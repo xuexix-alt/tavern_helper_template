@@ -1,0 +1,28 @@
+内容: |
+  @@activate
+  <%_
+  try {
+    // 1. 获取输入
+    let input = "";
+    try {
+      const msg = getChatMessage(-1);
+      input = msg ? msg.mes : "";
+    } catch(e){}
+    input = String(input || "");
+
+    // 2. 检测关键词
+    const isShopMode = ["搜索", "生成", "首页"].some(k => input.includes(k));
+
+    // 3. 设置全局开关
+    setvar("sys_shop_mode", isShopMode ? "true" : "false");
+
+    // 4. 如果是店铺模式，强制激活这4个条目
+    if (isShopMode) {
+      const targets = ["【后台系统触发指南 】", "美人团商品分类协议", "[mvu_update]变量更新列表", "[mvu_update]店铺更新格式", "<Z-Image-Turbo提示词生成指令>"];
+      // 修复：使用 Promise.all 并发激活，避免 for...of 循环在 EJS 中的编译问题
+      await Promise.all(targets.map(name => activewi(name)));
+    }
+  } catch (error) {
+    console.error('Activate error:', error);
+  }
+  _%>

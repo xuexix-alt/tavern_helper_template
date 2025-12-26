@@ -3,13 +3,14 @@
 import _ from 'lodash';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import z from 'zod';
 
 fs.globSync('src/**/schema.ts').forEach(async schema_file => {
   try {
     globalThis._ = _;
     globalThis.z = z;
-    const module = await import(path.resolve(import.meta.dirname, schema_file));
+    const module = await import(pathToFileURL(path.resolve(import.meta.dirname, schema_file)).href);
     if (_.has(module, 'Schema')) {
       const schema = _.get(module, 'Schema');
       if (_.isFunction(schema)) {
