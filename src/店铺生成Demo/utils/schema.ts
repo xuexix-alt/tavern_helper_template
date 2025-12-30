@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { z } from 'zod';
 
 declare const registerMvuSchema: (schema: any) => void;
@@ -15,8 +16,7 @@ export const ShopSchema = z.object({
     })
     .strict(),
   店铺列表: z
-    .record(
-      z.string().describe('店铺ID'),
+    .array(
       z
         .object({
           shopname: z.string(),
@@ -42,7 +42,7 @@ export const ShopSchema = z.object({
         })
         .strict(),
     )
-    .default({}),
+    .default([]),
 });
 
 /**

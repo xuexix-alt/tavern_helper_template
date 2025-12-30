@@ -45,10 +45,12 @@ export const shopStoreMvu = {
     try {
       const message_id = getCurrentMessageId?.() ?? 'latest';
 
-      try {
-        waitGlobalInitialized && waitGlobalInitialized('Mvu');
-      } catch (e) {
-        // ignore wait errors
+      if (typeof waitGlobalInitialized === 'function') {
+        try {
+          waitGlobalInitialized('Mvu');
+        } catch {
+          // ignore wait errors
+        }
       }
 
       const data = ((): any => {

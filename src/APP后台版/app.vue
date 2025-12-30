@@ -1,22 +1,48 @@
 <template>
-  <div class="phone-frame" :data-theme="currentTheme">
-    <!-- 错误边界组件 -->
-    <ErrorBoundary>
-      <RouterView />
-    </ErrorBoundary>
+  <div
+    class="relative flex h-full w-full flex-col overflow-hidden bg-slate-950 text-white selection:bg-blue-500/30"
+    :data-theme="currentTheme"
+  >
+    <!-- Background Effects -->
+    <div class="absolute inset-0 -z-20 bg-gradient-to-br from-slate-950 via-slate-900 to-black"></div>
+    <div class="absolute inset-0 -z-10 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-orange-600/5"></div>
+    <div class="absolute top-0 left-1/4 -z-10 h-96 w-96 animate-pulse rounded-full bg-blue-500/10 blur-3xl"></div>
+    <div class="absolute right-1/4 bottom-0 -z-10 h-96 w-96 animate-pulse rounded-full bg-purple-500/10 blur-3xl delay-1000"></div>
+
+    <div class="flex h-full w-full min-h-0">
+      <!-- Sidebar -->
+      <Sidebar />
+
+      <!-- Main Content Area -->
+      <main class="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <ErrorBoundary>
+          <div class="flex min-h-0 flex-1 flex-col">
+            <RouterView v-slot="{ Component }">
+              <transition name="fade" mode="out-in">
+                <component :is="Component" class="min-h-0 flex-1" />
+              </transition>
+            </RouterView>
+          </div>
+        </ErrorBoundary>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onErrorCaptured } from 'vue';
+import { ref, onMounted, onUnmounted, onErrorCaptured } from 'vue';
 import ErrorBoundary from './components/ErrorBoundary.vue';
+import Sidebar from './components/Sidebar.vue';
+import { enableIframeFullHeight } from './utils';
 
 // 当前主题
 const currentTheme = ref<'light' | 'dark'>('light');
 
+let disableIframeFullHeight: () => void = () => {};
+
 // 初始化主题
 function initTheme() {
-  // 从localStorage读取保存的主题设置，默认为浅色
+  // 默认使用浅色模式
   const savedTheme = localStorage.getItem('app-theme') || 'light';
   const isDark = savedTheme === 'dark';
 
@@ -26,20 +52,39 @@ function initTheme() {
   // 同时设置到documentElement，确保CSS变量能正确应用
   document.documentElement.setAttribute('data-theme', savedTheme);
 
+  if (isDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+
   console.log(`[主题初始化] 已加载${isDark ? '深色' : '浅色'}模式`);
 }
 
 // 在组件挂载时初始化主题
 onMounted(() => {
   initTheme();
+  window.addEventListener('theme-change', onThemeChange);
+  disableIframeFullHeight = enableIframeFullHeight({ minHeightPx: 480 });
 });
 
-// 监听主题切换事件
-window.addEventListener('theme-change', (event: any) => {
+function onThemeChange(event: any) {
   const newTheme = event.detail.isDark ? 'dark' : 'light';
   currentTheme.value = newTheme;
   document.documentElement.setAttribute('data-theme', newTheme);
+
+  if (newTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+
   console.log(`[主题切换] 已切换到${newTheme === 'dark' ? '深色' : '浅色'}模式`);
+}
+
+onUnmounted(() => {
+  window.removeEventListener('theme-change', onThemeChange);
+  disableIframeFullHeight();
 });
 
 // 全局错误处理
@@ -50,188 +95,63 @@ onErrorCaptured((err: Error) => {
 </script>
 
 <style lang="scss">
-// 全局主题CSS变量 - 定义在根节点，确保所有组件都能访问
-:root {
-  /* 浅色主题 */
-  --bg-primary: #f8f9fa;
-  --bg-header: #ffffff;
-  --bg-header-light: #fafbfc;
-  --bg-card: linear-gradient(135deg, #ffffff 0%, #fffef8 100%);
-  --bg-card-light: #f8f9fa;
-  --bg-item: #ffffff;
-  --bg-item-hover: #fff9e6;
-  --bg-badge: linear-gradient(135deg, #fff9e6, #fff);
-  --text-primary: #2c3e50; /* 更柔和的深色 */
-  --text-secondary: #606f7b; /* 更清晰的次级文本色 */
-  --text-placeholder: #95a5a6;
-  --text-price: #ff6b6b;
-  --border-color: #e0e0e0;
-  --border-accent: rgba(255, 195, 0, 0.15);
-  --accent-primary: #ffc300;
-  --accent-light: #ffd54f;
-  --accent-dark: #e6b000;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-  /* 状态颜色 */
-  --status-success: #66bb6a;
-  --status-info: #42a5f5;
-  --status-warning: #ffa726;
-  --status-danger: #ef5350;
-  /* 渐变 */
-  --badge-danger-gradient: linear-gradient(135deg, #ff4a4a 0%, #ff6b6b 100%);
-  --badge-info-gradient: linear-gradient(135deg, #42a5f5 0%, #478ed1 100%);
-}
-
-[data-theme='dark'] {
-  /* 深色主题 */
-  --bg-primary: #1a1a1a;
-  --bg-header: #2d2d2d;
-  --bg-header-light: #252525;
-  --bg-card: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
-  --bg-card-light: #252525;
-  --bg-item: #2d2d2d;
-  --bg-item-hover: #353535;
-  --bg-badge: linear-gradient(135deg, #3a3a3a, #2d2d2d);
-  --text-primary: #ffffff; /* 纯白色，提高对比度 */
-  --text-secondary: #e0e0e0; /* 亮灰色，增强可读性 */
-  --text-placeholder: #9e9e9e; /* 更亮的占位符颜色 */
-  --text-price: #ffab91; /* 更柔和的价格颜色 */
-  --border-color: #404040; /* 更明显的边框色 */
-  --border-accent: rgba(255, 195, 0, 0.3);
-  --accent-primary: #ffc300;
-  --accent-light: #ffd54f;
-  --accent-dark: #e6b000;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  /* 状态颜色 - 深色模式下调整亮度 */
-  --status-success: #66bb6a;
-  --status-info: #42a5f5;
-  --status-warning: #ffb74d;
-  --status-danger: #e57373;
-  /* 渐变 - 深色模式下调整 */
-  --badge-danger-gradient: linear-gradient(135deg, #ff5252 0%, #ff8a80 100%);
-  --badge-info-gradient: linear-gradient(135deg, #29b6f6 0%, #4fc3f7 100%);
-}
-
-/* 全局字体优化 */
-body {
-  font-family:
-    'PingFang SC',
-    'Microsoft YaHei',
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  font-feature-settings:
-    'kern' 1,
-    'liga' 1;
-  font-variant-ligatures: common-ligatures;
-  font-size: 16px; /* 基础字号调整 */
-  line-height: 1.6; /* 增加行高 */
-  color: var(--text-primary);
-}
-
-/* 深色模式下字体渲染优化 */
-[data-theme='dark'] body,
-[data-theme='dark'] {
-  font-weight: 400;
-  letter-spacing: 0.2px;
-}
-
-/* 深色模式下特殊元素字体 */
-[data-theme='dark'] .user-name,
-[data-theme='dark'] .stat-value,
-[data-theme='dark'] .service-name {
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-/* 深色模式下所有组件的字体优化 */
-[data-theme='dark'] * {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* 移动端触控优化 - 针对无hover设备和粗指针（触摸屏） */
-@media (hover: none) and (pointer: coarse) {
-  /* 移除移动端无效的hover效果，增强点击反馈 */
-  body button:hover,
-  body .nav-item:hover,
-  body .category-item:hover {
-    transform: none;
-  }
-
-  body .category-item:active .icon-wrapper,
-  body button:active,
-  body .nav-item:active {
-    opacity: 0.7;
-    transform: scale(0.95);
-    transition:
-      opacity 0.1s ease,
-      transform 0.1s ease;
-  }
-
-  /* 增加触控目标最小尺寸（WCAG 2.1 AA标准） */
-  body button,
-  body .nav-item,
-  body .category-item,
-  body .dlc-button,
-  body .search-btn,
-  body .retry-btn {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* 导航项特别优化 */
-  body .nav-item {
-    padding: 12px 0;
-  }
-
-  /* 输入框增加触控区域 */
-  body input,
-  body select,
-  body textarea {
-    font-size: 16px; /* 防止iOS自动缩放 */
-    min-height: 44px;
-  }
-
-  /* 移除移动端不需要的复杂hover动画 */
-  body .icon-wrapper:hover::before,
-  body .search-bar-container:hover::before,
-  body .dlc-button:hover::before {
-    animation: none;
-    transition: none;
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-.phone-frame {
+/* 让应用高度跟随宿主 iframe；滚动交给子容器 */
+html, body {
+  height: 100%;
   width: 100%;
-  height: 1024px; // 增大高度，模拟平板竖屏
-  background: var(--bg-primary);
-  border: 12px solid #1a1a1a;
-  border-radius: 24px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 全局滚动条样式覆盖 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.8);
+}
+
+// 保留原有的 CSS 变量定义，以兼容旧组件（如果需要）
+:root {
+  --bg-primary: #f8f9fa;
+  --text-primary: #2c3e50;
+  /* ... 其他变量保留 ... */
+}
+
+[data-theme='dark'] {
+  --bg-primary: #020617; /* slate-950 */
+  --text-primary: #ffffff;
+  /* ... */
+}
+
+/* #app 作为容器占满 iframe */
+#app {
+  height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  box-shadow:
-    0 25px 50px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.15) inset,
-    0 10px 20px rgba(255, 195, 0, 0.08);
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-
-  @media (max-width: 768px) {
-    border-width: 8px;
-    border-radius: 16px;
-  }
 }
 </style>

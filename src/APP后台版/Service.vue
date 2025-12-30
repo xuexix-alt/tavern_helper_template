@@ -474,11 +474,11 @@ const heartbeatStatusClass = computed(() => {
 const heartbeatColor = computed(() => {
   switch (heartbeatStatusClass.value) {
     case 'status-warning':
-      return '#FFA726';
+      return 'var(--status-warning)';
     case 'status-danger':
-      return '#EF5350';
+      return 'var(--status-danger)';
     default:
-      return '#66BB6A';
+      return 'var(--status-success)';
   }
 });
 
@@ -922,7 +922,7 @@ onMounted(async () => {
       .feature-tag {
         padding: 4px 12px;
         background: var(--accent-primary);
-        color: var(--text-primary);
+        color: #2c3e50; /* 强制使用深色文本 */
         border-radius: 50px;
         font-size: 11px;
         font-weight: 600;
@@ -1070,7 +1070,7 @@ onMounted(async () => {
       }
     }
 
-    // 字段名称统一样式（既适合浅色也适合深色模式）
+    // 字段名称统一样式
     .field-label,
     .feature-label,
     .desc-label,
@@ -1079,8 +1079,21 @@ onMounted(async () => {
     .compact-key,
     .info-key,
     .section-item-label {
-      color: #3b82f6 !important; // blue-500，既适合浅色也适合深色模式
+      color: #3b82f6 !important; // blue-500
       font-weight: 600;
+    }
+
+    :global([data-theme='dark']) & {
+      .field-label,
+      .feature-label,
+      .desc-label,
+      .stat-label,
+      .psychology-label,
+      .compact-key,
+      .info-key,
+      .section-item-label {
+        color: #60a5fa !important; // blue-400
+      }
     }
 
     // 可折叠分组样式

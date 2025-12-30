@@ -96,6 +96,11 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #ffc300 0%, #ff9500 100%);
+  /* 深色模式适配 */
+  :global([data-theme='dark']) & {
+    background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+  }
+
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -114,6 +119,9 @@ onMounted(async () => {
       position: absolute;
       border-radius: 50%;
       background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      :global([data-theme='dark']) & {
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+      }
       animation: float 6s ease-in-out infinite;
 
       &.circle-1 {
@@ -163,6 +171,11 @@ onMounted(async () => {
           width: 100px;
           height: 100px;
           background: rgba(255, 255, 255, 0.95);
+          :global([data-theme='dark']) & {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+          }
           border-radius: 50%;
           display: flex;
           justify-content: center;
@@ -174,6 +187,9 @@ onMounted(async () => {
           i {
             font-size: 2.5rem;
             background: linear-gradient(135deg, #ff6b35, #ff9500);
+            :global([data-theme='dark']) & {
+              background: linear-gradient(135deg, #60a5fa, #a855f7);
+            }
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;

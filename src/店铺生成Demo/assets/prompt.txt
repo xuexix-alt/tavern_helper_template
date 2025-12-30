@@ -26,8 +26,7 @@
 
 ### 店铺列表结构
 ```typescript
-店铺列表: {
-  [shopId: string]: {
+店铺列表: Array<{
     shopname: string;
     shop_id: number;
     shoptags: string[];
@@ -44,8 +43,7 @@
       content: string[];      // 性爱玩法
       reviews: string[];      // 推荐语
     }>;
-  };
-}
+}>
 ```
 
 ## 内容生成规则
@@ -173,8 +171,8 @@ require (作为单词)
   {
     "op": "replace",
     "path": "/店铺列表",
-    "value": {
-      "店铺ID1": {
+    "value": [
+      {
         "shopname": "店铺名称",
         "shop_id": 数字ID,
         "shoptags": ["标签1", "标签2"],
@@ -194,7 +192,7 @@ require (作为单词)
           }
         ]
       }
-    }
+    ]
   }
 ]
 </json_patch>

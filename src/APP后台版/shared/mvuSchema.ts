@@ -82,8 +82,7 @@ export const MvuSchema = z.object({
     .strict(),
   推荐标签: z.array(z.string()).default(['zod店铺集成']),
   店铺列表: z
-    .record(
-      z.string().describe('店铺ID'),
+    .array(
       z
         .object({
           shopname: z.string(),
@@ -109,7 +108,7 @@ export const MvuSchema = z.object({
         })
         .strict(),
     )
-    .default({}),
+    .default([]),
   服务中的订单: z
     .record(
       z.string().describe('订单ID'),

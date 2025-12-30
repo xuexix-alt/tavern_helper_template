@@ -11,11 +11,13 @@ const History = () => import('./History.vue');
 const Me = () => import('./Me.vue');
 const ShopDetail = () => import('./ShopDetail.vue');
 const ItemDetail = () => import('./ItemDetail.vue');
+const Dashboard = () => import('./Dashboard.vue');
 
 const router = createRouter({
   history: createMemoryHistory(),
   routes: [
     { path: '/', component: SplashScreen, name: 'SplashScreen' },
+    { path: '/play', component: Dashboard, name: 'Play' },
     { path: '/home', component: Home, name: 'Home' },
     { path: '/discover', component: Discover, name: 'Discover' },
     { path: '/service', component: Service, name: 'Service' },

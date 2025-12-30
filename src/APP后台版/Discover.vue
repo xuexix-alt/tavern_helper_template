@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { shopStoreMvu } from './shared/shopStoreMvu';
 
 const shops = ref<any[]>([]);
@@ -85,10 +85,18 @@ async function loadShops() {
   shops.value = Array.isArray(data) ? data : [];
 }
 
+const onShopCacheUpdated = () => {
+  void loadShops();
+};
+
 // 初始化
 onMounted(async () => {
   await loadShops();
-  window.addEventListener('shop:cache:updated', loadShops);
+  window.addEventListener('shop:cache:updated', onShopCacheUpdated);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('shop:cache:updated', onShopCacheUpdated);
 });
 
 function deleteShop(idx: number) {

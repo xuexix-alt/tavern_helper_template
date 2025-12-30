@@ -86,6 +86,92 @@ export function generateId(length: number = 8): string {
 }
 
 /**
+ * 让“楼层消息 iframe”尽量占满酒馆聊天区域高度。
+ * - 仅在 iframe 环境尝试（不影响本地独立调试）
+ * - 通过修改 window.frameElement 的样式来设置高度
+ */
+export function enableIframeFullHeight(options?: { minHeightPx?: number }) {
+  const minHeightPx = options?.minHeightPx ?? 480;
+
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+
+  if (!isInIframe) return () => {};
+
+  const iframe = window.frameElement as HTMLIFrameElement | null;
+  if (!iframe) return () => {};
+
+  const pickHostHeight = () => {
+    try {
+      const doc = window.parent?.document;
+      if (!doc) return window.innerHeight;
+
+      const candidates = [
+        '#chat',
+        '#chat-wrapper',
+        '#chat-container',
+        '#chat-messages',
+        '.chat',
+        '.chat-wrapper',
+        '.chat-content',
+      ];
+
+      for (const sel of candidates) {
+        const el = doc.querySelector(sel) as HTMLElement | null;
+        if (el && el.clientHeight > 0) return el.clientHeight;
+      }
+
+      return doc.documentElement?.clientHeight || window.parent.innerHeight || window.innerHeight;
+    } catch {
+      return window.innerHeight;
+    }
+  };
+
+  let rafId = 0;
+  const apply = () => {
+    rafId = 0;
+    const h = Math.max(minHeightPx, pickHostHeight());
+    const next = `${h}px`;
+    if (iframe.style.height !== next) {
+      iframe.style.height = next;
+      iframe.style.maxHeight = next;
+      iframe.style.display = 'block';
+    }
+  };
+
+  const schedule = () => {
+    if (rafId) return;
+    rafId = window.requestAnimationFrame(apply);
+  };
+
+  // 初始化一次
+  schedule();
+
+  window.addEventListener('resize', schedule);
+  // 宿主滚动/布局变化也可能影响可用高度
+  try {
+    window.parent?.addEventListener?.('resize', schedule);
+  } catch {
+    // ignore
+  }
+
+  return () => {
+    window.removeEventListener('resize', schedule);
+    try {
+      window.parent?.removeEventListener?.('resize', schedule);
+    } catch {
+      // ignore
+    }
+    if (rafId) window.cancelAnimationFrame(rafId);
+  };
+}
+
+/**
  * 智能导航函数 - 根据服务状态决定默认页面
  */
 export async function navigateToDefaultPage() {
@@ -121,7 +207,7 @@ export async function navigateToDefaultPage() {
       return '/home';
     }
 
-    return '/service';
+    return '/play';
   } catch (error) {
     console.error('[智能导航] 检查服务状态失败:', error);
     return '/home';
