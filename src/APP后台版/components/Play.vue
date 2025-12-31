@@ -1,5 +1,7 @@
 <template>
-  <div class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-br from-slate-900/75 to-black/60 shadow-2xl shadow-blue-500/10 backdrop-blur-xl">
+  <div
+    class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-br from-slate-900/75 to-black/60 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+  >
     <!-- Scene banner (Mythos-like) -->
     <div class="relative shrink-0 border-b border-blue-500/10">
       <div class="relative aspect-[21/9] w-full overflow-hidden">
@@ -10,11 +12,15 @@
         <div class="flex items-end justify-between gap-4">
           <div class="min-w-0">
             <div class="flex items-center gap-2 text-xs text-slate-300/90">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1">
+              <span
+                class="inline-flex items-center gap-2 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1"
+              >
                 <span class="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
                 <span>LIVE</span>
               </span>
-              <span class="hidden items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1 sm:inline-flex">
+              <span
+                class="hidden items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1 sm:inline-flex"
+              >
                 <i class="fas fa-magic text-blue-300"></i>
                 场景生成中（占位）
               </span>
@@ -24,7 +30,9 @@
           </div>
 
           <div class="shrink-0 text-right">
-            <div class="inline-flex items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-900/40 px-3 py-2 text-xs text-slate-200">
+            <div
+              class="inline-flex items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-900/40 px-3 py-2 text-xs text-slate-200"
+            >
               <i class="fas fa-star text-orange-400"></i>
               <span>4.9</span>
               <span class="text-slate-500">·</span>
@@ -54,8 +62,11 @@
           </button>
         </div>
 
-        <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent h-full overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-green-300">
-          <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+        <div
+          class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent h-full overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-green-300"
+        >
+          <pre
+            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
         </div>
       </section>
 
@@ -74,7 +85,9 @@
               @click="pickQuickAction(item.command)"
             >
               <span class="truncate">{{ item.label }}</span>
-              <i class="fas fa-chevron-right text-xs text-slate-500 transition-transform group-hover:translate-x-0.5"></i>
+              <i
+                class="fas fa-chevron-right text-xs text-slate-500 transition-transform group-hover:translate-x-0.5"
+              ></i>
             </button>
           </div>
           <div class="mt-3 text-xs text-slate-500">提示：发送后会尝试调用 `triggerSlash`（如存在）。</div>

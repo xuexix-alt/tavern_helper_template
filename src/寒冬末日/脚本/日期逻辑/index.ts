@@ -68,7 +68,7 @@ $(async () => {
         // 同时更新末日天数
         const oldDays = _.get(new_variables, 'stat_data.世界.末日天数');
         if (typeof oldDays === 'number') {
-            _.set(new_variables, 'stat_data.世界.末日天数', oldDays + 1);
+          _.set(new_variables, 'stat_data.世界.末日天数', oldDays + 1);
         }
       }
     }

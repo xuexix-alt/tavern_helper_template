@@ -23,7 +23,9 @@
         v-for="item in packageItems"
         :key="item.key"
         class="group relative flex cursor-pointer items-center space-x-4 rounded-xl border bg-slate-800/20 p-3 transition-all duration-300 hover:translate-x-1 hover:bg-slate-800/60 hover:shadow-lg hover:shadow-green-500/10"
-        :class="item.selected ? 'border-blue-500/50 ring-1 ring-blue-500/20' : 'border-slate-700/50 hover:border-green-500/50'"
+        :class="
+          item.selected ? 'border-blue-500/50 ring-1 ring-blue-500/20' : 'border-slate-700/50 hover:border-green-500/50'
+        "
         @click="select(item)"
       >
         <!-- Rank/Status Indicator (Optional) -->
@@ -43,7 +45,9 @@
               <i v-else class="fas fa-box"></i>
             </div>
           </div>
-          <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-slate-700/50 bg-slate-950/60 px-2 py-0.5 text-[10px] text-slate-300 backdrop-blur">
+          <div
+            class="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-slate-700/50 bg-slate-950/60 px-2 py-0.5 text-[10px] text-slate-300 backdrop-blur"
+          >
             {{ item.shopName }}
           </div>
         </div>
@@ -62,7 +66,9 @@
             </span>
           </div>
           <div class="flex items-center justify-between text-xs">
-            <span class="truncate text-slate-500 transition-colors group-hover:text-slate-400">{{ item.tagsText }}</span>
+            <span class="truncate text-slate-500 transition-colors group-hover:text-slate-400">{{
+              item.tagsText
+            }}</span>
             <span class="text-slate-600 group-hover:text-slate-500">{{ item.starsText }}</span>
           </div>
         </div>

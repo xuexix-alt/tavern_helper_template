@@ -299,7 +299,13 @@ window.addEventListener('error', event => {
   try {
     window.dispatchEvent(
       new CustomEvent('app-fatal-error', {
-        detail: { type: 'error', error: event.error, message: event.message, filename: event.filename, lineno: event.lineno },
+        detail: {
+          type: 'error',
+          error: event.error,
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+        },
       }),
     );
   } catch {

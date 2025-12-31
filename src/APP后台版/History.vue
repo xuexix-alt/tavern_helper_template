@@ -12,7 +12,7 @@
       <div class="card">
         <div class="card-title"><i class="fas fa-history"></i>历史订单</div>
         <div v-if="historyItems.length === 0" class="empty-state">暂无历史订单</div>
-          <div v-else>
+        <div v-else>
           <div
             v-for="(item, index) in historyItems"
             :key="item.id ?? `${item.order_time ?? 'history'}_${index}`"
@@ -54,11 +54,7 @@
     </div>
 
     <!-- 确认订单弹窗 -->
-    <div
-      v-if="currentView === 'reorder' && selectedOrder"
-      class="reorder-modal-overlay"
-      @click.self="backToHistory"
-    >
+    <div v-if="currentView === 'reorder' && selectedOrder" class="reorder-modal-overlay" @click.self="backToHistory">
       <div class="reorder-modal-content">
         <div class="modal-header">
           <div class="modal-title"><i class="fas fa-shopping-cart"></i>确认订单</div>
@@ -83,7 +79,7 @@
                 >
               </div>
             </div>
-              <div class="summary-price">
+            <div class="summary-price">
               <span class="price-number">￥{{ selectedOrder.price ?? '-' }}</span>
               <span class="price-tip">下单后立即生效</span>
             </div>
@@ -254,9 +250,7 @@
           <button class="btn btn-primary" @click="showReorderModal">
             <i class="fas fa-check-circle"></i> 再次下单
           </button>
-          <button class="btn btn-secondary" @click="backToHistory">
-            <i class="fas fa-times-circle"></i> 取消
-          </button>
+          <button class="btn btn-secondary" @click="backToHistory"><i class="fas fa-times-circle"></i> 取消</button>
         </div>
       </div>
     </div>
@@ -401,7 +395,11 @@ function extractOrderFeatures(order: any): string[] {
 const currentOrderFeatures = computed(() => {
   if (selectedOrder.value) {
     const raw = selectedOrder.value.features || extractOrderFeatures(selectedOrder.value.originalData);
-    const orderFeatures = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/\s*,\s*|\s+/).filter(Boolean) : [];
+    const orderFeatures = Array.isArray(raw)
+      ? raw
+      : typeof raw === 'string'
+        ? raw.split(/\s*,\s*|\s+/).filter(Boolean)
+        : [];
     if (orderFeatures.length > 0) return orderFeatures;
   }
   return [];

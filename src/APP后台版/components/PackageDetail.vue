@@ -1,5 +1,7 @@
 <template>
-  <div class="flex h-80 flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl">
+  <div
+    class="flex h-80 flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+  >
     <div class="mb-4 flex items-center space-x-2">
       <i class="fas fa-info-circle text-blue-400"></i>
       <h3 class="text-white">Package Details</h3>

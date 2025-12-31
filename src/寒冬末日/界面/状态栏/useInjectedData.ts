@@ -49,4 +49,3 @@ export function useInjectedData() {
 
   return { content, options, refresh };
 }
-

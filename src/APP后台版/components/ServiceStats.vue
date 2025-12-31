@@ -1,5 +1,7 @@
 <template>
-  <div class="rounded-3xl border border-violet-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-6 shadow-2xl shadow-violet-500/10 backdrop-blur-xl">
+  <div
+    class="rounded-3xl border border-violet-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-6 shadow-2xl shadow-violet-500/10 backdrop-blur-xl"
+  >
     <div class="mb-6 flex items-center justify-between">
       <h3 class="text-white">当前收益</h3>
       <i class="fas fa-chart-line text-green-400"></i>
@@ -27,11 +29,15 @@
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-emerald-600/10 p-3 text-center">
+        <div
+          class="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/10 to-emerald-600/10 p-3 text-center"
+        >
           <div class="text-lg text-green-400">+¥{{ weeklyProfit }}</div>
           <div class="text-xs text-green-400/70">本周收益</div>
         </div>
-        <div class="rounded-xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-red-600/10 p-3 text-center">
+        <div
+          class="rounded-xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-red-600/10 p-3 text-center"
+        >
           <div class="text-lg text-orange-400">-¥{{ dailyLoss }}</div>
           <div class="text-xs text-orange-400/70">今日支出</div>
         </div>

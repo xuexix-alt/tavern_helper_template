@@ -1,8 +1,6 @@
 <template>
   <section class="section">
-    <button ref="palette_button" class="palette-button" type="button" @click.stop="togglePalette">
-      🎨
-    </button>
+    <button ref="palette_button" class="palette-button" type="button" @click.stop="togglePalette">🎨</button>
     <h2 class="section-title choices-title">⚜️ 快速剧情 ⚜️</h2>
 
     <div>
@@ -150,4 +148,3 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick);
 });
 </script>
-

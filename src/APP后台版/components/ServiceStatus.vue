@@ -1,11 +1,15 @@
 <template>
-  <div class="rounded-3xl border border-orange-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-6 shadow-2xl shadow-orange-500/10 backdrop-blur-xl">
+  <div
+    class="rounded-3xl border border-orange-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-6 shadow-2xl shadow-orange-500/10 backdrop-blur-xl"
+  >
     <div class="mb-6 flex items-center space-x-4">
       <div class="relative">
         <div class="h-16 w-16 overflow-hidden rounded-2xl border-2 border-orange-400/30 shadow-lg shadow-orange-500/20">
           <img src="https://via.placeholder.com/150" alt="Avatar" class="h-full w-full object-cover" />
         </div>
-        <div class="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-black bg-green-400">
+        <div
+          class="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-black bg-green-400"
+        >
           <div class="h-2 w-2 animate-pulse rounded-full bg-white"></div>
         </div>
       </div>
@@ -56,7 +60,9 @@
       <!-- Achievement Badge -->
       <div class="rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10 p-3">
         <div class="flex items-center space-x-2">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500"
+          >
             <i class="fas fa-medal text-white"></i>
           </div>
           <div>
@@ -116,7 +122,7 @@ function updateDisplay() {
   heartbeat.value = getNestedValue(g, '服务统计.心跳', '-');
 
   // 评分根据好感度计算
-  rating.value = Math.min(5, Math.max(0, (currentExp.value / 20)));
+  rating.value = Math.min(5, Math.max(0, currentExp.value / 20));
 }
 
 onMounted(() => {

@@ -46,4 +46,3 @@ export const useDataStore = defineStore(
     return { data };
   }),
 );
-

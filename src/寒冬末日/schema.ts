@@ -12,7 +12,9 @@ const CharacterSchema = z.object({
   // 健康系统
   健康: z.coerce.number().min(0).max(100).describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
   健康更新原因: z.string().describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-  健康状况: z.enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡']).describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
+  健康状况: z
+    .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
+    .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
 
   // 外貌与状态 (纯文本描述)
   衣着: z.string().describe('详细描述当前的衣着状态'),
@@ -42,10 +44,14 @@ const ShelterSchema = z.object({
   庇护所等级: z.coerce.number().max(10),
   今日投掷点数: z.string().describe('记录每日升级判定结果'),
   距离上次升级: z.string().describe('记录保底进度'),
-  庇护所能力: z.array(z.object({
-    name: z.string(),
-    desc: z.string()
-  })).describe('已激活的庇护所能力列表'),
+  庇护所能力: z
+    .array(
+      z.object({
+        name: z.string(),
+        desc: z.string(),
+      }),
+    )
+    .describe('已激活的庇护所能力列表'),
 });
 
 // 4. 其他住户

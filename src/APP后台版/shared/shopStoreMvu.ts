@@ -1,6 +1,9 @@
 // Tavern Helper globals
 declare function getVariables(scope: { type: string; script_id?: string; message_id?: number | string }): any;
-declare function replaceVariables(variables: any, scope: { type: string; script_id?: string; message_id?: number | string }): void;
+declare function replaceVariables(
+  variables: any,
+  scope: { type: string; script_id?: string; message_id?: number | string },
+): void;
 declare function getCurrentMessageId(): number;
 declare function waitGlobalInitialized(name: string): Promise<void> | void;
 declare const Mvu: any;

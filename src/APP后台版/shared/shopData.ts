@@ -25,8 +25,14 @@ function normalizeBullet(line: string) {
 
 // ================= 数据模型 & 错误码 =================
 export const PackageSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform(v => String(v)).optional(), // 允许后续注入/数字 ID
-  shop_id: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+  id: z
+    .union([z.string(), z.number()])
+    .transform(v => String(v))
+    .optional(), // 允许后续注入/数字 ID
+  shop_id: z
+    .union([z.string(), z.number()])
+    .transform(v => String(v))
+    .optional(),
   shop_name: z.string().optional(),
   name: z.string().min(1, '套餐必须包含名称'),
   price: z.union([z.number(), z.string()]).default('N/A'),
@@ -42,8 +48,14 @@ export const PackageSchema = z.object({
 });
 
 export const ShopSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform(v => String(v)).optional(), // 允许后续生成/数字 ID
-  shop_id: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+  id: z
+    .union([z.string(), z.number()])
+    .transform(v => String(v))
+    .optional(), // 允许后续生成/数字 ID
+  shop_id: z
+    .union([z.string(), z.number()])
+    .transform(v => String(v))
+    .optional(),
   name: z.string().min(1).optional(), // 缺失时后续兜底为“未命名店铺”
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),

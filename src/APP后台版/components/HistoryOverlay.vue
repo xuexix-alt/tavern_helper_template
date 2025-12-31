@@ -1,6 +1,8 @@
 <template>
   <div v-if="historyOverlayOpen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/60 p-4">
-    <div class="relative flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 shadow-2xl shadow-blue-500/10 backdrop-blur-xl">
+    <div
+      class="relative flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+    >
       <div class="flex items-center gap-3 border-b border-slate-700/50 px-5 py-4">
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
           <i class="fas fa-history"></i>
@@ -75,8 +77,13 @@
     </div>
 
     <!-- Reorder modal -->
-    <div v-if="currentView === 'reorder' && selectedOrder" class="absolute inset-0 z-[5100] flex items-center justify-center bg-black/70 p-4">
-      <div class="w-full max-w-xl overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/95 to-black/90 shadow-2xl shadow-blue-500/10">
+    <div
+      v-if="currentView === 'reorder' && selectedOrder"
+      class="absolute inset-0 z-[5100] flex items-center justify-center bg-black/70 p-4"
+    >
+      <div
+        class="w-full max-w-xl overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/95 to-black/90 shadow-2xl shadow-blue-500/10"
+      >
         <div class="flex items-center gap-3 border-b border-slate-700/50 px-5 py-4">
           <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
             <i class="fas fa-shopping-cart"></i>
@@ -119,7 +126,9 @@
           <div class="grid grid-cols-3 gap-3">
             <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
               <div class="text-[11px] text-slate-400">好感度</div>
-              <div class="mt-1 text-sm font-bold text-white">{{ getNestedValue(selectedOrder?.originalData, '心理状态.好感度', '-') }}</div>
+              <div class="mt-1 text-sm font-bold text-white">
+                {{ getNestedValue(selectedOrder?.originalData, '心理状态.好感度', '-') }}
+              </div>
             </div>
             <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
               <div class="text-[11px] text-slate-400">怀孕几率</div>
@@ -129,7 +138,9 @@
             </div>
             <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-3">
               <div class="text-[11px] text-slate-400">下单次数</div>
-              <div class="mt-1 text-sm font-bold text-white">{{ getNestedValue(selectedOrder?.originalData, '性经验.下单次数', '-') }}</div>
+              <div class="mt-1 text-sm font-bold text-white">
+                {{ getNestedValue(selectedOrder?.originalData, '性经验.下单次数', '-') }}
+              </div>
             </div>
           </div>
 
@@ -152,11 +163,20 @@
     </div>
 
     <!-- remark modal -->
-    <div v-if="showRemarkModal" class="absolute inset-0 z-[5200] flex items-center justify-center bg-black/70 p-4" @click.self="closeRemarkModal">
-      <div class="w-full max-w-xl overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/95 to-black/90 shadow-2xl shadow-blue-500/10">
+    <div
+      v-if="showRemarkModal"
+      class="absolute inset-0 z-[5200] flex items-center justify-center bg-black/70 p-4"
+      @click.self="closeRemarkModal"
+    >
+      <div
+        class="w-full max-w-xl overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/95 to-black/90 shadow-2xl shadow-blue-500/10"
+      >
         <div class="flex items-center justify-between gap-3 border-b border-slate-700/50 px-5 py-4">
           <div class="text-base font-bold text-white">玩法和备注</div>
-          <button class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50" @click="closeRemarkModal">
+          <button
+            class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50"
+            @click="closeRemarkModal"
+          >
             <i class="fas fa-times"></i>
             <span class="ml-2">关闭</span>
           </button>
@@ -182,7 +202,12 @@
           ></textarea>
 
           <div class="flex items-center justify-end gap-3">
-            <button class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50" @click="closeRemarkModal">取消</button>
+            <button
+              class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-4 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50"
+              @click="closeRemarkModal"
+            >
+              取消
+            </button>
             <button
               class="rounded-xl border border-blue-400/30 bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-600 hover:to-violet-700"
               @click="confirmOrder"
@@ -362,7 +387,9 @@ async function confirmOrder() {
   const ok = sendToAI(cmd);
   if (!ok) {
     const copied = await copyToClipboard(`${cmd} | /trigger await=true`);
-    copiedHint.value = copied ? '未检测到 triggerSlash，已复制指令到剪贴板。' : '未检测到 triggerSlash，且复制失败，请手动复制指令。';
+    copiedHint.value = copied
+      ? '未检测到 triggerSlash，已复制指令到剪贴板。'
+      : '未检测到 triggerSlash，且复制失败，请手动复制指令。';
   } else {
     copiedHint.value = '已发送下单指令。';
   }
@@ -421,4 +448,3 @@ onMounted(() => {
   refreshHistory().catch(() => {});
 });
 </script>
-

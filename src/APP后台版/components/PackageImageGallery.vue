@@ -1,5 +1,8 @@
 <template>
-  <div v-if="variant === 'panel'" class="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-purple-500/10 backdrop-blur-xl">
+  <div
+    v-if="variant === 'panel'"
+    class="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-purple-500/10 backdrop-blur-xl"
+  >
     <div class="mb-4 flex items-center gap-2">
       <i class="fas fa-images text-purple-400"></i>
       <h3 class="text-white">套餐写真</h3>
@@ -21,8 +24,10 @@
           @error="onImgError(slot.key)"
         />
         <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 p-2 text-center">
-          <div class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/40 text-purple-300">
-          <i :class="slot.kind === 'text' ? 'fas fa-file-alt' : 'fas fa-image'"></i>
+          <div
+            class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/40 text-purple-300"
+          >
+            <i :class="slot.kind === 'text' ? 'fas fa-file-alt' : 'fas fa-image'"></i>
           </div>
           <div class="text-xs font-bold text-slate-200">{{ slot.label }}</div>
           <div class="line-clamp-2 text-[11px] text-slate-500">
@@ -30,8 +35,12 @@
           </div>
         </div>
 
-        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-        <div class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div
+          class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        ></div>
+        <div
+          class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        >
           <i class="fas fa-search-plus"></i>
           查看
         </div>
@@ -50,7 +59,9 @@
   <div v-else class="relative h-full w-full overflow-hidden">
     <!-- Background ambience -->
     <div class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-orange-600/10"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.22),transparent_55%),radial-gradient(circle_at_80%_30%,rgba(168,85,247,0.16),transparent_55%),radial-gradient(circle_at_50%_90%,rgba(249,115,22,0.10),transparent_60%)]"></div>
+    <div
+      class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.22),transparent_55%),radial-gradient(circle_at_80%_30%,rgba(168,85,247,0.16),transparent_55%),radial-gradient(circle_at_50%_90%,rgba(249,115,22,0.10),transparent_60%)]"
+    ></div>
     <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
 
     <!-- 3-slot previews (leave bottom space for PLAY HUD overlay) -->
@@ -69,7 +80,9 @@
           @error="onImgError(slot.key)"
         />
         <div v-else class="flex h-full w-full flex-col items-center justify-center gap-2 p-3 text-center">
-          <div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-900/40 text-blue-200">
+          <div
+            class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-900/40 text-blue-200"
+          >
             <i :class="slot.kind === 'text' ? 'fas fa-file-alt' : 'fas fa-image'"></i>
           </div>
           <div class="text-xs font-bold text-slate-200">{{ slot.label }}</div>
@@ -78,12 +91,18 @@
           </div>
         </div>
 
-        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-        <div class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+        <div
+          class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        ></div>
+        <div
+          class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        >
           <i class="fas fa-search-plus"></i>
           查看大图
         </div>
-        <div class="pointer-events-none absolute bottom-2 right-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm">
+        <div
+          class="pointer-events-none absolute bottom-2 right-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm"
+        >
           {{ slot.label }}
         </div>
       </button>
@@ -91,8 +110,14 @@
   </div>
 
   <!-- Lightbox -->
-  <div v-if="lightboxOpen" class="fixed inset-0 z-[4800] flex items-center justify-center bg-black/75 p-4" @click.self="close">
-    <div class="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/80 shadow-2xl backdrop-blur-xl">
+  <div
+    v-if="lightboxOpen"
+    class="fixed inset-0 z-[4800] flex items-center justify-center bg-black/75 p-4"
+    @click.self="close"
+  >
+    <div
+      class="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/80 shadow-2xl backdrop-blur-xl"
+    >
       <div class="flex items-center justify-between gap-3 border-b border-slate-800/60 px-4 py-3">
         <div class="min-w-0">
           <div class="truncate text-sm font-bold text-white">{{ title }}</div>
@@ -138,15 +163,27 @@
           v-for="(slot, idx) in slots"
           :key="slot.key"
           class="group relative h-14 w-14 overflow-hidden rounded-xl border bg-slate-950/40 transition-all"
-          :class="idx === activeIndex ? 'border-blue-500/60 shadow-lg shadow-blue-500/20' : 'border-slate-700/50 hover:border-blue-500/30'"
+          :class="
+            idx === activeIndex
+              ? 'border-blue-500/60 shadow-lg shadow-blue-500/20'
+              : 'border-slate-700/50 hover:border-blue-500/30'
+          "
           @click="setActive(idx)"
           :title="slot.label"
         >
-          <img v-if="slot.kind === 'image'" :src="slot.src" :alt="slot.label" class="h-full w-full object-cover" @error="onImgError(slot.key)" />
+          <img
+            v-if="slot.kind === 'image'"
+            :src="slot.src"
+            :alt="slot.label"
+            class="h-full w-full object-cover"
+            @error="onImgError(slot.key)"
+          />
           <div v-else class="flex h-full w-full items-center justify-center text-slate-200">
             <i :class="slot.kind === 'text' ? 'fas fa-file-alt text-purple-300' : 'fas fa-image text-slate-500'"></i>
           </div>
-          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+          <div
+            class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+          ></div>
         </button>
 
         <div class="ml-auto text-xs text-slate-500">{{ active.label }}</div>
@@ -157,7 +194,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { ensureSelectedPackageFromMvu, refreshSelectedPackageFromMvu, selectedPackage } from '../shared/selectedPackage';
+import {
+  ensureSelectedPackageFromMvu,
+  refreshSelectedPackageFromMvu,
+  selectedPackage,
+} from '../shared/selectedPackage';
 
 type SlotKey = 'image1' | 'image2' | 'image3';
 type SlotKind = 'image' | 'text' | 'empty';

@@ -35,4 +35,3 @@ import { useDataStore } from '../../store';
 
 const store = useDataStore();
 </script>
-

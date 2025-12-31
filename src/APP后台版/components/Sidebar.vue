@@ -46,7 +46,13 @@
         class="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-800/50 transition-all duration-300 hover:border-blue-500/30 hover:bg-slate-700/50"
         :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
       >
-        <i :class="['fas', isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-blue-400', 'text-lg transition-colors duration-300']"></i>
+        <i
+          :class="[
+            'fas',
+            isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-blue-400',
+            'text-lg transition-colors duration-300',
+          ]"
+        ></i>
       </button>
     </div>
   </div>
