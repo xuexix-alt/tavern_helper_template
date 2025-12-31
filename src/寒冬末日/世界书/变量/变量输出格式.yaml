@@ -1,0 +1,30 @@
+task: Output the thinking process and variable update commands based on the current scene and variable update rules.
+format: |-
+  <UpdateVariable>
+      <ThinkingProcess>(IN ENGLISH, follow the COT process)
+          **STEP 1: Scene Analysis**
+          [Describe current scene, character interactions, and events]
+
+          **STEP 2: Character Identity Check**
+          - Current active character(s): [names]
+          - Check if they are "登场" (Present) or "离场" (Absent) in variables.
+
+          **STEP 3: Variable Review**
+          [Review variables for each ACTIVE character and World/Shelter state]
+          - World.Time/Date: ...
+          - Character.Status: ...
+
+          **STEP 4: Command Selection**
+          [Determine _.set, _.add, etc.]
+
+          **STEP 5: Final Check**
+          - All string values quoted correctly? [YES/NO]
+          - No [0] suffixes (using new direct value schema)? [YES/NO]
+          - Reasons provided in comments? [YES/NO]
+      </ThinkingProcess>
+
+      _.set('世界.时间', '晚上 - 20:00');//时间流逝
+      _.set('浅见亚美.内心想法', '好冷...');//更新想法
+      _.set('浅见亚美.衣着', '破损的羽绒服');//更新衣着
+      _.add('庇护所.庇护所等级', 1);//等级提升
+  </UpdateVariable>

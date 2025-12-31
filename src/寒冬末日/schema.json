@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "世界": {
+      "type": "object",
+      "properties": {
+        "地址": {
+          "description": "当前所在的物理位置",
+          "type": "string"
+        },
+        "日期": {
+          "description": "格式：末日纪元，XXXX年XX月XX日",
+          "type": "string"
+        },
+        "时间": {
+          "description": "格式：时间段 - HH:MM",
+          "type": "string"
+        },
+        "末日天数": {
+          "description": "自“永恒暴雪”降临以来的总天数",
+          "type": "number"
+        }
+      },
+      "required": [
+        "地址",
+        "日期",
+        "时间",
+        "末日天数"
+      ]
+    },
+    "庇护所": {
+      "type": "object",
+      "properties": {
+        "庇护所等级": {
+          "type": "number",
+          "maximum": 10
+        },
+        "今日投掷点数": {
+          "description": "记录每日升级判定结果",
+          "type": "string"
+        },
+        "距离上次升级": {
+          "description": "记录保底进度",
+          "type": "string"
+        },
+        "庇护所能力": {
+          "description": "已激活的庇护所能力列表",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "desc": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "desc"
+            ]
+          }
+        }
+      },
+      "required": [
+        "庇护所等级",
+        "今日投掷点数",
+        "距离上次升级",
+        "庇护所能力"
+      ]
+    },
+    "浅见亚美": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "相田哲也": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "星野琉璃": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "早川遥": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "早川舞": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "藤井雪乃": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "中村惠子": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "爱宫心爱": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "爱宫铃": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "桃乐丝・泽巴哈": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "何铃": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "王静": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "康绮月": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "薛萍": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "临时NPC": {
+      "description": "当有临时NPC登场时使用，离场时设为undefined或重置",
+      "$ref": "#/$defs/__schema0"
+    },
+    "楼层其他住户": {
+      "type": "object",
+      "properties": {
+        "言语": {
+          "description": "其他幸存者的总体言语状态",
+          "type": "string"
+        },
+        "行为": {
+          "description": "其他幸存者的总体行为状态",
+          "type": "string"
+        }
+      },
+      "required": [
+        "言语",
+        "行为"
+      ]
+    }
+  },
+  "required": [
+    "世界",
+    "庇护所",
+    "浅见亚美",
+    "相田哲也",
+    "星野琉璃",
+    "早川遥",
+    "早川舞",
+    "藤井雪乃",
+    "中村惠子",
+    "爱宫心爱",
+    "爱宫铃",
+    "桃乐丝・泽巴哈",
+    "何铃",
+    "王静",
+    "康绮月",
+    "薛萍",
+    "楼层其他住户"
+  ],
+  "$defs": {
+    "__schema0": {
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "type": "string"
+        },
+        "健康": {
+          "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "健康更新原因": {
+          "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
+          "type": "string"
+        },
+        "健康状况": {
+          "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
+          "type": "string",
+          "enum": [
+            "健康",
+            "亚健康",
+            "生病/受伤",
+            "重病/濒死",
+            "无",
+            "死亡"
+          ]
+        },
+        "衣着": {
+          "description": "详细描述当前的衣着状态",
+          "type": "string"
+        },
+        "舌唇": {
+          "description": "口腔、嘴唇的状态",
+          "type": "string"
+        },
+        "胸乳": {
+          "description": "胸部的状态",
+          "type": "string"
+        },
+        "私穴": {
+          "description": "私处的详细状态",
+          "type": "string"
+        },
+        "神态样貌": {
+          "description": "面部表情和神态",
+          "type": "string"
+        },
+        "动作姿势": {
+          "description": "身体姿态和动作",
+          "type": "string"
+        },
+        "内心想法": {
+          "description": "第一人称内心独白",
+          "type": "string"
+        },
+        "登场状态": {
+          "description": "值为\"登场\"时显示在UI。角色不出现时设为\"离场\"",
+          "default": "离场",
+          "type": "string",
+          "enum": [
+            "登场",
+            "离场"
+          ]
+        }
+      },
+      "required": [
+        "姓名",
+        "健康",
+        "健康更新原因",
+        "健康状况",
+        "衣着",
+        "舌唇",
+        "胸乳",
+        "私穴",
+        "神态样貌",
+        "动作姿势",
+        "内心想法"
+      ]
+    }
+  }
+}
