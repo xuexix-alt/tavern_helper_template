@@ -1219,7 +1219,9 @@ function parseYamlShopByRegex(text: string): any | null {
 
         // 提取其他字段
         const extractField = (key: string) => {
-          const match = pkgSection.match(new RegExp(`^\\s*${key}:\\s*(.+)$`, 'm'));
+          // 使用字符串拼接避免模板字符串在打包时的转义问题
+          const pattern = '^\\s*' + key + ':\\s*(.+)$';
+          const match = pkgSection.match(new RegExp(pattern, 'm'));
           return match ? match[1].trim().replace(/^["']|["']$/g, '') : null;
         };
 
