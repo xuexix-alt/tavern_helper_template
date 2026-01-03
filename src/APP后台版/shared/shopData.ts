@@ -77,6 +77,68 @@ function logParse(step: string, ok: boolean, detail?: unknown) {
   }
 }
 
+// ================ 依赖可用性检查 ================
+// 用于 iframe 加载时检查酒馆全局变量是否已注入
+
+// 需要检查的依赖列表
+const REQUIRED_DEPENDENCIES = ['getCurrentMessageId', 'getChatMessages'] as const;
+type RequiredDep = (typeof REQUIRED_DEPENDENCIES)[number];
+
+// 检查单个依赖是否可用
+function isDependencyAvailable(name: string): boolean {
+  try {
+    if (name === 'getCurrentMessageId') {
+      return typeof getCurrentMessageId === 'function';
+    }
+    if (name === 'getChatMessages') {
+      return typeof getChatMessages === 'function';
+    }
+    // 可以继续添加其他依赖的检查逻辑
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// 检查所有必需依赖是否可用
+function areAllDependenciesReady(): boolean {
+  return REQUIRED_DEPENDENCIES.every(dep => isDependencyAvailable(dep));
+}
+
+// 等待依赖就绪（适用于 iframe 上下文）
+async function waitForDependencies(timeout: number = 10000): Promise<void> {
+  const startTime = Date.now();
+  const checkInterval = 100; // 每 100ms 检查一次
+
+  while (Date.now() - startTime < timeout) {
+    if (areAllDependenciesReady()) {
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, checkInterval));
+  }
+
+  const missingDeps = REQUIRED_DEPENDENCIES.filter(dep => !isDependencyAvailable(dep));
+  console.warn(`[依赖检查] 等待超时，缺少依赖: ${missingDeps.join(', ')}`);
+}
+
+// 安全获取当前消息 ID
+function safeGetCurrentMessageId(): number | undefined {
+  try {
+    return typeof getCurrentMessageId === 'function' ? getCurrentMessageId() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// 安全获取聊天消息
+function safeGetChatMessages(range: string | number): any[] {
+  try {
+    return typeof getChatMessages === 'function' ? getChatMessages(range) : [];
+  } catch {
+    return [];
+  }
+}
+
 // ================ 裁剪 & 预处理 ================
 function slicePhoneContent(text: string) {
   // 不再裁剪范围，而是直接移除标签本身，防止干扰解析
@@ -122,15 +184,12 @@ function fetchMessagePayload(range?: string | number): { messageId: string; text
   };
 
   if (typeof range !== 'undefined') pushCandidate(range);
-  try {
-    const current = getCurrentMessageId();
-    if (typeof current === 'number' && !Number.isNaN(current)) pushCandidate(current);
-  } catch (err) {
-    console.warn('[fetchMessagePayload] getCurrentMessageId failed', err);
-  }
+
+  // 使用安全函数获取当前消息 ID
+  const current = safeGetCurrentMessageId();
+  if (typeof current === 'number' && !Number.isNaN(current)) pushCandidate(current);
+
   // 关键候选：最后一条消息(-1) 和 开场白(0)
-  // 由于 ShopStore 已经负责了持久化缓存，不再需要盲目向上扫描 10 楼
-  // 且原有的扫描逻辑存在 Bug (遇到第一条非空文本就停止，无论是否包含店铺)，因此移除无效的扫描循环
   pushCandidate(-1);
   pushCandidate(0);
 
@@ -138,11 +197,11 @@ function fetchMessagePayload(range?: string | number): { messageId: string; text
     try {
       let entries: any[] = [];
       if (typeof candidate === 'number' && candidate < 0) {
-        entries = getChatMessages(candidate, { include_swipes: true, role: 'all', hide_state: 'all' } as any);
+        entries = safeGetChatMessages(candidate);
       } else if (candidate === -1) {
-        entries = getChatMessages(-1, { include_swipes: true, role: 'all', hide_state: 'all' } as any);
+        entries = safeGetChatMessages(-1);
       } else {
-        entries = getChatMessages(candidate, { include_swipes: true, role: 'all', hide_state: 'all' } as any);
+        entries = safeGetChatMessages(candidate);
       }
       if (!entries || entries.length === 0) continue;
       const parts: string[] = [];
@@ -1372,3 +1431,12 @@ function normalizeJsonData(data: any): { shops: any[]; packages: any[] } {
   logParse('normalize', true, { rawShops: rawShops.length, shops: result.shops.length, pkgs: result.packages.length });
   return result;
 }
+
+// 导出依赖检查工具函数
+export {
+  waitForDependencies,
+  areAllDependenciesReady,
+  isDependencyAvailable,
+  safeGetCurrentMessageId,
+  safeGetChatMessages,
+};
