@@ -1,0 +1,218 @@
+# MVU 动态提示词规范
+
+MVU 支持在系统提示词/世界书条目中使用 EJS 语法，根据变量值动态发送不同的提示词内容，实现更灵活的叙事控制。
+
+## 核心语法
+
+### 条件判断
+
+```ejs
+<%_ if (条件) { _%>
+条件成立时发送的内容
+<%_ } _%>
+```
+
+### 多条件判断
+
+```ejs
+<%_ if (条件1) { _%>
+条件1成立
+<%_ } else if (条件2) { _%>
+条件2成立
+<%_ } else { _%>
+都不成立
+<%_ } _%>
+```
+
+### 获取变量值
+
+- `getvar('stat_data.路径.到.变量')` - 获取变量值
+- `getvar('stat_data.路径.到.变量', { defaults: 默认值 })` - 带默认值
+
+### 输出内容
+
+- `print('内容')` - 在代码中输出提示词
+- `<%= 表达式 _%>` - 直接将表达式结果填入提示词
+
+---
+
+## 场景示例
+
+### 1. 角色登场状态动态提示词
+
+根据角色登场状态发送不同的描述：
+
+```ejs
+<%_ if (getvar('stat_data.浅见亚美.登场状态') === '登场') { _%>
+【浅见亚美当前在场。她正站在{{user}}身边，表情紧张但带着依赖。健康状况：{{format_message_variable::stat_data.浅见亚美.健康状况}}】
+<%_ } _%>
+
+<%_ if (getvar('stat_data.相田哲也.登场状态') === '登场') { _%>
+【相田哲也当前在场。他表情冷静，镜片后的眼神锐利，正在分析周围情况】
+<%_ } _%>
+```
+
+### 2. 数值分段提示词
+
+根据数值范围发送不同的描述：
+
+```ejs
+<%_
+  const health = getvar('stat_data.浅见亚美.健康');
+  if (health >= 80) {
+    print('【浅见亚美健康状况良好，精神饱满】');
+  } else if (health >= 60) {
+    print('【浅见亚美健康状况一般，有些疲惫但还能坚持】');
+  } else if (health >= 30) {
+    print('【浅见亚美健康状况较差，需要休息或治疗】');
+  } else {
+    print('【浅见亚美健康状况危急，需要紧急救治】');
+  }
+_%>
+```
+
+### 3. 时间段动态提示词
+
+```ejs
+<%_
+const timeStr = getvar('stat_data.世界.时间', { defaults: '早晨' });
+if (timeStr.includes('早晨') || timeStr.includes('早上')) {
+  print('【现在是早晨，阳光透过窗户洒进房间，大家刚刚起床】');
+} else if (timeStr.includes('夜晚') || timeStr.includes('深夜')) {
+  print('【现在是夜晚，外面一片漆黑，气温降至冰点，大家尽量减少外出】');
+}
+_%>
+```
+
+### 4. 地点动态提示词
+
+```ejs
+<%_ if (getvar('stat_data.世界.地址', { defaults: '' }).includes('医院')) { _%>
+【故事发生在一栋废弃医院内。空气中弥漫着消毒水和腐朽混合的怪异气味】
+<%_ } else if (getvar('stat_data.世界.地址', { defaults: '' }).includes('公寓')) { _%>
+【故事发生在星穹国际公寓20层。走廊里充满了绝望的呼喊和争夺物资的喧闹声】
+<%_ } _%>
+```
+
+### 5. 动态角色处理
+
+```ejs
+<%_
+const tempNpc = getvar('stat_data.临时NPC');
+if (tempNpc && tempNpc.登场状态 === '登场') {
+  const npcName = tempNpc.姓名 || '临时访客';
+  print(`【${npcName}当前在场。${tempNpc.神态样貌 || ''} ${tempNpc.内心想法 || ''}】`);
+}
+_%>
+```
+
+### 6. 根据天数动态调整提示词
+
+```ejs
+<%_
+const dayCount = getvar('stat_data.世界.末日天数', { defaults: 0 });
+const shelterLevel = getvar('stat_data.庇护所.庇护所等级', { defaults: 1 });
+
+if (dayCount <= 3) {
+  print('【暴雪刚刚降临三天，幸存者们还在尝试联系外界、求救。】');
+} else if (dayCount <= 7) {
+  print('【一周过去，救援无望。物资开始紧张，邻居之间的矛盾加剧。】');
+} else if (dayCount <= 14) {
+  print('【两周过去，庇护所的重要性凸显。与外界的联系彻底中断。】');
+} else {
+  print(`【末日已经过去${dayCount}天，长期的生存压力考验着每个人的意志。】`);
+}
+
+if (shelterLevel >= 3) {
+  print(`【庇护所已经升级到Lv${shelterLevel}，成为了这一带的希望之地。】`);
+} else if (shelterLevel >= 2) {
+  print(`【庇护所已经升级到Lv${shelterLevel}，安全性有所提升。】`);
+} else {
+  print('【庇护所还是Lv1，需要尽快升级以应对生存挑战。】');
+}
+_%>
+```
+
+### 7. 检测开局类型
+
+```ejs
+<%_
+const sceneType = getvar('stat_data.世界.场景类型', { defaults: 'default' });
+
+if (sceneType === 'start') {
+  print('【当前处于游戏初期阶段 - 永恒暴雪刚刚降临】');
+} else if (sceneType === 'middle') {
+  print('【当前处于游戏中期的物资匮乏阶段 - 生存压力增大】');
+} else if (sceneType === 'end') {
+  print('【当前处于游戏后期 - 关键抉择时刻，命运的分歧点】');
+} else {
+  print('【游戏进行中 - 根据环境变化调整生存策略】');
+}
+_%>
+```
+
+---
+
+## 不同开局设置不同变量初始值
+
+MVU 提供了 `<initvar>...</initvar>` 包裹机制来实现不同开局设置不同的变量初始值。
+
+### 使用方式
+
+在开局消息中使用 `<initvar>...</initvar>` 包裹该开局对应的变量初始值：
+
+```yaml
+<UpdateVariable>
+<initvar>
+世界:
+  日期: 末日纪元，9527年12月10日
+  时间: 早晨 - 08:30
+浅见亚美:
+  健康: 90
+  健康状况: 亚健康
+  登场状态: 登场
+相田哲也:
+  健康: 95
+  健康状况: 健康
+  登场状态: 登场
+</initvar>
+</UpdateVariable>
+```
+
+### 规则说明
+
+1. `[initvar].yaml` 是对所有开局的"保底"变量初始化
+2. 开局消息中的 `<initvar>...</initvar>` 是单独为某个开局设置变量初始化
+3. 如果开局中有 `<initvar>...</initvar>`，会完全忽略 `[initvar].yaml`
+4. 反之，如果开局中没有 `<initvar>...</initvar>`，则使用 `[initvar].yaml`
+
+### 示例：开局1 vs 开局2
+
+```yaml
+# 开局1：暴雪初临（默认）
+<UpdateVariable>
+<initvar>
+世界:
+  日期: 末日纪元，9527年12月10日
+  时间: 早晨 - 08:30
+  末日天数: 3
+浅见亚美:
+  登场状态: 登场
+</initvar>
+</UpdateVariable>
+
+# 开局2：一周后
+<UpdateVariable>
+<initvar>
+世界:
+  日期: 末日纪元，9527年12月17日
+  时间: 深夜 - 23:30
+  末日天数: 10
+浅见亚美:
+  健康: 70
+  健康状况: 生病/受伤
+  登场状态: 登场
+  内心想法: 又一天过去了...物资越来越少了...
+</initvar>
+</UpdateVariable>
+```

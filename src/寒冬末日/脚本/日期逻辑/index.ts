@@ -34,7 +34,7 @@ $(async () => {
 
   // 监听变量更新结束事件
   // @ts-ignore
-  Mvu.eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (new_variables, old_variables) => {
+  eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (new_variables, old_variables) => {
     // 1. 获取新旧时间
     const oldTimeStr = _.get(old_variables, 'stat_data.世界.时间', '');
     const newTimeStr = _.get(new_variables, 'stat_data.世界.时间', '');

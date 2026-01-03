@@ -3,6 +3,12 @@
   "type": "object",
   "properties": {
     "世界": {
+      "default": {
+        "地址": "",
+        "日期": "",
+        "时间": "",
+        "末日天数": 0
+      },
       "type": "object",
       "properties": {
         "地址": {
@@ -18,21 +24,27 @@
           "type": "string"
         },
         "末日天数": {
-          "description": "自“永恒暴雪”降临以来的总天数",
+          "description": "自\"永恒暴雪\"降临以来的总天数",
           "type": "number"
         }
-      },
-      "required": [
-        "地址",
-        "日期",
-        "时间",
-        "末日天数"
-      ]
+      }
     },
     "庇护所": {
+      "default": {
+        "庇护所等级": 1,
+        "今日投掷点数": "",
+        "距离上次升级": "",
+        "庇护所能力": [],
+        "可扩展区域": {
+          "医疗翼": "未解锁",
+          "制造工坊": "未解锁",
+          "载具格纳库": "未解锁"
+        }
+      },
       "type": "object",
       "properties": {
         "庇护所等级": {
+          "default": 1,
           "type": "number",
           "maximum": 10
         },
@@ -45,7 +57,8 @@
           "type": "string"
         },
         "庇护所能力": {
-          "description": "已激活的庇护所能力列表",
+          "description": "已激活的庇护所能力列表。请严格参照世界书条目<庇护所升级能力>添加新能力。",
+          "default": [],
           "type": "array",
           "items": {
             "type": "object",
@@ -62,14 +75,257 @@
               "desc"
             ]
           }
+        },
+        "可扩展区域": {
+          "description": "记录庇护所可扩展区域的解锁状态",
+          "default": {
+            "医疗翼": "未解锁",
+            "制造工坊": "未解锁",
+            "载具格纳库": "未解锁"
+          },
+          "type": "object",
+          "properties": {
+            "医疗翼": {
+              "description": "等级3解锁",
+              "default": "未解锁",
+              "type": "string"
+            },
+            "制造工坊": {
+              "description": "等级4解锁",
+              "default": "未解锁",
+              "type": "string"
+            },
+            "载具格纳库": {
+              "description": "等级7解锁",
+              "default": "未解锁",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "房间": {
+      "default": {
+        "玄关": {
+          "临时客房A入住者": [],
+          "临时客房B入住者": []
+        },
+        "核心区": {
+          "主卧室使用者": [],
+          "主浴室使用者": []
+        },
+        "楼层房间": {
+          "楼层20房间": {},
+          "楼层19房间": {}
         }
       },
-      "required": [
-        "庇护所等级",
-        "今日投掷点数",
-        "距离上次升级",
-        "庇护所能力"
-      ]
+      "type": "object",
+      "properties": {
+        "玄关": {
+          "description": "玄关区域房间状态",
+          "default": {
+            "临时客房A入住者": [],
+            "临时客房B入住者": []
+          },
+          "type": "object",
+          "properties": {
+            "临时客房A入住者": {
+              "description": "临时客房A入住者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "临时客房B入住者": {
+              "description": "临时客房B入住者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "核心区": {
+          "description": "核心区域房间状态",
+          "default": {
+            "主卧室使用者": [],
+            "主浴室使用者": []
+          },
+          "type": "object",
+          "properties": {
+            "主卧室使用者": {
+              "description": "主卧室使用者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "主浴室使用者": {
+              "description": "主浴室使用者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "楼层房间": {
+          "description": "楼层房间状态",
+          "default": {
+            "楼层20房间": {},
+            "楼层19房间": {}
+          },
+          "type": "object",
+          "properties": {
+            "楼层20房间": {
+              "description": "20层各房间状态，key为房间号",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "入住者": []
+                },
+                "type": "object",
+                "properties": {
+                  "入住者": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "入住者"
+                ]
+              }
+            },
+            "楼层19房间": {
+              "description": "19层各房间状态，key为房间号",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "入住者": []
+                },
+                "type": "object",
+                "properties": {
+                  "入住者": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "入住者"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "主线任务": {
+      "default": {
+        "当前阶段": "阶段一：秩序的萌芽",
+        "阶段目标": [
+          "肃清20、19、21层的敌对幸存者",
+          "庇护至少3个核心女性角色或家庭",
+          "完成一个公寓内部的情报碎片任务"
+        ],
+        "目标完成状态": {
+          "0": false,
+          "1": false,
+          "2": false
+        },
+        "情报碎片": {}
+      },
+      "type": "object",
+      "properties": {
+        "当前阶段": {
+          "description": "主线任务的当前阶段名称",
+          "default": "阶段一：秩序的萌芽",
+          "type": "string"
+        },
+        "阶段目标": {
+          "description": "当前阶段需要达成的目标列表",
+          "default": [
+            "肃清20、19、21层的敌对幸存者",
+            "庇护至少3个核心女性角色或家庭",
+            "完成一个公寓内部的情报碎片任务"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "目标完成状态": {
+          "description": "目标完成状态，key为索引字符串（0/1/2...），value为true表示完成",
+          "default": {
+            "0": false,
+            "1": false,
+            "2": false
+          },
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "情报碎片": {
+          "description": "已解锁的情报碎片",
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "default": {
+              "编号": "",
+              "描述": "",
+              "价值": "",
+              "风险": "",
+              "状态": "未探索"
+            },
+            "type": "object",
+            "properties": {
+              "编号": {
+                "type": "string"
+              },
+              "描述": {
+                "type": "string"
+              },
+              "价值": {
+                "type": "string"
+              },
+              "风险": {
+                "type": "string"
+              },
+              "状态": {
+                "default": "未探索",
+                "type": "string",
+                "enum": [
+                  "未探索",
+                  "已探索",
+                  "已完成"
+                ]
+              }
+            }
+          }
+        }
+      }
     },
     "浅见亚美": {
       "$ref": "#/$defs/__schema0"
@@ -113,11 +369,18 @@
     "薛萍": {
       "$ref": "#/$defs/__schema0"
     },
+    "小泽花": {
+      "$ref": "#/$defs/__schema0"
+    },
     "临时NPC": {
       "description": "当有临时NPC登场时使用，离场时设为undefined或重置",
       "$ref": "#/$defs/__schema0"
     },
     "楼层其他住户": {
+      "default": {
+        "言语": "",
+        "行为": ""
+      },
       "type": "object",
       "properties": {
         "言语": {
@@ -128,41 +391,53 @@
           "description": "其他幸存者的总体行为状态",
           "type": "string"
         }
-      },
-      "required": [
-        "言语",
-        "行为"
-      ]
+      }
     }
   },
-  "required": [
-    "世界",
-    "庇护所",
-    "浅见亚美",
-    "相田哲也",
-    "星野琉璃",
-    "早川遥",
-    "早川舞",
-    "藤井雪乃",
-    "中村惠子",
-    "爱宫心爱",
-    "爱宫铃",
-    "桃乐丝・泽巴哈",
-    "何铃",
-    "王静",
-    "康绮月",
-    "薛萍",
-    "楼层其他住户"
-  ],
   "$defs": {
     "__schema0": {
+      "default": {
+        "姓名": "",
+        "健康": 100,
+        "健康更新原因": "",
+        "健康状况": "健康",
+        "衣着": "",
+        "舌唇": "",
+        "胸乳": "",
+        "私穴": "",
+        "神态样貌": "",
+        "动作姿势": "",
+        "内心想法": "",
+        "登场状态": "离场"
+      },
       "type": "object",
       "properties": {
         "姓名": {
           "type": "string"
         },
+        "关系": {
+          "type": "string",
+          "enum": [
+            "拒绝",
+            "交易",
+            "顺从",
+            "忠诚",
+            "性奴"
+          ]
+        },
+        "关系倾向": {
+          "type": "string",
+          "enum": [
+            "拒绝",
+            "交易",
+            "顺从",
+            "忠诚",
+            "性奴"
+          ]
+        },
         "健康": {
           "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
+          "default": 100,
           "type": "number",
           "minimum": 0,
           "maximum": 100
@@ -173,6 +448,7 @@
         },
         "健康状况": {
           "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
+          "default": "健康",
           "type": "string",
           "enum": [
             "健康",
@@ -220,20 +496,7 @@
             "离场"
           ]
         }
-      },
-      "required": [
-        "姓名",
-        "健康",
-        "健康更新原因",
-        "健康状况",
-        "衣着",
-        "舌唇",
-        "胸乳",
-        "私穴",
-        "神态样貌",
-        "动作姿势",
-        "内心想法"
-      ]
+      }
     }
   }
 }

@@ -1,6 +1,5 @@
 ---
 description: 当需要编写脚本时, 你应该参考本文件
-alwaysApply: false
 ---
 # 脚本
 
@@ -18,7 +17,7 @@ alwaysApply: false
 
 ## 脚本 iframe 样式与酒馆网页样式的区别
 
-由于脚本运行在 iframe 中, 项目中所使用的 style 仅会应用于 iframe 内而不会应用到整个酒馆网页. 因此, 当通过脚本向酒馆网页添加 DOM 时 (无论是通过 jquery 添加, 还是通过 vue 挂载), 你都需要将样式复制到酒馆网页的 `<head>` 中. 为此, 你可以用 `src/util/script.ts` 中定义好了的工具函数:
+由于脚本运行在 iframe 中, 项目中所使用的 style 仅会应用于 iframe 内而不会应用到整个酒馆网页. 因此, 当通过脚本向酒馆网页添加 DOM 时 (无论是通过 jquery 添加, 还是通过 vue 挂载), 你都需要将样式复制到酒馆网页的 `<head>` 中:
 
 ```typescript
 export function teleport_style() {
@@ -47,4 +46,29 @@ export function deteleport_style() {
 eventOn(getButtonEvent('按钮名'), () => {
   console.log('按钮被点击了');
 });
+```
+
+## 第三方库和CDN引用
+
+脚本同样支持通过CDN引用外部资源.
+
+**国内访问优化**：
+- 使用 `https://testingcf.jsdelivr.net` 镜像确保国内网络环境可正常访问
+- 不推荐使用 `https://cdn.jsdelivr.net`（国内可能无法访问）
+
+**通过pnpm添加第三方库（推荐）**：
+```bash
+pnpm add lodash
+pnpm add gsap
+```
+模板已配置webpack，会自动将第三方库转换为CDN链接，避免重复打包。
+
+**手动引用CDN资源**：
+如果需要直接引用CDN资源，请使用：
+```typescript
+// ✅ 正确：使用国内可访问的镜像
+import something from 'https://testingcf.jsdelivr.net/npm/package-name@version/+esm';
+
+// ❌ 错误：可能无法在国内访问
+import something from 'https://cdn.jsdelivr.net/npm/package-name@version/+esm';
 ```

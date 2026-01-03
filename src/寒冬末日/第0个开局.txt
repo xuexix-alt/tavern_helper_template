@@ -1,0 +1,64 @@
+<content>
+<div style="background-color: #0d1117; color: #e6edf3; padding: 30px; border: 1px solid #30363d; border-radius: 12px; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 20px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <h1 style="color: #58a6ff; text-align: center; border-bottom: 2px solid #21262d; padding-bottom: 15px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px;">
+        ❄️ 寒冬末日：星穹秩序 ❄️
+    </h1>
+
+    <div style="background: linear-gradient(90deg, rgba(88,166,255,0.1) 0%, rgba(0,0,0,0) 100%); padding: 15px; border-left: 4px solid #58a6ff; margin-bottom: 25px;">
+        <p style="margin: 0; font-style: italic; color: #8b949e;">
+            “当蓝星被永恒的暴雪吞噬，文明在-50℃的极寒中支离破碎。你，作为‘伊甸’庇护所的唯一主宰，将在这片白色荒原上，用权力、科技与人心，重塑世界的秩序。”
+        </p>
+    </div>
+
+    <h2 style="color: #79c0ff; border-left: 4px solid #79c0ff; padding-left: 15px; margin-top: 30px;">💎 玩法特色</h2>
+    <ul style="list-style: none; padding-left: 0;">
+        <li style="margin-bottom: 15px;">
+            <strong style="color: #aff5b4;">📡 伊甸智能汇报系统：</strong>
+            每天清晨，庇护所AI“伊甸”将准时为你递交系统简报。不仅包含主线任务的实时进度，还会从旧文明的残骸中解析出宝贵的<strong>[情报碎片]</strong>。每一个情报都可能导向丰厚的资源或致命的陷阱。
+        </li>
+        <li style="margin-bottom: 15px;">
+            <strong style="color: #aff5b4;">💖 动态情感与关系链：</strong>
+            这里没有僵化的数值。从最初的<strong>【拒绝】</strong>到利益驱动的<strong>【交易】</strong>，再到彻底身心臣服的<strong>【忠诚】</strong>。每一位核心角色都有独特的灵魂，你的每一次对话和物资分配，都在悄然改变她们的内心想法。
+        </li>
+        <li style="margin-bottom: 15px;">
+            <strong style="color: #aff5b4;">🏗️ 庇护所科技演进：</strong>
+            从1级的基本生存到10级的生态穹顶。解锁万象合成终端、全天候侦察网络、甚至是足以改写肉体机能的医疗舱。
+        </li>
+    </ul>
+
+    <h2 style="color: #ff7b72; border-left: 4px solid #ff7b72; padding-left: 15px; margin-top: 30px;">⚠️ 注意事项 (生存指南)</h2>
+    <div style="background-color: #161b22; padding: 15px; border-radius: 8px; border: 1px dashed #484f58; margin-bottom: 25px;">
+        <ol style="padding-left: 20px;">
+            <li style="margin-bottom: 10px;">
+                <span style="color: #ffa657;"><strong>永久损失：</strong></span> 核心角色并非无限刷新的资源。一旦死亡，将无法复活，意味着相关剧情线的永久终结。
+            </li>
+            <li style="margin-bottom: 10px;">
+                <span style="color: #ffa657;"><strong>致命环境：</strong></span> 严禁无防护接触<strong>超噬性雪晶</strong>。在没有高级载具前，外界即是消融血肉的禁区。
+            </li>
+            <li style="margin-bottom: 10px;">
+                <span style="color: #ffa657;"><strong>黑盒效应：</strong></span> 你的庇护所是绝对隔绝的。外界无法探测内部。
+            </li>
+        </ol>
+    </div>
+
+    <h2 style="color: #d2a8ff; border-left: 4px solid #d2a8ff; padding-left: 15px; margin-top: 30px;">🚀 选择你的起点</h2>
+    <div style="background-color: #1c2128; padding: 20px; border-radius: 8px; border: 1px solid #444c56;">
+        <p style="margin-bottom: 15px;">
+            <strong style="color: #f0883e;">【硬核生存开局】</strong>：选择 <strong>Lv1 基础开局</strong> (第一个开局)，从物资匮乏的第一天开始，体验步步为营的秩序重建。
+        </p>
+        <p style="margin: 0;">
+            <strong style="color: #f0883e;">【普通开局】</strong>：选择 <strong>Lv3 奢华开局</strong> (第二个开局)，你已是星穹公寓的隐秘霸主，直接开启掌控模式。
+        </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px; border-top: 1px solid #21262d; padding-top: 20px;">
+        <p style="color: #ff7b72; font-weight: bold; font-size: 1.1em; background-color: rgba(255,123,114,0.1); padding: 10px; border-radius: 5px;">
+            📢 提醒：本楼层仅为玩法展示，不进行实际游玩。
+        </p>
+        <p style="color: #8b949e; margin-top: 10px;">
+            >>> 请<strong>向右滑动 (右滑切换 Swipe)</strong> 本消息，选择你心仪的开局档位开始游玩 <<<
+        </p>
+    </div>
+</div>
+</content>
+

@@ -1,8 +1,68 @@
-## 图片生成核心规则 ##
-- **图片总量与构成**：每次回复必须生成固定 3张与正文剧情相关的图片，总计3张。
-- **图片布局规则**：3张剧情图片必须分散插入在正文的段落之间，每一张图片都应紧跟在它所描绘的剧情段落之后，实现图文穿插的效果。
-- **通用格式与内容规则**：
-    - 每一张图片（包括剧情图片）都必须使用 <image>###标签包裹末尾以###</image>结束。
-    - 每一张 ### 标签内部，都必须包含一个 `【图片标题】`。剧情图片的标题用于概括画面，彩蛋图片的标题需遵循其专用格式。
-    - 详细的提示词（Prompt）生成方法（如 Scene Composition, Character Prompt 等）需严格遵守`<imageTag>`规则。
-    - 涉及私密部位暴露的画面，提示词必须添加 `nsfw` 前缀。
+<画图特色关键词参考(注:仅作为正文tag生成参考)>
+
+使用<image>标签插入图片tag
+
+猫猫姿势:all fours,paw pose,tail raised,arched back
+背部描述:bare back,shoulder blades,median furrow,
+揉胸侧乳特写:{{grabbing from behind}},grabbing another's breasts,full-face blush,sweet,steaming body,sideboob,arms up,no bra,wet skin,shiny skin,covered npples,from side,leash,saliva trail,shy,looking away,arm behind head
+遮乳头胸部特写:ollarbone,blush,self fondle,bed sheet,nude,bed,large breasts,covering self's breasts,solo focus,close-up,front,
+躺在床上胸部特写:nipples,large breasts,blush,white shirt,upper body,open shirt,covering mouth,sweat,off shoulder,bare shoulders,lying
+湿透短背心凑近胸部特写:{{{shiny skin,oily skin,thick thigh},{breast focus,from above},leaning forward,standing,sweat,underboob,sideboob,white crop top,wet,tank top,clothes writing,{{shiny skin}},cleavage,blue visor cap,white shorts,highleg panties,covered nipples,
+脱内裤仰视视角:underwear only,white bra,white panties,bow bra,bow panties,from below,looking at viewer,looking down,pulled by self
+走中仰视屁股特写:shiny skin,expressionless,standing,{{from below,from behind,ass focus,dynamic angle}},black pantyhose,ankle,outdoors,dynamic pose,walking
+后仰视学生装胖次:striped panties,black thighhighs,skirt,plaid skirt,pleated skirt,hair ribbon,upskirt,serafuku,school bag,looking back,cameltoe,ass,from below,pantyshot
+站立单脚仰视足底:1girl,black thighhighs,see-through thighhighs,no shoes,blush,standing on one leg,pov,{one leg lift},feet,{{form below looking down}},facing viewer,{{foot focus}},toes,{feet soles},put feet on viewer's face,underwear,looking at viewer
+湿身亲吻:1girl,{{1boy}},{{{{{close-up,crying,kiss,hug}}}}},saliva,drooling,standing,oversized shirt,half-closed eyes,sparkle,soft shadows,soft light,cinematic,day,dappled sunlight,{{{{shiny skin,wet skin,wet clothes,oil skin}}}},linea alba,
+亲吻特写:1girl,1boy,blush,close-up,{{french kiss}},hand on another's head,saliva,tongue out
+后入回首委屈表情特写:{upper body},bent over,{bare back,back,from above,from behind},looking at viewer,@_@,tears,wavy mouth,{big hands},trembling,motion lines,pov hands,torso grab,nude
+更衣自拍:{selfie},nude,{{{holding clothes}}},covering breasts,indoors,living room,upper body,groin,blush,{mirror},viewfinder,shiny skin
+自慰基础:{pussy juice,vaginal fingering,touching own pussy,female masturbate},nipples,anus
+第一人称女性自慰:{{pov breasts}},female pov,head out of frame,close-up,after masturbation,female masturbation,pussy juice,pussy juice on fingers,pussy juice stain on panties,lying,on back,black underwear,panty pull,cleavage,clothes pull,knees together feet apart,open clothes,sweat,steaming body,wet body,indoors
+掀开衣服露出胸部:close-up,breasts squeezed together,covering own mouth,looking to the side,nipples,nose blush,shirt,short sleeves,speech bubble,upper body,shirt lift
+裸体围裙做饭:back,nose blush,sweatdrop,no bra,sideboob,hanging breast,panties,side-tie panties,white apron,oven mitts,gloves,holding cooking pot,looking back,looking at viewer,hot soup,steam,window,cupboard,kitchen,cooking bench,sunset,golden light,sweat,shiny skin,buttocks,white thighhighs,cowboy shot,pov,from side,
+坐在勃起裤子上:stomach bulge,about to be raped,girl on top
+裸体电脑游戏:[shiny skin],black gloves,{nude},sit on chair,headphones,computers,esports chairs,play games,drinking glass,looking computer,from side,white socks
+脱衣:{{{large breasts}}},wet skin,shiny skin,{dress pull},clothes lift,undressing,lifted by self,no bra,bouncing breasts,breast drop,navel,flashing,underboob,indoor,backlight
+乙醚毛巾捂嘴:{{{{alley,night,hand to another's mouth,close up,macro,cinematic angle,face focus,cover mouth with a towel}}}},light frown,{{hug from behind,grabbing another's mouth,grabbing from behind}},{{{{despair,tears,horrified,surprised}},faceless male,arm grab,upper body,teras,{{hug,blurry background}},
+裸浴巾背后揉胸:{{{grabbing hard from behind}},faceless male,behind another,female orgasm,wet,wet towel,looking at viewer,{{{naked towel}}},steam
+捏乳头：{{close-up,nipple pinch,nipple focus,nipple tweak,from side}},full-face blush,{{{head out of frame}}}
+睡衣偷袭:{{{dinosaur doll costume}}},{{1girl,1boy}},{{{pov hand open clothes,lifted by another}}},cowboy shot,upper body,{{inside,lying on the bed,asleep}},anime style,bear print underwear,eyes closed,thin body,sexy,{tall body},high height,
+骑乘位但是只贴着小穴无插入:bedroom,indoors,on bed,wide shot,pov,{{{2girls}}},1boy,{{{{ffm threesome,bisexual female,group sex}}}},{{girl on top,on behind}},threesome,open mouth,shiny skin,harem,penis,nipples,{erection,spread legs},nude,pussy juice,wet
+地牢监禁:curled up,hugging own legs,yellow light,inside prison,dirty,chain,handcuffs,yellow light,hand lantern,torn clothes,brown dirty clothes,blurry foreground,rock
+战败侵犯:1girl,1boy,cum,underwear,upside-down,penis,vaginal,sex,cum in pussy,pussy,navel,boots,spread legs,nipples,hat removed,petite,bottomless,axe,sword,rape,grass,lying,empty eyes,helmet,solo focus
+百合面对身体与小穴相贴:rating explicit,2girls,pussy,nude,anus,yuri,on back,lying,spread legs,looking back,from behind,looking at viewer,on bed,{{ass stacking,pussy sandwiched}}
+双人乳交:cooperative paizuri,fellatio,penis,saliva trail,cum trail,tongue out,licking,asymmetrical docking,breasts press,
+双女协同口交:{{{{2girls}}},[nsfw],{{{looking at cock,looking at penis}}},{{{ heart-shaped pupils}}},slit pupils [cooperative paizuri,fellatio,penis,saliva trail,cum trail,tongue out,licking,collar,tears,asymmetrical docking,breasts press
+熟睡口交:1girl,1boy,{{{from above}}},close up,{{{{fellatio,penis on side}}}},{{lying on side}},{sleep,zzz},on bed,hand on another's
+head,close eyes,pillow,clothed female nude male,penis,solo focus  ,
+桌下口交:1girl,1boy,pov across table,{man sitting,man spread legs},oral,{{{{stealth fellatio,under table,hiding,head under
+table,hidden under the table}}}}},{{fellatio}},{table on top,girl on bottom},[pov],from abov,penis,penis outside,
+,,
+蹲姿骑乘位：1girl,1boy,pov,{{squatting cowgirl position}},{arm support},penis,sex,motion lines ,
+口交:1girl,1boy,pov,{fellatio},penis
+口爆:1girl,1boy,pov,fellatio,{{{deepthroat,head down,excessive cum}}},cum,{{{{cum in mouth,cum in nose}}}},{{cheek
+bulge}},grabbing another's head,teary-eyed,surprised,constricted pupils
+舔肉棒:nsfw,1girl,1boy,pov,{{{licking penis,penis on face}}},{{penis grab}},large penis,tongue out,penis,solo focus,
+,,,detailed tongue,
+骑乘口交:{{closed eyes,full body}},{{{{straddling paizuri,paizuri}}}}
+喝奶口交:{{{multiple boys,multiple penis,two-handed handjob, double handjob}}},{{fellatio,oral}}
+女上位手交:1girl,1boy,pov,{{girl on top,handjob}},sitting on person,large penis  ,
+足交:footjob, {{two-footed footjob}}, glansjob,from below, foreshortening, 1girl, sitting on bed,pov, penis, legs, knees
+apart feet together, foot focus, toe scrunch, toes, veiny penis, raised eyebrows,parted lips, looking down, erection, trembling, clothed female nude male,
+乳交:nsfw,{1girl},{1boy},breasts squeezed together,{{paizuri}},(breasts out),sit,nipple,penis,
+双手抓胸:1girl,pov hand,{{breasts grab,grabbing another's breasts,grab both breasts,two hands on another's
+breasts}},wearing clothes,standing,  ,
+第一视角后入:1girl,1boy,from above,first person,{{sex from behind,grabbing another's ass}},{ass ripple,facing away},on
+bed,penis,pussy,speed lines
+火车便当:1girl,1boy,nsfw,{{reverse suspended congress}},{legs grab,vaginal sex},standing,sex from behind,spread
+legs,penis,pussy
+睡奸:nsfw,{1girl},{1boy},{{sleep}},{close eyes},zzz,fast asleep,lying on bed,{{sleep_molestation}},m_shaped_legs,{{girl hands
+spread out}},{man leg lift},from above,pillow,clothed female nude male,{spread_legs},penis,sex,speed lines,,
+正常位:1girl,1boy,{{holding another's wrist}},{missionary},penis,sex,lying,speed lines,pussy,,
+坐位:1boy,1girl,{fron view},looking at viewer,{{{reverse upright straddle}}},{{sitting on lap,sex from
+behind}},{front-to-back,clothed female nude male},spread legs,faceless male,torso grab,sex,pussy,penis,solo
+focus,
+舔小穴:{1girl 1boy},nsfw,smile,{{{{{{cunnilingus}}}}}},{lick pussy},hands behind your back,{{pussy in face}},clothed female nude
+male,(between thighs),sitting on face,((no pants)),faceless male,pussy,
+
+</画图特色关键词参考(注:仅作为正文tag生成参考)>

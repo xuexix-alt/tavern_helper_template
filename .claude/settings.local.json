@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm dump:*)"
+      "Bash(pnpm dump:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)",
+      "Bash(pnpm build)"
     ]
   }
 }

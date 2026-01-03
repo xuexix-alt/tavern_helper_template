@@ -1,6 +1,7 @@
 <template>
   <main id="eden-main-container">
     <WorldSection />
+    <MissionSection />
     <StorySection :content="content" />
     <ShelterSection />
     <CharactersSection />
@@ -12,6 +13,7 @@
 <script setup lang="ts">
 import CharactersSection from './components/CharactersSection.vue';
 import ChoicesSection from './components/ChoicesSection.vue';
+import MissionSection from './components/MissionSection.vue';
 import OtherResidentsSection from './components/OtherResidentsSection.vue';
 import ShelterSection from './components/ShelterSection.vue';
 import StorySection from './components/StorySection.vue';

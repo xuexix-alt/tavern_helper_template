@@ -10,7 +10,7 @@
             class="tab-button"
             :class="{ active: active_character_key === key }"
             type="button"
-            @click="active_character_key = key"
+            @click="setActiveCharacter(key)"
           >
             {{ getCharacterDisplayName(key) }}
           </button>
@@ -18,6 +18,7 @@
 
         <div
           v-for="key in active_character_keys"
+          v-show="active_character_key === key"
           :key="`${key}:tab`"
           class="tab-content"
           :class="{ active: active_character_key === key }"
@@ -99,6 +100,7 @@ const CHARACTER_ORDER = [
   '王静',
   '康绮月',
   '薛萍',
+  '小泽花',
 ] as const;
 
 const store = useDataStore();
@@ -106,19 +108,33 @@ const store = useDataStore();
 const active_character_keys = computed<CharacterKey[]>(() => {
   const keys: CharacterKey[] = [];
 
+  // 1. 先添加预设角色（按固定顺序）
   CHARACTER_ORDER.forEach(key => {
     const char = store.data[key];
-    if (char.登场状态 === '登场') keys.push(key);
+    if (char?.登场状态 === '登场') keys.push(key);
   });
 
-  if (store.data.临时NPC?.登场状态 === '登场') {
-    keys.push('临时NPC');
-  }
+  // 2. 再添加动态角色（不在预设列表中的角色）
+  const dynamicKeys: CharacterKey[] = [];
+  Object.keys(store.data).forEach(key => {
+    if (
+      key !== '世界' &&
+      key !== '庇护所' &&
+      key !== '楼层其他住户' &&
+      !CHARACTER_ORDER.includes(key as any) &&
+      key !== '临时NPC'
+    ) {
+      const char = store.data[key as CharacterKey];
+      if (char?.登场状态 === '登场') {
+        dynamicKeys.push(key as CharacterKey);
+      }
+    }
+  });
 
-  return keys;
+  return [...keys, ...dynamicKeys];
 });
 
-const active_character_key = useLocalStorage<CharacterKey | null>('eden_status_bar:active_character', null);
+const active_character_key = ref<CharacterKey | null>(null);
 
 watch(
   active_character_keys,
@@ -143,6 +159,10 @@ function getCharacter(key: CharacterKey) {
 function getCharacterDisplayName(key: CharacterKey) {
   const char = getCharacter(key);
   return char?.姓名 ?? key;
+}
+
+function setActiveCharacter(key: CharacterKey) {
+  active_character_key.value = key;
 }
 
 function healthPercent(key: CharacterKey) {
