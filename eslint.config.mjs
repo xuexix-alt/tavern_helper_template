@@ -77,5 +77,17 @@ export default [
     },
   },
   eslintConfigPrettier,
-  globalIgnores(['dist/**', 'node_modules/**', 'eslint.config.mjs', 'postcss.config.js', 'webpack.config.ts']),
+  globalIgnores([
+    'dist/**',
+    'node_modules/**',
+    'eslint.config.mjs',
+    'postcss.config.js',
+    'webpack.config.ts',
+    // Generated/bundled tooling scripts (not part of browser runtime code quality).
+    'tavern_sync.mjs',
+    '同步脚本/**',
+    'scripts/**',
+    // Template sources shipped with the repo (not part of current workspace code).
+    '初始模板/**',
+  ]),
 ];

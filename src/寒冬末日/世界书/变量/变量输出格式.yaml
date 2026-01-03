@@ -43,7 +43,10 @@ format: |-
                - **Appearance**: Update `衣着` etc. if interaction occurred.
                - **Presence Check**: Change to "离场" if they left the scene.
              - **For INACTIVE characters ("离场" state)**:
-               - **Health ONLY**: If time passed > 6 hours, slightly decrease health (Hunger/Cold -1~2) to simulate background survival.
+               - **Health UPDATE (CRITICAL - DO NOT SKIP)**: ⚠️ OFF-SCREEN CHARACTERS STILL NEED HEALTH TRACKING. Apply background survival simulation:
+                 * Time passed > 6 hours: Health -1~3 (hunger/cold/stress)
+                 * Severe conditions (e.g., outdoor, injured): Health -5~10
+                 * **REASON**: Returning characters must have plausible health states; ignoring this breaks immersion.
                - **Presence Check**: Change to "登场" only if they explicitly entered the scene.
                - **Skip**: Do NOT update `内心想法`, `衣着`, `动作姿势` to save context.
 

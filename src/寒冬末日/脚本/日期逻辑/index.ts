@@ -10,6 +10,14 @@ function parseTimeToMinutes(timeStr: string): number {
   return 0;
 }
 
+declare const waitGlobalInitialized: (name: 'Mvu') => Promise<void>;
+declare const Mvu: {
+  events: {
+    VARIABLE_UPDATE_ENDED: string;
+  };
+};
+declare const eventOn: (event_type: string, listener: (...args: any[]) => void) => { stop: () => void };
+
 // 解析日期字符串 (格式: "末日纪元，XXXX年XX月XX日")
 function parseDate(dateStr: string): Date {
   if (!dateStr) return new Date();
@@ -29,11 +37,9 @@ function formatDate(date: Date): string {
 }
 
 $(async () => {
-  // @ts-ignore
   await waitGlobalInitialized('Mvu');
 
   // 监听变量更新结束事件
-  // @ts-ignore
   eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (new_variables, old_variables) => {
     // 1. 获取新旧时间
     const oldTimeStr = _.get(old_variables, 'stat_data.世界.时间', '');
