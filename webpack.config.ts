@@ -180,10 +180,11 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     .readFileSync(path.join(import.meta.dirname, entry.script), 'utf-8')
     .includes('@obfuscate');
   const script_filepath = path.parse(entry.script);
+  const is_ui_entry = entry.html !== undefined;
 
   return (_env, argv) => ({
     experiments: {
-      outputModule: true,
+      outputModule: !is_ui_entry,
     },
     devtool: argv.mode === 'production' ? 'source-map' : 'eval-source-map',
     watchOptions: {
@@ -213,9 +214,8 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       asyncChunks: true,
       clean: true,
       publicPath: '',
-      library: {
-        type: 'module',
-      },
+      module: !is_ui_entry,
+      ...(is_ui_entry ? {} : { library: { type: 'module' } }),
     },
     module: {
       rules: [
@@ -407,7 +407,9 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
           new HtmlWebpackPlugin({
             template: path.join(import.meta.dirname, entry.html),
             filename: path.parse(entry.html).base,
-            scriptLoading: 'module',
+            // Keep UI outputs compatible with jQuery `.load()` by inlining scripts
+            // and avoiding ESM module scripts.
+            scriptLoading: 'blocking',
             cache: false,
           }),
           new HtmlInlineScriptWebpackPlugin(),
@@ -542,7 +544,12 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         'pixi.js': 'PIXI',
       };
       if (request in global) {
-        return callback(null, 'var ' + global[request as keyof typeof global]);
+        return callback(null, 'var ' + global[request as keyof typeof global]); 
+      }
+      if (is_ui_entry) {
+        // UI entries are inlined into a single HTML file; avoid ESM externals
+        // (module-import) and bundle the dependency instead.
+        return callback();
       }
       const cdn = {
         sass: 'https://jspm.dev/sass',

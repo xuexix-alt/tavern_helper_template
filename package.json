@@ -1,7 +1,8 @@
 {
   "scripts": {
-    "build:dev": "webpack --mode development",
+    "build:dev": "webpack --mode development && pnpm -s postbuild",
     "build": "webpack --mode production",
+    "postbuild": "node scripts/postbuild-generate-loaders.mjs",
     "watch": "webpack --mode development --watch --progress",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,scss,html,vue}\"",
     "lint": "eslint",

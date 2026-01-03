@@ -243,9 +243,9 @@ reloadIframe();
 
 ## 5. 构建配置规范
 
-### 5.1 webpack.config.ts 禁止修改
+### 5.1 webpack.config.ts（可修改，需谨慎）
 
-- `webpack.config.ts` 是项目的构建配置文件，**不允许修改**
+- `webpack.config.ts` 是项目的构建配置文件，**允许修改，但必须谨慎**
 - 该文件已配置好所有必要的loader、插件和优化选项，包括：
   - Vue Loader（用于Vue SFC编译）
   - TypeScript Loader（用于.ts/.tsx文件编译）
@@ -254,8 +254,7 @@ reloadIframe();
   - HtmlWebpackPlugin（用于HTML打包）
   - VueUse自动导入组件和指令
   - 代码混淆和压缩优化
-- 修改此文件可能导致构建失败或功能异常
-- 如需调整构建行为，请通过项目提供的配置项或环境变量进行
+- 修改此文件可能导致构建失败或功能异常，建议每次改动后立即本地构建验证
 
 ### 5.2 已配置的Loader和插件
 
@@ -837,7 +836,7 @@ window.location.reload();
 
 - 为减轻酒馆渲染卡顿，可把大块HTML换成外链加载
 - 若需发布可自动更新的界面/脚本，使用 GitHub + jsdelivr 镜像域名
-- 即使模板提到删除 `LimitChunkCountPlugin` 以分割，本仓库仍保持"不修改 webpack.config.ts"
+- 即使模板提到删除 `LimitChunkCountPlugin` 以分割，也请在充分理解影响后再调整
 
 ### 12.4 设计与原型
 
@@ -886,7 +885,7 @@ window.location.reload();
 
 ### 关键配置文件
 
-- `/webpack.config.ts` - **不允许修改**
+- `/webpack.config.ts` - 构建配置文件
 - `/package.json` - 依赖管理
 - `/pnpm-lock.yaml` - 锁定版本
 
@@ -894,7 +893,7 @@ window.location.reload();
 
 ## ⚠️ 重要注意事项
 
-1. **禁止修改webpack.config.ts** - 构建配置文件已优化，修改可能导致构建失败
+1. **谨慎修改webpack.config.ts** - 构建配置文件已优化，修改可能导致构建失败
 2. **禁止超出@types接口** - 所有开发必须使用@types中定义的接口
 3. **正确使用加载/卸载时机** - 使用jQuery而非DOMContentLoaded
 4. **Vue Router必须使用MemoryHistory** - 前端界面和脚本都是iframe
