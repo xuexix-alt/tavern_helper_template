@@ -360,10 +360,7 @@ function normalizeRowCells(cells: string[], width: number): string[] {
 // 格式化表格单元格（支持粗体、斜体等）- 安全处理防止 XSS
 function formatTableCell(cell: string): string {
   // 先转义 HTML 特殊字符
-  const safe = cell
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  const safe = cell.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // 再处理支持的格式
   return safe
@@ -373,7 +370,7 @@ function formatTableCell(cell: string): string {
     .replace(/“([^”\n]+)”/g, '<span class="dialog-text">“$1”</span>')
     .replace(/‘([^’\n]+)’/g, '<span class="dialog-text">‘$1’</span>')
     .replace(/"([^"\n]+)"/g, '<span class="dialog-text">"$1"</span>')
-    .replace(/'([^'\n]+)'/g, "<span class=\"dialog-text\">'$1'</span>");
+    .replace(/'([^'\n]+)'/g, '<span class="dialog-text">\'$1\'</span>');
 }
 </script>
 
