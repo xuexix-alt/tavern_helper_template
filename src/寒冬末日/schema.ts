@@ -1,12 +1,84 @@
 import { z } from 'zod';
 
+const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
+const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
+const 健康状况Schema = z.enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡']).prefault('健康');
+const 登场状态Schema = z.enum(['登场', '离场']).prefault('离场');
+
+const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelation: string; defaultImprint: number }) =>
+  z
+    .object({
+      姓名: z.string().prefault(''),
+      关系: args.relationSchema.describe('以性关系倾向为主要，反映角色当前对{{user}}的态度'),
+      关系倾向: args.relationSchema.describe('角色关系的倾向影响Imp数值的变化幅度'),
+      秩序刻印: z.coerce
+        .number()
+        .transform(v => _.clamp(v, 0, 100))
+        .prefault(20)
+        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
+      秩序刻印更新原因: z
+        .string()
+        .prefault('')
+        .describe('符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求'),
+      健康: z.coerce
+        .number()
+        .transform(v => _.clamp(v, 0, 100))
+        .prefault(100)
+        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
+      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
+      健康状况: 健康状况Schema.describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
+      衣着: z.string().prefault('').describe('描述当前的衣着状态包括上衣裤子丝袜内衣内裤'),
+      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
+      胸乳: z.string().prefault('').describe('胸部的状态或乳房乳头乳晕等在色情挑逗下的反应'),
+      私穴: z.string().prefault('').describe('私处的详细状态或反应'),
+      神态样貌: z.string().prefault('').describe('面部表情和神态'),
+      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
+      内心想法: z.string().prefault('').describe('符合角色身份和剧情描述的第一人称内心独白'),
+      所在房间: z
+        .string()
+        .prefault('')
+        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+      登场状态: 登场状态Schema.describe('剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场"'),
+    })
+    .prefault({
+      姓名: '',
+      关系: args.defaultRelation,
+      关系倾向: args.defaultRelation,
+      秩序刻印: args.defaultImprint,
+      健康: 100,
+      健康更新原因: '',
+      健康状况: '健康',
+      衣着: '',
+      舌唇: '',
+      胸乳: '',
+      私穴: '',
+      神态样貌: '',
+      动作姿势: '',
+      内心想法: '',
+      所在房间: '',
+      秩序刻印更新原因: '',
+      登场状态: '离场',
+    });
+
+const 主要角色Schema = create角色Schema({
+  relationSchema: 主要角色关系档位Schema,
+  defaultRelation: '无',
+  defaultImprint: 0,
+});
+
+const 临时NPCSchema = create角色Schema({
+  relationSchema: 临时NPC关系档位Schema,
+  defaultRelation: '无',
+  defaultImprint: 0,
+});
+
 export const Schema = z.object({
   世界: z
     .object({
-      地址: z.string().prefault('').describe('当前所在的物理位置'),
-      日期: z.string().prefault('').describe('格式：末日纪元，XXXX年XX月XX日'),
-      时间: z.string().prefault('').describe('格式：时间段 - HH:MM'),
-      末日天数: z.coerce.number().prefault(0).describe('自"永恒暴雪"降临以来的总天数'),
+      地址: z.string().prefault(''),
+      日期: z.string().prefault(''),
+      时间: z.string().prefault(''),
+      末日天数: z.coerce.number().prefault(0),
     })
     .prefault({
       地址: '',
@@ -75,8 +147,8 @@ export const Schema = z.object({
     .object({
       玄关: z
         .object({
-          临时客房A入住者: z.array(z.string()).prefault([]).describe('临时客房A入住者姓名列表'),
-          临时客房B入住者: z.array(z.string()).prefault([]).describe('临时客房B入住者姓名列表'),
+          临时客房A入住者: z.array(z.string()).prefault([]).describe('临时客房A进入者姓名列表'),
+          临时客房B入住者: z.array(z.string()).prefault([]).describe('临时客房B进入者姓名列表'),
         })
         .prefault({
           临时客房A入住者: [],
@@ -85,24 +157,24 @@ export const Schema = z.object({
         .describe('玄关区域房间状态'),
       核心区: z
         .object({
-          主卧室使用者: z.array(z.string()).prefault([]).describe('主卧室使用者姓名列表'),
-          主浴室使用者: z.array(z.string()).prefault([]).describe('主浴室使用者姓名列表'),
+          主卧室使用者: z.array(z.string()).prefault([]).describe('主卧室进入或使用者姓名列表'),
+          主浴室使用者: z.array(z.string()).prefault([]).describe('主浴室进入或使用者姓名列表'),
         })
         .prefault({
           主卧室使用者: [],
           主浴室使用者: [],
         })
-        .describe('核心区域房间状态'),
+        .describe('核心区域房间进入或使用名单列表'),
       楼层房间: z
         .object({
           楼层20房间: z
             .record(z.string(), z.object({ 入住者: z.array(z.string()) }).prefault({ 入住者: [] }))
             .prefault({})
-            .describe('20层各房间状态，key为房间号'),
+            .describe('20层各房间进入或使用者列表，key为房间号'),
           楼层19房间: z
             .record(z.string(), z.object({ 入住者: z.array(z.string()) }).prefault({ 入住者: [] }))
             .prefault({})
-            .describe('19层各房间状态，key为房间号'),
+            .describe('19层各房间进入或使用者列表，key为房间号'),
         })
         .prefault({
           楼层20房间: {},
@@ -189,1062 +261,33 @@ export const Schema = z.object({
     }),
 
   // 主要角色
-  浅见亚美: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因。格式："+/-X, 原因"。无变化则为"0, 无变化"。'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录健康值变化的原因。格式："+/-X, 原因"。无变化则为"0, 无变化"。'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
+  浅见亚美: 主要角色Schema,
+  相田哲也: 主要角色Schema,
+  星野琉璃: 主要角色Schema,
+  早川遥: 主要角色Schema,
+  早川舞: 主要角色Schema,
+  藤井雪乃: 主要角色Schema,
+  中村惠子: 主要角色Schema,
+  爱宫心爱: 主要角色Schema,
+  爱宫铃: 主要角色Schema,
+  '桃乐丝・泽巴哈': 主要角色Schema,
+  何铃: 主要角色Schema,
+  王静: 主要角色Schema,
+  康绮月: 主要角色Schema,
+  薛萍: 主要角色Schema,
+  小泽花: 主要角色Schema,
 
-  相田哲也: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
 
-  星野琉璃: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  早川遥: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  早川舞: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  藤井雪乃: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  中村惠子: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  爱宫心爱: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  爱宫铃: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  '桃乐丝・泽巴哈': z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  何铃: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  王静: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  康绮月: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  薛萍: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
-
-  小泽花: z
-    .object({
-      姓名: z.string().prefault(''),
-      关系: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色当前对{{user}}的关系档位'),
-      关系倾向: z
-        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
-        .prefault('无')
-        .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-      秩序刻印: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('记录秩序刻印变化的原因和数值，格式示例：+3, 高级设施体验 / -5, 期望落空'),
-      健康: z.coerce
-        .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(100)
-        .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
-      健康状况: z
-        .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-        .prefault('健康')
-        .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-      衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-      舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-      胸乳: z.string().prefault('').describe('胸部的状态'),
-      私穴: z.string().prefault('').describe('私处的详细状态'),
-      神态样貌: z.string().prefault('').describe('面部表情和神态'),
-      动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-      内心想法: z.string().prefault('').describe('第一人称内心独白'),
-      所在房间: z
-        .string()
-        .prefault('')
-        .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-        ),
-      登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-    })
-    .prefault({
-      姓名: '',
-      关系: '无',
-      关系倾向: '无',
-      秩序刻印: 0,
-      健康: 100,
-      健康更新原因: '',
-      健康状况: '健康',
-      衣着: '',
-      舌唇: '',
-      胸乳: '',
-      私穴: '',
-      神态样貌: '',
-      动作姿势: '',
-      内心想法: '',
-      所在房间: '',
-      秩序刻印更新原因: '',
-      登场状态: '离场',
-    }),
 
   临时NPC: z
-    .record(
-      z.string(),
-      z
-        .object({
-          姓名: z.string().prefault(''),
-          关系: z
-            .enum(['拒绝', '交易', '顺从', '忠诚', '性奴'])
-            .prefault('拒绝')
-            .describe('角色当前对{{user}}的关系档位'),
-          关系倾向: z
-            .enum(['拒绝', '交易', '顺从', '忠诚', '性奴'])
-            .prefault('拒绝')
-            .describe('角色关系的倾向（可理解为更偏向于哪一档）'),
-          秩序刻印: z.coerce
-            .number()
-            .transform(v => _.clamp(v, 0, 100))
-            .prefault(20)
-            .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
-          秩序刻印更新原因: z
-            .string()
-            .prefault('')
-            .describe('记录秩序刻印变化的原因。格式："+/-X, 原因"。无变化则为"0, 无变化"。'),
-          健康: z.coerce
-            .number()
-            .transform(v => _.clamp(v, 0, 100))
-            .prefault(100)
-            .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-          健康更新原因: z
-            .string()
-            .prefault('')
-            .describe('记录健康值变化的原因。格式："+/-X, 原因"。无变化则为"0, 无变化"。'),
-          健康状况: z
-            .enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'])
-            .prefault('健康')
-            .describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
-          衣着: z.string().prefault('').describe('详细描述当前的衣着状态'),
-          舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
-          胸乳: z.string().prefault('').describe('胸部的状态'),
-          私穴: z.string().prefault('').describe('私处的详细状态'),
-          神态样貌: z.string().prefault('').describe('面部表情和神态'),
-          动作姿势: z.string().prefault('').describe('身体姿态和动作'),
-          内心想法: z.string().prefault('').describe('第一人称内心独白'),
-          所在房间: z
-            .string()
-            .prefault('')
-            .describe(
-              '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
-            ),
-          登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
-        })
-        .prefault({
-          姓名: '',
-          关系: '拒绝',
-          关系倾向: '拒绝',
-          秩序刻印: 20,
-          健康: 100,
-          健康更新原因: '',
-          健康状况: '健康',
-          衣着: '',
-          舌唇: '',
-          胸乳: '',
-          私穴: '',
-          神态样貌: '',
-          动作姿势: '',
-          内心想法: '',
-          所在房间: '',
-          秩序刻印更新原因: '',
-          登场状态: '离场',
-        }),
-    )
+    .record(z.string(), 临时NPCSchema)
     .prefault({})
     .describe('存储所有临时NPC的状态，key为NPC姓名。新NPC登场时在此处添加。'),
 
   楼层其他住户: z
     .object({
-      言语: z.string().prefault('').describe('其他幸存者的总体言语状态'),
-      行为: z.string().prefault('').describe('其他幸存者的总体行为状态'),
+      言语: z.string().prefault(''),
+      行为: z.string().prefault(''),
     })
     .prefault({
       言语: '',

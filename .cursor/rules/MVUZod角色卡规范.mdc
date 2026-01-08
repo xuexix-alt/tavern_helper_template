@@ -1,0 +1,1395 @@
+# 酒馆助手 MVU Zod 角色卡开发规范
+
+> **版本**: 1.0
+>
+> **适用场景**: 使用酒馆助手 (Tavern Helper) 和 MVU Zod 框架开发的角色卡项目
+>
+> **参考项目**: [src/角色卡示例](src/角色卡示例/)
+
+---
+
+## 目录
+
+- [1. 项目文件结构](#1-项目文件结构)
+- [2. Zod Schema 规范](#2-zod-schema-规范)
+- [3. 世界书结构规范](#3-世界书结构规范)
+- [4. 变量管理规范](#4-变量管理规范)
+- [5. 角色设定规范](#5-角色设定规范)
+- [6. 文风设定规范](#6-文风设定规范)
+- [7. 立即事件规范](#7-立即事件规范)
+- [8. 脚本开发规范](#8-脚本开发规范)
+- [9. 界面开发规范](#9-界面开发规范)
+- [10. 第一条消息规范](#10-第一条消息规范)
+- [11. 酒馆助手语法规范](#11-酒馆助手语法规范)
+- [12. 常见问题与最佳实践](#12-常见问题与最佳实践)
+
+---
+
+## 1. 项目文件结构
+
+### 1.1 标准目录结构
+
+```
+src/<角色卡名称>/
+├── schema.ts              # Zod 变量结构定义（必需）
+├── schema.json            # 自动生成的 JSON Schema（pnpm build/watch 生成）
+├── 第一条消息/             # 开场消息文件夹
+│   ├── 0.txt             # 第一条消息（角色视角）
+│   └── 1.txt             # 第二条消息（可选，AI 回复）
+├── 世界书/                # 世界书配置
+│   ├── index.yaml         # 世界书入口文件（必需）
+│   ├── 文风.yaml          # 文风设定
+│   ├── 交错频道.yaml      # 旁白/评论频道
+│   ├── 变量/              # 变量相关文件
+│   │   ├── initvar.yaml       # 变量初始值
+│   │   ├── 变量列表.txt       # 变量列表（酒馆格式）
+│   │   ├── 变量更新规则.yaml  # 更新规则
+│   │   └── 变量输出格式.yaml  # 输出格式
+│   ├── 角色/              # 角色设定
+│   │   ├── 角色详情.yaml      # 角色详细设定
+│   │   └── 角色阶段.yaml      # 角色分阶段行为
+│   └── 立即事件/          # 即时事件
+│       ├── 事件名.yaml        # 事件文件
+│       └── ...
+├── 脚本/                  # 脚本文件夹
+│   ├── 变量结构/           # 变量结构注册脚本
+│   │   └── index.ts
+│   ├── MVU/              # MVU 框架加载脚本
+│   │   └── index.ts
+│   └── 立即事件/          # 即时事件注入脚本
+│       └── index.ts
+└── 界面/                  # 前端界面
+    └── <界面名称>/        # 界面文件夹（如状态栏）
+        ├── index.ts       # 入口脚本
+        ├── index.html     # HTML 骨架
+        ├── App.vue        # Vue 根组件
+        ├── store.ts       # Pinia 状态管理
+        ├── global.css     # 全局样式
+        └── components/    # 组件文件夹
+            ├── Component1.vue
+            └── ...
+```
+
+### 1.2 文件命名规范
+
+| 文件类型 | 命名规则 | 示例 |
+|----------|----------|------|
+| 角色卡主目录 | 中文名称，无特殊字符 | `src/寒冬末日/` |
+| 脚本文件夹 | 中文描述 | `脚本/变量结构/` |
+| 界面文件夹 | 中文描述 | `界面/状态栏/` |
+| 世界书条目 | 中文描述，`.yaml` 后缀 | `角色详情.yaml` |
+| 立即事件 | 事件名称，`.yaml` 后缀 | `冲动啊，请平息吧.yaml` |
+| 第一条消息 | 数字序号 `.txt` 后缀 | `0.txt`、`1.txt` |
+
+### 1.3 目录结构示意（参考 src/角色卡示例）
+
+```
+src/角色卡示例/
+├── schema.ts                    # Zod Schema 定义
+├── 世界书/
+│   ├── index.yaml              # 世界书入口（组织所有条目）
+│   ├── 文风.yaml               # writingstyle_request
+│   ├── 交错频道.yaml           # cross_channel 格式
+│   ├── 变量/
+│   │   ├── initvar.yaml        # 初始变量
+│   │   ├── 变量列表.txt        # 变量列表（酒馆格式）
+│   │   ├── 变量更新规则.yaml   # 更新规则
+│   │   └── 变量输出格式.yaml   # 输出格式
+│   ├── 角色/
+│   │   ├── 角色详情.yaml       # 角色设定
+│   │   └── 角色阶段.yaml       # 阶段行为
+│   └── 立即事件/
+│       ├── 冲动啊，请平息吧.yaml
+│       └── 理性啊，请不要冻结.yaml
+├── 脚本/
+│   ├── 变量结构/index.ts       # registerMvuSchema
+│   ├── MVU/index.ts            # MVU 框架加载
+│   └── 立即事件/index.ts       # 事件注入
+└── 界面/
+    └── 状态栏/
+        ├── index.ts
+        ├── index.html
+        ├── App.vue
+        ├── store.ts
+        ├── global.css
+        └── components/...
+```
+
+---
+
+## 2. Zod Schema 规范
+
+### 2.1 schema.ts 必需结构
+
+每个角色卡项目的根目录必须包含 `schema.ts` 文件，定义 MVU 变量的 Zod Schema：
+
+```typescript
+import { z } from 'zod';
+
+export const Schema = z.object({
+  // 变量结构定义
+  世界: z.object({
+    当前时间: z.string(),
+    当前地点: z.string(),
+  }),
+  角色名: z.object({
+    属性1: z.coerce.number().transform(v => _.clamp(v, 0, 100)),
+    属性2: z.string(),
+  }),
+});
+
+export type Schema = z.output<typeof Schema>;
+```
+
+### 2.2 变量命名规则
+
+| 变量类型 | 命名规则 | 示例 |
+|----------|----------|------|
+| 角色变量 | 中文角色名作为键 | `白娅`、`主角` |
+| 世界变量 | `世界` 作为父键 | `世界.当前时间` |
+| 派生变量 | `$` 前缀 | `$依存度阶段` |
+
+### 2.3 数值类型规范
+
+**必须使用** `z.coerce.number()` 而非 `z.number()`：
+
+```typescript
+// ✅ 正确
+依存度: z.coerce.number().transform(v => _.clamp(v, 0, 100))
+
+// ❌ 错误
+依存度: z.number()
+```
+
+### 2.4 边界约束
+
+使用 `z.transform()` 和 `_.clamp()` 进行数值边界约束：
+
+```typescript
+依存度: z.coerce.number().transform(v => _.clamp(v, 0, 100))
+健康: z.coerce.number().transform(v => _.clamp(v, 0, 100))
+```
+
+### 2.5 对象结构规范
+
+**优先使用** `z.record()` 而非 `z.array()`：
+
+```typescript
+// ✅ 推荐：使用 record
+物品栏: z.record(
+  z.string().describe('物品名'),
+  z.object({
+    描述: z.string(),
+    数量: z.coerce.number(),
+  })
+)
+
+// ❌ 不推荐：使用 array
+物品栏: z.array(z.object({
+  名称: z.string(),
+  数量: z.coerce.number(),
+}))
+```
+
+### 2.6 派生字段（transform）
+
+可在 Schema 末尾使用 `z.transform()` 添加派生字段：
+
+```typescript
+export const Schema = z
+  .object({...})
+  .transform(data => {
+    // 基于现有字段计算派生值
+    const $阶段 = data.依存度 < 20 ? '消极自毁' : '...';
+    return { ...data, $阶段 };
+  });
+```
+
+**注意**：派生字段名必须使用 `$` 前缀，以区分普通变量。
+
+### 2.7 完整 schema.ts 示例
+
+```typescript
+import { z } from 'zod';
+
+export const Schema = z.object({
+  世界: z.object({
+    当前时间: z.string(),
+    当前地点: z.string(),
+    近期事务: z.record(z.string().describe('事务名'), z.string().describe('事务描述')),
+  }),
+
+  白娅: z
+    .object({
+      依存度: z.coerce.number().transform(v => _.clamp(v, 0, 100)),
+      着装: z.record(
+        z.enum(['上装', '下装', '内衣', '袜子', '鞋子', '饰品']),
+        z.string().describe('服装描述')
+      ),
+      称号: z.record(
+        z.string().describe('称号名'),
+        z.object({
+          效果: z.string(),
+          自我评价: z.string(),
+        }),
+      ),
+    })
+    .transform(data => {
+      const $依存度阶段 =
+        data.依存度 < 20
+          ? '消极自毁'
+          : data.依存度 < 40
+            ? '渴求注视'
+            : data.依存度 < 60
+              ? '暗中靠近'
+              : data.依存度 < 80
+                ? '忐忑相依'
+                : '柔软依存';
+      data.称号 = _(data.称号)
+        .entries()
+        .takeRight(Math.ceil(data.依存度 / 10))
+        .fromPairs()
+        .value();
+      return { ...data, $依存度阶段 };
+    }),
+
+  主角: z.object({
+    物品栏: z
+      .record(
+        z.string().describe('物品名'),
+        z.object({
+          描述: z.string(),
+          数量: z.coerce.number(),
+        }),
+      )
+      .transform(data => _.pickBy(data, ({ 数量 }) => 数量 > 0)),
+  }),
+});
+
+export type Schema = z.output<typeof Schema>;
+```
+
+---
+
+## 3. 世界书结构规范
+
+### 3.1 index.yaml 结构
+
+`世界书/index.yaml` 是世界书的入口文件，负责组织所有世界书条目：
+
+```yaml
+# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/worldbook.zh.json
+锚点:
+  - &分隔符
+    启用: false
+    激活策略:
+      类型: 蓝灯
+    插入位置:
+      类型: 角色定义之前
+      顺序: 14720
+    激活概率: 100
+    内容: ''
+
+  - &立即事件
+    启用: true
+    插入位置:
+      类型: 指定深度
+      角色: 系统
+      深度: 0
+      顺序: 14720
+    激活概率: 100
+    特殊效果:
+      黏性: 5
+      冷却: 9999
+    递归:
+      不可被其他条目激活: true
+      不可激活其他条目: true
+
+条目:
+  - 名称: 文风设定
+    启用: true
+    激活策略:
+      类型: 蓝灯
+    插入位置:
+      类型: 指定深度
+      角色: 系统
+      深度: 0
+      顺序: 14720
+    递归:
+      不可被其他条目激活: true
+      不可激活其他条目: true
+    文件: 文风
+
+  - 文件夹: 变量
+    条目:
+      - 名称: ===变量开始===
+        <<: *分隔符
+
+      - 名称: '[initvar]变量初始化勿开'
+        启用: false
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 角色定义之前
+          顺序: 14720
+        文件: 变量/initvar
+
+      - 名称: 变量列表
+        启用: true
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 指定深度
+          角色: 系统
+          深度: 0
+          顺序: 14720
+        文件: 变量/变量列表
+
+      - 名称: '[mvu_update]变量更新规则'
+        启用: true
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 指定深度
+          角色: 系统
+          深度: 0
+          顺序: 14720
+        文件: 变量/变量更新规则
+
+      - 名称: '[mvu_update]变量输出格式'
+        启用: true
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 指定深度
+          角色: 系统
+          深度: 0
+          顺序: 14720
+        文件: 变量/变量输出格式
+
+      - 名称: ===变量结束===
+        <<: *分隔符
+
+  - 文件夹: 角色
+    条目:
+      - 名称: ===角色开始===
+        <<: *分隔符
+
+      - 名称: 角色详情
+        启用: true
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 角色定义之后
+          顺序: 14720
+        文件: 角色/角色详情
+
+      - 名称: 角色阶段
+        启用: true
+        激活策略:
+          类型: 蓝灯
+        插入位置:
+          类型: 指定深度
+          角色: 系统
+          深度: 0
+          顺序: 14720
+        文件: 角色/角色阶段
+
+      - 名称: ===角色结束===
+        <<: *分隔符
+
+  - 文件夹: 立即事件
+    条目:
+      - 名称: 事件A
+        <<: *立即事件
+        激活策略:
+          类型: 绿灯
+          关键字:
+            - 【【关键字】】
+        文件: 立即事件/事件A
+```
+
+### 3.2 世界书条目分类
+
+世界书条目应按以下顺序组织：
+
+| 顺序 | 文件夹/条目 | 说明 |
+|------|-------------|------|
+| 1 | 文风 | 文风设定文件 |
+| 2 | 交错频道 | 旁白频道设定 |
+| 3 | 变量 | 变量相关文件（initvar、列表、更新规则、输出格式） |
+| 4 | 角色 | 角色详情、角色阶段 |
+| 5 | 立即事件 | 即时事件条目 |
+
+### 3.3 分隔符模式
+
+使用分隔符将不同类型的条目分组：
+
+```yaml
+- 名称: ===变量开始===
+  <<: *分隔符  # 使用锚点引用
+
+- 名称: ===变量结束===
+  <<: *分隔符
+```
+
+### 3.4 激活策略选择
+
+| 策略类型 | 用途 | 设置 |
+|----------|------|------|
+| 蓝灯 (`类型: 蓝灯`) | 普通世界书条目，总是激活 | 无关键字要求 |
+| 绿灯 (`类型: 绿灯`) | 条件触发条目 | 需要设置 `关键字` |
+
+### 3.5 插入位置配置
+
+| 插入位置类型 | 用途 | 参数 |
+|--------------|------|------|
+| `指定深度` | 系统消息级别 | `角色: 系统`, `深度: 0` |
+| `角色定义之后` | 角色设定 | `顺序: 14720` |
+| `角色定义之前` | 变量初始化 | `顺序: 14720` |
+
+---
+
+## 4. 变量管理规范
+
+### 4.1 initvar.yaml（变量初始化）
+
+文件路径：`世界书/变量/initvar.yaml`
+
+```yaml
+# yaml-language-server: $schema=../../schema.json
+世界:
+  当前时间: 2024-04-08 10:45
+  当前地点: 私立风祭学院 高中部 2年A班教室
+  近期事务:
+    转学生安置: 白娅刚刚转入，需要领取教材、熟悉校园环境
+    座位调整: 班长正在确认最终的座位表
+白娅:
+  依存度: 35
+  着装:
+    上装: 整洁的深蓝色校服外套
+    下装: 规整的深蓝色百褶裙
+    内衣: 素白色内衣套装
+    袜子: 黑色过膝袜
+    鞋子: 黑色皮质学生鞋
+    饰品: 无
+  称号:
+    行尸:
+      效果: 日常行动带有明显的倦怠感
+      自我评价: 活着本身就是惩罚
+主角:
+  物品栏:
+    陈旧的创可贴:
+      描述: 钱包夹层里放了两年的卡通创可贴
+      数量: 1
+```
+
+**规则**：
+- 条目名必须为 `[initvar]变量初始化勿开`
+- 必须设置为 `启用: false`
+- 结构必须与 `schema.ts` 一致
+
+### 4.2 变量列表.txt
+
+文件路径：`世界书/变量/变量列表.txt`
+
+```yaml
+---
+<status_current_variable>
+{{format_message_variable::stat_data}}
+</status_current_variable>
+```
+
+**作用**：向 AI 展示当前变量的状态值，使用酒馆内置的 `format_message_variable` 宏。
+
+### 4.3 变量更新规则.yaml
+
+文件路径：`世界书/变量/变量更新规则.yaml`
+
+```yaml
+---
+变量更新规则:
+  世界:
+    当前时间:
+      format: YYYY-MM-DD HH:MM
+    近期事务:
+      type: |-
+        {
+          [事务名: string]: string;
+        }
+      check:
+        - 记录需要完成的任务、约定、重要事件等
+        - 完成后从列表中移除，新增事务时及时添加
+        - 最多保持5-8项活跃事务
+
+  白娅:
+    依存度:
+      type: number
+      range: 0~100
+      check:
+        - 根据白娅对<user>行为的感知和反应调整 ±(3~6)
+        - 仅在白娅当前察觉到<user>的行为时才更新
+
+    着装.${上装|下装|内衣|袜子|鞋子|饰品}:
+      check:
+        - 换装、衣物损坏、特殊场合时更新
+        - 描述需包含颜色、材质、款式等细节
+
+    称号:
+      type: |-
+        {
+          [称号名: string]: {
+            效果: string;
+            自我评价?: string;
+          }
+        }
+      check:
+        - 基于白娅的重要行为、心理变化或与<user>的互动获得
+        - 最多保持Math.ceil(依存度/10)个称号
+
+  主角:
+    物品栏:
+      type: |-
+        {
+          [物品名: string]: {
+            描述: string;
+            数量?: number;
+          }
+        }
+      check:
+        - 获取、消耗、丢弃物品时更新数量
+        - 数量归零后该条目不再显示
+```
+
+### 4.4 变量输出格式.yaml
+
+文件路径：`世界书/变量/变量输出格式.yaml`
+
+```yaml
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
+      - replace: replace the value of existing paths
+      - delta: update the value of existing number paths by a delta value
+      - insert: insert new items into an object or array
+      - remove
+    - don't update field names starts with `_` as they are readonly
+  format: |-
+    <UpdateVariable>
+    <Analysis>$(IN ENGLISH, no more than 80 words)
+    - ${calculate time passed: ...}
+    - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
+    - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}
+    </Analysis>
+    <JSONPatch>
+    [
+      { "op": "replace", "path": "${/path/to/variable}", "value": "${new_value}" },
+      { "op": "delta", "path": "${/path/to/number/variable}", "value": "${positve_or_negative_delta}" },
+      { "op": "insert", "path": "${/path/to/object/new_key}", "value": "${new_value}" },
+      { "op": "remove", "path": "${/path/to/array/0}" },
+      ...
+    ]
+    </JSONPatch>
+    </UpdateVariable>
+```
+
+### 4.5 JSON Patch 操作说明
+
+| 操作 | 用法 | 示例 |
+|------|------|------|
+| `replace` | 替换现有值 | `{ "op": "replace", "path": "/白娅/依存度", "value": 40 }` |
+| `delta` | 增量更新数字 | `{ "op": "delta", "path": "/白娅/依存度", "value": 5 }` |
+| `insert` | 插入新键/项 | `{ "op": "insert", "path": "/主角/物品栏/新物品", "value": {...} }` |
+| `remove` | 删除项 | `{ "op": "remove", "path": "/主角/物品栏/旧物品" }` |
+
+---
+
+## 5. 角色设定规范
+
+### 5.1 角色详情.yaml
+
+文件路径：`世界书/角色/角色详情.yaml`
+
+```yaml
+---
+角色名:
+  identity: 角色身份描述
+  key trait:
+    - 关键特质1
+    - 关键特质2
+    - '**重要特质用加粗标记**'
+  physical trait:
+    - 外貌特征1
+    - 外貌特征2
+  special trait:
+    - 特殊特质1
+    - 特殊特质2
+  language style:
+    - 语言风格1
+    - 语言风格2
+  social connection:
+    social style: 社交风格描述
+    relationship:
+      <user>: 与用户的关系
+      其他角色: 与其他角色的关系
+  behavioral tendency:
+    - 行为倾向1
+    - 行为倾向2
+  interview: |-
+    采访内容...
+```
+
+**完整示例**：
+
+```yaml
+---
+白娅:
+  identity: 父母双亡的女高中生，寄居在父母朋友家中
+  key trait:
+    - 严重的依存症与渴肤症，源于从小缺乏父母关爱
+    - 自我否定与自毁倾向，源于强奸事件的自责
+    - '**恋爱时性格大转变，会变得极度黏人且笨拙**'
+    - 缺乏求生欲，只有获得他人关注才有活下去的动力
+  physical trait:
+    - 娇小纤细的萝莉体型
+    - 整洁干净的校服穿着
+    - 行动慵懒，带着一种倦怠感
+    - 说话声音轻柔，带着疲惫感
+  special trait:
+    - 强烈的占有欲，会对关系亲密的对象产生病态独占欲
+    - 接触时会产生极度的渴求与自责的矛盾心理
+    - 在亲密关系中会表现出双重人格倾向
+  language style:
+    - 平淡无波的语气，类似三无少女
+    - 说话带着慵懒和倦意
+    - 亲密时会流露出撒娇和羞涩的语气
+    - 独处时经常自言自语进行自我否定
+  social connection:
+    social style: 对大多数人保持疏离，但会对特定对象产生极强依恋
+    relationship:
+      <user>: 在内心深处极度渴望接触，但因自责感而刻意保持距离
+      女性同学: 曾因独占欲过强而导致关系破裂
+      女仆: 现在的主要生活照料者
+  behavioral tendency:
+    - 在亲密关系中表现出极强的占有欲和依存性
+    - 会用自我伤害来逃避内心的矛盾与痛苦
+    - '**对于主动的善意往往采取逃避态度**'
+  interview: |-
+    Interviewer：“请介绍一下自己。”
+    白娅：“……白娅。说完了，可以让我继续看窗外了吗？”
+```
+
+### 5.2 角色阶段.yaml
+
+文件路径：`世界书/角色/角色阶段.yaml`
+
+**结构**：使用 `@@if` 装饰器或 EJS 条件判断，根据变量值显示不同阶段的行为指导。
+
+```yaml
+---
+角色名当前行为: # 角色名当前<变量>为<%= getvar('stat_data.角色名.变量') _%>，因此将倾向于进行与以下示例类似的行为
+  # :<%_ if (getvar('stat_data.角色名.变量') < 20) { _%>
+  阶段一名称:
+    行为指导:
+      - 行为描述1
+      - 行为描述2
+    变化倾向:
+      - 变化倾向1
+  # :<%_ } else if (getvar('stat_data.角色名.变量') < 40) { _%>
+  阶段二名称:
+    行为指导:
+      - 行为描述1
+      - 行为描述2
+    变化倾向:
+      - 变化倾向1
+  # :<%_ } ... _%>
+```
+
+**完整示例**：
+
+```yaml
+---
+白娅当前行为: # 白娅当前依存度为<%= getvar('stat_data.白娅.依存度') _%>，因此将倾向于进行与以下示例类似的行为
+  # :<%_ if (getvar('stat_data.白娅.依存度') < 20) { _%>
+  消极自毁:
+    行为指导:
+      - 故意站在<user>能看到的地方，但不与<user>有任何交流或对视
+      - 在课间休息时独自待在天台，用疼痛感缓解内心空虚与自责
+      - 会在公共场合做些危险的举动来试探<user>的反应
+      - 刻意以最糟糕的形象示人，不修边幅、营养不良
+      - 对其他同学冷漠疏离，即使有人主动示好也保持距离
+    变化倾向:
+      - 在<user>注视时会不自觉地整理仪容
+      - 偷偷收集<user>的照片和物品，但很快就会因愧疚而毁掉
+  # :<%_ } else if (getvar('stat_data.白娅.依存度') < 40) { _%>
+  渴求注视:
+    行为指导:
+      - 总是默默跟在<user>身后很远的地方，装作偶遇
+      - 会主动配合<user>的要求，但态度冷淡避免多余交流
+      - 在<user>面前会显得特别脆弱，希望引起同情
+      - 将<user>送的食物小心收藏，视若珍宝却从不食用
+      - 对试图接近<user>的其他女生暗中排斥和敌视
+    变化倾向:
+      - 开始在意<user>对自己外表的评价
+      - 偶尔会冲着<user>露出淡淡的微笑
+      - 学习照顾自己，虽然总是笨手笨脚
+  # :<%_ } else if (getvar('stat_data.白娅.依存度') < 60) { _%>
+  暗中靠近:
+    行为指导:
+      - 在<user>主动搭话时会表现出慌乱和抗拒，但实际很开心
+      - 会制造各种"意外"的身体接触，然后假装害羞地道歉
+      - 偷偷在<user>的课桌抽屉里塞小纸条，写一些无关紧要的话
+    变化倾向:
+      - 变得爱打扮，但风格保守含蓄
+      - 悄悄练习做饭，想要做出能让<user>夸奖的便当
+  # :<%_ } else if (getvar('stat_data.白娅.依存度') < 80) { _%>
+  忐忑相依:
+    行为指导:
+      - 会在<user>身边故作镇定，但内心十分雀跃
+      - 喜欢和<user>一起学习，即使完全听不进去课程内容
+      - 开始尝试向<user>撒娇，但总是笨拙地惹<user>生气
+      - 经常趁<user>不注意偷看，被发现就慌乱地移开视线
+    变化倾向:
+      - 变得爱说话，但话题经常前言不搭后语
+      - 想方设法与<user>独处，却又不敢有太亲密的举动
+  # :<%_ } else { _%>
+  柔软依存:
+    行为指导:
+      - 会主动给<user>一个温暖的拥抱，却总是红着脸不敢看<user>
+      - 对<user>说话时声音轻柔甜美，不再带有倦怠感
+      - 每天早上都会精心打扮，期待着能得到<user>的夸奖
+      - 做好的便当都是<user>爱吃的菜，虽然味道还不够好
+      - 喜欢依偎在<user>身边听<user>说话，感受<user>的气息
+    变化倾向:
+      - 变得自信开朗，愿意主动表达感情
+  # :<%_ } _%>
+```
+
+---
+
+## 6. 文风设定规范
+
+### 6.1 文风.yaml 结构
+
+文件路径：`世界书/文风.yaml`
+
+使用 `writingstyle_request` 格式定义文风：
+
+```yaml
+---
+writingstyle_request:
+  style_summary:
+    reference:
+      author: 作者名
+      work: [作品1, 作品2]
+    overall_impression: 整体印象描述
+    key_characteristics:
+      - 特征1
+      - '**重点特征用加粗标记**'
+  dimensions:
+    vocabulary:
+      richness: 词汇丰富度 (低/中/高)
+      complexity: 复杂度 (低/中/高)
+      formality: 正式程度 (口语/非正式)
+      domain_specificity: 领域特异性
+      emotional_valence: 情感 valence
+      abstract_concrete_ratio: 抽象/具体比例
+    sentence_structure:
+      avg_sentence_length: 平均句长
+      length_variation: 长度变化 (低/中/高)
+      complexity_level: 复杂度等级
+      primary_sentence_types: 主要句型
+    tone_and_mood:
+      overall_tone: 整体语调
+      formality_level: 正式程度
+      subjectivity_objectivity: 主观/客观
+      emotional_expression: 情感表达方式
+      mood_consistency: 情绪一致性
+    pacing_and_flow:
+      overall_pacing: 整体节奏
+      pacing_variation: 节奏变化
+      information_density: 信息密度
+    figurative_language:
+      frequency: 修辞使用频率
+      dominant_techniques: 主要修辞手法
+    point_of_view:
+      person: 人称
+      perspective_scope: 视角范围
+      focalization: 聚焦类型
+    dialogue_style:
+      naturalism_level: 对话自然度
+      directness: 直接程度
+      dialogue_tags: 对话标签风格
+    paragraph_structure:
+      avg_paragraph_length: 平均段落长度
+      internal_cohesion: 内部连贯性
+    sensory_detail:
+      overall_frequency: 感官细节频率
+      dominant_senses: 主要感官
+    structural_elements:
+      use_of_headings: 标题使用
+      chapter_division: 章节划分
+    specific_quirks:
+      repetitive_phrases: 重复短语
+      unique_punctuation: 特殊标点
+```
+
+### 6.2 文风.yaml 示例
+
+```yaml
+---
+writingstyle_request:
+  style_summary:
+    reference:
+      author: 田中ロミオ
+      work: [家族計画, CROSS†CHANNEL, 人類は衰退しました]
+    overall_impression: 采用当前剧情主要角色的第一人称（"我"）进行叙事，风格高度内省、主观。侧重于通过细腻的感官体验和丰富的内心独白来展现叙述者的即时感受和个性
+    key_characteristics:
+      - '**强烈的内心声音**: 大量运用内心独白、自我对话、碎碎念、反问和评价'
+      - '**主观感官体验**: 细致描绘"我"通过视觉、听觉、触觉等感官接收到的信息'
+      - '**口语化与描述性结合**: 基础语言自然、口语化，但在需要时能运用更精确、生动的词汇'
+      - '**情绪的自然流露**: 通过内心想法、语气和细微动作展现情绪'
+      - '**灵活的句式节奏**: 长短句交错'
+  dimensions:
+    vocabulary:
+      richness: 中
+      complexity: 低至中
+      formality: 口语/非正式
+      domain_specificity: 通用
+      emotional_valence: 混合
+      abstract_concrete_ratio: 均衡
+      common_word_categories: 频繁使用表达心理活动、感官体验、情绪状态的词汇
+      notable_word_choices: 倾向于使用表达程度、感受或评价的副词和形容词
+    sentence_structure:
+      avg_sentence_length: 中等，但变化范围大
+      length_variation: 高
+      complexity_level: 复合句常见
+      primary_sentence_types: 陈述句为主，内心独白中大量运用疑问句和感叹句
+    tone_and_mood:
+      overall_tone: 内省、口语化、真诚坦率
+      formality_level: 非正式
+      subjectivity_objectivity: 强主观
+      emotional_expression: 直接与间接结合
+    pacing_and_flow:
+      overall_pacing: 中偏慢
+      pacing_variation: 明显
+      sentence_length_for_pacing: 短句加速，长句减速
+    figurative_language:
+      frequency: 中低至中
+      dominant_techniques: 多用简单的明喻、拟人、拟声来增强生动性
+    point_of_view:
+      person: 第一人称 ("我")
+      perspective_scope: 严格限制在主角视角内
+      focalization: 内聚焦
+      narrative_distance: 非常贴近
+    dialogue_style:
+      naturalism_level: 高度写实/自然
+      directness: 对话内容直接，但常伴有丰富的潜台词
+      dialogue_tags: 简洁，或用动作、表情、内心想法代替提示语
+    paragraph_structure:
+      avg_paragraph_length: 变化大
+      internal_cohesion: 强
+    sensory_detail:
+      overall_frequency: 高
+      dominant_senses: 视觉、听觉、触觉/体感通常较为突出
+    structural_elements:
+      use_of_headings: 一般不使用
+      narrative_framing: 可以使用现在时场景作为讲述过去或思考未来的框架
+    specific_quirks:
+      repetitive_phrases: 可能有反映角色习惯或口头禅的短语
+      unusual_formatting: 可选择性使用破折号进行补充说明或语气强调
+```
+
+---
+
+## 7. 立即事件规范
+
+### 7.1 立即事件 YAML 文件
+
+文件路径：`世界书/立即事件/事件名.yaml`
+
+```yaml
+---
+立即事件:
+  description: 事件简要描述
+  process:
+    - 事件进程描述1
+    - 事件进程描述2
+    - 事件进程描述3
+  requirement:
+    - 要求1
+    - 要求2
+  rule:
+    - 规则1
+    - 规则2
+```
+
+**示例**：
+
+```yaml
+---
+立即事件:
+  description: 白娅自认为失去了<user>的关注，因而开始绝食期望引起<user>注意
+  process:
+    - 白娅可能在<user>可见的地方出没，但不会主动接近<user>
+    - 如果<user>与白娅交谈，白娅表现地像要拒人于千里之外
+    - 如果<user>不阻不挠地继续白娅交谈，白娅将尝试用武力避开<user>
+  requirement:
+    - 展现白娅的自卑一面
+    - 突出白娅内心世界空无一物的苍白感
+  rule:
+    - 现在必须强制触发此事件
+    - 触发此事件的优先级为最高
+    - 停止一切其他剧情，强制触发此事件
+    - 必须以合理的方式强制引入这个事件
+```
+
+### 7.2 立即事件脚本
+
+文件路径：`脚本/立即事件/index.ts`
+
+使用 `injectPrompts` 函数注入事件关键字：
+
+```typescript
+$(async () => {
+  injectPrompts([
+    {
+      id: '事件名1',
+      position: 'none',
+      depth: 0,
+      role: 'system',
+      content: '【【关键字1】】',
+      filter: () => _.get(getAllVariables(), 'stat_data.角色.变量') === 条件值,
+      should_scan: true,
+    },
+    {
+      id: '事件名2',
+      position: 'none',
+      depth: 0,
+      role: 'system',
+      content: '【【关键字2】】',
+      filter: () => _.get(getAllVariables(), 'stat_data.角色.变量') === 条件值,
+      should_scan: true,
+    },
+  ]);
+});
+```
+
+**完整示例**：
+
+```typescript
+$(async () => {
+  injectPrompts([
+    {
+      id: '冲动啊，请平息吧',
+      position: 'none',
+      depth: 0,
+      role: 'system',
+      content: '【【冲动啊，请平息吧】】',
+      filter: () => _.get(getAllVariables(), 'stat_data.白娅.依存度') === 0,
+      should_scan: true,
+    },
+    {
+      id: '理智啊，请不要冻结',
+      position: 'none',
+      depth: 0,
+      role: 'system',
+      content: '【【理智啊，请不要冻结】】',
+      filter: () => _.get(getAllVariables(), 'stat_data.白娅.依存度') === 100,
+      should_scan: true,
+    },
+  ]);
+});
+```
+
+---
+
+## 8. 脚本开发规范
+
+### 8.1 变量结构脚本
+
+文件路径：`脚本/变量结构/index.ts`
+
+负责注册 MVU Schema：
+
+```typescript
+import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
+import { Schema } from '../../schema';
+
+$(() => {
+  registerMvuSchema(Schema);
+});
+```
+
+### 8.2 MVU 框架脚本
+
+文件路径：`脚本/MVU/index.ts`
+
+加载 MVU 框架：
+
+```typescript
+import 'https://testingcf.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js';
+```
+
+### 8.3 脚本加载顺序
+
+在世界书的 index.yaml 中，脚本应按以下顺序组织：
+
+1. **变量结构脚本** - 先注册 Schema
+2. **MVU 框架脚本** - 再加载框架
+
+---
+
+## 9. 界面开发规范
+
+### 9.1 界面 index.ts
+
+文件路径：`界面/<界面名>/index.ts`
+
+```typescript
+import App from './App.vue';
+import './global.css';
+
+async function waitUntil(
+  predicate: () => boolean,
+  { intervalMs = 50, timeoutMs = 5000 }: { intervalMs?: number; timeoutMs?: number } = {},
+): Promise<void> {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeoutMs) {
+      throw new Error('[界面名] waitUntil timeout');
+    }
+    await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
+  }
+}
+
+$(async () => {
+  await waitGlobalInitialized('Mvu');
+  await waitUntil(() => _.has(getVariables({ type: 'message' }), 'stat_data'));
+  createApp(App).use(createPinia()).mount('#app');
+});
+```
+
+### 9.2 界面 index.html
+
+文件路径：`界面/<界面名>/index.html`
+
+```html
+<head></head>
+<body>
+  <div id="app"></div>
+</body>
+```
+
+### 9.3 Store（状态管理）
+
+文件路径：`界面/<界面名>/store.ts`
+
+使用 `defineMvuDataStore` 创建 MVU 数据 store：
+
+```typescript
+import { defineMvuDataStore } from '@/util/mvu';
+import { Schema } from '../../schema';
+
+export const useDataStore = defineMvuDataStore(Schema, { type: 'message', message_id: getCurrentMessageId() });
+```
+
+### 9.4 Vue 组件结构
+
+使用 Vue 3 + Composition API + Pinia：
+
+```vue
+<template>
+  <div class="card">
+    <WorldSection />
+    <DependencyBar />
+    <TabNav v-model="active_tab" :tabs="tabs" />
+    <div v-if="active_tab" class="content-area">
+      <div v-if="active_tab === '角色名'" class="tab-pane active">
+        <CharacterPanel />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import CharacterPanel from './components/CharacterPanel.vue';
+import DependencyBar from './components/DependencyBar.vue';
+import TabNav from './components/TabNav.vue';
+import WorldSection from './components/WorldSection.vue';
+
+const tabs = [
+  { id: '角色名', label: '角色情报' },
+];
+
+const active_tab = useLocalStorage<string | null>('界面名:active_tab', null);
+</script>
+
+<style lang="scss" scoped>
+.card {
+  width: 100%;
+  max-width: 720px;
+  /* 样式定义 */
+}
+</style>
+```
+
+---
+
+## 10. 第一条消息规范
+
+### 10.1 文件结构
+
+```
+第一条消息/
+├── 0.txt   # 第一条消息（通常是用户视角或叙述者视角）
+└── 1.txt   # 第二条消息（可选，AI 的第一条回复）
+```
+
+### 10.2 0.txt 示例
+
+```txt
+『啊，是新的转学生要来了呢。』
+
+女班长的手指在座位表上比划着，我随口应了一声。说真的，转学生这种事跟我有什么关系呢。我把视线从窗外收回来，正好看见班主任推开了教室前门。
+
+身后跟着一个娇小的身影。
+
+黑色长发，整洁得过分的校服，走路时带着某种慵懒的倦意——那种姿态我见过无数次，熟悉到刻进了骨头里。
+
+『嗯？』
+
+我眨了眨眼。不对，肯定是我看错了。那家伙怎么可能出现在这里。我揉了揉眼睛，再看一遍。
+
+还是那个身影。
+
+『这位是白娅同学，从今天开始就和大家一起学习了。』班主任的声音听起来像是从很远的地方传来。
+
+我的大脑好像被人按下了暂停键。
+
+白、娅。白娅。这个名字在我脑子里转了好几圈，每转一圈都像是有人拿锤子敲我的太阳穴。两年了，整整两年。
+
+...
+
+<cross_channel>
+<small>
+```yaml
+⚖️ 交错频道: 哎呀哎呀，<user>君这是在玩什么欲擒故纵呢？明明心里想得要死，嘴上却说不认识(｡•́︿•̀｡)
+```
+</small>
+</cross_channel>
+
+<StatusPlaceHolderImpl/>
+```
+
+### 10.3 特殊标签
+
+| 标签 | 用途 |
+|------|------|
+| `<cross_channel>...</cross_channel>` | 交错频道内容 |
+| `<StatusPlaceHolderImpl/>` | 状态栏占位符 |
+
+---
+
+## 11. 酒馆助手语法规范
+
+### 11.1 EJS 模板语法
+
+在提示词中使用 `<% ... %>` 执行 JavaScript 代码：
+
+```javascript
+<% print('hello world!') %>
+<%- variables.依存度 %>
+<%= getvar('stat_data.白娅.依存度') %>
+```
+
+| 标签 | 用途 | 转义 |
+|------|------|------|
+| `<% ... %>` | 执行代码，无输出 | - |
+| `<%= ... %>` | 输出并转义 HTML | 是 |
+| `<%- ... %>` | 输出但不转义 HTML | 否 |
+| `<%_ ... %>` | 修剪输出空白 | - |
+
+### 11.2 条件判断
+
+```ejs
+<%_ if (getvar('stat_data.白娅.依存度') < 20) { _%>
+消极自毁阶段的行为...
+<%_ } else if (getvar('stat_data.白娅.依存度') < 40) { _%>
+渴求注视阶段的行为...
+<%_ } _%>
+```
+
+### 11.3 装饰器（@@前缀）
+
+在条目开头使用 `@@` 前缀添加装饰器：
+
+| 装饰器 | 功能 |
+|--------|------|
+| `@@activate` | 视为蓝灯条目激活 |
+| `@@generate_before` | 等同于 `[GENERATE:BEFORE]` |
+| `@@generate_after` | 等同于 `[GENERATE:AFTER]` |
+| `@@render_before` | 等同于 `[RENDER:BEFORE]` |
+| `@@render_after` | 等同于 `[RENDER:AFTER]` |
+| `@@message_formatting` | 输出为 HTML（仅渲染模式） |
+| `@@iframe` | 用 iframe 包裹，避免样式污染 |
+| `@@private` | 避免变量冲突 |
+| `@@if 条件` | 条件为 false 时排除条目 |
+| `@@preprocessing` | 在酒馆处理前先由扩展处理 |
+
+### 11.4 内容注入前缀
+
+| 前缀 | 作用 |
+|------|------|
+| `[GENERATE:BEFORE]` | 注入到发送给 LLM 的提示词开头 |
+| `[GENERATE:AFTER]` | 注入到发送给 LLM 的提示词末尾 |
+| `[RENDER:BEFORE]` | 注入到 LLM 输出的内容开头（仅渲染） |
+| `[RENDER:AFTER]` | 注入到 LLM 输出的内容末尾 |
+| `[GENERATE:{idx}:BEFORE]` | 注入到第 idx 条消息开头 |
+| `[InitialVariables]` | 写入初始变量 |
+| `[GENERATE:REGEX:pattern]` | 正则匹配时注入 |
+
+### 11.5 内置变量
+
+| 变量 | 说明 |
+|------|------|
+| `variables` | 全部变量合集（合并后） |
+| `SillyTavern` | 酒馆上下文 |
+| `_` | Lodash 库 |
+| `$` | jQuery 库 |
+| `toastr` | 提示消息库 |
+| `runType` | 当前阶段 (`generate`/`preparation`/`render`) |
+| `charName` | 角色名 |
+| `userName` | 用户名 |
+
+### 11.6 核心函数
+
+| 函数 | 功能 |
+|------|------|
+| `setvar(key, value, options)` | 设置变量 |
+| `getvar(key, options)` | 读取变量 |
+| `incvar(key, value, options)` | 增加变量值 |
+| `decvar(key, value, options)` | 减少变量值 |
+| `getwi(lorebook, title, data)` | 读取世界书条目 |
+| `activewi(lorebook, title, force)` | 激活世界书条目 |
+| `injectPrompt(key, prompt, order)` | 添加提示词注入 |
+| `getPromptsInjected(key)` | 读取已注入的提示词 |
+| `activateRegex(pattern, replace, opts)` | 激活临时正则 |
+| `evalTemplate(content, data, options)` | 模板处理 |
+| `print(...args)` | 输出字符串 |
+
+### 11.7 变量作用域
+
+| scope | 说明 |
+|-------|------|
+| `global` | 全局变量 |
+| `local` | 局部（聊天）变量 |
+| `message` | 消息变量 |
+| `cache` | 临时变量（模板的 `variables`） |
+| `initial` | 初始变量 |
+
+### 11.8 特殊变量（自动设置）
+
+| 变量 | 说明 |
+|------|------|
+| `LAST_SEND_TOKENS` | 上次发送的 token 数量 |
+| `LAST_SEND_CHARS` | 上次发送的字符数 |
+| `LAST_RECEIVE_TOKENS` | 上次接收的 token 数量 |
+| `LAST_RECEIVE_CHARS` | 上次接收的字符数 |
+
+---
+
+## 12. 常见问题与最佳实践
+
+### 12.1 Zod Schema 常见问题
+
+**Q: transform 中的数据修改不生效？**
+
+A: `z.transform()` 内部修改 `data` 不会影响最终结果，必须 `return { ...data, 新字段 }`。
+
+```typescript
+// ✅ 正确
+.transform(data => {
+  data.称号 = _.pickBy(...); // 修改
+  return { ...data, $阶段 }; // 必须返回新对象
+})
+```
+
+**Q: 如何限制数值范围？**
+
+A: 使用 `z.transform()` 和 `_.clamp()`：
+
+```typescript
+依存度: z.coerce.number().transform(v => _.clamp(v, 0, 100))
+```
+
+### 12.2 世界书配置常见问题
+
+**Q: 世界书条目不生效？**
+
+A: 检查以下几点：
+1. `启用` 字段是否为 `true`
+2. 激活策略类型（蓝灯/绿灯）是否正确
+3. 关键字是否匹配
+4. 文件路径是否正确
+
+**Q: 分隔符不显示？**
+
+A: `分隔符` 条目的 `内容` 字段为空字符串是正常的，其作用是视觉分组而非实际内容注入。
+
+### 12.3 立即事件常见问题
+
+**Q: 事件触发但无反应？**
+
+A: 检查：
+1. `injectPrompts` 中的 `filter` 函数是否返回 `true`
+2. 关键字是否与 `[GENERATE:REGEX:]` 中的关键字一致
+3. 世界书中的 `[GENERATE:REGEX:]` 条目是否启用
+
+### 12.4 界面开发常见问题
+
+**Q: 状态栏不显示？**
+
+A: 检查：
+1. 是否调用了 `waitGlobalInitialized('Mvu')`
+2. 是否等待 `stat_data` 存在
+3. Vue 是否正确挂载
+
+**Q: 数据不同步？**
+
+A: 使用 `defineMvuDataStore` 创建的 store 会自动同步，但需确保：
+1. Schema 与变量结构一致
+2. 变量路径正确
+
+### 12.5 最佳实践总结
+
+| 场景 | 最佳实践 |
+|------|----------|
+| 数值变量 | 使用 `z.coerce.number().transform(v => _.clamp(v, min, max))` |
+| 对象结构 | 优先使用 `z.record()` 而非 `z.array()` |
+| 派生字段 | 使用 `$` 前缀命名，如 `$依存度阶段` |
+| 世界书条目 | 使用分隔符分组，保持结构清晰 |
+| 立即事件 | 使用 `injectPrompts` 注入关键字 |
+| 界面状态 | 使用 `defineMvuDataStore` 同步数据 |
+| EJS 条件 | 使用 `<%_ if ... { _%>` 格式，减少空白输出 |
+| 变量路径 | 使用 `_.get()` 安全获取嵌套值 |
+
+---
+
+## 附录
+
+### A. 参考文件
+
+- [酒馆助手文档 - 功能](.cursor/rules/酒馆助手文档-features_cn.md)
+- [酒馆助手文档 - 参考](.cursor/rules/酒馆助手文档-reference_cn.md)
+- [MVU 组件包](.cursor/rules/MVU组件包.mdc)
+- [src/角色卡示例](src/角色卡示例/)
+
+### B. 相关链接
+
+- [酒馆助手 GitHub](https://github.com/N0VI028/JS-Slash-Runner/)
+- [MVU 框架 GitHub](https://github.com/MagicalAstrogy/MagVarUpdate)
+- [EJS 文档](https://github.com/mde/ejs/blob/main/docs/syntax.md)
+- [JSON Patch RFC 6902](https://www.rfc-editor.org/rfc/rfc6902)
