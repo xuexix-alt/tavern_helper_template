@@ -19,7 +19,9 @@ const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelatio
       秩序刻印更新原因: z
         .string()
         .prefault('')
-        .describe('符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求'),
+        .describe(
+          '符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求',
+        ),
       健康: z.coerce
         .number()
         .transform(v => _.clamp(v, 0, 100))
@@ -37,7 +39,9 @@ const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelatio
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: 登场状态Schema.describe('剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场"'),
     })
     .prefault({
@@ -276,8 +280,6 @@ export const Schema = z.object({
   康绮月: 主要角色Schema,
   薛萍: 主要角色Schema,
   小泽花: 主要角色Schema,
-
-
 
   临时NPC: z
     .record(z.string(), 临时NPCSchema)
