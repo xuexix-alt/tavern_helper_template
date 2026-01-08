@@ -28,7 +28,19 @@
             <div class="status-item health-section">
               <div class="health-section-header">
                 <div class="label">❤️ 健康</div>
-                <div class="value">{{ getCharacter(key)?.健康 ?? '--' }}</div>
+                <div class="value">
+                  {{ getCharacter(key)?.健康 ?? '--' }}
+                  <button
+                    v-if="isTempNpcKey(key)"
+                    class="tempnpc-remove-btn"
+                    type="button"
+                    aria-label="删除临时NPC"
+                    :disabled="deletingTempNpc === getTempNpcName(key)"
+                    @click="onClickDeleteTempNpc(key)"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
               <div class="health-status-subtext">{{ getCharacter(key)?.健康状况 ?? '--' }}</div>
               <div class="progress-bar-container">
@@ -129,30 +141,31 @@ const CHARACTER_ORDER = [
 const store = useDataStore();
 
 const active_character_keys = computed<CharacterKey[]>(() => {
-  const keys: CharacterKey[] = [];
-
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
 
-  // 1. 预设角色按固定顺序：先登场后离场
+  // 1. 预设角色按固定顺序
   const presetKeys = CHARACTER_ORDER.filter(key => store.data[key as keyof typeof store.data]);
   const presetActive = presetKeys.filter(isActive);
   const presetInactive = presetKeys.filter(k => !isActive(k));
-  keys.push(...presetActive, ...presetInactive);
 
-  // 2. 临时 NPC：先登场后离场（按名称字典序）
+  // 2. 临时 NPC（按名称字典序）
+  const tempActive: CharacterKey[] = [];
+  const tempInactive: CharacterKey[] = [];
   const tempNPCs = store.data.临时NPC;
   if (tempNPCs && typeof tempNPCs === 'object') {
     const npcNames = Object.keys(tempNPCs).sort();
     const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
     const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
-    npcActive.forEach(name => keys.push(`临时NPC:${name}`));
-    npcInactive.forEach(name => keys.push(`临时NPC:${name}`));
+    npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
+    npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
   }
 
-  return keys;
+  // 排序：所有【登场】角色（含临时NPC）置前，避免登场的临时NPC被排到离场角色后面
+  return [...presetActive, ...tempActive, ...presetInactive, ...tempInactive];
 });
 
 const active_character_key = ref<CharacterKey | null>(null);
+const deletingTempNpc = ref<string | null>(null);
 
 watch(
   active_character_keys,
@@ -178,6 +191,97 @@ function getCharacter(key: CharacterKey) {
     return store.data.临时NPC[realName];
   }
   return store.data[normalizedKey as keyof typeof store.data] as any;
+}
+
+function isTempNpcKey(key: CharacterKey): boolean {
+  return typeof key === 'string' && key.startsWith('临时NPC:');
+}
+
+function getTempNpcName(key: CharacterKey): string {
+  if (!isTempNpcKey(key)) return '';
+  return String(key.split(':')[1] ?? '').trim();
+}
+
+async function confirmDeleteTempNpc(name: string): Promise<boolean> {
+  const title = `确定删除临时NPC「${name}」？`;
+  const hint = '将从当前楼层变量中移除该临时NPC，并重载本楼层UI以刷新显示。';
+  const content = `${title}\n\n${hint}`;
+
+  try {
+    if (typeof (SillyTavern as any)?.callGenericPopup === 'function') {
+      const result = await SillyTavern.callGenericPopup(content, SillyTavern.POPUP_TYPE.CONFIRM);
+      return result === SillyTavern.POPUP_RESULT.AFFIRMATIVE || result === true;
+    }
+  } catch {
+    // ignore and fallback
+  }
+
+  return window.confirm(content);
+}
+
+function pruneNameFromRooms(stat_data: any, name: string) {
+  const n = String(name ?? '').trim();
+  if (!n) return;
+
+  const rooms = _.get(stat_data, '房间', null);
+  if (!rooms || typeof rooms !== 'object') return;
+
+  const pruneList = (path: string) => {
+    const list = _.get(rooms, path, null);
+    if (!Array.isArray(list)) return;
+    const next = list.filter(x => String(x ?? '').trim() !== n);
+    if (!_.isEqual(next, list)) _.set(rooms, path, next);
+  };
+
+  pruneList('玄关.临时客房A入住者');
+  pruneList('玄关.临时客房B入住者');
+  pruneList('核心区.主卧室使用者');
+  pruneList('核心区.主浴室使用者');
+
+  const floorKeys = ['楼层房间.楼层20房间', '楼层房间.楼层19房间'];
+  for (const baseKey of floorKeys) {
+    const record = _.get(rooms, baseKey, null);
+    if (!record || typeof record !== 'object') continue;
+    for (const roomNumber of Object.keys(record)) {
+      pruneList(`${baseKey}.${roomNumber}.入住者`);
+    }
+  }
+}
+
+async function onClickDeleteTempNpc(key: CharacterKey) {
+  const name = getTempNpcName(key);
+  if (!name) return;
+  if (deletingTempNpc.value) return;
+
+  const ok = await confirmDeleteTempNpc(name);
+  if (!ok) return;
+
+  try {
+    deletingTempNpc.value = name;
+    await waitGlobalInitialized('Mvu');
+
+    const message_id = getCurrentMessageId();
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
+
+    const existed = _.has(mvu_data, ['stat_data', '临时NPC', name]);
+    if (!existed) {
+      toastr.info(`临时NPC「${name}」已不存在`);
+      reloadIframe();
+      return;
+    }
+
+    _.unset(mvu_data, ['stat_data', '临时NPC', name]);
+    pruneNameFromRooms(_.get(mvu_data, 'stat_data', {}), name);
+
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+    toastr.success(`已删除临时NPC「${name}」`);
+    reloadIframe();
+  } catch (e: any) {
+    console.error('[CharactersSection] delete temp npc failed', e);
+    toastr.error(`删除失败：${e?.message ?? e}`);
+  } finally {
+    deletingTempNpc.value = null;
+  }
 }
 
 function getCharacterChange(key: CharacterKey) {
@@ -225,6 +329,7 @@ function getRelationStage(key: CharacterKey) {
   // fallback: 推断自秩序刻印数值
   const mark = typeof char?.秩序刻印 === 'number' ? char.秩序刻印 : null;
   if (mark === null) return '未知';
+  if (mark <= 0) return '无';
   if (mark < 20) return '拒绝';
   if (mark < 40) return '交易';
   if (mark < 60) return '顺从';
@@ -240,8 +345,10 @@ function getRelationTendency(key: CharacterKey) {
 function getRelationRangeText(key: CharacterKey) {
   const relation = getRelationStage(key);
   switch (relation) {
+    case '无':
+      return '0';
     case '拒绝':
-      return '0 - 19';
+      return '1 - 19';
     case '交易':
       return '20 - 39';
     case '顺从':
@@ -284,6 +391,35 @@ function getImprintChange(key: CharacterKey) {
 </style>
 
 <style scoped>
+.tempnpc-remove-btn {
+  margin-left: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 90, 0.55);
+  background: rgba(255, 90, 90, 0.12);
+  color: rgba(255, 150, 150, 0.98);
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.tempnpc-remove-btn:hover {
+  transform: scale(1.04);
+}
+
+.tempnpc-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .status-pill {
   margin-left: 8px;
   padding: 2px 6px;

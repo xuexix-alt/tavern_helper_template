@@ -47,10 +47,45 @@ $(async () => {
     await waitGlobalInitialized('Mvu');
   }
 
+  const scrollToTopOnce = (() => {
+    let done = false;
+    return () => {
+      if (done) return;
+      done = true;
+
+      const run = () => {
+        try {
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        } catch {
+          // ignore
+        }
+      };
+
+      // 多次尝试：覆盖浏览器/iframe恢复滚动、以及首帧布局抖动
+      run();
+      requestAnimationFrame(run);
+      setTimeout(run, 150);
+    };
+  })();
+
   // 挂载 Vue 应用
   const app = createApp(App);
   app.use(createPinia());
   app.mount('#app');
+
+  // 进入楼层 iframe 时，总是从顶部开始，避免出现“加载后停在最后一行”
+  scrollToTopOnce();
+
+  // BFCache/页面恢复时也强制回到顶部
+  window.addEventListener(
+    'pageshow',
+    () => {
+      scrollToTopOnce();
+    },
+    { once: true },
+  );
 });
 
 // 卸载时清理资源

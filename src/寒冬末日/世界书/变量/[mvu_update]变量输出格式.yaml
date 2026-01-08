@@ -2,11 +2,11 @@
 rule:
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
-  - "  - `replace`: replace the value of existing paths"
-  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
-  - "  - `insert`: insert new items into an object or array"
-  - "  - `remove`: delete path"
+  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:'
+  - '  - `replace`: replace the value of existing paths'
+  - '  - `delta`: update the value of existing number paths by a delta value (positive or negative)'
+  - '  - `insert`: insert new items into an object or array'
+  - '  - `remove`: delete path'
   - Path MUST start with `/stat_data/`.
   - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
 
@@ -15,11 +15,11 @@ format: |-
   <Analysis>
   从当前<user>消息、剧情上下文和上一轮 stat_data 状态中检索信息，严格按照以下分层检查顺序一步一步思考。
   前置步骤：清除本轮未提及的角色
-  - 快速检查当前登场角色列表，本轮哪位已登场角色未提及？→角色离场。
+  - 快速检查当前登场角色列表，本轮哪位已登场角色未提及也未出现在可能登场的场域？→角色离场。本轮哪位未登场角色有剧情提及或出现在可能登场的场域？→角色登场。
   - **特别不能遗漏** → 使用replace将登场状态设置为："离场"；
-  - 结果：需变更登场状态的离场角色：____。已检查：□（记录接下来的更新对象）
+  - 结果：需变更登场状态的离场角色：____。需变更登场状态的登场角色：____。已检查：□（记录接下来的更新对象）
 
-  步骤 1：世界变量 & 楼层氛围（最高优先级）
+  步骤 1：世界变量 & 楼层氛围
   - 时间：
     - 检查<user>是否指定时间流逝 → 计算新时间（格式："时间段 - HH:MM"）。
     - 若无指定 → 根据对话长度估算 5-15 分钟。
@@ -32,14 +32,9 @@ format: |-
     - 仅当角色或场景明确移动到新地点时更新。
     - 结果：需更新？是/否。新值：____。已检查：□
 
-  步骤 2：庇护所变量（强制检查升级相关）
-  - 每日Roll点判定 (若日期变更)：
-    - 执行随机数生成 (0-10)。
-    - 判定是否命中幸运数 (7, 10)。
-    - 结果写入 `今日投掷点数`。
-    - 结果：Roll点 [X]。命中？是/否。需升级？是/否。已检查：□
+  步骤 2：庇护所变量
   - 庇护所等级：
-    - 检查升级来源：Roll点命中 OR 剧情触发 OR 保底触发。
+    - 检查升级来源：剧情触发 OR 保底触发。
     - 若满足任一条件 → 等级 +1 (上限 10)，并记录新能力。
     - 结果：需更新？是/否。新值：____。已检查：□
   - 可扩展区域 & 庇护所能力：
@@ -48,8 +43,10 @@ format: |-
     - 结果：需更新？是/否。新值：____。已检查：□
 
    步骤 3：所有角色变量
-  - 逐个列出当前所有登场角色（主角色 + 已登场过的离场角色 + 临时NPC）：
-    - 角色列表：【浅见亚美】【相田哲也】【星野琉璃】【早川遥】【早川舞】【藤井雪乃】【中村惠子】【王静】【康绮月】【薛萍】【小泽花】【爱宫心爱】【爱宫铃】【桃乐丝・泽巴哈】【何铃】【临时NPC】。
+  - 逐个列出本轮需要检查的角色对象（避免硬编码名单）：
+    - 来源：上一轮/本轮的 `stat_data`（排除保留键）+ `stat_data/临时NPC` 下的所有对象。
+    - 保留键（不视为角色）：世界、庇护所、房间、主线任务、楼层其他住户、临时NPC。
+    - 结果：角色列表：____。已检查：□
   - 对每个角色逐一检查：
     a. 登场状态：**这是一个重要剧情开关**
        - 进入场景 → "登场"；
@@ -81,7 +78,7 @@ format: |-
        - 每次互动后必须更新，反映真实心声。
        - 离场角色可跳过，但回归时必须补上。
        - 结果：需更新？是/否。新值：____。已检查：□
-     g. 秩序刻印 (Imp) & 更新原因（**登场角色强制同步**）：
+     f. 秩序刻印 (Imp) & 更新原因（**登场角色强制同步**）：
         - 计算变动：基于生存供给(+1)、设施体验(+3~5)或感情、性爱互动(+2~6)计算增减。
         - 检查跃迁：本轮是否有完成任务等奖励内容直接涉及关系升级，如果有直接使用replace更新秩序刻印至新等级。
         - 重要：如果你在 JSONPatch 中对该角色执行了 `delta/replace` 更新 `秩序刻印`，必须在 JSONPatch 中同时写入：
@@ -92,8 +89,11 @@ format: |-
   步骤 4：临时NPC专用处理
   - 本轮是否有新npc登场？ → 参照核心角色的完整字段，使用 `insert` 创建完整新对象（初始化所有字段）。
   - 若已有临时NPC → 参考登场角色进行各字段更新。
-  - 若死亡 → 使用 `remove` 删除对应路径。
-  - 结果：需创建/更新/移除？是/否。已检查：□
+  - ❗保留原则：除非玩家明示永久移除，否则剧情不得 `remove` 临时NPC。
+    - 若死亡：默认使用 `remove` 删除该临时NPC（避免数量无限膨胀）。
+      - 仅当玩家明示“保留尸体/留档”时，才按“死亡处理”保留对象（健康=0，文本类字段置空）。
+    - 若离开视野：`replace` 登场状态为 "离场"，并按需要 `replace` 所在房间为 `""`。
+  - 结果：需创建/更新/（仅在玩家明示时）移除？是/否。已检查：□
 
   步骤 5：楼层其他住户
   - 言语 & 行为：
@@ -102,10 +102,14 @@ format: |-
 
   步骤 6：房间状态（强制，禁止遗漏）
   - 检查所有角色移动（进入/离开/换房）：
-    - 对应房间的 入住者/使用者 数组：必须先确定该房间**最终的完整入住者列表**，然后使用 `replace` 操作将这个**新列表**覆盖原数组。
-    - **禁止使用 `remove` 或 `insert`** 对数组进行增量修改。
+    - 先更新“发生移动的角色/临时NPC”的 `所在房间`（这是单一真源）：
+      - 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
+      - 离开公寓/位置未知：写空字符串 `""`
+    - 房间的 入住者/使用者 数组属于派生数据，脚本会自动重算并纠偏。
+      - 若你仍要显式输出房间数组：必须先确定该房间**最终的完整入住者列表**，然后用 `replace` 覆盖整个数组。
+      - **禁止使用 `remove` 或 `insert`** 对入住者数组做增量修改。
     - 涉及房间：玄关临时客房、核心区主卧/主浴、楼层具体房号等。
-    - 结果：需更新房间：____。操作：replace ____。已检查：□
+    - 结果：已检查：□
 
   步骤 7：主线任务
   - 当前阶段 & 阶段目标（进度追踪）：
@@ -151,6 +155,8 @@ format: |-
     { "op": "delta", "path": "/stat_data/浅见亚美/健康", "value": -1 },
     { "op": "replace", "path": "/stat_data/浅见亚美/内心想法", "value": "虽然有些冷，但至少哲也君还在我身边……" },
     { "op": "replace", "path": "/stat_data/浅见亚美/登场状态", "value": "登场" },
+    { "op": "replace", "path": "/stat_data/藤井雪乃/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/stat_data/浅见亚美/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/stat_data/庇护所/庇护所能力/???新型空气过滤盾???", "value": { "desc": "过滤效率提升30%。" } },
     { "op": "insert", "path": "/stat_data/临时NPC/陌生拾荒者", "value": { "姓名": "陌生拾荒者", "健康": 100, "登场状态": "登场" } },
     { "op": "replace", "path": "/stat_data/房间/楼层房间/楼层20房间/2001/入住者", "value": ["{{user}}", "早川遥"] }
@@ -159,8 +165,9 @@ format: |-
   </UpdateVariable>
 
 requirements:
-  - "Allowed operations: replace, delta, insert, remove."
+  - 'Allowed operations: replace, delta, insert, remove.'
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
-  - "Arrays: Use `replace` with the full new list for Room/User lists; use `insert` with `/-` for Appending to Capability/Log arrays."
+  - 'Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible.'
+  - 'For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth).'
+  - 'Arrays: Use `replace` with the full new list for Room/User lists; use `insert` with `/-` for Appending to Capability/Log arrays.'

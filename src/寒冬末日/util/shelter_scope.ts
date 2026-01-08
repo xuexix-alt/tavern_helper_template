@@ -28,7 +28,7 @@ export function normalizeScope(scope: ShelterScopeByFloor): ShelterScopeByFloor 
   for (const [floor, rooms] of Object.entries(scope ?? {})) {
     if (!Array.isArray(rooms)) continue;
     out[floor] = _(rooms)
-      .filter((x: any) => typeof x === 'string' && x.trim())
+      .filter((x: any) => typeof x === 'string' && x.trim().length > 0)
       .filter((room: string) => !(floor === '20' && room === '2001'))
       .uniq()
       .sortBy()

@@ -175,7 +175,7 @@
             <div class="scope-modal" role="dialog" aria-modal="true">
               <div class="scope-modal-header">
                 <div class="scope-modal-title">🛡️ 设置生存庇护范围</div>
-                <button class="scope-icon-btn" type="button" @click="closeScopeEditor" aria-label="关闭">✕</button>
+                <button class="scope-icon-btn" type="button" aria-label="关闭" @click="closeScopeEditor">✕</button>
               </div>
 
               <div class="scope-modal-subtitle">
@@ -595,11 +595,46 @@ function getFloorRoomNames(floor: string, room: string): string {
   const data = getFloorRoomData(floor, room);
   if (data.入住者.length === 0) return '-';
 
-  // 特殊房间显示固定名称
-  if (room === '2001') return '{{user}} (你)';
+  // 特殊房间：1901 固定家庭（避免 AI/变量波动导致 UI 显示不稳定）
   if (room === '1901') return '爱宫铃 & 爱宫心爱';
 
-  return data.入住者.join('、');
+  return formatRoomResidents(data.入住者, { maxShown: room === '2001' ? 3 : 4, showTotal: room === '2001' });
+}
+
+function normalizeResidentName(name: any): string {
+  const s = String(name ?? '').trim();
+  if (!s) return '';
+  // UI 显示：将酒馆变量占位符映射为“你”
+  if (s === '{{user}}') return '你';
+  return s;
+}
+
+function formatRoomResidents(
+  rawNames: any,
+  opts?: {
+    maxShown?: number;
+    showTotal?: boolean;
+  },
+): string {
+  const maxShown = Math.max(1, Number(opts?.maxShown ?? 4));
+  const showTotal = opts?.showTotal === true;
+
+  const names = (Array.isArray(rawNames) ? rawNames : [])
+    .map(normalizeResidentName)
+    .filter((n: string) => n.length > 0);
+  if (names.length === 0) return '-';
+
+  // 让“你”优先显示在最前面
+  const unique = _(names).uniq().value();
+  const hasYou = unique.includes('你');
+  const ordered = hasYou ? ['你', ...unique.filter(n => n !== '你')] : unique;
+
+  const shown = ordered.slice(0, maxShown);
+  const hidden = Math.max(0, ordered.length - shown.length);
+
+  const base = hidden > 0 ? `${shown.join('、')}…(+${hidden})` : shown.join('、');
+  return showTotal && ordered.length >= 2 ? `${base}（${ordered.length}）` : base;
+
 }
 </script>
 

@@ -6,6 +6,45 @@ export type RoomLocation =
 
 type RoomsStatData = any;
 
+export function normalizeRoomTag(tag: string): string {
+  return String(tag ?? '').trim();
+}
+
+export function parseRoomTag(tag: string): RoomLocation {
+  const t = normalizeRoomTag(tag);
+  if (!t) return { kind: 'none' };
+
+  if (t === '玄关/临时客房A') return { kind: 'entrance', room: '临时客房A' };
+  if (t === '玄关/临时客房B') return { kind: 'entrance', room: '临时客房B' };
+  if (t === '玄关') return { kind: 'entrance', room: '玄关' };
+
+  if (t === '核心区/主卧室') return { kind: 'core', room: '主卧室' };
+  if (t === '核心区/主浴室') return { kind: 'core', room: '主浴室' };
+
+  const m = t.match(/^楼层(20|19)\/(.+)$/);
+  if (m) {
+    const floor = m[1] as '20' | '19';
+    const roomNumber = String(m[2] ?? '').trim();
+    if (roomNumber) return { kind: 'floor', floor, roomNumber };
+  }
+
+  return { kind: 'none' };
+}
+
+export function roomTagFromLocation(loc: RoomLocation): string {
+  if (loc.kind === 'entrance') {
+    if (loc.room === '临时客房A') return '玄关/临时客房A';
+    if (loc.room === '临时客房B') return '玄关/临时客房B';
+    return '玄关';
+  }
+  if (loc.kind === 'core') {
+    if (loc.room === '主卧室') return '核心区/主卧室';
+    return '核心区/主浴室';
+  }
+  if (loc.kind === 'floor') return `楼层${loc.floor}/${loc.roomNumber}`;
+  return '';
+}
+
 export function findRoleLocation(rooms: RoomsStatData, roleName: string): RoomLocation {
   const name = roleName ?? '';
   if (!name) return { kind: 'none' };

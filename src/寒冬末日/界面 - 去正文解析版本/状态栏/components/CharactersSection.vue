@@ -232,8 +232,10 @@ function getRelationTendency(key: CharacterKey) {
 function getRelationRangeText(key: CharacterKey) {
   const relation = getRelationStage(key);
   switch (relation) {
+    case '无':
+      return '0';
     case '拒绝':
-      return '0 - 19';
+      return '1 - 19';
     case '交易':
       return '20 - 39';
     case '顺从':

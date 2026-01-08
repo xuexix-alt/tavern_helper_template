@@ -350,7 +350,7 @@ function splitInline(chunk: string, nextKey: () => string): Segment[] {
   if (!chunk) return [];
 
   // 需求：仅保留【】高亮；所有中英文引号/单引号都作为对话高亮
-  const inlineRe = /【[^】\n]+】|“[^”\n]+”|‘[^’\n]+’|"[^"\n]+"|'[^'\n]+'/g;
+  const inlineRe = /【[^】\n]+】|“[^”\n]+”|‘[^’\n]+’|「[^」\n]+」|"[^"\n]+"|'[^'\n]+'/g;
   const parts: Segment[] = [];
   let cursor = 0;
 
@@ -495,6 +495,7 @@ function formatTableCell(cell: string): string {
       .replace(/【([^】\n]+)】/g, '<span class="inline-bracket">【$1】</span>')
       .replace(/“([^”\n]+)”/g, '<span class="dialog-text">“$1”</span>')
       .replace(/‘([^’\n]+)’/g, '<span class="dialog-text">‘$1’</span>')
+      .replace(/「([^」\n]+)」/g, '<span class="dialog-text">「$1」</span>')
       .replace(/"([^"\n]+)"/g, '<span class="dialog-text">"$1"</span>')
       .replace(/'([^'\n]+)'/g, '<span class="dialog-text">\'$1\'</span>')
   );

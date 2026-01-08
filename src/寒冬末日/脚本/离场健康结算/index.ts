@@ -8,6 +8,7 @@ type RoleLike = {
   健康?: number;
   健康更新原因?: string;
   健康状况?: string;
+  内心想法?: string;
   登场状态?: string;
   关系?: string;
   关系倾向?: string;
@@ -22,6 +23,7 @@ type RoleTouched = {
   relationTendency: boolean;
   imprint: boolean;
   imprintReason: boolean;
+  thought: boolean;
 };
 
 function parseTimeStrToMinutes(timeStr: string): number | null {
@@ -57,8 +59,9 @@ function readDebugFlagsFromChat(): { dateLogic: boolean; offstageHealth: boolean
   };
 }
 
-function relationStageFromImprint(mark: number): '拒绝' | '交易' | '顺从' | '忠诚' | '性奴' {
+function relationStageFromImprint(mark: number): '无' | '拒绝' | '交易' | '顺从' | '忠诚' | '性奴' {
   const v = _.clamp(Number(mark) || 0, 0, 100);
+  if (v <= 0) return '无';
   if (v < 20) return '拒绝';
   if (v < 40) return '交易';
   if (v < 60) return '顺从';
@@ -109,6 +112,7 @@ function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouch
       relationTendency: false,
       imprint: false,
       imprintReason: false,
+      thought: false,
     };
   }
   return {
@@ -118,7 +122,32 @@ function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouch
     relationTendency: !_.isEqual(oldRole.关系倾向, newRole.关系倾向),
     imprint: !_.isEqual(oldRole.秩序刻印, newRole.秩序刻印),
     imprintReason: !_.isEqual(oldRole.秩序刻印更新原因, newRole.秩序刻印更新原因),
+    thought: !_.isEqual(oldRole.内心想法, newRole.内心想法),
   };
+}
+
+function applyAutoStageFromThoughtUpdateIfNeeded(
+  rolePath: string,
+  roleName: string,
+  oldRole: RoleLike | null,
+  newRole: RoleLike,
+  debug?: { offstageHealth: boolean },
+) {
+  if (!oldRole) return;
+  if (oldRole.登场状态 !== '离场') return;
+  if (newRole.登场状态 !== '离场') return;
+
+  const touched = diffRoleTouched(oldRole, newRole);
+  if (!touched.thought) return;
+
+  const nextThought = String(newRole.内心想法 ?? '').trim();
+  if (!nextThought) return;
+
+  // AI 本轮更新了内心想法，通常代表“在场/正在互动”，但可能遗漏把登场状态改为登场
+  _.set(newRole, '登场状态', '登场');
+  if (debug?.offstageHealth) {
+    console.log(`[OffstageHealth] auto-stage from thought update: ${rolePath} (${roleName})`);
+  }
 }
 
 function applyOffstageRoleHealthIfNeeded(
@@ -272,6 +301,7 @@ $(async () => {
       if (!isRoleLike(val)) continue;
 
       const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
+      applyAutoStageFromThoughtUpdateIfNeeded(key, key, oldRole, val as any, debug);
       applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
       applyDerivedHealthStatus(key, val as any, stat_data);
       applyDerivedRelationStage(key, oldRole, val as any, stat_data);
@@ -284,6 +314,7 @@ $(async () => {
         if (!isRoleLike(val)) continue;
 
         const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
+        applyAutoStageFromThoughtUpdateIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, debug);
         applyOffstageRoleHealthIfNeeded(
           `临时NPC.${name}`,
           name,
