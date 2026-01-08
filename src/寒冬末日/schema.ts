@@ -192,7 +192,10 @@ export const Schema = z.object({
   浅见亚美: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -229,7 +232,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -255,7 +260,10 @@ export const Schema = z.object({
   相田哲也: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -289,7 +297,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -315,7 +325,10 @@ export const Schema = z.object({
   星野琉璃: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -349,7 +362,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -375,7 +390,10 @@ export const Schema = z.object({
   早川遥: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -409,7 +427,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -435,7 +455,10 @@ export const Schema = z.object({
   早川舞: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -469,7 +492,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -495,7 +520,10 @@ export const Schema = z.object({
   藤井雪乃: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -529,7 +557,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -555,7 +585,10 @@ export const Schema = z.object({
   中村惠子: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -589,7 +622,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -615,7 +650,10 @@ export const Schema = z.object({
   爱宫心爱: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -649,7 +687,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -675,7 +715,10 @@ export const Schema = z.object({
   爱宫铃: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -709,7 +752,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -735,7 +780,10 @@ export const Schema = z.object({
   '桃乐丝・泽巴哈': z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -769,7 +817,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -795,7 +845,10 @@ export const Schema = z.object({
   何铃: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -829,7 +882,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -855,7 +910,10 @@ export const Schema = z.object({
   王静: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -889,7 +947,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -915,7 +975,10 @@ export const Schema = z.object({
   康绮月: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -949,7 +1012,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -975,7 +1040,10 @@ export const Schema = z.object({
   薛萍: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -1009,7 +1077,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -1035,7 +1105,10 @@ export const Schema = z.object({
   小泽花: z
     .object({
       姓名: z.string().prefault(''),
-      关系: z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无').describe('角色当前对{{user}}的关系档位'),
+      关系: z
+        .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
+        .prefault('无')
+        .describe('角色当前对{{user}}的关系档位'),
       关系倾向: z
         .enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴'])
         .prefault('无')
@@ -1069,7 +1142,9 @@ export const Schema = z.object({
       所在房间: z
         .string()
         .prefault('')
-        .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+        .describe(
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+        ),
       登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
     })
     .prefault({
@@ -1138,7 +1213,9 @@ export const Schema = z.object({
           所在房间: z
             .string()
             .prefault('')
-            .describe('角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出'),
+            .describe(
+              '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+            ),
           登场状态: z.enum(['登场', '离场']).prefault('离场').describe('值为"登场"时显示在UI。角色不出现时设为"离场"'),
         })
         .prefault({

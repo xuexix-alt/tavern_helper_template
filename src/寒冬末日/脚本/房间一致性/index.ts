@@ -191,7 +191,9 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const { core, tempNpc } = listRoleNames(stat_data);
   const knownNames = new Set<string>([...core, ...tempNpc]);
 
-  const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)]).uniq().value();
+  const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)])
+    .uniq()
+    .value();
 
   const finalTagByName = new Map<string, string>();
   const finalReasonByName = new Map<string, string>();
@@ -231,7 +233,9 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
     assignedByTag[tag].push(name);
   }
 
-  const writeTags = _([...allTags, ...Object.keys(assignedByTag)]).uniq().value();
+  const writeTags = _([...allTags, ...Object.keys(assignedByTag)])
+    .uniq()
+    .value();
   for (const tag of writeTags) {
     const assigned = assignedByTag[tag] ?? [];
     const prior = priorKnownOrderByTag[tag] ?? [];

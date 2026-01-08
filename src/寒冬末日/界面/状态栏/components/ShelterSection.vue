@@ -634,7 +634,6 @@ function formatRoomResidents(
 
   const base = hidden > 0 ? `${shown.join('、')}…(+${hidden})` : shown.join('、');
   return showTotal && ordered.length >= 2 ? `${base}（${ordered.length}）` : base;
-
 }
 </script>
 
