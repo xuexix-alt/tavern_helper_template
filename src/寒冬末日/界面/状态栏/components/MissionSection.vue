@@ -93,6 +93,7 @@
                 <div class="intel-meta">
                   <span class="intel-value">💰 {{ intel.价值 }}</span>
                   <span class="intel-risk">⚠️ {{ intel.风险 }}</span>
+                  <span v-if="getIntelCleanupHint(key, intel)" class="intel-deadline">{{ getIntelCleanupHint(key, intel) }}</span>
                 </div>
               </div>
             </div>
@@ -113,6 +114,7 @@ import { useDataStore } from '../../store';
 const store = useDataStore();
 const isGoalsExpanded = ref(false);
 const isIntelExpanded = ref(false);
+const currentMessageId = Number(getCurrentMessageId());
 
 type StageTarget = { key: string; 描述: string; 当前值: number; 目标值: number };
 const stageTargets = computed<StageTarget[]>(() => {
@@ -164,6 +166,42 @@ const intelTotal = computed(() => Object.keys(store.data.主线任务.情报碎�
 const intelCompleted = computed(
   () => Object.values(store.data.主线任务.情报碎片).filter(i => i.状态 === '已完成').length,
 );
+
+function getIntelCleanupHint(key: string, intel: any): string | null {
+  const meta = (store.data.主线任务 as any)?.$meta?.情报碎片?.[key];
+  if (!meta || !Number.isFinite(currentMessageId)) return null;
+
+  const createdAt = Number(meta.created_at ?? 0);
+  const exploredAt = Number(meta.explored_at ?? 0);
+  const completedAt = Number(meta.completed_at ?? 0);
+
+  const status = String(intel?.状态 ?? '');
+  const doneLimit = 3;
+  const notDoneLimit = 5;
+
+  if (status === '已完成') {
+    const base = completedAt || exploredAt || createdAt;
+    if (!base) return null;
+    const remaining = doneLimit - (currentMessageId - base);
+    if (remaining <= 0) return '即将自动清理（已完成）';
+    return `剩余${remaining}层自动清理（已完成）`;
+  }
+
+  if (status === '已探索') {
+    const base = exploredAt || createdAt;
+    if (!base) return null;
+    const remaining = doneLimit - (currentMessageId - base);
+    if (remaining <= 0) return '即将自动清理（已探索）';
+    return `剩余${remaining}层自动清理（已探索）`;
+  }
+
+  // 未探索：5 楼时限
+  const base = createdAt;
+  if (!base) return null;
+  const remaining = notDoneLimit - (currentMessageId - base);
+  if (remaining <= 0) return '已超时：即将自动清理';
+  return `时限剩余${remaining}层（未完成将清理）`;
+}
 
 function getStatusIcon(status: string): string {
   switch (status) {
@@ -512,6 +550,7 @@ function getRingProgress(status: string): string {
   display: flex;
   gap: 12px;
   font-size: 0.75em;
+  flex-wrap: wrap;
 }
 
 .intel-value {
@@ -520,5 +559,10 @@ function getRingProgress(status: string): string {
 
 .intel-risk {
   color: var(--accent-red);
+}
+
+.intel-deadline {
+  color: var(--text-color);
+  opacity: 0.75;
 }
 </style>

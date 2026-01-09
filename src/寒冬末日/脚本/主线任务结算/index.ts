@@ -13,6 +13,26 @@ type IntelFragment = {
   状态: IntelStatus;
 };
 
+type MissionMeta = {
+  楼层: {
+    last_seen_message_id: number;
+  };
+  情报碎片: Record<
+    string,
+    {
+      created_at: number;
+      explored_at: number;
+      completed_at: number;
+    }
+  >;
+  阶段目标: Record<
+    string,
+    {
+      completed_at: number;
+    }
+  >;
+};
+
 type MissionStageDef = {
   name: string;
   goals: Array<{ key: string; 描述: string; 目标值: number }>;
@@ -41,6 +61,7 @@ function pickMissionSnapshot(stat_data: any): any {
     阶段目标: _.get(stat_data, '主线任务.阶段目标', null),
     目标完成状态: _.get(stat_data, '主线任务.目标完成状态', null),
     情报碎片: _.get(stat_data, '主线任务.情报碎片', null),
+    $meta: _.get(stat_data, '主线任务.$meta', null),
     庇护所能力: _.get(stat_data, '庇护所.庇护所能力', null),
   };
 }
@@ -115,6 +136,211 @@ function isIntelFragment(val: unknown): val is IntelFragment {
   const status = (val as any).状态;
   if (status !== '未探索' && status !== '已探索' && status !== '已完成') return false;
   return true;
+}
+
+function getLastMessageIdSafe(): number | null {
+  try {
+    const id = (globalThis as any).getLastMessageId?.();
+    if (typeof id === 'number' && Number.isFinite(id)) return id;
+    const n = Number(id);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function ensureMissionMeta(stat_data: any) {
+  const mission = _.get(stat_data, '主线任务', null);
+  if (!mission || typeof mission !== 'object') return;
+
+  const raw = _.get(mission, '$meta', null);
+  const meta: MissionMeta =
+    raw && typeof raw === 'object'
+      ? (raw as any)
+      : {
+          楼层: { last_seen_message_id: 0 },
+          情报碎片: {},
+          阶段目标: {},
+        };
+
+  if (!meta.楼层 || typeof meta.楼层 !== 'object') meta.楼层 = { last_seen_message_id: 0 };
+  if (typeof meta.楼层.last_seen_message_id !== 'number') meta.楼层.last_seen_message_id = 0;
+  if (!meta.情报碎片 || typeof meta.情报碎片 !== 'object') meta.情报碎片 = {};
+  if (!meta.阶段目标 || typeof meta.阶段目标 !== 'object') meta.阶段目标 = {};
+
+  _.set(stat_data, '主线任务.$meta', meta);
+}
+
+function syncMissionMetaIntel(stat_data: any, message_id: number) {
+  const mission = _.get(stat_data, '主线任务', null);
+  if (!mission || typeof mission !== 'object') return;
+
+  const intel = _.get(mission, '情报碎片', null);
+  if (!intel || typeof intel !== 'object' || Array.isArray(intel)) return;
+
+  ensureMissionMeta(stat_data);
+  const meta: MissionMeta = _.get(stat_data, '主线任务.$meta');
+  const metaIntel = meta.情报碎片 ?? {};
+
+  // 清理已消失的 key
+  for (const k of Object.keys(metaIntel)) {
+    if (!(k in (intel as any))) delete metaIntel[k];
+  }
+
+  for (const [k, frag] of Object.entries(intel as Record<string, unknown>)) {
+    if (!isIntelFragment(frag)) continue;
+
+    const cur = metaIntel[k] ?? { created_at: message_id, explored_at: 0, completed_at: 0 };
+    if (!cur.created_at) cur.created_at = message_id;
+
+    if (frag.状态 === '未探索') {
+      cur.explored_at = 0;
+      cur.completed_at = 0;
+    } else if (frag.状态 === '已探索') {
+      if (!cur.explored_at) cur.explored_at = message_id;
+      cur.completed_at = 0;
+    } else if (frag.状态 === '已完成') {
+      if (!cur.completed_at) cur.completed_at = message_id;
+      if (!cur.explored_at) cur.explored_at = cur.created_at || message_id;
+    }
+
+    metaIntel[k] = cur;
+  }
+
+  meta.情报碎片 = metaIntel;
+  _.set(stat_data, '主线任务.$meta', meta);
+}
+
+function cleanupIntelFragments(stat_data: any, message_id: number, debug: boolean) {
+  const mission = _.get(stat_data, '主线任务', null);
+  if (!mission || typeof mission !== 'object') return;
+
+  const intel = _.get(mission, '情报碎片', null);
+  if (!intel || typeof intel !== 'object' || Array.isArray(intel)) return;
+
+  ensureMissionMeta(stat_data);
+  const meta: MissionMeta = _.get(stat_data, '主线任务.$meta');
+  const metaIntel = meta.情报碎片 ?? {};
+
+  const removeAfterDone = 3;
+  const removeAfterNotDone = 5;
+  const removed: string[] = [];
+
+  for (const [k, frag] of Object.entries(intel as Record<string, unknown>)) {
+    if (!isIntelFragment(frag)) continue;
+    const m = metaIntel[k];
+    if (!m) continue;
+
+    if (frag.状态 === '已完成') {
+      const base = m.completed_at || 0;
+      if (base > 0 && message_id - base >= removeAfterDone) removed.push(k);
+      continue;
+    }
+
+    if (frag.状态 === '已探索') {
+      const base = m.explored_at || 0;
+      if (base > 0 && message_id - base >= removeAfterDone) removed.push(k);
+      continue;
+    }
+
+    // 未探索：超过 5 楼仍未完成，则清理（避免长期占用 token）
+    const base = m.created_at || 0;
+    if (base > 0 && message_id - base >= removeAfterNotDone) removed.push(k);
+  }
+
+  if (removed.length === 0) return;
+
+  for (const k of removed) {
+    delete (intel as any)[k];
+    delete metaIntel[k];
+  }
+
+  meta.情报碎片 = metaIntel;
+  _.set(stat_data, '主线任务.情报碎片', intel);
+  _.set(stat_data, '主线任务.$meta', meta);
+
+  if (debug) console.log(`[MissionLogic] cleanup intel fragments: ${removed.join(', ')}`);
+}
+
+function syncMissionMetaGoals(stat_data: any, message_id: number) {
+  const mission = _.get(stat_data, '主线任务', null);
+  if (!mission || typeof mission !== 'object') return;
+
+  const stageGoals = normalizeMissionGoals(_.get(mission, '阶段目标', {}));
+  ensureMissionMeta(stat_data);
+  const meta: MissionMeta = _.get(stat_data, '主线任务.$meta');
+  const metaGoals = meta.阶段目标 ?? {};
+
+  const presentKeys = new Set(stageGoals.map(g => g.key));
+  for (const k of Object.keys(metaGoals)) {
+    if (!presentKeys.has(k)) delete metaGoals[k];
+  }
+
+  for (const g of stageGoals) {
+    const done = isGoalDone(g.value);
+    const cur = metaGoals[g.key] ?? { completed_at: 0 };
+    if (!done) cur.completed_at = 0;
+    else if (!cur.completed_at) cur.completed_at = message_id;
+    metaGoals[g.key] = cur;
+  }
+
+  meta.阶段目标 = metaGoals;
+  _.set(stat_data, '主线任务.$meta', meta);
+}
+
+function cleanupCompletedGoals(stat_data: any, message_id: number, debug: boolean) {
+  const mission = _.get(stat_data, '主线任务', null);
+  if (!mission || typeof mission !== 'object') return;
+
+  const goalsRaw = _.get(mission, '阶段目标', null);
+  if (!goalsRaw || typeof goalsRaw !== 'object') return;
+
+  ensureMissionMeta(stat_data);
+  const meta: MissionMeta = _.get(stat_data, '主线任务.$meta');
+  const metaGoals = meta.阶段目标 ?? {};
+
+  const removeAfter = 3;
+  const removedKeys: string[] = [];
+
+  const stageGoals = normalizeMissionGoals(goalsRaw);
+  for (const g of stageGoals) {
+    const done = isGoalDone(g.value);
+    if (!done) continue;
+    const base = metaGoals[g.key]?.completed_at ?? 0;
+    if (base > 0 && message_id - base >= removeAfter) removedKeys.push(g.key);
+  }
+
+  if (removedKeys.length === 0) return;
+
+  if (Array.isArray(goalsRaw)) {
+    // 兼容：如果阶段目标为 array，则按索引字符串删除（从后往前）
+    const idxs = removedKeys
+      .map(k => Number(k))
+      .filter(n => Number.isFinite(n))
+      .sort((a, b) => b - a);
+    for (const idx of idxs) {
+      if (idx >= 0 && idx < (goalsRaw as any[]).length) {
+        (goalsRaw as any[]).splice(idx, 1);
+      }
+    }
+    // array 模式下索引会整体移动，直接重置 meta，后续由 syncMissionMetaGoals 重新建立
+    meta.阶段目标 = {};
+  } else {
+    for (const k of removedKeys) {
+      delete (goalsRaw as any)[k];
+      delete metaGoals[k];
+    }
+  }
+
+  // 目标清单发生变更后，重建完成状态，避免遗留旧 index
+  _.set(stat_data, '主线任务.目标完成状态', {});
+  applyMissionGoalCompletion(stat_data, debug);
+
+  if (!Array.isArray(goalsRaw)) meta.阶段目标 = metaGoals;
+  _.set(stat_data, '主线任务.阶段目标', goalsRaw);
+  _.set(stat_data, '主线任务.$meta', meta);
+
+  if (debug) console.log(`[MissionLogic] cleanup completed goals: ${removedKeys.join(', ')}`);
 }
 
 const DEFAULT_INTELS: IntelFragment[] = [
@@ -331,6 +557,7 @@ $(async () => {
     const stat_data = _.get(new_variables, 'stat_data', {});
     const old_stat_data = _.get(old_variables, 'stat_data', {});
     const debug = readMissionDebugFlagFromChat();
+    const lastMessageId = getLastMessageIdSafe();
 
     if (debug) {
       const oldSnap = pickMissionSnapshot(old_stat_data);
@@ -343,6 +570,15 @@ $(async () => {
     syncIntelProgressIntoGoals(stat_data, debug);
     applyMissionGoalCompletion(stat_data, debug);
     applyMissionStageAdvanceIfCompleted(stat_data, old_stat_data, debug);
+
+    if (lastMessageId != null) {
+      ensureMissionMeta(stat_data);
+      _.set(stat_data, '主线任务.$meta.楼层.last_seen_message_id', lastMessageId);
+      syncMissionMetaIntel(stat_data, lastMessageId);
+      syncMissionMetaGoals(stat_data, lastMessageId);
+      cleanupIntelFragments(stat_data, lastMessageId, debug);
+      cleanupCompletedGoals(stat_data, lastMessageId, debug);
+    }
 
     if (debug && preScriptSnap) {
       const postScriptSnap = pickMissionSnapshot(stat_data);

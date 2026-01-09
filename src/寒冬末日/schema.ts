@@ -2,15 +2,22 @@ import { z } from 'zod';
 
 const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
+const 关系倾向Schema = z.enum(['极易', '易', '中立', '难', '极难', '不可']).prefault('中立');
 const 健康状况Schema = z.enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡']).prefault('健康');
 const 登场状态Schema = z.enum(['登场', '离场']).prefault('离场');
 
-const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelation: string; defaultImprint: number }) =>
+const create角色Schema = (args: {
+  relationStageSchema: z.ZodTypeAny;
+  relationTendencySchema: z.ZodTypeAny;
+  defaultRelationStage: string;
+  defaultRelationTendency: string;
+  defaultImprint: number;
+}) =>
   z
     .object({
       姓名: z.string().prefault(''),
-      关系: args.relationSchema.describe('以性关系倾向为主要，反映角色当前对{{user}}的态度'),
-      关系倾向: args.relationSchema.describe('角色关系的倾向影响Imp数值的变化幅度'),
+      关系: args.relationStageSchema.describe('以性关系倾向为主要，反映角色当前对{{user}}的态度'),
+      关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度'),
       秩序刻印: z.coerce
         .number()
         .transform(v => _.clamp(v, 0, 100))
@@ -46,8 +53,8 @@ const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelatio
     })
     .prefault({
       姓名: '',
-      关系: args.defaultRelation,
-      关系倾向: args.defaultRelation,
+      关系: args.defaultRelationStage,
+      关系倾向: args.defaultRelationTendency,
       秩序刻印: args.defaultImprint,
       健康: 100,
       健康更新原因: '',
@@ -65,14 +72,18 @@ const create角色Schema = (args: { relationSchema: z.ZodTypeAny; defaultRelatio
     });
 
 const 主要角色Schema = create角色Schema({
-  relationSchema: 主要角色关系档位Schema,
-  defaultRelation: '无',
+  relationStageSchema: 主要角色关系档位Schema,
+  relationTendencySchema: 关系倾向Schema,
+  defaultRelationStage: '无',
+  defaultRelationTendency: '中立',
   defaultImprint: 0,
 });
 
 const 临时NPCSchema = create角色Schema({
-  relationSchema: 临时NPC关系档位Schema,
-  defaultRelation: '无',
+  relationStageSchema: 临时NPC关系档位Schema,
+  relationTendencySchema: 关系倾向Schema,
+  defaultRelationStage: '无',
+  defaultRelationTendency: '中立',
   defaultImprint: 0,
 });
 
@@ -248,6 +259,54 @@ export const Schema = z.object({
         )
         .prefault({})
         .describe('已解锁的情报碎片'),
+      $meta: z
+        .object({
+          楼层: z
+            .object({
+              last_seen_message_id: z.coerce.number().prefault(0).describe('最近一次记录的楼层号（用于过期/清理逻辑）'),
+            })
+            .prefault({
+              last_seen_message_id: 0,
+            }),
+          情报碎片: z
+            .record(
+              z.string(),
+              z
+                .object({
+                  created_at: z.coerce.number().prefault(0),
+                  explored_at: z.coerce.number().prefault(0),
+                  completed_at: z.coerce.number().prefault(0),
+                })
+                .prefault({
+                  created_at: 0,
+                  explored_at: 0,
+                  completed_at: 0,
+                }),
+            )
+            .prefault({})
+            .describe('情报碎片的楼层时间戳（用于UI倒计时与自动清理）'),
+          阶段目标: z
+            .record(
+              z.string(),
+              z
+                .object({
+                  completed_at: z.coerce.number().prefault(0),
+                })
+                .prefault({
+                  completed_at: 0,
+                }),
+            )
+            .prefault({})
+            .describe('阶段目标的楼层时间戳（用于UI倒计时与自动清理）'),
+        })
+        .prefault({
+          楼层: {
+            last_seen_message_id: 0,
+          },
+          情报碎片: {},
+          阶段目标: {},
+        })
+        .describe('脚本/界面内部元数据（不建议在世界书中直接写入）'),
     })
     .prefault({
       当前阶段: '阶段一：秩序的萌芽',
@@ -262,6 +321,13 @@ export const Schema = z.object({
         '2': false,
       },
       情报碎片: {},
+      $meta: {
+        楼层: {
+          last_seen_message_id: 0,
+        },
+        情报碎片: {},
+        阶段目标: {},
+      },
     }),
 
   // 主要角色

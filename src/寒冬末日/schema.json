@@ -136,7 +136,14 @@
           "1": false,
           "2": false
         },
-        "情报碎片": {}
+        "情报碎片": {},
+        "$meta": {
+          "楼层": {
+            "last_seen_message_id": 0
+          },
+          "情报碎片": {},
+          "阶段目标": {}
+        }
       },
       "type": "object",
       "properties": {
@@ -179,58 +186,69 @@
           "description": "已解锁的情报碎片",
           "default": {},
           "$ref": "#/$defs/__schema20"
+        },
+        "$meta": {
+          "description": "脚本/界面内部元数据（不建议在世界书中直接写入）",
+          "default": {
+            "楼层": {
+              "last_seen_message_id": 0
+            },
+            "情报碎片": {},
+            "阶段目标": {}
+          },
+          "$ref": "#/$defs/__schema21"
         }
       }
     },
     "浅见亚美": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "相田哲也": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "星野琉璃": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "早川遥": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "早川舞": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "藤井雪乃": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "中村惠子": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "爱宫心爱": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "爱宫铃": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "桃乐丝・泽巴哈": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "何铃": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "王静": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "康绮月": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "薛萍": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "小泽花": {
-      "$ref": "#/$defs/__schema21"
+      "$ref": "#/$defs/__schema25"
     },
     "临时NPC": {
       "description": "存储所有临时NPC的状态，key为NPC姓名。新NPC登场时在此处添加。",
       "default": {},
-      "$ref": "#/$defs/__schema40"
+      "$ref": "#/$defs/__schema45"
     },
     "楼层其他住户": {
       "default": {
@@ -499,10 +517,82 @@
       }
     },
     "__schema21": {
+      "type": "object",
+      "properties": {
+        "楼层": {
+          "default": {
+            "last_seen_message_id": 0
+          },
+          "type": "object",
+          "properties": {
+            "last_seen_message_id": {
+              "description": "最近一次记录的楼层号（用于过期/清理逻辑）",
+              "$ref": "#/$defs/__schema22"
+            }
+          }
+        },
+        "情报碎片": {
+          "description": "情报碎片的楼层时间戳（用于UI倒计时与自动清理）",
+          "default": {},
+          "$ref": "#/$defs/__schema23"
+        },
+        "阶段目标": {
+          "description": "阶段目标的楼层时间戳（用于UI倒计时与自动清理）",
+          "default": {},
+          "$ref": "#/$defs/__schema24"
+        }
+      }
+    },
+    "__schema22": {
+      "type": "number"
+    },
+    "__schema23": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "default": {
+          "created_at": 0,
+          "explored_at": 0,
+          "completed_at": 0
+        },
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "number"
+          },
+          "explored_at": {
+            "type": "number"
+          },
+          "completed_at": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "__schema24": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "default": {
+          "completed_at": 0
+        },
+        "type": "object",
+        "properties": {
+          "completed_at": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "__schema25": {
       "default": {
         "姓名": "",
         "关系": "无",
-        "关系倾向": "无",
+        "关系倾向": "中立",
         "秩序刻印": 0,
         "健康": 100,
         "健康更新原因": "",
@@ -525,73 +615,74 @@
         },
         "关系": {
           "description": "以性关系倾向为主要，反映角色当前对{{user}}的态度",
-          "$ref": "#/$defs/__schema23"
+          "default": "无",
+          "$ref": "#/$defs/__schema26"
         },
         "关系倾向": {
           "description": "角色关系的倾向影响Imp数值的变化幅度",
-          "$ref": "#/$defs/__schema23"
+          "$ref": "#/$defs/__schema28"
         },
         "秩序刻印": {
           "description": "Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴",
           "default": 20,
-          "$ref": "#/$defs/__schema24"
+          "$ref": "#/$defs/__schema29"
         },
         "秩序刻印更新原因": {
           "description": "符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-          "$ref": "#/$defs/__schema25"
+          "$ref": "#/$defs/__schema30"
         },
         "健康": {
           "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
           "default": 100,
-          "$ref": "#/$defs/__schema26"
+          "$ref": "#/$defs/__schema31"
         },
         "健康更新原因": {
           "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-          "$ref": "#/$defs/__schema27"
+          "$ref": "#/$defs/__schema32"
         },
         "健康状况": {
           "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-          "$ref": "#/$defs/__schema29"
+          "$ref": "#/$defs/__schema34"
         },
         "衣着": {
           "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-          "$ref": "#/$defs/__schema30"
+          "$ref": "#/$defs/__schema35"
         },
         "舌唇": {
           "description": "口腔、嘴唇的状态",
-          "$ref": "#/$defs/__schema31"
+          "$ref": "#/$defs/__schema36"
         },
         "胸乳": {
           "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-          "$ref": "#/$defs/__schema32"
+          "$ref": "#/$defs/__schema37"
         },
         "私穴": {
           "description": "私处的详细状态或反应",
-          "$ref": "#/$defs/__schema33"
+          "$ref": "#/$defs/__schema38"
         },
         "神态样貌": {
           "description": "面部表情和神态",
-          "$ref": "#/$defs/__schema34"
+          "$ref": "#/$defs/__schema39"
         },
         "动作姿势": {
           "description": "身体姿态和动作",
-          "$ref": "#/$defs/__schema35"
+          "$ref": "#/$defs/__schema40"
         },
         "内心想法": {
           "description": "符合角色身份和剧情描述的第一人称内心独白",
-          "$ref": "#/$defs/__schema36"
+          "$ref": "#/$defs/__schema41"
         },
         "所在房间": {
           "description": "角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出",
-          "$ref": "#/$defs/__schema37"
+          "$ref": "#/$defs/__schema42"
         },
         "登场状态": {
           "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-          "$ref": "#/$defs/__schema39"
+          "$ref": "#/$defs/__schema44"
         }
       }
     },
-    "__schema22": {
+    "__schema26": {
       "type": "string",
       "enum": [
         "无",
@@ -602,23 +693,34 @@
         "性奴"
       ]
     },
-    "__schema23": {
-      "default": "无",
-      "$ref": "#/$defs/__schema22"
-    },
-    "__schema24": {
-      "type": "number"
-    },
-    "__schema25": {
-      "type": "string"
-    },
-    "__schema26": {
-      "type": "number"
-    },
     "__schema27": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+        "极易",
+        "易",
+        "中立",
+        "难",
+        "极难",
+        "不可"
+      ]
     },
     "__schema28": {
+      "default": "中立",
+      "$ref": "#/$defs/__schema27"
+    },
+    "__schema29": {
+      "type": "number"
+    },
+    "__schema30": {
+      "type": "string"
+    },
+    "__schema31": {
+      "type": "number"
+    },
+    "__schema32": {
+      "type": "string"
+    },
+    "__schema33": {
       "type": "string",
       "enum": [
         "健康",
@@ -629,24 +731,9 @@
         "死亡"
       ]
     },
-    "__schema29": {
-      "default": "健康",
-      "$ref": "#/$defs/__schema28"
-    },
-    "__schema30": {
-      "type": "string"
-    },
-    "__schema31": {
-      "type": "string"
-    },
-    "__schema32": {
-      "type": "string"
-    },
-    "__schema33": {
-      "type": "string"
-    },
     "__schema34": {
-      "type": "string"
+      "default": "健康",
+      "$ref": "#/$defs/__schema33"
     },
     "__schema35": {
       "type": "string"
@@ -658,17 +745,32 @@
       "type": "string"
     },
     "__schema38": {
+      "type": "string"
+    },
+    "__schema39": {
+      "type": "string"
+    },
+    "__schema40": {
+      "type": "string"
+    },
+    "__schema41": {
+      "type": "string"
+    },
+    "__schema42": {
+      "type": "string"
+    },
+    "__schema43": {
       "type": "string",
       "enum": [
         "登场",
         "离场"
       ]
     },
-    "__schema39": {
+    "__schema44": {
       "default": "离场",
-      "$ref": "#/$defs/__schema38"
+      "$ref": "#/$defs/__schema43"
     },
-    "__schema40": {
+    "__schema45": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -677,7 +779,7 @@
         "default": {
           "姓名": "",
           "关系": "无",
-          "关系倾向": "无",
+          "关系倾向": "中立",
           "秩序刻印": 0,
           "健康": 100,
           "健康更新原因": "",
@@ -700,74 +802,75 @@
           },
           "关系": {
             "description": "以性关系倾向为主要，反映角色当前对{{user}}的态度",
-            "$ref": "#/$defs/__schema42"
+            "default": "无",
+            "$ref": "#/$defs/__schema46"
           },
           "关系倾向": {
             "description": "角色关系的倾向影响Imp数值的变化幅度",
-            "$ref": "#/$defs/__schema42"
+            "$ref": "#/$defs/__schema28"
           },
           "秩序刻印": {
             "description": "Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴",
             "default": 20,
-            "$ref": "#/$defs/__schema43"
+            "$ref": "#/$defs/__schema47"
           },
           "秩序刻印更新原因": {
             "description": "符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-            "$ref": "#/$defs/__schema44"
+            "$ref": "#/$defs/__schema48"
           },
           "健康": {
             "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
             "default": 100,
-            "$ref": "#/$defs/__schema45"
+            "$ref": "#/$defs/__schema49"
           },
           "健康更新原因": {
             "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-            "$ref": "#/$defs/__schema46"
+            "$ref": "#/$defs/__schema50"
           },
           "健康状况": {
             "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-            "$ref": "#/$defs/__schema29"
+            "$ref": "#/$defs/__schema34"
           },
           "衣着": {
             "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-            "$ref": "#/$defs/__schema47"
+            "$ref": "#/$defs/__schema51"
           },
           "舌唇": {
             "description": "口腔、嘴唇的状态",
-            "$ref": "#/$defs/__schema48"
+            "$ref": "#/$defs/__schema52"
           },
           "胸乳": {
             "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-            "$ref": "#/$defs/__schema49"
+            "$ref": "#/$defs/__schema53"
           },
           "私穴": {
             "description": "私处的详细状态或反应",
-            "$ref": "#/$defs/__schema50"
+            "$ref": "#/$defs/__schema54"
           },
           "神态样貌": {
             "description": "面部表情和神态",
-            "$ref": "#/$defs/__schema51"
+            "$ref": "#/$defs/__schema55"
           },
           "动作姿势": {
             "description": "身体姿态和动作",
-            "$ref": "#/$defs/__schema52"
+            "$ref": "#/$defs/__schema56"
           },
           "内心想法": {
             "description": "符合角色身份和剧情描述的第一人称内心独白",
-            "$ref": "#/$defs/__schema53"
+            "$ref": "#/$defs/__schema57"
           },
           "所在房间": {
             "description": "角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出",
-            "$ref": "#/$defs/__schema54"
+            "$ref": "#/$defs/__schema58"
           },
           "登场状态": {
             "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-            "$ref": "#/$defs/__schema39"
+            "$ref": "#/$defs/__schema44"
           }
         }
       }
     },
-    "__schema41": {
+    "__schema46": {
       "type": "string",
       "enum": [
         "无",
@@ -778,30 +881,14 @@
         "性奴"
       ]
     },
-    "__schema42": {
-      "default": "无",
-      "$ref": "#/$defs/__schema41"
-    },
-    "__schema43": {
-      "type": "number"
-    },
-    "__schema44": {
-      "type": "string"
-    },
-    "__schema45": {
-      "type": "number"
-    },
-    "__schema46": {
-      "type": "string"
-    },
     "__schema47": {
-      "type": "string"
+      "type": "number"
     },
     "__schema48": {
       "type": "string"
     },
     "__schema49": {
-      "type": "string"
+      "type": "number"
     },
     "__schema50": {
       "type": "string"
@@ -816,6 +903,18 @@
       "type": "string"
     },
     "__schema54": {
+      "type": "string"
+    },
+    "__schema55": {
+      "type": "string"
+    },
+    "__schema56": {
+      "type": "string"
+    },
+    "__schema57": {
+      "type": "string"
+    },
+    "__schema58": {
       "type": "string"
     }
   }
