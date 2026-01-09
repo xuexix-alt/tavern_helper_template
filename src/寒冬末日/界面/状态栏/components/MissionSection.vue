@@ -93,7 +93,9 @@
                 <div class="intel-meta">
                   <span class="intel-value">💰 {{ intel.价值 }}</span>
                   <span class="intel-risk">⚠️ {{ intel.风险 }}</span>
-                  <span v-if="getIntelCleanupHint(key, intel)" class="intel-deadline">{{ getIntelCleanupHint(key, intel) }}</span>
+                  <span v-if="getIntelCleanupHint(key, intel)" class="intel-deadline">{{
+                    getIntelCleanupHint(key, intel)
+                  }}</span>
                 </div>
               </div>
             </div>
