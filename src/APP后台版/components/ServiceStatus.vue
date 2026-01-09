@@ -26,7 +26,10 @@
           <span v-if="girlIdentity" class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">
             {{ girlIdentity }}
           </span>
-          <span v-if="girlAge !== '-' && girlAge !== 0" class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">
+          <span
+            v-if="girlAge !== '-' && girlAge !== 0"
+            class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
+          >
             {{ girlAge }} 岁
           </span>
         </div>
@@ -141,4 +144,3 @@ onMounted(() => {
   refreshData();
 });
 </script>
-

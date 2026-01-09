@@ -48,4 +48,3 @@ function openPanels() {
   playPanelsOpen.value = true;
 }
 </script>
-

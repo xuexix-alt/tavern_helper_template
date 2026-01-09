@@ -13,15 +13,21 @@
         <span class="truncate text-xs text-slate-400">{{ focusText }}</span>
       </div>
       <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
-        <span class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">
+        <span
+          class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
+        >
           <i class="fas fa-coins text-yellow-300"></i>
           <span>{{ balanceText }}</span>
         </span>
-        <span class="inline-flex min-w-0 items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">
+        <span
+          class="inline-flex min-w-0 items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
+        >
           <i class="fas fa-user-shield text-blue-300"></i>
           <span class="truncate">{{ currentGirlText }}</span>
         </span>
-        <span class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">
+        <span
+          class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
+        >
           <i class="fas fa-heartbeat text-red-300"></i>
           <span>{{ heartbeatText }}</span>
         </span>

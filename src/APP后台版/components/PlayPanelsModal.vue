@@ -21,10 +21,14 @@
         </button>
       </div>
 
-      <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0 flex-1 overflow-y-auto p-4">
+      <div
+        class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0 flex-1 overflow-y-auto p-4"
+      >
         <div class="space-y-3">
           <details open class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
+            >
               <span class="flex items-center gap-2">
                 <i class="fas fa-user-shield text-blue-300"></i>
                 角色状态
@@ -38,7 +42,9 @@
           </details>
 
           <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
+            >
               <span class="flex items-center gap-2">
                 <i class="fas fa-store text-green-300"></i>
                 商城与套餐
@@ -53,7 +59,9 @@
           </details>
 
           <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
+            >
               <span class="flex items-center gap-2">
                 <i class="fas fa-history text-blue-300"></i>
                 历史订单
@@ -75,7 +83,9 @@
           </details>
 
           <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
+            >
               <span class="flex items-center gap-2">
                 <i class="fas fa-compass text-violet-300"></i>
                 导航
@@ -99,7 +109,9 @@
           </details>
 
           <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
+            >
               <span class="flex items-center gap-2">
                 <i class="fas fa-sliders text-slate-200"></i>
                 设置
@@ -146,7 +158,10 @@
 
       <div class="flex items-center justify-between gap-2 border-t border-slate-700/50 px-4 py-3">
         <div class="text-[11px] text-slate-500">提示：面板关闭后，正文区域保持最大化显示。</div>
-        <button class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50" @click="close">
+        <button
+          class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50"
+          @click="close"
+        >
           完成
         </button>
       </div>
@@ -243,4 +258,3 @@ onMounted(() => {
   }
 });
 </script>
-

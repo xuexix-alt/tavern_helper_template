@@ -7,7 +7,9 @@
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <div class="flex items-center gap-2 text-xs text-slate-300/90">
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1">
+            <span
+              class="inline-flex items-center gap-2 rounded-full border border-slate-700/50 bg-slate-900/40 px-3 py-1"
+            >
               <span class="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
               <span>LIVE</span>
             </span>
@@ -57,7 +59,8 @@
           ref="logScrollEl"
           class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent h-full overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-green-300"
         >
-          <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+          <pre
+            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
         </div>
       </section>
 
@@ -76,7 +79,9 @@
               @click="pickQuickAction(item.command)"
             >
               <span class="truncate">{{ item.label }}</span>
-              <i class="fas fa-chevron-right text-xs text-slate-500 transition-transform group-hover:translate-x-0.5"></i>
+              <i
+                class="fas fa-chevron-right text-xs text-slate-500 transition-transform group-hover:translate-x-0.5"
+              ></i>
             </button>
           </div>
           <div class="mt-3 text-xs text-slate-500">提示：发送后会尝试调用 `triggerSlash`（如存在）。</div>
@@ -211,7 +216,8 @@ function refreshHeaderFromMvu() {
   try {
     const getSnapshot = () => {
       try {
-        const message_id = typeof (window as any).getCurrentMessageId === 'function' ? (window as any).getCurrentMessageId() : 'latest';
+        const message_id =
+          typeof (window as any).getCurrentMessageId === 'function' ? (window as any).getCurrentMessageId() : 'latest';
         if (typeof (window as any).waitGlobalInitialized === 'function') {
           try {
             (window as any).waitGlobalInitialized('Mvu');
@@ -235,7 +241,9 @@ function refreshHeaderFromMvu() {
     const stat = snap?.stat_data || snap || {};
     const scene = getNestedValue(stat, '系统状态.当前场景', '') || getNestedValue(stat, '系统状态.当前模式', '');
     headerTitle.value = scene ? `当前场景：${scene}` : '交互界面';
-    headerSubTitle.value = selectedInfo.value ? `已选中：${selectedInfo.value}` : '正文区域优先显示 · 角色/商城请用上方“面板”';
+    headerSubTitle.value = selectedInfo.value
+      ? `已选中：${selectedInfo.value}`
+      : '正文区域优先显示 · 角色/商城请用上方“面板”';
   } catch {
     // ignore
   }
@@ -276,27 +284,31 @@ onMounted(() => {
   }
 
   try {
-    const canListen = typeof (window as any).eventOn === 'function' && typeof (window as any).tavern_events !== 'undefined';
+    const canListen =
+      typeof (window as any).eventOn === 'function' && typeof (window as any).tavern_events !== 'undefined';
     if (canListen) {
       // 不直接拼接 token，避免和 MESSAGE_RECEIVED 产生重复；这里只做“正在生成”的指示
       stopStreamHint = (window as any).eventOn((window as any).tavern_events.STREAM_TOKEN_RECEIVED, () => {
         isStreaming.value = true;
       });
-      stopMessageReceive = (window as any).eventOn((window as any).tavern_events.MESSAGE_RECEIVED, (message_id: number) => {
-        try {
-          if (typeof (window as any).getChatMessages !== 'function') return;
-          const msg = (window as any).getChatMessages(message_id)?.[0];
-          if (!msg) return;
-          const role = msg.role || 'assistant';
-          const name = msg.name || role;
-          const body = String(msg.message ?? '').trim();
-          if (!body) return;
-          appendLogBlock(`[${name}] ${body}`);
-        } finally {
-          isStreaming.value = false;
-          refreshHeaderFromMvu();
-        }
-      });
+      stopMessageReceive = (window as any).eventOn(
+        (window as any).tavern_events.MESSAGE_RECEIVED,
+        (message_id: number) => {
+          try {
+            if (typeof (window as any).getChatMessages !== 'function') return;
+            const msg = (window as any).getChatMessages(message_id)?.[0];
+            if (!msg) return;
+            const role = msg.role || 'assistant';
+            const name = msg.name || role;
+            const body = String(msg.message ?? '').trim();
+            if (!body) return;
+            appendLogBlock(`[${name}] ${body}`);
+          } finally {
+            isStreaming.value = false;
+            refreshHeaderFromMvu();
+          }
+        },
+      );
     }
   } catch {
     // ignore
@@ -310,4 +322,3 @@ onUnmounted(() => {
   stopMessageReceive?.stop?.();
 });
 </script>
-
