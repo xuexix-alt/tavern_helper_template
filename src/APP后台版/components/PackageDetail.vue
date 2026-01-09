@@ -112,7 +112,9 @@ const tags = computed<string[]>(() => {
   return [];
 });
 const features = computed<string[]>(() => {
-  const raw = (pkg.value as any)?.content;
+  const p: any = pkg.value as any;
+  // 美人团 MVU：店铺套餐的“玩法特色”在 schema.ts 里对应字段为 content（initvar.yaml: 订单模板.新订单原型.套餐.玩法特色）
+  const raw = p?.content ?? p?.玩法特色 ?? p?.features;
   if (Array.isArray(raw)) return raw.map(x => String(x)).filter(Boolean);
   if (typeof raw === 'string') return raw.split(/\s*,\s*|\s+/).filter(Boolean);
   return [];

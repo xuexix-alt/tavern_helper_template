@@ -43,5 +43,7 @@
   "exclude": [
     "**/dist/**",
     "**/node_modules/**",
+    "src/APP后台版/History.vue",
+    "src/APP后台版/Me.vue",
   ]
 }

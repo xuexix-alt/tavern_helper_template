@@ -43,8 +43,17 @@
               </div>
             </div>
 
-            <!-- 新增公告栏和玩法说明 -->
-            <div class="announcement-panel">
+            <!-- 公告/说明折叠面板：避免占用首屏，保留搜索与 DLC 按钮可用性 -->
+            <details class="announcement-details">
+              <summary class="announcement-summary">
+                <span class="summary-left">
+                  <i class="fas fa-bullhorn"></i>
+                  <span>公告 / 玩法说明</span>
+                </span>
+                <i class="fas fa-chevron-down summary-arrow"></i>
+              </summary>
+
+              <div class="announcement-panel">
               <div class="panel-header">
                 <i class="fas fa-bullhorn"></i>
                 <span>最新公告</span>
@@ -85,7 +94,8 @@
                   4. 世界书有二选一模式，如果常截断可以试试不同框架
                 </p>
               </div>
-            </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -691,6 +701,62 @@ function generateDLCContent() {
             animation-delay: 1s;
           }
         }
+      }
+    }
+  }
+
+  .announcement-details {
+    margin-top: 14px;
+
+    .announcement-summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--border-accent);
+      background: rgba(255, 255, 255, 0.55);
+      box-shadow: var(--shadow-sm);
+
+      .summary-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        color: var(--accent-dark);
+
+        i {
+          color: var(--accent-primary);
+        }
+      }
+
+      .summary-arrow {
+        color: var(--text-secondary);
+        transition: transform 0.25s ease;
+      }
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+    }
+
+    &[open] {
+      .announcement-summary {
+        border-radius: 16px 16px 0 0;
+      }
+
+      .summary-arrow {
+        transform: rotate(180deg);
+      }
+
+      .announcement-panel {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        margin-top: 0;
       }
     }
   }

@@ -37,7 +37,7 @@
                 </span>
               </div>
             </div>
-            <button class="delete-btn" @click.stop="deleteShop(idx)">
+            <button class="delete-btn" @click.stop="deleteShop(shop, idx)">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -76,10 +76,10 @@ onUnmounted(() => {
   window.removeEventListener('shop:cache:updated', onShopCacheUpdated);
 });
 
-function deleteShop(idx: number) {
-  // 只影响本地视图，不写回 MVU
-  shops.value = shops.value.filter((_, i) => i !== idx);
-  console.log('[Discover] 已删除店铺(仅本地视图)', idx);
+function deleteShop(shop: any, idx: number) {
+  const id = String(shop?.id ?? shop?.shop_id ?? idx);
+  shopStoreMvu.deleteShop(id);
+  toastr.success('已删除并写回 MVU', '删除成功');
 }
 
 function triggerImport() {
@@ -103,8 +103,14 @@ function handleFileChange(event: Event) {
       const parsed = JSON.parse(text);
       const list = Array.isArray(parsed) ? parsed : parsed?.店铺列表 || parsed?.shops || [];
       const safeList = Array.isArray(list) ? list.slice(0, MAX_IMPORT_ITEMS) : [];
-      shops.value = safeList;
-      toastr.success(`导入成功，${safeList.length} 条店铺`, '导入完成');
+
+      const { ok, saved } = shopStoreMvu.saveShops(safeList);
+      if (!ok) {
+        toastr.error('导入数据未通过校验（没有可写入的有效店铺）', '导入失败');
+      } else {
+        toastr.success(`导入成功，写入 ${saved} 条店铺`, '导入完成');
+      }
+      void loadShops();
     } catch (err: any) {
       toastr.error(err?.message || '解析失败', '导入失败');
     } finally {

@@ -157,7 +157,7 @@ onMounted(async () => {
     justify-content: center;
     align-items: center;
     width: 100%;
-    padding: 0 40px;
+    padding: 0 clamp(16px, 8vw, 40px);
     z-index: 1;
 
     .logo-section {
@@ -256,7 +256,7 @@ onMounted(async () => {
 
   .footer-section {
     width: 100%;
-    padding: 0 40px 40px;
+    padding: 0 clamp(16px, 8vw, 40px) calc(28px + env(safe-area-inset-bottom));
     display: flex;
     justify-content: space-between;
     align-items: center;

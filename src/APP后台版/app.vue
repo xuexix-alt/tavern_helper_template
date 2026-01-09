@@ -12,8 +12,8 @@
     ></div>
 
     <div class="flex h-full min-h-0 w-full">
-      <!-- Sidebar -->
-      <Sidebar />
+      <!-- Sidebar (Play 页面优先正文：隐藏侧栏，改用面板弹窗导航) -->
+      <Sidebar v-if="!hideSidebar" />
 
       <!-- Main Content Area -->
       <main class="relative flex min-h-0 min-w-0 flex-1 flex-col">
@@ -32,13 +32,16 @@
 </template>
 
 <script setup lang="ts">
-import { onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import ErrorBoundary from './components/ErrorBoundary.vue';
 import Sidebar from './components/Sidebar.vue';
 import { enableIframeFullHeight } from './utils';
 
 // 当前主题
 const currentTheme = ref<'light' | 'dark'>('light');
+const route = useRoute();
+const hideSidebar = computed(() => route.path === '/play');
 
 let disableIframeFullHeight: () => void = () => {};
 

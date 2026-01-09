@@ -1,5 +1,15 @@
 // Tavern Helper globals
 declare function getVariables(scope: { type: string; script_id?: string; message_id?: number | string }): any;
+// 尽量使用“增量写入”，避免覆盖其他变量（replaceVariables 会覆盖整个变量表）
+declare function updateVariablesWith(
+  updateFn: (vars: Record<string, any>) => Record<string, any>,
+  scope: { type: string; script_id?: string; message_id?: number | string },
+): void;
+declare function insertOrAssignVariables(
+  variables: Record<string, any>,
+  scope: { type: string; script_id?: string; message_id?: number | string },
+): void;
+// 兜底（极少数环境缺失 updateVariablesWith / insertOrAssignVariables）
 declare function replaceVariables(
   variables: any,
   scope: { type: string; script_id?: string; message_id?: number | string },
@@ -10,11 +20,12 @@ declare const Mvu: any;
 
 import { Schema, ShopItemSchema } from '../../美人团/schema';
 
-// 对齐美人团 Schema：店铺列表是数组（ShopItemSchema[]），作用域为当前楼层 stat_data
+// 对齐美人团 MVU：initvar.yaml 维护在 src/美人团/世界书/变量/initvar.yaml
+// 店铺列表保存到当前楼层的 stat_data.店铺列表
 export type MvuShop = (typeof Schema)['_output']['店铺列表'][number];
 
 export interface AppShop extends MvuShop {
-  id?: string; // 可选，若 json_patch 为 record 则来自 key
+  id?: string; // 可选：渲染用补齐
 }
 
 function normalizeToArray(value: any): MvuShop[] {
@@ -73,7 +84,7 @@ export const shopStoreMvu = {
     }
   },
 
-  saveShops(rawShops: any) {
+  saveShops(rawShops: any): { ok: boolean; saved: number } {
     try {
       const message_id = getCurrentMessageId?.() ?? 'latest';
       const shopsArray = normalizeToArray(rawShops);
@@ -86,18 +97,36 @@ export const shopStoreMvu = {
 
       if (safeShops.length === 0) {
         console.warn('[ShopStoreMVU] saveShops skipped: no valid shops');
-        return;
+        return { ok: false, saved: 0 };
       }
 
-      const current = getVariables({ type: 'message', message_id }) || {};
-      const stat = current.stat_data || {};
-      const nextStat = { ...stat, 店铺列表: safeShops };
+      const scope = { type: 'message', message_id } as const;
 
-      replaceVariables({ stat_data: nextStat }, { type: 'message', message_id });
+      if (typeof updateVariablesWith === 'function') {
+        updateVariablesWith((vars: Record<string, any>) => {
+          const next = vars && typeof vars === 'object' ? vars : {};
+          const stat = next.stat_data && typeof next.stat_data === 'object' ? next.stat_data : {};
+          next.stat_data = { ...stat, 店铺列表: safeShops };
+          return next;
+        }, scope);
+      } else if (typeof insertOrAssignVariables === 'function') {
+        const current = getVariables(scope) || {};
+        const stat = current.stat_data && typeof current.stat_data === 'object' ? current.stat_data : {};
+        const nextStat = { ...stat, 店铺列表: safeShops };
+        insertOrAssignVariables({ stat_data: nextStat }, scope);
+      } else {
+        // 最后兜底：尽量保留已有变量结构
+        const current = getVariables(scope) || {};
+        const stat = current.stat_data && typeof current.stat_data === 'object' ? current.stat_data : {};
+        const nextStat = { ...stat, 店铺列表: safeShops };
+        replaceVariables({ ...(current || {}), stat_data: nextStat }, scope);
+      }
 
       window.dispatchEvent(new CustomEvent('shop:cache:updated'));
+      return { ok: true, saved: safeShops.length };
     } catch (e) {
       console.error('[ShopStoreMVU] saveShops failed', e);
+      return { ok: false, saved: 0 };
     }
   },
 
@@ -110,3 +139,4 @@ export const shopStoreMvu = {
     }
   },
 };
+
