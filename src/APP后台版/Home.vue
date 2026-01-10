@@ -54,46 +54,46 @@
               </summary>
 
               <div class="announcement-panel">
-              <div class="panel-header">
-                <i class="fas fa-bullhorn"></i>
-                <span>最新公告</span>
-              </div>
-              <div class="panel-content">
-                <div class="notice-item">
-                  <span class="notice-tag">活动</span>
-                  <span class="notice-text">新增“国企往事”DLC，挂载世界书后点击即可</span>
+                <div class="panel-header">
+                  <i class="fas fa-bullhorn"></i>
+                  <span>最新公告</span>
                 </div>
-                <div class="notice-item">
-                  <span class="notice-tag">更新</span>
-                  <span class="notice-text">现在店铺脚本有快捷按钮导出JSON，欢迎分享到发布贴中供大家品尝 </span>
+                <div class="panel-content">
+                  <div class="notice-item">
+                    <span class="notice-tag">活动</span>
+                    <span class="notice-text">新增“国企往事”DLC，挂载世界书后点击即可</span>
+                  </div>
+                  <div class="notice-item">
+                    <span class="notice-tag">更新</span>
+                    <span class="notice-text">现在店铺脚本有快捷按钮导出JSON，欢迎分享到发布贴中供大家品尝 </span>
+                  </div>
+                  <div class="notice-item">
+                    <span class="notice-tag">更新</span>
+                    <span class="notice-text">当前推荐非json格式的APP生成方式，深度为0，顺序-1，根据预设情况调整</span>
+                  </div>
+                  <div class="notice-item">
+                    <span class="notice-tag">更新</span>
+                    <span class="notice-text">截断问题多出自预设和正则，我也没有更好的办法，不行你就还我的预设</span>
+                  </div>
+                  <div class="notice-item">
+                    <span class="notice-tag">更新</span>
+                    <span class="notice-text"
+                      >经常被截断推荐默认的非js生成模式，破限不完全的预设搜不出明星，只能搜出高仿货🤣</span
+                    >
+                  </div>
                 </div>
-                <div class="notice-item">
-                  <span class="notice-tag">更新</span>
-                  <span class="notice-text">当前推荐非json格式的APP生成方式，深度为0，顺序-1，根据预设情况调整</span>
+                <div class="panel-header mt-3">
+                  <i class="fas fa-gamepad"></i>
+                  <span>玩法说明</span>
                 </div>
-                <div class="notice-item">
-                  <span class="notice-tag">更新</span>
-                  <span class="notice-text">截断问题多出自预设和正则，我也没有更好的办法，不行你就还我的预设</span>
+                <div class="panel-content">
+                  <p class="instruction-text">
+                    1. 女孩你不想玩了最好向AI下指令‘结束服务’<br />
+                    2. 搜某种类别时最好加上“X店铺每个x套餐”<br />
+                    3. 正确更新APP的方式是关掉酒馆清空浏览器缓存<br />
+                    4. 世界书有二选一模式，如果常截断可以试试不同框架
+                  </p>
                 </div>
-                <div class="notice-item">
-                  <span class="notice-tag">更新</span>
-                  <span class="notice-text"
-                    >经常被截断推荐默认的非js生成模式，破限不完全的预设搜不出明星，只能搜出高仿货🤣</span
-                  >
-                </div>
-              </div>
-              <div class="panel-header mt-3">
-                <i class="fas fa-gamepad"></i>
-                <span>玩法说明</span>
-              </div>
-              <div class="panel-content">
-                <p class="instruction-text">
-                  1. 女孩你不想玩了最好向AI下指令‘结束服务’<br />
-                  2. 搜某种类别时最好加上“X店铺每个x套餐”<br />
-                  3. 正确更新APP的方式是关掉酒馆清空浏览器缓存<br />
-                  4. 世界书有二选一模式，如果常截断可以试试不同框架
-                </p>
-              </div>
               </div>
             </details>
           </div>
