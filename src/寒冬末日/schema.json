@@ -42,20 +42,38 @@
         "庇护所等级": {
           "description": "等级上限为10。升级来源：1.每日Roll点命中；2.剧情奖励；3.保底触发(7天)。",
           "default": 1,
-          "$ref": "#/$defs/__schema0"
+          "type": "number"
         },
         "今日投掷点数": {
           "description": "记录每日升级判定结果。跨天时Roll点(0-10)，命中幸运数(7,10)触发升级。格式：\"今日已投掷: X点 (触发幸运升级！/未升级)\"",
-          "$ref": "#/$defs/__schema1"
+          "type": "string"
         },
         "距离上次升级": {
           "description": "记录保底进度。若连续7天未升级，则在第8天跨天时强制触发保底升级。格式：\"X天 | 剩余保底升级天数：Y天\"。升级后重置。",
-          "$ref": "#/$defs/__schema2"
+          "type": "string"
         },
         "庇护所能力": {
           "description": "已激活的庇护所能力列表。包含等级提升奖励与主线任务解锁的特殊奖励。",
           "default": {},
-          "$ref": "#/$defs/__schema3"
+          "type": "object",
+          "propertyNames": {
+            "description": "能力名",
+            "type": "string"
+          },
+          "additionalProperties": {
+            "default": {
+              "desc": ""
+            },
+            "type": "object",
+            "properties": {
+              "desc": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "desc"
+            ]
+          }
         },
         "可扩展区域": {
           "description": "记录庇护所可扩展区域的解锁状态",
@@ -64,7 +82,24 @@
             "制造工坊": "未解锁",
             "载具格纳库": "未解锁"
           },
-          "$ref": "#/$defs/__schema4"
+          "type": "object",
+          "properties": {
+            "医疗翼": {
+              "description": "等级3:初级医疗舱; 等级6:外科手术台; 等级9:专家级自动医师",
+              "default": "未解锁",
+              "type": "string"
+            },
+            "制造工坊": {
+              "description": "任务奖励解锁: \"非致命防御制造器\"(阶段一), \"轻型军火熔炉\"(阶段二); 等级5解锁\"伊甸荚舱\"; 等级8解锁\"重型军械库\"",
+              "default": "未解锁",
+              "type": "string"
+            },
+            "载具格纳库": {
+              "description": "等级7解锁\"先驱者制造单元\"; 阶段三任务解锁\"工业原料合成器\"",
+              "default": "未解锁",
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -91,7 +126,25 @@
             "临时客房A入住者": [],
             "临时客房B入住者": []
           },
-          "$ref": "#/$defs/__schema8"
+          "type": "object",
+          "properties": {
+            "临时客房A入住者": {
+              "description": "临时客房A进入者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "临时客房B入住者": {
+              "description": "临时客房B进入者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "核心区": {
           "description": "核心区域房间进入或使用名单列表",
@@ -99,7 +152,25 @@
             "主卧室使用者": [],
             "主浴室使用者": []
           },
-          "$ref": "#/$defs/__schema11"
+          "type": "object",
+          "properties": {
+            "主卧室使用者": {
+              "description": "主卧室进入或使用者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "主浴室使用者": {
+              "description": "主浴室进入或使用者姓名列表",
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
         "楼层房间": {
           "description": "楼层房间状态",
@@ -107,7 +178,59 @@
             "楼层20房间": {},
             "楼层19房间": {}
           },
-          "$ref": "#/$defs/__schema14"
+          "type": "object",
+          "properties": {
+            "楼层20房间": {
+              "description": "20层各房间进入或使用者列表，key为房间号",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "入住者": []
+                },
+                "type": "object",
+                "properties": {
+                  "入住者": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "入住者"
+                ]
+              }
+            },
+            "楼层19房间": {
+              "description": "19层各房间进入或使用者列表，key为房间号",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "入住者": []
+                },
+                "type": "object",
+                "properties": {
+                  "入住者": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "入住者"
+                ]
+              }
+            }
+          }
         }
       }
     },
@@ -150,7 +273,7 @@
         "当前阶段": {
           "description": "主线任务的当前阶段名称",
           "default": "阶段一：秩序的萌芽",
-          "$ref": "#/$defs/__schema17"
+          "type": "string"
         },
         "阶段目标": {
           "description": "当前阶段需要达成的目标列表",
@@ -171,7 +294,28 @@
               "目标值": 1
             }
           },
-          "$ref": "#/$defs/__schema18"
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "描述": {
+                "type": "string"
+              },
+              "当前值": {
+                "type": "number"
+              },
+              "目标值": {
+                "default": 1,
+                "type": "number"
+              }
+            },
+            "required": [
+              "描述"
+            ]
+          }
         },
         "目标完成状态": {
           "description": "目标完成状态，key为索引字符串（0/1/2...），value为true表示完成",
@@ -180,12 +324,54 @@
             "1": false,
             "2": false
           },
-          "$ref": "#/$defs/__schema19"
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
         },
         "情报碎片": {
           "description": "已解锁的情报碎片",
           "default": {},
-          "$ref": "#/$defs/__schema20"
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "default": {
+              "编号": "",
+              "描述": "",
+              "价值": "",
+              "风险": "",
+              "状态": "未探索"
+            },
+            "type": "object",
+            "properties": {
+              "编号": {
+                "type": "string"
+              },
+              "描述": {
+                "type": "string"
+              },
+              "价值": {
+                "type": "string"
+              },
+              "风险": {
+                "type": "string"
+              },
+              "状态": {
+                "default": "未探索",
+                "type": "string",
+                "enum": [
+                  "未探索",
+                  "已探索",
+                  "已完成"
+                ]
+              }
+            }
+          }
         },
         "$meta": {
           "description": "脚本/界面内部元数据（不建议在世界书中直接写入）",
@@ -196,581 +382,118 @@
             "情报碎片": {},
             "阶段目标": {}
           },
-          "$ref": "#/$defs/__schema21"
+          "type": "object",
+          "properties": {
+            "楼层": {
+              "default": {
+                "last_seen_message_id": 0
+              },
+              "type": "object",
+              "properties": {
+                "last_seen_message_id": {
+                  "description": "最近一次记录的楼层号（用于过期/清理逻辑）",
+                  "type": "number"
+                }
+              }
+            },
+            "情报碎片": {
+              "description": "情报碎片的楼层时间戳（用于UI倒计时与自动清理）",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "created_at": 0,
+                  "explored_at": 0,
+                  "completed_at": 0
+                },
+                "type": "object",
+                "properties": {
+                  "created_at": {
+                    "type": "number"
+                  },
+                  "explored_at": {
+                    "type": "number"
+                  },
+                  "completed_at": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "阶段目标": {
+              "description": "阶段目标的楼层时间戳（用于UI倒计时与自动清理）",
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "default": {
+                  "completed_at": 0
+                },
+                "type": "object",
+                "properties": {
+                  "completed_at": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     "浅见亚美": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "相田哲也": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "星野琉璃": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "早川遥": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "早川舞": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "藤井雪乃": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "中村惠子": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "爱宫心爱": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "爱宫铃": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "桃乐丝・泽巴哈": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "何铃": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "王静": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "康绮月": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "薛萍": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "小泽花": {
-      "$ref": "#/$defs/__schema25"
+      "$ref": "#/$defs/__schema0"
     },
     "临时NPC": {
       "description": "存储所有临时NPC的状态，key为NPC姓名。新NPC登场时在此处添加。",
       "default": {},
-      "$ref": "#/$defs/__schema45"
-    },
-    "楼层其他住户": {
-      "default": {
-        "言语": "",
-        "行为": ""
-      },
-      "type": "object",
-      "properties": {
-        "言语": {
-          "type": "string"
-        },
-        "行为": {
-          "type": "string"
-        }
-      }
-    }
-  },
-  "$defs": {
-    "__schema0": {
-      "type": "number"
-    },
-    "__schema1": {
-      "type": "string"
-    },
-    "__schema2": {
-      "type": "string"
-    },
-    "__schema3": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string",
-        "description": "能力名"
-      },
-      "additionalProperties": {
-        "default": {
-          "desc": ""
-        },
-        "type": "object",
-        "properties": {
-          "desc": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "desc"
-        ]
-      }
-    },
-    "__schema4": {
-      "type": "object",
-      "properties": {
-        "医疗翼": {
-          "description": "等级3:初级医疗舱; 等级6:外科手术台; 等级9:专家级自动医师",
-          "default": "未解锁",
-          "$ref": "#/$defs/__schema5"
-        },
-        "制造工坊": {
-          "description": "任务奖励解锁: \"非致命防御制造器\"(阶段一), \"轻型军火熔炉\"(阶段二); 等级5解锁\"伊甸荚舱\"; 等级8解锁\"重型军械库\"",
-          "default": "未解锁",
-          "$ref": "#/$defs/__schema6"
-        },
-        "载具格纳库": {
-          "description": "等级7解锁\"先驱者制造单元\"; 阶段三任务解锁\"工业原料合成器\"",
-          "default": "未解锁",
-          "$ref": "#/$defs/__schema7"
-        }
-      }
-    },
-    "__schema5": {
-      "type": "string"
-    },
-    "__schema6": {
-      "type": "string"
-    },
-    "__schema7": {
-      "type": "string"
-    },
-    "__schema8": {
-      "type": "object",
-      "properties": {
-        "临时客房A入住者": {
-          "description": "临时客房A进入者姓名列表",
-          "default": [],
-          "$ref": "#/$defs/__schema9"
-        },
-        "临时客房B入住者": {
-          "description": "临时客房B进入者姓名列表",
-          "default": [],
-          "$ref": "#/$defs/__schema10"
-        }
-      }
-    },
-    "__schema9": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__schema10": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__schema11": {
-      "type": "object",
-      "properties": {
-        "主卧室使用者": {
-          "description": "主卧室进入或使用者姓名列表",
-          "default": [],
-          "$ref": "#/$defs/__schema12"
-        },
-        "主浴室使用者": {
-          "description": "主浴室进入或使用者姓名列表",
-          "default": [],
-          "$ref": "#/$defs/__schema13"
-        }
-      }
-    },
-    "__schema12": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__schema13": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "__schema14": {
-      "type": "object",
-      "properties": {
-        "楼层20房间": {
-          "description": "20层各房间进入或使用者列表，key为房间号",
-          "default": {},
-          "$ref": "#/$defs/__schema15"
-        },
-        "楼层19房间": {
-          "description": "19层各房间进入或使用者列表，key为房间号",
-          "default": {},
-          "$ref": "#/$defs/__schema16"
-        }
-      }
-    },
-    "__schema15": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "入住者": []
-        },
-        "type": "object",
-        "properties": {
-          "入住者": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "入住者"
-        ]
-      }
-    },
-    "__schema16": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "入住者": []
-        },
-        "type": "object",
-        "properties": {
-          "入住者": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "入住者"
-        ]
-      }
-    },
-    "__schema17": {
-      "type": "string"
-    },
-    "__schema18": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "描述": {
-            "type": "string"
-          },
-          "当前值": {
-            "type": "number"
-          },
-          "目标值": {
-            "default": 1,
-            "type": "number"
-          }
-        },
-        "required": [
-          "描述"
-        ]
-      }
-    },
-    "__schema19": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "type": "boolean"
-      }
-    },
-    "__schema20": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "编号": "",
-          "描述": "",
-          "价值": "",
-          "风险": "",
-          "状态": "未探索"
-        },
-        "type": "object",
-        "properties": {
-          "编号": {
-            "type": "string"
-          },
-          "描述": {
-            "type": "string"
-          },
-          "价值": {
-            "type": "string"
-          },
-          "风险": {
-            "type": "string"
-          },
-          "状态": {
-            "default": "未探索",
-            "type": "string",
-            "enum": [
-              "未探索",
-              "已探索",
-              "已完成"
-            ]
-          }
-        }
-      }
-    },
-    "__schema21": {
-      "type": "object",
-      "properties": {
-        "楼层": {
-          "default": {
-            "last_seen_message_id": 0
-          },
-          "type": "object",
-          "properties": {
-            "last_seen_message_id": {
-              "description": "最近一次记录的楼层号（用于过期/清理逻辑）",
-              "$ref": "#/$defs/__schema22"
-            }
-          }
-        },
-        "情报碎片": {
-          "description": "情报碎片的楼层时间戳（用于UI倒计时与自动清理）",
-          "default": {},
-          "$ref": "#/$defs/__schema23"
-        },
-        "阶段目标": {
-          "description": "阶段目标的楼层时间戳（用于UI倒计时与自动清理）",
-          "default": {},
-          "$ref": "#/$defs/__schema24"
-        }
-      }
-    },
-    "__schema22": {
-      "type": "number"
-    },
-    "__schema23": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "created_at": 0,
-          "explored_at": 0,
-          "completed_at": 0
-        },
-        "type": "object",
-        "properties": {
-          "created_at": {
-            "type": "number"
-          },
-          "explored_at": {
-            "type": "number"
-          },
-          "completed_at": {
-            "type": "number"
-          }
-        }
-      }
-    },
-    "__schema24": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "completed_at": 0
-        },
-        "type": "object",
-        "properties": {
-          "completed_at": {
-            "type": "number"
-          }
-        }
-      }
-    },
-    "__schema25": {
-      "default": {
-        "姓名": "",
-        "关系": "无",
-        "关系倾向": "中立",
-        "秩序刻印": 0,
-        "健康": 100,
-        "健康更新原因": "",
-        "健康状况": "健康",
-        "衣着": "",
-        "舌唇": "",
-        "胸乳": "",
-        "私穴": "",
-        "神态样貌": "",
-        "动作姿势": "",
-        "内心想法": "",
-        "所在房间": "",
-        "秩序刻印更新原因": "",
-        "登场状态": "离场"
-      },
-      "type": "object",
-      "properties": {
-        "姓名": {
-          "type": "string"
-        },
-        "关系": {
-          "description": "以性关系倾向为主要，反映角色当前对{{user}}的态度",
-          "default": "无",
-          "$ref": "#/$defs/__schema26"
-        },
-        "关系倾向": {
-          "description": "角色关系的倾向影响Imp数值的变化幅度",
-          "$ref": "#/$defs/__schema28"
-        },
-        "秩序刻印": {
-          "description": "Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴",
-          "default": 20,
-          "$ref": "#/$defs/__schema29"
-        },
-        "秩序刻印更新原因": {
-          "description": "符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-          "$ref": "#/$defs/__schema30"
-        },
-        "健康": {
-          "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
-          "default": 100,
-          "$ref": "#/$defs/__schema31"
-        },
-        "健康更新原因": {
-          "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-          "$ref": "#/$defs/__schema32"
-        },
-        "健康状况": {
-          "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-          "$ref": "#/$defs/__schema34"
-        },
-        "衣着": {
-          "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-          "$ref": "#/$defs/__schema35"
-        },
-        "舌唇": {
-          "description": "口腔、嘴唇的状态",
-          "$ref": "#/$defs/__schema36"
-        },
-        "胸乳": {
-          "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-          "$ref": "#/$defs/__schema37"
-        },
-        "私穴": {
-          "description": "私处的详细状态或反应",
-          "$ref": "#/$defs/__schema38"
-        },
-        "神态样貌": {
-          "description": "面部表情和神态",
-          "$ref": "#/$defs/__schema39"
-        },
-        "动作姿势": {
-          "description": "身体姿态和动作",
-          "$ref": "#/$defs/__schema40"
-        },
-        "内心想法": {
-          "description": "符合角色身份和剧情描述的第一人称内心独白",
-          "$ref": "#/$defs/__schema41"
-        },
-        "所在房间": {
-          "description": "角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出",
-          "$ref": "#/$defs/__schema42"
-        },
-        "登场状态": {
-          "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-          "$ref": "#/$defs/__schema44"
-        }
-      }
-    },
-    "__schema26": {
-      "type": "string",
-      "enum": [
-        "无",
-        "拒绝",
-        "交易",
-        "顺从",
-        "忠诚",
-        "性奴"
-      ]
-    },
-    "__schema27": {
-      "type": "string",
-      "enum": [
-        "极易",
-        "易",
-        "中立",
-        "难",
-        "极难",
-        "不可"
-      ]
-    },
-    "__schema28": {
-      "default": "中立",
-      "$ref": "#/$defs/__schema27"
-    },
-    "__schema29": {
-      "type": "number"
-    },
-    "__schema30": {
-      "type": "string"
-    },
-    "__schema31": {
-      "type": "number"
-    },
-    "__schema32": {
-      "type": "string"
-    },
-    "__schema33": {
-      "type": "string",
-      "enum": [
-        "健康",
-        "亚健康",
-        "生病/受伤",
-        "重病/濒死",
-        "无",
-        "死亡"
-      ]
-    },
-    "__schema34": {
-      "default": "健康",
-      "$ref": "#/$defs/__schema33"
-    },
-    "__schema35": {
-      "type": "string"
-    },
-    "__schema36": {
-      "type": "string"
-    },
-    "__schema37": {
-      "type": "string"
-    },
-    "__schema38": {
-      "type": "string"
-    },
-    "__schema39": {
-      "type": "string"
-    },
-    "__schema40": {
-      "type": "string"
-    },
-    "__schema41": {
-      "type": "string"
-    },
-    "__schema42": {
-      "type": "string"
-    },
-    "__schema43": {
-      "type": "string",
-      "enum": [
-        "登场",
-        "离场"
-      ]
-    },
-    "__schema44": {
-      "default": "离场",
-      "$ref": "#/$defs/__schema43"
-    },
-    "__schema45": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -801,121 +524,233 @@
             "type": "string"
           },
           "关系": {
-            "description": "以性关系倾向为主要，反映角色当前对{{user}}的态度",
+            "description": "反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大",
             "default": "无",
-            "$ref": "#/$defs/__schema46"
+            "type": "string",
+            "enum": [
+              "无",
+              "拒绝",
+              "交易",
+              "顺从",
+              "忠诚",
+              "性奴"
+            ]
           },
           "关系倾向": {
-            "description": "角色关系的倾向影响Imp数值的变化幅度",
-            "$ref": "#/$defs/__schema28"
+            "description": "角色关系的倾向影响Imp数值的变化幅度和难易程度",
+            "$ref": "#/$defs/__schema1"
           },
           "秩序刻印": {
-            "description": "Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴",
+            "description": "严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动",
             "default": 20,
-            "$ref": "#/$defs/__schema47"
+            "type": "number"
           },
           "秩序刻印更新原因": {
-            "description": "符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-            "$ref": "#/$defs/__schema48"
+            "description": "跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
+            "type": "string"
           },
           "健康": {
             "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
             "default": 100,
-            "$ref": "#/$defs/__schema49"
+            "type": "number"
           },
           "健康更新原因": {
             "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-            "$ref": "#/$defs/__schema50"
+            "type": "string"
           },
           "健康状况": {
             "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-            "$ref": "#/$defs/__schema34"
+            "$ref": "#/$defs/__schema2"
           },
           "衣着": {
             "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-            "$ref": "#/$defs/__schema51"
+            "type": "string"
           },
           "舌唇": {
             "description": "口腔、嘴唇的状态",
-            "$ref": "#/$defs/__schema52"
+            "type": "string"
           },
           "胸乳": {
             "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-            "$ref": "#/$defs/__schema53"
+            "type": "string"
           },
           "私穴": {
             "description": "私处的详细状态或反应",
-            "$ref": "#/$defs/__schema54"
+            "type": "string"
           },
           "神态样貌": {
             "description": "面部表情和神态",
-            "$ref": "#/$defs/__schema55"
+            "type": "string"
           },
           "动作姿势": {
             "description": "身体姿态和动作",
-            "$ref": "#/$defs/__schema56"
+            "type": "string"
           },
           "内心想法": {
             "description": "符合角色身份和剧情描述的第一人称内心独白",
-            "$ref": "#/$defs/__schema57"
+            "type": "string"
           },
           "所在房间": {
             "description": "角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出",
-            "$ref": "#/$defs/__schema58"
+            "type": "string"
           },
           "登场状态": {
             "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-            "$ref": "#/$defs/__schema44"
+            "$ref": "#/$defs/__schema3"
           }
         }
       }
     },
-    "__schema46": {
+    "楼层其他住户": {
+      "default": {
+        "言语": "",
+        "行为": ""
+      },
+      "type": "object",
+      "properties": {
+        "言语": {
+          "type": "string"
+        },
+        "行为": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "__schema0": {
+      "default": {
+        "姓名": "",
+        "关系": "无",
+        "关系倾向": "中立",
+        "秩序刻印": 0,
+        "健康": 100,
+        "健康更新原因": "",
+        "健康状况": "健康",
+        "衣着": "",
+        "舌唇": "",
+        "胸乳": "",
+        "私穴": "",
+        "神态样貌": "",
+        "动作姿势": "",
+        "内心想法": "",
+        "所在房间": "",
+        "秩序刻印更新原因": "",
+        "登场状态": "离场"
+      },
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "type": "string"
+        },
+        "关系": {
+          "description": "反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大",
+          "default": "无",
+          "type": "string",
+          "enum": [
+            "无",
+            "拒绝",
+            "交易",
+            "顺从",
+            "忠诚",
+            "性奴"
+          ]
+        },
+        "关系倾向": {
+          "description": "角色关系的倾向影响Imp数值的变化幅度和难易程度",
+          "$ref": "#/$defs/__schema1"
+        },
+        "秩序刻印": {
+          "description": "严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动",
+          "default": 20,
+          "type": "number"
+        },
+        "秩序刻印更新原因": {
+          "description": "跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
+          "type": "string"
+        },
+        "健康": {
+          "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
+          "default": 100,
+          "type": "number"
+        },
+        "健康更新原因": {
+          "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
+          "type": "string"
+        },
+        "健康状况": {
+          "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
+          "$ref": "#/$defs/__schema2"
+        },
+        "衣着": {
+          "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
+          "type": "string"
+        },
+        "舌唇": {
+          "description": "口腔、嘴唇的状态",
+          "type": "string"
+        },
+        "胸乳": {
+          "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
+          "type": "string"
+        },
+        "私穴": {
+          "description": "私处的详细状态或反应",
+          "type": "string"
+        },
+        "神态样貌": {
+          "description": "面部表情和神态",
+          "type": "string"
+        },
+        "动作姿势": {
+          "description": "身体姿态和动作",
+          "type": "string"
+        },
+        "内心想法": {
+          "description": "符合角色身份和剧情描述的第一人称内心独白",
+          "type": "string"
+        },
+        "所在房间": {
+          "description": "角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出",
+          "type": "string"
+        },
+        "登场状态": {
+          "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
+          "$ref": "#/$defs/__schema3"
+        }
+      }
+    },
+    "__schema1": {
+      "default": "中立",
       "type": "string",
       "enum": [
-        "无",
-        "拒绝",
-        "交易",
-        "顺从",
-        "忠诚",
-        "性奴"
+        "极易",
+        "易",
+        "中立",
+        "难",
+        "极难",
+        "不可"
       ]
     },
-    "__schema47": {
-      "type": "number"
+    "__schema2": {
+      "default": "健康",
+      "type": "string",
+      "enum": [
+        "健康",
+        "亚健康",
+        "生病/受伤",
+        "重病/濒死",
+        "无",
+        "死亡"
+      ]
     },
-    "__schema48": {
-      "type": "string"
-    },
-    "__schema49": {
-      "type": "number"
-    },
-    "__schema50": {
-      "type": "string"
-    },
-    "__schema51": {
-      "type": "string"
-    },
-    "__schema52": {
-      "type": "string"
-    },
-    "__schema53": {
-      "type": "string"
-    },
-    "__schema54": {
-      "type": "string"
-    },
-    "__schema55": {
-      "type": "string"
-    },
-    "__schema56": {
-      "type": "string"
-    },
-    "__schema57": {
-      "type": "string"
-    },
-    "__schema58": {
-      "type": "string"
+    "__schema3": {
+      "default": "离场",
+      "type": "string",
+      "enum": [
+        "登场",
+        "离场"
+      ]
     }
   }
 }

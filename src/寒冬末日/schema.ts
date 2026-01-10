@@ -16,19 +16,17 @@ const create角色Schema = (args: {
   z
     .object({
       姓名: z.string().prefault(''),
-      关系: args.relationStageSchema.describe('以性关系倾向为主要，反映角色当前对{{user}}的态度'),
-      关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度'),
+      关系: args.relationStageSchema.describe('反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大'),
+      关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度和难易程度'),
       秩序刻印: z.coerce
         .number()
         .transform(v => _.clamp(v, 0, 100))
         .prefault(20)
-        .describe('Imp数值(0-100)，衡量关系深度。0无, 1-19拒绝, 20-39交易, 40-59顺从, 60-89忠诚, 90-100性奴'),
+        .describe('严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动'),
       秩序刻印更新原因: z
         .string()
         .prefault('')
-        .describe(
-          '符合当前角色核心诉求的行动获得更大的Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求',
-        ),
+        .describe('跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求'),
       健康: z.coerce
         .number()
         .transform(v => _.clamp(v, 0, 100))
