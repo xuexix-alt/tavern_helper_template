@@ -19,8 +19,10 @@ import ShelterSection from './components/ShelterSection.vue';
 import StorySection from './components/StorySection.vue';
 import WorldSection from './components/WorldSection.vue';
 import { useInjectedData } from './useInjectedData';
+import { useShelterDailyRoll } from './useShelterDailyRoll';
 
 const { raw, options } = useInjectedData();
+useShelterDailyRoll();
 
 watchDebounced(
   () => [raw.value, options.value.join('\n')],

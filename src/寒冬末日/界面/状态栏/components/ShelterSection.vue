@@ -443,7 +443,8 @@ function canEditFloor(floor: '20' | '19'): boolean {
 }
 
 function isFloorRoomSheltered(floor: '20' | '19', roomNumber: string): boolean {
-  if (floor === '20' && roomNumber === '2001') return false;
+  // 2001（庇护所本体）以及庇护所内部区域默认受庇护：不需要设置，也不占用“庇护名额”。
+  if (floor === '20' && roomNumber === '2001') return true;
   return isRoomSheltered(scopeStore.scope, floor, roomNumber);
 }
 
@@ -480,7 +481,7 @@ function clearScopeSelection() {
 }
 
 function getToggleRoomDisabledReason(floor: '20' | '19', roomNumber: string): string | null {
-  if (floor === '20' && roomNumber === '2001') return '2001 为庇护所本体，无需设置庇护';
+  if (floor === '20' && roomNumber === '2001') return '2001/庇护所内部区域默认为受庇护，不占用名额、无需设置';
   if (!canEditFloor(floor)) return `当前等级未解锁${floor}层庇护范围`;
 
   const max = floor === '20' ? scope20Max.value : scope19Max.value;

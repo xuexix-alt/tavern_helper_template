@@ -467,32 +467,17 @@
     "中村惠子": {
       "$ref": "#/$defs/__schema0"
     },
-    "爱宫心爱": {
-      "$ref": "#/$defs/__schema0"
-    },
-    "爱宫铃": {
-      "$ref": "#/$defs/__schema0"
-    },
     "桃乐丝・泽巴哈": {
       "$ref": "#/$defs/__schema0"
     },
-    "何铃": {
-      "$ref": "#/$defs/__schema0"
-    },
     "王静": {
-      "$ref": "#/$defs/__schema0"
-    },
-    "康绮月": {
-      "$ref": "#/$defs/__schema0"
-    },
-    "薛萍": {
       "$ref": "#/$defs/__schema0"
     },
     "小泽花": {
       "$ref": "#/$defs/__schema0"
     },
     "临时NPC": {
-      "description": "存储所有临时NPC的状态，key为NPC姓名。新NPC登场时在此处添加。",
+      "description": "存储所有临时NPC的状态，key为NPC姓名。非主要角色一律添加在此处新NPC登场时在此处添加。",
       "default": {},
       "type": "object",
       "propertyNames": {

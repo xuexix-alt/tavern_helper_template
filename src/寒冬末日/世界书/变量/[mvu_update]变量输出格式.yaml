@@ -2,27 +2,28 @@
 rule:
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:'
-  - '  - `replace`: replace the value of existing paths'
-  - '  - `delta`: update the value of existing number paths by a delta value (positive or negative)'
-  - '  - `insert`: insert new items into an object or array'
-  - '  - `remove`: delete path'
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
   - Path MUST start with `/stat_data/`.
   - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
+  - The main character list is FIXED and IMMUTABLE - NEVER move temporary NPCs into the main character list.
 
 format: |-
   <UpdateVariable>
   <Analysis>
-  从当前<user>消息、剧情上下文和上一轮 stat_data 状态中检索信息，严格按照以下分层检查顺序一步一步思考。
-  前置步骤：清除本轮未提及的角色
-  - 快速检查当前登场角色列表，本轮哪位已登场角色未提及也未出现在可能登场的场域？→角色离场。本轮哪位未登场角色有剧情提及或出现在可能登场的场域？→角色登场。
+  从当前<user>消息、剧情上下文和上一轮 stat_data 状态中检索信息，一步一步思考。
+  前置步骤：区分登场与离场
+  - 快速检查当前登场角色列表→角色离场。本轮哪位未登场角色有剧情提及或出现在可能登场的场域？→角色登场。
   - **特别不能遗漏** → 使用replace将登场状态设置为："离场"；
-  - 结果：需变更登场状态的离场角色：____。需变更登场状态的登场角色：____。已检查：□（记录接下来的更新对象）
+  - 结果：____由离场变登场。____由登场变离场。
 
   步骤 1：世界变量 & 楼层氛围
   - 时间：
-    - 检查<user>是否指定时间流逝 → 计算新时间（格式："时间段 - HH:MM"）。
-    - 若无指定 → 根据对话长度估算 5-15 分钟。
+    - 检查<user>是否指定时间流逝 → 计算新时间
+    - 若无指定 → 根据对话长度估算 x 分钟？
     - 结果：需更新？是/否。新值：____。已检查：□
   - 日期 & 末日天数 & 楼层氛围：
     - 若时间跨越 00:00 → 日期 +1 天，末日天数 +1。
@@ -34,18 +35,16 @@ format: |-
 
   步骤 2：庇护所变量
   - 庇护所等级：
-    - 检查升级来源：剧情触发 OR 保底触发。
-    - 若满足任一条件 → 等级 +1 (上限 10)，并记录新能力。
-    - 结果：需更新？是/否。新值：____。已检查：□
+    - 每日开始，需检查是否由后台脚本发动了roll点升级
+      → 是 正文中向{{user}}提示升级结果和新增技能
+      → 否 则维持现状
   - 可扩展区域 & 庇护所能力：
-    - 若等级提升 → 同步添加新能力（参考<庇护所升级能力>），并更新对应区域的具体设施名称。
     - 检查：对比当前等级，确保 `stat_data/庇护所/庇护所能力` 包含所有已解锁等级的描述。
     - 结果：需更新？是/否。新值：____。已检查：□
 
    步骤 3：所有角色变量
-  - 逐个列出本轮需要检查的角色对象（避免硬编码名单）：
-    - 来源：上一轮/本轮的 `stat_data`（排除保留键）+ `stat_data/临时NPC` 下的所有对象。
-    - 保留键（不视为角色）：世界、庇护所、房间、主线任务、楼层其他住户、临时NPC。
+  - 逐个列出本轮需要检查的角色对象：
+    - 来源：上一轮/本轮的 `stat_data`+ `stat_data/临时NPC` 下的所有对象。
     - 结果：角色列表：____。已检查：□
   - 对每个角色逐一检查：
     a. 登场状态：**这是一个重要剧情开关**
@@ -54,55 +53,46 @@ format: |-
        - 死亡 → 触发死亡压缩。
        - 结果：新登场角色____，新值：____。已离场角色：____，新值：____。需更新？是/否。新值：____。已检查：□
     b. 健康（数值，0-100）：
-       - 登场角色：每轮强制结算（剧情性变化用 `delta`）。
-          - 庇护所内角色（玄关临时客房、核心区主卧/主浴）：通常无变化（0），或轻微恢复（0~+2）。
-          - 楼层房间内角色：
-            - 若该房间被设为“生存庇护范围”→ 视为受庇护（缓慢恢复，代表伊甸为其同步供暖/通风/电力等基础维持）。
+       - 登场角色：
+          - 是否所处于庇护所内？
+          - 是否处于楼层房间内？
+            - 若该房间被设为“生存庇护范围”→ 视为受庇护。
             - 若未纳入庇护范围 → 视为未受庇护（按规则被动扣减）。
-            - 注意：以上仅是“环境基础倾向”，【登场】角色本轮仍必须由你根据剧情事实决定 `delta`（食物/治疗/受伤/战斗等）。
-          - 受伤/饥饿/战斗等剧情因素：按情节额外扣减或恢复（±1~10）。
-        - 离场角色：默认不更新（健康/原因由脚本按“剧情时间 + 房间入住 + 庇护范围”自动结算）。仅在“剧情介入/远程投喂/治疗/受伤”等情况下才由 AI 明确增减（建议先把其登场状态改为"登场"以明确交由 AI 处理）。
-        - 操作: 使用 `delta` 计算新数值（如 85 -> 83）。
+          - 受照顾和受伤害等剧情因素：按情节额外扣减或恢复（±1~10）。
+        - 离场角色：由脚本负责模拟缓慢饥饿和末日生存受限的扣减
+        - 操作: 使用 `delta` 计算。
         - 结果：需更新？是/否。新值：____。已检查：□
     c. 健康更新原因
         - 必须与健康数值进行同步更新。
-            - 有变化: `+/-X, 原因` (如 `-2, 寒冷饥饿`)
-            - 无变化: `0, 无变化`
-        - 结果：需更新？是/否。新值：____。已检查：□
     d. 纯文本描述字段（衣着、舌唇、胸乳、私穴、神态样貌、动作姿势）：
        - 剧情是否提及？ 有 → 更新描述以反映当前状态。
-       - 剧情未提及，每位登场角色均需进行推演。
        - 结果：需更新____，推演字段：____。新值：____。已检查：□
     e. 内心想法（强制，第一人称）：
        - 本次哪几位角色与{{user}}进行了互动？
        - 每次互动后必须更新，反映真实心声。
-       - 离场角色可跳过，但回归时必须补上。
+       - 所有登场角色必须更新反应其视角的心理活动
        - 结果：需更新？是/否。新值：____。已检查：□
-     f. 秩序刻印 (Imp) & 更新原因（**登场角色强制同步**）：
+     f. 秩序刻印 (Imp) & 更新原因：
         - 计算变动：基于生存供给(+1)、设施体验(+3~5)或感情、性爱互动(+2~6)计算增减。
-        - 检查跃迁：本轮是否有完成任务等奖励内容直接涉及关系升级，如果有直接使用replace更新秩序刻印至新等级。
-        - 重要：如果你在 JSONPatch 中对该角色执行了 `delta/replace` 更新 `秩序刻印`，必须在 JSONPatch 中同时写入：
-          - `replace /stat_data/<角色>/秩序刻印更新原因`（`+/-X, 原因`；无变化：`0, 无变化`）
+        - 是否违反不得跨等级赋值的规定？
+        - 重要：秩序刻印更新原因同步（`+/-X, 原因`；无变化：`0, 无变化`）
         - 结果：Imp 变动 ____ (原因)。当前状态：____。已检查：□
 
 
   步骤 4：临时NPC专用处理
   - 本轮是否有新npc登场？ → 参照核心角色的完整字段，使用 `insert` 创建完整新对象（初始化所有字段）。
-  - 若已有临时NPC → 参考登场角色进行各字段更新。
-  - ❗保留原则：除非玩家明示永久移除，否则剧情不得 `remove` 临时NPC。
-    - 若死亡：默认使用 `remove` 删除该临时NPC（避免数量无限膨胀）。
-      - 仅当玩家明示“保留尸体/留档”时，才按“死亡处理”保留对象（健康=0，文本类字段置空）。
-    - 若离开视野：`replace` 登场状态为 "离场"，并按需要 `replace` 所在房间为 `""`。
-  - 结果：需创建/更新/（仅在玩家明示时）移除？是/否。已检查：□
+  - 登场临时NPC各字段是否更新？
+  - 是否违规将临时NPC移到核心角色区？
+  - 是否违规将临时NPC `remove` 。
+  - 结果：需创建/更新/？是/否。已检查：□
 
   步骤 5：楼层其他住户
   - 言语 & 行为：
-    - 日期是否变更？ 有 → 更新描述以反映新一天的氛围。
     - 结果：需更新？是/否。新值：____。已检查：□
 
   步骤 6：房间状态（强制，禁止遗漏）
   - 检查所有角色移动（进入/离开/换房）：
-    - 先更新“发生移动的角色/临时NPC”的 `所在房间`（这是单一真源）：
+    - 先更新“发生移动的角色/临时NPC”的 `所在房间`：
       - 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
       - 离开公寓/位置未知：写空字符串 `""`
     - 房间的 入住者/使用者 数组属于派生数据，脚本会自动重算并纠偏。
@@ -114,20 +104,16 @@ format: |-
   步骤 7：主线任务
   - 当前阶段 & 阶段目标（进度追踪）：
     - 检查剧情中是否有事件推动了任务进度（如清除了1层敌人，庇护了1个家庭）。
-    - 若有，计算本轮增量，使用 `delta` 累加对应目标对象的 `当前值` 字段。
-    - 若 `当前值` 达到 `目标值`，则判定该子目标完成。
-    - 若所有目标均完成，则判定阶段完成，发放奖励并刷新下一阶段目标。
-    - 结果：需更新进度？是/否。新值：____。已检查：□
-  - 任务奖励检查：
-    - 检查是否触发奖励条件 → 若是，使用 `insert` 添加能力并更新对应区域。
-    - 结果：触发奖励？是/否。操作：____。已检查：□
-  - 发放新任务阶段（若适用）：
-    - 若当前阶段完成 → 使用 `insert` 创建<主线任务-星穹秩序>新阶段对象，初始化目标和状态。
-    - 结果：已完成任务进度：____，已完成阶段任务：____，综合奖励____。需发放新阶段任务？是/否。已检查：□
+    - 若有，计算本轮增量，使用 `delta` 累加。
+    - `当前值` 是否达到 `目标值`，是→判定该子目标完成。
+        - 所有目标是否均完成，是→ 判定阶段完成，发放奖励并刷新下一阶段目标。
+    - 任务条件或任务阶段完成奖励是否需要发放？
+    - 结果：需更新进度？是/否。新值：____。触发奖励？是/否。已检查：□
   - 情报碎片：
     - "伊甸"AI 新汇报 → 使用 `insert` 添加新对象。
     - 玩家完成探索 → 使用 `replace` 修改对应碎片状态为"已完成"。
-    - 结果：根据<主线任务-星穹秩序> 或玩家探索发现，进行insert/replace？是/否。已检查：□
+    - 情报碎片完成后是否需要方法奖励？
+    - 结果：根据<主线任务-星穹秩序> 或玩家探索发现，进行insert/replace？是/否。触发奖励？是/否。已检查：□
 
   步骤 8：变量操作规划（总结）
   - 汇总所有需要更新的路径和操作（replace/delta/insert/remove）。
@@ -165,9 +151,9 @@ format: |-
   </UpdateVariable>
 
 requirements:
-  - 'Allowed operations: replace, delta, insert, remove.'
+  - "Allowed operations: replace, delta, insert, remove."
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - 'Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible.'
-  - 'For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth).'
-  - 'Arrays: Use `replace` with the full new list for Room/User lists; use `insert` with `/-` for Appending to Capability/Log arrays.'
+  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
+  - "For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth)."
+  - "Arrays: Use `replace` with the full new list for Room/User lists; use `insert` with `/-` for Appending to Capability/Log arrays."

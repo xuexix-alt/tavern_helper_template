@@ -3,6 +3,7 @@ import type { ShelterScopeByFloor } from '../util/shelter_scope';
 export const CHAT_VAR_KEYS = {
   EDEN_SHELTER_SCOPE: 'eden.shelter_scope',
   EDEN_RULES_HEALTH: 'eden.rules.health',
+  EDEN_SHELTER_UPGRADE: 'eden.shelter_upgrade',
   UI_SETTINGS: 'ui_settings',
 } as const;
 

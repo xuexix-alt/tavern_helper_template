@@ -336,19 +336,19 @@ export const Schema = z.object({
   早川舞: 主要角色Schema,
   藤井雪乃: 主要角色Schema,
   中村惠子: 主要角色Schema,
-  爱宫心爱: 主要角色Schema,
-  爱宫铃: 主要角色Schema,
+  // 爱宫心爱: 主要角色Schema,
+  // 爱宫铃: 主要角色Schema,
   '桃乐丝・泽巴哈': 主要角色Schema,
-  何铃: 主要角色Schema,
+  // 何铃: 主要角色Schema,
   王静: 主要角色Schema,
-  康绮月: 主要角色Schema,
-  薛萍: 主要角色Schema,
+  // 康绮月: 主要角色Schema,
+  // 薛萍: 主要角色Schema,
   小泽花: 主要角色Schema,
 
   临时NPC: z
     .record(z.string(), 临时NPCSchema)
     .prefault({})
-    .describe('存储所有临时NPC的状态，key为NPC姓名。新NPC登场时在此处添加。'),
+    .describe('存储所有临时NPC的状态，key为NPC姓名。非主要角色一律添加在此处新NPC登场时在此处添加。'),
 
   楼层其他住户: z
     .object({

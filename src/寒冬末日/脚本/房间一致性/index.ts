@@ -110,6 +110,13 @@ function resolveRoleFinalTag(args: {
   // 1) 显式真源：只要本轮变量中存在合法的“所在房间”，就以它为准
   if (isValidExplicitTag(newTag)) return { finalTag: newTag, reason: 'explicit' };
 
+  // 1.1) 显式离开：如果上一轮有有效房间，而本轮把“所在房间”置空，视为明确离开/未知。
+  // 这可以解决“剧情写在外部楼层(如3001)但地图仍显示旧房间”的常见情况：
+  // 由于 room.ts 只支持 19/20 层与核心区/玄关，`楼层30/3001` 这类标签会被判为无效。
+  if (isValidExplicitTag(oldTag) && normalizeRoomTag(newTag) === '') {
+    return { finalTag: '', reason: 'explicit-none' };
+  }
+
   const present: string[] = [];
   const added: string[] = [];
   const removed: string[] = [];
