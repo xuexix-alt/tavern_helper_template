@@ -204,11 +204,15 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
 
   const finalTagByName = new Map<string, string>();
   const finalReasonByName = new Map<string, string>();
+  const oldTagByName = new Map<string, string>();
+  const newTagByName = new Map<string, string>();
 
   for (const name of [...core, ...tempNpc]) {
     const isTemp = tempNpc.includes(name);
     const oldTag = readRoleRoomTag(old_stat_data, name, isTemp);
     const newTag = readRoleRoomTag(stat_data, name, isTemp);
+    oldTagByName.set(name, oldTag);
+    newTagByName.set(name, newTag);
 
     const resolved = resolveRoleFinalTag({ name, oldRooms, newRooms: rooms, oldTag, newTag, allTags });
     finalTagByName.set(name, resolved.finalTag);
@@ -255,6 +259,18 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   _.set(stat_data, '房间', nextRooms);
 
   if (debug) {
+    const explicitNone = [...finalReasonByName.entries()]
+      .filter(([, reason]) => reason === 'explicit-none')
+      .map(([name]) => ({
+        name,
+        oldTag: oldTagByName.get(name) ?? '',
+        newTag: newTagByName.get(name) ?? '',
+        finalTag: finalTagByName.get(name) ?? '',
+      }));
+    if (explicitNone.length > 0) {
+      console.log('[RoomLogic] explicit-none applied (role left to unknown):', explicitNone);
+    }
+
     const dup: Array<{ name: string; tags: string[] }> = [];
     for (const name of [...core, ...tempNpc]) {
       const tags = writeTags.filter(t => (readRoomListByTag(nextRooms, t) ?? []).includes(name));
