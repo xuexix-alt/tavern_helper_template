@@ -1,4 +1,4 @@
-import { parseRoomTag, normalizeRoomTag } from '../../util/room';
+import { findRoleLocation, parseRoomTag, normalizeRoomTag, roomTagFromLocation } from '../../util/room';
 
 type Rooms = any;
 
@@ -89,73 +89,44 @@ function isValidExplicitTag(tag: string): boolean {
   return loc.kind !== 'none';
 }
 
-function tagPriority(tag: string): number {
-  const t = normalizeRoomTag(tag);
-  if (t.startsWith('核心区/')) return 3;
-  if (t.startsWith('玄关/')) return 2;
-  if (t.startsWith('楼层')) return 1;
-  return 0;
-}
+function resolveRoleFinalTagTagOnly(args: { oldTag: string; newTag: string }): { finalTag: string; reason: string } {
+  const oldTag = normalizeRoomTag(args.oldTag);
+  const newTag = normalizeRoomTag(args.newTag);
 
-function resolveRoleFinalTag(args: {
-  name: string;
-  oldRooms: Rooms;
-  newRooms: Rooms;
-  oldTag: string;
-  newTag: string;
-  allTags: string[];
-}): { finalTag: string; reason: string } {
-  const { name, oldRooms, newRooms, oldTag, newTag, allTags } = args;
-
-  // 1) 显式真源：只要本轮变量中存在合法的“所在房间”，就以它为准
+  // 1) 单一真源：本轮显式写入且合法 → 直接采用
   if (isValidExplicitTag(newTag)) return { finalTag: newTag, reason: 'explicit' };
 
-  // 1.1) 显式离开：如果上一轮有有效房间，而本轮把“所在房间”置空，视为明确离开/未知。
-  // 这可以解决“剧情写在外部楼层(如3001)但地图仍显示旧房间”的常见情况：
-  // 由于 room.ts 只支持 19/20 层与核心区/玄关，`楼层30/3001` 这类标签会被判为无效。
-  if (isValidExplicitTag(oldTag) && normalizeRoomTag(newTag) === '') {
-    return { finalTag: '', reason: 'explicit-none' };
+  // 2) 显式置空：离开/未知/外出 → 直接清空（不再依赖房间数组推断）
+  if (newTag === '') {
+    return isValidExplicitTag(oldTag) ? { finalTag: '', reason: 'explicit-none' } : { finalTag: '', reason: 'none' };
   }
 
-  const present: string[] = [];
-  const added: string[] = [];
-  const removed: string[] = [];
-  for (const tag of allTags) {
-    const oldList = readRoomListByTag(oldRooms, tag);
-    const newList = readRoomListByTag(newRooms, tag);
-    const oldIn = Array.isArray(oldList) && oldList.includes(name);
-    const newIn = Array.isArray(newList) && newList.includes(name);
-    if (newIn) present.push(tag);
-    if (!oldIn && newIn) added.push(tag);
-    if (oldIn && !newIn) removed.push(tag);
+  // 3) 非空但非法：视为本轮写错（例如“楼层30/3001”），保持上轮合法值以免跳房；否则清空
+  if (isValidExplicitTag(oldTag)) return { finalTag: oldTag, reason: 'invalid-keep-old' };
+  return { finalTag: '', reason: 'invalid-to-none' };
+}
+
+function bootstrapMissingRoleRoomTagsFromRooms(stat_data: any, debug: boolean) {
+  const rooms = _.get(stat_data, '房间', {}) ?? {};
+  const { core, tempNpc } = listRoleNames(stat_data);
+
+  const patched: Array<{ name: string; tag: string }> = [];
+  for (const name of [...core, ...tempNpc]) {
+    const isTemp = tempNpc.includes(name);
+    const curTag = readRoleRoomTag(stat_data, name, isTemp);
+    if (curTag) continue;
+
+    const loc = findRoleLocation(rooms, name);
+    const tag = roomTagFromLocation(loc);
+    if (!tag) continue;
+
+    writeRoleRoomTag(stat_data, name, isTemp, tag);
+    patched.push({ name, tag });
   }
 
-  // 2) 正常：只出现在一个房间
-  if (present.length === 1) return { finalTag: present[0], reason: 'single' };
-
-  // 3) 冲突：同名出现在多个房间
-  if (present.length > 1) {
-    // 若本轮恰好“新增进”一个房间，通常代表移动目标；优先以此为准
-    if (added.length === 1) return { finalTag: added[0], reason: 'added' };
-
-    // 其次：若旧Tag仍有效且在 present 中，保持旧Tag（避免乱跳）
-    if (isValidExplicitTag(oldTag) && present.includes(oldTag)) return { finalTag: oldTag, reason: 'keep-old-tag' };
-
-    // 最后：按优先级选择（核心区 > 玄关 > 楼层），稳定输出
-    const picked = _(present)
-      .sortBy(t => -tagPriority(t))
-      .sortBy()
-      .head();
-    return { finalTag: picked ?? present[0], reason: 'priority' };
+  if (debug && patched.length > 0) {
+    console.log('[RoomLogic] bootstrapped missing role tags from rooms:', patched);
   }
-
-  // 4) 缺失：角色不在任何房间
-  // 若旧Tag存在且仍合法，则沿用旧Tag（防止“移除但忘记添加”的不健壮）
-  if (isValidExplicitTag(oldTag)) return { finalTag: oldTag, reason: 'sticky-old-tag' };
-
-  // 否则维持为空（未知/外出）
-  if (removed.length > 0) return { finalTag: '', reason: 'removed-to-none' };
-  return { finalTag: '', reason: 'none' };
 }
 
 function keepUnknownNames(list: any, known: Set<string>): string[] {
@@ -195,6 +166,10 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const rooms = _.get(stat_data, '房间', {}) ?? {};
   const oldRooms = _.get(old_stat_data, '房间', {}) ?? {};
 
+  // 兼容旧存档：若 initvar/旧聊天只维护了房间数组但没写“所在房间”，先把缺失标签补齐。
+  // 补齐后，后续逻辑以“所在房间”为单一真源，`房间/**` 只作为派生输出。
+  bootstrapMissingRoleRoomTagsFromRooms(stat_data, debug);
+
   const { core, tempNpc } = listRoleNames(stat_data);
   const knownNames = new Set<string>([...core, ...tempNpc]);
 
@@ -214,7 +189,7 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
     oldTagByName.set(name, oldTag);
     newTagByName.set(name, newTag);
 
-    const resolved = resolveRoleFinalTag({ name, oldRooms, newRooms: rooms, oldTag, newTag, allTags });
+    const resolved = resolveRoleFinalTagTagOnly({ oldTag, newTag });
     finalTagByName.set(name, resolved.finalTag);
     finalReasonByName.set(name, resolved.reason);
   }
@@ -232,9 +207,18 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const unknownByTag: Record<string, string[]> = {};
   const priorKnownOrderByTag: Record<string, string[]> = {};
   for (const tag of allTags) {
+    // 房间数组属于派生数据：unknown（如 {{user}}）以“本轮现值”为准，避免删除/迁移时被旧值反向复活。
     const raw = readRoomListByTag(rooms, tag);
     unknownByTag[tag] = keepUnknownNames(raw, knownNames);
     priorKnownOrderByTag[tag] = Array.isArray(raw) ? raw.filter(x => typeof x === 'string' && knownNames.has(x)) : [];
+
+    // 但对宏占位符做“温和兜底”：如果上一轮存在宏（如 {{user}}）而本轮被误删，则保留它。
+    const oldRaw = readRoomListByTag(oldRooms, tag);
+    const stickyMacros = keepUnknownNames(oldRaw, knownNames).filter(x => x === '{{user}}' || /^\{\{.+\}\}$/.test(x));
+    if (stickyMacros.length > 0) {
+      const merged = _(unknownByTag[tag]).concat(stickyMacros).uniq().value();
+      unknownByTag[tag] = merged;
+    }
   }
 
   const assignedByTag: Record<string, string[]> = {};
