@@ -21,9 +21,9 @@ const create角色Schema = (args: {
       秩序刻印: z.coerce
         .number()
         .int()
-        .transform(v => _.clamp(v, -100, 100))
-        .prefault(20)
-        .describe('范围-100~100（允许负数）；严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动'),
+        .transform(v => _.clamp(v, -20, 100))
+        .prefault(19)
+        .describe('范围-20~100（允许负数）；当Imp<0时将触发角色死亡结算'),
       秩序刻印更新原因: z
         .string()
         .prefault('')
