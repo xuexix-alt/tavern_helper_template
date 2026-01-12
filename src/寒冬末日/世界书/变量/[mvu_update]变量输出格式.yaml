@@ -95,9 +95,8 @@ format: |-
     - 先更新“发生移动的角色/临时NPC”的 `所在房间`：
       - 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
       - 离开公寓/位置未知：写空字符串 `""`
-    - 房间的 入住者/使用者 数组属于派生数据，脚本会自动重算并纠偏。
-      - 若你仍要显式输出房间数组：必须先确定该房间**最终的完整入住者列表**，然后用 `replace` 覆盖整个数组。
-      - **禁止使用 `remove` 或 `insert`** 对入住者数组做增量修改。
+    - 房间的 入住者/使用者 数组属于派生数据，脚本会自动重算并纠偏：
+      - **禁止**在 JSONPatch 中输出任何 `/stat_data/房间/**` 的更新（包括 `replace/delta/insert/remove`）。
     - 涉及房间：玄关临时客房、核心区主卧/主浴、楼层具体房号等。
     - 结果：已检查：□
 
@@ -132,7 +131,6 @@ format: |-
     /stat_data/庇护所/庇护所等级
     /stat_data/浅见亚美/健康
     /stat_data/浅见亚美/关系
-    /stat_data/房间/核心区/主卧室使用者
     等。
   </Analysis>
   <JSONPatch>
@@ -144,8 +142,7 @@ format: |-
     { "op": "replace", "path": "/stat_data/藤井雪乃/登场状态", "value": "离场" },
     { "op": "replace", "path": "/stat_data/浅见亚美/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/stat_data/庇护所/庇护所能力/???新型空气过滤盾???", "value": { "desc": "过滤效率提升30%。" } },
-    { "op": "insert", "path": "/stat_data/临时NPC/陌生拾荒者", "value": { "姓名": "陌生拾荒者", "健康": 100, "登场状态": "登场" } },
-    { "op": "replace", "path": "/stat_data/房间/楼层房间/楼层20房间/2001/入住者", "value": ["{{user}}", "早川遥"] }
+    { "op": "insert", "path": "/stat_data/临时NPC/陌生拾荒者", "value": { "姓名": "陌生拾荒者", "健康": 100, "登场状态": "登场", "所在房间": "玄关/临时客房A" } }
   ]
   </JSONPatch>
   </UpdateVariable>
@@ -154,6 +151,8 @@ requirements:
   - "Allowed operations: replace, delta, insert, remove."
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
+  - "NEVER output any operation under `/stat_data/房间/**` (derived; maintained by script)."
+  - "If inserting into `/stat_data/临时NPC/<姓名>` and `/stat_data/临时NPC` is missing, `insert` `/stat_data/临时NPC` as `{}` first."
   - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
   - "For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth)."
-  - "Arrays: Use `replace` with the full new list for Room/User lists; use `insert` with `/-` for Appending to Capability/Log arrays."
+  - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
