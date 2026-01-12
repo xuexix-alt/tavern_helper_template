@@ -224,8 +224,10 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const assignedByTag: Record<string, string[]> = {};
   for (const [name, tag] of finalTagByName.entries()) {
     if (!tag) continue;
-    if (!assignedByTag[tag]) assignedByTag[tag] = [];
-    assignedByTag[tag].push(name);
+    // UI 的房间数组没有“玄关”这个列表，所以“玄关”作为逻辑位置时，默认派生到临时客房A用于显示。
+    const physicalTag = tag === '玄关' ? '玄关/临时客房A' : tag;
+    if (!assignedByTag[physicalTag]) assignedByTag[physicalTag] = [];
+    assignedByTag[physicalTag].push(name);
   }
 
   const writeTags = _([...allTags, ...Object.keys(assignedByTag)])

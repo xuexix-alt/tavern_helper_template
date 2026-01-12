@@ -1,5 +1,5 @@
 export type RoomLocation =
-  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' }
+  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '玄关' }
   | { kind: 'core'; room: '主卧室' | '主浴室' }
   | { kind: 'floor'; floor: '20' | '19'; roomNumber: string }
   | { kind: 'none' };
@@ -16,6 +16,7 @@ export function parseRoomTag(tag: string): RoomLocation {
 
   if (t === '玄关/临时客房A') return { kind: 'entrance', room: '临时客房A' };
   if (t === '玄关/临时客房B') return { kind: 'entrance', room: '临时客房B' };
+  if (t === '玄关') return { kind: 'entrance', room: '玄关' };
 
   if (t === '核心区/主卧室') return { kind: 'core', room: '主卧室' };
   if (t === '核心区/主浴室') return { kind: 'core', room: '主浴室' };
@@ -33,7 +34,8 @@ export function parseRoomTag(tag: string): RoomLocation {
 export function roomTagFromLocation(loc: RoomLocation): string {
   if (loc.kind === 'entrance') {
     if (loc.room === '临时客房A') return '玄关/临时客房A';
-    return '玄关/临时客房B';
+    if (loc.room === '临时客房B') return '玄关/临时客房B';
+    return '玄关';
   }
   if (loc.kind === 'core') {
     if (loc.room === '主卧室') return '核心区/主卧室';
