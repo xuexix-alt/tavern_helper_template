@@ -20,9 +20,10 @@ const create角色Schema = (args: {
       关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度和难易程度'),
       秩序刻印: z.coerce
         .number()
-        .transform(v => _.clamp(v, 0, 100))
+        .int()
+        .transform(v => _.clamp(v, -100, 100))
         .prefault(20)
-        .describe('严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动'),
+        .describe('范围-100~100（允许负数）；严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动'),
       秩序刻印更新原因: z
         .string()
         .prefault('')

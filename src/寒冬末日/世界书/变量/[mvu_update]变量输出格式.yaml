@@ -2,11 +2,11 @@
 rule:
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
-  - "  - `replace`: replace the value of existing paths"
-  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
-  - "  - `insert`: insert new items into an object or array"
-  - "  - `remove`: delete path"
+  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:'
+  - '  - `replace`: replace the value of existing paths'
+  - '  - `delta`: update the value of existing number paths by a delta value (positive or negative)'
+  - '  - `insert`: insert new items into an object or array'
+  - '  - `remove`: delete path'
   - Path MUST start with `/stat_data/`.
   - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
   - The main character list is FIXED and IMMUTABLE - NEVER move temporary NPCs into the main character list.
@@ -73,8 +73,7 @@ format: |-
        - 所有登场角色必须更新反应其视角的心理活动
        - 结果：需更新？是/否。新值：____。已检查：□
      f. 秩序刻印 (Imp) & 更新原因：
-        - 计算变动：基于生存供给(+1)、设施体验(+3~5)或感情、性爱互动(+2~6)计算增减。
-        - 是否违反不得跨等级赋值的规定？
+        - 计算变动？
         - 重要：秩序刻印更新原因同步（`+/-X, 原因`；无变化：`0, 无变化`）
         - 结果：Imp 变动 ____ (原因)。当前状态：____。已检查：□
 
@@ -148,11 +147,11 @@ format: |-
   </UpdateVariable>
 
 requirements:
-  - "Allowed operations: replace, delta, insert, remove."
+  - 'Allowed operations: replace, delta, insert, remove.'
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - "NEVER output any operation under `/stat_data/房间/**` (derived; maintained by script)."
-  - "If inserting into `/stat_data/临时NPC/<姓名>` and `/stat_data/临时NPC` is missing, `insert` `/stat_data/临时NPC` as `{}` first."
-  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
-  - "For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth)."
-  - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
+  - 'NEVER output any operation under `/stat_data/房间/**` (derived; maintained by script).'
+  - 'If inserting into `/stat_data/临时NPC/<姓名>` and `/stat_data/临时NPC` is missing, `insert` `/stat_data/临时NPC` as `{}` first.'
+  - 'Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible.'
+  - 'For Role moves, update `/stat_data/<角色>/所在房间` with `replace` (single source of truth).'
+  - 'Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays.'

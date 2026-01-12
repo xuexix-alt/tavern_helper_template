@@ -198,6 +198,35 @@ function applyOffstageRoleHealthIfNeeded(
   console.log(`[离场健康结算] ${roleName}: ${currentHealth} → ${nextHealth} (${reasonText})`);
 }
 
+function applyDeathFromNegativeImprintIfNeeded(
+  rolePath: string,
+  roleName: string,
+  role: RoleLike,
+  stat_data: any,
+  debug?: { offstageHealth: boolean },
+): boolean {
+  const markRaw = role.秩序刻印;
+  if (typeof markRaw !== 'number' && typeof markRaw !== 'string') return false;
+
+  const mark = Number(markRaw);
+  if (!Number.isFinite(mark) || mark >= 0) return false;
+
+  const currentHealth = clampHealth(Number(role.健康) || 0);
+  if (currentHealth <= 0) return false;
+
+  const reasonText = `${-currentHealth}, 羞愧而死`;
+
+  _.set(stat_data, `${rolePath}.健康`, 0);
+  _.set(stat_data, `${rolePath}.健康更新原因`, reasonText);
+  _.set(stat_data, `${rolePath}.登场状态`, '离场');
+
+  console.log(`[角色死亡] ${roleName}: Imp=${mark} -> 健康 ${currentHealth} → 0 (${reasonText})`);
+  if (debug?.offstageHealth) {
+    console.log(`[OffstageHealth] applied death rule: ${rolePath} (${roleName})`);
+  }
+  return true;
+}
+
 function applyDerivedHealthStatus(rolePath: string, role: RoleLike, stat_data: any) {
   const health = clampHealth(Number(role.健康) || 0);
   const expected = healthCondition(health);
@@ -302,6 +331,7 @@ $(async () => {
 
       const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
       applyAutoStageFromThoughtUpdateIfNeeded(key, key, oldRole, val as any, debug);
+      applyDeathFromNegativeImprintIfNeeded(key, key, val as any, stat_data, debug);
       applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
       applyDerivedHealthStatus(key, val as any, stat_data);
       applyDerivedRelationStage(key, oldRole, val as any, stat_data);
@@ -315,6 +345,7 @@ $(async () => {
 
         const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
         applyAutoStageFromThoughtUpdateIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, debug);
+        applyDeathFromNegativeImprintIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
         applyOffstageRoleHealthIfNeeded(
           `临时NPC.${name}`,
           name,
