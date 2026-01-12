@@ -20,9 +20,10 @@ const create角色Schema = (args: {
       关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度和难易程度'),
       秩序刻印: z.coerce
         .number()
-        .transform(v => _.clamp(v, 0, 100))
-        .prefault(20)
-        .describe('严格参考<角色身份与关系>中的上下限约束，不可单次大幅度变动'),
+        .int()
+        .transform(v => _.clamp(v, -20, 100))
+        .prefault(19)
+        .describe('范围-20~100（允许负数）；当Imp<0时将触发角色死亡结算'),
       秩序刻印更新原因: z
         .string()
         .prefault('')
@@ -45,7 +46,7 @@ const create角色Schema = (args: {
         .string()
         .prefault('')
         .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关/临时客房A | 核心区/主卧室 | 楼层20/2001；留空表示未知/外出',
+          '角色所在房间（用于自动纠偏房间数组）。格式：玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901；留空表示未知/外出；注意：当值为“玄关”时，UI 会默认派生显示到“临时客房A”的入住列表',
         ),
       登场状态: 登场状态Schema.describe('剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场"'),
     })

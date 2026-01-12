@@ -346,7 +346,7 @@ function getRelationRangeText(key: CharacterKey) {
   const relation = getRelationStage(key);
   switch (relation) {
     case '无':
-      return '0';
+      return '-20 - 0';
     case '拒绝':
       return '1 - 19';
     case '交易':
@@ -358,7 +358,7 @@ function getRelationRangeText(key: CharacterKey) {
     case '性奴':
       return '90 - 100';
     default:
-      return '0 - 100';
+      return '-20 - 100';
   }
 }
 

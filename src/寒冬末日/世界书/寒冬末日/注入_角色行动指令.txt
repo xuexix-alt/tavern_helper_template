@@ -1,0 +1,2 @@
+<% const content = await getwi('角色行动指令'); %>
+<%- content || await getwi('角色行动指令') -%>
