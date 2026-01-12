@@ -77,15 +77,15 @@
           <div class="map-zone">
             <div class="zone-label">💎 核心生活区</div>
             <div class="room-grid core-grid">
-              <div class="room-cell highlight">
+              <div class="room-cell highlight" :class="{ occupied: hasLivingRoomUser }">
                 <div class="room-number">客厅</div>
                 <div class="room-value">公共区域</div>
-                <div class="room-resident">-</div>
+                <div class="room-resident">{{ getLivingRoomNames() }}</div>
               </div>
-              <div class="room-cell highlight">
+              <div class="room-cell highlight" :class="{ occupied: hasKitchenUser }">
                 <div class="room-number">餐厅/厨房</div>
                 <div class="room-value">万象合成终端</div>
-                <div class="room-resident">-</div>
+                <div class="room-resident">{{ getKitchenNames() }}</div>
               </div>
               <div class="room-cell" :class="{ occupied: hasBedroomUser }">
                 <div class="room-number">主卧室</div>
@@ -562,6 +562,20 @@ function getEntranceStatus(): string {
 }
 
 // 核心区计算属性
+const hasLivingRoomUser = computed(() => store.data.房间.核心区.客厅使用者.length > 0);
+
+const hasKitchenUser = computed(() => store.data.房间.核心区.餐厅厨房使用者.length > 0);
+
+function getLivingRoomNames(): string {
+  const names = store.data.房间.核心区.客厅使用者;
+  return names.length > 0 ? names.join('、') : '-';
+}
+
+function getKitchenNames(): string {
+  const names = store.data.房间.核心区.餐厅厨房使用者;
+  return names.length > 0 ? names.join('、') : '-';
+}
+
 const hasBedroomUser = computed(() => store.data.房间.核心区.主卧室使用者.length > 0);
 
 const hasBathroomUser = computed(() => store.data.房间.核心区.主浴室使用者.length > 0);

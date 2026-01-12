@@ -1,5 +1,5 @@
 import { diffWorldHours } from '../../util/time';
-import { findRoleLocation } from '../../util/room';
+import { parseRoomTag } from '../../util/room';
 import { normalizeScope, ShelterScopeByFloor, isRoomSheltered } from '../../util/shelter_scope';
 import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
 
@@ -88,13 +88,15 @@ function readHealthRulesFromChat(): HealthRules {
   };
 }
 
-function isShelteredForRole(stat_data: any, roleName: string, scope: ShelterScopeByFloor): boolean {
-  const rooms = _.get(stat_data, '房间', {});
-  const loc = findRoleLocation(rooms, roleName);
+function isShelteredForRole(stat_data: any, rolePath: string, scope: ShelterScopeByFloor): boolean {
+  const tag = _.get(stat_data, `${rolePath}.所在房间`, '');
+  const loc = parseRoomTag(tag);
   if (loc.kind === 'core' || loc.kind === 'entrance') return true;
   if (loc.kind === 'floor') {
     if (loc.floor === '20' && loc.roomNumber === '2001') return true;
-    return isRoomSheltered(scope, loc.floor, loc.roomNumber);
+    // 仅对当前支持的楼层（19/20）做庇护范围判定；其它楼层（如 30/40）暂视为未受庇护
+    if (loc.floor === '20' || loc.floor === '19') return isRoomSheltered(scope, loc.floor, loc.roomNumber);
+    return false;
   }
   return false;
 }
@@ -177,7 +179,7 @@ function applyOffstageRoleHealthIfNeeded(
   }
 
   const currentHealth = clampHealth(Number(newRole.健康) || 0);
-  const sheltered = isShelteredForRole(stat_data, roleName, scope);
+  const sheltered = isShelteredForRole(stat_data, rolePath, scope);
   const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules);
   if (!computed.delta) {
     if (debug?.offstageHealth) {

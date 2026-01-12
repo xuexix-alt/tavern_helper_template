@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
 
 const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
@@ -45,8 +46,12 @@ const create角色Schema = (args: {
       所在房间: z
         .string()
         .prefault('')
+        .transform(v => normalizeRoomTag(v))
+        .refine(v => v === '' || parseRoomTag(v).kind !== 'none', {
+          message: '所在房间格式不合法（将被视为未知/外出），请使用规范化路径（如：楼层30/3001、户外/停车场、核心区/客厅）。',
+        })
         .describe(
-          '角色所在房间（用于自动纠偏房间数组）。格式：玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901；留空表示未知/外出；注意：当值为“玄关”时，UI 会默认派生显示到“临时客房A”的入住列表',
+          '角色所在房间（单一真源，用于脚本解算与自动纠偏房间数组）。允许值：""（未知/外出） | 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{房间号}（示例：楼层30/3001） | 户外/{地点}（示例：户外/停车场）。注意：UI 地图仅会显示有格子的地点（玄关/临时客房A/B、核心区四区、以及当前支持的楼层房间）；其它位置（如楼层30/3001、户外/…）暂不展示。',
         ),
       登场状态: 登场状态Schema.describe('剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场"'),
     })
@@ -171,10 +176,14 @@ export const Schema = z.object({
         .describe('玄关区域房间状态'),
       核心区: z
         .object({
+          客厅使用者: z.array(z.string()).prefault([]).describe('客厅停留者姓名列表（公共区域）'),
+          餐厅厨房使用者: z.array(z.string()).prefault([]).describe('餐厅/厨房停留者姓名列表（含万象合成终端）'),
           主卧室使用者: z.array(z.string()).prefault([]).describe('主卧室进入或使用者姓名列表'),
           主浴室使用者: z.array(z.string()).prefault([]).describe('主浴室进入或使用者姓名列表'),
         })
         .prefault({
+          客厅使用者: [],
+          餐厅厨房使用者: [],
           主卧室使用者: [],
           主浴室使用者: [],
         })
@@ -202,6 +211,8 @@ export const Schema = z.object({
         临时客房B入住者: [],
       },
       核心区: {
+        客厅使用者: [],
+        餐厅厨房使用者: [],
         主卧室使用者: [],
         主浴室使用者: [],
       },

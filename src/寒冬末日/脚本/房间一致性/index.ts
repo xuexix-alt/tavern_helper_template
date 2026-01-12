@@ -9,7 +9,14 @@ function readRoomDebugFlagFromChat(): boolean {
 }
 
 function listRoomTagsFromRooms(rooms: Rooms): string[] {
-  const tags: string[] = ['玄关/临时客房A', '玄关/临时客房B', '核心区/主卧室', '核心区/主浴室'];
+  const tags: string[] = [
+    '玄关/临时客房A',
+    '玄关/临时客房B',
+    '核心区/客厅',
+    '核心区/餐厅/厨房',
+    '核心区/主卧室',
+    '核心区/主浴室',
+  ];
 
   const floor20: Record<string, any> = _.get(rooms, '楼层房间.楼层20房间', {});
   if (floor20 && typeof floor20 === 'object') {
@@ -33,6 +40,8 @@ function readRoomListByTag(rooms: Rooms, tag: string): string[] {
   const t = normalizeRoomTag(tag);
   if (t === '玄关/临时客房A') return _.get(rooms, '玄关.临时客房A入住者', []);
   if (t === '玄关/临时客房B') return _.get(rooms, '玄关.临时客房B入住者', []);
+  if (t === '核心区/客厅') return _.get(rooms, '核心区.客厅使用者', []);
+  if (t === '核心区/餐厅/厨房') return _.get(rooms, '核心区.餐厅厨房使用者', []);
   if (t === '核心区/主卧室') return _.get(rooms, '核心区.主卧室使用者', []);
   if (t === '核心区/主浴室') return _.get(rooms, '核心区.主浴室使用者', []);
 
@@ -150,6 +159,8 @@ function writeRoomListByTag(nextRooms: Rooms, tag: string, list: string[]) {
   const t = normalizeRoomTag(tag);
   if (t === '玄关/临时客房A') return void _.set(nextRooms, '玄关.临时客房A入住者', list);
   if (t === '玄关/临时客房B') return void _.set(nextRooms, '玄关.临时客房B入住者', list);
+  if (t === '核心区/客厅') return void _.set(nextRooms, '核心区.客厅使用者', list);
+  if (t === '核心区/餐厅/厨房') return void _.set(nextRooms, '核心区.餐厅厨房使用者', list);
   if (t === '核心区/主卧室') return void _.set(nextRooms, '核心区.主卧室使用者', list);
   if (t === '核心区/主浴室') return void _.set(nextRooms, '核心区.主浴室使用者', list);
 

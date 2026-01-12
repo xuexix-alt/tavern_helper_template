@@ -334,7 +334,7 @@ function cleanupCompletedGoals(stat_data: any, message_id: number, debug: boolea
 
   // 目标清单发生变更后，重建完成状态，避免遗留旧 index
   _.set(stat_data, '主线任务.目标完成状态', {});
-  applyMissionGoalCompletion(stat_data, debug);
+  applyMissionGoalCompletion(stat_data);
 
   if (!Array.isArray(goalsRaw)) meta.阶段目标 = metaGoals;
   _.set(stat_data, '主线任务.阶段目标', goalsRaw);
@@ -433,7 +433,7 @@ function findStageDef(stageName: string): { current: MissionStageDef; next: Miss
   return { current: STAGES[idx], next: STAGES[idx + 1] ?? null };
 }
 
-function applyMissionGoalCompletion(stat_data: any, debug: boolean) {
+function applyMissionGoalCompletion(stat_data: any) {
   const mission = _.get(stat_data, '主线任务', null);
   if (!mission || typeof mission !== 'object') return;
 
@@ -455,11 +455,14 @@ function applyMissionGoalCompletion(stat_data: any, debug: boolean) {
   }
 
   _.set(stat_data, '主线任务.目标完成状态', nextStatus);
-  if (debug) {
-    console.log(`[MissionLogic] goal completion: ${doneCount}/${stageGoals.length}`);
-    if (changedIndexes.length > 0)
-      console.log(`[MissionLogic] updated 目标完成状态 indexes: ${changedIndexes.join(', ')}`);
+  console.log(`[主线任务] 阶段目标完成状态: ${doneCount}/${stageGoals.length}`);
+  for (let i = 0; i < stageGoals.length; i += 1) {
+    const g = stageGoals[i].value;
+    const done = nextStatus[String(i)];
+    console.log(`[主线任务]  - 目标${i}: ${done ? '✓' : '○'} ${g.描述} (${g.当前值}/${g.目标值})`);
   }
+  const allDone = doneCount === stageGoals.length;
+  console.log(`[主线任务] ${allDone ? '✓ 所有目标完成，准备结算阶段' : '○ 等待剩余目标完成'}`);
 }
 
 function ensureIntelSeeds(stat_data: any, debug: boolean) {
@@ -568,7 +571,7 @@ $(async () => {
     const preScriptSnap = debug ? pickMissionSnapshot(stat_data) : null;
     ensureIntelSeeds(stat_data, debug);
     syncIntelProgressIntoGoals(stat_data, debug);
-    applyMissionGoalCompletion(stat_data, debug);
+    applyMissionGoalCompletion(stat_data);
     applyMissionStageAdvanceIfCompleted(stat_data, old_stat_data, debug);
 
     if (lastMessageId != null) {

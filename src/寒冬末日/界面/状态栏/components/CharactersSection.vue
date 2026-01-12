@@ -235,6 +235,8 @@ function pruneNameFromRooms(stat_data: any, name: string) {
 
   pruneList('玄关.临时客房A入住者');
   pruneList('玄关.临时客房B入住者');
+  pruneList('核心区.客厅使用者');
+  pruneList('核心区.餐厅厨房使用者');
   pruneList('核心区.主卧室使用者');
   pruneList('核心区.主浴室使用者');
 

@@ -1,13 +1,26 @@
 export type RoomLocation =
   | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '玄关' }
-  | { kind: 'core'; room: '主卧室' | '主浴室' }
-  | { kind: 'floor'; floor: '20' | '19'; roomNumber: string }
+  | { kind: 'core'; room: '客厅' | '餐厅/厨房' | '主卧室' | '主浴室' }
+  | { kind: 'floor'; floor: string; roomNumber: string }
+  | { kind: 'outdoor'; area: string }
   | { kind: 'none' };
 
 type RoomsStatData = any;
 
 export function normalizeRoomTag(tag: string): string {
-  return String(tag ?? '').trim();
+  const raw = String(tag ?? '').trim();
+  if (!raw) return '';
+
+  // 清理误输入的空白（兼容旧存档/手动编辑造成的断行空格）
+  const t = raw.replace(/\s+/g, '');
+
+  // 兼容旧命名/别名
+  if (t === '核心区/餐厅厨房') return '核心区/餐厅/厨房';
+  if (t === '玄关/隔离区' || t === '玄关/净化区' || t === '玄关/净化/隔离区') return '玄关';
+  if (t.startsWith('室外/')) return `户外/${t.slice('室外/'.length)}`;
+  if (t === '室外') return '户外';
+
+  return t;
 }
 
 export function parseRoomTag(tag: string): RoomLocation {
@@ -20,13 +33,23 @@ export function parseRoomTag(tag: string): RoomLocation {
 
   if (t === '核心区/主卧室') return { kind: 'core', room: '主卧室' };
   if (t === '核心区/主浴室') return { kind: 'core', room: '主浴室' };
+  if (t === '核心区/客厅') return { kind: 'core', room: '客厅' };
+  if (t === '核心区/餐厅/厨房') return { kind: 'core', room: '餐厅/厨房' };
 
-  const m = t.match(/^楼层(20|19)\/(.+)$/);
+  const m = t.match(/^楼层(\d+)\/(.+)$/);
   if (m) {
-    const floor = m[1] as '20' | '19';
+    const floor = String(m[1] ?? '').trim();
     const roomNumber = String(m[2] ?? '').trim();
-    if (roomNumber) return { kind: 'floor', floor, roomNumber };
+    if (floor && roomNumber) return { kind: 'floor', floor, roomNumber };
   }
+
+  const outdoor = t.match(/^户外\/(.+)$/);
+  if (outdoor) {
+    const area = String(outdoor[1] ?? '').trim();
+    if (area) return { kind: 'outdoor', area };
+    return { kind: 'outdoor', area: '' };
+  }
+  if (t === '户外') return { kind: 'outdoor', area: '' };
 
   return { kind: 'none' };
 }
@@ -38,10 +61,13 @@ export function roomTagFromLocation(loc: RoomLocation): string {
     return '玄关';
   }
   if (loc.kind === 'core') {
+    if (loc.room === '客厅') return '核心区/客厅';
+    if (loc.room === '餐厅/厨房') return '核心区/餐厅/厨房';
     if (loc.room === '主卧室') return '核心区/主卧室';
     return '核心区/主浴室';
   }
   if (loc.kind === 'floor') return `楼层${loc.floor}/${loc.roomNumber}`;
+  if (loc.kind === 'outdoor') return loc.area ? `户外/${loc.area}` : '户外';
   return '';
 }
 
@@ -60,6 +86,12 @@ export function findRoleLocation(rooms: RoomsStatData, roleName: string): RoomLo
 
   const bathroom: string[] = _.get(rooms, '核心区.主浴室使用者', []);
   if (Array.isArray(bathroom) && bathroom.includes(name)) return { kind: 'core', room: '主浴室' };
+
+  const livingRoom: string[] = _.get(rooms, '核心区.客厅使用者', []);
+  if (Array.isArray(livingRoom) && livingRoom.includes(name)) return { kind: 'core', room: '客厅' };
+
+  const kitchen: string[] = _.get(rooms, '核心区.餐厅厨房使用者', []);
+  if (Array.isArray(kitchen) && kitchen.includes(name)) return { kind: 'core', room: '餐厅/厨房' };
 
   const floor20: Record<string, any> = _.get(rooms, '楼层房间.楼层20房间', {});
   if (floor20 && typeof floor20 === 'object') {
