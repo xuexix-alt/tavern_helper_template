@@ -42,10 +42,20 @@
           </div>
 
           <div class="choice-modal-footer">
-            <button class="choice-btn choice-btn--ghost" type="button" :disabled="choiceSending" @click="closeChoiceDialog">
+            <button
+              class="choice-btn choice-btn--ghost"
+              type="button"
+              :disabled="choiceSending"
+              @click="closeChoiceDialog"
+            >
               取消
             </button>
-            <button class="choice-btn choice-btn--primary" type="button" :disabled="choiceSending" @click="confirmChoiceDialog">
+            <button
+              class="choice-btn choice-btn--primary"
+              type="button"
+              :disabled="choiceSending"
+              @click="confirmChoiceDialog"
+            >
               确认发送
             </button>
           </div>

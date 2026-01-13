@@ -221,7 +221,8 @@ export function useShelterDailyRoll() {
         const currentMessageId = getCurrentMessageId?.();
         const lastMessageId = typeof getLastMessageId === 'function' ? getLastMessageId() : null;
         const isLatest =
-          lastMessageId == null || (Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) === Number(lastMessageId));
+          lastMessageId == null ||
+          (Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) === Number(lastMessageId));
         if (!isLatest) return;
 
         // 首次进入：只做“对齐/建档”，避免一加载 UI 就立刻 roll
