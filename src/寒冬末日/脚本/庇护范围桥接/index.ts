@@ -74,7 +74,11 @@ function normalizeDelta(raw: any): ScopeDelta | null {
   const note = typeof (raw as any).note === 'string' ? String((raw as any).note) : undefined;
 
   if (Object.keys(add).length === 0 && Object.keys(remove).length === 0) return null;
-  return { add: Object.keys(add).length ? add : undefined, remove: Object.keys(remove).length ? remove : undefined, note };
+  return {
+    add: Object.keys(add).length ? add : undefined,
+    remove: Object.keys(remove).length ? remove : undefined,
+    note,
+  };
 }
 
 function enforceCapacity(list: string[], capacity: number): string[] {

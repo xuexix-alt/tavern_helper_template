@@ -182,7 +182,9 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const { core, tempNpc } = listRoleNames(stat_data);
   const knownNames = new Set<string>([...core, ...tempNpc]);
 
-  const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)]).uniq().value();
+  const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)])
+    .uniq()
+    .value();
 
   const finalTagByName = new Map<string, string>();
   const finalReasonByName = new Map<string, string>();
@@ -245,7 +247,8 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
       const newTag = newTagByName.get(name) ?? '';
       const finalTag = finalTagByName.get(name) ?? '';
       const reason = finalReasonByName.get(name) ?? '';
-      if (oldTag !== newTag || newTag !== finalTag) mismatch.push({ name, old: oldTag, next: newTag, final: finalTag, reason });
+      if (oldTag !== newTag || newTag !== finalTag)
+        mismatch.push({ name, old: oldTag, next: newTag, final: finalTag, reason });
     }
     if (mismatch.length > 0) console.log('[RoomLogic] tag reconcile:', mismatch);
 
@@ -337,7 +340,11 @@ function normalizeScopeDelta(raw: any): ScopeDelta | null {
   const note = typeof (raw as any).note === 'string' ? String((raw as any).note) : undefined;
 
   if (Object.keys(add).length === 0 && Object.keys(remove).length === 0) return null;
-  return { add: Object.keys(add).length ? add : undefined, remove: Object.keys(remove).length ? remove : undefined, note };
+  return {
+    add: Object.keys(add).length ? add : undefined,
+    remove: Object.keys(remove).length ? remove : undefined,
+    note,
+  };
 }
 
 function enforceCapacity(list: string[], capacity: number): string[] {
@@ -718,7 +725,17 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
       const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
       applyAutoStageFromThoughtUpdateIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, debug);
       applyDeathFromNegativeImprintIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
-      applyOffstageRoleHealthIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
+      applyOffstageRoleHealthIfNeeded(
+        `临时NPC.${name}`,
+        name,
+        oldRole,
+        val as any,
+        stat_data,
+        deltaHours,
+        scope,
+        rules,
+        debug,
+      );
       applyDerivedHealthStatus(`临时NPC.${name}`, val as any, stat_data);
       applyDerivedRelationStage(`临时NPC.${name}`, oldRole, val as any, stat_data);
     }

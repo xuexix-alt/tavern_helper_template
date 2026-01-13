@@ -9,7 +9,9 @@
       <div class="shelter-item">
         <div class="label">🎲 今日投掷点数</div>
         <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
-        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">📅 校准日期</button>
+        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
+          📅 校准日期
+        </button>
       </div>
       <div class="shelter-item">
         <div class="label">⏳ 距离下次保底升级</div>
@@ -43,8 +45,8 @@
         <button class="map-toggle-btn" :disabled="!canOpenScopeEditor" @click="toggleScopeEditor">
           <span class="toggle-icon">{{ isScopeEditorOpen ? '✕' : '➕' }}</span>
           <span class="toggle-text">
-	            🛡️ 设置庇护范围（20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}，19层
-	            {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}）
+            🛡️ 设置庇护范围（20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}，19层
+            {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}）
           </span>
         </button>
         <div v-if="canOpenScopeEditor && !isScopeEditorOpen" class="scope-hint">
@@ -185,7 +187,7 @@
 
               <div class="scope-modal-stats">
                 <div class="stat">
-	                  20层：<span class="stat-strong">{{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}</span>
+                  20层：<span class="stat-strong">{{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}</span>
                 </div>
                 <div class="stat">
                   19层：<span class="stat-strong">{{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}</span>
