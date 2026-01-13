@@ -10,7 +10,7 @@
           :key="idx"
           class="choice-item"
           type="button"
-          @click="handleChoiceClick(opt)"
+          @click="openChoiceDialog(opt)"
         >
           {{ opt }}
         </button>
@@ -19,6 +19,39 @@
         <button class="choice-item" type="button" disabled>当前无选项，请自由行动...</button>
       </template>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="choiceDialogOpen"
+        class="choice-modal-mask"
+        :style="choiceModalMaskStyle"
+        @click.self="closeChoiceDialog"
+      >
+        <div class="choice-modal" role="dialog" aria-modal="true">
+          <div class="choice-modal-header">
+            <div class="choice-modal-title">您还有要补充的吗？</div>
+            <button class="choice-icon-btn" type="button" @click="closeChoiceDialog">✕</button>
+          </div>
+
+          <div class="choice-modal-body">
+            <div class="choice-original-label">选项原文</div>
+            <div class="choice-original">{{ choiceDialogOriginal }}</div>
+
+            <div class="choice-edit-label">编辑后发送</div>
+            <textarea v-model="choiceDialogDraft" class="choice-textarea" rows="6" placeholder="在此补充或修改……" />
+          </div>
+
+          <div class="choice-modal-footer">
+            <button class="choice-btn choice-btn--ghost" type="button" :disabled="choiceSending" @click="closeChoiceDialog">
+              取消
+            </button>
+            <button class="choice-btn choice-btn--primary" type="button" :disabled="choiceSending" @click="confirmChoiceDialog">
+              确认发送
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div ref="palette_modal" class="palette-modal" :class="{ show: palette_open }">
       <h3>显示设置</h3>
@@ -60,7 +93,8 @@
 </template>
 
 <script setup lang="ts">
-import { CHAT_VAR_KEYS, sendToChat } from '../../outbound';
+import { nextTick } from 'vue';
+import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
 
 const props = defineProps<{
   options: string[];
@@ -95,6 +129,77 @@ watch(
 
 const palette_button = ref<HTMLElement | null>(null);
 const palette_modal = ref<HTMLElement | null>(null);
+
+const choiceDialogOpen = ref(false);
+const choiceDialogOriginal = ref('');
+const choiceDialogDraft = ref('');
+const choiceSending = ref(false);
+const choiceModalViewportTop = ref(0);
+const choiceModalViewportHeight = ref(0);
+let choiceParentScrollTarget: HTMLElement | Window | null = null;
+
+const choiceModalMaskStyle = computed(() => ({
+  top: `${choiceModalViewportTop.value}px`,
+  height: `${choiceModalViewportHeight.value}px`,
+}));
+
+function getParentScrollContainer(frameEl: HTMLElement): HTMLElement | Window {
+  try {
+    const doc = frameEl.ownerDocument;
+    const win = doc.defaultView ?? window.parent;
+    let cur: HTMLElement | null = frameEl.parentElement;
+    while (cur) {
+      const style = win.getComputedStyle(cur);
+      const overflowY = style.overflowY;
+      if ((overflowY === 'auto' || overflowY === 'scroll') && cur.scrollHeight > cur.clientHeight + 1) {
+        return cur;
+      }
+      cur = cur.parentElement;
+    }
+    return win;
+  } catch {
+    return window.parent;
+  }
+}
+
+function updateChoiceModalViewport() {
+  const frameEl = window.frameElement as HTMLElement | null;
+  if (!frameEl) return;
+  const parentWin = window.parent as Window | null;
+  if (!parentWin) return;
+
+  const rect = frameEl.getBoundingClientRect();
+  const topInIframeDoc = Math.max(0, -rect.top);
+  choiceModalViewportTop.value = topInIframeDoc;
+  choiceModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
+}
+
+function bindChoiceParentScrollSync() {
+  const frameEl = window.frameElement as HTMLElement | null;
+  if (!frameEl) return;
+  choiceParentScrollTarget = getParentScrollContainer(frameEl);
+  const handler = updateChoiceModalViewport;
+
+  if (choiceParentScrollTarget instanceof Window) {
+    choiceParentScrollTarget.addEventListener('scroll', handler, { passive: true });
+    choiceParentScrollTarget.addEventListener('resize', handler, { passive: true });
+  } else {
+    choiceParentScrollTarget.addEventListener('scroll', handler, { passive: true });
+    window.parent?.addEventListener?.('resize', handler, { passive: true });
+  }
+}
+
+function unbindChoiceParentScrollSync() {
+  const handler = updateChoiceModalViewport;
+  if (choiceParentScrollTarget instanceof Window) {
+    choiceParentScrollTarget.removeEventListener('scroll', handler as any);
+    choiceParentScrollTarget.removeEventListener('resize', handler as any);
+  } else if (choiceParentScrollTarget) {
+    choiceParentScrollTarget.removeEventListener('scroll', handler as any);
+    window.parent?.removeEventListener?.('resize', handler as any);
+  }
+  choiceParentScrollTarget = null;
+}
 
 function togglePalette() {
   palette_open.value = !palette_open.value;
@@ -139,16 +244,57 @@ watch(
   { immediate: true },
 );
 
-function handleChoiceClick(text: string) {
-  const res = sendToChat(text, {
-    toast: true,
-    successMessage: '已发送',
-    failureMessage: `指令发送失败：${text}`,
-    unavailableMessage: `无法自动发送：${text}`,
-  });
+async function openChoiceDialog(text: string) {
+  choiceDialogOriginal.value = String(text ?? '');
+  choiceDialogDraft.value = String(text ?? '');
+  choiceDialogOpen.value = true;
+  updateChoiceModalViewport();
+  bindChoiceParentScrollSync();
 
-  if (!res.ok && !(toastr as any)?.error) {
-    alert(`${res.reason}: ${res.sentText}`);
+  await nextTick();
+  const el = document.querySelector<HTMLTextAreaElement>('.choice-textarea');
+  el?.focus?.();
+  try {
+    el?.setSelectionRange?.(el.value.length, el.value.length);
+  } catch {
+    // ignore
+  }
+}
+
+function closeChoiceDialog() {
+  choiceDialogOpen.value = false;
+  choiceSending.value = false;
+  unbindChoiceParentScrollSync();
+}
+
+async function confirmChoiceDialog() {
+  if (choiceSending.value) return;
+  const text = String(choiceDialogDraft.value ?? '').trim();
+  if (!text) {
+    toastr?.warning?.('请输入要发送的内容', '快速剧情');
+    return;
+  }
+
+  choiceSending.value = true;
+  try {
+    const res = sendToChat(text, {
+      toast: true,
+      successMessage: '已发送',
+      failureMessage: '发送失败，已尝试复制，请手动发送',
+      unavailableMessage: '无法直接发送，已尝试复制，请手动发送',
+    });
+
+    if (res.ok) {
+      closeChoiceDialog();
+      return;
+    }
+
+    await copyText(text, { toast: false });
+    if (!(toastr as any)?.error) {
+      alert(`${res.reason}: ${res.sentText}`);
+    }
+  } finally {
+    choiceSending.value = false;
   }
 }
 
@@ -169,5 +315,128 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', onDocumentClick);
+  unbindChoiceParentScrollSync();
 });
 </script>
+
+<style scoped>
+.choice-modal-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.55);
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-right: calc(12px + env(safe-area-inset-right));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding-left: calc(12px + env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.choice-modal {
+  width: min(560px, calc(100% - 8px));
+  max-height: calc(100% - 8px);
+  background: rgba(25, 28, 35, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+}
+
+.choice-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 8px;
+}
+
+.choice-modal-title {
+  font-weight: 800;
+  color: var(--text-strong, #f1fa8c);
+}
+
+.choice-icon-btn {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.choice-modal-body {
+  padding: 8px 12px 0;
+  overflow: auto;
+}
+
+.choice-original-label,
+.choice-edit-label {
+  font-size: 0.85em;
+  opacity: 0.9;
+  margin: 6px 0 6px;
+}
+
+.choice-original {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.choice-textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-color);
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.choice-textarea:focus {
+  border-color: rgba(0, 180, 216, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+}
+
+.choice-modal-footer {
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.choice-btn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.choice-btn--primary {
+  border-color: rgba(0, 180, 216, 0.55);
+  background-color: rgba(0, 180, 216, 0.18);
+  color: #e8fbff;
+  font-weight: 700;
+}
+
+.choice-btn--ghost {
+  background-color: transparent;
+}
+
+.choice-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+</style>

@@ -9,6 +9,8 @@ rule:
   - '  - `remove`: delete path'
   - Path MUST start with `/stat_data/`.
   - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
+  - 'READ-ONLY FIELDS: `stat_data/庇护所/今日投掷点数` and `stat_data/庇护所/距离上次升级` are strictly managed by scripts. AI is FORBIDDEN from modifying them.'
+  - 'SHELTER SCOPE SYNC: To change the survival shelter scope, ONLY update `stat_data/庇护所/庇护范围变更` via `replace` with value like `{ "add": { "20": ["2002"] }, "remove": { "20": ["2007"] } }`. A script will validate/dedupe/cap and sync to UI. DO NOT modify `stat_data/庇护所/当前生存庇护范围` (mirror, read-only).'
   - The main character list is FIXED and IMMUTABLE - NEVER move temporary NPCs into the main character list.
 
 format: |-
@@ -35,9 +37,11 @@ format: |-
 
   步骤 2：庇护所变量
   - 庇护所等级：
-    - 每日开始，需检查是否由后台脚本发动了roll点升级
-      → 是 正文中向{{user}}提示升级结果和新增技能
-      → 否 则维持现状
+    - **禁止AI手动Roll点升级**。
+    - 检查逻辑：AI仅读取 `今日投掷点数` 状态。
+      → 若显示“触发幸运升级/保底升级”：在正文中向{{user}}播报新等级与新增权柄描述。
+      → 若主线任务阶段达成：使用 `replace` 强制更新等级至奖励目标（如阶段一结束强制升至Lv.3）。
+      → 其余情况：严禁手动修改等级数值。
   - 可扩展区域 & 庇护所能力：
     - 检查：对比当前等级，确保 `stat_data/庇护所/庇护所能力` 包含所有已解锁等级的描述。
     - 结果：需更新？是/否。新值：____。已检查：□
@@ -101,16 +105,17 @@ format: |-
 
   步骤 7：主线任务
   - 当前阶段 & 阶段目标（进度追踪）：
-    - 检查剧情中是否有事件推动了任务进度（如清除了1层敌人，庇护了1个家庭）。
-    - 若有，计算本轮增量，使用 `delta` 累加。
+    - 剧情中是否有事件推动了任务进度？（如清除了1层敌人，庇护了1个家庭）。
     - `当前值` 是否达到 `目标值`，是→判定该子目标完成。
-        - 所有目标是否均完成，是→ 判定阶段完成，发放奖励并刷新下一阶段目标。
-    - 任务条件或任务阶段完成奖励是否需要发放？
+      - 所有目标是否均完成，是→ 判定阶段完成，发放奖励并刷新下一阶段目标。
+    - 任务进度和任务阶段完成后是否触发对应奖励？
+    - 对应奖励是否已经在庇护所能力列表，需要跳过？
+    - 正文中是否安排新等级和能力播报？
     - 结果：需更新进度？是/否。新值：____。触发奖励？是/否。已检查：□
   - 情报碎片：
     - "伊甸"AI 新汇报 → 使用 `insert` 添加新对象。
     - 玩家完成探索 → 使用 `replace` 修改对应碎片状态为"已完成"。
-    - 情报碎片完成后是否需要方法奖励？
+    - 情报碎片完成后是否需要发放奖励？
     - 结果：根据<主线任务-星穹秩序> 或玩家探索发现，进行insert/replace？是/否。触发奖励？是/否。已检查：□
 
   步骤 8：变量操作规划（总结）
@@ -127,9 +132,9 @@ format: |-
   步骤 9：最终操作列表
   - 明确列出所有目标路径，例如：
     /stat_data/世界/时间
-    /stat_data/庇护所/庇护所等级
-    /stat_data/浅见亚美/健康
-    /stat_data/浅见亚美/关系
+    /stat_data/${角色}/健康
+    /stat_data/${角色}/内心想法
+    /stat_data/主线任务/阶段目标
     等。
   </Analysis>
   <JSONPatch>

@@ -1,11 +1,29 @@
 import { z } from 'zod';
-import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
+import { normalizeRoomTag, parseRoomTag } from './util/room';
 
 const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 关系倾向Schema = z.enum(['极易', '易', '中立', '难', '极难', '不可']).prefault('中立');
-const 健康状况Schema = z.enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡']).prefault('健康');
+const 健康状况Schema = z
+  .preprocess(
+    val => {
+      if (typeof val !== 'string') return val;
+      const s = val.trim();
+      if (s === '病重' || s === '濒死' || s === '重病' || s === '病重/濒死') return '重病/濒死';
+      if (s === '生病' || s === '受伤' || s === '生病/受伤' || s === '生病受伤') return '生病/受伤';
+      return s;
+    },
+    z.enum(['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡']),
+  )
+  .prefault('健康');
 const 登场状态Schema = z.enum(['登场', '离场']).prefault('离场');
+const 更新原因Schema = z
+  .preprocess(val => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'number') return String(val);
+    return val;
+  }, z.string())
+  .prefault('');
 
 const create角色Schema = (args: {
   relationStageSchema: z.ZodTypeAny;
@@ -25,16 +43,15 @@ const create角色Schema = (args: {
         .transform(v => _.clamp(v, -20, 100))
         .prefault(19)
         .describe('范围-20~100（允许负数）；当Imp<0时将触发角色死亡结算'),
-      秩序刻印更新原因: z
-        .string()
-        .prefault('')
-        .describe('跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求'),
+      秩序刻印更新原因: 更新原因Schema.describe(
+        '跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求',
+      ),
       健康: z.coerce
         .number()
         .transform(v => _.clamp(v, 0, 100))
         .prefault(100)
         .describe('范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。'),
-      健康更新原因: z.string().prefault('').describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
+      健康更新原因: 更新原因Schema.describe('记录健康值变化的原因和数值，格式：+/-X, 原因描述'),
       健康状况: 健康状况Schema.describe('>=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死'),
       衣着: z.string().prefault('').describe('描述当前的衣着状态包括上衣裤子丝袜内衣内裤'),
       舌唇: z.string().prefault('').describe('口腔、嘴唇的状态'),
@@ -150,6 +167,22 @@ export const Schema = z.object({
           载具格纳库: '未解锁',
         })
         .describe('记录庇护所可扩展区域的解锁状态'),
+
+      当前生存庇护范围: z
+        .record(z.string(), z.array(z.string()))
+        .prefault({})
+        .describe('脚本回写镜像：最终生效的生存庇护范围（key: 楼层号，如"20"/"19"，value: 房间号数组）。AI 只读。'),
+
+      庇护范围变更: z
+        .object({
+          add: z.record(z.string(), z.array(z.string())).optional(),
+          remove: z.record(z.string(), z.array(z.string())).optional(),
+          note: z.string().optional(),
+        })
+        .prefault({})
+        .describe(
+          'AI 写入入口（delta）：用于提交“生存庇护范围”的增删变更，脚本会校验/去重/卡上限后写入 chat 变量并回写镜像。示例：{ add: { "20": ["2002"] }, remove: { "20": ["2007"] } }',
+        ),
     })
     .prefault({
       庇护所等级: 1,
@@ -161,6 +194,8 @@ export const Schema = z.object({
         制造工坊: '未解锁',
         载具格纳库: '未解锁',
       },
+      当前生存庇护范围: {},
+      庇护范围变更: {},
     }),
 
   房间: z

@@ -43,6 +43,29 @@ function sanitizeHealthRules(rules: HealthRules): HealthRules {
   };
 }
 
+let __mvuReady: Promise<void> | null = null;
+function ensureMvuReady(): Promise<void> {
+  if (!__mvuReady) __mvuReady = waitGlobalInitialized('Mvu');
+  return __mvuReady;
+}
+
+async function syncScopeMirrorToLatest(scope: ShelterScopeByFloor) {
+  try {
+    await ensureMvuReady();
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id: 'latest' as any });
+    const stat_data = _.get(mvu_data, 'stat_data', {});
+    if (!stat_data || typeof stat_data !== 'object') _.set(mvu_data, 'stat_data', {});
+
+    const prev = _.get(mvu_data, ['stat_data', '庇护所', '当前生存庇护范围'], null);
+    if (_.isEqual(prev, scope)) return;
+
+    _.set(mvu_data, ['stat_data', '庇护所', '当前生存庇护范围'], scope);
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: 'latest' as any });
+  } catch {
+    // ignore
+  }
+}
+
 export const useShelterScopeStore = defineStore(
   CHAT_VAR_KEYS.EDEN_SHELTER_SCOPE,
   errorCatched(() => {
@@ -60,6 +83,9 @@ export const useShelterScopeStore = defineStore(
           },
           { type: 'chat' },
         );
+
+        // 让 AI 也能看到最终生效的庇护范围：回写镜像到最新楼层 stat_data
+        void syncScopeMirrorToLatest(normalizeScope(scope.value));
       },
       { deep: true },
     );
@@ -80,12 +106,17 @@ export const useShelterScopeStore = defineStore(
     useIntervalFn(() => {
       const nextScope = readScopeFromChat();
       const nextRules = readHealthRulesFromChat();
+      const scopeChanged = !_.isEqual(nextScope, scope.value);
+      const rulesChanged = !_.isEqual(nextRules, healthRules.value);
 
-      if (!_.isEqual(nextScope, scope.value) || !_.isEqual(nextRules, healthRules.value)) {
+      if (scopeChanged || rulesChanged) {
         ignoreUpdates(() => {
           scope.value = nextScope;
           healthRules.value = nextRules;
         });
+
+        // chat 侧被其他脚本/AI 改动时，也同步镜像供 AI 读取
+        if (scopeChanged) void syncScopeMirrorToLatest(nextScope);
       }
     }, 2000);
 

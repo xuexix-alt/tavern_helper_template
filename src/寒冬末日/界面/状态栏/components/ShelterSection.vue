@@ -9,6 +9,7 @@
       <div class="shelter-item">
         <div class="label">🎲 今日投掷点数</div>
         <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
+        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">📅 校准日期</button>
       </div>
       <div class="shelter-item">
         <div class="label">⏳ 距离下次保底升级</div>
@@ -42,8 +43,8 @@
         <button class="map-toggle-btn" :disabled="!canOpenScopeEditor" @click="toggleScopeEditor">
           <span class="toggle-icon">{{ isScopeEditorOpen ? '✕' : '➕' }}</span>
           <span class="toggle-text">
-            🛡️ 设置庇护范围（20层 {{ scope20Count }}/{{ scope20Max }}，19层
-            {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}）
+	            🛡️ 设置庇护范围（20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}，19层
+	            {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}）
           </span>
         </button>
         <div v-if="canOpenScopeEditor && !isScopeEditorOpen" class="scope-hint">
@@ -184,7 +185,7 @@
 
               <div class="scope-modal-stats">
                 <div class="stat">
-                  20层：<span class="stat-strong">{{ scope20Count }}/{{ scope20Max }}</span>
+	                  20层：<span class="stat-strong">{{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}</span>
                 </div>
                 <div class="stat">
                   19层：<span class="stat-strong">{{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}</span>
@@ -247,12 +248,26 @@
                   </div>
                 </div>
 
-                <details class="scope-details">
+                <details class="scope-details" open>
                   <summary>预览发送文本（调试用）</summary>
-                  <div v-if="scopeInstructionText" class="scope-preview">
-                    {{ scopeInstructionText }}
+                  <textarea
+                    v-model="scopeInstructionDraft"
+                    class="scope-preview scope-preview--editable"
+                    placeholder="(尚未选择任何房间)"
+                    rows="6"
+                    @input="onScopeInstructionInput"
+                  />
+                  <div class="scope-preview-actions">
+                    <button
+                      class="scope-btn scope-btn--ghost scope-btn--mini"
+                      type="button"
+                      :disabled="!scopeInstructionDirty"
+                      @click="resetScopeInstructionDraft"
+                    >
+                      重置为自动生成
+                    </button>
+                    <span class="scope-preview-hint">编辑后，“确定并发送”会发送你修改的文本。</span>
                   </div>
-                  <div v-else class="scope-preview">(尚未选择任何房间)</div>
                 </details>
               </div>
 
@@ -296,7 +311,7 @@ import { ref, computed, watch, onUnmounted } from 'vue';
 import { useDataStore } from '../../store';
 import { useShelterScopeStore } from '../../shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../util/shelter_scope';
-import { copyText, sendToChat } from '../../outbound';
+import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
 
 const store = useDataStore();
 const scopeStore = useShelterScopeStore();
@@ -307,6 +322,73 @@ const isScopeEditorOpen = ref(false);
 const scopeModalViewportTop = ref(0);
 const scopeModalViewportHeight = ref(0);
 let parentScrollTarget: HTMLElement | Window | null = null;
+const isCalibrating = ref(false);
+
+function parseDaysSinceUpgrade(distanceText: any): number {
+  const s = String(distanceText ?? '').trim();
+  const m = s.match(/^(\d+)\s*天/);
+  if (!m) return 0;
+  const v = Number(m[1]);
+  return Number.isFinite(v) ? Math.max(0, v) : 0;
+}
+
+function formatDistanceText(daysSinceUpgrade: number): string {
+  const days = Math.max(0, Math.floor(daysSinceUpgrade));
+  const remaining = Math.max(0, 7 - days);
+  return `${days}天 | 剩余保底升级天数：${remaining}天`;
+}
+
+async function calibrateDailyRollDate() {
+  if (isCalibrating.value) return;
+  isCalibrating.value = true;
+  try {
+    const today = String(store.data.世界.日期 ?? '').trim();
+    if (!today) {
+      toastr?.warning?.('无法校准：当前楼层没有世界日期', '每日Roll');
+      return;
+    }
+
+    const currentMessageId = Number(getCurrentMessageId());
+    const lastMessageId = typeof getLastMessageId === 'function' ? Number(getLastMessageId()) : NaN;
+    if (Number.isFinite(lastMessageId) && currentMessageId !== lastMessageId) {
+      toastr?.warning?.('请在“最新楼层”的状态栏中校准，避免污染历史楼层', '每日Roll');
+      return;
+    }
+
+    const daysSinceUpgrade = parseDaysSinceUpgrade(store.data.庇护所.距离上次升级);
+    if (typeof updateVariablesWith === 'function') {
+      updateVariablesWith(
+        (vars: any) => {
+          vars[CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE] = { last_roll_date: today, days_since_upgrade: daysSinceUpgrade };
+          return vars;
+        },
+        { type: 'chat' },
+      );
+    }
+
+    // 同步当前楼层的显示文本，避免用户校准后 UI 仍显示旧格式/旧值
+    try {
+      await waitGlobalInitialized('Mvu');
+      const message_id = getCurrentMessageId();
+      const mvu_data = Mvu.getMvuData({ type: 'message', message_id }) as any;
+      if (mvu_data && typeof mvu_data === 'object') {
+        const stat_data = (mvu_data.stat_data ??= {});
+        const shelter = (stat_data['庇护所'] ??= {});
+        shelter['距离上次升级'] = formatDistanceText(daysSinceUpgrade);
+        await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+      }
+    } catch {
+      // ignore: 校准 chat 变量已足够，楼层显示更新失败不影响后续计算
+    }
+
+    toastr?.success?.(`已校准：日期=${today}，进度=${daysSinceUpgrade}天`, '每日Roll');
+  } catch (e) {
+    console.error('[eden/shelter_calibrate_roll_date] failed', e);
+    toastr?.error?.('校准失败，请重试', '每日Roll');
+  } finally {
+    isCalibrating.value = false;
+  }
+}
 
 const scopeModalMaskStyle = computed(() => ({
   top: `${scopeModalViewportTop.value}px`,
@@ -387,6 +469,17 @@ const scope20Count = computed(() => (scopeStore.scope['20'] ?? []).length);
 const scope19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
 
 const scopeInstructionText = computed(() => scopeStore.buildInstructionText());
+const scopeInstructionDraft = ref('');
+const scopeInstructionDirty = ref(false);
+
+function resetScopeInstructionDraft() {
+  scopeInstructionDraft.value = scopeInstructionText.value;
+  scopeInstructionDirty.value = false;
+}
+
+function onScopeInstructionInput() {
+  scopeInstructionDirty.value = true;
+}
 
 function buildFloorScopeHint(rooms: string[], max: number, unlockLevel: number): string {
   if (!max) return `庇护范围未解锁（庇护所等级${unlockLevel}解锁）。当前可用庇护 0/0。`;
@@ -462,6 +555,7 @@ function closeScopeEditor() {
 
 watch(isScopeEditorOpen, open => {
   if (open) {
+    resetScopeInstructionDraft();
     updateScopeModalViewport();
     bindParentScrollSync();
     return;
@@ -471,6 +565,12 @@ watch(isScopeEditorOpen, open => {
 
 onUnmounted(() => {
   unbindParentScrollSync();
+});
+
+watch(scopeInstructionText, text => {
+  if (!isScopeEditorOpen.value) return;
+  if (scopeInstructionDirty.value) return;
+  scopeInstructionDraft.value = text;
 });
 
 function clearScopeSelection() {
@@ -512,11 +612,11 @@ function onFloorRoomClick(floor: '20' | '19', roomNumber: string) {
 }
 
 async function copyScopeInstruction() {
-  await copyText(scopeInstructionText.value, { toast: true });
+  await copyText(scopeInstructionDraft.value, { toast: true });
 }
 
 function sendScopeInstruction() {
-  sendToChat(scopeInstructionText.value, {
+  sendToChat(scopeInstructionDraft.value, {
     toast: true,
     successMessage: '已发送',
     failureMessage: '发送失败，请复制后手动发送',
@@ -525,7 +625,7 @@ function sendScopeInstruction() {
 }
 
 function confirmAndSendScope() {
-  const text = scopeInstructionText.value;
+  const text = scopeInstructionDraft.value.trim();
   if (!text) {
     toastr.warning('请先选择要庇护的房间');
     return;
@@ -653,6 +753,23 @@ function formatRoomResidents(
 </script>
 
 <style scoped>
+.roll-calibrate-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.roll-calibrate-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .scope-hint {
   margin: 2px 0 10px;
   font-size: 0.85em;
@@ -690,6 +807,39 @@ function formatRoomResidents(
   font-size: 0.9em;
   line-height: 1.4;
   word-break: break-word;
+}
+
+.scope-preview--editable {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  outline: none;
+  resize: vertical;
+  min-height: 92px;
+  font-family: inherit;
+}
+
+.scope-preview--editable:focus {
+  border-color: rgba(0, 180, 216, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+}
+
+.scope-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.scope-preview-hint {
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+
+.scope-btn--mini {
+  padding: 6px 10px;
+  font-size: 0.85em;
 }
 
 /* --- 庇护范围：快速设置弹窗 --- */

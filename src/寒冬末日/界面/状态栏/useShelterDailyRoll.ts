@@ -41,6 +41,31 @@ function formatRollText(roll: number | null, upgraded: boolean, reason?: string)
   return `今日已投掷: ${r}点 (${upgraded ? '触发幸运升级！' : '未升级'})`;
 }
 
+function formatNewDayToastText(roll: number | null, upgraded: boolean, didLevelUp: boolean, reason?: string): string {
+  const rollText = reason === 'guarantee' ? '保底升级' : `${Math.floor(roll ?? 0)}点`;
+  if (didLevelUp) return `新的一天roll点：${rollText}，已升级，进入UI查看`;
+  if (upgraded) return `新的一天roll点：${rollText}，触发升级判定，但庇护所已达等级上限`;
+  return `新的一天roll点：${rollText}，未升级，继续努力`;
+}
+
+function parseEdenDateToNumber(dateStr: any): number | null {
+  const s = String(dateStr ?? '').trim();
+  const m = s.match(/(\d+)年(\d+)月(\d+)日/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+  return y * 10000 + mo * 100 + d;
+}
+
+function isDateForward(today: string, last: string): boolean {
+  const t = parseEdenDateToNumber(today);
+  const l = parseEdenDateToNumber(last);
+  if (t == null || l == null) return today !== last;
+  return t > l;
+}
+
 function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
   const out: Record<number, Ability[]> = {};
   const parts = String(raw ?? '').split(/###\s*庇护所等级\s*(\d+)\s*:/g);
@@ -192,6 +217,13 @@ export function useShelterDailyRoll() {
       try {
         const state = await readShelterUpgradeState();
 
+        // 只允许“最新楼层”执行每日 roll，避免用户查看旧楼层/同屏多个楼层时触发“时间倒流/重复 roll”
+        const currentMessageId = getCurrentMessageId?.();
+        const lastMessageId = typeof getLastMessageId === 'function' ? getLastMessageId() : null;
+        const isLatest =
+          lastMessageId == null || (Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) === Number(lastMessageId));
+        if (!isLatest) return;
+
         // 首次进入：只做“对齐/建档”，避免一加载 UI 就立刻 roll
         if (!state.last_roll_date) {
           const seededDays = parseDaysSinceUpgrade(store.data.庇护所.距离上次升级);
@@ -199,7 +231,8 @@ export function useShelterDailyRoll() {
           return;
         }
 
-        if (state.last_roll_date === today) return;
+        // 只在“日期向前推进”时才 roll；避免因回看旧楼层而污染 chat 变量
+        if (!isDateForward(today, state.last_roll_date)) return;
 
         await waitGlobalInitialized('Mvu');
         const message_id = getCurrentMessageId();
@@ -237,9 +270,10 @@ export function useShelterDailyRoll() {
 
         await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
 
-        if (didLevelUp) {
-          toastr?.success?.('本日roll点成功，庇护所已升级！');
-        }
+        const toastText = formatNewDayToastText(roll, upgraded, didLevelUp, isGuarantee ? 'guarantee' : undefined);
+        const toastTitle = '每日Roll';
+        if (didLevelUp) toastr?.success?.(toastText, toastTitle);
+        else toastr?.info?.(toastText, toastTitle);
 
         writeShelterUpgradeState({ last_roll_date: today, days_since_upgrade: nextDays });
       } catch (e) {

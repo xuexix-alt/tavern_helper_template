@@ -24,7 +24,7 @@
         <button class="collapse-toggle-btn" @click="isGoalsExpanded = !isGoalsExpanded">
           <span class="toggle-icon">{{ isGoalsExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">📋 目标清单</span>
-          <span class="goals-count">({{ completedGoals }}/{{ store.data.主线任务.阶段目标.length }})</span>
+          <span class="goals-count">({{ completedGoals }}/{{ stageTargets.length }})</span>
         </button>
         <div v-show="isGoalsExpanded" class="goals-list">
           <template v-if="stageTargets.length > 0">

@@ -8,6 +8,7 @@
       - insert: insert new items into an object or array
       - remove
     - don't update field names starts with `_` as they are readonly, such as `_变量`
+    - 'shelter scope sync: to change survival shelter scope, ONLY `replace` `/stat_data/庇护所/庇护范围变更` with `{ "add": { "20": ["2002"] }, "remove": { "20": ["2007"] } }`. DO NOT modify `/stat_data/庇护所/当前生存庇护范围` (mirror, read-only).'
   format: |-
     <UpdateVariable>
     <Analysis>$(IN ENGLISH, no more than 80 words)
