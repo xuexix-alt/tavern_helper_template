@@ -510,7 +510,6 @@ function applyDerivedHealthStatus(rolePath: string, role: RoleLike, stat_data: a
 }
 
 function applyAutoStageFromThoughtUpdateIfNeeded(
-  rolePath: string,
   roleName: string,
   oldRole: RoleLike | null,
   newRole: RoleLike,
@@ -549,6 +548,8 @@ function applyDeathFromNegativeImprintIfNeeded(
   _.set(stat_data, `${rolePath}.健康`, 0);
   _.set(stat_data, `${rolePath}.健康更新原因`, '死亡（Imp<0 触发精神崩溃自杀）');
   _.set(stat_data, `${rolePath}.健康状况`, '死亡');
+  _.set(stat_data, `${rolePath}.秩序刻印`, 0);
+  _.set(stat_data, `${rolePath}.秩序刻印更新原因`, '');
   _.set(stat_data, `${rolePath}.登场状态`, '离场');
   _.set(stat_data, `${rolePath}.衣着`, '');
   _.set(stat_data, `${rolePath}.舌唇`, '');
@@ -558,6 +559,48 @@ function applyDeathFromNegativeImprintIfNeeded(
   _.set(stat_data, `${rolePath}.动作姿势`, '');
   _.set(stat_data, `${rolePath}.内心想法`, '');
   _.set(stat_data, `${rolePath}.所在房间`, '');
+}
+
+function applyDeathFromZeroHealthIfNeeded(
+  rolePath: string,
+  roleName: string,
+  role: RoleLike,
+  stat_data: any,
+  debug: { offstageHealth: boolean },
+) {
+  const healthRaw = role.健康;
+  if (typeof healthRaw !== 'number' && typeof healthRaw !== 'string') return;
+  const health = clampHealth(Number(healthRaw) || 0);
+  if (health > 0) return;
+
+  const reason = String((role as any)?.健康更新原因 ?? '').trim();
+  const markRaw = (role as any)?.秩序刻印;
+  const markNum = typeof markRaw === 'number' || typeof markRaw === 'string' ? Number(markRaw) : NaN;
+  const diedFromNegativeImprint = Number.isFinite(markNum) && markNum < 0;
+
+  _.set(stat_data, `${rolePath}.健康`, 0);
+  _.set(stat_data, `${rolePath}.健康状况`, '死亡');
+  _.set(stat_data, `${rolePath}.登场状态`, '离场');
+  if (!reason) _.set(stat_data, `${rolePath}.健康更新原因`, '死亡（健康归零）');
+
+  // 归档死亡：清空文本类字段；秩序刻印清零（负刻印死亡已在另一条规则内处理）
+  _.set(stat_data, `${rolePath}.衣着`, '');
+  _.set(stat_data, `${rolePath}.舌唇`, '');
+  _.set(stat_data, `${rolePath}.胸乳`, '');
+  _.set(stat_data, `${rolePath}.私穴`, '');
+  _.set(stat_data, `${rolePath}.神态样貌`, '');
+  _.set(stat_data, `${rolePath}.动作姿势`, '');
+  _.set(stat_data, `${rolePath}.内心想法`, '');
+  _.set(stat_data, `${rolePath}.所在房间`, '');
+
+  if (!diedFromNegativeImprint) {
+    _.set(stat_data, `${rolePath}.秩序刻印`, 0);
+    _.set(stat_data, `${rolePath}.秩序刻印更新原因`, '');
+  }
+
+  if (debug.offstageHealth) {
+    console.log(`[Death] ${roleName} died from health<=0`, { health, reason, diedFromNegativeImprint });
+  }
 }
 
 function applyOffstageRoleHealthIfNeeded(
@@ -574,7 +617,11 @@ function applyOffstageRoleHealthIfNeeded(
   if (deltaHours === null) return;
 
   const touched = diffRoleTouched(oldRole, newRole);
-  if (touched.health || touched.healthReason) return;
+  if (touched.health) return;
+  if (touched.healthReason) {
+    const r = String((newRole as any)?.健康更新原因 ?? '').trim();
+    if (r && r !== '0, 无变化') return;
+  }
 
   const stage = _.get(newRole, '登场状态', '');
   const isOffstage = stage === '离场';
@@ -583,6 +630,7 @@ function applyOffstageRoleHealthIfNeeded(
   const healthRaw = newRole.健康;
   if (typeof healthRaw !== 'number' && typeof healthRaw !== 'string') return;
   const currentHealth = clampHealth(Number(healthRaw) || 0);
+  if (currentHealth <= 0) return;
 
   const sheltered = isShelteredForRole(stat_data, rolePath, scope);
   const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules);
@@ -678,7 +726,16 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
   const oldWorld = _.get(old_variables, 'stat_data.世界', {});
   const newWorld = _.get(new_variables, 'stat_data.世界', {});
 
-  const deltaHours = diffWorldHours(oldWorld, newWorld);
+  let deltaHours = diffWorldHours(oldWorld, newWorld);
+  if (deltaHours === null) {
+    // fallback：当日期/时间格式异常导致无法计算时，用 末日天数 的差值近似（避免离场健康“经常不结算”）
+    const oldDays = _.get(oldWorld, '末日天数', null);
+    const newDays = _.get(newWorld, '末日天数', null);
+    if (typeof oldDays === 'number' && typeof newDays === 'number' && Number.isFinite(oldDays) && Number.isFinite(newDays)) {
+      const dayDelta = Math.floor(newDays) - Math.floor(oldDays);
+      if (dayDelta > 0) deltaHours = dayDelta * 24;
+    }
+  }
   if (deltaHours === null) {
     const oldTimeStr = _.get(old_variables, 'stat_data.世界.时间', '');
     const newTimeStr = _.get(new_variables, 'stat_data.世界.时间', '');
@@ -702,9 +759,10 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     if (!isRoleLike(val)) continue;
 
     const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
-    applyAutoStageFromThoughtUpdateIfNeeded(key, key, oldRole, val as any, debug);
+    applyAutoStageFromThoughtUpdateIfNeeded(key, oldRole, val as any, debug);
     applyDeathFromNegativeImprintIfNeeded(key, key, val as any, stat_data, debug);
     applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
+    applyDeathFromZeroHealthIfNeeded(key, key, val as any, stat_data, debug);
     applyDerivedHealthStatus(key, val as any, stat_data);
     applyDerivedRelationStage(key, oldRole, val as any, stat_data);
   }
@@ -716,9 +774,10 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
       if (!isRoleLike(val)) continue;
 
       const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
-      applyAutoStageFromThoughtUpdateIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, debug);
+      applyAutoStageFromThoughtUpdateIfNeeded(name, oldRole, val as any, debug);
       applyDeathFromNegativeImprintIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
       applyOffstageRoleHealthIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
+      applyDeathFromZeroHealthIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
       applyDerivedHealthStatus(`临时NPC.${name}`, val as any, stat_data);
       applyDerivedRelationStage(`临时NPC.${name}`, oldRole, val as any, stat_data);
     }
