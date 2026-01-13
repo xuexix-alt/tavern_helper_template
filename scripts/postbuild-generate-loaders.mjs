@@ -72,12 +72,39 @@ __th_loaded.add(__th_key);
 const indexUrl = new URL('./index.html', import.meta.url);
 
 (async () => {
-  const html = await fetch(indexUrl).then(r => r.text());
+  const res = await fetch(indexUrl);
+  if (!res.ok) {
+    const preview = await res.text().catch(() => '');
+    throw new Error(\`Failed to fetch \${indexUrl} (\${res.status} \${res.statusText})\\n\${preview.slice(0, 200)}\`);
+  }
+  const html = await res.text();
   const doc = new DOMParser().parseFromString(html, 'text/html');
 
+  const resolveAssetUrl = (raw) => {
+    const v = String(raw ?? '').trim();
+    if (!v) return '';
+    try {
+      return new URL(v, indexUrl).toString();
+    } catch {
+      return v;
+    }
+  };
+
   // Inject styles into the real <head>.
-  doc.querySelectorAll('head > style, head > link[rel="stylesheet"]').forEach(node => {
+  doc.querySelectorAll('head > style').forEach(node => {
     document.head.appendChild(node);
+  });
+  doc.querySelectorAll('head > link[rel="stylesheet"]').forEach(node => {
+    const href = resolveAssetUrl(node.getAttribute('href'));
+    if (!href) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    if (node.hasAttribute('media')) link.media = node.getAttribute('media') ?? '';
+    if (node.hasAttribute('crossorigin')) link.setAttribute('crossorigin', node.getAttribute('crossorigin') ?? '');
+    if (node.hasAttribute('integrity')) link.setAttribute('integrity', node.getAttribute('integrity') ?? '');
+    if (node.hasAttribute('referrerpolicy')) link.setAttribute('referrerpolicy', node.getAttribute('referrerpolicy') ?? '');
+    document.head.appendChild(link);
   });
 
   // Inject body content (excluding scripts; we recreate them to guarantee execution).
@@ -102,7 +129,8 @@ const indexUrl = new URL('./index.html', import.meta.url);
     if (src.hasAttribute('defer')) s.setAttribute('defer', '');
     if (src.id) s.id = src.id;
 
-    if (src.src) s.src = src.src;
+    const srcAttr = src.getAttribute('src');
+    if (srcAttr) s.src = resolveAssetUrl(srcAttr);
     else s.textContent = src.textContent;
 
     document.body.appendChild(s);
