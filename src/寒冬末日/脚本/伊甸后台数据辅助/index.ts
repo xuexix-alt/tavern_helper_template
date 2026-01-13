@@ -738,7 +738,12 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     // fallback：当日期/时间格式异常导致无法计算时，用 末日天数 的差值近似（避免离场健康“经常不结算”）
     const oldDays = _.get(oldWorld, '末日天数', null);
     const newDays = _.get(newWorld, '末日天数', null);
-    if (typeof oldDays === 'number' && typeof newDays === 'number' && Number.isFinite(oldDays) && Number.isFinite(newDays)) {
+    if (
+      typeof oldDays === 'number' &&
+      typeof newDays === 'number' &&
+      Number.isFinite(oldDays) &&
+      Number.isFinite(newDays)
+    ) {
       const dayDelta = Math.floor(newDays) - Math.floor(oldDays);
       if (dayDelta > 0) deltaHours = dayDelta * 24;
     }
@@ -783,7 +788,17 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
       const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
       applyAutoStageFromThoughtUpdateIfNeeded(name, oldRole, val as any, debug);
       applyDeathFromNegativeImprintIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
-      applyOffstageRoleHealthIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
+      applyOffstageRoleHealthIfNeeded(
+        `临时NPC.${name}`,
+        name,
+        oldRole,
+        val as any,
+        stat_data,
+        deltaHours,
+        scope,
+        rules,
+        debug,
+      );
       applyDeathFromZeroHealthIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
       applyOffstageRoleHealthIfNeeded(
         `临时NPC.${name}`,
