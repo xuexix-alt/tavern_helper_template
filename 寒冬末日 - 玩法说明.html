@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<!-- saved from url=(0226)file:///D:/STOBJECT/%E5%AE%9E%E6%97%B6%E7%BC%96%E5%86%99%E8%A7%92%E8%89%B2%E5%8D%A1%E5%92%8C%E4%B8%96%E7%95%8C%E4%B9%A6/tavern_helper_template/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%8E%A9%E6%B3%95%E8%AF%B4%E6%98%8E.html -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寒冬末日 - 玩法说明</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e8e8e8;
+            line-height: 1.8;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 60px 30px;
+        }
+
+        /* 标题样式 */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            font-weight: 300;
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(100, 200, 255, 0.5);
+            margin-bottom: 10px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            color: #7ec8e3;
+            letter-spacing: 4px;
+            opacity: 0.8;
+            animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .header::after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #7ec8e3, transparent);
+            margin: 30px auto 0;
+        }
+
+        /* 介绍区域 */
+        .intro {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(126, 200, 227, 0.2);
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        .intro p {
+            font-size: 1.1em;
+            text-align: center;
+            color: #b8d4e3;
+        }
+
+        /* 特性网格 */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(126, 200, 227, 0.15);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.8s ease-out backwards;
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.6s; }
+        .feature-card:nth-child(2) { animation-delay: 0.7s; }
+        .feature-card:nth-child(3) { animation-delay: 0.8s; }
+        .feature-card:nth-child(4) { animation-delay: 0.9s; }
+        .feature-card:nth-child(5) { animation-delay: 1.0s; }
+        .feature-card:nth-child(6) { animation-delay: 1.1s; }
+        .feature-card:nth-child(7) { animation-delay: 1.2s; }
+        .feature-card:nth-child(8) { animation-delay: 1.3s; }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(126, 200, 227, 0.4);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card h3 {
+            color: #7ec8e3;
+            font-size: 1.15em;
+            font-weight: 500;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-card h3::before {
+            content: '◆';
+            font-size: 0.7em;
+            color: #e94560;
+        }
+
+        .feature-card p {
+            font-size: 0.95em;
+            color: #a8c5d4;
+            line-height: 1.7;
+        }
+
+        /* 攻略区域 */
+        .guide {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(126, 200, 227, 0.2);
+            animation: fadeIn 1s ease-out 1.4s both;
+        }
+
+        .guide h2 {
+            color: #7ec8e3;
+            font-size: 1.8em;
+            font-weight: 400;
+            margin-bottom: 30px;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+
+        .guide h2::before,
+        .guide h2::after {
+            content: '—';
+            margin: 0 15px;
+            color: rgba(126, 200, 227, 0.5);
+        }
+
+        .guide-content {
+            counter-reset: guide;
+        }
+
+        .guide-item {
+            position: relative;
+            padding-left: 50px;
+            margin-bottom: 25px;
+            padding: 20px 20px 20px 60px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border-left: 3px solid rgba(233, 69, 96, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .guide-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            border-left-color: #e94560;
+        }
+
+        .guide-item::before {
+            counter-increment: guide;
+            content: counter(guide);
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #e94560, #c73e54);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .guide-item p {
+            color: #c8dce8;
+            font-size: 0.98em;
+            line-height: 1.8;
+        }
+
+        .guide-item strong {
+            color: #e94560;
+            font-weight: 600;
+        }
+
+        .guide-item em {
+            color: #7ec8e3;
+            font-style: normal;
+        }
+
+        /* 警告框 */
+        .warning {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(233, 69, 96, 0.05));
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .warning p {
+            color: #e8a0a8;
+            font-size: 0.95em;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(126, 200, 227, 0.2);
+            animation: fadeIn 1s ease-out 1.5s both;
+        }
+
+        .footer p {
+            color: rgba(126, 200, 227, 0.6);
+            font-size: 0.9em;
+            letter-spacing: 2px;
+        }
+
+        /* 动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 2em;
+                letter-spacing: 4px;
+            }
+
+            .container {
+                padding: 40px 20px;
+            }
+
+            .guide {
+                padding: 25px;
+            }
+
+            .guide h2 {
+                font-size: 1.4em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>寒冬末日</h1>
+            <p class="subtitle">SURVIVAL GUIDE</p>
+        </header>
+
+        <section class="intro">
+            <p>为了完整的游戏体验，请你务必阅读以下玩法介绍</p>
+        </section>
+
+        <section class="features">
+            <article class="feature-card">
+                <h3>真实世界</h3>
+                <p>本作模拟真实末日环境【一切角色（含user）均可死亡】、真实日期流动、真实健康值后台结算、真实女孩性同意设定</p>
+            </article>
+            <article class="feature-card">
+                <h3>扩展伊甸</h3>
+                <p>对伊甸庇护所进行了功能扩充和升级，现在庇护所等级是雪中送炭而不是锦上添花</p>
+            </article>
+            <article class="feature-card">
+                <h3>丰富变量</h3>
+                <p>使用zodmvu构建了一整套涵盖关系、健康值、状态栏描述的丰富设定</p>
+            </article>
+            <article class="feature-card">
+                <h3>交互式UI</h3>
+                <p>UI可以设置庇护范围、查看角色移动房间地图、对齐日期、发送选项、文生图支持</p>
+            </article>
+            <article class="feature-card">
+                <h3>开放角色</h3>
+                <p>内置丰富妹子+阶段性人设，拓展3名角色，20组NPC模板，状态栏同步支持</p>
+            </article>
+            <article class="feature-card">
+                <h3>递进任务</h3>
+                <p>设置【星穹秩序】主线任务，引导玩家种田/收人/探索/建立王国</p>
+            </article>
+        </section>
+
+        <section class="guide">
+            <h2>开局攻略</h2>
+            <div class="guide-content">
+                <div class="guide-item">
+                    <p><strong>重要</strong>【<em>第一个开局庇护所等级2</em>】是推荐开局，【<em>第二个开局庇护所等级1</em>】适合慢节奏，但边缘角色容易冻死</p>
+                </div>
+                <div class="guide-item">
+                    <p>主要角色经过精心设定，是核心资产，注意保护。</p>
+                </div>
+                <div class="guide-item">
+                    <p>所有角色挨冻受饿会随着时间变化掉健康值（日结），直至死亡。<strong>因此</strong>保护核心角色是玩家游玩的出发点。</p>
+                </div>
+                <div class="guide-item">
+                    <p>快速完成任务=升级庇护所=+庇护名额。庇护所拓展范围随等级可以向其他房间供暖，防止冻死，可以通过UI设置或剧情变量回填，地图可查看庇护房间分布。</p>
+                </div>
+                <div class="guide-item">
+                    <p>临时NPC有丰富拓展，请注意UI中有删除按钮，不要了记得删除。</p>
+                </div>
+                <div class="guide-item">
+                    <p>游戏立足于玩家种田/后宫/探索/建立秩序，配以丰富的任务系统和情报碎片玩法，不要只顾着把自己关在家里玩妹子。</p>
+                </div>
+                <div class="guide-item">
+                    <p>推妹子前，看一眼关系值和关系倾向，<strong>强推灰飞烟灭</strong>。</p>
+                </div>
+                <div class="guide-item">
+                    <p>任何人（含主角）都会死，理论上这卡有GAME OVER设定。</p>
+                </div>
+            </div>
+            <div class="warning">
+                <p>警告⚠️ 游戏包含成人内容，请确保你已年满18岁</p>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p>© 寒冬末日 · 末日生存模拟</p>
+            <p style="margin-top: 15px; color: rgba(126, 200, 227, 0.8);">→ 右滑开始游戏</p>
+        </footer>
+    </div>
+
+
+</body></html>
