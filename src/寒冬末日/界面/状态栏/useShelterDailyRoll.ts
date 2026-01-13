@@ -271,6 +271,23 @@ export function useShelterDailyRoll() {
 
         await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
 
+        // UI 首次加载时，Pinia store 可能还没来得及再刷新一次 MVU 数据；
+        // 这里将关键字段同步到 store，避免出现“roll 已执行但要手动重开 UI 才显示”的体验。
+        try {
+          const nextShelter = _.get(mvu_data, ['stat_data', '庇护所'], null);
+          if (nextShelter && typeof nextShelter === 'object' && !Array.isArray(nextShelter)) {
+            store.data = {
+              ...store.data,
+              庇护所: {
+                ...store.data.庇护所,
+                ...(nextShelter as any),
+              },
+            } as any;
+          }
+        } catch {
+          // ignore
+        }
+
         const toastText = formatNewDayToastText(roll, upgraded, didLevelUp, isGuarantee ? 'guarantee' : undefined);
         const toastTitle = '每日Roll';
         if (didLevelUp) toastr?.success?.(toastText, toastTitle);
