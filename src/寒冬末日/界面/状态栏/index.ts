@@ -17,14 +17,16 @@ async function waitForDependencies(maxWait = 15000): Promise<void> {
   const startTime = Date.now();
 
   // 检查关键依赖是否可用
-  const checkDeps = (): boolean => {
-    return (
-      typeof getCurrentMessageId === 'function' &&
-      typeof getChatMessages === 'function' &&
-      typeof Mvu !== 'undefined' &&
-      typeof eventOn === 'function'
-    );
+  const getMissingDeps = (): string[] => {
+    const missing: string[] = [];
+    if (typeof getCurrentMessageId !== 'function') missing.push('getCurrentMessageId');
+    if (typeof getChatMessages !== 'function') missing.push('getChatMessages');
+    if (typeof Mvu === 'undefined') missing.push('Mvu');
+    if (typeof eventOn !== 'function') missing.push('eventOn');
+    return missing;
   };
+
+  const checkDeps = (): boolean => getMissingDeps().length === 0;
 
   // 先快速检查一次
   if (checkDeps()) return;
@@ -35,7 +37,13 @@ async function waitForDependencies(maxWait = 15000): Promise<void> {
     if (checkDeps()) return;
   }
 
-  console.warn('[状态栏] 等待依赖注入超时，部分功能可能不可用');
+  const missing = getMissingDeps();
+  console.warn('[状态栏] 等待依赖注入超时，部分功能可能不可用', {
+    missing,
+    href: window.location?.href,
+    referrer: document.referrer,
+    hasFrameElement: !!(window as any).frameElement,
+  });
 }
 
 $(async () => {
