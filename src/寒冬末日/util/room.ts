@@ -1,5 +1,5 @@
 export type RoomLocation =
-  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '玄关' }
+  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '玄关' | '净化/隔离区' }
   | { kind: 'core'; room: '客厅' | '餐厅/厨房' | '主卧室' | '主浴室' }
   | { kind: 'floor'; floor: string; roomNumber: string }
   | { kind: 'outdoor'; area: string }
@@ -16,7 +16,14 @@ export function normalizeRoomTag(tag: string): string {
 
   // 兼容旧命名/别名
   if (t === '核心区/餐厅厨房') return '核心区/餐厅/厨房';
-  if (t === '玄关/隔离区' || t === '玄关/净化区' || t === '玄关/净化/隔离区') return '玄关';
+  if (
+    t === '玄关/隔离区' ||
+    t === '玄关/净化区' ||
+    t === '玄关/净化隔离区' ||
+    t === '玄关/净化/隔离区' ||
+    t === '玄关（净化/隔离区）'
+  )
+    return '玄关/净化/隔离区';
   if (t.startsWith('室外/')) return `户外/${t.slice('室外/'.length)}`;
   if (t === '室外') return '户外';
 
@@ -29,6 +36,7 @@ export function parseRoomTag(tag: string): RoomLocation {
 
   if (t === '玄关/临时客房A') return { kind: 'entrance', room: '临时客房A' };
   if (t === '玄关/临时客房B') return { kind: 'entrance', room: '临时客房B' };
+  if (t === '玄关/净化/隔离区') return { kind: 'entrance', room: '净化/隔离区' };
   if (t === '玄关') return { kind: 'entrance', room: '玄关' };
 
   if (t === '核心区/主卧室') return { kind: 'core', room: '主卧室' };
@@ -40,7 +48,8 @@ export function parseRoomTag(tag: string): RoomLocation {
   if (m) {
     const floor = String(m[1] ?? '').trim();
     const roomNumber = String(m[2] ?? '').trim();
-    if (floor && roomNumber) return { kind: 'floor', floor, roomNumber };
+    // 严格限制房号为纯数字（避免“2001门外/门口”等不规范字符串进入系统）
+    if (floor && roomNumber && /^\d{4}$/.test(roomNumber)) return { kind: 'floor', floor, roomNumber };
   }
 
   const outdoor = t.match(/^户外\/(.+)$/);
@@ -58,6 +67,7 @@ export function roomTagFromLocation(loc: RoomLocation): string {
   if (loc.kind === 'entrance') {
     if (loc.room === '临时客房A') return '玄关/临时客房A';
     if (loc.room === '临时客房B') return '玄关/临时客房B';
+    if (loc.room === '净化/隔离区') return '玄关/净化/隔离区';
     return '玄关';
   }
   if (loc.kind === 'core') {
@@ -80,6 +90,9 @@ export function findRoleLocation(rooms: RoomsStatData, roleName: string): RoomLo
 
   const entranceB: string[] = _.get(rooms, '玄关.临时客房B入住者', []);
   if (Array.isArray(entranceB) && entranceB.includes(name)) return { kind: 'entrance', room: '临时客房B' };
+
+  const purify: string[] = _.get(rooms, '玄关.净化隔离区入住者', []);
+  if (Array.isArray(purify) && purify.includes(name)) return { kind: 'entrance', room: '净化/隔离区' };
 
   const bedroom: string[] = _.get(rooms, '核心区.主卧室使用者', []);
   if (Array.isArray(bedroom) && bedroom.includes(name)) return { kind: 'core', room: '主卧室' };

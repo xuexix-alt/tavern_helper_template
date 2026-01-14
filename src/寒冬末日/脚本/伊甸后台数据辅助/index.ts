@@ -3,8 +3,195 @@ import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation }
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
 import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
 import { CHAT_VAR_KEYS } from '../../界面/outbound';
+import { z } from 'zod';
+
+import shelterBlueprintRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
 type Rooms = any;
+
+type EdenDebugSetting = {
+  enabled: boolean;
+  toConsole: boolean;
+  toChat: boolean;
+};
+
+const EDEN_HELPER_DEBUG_FLAG_PATH = 'eden.debug.eden_helper';
+const EDEN_HELPER_DEBUG_TO_CHAT_FLAG_PATH = 'eden.debug.to_chat';
+const EDEN_HELPER_DEBUG_LOG_PATH = 'eden.debug.eden_helper_log';
+const EDEN_HELPER_DEBUG_LOG_MAX = 80;
+
+const DEBUG_BUTTON_TOGGLE = '伊甸调试开关';
+const DEBUG_BUTTON_TOGGLE_CHATLOG = '伊甸调试写入日志';
+
+function getDeep(obj: any, path: string): any {
+  const keys = String(path ?? '')
+    .split('.')
+    .filter(Boolean);
+  let cur = obj;
+  for (const k of keys) {
+    if (!cur || typeof cur !== 'object') return undefined;
+    cur = cur[k];
+  }
+  return cur;
+}
+
+function setDeep(obj: any, path: string, value: any) {
+  const keys = String(path ?? '')
+    .split('.')
+    .filter(Boolean);
+  if (keys.length === 0) return;
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = keys[i];
+    if (!cur[k] || typeof cur[k] !== 'object') cur[k] = {};
+    cur = cur[k];
+  }
+  cur[keys[keys.length - 1]] = value;
+}
+
+function safeStringify(value: any, maxLen = 1200): string {
+  try {
+    const json = JSON.stringify(value, (_k, v) => {
+      if (typeof v === 'string' && v.length > 400) return `${v.slice(0, 400)}…`;
+      return v;
+    });
+    if (typeof json !== 'string') return String(value ?? '');
+    if (json.length <= maxLen) return json;
+    return `${json.slice(0, maxLen)}…`;
+  } catch {
+    return String(value ?? '');
+  }
+}
+
+function resolveEdenDebugSetting(): EdenDebugSetting {
+  try {
+    // 支持 ?debug：方便在不便写入变量时快速开启控制台日志（不写入 chat）
+    try {
+      const search = new URLSearchParams(window.location.search);
+      if (search.has('debug') || search.has('dev')) {
+        return { enabled: true, toConsole: true, toChat: search.has('to_chat') };
+      }
+    } catch {
+      // ignore
+    }
+
+    const vars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
+    const enabled = getDeep(vars, EDEN_HELPER_DEBUG_FLAG_PATH) === true;
+    const toChat = getDeep(vars, EDEN_HELPER_DEBUG_TO_CHAT_FLAG_PATH) === true;
+    return { enabled, toConsole: enabled, toChat };
+  } catch {
+    return { enabled: false, toConsole: false, toChat: false };
+  }
+}
+
+function edenLog(
+  level: 'debug' | 'info' | 'warn' | 'error',
+  event: string,
+  payload?: Record<string, any>,
+  debugSetting?: EdenDebugSetting,
+) {
+  const debug = debugSetting ?? resolveEdenDebugSetting();
+  if (!debug.enabled) return;
+
+  const record = {
+    ts: new Date().toISOString(),
+    level,
+    event,
+    ...(payload ? payload : {}),
+  };
+
+  if (debug.toConsole) {
+    // eslint-disable-next-line no-console
+    (console as any)?.[level]?.(`[eden/helper] ${safeStringify(record)}`);
+  }
+
+  if (debug.toChat && typeof updateVariablesWith === 'function') {
+    try {
+      updateVariablesWith(
+        (vars: any) => {
+          const current = getDeep(vars, EDEN_HELPER_DEBUG_LOG_PATH);
+          const list = Array.isArray(current) ? current.slice() : [];
+          list.push({
+            ts: record.ts,
+            level: record.level,
+            event: record.event,
+            data: payload ? safeStringify(payload) : '',
+          });
+          if (list.length > EDEN_HELPER_DEBUG_LOG_MAX) list.splice(0, list.length - EDEN_HELPER_DEBUG_LOG_MAX);
+          setDeep(vars, EDEN_HELPER_DEBUG_LOG_PATH, list);
+          return vars;
+        },
+        { type: 'chat' },
+      );
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function readChatDebugFlag(path: string): boolean {
+  try {
+    const vars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
+    return _.get(vars, path, false) === true;
+  } catch {
+    return false;
+  }
+}
+
+function writeChatDebugFlags(next: {
+  eden_helper?: boolean;
+  date_logic?: boolean;
+  offstage_health?: boolean;
+  room_logic?: boolean;
+  to_chat?: boolean;
+}) {
+  if (typeof updateVariablesWith !== 'function') return;
+  updateVariablesWith(
+    vars => {
+      if (typeof next.eden_helper === 'boolean') _.set(vars, 'eden.debug.eden_helper', next.eden_helper);
+      if (typeof next.date_logic === 'boolean') _.set(vars, 'eden.debug.date_logic', next.date_logic);
+      if (typeof next.offstage_health === 'boolean') _.set(vars, 'eden.debug.offstage_health', next.offstage_health);
+      if (typeof next.room_logic === 'boolean') _.set(vars, 'eden.debug.room_logic', next.room_logic);
+      if (typeof next.to_chat === 'boolean') _.set(vars, 'eden.debug.to_chat', next.to_chat);
+      return vars;
+    },
+    { type: 'chat' },
+  );
+}
+
+function ensureDebugButtons() {
+  if (typeof appendInexistentScriptButtons !== 'function') return;
+  if (typeof getButtonEvent !== 'function') return;
+  if (typeof eventOn !== 'function') return;
+
+  appendInexistentScriptButtons([
+    { name: DEBUG_BUTTON_TOGGLE, visible: true },
+    { name: DEBUG_BUTTON_TOGGLE_CHATLOG, visible: true },
+  ]);
+
+  eventOn(getButtonEvent(DEBUG_BUTTON_TOGGLE), () => {
+    const cur = readChatDebugFlag('eden.debug.eden_helper');
+    const next = !cur;
+    writeChatDebugFlags({
+      eden_helper: next,
+      date_logic: next,
+      offstage_health: next,
+      room_logic: next,
+    });
+    toastr?.info?.(`伊甸调试：${next ? '已开启' : '已关闭'}`);
+    // eslint-disable-next-line no-console
+    console.log(`[eden/helper] debug toggled via button ${safeStringify({ enabled: next })}`);
+  });
+
+  eventOn(getButtonEvent(DEBUG_BUTTON_TOGGLE_CHATLOG), () => {
+    const cur = readChatDebugFlag('eden.debug.to_chat');
+    const next = !cur;
+    writeChatDebugFlags({ to_chat: next });
+    toastr?.info?.(`伊甸调试写入日志：${next ? '已开启' : '已关闭'}`);
+    // eslint-disable-next-line no-console
+    console.log(`[eden/helper] debug to_chat toggled via button ${safeStringify({ to_chat: next })}`);
+  });
+}
 
 function readRoomDebugFlagFromChat(): boolean {
   const vars = getVariables({ type: 'chat' }) ?? {};
@@ -14,6 +201,7 @@ function readRoomDebugFlagFromChat(): boolean {
 
 function listRoomTagsFromRooms(rooms: Rooms): string[] {
   const tags: string[] = [
+    '玄关/净化/隔离区',
     '玄关/临时客房A',
     '玄关/临时客房B',
     '核心区/客厅',
@@ -42,6 +230,7 @@ function listRoomTagsFromRooms(rooms: Rooms): string[] {
 
 function readRoomListByTag(rooms: Rooms, tag: string): string[] {
   const t = normalizeRoomTag(tag);
+  if (t === '玄关/净化/隔离区') return _.get(rooms, '玄关.净化隔离区入住者', []);
   if (t === '玄关/临时客房A') return _.get(rooms, '玄关.临时客房A入住者', []);
   if (t === '玄关/临时客房B') return _.get(rooms, '玄关.临时客房B入住者', []);
   if (t === '核心区/客厅') return _.get(rooms, '核心区.客厅使用者', []);
@@ -157,6 +346,7 @@ function ensureFloorRoomSlot(nextRooms: Rooms, floor: '20' | '19', roomNumber: s
 
 function writeRoomListByTag(nextRooms: Rooms, tag: string, list: string[]) {
   const t = normalizeRoomTag(tag);
+  if (t === '玄关/净化/隔离区') return void _.set(nextRooms, '玄关.净化隔离区入住者', list);
   if (t === '玄关/临时客房A') return void _.set(nextRooms, '玄关.临时客房A入住者', list);
   if (t === '玄关/临时客房B') return void _.set(nextRooms, '玄关.临时客房B入住者', list);
   if (t === '核心区/客厅') return void _.set(nextRooms, '核心区.客厅使用者', list);
@@ -295,6 +485,693 @@ function writeShelterScopeToChat(scope: ShelterScopeByFloor) {
 function clampLevel(level: any): number {
   const lv = Number(level);
   return _.clamp(Number.isFinite(lv) ? lv : 1, 1, 10);
+}
+
+type Ability = { name: string; desc: string };
+
+type ShelterUpgradeState = z.output<typeof ShelterUpgradeStateSchema>;
+
+const ShelterUpgradeStateSchema = z
+  .object({
+    last_roll_date: z.string().prefault(''),
+    days_since_upgrade: z.coerce.number().prefault(0),
+
+    // meta: 用于 UI 显示 NEW 标签、以及调试定位“谁生效了”
+    last_roll_value: z.union([z.coerce.number(), z.null()]).optional(),
+    last_roll_upgraded: z.boolean().optional(),
+    last_roll_reason: z.string().optional(),
+    last_roll_source: z.string().optional(),
+    last_roll_message_id: z.coerce.number().optional(),
+    last_roll_message_hash: z.string().optional(),
+    last_roll_event_id: z.string().optional(),
+    last_roll_settled: z.boolean().optional(),
+
+    last_level_message_id: z.coerce.number().optional(),
+    last_level_source: z.string().optional(),
+    last_level_message_hash: z.string().optional(),
+
+    last_ability_message_id: z.coerce.number().optional(),
+    last_ability_source: z.string().optional(),
+    last_ability_message_hash: z.string().optional(),
+    last_ability_changed: z.boolean().optional(),
+    last_ability_event_id: z.string().optional(),
+    last_ability_added_names: z.array(z.string()).optional(),
+
+    manual_request: z
+      .object({
+        id: z.string().prefault(''),
+        message_id: z.coerce.number().prefault(0),
+        today: z.string().prefault(''),
+        ts: z.string().prefault(''),
+      })
+      .prefault({ id: '', message_id: 0, today: '', ts: '' })
+      .optional(),
+  })
+  .passthrough()
+  .prefault({ last_roll_date: '', days_since_upgrade: 0 });
+
+function readShelterUpgradeState(): ShelterUpgradeState {
+  try {
+    const vars = getVariables({ type: 'chat' }) ?? {};
+    const raw = _.get(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, {});
+    return ShelterUpgradeStateSchema.parse(raw);
+  } catch {
+    return ShelterUpgradeStateSchema.parse({});
+  }
+}
+
+function patchShelterUpgradeState(patcher: (prev: any) => any) {
+  if (typeof updateVariablesWith !== 'function') return;
+  updateVariablesWith(
+    (vars: any) => {
+      const raw = _.get(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, {});
+      const prev = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...(raw as any) } : {};
+      const next = patcher(prev) ?? prev;
+      _.set(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, next);
+      return vars;
+    },
+    { type: 'chat' },
+  );
+}
+
+function getLastMessageIdSafe(): number | null {
+  try {
+    const id = (globalThis as any).getLastMessageId?.();
+    if (typeof id === 'number' && Number.isFinite(id)) return id;
+    const n = Number(id);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseDaysSinceUpgrade(distanceText: any): number {
+  const s = String(distanceText ?? '').trim();
+  const m = s.match(/^(\d+)\s*天/);
+  if (!m) return 0;
+  const v = Number(m[1]);
+  return Number.isFinite(v) ? Math.max(0, v) : 0;
+}
+
+function formatDistanceText(daysSinceUpgrade: number): string {
+  const days = Math.max(0, Math.floor(daysSinceUpgrade));
+  const remaining = Math.max(0, 7 - days);
+  return `${days}天 | 剩余保底升级天数：${remaining}天`;
+}
+
+function formatRollText(roll: number | null, upgraded: boolean, reason?: 'guarantee'): string {
+  if (reason === 'guarantee') return '今日已投掷: 保底升级！';
+  const r = typeof roll === 'number' && Number.isFinite(roll) ? Math.floor(roll) : 0;
+  return `今日已投掷: ${r}点 (${upgraded ? '触发幸运升级！' : '未升级'})`;
+}
+
+function parseEdenDateToNumber(dateStr: any): number | null {
+  const s = String(dateStr ?? '').trim();
+  const m = s.match(/(\d+)年(\d+)月(\d+)日/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+  return y * 10000 + mo * 100 + d;
+}
+
+function isDateForward(today: string, last: string): boolean {
+  const t = parseEdenDateToNumber(today);
+  const l = parseEdenDateToNumber(last);
+  if (t == null || l == null) return today !== last;
+  return t > l;
+}
+
+function fnv1a32(text: string): string {
+  // 用于“删楼/重写导致 message_id 复用”场景的轻量自校验
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+function createEventId(prefix: string): string {
+  try {
+    const uuid = (globalThis as any)?.crypto?.randomUUID?.();
+    if (typeof uuid === 'string' && uuid) return `${prefix}_${uuid}`;
+  } catch {
+    // ignore
+  }
+  return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+}
+
+function getChatMessageTextForHash(message_id: number): string | null {
+  if (!Number.isFinite(message_id) || message_id <= 0) return null;
+  try {
+    const msgs: any[] = (globalThis as any).getChatMessages?.(`${message_id}-${message_id}`) ?? [];
+    const msg = Array.isArray(msgs) ? msgs[0] : null;
+    if (!msg) return null;
+
+    // SillyTavern 常见字段：mes / swipes + swipe_id；Tavern Helper 也可能是 message
+    const mes = typeof msg.mes === 'string' ? msg.mes : typeof msg.message === 'string' ? msg.message : '';
+    if (mes && mes.trim()) return mes.trim();
+
+    const swipeId = Number(msg.swipe_id ?? 0);
+    const swipes = Array.isArray(msg.swipes) ? msg.swipes : null;
+    const swipeText = swipes && Number.isFinite(swipeId) ? swipes[swipeId] : null;
+    const s = String(swipeText ?? '').trim();
+    return s ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeShelterUpgradeStateForTimeline(
+  today: string,
+  stat_data: any,
+  debugSetting: EdenDebugSetting,
+): ShelterUpgradeState {
+  const state = readShelterUpgradeState();
+
+  const todayNum = parseEdenDateToNumber(today);
+  const lastDate = String((state as any)?.last_roll_date ?? '').trim();
+  const lastNum = parseEdenDateToNumber(lastDate);
+
+  const lastRollMessageId = Number((state as any)?.last_roll_message_id ?? 0) || 0;
+  const lastRollHash = String((state as any)?.last_roll_message_hash ?? '').trim();
+
+  const lastLevelMessageId = Number((state as any)?.last_level_message_id ?? 0) || 0;
+  const lastLevelHash = String((state as any)?.last_level_message_hash ?? '').trim();
+
+  const lastAbilityMessageId = Number((state as any)?.last_ability_message_id ?? 0) || 0;
+  const lastAbilityHash = String((state as any)?.last_ability_message_hash ?? '').trim();
+
+  const missingAnchors: string[] = [];
+  const mismatchAnchors: string[] = [];
+
+  const validateAnchor = (kind: 'roll' | 'level' | 'ability', messageId: number, expectedHash: string) => {
+    if (!messageId || messageId <= 0) return;
+    const text = getChatMessageTextForHash(messageId);
+    if (!text) {
+      missingAnchors.push(kind);
+      return;
+    }
+    if (expectedHash) {
+      const nowHash = fnv1a32(text);
+      if (nowHash !== expectedHash) mismatchAnchors.push(kind);
+    }
+  };
+
+  validateAnchor('roll', lastRollMessageId, lastRollHash);
+  validateAnchor('level', lastLevelMessageId, lastLevelHash);
+  validateAnchor('ability', lastAbilityMessageId, lastAbilityHash);
+
+  const isFutureDate = todayNum != null && lastNum != null && lastNum > todayNum;
+  const needReset =
+    isFutureDate || missingAnchors.includes('roll') || mismatchAnchors.includes('roll') || missingAnchors.length > 0;
+
+  if (!needReset) return state;
+
+  const reason = isFutureDate
+    ? 'future_date'
+    : missingAnchors.length
+      ? 'missing_anchor'
+      : mismatchAnchors.length
+        ? 'mismatch_anchor'
+        : 'unknown';
+
+  patchShelterUpgradeState(prev => {
+    const next: any = { ...prev };
+
+    // 关键：清空 roll 记录，允许“重新跨天/手动校准”再次触发 roll
+    next.last_roll_date = '';
+    delete next.last_roll_value;
+    delete next.last_roll_upgraded;
+    delete next.last_roll_reason;
+    next.last_roll_source = 'reset';
+    next.last_roll_message_id = 0;
+    delete next.last_roll_message_hash;
+    delete next.last_roll_event_id;
+    delete next.last_roll_settled;
+
+    // NEW 标记依赖这些 message_id：锚点缺失/复用时一并清掉，避免 UI 永远指向旧楼层
+    if (missingAnchors.includes('level') || mismatchAnchors.includes('level') || isFutureDate) {
+      delete next.last_level_message_id;
+      delete next.last_level_source;
+      delete next.last_level_message_hash;
+    }
+    if (missingAnchors.includes('ability') || mismatchAnchors.includes('ability') || isFutureDate) {
+      delete next.last_ability_message_id;
+      delete next.last_ability_source;
+      delete next.last_ability_message_hash;
+      delete next.last_ability_changed;
+      delete next.last_ability_event_id;
+      delete next.last_ability_added_names;
+    }
+
+    // 天数以当前 stat_data 为准（防止“回滚剧情”后 chat 变量仍然是旧值）
+    next.days_since_upgrade = parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
+
+    return next;
+  });
+
+  edenLog(
+    'warn',
+    'daily_roll.meta.reset',
+    {
+      today,
+      last_roll_date: lastDate,
+      last_roll_message_id: lastRollMessageId,
+      missingAnchors,
+      mismatchAnchors,
+      reason,
+    },
+    debugSetting,
+  );
+
+  return readShelterUpgradeState();
+}
+
+function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
+  const out: Record<number, Ability[]> = {};
+  const parts = String(raw ?? '').split(/###\s*庇护所等级\s*(\d+)\s*:/g);
+  for (let i = 1; i + 1 < parts.length; i += 2) {
+    const level = Number(parts[i]);
+    const section = String(parts[i + 1] ?? '');
+    if (!Number.isFinite(level)) continue;
+
+    const lines = section.split(/\r?\n/);
+    const abilities: Ability[] = [];
+
+    let curName: string | null = null;
+    let curDesc: string[] = [];
+    let inDesc = false;
+
+    const commit = () => {
+      if (!curName) return;
+      const desc = curDesc
+        .map(x => String(x ?? '').trim())
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      abilities.push({ name: curName.trim(), desc });
+      curName = null;
+      curDesc = [];
+      inDesc = false;
+    };
+
+    const looksLikeAbilityName = (line: string) => {
+      const t = line.trim();
+      if (!t) return false;
+      // 能力名在蓝图中均以 emoji 开头；描述换行通常以中文开头，避免误判为“新能力”
+      try {
+        if (!/^\p{Extended_Pictographic}/u.test(t)) return false;
+      } catch {
+        // fallback：不支持 Unicode 属性转义时，退化为“常见图标前缀”判断
+        if (!/^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(t)) return false;
+      }
+      if (t.startsWith('#') || t.startsWith('<')) return false;
+      if (t.startsWith('---')) return false;
+      if (t.startsWith('简介')) return false;
+      if (t.startsWith('-')) return false;
+      return true;
+    };
+
+    for (const lineRaw of lines) {
+      const line = String(lineRaw ?? '').trimEnd();
+      const t = line.trim();
+      if (!t) {
+        if (inDesc) curDesc.push('');
+        continue;
+      }
+      if (t.startsWith('---')) {
+        if (curName) commit();
+        continue;
+      }
+
+      const descMatch = t.match(/^简介[:：]\s*(.*)$/);
+      if (descMatch && curName) {
+        inDesc = true;
+        curDesc.push(descMatch[1] ?? '');
+        continue;
+      }
+
+      if (looksLikeAbilityName(t)) {
+        if (curName) commit();
+        curName = t;
+        curDesc = [];
+        inDesc = false;
+        continue;
+      }
+
+      if (inDesc && curName) {
+        curDesc.push(t);
+      }
+    }
+    if (curName) commit();
+
+    if (abilities.length > 0) out[level] = abilities;
+  }
+  return out;
+}
+
+const __shelterAbilitiesByLevel = parseShelterAbilitiesByLevel(shelterBlueprintRaw);
+
+function applyShelterUpgradeRewards(stat_data: any, level: number): {
+  addedAbilities: string[];
+  patchedMedicalWing: boolean;
+  patchedVehicleHangar: boolean;
+} {
+  const lv = clampLevel(level);
+
+  const beforeRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
+  const beforeKeys = beforeRecord && typeof beforeRecord === 'object' ? Object.keys(beforeRecord as any) : [];
+
+  const abilityRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
+  if (!abilityRecord || typeof abilityRecord !== 'object') _.set(stat_data, ['庇护所', '庇护所能力'], {});
+
+  const merged: Record<string, { desc: string }> = { ...(_.get(stat_data, ['庇护所', '庇护所能力']) ?? {}) };
+  for (let i = 1; i <= lv; i++) {
+    for (const ab of __shelterAbilitiesByLevel[i] ?? []) {
+      const existing = merged[ab.name];
+      if (!existing) {
+        merged[ab.name] = { desc: ab.desc };
+        continue;
+      }
+      const oldDesc = String((existing as any)?.desc ?? '').trim();
+      if (!oldDesc && ab.desc) merged[ab.name] = { desc: ab.desc };
+    }
+  }
+  _.set(stat_data, ['庇护所', '庇护所能力'], merged);
+
+  const afterKeys = Object.keys(merged);
+  const addedAbilities = afterKeys.filter(k => !beforeKeys.includes(k));
+
+  // 可扩展区域：只按“明确等级解锁”的部分做同步，避免覆盖任务解锁逻辑
+  const beforeMed = String(_.get(stat_data, ['庇护所', '可扩展区域', '医疗翼'], '') ?? '');
+  const med = lv >= 9 ? '专家级自动医师' : lv >= 6 ? '外科手术台' : lv >= 3 ? '初级医疗舱' : '未解锁';
+  _.set(stat_data, ['庇护所', '可扩展区域', '医疗翼'], med);
+  const patchedMedicalWing = beforeMed !== med;
+
+  let patchedVehicleHangar = false;
+  if (lv >= 7) {
+    const cur = String(_.get(stat_data, ['庇护所', '可扩展区域', '载具格纳库'], '') ?? '');
+    if (!cur || cur === '未解锁') {
+      _.set(stat_data, ['庇护所', '可扩展区域', '载具格纳库'], '先驱者制造单元');
+      patchedVehicleHangar = true;
+    }
+  }
+
+  return { addedAbilities, patchedMedicalWing, patchedVehicleHangar };
+}
+
+type ParsedRollText =
+  | { kind: 'guarantee'; roll: null; upgraded: true }
+  | { kind: 'number'; roll: number; upgraded: boolean };
+
+function parseRollText(text: any): ParsedRollText | null {
+  const s = String(text ?? '').trim();
+  if (!s) return null;
+  if (s.includes('保底')) return { kind: 'guarantee', roll: null, upgraded: true };
+
+  const m = s.match(/今日已投掷[:：]?\s*(\d+)\s*点/);
+  if (!m) return null;
+  const roll = Number(m[1]);
+  if (!Number.isFinite(roll)) return null;
+  const clamped = _.clamp(Math.floor(roll), 0, 10);
+  const upgraded = clamped === 7 || clamped === 10;
+  return { kind: 'number', roll: clamped, upgraded };
+}
+
+function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, debugSetting: EdenDebugSetting) {
+  const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
+  const old_stat_data = _.get(old_variables, 'stat_data', {}) ?? {};
+
+  const today = String(_.get(stat_data, ['世界', '日期'], '') ?? '').trim();
+  if (!today) return;
+  const yesterday = String(_.get(old_stat_data, ['世界', '日期'], '') ?? '').trim();
+
+  const state = normalizeShelterUpgradeStateForTimeline(today, stat_data, debugSetting);
+
+  const manualReq = (state as any)?.manual_request ?? null;
+  const manualMessageId = Number((manualReq as any)?.message_id ?? 0);
+  const manualToday = String((manualReq as any)?.today ?? '').trim();
+  const hasManual = Number.isFinite(manualMessageId) && manualMessageId > 0 && (!manualToday || manualToday === today);
+
+  const lastDate = String(state.last_roll_date ?? '').trim();
+  const hasRollValue = Object.prototype.hasOwnProperty.call(state, 'last_roll_value') && (state as any).last_roll_value !== undefined;
+  const alreadyRolledToday = lastDate === today && hasRollValue;
+
+  const crossedDay = (() => {
+    if (!yesterday) return false;
+    if (yesterday === today) return false;
+    // 如果解析失败，退化为“字符串变化即跨天”，宁可触发一次也不要错过（有 chat 变量幂等兜底）
+    const y = parseEdenDateToNumber(yesterday);
+    const t = parseEdenDateToNumber(today);
+    if (y == null || t == null) return true;
+    return t > y;
+  })();
+
+  // 初次进入：优先用 old date 建档（避免“第一次装脚本刚好跨天但没roll”的体验）
+  if (!lastDate) {
+    const seededDays = parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
+    const seededRoll = parseRollText(_.get(stat_data, ['庇护所', '今日投掷点数'], ''));
+    const seededMessageId = getLastMessageIdSafe() ?? 0;
+    const seedDate = yesterday && yesterday !== today ? yesterday : today;
+
+    patchShelterUpgradeState(prev => ({
+      ...prev,
+      last_roll_date: seedDate,
+      days_since_upgrade: seededDays,
+      ...(seededRoll
+        ? {
+            last_roll_value: seededRoll.roll,
+            last_roll_upgraded: seededRoll.upgraded,
+            last_roll_reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
+            last_roll_source: 'seed',
+            last_roll_message_id: seededMessageId,
+          }
+        : {}),
+    }));
+
+    edenLog(
+      'info',
+      'daily_roll.seed',
+      { today, yesterday, seedDate, seededDays, hasSeededRoll: !!seededRoll, message_id: seededMessageId },
+      debugSetting,
+    );
+  }
+
+  // 重新读取一次，确保 last_roll_date/天数已就绪（本次事件内写回 chat 变量不会影响 new_variables，但这里用于逻辑判断即可）
+  const nextState = lastDate ? state : readShelterUpgradeState();
+  const nextLastDate = String(nextState.last_roll_date ?? '').trim();
+  const nextHasRollValue =
+    Object.prototype.hasOwnProperty.call(nextState, 'last_roll_value') && (nextState as any).last_roll_value !== undefined;
+  const nextAlreadyRolledToday = nextLastDate === today && nextHasRollValue;
+
+  const needRollByDate = (() => {
+    if (!crossedDay) return false;
+    if (!nextLastDate) return true;
+    if (nextLastDate === today) {
+      if (!nextAlreadyRolledToday) return true;
+
+      // 修复：旧版本可能在“刚跨天”时把 last_roll_date 直接 seed 成 today，导致跨天这一轮永远不会 roll。
+      // 若本次事件确实是 yesterday->today，且记录来源仍为 seed（且缺少可信 message_id），则强制补一次 roll。
+      const src = String((nextState as any)?.last_roll_source ?? '').trim();
+      const mid = Number((nextState as any)?.last_roll_message_id ?? 0) || 0;
+      if (yesterday && yesterday !== today && src === 'seed' && mid <= 0) return true;
+
+      return false;
+    }
+    return isDateForward(today, nextLastDate);
+  })();
+  const needRollByManual = hasManual && !nextAlreadyRolledToday;
+  const needRoll = needRollByDate || needRollByManual;
+
+  const settleSource = needRollByManual ? 'manual' : 'script';
+  const metaMessageId = (needRollByManual ? manualMessageId : getLastMessageIdSafe()) ?? 0;
+
+  // 未触发 roll：仅清理 manual_request（避免重复触发）
+  if (!needRoll) {
+    if (crossedDay || hasManual) {
+      console.log(
+        `[DailyRoll] skip ${JSON.stringify({
+          today,
+          yesterday,
+          crossedDay,
+          last_roll_date: nextLastDate,
+          alreadyRolledToday: nextAlreadyRolledToday,
+          hasManual,
+          last_roll_source: (nextState as any)?.last_roll_source ?? '',
+          last_roll_message_id: (nextState as any)?.last_roll_message_id ?? 0,
+        })}`,
+      );
+    }
+    if (hasManual) {
+      patchShelterUpgradeState(prev => {
+        const next = { ...prev };
+        delete (next as any).manual_request;
+        return next;
+      });
+      edenLog('info', 'daily_roll.manual.noop', { today, message_id: metaMessageId }, debugSetting);
+    }
+    return;
+  }
+
+  const baseDays = Number.isFinite(nextState.days_since_upgrade)
+    ? Math.max(0, Math.floor(nextState.days_since_upgrade))
+    : parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
+
+  const isGuarantee = baseDays >= 7;
+
+  const rollTextNew = _.get(stat_data, ['庇护所', '今日投掷点数'], '');
+  const rollTextOld = _.get(old_stat_data, ['庇护所', '今日投掷点数'], '');
+  const aiTouchedRollTextRaw = !_.isEqual(rollTextNew, rollTextOld) && String(rollTextNew ?? '').trim().length > 0;
+  const aiTouchedRollText = false; // 默认忽略 AI 写入 roll 文本（避免固定点数/刷点）
+  const aiParsed = aiTouchedRollText ? parseRollText(rollTextNew) : null;
+
+  if (aiTouchedRollTextRaw) {
+    edenLog(
+      'warn',
+      'daily_roll.ai_roll_ignored',
+      {
+        today,
+        message_id: metaMessageId,
+        roll_text: String(rollTextNew ?? '').slice(0, 120),
+      },
+      debugSetting,
+    );
+  }
+
+  let roll: number | null = null;
+  let upgraded = false;
+  let reason: 'guarantee' | 'lucky' | 'normal' | 'ai_invalid' = 'normal';
+  let source: 'script' | 'manual' | 'ai' = settleSource;
+
+  if (isGuarantee) {
+    roll = null;
+    upgraded = true;
+    reason = 'guarantee';
+  } else if (aiParsed && aiParsed.kind === 'number') {
+    roll = aiParsed.roll;
+    upgraded = aiParsed.upgraded;
+    reason = upgraded ? 'lucky' : 'normal';
+    source = 'ai';
+  } else {
+    if (aiTouchedRollText && !aiParsed) {
+      reason = 'ai_invalid';
+    }
+    roll = Math.floor(Math.random() * 11);
+    upgraded = roll === 7 || roll === 10;
+    source = settleSource;
+    reason = upgraded ? 'lucky' : reason === 'ai_invalid' ? 'ai_invalid' : 'normal';
+  }
+
+  const oldLevelRaw = _.get(old_stat_data, ['庇护所', '庇护所等级'], 1);
+  const newLevelRaw = _.get(stat_data, ['庇护所', '庇护所等级'], 1);
+  const oldLevel = clampLevel(oldLevelRaw);
+  const newLevel = clampLevel(newLevelRaw);
+  const baselineLevel = Math.max(oldLevel, newLevel);
+
+  if (baselineLevel !== newLevel) {
+    _.set(stat_data, ['庇护所', '庇护所等级'], baselineLevel);
+    edenLog(
+      'warn',
+      'shelter.level.downgrade_corrected',
+      { oldLevel, newLevel, baselineLevel, today, message_id: metaMessageId },
+      debugSetting,
+    );
+  }
+
+  const canLevelUp = baselineLevel < 10;
+  const alreadyLevelUpByAI = newLevel > oldLevel;
+
+  const nextLevel = upgraded && canLevelUp && !alreadyLevelUpByAI ? clampLevel(baselineLevel + 1) : baselineLevel;
+  const nextDays = upgraded ? 0 : baseDays + 1;
+
+  _.set(stat_data, ['庇护所', '今日投掷点数'], formatRollText(roll, upgraded, isGuarantee ? 'guarantee' : undefined));
+  _.set(stat_data, ['庇护所', '距离上次升级'], formatDistanceText(nextDays));
+  _.set(stat_data, ['庇护所', '庇护所等级'], nextLevel);
+
+  const rewardDiff = applyShelterUpgradeRewards(stat_data, nextLevel);
+
+  const didLevelUp = nextLevel > oldLevel;
+  const didAbilityListChange = rewardDiff.addedAbilities.length > 0;
+  const rollEventId = createEventId('roll');
+  const abilityEventId = didAbilityListChange ? createEventId('ability') : '';
+
+  edenLog(
+    'info',
+    'daily_roll.settled',
+    {
+      today,
+      message_id: metaMessageId,
+      trigger: needRollByManual ? 'manual' : 'auto',
+      source,
+      reason,
+      baseDays,
+      nextDays,
+      roll,
+      upgraded,
+      oldLevel,
+      nextLevel,
+      didLevelUp,
+      rewardAddedAbilities: rewardDiff.addedAbilities,
+      rewardPatchedMedicalWing: rewardDiff.patchedMedicalWing,
+      rewardPatchedVehicleHangar: rewardDiff.patchedVehicleHangar,
+    },
+    debugSetting,
+  );
+  console.log(
+    `[DailyRoll] settled ${JSON.stringify({
+      today,
+      yesterday,
+      trigger: needRollByManual ? 'manual' : 'auto',
+      source,
+      reason,
+      roll,
+      upgraded,
+      oldLevel,
+      nextLevel,
+      baseDays,
+      nextDays,
+    })}`,
+  );
+
+  patchShelterUpgradeState(prev => {
+    const next = {
+      ...prev,
+      last_roll_date: today,
+      days_since_upgrade: nextDays,
+      last_roll_value: roll,
+      last_roll_upgraded: upgraded,
+      last_roll_reason: reason,
+      last_roll_source: source,
+      last_roll_message_id: metaMessageId,
+      last_roll_event_id: rollEventId,
+      last_roll_settled: true,
+    } as any;
+
+    const anchorText = getChatMessageTextForHash(metaMessageId);
+    if (anchorText) next.last_roll_message_hash = fnv1a32(anchorText);
+
+    if (didLevelUp) {
+      next.last_level_message_id = metaMessageId;
+      next.last_level_source = source;
+      if (anchorText) next.last_level_message_hash = fnv1a32(anchorText);
+    }
+
+    // 能力列表 NEW：仅在“新增能力条目”时点亮，避免仅修补可扩展区域等也显示 NEW
+    next.last_ability_changed = didAbilityListChange;
+    if (didAbilityListChange) {
+      next.last_ability_message_id = metaMessageId;
+      next.last_ability_source = source;
+      if (anchorText) next.last_ability_message_hash = fnv1a32(anchorText);
+      next.last_ability_event_id = abilityEventId;
+      next.last_ability_added_names = rewardDiff.addedAbilities.slice();
+    }
+
+    delete next.manual_request;
+    return next;
+  });
 }
 
 function toRoomList(input: any): string[] {
@@ -508,6 +1385,55 @@ function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouch
   };
 }
 
+/**
+ * 登场状态清洗（针对“AI忘了把登场拨回离场，且本次没写任何字段”的失效局面）
+ *
+ * 规则（按用户需求）：
+ * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
+ * - 仅当：旧值为【登场】、新值仍为【登场】、且整段角色对象完全没变化（AI未写任何字段）
+ *   => 视为“忘回拨”，脚本强制改为【离场】以继续走离场健康结算
+ */
+function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+  const { core, tempNpc } = listRoleNames(stat_data);
+  const all = [...core, ...tempNpc];
+
+  const patched: Array<{ name: string; path: string }> = [];
+
+  for (const name of all) {
+    const isTemp = tempNpc.includes(name);
+    const rolePath = isTemp ? `临时NPC.${name}` : name;
+
+    const newRole = _.get(stat_data, rolePath, null);
+    const oldRole = _.get(old_stat_data, rolePath, null);
+    if (!newRole || typeof newRole !== 'object') continue;
+    if (!oldRole || typeof oldRole !== 'object') continue;
+
+    const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
+    const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
+
+    // 只处理“旧登场、且 AI 未改登场状态”的情况
+    if (oldStage !== '登场') continue;
+    if (oldStage !== newStage) continue;
+
+    // 若 AI 写了任何字段（对象有差异），则认为“登场是有意为之”，不处理
+    if (!_.isEqual(oldRole, newRole)) continue;
+
+    _.set(stat_data, `${rolePath}.登场状态`, '离场');
+    patched.push({ name, path: rolePath });
+
+    edenLog(
+      'warn',
+      'stage_sanitize.force_offstage',
+      { role: name, rolePath, reason: 'onstage_unchanged_and_no_updates' },
+      debugSetting,
+    );
+  }
+
+  if (patched.length > 0) {
+    edenLog('info', 'stage_sanitize.summary', { patchedCount: patched.length, patched }, debugSetting);
+  }
+}
+
 function applyDerivedHealthStatus(rolePath: string, role: RoleLike, stat_data: any) {
   const healthRaw = role.健康;
   const health = typeof healthRaw === 'number' || typeof healthRaw === 'string' ? Number(healthRaw) : NaN;
@@ -606,7 +1532,9 @@ function applyDeathFromZeroHealthIfNeeded(
   }
 
   if (debug.offstageHealth) {
-    console.log(`[Death] ${roleName} died from health<=0`, { health, reason, diedFromNegativeImprint });
+    console.log(
+      `[Death] ${roleName} died from health<=0 ${safeStringify({ health, reason, diedFromNegativeImprint })}`,
+    );
   }
 }
 
@@ -653,11 +1581,13 @@ function applyOffstageRoleHealthIfNeeded(
   _.set(stat_data, `${rolePath}.健康更新原因`, reasonText);
 
   if (debug.offstageHealth) {
-    console.log(`[Offstage] ${roleName} health ${currentHealth} -> ${nextHealth} (${reasonText})`, {
-      deltaHours,
-      sheltered,
-      rules,
-    });
+    console.log(
+      `[Offstage] ${roleName} health ${currentHealth} -> ${nextHealth} (${reasonText}) ${safeStringify({
+        deltaHours,
+        sheltered,
+        rules,
+      })}`,
+    );
   }
 }
 
@@ -752,9 +1682,9 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     const oldTimeStr = _.get(old_variables, 'stat_data.世界.时间', '');
     const newTimeStr = _.get(new_variables, 'stat_data.世界.时间', '');
     if (oldTimeStr !== newTimeStr) {
-      console.log('[DateLogic] diffWorldHours=null', { oldWorld, newWorld });
+      console.log(`[DateLogic] diffWorldHours=null ${safeStringify({ oldWorld, newWorld })}`);
     } else if (debug.dateLogic) {
-      console.log('[DateLogic] diffWorldHours=null (time unchanged)', { oldWorld, newWorld });
+      console.log(`[DateLogic] diffWorldHours=null (time unchanged) ${safeStringify({ oldWorld, newWorld })}`);
     }
   } else if (debug.dateLogic) {
     console.log(`[DateLogic] diffWorldHours=${deltaHours.toFixed(2)}`);
@@ -818,36 +1748,84 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
 }
 
 $(async () => {
+  ensureDebugButtons();
   await waitGlobalInitialized('Mvu');
 
+  const baseDebug = resolveEdenDebugSetting();
+  edenLog('info', 'boot', { script: '伊甸后台数据辅助' }, baseDebug);
+
   const first = (new_variables: any, old_variables: any) => {
-    const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
-    const old_stat_data = _.get(old_variables, 'stat_data', {}) ?? {};
+    const debugSetting = resolveEdenDebugSetting();
+    edenLog('debug', 'mvu.update_ended.first.begin', {}, debugSetting);
 
-    const roomDebug = readRoomDebugFlagFromChat();
-    applyRoomConsistency(stat_data, old_stat_data, roomDebug);
+    try {
+      const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
+      const old_stat_data = _.get(old_variables, 'stat_data', {}) ?? {};
 
-    const debug = readDebugFlagsFromChat();
-    patchDateOnMidnightCrossIfNeeded(new_variables, old_variables, debug);
+      // 出场状态清洗：尽早处理，避免后续房间逻辑等改动干扰“AI本次是否写入字段”的判定
+      sanitizeForgottenOnstageRoles(stat_data, old_stat_data, debugSetting);
+
+      const roomDebug = readRoomDebugFlagFromChat();
+      if (roomDebug) edenLog('debug', 'room_logic.begin', {}, debugSetting);
+      applyRoomConsistency(stat_data, old_stat_data, roomDebug);
+      if (roomDebug) edenLog('debug', 'room_logic.end', {}, debugSetting);
+
+      const debug = readDebugFlagsFromChat();
+      patchDateOnMidnightCrossIfNeeded(new_variables, old_variables, debug);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      edenLog('error', 'mvu.update_ended.first.error', { reason }, debugSetting);
+    } finally {
+      edenLog('debug', 'mvu.update_ended.first.end', {}, debugSetting);
+    }
   };
 
   const last = (new_variables: any, old_variables: any) => {
-    const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
-    const shelterLevel = clampLevel(_.get(stat_data, ['庇护所', '庇护所等级'], 1));
+    const debugSetting = resolveEdenDebugSetting();
+    edenLog('debug', 'mvu.update_ended.last.begin', {}, debugSetting);
 
-    const currentScope = readShelterScopeFromChat();
-    const rawDelta = _.get(stat_data, ['庇护所', '庇护范围变更'], null);
-    const delta = normalizeScopeDelta(rawDelta);
+    try {
+      const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
 
-    const nextScope = delta ? applyScopeDelta(currentScope, delta, shelterLevel) : currentScope;
-    if (delta) writeShelterScopeToChat(nextScope);
+      // 日更 roll / 升级结算：从 UI 剥离后由脚本统一处理（含手动校准触发）
+      applyShelterDailyRollIfNeeded(new_variables, old_variables, debugSetting);
+      const shelterLevel = clampLevel(_.get(stat_data, ['庇护所', '庇护所等级'], 1));
 
-    _.set(stat_data, ['庇护所', '当前生存庇护范围'], nextScope);
+      const currentScope = readShelterScopeFromChat();
+      const rawDelta = _.get(stat_data, ['庇护所', '庇护范围变更'], null);
+      const delta = normalizeScopeDelta(rawDelta);
 
-    // 清空触发器（保留字段本身），避免重复执行；并保证 AI 后续可继续 replace 该路径。
-    if (delta) _.set(stat_data, ['庇护所', '庇护范围变更'], {});
+      edenLog(
+        'debug',
+        'shelter_scope.input',
+        {
+          shelterLevel,
+          hasDelta: !!delta,
+          deltaNote: delta?.note ?? '',
+          add: delta?.add ?? null,
+          remove: delta?.remove ?? null,
+        },
+        debugSetting,
+      );
 
-    applyOffstageBundle(new_variables, old_variables, nextScope);
+      const nextScope = delta ? applyScopeDelta(currentScope, delta, shelterLevel) : currentScope;
+      if (delta) {
+        writeShelterScopeToChat(nextScope);
+        edenLog('info', 'shelter_scope.applied', { scope: nextScope }, debugSetting);
+      }
+
+      _.set(stat_data, ['庇护所', '当前生存庇护范围'], nextScope);
+
+      // 清空触发器（保留字段本身），避免重复执行；并保证 AI 后续可继续 replace 该路径。
+      if (delta) _.set(stat_data, ['庇护所', '庇护范围变更'], {});
+
+      applyOffstageBundle(new_variables, old_variables, nextScope);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      edenLog('error', 'mvu.update_ended.last.error', { reason }, debugSetting);
+    } finally {
+      edenLog('debug', 'mvu.update_ended.last.end', {}, debugSetting);
+    }
   };
 
   eventMakeFirst(Mvu.events.VARIABLE_UPDATE_ENDED, first);
