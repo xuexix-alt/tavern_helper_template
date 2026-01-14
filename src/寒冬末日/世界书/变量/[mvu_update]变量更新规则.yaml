@@ -5,19 +5,19 @@
       check: "计算剧情流逝后的时间点，严格保持 '时间段 - HH:MM' 格式。"
     日期:
       type: string
-      check: '日期变更时，使用 `replace` 更新为新的日期字符串（格式：末日纪元，XXXX年XX月XX日）。若你漏更但时间跨过 00:00，系统会尝试自动修正。'
+      check: "日期变更时，使用 `replace` 更新为新的日期字符串（格式：末日纪元，XXXX年XX月XX日）。若你漏更但时间跨过 00:00，系统会尝试自动修正。"
     末日天数:
       type: number
-      check: '日期变更时，使用 `delta: 1` 进行累加。若你漏更但时间跨过 00:00，系统会尝试自动修正。'
+      check: "日期变更时，使用 `delta: 1` 进行累加。若你漏更但时间跨过 00:00，系统会尝试自动修正。"
     地址:
       type: string
-      check: '仅当物理位置发生迁移时使用 `replace` 更新。'
+      check: "仅当物理位置发生迁移时使用 `replace` 更新。"
   庇护所:
     今日投掷点数:
       type: string
       check:
-        - '由脚本维护，AI 无需处理/禁止修改'
-        - '字段内容为“展示用文本”，示例：今日已投掷: 3点 (未升级) / 今日已投掷: 7点 (触发幸运升级！) / 今日已投掷: 保底升级！'
+        - "由脚本维护，AI 无需处理/禁止修改"
+        - "字段内容为“展示用文本”，示例：今日已投掷: 3点 (未升级) / 今日已投掷: 7点 (触发幸运升级！) / 今日已投掷: 保底升级！"
     庇护所等级:
       type: number
       range: [1, 10]
@@ -26,17 +26,17 @@
       type: string
       check: 由脚本维护AI无需处理
     庇护所能力:
-      type: 'record<string, { desc: string }>'
+      type: "record<string, { desc: string }>"
       check: |-
         - 触发机制：主线阶段达成、完成特定【情报碎片】。
         - 操作：使用 `insert` 添加新能力项。
         - 措辞对齐：奖励描述<庇护所升级能力列表>中的标准文本。
     可扩展区域:
-      type: '{ 医疗翼: string, 制造工坊: string, 载具格纳库: string }'
-      check: '随等级提升，由脚本维护AI无需处理'
+      type: "{ 医疗翼: string, 制造工坊: string, 载具格纳库: string }"
+      check: "随等级提升，由脚本维护AI无需处理"
     当前生存庇护范围:
       type: 'record<"20"|"19", string[]>'
-      check: '脚本回写镜像（最终生效结果）。AI 只读，禁止修改。'
+      check: "脚本回写镜像（最终生效结果）。AI 只读，禁止修改。"
     庇护范围变更:
       type: '{ add?: record<"20"|"19", string[]>, remove?: record<"20"|"19", string[]>, note?: string }'
       check: |-
@@ -145,14 +145,14 @@
           - 若你本轮未更新离场角色健康/原因，脚本会按规则自动结算写回。
     健康状况:
       type: 健康|亚健康|生病/受伤|重病/濒死|无|死亡
-      check: '由脚本根据健康值阈值自动重算写回（登场/离场/临时NPC均适用）。AI 不需要也不应手动维护该字段。'
+      check: "由脚本根据健康值阈值自动重算写回（登场/离场/临时NPC均适用）。AI 不需要也不应手动维护该字段。"
 
     内心想法:
       type: string
       check:
-        - '每次互动后必须使用 `replace` 更新第一人称心声。'
+        - "每次互动后必须使用 `replace` 更新第一人称心声。"
         - 心声内容应该紧密围绕剧情互动严格符合角色设定和关系定位
-        - '**拒绝**神化<user>和角色精神奔溃、奴化'
+        - "**拒绝**神化<user>和角色精神奔溃、奴化"
         - 措辞有张力，符合“台词”特性
     衣着/舌唇/胸乳/私穴/神态样貌/动作姿势:
       type: string
@@ -164,7 +164,7 @@
         角色移动（进入/离开/换房）时，必须使用 `replace` 更新本字段。
         - 进入{{user}}所在的**楼层20/2001**也就是庇护所本体时。更新路径示例：{ "op": "replace", "path": "/stat_data/早川遥/所在房间", "value": "玄关/临时客房A" }
           包含以下区域（严格对照）
-          - 玄关/净化/隔离区
+          - 玄关/净化/隔离区  "净化/隔离区"是一个整体路径不可分割：示例：  { "op": "replace", "path": "/浅见亚美/所在房间", "value": "玄关/净化/隔离区" }
           - 玄关/临时客房A
           - 玄关/临时客房B
           - 核心区/客厅（公共区域）
@@ -183,9 +183,9 @@
         - 【庇护所内部例外】凡在庇护所内部一律默认 '登场'"
   死亡处理:
     check:
-      - '健康值为0触发死亡'
-      - 'imp值为负触发精神崩溃自杀身亡'
-      - '角色死亡时，使用 `replace` 将文本类字段置空，秩序刻印清零，保留姓名与死亡状态。'
+      - "健康值为0触发死亡"
+      - "imp值为负触发精神崩溃自杀身亡"
+      - "角色死亡时，使用 `replace` 将文本类字段置空，秩序刻印清零，保留姓名与死亡状态。"
     临时NPC:
       check: |-
         - 新登场：使用 `insert` 在 `stat_data/临时NPC/` 下创建以姓名为 Key 的完整对象(参考<临时NPC变量结构示意>)
@@ -202,29 +202,29 @@
   楼层其他住户:
     言语:
       type: string
-      check: '随日期变动更新。使用 `replace` 更新群体“民意”对{{user}}行为的反应。'
+      check: "随日期变动更新。使用 `replace` 更新群体“民意”对{{user}}行为的反应。"
     行为:
       type: string
-      check: '随日期变动更新。使用 `replace` 更新群体基于{{user}}行为而产生的主要行为模式。'
+      check: "随日期变动更新。使用 `replace` 更新群体基于{{user}}行为而产生的主要行为模式。"
     房间:
-      type: 'object（readonly/derived）'
+      type: "object（readonly/derived）"
       check: |-
         - 由脚本维护，AI 无需也不应管理
         - **禁止**在 JSONPatch 中输出任何 `/stat_data/房间/**` 更新（包括 `replace/delta/insert/remove`）
   主线任务:
     当前阶段:
       type: string
-      check: '完成所有当前阶段目标后，使用 `replace` 更新为下一阶段名称。'
+      check: "完成所有当前阶段目标后，使用 `replace` 更新为下一阶段名称。"
     阶段目标:
-      type: 'record<string, { 描述: string, 当前值: number, 目标值: number }>'
+      type: "record<string, { 描述: string, 当前值: number, 目标值: number }>"
       check: |-
         - '根据剧情进展，使用 `delta` 累加 `当前值`。若达成则修改状态并使用 `insert` 发放奖励。'
         - '奖励内容涉及庇护所等级和扩展区是，如果已经由其他渠道（自然升级等）获得了该能力和拓展，则跳过（但在剧情中要向用户播报）'
     目标完成状态:
-      type: 'record<string, boolean>'
-      check: '目标达成时，使用 `replace` 将对应 key 设为 true。'
+      type: "record<string, boolean>"
+      check: "目标达成时，使用 `replace` 将对应 key 设为 true。"
     情报碎片:
-      type: 'record<string, { 编号: string, 描述: string, 价值: string, 风险: string, 状态: 未探索|已探索|已完成 }>'
+      type: "record<string, { 编号: string, 描述: string, 价值: string, 风险: string, 状态: 未探索|已探索|已完成 }>"
       check: |-
         - 状态范围**['未探索', '已探索', '已完成']**。
         - 奖励发放指令 (核心)：当状态变更为 '已完成' 时，AI **必须** 在同一轮 JSONPatch 中执行以下操作：
