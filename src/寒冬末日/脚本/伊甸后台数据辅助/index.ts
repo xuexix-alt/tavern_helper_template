@@ -835,7 +835,10 @@ function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
 
 const __shelterAbilitiesByLevel = parseShelterAbilitiesByLevel(shelterBlueprintRaw);
 
-function applyShelterUpgradeRewards(stat_data: any, level: number): {
+function applyShelterUpgradeRewards(
+  stat_data: any,
+  level: number,
+): {
   addedAbilities: string[];
   patchedMedicalWing: boolean;
   patchedVehicleHangar: boolean;
@@ -917,7 +920,8 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   const hasManual = Number.isFinite(manualMessageId) && manualMessageId > 0 && (!manualToday || manualToday === today);
 
   const lastDate = String(state.last_roll_date ?? '').trim();
-  const hasRollValue = Object.prototype.hasOwnProperty.call(state, 'last_roll_value') && (state as any).last_roll_value !== undefined;
+  const hasRollValue =
+    Object.prototype.hasOwnProperty.call(state, 'last_roll_value') && (state as any).last_roll_value !== undefined;
   const alreadyRolledToday = lastDate === today && hasRollValue;
 
   const crossedDay = (() => {
@@ -964,7 +968,8 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   const nextState = lastDate ? state : readShelterUpgradeState();
   const nextLastDate = String(nextState.last_roll_date ?? '').trim();
   const nextHasRollValue =
-    Object.prototype.hasOwnProperty.call(nextState, 'last_roll_value') && (nextState as any).last_roll_value !== undefined;
+    Object.prototype.hasOwnProperty.call(nextState, 'last_roll_value') &&
+    (nextState as any).last_roll_value !== undefined;
   const nextAlreadyRolledToday = nextLastDate === today && nextHasRollValue;
 
   const needRollByDate = (() => {

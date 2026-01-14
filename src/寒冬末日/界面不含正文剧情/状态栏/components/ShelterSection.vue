@@ -395,7 +395,8 @@ function markShelterUiSeen(next: Partial<{ roll_event_id: string; ability_event_
     (vars: any) => {
       const base = _.get(vars, 'eden.ui.seen', {}) ?? {};
       const merged = base && typeof base === 'object' && !Array.isArray(base) ? { ...(base as any) } : {};
-      if (typeof next.roll_event_id === 'string' && next.roll_event_id) merged.shelter_roll_event_id = next.roll_event_id;
+      if (typeof next.roll_event_id === 'string' && next.roll_event_id)
+        merged.shelter_roll_event_id = next.roll_event_id;
       if (typeof next.ability_event_id === 'string' && next.ability_event_id)
         merged.shelter_ability_event_id = next.ability_event_id;
       _.set(vars, 'eden.ui.seen', merged);
