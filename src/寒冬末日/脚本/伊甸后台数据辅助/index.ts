@@ -944,7 +944,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   const settleSource = needRollByManual ? 'manual' : 'script';
   const metaMessageId = (needRollByManual ? manualMessageId : getLastMessageIdSafe()) ?? 0;
 
-  // 若今天已经有 roll_history 记录，则以它为准回写 roll 文本，避免 MVU “无更新取旧值”导致 UI 混淆。
+  // 若今天已经有 roll_history 记录，则以它为准回写 roll/天数字段，避免 MVU “无更新取旧值”导致 UI 混淆。
   if (nextAlreadyHasHistoryToday) {
     const roll = (historyEntryToday as any)?.roll ?? null;
     const upgraded = (historyEntryToday as any)?.upgraded === true;
@@ -952,6 +952,15 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
     const text = formatRollText(roll, upgraded, reason === 'guarantee' ? 'guarantee' : undefined);
     if (String(_.get(stat_data, ['庇护所', '今日投掷点数'], '') ?? '') !== text) {
       _.set(stat_data, ['庇护所', '今日投掷点数'], text);
+    }
+
+    const days =
+      Number.isFinite((nextState as any).days_since_upgrade) && (nextState as any).days_since_upgrade >= 0
+        ? Math.floor((nextState as any).days_since_upgrade)
+        : parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
+    const distText = formatDistanceText(days);
+    if (String(_.get(stat_data, ['庇护所', '距离上次升级'], '') ?? '') !== distText) {
+      _.set(stat_data, ['庇护所', '距离上次升级'], distText);
     }
   }
 

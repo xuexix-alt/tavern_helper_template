@@ -16,10 +16,10 @@
         </div>
         <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
         <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
-          📅 校准日期
+          📅 校准日期和roll点
         </button>
       </div>
-      <div class="shelter-item">
+      <div class="shelter-item distance-item">
         <div class="label">⏳ 距离下次保底升级</div>
         <div class="value">{{ store.data.庇护所.距离上次升级 }}</div>
       </div>
@@ -928,6 +928,20 @@ function formatRoomResidents(
   font-size: 0.68em;
   line-height: 1.4;
   opacity: 0.95;
+}
+
+.distance-item .label {
+  /* 保持 DOM 结构不动，只修正文案（避免因编码/表情符号导致的补丁匹配问题） */
+  position: relative;
+  color: transparent;
+}
+
+.distance-item .label::after {
+  content: '⏳ 距离上次保底升级';
+  position: absolute;
+  inset: 0;
+  color: var(--text-color);
+  pointer-events: none;
 }
 
 .scope-hint {
