@@ -895,9 +895,13 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
             last_roll_reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
             last_roll_source: 'seed',
             roll_history: {
-              ...(typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history ? (prev as any).roll_history : {}),
+              ...(typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history
+                ? (prev as any).roll_history
+                : {}),
               ...(Object.prototype.hasOwnProperty.call(
-                typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history ? (prev as any).roll_history : {},
+                typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history
+                  ? (prev as any).roll_history
+                  : {},
                 seedDate,
               )
                 ? {}
@@ -905,8 +909,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
                     [seedDate]: {
                       roll: seededRoll.roll,
                       upgraded: seededRoll.upgraded,
-                      reason:
-                        seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
+                      reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
                       source: 'seed',
                       ts: new Date().toISOString(),
                       message_id: seededMessageId,
