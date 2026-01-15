@@ -331,7 +331,8 @@ const store = useDataStore();
 const scopeStore = useShelterScopeStore();
 const currentMessageId = Number(getCurrentMessageId());
 
-function readShelterUpgradeMeta(): {
+function readShelterUpgradeMeta(worldDate: string): {
+  last_roll_date: string;
   last_roll_message_id: number;
   last_level_message_id: number;
   last_ability_message_id: number;
@@ -345,8 +346,12 @@ function readShelterUpgradeMeta(): {
   try {
     const vars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
     const raw = _.get(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, {}) ?? {};
+    const rollHistory = (raw as any)?.roll_history ?? {};
+    const entry = worldDate && rollHistory && typeof rollHistory === 'object' ? (rollHistory as any)[worldDate] : null;
     return {
-      last_roll_message_id: Number((raw as any)?.last_roll_message_id ?? 0) || 0,
+      last_roll_date: String((raw as any)?.last_roll_date ?? '').trim(),
+      // v2: roll NEW 绑定到 roll_history[日期].message_id（比 message_hash 锚点更稳定）
+      last_roll_message_id: Number((entry as any)?.message_id ?? (raw as any)?.last_roll_message_id ?? 0) || 0,
       last_level_message_id: Number((raw as any)?.last_level_message_id ?? 0) || 0,
       last_ability_message_id: Number((raw as any)?.last_ability_message_id ?? 0) || 0,
       last_roll_source: String((raw as any)?.last_roll_source ?? '').trim(),
@@ -360,6 +365,7 @@ function readShelterUpgradeMeta(): {
     };
   } catch {
     return {
+      last_roll_date: '',
       last_roll_message_id: 0,
       last_level_message_id: 0,
       last_ability_message_id: 0,
@@ -373,7 +379,8 @@ function readShelterUpgradeMeta(): {
   }
 }
 
-const shelterMeta = readShelterUpgradeMeta();
+const worldDate = computed(() => String((store.data as any)?.世界?.日期 ?? '').trim());
+const shelterMeta = computed(() => readShelterUpgradeMeta(worldDate.value));
 function readShelterUiSeen(): { roll_event_id: string; ability_event_id: string } {
   try {
     const vars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
@@ -408,45 +415,45 @@ function markShelterUiSeen(next: Partial<{ roll_event_id: string; ability_event_
 
 const isNewDailyRoll = computed(
   () =>
-    Number.isFinite(currentMessageId) &&
-    currentMessageId > 0 &&
-    currentMessageId === shelterMeta.last_roll_message_id &&
-    shelterMeta.last_roll_source !== 'seed' &&
-    shelterMeta.last_roll_settled === true &&
-    !!shelterMeta.last_roll_event_id &&
-    shelterMeta.last_roll_event_id !== seen.roll_event_id,
+    !!worldDate.value &&
+    worldDate.value === shelterMeta.value.last_roll_date &&
+    shelterMeta.value.last_roll_source !== 'seed' &&
+    shelterMeta.value.last_roll_settled === true &&
+    !!shelterMeta.value.last_roll_event_id &&
+    shelterMeta.value.last_roll_event_id !== seen.roll_event_id,
 );
 const isNewShelterLevel = computed(
   () =>
-    Number.isFinite(currentMessageId) && currentMessageId > 0 && currentMessageId === shelterMeta.last_level_message_id,
+    Number.isFinite(currentMessageId) &&
+    currentMessageId > 0 &&
+    currentMessageId === shelterMeta.value.last_level_message_id,
 );
 const isNewAbilityList = computed(
   () =>
-    Number.isFinite(currentMessageId) &&
-    currentMessageId > 0 &&
-    currentMessageId === shelterMeta.last_ability_message_id &&
-    shelterMeta.last_ability_changed === true &&
-    !!shelterMeta.last_ability_event_id &&
-    shelterMeta.last_ability_event_id !== seen.ability_event_id,
+    !!worldDate.value &&
+    worldDate.value === shelterMeta.value.last_roll_date &&
+    shelterMeta.value.last_ability_changed === true &&
+    !!shelterMeta.value.last_ability_event_id &&
+    shelterMeta.value.last_ability_event_id !== seen.ability_event_id,
 );
 
 if (isNewDailyRoll.value) {
-  markShelterUiSeen({ roll_event_id: shelterMeta.last_roll_event_id });
+  markShelterUiSeen({ roll_event_id: shelterMeta.value.last_roll_event_id });
 }
 
-const addedAbilitySet = new Set(shelterMeta.last_ability_added_names);
+const addedAbilitySet = computed(() => new Set(shelterMeta.value.last_ability_added_names));
 function isNewAbilityItem(name: string): boolean {
   const n = String(name ?? '').trim();
   if (!n) return false;
   if (!isNewAbilityList.value) return false;
-  return addedAbilitySet.has(n);
+  return addedAbilitySet.value.has(n);
 }
 
 function toggleAbilityExpanded() {
   const next = !isAbilityExpanded.value;
   isAbilityExpanded.value = next;
   if (next && isNewAbilityList.value) {
-    markShelterUiSeen({ ability_event_id: shelterMeta.last_ability_event_id });
+    markShelterUiSeen({ ability_event_id: shelterMeta.value.last_ability_event_id });
   }
 }
 // 默认折叠，保持原有交互

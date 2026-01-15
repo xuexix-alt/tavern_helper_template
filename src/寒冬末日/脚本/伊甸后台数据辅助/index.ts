@@ -497,22 +497,36 @@ const ShelterUpgradeStateSchema = z
     days_since_upgrade: z.coerce.number().prefault(0),
 
     // meta: 用于 UI 显示 NEW 标签、以及调试定位“谁生效了”
+    // roll_history: 以“日期”为粒度的一次性结算记录（用于防删楼刷点、以及回看旧日期时保持点数稳定）
+    roll_history: z
+      .record(
+        z.string(),
+        z
+          .object({
+            roll: z.union([z.coerce.number(), z.null()]),
+            upgraded: z.boolean(),
+            reason: z.string().prefault('normal'),
+            source: z.string().prefault('script'),
+            ts: z.string().prefault(''),
+            event_id: z.string().optional(),
+            message_id: z.coerce.number().optional(),
+            trigger: z.string().optional(),
+          })
+          .passthrough(),
+      )
+      .prefault({}),
     last_roll_value: z.union([z.coerce.number(), z.null()]).optional(),
     last_roll_upgraded: z.boolean().optional(),
     last_roll_reason: z.string().optional(),
     last_roll_source: z.string().optional(),
-    last_roll_message_id: z.coerce.number().optional(),
-    last_roll_message_hash: z.string().optional(),
     last_roll_event_id: z.string().optional(),
     last_roll_settled: z.boolean().optional(),
 
     last_level_message_id: z.coerce.number().optional(),
     last_level_source: z.string().optional(),
-    last_level_message_hash: z.string().optional(),
 
     last_ability_message_id: z.coerce.number().optional(),
     last_ability_source: z.string().optional(),
-    last_ability_message_hash: z.string().optional(),
     last_ability_changed: z.boolean().optional(),
     last_ability_event_id: z.string().optional(),
     last_ability_added_names: z.array(z.string()).optional(),
@@ -603,16 +617,6 @@ function isDateForward(today: string, last: string): boolean {
   return t > l;
 }
 
-function fnv1a32(text: string): string {
-  // 用于“删楼/重写导致 message_id 复用”场景的轻量自校验
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(16);
-}
-
 function createEventId(prefix: string): string {
   try {
     const uuid = (globalThis as any)?.crypto?.randomUUID?.();
@@ -623,131 +627,21 @@ function createEventId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
 }
 
-function getChatMessageTextForHash(message_id: number): string | null {
-  if (!Number.isFinite(message_id) || message_id <= 0) return null;
-  try {
-    const msgs: any[] = (globalThis as any).getChatMessages?.(`${message_id}-${message_id}`) ?? [];
-    const msg = Array.isArray(msgs) ? msgs[0] : null;
-    if (!msg) return null;
+function pruneRollHistory(history: Record<string, any>, keep: number): Record<string, any> {
+  const entries = Object.entries(history ?? {});
+  if (entries.length <= keep) return history ?? {};
 
-    // SillyTavern 常见字段：mes / swipes + swipe_id；Tavern Helper 也可能是 message
-    const mes = typeof msg.mes === 'string' ? msg.mes : typeof msg.message === 'string' ? msg.message : '';
-    if (mes && mes.trim()) return mes.trim();
-
-    const swipeId = Number(msg.swipe_id ?? 0);
-    const swipes = Array.isArray(msg.swipes) ? msg.swipes : null;
-    const swipeText = swipes && Number.isFinite(swipeId) ? swipes[swipeId] : null;
-    const s = String(swipeText ?? '').trim();
-    return s ? s : null;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeShelterUpgradeStateForTimeline(
-  today: string,
-  stat_data: any,
-  debugSetting: EdenDebugSetting,
-): ShelterUpgradeState {
-  const state = readShelterUpgradeState();
-
-  const todayNum = parseEdenDateToNumber(today);
-  const lastDate = String((state as any)?.last_roll_date ?? '').trim();
-  const lastNum = parseEdenDateToNumber(lastDate);
-
-  const lastRollMessageId = Number((state as any)?.last_roll_message_id ?? 0) || 0;
-  const lastRollHash = String((state as any)?.last_roll_message_hash ?? '').trim();
-
-  const lastLevelMessageId = Number((state as any)?.last_level_message_id ?? 0) || 0;
-  const lastLevelHash = String((state as any)?.last_level_message_hash ?? '').trim();
-
-  const lastAbilityMessageId = Number((state as any)?.last_ability_message_id ?? 0) || 0;
-  const lastAbilityHash = String((state as any)?.last_ability_message_hash ?? '').trim();
-
-  const missingAnchors: string[] = [];
-  const mismatchAnchors: string[] = [];
-
-  const validateAnchor = (kind: 'roll' | 'level' | 'ability', messageId: number, expectedHash: string) => {
-    if (!messageId || messageId <= 0) return;
-    const text = getChatMessageTextForHash(messageId);
-    if (!text) {
-      missingAnchors.push(kind);
-      return;
-    }
-    if (expectedHash) {
-      const nowHash = fnv1a32(text);
-      if (nowHash !== expectedHash) mismatchAnchors.push(kind);
-    }
-  };
-
-  validateAnchor('roll', lastRollMessageId, lastRollHash);
-  validateAnchor('level', lastLevelMessageId, lastLevelHash);
-  validateAnchor('ability', lastAbilityMessageId, lastAbilityHash);
-
-  const isFutureDate = todayNum != null && lastNum != null && lastNum > todayNum;
-  const needReset =
-    isFutureDate || missingAnchors.includes('roll') || mismatchAnchors.includes('roll') || missingAnchors.length > 0;
-
-  if (!needReset) return state;
-
-  const reason = isFutureDate
-    ? 'future_date'
-    : missingAnchors.length
-      ? 'missing_anchor'
-      : mismatchAnchors.length
-        ? 'mismatch_anchor'
-        : 'unknown';
-
-  patchShelterUpgradeState(prev => {
-    const next: any = { ...prev };
-
-    // 关键：清空 roll 记录，允许“重新跨天/手动校准”再次触发 roll
-    next.last_roll_date = '';
-    delete next.last_roll_value;
-    delete next.last_roll_upgraded;
-    delete next.last_roll_reason;
-    next.last_roll_source = 'reset';
-    next.last_roll_message_id = 0;
-    delete next.last_roll_message_hash;
-    delete next.last_roll_event_id;
-    delete next.last_roll_settled;
-
-    // NEW 标记依赖这些 message_id：锚点缺失/复用时一并清掉，避免 UI 永远指向旧楼层
-    if (missingAnchors.includes('level') || mismatchAnchors.includes('level') || isFutureDate) {
-      delete next.last_level_message_id;
-      delete next.last_level_source;
-      delete next.last_level_message_hash;
-    }
-    if (missingAnchors.includes('ability') || mismatchAnchors.includes('ability') || isFutureDate) {
-      delete next.last_ability_message_id;
-      delete next.last_ability_source;
-      delete next.last_ability_message_hash;
-      delete next.last_ability_changed;
-      delete next.last_ability_event_id;
-      delete next.last_ability_added_names;
-    }
-
-    // 天数以当前 stat_data 为准（防止“回滚剧情”后 chat 变量仍然是旧值）
-    next.days_since_upgrade = parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
-
-    return next;
+  const scored = entries.map(([k, v]) => {
+    const n = parseEdenDateToNumber(k);
+    return { k, v, n: n == null ? Number.POSITIVE_INFINITY : n };
   });
+  scored.sort((a, b) => a.n - b.n);
 
-  edenLog(
-    'warn',
-    'daily_roll.meta.reset',
-    {
-      today,
-      last_roll_date: lastDate,
-      last_roll_message_id: lastRollMessageId,
-      missingAnchors,
-      mismatchAnchors,
-      reason,
-    },
-    debugSetting,
-  );
-
-  return readShelterUpgradeState();
+  const sliced = scored.slice(Math.max(0, scored.length - keep));
+  return sliced.reduce<Record<string, any>>((acc, x) => {
+    acc[x.k] = x.v;
+    return acc;
+  }, {});
 }
 
 function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
@@ -835,6 +729,19 @@ function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
 
 const __shelterAbilitiesByLevel = parseShelterAbilitiesByLevel(shelterBlueprintRaw);
 
+function normalizeAbilityName(name: any): string {
+  // 统一“智能引号”等字符，避免同一能力被 AI 写出多个 key（导致误判 NEW / addedAbilities）
+  const s = String(name ?? '').trim();
+  if (!s) return '';
+  return s
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[（]/g, '(')
+    .replace(/[）]/g, ')')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function applyShelterUpgradeRewards(
   stat_data: any,
   level: number,
@@ -847,26 +754,60 @@ function applyShelterUpgradeRewards(
 
   const beforeRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
   const beforeKeys = beforeRecord && typeof beforeRecord === 'object' ? Object.keys(beforeRecord as any) : [];
+  const beforeNorm = new Set(beforeKeys.map(k => normalizeAbilityName(k)).filter(Boolean));
 
   const abilityRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
   if (!abilityRecord || typeof abilityRecord !== 'object') _.set(stat_data, ['庇护所', '庇护所能力'], {});
 
-  const merged: Record<string, { desc: string }> = { ...(_.get(stat_data, ['庇护所', '庇护所能力']) ?? {}) };
-  for (let i = 1; i <= lv; i++) {
-    for (const ab of __shelterAbilitiesByLevel[i] ?? []) {
-      const existing = merged[ab.name];
-      if (!existing) {
-        merged[ab.name] = { desc: ab.desc };
-        continue;
-      }
-      const oldDesc = String((existing as any)?.desc ?? '').trim();
-      if (!oldDesc && ab.desc) merged[ab.name] = { desc: ab.desc };
+  // 先把当前能力表去重（按 normalizeAbilityName），合并 desc，避免产生“同能力多个 key”
+  const rawMerged: Record<string, { desc: string }> = { ...(_.get(stat_data, ['庇护所', '庇护所能力']) ?? {}) };
+  const deduped: Record<string, { desc: string }> = {};
+  const normToKey = new Map<string, string>();
+  for (const [k, v] of Object.entries(rawMerged)) {
+    const key = String(k ?? '').trim();
+    if (!key) continue;
+    const norm = normalizeAbilityName(key);
+    if (!norm) continue;
+    const desc = String((v as any)?.desc ?? '').trim();
+    const existKey = normToKey.get(norm);
+    if (!existKey) {
+      normToKey.set(norm, key);
+      deduped[key] = { desc };
+      continue;
+    }
+    const old = String((deduped[existKey] as any)?.desc ?? '').trim();
+    // 优先保留信息量更大的描述，避免丢字；否则保留已有
+    if ((!old && desc) || (desc && desc.length > old.length)) {
+      deduped[existKey] = { desc };
     }
   }
-  _.set(stat_data, ['庇护所', '庇护所能力'], merged);
 
-  const afterKeys = Object.keys(merged);
-  const addedAbilities = afterKeys.filter(k => !beforeKeys.includes(k));
+  const addedAbilities: string[] = [];
+  const merged: Record<string, { desc: string }> = { ...deduped };
+
+  for (let i = 1; i <= lv; i++) {
+    for (const ab of __shelterAbilitiesByLevel[i] ?? []) {
+      const name = String(ab.name ?? '').trim();
+      const norm = normalizeAbilityName(name);
+      if (!norm) continue;
+
+      const existingKey = normToKey.get(norm);
+      if (!existingKey) {
+        // 不存在：以蓝图名作为 canonical key 插入
+        normToKey.set(norm, name);
+        merged[name] = { desc: ab.desc };
+        if (!beforeNorm.has(norm)) addedAbilities.push(name);
+        continue;
+      }
+
+      // 已存在：仅在 desc 为空时补全，避免覆盖玩家/AI 写的更详细版本
+      const existing = merged[existingKey];
+      const oldDesc = String((existing as any)?.desc ?? '').trim();
+      if (!oldDesc && ab.desc) merged[existingKey] = { desc: ab.desc };
+    }
+  }
+
+  _.set(stat_data, ['庇护所', '庇护所能力'], merged);
 
   // 可扩展区域：只按“明确等级解锁”的部分做同步，避免覆盖任务解锁逻辑
   const beforeMed = String(_.get(stat_data, ['庇护所', '可扩展区域', '医疗翼'], '') ?? '');
@@ -912,7 +853,8 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   if (!today) return;
   const yesterday = String(_.get(old_stat_data, ['世界', '日期'], '') ?? '').trim();
 
-  const state = normalizeShelterUpgradeStateForTimeline(today, stat_data, debugSetting);
+  const state = readShelterUpgradeState();
+  const history0: Record<string, any> = ((state as any).roll_history as any) ?? {};
 
   const manualReq = (state as any)?.manual_request ?? null;
   const manualMessageId = Number((manualReq as any)?.message_id ?? 0);
@@ -923,6 +865,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   const hasRollValue =
     Object.prototype.hasOwnProperty.call(state, 'last_roll_value') && (state as any).last_roll_value !== undefined;
   const alreadyRolledToday = lastDate === today && hasRollValue;
+  const alreadyHasHistoryToday = Object.prototype.hasOwnProperty.call(history0, today);
 
   const crossedDay = (() => {
     if (!yesterday) return false;
@@ -951,7 +894,26 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
             last_roll_upgraded: seededRoll.upgraded,
             last_roll_reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
             last_roll_source: 'seed',
-            last_roll_message_id: seededMessageId,
+            roll_history: {
+              ...(typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history ? (prev as any).roll_history : {}),
+              ...(Object.prototype.hasOwnProperty.call(
+                typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history ? (prev as any).roll_history : {},
+                seedDate,
+              )
+                ? {}
+                : {
+                    [seedDate]: {
+                      roll: seededRoll.roll,
+                      upgraded: seededRoll.upgraded,
+                      reason:
+                        seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
+                      source: 'seed',
+                      ts: new Date().toISOString(),
+                      message_id: seededMessageId,
+                      trigger: 'seed',
+                    },
+                  }),
+            },
           }
         : {}),
     }));
@@ -966,33 +928,32 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
 
   // 重新读取一次，确保 last_roll_date/天数已就绪（本次事件内写回 chat 变量不会影响 new_variables，但这里用于逻辑判断即可）
   const nextState = lastDate ? state : readShelterUpgradeState();
+  const history: Record<string, any> = ((nextState as any).roll_history as any) ?? {};
+  const historyEntryToday = Object.prototype.hasOwnProperty.call(history, today) ? history[today] : null;
   const nextLastDate = String(nextState.last_roll_date ?? '').trim();
   const nextHasRollValue =
     Object.prototype.hasOwnProperty.call(nextState, 'last_roll_value') &&
     (nextState as any).last_roll_value !== undefined;
   const nextAlreadyRolledToday = nextLastDate === today && nextHasRollValue;
+  const nextAlreadyHasHistoryToday = !!historyEntryToday;
 
-  const needRollByDate = (() => {
-    if (!crossedDay) return false;
-    if (!nextLastDate) return true;
-    if (nextLastDate === today) {
-      if (!nextAlreadyRolledToday) return true;
-
-      // 修复：旧版本可能在“刚跨天”时把 last_roll_date 直接 seed 成 today，导致跨天这一轮永远不会 roll。
-      // 若本次事件确实是 yesterday->today，且记录来源仍为 seed（且缺少可信 message_id），则强制补一次 roll。
-      const src = String((nextState as any)?.last_roll_source ?? '').trim();
-      const mid = Number((nextState as any)?.last_roll_message_id ?? 0) || 0;
-      if (yesterday && yesterday !== today && src === 'seed' && mid <= 0) return true;
-
-      return false;
-    }
-    return isDateForward(today, nextLastDate);
-  })();
-  const needRollByManual = hasManual && !nextAlreadyRolledToday;
+  const needRollByDate = crossedDay && !nextAlreadyHasHistoryToday;
+  const needRollByManual = hasManual && !nextAlreadyHasHistoryToday;
   const needRoll = needRollByDate || needRollByManual;
 
   const settleSource = needRollByManual ? 'manual' : 'script';
   const metaMessageId = (needRollByManual ? manualMessageId : getLastMessageIdSafe()) ?? 0;
+
+  // 若今天已经有 roll_history 记录，则以它为准回写 roll 文本，避免 MVU “无更新取旧值”导致 UI 混淆。
+  if (nextAlreadyHasHistoryToday) {
+    const roll = (historyEntryToday as any)?.roll ?? null;
+    const upgraded = (historyEntryToday as any)?.upgraded === true;
+    const reason = String((historyEntryToday as any)?.reason ?? '').trim();
+    const text = formatRollText(roll, upgraded, reason === 'guarantee' ? 'guarantee' : undefined);
+    if (String(_.get(stat_data, ['庇护所', '今日投掷点数'], '') ?? '') !== text) {
+      _.set(stat_data, ['庇护所', '今日投掷点数'], text);
+    }
+  }
 
   // 未触发 roll：仅清理 manual_request（避免重复触发）
   if (!needRoll) {
@@ -1004,9 +965,9 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
           crossedDay,
           last_roll_date: nextLastDate,
           alreadyRolledToday: nextAlreadyRolledToday,
+          alreadyHasHistoryToday: nextAlreadyHasHistoryToday,
           hasManual,
           last_roll_source: (nextState as any)?.last_roll_source ?? '',
-          last_roll_message_id: (nextState as any)?.last_roll_message_id ?? 0,
         })}`,
       );
     }
@@ -1150,18 +1111,32 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
       last_roll_upgraded: upgraded,
       last_roll_reason: reason,
       last_roll_source: source,
-      last_roll_message_id: metaMessageId,
       last_roll_event_id: rollEventId,
       last_roll_settled: true,
     } as any;
 
-    const anchorText = getChatMessageTextForHash(metaMessageId);
-    if (anchorText) next.last_roll_message_hash = fnv1a32(anchorText);
+    const prevHistory: Record<string, any> =
+      prev && typeof prev === 'object' && !Array.isArray(prev) && typeof (prev as any).roll_history === 'object'
+        ? ((prev as any).roll_history ?? {})
+        : {};
+    const nextHistory = {
+      ...prevHistory,
+      [today]: {
+        roll,
+        upgraded,
+        reason,
+        source,
+        ts: new Date().toISOString(),
+        event_id: rollEventId,
+        message_id: metaMessageId,
+        trigger: needRollByManual ? 'manual' : 'auto',
+      },
+    };
+    next.roll_history = pruneRollHistory(nextHistory, 120);
 
     if (didLevelUp) {
       next.last_level_message_id = metaMessageId;
       next.last_level_source = source;
-      if (anchorText) next.last_level_message_hash = fnv1a32(anchorText);
     }
 
     // 能力列表 NEW：仅在“新增能力条目”时点亮，避免仅修补可扩展区域等也显示 NEW
@@ -1169,7 +1144,6 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
     if (didAbilityListChange) {
       next.last_ability_message_id = metaMessageId;
       next.last_ability_source = source;
-      if (anchorText) next.last_ability_message_hash = fnv1a32(anchorText);
       next.last_ability_event_id = abilityEventId;
       next.last_ability_added_names = rewardDiff.addedAbilities.slice();
     }
