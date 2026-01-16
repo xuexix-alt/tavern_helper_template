@@ -62,9 +62,9 @@
       }
     },
     "data_structure": {
-      "target_path": "/店铺列表",
-      "operation": "add",
-      "key_structure": "ShopID (Key) -> ShopObject (Value)",
+      "target_path": "/店铺列表/-",
+      "operation": "insert",
+      "key_structure": "Append item to array (path /店铺列表/-)",
       "fields": {
         "shopname": "店铺名称",
         "shop_id": "YYYYMMDD001",
@@ -97,8 +97,8 @@
           "tag": "<json_patch>",
           "content": [
             {
-              "op": "add",
-              "path": "/店铺列表",
+              "op": "insert",
+              "path": "/店铺列表/-",
               "value": {
                 "shopname": "{店铺名称}",
                 "shop_id": 20251122001,
