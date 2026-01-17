@@ -15,6 +15,16 @@ type EdenDebugSetting = {
   toChat: boolean;
 };
 
+const EDEN_HELPER_VERSION = '1.0';
+const EDEN_HELPER_ACTIVE_INSTANCE_KEY = '__eden_helper_active_instance__';
+const EDEN_HELPER_INSTANCE_ID = (() => {
+  try {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  } catch {
+    return String(Date.now());
+  }
+})();
+
 const EDEN_HELPER_DEBUG_FLAG_PATH = 'eden.debug.eden_helper';
 const EDEN_HELPER_DEBUG_TO_CHAT_FLAG_PATH = 'eden.debug.to_chat';
 const EDEN_HELPER_DEBUG_LOG_PATH = 'eden.debug.eden_helper_log';
@@ -84,25 +94,68 @@ function resolveEdenDebugSetting(): EdenDebugSetting {
   }
 }
 
+function getHostGlobal(): any {
+  // 在 SillyTavern 中脚本运行于 iframe，顶层 window 可作为“跨重载”的共享存储。
+  try {
+    return (window.top ?? window) as any;
+  } catch {
+    return window as any;
+  }
+}
+
+function markThisInstanceActive() {
+  try {
+    const host = getHostGlobal();
+    host[EDEN_HELPER_ACTIVE_INSTANCE_KEY] = {
+      id: EDEN_HELPER_INSTANCE_ID,
+      version: EDEN_HELPER_VERSION,
+      scriptId: typeof getScriptId === 'function' ? (getScriptId() as any) : null,
+      ts: new Date().toISOString(),
+    };
+  } catch {
+    // ignore
+  }
+}
+
+function isActiveInstance(): boolean {
+  try {
+    const host = getHostGlobal();
+    const cur = host?.[EDEN_HELPER_ACTIVE_INSTANCE_KEY];
+    // 若宿主没写入 active key（极端环境），默认放行，避免脚本“完全失效”。
+    if (!cur || typeof cur !== 'object') return true;
+    return cur.id === EDEN_HELPER_INSTANCE_ID;
+  } catch {
+    return true;
+  }
+}
+
 function edenLog(
   level: 'debug' | 'info' | 'warn' | 'error',
   event: string,
   payload?: Record<string, any>,
   debugSetting?: EdenDebugSetting,
 ) {
+  if (!isActiveInstance()) return;
   const debug = debugSetting ?? resolveEdenDebugSetting();
   if (!debug.enabled) return;
+
+  const zh = typeof payload?.zh === 'string' ? (payload.zh as string) : '';
+  const payloadForPrint = payload ? { ...payload } : undefined;
+  if (payloadForPrint && 'zh' in payloadForPrint) delete (payloadForPrint as any).zh;
 
   const record = {
     ts: new Date().toISOString(),
     level,
     event,
+    ...(zh ? { zh } : {}),
     ...(payload ? payload : {}),
   };
 
   if (debug.toConsole) {
     // eslint-disable-next-line no-console
-    (console as any)?.[level]?.(`[eden/helper] ${safeStringify(record)}`);
+    const head = zh ? `${zh} (${event})` : event;
+    const tail = payloadForPrint ? ` ${safeStringify(payloadForPrint)}` : '';
+    (console as any)?.[level]?.(`[eden/helper] ${head}${tail}`);
   }
 
   if (debug.toChat && typeof updateVariablesWith === 'function') {
@@ -115,6 +168,7 @@ function edenLog(
             ts: record.ts,
             level: record.level,
             event: record.event,
+            zh: record.zh ?? '',
             data: payload ? safeStringify(payload) : '',
           });
           if (list.length > EDEN_HELPER_DEBUG_LOG_MAX) list.splice(0, list.length - EDEN_HELPER_DEBUG_LOG_MAX);
@@ -170,6 +224,7 @@ function ensureDebugButtons() {
   ]);
 
   eventOn(getButtonEvent(DEBUG_BUTTON_TOGGLE), () => {
+    if (!isActiveInstance()) return;
     const cur = readChatDebugFlag('eden.debug.eden_helper');
     const next = !cur;
     writeChatDebugFlags({
@@ -180,16 +235,17 @@ function ensureDebugButtons() {
     });
     toastr?.info?.(`伊甸调试：${next ? '已开启' : '已关闭'}`);
     // eslint-disable-next-line no-console
-    console.log(`[eden/helper] debug toggled via button ${safeStringify({ enabled: next })}`);
+    console.log(`[eden/helper] 调试开关：${next ? '开启' : '关闭'} ${safeStringify({ enabled: next })}`);
   });
 
   eventOn(getButtonEvent(DEBUG_BUTTON_TOGGLE_CHATLOG), () => {
+    if (!isActiveInstance()) return;
     const cur = readChatDebugFlag('eden.debug.to_chat');
     const next = !cur;
     writeChatDebugFlags({ to_chat: next });
     toastr?.info?.(`伊甸调试写入日志：${next ? '已开启' : '已关闭'}`);
     // eslint-disable-next-line no-console
-    console.log(`[eden/helper] debug to_chat toggled via button ${safeStringify({ to_chat: next })}`);
+    console.log(`[eden/helper] 调试写入日志：${next ? '开启' : '关闭'} ${safeStringify({ to_chat: next })}`);
   });
 }
 
@@ -197,6 +253,19 @@ function readRoomDebugFlagFromChat(): boolean {
   const vars = getVariables({ type: 'chat' }) ?? {};
   const debug = _.get(vars, 'eden.debug', {}) ?? {};
   return _.get(debug, 'room_logic', false) === true;
+}
+
+function notifyEdenHelperLoaded() {
+  try {
+    if (!isActiveInstance()) return;
+    const id = typeof getScriptId === 'function' ? String(getScriptId() ?? 'unknown') : 'unknown';
+    const key = `eden.helper.loaded.${id}.v${EDEN_HELPER_VERSION}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    toastr?.success?.(`伊甸后台数据辅助 v${EDEN_HELPER_VERSION} 加载成功`);
+  } catch {
+    // ignore
+  }
 }
 
 function listRoomTagsFromRooms(rooms: Rooms): string[] {
@@ -322,10 +391,10 @@ function bootstrapMissingRoleRoomTagsFromRooms(stat_data: any, debug: boolean) {
     patched.push({ name, tag });
   }
 
-  if (debug && patched.length > 0) {
-    console.log('[RoomLogic] bootstrapped missing role tags from rooms:', patched);
+    if (debug && patched.length > 0) {
+      console.log('[房间逻辑] 已从「房间」表补齐缺失的角色所在房间标签:', patched);
+    }
   }
-}
 
 function keepUnknownNames(list: any, known: Set<string>): string[] {
   if (!Array.isArray(list)) return [];
@@ -440,7 +509,7 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
       if (oldTag !== newTag || newTag !== finalTag)
         mismatch.push({ name, old: oldTag, next: newTag, final: finalTag, reason });
     }
-    if (mismatch.length > 0) console.log('[RoomLogic] tag reconcile:', mismatch);
+      if (mismatch.length > 0) console.log('[房间逻辑] 房间标签对齐详情:', mismatch);
 
     const dup: Array<{ name: string; tags: string[] }> = [];
     const writeTags = allTags;
@@ -448,15 +517,15 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
       const tags = writeTags.filter(t => (readRoomListByTag(nextRooms, t) ?? []).includes(name));
       if (tags.length > 1) dup.push({ name, tags });
     }
-    if (dup.length > 0) console.log('[RoomLogic] still duplicated after reconcile:', dup);
+      if (dup.length > 0) console.log('[房间逻辑] 对齐后仍存在多房间重复占用:', dup);
 
     const reasons = [...finalReasonByName.entries()].reduce<Record<string, number>>((acc, [, r]) => {
       acc[r] = (acc[r] ?? 0) + 1;
       return acc;
     }, {});
-    console.log('[RoomLogic] reconcile summary:', reasons);
+      console.log('[房间逻辑] 对齐原因统计:', reasons);
+    }
   }
-}
 
 type ScopeDelta = {
   add?: ShelterScopeByFloor;
@@ -1415,13 +1484,96 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
     edenLog(
       'warn',
       'stage_sanitize.force_offstage',
-      { role: name, rolePath, reason: 'onstage_unchanged_and_no_updates' },
+      {
+        zh: `回拨「${name}」的登场状态为「离场」（AI 未改登场状态且本轮无字段更新）`,
+        role: name,
+        rolePath,
+        reason: 'onstage_unchanged_and_no_updates',
+      },
       debugSetting,
     );
   }
 
   if (patched.length > 0) {
-    edenLog('info', 'stage_sanitize.summary', { patchedCount: patched.length, patched }, debugSetting);
+    edenLog(
+      'info',
+      'stage_sanitize.summary',
+      {
+        zh: `登场状态清洗完成：共回拨 ${patched.length} 名角色为「离场」`,
+        patchedCount: patched.length,
+        patched,
+      },
+      debugSetting,
+    );
+  }
+}
+
+  /**
+   * 登场状态反向回拨（针对“角色实际有字段更新，但登场状态还停留在离场”的局面）
+   *
+   * 规则（按用户需求，且尽量保守）：
+   * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
+   * - 仅当：旧值为【离场】、新值仍为【离场】、且角色对象出现任何字段更新
+   *   => 视为“忘拨回登场”，脚本强制改为【登场】
+   */
+  function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+    const { core, tempNpc } = listRoleNames(stat_data);
+    const all = [...core, ...tempNpc];
+
+    const patched: Array<{ name: string; path: string; changedKeys: string[] }> = [];
+
+    for (const name of all) {
+      const isTemp = tempNpc.includes(name);
+      const rolePath = isTemp ? `临时NPC.${name}` : name;
+
+    const newRole = _.get(stat_data, rolePath, null);
+    const oldRole = _.get(old_stat_data, rolePath, null);
+    if (!newRole || typeof newRole !== 'object') continue;
+    if (!oldRole || typeof oldRole !== 'object') continue;
+
+    const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
+    const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
+
+      // 只处理“旧离场、且 AI 未改登场状态”的情况
+      if (oldStage !== '离场') continue;
+      if (oldStage !== newStage) continue;
+
+      // 只要 AI 本轮写入了任何字段（角色对象发生变化），就认为该角色“实际在场”。
+      if (_.isEqual(oldRole, newRole)) continue;
+
+      const IGNORE_KEYS = new Set(['登场状态']);
+      const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
+      const changedKeys = keys.filter(k => !IGNORE_KEYS.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]));
+      if (changedKeys.length === 0) continue;
+
+      _.set(stat_data, `${rolePath}.登场状态`, '登场');
+      patched.push({ name, path: rolePath, changedKeys: changedKeys.slice() });
+
+      edenLog(
+        'warn',
+        'stage_sanitize.force_onstage',
+        {
+          zh: `回拨「${name}」的登场状态为「登场」（检测到字段更新：${changedKeys.slice(0, 8).join('、')}${changedKeys.length > 8 ? ` 等${changedKeys.length}项` : ''}）`,
+          role: name,
+          rolePath,
+          reason: 'offstage_unchanged_but_role_updated',
+          changedKeys,
+        },
+        debugSetting,
+      );
+    }
+
+  if (patched.length > 0) {
+    edenLog(
+      'info',
+      'stage_sanitize.summary.force_onstage',
+      {
+        zh: `离场状态校准完成：共回拨 ${patched.length} 名角色为「登场」`,
+        patchedCount: patched.length,
+        patched,
+      },
+      debugSetting,
+    );
   }
 }
 
@@ -1446,10 +1598,10 @@ function applyAutoStageFromThoughtUpdateIfNeeded(
   if (tag !== '离场') return;
 
   if (debug.offstageHealth) {
-    console.log(`[Offstage] auto stage: ${roleName} is 离场 because thought updated.`);
+    console.log(`[登场状态] 「${roleName}」内心想法已更新，登场状态自动回拨为「登场」`);
   }
 
-  _.set(newRole, '登场状态', '离场');
+  _.set(newRole, '登场状态', '登场');
 }
 
 function applyDeathFromNegativeImprintIfNeeded(
@@ -1466,13 +1618,14 @@ function applyDeathFromNegativeImprintIfNeeded(
   if (mark >= 0) return;
 
   if (debug.offstageHealth) {
-    console.log(`[Death] ${roleName} died from negative imprint: ${mark}`);
+    console.log(`[死亡判定] 「${roleName}」Imp=${mark}（<0），判定精神崩溃自杀：健康清零`);
   }
 
   _.set(stat_data, `${rolePath}.健康`, 0);
   _.set(stat_data, `${rolePath}.健康更新原因`, '死亡（Imp<0 触发精神崩溃自杀）');
   _.set(stat_data, `${rolePath}.健康状况`, '死亡');
-  _.set(stat_data, `${rolePath}.秩序刻印`, 0);
+  // Imp<0 自杀：按规则保留负值，不清零（仅规范化为 number）
+  _.set(stat_data, `${rolePath}.秩序刻印`, mark);
   _.set(stat_data, `${rolePath}.秩序刻印更新原因`, '');
   _.set(stat_data, `${rolePath}.登场状态`, '离场');
   _.set(stat_data, `${rolePath}.衣着`, '');
@@ -1524,7 +1677,7 @@ function applyDeathFromZeroHealthIfNeeded(
 
   if (debug.offstageHealth) {
     console.log(
-      `[Death] ${roleName} died from health<=0 ${safeStringify({ health, reason, diedFromNegativeImprint })}`,
+      `[死亡判定] 「${roleName}」健康<=0，判定死亡 ${safeStringify({ health, reason, diedFromNegativeImprint })}`,
     );
   }
 }
@@ -1573,7 +1726,7 @@ function applyOffstageRoleHealthIfNeeded(
 
   if (debug.offstageHealth) {
     console.log(
-      `[Offstage] ${roleName} health ${currentHealth} -> ${nextHealth} (${reasonText}) ${safeStringify({
+      `[离场结算] 「${roleName}」健康 ${currentHealth} -> ${nextHealth}（${reasonText}）${safeStringify({
         deltaHours,
         sheltered,
         rules,
@@ -1585,13 +1738,22 @@ function applyOffstageRoleHealthIfNeeded(
 function applyDerivedRelationStage(rolePath: string, oldRole: RoleLike | null, newRole: RoleLike, stat_data: any) {
   const markRaw = newRole.秩序刻印;
   if (typeof markRaw !== 'number' && typeof markRaw !== 'string') return;
-  const stage = relationStageFromImprint(Number(markRaw));
+  const mark = Number(markRaw);
+  const stage = relationStageFromImprint(mark);
 
   const touched = diffRoleTouched(oldRole, newRole);
   if (touched.relation) return;
 
   if (newRole.关系 !== stage) {
+    const oldStage = String((newRole as any)?.关系 ?? '').trim();
     _.set(stat_data, `${rolePath}.关系`, stage);
+    edenLog('info', 'relation.auto_derived', {
+      zh: `Imp 达到 ${Number.isFinite(mark) ? mark : '?'}，自动调整「${rolePath}」关系为「${stage}」`,
+      rolePath,
+      imp: Number.isFinite(mark) ? mark : null,
+      relationBefore: oldStage,
+      relationAfter: stage,
+    });
   }
 }
 
@@ -1600,7 +1762,7 @@ function patchDateOnMidnightCrossIfNeeded(new_variables: any, old_variables: any
   const newTimeStr = _.get(new_variables, 'stat_data.世界.时间', '');
 
   if (oldTimeStr === newTimeStr) {
-    if (debug.dateLogic) console.log('[DateLogic] time unchanged; no date check.');
+    if (debug.dateLogic) console.log('[时间逻辑] 时间未变化：不检查日期');
     return;
   }
 
@@ -1611,34 +1773,34 @@ function patchDateOnMidnightCrossIfNeeded(new_variables: any, old_variables: any
   if (oldMinutes <= newMinutes) {
     if (debug.dateLogic) {
       console.log(
-        `[DateLogic] time changed but not crossing: ${oldTimeStr} -> ${newTimeStr} (oldMin=${oldMinutes}, newMin=${newMinutes})`,
+        `[时间逻辑] 时间变化但未跨天：${oldTimeStr} -> ${newTimeStr} (oldMin=${oldMinutes}, newMin=${newMinutes})`,
       );
     }
     return;
   }
 
-  console.log(`[DateLogic] Detected midnight crossing: ${oldTimeStr} -> ${newTimeStr}`);
+  console.log(`[时间逻辑] 检测到跨天：${oldTimeStr} -> ${newTimeStr}`);
 
   const oldDateStr = _.get(old_variables, 'stat_data.世界.日期', '');
   const newDateStr = _.get(new_variables, 'stat_data.世界.日期', '');
   if (oldDateStr !== newDateStr) {
-    if (debug.dateLogic) console.log(`[DateLogic] date already updated by AI: ${oldDateStr} -> ${newDateStr}`);
+    if (debug.dateLogic) console.log(`[时间逻辑] AI 已更新日期：${oldDateStr} -> ${newDateStr}`);
     return;
   }
 
   const parsed = parseDateStr(oldDateStr);
   if (!parsed) {
-    if (debug.dateLogic) console.log(`[DateLogic] cannot parse date string: ${oldDateStr}`);
+    if (debug.dateLogic) console.log(`[时间逻辑] 无法解析日期字符串：${oldDateStr}`);
     return;
   }
 
   const dateObj = new Date(parsed.year, parsed.month - 1, parsed.day);
   if (Number.isNaN(dateObj.getTime())) {
-    if (debug.dateLogic) console.log(`[DateLogic] cannot parse date to Date(): ${oldDateStr}`);
+    if (debug.dateLogic) console.log(`[时间逻辑] 无法转换为 Date：${oldDateStr}`);
     return;
   }
 
-  console.log('[DateLogic] AI did not update date, patching date/day...');
+  console.log('[时间逻辑] AI 未更新日期，脚本开始补全日期/天数...');
   dateObj.setDate(dateObj.getDate() + 1);
   const patched = formatDateStr(dateObj);
   _.set(new_variables, 'stat_data.世界.日期', patched);
@@ -1646,7 +1808,7 @@ function patchDateOnMidnightCrossIfNeeded(new_variables: any, old_variables: any
   const oldDays = _.get(new_variables, 'stat_data.世界.末日天数');
   if (typeof oldDays === 'number') _.set(new_variables, 'stat_data.世界.末日天数', oldDays + 1);
   const daysAfter = _.get(new_variables, 'stat_data.世界.末日天数');
-  console.log(`[DateLogic] patched date: ${oldDateStr} -> ${patched}; days: ${oldDays} -> ${daysAfter}`);
+  console.log(`[时间逻辑] 已补全日期：${oldDateStr} -> ${patched}; 天数: ${oldDays} -> ${daysAfter}`);
 }
 
 function applyOffstageBundle(new_variables: any, old_variables: any, scope: ShelterScopeByFloor) {
@@ -1673,12 +1835,12 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     const oldTimeStr = _.get(old_variables, 'stat_data.世界.时间', '');
     const newTimeStr = _.get(new_variables, 'stat_data.世界.时间', '');
     if (oldTimeStr !== newTimeStr) {
-      console.log(`[DateLogic] diffWorldHours=null ${safeStringify({ oldWorld, newWorld })}`);
+      console.log(`[时间逻辑] 无法计算世界时间差(diffWorldHours=null) ${safeStringify({ oldWorld, newWorld })}`);
     } else if (debug.dateLogic) {
-      console.log(`[DateLogic] diffWorldHours=null (time unchanged) ${safeStringify({ oldWorld, newWorld })}`);
+      console.log(`[时间逻辑] diffWorldHours=null（时间未变化）${safeStringify({ oldWorld, newWorld })}`);
     }
   } else if (debug.dateLogic) {
-    console.log(`[DateLogic] diffWorldHours=${deltaHours.toFixed(2)}`);
+    console.log(`[时间逻辑] 世界时间差(diffWorldHours)=${deltaHours.toFixed(2)}小时`);
   }
 
   const stat_data = _.get(new_variables, 'stat_data', {});
@@ -1738,23 +1900,53 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
   }
 }
 
-$(async () => {
-  ensureDebugButtons();
-  await waitGlobalInitialized('Mvu');
+  $(async () => {
+    ensureDebugButtons();
+    await waitGlobalInitialized('Mvu');
+    // 防止“脚本-实时修改/重载”导致重复监听：以顶层 window 为准，仅让最新实例生效。
+    markThisInstanceActive();
 
-  const baseDebug = resolveEdenDebugSetting();
-  edenLog('info', 'boot', { script: '伊甸后台数据辅助' }, baseDebug);
+    const baseDebug = resolveEdenDebugSetting();
+    notifyEdenHelperLoaded();
+    edenLog(
+      'info',
+      'boot',
+      {
+        zh: `伊甸后台数据辅助已启动 v${EDEN_HELPER_VERSION}（实例 ${EDEN_HELPER_INSTANCE_ID}）`,
+        script: '伊甸后台数据辅助',
+        version: EDEN_HELPER_VERSION,
+        instanceId: EDEN_HELPER_INSTANCE_ID,
+      },
+      baseDebug,
+    );
 
-  const first = (new_variables: any, old_variables: any) => {
-    const debugSetting = resolveEdenDebugSetting();
-    edenLog('debug', 'mvu.update_ended.first.begin', {}, debugSetting);
+  // MVU 更新变量时可能会“就地修改”对象，导致 VARIABLE_UPDATE_ENDED 的
+  // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
+  // 因此在 UPDATE_STARTED 时抓取一份深拷贝快照，供本轮 UPDATE_ENDED 使用。
+    let variablesBeforeUpdateSnapshot: any | null = null;
+    eventMakeFirst(Mvu.events.VARIABLE_UPDATE_STARTED, (variables: any) => {
+      if (!isActiveInstance()) return;
+      try {
+        variablesBeforeUpdateSnapshot = _.cloneDeep(variables);
+      } catch {
+        // best-effort: 保底不要影响后续逻辑
+      variablesBeforeUpdateSnapshot = variables;
+    }
+  });
+
+    const first = (new_variables: any, old_variables: any) => {
+      if (!isActiveInstance()) return;
+      const debugSetting = resolveEdenDebugSetting();
+      edenLog('debug', 'mvu.update_ended.first.begin', {}, debugSetting);
 
     try {
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
-      const old_stat_data = _.get(old_variables, 'stat_data', {}) ?? {};
+      const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
+      const old_stat_data = _.get(old_vars, 'stat_data', {}) ?? {};
 
       // 出场状态清洗：尽早处理，避免后续房间逻辑等改动干扰“AI本次是否写入字段”的判定
       sanitizeForgottenOnstageRoles(stat_data, old_stat_data, debugSetting);
+      sanitizeForgottenOffstageRoles(stat_data, old_stat_data, debugSetting);
 
       const roomDebug = readRoomDebugFlagFromChat();
       if (roomDebug) edenLog('debug', 'room_logic.begin', {}, debugSetting);
@@ -1762,7 +1954,7 @@ $(async () => {
       if (roomDebug) edenLog('debug', 'room_logic.end', {}, debugSetting);
 
       const debug = readDebugFlagsFromChat();
-      patchDateOnMidnightCrossIfNeeded(new_variables, old_variables, debug);
+      patchDateOnMidnightCrossIfNeeded(new_variables, old_vars, debug);
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       edenLog('error', 'mvu.update_ended.first.error', { reason }, debugSetting);
@@ -1771,15 +1963,17 @@ $(async () => {
     }
   };
 
-  const last = (new_variables: any, old_variables: any) => {
-    const debugSetting = resolveEdenDebugSetting();
-    edenLog('debug', 'mvu.update_ended.last.begin', {}, debugSetting);
+    const last = (new_variables: any, old_variables: any) => {
+      if (!isActiveInstance()) return;
+      const debugSetting = resolveEdenDebugSetting();
+      edenLog('debug', 'mvu.update_ended.last.begin', {}, debugSetting);
 
     try {
+      const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
 
       // 日更 roll / 升级结算：从 UI 剥离后由脚本统一处理（含手动校准触发）
-      applyShelterDailyRollIfNeeded(new_variables, old_variables, debugSetting);
+      applyShelterDailyRollIfNeeded(new_variables, old_vars, debugSetting);
       const shelterLevel = clampLevel(_.get(stat_data, ['庇护所', '庇护所等级'], 1));
 
       const currentScope = readShelterScopeFromChat();
@@ -1810,12 +2004,13 @@ $(async () => {
       // 清空触发器（保留字段本身），避免重复执行；并保证 AI 后续可继续 replace 该路径。
       if (delta) _.set(stat_data, ['庇护所', '庇护范围变更'], {});
 
-      applyOffstageBundle(new_variables, old_variables, nextScope);
+      applyOffstageBundle(new_variables, old_vars, nextScope);
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       edenLog('error', 'mvu.update_ended.last.error', { reason }, debugSetting);
     } finally {
       edenLog('debug', 'mvu.update_ended.last.end', {}, debugSetting);
+      variablesBeforeUpdateSnapshot = null;
     }
   };
 

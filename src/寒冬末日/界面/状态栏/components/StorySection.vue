@@ -52,6 +52,86 @@ const props = defineProps<{
   raw: string;
 }>();
 
+type ResolvedDisplayedImage = {
+  src: string;
+  alt: string;
+};
+
+// 生图插件升级后，图片可能不再写回到消息“原始文本”里，而是只在酒馆的“显示层 DOM”里插入 <img>。
+// 因此这里尝试从 retrieveDisplayedMessage(message_id) 中，把 image###...### 对应的图片 src 解析出来。
+const resolvedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
+
+function normalizeForMatch(s: string): string {
+  return String(s ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findNextImageElement(start: Element): HTMLImageElement | null {
+  // 先从当前元素的后续兄弟节点开始找 img；若没找到，则向上逐层父节点扩展范围。
+  let cur: Element | null = start;
+  while (cur) {
+    let sib = cur.nextElementSibling;
+    while (sib) {
+      if (sib.tagName === 'IMG') return sib as HTMLImageElement;
+      const inner = sib.querySelector?.('img');
+      if (inner) return inner as HTMLImageElement;
+      sib = sib.nextElementSibling;
+    }
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
+function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: string[]) {
+  if (!messageId || !Number.isFinite(messageId)) return {};
+  if (typeof retrieveDisplayedMessage !== 'function') return {};
+
+  const $mes = retrieveDisplayedMessage(messageId);
+  const root = $mes?.get?.(0) as HTMLElement | undefined;
+  if (!root) return {};
+
+  const promptEls = Array.from(root.querySelectorAll('pre, code, p, div, span'))
+    .filter(el => normalizeForMatch(el.textContent ?? '').includes('image###'));
+
+  const out: Record<string, ResolvedDisplayedImage[]> = {};
+
+  for (const rawPrompt of prompts) {
+    const needle = normalizeForMatch(rawPrompt);
+    if (!needle) continue;
+
+    const el = promptEls.find(node => normalizeForMatch(node.textContent ?? '').includes(needle));
+    const img = el ? findNextImageElement(el) : null;
+    const src = img?.getAttribute('src') ?? '';
+    if (!src) continue;
+
+    const alt = img?.getAttribute('alt') ?? img?.getAttribute('title') ?? '';
+    out[rawPrompt] = [{ src, alt }];
+  }
+
+  // fallback：若按“提示词邻近”没匹配到，但确实存在图片，则按顺序兜底 indicated.
+  const missing = prompts.filter(p => !out[p]);
+  if (missing.length > 0) {
+    const imgs = Array.from(root.querySelectorAll('img'))
+      .map(img => ({
+        src: img.getAttribute('src') ?? '',
+        alt: img.getAttribute('alt') ?? img.getAttribute('title') ?? '',
+      }))
+      .filter(it => !!it.src);
+
+    // 仅在数量可对齐时才做顺序匹配，避免把头像/emoji 等误当生图结果。
+    if (imgs.length > 0 && imgs.length === prompts.length) {
+      for (let i = 0; i < prompts.length; i++) {
+        out[prompts[i]] = [imgs[i]];
+      }
+    }
+  }
+
+  return out;
+}
+
 const segments = computed<Segment[]>(() => {
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
@@ -59,7 +139,64 @@ const segments = computed<Segment[]>(() => {
 
   if (!text.trim()) return [{ key: 'empty', text: '(暂无正文)' }];
   const segs = buildSegments(text);
-  return segs.length ? segs : [{ key: 'empty', text: '(暂无正文)' }];
+
+  const mapped = resolvedImagesByPrompt.value ?? {};
+  const out: Segment[] = [];
+  let id = 0;
+  for (const seg of segs) {
+    if (seg.className === 'image-prompt' && seg.text) {
+      const hits = mapped[seg.text] ?? [];
+      if (hits.length > 0) {
+        for (const hit of hits) {
+          out.push({
+            key: `img_resolved_${id++}`,
+            isImage: true,
+            imageUrl: hit.src,
+            altText: hit.alt || '生成图片',
+            text: hit.src,
+          });
+        }
+        // 已有图片时默认不再显示提示词，避免占位刷屏
+        continue;
+      }
+    }
+    out.push(seg);
+  }
+
+  return out.length ? out : [{ key: 'empty', text: '(暂无正文)' }];
+});
+
+watchEffect(onCleanup => {
+  // 在消息 iframe 中可用；非消息上下文则无法解析显示层 DOM
+  const messageId = typeof getCurrentMessageId === 'function' ? Number(getCurrentMessageId() as any) : null;
+
+  const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
+  const mainText = extractMainStoryText(normalizedRaw);
+  const text = normalizeStoryText(mainText);
+  const prompts = Array.from(text.matchAll(/image###([\s\S]*?)###/g)).map(m => m[0] ?? '').filter(Boolean);
+
+  let canceled = false;
+  const timers: number[] = [];
+
+  const run = () => {
+    if (canceled) return;
+    const next = resolveImagesFromDisplayedMessage(messageId, prompts);
+    // 只有在结果有变化时才写入，避免无意义触发重渲染
+    const prev = resolvedImagesByPrompt.value ?? {};
+    const prevJson = JSON.stringify(prev);
+    const nextJson = JSON.stringify(next);
+    if (prevJson !== nextJson) resolvedImagesByPrompt.value = next;
+  };
+
+  // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
+  run();
+  timers.push(window.setTimeout(run, 600));
+  timers.push(window.setTimeout(run, 2000));
+
+  onCleanup(() => {
+    canceled = true;
+    for (const t of timers) window.clearTimeout(t);
+  });
 });
 
 let __resizeScheduled = false;

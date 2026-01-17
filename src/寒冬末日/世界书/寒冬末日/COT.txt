@@ -31,11 +31,11 @@
 1.  严格执行mvu变量更新规则和变量更新格式
 2.  庇护所等级升级播报：校测到MVU变量中等级比上一次回复有提升，应当总结提升的等级和对应的技能列表向<user>进行“语言播报”
 2.  输出格式检查：
-        \<content\>or\<game\>块${image###包裹的图片提示词，务必包裹在\<content\>块当中。}
-        <option>
-        <UpdateVariable>块
-          <Analysis>块
-          <JSONPatch>块
+        \<content\>块包裹的正文
+        \<option\>块包裹的选项
+        \<UpdateVariable\>块
+          \Analysis\>块
+          \<JSONPatch\>块
 ---
 </criteria>
 思考完毕，开始结合上述思考内容进行创作游戏剧情。
