@@ -93,8 +93,9 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   const root = $mes?.get?.(0) as HTMLElement | undefined;
   if (!root) return {};
 
-  const promptEls = Array.from(root.querySelectorAll('pre, code, p, div, span'))
-    .filter(el => normalizeForMatch(el.textContent ?? '').includes('image###'));
+  const promptEls = Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el =>
+    normalizeForMatch(el.textContent ?? '').includes('image###'),
+  );
 
   const out: Record<string, ResolvedDisplayedImage[]> = {};
 
@@ -173,7 +174,9 @@ watchEffect(onCleanup => {
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
   const text = normalizeStoryText(mainText);
-  const prompts = Array.from(text.matchAll(/image###([\s\S]*?)###/g)).map(m => m[0] ?? '').filter(Boolean);
+  const prompts = Array.from(text.matchAll(/image###([\s\S]*?)###/g))
+    .map(m => m[0] ?? '')
+    .filter(Boolean);
 
   let canceled = false;
   const timers: number[] = [];
