@@ -391,10 +391,10 @@ function bootstrapMissingRoleRoomTagsFromRooms(stat_data: any, debug: boolean) {
     patched.push({ name, tag });
   }
 
-    if (debug && patched.length > 0) {
-      console.log('[房间逻辑] 已从「房间」表补齐缺失的角色所在房间标签:', patched);
-    }
+  if (debug && patched.length > 0) {
+    console.log('[房间逻辑] 已从「房间」表补齐缺失的角色所在房间标签:', patched);
   }
+}
 
 function keepUnknownNames(list: any, known: Set<string>): string[] {
   if (!Array.isArray(list)) return [];
@@ -509,7 +509,7 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
       if (oldTag !== newTag || newTag !== finalTag)
         mismatch.push({ name, old: oldTag, next: newTag, final: finalTag, reason });
     }
-      if (mismatch.length > 0) console.log('[房间逻辑] 房间标签对齐详情:', mismatch);
+    if (mismatch.length > 0) console.log('[房间逻辑] 房间标签对齐详情:', mismatch);
 
     const dup: Array<{ name: string; tags: string[] }> = [];
     const writeTags = allTags;
@@ -517,15 +517,15 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
       const tags = writeTags.filter(t => (readRoomListByTag(nextRooms, t) ?? []).includes(name));
       if (tags.length > 1) dup.push({ name, tags });
     }
-      if (dup.length > 0) console.log('[房间逻辑] 对齐后仍存在多房间重复占用:', dup);
+    if (dup.length > 0) console.log('[房间逻辑] 对齐后仍存在多房间重复占用:', dup);
 
     const reasons = [...finalReasonByName.entries()].reduce<Record<string, number>>((acc, [, r]) => {
       acc[r] = (acc[r] ?? 0) + 1;
       return acc;
     }, {});
-      console.log('[房间逻辑] 对齐原因统计:', reasons);
-    }
+    console.log('[房间逻辑] 对齐原因统计:', reasons);
   }
+}
 
 type ScopeDelta = {
   add?: ShelterScopeByFloor;
@@ -1531,9 +1531,9 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
 
     const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
 
-    for (const name of all) {
-      const isTemp = tempNpc.includes(name);
-      const rolePath = isTemp ? `临时NPC.${name}` : name;
+  for (const name of all) {
+    const isTemp = tempNpc.includes(name);
+    const rolePath = isTemp ? `临时NPC.${name}` : name;
 
     const newRole = _.get(stat_data, rolePath, null);
     const oldRole = _.get(old_stat_data, rolePath, null);
@@ -1543,12 +1543,12 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
     const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
     const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
 
-      // 只处理“旧离场、且 AI 未改登场状态”的情况
-      if (oldStage !== '离场') continue;
-      if (oldStage !== newStage) continue;
+    // 只处理“旧离场、且 AI 未改登场状态”的情况
+    if (oldStage !== '离场') continue;
+    if (oldStage !== newStage) continue;
 
-      // 只要 AI 本轮写入了任何字段（角色对象发生变化），就认为该角色“实际在场”。
-      if (_.isEqual(oldRole, newRole)) continue;
+    // 只要 AI 本轮写入了任何字段（角色对象发生变化），就认为该角色“实际在场”。
+    if (_.isEqual(oldRole, newRole)) continue;
 
       const IGNORE_FOR_DIFF = new Set(['登场状态']);
       // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
@@ -1588,6 +1588,19 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
         debugSetting,
       );
     }
+    edenLog(
+      'warn',
+      'stage_sanitize.force_onstage',
+      {
+        zh: `回拨「${name}」的登场状态为「登场」（检测到字段更新：${changedKeys.slice(0, 8).join('、')}${changedKeys.length > 8 ? ` 等${changedKeys.length}项` : ''}）`,
+        role: name,
+        rolePath,
+        reason: 'offstage_unchanged_but_role_updated',
+        changedKeys,
+      },
+      debugSetting,
+    );
+  }
 
     if (patched.length > 0) {
       edenLog(
@@ -1939,44 +1952,44 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
   }
 }
 
-  $(async () => {
-    ensureDebugButtons();
-    await waitGlobalInitialized('Mvu');
-    // 防止“脚本-实时修改/重载”导致重复监听：以顶层 window 为准，仅让最新实例生效。
-    markThisInstanceActive();
+$(async () => {
+  ensureDebugButtons();
+  await waitGlobalInitialized('Mvu');
+  // 防止“脚本-实时修改/重载”导致重复监听：以顶层 window 为准，仅让最新实例生效。
+  markThisInstanceActive();
 
-    const baseDebug = resolveEdenDebugSetting();
-    notifyEdenHelperLoaded();
-    edenLog(
-      'info',
-      'boot',
-      {
-        zh: `伊甸后台数据辅助已启动 v${EDEN_HELPER_VERSION}（实例 ${EDEN_HELPER_INSTANCE_ID}）`,
-        script: '伊甸后台数据辅助',
-        version: EDEN_HELPER_VERSION,
-        instanceId: EDEN_HELPER_INSTANCE_ID,
-      },
-      baseDebug,
-    );
+  const baseDebug = resolveEdenDebugSetting();
+  notifyEdenHelperLoaded();
+  edenLog(
+    'info',
+    'boot',
+    {
+      zh: `伊甸后台数据辅助已启动 v${EDEN_HELPER_VERSION}（实例 ${EDEN_HELPER_INSTANCE_ID}）`,
+      script: '伊甸后台数据辅助',
+      version: EDEN_HELPER_VERSION,
+      instanceId: EDEN_HELPER_INSTANCE_ID,
+    },
+    baseDebug,
+  );
 
   // MVU 更新变量时可能会“就地修改”对象，导致 VARIABLE_UPDATE_ENDED 的
   // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
   // 因此在 UPDATE_STARTED 时抓取一份深拷贝快照，供本轮 UPDATE_ENDED 使用。
-    let variablesBeforeUpdateSnapshot: any | null = null;
-    eventMakeFirst(Mvu.events.VARIABLE_UPDATE_STARTED, (variables: any) => {
-      if (!isActiveInstance()) return;
-      try {
-        variablesBeforeUpdateSnapshot = _.cloneDeep(variables);
-      } catch {
-        // best-effort: 保底不要影响后续逻辑
+  let variablesBeforeUpdateSnapshot: any | null = null;
+  eventMakeFirst(Mvu.events.VARIABLE_UPDATE_STARTED, (variables: any) => {
+    if (!isActiveInstance()) return;
+    try {
+      variablesBeforeUpdateSnapshot = _.cloneDeep(variables);
+    } catch {
+      // best-effort: 保底不要影响后续逻辑
       variablesBeforeUpdateSnapshot = variables;
     }
   });
 
-    const first = (new_variables: any, old_variables: any) => {
-      if (!isActiveInstance()) return;
-      const debugSetting = resolveEdenDebugSetting();
-      edenLog('debug', 'mvu.update_ended.first.begin', {}, debugSetting);
+  const first = (new_variables: any, old_variables: any) => {
+    if (!isActiveInstance()) return;
+    const debugSetting = resolveEdenDebugSetting();
+    edenLog('debug', 'mvu.update_ended.first.begin', {}, debugSetting);
 
     try {
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
@@ -2002,10 +2015,10 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     }
   };
 
-    const last = (new_variables: any, old_variables: any) => {
-      if (!isActiveInstance()) return;
-      const debugSetting = resolveEdenDebugSetting();
-      edenLog('debug', 'mvu.update_ended.last.begin', {}, debugSetting);
+  const last = (new_variables: any, old_variables: any) => {
+    if (!isActiveInstance()) return;
+    const debugSetting = resolveEdenDebugSetting();
+    edenLog('debug', 'mvu.update_ended.last.begin', {}, debugSetting);
 
     try {
       const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
