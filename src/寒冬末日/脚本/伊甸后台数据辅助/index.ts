@@ -1508,110 +1508,110 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
   }
 }
 
-  /**
-   * 登场状态反向回拨（针对“角色实际有字段更新，但登场状态还停留在离场”的局面）
-   *
-   * 规则（按用户需求，且尽量保守）：
-   * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
-   * - 仅当：旧值为【离场】、新值仍为【离场】、且角色对象出现“非健康结算类字段”的更新
-   *   => 视为“忘拨回登场”，脚本强制改为【登场】
-   *
-   * 说明：健康/健康更新原因 可能会被脚本或 AI 用于“离场期间的休整/衰减结算”，不应据此强制登场。
-   */
-  function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
-    const { core, tempNpc } = listRoleNames(stat_data);
-    const all = [...core, ...tempNpc];
+/**
+ * 登场状态反向回拨（针对“角色实际有字段更新，但登场状态还停留在离场”的局面）
+ *
+ * 规则（按用户需求，且尽量保守）：
+ * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
+ * - 仅当：旧值为【离场】、新值仍为【离场】、且角色对象出现“非健康结算类字段”的更新
+ *   => 视为“忘拨回登场”，脚本强制改为【登场】
+ *
+ * 说明：健康/健康更新原因 可能会被脚本或 AI 用于“离场期间的休整/衰减结算”，不应据此强制登场。
+ */
+function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+  const { core, tempNpc } = listRoleNames(stat_data);
+  const all = [...core, ...tempNpc];
 
-    const patched: Array<{ name: string; path: string; changedKeys: string[]; effectiveChangedKeys: string[] }> = [];
-    const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
+  const patched: Array<{ name: string; path: string; changedKeys: string[]; effectiveChangedKeys: string[] }> = [];
+  const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
 
-    for (const name of all) {
-      const isTemp = tempNpc.includes(name);
-      const rolePath = isTemp ? `临时NPC.${name}` : name;
+  for (const name of all) {
+    const isTemp = tempNpc.includes(name);
+    const rolePath = isTemp ? `临时NPC.${name}` : name;
 
-      const newRole = _.get(stat_data, rolePath, null);
-      const oldRole = _.get(old_stat_data, rolePath, null);
-      if (!newRole || typeof newRole !== 'object') continue;
-      if (!oldRole || typeof oldRole !== 'object') continue;
+    const newRole = _.get(stat_data, rolePath, null);
+    const oldRole = _.get(old_stat_data, rolePath, null);
+    if (!newRole || typeof newRole !== 'object') continue;
+    if (!oldRole || typeof oldRole !== 'object') continue;
 
-      const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
-      const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
+    const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
+    const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
 
-      // 只处理“旧离场、且 AI 未改登场状态”的情况
-      if (oldStage !== '离场') continue;
-      if (oldStage !== newStage) continue;
+    // 只处理“旧离场、且 AI 未改登场状态”的情况
+    if (oldStage !== '离场') continue;
+    if (oldStage !== newStage) continue;
 
-      // AI 本轮没有写入任何字段：不回拨
-      if (_.isEqual(oldRole, newRole)) continue;
+    // AI 本轮没有写入任何字段：不回拨
+    if (_.isEqual(oldRole, newRole)) continue;
 
-      const IGNORE_FOR_DIFF = new Set(['登场状态']);
-      // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
-      const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
+    const IGNORE_FOR_DIFF = new Set(['登场状态']);
+    // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
+    const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
 
-      const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
-      const changedKeys = keys.filter(
-        k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]),
-      );
-      const effectiveChangedKeys = changedKeys.filter(k => !IGNORE_FOR_EFFECTIVE.has(k));
+    const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
+    const changedKeys = keys.filter(
+      k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]),
+    );
+    const effectiveChangedKeys = changedKeys.filter(k => !IGNORE_FOR_EFFECTIVE.has(k));
 
-      // 只更新了健康/健康更新原因：不回拨登场（保持离场）。
-      if (effectiveChangedKeys.length === 0) {
-        if (changedKeys.length > 0) skippedHealthOnly.push({ name, path: rolePath, changedKeys: changedKeys.slice() });
-        continue;
-      }
-
-      _.set(stat_data, `${rolePath}.登场状态`, '登场');
-      patched.push({
-        name,
-        path: rolePath,
-        changedKeys: changedKeys.slice(),
-        effectiveChangedKeys: effectiveChangedKeys.slice(),
-      });
-
-      edenLog(
-        'warn',
-        'stage_sanitize.force_onstage',
-        {
-          zh: `回拨「${name}」的登场状态为「登场」（检测到非健康字段更新：${effectiveChangedKeys
-            .slice(0, 8)
-            .join('、')}${effectiveChangedKeys.length > 8 ? ` 等${effectiveChangedKeys.length}项` : ''}）`,
-          role: name,
-          rolePath,
-          reason: 'offstage_unchanged_but_role_updated',
-          changedKeys,
-          effectiveChangedKeys,
-          ignoredKeysForEffective: Array.from(IGNORE_FOR_EFFECTIVE),
-        },
-        debugSetting,
-      );
+    // 只更新了健康/健康更新原因：不回拨登场（保持离场）。
+    if (effectiveChangedKeys.length === 0) {
+      if (changedKeys.length > 0) skippedHealthOnly.push({ name, path: rolePath, changedKeys: changedKeys.slice() });
+      continue;
     }
 
-    if (patched.length > 0) {
-      edenLog(
-        'info',
-        'stage_sanitize.summary.force_onstage',
-        {
-          zh: `离场状态校准完成：共回拨 ${patched.length} 名角色为「登场」`,
-          patchedCount: patched.length,
-          patched,
-        },
-        debugSetting,
-      );
-    }
+    _.set(stat_data, `${rolePath}.登场状态`, '登场');
+    patched.push({
+      name,
+      path: rolePath,
+      changedKeys: changedKeys.slice(),
+      effectiveChangedKeys: effectiveChangedKeys.slice(),
+    });
 
-    if (skippedHealthOnly.length > 0) {
-      edenLog(
-        'debug',
-        'stage_sanitize.summary.skip_health_only',
-        {
-          zh: `离场状态校准：检测到 ${skippedHealthOnly.length} 名角色仅更新「健康/健康更新原因」，保持「离场」`,
-          skippedCount: skippedHealthOnly.length,
-          skipped: skippedHealthOnly,
-        },
-        debugSetting,
-      );
-    }
+    edenLog(
+      'warn',
+      'stage_sanitize.force_onstage',
+      {
+        zh: `回拨「${name}」的登场状态为「登场」（检测到非健康字段更新：${effectiveChangedKeys
+          .slice(0, 8)
+          .join('、')}${effectiveChangedKeys.length > 8 ? ` 等${effectiveChangedKeys.length}项` : ''}）`,
+        role: name,
+        rolePath,
+        reason: 'offstage_unchanged_but_role_updated',
+        changedKeys,
+        effectiveChangedKeys,
+        ignoredKeysForEffective: Array.from(IGNORE_FOR_EFFECTIVE),
+      },
+      debugSetting,
+    );
   }
+
+  if (patched.length > 0) {
+    edenLog(
+      'info',
+      'stage_sanitize.summary.force_onstage',
+      {
+        zh: `离场状态校准完成：共回拨 ${patched.length} 名角色为「登场」`,
+        patchedCount: patched.length,
+        patched,
+      },
+      debugSetting,
+    );
+  }
+
+  if (skippedHealthOnly.length > 0) {
+    edenLog(
+      'debug',
+      'stage_sanitize.summary.skip_health_only',
+      {
+        zh: `离场状态校准：检测到 ${skippedHealthOnly.length} 名角色仅更新「健康/健康更新原因」，保持「离场」`,
+        skippedCount: skippedHealthOnly.length,
+        skipped: skippedHealthOnly,
+      },
+      debugSetting,
+    );
+  }
+}
 
 function applyDerivedHealthStatus(rolePath: string, role: RoleLike, stat_data: any) {
   const healthRaw = role.健康;
