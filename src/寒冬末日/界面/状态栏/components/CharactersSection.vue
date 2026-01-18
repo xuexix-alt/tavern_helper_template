@@ -185,14 +185,7 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   }
 
   // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
-  return [
-    ...fixedActive,
-    ...extraActive,
-    ...tempActive,
-    ...fixedInactive,
-    ...extraInactive,
-    ...tempInactive,
-  ];
+  return [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
 });
 
 const active_character_key = ref<CharacterKey | null>(null);
