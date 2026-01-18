@@ -1,9 +1,9 @@
-import { diffWorldHours } from '../../util/time';
+import { z } from 'zod';
+import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
 import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation } from '../../util/room';
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
-import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
+import { diffWorldHours } from '../../util/time';
 import { CHAT_VAR_KEYS } from '../../界面/outbound';
-import { z } from 'zod';
 
 import shelterBlueprintRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
@@ -15,7 +15,7 @@ type EdenDebugSetting = {
   toChat: boolean;
 };
 
-const EDEN_HELPER_VERSION = '1.0';
+const EDEN_HELPER_VERSION = '1.2';
 const EDEN_HELPER_ACTIVE_INSTANCE_KEY = '__eden_helper_active_instance__';
 const EDEN_HELPER_INSTANCE_ID = (() => {
   try {
@@ -152,7 +152,6 @@ function edenLog(
   };
 
   if (debug.toConsole) {
-    // eslint-disable-next-line no-console
     const head = zh ? `${zh} (${event})` : event;
     const tail = payloadForPrint ? ` ${safeStringify(payloadForPrint)}` : '';
     (console as any)?.[level]?.(`[eden/helper] ${head}${tail}`);
@@ -234,7 +233,7 @@ function ensureDebugButtons() {
       room_logic: next,
     });
     toastr?.info?.(`伊甸调试：${next ? '已开启' : '已关闭'}`);
-    // eslint-disable-next-line no-console
+
     console.log(`[eden/helper] 调试开关：${next ? '开启' : '关闭'} ${safeStringify({ enabled: next })}`);
   });
 
@@ -244,7 +243,7 @@ function ensureDebugButtons() {
     const next = !cur;
     writeChatDebugFlags({ to_chat: next });
     toastr?.info?.(`伊甸调试写入日志：${next ? '已开启' : '已关闭'}`);
-    // eslint-disable-next-line no-console
+
     console.log(`[eden/helper] 调试写入日志：${next ? '开启' : '关闭'} ${safeStringify({ to_chat: next })}`);
   });
 }
@@ -1422,6 +1421,48 @@ function isRoleLike(val: any): val is RoleLike {
   return val && typeof val === 'object' && '健康' in val && '登场状态' in val;
 }
 
+function mergeRoleLike(coreRole: RoleLike, tempRole: RoleLike): RoleLike {
+  const next: any = _.cloneDeep(coreRole);
+  for (const [key, value] of Object.entries(tempRole ?? {})) {
+    const cur = next[key];
+    if (cur === undefined || cur === null) {
+      next[key] = value;
+      continue;
+    }
+    if (typeof cur === 'string' && cur.trim() === '' && typeof value === 'string' && value.trim() !== '') {
+      next[key] = value;
+      continue;
+    }
+    if (Array.isArray(cur) && cur.length === 0 && Array.isArray(value) && value.length > 0) {
+      next[key] = value.slice();
+      continue;
+    }
+  }
+  return next as RoleLike;
+}
+
+function mergeTempNpcIntoCore(stat_data: any, debugSetting?: EdenDebugSetting) {
+  const temp = _.get(stat_data, '临时NPC', {});
+  if (!temp || typeof temp !== 'object' || Array.isArray(temp)) return;
+
+  const merged: string[] = [];
+  for (const [name, tempRole] of Object.entries(temp)) {
+    if (typeof name !== 'string' || !name) continue;
+    if (!isRoleLike(tempRole)) continue;
+    const coreRole = _.get(stat_data, name, null);
+    if (!isRoleLike(coreRole)) continue;
+
+    const next = mergeRoleLike(coreRole, tempRole as RoleLike);
+    _.set(stat_data, name, next);
+    _.unset(stat_data, ['临时NPC', name]);
+    merged.push(name);
+  }
+
+  if (merged.length > 0 && debugSetting) {
+    edenLog('info', 'role.merge_temp_into_core', { names: merged }, debugSetting);
+  }
+}
+
 function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouched {
   if (!oldRole) {
     return {
@@ -1508,110 +1549,110 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
   }
 }
 
-  /**
-   * 登场状态反向回拨（针对“角色实际有字段更新，但登场状态还停留在离场”的局面）
-   *
-   * 规则（按用户需求，且尽量保守）：
-   * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
-   * - 仅当：旧值为【离场】、新值仍为【离场】、且角色对象出现“非健康结算类字段”的更新
-   *   => 视为“忘拨回登场”，脚本强制改为【登场】
-   *
-   * 说明：健康/健康更新原因 可能会被脚本或 AI 用于“离场期间的休整/衰减结算”，不应据此强制登场。
-   */
-  function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
-    const { core, tempNpc } = listRoleNames(stat_data);
-    const all = [...core, ...tempNpc];
+/**
+ * 登场状态反向回拨（针对“角色实际有字段更新，但登场状态还停留在离场”的局面）
+ *
+ * 规则（按用户需求，且尽量保守）：
+ * - 若 AI 明确改了登场状态（登场/离场），一律信任 AI（不在此处干预）
+ * - 仅当：旧值为【离场】、新值仍为【离场】、且角色对象出现“非健康结算类字段”的更新
+ *   => 视为“忘拨回登场”，脚本强制改为【登场】
+ *
+ * 说明：健康/健康更新原因 可能会被脚本或 AI 用于“离场期间的休整/衰减结算”，不应据此强制登场。
+ */
+function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+  const { core, tempNpc } = listRoleNames(stat_data);
+  const all = [...core, ...tempNpc];
 
-    const patched: Array<{ name: string; path: string; changedKeys: string[]; effectiveChangedKeys: string[] }> = [];
-    const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
+  const patched: Array<{ name: string; path: string; changedKeys: string[]; effectiveChangedKeys: string[] }> = [];
+  const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
 
-    for (const name of all) {
-      const isTemp = tempNpc.includes(name);
-      const rolePath = isTemp ? `临时NPC.${name}` : name;
+  for (const name of all) {
+    const isTemp = tempNpc.includes(name);
+    const rolePath = isTemp ? `临时NPC.${name}` : name;
 
-      const newRole = _.get(stat_data, rolePath, null);
-      const oldRole = _.get(old_stat_data, rolePath, null);
-      if (!newRole || typeof newRole !== 'object') continue;
-      if (!oldRole || typeof oldRole !== 'object') continue;
+    const newRole = _.get(stat_data, rolePath, null);
+    const oldRole = _.get(old_stat_data, rolePath, null);
+    if (!newRole || typeof newRole !== 'object') continue;
+    if (!oldRole || typeof oldRole !== 'object') continue;
 
-      const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
-      const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
+    const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
+    const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
 
-      // 只处理“旧离场、且 AI 未改登场状态”的情况
-      if (oldStage !== '离场') continue;
-      if (oldStage !== newStage) continue;
+    // 只处理“旧离场、且 AI 未改登场状态”的情况
+    if (oldStage !== '离场') continue;
+    if (oldStage !== newStage) continue;
 
-      // AI 本轮没有写入任何字段：不回拨
-      if (_.isEqual(oldRole, newRole)) continue;
+    // AI 本轮没有写入任何字段：不回拨
+    if (_.isEqual(oldRole, newRole)) continue;
 
-      const IGNORE_FOR_DIFF = new Set(['登场状态']);
-      // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
-      const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
+    const IGNORE_FOR_DIFF = new Set(['登场状态']);
+    // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
+    const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
 
-      const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
-      const changedKeys = keys.filter(
-        k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]),
-      );
-      const effectiveChangedKeys = changedKeys.filter(k => !IGNORE_FOR_EFFECTIVE.has(k));
+    const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
+    const changedKeys = keys.filter(
+      k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]),
+    );
+    const effectiveChangedKeys = changedKeys.filter(k => !IGNORE_FOR_EFFECTIVE.has(k));
 
-      // 只更新了健康/健康更新原因：不回拨登场（保持离场）。
-      if (effectiveChangedKeys.length === 0) {
-        if (changedKeys.length > 0) skippedHealthOnly.push({ name, path: rolePath, changedKeys: changedKeys.slice() });
-        continue;
-      }
-
-      _.set(stat_data, `${rolePath}.登场状态`, '登场');
-      patched.push({
-        name,
-        path: rolePath,
-        changedKeys: changedKeys.slice(),
-        effectiveChangedKeys: effectiveChangedKeys.slice(),
-      });
-
-      edenLog(
-        'warn',
-        'stage_sanitize.force_onstage',
-        {
-          zh: `回拨「${name}」的登场状态为「登场」（检测到非健康字段更新：${effectiveChangedKeys
-            .slice(0, 8)
-            .join('、')}${effectiveChangedKeys.length > 8 ? ` 等${effectiveChangedKeys.length}项` : ''}）`,
-          role: name,
-          rolePath,
-          reason: 'offstage_unchanged_but_role_updated',
-          changedKeys,
-          effectiveChangedKeys,
-          ignoredKeysForEffective: Array.from(IGNORE_FOR_EFFECTIVE),
-        },
-        debugSetting,
-      );
+    // 只更新了健康/健康更新原因：不回拨登场（保持离场）。
+    if (effectiveChangedKeys.length === 0) {
+      if (changedKeys.length > 0) skippedHealthOnly.push({ name, path: rolePath, changedKeys: changedKeys.slice() });
+      continue;
     }
 
-    if (patched.length > 0) {
-      edenLog(
-        'info',
-        'stage_sanitize.summary.force_onstage',
-        {
-          zh: `离场状态校准完成：共回拨 ${patched.length} 名角色为「登场」`,
-          patchedCount: patched.length,
-          patched,
-        },
-        debugSetting,
-      );
-    }
+    _.set(stat_data, `${rolePath}.登场状态`, '登场');
+    patched.push({
+      name,
+      path: rolePath,
+      changedKeys: changedKeys.slice(),
+      effectiveChangedKeys: effectiveChangedKeys.slice(),
+    });
 
-    if (skippedHealthOnly.length > 0) {
-      edenLog(
-        'debug',
-        'stage_sanitize.summary.skip_health_only',
-        {
-          zh: `离场状态校准：检测到 ${skippedHealthOnly.length} 名角色仅更新「健康/健康更新原因」，保持「离场」`,
-          skippedCount: skippedHealthOnly.length,
-          skipped: skippedHealthOnly,
-        },
-        debugSetting,
-      );
-    }
+    edenLog(
+      'warn',
+      'stage_sanitize.force_onstage',
+      {
+        zh: `回拨「${name}」的登场状态为「登场」（检测到非健康字段更新：${effectiveChangedKeys
+          .slice(0, 8)
+          .join('、')}${effectiveChangedKeys.length > 8 ? ` 等${effectiveChangedKeys.length}项` : ''}）`,
+        role: name,
+        rolePath,
+        reason: 'offstage_unchanged_but_role_updated',
+        changedKeys,
+        effectiveChangedKeys,
+        ignoredKeysForEffective: Array.from(IGNORE_FOR_EFFECTIVE),
+      },
+      debugSetting,
+    );
   }
+
+  if (patched.length > 0) {
+    edenLog(
+      'info',
+      'stage_sanitize.summary.force_onstage',
+      {
+        zh: `离场状态校准完成：共回拨 ${patched.length} 名角色为「登场」`,
+        patchedCount: patched.length,
+        patched,
+      },
+      debugSetting,
+    );
+  }
+
+  if (skippedHealthOnly.length > 0) {
+    edenLog(
+      'debug',
+      'stage_sanitize.summary.skip_health_only',
+      {
+        zh: `离场状态校准：检测到 ${skippedHealthOnly.length} 名角色仅更新「健康/健康更新原因」，保持「离场」`,
+        skippedCount: skippedHealthOnly.length,
+        skipped: skippedHealthOnly,
+      },
+      debugSetting,
+    );
+  }
+}
 
 function applyDerivedHealthStatus(rolePath: string, role: RoleLike, stat_data: any) {
   const healthRaw = role.健康;
@@ -1979,6 +2020,9 @@ $(async () => {
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
       const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
       const old_stat_data = _.get(old_vars, 'stat_data', {}) ?? {};
+
+      // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
+      mergeTempNpcIntoCore(stat_data, debugSetting);
 
       // 出场状态清洗：尽早处理，避免后续房间逻辑等改动干扰“AI本次是否写入字段”的判定
       sanitizeForgottenOnstageRoles(stat_data, old_stat_data, debugSetting);

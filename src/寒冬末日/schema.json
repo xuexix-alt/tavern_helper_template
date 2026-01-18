@@ -267,6 +267,9 @@
       }
     }
   },
+  "additionalProperties": {
+    "$ref": "#/$defs/__schema29"
+  },
   "$defs": {
     "__schema0": {
       "type": "number"

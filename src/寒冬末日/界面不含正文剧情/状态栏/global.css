@@ -345,6 +345,14 @@ main {
   word-break: break-word;
 }
 
+.eden-version {
+  align-self: flex-end;
+  font-size: 0.75em;
+  opacity: 0.6;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
 .health-section-header {
   display: flex;
   align-items: baseline;

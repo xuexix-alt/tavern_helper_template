@@ -11,7 +11,9 @@ rule:
   - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
   - 'READ-ONLY FIELDS: `stat_data/庇护所/今日投掷点数` and `stat_data/庇护所/距离上次升级` are strictly managed by scripts. AI is FORBIDDEN from modifying them.'
   - 'SHELTER SCOPE SYNC: To change the survival shelter scope, ONLY update `stat_data/庇护所/庇护范围变更` via `replace` with value like `{ "add": { "20": ["2002"] }, "remove": { "20": ["2007"] } }`. A script will validate/dedupe/cap and sync to UI. DO NOT modify `stat_data/庇护所/当前生存庇护范围` (mirror, read-only).'
-  - The main character list is FIXED and IMMUTABLE - NEVER move temporary NPCs into the main character list.
+  - The main character list is dynamic: any role object at `stat_data` top-level (excluding reserved keys and `临时NPC`) is a main character.
+  - Temporary NPCs live under `stat_data/临时NPC` and can be promoted by moving to top-level and removing from `临时NPC`.
+  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
 
 format: |-
   <UpdateVariable>
@@ -85,9 +87,9 @@ format: |-
   步骤 4：临时NPC专用处理
   - 本轮是否有新npc登场？ → 参照核心角色的完整字段，使用 `insert` 创建完整新对象（初始化所有字段）。
   - 登场临时NPC各字段是否更新？
-  - 是否违规将临时NPC移到核心角色区？
-  - 是否违规将临时NPC `remove` 。
-  - 结果：需创建/更新/？是/否。已检查：□
+  - 若需转正：将该 NPC 移动到 `stat_data` 顶层，并从 `临时NPC` 中删除。
+  - 若需删除：允许 `remove` 临时NPC（或删除顶层角色），并注意同步房间相关状态。
+  - 结果：需创建/更新/转正/删除？是/否。已检查：□
 
   步骤 5：楼层其他住户
   - 言语 & 行为：

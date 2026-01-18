@@ -56,6 +56,46 @@ function readRoomListByTag(rooms: Rooms, tag: string): string[] {
   return [];
 }
 
+function isRoleLike(val: any): boolean {
+  return val && typeof val === 'object' && '健康' in val && '登场状态' in val;
+}
+
+function mergeRoleLike(coreRole: any, tempRole: any): any {
+  const next: any = _.cloneDeep(coreRole);
+  for (const [key, value] of Object.entries(tempRole ?? {})) {
+    const cur = next[key];
+    if (cur === undefined || cur === null) {
+      next[key] = value;
+      continue;
+    }
+    if (typeof cur === 'string' && cur.trim() === '' && typeof value === 'string' && value.trim() !== '') {
+      next[key] = value;
+      continue;
+    }
+    if (Array.isArray(cur) && cur.length === 0 && Array.isArray(value) && value.length > 0) {
+      next[key] = value.slice();
+      continue;
+    }
+  }
+  return next;
+}
+
+function mergeTempNpcIntoCore(stat_data: any) {
+  const temp = _.get(stat_data, '临时NPC', {});
+  if (!temp || typeof temp !== 'object' || Array.isArray(temp)) return;
+
+  for (const [name, tempRole] of Object.entries(temp)) {
+    if (typeof name !== 'string' || !name) continue;
+    if (!isRoleLike(tempRole)) continue;
+    const coreRole = _.get(stat_data, name, null);
+    if (!isRoleLike(coreRole)) continue;
+
+    const next = mergeRoleLike(coreRole, tempRole);
+    _.set(stat_data, name, next);
+    _.unset(stat_data, ['临时NPC', name]);
+  }
+}
+
 function listRoleNames(stat_data: any): { core: string[]; tempNpc: string[] } {
   const reserved = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
 
@@ -174,6 +214,9 @@ function writeRoomListByTag(nextRooms: Rooms, tag: string, list: string[]) {
 }
 
 function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean) {
+  // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
+  mergeTempNpcIntoCore(stat_data);
+
   const rooms = _.get(stat_data, '房间', {}) ?? {};
   const oldRooms = _.get(old_stat_data, '房间', {}) ?? {};
 

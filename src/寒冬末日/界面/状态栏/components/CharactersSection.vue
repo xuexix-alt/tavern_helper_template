@@ -31,12 +31,12 @@
                 <div class="value">
                   {{ getCharacter(key)?.健康 ?? '--' }}
                   <button
-                    v-if="isTempNpcKey(key)"
-                    class="tempnpc-remove-btn"
+                    v-if="canDeleteRole(key)"
+                    class="role-remove-btn"
                     type="button"
-                    aria-label="删除临时NPC"
-                    :disabled="deletingTempNpc === getTempNpcName(key)"
-                    @click="onClickDeleteTempNpc(key)"
+                    aria-label="删除角色"
+                    :disabled="deletingRoleName === getRoleNameKey(key)"
+                    @click="onClickDeleteRole(key)"
                   >
                     ×
                   </button>
@@ -140,15 +140,39 @@ const CHARACTER_ORDER = [
 
 const store = useDataStore();
 
+const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
+
+function isRoleLike(val: any): boolean {
+  if (!val || typeof val !== 'object') return false;
+  return '登场状态' in val && '健康' in val;
+}
+
+function listExtraCoreKeys(): string[] {
+  const data = store.data as Record<string, any>;
+  return Object.keys(data)
+    .filter(key => !RESERVED_KEYS.has(key))
+    .filter(key => !CHARACTER_ORDER.includes(key as (typeof CHARACTER_ORDER)[number]))
+    .filter(key => typeof key === 'string' && key.length > 0 && !key.startsWith('_'))
+    .filter(key => isRoleLike(data[key]))
+    .sort();
+}
+
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
 
-  // 1. 预设角色按固定顺序
-  const presetKeys = CHARACTER_ORDER.filter(key => store.data[key as keyof typeof store.data]);
-  const presetActive = presetKeys.filter(isActive);
-  const presetInactive = presetKeys.filter(k => !isActive(k));
+  const data = store.data as Record<string, any>;
 
-  // 2. 临时 NPC（按名称字典序）
+  // 1. 固定角色按固定顺序
+  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]));
+  const fixedActive = fixedKeys.filter(isActive);
+  const fixedInactive = fixedKeys.filter(k => !isActive(k));
+
+  // 2. 追加角色（顶层非固定角色）
+  const extraKeys = listExtraCoreKeys();
+  const extraActive = extraKeys.filter(isActive);
+  const extraInactive = extraKeys.filter(k => !isActive(k));
+
+  // 3. 临时 NPC（按名称字典序）
   const tempActive: CharacterKey[] = [];
   const tempInactive: CharacterKey[] = [];
   const tempNPCs = store.data.临时NPC;
@@ -160,12 +184,19 @@ const active_character_keys = computed<CharacterKey[]>(() => {
     npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
   }
 
-  // 排序：所有【登场】角色（含临时NPC）置前，避免登场的临时NPC被排到离场角色后面
-  return [...presetActive, ...tempActive, ...presetInactive, ...tempInactive];
+  // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
+  return [
+    ...fixedActive,
+    ...extraActive,
+    ...tempActive,
+    ...fixedInactive,
+    ...extraInactive,
+    ...tempInactive,
+  ];
 });
 
 const active_character_key = ref<CharacterKey | null>(null);
-const deletingTempNpc = ref<string | null>(null);
+const deletingRoleName = ref<string | null>(null);
 
 watch(
   active_character_keys,
@@ -202,9 +233,21 @@ function getTempNpcName(key: CharacterKey): string {
   return String(key.split(':')[1] ?? '').trim();
 }
 
-async function confirmDeleteTempNpc(name: string): Promise<boolean> {
-  const title = `确定删除临时NPC「${name}」？`;
-  const hint = '将从当前楼层变量中移除该临时NPC，并重载本楼层UI以刷新显示。';
+function getRoleNameKey(key: CharacterKey): string {
+  if (isTempNpcKey(key)) return getTempNpcName(key);
+  if (typeof key === 'string') return key.replace(/\?/g, '・');
+  return String(key);
+}
+
+function canDeleteRole(key: CharacterKey): boolean {
+  return !!getRoleNameKey(key);
+}
+
+async function confirmDeleteRole(name: string, isTemp: boolean): Promise<boolean> {
+  const title = isTemp ? `确定删除临时NPC「${name}」？` : `确定删除角色「${name}」？`;
+  const hint = isTemp
+    ? '将从当前楼层变量中移除该临时NPC，并重载本楼层UI以刷新显示。'
+    : '将从当前楼层变量中移除该角色（含固定角色/主角），并重载本楼层UI以刷新显示。';
   const content = `${title}\n\n${hint}`;
 
   try {
@@ -250,39 +293,49 @@ function pruneNameFromRooms(stat_data: any, name: string) {
   }
 }
 
-async function onClickDeleteTempNpc(key: CharacterKey) {
-  const name = getTempNpcName(key);
+async function onClickDeleteRole(key: CharacterKey) {
+  const isTemp = isTempNpcKey(key);
+  const name = getRoleNameKey(key);
   if (!name) return;
-  if (deletingTempNpc.value) return;
+  if (deletingRoleName.value) return;
 
-  const ok = await confirmDeleteTempNpc(name);
+  const ok = await confirmDeleteRole(name, isTemp);
   if (!ok) return;
 
   try {
-    deletingTempNpc.value = name;
+    deletingRoleName.value = name;
     await waitGlobalInitialized('Mvu');
 
     const message_id = getCurrentMessageId();
     const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
 
-    const existed = _.has(mvu_data, ['stat_data', '临时NPC', name]);
-    if (!existed) {
-      toastr.info(`临时NPC「${name}」已不存在`);
+    const existedCore = _.has(mvu_data, ['stat_data', name]);
+    const existedTemp = _.has(mvu_data, ['stat_data', '临时NPC', name]);
+    if (!existedCore && !existedTemp) {
+      toastr.info(`角色「${name}」已不存在`);
       reloadIframe();
       return;
     }
 
-    _.unset(mvu_data, ['stat_data', '临时NPC', name]);
-    pruneNameFromRooms(_.get(mvu_data, 'stat_data', {}), name);
+    const removeCore = !isTemp && existedCore;
+    const removeTemp = isTemp ? existedTemp : existedTemp;
+    if (removeCore) _.unset(mvu_data, ['stat_data', name]);
+    if (removeTemp) _.unset(mvu_data, ['stat_data', '临时NPC', name]);
+
+    const keepCore = existedCore && !removeCore;
+    const keepTemp = existedTemp && !removeTemp;
+    if (!keepCore && !keepTemp) {
+      pruneNameFromRooms(_.get(mvu_data, 'stat_data', {}), name);
+    }
 
     await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
-    toastr.success(`已删除临时NPC「${name}」`);
+    toastr.success(`已删除角色「${name}」`);
     reloadIframe();
   } catch (e: any) {
-    console.error('[CharactersSection] delete temp npc failed', e);
+    console.error('[CharactersSection] delete role failed', e);
     toastr.error(`删除失败：${e?.message ?? e}`);
   } finally {
-    deletingTempNpc.value = null;
+    deletingRoleName.value = null;
   }
 }
 
@@ -393,7 +446,7 @@ function getImprintChange(key: CharacterKey) {
 </style>
 
 <style scoped>
-.tempnpc-remove-btn {
+.role-remove-btn {
   margin-left: 10px;
   width: 22px;
   height: 22px;
@@ -412,11 +465,11 @@ function getImprintChange(key: CharacterKey) {
     opacity 0.12s ease;
 }
 
-.tempnpc-remove-btn:hover {
+.role-remove-btn:hover {
   transform: scale(1.04);
 }
 
-.tempnpc-remove-btn:disabled {
+.role-remove-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;

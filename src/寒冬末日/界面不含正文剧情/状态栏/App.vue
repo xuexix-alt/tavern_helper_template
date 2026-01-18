@@ -6,6 +6,7 @@
     <CharactersSection />
     <OtherResidentsSection />
     <ChoicesSection :options="options" />
+    <div class="eden-version">界面版本 v{{ UI_VERSION }}</div>
   </main>
 </template>
 
@@ -18,6 +19,7 @@ import ShelterSection from './components/ShelterSection.vue';
 import WorldSection from './components/WorldSection.vue';
 import { useInjectedData } from './useInjectedData';
 
+const UI_VERSION = '1.2';
 const { options } = useInjectedData();
 
 watchDebounced(

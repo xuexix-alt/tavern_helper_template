@@ -105,6 +105,42 @@ function isRoleLike(val: any): val is RoleLike {
   return val && typeof val === 'object' && '健康' in val && '登场状态' in val;
 }
 
+function mergeRoleLike(coreRole: RoleLike, tempRole: RoleLike): RoleLike {
+  const next: any = _.cloneDeep(coreRole);
+  for (const [key, value] of Object.entries(tempRole ?? {})) {
+    const cur = next[key];
+    if (cur === undefined || cur === null) {
+      next[key] = value;
+      continue;
+    }
+    if (typeof cur === 'string' && cur.trim() === '' && typeof value === 'string' && value.trim() !== '') {
+      next[key] = value;
+      continue;
+    }
+    if (Array.isArray(cur) && cur.length === 0 && Array.isArray(value) && value.length > 0) {
+      next[key] = value.slice();
+      continue;
+    }
+  }
+  return next as RoleLike;
+}
+
+function mergeTempNpcIntoCore(stat_data: any) {
+  const temp = _.get(stat_data, '临时NPC', {});
+  if (!temp || typeof temp !== 'object' || Array.isArray(temp)) return;
+
+  for (const [name, tempRole] of Object.entries(temp)) {
+    if (typeof name !== 'string' || !name) continue;
+    if (!isRoleLike(tempRole)) continue;
+    const coreRole = _.get(stat_data, name, null);
+    if (!isRoleLike(coreRole)) continue;
+
+    const next = mergeRoleLike(coreRole, tempRole as RoleLike);
+    _.set(stat_data, name, next);
+    _.unset(stat_data, ['临时NPC', name]);
+  }
+}
+
 function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouched {
   if (!oldRole) {
     return {
@@ -321,6 +357,9 @@ $(async () => {
 
     const stat_data = _.get(new_variables, 'stat_data', {});
     const old_stat_data = _.get(old_variables, 'stat_data', {});
+
+    // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
+    mergeTempNpcIntoCore(stat_data);
 
     const scope = readShelterScopeFromChat();
     const rules = readHealthRulesFromChat();

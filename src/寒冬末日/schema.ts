@@ -398,7 +398,9 @@ export const Schema = z.object({
   临时NPC: z
     .record(z.string(), 临时NPCSchema)
     .prefault({})
-    .describe('存储所有临时NPC的状态，key为NPC姓名。非主要角色一律添加在此处新NPC登场时在此处添加。'),
+    .describe(
+      '存储临时NPC的状态，key为NPC姓名。临时NPC用于短期/路人角色；允许将其转正为主要角色（移至顶层并删除此处）。',
+    ),
 
   楼层其他住户: z
     .object({
@@ -409,6 +411,6 @@ export const Schema = z.object({
       言语: '',
       行为: '',
     }),
-});
+}).catchall(主要角色Schema);
 
 export type Schema = z.output<typeof Schema>;
