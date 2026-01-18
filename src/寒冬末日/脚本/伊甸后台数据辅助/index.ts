@@ -1522,39 +1522,36 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
     const { core, tempNpc } = listRoleNames(stat_data);
     const all = [...core, ...tempNpc];
 
-    const patched: Array<{
-      name: string;
-      path: string;
-      changedKeys: string[];
-      effectiveChangedKeys: string[];
-    }> = [];
-
+    const patched: Array<{ name: string; path: string; changedKeys: string[]; effectiveChangedKeys: string[] }> = [];
     const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
 
-  for (const name of all) {
-    const isTemp = tempNpc.includes(name);
-    const rolePath = isTemp ? `临时NPC.${name}` : name;
+    for (const name of all) {
+      const isTemp = tempNpc.includes(name);
+      const rolePath = isTemp ? `临时NPC.${name}` : name;
 
-    const newRole = _.get(stat_data, rolePath, null);
-    const oldRole = _.get(old_stat_data, rolePath, null);
-    if (!newRole || typeof newRole !== 'object') continue;
-    if (!oldRole || typeof oldRole !== 'object') continue;
+      const newRole = _.get(stat_data, rolePath, null);
+      const oldRole = _.get(old_stat_data, rolePath, null);
+      if (!newRole || typeof newRole !== 'object') continue;
+      if (!oldRole || typeof oldRole !== 'object') continue;
 
-    const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
-    const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
+      const oldStage = String(_.get(oldRole, '登场状态', '') ?? '').trim();
+      const newStage = String(_.get(newRole, '登场状态', '') ?? '').trim();
 
-    // 只处理“旧离场、且 AI 未改登场状态”的情况
-    if (oldStage !== '离场') continue;
-    if (oldStage !== newStage) continue;
+      // 只处理“旧离场、且 AI 未改登场状态”的情况
+      if (oldStage !== '离场') continue;
+      if (oldStage !== newStage) continue;
 
-    // 只要 AI 本轮写入了任何字段（角色对象发生变化），就认为该角色“实际在场”。
-    if (_.isEqual(oldRole, newRole)) continue;
+      // AI 本轮没有写入任何字段：不回拨
+      if (_.isEqual(oldRole, newRole)) continue;
 
       const IGNORE_FOR_DIFF = new Set(['登场状态']);
       // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
       const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
+
       const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
-      const changedKeys = keys.filter(k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]));
+      const changedKeys = keys.filter(
+        k => !IGNORE_FOR_DIFF.has(k) && !_.isEqual((oldRole as any)?.[k], (newRole as any)?.[k]),
+      );
       const effectiveChangedKeys = changedKeys.filter(k => !IGNORE_FOR_EFFECTIVE.has(k));
 
       // 只更新了健康/健康更新原因：不回拨登场（保持离场）。
@@ -1588,19 +1585,6 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
         debugSetting,
       );
     }
-    edenLog(
-      'warn',
-      'stage_sanitize.force_onstage',
-      {
-        zh: `回拨「${name}」的登场状态为「登场」（检测到字段更新：${changedKeys.slice(0, 8).join('、')}${changedKeys.length > 8 ? ` 等${changedKeys.length}项` : ''}）`,
-        role: name,
-        rolePath,
-        reason: 'offstage_unchanged_but_role_updated',
-        changedKeys,
-      },
-      debugSetting,
-    );
-  }
 
     if (patched.length > 0) {
       edenLog(
