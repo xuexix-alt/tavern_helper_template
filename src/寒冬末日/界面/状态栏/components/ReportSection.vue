@@ -589,10 +589,7 @@ async function buildReport(): Promise<ReportResult> {
     recognizedPaths.add('stat_data.主线任务.当前阶段');
   }
 
-  const goals = new Set([
-    ...Object.keys(prevMission?.阶段目标 ?? {}),
-    ...Object.keys(curMission?.阶段目标 ?? {}),
-  ]);
+  const goals = new Set([...Object.keys(prevMission?.阶段目标 ?? {}), ...Object.keys(curMission?.阶段目标 ?? {})]);
   for (const key of goals) {
     const prevGoal = _.get(prevMission, ['阶段目标', key], null);
     const curGoal = _.get(curMission, ['阶段目标', key], null);
@@ -611,10 +608,7 @@ async function buildReport(): Promise<ReportResult> {
 
   // 情报碎片
   const intelItems: ReportRow[] = [];
-  const intelKeys = new Set([
-    ...Object.keys(prevMission?.情报碎片 ?? {}),
-    ...Object.keys(curMission?.情报碎片 ?? {}),
-  ]);
+  const intelKeys = new Set([...Object.keys(prevMission?.情报碎片 ?? {}), ...Object.keys(curMission?.情报碎片 ?? {})]);
   for (const key of intelKeys) {
     const prevIntel = _.get(prevMission, ['情报碎片', key], null);
     const curIntel = _.get(curMission, ['情报碎片', key], null);
@@ -718,9 +712,7 @@ async function buildReport(): Promise<ReportResult> {
     roleItems.push({
       key: 'deaths',
       title: '角色死亡',
-      detail: `有 ${deaths.length} 名角色死亡：${deaths
-        .map(d => `${d.name}（${d.reason}）`)
-        .join('、')}`,
+      detail: `有 ${deaths.length} 名角色死亡：${deaths.map(d => `${d.name}（${d.reason}）`).join('、')}`,
       source: deaths.some(d => d.source === 'AI') ? 'AI' : '脚本',
     });
   }
