@@ -1,6 +1,7 @@
 <template>
   <main id="eden-main-container">
     <WorldSection />
+    <ReportSection />
     <StorySection :raw="raw" />
     <ShelterSection />
     <MissionSection />
@@ -16,12 +17,13 @@ import CharactersSection from './components/CharactersSection.vue';
 import ChoicesSection from './components/ChoicesSection.vue';
 import MissionSection from './components/MissionSection.vue';
 import OtherResidentsSection from './components/OtherResidentsSection.vue';
+import ReportSection from './components/ReportSection.vue';
 import ShelterSection from './components/ShelterSection.vue';
 import StorySection from './components/StorySection.vue';
 import WorldSection from './components/WorldSection.vue';
 import { useInjectedData } from './useInjectedData';
 
-const UI_VERSION = '1.2';
+const UI_VERSION = '1.3';
 const { raw, options } = useInjectedData();
 
 watchDebounced(

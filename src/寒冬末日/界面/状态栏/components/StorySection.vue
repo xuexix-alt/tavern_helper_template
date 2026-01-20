@@ -212,15 +212,190 @@ function scheduleResize() {
   });
 }
 
+function applyTavernDisplayRegex(text: string): string {
+  if (!text) return '';
+  try {
+    if (typeof formatAsTavernRegexedString === 'function') {
+      const out = formatAsTavernRegexedString(text, 'ai_output', 'display', { depth: 0 });
+      return typeof out === 'string' ? out : text;
+    }
+  } catch {
+    // ignore: 在非酒馆/未注入对应 API 的环境里可能不可用
+  }
+  return text;
+}
+
+function normalizeXmlishForDisplay(input: string): string {
+  // 目标：
+  // 1) 识别并优雅处理常见块标签（例如 <details>/<summary>）
+  // 2) 其余“XML 风格标签”默认只作为包裹层：去掉标签但保留文本内容，避免 UI 里出现成片的 <tag>
+  if (!input || !input.includes('<')) return input;
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(input, 'text/html');
+    const root = doc.body as HTMLElement | null;
+    if (!root) return input;
+
+    const STRIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'META', 'LINK', 'NOSCRIPT']);
+    const INLINE_TAGS = new Set([
+      'A',
+      'ABBR',
+      'B',
+      'BDI',
+      'BDO',
+      'CITE',
+      'CODE',
+      'DATA',
+      'DFN',
+      'EM',
+      'I',
+      'KBD',
+      'MARK',
+      'Q',
+      'S',
+      'SAMP',
+      'SMALL',
+      'SPAN',
+      'STRONG',
+      'SUB',
+      'SUP',
+      'TIME',
+      'U',
+      'VAR',
+      // 自定义标签通常是“块”语义；不放进 INLINE_TAGS 里，避免粘连成一行
+    ]);
+    const BLOCK_TAGS = new Set([
+      'ADDRESS',
+      'ARTICLE',
+      'ASIDE',
+      'BLOCKQUOTE',
+      'DIV',
+      'DL',
+      'DT',
+      'DD',
+      'FIGCAPTION',
+      'FIGURE',
+      'FOOTER',
+      'FORM',
+      'H1',
+      'H2',
+      'H3',
+      'H4',
+      'H5',
+      'H6',
+      'HEADER',
+      'HR',
+      'LI',
+      'MAIN',
+      'NAV',
+      'OL',
+      'P',
+      'PRE',
+      'SECTION',
+      'TABLE',
+      'TBODY',
+      'THEAD',
+      'TFOOT',
+      'TR',
+      'TD',
+      'TH',
+      'UL',
+    ]);
+
+    const append = (parts: string[], s: string) => {
+      if (!s) return;
+      parts.push(s);
+    };
+
+    const renderChildren = (nodes: ChildNode[]): string => {
+      const parts: string[] = [];
+      for (const n of nodes) append(parts, renderNode(n));
+      return parts.join('');
+    };
+
+    const renderNode = (node: ChildNode): string => {
+      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ?? '';
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+      const el = node as HTMLElement;
+      const tag = (el.tagName ?? '').toUpperCase();
+      if (!tag || STRIP_TAGS.has(tag)) return '';
+
+      if (tag === 'BR') return '\n';
+
+      if (tag === 'IMG') {
+        // 兼容“模型直接输出 <img>”的情况：转成 markdown 图片，复用现有 mdImage 解析逻辑
+        const src = (el.getAttribute('src') ?? '').trim();
+        if (!src) return '';
+        const alt = (el.getAttribute('alt') ?? el.getAttribute('title') ?? '').replace(/[\]\r\n]+/g, ' ').trim();
+        const safeSrc = src.replace(/\)/g, '%29');
+        return `\n![${alt}](${safeSrc})\n`;
+      }
+
+      if (tag === 'DETAILS') {
+        const children = Array.from(el.childNodes) as ChildNode[];
+        const summaryEl = Array.from(el.children).find(c => (c as HTMLElement).tagName?.toUpperCase() === 'SUMMARY') as
+          | HTMLElement
+          | undefined;
+
+        const summary = summaryEl?.textContent?.trim() ?? '';
+        const bodyNodes = children.filter(n => n !== summaryEl);
+        const body = renderChildren(bodyNodes).trim();
+        const header = summary ? `【${summary}】\n` : '';
+        return `\n\n${header}${body}\n\n`;
+      }
+
+      if (tag === 'SUMMARY') {
+        // <summary> 仅在 <details> 内使用；已由 <details> 分支处理
+        return '';
+      }
+
+      if (tag === 'A') {
+        const href = (el.getAttribute('href') ?? '').trim();
+        const text = renderChildren(Array.from(el.childNodes) as ChildNode[]).trim();
+        if (!href) return text;
+        if (!text) return href;
+        return `${text} (${href})`;
+      }
+
+      const childrenText = renderChildren(Array.from(el.childNodes) as ChildNode[]);
+      const isInline =
+        INLINE_TAGS.has(tag) ||
+        (!BLOCK_TAGS.has(tag) && !childrenText.includes('\n') && childrenText.trim().length <= 120);
+
+      // 默认：去标签保留内容；仅对“块语义”标签补一点换行，避免不同块粘连到一行
+      if (isInline) return childrenText;
+      return `\n${childrenText}\n`;
+    };
+
+    const rendered = renderChildren(Array.from(root.childNodes) as ChildNode[]);
+    return (
+      rendered
+        // 防止块级标签产生大量空行
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+    );
+  } catch {
+    return input;
+  }
+}
+
 function normalizeStoryText(raw: string): string {
   // 1) 隐藏绘图思维链
   // 2) 隐藏 <image> 包裹标签，但保留其中的 image###...### 供生图插件提取
-  // 3) 归一化空白行，减少图片/提示词前后的“被动拉高”
-  return raw
+  // 3) 优先应用“酒馆正则”，让用户能用酒馆自带正则更灵活地对齐/处理各种自定义 XML 块
+  // 4) 将剩余的 XML/HTML 风格标签做“去标签保内容”的显示归一化（例如 <details>）
+  // 5) 归一化空白行，减少图片/提示词前后的“被动拉高”
+  const stripped = (raw ?? '')
     .replace(/\r\n/g, '\n')
     .replace(/<imgthink>[\s\S]*?<\/imgthink>/gi, '')
-    .replace(/<\/?image(?:\s[^>]*)?>/gi, '')
-    .replace(/\n{3,}/g, '\n\n');
+    .replace(/<\/?image(?:\s[^>]*)?>/gi, '');
+
+  const regexed = applyTavernDisplayRegex(stripped);
+  const xmlNormalized = normalizeXmlishForDisplay(regexed);
+  return xmlNormalized.replace(/\n{3,}/g, '\n\n');
 }
 
 type TagBlock = {
