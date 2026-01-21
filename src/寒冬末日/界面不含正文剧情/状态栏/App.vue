@@ -21,7 +21,7 @@ import ShelterSection from './components/ShelterSection.vue';
 import WorldSection from './components/WorldSection.vue';
 import { useInjectedData } from './useInjectedData';
 
-const UI_VERSION = '1.3';
+const UI_VERSION = '2.0';
 const { options } = useInjectedData();
 
 watchDebounced(

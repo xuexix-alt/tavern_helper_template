@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
 import _ from 'lodash';
+import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { diffWorldHours } from '../../../util/time';
 import { normalizeRoomTag } from '../../../util/room';
 
@@ -134,6 +135,8 @@ let reportParentScrollTarget: HTMLElement | Window | null = null;
 let reportScrollOverflow = '';
 let reportDocOverflow = '';
 let reportBodyOverflow = '';
+let stopReportScroll: (() => void) | null = null;
+let stopReportResize: (() => void) | null = null;
 
 const reportModalMaskStyle = computed(() => ({
   top: `${reportModalViewportTop.value}px`,
@@ -182,30 +185,26 @@ function updateReportModalViewport() {
   reportModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
 }
 
+const throttledUpdateReportModalViewport = useThrottleFn(updateReportModalViewport, 50);
+
 function bindReportParentScrollSync() {
   const frameEl = window.frameElement as HTMLElement | null;
   if (!frameEl) return;
   reportParentScrollTarget = getParentScrollContainer(frameEl);
-  const handler = updateReportModalViewport;
-
-  if (reportParentScrollTarget instanceof Window) {
-    reportParentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    reportParentScrollTarget.addEventListener('resize', handler, { passive: true });
-  } else {
-    reportParentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    window.parent?.addEventListener?.('resize', handler, { passive: true });
-  }
+  const handler = throttledUpdateReportModalViewport;
+  if (!reportParentScrollTarget) return;
+  stopReportScroll?.();
+  stopReportResize?.();
+  stopReportScroll = useEventListener(reportParentScrollTarget, 'scroll', handler, { passive: true });
+  const resizeTarget = reportParentScrollTarget instanceof Window ? reportParentScrollTarget : window.parent ?? window;
+  stopReportResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 
 function unbindReportParentScrollSync() {
-  const handler = updateReportModalViewport;
-  if (reportParentScrollTarget instanceof Window) {
-    reportParentScrollTarget.removeEventListener('scroll', handler as any);
-    reportParentScrollTarget.removeEventListener('resize', handler as any);
-  } else if (reportParentScrollTarget) {
-    reportParentScrollTarget.removeEventListener('scroll', handler as any);
-    window.parent?.removeEventListener?.('resize', handler as any);
-  }
+  stopReportScroll?.();
+  stopReportResize?.();
+  stopReportScroll = null;
+  stopReportResize = null;
 }
 
 function lockParentScroll() {

@@ -322,6 +322,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue';
+import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { useDataStore } from '../../store';
 import { useShelterScopeStore } from '../../shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../util/shelter_scope';
@@ -463,6 +464,8 @@ const isScopeEditorOpen = ref(false);
 const scopeModalViewportTop = ref(0);
 const scopeModalViewportHeight = ref(0);
 let parentScrollTarget: HTMLElement | Window | null = null;
+let stopScopeScroll: (() => void) | null = null;
+let stopScopeResize: (() => void) | null = null;
 const isCalibrating = ref(false);
 
 async function calibrateDailyRollDate() {
@@ -559,30 +562,26 @@ function updateScopeModalViewport() {
   scopeModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
 }
 
+const throttledUpdateScopeModalViewport = useThrottleFn(updateScopeModalViewport, 50);
+
 function bindParentScrollSync() {
   const frameEl = window.frameElement as HTMLElement | null;
   if (!frameEl) return;
   parentScrollTarget = getParentScrollContainer(frameEl);
-  const handler = updateScopeModalViewport;
-
-  if (parentScrollTarget instanceof Window) {
-    parentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    parentScrollTarget.addEventListener('resize', handler, { passive: true });
-  } else {
-    parentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    window.parent?.addEventListener?.('resize', handler, { passive: true });
-  }
+  const handler = throttledUpdateScopeModalViewport;
+  if (!parentScrollTarget) return;
+  stopScopeScroll?.();
+  stopScopeResize?.();
+  stopScopeScroll = useEventListener(parentScrollTarget, 'scroll', handler, { passive: true });
+  const resizeTarget = parentScrollTarget instanceof Window ? parentScrollTarget : window.parent ?? window;
+  stopScopeResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 
 function unbindParentScrollSync() {
-  const handler = updateScopeModalViewport;
-  if (parentScrollTarget instanceof Window) {
-    parentScrollTarget.removeEventListener('scroll', handler as any);
-    parentScrollTarget.removeEventListener('resize', handler as any);
-  } else if (parentScrollTarget) {
-    parentScrollTarget.removeEventListener('scroll', handler as any);
-    window.parent?.removeEventListener?.('resize', handler as any);
-  }
+  stopScopeScroll?.();
+  stopScopeResize?.();
+  stopScopeScroll = null;
+  stopScopeResize = null;
   parentScrollTarget = null;
 }
 

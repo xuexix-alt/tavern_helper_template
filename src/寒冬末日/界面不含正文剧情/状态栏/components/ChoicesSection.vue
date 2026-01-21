@@ -104,6 +104,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue';
+import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
 
 const props = defineProps<{
@@ -147,6 +148,9 @@ const choiceSending = ref(false);
 const choiceModalViewportTop = ref(0);
 const choiceModalViewportHeight = ref(0);
 let choiceParentScrollTarget: HTMLElement | Window | null = null;
+let stopChoiceScroll: (() => void) | null = null;
+let stopChoiceResize: (() => void) | null = null;
+let stopPaletteClick: (() => void) | null = null;
 
 const choiceModalMaskStyle = computed(() => ({
   top: `${choiceModalViewportTop.value}px`,
@@ -184,30 +188,26 @@ function updateChoiceModalViewport() {
   choiceModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
 }
 
+const throttledUpdateChoiceModalViewport = useThrottleFn(updateChoiceModalViewport, 50);
+
 function bindChoiceParentScrollSync() {
   const frameEl = window.frameElement as HTMLElement | null;
   if (!frameEl) return;
   choiceParentScrollTarget = getParentScrollContainer(frameEl);
-  const handler = updateChoiceModalViewport;
-
-  if (choiceParentScrollTarget instanceof Window) {
-    choiceParentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    choiceParentScrollTarget.addEventListener('resize', handler, { passive: true });
-  } else {
-    choiceParentScrollTarget.addEventListener('scroll', handler, { passive: true });
-    window.parent?.addEventListener?.('resize', handler, { passive: true });
-  }
+  const handler = throttledUpdateChoiceModalViewport;
+  if (!choiceParentScrollTarget) return;
+  stopChoiceScroll?.();
+  stopChoiceResize?.();
+  stopChoiceScroll = useEventListener(choiceParentScrollTarget, 'scroll', handler, { passive: true });
+  const resizeTarget = choiceParentScrollTarget instanceof Window ? choiceParentScrollTarget : window.parent ?? window;
+  stopChoiceResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 
 function unbindChoiceParentScrollSync() {
-  const handler = updateChoiceModalViewport;
-  if (choiceParentScrollTarget instanceof Window) {
-    choiceParentScrollTarget.removeEventListener('scroll', handler as any);
-    choiceParentScrollTarget.removeEventListener('resize', handler as any);
-  } else if (choiceParentScrollTarget) {
-    choiceParentScrollTarget.removeEventListener('scroll', handler as any);
-    window.parent?.removeEventListener?.('resize', handler as any);
-  }
+  stopChoiceScroll?.();
+  stopChoiceResize?.();
+  stopChoiceScroll = null;
+  stopChoiceResize = null;
   choiceParentScrollTarget = null;
 }
 
@@ -320,11 +320,12 @@ function onDocumentClick(ev: MouseEvent) {
 
 onMounted(() => {
   loadPersistedSettings();
-  document.addEventListener('click', onDocumentClick);
+  stopPaletteClick = useEventListener(document, 'click', onDocumentClick);
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocumentClick);
+  stopPaletteClick?.();
+  stopPaletteClick = null;
   unbindChoiceParentScrollSync();
 });
 </script>

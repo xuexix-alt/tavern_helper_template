@@ -85,3 +85,16 @@ import something from 'https://cdn.jsdelivr.net/npm/package-name@version/+esm';
 - 页面整体应适配容器宽度，不产生横向滚动条.
 - 如果样式更适合卡片形状，则不要有背景颜色，除非用户有明确要求.
 >>>>>>> 640d7d7c3f446a2c95904767cd9075c4284f5111
+
+## VueUse 规范（轻量）
+
+### 必需规范（写进规则）
+- 事件监听一律使用 `useEventListener`（避免内存泄漏与残留监听）
+- 高频滚动/resize 回调必须节流（`useThrottleFn` 或 `watchThrottled`）
+- 多行文本输入优先使用 `useTextareaAutosize`
+- 弹窗/浮层高度优先使用 `useElementSize` / `useResizeObserver` 做动态适配
+
+### 推荐规范（建议项）
+- 列表项 > 6 时建议使用 `useVirtualList`
+- 复杂输入/搜索建议使用 `watchDebounced`
+- 需要复制时优先使用 `useClipboard`
