@@ -135,9 +135,7 @@
           <div class="role-modal-header">
             <div class="role-modal-title">✨ 添加角色</div>
             <div class="role-modal-actions">
-              <button class="role-btn ghost role-generate-btn" type="button" @click="openGenerateRole">
-                生成角色
-              </button>
+              <button class="role-btn ghost role-generate-btn" type="button" @click="openGenerateRole">生成角色</button>
               <button class="role-icon-btn" type="button" @click="closeAddRole">✕</button>
             </div>
           </div>
@@ -151,12 +149,7 @@
             <div class="role-form-grid">
               <div class="role-form-item">
                 <label class="role-form-label">姓名 *</label>
-                <input
-                  v-model="addRoleForm.姓名"
-                  class="role-form-input"
-                  type="text"
-                  placeholder="角色姓名"
-                />
+                <input v-model="addRoleForm.姓名" class="role-form-input" type="text" placeholder="角色姓名" />
               </div>
 
               <div class="role-form-item role-form-toggle">
@@ -186,12 +179,7 @@
 
               <div class="role-form-item">
                 <label class="role-form-label">秩序刻印</label>
-                <input
-                  v-model="addRoleForm.秩序刻印"
-                  class="role-form-input"
-                  type="number"
-                  placeholder="数值"
-                />
+                <input v-model="addRoleForm.秩序刻印" class="role-form-input" type="number" placeholder="数值" />
               </div>
 
               <div class="role-form-item">
@@ -206,12 +194,7 @@
 
               <div class="role-form-item">
                 <label class="role-form-label">健康</label>
-                <input
-                  v-model="addRoleForm.健康"
-                  class="role-form-input"
-                  type="number"
-                  placeholder="数值"
-                />
+                <input v-model="addRoleForm.健康" class="role-form-input" type="number" placeholder="数值" />
               </div>
 
               <div class="role-form-item">
@@ -324,9 +307,7 @@
           </div>
 
           <div class="role-modal-footer">
-            <button class="role-btn ghost" type="button" :disabled="addRoleLoading" @click="closeAddRole">
-              取消
-            </button>
+            <button class="role-btn ghost" type="button" :disabled="addRoleLoading" @click="closeAddRole">取消</button>
             <button class="role-btn primary" type="button" :disabled="addRoleLoading" @click="submitAddRole">
               {{ addRoleLoading ? '正在写入…' : '添加角色' }}
             </button>
@@ -342,9 +323,7 @@
           </div>
 
           <div class="role-generate-body" :style="{ maxHeight: roleModalBodyMaxHeight }">
-            <div class="role-form-hint">
-              请输入你想要的角色概况，示例：2B，女，冷酷性感的刀女，身份为……
-            </div>
+            <div class="role-form-hint">请输入你想要的角色概况，示例：2B，女，冷酷性感的刀女，身份为……</div>
             <textarea
               ref="roleGenerateTextarea"
               v-model="generateRoleInput"
@@ -390,7 +369,12 @@
           </div>
 
           <div class="role-modal-footer">
-            <button class="role-btn ghost" type="button" @click="applyGeneratedRoleToForm" :disabled="!generatedRoleForm">
+            <button
+              class="role-btn ghost"
+              type="button"
+              @click="applyGeneratedRoleToForm"
+              :disabled="!generatedRoleForm"
+            >
               应用到添加角色
             </button>
             <button
@@ -902,7 +886,10 @@ function extractEnglishNameFromYaml(source: string) {
 }
 
 function stripCodeFence(source: string) {
-  return source.replace(/```(?:json|yaml)?/gi, '').replace(/```/g, '').trim();
+  return source
+    .replace(/```(?:json|yaml)?/gi, '')
+    .replace(/```/g, '')
+    .trim();
 }
 
 function extractJsonBlock(source: string, startChar: '{' | '[', endChar: '}' | ']') {

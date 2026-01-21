@@ -199,7 +199,8 @@ function bindChoiceParentScrollSync() {
   stopChoiceScroll?.();
   stopChoiceResize?.();
   stopChoiceScroll = useEventListener(choiceParentScrollTarget, 'scroll', handler, { passive: true });
-  const resizeTarget = choiceParentScrollTarget instanceof Window ? choiceParentScrollTarget : window.parent ?? window;
+  const resizeTarget =
+    choiceParentScrollTarget instanceof Window ? choiceParentScrollTarget : (window.parent ?? window);
   stopChoiceResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 

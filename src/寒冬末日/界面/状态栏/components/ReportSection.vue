@@ -196,7 +196,8 @@ function bindReportParentScrollSync() {
   stopReportScroll?.();
   stopReportResize?.();
   stopReportScroll = useEventListener(reportParentScrollTarget, 'scroll', handler, { passive: true });
-  const resizeTarget = reportParentScrollTarget instanceof Window ? reportParentScrollTarget : window.parent ?? window;
+  const resizeTarget =
+    reportParentScrollTarget instanceof Window ? reportParentScrollTarget : (window.parent ?? window);
   stopReportResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 
