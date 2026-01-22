@@ -409,12 +409,12 @@ async function refreshData() {
       girlsData.value = [];
     }
   } finally {
-  isRefreshing.value = false;
-}
+    isRefreshing.value = false;
+  }
 
-function goPlay() {
-  router.push('/play');
-}
+  function goPlay() {
+    router.push('/play');
+  }
 }
 
 // ================ 计算属性 ================

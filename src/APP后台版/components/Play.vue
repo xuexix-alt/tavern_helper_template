@@ -39,7 +39,9 @@
     <!-- Content -->
     <div class="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
       <!-- Narrative / Log -->
-      <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/60">
+      <section
+        class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/60"
+      >
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 px-4 py-3">
           <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
             <i class="fas fa-scroll text-blue-300"></i>
@@ -57,7 +59,9 @@
 
         <div class="flex items-center gap-2 border-b border-slate-800/50 px-4 py-2 text-[11px] text-slate-400">
           <span class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">快捷指令</span>
-          <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto">
+          <div
+            class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto"
+          >
             <button
               v-for="item in quickActions"
               :key="item.label"
@@ -74,7 +78,8 @@
           ref="logScrollEl"
           class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex-1 overflow-y-auto px-4 py-4 text-[14px] leading-relaxed text-slate-100"
         >
-          <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+          <pre
+            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
         </div>
       </section>
     </div>
