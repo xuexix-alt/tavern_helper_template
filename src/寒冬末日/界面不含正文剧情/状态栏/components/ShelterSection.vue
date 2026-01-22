@@ -573,7 +573,7 @@ function bindParentScrollSync() {
   stopScopeScroll?.();
   stopScopeResize?.();
   stopScopeScroll = useEventListener(parentScrollTarget, 'scroll', handler, { passive: true });
-  const resizeTarget = parentScrollTarget instanceof Window ? parentScrollTarget : window.parent ?? window;
+  const resizeTarget = parentScrollTarget instanceof Window ? parentScrollTarget : (window.parent ?? window);
   stopScopeResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
 }
 
