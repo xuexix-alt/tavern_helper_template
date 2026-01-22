@@ -130,12 +130,12 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="addRoleOpen" class="role-modal-mask" @click.self="closeAddRole">
+      <div v-if="addRoleOpen" class="role-modal-mask">
         <div class="role-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-modal-header">
             <div class="role-modal-title">✨ 添加角色</div>
             <div class="role-modal-actions">
-              <button class="role-btn ghost role-generate-btn" type="button" @click="openGenerateRole">
+              <button class="role-btn primary role-generate-btn" type="button" @click="openGenerateRole">
                 生成角色
               </button>
               <button class="role-icon-btn" type="button" @click="closeAddRole">✕</button>
@@ -249,83 +249,14 @@
                 </select>
               </div>
 
-              <div class="role-form-item full">
-                <label class="role-form-label">衣着</label>
-                <textarea
-                  ref="roleTextareaClothes"
-                  v-model="addRoleForm.衣着"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">舌唇</label>
-                <textarea
-                  ref="roleTextareaMouth"
-                  v-model="addRoleForm.舌唇"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">胸乳</label>
-                <textarea
-                  ref="roleTextareaChest"
-                  v-model="addRoleForm.胸乳"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">私穴</label>
-                <textarea
-                  ref="roleTextareaPriv"
-                  v-model="addRoleForm.私穴"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">神态样貌</label>
-                <textarea
-                  ref="roleTextareaFace"
-                  v-model="addRoleForm.神态样貌"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">动作姿势</label>
-                <textarea
-                  ref="roleTextareaPose"
-                  v-model="addRoleForm.动作姿势"
-                  class="role-form-textarea"
-                  rows="2"
-                ></textarea>
-              </div>
-
-              <div class="role-form-item full">
-                <label class="role-form-label">内心想法</label>
-                <textarea
-                  ref="roleTextareaMind"
-                  v-model="addRoleForm.内心想法"
-                  class="role-form-textarea"
-                  rows="3"
-                ></textarea>
-              </div>
             </div>
 
             <div v-if="addRoleError" class="role-form-error">{{ addRoleError }}</div>
           </div>
 
           <div class="role-modal-footer">
-            <button class="role-btn ghost" type="button" :disabled="addRoleLoading" @click="closeAddRole">
-              取消
+            <button class="role-btn danger" type="button" :disabled="addRoleLoading" @click="closeAddRole">
+              关闭
             </button>
             <button class="role-btn primary" type="button" :disabled="addRoleLoading" @click="submitAddRole">
               {{ addRoleLoading ? '正在写入…' : '添加角色' }}
@@ -334,73 +265,291 @@
         </div>
       </div>
 
-      <div v-if="generateRoleOpen" class="role-generate-mask" @click.self="closeGenerateRole">
+      <div v-if="generateRoleOpen" class="role-generate-mask">
         <div class="role-generate-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-generate-header">
             <div class="role-modal-title">🧬 生成角色面板</div>
-            <button class="role-icon-btn" type="button" @click="closeGenerateRole">✕</button>
+            <div class="role-generate-header-actions">
+              <input ref="roleImportInput" class="role-file-input" type="file" accept="application/json" @change="onImportRoleFile" />
+              <button class="role-btn ghost role-header-btn" type="button" @click="triggerImportRole">
+                导入
+              </button>
+              <button class="role-btn ghost role-header-btn" type="button" @click="exportGeneratedRoles">
+                导出
+              </button>
+              <button class="role-icon-btn" type="button" @click="closeGenerateRole">✕</button>
+            </div>
           </div>
 
           <div class="role-generate-body" :style="{ maxHeight: roleModalBodyMaxHeight }">
-            <div class="role-form-hint">
-              请输入你想要的角色概况，示例：2B，女，冷酷性感的刀女，身份为……
+            <div class="role-generate-input-block primary">
+              <div class="role-generate-title">🌟 主要提示词（请先填写这里）</div>
+              <div class="role-form-hint">
+                请输入你想要的角色概况，示例：2B，女，冷酷性感的刀女，身份为……
+              </div>
+              <textarea
+                ref="roleGenerateTextarea"
+                v-model="generateRoleInput"
+                class="role-form-textarea role-generate-input"
+                rows="3"
+                placeholder="输入角色信息提示词…"
+              ></textarea>
+              <div class="role-generate-actions toolbar">
+                <div class="role-generate-toggle-group">
+                  <button class="role-btn ghost" type="button" @click="showPromptPanel = !showPromptPanel">
+                    提示词
+                  </button>
+                  <button class="role-btn ghost" type="button" @click="showTemplatePanel = !showTemplatePanel">
+                    模板
+                  </button>
+                  <button class="role-btn ghost" type="button" @click="showWorldbookPanel = !showWorldbookPanel">
+                    世界书
+                  </button>
+                </div>
+                <button
+                  class="role-btn primary"
+                  type="button"
+                  :disabled="generateRoleLoading || !generateRoleInput.trim()"
+                  @click="onGenerateRole"
+                >
+                  {{ generateRoleLoading ? '生成中…' : '点击生成' }}
+                </button>
+              </div>
             </div>
-            <textarea
-              ref="roleGenerateTextarea"
-              v-model="generateRoleInput"
-              class="role-form-textarea role-generate-input"
-              rows="3"
-              placeholder="输入角色信息提示词…"
-            ></textarea>
-            <div class="role-generate-actions">
-              <button
-                class="role-btn primary"
-                type="button"
-                :disabled="generateRoleLoading || !generateRoleInput.trim()"
-                @click="onGenerateRole"
-              >
-                {{ generateRoleLoading ? '生成中…' : '点击生成' }}
-              </button>
+
+            <div class="role-generate-settings">
+              <div class="role-generate-title">生成设置</div>
+              <div class="role-form-hint">
+                只使用当前预设 + 选中的世界书子集，不携带聊天上下文。可保存为默认配置。
+              </div>
+              <div v-if="showPromptPanel" class="role-generate-setting-item">
+                <label class="role-form-label">系统提示词</label>
+                <textarea v-model="roleGenerateSystemPromptText" class="role-form-textarea" rows="4"></textarea>
+              </div>
+              <div v-if="showPromptPanel" class="role-generate-setting-item">
+                <label class="role-form-label">生成提示词</label>
+                <textarea v-model="roleGeneratePromptText" class="role-form-textarea" rows="6"></textarea>
+              </div>
+              <div v-if="showTemplatePanel" class="role-generate-setting-item">
+                <label class="role-form-label">世界书模板</label>
+                <textarea v-model="roleGenerateTemplateText" class="role-form-textarea" rows="8"></textarea>
+              </div>
+              <div v-if="showPromptPanel" class="role-generate-setting-item">
+                <label class="role-form-label">最终提示词（只读）</label>
+                <textarea class="role-form-textarea" rows="6" readonly>{{ finalGeneratePromptText }}</textarea>
+                <div class="role-generate-actions">
+                  <button class="role-btn ghost" type="button" @click="saveGenerateSettings">保存为默认</button>
+                  <button class="role-btn ghost" type="button" @click="resetGenerateSettings">重置默认</button>
+                  <button class="role-btn ghost" type="button" @click="copyFinalPrompt">复制最终提示词</button>
+                </div>
+              </div>
+
+              <div v-if="showWorldbookPanel" class="role-generate-setting-item">
+                <div class="role-generate-title">世界书条目子集（多选）</div>
+                <div class="role-generate-worldbook-toolbar">
+                  <input
+                    v-model="worldbookFilterText"
+                    class="role-form-input"
+                    type="text"
+                    placeholder="筛选条目名称…"
+                  />
+                  <button class="role-btn ghost" type="button" :disabled="isWorldbookLoading" @click="loadWorldbookEntryOptions">
+                    {{ isWorldbookLoading ? '加载中…' : '刷新列表' }}
+                  </button>
+                  <button class="role-btn ghost" type="button" @click="selectAllEnabledWorldbookEntries">勾选已启用</button>
+                  <button class="role-btn ghost" type="button" @click="clearWorldbookSelection">清空</button>
+                  <div class="role-generate-meta">已选 {{ selectedWorldbookCount }} 条</div>
+                </div>
+                <div class="role-generate-worldbook-list">
+                  <label
+                    v-for="item in filteredWorldbookEntryOptions"
+                    :key="item.id"
+                    class="role-generate-worldbook-item"
+                  >
+                    <input v-model="selectedWorldbookEntryIds" type="checkbox" :value="item.id" />
+                    <span class="role-worldbook-label" :class="{ disabled: !item.enabled }">
+                      {{ item.label }}
+                    </span>
+                  </label>
+                  <div v-if="filteredWorldbookEntryOptions.length === 0" class="role-generate-empty">暂无条目</div>
+                </div>
+              </div>
             </div>
 
             <div v-if="generateRoleError" class="role-form-error">{{ generateRoleError }}</div>
 
-            <div v-if="generatedRoleForm" class="role-generate-result">
-              <div class="role-generate-section">
-                <div class="role-generate-title">角色变量预览</div>
-                <textarea class="role-form-textarea" rows="6" readonly>{{ generatedRoleJsonText }}</textarea>
+            <div v-if="generatedRoles.length > 0" class="role-generate-result">
+              <div class="role-generate-tabs">
+                <button
+                  v-for="(item, index) in generatedRoles"
+                  :key="item.id"
+                  class="role-tab-btn"
+                  :class="{ active: activeGeneratedIndex === index }"
+                  type="button"
+                  @click="activeGeneratedIndex = index"
+                >
+                  {{ item.form.姓名 || `角色${index + 1}` }}
+                  <span v-if="item.status === 'success'" class="role-status success">已写入</span>
+                  <span v-else-if="item.status === 'error'" class="role-status error">失败</span>
+                </button>
               </div>
-              <div class="role-generate-section">
-                <div class="role-generate-title">世界书关键词</div>
-                <div class="role-generate-keys">
-                  <span v-for="key in generatedWorldbookKeys" :key="key" class="role-chip">{{ key }}</span>
-                  <span v-if="generatedWorldbookKeys.length === 0" class="role-generate-empty">（未提取）</span>
+
+              <div v-if="activeGeneratedRole" class="role-generate-panel">
+                <div class="role-generate-section">
+                  <div class="role-generate-title">角色变量编辑</div>
+                  <div class="role-form-grid">
+                    <div class="role-form-item">
+                      <label class="role-form-label">姓名 *</label>
+                      <input v-model="activeGeneratedRole.form.姓名" class="role-form-input" type="text" />
+                    </div>
+
+                    <div class="role-form-item role-form-toggle">
+                      <label class="role-form-label">临时NPC</label>
+                      <label class="role-switch">
+                        <input v-model="activeGeneratedRole.isTemp" type="checkbox" />
+                        <span class="role-switch-slider"></span>
+                        <span class="role-switch-text">写入临时NPC</span>
+                      </label>
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">关系</label>
+                      <select v-model="activeGeneratedRole.form.关系" class="role-form-select">
+                        <option value="">（留空）</option>
+                        <option v-for="opt in relationStageOptions" :key="opt" :value="opt">{{ opt }}</option>
+                      </select>
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">关系倾向</label>
+                      <select v-model="activeGeneratedRole.form.关系倾向" class="role-form-select">
+                        <option value="">（留空）</option>
+                        <option v-for="opt in relationTendencyOptions" :key="opt" :value="opt">{{ opt }}</option>
+                      </select>
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">秩序刻印</label>
+                      <input v-model="activeGeneratedRole.form.秩序刻印" class="role-form-input" type="number" />
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">秩序刻印更新原因</label>
+                      <input v-model="activeGeneratedRole.form.秩序刻印更新原因" class="role-form-input" type="text" />
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">健康</label>
+                      <input v-model="activeGeneratedRole.form.健康" class="role-form-input" type="number" />
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">健康更新原因</label>
+                      <input v-model="activeGeneratedRole.form.健康更新原因" class="role-form-input" type="text" />
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">健康状况</label>
+                      <select v-model="activeGeneratedRole.form.健康状况" class="role-form-select">
+                        <option value="">（留空）</option>
+                        <option v-for="opt in healthStatusOptions" :key="opt" :value="opt">{{ opt }}</option>
+                      </select>
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">所在房间</label>
+                      <input v-model="activeGeneratedRole.form.所在房间" class="role-form-input" type="text" />
+                    </div>
+
+                    <div class="role-form-item">
+                      <label class="role-form-label">登场状态</label>
+                      <select v-model="activeGeneratedRole.form.登场状态" class="role-form-select">
+                        <option v-for="opt in presenceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                      </select>
+                    </div>
+
+                    <div class="role-form-item full">
+                      <label class="role-form-label">衣着</label>
+                      <textarea v-model="activeGeneratedRole.form.衣着" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">舌唇</label>
+                      <textarea v-model="activeGeneratedRole.form.舌唇" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">胸乳</label>
+                      <textarea v-model="activeGeneratedRole.form.胸乳" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">私穴</label>
+                      <textarea v-model="activeGeneratedRole.form.私穴" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">神态样貌</label>
+                      <textarea v-model="activeGeneratedRole.form.神态样貌" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">动作姿势</label>
+                      <textarea v-model="activeGeneratedRole.form.动作姿势" class="role-form-textarea" rows="2"></textarea>
+                    </div>
+                    <div class="role-form-item full">
+                      <label class="role-form-label">内心想法</label>
+                      <textarea v-model="activeGeneratedRole.form.内心想法" class="role-form-textarea" rows="3"></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="role-generate-section">
+                  <div class="role-generate-title">世界书关键词（逗号分隔）</div>
+                  <input
+                    class="role-form-input"
+                    type="text"
+                    :value="getWorldbookKeysText(activeGeneratedRole)"
+                    @input="onWorldbookKeysInput(activeGeneratedRole, $event)"
+                  />
+                </div>
+
+                <div class="role-generate-section">
+                  <div class="role-generate-title">世界书文本（可编辑）</div>
+                  <textarea v-model="activeGeneratedRole.worldbookText" class="role-form-textarea" rows="10"></textarea>
+                </div>
+
+                <label class="role-switch role-generate-toggle">
+                  <input v-model="activeGeneratedRole.excludeWorldbook" type="checkbox" />
+                  <span class="role-switch-slider"></span>
+                  <span class="role-switch-text">排除世界书</span>
+                </label>
+
+                <div v-if="activeGeneratedRole.errorMessage" class="role-form-error">
+                  {{ activeGeneratedRole.errorMessage }}
                 </div>
               </div>
-              <div class="role-generate-section">
-                <div class="role-generate-title">世界书文本预览</div>
-                <textarea class="role-form-textarea" rows="10" readonly>{{ generatedWorldbookText }}</textarea>
-              </div>
-              <label class="role-switch role-generate-toggle">
-                <input v-model="generatedWriteWorldbook" type="checkbox" />
-                <span class="role-switch-slider"></span>
-                <span class="role-switch-text">同时写入世界书</span>
-              </label>
+            </div>
+
+            <div v-if="generateRoleRawResponse && generatedRoles.length === 0" class="role-generate-section">
+              <div class="role-generate-title">原始响应（解析失败时用于排查）</div>
+              <textarea class="role-form-textarea" rows="8" readonly>{{ generateRoleRawResponse }}</textarea>
             </div>
           </div>
 
           <div class="role-modal-footer">
-            <button class="role-btn ghost" type="button" @click="applyGeneratedRoleToForm" :disabled="!generatedRoleForm">
-              应用到添加角色
-            </button>
             <button
               class="role-btn primary"
               type="button"
-              :disabled="generateRoleLoading || !generatedRoleForm"
+              :disabled="generateRoleLoading || generatedRoles.length === 0"
               @click="writeGeneratedRole"
             >
               写入角色
             </button>
+            <button
+              class="role-btn primary"
+              type="button"
+              :disabled="generateRoleLoading || generatedRoles.length === 0"
+              @click="writeAllGeneratedRoles"
+            >
+              写入全部
+            </button>
+            <button class="role-btn danger" type="button" @click="closeGenerateRole">关闭</button>
           </div>
         </div>
       </div>
@@ -510,19 +659,21 @@ const generateRoleOpen = ref(false);
 const generateRoleInput = ref('');
 const generateRoleLoading = ref(false);
 const generateRoleError = ref('');
-const generatedRoleForm = ref<AddRoleForm | null>(null);
-const generatedRoleJsonText = ref('');
-const generatedWorldbookText = ref('');
-const generatedWorldbookKeys = ref<string[]>([]);
-const generatedWriteWorldbook = ref(true);
-const roleTextareaClothes = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaMouth = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaChest = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaPriv = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaFace = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaPose = ref<HTMLTextAreaElement | null>(null);
-const roleTextareaMind = ref<HTMLTextAreaElement | null>(null);
+const generateRoleRawResponse = ref('');
+const roleGenerateSystemPromptText = ref('');
+const roleGeneratePromptText = ref('');
+const roleGenerateTemplateText = ref('');
+const showPromptPanel = ref(false);
+const showTemplatePanel = ref(false);
+const showWorldbookPanel = ref(false);
+const worldbookFilterText = ref('');
+const worldbookEntryOptions = ref<WorldbookEntryOption[]>([]);
+const selectedWorldbookEntryIds = ref<string[]>([]);
+const isWorldbookLoading = ref(false);
+const generatedRoles = ref<GeneratedRoleItem[]>([]);
+const activeGeneratedIndex = ref(0);
 const roleGenerateTextarea = ref<HTMLTextAreaElement | null>(null);
+const roleImportInput = ref<HTMLInputElement | null>(null);
 
 type AddRoleForm = {
   姓名: string;
@@ -544,6 +695,26 @@ type AddRoleForm = {
   登场状态: string;
 };
 
+type WorldbookEntryOption = {
+  id: string;
+  worldbook: string;
+  entry: WorldbookEntry;
+  enabled: boolean;
+  label: string;
+};
+
+type GeneratedRoleItem = {
+  id: string;
+  form: AddRoleForm;
+  rawJson: string;
+  worldbookText: string;
+  worldbookKeys: string[];
+  excludeWorldbook: boolean;
+  isTemp: boolean;
+  status: 'idle' | 'writing' | 'success' | 'error';
+  errorMessage: string;
+};
+
 const relationStageOptions = ['无', '拒绝', '交易', '顺从', '忠诚', '性奴'] as const;
 const relationTendencyOptions = ['极易', '易', '中立', '难', '极难', '不可'] as const;
 const healthStatusOptions = ['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'] as const;
@@ -551,7 +722,7 @@ const presenceOptions = ['登场', '离场'] as const;
 
 const ROLE_GENERATE_SYSTEM_PROMPT = [
   '你是结构化角色/世界书生成器。',
-  '只允许输出以下三段，顺序固定，段落外不得出现任何文字：',
+  '只允许输出以下三段，顺序固定，段落外不得出现任何文字；若为多名角色则按顺序重复这三段：',
   '1) <ROLE_JSON>JSON</ROLE_JSON>',
   '2) <WB_KEYS>JSON数组</WB_KEYS>',
   '3) <context>...必须包含 NOTE 与 ```yaml 代码块...</context>',
@@ -560,8 +731,12 @@ const ROLE_GENERATE_SYSTEM_PROMPT = [
   'JSON 必须严格可解析（双引号、无注释、无尾逗号）。',
 ].join('\n');
 
+const ROLE_GENERATE_SETTINGS_KEY = 'ui_role_generate_settings';
+const DEFAULT_WORLDBOOK_NAME = '寒冬末日-星穹秩序';
+const DEFAULT_WORLDBOOK_NAME_ALT = '末世寒冬 - 星穹秩序';
+
 const ROLE_GENERATE_PROMPT = [
-  '你将根据用户输入生成“寒冬末日角色变量 + 世界书条目”。只输出以下三段，顺序固定：',
+  '你将根据用户输入生成“寒冬末日角色变量 + 世界书条目”。只输出以下三段，顺序固定；多角色时按顺序重复三段：',
   '<ROLE_JSON>JSON对象</ROLE_JSON>',
   '<WB_KEYS>JSON数组</WB_KEYS>',
   '<context>模板内容</context>',
@@ -650,15 +825,24 @@ const WORLD_BOOK_TEMPLATE = [
   '</context>',
 ].join('\n');
 
+roleGenerateSystemPromptText.value = ROLE_GENERATE_SYSTEM_PROMPT;
+roleGeneratePromptText.value = ROLE_GENERATE_PROMPT;
+roleGenerateTemplateText.value = WORLD_BOOK_TEMPLATE;
+
 const addRoleForm = ref<AddRoleForm>(createEmptyRoleForm());
-useTextareaAutosize({ element: roleTextareaClothes, input: computed(() => addRoleForm.value.衣着) });
-useTextareaAutosize({ element: roleTextareaMouth, input: computed(() => addRoleForm.value.舌唇) });
-useTextareaAutosize({ element: roleTextareaChest, input: computed(() => addRoleForm.value.胸乳) });
-useTextareaAutosize({ element: roleTextareaPriv, input: computed(() => addRoleForm.value.私穴) });
-useTextareaAutosize({ element: roleTextareaFace, input: computed(() => addRoleForm.value.神态样貌) });
-useTextareaAutosize({ element: roleTextareaPose, input: computed(() => addRoleForm.value.动作姿势) });
-useTextareaAutosize({ element: roleTextareaMind, input: computed(() => addRoleForm.value.内心想法) });
 useTextareaAutosize({ element: roleGenerateTextarea, input: computed(() => generateRoleInput.value) });
+
+const filteredWorldbookEntryOptions = computed(() => {
+  const keyword = worldbookFilterText.value.trim();
+  if (!keyword) return worldbookEntryOptions.value;
+  return worldbookEntryOptions.value.filter(item => item.label.includes(keyword));
+});
+
+const selectedWorldbookCount = computed(() => selectedWorldbookEntryIds.value.length);
+
+const finalGeneratePromptText = computed(() => buildGeneratePrompt(generateRoleInput.value));
+
+const activeGeneratedRole = computed(() => generatedRoles.value[activeGeneratedIndex.value] ?? null);
 
 const tabItems = computed(() =>
   active_character_keys.value.map(key => ({
@@ -728,20 +912,148 @@ function closeAddRole() {
   addRoleLoading.value = false;
 }
 
+function readGenerateSettings(): Record<string, any> | null {
+  try {
+    const vars = getVariables({ type: 'chat' });
+    const data = _.get(vars, ROLE_GENERATE_SETTINGS_KEY, null);
+    return data && typeof data === 'object' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function applyGenerateSettings(settings: Record<string, any> | null) {
+  if (!settings) return;
+  if (typeof settings.system_prompt === 'string') roleGenerateSystemPromptText.value = settings.system_prompt;
+  if (typeof settings.base_prompt === 'string') roleGeneratePromptText.value = settings.base_prompt;
+  if (typeof settings.template === 'string') roleGenerateTemplateText.value = settings.template;
+  if (Array.isArray(settings.selected_entry_ids)) {
+    selectedWorldbookEntryIds.value = settings.selected_entry_ids.map((id: any) => String(id ?? '')).filter(Boolean);
+  }
+}
+
+function saveGenerateSettings() {
+  updateVariablesWith(vars => {
+    _.set(vars, ROLE_GENERATE_SETTINGS_KEY, {
+      system_prompt: roleGenerateSystemPromptText.value,
+      base_prompt: roleGeneratePromptText.value,
+      template: roleGenerateTemplateText.value,
+      selected_entry_ids: selectedWorldbookEntryIds.value,
+    });
+    return vars;
+  }, { type: 'chat' });
+  toastr.success('已保存为默认生成配置');
+}
+
+function resetGenerateSettings() {
+  roleGenerateSystemPromptText.value = ROLE_GENERATE_SYSTEM_PROMPT;
+  roleGeneratePromptText.value = ROLE_GENERATE_PROMPT;
+  roleGenerateTemplateText.value = WORLD_BOOK_TEMPLATE;
+  selectedWorldbookEntryIds.value = [];
+  updateVariablesWith(vars => {
+    _.set(vars, ROLE_GENERATE_SETTINGS_KEY, {
+      system_prompt: roleGenerateSystemPromptText.value,
+      base_prompt: roleGeneratePromptText.value,
+      template: roleGenerateTemplateText.value,
+      selected_entry_ids: selectedWorldbookEntryIds.value,
+    });
+    return vars;
+  }, { type: 'chat' });
+  toastr.info('已重置并保存为默认生成配置');
+}
+
+async function loadWorldbookEntryOptions() {
+  if (isWorldbookLoading.value) return;
+  isWorldbookLoading.value = true;
+  try {
+    const names = new Set<string>();
+    const chatWb = getChatWorldbookName('current');
+    if (chatWb) names.add(chatWb);
+
+    const globalWb = getGlobalWorldbookNames();
+    globalWb.forEach(name => name && names.add(name));
+
+    try {
+      const charWb = getCharWorldbookNames('current');
+      if (charWb?.primary) names.add(charWb.primary);
+      charWb?.additional?.forEach(name => name && names.add(name));
+    } catch {
+      // ignore
+    }
+
+    const items: WorldbookEntryOption[] = [];
+    for (const name of Array.from(names)) {
+      try {
+        const entries = await getWorldbook(name);
+        entries.forEach(entry => {
+          items.push({
+            id: `${name}::${entry.uid}`,
+            worldbook: name,
+            entry,
+            enabled: !!entry.enabled,
+            label: `${name} / ${entry.name || `#${entry.uid}`}`,
+          });
+        });
+      } catch (err) {
+        console.warn('[CharactersSection] load worldbook failed', name, err);
+      }
+    }
+
+    const normalizedDefault = DEFAULT_WORLDBOOK_NAME.replace(/\s+/g, '');
+    const normalizedAlt = DEFAULT_WORLDBOOK_NAME_ALT.replace(/\s+/g, '');
+    items.sort((a, b) => {
+      const aNorm = a.worldbook.replace(/\s+/g, '');
+      const bNorm = b.worldbook.replace(/\s+/g, '');
+      const aScore = aNorm === normalizedDefault || aNorm === normalizedAlt ? 0 : 1;
+      const bScore = bNorm === normalizedDefault || bNorm === normalizedAlt ? 0 : 1;
+      if (aScore !== bScore) return aScore - bScore;
+      return a.label.localeCompare(b.label, 'zh-Hans');
+    });
+
+    worldbookEntryOptions.value = items;
+
+    const existingIds = new Set(items.map(item => item.id));
+    selectedWorldbookEntryIds.value = selectedWorldbookEntryIds.value.filter(id => existingIds.has(id));
+
+    if (selectedWorldbookEntryIds.value.length === 0) {
+      const preferred = items.filter(item => {
+        const name = item.worldbook.replace(/\s+/g, '');
+        return name === normalizedDefault || name === normalizedAlt;
+      });
+      const isDefaultEntry = (entryName: string) => {
+        if (entryName.includes('世界观')) return true;
+        if (entryName.includes('文明阶段')) return true;
+        if (entryName.includes('庇护所') && entryName.includes('能力')) return true;
+        return false;
+      };
+      const pick = preferred.length > 0 ? preferred : items;
+      selectedWorldbookEntryIds.value = pick
+        .filter(item => item.enabled)
+        .filter(item => isDefaultEntry(String(item.entry?.name ?? '')))
+        .map(item => item.id);
+    }
+  } finally {
+    isWorldbookLoading.value = false;
+  }
+}
+
 function resetGenerateRoleState() {
   generateRoleInput.value = '';
   generateRoleError.value = '';
-  generatedRoleForm.value = null;
-  generatedRoleJsonText.value = '';
-  generatedWorldbookText.value = '';
-  generatedWorldbookKeys.value = [];
-  generatedWriteWorldbook.value = true;
+  generateRoleRawResponse.value = '';
+  generatedRoles.value = [];
+  activeGeneratedIndex.value = 0;
+  showPromptPanel.value = false;
+  showTemplatePanel.value = false;
+  showWorldbookPanel.value = false;
 }
 
 function openGenerateRole() {
   if (!addRoleOpen.value) addRoleOpen.value = true;
   resetGenerateRoleState();
   generateRoleOpen.value = true;
+  applyGenerateSettings(readGenerateSettings());
+  loadWorldbookEntryOptions();
 }
 
 function closeGenerateRole() {
@@ -762,51 +1074,46 @@ async function onGenerateRole() {
   generateRoleError.value = '';
 
   try {
-    const result = await generate({
-      user_input: buildGeneratePrompt(input),
-      max_chat_history: 0,
-      overrides: {
-        world_info_before: '',
-        world_info_after: '',
-        persona_description: '',
-        char_description: '',
-        char_personality: '',
-        scenario: '',
-        dialogue_examples: '',
-        chat_history: {
-          prompts: [],
-          with_depth_entries: false,
-          author_note: '',
-        },
-      },
-      injects: [
-        {
-          role: 'system',
-          content: ROLE_GENERATE_SYSTEM_PROMPT,
-          position: 'in_chat',
-          depth: 0,
-          should_scan: false,
-        },
-      ],
+    const result = await generate(buildRoleGenerateConfig(input));
+    generateRoleRawResponse.value = result;
+
+    const roleBlocks = extractRoleJsonBlocks(result);
+    if (roleBlocks.length === 0) throw new Error('未找到 ROLE_JSON 区块');
+
+    const keyBlocks = extractWorldbookKeyBlocks(result);
+    const contextBlocks = extractTagContents(result, 'context');
+
+    const items: GeneratedRoleItem[] = [];
+
+    roleBlocks.forEach((block, index) => {
+      const roleObj = safeParseRoleJson(block);
+      const normalizedForm = normalizeGeneratedRole(roleObj);
+      if (!normalizedForm.姓名) {
+        throw new Error(`角色${index + 1}姓名为空`);
+      }
+
+      const keyBlock = keyBlocks[index] ?? keyBlocks[keyBlocks.length - 1] ?? '';
+      const contextBlock = contextBlocks[index] ?? contextBlocks[contextBlocks.length - 1] ?? '';
+      const yamlContent = extractYamlBlock(contextBlock);
+      const englishName = extractEnglishNameFromYaml(yamlContent);
+      const parsedKeys = parseWorldbookKeys(stripCodeFence(keyBlock));
+      const ensuredKeys = _.uniq([normalizedForm.姓名, englishName, ...parsedKeys].filter(Boolean)).slice(0, 12);
+
+      items.push({
+        id: `${normalizedForm.姓名}-${index}`,
+        form: normalizedForm,
+        rawJson: JSON.stringify(roleObj, null, 2),
+        worldbookText: yamlContent,
+        worldbookKeys: ensuredKeys,
+        excludeWorldbook: false,
+        isTemp: false,
+        status: 'idle',
+        errorMessage: '',
+      });
     });
-    const roleJson = extractRoleJsonFallback(result);
-    const wbKeysRaw = extractKeysFallback(result);
-    const wbContext = extractTagContent(result, 'context');
 
-    if (!roleJson) throw new Error('未找到 ROLE_JSON 区块');
-    const roleObj = safeParseRoleJson(roleJson);
-    const normalizedForm = normalizeGeneratedRole(roleObj);
-    if (!normalizedForm.姓名) throw new Error('角色姓名为空');
-
-    const yamlContent = extractYamlBlock(wbContext);
-    const englishName = extractEnglishNameFromYaml(yamlContent);
-    const parsedKeys = parseWorldbookKeys(stripCodeFence(wbKeysRaw));
-    const ensuredKeys = _.uniq([normalizedForm.姓名, englishName, ...parsedKeys].filter(Boolean)).slice(0, 12);
-
-    generatedRoleForm.value = normalizedForm;
-    generatedRoleJsonText.value = JSON.stringify(roleObj, null, 2);
-    generatedWorldbookText.value = yamlContent;
-    generatedWorldbookKeys.value = ensuredKeys;
+    generatedRoles.value = items;
+    activeGeneratedIndex.value = 0;
   } catch (err: any) {
     console.error('[CharactersSection] generate role failed', err);
     generateRoleError.value = err?.message ?? String(err);
@@ -815,17 +1122,24 @@ async function onGenerateRole() {
   }
 }
 
+function getActiveGeneratedRole() {
+  return generatedRoles.value[activeGeneratedIndex.value] ?? null;
+}
+
 function applyGeneratedRoleToForm() {
-  if (!generatedRoleForm.value) return;
-  addRoleForm.value = { ...generatedRoleForm.value };
+  const active = getActiveGeneratedRole();
+  if (!active) return;
+  addRoleForm.value = { ...active.form };
   addRoleIsTempNpc.value = false;
   generateRoleOpen.value = false;
   toastr.success('已将生成内容应用到添加角色');
 }
 
 async function writeGeneratedRole() {
-  if (!generatedRoleForm.value || generateRoleLoading.value) return;
-  const name = generatedRoleForm.value.姓名.trim();
+  if (generateRoleLoading.value) return;
+  const active = getActiveGeneratedRole();
+  if (!active) return;
+  const name = active.form.姓名.trim();
   if (!name) {
     generateRoleError.value = '角色姓名为空';
     return;
@@ -833,29 +1147,76 @@ async function writeGeneratedRole() {
 
   generateRoleLoading.value = true;
   generateRoleError.value = '';
+  active.status = 'writing';
+  active.errorMessage = '';
 
   try {
     const result = await writeRoleData({
-      form: generatedRoleForm.value,
+      form: active.form,
       name,
-      isTemp: false,
-      writeWorldbook: generatedWriteWorldbook.value,
-      worldbookText: generatedWorldbookText.value,
-      worldbookKeys: generatedWorldbookKeys.value,
+      isTemp: active.isTemp,
+      writeWorldbook: !active.excludeWorldbook,
+      worldbookText: active.worldbookText,
+      worldbookKeys: active.worldbookKeys,
     });
 
     if (result?.canceled) return;
 
-    closeGenerateRole();
-    closeAddRole();
-    resetAddRoleForm();
-    reloadIframe();
+    active.status = 'success';
+    if (generatedRoles.value.length <= 1) {
+      closeGenerateRole();
+      closeAddRole();
+      resetAddRoleForm();
+      reloadIframe();
+    }
   } catch (err: any) {
     console.error('[CharactersSection] write generated role failed', err);
     generateRoleError.value = err?.message ?? String(err);
+    active.status = 'error';
+    active.errorMessage = err?.message ?? String(err);
   } finally {
     generateRoleLoading.value = false;
   }
+}
+
+async function writeAllGeneratedRoles() {
+  if (generateRoleLoading.value || generatedRoles.value.length === 0) return;
+  generateRoleLoading.value = true;
+  generateRoleError.value = '';
+  for (const item of generatedRoles.value) {
+    const name = item.form.姓名.trim();
+    if (!name) {
+      item.status = 'error';
+      item.errorMessage = '角色姓名为空';
+      continue;
+    }
+    item.status = 'writing';
+    item.errorMessage = '';
+    try {
+      const result = await writeRoleData({
+      form: item.form,
+      name,
+      isTemp: item.isTemp,
+      writeWorldbook: !item.excludeWorldbook,
+      worldbookText: item.worldbookText,
+      worldbookKeys: item.worldbookKeys,
+    });
+      if (result?.canceled) {
+        item.status = 'idle';
+        continue;
+      }
+      item.status = 'success';
+    } catch (err: any) {
+      item.status = 'error';
+      item.errorMessage = err?.message ?? String(err);
+      console.error('[CharactersSection] write generated role failed', err);
+    }
+  }
+  generateRoleLoading.value = false;
+  closeGenerateRole();
+  closeAddRole();
+  resetAddRoleForm();
+  reloadIframe();
 }
 
 function normalizeTextInput(value: string) {
@@ -877,7 +1238,41 @@ function normalizeSelectInput(value: string, options: readonly string[], fallbac
 }
 
 function buildGeneratePrompt(userInput: string) {
-  return `${ROLE_GENERATE_PROMPT}\n\n${WORLD_BOOK_TEMPLATE}\n\n用户输入如下：\n${userInput}`.trim();
+  return `${roleGeneratePromptText.value}\n\n${roleGenerateTemplateText.value}\n\n用户输入如下：\n${userInput}`.trim();
+}
+
+function buildWorldbookSubsetText() {
+  const selected = new Set(selectedWorldbookEntryIds.value);
+  const parts = worldbookEntryOptions.value
+    .filter(item => selected.has(item.id))
+    .map(item => `【世界书:${item.worldbook}/${item.entry.name || `#${item.entry.uid}`}】\n${item.entry.content}`);
+  return parts.join('\n\n').trim();
+}
+
+function buildRoleGenerateConfig(userInput: string) {
+  const worldbookText = buildWorldbookSubsetText();
+  return {
+    user_input: buildGeneratePrompt(userInput),
+    max_chat_history: 0,
+    overrides: {
+      world_info_before: worldbookText,
+      world_info_after: '',
+      chat_history: {
+        prompts: [],
+        with_depth_entries: false,
+        author_note: '',
+      },
+    },
+    injects: [
+      {
+        role: 'system',
+        content: roleGenerateSystemPromptText.value,
+        position: 'in_chat',
+        depth: 0,
+        should_scan: false,
+      },
+    ],
+  };
 }
 
 function extractTagContent(source: string, tag: string) {
@@ -888,6 +1283,16 @@ function extractTagContent(source: string, tag: string) {
     last = match[1];
   }
   return last ? last.trim() : '';
+}
+
+function extractTagContents(source: string, tag: string) {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+  const list: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(source)) !== null) {
+    list.push(match[1].trim());
+  }
+  return list;
 }
 
 function extractYamlBlock(source: string) {
@@ -948,6 +1353,159 @@ function extractKeysFallback(source: string) {
   const fenced = extractTagContent(source, 'WB_KEYS');
   if (fenced) return fenced;
   return extractJsonBlock(source, '[', ']');
+}
+
+function extractRoleJsonBlocks(source: string) {
+  const blocks = extractTagContents(source, 'ROLE_JSON');
+  if (blocks.length) return blocks;
+  const listBlock = extractTagContent(source, 'ROLE_JSON_LIST');
+  if (listBlock) {
+    try {
+      const parsed = JSON.parse(stripCodeFence(listBlock));
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => JSON.stringify(item));
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const fallback = extractRoleJsonFallback(source);
+  return fallback ? [fallback] : [];
+}
+
+function extractWorldbookKeyBlocks(source: string) {
+  const blocks = extractTagContents(source, 'WB_KEYS');
+  if (blocks.length) return blocks;
+  const fallback = extractKeysFallback(source);
+  return fallback ? [fallback] : [];
+}
+
+function selectAllEnabledWorldbookEntries() {
+  selectedWorldbookEntryIds.value = worldbookEntryOptions.value.filter(item => item.enabled).map(item => item.id);
+}
+
+function clearWorldbookSelection() {
+  selectedWorldbookEntryIds.value = [];
+}
+
+async function copyFinalPrompt() {
+  try {
+    await navigator.clipboard.writeText(finalGeneratePromptText.value);
+    toastr.success('已复制最终提示词');
+  } catch (err) {
+    console.error('[CharactersSection] copy prompt failed', err);
+    toastr.error('复制失败，请手动复制');
+  }
+}
+
+function getWorldbookKeysText(item: GeneratedRoleItem) {
+  return item.worldbookKeys.join(', ');
+}
+
+function onWorldbookKeysInput(item: GeneratedRoleItem, event: Event) {
+  const value = (event.target as HTMLInputElement | null)?.value ?? '';
+  item.worldbookKeys = value
+    .split(/[,\n]/)
+    .map(token => String(token ?? '').trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function triggerImportRole() {
+  if (!roleImportInput.value) return;
+  roleImportInput.value.value = '';
+  roleImportInput.value.click();
+}
+
+async function onImportRoleFile(event: Event) {
+  const input = event.target as HTMLInputElement | null;
+  const file = input?.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const roles = normalizeImportedRoles(parsed);
+    if (roles.length === 0) {
+      throw new Error('未解析到可用角色数据');
+    }
+    generatedRoles.value = roles;
+    activeGeneratedIndex.value = 0;
+    toastr.success(`已导入 ${roles.length} 个角色`);
+  } catch (err: any) {
+    console.error('[CharactersSection] import roles failed', err);
+    toastr.error(err?.message ?? '导入失败');
+  }
+}
+
+function normalizeImportedRoles(payload: any): GeneratedRoleItem[] {
+  const list: any[] = [];
+
+  if (Array.isArray(payload)) {
+    list.push(...payload);
+  } else if (payload && typeof payload === 'object') {
+    if (Array.isArray(payload.roles)) {
+      list.push(...payload.roles);
+    } else if (payload.role || payload.form || payload.姓名) {
+      list.push(payload);
+    }
+  }
+
+  const normalized: GeneratedRoleItem[] = [];
+  list.forEach((item, index) => {
+    const rawForm = item?.form ?? item?.role ?? item;
+    if (!rawForm || typeof rawForm !== 'object') return;
+    const normalizedForm = normalizeGeneratedRole(rawForm);
+    if (!normalizedForm.姓名) return;
+
+    const wbText =
+      String(item?.worldbook?.text ?? item?.worldbookText ?? payload?.worldbook?.text ?? payload?.worldbookText ?? '').trim();
+    const wbKeysRaw = item?.worldbook?.keys ?? item?.worldbookKeys ?? payload?.worldbook?.keys ?? payload?.worldbookKeys;
+    const wbKeys = Array.isArray(wbKeysRaw)
+      ? wbKeysRaw.map((key: any) => String(key ?? '').trim()).filter(Boolean)
+      : [];
+
+    normalized.push({
+      id: `${normalizedForm.姓名}-${index}`,
+      form: normalizedForm,
+      rawJson: JSON.stringify(rawForm, null, 2),
+      worldbookText: wbText,
+      worldbookKeys: wbKeys,
+      excludeWorldbook: !!item?.excludeWorldbook,
+      isTemp: !!item?.isTemp,
+      status: 'idle',
+      errorMessage: '',
+    });
+  });
+
+  return normalized;
+}
+
+function exportGeneratedRoles() {
+  if (generatedRoles.value.length === 0) {
+    toastr.error('当前没有可导出的角色');
+    return;
+  }
+  const payload = {
+    version: '1.0',
+    generated_at: new Date().toISOString(),
+    roles: generatedRoles.value.map(item => ({
+      form: item.form,
+      worldbook: {
+        text: item.worldbookText,
+        keys: item.worldbookKeys,
+      },
+      excludeWorldbook: item.excludeWorldbook,
+      isTemp: item.isTemp,
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `角色导出_${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toastr.success('已导出角色 JSON');
 }
 
 function safeParseRoleJson(raw: string) {
@@ -1043,7 +1601,7 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
   const normalizedKeys = _.uniq(rawKeys.map(item => String(item ?? '').trim()).filter(Boolean));
   const ensuredKeys = _.uniq([name, ...normalizedKeys]).slice(0, 12);
 
-  const worldbook_name = await getOrCreateChatWorldbook('current');
+  const worldbook_name = await resolveDefaultWorldbookName();
   await createWorldbookEntries(
     worldbook_name,
     [
@@ -1059,14 +1617,34 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
         position: {
           type: 'at_depth',
           role: 'user',
-          depth: 4,
-          order: 20,
+          depth: 2,
+          order: 40,
         },
         content: wbContent,
       },
     ],
     { render: 'immediate' },
   );
+}
+
+async function resolveDefaultWorldbookName() {
+  const names = getWorldbookNames().map(name => name.replace(/\s+/g, ''));
+  const normalizedDefault = DEFAULT_WORLDBOOK_NAME.replace(/\s+/g, '');
+  const normalizedAlt = DEFAULT_WORLDBOOK_NAME_ALT.replace(/\s+/g, '');
+  if (names.includes(normalizedDefault)) return DEFAULT_WORLDBOOK_NAME;
+  if (names.includes(normalizedAlt)) return DEFAULT_WORLDBOOK_NAME_ALT;
+
+  try {
+    const charWb = getCharWorldbookNames('current');
+    if (charWb?.primary) {
+      const primaryNorm = charWb.primary.replace(/\s+/g, '');
+      if (primaryNorm === normalizedDefault) return charWb.primary;
+    }
+  } catch {
+    // ignore
+  }
+
+  throw new Error(`未找到世界书「${DEFAULT_WORLDBOOK_NAME}」，请确认当前角色卡已绑定该世界书`);
 }
 
 async function writeRoleData(options: {
@@ -1567,8 +2145,8 @@ onBeforeUnmount(() => {
 }
 
 .role-modal {
-  width: min(70vw, 700px);
-  max-height: 70vh;
+  width: min(82vw, 920px);
+  max-height: 76vh;
   background: rgba(18, 20, 36, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
@@ -1601,6 +2179,8 @@ onBeforeUnmount(() => {
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 0.9em;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(0, 180, 216, 0.25);
 }
 
 .role-icon-btn {
@@ -1626,8 +2206,8 @@ onBeforeUnmount(() => {
 }
 
 .role-generate-modal {
-  width: min(72vw, 760px);
-  max-height: 70vh;
+  width: min(82vw, 940px);
+  max-height: 76vh;
   background: rgba(16, 18, 32, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
@@ -1644,6 +2224,22 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.role-generate-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-header-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 0.88em;
+}
+
+.role-file-input {
+  display: none;
+}
+
 .role-generate-body {
   padding: 16px 20px;
   overflow: auto;
@@ -1653,6 +2249,18 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.role-generate-actions.toolbar {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-generate-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .role-generate-input {
@@ -1698,6 +2306,118 @@ onBeforeUnmount(() => {
 
 .role-generate-toggle {
   margin-top: 8px;
+}
+
+.role-generate-settings {
+  display: grid;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 16px;
+}
+
+.role-generate-setting-item {
+  display: grid;
+  gap: 8px;
+}
+
+.role-generate-worldbook-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-generate-meta {
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.role-generate-worldbook-list {
+  max-height: 180px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.role-generate-worldbook-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85em;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.role-worldbook-label.disabled {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.role-generate-input-block {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  background: linear-gradient(135deg, rgba(14, 116, 144, 0.2), rgba(15, 23, 42, 0.3));
+  box-shadow: 0 12px 24px rgba(14, 116, 144, 0.25);
+}
+
+.role-generate-input-block.primary .role-generate-title {
+  font-size: 1em;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.role-generate-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-tab-btn {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-tab-btn.active {
+  border-color: rgba(80, 250, 123, 0.6);
+  background: rgba(80, 250, 123, 0.12);
+}
+
+.role-status {
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.role-status.success {
+  background: rgba(80, 250, 123, 0.2);
+  color: #b8ffcf;
+}
+
+.role-status.error {
+  background: rgba(255, 90, 90, 0.2);
+  color: #ffc4c4;
+}
+
+.role-generate-panel {
+  display: grid;
+  gap: 12px;
 }
 
 .role-modal-body {
@@ -1834,6 +2554,11 @@ onBeforeUnmount(() => {
   color: #e8fbff;
 }
 
+.role-btn.danger {
+  border-color: rgba(255, 90, 90, 0.55);
+  background-color: rgba(255, 90, 90, 0.18);
+  color: rgba(255, 215, 215, 0.95);
+}
 .role-btn.ghost {
   background: transparent;
 }
