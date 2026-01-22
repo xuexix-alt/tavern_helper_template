@@ -1,7 +1,7 @@
 <template>
-  <div class="relative flex h-full min-h-0 w-full flex-col gap-3 overflow-hidden p-3 sm:p-4">
+  <div class="relative flex h-full min-h-0 w-full flex-col gap-2 overflow-hidden">
     <!-- Compact HUD / Actions -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 px-2 pt-2 sm:px-3 sm:pt-3">
       <button
         class="shrink-0 rounded-2xl border border-blue-500/20 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 hover:border-blue-500/40 hover:bg-slate-800/60"
         @click="openPanels"
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Main narrative area (maximize) -->
-    <main class="min-h-0 min-w-0 flex-1">
+    <main class="min-h-0 min-w-0 flex-1 px-2 pb-2 sm:px-3 sm:pb-3">
       <Play class="h-full" />
     </main>
   </div>

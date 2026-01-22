@@ -6,9 +6,15 @@
         <i class="fas fa-concierge-bell"></i>
         <span>服务状态</span>
       </div>
-      <button v-if="girlsData.length > 0" class="refresh-btn" @click="refreshData">
-        <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
-      </button>
+      <div class="header-actions">
+        <button v-if="girlsData.length > 0" class="refresh-btn" @click="refreshData">
+          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
+        </button>
+        <button class="back-btn" @click="goPlay">
+          <i class="fas fa-gamepad"></i>
+          返回Play
+        </button>
+      </div>
     </div>
 
     <div class="app-content">
@@ -332,6 +338,7 @@
 
 <script setup lang="ts">
 import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { filterActiveOrders, loadOrdersFromMVU, readCachedOrders } from './shared/serviceOrders';
 import { getNestedValue } from './utils';
 // 响应式数据
@@ -341,6 +348,7 @@ const showDetails = ref(true);
 const isLoading = ref(false);
 const isRefreshing = ref(false);
 const errorMessage = ref('');
+const router = useRouter();
 
 // 可折叠分组状态
 const showPsychology = ref(false);
@@ -401,8 +409,12 @@ async function refreshData() {
       girlsData.value = [];
     }
   } finally {
-    isRefreshing.value = false;
-  }
+  isRefreshing.value = false;
+}
+
+function goPlay() {
+  router.push('/play');
+}
 }
 
 // ================ 计算属性 ================
@@ -608,6 +620,35 @@ onActivated(() => {
 
     span {
       color: var(--text-primary);
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-accent);
+    background: var(--bg-card);
+    color: var(--accent-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: all 0.25s ease;
+
+    i {
+      color: var(--accent-primary);
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
     }
   }
 

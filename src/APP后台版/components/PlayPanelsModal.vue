@@ -88,11 +88,14 @@
             >
               <span class="flex items-center gap-2">
                 <i class="fas fa-compass text-violet-300"></i>
-                导航
+                挂载入口
               </span>
               <i class="fas fa-chevron-down text-xs text-slate-400"></i>
             </summary>
             <div class="grid gap-2 px-4 pb-4 pt-1">
+              <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-3 text-xs text-slate-300">
+                Play 为核心页面。这里的入口用于“挂载”辅助功能，正文区域依旧保持最大化显示。
+              </div>
               <button
                 v-for="item in navItems"
                 :key="item.path"
@@ -172,6 +175,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { requestStreaming } from '../utils';
 import { historyOverlayOpen, playPanelsOpen } from '../shared/uiState';
 import PackageDetail from './PackageDetail.vue';
 import PackageImages from './PackageImages.vue';
@@ -239,6 +243,7 @@ function sendToAI(message: string) {
 }
 
 function regenerateHomeShops() {
+  requestStreaming('shop');
   const ok = sendToAI('/send 生成-首页-熟人店铺2个-路人店铺2个');
   try {
     const toastr = (window as any)?.toastr;

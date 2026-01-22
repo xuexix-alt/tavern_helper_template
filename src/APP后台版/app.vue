@@ -108,6 +108,8 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: 'Noto Sans SC', 'MiSans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg-primary);
 }
 
 /* 过渡动画 */
@@ -142,15 +144,37 @@ body {
 
 // 保留原有的 CSS 变量定义，以兼容旧组件（如果需要）
 :root {
-  --bg-primary: #f8f9fa;
-  --text-primary: #2c3e50;
-  /* ... 其他变量保留 ... */
+  --bg-primary: #f8f6f1;
+  --bg-header: #fff4d1;
+  --bg-header-light: #fffaf0;
+  --bg-card: #fff6e8;
+  --bg-badge: #fff0bf;
+  --border-color: rgba(55, 47, 32, 0.12);
+  --border-accent: rgba(245, 183, 74, 0.45);
+  --text-primary: #2b2620;
+  --text-secondary: #6f6558;
+  --text-placeholder: #9b8f7a;
+  --accent-primary: #f4b400;
+  --accent-dark: #c98a00;
+  --shadow-sm: 0 8px 20px rgba(245, 183, 74, 0.2);
+  --shadow-md: 0 16px 32px rgba(201, 138, 0, 0.22);
 }
 
 [data-theme='dark'] {
-  --bg-primary: #020617; /* slate-950 */
-  --text-primary: #ffffff;
-  /* ... */
+  --bg-primary: #0b0f1a;
+  --bg-header: #12182a;
+  --bg-header-light: #1b2236;
+  --bg-card: #121a2d;
+  --bg-badge: #1b243a;
+  --border-color: rgba(148, 163, 184, 0.16);
+  --border-accent: rgba(122, 172, 255, 0.35);
+  --text-primary: #e9edf5;
+  --text-secondary: #a6b0c2;
+  --text-placeholder: #7e899b;
+  --accent-primary: #6bbcff;
+  --accent-dark: #3a77c9;
+  --shadow-sm: 0 10px 26px rgba(12, 20, 40, 0.45);
+  --shadow-md: 0 20px 40px rgba(9, 14, 28, 0.55);
 }
 
 /* #app 作为容器占满 iframe */

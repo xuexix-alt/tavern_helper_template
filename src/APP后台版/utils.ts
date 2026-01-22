@@ -213,3 +213,20 @@ export async function navigateToDefaultPage() {
     return '/home';
   }
 }
+
+export function requestStreaming(reason: string = 'manual', ttlMs: number = 120000) {
+  try {
+    const detail = { reason, ttlMs };
+    window.dispatchEvent(new CustomEvent('app-backend:streaming:enable', { detail }));
+  } catch {
+    // ignore
+  }
+}
+
+export function stopStreaming() {
+  try {
+    window.dispatchEvent(new Event('app-backend:streaming:disable'));
+  } catch {
+    // ignore
+  }
+}

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-blue-500/20 bg-gradient-to-br from-slate-900/75 to-black/60 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+    class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/75 to-black/60 shadow-2xl shadow-blue-500/10 backdrop-blur-xl lg:rounded-3xl"
   >
     <!-- Header (正文优先；大图可折叠) -->
     <div class="shrink-0 border-b border-blue-500/10 p-3 sm:p-4">
@@ -37,16 +37,16 @@
     </div>
 
     <!-- Content -->
-    <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div class="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
       <!-- Narrative / Log -->
-      <section class="min-h-0 overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/60">
-        <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3">
-          <div class="flex items-center gap-2 text-sm font-bold text-slate-200">
+      <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/60">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 px-4 py-3">
+          <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
             <i class="fas fa-scroll text-blue-300"></i>
-            交互日志
+            正文和剧情
           </div>
           <button
-            class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-2 py-1 text-xs text-slate-300 hover:border-blue-500/30 hover:bg-slate-800/60"
+            class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
             @click="clearLog"
             :disabled="isStreaming"
           >
@@ -55,38 +55,28 @@
           </button>
         </div>
 
-        <div
-          ref="logScrollEl"
-          class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent h-full overflow-y-auto p-4 font-mono text-[13px] leading-relaxed text-green-300"
-        >
-          <pre
-            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
-        </div>
-      </section>
-
-      <!-- Quick Actions -->
-      <aside class="hidden min-h-0 flex-col gap-3 lg:flex">
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/50 p-4">
-          <div class="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-            <i class="fas fa-bolt text-yellow-300"></i>
-            快捷指令
-          </div>
-          <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2 border-b border-slate-800/50 px-4 py-2 text-[11px] text-slate-400">
+          <span class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">快捷指令</span>
+          <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto">
             <button
               v-for="item in quickActions"
               :key="item.label"
-              class="group flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-3 py-2 text-left text-sm text-slate-200 transition-all hover:border-blue-500/30 hover:bg-slate-800/60"
+              class="whitespace-nowrap rounded-full border border-slate-700/50 bg-slate-900/50 px-3 py-1 text-[11px] text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
               @click="pickQuickAction(item.command)"
             >
-              <span class="truncate">{{ item.label }}</span>
-              <i
-                class="fas fa-chevron-right text-xs text-slate-500 transition-transform group-hover:translate-x-0.5"
-              ></i>
+              {{ item.label }}
             </button>
           </div>
-          <div class="mt-3 text-xs text-slate-500">提示：发送后会尝试调用 `triggerSlash`（如存在）。</div>
+          <span class="hidden sm:inline">· 发送后会尝试触发指令</span>
         </div>
-      </aside>
+
+        <div
+          ref="logScrollEl"
+          class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex-1 overflow-y-auto px-4 py-4 text-[14px] leading-relaxed text-slate-100"
+        >
+          <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+        </div>
+      </section>
     </div>
 
     <!-- Input Bar -->
@@ -117,7 +107,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import PackageImageGallery from './PackageImageGallery.vue';
-import { getNestedValue } from '../utils';
+import { getNestedValue, requestStreaming } from '../utils';
 import { selectedPackage } from '../shared/selectedPackage';
 
 const streamContent = ref('');
@@ -127,9 +117,9 @@ const userInput = ref('');
 const showScene = ref(false);
 const logScrollEl = ref<HTMLDivElement | null>(null);
 
-const headerTitle = ref('交互界面');
-const headerSubTitle = ref('正文区域优先显示 · 角色/商城请用上方“面板”');
-const headerHint = ref('将自动读取聊天记录并监听消息（如环境支持）');
+const headerTitle = ref('正文和剧情');
+const headerSubTitle = ref('Play 为核心 · 角色/商城/历史等功能从面板挂载');
+const headerHint = ref('自动读取聊天记录并监听消息（如环境支持）');
 
 const safeAreaBottom = (() => {
   try {
@@ -182,6 +172,14 @@ function pickQuickAction(command: string) {
   nextTick(() => inputEl.value?.focus());
 }
 
+function shouldEnableStreaming(input: string) {
+  const text = input.trim();
+  if (!text) return false;
+  if (/^\/(home|discover|service|play)\b/i.test(text)) return false;
+  if (/^\/(help|clear|reset)\b/i.test(text)) return false;
+  return /生成|续写|继续|剧情|正文|故事|店铺|搜索/.test(text) || /^\/send\b/i.test(text);
+}
+
 function tryTriggerSlash(command: string) {
   const fn = (window as any)?.triggerSlash;
   if (typeof fn !== 'function') return false;
@@ -200,6 +198,10 @@ function send() {
 
   userInput.value = '';
   appendLogBlock(`> ${raw}`);
+
+  if (shouldEnableStreaming(raw)) {
+    requestStreaming('play');
+  }
 
   const cmd = raw.startsWith('/') ? `${raw} | /trigger await=true` : `/send ${raw} | /trigger await=true`;
   const ok = tryTriggerSlash(cmd);
@@ -243,7 +245,7 @@ function refreshHeaderFromMvu() {
     headerTitle.value = scene ? `当前场景：${scene}` : '交互界面';
     headerSubTitle.value = selectedInfo.value
       ? `已选中：${selectedInfo.value}`
-      : '正文区域优先显示 · 角色/商城请用上方“面板”';
+      : 'Play 为核心 · 角色/商城/历史等功能从面板挂载';
   } catch {
     // ignore
   }

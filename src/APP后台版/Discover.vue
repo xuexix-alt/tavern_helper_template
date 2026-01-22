@@ -3,7 +3,13 @@
     <div class="app-header">
       <div class="title">
         <span>?? 发现</span>
+      </div>
+      <div class="header-actions">
         <button class="import-btn" @click="triggerImport">导入JSON</button>
+        <button class="back-btn" @click="goPlay">
+          <i class="fas fa-gamepad"></i>
+          返回Play
+        </button>
       </div>
     </div>
 
@@ -50,12 +56,14 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { shopStoreMvu } from './shared/shopStoreMvu';
 
 const shops = ref<any[]>([]);
 const fileInput = ref<HTMLInputElement | null>(null);
 const MAX_IMPORT_ITEMS = 200;
 const MAX_IMPORT_SIZE_MB = 5;
+const router = useRouter();
 
 async function loadShops() {
   const data = await shopStoreMvu.getShops();
@@ -84,6 +92,10 @@ function deleteShop(shop: any, idx: number) {
 
 function triggerImport() {
   fileInput.value?.click();
+}
+
+function goPlay() {
+  router.push('/play');
 }
 
 function handleFileChange(event: Event) {
@@ -180,6 +192,35 @@ function handleFileChange(event: Event) {
       &:hover {
         transform: translateY(-2px);
       }
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-accent);
+    background: var(--bg-card);
+    color: var(--accent-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: all 0.25s ease;
+
+    i {
+      color: var(--accent-primary);
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
     }
   }
 }

@@ -6,6 +6,10 @@
         <i class="fas fa-home"></i>
         <span>首页</span>
       </div>
+      <button class="back-btn" @click="goPlay">
+        <i class="fas fa-gamepad"></i>
+        返回Play
+      </button>
     </div>
 
     <div class="app-content">
@@ -169,6 +173,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { requestStreaming } from './utils';
 import { ShopGenerationAdapter } from '../店铺生成Demo/utils/adapters/shop-generation';
 import { InlineInteractionService } from '../店铺生成Demo/utils/core';
 
@@ -178,6 +184,7 @@ const loading = ref(false);
 
 const service = new InlineInteractionService();
 const adapter = new ShopGenerationAdapter();
+const router = useRouter();
 
 // 通用触发（静默楼层，MVU 自动应用 json_patch）
 async function triggerGenerate(keyword: string) {
@@ -185,6 +192,7 @@ async function triggerGenerate(keyword: string) {
   if (loading.value) return;
   loading.value = true;
   try {
+    requestStreaming('shop');
     await service.execute(adapter, { keyword });
   } catch (e) {
     console.error('[Home] 执行生成失败', e);
@@ -202,6 +210,10 @@ function doSearch() {
   if (searchKeyword.value.trim()) {
     search(searchKeyword.value.trim());
   }
+}
+
+function goPlay() {
+  router.push('/play');
 }
 
 // DLC内容生成功能
@@ -268,6 +280,29 @@ function generateDLCContent() {
         transform: scale(1.1) rotate(-5deg);
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
       }
+    }
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-accent);
+    background: var(--bg-card);
+    color: var(--accent-dark);
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: all 0.25s ease;
+
+    i {
+      color: var(--accent-primary);
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
     }
   }
 }
