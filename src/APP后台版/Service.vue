@@ -427,7 +427,8 @@ function clothingIcon(key: string) {
   flex-direction: column;
   gap: 16px;
   padding: 18px;
-  background: radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 50%),
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.18), transparent 50%),
     linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
   color: #e2e8f0;
 }

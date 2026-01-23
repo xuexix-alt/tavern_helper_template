@@ -256,12 +256,7 @@ export const Schema = z.object({
     })
     .strict(),
   推荐标签: z.array(z.string()).default(['zod店铺集成']),
-  服务中的订单: z
-    .record(
-      z.string().describe('订单ID'),
-      OrderSchema,
-    )
-    .prefault({}),
+  服务中的订单: z.record(z.string().describe('订单ID'), OrderSchema).prefault({}),
   店铺列表: z.array(ShopItemSchema).default(INITIAL_SHOP_LIST),
 });
 

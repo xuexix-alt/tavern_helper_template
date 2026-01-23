@@ -25,9 +25,7 @@
         <i class="fas fa-search"></i>
         <input v-model="filterKeyword" placeholder="筛选店铺名称 / 标签" />
       </div>
-      <div class="toolbar-hint">
-        点击店铺卡片进入详情，可在 Play 商城侧栏随时下单。
-      </div>
+      <div class="toolbar-hint">点击店铺卡片进入详情，可在 Play 商城侧栏随时下单。</div>
     </section>
 
     <section class="discover-content">
@@ -184,7 +182,8 @@ function handleFileChange(event: Event) {
   flex-direction: column;
   gap: 16px;
   padding: 18px;
-  background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 50%),
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 50%),
     linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
   color: #e2e8f0;
 }
@@ -295,7 +294,9 @@ function handleFileChange(event: Event) {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.8);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .shop-card:hover {

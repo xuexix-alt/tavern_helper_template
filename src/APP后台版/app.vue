@@ -1,5 +1,8 @@
 <template>
-  <div class="relative flex w-full flex-col bg-slate-950 text-white selection:bg-blue-500/30" :data-theme="currentTheme">
+  <div
+    class="relative flex w-full flex-col bg-slate-950 text-white selection:bg-blue-500/30"
+    :data-theme="currentTheme"
+  >
     <!-- Background Effects -->
     <div class="absolute inset-0 -z-20 bg-gradient-to-br from-slate-950 via-slate-900 to-black"></div>
     <div class="absolute inset-0 -z-10 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-orange-600/5"></div>
@@ -25,7 +28,6 @@
         </ErrorBoundary>
       </main>
     </div>
-
   </div>
 </template>
 
@@ -93,7 +95,6 @@ onErrorCaptured((err: Error) => {
   console.error('[全局错误] 根组件错误:', err);
   return false;
 });
-
 </script>
 
 <style lang="scss">

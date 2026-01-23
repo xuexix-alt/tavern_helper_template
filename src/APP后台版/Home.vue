@@ -219,7 +219,8 @@ function generateDLCContent() {
   flex-direction: column;
   gap: 20px;
   padding: 18px;
-  background: radial-gradient(circle at top left, rgba(30, 58, 138, 0.25), transparent 50%),
+  background:
+    radial-gradient(circle at top left, rgba(30, 58, 138, 0.25), transparent 50%),
     linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
   color: #e2e8f0;
 }

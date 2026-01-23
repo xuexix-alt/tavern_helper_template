@@ -59,7 +59,9 @@ const balance = ref<any>(null);
 const heartbeat = ref<any>(null);
 
 const sceneText = computed(() => {
-  const raw = String(scene.value || '').trim().toLowerCase();
+  const raw = String(scene.value || '')
+    .trim()
+    .toLowerCase();
   if (raw === 'app' || raw === 'rp' || raw === 'mixed') return appModeLabel.value;
   return scene.value || appModeLabel.value || 'RPG · 进行中';
 });

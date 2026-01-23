@@ -78,7 +78,8 @@
         </div>
 
         <div ref="logScrollEl" class="play-log-content">
-          <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+          <pre
+            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
           <div ref="logTailEl"></div>
         </div>
       </section>
@@ -390,7 +391,6 @@ onUnmounted(() => {
   border-radius: 16px;
 }
 
-
 .play-body {
   padding: 14px 16px 0;
   display: grid;
@@ -405,7 +405,9 @@ onUnmounted(() => {
 
 .play-log-card.link-market {
   border-color: rgba(16, 185, 129, 0.45);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 12px 30px rgba(16, 185, 129, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.2),
+    0 12px 30px rgba(16, 185, 129, 0.12);
 }
 
 .play-log-head {
@@ -480,7 +482,9 @@ onUnmounted(() => {
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .play-send:disabled {
