@@ -62,7 +62,9 @@
 
         <div class="play-tools">
           <span class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">快捷指令</span>
-          <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto">
+          <div
+            class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto"
+          >
             <button
               v-for="item in quickActions"
               :key="item.label"

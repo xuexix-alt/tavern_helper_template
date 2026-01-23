@@ -87,7 +87,8 @@ $(() => {
   app.mount('#app');
   const stopModeWatcher = startAppModeWatcher();
 
-  const canStream = typeof (window as any).eventOn === 'function' && typeof (window as any).getChatMessages === 'function';
+  const canStream =
+    typeof (window as any).eventOn === 'function' && typeof (window as any).getChatMessages === 'function';
   const { unmount } = canStream
     ? mountStreamingMessages(() => createApp(StreamingApp), {
         host: 'iframe',
