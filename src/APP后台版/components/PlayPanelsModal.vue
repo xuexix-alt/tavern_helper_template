@@ -1,200 +1,164 @@
 <template>
-  <div class="fixed inset-0 z-[5200] bg-black/70 p-3 sm:p-4" @click.self="close">
-    <div
-      class="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/95 to-black/90 shadow-2xl shadow-blue-500/10 backdrop-blur"
-    >
-      <div class="flex items-center gap-3 border-b border-slate-700/50 px-4 py-3">
-        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+  <div class="panel-overlay" @click.self="close">
+    <div class="panel-shell">
+      <div class="panel-head">
+      <div class="panel-title">
+        <div class="panel-icon">
           <i class="fas fa-layer-group"></i>
         </div>
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-sm font-bold text-white">面板</div>
-          <div class="truncate text-[11px] text-slate-400">手风琴/弹窗：尽量不挤占正文区域</div>
+        <div>
+            <div class="title">快捷面板</div>
+          <div class="sub">{{ appModeLabel }}</div>
         </div>
-
-        <button
-          class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50"
-          @click="close"
-        >
+      </div>
+      <div class="panel-head-actions">
+        <button class="panel-close" @click="minimize">
+          <i class="fas fa-window-restore"></i>
+          小窗
+        </button>
+        <button class="panel-close" @click="close">
           <i class="fas fa-times"></i>
-          <span class="ml-2">关闭</span>
+          关闭
         </button>
       </div>
+    </div>
 
-      <div
-        class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0 flex-1 overflow-y-auto p-4"
-      >
-        <div class="space-y-3">
-          <details open class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
-            >
-              <span class="flex items-center gap-2">
-                <i class="fas fa-user-shield text-blue-300"></i>
+      <div class="panel-layout">
+        <nav class="panel-tabs">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            class="panel-tab"
+            :class="{ active: activeTab === tab.id }"
+            @click="activeTab = tab.id"
+          >
+            <i :class="tab.icon"></i>
+            <span>{{ tab.label }}</span>
+          </button>
+        </nav>
+
+        <section class="panel-main">
+          <div v-if="activeTab === 'status'" class="panel-section">
+            <div class="panel-card">
+              <div class="panel-card-title">
+                <i class="fas fa-user-shield"></i>
                 角色状态
-              </span>
-              <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-            </summary>
-            <div class="grid gap-3 px-4 pb-4 pt-1">
-              <ServiceStatus />
-              <ServiceStats />
+              </div>
+              <div class="panel-grid">
+                <ServiceStatus />
+                <ServiceStats />
+              </div>
             </div>
-          </details>
+          </div>
 
-          <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
-            >
-              <span class="flex items-center gap-2">
-                <i class="fas fa-store text-green-300"></i>
-                商城与套餐
-              </span>
-              <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-            </summary>
-            <div class="grid gap-3 px-4 pb-4 pt-1">
-              <ShopList />
-              <PackageDetail />
-              <PackageImages />
-            </div>
-          </details>
+          <div v-else-if="activeTab === 'discover'" class="panel-section">
+            <DiscoverQuickPanel />
+          </div>
 
-          <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
-            >
-              <span class="flex items-center gap-2">
-                <i class="fas fa-history text-blue-300"></i>
+          <div v-else-if="activeTab === 'history'" class="panel-section">
+            <div class="panel-card">
+              <div class="panel-card-title">
+                <i class="fas fa-history"></i>
                 历史订单
-              </span>
-              <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-            </summary>
-            <div class="px-4 pb-4 pt-1">
-              <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-3 text-xs text-slate-300">
-                历史订单以单独弹窗展示，避免面板过长导致滚动困难。
-                <button
-                  class="ml-2 rounded-lg border border-slate-700/50 bg-slate-950/40 px-2 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
-                  @click="openHistory"
-                >
-                  <i class="fas fa-up-right-from-square"></i>
-                  <span class="ml-1">打开</span>
+              </div>
+              <div class="panel-card-desc">历史订单以单独弹窗展示，便于快速查看与复购。</div>
+              <button class="panel-action" @click="openHistory">
+                <i class="fas fa-up-right-from-square"></i>
+                打开历史
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="panel-section">
+            <div class="panel-card">
+              <div class="panel-card-title">
+                <i class="fas fa-sliders"></i>
+                设置
+              </div>
+              <div class="panel-actions">
+                <button class="panel-action" @click="toggleTheme">
+                  <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"></i>
+                  {{ isDark ? '切换到浅色' : '切换到深色' }}
+                </button>
+                <button class="panel-action" @click="refreshApp">
+                  <i class="fas fa-sync-alt"></i>
+                  刷新界面
+                </button>
+                <button class="panel-action" @click="regenerateHomeShops">
+                  <i class="fas fa-wand-magic-sparkles"></i>
+                  重新生成首页店铺
                 </button>
               </div>
             </div>
-          </details>
 
-          <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
-            >
-              <span class="flex items-center gap-2">
-                <i class="fas fa-compass text-violet-300"></i>
-                挂载入口
-              </span>
-              <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-            </summary>
-            <div class="grid gap-2 px-4 pb-4 pt-1">
-              <div class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-3 text-xs text-slate-300">
-                Play 为核心页面。这里的入口用于“挂载”辅助功能，正文区域依旧保持最大化显示。
+            <div class="panel-card">
+              <div class="panel-card-title">
+                <i class="fas fa-route"></i>
+                快速入口
               </div>
-              <button
-                v-for="item in navItems"
-                :key="item.path"
-                class="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-900/30 px-3 py-2 text-left text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
-                @click="go(item.path)"
-              >
-                <span class="flex items-center gap-2">
+              <div class="panel-nav-grid">
+                <button v-for="item in navItems" :key="item.path" class="panel-chip" @click="go(item.path)">
                   <i :class="item.icon"></i>
-                  <span>{{ item.label }}</span>
-                </span>
-                <i class="fas fa-chevron-right text-xs text-slate-500"></i>
-              </button>
+                  {{ item.label }}
+                </button>
+              </div>
             </div>
-          </details>
-
-          <details class="rounded-2xl border border-slate-700/50 bg-slate-950/40">
-            <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-slate-100"
-            >
-              <span class="flex items-center gap-2">
-                <i class="fas fa-sliders text-slate-200"></i>
-                设置
-              </span>
-              <i class="fas fa-chevron-down text-xs text-slate-400"></i>
-            </summary>
-            <div class="grid gap-2 px-4 pb-4 pt-1">
-              <button
-                class="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-900/30 px-3 py-2 text-left text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
-                @click="toggleTheme"
-              >
-                <span class="flex items-center gap-2">
-                  <i :class="['fas', isDark ? 'fa-sun text-yellow-300' : 'fa-moon text-blue-300']"></i>
-                  <span>{{ isDark ? '切换到浅色' : '切换到深色' }}</span>
-                </span>
-                <i class="fas fa-chevron-right text-xs text-slate-500"></i>
-              </button>
-
-              <button
-                class="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-900/30 px-3 py-2 text-left text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
-                @click="refreshApp"
-              >
-                <span class="flex items-center gap-2">
-                  <i class="fas fa-sync-alt text-green-300"></i>
-                  <span>刷新界面</span>
-                </span>
-                <i class="fas fa-chevron-right text-xs text-slate-500"></i>
-              </button>
-
-              <button
-                class="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-900/30 px-3 py-2 text-left text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
-                @click="regenerateHomeShops"
-              >
-                <span class="flex items-center gap-2">
-                  <i class="fas fa-wand-magic-sparkles text-purple-300"></i>
-                  <span>重新生成首页店铺</span>
-                </span>
-                <i class="fas fa-chevron-right text-xs text-slate-500"></i>
-              </button>
-            </div>
-          </details>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between gap-2 border-t border-slate-700/50 px-4 py-3">
-        <div class="text-[11px] text-slate-500">提示：面板关闭后，正文区域保持最大化显示。</div>
-        <button
-          class="rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50"
-          @click="close"
-        >
-          完成
-        </button>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { requestStreaming } from '../utils';
-import { historyOverlayOpen, playPanelsOpen } from '../shared/uiState';
-import PackageDetail from './PackageDetail.vue';
-import PackageImages from './PackageImages.vue';
+import { historyOverlayOpen, playPanelsMini, playPanelsOpen } from '../shared/uiState';
 import ServiceStats from './ServiceStats.vue';
 import ServiceStatus from './ServiceStatus.vue';
-import ShopList from './ShopList.vue';
+import DiscoverQuickPanel from './DiscoverQuickPanel.vue';
+import { appModeLabel, isAppMode, isMixedMode } from '../shared/appMode';
 
 const router = useRouter();
 
 const navItems = [
-  { icon: 'fas fa-gamepad text-blue-300', label: 'Play', path: '/play' },
-  { icon: 'fas fa-home text-slate-200', label: 'Home', path: '/home' },
-  { icon: 'fas fa-concierge-bell text-slate-200', label: 'Service', path: '/service' },
-  { icon: 'fas fa-compass text-slate-200', label: 'Discover', path: '/discover' },
+  { icon: 'fas fa-gamepad', label: 'Play', path: '/play' },
+  { icon: 'fas fa-home', label: 'Home', path: '/home' },
+  { icon: 'fas fa-concierge-bell', label: 'Service', path: '/service' },
+  { icon: 'fas fa-compass', label: 'Discover', path: '/discover' },
 ];
 
 const isDark = ref(false);
+const showStorePanels = computed(() => isAppMode.value || isMixedMode.value);
+
+const tabs = computed(() => {
+  const base = [
+    { id: 'status', label: '状态', icon: 'fas fa-user-shield' },
+    { id: 'discover', label: '发现', icon: 'fas fa-compass' },
+    { id: 'history', label: '历史', icon: 'fas fa-history' },
+    { id: 'settings', label: '设置', icon: 'fas fa-sliders' },
+  ];
+  if (!showStorePanels.value) {
+    return base.filter(t => t.id !== 'discover' && t.id !== 'history');
+  }
+  return base;
+});
+
+const activeTab = ref<'status' | 'discover' | 'history' | 'settings'>('status');
+
+watch(tabs, next => {
+  if (!next.find(t => t.id === activeTab.value)) {
+    activeTab.value = (next[0]?.id as any) || 'status';
+  }
+});
 
 function close() {
+  playPanelsOpen.value = false;
+}
+
+function minimize() {
+  playPanelsMini.value = true;
   playPanelsOpen.value = false;
 }
 
@@ -263,3 +227,195 @@ onMounted(() => {
   }
 });
 </script>
+
+<style scoped lang="scss">
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5200;
+  background: rgba(2, 6, 23, 0.6);
+  padding: 16px;
+}
+
+.panel-shell {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.5);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #e2e8f0;
+}
+
+.panel-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
+.panel-title .title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.panel-title .sub {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.panel-close {
+  border-radius: 14px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-layout {
+  display: grid;
+  grid-template-columns: minmax(140px, 180px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.panel-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  color: rgba(226, 232, 240, 0.85);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.panel-tab.active {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.2);
+  color: #e0f2fe;
+}
+
+.panel-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.75);
+  padding: 14px;
+  color: #e2e8f0;
+}
+
+.panel-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.panel-card-desc {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.6);
+  margin-bottom: 10px;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.panel-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.panel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.5);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .panel-layout {
+    grid-template-columns: 1fr;
+  }
+  .panel-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+</style>

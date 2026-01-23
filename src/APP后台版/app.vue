@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="relative flex h-full w-full flex-col overflow-hidden bg-slate-950 text-white selection:bg-blue-500/30"
-    :data-theme="currentTheme"
-  >
+  <div class="relative flex w-full flex-col bg-slate-950 text-white selection:bg-blue-500/30" :data-theme="currentTheme">
     <!-- Background Effects -->
     <div class="absolute inset-0 -z-20 bg-gradient-to-br from-slate-950 via-slate-900 to-black"></div>
     <div class="absolute inset-0 -z-10 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-orange-600/5"></div>
@@ -11,44 +8,43 @@
       class="absolute right-1/4 bottom-0 -z-10 h-96 w-96 animate-pulse rounded-full bg-purple-500/10 blur-3xl delay-1000"
     ></div>
 
-    <div class="flex h-full min-h-0 w-full">
+    <div class="flex w-full items-stretch">
       <!-- Sidebar (Play 页面优先正文：隐藏侧栏，改用面板弹窗导航) -->
       <Sidebar v-if="!hideSidebar" />
 
       <!-- Main Content Area -->
-      <main class="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <main class="relative flex min-w-0 flex-1 flex-col">
         <ErrorBoundary>
-          <div class="flex min-h-0 flex-1 flex-col">
+          <div class="flex flex-col">
             <RouterView v-slot="{ Component }">
               <transition name="fade">
-                <component :is="Component" v-if="Component" class="min-h-0 flex-1" />
+                <component :is="Component" v-if="Component" class="w-full" />
               </transition>
             </RouterView>
           </div>
         </ErrorBoundary>
       </main>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
 import ErrorBoundary from './components/ErrorBoundary.vue';
 import Sidebar from './components/Sidebar.vue';
 import { enableIframeFullHeight } from './utils';
 
 // 当前主题
 const currentTheme = ref<'light' | 'dark'>('light');
-const route = useRoute();
-const hideSidebar = computed(() => route.path === '/play');
+const hideSidebar = ref(false);
 
 let disableIframeFullHeight: () => void = () => {};
 
 // 初始化主题
 function initTheme() {
   // 默认使用浅色模式
-  const savedTheme = localStorage.getItem('app-theme') || 'light';
+  const savedTheme = localStorage.getItem('app-theme') || 'dark';
   const isDark = savedTheme === 'dark';
 
   // 设置Vue响应式数据
@@ -70,7 +66,7 @@ function initTheme() {
 onMounted(() => {
   initTheme();
   window.addEventListener('theme-change', onThemeChange);
-  disableIframeFullHeight = enableIframeFullHeight({ minHeightPx: 480 });
+  disableIframeFullHeight = enableIframeFullHeight({ minHeightPx: 0 });
 });
 
 function onThemeChange(event: any) {
@@ -97,17 +93,19 @@ onErrorCaptured((err: Error) => {
   console.error('[全局错误] 根组件错误:', err);
   return false;
 });
+
 </script>
 
 <style lang="scss">
 /* 让应用高度跟随宿主 iframe；滚动交给子容器 */
 html,
 body {
-  height: 100%;
+  height: auto;
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   font-family: 'Noto Sans SC', 'MiSans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--bg-primary);
 }
@@ -179,7 +177,7 @@ body {
 
 /* #app 作为容器占满 iframe */
 #app {
-  height: 100%;
+  height: auto;
   width: 100%;
   display: flex;
   flex-direction: column;

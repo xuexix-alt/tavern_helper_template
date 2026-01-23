@@ -69,7 +69,7 @@
       <button
         v-for="(slot, idx) in slots"
         :key="slot.key"
-        class="group relative min-h-0 overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/40 transition-all hover:border-blue-500/30 hover:bg-slate-900/60"
+        class="group relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/40 transition-all hover:border-blue-500/30 hover:bg-slate-900/60"
         @click="open(idx)"
       >
         <img
@@ -146,7 +146,7 @@
           v-if="active.kind === 'image'"
           :src="active.src"
           alt="Full Image"
-          class="max-h-[82vh] w-auto max-w-[92vw] object-contain"
+          class="max-h-[80%] w-auto max-w-[92vw] object-contain"
           @error="onImgError(active.key)"
         />
         <div v-else class="w-full p-4">

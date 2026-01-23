@@ -1,6 +1,6 @@
 <template>
   <div
-    class="z-50 flex h-full w-20 shrink-0 flex-col items-center space-y-6 border-r border-blue-500/20 bg-gradient-to-b from-slate-900/80 to-black/80 py-6 backdrop-blur-xl"
+    class="z-50 flex w-20 shrink-0 flex-col items-center space-y-6 border-r border-blue-500/20 bg-gradient-to-b from-slate-900/80 to-black/80 py-6 backdrop-blur-xl lg:sticky lg:top-0"
   >
     <!-- Logo -->
     <div
@@ -15,12 +15,12 @@
     <div class="flex flex-1 flex-col space-y-4">
       <button
         v-for="item in menuItems"
-        :key="item.path"
-        @click="navigate(item.path)"
+        :key="item.label"
+        @click="navigate(item.path, item.action)"
         :title="item.label"
         :class="[
           'group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300',
-          isActive(item.path)
+          isActive(item)
             ? 'border border-blue-400/30 bg-gradient-to-br from-blue-500/20 to-violet-600/20 shadow-lg shadow-blue-500/20'
             : 'border border-slate-700/50 bg-slate-800/50 hover:border-blue-500/30 hover:bg-slate-700/50',
         ]"
@@ -29,11 +29,11 @@
           :class="[
             item.icon,
             'text-lg transition-colors duration-300',
-            isActive(item.path) ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-400',
+            isActive(item) ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-400',
           ]"
         ></i>
         <div
-          v-if="isActive(item.path)"
+          v-if="isActive(item)"
           class="absolute top-1/2 -right-1 h-6 w-1 -translate-y-1/2 transform rounded-full bg-gradient-to-b from-blue-400 to-violet-500"
         ></div>
       </button>
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { marketplaceOpen, playPanelsOpen } from '../shared/uiState';
 
 const router = useRouter();
 const route = useRoute();
@@ -69,16 +70,34 @@ const isDark = ref(false);
 const menuItems = [
   { icon: 'fas fa-gamepad', label: 'Play', path: '/play' },
   { icon: 'fas fa-home', label: 'Home', path: '/home' },
+  { icon: 'fas fa-store', label: 'Market', action: 'market' },
+  { icon: 'fas fa-layer-group', label: 'Panels', action: 'panels' },
   { icon: 'fas fa-concierge-bell', label: 'Service', path: '/service' },
   { icon: 'fas fa-compass', label: 'Discover', path: '/discover' },
 ];
 
-function navigate(path: string) {
-  router.push(path);
+function navigate(path: string, action?: string) {
+  if (action === 'market') {
+    marketplaceOpen.value = !marketplaceOpen.value;
+    if (route.path !== '/play') {
+      router.push('/play');
+    }
+    return;
+  }
+  if (action === 'panels') {
+    playPanelsOpen.value = !playPanelsOpen.value;
+    if (route.path !== '/play') {
+      router.push('/play');
+    }
+    return;
+  }
+  if (path) router.push(path);
 }
 
-function isActive(path: string) {
-  return route.path === path;
+function isActive(item: { path?: string; action?: string }) {
+  if (item.action === 'market') return marketplaceOpen.value && route.path === '/play';
+  if (item.action === 'panels') return playPanelsOpen.value;
+  return item.path ? route.path === item.path : false;
 }
 
 function toggleTheme() {

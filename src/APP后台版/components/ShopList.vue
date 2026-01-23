@@ -1,6 +1,6 @@
 <template>
   <div
-    class="grid h-full grid-rows-[auto_minmax(0,1fr)_auto] gap-y-4 rounded-2xl border border-green-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 p-5 shadow-2xl shadow-green-500/10 backdrop-blur-xl"
+    class="flex flex-col gap-4 rounded-2xl border border-green-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 p-5 shadow-2xl shadow-green-500/10 backdrop-blur-xl"
   >
     <!-- Header -->
     <div class="flex items-center justify-between">
@@ -16,9 +16,7 @@
     </div>
 
     <!-- List -->
-    <div
-      class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent min-h-0 space-y-3 overflow-y-auto pr-1"
-    >
+    <div class="space-y-3">
       <div
         v-for="item in packageItems"
         :key="item.key"

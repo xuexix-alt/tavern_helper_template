@@ -1,9 +1,7 @@
 <template>
-  <div
-    class="relative flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/75 to-black/60 shadow-2xl shadow-blue-500/10 backdrop-blur-xl lg:rounded-3xl"
-  >
+  <div class="play-shell">
     <!-- Header (正文优先；大图可折叠) -->
-    <div class="shrink-0 border-b border-blue-500/10 p-3 sm:p-4">
+    <div class="play-header">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <div class="flex items-center gap-2 text-xs text-slate-300/90">
@@ -12,6 +10,13 @@
             >
               <span class="h-2 w-2 animate-pulse rounded-full bg-green-400"></span>
               <span>LIVE</span>
+            </span>
+            <span
+              class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px]"
+              :class="modeToneClass"
+            >
+              <i class="fas fa-bolt"></i>
+              <span>{{ appModeLabel }}</span>
             </span>
             <span class="truncate text-slate-400">{{ headerHint }}</span>
           </div>
@@ -30,17 +35,17 @@
       </div>
     </div>
 
-    <div v-if="showScene" class="relative shrink-0 border-b border-blue-500/10">
-      <div class="relative aspect-[21/9] w-full overflow-hidden">
+    <div v-if="showScene" class="play-stage">
+      <div class="play-stage-media">
         <PackageImageGallery variant="stage" />
       </div>
     </div>
 
     <!-- Content -->
-    <div class="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+    <div class="play-body">
       <!-- Narrative / Log -->
-      <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/60">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 px-4 py-3">
+      <section class="play-log-card" :class="{ 'link-market': isMarketLinked }" @click="focusText">
+        <div class="play-log-head">
           <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
             <i class="fas fa-scroll text-blue-300"></i>
             正文和剧情
@@ -55,7 +60,7 @@
           </button>
         </div>
 
-        <div class="flex items-center gap-2 border-b border-slate-800/50 px-4 py-2 text-[11px] text-slate-400">
+        <div class="play-tools">
           <span class="rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5">快捷指令</span>
           <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex flex-1 gap-2 overflow-x-auto">
             <button
@@ -70,34 +75,27 @@
           <span class="hidden sm:inline">· 发送后会尝试触发指令</span>
         </div>
 
-        <div
-          ref="logScrollEl"
-          class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex-1 overflow-y-auto px-4 py-4 text-[14px] leading-relaxed text-slate-100"
-        >
+        <div ref="logScrollEl" class="play-log-content">
           <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+          <div ref="logTailEl"></div>
         </div>
       </section>
     </div>
 
     <!-- Input Bar -->
-    <div class="shrink-0 border-t border-slate-800/60 p-4" :style="{ paddingBottom: safeAreaBottom }">
-      <div class="flex items-center gap-2">
-        <div class="flex-1">
-          <input
-            ref="inputEl"
-            v-model="userInput"
-            class="w-full rounded-2xl border border-slate-700/50 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-blue-500/40 focus:outline-none"
-            placeholder="输入指令…（例如：生成 / 搜索 /home 或 /send 你好）"
-            @keydown.enter.exact.prevent="send"
-          />
-        </div>
-        <button
-          class="flex items-center justify-center rounded-2xl border border-blue-400/30 bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/25 hover:from-blue-600 hover:to-violet-700 disabled:opacity-50"
-          :disabled="!userInput.trim()"
-          @click="send"
-        >
+    <div class="play-input" :class="{ 'link-market': isMarketLinked }" :style="{ paddingBottom: safeAreaBottom }">
+      <div class="play-input-row">
+        <input
+          ref="inputEl"
+          v-model="userInput"
+          class="play-input-field"
+          placeholder="输入指令…（例如：生成 / 搜索 /home 或 /send 你好）"
+          @focus="focusText"
+          @keydown.enter.exact.prevent="send"
+        />
+        <button class="play-send" :disabled="!userInput.trim()" @click="send">
           <i class="fas fa-paper-plane"></i>
-          <span class="ml-2 hidden sm:inline">发送</span>
+          <span>发送</span>
         </button>
       </div>
     </div>
@@ -109,6 +107,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import PackageImageGallery from './PackageImageGallery.vue';
 import { getNestedValue, requestStreaming } from '../utils';
 import { selectedPackage } from '../shared/selectedPackage';
+import { focusArea } from '../shared/uiState';
+import { appModeLabel, isAppMode, isMixedMode, isRpMode } from '../shared/appMode';
 
 const streamContent = ref('');
 const isStreaming = ref(false);
@@ -116,10 +116,13 @@ const inputEl = ref<HTMLInputElement | null>(null);
 const userInput = ref('');
 const showScene = ref(false);
 const logScrollEl = ref<HTMLDivElement | null>(null);
+const logTailEl = ref<HTMLDivElement | null>(null);
 
 const headerTitle = ref('正文和剧情');
 const headerSubTitle = ref('Play 为核心 · 角色/商城/历史等功能从面板挂载');
 const headerHint = ref('自动读取聊天记录并监听消息（如环境支持）');
+
+const isMarketLinked = computed(() => focusArea.value === 'market');
 
 const safeAreaBottom = (() => {
   try {
@@ -137,16 +140,43 @@ const selectedInfo = computed(() => {
   return `${name}${shop}`;
 });
 
-const quickActions = [
-  { label: '生成：店铺 + 套餐（默认）', command: '生成' },
-  { label: '打开：首页', command: '/home' },
-  { label: '打开：发现', command: '/discover' },
-];
+const quickActions = computed(() => {
+  if (isRpMode.value) {
+    return [
+      { label: '继续剧情', command: '继续' },
+      { label: '续写一段', command: '续写' },
+      { label: '打开：首页', command: '/home' },
+    ];
+  }
+  if (isMixedMode.value) {
+    return [
+      { label: '生成：店铺 + 套餐（默认）', command: '生成' },
+      { label: '继续剧情', command: '继续' },
+      { label: '打开：发现', command: '/discover' },
+      { label: '打开：首页', command: '/home' },
+    ];
+  }
+  return [
+    { label: '生成：店铺 + 套餐（默认）', command: '生成' },
+    { label: '打开：发现', command: '/discover' },
+    { label: '打开：首页', command: '/home' },
+  ];
+});
+
+const modeToneClass = computed(() => {
+  if (isRpMode.value) return 'border-purple-500/30 bg-purple-500/10 text-purple-200';
+  if (isMixedMode.value) return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+  return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
+});
 
 function scrollToBottom() {
-  const el = logScrollEl.value;
+  const el = logTailEl.value || logScrollEl.value;
   if (!el) return;
-  el.scrollTop = el.scrollHeight;
+  try {
+    el.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  } catch {
+    // ignore
+  }
 }
 
 watch(
@@ -197,6 +227,7 @@ function send() {
   if (!raw) return;
 
   userInput.value = '';
+  focusText();
   appendLogBlock(`> ${raw}`);
 
   if (shouldEnableStreaming(raw)) {
@@ -212,6 +243,10 @@ function send() {
 
 function toggleScene() {
   showScene.value = !showScene.value;
+}
+
+function focusText() {
+  focusArea.value = 'text';
 }
 
 function refreshHeaderFromMvu() {
@@ -324,3 +359,147 @@ onUnmounted(() => {
   stopMessageReceive?.stop?.();
 });
 </script>
+
+<style scoped lang="scss">
+.play-shell {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(2, 6, 23, 0.88), rgba(15, 23, 42, 0.92));
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(18px);
+  padding: 0;
+}
+
+.play-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.play-stage {
+  border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+  padding: 12px 14px 14px;
+}
+
+.play-stage-media {
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+
+.play-body {
+  padding: 14px 16px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.play-log-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.65);
+}
+
+.play-log-card.link-market {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 12px 30px rgba(16, 185, 129, 0.12);
+}
+
+.play-log-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.play-tools {
+  padding: 8px 16px;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.25);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.65);
+}
+
+.play-log-content {
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+}
+
+.play-input {
+  padding: 14px 16px 18px;
+}
+
+.play-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.play-input-field {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(2, 6, 23, 0.75);
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.play-input-field:focus {
+  border-color: rgba(96, 165, 250, 0.6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.play-input.link-market .play-input-field {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.play-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 16px;
+  padding: 12px 18px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.85));
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.play-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.play-send:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+}
+
+@media (max-width: 768px) {
+  .play-shell {
+    border-radius: 12px;
+  }
+  .play-input-row {
+    grid-template-columns: 1fr;
+  }
+  .play-send {
+    justify-content: center;
+  }
+}
+</style>

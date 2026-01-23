@@ -1,69 +1,109 @@
 <template>
-  <div class="app-view active">
-    <div class="app-header">
-      <div class="title">
-        <span>?? 发现</span>
+  <div class="discover-view">
+    <header class="discover-hero">
+      <div class="hero-left">
+        <div class="hero-title">
+          <i class="fas fa-compass"></i>
+          发现店铺
+        </div>
+        <div class="hero-sub">共 {{ filteredShops.length }} 家店铺 · 数据来自世界书</div>
       </div>
-      <div class="header-actions">
-        <button class="import-btn" @click="triggerImport">导入JSON</button>
-        <button class="back-btn" @click="goPlay">
+      <div class="hero-actions">
+        <button class="btn-outline" @click="triggerImport">
+          <i class="fas fa-file-import"></i>
+          导入 JSON
+        </button>
+        <button class="btn-ghost" @click="goPlay">
           <i class="fas fa-gamepad"></i>
-          返回Play
+          返回 Play
         </button>
       </div>
-    </div>
+    </header>
 
-    <div class="app-content">
-      <div class="shop-list">
-        <div v-if="shops.length === 0" class="empty-state">
-          <i class="fas fa-search"></i>
-          <p>暂无发现，请先让AI生成内容</p>
-        </div>
-        <div v-else class="shop-list-items">
-          <div
-            v-for="(shop, idx) in shops"
-            :key="shop.id || shop.shop_id || idx"
-            class="shop-card"
-            @click="$router.push(`/shop/${shop.id || shop.shop_id || idx}`)"
-          >
-            <div class="avatar-text">
-              <i
-                v-if="(shop.packages || []).find((p: any) => p.icon)"
-                :class="(shop.packages || []).find((p: any) => p.icon).icon"
-              ></i>
-              <i v-else class="fas fa-store"></i>
-            </div>
-            <div class="info">
-              <div class="name">{{ shop.shopname || shop.name || '未命名店铺' }}</div>
-              <div class="desc">
-                <span class="slogan-text">{{ (shop.shoptags || []).join(' / ') || '优质服务' }}</span>
-                <span v-if="shop.packages && shop.packages.length > 0" class="package-count">
-                  <i class="fas fa-layer-group"></i>
-                  {{ shop.packages.length }} 个套餐
-                </span>
-              </div>
-            </div>
-            <button class="delete-btn" @click.stop="deleteShop(shop, idx)">
-              <i class="fas fa-trash"></i>
-            </button>
+    <section class="discover-toolbar">
+      <div class="toolbar-search">
+        <i class="fas fa-search"></i>
+        <input v-model="filterKeyword" placeholder="筛选店铺名称 / 标签" />
+      </div>
+      <div class="toolbar-hint">
+        点击店铺卡片进入详情，可在 Play 商城侧栏随时下单。
+      </div>
+    </section>
+
+    <section class="discover-content">
+      <div v-if="filteredShops.length === 0" class="empty-state">
+        <i class="fas fa-store-slash"></i>
+        <p>暂无店铺。请先在首页或 Play 中触发生成。</p>
+        <button class="btn-primary" @click="goHome">
+          <i class="fas fa-home"></i>
+          去首页生成
+        </button>
+      </div>
+
+      <div v-else class="shop-grid">
+        <div
+          v-for="(shop, idx) in filteredShops"
+          :key="shop.id || shop.shop_id || idx"
+          class="shop-card"
+          @click="$router.push(`/shop/${shop.id || shop.shop_id || idx}`)"
+        >
+          <div class="shop-icon">
+            <i
+              v-if="(shop.packages || []).find((p: any) => p.icon)"
+              :class="(shop.packages || []).find((p: any) => p.icon).icon"
+            ></i>
+            <i v-else class="fas fa-store"></i>
           </div>
+          <div class="shop-info">
+            <div class="shop-name">{{ shop.shopname || shop.name || '未命名店铺' }}</div>
+            <div class="shop-tags">
+              <span v-for="(tag, tIdx) in (shop.shoptags || []).slice(0, 4)" :key="tIdx" class="tag">
+                {{ tag }}
+              </span>
+              <span v-if="(shop.shoptags || []).length === 0" class="tag muted">优质服务</span>
+            </div>
+            <div class="shop-meta">
+              <span class="meta-item">
+                <i class="fas fa-layer-group"></i>
+                {{ (shop.packages || []).length }} 个套餐
+              </span>
+              <span class="meta-item">
+                <i class="fas fa-scroll"></i>
+                支持 Play 下单
+              </span>
+            </div>
+          </div>
+          <button class="delete-btn" @click.stop="deleteShop(shop, idx)">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
-    </div>
+    </section>
   </div>
   <input ref="fileInput" class="hidden-input" type="file" accept=".json,application/json" @change="handleFileChange" />
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { shopStoreMvu } from './shared/shopStoreMvu';
 
 const shops = ref<any[]>([]);
+const filterKeyword = ref('');
 const fileInput = ref<HTMLInputElement | null>(null);
 const MAX_IMPORT_ITEMS = 200;
 const MAX_IMPORT_SIZE_MB = 5;
 const router = useRouter();
+
+const filteredShops = computed(() => {
+  const keyword = filterKeyword.value.trim().toLowerCase();
+  if (!keyword) return shops.value;
+  return shops.value.filter(shop => {
+    const name = String(shop?.shopname || shop?.name || '').toLowerCase();
+    const tags = (shop?.shoptags || []).join(' ').toLowerCase();
+    return name.includes(keyword) || tags.includes(keyword);
+  });
+});
 
 async function loadShops() {
   const data = await shopStoreMvu.getShops();
@@ -74,7 +114,6 @@ const onShopCacheUpdated = () => {
   void loadShops();
 };
 
-// 初始化
 onMounted(async () => {
   await loadShops();
   window.addEventListener('shop:cache:updated', onShopCacheUpdated);
@@ -96,6 +135,10 @@ function triggerImport() {
 
 function goPlay() {
   router.push('/play');
+}
+
+function goHome() {
+  router.push('/home');
 }
 
 function handleFileChange(event: Event) {
@@ -134,339 +177,207 @@ function handleFileChange(event: Event) {
 </script>
 
 <style lang="scss" scoped>
-.app-view {
+.discover-view {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-primary);
-  /* position: absolute; */
-  /* top: 0; */
-  /* left: 0; */
-  transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  display: flex;
-  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 50%),
+    linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
+  color: #e2e8f0;
 }
 
-.app-header {
-  background: linear-gradient(135deg, var(--bg-header) 0, var(--bg-header-light) 100%);
-  padding: 35px 16px 12px 16px;
+.discover-hero {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
-  }
-
-  .title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--text-primary);
-
-    .import-btn {
-      border: none;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-dark));
-      color: #fff;
-      padding: 8px 14px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 195, 0, 0.3);
-      transition: all 0.2s ease;
-
-      &:hover {
-        transform: translateY(-2px);
-      }
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--border-accent);
-    background: var(--bg-card);
-    color: var(--accent-dark);
-    font-size: 0.85rem;
-    font-weight: 700;
-    transition: all 0.25s ease;
-
-    i {
-      color: var(--accent-primary);
-    }
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-    }
-  }
-}
-
-.app-content {
-  flex-grow: 1;
-  overflow-y: auto;
+  justify-content: space-between;
   padding: 16px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  border-radius: 18px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(15, 23, 42, 0.85);
 }
 
-.shop-list {
+.hero-title {
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-sub {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-outline,
+.btn-ghost,
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.8), rgba(5, 150, 105, 0.8));
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #ecfdf5;
+}
+
+.discover-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toolbar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(2, 6, 23, 0.65);
+  min-width: min(280px, 100%);
+}
+
+.toolbar-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.toolbar-hint {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.discover-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.shop-list-items {
-  display: flex;
-  flex-direction: column;
+.shop-grid {
+  display: grid;
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .shop-card {
-  background: var(--bg-card);
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--border-color);
+  align-items: start;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.8);
   cursor: pointer;
-  transition: all 0.25s ease;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-  }
-
-  .avatar-text {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(255, 195, 0, 0.12), rgba(255, 215, 64, 0.18));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-
-    i {
-      font-size: 1.4rem;
-      color: var(--accent-primary);
-      text-shadow:
-        0 2px 8px rgba(255, 195, 0, 0.5),
-        0 0 12px rgba(255, 215, 64, 0.4);
-      filter: drop-shadow(0 2px 4px rgba(255, 195, 0, 0.5));
-      transition: all 0.3s ease;
-    }
-  }
-
-  .info {
-    flex-grow: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .name {
-    font-weight: 700;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 1.15rem;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-  }
-
-  .desc {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    line-height: 1.5;
-    font-weight: 400;
-
-    .slogan-text {
-      flex: 1;
-      min-width: 100px;
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .package-count {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-light));
-      color: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(255, 195, 0, 0.3);
-      transition: all 0.3s ease;
-
-      i {
-        font-size: 0.7rem;
-        opacity: 0.9;
-      }
-    }
-  }
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.nav-bar {
+.shop-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.35);
+}
+
+.shop-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(16, 185, 129, 0.15);
+  color: #a7f3d0;
+  font-size: 18px;
+}
+
+.shop-info {
   display: flex;
-  border-top: 1px solid var(--border-accent);
-  background: linear-gradient(135deg, var(--bg-header) 0%, var(--bg-header-light) 100%);
-  padding: 8px 12px;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
-  flex-shrink: 0;
-  -webkit-backdrop-filter: blur(15px);
-  backdrop-filter: blur(15px);
-  position: relative;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
-  }
+.shop-name {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
-  .nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    padding: 6px 4px;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
-    border-radius: 12px;
-    margin: 0 2px;
+.shop-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 100%;
-      background: linear-gradient(135deg, rgba(255, 195, 0, 0.15), rgba(255, 215, 64, 0.1));
-      border-radius: 12px;
-      transition: all 0.3s ease;
-      z-index: 0;
-    }
+.tag {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
 
-    &.active {
-      color: var(--text-primary);
-      transform: translateY(-2px);
+.tag.muted {
+  background: rgba(148, 163, 184, 0.15);
+  color: rgba(226, 232, 240, 0.7);
+}
 
-      &::before {
-        width: 100%;
-      }
+.shop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.6);
+}
 
-      i {
-        color: var(--accent-primary);
-        transform: scale(1.2) translateY(-3px);
-        filter: drop-shadow(0 2px 6px rgba(255, 195, 0, 0.4));
-      }
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 
-      span {
-        font-weight: 700;
-        color: var(--accent-primary);
-      }
-    }
-
-    &:hover:not(.active) {
-      color: var(--text-primary);
-      transform: translateY(-1px);
-
-      &::before {
-        width: 60%;
-      }
-    }
-
-    i {
-      font-size: 1.4rem;
-      margin-bottom: 2px;
-      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-      position: relative;
-      z-index: 1;
-    }
-
-    span {
-      font-size: 0.7rem;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      position: relative;
-      z-index: 1;
-      letter-spacing: 0.5px;
-    }
-  }
+.delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fecaca;
+  border-radius: 10px;
+  padding: 6px 8px;
 }
 
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: var(--text-secondary);
+  gap: 10px;
+  padding: 40px 12px;
   text-align: center;
-
-  i {
-    font-size: 3rem;
-    margin-bottom: 16px;
-    opacity: 0.3;
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.95rem;
-    opacity: 0.8;
-  }
+  color: rgba(226, 232, 240, 0.6);
 }
 
 .hidden-input {

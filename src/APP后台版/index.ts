@@ -5,6 +5,7 @@ import { mountStreamingMessages } from '@util/streaming';
 import App from './app.vue';
 import router from './界面';
 import StreamingApp from './StreamingApp.vue';
+import { startAppModeWatcher, stopAppModeWatcher } from './shared/appMode';
 
 const parentWindow = (() => {
   try {
@@ -84,6 +85,7 @@ $(() => {
   const app = createApp(App);
   app.use(router);
   app.mount('#app');
+  const stopModeWatcher = startAppModeWatcher();
 
   const canStream = typeof (window as any).eventOn === 'function' && typeof (window as any).getChatMessages === 'function';
   const { unmount } = canStream
@@ -121,6 +123,7 @@ $(() => {
 
   $(window).on('pagehide', () => {
     stopMessageReceive?.stop?.();
+    stopModeWatcher?.();
     window.clearInterval(gateTimer);
     unmount();
     app.unmount();

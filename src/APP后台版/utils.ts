@@ -133,9 +133,31 @@ export function enableIframeFullHeight(options?: { minHeightPx?: number }) {
   };
 
   let rafId = 0;
+  const pickContentHeight = () => {
+    try {
+      const doc = document;
+      const body = doc.body;
+      const root = doc.documentElement;
+      const app = doc.getElementById('app');
+      const heights = [
+        body?.scrollHeight,
+        body?.offsetHeight,
+        root?.scrollHeight,
+        root?.offsetHeight,
+        app?.scrollHeight,
+        app?.offsetHeight,
+      ]
+        .filter(v => typeof v === 'number' && Number.isFinite(v)) as number[];
+      const max = heights.length ? Math.max(...heights) : 0;
+      return max || window.innerHeight;
+    } catch {
+      return window.innerHeight;
+    }
+  };
+
   const apply = () => {
     rafId = 0;
-    const h = Math.max(minHeightPx, pickHostHeight());
+    const h = Math.max(minHeightPx, pickContentHeight());
     const next = `${h}px`;
     if (iframe.style.height !== next) {
       iframe.style.height = next;
@@ -160,10 +182,28 @@ export function enableIframeFullHeight(options?: { minHeightPx?: number }) {
     // ignore
   }
 
+  // 内容变化时也调整高度
+  let resizeObserver: ResizeObserver | null = null;
+  try {
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => schedule());
+      resizeObserver.observe(document.body);
+      const app = document.getElementById('app');
+      if (app) resizeObserver.observe(app);
+    }
+  } catch {
+    // ignore
+  }
+
   return () => {
     window.removeEventListener('resize', schedule);
     try {
       window.parent?.removeEventListener?.('resize', schedule);
+    } catch {
+      // ignore
+    }
+    try {
+      resizeObserver?.disconnect();
     } catch {
       // ignore
     }
@@ -175,43 +215,8 @@ export function enableIframeFullHeight(options?: { minHeightPx?: number }) {
  * 智能导航函数 - 根据服务状态决定默认页面
  */
 export async function navigateToDefaultPage() {
-  try {
-    // 等待MVU初始化 (最多等待2秒)
-    await Promise.race([
-      waitGlobalInitialized('Mvu'),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('MVU初始化超时')), 2000)),
-    ]);
-
-    // 获取MVU数据
-    const mvuData = Mvu.getMvuData({ type: 'message', message_id: 'latest' }) as any;
-
-    if (!mvuData) {
-      // 使用 console.debug 避免生产环境噪音，或引入 logger
-      return '/home';
-    }
-
-    // 检查订单数据
-    const orders = mvuData.stat_data?.['服务中的订单'] || mvuData['服务中的订单'];
-
-    if (!orders || !Array.isArray(orders) || orders.length === 0) {
-      return '/home';
-    }
-
-    // 过滤出服务中的订单（排除服务结束的）
-    const activeOrders = orders.filter((order: any) => {
-      const orderStatus = order.订单状态 || '';
-      return !orderStatus.includes('服务结束');
-    });
-
-    if (activeOrders.length === 0) {
-      return '/home';
-    }
-
-    return '/play';
-  } catch (error) {
-    console.error('[智能导航] 检查服务状态失败:', error);
-    return '/home';
-  }
+  // 首页作为固定起始页（保留游玩引导与说明）
+  return '/home';
 }
 
 export function requestStreaming(reason: string = 'manual', ttlMs: number = 120000) {

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex h-80 flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+    class="flex flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
   >
     <div class="mb-4 flex items-center space-x-2">
       <i class="fas fa-info-circle text-blue-400"></i>
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <div class="scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent flex-1 space-y-3 overflow-y-auto">
+    <div class="space-y-3">
       <div v-if="!pkg" class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4 text-sm text-slate-400">
         暂无选中套餐（请在右侧列表点击一个套餐）
       </div>

@@ -1,7 +1,7 @@
 <template>
   <div v-if="historyOverlayOpen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-black/60 p-4">
     <div
-      class="relative flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
+      class="relative flex w-full max-w-3xl flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/90 to-black/80 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
     >
       <div class="flex items-center gap-3 border-b border-slate-700/50 px-5 py-4">
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
@@ -28,7 +28,7 @@
         </button>
       </div>
 
-      <div class="min-h-0 flex-1 overflow-y-auto p-5">
+      <div class="p-5">
         <div v-if="loading" class="flex items-center justify-center py-12 text-slate-300">
           <div class="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-slate-600 border-t-blue-400"></div>
           正在加载历史订单…

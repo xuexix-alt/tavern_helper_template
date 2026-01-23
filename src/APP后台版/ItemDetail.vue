@@ -242,23 +242,21 @@ onMounted(async () => {
 <style lang="scss" scoped>
 .app-view {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-primary);
-  position: absolute;
-  top: 0;
-  left: 0;
+  background: linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
+  color: #e2e8f0;
 }
 
 .app-header {
-  background: linear-gradient(135deg, var(--bg-header) 0, var(--bg-header-light) 100%);
+  background: rgba(15, 23, 42, 0.9);
   padding: 16px;
   padding-top: max(16px, env(safe-area-inset-top));
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2);
   flex-shrink: 0;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -270,7 +268,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--text-primary);
+    color: #e2e8f0;
 
     i {
       cursor: pointer;
@@ -289,14 +287,8 @@ onMounted(async () => {
 
 .app-content {
   flex-grow: 1;
-  overflow-y: auto;
+  overflow: visible;
   padding: 0;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .detail-info-card {

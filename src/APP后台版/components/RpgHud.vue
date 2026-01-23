@@ -50,6 +50,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { filterActiveOrders, loadOrdersFromMVU, type ServiceOrder } from '../shared/serviceOrders';
 import { getNestedValue } from '../utils';
+import { appModeLabel } from '../shared/appMode';
 
 const loading = ref(false);
 const currentGirl = ref<ServiceOrder | null>(null);
@@ -57,7 +58,11 @@ const scene = ref<string>('');
 const balance = ref<any>(null);
 const heartbeat = ref<any>(null);
 
-const sceneText = computed(() => scene.value || 'RPG · 进行中');
+const sceneText = computed(() => {
+  const raw = String(scene.value || '').trim().toLowerCase();
+  if (raw === 'app' || raw === 'rp' || raw === 'mixed') return appModeLabel.value;
+  return scene.value || appModeLabel.value || 'RPG · 进行中';
+});
 const currentGirlText = computed(() => {
   if (!currentGirl.value) return '暂无服务';
   const name = getNestedValue(currentGirl.value, '基础信息.姓名', '未知');
