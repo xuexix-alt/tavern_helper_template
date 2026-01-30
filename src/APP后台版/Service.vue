@@ -1,111 +1,119 @@
 <template>
-  <div class="service-view">
-    <header class="service-hero">
-      <div class="hero-left">
-        <div class="hero-title">
-          <i class="fas fa-concierge-bell"></i>
-          服务状态
+  <div class="service-screen">
+    <header class="service-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <span class="material-symbols-outlined">concierge</span>
         </div>
-        <div class="hero-sub">
-          当前服务中 {{ girlsData.length }} 单
-          <span v-if="lastUpdated" class="hero-time">· 最近更新 {{ lastUpdated }}</span>
+        <div>
+          <div class="header-title">{{ ui.pageTitles.service }}</div>
+          <div class="header-sub">
+            {{ ui.servicePage.summary.inProgress }} {{ girlsData.length }} 单
+            <span v-if="lastUpdated" class="header-time">· {{ ui.servicePage.summary.updated }} {{ lastUpdated }}</span>
+          </div>
         </div>
       </div>
-      <div class="hero-actions">
-        <button class="btn-outline" @click="refreshData">
-          <i class="fas fa-sync-alt" :class="{ 'fa-spin': isRefreshing }"></i>
-          刷新
+      <div class="header-actions">
+        <button class="ghost-pill" @click="refreshData">
+          <span class="material-symbols-outlined" :class="{ spin: isRefreshing }">sync</span>
+          {{ ui.commonActions.refresh }}
         </button>
-        <button class="btn-ghost" @click="goPlay">
-          <i class="fas fa-gamepad"></i>
-          返回 Play
+        <button class="ghost-pill" @click="goPlay">
+          <span class="material-symbols-outlined">stadia_controller</span>
+          {{ ui.commonActions.backPlay }}
         </button>
       </div>
     </header>
 
     <div v-if="isLoading" class="loading-state">
       <div class="spinner"></div>
-      <p>正在加载服务数据...</p>
+      <p>{{ ui.servicePage.states.loading }}</p>
     </div>
 
     <div v-else-if="girlsData.length === 0" class="empty-state">
-      <i class="fas fa-inbox"></i>
-      <p>{{ errorMessage || '暂无服务中的订单' }}</p>
+      <span class="material-symbols-outlined">inbox</span>
+      <p>{{ errorMessage || ui.servicePage.states.empty }}</p>
       <button class="btn-primary" @click="refreshData">
-        <i class="fas fa-redo"></i>
-        重试
+        <span class="material-symbols-outlined">refresh</span>
+        {{ ui.servicePage.states.retry }}
       </button>
     </div>
 
-    <div v-else class="service-layout">
-      <aside class="order-list">
-        <div class="order-list-title">进行中的订单</div>
-        <div class="order-list-body">
+    <div v-else class="service-body">
+      <aside class="order-list glass-panel">
+        <div class="list-title">{{ ui.servicePage.sections.orderList }}</div>
+        <div class="order-items">
           <button
             v-for="(girl, index) in girlsData"
             :key="girl.id || index"
-            class="order-card"
+            class="order-item"
             :class="{ active: currentGirlIndex === index }"
             @click="currentGirlIndex = index"
           >
-            <div class="order-name">{{ getGirlName(girl) }}</div>
-            <div class="order-meta">
-              <span>{{ getNestedValue(girl, '套餐.套餐名称', '未命名套餐') }}</span>
-              <span>·</span>
-              <span>{{ getNestedValue(girl, '订单状态', '服务中') }}</span>
-            </div>
-            <div class="order-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: orderProgressWidth(girl) }"></div>
+            <div class="order-avatar image-placeholder"></div>
+            <div class="order-info">
+              <div class="order-name">{{ getGirlName(girl) }}</div>
+              <div class="order-meta">
+                <span>{{ getNestedValue(girl, '套餐.套餐名称', '未命名套餐') }}</span>
+                <span>·</span>
+                <span>{{ getNestedValue(girl, '订单状态', '服务中') }}</span>
               </div>
-              <span class="progress-text">{{ orderProgressDisplay(girl) }}</span>
+              <div class="order-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: orderProgressWidth(girl) }"></div>
+                </div>
+                <span class="progress-text">{{ orderProgressDisplay(girl) }}</span>
+              </div>
             </div>
           </button>
         </div>
       </aside>
 
       <section v-if="currentGirl" class="order-detail">
-        <div class="detail-hero">
-          <div>
-            <div class="detail-name">{{ basicInfo.name }}</div>
-            <div class="detail-sub">
-              <span>{{ basicInfo.identity }}</span>
-              <span>·</span>
-              <span>{{ basicInfo.age }} 岁</span>
-              <span>·</span>
-              <span :class="orderStatusClass">{{ orderStatus }}</span>
+        <div class="detail-hero glass-panel">
+          <div class="detail-banner image-placeholder"></div>
+          <div class="detail-content">
+            <div>
+              <div class="detail-name">{{ basicInfo.name }}</div>
+              <div class="detail-sub">
+                <span>{{ basicInfo.identity }}</span>
+                <span>·</span>
+                <span>{{ basicInfo.age }} 岁</span>
+                <span>·</span>
+                <span :class="orderStatusClass">{{ orderStatus }}</span>
+              </div>
             </div>
-          </div>
-          <div class="detail-tags">
-            <span class="tag">套餐 {{ packageInfo.type || '综合' }}</span>
-            <span class="tag accent">好感 {{ affectionDisplay }}/100</span>
+            <div class="detail-tags">
+              <span class="tag">套餐 {{ packageInfo.type || '综合' }}</span>
+              <span class="tag accent">好感 {{ affectionDisplay }}/100</span>
+            </div>
           </div>
         </div>
 
         <div class="metric-grid">
-          <div class="metric-card">
-            <div class="metric-label">心跳</div>
+          <div class="metric-card glass-panel">
+            <div class="metric-label">{{ ui.servicePage.metrics.heartbeat }}</div>
             <div class="metric-value" :style="{ color: heartbeatColor }">{{ heartbeatDisplay }}</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-label">服务进度</div>
+          <div class="metric-card glass-panel">
+            <div class="metric-label">{{ ui.servicePage.metrics.serviceProgress }}</div>
             <div class="metric-value">{{ serviceProgressDisplay }}</div>
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: serviceProgressBarWidth, background: progressColor }"></div>
             </div>
           </div>
-          <div class="metric-card">
-            <div class="metric-label">服务次数</div>
+          <div class="metric-card glass-panel">
+            <div class="metric-label">{{ ui.servicePage.metrics.interactionTimes }}</div>
             <div class="metric-value">{{ serviceCount }}</div>
           </div>
-          <div class="metric-card">
-            <div class="metric-label">好感度</div>
+          <div class="metric-card glass-panel">
+            <div class="metric-label">{{ ui.servicePage.metrics.affection }}</div>
             <div class="metric-value">{{ affectionDisplay }}/100</div>
           </div>
         </div>
 
-        <div class="package-card">
-          <div class="package-title">套餐信息</div>
+        <div class="package-card glass-panel">
+          <div class="package-title">{{ ui.servicePage.sections.packageInfo }}</div>
           <div class="package-price">¥{{ packageInfo.price }}</div>
           <div class="package-name">{{ packageInfo.name }}</div>
           <div class="package-tags">
@@ -114,95 +122,73 @@
           </div>
         </div>
 
-        <details class="detail-panel" open>
-          <summary>
-            <span><i class="fas fa-user-tie"></i> 着装信息</span>
-            <i class="fas fa-chevron-down"></i>
-          </summary>
-          <div class="panel-body">
+        <div class="panel-stack">
+          <ExpandablePanel :title="ui.servicePage.body.clothing" material-icon="checkroom" :open="true">
             <div v-if="hasValidClothing" class="clothing-grid">
               <div v-for="(value, key) in displayClothing" :key="key" class="clothing-item">
-                <i :class="['clothing-icon', clothingIcon(String(key))]"></i>
+                <span class="material-symbols-outlined clothing-icon">{{ clothingIcon(String(key)) }}</span>
                 <div class="clothing-text">
                   <div class="clothing-key">{{ key }}</div>
                   <div class="clothing-value">{{ value }}</div>
                 </div>
               </div>
             </div>
-            <div v-else class="empty-text">暂无着装信息</div>
-          </div>
-        </details>
+            <div v-else class="empty-text">{{ ui.servicePage.states.noClothing }}</div>
+          </ExpandablePanel>
 
-        <details class="detail-panel">
-          <summary>
-            <span><i class="fas fa-heart"></i> 心理状态</span>
-            <i class="fas fa-chevron-down"></i>
-          </summary>
-          <div class="panel-body">
+          <ExpandablePanel :title="ui.servicePage.body.psychology" material-icon="psychology">
             <div class="info-line">
-              <span class="info-label">当前所想</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.currentThought }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '心理状态.当前所想', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">性格类型</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.personalityType }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '心理状态.性格类型', '-') }}</span>
             </div>
-          </div>
-        </details>
+          </ExpandablePanel>
 
-        <details class="detail-panel">
-          <summary>
-            <span><i class="fas fa-female"></i> 身体特征</span>
-            <i class="fas fa-chevron-down"></i>
-          </summary>
-          <div class="panel-body">
+          <ExpandablePanel :title="ui.servicePage.body.body" material-icon="accessibility_new">
             <div class="info-line">
-              <span class="info-label">罩杯</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.cup }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '身体特征.三围.罩杯', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">乳形</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.breastShape }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '身体特征.乳房.形状', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">胸部</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.breast }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '身体特征.胸部', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">私处</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.privatePart }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '身体特征.私处', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">姿势</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.pose }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '身体特征.姿势', '-') }}</span>
             </div>
-          </div>
-        </details>
+          </ExpandablePanel>
 
-        <details class="detail-panel">
-          <summary>
-            <span><i class="fas fa-chart-line"></i> 服务统计</span>
-            <i class="fas fa-chevron-down"></i>
-          </summary>
-          <div class="panel-body">
+          <ExpandablePanel :title="ui.servicePage.body.statistics" material-icon="ssid_chart">
             <div class="info-line">
-              <span class="info-label">处女</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.virgin }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '性经验.处女', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">性伴侣数量</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.partnerCount }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '性经验.性伴侣数量', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">本次服务性交次数</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.interactionTimes }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '服务统计.本次服务性交次数', '-') }}</span>
             </div>
             <div class="info-line">
-              <span class="info-label">内射次数</span>
+              <span class="info-label">{{ ui.servicePage.detailLabels.internalShotTimes }}</span>
               <span class="info-value">{{ getNestedValue(currentGirl, '服务统计.内射次数', '-') }}</span>
             </div>
-          </div>
-        </details>
+          </ExpandablePanel>
+        </div>
       </section>
     </div>
   </div>
@@ -213,6 +199,8 @@ import { computed, onActivated, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { filterActiveOrders, loadOrdersFromMVU, readCachedOrders } from './shared/serviceOrders';
 import { getNestedValue } from './utils';
+import ExpandablePanel from './components/ExpandablePanel.vue';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 const girlsData = ref<any[]>([]);
 const currentGirlIndex = ref(0);
@@ -222,6 +210,7 @@ const errorMessage = ref('');
 const lastUpdated = ref('');
 
 const router = useRouter();
+const ui = uiSpec.uiTexts;
 
 const currentGirl = computed(() => girlsData.value[currentGirlIndex.value] || null);
 
@@ -408,14 +397,14 @@ const displayClothing = computed(() => {
 const hasValidClothing = computed(() => Object.keys(displayClothing.value).length > 0);
 
 function clothingIcon(key: string) {
-  if (key.includes('上衣')) return 'fas fa-tshirt';
-  if (key.includes('下装')) return 'fas fa-user';
-  if (key.includes('内衣')) return 'fas fa-heart';
-  if (key.includes('内裤')) return 'fas fa-venus';
-  if (key.includes('丝袜')) return 'fas fa-socks';
-  if (key.includes('鞋')) return 'fas fa-shoe-prints';
-  if (key.includes('配饰')) return 'fas fa-gem';
-  return 'fas fa-tag';
+  if (key.includes('上衣')) return 'checkroom';
+  if (key.includes('下装')) return 'styler';
+  if (key.includes('内衣')) return 'favorite';
+  if (key.includes('内裤')) return 'shield';
+  if (key.includes('丝袜')) return 'spa';
+  if (key.includes('鞋')) return 'hiking';
+  if (key.includes('配饰')) return 'diamond';
+  return 'sell';
 }
 </script>
 
@@ -807,5 +796,375 @@ function clothingIcon(key: string) {
 
 .status-pending {
   color: #f59e0b;
+}
+
+.service-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 20px 40px;
+  color: #f8fafc;
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(127, 19, 236, 0.2);
+  color: rgba(216, 180, 254, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.header-sub {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ghost-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.loading-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 12px;
+  text-align: center;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.btn-primary {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #7f13ec, #6c4bff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.service-body {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 300px) 1fr;
+}
+
+.order-list {
+  padding: 16px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.list-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.order-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.order-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  text-align: left;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.order-item.active {
+  border-color: rgba(127, 19, 236, 0.45);
+  background: rgba(127, 19, 236, 0.12);
+}
+
+.order-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+}
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.order-meta {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.65);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.order-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-text {
+  font-size: 10px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detail-hero {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.detail-banner {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.detail-content {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-name {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.detail-sub {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.65);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.detail-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(127, 19, 236, 0.2);
+  color: rgba(216, 180, 254, 0.95);
+}
+
+.tag.accent {
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+}
+
+.tag.muted {
+  background: rgba(148, 163, 184, 0.2);
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.metric-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.metric-card {
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: rgba(127, 19, 236, 0.8);
+}
+
+.package-card {
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.package-title {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.package-price {
+  font-size: 22px;
+  font-weight: 800;
+  color: rgba(216, 180, 254, 0.95);
+}
+
+.package-name {
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.package-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clothing-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.clothing-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.clothing-icon {
+  color: rgba(216, 180, 254, 0.95);
+}
+
+.clothing-key {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.clothing-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.info-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+.info-value {
+  font-size: 12px;
+  color: #e2e8f0;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.empty-text {
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.6);
+}
+
+@media (max-width: 980px) {
+  .service-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

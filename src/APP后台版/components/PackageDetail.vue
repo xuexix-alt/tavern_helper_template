@@ -3,32 +3,32 @@
     class="flex flex-col rounded-2xl border border-blue-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-xl"
   >
     <div class="mb-4 flex items-center space-x-2">
-      <i class="fas fa-info-circle text-blue-400"></i>
-      <h3 class="text-white">Package Details</h3>
+      <span class="material-symbols-outlined text-blue-400">info</span>
+      <h3 class="text-white">{{ ui.packageDetail.title }}</h3>
       <div class="ml-auto flex items-center space-x-1">
         <button
           class="mr-2 rounded-lg border border-slate-700/50 bg-slate-800/50 px-2 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-700/50"
           @click="openHistory"
         >
-          <i class="fas fa-history text-blue-300"></i>
-          <span class="ml-1">历史订单</span>
+          <span class="material-symbols-outlined text-blue-300">history</span>
+          <span class="ml-1">{{ ui.packageDetail.history }}</span>
         </button>
         <div class="h-2 w-2 animate-pulse rounded-full bg-green-400"></div>
-        <span class="text-xs text-green-400">Active</span>
+        <span class="text-xs text-green-400">{{ ui.packageDetail.active }}</span>
       </div>
     </div>
 
     <div class="space-y-3">
       <div v-if="!pkg" class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4 text-sm text-slate-400">
-        暂无选中套餐（请在右侧列表点击一个套餐）
+        {{ ui.packageDetail.empty }}
       </div>
 
       <div v-else class="space-y-3">
         <div class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="truncate text-base font-bold text-white">{{ pkg.name || '未命名套餐' }}</div>
-              <div class="mt-1 truncate text-xs text-slate-500">{{ pkg.shop_name || '未命名店铺' }}</div>
+              <div class="truncate text-base font-bold text-white">{{ pkg.name || ui.packageDetail.fallbackPackage }}</div>
+              <div class="mt-1 truncate text-xs text-slate-500">{{ pkg.shop_name || ui.packageDetail.fallbackShop }}</div>
             </div>
             <div class="shrink-0 text-right">
               <div class="text-lg font-bold text-yellow-300">￥{{ priceText }}</div>
@@ -48,8 +48,8 @@
 
         <div class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4">
           <div class="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
-            <i class="fas fa-align-left text-blue-300"></i>
-            简介
+            <span class="material-symbols-outlined text-blue-300">subject</span>
+            {{ ui.packageDetail.intro }}
           </div>
           <div class="text-sm leading-relaxed text-slate-300">
             {{ descriptionText }}
@@ -58,8 +58,8 @@
 
         <div v-if="features.length" class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4">
           <div class="mb-2 flex items-center gap-2 text-sm font-bold text-slate-200">
-            <i class="fas fa-bolt text-yellow-300"></i>
-            玩法特色
+            <span class="material-symbols-outlined text-yellow-300">bolt</span>
+            {{ ui.packageDetail.features }}
           </div>
           <div class="flex flex-wrap gap-2">
             <button
@@ -78,7 +78,7 @@
     <div class="mt-4 flex items-center space-x-2 border-t border-slate-700/50 pt-4">
       <input
         v-model="remark"
-        placeholder="下单备注（可选）"
+        :placeholder="ui.packageDetail.remarkPlaceholder"
         class="flex-1 rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-white placeholder-slate-400 focus:border-blue-500/50 focus:outline-none"
       />
       <button
@@ -86,8 +86,8 @@
         :disabled="!pkg"
         @click="placeOrder()"
       >
-        <i class="fas fa-paper-plane text-white"></i>
-        <span class="ml-2 hidden sm:inline">下单</span>
+        <span class="material-symbols-outlined text-white">send</span>
+        <span class="ml-2 hidden sm:inline">{{ ui.packageDetail.orderAction }}</span>
       </button>
     </div>
   </div>
@@ -97,6 +97,9 @@
 import { computed, ref } from 'vue';
 import { historyOverlayOpen } from '../shared/uiState';
 import { selectedPackage } from '../shared/selectedPackage';
+import uiSpec from '../shared/ui-spec-for-designers.json';
+
+const ui = uiSpec.uiTexts;
 
 function openHistory() {
   historyOverlayOpen.value = true;
@@ -134,7 +137,7 @@ const starsText = computed(() => {
 const descriptionText = computed(() => {
   const v = (pkg.value as any)?.description;
   const s = typeof v === 'string' ? v.trim() : '';
-  return s || '暂无描述';
+  return s || ui.packageDetail.fallbackDescription;
 });
 
 function tryTriggerSlash(command: string) {
@@ -172,8 +175,8 @@ async function copyToClipboard(text: string) {
 
 async function placeOrder(extra?: string) {
   if (!pkg.value) return;
-  const pkgName = pkg.value.name || '未命名套餐';
-  const shopName = pkg.value.shop_name || '未命名店铺';
+  const pkgName = pkg.value.name || ui.packageDetail.fallbackPackage;
+  const shopName = pkg.value.shop_name || ui.packageDetail.fallbackShop;
   const note = [extra, remark.value.trim()].filter(Boolean).join(' ');
   const text = `下单：${shopName} / ${pkgName}${note ? `，备注：${note}` : ''}`;
   const cmd = `/send ${text} | /trigger await=true`;

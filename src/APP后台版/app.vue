@@ -3,10 +3,8 @@
     <!-- Background Effects -->
     <div class="absolute inset-0 -z-20 bg-gradient-to-br from-slate-950 via-slate-900 to-black"></div>
     <div class="absolute inset-0 -z-10 bg-gradient-to-br from-blue-600/5 via-purple-600/5 to-orange-600/5"></div>
-    <div class="absolute top-0 left-1/4 -z-10 h-96 w-96 animate-pulse rounded-full bg-blue-500/10 blur-3xl"></div>
-    <div
-      class="absolute right-1/4 bottom-0 -z-10 h-96 w-96 animate-pulse rounded-full bg-purple-500/10 blur-3xl delay-1000"
-    ></div>
+    <div class="glow-layer glow-layer--one"></div>
+    <div class="glow-layer glow-layer--two"></div>
 
     <div class="flex w-full items-stretch">
       <!-- Sidebar (Play 页面优先正文：隐藏侧栏，改用面板弹窗导航) -->
@@ -30,14 +28,16 @@
 </template>
 
 <script setup lang="ts">
-import { onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onErrorCaptured, onMounted, onUnmounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import ErrorBoundary from './components/ErrorBoundary.vue';
 import Sidebar from './components/Sidebar.vue';
 import { enableIframeFullHeight } from './utils';
 
 // 当前主题
 const currentTheme = ref<'light' | 'dark'>('light');
-const hideSidebar = ref(false);
+const route = useRoute();
+const hideSidebar = computed(() => route.path === '/play');
 
 let disableIframeFullHeight: () => void = () => {};
 
@@ -97,6 +97,8 @@ onErrorCaptured((err: Error) => {
 </script>
 
 <style lang="scss">
+@import url('https://testingcf.jsdelivr.net/npm/@fontsource/material-symbols-outlined@latest/index.css');
+
 /* 让应用高度跟随宿主 iframe；滚动交给子容器 */
 html,
 body {
@@ -108,6 +110,23 @@ body {
   overflow-y: visible;
   font-family: 'Noto Sans SC', 'MiSans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   background: var(--bg-primary);
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
 }
 
 /* 过渡动画 */
@@ -156,6 +175,10 @@ body {
   --accent-dark: #c98a00;
   --shadow-sm: 0 8px 20px rgba(245, 183, 74, 0.2);
   --shadow-md: 0 16px 32px rgba(201, 138, 0, 0.22);
+  --glass-bg: rgba(25, 16, 34, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --image-placeholder: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop stop-color='%231b2333' offset='0'/><stop stop-color='%23312b45' offset='1'/></linearGradient></defs><rect width='100%25' height='100%25' fill='url(%23g)'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' opacity='0.55' font-size='48' font-family='Noto Sans SC, sans-serif'>IMAGE</text></svg>");
+  --avatar-placeholder: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop stop-color='%23242a3a' offset='0'/><stop stop-color='%233b3f52' offset='1'/></linearGradient></defs><rect width='100%25' height='100%25' rx='200' ry='200' fill='url(%23g)'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' opacity='0.65' font-size='64' font-family='Noto Sans SC, sans-serif'>AVATAR</text></svg>");
 }
 
 [data-theme='dark'] {
@@ -173,6 +196,72 @@ body {
   --accent-dark: #3a77c9;
   --shadow-sm: 0 10px 26px rgba(12, 20, 40, 0.45);
   --shadow-md: 0 20px 40px rgba(9, 14, 28, 0.55);
+}
+
+/* 模糊光斑层 */
+.glow-layer {
+  position: absolute;
+  z-index: -10;
+  width: 380px;
+  height: 380px;
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0.35;
+  animation: glowPulse 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.glow-layer--one {
+  top: -40px;
+  left: 10%;
+  background: rgba(99, 102, 241, 0.45);
+}
+
+.glow-layer--two {
+  bottom: -60px;
+  right: 8%;
+  background: rgba(236, 72, 153, 0.35);
+  animation-delay: 1.8s;
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* 玻璃通用面板 */
+.glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-nav {
+  background: rgba(15, 11, 21, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* 统一图片占位 */
+.image-placeholder {
+  background-image: var(--image-placeholder);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.avatar-placeholder {
+  background-image: var(--avatar-placeholder);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* #app 作为容器占满 iframe */

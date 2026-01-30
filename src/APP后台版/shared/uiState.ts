@@ -6,7 +6,8 @@ export const historyOverlayOpen = ref(false);
 export const playPanelsOpen = ref(false);
 
 // /play 页面：商城与套餐独立侧栏
-export const marketplaceOpen = ref(false);
+// /play 页面：商城浮层
+export const shopOverlayOpen = ref(false);
 
 // /play 页面：面板小窗模式
 export const playPanelsMini = ref(false);

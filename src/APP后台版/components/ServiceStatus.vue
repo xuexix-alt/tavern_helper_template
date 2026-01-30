@@ -41,7 +41,7 @@
       <div class="space-y-2">
         <div class="flex items-center justify-between text-sm">
           <span class="flex items-center space-x-1 text-slate-400">
-            <i class="fas fa-bolt text-xs"></i>
+            <span class="material-symbols-outlined text-xs">bolt</span>
             <span>好感度</span>
           </span>
           <span class="text-orange-400">{{ currentExp }} / {{ maxExp }}</span>
@@ -58,7 +58,7 @@
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3">
           <div class="mb-1 flex items-center space-x-2">
-            <i class="fas fa-heart text-red-400"></i>
+            <span class="material-symbols-outlined text-red-400">favorite</span>
             <span class="text-sm text-red-400">心跳</span>
           </div>
           <div class="text-white">{{ heartbeat }} bpm</div>
@@ -66,7 +66,7 @@
 
         <div class="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3">
           <div class="mb-1 flex items-center space-x-2">
-            <i class="fas fa-star text-yellow-400"></i>
+            <span class="material-symbols-outlined text-yellow-400">star</span>
             <span class="text-sm text-yellow-400">评分</span>
           </div>
           <div class="text-white">{{ rating }}</div>

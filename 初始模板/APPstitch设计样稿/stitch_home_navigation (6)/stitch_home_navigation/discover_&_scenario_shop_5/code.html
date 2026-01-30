@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>剧本详情页-含玩法推荐</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f13ec",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#191022",
+                        "surface-dark": "#261933",
+                        "surface-light": "#ffffff",
+                        "accent-purple": "#ad92c9",
+                    },
+                    fontFamily: {
+                        "display": ["Noto Sans SC", "Spline Sans", "sans-serif"],
+                        "body": ["Noto Sans SC", "Spline Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-x-hidden max-w-md mx-auto shadow-2xl pb-40">
+<header class="sticky top-0 z-50 flex items-center bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md p-4 pb-2 justify-between border-b border-gray-200 dark:border-white/5">
+<button class="p-2 -ml-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-8">剧本详情</h2>
+</header>
+<main class="flex-1 w-full">
+<section class="relative w-full aspect-[4/3] overflow-hidden">
+<div class="w-full h-full bg-center bg-cover" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDLaYj-P9ZwmpAgWS8EIZgsNsCgOadncKmoVDqWcJqQi8AXqlscO_StsvZOtndhUu49_eaZQnM2uZhvo_1GDhsFtpAv-o1GOrCtyzSWhPNBtOIDg9Tu10OplXEkXHzi2jNyoYyk15T3AhZs9Kbum--kG8KybS2X1aUo-K1F1INhkguJei9zECdklEoVwIA_5Zvzb98HR6YRRH_23zd5A-OhGVUruVJzvce7SN4y_PMWCmfqU4HzwdEAMpBsjEU5R1rUz9mP72nmk67T");'>
+<div class="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark via-transparent to-transparent opacity-90"></div>
+</div>
+<div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+<div>
+<div class="flex gap-2 mb-2">
+<span class="px-2 py-0.5 rounded bg-primary/20 backdrop-blur-md text-primary dark:text-accent-purple text-[10px] font-bold uppercase tracking-wide border border-primary/20">#哥特</span>
+<span class="px-2 py-0.5 rounded bg-black/40 backdrop-blur-md text-white text-[10px] font-medium uppercase tracking-wide border border-white/10">#恐怖</span>
+</div>
+<h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-1 shadow-black drop-shadow-lg">猩红山庄</h1>
+</div>
+</div>
+</section>
+<section class="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-surface-dark/50">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs text-slate-500 dark:text-gray-400">评分</span>
+<div class="flex items-center text-yellow-500 font-bold">
+<span class="material-symbols-outlined text-[16px] fill-current mr-0.5">star</span>
+                        4.9
+                    </div>
+</div>
+<div class="w-px h-8 bg-gray-200 dark:bg-white/10"></div>
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs text-slate-500 dark:text-gray-400">时长</span>
+<div class="flex items-center font-bold text-slate-700 dark:text-gray-200">
+<span class="material-symbols-outlined text-[16px] mr-0.5">schedule</span>
+                        2-3小时
+                    </div>
+</div>
+<div class="w-px h-8 bg-gray-200 dark:bg-white/10"></div>
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs text-slate-500 dark:text-gray-400">难度</span>
+<div class="flex items-center font-bold text-slate-700 dark:text-gray-200">
+<span class="material-symbols-outlined text-[16px] mr-0.5">psychology</span>
+                        困难
+                    </div>
+</div>
+</section>
+<section class="px-5 py-6 flex flex-col gap-6">
+<div>
+<h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+<span class="w-1 h-5 rounded-full bg-primary"></span>
+                        剧情简介
+                    </h3>
+<p class="text-slate-600 dark:text-gray-300 text-sm leading-relaxed text-justify">
+                        在这座被迷雾笼罩的古老庄园中，每个房间都隐藏着不为人知的秘密。你是受邀而来的侦探，本以为只是一次简单的遗产公证，却意外卷入了一场跨越百年的家族诅咒。午夜的钟声敲响，墙壁里传来低语，你必须在天亮之前揭开真相，否则将永远成为庄园的一部分。这里不仅有错综复杂的谜题，更有考验人性的抉择。
+                    </p>
+</div>
+<div>
+<h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+<span class="w-1 h-5 rounded-full bg-primary"></span>
+                        角色照片
+                    </h3>
+<div class="flex gap-4 overflow-x-auto no-scrollbar pb-2 -mx-5 px-5">
+<div class="flex-shrink-0 w-32 relative group cursor-pointer">
+<div class="w-32 h-44 rounded-xl bg-slate-200 dark:bg-surface-dark border border-white/10 overflow-hidden relative shadow-lg">
+<img alt="Felix" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDS3-HfA-RrfZnWf71w8SGVt5Gfm_4PDSsQWvyiViCyitO8IwVxwPH9zu1rtXD4h0iCWrMd22AVtXOq_USS23il8DFCTFHdO-CJSVqwUZys7S6JKhKyQgZ8WYymSQvsFWkmJoghfomCy--H_S5-UbUOnnDKv7vDVaeb1fafClQAay0g65nxdjr3CKb3jbsRS1kA2Q4ACzYZbEaE4xdQXXdhiZfqCpAyYQlJZisOEckoggg8BIJFfi8bv_8zqe7Em5H07rMnLbGF0nvD"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-white">play_arrow</span>
+</div>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm flex items-center gap-1 border border-white/20">
+<span class="material-symbols-outlined text-[10px] text-white">photo_library</span>
+<span class="text-[10px] font-bold text-white">5</span>
+</div>
+<div class="absolute bottom-3 left-3 right-3">
+<h4 class="text-sm font-bold text-white leading-tight">菲利克斯</h4>
+<span class="text-[10px] text-gray-300 block mt-0.5">庄园继承人</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 w-32 relative group cursor-pointer">
+<div class="w-32 h-44 rounded-xl bg-slate-200 dark:bg-surface-dark border border-white/10 overflow-hidden relative shadow-lg">
+<img alt="Sarah" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfhc_Sfwm6mIRN_mjOYCl-OyZHxYxpDts0N05sIQA5iAcDgpE1JUS5gb4e97I_NUt6RFacTa1AoxNKOxS5bG-KtUhLwNz-8BdjiybKBiAoo0ve5RGM1mJ7GRIv1sG4bhJuzfV_ECe4PZ4u6n3ZajhUfhHHnCjoD7drvLgdBO_AgatSlQJk5ITzvs-V_cjTVV5p3_iJYswmbrvynryyo8uNtZwAeDYyRvHQrSDiRNKUgNW5WrzOzpAodFmwcCa6cNnk7HaZGVZtxD_-"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-white">play_arrow</span>
+</div>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm flex items-center gap-1 border border-white/20">
+<span class="material-symbols-outlined text-[10px] text-white">photo_library</span>
+<span class="text-[10px] font-bold text-white">8</span>
+</div>
+<div class="absolute bottom-3 left-3 right-3">
+<h4 class="text-sm font-bold text-white leading-tight">萨拉夫人</h4>
+<span class="text-[10px] text-gray-300 block mt-0.5">神秘女主人</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 w-32 relative group cursor-pointer">
+<div class="w-32 h-44 rounded-xl bg-slate-200 dark:bg-surface-dark border border-white/10 overflow-hidden relative shadow-lg">
+<img alt="Butler" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHiDV7DBU3-N39thGLQBwrHiU8zvvc2oQAuL9in3yphL62YKaXufOsdJT0nKE2BrNL8_76h1buAftve_SNbyYZ5rzor5mTSnzCoQEcki0O0cWtYCVbcs6vyGaumqqOg_5rSJ0SWf8zLeGsDPlcbVr0foT3_o03x2MOH2mcYWCqh-EAVXrhs2Y3hPTBMP3Ms-4BEU0M_Rt2TosKUQMGFQtTKERphERGbh3jRE8aCgyr4I6g4YkEzGezI2O_VYvkYHDavElpSSAdDNgB"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-white">play_arrow</span>
+</div>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm flex items-center gap-1 border border-white/20">
+<span class="material-symbols-outlined text-[10px] text-white">photo_library</span>
+<span class="text-[10px] font-bold text-white">3</span>
+</div>
+<div class="absolute bottom-3 left-3 right-3">
+<h4 class="text-sm font-bold text-white leading-tight">老管家</h4>
+<span class="text-[10px] text-gray-300 block mt-0.5">沉默守护者</span>
+</div>
+</div>
+</div>
+<div class="flex-shrink-0 w-32 relative group cursor-pointer">
+<div class="w-32 h-44 rounded-xl bg-slate-200 dark:bg-surface-dark border border-white/10 overflow-hidden relative shadow-lg">
+<img alt="Maid" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA76d6xwnnEeBQ4ROyPqU2zcpGcoJrGiY_hA_UUN0w6LhQffdaXpF8pILtuFkZc4JQWQK1PndSslwaiBdZ8ik17hih1ULWToE_4Tspx0I8XO8QXAtse1cDqtYJ-_22ucuYqKWojRB7PF9xG6PjedE-q1X3qB7iUC6Tf7kLXH8jZEZGLNhuXUxnuxK61HSn11DOGqOK1gQ4TaE4Ndp7YX2vZwQbI1XUB_y_XyARszEoITewrVeSlAHwNA1SXWzridHFgVJjjIN6rkavG"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+<span class="material-symbols-outlined text-[14px] text-white">play_arrow</span>
+</div>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/40 backdrop-blur-sm flex items-center gap-1 border border-white/20">
+<span class="material-symbols-outlined text-[10px] text-white">photo_library</span>
+<span class="text-[10px] font-bold text-white">6</span>
+</div>
+<div class="absolute bottom-3 left-3 right-3">
+<h4 class="text-sm font-bold text-white leading-tight">女仆艾米</h4>
+<span class="text-[10px] text-gray-300 block mt-0.5">无辜受害者</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-3">
+<h3 class="text-lg font-bold flex items-center gap-2">
+<span class="w-1 h-5 rounded-full bg-primary"></span>
+                            玩家评价
+                        </h3>
+<button class="text-primary text-xs font-bold">查看全部</button>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-[10px] text-white font-bold">A</div>
+<span class="text-sm font-bold">Alice_99</span>
+</div>
+<span class="text-[10px] text-gray-400">2小时前</span>
+</div>
+<p class="text-xs text-slate-600 dark:text-gray-300 line-clamp-2">氛围感太强了！最后的反转完全没有猜到，强烈推荐喜欢哥特风的朋友尝试。</p>
+</div>
+</div>
+<div>
+<h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+<span class="w-1 h-5 rounded-full bg-primary"></span>
+                        玩法推荐
+                    </h3>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-lg bg-surface-dark border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-sm font-medium dark:text-accent-purple dark:border-accent-purple/30 dark:hover:bg-accent-purple/10">
+                        沉浸式角色扮演
+                    </button>
+<button class="px-4 py-2 rounded-lg bg-surface-dark border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-sm font-medium dark:text-accent-purple dark:border-accent-purple/30 dark:hover:bg-accent-purple/10">
+                        纯文字氛围流
+                    </button>
+<button class="px-4 py-2 rounded-lg bg-surface-dark border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-sm font-medium dark:text-accent-purple dark:border-accent-purple/30 dark:hover:bg-accent-purple/10">
+                        侧重解谜探险
+                    </button>
+<button class="px-4 py-2 rounded-lg bg-surface-dark border border-primary/30 text-primary hover:bg-primary/10 transition-colors text-sm font-medium dark:text-accent-purple dark:border-accent-purple/30 dark:hover:bg-accent-purple/10">
+                        加强互动感
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed bottom-0 w-full max-w-md bg-white/90 dark:bg-surface-dark/95 backdrop-blur-lg border-t border-gray-200 dark:border-white/5 p-4 z-40 pb-8">
+<div class="flex justify-between items-center mb-3">
+<div class="flex flex-col">
+<span class="text-xs text-slate-500 dark:text-gray-400">价格</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-primary dark:text-white">100</span>
+<span class="text-sm font-bold text-primary dark:text-accent-purple">积分</span>
+<span class="text-xs text-slate-400 line-through decoration-slate-400">150 积分</span>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-surface-dark/5 dark:bg-white/5 px-2 py-1 rounded text-xs">
+<span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
+<span class="text-slate-600 dark:text-gray-300">目前可用</span>
+</div>
+</div>
+<button class="w-full bg-primary hover:bg-primary/90 text-white text-base font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2 active:scale-[0.98]">
+<span class="material-symbols-outlined">lock_open</span>
+<span>解锁剧本</span>
+</button>
+<p class="text-center mt-3 text-[10px] text-slate-400 dark:text-gray-500">
+                购买后即可永久解锁该剧本场景与所有角色
+            </p>
+</div>
+</div>
+</body></html>

@@ -4,7 +4,7 @@
       <div class="panel-head">
       <div class="panel-title">
         <div class="panel-icon">
-          <i class="fas fa-layer-group"></i>
+          <span class="material-symbols-outlined">layers</span>
         </div>
         <div>
             <div class="title">快捷面板</div>
@@ -13,11 +13,11 @@
       </div>
       <div class="panel-head-actions">
         <button class="panel-close" @click="minimize">
-          <i class="fas fa-window-restore"></i>
+          <span class="material-symbols-outlined">open_in_full</span>
           小窗
         </button>
         <button class="panel-close" @click="close">
-          <i class="fas fa-times"></i>
+          <span class="material-symbols-outlined">close</span>
           关闭
         </button>
       </div>
@@ -32,7 +32,7 @@
             :class="{ active: activeTab === tab.id }"
             @click="activeTab = tab.id"
           >
-            <i :class="tab.icon"></i>
+            <span class="material-symbols-outlined">{{ tab.icon }}</span>
             <span>{{ tab.label }}</span>
           </button>
         </nav>
@@ -41,7 +41,7 @@
           <div v-if="activeTab === 'status'" class="panel-section">
             <div class="panel-card">
               <div class="panel-card-title">
-                <i class="fas fa-user-shield"></i>
+                <span class="material-symbols-outlined">shield</span>
                 角色状态
               </div>
               <div class="panel-grid">
@@ -58,12 +58,12 @@
           <div v-else-if="activeTab === 'history'" class="panel-section">
             <div class="panel-card">
               <div class="panel-card-title">
-                <i class="fas fa-history"></i>
+                <span class="material-symbols-outlined">history</span>
                 历史订单
               </div>
               <div class="panel-card-desc">历史订单以单独弹窗展示，便于快速查看与复购。</div>
               <button class="panel-action" @click="openHistory">
-                <i class="fas fa-up-right-from-square"></i>
+                <span class="material-symbols-outlined">open_in_new</span>
                 打开历史
               </button>
             </div>
@@ -72,20 +72,20 @@
           <div v-else class="panel-section">
             <div class="panel-card">
               <div class="panel-card-title">
-                <i class="fas fa-sliders"></i>
+                <span class="material-symbols-outlined">tune</span>
                 设置
               </div>
               <div class="panel-actions">
                 <button class="panel-action" @click="toggleTheme">
-                  <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"></i>
+                  <span class="material-symbols-outlined">{{ isDark ? 'light_mode' : 'dark_mode' }}</span>
                   {{ isDark ? '切换到浅色' : '切换到深色' }}
                 </button>
                 <button class="panel-action" @click="refreshApp">
-                  <i class="fas fa-sync-alt"></i>
+                  <span class="material-symbols-outlined">sync</span>
                   刷新界面
                 </button>
                 <button class="panel-action" @click="regenerateHomeShops">
-                  <i class="fas fa-wand-magic-sparkles"></i>
+                  <span class="material-symbols-outlined">auto_awesome</span>
                   重新生成首页店铺
                 </button>
               </div>
@@ -93,12 +93,69 @@
 
             <div class="panel-card">
               <div class="panel-card-title">
-                <i class="fas fa-route"></i>
+                <span class="material-symbols-outlined">menu_book</span>
+                正文外观
+              </div>
+              <div class="panel-card-desc">你可以自定义 Play 页“正文和剧情”的底图与底色（本地/变量持久化）。</div>
+
+              <div class="panel-form">
+                <label class="panel-label">底图来源</label>
+                <div class="panel-chip-row">
+                  <button
+                    class="panel-chip"
+                    :class="{ active: playAppearance.logBgSource === 'none' }"
+                    @click="playAppearance.logBgSource = 'none'"
+                  >
+                    无
+                  </button>
+                  <button
+                    class="panel-chip"
+                    :class="{ active: playAppearance.logBgSource === 'placeholder' }"
+                    @click="playAppearance.logBgSource = 'placeholder'"
+                  >
+                    占位图
+                  </button>
+                  <button
+                    class="panel-chip"
+                    :class="{ active: playAppearance.logBgSource === 'url' }"
+                    @click="playAppearance.logBgSource = 'url'"
+                  >
+                    自定义URL
+                  </button>
+                </div>
+
+                <label class="panel-label">底图URL</label>
+                <input
+                  class="panel-input"
+                  v-model="playAppearance.logBgUrl"
+                  placeholder="https://...（仅在“自定义URL”时生效）"
+                />
+
+                <label class="panel-label">底色</label>
+                <div class="panel-chip-row">
+                  <button class="panel-chip" @click="playAppearance.logTint = 'rgba(0, 0, 0, 0.55)'">黑</button>
+                  <button class="panel-chip" @click="playAppearance.logTint = 'rgba(58, 35, 24, 0.7)'">棕</button>
+                  <button class="panel-chip" @click="playAppearance.logTint = 'rgba(10, 16, 28, 0.7)'">蓝黑</button>
+                </div>
+
+                <label class="panel-label">底色强度</label>
+                <input class="panel-range" type="range" min="0" max="1" step="0.05" v-model.number="playAppearance.logTintStrength" />
+
+                <button class="panel-action" @click="resetPlayAppearance">
+                  <span class="material-symbols-outlined">restart_alt</span>
+                  恢复默认
+                </button>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-card-title">
+                <span class="material-symbols-outlined">route</span>
                 快速入口
               </div>
               <div class="panel-nav-grid">
                 <button v-for="item in navItems" :key="item.path" class="panel-chip" @click="go(item.path)">
-                  <i :class="item.icon"></i>
+                  <span class="material-symbols-outlined">{{ item.icon }}</span>
                   {{ item.label }}
                 </button>
               </div>
@@ -115,6 +172,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { requestStreaming } from '../utils';
 import { historyOverlayOpen, playPanelsMini, playPanelsOpen } from '../shared/uiState';
+import { playAppearance as playAppearanceRef } from '../shared/playAppearance';
 import ServiceStats from './ServiceStats.vue';
 import ServiceStatus from './ServiceStatus.vue';
 import DiscoverQuickPanel from './DiscoverQuickPanel.vue';
@@ -123,21 +181,22 @@ import { appModeLabel, isAppMode, isMixedMode } from '../shared/appMode';
 const router = useRouter();
 
 const navItems = [
-  { icon: 'fas fa-gamepad', label: 'Play', path: '/play' },
-  { icon: 'fas fa-home', label: 'Home', path: '/home' },
-  { icon: 'fas fa-concierge-bell', label: 'Service', path: '/service' },
-  { icon: 'fas fa-compass', label: 'Discover', path: '/discover' },
+  { icon: 'stadia_controller', label: 'Play', path: '/play' },
+  { icon: 'home', label: 'Home', path: '/home' },
+  { icon: 'room_service', label: 'Service', path: '/service' },
+  { icon: 'explore', label: 'Discover', path: '/discover' },
 ];
 
 const isDark = ref(false);
 const showStorePanels = computed(() => isAppMode.value || isMixedMode.value);
+const playAppearance = playAppearanceRef;
 
 const tabs = computed(() => {
   const base = [
-    { id: 'status', label: '状态', icon: 'fas fa-user-shield' },
-    { id: 'discover', label: '发现', icon: 'fas fa-compass' },
-    { id: 'history', label: '历史', icon: 'fas fa-history' },
-    { id: 'settings', label: '设置', icon: 'fas fa-sliders' },
+    { id: 'status', label: '状态', icon: 'shield' },
+    { id: 'discover', label: '发现', icon: 'explore' },
+    { id: 'history', label: '历史', icon: 'history' },
+    { id: 'settings', label: '设置', icon: 'tune' },
   ];
   if (!showStorePanels.value) {
     return base.filter(t => t.id !== 'discover' && t.id !== 'history');
@@ -216,6 +275,16 @@ function regenerateHomeShops() {
   } catch {
     // ignore
   }
+}
+
+function resetPlayAppearance() {
+  playAppearance.value = {
+    version: 1,
+    logBgSource: 'placeholder',
+    logBgUrl: '',
+    logTint: 'rgba(0, 0, 0, 0.55)',
+    logTintStrength: 0.6,
+  };
 }
 
 onMounted(() => {
@@ -375,6 +444,48 @@ onMounted(() => {
 .panel-actions {
   display: grid;
   gap: 8px;
+}
+
+.panel-form {
+  display: grid;
+  gap: 10px;
+}
+
+.panel-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.panel-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.55);
+  color: #e2e8f0;
+  padding: 10px 12px;
+  font-size: 12px;
+  outline: none;
+}
+
+.panel-input:focus {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.panel-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel-chip.active {
+  border-color: rgba(59, 130, 246, 0.55);
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.panel-range {
+  width: 100%;
 }
 
 .panel-action {

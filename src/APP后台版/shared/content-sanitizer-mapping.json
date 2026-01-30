@@ -1,0 +1,271 @@
+{
+  "version": "1.1.0",
+  "description": "敏感内容去敏感化映射表 - 用于UI界面改造（完整版）",
+  "lastUpdated": "2026-01-27",
+  "mappings": {
+    "brandMapping": {
+      "description": "品牌与应用名称映射",
+      "rules": [
+        { "original": "美人团外卖", "sanitized": "创角工坊", "example": "应用标题、Logo文字" },
+        { "original": "美人团", "sanitized": "创角工坊", "example": "简短品牌名" },
+        { "original": "APP 后台版", "sanitized": "创作后台", "example": "页面标题" }
+      ]
+    },
+    "categoryMapping": {
+      "description": "分类标签映射（首页快捷分类）",
+      "rules": [
+        { "original": "路人", "sanitized": "随机", "example": "随机角色生成" },
+        { "original": "偶遇", "sanitized": "邂逅", "example": "偶遇类角色" },
+        { "original": "AV", "sanitized": "影视", "example": "影视从业者角色" },
+        { "original": "街拍", "sanitized": "外景", "example": "外景街拍类角色" },
+        { "original": "熟人", "sanitized": "相识", "example": "相识关系角色" },
+        { "original": "乱伦", "sanitized": "家族", "example": "家族关系角色（非直系）" },
+        { "original": "职场", "sanitized": "办公", "example": "办公场景角色" },
+        { "original": "友妻", "sanitized": "朋友", "example": "朋友相关角色" }
+      ]
+    },
+    "keywordMapping": {
+      "description": "生成关键词映射（指令中心生成关键词）",
+      "rules": [
+        { "original": "各类路人商品", "sanitized": "随机角色包" },
+        { "original": "路人商品", "sanitized": "随机角色" },
+        { "original": "路人", "sanitized": "随机" },
+        { "original": "熟人商品", "sanitized": "相识角色" },
+        { "original": "各类熟人商品", "sanitized": "相识角色包" },
+        { "original": "色情片中的AV女优主题", "sanitized": "影视演员主题" },
+        { "original": "心动女孩", "sanitized": "心动角色" },
+        { "original": "心动美女", "sanitized": "心动角色" },
+        { "original": "乱伦主题（不得含母子）", "sanitized": "家族关系主题（不涉及直系血亲）" },
+        { "original": "各类职场主题", "sanitized": "办公场景主题" },
+        { "original": "各类朋友妻主题", "sanitized": "朋友相关主题" }
+      ]
+    },
+    "dlcMapping": {
+      "description": "DLC与特殊内容映射",
+      "rules": [
+        { "original": "国企往事", "sanitized": "企业故事" },
+        { "original": "组织部派来一个年轻人", "sanitized": "组织派遣" },
+        { "original": "组织部", "sanitized": "调配中心" }
+      ]
+    },
+    "characterNameMapping": {
+      "description": "示例角色名称映射",
+      "rules": [
+        { "original": "苏晴", "sanitized": "苏雨" },
+        { "original": "白慧", "sanitized": "白萱" },
+        { "original": "丁小芹", "sanitized": "丁雨" },
+        { "original": "王春燕", "sanitized": "王雨萱" },
+        { "original": "林婉仪", "sanitized": "林诗涵" },
+        { "original": "秦舒澜", "sanitized": "秦雨萱" },
+        { "original": "藤原千惠", "sanitized": "藤原惠子" }
+      ]
+    },
+    "uiTextMapping": {
+      "description": "界面显示文本映射（完整版）",
+      "categories": {
+        "homePage": {
+          "description": "首页相关文本",
+          "rules": [
+            { "original": "一站式角色扮演入口", "sanitized": "一站式角色创作入口" },
+            { "original": "生成店铺、下单演绎、回收订单", "sanitized": "生成角色、选择剧本、完成任务" },
+            { "original": "三步开局", "sanitized": "三步上手" },
+            { "original": "生成店铺", "sanitized": "创建角色" },
+            { "original": "挑选套餐", "sanitized": "选择剧本" },
+            { "original": "沉浸剧情", "sanitized": "沉浸演绎" },
+            { "original": "正文连贯输出，订单闭环", "sanitized": "内容连贯输出，流程闭环" },
+            { "original": "侧边商场随时下单", "sanitized": "侧边栏随时选择" },
+            { "original": "指令中心", "sanitized": "创作中心" },
+            { "original": "输入关键词或点分类，直接生成店铺", "sanitized": "输入关键词或选择分类，直接生成角色" },
+            { "original": "输入关键词，生成店铺与套餐", "sanitized": "输入关键词，生成角色与剧本" },
+            { "original": "DLC 专案", "sanitized": "专题创作" },
+            { "original": "一键路人", "sanitized": "随机生成" },
+            { "original": "公告与说明", "sanitized": "使用说明" },
+            { "original": "进入正文", "sanitized": "开始创作" },
+            { "original": "浏览店铺", "sanitized": "浏览角色" },
+            { "original": "立即生成", "sanitized": "开始生成" },
+            { "original": "生成中...", "sanitized": "创作中..." }
+          ]
+        },
+        "detailPages": {
+          "description": "详情页相关文本",
+          "rules": [
+            { "original": "店铺详情", "sanitized": "角色详情" },
+            { "original": "商品详情", "sanitized": "剧本详情" },
+            { "original": "精选套餐", "sanitized": "精选剧本" },
+            { "original": "私密写真", "sanitized": "相册展示" },
+            { "original": "露脸图", "sanitized": "头像照" },
+            { "original": "时装秀", "sanitized": "服装展示" },
+            { "original": "私密拍", "sanitized": "私房照" },
+            { "original": "玩法和备注", "sanitized": "要求与备注" },
+            { "original": "特色玩法", "sanitized": "剧本特色" },
+            { "original": "顾客评价", "sanitized": "用户评价" },
+            { "original": "玩法特色", "sanitized": "剧本特色" }
+          ]
+        },
+        "orderRelated": {
+          "description": "订单相关文本",
+          "rules": [
+            { "original": "历史订单", "sanitized": "历史记录" },
+            { "original": "订单状态", "sanitized": "服务状态" },
+            { "original": "订单列表", "sanitized": "服务列表" },
+            { "original": "订单消费", "sanitized": "消费金额" },
+            { "original": "订单详情", "sanitized": "详情" },
+            { "original": "下单", "sanitized": "预订" },
+            { "original": "下单备注", "sanitized": "预订备注" },
+            { "original": "再次下单", "sanitized": "再次预订" },
+            { "original": "发送下单指令", "sanitized": "发送预订指令" },
+            { "original": "立即下单", "sanitized": "立即预订" },
+            { "original": "下单次数", "sanitized": "复购次数" },
+            { "original": "已发送下单指令", "sanitized": "已发送预订指令" },
+            { "original": "服务中的订单", "sanitized": "进行中的服务" },
+            { "original": "订单价格", "sanitized": "价格" }
+          ]
+        },
+        "coreTerms": {
+          "description": "核心术语替换",
+          "rules": [
+            { "original": "店铺", "sanitized": "角色包" },
+            { "original": "套餐", "sanitized": "剧本" },
+            { "original": "商城与套餐", "sanitized": "剧本与角色" },
+            { "original": "服务进度", "sanitized": "互动进度" },
+            { "original": "服务次数", "sanitized": "互动次数" },
+            { "original": "心跳", "sanitized": "脉搏" }
+          ]
+        },
+        "announcementTags": {
+          "description": "公告标签",
+          "rules": [
+            { "original": "活动", "sanitized": "更新" },
+            { "original": "玩法", "sanitized": "提示" }
+          ]
+        }
+      }
+    },
+    "placeholderMapping": {
+      "description": "下单备注占位符敏感词映射",
+      "rules": [
+        { "original": "时空替换", "sanitized": "身份变换", "context": "备注输入框示例文本" },
+        { "original": "NTR", "sanitized": "情感波折", "context": "备注输入框示例文本" },
+        { "original": "NTL", "sanitized": "关系突破", "context": "备注输入框示例文本" },
+        { "original": "露出", "sanitized": "公开场合", "context": "备注输入框示例文本" },
+        { "original": "换装秀", "sanitized": "服装变换", "context": "备注输入框示例文本" },
+        { "original": "反差婊", "sanitized": "反差萌", "context": "备注输入框示例文本" }
+      ]
+    },
+    "serviceFieldMapping": {
+      "description": "服务状态字段映射（身体/性相关）",
+      "categories": {
+        "bodyFeatures": {
+          "description": "身体特征字段",
+          "rules": [
+            { "original": "罩杯", "sanitized": "身材", "context": "身体特征面板" },
+            { "original": "乳形", "sanitized": "身形", "context": "身体特征面板" },
+            { "original": "乳房", "sanitized": "上装", "context": "身体特征面板" },
+            { "original": "胸部", "sanitized": "上装", "context": "身体特征面板" },
+            { "original": "私处", "sanitized": "下装", "context": "身体特征面板" },
+            { "original": "姿势", "sanitized": "体态", "context": "身体特征面板" }
+          ]
+        },
+        "sexualExperience": {
+          "description": "性经验/情感经历字段",
+          "rules": [
+            { "original": "处女", "sanitized": "初次经历", "context": "统计面板" },
+            { "original": "性伴侣数量", "sanitized": "交往经历数", "context": "统计面板" },
+            { "original": "性经验", "sanitized": "情感经历", "context": "统计面板" }
+          ]
+        },
+        "serviceStats": {
+          "description": "服务统计字段",
+          "rules": [
+            { "original": "本次服务性交次数", "sanitized": "本次互动次数", "context": "服务统计" },
+            { "original": "内射次数", "sanitized": "深度互动次数", "context": "服务统计" },
+            { "original": "服务统计", "sanitized": "互动统计", "context": "面板标题" },
+            { "original": "服务进度", "sanitized": "互动进度", "context": "进度条标签" },
+            { "original": "服务次数", "sanitized": "互动次数", "context": "统计数字" },
+            { "original": "怀孕几率", "sanitized": "受孕概率", "context": "历史订单详情" }
+          ]
+        },
+        "psychology": {
+          "description": "心理状态字段",
+          "rules": [
+            { "original": "当前所想", "sanitized": "当前心情", "context": "心理面板" },
+            { "original": "性格类型", "sanitized": "性格特征", "context": "心理面板" }
+          ]
+        }
+      }
+    },
+    "packageTypeMapping": {
+      "description": "套餐/商品类型映射",
+      "rules": [
+        { "original": "综合", "sanitized": "完整", "context": "套餐类型标签" },
+        { "original": "服务中", "sanitized": "进行中", "context": "状态标签" },
+        { "original": "服务结束", "sanitized": "已完成", "context": "状态标签" },
+        { "original": "商品类型", "sanitized": "剧本类型", "context": "套餐信息" }
+      ]
+    },
+    "exportFileMapping": {
+      "description": "导出文件名映射",
+      "rules": [
+        { "original": "美人团", "sanitized": "创作工具", "context": "JSON导出文件名" },
+        { "original": "店铺导出", "sanitized": "角色包导出", "context": "JSON导出文件名" }
+      ]
+    }
+  },
+  "usage": {
+    "description": "使用说明",
+    "functions": {
+      "sanitizeText": {
+        "description": "对单个文本进行去敏感化处理",
+        "params": ["text: string"],
+        "returns": "string"
+      },
+      "sanitizeObject": {
+        "description": "对对象进行深度去敏感化处理（支持嵌套路径）",
+        "params": ["obj: any", "keys: string[]"],
+        "returns": "any"
+      },
+      "sanitizeExportFileName": {
+        "description": "对导出文件名进行去敏感化处理",
+        "params": ["originalName: string"],
+        "returns": "string"
+      },
+      "getSanitizedCategory": {
+        "description": "获取去敏感化的分类名",
+        "params": ["category: string"],
+        "returns": "string"
+      },
+      "getSanitizedFieldLabel": {
+        "description": "获取去敏感化的字段标签",
+        "params": ["field: string"],
+        "returns": "string"
+      },
+      "getSanitizedUiText": {
+        "description": "获取去敏感化的界面文本",
+        "params": ["text: string"],
+        "returns": "string"
+      }
+    },
+    "examples": {
+      "typescript": [
+        "import { sanitizeText, sanitizeObject } from './contentSanitizer';",
+        "sanitizeText('路人商品'); // 返回 '随机角色'",
+        "sanitizeObject(girlData, ['身体特征.罩杯', '性经验.处女']); // 返回去敏感化后的对象"
+      ],
+      "vueTemplate": [
+        "<span>{{ getSanitizedUiText('下单') }}</span>  <!-- 显示 '预订' -->",
+        "<span>{{ getSanitizedFieldLabel('处女') }}</span>  <!-- 显示 '初次经历' -->"
+      ]
+    },
+    "implementationNotes": [
+      "1. 所有界面显示文本应通过映射函数处理后再展示",
+      "2. 字段标签（表格头、详情面板标题等）应使用 getSanitizedFieldLabel()",
+      "3. 分类名称应使用 getSanitizedCategory()",
+      "4. 导出文件名应使用 sanitizeExportFileName()",
+      "5. 保留原始数据不变，仅在显示层进行映射转换"
+    ]
+  },
+  "files": {
+    "source": "src/APP后台版/shared/contentSanitizer.ts",
+    "jsonExport": "src/APP后台版/shared/content-sanitizer-mapping.json"
+  }
+}

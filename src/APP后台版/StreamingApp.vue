@@ -3,22 +3,22 @@
     <div class="stream-header">
       <div class="stream-title">
         <span class="live-dot" :class="{ streaming: context.during_streaming }"></span>
-        <span class="title-text">正文和剧情</span>
-        <span v-if="context.during_streaming" class="streaming-hint">生成中…</span>
+        <span class="title-text">{{ ui.streaming.title }}</span>
+        <span v-if="context.during_streaming" class="streaming-hint">{{ ui.streaming.streamingHint }}</span>
       </div>
-      <div class="stream-meta">第 {{ context.message_id }} 楼</div>
+      <div class="stream-meta">{{ ui.streaming.floorPrefix }} {{ context.message_id }} {{ ui.streaming.floorSuffix }}</div>
     </div>
 
     <div class="stream-body">
-      <pre class="stream-content">{{ contentText || '（无正文）' }}<span v-if="context.during_streaming">_</span></pre>
+      <pre class="stream-content">{{ contentText || ui.streaming.empty }}<span v-if="context.during_streaming">_</span></pre>
 
       <details v-if="summaryText" class="stream-fold">
-        <summary>总结</summary>
+        <summary>{{ ui.streaming.summary }}</summary>
         <pre>{{ summaryText }}</pre>
       </details>
 
       <details v-if="optionText" class="stream-fold">
-        <summary>选项</summary>
+        <summary>{{ ui.streaming.options }}</summary>
         <pre>{{ optionText }}</pre>
       </details>
     </div>
@@ -28,8 +28,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { injectStreamingMessageContext } from '@util/streaming';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 const context = injectStreamingMessageContext();
+const ui = uiSpec.uiTexts;
 
 function extractTag(text: string, tag: string): string {
   const pattern = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
@@ -74,7 +76,7 @@ const contentText = computed(() => {
   if (stripped) return stripped;
 
   const hasUpdateOnly = /<(update|updatevariable|json_patch|jsonpatch)[^>]*>/i.test(raw);
-  if (hasUpdateOnly) return '（该楼层仅包含变量更新，暂无剧情正文）';
+  if (hasUpdateOnly) return ui.streaming.updateOnly;
 
   return '';
 });

@@ -1,10 +1,13 @@
 <template>
   <div v-if="hasError" class="error-boundary">
     <div class="error-content">
-      <i class="fas fa-exclamation-triangle"></i>
+      <span class="material-symbols-outlined">error</span>
       <h3>页面出现错误</h3>
       <p>{{ errorMessage }}</p>
-      <button class="retry-btn" @click="retry"><i class="fas fa-redo"></i> 重新加载</button>
+      <button class="retry-btn" @click="retry">
+        <span class="material-symbols-outlined">refresh</span>
+        重新加载
+      </button>
     </div>
   </div>
   <slot v-else></slot>

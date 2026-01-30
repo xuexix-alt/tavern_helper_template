@@ -1,0 +1,2394 @@
+```html
+<html>
+  <head>
+    <title>Galgame Style UI - Sprite v37.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --panel-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5));
+        --text-color: #2c3e50;
+        --primary-color: #7890c2;
+        --header-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+        --shadow-color: rgba(44, 62, 80, 0.15);
+        --border-color: rgba(255, 255, 255, 0.8);
+        --top-bar-height: 45px;
+        --transition-speed: 0.4s;
+        --stamina-color: #4caf50;
+        --desire-color: #e91e63;
+        --affection-color: #f48fb1;
+        --orgasm-color: #ff9800;
+        --regen-btn-color: #e67e22;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100vh !important;
+        min-height: 100vh !important;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        overflow: hidden;
+      }
+      #root {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      body {
+        background-size: cover;
+        background-position: center center;
+        background-repeat: no-repeat;
+        transition: background-image 0.2s ease-in;
+      }
+      #author-watermark {
+        position: fixed;
+        top: 60px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 500;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        z-index: 9998;
+        opacity: 1;
+        pointer-events: none;
+        transition: opacity 2s ease-out;
+      }
+      #author-watermark.hidden {
+        opacity: 0;
+      }
+      #scene-transition-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #000;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 9999;
+        transition: opacity 0.4s ease-in-out;
+      }
+      .top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: var(--top-bar-height);
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 2px 10px var(--shadow-color);
+        z-index: 110;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+        box-sizing: border-box;
+        color: var(--text-color);
+        font-size: 0.9rem;
+      }
+      #top-bar-left,
+      #top-bar-center,
+      #top-bar-right {
+        flex: 1;
+        text-align: center;
+        font-weight: 500;
+      }
+      #top-bar-left {
+        text-align: left;
+      }
+      #top-bar-right {
+        text-align: right;
+      }
+      .main-container {
+        display: flex;
+        height: 100%;
+        width: 100%;
+        position: relative;
+        padding-top: var(--top-bar-height);
+        box-sizing: border-box;
+      }
+      #sprite-container {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        pointer-events: none;
+        z-index: 1;
+      }
+      .sprite {
+        position: absolute;
+        bottom: 0;
+        height: 85vh;
+        max-height: 85%;
+        width: 50%;
+        background-size: contain;
+        background-repeat: no-repeat;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
+      }
+      #sprite-left {
+        background-position: bottom left;
+        left: 0;
+      }
+      #sprite-center {
+        background-position: bottom center;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 70%;
+      }
+      #sprite-right {
+        background-position: bottom right;
+        right: 0;
+      }
+      .center-panel {
+        flex-grow: 1;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 2rem;
+        padding-bottom: 140px;
+        box-sizing: border-box;
+        position: relative;
+        z-index: 10;
+      }
+      .narrative-box {
+        background: rgba(0, 0, 0, 0.55);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 8px;
+        max-width: 800px;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        font-size: 1.15rem;
+        line-height: 1.8;
+        width: 100%;
+        cursor: pointer;
+        max-height: calc(100vh - 220px);
+        overflow-y: auto;
+        transition: background 0.3s ease;
+      }
+      .narrative-box::-webkit-scrollbar {
+        width: 6px;
+      }
+      .narrative-box::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .narrative-box::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 3px;
+      }
+      .narrative-box::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.6);
+      }
+      .dialogue-turn {
+        margin-bottom: 1rem;
+      }
+      #dialogue-speaker {
+        display: block;
+        margin-bottom: 0.8rem;
+        font-weight: 600;
+        font-size: 1.25rem;
+        color: #ffffff;
+        text-shadow: 1px 1px 2px var(--primary-color);
+      }
+      #dialogue-text {
+        margin: 0;
+      }
+      .side-panel {
+        position: fixed;
+        top: calc(var(--top-bar-height) + 20px);
+        height: calc(100% - var(--top-bar-height) - 40px);
+        max-width: 320px;
+        width: 80%;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel-bg);
+        backdrop-filter: blur(18px) saturate(120%);
+        -webkit-backdrop-filter: blur(18px) saturate(120%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 10px 35px var(--shadow-color);
+        z-index: 100;
+        transition:
+          transform var(--transition-speed) ease-in-out,
+          opacity 0.3s ease-in-out;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .panel-header {
+        padding: 1rem 1.5rem;
+        background: var(--header-bg);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px 16px 0 0;
+        flex-shrink: 0;
+      }
+      .panel-header h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        color: var(--text-color);
+        font-weight: 500;
+      }
+      .panel-content {
+        padding: 1rem;
+        overflow-y: auto;
+        flex-grow: 1;
+        color: var(--text-color);
+      }
+      #left-panel {
+        left: 20px;
+        transform: translateX(calc(-100% - 20px));
+      }
+      #right-panel {
+        right: 20px;
+        transform: translateX(calc(100% + 20px));
+      }
+      #left-panel.active,
+      #right-panel.active {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .panel-toggle-btn {
+        position: fixed;
+        z-index: 50;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 60px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transition:
+          background-color 0.3s,
+          opacity var(--transition-speed) ease-in-out;
+      }
+      .panel-toggle-btn.left {
+        left: 0;
+        border-radius: 0 10px 10px 0;
+      }
+      .panel-toggle-btn.right {
+        right: 0;
+        border-radius: 10px 0 0 10px;
+      }
+      .panel-toggle-btn.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        z-index: 99;
+        pointer-events: none;
+        transition: background-color 0.3s ease;
+      }
+      .overlay.active {
+        pointer-events: auto;
+      }
+      .overlay.dimmed {
+        background: rgba(0, 0, 0, 0.2);
+      }
+      #map-toggle-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 101;
+        width: 50px;
+        height: 50px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        transition:
+          transform 0.2s ease,
+          background-color 0.2s ease;
+      }
+      #map-toggle-button:hover {
+        transform: scale(1.1);
+      }
+      #map-popup {
+        position: fixed;
+        bottom: 85px;
+        right: 20px;
+        z-index: 102;
+        width: 300px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(18px) saturate(120%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 10px 35px var(--shadow-color);
+        padding: 1.5rem;
+        box-sizing: border-box;
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+        pointer-events: none;
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+      }
+      #map-popup.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+      }
+      .location-menu {
+        text-align: center;
+      }
+      .location-menu h4 {
+        font-weight: 500;
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: #555;
+      }
+      .location-menu #current-location {
+        color: var(--primary-color);
+        font-weight: 600;
+      }
+      .location-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .location-item {
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        font-size: 0.95rem;
+      }
+      .location-item:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .location-item.active {
+        background: var(--primary-color);
+        color: white;
+        font-weight: 600;
+      }
+      #chat-input-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: clamp(300px, 70%, 800px);
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        background: var(--panel-bg);
+        backdrop-filter: blur(18px) saturate(120%);
+        -webkit-backdrop-filter: blur(18px) saturate(120%);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        box-shadow: 0 8px 30px var(--shadow-color);
+        z-index: 200;
+      }
+      #action-button-container {
+        position: relative;
+        flex-shrink: 0;
+      }
+      #action-toggle-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        color: var(--text-color);
+        font-size: 1.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          background-color 0.2s,
+          transform 0.2s;
+      }
+      #action-toggle-btn:hover {
+        background-color: white;
+        transform: scale(1.1);
+      }
+      #action-popup {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px;
+        background: var(--panel-bg);
+        backdrop-filter: blur(18px) saturate(120%);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 0 6px 20px var(--shadow-color);
+        opacity: 0;
+        transform: translateY(10px);
+        pointer-events: none;
+        transition:
+          opacity 0.25s ease,
+          transform 0.25s ease;
+        width: max-content;
+        max-width: 400px;
+      }
+      #action-popup.active {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+      .action-choice {
+        padding: 8px 16px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-color);
+        cursor: pointer;
+        transition: background-color 0.2s;
+        white-space: nowrap;
+      }
+      .action-choice:hover {
+        background-color: white;
+      }
+      .no-actions-msg {
+        padding: 8px 16px;
+        color: #888;
+        font-style: italic;
+      }
+      #chat-input-box {
+        flex-grow: 1;
+        min-height: 22px;
+        max-height: 120px;
+        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-color);
+        font-size: 1rem;
+        line-height: 1.5;
+        overflow-y: auto;
+        caret-color: var(--primary-color);
+      }
+      #chat-input-box:empty::before {
+        content: attr(data-placeholder);
+        color: #8a95a5;
+        cursor: text;
+      }
+      #send-btn,
+      #regen-btn {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 50%;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          background-color 0.2s,
+          transform 0.2s;
+      }
+      #send-btn {
+        background-color: var(--primary-color);
+        font-size: 1.3rem;
+      }
+      #send-btn:hover {
+        transform: scale(1.1);
+        background-color: #5f79b3;
+      }
+      #regen-btn {
+        background-color: var(--regen-btn-color);
+      }
+      #regen-btn:hover {
+        transform: scale(1.1);
+        background-color: #d35400;
+      }
+      .status-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .status-card {
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: #ccc;
+        background-size: cover;
+        background-position: center;
+        border: 2px solid white;
+      }
+      .char-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333;
+      }
+      .card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+      .status-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .status-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: #555;
+      }
+      .status-value {
+        font-weight: 500;
+        color: #111;
+        background-color: rgba(255, 255, 255, 0.6);
+        padding: 2px 8px;
+        border-radius: 6px;
+      }
+      .progress-bar-container {
+        flex-grow: 1;
+        height: 12px;
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.5s ease;
+        text-align: right;
+        color: white;
+        font-size: 0.7rem;
+        line-height: 12px;
+        padding-right: 4px;
+        box-sizing: border-box;
+      }
+      .stamina-bar {
+        background-color: var(--stamina-color);
+      }
+      .desire-bar {
+        background-color: var(--desire-color);
+      }
+      .affection-bar {
+        background-color: var(--affection-color);
+      }
+      .orgasm-bar {
+        background: var(--orgasm-color);
+      }
+      .collapsible-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        margin-top: 8px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .collapsible-toggle:hover {
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .collapsible-toggle::after {
+        content: '►';
+        font-size: 0.7rem;
+        transition: transform 0.3s ease;
+      }
+      .collapsible-toggle.active::after {
+        transform: rotate(90deg);
+      }
+      .collapsible-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease-out;
+        padding-left: 10px;
+        border-left: 2px solid rgba(0, 0, 0, 0.1);
+        margin-left: 5px;
+      }
+      .collapsible-content .status-item {
+        padding: 4px 0;
+      }
+      .collapsible-content .status-label {
+        font-size: 0.85rem;
+      }
+      .collapsible-content .status-value {
+        font-size: 0.85rem;
+      }
+      .todo-container {
+        margin-top: 1.5rem;
+      }
+      .todo-container h3 {
+        font-size: 1rem;
+        color: #444;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .todo-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .todo-item {
+        background: rgba(255, 255, 255, 0.5);
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+      }
+      .todo-item::before {
+        content: '☐';
+        font-family: monospace;
+        font-size: 1.2em;
+        color: var(--primary-color);
+      }
+      .todo-item.completed {
+        opacity: 0.5;
+        text-decoration: line-through;
+        color: #888;
+      }
+      .todo-item.completed::before {
+        content: '☑';
+      }
+      .system-menu-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .menu-button {
+        width: 100%;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        text-align: left;
+        font-size: 1rem;
+        color: var(--text-color);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .menu-button:hover {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba(255, 255, 255, 0.6);
+        transform: translateX(5px);
+      }
+      .menu-button .icon {
+        font-size: 1.2rem;
+      }
+      #modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      #modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .modal-window {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.95);
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        background: var(--panel-bg);
+        backdrop-filter: blur(20px) saturate(150%);
+        -webkit-backdrop-filter: blur(20px) saturate(150%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 1001;
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+        display: flex;
+        flex-direction: column;
+      }
+      .modal-window.active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      .modal-header {
+        padding: 1rem 1.5rem;
+        background: var(--header-bg);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px 16px 0 0;
+        flex-shrink: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .modal-header h3 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 500;
+        color: var(--text-color);
+      }
+      .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.8rem;
+        color: #888;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0;
+        transition: color 0.2s;
+      }
+      .modal-close-btn:hover {
+        color: #333;
+      }
+      .modal-content {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+      .save-load-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+      }
+      .save-slot {
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+      }
+      .save-slot:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        border-color: var(--primary-color);
+      }
+      .save-thumbnail {
+        height: 120px;
+        background: #e0e0e0;
+        background-position: center;
+        background-size: cover;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #888;
+        font-style: italic;
+      }
+      .save-info {
+        padding: 1rem;
+      }
+      .save-info h4 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #333;
+      }
+      .save-summary {
+        font-size: 0.85rem;
+        color: #555;
+        font-style: italic;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .save-location {
+        margin-top: 4px;
+        font-size: 0.85rem;
+        color: #555;
+      }
+      .save-slot.empty .save-info h4 {
+        color: #999;
+      }
+      .save-slot.empty .save-thumbnail::before {
+        content: '无数据';
+      }
+      .replay-list details {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+      .replay-list summary {
+        padding: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .replay-list summary::-webkit-details-marker {
+        display: none;
+      }
+      .replay-list summary .replay-title::before {
+        content: '▶';
+        margin-right: 10px;
+        display: inline-block;
+        transition: transform 0.2s;
+      }
+      .replay-list details[open] > summary .replay-title::before {
+        transform: rotate(90deg);
+      }
+      .replay-date {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 400;
+      }
+      .replay-content {
+        padding: 0 1rem 1rem 2rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        line-height: 1.7;
+        color: #333;
+      }
+      .pose-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 1rem;
+        user-select: none;
+      }
+      .pose-item {
+        aspect-ratio: 3 / 4;
+        background-size: cover;
+        background-position: center;
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        cursor: help;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+      .pose-item:hover {
+        transform: scale(1.05);
+        z-index: 10;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+      }
+      .pose-item .pose-name {
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+        color: white;
+        padding: 12px 8px 8px;
+        font-size: 0.9rem;
+        text-align: center;
+        transition: background 0.3s ease;
+      }
+      .pose-item:hover .pose-name {
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+      }
+      .pose-item.locked::after {
+        content: '🔒';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(2px) grayscale(1);
+        -webkit-backdrop-filter: blur(2px) grayscale(1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: rgba(255, 255, 255, 0.8);
+        transition:
+          opacity 0.3s ease,
+          background 0.3s ease;
+      }
+      .pose-item.locked:hover::after {
+        background: rgba(0, 0, 0, 0.4);
+        opacity: 0.8;
+      }
+      #pose-tooltip,
+      #save-slot-tooltip {
+        position: fixed;
+        background: rgba(10, 10, 20, 0.85);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        z-index: 9999;
+        width: auto;
+        max-width: 320px;
+        text-align: left;
+        opacity: 0;
+        transition: opacity 0.2s ease-out;
+        pointer-events: none;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+      #save-slot-tooltip {
+        transform: translate(-50%, calc(-100% - 15px));
+      }
+      #pose-tooltip h4 {
+        margin: 0 0 8px 0;
+        font-size: 1rem;
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 6px;
+      }
+      #pose-tooltip p {
+        margin: 4px 0;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #e0e0e0;
+      }
+      #pose-tooltip .tooltip-section-title {
+        margin-top: 10px;
+        font-weight: bold;
+        color: #999;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .settings-list,
+      .help-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .setting-item,
+      .help-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .setting-item > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      .setting-label,
+      .help-item h4 {
+        font-weight: 500;
+        color: var(--text-color);
+        margin: 0;
+      }
+      .help-item p {
+        margin: 0;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #555;
+      }
+      .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+      .setting-control input[type='text'] {
+        border: 1px solid #ccc;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.7);
+      }
+      .setting-control select {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background: rgba(255, 255, 255, 0.7);
+      }
+      .setting-control input[type='range'] {
+        flex-grow: 1;
+        min-width: 150px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-creator="\【木鱼\】">
+      <div id="author-watermark">作者：木鱼</div>
+      <div id="scene-transition-overlay"></div>
+      <div class="top-bar">
+        <div id="top-bar-left"></div>
+        <div id="top-bar-center"></div>
+        <div id="top-bar-right"></div>
+      </div>
+      <div id="overlay" class="overlay"></div>
+      <button id="toggle-left-btn" class="panel-toggle-btn left">☰</button>
+      <button id="toggle-right-btn" class="panel-toggle-btn right">⚙️</button>
+      <div class="main-container">
+        <div id="sprite-container">
+          <div id="sprite-left" class="sprite"></div>
+          <div id="sprite-center" class="sprite"></div>
+          <div id="sprite-right" class="sprite"></div>
+        </div>
+        <aside id="left-panel" class="side-panel">
+          <div class="panel-header"><h2>角色状态</h2></div>
+          <div class="panel-content">
+            <div class="status-cards-container">
+              <div id="user-status-card" class="status-card">
+                <div class="card-header">
+                  <div class="avatar user_avatar"></div>
+                  <span class="char-name">{{user}}</span>
+                </div>
+                <div class="card-body">
+                  <div class="status-item">
+                    <span class="status-label">⚡ 体力</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill stamina-bar" id="user-stamina_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">🔥 欲望</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill desire-bar" id="user-desire_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">心情</span><span class="status-value" id="user-mood_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">特殊状态</span
+                    ><span class="status-value" id="user-special_status_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">📍 当前地点</span
+                    ><span class="status-value" id="user-location_text"></span>
+                  </div>
+                </div>
+              </div>
+              <div id="char1-status-card" class="status-card">
+                <div class="card-header">
+                  <div
+                    class="avatar"
+                    style="background-image: url('https://i.ibb.co/d0vfkSXR/20250725-001430.png')"
+                  ></div>
+                  <span class="char-name">苏映雪</span>
+                </div>
+                <div class="card-body">
+                  <div class="status-item">
+                    <span class="status-label">❤️ 好感度</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill affection-bar" id="char1-affection_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">🔥 欲望</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill desire-bar" id="char1-desire_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">心情</span><span class="status-value" id="char1-mood_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">特殊状态</span
+                    ><span class="status-value" id="char1-special_status_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">📍 当前地点</span
+                    ><span class="status-value" id="char1-location_text"></span>
+                  </div>
+                  <div class="collapsible-toggle">身体状态</div>
+                  <div class="collapsible-content">
+                    <div class="status-item">
+                      <span class="status-label">当前穿着</span
+                      ><span class="status-value" id="char1-outfit_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">当前姿势</span><span class="status-value" id="char1-pose_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">乳房状态</span
+                      ><span class="status-value" id="char1-breast_status_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">小穴状态</span
+                      ><span class="status-value" id="char1-vagina_status_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">高潮进度</span>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill orgasm-bar" id="char1-orgasm_progress_bar"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="char2-status-card" class="status-card">
+                <div class="card-header">
+                  <div
+                    class="avatar"
+                    style="background-image: url('https://i.ibb.co/bR5PV1pJ/20250725-001355.png')"
+                  ></div>
+                  <span class="char-name">苏映月</span>
+                </div>
+                <div class="card-body">
+                  <div class="status-item">
+                    <span class="status-label">❤️ 好感度</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill affection-bar" id="char2-affection_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">🔥 欲望</span>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill desire-bar" id="char2-desire_bar"></div>
+                    </div>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">心情</span><span class="status-value" id="char2-mood_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">特殊状态</span
+                    ><span class="status-value" id="char2-special_status_text"></span>
+                  </div>
+                  <div class="status-item">
+                    <span class="status-label">📍 当前地点</span
+                    ><span class="status-value" id="char2-location_text"></span>
+                  </div>
+                  <div class="collapsible-toggle">身体状态</div>
+                  <div class="collapsible-content">
+                    <div class="status-item">
+                      <span class="status-label">当前穿着</span
+                      ><span class="status-value" id="char2-outfit_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">当前姿势</span><span class="status-value" id="char2-pose_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">乳房状态</span
+                      ><span class="status-value" id="char2-breast_status_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">小穴状态</span
+                      ><span class="status-value" id="char2-vagina_status_text"></span>
+                    </div>
+                    <div class="status-item">
+                      <span class="status-label">高潮进度</span>
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill orgasm-bar" id="char2-orgasm_progress_bar"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="todo-container">
+              <h3>待办事项</h3>
+              <ul class="todo-list" id="todo-list"></ul>
+            </div>
+          </div>
+        </aside>
+        <main class="center-panel">
+          <div id="narrative-box" class="narrative-box"><div id="dialogue-content"></div></div>
+        </main>
+        <aside id="right-panel" class="side-panel">
+          <div class="panel-header"><h2>系统菜单</h2></div>
+          <div class="panel-content">
+            <div class="system-menu-container">
+              <button class="menu-button" data-modal="save-modal"><span class="icon">💾</span> 存档</button>
+              <button class="menu-button" data-modal="load-modal"><span class="icon">📁</span> 读档</button>
+              <button class="menu-button" data-modal="replay-modal"><span class="icon">📜</span> 剧情回顾</button>
+              <button class="menu-button" data-modal="poses-modal"><span class="icon">🤸</span> 解锁姿势</button>
+              <button class="menu-button" data-modal="settings-modal"><span class="icon">🔧</span> 设置</button>
+              <button class="menu-button" id="restart-game-btn"><span class="icon">🔄</span> 重新开始</button>
+              <button class="menu-button" data-modal="help-modal"><span class="icon">❓</span> 帮助 / 解答</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <button id="map-toggle-button">🗺️</button>
+      <div id="map-popup">
+        <div class="location-menu">
+          <h4>当前位置: <span id="current-location"></span></h4>
+          <div class="location-list">
+            <div class="location-item" data-location="客厅">客厅</div>
+            <div class="location-item" data-location="书房">书房</div>
+            <div class="location-item" data-location="厨房">厨房</div>
+            <div class="location-item" data-location="餐厅">餐厅</div>
+            <div class="location-item" data-location="卫生间">卫生间</div>
+            <div class="location-item" data-location="{{user}}卧室">{{user}}卧室</div>
+            <div class="location-item" data-location="苏映雪房间">苏映雪房间</div>
+            <div class="location-item" data-location="苏映月房间">苏映月房间</div>
+          </div>
+        </div>
+      </div>
+      <div id="chat-input-container">
+        <div id="action-button-container">
+          <button id="action-toggle-btn">➕</button>
+          <div id="action-popup"></div>
+        </div>
+        <div id="chat-input-box" class="chat-input" contenteditable="true" data-placeholder="输入对话…"></div>
+        <button id="regen-btn">↻</button> <button id="send-btn">➤</button>
+      </div>
+      <div id="modal-overlay"></div>
+      <div id="save-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>存档</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content"><div class="save-load-grid"></div></div>
+      </div>
+      <div id="load-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>读档</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content"><div class="save-load-grid"></div></div>
+      </div>
+      <div id="replay-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>剧情回顾</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content"><div class="replay-list"></div></div>
+      </div>
+      <div id="poses-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>解锁姿势</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="pose-grid">
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/6q1z5h.png')"
+              data-pose-id="handjob"
+              data-name="手淫"
+              data-description="她放下长辈的矜持与羞涩，用温柔的素手为你带来最直接、最原始的慰藉。"
+              data-unlock="情感达到一定阶段，她在独处或在你面前，决定用手为你服务时解锁。"
+            >
+              <div class="pose-name">手淫</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/jbfsta.png')"
+              data-pose-id="titjob"
+              data-name="乳交"
+              data-description="将火热埋入柔软的深谷中，感受被丰腴的、充满母性的胸怀所包裹的极致体验。"
+              data-unlock="当她决定用自己最引以为傲的胸部作为打破僵局的武器时解锁。"
+            >
+              <div class="pose-name">乳交</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/g2tl30.png')"
+              data-pose-id="footjob"
+              data-name="足交"
+              data-description="用保养精致的玉足和灵活的脚趾带来独特的刺激，是苏映月式的俏皮挑逗。"
+              data-unlock="苏映月在与你互动时，决定用这种大胆又保持距离的方式挑逗你时解锁。"
+            >
+              <div class="pose-name">足交</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/sfcnks.png')"
+              data-pose-id="thigh_sex"
+              data-name="素股"
+              data-description="在不插入的情况下，用紧实丰腴的大腿内侧进行摩擦，带来安全而强烈的快感。"
+              data-unlock="在双方都渴望但又有所犹豫时，由她提出用这种“安全”的方式来满足欲望时解锁。"
+            >
+              <div class="pose-name">素股</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/lnk68m.png')"
+              data-pose-id="oral_sex"
+              data-name="口交"
+              data-description="她彻底放下尊严与矜持，用湿润的口腔与灵活的舌头带来极致的服务，是臣服与奉献的证明。"
+              data-unlock="在经历过初步的亲密后，她渴望给予你更多，决定用最谦卑的姿态取悦你时解锁。"
+            >
+              <div class="pose-name">口交</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/97p661.png')"
+              data-pose-id="missionary"
+              data-name="传教士位"
+              data-description="最传统也最具情感交流的姿势，四目相对，灵与肉在此刻真正结合，是关系质变的关键。"
+              data-unlock="在一次深入的情感交流后，苏映雪决定与你彻底融为一体时解锁。"
+            >
+              <div class="pose-name">传教士位</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/awvkn1.png')"
+              data-pose-id="cowgirl"
+              data-name="骑乘位"
+              data-description="女性主导的姿势，她将主动权握在手中，自由地驰骋、掌控着快乐的节奏，是自信回归的象征。"
+              data-unlock="当她不再满足于被动接受，渴望主动掌控自己的快乐时解锁。"
+            >
+              <div class="pose-name">骑乘位</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/n0l90s.png')"
+              data-pose-id="doggy_style"
+              data-name="後背位"
+              data-description="抛开羞耻心，从身后进行最原始、最深入的结合，追求纯粹的肉体快乐与征服感。"
+              data-unlock="在双方关系稳固，开始共同追求更强烈的生理刺激时解锁。"
+            >
+              <div class="pose-name">後背位</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/7tetiy.png')"
+              data-pose-id="anal_sex"
+              data-name="肛交"
+              data-description="挑战禁忌的后庭，征服最后的秘密花园。代表着完全的信任与交付。"
+              data-unlock="触发关键剧情【打开新世界的大门】，在双方同意下进行全新探索后解锁。"
+            >
+              <div class="pose-name">肛交</div>
+            </div>
+            <div
+              class="pose-item"
+              style="background-image: url('https://files.catbox.moe/i8kzok.png')"
+              data-pose-id="threesome"
+              data-name="3P"
+              data-description="与两位美人共赴云雨，是天堂般的享受，也是对体力的终极考验。是这个特殊“家庭”的最终形态。"
+              data-unlock="触发关键剧情【家人的共识】，姐妹二人达成一致，愿意共同分享你时解锁。"
+            >
+              <div class="pose-name">3P</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="settings-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>设置</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="settings-list">
+            <div class="setting-item">
+              <div>
+                <span class="setting-label">主角姓名</span>
+                <div class="setting-control"><input id="username-input" type="text" value="{{user}}" /></div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
+                <span class="setting-label">文本速度</span>
+                <div class="setting-control">
+                  <input type="range" min="0" max="100" value="70" id="text-speed-slider" />
+                </div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
+                <span class="setting-label">跳过已读文本</span>
+                <div class="setting-control"><input id="skip-read-toggle" type="checkbox" checked /></div>
+              </div>
+            </div>
+            <div class="setting-item">
+              <div>
+                <span class="setting-label">显示模式</span>
+                <div class="setting-control">
+                  <button
+                    id="fullscreen-btn"
+                    class="menu-button"
+                    style="width: auto; padding: 8px 16px; flex-grow: 0; margin: 0; justify-content: center"
+                  >
+                    切换全屏
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="help-modal" class="modal-window">
+        <div class="modal-header">
+          <h3>帮助 / 解答</h3>
+          <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="help-list">
+            <div class="help-item">
+              <h4>API Error: no candidates returned</h4>
+              <p>
+                这表示AI收到的指令过长，超出了其单次处理的极限。这通常发生在游戏后期，因为我们详尽的状态系统会累积大量信息。这个问题在v36.0版本中已通过多种优化手段极大缓解。如果偶尔仍出现此问题，请尝试【存档】后立刻【读档】，这相当于为AI清理缓存，让故事能顺利继续。
+              </p>
+            </div>
+            <div class="help-item">
+              <h4>(AI未提供对话)</h4>
+              <p>
+                这曾是AI模型未能按预期格式生成回复时的备用信息。在新版[v23.0]中，此问题已基本被解决。系统现在能智能解析不完整的AI回复，只要AI生成了任何文本，都会被展现为剧情。如果此消息依然出现，代表AI返回了完全空洞的内容。
+              </p>
+            </div>
+            <div class="help-item">
+              <h4>AI没有返回任何内容，可能需要重试</h4>
+              <p>
+                这表示与AI模型的通信已建立，但模型返回了空内容。这可能是暂时的网络问题、API服务不稳定或模型内部错误。请尝试重新发送您的消息或稍后再试。
+              </p>
+            </div>
+            <div class="help-item">
+              <h4>读取失败: 这是一个空档位</h4>
+              <p>您尝试读取的存档位中没有数据。请选择一个有数据的存档位进行读取。</p>
+            </div>
+            <div class="help-item">
+              <h4>读取失败: 存档数据已损坏</h4>
+              <p>
+                存档文件存在，但其内容格式不正确，无法被系统解析。这可能是因为存档在保存过程中被中断，或文件被意外修改。此存档已无法恢复。
+              </p>
+            </div>
+            <div class="help-item">
+              <h4>处理请求时发生未知错误</h4>
+              <p>
+                在向AI发送请求或处理其返回数据的过程中，发生了代码无法预料的JavaScript错误。这通常是系统内部的BUG。您可以尝试刷新页面或读取之前的存档。
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="pose-tooltip"></div>
+      <div id="save-slot-tooltip"></div>
+    </div>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const LIVE_STATE_KEY = 'galgame_live_state_v37.0'; // Version updated for sprites
+        const DIALOGUE_RENDER_LIMIT = 20;
+        const state = {
+          gameState: {},
+          dialogueHistory: [],
+          storyReplays: [],
+          isGenerating: false,
+          typewriterTimer: null,
+        };
+        const spriteMap = {
+          char1: {
+            常态: 'https://i.ibb.co/gFX0w25F/Bg-Sub-14.png',
+            扶腰: 'https://i.ibb.co/NgmgkFBD/Bg-Sub-15.png',
+            高兴: 'https://i.ibb.co/v6tfqTdr/Bg-Sub-11.png',
+            害羞: 'https://i.ibb.co/5Xfs2rdN/Bg-Sub-16.png',
+          },
+          char2: {
+            常态: 'https://i.ibb.co/RT1R3BMp/Bg-Sub-12.png',
+            高兴: 'https://i.ibb.co/ycyJSZyZ/Bg-Sub-18.png',
+            瑜伽: 'https://i.ibb.co/FZM8wCp/Bg-Sub-13.png',
+            害羞: 'https://i.ibb.co/Kxwp87xK/Bg-Sub-17.png',
+          },
+          both: 'https://i.ibb.co/7JvkbGPS/Bg-Sub-10.png',
+        };
+        const UIElements = {
+          body: document.body,
+          root: document.getElementById('root'),
+          narrativeContainer: document.getElementById('dialogue-content'),
+          inputBox: document.getElementById('chat-input-box'),
+          sendBtn: document.getElementById('send-btn'),
+          regenBtn: document.getElementById('regen-btn'),
+          overlay: document.getElementById('overlay'),
+          leftPanel: document.getElementById('left-panel'),
+          rightPanel: document.getElementById('right-panel'),
+          toggleLeftBtn: document.getElementById('toggle-left-btn'),
+          toggleRightBtn: document.getElementById('toggle-right-btn'),
+          mapToggleButton: document.getElementById('map-toggle-button'),
+          mapPopup: document.getElementById('map-popup'),
+          actionToggleButton: document.getElementById('action-toggle-btn'),
+          actionPopup: document.getElementById('action-popup'),
+          todoList: document.getElementById('todo-list'),
+          replayModalList: document.querySelector('#replay-modal .replay-list'),
+          poseGrid: document.querySelector('#poses-modal .pose-grid'),
+          topBarLeft: document.getElementById('top-bar-left'),
+          authorWatermark: document.getElementById('author-watermark'),
+          poseTooltip: document.getElementById('pose-tooltip'),
+          saveSlotTooltip: document.getElementById('save-slot-tooltip'),
+          saveModalGrid: document.querySelector('#save-modal .save-load-grid'),
+          loadModalGrid: document.querySelector('#load-modal .save-load-grid'),
+          spriteLeft: document.getElementById('sprite-left'),
+          spriteCenter: document.getElementById('sprite-center'),
+          spriteRight: document.getElementById('sprite-right'),
+        };
+        const roomImages = {
+          客厅: 'https://i.ibb.co/Q3m9F1Zw/image.png',
+          书房: 'https://i.ibb.co/gbz23b46/image.png',
+          厨房: 'https://i.ibb.co/pB68TfRw/image.png',
+          餐厅: 'https://i.ibb.co/G3Pwg2jM/image.png',
+          卫生间: 'https://i.ibb.co/0p20f0fW/image.png',
+          '{{user}}卧室': 'https://i.ibb.co/1tqJr9n6/image.png',
+          苏映雪房间: 'https://i.ibb.co/PzYdqrbk/1.png',
+          苏映月房间: 'https://i.ibb.co/BVXnzXZY/2.png',
+        };
+        const CHARACTERS = ['user', 'char1', 'char2'];
+
+        const getNested = (obj, path) =>
+          path
+            .split(/[\.\[\]]+/)
+            .filter(Boolean)
+            .reduce((res, key) => (res && typeof res === 'object' ? res[key] : undefined), obj);
+        const setNested = (obj, path, value) => {
+          const keys = path.split(/[\.\[\]]+/).filter(Boolean);
+          let current = obj;
+          for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]] || typeof current[keys[i]] !== 'object') {
+              current[keys[i]] = {};
+            }
+            current = current[keys[i]];
+          }
+          current[keys[keys.length - 1]] = value;
+        };
+        const getCleanInput = () => {
+          const c = document.createElement('div');
+          c.innerHTML = UIElements.inputBox.innerHTML;
+          return c.textContent || '';
+        };
+        const changeBackground = newUrl => {
+          const T = document.getElementById('scene-transition-overlay');
+          T.style.opacity = '1';
+          setTimeout(() => {
+            UIElements.body.style.backgroundImage = `url('${newUrl}')`;
+            setTimeout(() => (T.style.opacity = '0'), 50);
+          }, 400);
+        };
+
+        const renderUIFromState = () => {
+          const gs = state.gameState;
+          if (!gs || Object.keys(gs).length === 0) return;
+          const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+          UIElements.inputBox.setAttribute('data-placeholder', '请输入对话...');
+          CHARACTERS.forEach(charKey => {
+            const charName =
+              charKey === 'user'
+                ? userName
+                : document.querySelector(`#${charKey}-status-card .char-name`)?.textContent || '角色';
+            const charState = gs[charKey];
+            if (!charState) return;
+            Object.keys(charState).forEach(statKey => {
+              const value_array = getNested(gs, `${charKey}.${statKey}`);
+              const value = Array.isArray(value_array) ? value_array[0] : value_array;
+              const barEl = document.getElementById(`${charKey}-${statKey}_bar`);
+              if (barEl) {
+                const numVal = parseInt(value, 10);
+                const val = isNaN(numVal) ? 0 : Math.max(0, Math.min(100, numVal));
+                barEl.style.width = `${val}%`;
+                barEl.textContent = val;
+              }
+              const textEl = document.getElementById(`${charKey}-${statKey}_text`);
+              if (textEl)
+                textEl.textContent = (typeof value === 'string' ? value.replace('{{user}}', userName) : value) ?? 'N/A';
+            });
+          });
+          const world = gs.world;
+          if (world) {
+            document.getElementById('top-bar-right').textContent =
+              `${getNested(world, 'weather[0]') || ''} | ${getNested(world, 'temperature[0]') || ''}°C`;
+          }
+          const loc_array = getNested(gs, 'user.location');
+          const loc = Array.isArray(loc_array) ? loc_array[0] : loc_array;
+          if (loc && typeof loc === 'string') {
+            const finalLoc = loc.replace('{{user}}', userName);
+            const imgUrl = roomImages[loc] || roomImages[finalLoc.replace(userName, '{{user}}')] || '';
+            const newBg = `url("${imgUrl}")`;
+            if (imgUrl && UIElements.body.style.backgroundImage !== newBg) {
+              changeBackground(imgUrl);
+            }
+            document.getElementById('current-location').textContent = finalLoc;
+            document.getElementById('top-bar-center').textContent = `📍 ${finalLoc}`;
+            document
+              .querySelectorAll('.location-item')
+              .forEach(el => el.classList.toggle('active', el.dataset.location === loc));
+          }
+          renderTodoList();
+          renderReplayModal();
+          updatePoseLocks();
+          updateSprites();
+        };
+
+        const renderNarrative = (isTyping = false) => {
+          if (!isTyping && state.typewriterTimer) clearTimeout(state.typewriterTimer);
+          UIElements.narrativeContainer.innerHTML = '';
+          const skipReadCheckbox = document.getElementById('skip-read-toggle');
+          const shouldSkip = skipReadCheckbox && skipReadCheckbox.checked;
+          const historyToRender = shouldSkip
+            ? state.dialogueHistory.slice(-1)
+            : state.dialogueHistory.slice(-DIALOGUE_RENDER_LIMIT);
+          historyToRender.forEach(turn => {
+            const d = document.createElement('div');
+            d.className = 'dialogue-turn';
+            const s = document.createElement('strong');
+            s.id = 'dialogue-speaker';
+            s.textContent = turn.speaker;
+            const t = document.createElement('p');
+            t.id = 'dialogue-text';
+            t.innerHTML = turn.text.replace(/\n/g, '<br>');
+            d.appendChild(s);
+            d.appendChild(t);
+            UIElements.narrativeContainer.appendChild(d);
+          });
+          UIElements.narrativeContainer.parentElement.scrollTop =
+            UIElements.narrativeContainer.parentElement.scrollHeight;
+        };
+        const renderTodoList = () => {
+          UIElements.todoList.innerHTML = '';
+          const todos = getNested(state, 'gameState.world.todos') || [];
+          todos.forEach(todo => {
+            if (todo.completed) return;
+            const li = document.createElement('li');
+            li.className = 'todo-item';
+            li.textContent = todo.text;
+            li.dataset.todoId = todo.id;
+            li.addEventListener('click', () => handleTodoClick(todo.id, todo.text));
+            UIElements.todoList.appendChild(li);
+          });
+        };
+        const renderReplayModal = () => {
+          UIElements.replayModalList.innerHTML = '';
+          state.storyReplays.forEach(replay => {
+            const details = document.createElement('details');
+            const summary = document.createElement('summary');
+            const title = document.createElement('span');
+            title.className = 'replay-title';
+            title.textContent = replay.title;
+            const date = document.createElement('span');
+            date.className = 'replay-date';
+            date.textContent = replay.date;
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'replay-content';
+            contentDiv.innerHTML = `<p>${replay.content}</p>`;
+            summary.appendChild(title);
+            summary.appendChild(date);
+            details.appendChild(summary);
+            details.appendChild(contentDiv);
+            UIElements.replayModalList.appendChild(details);
+          });
+        };
+        const renderActionButtons = actions => {
+          UIElements.actionPopup.innerHTML = '';
+          if (!actions || actions.length === 0) {
+            UIElements.actionPopup.innerHTML = '<span class="no-actions-msg">无建议行动...</span>';
+            return;
+          }
+          actions.forEach(actionText => {
+            const btn = document.createElement('button');
+            btn.className = 'action-choice';
+            btn.textContent = actionText;
+            btn.addEventListener('click', () => submitInteraction(`*我${actionText}*`));
+            UIElements.actionPopup.appendChild(btn);
+          });
+        };
+
+        const persistStateToTavern = async () => {
+          const fullState = {
+            gameState: state.gameState,
+            dialogueHistory: state.dialogueHistory,
+            storyReplays: state.storyReplays,
+          };
+          try {
+            const stateJson = JSON.stringify(fullState);
+            const base64State = btoa(unescape(encodeURIComponent(stateJson)));
+            if (typeof triggerSlash === 'function')
+              await triggerSlash(`/setglobalvar key=${LIVE_STATE_KEY} "${base64State}"`);
+          } catch (e) {
+            console.error('无法持久化状态:', e);
+          }
+        };
+        const syncStateFromTavern = async () => {
+          if (typeof triggerSlashWithResult !== 'function') {
+            return;
+          }
+          try {
+            const base64State = await triggerSlashWithResult(`/getglobalvar ${LIVE_STATE_KEY}`);
+            if (base64State && base64State.trim() !== 'undefined' && base64State.trim() !== '') {
+              const stateJson = decodeURIComponent(escape(atob(base64State)));
+              const fullState = JSON.parse(stateJson);
+              state.gameState = fullState.gameState || {};
+              state.dialogueHistory = fullState.dialogueHistory || [];
+              state.storyReplays = fullState.storyReplays || [];
+              renderAll();
+            } else {
+              await initializeGame();
+            }
+          } catch (e) {
+            console.error('同步Tavern状态失败:', e);
+            await initializeGame();
+          }
+        };
+
+        const setGeneratingState = isGenerating => {
+          state.isGenerating = isGenerating;
+          const btnOpacity = isGenerating ? '0.5' : '1';
+          const btnEvents = isGenerating ? 'none' : 'auto';
+          UIElements.sendBtn.style.opacity = btnOpacity;
+          UIElements.sendBtn.style.pointerEvents = btnEvents;
+          UIElements.regenBtn.style.opacity = btnOpacity;
+          UIElements.regenBtn.style.pointerEvents = btnEvents;
+        };
+        const submitInteraction = async text => {
+          if (!text || state.isGenerating) return;
+          setGeneratingState(true);
+          UIElements.actionPopup.classList.remove('active');
+          const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+          const userTurn = { speaker: userName, text };
+          state.dialogueHistory.push(userTurn);
+          renderNarrative();
+          if (UIElements.inputBox.contains(document.activeElement)) UIElements.inputBox.innerHTML = '';
+          const prompt = buildAIPrompt();
+          const command = `/gen lock=on "${prompt}"`;
+          try {
+            const aiResponse = await triggerSlashWithResult(command);
+            if (aiResponse) parseAndProcessAIResponse(aiResponse);
+            else {
+              state.dialogueHistory.push({ speaker: '系统', text: 'AI没有返回任何内容，可能需要重试。' });
+              renderNarrative();
+            }
+          } catch (error) {
+            console.error('与AI交互时出错:', error);
+            state.dialogueHistory.push({ speaker: '系统错误', text: `处理请求时发生未知错误: ${error.message}` });
+            renderNarrative();
+          }
+          if (!state.typewriterTimer) {
+            setGeneratingState(false);
+          }
+        };
+
+        const parseAndProcessAIResponse = response => {
+          const filteredResponse = response
+            .replace(/<think(ing)?>[\s\S]*?<\/think(ing)?>/gi, '')
+            .replace(/thinking\.\.\./gi, '')
+            .trim();
+          const hiddenResponseMatch = /<HiddenUIResponse>([\s\S]*?)<\/HiddenUIResponse>/.exec(filteredResponse);
+          if (!hiddenResponseMatch) {
+            console.error('AI未返回<HiddenUIResponse>标签。');
+            state.dialogueHistory.push({ speaker: '系统错误', text: 'AI响应格式不正确，无法解析。' });
+            renderNarrative();
+            return;
+          }
+          let content = hiddenResponseMatch[1];
+          const REGEX = {
+            update: /<UpdateVariable>([\s\S]*?)<\/UpdateVariable>/,
+            actions: /<Actions>([\s\S]*?)<\/Actions>/,
+            action: /<action>([\s\S]*?)<\/action>/g,
+            lore: /<LoreSummary[^>]*title="([^"]*)">([\s\S]*?)<\/LoreSummary>/,
+          };
+
+          const loreMatch = content.match(REGEX.lore);
+          if (loreMatch) {
+            content = content.replace(loreMatch[0], '');
+          }
+          const updateMatch = content.match(REGEX.update);
+          if (updateMatch) {
+            content = content.replace(updateMatch[0], '');
+          }
+          const actionsMatch = content.match(REGEX.actions);
+          if (actionsMatch) {
+            content = content.replace(actionsMatch[0], '');
+          }
+
+          const updateBlock = updateMatch ? updateMatch[1].trim() : null;
+          const actionsBlock = actionsMatch ? actionsMatch[1].trim() : null;
+          const loreSummary = loreMatch ? { title: loreMatch[1].trim(), content: loreMatch[2].trim() } : null;
+
+          let responseText = content.replace(/<\/?Response>/gi, '').trim();
+
+          const actions = actionsBlock ? Array.from(actionsBlock.matchAll(REGEX.action), m => m[1].trim()) : [];
+          if (!responseText) responseText = '(AI未提供对话)';
+
+          if (updateBlock) {
+            updateStateFromAI(updateBlock);
+            renderUIFromState();
+          }
+          renderActionButtons(actions);
+          if (loreSummary && loreSummary.content) {
+            const MAX_REPLAYS = 15;
+            if (state.storyReplays.length >= MAX_REPLAYS) {
+              state.storyReplays.shift();
+            }
+            state.storyReplays.push({ ...loreSummary, date: new Date().toLocaleString() });
+            renderReplayModal();
+          }
+
+          const dialogueParts = responseText.split(/：|:/, 2);
+          const aiTurn =
+            dialogueParts.length > 1 && dialogueParts[0].trim().length < 15 && dialogueParts[0].trim().length > 0
+              ? { speaker: dialogueParts[0].trim().replace(/"/g, ''), text: dialogueParts[1].trim() }
+              : { speaker: '旁白', text: responseText };
+
+          typeWriterEffect(aiTurn, () => {
+            persistStateToTavern();
+          });
+        };
+
+        const updateStateFromAI = updateBlock => {
+          if (!updateBlock) return;
+          const commands = updateBlock.split(';').filter(c => c.trim());
+          const threeArgRegex = /_.set\s*\(\s*['"]([^'"]+)['"]\s*,\s*[^,]+\s*,\s*([^;)]+)/;
+          const twoArgRegex = /_.set\s*\(\s*['"]([^'"]+?)['"]\s*,\s*([^,;)]+?)\s*\)/;
+
+          commands.forEach(cmd => {
+            let setMatch = threeArgRegex.exec(cmd);
+            let path, valueStr, value;
+            if (setMatch) {
+              path = setMatch[1];
+              valueStr = setMatch[2].trim();
+            } else {
+              setMatch = twoArgRegex.exec(cmd);
+              if (setMatch) {
+                path = setMatch[1];
+                valueStr = setMatch[2].trim();
+              }
+            }
+            if (setMatch) {
+              if (valueStr === 'true') value = true;
+              else if (valueStr === 'false') value = false;
+              else if (!isNaN(parseFloat(valueStr)) && isFinite(valueStr)) value = Number(valueStr);
+              else value = valueStr.replace(/^['"]|['"]$/g, '');
+              setNested(state.gameState, path, [value]);
+              return;
+            }
+            const todoAddMatch = /_.todo.add\s*\(\s*['"]([^'"]+?)['"]\s*\)/.exec(cmd);
+            if (todoAddMatch) {
+              const todos = getNested(state, 'gameState.world.todos') || [];
+              todos.push({ id: `todo_${Date.now()}`, text: todoAddMatch[1], completed: false });
+              setNested(state, 'gameState.world.todos', todos);
+              return;
+            }
+            const todoCompleteMatch = /_.todo.complete\s*\(\s*['"]([^'"]+?)['"]\s*\)/.exec(cmd);
+            if (todoCompleteMatch) {
+              const todos = getNested(state, 'gameState.world.todos') || [];
+              const todo = todos.find(t => t.text === todoCompleteMatch[1] && !t.completed);
+              if (todo) {
+                todo.completed = true;
+              }
+              setNested(state, 'gameState.world.todos', todos);
+            }
+          });
+        };
+        const handleTodoClick = (id, text) => {
+          const todos = getNested(state, 'gameState.world.todos') || [];
+          const todo = todos.find(t => t.id === id);
+          if (todo) {
+            todo.completed = true;
+            setNested(state, 'gameState.world.todos', todos);
+          }
+          renderTodoList();
+          submitInteraction(`*我完成了待办事项：“${text}”*`);
+        };
+
+        const initializeGame = async () => {
+          state.gameState = {
+            user: { stamina: [85], desire: [1], mood: ['平静'], special_status: ['无'], location: ['客厅'] },
+            char1: {
+              affection: [10],
+              desire: [5],
+              orgasm_progress: [0],
+              mood: ['专注'],
+              special_status: ['无'],
+              location: ['书房'],
+              outfit: ['居家常服'],
+              pose: ['常态'],
+              breast_status: ['柔软'],
+              vagina_status: ['干爽'],
+            },
+            char2: {
+              affection: [5],
+              desire: [5],
+              orgasm_progress: [0],
+              mood: ['好奇'],
+              special_status: ['无'],
+              location: ['厨房'],
+              outfit: ['连衣裙'],
+              pose: ['常态'],
+              breast_status: ['柔软'],
+              vagina_status: ['干爽'],
+            },
+            world: {
+              time: ['上午'],
+              weather: ['晴朗'],
+              temperature: ['26'],
+              todos: [
+                { id: 'todo_init1', text: '和苏映雪谈谈她的研究', completed: false },
+                { id: 'todo_init2', text: '尝尝苏映月做的点心', completed: false },
+              ],
+            },
+            unlocked_poses: {
+              handjob: [false],
+              titjob: [false],
+              thigh_sex: [false],
+              oral_sex: [false],
+              missionary: [false],
+              footjob: [false],
+              cowgirl: [false],
+              doggy_style: [false],
+              anal_sex: [false],
+              threesome: [false],
+            },
+          };
+          state.dialogueHistory = [
+            { speaker: '旁白', text: '玄关处传来了钥匙转动的轻响，你回到了这个属于自己的小空间...' },
+          ];
+          state.storyReplays = [];
+          renderAll();
+          await persistStateToTavern();
+        };
+
+        const handleRestartGame = async () => {
+          const confirmation = confirm('您确定要重新开始游戏吗？所有未保存的进度都将丢失。');
+          if (confirmation) {
+            closeAllModals();
+            await triggerSlash(`/flushglobalvar ${LIVE_STATE_KEY}`);
+            await initializeGame();
+            triggerSlash('/echo title="游戏已重置" severity=success 新的旅程已经开始。');
+          }
+        };
+
+        const buildAIPrompt = () => {
+          const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+          const contextPrompt = state.dialogueHistory
+            .slice(-5)
+            .map(t => `${t.speaker}: ${t.text}`)
+            .join('\n');
+          const tempStateForPrompt = JSON.parse(JSON.stringify(state.gameState));
+          if (tempStateForPrompt.world && tempStateForPrompt.world.todos) {
+            tempStateForPrompt.world.todos = tempStateForPrompt.world.todos.filter(todo => !todo.completed);
+          }
+          const stateString = JSON.stringify(tempStateForPrompt);
+
+          return `Your entire response MUST be wrapped in <HiddenUIResponse>...</HiddenUIResponse> tags.
+                Key Commands for Variable Updates:
+                - To change a value: _.set('character.stat', new_value)
+                - To change a character's visual sprite, update their 'pose' variable with a specific keyword.
+                  - For 苏映雪 (char1), available poses are: ['常态', '扶腰', '高兴', '害羞'].
+                  - For 苏映月 (char2), available poses are: ['常态', '高兴', '瑜伽', '害羞'].
+                  - Example: _.set('char1.pose', '害羞');
+                The user's name is ${userName}.
+                ${contextPrompt}\n\n<system_memory><status_current_variables>${stateString}</status_current_variables></system_memory>`;
+        };
+
+        const handleRegenerate = async () => {
+          if (state.isGenerating || state.dialogueHistory.length < 1) return;
+          let lastUserTurnIndex = -1;
+          for (let i = state.dialogueHistory.length - 1; i >= 0; i--) {
+            const speaker = state.dialogueHistory[i].speaker;
+            const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+            if (speaker === userName || speaker === '{{user}}') {
+              lastUserTurnIndex = i;
+              break;
+            }
+          }
+          if (lastUserTurnIndex === -1) {
+            triggerSlash('/echo title="无法重置" severity=warning 未找到您的上一条输入。');
+            return;
+          }
+          const lastUserPrompt = state.dialogueHistory[lastUserTurnIndex].text;
+          state.dialogueHistory = state.dialogueHistory.slice(0, lastUserTurnIndex);
+          renderNarrative();
+          await submitInteraction(lastUserPrompt);
+        };
+        const typeWriterEffect = (turn, onComplete) => {
+          state.dialogueHistory.push(turn);
+          const container = UIElements.narrativeContainer.parentElement;
+          renderNarrative(true);
+          const turnElements = UIElements.narrativeContainer.children;
+          if (turnElements.length === 0) return;
+          const lastTurnElement = turnElements[turnElements.length - 1];
+          if (!lastTurnElement) return;
+          const textElement = lastTurnElement.querySelector('#dialogue-text');
+          if (!textElement) return;
+          textElement.innerHTML = '';
+          let i = 0;
+          function type() {
+            if (i < turn.text.length) {
+              textElement.innerHTML += turn.text.charAt(i).replace(/\n/g, '<br>');
+              i++;
+              container.scrollTop = container.scrollHeight;
+              const speed = 105 - (document.getElementById('text-speed-slider')?.value ?? 70);
+              state.typewriterTimer = setTimeout(type, speed);
+            } else {
+              state.typewriterTimer = null;
+              setGeneratingState(false);
+              if (onComplete) onComplete();
+            }
+          }
+          type();
+        };
+        const setupEventListeners = () => {
+          UIElements.sendBtn.addEventListener('click', () => {
+            submitInteraction(getCleanInput());
+          });
+          UIElements.regenBtn.addEventListener('click', handleRegenerate);
+          UIElements.inputBox.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submitInteraction(getCleanInput());
+            }
+          });
+          UIElements.narrativeContainer.addEventListener('click', () => {
+            if (state.typewriterTimer) {
+              clearTimeout(state.typewriterTimer);
+              state.typewriterTimer = null;
+              setGeneratingState(false);
+              const lastTurn = state.dialogueHistory.pop();
+              state.dialogueHistory.push(lastTurn);
+              renderNarrative();
+              persistStateToTavern();
+            }
+          });
+          UIElements.toggleLeftBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const i = UIElements.leftPanel.classList.contains('active');
+            closeAllPanels();
+            if (!i) {
+              UIElements.leftPanel.classList.add('active');
+              UIElements.overlay.classList.add('active');
+              UIElements.toggleLeftBtn.classList.add('hidden');
+            }
+          });
+          UIElements.toggleRightBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            const i = UIElements.rightPanel.classList.contains('active');
+            closeAllPanels();
+            if (!i) {
+              UIElements.rightPanel.classList.add('active');
+              UIElements.overlay.classList.add('active');
+              UIElements.toggleRightBtn.classList.add('hidden');
+            }
+          });
+          UIElements.overlay.addEventListener('click', closeAllPanels);
+          UIElements.mapToggleButton.addEventListener('click', e => {
+            e.stopPropagation();
+            UIElements.mapPopup.classList.toggle('active');
+            UIElements.overlay.classList.toggle('dimmed', UIElements.mapPopup.classList.contains('active'));
+          });
+          document.addEventListener('click', e => {
+            if (!UIElements.mapPopup.contains(e.target) && !UIElements.mapToggleButton.contains(e.target)) {
+              UIElements.mapPopup.classList.remove('active');
+              UIElements.overlay.classList.remove('dimmed');
+            }
+            if (!UIElements.actionPopup.parentElement.contains(e.target)) {
+              UIElements.actionPopup.classList.remove('active');
+            }
+          });
+          UIElements.actionToggleButton.addEventListener('click', e => {
+            e.stopPropagation();
+            UIElements.actionPopup.classList.toggle('active');
+          });
+          document.querySelectorAll('.collapsible-toggle').forEach(t => {
+            t.addEventListener('click', function () {
+              this.classList.toggle('active');
+              const c = this.nextElementSibling;
+              if (c.style.maxHeight) {
+                c.style.maxHeight = null;
+              } else {
+                c.style.maxHeight = c.scrollHeight + 'px';
+              }
+            });
+          });
+          document.querySelectorAll('.menu-button, .modal-close-btn').forEach(btn => {
+            const modalId = btn.getAttribute('data-modal');
+            btn.addEventListener('click', () => (modalId ? openModal(modalId) : closeAllModals()));
+          });
+          document.getElementById('modal-overlay').addEventListener('click', closeAllModals);
+          document.querySelectorAll('.location-item').forEach(item => {
+            item.addEventListener('click', async () => {
+              UIElements.mapPopup.classList.remove('active');
+              UIElements.overlay.classList.remove('dimmed');
+              const newLocation = item.getAttribute('data-location');
+              if (getNested(state.gameState, 'user.location[0]') === newLocation) return;
+              setNested(state.gameState, 'user.location', [newLocation]);
+              renderUIFromState();
+              submitInteraction(`*我来到了${item.textContent}*`);
+            });
+          });
+          document.getElementById('fullscreen-btn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+              document.documentElement.requestFullscreen();
+            } else if (document.exitFullscreen) {
+              document.exitFullscreen();
+            }
+          });
+          document.getElementById('skip-read-toggle')?.addEventListener('change', () => renderNarrative());
+          document.getElementById('restart-game-btn').addEventListener('click', handleRestartGame);
+          UIElements.poseGrid.querySelectorAll('.pose-item').forEach(item => {
+            item.addEventListener('mouseenter', e => {
+              const name = item.dataset.name;
+              const desc = item.dataset.description;
+              const unlock = item.dataset.unlock;
+              const isLocked = item.classList.contains('locked');
+              let tooltipContent = `<h4>${name}</h4>`;
+              if (isLocked) {
+                tooltipContent += `<p class="tooltip-section-title">🔒 未解锁</p><p>${unlock}</p>`;
+              } else {
+                tooltipContent += `<p class="tooltip-section-title">📖 描述</p><p>${desc}</p>`;
+              }
+              UIElements.poseTooltip.innerHTML = tooltipContent;
+              UIElements.poseTooltip.style.opacity = '1';
+            });
+            item.addEventListener('mousemove', e => {
+              const xOffset = -15 - UIElements.poseTooltip.offsetWidth;
+              const yOffset = -15 - UIElements.poseTooltip.offsetHeight;
+              UIElements.poseTooltip.style.left = `${e.clientX + xOffset}px`;
+              UIElements.poseTooltip.style.top = `${e.clientY + yOffset}px`;
+            });
+            item.addEventListener('mouseleave', () => {
+              UIElements.poseTooltip.style.opacity = '0';
+            });
+          });
+        };
+        const updateSprites = () => {
+          const gs = state.gameState;
+          if (!gs) return;
+          const userLoc = getNested(gs, 'user.location[0]');
+          const char1Loc = getNested(gs, 'char1.location[0]');
+          const char2Loc = getNested(gs, 'char2.location[0]');
+          const isChar1Present = userLoc === char1Loc;
+          const isChar2Present = userLoc === char2Loc;
+
+          UIElements.spriteLeft.style.opacity = '0';
+          UIElements.spriteCenter.style.opacity = '0';
+          UIElements.spriteRight.style.opacity = '0';
+
+          if (isChar1Present && isChar2Present) {
+            UIElements.spriteCenter.style.backgroundImage = `url('${spriteMap.both}')`;
+            UIElements.spriteCenter.style.opacity = '1';
+          } else if (isChar1Present) {
+            const pose = getNested(gs, 'char1.pose[0]') || '常态';
+            const url = spriteMap.char1[pose] || spriteMap.char1['常态'];
+            UIElements.spriteLeft.style.backgroundImage = `url('${url}')`;
+            UIElements.spriteLeft.style.opacity = '1';
+          } else if (isChar2Present) {
+            const pose = getNested(gs, 'char2.pose[0]') || '常态';
+            const url = spriteMap.char2[pose] || spriteMap.char2['常态'];
+            UIElements.spriteRight.style.backgroundImage = `url('${url}')`;
+            UIElements.spriteRight.style.opacity = '1';
+          }
+        };
+        const closeAllPanels = () => {
+          UIElements.leftPanel.classList.remove('active');
+          UIElements.rightPanel.classList.remove('active');
+          UIElements.overlay.classList.remove('active', 'dimmed');
+          UIElements.toggleLeftBtn.classList.remove('hidden');
+          UIElements.toggleRightBtn.classList.remove('hidden');
+        };
+        const closeAllModals = () => {
+          document.getElementById('modal-overlay').classList.remove('active');
+          document.querySelectorAll('.modal-window').forEach(m => m.classList.remove('active'));
+        };
+        const openModal = async modalId => {
+          closeAllModals();
+          const modal = document.getElementById(modalId);
+          if (modal) {
+            document.getElementById('modal-overlay').classList.add('active');
+            modal.classList.add('active');
+            if (modalId === 'save-modal' || modalId === 'load-modal') await updateSaveSlotsUI();
+          }
+        };
+        const handleSave = async slotId => {
+          const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+          const lastTwo = state.dialogueHistory.slice(-2);
+          let summaryText = '故事的开端...';
+          if (lastTwo.length > 0) {
+            summaryText = lastTwo
+              .map(t => `${t.speaker === '{{user}}' ? userName : t.speaker}: ${t.text}`)
+              .join(' <br> ');
+          }
+          const shortSummary =
+            summaryText.length > 70
+              ? summaryText.substring(0, 70).replace(/<br>/g, ' / ') + '...'
+              : summaryText.replace(/<br>/g, ' / ');
+          const fullState = { ...state, lastDialogueSummary: shortSummary, fullDialogueSummary: summaryText };
+          const base64State = btoa(unescape(encodeURIComponent(JSON.stringify(fullState))));
+          const saveKey = `galgame_save_v37.0_${slotId}`;
+          await triggerSlash(`/setglobalvar key=${saveKey} "${base64State}"`);
+          triggerSlash(`/echo title="存档成功" 游戏进度已保存至档位 ${slotId}`);
+          await updateSaveSlotsUI(slotId);
+        };
+        const handleLoad = async slotId => {
+          const saveKey = `galgame_save_v37.0_${slotId}`;
+          const base64State = await triggerSlashWithResult(`/getglobalvar ${saveKey}`);
+          if (!base64State || base64State.trim() === '' || base64State.trim() === 'undefined') {
+            triggerSlash('/echo title="读取失败" severity=error 这是一个空档位');
+            return;
+          }
+          try {
+            const loadedData = JSON.parse(decodeURIComponent(escape(atob(base64State))));
+            delete loadedData.lastDialogueSummary;
+            delete loadedData.fullDialogueSummary;
+            Object.assign(state, loadedData);
+            await persistStateToTavern();
+            renderAll();
+            closeAllModals();
+            triggerSlash(`/echo title="读取成功" 时空锚点已同步`);
+          } catch (e) {
+            console.error('读取存档失败:', e);
+            triggerSlash('/echo title="读取失败" severity=error 存档数据已损坏');
+          }
+        };
+        const updateSaveSlotsUI = async specificSlot => {
+          const userName = UIElements.root.querySelector('#username-input')?.value || '{{user}}';
+          const grids = [UIElements.saveModalGrid, UIElements.loadModalGrid];
+          for (const grid of grids) {
+            const slotsToUpdate = specificSlot
+              ? [grid.querySelector(`.save-slot[data-slot-id="${specificSlot}"]`)]
+              : Array.from(grid.querySelectorAll('.save-slot'));
+            for (const slot of slotsToUpdate) {
+              if (!slot) continue;
+              const slotId = slot.dataset.slotId;
+              const saveKey = `galgame_save_v37.0_${slotId}`;
+              const b64 = await triggerSlashWithResult(`/getglobalvar ${saveKey}`);
+              if (b64 && b64.trim() !== '' && b64.trim() !== 'undefined') {
+                try {
+                  const data = JSON.parse(decodeURIComponent(escape(atob(b64))));
+                  slot.classList.remove('empty');
+                  const loc_array = getNested(data.gameState, 'user.location');
+                  const loc = Array.isArray(loc_array) ? loc_array[0] : loc_array;
+                  const finalLoc = loc ? loc.replace('{{user}}', userName) : '未知地点';
+                  slot.querySelector('.save-thumbnail').style.backgroundImage =
+                    loc && roomImages[loc] ? `url('${roomImages[loc]}')` : '';
+                  slot.querySelector('h4').textContent = `NO.${String(slotId).padStart(2, '0')}`;
+                  slot.querySelector('.save-summary').textContent = data.lastDialogueSummary || '无剧情快照';
+                  slot.querySelector('.save-location').textContent = `@ ${finalLoc}`;
+                  slot.dataset.fullSummary = data.fullDialogueSummary || '';
+                } catch (e) {
+                  slot.classList.add('empty');
+                  console.error(`解析存档 ${slotId} 失败:`, e);
+                }
+              } else {
+                slot.classList.add('empty');
+                slot.querySelector('.save-thumbnail').style.backgroundImage = '';
+                slot.querySelector('h4').textContent = `NO.${String(slotId).padStart(2, '0')} 空白档位`;
+                slot.querySelector('.save-summary').textContent = '';
+                slot.querySelector('.save-location').textContent = '';
+                slot.dataset.fullSummary = '';
+              }
+            }
+          }
+        };
+        const initGlobalFeatures = () => {
+          const updateTopBar = () => {
+            const n = new Date();
+            UIElements.topBarLeft.textContent = `${n.getFullYear()}/${String(n.getMonth() + 1).padStart(2, '0')}/${String(n.getDate()).padStart(2, '0')} ${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+          };
+          updateTopBar();
+          setInterval(updateTopBar, 60000);
+          setTimeout(() => {
+            UIElements.authorWatermark.classList.add('hidden');
+            UIElements.authorWatermark.addEventListener(
+              'transitionend',
+              () => (UIElements.authorWatermark.style.display = 'none'),
+              { once: true },
+            );
+          }, 2500);
+          console.log(
+            `%c UI by 木鱼 %c Sprite Edition %c Ver 37.0 | 请尊重创作者劳动。`,
+            'background:#4e74bf; padding: 2px; border-radius: 3px 0 0 3px; color: #fff; font-weight: bold;',
+            'background:#f48fb1; padding: 2px; border-radius: 0 3px 3px 0; color: #fff',
+            'background:transparent; color: #35495e; font-style: italic;',
+          );
+          setupModalGrids();
+        };
+        const setupModalGrids = () => {
+          for (const grid of [UIElements.saveModalGrid, UIElements.loadModalGrid]) {
+            let html = '';
+            for (let j = 1; j <= 9; j++) {
+              html += `<div class="save-slot empty" data-slot-id="${j}" data-full-summary=""><div class="save-thumbnail"></div><div class="save-info"><h4>NO.${String(j).padStart(2, '0')} 空白档位</h4><p class="save-summary"></p><p class="save-location"></p></div></div>`;
+            }
+            grid.innerHTML = html;
+            grid.querySelectorAll('.save-slot').forEach(slot => {
+              const action = grid === UIElements.saveModalGrid ? handleSave : handleLoad;
+              slot.addEventListener('click', () => action(slot.dataset.slotId));
+              slot.addEventListener('mouseenter', e => {
+                const fullSummary = e.currentTarget.dataset.fullSummary;
+                if (fullSummary) {
+                  UIElements.saveSlotTooltip.innerHTML = fullSummary;
+                  UIElements.saveSlotTooltip.style.opacity = '1';
+                }
+              });
+              slot.addEventListener('mousemove', e => {
+                UIElements.saveSlotTooltip.style.left = `${e.clientX}px`;
+                UIElements.saveSlotTooltip.style.top = `${e.clientY}px`;
+              });
+              slot.addEventListener('mouseleave', () => {
+                UIElements.saveSlotTooltip.style.opacity = '0';
+              });
+            });
+          }
+        };
+        const updatePoseLocks = () => {
+          const unlocked = getNested(state, 'gameState.unlocked_poses') || {};
+          UIElements.poseGrid.querySelectorAll('.pose-item').forEach(item => {
+            const poseId = item.dataset.poseId;
+            const isUnlocked = unlocked[poseId] && unlocked[poseId][0] === true;
+            item.classList.toggle('locked', !isUnlocked);
+          });
+        };
+        const renderAll = () => {
+          renderUIFromState();
+          renderNarrative();
+          renderActionButtons([]);
+          updateSprites();
+        };
+
+        setupEventListeners();
+        initGlobalFeatures();
+        syncStateFromTavern();
+      });
+    </script>
+  </body>
+</html>
+```

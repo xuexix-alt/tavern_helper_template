@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIRP 互动界面 (沉浸式小说版)</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@300;400;500;700&amp;family=Noto+Serif+SC:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#8b5cf6",
+                        "primary-light": "#a78bfa",
+                        "accent": "#f59e0b",
+                        "background-dark": "#0f0f11",
+                        "surface-dark": "#18181b",
+                        "text-main": "#d4d4d8",
+                        "text-dim": "#a1a1aa",
+                        "paper-dark": "#121214",
+                    },
+                    fontFamily: {
+                        "display": ["Noto Serif SC", "serif"],
+                        "body": ["Noto Serif SC", "serif"],
+                        "sans": ["Noto Sans SC", "sans-serif"]
+                    },
+                    fontSize: {
+                        "novel": ["1.125rem", { lineHeight: "2rem" }], 
+                        "novel-lg": ["1.25rem", { lineHeight: "2.25rem" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-header {
+            background: linear-gradient(to bottom, rgba(15, 15, 17, 0.98) 0%, rgba(15, 15, 17, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .mask-linear-fade {
+            mask-image: linear-gradient(to right, transparent, black 20px, black 90%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black 90%, transparent);
+        }
+        .fade-enter {
+            animation: fadeIn 1s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }.prose-custom p {
+            margin-bottom: 1.5em;
+            text-align: justify;
+            text-justify: inter-ideograph;
+        }.dialogue {
+            color: #e4e4e7;font-weight: 500;
+        }
+        .dialogue-speaker {
+            color: #a78bfa;font-size: 0.9em;
+            margin-right: 0.5em;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }.first-letter::first-letter {
+            float: left;
+            font-size: 3.5rem;
+            line-height: 3rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+            margin-top: -0.2rem;
+            color: #8b5cf6;
+        }
+        .highlight-text {
+             background: linear-gradient(120deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+             padding: 2px 4px;
+             border-radius: 4px;
+             color: #e9d5ff;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-dark text-text-main font-body h-screen flex flex-col overflow-hidden selection:bg-primary/20 selection:text-white">
+<header class="shrink-0 z-50 glass-header border-b border-white/5 absolute top-0 w-full transition-all duration-300">
+<div class="flex items-center h-16 px-6 justify-between max-w-2xl mx-auto w-full">
+<div class="flex flex-col items-start">
+<span class="text-[10px] font-sans font-bold text-primary tracking-[0.2em] uppercase mb-0.5">第一幕</span>
+<h1 class="text-white/90 text-sm font-bold font-display tracking-widest">地下城入口</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-[11px] font-sans text-white/30 tracking-widest uppercase flex items-center gap-1">
+<span class="size-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    进行中
+                </div>
+<button class="flex items-center justify-center size-8 rounded-full hover:bg-white/5 active:bg-white/10 transition-colors text-white/40">
+<span class="material-symbols-outlined text-[20px]">bookmarks</span>
+</button>
+<button class="flex items-center justify-center size-8 rounded-full hover:bg-white/5 active:bg-white/10 transition-colors text-white/40">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</div>
+<div class="h-[1px] w-full bg-white/5">
+<div class="h-full bg-primary/40 w-[15%] shadow-[0_0_10px_rgba(139,92,246,0.5)]"></div>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto overflow-x-hidden pt-24 pb-48 px-6 sm:px-8 w-full max-w-2xl mx-auto scroll-smooth no-scrollbar">
+<article class="prose-custom font-body text-novel text-gray-400/90 tracking-wide">
+<div class="flex justify-center mb-10 opacity-30">
+<span class="text-[11px] font-sans font-medium tracking-[0.2em] border-b border-white/20 pb-1">— 晚上 10:42 —</span>
+</div>
+<div class="fade-enter" style="animation-delay: 0ms;">
+<p class="first-letter text-gray-300">
+                    地下城的空气总是带着一股陈腐的霉味，混合着生锈金属和不知名草药的刺鼻气息。那是危险的味道，也是机遇的味道。昏暗的油灯在石壁上投下摇曳的影子，仿佛有什么不可名状的生物正潜伏在黑暗的边缘窥视。
+                </p>
+<p>
+                    你推开了那扇吱呀作响的木门，门轴发出的呻吟在寂静的走廊里回荡得格外刺耳。屋内，那个被称为“守门人”的商人正坐在一张堆满杂物的桌子后面。
+                </p>
+<p>
+                    商人抬起头，那双浑浊的眼睛里闪烁着怀疑的光芒。他停下了手中的动作，那是一把锯齿状的匕首，被一块早已看不出颜色的脏抹布反复擦拭着。
+                </p>
+<p>
+<span class="dialogue">“我们这儿不常有旅客，”</span> 商人用沙哑的声音打破了沉默，仿佛砂纸磨过粗糙的石面，<span class="dialogue">“特别是像你这样，看起来还没做好送死准备的。”</span>
+</p>
+</div>
+<div class="fade-enter" style="animation-delay: 150ms;">
+<p>
+                   这种明显的挑衅并没有让你退缩。你知道在这个地方，示弱等同于死亡。你向前迈了一小步，靴底在石板上发出沉闷的声响。你尽量放松紧绷的肌肉，展示出一种克制而没有敌意的姿态，直视着他的眼睛。
+                </p>
+<p>
+<span class="dialogue-speaker">你</span><span class="dialogue highlight-text">“我只是想找些补给。”</span> 你的声音平静，在这压抑的空间里显得格外清晰。
+                </p>
+<div class="my-4 pl-4 border-l border-white/10 italic text-sm text-white/20 font-sans">
+                   系统判定：交涉判定成功 (1d20+3 = 16)
+                </div>
+</div>
+<div class="fade-enter" style="animation-delay: 300ms;">
+<p>
+                    他停顿了一下，金属刮擦布料的刺耳声音戛然而止。空气似乎凝固了一瞬。商人眯起眼睛，重新打量了你一番，似乎在评估你的价值，或者仅仅是在计算你身上的装备能换多少酒钱。
+                </p>
+<p>
+                    终于，他把匕首重重地插在木桌上，发出“笃”的一声闷响。
+                </p>
+<p>
+<span class="dialogue-speaker">商人</span><span class="dialogue italic">“补给需要钱币。或者……鲜血。”</span> 他咧开嘴，露出一口残缺不全的黄牙，<span class="dialogue">“你有哪样？”</span>
+</p>
+</div>
+<div class="fade-enter" style="animation-delay: 450ms;">
+<p>
+                    还没等你回答，角落里的阴影似乎动了一下。那是某种生物的呼吸声，沉重而湿润。你的手下意识地摸向腰间的剑柄，指尖触碰到冰冷的皮革，带来一丝虚幻的安全感。
+                </p>
+</div>
+<div class="h-12 flex items-center justify-center opacity-30 mt-8">
+<span class="material-symbols-outlined text-2xl animate-pulse">more_horiz</span>
+</div>
+</article>
+</main>
+<div class="fixed bottom-0 w-full z-50 font-sans">
+<div class="h-32 w-full bg-gradient-to-t from-background-dark via-background-dark/95 to-transparent pointer-events-none absolute -top-32 left-0"></div>
+<div class="bg-[#0f0f11] border-t border-white/5 pb-6 pt-2 relative">
+<div class="flex gap-3 px-4 py-3 overflow-x-auto no-scrollbar mask-linear-fade justify-start md:justify-center mb-1">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded bg-surface-dark border border-white/5 px-4 active:scale-95 transition-all hover:bg-surface-dark/80 hover:border-primary/30 group shadow-md shadow-black/20">
+<span class="material-symbols-outlined text-blue-400/80 text-[18px] group-hover:text-blue-400 transition-colors">visibility</span>
+<p class="text-gray-400 text-[12px] font-medium tracking-wide group-hover:text-gray-200">观察环境</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded bg-surface-dark border border-white/5 px-4 active:scale-95 transition-all hover:bg-surface-dark/80 hover:border-primary/30 group shadow-md shadow-black/20">
+<span class="material-symbols-outlined text-green-400/80 text-[18px] group-hover:text-green-400 transition-colors">chat</span>
+<p class="text-gray-400 text-[12px] font-medium tracking-wide group-hover:text-gray-200">继续交涉</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded bg-surface-dark border border-white/5 px-4 active:scale-95 transition-all hover:bg-surface-dark/80 hover:border-primary/30 group shadow-md shadow-black/20">
+<span class="material-symbols-outlined text-purple-400/80 text-[18px] group-hover:text-purple-400 transition-colors">auto_fix_high</span>
+<p class="text-gray-400 text-[12px] font-medium tracking-wide group-hover:text-gray-200">洞察检定</p>
+</button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded bg-surface-dark border border-white/5 px-4 active:scale-95 transition-all hover:bg-surface-dark/80 hover:border-primary/30 group shadow-md shadow-black/20">
+<span class="material-symbols-outlined text-yellow-500/80 text-[18px] group-hover:text-yellow-500 transition-colors">shopping_bag</span>
+<p class="text-gray-400 text-[12px] font-medium tracking-wide group-hover:text-gray-200">交易列表</p>
+</button>
+</div>
+<div class="px-4 pt-1 flex items-end gap-3 max-w-2xl mx-auto">
+<div class="relative flex-1 bg-surface-dark/80 backdrop-blur-sm rounded-lg flex items-center border border-white/5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-inner group">
+<input class="w-full bg-transparent text-gray-200 placeholder-white/20 text-[15px] px-4 py-3.5 focus:outline-none rounded-lg font-sans tracking-wide" placeholder="书写你的故事..." type="text"/>
+<button class="p-2 mr-1 text-white/30 hover:text-white transition-colors rounded-md group-focus-within:text-primary/70">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+</div>
+<button class="size-[48px] shrink-0 bg-white text-background-dark rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-95 transition-transform hover:bg-gray-100 hover:shadow-[0_0_25px_rgba(255,255,255,0.25)]">
+<span class="material-symbols-outlined text-[22px] ml-0.5">arrow_upward</span>
+</button>
+</div>
+<div class="h-safe-bottom w-full"></div>
+</div>
+</div>
+
+</body></html>

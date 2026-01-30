@@ -13,11 +13,11 @@
       <div class="logo-section">
         <div class="logo-container">
           <div class="logo-icon">
-            <i class="fas fa-heart"></i>
+            <span class="material-symbols-outlined">favorite</span>
           </div>
           <div class="logo-text">
-            <h1 class="brand-name">美人团</h1>
-            <p class="brand-subtitle">Mei Ren Tuan</p>
+            <h1 class="brand-name">{{ ui.brand.appTitle }}</h1>
+            <p class="brand-subtitle">{{ ui.brand.subtitle }}</p>
           </div>
         </div>
       </div>
@@ -27,7 +27,7 @@
         <p class="main-slogan">{{ slogan }}</p>
         <div class="slogan-decoration">
           <div class="decoration-line"></div>
-          <i class="fas fa-star"></i>
+          <span class="material-symbols-outlined">auto_awesome</span>
           <div class="decoration-line"></div>
         </div>
       </div>
@@ -35,11 +35,11 @@
       <!-- 底部信息 -->
       <div class="footer-section">
         <div class="version-info">
-          <span>v3.0.0后台版</span>
+          <span>{{ ui.brand.version }}</span>
         </div>
         <div class="skip-button" :class="{ 'fade-out': isFading }" @click="skipSplash">
-          <span>跳过</span>
-          <i class="fas fa-chevron-right"></i>
+          <span>{{ ui.splash.skip }}</span>
+          <span class="material-symbols-outlined">chevron_right</span>
         </div>
       </div>
     </div>
@@ -57,9 +57,11 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { navigateToDefaultPage } from './utils';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 // 响应式数据
-const slogan = ref('为您送上一切心动的美人');
+const ui = uiSpec.uiTexts;
+const slogan = ref(ui.splash.slogan);
 const isFading = ref(false);
 const router = useRouter();
 
@@ -184,17 +186,28 @@ onMounted(async () => {
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
           animation: logoBounce 2s ease-in-out infinite;
 
-          i {
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, #ff6b35, #ff9500);
-            :global([data-theme='dark']) & {
-              background: linear-gradient(135deg, #60a5fa, #a855f7);
+        i {
+          font-size: 2.5rem;
+          background: linear-gradient(135deg, #ff6b35, #ff9500);
+          :global([data-theme='dark']) & {
+            background: linear-gradient(135deg, #60a5fa, #a855f7);
             }
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
+
+        .material-symbols-outlined {
+          font-size: 2.5rem;
+          background: linear-gradient(135deg, #ff6b35, #ff9500);
+          :global([data-theme='dark']) & {
+            background: linear-gradient(135deg, #60a5fa, #a855f7);
+          }
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      }
 
         .logo-text {
           .brand-name {
@@ -250,6 +263,12 @@ onMounted(async () => {
           font-size: 1rem;
           animation: sparkle 2s ease-in-out infinite;
         }
+
+        .material-symbols-outlined {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 1rem;
+          animation: sparkle 2s ease-in-out infinite;
+        }
       }
     }
   }
@@ -296,6 +315,10 @@ onMounted(async () => {
       }
 
       i {
+        font-size: 0.8rem;
+      }
+
+      .material-symbols-outlined {
         font-size: 0.8rem;
       }
     }

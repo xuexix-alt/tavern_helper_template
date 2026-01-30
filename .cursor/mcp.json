@@ -1,41 +1,9 @@
 {
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "github_token",
-      "description": "GitHub Personal Access Token",
-      "password": true
-    }
-  ],
   "mcpServers": {
-    "chrome-devtools": {
-      "command": "pnpx",
-      "args": ["@browsermcp/mcp"]
-    },
     "chrome-devtools": {
       "command": "npx",
       "args": ["-y", "chrome-devtools-mcp@latest"],
       "alwaysAllow": ["list_pages", "evaluate_script"]
-    },
-    "github": {
-      "command": "docker",
-      "args": [
-<<<<<<< HEAD
-        "run",
-        "-i",
-        "--rm",
-        "-e",
-        "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${input:github_token}"
-      }
-=======
-        "chrome-devtools-mcp@latest",
-        "--autoConnect"
-      ]
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
     }
   }
 }

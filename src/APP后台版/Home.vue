@@ -1,145 +1,160 @@
 <template>
-  <div class="home-view">
-    <header class="home-hero">
-      <div class="hero-main">
-        <div class="brand-row">
-          <span class="brand-badge">
-            <i class="fas fa-heart"></i>
-            美人团外卖
-          </span>
-          <span class="brand-version">v3.0.0 后台版</span>
-        </div>
-        <h1 class="hero-title">一站式角色扮演入口</h1>
-        <p class="hero-subtitle">从店铺生成到下单演绎，所有流程集中在 Play。首页负责引导和快速下发指令。</p>
-        <div class="hero-actions">
-          <button class="btn-primary" @click="goPlay">
-            <i class="fas fa-gamepad"></i>
-            进入 Play
-          </button>
-          <button class="btn-ghost" @click="goDiscover">
-            <i class="fas fa-compass"></i>
-            去发现
-          </button>
+  <div class="home-screen">
+    <header class="home-header">
+      <div class="user-block">
+        <div class="avatar avatar-placeholder"></div>
+        <div class="user-text">
+          <p class="welcome">{{ ui.brand.welcome }}</p>
+          <h2 class="user-name">{{ ui.brand.userName }}</h2>
         </div>
       </div>
-      <div class="hero-guide">
-        <div class="guide-title">三步快速开局</div>
-        <div class="guide-steps">
-          <div class="guide-step">
-            <span class="step-index">01</span>
-            <div>
-              <div class="step-title">生成店铺</div>
-              <div class="step-desc">从分类或搜索触发生成，写入世界书。</div>
-            </div>
-          </div>
-          <div class="guide-step">
-            <span class="step-index">02</span>
-            <div>
-              <div class="step-title">挑选套餐</div>
-              <div class="step-desc">在商场面板中浏览套餐详情并下单。</div>
-            </div>
-          </div>
-          <div class="guide-step">
-            <span class="step-index">03</span>
-            <div>
-              <div class="step-title">沉浸剧情</div>
-              <div class="step-desc">Play 内生成正文，服务结束再回到商场。</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <button class="icon-btn" type="button">
+        <span class="material-symbols-outlined">notifications</span>
+      </button>
     </header>
 
-    <section class="home-section command-center">
-      <div class="command-card">
-        <div class="command-head">
-          <div>
-            <div class="command-title">指令中心</div>
-            <div class="command-desc">输入关键词或直接点击分类，发起店铺/套餐生成。</div>
-          </div>
-          <div class="command-actions">
-            <button class="btn-outline" @click="triggerGenerate('生成-首页-熟人店铺2个-路人店铺2个')">
-              <i class="fas fa-wand-magic-sparkles"></i>
-              默认生成
-            </button>
-            <button class="btn-outline" @click="generateDLCContent">
-              <i class="fas fa-history"></i>
-              DLC 专案
-            </button>
-          </div>
-        </div>
+    <section class="hero-block">
+      <h1 class="hero-title">
+        {{ ui.homePage.hero.title }}
+        <span class="hero-highlight">{{ ui.homePage.hero.highlight }}</span>
+      </h1>
+      <p class="hero-subtitle">{{ ui.homePage.hero.subtitle }}</p>
+      <div class="hero-actions">
+        <button class="btn-primary" @click="goPlay">
+          <span class="material-symbols-outlined">rocket_launch</span>
+          {{ ui.homePage.hero.primaryAction }}
+        </button>
+        <button class="btn-ghost" @click="goDiscover">
+          <span class="material-symbols-outlined">explore</span>
+          {{ ui.homePage.hero.secondaryAction }}
+        </button>
+      </div>
+    </section>
 
-        <div class="search-row">
-          <i class="fas fa-search"></i>
-          <input v-model="searchKeyword" placeholder="要养成告诉AI“结束XX订单”的好习惯" @keyup.enter="doSearch" />
-          <button class="btn-primary" :disabled="loading" @click="doSearch">
-            {{ loading ? '生成中...' : '搜索生成' }}
-          </button>
-        </div>
-
-        <div class="quick-grid">
-          <button v-for="item in categories" :key="item.label" class="quick-chip" @click="search(item.keyword)">
-            <i :class="item.icon"></i>
-            <span>{{ item.label }}</span>
+    <section class="search-section">
+      <div class="search-shell">
+        <div class="search-glow"></div>
+        <div class="search-bar glass-panel">
+          <span class="material-symbols-outlined accent">auto_fix_high</span>
+          <input
+            v-model="searchKeyword"
+            :placeholder="ui.homePage.commandCenter.placeholder"
+            @keyup.enter="doSearch"
+          />
+          <button class="search-action" :disabled="loading" @click="doSearch">
+            <span class="material-symbols-outlined">arrow_forward</span>
           </button>
         </div>
       </div>
+      <div class="quick-actions">
+        <button class="ghost-pill" @click="triggerGenerate('生成-首页-熟人店铺2个-路人店铺2个')">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          {{ ui.homePage.commandCenter.defaultGenerate }}
+        </button>
+        <button class="ghost-pill" @click="generateDLCContent">
+          <span class="material-symbols-outlined">history_edu</span>
+          {{ ui.homePage.commandCenter.specialProject }}
+        </button>
+        <button class="ghost-pill" @click="triggerGenerate('搜索：各类路人商品-2个店铺每个含3个套餐')">
+          <span class="material-symbols-outlined">bolt</span>
+          {{ ui.homePage.quickEntries.extraAction.label }}
+        </button>
+      </div>
+    </section>
 
-      <div class="side-stack">
-        <div class="side-card">
-          <div class="card-title">
-            <i class="fas fa-bolt"></i>
-            快捷入口
+    <section class="style-section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">{{ ui.homePage.sections.stylesTitle }}</div>
+          <div class="section-sub">{{ ui.homePage.sections.stylesSubtitle || ui.homePage.commandCenter.subtitle }}</div>
+        </div>
+        <button class="link-btn" type="button">{{ ui.homePage.sections.stylesAction }}</button>
+      </div>
+      <div class="chip-row hide-scrollbar">
+        <button
+          v-for="item in categories"
+          :key="item.label"
+          class="style-chip"
+          @click="search(item.keyword)"
+        >
+          <span class="material-symbols-outlined">{{ categoryIcon(item.icon) }}</span>
+          <span>{{ item.label }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="trend-section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">{{ ui.homePage.sections.trendingTitle }}</div>
+          <div class="section-sub">{{ ui.homePage.sections.trendingSubtitle }}</div>
+        </div>
+      </div>
+      <div class="trend-row hide-scrollbar">
+        <article v-for="card in ui.homePage.trendingCards" :key="card.title" class="trend-card glass-panel">
+          <div class="trend-media image-placeholder"></div>
+          <div class="trend-overlay"></div>
+          <div class="trend-content">
+            <div class="trend-title">{{ card.title }}</div>
+            <div class="trend-sub">{{ card.subtitle }}</div>
+            <div class="trend-meta">
+              <div class="rating">
+                <span class="material-symbols-outlined fill">star</span>
+                <span>{{ card.rating }}</span>
+              </div>
+              <span class="plays">{{ card.plays }} {{ ui.discoverPage.defaults.supportsPlay }}</span>
+            </div>
+            <button class="trend-cta" type="button" @click="goDiscover">
+              {{ card.cta }}
+              <span class="material-symbols-outlined">lock_open</span>
+            </button>
           </div>
-          <div class="card-actions">
-            <button class="btn-ghost" @click="goPlay">
-              <i class="fas fa-scroll"></i>
-              进入正文
-            </button>
-            <button class="btn-ghost" @click="goDiscover">
-              <i class="fas fa-store"></i>
-              浏览店铺
-            </button>
-            <button class="btn-ghost" @click="triggerGenerate('搜索：各类路人商品-2个店铺每个含3个套餐')">
-              <i class="fas fa-street-view"></i>
-              一键路人
-            </button>
+        </article>
+      </div>
+    </section>
+
+    <section class="latest-section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">{{ ui.homePage.sections.latestTitle }}</div>
+          <div class="section-sub">{{ ui.homePage.sections.latestSubtitle }}</div>
+        </div>
+      </div>
+      <div class="latest-list">
+        <div v-for="item in ui.homePage.latestItems" :key="item.title" class="latest-card glass-panel">
+          <div class="latest-main">
+            <span class="latest-tag">{{ item.tag }}</span>
+            <div class="latest-title">{{ item.title }}</div>
+            <div class="latest-desc">{{ item.desc }}</div>
+          </div>
+          <button class="latest-action" type="button" @click="goDiscover">
+            {{ item.cta }}
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-section">
+      <div class="info-card glass-panel">
+        <div class="info-title">{{ ui.homePage.notice.title }}</div>
+        <div class="info-list">
+          <div v-for="(item, idx) in ui.homePage.announcements.items" :key="`${item.tag}_${idx}`" class="info-item">
+            <span class="info-tag">{{ item.tag }}</span>
+            <span class="info-text">{{ item.text }}</span>
           </div>
         </div>
-
-        <div class="side-card">
-          <div class="card-title">
-            <i class="fas fa-bullhorn"></i>
-            公告 / 玩法说明
-          </div>
-          <details class="notice-details">
-            <summary>
-              <span>展开详情</span>
-              <i class="fas fa-chevron-down"></i>
-            </summary>
-            <div class="notice-body">
-              <div class="notice-item">
-                <span class="tag">活动</span>
-                新增“国企往事”DLC，挂载世界书后点击即可
-              </div>
-              <div class="notice-item">
-                <span class="tag">更新</span>
-                现在店铺脚本有快捷按钮导出JSON，欢迎分享到发布贴中供大家品尝
-              </div>
-              <div class="notice-item">
-                <span class="tag">更新</span>
-                推荐非json格式的APP生成方式，深度0，顺序-1
-              </div>
-              <div class="notice-item">
-                <span class="tag">提示</span>
-                截断问题多出自预设和正则，保持模板一致性
-              </div>
-              <div class="notice-item">
-                <span class="tag">玩法</span>
-                女孩不想玩时向AI下指令“结束服务”
-              </div>
+      </div>
+      <div class="guide-card glass-panel">
+        <div class="info-title">{{ ui.homePage.guide.title }}</div>
+        <div class="guide-list">
+          <div v-for="step in ui.homePage.guide.steps" :key="step.index" class="guide-item">
+            <span class="guide-index">{{ step.index }}</span>
+            <div>
+              <div class="guide-title">{{ step.title }}</div>
+              <div class="guide-desc">{{ step.desc }}</div>
             </div>
-          </details>
+          </div>
         </div>
       </div>
     </section>
@@ -152,22 +167,30 @@ import { useRouter } from 'vue-router';
 import { requestStreaming } from './utils';
 import { ShopGenerationAdapter } from '../店铺生成Demo/utils/adapters/shop-generation';
 import { InlineInteractionService } from '../店铺生成Demo/utils/core';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 const router = useRouter();
+const ui = uiSpec.uiTexts;
 
 const searchKeyword = ref('');
 const loading = ref(false);
 
-const categories = [
-  { label: '路人', icon: 'fas fa-street-view', keyword: '各类路人商品-2个店铺每个含3个套餐' },
-  { label: '偶遇', icon: 'fas fa-mask', keyword: '路人商品-各类场景偶遇的心动女孩主题-2个店铺每个含3个套餐' },
-  { label: 'AV', icon: 'fas fa-video', keyword: '路人商品-色情片中的AV女优主题-2个店铺每个含3个套餐' },
-  { label: '街拍', icon: 'fas fa-camera-retro', keyword: '路人商品-街上遇到的心动美女主题-2个店铺每个含3个套餐' },
-  { label: '熟人', icon: 'fas fa-user-friends', keyword: '各类熟人商品-2个店铺每个含3个套餐' },
-  { label: '乱伦', icon: 'fas fa-heart-broken', keyword: '熟人商品-乱伦主题（不得含母子）-2个店铺每个含3个套餐' },
-  { label: '职场', icon: 'fas fa-briefcase', keyword: '熟人商品-各类职场主题-2个店铺每个含3个套餐' },
-  { label: '友妻', icon: 'fas fa-users', keyword: '熟人商品-各类朋友妻主题-2个店铺每个含3个套餐' },
-];
+const categories = ui.categoryButtons || [];
+
+const categoryIconMap: Record<string, string> = {
+  'street-view': 'person_pin_circle',
+  mask: 'masks',
+  video: 'movie',
+  'camera-retro': 'photo_camera',
+  'user-friends': 'group',
+  'heart-broken': 'heart_broken',
+  briefcase: 'work',
+  users: 'groups',
+};
+
+function categoryIcon(icon: string) {
+  return categoryIconMap[icon] || 'auto_awesome';
+}
 
 const service = new InlineInteractionService();
 const adapter = new ShopGenerationAdapter();
@@ -212,23 +235,487 @@ function generateDLCContent() {
 </script>
 
 <style lang="scss" scoped>
-.home-view {
+.home-screen {
   width: 100%;
   height: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 18px;
-  background: radial-gradient(circle at top left, rgba(30, 58, 138, 0.25), transparent 50%),
-    linear-gradient(135deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.96));
-  color: #e2e8f0;
+  gap: 24px;
+  padding: 20px 20px 40px;
+  color: #f8fafc;
 }
 
-.home-hero {
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.user-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background-image: var(--avatar-placeholder);
+  background-size: cover;
+  background-position: center;
+  border: 2px solid rgba(127, 19, 236, 0.3);
+  box-shadow: 0 0 12px rgba(127, 19, 236, 0.2);
+}
+
+.user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.welcome {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.user-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  border-color: rgba(127, 19, 236, 0.5);
+  background: rgba(127, 19, 236, 0.15);
+}
+
+.hero-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.hero-highlight {
+  display: block;
+  background: linear-gradient(90deg, #7f13ec, #9d7bff, #6bc6ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-primary,
+.btn-ghost {
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #7f13ec, #6c4bff);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(127, 19, 236, 0.3);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-shell {
+  position: relative;
+}
+
+.search-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, rgba(127, 19, 236, 0.35), rgba(99, 102, 241, 0.15));
+  filter: blur(16px);
+  opacity: 0.4;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  border-radius: 16px;
+  padding: 0 12px;
+}
+
+.search-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.search-bar input::placeholder {
+  color: rgba(148, 163, 184, 0.8);
+}
+
+.search-bar .accent {
+  color: rgba(167, 139, 250, 0.9);
+}
+
+.search-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(127, 19, 236, 0.35);
+  background: rgba(127, 19, 236, 0.2);
+  color: #e9d5ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ghost-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ghost-pill:hover {
+  border-color: rgba(127, 19, 236, 0.45);
+  color: #fff;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.section-sub {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: rgba(192, 132, 252, 0.95);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chip-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.style-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(30, 20, 45, 0.7);
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.style-chip:hover {
+  border-color: rgba(127, 19, 236, 0.5);
+  color: #fff;
+}
+
+.style-chip .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.trend-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.trend-card {
+  position: relative;
+  width: 200px;
+  border-radius: 18px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.trend-media {
+  height: 220px;
+}
+
+.trend-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 22, 0.05), rgba(10, 10, 22, 0.75));
+}
+
+.trend-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trend-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trend-sub {
+  font-size: 11px;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+.trend-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(203, 213, 225, 0.85);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #facc15;
+  font-weight: 600;
+}
+
+.rating .material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 18;
+  font-size: 14px;
+}
+
+.trend-cta {
+  align-self: flex-start;
+  border: none;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  background: rgba(127, 19, 236, 0.85);
+}
+
+.latest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.latest-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.latest-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(167, 139, 250, 0.95);
+  background: rgba(127, 19, 236, 0.15);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+.latest-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.latest-desc {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.latest-action {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(59, 130, 246, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.info-section {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  align-items: stretch;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.info-card,
+.guide-card {
+  padding: 16px;
+  border-radius: 18px;
+}
+
+.info-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(226, 232, 240, 0.88);
+}
+
+.info-tag {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(127, 19, 236, 0.2);
+  color: rgba(167, 139, 250, 0.95);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.guide-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guide-item {
+  display: flex;
+  gap: 10px;
+}
+
+.guide-index {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(127, 19, 236, 0.2);
+  color: rgba(167, 139, 250, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.guide-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.guide-desc {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
 }
 
 .hero-main,

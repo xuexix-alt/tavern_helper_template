@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>发现与剧本商城</title>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f13ec",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#191022",
+                        "surface-dark": "#261933",
+                        "surface-light": "#ffffff",
+                        "accent-purple": "#ad92c9",
+                    },
+                    fontFamily: {
+                        "display": ["Noto Sans SC", "Spline Sans", "sans-serif"],
+                        "body": ["Noto Sans SC", "Spline Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }.no-scrollbar {
+            -ms-overflow-style: none;scrollbar-width: none;}
+    </style>
+<style>
+    body {
+      min-height: 100vh;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased selection:bg-primary selection:text-white min-h-screen flex flex-col">
+<header class="sticky top-0 z-50 w-full bg-white/80 dark:bg-background-dark/95 backdrop-blur-xl border-b border-gray-200 dark:border-white/5">
+<div class="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
+<div class="flex items-center gap-8">
+<h1 class="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-pink-500">
+                AIRP 发现剧本
+            </h1>
+<nav class="hidden md:flex items-center gap-2 ml-4">
+<button class="px-5 py-2.5 rounded-xl bg-primary/10 text-primary dark:text-white font-bold text-sm transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">explore</span>
+                    发现
+                </button>
+<button class="px-5 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-slate-600 dark:text-gray-400 font-medium text-sm transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">history_edu</span>
+                    我的故事
+                </button>
+<button class="px-5 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-slate-600 dark:text-gray-400 font-medium text-sm transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">person</span>
+                    个人中心
+                </button>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:block relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-[20px]">search</span>
+<input class="bg-slate-100 dark:bg-white/5 border-none rounded-full py-2 pl-10 pr-4 text-sm w-64 focus:ring-1 focus:ring-primary placeholder:text-slate-400" placeholder="搜索剧本..." type="text"/>
+</div>
+<div class="h-8 w-px bg-gray-200 dark:bg-white/10"></div>
+<div class="flex items-center gap-3 bg-surface-dark/5 dark:bg-surface-dark/50 px-4 py-2 rounded-full border border-gray-200 dark:border-white/10 hover:border-primary/50 transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-[22px] group-hover:scale-110 transition-transform">bolt</span>
+<p class="text-primary dark:text-accent-purple text-base font-bold leading-normal shrink-0">500 积分</p>
+</div>
+<button class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-pink-500 p-[2px] cursor-pointer hover:shadow-lg hover:shadow-primary/20 transition-all">
+<div class="w-full h-full rounded-full bg-surface-dark flex items-center justify-center overflow-hidden">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkpp95kSvE9cWUKMWVRzGE87qIjjT3sXLYRmJ5v0DhjMdh6nmpO2uZiaiqYm1eHy4iWnL1WosvdxEET6CkuXTgfACZHdwYwkBRaId_028Rqn9dGTezMzQsextqLnfvdqTaCb7aeOo8EXnS8tSLJWtVZ0yhitcMxSnWXR-K5Pm9ZwrHndO8wWF_N94tLgzqTU5ROtvu63FKrajjRcy5tvf_LLo8frkBuqpD2teJ6lpxtcLgL4AuJiLI--dFtJ27qf72wyMCOHbWYwoH"/>
+</div>
+</div>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-[1600px] mx-auto px-6 py-8">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<div class="lg:col-span-9 flex flex-col gap-10">
+<section class="relative rounded-3xl overflow-hidden bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-white/5 shadow-2xl shadow-black/20 p-8 md:p-14 flex flex-col items-center text-center gap-8 group">
+<div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-40">
+<div class="absolute top-[-50%] left-[-10%] w-[50%] h-[150%] bg-primary/20 blur-[120px] rounded-full mix-blend-screen animate-pulse duration-[5s]"></div>
+<div class="absolute bottom-[-50%] right-[-10%] w-[50%] h-[150%] bg-pink-500/20 blur-[120px] rounded-full mix-blend-screen"></div>
+</div>
+<div class="relative z-10 flex flex-col gap-4 max-w-3xl">
+<h1 class="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
+                        创造属于你的 <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-pink-500">世界</span>
+</h1>
+<p class="text-slate-600 dark:text-gray-300 text-base md:text-xl font-light">
+                        指令AI生成新场景，让想象瞬间成真。探索无限可能的剧本宇宙。
+                    </p>
+</div>
+<div class="relative z-10 w-full max-w-3xl mt-4">
+<label class="flex w-full h-16 relative group shadow-[0_4px_30px_rgba(127,19,236,0.15)] rounded-2xl transition-transform focus-within:-translate-y-1">
+<div class="flex w-full flex-1 items-stretch rounded-2xl h-full overflow-hidden bg-white dark:bg-[#1e1427] border border-gray-200 dark:border-white/10 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all">
+<div class="pl-6 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">auto_awesome</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none border-none bg-transparent focus:outline-0 focus:ring-0 h-full placeholder:text-gray-400 dark:placeholder:text-gray-500 px-4 text-lg font-normal" placeholder="例如：2050年的黑色侦探故事..." value=""/>
+<div class="flex items-center justify-center pr-2">
+<button class="flex shrink-0 cursor-pointer items-center justify-center rounded-xl h-12 px-8 bg-primary text-white hover:bg-primary/90 transition-all hover:scale-105 shadow-lg shadow-primary/30 font-bold text-base tracking-wide gap-2">
+<span>生成</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</label>
+</div>
+</section>
+<section class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+<button class="flex h-10 items-center justify-center gap-x-2 rounded-full bg-primary text-white px-6 shadow-lg shadow-primary/25 transition-transform active:scale-95 hover:bg-primary/90">
+<span class="material-symbols-outlined text-[18px]">local_fire_department</span>
+<p class="text-sm font-bold">热门</p>
+</button>
+<button class="flex h-10 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 px-6 text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
+<p class="text-sm font-medium">奇幻</p>
+</button>
+<button class="flex h-10 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 px-6 text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
+<p class="text-sm font-medium">赛博朋克</p>
+</button>
+<button class="flex h-10 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 px-6 text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
+<p class="text-sm font-medium">悬疑</p>
+</button>
+<button class="flex h-10 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 px-6 text-slate-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors">
+<p class="text-sm font-medium">浪漫</p>
+</button>
+</div>
+<button class="hidden md:flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-gray-400 hover:text-primary transition-colors px-4 py-2 rounded-lg hover:bg-white/5">
+<span>排序: 推荐</span>
+<span class="material-symbols-outlined text-[20px]">sort</span>
+</button>
+</section>
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<article class="flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-white/5 group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 h-full">
+<div class="relative w-full aspect-[16/9] overflow-hidden">
+<div class="w-full h-full bg-center bg-cover transform group-hover:scale-105 transition-transform duration-700" data-alt="Futuristic neon lit market street" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAD6rf37sLEhUcT6yzm0rJ20699WRs1xHI2B56TAJcdvRZkCBJQLl9fA7s19pju6SKSmZaecI8_MS5aLf-G1aRHJlbtuDEvVQ0iokT1zgPmxVmLt8nOdQVcxCi4Ioj5CyPsRPzw-US24I3h9HhGeM-Jfmo8Uud7MJJojkp3YTdxtKQPcqFZA3s51Eoaqihin9mj4vcX75JTXGZMoPwRNjyLEuNJWtgLfCeTaWCUMeMwgJQEPiMTRawP1jtXguSDPMHT6YNov2FVdbzQ");'>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dark/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-white uppercase tracking-wider border border-white/10 shadow-lg">
+                            人气推荐
+                        </div>
+</div>
+<div class="flex flex-col p-5 gap-4 flex-1">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-bold leading-tight group-hover:text-primary transition-colors">霓虹市集</h3>
+<div class="flex items-center text-yellow-500 text-xs gap-1 bg-yellow-500/10 px-2 py-1 rounded-md">
+<span class="material-symbols-outlined text-[14px] fill-current">star</span>
+<span class="font-bold">4.8</span>
+</div>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm leading-relaxed line-clamp-2">
+                                在巨型城市的阴暗腹地中游走，在这里，信息是唯一重要的货币。
+                            </p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#赛博朋克</span>
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#交易</span>
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#黑色电影</span>
+</div>
+<div class="pt-4 mt-auto border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+<span class="text-xs font-medium text-green-500 flex items-center gap-1 bg-green-500/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                免费体验
+                            </span>
+<button class="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-primary/20 flex items-center gap-2">
+<span>立即开始</span>
+<span class="material-symbols-outlined text-[18px]">login</span>
+</button>
+</div>
+</div>
+</article>
+<article class="flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-white/5 group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 h-full">
+<div class="relative w-full aspect-[16/9] overflow-hidden">
+<div class="w-full h-full bg-center bg-cover transform group-hover:scale-105 transition-transform duration-700" data-alt="Gloomy gothic manor" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDLaYj-P9ZwmpAgWS8EIZgsNsCgOadncKmoVDqWcJqQi8AXqlscO_StsvZOtndhUu49_eaZQnM2uZhvo_1GDhsFtpAv-o1GOrCtyzSWhPNBtOIDg9Tu10OplXEkXHzi2jNyoYyk15T3AhZs9Kbum--kG8KybS2X1aUo-K1F1INhkguJei9zECdklEoVwIA_5Zvzb98HR6YRRH_23zd5A-OhGVUruVJzvce7SN4y_PMWCmfqU4HzwdEAMpBsjEU5R1rUz9mP72nmk67T");'>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dark/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+</div>
+</div>
+<div class="flex flex-col p-5 gap-4 flex-1">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-bold leading-tight group-hover:text-primary transition-colors">猩红山庄</h3>
+<div class="flex items-center text-yellow-500 text-xs gap-1 bg-yellow-500/10 px-2 py-1 rounded-md">
+<span class="material-symbols-outlined text-[14px] fill-current">star</span>
+<span class="font-bold">4.9</span>
+</div>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm leading-relaxed line-clamp-2">
+                                经典的哥特式恐怖故事，秘密深埋在这座祖传老宅的墙壁之中。
+                            </p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#哥特</span>
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#恐怖</span>
+</div>
+<div class="pt-4 mt-auto border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+<span class="text-xs font-bold text-slate-400 line-through">150 积分</span>
+<button class="bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 text-slate-900 dark:text-white border border-gray-200 dark:border-white/10 text-sm font-bold py-2 px-5 rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">lock_open</span>
+<span>解锁 - 100</span>
+</button>
+</div>
+</div>
+</article>
+<article class="flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-white/5 group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 h-full">
+<div class="relative w-full aspect-[16/9] overflow-hidden">
+<div class="w-full h-full bg-center bg-cover transform group-hover:scale-105 transition-transform duration-700" data-alt="Sci-fi spaceship cockpit" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAeUyAEs5ziykSTd83MQDoQb0HX9GVqOGzMfmEwkyQzbjzF770bQ3mHfwk9O6cXYCSO8MseyEAiTnbycB_9kUqziGPsd9Wew9svEAaPk6QjgxJx-fatpPYJ2lpQk25zEI_SdvdYjTQDqZUmh-KreCFnRIhdbtMTTUTl5H2gUD1RPz1fkbkku3pX9VrP-X1BFH5QbqZL390rRsIkMNItGsXJi7lZlhnx0CsrhwURVLJ1XKQ7Hg55UzV75uPXmmUqFTNAeb65HIBUH0Kw");'>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dark/90 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+</div>
+<div class="absolute top-3 left-3 bg-primary text-white px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-lg">
+                            已购买
+                        </div>
+</div>
+<div class="flex flex-col p-5 gap-4 flex-1">
+<div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-xl font-bold leading-tight group-hover:text-primary transition-colors">星际战舰 Velox 9</h3>
+<div class="flex items-center text-yellow-500 text-xs gap-1 bg-yellow-500/10 px-2 py-1 rounded-md">
+<span class="material-symbols-outlined text-[14px] fill-current">star</span>
+<span class="font-bold">4.5</span>
+</div>
+</div>
+<p class="text-slate-500 dark:text-gray-400 text-sm leading-relaxed line-clamp-2">
+                                在深空绝境中求生。策略与资源管理是你生存的关键。
+                            </p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#科幻</span>
+<span class="px-2 py-1 rounded bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wide">#生存</span>
+</div>
+<div class="pt-4 mt-auto border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+<span class="text-xs font-medium text-slate-500 dark:text-gray-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">history</span>
+                                2小时前
+                            </span>
+<button class="bg-primary hover:bg-primary/90 text-white text-sm font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-primary/20 flex items-center gap-2">
+<span>继续游戏</span>
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+</button>
+</div>
+</div>
+</article>
+<article class="flex flex-col overflow-hidden rounded-2xl bg-slate-50 dark:bg-surface-dark/40 border border-dashed border-gray-300 dark:border-white/10 group hover:border-primary/50 transition-colors duration-300 h-full min-h-[400px]">
+<div class="flex flex-col items-center justify-center flex-1 text-center p-6 gap-3">
+<div class="w-16 h-16 rounded-full bg-slate-200 dark:bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px] text-gray-400 dark:text-white/20">add</span>
+</div>
+<h3 class="text-lg font-bold text-slate-400 dark:text-white/30">更多剧本</h3>
+<p class="text-sm text-slate-400 dark:text-white/20">敬请期待新世界上线</p>
+</div>
+</article>
+</section>
+</div>
+<aside class="hidden lg:flex lg:col-span-3 flex-col gap-6">
+<div class="rounded-2xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 p-6 shadow-sm">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-pink-500 p-[2px]">
+<img alt="User" class="w-full h-full rounded-full bg-surface-dark object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE-jJChtKiRP9v_aWq76eJJaaRXULl3MWUsNDmFbDNmCgPo3hVsDZMXUnHW7bcbzy20f4rX5gn_X3FpcKNMDEJibagIL-W9-PcteiSZMACvCgMUco_K7Ywe_t6dhOhLmYAYoYeAJAYD1eT4t_6RpKK4vRedqHema8zti4q2SITzmtZ8QZVR27GK821sD9Ol4c8-XO4NmmWJu9N5z86bcEn_rOThFU_db3j8F_49eILlNDP-h6kpuVt1QUa5t6g9qIp5l-9thSXQInX"/>
+</div>
+<div>
+<h3 class="font-bold text-lg text-slate-900 dark:text-white">探险家007</h3>
+<p class="text-xs text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full inline-block mt-1">Lv.12 剧情大师</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mb-5">
+<div class="bg-slate-50 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-100 dark:border-white/5">
+<span class="block text-xl font-bold text-slate-900 dark:text-white">12</span>
+<span class="text-[10px] text-slate-500 dark:text-gray-400 font-medium uppercase tracking-wide">已玩剧本</span>
+</div>
+<div class="bg-slate-50 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-100 dark:border-white/5">
+<span class="block text-xl font-bold text-slate-900 dark:text-white">500</span>
+<span class="text-[10px] text-slate-500 dark:text-gray-400 font-medium uppercase tracking-wide">积分余额</span>
+</div>
+</div>
+<button class="w-full py-2.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-white/10 transition-colors uppercase tracking-wider">
+                     进入个人中心
+                 </button>
+</div>
+<div class="rounded-2xl bg-white dark:bg-surface-dark border border-gray-200 dark:border-white/5 p-6 shadow-sm sticky top-24">
+<div class="flex items-center justify-between mb-5">
+<h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">trending_up</span>
+                         热门标签
+                     </h3>
+<a class="text-xs text-primary font-bold hover:underline" href="#">全部</a>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between group cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-6 text-center text-lg font-bold text-slate-300 dark:text-white/20 group-hover:text-primary transition-colors">1</span>
+<span class="text-sm font-medium text-slate-700 dark:text-gray-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">赛博朋克 2077</span>
+</div>
+<span class="text-xs text-slate-400 dark:text-gray-500 font-medium">2.1k</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-6 text-center text-lg font-bold text-slate-300 dark:text-white/20 group-hover:text-primary transition-colors">2</span>
+<span class="text-sm font-medium text-slate-700 dark:text-gray-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">克苏鲁神话</span>
+</div>
+<span class="text-xs text-slate-400 dark:text-gray-500 font-medium">1.8k</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-6 text-center text-lg font-bold text-slate-300 dark:text-white/20 group-hover:text-primary transition-colors">3</span>
+<span class="text-sm font-medium text-slate-700 dark:text-gray-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">校园恋爱</span>
+</div>
+<span class="text-xs text-slate-400 dark:text-gray-500 font-medium">1.5k</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+<div class="flex items-center gap-3">
+<span class="w-6 text-center text-lg font-bold text-slate-300 dark:text-white/20 group-hover:text-primary transition-colors">4</span>
+<span class="text-sm font-medium text-slate-700 dark:text-gray-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">末日生存</span>
+</div>
+<span class="text-xs text-slate-400 dark:text-gray-500 font-medium">1.2k</span>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-gray-100 dark:border-white/5">
+<h4 class="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest mb-4">系统公告</h4>
+<div class="flex gap-3 items-start p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center shrink-0 text-primary">
+<span class="material-symbols-outlined text-[18px]">campaign</span>
+</div>
+<div>
+<p class="text-xs font-bold text-slate-700 dark:text-gray-200 leading-tight">遗忘的废墟 v1.2 更新</p>
+<p class="text-[10px] text-slate-400 mt-1 leading-normal">增加了新的隐藏结局和3个新角色，修复了部分对话逻辑。</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+
+</body></html>

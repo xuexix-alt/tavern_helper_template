@@ -2,33 +2,33 @@
   <div class="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
-        <i class="fas fa-compass text-violet-300"></i>
-        发现 · 快捷浏览
+        <span class="material-symbols-outlined text-violet-300">explore</span>
+        {{ ui.discoverQuickPanel.title }}
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button
           class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
           @click="triggerImport"
         >
-          导入 JSON
+          {{ ui.discoverQuickPanel.actions.import }}
         </button>
         <button
           class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
           @click="exportShops"
         >
-          导出 JSON
+          {{ ui.discoverQuickPanel.actions.export }}
         </button>
         <button
           class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-1 text-xs text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
           @click="openDiscover"
         >
-          打开发现页
+          {{ ui.discoverQuickPanel.actions.open }}
         </button>
       </div>
     </div>
 
     <div class="mt-3 text-[11px] text-slate-400">
-      这里快速查看店铺并选择默认套餐，详细筛选与导入也可在 Discover 页面完成。
+      {{ ui.discoverQuickPanel.hint }}
     </div>
 
     <div class="mt-4 space-y-2">
@@ -36,7 +36,7 @@
         v-if="shops.length === 0"
         class="rounded-xl border border-slate-700/50 bg-slate-900/30 p-3 text-xs text-slate-400"
       >
-        暂无店铺，请先在 Play 中输入“生成/搜索”或前往首页触发生成。
+        {{ ui.discoverQuickPanel.empty }}
       </div>
 
       <button
@@ -48,11 +48,11 @@
         <span class="min-w-0">
           <span class="block truncate font-semibold">{{ shop.shopname || shop.name || '未命名店铺' }}</span>
           <span class="block truncate text-[11px] text-slate-400">
-            {{ (shop.shoptags || []).slice(0, 3).join(' / ') || '暂无标签' }}
+            {{ (shop.shoptags || []).slice(0, 3).join(' / ') || ui.discoverQuickPanel.emptyTag }}
           </span>
         </span>
         <span class="shrink-0 text-[11px] text-slate-500">
-          {{ Array.isArray(shop.packages) ? shop.packages.length : 0 }} 套餐
+          {{ Array.isArray(shop.packages) ? shop.packages.length : 0 }} {{ ui.discoverQuickPanel.packages }}
         </span>
       </button>
     </div>
@@ -66,12 +66,14 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { shopStoreMvu, type AppShop } from '../shared/shopStoreMvu';
 import { setSelectedPackageFromShop } from '../shared/selectedPackage';
+import uiSpec from '../shared/ui-spec-for-designers.json';
 
 const router = useRouter();
 const shops = ref<AppShop[]>([]);
 const fileInput = ref<HTMLInputElement | null>(null);
 const MAX_IMPORT_ITEMS = 200;
 const MAX_IMPORT_SIZE_MB = 5;
+const ui = uiSpec.uiTexts;
 
 function loadShops() {
   shops.value = shopStoreMvu.getShops() || [];

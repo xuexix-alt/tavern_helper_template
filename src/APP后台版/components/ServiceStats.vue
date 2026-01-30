@@ -4,14 +4,14 @@
   >
     <div class="mb-6 flex items-center justify-between">
       <h3 class="text-white">经济概览</h3>
-      <i class="fas fa-chart-line text-green-400"></i>
+      <span class="material-symbols-outlined text-green-400">analytics</span>
     </div>
 
     <div class="space-y-4">
       <div class="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <i class="fas fa-dollar-sign text-green-400"></i>
+            <span class="material-symbols-outlined text-green-400">payments</span>
             <span class="text-sm text-slate-400">账户余额</span>
           </div>
           <span class="text-white">{{ balanceText }}</span>

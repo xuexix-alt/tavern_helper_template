@@ -2,7 +2,7 @@
   <div class="mini-panel" @click.stop>
     <div class="mini-head">
       <div class="mini-title">
-        <i class="fas fa-layer-group"></i>
+        <span class="material-symbols-outlined">layers</span>
         <div>
           <div class="title">面板小窗</div>
           <div class="sub">{{ appModeLabel }}</div>
@@ -10,11 +10,11 @@
       </div>
       <div class="mini-actions">
         <button class="mini-btn" @click="expand">
-          <i class="fas fa-up-right-and-down-left-from-center"></i>
+          <span class="material-symbols-outlined">open_in_full</span>
           展开
         </button>
         <button class="mini-btn danger" @click="close">
-          <i class="fas fa-times"></i>
+          <span class="material-symbols-outlined">close</span>
           关闭
         </button>
       </div>
@@ -28,7 +28,7 @@
         :class="{ active: activeTab === tab.id }"
         @click="activeTab = tab.id"
       >
-        <i :class="tab.icon"></i>
+        <span class="material-symbols-outlined">{{ tab.icon }}</span>
         <span>{{ tab.label }}</span>
       </button>
     </div>
@@ -41,26 +41,13 @@
       <div v-else-if="activeTab === 'discover'" class="mini-section">
         <DiscoverQuickPanel />
       </div>
-      <div v-else class="mini-section">
-        <div class="mini-card">
-          <div class="mini-card-title">
-            <i class="fas fa-history"></i>
-            历史订单
-          </div>
-          <div class="mini-card-desc">独立弹窗展示，便于复购与回看。</div>
-          <button class="mini-primary" @click="openHistory">
-            <i class="fas fa-up-right-from-square"></i>
-            打开历史
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { historyOverlayOpen, playPanelsMini, playPanelsOpen } from '../shared/uiState';
+import { playPanelsMini, playPanelsOpen } from '../shared/uiState';
 import ServiceStatus from './ServiceStatus.vue';
 import ServiceStats from './ServiceStats.vue';
 import DiscoverQuickPanel from './DiscoverQuickPanel.vue';
@@ -70,27 +57,22 @@ const showStorePanels = computed(() => isAppMode.value || isMixedMode.value);
 
 const tabs = computed(() => {
   const base = [
-    { id: 'status', label: '状态', icon: 'fas fa-user-shield' },
-    { id: 'discover', label: '发现', icon: 'fas fa-compass' },
-    { id: 'history', label: '历史', icon: 'fas fa-history' },
+    { id: 'status', label: '状态', icon: 'shield' },
+    { id: 'discover', label: '发现', icon: 'explore' },
   ];
   if (!showStorePanels.value) {
-    return base.filter(t => t.id !== 'discover' && t.id !== 'history');
+    return base.filter(t => t.id !== 'discover');
   }
   return base;
 });
 
-const activeTab = ref<'status' | 'discover' | 'history'>('status');
+const activeTab = ref<'status' | 'discover'>('status');
 
 watch(tabs, next => {
   if (!next.find(t => t.id === activeTab.value)) {
     activeTab.value = (next[0]?.id as any) || 'status';
   }
 });
-
-function openHistory() {
-  historyOverlayOpen.value = true;
-}
 
 function expand() {
   playPanelsOpen.value = true;
@@ -108,15 +90,15 @@ function close() {
   right: 16px;
   bottom: 16px;
   z-index: 5100;
-  width: min(360px, 92vw);
+  width: min(320px, 92vw);
   border-radius: 18px;
   border: 1px solid rgba(59, 130, 246, 0.25);
   background: linear-gradient(135deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.98));
   box-shadow: 0 25px 50px rgba(15, 23, 42, 0.55);
-  padding: 12px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mini-head {
@@ -135,10 +117,14 @@ function close() {
   i {
     color: #93c5fd;
   }
+
+  .material-symbols-outlined {
+    color: #93c5fd;
+  }
 }
 
 .mini-title .title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -154,11 +140,11 @@ function close() {
 
 .mini-btn {
   border-radius: 10px;
-  padding: 6px 8px;
+  padding: 5px 7px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   background: rgba(30, 41, 59, 0.6);
   color: #e2e8f0;
-  font-size: 11px;
+  font-size: 10px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -180,11 +166,11 @@ function close() {
   align-items: center;
   gap: 6px;
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(15, 23, 42, 0.85);
   color: rgba(226, 232, 240, 0.8);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -197,49 +183,13 @@ function close() {
 .mini-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mini-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.mini-card {
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(15, 23, 42, 0.75);
-  padding: 12px;
-  color: #e2e8f0;
-}
-
-.mini-card-title {
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.mini-card-desc {
-  font-size: 11px;
-  color: rgba(226, 232, 240, 0.6);
-  margin-bottom: 8px;
-}
-
-.mini-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  background: rgba(59, 130, 246, 0.2);
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 8px;
 }
 
 @media (max-width: 640px) {

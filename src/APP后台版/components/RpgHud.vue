@@ -16,19 +16,19 @@
         <span
           class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
         >
-          <i class="fas fa-coins text-yellow-300"></i>
+          <span class="material-symbols-outlined text-yellow-300">paid</span>
           <span>{{ balanceText }}</span>
         </span>
         <span
           class="inline-flex min-w-0 items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
         >
-          <i class="fas fa-user-shield text-blue-300"></i>
+          <span class="material-symbols-outlined text-blue-300">shield</span>
           <span class="truncate">{{ currentGirlText }}</span>
         </span>
         <span
           class="inline-flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/40 px-2 py-0.5"
         >
-          <i class="fas fa-heartbeat text-red-300"></i>
+          <span class="material-symbols-outlined text-red-300">favorite</span>
           <span>{{ heartbeatText }}</span>
         </span>
       </div>
@@ -40,7 +40,7 @@
       @click="refresh"
       title="刷新状态"
     >
-      <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+      <span class="material-symbols-outlined" :class="{ spin: loading }">sync</span>
       <span class="ml-2 hidden sm:inline">刷新</span>
     </button>
   </div>
@@ -135,3 +135,15 @@ onUnmounted(() => {
   if (timer) window.clearInterval(timer);
 });
 </script>
+
+<style scoped>
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

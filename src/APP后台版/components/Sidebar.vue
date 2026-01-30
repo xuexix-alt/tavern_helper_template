@@ -5,8 +5,8 @@
     <!-- Logo -->
     <div
       class="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg shadow-blue-500/25 transition-transform hover:scale-105"
-      @click="navigate('/play')"
-      title="Go to Play"
+      @click="openPanelsFromLogo"
+      :title="ui.panelTitles.quickPanel"
     >
       <div class="h-6 w-6 rounded-sm bg-white"></div>
     </div>
@@ -25,13 +25,12 @@
             : 'border border-slate-700/50 bg-slate-800/50 hover:border-blue-500/30 hover:bg-slate-700/50',
         ]"
       >
-        <i
-          :class="[
-            item.icon,
-            'text-lg transition-colors duration-300',
-            isActive(item) ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-400',
-          ]"
-        ></i>
+        <span
+          class="material-symbols-outlined text-lg transition-colors duration-300"
+          :class="[isActive(item) ? 'text-blue-400' : 'text-slate-400 group-hover:text-blue-400']"
+        >
+          {{ item.icon }}
+        </span>
         <div
           v-if="isActive(item)"
           class="absolute top-1/2 -right-1 h-6 w-1 -translate-y-1/2 transform rounded-full bg-gradient-to-b from-blue-400 to-violet-500"
@@ -46,13 +45,12 @@
         class="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-800/50 transition-all duration-300 hover:border-blue-500/30 hover:bg-slate-700/50"
         :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
       >
-        <i
-          :class="[
-            'fas',
-            isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-blue-400',
-            'text-lg transition-colors duration-300',
-          ]"
-        ></i>
+        <span
+          class="material-symbols-outlined text-lg transition-colors duration-300"
+          :class="isDark ? 'text-yellow-400' : 'text-blue-400'"
+        >
+          {{ isDark ? 'light_mode' : 'dark_mode' }}
+        </span>
       </button>
     </div>
   </div>
@@ -61,31 +59,29 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { marketplaceOpen, playPanelsOpen } from '../shared/uiState';
+import { playPanelsOpen, shopOverlayOpen } from '../shared/uiState';
+import uiSpec from '../shared/ui-spec-for-designers.json';
 
 const router = useRouter();
 const route = useRoute();
 const isDark = ref(false);
+const ui = uiSpec.uiTexts;
 
 const menuItems = [
-  { icon: 'fas fa-gamepad', label: 'Play', path: '/play' },
-  { icon: 'fas fa-home', label: 'Home', path: '/home' },
-  { icon: 'fas fa-store', label: 'Market', action: 'market' },
-  { icon: 'fas fa-layer-group', label: 'Panels', action: 'panels' },
-  { icon: 'fas fa-concierge-bell', label: 'Service', path: '/service' },
-  { icon: 'fas fa-compass', label: 'Discover', path: '/discover' },
+  { icon: 'home', label: ui.navigation.home, path: '/home' },
+  { icon: 'storefront', label: ui.navigation.market, action: 'market' },
+  { icon: 'room_service', label: ui.navigation.service, path: '/service' },
+  { icon: 'explore', label: ui.navigation.discover, path: '/discover' },
 ];
+
+function openPanelsFromLogo() {
+  playPanelsOpen.value = true;
+  if (route.path !== '/play') router.push('/play');
+}
 
 function navigate(path: string, action?: string) {
   if (action === 'market') {
-    marketplaceOpen.value = !marketplaceOpen.value;
-    if (route.path !== '/play') {
-      router.push('/play');
-    }
-    return;
-  }
-  if (action === 'panels') {
-    playPanelsOpen.value = !playPanelsOpen.value;
+    shopOverlayOpen.value = true;
     if (route.path !== '/play') {
       router.push('/play');
     }
@@ -95,8 +91,7 @@ function navigate(path: string, action?: string) {
 }
 
 function isActive(item: { path?: string; action?: string }) {
-  if (item.action === 'market') return marketplaceOpen.value && route.path === '/play';
-  if (item.action === 'panels') return playPanelsOpen.value;
+  if (item.action === 'market') return shopOverlayOpen.value && route.path === '/play';
   return item.path ? route.path === item.path : false;
 }
 

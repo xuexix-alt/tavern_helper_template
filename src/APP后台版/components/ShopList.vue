@@ -6,12 +6,12 @@
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
-          <i class="fas fa-store"></i>
+          <span class="material-symbols-outlined">storefront</span>
         </div>
-        <h3 class="text-lg font-bold tracking-wide text-white">MARKETPLACE</h3>
+        <h3 class="text-lg font-bold tracking-wide text-white">{{ ui.marketplace.title }}</h3>
       </div>
       <span class="rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400/80"
-        >{{ packageItems.length }} PACKAGES</span
+        >{{ packageItems.length }} {{ ui.marketplace.packagesCount }}</span
       >
     </div>
 
@@ -39,8 +39,7 @@
             :class="item.selected ? 'border-blue-500/50' : 'border-slate-700 group-hover:border-green-500/50'"
           >
             <div class="flex h-full w-full items-center justify-center bg-slate-900/50 text-slate-100">
-              <i v-if="item.icon" :class="item.icon"></i>
-              <i v-else class="fas fa-box"></i>
+              <span class="material-symbols-outlined">{{ packageIcon(item.icon) }}</span>
             </div>
           </div>
           <div
@@ -59,7 +58,7 @@
             <span
               class="flex items-center space-x-1 rounded border border-green-500/20 bg-green-900/20 px-1.5 py-0.5 text-xs font-bold text-green-400"
             >
-              <i class="fas fa-yen-sign text-[10px]"></i>
+              <span class="material-symbols-outlined text-[14px]">currency_yen</span>
               <span>{{ item.price }}</span>
             </span>
           </div>
@@ -78,8 +77,8 @@
       class="group flex w-full items-center justify-center space-x-2 rounded-xl border border-dashed border-slate-600 bg-transparent py-3 text-sm font-medium text-slate-400 transition-all hover:border-green-500/50 hover:bg-green-500/5 hover:text-green-400"
       @click="refreshData"
     >
-      <span>刷新数据</span>
-      <i class="fas fa-sync-alt transition-transform group-hover:translate-x-1"></i>
+      <span>{{ ui.marketplace.refresh }}</span>
+      <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">sync</span>
     </button>
   </div>
 </template>
@@ -88,6 +87,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { shopStoreMvu } from '../shared/shopStoreMvu';
 import { selectedPackage, setSelectedPackageFromShop, refreshSelectedPackageFromMvu } from '../shared/selectedPackage';
+import uiSpec from '../shared/ui-spec-for-designers.json';
 
 type PackageItem = {
   key: string;
@@ -103,6 +103,20 @@ type PackageItem = {
 };
 
 const shops = ref<any[]>([]);
+const ui = uiSpec.uiTexts;
+
+function packageIcon(icon?: string) {
+  const raw = String(icon || '').toLowerCase();
+  if (raw.includes('user') || raw.includes('person')) return 'person';
+  if (raw.includes('camera')) return 'photo_camera';
+  if (raw.includes('tshirt') || raw.includes('shirt')) return 'checkroom';
+  if (raw.includes('heart')) return 'favorite';
+  if (raw.includes('gift')) return 'redeem';
+  if (raw.includes('ticket')) return 'confirmation_number';
+  if (raw.includes('box')) return 'inventory_2';
+  if (raw.includes('store')) return 'storefront';
+  return 'local_mall';
+}
 
 async function refreshData() {
   try {

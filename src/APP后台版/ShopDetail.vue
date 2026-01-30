@@ -2,8 +2,8 @@
   <div class="app-view active">
     <div class="app-header">
       <div class="title">
-        <i class="fas fa-arrow-left" @click="$router.back()"></i>
-        <span>店铺详情</span>
+        <span class="material-symbols-outlined back-icon" @click="$router.back()">arrow_back</span>
+        <span>{{ ui.pageTitles.shopDetail }}</span>
       </div>
     </div>
 
@@ -11,25 +11,25 @@
       <div class="shop-header-card">
         <div class="shop-avatar-text">
           <i v-if="shopPackages.find(p => p.icon)" :class="shopPackages.find(p => p.icon).icon"></i>
-          <i v-else class="fas fa-store"></i>
+          <span v-else class="material-symbols-outlined">storefront</span>
         </div>
         <div class="shop-name">{{ shopInfo?.shopname || shopInfo?.name || '未命名店铺' }}</div>
         <div class="shop-slogan">{{ shopInfo?.slogan || (shopInfo?.shoptags || []).join(' / ') || '优质服务' }}</div>
       </div>
 
       <div class="restore-tip">
-        <i class="fas fa-undo-alt"></i>
-        <span>误删店铺可回到原页面点击卡片重新找回</span>
+        <span class="material-symbols-outlined">undo</span>
+        <span>{{ ui.shopDetail.tips.restore }}</span>
       </div>
 
       <div class="list-section">
         <div class="section-header">
-          <h3>精选套餐</h3>
+          <h3>{{ ui.shopDetail.sections.featuredPackages }}</h3>
         </div>
         <div class="package-list">
           <div v-if="shopPackages.length === 0" class="empty-state">
-            <i class="fas fa-box-open"></i>
-            <p>该店铺暂无套餐</p>
+            <span class="material-symbols-outlined">inventory_2</span>
+            <p>{{ ui.shopDetail.states.emptyPackages }}</p>
           </div>
           <div
             v-for="pkg in shopPackages"
@@ -60,12 +60,12 @@
 
     <div class="nav-bar">
       <div class="nav-item" @click="$router.push('/home')">
-        <i class="fas fa-home"></i>
-        <span>首页</span>
+        <span class="material-symbols-outlined">home</span>
+        <span>{{ ui.navigation.home }}</span>
       </div>
       <div class="nav-item" @click="$router.push('/discover')">
-        <i class="fas fa-compass"></i>
-        <span>发现</span>
+        <span class="material-symbols-outlined">explore</span>
+        <span>{{ ui.navigation.discover }}</span>
       </div>
     </div>
   </div>
@@ -75,11 +75,13 @@
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { shopStoreMvu } from './shared/shopStoreMvu';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 const route = useRoute();
 const router = useRouter();
 const shopInfo = ref<any>(null);
 const shopPackages = ref<any[]>([]);
+const ui = uiSpec.uiTexts;
 
 type StoredShop = Record<string, any> & { id: string; packages?: any[]; __savedAt?: number };
 const SHOP_STORE_KEY = 'shop_store_cache';
@@ -156,6 +158,20 @@ function goItemDetail(pkg: any) {
       transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       padding: 4px;
       border-radius: 6px;
+
+      &:hover {
+        background-color: var(--accent-light);
+        transform: scale(1.1) rotate(-5deg);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    .back-icon {
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      padding: 4px;
+      border-radius: 6px;
+      font-size: 22px;
 
       &:hover {
         background-color: var(--accent-light);
@@ -309,6 +325,11 @@ function goItemDetail(pkg: any) {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 
   i {
+    color: var(--accent-primary);
+    font-size: 1rem;
+  }
+
+  .material-symbols-outlined {
     color: var(--accent-primary);
     font-size: 1rem;
   }
@@ -541,6 +562,11 @@ function goItemDetail(pkg: any) {
         color: var(--accent-primary);
         transform: scale(1.15) translateY(-2px);
       }
+
+      .material-symbols-outlined {
+        color: var(--accent-primary);
+        transform: scale(1.15) translateY(-2px);
+      }
     }
 
     &:hover:not(.active) {
@@ -565,6 +591,12 @@ function goItemDetail(pkg: any) {
   color: var(--text-placeholder);
 
   i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .material-symbols-outlined {
     font-size: 2.5rem;
     margin-bottom: 12px;
     opacity: 0.4;

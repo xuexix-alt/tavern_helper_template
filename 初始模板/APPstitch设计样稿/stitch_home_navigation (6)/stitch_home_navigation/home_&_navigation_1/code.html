@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>首页导航 - AIRP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7f13ec",
+                        "background-light": "#f7f6f8",
+                        "background-dark": "#0F0B15",
+                        "glass-dark": "rgba(25, 16, 34, 0.7)",
+                        "glass-border": "rgba(255, 255, 255, 0.1)",
+                    },
+                    fontFamily: {
+                        "display": ["Spline Sans", "Noto Sans SC", "sans-serif"],
+                        "sans": ["Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.375rem",
+                        "md": "0.375rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-panel {
+            background: rgba(30, 20, 45, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-nav {
+            background: rgba(15, 11, 21, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-glow {
+            box-shadow: 0 0 15px rgba(127, 19, 236, 0.3);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-sans antialiased selection:bg-primary selection:text-white overflow-x-hidden">
+<div class="relative flex min-h-screen w-full flex-col pb-24">
+<header class="flex items-center justify-between px-5 pt-8 pb-2">
+<div class="flex items-center gap-3">
+<div class="relative size-10 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/20">
+<div class="h-full w-full bg-cover bg-center" data-alt="User avatar profile picture abstract colorful" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBklRZxFLoZtK2mV9gKtJeXvd8hYYNGwJeu5uBgtmfX7eHg2gzdvTMD93ZADig3T6AduT1_o14CNGA957eLifKZtn3e3-hO_WN_PxhpLAQjnocLJUngrTyFDSrC3Ic53v_1wH7lpA8hPTa5eqvZgNTfIRUyz_nXoPanQjhcFyvOZ2k2IWKWO1mbrO_ip7_f-XXlgNYBNHTt1ccsYVV5TYR8X7vgZUNBIiQsq0H-1f9mqvl5F0z0QQtjdYhzRT8svJ_FUJzkXQYz772U");'>
+</div>
+<div class="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background-dark"></div>
+</div>
+<div>
+<p class="text-xs font-medium text-slate-400 uppercase tracking-wider">欢迎回来</p>
+<h2 class="text-sm font-bold text-white leading-tight">旅行者 #4092</h2>
+</div>
+</div>
+<button class="flex items-center justify-center size-10 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-white" style="font-size: 24px;">notifications</span>
+</button>
+</header>
+<div class="px-5 pt-6 pb-4">
+<h1 class="text-4xl font-extrabold leading-[1.3] tracking-tight text-white">
+                探索无限可能的 <br/>
+<span class="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-400 to-indigo-400">AI 剧本世界</span>
+</h1>
+</div>
+<div class="px-5 py-2 sticky top-0 z-20">
+<div class="relative group">
+<div class="absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+<div class="relative flex items-center w-full h-12 rounded-xl glass-panel px-4 transition-all">
+<span class="material-symbols-outlined text-primary/80 mr-3">search</span>
+<input class="flex-1 bg-transparent border-none text-white placeholder-slate-400 focus:ring-0 text-sm font-medium h-full" placeholder="搜索剧本、世界或风格" type="text"/>
+<button class="p-1 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">mic</span>
+</button>
+</div>
+</div>
+</div>
+<div class="w-full py-6">
+<div class="flex items-center justify-between px-5 mb-3">
+<h3 class="text-white text-lg font-bold">选择你的风格</h3>
+<button class="text-xs text-primary font-semibold hover:text-purple-300">查看全部</button>
+</div>
+<div class="flex gap-3 px-5 overflow-x-auto hide-scrollbar pb-2">
+<button class="flex shrink-0 items-center gap-2 rounded-full bg-primary neon-glow px-5 py-2.5 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-white text-[18px]">auto_fix</span>
+<span class="text-white text-sm font-medium">奇幻</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-2.5 hover:bg-white/10 transition-all active:scale-95">
+<span class="material-symbols-outlined text-cyan-400 text-[18px]">memory</span>
+<span class="text-white text-sm font-medium">赛博朋克</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-2.5 hover:bg-white/10 transition-all active:scale-95">
+<span class="material-symbols-outlined text-red-400 text-[18px]">local_bar</span>
+<span class="text-white text-sm font-medium">黑色电影</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-2.5 hover:bg-white/10 transition-all active:scale-95">
+<span class="material-symbols-outlined text-yellow-400 text-[18px]">rocket_launch</span>
+<span class="text-white text-sm font-medium">科幻</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 rounded-full bg-white/5 border border-white/10 px-5 py-2.5 hover:bg-white/10 transition-all active:scale-95">
+<span class="material-symbols-outlined text-purple-400 text-[18px]">skull</span>
+<span class="text-white text-sm font-medium">恐怖</span>
+</button>
+</div>
+</div>
+<section class="mb-6">
+<div class="px-5 mb-4">
+<h2 class="text-xl font-bold text-white tracking-tight">正在流行</h2>
+<p class="text-xs text-slate-400">本周热门剧本</p>
+</div>
+<div class="flex overflow-x-auto hide-scrollbar px-5 gap-4 pb-4 snap-x snap-mandatory">
+<div class="snap-center relative shrink-0 w-[280px] h-[380px] rounded-2xl overflow-hidden group cursor-pointer ring-1 ring-white/10">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Futuristic neon city street with rain at night cyberpunk style" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAFPknGshFD8GS1eXxYhLba-mBE_6UZDmUz8yisPeNW6K_SDam3FRWGocwT6AhFBhzllA1uTVbQpDPLZq6GWoQ65HmvVbsOIDo0S62M9tiuRwE2UTxCc5D2laFLrwZOJmu4drnTR-BNXlV_2qo46UalX29kdaJR3vqsXd7HSKqqD8NroUE0ZS-74tv0_fgrnVsMtzS0rPnWIUgDg6XkTRMLqkfkCiWRSoTsNEl358x96MZo3O8tU2l2NXly_EKCIb3XJ7o9326nGrCy');">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/60 to-transparent"></div>
+<div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md flex items-center gap-1 border border-white/10">
+<span class="material-symbols-outlined text-yellow-400 text-[14px] fill-1">star</span>
+<span class="text-xs font-bold text-white">4.9</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-5">
+<div class="flex flex-col gap-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-cyan-400">赛博朋克</span>
+<h3 class="text-2xl font-bold text-white leading-tight">霓虹侦探</h3>
+<p class="text-xs text-slate-300 line-clamp-2 mb-3">在不夜城中破解谜案，这里的记忆可以买卖。</p>
+<button class="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-bold text-sm transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                                进入世界
+                            </button>
+</div>
+</div>
+</div>
+<div class="snap-center relative shrink-0 w-[280px] h-[380px] rounded-2xl overflow-hidden group cursor-pointer ring-1 ring-white/10">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Medieval fantasy castle on a floating island with dragons" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCB5uHFIxp-OS_tBPCSIWT470KZ-9-9ImGFzun0TET9G6FWNEb7zkYMWXTqrB_CWyUG_XxQtO6yFt7Ml7_R4gEL-w3HXYZbJCZqFL3DEzIR4Y49tbSr5s1QfkrHaSWJC8Q-TcgLIhmi1ZxN8BT1GitkGuX_s2lupggEHZTugsurLcDHkS_pmt7emf5ebbQAb2VaDpNHhcH4qjiWYHkGyoj-8yJp288JBHMJQjok5seLQawa1IFwWT2CnECVsDhs-hbukUYYLl67fMd6');">
+</div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/60 to-transparent"></div>
+<div class="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md flex items-center gap-1 border border-white/10">
+<span class="material-symbols-outlined text-yellow-400 text-[14px] fill-1">star</span>
+<span class="text-xs font-bold text-white">4.7</span>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-5">
+<div class="flex flex-col gap-2">
+<span class="text-[10px] font-bold uppercase tracking-widest text-amber-400">高魔奇幻</span>
+<h3 class="text-2xl font-bold text-white leading-tight">龙之契约</h3>
+<p class="text-xs text-slate-300 line-clamp-2 mb-3">与古兽结盟，拯救漂浮的艾瑟加德王国。</p>
+<button class="w-full py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/20 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                                进入世界
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="px-5">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold text-white tracking-tight">最新上架</h2>
+<button class="text-xs text-primary font-semibold hover:text-purple-300">查看全部</button>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer group">
+<div class="shrink-0 size-20 rounded-lg overflow-hidden bg-slate-800 relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Spooky abandoned victorian mansion in fog" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD2MpHW5Ist3HYYPqmKWL1CRFG09G8v7FHKe3r8Rw48Z9rwZHIsf1VHuxe8R9LV7VBQ5xPnFxHjq6UTFOSh8wjbXGDM66gWtmiuBPfpOIwy8AbG2-VV3-WeWaI9yDGjT9dCYvdpBPcFVgiZQlwGPkCvydmXY44vPo3QThuaPEkIN-GvAsUfl8urjGYNB1oJlL7B2cp2Qbric7-Cd0jc52RO8FptN21JHjZlxPUQm2jfTWHeRysq-edAt_XMbjL08H78ORCRxgBA4VxC');">
+</div>
+</div>
+<div class="flex flex-col justify-center flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wide">悬疑</span>
+<span class="text-[10px] text-slate-500">•</span>
+<span class="text-[10px] text-slate-400">2小时前添加</span>
+</div>
+<h4 class="text-white font-bold text-base truncate group-hover:text-primary transition-colors">午夜庄园</h4>
+<p class="text-xs text-slate-400 line-clamp-1 mt-1">继承一座充满不可告人秘密的老宅。</p>
+</div>
+<div class="flex items-center justify-center shrink-0 pr-1">
+<button class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer group">
+<div class="shrink-0 size-20 rounded-lg overflow-hidden bg-slate-800 relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Cozy coffee shop interior anime style" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBhqCgn6Mfs1vmywRD3y6cmI0IWJJJmExIeqGPCN26fMmP8E6ns_AXmAfRIPOPtltY3OyoEiq6kwLihfd22KEpLSEFGjglua5QOHcO5aKbAfeoB44k0QuCgSK4MLRvSSDI0jq7QWIrBBLQEuw0TfoV9f-G4ZD7egCFYy_5GxDS3sLRiRVG5pVSocgpOrsbQ4Ixj19SZuNBq2Zjosi3VyFv08Z4kYgmPVhXie86yrQ6Nt7ImHEBTRzvxOr623AQhTjd2yAghgBnwoECu');">
+</div>
+</div>
+<div class="flex flex-col justify-center flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 font-bold uppercase tracking-wide">生活流</span>
+<span class="text-[10px] text-slate-500">•</span>
+<span class="text-[10px] text-slate-400">5小时前添加</span>
+</div>
+<h4 class="text-white font-bold text-base truncate group-hover:text-primary transition-colors">猫咪咖啡馆</h4>
+<p class="text-xs text-slate-400 line-clamp-1 mt-1">经营一家猫咖，聆听各路客人的奇妙故事。</p>
+</div>
+<div class="flex items-center justify-center shrink-0 pr-1">
+<button class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="flex gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer group">
+<div class="shrink-0 size-20 rounded-lg overflow-hidden bg-slate-800 relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Spaceship cockpit looking out at stars" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDcjIZyNVPONBvrfgdNeB1KsE_sJMrc0gX_HCCDuJHmtG-lNzriwQ7KKa_fK86VLxw6Jev2Zg97l8lFPz1MCSHCYS5x7Q6fbSrEcgtYcCczp255Iz4LWpDMiHyD-8y2aw8WiQfUCFdfrTV6XH5B0Lp2l3RB4iwwZO-gO_oOPUE7nuXmrKvHODSP68soO-RySz-h51VmRtMGtDHw9EMpJ94Cbe11UDYMSaWyENaRYIm_a5OXhoJB53Qube5n3Fya5j8rFrFS_UQCzLdJ');">
+</div>
+</div>
+<div class="flex flex-col justify-center flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold uppercase tracking-wide">科幻</span>
+<span class="text-[10px] text-slate-500">•</span>
+<span class="text-[10px] text-slate-400">1天前添加</span>
+</div>
+<h4 class="text-white font-bold text-base truncate group-hover:text-primary transition-colors">星舰逃亡</h4>
+<p class="text-xs text-slate-400 line-clamp-1 mt-1">指挥人类最后的舰队，逃离即将熄灭的恒星。</p>
+</div>
+<div class="flex items-center justify-center shrink-0 pr-1">
+<button class="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<nav class="fixed bottom-0 w-full glass-nav z-50 pb-[env(safe-area-inset-bottom)]">
+<div class="flex justify-around items-center h-[64px] px-2">
+<button class="flex flex-col items-center justify-center w-full h-full gap-1 text-primary group">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">home</span>
+<span class="text-[10px] font-medium">首页</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-400 hover:text-white transition-colors group">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">explore</span>
+<span class="text-[10px] font-medium">发现</span>
+</button>
+<div class="relative w-full h-full flex justify-center items-center -mt-6">
+<button class="size-14 rounded-full bg-primary text-white neon-glow flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-400 hover:text-white transition-colors group">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">history_edu</span>
+<span class="text-[10px] font-medium">进行中</span>
+</button>
+<button class="flex flex-col items-center justify-center w-full h-full gap-1 text-slate-400 hover:text-white transition-colors group">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">history</span>
+<span class="text-[10px] font-medium">历史</span>
+</button>
+</div>
+<div class="h-[env(safe-area-inset-bottom)] w-full"></div>
+</nav>
+
+</body></html>

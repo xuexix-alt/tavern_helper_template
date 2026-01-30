@@ -4,8 +4,8 @@
     class="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-slate-900/80 to-black/60 p-4 shadow-2xl shadow-purple-500/10 backdrop-blur-xl"
   >
     <div class="mb-4 flex items-center gap-2">
-      <i class="fas fa-images text-purple-400"></i>
-      <h3 class="text-white">套餐写真</h3>
+      <span class="material-symbols-outlined text-purple-400">photo_library</span>
+      <h3 class="text-white">{{ ui.packageImages.title }}</h3>
       <div class="ml-auto text-xs text-slate-500">{{ subtitle }}</div>
     </div>
 
@@ -14,6 +14,7 @@
         v-for="(slot, idx) in slots"
         :key="slot.key"
         class="group relative aspect-square overflow-hidden rounded-xl border border-slate-700/50 bg-slate-950/40 text-left transition-all hover:border-purple-500/40 hover:bg-slate-900/60"
+        :class="slot.kind === 'image' ? '' : 'image-placeholder'"
         @click="open(idx)"
       >
         <img
@@ -27,11 +28,11 @@
           <div
             class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700/50 bg-slate-900/40 text-purple-300"
           >
-            <i :class="slot.kind === 'text' ? 'fas fa-file-alt' : 'fas fa-image'"></i>
+            <span class="material-symbols-outlined">{{ slot.kind === 'text' ? 'description' : 'image' }}</span>
           </div>
           <div class="text-xs font-bold text-slate-200">{{ slot.label }}</div>
           <div class="line-clamp-2 text-[11px] text-slate-500">
-            {{ slot.kind === 'text' ? slot.text : '暂未提供' }}
+            {{ slot.kind === 'text' ? slot.text : ui.packageImages.empty }}
           </div>
         </div>
 
@@ -41,8 +42,8 @@
         <div
           class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         >
-          <i class="fas fa-search-plus"></i>
-          查看
+          <span class="material-symbols-outlined">zoom_in</span>
+          {{ ui.packageImages.view }}
         </div>
       </button>
     </div>
@@ -51,7 +52,7 @@
       class="mt-4 w-full rounded-xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10 py-2 text-sm text-purple-300 transition-all duration-300 hover:from-purple-500/20 hover:to-pink-500/20"
       @click="open(0)"
     >
-      查看大图
+      {{ ui.packageImages.viewLarge }}
     </button>
   </div>
 
@@ -70,6 +71,7 @@
         v-for="(slot, idx) in slots"
         :key="slot.key"
         class="group relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-950/40 transition-all hover:border-blue-500/30 hover:bg-slate-900/60"
+        :class="slot.kind === 'image' ? '' : 'image-placeholder'"
         @click="open(idx)"
       >
         <img
@@ -83,11 +85,11 @@
           <div
             class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/50 bg-slate-900/40 text-blue-200"
           >
-            <i :class="slot.kind === 'text' ? 'fas fa-file-alt' : 'fas fa-image'"></i>
+            <span class="material-symbols-outlined">{{ slot.kind === 'text' ? 'description' : 'image' }}</span>
           </div>
           <div class="text-xs font-bold text-slate-200">{{ slot.label }}</div>
           <div class="line-clamp-3 text-[11px] text-slate-500">
-            {{ slot.kind === 'text' ? slot.text : '暂未提供' }}
+            {{ slot.kind === 'text' ? slot.text : ui.packageImages.empty }}
           </div>
         </div>
 
@@ -97,8 +99,8 @@
         <div
           class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 text-xs text-white/90 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         >
-          <i class="fas fa-search-plus"></i>
-          查看大图
+          <span class="material-symbols-outlined">zoom_in</span>
+          {{ ui.packageImages.viewLarge }}
         </div>
         <div
           class="pointer-events-none absolute bottom-2 right-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm"
@@ -128,15 +130,15 @@
             class="rounded-xl border border-slate-700/50 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
             @click="copyActive"
           >
-            <i class="fas fa-copy"></i>
-            <span class="ml-2">复制</span>
+            <span class="material-symbols-outlined">content_copy</span>
+            <span class="ml-2">{{ ui.packageImages.copy }}</span>
           </button>
           <button
             class="rounded-xl border border-slate-700/50 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 hover:border-blue-500/30 hover:bg-slate-800/60"
             @click="close"
           >
-            <i class="fas fa-times"></i>
-            <span class="ml-2">关闭</span>
+            <span class="material-symbols-outlined">close</span>
+            <span class="ml-2">{{ ui.packageImages.close }}</span>
           </button>
         </div>
       </div>
@@ -151,8 +153,8 @@
         />
         <div v-else class="w-full p-4">
           <div class="rounded-xl border border-slate-800/60 bg-slate-900/40 p-4 font-mono text-xs text-slate-200">
-            <div class="mb-2 text-[11px] text-slate-500">（此字段不是图片 URL，已作为提示词/文本展示）</div>
-            <pre class="whitespace-pre-wrap">{{ active.kind === 'text' ? active.text : '暂未提供' }}</pre>
+            <div class="mb-2 text-[11px] text-slate-500">{{ ui.packageImages.textHint }}</div>
+            <pre class="whitespace-pre-wrap">{{ active.kind === 'text' ? active.text : ui.packageImages.empty }}</pre>
           </div>
           <div v-if="copiedHint" class="mt-3 text-sm text-green-300">{{ copiedHint }}</div>
         </div>
@@ -163,11 +165,12 @@
           v-for="(slot, idx) in slots"
           :key="slot.key"
           class="group relative h-14 w-14 overflow-hidden rounded-xl border bg-slate-950/40 transition-all"
-          :class="
+          :class="[
             idx === activeIndex
               ? 'border-blue-500/60 shadow-lg shadow-blue-500/20'
-              : 'border-slate-700/50 hover:border-blue-500/30'
-          "
+              : 'border-slate-700/50 hover:border-blue-500/30',
+            slot.kind === 'image' ? '' : 'image-placeholder',
+          ]"
           @click="setActive(idx)"
           :title="slot.label"
         >
@@ -179,7 +182,12 @@
             @error="onImgError(slot.key)"
           />
           <div v-else class="flex h-full w-full items-center justify-center text-slate-200">
-            <i :class="slot.kind === 'text' ? 'fas fa-file-alt text-purple-300' : 'fas fa-image text-slate-500'"></i>
+            <span
+              class="material-symbols-outlined"
+              :class="slot.kind === 'text' ? 'text-purple-300' : 'text-slate-500'"
+            >
+              {{ slot.kind === 'text' ? 'description' : 'image' }}
+            </span>
           </div>
           <div
             class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
@@ -199,6 +207,7 @@ import {
   refreshSelectedPackageFromMvu,
   selectedPackage,
 } from '../shared/selectedPackage';
+import uiSpec from '../shared/ui-spec-for-designers.json';
 
 type SlotKey = 'image1' | 'image2' | 'image3';
 type SlotKind = 'image' | 'text' | 'empty';
@@ -221,6 +230,7 @@ const activeIndex = ref(0);
 const lightboxOpen = ref(false);
 const copiedHint = ref('');
 const broken = ref<Record<string, boolean>>({});
+const ui = uiSpec.uiTexts;
 
 function isLikelyImageUrl(raw: string) {
   const v = (raw || '').trim();

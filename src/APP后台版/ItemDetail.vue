@@ -2,14 +2,14 @@
   <div class="app-view active">
     <div class="app-header">
       <div class="title">
-        <i class="fas fa-arrow-left" @click="$router.back()"></i>
-        <span id="detail-header-title">{{ itemData?.name || '商品详情' }}</span>
+        <span class="material-symbols-outlined back-icon" @click="$router.back()">arrow_back</span>
+        <span id="detail-header-title">{{ itemData?.name || ui.pageTitles.itemDetail }}</span>
       </div>
     </div>
 
     <div id="detail-content" class="app-content">
       <div class="detail-info-card">
-        <div class="detail-name">{{ itemData?.name || '未命名套餐' }}</div>
+        <div class="detail-name">{{ itemData?.name || ui.itemDetail.texts.fallbackName }}</div>
         <div class="detail-tags">
           <span v-for="tag in itemData?.tags || []" :key="tag" class="tag">{{ tag }}</span>
         </div>
@@ -17,20 +17,20 @@
 
       <div class="detail-tabs">
         <button class="tab-link" :class="{ active: activeTab === 'content' }" @click="activeTab = 'content'">
-          特色玩法
+          {{ tabLabel('content') }}
         </button>
         <button class="tab-link" :class="{ active: activeTab === 'reviews' }" @click="activeTab = 'reviews'">
-          顾客评价
+          {{ tabLabel('reviews') }}
         </button>
         <button class="tab-link" :class="{ active: activeTab === 'images' }" @click="activeTab = 'images'">
-          私密写真
+          {{ tabLabel('images') }}
         </button>
       </div>
 
       <div class="tab-content" :class="{ active: activeTab === 'content' }">
         <div v-if="itemData?.description" class="service-item description-item">
           <div>
-            <p class="title">详情介绍</p>
+            <p class="title">{{ ui.itemDetail.texts.detailTitle }}</p>
             <p class="text">{{ itemData.description }}</p>
           </div>
         </div>
@@ -43,11 +43,11 @@
           >
             <p>{{ content }}</p>
           </div>
-          <div class="tip-text">💡 点击上方特色玩法可直接下单，或点击底部"立即下单"自定义备注</div>
+          <div class="tip-text">{{ ui.itemDetail.texts.featuresTip }}</div>
         </div>
         <div v-else class="empty-state">
-          <i class="fas fa-list-ul"></i>
-          <p>暂无特色玩法介绍</p>
+          <span class="material-symbols-outlined">format_list_bulleted</span>
+          <p>{{ ui.itemDetail.texts.emptyContent }}</p>
         </div>
       </div>
 
@@ -58,28 +58,46 @@
           </div>
         </div>
         <div v-else class="empty-state">
-          <i class="fas fa-comment-slash"></i>
-          <p>暂无顾客评价</p>
+          <span class="material-symbols-outlined">forum</span>
+          <p>{{ ui.itemDetail.texts.emptyReviews }}</p>
         </div>
       </div>
 
       <div class="tab-content" :class="{ active: activeTab === 'images' }">
         <div class="image-item">
-          <h5>露脸图</h5>
-          <div class="image-placeholder" :style="{ borderStyle: itemData?.image1 ? 'solid' : 'dashed' }">
-            {{ itemData?.image1 || '暂未提供' }}
+          <h5>{{ imageLabel(0) }}</h5>
+          <div
+            class="image-placeholder"
+            :style="{
+              borderStyle: itemData?.image1 ? 'solid' : 'dashed',
+              backgroundImage: itemData?.image1 ? 'none' : 'var(--image-placeholder)',
+            }"
+          >
+            {{ itemData?.image1 || ui.itemDetail.texts.emptyImage }}
           </div>
         </div>
         <div class="image-item">
-          <h5>时装秀</h5>
-          <div class="image-placeholder" :style="{ borderStyle: itemData?.image2 ? 'solid' : 'dashed' }">
-            {{ itemData?.image2 || '暂未提供' }}
+          <h5>{{ imageLabel(1) }}</h5>
+          <div
+            class="image-placeholder"
+            :style="{
+              borderStyle: itemData?.image2 ? 'solid' : 'dashed',
+              backgroundImage: itemData?.image2 ? 'none' : 'var(--image-placeholder)',
+            }"
+          >
+            {{ itemData?.image2 || ui.itemDetail.texts.emptyImage }}
           </div>
         </div>
         <div class="image-item">
-          <h5>私密拍</h5>
-          <div class="image-placeholder" :style="{ borderStyle: itemData?.image3 ? 'solid' : 'dashed' }">
-            {{ itemData?.image3 || '暂未提供' }}
+          <h5>{{ imageLabel(2) }}</h5>
+          <div
+            class="image-placeholder"
+            :style="{
+              borderStyle: itemData?.image3 ? 'solid' : 'dashed',
+              backgroundImage: itemData?.image3 ? 'none' : 'var(--image-placeholder)',
+            }"
+          >
+            {{ itemData?.image3 || ui.itemDetail.texts.emptyImage }}
           </div>
         </div>
       </div>
@@ -87,18 +105,18 @@
 
     <div class="detail-footer">
       <div class="price-info">
-        <span class="price">{{ itemData?.price || '¥0' }}</span>
+        <span class="price">{{ itemData?.price || ui.itemDetail.texts.footerPriceFallback }}</span>
       </div>
-      <button class="order-btn" @click="showRemarkModal">立即下单</button>
+      <button class="order-btn" @click="showRemarkModal">{{ ui.itemDetail.footer.action }}</button>
     </div>
 
     <!-- 备注模态框 -->
     <div id="remark-modal" class="modal-overlay" :style="{ display: showModal ? 'flex' : 'none' }">
       <div class="modal-content">
-        <h3>玩法和备注</h3>
+        <h3>{{ ui.itemDetail.modal.title }}</h3>
 
         <div v-if="itemData?.content && itemData.content.length > 0" class="modal-content-tags">
-          <h4 class="modal-tags-title">快速选择</h4>
+          <h4 class="modal-tags-title">{{ ui.itemDetail.modal.quickSelect }}</h4>
           <div class="modal-tags-wrapper">
             <button
               v-for="content in itemData.content"
@@ -114,12 +132,12 @@
         <textarea
           id="remark-textarea"
           v-model="remarkText"
-          placeholder="可尝试时空替换、NTR、NTL、露出、换装秀、反差婊等多样玩法..."
+          :placeholder="ui.itemDetail.modal.placeholder"
         ></textarea>
 
         <div class="modal-buttons">
-          <button class="modal-btn-cancel" @click="closeRemarkModal">取消</button>
-          <button class="modal-btn-confirm" @click="confirmOrder">确认下单</button>
+          <button class="modal-btn-cancel" @click="closeRemarkModal">{{ ui.itemDetail.modal.cancel }}</button>
+          <button class="modal-btn-confirm" @click="confirmOrder">{{ ui.itemDetail.modal.confirm }}</button>
         </div>
       </div>
     </div>
@@ -131,6 +149,7 @@ import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { extractDataFromMessage } from './dataParser';
 import { shopStoreMvu } from './shared/shopStoreMvu';
+import uiSpec from './shared/ui-spec-for-designers.json';
 
 const route = useRoute();
 const itemData = ref<any>(null);
@@ -139,6 +158,15 @@ const showModal = ref(false);
 const remarkText = ref('');
 const shopStoreApi = ref<any>(shopStoreMvu);
 const fallbackLogPrinted = ref(false);
+const ui = uiSpec.uiTexts;
+
+function tabLabel(id: string) {
+  return ui.itemDetail.tabs.find(tab => tab.id === id)?.label || id;
+}
+
+function imageLabel(index: number) {
+  return ui.itemDetail.images?.[index]?.label || `图片 ${index + 1}`;
+}
 
 function dedupePackages(list: any[]) {
   const map = new Map<string, any>();
@@ -275,6 +303,20 @@ onMounted(async () => {
       transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       padding: 4px;
       border-radius: 6px;
+
+      &:hover {
+        background-color: #fff3cc;
+        transform: scale(1.1) rotate(-5deg);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    .back-icon {
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      padding: 4px;
+      border-radius: 6px;
+      font-size: 22px;
 
       &:hover {
         background-color: #fff3cc;
@@ -796,6 +838,12 @@ onMounted(async () => {
   color: var(--text-placeholder);
 
   i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .material-symbols-outlined {
     font-size: 2.5rem;
     margin-bottom: 12px;
     opacity: 0.4;

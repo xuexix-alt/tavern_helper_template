@@ -6,6 +6,76 @@
     <title>APP 后台版</title>
   </head>
   <body>
+    <script>
+      // Ensure webpack externals (Vue/VueRouter/$/_) are available as true globals in iframe/module contexts.
+      (function () {
+        try {
+          var p = window.parent && window.parent !== window ? window.parent : null;
+          if (p) {
+            window.Vue = window.Vue || p.Vue;
+            window.VueRouter = window.VueRouter || p.VueRouter;
+            window.$ = window.$ || p.$ || p.jQuery;
+            window.jQuery = window.jQuery || p.jQuery || p.$;
+            window._ = window._ || p._;
+            window.toastr = window.toastr || p.toastr;
+            window.z = window.z || p.z;
+            window.YAML = window.YAML || p.YAML;
+            window.PIXI = window.PIXI || p.PIXI;
+          }
+        } catch (e) {}
+
+        // Optional local fallback (non-SillyTavern): load from CDN only when missing.
+        function load(src) {
+          document.write('<script src="' + src + '"><' + '/script>');
+        }
+        if (!window.Vue) load('https://testingcf.jsdelivr.net/npm/vue@3.5.27/dist/vue.global.prod.js');
+        if (!window.VueRouter) load('https://testingcf.jsdelivr.net/npm/vue-router@4.6.4/dist/vue-router.global.prod.js');
+        if (!window.$ && !window.jQuery) load('https://testingcf.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
+        if (!window._) load('https://testingcf.jsdelivr.net/npm/lodash@4.17.23/lodash.min.js');
+        if (!window.z && !window.zod && !window.Zod)
+          load('https://testingcf.jsdelivr.net/npm/zod@4.3.5/lib/index.umd.js');
+
+        // Create real global bindings for webpack externals: `var Vue`, `var VueRouter`, `var $`, `var _`, ...
+        window.Vue = window.Vue || undefined;
+        window.VueRouter = window.VueRouter || undefined;
+        window.$ = window.$ || window.jQuery || undefined;
+        window.jQuery = window.jQuery || window.$ || undefined;
+        window._ = window._ || undefined;
+        window.toastr = window.toastr || undefined;
+        // zod UMD usually exports as `zod` (or `Zod`); normalize to SillyTavern's `z`.
+        window.z = window.z || window.zod || window.Zod || undefined;
+        window.YAML = window.YAML || undefined;
+        window.PIXI = window.PIXI || undefined;
+
+        // eslint-disable-next-line no-var
+        var Vue = window.Vue;
+        // eslint-disable-next-line no-var
+        var VueRouter = window.VueRouter;
+        // eslint-disable-next-line no-var
+        var $ = window.$;
+        // eslint-disable-next-line no-var
+        var jQuery = window.jQuery;
+        // eslint-disable-next-line no-var
+        var _ = window._;
+        // eslint-disable-next-line no-var
+        var toastr = window.toastr;
+        // eslint-disable-next-line no-var
+        var z = window.z;
+        // eslint-disable-next-line no-var
+        var YAML = window.YAML;
+        // eslint-disable-next-line no-var
+        var PIXI = window.PIXI;
+        void Vue;
+        void VueRouter;
+        void $;
+        void jQuery;
+        void _;
+        void toastr;
+        void z;
+        void YAML;
+        void PIXI;
+      })();
+    </script>
     <div id="app"></div>
   </body>
 </html>

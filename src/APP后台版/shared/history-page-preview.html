@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史记录 - 剧情工坊</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .overlay {
+      width: 100%;
+      max-width: 640px;
+      border-radius: 20px;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(0, 0, 0, 0.9));
+      box-shadow: 0 25px 50px rgba(15, 23, 42, 0.5);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+    }
+
+    .header-title {
+      flex: 1;
+    }
+
+    .header-title h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .header-title p {
+      font-size: 12px;
+      color: rgba(226, 232, 240, 0.5);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(30, 41, 59, 0.6);
+      color: #e2e8f0;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: rgba(96, 165, 250, 0.4);
+    }
+
+    /* Content */
+    .modal-body {
+      padding: 20px;
+    }
+
+    /* Order Card */
+    .order-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(30, 41, 59, 0.5);
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .order-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(96, 165, 250, 0.4);
+      background: rgba(30, 41, 59, 0.8);
+      box-shadow: 0 8px 20px rgba(96, 165, 250, 0.15);
+    }
+
+    .order-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+      flex-shrink: 0;
+    }
+
+    .order-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .order-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .order-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .order-price {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fcd34d;
+    }
+
+    .order-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .meta-tag {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+    }
+
+    .meta-tag.status {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .order-arrow {
+      color: rgba(148, 163, 184, 0.5);
+      font-size: 12px;
+    }
+
+    /* Reorder Modal */
+    .reorder-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .reorder-content {
+      width: 100%;
+      max-width: 480px;
+      border-radius: 20px;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(0, 0, 0, 0.95));
+      overflow: hidden;
+    }
+
+    .reorder-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .reorder-header .header-icon {
+      background: rgba(96, 165, 250, 0.15);
+    }
+
+    .reorder-header h3 {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .reorder-body {
+      padding: 20px;
+    }
+
+    .reorder-card {
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(30, 41, 59, 0.5);
+      margin-bottom: 16px;
+    }
+
+    .reorder-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .reorder-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .reorder-card-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fcd34d;
+    }
+
+    .reorder-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .reorder-tag {
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(30, 41, 59, 0.5);
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.5);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    /* Actions */
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 8px;
+    }
+
+    .btn-cancel {
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(30, 41, 59, 0.6);
+      color: #e2e8f0;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-cancel:hover {
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    .btn-primary {
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      background: linear-gradient(135deg, rgba(96, 165, 250, 0.9), rgba(139, 92, 246, 0.9));
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+    }
+
+    /* Remark Modal */
+    .remark-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 200;
+    }
+
+    .remark-content {
+      width: 100%;
+      max-width: 480px;
+      border-radius: 20px;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(0, 0, 0, 0.95));
+      overflow: hidden;
+    }
+
+    .remark-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .remark-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .remark-body {
+      padding: 20px;
+    }
+
+    .remark-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .remark-tag {
+      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(30, 41, 59, 0.6);
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .remark-tag:hover {
+      background: rgba(96, 165, 250, 0.15);
+      border-color: rgba(96, 165, 250, 0.4);
+      color: #60a5fa;
+    }
+
+    .remark-textarea {
+      width: 100%;
+      height: 120px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.6);
+      padding: 14px;
+      color: #e2e8f0;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+    }
+
+    .remark-textarea::placeholder {
+      color: rgba(226, 232, 240, 0.4);
+    }
+
+    .remark-textarea:focus {
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <!-- Header -->
+    <header class="modal-header">
+      <div class="header-icon">
+        <i class="fas fa-history"></i>
+      </div>
+      <div class="header-title">
+        <h2>历史记录</h2>
+        <p>从缓存读取已完成记录</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-ghost">
+          <i class="fas fa-sync-alt"></i>
+          刷新
+        </button>
+        <button class="btn-ghost">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="modal-body">
+      <!-- Order List -->
+      <div class="order-card">
+        <div class="order-avatar">
+          <i class="fas fa-receipt"></i>
+        </div>
+        <div class="order-info">
+          <div class="order-header">
+            <div class="order-name">林诗涵 · 都市白领</div>
+            <div class="order-price">¥388</div>
+          </div>
+          <div class="order-meta">
+            <span class="meta-tag">高管秘书剧本</span>
+            <span class="meta-tag status">已完成</span>
+          </div>
+        </div>
+        <div class="order-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-avatar">
+          <i class="fas fa-receipt"></i>
+        </div>
+        <div class="order-info">
+          <div class="order-header">
+            <div class="order-name">白萱 · 职场精英</div>
+            <div class="order-price">¥488</div>
+          </div>
+          <div class="order-meta">
+            <span class="meta-tag">项目合作剧本</span>
+            <span class="meta-tag status">已完成</span>
+          </div>
+        </div>
+        <div class="order-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-avatar">
+          <i class="fas fa-receipt"></i>
+        </div>
+        <div class="order-info">
+          <div class="order-header">
+            <div class="order-name">苏雨 · 校园邂逅</div>
+            <div class="order-price">¥288</div>
+          </div>
+          <div class="order-meta">
+            <span class="meta-tag">课堂偶遇剧本</span>
+            <span class="meta-tag status">已完成</span>
+          </div>
+        </div>
+        <div class="order-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+
+      <div class="order-card">
+        <div class="order-avatar">
+          <i class="fas fa-receipt"></i>
+        </div>
+        <div class="order-info">
+          <div class="order-header">
+            <div class="order-name">秦雨萱 · 企业故事</div>
+            <div class="order-price">¥588</div>
+          </div>
+          <div class="order-meta">
+            <span class="meta-tag">组织派遣剧本</span>
+            <span class="meta-tag status">已完成</span>
+          </div>
+        </div>
+        <div class="order-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reorder Modal (Demo) -->
+    <div class="reorder-modal">
+      <div class="reorder-content">
+        <div class="reorder-header">
+          <div class="header-icon">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <h3>确认订单</h3>
+          <button class="btn-ghost">
+            <i class="fas fa-arrow-left"></i>
+            返回
+          </button>
+        </div>
+
+        <div class="reorder-body">
+          <!-- Order Info -->
+          <div class="reorder-card">
+            <div class="reorder-card-header">
+              <div>
+                <div class="reorder-card-name">林诗涵 · 都市白领</div>
+                <div style="font-size: 12px; color: rgba(226, 232, 240, 0.5); margin-top: 4px;">高管秘书剧本</div>
+              </div>
+              <div class="reorder-card-price">¥388</div>
+            </div>
+            <div class="reorder-tags">
+              <span class="reorder-tag">身份变换</span>
+              <span class="reorder-tag">情感波折</span>
+              <span class="reorder-tag">公开场合</span>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">好感度</div>
+              <div class="stat-value">85/100</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">受孕概率</div>
+              <div class="stat-value">18%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">复购次数</div>
+              <div class="stat-value">3</div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button class="btn-cancel">取消</button>
+            <button class="btn-primary">
+              <i class="fas fa-paper-plane" style="margin-right: 6px;"></i>
+              再次预订
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remark Modal (Demo) -->
+    <div class="remark-modal">
+      <div class="remark-content">
+        <div class="remark-header">
+          <h3>要求与备注</h3>
+          <button class="btn-ghost">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="remark-body">
+          <div class="remark-tags">
+            <button class="remark-tag">身份变换</button>
+            <button class="remark-tag">情感波折</button>
+            <button class="remark-tag">公开场合</button>
+            <button class="remark-tag">服装变换</button>
+            <button class="remark-tag">反差萌</button>
+            <button class="remark-tag">关系突破</button>
+          </div>
+
+          <textarea class="remark-textarea" placeholder="可输入特殊要求，如服装、场景、认知等..."></textarea>
+
+          <div class="modal-actions">
+            <button class="btn-cancel">取消</button>
+            <button class="btn-primary">
+              <i class="fas fa-paper-plane" style="margin-right: 6px;"></i>
+              发送预订指令
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

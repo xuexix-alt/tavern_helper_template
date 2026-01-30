@@ -1,0 +1,350 @@
+{
+  "version": "1.0.0",
+  "description": "UI界面文本",
+  "lastUpdated": "2026-01-27",
+  "uiTexts": {
+    "assets": {
+      "placeholderImage": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop stop-color='%231b2333' offset='0'/><stop stop-color='%23312b45' offset='1'/></linearGradient></defs><rect width='100%' height='100%' fill='url(%23g)'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' opacity='0.55' font-size='48' font-family='Noto Sans SC, sans-serif'>IMAGE</text></svg>",
+      "avatarFallback": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop stop-color='%23242a3a' offset='0'/><stop stop-color='%233b3f52' offset='1'/></linearGradient></defs><rect width='100%25' height='100%25' rx='200' ry='200' fill='url(%23g)'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff' opacity='0.65' font-size='64' font-family='Noto Sans SC, sans-serif'>AVATAR</text></svg>"
+    },
+    "brand": {
+      "appTitle": "剧情工坊",
+      "subtitle": "创作后台",
+      "badge": "剧情工坊",
+      "version": "v3.0.0 后台版",
+      "welcome": "欢迎回来",
+      "userName": "创作管理员"
+    },
+    "categoryButtons": [
+      { "label": "路人", "icon": "street-view", "keyword": "各类路人商品-2个店铺每个含3个套餐" },
+      { "label": "偶遇", "icon": "mask", "keyword": "路人商品-各类场景偶遇的心动女孩主题-2个店铺每个含3个套餐" },
+      { "label": "AV", "icon": "video", "keyword": "路人商品-色情片中的AV女优主题-2个店铺每个含3个套餐" },
+      { "label": "街拍", "icon": "camera-retro", "keyword": "路人商品-街上遇到的心动美女主题-2个店铺每个含3个套餐" },
+      { "label": "熟人", "icon": "user-friends", "keyword": "各类熟人商品-2个店铺每个含3个套餐" },
+      { "label": "乱伦", "icon": "heart-broken", "keyword": "熟人商品-乱伦主题（不得含母子）-2个店铺每个含3个套餐" },
+      { "label": "职场", "icon": "briefcase", "keyword": "熟人商品-各类职场主题-2个店铺每个含3个套餐" },
+      { "label": "友妻", "icon": "users", "keyword": "熟人商品-各类朋友妻主题-2个店铺每个含3个套餐" }
+    ],
+    "homePage": {
+      "hero": {
+        "title": "一站式角色创作入口",
+        "highlight": "AI 剧本世界",
+        "subtitle": "生成角色、选择剧本、完成任务，一条链路全打通。",
+        "primaryAction": "进入创作",
+        "secondaryAction": "去发现"
+      },
+      "sections": {
+        "stylesTitle": "选择你的风格",
+        "stylesAction": "查看全部",
+        "trendingTitle": "正在流行",
+        "trendingSubtitle": "热门剧本推荐",
+        "latestTitle": "最新上架",
+        "latestSubtitle": "本周更新精选"
+      },
+      "guide": {
+        "title": "三步上手",
+        "steps": [
+          { "title": "创建角色", "desc": "一键生成可用角色与剧本。", "index": "01" },
+          { "title": "选择剧本", "desc": "侧边栏随时选择。", "index": "02" },
+          { "title": "沉浸演绎", "desc": "内容连贯输出，流程闭环。", "index": "03" }
+        ]
+      },
+      "trendingCards": [
+        { "title": "赛博侦探", "subtitle": "都市 · 悬疑", "rating": "4.9", "plays": "2.3k", "cta": "解锁" },
+        { "title": "霓虹夜行", "subtitle": "赛博 · 冒险", "rating": "4.8", "plays": "1.8k", "cta": "解锁" },
+        { "title": "双生契约", "subtitle": "奇幻 · 养成", "rating": "4.7", "plays": "1.3k", "cta": "解锁" },
+        { "title": "校园白日梦", "subtitle": "校园 · 日常", "rating": "4.6", "plays": "900", "cta": "解锁" }
+      ],
+      "latestItems": [
+        { "title": "银色漫游者", "tag": "上新", "desc": "太空远航 · 人设多线", "cta": "查看" },
+        { "title": "夜宴主理人", "tag": "更新", "desc": "权谋宴会 · 限时场景", "cta": "查看" },
+        { "title": "雨季来电", "tag": "上新", "desc": "都市心动 · 情绪拉满", "cta": "查看" }
+      ],
+      "commandCenter": {
+        "title": "创作中心",
+        "subtitle": "输入关键词或选择分类，直接生成角色。",
+        "defaultGenerate": "默认生成",
+        "specialProject": "专题创作",
+        "placeholder": "输入关键词，生成角色与剧本",
+        "actionLoading": "创作中...",
+        "action": "开始生成",
+        "randomGenerate": "随机生成"
+      },
+      "quickEntries": {
+        "title": "快捷入口",
+        "actions": [
+          { "label": "开始创作", "icon": "scroll" },
+          { "label": "浏览角色", "icon": "store" }
+        ],
+        "extraAction": {
+          "label": "一键路人"
+        }
+      },
+      "notice": {
+        "title": "公告与说明",
+        "toggle": "查看详情"
+      },
+      "announcements": {
+        "title": "使用说明",
+        "items": [
+          { "tag": "更新", "text": "新增专题创作功能，挂载后可一键生成" },
+          { "tag": "更新", "text": "已支持 JSON 导入导出，便于分享" },
+          { "tag": "提示", "text": "截断多来自预设/正则，尽量保持模板一致" }
+        ]
+      }
+    },
+    "splash": {
+      "slogan": "为您送上一切心动的美人",
+      "skip": "跳过"
+    },
+    "pageTitles": {
+      "discover": "发现店铺",
+      "discoverSubtitle": "共 X 家角色包",
+      "service": "服务状态",
+      "shopDetail": "角色详情",
+      "itemDetail": "剧本详情",
+      "history": "历史记录"
+    },
+    "discoverPage": {
+      "searchPlaceholder": "筛选店铺名称 / 标签",
+      "hint": "点击店铺进入详情，Play 侧栏可直接下单。",
+      "emptyTitle": "暂无店铺。先去首页/Play 触发生成。",
+      "emptyAction": "去首页生成",
+      "sortLabel": "排序",
+      "sortOptions": [
+        { "id": "recommended", "label": "推荐" },
+        { "id": "packages", "label": "套餐数" },
+        { "id": "newest", "label": "最新" }
+      ],
+      "chipAll": "热门",
+      "defaults": {
+        "tag": "优质服务",
+        "packageUnit": "个套餐",
+        "supportsPlay": "支持 Play 下单"
+      }
+    },
+    "discoverQuickPanel": {
+      "title": "发现 · 快捷浏览",
+      "actions": {
+        "import": "导入 JSON",
+        "export": "导出 JSON",
+        "open": "打开发现页"
+      },
+      "hint": "这里快速查看店铺并选择默认套餐，详细筛选与导入也可在 Discover 页面完成。",
+      "empty": "暂无店铺，请先在 Play 中输入“生成/搜索”或前往首页触发生成。",
+      "emptyTag": "暂无标签",
+      "packages": "套餐"
+    },
+    "shopDetail": {
+      "sections": {
+        "featuredPackages": "精选剧本"
+      },
+      "states": {
+        "emptyPackages": "该店铺暂无套餐"
+      },
+      "tips": {
+        "restore": "误删角色包可回到原页面点击卡片重新找回"
+      }
+    },
+    "itemDetail": {
+      "tabs": [
+        { "id": "content", "label": "剧本特色" },
+        { "id": "reviews", "label": "用户评价" },
+        { "id": "images", "label": "相册展示" }
+      ],
+      "images": [{ "label": "头像照" }, { "label": "服装展示" }, { "label": "私房照" }],
+      "texts": {
+        "detailTitle": "详情介绍",
+        "featuresTip": "💡 点击上方特色玩法可直接下单，或点击底部\"立即下单\"自定义备注",
+        "emptyContent": "暂无特色玩法介绍",
+        "emptyReviews": "暂无顾客评价",
+        "emptyImage": "暂未提供",
+        "fallbackName": "未命名套餐",
+        "footerPriceFallback": "¥0"
+      },
+      "modal": {
+        "title": "要求与备注",
+        "quickSelect": "快速选择",
+        "placeholder": "可尝试身份变换、情感波折、关系突破、公开场合、服装变换、反差萌等...",
+        "cancel": "取消",
+        "confirm": "确认预订"
+      },
+      "footer": {
+        "action": "立即预订"
+      }
+    },
+    "servicePage": {
+      "summary": {
+        "inProgress": "进行中",
+        "updated": "更新"
+      },
+      "states": {
+        "loading": "正在加载服务数据...",
+        "empty": "暂无服务中的订单",
+        "retry": "重试",
+        "noClothing": "暂无着装信息"
+      },
+      "sections": {
+        "orderList": "订单列表",
+        "packageInfo": "套餐信息"
+      },
+      "tabs": [
+        { "id": "content", "label": "剧本特色" },
+        { "id": "reviews", "label": "用户评价" },
+        { "id": "images", "label": "相册展示" }
+      ],
+      "body": {
+        "clothing": "着装",
+        "psychology": "心理",
+        "body": "身体",
+        "statistics": "统计"
+      },
+      "fields": {
+        "currentMood": "当前心情",
+        "personality": "性格特征",
+        "figure": "身材",
+        "figureShape": "身形",
+        "topWear": "上装",
+        "bottomWear": "下装",
+        "posture": "体态",
+        "firstExperience": "初次经历",
+        "relationshipCount": "交往经历数",
+        "interactionCount": "本次互动次数",
+        "deepInteractionCount": "深度互动次数",
+        "pregnancyChance": "受孕概率"
+      },
+      "detailLabels": {
+        "currentThought": "当前所想",
+        "personalityType": "性格类型",
+        "cup": "罩杯",
+        "breastShape": "乳形",
+        "breast": "胸部",
+        "privatePart": "私处",
+        "pose": "姿势",
+        "virgin": "处女",
+        "partnerCount": "性伴侣数量",
+        "interactionTimes": "本次服务性交次数",
+        "internalShotTimes": "内射次数"
+      },
+      "metrics": {
+        "heartbeat": "脉搏",
+        "serviceProgress": "互动进度",
+        "interactionTimes": "互动次数",
+        "affection": "好感度"
+      }
+    },
+    "historyOverlay": {
+      "title": "历史记录",
+      "subtitle": "从缓存读取已完成记录",
+      "refresh": "刷新",
+      "close": "关闭",
+      "empty": "暂无历史记录",
+      "detail": {
+        "title": "历史详情",
+        "back": "返回",
+        "reorder": "再次预订",
+        "summaryTitle": "订单信息",
+        "statsTitle": "统计概览"
+      },
+      "reorderModal": {
+        "title": "确认订单",
+        "back": "返回",
+        "reorder": "再次预订",
+        "fields": {
+          "affection": "好感度",
+          "pregnancyChance": "受孕概率",
+          "orderCount": "复购次数"
+        }
+      },
+      "remarkModal": {
+        "title": "要求与备注",
+        "close": "关闭",
+        "cancel": "取消",
+        "confirm": "发送预订指令"
+      }
+    },
+    "commonActions": {
+      "import": "导入 JSON",
+      "export": "导出 JSON",
+      "openPage": "打开页面",
+      "refresh": "刷新",
+      "settings": "设置",
+      "backPlay": "返回 Play",
+      "back": "返回",
+      "close": "关闭"
+    },
+    "navigation": {
+      "home": "首页",
+      "discover": "发现",
+      "play": "Play",
+      "service": "服务",
+      "history": "历史",
+      "market": "市场",
+      "profile": "我的"
+    },
+    "orderStatus": {
+      "inProgress": "进行中",
+      "completed": "已完成"
+    },
+    "economicOverview": {
+      "title": "经济概览",
+      "balance": "账户余额",
+      "activeOrders": "进行中的服务",
+      "spending": "消费金额"
+    },
+    "panelTitles": {
+      "quickPanel": "快捷面板",
+      "status": "状态",
+      "discover": "发现",
+      "history": "历史",
+      "settings": "设置",
+      "miniPanel": "面板小窗",
+      "expand": "展开",
+      "close": "关闭",
+      "economy": "经济概览",
+      "marketplace": "商城与套餐"
+    },
+    "panelActions": {
+      "switchTheme": "切换主题",
+      "refreshUI": "刷新界面",
+      "regenerate": "重新生成首页角色"
+    },
+    "marketplace": {
+      "title": "MARKETPLACE",
+      "packagesCount": "PACKAGES",
+      "refresh": "刷新数据"
+    },
+    "packageDetail": {
+      "title": "套餐详情",
+      "history": "历史订单",
+      "active": "Active",
+      "empty": "暂无选中套餐（请在右侧列表点击一个套餐）",
+      "intro": "简介",
+      "features": "玩法特色",
+      "remarkPlaceholder": "下单备注（可选）",
+      "orderAction": "下单",
+      "fallbackPackage": "未命名套餐",
+      "fallbackShop": "未命名店铺",
+      "fallbackDescription": "暂无描述"
+    },
+    "packageImages": {
+      "title": "套餐写真",
+      "view": "查看",
+      "viewLarge": "查看大图",
+      "copy": "复制",
+      "close": "关闭",
+      "textHint": "（此字段不是图片 URL，已作为提示词/文本展示）",
+      "empty": "暂未提供"
+    },
+    "streaming": {
+      "title": "正文和剧情",
+      "streamingHint": "生成中…",
+      "floorPrefix": "第",
+      "floorSuffix": "楼",
+      "empty": "（无正文）",
+      "summary": "总结",
+      "options": "选项",
+      "updateOnly": "（该楼层仅包含变量更新，暂无剧情正文）"
+    }
+  }
+}
