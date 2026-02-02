@@ -648,7 +648,9 @@ onUnmounted(() => {
   color: #fff7ed;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .play-send:disabled {

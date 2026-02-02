@@ -8,7 +8,18 @@
         </div>
         <div>
             <div class="title">快捷面板</div>
-          <div class="sub">{{ appModeLabel }}</div>
+            <div class="sub">{{ appModeLabel }}</div>
+          </div>
+        </div>
+        <div class="panel-head-actions">
+          <button class="panel-close" @click="minimize">
+            <i class="fas fa-window-restore"></i>
+            小窗
+          </button>
+          <button class="panel-close" @click="close">
+            <i class="fas fa-times"></i>
+            关闭
+          </button>
         </div>
       </div>
       <div class="panel-head-actions">

@@ -16,7 +16,9 @@ export const appModeLabel = computed(() => {
 });
 
 function normalizeMode(raw: any): AppMode {
-  const text = String(raw ?? '').trim().toLowerCase();
+  const text = String(raw ?? '')
+    .trim()
+    .toLowerCase();
   if (!text) return 'app';
   if (['app', 'play', 'home'].includes(text)) return 'app';
   if (['rp', 'rpg', 'story', '剧情', '正文'].includes(text)) return 'rp';

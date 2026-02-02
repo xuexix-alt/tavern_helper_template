@@ -146,8 +146,7 @@ export function enableIframeFullHeight(options?: { minHeightPx?: number }) {
         root?.offsetHeight,
         app?.scrollHeight,
         app?.offsetHeight,
-      ]
-        .filter(v => typeof v === 'number' && Number.isFinite(v)) as number[];
+      ].filter(v => typeof v === 'number' && Number.isFinite(v)) as number[];
       const max = heights.length ? Math.max(...heights) : 0;
       return max || window.innerHeight;
     } catch {

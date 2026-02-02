@@ -475,7 +475,9 @@ function handleFileChange(event: Event) {
   border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .shop-card:hover {

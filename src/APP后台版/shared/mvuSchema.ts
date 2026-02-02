@@ -122,12 +122,7 @@ export const MvuSchema = z.object({
         .strict(),
     )
     .default([]),
-  服务中的订单: z
-    .record(
-      z.string().describe('订单ID'),
-      OrderSchema,
-    )
-    .default({}),
+  服务中的订单: z.record(z.string().describe('订单ID'), OrderSchema).default({}),
 });
 
 // Export inferred types for usage in the app
