@@ -183,9 +183,12 @@ importers:
       mini-css-extract-plugin:
         specifier: ^2.10.0
         version: 2.10.0(webpack@5.105.0)
+<<<<<<< HEAD
       playwright:
         specifier: ^1.58.1
         version: 1.58.1
+=======
+>>>>>>> f0b81694107b46de13c384cb766919135218501f
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
