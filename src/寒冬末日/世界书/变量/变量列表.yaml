@@ -1,3 +1,5 @@
-<status_current_variables>
-{{get_message_variable::stat_data}}
-</status_current_variables>
+# NOTE:
+# 这个文件名后缀是 .yaml，会被 IDE 的 YAML 校验器当作 YAML 解析并报错。
+# 真正用于世界书注入的内容已迁移到同目录的 `变量列表.txt`（EJS/宏原样文本）。
+#
+# 保留此空 YAML 仅用于避免编辑器误报；不要在 index.yaml 中引用它。

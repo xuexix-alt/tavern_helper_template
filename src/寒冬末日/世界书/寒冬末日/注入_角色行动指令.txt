@@ -1,2 +1,15 @@
-<% const content = await getwi('角色行动指令'); %>
-<%- content || await getwi('角色行动指令') -%>
+<%_
+  // 只注入“摘要”块，避免长系统指令被稀释/挤占上下文。
+  // 若摘要块缺失，则回退为注入完整内容（便于兼容旧文本）。
+  // 注意：提示词模板语法插件的运行环境可能不支持 optional chaining 等较新语法，
+  // 这里避免使用正则与 ?. ，改用简单的 substring 截取，减少编译失败概率。
+  const full = (await getwi('角色行动指令')) || '';
+  const startTag = '<角色行动指令_摘要>';
+  const endTag = '</角色行动指令_摘要>';
+  const start = full.indexOf(startTag);
+  const end = full.indexOf(endTag);
+  const out = (start !== -1 && end !== -1 && end > start)
+    ? full.slice(start, end + endTag.length)
+    : full;
+_%>
+<%- out -%>

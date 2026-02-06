@@ -1,0 +1,5 @@
+[以下只发送给AI不得输出]：
+<status_current_variable>
+{{format_message_variable::stat_data.$meta.prompt.status_current_variable}}
+</status_current_variable>
+----
