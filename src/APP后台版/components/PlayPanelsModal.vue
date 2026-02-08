@@ -32,8 +32,6 @@
           关闭
         </button>
       </div>
-    </div>
-
       <div class="panel-layout">
         <nav class="panel-tabs">
           <button
