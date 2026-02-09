@@ -187,6 +187,16 @@ function keepUnknownNames(list: any, known: Set<string>): string[] {
     .value();
 }
 
+function resetRoomsToEmpty(stat_data: any) {
+  // “初值为空”：仅当角色.所在房间出现有效值时，才开始派生 /房间/**。
+  // 这能避免“新开局清空房间后，又从旧存档的房间数组反推并复活邻居”的现象。
+  _.set(stat_data, '房间', {
+    玄关: { 净化隔离区入住者: [], 临时客房A入住者: [], 临时客房B入住者: [] },
+    核心区: { 客厅使用者: [], 餐厅厨房使用者: [], 主卧室使用者: [], 主浴室使用者: [] },
+    楼层房间: { 楼层20房间: {}, 楼层19房间: {} },
+  });
+}
+
 function ensureFloorRoomSlot(nextRooms: Rooms, floor: '20' | '19', roomNumber: string) {
   const path = `楼层房间.楼层${floor}房间.${roomNumber}`;
   const cur = _.get(nextRooms, path, null);
@@ -217,14 +227,24 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
   mergeTempNpcIntoCore(stat_data);
 
+  const { core, tempNpc } = listRoleNames(stat_data);
+  const allNames = [...core, ...tempNpc];
+  const hasAnyExplicitTag = allNames.some(name => {
+    const isTemp = tempNpc.includes(name);
+    return !!readRoleRoomTag(stat_data, name, isTemp);
+  });
+
+  // 初值为空：只有当“角色.所在房间”出现至少一个有效值时，才开始派生 /房间/**。
+  // 否则直接维持空房间结构（避免从旧房间数组 bootstrap 导致“邻居复活”）。
+  if (!hasAnyExplicitTag) {
+    resetRoomsToEmpty(stat_data);
+    if (debug) console.log('[RoomLogic] skipped reconcile: no explicit role room tags yet (rooms kept empty)');
+    return;
+  }
+
   const rooms = _.get(stat_data, '房间', {}) ?? {};
   const oldRooms = _.get(old_stat_data, '房间', {}) ?? {};
 
-  // 兼容旧存档：若 initvar/旧聊天只维护了房间数组但没写“所在房间”，先把缺失标签补齐。
-  // 补齐后，后续逻辑以“所在房间”为单一真源，`房间/**` 只作为派生输出。
-  bootstrapMissingRoleRoomTagsFromRooms(stat_data, debug);
-
-  const { core, tempNpc } = listRoleNames(stat_data);
   const knownNames = new Set<string>([...core, ...tempNpc]);
 
   const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)])

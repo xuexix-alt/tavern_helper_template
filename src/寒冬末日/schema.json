@@ -74,7 +74,7 @@
           "$ref": "#/$defs/__schema8"
         },
         "庇护范围变更": {
-          "description": "AI 写入入口（delta）：用于提交“生存庇护范围”的增删变更，脚本会校验/去重/卡上限后写入 chat 变量并回写镜像。示例：{ add: { \"20\": [\"2002\"] }, remove: { \"20\": [\"2007\"] } }",
+          "description": "AI 写入入口（replace）：用于提交“生存庇护范围”的增删变更（add/remove/note），脚本会校验/去重/按庇护所等级卡上限后写入 chat 变量并回写镜像。规则提示：仅支持楼层\"20\"/\"19\"；房间号为字符串数组；\"2001\"为庇护所本体默认受庇护（会被忽略/剔除）。示例：{ add: { \"20\": [\"2002\"] }, remove: { \"20\": [\"2007\"] } }",
           "default": {},
           "$ref": "#/$defs/__schema9"
         }
@@ -83,6 +83,7 @@
     "房间": {
       "default": {
         "玄关": {
+          "净化隔离区入住者": [],
           "临时客房A入住者": [],
           "临时客房B入住者": []
         },
@@ -102,20 +103,21 @@
         "玄关": {
           "description": "玄关区域房间状态",
           "default": {
+            "净化隔离区入住者": [],
             "临时客房A入住者": [],
             "临时客房B入住者": []
           },
           "$ref": "#/$defs/__schema10"
         },
         "核心区": {
-          "description": "核心区域房间进入或使用名单列表",
+          "description": "20楼2001室核心区域房间进入或使用名单列表",
           "default": {
             "客厅使用者": [],
             "餐厅厨房使用者": [],
             "主卧室使用者": [],
             "主浴室使用者": []
           },
-          "$ref": "#/$defs/__schema13"
+          "$ref": "#/$defs/__schema14"
         },
         "楼层房间": {
           "description": "楼层房间状态",
@@ -123,7 +125,7 @@
             "楼层20房间": {},
             "楼层19房间": {}
           },
-          "$ref": "#/$defs/__schema18"
+          "$ref": "#/$defs/__schema19"
         }
       }
     },
@@ -166,7 +168,7 @@
         "当前阶段": {
           "description": "主线任务的当前阶段名称",
           "default": "阶段一：秩序的萌芽",
-          "$ref": "#/$defs/__schema21"
+          "$ref": "#/$defs/__schema22"
         },
         "阶段目标": {
           "description": "当前阶段需要达成的目标列表",
@@ -187,7 +189,7 @@
               "目标值": 1
             }
           },
-          "$ref": "#/$defs/__schema22"
+          "$ref": "#/$defs/__schema23"
         },
         "目标完成状态": {
           "description": "目标完成状态，key为索引字符串（0/1/2...），value为true表示完成",
@@ -196,12 +198,12 @@
             "1": false,
             "2": false
           },
-          "$ref": "#/$defs/__schema23"
+          "$ref": "#/$defs/__schema24"
         },
         "情报碎片": {
           "description": "已解锁的情报碎片",
           "default": {},
-          "$ref": "#/$defs/__schema24"
+          "$ref": "#/$defs/__schema25"
         },
         "$meta": {
           "description": "脚本/界面内部元数据（不建议在世界书中直接写入）",
@@ -212,44 +214,53 @@
             "情报碎片": {},
             "阶段目标": {}
           },
-          "$ref": "#/$defs/__schema25"
+          "$ref": "#/$defs/__schema26"
         }
       }
     },
+    "$meta": {
+      "description": "脚本内部元数据：提示词裁剪视图等（AI 只读）",
+      "default": {
+        "prompt": {
+          "status_current_variable": {}
+        }
+      },
+      "$ref": "#/$defs/__schema30"
+    },
     "浅见亚美": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "相田哲也": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "星野琉璃": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "早川遥": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "早川舞": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "藤井雪乃": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "中村惠子": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "桃乐丝・泽巴哈": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "王静": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "小泽花": {
-      "$ref": "#/$defs/__schema29"
+      "$ref": "#/$defs/__schema32"
     },
     "临时NPC": {
-      "description": "存储所有临时NPC的状态，key为NPC姓名。非主要角色一律添加在此处新NPC登场时在此处添加。",
+      "description": "存储临时NPC的状态，key为NPC姓名。临时NPC用于短期/路人角色；允许将其转正为主要角色（移至顶层并删除此处）。",
       "default": {},
-      "$ref": "#/$defs/__schema49"
+      "$ref": "#/$defs/__schema52"
     },
     "楼层其他住户": {
       "default": {
@@ -268,7 +279,7 @@
     }
   },
   "additionalProperties": {
-    "$ref": "#/$defs/__schema29"
+    "$ref": "#/$defs/__schema32"
   },
   "$defs": {
     "__schema0": {
@@ -377,15 +388,20 @@
     "__schema10": {
       "type": "object",
       "properties": {
+        "净化隔离区入住者": {
+          "description": "净化/隔离区停留者姓名列表（公共区域）",
+          "default": [],
+          "$ref": "#/$defs/__schema11"
+        },
         "临时客房A入住者": {
           "description": "临时客房A进入者姓名列表",
           "default": [],
-          "$ref": "#/$defs/__schema11"
+          "$ref": "#/$defs/__schema12"
         },
         "临时客房B入住者": {
           "description": "临时客房B进入者姓名列表",
           "default": [],
-          "$ref": "#/$defs/__schema12"
+          "$ref": "#/$defs/__schema13"
         }
       }
     },
@@ -402,34 +418,34 @@
       }
     },
     "__schema13": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema14": {
       "type": "object",
       "properties": {
         "客厅使用者": {
           "description": "客厅停留者姓名列表（公共区域）",
           "default": [],
-          "$ref": "#/$defs/__schema14"
+          "$ref": "#/$defs/__schema15"
         },
         "餐厅厨房使用者": {
           "description": "餐厅/厨房停留者姓名列表（含万象合成终端）",
           "default": [],
-          "$ref": "#/$defs/__schema15"
+          "$ref": "#/$defs/__schema16"
         },
         "主卧室使用者": {
           "description": "主卧室进入或使用者姓名列表",
           "default": [],
-          "$ref": "#/$defs/__schema16"
+          "$ref": "#/$defs/__schema17"
         },
         "主浴室使用者": {
           "description": "主浴室进入或使用者姓名列表",
           "default": [],
-          "$ref": "#/$defs/__schema17"
+          "$ref": "#/$defs/__schema18"
         }
-      }
-    },
-    "__schema14": {
-      "type": "array",
-      "items": {
-        "type": "string"
       }
     },
     "__schema15": {
@@ -451,41 +467,24 @@
       }
     },
     "__schema18": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "__schema19": {
       "type": "object",
       "properties": {
         "楼层20房间": {
           "description": "20层各房间进入或使用者列表，key为房间号",
           "default": {},
-          "$ref": "#/$defs/__schema19"
+          "$ref": "#/$defs/__schema20"
         },
         "楼层19房间": {
           "description": "19层各房间进入或使用者列表，key为房间号",
           "default": {},
-          "$ref": "#/$defs/__schema20"
+          "$ref": "#/$defs/__schema21"
         }
-      }
-    },
-    "__schema19": {
-      "type": "object",
-      "propertyNames": {
-        "type": "string"
-      },
-      "additionalProperties": {
-        "default": {
-          "入住者": []
-        },
-        "type": "object",
-        "properties": {
-          "入住者": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "入住者"
-        ]
       }
     },
     "__schema20": {
@@ -512,9 +511,32 @@
       }
     },
     "__schema21": {
-      "type": "string"
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "default": {
+          "入住者": []
+        },
+        "type": "object",
+        "properties": {
+          "入住者": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "入住者"
+        ]
+      }
     },
     "__schema22": {
+      "type": "string"
+    },
+    "__schema23": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -538,7 +560,7 @@
         ]
       }
     },
-    "__schema23": {
+    "__schema24": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -547,7 +569,7 @@
         "type": "boolean"
       }
     },
-    "__schema24": {
+    "__schema25": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -586,7 +608,7 @@
         }
       }
     },
-    "__schema25": {
+    "__schema26": {
       "type": "object",
       "properties": {
         "楼层": {
@@ -597,26 +619,26 @@
           "properties": {
             "last_seen_message_id": {
               "description": "最近一次记录的楼层号（用于过期/清理逻辑）",
-              "$ref": "#/$defs/__schema26"
+              "$ref": "#/$defs/__schema27"
             }
           }
         },
         "情报碎片": {
           "description": "情报碎片的楼层时间戳（用于UI倒计时与自动清理）",
           "default": {},
-          "$ref": "#/$defs/__schema27"
+          "$ref": "#/$defs/__schema28"
         },
         "阶段目标": {
           "description": "阶段目标的楼层时间戳（用于UI倒计时与自动清理）",
           "default": {},
-          "$ref": "#/$defs/__schema28"
+          "$ref": "#/$defs/__schema29"
         }
       }
     },
-    "__schema26": {
+    "__schema27": {
       "type": "number"
     },
-    "__schema27": {
+    "__schema28": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -641,7 +663,7 @@
         }
       }
     },
-    "__schema28": {
+    "__schema29": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -658,7 +680,32 @@
         }
       }
     },
-    "__schema29": {
+    "__schema30": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "default": {
+            "status_current_variable": {}
+          },
+          "type": "object",
+          "properties": {
+            "status_current_variable": {
+              "description": "脚本回写：发送给 AI 的“变量列表”裁剪视图（用于 <status_current_variable>），AI 只读。",
+              "default": {},
+              "$ref": "#/$defs/__schema31"
+            }
+          }
+        }
+      }
+    },
+    "__schema31": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "__schema32": {
       "default": {
         "姓名": "",
         "关系": "无",
@@ -686,73 +733,73 @@
         "关系": {
           "description": "反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大",
           "default": "无",
-          "$ref": "#/$defs/__schema30"
+          "$ref": "#/$defs/__schema33"
         },
         "关系倾向": {
           "description": "角色关系的倾向影响Imp数值的变化幅度和难易程度",
-          "$ref": "#/$defs/__schema32"
+          "$ref": "#/$defs/__schema35"
         },
         "秩序刻印": {
           "description": "范围-20~100（允许负数）；当Imp<0时将触发角色死亡结算",
           "default": 19,
-          "$ref": "#/$defs/__schema33"
+          "$ref": "#/$defs/__schema36"
         },
         "秩序刻印更新原因": {
           "description": "跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-          "$ref": "#/$defs/__schema35"
+          "$ref": "#/$defs/__schema38"
         },
         "健康": {
           "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
           "default": 100,
-          "$ref": "#/$defs/__schema36"
+          "$ref": "#/$defs/__schema39"
         },
         "健康更新原因": {
           "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-          "$ref": "#/$defs/__schema35"
+          "$ref": "#/$defs/__schema38"
         },
         "健康状况": {
           "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-          "$ref": "#/$defs/__schema38"
+          "$ref": "#/$defs/__schema41"
         },
         "衣着": {
           "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-          "$ref": "#/$defs/__schema39"
+          "$ref": "#/$defs/__schema42"
         },
         "舌唇": {
           "description": "口腔、嘴唇的状态",
-          "$ref": "#/$defs/__schema40"
+          "$ref": "#/$defs/__schema43"
         },
         "胸乳": {
           "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-          "$ref": "#/$defs/__schema41"
+          "$ref": "#/$defs/__schema44"
         },
         "私穴": {
           "description": "私处的详细状态或反应",
-          "$ref": "#/$defs/__schema42"
+          "$ref": "#/$defs/__schema45"
         },
         "神态样貌": {
           "description": "面部表情和神态",
-          "$ref": "#/$defs/__schema43"
+          "$ref": "#/$defs/__schema46"
         },
         "动作姿势": {
           "description": "身体姿态和动作",
-          "$ref": "#/$defs/__schema44"
+          "$ref": "#/$defs/__schema47"
         },
         "内心想法": {
           "description": "符合角色身份和剧情描述的第一人称内心独白",
-          "$ref": "#/$defs/__schema45"
+          "$ref": "#/$defs/__schema48"
         },
         "所在房间": {
-          "description": "角色所在房间（单一真源，用于脚本解算与自动纠偏房间数组）。允许值：\"\"（未知/外出） | 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{房间号}（示例：楼层30/3001） | 户外/{地点}（示例：户外/停车场）。注意：UI 地图仅会显示有格子的地点（玄关/临时客房A/B、核心区四区、以及当前支持的楼层房间）；其它位置（如楼层30/3001、户外/…）暂不展示。",
-          "$ref": "#/$defs/__schema46"
+          "description": "角色所在房间（单一真源，用于脚本解算与自动纠偏房间数组）。允许值：\"\"（未知/外出） | 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{房间号4位数字}（示例：楼层30/3001） | 户外/{地点}（示例：户外/停车场）。注意：UI 地图仅会显示有格子的地点（玄关/净化/隔离区、玄关/临时客房A/B、核心区四区、以及当前支持的楼层房间）；其它位置（如楼层30/3001、户外/…）暂不展示。",
+          "$ref": "#/$defs/__schema49"
         },
         "登场状态": {
           "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-          "$ref": "#/$defs/__schema48"
+          "$ref": "#/$defs/__schema51"
         }
       }
     },
-    "__schema30": {
+    "__schema33": {
       "type": "string",
       "enum": [
         "无",
@@ -763,7 +810,7 @@
         "性奴"
       ]
     },
-    "__schema31": {
+    "__schema34": {
       "type": "string",
       "enum": [
         "极易",
@@ -774,25 +821,25 @@
         "不可"
       ]
     },
-    "__schema32": {
+    "__schema35": {
       "default": "中立",
-      "$ref": "#/$defs/__schema31"
+      "$ref": "#/$defs/__schema34"
     },
-    "__schema33": {
+    "__schema36": {
       "type": "integer",
       "minimum": -9007199254740991,
       "maximum": 9007199254740991
     },
-    "__schema34": {
+    "__schema37": {
       "type": "string"
     },
-    "__schema35": {
-      "$ref": "#/$defs/__schema34"
+    "__schema38": {
+      "$ref": "#/$defs/__schema37"
     },
-    "__schema36": {
+    "__schema39": {
       "type": "number"
     },
-    "__schema37": {
+    "__schema40": {
       "type": "string",
       "enum": [
         "健康",
@@ -803,18 +850,9 @@
         "死亡"
       ]
     },
-    "__schema38": {
-      "default": "健康",
-      "$ref": "#/$defs/__schema37"
-    },
-    "__schema39": {
-      "type": "string"
-    },
-    "__schema40": {
-      "type": "string"
-    },
     "__schema41": {
-      "type": "string"
+      "default": "健康",
+      "$ref": "#/$defs/__schema40"
     },
     "__schema42": {
       "type": "string"
@@ -832,17 +870,26 @@
       "type": "string"
     },
     "__schema47": {
+      "type": "string"
+    },
+    "__schema48": {
+      "type": "string"
+    },
+    "__schema49": {
+      "type": "string"
+    },
+    "__schema50": {
       "type": "string",
       "enum": [
         "登场",
         "离场"
       ]
     },
-    "__schema48": {
+    "__schema51": {
       "default": "离场",
-      "$ref": "#/$defs/__schema47"
+      "$ref": "#/$defs/__schema50"
     },
-    "__schema49": {
+    "__schema52": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -875,74 +922,74 @@
           "关系": {
             "description": "反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大",
             "default": "无",
-            "$ref": "#/$defs/__schema50"
+            "$ref": "#/$defs/__schema53"
           },
           "关系倾向": {
             "description": "角色关系的倾向影响Imp数值的变化幅度和难易程度",
-            "$ref": "#/$defs/__schema32"
+            "$ref": "#/$defs/__schema35"
           },
           "秩序刻印": {
             "description": "范围-20~100（允许负数）；当Imp<0时将触发角色死亡结算",
             "default": 19,
-            "$ref": "#/$defs/__schema51"
+            "$ref": "#/$defs/__schema54"
           },
           "秩序刻印更新原因": {
             "description": "跟随Imp值变动，格式示例：+3, 高级设施体验 / -5, 违反等级约束强行提出性要求",
-            "$ref": "#/$defs/__schema35"
+            "$ref": "#/$defs/__schema38"
           },
           "健康": {
             "description": "范围0-100。记录健康数值。获得食物/温暖增加；受伤/饥饿/寒冷减少。",
             "default": 100,
-            "$ref": "#/$defs/__schema52"
+            "$ref": "#/$defs/__schema55"
           },
           "健康更新原因": {
             "description": "记录健康值变化的原因和数值，格式：+/-X, 原因描述",
-            "$ref": "#/$defs/__schema35"
+            "$ref": "#/$defs/__schema38"
           },
           "健康状况": {
             "description": ">=80:健康; 60-79:亚健康; 30-59:生病/受伤; <30:重病/濒死",
-            "$ref": "#/$defs/__schema38"
+            "$ref": "#/$defs/__schema41"
           },
           "衣着": {
             "description": "描述当前的衣着状态包括上衣裤子丝袜内衣内裤",
-            "$ref": "#/$defs/__schema53"
+            "$ref": "#/$defs/__schema56"
           },
           "舌唇": {
             "description": "口腔、嘴唇的状态",
-            "$ref": "#/$defs/__schema54"
+            "$ref": "#/$defs/__schema57"
           },
           "胸乳": {
             "description": "胸部的状态或乳房乳头乳晕等在色情挑逗下的反应",
-            "$ref": "#/$defs/__schema55"
+            "$ref": "#/$defs/__schema58"
           },
           "私穴": {
             "description": "私处的详细状态或反应",
-            "$ref": "#/$defs/__schema56"
+            "$ref": "#/$defs/__schema59"
           },
           "神态样貌": {
             "description": "面部表情和神态",
-            "$ref": "#/$defs/__schema57"
+            "$ref": "#/$defs/__schema60"
           },
           "动作姿势": {
             "description": "身体姿态和动作",
-            "$ref": "#/$defs/__schema58"
+            "$ref": "#/$defs/__schema61"
           },
           "内心想法": {
             "description": "符合角色身份和剧情描述的第一人称内心独白",
-            "$ref": "#/$defs/__schema59"
+            "$ref": "#/$defs/__schema62"
           },
           "所在房间": {
-            "description": "角色所在房间（单一真源，用于脚本解算与自动纠偏房间数组）。允许值：\"\"（未知/外出） | 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{房间号}（示例：楼层30/3001） | 户外/{地点}（示例：户外/停车场）。注意：UI 地图仅会显示有格子的地点（玄关/临时客房A/B、核心区四区、以及当前支持的楼层房间）；其它位置（如楼层30/3001、户外/…）暂不展示。",
-            "$ref": "#/$defs/__schema60"
+            "description": "角色所在房间（单一真源，用于脚本解算与自动纠偏房间数组）。允许值：\"\"（未知/外出） | 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{房间号4位数字}（示例：楼层30/3001） | 户外/{地点}（示例：户外/停车场）。注意：UI 地图仅会显示有格子的地点（玄关/净化/隔离区、玄关/临时客房A/B、核心区四区、以及当前支持的楼层房间）；其它位置（如楼层30/3001、户外/…）暂不展示。",
+            "$ref": "#/$defs/__schema63"
           },
           "登场状态": {
             "description": "剧情未提及时离场，剧情提及登场，凡在庇护所内一律默认登场\"",
-            "$ref": "#/$defs/__schema48"
+            "$ref": "#/$defs/__schema51"
           }
         }
       }
     },
-    "__schema50": {
+    "__schema53": {
       "type": "string",
       "enum": [
         "无",
@@ -953,22 +1000,13 @@
         "性奴"
       ]
     },
-    "__schema51": {
+    "__schema54": {
       "type": "integer",
       "minimum": -9007199254740991,
       "maximum": 9007199254740991
     },
-    "__schema52": {
-      "type": "number"
-    },
-    "__schema53": {
-      "type": "string"
-    },
-    "__schema54": {
-      "type": "string"
-    },
     "__schema55": {
-      "type": "string"
+      "type": "number"
     },
     "__schema56": {
       "type": "string"
@@ -983,6 +1021,15 @@
       "type": "string"
     },
     "__schema60": {
+      "type": "string"
+    },
+    "__schema61": {
+      "type": "string"
+    },
+    "__schema62": {
+      "type": "string"
+    },
+    "__schema63": {
       "type": "string"
     }
   }

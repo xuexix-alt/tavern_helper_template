@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { normalizeRoomTag, parseRoomTag } from './util/room';
+// 注意：此 schema.ts 会被 dump_schema.ts 在 Node(Esm) 环境下直接 import。
+// Node 对相对路径的 ESM 解析更严格：不带扩展名的 './util/room' 可能无法解析到 TS 源文件。
+// 显式写出扩展名，保证 `pnpm dump` 稳定生成 schema.json。
+import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
 
 const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
@@ -108,6 +111,11 @@ const 临时NPCSchema = create角色Schema({
   defaultImprint: 0,
 });
 
+// 给提示词“变量列表”使用的裁剪视图（脚本回写；AI 只读）。
+// 按 MVU 组件包建议：变量列表世界书尽量只写 `{{format_message_variable::...}}`，
+// 复杂筛选逻辑由脚本生成该视图，避免在世界书里塞 EJS 代码导致不稳定/难排错。
+const StatusCurrentVariableViewSchema = z.record(z.string(), z.any()).prefault({});
+
 export const Schema = z
   .object({
     世界: z
@@ -181,7 +189,7 @@ export const Schema = z
           })
           .prefault({})
           .describe(
-            'AI 写入入口（delta）：用于提交“生存庇护范围”的增删变更，脚本会校验/去重/卡上限后写入 chat 变量并回写镜像。示例：{ add: { "20": ["2002"] }, remove: { "20": ["2007"] } }',
+            'AI 写入入口（replace）：用于提交“生存庇护范围”的增删变更（add/remove/note），脚本会校验/去重/按庇护所等级卡上限后写入 chat 变量并回写镜像。规则提示：仅支持楼层"20"/"19"；房间号为字符串数组；"2001"为庇护所本体默认受庇护（会被忽略/剔除）。示例：{ add: { "20": ["2002"] }, remove: { "20": ["2007"] } }',
           ),
       })
       .prefault({
@@ -381,6 +389,25 @@ export const Schema = z
           阶段目标: {},
         },
       }),
+
+    $meta: z
+      .object({
+        prompt: z
+          .object({
+            status_current_variable: StatusCurrentVariableViewSchema.describe(
+              '脚本回写：发送给 AI 的“变量列表”裁剪视图（用于 <status_current_variable>），AI 只读。',
+            ),
+          })
+          .prefault({
+            status_current_variable: {},
+          }),
+      })
+      .prefault({
+        prompt: {
+          status_current_variable: {},
+        },
+      })
+      .describe('脚本内部元数据：提示词裁剪视图等（AI 只读）'),
 
     // 主要角色
     浅见亚美: 主要角色Schema,
