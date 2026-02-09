@@ -18,6 +18,30 @@ function isRecord(v) {
 
 if (!isRecord(stat)) return;
 
+function normalizeRoleList(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = {};
+  const out = [];
+  for (let i = 0; i < list.length; i++) {
+    const name = String(list[i] || '').trim();
+    if (!name || seen[name]) continue;
+    seen[name] = true;
+    out.push(name);
+  }
+  return out;
+}
+
+function readRoleSelectorState(stat_data) {
+  if (!isRecord(stat_data)) return null;
+  const main = stat_data['主线任务'];
+  if (!isRecord(main)) return null;
+  const meta = main['$meta'];
+  if (!isRecord(meta)) return null;
+  const raw = meta['角色控制'];
+  if (!isRecord(raw)) return null;
+  return raw;
+}
+
 const reserved = {
   '世界': true,
   '主线任务': true,
@@ -92,6 +116,14 @@ function parseDossierIndex(text) {
   }
 }
 
+function extractRoleNameFromComment(comment) {
+  const text = String(comment || '').trim();
+  if (!text) return '';
+  const match = text.match(/角色档案\\s*[-—–:：]?\\s*(.+)$/);
+  if (!match) return '';
+  return String(match[1] || '').trim();
+}
+
 const MAX_INJECT = 3;
 
 function uniqPushByKey(list, key, item) {
@@ -99,6 +131,39 @@ function uniqPushByKey(list, key, item) {
     if (list[i] && list[i].key === key) return;
   }
   list.push(item);
+}
+
+const roleSelectorState = readRoleSelectorState(stat);
+const roleSelectorEnabled = (() => {
+  if (!roleSelectorState) return null;
+  const selected = normalizeRoleList(roleSelectorState.selected_roles);
+  const revealed = normalizeRoleList(roleSelectorState.revealed_roles);
+  const combined = normalizeRoleList(selected.concat(revealed));
+  if (combined.length === 0) return null;
+  return new Set(combined);
+})();
+
+let dossierIndex = [];
+try {
+  const indexText = await getwi('角色档案索引');
+  dossierIndex = parseDossierIndex(indexText);
+} catch (e) {
+  dossierIndex = [];
+}
+
+const knownRoleSet = new Set();
+for (let i = 0; i < dossierIndex.length; i++) {
+  const name = String(dossierIndex[i].name || '').trim();
+  if (name) knownRoleSet.add(name);
+}
+
+function isRoleEnabledBySelector(roleName) {
+  if (!roleSelectorEnabled) return true;
+  if (!knownRoleSet.size) return true;
+  const name = String(roleName || '').trim();
+  if (!name) return false;
+  if (!knownRoleSet.has(name)) return true;
+  return roleSelectorEnabled.has(name);
 }
 
 // 0) 动态新角色（若可用）：按关键字命中“已启用”的世界书条目，然后按 uid 注入
@@ -111,6 +176,8 @@ if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
       const e = arr[i];
       const comment = String((e && e.comment) || '').trim();
       if (!comment || comment.indexOf('角色档案') === -1) continue;
+      const parsedRoleName = extractRoleNameFromComment(comment);
+      if (parsedRoleName && !isRoleEnabledBySelector(parsedRoleName)) continue;
       const keys = []
         .concat(Array.isArray(e && e.key) ? e.key : [])
         .concat(Array.isArray(e && e.keysecondary) ? e.keysecondary : []);
@@ -126,13 +193,12 @@ if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
 // 1) 提及：按“角色档案索引”命中（不依赖世界书启用状态）
 const mentionTargets = [];
 if (mentionText) {
-  const indexText = await getwi('角色档案索引');
-  const index = parseDossierIndex(indexText);
-  for (let i = 0; i < index.length; i++) {
-    const name = index[i].name;
-    const aliases = index[i].aliases;
+  for (let i = 0; i < dossierIndex.length; i++) {
+    const name = dossierIndex[i].name;
+    const aliases = dossierIndex[i].aliases;
     const hit = mentionText.indexOf(name) !== -1 || includesAny(mentionText, aliases);
     if (!hit) continue;
+    if (!isRoleEnabledBySelector(name)) continue;
     uniqPushByKey(mentionTargets, 'role:' + name, { key: 'role:' + name, roleName: name, label: '角色档案 - ' + name });
     if (mentionTargets.length >= MAX_INJECT) break;
   }
@@ -147,6 +213,7 @@ for (const k in stat) {
   if (!isOnstageRole(v) || isDeadRole(v)) continue;
   const roleName = String(k).trim();
   if (!roleName) continue;
+  if (!isRoleEnabledBySelector(roleName)) continue;
   uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
 }
 
@@ -159,6 +226,7 @@ if (isRecord(tempNpc)) {
     if (!isOnstageRole(v) || isDeadRole(v)) continue;
     const roleName = String(k).trim();
     if (!roleName) continue;
+    if (!isRoleEnabledBySelector(roleName)) continue;
     uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
   }
 }

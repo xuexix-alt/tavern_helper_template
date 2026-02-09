@@ -2,6 +2,7 @@ import { diffWorldHours } from '../../util/time';
 import { parseRoomTag } from '../../util/room';
 import { normalizeScope, ShelterScopeByFloor, isRoomSheltered } from '../../util/shelter_scope';
 import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
+import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../role_control';
 
 type RoleLike = {
   姓名?: string;
@@ -357,6 +358,7 @@ $(async () => {
 
     const stat_data = _.get(new_variables, 'stat_data', {});
     const old_stat_data = _.get(old_variables, 'stat_data', {});
+    const roleSelectorState = readRoleSelectorStateFromStatData(stat_data);
 
     // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
     mergeTempNpcIntoCore(stat_data);
@@ -369,6 +371,7 @@ $(async () => {
       if (reserved.has(key)) continue;
       if (typeof key !== 'string' || key.startsWith('_')) continue;
       if (!isRoleLike(val)) continue;
+      if (!isRoleEnabledBySelectorState(roleSelectorState, key)) continue;
 
       const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
       applyAutoStageFromThoughtUpdateIfNeeded(key, key, oldRole, val as any, debug);
@@ -383,6 +386,7 @@ $(async () => {
       for (const [name, val] of Object.entries(tempNpc)) {
         if (typeof name !== 'string' || !name) continue;
         if (!isRoleLike(val)) continue;
+        if (!isRoleEnabledBySelectorState(roleSelectorState, name)) continue;
 
         const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
         applyAutoStageFromThoughtUpdateIfNeeded(`临时NPC.${name}`, name, oldRole, val as any, debug);

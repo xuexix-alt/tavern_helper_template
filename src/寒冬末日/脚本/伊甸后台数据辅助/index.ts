@@ -4,6 +4,7 @@ import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation }
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
 import { diffWorldHours } from '../../util/time';
 import { CHAT_VAR_KEYS } from '../../界面/outbound';
+import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../role_control';
 
 import shelterBlueprintRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
@@ -38,6 +39,19 @@ const EDEN_HELPER_DEBUG_LOG_MAX = 80;
 
 const DEBUG_BUTTON_TOGGLE = '伊甸调试开关';
 const DEBUG_BUTTON_TOGGLE_CHATLOG = '伊甸调试写入日志';
+
+function readRoleSelectorStateSafe(stat_data: any) {
+  try {
+    return readRoleSelectorStateFromStatData(stat_data);
+  } catch {
+    return null;
+  }
+}
+
+function isRoleEnabledBySelector(roleSelectorState: any, roleName: string): boolean {
+  if (!roleSelectorState) return true;
+  return isRoleEnabledBySelectorState(roleSelectorState, roleName);
+}
 
 function getDeep(obj: any, path: string): any {
   const keys = String(path ?? '')
@@ -155,6 +169,15 @@ function normalizeCommandPathToDotPath(rawPath: any): string | null {
   return s.replace(/^(?:stat_data|status_current_variables)\./, '');
 }
 
+function extractRoleNameFromDotPath(dotPath: string): string | null {
+  const parts = String(dotPath ?? '')
+    .split('.')
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  if (parts[0] === '临时NPC') return parts[1] || null;
+  return parts[0] || null;
+}
+
 function clampImprint(v: number): number {
   return _.clamp(v, -20, 100);
 }
@@ -169,10 +192,12 @@ function parseSignedDeltaFromReason(raw: any): number | null {
 }
 
 function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: any, debug: EdenDebugSetting) {
+  const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const { core, tempNpc } = listRoleNames(stat_data);
   const all = [...core.map(name => ({ name, path: name })), ...tempNpc.map(name => ({ name, path: `临时NPC.${name}` }))];
 
   for (const it of all) {
+    if (!isRoleEnabledBySelector(roleSelectorState, it.name)) continue;
     const rolePath = it.path;
     const oldRole = _.get(old_stat_data, rolePath, null);
     const newRole = _.get(stat_data, rolePath, null);
@@ -217,6 +242,7 @@ function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: an
 
 function fixBrokenImprintDeltaIfNeeded(stat_data: any, old_stat_data: any, commands: MvuCommandLike[] | null, debug: EdenDebugSetting) {
   if (!commands || commands.length === 0) return;
+  const roleSelectorState = readRoleSelectorStateSafe(stat_data);
 
   const deltasByPath = new Map<string, number>();
   for (const cmd of commands) {
@@ -247,6 +273,8 @@ function fixBrokenImprintDeltaIfNeeded(stat_data: any, old_stat_data: any, comma
   if (deltasByPath.size === 0) return;
 
   for (const [dotPath, deltaSum] of deltasByPath.entries()) {
+    const roleName = extractRoleNameFromDotPath(dotPath);
+    if (roleName && !isRoleEnabledBySelector(roleSelectorState, roleName)) continue;
     const oldValRaw = _.get(old_stat_data, dotPath);
     const newValRaw = _.get(stat_data, dotPath);
     const oldVal = typeof oldValRaw === 'number' || typeof oldValRaw === 'string' ? Number(oldValRaw) : NaN;
@@ -1643,12 +1671,14 @@ function diffRoleTouched(oldRole: RoleLike | null, newRole: RoleLike): RoleTouch
  *   => 视为“忘回拨”，脚本强制改为【离场】以继续走离场健康结算
  */
 function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+  const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const { core, tempNpc } = listRoleNames(stat_data);
   const all = [...core, ...tempNpc];
 
   const patched: Array<{ name: string; path: string }> = [];
 
   for (const name of all) {
+    if (!isRoleEnabledBySelector(roleSelectorState, name)) continue;
     const isTemp = tempNpc.includes(name);
     const rolePath = isTemp ? `临时NPC.${name}` : name;
 
@@ -1708,6 +1738,7 @@ function sanitizeForgottenOnstageRoles(stat_data: any, old_stat_data: any, debug
  * 说明：健康/健康更新原因 可能会被脚本或 AI 用于“离场期间的休整/衰减结算”，不应据此强制登场。
  */
 function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debugSetting: EdenDebugSetting) {
+  const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const { core, tempNpc } = listRoleNames(stat_data);
   const all = [...core, ...tempNpc];
 
@@ -1715,6 +1746,7 @@ function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debu
   const skippedHealthOnly: Array<{ name: string; path: string; changedKeys: string[] }> = [];
 
   for (const name of all) {
+    if (!isRoleEnabledBySelector(roleSelectorState, name)) continue;
     const isTemp = tempNpc.includes(name);
     const rolePath = isTemp ? `临时NPC.${name}` : name;
 
@@ -2070,6 +2102,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
 
   const stat_data = _.get(new_variables, 'stat_data', {});
   const old_stat_data = _.get(old_variables, 'stat_data', {});
+  const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const rules = readHealthRulesFromChat();
 
   const reserved = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
@@ -2077,6 +2110,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     if (reserved.has(key)) continue;
     if (typeof key !== 'string' || key.startsWith('_')) continue;
     if (!isRoleLike(val)) continue;
+    if (!isRoleEnabledBySelector(roleSelectorState, key)) continue;
 
     const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
     applyAutoStageFromThoughtUpdateIfNeeded(key, oldRole, val as any, debug);
@@ -2092,6 +2126,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     for (const [name, val] of Object.entries(tempNpc)) {
       if (typeof name !== 'string' || !name) continue;
       if (!isRoleLike(val)) continue;
+      if (!isRoleEnabledBySelector(roleSelectorState, name)) continue;
 
       const oldRole = _.get(old_stat_data, `临时NPC.${name}`, null) as any as RoleLike | null;
       applyAutoStageFromThoughtUpdateIfNeeded(name, oldRole, val as any, debug);

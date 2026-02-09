@@ -367,17 +367,15 @@
 
             <div v-if="generatedRoles.length > 0" class="role-generate-input-block">
               <div class="role-generate-title">🧪 第2步：检查修正</div>
-              <div class="role-form-hint">
-                默认沿用首次提示词。你可以补充“针对刚生成内容”的修正意见，例如：强化边界感、降低套路化命名、补足关键背景。
-              </div>
+              <div class="role-form-hint">{{ REVIEW_STEP_INTRO_TEXT }}</div>
               <textarea
                 v-model="generateRoleReviewInput"
                 class="role-form-textarea role-generate-review-input"
                 rows="3"
-                placeholder="默认与首轮输入一致；可在此追加针对性修正意见…"
+                placeholder="可留空（按默认设置校验修正）；也可在此补充修正意见…"
               ></textarea>
               <div class="role-generate-actions toolbar">
-                <div class="role-generate-meta">{{ generateRoleReviewMessage || '建议先执行一次检查修正，再写入角色。' }}</div>
+                <div class="role-generate-meta">{{ roleReviewMetaText }}</div>
                 <button
                   class="role-btn primary"
                   type="button"
@@ -557,7 +555,10 @@
 
           <div class="role-modal-footer">
             <div v-if="generatedRoles.length > 0 && !canWriteGeneratedRoles" class="role-form-hint role-generate-write-hint">
-              请先执行“检查修正”后再写入；若检查失败会保留首稿并允许写入。
+              {{ roleWriteHintText }}
+            </div>
+            <div v-else-if="generatedRoles.length > 0" class="role-form-hint role-generate-write-hint">
+              {{ roleWriteHintText }}
             </div>
             <button
               class="role-btn primary"
@@ -587,6 +588,7 @@
 import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
+import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../../role_control';
 import { useDataStore } from '../../store';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
@@ -648,14 +650,16 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
 
   const data = store.data as Record<string, any>;
+  const roleSelector = readRoleSelectorStateFromStatData(data);
+  const isEnabled = (roleName: string) => isRoleEnabledBySelectorState(roleSelector, roleName);
 
   // 1. 固定角色按固定顺序
-  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]));
+  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]) && isEnabled(key));
   const fixedActive = fixedKeys.filter(isActive);
   const fixedInactive = fixedKeys.filter(k => !isActive(k));
 
   // 2. 追加角色（顶层非固定角色）
-  const extraKeys = listExtraCoreKeys();
+  const extraKeys = listExtraCoreKeys().filter(key => isEnabled(String(key)));
   const extraActive = extraKeys.filter(isActive);
   const extraInactive = extraKeys.filter(k => !isActive(k));
 
@@ -664,7 +668,9 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   const tempInactive: CharacterKey[] = [];
   const tempNPCs = store.data.临时NPC;
   if (tempNPCs && typeof tempNPCs === 'object') {
-    const npcNames = Object.keys(tempNPCs).sort();
+    const npcNames = Object.keys(tempNPCs)
+      .filter(name => isEnabled(name))
+      .sort();
     const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
     const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
     npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
@@ -754,7 +760,7 @@ const ROLE_GENERATE_KNOWLEDGE_TEXT = [
   '<creative_principles>',
   '角色卡制作核心原则',
   '',
-  '制作角色卡时，遵循以下原则来创造真实、鲜活的角色：',
+  '制作角色卡时，遵循以下原则来创造真实、鲜活的角色：（除非用户特别说明，应不与当前任意角色雷同）',
   '',
   '1. 用行为展现性格，而非定义性格',
   '2. 提供具体的语料示例，而非描述语气',
@@ -826,6 +832,8 @@ const ROLE_GENERATE_SYSTEM_PROMPT = [
 ].join('\n');
 
 const ROLE_GENERATE_SETTINGS_KEY = 'ui_role_generate_settings';
+const ROLE_CREATOR_OPEN_EVENT = 'eden.role_creator.open';
+const ROLE_SELECTOR_OPEN_EVENT = 'eden.role_selector.open';
 const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
   '末世寒冬-星穹秩序2.0',
   '寒冬末日-星穹秩序',
@@ -937,6 +945,9 @@ roleGenerateTemplateText.value = WORLD_BOOK_TEMPLATE;
 const addRoleForm = ref<AddRoleForm>(createEmptyRoleForm());
 useTextareaAutosize({ element: roleGenerateTextarea, input: computed(() => generateRoleInput.value) });
 
+const REVIEW_STEP_INTRO_TEXT =
+  '生成成功！接下来需要对生成的角色进行再次校验，请你查看下面变量和世界书内容，提出修正意见，留空则按默认设置进行校验修正。';
+
 const filteredWorldbookEntryOptions = computed(() => {
   const keyword = worldbookFilterText.value.trim();
   if (!keyword) return worldbookEntryOptions.value;
@@ -947,7 +958,21 @@ const selectedWorldbookCount = computed(() => selectedWorldbookEntryIds.value.le
 
 const finalGeneratePromptText = computed(() => buildGeneratePrompt(generateRoleInput.value));
 
-const canRunRoleReview = computed(() => generatedRoles.value.length > 0 && generateRoleReviewInput.value.trim().length > 0);
+const canRunRoleReview = computed(() => generatedRoles.value.length > 0);
+
+const roleReviewMetaText = computed(() => generateRoleReviewMessage.value || REVIEW_STEP_INTRO_TEXT);
+
+const roleWriteHintText = computed(() => {
+  if (generatedRoles.value.length === 0) return '';
+  if (generateRoleReviewState.value === 'running') return '正在校验修正中，请稍候…';
+  if (generateRoleReviewState.value === 'done') {
+    return '校验修正完成：请检查并按需编辑下方角色变量与世界书文本，确认后可“写入角色”或“写入全部”进行保存。变量支持按你的需要继续修改。';
+  }
+  if (generateRoleReviewState.value === 'failed') {
+    return '校验修正失败：已保留首稿。你仍可先检查并编辑下方角色变量与世界书文本，再执行写入保存。变量支持按你的需要继续修改。';
+  }
+  return '请先执行“检查修正”后再写入；留空修正意见会按默认设置完成校验修正。';
+});
 
 const canWriteGeneratedRoles = computed(() => {
   if (generatedRoles.value.length === 0) return false;
@@ -1019,6 +1044,18 @@ function openAddRole() {
   addRoleError.value = '';
   addRoleOpen.value = true;
 }
+
+let roleCreatorOpenStop: { stop: () => void } | null = null;
+onMounted(() => {
+  if (typeof eventOn !== 'function') return;
+  roleCreatorOpenStop = eventOn(ROLE_CREATOR_OPEN_EVENT as any, () => {
+    openAddRole();
+  });
+});
+onBeforeUnmount(() => {
+  roleCreatorOpenStop?.stop?.();
+  roleCreatorOpenStop = null;
+});
 
 function closeAddRole() {
   addRoleOpen.value = false;
@@ -1296,9 +1333,9 @@ async function onGenerateRole() {
 
     generatedRoles.value = items;
     activeGeneratedIndex.value = 0;
-    generateRoleReviewInput.value = input;
+    generateRoleReviewInput.value = '';
     generateRoleReviewState.value = 'idle';
-    generateRoleReviewMessage.value = '首稿已生成。建议执行一次检查修正后再写入。';
+    generateRoleReviewMessage.value = REVIEW_STEP_INTRO_TEXT;
   } catch (err: any) {
     console.error('[CharactersSection] generate role failed', err);
     generateRoleError.value = err?.message ?? String(err);
@@ -1325,11 +1362,7 @@ async function onReviewGeneratedRoles() {
   if (generateRoleLoading.value) return;
   const reviewInputRaw = generateRoleReviewInput.value.trim();
   const reviewInput = replaceRoleGenerateAliases(reviewInputRaw).trim();
-  if (!reviewInput) {
-    generateRoleError.value = '请先填写检查修正意见。';
-    return;
-  }
-  if (reviewInput !== reviewInputRaw) {
+  if (reviewInputRaw && reviewInput !== reviewInputRaw) {
     generateRoleReviewInput.value = reviewInput;
   }
   if (generatedRoles.value.length === 0) {
@@ -1355,8 +1388,9 @@ async function onReviewGeneratedRoles() {
     activeGeneratedIndex.value = Math.min(activeGeneratedIndex.value, Math.max(0, reviewedItems.length - 1));
 
     generateRoleReviewState.value = 'done';
-    generateRoleReviewMessage.value = '检查修正完成，已更新为修正稿。';
-    toastr.success('检查修正完成');
+    generateRoleReviewMessage.value =
+      '校验修正完成！请检查并按需编辑下方角色变量与世界书文本，确认后点击“写入角色”或“写入全部”进行保存。变量可按需要继续修改。';
+    toastr.success('校验修正完成，请检查并写入变量/世界书');
   } catch (err: any) {
     generateRoleReviewState.value = 'failed';
     const reason = err?.message ?? String(err);
@@ -1453,6 +1487,9 @@ async function writeAllGeneratedRoles() {
   closeGenerateRole();
   closeAddRole();
   resetAddRoleForm();
+  if (typeof eventEmit === 'function') {
+    eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
+  }
   reloadIframe();
 }
 
@@ -1483,7 +1520,10 @@ function buildGeneratePrompt(userInput: string) {
 function buildRoleReviewPrompt(originalInput: string, reviewInput: string, draftItems: GeneratedRoleItem[]) {
   const normalizedOriginalInput = replaceRoleGenerateAliases(String(originalInput ?? '').trim());
   const normalizedReviewInput = replaceRoleGenerateAliases(String(reviewInput ?? '').trim());
-  const effectiveOriginalInput = normalizedOriginalInput || normalizedReviewInput;
+  const defaultReviewInput =
+    '（留空，按默认设置进行校验修正：优先保证角色变量结构完整、关键字段合理、世界书内容可直接写入，并提出必要修正建议）';
+  const effectiveReviewInput = normalizedReviewInput || defaultReviewInput;
+  const effectiveOriginalInput = normalizedOriginalInput || normalizedReviewInput || '请基于首稿执行默认校验修正。';
 
   const draftText = draftItems
     .map((item, index) => {
@@ -1510,7 +1550,7 @@ function buildRoleReviewPrompt(originalInput: string, reviewInput: string, draft
     '【检查修正任务】',
     '请基于“首稿”进行一次定向检查与修正，目标是减少套路化命名、保证设定一致性、补齐关键信息。',
     '若某项已合理可保持；但最终必须完整输出可直接写入的最终稿。',
-    `本轮修正意见：\n${normalizedReviewInput}`,
+    `本轮修正意见：\n${effectiveReviewInput}`,
     '',
     '【首稿如下】',
     draftText,
@@ -1931,6 +1971,26 @@ function buildRolePayload(name: string, form: AddRoleForm = addRoleForm.value) {
   };
 }
 
+function buildManualWorldbookText(name: string, form: AddRoleForm = addRoleForm.value): string {
+  const payload = buildRolePayload(name, form);
+  const imprint = payload.秩序刻印 === '' ? 0 : payload.秩序刻印;
+  const health = payload.健康 === '' ? 100 : payload.健康;
+  const lines = [
+    `<角色档案 - ${name}>`,
+    '角色档案:',
+    `  姓名: ${name}`,
+    `  关系: ${payload.关系}`,
+    `  关系倾向: ${payload.关系倾向}`,
+    `  秩序刻印: ${imprint}`,
+    `  健康: ${health}`,
+    payload.所在房间 ? `  所在房间: ${payload.所在房间}` : '',
+    payload.神态样貌 ? `  神态样貌: ${payload.神态样貌}` : '',
+    payload.内心想法 ? `  内心想法: ${payload.内心想法}` : '',
+    `</角色档案 - ${name}>`,
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
 type NumberRangeValidationResult =
   | { ok: true; value: string | number }
   | { ok: false; error: string };
@@ -1996,7 +2056,14 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
   );
 }
 
-type DossierIndexItem = { name: string; aliases: string[] };
+type DossierIndexItem = {
+  name: string;
+  aliases: string[];
+  identity?: string;
+  summary?: string;
+  location?: string;
+  defaultSelected?: boolean;
+};
 
 function parseDossierIndex(text: string): DossierIndexItem[] {
   try {
@@ -2011,6 +2078,10 @@ function parseDossierIndex(text: string): DossierIndexItem[] {
       out.push({
         name,
         aliases: aliases.map((v: any) => String(v ?? '').trim()).filter(Boolean),
+        identity: typeof (row as any).identity === 'string' ? String((row as any).identity).trim() : undefined,
+        summary: typeof (row as any).summary === 'string' ? String((row as any).summary).trim() : undefined,
+        location: typeof (row as any).location === 'string' ? String((row as any).location).trim() : undefined,
+        defaultSelected: (row as any).defaultSelected === true,
       });
     }
     return out;
@@ -2067,7 +2138,14 @@ async function ensureDossierIndexEntry(worldbookName: string) {
   );
 }
 
-async function appendRoleToDossierIndex(options: { roleName: string; keys: string[] }) {
+async function appendRoleToDossierIndex(options: {
+  roleName: string;
+  keys: string[];
+  identity?: string;
+  summary?: string;
+  location?: string;
+  defaultSelected?: boolean;
+}) {
   const roleName = String(options.roleName ?? '').trim();
   if (!roleName) return;
 
@@ -2075,6 +2153,9 @@ async function appendRoleToDossierIndex(options: { roleName: string; keys: strin
   await ensureDossierIndexEntry(worldbookName);
 
   const aliases = normalizeDossierAliases(roleName, options.keys ?? []);
+  const identity = typeof options.identity === 'string' ? options.identity.trim() : '';
+  const summary = typeof options.summary === 'string' ? options.summary.trim() : '';
+  const location = typeof options.location === 'string' ? options.location.trim() : '';
 
   await updateWorldbookWith(
     worldbookName,
@@ -2086,13 +2167,22 @@ async function appendRoleToDossierIndex(options: { roleName: string; keys: strin
       const list = parseDossierIndex(String(entry?.content ?? ''));
       const found = list.find(item => item.name === roleName);
       if (!found) {
-        list.push({ name: roleName, aliases });
+        const next: DossierIndexItem = { name: roleName, aliases };
+        if (identity) next.identity = identity;
+        if (summary) next.summary = summary;
+        if (location) next.location = location;
+        if (options.defaultSelected === true) next.defaultSelected = true;
+        list.push(next);
       } else {
         found.aliases = _.uniq([...(found.aliases ?? []), ...aliases])
           .map(s => String(s ?? '').trim())
           .filter(Boolean)
           .filter(s => s.length >= 2)
           .slice(0, 12);
+        if (identity) found.identity = identity;
+        if (summary) found.summary = summary;
+        if (location) found.location = location;
+        if (options.defaultSelected === true) found.defaultSelected = true;
       }
 
       list.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans'));
@@ -2189,7 +2279,12 @@ async function writeRoleData(options: {
 
     if (!wbError) {
       try {
-        await appendRoleToDossierIndex({ roleName: name, keys: worldbookKeys ?? [] });
+        await appendRoleToDossierIndex({
+          roleName: name,
+          keys: worldbookKeys ?? [],
+          summary: String(form?.内心想法 ?? form?.神态样貌 ?? ''),
+          location: String(form?.所在房间 ?? ''),
+        });
       } catch (err: any) {
         idxError = err?.message ?? String(err);
       }
@@ -2264,7 +2359,9 @@ async function submitAddRole() {
       form: addRoleForm.value,
       name,
       isTemp: addRoleIsTempNpc.value,
-      writeWorldbook: false,
+      writeWorldbook: true,
+      worldbookText: buildManualWorldbookText(name, addRoleForm.value),
+      worldbookKeys: [name],
     });
     if (result?.canceled) return;
 
