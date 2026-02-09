@@ -316,7 +316,7 @@
               </div>
               <div v-if="showPromptPanel" class="role-generate-setting-item">
                 <label class="role-form-label">最终提示词（只读）</label>
-                <textarea class="role-form-textarea" rows="6" readonly>{{ finalGeneratePromptText }}</textarea>
+                <textarea class="role-form-textarea" rows="6" readonly :value="finalGeneratePromptText"></textarea>
                 <div class="role-generate-actions">
                   <button class="role-btn ghost" type="button" @click="saveGenerateSettings">保存为默认</button>
                   <button class="role-btn ghost" type="button" @click="resetGenerateSettings">重置默认</button>
@@ -551,7 +551,7 @@
 
             <div v-if="generateRoleRawResponse && generatedRoles.length === 0" class="role-generate-section">
               <div class="role-generate-title">原始响应（解析失败时用于排查）</div>
-              <textarea class="role-form-textarea" rows="8" readonly>{{ generateRoleRawResponse }}</textarea>
+              <textarea class="role-form-textarea" rows="8" readonly :value="generateRoleRawResponse"></textarea>
             </div>
           </div>
 
@@ -590,8 +590,10 @@ import type { Schema as SchemaType } from '../../../schema';
 import { useDataStore } from '../../store';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
+type TempNpcKey = `临时NPC:${string}`;
 type CharacterKey =
   | Exclude<keyof SchemaType, '世界' | '庇护所' | '楼层其他住户' | '房间' | '主线任务' | '临时NPC'>
+  | TempNpcKey
   | string;
 
 const CHARACTER_ORDER = [
@@ -2290,19 +2292,17 @@ function getCharacter(key: CharacterKey) {
   return store.data[normalizedKey as keyof typeof store.data] as any;
 }
 
-function isTempNpcKey(key: CharacterKey): key is string {
+function isTempNpcKey(key: CharacterKey): key is TempNpcKey {
   return typeof key === 'string' && key.startsWith('临时NPC:');
 }
 
-function getTempNpcName(key: CharacterKey): string {
-  if (!isTempNpcKey(key)) return '';
+function getTempNpcName(key: TempNpcKey): string {
   return String(key.split(':')[1] ?? '').trim();
 }
 
 function getRoleNameKey(key: CharacterKey): string {
   if (isTempNpcKey(key)) return getTempNpcName(key);
-  if (typeof key === 'string') return key.replace(/\?/g, '・');
-  return String(key);
+  return String(key).replace(/\?/g, '・');
 }
 
 function canDeleteRole(key: CharacterKey): boolean {
