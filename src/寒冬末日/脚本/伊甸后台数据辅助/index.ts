@@ -73,6 +73,86 @@ function safeStringify(value: any, maxLen = 1200): string {
   }
 }
 
+function isPlainRecord(v: any): v is Record<string, any> {
+  return !!v && typeof v === 'object' && !Array.isArray(v);
+}
+
+function buildStatusCurrentVariableView(stat_data: any): Record<string, any> {
+  // 目标：把“变量列表”的筛选逻辑放到脚本里，世界书只负责输出 `{{format_message_variable::...}}`。
+  // 输出结构与旧的 变量列表.txt EJS 逻辑保持一致。
+  const d = isPlainRecord(stat_data) ? stat_data : {};
+  const out: Record<string, any> = {};
+
+  // “阅后即焚”字段：不发给 AI（减少 token；避免 AI 被短期噪声干扰）。
+  // 这些字段仍保留在 stat_data 里供 UI/存档使用，只是不会出现在 <status_current_variable> 裁剪视图中。
+  const burnAfterRead = new Set(['衣着', '舌唇', '胸乳', '私穴', '神态样貌', '动作姿势', '内心想法']);
+
+  const fullGroups = ['世界', '主线任务', '房间'];
+  for (const k of fullGroups) {
+    if (k in d) out[k] = d[k];
+  }
+
+  // 字段参照：浅见亚美全字段（不要求必须登场）
+  if ('浅见亚美' in d) {
+    const ref = d['浅见亚美'];
+    if (isPlainRecord(ref)) {
+      const cloned: Record<string, any> = { ...ref };
+      for (const k of burnAfterRead) delete cloned[k];
+      out['浅见亚美'] = cloned;
+    } else {
+      out['浅见亚美'] = ref;
+    }
+  }
+
+  // 庇护所：仅发送等级 + 技能名称（不发送技能详情）
+  const shelter = d['庇护所'];
+  if (isPlainRecord(shelter)) {
+    const level = shelter['庇护所等级'] ?? 1;
+    const ability = shelter['庇护所能力'];
+    const abilityNames = isPlainRecord(ability) ? Object.keys(ability).sort() : [];
+    out['庇护所'] = { 庇护所等级: level, 技能名称: abilityNames };
+  }
+
+  const reserved = new Set([
+    '世界',
+    '主线任务',
+    '房间',
+    '庇护所',
+    '临时NPC',
+    '楼层其他住户',
+    '$meta',
+    '浅见亚美',
+  ]);
+
+  const fieldsOf = (obj: any) =>
+    isPlainRecord(obj) ? Object.keys(obj).filter(k => !burnAfterRead.has(k)).sort() : [];
+
+  // 其余：仅登场角色字段列表
+  const roleNames = Object.keys(d).filter(k => !reserved.has(k)).sort();
+  for (const k of roleNames) {
+    const v = d[k];
+    if (!isPlainRecord(v)) continue;
+    if (v['登场状态'] !== '登场') continue;
+    out[k] = { 字段: fieldsOf(v) };
+  }
+
+  // 临时NPC：仅登场角色字段列表
+  const tempNpc = d['临时NPC'];
+  if (isPlainRecord(tempNpc)) {
+    const npcOut: Record<string, any> = {};
+    const npcNames = Object.keys(tempNpc).sort();
+    for (const name of npcNames) {
+      const v = tempNpc[name];
+      if (!isPlainRecord(v)) continue;
+      if (v['登场状态'] !== '登场') continue;
+      npcOut[name] = { 字段: fieldsOf(v) };
+    }
+    if (Object.keys(npcOut).length > 0) out['临时NPC'] = npcOut;
+  }
+
+  return out;
+}
+
 function resolveEdenDebugSetting(): EdenDebugSetting {
   try {
     // 支持 ?debug：方便在不便写入变量时快速开启控制台日志（不写入 chat）
@@ -404,6 +484,16 @@ function keepUnknownNames(list: any, known: Set<string>): string[] {
     .value();
 }
 
+function resetRoomsToEmpty(stat_data: any) {
+  // “初值为空”：仅当角色.所在房间出现有效值时，才开始派生 /房间/**。
+  // 这能避免“新开局清空房间后，又从旧存档的房间数组反推并复活邻居”的现象。
+  _.set(stat_data, '房间', {
+    玄关: { 净化隔离区入住者: [], 临时客房A入住者: [], 临时客房B入住者: [] },
+    核心区: { 客厅使用者: [], 餐厅厨房使用者: [], 主卧室使用者: [], 主浴室使用者: [] },
+    楼层房间: { 楼层20房间: {}, 楼层19房间: {} },
+  });
+}
+
 function ensureFloorRoomSlot(nextRooms: Rooms, floor: '20' | '19', roomNumber: string) {
   const path = `楼层房间.楼层${floor}房间.${roomNumber}`;
   const cur = _.get(nextRooms, path, null);
@@ -435,9 +525,21 @@ function applyRoomConsistency(stat_data: any, old_stat_data: any, debug: boolean
   const rooms = _.get(stat_data, '房间', {}) ?? {};
   const oldRooms = _.get(old_stat_data, '房间', {}) ?? {};
 
-  bootstrapMissingRoleRoomTagsFromRooms(stat_data, debug);
-
   const { core, tempNpc } = listRoleNames(stat_data);
+  const allNames = [...core, ...tempNpc];
+  const hasAnyExplicitTag = allNames.some(name => {
+    const isTemp = tempNpc.includes(name);
+    return !!readRoleRoomTag(stat_data, name, isTemp);
+  });
+
+  // 初值为空：只有当“角色.所在房间”出现至少一个有效值时，才开始派生 /房间/**。
+  // 否则直接维持空房间结构（避免从旧房间数组 bootstrap 导致“邻居复活”）。
+  if (!hasAnyExplicitTag) {
+    resetRoomsToEmpty(stat_data);
+    if (debug) console.log('[房间逻辑] skipped reconcile: no explicit role room tags yet (rooms kept empty)');
+    return;
+  }
+
   const knownNames = new Set<string>([...core, ...tempNpc]);
 
   const allTags = _([...listRoomTagsFromRooms(oldRooms), ...listRoomTagsFromRooms(rooms)])
@@ -1586,8 +1688,19 @@ function sanitizeForgottenOffstageRoles(stat_data: any, old_stat_data: any, debu
     if (_.isEqual(oldRole, newRole)) continue;
 
     const IGNORE_FOR_DIFF = new Set(['登场状态']);
-    // 用户设定：只排除“脚本后台可能更新”的字段（健康与原因）。其他字段若被更新，一律视为“角色实际在场”。
-    const IGNORE_FOR_EFFECTIVE = new Set(['健康', '健康更新原因']);
+    // 用户设定（更保守）：允许在“离场”期间更新这些“状态/数值类字段”（例如开局初始化或后台结算/纠偏），
+    // 不应据此强制回拨为「登场」。只有当外观/行为/心理等“剧情表现字段”被更新时，才认为角色实际在场。
+    const IGNORE_FOR_EFFECTIVE = new Set([
+      '姓名',
+      '关系',
+      '关系倾向',
+      '秩序刻印',
+      '秩序刻印更新原因',
+      '健康',
+      '健康更新原因',
+      '健康状况',
+      '所在房间',
+    ]);
 
     const keys = Array.from(new Set([...Object.keys(oldRole), ...Object.keys(newRole)]));
     const changedKeys = keys.filter(
@@ -2001,6 +2114,19 @@ $(async () => {
   // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
   // 因此在 UPDATE_STARTED 时抓取一份深拷贝快照，供本轮 UPDATE_ENDED 使用。
   let variablesBeforeUpdateSnapshot: any | null = null;
+
+  // 初始化时也要生成一次“变量列表裁剪视图”，否则首轮（仅 initvar 落盘、尚未发生 update）
+  // <status_current_variable> 里会是空对象。
+  eventMakeLast(Mvu.events.VARIABLE_INITIALIZED, (variables: any) => {
+    if (!isActiveInstance()) return;
+    try {
+      const stat_data = _.get(variables, 'stat_data', {}) ?? {};
+      _.set(stat_data, ['$meta', 'prompt', 'status_current_variable'], buildStatusCurrentVariableView(stat_data));
+    } catch {
+      // ignore
+    }
+  });
+
   eventMakeFirst(Mvu.events.VARIABLE_UPDATE_STARTED, (variables: any) => {
     if (!isActiveInstance()) return;
     try {
@@ -2085,6 +2211,9 @@ $(async () => {
       if (delta) _.set(stat_data, ['庇护所', '庇护范围变更'], {});
 
       applyOffstageBundle(new_variables, old_vars, nextScope);
+
+      // 生成“变量列表”裁剪视图（世界书只输出宏，避免 EJS 代码被当作文本注入）。
+      _.set(stat_data, ['$meta', 'prompt', 'status_current_variable'], buildStatusCurrentVariableView(stat_data));
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       edenLog('error', 'mvu.update_ended.last.error', { reason }, debugSetting);

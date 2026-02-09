@@ -7,6 +7,7 @@ import { ChildProcess, exec, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import RemarkHTML from 'remark-html';
 import { Server } from 'socket.io';
 import TerserPlugin from 'terser-webpack-plugin';
@@ -17,6 +18,7 @@ import unpluginVueComponents from 'unplugin-vue-components/webpack';
 import { VueLoaderPlugin } from 'vue-loader';
 import webpack from 'webpack';
 import WebpackObfuscator from 'webpack-obfuscator';
+import z from 'zod';
 const require = createRequire(import.meta.url);
 const HTMLInlineCSSWebpackPlugin = require('html-inline-css-webpack-plugin').default;
 
@@ -107,11 +109,53 @@ function watch_tavern_helper(compiler: webpack.Compiler) {
 }
 
 let watcher: FSWatcher;
+
+async function dumpSchemasInProcessBestEffort() {
+  // 某些环境会禁止在 webpack 配置里二次 spawn 子进程（会报 spawn EPERM）。
+  // 这里直接在同一进程内执行 `pnpm dump` 的核心逻辑，避免构建被中断。
+  try {
+    (globalThis as any)._ = _;
+    (globalThis as any).z = z;
+
+    const files = fs.globSync('src/**/schema.ts');
+    await Promise.all(
+      files.map(async schema_file => {
+        try {
+          const href = pathToFileURL(path.resolve(import.meta.dirname, schema_file)).href;
+          const module = await import(href);
+          if (!_.has(module, 'Schema')) return;
+
+          let schema = _.get(module, 'Schema');
+          if (_.isFunction(schema)) schema = schema();
+
+          fs.writeFileSync(
+            path.join(path.dirname(schema_file), 'schema.json'),
+            JSON.stringify((z as any).toJSONSchema(schema, { io: 'input', reused: 'ref' }), null, 2),
+          );
+        } catch (e) {
+          console.error(`生成 '${schema_file}' 对应的 schema.json 失败: ${e}`);
+        }
+      }),
+    );
+  } catch (e) {
+    console.warn(`[schema_dump] dumpSchemasInProcessBestEffort failed: ${e}`);
+  }
+}
+
 const dump = () => {
-  exec('pnpm dump', { cwd: import.meta.dirname });
-  console.info('\x1b[36m[schema_dump]\x1b[0m 已将所有 schema.ts 转换为 schema.json');
+  // 先尝试 in-process 方案；再 best-effort 回退到子进程（不让构建因此失败）。
+  void dumpSchemasInProcessBestEffort();
+
+  try {
+    exec('pnpm dump', { cwd: import.meta.dirname });
+  } catch (e) {
+    console.warn(`[schema_dump] spawn blocked, skipped pnpm dump: ${e}`);
+  }
+
+  console.info('\x1b[36m[schema_dump]\x1b[0m 已触发 schema.ts -> schema.json 转换（best-effort）');
 };
 const dump_debounced = _.debounce(dump, 500, { leading: true, trailing: false });
+
 function schema_dump(compiler: webpack.Compiler) {
   if (!compiler.options.watch) {
     dump_debounced();
@@ -222,7 +266,9 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       ),
       chunkFilename: `${script_filepath.name}.[contenthash].chunk.js`,
       asyncChunks: true,
-      clean: true,
+      // Windows 下 dist/** 中的 loader.js / paste.html 可能被外部进程占用，clean 时会 unlink 报 EPERM 并导致构建失败。
+      // 这里关闭 clean，避免被锁文件打断；需要清理 dist 时请手动删除 dist/。
+      clean: false,
       publicPath: '',
       module: !is_ui_entry,
       ...(is_ui_entry ? {} : { library: { type: 'module' } }),
@@ -557,11 +603,8 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         vue: 'Vue',
         'vue-router': 'VueRouter',
         yaml: 'YAML',
-<<<<<<< HEAD
         'pixi.js': 'PIXI',
-=======
         zod: 'z',
->>>>>>> f0b81694107b46de13c384cb766919135218501f
       };
       if (request in global) {
         return callback(null, 'var ' + global[request as keyof typeof global]); 
