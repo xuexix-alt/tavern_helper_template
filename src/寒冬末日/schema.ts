@@ -35,8 +35,8 @@ const create角色Schema = (args: {
   z
     .object({
       姓名: z.string().prefault(''),
-      关系: args.relationStageSchema.describe('反应角色的性同意程度，受玩家施舍/救助影响小受关系倾向影响大'),
-      关系倾向: args.relationTendencySchema.describe('角色关系的倾向影响Imp数值的变化幅度和难易程度'),
+      关系: args.relationStageSchema.describe('角色关系档位（由Imp区间驱动），综合反映信任、边界、合作与亲密意愿，不得与Imp脱钩'),
+      关系倾向: args.relationTendencySchema.describe('关系变化倾向，影响Imp数值变化幅度与升降档难度'),
       秩序刻印: z.coerce
         .number()
         .int()

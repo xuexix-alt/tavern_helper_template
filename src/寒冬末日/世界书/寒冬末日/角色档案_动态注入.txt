@@ -206,6 +206,17 @@ for (let i = 0; i < finalTargets.length; i++) {
   print('\\n<' + title + '>\\n');
   print(String(wi).trimEnd());
   print('\\n</' + title + '>\\n');
+
+  // 角色专属补丁联动注入（按需添加）
+  if (roleName === '浅见亚美') {
+    const extraTitle = '角色补丁 - 浅见亚美NSFW档案';
+    const extraWi = await getwi(extraTitle);
+    if (extraWi) {
+      print('\\n<' + extraTitle + '>\\n');
+      print(String(extraWi).trimEnd());
+      print('\\n</' + extraTitle + '>\\n');
+    }
+  }
 }
 print('\\n</角色档案_动态注入>');
 %>
