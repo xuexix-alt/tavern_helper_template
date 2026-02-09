@@ -267,7 +267,7 @@
 
           <div class="role-generate-body" :style="{ maxHeight: roleModalBodyMaxHeight }">
             <div class="role-generate-input-block primary">
-              <div class="role-generate-title">🌟 主要提示词（请先填写这里）</div>
+              <div class="role-generate-title">🌟 第1步：生成首稿</div>
               <div class="role-form-hint">请输入你想要的角色概况，示例：2B，女，冷酷性感的刀女，身份为……</div>
               <textarea
                 ref="roleGenerateTextarea"
@@ -294,7 +294,7 @@
                   :disabled="generateRoleLoading || !generateRoleInput.trim()"
                   @click="onGenerateRole"
                 >
-                  {{ generateRoleLoading ? '生成中…' : '点击生成' }}
+                  {{ generateRoleLoading ? '生成中…' : '生成首稿' }}
                 </button>
               </div>
             </div>
@@ -364,6 +364,30 @@
             </div>
 
             <div v-if="generateRoleError" class="role-form-error">{{ generateRoleError }}</div>
+
+            <div v-if="generatedRoles.length > 0" class="role-generate-input-block">
+              <div class="role-generate-title">🧪 第2步：检查修正</div>
+              <div class="role-form-hint">
+                默认沿用首次提示词。你可以补充“针对刚生成内容”的修正意见，例如：强化边界感、降低套路化命名、补足关键背景。
+              </div>
+              <textarea
+                v-model="generateRoleReviewInput"
+                class="role-form-textarea role-generate-review-input"
+                rows="3"
+                placeholder="默认与首轮输入一致；可在此追加针对性修正意见…"
+              ></textarea>
+              <div class="role-generate-actions toolbar">
+                <div class="role-generate-meta">{{ generateRoleReviewMessage || '建议先执行一次检查修正，再写入角色。' }}</div>
+                <button
+                  class="role-btn primary"
+                  type="button"
+                  :disabled="generateRoleLoading || !canRunRoleReview"
+                  @click="onReviewGeneratedRoles"
+                >
+                  {{ generateRoleReviewState === 'running' ? '检查中…' : '执行检查修正' }}
+                </button>
+              </div>
+            </div>
 
             <div v-if="generatedRoles.length > 0" class="role-generate-result">
               <div class="role-generate-tabs">
@@ -532,10 +556,13 @@
           </div>
 
           <div class="role-modal-footer">
+            <div v-if="generatedRoles.length > 0 && !canWriteGeneratedRoles" class="role-form-hint role-generate-write-hint">
+              请先执行“检查修正”后再写入；若检查失败会保留首稿并允许写入。
+            </div>
             <button
               class="role-btn primary"
               type="button"
-              :disabled="generateRoleLoading || generatedRoles.length === 0"
+              :disabled="generateRoleLoading || !canWriteGeneratedRoles"
               @click="writeGeneratedRole"
             >
               写入角色
@@ -543,7 +570,7 @@
             <button
               class="role-btn primary"
               type="button"
-              :disabled="generateRoleLoading || generatedRoles.length === 0"
+              :disabled="generateRoleLoading || !canWriteGeneratedRoles"
               @click="writeAllGeneratedRoles"
             >
               写入全部
@@ -656,9 +683,12 @@ const addRoleError = ref('');
 const addRoleIsTempNpc = ref(false);
 const generateRoleOpen = ref(false);
 const generateRoleInput = ref('');
+const generateRoleReviewInput = ref('');
 const generateRoleLoading = ref(false);
 const generateRoleError = ref('');
 const generateRoleRawResponse = ref('');
+const generateRoleReviewMessage = ref('');
+const generateRoleReviewState = ref<'idle' | 'running' | 'done' | 'failed'>('idle');
 const roleGenerateSystemPromptText = ref('');
 const roleGeneratePromptText = ref('');
 const roleGenerateTemplateText = ref('');
@@ -719,8 +749,73 @@ const relationTendencyOptions = ['极易', '易', '中立', '难', '极难', '�
 const healthStatusOptions = ['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'] as const;
 const presenceOptions = ['登场', '离场'] as const;
 
+// 角色生成用“知识库”提示词：直接嵌入到生成提示中，避免依赖外部预设/插件内容。
+const ROLE_GENERATE_KNOWLEDGE_TEXT = [
+  '<creative_principles>',
+  '角色卡制作核心原则',
+  '',
+  '制作角色卡时，遵循以下原则来创造真实、鲜活的角色：',
+  '',
+  '1. 用行为展现性格，而非定义性格',
+  '2. 提供具体的语料示例，而非描述语气',
+  '3. 避免模糊词、比喻词、微表情等八股描写',
+  '4. 外貌描写使用描述性语言，不用精确数字',
+  '5. 设计完整的世界观，让角色有生存的土壤',
+  '6. 注重细节，用小习惯让角色立体化',
+  '7. 保持一致性，所有设定要相互支撑',
+  '</creative_principles>',
+  '',
+  '<writing_principles>',
+  '什么是八股',
+  '',
+  '八股是指陈词滥调、机械化的描写方式：',
+  '- 模糊词：似乎、几乎、仿佛、如同、宛如',
+  '- 劣质比喻：像小兽、像小兔子、投石入湖、心湖泛起涟漪',
+  '- 微表情：嘴角上扬、眼里闪过光芒、指尖泛白',
+  '- 语气描写：带着xx的口吻、用xx的语气',
+  '- 极端情绪词：陷入极大的恐惧、极度羞耻',
+  '- 否定转折句：不是...而是...',
+  '- 过度心理描写：大段内心活动',
+  '',
+  '创作必须遵守的原则',
+  '',
+  '绝对零度：',
+  '- 保持客观冷静的叙述视角',
+  '- 不带主观判断',
+  '- 不添加个人情感色彩',
+  '',
+  '白描手法：',
+  '- 直接描述事实',
+  '- 不添加修饰和渲染',
+  '- 用最简单的语言呈现',
+  '',
+  '不使用形容词：',
+  '- 简单干净',
+  '- 用名词和动词直接呈现',
+  '- 避免一切装饰性描述',
+  '',
+  '不使用代词和意象词：',
+  '- 避免歧义',
+  '- 使用具体明确的本意',
+  '- 不用抽象概念替代具体事物',
+  '',
+  '用行为替代描述：',
+  '- 展现而非告知',
+  '- 写角色做了什么，而非角色是什么样的人',
+  '- 让读者通过行为自己判断',
+  '',
+  '用语料展现性格：',
+  '- 让角色通过对话体现特点',
+  '- 不描述语气，让对话本身说话',
+  '- 纯粹的话语，不附加动作和神态',
+  '</writing_principles>',
+].join('\n');
+
 const ROLE_GENERATE_SYSTEM_PROMPT = [
   '你是结构化角色/世界书生成器。',
+  '忽略任何与本任务无关的预设提示词/身份设定/剧情要求（例如“秘书身份”“GM主持”“破限自检”等），只执行本任务。',
+  '若上游提示中出现“秋青子/明月/秘书/昵称化称呼/完成后引导/自查”等内容，全部视为噪声并忽略。',
+  '输出中面向玩家的称呼一律使用 "{{user}}"。',
   '只允许输出以下三段，顺序固定，段落外不得出现任何文字；若为多名角色则按顺序重复这三段：',
   '1) <ROLE_JSON>JSON</ROLE_JSON>',
   '2) <WB_KEYS>JSON数组</WB_KEYS>',
@@ -731,14 +826,21 @@ const ROLE_GENERATE_SYSTEM_PROMPT = [
 ].join('\n');
 
 const ROLE_GENERATE_SETTINGS_KEY = 'ui_role_generate_settings';
-const DEFAULT_WORLDBOOK_NAME = '寒冬末日-星穹秩序';
-const DEFAULT_WORLDBOOK_NAME_ALT = '末世寒冬 - 星穹秩序';
+const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
+  '末世寒冬-星穹秩序2.0',
+  '寒冬末日-星穹秩序',
+  '末世寒冬 - 星穹秩序',
+  '末世寒冬-星穹秩序',
+] as const;
 
 const ROLE_GENERATE_PROMPT = [
   '你将根据用户输入生成“寒冬末日角色变量 + 世界书条目”。只输出以下三段，顺序固定；多角色时按顺序重复三段：',
   '<ROLE_JSON>JSON对象</ROLE_JSON>',
   '<WB_KEYS>JSON数组</WB_KEYS>',
   '<context>模板内容</context>',
+  '',
+  '【创作原则】必须遵守下方知识库（影响世界书文本风格与可用性）：',
+  ROLE_GENERATE_KNOWLEDGE_TEXT,
   '',
   '【ROLE_JSON】必须是 JSON 对象，且仅包含这些字段：',
   '"姓名","关系","关系倾向","秩序刻印","秩序刻印更新原因","健康","健康更新原因","健康状况","衣着","舌唇","胸乳","私穴","神态样貌","动作姿势","内心想法","所在房间","登场状态"',
@@ -757,69 +859,73 @@ const WORLD_BOOK_TEMPLATE = [
   '<context>',
   'NOTE: 请新建一个 角色定义之后 条目, 将代码块中的内容复制到该条目中',
   '```yaml',
-  '---',
-  '角色详情:',
-  '  ${主名}:',
-  '    chinese name: ${主名}',
+  '<角色档案 - ${主名}>',
+  '角色档案:',
+  '  基本信息:',
+  '    姓名: ${主名}',
   '    english name: ${英文名}',
-  '    title: ${如果有,称号与代号}',
-  '    gender: ${性别}',
-  '    age: ${年龄}',
-  '    identity:',
-  '      public: ${表面身份与职位}',
-  '      hidden: ${隐藏身份与职位}',
-  '    life_story:',
-  '      childhood(0~x岁):',
-  '        - ${至少15条经历，按年龄顺序；重要经历用**加粗**并用单引号包裹}',
-  '      adolescence(x~y岁):',
-  '        - ${至少5条经历}',
-  '      adulthood(z~n岁):',
-  '        - ${至少5条经历}',
-  '    current state:',
-  '      - ${当前状态要点}',
-  '    social connection:',
-  '      ${关联人}:',
-  '        relationship: ${关联人和角色的关系}',
-  '        major event: ${与 life story 相关的事件}',
-  '    personality:',
-  '      core:',
-  '        ${性格特征关键词，2到5字}: ${对这种性格的具体描述}',
-  '      conditional:',
-  '        ${条件性格特征关键词，2到5字}: ${触发条件与原因}',
-  '      hidden:',
-  '        ${隐藏性格特征关键词，2到5字}: ${不可告人的一面，禁止使用占有欲等泛化词}',
-  '    habit:',
-  '      - ${日常习惯1}',
-  '      - ${日常习惯2}',
-  '    hidden behavior:',
-  '      - ${隐藏行为1}',
-  '      - ${隐藏行为2}',
-  '    appearance:',
-  '      height: ${xxx}cm',
-  '      weight: ${xx}kg',
-  '      measurement: B${xx}({ABCDE}罩杯) W${xx} H${xx}',
-  '      style: ${风格词}',
-  '      overview: ${整体形象概述}',
-  '      attire:',
-  '        ${场合}: ${该场合着装风格，<=20字}',
-  '        casual: ${日常着装风格}',
-  '      feature:',
-  '        - ${特别特征1}',
-  '        - ${特别特征2}',
-  '    sexual preference:',
-  '      role: ${性爱时常扮演的角色}',
-  '      masturbation frequency: ${自慰频率/方式/原因}',
-  '      orgasm response: ${高潮时的独特表现}',
-  '      sensitve spot:',
-  '        - ${敏感部位1}',
-  '        - ${敏感部位2}',
-  '      fetish:',
-  '        - ${性癖1}',
-  '        - ${性癖2}',
-  '      special trait:',
-  '        - ${性爱特质及原因}',
-  'rule:',
-  '  - 你必须在之后理解`角色关键信息`时recall角色对应的`角色详情`词条',
+  '    年龄: ${年龄}',
+  '    性别: ${性别}',
+  '    身份: ${身份/职业/住址}',
+  '    婚姻状况: ${婚姻状况}',
+  '    与{{user}}关系: ${与{{user}}关系}',
+  '',
+  '  外貌特征:',
+  '    整体印象:',
+  '      体型: ${体型}',
+  '      发型:',
+  '        - ${发型与打理方式1}',
+  '        - ${发型与打理方式2}',
+  '      穿着:',
+  '        - ${日常穿着（物品组合）}',
+  '        - ${需要行动时穿着（物品组合）}',
+  '    面部:',
+  '      五官:',
+  '        - ${五官要点}',
+  '      表情:',
+  '        - ${常见表情/动作1}',
+  '        - ${常见表情/动作2}',
+  '    身体细节:',
+  '      手部/肢体:',
+  '        - ${身体细节/动作习惯1}',
+  '        - ${身体细节/动作习惯2}',
+  '      随身物品:',
+  '        - ${物品1}',
+  '        - ${物品2}',
+  '        - ${物品3}',
+  '',
+  '  性格特点:',
+  '    核心特质_1:',
+  '      表现形式:',
+  '        - ${行为1}',
+  '        - ${行为2}',
+  '        - ${行为3}',
+  '      对{{user}}/伊甸的态度:',
+  '        - "${台词1}"',
+  '        - "${台词2}"',
+  '    核心特质_2:',
+  '      表现形式:',
+  '        - ${行为1}',
+  '        - ${行为2}',
+  '',
+  '  背景设定:',
+  '    职业背景:',
+  '      - ${职业经历1}',
+  '      - ${职业经历2}',
+  '    生活习惯:',
+  '      - ${习惯1}',
+  '      - ${习惯2}',
+  '    过往经历:',
+  '      - ${经历1}',
+  '',
+  '  语言特征:',
+  '    说话方式:',
+  '      - ${说话习惯1}',
+  '      - ${说话习惯2}',
+  '    语料示例:',
+  '      - "${台词1}"',
+  '      - "${台词2}"',
+  '</角色档案 - ${主名}>',
   '```',
   '</context>',
 ].join('\n');
@@ -840,6 +946,15 @@ const filteredWorldbookEntryOptions = computed(() => {
 const selectedWorldbookCount = computed(() => selectedWorldbookEntryIds.value.length);
 
 const finalGeneratePromptText = computed(() => buildGeneratePrompt(generateRoleInput.value));
+
+const canRunRoleReview = computed(() => generatedRoles.value.length > 0 && generateRoleReviewInput.value.trim().length > 0);
+
+const canWriteGeneratedRoles = computed(() => {
+  if (generatedRoles.value.length === 0) return false;
+  if (generateRoleReviewState.value === 'running') return false;
+  // 推荐：检查后写入；但检查失败时允许写入首稿避免流程卡死
+  return generateRoleReviewState.value === 'done' || generateRoleReviewState.value === 'failed';
+});
 
 const activeGeneratedRole = computed(() => generatedRoles.value[activeGeneratedIndex.value] ?? null);
 
@@ -921,17 +1036,105 @@ function readGenerateSettings(): Record<string, any> | null {
   }
 }
 
+function replaceRoleGenerateAliases(text: string): string {
+  return String(text ?? '')
+    .replaceAll('小哥哥', '{{user}}')
+    .replaceAll('哥哥', '{{user}}')
+    .replaceAll('主人', '{{user}}');
+}
+
+function removeTemplateHintLines(text: string): string {
+  return String(text ?? '')
+    .split('\n')
+    .filter(line => !line.trim().startsWith('# 提示：'))
+    .join('\n');
+}
+
+function sanitizeGenerateSystemPromptText(text: string): string {
+  return replaceRoleGenerateAliases(text);
+}
+
+function sanitizeGenerateBasePromptText(text: string): string {
+  return replaceRoleGenerateAliases(text);
+}
+
+function sanitizeGenerateTemplateText(text: string): string {
+  return removeTemplateHintLines(replaceRoleGenerateAliases(text));
+}
+
+function normalizeSelectedEntryIds(value: any): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((id: any) => String(id ?? '').trim()).filter(Boolean);
+}
+
+function buildSanitizedGenerateSettings(settings: Record<string, any>): Record<string, any> {
+  const next = { ...settings };
+  if (typeof settings.system_prompt === 'string') {
+    next.system_prompt = sanitizeGenerateSystemPromptText(settings.system_prompt);
+  }
+  if (typeof settings.base_prompt === 'string') {
+    next.base_prompt = sanitizeGenerateBasePromptText(settings.base_prompt);
+  }
+  if (typeof settings.template === 'string') {
+    next.template = sanitizeGenerateTemplateText(settings.template);
+  }
+  if (Array.isArray(settings.selected_entry_ids)) {
+    next.selected_entry_ids = normalizeSelectedEntryIds(settings.selected_entry_ids);
+  }
+  return next;
+}
+
+function migrateGenerateSettingsInChat(settings: Record<string, any> | null) {
+  if (!settings) return;
+
+  const next = buildSanitizedGenerateSettings(settings);
+  const prevComparable = {
+    system_prompt: typeof settings.system_prompt === 'string' ? settings.system_prompt : undefined,
+    base_prompt: typeof settings.base_prompt === 'string' ? settings.base_prompt : undefined,
+    template: typeof settings.template === 'string' ? settings.template : undefined,
+    selected_entry_ids: Array.isArray(settings.selected_entry_ids)
+      ? normalizeSelectedEntryIds(settings.selected_entry_ids)
+      : undefined,
+  };
+  const nextComparable = {
+    system_prompt: typeof next.system_prompt === 'string' ? next.system_prompt : undefined,
+    base_prompt: typeof next.base_prompt === 'string' ? next.base_prompt : undefined,
+    template: typeof next.template === 'string' ? next.template : undefined,
+    selected_entry_ids: Array.isArray(next.selected_entry_ids) ? normalizeSelectedEntryIds(next.selected_entry_ids) : undefined,
+  };
+
+  if (_.isEqual(prevComparable, nextComparable)) return;
+
+  updateVariablesWith(
+    vars => {
+      _.set(vars, ROLE_GENERATE_SETTINGS_KEY, next);
+      return vars;
+    },
+    { type: 'chat' },
+  );
+}
+
 function applyGenerateSettings(settings: Record<string, any> | null) {
   if (!settings) return;
-  if (typeof settings.system_prompt === 'string') roleGenerateSystemPromptText.value = settings.system_prompt;
-  if (typeof settings.base_prompt === 'string') roleGeneratePromptText.value = settings.base_prompt;
-  if (typeof settings.template === 'string') roleGenerateTemplateText.value = settings.template;
+  if (typeof settings.system_prompt === 'string') {
+    roleGenerateSystemPromptText.value = sanitizeGenerateSystemPromptText(settings.system_prompt);
+  }
+  if (typeof settings.base_prompt === 'string') {
+    roleGeneratePromptText.value = sanitizeGenerateBasePromptText(settings.base_prompt);
+  }
+  if (typeof settings.template === 'string') {
+    roleGenerateTemplateText.value = sanitizeGenerateTemplateText(settings.template);
+  }
   if (Array.isArray(settings.selected_entry_ids)) {
     selectedWorldbookEntryIds.value = settings.selected_entry_ids.map((id: any) => String(id ?? '')).filter(Boolean);
   }
 }
 
 function saveGenerateSettings() {
+  roleGenerateSystemPromptText.value = sanitizeGenerateSystemPromptText(roleGenerateSystemPromptText.value);
+  roleGeneratePromptText.value = sanitizeGenerateBasePromptText(roleGeneratePromptText.value);
+  roleGenerateTemplateText.value = sanitizeGenerateTemplateText(roleGenerateTemplateText.value);
+
   updateVariablesWith(
     vars => {
       _.set(vars, ROLE_GENERATE_SETTINGS_KEY, {
@@ -1004,28 +1207,25 @@ async function loadWorldbookEntryOptions() {
       }
     }
 
-    const normalizedDefault = DEFAULT_WORLDBOOK_NAME.replace(/\s+/g, '');
-    const normalizedAlt = DEFAULT_WORLDBOOK_NAME_ALT.replace(/\s+/g, '');
+    const preferredNorm = new Set(DEFAULT_WORLDBOOK_NAME_CANDIDATES.map(name => name.replace(/\s+/g, '')));
     items.sort((a, b) => {
       const aNorm = a.worldbook.replace(/\s+/g, '');
       const bNorm = b.worldbook.replace(/\s+/g, '');
-      const aScore = aNorm === normalizedDefault || aNorm === normalizedAlt ? 0 : 1;
-      const bScore = bNorm === normalizedDefault || bNorm === normalizedAlt ? 0 : 1;
+      const aScore = preferredNorm.has(aNorm) ? 0 : 1;
+      const bScore = preferredNorm.has(bNorm) ? 0 : 1;
       if (aScore !== bScore) return aScore - bScore;
       return a.label.localeCompare(b.label, 'zh-Hans');
     });
 
     worldbookEntryOptions.value = items;
 
-    // 清理无效选择
     const existingIds = new Set(items.map(item => item.id));
     selectedWorldbookEntryIds.value = selectedWorldbookEntryIds.value.filter(id => existingIds.has(id));
 
-    // 如果没有任何选择，默认勾选启用条目
     if (selectedWorldbookEntryIds.value.length === 0) {
       const preferred = items.filter(item => {
         const name = item.worldbook.replace(/\s+/g, '');
-        return name === normalizedDefault || name === normalizedAlt;
+        return preferredNorm.has(name);
       });
       const isDefaultEntry = (entryName: string) => {
         if (entryName.includes('世界观')) return true;
@@ -1046,8 +1246,11 @@ async function loadWorldbookEntryOptions() {
 
 function resetGenerateRoleState() {
   generateRoleInput.value = '';
+  generateRoleReviewInput.value = '';
   generateRoleError.value = '';
   generateRoleRawResponse.value = '';
+  generateRoleReviewMessage.value = '';
+  generateRoleReviewState.value = 'idle';
   generatedRoles.value = [];
   activeGeneratedIndex.value = 0;
   showPromptPanel.value = false;
@@ -1059,7 +1262,9 @@ function openGenerateRole() {
   if (!addRoleOpen.value) addRoleOpen.value = true;
   resetGenerateRoleState();
   generateRoleOpen.value = true;
-  applyGenerateSettings(readGenerateSettings());
+  const settings = readGenerateSettings();
+  applyGenerateSettings(settings);
+  migrateGenerateSettingsInChat(settings);
   loadWorldbookEntryOptions();
 }
 
@@ -1067,6 +1272,8 @@ function closeGenerateRole() {
   generateRoleOpen.value = false;
   generateRoleError.value = '';
   generateRoleLoading.value = false;
+  generateRoleReviewMessage.value = '';
+  generateRoleReviewState.value = 'idle';
 }
 
 async function onGenerateRole() {
@@ -1079,48 +1286,19 @@ async function onGenerateRole() {
 
   generateRoleLoading.value = true;
   generateRoleError.value = '';
+  generateRoleReviewState.value = 'idle';
+  generateRoleReviewMessage.value = '';
 
   try {
-    const result = await generate(buildRoleGenerateConfig(input));
+    const result = await generateRoleRawWithRetry(input);
     generateRoleRawResponse.value = result;
-
-    const roleBlocks = extractRoleJsonBlocks(result);
-    if (roleBlocks.length === 0) throw new Error('未找到 ROLE_JSON 区块');
-
-    const keyBlocks = extractWorldbookKeyBlocks(result);
-    const contextBlocks = extractTagContents(result, 'context');
-
-    const items: GeneratedRoleItem[] = [];
-
-    roleBlocks.forEach((block, index) => {
-      const roleObj = safeParseRoleJson(block);
-      const normalizedForm = normalizeGeneratedRole(roleObj);
-      if (!normalizedForm.姓名) {
-        throw new Error(`角色${index + 1}姓名为空`);
-      }
-
-      const keyBlock = keyBlocks[index] ?? keyBlocks[keyBlocks.length - 1] ?? '';
-      const contextBlock = contextBlocks[index] ?? contextBlocks[contextBlocks.length - 1] ?? '';
-      const yamlContent = extractYamlBlock(contextBlock);
-      const englishName = extractEnglishNameFromYaml(yamlContent);
-      const parsedKeys = parseWorldbookKeys(stripCodeFence(keyBlock));
-      const ensuredKeys = _.uniq([normalizedForm.姓名, englishName, ...parsedKeys].filter(Boolean)).slice(0, 12);
-
-      items.push({
-        id: `${normalizedForm.姓名}-${index}`,
-        form: normalizedForm,
-        rawJson: JSON.stringify(roleObj, null, 2),
-        worldbookText: yamlContent,
-        worldbookKeys: ensuredKeys,
-        excludeWorldbook: false,
-        isTemp: false,
-        status: 'idle',
-        errorMessage: '',
-      });
-    });
+    const items = parseGeneratedRolesFromRaw(result, generatedRoles.value);
 
     generatedRoles.value = items;
     activeGeneratedIndex.value = 0;
+    generateRoleReviewInput.value = input;
+    generateRoleReviewState.value = 'idle';
+    generateRoleReviewMessage.value = '首稿已生成。建议执行一次检查修正后再写入。';
   } catch (err: any) {
     console.error('[CharactersSection] generate role failed', err);
     generateRoleError.value = err?.message ?? String(err);
@@ -1129,17 +1307,69 @@ async function onGenerateRole() {
   }
 }
 
-function getActiveGeneratedRole() {
-  return generatedRoles.value[activeGeneratedIndex.value] ?? null;
+async function generateRoleRawWithRetry(input: string): Promise<string> {
+  const first = await generateRaw(buildRoleGenerateConfig(input));
+  if (String(first ?? '').trim()) return first;
+
+  const retryInput = `${input}\n\n【重试要求】上一轮输出为空。请严格输出 <ROLE_JSON>/<WB_KEYS>/<context> 三段，禁止空回复。`;
+  const second = await generateRaw(buildRoleGenerateConfig(retryInput));
+  if (String(second ?? '').trim()) {
+    toastr.info('检测到首次空回复，已自动重试一次');
+    return second;
+  }
+
+  throw new Error('模型返回空回复（completion_tokens=0）。请检查预设中的 stop（如 <end>）和外部角色扮演提示词污染后重试。');
 }
 
-function applyGeneratedRoleToForm() {
-  const active = getActiveGeneratedRole();
-  if (!active) return;
-  addRoleForm.value = { ...active.form };
-  addRoleIsTempNpc.value = false;
-  generateRoleOpen.value = false;
-  toastr.success('已将生成内容应用到添加角色');
+async function onReviewGeneratedRoles() {
+  if (generateRoleLoading.value) return;
+  const reviewInputRaw = generateRoleReviewInput.value.trim();
+  const reviewInput = replaceRoleGenerateAliases(reviewInputRaw).trim();
+  if (!reviewInput) {
+    generateRoleError.value = '请先填写检查修正意见。';
+    return;
+  }
+  if (reviewInput !== reviewInputRaw) {
+    generateRoleReviewInput.value = reviewInput;
+  }
+  if (generatedRoles.value.length === 0) {
+    generateRoleError.value = '请先生成首稿。';
+    return;
+  }
+
+  generateRoleLoading.value = true;
+  generateRoleError.value = '';
+  generateRoleReviewState.value = 'running';
+  generateRoleReviewMessage.value = '正在执行检查修正…';
+
+  try {
+    const originalInput = generateRoleInput.value.trim();
+    const result = await generateRaw(buildRoleReviewConfig(originalInput, reviewInput, generatedRoles.value));
+    if (!String(result ?? '').trim()) {
+      throw new Error('检查修正返回空回复，请调整修正意见后重试');
+    }
+
+    generateRoleRawResponse.value = result;
+    const reviewedItems = parseGeneratedRolesFromRaw(result, generatedRoles.value);
+    generatedRoles.value = reviewedItems;
+    activeGeneratedIndex.value = Math.min(activeGeneratedIndex.value, Math.max(0, reviewedItems.length - 1));
+
+    generateRoleReviewState.value = 'done';
+    generateRoleReviewMessage.value = '检查修正完成，已更新为修正稿。';
+    toastr.success('检查修正完成');
+  } catch (err: any) {
+    generateRoleReviewState.value = 'failed';
+    const reason = err?.message ?? String(err);
+    generateRoleReviewMessage.value = `检查修正失败：${reason}（已保留首稿，可直接写入）`;
+    generateRoleError.value = reason;
+    toastr.warning('检查失败，已保留首稿');
+  } finally {
+    generateRoleLoading.value = false;
+  }
+}
+
+function getActiveGeneratedRole() {
+  return generatedRoles.value[activeGeneratedIndex.value] ?? null;
 }
 
 async function writeGeneratedRole() {
@@ -1245,7 +1475,46 @@ function normalizeSelectInput(value: string, options: readonly string[], fallbac
 }
 
 function buildGeneratePrompt(userInput: string) {
-  return `${roleGeneratePromptText.value}\n\n${roleGenerateTemplateText.value}\n\n用户输入如下：\n${userInput}`.trim();
+  const basePrompt = sanitizeGenerateBasePromptText(roleGeneratePromptText.value);
+  const templatePrompt = sanitizeGenerateTemplateText(roleGenerateTemplateText.value);
+  return `${basePrompt}\n\n${templatePrompt}\n\n用户输入如下：\n${userInput}`.trim();
+}
+
+function buildRoleReviewPrompt(originalInput: string, reviewInput: string, draftItems: GeneratedRoleItem[]) {
+  const normalizedOriginalInput = replaceRoleGenerateAliases(String(originalInput ?? '').trim());
+  const normalizedReviewInput = replaceRoleGenerateAliases(String(reviewInput ?? '').trim());
+  const effectiveOriginalInput = normalizedOriginalInput || normalizedReviewInput;
+
+  const draftText = draftItems
+    .map((item, index) => {
+      const roleJson = JSON.stringify(item.form, null, 2);
+      const wbKeys = JSON.stringify(item.worldbookKeys ?? [], null, 2);
+      const worldbookText = String(item.worldbookText ?? '').trim();
+      return [
+        `【首稿角色${index + 1}】`,
+        `<ROLE_JSON>${roleJson}</ROLE_JSON>`,
+        `<WB_KEYS>${wbKeys}</WB_KEYS>`,
+        '<context>',
+        'NOTE: 以下为当前世界书草稿',
+        '```yaml',
+        worldbookText || '# 当前为空',
+        '```',
+        '</context>',
+      ].join('\n');
+    })
+    .join('\n\n');
+
+  return [
+    buildGeneratePrompt(effectiveOriginalInput),
+    '',
+    '【检查修正任务】',
+    '请基于“首稿”进行一次定向检查与修正，目标是减少套路化命名、保证设定一致性、补齐关键信息。',
+    '若某项已合理可保持；但最终必须完整输出可直接写入的最终稿。',
+    `本轮修正意见：\n${normalizedReviewInput}`,
+    '',
+    '【首稿如下】',
+    draftText,
+  ].join('\n').trim();
 }
 
 function buildWorldbookSubsetText() {
@@ -1256,12 +1525,23 @@ function buildWorldbookSubsetText() {
   return parts.join('\n\n').trim();
 }
 
-function buildRoleGenerateConfig(userInput: string) {
+function buildRoleGenerateConfig(userInput: string): GenerateRawConfig {
   const worldbookText = buildWorldbookSubsetText();
+  const systemPrompt = sanitizeGenerateSystemPromptText(roleGenerateSystemPromptText.value);
+  const ordered_prompts: NonNullable<GenerateRawConfig['ordered_prompts']> = [
+    { role: 'system', content: systemPrompt },
+    'world_info_before',
+    'user_input',
+  ];
   return {
     user_input: buildGeneratePrompt(userInput),
     max_chat_history: 0,
     overrides: {
+      persona_description: '',
+      char_description: '',
+      char_personality: '',
+      scenario: '',
+      dialogue_examples: '',
       world_info_before: worldbookText,
       world_info_after: '',
       chat_history: {
@@ -1270,16 +1550,187 @@ function buildRoleGenerateConfig(userInput: string) {
         author_note: '',
       },
     },
-    injects: [
-      {
-        role: 'system',
-        content: roleGenerateSystemPromptText.value,
-        position: 'in_chat',
-        depth: 0,
-        should_scan: false,
-      },
-    ],
+    ordered_prompts,
   };
+}
+
+function buildRoleReviewConfig(originalInput: string, reviewInput: string, draftItems: GeneratedRoleItem[]): GenerateRawConfig {
+  const worldbookText = buildWorldbookSubsetText();
+  const systemPrompt = sanitizeGenerateSystemPromptText(roleGenerateSystemPromptText.value);
+  const ordered_prompts: NonNullable<GenerateRawConfig['ordered_prompts']> = [
+    { role: 'system', content: systemPrompt },
+    'world_info_before',
+    'user_input',
+  ];
+  return {
+    user_input: buildRoleReviewPrompt(originalInput, reviewInput, draftItems),
+    max_chat_history: 0,
+    overrides: {
+      persona_description: '',
+      char_description: '',
+      char_personality: '',
+      scenario: '',
+      dialogue_examples: '',
+      world_info_before: worldbookText,
+      world_info_after: '',
+      chat_history: {
+        prompts: [],
+        with_depth_entries: false,
+        author_note: '',
+      },
+    },
+    ordered_prompts,
+  };
+}
+
+function parseGeneratedRolesFromRaw(result: string, previousItems: GeneratedRoleItem[] = []): GeneratedRoleItem[] {
+  const roleBlocks = extractRoleJsonBlocks(result);
+  if (roleBlocks.length === 0) throw new Error('未找到 ROLE_JSON 区块');
+
+  const keyBlocks = extractWorldbookKeyBlocks(result);
+  const contextBlocks = extractTagContents(result, 'context');
+  const previousByName = new Map(previousItems.map(item => [String(item.form.姓名 ?? '').trim(), item]));
+  const items: GeneratedRoleItem[] = [];
+
+  roleBlocks.forEach((block, index) => {
+    const roleObj = safeParseRoleJson(block);
+    const normalizedForm = normalizeGeneratedRole(roleObj);
+    if (!normalizedForm.姓名) {
+      throw new Error(`角色${index + 1}姓名为空`);
+    }
+
+    const keyBlock = keyBlocks[index] ?? keyBlocks[keyBlocks.length - 1] ?? '';
+    const contextBlock = contextBlocks[index] ?? contextBlocks[contextBlocks.length - 1] ?? '';
+    const yamlContent = extractYamlBlock(contextBlock);
+    const englishName = extractEnglishNameFromYaml(yamlContent);
+    const parsedKeys = parseWorldbookKeys(stripCodeFence(keyBlock));
+    const ensuredKeys = _.uniq([normalizedForm.姓名, englishName, ...parsedKeys].filter(Boolean)).slice(0, 12);
+    const previous = previousByName.get(normalizedForm.姓名) ?? previousItems[index];
+
+    items.push({
+      id: `${normalizedForm.姓名}-${index}`,
+      form: normalizedForm,
+      rawJson: JSON.stringify(roleObj, null, 2),
+      worldbookText: yamlContent,
+      worldbookKeys: ensuredKeys,
+      excludeWorldbook: previous?.excludeWorldbook ?? false,
+      isTemp: previous?.isTemp ?? false,
+      status: 'idle',
+      errorMessage: '',
+    });
+  });
+
+  return items;
+}
+
+function extractTagContent(source: string, tag: string) {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+  let last = '';
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(source)) !== null) {
+    last = match[1];
+  }
+  return last ? last.trim() : '';
+}
+
+function extractTagContents(source: string, tag: string) {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+  const list: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(source)) !== null) {
+    list.push(match[1].trim());
+  }
+  return list;
+}
+
+function extractYamlBlock(source: string) {
+  const re = /```yaml\s*([\s\S]*?)```/i;
+  const match = source.match(re);
+  return match ? match[1].trim() : source.trim();
+}
+
+function extractEnglishNameFromYaml(source: string) {
+  const match = source.match(/english name:\s*([^\n\r]+)/i);
+  if (match) return String(match[1]).trim();
+  const matchZh = source.match(/英文名:\s*([^\n\r]+)/i);
+  return matchZh ? String(matchZh[1]).trim() : '';
+}
+
+function stripCodeFence(source: string) {
+  return source
+    .replace(/```(?:json|yaml)?/gi, '')
+    .replace(/```/g, '')
+    .trim();
+}
+
+function extractJsonBlock(source: string, startChar: '{' | '[', endChar: '}' | ']') {
+  const start = source.indexOf(startChar);
+  if (start === -1) return '';
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < source.length; i += 1) {
+    const ch = source[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === startChar) depth += 1;
+    if (ch === endChar) depth -= 1;
+    if (depth === 0) {
+      return source.slice(start, i + 1).trim();
+    }
+  }
+  return '';
+}
+
+function extractRoleJsonFallback(source: string) {
+  const fenced = extractTagContent(source, 'ROLE_JSON');
+  if (fenced) return fenced;
+  const codeBlock = extractTagContent(source, 'json');
+  if (codeBlock) return codeBlock;
+  return extractJsonBlock(source, '{', '}');
+}
+
+function extractKeysFallback(source: string) {
+  const fenced = extractTagContent(source, 'WB_KEYS');
+  if (fenced) return fenced;
+  return extractJsonBlock(source, '[', ']');
+}
+
+function extractRoleJsonBlocks(source: string) {
+  const blocks = extractTagContents(source, 'ROLE_JSON');
+  if (blocks.length) return blocks;
+  const listBlock = extractTagContent(source, 'ROLE_JSON_LIST');
+  if (listBlock) {
+    try {
+      const parsed = JSON.parse(stripCodeFence(listBlock));
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => JSON.stringify(item));
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const fallback = extractRoleJsonFallback(source);
+  return fallback ? [fallback] : [];
+}
+
+function extractWorldbookKeyBlocks(source: string) {
+  const blocks = extractTagContents(source, 'WB_KEYS');
+  if (blocks.length) return blocks;
+  const fallback = extractKeysFallback(source);
+  return fallback ? [fallback] : [];
 }
 
 function selectAllEnabledWorldbookEntries() {
@@ -1412,114 +1863,6 @@ function exportGeneratedRoles() {
   toastr.success('已导出角色 JSON');
 }
 
-function extractTagContent(source: string, tag: string) {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
-  let last = '';
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(source)) !== null) {
-    last = match[1];
-  }
-  return last ? last.trim() : '';
-}
-
-function extractTagContents(source: string, tag: string) {
-  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
-  const list: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(source)) !== null) {
-    list.push(match[1].trim());
-  }
-  return list;
-}
-
-function extractYamlBlock(source: string) {
-  const re = /```yaml\s*([\s\S]*?)```/i;
-  const match = source.match(re);
-  return match ? match[1].trim() : source.trim();
-}
-
-function extractEnglishNameFromYaml(source: string) {
-  const match = source.match(/english name:\s*([^\n\r]+)/i);
-  return match ? String(match[1]).trim() : '';
-}
-
-function stripCodeFence(source: string) {
-  return source
-    .replace(/```(?:json|yaml)?/gi, '')
-    .replace(/```/g, '')
-    .trim();
-}
-
-function extractJsonBlock(source: string, startChar: '{' | '[', endChar: '}' | ']') {
-  const start = source.indexOf(startChar);
-  if (start === -1) return '';
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < source.length; i += 1) {
-    const ch = source[i];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (ch === '\\') {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-    if (ch === startChar) depth += 1;
-    if (ch === endChar) depth -= 1;
-    if (depth === 0) {
-      return source.slice(start, i + 1).trim();
-    }
-  }
-  return '';
-}
-
-function extractRoleJsonFallback(source: string) {
-  const fenced = extractTagContent(source, 'ROLE_JSON');
-  if (fenced) return fenced;
-  const codeBlock = extractTagContent(source, 'json');
-  if (codeBlock) return codeBlock;
-  return extractJsonBlock(source, '{', '}');
-}
-
-function extractKeysFallback(source: string) {
-  const fenced = extractTagContent(source, 'WB_KEYS');
-  if (fenced) return fenced;
-  return extractJsonBlock(source, '[', ']');
-}
-
-function extractRoleJsonBlocks(source: string) {
-  const blocks = extractTagContents(source, 'ROLE_JSON');
-  if (blocks.length) return blocks;
-  const listBlock = extractTagContent(source, 'ROLE_JSON_LIST');
-  if (listBlock) {
-    try {
-      const parsed = JSON.parse(stripCodeFence(listBlock));
-      if (Array.isArray(parsed)) {
-        return parsed.map(item => JSON.stringify(item));
-      }
-    } catch {
-      // ignore
-    }
-  }
-  const fallback = extractRoleJsonFallback(source);
-  return fallback ? [fallback] : [];
-}
-
-function extractWorldbookKeyBlocks(source: string) {
-  const blocks = extractTagContents(source, 'WB_KEYS');
-  if (blocks.length) return blocks;
-  const fallback = extractKeysFallback(source);
-  return fallback ? [fallback] : [];
-}
-
 function safeParseRoleJson(raw: string) {
   const cleaned = stripCodeFence(raw);
   try {
@@ -1588,7 +1931,19 @@ function buildRolePayload(name: string, form: AddRoleForm = addRoleForm.value) {
   };
 }
 
-function validateNumberRange(label: string, value: string, min: number, max: number) {
+type NumberRangeValidationResult =
+  | { ok: true; value: string | number }
+  | { ok: false; error: string };
+
+type RoleFormValidationResult =
+  | {
+      ok: true;
+      imprintCheck: Extract<NumberRangeValidationResult, { ok: true }>;
+      healthCheck: Extract<NumberRangeValidationResult, { ok: true }>;
+    }
+  | { ok: false; error: string };
+
+function validateNumberRange(label: string, value: string, min: number, max: number): NumberRangeValidationResult {
   const s = String(value ?? '').trim();
   if (!s) return { ok: true, value: '' as string | number };
   const num = Number(s);
@@ -1597,7 +1952,7 @@ function validateNumberRange(label: string, value: string, min: number, max: num
   return { ok: true, value: num };
 }
 
-function validateRoleForm(form: AddRoleForm) {
+function validateRoleForm(form: AddRoleForm): RoleFormValidationResult {
   const imprintCheck = validateNumberRange('秩序刻印', form.秩序刻印, -20, 100);
   if (!imprintCheck.ok) return { ok: false, error: imprintCheck.error ?? '秩序刻印不合法' };
   const healthCheck = validateNumberRange('健康', form.健康, 0, 100);
@@ -1618,8 +1973,9 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
     worldbook_name,
     [
       {
-        name: `角色档案_用户添加_${name}`,
-        enabled: true,
+        // 与“角色档案_动态注入”保持一致：条目名固定为 `角色档案 - <姓名>`，默认不启用，由 @INJECT 负责按需注入。
+        name: `角色档案 - ${name}`,
+        enabled: false,
         strategy: {
           type: 'selective',
           keys: ensuredKeys,
@@ -1627,11 +1983,12 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
           scan_depth: 'same_as_global',
         },
         position: {
-          type: 'at_depth',
-          role: 'user',
-          depth: 2,
-          order: 40,
+          type: 'after_character_definition',
+          role: 'system',
+          depth: 0,
+          order: 10,
         },
+        recursion: { prevent_incoming: true, prevent_outgoing: true, delay_until: null },
         content: wbContent,
       },
     ],
@@ -1639,24 +1996,134 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
   );
 }
 
+type DossierIndexItem = { name: string; aliases: string[] };
+
+function parseDossierIndex(text: string): DossierIndexItem[] {
+  try {
+    const data = JSON.parse(String(text ?? ''));
+    if (!Array.isArray(data)) return [];
+    const out: DossierIndexItem[] = [];
+    for (const row of data) {
+      if (!row || typeof row !== 'object') continue;
+      const name = String((row as any).name ?? '').trim();
+      if (!name) continue;
+      const aliases = Array.isArray((row as any).aliases) ? (row as any).aliases : [];
+      out.push({
+        name,
+        aliases: aliases.map((v: any) => String(v ?? '').trim()).filter(Boolean),
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function buildDossierIndexText(list: DossierIndexItem[]): string {
+  // 仅输出 JSON，供 @INJECT EJS 用 JSON.parse() 读取。
+  return JSON.stringify(list, null, 2);
+}
+
+function normalizeDossierAliases(roleName: string, keys: string[]): string[] {
+  const out = _.uniq(
+    (Array.isArray(keys) ? keys : [])
+      .map(k => String(k ?? '').trim())
+      .filter(Boolean)
+      .filter(k => k !== roleName),
+  )
+    .filter(k => k.length >= 2)
+    .slice(0, 12);
+  return out;
+}
+
+async function ensureDossierIndexEntry(worldbookName: string) {
+  const worldbook = await getWorldbook(worldbookName);
+  const exists = worldbook.some(entry => String(entry?.name ?? '').trim() === '角色档案索引');
+  if (exists) return;
+
+  await createWorldbookEntries(
+    worldbookName,
+    [
+      {
+        name: '角色档案索引',
+        enabled: false,
+        strategy: {
+          type: 'constant',
+          keys: [],
+          keys_secondary: { logic: 'and_any', keys: [] },
+          scan_depth: 'same_as_global',
+        },
+        position: {
+          type: 'after_character_definition',
+          role: 'system',
+          depth: 0,
+          order: 8,
+        },
+        recursion: { prevent_incoming: true, prevent_outgoing: true, delay_until: null },
+        content: '[]',
+      },
+    ],
+    { render: 'immediate' },
+  );
+}
+
+async function appendRoleToDossierIndex(options: { roleName: string; keys: string[] }) {
+  const roleName = String(options.roleName ?? '').trim();
+  if (!roleName) return;
+
+  const worldbookName = await resolveDefaultWorldbookName();
+  await ensureDossierIndexEntry(worldbookName);
+
+  const aliases = normalizeDossierAliases(roleName, options.keys ?? []);
+
+  await updateWorldbookWith(
+    worldbookName,
+    worldbook => {
+      const idx = worldbook.findIndex(entry => String(entry?.name ?? '').trim() === '角色档案索引');
+      if (idx === -1) return worldbook;
+
+      const entry = worldbook[idx];
+      const list = parseDossierIndex(String(entry?.content ?? ''));
+      const found = list.find(item => item.name === roleName);
+      if (!found) {
+        list.push({ name: roleName, aliases });
+      } else {
+        found.aliases = _.uniq([...(found.aliases ?? []), ...aliases])
+          .map(s => String(s ?? '').trim())
+          .filter(Boolean)
+          .filter(s => s.length >= 2)
+          .slice(0, 12);
+      }
+
+      list.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans'));
+      worldbook[idx] = { ...entry, content: buildDossierIndexText(list) };
+      return worldbook;
+    },
+    { render: 'immediate' },
+  );
+}
+
 async function resolveDefaultWorldbookName() {
-  const names = getWorldbookNames().map(name => name.replace(/\s+/g, ''));
-  const normalizedDefault = DEFAULT_WORLDBOOK_NAME.replace(/\s+/g, '');
-  const normalizedAlt = DEFAULT_WORLDBOOK_NAME_ALT.replace(/\s+/g, '');
-  if (names.includes(normalizedDefault)) return DEFAULT_WORLDBOOK_NAME;
-  if (names.includes(normalizedAlt)) return DEFAULT_WORLDBOOK_NAME_ALT;
+  const originalNames = getWorldbookNames();
+  const names = originalNames.map(name => name.replace(/\s+/g, ''));
+  for (const candidate of DEFAULT_WORLDBOOK_NAME_CANDIDATES) {
+    const idx = names.indexOf(candidate.replace(/\s+/g, ''));
+    if (idx !== -1) return originalNames[idx] ?? candidate;
+  }
 
   try {
     const charWb = getCharWorldbookNames('current');
     if (charWb?.primary) {
       const primaryNorm = charWb.primary.replace(/\s+/g, '');
-      if (primaryNorm === normalizedDefault) return charWb.primary;
+      if (DEFAULT_WORLDBOOK_NAME_CANDIDATES.some(name => name.replace(/\s+/g, '') === primaryNorm)) {
+        return charWb.primary;
+      }
     }
   } catch {
     // ignore
   }
 
-  throw new Error(`未找到世界书「${DEFAULT_WORLDBOOK_NAME}」，请确认当前角色卡已绑定该世界书`);
+  throw new Error(`未找到默认世界书（${DEFAULT_WORLDBOOK_NAME_CANDIDATES.join(' / ')}），请确认当前角色卡已绑定该世界书`);
 }
 
 async function writeRoleData(options: {
@@ -1712,16 +2179,27 @@ async function writeRoleData(options: {
   await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
 
   let wbError = '';
+  let idxError = '';
   if (writeWorldbook) {
     try {
       await writeWorldbookEntry(name, String(worldbookText ?? ''), worldbookKeys ?? []);
     } catch (err: any) {
       wbError = err?.message ?? String(err);
     }
+
+    if (!wbError) {
+      try {
+        await appendRoleToDossierIndex({ roleName: name, keys: worldbookKeys ?? [] });
+      } catch (err: any) {
+        idxError = err?.message ?? String(err);
+      }
+    }
   }
 
   if (wbError) {
     toastr.warning(`角色已写入，但世界书失败：${wbError}`);
+  } else if (idxError) {
+    toastr.warning(`角色已写入，但角色档案索引更新失败：${idxError}`);
   } else if (writeWorldbook) {
     toastr.success(`已写入角色与世界书「${name}」`);
   } else {
@@ -1812,7 +2290,7 @@ function getCharacter(key: CharacterKey) {
   return store.data[normalizedKey as keyof typeof store.data] as any;
 }
 
-function isTempNpcKey(key: CharacterKey): boolean {
+function isTempNpcKey(key: CharacterKey): key is string {
   return typeof key === 'string' && key.startsWith('临时NPC:');
 }
 
@@ -1906,7 +2384,7 @@ async function onClickDeleteRole(key: CharacterKey) {
     }
 
     const removeCore = !isTemp && existedCore;
-    const removeTemp = isTemp ? existedTemp : existedTemp;
+    const removeTemp = existedTemp;
     if (removeCore) _.unset(mvu_data, ['stat_data', name]);
     if (removeTemp) _.unset(mvu_data, ['stat_data', '临时NPC', name]);
 
@@ -2277,6 +2755,15 @@ onBeforeUnmount(() => {
 
 .role-generate-input {
   min-height: 72px;
+}
+
+.role-generate-review-input {
+  min-height: 76px;
+}
+
+.role-generate-write-hint {
+  margin: 0 auto 0 0;
+  max-width: 520px;
 }
 
 .role-generate-result {

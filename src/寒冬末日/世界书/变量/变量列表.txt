@@ -1,5 +1,6 @@
-[以下只发送给AI不得输出]：
+
 <status_current_variable>
-{{format_message_variable::stat_data.$meta.prompt.status_current_variable}}
+[不得在正文中输出]{{format_message_variable::stat_data}}
+[上一轮的变量中，如有有任何角色Imp < 0或健康值=0，则角色已经死亡，本轮演绎其死亡剧情，并今后正文不会违反这个事实。]
 </status_current_variable>
 ----

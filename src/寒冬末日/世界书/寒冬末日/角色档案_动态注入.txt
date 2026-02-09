@@ -1,123 +1,211 @@
 <%
-// 动态注入角色档案：
-// 仅当【角色登场】且【用户本轮或AI上轮提及(关键字/姓名)】时，才将对应角色档案条目发给AI。
+// 动态注入角色档案（@INJECT 专用）：
+// - 约束：@INJECT 条目本身应保持“未启用”，由提示词模板语法插件在生成提示词时执行此 EJS。
+// - 兼容：避免使用 optional chaining / 不依赖“列出已启用世界书条目”的 API（不同环境可能不存在）。
 //
-// 说明：生成正文之前只能读取“上一轮已落盘的变量”(当前 stat_data)，无法得知“本轮将被更新为登场”的结果，
-// 因此这里以 stat_data 中的 登场状态=登场 作为筛选条件。
-const d = getvar('stat_data', { defaults: {} });
+// 策略（宽容触发，提及/登场都可）：
+// - 提及：本轮用户输入 + 上轮AI输出 里点名/别名命中 -> 注入对应角色档案。
+// - 登场：stat_data 中登场 -> 也注入对应角色档案。
+// - 动态新角色：若角色档案条目命名不统一，但关键字里包含角色名，则尝试用
+//   getEnabledWorldInfoEntries()（若存在）按关键字命中并用 uid 注入（不依赖标题规范）。
+//
+// 如果你更想“仅当提及才注入”，可以再加一层关键词命中；但为了保证不漏注入，这里优先稳妥策略。
 
-const isRecord = v => v && typeof v === 'object' && !Array.isArray(v);
-const reserved = new Set(['世界', '主线任务', '庇护所', '房间', '楼层其他住户', '临时NPC', '_变量']);
+const stat = getvar('stat_data', { defaults: {} });
+function isRecord(v) {
+  return !!(v && typeof v === 'object' && !Array.isArray(v));
+}
 
-const tempNpc = d?.['临时NPC'];
+if (!isRecord(stat)) return;
 
-// 读取最近一条用户/AI消息（用于关键字匹配）。
-// 注意：getChatMessages 的重载较多，传错参数可能导致取到“整段聊天文本”，进而误触发大量关键字。
-const getLastByRole = role => {
+const reserved = {
+  '世界': true,
+  '主线任务': true,
+  '庇护所': true,
+  '房间': true,
+  '楼层其他住户': true,
+  '临时NPC': true,
+  '_变量': true,
+};
+
+function isOnstageRole(v) {
+  return isRecord(v) && v['登场状态'] === '登场';
+}
+
+function isDeadRole(v) {
+  if (!isRecord(v)) return false;
+  const health = Number(v['健康']);
+  const imp = Number(v['秩序刻印']);
+  if (Number.isFinite(health) && health <= 0) return true;
+  if (Number.isFinite(imp) && imp < 0) return true;
+  return false;
+}
+
+function safeString(v) {
+  return v === null || v === undefined ? '' : String(v);
+}
+
+function getLastByRole(role) {
   try {
-    if (role === 'user' && typeof lastUserMessageId === 'number') return String(getChatMessage(lastUserMessageId, 'user') ?? '');
-    if (role === 'assistant' && typeof lastCharMessageId === 'number')
-      return String(getChatMessage(lastCharMessageId, 'assistant') ?? '');
+    if (role === 'user' && typeof lastUserMessageId === 'number') return safeString(getChatMessage(lastUserMessageId, 'user'));
+    if (role === 'assistant' && typeof lastCharMessageId === 'number') return safeString(getChatMessage(lastCharMessageId, 'assistant'));
   } catch (e) {}
 
   try {
-    // fallback: count + role 的重载
     const arr = getChatMessages(1, role);
-    if (Array.isArray(arr) && arr.length > 0) return String(arr[arr.length - 1] ?? '');
+    if (Array.isArray(arr) && arr.length > 0) return safeString(arr[arr.length - 1]);
   } catch (e) {}
 
   return '';
-};
+}
 
-const userMsg = getLastByRole('user');
-const lastAiMsg = getLastByRole('assistant');
-const mentionText = `${userMsg}\\n${lastAiMsg}`;
-if (!mentionText.trim()) return;
+const mentionText = (getLastByRole('user') + '\n' + getLastByRole('assistant')).trim();
 
-// 从当前已启用世界书集合中筛选“角色档案 - <姓名>”条目。
-const allEntries = await getEnabledWorldInfoEntries(true, true, true, true, true);
-const dossierEntries = (Array.isArray(allEntries) ? allEntries : []).filter(e =>
-  /^角色档案\s*-\s*.+$/.test(String(e?.comment ?? '').trim()),
-);
-if (dossierEntries.length === 0) return;
-
-const getRoleVar = roleName => {
-  if (isRecord(d?.[roleName])) return d[roleName];
-  if (isRecord(tempNpc) && isRecord(tempNpc?.[roleName])) return tempNpc[roleName];
-  return null;
-};
-
-// “以关键字中的姓名为基准”：只允许匹配与角色名互为子串的关键字（例如：浅见亚美 <-> 亚美）。
-const pickNameLikeAliases = (roleName, keywords) => {
-  const out = [];
-  const ks = Array.isArray(keywords) ? keywords : [];
-  for (const k of ks) {
-    const kw = String(k ?? '').trim();
-    if (!kw || kw.length < 2) continue;
-    if (roleName.includes(kw) || kw.includes(roleName)) out.push(kw);
-  }
-  return out;
-};
-
-const includesAnyKeyword = (text, keywords) => {
+function includesAny(text, list) {
   if (!text) return false;
-  const ks = Array.isArray(keywords) ? keywords : [];
-  for (const k of ks) {
-    const kw = String(k ?? '').trim();
-    // 过滤过短关键字，避免误触发（如“静”“花”等 1 字词）。
+  if (!Array.isArray(list)) return false;
+  for (let i = 0; i < list.length; i++) {
+    const kw = String(list[i] || '').trim();
+    // 过滤过短别名，避免误触发。
     if (!kw || kw.length < 2) continue;
-    if (text.includes(kw)) return true;
+    if (text.indexOf(kw) !== -1) return true;
   }
   return false;
-};
+}
 
-const targets = [];
-for (const e of dossierEntries) {
-  const title = String(e?.comment ?? '').trim();
-  // 角色档案条目通常形如：角色档案 - 姓名；若命名不规范，则退化为“关键字命中就注入”。
-  const m = title.match(/^角色档案\\s*-\\s*(.+)$/);
-  const roleName = (m?.[1] ? String(m[1]).trim() : '');
+function parseDossierIndex(text) {
+  try {
+    const data = JSON.parse(String(text || ''));
+    if (!Array.isArray(data)) return [];
+    const out = [];
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      if (!row || typeof row !== 'object') continue;
+      const name = String(row.name || '').trim();
+      if (!name) continue;
+      const aliases = Array.isArray(row.aliases) ? row.aliases : [];
+      out.push({ name, aliases });
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
+}
+
+const MAX_INJECT = 3;
+
+function uniqPushByKey(list, key, item) {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i] && list[i].key === key) return;
+  }
+  list.push(item);
+}
+
+// 0) 动态新角色（若可用）：按关键字命中“已启用”的世界书条目，然后按 uid 注入
+const hitEntries = [];
+if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
+  try {
+    const allEntries = await getEnabledWorldInfoEntries(true, true, true, true, true);
+    const arr = Array.isArray(allEntries) ? allEntries : [];
+    for (let i = 0; i < arr.length; i++) {
+      const e = arr[i];
+      const comment = String((e && e.comment) || '').trim();
+      if (!comment || comment.indexOf('角色档案') === -1) continue;
+      const keys = []
+        .concat(Array.isArray(e && e.key) ? e.key : [])
+        .concat(Array.isArray(e && e.keysecondary) ? e.keysecondary : []);
+      if (!includesAny(mentionText, keys)) continue;
+      const uid = e && e.uid;
+      if (uid === null || uid === undefined) continue;
+      uniqPushByKey(hitEntries, 'uid:' + String(uid), { key: 'uid:' + String(uid), uid: Number(uid), label: comment });
+      if (hitEntries.length >= MAX_INJECT) break;
+    }
+  } catch (e) {}
+}
+
+// 1) 提及：按“角色档案索引”命中（不依赖世界书启用状态）
+const mentionTargets = [];
+if (mentionText) {
+  const indexText = await getwi('角色档案索引');
+  const index = parseDossierIndex(indexText);
+  for (let i = 0; i < index.length; i++) {
+    const name = index[i].name;
+    const aliases = index[i].aliases;
+    const hit = mentionText.indexOf(name) !== -1 || includesAny(mentionText, aliases);
+    if (!hit) continue;
+    uniqPushByKey(mentionTargets, 'role:' + name, { key: 'role:' + name, roleName: name, label: '角色档案 - ' + name });
+    if (mentionTargets.length >= MAX_INJECT) break;
+  }
+}
+
+// 2) 登场：按“登场变量”挑选（兜底，不依赖本轮提及）
+const onstageTargets = [];
+for (const k in stat) {
+  if (!Object.prototype.hasOwnProperty.call(stat, k)) continue;
+  if (!k || reserved[k] || k.charAt(0) === '_') continue;
+  const v = stat[k];
+  if (!isOnstageRole(v) || isDeadRole(v)) continue;
+  const roleName = String(k).trim();
   if (!roleName) continue;
-
-  // 若能解析出角色名，则必须满足：变量中存在 + 登场；否则只做关键字命中但仍要求能对应到变量里的某个角色。
-  const v = getRoleVar(roleName);
-  if (!isRecord(v) || v.登场状态 !== '登场') continue;
-
-  const aliases = [
-    ...pickNameLikeAliases(roleName, e?.key),
-    ...pickNameLikeAliases(roleName, e?.keysecondary),
-  ];
-
-  const hit =
-    mentionText.includes(roleName) ||
-    (aliases.length > 0 && includesAnyKeyword(mentionText, aliases));
-  if (!hit) continue;
-
-  // 如果能解析出角色名：用角色名去做去重与标签；否则用 uid 做兜底。
-  targets.push({ uid: e?.uid, title, roleName });
+  uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
 }
 
-if (targets.length === 0) return;
-
-// 去重：按 uid/roleName 去重
-const seen = new Set();
-const uniq = [];
-for (const t of targets) {
-  const k = t?.roleName ? `role:${t.roleName}` : `uid:${t?.uid}`;
-  if (!k || seen.has(k)) continue;
-  seen.add(k);
-  uniq.push(t);
+const tempNpc = stat['临时NPC'];
+if (isRecord(tempNpc)) {
+  for (const k in tempNpc) {
+    if (!Object.prototype.hasOwnProperty.call(tempNpc, k)) continue;
+    if (!k || k.charAt(0) === '_') continue;
+    const v = tempNpc[k];
+    if (!isOnstageRole(v) || isDeadRole(v)) continue;
+    const roleName = String(k).trim();
+    if (!roleName) continue;
+    uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
+  }
 }
+
+// 合并：动态命中 uid 优先，其次提及命中角色名，其次登场角色名；总量限制 MAX_INJECT
+const finalTargets = [];
+for (let i = 0; i < hitEntries.length; i++) {
+  if (finalTargets.length >= MAX_INJECT) break;
+  finalTargets.push(hitEntries[i]);
+}
+for (let i = 0; i < mentionTargets.length; i++) {
+  if (finalTargets.length >= MAX_INJECT) break;
+  uniqPushByKey(finalTargets, mentionTargets[i].key, mentionTargets[i]);
+}
+// 登场目标按名字稳定排序，避免每轮抖动
+onstageTargets.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+for (let i = 0; i < onstageTargets.length; i++) {
+  if (finalTargets.length >= MAX_INJECT) break;
+  uniqPushByKey(finalTargets, onstageTargets[i].key, onstageTargets[i]);
+}
+
+if (finalTargets.length === 0) return;
 
 print('<角色档案_动态注入>\\n');
-for (const t of uniq) {
-  const wi = (t?.uid !== undefined && t?.uid !== null) ? await getwi(Number(t.uid)) : await getwi(String(t.title));
-  if (!wi) continue;
+for (let i = 0; i < finalTargets.length; i++) {
+  const t = finalTargets[i];
 
-  const label = t?.roleName ? `角色档案 - ${t.roleName}` : String(t.title || '角色档案');
-  print(`\\n<${label}>\\n`);
+  // uid 注入：用于“命名不统一但关键字命中”的动态角色档案
+  if (t && t.uid !== undefined && t.uid !== null) {
+    const wi = await getwi(Number(t.uid));
+    if (!wi) continue;
+    const label = String(t.label || '角色档案').trim() || '角色档案';
+    print('\\n<' + label + '>\\n');
+    print(String(wi).trimEnd());
+    print('\\n</' + label + '>\\n');
+    continue;
+  }
+
+  // roleName 注入：要求条目标题可用 `角色档案 - <姓名>` 读取
+  const roleName = t && t.roleName ? String(t.roleName).trim() : '';
+  if (!roleName) continue;
+  const title = '角色档案 - ' + roleName;
+  const wi = await getwi(title);
+  if (!wi) continue;
+  print('\\n<' + title + '>\\n');
   print(String(wi).trimEnd());
-  print(`\\n</${label}>\\n`);
+  print('\\n</' + title + '>\\n');
 }
 print('\\n</角色档案_动态注入>');
 %>

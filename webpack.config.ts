@@ -557,11 +557,8 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         vue: 'Vue',
         'vue-router': 'VueRouter',
         yaml: 'YAML',
-<<<<<<< HEAD
         'pixi.js': 'PIXI',
-=======
         zod: 'z',
->>>>>>> f0b81694107b46de13c384cb766919135218501f
       };
       if (request in global) {
         return callback(null, 'var ' + global[request as keyof typeof global]); 

@@ -15,7 +15,13 @@ type EdenDebugSetting = {
   toChat: boolean;
 };
 
-const EDEN_HELPER_VERSION = '1.2';
+type MvuCommandLike = {
+  type?: string;
+  full_match?: string;
+  args?: any[];
+};
+
+const EDEN_HELPER_VERSION = '1.5';
 const EDEN_HELPER_ACTIVE_INSTANCE_KEY = '__eden_helper_active_instance__';
 const EDEN_HELPER_INSTANCE_ID = (() => {
   try {
@@ -126,6 +132,148 @@ function isActiveInstance(): boolean {
     return cur.id === EDEN_HELPER_INSTANCE_ID;
   } catch {
     return true;
+  }
+}
+
+function parseJsonPointerToDotPath(ptr: string): string | null {
+  const s = String(ptr ?? '').trim();
+  if (!s.startsWith('/')) return null;
+  const parts = s
+    .split('/')
+    .slice(1)
+    .map(p => p.replaceAll('~1', '/').replaceAll('~0', '~'))
+    .filter(Boolean);
+  return parts.length ? parts.join('.') : '';
+}
+
+function normalizeCommandPathToDotPath(rawPath: any): string | null {
+  if (rawPath === null || rawPath === undefined) return null;
+  const s = String(rawPath).trim();
+  if (!s) return null;
+  if (s.startsWith('/')) return parseJsonPointerToDotPath(s);
+  // MVU / zod 插件常见前缀：统一剥掉，保持与 stat_data 根对齐
+  return s.replace(/^(?:stat_data|status_current_variables)\./, '');
+}
+
+function clampImprint(v: number): number {
+  return _.clamp(v, -20, 100);
+}
+
+function parseSignedDeltaFromReason(raw: any): number | null {
+  const s = String(raw ?? '').trim();
+  if (!s) return null;
+  const m = s.match(/^([+-]?\d+(?:\.\d+)?)[\s]*[,，]/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: any, debug: EdenDebugSetting) {
+  const { core, tempNpc } = listRoleNames(stat_data);
+  const all = [...core.map(name => ({ name, path: name })), ...tempNpc.map(name => ({ name, path: `临时NPC.${name}` }))];
+
+  for (const it of all) {
+    const rolePath = it.path;
+    const oldRole = _.get(old_stat_data, rolePath, null);
+    const newRole = _.get(stat_data, rolePath, null);
+    if (!isRoleLike(oldRole) || !isRoleLike(newRole)) continue;
+
+    const touched = diffRoleTouched(oldRole, newRole);
+    if (!touched.imprint && !touched.imprintReason) continue;
+
+    const deltaX = parseSignedDeltaFromReason((newRole as any)?.秩序刻印更新原因);
+    if (deltaX === null || deltaX === 0) continue;
+
+    const oldVal = Number((oldRole as any)?.秩序刻印);
+    const newVal = Number((newRole as any)?.秩序刻印);
+    if (!Number.isFinite(oldVal) || !Number.isFinite(newVal)) continue;
+
+    const expected = clampImprint(oldVal + deltaX);
+    if (newVal === expected) continue;
+
+    // 典型 BUG：delta 被当作“覆盖值”，导致 newVal==deltaX 而不是 old+deltaX。
+  if (newVal !== deltaX) continue;
+
+  _.set(stat_data, `${rolePath}.秩序刻印`, expected);
+  // 始终打到控制台，方便在 debug 关闭时也能定位问题。
+  console.warn(
+    `[eden/helper] [imp.delta_fixed.by_reason] ${rolePath}.秩序刻印: ${oldVal} + (${deltaX}) -> ${expected} (actual was ${newVal})`,
+  );
+  edenLog(
+    'warn',
+    'imp.delta_fixed.by_reason',
+    {
+      zh: `修复秩序刻印 delta 覆盖BUG(从更新原因推断)：${rolePath}.秩序刻印 ${oldVal} + (${deltaX}) -> ${expected}（原值异常为 ${newVal}）`,
+        rolePath,
+        old: oldVal,
+        delta: deltaX,
+        expected,
+        actual: newVal,
+      },
+      debug,
+    );
+  }
+}
+
+function fixBrokenImprintDeltaIfNeeded(stat_data: any, old_stat_data: any, commands: MvuCommandLike[] | null, debug: EdenDebugSetting) {
+  if (!commands || commands.length === 0) return;
+
+  const deltasByPath = new Map<string, number>();
+  for (const cmd of commands) {
+    const type = String(cmd?.type ?? '').trim();
+    if (!type) continue;
+
+    // 兼容：MVU 可能把 JSONPatch 的 `delta` 映射为 add，也可能误映射为 set（full_match 中仍带 op=delta）。
+    let deltaRaw: any = null;
+    if (type === 'add') {
+      deltaRaw = cmd?.args?.[1];
+    } else if (type === 'set') {
+      const fm = String(cmd?.full_match ?? '');
+      if (!/\"op\"\\s*:\\s*\"delta\"/i.test(fm)) continue;
+      deltaRaw = cmd?.args?.at(-1);
+    } else {
+      continue;
+    }
+
+    const dotPath = normalizeCommandPathToDotPath(cmd?.args?.[0]);
+    if (!dotPath || !dotPath.endsWith('.秩序刻印')) continue;
+
+    const delta = typeof deltaRaw === 'number' || typeof deltaRaw === 'string' ? Number(deltaRaw) : NaN;
+    if (!Number.isFinite(delta) || delta === 0) continue;
+
+    deltasByPath.set(dotPath, (deltasByPath.get(dotPath) ?? 0) + delta);
+  }
+
+  if (deltasByPath.size === 0) return;
+
+  for (const [dotPath, deltaSum] of deltasByPath.entries()) {
+    const oldValRaw = _.get(old_stat_data, dotPath);
+    const newValRaw = _.get(stat_data, dotPath);
+    const oldVal = typeof oldValRaw === 'number' || typeof oldValRaw === 'string' ? Number(oldValRaw) : NaN;
+    const newVal = typeof newValRaw === 'number' || typeof newValRaw === 'string' ? Number(newValRaw) : NaN;
+    if (!Number.isFinite(oldVal) || !Number.isFinite(newVal)) continue;
+
+    const expected = clampImprint(oldVal + deltaSum);
+    if (newVal === expected) continue;
+
+    _.set(stat_data, dotPath, expected);
+    // 只要能确定本轮对该路径下发了 delta 指令，就强制把结果修正为 old+delta。
+    console.warn(
+      `[eden/helper] [imp.delta_fixed] ${dotPath}: ${oldVal} + (${deltaSum}) -> ${expected} (actual was ${newVal})`,
+    );
+    edenLog(
+      'warn',
+      'imp.delta_fixed',
+      {
+        zh: `修复秩序刻印 delta 覆盖BUG：${dotPath} ${oldVal} + (${deltaSum}) -> ${expected}（原值异常为 ${newVal}）`,
+        path: dotPath,
+        old: oldVal,
+        delta: deltaSum,
+        expected,
+        actual: newVal,
+      },
+      debug,
+    );
   }
 }
 
@@ -2001,6 +2149,8 @@ $(async () => {
   // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
   // 因此在 UPDATE_STARTED 时抓取一份深拷贝快照，供本轮 UPDATE_ENDED 使用。
   let variablesBeforeUpdateSnapshot: any | null = null;
+  let commandsParsedSnapshot: MvuCommandLike[] | null = null;
+  let statDataBeforeCommandsSnapshot: any | null = null;
   eventMakeFirst(Mvu.events.VARIABLE_UPDATE_STARTED, (variables: any) => {
     if (!isActiveInstance()) return;
     try {
@@ -2008,6 +2158,33 @@ $(async () => {
     } catch {
       // best-effort: 保底不要影响后续逻辑
       variablesBeforeUpdateSnapshot = variables;
+    }
+  });
+  eventMakeFirst(Mvu.events.COMMAND_PARSED, (_variables: any, commands: any) => {
+    if (!isActiveInstance()) return;
+    try {
+      commandsParsedSnapshot = _.cloneDeep(commands ?? []);
+    } catch {
+      commandsParsedSnapshot = commands ?? [];
+    }
+    try {
+      statDataBeforeCommandsSnapshot = _.cloneDeep(_variables?.stat_data ?? null);
+    } catch {
+      statDataBeforeCommandsSnapshot = _variables?.stat_data ?? null;
+    }
+  });
+  // MVU Zod 模式下会额外触发该事件（见 tavern_resource/dist/util/mvu_zod.js）。
+  eventMakeFirst('mag_command_parsed_for_zod' as any, (_variables: any, commands: any) => {
+    if (!isActiveInstance()) return;
+    try {
+      commandsParsedSnapshot = _.cloneDeep(commands ?? []);
+    } catch {
+      commandsParsedSnapshot = commands ?? [];
+    }
+    try {
+      statDataBeforeCommandsSnapshot = _.cloneDeep(_variables?.stat_data ?? null);
+    } catch {
+      statDataBeforeCommandsSnapshot = _variables?.stat_data ?? null;
     }
   });
 
@@ -2018,8 +2195,23 @@ $(async () => {
 
     try {
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
-      const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
-      const old_stat_data = _.get(old_vars, 'stat_data', {}) ?? {};
+      const new_stat_data = stat_data;
+      const candidateA = statDataBeforeCommandsSnapshot;
+      const candidateB = _.get(old_variables, 'stat_data', null);
+      const candidateC = _.get(variablesBeforeUpdateSnapshot, 'stat_data', null);
+      // 优先使用“看起来确实比 new 更旧”的快照，避免引用共享导致 old==new。
+      const old_stat_data =
+        candidateA && !_.isEqual(candidateA, new_stat_data)
+          ? candidateA
+          : candidateB && !_.isEqual(candidateB, new_stat_data)
+            ? candidateB
+            : candidateC && !_.isEqual(candidateC, new_stat_data)
+              ? candidateC
+              : (candidateB ?? candidateC ?? {});
+      const old_vars = { stat_data: old_stat_data };
+
+      fixBrokenImprintDeltaIfNeeded(stat_data, old_stat_data, commandsParsedSnapshot, debugSetting);
+      fixBrokenImprintDeltaByReasonIfNeeded(stat_data, old_stat_data, debugSetting);
 
       // 若同名角色同时存在于顶层与临时NPC，自动合并并移除临时NPC
       mergeTempNpcIntoCore(stat_data, debugSetting);
@@ -2091,6 +2283,8 @@ $(async () => {
     } finally {
       edenLog('debug', 'mvu.update_ended.last.end', {}, debugSetting);
       variablesBeforeUpdateSnapshot = null;
+      commandsParsedSnapshot = null;
+      statDataBeforeCommandsSnapshot = null;
     }
   };
 
