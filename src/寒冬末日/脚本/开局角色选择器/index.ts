@@ -16,11 +16,14 @@ const STYLE_ATTR = 'data-eden-role-selector-style';
 const BTN_OPEN = '角色选择';
 const BTN_RESET = '重置角色选择';
 const BTN_APPLY_PENDING = '应用剧情解锁';
+const BTN_TOGGLE_DOSSIER_DEBUG = '切换档案注入调试';
 const BTN_CREATE_ROLE = '创建角色';
 const BTN_REFRESH_LIST = '刷新名单';
 const ROLE_CREATOR_OPEN_EVENT = 'eden.role_creator.open';
 const ROLE_SELECTOR_OPEN_EVENT = 'eden.role_selector.open';
+const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
 const DELETE_UNSELECTED_KEY = 'eden.role_selector.delete_unselected';
+const DOSSIER_INJECT_DEBUG_KEY = 'debug.角色档案动态注入';
 const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
   '末世寒冬-星穹秩序2.0',
   '寒冬末日-星穹秩序',
@@ -54,6 +57,22 @@ function saveDeleteUnselectedFlag(value: boolean) {
   );
 }
 
+function readDossierInjectDebugFlag(): boolean {
+  const vars = getChatVars();
+  return _.get(vars, DOSSIER_INJECT_DEBUG_KEY, false) === true;
+}
+
+function saveDossierInjectDebugFlag(value: boolean) {
+  if (typeof updateVariablesWith !== 'function') return;
+  updateVariablesWith(
+    vars => {
+      _.set(vars, DOSSIER_INJECT_DEBUG_KEY, value === true);
+      return vars;
+    },
+    { type: 'chat' },
+  );
+}
+
 function saveRoleSelectorStateToChat(state: RoleSelectorStateLike) {
   if (typeof updateVariablesWith !== 'function') return;
   updateVariablesWith(
@@ -73,15 +92,6 @@ function getCurrentMessageIdSafe(): number {
     // ignore
   }
   return 0;
-}
-
-function getMvuStatDataForLatest(): any {
-  try {
-    const latest = Mvu.getMvuData({ type: 'message', message_id: 'latest' as any });
-    return _.get(latest, 'stat_data', {});
-  } catch {
-    return {};
-  }
 }
 
 type DossierIndexItem = {
@@ -219,6 +229,66 @@ function isRoleLike(val: any): boolean {
   return !!(val && typeof val === 'object' && !Array.isArray(val) && '登场状态' in val && '健康' in val);
 }
 
+function normalizeInitialRoomFromCatalog(item?: RoleCatalogItem): string {
+  const raw = String(item?.location ?? '').trim();
+  if (!raw || raw === '未设置位置') return '';
+  if (/^楼层\d+\/\d+$/.test(raw)) return raw;
+  if (raw === '玄关' || raw.startsWith('玄关/') || raw.startsWith('核心区/')) return raw;
+  return '';
+}
+
+function createDefaultRolePayload(name: string, item?: RoleCatalogItem): any {
+  return {
+    姓名: name,
+    关系: '无',
+    关系倾向: '中立',
+    秩序刻印: 0,
+    秩序刻印更新原因: '0, 无变化',
+    健康: 100,
+    健康更新原因: '0, 无变化',
+    健康状况: '健康',
+    衣着: '',
+    舌唇: '',
+    胸乳: '',
+    私穴: '',
+    神态样貌: '',
+    动作姿势: '',
+    内心想法: '',
+    所在房间: normalizeInitialRoomFromCatalog(item),
+    登场状态: '登场',
+  };
+}
+
+function materializeSelectedRoles(
+  stat_data: any,
+  enabledSet: Set<string>,
+  catalogByName: Map<string, RoleCatalogItem>,
+) {
+  for (const name of enabledSet) {
+    const roleName = String(name ?? '').trim();
+    if (!roleName) continue;
+
+    const coreRole = _.get(stat_data, [roleName]);
+    if (isRoleLike(coreRole)) {
+      _.set(stat_data, [roleName, '姓名'], String(_.get(coreRole, '姓名', '') || roleName));
+      _.set(stat_data, [roleName, '登场状态'], '登场');
+      continue;
+    }
+
+    const tempRole = _.get(stat_data, ['临时NPC', roleName]);
+    if (isRoleLike(tempRole)) {
+      const migrated = _.cloneDeep(tempRole);
+      _.set(migrated, '姓名', String(_.get(migrated, '姓名', '') || roleName));
+      _.set(migrated, '登场状态', '登场');
+      _.set(stat_data, [roleName], migrated);
+      _.unset(stat_data, ['临时NPC', roleName]);
+      continue;
+    }
+
+    _.set(stat_data, [roleName], createDefaultRolePayload(roleName, catalogByName.get(roleName)));
+  }
+}
+
 function removeNameFromRooms(stat_data: any, name: string) {
   const paths = [
     ['房间', '玄关', '净化隔离区入住者'],
@@ -232,24 +302,14 @@ function removeNameFromRooms(stat_data: any, name: string) {
 
   for (const path of paths) {
     const list = _.get(stat_data, path, []);
-    if (Array.isArray(list))
-      _.set(
-        stat_data,
-        path,
-        list.filter((x: any) => x !== name),
-      );
+    if (Array.isArray(list)) _.set(stat_data, path, list.filter((x: any) => x !== name));
   }
 
   const floor20 = _.get(stat_data, ['房间', '楼层房间', '楼层20房间'], {});
   if (floor20 && typeof floor20 === 'object') {
     for (const room of Object.keys(floor20)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], []);
-      if (Array.isArray(list))
-        _.set(
-          stat_data,
-          ['房间', '楼层房间', '楼层20房间', room, '入住者'],
-          list.filter((x: any) => x !== name),
-        );
+      if (Array.isArray(list)) _.set(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], list.filter((x: any) => x !== name));
     }
   }
 
@@ -257,12 +317,7 @@ function removeNameFromRooms(stat_data: any, name: string) {
   if (floor19 && typeof floor19 === 'object') {
     for (const room of Object.keys(floor19)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], []);
-      if (Array.isArray(list))
-        _.set(
-          stat_data,
-          ['房间', '楼层房间', '楼层19房间', room, '入住者'],
-          list.filter((x: any) => x !== name),
-        );
+      if (Array.isArray(list)) _.set(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], list.filter((x: any) => x !== name));
     }
   }
 }
@@ -317,6 +372,27 @@ async function replaceLatestStatData(mutator: (stat_data: any) => void) {
   }
 }
 
+async function notifyRoleSelectorUpdated() {
+  try {
+    if (typeof eventEmit === 'function') {
+      await eventEmit(ROLE_SELECTOR_UPDATED_EVENT as any);
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    if (typeof setChatMessages === 'function' && typeof getLastMessageId === 'function') {
+      const message_id = Number(getLastMessageId());
+      if (Number.isFinite(message_id) && message_id >= 0) {
+        await setChatMessages([{ message_id }], { refresh: 'affected' });
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function ensureCss() {
   if ($(`head style[${STYLE_ATTR}]`).length > 0) return;
   const css = `
@@ -361,9 +437,7 @@ function renderSelector(options: {
   const $root = $('<div></div>').attr(ROOT_ATTR, '1');
   const $modal = $('<div class="eden-rs-modal"></div>').appendTo($root);
   $('<div class="eden-rs-head">开局角色选择器</div>').appendTo($modal);
-  $(
-    '<div class="eden-rs-desc">请勾选本次开局要出场的角色。未勾选角色会被初始化为离场，不显示、不触发；后续可通过剧情或按钮解锁。</div>',
-  ).appendTo($modal);
+  $('<div class="eden-rs-desc">请勾选本次开局要出场的角色。未勾选角色会被初始化为离场，不显示、不触发；后续可通过剧情或按钮解锁。</div>').appendTo($modal);
 
   const $list = $('<div class="eden-rs-list"></div>').appendTo($modal);
   const updateCount = () => {
@@ -400,9 +474,7 @@ function renderSelector(options: {
   const $btnNone = $('<button class="eden-rs-btn" type="button">清空</button>').appendTo($actions);
   const $btnCancel = $('<button class="eden-rs-btn" type="button">取消</button>').appendTo($actions);
   const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认并初始化</button>').appendTo($actions);
-  const $deleteLabel = $(
-    '<label class="eden-rs-count" style="display:flex;gap:6px;align-items:center;"></label>',
-  ).appendTo($foot);
+  const $deleteLabel = $('<label class="eden-rs-count" style="display:flex;gap:6px;align-items:center;"></label>').appendTo($foot);
   const $deleteInput = $('<input type="checkbox" />').prop('checked', deleteUnselected).appendTo($deleteLabel);
   $('<span>未勾选角色彻底删除（等同X按钮）</span>').appendTo($deleteLabel);
 
@@ -472,11 +544,9 @@ function openRoleCreatorFromSelector() {
 
 async function applyRoleSelection(selected: string[], deleteUnselected: boolean) {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
-  const normalizedSelected = _(selected)
-    .map(name => String(name ?? '').trim())
-    .filter(Boolean)
-    .uniq()
-    .value();
+  const catalog = await buildMergedCatalog(state);
+  const catalogByName = new Map(catalog.map(item => [item.name, item]));
+  const normalizedSelected = _(selected).map(name => String(name ?? '').trim()).filter(Boolean).uniq().value();
   const nextState = normalizeRoleSelectorState({
     ...state,
     version: state.version || 1,
@@ -490,9 +560,11 @@ async function applyRoleSelection(selected: string[], deleteUnselected: boolean)
 
   const enabledSet = new Set(nextState.revealed_roles);
   await replaceLatestStatData(stat_data => {
+    materializeSelectedRoles(stat_data, enabledSet, catalogByName);
     applySelectionToStatData(stat_data, enabledSet, deleteUnselected);
     _.set(stat_data, '主线任务.$meta.角色控制', nextState);
   });
+  await notifyRoleSelectorUpdated();
 
   toastr.success(`角色选择已保存：${nextState.selected_roles.length} 位角色`);
   reloadIframe();
@@ -517,10 +589,13 @@ async function resetSelectionToDefault() {
   saveRoleSelectorStateToChat(nextState);
 
   const enabledSet = new Set(nextState.revealed_roles);
+  const catalogByName = new Map(ROLE_CATALOG.map(item => [item.name, item]));
   await replaceLatestStatData(stat_data => {
+    materializeSelectedRoles(stat_data, enabledSet, catalogByName);
     applySelectionToStatData(stat_data, enabledSet, false);
     _.set(stat_data, '主线任务.$meta.角色控制', nextState);
   });
+  await notifyRoleSelectorUpdated();
 
   toastr.success('已重置为默认角色选择');
   reloadIframe();
@@ -537,8 +612,20 @@ async function applyPendingUnlockFromChat() {
   await replaceLatestStatData(stat_data => {
     _.set(stat_data, '主线任务.$meta.角色控制', next);
   });
+  await notifyRoleSelectorUpdated();
   toastr.success(`已应用剧情解锁：当前可见角色 ${next.revealed_roles.length} 位`);
   reloadIframe();
+}
+
+function toggleDossierInjectDebug() {
+  const next = !readDossierInjectDebugFlag();
+  saveDossierInjectDebugFlag(next);
+  if (next) {
+    toastr.success('已开启「角色档案动态注入调试」');
+    toastr.info('调试信息将以 <角色档案_动态注入_调试> 输出到提示词');
+  } else {
+    toastr.info('已关闭「角色档案动态注入调试」');
+  }
 }
 
 function ensureButtons() {
@@ -547,6 +634,7 @@ function ensureButtons() {
     { name: BTN_OPEN, visible: true },
     { name: BTN_RESET, visible: true },
     { name: BTN_APPLY_PENDING, visible: true },
+    { name: BTN_TOGGLE_DOSSIER_DEBUG, visible: true },
   ]);
 }
 
@@ -563,6 +651,10 @@ function bindButtons() {
 
   eventOn(getButtonEvent(BTN_APPLY_PENDING), () => {
     void applyPendingUnlockFromChat();
+  });
+
+  eventOn(getButtonEvent(BTN_TOGGLE_DOSSIER_DEBUG), () => {
+    toggleDossierInjectDebug();
   });
 }
 

@@ -382,22 +382,7 @@ export const Schema = z
         },
       }),
 
-    // 主要角色
-    浅见亚美: 主要角色Schema,
-    相田哲也: 主要角色Schema,
-    星野琉璃: 主要角色Schema,
-    早川遥: 主要角色Schema,
-    早川舞: 主要角色Schema,
-    藤井雪乃: 主要角色Schema,
-    中村惠子: 主要角色Schema,
-    // 爱宫心爱: 主要角色Schema,
-    // 爱宫铃: 主要角色Schema,
-    '桃乐丝・泽巴哈': 主要角色Schema,
-    // 何铃: 主要角色Schema,
-    王静: 主要角色Schema,
-    // 康绮月: 主要角色Schema,
-    // 薛萍: 主要角色Schema,
-    小泽花: 主要角色Schema,
+    // 主要角色采用动态键：未显式声明的顶层角色将由 .catchall(主要角色Schema) 校验
 
     临时NPC: z
       .record(z.string(), 临时NPCSchema)

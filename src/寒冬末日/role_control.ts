@@ -34,7 +34,7 @@ function dedupeAndFilterRoles(input: any): string[] {
   if (!Array.isArray(input)) return [];
   return _(input)
     .map(normalizeName)
-    .filter((name: string) => !!name && ROLE_CATALOG_NAME_SET.has(name))
+    .filter((name: string) => !!name)
     .uniq()
     .value();
 }

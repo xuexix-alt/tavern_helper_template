@@ -150,7 +150,7 @@ format: |-
     { "op": "delta", "path": "/浅见亚美/健康", "value": -1 },
     { "op": "replace", "path": "/浅见亚美/内心想法", "value": "虽然有些冷，但至少哲也君还在我身边……" },
     { "op": "replace", "path": "/浅见亚美/登场状态", "value": "登场" },
-    { "op": "replace", "path": "/藤井雪乃/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
     { "op": "replace", "path": "/浅见亚美/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/庇护所/庇护所能力/???新型空气过滤盾???", "value": { "desc": "过滤效率提升30%。" } },
     { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { "姓名": "陌生拾荒者", "健康": 100, "登场状态": "登场", "所在房间": "玄关" } }
@@ -162,6 +162,7 @@ requirements:
   - "Allowed operations: replace, delta, insert, remove, move."
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
   - "NEVER output any operation under `/房间/**` (derived; maintained by script)."
   - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
   - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
