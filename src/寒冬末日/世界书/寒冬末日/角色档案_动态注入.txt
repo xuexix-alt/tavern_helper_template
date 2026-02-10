@@ -4,7 +4,8 @@
 // - 兼容：避免使用 optional chaining / 不依赖“列出已启用世界书条目”的 API（不同环境可能不存在）。
 //
 // 策略（宽容触发，提及/登场都可）：
-// - 提及：本轮用户输入 + 上轮AI输出 里点名/别名命中 -> 注入对应角色档案。
+// - 提及：优先读取“当前轮可见的最新用户输入 + 最新AI输出 + 最新system补充信息”做命中；
+//   若环境取不到当前轮输入，再回退到 lastUserMessageId/lastCharMessageId。
 // - 登场：stat_data 中登场 -> 也注入对应角色档案。
 // - 动态新角色：若角色档案条目命名不统一，但关键字里包含角色名，则尝试用
 //   getEnabledWorldInfoEntries()（若存在）按关键字命中并用 uid 注入（不依赖标题规范）。
@@ -15,6 +16,33 @@ const stat = getvar('stat_data', { defaults: {} });
 function isRecord(v) {
   return !!(v && typeof v === 'object' && !Array.isArray(v));
 }
+
+function toBool(v) {
+  if (v === true || v === false) return v;
+  if (typeof v === 'number') return v !== 0;
+  const s = String(v === null || v === undefined ? '' : v)
+    .trim()
+    .toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'on' || s === '开启';
+}
+
+function readInjectDebugEnabled() {
+  const candidates = [
+    getvar('stat_data.主线任务.$meta.调试.角色档案动态注入', { defaults: null }),
+    getvar('stat_data.主线任务.$meta.角色控制.debug_dossier_inject', { defaults: null }),
+    getvar('debug.角色档案动态注入', { defaults: null }),
+    getvar('角色档案动态注入调试', { defaults: null }),
+  ];
+
+  for (let i = 0; i < candidates.length; i++) {
+    const v = candidates[i];
+    if (v === null || v === undefined || v === '') continue;
+    return toBool(v);
+  }
+  return false;
+}
+
+const injectDebugEnabled = readInjectDebugEnabled();
 
 if (!isRecord(stat)) return;
 
@@ -70,20 +98,37 @@ function safeString(v) {
 }
 
 function getLastByRole(role) {
+  // 先读 getChatMessages：在生成阶段通常更接近“当前轮”上下文。
+  // 说明：此前优先用 lastUserMessageId/lastCharMessageId，某些环境会晚一拍，导致提及命中延迟到下一轮。
+  try {
+    const arr = getChatMessages(1, role);
+    if (Array.isArray(arr) && arr.length > 0) {
+      const latest = safeString(arr[arr.length - 1]);
+      if (latest) return latest;
+    }
+  } catch (e) {}
+
+  // 兜底：读最近几条同 role 文本，避免极端情况下 1 条读取为空。
+  try {
+    const arr = getChatMessages(6, role);
+    if (Array.isArray(arr) && arr.length > 0) {
+      const latest = safeString(arr[arr.length - 1]);
+      if (latest) return latest;
+    }
+  } catch (e) {}
+
+  // 最后兜底：使用 last*MessageId（可能存在“上一轮”延迟）。
   try {
     if (role === 'user' && typeof lastUserMessageId === 'number') return safeString(getChatMessage(lastUserMessageId, 'user'));
     if (role === 'assistant' && typeof lastCharMessageId === 'number') return safeString(getChatMessage(lastCharMessageId, 'assistant'));
-  } catch (e) {}
-
-  try {
-    const arr = getChatMessages(1, role);
-    if (Array.isArray(arr) && arr.length > 0) return safeString(arr[arr.length - 1]);
+    if (role === 'system' && typeof lastCharMessageId === 'number') return safeString(getChatMessage(lastCharMessageId, 'system'));
   } catch (e) {}
 
   return '';
 }
 
-const mentionText = (getLastByRole('user') + '\n' + getLastByRole('assistant')).trim();
+// 这里把最新 system 也纳入命中：有些“情报条目/系统汇总”会先提到人物名。
+const mentionText = (getLastByRole('user') + '\n' + getLastByRole('assistant') + '\n' + getLastByRole('system')).trim();
 
 function includesAny(text, list) {
   if (!text) return false;
@@ -108,7 +153,8 @@ function parseDossierIndex(text) {
       const name = String(row.name || '').trim();
       if (!name) continue;
       const aliases = Array.isArray(row.aliases) ? row.aliases : [];
-      out.push({ name, aliases });
+      const title = typeof row.title === 'string' ? String(row.title).trim() : '';
+      out.push({ name, aliases, title });
     }
     return out;
   } catch (e) {
@@ -124,8 +170,6 @@ function extractRoleNameFromComment(comment) {
   return String(match[1] || '').trim();
 }
 
-const MAX_INJECT = 3;
-
 function uniqPushByKey(list, key, item) {
   for (let i = 0; i < list.length; i++) {
     if (list[i] && list[i].key === key) return;
@@ -134,13 +178,11 @@ function uniqPushByKey(list, key, item) {
 }
 
 const roleSelectorState = readRoleSelectorState(stat);
-const roleSelectorEnabled = (() => {
+const roleSelectorSelected = (() => {
   if (!roleSelectorState) return null;
   const selected = normalizeRoleList(roleSelectorState.selected_roles);
-  const revealed = normalizeRoleList(roleSelectorState.revealed_roles);
-  const combined = normalizeRoleList(selected.concat(revealed));
-  if (combined.length === 0) return null;
-  return new Set(combined);
+  if (selected.length === 0) return null;
+  return selected;
 })();
 
 let dossierIndex = [];
@@ -152,18 +194,92 @@ try {
 }
 
 const knownRoleSet = new Set();
+const dossierIndexMap = {};
 for (let i = 0; i < dossierIndex.length; i++) {
-  const name = String(dossierIndex[i].name || '').trim();
+  const row = dossierIndex[i] || {};
+  const name = String(row.name || '').trim();
   if (name) knownRoleSet.add(name);
+  if (name && !dossierIndexMap[name]) dossierIndexMap[name] = row;
 }
 
-function isRoleEnabledBySelector(roleName) {
-  if (!roleSelectorEnabled) return true;
-  if (!knownRoleSet.size) return true;
+function buildRoleDossierTitleCandidates(roleName) {
   const name = String(roleName || '').trim();
-  if (!name) return false;
-  if (!knownRoleSet.has(name)) return true;
-  return roleSelectorEnabled.has(name);
+  if (!name) return [];
+
+  const row = dossierIndexMap[name] || null;
+  const nameVariants = [];
+  const pushName = v => {
+    const x = String(v || '').trim();
+    if (!x) return;
+    if (nameVariants.indexOf(x) === -1) nameVariants.push(x);
+  };
+  pushName(name);
+  pushName(name.replace(/\?/g, '・'));
+  pushName(name.replace(/・/g, '?'));
+  pushName(name.replace(/·/g, '・'));
+  pushName(name.replace(/•/g, '・'));
+
+  const titles = [];
+  const pushTitle = v => {
+    const x = String(v || '').trim();
+    if (!x) return;
+    if (titles.indexOf(x) === -1) titles.push(x);
+  };
+
+  if (row && typeof row.title === 'string' && row.title.trim()) {
+    pushTitle(row.title.trim());
+  }
+
+  for (let i = 0; i < nameVariants.length; i++) {
+    const n = nameVariants[i];
+    pushTitle('角色档案 - ' + n);
+    pushTitle('角色档案- ' + n);
+    pushTitle('角色档案-' + n);
+    pushTitle('角色档案：' + n);
+    pushTitle('角色档案_' + n);
+    pushTitle('角色档案_-_' + n);
+  }
+
+  return titles;
+}
+
+async function getRoleDossierByName(roleName) {
+  const name = String(roleName || '').trim();
+  if (!name) return null;
+
+  const candidates = buildRoleDossierTitleCandidates(name);
+  for (let i = 0; i < candidates.length; i++) {
+    const title = candidates[i];
+    try {
+      const wi = await getwi(title);
+      if (wi) return { label: title, content: wi };
+    } catch (e) {}
+  }
+
+  // 宽容兜底：若环境提供“已启用条目”列表，则尝试按注释/关键字命中后用 uid 读取。
+  if (typeof getEnabledWorldInfoEntries === 'function') {
+    try {
+      const allEntries = await getEnabledWorldInfoEntries(true, true, true, true, true);
+      const arr = Array.isArray(allEntries) ? allEntries : [];
+      for (let i = 0; i < arr.length; i++) {
+        const e = arr[i];
+        const comment = String((e && e.comment) || '').trim();
+        const keys = []
+          .concat(Array.isArray(e && e.key) ? e.key : [])
+          .concat(Array.isArray(e && e.keysecondary) ? e.keysecondary : []);
+        const parsedRoleName = extractRoleNameFromComment(comment);
+        const hitByComment = !!parsedRoleName && parsedRoleName.indexOf(name) !== -1;
+        const hitByKeys = includesAny(name, keys) || includesAny(comment, [name]);
+        if (!(hitByComment || hitByKeys)) continue;
+        const uid = e && e.uid;
+        if (uid === null || uid === undefined) continue;
+        const wi = await getwi(Number(uid));
+        if (wi) return { label: comment || ('角色档案 - ' + name), content: wi };
+      }
+    } catch (e) {}
+  }
+
+  return null;
 }
 
 // 0) 动态新角色（若可用）：按关键字命中“已启用”的世界书条目，然后按 uid 注入
@@ -177,7 +293,6 @@ if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
       const comment = String((e && e.comment) || '').trim();
       if (!comment || comment.indexOf('角色档案') === -1) continue;
       const parsedRoleName = extractRoleNameFromComment(comment);
-      if (parsedRoleName && !isRoleEnabledBySelector(parsedRoleName)) continue;
       const keys = []
         .concat(Array.isArray(e && e.key) ? e.key : [])
         .concat(Array.isArray(e && e.keysecondary) ? e.keysecondary : []);
@@ -185,7 +300,6 @@ if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
       const uid = e && e.uid;
       if (uid === null || uid === undefined) continue;
       uniqPushByKey(hitEntries, 'uid:' + String(uid), { key: 'uid:' + String(uid), uid: Number(uid), label: comment });
-      if (hitEntries.length >= MAX_INJECT) break;
     }
   } catch (e) {}
 }
@@ -198,9 +312,7 @@ if (mentionText) {
     const aliases = dossierIndex[i].aliases;
     const hit = mentionText.indexOf(name) !== -1 || includesAny(mentionText, aliases);
     if (!hit) continue;
-    if (!isRoleEnabledBySelector(name)) continue;
     uniqPushByKey(mentionTargets, 'role:' + name, { key: 'role:' + name, roleName: name, label: '角色档案 - ' + name });
-    if (mentionTargets.length >= MAX_INJECT) break;
   }
 }
 
@@ -213,7 +325,6 @@ for (const k in stat) {
   if (!isOnstageRole(v) || isDeadRole(v)) continue;
   const roleName = String(k).trim();
   if (!roleName) continue;
-  if (!isRoleEnabledBySelector(roleName)) continue;
   uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
 }
 
@@ -226,29 +337,79 @@ if (isRecord(tempNpc)) {
     if (!isOnstageRole(v) || isDeadRole(v)) continue;
     const roleName = String(k).trim();
     if (!roleName) continue;
-    if (!isRoleEnabledBySelector(roleName)) continue;
     uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
   }
 }
 
-// 合并：动态命中 uid 优先，其次提及命中角色名，其次登场角色名；总量限制 MAX_INJECT
+// 3) 选择器勾选：若角色在选择器中被勾选，且世界书里存在角色档案条目，则强制注入（不依赖提及/登场）
+const selectorTargets = [];
+if (Array.isArray(roleSelectorSelected) && roleSelectorSelected.length > 0) {
+  for (let i = 0; i < roleSelectorSelected.length; i++) {
+    const roleName = String(roleSelectorSelected[i] || '').trim();
+    if (!roleName) continue;
+    uniqPushByKey(selectorTargets, 'role:' + roleName, {
+      key: 'role:' + roleName,
+      roleName,
+      label: '角色档案 - ' + roleName,
+    });
+  }
+}
+
+// 合并：动态命中 uid 优先，其次提及命中角色名，再次登场角色名，最后补齐“选择器勾选强制注入”
 const finalTargets = [];
 for (let i = 0; i < hitEntries.length; i++) {
-  if (finalTargets.length >= MAX_INJECT) break;
   finalTargets.push(hitEntries[i]);
 }
 for (let i = 0; i < mentionTargets.length; i++) {
-  if (finalTargets.length >= MAX_INJECT) break;
   uniqPushByKey(finalTargets, mentionTargets[i].key, mentionTargets[i]);
 }
 // 登场目标按名字稳定排序，避免每轮抖动
 onstageTargets.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
 for (let i = 0; i < onstageTargets.length; i++) {
-  if (finalTargets.length >= MAX_INJECT) break;
   uniqPushByKey(finalTargets, onstageTargets[i].key, onstageTargets[i]);
 }
+for (let i = 0; i < selectorTargets.length; i++) {
+  uniqPushByKey(finalTargets, selectorTargets[i].key, selectorTargets[i]);
+}
 
-if (finalTargets.length === 0) return;
+function debugRoleLabel(t) {
+  if (t && t.roleName) return String(t.roleName).trim();
+  if (t && t.label) return String(t.label).trim();
+  if (t && t.uid !== undefined && t.uid !== null) return 'uid:' + String(t.uid);
+  return '';
+}
+
+function printInjectDebugBlock(finalTargetsList) {
+  if (!injectDebugEnabled) return;
+
+  const mentionNames = mentionTargets.map(debugRoleLabel).filter(Boolean);
+  const onstageNames = onstageTargets.map(debugRoleLabel).filter(Boolean);
+  const selectorNames = selectorTargets.map(debugRoleLabel).filter(Boolean);
+  const uidNames = hitEntries.map(debugRoleLabel).filter(Boolean);
+  const finalNames = (finalTargetsList || []).map(debugRoleLabel).filter(Boolean);
+  const textPreview = mentionText
+    ? mentionText
+        .replace(/\s+/g, ' ')
+        .slice(0, 120)
+    : '（空）';
+
+  print('\n<角色档案_动态注入_调试>\n');
+  print('开关: 开启\n');
+  print('提及命中: ' + (mentionNames.length > 0 ? mentionNames.join('、') : '无') + '\n');
+  print('登场命中: ' + (onstageNames.length > 0 ? onstageNames.join('、') : '无') + '\n');
+  print('选择器命中: ' + (selectorNames.length > 0 ? selectorNames.join('、') : '无') + '\n');
+  print('UID命中: ' + (uidNames.length > 0 ? uidNames.join('、') : '无') + '\n');
+  print('最终注入: ' + (finalNames.length > 0 ? finalNames.join('、') : '无') + '\n');
+  print('命中文本预览: ' + textPreview + '\n');
+  print('</角色档案_动态注入_调试>\n');
+}
+
+if (finalTargets.length === 0) {
+  printInjectDebugBlock(finalTargets);
+  return;
+}
+
+printInjectDebugBlock(finalTargets);
 
 print('<角色档案_动态注入>\\n');
 for (let i = 0; i < finalTargets.length; i++) {
@@ -265,14 +426,14 @@ for (let i = 0; i < finalTargets.length; i++) {
     continue;
   }
 
-  // roleName 注入：要求条目标题可用 `角色档案 - <姓名>` 读取
+  // roleName 注入：对世界书条目做宽容匹配（标题多候选 + uid 兜底）
   const roleName = t && t.roleName ? String(t.roleName).trim() : '';
   if (!roleName) continue;
-  const title = '角色档案 - ' + roleName;
-  const wi = await getwi(title);
-  if (!wi) continue;
+  const dossier = await getRoleDossierByName(roleName);
+  if (!dossier || !dossier.content) continue;
+  const title = String(dossier.label || ('角色档案 - ' + roleName)).trim() || ('角色档案 - ' + roleName);
   print('\\n<' + title + '>\\n');
-  print(String(wi).trimEnd());
+  print(String(dossier.content).trimEnd());
   print('\\n</' + title + '>\\n');
 
   if (roleName === '浅见亚美') {
