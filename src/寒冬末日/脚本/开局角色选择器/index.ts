@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { ROLE_CATALOG, RoleCatalogItem } from '../../roleCatalog';
+import { ROLE_ALIAS_MAP, ROLE_CATALOG, RoleCatalogItem } from '../../roleCatalog';
 import {
   CHAT_VAR_KEYS_ROLE,
   applyPendingUnlocks,
@@ -32,6 +32,29 @@ const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
 ] as const;
 
 const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
+
+function normalizeRoleNameLoose(raw: any): string {
+  return String(raw ?? '')
+    .trim()
+    .replace(/[?？·•‧∙]/g, '・');
+}
+
+const ROLE_ALIAS_MAP_NORMALIZED = (() => {
+  const map = new Map<string, string>();
+  for (const [alias, canonical] of Object.entries(ROLE_ALIAS_MAP)) {
+    const normalizedAlias = normalizeRoleNameLoose(alias);
+    const normalizedCanonical = normalizeRoleNameLoose(canonical);
+    if (!normalizedAlias || !normalizedCanonical) continue;
+    map.set(normalizedAlias, normalizedCanonical);
+  }
+  return map;
+})();
+
+function canonicalizeRoleName(raw: any): string {
+  const normalized = normalizeRoleNameLoose(raw);
+  if (!normalized) return '';
+  return ROLE_ALIAS_MAP_NORMALIZED.get(normalized) ?? normalized;
+}
 
 function getChatVars(): any {
   try {
@@ -266,31 +289,50 @@ function materializeSelectedRoles(
   catalogByName: Map<string, RoleCatalogItem>,
 ) {
   for (const name of enabledSet) {
-    const roleName = String(name ?? '').trim();
+    const roleName = canonicalizeRoleName(name);
     if (!roleName) continue;
 
-    const coreRole = _.get(stat_data, [roleName]);
+    const roleKey =
+      Object.keys(stat_data ?? {}).find(key => {
+        if (RESERVED_KEYS.has(key)) return false;
+        const val = _.get(stat_data, [key]);
+        if (!isRoleLike(val)) return false;
+        return canonicalizeRoleName(key) === roleName;
+      }) ?? roleName;
+
+    const coreRole = _.get(stat_data, [roleKey]);
     if (isRoleLike(coreRole)) {
-      _.set(stat_data, [roleName, '姓名'], String(_.get(coreRole, '姓名', '') || roleName));
-      _.set(stat_data, [roleName, '登场状态'], '登场');
+      _.set(stat_data, [roleKey, '姓名'], String(_.get(coreRole, '姓名', '') || roleName));
+      _.set(stat_data, [roleKey, '登场状态'], '登场');
       continue;
     }
 
-    const tempRole = _.get(stat_data, ['临时NPC', roleName]);
+    const tempRoleKey =
+      Object.keys(_.get(stat_data, '临时NPC', {}) ?? {}).find(key => canonicalizeRoleName(key) === roleName) ?? roleName;
+    const tempRole = _.get(stat_data, ['临时NPC', tempRoleKey]);
     if (isRoleLike(tempRole)) {
       const migrated = _.cloneDeep(tempRole);
       _.set(migrated, '姓名', String(_.get(migrated, '姓名', '') || roleName));
       _.set(migrated, '登场状态', '登场');
       _.set(stat_data, [roleName], migrated);
-      _.unset(stat_data, ['临时NPC', roleName]);
+      _.unset(stat_data, ['临时NPC', tempRoleKey]);
       continue;
     }
 
-    _.set(stat_data, [roleName], createDefaultRolePayload(roleName, catalogByName.get(roleName)));
+    _.set(
+      stat_data,
+      [roleName],
+      createDefaultRolePayload(roleName, catalogByName.get(roleName) ?? catalogByName.get(canonicalizeRoleName(name))),
+    );
   }
 }
 
 function removeNameFromRooms(stat_data: any, name: string) {
+  const normalizedName = canonicalizeRoleName(name);
+  if (!normalizedName) return;
+
+  const shouldKeep = (x: any) => canonicalizeRoleName(x) !== normalizedName;
+
   const paths = [
     ['房间', '玄关', '净化隔离区入住者'],
     ['房间', '玄关', '临时客房A入住者'],
@@ -303,24 +345,16 @@ function removeNameFromRooms(stat_data: any, name: string) {
 
   for (const path of paths) {
     const list = _.get(stat_data, path, []);
-    if (Array.isArray(list))
-      _.set(
-        stat_data,
-        path,
-        list.filter((x: any) => x !== name),
-      );
+    if (Array.isArray(list)) _.set(stat_data, path, list.filter(shouldKeep));
   }
 
   const floor20 = _.get(stat_data, ['房间', '楼层房间', '楼层20房间'], {});
   if (floor20 && typeof floor20 === 'object') {
     for (const room of Object.keys(floor20)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], []);
-      if (Array.isArray(list))
-        _.set(
-          stat_data,
-          ['房间', '楼层房间', '楼层20房间', room, '入住者'],
-          list.filter((x: any) => x !== name),
-        );
+      if (Array.isArray(list)) {
+        _.set(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], list.filter(shouldKeep));
+      }
     }
   }
 
@@ -328,12 +362,9 @@ function removeNameFromRooms(stat_data: any, name: string) {
   if (floor19 && typeof floor19 === 'object') {
     for (const room of Object.keys(floor19)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], []);
-      if (Array.isArray(list))
-        _.set(
-          stat_data,
-          ['房间', '楼层房间', '楼层19房间', room, '入住者'],
-          list.filter((x: any) => x !== name),
-        );
+      if (Array.isArray(list)) {
+        _.set(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], list.filter(shouldKeep));
+      }
     }
   }
 }
@@ -341,10 +372,16 @@ function removeNameFromRooms(stat_data: any, name: string) {
 function applySelectionToStatData(stat_data: any, enabledSet: Set<string>, deleteUnselected: boolean) {
   if (!stat_data || typeof stat_data !== 'object') return;
 
+  const enabledCanonicalSet = new Set(
+    Array.from(enabledSet)
+      .map(name => canonicalizeRoleName(name))
+      .filter(Boolean),
+  );
+
   for (const [key, val] of Object.entries(stat_data)) {
     if (RESERVED_KEYS.has(key)) continue;
     if (!isRoleLike(val)) continue;
-    if (enabledSet.has(key)) continue;
+    if (enabledCanonicalSet.has(canonicalizeRoleName(key))) continue;
 
     if (deleteUnselected) {
       _.unset(stat_data, [key]);
@@ -360,7 +397,7 @@ function applySelectionToStatData(stat_data: any, enabledSet: Set<string>, delet
   if (tempNpc && typeof tempNpc === 'object') {
     for (const [name, role] of Object.entries(tempNpc)) {
       if (!isRoleLike(role)) continue;
-      if (enabledSet.has(name)) continue;
+      if (enabledCanonicalSet.has(canonicalizeRoleName(name))) continue;
 
       if (deleteUnselected) {
         _.unset(stat_data, ['临时NPC', name]);
@@ -565,9 +602,9 @@ function openRoleCreatorFromSelector() {
 async function applyRoleSelection(selected: string[], deleteUnselected: boolean) {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
   const catalog = await buildMergedCatalog(state);
-  const catalogByName = new Map(catalog.map(item => [item.name, item]));
+  const catalogByName = new Map(catalog.map(item => [canonicalizeRoleName(item.name), item]));
   const normalizedSelected = _(selected)
-    .map(name => String(name ?? '').trim())
+    .map(name => canonicalizeRoleName(name))
     .filter(Boolean)
     .uniq()
     .value();
