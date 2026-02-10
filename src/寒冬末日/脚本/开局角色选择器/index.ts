@@ -302,14 +302,24 @@ function removeNameFromRooms(stat_data: any, name: string) {
 
   for (const path of paths) {
     const list = _.get(stat_data, path, []);
-    if (Array.isArray(list)) _.set(stat_data, path, list.filter((x: any) => x !== name));
+    if (Array.isArray(list))
+      _.set(
+        stat_data,
+        path,
+        list.filter((x: any) => x !== name),
+      );
   }
 
   const floor20 = _.get(stat_data, ['房间', '楼层房间', '楼层20房间'], {});
   if (floor20 && typeof floor20 === 'object') {
     for (const room of Object.keys(floor20)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], []);
-      if (Array.isArray(list)) _.set(stat_data, ['房间', '楼层房间', '楼层20房间', room, '入住者'], list.filter((x: any) => x !== name));
+      if (Array.isArray(list))
+        _.set(
+          stat_data,
+          ['房间', '楼层房间', '楼层20房间', room, '入住者'],
+          list.filter((x: any) => x !== name),
+        );
     }
   }
 
@@ -317,7 +327,12 @@ function removeNameFromRooms(stat_data: any, name: string) {
   if (floor19 && typeof floor19 === 'object') {
     for (const room of Object.keys(floor19)) {
       const list = _.get(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], []);
-      if (Array.isArray(list)) _.set(stat_data, ['房间', '楼层房间', '楼层19房间', room, '入住者'], list.filter((x: any) => x !== name));
+      if (Array.isArray(list))
+        _.set(
+          stat_data,
+          ['房间', '楼层房间', '楼层19房间', room, '入住者'],
+          list.filter((x: any) => x !== name),
+        );
     }
   }
 }
@@ -437,7 +452,9 @@ function renderSelector(options: {
   const $root = $('<div></div>').attr(ROOT_ATTR, '1');
   const $modal = $('<div class="eden-rs-modal"></div>').appendTo($root);
   $('<div class="eden-rs-head">开局角色选择器</div>').appendTo($modal);
-  $('<div class="eden-rs-desc">请勾选本次开局要出场的角色。未勾选角色会被初始化为离场，不显示、不触发；后续可通过剧情或按钮解锁。</div>').appendTo($modal);
+  $(
+    '<div class="eden-rs-desc">请勾选本次开局要出场的角色。未勾选角色会被初始化为离场，不显示、不触发；后续可通过剧情或按钮解锁。</div>',
+  ).appendTo($modal);
 
   const $list = $('<div class="eden-rs-list"></div>').appendTo($modal);
   const updateCount = () => {
@@ -474,7 +491,9 @@ function renderSelector(options: {
   const $btnNone = $('<button class="eden-rs-btn" type="button">清空</button>').appendTo($actions);
   const $btnCancel = $('<button class="eden-rs-btn" type="button">取消</button>').appendTo($actions);
   const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认并初始化</button>').appendTo($actions);
-  const $deleteLabel = $('<label class="eden-rs-count" style="display:flex;gap:6px;align-items:center;"></label>').appendTo($foot);
+  const $deleteLabel = $(
+    '<label class="eden-rs-count" style="display:flex;gap:6px;align-items:center;"></label>',
+  ).appendTo($foot);
   const $deleteInput = $('<input type="checkbox" />').prop('checked', deleteUnselected).appendTo($deleteLabel);
   $('<span>未勾选角色彻底删除（等同X按钮）</span>').appendTo($deleteLabel);
 
@@ -546,7 +565,11 @@ async function applyRoleSelection(selected: string[], deleteUnselected: boolean)
   const state = readRoleSelectorStateFromChatVars(getChatVars());
   const catalog = await buildMergedCatalog(state);
   const catalogByName = new Map(catalog.map(item => [item.name, item]));
-  const normalizedSelected = _(selected).map(name => String(name ?? '').trim()).filter(Boolean).uniq().value();
+  const normalizedSelected = _(selected)
+    .map(name => String(name ?? '').trim())
+    .filter(Boolean)
+    .uniq()
+    .value();
   const nextState = normalizeRoleSelectorState({
     ...state,
     version: state.version || 1,
