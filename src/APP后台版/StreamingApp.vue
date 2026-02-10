@@ -6,11 +6,14 @@
         <span class="title-text">{{ ui.streaming.title }}</span>
         <span v-if="context.during_streaming" class="streaming-hint">{{ ui.streaming.streamingHint }}</span>
       </div>
-      <div class="stream-meta">{{ ui.streaming.floorPrefix }} {{ context.message_id }} {{ ui.streaming.floorSuffix }}</div>
+      <div class="stream-meta">
+        {{ ui.streaming.floorPrefix }} {{ context.message_id }} {{ ui.streaming.floorSuffix }}
+      </div>
     </div>
 
     <div class="stream-body">
-      <pre class="stream-content">{{ contentText || ui.streaming.empty }}<span v-if="context.during_streaming">_</span></pre>
+      <pre
+        class="stream-content">{{ contentText || ui.streaming.empty }}<span v-if="context.during_streaming">_</span></pre>
 
       <details v-if="summaryText" class="stream-fold">
         <summary>{{ ui.streaming.summary }}</summary>

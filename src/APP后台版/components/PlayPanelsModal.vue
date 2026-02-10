@@ -2,11 +2,11 @@
   <div class="panel-overlay" @click.self="close">
     <div class="panel-shell">
       <div class="panel-head">
-      <div class="panel-title">
-        <div class="panel-icon">
-          <span class="material-symbols-outlined">layers</span>
-        </div>
-        <div>
+        <div class="panel-title">
+          <div class="panel-icon">
+            <span class="material-symbols-outlined">layers</span>
+          </div>
+          <div>
             <div class="title">快捷面板</div>
             <div class="sub">{{ appModeLabel }}</div>
           </div>
@@ -148,7 +148,14 @@
                 </div>
 
                 <label class="panel-label">底色强度</label>
-                <input class="panel-range" type="range" min="0" max="1" step="0.05" v-model.number="playAppearance.logTintStrength" />
+                <input
+                  class="panel-range"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  v-model.number="playAppearance.logTintStrength"
+                />
 
                 <button class="panel-action" @click="resetPlayAppearance">
                   <span class="material-symbols-outlined">restart_alt</span>

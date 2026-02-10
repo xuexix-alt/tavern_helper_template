@@ -88,7 +88,7 @@ description: 根据MVU Zod框架规范，书写、校验、修改角色卡变量
 | [酒馆助手文档-功能](.cursor/rules/酒馆助手文档-features_cn.md) | 酒馆助手功能说明 |
 | [酒馆助手文档-参考](.cursor/rules/酒馆助手文档-reference_cn.md) | 函数和变量参考 |
 | [MVU组件包](.cursor/rules/MVU组件包.mdc) | MVU Zod 框架说明 |
-| [src/角色卡示例](src/角色卡示例/) | 参考实现示例 |
+| [示例/角色卡示例](示例/角色卡示例/) | 参考实现示例 |
 | `@types/iframe/exported.mvu.d.ts` | `Mvu.getMvuData/replaceMvuData/parseMessage/reloadInitVar` 与 `Mvu.events.*` |
 | `@types/function/global.d.ts` | `waitGlobalInitialized('Mvu')/initializeGlobal` |
 | `@types/function/variables.d.ts` | `VariableOption/getVariables/replaceVariables/updateVariablesWith/registerVariableSchema` |
@@ -121,9 +121,12 @@ export type Schema = z.output<typeof Schema>;
 
 - 布尔值：不要使用 `z.coerce.boolean()`；直接使用 `z.boolean()`（除非你明确要做字符串到布尔的自定义 preprocess）。
 - 可选字段：不要随意对字段使用 `.optional()`；在“增量更新 + 反复 parse”场景下，优先用 `z.prefault(...)` 保证字段始终存在、结构稳定。
+- 对象键策略：固定必填同类型键优先 `z.record(z.enum([...]), value)`；固定可选同类型键优先 `z.partialRecord(z.enum([...]), value)`。
 - 幂等性：`transform` 要谨慎，确保 `Schema.parse(Schema.parse(input))` 与 `Schema.parse(input)` 等价（例如 clamp、normalize 这类幂等转换是安全的）。
 - 默认值策略：优先 `z.prefault`（而不是 `z.default`）；复杂对象建议“每个字段都可解析”，必要时可用 `z.literal('待初始化').or(...).prefault('待初始化')`。
+- 复合类型默认值：若某个 `z.object/z.record/z.array` 使用了 `prefault`，其子字段也应补齐可解析输入（通常也需要 `prefault`）。
 - `describe` 的使用：仅在字段名不足以表达含义时使用（典型：`z.record(z.string().describe('键含义'), valueSchema)`），不要滥用 `describe` 占 token。
+- 特殊格式字段：时间、房间号、坐标等可结构化字符串，优先尝试 `z.templateLiteral`，再考虑正则/手写解析。
 - `registerMvuSchema` 的函数形态：允许 `registerMvuSchema(Schema)` 或 `registerMvuSchema(() => Schema)`（当 schema 依赖运行时数据/函数、或注册时尚未就绪时用后者）。
 
 #### MVU Zod vs MVU Beta（避免混用）
@@ -211,55 +214,127 @@ export type Schema = z.output<typeof Schema>;
 
 ### 模板4: 变量输出格式.yaml
 
-文件路径：`世界书/变量/变量输出格式.yaml`
+文件路径：`世界书/变量/[mvu_update]变量输出格式.yaml`
 
-**说明**：此文件定义了 AI 输出变量更新命令的标准格式，使用 JSON Patch (RFC 6902) 标准。
+**说明**：此文件定义 AI 输出变量更新命令的标准格式；以 JSON Patch 为核心，并扩展支持 `move`。建议直接复用下列优化模板。
 
 ```yaml
----
-变量输出格式:
-  rule:
-    - you must output the update analysis and the actual update commands at once in the end of the next reply
-    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
-      - replace: replace the value of existing paths
-      - delta: update the value of existing number paths by a delta value
-      - insert: insert new items into an object or array
-      - remove
-    - don't update field names starts with `_` as they are readonly, such as `_变量`
-  format: |-
-    <UpdateVariable>
-    <Analysis>$(IN ENGLISH, no more than 80 words)
-    - ${calculate time passed: ...}
-    - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
-    - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}
-    </Analysis>
-    <JSONPatch>
-    [
-      { "op": "replace", "path": "${/path/to/variable}", "value": "${new_value}" },
-      { "op": "delta", "path": "${/path/to/number/variable}", "value": "${positve_or_negative_delta}" },
-      { "op": "insert", "path": "${/path/to/object/new_key}", "value": "${new_value}" },
-      { "op": "remove", "path": "${/path/to/array/0}" },
-      ...
-    ]
-    </JSONPatch>
-    </UpdateVariable>
+# [mvu_update] 变量输出格式（优化版）
+
+rule:
+  - You MUST output the `<UpdateVariable>` block at the end of your reply.
+  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
+  - '  - `move`: move an existing value from one path to another (requires `"from"`). '
+  - Path MUST start with `/`.
+  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
+  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.
+  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).
+  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
+  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots
+
+format: |-
+  <UpdateVariable>
+  <Analysis>
+  Step-by-step logic chain based on current context and variable checks:
+
+  1. Presence Check (登场状态)
+     - Quick scan: Which characters are present/mentioned in current scene?
+     - Set active roles to '登场' (登场), absent roles to '离场' (离场).
+     - This is a CRITICAL story switch - do NOT miss any role.
+     - Result: 新登场角色 ____，新离场角色 ____。
+
+  2. World Variables & Atmosphere
+     - Time: Calculate time elapsed (estimated by dialogue length if not specified).
+     - If crossing 00:00: delta date/doom_day, replace floor ambience.
+     - Address: Update only on actual character movement.
+     - Result: 时间更新？____，日期更新？____。
+
+  3. Shelter/Base Variables
+     - CRITICAL: DO NOT manually roll for shelter level upgrades.
+     - AI only reads `今日投掷点数` status.
+     - If "lucky upgrade" triggered in narrative -> broadcast new level & capabilities in story.
+     - If main task stage completed -> use `replace` to force level to reward target.
+     - Otherwise: DO NOT modify level numbers manually.
+     - Sync capability descriptions when level changes.
+
+  4. All Roles Variables (逐个检查每个角色)
+     - Source: top-level roles + `/临时NPC` objects.
+     - For each role check:
+       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.
+       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.
+       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.
+       d. Visuals (replace): Update physical descriptions only if changed in plot.
+       e. Health Reason (sync): MUST sync with health delta.
+
+  5. Temporary NPCs
+     - New NPCs -> use `insert` with complete field initialization.
+     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.
+     - If top-level already exists with same name -> merge and `remove` temp NPC.
+     - Result: 需创建/更新/删除？____。
+
+  6. Room State (强制禁止遗漏)
+     - Update `/<角色>/所在房间` for moving characters:
+       - Valid values: 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
+       - Leaving apartment -> "" (empty string)
+     - NEVER output any operation under `/房间/**` (derived; maintained by script).
+     - Result: 需更新房间的角色 ____。
+
+  7. Main Task & Rewards
+     - Track stage goals. If completed -> execute rewards.
+     - Info fragments: insert new, replace with '已完成' when explored.
+     - Grant rewards: Capability insert / Imp boost / Thoughts update.
+     - Result: 任务进度更新？____，触发奖励？____。
+
+  8. Operation Summary
+     - List all paths + operations (replace/delta/insert/remove/move).
+     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
+
+  </Analysis>
+  <JSONPatch>
+  [
+    { "op": "replace", "path": "/世界/时间", "value": "..." },
+    { "op": "delta", "path": "/浅见亚美/健康", "value": -1 },
+    { "op": "replace", "path": "/浅见亚美/内心想法", "value": "..." },
+    { "op": "replace", "path": "/浅见亚美/登场状态", "value": "登场" },
+    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/浅见亚美/所在房间", "value": "楼层20/2001" },
+    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
+  ]
+  </JSONPatch>
+  </UpdateVariable>
+
+requirements:
+  - "Allowed operations: replace, delta, insert, remove, move."
+  - Path MUST be a valid JSON Pointer absolute path.
+  - DO NOT `replace` on non-existent paths (use `insert`).
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "NEVER output any operation under `/房间/**` (derived; maintained by script)."
+  - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
+  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
+  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
+  - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
+  - "Shelter level: AI MUST NOT manually roll upgrades. Only read `今日投掷点数` status and broadcast results."
 ```
 
 **关键要点**：
 
-- `Analysis` 部分必须用**英文**撰写，不超过 80 词
-- 必须包含：时间推移判断、是否允许重大更新、基于 check 规则的变量分析
-- JSON Patch 路径使用 `/路径/到/变量` 格式
-- 以 `_` 开头的字段是只读的，不应更新
-- `delta` 操作只用于数值类型字段的增量修改
+- 允许操作集为 `replace/delta/insert/remove/move`。
+- 路径必须是绝对 JSON Pointer（以 `/` 开头）。
+- 角色不存在时必须先 `insert /<角色名>`，禁止直接 `replace/delta/remove` 子路径。
+- `房间` 为派生只读区，禁止输出 `/房间/**` 操作。
+- `_` 前缀字段只读，不可更新。
 
 **校验要点**：
 
-- [ ] `rule` 包含完整的规则说明
-- [ ] `format` 包含标准 `<UpdateVariable>` 结构
-- [ ] `Analysis` 描述使用英文且长度合理
-- [ ] JSON Patch 操作类型正确（replace/delta/insert/remove）
-- [ ] 示例路径格式正确
+- [ ] `rule` 覆盖 allowed operations 与只读约束
+- [ ] `format` 含 `<UpdateVariable>/<Analysis>/<JSONPatch>`
+- [ ] JSONPatch 操作与路径合法
+- [ ] 新角色创建流程符合“先 insert 后更新”
 
 ### 模板5: 角色阶段.yaml
 
@@ -603,7 +678,7 @@ export const useDataStore = defineMvuDataStore(Schema, { type: 'message', messag
 ## 注意事项
 
 1. **必须熟读规范**：编写前先参考 MVUZod角色卡规范.mdc
-2. **参考示例**：不确定时参考 src/角色卡示例/ 目录
+2. **参考示例**：不确定时参考 示例/角色卡示例/ 目录
 3. **同步修改**：修改 schema.ts 时同步更新 initvar.yaml
 4. **数值约束**：始终使用 `_.clamp()` 约束数值范围
 5. **派生字段**：派生字段必须以 `$` 开头命名

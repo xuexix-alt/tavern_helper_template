@@ -35,10 +35,10 @@
       @click="focusMarket"
     >
       <div class="flex items-center justify-between border-b border-slate-800/60 px-4 py-3">
-      <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
-        <span class="material-symbols-outlined text-emerald-300">storefront</span>
-        商城与套餐
-      </div>
+        <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
+          <span class="material-symbols-outlined text-emerald-300">storefront</span>
+          商城与套餐
+        </div>
         <button
           class="rounded-lg border border-slate-700/50 bg-slate-900/60 px-2 py-1 text-xs text-slate-200 hover:border-emerald-500/30 hover:bg-slate-800/70"
           @click="close"

@@ -39,32 +39,33 @@
       </header>
 
       <section class="play-log-card" :style="logCardStyle">
-      <div class="play-log-head">
-        <div class="play-log-title">
-          <span class="material-symbols-outlined">menu_book</span>
-          正文和剧情
+        <div class="play-log-head">
+          <div class="play-log-title">
+            <span class="material-symbols-outlined">menu_book</span>
+            正文和剧情
+          </div>
         </div>
-      </div>
 
-      <div ref="logScrollEl" class="play-log-content">
-        <pre class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
-        <div ref="logTailEl"></div>
-      </div>
-    </section>
+        <div ref="logScrollEl" class="play-log-content">
+          <pre
+            class="whitespace-pre-wrap">{{ streamContent }}<span v-if="isStreaming" class="animate-pulse">_</span></pre>
+          <div ref="logTailEl"></div>
+        </div>
+      </section>
 
       <div class="play-input">
         <input
           ref="inputEl"
           v-model="userInput"
-        class="play-input-field"
-        placeholder="输入指令…（例如：生成 / 搜索 /home 或 /send 你好）"
-        @focus="focusText"
-        @keydown.enter.exact.prevent="send"
-      />
-      <button class="play-send" :disabled="!userInput.trim()" @click="send">
-        <span class="material-symbols-outlined">send</span>
-        <span>发送</span>
-      </button>
+          class="play-input-field"
+          placeholder="输入指令…（例如：生成 / 搜索 /home 或 /send 你好）"
+          @focus="focusText"
+          @keydown.enter.exact.prevent="send"
+        />
+        <button class="play-send" :disabled="!userInput.trim()" @click="send">
+          <span class="material-symbols-outlined">send</span>
+          <span>发送</span>
+        </button>
       </div>
     </div>
 
@@ -353,7 +354,9 @@ onUnmounted(() => {
     linear-gradient(150deg, rgba(58, 35, 24, 0.88), rgba(28, 18, 16, 0.92));
   border: 1px solid rgba(251, 191, 36, 0.22);
   border-radius: 20px;
-  box-shadow: 0 18px 46px rgba(24, 12, 8, 0.55), inset 0 1px 0 rgba(255, 237, 213, 0.1);
+  box-shadow:
+    0 18px 46px rgba(24, 12, 8, 0.55),
+    inset 0 1px 0 rgba(255, 237, 213, 0.1);
   backdrop-filter: blur(18px);
   padding: 14px;
   display: grid;
@@ -370,7 +373,9 @@ onUnmounted(() => {
   padding: 1px;
   border-radius: 20px;
   background: linear-gradient(140deg, rgba(251, 191, 36, 0.4), rgba(253, 230, 138, 0.08), rgba(244, 63, 94, 0.2));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -411,7 +416,10 @@ onUnmounted(() => {
   color: rgba(255, 237, 213, 0.92);
   display: grid;
   place-items: center;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
 }
 
 .side-btn.active {
@@ -450,7 +458,9 @@ onUnmounted(() => {
   background:
     radial-gradient(120% 120% at 0% 0%, rgba(251, 146, 60, 0.16), transparent 55%),
     linear-gradient(150deg, rgba(58, 35, 24, 0.9), rgba(28, 18, 16, 0.94));
-  box-shadow: 0 16px 36px rgba(24, 12, 8, 0.5), inset 0 1px 0 rgba(255, 237, 213, 0.12);
+  box-shadow:
+    0 16px 36px rgba(24, 12, 8, 0.5),
+    inset 0 1px 0 rgba(255, 237, 213, 0.12);
   backdrop-filter: blur(18px);
 }
 
@@ -561,7 +571,9 @@ onUnmounted(() => {
   grid-row: 1 / 4;
   width: 0;
   overflow: hidden;
-  transition: width 0.2s ease, opacity 0.2s ease;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
   opacity: 0;
   padding: 0;
 }

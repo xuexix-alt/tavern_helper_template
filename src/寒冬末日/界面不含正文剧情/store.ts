@@ -1,5 +1,7 @@
 import { Schema } from '../schema';
 
+const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
+
 // 完整的初始默认值 - 使用 Schema.parse({}) 会自动应用所有 prefault
 const initialData: z.output<typeof Schema> = Schema.parse({});
 
@@ -69,6 +71,19 @@ export const useDataStore = defineStore(
 
       eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, refresh_from_mvu);
       eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh_from_mvu);
+
+      // 角色选择器保存后会主动广播该事件，避免必须手动重载 UI。
+      eventOn(ROLE_SELECTOR_UPDATED_EVENT as any, refresh_from_mvu);
+
+      // 兼容：当外部通过 setChatMessages(refresh:'affected'|'all') 刷新楼层时，主动同步一次。
+      if (typeof tavern_events !== 'undefined') {
+        eventOn(tavern_events.MESSAGE_UPDATED as any, (updated_message_id: number) => {
+          if (Number(updated_message_id) === Number(message_id)) refresh_from_mvu();
+        });
+        eventOn(tavern_events.MESSAGE_RECEIVED as any, (_message_id: number) => {
+          refresh_from_mvu();
+        });
+      }
     })();
 
     return { data };

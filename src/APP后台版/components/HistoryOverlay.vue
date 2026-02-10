@@ -134,7 +134,9 @@
           <div class="reorder-card glass-panel">
             <div class="reorder-head">
               <div>
-                <div class="reorder-title">{{ selectedOrder.girl_name || '-' }} · {{ selectedOrder.identity || '-' }}</div>
+                <div class="reorder-title">
+                  {{ selectedOrder.girl_name || '-' }} · {{ selectedOrder.identity || '-' }}
+                </div>
                 <div class="reorder-sub">{{ selectedOrder.package_name || '未命名套餐' }}</div>
               </div>
               <div class="reorder-price">￥{{ selectedOrder.price ?? '-' }}</div>

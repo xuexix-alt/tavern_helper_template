@@ -91,11 +91,15 @@
               <span v-for="(tag, tIdx) in (shop.shoptags || []).slice(0, 3)" :key="tIdx" class="tag">
                 {{ tag }}
               </span>
-              <span v-if="(shop.shoptags || []).length === 0" class="tag muted">{{ ui.discoverPage.defaults.tag }}</span>
+              <span v-if="(shop.shoptags || []).length === 0" class="tag muted">{{
+                ui.discoverPage.defaults.tag
+              }}</span>
             </div>
             <div class="shop-meta">
               <span class="meta-item">{{ formatPlays(shopPlays(shop, idx)) }} 游玩</span>
-              <span class="meta-item">{{ (shop.packages || []).length }} {{ ui.discoverPage.defaults.packageUnit }}</span>
+              <span class="meta-item"
+                >{{ (shop.packages || []).length }} {{ ui.discoverPage.defaults.packageUnit }}</span
+              >
             </div>
           </div>
           <button class="delete-btn" type="button" @click.stop="deleteShop(shop, idx)">
@@ -130,8 +134,7 @@ const filteredShops = computed(() => {
     const name = String(shop?.shopname || shop?.name || '').toLowerCase();
     const tags = (shop?.shoptags || []).join(' ').toLowerCase();
     const hitKeyword = !keyword || name.includes(keyword) || tags.includes(keyword);
-    const hitTag =
-      activeTag.value === 'all' || (shop?.shoptags || []).some((tag: string) => tag === activeTag.value);
+    const hitTag = activeTag.value === 'all' || (shop?.shoptags || []).some((tag: string) => tag === activeTag.value);
     return hitKeyword && hitTag;
   });
   return base;
@@ -543,7 +546,10 @@ function handleFileChange(event: Event) {
 }
 
 .shop-rating .fill {
-  font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 18;
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 600,
+    'opsz' 18;
   font-size: 14px;
 }
 

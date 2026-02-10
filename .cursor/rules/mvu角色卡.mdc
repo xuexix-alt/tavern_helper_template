@@ -31,9 +31,9 @@ export const Schema = z.object({
 你应该要求用户提供变量结构文件或者自行编写, 它应该遵循以下要求:
 
 ```yaml
+rtask: Explorer requests to design the zod schema of variables which records the world status, you should reappear an instance of it using zod 4.x inside `<context>`, which is the main content of your reply
 rule:
-  - libraries: "`z` from zod and `_` from lodash are available by default, so you can use them directly and should prefer to use them; don't import them in the generated code"
-  - zod 4: stick to use zod 4.x, never ever use `.passthrough` or `.strict`!
+  - libraries: "`z` from zod 4.x (stick to it instead of 3.x!) and `_` from lodash are available by default, so you can use them directly and should prefer to use them; don't import them in the generated code"
   - idempotent operation: the schema is intended to parse the updates of the world status incrementally, thus, the output of `Schema.parse(input)` must be a valid input of `Schema.parse` itself; that is, you should use z.transform carefully, keeping `Schema.parse(Schema.parse(input))` equal to `Schema.parse(input)`
   - for number schema: prefer `z.coerce.number()` over `z.number()` whenever you expect a number since it will try to convert the input to a number if it's not a number; but don't use other `z.coerce.xxx()` such as `z.coerce.boolean()`, just use `z.boolean()` directly
   - prefer object schema over array schema: "the array index is hard to understand and maintain, so you should use `物品栏: z.record(z.string().describe('物品名'), z.object({ 描述: z.string(), ... }))` instead of `物品栏: z.array(z.object({ 名称: z.string(), 描述: z.string(), ... }))`"
@@ -43,21 +43,28 @@ rule:
         dynamic optional keys + the same type: use `z.record(z.string(), ${value type})`
         fixed required keys + different types: 'use `z.object({ key1: ${type1}, key2: ${type2}, ... })`'
         dynamic keys but some keys are required + the same type: 'use `z.intersection(z.object({ requiredKey1: ${type1}, requiredKey2: ${type2}, ... }), z.record(z.string(), ${value type}))`'
-      - on clearable object: 'if the object is clearable by JSON patch `{ "op": "remove", "path": "/path/to/object" }`, set `z.object({ ...prefault for every field }).prefault({})` instead of `z.object({ ... }).optional()` for better compatibility with the incremental update'
+      - on clearable object: 'if the object is clearable by JSON patch `{ "op": "remove", "path": "/path/to/object" }`, set `z.object({ ${field}: ${type}.prefault(...), ... }).prefault({})` instead of `z.object({ ... }).optional()` for better compatibility with the incremental update'
   - for special format (rare to happen): prefer `z.templateLiteral` over regex or manual parsing
   - for restrictions: when accepting a update that breaks the schema, users are tend to expect the update takes some effect instead of being discarded completely; therefore, you should try your best to use `z.transform` to convert the broken input to a valid input. For example, if Explorer requests a value to be between 0 and 100, prefer `z.number().transform(value => _.clamp(value, 0, 100))` over `z.number().min(0).max(100)`; if an object could only contain 10 keys, when a new key comes, discard the oldest key instead. **but only impose these restrictions when Explorer requests**
   - on default value:
       - prefer `z.prefault` over `z.default`
       - if a `z.object` or the whole Schema is complicated enough, set `.prefault('${suitable default value}')` or `.or(z.literal('待初始化')).prefault('待初始化')` for every field of it
+      - if a compund type is prefault-ed, all its fields should be prefault-ed as well
       - don't set `z.prefault` for other situatioins unless Explorer requests it
   - when to describe: use `z.describe` only when there's no field name to explain the usage of the schema such as the key type of `z.record`; in contrast, you should never use `z.describe` if the field name has already explained the usage well
   - determine the order of keys: 'if Explorer requests you to do something with the insertion time of keys, prefer to use `_(data).entries()` which almost always lists keys in insertion order, e.g. you can remove old keys with a simple `_(data).entries().takeRight(10)`; when keys are already additionally sorted inside `z.transform`, you should use `$time: z.coerce.number().prefault(() => Date.now())` to automatically assign a timestamp'
   - don't repeat yourself: merge the same variable schemas whenever possible, but don't define extra variables to do so - you can only define schema inside `export const Schema = z.object({ ... })`
-  - type of functions:
-      - '`registerMvuSchema = (schema: z.ZodObject | (() => z.ZodObject)) => void`, the function input `() => z.ZodObject` could be used when the schema is not ready at the time of registering, or the schema depends on runtime data/function'
-      - '`z.transform(value => value)`'
-      - '`z.prefault/z.catch(value | () => value)`'
-  - REPEAT: DON'T mark any variable as optional or impose any restriction to the schema unless Explorer requests them
+  - some function definition corrections:
+      z.transform:
+        type: '(fn: (value: Output) => NewOutput) => z.ZodType'
+        limit: '`fn` can only take the parsed output as input, never ever use `context`. i.e. `z.string().transform(value => value)` is valid, while `z.string().transform((value, context) => value)` is not'
+        example: 'z.object({ 好感度: z.coerce.number() }).transform(data => ({ 好感度: _.clamp(data.好感度, 0, 100) }))'
+      z.prefault:
+        type: '(value: Input | (() => Input)) => z.ZodType'
+        limit: '`value` must be a valid input of the schema itself. i.e. `z.object({ 好感度: z.coerce.number().prefault(0) }).prefault({})` is valid, while `z.object({ 好感度: z.coerce.number() }).prefault({})` is not (the input must contain the `好感度` field in this case)'
+      z.extend:
+        limit: only `z.object`、`z.looseObject`、`z.strictObject` can be extended, even if `z.object(...).prefault({})` could not be extended! i.e. `z.object({...}).extend({...})` is valid, while `z.object({...}).prefault({}).extend({...})` is not
+      z.passthrough、z.strict: they are not exist, never ever use them!
 ```
 
 如果用户提供了 `export const Schema`, 你应该区分用户提供的是直接的 `schema.ts` 还是变量结构脚本. 具体地,
@@ -96,7 +103,7 @@ function defineMvuDataStore<T extends z.ZodObject>(
 
 其中 `Schema` 是变量结构, `variable_option` 是要访问的变量类型, `additional_setup` 是可选的额外设置函数.
 
-例如, `示例/角色卡示例示例/store.ts` 中定义了访问 `useDataStore` 函数:
+例如, `示例/角色卡示例/store.ts` 中定义了访问 `useDataStore` 函数:
 
 ```ts
 import { defineMvuDataStore } from '@util/mvu';
@@ -204,31 +211,104 @@ example: |- # just examples, don't copy them literally
 `[mvu_update]变量输出格式`必须按照以下最新模板编写:
 
 ```yaml
----
-变量输出格式:
-  rule:
-    - you must output the update analysis and the actual update commands at once in the end of the next reply
-    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
-      - replace: replace the value of existing paths
-      - delta: update the value of existing number paths by a delta value
-      - insert: insert new items into an object or array
-      - remove
-    - don't update field names starts with `_` as they are readonly, such as `_变量`
-  format: |-
-    <UpdateVariable>
-    <Analysis>$(IN ENGLISH, no more than 80 words)
-    - ${calculate time passed: ...}
-    - ${decide whether dramatic updates are allowed as it's in a special case or the time passed is more than usual: yes/no}
-    - ${analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots: ...}
-    </Analysis>
-    <JSONPatch>
-    [
-      { "op": "replace", "path": "${/path/to/variable}", "value": "${new_value}" },
-      { "op": "delta", "path": "${/path/to/number/variable}", "value": "${positve_or_negative_delta}" },
-      { "op": "insert", "path": "${/path/to/object/new_key}", "value": "${new_value}" },
-      { "op": "remove", "path": "${/path/to/array/0}" },
-      ...
-    ]
-    </JSONPatch>
-    </UpdateVariable>
+# [mvu_update] 变量输出格式（优化版）
+
+rule:
+  - You MUST output the `<UpdateVariable>` block at the end of your reply.
+  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
+  - '  - `move`: move an existing value from one path to another (requires `"from"`). '
+  - Path MUST start with `/`.
+  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
+  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.
+  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).
+  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
+  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots
+
+format: |-
+  <UpdateVariable>
+  <Analysis>
+  Step-by-step logic chain based on current context and variable checks:
+
+  1. Presence Check (登场状态)
+     - Quick scan: Which characters are present/mentioned in current scene?
+     - Set active roles to '登场' (登场), absent roles to '离场' (离场).
+     - This is a CRITICAL story switch - do NOT miss any role.
+     - Result: 新登场角色 ____，新离场角色 ____。
+
+  2. World Variables & Atmosphere
+     - Time: Calculate time elapsed (estimated by dialogue length if not specified).
+     - If crossing 00:00: delta date/doom_day, replace floor ambience.
+     - Address: Update only on actual character movement.
+     - Result: 时间更新？____，日期更新？____。
+
+  3. Shelter/Base Variables
+     - CRITICAL: DO NOT manually roll for shelter level upgrades.
+     - AI only reads `今日投掷点数` status.
+     - If "lucky upgrade" triggered in narrative -> broadcast new level & capabilities in story.
+     - If main task stage completed -> use `replace` to force level to reward target.
+     - Otherwise: DO NOT modify level numbers manually.
+     - Sync capability descriptions when level changes.
+
+  4. All Roles Variables (逐个检查每个角色)
+     - Source: top-level roles + `/临时NPC` objects.
+     - For each role check:
+       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.
+       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.
+       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.
+       d. Visuals (replace): Update physical descriptions only if changed in plot.
+       e. Health Reason (sync): MUST sync with health delta.
+
+  5. Temporary NPCs
+     - New NPCs -> use `insert` with complete field initialization.
+     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.
+     - If top-level already exists with same name -> merge and `remove` temp NPC.
+     - Result: 需创建/更新/删除？____。
+
+  6. Room State (强制禁止遗漏)
+     - Update `/<角色>/所在房间` for moving characters:
+       - Valid values: 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
+       - Leaving apartment -> "" (empty string)
+     - NEVER output any operation under `/房间/**` (derived; maintained by script).
+     - Result: 需更新房间的角色 ____。
+
+  7. Main Task & Rewards
+     - Track stage goals. If completed -> execute rewards.
+     - Info fragments: insert new, replace with '已完成' when explored.
+     - Grant rewards: Capability insert / Imp boost / Thoughts update.
+     - Result: 任务进度更新？____，触发奖励？____。
+
+  8. Operation Summary
+     - List all paths + operations (replace/delta/insert/remove/move).
+     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
+
+  </Analysis>
+  <JSONPatch>
+  [
+    { "op": "replace", "path": "/世界/时间", "value": "..." },
+    { "op": "delta", "path": "/浅见亚美/健康", "value": -1 },
+    { "op": "replace", "path": "/浅见亚美/内心想法", "value": "..." },
+    { "op": "replace", "path": "/浅见亚美/登场状态", "value": "登场" },
+    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/浅见亚美/所在房间", "value": "楼层20/2001" },
+    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
+  ]
+  </JSONPatch>
+  </UpdateVariable>
+
+requirements:
+  - "Allowed operations: replace, delta, insert, remove, move."
+  - Path MUST be a valid JSON Pointer absolute path.
+  - DO NOT `replace` on non-existent paths (use `insert`).
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "NEVER output any operation under `/房间/**` (derived; maintained by script)."
+  - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
+  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
+  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
+  - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
+  - "Shelter level: AI MUST NOT manually roll upgrades. Only read `今日投掷点数` status and broadcast results."
 ```

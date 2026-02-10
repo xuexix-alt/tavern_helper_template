@@ -186,28 +186,28 @@ onMounted(async () => {
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
           animation: logoBounce 2s ease-in-out infinite;
 
-        i {
-          font-size: 2.5rem;
-          background: linear-gradient(135deg, #ff6b35, #ff9500);
-          :global([data-theme='dark']) & {
-            background: linear-gradient(135deg, #60a5fa, #a855f7);
+          i {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #ff6b35, #ff9500);
+            :global([data-theme='dark']) & {
+              background: linear-gradient(135deg, #60a5fa, #a855f7);
             }
             -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .material-symbols-outlined {
-          font-size: 2.5rem;
-          background: linear-gradient(135deg, #ff6b35, #ff9500);
-          :global([data-theme='dark']) & {
-            background: linear-gradient(135deg, #60a5fa, #a855f7);
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
           }
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+
+          .material-symbols-outlined {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #ff6b35, #ff9500);
+            :global([data-theme='dark']) & {
+              background: linear-gradient(135deg, #60a5fa, #a855f7);
+            }
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
         }
-      }
 
         .logo-text {
           .brand-name {

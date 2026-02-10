@@ -36,11 +36,7 @@
         <div class="search-glow"></div>
         <div class="search-bar glass-panel">
           <span class="material-symbols-outlined accent">auto_fix_high</span>
-          <input
-            v-model="searchKeyword"
-            :placeholder="ui.homePage.commandCenter.placeholder"
-            @keyup.enter="doSearch"
-          />
+          <input v-model="searchKeyword" :placeholder="ui.homePage.commandCenter.placeholder" @keyup.enter="doSearch" />
           <button class="search-action" :disabled="loading" @click="doSearch">
             <span class="material-symbols-outlined">arrow_forward</span>
           </button>
@@ -71,12 +67,7 @@
         <button class="link-btn" type="button">{{ ui.homePage.sections.stylesAction }}</button>
       </div>
       <div class="chip-row hide-scrollbar">
-        <button
-          v-for="item in categories"
-          :key="item.label"
-          class="style-chip"
-          @click="search(item.keyword)"
-        >
+        <button v-for="item in categories" :key="item.label" class="style-chip" @click="search(item.keyword)">
           <span class="material-symbols-outlined">{{ categoryIcon(item.icon) }}</span>
           <span>{{ item.label }}</span>
         </button>
@@ -567,7 +558,10 @@ function generateDLCContent() {
 }
 
 .rating .material-symbols-outlined.fill {
-  font-variation-settings: 'FILL' 1, 'wght' 600, 'opsz' 18;
+  font-variation-settings:
+    'FILL' 1,
+    'wght' 600,
+    'opsz' 18;
   font-size: 14px;
 }
 

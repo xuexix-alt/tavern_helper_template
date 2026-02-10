@@ -1,486 +1,490 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>服务状态 - 美人团</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>服务状态 - 美人团</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-    body {
-      font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
-      min-height: 100vh;
-      color: #e2e8f0;
-      padding: 20px;
-    }
+      body {
+        font-family:
+          'PingFang SC',
+          'Microsoft YaHei',
+          -apple-system,
+          sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+        min-height: 100vh;
+        color: #e2e8f0;
+        padding: 20px;
+      }
 
-    .service-view {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
-    }
+      .service-view {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+      }
 
-    /* Header */
-    .service-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      border-radius: 16px;
-      border: 1px solid rgba(251, 146, 60, 0.3);
-      background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(234, 88, 12, 0.05));
-      margin-bottom: 16px;
-    }
+      /* Header */
+      .service-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-radius: 16px;
+        border: 1px solid rgba(251, 146, 60, 0.3);
+        background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(234, 88, 12, 0.05));
+        margin-bottom: 16px;
+      }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
 
-    .header-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      background: rgba(251, 146, 60, 0.2);
-      color: #fb923c;
-    }
+      .header-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: rgba(251, 146, 60, 0.2);
+        color: #fb923c;
+      }
 
-    .header-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #fed7aa;
-    }
+      .header-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fed7aa;
+      }
 
-    .header-actions {
-      display: flex;
-      gap: 8px;
-    }
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
 
-    .btn-small {
-      padding: 8px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      background: rgba(15, 23, 42, 0.6);
-      color: #e2e8f0;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+      .btn-small {
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.6);
+        color: #e2e8f0;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
 
-    .btn-small:hover {
-      background: rgba(30, 41, 59, 0.8);
-    }
+      .btn-small:hover {
+        background: rgba(30, 41, 59, 0.8);
+      }
 
-    /* Character Info */
-    .char-card {
-      border-radius: 16px;
-      padding: 20px;
-      border: 1px solid rgba(251, 146, 60, 0.25);
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
-      margin-bottom: 16px;
-      text-align: center;
-    }
+      /* Character Info */
+      .char-card {
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid rgba(251, 146, 60, 0.25);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
+        margin-bottom: 16px;
+        text-align: center;
+      }
 
-    .char-avatar {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      margin: 0 auto 12px;
-      border: 3px solid #fb923c;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(251, 146, 60, 0.15);
-      color: #fb923c;
-      font-size: 28px;
-      font-weight: 700;
-    }
+      .char-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        margin: 0 auto 12px;
+        border: 3px solid #fb923c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(251, 146, 60, 0.15);
+        color: #fb923c;
+        font-size: 28px;
+        font-weight: 700;
+      }
 
-    .char-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #fed7aa;
-      margin-bottom: 4px;
-    }
+      .char-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fed7aa;
+        margin-bottom: 4px;
+      }
 
-    .char-tags {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
+      .char-tags {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
 
-    .tag {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(251, 146, 60, 0.15);
-      color: #fb923c;
-    }
+      .tag {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(251, 146, 60, 0.15);
+        color: #fb923c;
+      }
 
-    /* Metrics Grid */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+      /* Metrics Grid */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
 
-    .metric-card {
-      border-radius: 12px;
-      padding: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(30, 41, 59, 0.6);
-      text-align: center;
-    }
+      .metric-card {
+        border-radius: 12px;
+        padding: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(30, 41, 59, 0.6);
+        text-align: center;
+      }
 
-    .metric-label {
-      font-size: 11px;
-      color: rgba(226, 232, 240, 0.5);
-      margin-bottom: 6px;
-    }
+      .metric-label {
+        font-size: 11px;
+        color: rgba(226, 232, 240, 0.5);
+        margin-bottom: 6px;
+      }
 
-    .metric-value {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fb923c;
-    }
+      .metric-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fb923c;
+      }
 
-    .metric-bar {
-      height: 6px;
-      border-radius: 999px;
-      background: rgba(148, 163, 184, 0.2);
-      margin-top: 8px;
-      overflow: hidden;
-    }
+      .metric-bar {
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.2);
+        margin-top: 8px;
+        overflow: hidden;
+      }
 
-    .metric-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #fb923c, #f97316);
-      border-radius: 999px;
-    }
+      .metric-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #fb923c, #f97316);
+        border-radius: 999px;
+      }
 
-    /* Info Panels */
-    .info-panel {
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(30, 41, 59, 0.5);
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
+      /* Info Panels */
+      .info-panel {
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(30, 41, 59, 0.5);
+        margin-bottom: 12px;
+        overflow: hidden;
+      }
 
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 14px;
-      background: rgba(15, 23, 42, 0.6);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        background: rgba(15, 23, 42, 0.6);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
 
-    .panel-header i:first-child {
-      color: #fb923c;
-      margin-right: 8px;
-    }
+      .panel-header i:first-child {
+        color: #fb923c;
+        margin-right: 8px;
+      }
 
-    .panel-body {
-      padding: 14px;
-    }
+      .panel-body {
+        padding: 14px;
+      }
 
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-    }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      }
 
-    .info-row:last-child {
-      border-bottom: none;
-    }
+      .info-row:last-child {
+        border-bottom: none;
+      }
 
-    .info-label {
-      font-size: 12px;
-      color: rgba(226, 232, 240, 0.5);
-    }
+      .info-label {
+        font-size: 12px;
+        color: rgba(226, 232, 240, 0.5);
+      }
 
-    .info-value {
-      font-size: 13px;
-      color: #e2e8f0;
-    }
+      .info-value {
+        font-size: 13px;
+        color: #e2e8f0;
+      }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
 
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px;
-      border-radius: 8px;
-      background: rgba(15, 23, 42, 0.6);
-    }
+      .info-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.6);
+      }
 
-    .info-item i {
-      color: #fb923c;
-      font-size: 14px;
-    }
+      .info-item i {
+        color: #fb923c;
+        font-size: 14px;
+      }
 
-    .info-item .label {
-      font-size: 11px;
-      color: rgba(226, 232, 240, 0.5);
-    }
+      .info-item .label {
+        font-size: 11px;
+        color: rgba(226, 232, 240, 0.5);
+      }
 
-    .info-item .value {
-      font-size: 12px;
-      font-weight: 600;
-      color: #e2e8f0;
-    }
+      .info-item .value {
+        font-size: 12px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
 
-    /* Package Info */
-    .package-card {
-      border-radius: 12px;
-      padding: 16px;
-      border: 1px solid rgba(251, 146, 60, 0.25);
-      background: rgba(251, 146, 60, 0.08);
-      margin-bottom: 12px;
-    }
+      /* Package Info */
+      .package-card {
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid rgba(251, 146, 60, 0.25);
+        background: rgba(251, 146, 60, 0.08);
+        margin-bottom: 12px;
+      }
 
-    .package-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
+      .package-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
 
-    .package-name {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fb923c;
-    }
+      .package-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fb923c;
+      }
 
-    .package-price {
-      font-size: 18px;
-      font-weight: 700;
-      color: #fb923c;
-    }
+      .package-price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #fb923c;
+      }
 
-    .package-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
+      .package-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
 
-    .pkg-tag {
-      font-size: 10px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: rgba(251, 146, 60, 0.15);
-      color: #fb923c;
-    }
-  </style>
-</head>
-<body>
-  <div class="service-view">
-    <!-- Header -->
-    <header class="service-header">
-      <div class="header-left">
-        <div class="header-icon">
-          <i class="fas fa-concierge-bell"></i>
+      .pkg-tag {
+        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(251, 146, 60, 0.15);
+        color: #fb923c;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="service-view">
+      <!-- Header -->
+      <header class="service-header">
+        <div class="header-left">
+          <div class="header-icon">
+            <i class="fas fa-concierge-bell"></i>
+          </div>
+          <div class="header-title">服务状态</div>
         </div>
-        <div class="header-title">服务状态</div>
-      </div>
-      <div class="header-actions">
-        <button class="btn-small">
-          <i class="fas fa-sync-alt"></i>
-        </button>
-        <button class="btn-small">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-    </header>
-
-    <!-- Character Card -->
-    <div class="char-card">
-      <div class="char-avatar">
-        <i class="fas fa-user"></i>
-      </div>
-      <div class="char-name">苏雨萱</div>
-      <div class="char-tags">
-        <span class="tag">都市白领</span>
-        <span class="tag">24岁</span>
-      </div>
-
-      <!-- Metrics -->
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-label">脉搏</div>
-          <div class="metric-value">88 bpm</div>
+        <div class="header-actions">
+          <button class="btn-small">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <button class="btn-small">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">互动进度</div>
-          <div class="metric-value">68%</div>
-          <div class="metric-bar">
-            <div class="metric-fill" style="width: 68%"></div>
+      </header>
+
+      <!-- Character Card -->
+      <div class="char-card">
+        <div class="char-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="char-name">苏雨萱</div>
+        <div class="char-tags">
+          <span class="tag">都市白领</span>
+          <span class="tag">24岁</span>
+        </div>
+
+        <!-- Metrics -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">脉搏</div>
+            <div class="metric-value">88 bpm</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">互动进度</div>
+            <div class="metric-value">68%</div>
+            <div class="metric-bar">
+              <div class="metric-fill" style="width: 68%"></div>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">互动次数</div>
+            <div class="metric-value">5</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">好感度</div>
+            <div class="metric-value">72/100</div>
+            <div class="metric-bar">
+              <div class="metric-fill" style="width: 72%"></div>
+            </div>
           </div>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">互动次数</div>
-          <div class="metric-value">5</div>
+      </div>
+
+      <!-- Package Info -->
+      <div class="package-card">
+        <div class="package-header">
+          <div class="package-name">高管秘书剧本</div>
+          <div class="package-price">¥388</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">好感度</div>
-          <div class="metric-value">72/100</div>
-          <div class="metric-bar">
-            <div class="metric-fill" style="width: 72%"></div>
-          </div>
+        <div class="package-tags">
+          <span class="pkg-tag">身份变换</span>
+          <span class="pkg-tag">情感波折</span>
+          <span class="pkg-tag">公开场合</span>
         </div>
       </div>
+
+      <!-- Clothing Panel -->
+      <details class="info-panel">
+        <summary class="panel-header">
+          <span><i class="fas fa-tshirt"></i> 着装</span>
+          <i class="fas fa-chevron-down"></i>
+        </summary>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item">
+              <i class="fas fa-tshirt"></i>
+              <div>
+                <div class="label">上衣</div>
+                <div class="value">白色衬衫</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-user"></i>
+              <div>
+                <div class="label">下装</div>
+                <div class="value">黑色包臀裙</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-heart"></i>
+              <div>
+                <div class="label">内衣</div>
+                <div class="value">黑色蕾丝</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-shoe-prints"></i>
+              <div>
+                <div class="label">鞋履</div>
+                <div class="value">黑色高跟鞋</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Psychology Panel -->
+      <details class="info-panel">
+        <summary class="panel-header">
+          <span><i class="fas fa-heart"></i> 心理</span>
+          <i class="fas fa-chevron-down"></i>
+        </summary>
+        <div class="panel-body">
+          <div class="info-row">
+            <span class="info-label">当前所想</span>
+            <span class="info-value">既紧张又期待</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">性格类型</span>
+            <span class="info-value">外向活泼</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- Body Panel -->
+      <details class="info-panel">
+        <summary class="panel-header">
+          <span><i class="fas fa-female"></i> 身体</span>
+          <i class="fas fa-chevron-down"></i>
+        </summary>
+        <div class="panel-body">
+          <div class="info-row">
+            <span class="info-label">罩杯</span>
+            <span class="info-value">B杯</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">乳形</span>
+            <span class="info-value">标准形</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">胸部</span>
+            <span class="info-value">聚拢型</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">私处</span>
+            <span class="info-value">粉嫩型</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">姿势</span>
+            <span class="info-value">婷婷玉立</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- Statistics Panel -->
+      <details class="info-panel">
+        <summary class="panel-header">
+          <span><i class="fas fa-chart-line"></i> 统计</span>
+          <i class="fas fa-chevron-down"></i>
+        </summary>
+        <div class="panel-body">
+          <div class="info-row">
+            <span class="info-label">处女</span>
+            <span class="info-value">是</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">性伴侣数量</span>
+            <span class="info-value">2</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">本次服务性交次数</span>
+            <span class="info-value">5</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">内射次数</span>
+            <span class="info-value">2</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">怀孕几率</span>
+            <span class="info-value">15%</span>
+          </div>
+        </div>
+      </details>
     </div>
-
-    <!-- Package Info -->
-    <div class="package-card">
-      <div class="package-header">
-        <div class="package-name">高管秘书剧本</div>
-        <div class="package-price">¥388</div>
-      </div>
-      <div class="package-tags">
-        <span class="pkg-tag">身份变换</span>
-        <span class="pkg-tag">情感波折</span>
-        <span class="pkg-tag">公开场合</span>
-      </div>
-    </div>
-
-    <!-- Clothing Panel -->
-    <details class="info-panel">
-      <summary class="panel-header">
-        <span><i class="fas fa-tshirt"></i> 着装</span>
-        <i class="fas fa-chevron-down"></i>
-      </summary>
-      <div class="panel-body">
-        <div class="info-grid">
-          <div class="info-item">
-            <i class="fas fa-tshirt"></i>
-            <div>
-              <div class="label">上衣</div>
-              <div class="value">白色衬衫</div>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-user"></i>
-            <div>
-              <div class="label">下装</div>
-              <div class="value">黑色包臀裙</div>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-heart"></i>
-            <div>
-              <div class="label">内衣</div>
-              <div class="value">黑色蕾丝</div>
-            </div>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-shoe-prints"></i>
-            <div>
-              <div class="label">鞋履</div>
-              <div class="value">黑色高跟鞋</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </details>
-
-    <!-- Psychology Panel -->
-    <details class="info-panel">
-      <summary class="panel-header">
-        <span><i class="fas fa-heart"></i> 心理</span>
-        <i class="fas fa-chevron-down"></i>
-      </summary>
-      <div class="panel-body">
-        <div class="info-row">
-          <span class="info-label">当前所想</span>
-          <span class="info-value">既紧张又期待</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">性格类型</span>
-          <span class="info-value">外向活泼</span>
-        </div>
-      </div>
-    </details>
-
-    <!-- Body Panel -->
-    <details class="info-panel">
-      <summary class="panel-header">
-        <span><i class="fas fa-female"></i> 身体</span>
-        <i class="fas fa-chevron-down"></i>
-      </summary>
-      <div class="panel-body">
-        <div class="info-row">
-          <span class="info-label">罩杯</span>
-          <span class="info-value">B杯</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">乳形</span>
-          <span class="info-value">标准形</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">胸部</span>
-          <span class="info-value">聚拢型</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">私处</span>
-          <span class="info-value">粉嫩型</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">姿势</span>
-          <span class="info-value">婷婷玉立</span>
-        </div>
-      </div>
-    </details>
-
-    <!-- Statistics Panel -->
-    <details class="info-panel">
-      <summary class="panel-header">
-        <span><i class="fas fa-chart-line"></i> 统计</span>
-        <i class="fas fa-chevron-down"></i>
-      </summary>
-      <div class="panel-body">
-        <div class="info-row">
-          <span class="info-label">处女</span>
-          <span class="info-value">是</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">性伴侣数量</span>
-          <span class="info-value">2</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">本次服务性交次数</span>
-          <span class="info-value">5</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">内射次数</span>
-          <span class="info-value">2</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">怀孕几率</span>
-          <span class="info-value">15%</span>
-        </div>
-      </div>
-    </details>
-  </div>
-</body>
+  </body>
 </html>
