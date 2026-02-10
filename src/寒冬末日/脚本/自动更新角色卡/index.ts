@@ -193,10 +193,7 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
       const shouldApply = settings.auto_apply || forceApply;
       if (shouldApply) {
         await checkAndUpdateCharacter(characterName, remoteVersion, remote.png_url);
-        toastr.success(
-          `[自动更新] 已更新 ${characterName}: ${currentVersion} -> ${remoteVersion}`,
-          '自动更新角色卡',
-        );
+        toastr.success(`[自动更新] 已更新 ${characterName}: ${currentVersion} -> ${remoteVersion}`, '自动更新角色卡');
       } else {
         toastr.info(
           `[自动更新] 检测到新版本 ${remoteVersion}（当前 ${currentVersion}），点击“${BTN_APPLY}”可执行更新`,

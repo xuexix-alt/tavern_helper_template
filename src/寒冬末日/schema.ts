@@ -27,11 +27,13 @@ const 更新原因Schema = z
 const 时间段Schema = z.enum(['凌晨', '清晨', '上午', '中午', '下午', '傍晚', '夜间', '深夜']);
 const 时间格式Schema = z.templateLiteral([时间段Schema, ' - ', z.string().regex(/^\d{2}:\d{2}$/)]);
 const 庇护楼层Schema = z.enum(['19', '20']);
-const 可扩展区域Schema = z.record(z.enum(['医疗翼', '制造工坊', '载具格纳库']), z.string().prefault('未解锁')).prefault({
-  医疗翼: '未解锁',
-  制造工坊: '未解锁',
-  载具格纳库: '未解锁',
-});
+const 可扩展区域Schema = z
+  .record(z.enum(['医疗翼', '制造工坊', '载具格纳库']), z.string().prefault('未解锁'))
+  .prefault({
+    医疗翼: '未解锁',
+    制造工坊: '未解锁',
+    载具格纳库: '未解锁',
+  });
 const 所在房间格式Schema = z.union([
   z.literal(''),
   z.enum([
@@ -155,7 +157,10 @@ export const Schema = z
 
     庇护所: z
       .object({
-        庇护所等级: z.coerce.number().transform(v => _.clamp(v, 1, 10)).prefault(1),
+        庇护所等级: z.coerce
+          .number()
+          .transform(v => _.clamp(v, 1, 10))
+          .prefault(1),
         今日投掷点数: z.string().prefault(''),
         距离上次升级: z.string().prefault(''),
         庇护所能力: z
@@ -163,9 +168,7 @@ export const Schema = z
           .prefault({}),
         可扩展区域: 可扩展区域Schema,
 
-        当前生存庇护范围: z
-          .partialRecord(庇护楼层Schema, z.array(z.string()).prefault([]))
-          .prefault({}),
+        当前生存庇护范围: z.partialRecord(庇护楼层Schema, z.array(z.string()).prefault([])).prefault({}),
 
         庇护范围变更: z
           .object({
@@ -268,13 +271,11 @@ export const Schema = z
             庇护至少3个核心女性角色或家庭: { 描述: '庇护至少3个核心女性角色或家庭', 当前值: 0, 目标值: 3 },
             完成一个公寓内部的情报碎片任务: { 描述: '完成一个公寓内部的情报碎片任务', 当前值: 0, 目标值: 1 },
           }),
-        目标完成状态: z
-          .record(z.string(), z.boolean())
-          .prefault({
-            '0': false,
-            '1': false,
-            '2': false,
-          }),
+        目标完成状态: z.record(z.string(), z.boolean()).prefault({
+          '0': false,
+          '1': false,
+          '2': false,
+        }),
         情报碎片: z
           .record(
             z.string(),
@@ -365,9 +366,7 @@ export const Schema = z
 
     // 主要角色采用动态键：未显式声明的顶层角色将由 .catchall(主要角色Schema) 校验
 
-    临时NPC: z
-      .record(z.string(), 临时NPCSchema)
-      .prefault({}),
+    临时NPC: z.record(z.string(), 临时NPCSchema).prefault({}),
 
     楼层其他住户: z
       .object({
