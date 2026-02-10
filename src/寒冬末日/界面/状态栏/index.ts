@@ -21,7 +21,6 @@ async function waitForDependencies(maxWait = 15000): Promise<void> {
     const missing: string[] = [];
     if (typeof getCurrentMessageId !== 'function') missing.push('getCurrentMessageId');
     if (typeof getChatMessages !== 'function') missing.push('getChatMessages');
-    if (typeof Mvu === 'undefined') missing.push('Mvu');
     if (typeof eventOn !== 'function') missing.push('eventOn');
     return missing;
   };
@@ -46,13 +45,53 @@ async function waitForDependencies(maxWait = 15000): Promise<void> {
   });
 }
 
+async function waitForMvuReady(maxWait = 15000): Promise<boolean> {
+  if (typeof Mvu !== 'undefined') return true;
+
+  try {
+    const topMvu = (window.top as any)?.Mvu;
+    if (typeof topMvu !== 'undefined' && typeof initializeGlobal === 'function') {
+      initializeGlobal('Mvu', topMvu);
+    }
+  } catch {
+    // ignore
+  }
+
+  if (typeof waitGlobalInitialized === 'function') {
+    try {
+      await Promise.race([
+        waitGlobalInitialized('Mvu'),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('timeout')), maxWait);
+        }),
+      ]);
+    } catch {
+      // ignore
+    }
+  } else {
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (typeof Mvu !== 'undefined') return true;
+    }
+  }
+
+  return typeof Mvu !== 'undefined';
+}
+
 $(async () => {
   // 等待所有依赖注入完成
   await waitForDependencies();
 
-  // 再等待 MVU 框架初始化完成
-  if (typeof waitGlobalInitialized === 'function') {
-    await waitGlobalInitialized('Mvu');
+  // 再等待 MVU 框架初始化完成（单独等待，避免把 Mvu 误判为“前置注入失败”）
+  const mvuReady = await waitForMvuReady();
+  if (!mvuReady) {
+    console.warn('[状态栏] 未检测到 Mvu 全局对象，请确认脚本库中的 MVU 脚本已启用', {
+      missing: ['Mvu'],
+      href: window.location?.href,
+      referrer: document.referrer,
+      hasFrameElement: !!(window as any).frameElement,
+    });
   }
 
   const scrollToTopOnce = (() => {

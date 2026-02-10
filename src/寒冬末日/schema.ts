@@ -25,7 +25,7 @@ const 更新原因Schema = z
   }, z.string())
   .prefault('');
 const 时间段Schema = z.enum(['凌晨', '清晨', '上午', '中午', '下午', '傍晚', '夜间', '深夜']);
-const 时间格式Schema = z.templateLiteral([时间段Schema, ' - ', z.string().regex(/^\d{2}:\d{2}$/)]);
+const 时间格式Schema = z.string().regex(/^(凌晨|清晨|上午|中午|下午|傍晚|夜间|深夜) - \d{2}:\d{2}$/);
 const 庇护楼层Schema = z.enum(['19', '20']);
 const 可扩展区域Schema = z
   .record(z.enum(['医疗翼', '制造工坊', '载具格纳库']), z.string().prefault('未解锁'))
@@ -47,8 +47,8 @@ const 所在房间格式Schema = z.union([
     '核心区/主浴室',
     '户外',
   ]),
-  z.templateLiteral(['楼层', z.string().regex(/^\d+$/), '/', z.string().regex(/^\d{4}$/)]),
-  z.templateLiteral(['户外/', z.string().min(1)]),
+  z.string().regex(/^楼层\d+\/\d{4}$/),
+  z.string().regex(/^户外\/.+$/),
 ]);
 
 const create角色Schema = (args: {
