@@ -308,7 +308,8 @@ function materializeSelectedRoles(
     }
 
     const tempRoleKey =
-      Object.keys(_.get(stat_data, '临时NPC', {}) ?? {}).find(key => canonicalizeRoleName(key) === roleName) ?? roleName;
+      Object.keys(_.get(stat_data, '临时NPC', {}) ?? {}).find(key => canonicalizeRoleName(key) === roleName) ??
+      roleName;
     const tempRole = _.get(stat_data, ['临时NPC', tempRoleKey]);
     if (isRoleLike(tempRole)) {
       const migrated = _.cloneDeep(tempRole);
