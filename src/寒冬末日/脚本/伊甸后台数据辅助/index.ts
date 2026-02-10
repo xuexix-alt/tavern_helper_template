@@ -194,7 +194,10 @@ function parseSignedDeltaFromReason(raw: any): number | null {
 function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: any, debug: EdenDebugSetting) {
   const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const { core, tempNpc } = listRoleNames(stat_data);
-  const all = [...core.map(name => ({ name, path: name })), ...tempNpc.map(name => ({ name, path: `临时NPC.${name}` }))];
+  const all = [
+    ...core.map(name => ({ name, path: name })),
+    ...tempNpc.map(name => ({ name, path: `临时NPC.${name}` })),
+  ];
 
   for (const it of all) {
     if (!isRoleEnabledBySelector(roleSelectorState, it.name)) continue;
@@ -217,18 +220,18 @@ function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: an
     if (newVal === expected) continue;
 
     // 典型 BUG：delta 被当作“覆盖值”，导致 newVal==deltaX 而不是 old+deltaX。
-  if (newVal !== deltaX) continue;
+    if (newVal !== deltaX) continue;
 
-  _.set(stat_data, `${rolePath}.秩序刻印`, expected);
-  // 始终打到控制台，方便在 debug 关闭时也能定位问题。
-  console.warn(
-    `[eden/helper] [imp.delta_fixed.by_reason] ${rolePath}.秩序刻印: ${oldVal} + (${deltaX}) -> ${expected} (actual was ${newVal})`,
-  );
-  edenLog(
-    'warn',
-    'imp.delta_fixed.by_reason',
-    {
-      zh: `修复秩序刻印 delta 覆盖BUG(从更新原因推断)：${rolePath}.秩序刻印 ${oldVal} + (${deltaX}) -> ${expected}（原值异常为 ${newVal}）`,
+    _.set(stat_data, `${rolePath}.秩序刻印`, expected);
+    // 始终打到控制台，方便在 debug 关闭时也能定位问题。
+    console.warn(
+      `[eden/helper] [imp.delta_fixed.by_reason] ${rolePath}.秩序刻印: ${oldVal} + (${deltaX}) -> ${expected} (actual was ${newVal})`,
+    );
+    edenLog(
+      'warn',
+      'imp.delta_fixed.by_reason',
+      {
+        zh: `修复秩序刻印 delta 覆盖BUG(从更新原因推断)：${rolePath}.秩序刻印 ${oldVal} + (${deltaX}) -> ${expected}（原值异常为 ${newVal}）`,
         rolePath,
         old: oldVal,
         delta: deltaX,
@@ -240,7 +243,12 @@ function fixBrokenImprintDeltaByReasonIfNeeded(stat_data: any, old_stat_data: an
   }
 }
 
-function fixBrokenImprintDeltaIfNeeded(stat_data: any, old_stat_data: any, commands: MvuCommandLike[] | null, debug: EdenDebugSetting) {
+function fixBrokenImprintDeltaIfNeeded(
+  stat_data: any,
+  old_stat_data: any,
+  commands: MvuCommandLike[] | null,
+  debug: EdenDebugSetting,
+) {
   if (!commands || commands.length === 0) return;
   const roleSelectorState = readRoleSelectorStateSafe(stat_data);
 

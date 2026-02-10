@@ -84,9 +84,9 @@ export const ROLE_CATALOG_NAMES = ROLE_CATALOG.map(item => item.name);
 
 export const ROLE_CATALOG_NAME_SET = new Set(ROLE_CATALOG_NAMES);
 
-export const DEFAULT_SELECTED_ROLE_NAMES = ROLE_CATALOG
-  .filter(item => item.defaultSelected !== false)
-  .map(item => item.name);
+export const DEFAULT_SELECTED_ROLE_NAMES = ROLE_CATALOG.filter(item => item.defaultSelected !== false).map(
+  item => item.name,
+);
 
 export const ROLE_ALIAS_MAP = (() => {
   const map: Record<string, string> = {};
@@ -100,4 +100,3 @@ export const ROLE_ALIAS_MAP = (() => {
   }
   return map;
 })();
-

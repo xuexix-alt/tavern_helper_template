@@ -27,8 +27,12 @@
         <div class="rounded-xl border border-slate-700/50 bg-slate-950/40 p-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <div class="truncate text-base font-bold text-white">{{ pkg.name || ui.packageDetail.fallbackPackage }}</div>
-              <div class="mt-1 truncate text-xs text-slate-500">{{ pkg.shop_name || ui.packageDetail.fallbackShop }}</div>
+              <div class="truncate text-base font-bold text-white">
+                {{ pkg.name || ui.packageDetail.fallbackPackage }}
+              </div>
+              <div class="mt-1 truncate text-xs text-slate-500">
+                {{ pkg.shop_name || ui.packageDetail.fallbackShop }}
+              </div>
             </div>
             <div class="shrink-0 text-right">
               <div class="text-lg font-bold text-yellow-300">￥{{ priceText }}</div>

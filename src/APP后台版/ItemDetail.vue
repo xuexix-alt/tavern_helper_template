@@ -129,11 +129,7 @@
           </div>
         </div>
 
-        <textarea
-          id="remark-textarea"
-          v-model="remarkText"
-          :placeholder="ui.itemDetail.modal.placeholder"
-        ></textarea>
+        <textarea id="remark-textarea" v-model="remarkText" :placeholder="ui.itemDetail.modal.placeholder"></textarea>
 
         <div class="modal-buttons">
           <button class="modal-btn-cancel" @click="closeRemarkModal">{{ ui.itemDetail.modal.cancel }}</button>

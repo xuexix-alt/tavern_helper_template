@@ -554,7 +554,10 @@
           </div>
 
           <div class="role-modal-footer">
-            <div v-if="generatedRoles.length > 0 && !canWriteGeneratedRoles" class="role-form-hint role-generate-write-hint">
+            <div
+              v-if="generatedRoles.length > 0 && !canWriteGeneratedRoles"
+              class="role-form-hint role-generate-write-hint"
+            >
               {{ roleWriteHintText }}
             </div>
             <div v-else-if="generatedRoles.length > 0" class="role-form-hint role-generate-write-hint">
@@ -1137,7 +1140,9 @@ function migrateGenerateSettingsInChat(settings: Record<string, any> | null) {
     system_prompt: typeof next.system_prompt === 'string' ? next.system_prompt : undefined,
     base_prompt: typeof next.base_prompt === 'string' ? next.base_prompt : undefined,
     template: typeof next.template === 'string' ? next.template : undefined,
-    selected_entry_ids: Array.isArray(next.selected_entry_ids) ? normalizeSelectedEntryIds(next.selected_entry_ids) : undefined,
+    selected_entry_ids: Array.isArray(next.selected_entry_ids)
+      ? normalizeSelectedEntryIds(next.selected_entry_ids)
+      : undefined,
   };
 
   if (_.isEqual(prevComparable, nextComparable)) return;
@@ -1355,7 +1360,9 @@ async function generateRoleRawWithRetry(input: string): Promise<string> {
     return second;
   }
 
-  throw new Error('模型返回空回复（completion_tokens=0）。请检查预设中的 stop（如 <end>）和外部角色扮演提示词污染后重试。');
+  throw new Error(
+    '模型返回空回复（completion_tokens=0）。请检查预设中的 stop（如 <end>）和外部角色扮演提示词污染后重试。',
+  );
 }
 
 async function onReviewGeneratedRoles() {
@@ -1554,7 +1561,9 @@ function buildRoleReviewPrompt(originalInput: string, reviewInput: string, draft
     '',
     '【首稿如下】',
     draftText,
-  ].join('\n').trim();
+  ]
+    .join('\n')
+    .trim();
 }
 
 function buildWorldbookSubsetText() {
@@ -1594,7 +1603,11 @@ function buildRoleGenerateConfig(userInput: string): GenerateRawConfig {
   };
 }
 
-function buildRoleReviewConfig(originalInput: string, reviewInput: string, draftItems: GeneratedRoleItem[]): GenerateRawConfig {
+function buildRoleReviewConfig(
+  originalInput: string,
+  reviewInput: string,
+  draftItems: GeneratedRoleItem[],
+): GenerateRawConfig {
   const worldbookText = buildWorldbookSubsetText();
   const systemPrompt = sanitizeGenerateSystemPromptText(roleGenerateSystemPromptText.value);
   const ordered_prompts: NonNullable<GenerateRawConfig['ordered_prompts']> = [
@@ -1991,9 +2004,7 @@ function buildManualWorldbookText(name: string, form: AddRoleForm = addRoleForm.
   return lines.filter(Boolean).join('\n');
 }
 
-type NumberRangeValidationResult =
-  | { ok: true; value: string | number }
-  | { ok: false; error: string };
+type NumberRangeValidationResult = { ok: true; value: string | number } | { ok: false; error: string };
 
 type RoleFormValidationResult =
   | {
@@ -2213,7 +2224,9 @@ async function resolveDefaultWorldbookName() {
     // ignore
   }
 
-  throw new Error(`未找到默认世界书（${DEFAULT_WORLDBOOK_NAME_CANDIDATES.join(' / ')}），请确认当前角色卡已绑定该世界书`);
+  throw new Error(
+    `未找到默认世界书（${DEFAULT_WORLDBOOK_NAME_CANDIDATES.join(' / ')}），请确认当前角色卡已绑定该世界书`,
+  );
 }
 
 async function writeRoleData(options: {

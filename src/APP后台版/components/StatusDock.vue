@@ -15,9 +15,7 @@
       <button class="dock-tab" :class="{ active: activeTab === 'status' }" @click="activeTab = 'status'">
         角色信息
       </button>
-      <button class="dock-tab" :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">
-        任务日志
-      </button>
+      <button class="dock-tab" :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">任务日志</button>
     </div>
 
     <div v-if="!collapsed" class="dock-body">
@@ -76,7 +74,9 @@ watch(
   flex-direction: column;
   gap: 10px;
   color: #e2e8f0;
-  transition: width 0.2s ease, padding 0.2s ease;
+  transition:
+    width 0.2s ease,
+    padding 0.2s ease;
 }
 
 .dock-head {
