@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import YAML from 'yaml';
 import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
 import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation } from '../../util/room';
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
@@ -263,7 +264,7 @@ function fixBrokenImprintDeltaIfNeeded(
       deltaRaw = cmd?.args?.[1];
     } else if (type === 'set') {
       const fm = String(cmd?.full_match ?? '');
-      if (!/\"op\"\\s*:\\s*\"delta\"/i.test(fm)) continue;
+      if (!/(?:\\"|")op(?:\\"|")\s*:\s*(?:\\"|")delta(?:\\"|")/i.test(fm)) continue;
       deltaRaw = cmd?.args?.at(-1);
     } else {
       continue;
@@ -739,7 +740,35 @@ function clampLevel(level: any): number {
   return _.clamp(Number.isFinite(lv) ? lv : 1, 1, 10);
 }
 
-type Ability = { name: string; desc: string };
+type ShelterCategory = '安全' | '生存' | '舒适' | '扩展' | '远征' | '限制';
+
+const SHELTER_CATEGORY_ORDER: ShelterCategory[] = ['安全', '生存', '舒适', '扩展', '远征', '限制'];
+
+type Ability = {
+  key: string;
+  name: string;
+  desc: string;
+  category: ShelterCategory;
+  unlock_level: number;
+};
+
+type ShelterBlueprintRuntime = {
+  abilitiesByLevel: Record<number, Ability[]>;
+  abilitiesByKey: Record<string, Ability>;
+  levelLabels: Record<number, string>;
+  categories: ShelterCategory[];
+  maintenance: {
+    baseDays: number;
+    baseImpThreshold: number;
+    bonusDaysPerQualifiedSurvivor: number;
+    thresholdReductionPerTier: number;
+    daysBonusPerTier: number;
+    minThreshold: number;
+    maxBonusDaysPerSurvivor: number;
+    maxTotalMaintenanceDays: number;
+    maxTier: number;
+  };
+};
 
 type ShelterUpgradeState = z.output<typeof ShelterUpgradeStateSchema>;
 
@@ -896,90 +925,100 @@ function pruneRollHistory(history: Record<string, any>, keep: number): Record<st
   }, {});
 }
 
-function parseShelterAbilitiesByLevel(raw: string): Record<number, Ability[]> {
-  const out: Record<number, Ability[]> = {};
-  const parts = String(raw ?? '').split(/###\s*庇护所等级\s*(\d+)\s*:/g);
-  for (let i = 1; i + 1 < parts.length; i += 2) {
-    const level = Number(parts[i]);
-    const section = String(parts[i + 1] ?? '');
-    if (!Number.isFinite(level)) continue;
+function parseShelterBlueprint(raw: string): ShelterBlueprintRuntime {
+  const emptyMaintenance: ShelterBlueprintRuntime['maintenance'] = {
+    baseDays: 1,
+    baseImpThreshold: 70,
+    bonusDaysPerQualifiedSurvivor: 1,
+    thresholdReductionPerTier: 0,
+    daysBonusPerTier: 0,
+    minThreshold: 45,
+    maxBonusDaysPerSurvivor: 2,
+    maxTotalMaintenanceDays: 21,
+    maxTier: 5,
+  };
 
-    const lines = section.split(/\r?\n/);
-    const abilities: Ability[] = [];
+  const fallback: ShelterBlueprintRuntime = {
+    abilitiesByLevel: {},
+    abilitiesByKey: {},
+    levelLabels: {},
+    categories: SHELTER_CATEGORY_ORDER.slice(),
+    maintenance: emptyMaintenance,
+  };
 
-    let curName: string | null = null;
-    let curDesc: string[] = [];
-    let inDesc = false;
+  try {
+    const doc = YAML.parse(String(raw ?? '')) ?? {};
+    const abilitiesByKey: Record<string, Ability> = {};
+    const abilitiesByLevel: Record<number, Ability[]> = {};
+    const levelLabels: Record<number, string> = {};
 
-    const commit = () => {
-      if (!curName) return;
-      const desc = curDesc
-        .map(x => String(x ?? '').trim())
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-      abilities.push({ name: curName.trim(), desc });
-      curName = null;
-      curDesc = [];
-      inDesc = false;
-    };
+    const categoriesRaw = _.get(doc, 'rules.categories', []);
+    const categories = (Array.isArray(categoriesRaw) ? categoriesRaw : [])
+      .map(v => String(v ?? '').trim())
+      .filter((v): v is ShelterCategory => SHELTER_CATEGORY_ORDER.includes(v as ShelterCategory));
 
-    const looksLikeAbilityName = (line: string) => {
-      const t = line.trim();
-      if (!t) return false;
-      // 能力名在蓝图中均以 emoji 开头；描述换行通常以中文开头，避免误判为“新能力”
-      try {
-        if (!/^\p{Extended_Pictographic}/u.test(t)) return false;
-      } catch {
-        // fallback：不支持 Unicode 属性转义时，退化为“常见图标前缀”判断
-        if (!/^[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(t)) return false;
-      }
-      if (t.startsWith('#') || t.startsWith('<')) return false;
-      if (t.startsWith('---')) return false;
-      if (t.startsWith('简介')) return false;
-      if (t.startsWith('-')) return false;
-      return true;
-    };
-
-    for (const lineRaw of lines) {
-      const line = String(lineRaw ?? '').trimEnd();
-      const t = line.trim();
-      if (!t) {
-        if (inDesc) curDesc.push('');
-        continue;
-      }
-      if (t.startsWith('---')) {
-        if (curName) commit();
-        continue;
-      }
-
-      const descMatch = t.match(/^简介[:：]\s*(.*)$/);
-      if (descMatch && curName) {
-        inDesc = true;
-        curDesc.push(descMatch[1] ?? '');
-        continue;
-      }
-
-      if (looksLikeAbilityName(t)) {
-        if (curName) commit();
-        curName = t;
-        curDesc = [];
-        inDesc = false;
-        continue;
-      }
-
-      if (inDesc && curName) {
-        curDesc.push(t);
+    const abilityMapRaw = _.get(doc, 'abilities', {});
+    if (abilityMapRaw && typeof abilityMapRaw === 'object' && !Array.isArray(abilityMapRaw)) {
+      for (const [keyRaw, val] of Object.entries(abilityMapRaw)) {
+        const key = String(keyRaw ?? '').trim();
+        if (!key) continue;
+        const name = String((val as any)?.name ?? key).trim();
+        const desc = String((val as any)?.desc ?? '').trim();
+        const categoryRaw = String((val as any)?.category ?? '限制').trim();
+        const category = SHELTER_CATEGORY_ORDER.includes(categoryRaw as ShelterCategory)
+          ? (categoryRaw as ShelterCategory)
+          : '限制';
+        const unlockLevelRaw = Number((val as any)?.unlock_level ?? 1);
+        const unlock_level = _.clamp(Number.isFinite(unlockLevelRaw) ? Math.floor(unlockLevelRaw) : 1, 1, 10);
+        abilitiesByKey[key] = { key, name, desc, category, unlock_level };
       }
     }
-    if (curName) commit();
 
-    if (abilities.length > 0) out[level] = abilities;
+    const levelsRaw = _.get(doc, 'levels', {});
+    if (levelsRaw && typeof levelsRaw === 'object' && !Array.isArray(levelsRaw)) {
+      for (const [lvKey, lvVal] of Object.entries(levelsRaw)) {
+        const level = _.clamp(Number(lvKey), 1, 10);
+        if (!Number.isFinite(level)) continue;
+        const label = String((lvVal as any)?.label ?? '').trim();
+        if (label) levelLabels[level] = label;
+
+        const unlocksRaw = Array.isArray((lvVal as any)?.unlocks) ? ((lvVal as any).unlocks as any[]) : [];
+        const abilities = unlocksRaw
+          .map(x => String(x ?? '').trim())
+          .filter(Boolean)
+          .map(key => abilitiesByKey[key])
+          .filter((ab): ab is Ability => !!ab);
+        if (abilities.length > 0) abilitiesByLevel[level] = abilities;
+      }
+    }
+
+    const impSupport = _.get(doc, 'maintenance.imp_support', {}) ?? {};
+    const maintenance: ShelterBlueprintRuntime['maintenance'] = {
+      baseDays: Number((impSupport as any).base_days ?? 1) || 1,
+      baseImpThreshold: Number((impSupport as any).base_imp_threshold ?? 70) || 70,
+      bonusDaysPerQualifiedSurvivor: Number((impSupport as any).bonus_days_per_qualified_survivor ?? 1) || 1,
+      thresholdReductionPerTier: Number((impSupport as any)?.scaling?.threshold_reduction_per_tier ?? 0) || 0,
+      daysBonusPerTier: Number((impSupport as any)?.scaling?.days_bonus_per_tier ?? 0) || 0,
+      maxTier: Number((impSupport as any)?.scaling?.max_tier ?? 5) || 5,
+      minThreshold: Number((impSupport as any)?.caps?.min_threshold ?? 45) || 45,
+      maxBonusDaysPerSurvivor: Number((impSupport as any)?.caps?.max_bonus_days_per_survivor ?? 2) || 2,
+      maxTotalMaintenanceDays: Number((impSupport as any)?.caps?.max_total_maintenance_days ?? 21) || 21,
+    };
+
+    return {
+      abilitiesByLevel,
+      abilitiesByKey,
+      levelLabels,
+      categories: categories.length > 0 ? categories : SHELTER_CATEGORY_ORDER.slice(),
+      maintenance,
+    };
+  } catch {
+    return fallback;
   }
-  return out;
 }
 
-const __shelterAbilitiesByLevel = parseShelterAbilitiesByLevel(shelterBlueprintRaw);
+const __shelterBlueprint = parseShelterBlueprint(shelterBlueprintRaw);
+const __shelterAbilitiesByLevel = __shelterBlueprint.abilitiesByLevel;
 
 function normalizeAbilityName(name: any): string {
   // 统一“智能引号”等字符，避免同一能力被 AI 写出多个 key（导致误判 NEW / addedAbilities）
@@ -994,6 +1033,130 @@ function normalizeAbilityName(name: any): string {
     .trim();
 }
 
+function abilityRecordToNameSet(raw: any): Set<string> {
+  const out = new Set<string>();
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const keyNorm = normalizeAbilityName(k);
+    if (keyNorm) out.add(keyNorm);
+    const keyByName = normalizeAbilityName((v as any)?.name ?? '');
+    if (keyByName) out.add(keyByName);
+  }
+  return out;
+}
+
+function normalizeShelterAbilityRecordInPlace(stat_data: any): Record<string, { name: string }> {
+  const raw = _.get(stat_data, ['庇护所', '庇护所能力'], {});
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    const empty: Record<string, { name: string }> = {};
+    _.set(stat_data, ['庇护所', '庇护所能力'], empty);
+    return empty;
+  }
+
+  const merged: Record<string, { name: string }> = {};
+  const normToKey = new Map<string, string>();
+
+  for (const [k, v] of Object.entries(raw)) {
+    const key = String(k ?? '').trim();
+    if (!key) continue;
+    const norm = normalizeAbilityName(key);
+    if (!norm) continue;
+
+    const valueName = String((v as any)?.name ?? '').trim();
+    const finalName = valueName || key;
+    const existKey = normToKey.get(norm);
+    if (!existKey) {
+      normToKey.set(norm, key);
+      merged[key] = { name: finalName };
+      continue;
+    }
+    const oldName = String((merged[existKey] as any)?.name ?? '').trim();
+    if (!oldName && finalName) merged[existKey] = { name: finalName };
+  }
+
+  _.set(stat_data, ['庇护所', '庇护所能力'], merged);
+  return merged;
+}
+
+function decodeShelterPerformanceSummary(stat_data: any): string {
+  const shelter = _.get(stat_data, ['庇护所'], {}) ?? {};
+  const level = clampLevel(_.get(shelter, ['庇护所等级'], 1));
+  const levelLabel = __shelterBlueprint.levelLabels[level] ? `（${__shelterBlueprint.levelLabels[level]}）` : '';
+
+  const abilitySet = abilityRecordToNameSet(_.get(shelter, ['庇护所能力'], {}));
+  const unlockedByCategory = SHELTER_CATEGORY_ORDER.reduce<Record<ShelterCategory, string[]>>(
+    (acc, cat) => {
+      acc[cat] = [];
+      return acc;
+    },
+    {
+      安全: [],
+      生存: [],
+      舒适: [],
+      扩展: [],
+      远征: [],
+      限制: [],
+    },
+  );
+
+  for (const ab of Object.values(__shelterBlueprint.abilitiesByKey)) {
+    const keyNorm = normalizeAbilityName(ab.key);
+    const nameNorm = normalizeAbilityName(ab.name);
+    if (!keyNorm && !nameNorm) continue;
+    const unlocked = (keyNorm && abilitySet.has(keyNorm)) || (nameNorm && abilitySet.has(nameNorm));
+    if (!unlocked) continue;
+    if (!unlockedByCategory[ab.category].includes(ab.name)) unlockedByCategory[ab.category].push(ab.name);
+  }
+
+  const matchedCount = SHELTER_CATEGORY_ORDER.reduce((acc, cat) => acc + unlockedByCategory[cat].length, 0);
+  const unknownCount = Math.max(0, abilitySet.size - matchedCount);
+
+  const scope = (_.get(shelter, ['当前生存庇护范围'], {}) ?? {}) as ShelterScopeByFloor;
+  const roomCount20 = Array.isArray(scope['20']) ? scope['20'].length : 0;
+  const roomCount19 = Array.isArray(scope['19']) ? scope['19'].length : 0;
+  const scopeRoomTotal = roomCount20 + roomCount19;
+
+  const supportTierRaw = Math.max(0, level - 1);
+  const maxTier = Math.max(0, Number(__shelterBlueprint.maintenance.maxTier) || 0);
+  const supportTier = _.clamp(supportTierRaw, 0, maxTier);
+
+  const thresholdDrop = __shelterBlueprint.maintenance.thresholdReductionPerTier * supportTier;
+  const rawThreshold = __shelterBlueprint.maintenance.baseImpThreshold - thresholdDrop;
+  const impThreshold = Math.max(__shelterBlueprint.maintenance.minThreshold, Math.floor(rawThreshold));
+
+  const rawBonus =
+    __shelterBlueprint.maintenance.bonusDaysPerQualifiedSurvivor +
+    __shelterBlueprint.maintenance.daysBonusPerTier * supportTier;
+  const bonusPerPerson = _.clamp(
+    Math.round(rawBonus * 10) / 10,
+    0,
+    __shelterBlueprint.maintenance.maxBonusDaysPerSurvivor,
+  );
+
+  const categoryLine = SHELTER_CATEGORY_ORDER.map(cat => `${cat}${unlockedByCategory[cat].length}`).join('｜');
+  const utilityLine = `水电暖与安全接口覆盖已与庇护范围等价（20层${roomCount20}间，19层${roomCount19}间）`;
+
+  const lines = [
+    `庇护所性能解码：Lv.${level}${levelLabel}，已解锁能力${matchedCount}项（${categoryLine}）${
+      unknownCount > 0 ? `；未入总表能力${unknownCount}项` : ''
+    }。`,
+    `空间覆盖：当前生存庇护范围共${scopeRoomTotal}间（20层${roomCount20}，19层${roomCount19}）。${utilityLine}。`,
+    `维持约束：基础维持${__shelterBlueprint.maintenance.baseDays}天；协作阈值 IMP≥${impThreshold}；每名达标幸存者额外+${bonusPerPerson}天（总上限${__shelterBlueprint.maintenance.maxTotalMaintenanceDays}天）。`,
+  ];
+
+  return lines.join('\n');
+}
+
+function syncShelterDecodedProfile(stat_data: any) {
+  normalizeShelterAbilityRecordInPlace(stat_data);
+  const summary = decodeShelterPerformanceSummary(stat_data);
+  const scope = normalizeScope((_.get(stat_data, ['庇护所', '当前生存庇护范围'], {}) ?? {}) as any);
+
+  _.set(stat_data, ['庇护所', '庇护所能力总述'], summary);
+  _.set(stat_data, ['庇护所', '接口覆盖等价庇护范围'], true);
+  _.set(stat_data, ['庇护所', '接口覆盖范围'], scope);
+}
+
 function applyShelterUpgradeRewards(
   stat_data: any,
   level: number,
@@ -1005,37 +1168,39 @@ function applyShelterUpgradeRewards(
   const lv = clampLevel(level);
 
   const beforeRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
-  const beforeKeys = beforeRecord && typeof beforeRecord === 'object' ? Object.keys(beforeRecord as any) : [];
-  const beforeNorm = new Set(beforeKeys.map(k => normalizeAbilityName(k)).filter(Boolean));
+  const beforeNorm = abilityRecordToNameSet(beforeRecord);
 
   const abilityRecord = _.get(stat_data, ['庇护所', '庇护所能力'], {});
   if (!abilityRecord || typeof abilityRecord !== 'object') _.set(stat_data, ['庇护所', '庇护所能力'], {});
 
-  // 先把当前能力表去重（按 normalizeAbilityName），合并 desc，避免产生“同能力多个 key”
-  const rawMerged: Record<string, { desc: string }> = { ...(_.get(stat_data, ['庇护所', '庇护所能力']) ?? {}) };
-  const deduped: Record<string, { desc: string }> = {};
+  // 先把当前能力表去重（按 normalizeAbilityName），只保留“能力名”
+  const rawMerged: Record<string, { name?: string }> = { ...(_.get(stat_data, ['庇护所', '庇护所能力']) ?? {}) };
+  const deduped: Record<string, { name: string }> = {};
   const normToKey = new Map<string, string>();
   for (const [k, v] of Object.entries(rawMerged)) {
     const key = String(k ?? '').trim();
     if (!key) continue;
     const norm = normalizeAbilityName(key);
     if (!norm) continue;
-    const desc = String((v as any)?.desc ?? '').trim();
+    const nameByValue = String((v as any)?.name ?? '').trim();
+    const normalizedNameByValue = normalizeAbilityName(nameByValue);
+    const finalName = nameByValue || key;
+
+    if (normalizedNameByValue) normToKey.set(normalizedNameByValue, key);
     const existKey = normToKey.get(norm);
     if (!existKey) {
       normToKey.set(norm, key);
-      deduped[key] = { desc };
+      deduped[key] = { name: finalName };
       continue;
     }
-    const old = String((deduped[existKey] as any)?.desc ?? '').trim();
-    // 优先保留信息量更大的描述，避免丢字；否则保留已有
-    if ((!old && desc) || (desc && desc.length > old.length)) {
-      deduped[existKey] = { desc };
+    const old = String((deduped[existKey] as any)?.name ?? '').trim();
+    if (!old && finalName) {
+      deduped[existKey] = { name: finalName };
     }
   }
 
   const addedAbilities: string[] = [];
-  const merged: Record<string, { desc: string }> = { ...deduped };
+  const merged: Record<string, { name: string }> = { ...deduped };
 
   for (let i = 1; i <= lv; i++) {
     for (const ab of __shelterAbilitiesByLevel[i] ?? []) {
@@ -1047,19 +1212,20 @@ function applyShelterUpgradeRewards(
       if (!existingKey) {
         // 不存在：以蓝图名作为 canonical key 插入
         normToKey.set(norm, name);
-        merged[name] = { desc: ab.desc };
+        merged[name] = { name };
         if (!beforeNorm.has(norm)) addedAbilities.push(name);
         continue;
       }
 
-      // 已存在：仅在 desc 为空时补全，避免覆盖玩家/AI 写的更详细版本
+      // 已存在：仅在 name 为空时补全
       const existing = merged[existingKey];
-      const oldDesc = String((existing as any)?.desc ?? '').trim();
-      if (!oldDesc && ab.desc) merged[existingKey] = { desc: ab.desc };
+      const oldName = String((existing as any)?.name ?? '').trim();
+      if (!oldName) merged[existingKey] = { name };
     }
   }
 
   _.set(stat_data, ['庇护所', '庇护所能力'], merged);
+  syncShelterDecodedProfile(stat_data);
 
   // 可扩展区域：只按“明确等级解锁”的部分做同步，避免覆盖任务解锁逻辑
   const beforeMed = String(_.get(stat_data, ['庇护所', '可扩展区域', '医疗翼'], '') ?? '');
@@ -1889,9 +2055,7 @@ function applyDeathFromNegativeImprintIfNeeded(
   _.set(stat_data, `${rolePath}.健康`, 0);
   _.set(stat_data, `${rolePath}.健康更新原因`, '死亡（Imp<0 触发精神崩溃自杀）');
   _.set(stat_data, `${rolePath}.健康状况`, '死亡');
-  // Imp<0 自杀：按规则保留负值，不清零（仅规范化为 number）
-  _.set(stat_data, `${rolePath}.秩序刻印`, mark);
-  _.set(stat_data, `${rolePath}.秩序刻印更新原因`, '');
+  // Imp<0 自杀：仅清零健康并标记死亡，保留 Imp 及其原因供排查
   _.set(stat_data, `${rolePath}.登场状态`, '离场');
   _.set(stat_data, `${rolePath}.衣着`, '');
   _.set(stat_data, `${rolePath}.舌唇`, '');
@@ -1916,10 +2080,6 @@ function applyDeathFromZeroHealthIfNeeded(
   if (health > 0) return;
 
   const reason = String((role as any)?.健康更新原因 ?? '').trim();
-  const markRaw = (role as any)?.秩序刻印;
-  const markNum = typeof markRaw === 'number' || typeof markRaw === 'string' ? Number(markRaw) : NaN;
-  const diedFromNegativeImprint = Number.isFinite(markNum) && markNum < 0;
-
   _.set(stat_data, `${rolePath}.健康`, 0);
   _.set(stat_data, `${rolePath}.健康状况`, '死亡');
   _.set(stat_data, `${rolePath}.登场状态`, '离场');
@@ -1935,14 +2095,9 @@ function applyDeathFromZeroHealthIfNeeded(
   _.set(stat_data, `${rolePath}.内心想法`, '');
   _.set(stat_data, `${rolePath}.所在房间`, '');
 
-  if (!diedFromNegativeImprint) {
-    _.set(stat_data, `${rolePath}.秩序刻印`, 0);
-    _.set(stat_data, `${rolePath}.秩序刻印更新原因`, '');
-  }
-
   if (debug.offstageHealth) {
     console.log(
-      `[死亡判定] 「${roleName}」健康<=0，判定死亡 ${safeStringify({ health, reason, diedFromNegativeImprint })}`,
+      `[死亡判定] 「${roleName}」健康<=0，判定死亡 ${safeStringify({ health, reason })}`,
     );
   }
 }
@@ -2168,6 +2323,43 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
   }
 }
 
+async function syncLatestShelterProfileOnBoot() {
+  if (!isActiveInstance()) return;
+  try {
+    const latest = Mvu.getMvuData({ type: 'message', message_id: 'latest' as any });
+    if (!latest || typeof latest !== 'object') return;
+
+    const next = _.cloneDeep(latest);
+    const stat_data = (_.get(next, 'stat_data', {}) ?? {}) as any;
+    const beforeShelter = _.cloneDeep(_.get(stat_data, '庇护所', {}));
+
+    const shelterLevel = clampLevel(_.get(stat_data, ['庇护所', '庇护所等级'], 1));
+    applyShelterUpgradeRewards(stat_data, shelterLevel);
+    syncShelterDecodedProfile(stat_data);
+
+    const afterShelter = _.get(stat_data, '庇护所', {});
+    if (_.isEqual(beforeShelter, afterShelter)) return;
+
+    _.set(next, 'stat_data', stat_data);
+    await Mvu.replaceMvuData(next as any, { type: 'message', message_id: 'latest' as any });
+
+    const debugSetting = resolveEdenDebugSetting();
+    edenLog(
+      'info',
+      'boot.shelter_sync.applied',
+      {
+        zh: `启动时已同步庇护所能力与总述（latest，Lv.${shelterLevel}）`,
+        level: shelterLevel,
+      },
+      debugSetting,
+    );
+  } catch (err) {
+    const debugSetting = resolveEdenDebugSetting();
+    const reason = err instanceof Error ? err.message : String(err);
+    edenLog('warn', 'boot.shelter_sync.failed', { reason }, debugSetting);
+  }
+}
+
 $(async () => {
   ensureDebugButtons();
   await waitGlobalInitialized('Mvu');
@@ -2187,6 +2379,8 @@ $(async () => {
     },
     baseDebug,
   );
+
+  await syncLatestShelterProfileOnBoot();
 
   // MVU 更新变量时可能会“就地修改”对象，导致 VARIABLE_UPDATE_ENDED 的
   // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
@@ -2291,6 +2485,9 @@ $(async () => {
       applyShelterDailyRollIfNeeded(new_variables, old_vars, debugSetting);
       const shelterLevel = clampLevel(_.get(stat_data, ['庇护所', '庇护所等级'], 1));
 
+      // 兜底同步：即便当天未触发日更 roll，也保证“当前等级应有能力”被补齐，避免旧存档能力表与新蓝图不一致。
+      applyShelterUpgradeRewards(stat_data, shelterLevel);
+
       const currentScope = readShelterScopeFromChat();
       const rawDelta = _.get(stat_data, ['庇护所', '庇护范围变更'], null);
       const delta = normalizeScopeDelta(rawDelta);
@@ -2318,6 +2515,9 @@ $(async () => {
 
       // 清空触发器（保留字段本身），避免重复执行；并保证 AI 后续可继续 replace 该路径。
       if (delta) _.set(stat_data, ['庇护所', '庇护范围变更'], {});
+
+      // 无论是否发生升级/范围变更，都保持“庇护所能力总述”与当前能力状态同步。
+      syncShelterDecodedProfile(stat_data);
 
       applyOffstageBundle(new_variables, old_vars, nextScope);
     } catch (err) {

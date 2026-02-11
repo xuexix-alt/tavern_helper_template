@@ -296,6 +296,11 @@
 
       <!-- 庇护所能力列表（可折叠） -->
       <div class="shelter-item">
+        <div class="label">🧠 庇护所能力总述</div>
+        <div class="value">{{ shelterAbilitySummary }}</div>
+      </div>
+
+      <div class="shelter-item">
         <button class="collapse-toggle-btn" @click="toggleAbilityExpanded()">
           <span class="toggle-icon">{{ isAbilityExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">
@@ -304,16 +309,76 @@
           </span>
         </button>
         <div v-show="isAbilityExpanded" class="ability-list">
-          <template v-if="abilities.length > 0">
-            <div v-for="(ab, idx) in abilities" :key="idx" class="ability-card">
-              <div class="name">
-                {{ ab.name }}
-                <span v-if="isNewAbilityItem(ab.name)" class="new-tag new-tag--small">NEW</span>
-              </div>
-              <div class="desc">{{ ab.desc }}</div>
+          <div class="ability-toolbar">
+            <label class="ability-control">
+              <span>类别</span>
+              <select v-model="abilityCategoryFilter" class="ability-select">
+                <option value="全部">全部</option>
+                <option v-for="cat in SHELTER_CATEGORY_ORDER" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+            </label>
+            <label class="ability-control">
+              <span>状态</span>
+              <select v-model="abilityUnlockFilter" class="ability-select">
+                <option value="全部">全部</option>
+                <option value="已解锁">已解锁</option>
+                <option value="未解锁">未解锁</option>
+              </select>
+            </label>
+            <label class="ability-control">
+              <span>排序</span>
+              <select v-model="abilitySortMode" class="ability-select">
+                <option value="level_asc">等级↑</option>
+                <option value="level_desc">等级↓</option>
+                <option value="value_desc">价值优先</option>
+                <option value="unlock_first">解锁优先</option>
+              </select>
+            </label>
+          </div>
+          <div class="ability-legend">
+            <span class="ability-legend-item is-green">● 基础（绿）</span>
+            <span class="ability-legend-item is-purple">● 关键（紫）</span>
+            <span class="ability-legend-item is-orange">● 核心（金橙）</span>
+          </div>
+
+          <template v-if="abilityMatrixRows.length > 0">
+            <div class="ability-matrix">
+              <section v-for="row in abilityMatrixRows" :key="row.level" class="ability-matrix-row">
+                <div class="ability-row-label">Lv.{{ row.level }} <span v-if="row.label">· {{ row.label }}</span></div>
+                <div
+                  class="ability-row-grid"
+                >
+                  <div v-for="cat in abilityVisibleCategories" :key="`${row.level}-${cat}`" class="ability-grid-cell">
+                    <div class="ability-grid-head">{{ cat }}</div>
+                    <div class="ability-grid-cards">
+                      <template v-if="row.byCategory[cat].length > 0">
+                        <article
+                          v-for="ab in row.byCategory[cat]"
+                          :key="ab.id"
+                          class="skill-card"
+                          :class="[`rarity-${ab.rarity}`, { unlocked: ab.unlocked, locked: !ab.unlocked }]"
+                        >
+                          <div class="skill-main">
+                            <span class="skill-icon">{{ ab.icon }}</span>
+                            <span class="skill-name">{{ ab.title }}</span>
+                          </div>
+                          <div class="skill-foot">
+                            <span class="skill-dot" :class="{ on: ab.unlocked }"></span>
+                            <span class="skill-state">{{ ab.unlocked ? '已解锁' : '未解锁' }}</span>
+                            <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small">NEW</span>
+                          </div>
+                        </article>
+                      </template>
+                      <div v-else class="skill-empty">—</div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
           </template>
-          <template v-else>(暂无能力)</template>
+          <template v-else>
+            <div class="ability-empty">(当前筛选条件下暂无能力)</div>
+          </template>
         </div>
       </div>
     </div>
@@ -323,10 +388,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue';
 import { useEventListener, useThrottleFn } from '@vueuse/core';
+import YAML from 'yaml';
 import { useDataStore } from '../../store';
 import { useShelterScopeStore } from '../../shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../util/shelter_scope';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
+import shelterBlueprintRaw from '../../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
 const store = useDataStore();
 const scopeStore = useShelterScopeStore();
@@ -619,13 +686,262 @@ function buildFloorScopeHint(rooms: string[], max: number, unlockLevel: number):
 const scope20Hint = computed(() => buildFloorScopeHint(scopeStore.scope['20'] ?? [], scope20Max.value, 3));
 const scope19Hint = computed(() => buildFloorScopeHint(scopeStore.scope['19'] ?? [], scope19Max.value, 6));
 
-const abilities = computed(() => {
+const SHELTER_CATEGORY_ORDER = ['安全', '生存', '舒适', '扩展', '远征', '限制'] as const;
+const ABILITY_VALUE_ORDER = ['基础', '关键', '核心'] as const;
+
+type AbilityCategory = (typeof SHELTER_CATEGORY_ORDER)[number];
+type AbilityValueTier = (typeof ABILITY_VALUE_ORDER)[number];
+
+type ShelterBlueprintAbilityLite = {
+  id: string;
+  name: string;
+  category: AbilityCategory;
+  unlock_level: number;
+  value_tier: AbilityValueTier;
+  icon: string;
+};
+
+type AbilitySortMode = 'level_asc' | 'level_desc' | 'value_desc' | 'unlock_first';
+
+type SkillCardView = {
+  id: string;
+  name: string;
+  title: string;
+  icon: string;
+  level: number;
+  category: AbilityCategory;
+  rarity: 'green' | 'orange' | 'purple';
+  valueTier: AbilityValueTier;
+  unlocked: boolean;
+};
+
+function normalizeAbilityText(input: any): string {
+  const s = String(input ?? '').trim();
+  if (!s) return '';
+  return s
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[（]/g, '(')
+    .replace(/[）]/g, ')')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseAbilityIcon(name: string): { icon: string; title: string } {
+  const s = String(name ?? '').trim();
+  if (!s) return { icon: '🧩', title: '' };
+  const m = s.match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*(.*)$/u);
+  if (m) {
+    const icon = String(m[1] ?? '').trim() || '🧩';
+    const title = String(m[2] ?? '').trim() || s;
+    return { icon, title };
+  }
+  return { icon: '🧩', title: s };
+}
+
+function toValueTier(level: number): AbilityValueTier {
+  if (level >= 8) return '核心';
+  if (level >= 5) return '关键';
+  return '基础';
+}
+
+function toRarityByTier(tier: AbilityValueTier): 'green' | 'orange' | 'purple' {
+  if (tier === '核心') return 'orange';
+  if (tier === '关键') return 'purple';
+  return 'green';
+}
+
+function parseShelterAbilityMasterList(raw: string): ShelterBlueprintAbilityLite[] {
+  try {
+    const doc = YAML.parse(String(raw ?? '')) ?? {};
+    const abilitiesRaw = _.get(doc, 'abilities', {});
+    if (!abilitiesRaw || typeof abilitiesRaw !== 'object' || Array.isArray(abilitiesRaw)) return [];
+    const out: ShelterBlueprintAbilityLite[] = [];
+    for (const [key, val] of Object.entries(abilitiesRaw)) {
+      const name = String((val as any)?.name ?? key).trim();
+      if (!name) continue;
+      const categoryRaw = String((val as any)?.category ?? '限制').trim();
+      const category = SHELTER_CATEGORY_ORDER.includes(categoryRaw as any)
+        ? (categoryRaw as (typeof SHELTER_CATEGORY_ORDER)[number])
+        : '限制';
+      const unlockLevelRaw = Number((val as any)?.unlock_level ?? 1);
+      const unlock_level = _.clamp(Number.isFinite(unlockLevelRaw) ? Math.floor(unlockLevelRaw) : 1, 1, 10);
+      const parsed = parseAbilityIcon(name);
+      const value_tier = toValueTier(unlock_level);
+      out.push({
+        id: String(key ?? '').trim() || `${category}-${unlock_level}-${name}`,
+        name,
+        category,
+        unlock_level,
+        value_tier,
+        icon: parsed.icon,
+      });
+    }
+
+    out.sort((a, b) => {
+      if (a.unlock_level !== b.unlock_level) return a.unlock_level - b.unlock_level;
+      const ca = SHELTER_CATEGORY_ORDER.indexOf(a.category);
+      const cb = SHELTER_CATEGORY_ORDER.indexOf(b.category);
+      if (ca !== cb) return ca - cb;
+      return a.name.localeCompare(b.name, 'zh-Hans-CN');
+    });
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+const shelterAbilityMasterList = parseShelterAbilityMasterList(shelterBlueprintRaw);
+
+const shelterAbilitySummary = computed(() => {
+  const value = String((store.data.庇护所 as any)?.庇护所能力总述 ?? '').trim();
+  if (value) return value;
+  return '庇护所性能解码尚未生成，等待脚本同步中。';
+});
+
+const unlockedAbilityNameSet = computed(() => {
+  const set = new Set<string>();
   const raw = store.data.庇护所.庇护所能力 as any;
-  if (Array.isArray(raw)) return raw;
-  return Object.entries(raw ?? {}).map(([name, val]) => ({
-    name,
-    desc: (val as any)?.desc ?? '',
-  }));
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return set;
+
+  for (const [key, val] of Object.entries(raw)) {
+    const keyNorm = normalizeAbilityText(key);
+    if (keyNorm) set.add(keyNorm);
+
+    const valNameNorm = normalizeAbilityText((val as any)?.name ?? '');
+    if (valNameNorm) set.add(valNameNorm);
+  }
+  return set;
+});
+
+const unlockedAbilityRawRecord = computed(() => {
+  const raw = store.data.庇护所.庇护所能力 as any;
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+});
+
+const abilityCategoryFilter = ref<'全部' | AbilityCategory>('全部');
+const abilityUnlockFilter = ref<'全部' | '已解锁' | '未解锁'>('全部');
+const abilitySortMode = ref<AbilitySortMode>('level_asc');
+
+const allAbilityEntries = computed<SkillCardView[]>(() => {
+  const unlocked = unlockedAbilityNameSet.value;
+  const unlockedRaw = unlockedAbilityRawRecord.value;
+  const currentLevel = Math.max(1, Math.floor(Number(shelterLevel.value) || 1));
+  const fromMaster: SkillCardView[] = shelterAbilityMasterList.map(item => {
+    const parsed = parseAbilityIcon(item.name);
+    const keyNorm = normalizeAbilityText(item.id);
+    const nameNorm = normalizeAbilityText(item.name);
+    const rawHit = Object.prototype.hasOwnProperty.call(unlockedRaw, item.id);
+    return {
+      id: item.id,
+      name: item.name,
+      title: parsed.title,
+      icon: item.icon || parsed.icon,
+      level: item.unlock_level,
+      category: item.category,
+      rarity: toRarityByTier(item.value_tier),
+      valueTier: item.value_tier,
+      unlocked: rawHit || unlocked.has(nameNorm) || unlocked.has(keyNorm) || currentLevel >= item.unlock_level,
+    };
+  });
+  if (fromMaster.length > 0) return fromMaster;
+
+  const names = Array.from(unlocked).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+  return names.map(name => {
+    const parsed = parseAbilityIcon(name);
+    return {
+      id: name,
+      name,
+      title: parsed.title,
+      icon: parsed.icon,
+      level: 1,
+      category: '限制',
+      rarity: 'green',
+      valueTier: '基础',
+      unlocked: true,
+    };
+  });
+});
+
+const filteredAbilityEntries = computed(() => {
+  return allAbilityEntries.value
+    .filter(item => {
+      if (abilityCategoryFilter.value !== '全部' && item.category !== abilityCategoryFilter.value) return false;
+      if (abilityUnlockFilter.value === '已解锁' && !item.unlocked) return false;
+      if (abilityUnlockFilter.value === '未解锁' && item.unlocked) return false;
+      return true;
+    })
+    .slice()
+    .sort((a, b) => {
+      const mode = abilitySortMode.value;
+      if (mode === 'unlock_first') {
+        if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+        if (a.level !== b.level) return a.level - b.level;
+      }
+      if (mode === 'value_desc') {
+        const va = ABILITY_VALUE_ORDER.indexOf(a.valueTier);
+        const vb = ABILITY_VALUE_ORDER.indexOf(b.valueTier);
+        if (va !== vb) return vb - va;
+        if (a.level !== b.level) return b.level - a.level;
+      }
+      if (mode === 'level_desc') {
+        if (a.level !== b.level) return b.level - a.level;
+      } else {
+        if (a.level !== b.level) return a.level - b.level;
+      }
+      const ca = SHELTER_CATEGORY_ORDER.indexOf(a.category);
+      const cb = SHELTER_CATEGORY_ORDER.indexOf(b.category);
+      if (ca !== cb) return ca - cb;
+      return a.name.localeCompare(b.name, 'zh-Hans-CN');
+    });
+});
+
+const abilityVisibleCategories = computed<AbilityCategory[]>(() => {
+  if (abilityCategoryFilter.value !== '全部') return [abilityCategoryFilter.value];
+  return SHELTER_CATEGORY_ORDER.slice();
+});
+
+const abilityMatrixRows = computed(() => {
+  const categories = abilityVisibleCategories.value;
+  const grouped = new Map<number, SkillCardView[]>();
+  for (const item of filteredAbilityEntries.value) {
+    const level = item.level;
+    if (!grouped.has(level)) grouped.set(level, []);
+    grouped.get(level)!.push(item);
+  }
+
+  return Array.from(grouped.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, list]) => {
+      const byCategory = categories.reduce<Record<string, SkillCardView[]>>((acc, cat) => {
+        acc[cat] = [];
+        return acc;
+      }, {});
+      for (const item of list) byCategory[item.category].push(item);
+      return {
+        level,
+        label: shelterLevelLabelByLevel.value[level] ?? '',
+        byCategory: byCategory as Record<AbilityCategory, SkillCardView[]>,
+      };
+    });
+});
+
+const shelterLevelLabelByLevel = computed(() => {
+  const map: Record<number, string> = {};
+  try {
+    const doc = YAML.parse(String(shelterBlueprintRaw ?? '')) ?? {};
+    const levels = _.get(doc, 'levels', {});
+    if (levels && typeof levels === 'object') {
+      for (const [k, v] of Object.entries(levels)) {
+        const lv = _.clamp(Number(k), 1, 10);
+        if (!Number.isFinite(lv)) continue;
+        map[lv] = String((v as any)?.label ?? '').trim();
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return map;
 });
 
 // 20层房间数据

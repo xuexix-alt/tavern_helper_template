@@ -1,184 +1,857 @@
-<庇护所升级能力>
+version: 1
+meta:
+  id: eden_shelter_ability_master
+  name: 伊甸庇护所能力总表
+  world: 寒冬末日-星穹秩序
+  authoring_note: 严格YAML；该文件是庇护所能力的唯一总表（UI与脚本应按能力键查询描述）
+  source_of_truth: true
 
-# 伊甸园庇护所升级蓝图
+rules:
+  level_range: [1, 10]
+  categories: [安全, 生存, 舒适, 扩展, 远征, 限制]
+  progression_style: 小步快走
+  balancing_principles:
+    - 低等级优先生存，不给压制级战斗能力
+    - 单级能力数量适中，避免跨级质变过猛
+    - 强能力必须绑定成本、门槛或冷却
+    - 舒适类不直接转化为战斗优势
+    - 远征类强调“能出去”，不保证“无损回来”
 
-### ⚙️ 自适应升级逻辑 (Adaptive Upgrade Logic)
-“伊甸”庇护所的升级并非简单的数值积累，而是基于“伊甸”AI对外部环境的自适应响应以及对失落科技的重新整合。
-1. **主线驱动**：完成 <主线任务-星穹秩序> 的关键阶段是获得大规模功能升级（跨等级跳跃）的主要手段。
-2. **情报碎片触发**：发现并完成特定的【情报碎片】（尤其是主线与扩展类）是解锁特定功能模块（如医疗舱、制造单元）的前提条件。
-3. **资源反馈**：AI会根据收容人数、掌握的楼层范围自动优化电力与资源配给。
+maintenance:
+  imp_support:
+    description: 伊甸维持系统由“高意愿协作人口”提供社会运转稳定度
+    base_days: 1
+    base_imp_threshold: 70
+    bonus_days_per_qualified_survivor: 1
+    qualified_rule: 幸存者Imp >= imp_threshold 且处于受管辖状态
+    scaling:
+      threshold_reduction_per_tier: 5
+      days_bonus_per_tier: 0.5
+      max_tier: 5
+    caps:
+      min_threshold: 45
+      max_bonus_days_per_survivor: 2
+      max_total_maintenance_days: 21
+    anti_snowball:
+      diminishing_return_after_survivors: 8
+      diminishing_factor: 0.5
 
----
-### 庇护所等级 1: 磐石基础 (Rock-Solid Foundation)
+levels:
+  "1":
+    label: 霜墙火种
+    unlocks:
+      - safe.sealed_bulkhead
+      - safe.foyer_aegis_grid
+      - survive.thermal_loop_seed
+      - survive.water_air_loop_seed
+      - survive.basic_ration_fabricator
+      - comfort.quiet_mind_channel
+      - expand.core_safe_zone_anchor
+      - limit.imp_support_protocol_alpha
+  "2":
+    label: 稳态筑巢
+    unlocks:
+      - safe.peephole_mesh
+      - safe.corridor_echo_probe
+      - survive.sanitation_capsule
+      - survive.heat_budget_allocator
+      - comfort.archive_gallery_local
+      - expand.utility_interface_s1
+      - limit.threshold_tuning_beta
+  "3":
+    label: 玄关前哨
+    unlocks:
+      - safe.nonlethal_latch
+      - safe.panic_path_lamp
+      - survive.clinic_pod_t0
+      - comfort.circadian_symphony
+      - expand.shelter_radius_20f_s1
+      - expand.heating_radius_20f_s1
+      - limit.support_quota_beta
+  "4":
+    label: 楼层洞察
+    unlocks:
+      - safe.nightglass_swarm
+      - safe.hallway_threat_score
+      - survive.nutri_variety_primer
+      - comfort.digital_arcadia_v1
+      - expand.resource_interface_20f_s1
+      - expedition.signal_scout_pack
+      - limit.threshold_tuning_gamma
+  "5":
+    label: 合作化秩序
+    unlocks:
+      - safe.response_drill_grid
+      - survive.clinic_pod_t1
+      - survive.pharma_replicator_t0
+      - comfort.social_hearth_room
+      - expand.shelter_radius_20f_s2
+      - expedition.relay_cache_box
+      - limit.support_quota_gamma
+  "6":
+    label: 跨层联结
+    unlocks:
+      - safe.tactical_jammer_node
+      - survive.surgery_table_t0
+      - comfort.holo_stage_chamber
+      - expand.shelter_radius_19f_s1
+      - expand.heating_radius_19f_s1
+      - expedition.weather_trace_array
+      - limit.threshold_tuning_delta
+  "7":
+    label: 远征启步
+    unlocks:
+      - safe.perimeter_drone_ring
+      - survive.field_med_kit_line
+      - comfort.deep_rest_suite
+      - expand.resource_interface_19f_s1
+      - expedition.pioneer_vehicle_mk1
+      - expedition.mobile_relief_pod
+      - limit.support_quota_delta
+  "8":
+    label: 机动堡垒
+    unlocks:
+      - safe.heavy_nonlethal_turret
+      - survive.pharma_replicator_t1
+      - comfort.virtual_biome_voyage
+      - expand.shelter_radius_20f_s3
+      - expedition.long_range_sensor_mast
+      - expedition.convoy_dock_node
+      - limit.threshold_tuning_epsilon
+  "9":
+    label: 自持方舟
+    unlocks:
+      - safe.counterstrike_doctrine_lock
+      - survive.eco_farm_vertical
+      - survive.surgery_table_t1
+      - comfort.hydro_thermal_pool
+      - expand.shelter_radius_19f_s2
+      - expedition.pioneer_vehicle_mk2
+      - limit.support_quota_epsilon
+  "10":
+    label: 行走伊甸
+    unlocks:
+      - safe.optic_veil_field
+      - survive.genesis_core_regulator
+      - comfort.ark_theatre_infinite
+      - expand.omni_interface_network
+      - expedition.stratos_probe_lance
+      - expedition.frontier_command_hub
+      - limit.maintenance_compact_omega
 
+abilities:
+  safe.sealed_bulkhead:
+    name: "🛡️密封霜墙门闩"
+    category: 安全
+    unlock_level: 1
+    desc: 核心入口获得双层气密门闩与合金滑轨，能抵御大多数暴力破门与低温冲击。
+    effects: [入口防护+1, 破门延迟]
+    balance:
+      cost: 低
+      limit: 仅核心入口生效
 
----
-🛡️绝对安全屏障🛡️
-简介：庇护所的外墙、门窗均由未知超合金构成，形成一体化的绝对物理屏障。主入口的气密舱门足以抵御包括穿甲火箭弹在内的常规攻城武器，确保外部的任何灾害与暴力都无法侵扰您的安宁。
+  safe.foyer_aegis_grid:
+    name: "⚡玄关静电裁断网"
+    category: 安全
+    unlock_level: 1
+    desc: 玄关地板植入低致伤静电网，识别敌意动作后触发麻痹性击退。
+    effects: [非致命制止, 入侵减速]
+    balance:
+      cost: 低
+      limit: 对重装目标效果有限
 
-⚡“仲裁者”内部安防系统⚡
-简介：庇护所的地板、墙壁内集成了纳米级安防网络。一旦“伊甸”AI通过生物特征或您的指令，判定进入内部的访客怀有敌意或攻击倾向，系统会瞬间释放高压电流，使其立刻麻痹并丧失行动能力，任您处置。从这一刻起，任何进入您家的人，生死皆在您一念之间。
+  survive.thermal_loop_seed:
+    name: "🌡️恒温循环底座"
+    category: 生存
+    unlock_level: 1
+    desc: 建立基础热循环，2001核心区维持稳定体感温度，显著降低寒冷导致的健康损耗。
+    effects: [核心区恒温, 寒冷伤害缓解]
+    balance:
+      cost: 低
+      limit: 仅核心区
 
-💧无限基础资源💧
-简介：内部管网系统与一个微型物质重组单元相连，可在【2001核心区内】无限量供应生命所需的基础资源（基础口粮、纯净水、基础电力与清洁用水）。
-边界：这份“无限”并不等于对外无限供给。对外投送存在吞吐与隐蔽性限制，频繁外放会留下痕迹并改变外部势力的行为。
+  survive.water_air_loop_seed:
+    name: "💧空气-净水双循环"
+    category: 生存
+    unlock_level: 1
+    desc: 启动初级空气净化与净水回路，确保基础可呼吸与可饮用条件。
+    effects: [基础净水, 基础净化]
+    balance:
+      cost: 低
+      limit: 对污染峰值响应较慢
 
-🌡️环境循环系统🌡️
-简介：一套完全独立的空气净化与温控系统。它能24小时不间断地过滤并循环室内空气，维持医用无菌标准，同时将室温恒定在您设定的最舒适的温度，让您彻底隔绝外界的严寒。
+  survive.basic_ration_fabricator:
+    name: "🍞基础口粮织造器"
+    category: 生存
+    unlock_level: 1
+    desc: 提供稳定但单调的高热量口粮，保障最低生存线。
+    effects: [饥饿缓解, 基础供给]
+    balance:
+      cost: 低
+      limit: 口味与营养结构单一
 
-📡对外观察接口📡
-简介：位于玄关的集成系统，包含一块高清显示屏和一套双向通信设备。您可以安全地在室内与门外的访客对话，并通过遍布公寓楼内外的微型无人机（此时仅有监视功能）观察周边情况。
+  comfort.quiet_mind_channel:
+    name: "🎧静心白噪通道"
+    category: 舒适
+    unlock_level: 1
+    desc: 提供基础降噪与睡前音景，缓和长期高压下的精神紧绷。
+    effects: [压力缓解]
+    balance:
+      cost: 低
+      limit: 不提供强娱乐刺激
 
-📤单向物资投送仓📤
-简介：位于玄关墙壁上的一个小型投送装置。
-限制：吞吐量有限；每次投送都会在走廊留下可被观察/追踪的“痕迹”（热源、声响、脚印路线、物资包装特征）。它能救人，也能把“伊甸存在”的消息扩散出去。
+  expand.core_safe_zone_anchor:
+    name: "📍核心安全锚点"
+    category: 扩展
+    unlock_level: 1
+    desc: 定义2001为绝对安全锚点，后续所有扩展范围均以此为基准。
+    effects: [范围系统初始化]
+    balance:
+      cost: 低
+      limit: 无直接外扩能力
 
----
-### 庇护所等级 2: 安全掌控 (Secure & Control)
+  limit.imp_support_protocol_alpha:
+    name: "📐维持协议α"
+    category: 限制
+    unlock_level: 1
+    desc: 启用“高Imp协作人口”维持规则：每名达标幸存者可额外维持伊甸运行天数。
+    effects: [维持系统启用]
+    balance:
+      cost: 中
+      limit: 初始阈值高（Imp>=70）
 
+  safe.peephole_mesh:
+    name: "🔍门外蜂眼网"
+    category: 安全
+    unlock_level: 2
+    desc: 门外近距盲区被蜂眼镜头补齐，可识别尾随与伏击动作。
+    effects: [盲区补足]
+    balance:
+      cost: 低
+      limit: 仅门外短距
 
----
+  safe.corridor_echo_probe:
+    name: "📶走廊回声探针"
+    category: 安全
+    unlock_level: 2
+    desc: 通过声纹回声估算走廊活动密度，提前规避短时拥堵与冲突点。
+    effects: [风险预估]
+    balance:
+      cost: 低
+      limit: 精度受环境噪声影响
 
-🌐数字天堂🌐
-简介：庇护所建立了一个独立的局域网络，并链接到一个存储着旧世界海量数据的服务器。您可以随时访问几乎所有的电影、电视剧、音乐、游戏和电子书籍。网络稳定，体验流畅，告别末世的枯燥乏味。
+  survive.sanitation_capsule:
+    name: "🧼卫生净化舱"
+    category: 生存
+    unlock_level: 2
+    desc: 建立基础消杀流程，降低常见感染风险并改善居住卫生水平。
+    effects: [感染风险下降]
+    balance:
+      cost: 低
+      limit: 仅基础病原防护
 
-👁️全天候侦察网络👁️
-简介：监视无人机群升级。增加了红外热成像与夜视功能，并扩大了侦察范围，覆盖整个小区。您现在可以更清晰、更全面地掌握周边所有幸存者的动态。
+  survive.heat_budget_allocator:
+    name: "🔥热量配额调度器"
+    category: 生存
+    unlock_level: 2
+    desc: 对供暖进行时段化调度，减少无效能耗并提升夜间舒适稳定性。
+    effects: [供暖效率提升]
+    balance:
+      cost: 低
+      limit: 不能提高绝对供暖上限
 
-🛰️“哨兵”预警系统🛰️
-简介：一套集成在侦察网络中的高级预警系统。当无人机侦测到任何潜在威胁（如大规模人群聚集、武器开火、异常热源）靠近庇护所一定范围时，系统会立即通过全息投影和语音向您发出警报，并提供实时战术分析。
+  comfort.archive_gallery_local:
+    name: "📚离线档案长廊"
+    category: 舒适
+    unlock_level: 2
+    desc: 激活旧世界离线影像与文献库，提供低带宽文化娱乐与学习资源。
+    effects: [娱乐与信息恢复]
+    balance:
+      cost: 低
+      limit: 内容更新慢
 
----
-### 庇护所等级 3: 奢华纪元 (Era of Luxury)
-简介: 您正式步入末日中的“帝王”生活。物质享受达到顶峰，基础的医疗保障也已到位，您的生存优势变得无可动摇。
+  expand.utility_interface_s1:
+    name: "🔌基础资源接口S1"
+    category: 扩展
+    unlock_level: 2
+    desc: 开通最小对外资源接口，可对外提供低强度水电支援。
+    effects: [小规模水电接口]
+    balance:
+      cost: 中
+      limit: 吞吐低、暴露风险上升
 
----
-💎万象合成终端：文明垄断💎
-简介：物质重组单元的质变进化。它让您在核心区内实现“高质量生活与精细制造”的跃迁：更稳定的口味、更丰富的食材、更高品质的衣物与日用品，乃至部分精密耗材的复刻。
-边界：
-- 该终端并非“全能许愿机”，涉及药品、燃料、弹药、武器与高危化学品的合成都需要后续模块/情报碎片解锁与耗材前置。
-- 任何对人体产生显著生理/心理影响的合成物默认受“安全与伦理协议”约束：不能作为强制支配工具；若用于医疗/舒缓压力/营养补给，必须以自愿与明示告知为前提。
+  limit.threshold_tuning_beta:
+    name: "🧮阈值校准β"
+    category: 限制
+    unlock_level: 2
+    desc: 对维持规则进行第一轮校准，适度降低达标Imp阈值，提高可调度性。
+    effects: [imp_threshold -5]
+    balance:
+      cost: 中
+      limit: 仅降低阈值，不增加单人产能
 
-👕环境织造机：第二层皮肤👕
-简介：超越传统物理隔离的生产单元。它能制造厚度仅如蝉翼、却能发射稳定“热场力”的特制纤维。这意味着角色在零下五十度的室内也能身着轻薄性感的旧时代衣物，彻底解放被臃肿冬装束缚的肉体。同时，织物内嵌的纳米触感传感器可由主控端调节，实现对穿着者**全天候的生理状态监控与微妙触觉反馈控制**。
+  safe.nonlethal_latch:
+    name: "🪤非致命束止栓"
+    category: 安全
+    unlock_level: 3
+    desc: 玄关新增可控束止器，对闯入目标实施定点禁锢，便于审讯与驱离。
+    effects: [非致命控制提升]
+    balance:
+      cost: 中
+      limit: 连续触发存在冷却
 
-⚕️生化医疗站：基因进化⚕️
-简介：配备高精度纳米医疗阵列。除了显著降低感冒、发烧与雪晶初级感染风险外，它最核心的功能是**“基因修复与容颜常驻”**：通过代谢调节，修复末世极寒导致的组织损伤与衰老迹象。
-玩法定位：它带来“希望与诱惑”，但不会自动改写人格或强制制造顺从。角色可能把它视为合作筹码、交易条件、或需要严格审慎的伦理红线。
+  safe.panic_path_lamp:
+    name: "🚨惊厥路径警示灯"
+    category: 安全
+    unlock_level: 3
+    desc: 在核心动线中投射高可见引导，紧急情况下减少踩踏与误判。
+    effects: [紧急撤离效率提升]
+    balance:
+      cost: 低
+      limit: 仅内部生效
 
-🛡️庇护范围同步协议🛡️
-简介：“伊甸”获得对整栋公寓环境管网的深度控制权。将部分公寓房间纳入【生存庇护范围】，为其同步供暖、通风与空气过滤。
-- 名额：20层可同步 3 个房间。
-- 效果：被同步房间成为“温暖而可呼吸”的据点
-- 限制：仅提供环境维持与基础生存保障，不等同于 2001 室的绝对安防
+  survive.clinic_pod_t0:
+    name: "⚕️临床舱T0"
+    category: 生存
+    unlock_level: 3
+    desc: 提供常见外伤与轻中度感染处置，建立最小医疗闭环。
+    effects: [基础医疗]
+    balance:
+      cost: 中
+      limit: 不支持复杂外科
 
-🎭全息娱乐剧院🎭
-简介：在客厅区域激活一个全息投影舞台，配合环绕立体声系统，提供沉浸式的感官享受。
+  comfort.circadian_symphony:
+    name: "🌙昼夜韵律编排"
+    category: 舒适
+    unlock_level: 3
+    desc: 根据作息自动调节光色、音景与气味，减少失眠和情绪失衡。
+    effects: [休息质量提升]
+    balance:
+      cost: 低
+      limit: 对重度创伤无直接治疗效果
 
----
-### 庇护所等级 4: 秩序武装 (Armament of Order)
+  expand.shelter_radius_20f_s1:
+    name: "🛡️20层庇护半径S1"
+    category: 扩展
+    unlock_level: 3
+    desc: 允许将20层少量房间纳入“生存庇护范围”，提供基础防护与环境维持。
+    effects: [20层安全范围初次扩展]
+    balance:
+      cost: 中
+      limit: 名额有限
 
----
-🤖“看守者”自动巡逻机器人🤖
-简介：一种小型、静音的双足巡逻机器人，可在庇护所内部及门口走廊进行24小时不间断巡逻。配备非致命电击武器和摄像探头，能够自动驱离未经授权的闯入者，并将实时画面传回观察接口。
+  expand.heating_radius_20f_s1:
+    name: "♨️20层供暖半径S1"
+    category: 扩展
+    unlock_level: 3
+    desc: 供暖网络首次外扩到20层部分房间，减轻寒冷被动损耗。
+    effects: [20层恒温范围初次扩展]
+    balance:
+      cost: 中
+      limit: 仅温度维持，不含安防加成
 
-🛡️庇护范围扩展·20层🛡️
-简介：环境管网的同步带宽提升，“伊甸”可同时维持更多房间的供暖与通风。
-- 名额：20层可同步 6 个房间。
+  limit.support_quota_beta:
+    name: "📊维持配额β"
+    category: 限制
+    unlock_level: 3
+    desc: 改善调度后勤，每名达标协作幸存者的维持贡献轻微提高。
+    effects: [bonus_days_per_qualified_survivor +0.5]
+    balance:
+      cost: 中
+      limit: 受总天数上限约束
 
----
-### 庇护所等级 5: 追随者体系 (Follower System)
-简介: 您的权柄开始向外延伸。您现在有能力为您的忠诚追随者提供一个赖以生存的“家”，建立属于您的末日秩序。
+  safe.nightglass_swarm:
+    name: "👁️夜晶侦巡群"
+    category: 安全
+    unlock_level: 4
+    desc: 侦查无人机升级夜视与热成像，在低能见度环境维持中距离预警。
+    effects: [中距侦查]
+    balance:
+      cost: 中
+      limit: 恶劣暴雪下有效半径衰减
 
----
-🏘️独立生命维持模块：恩赐量化🏘️
-简介：每一间“伊甸荚舱”的氧气纯度、淡水流量、热量等级都由主控制室实时量化调节。这使得庇护不再是“全有或全无”，而是一套可被谈判、被交换、被监督的公共资源体系。
-边界：系统默认执行最低人道标准；若试图将其作为纯惩戒工具，会引发强烈的道德反弹与外部势力的借题发挥（“伊甸暴君”的传闻）。
+  safe.hallway_threat_score:
+    name: "📈走廊威胁评分"
+    category: 安全
+    unlock_level: 4
+    desc: 基于轨迹与行为片段给出威胁评分，辅助决定接触、避让或拦截。
+    effects: [决策辅助]
+    balance:
+      cost: 低
+      limit: 属概率判断，不保证绝对正确
 
-📊追随者监控矩阵：意志解析📊
-简介：通过内嵌于各区域的次声波扫描与生物电感应，系统可以对压力水平、睡眠质量与健康风险做出“预警式评估”。
-边界：它不是读心术，也不提供“强制占有”的最优解。它只能给出风险提示（崩溃、抑郁、冲突升级、逃跑倾向上升等），最终选择与代价仍由角色与{{user}}在剧情中承担。
+  survive.nutri_variety_primer:
+    name: "🥣营养谱系引擎·初型"
+    category: 生存
+    unlock_level: 4
+    desc: 从单一口粮过渡到多营养配比，降低长期缺乏导致的隐性损耗。
+    effects: [营养结构改善]
+    balance:
+      cost: 中
+      limit: 高级食材尚未解锁
 
-🌐全环境集成网络：上帝视角🌐
-简介：接入庇护所公共区域与外部侦察网络的安全采集终端，强化对威胁、火情、冲突与渗透的预警能力。
-边界：默认不对私密区域进行无差别监听；任何“精神干预/睡眠调节”都被视为医疗级行为，需要明确的风险说明与自愿授权，否则会成为外部势力与内部反弹的引爆点。
+  comfort.digital_arcadia_v1:
+    name: "🌐数字乐园V1"
+    category: 舒适
+    unlock_level: 4
+    desc: 解锁稳定影音与互动娱乐，恢复“像末日前那样消磨夜晚”的体验。
+    effects: [中等娱乐恢复]
+    balance:
+      cost: 低
+      limit: 不提供实体享乐设施
 
-🍽️集体餐饮合成器🍽️
-简介：扩展万象合成终端的功能，允许批量合成定制化的餐食。您可以预设菜单，系统将自动为所有追随者准备营养均衡、口味适宜的饭菜，并通过荚舱的投送系统分发，大幅减轻您的管理负担。
+  expand.resource_interface_20f_s1:
+    name: "🚰20层资源接口S1"
+    category: 扩展
+    unlock_level: 4
+    desc: 对20层开放第一档资源接口，支持小规模供水、供电与应急燃气调配。
+    effects: [20层资源接口初次扩展]
+    balance:
+      cost: 中
+      limit: 吞吐受限，频繁调用会暴露秩序中心
 
-🛡️庇护范围扩展·整层覆盖🛡️
-简介：对 20 层环境管网完成完全接管，同步效率与稳定性质变。
-- 名额：20层可同步 12 个房间（整层覆盖）。
+  expedition.signal_scout_pack:
+    name: "📡信标侦搜包"
+    category: 远征
+    unlock_level: 4
+    desc: 可部署短时信标与回传节点，为楼内外探索建立最小闭环导航。
+    effects: [短程远征辅助]
+    balance:
+      cost: 中
+      limit: 续航有限，需要回收维护
 
----
-### 庇护所等级 6: 武装力量 (Armed Force)
-简介: 您获得了真正意义上的致命武力，从一个富有的幸存者，转变为拥有武装力量的末日军阀。
+  limit.threshold_tuning_gamma:
+    name: "🧠阈值校准γ"
+    category: 限制
+    unlock_level: 4
+    desc: 进一步降低维持阈值，让中高协作人群也可稳定贡献运行时长。
+    effects: [imp_threshold -5]
+    balance:
+      cost: 中
+      limit: 仍需满足秩序归属与管辖条件
 
----
-🔬外科手术台🔬
-简介：初级医疗舱升级。新增一套全自动外科手术设备，能够处理更严重的伤势，如枪伤、骨折固定、阑尾炎切除等中等复杂度的外科手术，极大地提升了您和您追随者的生存率。
+  safe.response_drill_grid:
+    name: "🧱响应演训网格"
+    category: 安全
+    unlock_level: 5
+    desc: 内部应急动作标准化，遭遇突发时减少决策迟滞与误伤。
+    effects: [团队响应效率提升]
+    balance:
+      cost: 中
+      limit: 依赖人员执行度
 
-🛡️庇护范围扩展·跨楼层🛡️
-简介：同步管网向下贯通，伊甸开始具备对 19 层房间的环境维持能力。
-- 名额：19层可同步 3 个房间（此后每提升 1 级再 +3，上限 12）。
+  survive.clinic_pod_t1:
+    name: "🏥临床舱T1"
+    category: 生存
+    unlock_level: 5
+    desc: 提升伤病处理吞吐与稳定性，可支撑小规模集体护理。
+    effects: [中级医疗]
+    balance:
+      cost: 中
+      limit: 复杂手术仍需外科台
 
-🎯战术训练模拟舱🎯
-简介：一个虚拟现实训练装置。您和您的卫队可以在完全安全的模拟环境中进行武器射击、小队配合、CQB战术等训练，快速提升实战能力，而无需消耗实际弹药或承担受伤风险。
+  survive.pharma_replicator_t0:
+    name: "💊药剂复构台T0"
+    category: 生存
+    unlock_level: 5
+    desc: 可复构常见药物与基础耗材，缓解药品断供压力。
+    effects: [基础药品供给]
+    balance:
+      cost: 中
+      limit: 稀有药与高危药物不可批量生成
 
----
-### 庇护所等级 7: 远征准备 (Expedition Prep)
-简介: 庇护所开始为走出公寓、探索这个面目全非的世界做准备。
+  comfort.social_hearth_room:
+    name: "🔥群体暖炉会客厅"
+    category: 舒适
+    unlock_level: 5
+    desc: 提供可社交的温暖会客环境，缓和隔离导致的关系断裂。
+    effects: [社交舒适提升]
+    balance:
+      cost: 低
+      limit: 间接收益，不直接加战力
 
----
-🚗“先驱者”载具制造单元🚗
-简介：庇护所内一个巨大的扩展区被解锁，成为载具车库。同时，您获得了一台载具制造器，能够生产第一代末日探索载具“先驱者-I”。这是一款具备全地形履带、密封增压驾驶室（可抵御雪晶腐蚀）、大容量储物空间和基础外部装甲的六轮探索车。
+  expand.shelter_radius_20f_s2:
+    name: "🛡️20层庇护半径S2"
+    category: 扩展
+    unlock_level: 5
+    desc: 20层可纳入庇护的房间名额提升，秩序影响力向同层扩散。
+    effects: [20层安全范围二次扩展]
+    balance:
+      cost: 中
+      limit: 扩展越快，治理压力越高
 
-🌡️外部环境分析仪🌡️
-简介：安装在载具和无人机上的高级传感器阵列。能够实时分析外部空气中的雪晶浓度、辐射水平、有毒气体成分，并预测局部天气变化，为您的远征提供至关重要的环境情报。
+  expedition.relay_cache_box:
+    name: "📦中继补给箱"
+    category: 远征
+    unlock_level: 5
+    desc: 可在楼层关键点布设临时补给箱，提升探索回程成功率。
+    effects: [中程远征续航]
+    balance:
+      cost: 中
+      limit: 易被夺取，需要守护
 
----
-### 庇护所等级 8: 移动堡垒 (Mobile Fortress)
-简介: 质变的时刻。您的家不再被束缚于原地，它本身就成为了最强大的末日座驾。
+  limit.support_quota_gamma:
+    name: "📊维持配额γ"
+    category: 限制
+    unlock_level: 5
+    desc: 调度模型更新后，达标协作者的维持贡献再次小幅增长。
+    effects: [bonus_days_per_qualified_survivor +0.5]
+    balance:
+      cost: 中
+      limit: 超过人数阈值后触发递减收益
 
----
-⚙️动力驱动系统 Mk.I⚙️
-简介：庇护所底部伸出数条巨大的、如同蜈蚣般的节肢状液压驱动足。您的整个庇护所（公寓房间）现在可以从建筑结构上脱离，以缓慢但稳定的速度在城市废墟中移动，成为一个真正意义上的移动堡垒。
+  safe.tactical_jammer_node:
+    name: "📻战术干扰节点"
+    category: 安全
+    unlock_level: 6
+    desc: 对局部通信进行短时压制，打断敌对协同与远程呼叫。
+    effects: [局部通信干扰]
+    balance:
+      cost: 中
+      limit: 使用窗口短，冷却较长
 
-💥重型军械库💥
-简介：军火熔炉升级。解锁了突击步枪、狙击步枪、霰弹枪和手榴弹等更具威力的武器制造权限，您的武装力量得到全面强化。
+  survive.surgery_table_t0:
+    name: "🔬外科台T0"
+    category: 生存
+    unlock_level: 6
+    desc: 支持中等复杂度外科处理，显著提升重伤存活率。
+    effects: [外科处理能力]
+    balance:
+      cost: 高
+      limit: 依赖专业流程与耗材
 
-⚖️内部重力稳定系统⚖️
-简介：在庇护所移动时，该系统能自动调节内部重力场，消除加速、减速、颠簸带来的不适感，确保内部人员如履平地。同时，它还能模拟不同的重力环境，用于训练或特殊实验。
+  comfort.holo_stage_chamber:
+    name: "🎭全息舞台舱"
+    category: 舒适
+    unlock_level: 6
+    desc: 在封闭环境中复现演出、景观与情境互动，恢复“被文明拥抱”的感觉。
+    effects: [沉浸娱乐提升]
+    balance:
+      cost: 中
+      limit: 能耗较高
 
----
-### 庇护所等级 9: 完全自持 (Total Self-Sufficiency)
-简介: 庇护所进化为一座近乎完美的生态闭环方舟，其医疗科技已超越旧世界。
+  expand.shelter_radius_19f_s1:
+    name: "🛡️19层庇护半径S1"
+    category: 扩展
+    unlock_level: 6
+    desc: 庇护能力首次下贯至19层，形成跨层安全节点。
+    effects: [19层安全范围初次扩展]
+    balance:
+      cost: 高
+      limit: 初始名额较少
 
----
-⚛️“创世纪”能源核心⚛️
-简介：庇护所的核心能源升级为一座微型、安全、零污染的聚变反应堆。它能提供近乎无限的庞大能源，足以支持所有系统（包括移动）高强度运行，并拥有巨大的能源冗余。
+  expand.heating_radius_19f_s1:
+    name: "♨️19层供暖半径S1"
+    category: 扩展
+    unlock_level: 6
+    desc: 供暖网络跨层下沉，19层指定房间可获得稳定温控。
+    effects: [19层恒温范围初次扩展]
+    balance:
+      cost: 高
+      limit: 供暖与安防并不绑定
 
-🧬专家级自动医师🧬
-简介：外科手术台最终升级。新增的生物再生模块使其能够执行高难度的再生手术，如断肢再接续、受损器官修复等。理论上，只要大脑未死亡，任何非致命的物理损伤都可以被逆转。
+  expedition.weather_trace_array:
+    name: "🌨️风雪轨迹阵列"
+    category: 远征
+    unlock_level: 6
+    desc: 对短期风雪窗口进行预测，为跨层行动选择低风险时段。
+    effects: [天气窗口预测]
+    balance:
+      cost: 中
+      limit: 极端气候下误差增大
 
-🌿生态循环农场🌿
-简介：一个利用先进水培和气培技术的室内垂直农场。它可以高效生产新鲜蔬菜、水果甚至小型粮食作物，不仅丰富了您的食谱，更实现了食物来源的完全自给，不依赖物质重组单元。
+  limit.threshold_tuning_delta:
+    name: "📉阈值校准δ"
+    category: 限制
+    unlock_level: 6
+    desc: 维持阈值进一步下调，扩大可持续协作人口池。
+    effects: [imp_threshold -5]
+    balance:
+      cost: 中
+      limit: 不能绕过忠诚与秩序边界
 
----
-### 庇护所等级 10: 行走伊甸 (Walking Eden)
-简介: 您的庇护所已成为这个冰封星球上的奇迹，是行走的文明火种，是您意志所及的权柄象征。
+  safe.perimeter_drone_ring:
+    name: "🛸周界巡航环"
+    category: 安全
+    unlock_level: 7
+    desc: 形成楼体周界巡航闭环，提前发现中距离接近威胁。
+    effects: [周界预警]
+    balance:
+      cost: 高
+      limit: 维护成本明显上升
 
----
-🚀动力驱动系统 Mk.II🚀
-简介：液压驱动足被反重力引擎所取代。您的庇护所现在可以离地数米悬浮，并以更快的速度、更强的机动性在任何地形上“航行”，无视一切地面障碍。
+  survive.field_med_kit_line:
+    name: "🩹远征急救链"
+    category: 生存
+    unlock_level: 7
+    desc: 建立外出场景专用急救链路，降低远征途中可避免死亡。
+    effects: [远征医疗保障]
+    balance:
+      cost: 中
+      limit: 对致命创伤仅延缓，不保证治愈
 
-🌌光学迷彩力场🌌
-简介：庇护所外部可以生成一层扭曲光线和热信号的力场，使其在视觉上和热成像上完全隐形。您可以悄无声-息地出现在任何地方，或是在众目睽睽之下消失无踪。
+  comfort.deep_rest_suite:
+    name: "🛌深度复原寝舱"
+    category: 舒适
+    unlock_level: 7
+    desc: 通过睡眠环境调谐提升恢复质量，缓冲长期高压导致的崩溃风险。
+    effects: [恢复效率提升]
+    balance:
+      cost: 中
+      limit: 对急性危机无即时效果
 
-🌍“净化者”环境探针🌍
-简介：您可以发射一种特殊的能量探针。在探针效果范围内（半径约50米），它可以在短时间内中和雪晶的腐蚀性，融化积雪，净化水源，创造出一片小型的、临时的“安全区”。这是您向外界彰显并施展影响力的强大工具。
+  expand.resource_interface_19f_s1:
+    name: "🚰19层资源接口S1"
+    category: 扩展
+    unlock_level: 7
+    desc: 资源接口首次下沉至19层，允许有限的跨层生存支援。
+    effects: [19层资源接口初次扩展]
+    balance:
+      cost: 高
+      limit: 吞吐低且需严格配额
 
-⏳时空稳定锚⏳
-简介：庇护所的最神秘科技之一。启动后，可以在庇护所周围形成一个稳定的时空场，极大程度地抵抗外部时间流速异常、空间扭曲等极端现象，确保您在面对未知超自然威胁时保有最后的避难所。
+  expedition.pioneer_vehicle_mk1:
+    name: "🚗先驱者载具Mk.I"
+    category: 远征
+    unlock_level: 7
+    desc: 解锁首台中短程雪地远征载具，实现“可带回资源”的机动能力。
+    effects: [短中程机动远征]
+    balance:
+      cost: 高
+      limit: 装甲与续航有限
 
-</庇护所升级能力>
+  expedition.mobile_relief_pod:
+    name: "🧯临时救助舱"
+    category: 远征
+    unlock_level: 7
+    desc: 可快速部署临时保温/补氧点，为撤离和救助争取黄金窗口。
+    effects: [临时救助节点]
+    balance:
+      cost: 中
+      limit: 持续时间短
+
+  limit.support_quota_delta:
+    name: "📊维持配额δ"
+    category: 限制
+    unlock_level: 7
+    desc: 协作配额模型优化，达标协作者贡献再提升，但进入递减区间更早。
+    effects: [bonus_days_per_qualified_survivor +0.5]
+    balance:
+      cost: 中
+      limit: 强递减约束
+
+  safe.heavy_nonlethal_turret:
+    name: "🛡️重型非致命炮塔"
+    category: 安全
+    unlock_level: 8
+    desc: 在关键走廊部署高压抑制炮塔，强化群体冲突管控能力。
+    effects: [群体非致命压制]
+    balance:
+      cost: 高
+      limit: 对装甲武装仍非决定性
+
+  survive.pharma_replicator_t1:
+    name: "🧪药剂复构台T1"
+    category: 生存
+    unlock_level: 8
+    desc: 扩展药品谱系与稳定性，提升长期伤病管理能力。
+    effects: [中高级药品供给]
+    balance:
+      cost: 高
+      limit: 受原料与伦理规则约束
+
+  comfort.virtual_biome_voyage:
+    name: "🌴亚空间仿生游览舱"
+    category: 舒适
+    unlock_level: 8
+    desc: 提供高沉浸仿生环境漫游，短时缓解“永久冬夜”心理磨损。
+    effects: [高阶舒适体验]
+    balance:
+      cost: 中
+      limit: 心理疗效因人而异
+
+  expand.shelter_radius_20f_s3:
+    name: "🛡️20层庇护半径S3"
+    category: 扩展
+    unlock_level: 8
+    desc: 20层庇护名额再扩容，形成稳定治理走廊。
+    effects: [20层安全范围三次扩展]
+    balance:
+      cost: 高
+      limit: 治理维护负担显著增加
+
+  expedition.long_range_sensor_mast:
+    name: "📡远距感知桅杆"
+    category: 远征
+    unlock_level: 8
+    desc: 构建更远距离感知链路，可为外部探索提供提前量更高的情报。
+    effects: [远距侦查]
+    balance:
+      cost: 高
+      limit: 对抗式干扰下精度下降
+
+  expedition.convoy_dock_node:
+    name: "🚚补给车队泊接点"
+    category: 远征
+    unlock_level: 8
+    desc: 建立车队回收与再出发节点，提升外勤周转效率。
+    effects: [远征周转提升]
+    balance:
+      cost: 高
+      limit: 对内部物流调度要求高
+
+  limit.threshold_tuning_epsilon:
+    name: "📉阈值校准ε"
+    category: 限制
+    unlock_level: 8
+    desc: 维持阈值完成高阶下调，兼顾扩张期的人口结构波动。
+    effects: [imp_threshold -5]
+    balance:
+      cost: 中
+      limit: 受最低阈值封顶保护
+
+  safe.counterstrike_doctrine_lock:
+    name: "🎯反制条令锁"
+    category: 安全
+    unlock_level: 9
+    desc: 安防系统进入条令化反制模式，能对高危入侵执行分层应对。
+    effects: [高危威胁处置提升]
+    balance:
+      cost: 高
+      limit: 需人工授权关键步骤
+
+  survive.eco_farm_vertical:
+    name: "🌱垂直生态农场"
+    category: 生存
+    unlock_level: 9
+    desc: 建立可持续食物生产闭环，降低对外部补给依赖。
+    effects: [高阶食物自给]
+    balance:
+      cost: 高
+      limit: 前期建设周期长
+
+  survive.surgery_table_t1:
+    name: "🩺外科台T1"
+    category: 生存
+    unlock_level: 9
+    desc: 支持更高复杂度组织修复与康复流程，进一步降低致残概率。
+    effects: [高阶外科]
+    balance:
+      cost: 高
+      limit: 仍需专业操作条件
+
+  comfort.hydro_thermal_pool:
+    name: "🏊恒温水疗池"
+    category: 舒适
+    unlock_level: 9
+    desc: 提供低冲击恢复与高质量放松场景，强化长期生存中的精神韧性。
+    effects: [高阶舒适恢复]
+    balance:
+      cost: 中
+      limit: 占用较高水热预算
+
+  expand.shelter_radius_19f_s2:
+    name: "🛡️19层庇护半径S2"
+    category: 扩展
+    unlock_level: 9
+    desc: 19层庇护名额提升，形成双层协同秩序网。
+    effects: [19层安全范围二次扩展]
+    balance:
+      cost: 高
+      limit: 跨层治理复杂度陡升
+
+  expedition.pioneer_vehicle_mk2:
+    name: "🚙先驱者载具Mk.II"
+    category: 远征
+    unlock_level: 9
+    desc: 强化装甲与续航的二代载具，可承担更远半径探索与回收任务。
+    effects: [中远程机动远征]
+    balance:
+      cost: 高
+      limit: 维护开销大
+
+  limit.support_quota_epsilon:
+    name: "📊维持配额ε"
+    category: 限制
+    unlock_level: 9
+    desc: 达标协作贡献达到上限档，系统整体维持效率进入高位稳定区。
+    effects: [bonus_days_per_qualified_survivor +0.5]
+    balance:
+      cost: 高
+      limit: 单人贡献受上限约束
+
+  safe.optic_veil_field:
+    name: "🌌光学匿迹场"
+    category: 安全
+    unlock_level: 10
+    desc: 关键时段可扭曲可见与热特征，降低被远距锁定的概率。
+    effects: [高阶隐蔽]
+    balance:
+      cost: 极高
+      limit: 不能持续常开
+
+  survive.genesis_core_regulator:
+    name: "⚛️创世纪核心稳压器"
+    category: 生存
+    unlock_level: 10
+    desc: 为全系统提供高冗余稳态能源，支撑高负载下的持续运转。
+    effects: [全局能源稳定]
+    balance:
+      cost: 极高
+      limit: 仍需防范系统级故障链
+
+  comfort.ark_theatre_infinite:
+    name: "🎬方舟剧院·无尽季"
+    category: 舒适
+    unlock_level: 10
+    desc: 融合叙事、互动与环境沉浸的终阶娱乐系统，近似复原末日前夜生活密度。
+    effects: [终阶娱乐恢复]
+    balance:
+      cost: 高
+      limit: 不提供直接战斗收益
+
+  expand.omni_interface_network:
+    name: "🔗全域接口网络"
+    category: 扩展
+    unlock_level: 10
+    desc: 融合安全、供暖与资源接口为统一调度网络，实现高效跨区协同。
+    effects: [范围与接口统一调度]
+    balance:
+      cost: 极高
+      limit: 调度错误会导致连锁波动
+
+  expedition.stratos_probe_lance:
+    name: "🚀平流层探针枪"
+    category: 远征
+    unlock_level: 10
+    desc: 可发射高空探针建立更远域感知，为跨区域战略行动提供前置情报。
+    effects: [战略级侦查]
+    balance:
+      cost: 极高
+      limit: 发射频率受严格配额限制
+
+  expedition.frontier_command_hub:
+    name: "🧭前沿指挥枢纽"
+    category: 远征
+    unlock_level: 10
+    desc: 统一远征编组、补给、撤离与回收决策，形成可持续外拓能力。
+    effects: [战略远征协同]
+    balance:
+      cost: 极高
+      limit: 依赖高成熟组织度
+
+  limit.maintenance_compact_omega:
+    name: "∞维持契约Ω"
+    category: 限制
+    unlock_level: 10
+    desc: 维持规则终阶整合，阈值与贡献达到平衡上限，同时强化反滚雪球约束。
+    effects: [维持系统上限档]
+    balance:
+      cost: 高
+      limit: 严格受总天数上限与递减规则约束
+
+custom:
+  note: 用户自定义能力扩展区（建议使用自定义前缀，如 custom.xxx）
+  abilities: {}
+  level_overrides: {}
+

@@ -23,7 +23,7 @@ import StorySection from './components/StorySection.vue';
 import WorldSection from './components/WorldSection.vue';
 import { useInjectedData } from './useInjectedData';
 
-const UI_VERSION = '2.1';
+const UI_VERSION = '2.2';
 const { raw, options } = useInjectedData();
 
 watchDebounced(

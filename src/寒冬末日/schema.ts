@@ -51,6 +51,9 @@ const 所在房间格式Schema = z.union([
   z.string().regex(/^户外\/.+$/),
 ]);
 
+const createExtensibleMapSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.looseObject({}).catchall(itemSchema).prefault({});
+
 const create角色Schema = (args: {
   relationStageSchema: z.ZodTypeAny;
   relationTendencySchema: z.ZodTypeAny;
@@ -164,8 +167,19 @@ export const Schema = z
         今日投掷点数: z.string().prefault(''),
         距离上次升级: z.string().prefault(''),
         庇护所能力: z
-          .record(z.string().describe('能力名'), z.object({ desc: z.string().prefault('') }).prefault({ desc: '' }))
+          .record(
+            z.string().describe('能力名'),
+            z
+              .object({
+                name: z.string().prefault(''),
+                desc: z.string().prefault(''),
+              })
+              .prefault({ name: '', desc: '' }),
+          )
           .prefault({}),
+        庇护所能力总述: z.string().prefault(''),
+        接口覆盖等价庇护范围: z.boolean().prefault(false),
+        接口覆盖范围: z.partialRecord(庇护楼层Schema, z.array(z.string()).prefault([])).prefault({}),
         可扩展区域: 可扩展区域Schema,
 
         当前生存庇护范围: z.partialRecord(庇护楼层Schema, z.array(z.string()).prefault([])).prefault({}),
@@ -183,6 +197,9 @@ export const Schema = z
         今日投掷点数: '',
         距离上次升级: '',
         庇护所能力: {},
+        庇护所能力总述: '',
+        接口覆盖等价庇护范围: false,
+        接口覆盖范围: {},
         可扩展区域: {
           医疗翼: '未解锁',
           制造工坊: '未解锁',
@@ -276,26 +293,23 @@ export const Schema = z
           '1': false,
           '2': false,
         }),
-        情报碎片: z
-          .record(
-            z.string(),
-            z
-              .object({
-                编号: z.string().prefault(''),
-                描述: z.string().prefault(''),
-                价值: z.string().prefault(''),
-                风险: z.string().prefault(''),
-                状态: z.enum(['未探索', '已探索', '已完成']).prefault('未探索'),
-              })
-              .prefault({
-                编号: '',
-                描述: '',
-                价值: '',
-                风险: '',
-                状态: '未探索',
-              }),
-          )
-          .prefault({}),
+        情报碎片: createExtensibleMapSchema(
+          z
+            .object({
+              编号: z.string().prefault(''),
+              描述: z.string().prefault(''),
+              价值: z.string().prefault(''),
+              风险: z.string().prefault(''),
+              状态: z.enum(['未探索', '已探索', '已完成']).prefault('未探索'),
+            })
+            .prefault({
+              编号: '',
+              描述: '',
+              价值: '',
+              风险: '',
+              状态: '未探索',
+            }),
+        ),
         $meta: z
           .object({
             楼层: z
@@ -305,34 +319,28 @@ export const Schema = z
               .prefault({
                 last_seen_message_id: 0,
               }),
-            情报碎片: z
-              .record(
-                z.string(),
-                z
-                  .object({
-                    created_at: z.coerce.number().prefault(0),
-                    explored_at: z.coerce.number().prefault(0),
-                    completed_at: z.coerce.number().prefault(0),
-                  })
-                  .prefault({
-                    created_at: 0,
-                    explored_at: 0,
-                    completed_at: 0,
-                  }),
-              )
-              .prefault({}),
-            阶段目标: z
-              .record(
-                z.string(),
-                z
-                  .object({
-                    completed_at: z.coerce.number().prefault(0),
-                  })
-                  .prefault({
-                    completed_at: 0,
-                  }),
-              )
-              .prefault({}),
+            情报碎片: createExtensibleMapSchema(
+              z
+                .object({
+                  created_at: z.coerce.number().prefault(0),
+                  explored_at: z.coerce.number().prefault(0),
+                  completed_at: z.coerce.number().prefault(0),
+                })
+                .prefault({
+                  created_at: 0,
+                  explored_at: 0,
+                  completed_at: 0,
+                }),
+            ),
+            阶段目标: createExtensibleMapSchema(
+              z
+                .object({
+                  completed_at: z.coerce.number().prefault(0),
+                })
+                .prefault({
+                  completed_at: 0,
+                }),
+            ),
           })
           .prefault({
             楼层: {
@@ -366,7 +374,7 @@ export const Schema = z
 
     // 主要角色采用动态键：未显式声明的顶层角色将由 .catchall(主要角色Schema) 校验
 
-    临时NPC: z.record(z.string(), 临时NPCSchema).prefault({}),
+    临时NPC: createExtensibleMapSchema(临时NPCSchema),
 
     楼层其他住户: z
       .object({
