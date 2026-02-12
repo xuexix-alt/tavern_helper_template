@@ -1,95 +1,86 @@
 <template>
   <section class="section report-section">
-    <h2 class="section-title">📜 变量演化汇报</h2>
-    <div class="report-actions">
-      <button class="report-btn" type="button" :disabled="loading" @click="openReport">
-        {{ loading ? '正在生成…' : '查看汇总' }}
-      </button>
-      <div class="report-hint">点击后对比上一楼层变量，生成 RPG 风格汇报</div>
-    </div>
+    <div class="report-inline-body">
+      <div v-if="loading" class="report-loading">
+        <div class="report-spinner"></div>
+        <div class="report-loading-text">正在读取变量与日志…</div>
+      </div>
 
-    <div v-if="lastComputedAt" class="report-last">上次生成：{{ lastComputedAt }}</div>
-    <div v-if="lastSummary" class="report-summary-preview">{{ lastSummary }}</div>
+      <div v-else-if="errorText" class="report-error">
+        <div class="report-error-title">生成失败</div>
+        <div class="report-error-detail">{{ errorText }}</div>
+      </div>
 
-    <Teleport to="body">
-      <div v-if="reportOpen" class="report-modal-mask" :style="reportModalMaskStyle" @click.self="closeReport">
-        <div class="report-modal" role="dialog" aria-modal="true">
-          <div class="report-modal-header">
-            <div class="report-modal-title">📜 本楼层变量演化汇总</div>
-            <button class="report-icon-btn" type="button" @click="closeReport">✕</button>
-          </div>
-
-          <div class="report-modal-body">
-            <div v-if="loading" class="report-loading">
-              <div class="report-spinner"></div>
-              <div class="report-loading-text">正在读取变量与日志…</div>
+      <template v-else>
+        <div class="report-duo">
+          <div class="report-pane report-pane--digest">
+            <div class="report-pane-tab active">
+              <span>汇总摘要</span>
+              <button class="report-btn compact inline" type="button" :disabled="loading" @click="refreshReport">
+                {{ loading ? '刷新中…' : '刷新' }}
+              </button>
             </div>
-
-            <div v-else-if="errorText" class="report-error">
-              <div class="report-error-title">生成失败</div>
-              <div class="report-error-detail">{{ errorText }}</div>
-            </div>
-
-            <template v-else>
-              <div class="report-summary">
-                {{ report?.summary || '暂无可汇报的变化。' }}
-              </div>
-
-              <template v-if="visibleSections.length > 0">
-                <details
-                  v-for="section in visibleSections"
-                  :key="section.key"
-                  class="report-accordion"
-                  :open="isSectionOpen(section.key)"
-                >
-                  <summary class="report-accordion-title">
-                    <span class="report-accordion-text">{{ section.title }}</span>
-                    <span class="report-accordion-meta">{{ section.items.length }} 项</span>
-                  </summary>
-                  <div class="report-accordion-body">
-                    <table class="report-table">
-                      <thead>
-                        <tr>
-                          <th>项目</th>
-                          <th>变化</th>
-                          <th>来源</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="row in section.items" :key="row.key">
-                          <td class="report-cell-title">{{ row.title }}</td>
-                          <td class="report-cell-detail">{{ row.detail }}</td>
-                          <td class="report-cell-source">
-                            <span class="source-tag" :class="`source-${row.source ?? 'unknown'}`">
-                              {{ row.source ?? '未知' }}
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+            <div class="report-pane-body report-pane-body--digest">
+              <div class="report-quick-list">
+                <div v-for="(line, idx) in quickDigestLines" :key="line.key" class="report-quick-line" :class="line.tone">
+                  <div class="report-quick-index">0{{ idx + 1 }}</div>
+                  <div class="report-quick-content">
+                    <div class="report-quick-label">{{ line.label }}</div>
+                    <div v-if="line.tokens && line.tokens.length > 0" class="report-quick-interactive">
+                      <div
+                        v-if="!line.hideTextWhenTokens"
+                        class="report-quick-text report-quick-text--interactive"
+                        :class="{ 'report-quick-text--multi': line.multiline }"
+                      >
+                        <TextHighlight :text="line.text" :query="query" />
+                      </div>
+                      <div class="report-quick-token-row" :class="{ 'is-stack': line.tokenLayout === 'stack' }">
+                        <button
+                          v-for="token in line.tokens"
+                          :key="token.id"
+                          type="button"
+                          class="report-quick-token"
+                          :class="{ active: activeQuickTokenId === token.id, disabled: token.items.length === 0 }"
+                          :disabled="token.items.length === 0"
+                          @click.stop="token.items.length > 0 && toggleQuickToken(token.id)"
+                        >
+                          {{ token.label }}
+                        </button>
+                      </div>
+                    </div>
+                    <div v-else class="report-quick-text">
+                      <TextHighlight :text="line.text" :query="query" />
+                    </div>
                   </div>
-                </details>
-              </template>
-              <div v-else class="report-empty">本楼层未检测到变量变化</div>
-            </template>
-          </div>
-
-          <div class="report-modal-footer">
-            <button class="report-btn ghost" type="button" :disabled="loading" @click="closeReport">关闭</button>
-            <!-- 暂停使用：重新生成 -->
-            <!-- <button class="report-btn primary" type="button" :disabled="loading" @click="refreshReport">重新生成</button> -->
+                </div>
+              </div>
+              <div v-if="activeTokenContext" class="report-float-pop" @click.stop>
+                <div class="report-float-pop-head">
+                  <div class="report-float-pop-title">{{ activeTokenContext.token.popupTitle }}</div>
+                  <button class="report-float-pop-close" type="button" @click.stop="activeQuickTokenId = null">关闭</button>
+                </div>
+                <ul class="report-float-pop-list">
+                  <li
+                    v-for="(item, itemIdx) in activeTokenContext.token.items"
+                    :key="`${activeTokenContext.token.id}:${itemIdx}`"
+                  >
+                    {{ item }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </Teleport>
+      </template>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import _ from 'lodash';
-import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { diffWorldHours } from '../../../util/time';
 import { normalizeRoomTag } from '../../../util/room';
+import TextHighlight from './TextHighlight.vue';
 
 type ReportSource = '脚本' | 'AI' | '系统' | '未知';
 
@@ -110,9 +101,56 @@ type ReportSection = {
 type ReportResult = {
   summary: string;
   sections: ReportSection[];
+  briefs: {
+    time: string;
+    overview: string;
+    focus: string;
+    roll: string;
+    mission: string;
+    status: string;
+    change: string;
+  };
+  details: {
+    missionStage: string[];
+    missionGoals: string[];
+    intel: string[];
+    stageOn: string[];
+    onstageTotal: number;
+    deaths: string[];
+    stageOff: string[];
+    roomMoves: string[];
+    healthChanges: string[];
+    impChanges: string[];
+    thoughtChanges: string[];
+    others: string[];
+    aiUpdatedFields: string[];
+    scriptUpdatedFields: string[];
+    currentStageShort: string;
+    shelterLevel: number | null;
+    roll: string[];
+    shelter: string[];
+  };
 };
 
 type PatchOp = { op?: string; path?: string; value?: any };
+
+type QuickToken = {
+  id: string;
+  label: string;
+  popupTitle: string;
+  items: string[];
+};
+
+type QuickLine = {
+  key: string;
+  label: string;
+  text: string;
+  tone: 'summary' | 'focus' | 'hint';
+  multiline?: boolean;
+  tokenLayout?: 'wrap' | 'stack';
+  hideTextWhenTokens?: boolean;
+  tokens?: QuickToken[];
+};
 
 type EdenLog = {
   ts?: string;
@@ -122,144 +160,200 @@ type EdenLog = {
   data?: string;
 };
 
-const reportOpen = ref(false);
+const props = withDefaults(
+  defineProps<{
+    query?: string;
+  }>(),
+  {
+    query: '',
+  },
+);
+const query = computed(() => props.query ?? '');
+
 const loading = ref(false);
 const errorText = ref('');
 const report = ref<ReportResult | null>(null);
-const lastComputedAt = ref('');
-const lastSummary = ref('');
+const activeQuickTokenId = ref<string | null>(null);
 
-const reportModalViewportTop = ref(0);
-const reportModalViewportHeight = ref(0);
-let reportParentScrollTarget: HTMLElement | Window | null = null;
-let reportScrollOverflow = '';
-let reportDocOverflow = '';
-let reportBodyOverflow = '';
-let stopReportScroll: (() => void) | null = null;
-let stopReportResize: (() => void) | null = null;
+function compactDigestText(text: string, maxLen = 58): string {
+  const normalized = String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, Math.max(1, maxLen - 1))}…`;
+}
 
-const reportModalMaskStyle = computed(() => ({
-  top: `${reportModalViewportTop.value}px`,
-  height: `${reportModalViewportHeight.value}px`,
-}));
+const quickDigestLines = computed<QuickLine[]>(() => {
+  const briefs = report.value?.briefs;
+  const details = report.value?.details;
+  const aiCount = details?.aiUpdatedFields.length ?? 0;
+  const scriptCount = details?.scriptUpdatedFields.length ?? 0;
+  const rollLineText = `今日roll点：${briefs?.roll || '暂无记录'}`;
 
-const visibleSections = computed(() => {
-  const sections = report.value?.sections ?? [];
-  return sections.filter(section => Array.isArray(section.items) && section.items.length > 0);
+  return [
+    {
+      key: 'quick_01',
+      label: '状态',
+      text: compactDigestText(briefs?.status || '登场0/0 · 死亡0 · 离场0 · 庇护所等级？', 64),
+      tone: 'focus',
+      hideTextWhenTokens: true,
+      tokens: [
+        {
+          id: 'token_status_on',
+          label: `登场${details?.stageOn.length ?? 0}/${details?.onstageTotal ?? 0}`,
+          popupTitle: '当前新增登场',
+          items: details?.stageOn ?? [],
+        },
+        {
+          id: 'token_status_dead',
+          label: `死亡${details?.deaths.length ?? 0}`,
+          popupTitle: '角色死亡',
+          items: details?.deaths ?? [],
+        },
+        {
+          id: 'token_status_off',
+          label: `离场${details?.stageOff.length ?? 0}`,
+          popupTitle: '角色离场',
+          items: details?.stageOff ?? [],
+        },
+        {
+          id: 'token_status_shelter',
+          label: `庇护所等级${details?.shelterLevel ?? '？'}`,
+          popupTitle: '庇护所相关变化',
+          items: details?.shelter ?? [],
+        },
+      ],
+    },
+    {
+      key: 'quick_02',
+      label: '时间',
+      text: compactDigestText(briefs?.time || '时间：跨+0天 · 约0.0小时 · --:--', 64),
+      tone: 'summary',
+    },
+    {
+      key: 'quick_03',
+      label: '快报',
+      text: rollLineText,
+      tone: 'hint',
+      tokenLayout: 'wrap',
+      tokens: [
+        {
+          id: 'token_roll_ai',
+          label: `AI更新${aiCount}项`,
+          popupTitle: 'AI 更新字段',
+          items: details?.aiUpdatedFields ?? [],
+        },
+        {
+          id: 'token_roll_script',
+          label: `脚本更新${scriptCount}项`,
+          popupTitle: '脚本更新字段',
+          items: details?.scriptUpdatedFields ?? [],
+        },
+      ],
+    },
+    {
+      key: 'quick_04',
+      label: '任务',
+      text: compactDigestText(briefs?.mission || '任务：当前阶段? · 任务目标0 · 情报0', 64),
+      tone: 'summary',
+      hideTextWhenTokens: true,
+      tokens: [
+        {
+          id: 'token_mission_stage',
+          label: `当前${details?.currentStageShort ?? '阶段?'}`,
+          popupTitle: '主线阶段变化',
+          items: details?.missionStage ?? [],
+        },
+        {
+          id: 'token_mission_goal',
+          label: `任务目标${details?.missionGoals.length ?? 0}`,
+          popupTitle: '阶段目标变化',
+          items: details?.missionGoals ?? [],
+        },
+        {
+          id: 'token_mission_intel',
+          label: `情报${details?.intel.length ?? 0}`,
+          popupTitle: '情报碎片变化',
+          items: details?.intel ?? [],
+        },
+      ],
+    },
+    {
+      key: 'quick_05',
+      label: '角色信息变动',
+      text: `房间${details?.roomMoves.length ?? 0} · 健康${details?.healthChanges.length ?? 0} · 其他${details?.others.length ?? 0}`,
+      tone: 'summary',
+      hideTextWhenTokens: true,
+      tokens: [
+        {
+          id: 'token_change_room',
+          label: `房间${details?.roomMoves.length ?? 0}`,
+          popupTitle: '房间移动',
+          items: details?.roomMoves ?? [],
+        },
+        {
+          id: 'token_change_health',
+          label: `健康${details?.healthChanges.length ?? 0}`,
+          popupTitle: '健康变化',
+          items: details?.healthChanges ?? [],
+        },
+        {
+          id: 'token_change_other',
+          label: `其他${details?.others.length ?? 0}`,
+          popupTitle: '其他字段变化',
+          items: details?.others ?? [],
+        },
+      ],
+    },
+    {
+      key: 'quick_06',
+      label: '角色信息变动2',
+      text: `IMP${details?.impChanges.length ?? 0} · 想法${details?.thoughtChanges.length ?? 0}`,
+      tone: 'hint',
+      hideTextWhenTokens: true,
+      tokens: [
+        {
+          id: 'token_change_imp',
+          label: `IMP${details?.impChanges.length ?? 0}`,
+          popupTitle: 'IMP 变化',
+          items: details?.impChanges ?? [],
+        },
+        {
+          id: 'token_change_thought',
+          label: `想法${details?.thoughtChanges.length ?? 0}`,
+          popupTitle: '内心想法变化',
+          items: details?.thoughtChanges ?? [],
+        },
+      ],
+    },
+  ];
 });
 
-const defaultOpenSections = new Set<string>(['world', 'roll', 'roles']);
-
-function isSectionOpen(key: string): boolean {
-  return defaultOpenSections.has(key);
-}
-
-function getParentScrollContainer(frameEl: HTMLElement): HTMLElement | Window {
-  try {
-    const doc = frameEl.ownerDocument;
-    const win = doc.defaultView ?? window.parent;
-    let cur: HTMLElement | null = frameEl.parentElement;
-    while (cur) {
-      const style = win.getComputedStyle(cur);
-      const overflowY = style.overflowY;
-      if ((overflowY === 'auto' || overflowY === 'scroll') && cur.scrollHeight > cur.clientHeight + 1) {
-        return cur;
-      }
-      cur = cur.parentElement;
-    }
-    return win;
-  } catch {
-    return window.parent;
+const activeTokenContext = computed<{ line: QuickLine; token: QuickToken } | null>(() => {
+  const tokenId = activeQuickTokenId.value;
+  if (!tokenId) return null;
+  for (const line of quickDigestLines.value) {
+    const token = line.tokens?.find(item => item.id === tokenId);
+    if (token) return { line, token };
   }
+  return null;
+});
+
+function toggleQuickToken(tokenId: string) {
+  activeQuickTokenId.value = activeQuickTokenId.value === tokenId ? null : tokenId;
 }
 
-function updateReportModalViewport() {
-  const frameEl = window.frameElement as HTMLElement | null;
-  if (!frameEl) return;
-  const parentWin = window.parent as Window | null;
-  if (!parentWin) return;
-
-  const rect = frameEl.getBoundingClientRect();
-  const topInIframeDoc = Math.max(0, -rect.top);
-  reportModalViewportTop.value = topInIframeDoc;
-  reportModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
-}
-
-const throttledUpdateReportModalViewport = useThrottleFn(updateReportModalViewport, 50);
-
-function bindReportParentScrollSync() {
-  const frameEl = window.frameElement as HTMLElement | null;
-  if (!frameEl) return;
-  reportParentScrollTarget = getParentScrollContainer(frameEl);
-  const handler = throttledUpdateReportModalViewport;
-  if (!reportParentScrollTarget) return;
-  stopReportScroll?.();
-  stopReportResize?.();
-  stopReportScroll = useEventListener(reportParentScrollTarget, 'scroll', handler, { passive: true });
-  const resizeTarget =
-    reportParentScrollTarget instanceof Window ? reportParentScrollTarget : (window.parent ?? window);
-  stopReportResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
-}
-
-function unbindReportParentScrollSync() {
-  stopReportScroll?.();
-  stopReportResize?.();
-  stopReportScroll = null;
-  stopReportResize = null;
-}
-
-function lockParentScroll() {
-  const frameEl = window.frameElement as HTMLElement | null;
-  if (!frameEl) return;
-  reportParentScrollTarget = getParentScrollContainer(frameEl);
-  if (reportParentScrollTarget instanceof Window) {
-    const doc = reportParentScrollTarget.document;
-    reportDocOverflow = doc.documentElement.style.overflow;
-    reportBodyOverflow = doc.body.style.overflow;
-    doc.documentElement.style.overflow = 'hidden';
-    doc.body.style.overflow = 'hidden';
-  } else if (reportParentScrollTarget) {
-    reportScrollOverflow = reportParentScrollTarget.style.overflow;
-    reportParentScrollTarget.style.overflow = 'hidden';
-  }
-}
-
-function unlockParentScroll() {
-  if (reportParentScrollTarget instanceof Window) {
-    const doc = reportParentScrollTarget.document;
-    doc.documentElement.style.overflow = reportDocOverflow;
-    doc.body.style.overflow = reportBodyOverflow;
-  } else if (reportParentScrollTarget) {
-    reportParentScrollTarget.style.overflow = reportScrollOverflow;
-  }
-  reportParentScrollTarget = null;
-  reportScrollOverflow = '';
-  reportDocOverflow = '';
-  reportBodyOverflow = '';
-}
-
-async function openReport() {
-  reportOpen.value = true;
-  updateReportModalViewport();
-  bindReportParentScrollSync();
-  lockParentScroll();
-  await refreshReport();
-}
-
-function closeReport() {
-  reportOpen.value = false;
-  unbindReportParentScrollSync();
-  unlockParentScroll();
+function onDocumentClick() {
+  if (activeQuickTokenId.value) activeQuickTokenId.value = null;
 }
 
 async function refreshReport() {
   if (loading.value) return;
   loading.value = true;
   errorText.value = '';
+  activeQuickTokenId.value = null;
   try {
     report.value = await buildReport();
-    lastComputedAt.value = new Date().toLocaleString();
-    lastSummary.value = report.value?.summary ?? '';
   } catch (err) {
     errorText.value = err instanceof Error ? err.message : String(err ?? '未知错误');
   } finally {
@@ -309,8 +403,12 @@ function buildAiPathSet(raw: string): Set<string> {
 }
 
 function aiTouchedPath(aiPaths: Set<string>, target: string): boolean {
+  return pathMatchesSet(aiPaths, target);
+}
+
+function pathMatchesSet(pathSet: Set<string>, target: string): boolean {
   if (!target) return false;
-  for (const p of aiPaths) {
+  for (const p of pathSet) {
     if (!p) continue;
     if (target === p) return true;
     if (target.startsWith(p + '.')) return true;
@@ -380,6 +478,30 @@ function parseRollText(text: string): { roll: number | null; upgraded: boolean; 
   return { roll: Number.isFinite(roll) ? roll : null, upgraded, isGuarantee };
 }
 
+function parseDateToEpochDayLoose(dateStr: string): number | null {
+  const m = String(dateStr ?? '').match(/(\d{1,4})年(\d{1,2})月(\d{1,2})日/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const d = new Date(year, month - 1, day);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor(d.getTime() / 86400000);
+}
+
+function extractClockText(timeStr: string): string {
+  const m = String(timeStr ?? '').match(/(\d{1,2}:\d{2})/);
+  return m?.[1] ?? '--:--';
+}
+
+function extractStageShort(stageText: string): string {
+  const raw = String(stageText ?? '').trim();
+  if (!raw) return '阶段?';
+  const m = raw.match(/阶段[一二三四五六七八九十百千万0-9]+/);
+  return m?.[0] ?? raw;
+}
+
 function listRoles(stat_data: any): { core: string[]; temp: string[] } {
   const reserved = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
   const core: string[] = [];
@@ -407,6 +529,44 @@ function getRole(stat_data: any, name: string, isTemp: boolean): any {
 
 function sourceByPath(aiPaths: Set<string>, path: string, fallback: ReportSource = '脚本'): ReportSource {
   return aiTouchedPath(aiPaths, path) ? 'AI' : fallback;
+}
+
+function stripStatDataPrefix(path: string): string {
+  return path.startsWith('stat_data.') ? path.slice('stat_data.'.length) : path;
+}
+
+function collectChangedLeafPaths(prevValue: any, nextValue: any, basePath: string): string[] {
+  const changed: string[] = [];
+
+  const walk = (before: any, after: any, path: string) => {
+    if (_.isEqual(before, after)) return;
+
+    const beforeObj = _.isPlainObject(before);
+    const afterObj = _.isPlainObject(after);
+    if (beforeObj && afterObj) {
+      const beforeKeys = Object.keys(before as Record<string, any>);
+      const afterKeys = Object.keys(after as Record<string, any>);
+      const keys = new Set([...beforeKeys, ...afterKeys]);
+      if (keys.size === 0) {
+        changed.push(path);
+        return;
+      }
+      for (const key of keys) {
+        walk((before as Record<string, any>)[key], (after as Record<string, any>)[key], `${path}.${key}`);
+      }
+      return;
+    }
+
+    if (Array.isArray(before) && Array.isArray(after)) {
+      changed.push(path);
+      return;
+    }
+
+    changed.push(path);
+  };
+
+  walk(prevValue, nextValue, basePath);
+  return _.uniq(changed.filter(Boolean));
 }
 
 async function buildReport(): Promise<ReportResult> {
@@ -441,6 +601,12 @@ async function buildReport(): Promise<ReportResult> {
   const currentWorld = _.get(currentData, '世界', {}) ?? {};
   const prevWorld = _.get(prevData, '世界', {}) ?? {};
   const deltaHours = diffWorldHours(prevWorld, currentWorld);
+  const prevEpochDay = parseDateToEpochDayLoose(String(prevWorld?.日期 ?? ''));
+  const currentEpochDay = parseDateToEpochDayLoose(String(currentWorld?.日期 ?? ''));
+  const crossDays =
+    prevEpochDay != null && currentEpochDay != null && currentEpochDay >= prevEpochDay ? currentEpochDay - prevEpochDay : 0;
+  const currentClock = extractClockText(String(currentWorld?.时间 ?? ''));
+  const timeBrief = `时间：跨+${crossDays}天 · ${deltaHours != null ? `约${deltaHours.toFixed(1)}小时` : '约0.0小时'} · ${currentClock}`;
 
   const summaryParts: string[] = [];
   if (currentWorld?.末日天数 != null) summaryParts.push(`末日第 ${currentWorld.末日天数} 天`);
@@ -491,6 +657,7 @@ async function buildReport(): Promise<ReportResult> {
   const rollItem: ReportRow[] = [];
   const rollLog = pickDailyRollLog(rollLogs, currentId);
   const rollText = String(shelter?.今日投掷点数 ?? '').trim();
+  let rollBrief = '暂无记录';
   if (rollLog || rollText) {
     const parsed = rollLog
       ? {
@@ -503,6 +670,14 @@ async function buildReport(): Promise<ReportResult> {
     const rollLabel =
       parsed.roll != null ? `${parsed.roll} 点` : parsed.isGuarantee ? '保底升级' : rollText || '未记录';
     const upgradedLabel = parsed.upgraded ? '升级成功' : '未升级';
+    const roundLabel =
+      rollLog && typeof rollLog?.message_id === 'number'
+        ? rollLog.message_id === currentId
+          ? '本楼层'
+          : '前楼层'
+        : '本楼层';
+    const rollPointText = parsed.roll != null ? `${parsed.roll}点` : rollLabel.replace(/\s+/g, '');
+    rollBrief = `${roundLabel} roll${rollPointText} ${parsed.upgraded ? '已升级' : '未升级'}`;
 
     rollItem.push({
       key: 'roll',
@@ -761,7 +936,6 @@ async function buildReport(): Promise<ReportResult> {
 
   // 健康变化
   const healthItems: ReportRow[] = [];
-  const offstageSettled: string[] = [];
   for (const name of allNames) {
     const isTemp = currentRoles.temp.includes(name) || prevRoles.temp.includes(name);
     const newRole = getRole(currentData, name, isTemp);
@@ -780,8 +954,6 @@ async function buildReport(): Promise<ReportResult> {
         ? '脚本'
         : '脚本';
 
-    if (isOffstage) offstageSettled.push(name);
-
     healthItems.push({
       key: `health_${name}`,
       title: name,
@@ -790,14 +962,6 @@ async function buildReport(): Promise<ReportResult> {
     });
     recognizedPaths.add(`stat_data.${isTemp ? `临时NPC.${name}` : name}.健康`);
     recognizedPaths.add(`stat_data.${isTemp ? `临时NPC.${name}` : name}.健康更新原因`);
-  }
-  if (offstageSettled.length > 0) {
-    healthItems.unshift({
-      key: 'health_offstage',
-      title: '后台结算',
-      detail: `以下角色由后台根据时间推演进行健康结算：${offstageSettled.join('、')}`,
-      source: '脚本',
-    });
   }
   sections.push({ key: 'health', title: '健康值变化', items: healthItems, emptyText: '健康值无显著变化' });
 
@@ -824,16 +988,40 @@ async function buildReport(): Promise<ReportResult> {
   }
   sections.push({ key: 'imp', title: 'IMP 变化', items: impItems, emptyText: '秩序刻印无变化' });
 
-  // 其他字段（AI patch 未覆盖的变更）
+  // 内心想法变化
+  const thoughtItems: ReportRow[] = [];
+  for (const name of allNames) {
+    const isTemp = currentRoles.temp.includes(name) || prevRoles.temp.includes(name);
+    const newRole = getRole(currentData, name, isTemp);
+    const oldRole = getRole(prevData, name, isTemp);
+    if (!newRole || !oldRole) continue;
+    const oldThought = String(oldRole?.内心想法 ?? '').trim();
+    const newThought = String(newRole?.内心想法 ?? '').trim();
+    if (oldThought === newThought) continue;
+    thoughtItems.push({
+      key: `thought_${name}`,
+      title: name,
+      detail: `${oldThought || '（空）'} → ${newThought || '（空）'}`,
+      source: sourceByPath(aiPaths, `stat_data.${isTemp ? `临时NPC.${name}` : name}.内心想法`, 'AI'),
+    });
+    recognizedPaths.add(`stat_data.${isTemp ? `临时NPC.${name}` : name}.内心想法`);
+  }
+  sections.push({ key: 'thought', title: '内心想法', items: thoughtItems, emptyText: '内心想法无变化' });
+
+  const changedLeafPaths = collectChangedLeafPaths(prevData, currentData, 'stat_data');
+
+  // 其他字段（除已识别板块外的变更）
   const otherItems: ReportRow[] = [];
-  const aiPathList = Array.from(aiPaths).filter(p => p.startsWith('stat_data.'));
-  for (const path of aiPathList) {
-    if (recognizedPaths.has(path)) continue;
+  const otherChangedPaths = changedLeafPaths.filter(path => {
+    if (!path.startsWith('stat_data.')) return false;
+    return !pathMatchesSet(recognizedPaths, path);
+  });
+  for (const path of otherChangedPaths) {
     otherItems.push({
       key: `other_${path}`,
       title: path.replace('stat_data.', ''),
-      detail: '本轮由 AI 直接输出更新',
-      source: 'AI',
+      detail: '字段值发生变化',
+      source: aiTouchedPath(aiPaths, path) ? 'AI' : '脚本',
     });
     if (otherItems.length >= 12) break;
   }
@@ -841,10 +1029,76 @@ async function buildReport(): Promise<ReportResult> {
     key: 'others',
     title: '其他字段',
     items: otherItems,
-    emptyText: aiPathList.length === 0 ? '未检测到 JSONPatch 输出' : '未发现额外字段变化',
+    emptyText: otherChangedPaths.length === 0 ? '未发现额外字段变化' : '已截断显示前 12 项',
   });
 
-  return { summary, sections };
+  let focusText = '暂无重点变化';
+  for (const section of sections) {
+    if (!Array.isArray(section.items) || section.items.length === 0) continue;
+    const first = section.items[0];
+    focusText = `${section.title} · ${first.title}：${first.detail}`;
+    break;
+  }
+
+  const nonEmptySections = sections.filter(section => Array.isArray(section.items) && section.items.length > 0);
+  const sectionCount = nonEmptySections.length;
+  const itemCount = nonEmptySections.reduce((sum, section) => sum + section.items.length, 0);
+
+  const allCurrentRoleNames = [...currentRoles.core, ...currentRoles.temp];
+
+  const overview = `末日第${currentWorld?.末日天数 ?? '？'}天 · ${currentWorld?.时间 || '未知时间'}${
+    currentWorld?.地址 ? ` · ${currentWorld.地址}` : ''
+  } · 变动${sectionCount}组/${itemCount}项`;
+  const currentStageShort = extractStageShort(String(curMission?.当前阶段 ?? ''));
+  const changedGoalCount = missionItems.filter(item => item.key !== 'mission_stage').length;
+  const mission = `当前${currentStageShort} · 任务目标${changedGoalCount} · 情报${intelItems.length}`;
+  const status = `登场${stageOn.length}/${allCurrentRoleNames.length || 0} · 死亡${deaths.length} · 离场${stageOff.length} · 庇护所等级${
+    shelter?.庇护所等级 ?? '？'
+  }`;
+  const change = `房间${roomItems.length} · 健康${healthItems.length} · IMP${impItems.length} · 想法${thoughtItems.length}`;
+  const listRowText = (rows: ReportRow[]): string[] => rows.map(row => `${row.title}：${row.detail}`);
+  const deathText = deaths.map(entry => `${entry.name}（${entry.reason}）`);
+  const stageOnText = stageOn.map(name => `${name}（登场）`);
+  const stageOffText = stageOff.map(entry => `${entry.name}（离场）`);
+  const rollDetailText = rollItem.length > 0 ? listRowText(rollItem) : [rollBrief];
+  const shelterText = shelterItems.length > 0 ? listRowText(shelterItems) : [];
+  const thoughtText = listRowText(thoughtItems);
+  const aiUpdatedFields = changedLeafPaths.filter(path => aiTouchedPath(aiPaths, path)).map(stripStatDataPrefix);
+  const scriptUpdatedFields = changedLeafPaths.filter(path => !aiTouchedPath(aiPaths, path)).map(stripStatDataPrefix);
+
+  return {
+    summary,
+    sections,
+    briefs: {
+      time: timeBrief,
+      overview,
+      focus: focusText,
+      roll: rollBrief,
+      mission,
+      status,
+      change,
+    },
+    details: {
+      missionStage: missionItems.filter(item => item.key === 'mission_stage').map(item => `${item.detail}`),
+      missionGoals: missionItems.filter(item => item.key !== 'mission_stage').map(item => `${item.title}：${item.detail}`),
+      intel: listRowText(intelItems),
+      stageOn: stageOnText,
+      onstageTotal: allCurrentRoleNames.length || 0,
+      deaths: deathText,
+      stageOff: stageOffText,
+      roomMoves: listRowText(roomItems),
+      healthChanges: listRowText(healthItems),
+      impChanges: listRowText(impItems),
+      thoughtChanges: thoughtText,
+      others: listRowText(otherItems),
+      aiUpdatedFields,
+      scriptUpdatedFields,
+      currentStageShort,
+      shelterLevel: Number.isFinite(Number(shelter?.庇护所等级)) ? Number(shelter?.庇护所等级) : null,
+      roll: rollDetailText,
+      shelter: shelterText,
+    },
+  };
 }
 
 function findPrevMessageId(currentId: number): number | null {
@@ -862,146 +1116,342 @@ function findPrevMessageId(currentId: number): number | null {
   return null;
 }
 
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick);
+  void refreshReport();
+});
+
+onActivated(() => {
+  void refreshReport();
+});
+
 onBeforeUnmount(() => {
-  unbindReportParentScrollSync();
-  unlockParentScroll();
+  document.removeEventListener('click', onDocumentClick);
 });
 </script>
 
 <style scoped>
-.report-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.report-section {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .report-btn {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(139, 233, 253, 0.42);
+  background: rgba(139, 233, 253, 0.14);
   color: var(--text-color);
   cursor: pointer;
   font-weight: 700;
   transition: all var(--transition-speed);
 }
 
+.report-btn.compact {
+  font-size: 0.82em;
+}
+
+.report-btn.inline {
+  margin-left: auto;
+  padding: 3px 8px;
+  font-size: 0.74em;
+  line-height: 1.2;
+}
+
 .report-btn:hover {
-  background: var(--border-color);
-  color: var(--bg-dark);
-}
-
-.report-btn.primary {
-  border-color: rgba(0, 180, 216, 0.55);
-  background-color: rgba(0, 180, 216, 0.18);
-  color: #e8fbff;
-}
-
-.report-btn.ghost {
-  background: transparent;
+  background: rgba(139, 233, 253, 0.28);
 }
 
 .report-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.62;
   cursor: not-allowed;
 }
 
-.report-hint {
-  font-size: 0.85em;
-  opacity: 0.75;
+.report-inline-body {
+  display: grid;
+  gap: 6px;
 }
 
-.report-last {
-  margin-top: 10px;
-  font-size: 0.85em;
+.report-duo {
+  display: block;
+}
+
+.report-pane {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.report-pane--digest {
+  width: 100%;
+}
+
+.report-pane-tab {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 0.84em;
+  font-weight: 700;
+  color: var(--text-color);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: default;
+}
+
+.report-pane-tab.active {
+  color: var(--accent-gold);
+  background: rgba(139, 233, 253, 0.15);
+  border-bottom-color: rgba(139, 233, 253, 0.3);
+}
+
+.report-pane-body {
+  padding: 8px;
+}
+
+.report-pane-body--digest {
+  display: grid;
+  gap: 5px;
+  position: relative;
+}
+
+.report-quick-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(56px, auto);
+  align-items: start;
+  gap: 6px 8px;
+}
+
+.report-quick-line {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 5px 7px;
+}
+
+.report-quick-line.summary {
+  border-color: rgba(139, 233, 253, 0.35);
+  background: rgba(139, 233, 253, 0.11);
+}
+
+.report-quick-line.focus {
+  border-color: rgba(241, 250, 140, 0.28);
+  background: rgba(241, 250, 140, 0.08);
+}
+
+.report-quick-line.hint {
+  border-style: dashed;
+  opacity: 0.92;
+}
+
+.report-quick-index {
+  width: 26px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.report-quick-content {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  position: relative;
+}
+
+.report-quick-label {
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: var(--accent-blue);
 }
 
-.report-summary-preview {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.9em;
-  opacity: 0.9;
-  max-height: 72px;
-  overflow: hidden;
+.report-quick-text {
+  font-size: 0.76em;
+  line-height: 1.3;
+  color: rgba(245, 247, 255, 0.95);
+  word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.report-modal-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 70;
-  background: rgba(0, 0, 0, 0.6);
-  padding-top: calc(12px + env(safe-area-inset-top));
-  padding-right: calc(12px + env(safe-area-inset-right));
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  padding-left: calc(12px + env(safe-area-inset-left));
+.report-quick-text--multi {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: pre-line;
+}
+
+.report-quick-interactive {
+  display: grid;
+  gap: 3px;
+}
+
+.report-quick-token-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-.report-modal {
-  width: min(648px, calc(100% - 24px));
-  max-height: calc(100% - 24px);
-  background: rgba(20, 22, 30, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-  display: flex;
-  flex-direction: column;
+.report-quick-token-row.is-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
 }
 
-.report-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  padding: 14px 14px 10px;
-}
-
-.report-modal-title {
-  font-weight: 800;
-  color: var(--text-strong, #f1fa8c);
-  flex: 1 1 auto;
-}
-
-.report-icon-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-color);
-  border-radius: 10px;
-  padding: 6px 10px;
+.report-quick-token {
+  border: 1px solid rgba(139, 233, 253, 0.32);
+  background: rgba(139, 233, 253, 0.1);
+  color: rgba(235, 245, 255, 0.96);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.75em;
+  line-height: 1.35;
   cursor: pointer;
-  margin-left: auto;
+  white-space: nowrap;
 }
 
-.report-modal-body {
-  padding: 8px 14px 12px;
+.report-quick-token-row.is-stack .report-quick-token {
+  justify-self: start;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.report-quick-token:hover {
+  background: rgba(139, 233, 253, 0.2);
+}
+
+.report-quick-token:disabled,
+.report-quick-token.disabled {
+  opacity: 0.46;
+  filter: grayscale(0.35);
+  cursor: default;
+  background: rgba(180, 190, 205, 0.08);
+  border-color: rgba(200, 210, 225, 0.18);
+  color: rgba(205, 214, 226, 0.75);
+}
+
+.report-quick-token.active {
+  border-color: rgba(241, 250, 140, 0.55);
+  background: rgba(241, 250, 140, 0.18);
+  color: #fffde6;
+}
+
+.report-quick-pop {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(22, 27, 39, 0.92);
+  border-radius: 8px;
+  padding: 6px 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.24);
+}
+
+.report-quick-pop-title {
+  font-size: 0.72em;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 4px;
+}
+
+.report-quick-pop-list {
+  margin: 0;
+  padding-left: 14px;
+  max-height: 140px;
   overflow: auto;
-  flex: 1 1 auto;
-  min-height: 0;
+  display: grid;
+  gap: 2px;
 }
 
-.report-summary {
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  line-height: 1.5;
-  margin-bottom: 16px;
+.report-quick-pop-list > li {
+  font-size: 0.75em;
+  line-height: 1.35;
+  color: rgba(239, 244, 255, 0.95);
+}
+
+.report-quick-pop-empty {
+  font-size: 0.74em;
+  color: rgba(220, 230, 255, 0.78);
+}
+
+.report-float-pop {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  z-index: 30;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(16, 21, 32, 0.94);
+  border-radius: 10px;
+  padding: 7px 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.report-float-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.report-float-pop-title {
+  font-size: 0.74em;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.report-float-pop-close {
+  border: 1px solid rgba(139, 233, 253, 0.28);
+  background: rgba(139, 233, 253, 0.08);
+  color: rgba(225, 235, 248, 0.9);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.7em;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.report-float-pop-list {
+  margin: 0;
+  padding-left: 14px;
+  max-height: 120px;
+  overflow: auto;
+  display: grid;
+  gap: 2px;
+}
+
+.report-float-pop-list > li {
+  font-size: 0.76em;
+  line-height: 1.34;
+  color: rgba(239, 244, 255, 0.95);
 }
 
 .report-accordion {
-  margin: 10px 0;
-  border-radius: 12px;
+  margin: 0;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
@@ -1017,7 +1467,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   cursor: pointer;
   font-weight: 700;
   color: var(--accent-gold);
@@ -1029,27 +1479,27 @@ onBeforeUnmount(() => {
 }
 
 .report-accordion-meta {
-  font-size: 0.8em;
+  font-size: 0.76em;
   color: rgba(255, 255, 255, 0.65);
 }
 
 .report-accordion-body {
-  padding: 8px 10px 12px;
+  padding: 4px 6px 6px;
 }
 
 .report-table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 6px;
+  border-spacing: 0 3px;
   background: transparent;
 }
 
 .report-table th,
 .report-table td {
   text-align: left;
-  padding: 10px 12px;
+  padding: 7px 9px;
   border-bottom: none;
-  font-size: 0.9em;
+  font-size: 0.82em;
 }
 
 .report-table th {
@@ -1071,17 +1521,17 @@ onBeforeUnmount(() => {
 }
 
 .report-cell-title {
-  width: 30%;
+  width: 28%;
   color: var(--text-strong);
 }
 
 .report-cell-detail {
-  width: 50%;
+  width: 54%;
   white-space: pre-line;
 }
 
 .report-cell-source {
-  width: 20%;
+  width: 18%;
 }
 
 .source-tag {
@@ -1112,23 +1562,14 @@ onBeforeUnmount(() => {
 }
 
 .report-empty {
-  padding: 10px 12px;
+  padding: 7px 9px;
   border-radius: 10px;
   border: 1px dashed rgba(255, 255, 255, 0.15);
   color: rgba(255, 255, 255, 0.6);
 }
 
-.report-modal-footer {
-  padding: 12px 14px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-}
-
 .report-loading {
-  padding: 24px 0;
+  padding: 14px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1168,9 +1609,80 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 600px) {
+  .report-btn.inline {
+    width: auto;
+  }
+
   .report-table th,
   .report-table td {
-    padding: 8px 10px;
+    padding: 6px 7px;
+    font-size: 0.8em;
+  }
+}
+
+@media (max-width: 900px) {
+  .report-pane-body {
+    padding: 7px;
+  }
+}
+
+@media (max-width: 680px) {
+  .report-quick-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-accordion-body {
+    padding: 4px 5px 6px;
+  }
+
+  .report-table {
+    border-spacing: 0 6px;
+  }
+
+  .report-table thead {
+    display: none;
+  }
+
+  .report-table tbody tr {
+    display: grid;
+    gap: 5px;
+    padding: 7px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .report-table tbody tr td {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    width: 100%;
+    padding: 0;
+    background: transparent;
+    font-size: 0.8em;
+  }
+
+  .report-table tbody tr td::before {
+    content: attr(data-label);
+    flex: 0 0 32px;
+    font-size: 0.76em;
+    line-height: 1.4;
+    color: rgba(200, 220, 255, 0.8);
+  }
+
+  .report-table tbody tr td:first-child,
+  .report-table tbody tr td:last-child {
+    border-radius: 0;
+  }
+
+  .report-cell-title,
+  .report-cell-detail,
+  .report-cell-source {
+    width: auto;
+  }
+
+  .report-cell-source .source-tag {
+    margin-top: 1px;
   }
 }
 </style>

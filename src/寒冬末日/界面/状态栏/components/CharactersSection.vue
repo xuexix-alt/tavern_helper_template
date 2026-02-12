@@ -16,7 +16,7 @@
               type="button"
               @click="setActiveCharacter(item.data.key)"
             >
-              {{ item.data.label }}
+              <TextHighlight :text="item.data.label" :query="query" />
               <span class="status-pill" :class="item.data.status">{{ item.data.status }}</span>
             </button>
           </div>
@@ -30,7 +30,7 @@
             type="button"
             @click="setActiveCharacter(key)"
           >
-            {{ getCharacterDisplayName(key) }}
+            <TextHighlight :text="getCharacterDisplayName(key)" :query="query" />
             <span class="status-pill" :class="getCharacterStatus(key)">{{ getCharacterStatus(key) }}</span>
           </button>
         </div>
@@ -125,7 +125,7 @@
       </template>
 
       <template v-else>
-        <div class="content-text">暂无登场角色</div>
+        <div class="content-text">{{ hasQuery ? '当前关键词下暂无匹配角色' : '暂无登场角色' }}</div>
       </template>
     </div>
 
@@ -609,6 +609,7 @@ import {
   readRoleSelectorStateFromStatData,
 } from '../../../role_control';
 import { useDataStore } from '../../store';
+import TextHighlight from './TextHighlight.vue';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
 type CharacterKey =
@@ -634,6 +635,17 @@ const CHARACTER_ORDER = [
 ] as const;
 
 const store = useDataStore();
+const props = withDefaults(
+  defineProps<{
+    query?: string;
+  }>(),
+  {
+    query: '',
+  },
+);
+const query = computed(() => props.query ?? '');
+const normalizedQuery = computed(() => query.value.trim().toLowerCase());
+const hasQuery = computed(() => normalizedQuery.value.length > 0);
 const rootEl = ref<HTMLElement | null>(null);
 
 onMounted(() => {
@@ -663,6 +675,38 @@ function listExtraCoreKeys(): string[] {
     .filter(key => typeof key === 'string' && key.length > 0 && !key.startsWith('_'))
     .filter(key => isRoleLike(data[key]))
     .sort();
+}
+
+function matchCharacterByQuery(key: CharacterKey): boolean {
+  if (!normalizedQuery.value) return true;
+  const char = getCharacter(key) as Record<string, any> | undefined;
+  if (!char) return false;
+
+  const chunks = [
+    key,
+    getCharacterDisplayName(key),
+    char.姓名,
+    char.登场状态,
+    char.关系,
+    char.关系倾向,
+    char.健康,
+    char.健康状况,
+    char.秩序刻印,
+    char.所在房间,
+    char.衣着,
+    char.舌唇,
+    char.胸乳,
+    char.私穴,
+    char.神态样貌,
+    char.动作姿势,
+    char.内心想法,
+  ];
+
+  return chunks
+    .map(v => String(v ?? ''))
+    .join('\n')
+    .toLowerCase()
+    .includes(normalizedQuery.value);
 }
 
 const active_character_keys = computed<CharacterKey[]>(() => {
@@ -708,7 +752,9 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   }
 
   // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
-  return [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
+  const ordered = [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
+  if (!normalizedQuery.value) return ordered;
+  return ordered.filter(matchCharacterByQuery);
 });
 
 const active_character_key = ref<CharacterKey | null>(null);

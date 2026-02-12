@@ -1,10 +1,25 @@
 <template>
   <div class="world-section">
-    <div class="meta-row">
-      <span>DATE: {{ formatted_date }}</span>
-      <span>TIME: {{ formatted_time }}</span>
-      <span>LOC: {{ store.data.世界.当前地点 }}</span>
+    <div class="world-head">
+      <span class="world-kicker">WORLD SNAPSHOT</span>
+      <span class="world-location">📍 {{ store.data.世界.当前地点 }}</span>
     </div>
+
+    <div class="meta-row">
+      <div class="meta-pill">
+        <span class="meta-label">DATE</span>
+        <span class="meta-value">{{ formatted_date }}</span>
+      </div>
+      <div class="meta-pill">
+        <span class="meta-label">TIME</span>
+        <span class="meta-value">{{ formatted_time }}</span>
+      </div>
+      <div class="meta-pill">
+        <span class="meta-label">EVENTS</span>
+        <span class="meta-value">{{ _.size(store.data.世界.近期事务) || 0 }}</span>
+      </div>
+    </div>
+
     <div class="event-list">
       <div v-for="(description, name) in store.data.世界.近期事务" :key="name" class="event-badge">
         <span class="event-title">{{ name }}</span>
@@ -37,74 +52,135 @@ const formatted_time = computed(() => {
 
 <style lang="scss" scoped>
 .world-section {
-  border-bottom: 3px solid var(--c-granite);
-  padding: 10px;
-  background-color: var(--c-mint-cream);
+  border-bottom: 1px solid var(--c-border-soft);
+  padding: 11px 12px;
+  background: linear-gradient(180deg, rgba(240, 247, 244, 0.76), rgba(255, 255, 255, 0.36));
+}
+
+.world-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.world-kicker {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: var(--c-grey-olive);
+}
+
+.world-location {
+  max-width: 62%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(76, 98, 89, 0.42);
+}
+
+.meta-pill {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  font-weight: bold;
-  font-size: 0.9rem;
-  border-bottom: 1.5px dashed var(--c-grey-olive);
-  padding-bottom: 6px;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid rgba(76, 98, 89, 0.28);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 6px 8px;
+}
+
+.meta-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--c-grey-olive);
+}
+
+.meta-value {
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .event-list {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(90, 117, 104, 0.4) transparent;
 }
 
 .event-badge {
-  background: #fff;
-  border: 1.5px solid var(--c-granite);
-  padding: 6px 8px;
-  min-width: 130px;
-  flex: 1;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(60, 73, 63, 0.34);
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 150px;
+  flex: 0 0 min(220px, 78%);
   position: relative;
+  scroll-snap-align: start;
+  box-shadow: 0 5px 14px rgba(20, 45, 35, 0.08);
 }
 
 .event-badge::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: var(--c-celadon);
+  left: 8px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background-color: #77c79f;
 }
 
 .event-title {
   display: block;
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 2px;
-  padding-left: 6px;
+  padding-left: 12px;
+  font-size: 0.8rem;
 }
 
 .event-desc {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--c-grey-olive);
-  padding-left: 6px;
+  padding-left: 12px;
+  line-height: 1.35;
 }
 
 @media (max-width: 600px) {
-  .meta-row {
-    flex-direction: column;
-    gap: 5px;
+  .world-section {
+    padding: 10px;
   }
 
-  .event-list {
-    flex-direction: column;
+  .world-location {
+    max-width: 58%;
+    font-size: 0.72rem;
+  }
+
+  .meta-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .meta-pill:last-child {
+    grid-column: span 2;
   }
 
   .event-badge {
-    min-width: auto;
+    flex-basis: 84%;
+    min-width: 0;
   }
 }
 </style>

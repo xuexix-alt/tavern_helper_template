@@ -29,7 +29,8 @@ format: |-
 
   2. World Variables & Atmosphere
      - Time: Calculate time elapsed (estimated by dialogue length if not specified).
-     - If crossing 00:00: delta date/doom_day, replace floor ambience.
+     - AI MUST advance minutes in `/世界/时间` based on current scene progress.
+     - If crossing 00:00: update date and apply `delta +1` to `/世界/末日天数` (backend script is fallback only).
      - Address: Update only on actual character movement.
      - Result: 时间更新？____，日期更新？____。
 
@@ -58,7 +59,7 @@ format: |-
 
   6. Room State (强制禁止遗漏)
      - Update `/<角色>/所在房间` for moving characters:
-       - Valid values: 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
+       - Valid values: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{4-digit room} | 户外 | 户外/{地点}
        - Leaving apartment -> "" (empty string)
      - NEVER output any operation under `/房间/**` (derived; maintained by script).
      - Result: 需更新房间的角色 ____。
@@ -98,4 +99,3 @@ requirements:
   - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
   - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
   - "Shelter level: AI MUST NOT manually roll upgrades. Only read `今日投掷点数` status and broadcast results."
-

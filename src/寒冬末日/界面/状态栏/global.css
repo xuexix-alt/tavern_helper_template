@@ -16,8 +16,8 @@
   --accent-cyan: #00b4d8;
   --health-bar-color: #50fa7b;
   --border-radius: 12px;
-  --section-gap: 16px;
-  --inner-padding: 18px;
+  --section-gap: 12px;
+  --inner-padding: 13px;
   --transition-speed: 0.3s;
   --font-main:
     'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -95,7 +95,7 @@ body,
 body {
   font-family: var(--font-main);
   margin: 0;
-  padding: 8px;
+  padding: 4px;
   background-color: transparent;
   color: var(--text-color);
   line-height: 1.7;
@@ -108,7 +108,7 @@ main {
     0 0 25px 0px var(--border-shadow-color),
     inset 0 0 15px rgba(255, 255, 255, 0.05);
   background-color: var(--bg-main);
-  padding: 20px;
+  padding: 14px;
   border-radius: var(--border-radius);
   max-width: 100%;
   margin: 0;
@@ -127,13 +127,13 @@ main {
 }
 
 .section-title {
-  font-size: 1.25em;
+  font-size: 1.12em;
   font-weight: bold;
   color: var(--text-strong);
   text-align: center;
-  margin: 0 0 16px 0;
+  margin: 0 0 10px 0;
   border-bottom: 2px solid var(--border-color);
-  padding-bottom: 10px;
+  padding-bottom: 6px;
 }
 
 .choices-title {
@@ -656,12 +656,12 @@ main {
 .status-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .status-item {
   background-color: var(--bg-light);
-  padding: 12px;
+  padding: 10px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -729,7 +729,7 @@ main {
 .details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .other-residents-item {
@@ -925,14 +925,22 @@ main {
   }
 
   main {
-    padding: 12px;
-    margin: 5px auto;
+    padding: 10px;
+    margin: 4px auto;
     font-size: var(--font-size-main, 14px);
   }
 
   .tab-button {
     padding: 6px 10px;
     font-size: 0.85em;
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --section-gap: 10px;
+    --inner-padding: 11px;
+    --border-radius: 10px;
   }
 }
 

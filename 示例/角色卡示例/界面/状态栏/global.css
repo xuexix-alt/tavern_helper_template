@@ -11,7 +11,20 @@
   --c-ash-grey: #b3bfb8; /* 背景：网页底色、装饰块 */
   --c-mint-cream: #f0f7f4; /* 卡片底色 */
   --c-celadon: #a2e3c4; /* 高亮：进度条、重点装饰 */
+  --c-border-soft: rgba(60, 73, 63, 0.2);
 
   /* 字体 */
-  --font-archive: 'Courier New', 'Microsoft YaHei', monospace;
+  --font-archive: 'Consolas', 'Courier New', 'Microsoft YaHei', monospace;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+}
+
+body {
+  color: var(--c-granite);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }

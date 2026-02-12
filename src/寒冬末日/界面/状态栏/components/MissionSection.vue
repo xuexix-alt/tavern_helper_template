@@ -8,14 +8,14 @@
       <!-- 当前阶段 -->
       <div class="mission-phase">
         <div class="phase-label">📍 当前阶段</div>
-        <div class="phase-name">{{ store.data.主线任务.当前阶段 }}</div>
+        <div class="phase-name"><TextHighlight :text="store.data.主线任务.当前阶段" :query="query" /></div>
       </div>
 
       <!-- 阶段目标进度条 -->
       <div class="goals-progress-bar">
         <div class="progress-header">
           <span>🎯 阶段目标进度</span>
-          <span class="progress-text">{{ completedGoals }}/{{ stageTargets.length }}</span>
+          <span class="progress-text">{{ completedGoalsDisplay }}/{{ goalsTotalDisplay }}</span>
         </div>
         <div class="progress-track">
           <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
@@ -27,18 +27,18 @@
         <button class="collapse-toggle-btn" @click="isGoalsExpanded = !isGoalsExpanded">
           <span class="toggle-icon">{{ isGoalsExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">📋 目标清单</span>
-          <span class="goals-count">({{ completedGoals }}/{{ stageTargets.length }})</span>
+          <span class="goals-count">({{ completedGoalsDisplay }}/{{ goalsTotalDisplay }})</span>
         </button>
         <div v-show="isGoalsExpanded" class="goals-list">
-          <template v-if="stageTargets.length > 0">
+          <template v-if="visibleStageTargets.length > 0">
             <div
-              v-for="(goal, idx) in stageTargets"
-              :key="goal.key || idx"
+              v-for="goal in visibleStageTargets"
+              :key="goal.key"
               class="goal-item"
-              :class="{ completed: isGoalCompleted(goal.key, idx) }"
+              :class="{ completed: isGoalCompleted(goal.key, Number(goal.key) || 0) }"
             >
               <div class="goal-checkbox">
-                <svg v-if="isGoalCompleted(goal.key, idx)" viewBox="0 0 24 24" class="check-icon">
+                <svg v-if="isGoalCompleted(goal.key, Number(goal.key) || 0)" viewBox="0 0 24 24" class="check-icon">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
                 <svg v-else viewBox="0 0 24 24" class="check-icon empty">
@@ -46,18 +46,18 @@
                 </svg>
               </div>
               <div class="goal-content">
-                <div class="goal-text" :class="{ completed: isGoalCompleted(goal.key, idx) }">
-                  {{ getGoalText(goal) }}
+                <div class="goal-text" :class="{ completed: isGoalCompleted(goal.key, Number(goal.key) || 0) }">
+                  <TextHighlight :text="getGoalText(goal)" :query="query" />
                 </div>
                 <div class="goal-meta" v-if="hasGoalProgress(goal)">
                   <span class="meta-chip">进度：{{ goal.当前值 ?? 0 }}/{{ goal.目标值 ?? 0 }}</span>
                 </div>
-                <span v-if="isGoalCompleted(goal.key, idx)" class="goal-status-tag">已完成</span>
+                <span v-if="isGoalCompleted(goal.key, Number(goal.key) || 0)" class="goal-status-tag">已完成</span>
               </div>
             </div>
           </template>
           <template v-else>
-            <div class="goal-item empty">(暂无目标)</div>
+            <div class="goal-item empty">{{ query ? '(当前关键词下无目标)' : '(暂无目标)' }}</div>
           </template>
         </div>
       </div>
@@ -67,13 +67,20 @@
         <button class="collapse-toggle-btn" @click="isIntelExpanded = !isIntelExpanded">
           <span class="toggle-icon">{{ isIntelExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">🔍 情报碎片</span>
-          <span class="intel-count">({{ intelCompleted }}/{{ intelTotal }})</span>
+          <span class="intel-count">({{ intelCompletedDisplay }}/{{ intelTotalDisplay }})</span>
         </button>
-        <div v-if="intelTotal === 0" class="intel-empty-hint">暂无情报碎片，继续探索/搜刮可解锁新的线索。</div>
+        <div v-if="intelTotalDisplay === 0" class="intel-empty-hint">
+          {{ query ? '当前关键词下没有匹配的情报碎片。' : '暂无情报碎片，继续探索/搜刮可解锁新的线索。' }}
+        </div>
         <div v-show="isIntelExpanded" class="intel-list">
-          <template v-if="intelTotal > 0">
-            <div v-for="(intel, key) in store.data.主线任务.情报碎片" :key="key" class="intel-item" :class="intel.状态">
-              <div class="intel-status-ring" :class="intel.状态">
+          <template v-if="intelTotalDisplay > 0">
+            <div
+              v-for="item in visibleIntelEntries"
+              :key="item.key"
+              class="intel-item"
+              :class="item.intel.状态"
+            >
+              <div class="intel-status-ring" :class="item.intel.状态">
                 <svg viewBox="0 0 36 36" class="progress-ring">
                   <circle cx="18" cy="18" r="16" class="ring-bg" />
                   <circle
@@ -81,30 +88,30 @@
                     cy="18"
                     r="16"
                     class="ring-progress"
-                    :stroke-dasharray="getRingProgress(intel.状态)"
-                    :class="intel.状态"
+                    :stroke-dasharray="getRingProgress(item.intel.状态)"
+                    :class="item.intel.状态"
                   />
                 </svg>
-                <span class="ring-icon">{{ getStatusIcon(intel.状态) }}</span>
+                <span class="ring-icon">{{ getStatusIcon(item.intel.状态) }}</span>
               </div>
               <div class="intel-content">
                 <div class="intel-header">
-                  <span class="intel-id">{{ intel.编号 }}</span>
-                  <span class="intel-status-badge" :class="intel.状态">{{ intel.状态 }}</span>
+                  <span class="intel-id"><TextHighlight :text="item.intel.编号" :query="query" /></span>
+                  <span class="intel-status-badge" :class="item.intel.状态">{{ item.intel.状态 }}</span>
                 </div>
-                <div class="intel-desc">{{ intel.描述 }}</div>
+                <div class="intel-desc"><TextHighlight :text="item.intel.描述" :query="query" /></div>
                 <div class="intel-meta">
-                  <span class="intel-value">💰 {{ intel.价值 }}</span>
-                  <span class="intel-risk">⚠️ {{ intel.风险 }}</span>
-                  <span v-if="getIntelCleanupHint(key, intel)" class="intel-deadline">{{
-                    getIntelCleanupHint(key, intel)
+                  <span class="intel-value">💰 <TextHighlight :text="item.intel.价值" :query="query" /></span>
+                  <span class="intel-risk">⚠️ <TextHighlight :text="item.intel.风险" :query="query" /></span>
+                  <span v-if="getIntelCleanupHint(item.key, item.intel)" class="intel-deadline">{{
+                    getIntelCleanupHint(item.key, item.intel)
                   }}</span>
                 </div>
               </div>
             </div>
           </template>
           <template v-else>
-            <div class="intel-item empty">(暂无情报碎片)</div>
+            <div class="intel-item empty">{{ query ? '(当前关键词下无情报碎片)' : '(暂无情报碎片)' }}</div>
           </template>
         </div>
       </div>
@@ -114,12 +121,23 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import TextHighlight from './TextHighlight.vue';
 import { useDataStore } from '../../store';
 
+const props = withDefaults(
+  defineProps<{
+    query?: string;
+  }>(),
+  {
+    query: '',
+  },
+);
 const store = useDataStore();
 const isGoalsExpanded = ref(false);
 const isIntelExpanded = ref(false);
 const currentMessageId = Number(getCurrentMessageId());
+const query = computed(() => props.query ?? '');
+const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 
 const hasMissionNew = computed(() => {
   if (!Number.isFinite(currentMessageId) || currentMessageId <= 0) return false;
@@ -169,12 +187,28 @@ const stageTargets = computed<StageTarget[]>(() => {
   }));
 });
 
-const completedGoals = computed(() => stageTargets.value.filter((g, idx) => isGoalCompleted(g.key, idx)).length);
+function matchByQuery(...values: Array<string | number | null | undefined>): boolean {
+  if (!normalizedQuery.value) return true;
+  const merged = values
+    .map(v => String(v ?? ''))
+    .join('\n')
+    .toLowerCase();
+  return merged.includes(normalizedQuery.value);
+}
+
+const visibleStageTargets = computed(() =>
+  stageTargets.value.filter(goal => matchByQuery(goal.key, goal.描述, goal.当前值, goal.目标值)),
+);
+
+const goalsTotalDisplay = computed(() => visibleStageTargets.value.length);
+const completedGoalsDisplay = computed(() =>
+  visibleStageTargets.value.filter(goal => isGoalCompleted(goal.key, Number(goal.key) || 0)).length,
+);
 
 const progressPercent = computed(() => {
-  const total = stageTargets.value.length;
+  const total = goalsTotalDisplay.value;
   if (total === 0) return 0;
-  return Math.round((completedGoals.value / total) * 100);
+  return Math.round((completedGoalsDisplay.value / total) * 100);
 });
 
 function isGoalCompleted(goalKey: string, idx: number): boolean {
@@ -195,10 +229,22 @@ function hasGoalProgress(goal: any): boolean {
   return goal && typeof goal === 'object' && goal.当前值 !== undefined && goal.目标值 !== undefined;
 }
 
-// 情报碎片统计
-const intelTotal = computed(() => Object.keys(store.data.主线任务.情报碎片).length);
-const intelCompleted = computed(
-  () => Object.values(store.data.主线任务.情报碎片).filter(i => i.状态 === '已完成').length,
+const intelEntries = computed(() =>
+  Object.entries(store.data.主线任务.情报碎片 ?? {}).map(([key, intel]) => ({
+    key,
+    intel: intel as any,
+  })),
+);
+
+const visibleIntelEntries = computed(() =>
+  intelEntries.value.filter(({ key, intel }) =>
+    matchByQuery(key, intel?.编号, intel?.描述, intel?.状态, intel?.价值, intel?.风险),
+  ),
+);
+
+const intelTotalDisplay = computed(() => visibleIntelEntries.value.length);
+const intelCompletedDisplay = computed(() =>
+  visibleIntelEntries.value.filter(({ intel }) => intel?.状态 === '已完成').length,
 );
 
 function getIntelCleanupHint(key: string, intel: any): string | null {

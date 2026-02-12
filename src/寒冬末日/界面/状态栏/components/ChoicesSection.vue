@@ -4,16 +4,19 @@
     <h2 class="section-title choices-title">⚜️ 快速剧情 ⚜️</h2>
 
     <div>
-      <template v-if="props.options.length > 0">
+      <template v-if="filtered_options.length > 0">
         <button
-          v-for="(opt, idx) in props.options"
+          v-for="(opt, idx) in filtered_options"
           :key="idx"
           class="choice-item"
           type="button"
           @click="openChoiceDialog(opt)"
         >
-          {{ opt }}
+          <TextHighlight :text="opt" :query="props.query" />
         </button>
+      </template>
+      <template v-else-if="props.options.length > 0">
+        <button class="choice-item" type="button" disabled>没有匹配当前关键词的选项。</button>
       </template>
       <template v-else>
         <button class="choice-item" type="button" disabled>当前无选项，请自由行动...</button>
@@ -35,7 +38,9 @@
 
           <div class="choice-modal-body">
             <div class="choice-original-label">选项原文</div>
-            <div class="choice-original">{{ choiceDialogOriginal }}</div>
+            <div class="choice-original">
+              <TextHighlight :text="choiceDialogOriginal" :query="props.query" />
+            </div>
 
             <div class="choice-edit-label">编辑后发送</div>
             <textarea v-model="choiceDialogDraft" class="choice-textarea" rows="6" placeholder="在此补充或修改……" />
@@ -106,10 +111,18 @@
 import { nextTick } from 'vue';
 import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
+import TextHighlight from './TextHighlight.vue';
 
 const props = defineProps<{
   options: string[];
+  query?: string;
 }>();
+
+const normalized_query = computed(() => String(props.query ?? '').trim().toLowerCase());
+const filtered_options = computed(() => {
+  if (!normalized_query.value) return props.options;
+  return props.options.filter(opt => String(opt ?? '').toLowerCase().includes(normalized_query.value));
+});
 
 const palette_open = ref(false);
 const theme = useLocalStorage<string>('eden_theme', 'apocalypse_tech');

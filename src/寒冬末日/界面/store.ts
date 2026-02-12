@@ -30,30 +30,82 @@ export const useDataStore = defineStore(
   errorCatched(() => {
     const message_id = getCurrentMessageId();
     const isDebug = readUiStoreDebugFlag();
+    let hasWarnedFallback = false;
 
     // 使用完整初始值，而不是空对象
     const data = ref<z.output<typeof Schema>>(initialData);
 
-    const read_stat_data = () => {
-      const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
-      return Schema.parse(_.get(mvu_data, 'stat_data', {}));
+    const read_stat_data_once = (
+      target_message_id: number | 'latest',
+      source: 'current' | 'latest',
+    ): { ok: true; source: 'current' | 'latest'; data: z.output<typeof Schema> } | { ok: false; reason: string } => {
+      try {
+        const mvu_data = Mvu.getMvuData({ type: 'message', message_id: target_message_id });
+        const raw_stat_data = _.get(mvu_data, 'stat_data', null);
+        const isObjectLike =
+          !!raw_stat_data &&
+          typeof raw_stat_data === 'object' &&
+          !Array.isArray(raw_stat_data) &&
+          Object.keys(raw_stat_data).length > 0;
+
+        if (!isObjectLike) {
+          return { ok: false, reason: `${source}: missing_or_empty_stat_data` };
+        }
+
+        const parsed = Schema.safeParse(raw_stat_data);
+        if (!parsed.success) {
+          const firstIssue = parsed.error.issues[0];
+          const issuePath = firstIssue?.path?.length ? firstIssue.path.join('.') : 'root';
+          return { ok: false, reason: `${source}: ${issuePath} ${firstIssue?.message ?? 'schema_parse_failed'}` };
+        }
+
+        return { ok: true, source, data: parsed.data };
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        return { ok: false, reason: `${source}: ${reason}` };
+      }
+    };
+
+    const resolve_stat_data = (): { data: z.output<typeof Schema>; source: 'current' | 'latest' | 'default' } => {
+      const current = read_stat_data_once(message_id, 'current');
+      if (current.ok) {
+        return { data: current.data, source: 'current' };
+      }
+
+      const latest = read_stat_data_once('latest', 'latest');
+      if (latest.ok) {
+        if (!hasWarnedFallback) {
+          hasWarnedFallback = true;
+          // eslint-disable-next-line no-console
+          console.warn?.('[eden/ui_store] current message has no valid stat_data, fallback to latest', {
+            message_id,
+            reason: current.reason,
+          });
+        }
+        return { data: latest.data, source: 'latest' };
+      }
+
+      if (!hasWarnedFallback) {
+        hasWarnedFallback = true;
+        // eslint-disable-next-line no-console
+        console.warn?.('[eden/ui_store] failed to load stat_data from current/latest, fallback to defaults', {
+          message_id,
+          reason_current: current.reason,
+          reason_latest: latest.reason,
+        });
+      }
+
+      return { data: initialData, source: 'default' };
     };
 
     const refresh_from_mvu = () => {
-      try {
-        const next = read_stat_data();
-        if (!_.isEqual(next, data.value)) {
-          data.value = next;
-          if (isDebug) {
-            // eslint-disable-next-line no-console
-            console.debug?.('[eden/ui_store] refreshed from MVU', { message_id });
-          }
-        }
-      } catch (err) {
+      const resolved = resolve_stat_data();
+      const next = resolved.data;
+      if (!_.isEqual(next, data.value)) {
+        data.value = next;
         if (isDebug) {
-          const reason = err instanceof Error ? err.message : String(err);
           // eslint-disable-next-line no-console
-          console.warn?.('[eden/ui_store] failed to refresh from MVU', { message_id, reason });
+          console.debug?.('[eden/ui_store] refreshed from MVU', { message_id, source: resolved.source });
         }
       }
     };

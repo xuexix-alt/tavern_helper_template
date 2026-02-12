@@ -1,8 +1,51 @@
 <template>
   <section class="section">
-    <h2 class="section-title">📖 正文剧情 📖</h2>
-    <div class="content-text">
-      <template v-for="seg in segments" :key="seg.key">
+    <h2 class="section-title story-header-title">📖 正文剧情 📖</h2>
+
+    <div class="story-toolbar">
+      <div class="story-mini-tabs" role="tablist" aria-label="正文视图切换">
+        <button
+          v-for="tab in storyTabs"
+          :key="tab.key"
+          type="button"
+          class="story-mini-tab"
+          :class="{ active: activeStoryTab === tab.key }"
+          @click="activeStoryTab = tab.key"
+        >
+          <span>{{ tab.label }}</span>
+          <span class="story-mini-tab-count">{{ tab.count }}</span>
+        </button>
+      </div>
+      <div class="story-zoom-controls">
+        <button type="button" class="zoom-btn" @click="zoomOut">−</button>
+        <span class="zoom-value">{{ zoomPercent }}%</span>
+        <button type="button" class="zoom-btn" @click="zoomIn">+</button>
+      </div>
+    </div>
+
+    <div v-if="activeStoryTab === 'story'" class="story-pane content-text" :style="storyContentStyle">
+      <button type="button" class="story-filter-toggle" @click="isFilterExpanded = !isFilterExpanded">
+        {{ isFilterExpanded ? '收起标签筛选' : '展开标签筛选' }}
+      </button>
+      <div v-if="isFilterExpanded" class="story-filter-panel">
+        <button
+          v-for="item in segmentFilterItems"
+          :key="item.key"
+          type="button"
+          class="story-filter-chip"
+          :class="{ active: enabledSegmentKinds.includes(item.key) }"
+          @click="toggleSegmentKind(item.key)"
+        >
+          <span>{{ item.label }}</span>
+          <span class="chip-count">{{ item.count }}</span>
+        </button>
+        <div class="story-filter-actions">
+          <button type="button" class="story-filter-action-btn" @click="enableAllSegmentKinds">全选</button>
+          <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优先</button>
+        </div>
+      </div>
+
+      <template v-for="seg in filteredSegments" :key="seg.key">
         <img
           v-if="seg.isImage"
           :src="seg.imageUrl"
@@ -25,16 +68,31 @@
           </tbody>
         </table>
         <div v-else-if="seg.isSystem" class="system-message">
-          <pre>{{ seg.text }}</pre>
+          <pre><TextHighlight :text="seg.text" :query="query" /></pre>
         </div>
-        <pre v-else-if="seg.className === 'image-prompt'" class="image-prompt">{{ seg.text }}</pre>
-        <span v-else :class="seg.className">{{ seg.text }}</span>
+        <pre v-else-if="seg.className === 'image-prompt'" class="image-prompt">
+          <TextHighlight :text="seg.text" :query="query" />
+        </pre>
+        <span v-else :class="seg.className"><TextHighlight :text="seg.text" :query="query" /></span>
       </template>
+    </div>
+
+    <div v-else class="story-pane story-modules">
+      <div v-if="metaBlocks.length === 0" class="story-modules-empty">当前楼层没有额外模块（如 profile / meow_FM）。</div>
+      <details v-for="block in metaBlocks" :key="block.key" class="meta-block" :open="isMetaBlockOpen(block.tag)">
+        <summary class="meta-block-title">
+          <span>{{ block.title }}</span>
+          <span class="meta-block-tag">{{ block.tag }}</span>
+        </summary>
+        <pre class="meta-block-body"><TextHighlight :text="block.content" :query="query" /></pre>
+      </details>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import TextHighlight from './TextHighlight.vue';
+
 type Segment = {
   key: string;
   text?: string;
@@ -47,10 +105,53 @@ type Segment = {
   tableRows?: string[][];
   isSystem?: boolean;
 };
+type SegmentKind = 'narrative' | 'dialog' | 'system' | 'table' | 'image' | 'image_prompt';
+type StoryTab = 'story' | 'modules';
+type MetaBlock = {
+  key: string;
+  tag: string;
+  title: string;
+  content: string;
+};
 
-const props = defineProps<{
-  raw: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    raw: string;
+    query?: string;
+  }>(),
+  {
+    query: '',
+  },
+);
+const query = computed(() => props.query ?? '');
+const storyTabs = computed<ReadonlyArray<{ key: StoryTab; label: string; count: number }>>(() => [
+  { key: 'story', label: '正文', count: filteredSegments.value.length },
+  { key: 'modules', label: '模块', count: metaBlocks.value.length },
+]);
+
+const activeStoryTab = useLocalStorage<StoryTab>('eden:story_active_tab', 'story');
+const isFilterExpanded = useLocalStorage<boolean>('eden:story_filter_expanded', false);
+const storyZoom = useLocalStorage<number>('eden:story_zoom', 1);
+const enabledSegmentKinds = useLocalStorage<SegmentKind[]>('eden:story_segment_kinds', [
+  'narrative',
+  'dialog',
+  'system',
+  'table',
+  'image',
+  'image_prompt',
+]);
+const zoomPercent = computed(() => Math.round(storyZoom.value * 100));
+const storyContentStyle = computed<Record<string, string>>(() => ({
+  '--story-font-size': `${storyZoom.value.toFixed(2)}em`,
+}));
+
+function zoomIn() {
+  storyZoom.value = _.clamp(Number((storyZoom.value + 0.08).toFixed(2)), 0.84, 1.32);
+}
+
+function zoomOut() {
+  storyZoom.value = _.clamp(Number((storyZoom.value - 0.08).toFixed(2)), 0.84, 1.32);
+}
 
 type ResolvedDisplayedImage = {
   src: string;
@@ -166,6 +267,108 @@ const segments = computed<Segment[]>(() => {
 
   return out.length ? out : [{ key: 'empty', text: '(暂无正文)' }];
 });
+
+const segmentFilterItems = computed<Array<{ key: SegmentKind; label: string; count: number }>>(() => {
+  const items: Array<{ key: SegmentKind; label: string }> = [
+    { key: 'narrative', label: '叙述' },
+    { key: 'dialog', label: '对话' },
+    { key: 'system', label: '系统' },
+    { key: 'table', label: '表格' },
+    { key: 'image', label: '图片' },
+    { key: 'image_prompt', label: '提示词' },
+  ];
+  const counts = new Map<SegmentKind, number>(items.map(it => [it.key, 0] as const));
+  for (const seg of segments.value) {
+    const kind = detectSegmentKind(seg);
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+  return items.map(it => ({ ...it, count: counts.get(it.key) ?? 0 }));
+});
+
+const filteredSegments = computed<Segment[]>(() => {
+  const enabled = new Set(enabledSegmentKinds.value);
+  const list = segments.value.filter(seg => enabled.has(detectSegmentKind(seg)));
+  return list.length > 0 ? list : [{ key: 'empty_filtered', text: '(当前筛选条件下无正文内容)' }];
+});
+
+function detectSegmentKind(seg: Segment): SegmentKind {
+  if (seg.isImage) return 'image';
+  if (seg.isTable) return 'table';
+  if (seg.isSystem) return 'system';
+  if (seg.className === 'image-prompt') return 'image_prompt';
+  if (seg.className === 'dialog-text') return 'dialog';
+  return 'narrative';
+}
+
+function toggleSegmentKind(kind: SegmentKind) {
+  const enabled = new Set(enabledSegmentKinds.value);
+  if (enabled.has(kind)) {
+    if (enabled.size <= 1) return;
+    enabled.delete(kind);
+  } else {
+    enabled.add(kind);
+  }
+  enabledSegmentKinds.value = Array.from(enabled);
+}
+
+function enableAllSegmentKinds() {
+  enabledSegmentKinds.value = ['narrative', 'dialog', 'system', 'table', 'image', 'image_prompt'];
+}
+
+function enableCoreSegmentKinds() {
+  enabledSegmentKinds.value = ['narrative', 'dialog', 'system'];
+}
+
+const META_BLOCK_TAGS = [
+  'meow_fm',
+  'profile',
+  'variablethink',
+  'variableedit',
+  'updatevariable',
+  'jsonpatch',
+  'analysis',
+  'era_data',
+  'variableinsert',
+  'statusplaceholderimpl',
+] as const;
+
+const META_TITLE_MAP: Record<string, string> = {
+  meow_fm: 'FM 摘要',
+  profile: '角色档案',
+  variablethink: '变量思考',
+  variableedit: '变量编辑',
+  updatevariable: '变量更新',
+  jsonpatch: 'JSON Patch',
+  analysis: '分析过程',
+  era_data: 'ERA 数据',
+  variableinsert: '变量插入',
+  statusplaceholderimpl: '占位模块',
+};
+
+const metaBlocks = computed<MetaBlock[]>(() => {
+  const raw = props.raw ?? '';
+  const blocks: MetaBlock[] = [];
+  let id = 0;
+  for (const tag of META_BLOCK_TAGS) {
+    const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+    for (const m of raw.matchAll(re)) {
+      const content = String(m[1] ?? '').trim();
+      if (!content) continue;
+      blocks.push({
+        key: `${tag}_${id++}`,
+        tag,
+        title: META_TITLE_MAP[tag] ?? tag,
+        content,
+      });
+    }
+  }
+  return blocks;
+});
+
+const defaultOpenMetaTags = new Set<string>(['meow_fm', 'profile']);
+function isMetaBlockOpen(tag: string): boolean {
+  return defaultOpenMetaTags.has(tag);
+}
 
 watchEffect(onCleanup => {
   // 在消息 iframe 中可用；非消息上下文则无法解析显示层 DOM
@@ -873,11 +1076,11 @@ function formatTableCell(cell: string): string {
   background-color: rgba(0, 180, 216, 0.1);
   border: 1px solid rgba(0, 180, 216, 0.4);
   border-radius: 8px;
-  padding: 12px 16px;
-  margin: 12px 0;
+  padding: 9px 12px;
+  margin: 8px 0;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.9em;
-  line-height: 1.6;
+  font-size: 0.85em;
+  line-height: 1.5;
   color: var(--accent-cyan, #00b4d8);
   overflow-x: auto;
 }
@@ -906,10 +1109,10 @@ function formatTableCell(cell: string): string {
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px dashed rgba(255, 255, 255, 0.2);
   border-radius: 4px;
-  padding: 8px 12px;
-  margin: 8px 0;
+  padding: 6px 9px;
+  margin: 6px 0;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.85em;
+  font-size: 0.8em;
   color: var(--accent-gold);
   overflow-x: auto;
 }
@@ -917,5 +1120,245 @@ function formatTableCell(cell: string): string {
 .inline-bracket {
   color: var(--accent-blue, #bd93f9);
   font-weight: 600;
+}
+
+.story-header-title {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  font-size: 1.02em;
+}
+
+.story-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 4px 5px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(26, 27, 38, 0.96), rgba(26, 27, 38, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(2px);
+}
+
+.story-mini-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.story-mini-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.75em;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.story-mini-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.26);
+  font-size: 0.78em;
+  opacity: 0.9;
+}
+
+.story-mini-tab.active {
+  border-color: rgba(139, 233, 253, 0.52);
+  background: rgba(139, 233, 253, 0.22);
+  color: var(--text-strong);
+}
+
+.story-mini-tab.active .story-mini-tab-count {
+  border-color: rgba(139, 233, 253, 0.65);
+  background: rgba(139, 233, 253, 0.24);
+}
+
+.story-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.zoom-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  font-size: 0.95em;
+  cursor: pointer;
+}
+
+.zoom-value {
+  min-width: 34px;
+  text-align: center;
+  font-size: 0.72em;
+  opacity: 0.85;
+}
+
+.story-pane {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 7px 8px;
+}
+
+.content-text.story-pane {
+  font-size: var(--story-font-size, 1em);
+}
+
+.story-filter-toggle {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  border-radius: 8px;
+  padding: 5px 7px;
+  font-size: 0.76em;
+  text-align: left;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.story-filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.story-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.72em;
+  cursor: pointer;
+}
+
+.story-filter-chip.active {
+  border-color: rgba(80, 250, 123, 0.45);
+  background: rgba(80, 250, 123, 0.18);
+}
+
+.chip-count {
+  opacity: 0.78;
+}
+
+.story-filter-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.story-filter-action-btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  border-radius: 7px;
+  padding: 3px 7px;
+  font-size: 0.7em;
+  cursor: pointer;
+}
+
+.story-filter-action-btn:hover {
+  border-color: rgba(139, 233, 253, 0.45);
+  background: rgba(139, 233, 253, 0.14);
+}
+
+.story-modules {
+  display: grid;
+  gap: 8px;
+}
+
+.meta-block {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.meta-block-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  cursor: pointer;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--accent-gold);
+  list-style: none;
+}
+
+.meta-block-title::-webkit-details-marker {
+  display: none;
+}
+
+.meta-block-tag {
+  font-size: 0.74em;
+  opacity: 0.72;
+  color: var(--accent-blue);
+}
+
+.meta-block-body {
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 10px;
+  font-size: 0.78em;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.story-modules-empty {
+  font-size: 0.84em;
+  opacity: 0.72;
+  padding: 8px 9px;
+}
+
+@media (max-width: 480px) {
+  .story-pane {
+    padding: 6px 7px;
+  }
+
+  .story-mini-tab {
+    padding: 3px 7px;
+    font-size: 0.72em;
+  }
+
+  .story-filter-chip {
+    font-size: 0.7em;
+    padding: 3px 7px;
+  }
+
+  .story-filter-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>

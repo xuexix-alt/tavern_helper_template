@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { normalizeRoomTag, parseRoomTag } from './util/room';
+import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
 
 const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
@@ -26,6 +26,27 @@ const 更新原因Schema = z
   .prefault('');
 const 时间段Schema = z.enum(['凌晨', '清晨', '上午', '中午', '下午', '傍晚', '夜间', '深夜']);
 const 时间格式Schema = z.string().regex(/^(凌晨|清晨|上午|中午|下午|傍晚|夜间|深夜) - \d{2}:\d{2}$/);
+const 时间段别名映射: Record<string, z.infer<typeof 时间段Schema>> = {
+  早晨: '清晨',
+  早上: '上午',
+  午后: '下午',
+  晚上: '夜间',
+};
+
+function normalizeTimeText(value: unknown): string {
+  const raw = String(value ?? '').trim();
+  const normalized = raw.replace(/\s+/g, ' ');
+  const match = normalized.match(/^([^\s-]+)\s*-\s*(\d{1,2}):(\d{1,2})$/);
+  if (!match) return normalized;
+
+  const rawPeriod = String(match[1]).trim();
+  const period = 时间段别名映射[rawPeriod] ?? rawPeriod;
+  const validPeriod = 时间段Schema.safeParse(period).success ? period : '上午';
+
+  const hh = _.padStart(String(_.clamp(Number(match[2]), 0, 23)), 2, '0');
+  const mm = _.padStart(String(_.clamp(Number(match[3]), 0, 59)), 2, '0');
+  return `${validPeriod} - ${hh}:${mm}`;
+}
 const 庇护楼层Schema = z.enum(['19', '20']);
 const 可扩展区域Schema = z
   .record(z.enum(['医疗翼', '制造工坊', '载具格纳库']), z.string().prefault('未解锁'))
@@ -53,6 +74,34 @@ const 所在房间格式Schema = z.union([
 
 const createExtensibleMapSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.looseObject({}).catchall(itemSchema).prefault({});
+
+const 角色控制Schema = z
+  .object({
+    version: z.coerce
+      .number()
+      .int()
+      .transform(v => Math.max(1, v))
+      .prefault(1),
+    initialized: z.boolean().prefault(false),
+    selected_roles: z.array(z.string()).prefault([]),
+    revealed_roles: z.array(z.string()).prefault([]),
+    initialized_at_message_id: z.coerce
+      .number()
+      .int()
+      .transform(v => Math.max(0, v))
+      .prefault(0),
+    pending_unlock: z.array(z.string()).prefault([]),
+    debug_dossier_inject: z.boolean().prefault(false),
+  })
+  .prefault({
+    version: 1,
+    initialized: false,
+    selected_roles: [],
+    revealed_roles: [],
+    initialized_at_message_id: 0,
+    pending_unlock: [],
+    debug_dossier_inject: false,
+  });
 
 const create角色Schema = (args: {
   relationStageSchema: z.ZodTypeAny;
@@ -136,19 +185,7 @@ export const Schema = z
       .object({
         地址: z.string().prefault(''),
         日期: z.string().prefault(''),
-        时间: z
-          .union([时间格式Schema, z.string()])
-          .prefault('上午 - 08:00')
-          .transform(value => {
-            const raw = String(value ?? '').trim();
-            const normalized = raw.replace(/\s+/g, ' ');
-            const match = normalized.match(/^([^\s-]+)\s*-\s*(\d{1,2}):(\d{1,2})$/);
-            if (!match) return normalized;
-            const period = String(match[1]).trim();
-            const hh = _.padStart(String(_.clamp(Number(match[2]), 0, 23)), 2, '0');
-            const mm = _.padStart(String(_.clamp(Number(match[3]), 0, 59)), 2, '0');
-            return `${period} - ${hh}:${mm}`;
-          }),
+        时间: z.preprocess(normalizeTimeText, 时间格式Schema).prefault('上午 - 08:00').catch('上午 - 08:00'),
         末日天数: z.coerce.number().prefault(0),
       })
       .prefault({
@@ -341,6 +378,7 @@ export const Schema = z
                   completed_at: 0,
                 }),
             ),
+            角色控制: 角色控制Schema,
           })
           .prefault({
             楼层: {
@@ -348,6 +386,15 @@ export const Schema = z
             },
             情报碎片: {},
             阶段目标: {},
+            角色控制: {
+              version: 1,
+              initialized: false,
+              selected_roles: [],
+              revealed_roles: [],
+              initialized_at_message_id: 0,
+              pending_unlock: [],
+              debug_dossier_inject: false,
+            },
           }),
       })
       .prefault({
