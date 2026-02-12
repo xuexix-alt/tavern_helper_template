@@ -349,20 +349,20 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 0;
   right: 0;
-  z-index: 60;
+  z-index: 2605;
   background: rgba(0, 0, 0, 0.55);
-  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-top: calc(38px + env(safe-area-inset-top));
   padding-right: calc(12px + env(safe-area-inset-right));
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
   padding-left: calc(12px + env(safe-area-inset-left));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .choice-modal {
-  width: min(560px, calc(100% - 8px));
-  max-height: calc(100% - 8px);
+  width: min(540px, calc(100% - 8px));
+  max-height: calc(100% - 20px);
   background: rgba(25, 28, 35, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 12px 8px;
+  padding: 9px 10px 6px;
 }
 
 .choice-modal-title {
@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
 }
 
 .choice-modal-body {
-  padding: 8px 12px 0;
+  padding: 6px 10px 0;
   overflow: auto;
 }
 
@@ -432,7 +432,7 @@ onBeforeUnmount(() => {
 }
 
 .choice-modal-footer {
-  padding: 10px 12px 12px;
+  padding: 8px 10px 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   gap: 8px;

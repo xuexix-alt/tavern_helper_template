@@ -1,7 +1,15 @@
 <template>
   <div class="eden-searchbar" @click.stop>
     <div class="eden-searchbar-inner">
-      <span class="eden-searchbar-label" aria-hidden="true">检索</span>
+      <button
+        v-if="isSendMode"
+        class="eden-searchbar-option"
+        type="button"
+        @click.stop="emitOpenChoices"
+      >
+        {{ optionText }}
+      </button>
+      <span v-else class="eden-searchbar-label" aria-hidden="true">{{ modeLabel }}</span>
       <input
         id="eden-search-input"
         v-model="model"
@@ -9,10 +17,20 @@
         class="eden-searchbar-input text_pole"
         :placeholder="placeholderText"
         @keydown.esc="clearQuery"
+        @keydown.enter.exact.prevent="onEnterSend"
         @click.stop
       />
-      <button v-if="model" class="eden-searchbar-clear" type="button" @click.stop="clearQuery">
+      <button v-if="showClearButton" class="eden-searchbar-clear" type="button" @click.stop="clearQuery">
         {{ clearText }}
+      </button>
+      <button
+        v-if="isSendMode"
+        class="eden-searchbar-send"
+        type="button"
+        :disabled="isSendDisabled"
+        @click.stop="emitSend"
+      >
+        {{ sendText }}
       </button>
     </div>
   </div>
@@ -22,16 +40,57 @@
 import { computed } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 
+type SearchBarMode = 'search' | 'send';
+
+const props = withDefaults(
+  defineProps<{
+    mode?: SearchBarMode;
+  }>(),
+  {
+    mode: 'search',
+  },
+);
+const emit = defineEmits<{
+  send: [value: string];
+  openChoices: [];
+}>();
 const model = defineModel<string>({ required: true });
 const compactMode = useMediaQuery('(max-width: 420px)');
-const placeholderText = computed(() => (compactMode.value ? '搜索当前页（/）' : '输入关键词高亮当前页（/ 快捷聚焦）'));
+const isSendMode = computed(() => props.mode === 'send');
+const modeLabel = computed(() => (isSendMode.value ? '发送' : '检索'));
+const optionText = computed(() => (compactMode.value ? '选' : '选项'));
+const placeholderText = computed(() => {
+  if (isSendMode.value) {
+    return compactMode.value ? '输入并发送（Enter）' : '输入内容发送给AI（Enter 快捷发送）';
+  }
+  return compactMode.value ? '搜索当前页（/）' : '输入关键词高亮当前页（/ 快捷聚焦）';
+});
 const clearText = computed(() => (compactMode.value ? '×' : '清除'));
+const sendText = computed(() => (compactMode.value ? '发' : '发送'));
+const isSendDisabled = computed(() => !String(model.value ?? '').trim());
+const showClearButton = computed(() => !isSendMode.value && !!model.value);
 
 function clearQuery() {
   model.value = '';
 }
 
+function emitSend() {
+  const text = String(model.value ?? '').trim();
+  if (!text) return;
+  emit('send', text);
+}
+
+function onEnterSend() {
+  if (!isSendMode.value) return;
+  emitSend();
+}
+
+function emitOpenChoices() {
+  emit('openChoices');
+}
+
 function onSlashFocus(event: KeyboardEvent) {
+  if (isSendMode.value) return;
   if (event.key !== '/') return;
   const active = document.activeElement as HTMLElement | null;
   if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
@@ -114,6 +173,45 @@ onBeforeUnmount(() => {
   background: rgba(139, 233, 253, 0.2);
 }
 
+.eden-searchbar-send {
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 1px solid rgba(139, 233, 253, 0.55);
+  background: rgba(139, 233, 253, 0.25);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.76em;
+  line-height: 1;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+.eden-searchbar-option {
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.76em;
+  line-height: 1;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+.eden-searchbar-option:hover {
+  background: rgba(139, 233, 253, 0.2);
+}
+
+.eden-searchbar-send:hover:not(:disabled) {
+  background: rgba(139, 233, 253, 0.38);
+}
+
+.eden-searchbar-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (max-width: 420px) {
   .eden-searchbar-label {
     display: none;
@@ -127,6 +225,16 @@ onBeforeUnmount(() => {
   .eden-searchbar-clear {
     min-width: 30px;
     padding: 5px 6px;
+  }
+
+  .eden-searchbar-send {
+    min-width: 34px;
+    padding: 5px 7px;
+  }
+
+  .eden-searchbar-option {
+    min-width: 34px;
+    padding: 5px 7px;
   }
 }
 </style>

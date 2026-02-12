@@ -7,7 +7,13 @@
     </section>
 
     <footer class="eden-shell-footer">
-      <SearchBar v-model="searchQuery" />
+      <StoryStreamObserver :active="isStoryTab" :arm-tick="streamArmTick" />
+      <SearchBar
+        v-model="footerInputValue"
+        :mode="isStoryTab ? 'send' : 'search'"
+        @send="sendStoryInputToAi"
+        @open-choices="openChoicesModal"
+      />
       <nav class="eden-tabbar" aria-label="状态栏页面切换">
         <button
           v-for="tab in tabs"
@@ -22,6 +28,20 @@
         </button>
       </nav>
     </footer>
+
+    <Teleport to="body">
+      <div v-if="choicesModalOpen" class="eden-choices-modal-mask" @click.self="closeChoicesModal">
+        <section class="eden-choices-modal" role="dialog" aria-modal="true" aria-label="快速剧情选项">
+          <header class="eden-choices-modal-head">
+            <div class="eden-choices-modal-title">⚜️ 快速剧情</div>
+            <button type="button" class="eden-choices-modal-close" @click="closeChoicesModal">关闭</button>
+          </header>
+          <div class="eden-choices-modal-body">
+            <ChoicesSection :options="options" :query="searchQuery" />
+          </div>
+        </section>
+      </div>
+    </Teleport>
   </main>
 </template>
 
@@ -30,12 +50,14 @@ import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { watchDebounced } from '@vueuse/core';
 import CharactersPage from './pages/CharactersPage.vue';
-import ChoicesPage from './pages/ChoicesPage.vue';
+import ChoicesSection from './components/ChoicesSection.vue';
 import MissionPage from './pages/MissionPage.vue';
 import OverviewPage from './pages/OverviewPage.vue';
 import SearchBar from './components/SearchBar.vue';
+import StoryStreamObserver from './components/StoryStreamObserver.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import StoryPage from './pages/StoryPage.vue';
+import { sendToChat } from '../outbound';
 import { useInjectedData } from './useInjectedData';
 
 const MIN_SHELL_HEIGHT = 300;
@@ -48,22 +70,36 @@ const tabs = [
   { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },
   { key: 'mission', label: '任务', icon: '🎯', component: MissionPage },
   { key: 'characters', label: '角色', icon: '🧑‍🤝‍🧑', component: CharactersPage },
-  { key: 'choices', label: '选项', icon: '⚜️', component: ChoicesPage },
 ] as const satisfies ReadonlyArray<{ key: string; label: string; icon: string; component: Component }>;
 
 type TabKey = (typeof tabs)[number]['key'];
 
-const activeTabKey = ref<TabKey>('overview');
+const activeTabKey = ref<TabKey>('story');
 const searchQuery = useLocalStorage<string>('eden:ui_search_query', '');
+const storyInput = useLocalStorage<string>('eden:ui_story_input', '');
+const streamArmTick = ref(0);
+const choicesModalOpen = ref(false);
 const shellHeight = ref<number>(Math.max(MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
 const shellMainRef = ref<HTMLElement | null>(null);
 const tabScrollPosition = new Map<TabKey, number>(tabs.map(tab => [tab.key, 0] as const));
 
 const activeTab = computed(() => tabs.find(tab => tab.key === activeTabKey.value) ?? tabs[0]);
+const isStoryTab = computed(() => activeTab.value.key === 'story');
+const footerInputValue = computed<string>({
+  get() {
+    return isStoryTab.value ? storyInput.value : searchQuery.value;
+  },
+  set(value) {
+    if (isStoryTab.value) {
+      storyInput.value = value;
+      return;
+    }
+    searchQuery.value = value;
+  },
+});
 const activeTabProps = computed<Record<string, unknown>>(() => {
   const baseProps: Record<string, unknown> = { query: searchQuery.value };
   if (activeTab.value.key === 'story') return { ...baseProps, raw: raw.value };
-  if (activeTab.value.key === 'choices') return { ...baseProps, options: options.value };
   return baseProps;
 });
 
@@ -106,6 +142,29 @@ function switchTab(nextTab: TabKey) {
     restoreTabScroll(nextTab);
     notifyLayoutChanged();
   });
+}
+
+function sendStoryInputToAi(value: string) {
+  if (!isStoryTab.value) return;
+  const text = String(value ?? '').trim();
+  if (!text) return;
+  const result = sendToChat(text, {
+    successMessage: '已发送给AI',
+    failureMessage: '发送失败，请手动发送',
+    unavailableMessage: '无法发送：triggerSlash 不可用',
+  });
+  if (result.ok) {
+    storyInput.value = '';
+    streamArmTick.value += 1;
+  }
+}
+
+function openChoicesModal() {
+  choicesModalOpen.value = true;
+}
+
+function closeChoicesModal() {
+  choicesModalOpen.value = false;
 }
 
 function getViewportHeight() {
@@ -287,6 +346,86 @@ watchDebounced(
   gap: 4px;
 }
 
+.eden-choices-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  padding: 54px 12px 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: rgba(8, 12, 20, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.eden-choices-modal {
+  width: min(100%, 900px);
+  max-height: min(72vh, 820px);
+  border-radius: 12px;
+  border: 1px solid rgba(139, 233, 253, 0.4);
+  background: linear-gradient(180deg, rgba(20, 26, 40, 0.96), rgba(10, 14, 22, 0.97));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.eden-choices-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.eden-choices-modal-title {
+  font-size: 0.88em;
+  color: var(--text-strong);
+  line-height: 1;
+}
+
+.eden-choices-modal-close {
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.76em;
+  line-height: 1;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+.eden-choices-modal-close:hover {
+  background: rgba(139, 233, 253, 0.24);
+}
+
+.eden-choices-modal-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 6px;
+}
+
+.eden-choices-modal-body :deep(.choices-title) {
+  display: none;
+}
+
+.eden-choices-modal-body :deep(.choice-item) {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 7px;
+}
+
+.eden-choices-modal-body :deep(.palette-button) {
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+
 .eden-tab-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -340,6 +479,23 @@ watchDebounced(
   .eden-tab-btn {
     min-height: 36px;
     border-radius: 8px;
+  }
+
+  .eden-choices-modal-mask {
+    padding: 44px 8px 8px;
+    align-items: flex-start;
+  }
+
+  .eden-choices-modal {
+    max-height: min(78vh, 940px);
+  }
+
+  .eden-choices-modal-head {
+    padding: 6px 8px;
+  }
+
+  .eden-choices-modal-body {
+    padding: 6px;
   }
 
   .eden-tab-label {

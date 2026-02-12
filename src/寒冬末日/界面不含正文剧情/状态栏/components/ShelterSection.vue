@@ -1,5 +1,5 @@
 <template>
-  <section id="shelter-section" class="section">
+  <section id="shelter-section" class="section shelter-redesign">
     <h2 class="section-title">🏰 庇护所信息 🏰</h2>
     <div class="shelter-grid">
       <div class="shelter-item">
@@ -16,7 +16,7 @@
         </div>
         <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
         <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
-          📅 校准日期和roll点
+          校准
         </button>
       </div>
       <div class="shelter-item distance-item">
@@ -42,24 +42,22 @@
       </div>
 
       <!-- 伊甸空间地图 -->
-      <div class="shelter-item">
+      <div class="shelter-item shelter-map-block">
         <div class="label">🗺️ 伊甸空间地图</div>
-        <button class="map-toggle-btn" @click="isMapExpanded = !isMapExpanded">
+        <button class="map-toggle-btn map-toggle-btn--expand" @click="isMapExpanded = !isMapExpanded">
           <span class="toggle-icon">{{ isMapExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">{{ isMapExpanded ? '收起地图' : '展开地图' }}</span>
         </button>
-        <button class="map-toggle-btn" :disabled="!canOpenScopeEditor" @click="toggleScopeEditor">
+        <button class="map-toggle-btn map-toggle-btn--scope" :disabled="!canOpenScopeEditor" @click="toggleScopeEditor">
           <span class="toggle-icon">{{ isScopeEditorOpen ? '✕' : '➕' }}</span>
-          <span class="toggle-text">
-            🛡️ 设置庇护范围（20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }}，19层
-            {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}）
-          </span>
+          <span class="toggle-text">{{ isScopeEditorOpen ? '结束勾选' : '设置庇护所' }}</span>
         </button>
         <div v-if="canOpenScopeEditor && !isScopeEditorOpen" class="scope-hint">
-          当前等级获得升级庇护范围权限，点击查看
+          20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }} · 19层
+          {{ scope19Max ? `${scope19Count}/${scope19Max}` : '未解锁' }}
         </div>
 
-        <div v-show="isMapExpanded" class="map-container">
+        <div class="map-container">
           <!-- 玄关区域 -->
           <div class="map-zone">
             <div class="zone-label">🚪 玄关 - 净化区</div>
@@ -71,12 +69,12 @@
               </div>
               <div class="room-cell" :class="{ occupied: hasTempGuestA }">
                 <div class="room-number">临时客房 A</div>
-                <div class="room-value">{{ hasTempGuestA ? '已入住' : '空置' }}</div>
+                <div class="room-value">{{ hasTempGuestA ? '' : '空置' }}</div>
                 <div class="room-resident">{{ getTempGuestNames('A') }}</div>
               </div>
               <div class="room-cell" :class="{ occupied: hasTempGuestB }">
                 <div class="room-number">临时客房 B</div>
-                <div class="room-value">{{ hasTempGuestB ? '已入住' : '空置' }}</div>
+                <div class="room-value">{{ hasTempGuestB ? '' : '空置' }}</div>
                 <div class="room-resident">{{ getTempGuestNames('B') }}</div>
               </div>
             </div>
@@ -98,12 +96,12 @@
               </div>
               <div class="room-cell" :class="{ occupied: hasBedroomUser }">
                 <div class="room-number">主卧室</div>
-                <div class="room-value">{{ hasBedroomUser ? '使用中' : '空闲' }}</div>
+                <div class="room-value">{{ hasBedroomUser ? '' : '空闲' }}</div>
                 <div class="room-resident">{{ getBedroomUserNames() }}</div>
               </div>
               <div class="room-cell" :class="{ occupied: hasBathroomUser }">
                 <div class="room-number">主浴室</div>
-                <div class="room-value">{{ hasBathroomUser ? '使用中' : '空闲' }}</div>
+                <div class="room-value">{{ hasBathroomUser ? '' : '空闲' }}</div>
                 <div class="room-resident">{{ getBathroomUserNames() }}</div>
               </div>
             </div>
@@ -132,10 +130,10 @@
                   class="scope-badge"
                   :class="{ on: isFloorRoomSheltered('20', room.number) }"
                 >
-                  🛡️
+                  {{ isFloorRoomSheltered('20', room.number) ? '已勾选' : '待勾选' }}
                 </div>
                 <div class="room-number">{{ room.number }}</div>
-                <div class="room-value">{{ getFloorRoomStatus('20', room.number) }}</div>
+                <div class="room-value">{{ getFloorRoomCompactStatus('20', room.number) }}</div>
                 <div class="room-resident">{{ getFloorRoomNames('20', room.number) }}</div>
               </div>
             </div>
@@ -162,10 +160,10 @@
                   class="scope-badge"
                   :class="{ on: isFloorRoomSheltered('19', room.number) }"
                 >
-                  🛡️
+                  {{ isFloorRoomSheltered('19', room.number) ? '已勾选' : '待勾选' }}
                 </div>
                 <div class="room-number">{{ room.number }}</div>
-                <div class="room-value">{{ getFloorRoomStatus('19', room.number) }}</div>
+                <div class="room-value">{{ getFloorRoomCompactStatus('19', room.number) }}</div>
                 <div class="room-resident">{{ getFloorRoomNames('19', room.number) }}</div>
               </div>
             </div>
@@ -295,12 +293,12 @@
       </div>
 
       <!-- 庇护所能力列表（可折叠） -->
-      <div class="shelter-item">
+      <div class="shelter-item shelter-summary-block">
         <div class="label">🧠 庇护所能力总述</div>
         <div class="value">{{ shelterAbilitySummary }}</div>
       </div>
 
-      <div class="shelter-item">
+      <div class="shelter-item shelter-ability-block">
         <button class="collapse-toggle-btn" @click="toggleAbilityExpanded()">
           <span class="toggle-icon">{{ isAbilityExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">
@@ -314,7 +312,7 @@
               <span>类别</span>
               <select v-model="abilityCategoryFilter" class="ability-select">
                 <option value="全部">全部</option>
-                <option v-for="cat in SHELTER_CATEGORY_ORDER" :key="cat" :value="cat">{{ cat }}</option>
+                <option v-for="cat in SHELTER_CATEGORY_ORDER_DISPLAY" :key="cat" :value="cat">{{ cat }}</option>
               </select>
             </label>
             <label class="ability-control">
@@ -358,13 +356,10 @@
                           class="skill-card"
                           :class="[`rarity-${ab.rarity}`, { unlocked: ab.unlocked, locked: !ab.unlocked }]"
                         >
-                          <div class="skill-main">
+                          <div class="skill-main skill-main--compact">
+                            <span class="skill-dot" :class="{ on: ab.unlocked }"></span>
                             <span class="skill-icon">{{ ab.icon }}</span>
                             <span class="skill-name">{{ ab.title }}</span>
-                          </div>
-                          <div class="skill-foot">
-                            <span class="skill-dot" :class="{ on: ab.unlocked }"></span>
-                            <span class="skill-state">{{ ab.unlocked ? '已解锁' : '未解锁' }}</span>
                             <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small">NEW</span>
                           </div>
                         </article>
@@ -686,16 +681,18 @@ function buildFloorScopeHint(rooms: string[], max: number, unlockLevel: number):
 const scope20Hint = computed(() => buildFloorScopeHint(scopeStore.scope['20'] ?? [], scope20Max.value, 3));
 const scope19Hint = computed(() => buildFloorScopeHint(scopeStore.scope['19'] ?? [], scope19Max.value, 6));
 
-const SHELTER_CATEGORY_ORDER = ['安全', '生存', '舒适', '扩展', '远征', '限制'] as const;
+const SHELTER_CATEGORY_ORDER_RAW = ['安全', '生存', '舒适', '扩展', '远征', '限制'] as const;
+const SHELTER_CATEGORY_ORDER_DISPLAY = ['安全', '生存', '舒适', '远征&扩展', '限制'] as const;
 const ABILITY_VALUE_ORDER = ['基础', '关键', '核心'] as const;
 
-type AbilityCategory = (typeof SHELTER_CATEGORY_ORDER)[number];
+type AbilityCategoryRaw = (typeof SHELTER_CATEGORY_ORDER_RAW)[number];
+type AbilityCategoryDisplay = (typeof SHELTER_CATEGORY_ORDER_DISPLAY)[number];
 type AbilityValueTier = (typeof ABILITY_VALUE_ORDER)[number];
 
 type ShelterBlueprintAbilityLite = {
   id: string;
   name: string;
-  category: AbilityCategory;
+  category: AbilityCategoryRaw;
   unlock_level: number;
   value_tier: AbilityValueTier;
   icon: string;
@@ -709,11 +706,16 @@ type SkillCardView = {
   title: string;
   icon: string;
   level: number;
-  category: AbilityCategory;
+  category: AbilityCategoryRaw;
   rarity: 'green' | 'orange' | 'purple';
   valueTier: AbilityValueTier;
   unlocked: boolean;
 };
+
+function toDisplayCategory(category: AbilityCategoryRaw): AbilityCategoryDisplay {
+  if (category === '扩展' || category === '远征') return '远征&扩展';
+  return category;
+}
 
 function normalizeAbilityText(input: any): string {
   const s = String(input ?? '').trim();
@@ -761,8 +763,8 @@ function parseShelterAbilityMasterList(raw: string): ShelterBlueprintAbilityLite
       const name = String((val as any)?.name ?? key).trim();
       if (!name) continue;
       const categoryRaw = String((val as any)?.category ?? '限制').trim();
-      const category = SHELTER_CATEGORY_ORDER.includes(categoryRaw as any)
-        ? (categoryRaw as (typeof SHELTER_CATEGORY_ORDER)[number])
+      const category = SHELTER_CATEGORY_ORDER_RAW.includes(categoryRaw as any)
+        ? (categoryRaw as (typeof SHELTER_CATEGORY_ORDER_RAW)[number])
         : '限制';
       const unlockLevelRaw = Number((val as any)?.unlock_level ?? 1);
       const unlock_level = _.clamp(Number.isFinite(unlockLevelRaw) ? Math.floor(unlockLevelRaw) : 1, 1, 10);
@@ -780,8 +782,8 @@ function parseShelterAbilityMasterList(raw: string): ShelterBlueprintAbilityLite
 
     out.sort((a, b) => {
       if (a.unlock_level !== b.unlock_level) return a.unlock_level - b.unlock_level;
-      const ca = SHELTER_CATEGORY_ORDER.indexOf(a.category);
-      const cb = SHELTER_CATEGORY_ORDER.indexOf(b.category);
+      const ca = SHELTER_CATEGORY_ORDER_RAW.indexOf(a.category);
+      const cb = SHELTER_CATEGORY_ORDER_RAW.indexOf(b.category);
       if (ca !== cb) return ca - cb;
       return a.name.localeCompare(b.name, 'zh-Hans-CN');
     });
@@ -819,7 +821,7 @@ const unlockedAbilityRawRecord = computed(() => {
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
 });
 
-const abilityCategoryFilter = ref<'全部' | AbilityCategory>('全部');
+const abilityCategoryFilter = ref<'全部' | AbilityCategoryDisplay>('全部');
 const abilityUnlockFilter = ref<'全部' | '已解锁' | '未解锁'>('全部');
 const abilitySortMode = ref<AbilitySortMode>('level_asc');
 
@@ -866,7 +868,8 @@ const allAbilityEntries = computed<SkillCardView[]>(() => {
 const filteredAbilityEntries = computed(() => {
   return allAbilityEntries.value
     .filter(item => {
-      if (abilityCategoryFilter.value !== '全部' && item.category !== abilityCategoryFilter.value) return false;
+      if (abilityCategoryFilter.value !== '全部' && toDisplayCategory(item.category) !== abilityCategoryFilter.value)
+        return false;
       if (abilityUnlockFilter.value === '已解锁' && !item.unlocked) return false;
       if (abilityUnlockFilter.value === '未解锁' && item.unlocked) return false;
       return true;
@@ -889,16 +892,16 @@ const filteredAbilityEntries = computed(() => {
       } else {
         if (a.level !== b.level) return a.level - b.level;
       }
-      const ca = SHELTER_CATEGORY_ORDER.indexOf(a.category);
-      const cb = SHELTER_CATEGORY_ORDER.indexOf(b.category);
+      const ca = SHELTER_CATEGORY_ORDER_RAW.indexOf(a.category);
+      const cb = SHELTER_CATEGORY_ORDER_RAW.indexOf(b.category);
       if (ca !== cb) return ca - cb;
       return a.name.localeCompare(b.name, 'zh-Hans-CN');
     });
 });
 
-const abilityVisibleCategories = computed<AbilityCategory[]>(() => {
+const abilityVisibleCategories = computed<AbilityCategoryDisplay[]>(() => {
   if (abilityCategoryFilter.value !== '全部') return [abilityCategoryFilter.value];
-  return SHELTER_CATEGORY_ORDER.slice();
+  return SHELTER_CATEGORY_ORDER_DISPLAY.slice();
 });
 
 const abilityMatrixRows = computed(() => {
@@ -917,11 +920,14 @@ const abilityMatrixRows = computed(() => {
         acc[cat] = [];
         return acc;
       }, {});
-      for (const item of list) byCategory[item.category].push(item);
+      for (const item of list) {
+        const displayCategory = toDisplayCategory(item.category);
+        byCategory[displayCategory].push(item);
+      }
       return {
         level,
         label: shelterLevelLabelByLevel.value[level] ?? '',
-        byCategory: byCategory as Record<AbilityCategory, SkillCardView[]>,
+        byCategory: byCategory as Record<AbilityCategoryDisplay, SkillCardView[]>,
       };
     });
 });
@@ -1100,12 +1106,12 @@ const hasPurifyZoneUser = computed(() => store.data.房间.玄关.净化隔离�
 
 function getTempGuestNames(room: 'A' | 'B'): string {
   const names = room === 'A' ? store.data.房间.玄关.临时客房A入住者 : store.data.房间.玄关.临时客房B入住者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 function getPurifyZoneNames(): string {
   const names = store.data.房间.玄关.净化隔离区入住者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 function getEntranceStatus(): string {
@@ -1120,12 +1126,12 @@ const hasKitchenUser = computed(() => store.data.房间.核心区.餐厅厨房�
 
 function getLivingRoomNames(): string {
   const names = store.data.房间.核心区.客厅使用者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 function getKitchenNames(): string {
   const names = store.data.房间.核心区.餐厅厨房使用者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 const hasBedroomUser = computed(() => store.data.房间.核心区.主卧室使用者.length > 0);
@@ -1134,12 +1140,12 @@ const hasBathroomUser = computed(() => store.data.房间.核心区.主浴室使�
 
 function getBedroomUserNames(): string {
   const names = store.data.房间.核心区.主卧室使用者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 function getBathroomUserNames(): string {
   const names = store.data.房间.核心区.主浴室使用者;
-  return names.length > 0 ? names.join('、') : '-';
+  return names.length > 0 ? names.join('、') : '';
 }
 
 // 楼层房间辅助函数
@@ -1158,9 +1164,14 @@ function getFloorRoomStatus(floor: string, room: string): string {
   return data.入住者.length > 0 ? '已入住' : '空置';
 }
 
+function getFloorRoomCompactStatus(floor: string, room: string): string {
+  const data = getFloorRoomData(floor, room);
+  return data.入住者.length > 0 ? '' : '空置';
+}
+
 function getFloorRoomNames(floor: string, room: string): string {
   const data = getFloorRoomData(floor, room);
-  if (data.入住者.length === 0) return '-';
+  if (data.入住者.length === 0) return '';
 
   // 特殊房间：1901 固定家庭（避免 AI/变量波动导致 UI 显示不稳定）
   if (room === '1901') return '爱宫铃 & 爱宫心爱';
@@ -1207,14 +1218,16 @@ function formatRoomResidents(
 <style scoped>
 .roll-calibrate-btn {
   margin-top: 8px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-color);
+  width: auto;
+  min-width: 68px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(170, 196, 255, 0.45);
+  background: rgba(89, 130, 255, 0.14);
+  color: #dce7ff;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: 0.78em;
+  line-height: 1.2;
 }
 
 .roll-calibrate-btn:disabled {
@@ -1572,85 +1585,269 @@ function formatRoomResidents(
   flex: 1;
 }
 
-.room-cell {
-  position: relative;
-  /* 普通状态：冷色调，暗示未受庇护 */
-  border: 1px solid rgba(100, 120, 100, 0.3);
+.shelter-redesign .shelter-grid {
+  gap: 10px;
 }
 
-.room-cell.scope-editable {
+.shelter-redesign .shelter-summary-block,
+.shelter-redesign .shelter-ability-block,
+.shelter-redesign .shelter-map-block {
+  grid-column: 1 / -1;
+}
+
+.shelter-redesign .shelter-summary-block {
+  order: -3;
+}
+
+.shelter-redesign .shelter-ability-block {
+  order: -2;
+}
+
+.shelter-redesign .shelter-map-block {
+  order: -1;
+}
+
+.shelter-redesign .shelter-item {
+  padding: 10px 11px;
+  border-radius: 12px;
+}
+
+.shelter-redesign .shelter-item .label {
+  margin-bottom: 4px;
+}
+
+.shelter-redesign .shelter-item .value {
+  line-height: 1.45;
+}
+
+.shelter-redesign .expansion-list {
+  gap: 6px;
+}
+
+.shelter-redesign .expansion-card {
+  padding: 6px 8px;
+  min-height: 0;
+}
+
+.shelter-redesign .map-toggle-btn--expand {
+  display: none;
+}
+
+.shelter-redesign .map-toggle-btn--scope {
+  width: auto;
+  min-width: 104px;
+  margin: 4px 0 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.shelter-redesign .map-toggle-btn--scope .toggle-text {
+  font-size: 0.78em;
+  letter-spacing: 0.01em;
+}
+
+.shelter-redesign .scope-hint {
+  margin-top: 6px;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(132, 90, 223, 0.14);
+  color: #d9c8ff;
+  font-size: 0.76em;
+}
+
+.shelter-redesign .map-container {
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.shelter-redesign .map-zone {
+  padding: 6px;
+  margin-bottom: 6px;
+  border-radius: 9px;
+}
+
+.shelter-redesign .zone-label {
+  margin-bottom: 3px;
+  font-size: 0.8em;
+}
+
+.shelter-redesign .zone-scope-hint {
+  margin: 2px 0 4px;
+  padding: 3px 6px;
+  font-size: 0.7em;
+  border-radius: 7px;
+}
+
+.shelter-redesign .floor-indicator {
+  margin: 2px 0 3px;
+  font-size: 0.68em;
+}
+
+.shelter-redesign .room-grid {
+  gap: 4px;
+}
+
+.shelter-redesign .room-cell {
+  position: relative;
+  border: 1px solid rgba(162, 172, 196, 0.3);
+  border-radius: 8px;
+  padding: 5px 6px;
+  min-height: 46px;
+}
+
+.shelter-redesign .room-cell.scope-editable {
   cursor: pointer;
 }
 
-/* 受庇护状态：橙色/金色渐变，暗示温暖安全 */
-.room-cell.sheltered {
-  border: none;
-  outline: 3px solid rgba(255, 160, 60, 0.9);
-  outline-offset: 1px;
-  box-shadow:
-    0 0 0 1px rgba(255, 180, 80, 0.3),
-    0 0 24px rgba(255, 140, 0, 0.4),
-    0 0 48px rgba(255, 100, 0, 0.2),
-    inset 0 0 30px rgba(255, 200, 100, 0.15);
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 200, 100, 0.25) 0%,
-    rgba(255, 180, 80, 0.15) 40%,
-    transparent 70%
-  );
-}
-
-.room-cell.sheltered .room-number {
-  color: #ffb347;
+.shelter-redesign .room-number {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78em;
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(255, 180, 80, 0.6);
 }
 
-.room-cell.sheltered .room-number::after {
-  content: ' 🛡️';
-  font-size: 0.85em;
-  filter: drop-shadow(0 0 4px rgba(255, 200, 100, 0.8));
+.shelter-redesign .room-number::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(172, 172, 186, 0.65);
+  box-shadow: 0 0 0 2px rgba(90, 90, 106, 0.15);
+  flex: 0 0 auto;
 }
 
-.room-cell.sheltered .room-occupants {
-  color: rgba(255, 220, 150, 0.9);
+.shelter-redesign .room-cell.occupied .room-number::before {
+  background: #b679ff;
+  box-shadow: 0 0 0 2px rgba(182, 121, 255, 0.23);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .room-cell.sheltered {
-    animation: edenShelterWarmGlow 3s ease-in-out infinite;
-  }
+.shelter-redesign .room-value {
+  margin-top: 1px;
+  font-size: 0.68em;
+  opacity: 0.78;
+  line-height: 1.1;
 }
 
-@keyframes edenShelterWarmGlow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(255, 180, 80, 0.3),
-      0 0 24px rgba(255, 140, 0, 0.4),
-      0 0 48px rgba(255, 100, 0, 0.2),
-      inset 0 0 30px rgba(255, 200, 100, 0.15);
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(255, 180, 80, 0.4),
-      0 0 36px rgba(255, 160, 0, 0.5),
-      0 0 60px rgba(255, 120, 0, 0.25),
-      inset 0 0 40px rgba(255, 220, 120, 0.2);
-  }
+.shelter-redesign .room-value:empty {
+  display: none;
 }
 
-.scope-badge {
+.shelter-redesign .room-resident {
+  margin-top: 1px;
+  font-size: 0.69em;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shelter-redesign .room-resident:empty {
+  display: none;
+}
+
+.shelter-redesign .room-cell.sheltered {
+  border: 1px solid rgba(255, 186, 82, 0.58);
+  outline: none;
+  box-shadow: inset 0 0 16px rgba(255, 188, 86, 0.16);
+  background: radial-gradient(circle at 18% 12%, rgba(255, 208, 130, 0.2), rgba(255, 255, 255, 0.02) 55%);
+}
+
+.shelter-redesign .room-cell.sheltered .room-number {
+  color: #ffd08a;
+  text-shadow: none;
+}
+
+.shelter-redesign .room-cell.sheltered .room-number::after {
+  content: '';
+}
+
+.shelter-redesign .scope-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  font-size: 0.9em;
-  opacity: 0.25;
+  top: 4px;
+  right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.62em;
+  line-height: 1.35;
+  opacity: 0.96;
+  background: rgba(132, 138, 160, 0.22);
+  border: 1px solid rgba(164, 172, 194, 0.35);
+  color: #cfd5e8;
   pointer-events: none;
 }
 
-.scope-badge.on {
-  opacity: 1;
+.shelter-redesign .scope-badge.on {
+  background: rgba(182, 121, 255, 0.2);
+  border-color: rgba(197, 149, 255, 0.58);
+  color: #e8dcff;
+}
+
+.shelter-redesign .ability-list {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.shelter-redesign .ability-toolbar {
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.shelter-redesign .ability-control {
+  gap: 3px;
+}
+
+.shelter-redesign .ability-select {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 0.8em;
+}
+
+.shelter-redesign .ability-legend {
+  margin-bottom: 8px;
+  font-size: 0.76em;
+}
+
+.shelter-redesign .ability-grid-head {
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+}
+
+.shelter-redesign .ability-grid-cards {
+  gap: 4px;
+}
+
+.shelter-redesign .skill-card {
+  padding: 6px 8px;
+  min-height: 0;
+}
+
+.shelter-redesign .skill-main--compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.2;
+}
+
+.shelter-redesign .skill-main--compact .skill-icon {
+  font-size: 0.92em;
+}
+
+.shelter-redesign .skill-main--compact .skill-name {
+  flex: 1;
+  font-size: 0.82em;
+}
+
+.shelter-redesign .skill-main--compact .skill-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.shelter-redesign .skill-main--compact .new-tag--small {
+  margin-left: 4px;
 }
 
 @media (max-width: 520px) {
