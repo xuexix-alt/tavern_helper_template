@@ -31,8 +31,17 @@
         </button>
         <button
           type="button"
+          class="eden-story-composer-regenerate"
+          :disabled="!canRegenerate"
+          :title="regenerateButtonTitle"
+          @click="regenerateFromLatestUserInput"
+        >
+          {{ regenerateSending ? '重生中' : '重新生成' }}
+        </button>
+        <button
+          type="button"
           class="eden-story-composer-send"
-          :disabled="isHistoryMode || composerSending || !composerInput.trim()"
+          :disabled="isHistoryMode || composerSending || regenerateSending || deletingFromMessageId !== null || !composerInput.trim()"
           @click="sendComposerInput"
         >
           {{ composerSending ? '发送中' : '发送' }}
@@ -48,7 +57,7 @@
             <button type="button" class="eden-story-choices-close" @click="closeChoicesPanel">关闭</button>
           </div>
           <div class="eden-story-choices-body">
-            <ChoicesSection :options="displayOptions" :query="query" />
+            <ChoicesSection :options="displayOptions" :query="query" @choice-sent="onChoiceSent" />
           </div>
         </div>
       </div>
@@ -63,26 +72,48 @@
           </div>
           <div class="eden-story-choices-body">
             <div class="eden-history-list">
-              <button type="button" class="eden-history-item is-latest" @click="switchToLatest">
-                <div class="eden-history-item-top">
-                  <span>最新楼层</span>
-                  <span class="eden-history-item-id">自动跟随</span>
-                </div>
-              </button>
               <button
-                v-for="item in historyCandidates"
-                :key="item.message_id"
                 type="button"
-                class="eden-history-item"
-                :class="{ active: historyMessageId === item.message_id }"
-                @click="selectHistoryMessage(item.message_id)"
+                class="eden-history-item is-latest"
+                :class="{ active: !isHistoryMode }"
+                @click="switchToLatest"
               >
                 <div class="eden-history-item-top">
-                  <span>楼层 #{{ item.message_id }}</span>
-                  <span class="eden-history-item-id">{{ item.timeLabel }}</span>
+                  <span>最新楼层 #{{ latestLiveMessageId ?? '?' }}</span>
+                  <div class="eden-history-item-id-group">
+                    <span class="eden-history-item-id">自动跟随</span>
+                    <span class="eden-history-follow-state">{{ latestFollowStateLabel }}</span>
+                  </div>
                 </div>
-                <div class="eden-history-item-preview">{{ item.preview }}</div>
               </button>
+              <div
+                v-for="item in historyCandidates"
+                :key="item.message_id"
+                class="eden-history-item"
+                :class="[{ active: historyMessageId === item.message_id }, `is-${item.role}`]"
+              >
+                <button type="button" class="eden-history-item-main" @click="selectHistoryMessage(item.message_id)">
+                  <div class="eden-history-item-top">
+                    <span class="eden-history-item-title-group">
+                      <span>楼层 #{{ item.message_id }}</span>
+                      <span class="eden-history-mini-role" :class="`is-${item.role}`">{{ item.role === 'user' ? '用户' : 'AI' }}</span>
+                    </span>
+                    <span class="eden-history-item-id">{{ item.timeLabel }}</span>
+                  </div>
+                  <div class="eden-history-item-preview">{{ item.preview }}</div>
+                </button>
+                <div class="eden-history-item-actions">
+                  <span class="eden-history-role-tag" :class="`is-${item.role}`">{{ item.roleLabel }}</span>
+                  <button
+                    type="button"
+                    class="eden-history-item-delete"
+                    :disabled="deletingFromMessageId !== null"
+                    @click.stop="deleteFromMessage(item)"
+                  >
+                    {{ deletingFromMessageId === item.message_id ? '删除中…' : '回退删除' }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -99,6 +130,7 @@ import { sendToChat } from '../../outbound';
 import {
   getViewMessageState,
   onViewMessageChanged,
+  resolveLiveMessageId,
   setViewMessageHistory,
   setViewMessageLatest,
 } from '../../viewMessage';
@@ -107,6 +139,8 @@ type HistoryCandidate = {
   message_id: number;
   preview: string;
   timeLabel: string;
+  role: 'assistant' | 'user';
+  roleLabel: string;
 };
 
 type HistoryRecord = {
@@ -117,10 +151,41 @@ type HistoryRecord = {
   send_date?: string;
 };
 
+function normalizeBooleanFlag(input: unknown): boolean | undefined {
+  if (typeof input === 'boolean') return input;
+  if (typeof input === 'number') return Number.isFinite(input) ? input !== 0 : undefined;
+  if (typeof input === 'string') {
+    const v = input.trim().toLowerCase();
+    if (!v) return undefined;
+    if (['true', '1', 'yes', 'on', 'user', 'human', 'usr'].includes(v)) return true;
+    if (['false', '0', 'no', 'off', 'assistant', 'ai', 'bot', 'system', 'sys'].includes(v)) return false;
+  }
+  return undefined;
+}
+
+function normalizeRoleHints(msg: any): { is_user?: boolean; is_system?: boolean } {
+  const role = String(msg?.role ?? msg?.type ?? '').trim().toLowerCase();
+  const hintUser = normalizeBooleanFlag(msg?.is_user);
+  const hintSystem = normalizeBooleanFlag(msg?.is_system);
+
+  const is_system =
+    hintSystem ??
+    (role === 'system' ? true : undefined) ??
+    (String(msg?.name ?? '').trim() === 'System' ? true : undefined);
+
+  const is_user =
+    hintUser ??
+    (role === 'user' ? true : undefined) ??
+    (role === 'assistant' ? false : undefined) ??
+    (is_system === true ? false : undefined);
+
+  return { is_user, is_system };
+}
+
 const props = withDefaults(
   defineProps<{
     raw: string;
-    options: string[];
+    options?: string[];
     query?: string;
   }>(),
   {
@@ -131,12 +196,20 @@ const props = withDefaults(
 
 const composerInput = ref('');
 const composerSending = ref(false);
+const regenerateSending = ref(false);
+const latestUserInput = ref('');
+const latestUserInputMessageId = ref<number | null>(null);
+const latestLiveMessageId = ref<number | null>(null);
+const containerMessageId = ref<number | null>(null);
 const choicesPanelOpen = ref(false);
 const historyPickerOpen = ref(false);
 const historyCandidates = ref<HistoryCandidate[]>([]);
+const deletingFromMessageId = ref<number | null>(null);
 const viewMessageState = ref(getViewMessageState());
 const historyRaw = ref('');
 const historyOptions = ref<string[]>([]);
+const latestModeRaw = ref('');
+const latestModeOptions = ref<string[]>([]);
 let stopViewMessageChanged: (() => void) | null = null;
 
 const isHistoryMode = computed(() => viewMessageState.value.mode === 'history');
@@ -145,12 +218,34 @@ const historyMessageId = computed(() => {
   return Number.isFinite(id) ? id : null;
 });
 
-const displayRaw = computed(() => (isHistoryMode.value ? historyRaw.value : props.raw));
-const displayOptions = computed(() => (isHistoryMode.value ? historyOptions.value : props.options));
+const displayRaw = computed(() => {
+  if (isHistoryMode.value) return historyRaw.value;
+  if (String(latestModeRaw.value ?? '').trim()) return latestModeRaw.value;
+  return props.raw;
+});
+const displayOptions = computed(() => {
+  if (isHistoryMode.value) return historyOptions.value;
+  if (String(latestModeRaw.value ?? '').trim()) return latestModeOptions.value;
+  return props.options;
+});
 const displayMessageId = computed(() => {
   const id = historyMessageId.value;
-  return isHistoryMode.value && id != null ? id : null;
+  if (isHistoryMode.value && id != null) return id;
+  const live = latestLiveMessageId.value;
+  return live != null ? live : null;
 });
+const canRegenerate = computed(
+  () => !isHistoryMode.value && !composerSending.value && !regenerateSending.value && deletingFromMessageId.value == null,
+);
+const regenerateButtonTitle = computed(() => {
+  if (isHistoryMode.value) return '回看模式下不可用，请先返回最新楼层';
+  if (!String(latestUserInput.value ?? '').trim()) return '未找到最近一次用户输入，将按当前聊天上下文尝试重生';
+  if (regenerateSending.value) return '正在以最近一次用户输入重新生成…';
+  return `以楼层 #${latestUserInputMessageId.value ?? '?'} 的最新用户输入重新生成`;
+});
+const latestFollowStateLabel = computed(
+  () => `容器#${containerMessageId.value ?? '?'} / 跟随#${latestLiveMessageId.value ?? '?'}`,
+);
 
 function stripForPreview(input: string): string {
   return String(input ?? '')
@@ -196,7 +291,97 @@ function syncHistoryPayload() {
   historyOptions.value = extractOptionsFromRaw(raw);
 }
 
-function buildHistoryCandidates(limit = 24): HistoryCandidate[] {
+function syncLatestModePayload() {
+  const id = latestLiveMessageId.value;
+  if (id == null) {
+    latestModeRaw.value = '';
+    latestModeOptions.value = [];
+    return;
+  }
+  const raw = readMessageRawById(id);
+  latestModeRaw.value = raw;
+  latestModeOptions.value = extractOptionsFromRaw(raw);
+}
+
+function readMessageText(msg: any): string {
+  if (Array.isArray(msg?.swipes) && msg.swipes.length > 0) {
+    const swipeId = Number(msg?.swipe_id);
+    if (Number.isFinite(swipeId) && swipeId >= 0 && swipeId < msg.swipes.length) {
+      return String(msg.swipes[swipeId] ?? '').trim();
+    }
+    return String(msg.swipes[msg.swipes.length - 1] ?? '').trim();
+  }
+  return String(msg?.message ?? '').trim();
+}
+
+function resolveLatestUserInputMetaFromContext(): { message_id: number; text: string } | null {
+  try {
+    const ctx = (window as any)?.SillyTavern?.getContext?.();
+    const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+    for (let i = chat.length - 1; i >= 0; i -= 1) {
+      const msg = chat[i];
+      if (!msg || typeof msg !== 'object') continue;
+      if ((msg as any).is_user !== true) continue;
+      const text = readMessageText(msg);
+      if (!text) continue;
+      return { message_id: i, text };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function resolveLatestUserInputMetaFromApi(): { message_id: number; text: string } | null {
+  try {
+    const list = getChatMessages('0-{{lastMessageId}}') as any[];
+    if (!Array.isArray(list) || list.length === 0) return null;
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      const msg = list[i];
+      if (!msg || typeof msg !== 'object') continue;
+      if ((msg as any).is_user !== true) continue;
+      const text = readMessageText(msg);
+      if (!text) continue;
+      const message_id = Number((msg as any)?.message_id);
+      if (Number.isFinite(message_id) && message_id >= 0) return { message_id: Math.trunc(message_id), text };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function refreshLatestUserInput() {
+  const resolved = resolveLatestUserInputMetaFromContext() ?? resolveLatestUserInputMetaFromApi();
+  latestUserInput.value = resolved?.text ?? '';
+  latestUserInputMessageId.value = resolved?.message_id ?? null;
+}
+
+function resolveReliableLiveMessageId(): number | null {
+  const fromViewState = resolveLiveMessageId();
+  const fromApi = resolveLastMessageId();
+  if (fromViewState == null) return fromApi;
+  if (fromApi == null) return fromViewState;
+  return Math.max(fromViewState, fromApi);
+}
+
+function resolveContainerMessageId(): number | null {
+  try {
+    const id = Number(getCurrentMessageId?.());
+    if (Number.isFinite(id) && id >= 0) return Math.trunc(id);
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function refreshLiveMessageId() {
+  containerMessageId.value = resolveContainerMessageId();
+  latestLiveMessageId.value = resolveReliableLiveMessageId();
+  syncLatestModePayload();
+}
+
+function buildHistoryCandidates(limit = 48): HistoryCandidate[] {
   const out: HistoryCandidate[] = [];
   const byId = new Map<number, HistoryRecord>();
 
@@ -223,11 +408,13 @@ function buildHistoryCandidates(limit = 24): HistoryCandidate[] {
     for (let i = 0; i < chat.length; i += 1) {
       const msg = chat[i];
       if (!msg || typeof msg !== 'object') continue;
+      const roleHints = normalizeRoleHints(msg);
+      const rawContextId = Number((msg as any).message_id);
       mergeRecord({
-        message_id: i,
+        message_id: Number.isFinite(rawContextId) ? Math.trunc(rawContextId) : i,
         raw: String((msg as any).message ?? ''),
-        is_user: (msg as any).is_user === true,
-        is_system: (msg as any).is_system === true,
+        is_user: roleHints.is_user,
+        is_system: roleHints.is_system,
         send_date: String((msg as any).send_date ?? ''),
       });
     }
@@ -242,13 +429,14 @@ function buildHistoryCandidates(limit = 24): HistoryCandidate[] {
       for (let i = 0; i < all.length; i += 1) {
         const msg = all[i];
         if (!msg || typeof msg !== 'object') continue;
+        const roleHints = normalizeRoleHints(msg);
         const rawId = Number((msg as any).message_id);
         const fallbackId = Number(i);
         mergeRecord({
           message_id: Number.isFinite(rawId) ? rawId : fallbackId,
           raw: String((msg as any).message ?? ''),
-          is_user: (msg as any).is_user === true,
-          is_system: (msg as any).is_system === true,
+          is_user: roleHints.is_user,
+          is_system: roleHints.is_system,
           send_date: String((msg as any).send_date ?? ''),
         });
       }
@@ -262,14 +450,16 @@ function buildHistoryCandidates(limit = 24): HistoryCandidate[] {
     if (out.length >= limit) break;
     const rec = byId.get(id);
     if (!rec) continue;
-    if (rec.is_user === true) continue;
     if (rec.is_system === true) continue;
     const raw = String(rec.raw ?? '').trim();
     if (!raw) continue;
+    const role: HistoryCandidate['role'] = rec.is_user === true ? 'user' : 'assistant';
     out.push({
       message_id: id,
       preview: stripForPreview(raw).slice(0, 120) || '(空内容)',
-      timeLabel: String(rec.send_date ?? '').trim() || '助手消息',
+      timeLabel: String(rec.send_date ?? '').trim() || (role === 'user' ? '用户输入' : '助手消息'),
+      role,
+      roleLabel: role === 'user' ? '用户输入' : '助手消息',
     });
   }
 
@@ -314,13 +504,212 @@ function sendComposerInput() {
   }
 }
 
+async function regenerateFromLatestUserInput() {
+  if (regenerateSending.value || composerSending.value || deletingFromMessageId.value != null) return;
+  if (isHistoryMode.value) {
+    toastr?.info?.('回看模式仅查看，不能重新生成。请先返回最新楼层。');
+    return;
+  }
+
+  regenerateSending.value = true;
+  try {
+    if (tryClickHostRegenerateButton()) {
+      setViewMessageLatest('story-page:host-regenerate');
+      toastr?.success?.('已调用酒馆重新生成');
+      return;
+    }
+
+    refreshLatestUserInput();
+    const userText = String(latestUserInput.value ?? '').trim();
+    const userMessageId = latestUserInputMessageId.value;
+    const lastId = resolveLastMessageId();
+    const slash = resolveTriggerSlashForRegenerate();
+    if (!slash) {
+      toastr?.error?.('无法重生：triggerSlash 不可用');
+      return;
+    }
+
+    if (userMessageId != null && Number.isFinite(userMessageId) && lastId != null && lastId > userMessageId) {
+      const idsToDelete = _.range(userMessageId + 1, lastId + 1);
+      if (idsToDelete.length > 0) await deleteChatMessages(idsToDelete, { refresh: 'all' });
+    }
+
+    await Promise.resolve(slash('/trigger await=true'));
+    setViewMessageLatest('story-page:regenerate');
+    historyCandidates.value = buildHistoryCandidates();
+    syncHistoryPayload();
+    refreshLatestUserInput();
+    refreshLiveMessageId();
+    if (userText) toastr?.success?.(`已按楼层 #${userMessageId ?? '?'} 的用户输入重新生成`);
+    else toastr?.success?.('已按当前聊天上下文重新生成');
+  } catch (err: any) {
+    toastr?.error?.(`重生失败：${err?.message ?? String(err)}`);
+  } finally {
+    regenerateSending.value = false;
+  }
+}
+
 function openHistoryPicker() {
+  refreshLiveMessageId();
   historyCandidates.value = buildHistoryCandidates();
   historyPickerOpen.value = true;
 }
 
 function closeHistoryPicker() {
   historyPickerOpen.value = false;
+}
+
+function resolveLastMessageId(): number | null {
+  try {
+    const id = Number(getLastMessageId?.());
+    if (Number.isFinite(id) && id >= 0) return Math.trunc(id);
+  } catch {
+    // ignore
+  }
+  try {
+    const all = getChatMessages('0-{{lastMessageId}}') as any[];
+    if (!Array.isArray(all) || all.length === 0) return null;
+    const ids = all
+      .map(msg => Number((msg as any)?.message_id))
+      .filter(id => Number.isFinite(id) && id >= 0)
+      .map(id => Math.trunc(id));
+    if (ids.length === 0) return null;
+    return Math.max(...ids);
+  } catch {
+    return null;
+  }
+}
+
+async function confirmWithPopup(content: string): Promise<boolean> {
+  try {
+    if (typeof (SillyTavern as any)?.callGenericPopup === 'function') {
+      const result = await SillyTavern.callGenericPopup(content, SillyTavern.POPUP_TYPE.CONFIRM);
+      return result === SillyTavern.POPUP_RESULT.AFFIRMATIVE || result === true;
+    }
+  } catch {
+    // ignore
+  }
+  return window.confirm(content);
+}
+
+async function deleteFromMessage(item: HistoryCandidate) {
+  if (deletingFromMessageId.value != null) return;
+  const startId = Number(item.message_id);
+  if (!Number.isFinite(startId) || startId < 0) {
+    toastr?.warning?.('无效楼层号');
+    return;
+  }
+
+  const lastId = resolveLastMessageId();
+  if (lastId == null || startId > lastId) {
+    toastr?.warning?.('未找到可删除楼层');
+    return;
+  }
+
+  const count = lastId - startId + 1;
+  const ok = await confirmWithPopup(
+    `确定回退并删除楼层 #${startId} 到 #${lastId}（共 ${count} 层）？\n\n该操作与酒馆回退逻辑一致：删除该楼层后，其后的楼层将一并删除。`,
+  );
+  if (!ok) return;
+
+  deletingFromMessageId.value = startId;
+  try {
+    const ids = _.range(startId, lastId + 1);
+    await deleteChatMessages(ids, { refresh: 'all' });
+    setViewMessageLatest('story-page:delete-rollback');
+    historyCandidates.value = buildHistoryCandidates();
+    syncHistoryPayload();
+    refreshLatestUserInput();
+    refreshLiveMessageId();
+    toastr?.success?.(`已回退删除 ${count} 层`);
+  } catch (err: any) {
+    toastr?.error?.(`删除失败：${err?.message ?? String(err)}`);
+  } finally {
+    deletingFromMessageId.value = null;
+  }
+}
+
+function resolveTriggerSlashForRegenerate(): ((command: string) => Promise<any> | any) | null {
+  if (typeof triggerSlash === 'function') return triggerSlash;
+  let cur: Window | null = window;
+  for (let i = 0; i < 8 && cur; i += 1) {
+    try {
+      const fn = (cur as any)?.triggerSlash;
+      if (typeof fn === 'function') return fn.bind(cur);
+    } catch {
+      // ignore
+    }
+    try {
+      if (!cur.parent || cur.parent === cur) break;
+      cur = cur.parent;
+    } catch {
+      break;
+    }
+  }
+  try {
+    const parent = window.parent as any;
+    if (typeof parent?.triggerSlash === 'function') return parent.triggerSlash.bind(parent);
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+function tryClickHostRegenerateButton(): boolean {
+  const docs: Document[] = [];
+  const pushDoc = (doc: Document | null | undefined) => {
+    if (!doc) return;
+    if (docs.includes(doc)) return;
+    docs.push(doc);
+  };
+
+  pushDoc(document);
+  try {
+    pushDoc(window.parent?.document);
+  } catch {
+    // ignore
+  }
+  try {
+    pushDoc(window.top?.document);
+  } catch {
+    // ignore
+  }
+
+  const selectors = [
+    '#option_regenerate',
+    '#option_continue',
+    'button[title*="重新生成"]',
+    'button[aria-label*="重新生成"]',
+    'button[title*="Regenerate"]',
+    'button[aria-label*="Regenerate"]',
+  ];
+
+  const isInteractable = (el: HTMLElement, doc: Document): boolean => {
+    if ((el as HTMLButtonElement).disabled) return false;
+    const win = doc.defaultView ?? window;
+    const style = win.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+
+  for (const doc of docs) {
+    for (const selector of selectors) {
+      const candidates = Array.from(doc.querySelectorAll<HTMLElement>(selector));
+      for (const el of candidates) {
+        if (!isInteractable(el, doc)) continue;
+        try {
+          const view = doc.defaultView ?? window;
+          el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view }));
+          return true;
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 function selectHistoryMessage(message_id: number) {
@@ -334,7 +723,15 @@ function selectHistoryMessage(message_id: number) {
 
 function switchToLatest() {
   setViewMessageLatest('story-page');
+  refreshLiveMessageId();
   closeHistoryPicker();
+}
+
+function onChoiceSent() {
+  closeChoicesPanel();
+  setViewMessageLatest('story-page:choice-sent');
+  refreshLatestUserInput();
+  refreshLiveMessageId();
 }
 
 function onWindowKeydown(event: KeyboardEvent) {
@@ -343,14 +740,61 @@ function onWindowKeydown(event: KeyboardEvent) {
   if (historyPickerOpen.value) closeHistoryPicker();
 }
 
+function ensureHistorySelectionValid() {
+  if (!isHistoryMode.value) return;
+  const selected = historyMessageId.value;
+  if (selected == null) {
+    setViewMessageLatest('story-page:auto-fix-empty-history');
+    return;
+  }
+
+  // 生图回传/同层隐藏期间，live id 可能短暂不可用或回跳，不能据此强制退出回看。
+  // 只要目标楼层仍存在，就保持 history 选择不变。
+  try {
+    const target = getChatMessages(selected)?.[0] as any;
+    if (target && typeof target === 'object') return;
+  } catch {
+    // ignore
+  }
+
+  // 兜底：若 API 单点读取异常，再用全量列表校验一次。
+  try {
+    const all = getChatMessages('0-{{lastMessageId}}') as any[];
+    if (Array.isArray(all)) {
+      const exists = all.some(msg => Number((msg as any)?.message_id) === selected);
+      if (exists) return;
+    }
+  } catch {
+    // ignore
+  }
+
+  // 只有在确认为“回看楼层不存在”时才回退到最新，避免误切换。
+  setViewMessageLatest('story-page:auto-fix-missing-history');
+}
+
 onMounted(() => {
   window.addEventListener('keydown', onWindowKeydown);
   stopViewMessageChanged = onViewMessageChanged(nextState => {
     viewMessageState.value = nextState;
     syncHistoryPayload();
+    refreshLatestUserInput();
+    refreshLiveMessageId();
+    ensureHistorySelectionValid();
   });
   syncHistoryPayload();
+  refreshLatestUserInput();
+  refreshLiveMessageId();
+  ensureHistorySelectionValid();
 });
+
+watch(
+  () => props.raw,
+  () => {
+    refreshLatestUserInput();
+    refreshLiveMessageId();
+    ensureHistorySelectionValid();
+  },
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onWindowKeydown);
@@ -415,7 +859,7 @@ onBeforeUnmount(() => {
 
 .eden-story-composer-inner {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   gap: 4px;
   border-radius: 9px;
   padding: 4px;
@@ -457,6 +901,7 @@ onBeforeUnmount(() => {
 }
 
 .eden-story-composer-option,
+.eden-story-composer-regenerate,
 .eden-story-composer-send {
   flex: 0 0 auto;
   border-radius: 7px;
@@ -488,6 +933,15 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(139, 233, 253, 0.4);
 }
 
+.eden-story-composer-regenerate {
+  border: 1px solid rgba(255, 214, 102, 0.48);
+  background: rgba(255, 214, 102, 0.16);
+}
+
+.eden-story-composer-regenerate:hover:not(:disabled) {
+  background: rgba(255, 214, 102, 0.28);
+}
+
 .eden-story-composer-send {
   border: 1px solid rgba(139, 233, 253, 0.55);
   background: rgba(139, 233, 253, 0.25);
@@ -497,6 +951,7 @@ onBeforeUnmount(() => {
   background: rgba(139, 233, 253, 0.38);
 }
 
+.eden-story-composer-regenerate:disabled,
 .eden-story-composer-send:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -508,15 +963,14 @@ onBeforeUnmount(() => {
 }
 
 .eden-history-item {
-  width: 100%;
-  text-align: left;
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left-width: 4px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-color);
-  font: inherit;
   padding: 8px 10px;
-  cursor: pointer;
+  display: grid;
+  gap: 7px;
 }
 
 .eden-history-item:hover {
@@ -532,6 +986,38 @@ onBeforeUnmount(() => {
   border-color: rgba(139, 233, 253, 0.45);
 }
 
+.eden-history-item.is-user {
+  border-color: rgba(143, 213, 255, 0.45);
+  background: linear-gradient(90deg, rgba(143, 213, 255, 0.2), rgba(143, 213, 255, 0.08));
+}
+
+.eden-history-item.is-assistant {
+  border-color: rgba(255, 214, 102, 0.45);
+  background: linear-gradient(90deg, rgba(255, 214, 102, 0.2), rgba(255, 214, 102, 0.08));
+}
+
+.eden-history-item.is-user.active {
+  border-color: rgba(143, 213, 255, 0.75);
+  background: linear-gradient(90deg, rgba(143, 213, 255, 0.32), rgba(143, 213, 255, 0.14));
+}
+
+.eden-history-item.is-assistant.active {
+  border-color: rgba(255, 214, 102, 0.75);
+  background: linear-gradient(90deg, rgba(255, 214, 102, 0.32), rgba(255, 214, 102, 0.14));
+}
+
+.eden-history-item-main {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
 .eden-history-item-top {
   display: flex;
   align-items: center;
@@ -541,15 +1027,108 @@ onBeforeUnmount(() => {
   margin-bottom: 4px;
 }
 
+.eden-history-item-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.eden-history-mini-role {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 1px 5px;
+  font-size: 0.72em;
+  line-height: 1;
+  opacity: 0.95;
+}
+
+.eden-history-mini-role.is-user {
+  border-color: rgba(143, 213, 255, 0.55);
+  background: rgba(143, 213, 255, 0.2);
+  color: #e5f7ff;
+}
+
+.eden-history-mini-role.is-assistant {
+  border-color: rgba(255, 214, 102, 0.55);
+  background: rgba(255, 214, 102, 0.2);
+  color: #fff8dc;
+}
+
 .eden-history-item-id {
   opacity: 0.78;
   font-size: 0.82em;
+}
+
+.eden-history-item-id-group {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.eden-history-follow-state {
+  opacity: 0.7;
+  font-size: 0.72em;
+  white-space: nowrap;
 }
 
 .eden-history-item-preview {
   font-size: 0.78em;
   line-height: 1.35;
   opacity: 0.9;
+}
+
+.eden-history-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eden-history-role-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.72em;
+  line-height: 1;
+  padding: 3px 7px;
+  opacity: 0.95;
+}
+
+.eden-history-role-tag.is-user {
+  border-color: rgba(143, 213, 255, 0.5);
+  background: rgba(143, 213, 255, 0.22);
+  color: #e5f7ff;
+}
+
+.eden-history-role-tag.is-assistant {
+  border-color: rgba(255, 214, 102, 0.5);
+  background: rgba(255, 214, 102, 0.2);
+  color: #fff8dc;
+}
+
+.eden-history-item-delete {
+  border-radius: 7px;
+  border: 1px solid rgba(255, 120, 120, 0.45);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffdcdc;
+  font: inherit;
+  font-size: 0.72em;
+  line-height: 1;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.eden-history-item-delete:hover:not(:disabled) {
+  background: rgba(255, 120, 120, 0.24);
+}
+
+.eden-history-item-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .eden-story-choices-mask {
@@ -652,6 +1231,7 @@ onBeforeUnmount(() => {
   }
 
   .eden-story-composer-option,
+  .eden-story-composer-regenerate,
   .eden-story-composer-send {
     min-width: 34px;
     padding: 5px 7px;

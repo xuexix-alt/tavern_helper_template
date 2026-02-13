@@ -118,6 +118,9 @@ const props = defineProps<{
   options: string[];
   query?: string;
 }>();
+const emit = defineEmits<{
+  (event: 'choice-sent', payload: { text: string }): void;
+}>();
 
 const normalized_query = computed(() => String(props.query ?? '').trim().toLowerCase());
 const filtered_options = computed(() => {
@@ -248,6 +251,7 @@ async function sendChoiceText(rawText: string): Promise<boolean> {
 
     if (res.ok) {
       closeChoiceDialog();
+      emit('choice-sent', { text });
       return true;
     }
 

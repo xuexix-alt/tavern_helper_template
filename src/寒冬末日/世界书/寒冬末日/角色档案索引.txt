@@ -1,15 +1,20 @@
 [
   { "name": "浅见亚美", "aliases": ["亚美"] },
-  { "name": "星野琉璃", "aliases": ["琉璃"] },
-  { "name": "早川舞", "aliases": ["舞"] },
-  { "name": "早川遥", "aliases": ["遥"] },
-  { "name": "藤井雪乃", "aliases": ["雪乃"] },
+  { "name": "慕小小", "aliases": ["小小"] },
+  { "name": "佐伯惠理", "aliases": ["恵理"] },
+  { "name": "佐伯诗织", "aliases": ["詩织"] },
+  { "name": "佐伯龙一", "aliases": ["龙一"] },
+  { "name": "林月华", "aliases": ["月华", "月华姐"] },
+  { "name": "赵卫国", "aliases": ["卫国"] },
+  { "name": "雪乃", "aliases": [] },
+  { "name": "陈雪", "aliases": ["雪姐"] },
+  { "name": "陈幺妹", "aliases": ["幺妹", "Yaomei"] },
+  { "name": "凌音", "aliases": [] },
   { "name": "相田哲也", "aliases": ["哲也"] },
   { "name": "爱宫 心爱", "aliases": ["爱宫心爱", "爱宫_心爱", "心爱"] },
   { "name": "小泽花", "aliases": ["小泽", "小花"] },
   { "name": "桃乐丝・泽巴哈", "aliases": ["桃乐丝", "泽巴哈"] },
   { "name": "爱宫 铃", "aliases": ["爱宫铃", "爱宫_铃"] },
   { "name": "何铃", "aliases": [] },
-  { "name": "王静", "aliases": [] },
-  { "name": "中村惠子", "aliases": ["惠子"] }
+  { "name": "王静", "aliases": [] }
 ]

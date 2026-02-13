@@ -7,9 +7,10 @@ type StopHandle = { stop?: () => void } | null;
 
 const __edenInjectedDataDebugOnce = new Set<number>();
 
-// 要过滤/隐藏的自定义标签列表（绘图思维链等）
+// 要过滤/隐藏的自定义标签列表（仅隐藏思维链类内容）。
+// 注意：不要在这里移除 imageprompt/genimage，这些块可能承载生图插件回传的有效提示词。
 // 注意：避免使用 `\\b`（JSON 会将 `\\b` 反转义为 backspace），使用更稳健的“空白或 >”边界。
-const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt', 'imageprompt', 'genimage'];
+const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt'];
 
 function stripHiddenBlocks(raw: string): string {
   let cleaned = raw;

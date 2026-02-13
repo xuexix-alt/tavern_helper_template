@@ -24,33 +24,6 @@ const state: BridgeState = {
 };
 let last_stream_scroll_at = 0;
 
-function parseFlag(value: string | null | undefined): boolean | null {
-  if (value == null) return null;
-  const v = String(value).trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(v)) return true;
-  if (['0', 'false', 'no', 'off'].includes(v)) return false;
-  return null;
-}
-
-function isLegacyModeEnabled(): boolean {
-  try {
-    const search = new URLSearchParams(window.location.search);
-    const fromQuery = parseFlag(search.get('legacy_mode'));
-    if (fromQuery != null) return fromQuery;
-  } catch {
-    // ignore
-  }
-
-  try {
-    const fromStorage = parseFlag(localStorage.getItem('eden:samelayer:legacy_mode'));
-    if (fromStorage != null) return fromStorage;
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
 function readContext(): any {
   try {
     return (window as any).SillyTavern?.getContext?.() ?? null;
@@ -84,19 +57,32 @@ function ensureHideStyle() {
   if ($(`#${STYLE_ID}`).length > 0) return;
   $('<style>')
     .attr('id', STYLE_ID)
-    .text(`#chat > .mes.${HIDDEN_CLASS}{display:none !important;}`)
+    .text(`#chat > .mes.${HIDDEN_CLASS},#chat .mes.${HIDDEN_CLASS}{display:none !important;}`)
     .appendTo('head');
 }
 
+function listChatMessageElements(): JQuery<HTMLElement> {
+  const $direct = $('#chat > .mes[mesid]') as JQuery<HTMLElement>;
+  if ($direct.length > 0) return $direct;
+  return $('#chat .mes[mesid]') as JQuery<HTMLElement>;
+}
+
+function findChatMessageElement(message_id: number): JQuery<HTMLElement> {
+  let $mes = $(`#chat > .mes[mesid='${message_id}']`) as JQuery<HTMLElement>;
+  if ($mes.length > 0) return $mes;
+  $mes = $(`#chat .mes[mesid='${message_id}']`) as JQuery<HTMLElement>;
+  return $mes;
+}
+
 function setMessageHidden(message_id: number, hidden: boolean) {
-  const $mes = $(`#chat > .mes[mesid='${message_id}']`);
+  const $mes = findChatMessageElement(message_id);
   if ($mes.length === 0) return;
   $mes.toggleClass(HIDDEN_CLASS, hidden);
 }
 
 function applyHidePolicy() {
   const anchor_id = state.anchor_message_id;
-  $('#chat > .mes').each((_idx, el) => {
+  listChatMessageElements().each((_idx, el) => {
     const message_id = Number($(el).attr('mesid'));
     if (!Number.isFinite(message_id)) return;
     if (anchor_id == null) {
@@ -110,7 +96,7 @@ function applyHidePolicy() {
 function scrollAnchorIntoView(align: 'start' | 'end' | 'nearest' = 'end') {
   const anchor_id = state.anchor_message_id;
   if (anchor_id == null) return;
-  const anchor = $(`#chat > .mes[mesid='${anchor_id}']`).get(0);
+  const anchor = findChatMessageElement(anchor_id).get(0);
   if (!anchor) return;
 
   try {
@@ -264,7 +250,10 @@ function resetBridge(reason: string) {
 }
 
 function resolveCurrentStreamingMessageId(): number | null {
-  const raw = $('#chat').children('.mes.last_mes').attr('mesid');
+  const raw =
+    $('#chat > .mes.last_mes').attr('mesid') ??
+    $('#chat .mes.last_mes').last().attr('mesid') ??
+    null;
   const message_id = Number(raw);
   return Number.isFinite(message_id) ? message_id : null;
 }
@@ -274,6 +263,8 @@ function handleStreamToken(message: string) {
   if (message_id == null || !isAssistantMessage(message_id)) return;
 
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
+  // 首轮生成时可能还没有可解析锚点，兜底为当前流式助手楼层，避免隐藏策略失效。
+  if (state.anchor_message_id == null) state.anchor_message_id = message_id;
   if (state.anchor_message_id != null && message_id !== state.anchor_message_id) {
     setMessageHidden(message_id, true);
   }
@@ -281,6 +272,7 @@ function handleStreamToken(message: string) {
   state.message_id = message_id;
   state.raw = String(message ?? '');
   state.during_streaming = true;
+  applyHidePolicy();
   scheduleAnchorScroll(false, 'end');
   emitSnapshotLegacyAndShow(SAMELAYER_EVENTS.STREAM, 'stream');
 }
@@ -289,6 +281,7 @@ function handleMessageReceived(message_id: number) {
   if (!Number.isFinite(message_id) || !isAssistantMessage(message_id)) return;
 
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
+  if (state.anchor_message_id == null) state.anchor_message_id = message_id;
   if (state.anchor_message_id != null && message_id !== state.anchor_message_id) {
     setMessageHidden(message_id, true);
   }
@@ -296,6 +289,7 @@ function handleMessageReceived(message_id: number) {
   state.message_id = message_id;
   state.raw = readMessageText(message_id);
   state.during_streaming = false;
+  applyHidePolicy();
   scheduleAnchorScroll(true, 'end');
   emitSnapshotLegacyAndShow(SAMELAYER_EVENTS.FINAL, 'final');
 }
@@ -304,6 +298,7 @@ function handleMessageUpdated(message_id: number) {
   if (!Number.isFinite(message_id) || !isAssistantMessage(message_id)) return;
   if (message_id !== state.message_id) return;
   state.raw = readMessageText(message_id);
+  applyHidePolicy();
   scheduleAnchorScroll(false, 'end');
   emitSnapshotLegacyAndShow(SAMELAYER_EVENTS.FINAL, 'final');
 }
@@ -331,11 +326,6 @@ function onAnyEvent(eventName: string, listener: (...args: any[]) => void): Stop
 }
 
 $(() => {
-  if (isLegacyModeEnabled()) {
-    console.info('[eden/samelayer] legacy_mode=on, 同层桥接已停用');
-    return;
-  }
-
   ensureHideStyle();
   resetBridge('init');
 
@@ -374,7 +364,7 @@ $(() => {
   $(window).on('pagehide', () => {
     stops.forEach(s => s?.stop?.());
     $(`#${STYLE_ID}`).remove();
-    $('#chat > .mes').removeClass(HIDDEN_CLASS);
+    listChatMessageElements().removeClass(HIDDEN_CLASS);
     if (typeof eventClearAll === 'function') eventClearAll();
   });
 });

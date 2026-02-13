@@ -9,9 +9,10 @@ type StopHandle = { stop?: () => void } | null;
 const __edenInjectedDataDebugOnce = new Set<number>();
 const __edenInjectedDataWarnOnce = new Set<number>();
 
-// 要过滤/隐藏的自定义标签列表（绘图思维链等）
+// 要过滤/隐藏的自定义标签列表（仅隐藏思维链类内容）。
+// 注意：不要在这里移除 imageprompt/genimage，这些块可能承载生图插件回传的有效提示词。
 // 注意：避免使用 `\\b`（JSON 会将 `\\b` 反转义为 backspace），使用更稳健的“空白或 >”边界。
-const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt', 'imageprompt', 'genimage'];
+const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt'];
 const STRUCTURED_TAGS = ['content', 'game', 'option'] as const;
 const IMAGE_PROMPT_TOKEN_RE = /(?:^|[\s>])[\w\u4e00-\u9fa5-]+###([\s\S]+?)###/i;
 
@@ -257,7 +258,6 @@ export function useInjectedData() {
     options.value = parsed.options;
 
     if (isDebug) {
-      // eslint-disable-next-line no-console
       console.debug('[状态栏][InjectedData] 使用同层桥接数据', {
         messageId: payload.message_id,
         phase: payload.phase,
@@ -295,12 +295,6 @@ export function useInjectedData() {
     onAnyEvent(SAMELAYER_EVENTS.SHOW, applyBridgePayload);
     onAnyEvent(SAMELAYER_EVENTS.SYNC_DATA, applyBridgePayload);
 
-    // 兼容旧协议事件，逐步迁移期间不丢数据。
-    onAnyEvent(SAMELAYER_EVENTS.STREAM, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.FINAL, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.RESET, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.SYNC_RESPONSE, applyBridgePayload);
-
     // 分支切换/编辑/收消息后，强制按当前楼层重新解析，避免停留在旧分支正文。
     if (typeof tavern_events !== 'undefined') {
       bindRefreshOnTavernEvent(tavern_events.MESSAGE_SWIPED as any);
@@ -314,7 +308,6 @@ export function useInjectedData() {
 
     if (typeof eventEmit === 'function') {
       void eventEmit(SAMELAYER_EVENTS.REQUIRE_DATA as any);
-      void eventEmit(SAMELAYER_EVENTS.SYNC_REQUEST as any);
     }
   });
 

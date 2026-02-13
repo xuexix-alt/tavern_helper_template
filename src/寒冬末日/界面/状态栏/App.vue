@@ -284,86 +284,6 @@ watchDebounced(
   gap: 4px;
 }
 
-.eden-choices-modal-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 2200;
-  padding: 54px 12px 10px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  background: rgba(8, 12, 20, 0.55);
-  backdrop-filter: blur(2px);
-}
-
-.eden-choices-modal {
-  width: min(100%, 900px);
-  max-height: min(72vh, 820px);
-  border-radius: 12px;
-  border: 1px solid rgba(139, 233, 253, 0.4);
-  background: linear-gradient(180deg, rgba(20, 26, 40, 0.96), rgba(10, 14, 22, 0.97));
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
-  overflow: hidden;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
-.eden-choices-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 9px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.eden-choices-modal-title {
-  font-size: 0.88em;
-  color: var(--text-strong);
-  line-height: 1;
-}
-
-.eden-choices-modal-close {
-  flex: 0 0 auto;
-  border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-color);
-  font: inherit;
-  font-size: 0.76em;
-  line-height: 1;
-  padding: 6px 9px;
-  cursor: pointer;
-}
-
-.eden-choices-modal-close:hover {
-  background: rgba(139, 233, 253, 0.24);
-}
-
-.eden-choices-modal-body {
-  min-height: 0;
-  overflow: auto;
-  padding: 6px;
-}
-
-.eden-choices-modal-body :deep(.choices-title) {
-  display: none;
-}
-
-.eden-choices-modal-body :deep(.choice-item) {
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  border-radius: 7px;
-}
-
-.eden-choices-modal-body :deep(.palette-button) {
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  font-size: 15px;
-}
-
 .eden-tab-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -417,23 +337,6 @@ watchDebounced(
   .eden-tab-btn {
     min-height: 36px;
     border-radius: 8px;
-  }
-
-  .eden-choices-modal-mask {
-    padding: 44px 8px 8px;
-    align-items: flex-start;
-  }
-
-  .eden-choices-modal {
-    max-height: min(78vh, 940px);
-  }
-
-  .eden-choices-modal-head {
-    padding: 6px 8px;
-  }
-
-  .eden-choices-modal-body {
-    padding: 6px;
   }
 
   .eden-tab-label {
