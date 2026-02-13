@@ -1,7 +1,7 @@
 <template>
   <section class="eden-page">
     <div class="eden-page-scroll">
-      <CharactersSection :query="query" />
+      <CharactersSection :query="query" mode="characters" />
       <OtherResidentsSection :query="query" />
     </div>
   </section>

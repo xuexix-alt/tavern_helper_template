@@ -349,9 +349,9 @@
                   <div v-for="cat in abilityVisibleCategories" :key="`${row.level}-${cat}`" class="ability-grid-cell">
                     <div class="ability-grid-head">{{ cat }}</div>
                     <div class="ability-grid-cards">
-                      <template v-if="row.byCategory[cat].length > 0">
+                      <template v-if="getAbilityCardsByCategory(row, cat).length > 0">
                         <article
-                          v-for="ab in row.byCategory[cat]"
+                          v-for="ab in getAbilityCardsByCategory(row, cat)"
                           :key="ab.id"
                           class="skill-card"
                           :class="[`rarity-${ab.rarity}`, { unlocked: ab.unlocked, locked: !ab.unlocked }]"
@@ -388,11 +388,12 @@ import { useDataStore } from '../../store';
 import { useShelterScopeStore } from '../../shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../util/shelter_scope';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
+import { getViewMessageState, resolveViewMessageId } from '../../../界面/viewMessage';
 import shelterBlueprintRaw from '../../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
 const store = useDataStore();
 const scopeStore = useShelterScopeStore();
-const currentMessageId = Number(getCurrentMessageId());
+const currentMessageId = computed(() => resolveViewMessageId({ preferHistory: true }) ?? -1);
 
 function readShelterUpgradeMeta(worldDate: string): {
   last_roll_date: string;
@@ -487,9 +488,9 @@ const isNewDailyRoll = computed(
 );
 const isNewShelterLevel = computed(
   () =>
-    Number.isFinite(currentMessageId) &&
-    currentMessageId > 0 &&
-    currentMessageId === shelterMeta.value.last_level_message_id,
+    Number.isFinite(currentMessageId.value) &&
+    currentMessageId.value > 0 &&
+    currentMessageId.value === shelterMeta.value.last_level_message_id,
 );
 const isNewAbilityList = computed(
   () =>
@@ -534,14 +535,20 @@ async function calibrateDailyRollDate() {
   if (isCalibrating.value) return;
   isCalibrating.value = true;
   try {
+    if (getViewMessageState().mode === 'history') {
+      toastr?.info?.('回看模式仅查看，请先返回最新楼层后再校准。', '每日Roll');
+      return;
+    }
+
     const today = String(store.data.世界.日期 ?? '').trim();
     if (!today) {
       toastr?.warning?.('无法校准：当前楼层没有世界日期', '每日Roll');
       return;
     }
 
-    const message_id = Number(getCurrentMessageId());
-    if (!Number.isFinite(message_id)) {
+    const message_id = resolveViewMessageId({ preferHistory: false });
+    const targetMessageId = Number(message_id);
+    if (!Number.isFinite(targetMessageId)) {
       toastr?.warning?.('无法校准：未能获取当前楼层号', '每日Roll');
       return;
     }
@@ -550,7 +557,7 @@ async function calibrateDailyRollDate() {
     if (typeof updateVariablesWith === 'function') {
       const request = {
         id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        message_id,
+        message_id: targetMessageId,
         today,
         ts: new Date().toISOString(),
       };
@@ -568,8 +575,8 @@ async function calibrateDailyRollDate() {
 
     // 触发一次 MVU 更新事件，让后台脚本立刻处理（尽量不改动楼层变量内容）
     await waitGlobalInitialized('Mvu');
-    const mvu_data = Mvu.getMvuData({ type: 'message', message_id }) as any;
-    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId }) as any;
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
 
     toastr?.info?.('已请求校准/roll，正在刷新…', '每日Roll');
     try {
@@ -932,6 +939,14 @@ const abilityMatrixRows = computed(() => {
     });
 });
 
+function getAbilityCardsByCategory(
+  row: { byCategory?: Record<string, SkillCardView[] | undefined> } | null | undefined,
+  category: AbilityCategoryDisplay,
+): SkillCardView[] {
+  const cards = row?.byCategory?.[category];
+  return Array.isArray(cards) ? cards : [];
+}
+
 const shelterLevelLabelByLevel = computed(() => {
   const map: Record<number, string> = {};
   try {
@@ -1097,20 +1112,25 @@ function confirmAndSendScope() {
   void copyText(text, { toast: false });
 }
 
+function readNameList(path: string): string[] {
+  const value = _.get(store.data, path, []);
+  return Array.isArray(value) ? value.filter(Boolean) : [];
+}
+
 // 玄关区域计算属性
-const hasTempGuestA = computed(() => store.data.房间.玄关.临时客房A入住者.length > 0);
+const hasTempGuestA = computed(() => readNameList('房间.玄关.临时客房A入住者').length > 0);
 
-const hasTempGuestB = computed(() => store.data.房间.玄关.临时客房B入住者.length > 0);
+const hasTempGuestB = computed(() => readNameList('房间.玄关.临时客房B入住者').length > 0);
 
-const hasPurifyZoneUser = computed(() => store.data.房间.玄关.净化隔离区入住者.length > 0);
+const hasPurifyZoneUser = computed(() => readNameList('房间.玄关.净化隔离区入住者').length > 0);
 
 function getTempGuestNames(room: 'A' | 'B'): string {
-  const names = room === 'A' ? store.data.房间.玄关.临时客房A入住者 : store.data.房间.玄关.临时客房B入住者;
+  const names = room === 'A' ? readNameList('房间.玄关.临时客房A入住者') : readNameList('房间.玄关.临时客房B入住者');
   return names.length > 0 ? names.join('、') : '';
 }
 
 function getPurifyZoneNames(): string {
-  const names = store.data.房间.玄关.净化隔离区入住者;
+  const names = readNameList('房间.玄关.净化隔离区入住者');
   return names.length > 0 ? names.join('、') : '';
 }
 
@@ -1120,31 +1140,31 @@ function getEntranceStatus(): string {
 }
 
 // 核心区计算属性
-const hasLivingRoomUser = computed(() => store.data.房间.核心区.客厅使用者.length > 0);
+const hasLivingRoomUser = computed(() => readNameList('房间.核心区.客厅使用者').length > 0);
 
-const hasKitchenUser = computed(() => store.data.房间.核心区.餐厅厨房使用者.length > 0);
+const hasKitchenUser = computed(() => readNameList('房间.核心区.餐厅厨房使用者').length > 0);
 
 function getLivingRoomNames(): string {
-  const names = store.data.房间.核心区.客厅使用者;
+  const names = readNameList('房间.核心区.客厅使用者');
   return names.length > 0 ? names.join('、') : '';
 }
 
 function getKitchenNames(): string {
-  const names = store.data.房间.核心区.餐厅厨房使用者;
+  const names = readNameList('房间.核心区.餐厅厨房使用者');
   return names.length > 0 ? names.join('、') : '';
 }
 
-const hasBedroomUser = computed(() => store.data.房间.核心区.主卧室使用者.length > 0);
+const hasBedroomUser = computed(() => readNameList('房间.核心区.主卧室使用者').length > 0);
 
-const hasBathroomUser = computed(() => store.data.房间.核心区.主浴室使用者.length > 0);
+const hasBathroomUser = computed(() => readNameList('房间.核心区.主浴室使用者').length > 0);
 
 function getBedroomUserNames(): string {
-  const names = store.data.房间.核心区.主卧室使用者;
+  const names = readNameList('房间.核心区.主卧室使用者');
   return names.length > 0 ? names.join('、') : '';
 }
 
 function getBathroomUserNames(): string {
-  const names = store.data.房间.核心区.主浴室使用者;
+  const names = readNameList('房间.核心区.主浴室使用者');
   return names.length > 0 ? names.join('、') : '';
 }
 
@@ -1152,7 +1172,12 @@ function getBathroomUserNames(): string {
 function getFloorRoomData(floor: string, room: string) {
   const floorKey = floor === '20' ? '楼层20房间' : '楼层19房间';
   const rooms = store.data.房间.楼层房间[floorKey as keyof typeof store.data.房间.楼层房间];
-  return rooms?.[room] || { 入住者: [] };
+  const raw = rooms?.[room] as any;
+  const residents = Array.isArray(raw?.入住者) ? raw.入住者 : [];
+  return {
+    ...(raw && typeof raw === 'object' ? raw : {}),
+    入住者: residents,
+  };
 }
 
 function hasFloorResident(floor: string, room: string): boolean {

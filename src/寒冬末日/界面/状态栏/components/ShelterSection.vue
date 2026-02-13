@@ -2,28 +2,38 @@
   <section id="shelter-section" class="section shelter-redesign">
     <h2 class="section-title">🏰 庇护所信息 🏰</h2>
     <div class="shelter-grid">
-      <div class="shelter-item">
-        <div class="label">
-          ⚜️ 庇护所等级
-          <span v-if="isNewShelterLevel" class="new-tag">NEW</span>
+      <div class="shelter-top-metrics">
+        <div class="shelter-item shelter-item--metric shelter-item--level">
+          <div class="label">
+            ⚜️ 庇护所等级
+            <span v-if="isNewShelterLevel" class="new-tag">NEW</span>
+          </div>
+          <div class="value metric-value metric-value--level">
+            <span class="metric-number">{{ store.data.庇护所.庇护所等级 }}</span>
+            <span class="metric-unit">级</span>
+          </div>
         </div>
-        <div class="value">{{ store.data.庇护所.庇护所等级 }}</div>
-      </div>
-      <div class="shelter-item">
-        <div class="label">
-          🎲 今日投掷点数
-          <span v-if="isNewDailyRoll" class="new-tag">NEW</span>
+
+        <div class="shelter-item shelter-item--metric shelter-item--roll">
+          <div class="label">
+            🎲 今日投掷点数
+            <span v-if="isNewDailyRoll" class="new-tag">NEW</span>
+          </div>
+          <div class="metric-roll-row">
+            <div class="value metric-value metric-value--roll">{{ store.data.庇护所.今日投掷点数 }}</div>
+            <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
+              校准
+            </button>
+          </div>
         </div>
-        <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
-        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
-          校准
-        </button>
+
+        <div class="shelter-item shelter-item--metric shelter-item--pity distance-item">
+          <div class="label">⏳ 距离下次保底升级</div>
+          <div class="value metric-value metric-value--pity">{{ store.data.庇护所.距离上次升级 }}</div>
+        </div>
       </div>
-      <div class="shelter-item distance-item">
-        <div class="label">⏳ 距离下次保底升级</div>
-        <div class="value">{{ store.data.庇护所.距离上次升级 }}</div>
-      </div>
-      <div class="shelter-item">
+
+      <div class="shelter-item shelter-item--expansion">
         <div class="label">🔒 可扩展区域状态</div>
         <div class="expansion-list">
           <div class="expansion-card" :class="{ unlocked: store.data.庇护所.可扩展区域.医疗翼 !== '未解锁' }">
@@ -49,8 +59,8 @@
           <span class="toggle-text">{{ isMapExpanded ? '收起地图' : '展开地图' }}</span>
         </button>
         <button class="map-toggle-btn map-toggle-btn--scope" :disabled="!canOpenScopeEditor" @click="toggleScopeEditor">
-          <span class="toggle-icon">{{ isScopeEditorOpen ? '✕' : '➕' }}</span>
-          <span class="toggle-text">{{ isScopeEditorOpen ? '结束勾选' : '设置庇护所' }}</span>
+          <span class="toggle-icon">{{ isScopeEditorOpen ? '✓' : '＋' }}</span>
+          <span class="toggle-text">+庇护范围</span>
         </button>
         <div v-if="canOpenScopeEditor && !isScopeEditorOpen" class="scope-hint">
           20层 {{ scope20Max ? `${scope20Count}/${scope20Max}` : '未解锁' }} · 19层
@@ -58,60 +68,57 @@
         </div>
 
         <div class="map-container">
-          <!-- 玄关区域 -->
-          <div class="map-zone">
-            <div class="zone-label">🚪 玄关 - 净化区</div>
-            <div class="room-grid entrance-grid">
-              <div class="room-cell highlight" :class="{ occupied: hasPurifyZoneUser }">
-                <div class="room-number">玄关</div>
-                <div class="room-value">{{ getEntranceStatus() }}</div>
-                <div class="room-resident">{{ getPurifyZoneNames() }}</div>
+          <div class="map-quick-zones">
+            <!-- 玄关区域 -->
+            <div class="map-zone map-zone--compact map-zone--entrance">
+              <div class="zone-label zone-label--compact">
+                <span class="zone-label-main">🚪 玄关 · 净化区</span>
+                <span class="zone-label-sub">出入缓冲 / 临时接待</span>
               </div>
-              <div class="room-cell" :class="{ occupied: hasTempGuestA }">
-                <div class="room-number">临时客房 A</div>
-                <div class="room-value">{{ hasTempGuestA ? '' : '空置' }}</div>
-                <div class="room-resident">{{ getTempGuestNames('A') }}</div>
-              </div>
-              <div class="room-cell" :class="{ occupied: hasTempGuestB }">
-                <div class="room-number">临时客房 B</div>
-                <div class="room-value">{{ hasTempGuestB ? '' : '空置' }}</div>
-                <div class="room-resident">{{ getTempGuestNames('B') }}</div>
+              <div class="room-grid entrance-grid">
+                <div
+                  v-for="room in entranceRooms"
+                  :key="`entrance-${room.key}`"
+                  class="room-cell room-cell--compact"
+                  :class="[
+                    room.main ? 'room-cell--entrance-main highlight' : '',
+                    { occupied: hasEntranceRoomResident(room.key) },
+                  ]"
+                >
+                  <div class="room-number">{{ room.label }}</div>
+                  <div class="room-value">{{ getEntranceRoomStatus(room.key) }}</div>
+                  <div class="room-resident">{{ getEntranceRoomNames(room.key) }}</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- 核心区 -->
-          <div class="map-zone">
-            <div class="zone-label">💎 核心生活区</div>
-            <div class="room-grid core-grid">
-              <div class="room-cell highlight" :class="{ occupied: hasLivingRoomUser }">
-                <div class="room-number">客厅</div>
-                <div class="room-value">公共区域</div>
-                <div class="room-resident">{{ getLivingRoomNames() }}</div>
+            <!-- 核心区 -->
+            <div class="map-zone map-zone--compact map-zone--core">
+              <div class="zone-label zone-label--compact">
+                <span class="zone-label-main">💎 核心生活区</span>
+                <span class="zone-label-sub">主要功能房间</span>
               </div>
-              <div class="room-cell highlight" :class="{ occupied: hasKitchenUser }">
-                <div class="room-number">餐厅/厨房</div>
-                <div class="room-value">万象合成终端</div>
-                <div class="room-resident">{{ getKitchenNames() }}</div>
-              </div>
-              <div class="room-cell" :class="{ occupied: hasBedroomUser }">
-                <div class="room-number">主卧室</div>
-                <div class="room-value">{{ hasBedroomUser ? '' : '空闲' }}</div>
-                <div class="room-resident">{{ getBedroomUserNames() }}</div>
-              </div>
-              <div class="room-cell" :class="{ occupied: hasBathroomUser }">
-                <div class="room-number">主浴室</div>
-                <div class="room-value">{{ hasBathroomUser ? '' : '空闲' }}</div>
-                <div class="room-resident">{{ getBathroomUserNames() }}</div>
+              <div class="room-grid core-grid">
+                <div
+                  v-for="room in coreRooms"
+                  :key="`core-${room.key}`"
+                  class="room-cell room-cell--compact"
+                  :class="[
+                    room.feature ? 'room-cell--feature highlight' : '',
+                    { occupied: hasCoreRoomResident(room.key) },
+                  ]"
+                >
+                  <div class="room-number">{{ room.label }}</div>
+                  <div class="room-resident">{{ getCoreRoomNames(room.key) }}</div>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 20层走廊 -->
-          <div class="map-zone">
+          <div class="map-zone map-zone--floor">
             <div class="zone-label">🏢 20层 - 公寓走廊</div>
             <div class="zone-scope-hint">{{ scope20Hint }}</div>
-            <div class="floor-indicator">↓ 通往外部楼梯</div>
             <div class="room-grid floor-grid">
               <div
                 v-for="room in floor20Rooms"
@@ -140,7 +147,7 @@
           </div>
 
           <!-- 19层走廊 -->
-          <div class="map-zone">
+          <div class="map-zone map-zone--floor">
             <div class="zone-label">🏢 19层 - 公寓走廊</div>
             <div class="zone-scope-hint">{{ scope19Hint }}</div>
             <div class="room-grid floor-grid">
@@ -167,7 +174,6 @@
                 <div class="room-resident">{{ getFloorRoomNames('19', room.number) }}</div>
               </div>
             </div>
-            <div class="floor-indicator">↓ 通往18层</div>
           </div>
         </div>
 
@@ -302,7 +308,7 @@
         <button class="collapse-toggle-btn" @click="toggleAbilityExpanded()">
           <span class="toggle-icon">{{ isAbilityExpanded ? '▼' : '▶' }}</span>
           <span class="toggle-text">
-            💡 庇护所能力列表
+            💡 能力卡牌
             <span v-if="isNewAbilityList" class="new-tag">NEW</span>
           </span>
         </button>
@@ -349,9 +355,9 @@
                   <div v-for="cat in abilityVisibleCategories" :key="`${row.level}-${cat}`" class="ability-grid-cell">
                     <div class="ability-grid-head">{{ cat }}</div>
                     <div class="ability-grid-cards">
-                      <template v-if="row.byCategory[cat].length > 0">
+                      <template v-if="getAbilityCardsByCategory(row, cat).length > 0">
                         <article
-                          v-for="ab in row.byCategory[cat]"
+                          v-for="ab in getAbilityCardsByCategory(row, cat)"
                           :key="ab.id"
                           class="skill-card"
                           :class="[`rarity-${ab.rarity}`, { unlocked: ab.unlocked, locked: !ab.unlocked }]"
@@ -388,11 +394,12 @@ import { useDataStore } from '../../store';
 import { useShelterScopeStore } from '../../shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../util/shelter_scope';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
+import { getViewMessageState, resolveViewMessageId } from '../../viewMessage';
 import shelterBlueprintRaw from '../../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
 const store = useDataStore();
 const scopeStore = useShelterScopeStore();
-const currentMessageId = Number(getCurrentMessageId());
+const currentMessageId = computed(() => resolveViewMessageId({ preferHistory: true }) ?? -1);
 
 function readShelterUpgradeMeta(worldDate: string): {
   last_roll_date: string;
@@ -487,9 +494,9 @@ const isNewDailyRoll = computed(
 );
 const isNewShelterLevel = computed(
   () =>
-    Number.isFinite(currentMessageId) &&
-    currentMessageId > 0 &&
-    currentMessageId === shelterMeta.value.last_level_message_id,
+    Number.isFinite(currentMessageId.value) &&
+    currentMessageId.value > 0 &&
+    currentMessageId.value === shelterMeta.value.last_level_message_id,
 );
 const isNewAbilityList = computed(
   () =>
@@ -534,14 +541,20 @@ async function calibrateDailyRollDate() {
   if (isCalibrating.value) return;
   isCalibrating.value = true;
   try {
+    if (getViewMessageState().mode === 'history') {
+      toastr?.info?.('回看模式仅查看，请先返回最新楼层后再校准。', '每日Roll');
+      return;
+    }
+
     const today = String(store.data.世界.日期 ?? '').trim();
     if (!today) {
       toastr?.warning?.('无法校准：当前楼层没有世界日期', '每日Roll');
       return;
     }
 
-    const message_id = Number(getCurrentMessageId());
-    if (!Number.isFinite(message_id)) {
+    const message_id = resolveViewMessageId({ preferHistory: false });
+    const targetMessageId = Number(message_id);
+    if (!Number.isFinite(targetMessageId)) {
       toastr?.warning?.('无法校准：未能获取当前楼层号', '每日Roll');
       return;
     }
@@ -550,7 +563,7 @@ async function calibrateDailyRollDate() {
     if (typeof updateVariablesWith === 'function') {
       const request = {
         id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
-        message_id,
+        message_id: targetMessageId,
         today,
         ts: new Date().toISOString(),
       };
@@ -568,8 +581,8 @@ async function calibrateDailyRollDate() {
 
     // 触发一次 MVU 更新事件，让后台脚本立刻处理（尽量不改动楼层变量内容）
     await waitGlobalInitialized('Mvu');
-    const mvu_data = Mvu.getMvuData({ type: 'message', message_id }) as any;
-    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId }) as any;
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
 
     toastr?.info?.('已请求校准/roll，正在刷新…', '每日Roll');
     try {
@@ -656,8 +669,18 @@ const canOpenScopeEditor = computed(() => shelterLevel.value >= 3);
 
 const scope20Max = computed(() => floorRoomCapacity(shelterLevel.value, '20'));
 const scope19Max = computed(() => floorRoomCapacity(shelterLevel.value, '19'));
-const scope20Count = computed(() => (scopeStore.scope['20'] ?? []).length);
-const scope19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
+
+function isVisibleScopeRoom(floor: '20' | '19', roomNumber: string): boolean {
+  const n = String(roomNumber ?? '').trim();
+  return floor === '20' ? /^200[1-8]$/.test(n) : /^190[1-8]$/.test(n);
+}
+
+function getVisibleScopeRooms(floor: '20' | '19'): string[] {
+  return (scopeStore.scope[floor] ?? []).filter(room => isVisibleScopeRoom(floor, room));
+}
+
+const scope20Count = computed(() => getVisibleScopeRooms('20').length);
+const scope19Count = computed(() => getVisibleScopeRooms('19').length);
 
 const scopeInstructionText = computed(() => scopeStore.buildInstructionText());
 const scopeInstructionDraft = ref('');
@@ -678,8 +701,8 @@ function buildFloorScopeHint(rooms: string[], max: number, unlockLevel: number):
   return `伊甸已庇护${list}。当前可用庇护 ${rooms.length}/${max}。`;
 }
 
-const scope20Hint = computed(() => buildFloorScopeHint(scopeStore.scope['20'] ?? [], scope20Max.value, 3));
-const scope19Hint = computed(() => buildFloorScopeHint(scopeStore.scope['19'] ?? [], scope19Max.value, 6));
+const scope20Hint = computed(() => buildFloorScopeHint(getVisibleScopeRooms('20'), scope20Max.value, 3));
+const scope19Hint = computed(() => buildFloorScopeHint(getVisibleScopeRooms('19'), scope19Max.value, 6));
 
 const SHELTER_CATEGORY_ORDER_RAW = ['安全', '生存', '舒适', '扩展', '远征', '限制'] as const;
 const SHELTER_CATEGORY_ORDER_DISPLAY = ['安全', '生存', '舒适', '远征&扩展', '限制'] as const;
@@ -889,8 +912,8 @@ const filteredAbilityEntries = computed(() => {
       }
       if (mode === 'level_desc') {
         if (a.level !== b.level) return b.level - a.level;
-      } else {
-        if (a.level !== b.level) return a.level - b.level;
+      } else if (a.level !== b.level) {
+        return a.level - b.level;
       }
       const ca = SHELTER_CATEGORY_ORDER_RAW.indexOf(a.category);
       const cb = SHELTER_CATEGORY_ORDER_RAW.indexOf(b.category);
@@ -932,6 +955,14 @@ const abilityMatrixRows = computed(() => {
     });
 });
 
+function getAbilityCardsByCategory(
+  row: { byCategory?: Record<string, SkillCardView[] | undefined> } | null | undefined,
+  category: AbilityCategoryDisplay,
+): SkillCardView[] {
+  const cards = row?.byCategory?.[category];
+  return Array.isArray(cards) ? cards : [];
+}
+
 const shelterLevelLabelByLevel = computed(() => {
   const map: Record<number, string> = {};
   try {
@@ -960,10 +991,6 @@ const floor20Rooms = [
   { number: '2006' },
   { number: '2007' },
   { number: '2008' },
-  { number: '2009' },
-  { number: '2010' },
-  { number: '2011' },
-  { number: '2012' },
 ];
 
 // 19层房间数据
@@ -976,10 +1003,6 @@ const floor19Rooms = [
   { number: '1906' },
   { number: '1907' },
   { number: '1908' },
-  { number: '1909' },
-  { number: '1910' },
-  { number: '1911' },
-  { number: '1912' },
 ];
 
 function canEditFloor(floor: '20' | '19'): boolean {
@@ -1097,62 +1120,94 @@ function confirmAndSendScope() {
   void copyText(text, { toast: false });
 }
 
-// 玄关区域计算属性
-const hasTempGuestA = computed(() => store.data.房间.玄关.临时客房A入住者.length > 0);
+type EntranceRoomKey = 'entrance' | 'guest_a' | 'guest_b' | 'guest_c' | 'guest_d' | 'guest_e';
+type CoreRoomKey = 'living_room' | 'kitchen' | 'master_bedroom' | 'mini_theater_stage' | 'meeting_room' | 'second_bedroom';
 
-const hasTempGuestB = computed(() => store.data.房间.玄关.临时客房B入住者.length > 0);
+const entranceRooms: Array<{ key: EntranceRoomKey; label: string; main?: boolean }> = [
+  { key: 'entrance', label: '玄关', main: true },
+  { key: 'guest_a', label: '客房A' },
+  { key: 'guest_b', label: '客房B' },
+  { key: 'guest_c', label: '客房C' },
+  { key: 'guest_d', label: '客房D' },
+  { key: 'guest_e', label: '客房E' },
+];
 
-const hasPurifyZoneUser = computed(() => store.data.房间.玄关.净化隔离区入住者.length > 0);
+const coreRooms: Array<{ key: CoreRoomKey; label: string; feature?: boolean }> = [
+  { key: 'living_room', label: '客厅', feature: true },
+  { key: 'kitchen', label: '餐厅/厨房', feature: true },
+  { key: 'master_bedroom', label: '主卧' },
+  { key: 'mini_theater_stage', label: '小影院&舞台' },
+  { key: 'meeting_room', label: '会议室' },
+  { key: 'second_bedroom', label: '次卧' },
+];
 
-function getTempGuestNames(room: 'A' | 'B'): string {
-  const names = room === 'A' ? store.data.房间.玄关.临时客房A入住者 : store.data.房间.玄关.临时客房B入住者;
-  return names.length > 0 ? names.join('、') : '';
+function toNameArray(value: any): string[] {
+  return Array.isArray(value) ? value.filter(Boolean) : [];
 }
 
-function getPurifyZoneNames(): string {
-  const names = store.data.房间.玄关.净化隔离区入住者;
-  return names.length > 0 ? names.join('、') : '';
+function pickNameArray(paths: string[], fallback: string[] = []): string[] {
+  for (const path of paths) {
+    const names = toNameArray(_.get(store.data, path, []));
+    if (names.length > 0) return names;
+  }
+  return fallback;
 }
 
-function getEntranceStatus(): string {
-  // 玄关总是显示"就绪"
-  return '就绪';
+function getEntranceRoomResidents(key: EntranceRoomKey): string[] {
+  if (key === 'entrance') return toNameArray(_.get(store.data, '房间.玄关.净化隔离区入住者', []));
+  if (key === 'guest_a') return toNameArray(_.get(store.data, '房间.玄关.临时客房A入住者', []));
+  if (key === 'guest_b') return toNameArray(_.get(store.data, '房间.玄关.临时客房B入住者', []));
+  if (key === 'guest_c') return toNameArray(_.get(store.data, '房间.玄关.临时客房C入住者', []));
+  if (key === 'guest_d') return toNameArray(_.get(store.data, '房间.玄关.临时客房D入住者', []));
+  return toNameArray(_.get(store.data, '房间.玄关.临时客房E入住者', []));
 }
 
-// 核心区计算属性
-const hasLivingRoomUser = computed(() => store.data.房间.核心区.客厅使用者.length > 0);
-
-const hasKitchenUser = computed(() => store.data.房间.核心区.餐厅厨房使用者.length > 0);
-
-function getLivingRoomNames(): string {
-  const names = store.data.房间.核心区.客厅使用者;
-  return names.length > 0 ? names.join('、') : '';
+function hasEntranceRoomResident(key: EntranceRoomKey): boolean {
+  return getEntranceRoomResidents(key).length > 0;
 }
 
-function getKitchenNames(): string {
-  const names = store.data.房间.核心区.餐厅厨房使用者;
-  return names.length > 0 ? names.join('、') : '';
+function getEntranceRoomStatus(key: EntranceRoomKey): string {
+  if (key === 'entrance') return '就绪';
+  return hasEntranceRoomResident(key) ? '' : '空置';
 }
 
-const hasBedroomUser = computed(() => store.data.房间.核心区.主卧室使用者.length > 0);
-
-const hasBathroomUser = computed(() => store.data.房间.核心区.主浴室使用者.length > 0);
-
-function getBedroomUserNames(): string {
-  const names = store.data.房间.核心区.主卧室使用者;
-  return names.length > 0 ? names.join('、') : '';
+function getEntranceRoomNames(key: EntranceRoomKey): string {
+  const names = getEntranceRoomResidents(key);
+  if (names.length === 0) return '';
+  return formatRoomResidents(names, { maxShown: 3 });
 }
 
-function getBathroomUserNames(): string {
-  const names = store.data.房间.核心区.主浴室使用者;
-  return names.length > 0 ? names.join('、') : '';
+function getCoreRoomResidents(key: CoreRoomKey): string[] {
+  if (key === 'living_room') return toNameArray(_.get(store.data, '房间.核心区.客厅使用者', []));
+  if (key === 'kitchen') return toNameArray(_.get(store.data, '房间.核心区.餐厅厨房使用者', []));
+  if (key === 'master_bedroom') return toNameArray(_.get(store.data, '房间.核心区.主卧室使用者', []));
+  if (key === 'mini_theater_stage') {
+    return pickNameArray(['房间.核心区.小影院舞台使用者', '房间.核心区.主浴室使用者']);
+  }
+  if (key === 'meeting_room') return toNameArray(_.get(store.data, '房间.核心区.会议室使用者', []));
+  return pickNameArray(['房间.核心区.次卧使用者', '房间.核心区.书房使用者']);
+}
+
+function hasCoreRoomResident(key: CoreRoomKey): boolean {
+  return getCoreRoomResidents(key).length > 0;
+}
+
+function getCoreRoomNames(key: CoreRoomKey): string {
+  const names = getCoreRoomResidents(key);
+  if (names.length === 0) return '';
+  return formatRoomResidents(names, { maxShown: 4 });
 }
 
 // 楼层房间辅助函数
 function getFloorRoomData(floor: string, room: string) {
   const floorKey = floor === '20' ? '楼层20房间' : '楼层19房间';
   const rooms = store.data.房间.楼层房间[floorKey as keyof typeof store.data.房间.楼层房间];
-  return rooms?.[room] || { 入住者: [] };
+  const raw = rooms?.[room] as any;
+  const residents = Array.isArray(raw?.入住者) ? raw.入住者 : [];
+  return {
+    ...(raw && typeof raw === 'object' ? raw : {}),
+    入住者: residents,
+  };
 }
 
 function hasFloorResident(floor: string, room: string): boolean {
@@ -1589,27 +1644,65 @@ function formatRoomResidents(
   gap: 10px;
 }
 
+.shelter-redesign .shelter-top-metrics {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  order: 1;
+}
+
 .shelter-redesign .shelter-summary-block,
 .shelter-redesign .shelter-ability-block,
 .shelter-redesign .shelter-map-block {
   grid-column: 1 / -1;
+  margin: 0;
 }
 
 .shelter-redesign .shelter-summary-block {
-  order: -3;
+  order: 3;
 }
 
 .shelter-redesign .shelter-ability-block {
-  order: -2;
+  order: 4;
 }
 
 .shelter-redesign .shelter-map-block {
-  order: -1;
+  order: 5;
 }
 
 .shelter-redesign .shelter-item {
   padding: 10px 11px;
   border-radius: 12px;
+}
+
+.shelter-redesign .shelter-item--metric {
+  padding: 6px 9px;
+  border-radius: 10px;
+  min-height: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(150, 169, 214, 0.3);
+  background: linear-gradient(165deg, rgba(16, 22, 38, 0.94), rgba(14, 19, 32, 0.78));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.shelter-redesign .shelter-item--level {
+  border-color: rgba(146, 227, 255, 0.34);
+}
+
+.shelter-redesign .shelter-item--roll {
+  border-color: rgba(170, 153, 255, 0.3);
+}
+
+.shelter-redesign .shelter-item--pity {
+  border-color: rgba(255, 206, 134, 0.3);
+}
+
+.shelter-redesign .shelter-item--expansion {
+  padding: 8px 10px;
+  order: 2;
 }
 
 .shelter-redesign .shelter-item .label {
@@ -1620,12 +1713,78 @@ function formatRoomResidents(
   line-height: 1.45;
 }
 
+.shelter-redesign .shelter-item--metric .label {
+  margin-bottom: 2px;
+  font-size: 0.76em;
+  line-height: 1.2;
+  opacity: 0.9;
+}
+
+.shelter-redesign .shelter-item--metric .value {
+  font-size: 0.84em;
+  line-height: 1.16;
+}
+
+.shelter-redesign .metric-value {
+  min-height: 0;
+}
+
+.shelter-redesign .metric-value--level {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.shelter-redesign .metric-number {
+  font-size: 1.34em;
+  line-height: 1;
+  font-weight: 800;
+  color: #e8f2ff;
+  text-shadow: 0 0 14px rgba(155, 211, 255, 0.2);
+}
+
+.shelter-redesign .metric-unit {
+  font-size: 0.72em;
+  opacity: 0.78;
+}
+
+.shelter-redesign .metric-value--roll {
+  font-size: 0.84em;
+  font-weight: 600;
+  line-height: 1.16;
+}
+
+.shelter-redesign .metric-value--pity {
+  font-size: 0.84em;
+  font-weight: 600;
+  line-height: 1.16;
+}
+
+.shelter-redesign .metric-roll-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shelter-redesign .roll-calibrate-btn {
+  margin-top: 0;
+  padding: 1px 10px;
+  min-width: 56px;
+  min-height: 22px;
+  font-size: 0.68em;
+  line-height: 1.1;
+  align-self: auto;
+  border-color: rgba(150, 190, 255, 0.52);
+  background: rgba(82, 124, 236, 0.16);
+}
+
 .shelter-redesign .expansion-list {
-  gap: 6px;
+  gap: 5px;
 }
 
 .shelter-redesign .expansion-card {
-  padding: 6px 8px;
+  padding: 5px 7px;
   min-height: 0;
 }
 
@@ -1635,15 +1794,24 @@ function formatRoomResidents(
 
 .shelter-redesign .map-toggle-btn--scope {
   width: auto;
-  min-width: 104px;
-  margin: 4px 0 0;
-  padding: 5px 10px;
+  min-width: 110px;
+  margin: 2px 0 0;
+  padding: 4px 12px;
   border-radius: 999px;
+  border: 1px solid rgba(120, 228, 166, 0.45);
+  background: linear-gradient(180deg, rgba(52, 162, 104, 0.2), rgba(31, 107, 71, 0.18));
+  box-shadow: inset 0 0 0 1px rgba(182, 255, 217, 0.08);
 }
 
 .shelter-redesign .map-toggle-btn--scope .toggle-text {
-  font-size: 0.78em;
+  font-size: 0.74em;
   letter-spacing: 0.01em;
+  font-weight: 700;
+}
+
+.shelter-redesign .map-toggle-btn--scope .toggle-icon {
+  color: #bfffd9;
+  font-weight: 900;
 }
 
 .shelter-redesign .scope-hint {
@@ -1657,20 +1825,78 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .map-container {
-  margin-top: 4px;
+  margin-top: 2px;
   padding: 6px;
   border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shelter-redesign .map-quick-zones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
 }
 
 .shelter-redesign .map-zone {
   padding: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   border-radius: 9px;
+  border: 1px solid rgba(120, 134, 164, 0.22);
+  background: linear-gradient(180deg, rgba(8, 12, 22, 0.64), rgba(8, 12, 22, 0.32));
+}
+
+.shelter-redesign .map-zone--compact {
+  padding: 6px;
+  border-color: rgba(136, 152, 186, 0.32);
+  background: linear-gradient(165deg, rgba(9, 14, 26, 0.8), rgba(9, 13, 24, 0.46));
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.shelter-redesign .map-zone--entrance {
+  box-shadow: inset 0 0 0 1px rgba(105, 180, 255, 0.08);
+}
+
+.shelter-redesign .map-zone--core {
+  box-shadow: inset 0 0 0 1px rgba(241, 250, 140, 0.08);
+}
+
+.shelter-redesign .map-zone--floor {
+  padding: 7px;
 }
 
 .shelter-redesign .zone-label {
   margin-bottom: 3px;
   font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.shelter-redesign .zone-label--compact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.shelter-redesign .zone-label-main {
+  min-width: 0;
+}
+
+.shelter-redesign .zone-label-sub {
+  flex: 0 0 auto;
+  font-size: 0.68em;
+  font-weight: 500;
+  opacity: 0.85;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(167, 184, 220, 0.25);
+  background: rgba(132, 148, 180, 0.14);
 }
 
 .shelter-redesign .zone-scope-hint {
@@ -1681,20 +1907,54 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .floor-indicator {
-  margin: 2px 0 3px;
+  margin: 3px 0 4px;
   font-size: 0.68em;
+  text-align: center;
+  opacity: 0.82;
+  display: none;
 }
 
 .shelter-redesign .room-grid {
+  display: grid;
   gap: 4px;
+}
+
+.shelter-redesign .entrance-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.shelter-redesign .core-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.shelter-redesign .floor-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .shelter-redesign .room-cell {
   position: relative;
-  border: 1px solid rgba(162, 172, 196, 0.3);
+  border: 1px solid rgba(225, 206, 128, 0.26);
   border-radius: 8px;
   padding: 5px 6px;
   min-height: 46px;
+  background: linear-gradient(180deg, rgba(233, 218, 144, 0.12), rgba(172, 152, 92, 0.05));
+}
+
+.shelter-redesign .room-cell--compact {
+  min-height: 34px;
+  padding: 3px 5px;
+  border-color: rgba(225, 206, 128, 0.28);
+  background: linear-gradient(180deg, rgba(236, 222, 148, 0.11), rgba(166, 148, 90, 0.04));
+}
+
+.shelter-redesign .room-cell--feature {
+  border-color: rgba(241, 216, 121, 0.32);
+  background: linear-gradient(180deg, rgba(238, 214, 112, 0.14), rgba(161, 141, 78, 0.06));
+}
+
+.shelter-redesign .room-cell--entrance-main {
+  border-color: rgba(241, 216, 121, 0.36);
+  background: linear-gradient(180deg, rgba(238, 214, 112, 0.15), rgba(161, 141, 78, 0.06));
 }
 
 .shelter-redesign .room-cell.scope-editable {
@@ -1709,6 +1969,14 @@ function formatRoomResidents(
   font-weight: 700;
 }
 
+.shelter-redesign .room-cell--compact .room-number {
+  font-size: 0.72em;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .shelter-redesign .room-number::before {
   content: '';
   width: 6px;
@@ -1720,8 +1988,20 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .room-cell.occupied .room-number::before {
-  background: #b679ff;
-  box-shadow: 0 0 0 2px rgba(182, 121, 255, 0.23);
+  background: #61d88d;
+  box-shadow: 0 0 0 2px rgba(97, 216, 141, 0.26);
+}
+
+.shelter-redesign .room-cell.occupied {
+  border-color: rgba(98, 212, 140, 0.55);
+  background: radial-gradient(circle at 18% 16%, rgba(121, 246, 168, 0.22), rgba(30, 88, 58, 0.18) 70%);
+  box-shadow:
+    inset 0 0 0 1px rgba(152, 255, 192, 0.18),
+    0 0 12px rgba(98, 212, 140, 0.16);
+}
+
+.shelter-redesign .room-cell.occupied .room-number {
+  color: #cfffe3;
 }
 
 .shelter-redesign .room-value {
@@ -1729,6 +2009,12 @@ function formatRoomResidents(
   font-size: 0.68em;
   opacity: 0.78;
   line-height: 1.1;
+}
+
+.shelter-redesign .room-cell--compact .room-value {
+  font-size: 0.62em;
+  line-height: 1.05;
+  opacity: 0.7;
 }
 
 .shelter-redesign .room-value:empty {
@@ -1744,8 +2030,70 @@ function formatRoomResidents(
   text-overflow: ellipsis;
 }
 
+.shelter-redesign .room-cell--compact .room-resident {
+  margin-top: 0;
+  font-size: 0.64em;
+  line-height: 1.1;
+}
+
 .shelter-redesign .room-resident:empty {
   display: none;
+}
+
+@media (max-width: 760px) {
+  .shelter-redesign .shelter-top-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shelter-redesign .shelter-item--pity {
+    grid-column: 1 / -1;
+  }
+
+  .shelter-redesign .map-quick-zones {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .shelter-redesign .floor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .shelter-redesign .zone-label--compact {
+    align-items: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .shelter-redesign .floor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .shelter-redesign .shelter-top-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .shelter-redesign .shelter-item--pity {
+    grid-column: auto;
+  }
+
+  .shelter-redesign .shelter-item--metric {
+    min-height: 40px;
+  }
+
+  .shelter-redesign .metric-number {
+    font-size: 1.26em;
+  }
+
+  .shelter-redesign .floor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shelter-redesign .zone-label-sub {
+    display: none;
+  }
 }
 
 .shelter-redesign .room-cell.sheltered {
@@ -1758,6 +2106,17 @@ function formatRoomResidents(
 .shelter-redesign .room-cell.sheltered .room-number {
   color: #ffd08a;
   text-shadow: none;
+}
+
+.shelter-redesign .room-cell.sheltered.occupied {
+  border-color: rgba(98, 212, 140, 0.62);
+  box-shadow:
+    inset 0 0 16px rgba(98, 212, 140, 0.18),
+    0 0 12px rgba(98, 212, 140, 0.16);
+}
+
+.shelter-redesign .room-cell.sheltered.occupied .room-number {
+  color: #cfffe3;
 }
 
 .shelter-redesign .room-cell.sheltered .room-number::after {
@@ -1786,9 +2145,21 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .ability-list {
-  margin-top: 8px;
-  padding: 10px;
+  margin-top: 6px;
+  padding: 8px 9px;
   border-radius: 10px;
+}
+
+.shelter-redesign .shelter-ability-block .collapse-toggle-btn {
+  border-radius: 12px;
+  border: 1px solid rgba(241, 216, 121, 0.36);
+  background: linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52));
+  box-shadow: inset 0 0 0 1px rgba(255, 244, 201, 0.08);
+}
+
+.shelter-redesign .shelter-ability-block .collapse-toggle-btn .toggle-text {
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
 .shelter-redesign .ability-toolbar {

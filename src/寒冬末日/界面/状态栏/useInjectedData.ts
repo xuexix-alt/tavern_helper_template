@@ -1,7 +1,10 @@
+import { SAMELAYER_EVENTS, type SameLayerPayload } from '../../samelayer_events';
+
 type InjectedData = {
   raw: string;
   options: string[];
 };
+type StopHandle = { stop?: () => void } | null;
 
 const __edenInjectedDataDebugOnce = new Set<number>();
 const __edenInjectedDataWarnOnce = new Set<number>();
@@ -35,6 +38,13 @@ function isLikelyUiLoaderPayload(raw: string): boolean {
 
 function readMessageRaw(msg: unknown): string {
   const data = msg as any;
+  if (Array.isArray(data?.swipes) && data.swipes.length > 0) {
+    const swipeId = Number(data?.swipe_id);
+    if (Number.isFinite(swipeId) && swipeId >= 0 && swipeId < data.swipes.length) {
+      return String(data.swipes[swipeId] ?? '');
+    }
+    return String(data.swipes[data.swipes.length - 1] ?? '');
+  }
   return String(data?.message ?? data?.data?.extra_text ?? data?.text ?? '');
 }
 
@@ -75,6 +85,24 @@ function parseInjectedText(raw: string): InjectedData {
   return { raw, options };
 }
 
+function readCurrentChatId(): string | null {
+  try {
+    const ctx = (window as any)?.SillyTavern?.getContext?.();
+    const id = ctx?.chatId ?? ctx?.getCurrentChatId?.();
+    return id == null ? null : String(id);
+  } catch {
+    return null;
+  }
+}
+
+function isPayloadForCurrentChat(payload: SameLayerPayload): boolean {
+  const payloadChatId = payload?.chat_id == null ? null : String(payload.chat_id);
+  if (!payloadChatId) return true;
+  const currentChatId = readCurrentChatId();
+  if (!currentChatId) return true;
+  return payloadChatId === currentChatId;
+}
+
 function findNearbyStructuredRaw(currentMessageId: number, lookback = 12): { messageId: number; raw: string } | null {
   if (!Number.isFinite(currentMessageId)) return null;
   const start = Math.max(0, Math.trunc(currentMessageId) - lookback);
@@ -97,9 +125,23 @@ function findNearbyStructuredRaw(currentMessageId: number, lookback = 12): { mes
 }
 
 function fetchFromCurrentMessage(isDebug: boolean): InjectedData | null {
+  const getCurrentMessageIdSafe = (): number | null => {
+    if (typeof getCurrentMessageId !== 'function') return null;
+    try {
+      const id = Number(getCurrentMessageId());
+      return Number.isFinite(id) ? id : null;
+    } catch (err) {
+      // 同层脚本或全局脚本 iframe 环境下会抛错，这里静默返回，避免污染控制台与中断逻辑
+      if (isDebug) console.debug('[状态栏][InjectedData] getCurrentMessageId 不可用，已跳过当前楼层解析', err);
+      return null;
+    }
+  };
+
   try {
     // 仅解析“当前 iframe 所在楼层”的消息文本
-    const messageId = Number(getCurrentMessageId());
+    const messageId = getCurrentMessageIdSafe();
+    if (messageId == null) return null;
+
     const msg = getChatMessages(messageId)?.[0];
     let raw = readMessageRaw(msg);
     let resolvedMessageId = Number.isFinite(messageId) ? messageId : readMessageId(msg) ?? -1;
@@ -178,6 +220,7 @@ function getMockData(): InjectedData {
 export function useInjectedData() {
   const raw = ref<string>('');
   const options = ref<string[]>([]);
+  const stopHandles: StopHandle[] = [];
 
   // 开发模式检测 (通过 URL 查询参数)
   const search = new URLSearchParams(window.location.search);
@@ -198,10 +241,86 @@ export function useInjectedData() {
       options.value = fromMsg.options;
       return;
     }
+
+    // 无可用结构化内容时清空，避免保留上一个分支的旧正文
+    raw.value = '';
+    options.value = [];
+  };
+
+  const applyBridgePayload = (payload: SameLayerPayload) => {
+    if (!payload || typeof payload !== 'object') return;
+    if (!isPayloadForCurrentChat(payload)) return;
+
+    const rawText = String(payload.raw ?? '');
+    const parsed = parseInjectedText(rawText);
+    raw.value = rawText;
+    options.value = parsed.options;
+
+    if (isDebug) {
+      // eslint-disable-next-line no-console
+      console.debug('[状态栏][InjectedData] 使用同层桥接数据', {
+        messageId: payload.message_id,
+        phase: payload.phase,
+        rawLen: rawText.length,
+        optionsCount: parsed.options.length,
+      });
+    }
+  };
+
+  const onAnyEvent = (eventName: string, listener: (payload: SameLayerPayload) => void) => {
+    if (typeof eventOn !== 'function') return;
+    try {
+      const stop = eventOn(eventName as any, listener as any);
+      stopHandles.push(stop);
+    } catch {
+      // ignore
+    }
+  };
+
+  const bindRefreshOnTavernEvent = (eventName: string) => {
+    if (typeof eventOn !== 'function') return;
+    try {
+      const stop = eventOn(eventName as any, () => {
+        refresh();
+      });
+      stopHandles.push(stop);
+    } catch {
+      // ignore
+    }
   };
 
   onMounted(() => {
     refresh();
+
+    onAnyEvent(SAMELAYER_EVENTS.SHOW, applyBridgePayload);
+    onAnyEvent(SAMELAYER_EVENTS.SYNC_DATA, applyBridgePayload);
+
+    // 兼容旧协议事件，逐步迁移期间不丢数据。
+    onAnyEvent(SAMELAYER_EVENTS.STREAM, applyBridgePayload);
+    onAnyEvent(SAMELAYER_EVENTS.FINAL, applyBridgePayload);
+    onAnyEvent(SAMELAYER_EVENTS.RESET, applyBridgePayload);
+    onAnyEvent(SAMELAYER_EVENTS.SYNC_RESPONSE, applyBridgePayload);
+
+    // 分支切换/编辑/收消息后，强制按当前楼层重新解析，避免停留在旧分支正文。
+    if (typeof tavern_events !== 'undefined') {
+      bindRefreshOnTavernEvent(tavern_events.MESSAGE_SWIPED as any);
+      bindRefreshOnTavernEvent(tavern_events.MESSAGE_UPDATED as any);
+      bindRefreshOnTavernEvent(tavern_events.MESSAGE_EDITED as any);
+      bindRefreshOnTavernEvent(tavern_events.MESSAGE_RECEIVED as any);
+      bindRefreshOnTavernEvent(tavern_events.CHARACTER_MESSAGE_RENDERED as any);
+      bindRefreshOnTavernEvent(tavern_events.USER_MESSAGE_RENDERED as any);
+      bindRefreshOnTavernEvent(tavern_events.CHAT_CHANGED as any);
+    }
+
+    if (typeof eventEmit === 'function') {
+      void eventEmit(SAMELAYER_EVENTS.REQUIRE_DATA as any);
+      void eventEmit(SAMELAYER_EVENTS.SYNC_REQUEST as any);
+    }
+  });
+
+  onBeforeUnmount(() => {
+    stopHandles.forEach(s => s?.stop?.());
+    stopHandles.length = 0;
   });
 
   return { raw, options, refresh };

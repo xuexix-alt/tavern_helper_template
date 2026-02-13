@@ -1,10 +1,30 @@
 <template>
   <section id="characters-section" class="section">
     <div class="section-header">
-      <h2 class="section-title">👤 登场角色 👤</h2>
-      <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
+      <h2 class="section-title">{{ isCreationMode ? '🛠️ 创作 🛠️' : '👤 登场角色 👤' }}</h2>
+      <div class="section-header-actions">
+        <template v-if="isCreationMode">
+          <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
+          <button class="role-add-btn secondary" type="button" @click="openGenerateRole">🧬 生成角色</button>
+        </template>
+        <template v-else>
+          <button class="section-view-btn" type="button" @click="openWorldInfoModal">基础信息</button>
+          <button class="section-view-btn" type="button" @click="openReportDigestModal">汇总摘要</button>
+        </template>
+      </div>
     </div>
-    <div class="status-tabs-container">
+
+    <div v-if="isCreationMode" class="creation-entry">
+      <div class="creation-entry-hint">
+        在此页面集中进行角色新增与批量创作。点击上方按钮可打开对应创作弹窗。
+      </div>
+      <div class="creation-entry-actions">
+        <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
+        <button class="role-add-btn secondary" type="button" @click="openGenerateRole">🧬 生成角色</button>
+      </div>
+    </div>
+
+    <div v-else class="status-tabs-container">
       <template v-if="active_character_keys.length > 0">
         <div v-if="useVirtualTabs" class="tab-buttons virtual" v-bind="virtualTabContainerProps">
           <div v-bind="virtualTabWrapperProps" class="virtual-tabs-wrapper horizontal">
@@ -130,7 +150,43 @@
     </div>
 
     <Teleport to="body">
-      <div v-if="addRoleOpen" class="role-modal-mask">
+      <div
+        v-if="!isCreationMode && worldInfoModalOpen"
+        class="role-modal-mask role-modal-mask--overview"
+        @click.self="closeWorldInfoModal"
+      >
+        <div class="role-modal overview-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+          <div class="role-modal-header">
+            <div class="role-modal-title">基础信息</div>
+            <div class="role-modal-actions">
+              <button class="role-icon-btn" type="button" @click="closeWorldInfoModal">✕</button>
+            </div>
+          </div>
+          <div class="role-modal-body overview-modal-body" :style="{ maxHeight: roleModalBodyMaxHeight }">
+            <WorldSection :query="query" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="!isCreationMode && reportDigestModalOpen"
+        class="role-modal-mask role-modal-mask--overview"
+        @click.self="closeReportDigestModal"
+      >
+        <div class="role-modal overview-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+          <div class="role-modal-header">
+            <div class="role-modal-title">汇总摘要</div>
+            <div class="role-modal-actions">
+              <button class="role-icon-btn" type="button" @click="closeReportDigestModal">✕</button>
+            </div>
+          </div>
+          <div class="role-modal-body overview-modal-body" :style="{ maxHeight: roleModalBodyMaxHeight }">
+            <ReportSection :query="query" />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="isCreationMode && addRoleOpen" class="role-modal-mask">
         <div class="role-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-modal-header">
             <div class="role-modal-title">✨ 添加角色</div>
@@ -247,7 +303,7 @@
         </div>
       </div>
 
-      <div v-if="generateRoleOpen" class="role-generate-mask">
+      <div v-if="isCreationMode && generateRoleOpen" class="role-generate-mask">
         <div class="role-generate-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-generate-header">
             <div class="role-modal-title">🧬 生成角色面板</div>
@@ -328,7 +384,7 @@
               </div>
               <div v-if="showPromptPanel" class="role-generate-setting-item">
                 <label class="role-form-label">最终提示词（只读）</label>
-                <textarea class="role-form-textarea" rows="6" readonly>{{ finalGeneratePromptText }}</textarea>
+                <textarea class="role-form-textarea" rows="6" readonly :value="finalGeneratePromptText"></textarea>
                 <div class="role-generate-actions">
                   <button class="role-btn ghost" type="button" @click="saveGenerateSettings">保存为默认</button>
                   <button class="role-btn ghost" type="button" @click="resetGenerateSettings">重置默认</button>
@@ -561,7 +617,7 @@
 
             <div v-if="generateRoleRawResponse && generatedRoles.length === 0" class="role-generate-section">
               <div class="role-generate-title">原始响应（解析失败时用于排查）</div>
-              <textarea class="role-form-textarea" rows="8" readonly>{{ generateRoleRawResponse }}</textarea>
+              <textarea class="role-form-textarea" rows="8" readonly :value="generateRoleRawResponse"></textarea>
             </div>
           </div>
 
@@ -609,7 +665,12 @@ import {
   readRoleSelectorStateFromStatData,
 } from '../../../role_control';
 import { useDataStore } from '../../store';
+import { getViewMessageState, resolveViewMessageId } from '../../viewMessage';
+import ReportSection from './ReportSection.vue';
 import TextHighlight from './TextHighlight.vue';
+import WorldSection from './WorldSection.vue';
+
+type CharactersSectionMode = 'characters' | 'creation';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
 type CharacterKey =
@@ -638,14 +699,17 @@ const store = useDataStore();
 const props = withDefaults(
   defineProps<{
     query?: string;
+    mode?: CharactersSectionMode;
   }>(),
   {
     query: '',
+    mode: 'characters',
   },
 );
 const query = computed(() => props.query ?? '');
 const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 const hasQuery = computed(() => normalizedQuery.value.length > 0);
+const isCreationMode = computed(() => props.mode === 'creation');
 const rootEl = ref<HTMLElement | null>(null);
 
 onMounted(() => {
@@ -659,6 +723,28 @@ const roleModalMaxHeightPx = computed(() => {
 });
 const roleModalMaxHeight = computed(() => `${roleModalMaxHeightPx.value}px`);
 const roleModalBodyMaxHeight = computed(() => `${Math.max(200, roleModalMaxHeightPx.value - 160)}px`);
+const worldInfoModalOpen = ref(false);
+const reportDigestModalOpen = ref(false);
+
+function openWorldInfoModal() {
+  if (isCreationMode.value) return;
+  reportDigestModalOpen.value = false;
+  worldInfoModalOpen.value = true;
+}
+
+function closeWorldInfoModal() {
+  worldInfoModalOpen.value = false;
+}
+
+function openReportDigestModal() {
+  if (isCreationMode.value) return;
+  worldInfoModalOpen.value = false;
+  reportDigestModalOpen.value = true;
+}
+
+function closeReportDigestModal() {
+  reportDigestModalOpen.value = false;
+}
 
 const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
 
@@ -1190,6 +1276,7 @@ function resetAddRoleForm() {
 }
 
 function openAddRole() {
+  if (!isCreationMode.value) return;
   resetAddRoleForm();
   addRoleError.value = '';
   addRoleOpen.value = true;
@@ -1476,6 +1563,7 @@ function resetGenerateRoleState() {
 }
 
 function openGenerateRole() {
+  if (!isCreationMode.value) return;
   if (!addRoleOpen.value) addRoleOpen.value = true;
   resetGenerateRoleState();
   generateRoleOpen.value = true;
@@ -2432,10 +2520,17 @@ async function writeRoleData(options: {
   if (!check.ok) {
     throw new Error(check.error ?? '角色数据不合法');
   }
+  if (getViewMessageState().mode === 'history') {
+    throw new Error('回看模式仅查看，请先返回最新楼层后再进行角色写入。');
+  }
 
   await waitGlobalInitialized('Mvu');
-  const message_id = getCurrentMessageId();
-  const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
+  const message_id = resolveViewMessageId({ preferHistory: false });
+  const targetMessageId = Number(message_id);
+  if (!Number.isFinite(targetMessageId)) {
+    throw new Error('未能解析最新楼层号');
+  }
+  const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId });
   if (!mvu_data || typeof mvu_data !== 'object') {
     throw new Error('未读取到当前楼层变量');
   }
@@ -2469,7 +2564,7 @@ async function writeRoleData(options: {
     if (existedTemp) _.unset(statData, ['临时NPC', name]);
   }
 
-  await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+  await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
 
   let wbError = '';
   let idxError = '';
@@ -2664,6 +2759,10 @@ async function onClickDeleteRole(key: CharacterKey) {
   const name = getRoleNameKey(key);
   if (!name) return;
   if (deletingRoleName.value) return;
+  if (getViewMessageState().mode === 'history') {
+    toastr.info('回看模式仅查看，请先返回最新楼层后再删除角色。');
+    return;
+  }
 
   const ok = await confirmDeleteRole(name, isTemp);
   if (!ok) return;
@@ -2672,8 +2771,12 @@ async function onClickDeleteRole(key: CharacterKey) {
     deletingRoleName.value = name;
     await waitGlobalInitialized('Mvu');
 
-    const message_id = getCurrentMessageId();
-    const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
+    const message_id = resolveViewMessageId({ preferHistory: false });
+    const targetMessageId = Number(message_id);
+    if (!Number.isFinite(targetMessageId)) {
+      throw new Error('未能解析最新楼层号');
+    }
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId });
 
     const existedCore = _.has(mvu_data, ['stat_data', name]);
     const existedTemp = _.has(mvu_data, ['stat_data', '临时NPC', name]);
@@ -2694,7 +2797,7 @@ async function onClickDeleteRole(key: CharacterKey) {
       pruneNameFromRooms(_.get(mvu_data, 'stat_data', {}), name);
     }
 
-    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
     toastr.success(`已删除角色「${name}」`);
     reloadIframe();
   } catch (e: any) {
@@ -2797,6 +2900,8 @@ function getImprintChange(key: CharacterKey) {
 }
 
 onBeforeUnmount(() => {
+  worldInfoModalOpen.value = false;
+  reportDigestModalOpen.value = false;
   addRoleOpen.value = false;
   generateRoleOpen.value = false;
 });
@@ -2904,6 +3009,33 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.section-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.section-view-btn {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(139, 233, 253, 0.4);
+  background: rgba(139, 233, 253, 0.14);
+  color: #e8f7ff;
+  font-size: 0.78em;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.section-view-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(139, 233, 253, 0.22);
+}
+
 .role-add-btn {
   padding: 6px 12px;
   border-radius: 999px;
@@ -2922,6 +3054,37 @@ onBeforeUnmount(() => {
   background: rgba(0, 180, 216, 0.2);
 }
 
+.role-add-btn.secondary {
+  border-color: rgba(188, 161, 255, 0.5);
+  background: rgba(188, 161, 255, 0.12);
+}
+
+.role-add-btn.secondary:hover {
+  background: rgba(188, 161, 255, 0.2);
+}
+
+.creation-entry {
+  border-radius: 12px;
+  border: 1px dashed rgba(139, 233, 253, 0.32);
+  background: rgba(139, 233, 253, 0.08);
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.creation-entry-hint {
+  font-size: 0.84em;
+  line-height: 1.45;
+  color: rgba(226, 243, 255, 0.92);
+}
+
+.creation-entry-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .role-modal-mask {
   position: fixed;
   inset: 0;
@@ -2932,6 +3095,18 @@ onBeforeUnmount(() => {
   justify-content: center;
   padding: 24px 16px;
   z-index: 999;
+}
+
+.role-modal-mask--overview {
+  z-index: 997;
+}
+
+.overview-modal {
+  width: min(84vw, 980px);
+}
+
+.overview-modal-body {
+  padding: 10px 12px;
 }
 
 .role-modal {
@@ -3365,5 +3540,22 @@ onBeforeUnmount(() => {
 .role-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .section-header {
+    align-items: flex-start;
+  }
+
+  .section-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .section-view-btn,
+  .role-add-btn {
+    font-size: 0.76em;
+    padding: 5px 10px;
+  }
 }
 </style>

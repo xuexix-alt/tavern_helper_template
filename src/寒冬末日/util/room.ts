@@ -1,6 +1,6 @@
 export type RoomLocation =
-  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '玄关' | '净化/隔离区' }
-  | { kind: 'core'; room: '客厅' | '餐厅/厨房' | '主卧室' | '主浴室' }
+  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '临时客房C' | '临时客房D' | '临时客房E' | '玄关' | '净化/隔离区' }
+  | { kind: 'core'; room: '客厅' | '餐厅/厨房' | '主卧室' | '次卧' | '小影院&舞台' | '会议室' | '主浴室' | '书房' }
   | { kind: 'floor'; floor: string; roomNumber: string }
   | { kind: 'outdoor'; area: string }
   | { kind: 'none' };
@@ -16,6 +16,13 @@ export function normalizeRoomTag(tag: string): string {
 
   // 兼容旧命名/别名
   if (t === '核心区/餐厅厨房') return '核心区/餐厅/厨房';
+  if (t === '核心区/小影院舞台' || t === '核心区/小影院/舞台') return '核心区/小影院&舞台';
+  if (t === '核心区/书房') return '核心区/次卧';
+  if (t === '玄关/客房A') return '玄关/临时客房A';
+  if (t === '玄关/客房B') return '玄关/临时客房B';
+  if (t === '玄关/客房C') return '玄关/临时客房C';
+  if (t === '玄关/客房D') return '玄关/临时客房D';
+  if (t === '玄关/客房E') return '玄关/临时客房E';
   if (
     t === '玄关/隔离区' ||
     t === '玄关/净化区' ||
@@ -36,9 +43,15 @@ export function parseRoomTag(tag: string): RoomLocation {
 
   if (t === '玄关/临时客房A') return { kind: 'entrance', room: '临时客房A' };
   if (t === '玄关/临时客房B') return { kind: 'entrance', room: '临时客房B' };
+  if (t === '玄关/临时客房C') return { kind: 'entrance', room: '临时客房C' };
+  if (t === '玄关/临时客房D') return { kind: 'entrance', room: '临时客房D' };
+  if (t === '玄关/临时客房E') return { kind: 'entrance', room: '临时客房E' };
   if (t === '玄关/净化/隔离区') return { kind: 'entrance', room: '净化/隔离区' };
   if (t === '玄关') return { kind: 'entrance', room: '玄关' };
 
+  if (t === '核心区/次卧') return { kind: 'core', room: '次卧' };
+  if (t === '核心区/小影院&舞台') return { kind: 'core', room: '小影院&舞台' };
+  if (t === '核心区/会议室') return { kind: 'core', room: '会议室' };
   if (t === '核心区/主卧室') return { kind: 'core', room: '主卧室' };
   if (t === '核心区/主浴室') return { kind: 'core', room: '主浴室' };
   if (t === '核心区/客厅') return { kind: 'core', room: '客厅' };
@@ -67,14 +80,20 @@ export function roomTagFromLocation(loc: RoomLocation): string {
   if (loc.kind === 'entrance') {
     if (loc.room === '临时客房A') return '玄关/临时客房A';
     if (loc.room === '临时客房B') return '玄关/临时客房B';
+    if (loc.room === '临时客房C') return '玄关/临时客房C';
+    if (loc.room === '临时客房D') return '玄关/临时客房D';
+    if (loc.room === '临时客房E') return '玄关/临时客房E';
     if (loc.room === '净化/隔离区') return '玄关/净化/隔离区';
     return '玄关';
   }
   if (loc.kind === 'core') {
     if (loc.room === '客厅') return '核心区/客厅';
     if (loc.room === '餐厅/厨房') return '核心区/餐厅/厨房';
+    if (loc.room === '次卧' || loc.room === '书房') return '核心区/次卧';
+    if (loc.room === '小影院&舞台' || loc.room === '主浴室') return '核心区/小影院&舞台';
+    if (loc.room === '会议室') return '核心区/会议室';
     if (loc.room === '主卧室') return '核心区/主卧室';
-    return '核心区/主浴室';
+    return '核心区/次卧';
   }
   if (loc.kind === 'floor') return `楼层${loc.floor}/${loc.roomNumber}`;
   if (loc.kind === 'outdoor') return loc.area ? `户外/${loc.area}` : '户外';
@@ -91,14 +110,35 @@ export function findRoleLocation(rooms: RoomsStatData, roleName: string): RoomLo
   const entranceB: string[] = _.get(rooms, '玄关.临时客房B入住者', []);
   if (Array.isArray(entranceB) && entranceB.includes(name)) return { kind: 'entrance', room: '临时客房B' };
 
+  const entranceC: string[] = _.get(rooms, '玄关.临时客房C入住者', []);
+  if (Array.isArray(entranceC) && entranceC.includes(name)) return { kind: 'entrance', room: '临时客房C' };
+
+  const entranceD: string[] = _.get(rooms, '玄关.临时客房D入住者', []);
+  if (Array.isArray(entranceD) && entranceD.includes(name)) return { kind: 'entrance', room: '临时客房D' };
+
+  const entranceE: string[] = _.get(rooms, '玄关.临时客房E入住者', []);
+  if (Array.isArray(entranceE) && entranceE.includes(name)) return { kind: 'entrance', room: '临时客房E' };
+
   const purify: string[] = _.get(rooms, '玄关.净化隔离区入住者', []);
   if (Array.isArray(purify) && purify.includes(name)) return { kind: 'entrance', room: '净化/隔离区' };
 
   const bedroom: string[] = _.get(rooms, '核心区.主卧室使用者', []);
   if (Array.isArray(bedroom) && bedroom.includes(name)) return { kind: 'core', room: '主卧室' };
 
+  const secondBedroom: string[] = _.get(rooms, '核心区.次卧使用者', []);
+  if (Array.isArray(secondBedroom) && secondBedroom.includes(name)) return { kind: 'core', room: '次卧' };
+
+  const theater: string[] = _.get(rooms, '核心区.小影院舞台使用者', []);
+  if (Array.isArray(theater) && theater.includes(name)) return { kind: 'core', room: '小影院&舞台' };
+
+  const meetingRoom: string[] = _.get(rooms, '核心区.会议室使用者', []);
+  if (Array.isArray(meetingRoom) && meetingRoom.includes(name)) return { kind: 'core', room: '会议室' };
+
+  const study: string[] = _.get(rooms, '核心区.书房使用者', []);
+  if (Array.isArray(study) && study.includes(name)) return { kind: 'core', room: '次卧' };
+
   const bathroom: string[] = _.get(rooms, '核心区.主浴室使用者', []);
-  if (Array.isArray(bathroom) && bathroom.includes(name)) return { kind: 'core', room: '主浴室' };
+  if (Array.isArray(bathroom) && bathroom.includes(name)) return { kind: 'core', room: '小影院&舞台' };
 
   const livingRoom: string[] = _.get(rooms, '核心区.客厅使用者', []);
   if (Array.isArray(livingRoom) && livingRoom.includes(name)) return { kind: 'core', room: '客厅' };

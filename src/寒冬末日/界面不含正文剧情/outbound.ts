@@ -1,4 +1,5 @@
 import type { ShelterScopeByFloor } from '../util/shelter_scope';
+import { SAMELAYER_EVENTS } from '../samelayer_events';
 
 export const CHAT_VAR_KEYS = {
   EDEN_SHELTER_SCOPE: 'eden.shelter_scope',
@@ -34,6 +35,62 @@ function normalizeChatText(input: string): string {
   return noNewlines.replaceAll('|', '｜');
 }
 
+function resolveTriggerSlash(): ((cmd: string) => any) | null {
+  if (typeof triggerSlash === 'function') return triggerSlash;
+
+  // 同层卡/iframe 场景：逐级向父窗口查找，避免只查一层导致发送失败
+  let cur: Window | null = window;
+  for (let i = 0; i < 8 && cur; i += 1) {
+    try {
+      const fn = (cur as any)?.triggerSlash;
+      if (typeof fn === 'function') return fn.bind(cur);
+    } catch {
+      // ignore
+    }
+
+    try {
+      if (!cur.parent || cur.parent === cur) break;
+      cur = cur.parent;
+    } catch {
+      break;
+    }
+  }
+
+  try {
+    const parent = window.parent as any;
+    if (typeof parent?.triggerSlash === 'function') {
+      return parent.triggerSlash.bind(parent);
+    }
+  } catch {
+    // ignore
+  }
+
+  const resolveFromSillyTavernContext = (targetWindow: Window | null): ((cmd: string) => any) | null => {
+    if (!targetWindow) return null;
+    try {
+      const ctx = (targetWindow as any)?.SillyTavern?.getContext?.();
+      if (typeof ctx?.executeSlashCommandsWithOptions === 'function') {
+        return (cmd: string) => ctx.executeSlashCommandsWithOptions(cmd, { source: 'eden-ui-no-story' });
+      }
+      if (typeof ctx?.executeSlashCommands === 'function') {
+        return ctx.executeSlashCommands.bind(ctx);
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const fromCurrent = resolveFromSillyTavernContext(window);
+  if (fromCurrent) return fromCurrent;
+  const fromParent = resolveFromSillyTavernContext(window.parent ?? null);
+  if (fromParent) return fromParent;
+  const fromTop = resolveFromSillyTavernContext(window.top ?? null);
+  if (fromTop) return fromTop;
+
+  return null;
+}
+
 function resolveDebug(debug?: DebugSetting): { enabled: boolean; toConsole: boolean; toChat: boolean } {
   if (typeof debug === 'boolean') {
     return { enabled: debug, toConsole: debug, toChat: false };
@@ -58,6 +115,80 @@ function truncateText(text: string, max = 200): string {
   const s = String(text ?? '');
   if (s.length <= max) return s;
   return `${s.slice(0, max)}…`;
+}
+
+function tryEmitSameLayerSendRequest(
+  text: string,
+  awaitTrigger: boolean,
+  debug: { enabled: boolean; toConsole: boolean; toChat: boolean },
+): boolean {
+  if (typeof eventEmit !== 'function') return false;
+  try {
+    void eventEmit(SAMELAYER_EVENTS.SEND_REQUEST as any, {
+      text,
+      await_trigger: awaitTrigger,
+      source: 'ui-no-story',
+    });
+    debugLog(debug, 'sendToChat:emit_request', { ok: true, text: truncateText(text), awaitTrigger });
+    return true;
+  } catch (err) {
+    debugLog(debug, 'sendToChat:emit_request', {
+      ok: false,
+      reason: err instanceof Error ? err.message : String(err),
+      text: truncateText(text),
+      awaitTrigger,
+    });
+    return false;
+  }
+}
+
+function trySendViaHostDom(
+  text: string,
+  debug: { enabled: boolean; toConsole: boolean; toChat: boolean },
+): boolean {
+  const resolveDocs = (): Document[] => {
+    const out: Document[] = [];
+    const pushDoc = (doc: Document | null | undefined) => {
+      if (!doc) return;
+      if (out.includes(doc)) return;
+      out.push(doc);
+    };
+    pushDoc(document);
+    try {
+      pushDoc(window.parent?.document);
+    } catch {
+      // ignore
+    }
+    try {
+      pushDoc(window.top?.document);
+    } catch {
+      // ignore
+    }
+    return out;
+  };
+
+  for (const doc of resolveDocs()) {
+    try {
+      const input = doc.getElementById('send_textarea') as HTMLTextAreaElement | HTMLInputElement | null;
+      const sendBtn = doc.getElementById('send_but') as HTMLElement | null;
+      if (!input || !sendBtn) continue;
+
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      const view = doc.defaultView ?? window;
+      sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view }));
+      debugLog(debug, 'sendToChat:dom_send', { ok: true, text: truncateText(text) });
+      return true;
+    } catch (err) {
+      debugLog(debug, 'sendToChat:dom_send', {
+        ok: false,
+        reason: err instanceof Error ? err.message : String(err),
+        text: truncateText(text),
+      });
+    }
+  }
+  return false;
 }
 
 function setDeep(obj: any, path: string, value: any) {
@@ -148,7 +279,16 @@ export function sendToChat(
     return { ok: false, method: 'unavailable', reason, sentText };
   }
 
-  if (typeof triggerSlash !== 'function') {
+  const slash = resolveTriggerSlash();
+  if (!slash) {
+    if (tryEmitSameLayerSendRequest(sentText, awaitTrigger, debugResolved)) {
+      if (toast) toastr?.success?.('已转交桥接发送');
+      return { ok: true, method: 'triggerSlash', sentText };
+    }
+    if (trySendViaHostDom(sentText, debugResolved)) {
+      if (toast) toastr?.success?.('已通过宿主输入框发送');
+      return { ok: true, method: 'triggerSlash', sentText };
+    }
     if (toast) toastr?.error?.(unavailableMessage);
     debugLog(debugResolved, 'sendToChat', {
       ok: false,
@@ -161,12 +301,20 @@ export function sendToChat(
 
   const cmd = awaitTrigger ? `/send ${sentText} | /trigger await=true` : `/send ${sentText}`;
   try {
-    triggerSlash(cmd);
+    slash(cmd);
     if (toast) toastr?.success?.(successMessage);
     debugLog(debugResolved, 'sendToChat', { ok: true, method: 'triggerSlash', text: truncateText(sentText) });
     return { ok: true, method: 'triggerSlash', sentText };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
+    if (tryEmitSameLayerSendRequest(sentText, awaitTrigger, debugResolved)) {
+      if (toast) toastr?.success?.('已转交桥接发送');
+      return { ok: true, method: 'triggerSlash', sentText };
+    }
+    if (trySendViaHostDom(sentText, debugResolved)) {
+      if (toast) toastr?.success?.('已通过宿主输入框发送');
+      return { ok: true, method: 'triggerSlash', sentText };
+    }
     if (toast) toastr?.error?.(failureMessage);
     debugLog(debugResolved, 'sendToChat', { ok: false, method: 'triggerSlash', reason, text: truncateText(sentText) });
     return { ok: false, method: 'triggerSlash', reason, sentText };

@@ -7,13 +7,7 @@
     </section>
 
     <footer class="eden-shell-footer">
-      <StoryStreamObserver :active="isStoryTab" :arm-tick="streamArmTick" />
-      <SearchBar
-        v-model="footerInputValue"
-        :mode="isStoryTab ? 'send' : 'search'"
-        @send="sendStoryInputToAi"
-        @open-choices="openChoicesModal"
-      />
+      <StoryStreamObserver :active="isStoryTab" />
       <nav class="eden-tabbar" aria-label="状态栏页面切换">
         <button
           v-for="tab in tabs"
@@ -28,20 +22,6 @@
         </button>
       </nav>
     </footer>
-
-    <Teleport to="body">
-      <div v-if="choicesModalOpen" class="eden-choices-modal-mask" @click.self="closeChoicesModal">
-        <section class="eden-choices-modal" role="dialog" aria-modal="true" aria-label="快速剧情选项">
-          <header class="eden-choices-modal-head">
-            <div class="eden-choices-modal-title">⚜️ 快速剧情</div>
-            <button type="button" class="eden-choices-modal-close" @click="closeChoicesModal">关闭</button>
-          </header>
-          <div class="eden-choices-modal-body">
-            <ChoicesSection :options="options" :query="searchQuery" />
-          </div>
-        </section>
-      </div>
-    </Teleport>
   </main>
 </template>
 
@@ -50,14 +30,11 @@ import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { watchDebounced } from '@vueuse/core';
 import CharactersPage from './pages/CharactersPage.vue';
-import ChoicesSection from './components/ChoicesSection.vue';
+import CreationPage from './pages/CreationPage.vue';
 import MissionPage from './pages/MissionPage.vue';
-import OverviewPage from './pages/OverviewPage.vue';
-import SearchBar from './components/SearchBar.vue';
 import StoryStreamObserver from './components/StoryStreamObserver.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import StoryPage from './pages/StoryPage.vue';
-import { sendToChat } from '../outbound';
 import { useInjectedData } from './useInjectedData';
 
 const MIN_SHELL_HEIGHT = 300;
@@ -65,41 +42,25 @@ const MAX_SHELL_HEIGHT = 980;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const { raw, options } = useInjectedData();
 const tabs = [
-  { key: 'overview', label: '总览', icon: '📡', component: OverviewPage },
   { key: 'story', label: '剧情', icon: '📖', component: StoryPage },
   { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },
   { key: 'mission', label: '任务', icon: '🎯', component: MissionPage },
   { key: 'characters', label: '角色', icon: '🧑‍🤝‍🧑', component: CharactersPage },
+  { key: 'creation', label: '创作', icon: '🛠️', component: CreationPage },
 ] as const satisfies ReadonlyArray<{ key: string; label: string; icon: string; component: Component }>;
 
 type TabKey = (typeof tabs)[number]['key'];
 
 const activeTabKey = ref<TabKey>('story');
-const searchQuery = useLocalStorage<string>('eden:ui_search_query', '');
-const storyInput = useLocalStorage<string>('eden:ui_story_input', '');
-const streamArmTick = ref(0);
-const choicesModalOpen = ref(false);
 const shellHeight = ref<number>(Math.max(MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
 const shellMainRef = ref<HTMLElement | null>(null);
 const tabScrollPosition = new Map<TabKey, number>(tabs.map(tab => [tab.key, 0] as const));
 
 const activeTab = computed(() => tabs.find(tab => tab.key === activeTabKey.value) ?? tabs[0]);
 const isStoryTab = computed(() => activeTab.value.key === 'story');
-const footerInputValue = computed<string>({
-  get() {
-    return isStoryTab.value ? storyInput.value : searchQuery.value;
-  },
-  set(value) {
-    if (isStoryTab.value) {
-      storyInput.value = value;
-      return;
-    }
-    searchQuery.value = value;
-  },
-});
 const activeTabProps = computed<Record<string, unknown>>(() => {
-  const baseProps: Record<string, unknown> = { query: searchQuery.value };
-  if (activeTab.value.key === 'story') return { ...baseProps, raw: raw.value };
+  const baseProps: Record<string, unknown> = { query: '' };
+  if (activeTab.value.key === 'story') return { ...baseProps, raw: raw.value, options: options.value };
   return baseProps;
 });
 
@@ -142,29 +103,6 @@ function switchTab(nextTab: TabKey) {
     restoreTabScroll(nextTab);
     notifyLayoutChanged();
   });
-}
-
-function sendStoryInputToAi(value: string) {
-  if (!isStoryTab.value) return;
-  const text = String(value ?? '').trim();
-  if (!text) return;
-  const result = sendToChat(text, {
-    successMessage: '已发送给AI',
-    failureMessage: '发送失败，请手动发送',
-    unavailableMessage: '无法发送：triggerSlash 不可用',
-  });
-  if (result.ok) {
-    storyInput.value = '';
-    streamArmTick.value += 1;
-  }
-}
-
-function openChoicesModal() {
-  choicesModalOpen.value = true;
-}
-
-function closeChoicesModal() {
-  choicesModalOpen.value = false;
 }
 
 function getViewportHeight() {
@@ -281,7 +219,7 @@ onBeforeUnmount(() => {
 });
 
 watchDebounced(
-  () => [raw.value, options.value.join('\n')],
+  () => [raw.value],
   () => {
     window.dispatchEvent(new Event('resize'));
   },

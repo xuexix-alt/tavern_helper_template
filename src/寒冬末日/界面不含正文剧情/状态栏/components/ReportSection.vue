@@ -90,6 +90,7 @@ import _ from 'lodash';
 import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { diffWorldHours } from '../../../util/time';
 import { normalizeRoomTag } from '../../../util/room';
+import { resolveViewMessageId } from '../../../界面/viewMessage';
 
 type ReportSource = '脚本' | 'AI' | '系统' | '未知';
 
@@ -412,8 +413,7 @@ function sourceByPath(aiPaths: Set<string>, path: string, fallback: ReportSource
 async function buildReport(): Promise<ReportResult> {
   await waitGlobalInitialized('Mvu');
 
-  const currentIdRaw = typeof getCurrentMessageId === 'function' ? getCurrentMessageId() : null;
-  const currentId = Number(currentIdRaw);
+  const currentId = Number(resolveViewMessageId({ preferHistory: true }));
   if (!Number.isFinite(currentId)) throw new Error('无法获取当前楼层号');
 
   const prevId = findPrevMessageId(currentId);

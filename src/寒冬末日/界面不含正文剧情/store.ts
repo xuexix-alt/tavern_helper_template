@@ -1,4 +1,5 @@
 import { Schema } from '../schema';
+import { getViewMessageState, onViewMessageChanged } from '../界面/viewMessage';
 
 const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
 
@@ -28,9 +29,10 @@ function readUiStoreDebugFlag(): boolean {
 export const useDataStore = defineStore(
   'data',
   errorCatched(() => {
-    const message_id = getCurrentMessageId();
     const isDebug = readUiStoreDebugFlag();
     let hasWarnedFallback = false;
+    const viewMessageState = ref(getViewMessageState());
+    let stopViewMessageChanged: (() => void) | null = null;
 
     // 使用完整初始值，而不是空对象
     const data = ref<z.output<typeof Schema>>(initialData);
@@ -66,10 +68,59 @@ export const useDataStore = defineStore(
       }
     };
 
-    const resolve_stat_data = (): { data: z.output<typeof Schema>; source: 'current' | 'latest' | 'default' } => {
-      const current = read_stat_data_once(message_id, 'current');
+    const resolveLatestAssistantMessageId = (): number | null => {
+      try {
+        const ctx = (window as any)?.SillyTavern?.getContext?.();
+        const chat = Array.isArray(ctx?.chat) ? ctx.chat : [];
+        for (let i = chat.length - 1; i >= 0; i -= 1) {
+          const msg = chat[i];
+          if (!msg || typeof msg !== 'object') continue;
+          if ((msg as any).is_user === true) continue;
+          if ((msg as any).is_system === true) continue;
+          return i;
+        }
+      } catch {
+        // ignore
+      }
+      return null;
+    };
+
+    const resolveTargetMessageId = (): number | 'latest' => {
+      const mode = viewMessageState.value.mode;
+      const selectedId = Number(viewMessageState.value.message_id);
+      if (mode === 'history' && Number.isFinite(selectedId) && selectedId >= 0) {
+        return Math.trunc(selectedId);
+      }
+
+      const latestAssistantId = resolveLatestAssistantMessageId();
+      if (latestAssistantId != null) return latestAssistantId;
+
+      try {
+        const lastId = typeof getLastMessageId === 'function' ? Number(getLastMessageId()) : NaN;
+        if (Number.isFinite(lastId) && lastId >= 0) return Math.trunc(lastId);
+      } catch {
+        // ignore
+      }
+
+      try {
+        const currentId = Number(getCurrentMessageId?.());
+        if (Number.isFinite(currentId) && currentId >= 0) return Math.trunc(currentId);
+      } catch {
+        // ignore
+      }
+
+      return 'latest';
+    };
+
+    const resolve_stat_data = (): {
+      data: z.output<typeof Schema>;
+      source: 'current' | 'latest' | 'default';
+      target: number | 'latest';
+    } => {
+      const target = resolveTargetMessageId();
+      const current = read_stat_data_once(target, 'current');
       if (current.ok) {
-        return { data: current.data, source: 'current' };
+        return { data: current.data, source: 'current', target };
       }
 
       const latest = read_stat_data_once('latest', 'latest');
@@ -78,24 +129,24 @@ export const useDataStore = defineStore(
           hasWarnedFallback = true;
           // eslint-disable-next-line no-console
           console.warn?.('[eden/ui_store] current message has no valid stat_data, fallback to latest', {
-            message_id,
+            target_message_id: target,
             reason: current.reason,
           });
         }
-        return { data: latest.data, source: 'latest' };
+        return { data: latest.data, source: 'latest', target };
       }
 
       if (!hasWarnedFallback) {
         hasWarnedFallback = true;
         // eslint-disable-next-line no-console
         console.warn?.('[eden/ui_store] failed to load stat_data from current/latest, fallback to defaults', {
-          message_id,
+          target_message_id: target,
           reason_current: current.reason,
           reason_latest: latest.reason,
         });
       }
 
-      return { data: initialData, source: 'default' };
+      return { data: initialData, source: 'default', target };
     };
 
     const refresh_from_mvu = () => {
@@ -105,7 +156,11 @@ export const useDataStore = defineStore(
         data.value = next;
         if (isDebug) {
           // eslint-disable-next-line no-console
-          console.debug?.('[eden/ui_store] refreshed from MVU', { message_id, source: resolved.source });
+          console.debug?.('[eden/ui_store] refreshed from MVU', {
+            source: resolved.source,
+            target_message_id: resolved.target,
+            mode: viewMessageState.value.mode,
+          });
         }
       }
     };
@@ -116,7 +171,7 @@ export const useDataStore = defineStore(
 
       if (isDebug) {
         // eslint-disable-next-line no-console
-        console.debug?.('[eden/ui_store] MVU initialized; binding listeners', { message_id });
+        console.debug?.('[eden/ui_store] MVU initialized; binding listeners');
       }
 
       refresh_from_mvu();
@@ -129,15 +184,22 @@ export const useDataStore = defineStore(
 
       // 兼容：当外部通过 setChatMessages(refresh:'affected'|'all') 刷新楼层时，主动同步一次。
       if (typeof tavern_events !== 'undefined') {
-        eventOn(tavern_events.MESSAGE_UPDATED as any, (updated_message_id: number) => {
-          if (Number(updated_message_id) === Number(message_id)) refresh_from_mvu();
+        eventOn(tavern_events.MESSAGE_UPDATED as any, (_updated_message_id: number) => {
+          refresh_from_mvu();
         });
         eventOn(tavern_events.MESSAGE_RECEIVED as any, (_message_id: number) => {
           refresh_from_mvu();
         });
       }
+
+      if (!stopViewMessageChanged) {
+        stopViewMessageChanged = onViewMessageChanged(nextState => {
+          viewMessageState.value = nextState;
+          refresh_from_mvu();
+        });
+      }
     })();
 
-    return { data };
+    return { data, viewMessageState };
   }),
 );

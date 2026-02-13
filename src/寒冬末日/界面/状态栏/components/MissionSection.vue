@@ -5,31 +5,32 @@
       <span v-if="hasMissionNew" class="new-dot" aria-label="有新进展"></span>
     </h2>
     <div class="mission-content">
-      <!-- 当前阶段 -->
-      <div class="mission-phase">
-        <div class="phase-label">📍 当前阶段</div>
-        <div class="phase-name"><TextHighlight :text="store.data.主线任务.当前阶段" :query="query" /></div>
-      </div>
-
-      <!-- 阶段目标进度条 -->
-      <div class="goals-progress-bar">
-        <div class="progress-header">
-          <span>🎯 阶段目标进度</span>
-          <span class="progress-text">{{ completedGoalsDisplay }}/{{ goalsTotalDisplay }}</span>
+      <div class="mission-overview-grid">
+        <!-- 当前阶段 -->
+        <div class="mission-phase">
+          <div class="phase-label">📍 当前阶段</div>
+          <div class="phase-name"><TextHighlight :text="store.data.主线任务.当前阶段" :query="query" /></div>
         </div>
-        <div class="progress-track">
-          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+
+        <!-- 阶段目标进度条 -->
+        <div class="goals-progress-bar">
+          <div class="progress-header">
+            <span>🎯 阶段目标进度</span>
+            <span class="progress-text">{{ completedGoalsDisplay }}/{{ goalsTotalDisplay }}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+          </div>
         </div>
       </div>
 
       <!-- 阶段目标 -->
       <div class="mission-goals">
-        <button class="collapse-toggle-btn" @click="isGoalsExpanded = !isGoalsExpanded">
-          <span class="toggle-icon">{{ isGoalsExpanded ? '▼' : '▶' }}</span>
-          <span class="toggle-text">📋 目标清单</span>
-          <span class="goals-count">({{ completedGoalsDisplay }}/{{ goalsTotalDisplay }})</span>
-        </button>
-        <div v-show="isGoalsExpanded" class="goals-list">
+        <div class="mission-panel-title">
+          <span class="panel-title-main">📋 目标清单</span>
+          <span class="panel-title-count">{{ completedGoalsDisplay }}/{{ goalsTotalDisplay }}</span>
+        </div>
+        <div class="goals-list">
           <template v-if="visibleStageTargets.length > 0">
             <div
               v-for="goal in visibleStageTargets"
@@ -49,7 +50,7 @@
                 <div class="goal-text" :class="{ completed: isGoalCompleted(goal.key, Number(goal.key) || 0) }">
                   <TextHighlight :text="getGoalText(goal)" :query="query" />
                 </div>
-                <div class="goal-meta" v-if="hasGoalProgress(goal)">
+                <div v-if="hasGoalProgress(goal)" class="goal-meta">
                   <span class="meta-chip">进度：{{ goal.当前值 ?? 0 }}/{{ goal.目标值 ?? 0 }}</span>
                 </div>
                 <span v-if="isGoalCompleted(goal.key, Number(goal.key) || 0)" class="goal-status-tag">已完成</span>
@@ -64,15 +65,14 @@
 
       <!-- 情报碎片 -->
       <div class="mission-intel">
-        <button class="collapse-toggle-btn" @click="isIntelExpanded = !isIntelExpanded">
-          <span class="toggle-icon">{{ isIntelExpanded ? '▼' : '▶' }}</span>
-          <span class="toggle-text">🔍 情报碎片</span>
-          <span class="intel-count">({{ intelCompletedDisplay }}/{{ intelTotalDisplay }})</span>
-        </button>
+        <div class="mission-panel-title">
+          <span class="panel-title-main">🔍 情报碎片</span>
+          <span class="panel-title-count">{{ intelCompletedDisplay }}/{{ intelTotalDisplay }}</span>
+        </div>
         <div v-if="intelTotalDisplay === 0" class="intel-empty-hint">
           {{ query ? '当前关键词下没有匹配的情报碎片。' : '暂无情报碎片，继续探索/搜刮可解锁新的线索。' }}
         </div>
-        <div v-show="isIntelExpanded" class="intel-list">
+        <div class="intel-list">
           <template v-if="intelTotalDisplay > 0">
             <div
               v-for="item in visibleIntelEntries"
@@ -120,9 +120,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 import TextHighlight from './TextHighlight.vue';
 import { useDataStore } from '../../store';
+import { resolveViewMessageId } from '../../viewMessage';
 
 const props = withDefaults(
   defineProps<{
@@ -133,14 +134,13 @@ const props = withDefaults(
   },
 );
 const store = useDataStore();
-const isGoalsExpanded = ref(false);
-const isIntelExpanded = ref(false);
-const currentMessageId = Number(getCurrentMessageId());
+const currentMessageId = computed(() => resolveViewMessageId({ preferHistory: true }) ?? -1);
 const query = computed(() => props.query ?? '');
 const normalizedQuery = computed(() => query.value.trim().toLowerCase());
 
 const hasMissionNew = computed(() => {
-  if (!Number.isFinite(currentMessageId) || currentMessageId <= 0) return false;
+  const currentId = currentMessageId.value;
+  if (!Number.isFinite(currentId) || currentId <= 0) return false;
   const meta = (store.data.主线任务 as any)?.$meta;
   if (!meta || typeof meta !== 'object') return false;
 
@@ -151,7 +151,7 @@ const hasMissionNew = computed(() => {
       const createdAt = Number((v as any).created_at ?? 0);
       const exploredAt = Number((v as any).explored_at ?? 0);
       const completedAt = Number((v as any).completed_at ?? 0);
-      if (createdAt === currentMessageId || exploredAt === currentMessageId || completedAt === currentMessageId)
+      if (createdAt === currentId || exploredAt === currentId || completedAt === currentId)
         return true;
     }
   }
@@ -161,7 +161,7 @@ const hasMissionNew = computed(() => {
     for (const v of Object.values(goalsMeta as any)) {
       if (!v || typeof v !== 'object') continue;
       const completedAt = Number((v as any).completed_at ?? 0);
-      if (completedAt === currentMessageId) return true;
+      if (completedAt === currentId) return true;
     }
   }
 
@@ -249,7 +249,8 @@ const intelCompletedDisplay = computed(() =>
 
 function getIntelCleanupHint(key: string, intel: any): string | null {
   const meta = (store.data.主线任务 as any)?.$meta?.情报碎片?.[key];
-  if (!meta || !Number.isFinite(currentMessageId)) return null;
+  const currentId = currentMessageId.value;
+  if (!meta || !Number.isFinite(currentId)) return null;
 
   const createdAt = Number(meta.created_at ?? 0);
   const exploredAt = Number(meta.explored_at ?? 0);
@@ -262,7 +263,7 @@ function getIntelCleanupHint(key: string, intel: any): string | null {
   if (status === '已完成') {
     const base = completedAt || exploredAt || createdAt;
     if (!base) return null;
-    const remaining = doneLimit - (currentMessageId - base);
+    const remaining = doneLimit - (currentId - base);
     if (remaining <= 0) return '即将自动清理（已完成）';
     return `剩余${remaining}层自动清理（已完成）`;
   }
@@ -270,7 +271,7 @@ function getIntelCleanupHint(key: string, intel: any): string | null {
   if (status === '已探索') {
     const base = exploredAt || createdAt;
     if (!base) return null;
-    const remaining = doneLimit - (currentMessageId - base);
+    const remaining = doneLimit - (currentId - base);
     if (remaining <= 0) return '即将自动清理（已探索）';
     return `剩余${remaining}层自动清理（已探索）`;
   }
@@ -278,7 +279,7 @@ function getIntelCleanupHint(key: string, intel: any): string | null {
   // 未探索：5 楼时限
   const base = createdAt;
   if (!base) return null;
-  const remaining = notDoneLimit - (currentMessageId - base);
+  const remaining = notDoneLimit - (currentId - base);
   if (remaining <= 0) return '已超时：即将自动清理';
   return `时限剩余${remaining}层（未完成将清理）`;
 }
@@ -657,5 +658,166 @@ function getRingProgress(status: string): string {
 .intel-deadline {
   color: var(--text-color);
   opacity: 0.75;
+}
+
+/* --- mission compact redesign --- */
+#mission-section .mission-content {
+  gap: 9px;
+}
+
+#mission-section .mission-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+#mission-section .mission-phase,
+#mission-section .goals-progress-bar {
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(173, 186, 216, 0.16);
+  background: linear-gradient(170deg, rgba(35, 41, 62, 0.92), rgba(21, 25, 42, 0.85));
+}
+
+#mission-section .phase-label {
+  margin-bottom: 4px;
+  font-size: 0.76em;
+}
+
+#mission-section .phase-name {
+  font-size: 0.92em;
+  line-height: 1.25;
+}
+
+#mission-section .progress-header {
+  margin-bottom: 6px;
+  font-size: 0.8em;
+}
+
+#mission-section .progress-track {
+  height: 6px;
+  border-radius: 999px;
+}
+
+#mission-section .mission-goals,
+#mission-section .mission-intel {
+  margin-top: 0;
+  padding: 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(173, 186, 216, 0.14);
+  background: linear-gradient(180deg, rgba(13, 17, 31, 0.86), rgba(8, 10, 22, 0.88));
+}
+
+#mission-section .mission-panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(141, 233, 255, 0.3);
+  background: linear-gradient(180deg, rgba(67, 79, 112, 0.55), rgba(54, 63, 92, 0.5));
+}
+
+#mission-section .panel-title-main {
+  font-size: 0.98em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+#mission-section .panel-title-count {
+  font-size: 0.82em;
+  font-weight: 700;
+  color: rgba(237, 241, 255, 0.9);
+  opacity: 0.95;
+}
+
+#mission-section .goals-list,
+#mission-section .intel-list {
+  margin-top: 0;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+#mission-section .goal-item {
+  gap: 8px;
+  padding: 7px 6px;
+}
+
+#mission-section .goal-content {
+  gap: 3px;
+}
+
+#mission-section .goal-text {
+  font-size: 0.84em;
+  line-height: 1.32;
+}
+
+#mission-section .meta-chip {
+  font-size: 0.72em;
+  padding: 1px 6px;
+}
+
+#mission-section .goal-status-tag {
+  font-size: 0.66em;
+  padding: 1px 5px;
+}
+
+#mission-section .goal-checkbox {
+  width: 19px;
+  height: 19px;
+  margin-top: 0;
+}
+
+#mission-section .intel-item {
+  gap: 9px;
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+}
+
+#mission-section .intel-status-ring {
+  width: 30px;
+  height: 30px;
+}
+
+#mission-section .intel-header {
+  margin-bottom: 4px;
+}
+
+#mission-section .intel-id {
+  font-size: 0.78em;
+}
+
+#mission-section .intel-status-badge {
+  font-size: 0.65em;
+  padding: 1px 7px;
+}
+
+#mission-section .intel-desc {
+  font-size: 0.8em;
+  margin-bottom: 5px;
+  line-height: 1.35;
+}
+
+#mission-section .intel-meta {
+  gap: 8px;
+  font-size: 0.72em;
+}
+
+#mission-section .intel-empty-hint {
+  margin: 2px 2px 5px;
+  font-size: 0.74em;
+}
+
+@media (max-width: 640px) {
+  #mission-section .mission-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #mission-section .panel-title-main {
+    font-size: 0.92em;
+  }
 }
 </style>

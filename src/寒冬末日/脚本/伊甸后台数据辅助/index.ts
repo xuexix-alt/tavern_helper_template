@@ -457,9 +457,16 @@ function listRoomTagsFromRooms(rooms: Rooms): string[] {
     '玄关/净化/隔离区',
     '玄关/临时客房A',
     '玄关/临时客房B',
+    '玄关/临时客房C',
+    '玄关/临时客房D',
+    '玄关/临时客房E',
     '核心区/客厅',
     '核心区/餐厅/厨房',
     '核心区/主卧室',
+    '核心区/次卧',
+    '核心区/小影院&舞台',
+    '核心区/会议室',
+    '核心区/书房',
     '核心区/主浴室',
   ];
 
@@ -486,9 +493,16 @@ function readRoomListByTag(rooms: Rooms, tag: string): string[] {
   if (t === '玄关/净化/隔离区') return _.get(rooms, '玄关.净化隔离区入住者', []);
   if (t === '玄关/临时客房A') return _.get(rooms, '玄关.临时客房A入住者', []);
   if (t === '玄关/临时客房B') return _.get(rooms, '玄关.临时客房B入住者', []);
+  if (t === '玄关/临时客房C') return _.get(rooms, '玄关.临时客房C入住者', []);
+  if (t === '玄关/临时客房D') return _.get(rooms, '玄关.临时客房D入住者', []);
+  if (t === '玄关/临时客房E') return _.get(rooms, '玄关.临时客房E入住者', []);
   if (t === '核心区/客厅') return _.get(rooms, '核心区.客厅使用者', []);
   if (t === '核心区/餐厅/厨房') return _.get(rooms, '核心区.餐厅厨房使用者', []);
   if (t === '核心区/主卧室') return _.get(rooms, '核心区.主卧室使用者', []);
+  if (t === '核心区/次卧') return _.get(rooms, '核心区.次卧使用者', []);
+  if (t === '核心区/小影院&舞台') return _.get(rooms, '核心区.小影院舞台使用者', []);
+  if (t === '核心区/会议室') return _.get(rooms, '核心区.会议室使用者', []);
+  if (t === '核心区/书房') return _.get(rooms, '核心区.书房使用者', []);
   if (t === '核心区/主浴室') return _.get(rooms, '核心区.主浴室使用者', []);
 
   const m = t.match(/^楼层(20|19)\/(.+)$/);
@@ -602,9 +616,16 @@ function writeRoomListByTag(nextRooms: Rooms, tag: string, list: string[]) {
   if (t === '玄关/净化/隔离区') return void _.set(nextRooms, '玄关.净化隔离区入住者', list);
   if (t === '玄关/临时客房A') return void _.set(nextRooms, '玄关.临时客房A入住者', list);
   if (t === '玄关/临时客房B') return void _.set(nextRooms, '玄关.临时客房B入住者', list);
+  if (t === '玄关/临时客房C') return void _.set(nextRooms, '玄关.临时客房C入住者', list);
+  if (t === '玄关/临时客房D') return void _.set(nextRooms, '玄关.临时客房D入住者', list);
+  if (t === '玄关/临时客房E') return void _.set(nextRooms, '玄关.临时客房E入住者', list);
   if (t === '核心区/客厅') return void _.set(nextRooms, '核心区.客厅使用者', list);
   if (t === '核心区/餐厅/厨房') return void _.set(nextRooms, '核心区.餐厅厨房使用者', list);
   if (t === '核心区/主卧室') return void _.set(nextRooms, '核心区.主卧室使用者', list);
+  if (t === '核心区/次卧') return void _.set(nextRooms, '核心区.次卧使用者', list);
+  if (t === '核心区/小影院&舞台') return void _.set(nextRooms, '核心区.小影院舞台使用者', list);
+  if (t === '核心区/会议室') return void _.set(nextRooms, '核心区.会议室使用者', list);
+  if (t === '核心区/书房') return void _.set(nextRooms, '核心区.书房使用者', list);
   if (t === '核心区/主浴室') return void _.set(nextRooms, '核心区.主浴室使用者', list);
 
   const m = t.match(/^楼层(20|19)\/(.+)$/);

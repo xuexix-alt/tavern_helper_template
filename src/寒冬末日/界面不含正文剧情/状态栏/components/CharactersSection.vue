@@ -609,6 +609,7 @@ import {
   readRoleSelectorStateFromStatData,
 } from '../../../role_control';
 import { useDataStore } from '../../store';
+import { getViewMessageState, resolveViewMessageId } from '../../../界面/viewMessage';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
 type TempNpcKey = `临时NPC:${string}`;
@@ -2388,10 +2389,17 @@ async function writeRoleData(options: {
   if (!check.ok) {
     throw new Error(check.error ?? '角色数据不合法');
   }
+  if (getViewMessageState().mode === 'history') {
+    throw new Error('回看模式仅查看，请先返回最新楼层后再进行角色写入。');
+  }
 
   await waitGlobalInitialized('Mvu');
-  const message_id = getCurrentMessageId();
-  const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
+  const message_id = resolveViewMessageId({ preferHistory: false });
+  const targetMessageId = Number(message_id);
+  if (!Number.isFinite(targetMessageId)) {
+    throw new Error('未能解析最新楼层号');
+  }
+  const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId });
   if (!mvu_data || typeof mvu_data !== 'object') {
     throw new Error('未读取到当前楼层变量');
   }
@@ -2425,7 +2433,7 @@ async function writeRoleData(options: {
     if (existedTemp) _.unset(statData, ['临时NPC', name]);
   }
 
-  await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+  await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
 
   let wbError = '';
   let idxError = '';
@@ -2618,6 +2626,10 @@ async function onClickDeleteRole(key: CharacterKey) {
   const name = getRoleNameKey(key);
   if (!name) return;
   if (deletingRoleName.value) return;
+  if (getViewMessageState().mode === 'history') {
+    toastr.info('回看模式仅查看，请先返回最新楼层后再删除角色。');
+    return;
+  }
 
   const ok = await confirmDeleteRole(name, isTemp);
   if (!ok) return;
@@ -2626,8 +2638,12 @@ async function onClickDeleteRole(key: CharacterKey) {
     deletingRoleName.value = name;
     await waitGlobalInitialized('Mvu');
 
-    const message_id = getCurrentMessageId();
-    const mvu_data = Mvu.getMvuData({ type: 'message', message_id });
+    const message_id = resolveViewMessageId({ preferHistory: false });
+    const targetMessageId = Number(message_id);
+    if (!Number.isFinite(targetMessageId)) {
+      throw new Error('未能解析最新楼层号');
+    }
+    const mvu_data = Mvu.getMvuData({ type: 'message', message_id: targetMessageId });
 
     const existedCore = _.has(mvu_data, ['stat_data', name]);
     const existedTemp = _.has(mvu_data, ['stat_data', '临时NPC', name]);
@@ -2648,7 +2664,7 @@ async function onClickDeleteRole(key: CharacterKey) {
       pruneNameFromRooms(_.get(mvu_data, 'stat_data', {}), name);
     }
 
-    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id });
+    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
     toastr.success(`已删除角色「${name}」`);
     reloadIframe();
   } catch (e: any) {

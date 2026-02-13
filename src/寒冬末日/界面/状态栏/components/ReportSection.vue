@@ -80,6 +80,7 @@
 import _ from 'lodash';
 import { diffWorldHours } from '../../../util/time';
 import { normalizeRoomTag } from '../../../util/room';
+import { resolveViewMessageId } from '../../viewMessage';
 import TextHighlight from './TextHighlight.vue';
 
 type ReportSource = '脚本' | 'AI' | '系统' | '未知';
@@ -572,8 +573,7 @@ function collectChangedLeafPaths(prevValue: any, nextValue: any, basePath: strin
 async function buildReport(): Promise<ReportResult> {
   await waitGlobalInitialized('Mvu');
 
-  const currentIdRaw = typeof getCurrentMessageId === 'function' ? getCurrentMessageId() : null;
-  const currentId = Number(currentIdRaw);
+  const currentId = Number(resolveViewMessageId({ preferHistory: true }));
   if (!Number.isFinite(currentId)) throw new Error('无法获取当前楼层号');
 
   const prevId = findPrevMessageId(currentId);

@@ -10,7 +10,7 @@
           :key="idx"
           class="choice-item"
           type="button"
-          @click="openChoiceDialog(opt)"
+          @click.stop="openChoiceDialog(opt)"
         >
           {{ opt }}
         </button>
@@ -21,12 +21,7 @@
     </div>
 
     <Teleport to="body">
-      <div
-        v-if="choiceDialogOpen"
-        class="choice-modal-mask"
-        :style="choiceModalMaskStyle"
-        @click.self="closeChoiceDialog"
-      >
+      <div v-if="choiceDialogOpen" class="choice-modal-mask" @click.self="closeChoiceDialog">
         <div class="choice-modal" role="dialog" aria-modal="true">
           <div class="choice-modal-header">
             <div class="choice-modal-title">您还有要补充的吗？</div>
@@ -38,7 +33,13 @@
             <div class="choice-original">{{ choiceDialogOriginal }}</div>
 
             <div class="choice-edit-label">编辑后发送</div>
-            <textarea v-model="choiceDialogDraft" class="choice-textarea" rows="6" placeholder="在此补充或修改……" />
+            <textarea
+              ref="choiceTextareaRef"
+              v-model="choiceDialogDraft"
+              class="choice-textarea"
+              rows="6"
+              placeholder="在此补充或修改……"
+            />
           </div>
 
           <div class="choice-modal-footer">
@@ -104,7 +105,7 @@
 
 <script setup lang="ts">
 import { nextTick } from 'vue';
-import { useEventListener, useThrottleFn } from '@vueuse/core';
+import { useEventListener } from '@vueuse/core';
 import { CHAT_VAR_KEYS, copyText, sendToChat } from '../../outbound';
 
 const props = defineProps<{
@@ -145,72 +146,8 @@ const choiceDialogOpen = ref(false);
 const choiceDialogOriginal = ref('');
 const choiceDialogDraft = ref('');
 const choiceSending = ref(false);
-const choiceModalViewportTop = ref(0);
-const choiceModalViewportHeight = ref(0);
-let choiceParentScrollTarget: HTMLElement | Window | null = null;
-let stopChoiceScroll: (() => void) | null = null;
-let stopChoiceResize: (() => void) | null = null;
+const choiceTextareaRef = ref<HTMLTextAreaElement | null>(null);
 let stopPaletteClick: (() => void) | null = null;
-
-const choiceModalMaskStyle = computed(() => ({
-  top: `${choiceModalViewportTop.value}px`,
-  height: `${choiceModalViewportHeight.value}px`,
-}));
-
-function getParentScrollContainer(frameEl: HTMLElement): HTMLElement | Window {
-  try {
-    const doc = frameEl.ownerDocument;
-    const win = doc.defaultView ?? window.parent;
-    let cur: HTMLElement | null = frameEl.parentElement;
-    while (cur) {
-      const style = win.getComputedStyle(cur);
-      const overflowY = style.overflowY;
-      if ((overflowY === 'auto' || overflowY === 'scroll') && cur.scrollHeight > cur.clientHeight + 1) {
-        return cur;
-      }
-      cur = cur.parentElement;
-    }
-    return win;
-  } catch {
-    return window.parent;
-  }
-}
-
-function updateChoiceModalViewport() {
-  const frameEl = window.frameElement as HTMLElement | null;
-  if (!frameEl) return;
-  const parentWin = window.parent as Window | null;
-  if (!parentWin) return;
-
-  const rect = frameEl.getBoundingClientRect();
-  const topInIframeDoc = Math.max(0, -rect.top);
-  choiceModalViewportTop.value = topInIframeDoc;
-  choiceModalViewportHeight.value = Math.max(0, parentWin.innerHeight);
-}
-
-const throttledUpdateChoiceModalViewport = useThrottleFn(updateChoiceModalViewport, 50);
-
-function bindChoiceParentScrollSync() {
-  const frameEl = window.frameElement as HTMLElement | null;
-  if (!frameEl) return;
-  choiceParentScrollTarget = getParentScrollContainer(frameEl);
-  const handler = throttledUpdateChoiceModalViewport;
-  if (!choiceParentScrollTarget) return;
-  stopChoiceScroll?.();
-  stopChoiceResize?.();
-  stopChoiceScroll = useEventListener(choiceParentScrollTarget, 'scroll', handler, { passive: true });
-  const resizeTarget =
-    choiceParentScrollTarget instanceof Window ? choiceParentScrollTarget : (window.parent ?? window);
-  stopChoiceResize = useEventListener(resizeTarget, 'resize', handler, { passive: true });
-}
-
-function unbindChoiceParentScrollSync() {
-  stopChoiceScroll?.();
-  stopChoiceResize?.();
-  stopChoiceScroll = null;
-  stopChoiceResize = null;
-  choiceParentScrollTarget = null;
-}
 
 function togglePalette() {
   palette_open.value = !palette_open.value;
@@ -259,11 +196,14 @@ async function openChoiceDialog(text: string) {
   choiceDialogOriginal.value = String(text ?? '');
   choiceDialogDraft.value = String(text ?? '');
   choiceDialogOpen.value = true;
-  updateChoiceModalViewport();
-  bindChoiceParentScrollSync();
 
   await nextTick();
-  const el = document.querySelector<HTMLTextAreaElement>('.choice-textarea');
+  let el = choiceTextareaRef.value;
+  if (!el) {
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    el = choiceTextareaRef.value;
+  }
+  if (!el) return;
   el?.focus?.();
   try {
     el?.setSelectionRange?.(el.value.length, el.value.length);
@@ -275,15 +215,13 @@ async function openChoiceDialog(text: string) {
 function closeChoiceDialog() {
   choiceDialogOpen.value = false;
   choiceSending.value = false;
-  unbindChoiceParentScrollSync();
 }
 
-async function confirmChoiceDialog() {
-  if (choiceSending.value) return;
-  const text = String(choiceDialogDraft.value ?? '').trim();
+async function sendChoiceText(rawText: string): Promise<boolean> {
+  const text = String(rawText ?? '').trim();
   if (!text) {
     toastr?.warning?.('请输入要发送的内容', '快速剧情');
-    return;
+    return false;
   }
 
   choiceSending.value = true;
@@ -297,16 +235,22 @@ async function confirmChoiceDialog() {
 
     if (res.ok) {
       closeChoiceDialog();
-      return;
+      return true;
     }
 
     await copyText(text, { toast: false });
     if (!(toastr as any)?.error) {
       alert(`${res.reason}: ${res.sentText}`);
     }
+    return false;
   } finally {
     choiceSending.value = false;
   }
+}
+
+async function confirmChoiceDialog() {
+  if (choiceSending.value) return;
+  await sendChoiceText(choiceDialogDraft.value);
 }
 
 function onDocumentClick(ev: MouseEvent) {
@@ -327,15 +271,13 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopPaletteClick?.();
   stopPaletteClick = null;
-  unbindChoiceParentScrollSync();
 });
 </script>
 
 <style scoped>
 .choice-modal-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
+  position: fixed;
+  inset: 0;
   z-index: 60;
   background: rgba(0, 0, 0, 0.55);
   padding-top: calc(12px + env(safe-area-inset-top));

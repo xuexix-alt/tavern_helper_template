@@ -23,28 +23,25 @@
       </div>
     </div>
 
-    <div v-if="activeStoryTab === 'story'" class="story-pane content-text" :style="storyContentStyle">
-      <button type="button" class="story-filter-toggle" @click="isFilterExpanded = !isFilterExpanded">
-        {{ isFilterExpanded ? '收起标签筛选' : '展开标签筛选' }}
+    <div v-if="activeStoryTab === 'story'" class="story-filter-panel story-filter-panel-pinned">
+      <button
+        v-for="item in segmentFilterItems"
+        :key="item.key"
+        type="button"
+        class="story-filter-chip"
+        :class="{ active: enabledSegmentKinds.includes(item.key) }"
+        @click="toggleSegmentKind(item.key)"
+      >
+        <span>{{ item.label }}</span>
+        <span class="chip-count">{{ item.count }}</span>
       </button>
-      <div v-if="isFilterExpanded" class="story-filter-panel">
-        <button
-          v-for="item in segmentFilterItems"
-          :key="item.key"
-          type="button"
-          class="story-filter-chip"
-          :class="{ active: enabledSegmentKinds.includes(item.key) }"
-          @click="toggleSegmentKind(item.key)"
-        >
-          <span>{{ item.label }}</span>
-          <span class="chip-count">{{ item.count }}</span>
-        </button>
-        <div class="story-filter-actions">
-          <button type="button" class="story-filter-action-btn" @click="enableAllSegmentKinds">全选</button>
-          <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优先</button>
-        </div>
+      <div class="story-filter-actions">
+        <button type="button" class="story-filter-action-btn" @click="enableImageOnlySegmentKinds">仅图片</button>
+        <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优选</button>
       </div>
+    </div>
 
+    <div v-if="activeStoryTab === 'story'" class="story-pane content-text" :style="storyContentStyle">
       <template v-for="seg in filteredSegments" :key="seg.key">
         <div v-if="seg.isImage" class="story-image-wrap" :class="getImageWrapAlignmentClass()">
           <img
@@ -200,9 +197,11 @@ const props = withDefaults(
   defineProps<{
     raw: string;
     query?: string;
+    messageId?: number | null;
   }>(),
   {
     query: '',
+    messageId: null,
   },
 );
 const query = computed(() => props.query ?? '');
@@ -212,7 +211,6 @@ const storyTabs = computed<ReadonlyArray<{ key: StoryTab; label: string; count: 
 ]);
 
 const activeStoryTab = useLocalStorage<StoryTab>('eden:story_active_tab', 'story');
-const isFilterExpanded = useLocalStorage<boolean>('eden:story_filter_expanded', false);
 const storyZoom = useLocalStorage<number>('eden:story_zoom', 1);
 const enabledSegmentKinds = useLocalStorage<SegmentKind[]>('eden:story_segment_kinds', [
   'narrative',
@@ -1234,7 +1232,8 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
 const segments = computed<Segment[]>(() => {
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
-  const text = normalizeStoryText(mainText);
+  const mainTextWithoutMeta = stripMetaBlocks(mainText);
+  const text = normalizeStoryText(mainTextWithoutMeta);
 
   if (!text.trim()) return [{ key: 'empty', text: '(暂无正文)' }];
   const segs = buildSegments(text);
@@ -1286,8 +1285,13 @@ const segmentFilterItems = computed<Array<{ key: SegmentKind; label: string; cou
 });
 
 const filteredSegments = computed<Segment[]>(() => {
-  const enabled = new Set(enabledSegmentKinds.value);
-  const list = segments.value.filter(seg => detectSegmentKinds(seg).some(kind => enabled.has(kind)));
+  const enabledKinds = enabledSegmentKinds.value;
+  const imageOnlyMode = enabledKinds.length === 1 && enabledKinds[0] === 'image';
+  const enabled = new Set(enabledKinds);
+  const list = segments.value.filter(seg => {
+    if (imageOnlyMode) return seg.isImage === true;
+    return detectSegmentKinds(seg).some(kind => enabled.has(kind));
+  });
   return list.length > 0 ? list : [{ key: 'empty_filtered', text: '(当前筛选条件下无正文内容)' }];
 });
 
@@ -1316,8 +1320,8 @@ function toggleSegmentKind(kind: SegmentKind) {
   enabledSegmentKinds.value = Array.from(enabled);
 }
 
-function enableAllSegmentKinds() {
-  enabledSegmentKinds.value = ['narrative', 'dialog', 'system', 'table', 'image', 'image_prompt'];
+function enableImageOnlySegmentKinds() {
+  enabledSegmentKinds.value = ['image'];
 }
 
 function enableCoreSegmentKinds() {
@@ -1350,29 +1354,76 @@ const META_TITLE_MAP: Record<string, string> = {
   statusplaceholderimpl: '占位模块',
 };
 
-const metaBlocks = computed<MetaBlock[]>(() => {
-  const raw = props.raw ?? '';
-  const blocks: MetaBlock[] = [];
-  let id = 0;
-  for (const tag of META_BLOCK_TAGS) {
-    const re = new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'gi');
-    for (const m of raw.matchAll(re)) {
-      const content = String(m[1] ?? '').trim();
-      if (!content) continue;
-      blocks.push({
-        key: `${tag}_${id++}`,
-        tag,
-        title: META_TITLE_MAP[tag] ?? tag,
-        content,
-      });
-    }
+const META_TAG_PATTERN_SOURCE = META_BLOCK_TAGS.map(escapeRegExp).join('|');
+
+function createMetaBlockRegex() {
+  return new RegExp(`<(${META_TAG_PATTERN_SOURCE})(?:\\s[^>]*)?>([\\s\\S]*?)<\\/\\1>`, 'gi');
+}
+
+function createMetaSelfClosingRegex() {
+  return new RegExp(`<(${META_TAG_PATTERN_SOURCE})(?:\\s[^>]*)?\\s*\\/\\s*>`, 'gi');
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function collectMetaBlocks(raw: string): MetaBlock[] {
+  if (!raw) return [];
+
+  const indexedBlocks: Array<{ start: number; tag: string; content: string }> = [];
+  const re = createMetaBlockRegex();
+
+  for (const m of raw.matchAll(re)) {
+    const tag = String(m[1] ?? '').toLowerCase();
+    const content = String(m[2] ?? '').trim();
+    if (!tag || !content) continue;
+
+    indexedBlocks.push({
+      start: m.index ?? 0,
+      tag,
+      content,
+    });
   }
-  return blocks;
+
+  indexedBlocks.sort((a, b) => a.start - b.start);
+  return indexedBlocks.map((item, idx) => ({
+    key: `${item.tag}_${idx}`,
+    tag: item.tag,
+    title: META_TITLE_MAP[item.tag] ?? item.tag,
+    content: item.content,
+  }));
+}
+
+function stripMetaBlocks(raw: string): string {
+  if (!raw) return '';
+
+  const withoutBlock = raw.replace(createMetaBlockRegex(), '\n');
+  const withoutSelfClosing = withoutBlock.replace(createMetaSelfClosingRegex(), '\n');
+  return withoutSelfClosing.replace(/\n{3,}/g, '\n\n');
+}
+
+const metaBlocks = computed<MetaBlock[]>(() => {
+  return collectMetaBlocks(props.raw ?? '');
 });
 
+function resolveStoryMessageId(): number | null {
+  const fromProp = Number(props.messageId);
+  if (Number.isFinite(fromProp)) return fromProp;
+  if (typeof getCurrentMessageId !== 'function') return null;
+
+  try {
+    const fromIframe = Number(getCurrentMessageId() as any);
+    return Number.isFinite(fromIframe) ? fromIframe : null;
+  } catch {
+    // 同层卡脚本挂载上下文会抛错：不要对全局脚本 iframe 调用 getMessageId
+    return null;
+  }
+}
+
 watchEffect(onCleanup => {
-  // 在消息 iframe 中可用；非消息上下文则无法解析显示层 DOM
-  const messageId = typeof getCurrentMessageId === 'function' ? Number(getCurrentMessageId() as any) : null;
+  // 优先使用外部传入的 messageId，同层脚本挂载时避免调用 getCurrentMessageId 抛错
+  const messageId = resolveStoryMessageId();
 
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
@@ -1768,6 +1819,10 @@ function normalizeInjectedRaw(raw: string): string {
 function extractMainStoryText(raw: string): string {
   const blocks = findTagBlocks(raw);
   if (blocks.length) return blocks.map(b => b.inner ?? '').join('\n');
+  // 容错：部分楼层会出现 <content>/<game> 开标签缺少闭合标签的情况，
+  // 此时退化为从首个开标签后截取到末尾，避免把前置模块（meow_FM/profile 等）并入正文。
+  const loose = raw.match(/<(content|game)(?:\s[^>]*)?>([\s\S]*)$/i);
+  if (loose) return stripOptionBlock(String(loose[2] ?? ''));
   return stripOptionBlock(raw);
 }
 
@@ -2535,25 +2590,20 @@ function formatTableCell(cell: string): string {
   font-size: var(--story-font-size, 1em);
 }
 
-.story-filter-toggle {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-color);
-  border-radius: 8px;
-  padding: 5px 7px;
-  font-size: 0.76em;
-  text-align: left;
-  margin-bottom: 6px;
-  cursor: pointer;
-}
-
 .story-filter-panel {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 5px;
   margin-bottom: 8px;
+}
+
+.story-filter-panel-pinned {
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
 }
 
 .story-filter-chip {
