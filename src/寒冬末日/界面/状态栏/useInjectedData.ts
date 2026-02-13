@@ -145,7 +145,7 @@ function fetchFromCurrentMessage(isDebug: boolean): InjectedData | null {
 
     const msg = getChatMessages(messageId)?.[0];
     let raw = readMessageRaw(msg);
-    let resolvedMessageId = Number.isFinite(messageId) ? messageId : readMessageId(msg) ?? -1;
+    let resolvedMessageId = Number.isFinite(messageId) ? messageId : (readMessageId(msg) ?? -1);
     if (!raw.trim()) return null;
 
     if (isLikelyUiLoaderPayload(raw)) {

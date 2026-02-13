@@ -174,8 +174,9 @@ onMounted(() => {
   try {
     const hostDoc = window.parent?.document;
     if (hostDoc && hostDoc !== document && typeof ResizeObserver !== 'undefined') {
-      const hostChatEl = HOST_CHAT_HEIGHT_SELECTORS.map(selector => hostDoc.querySelector(selector) as HTMLElement | null)
-        .find(Boolean);
+      const hostChatEl = HOST_CHAT_HEIGHT_SELECTORS.map(
+        selector => hostDoc.querySelector(selector) as HTMLElement | null,
+      ).find(Boolean);
       if (hostChatEl) {
         hostChatResizeObserver = new ResizeObserver(() => {
           syncShellHeight();

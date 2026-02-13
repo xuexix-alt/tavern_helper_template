@@ -1,12 +1,7 @@
 <template>
   <div class="eden-searchbar" @click.stop>
     <div class="eden-searchbar-inner">
-      <button
-        v-if="isSendMode"
-        class="eden-searchbar-option"
-        type="button"
-        @click.stop="emitOpenChoices"
-      >
+      <button v-if="isSendMode" class="eden-searchbar-option" type="button" @click.stop="emitOpenChoices">
         {{ optionText }}
       </button>
       <span v-else class="eden-searchbar-label" aria-hidden="true">{{ modeLabel }}</span>

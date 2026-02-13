@@ -122,10 +122,18 @@ const emit = defineEmits<{
   (event: 'choice-sent', payload: { text: string }): void;
 }>();
 
-const normalized_query = computed(() => String(props.query ?? '').trim().toLowerCase());
+const normalized_query = computed(() =>
+  String(props.query ?? '')
+    .trim()
+    .toLowerCase(),
+);
 const filtered_options = computed(() => {
   if (!normalized_query.value) return props.options;
-  return props.options.filter(opt => String(opt ?? '').toLowerCase().includes(normalized_query.value));
+  return props.options.filter(opt =>
+    String(opt ?? '')
+      .toLowerCase()
+      .includes(normalized_query.value),
+  );
 });
 
 const palette_open = ref(false);

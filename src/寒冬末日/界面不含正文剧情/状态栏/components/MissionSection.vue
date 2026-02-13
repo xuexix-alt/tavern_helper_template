@@ -133,8 +133,7 @@ const hasMissionNew = computed(() => {
       const createdAt = Number((v as any).created_at ?? 0);
       const exploredAt = Number((v as any).explored_at ?? 0);
       const completedAt = Number((v as any).completed_at ?? 0);
-      if (createdAt === currentId || exploredAt === currentId || completedAt === currentId)
-        return true;
+      if (createdAt === currentId || exploredAt === currentId || completedAt === currentId) return true;
     }
   }
 

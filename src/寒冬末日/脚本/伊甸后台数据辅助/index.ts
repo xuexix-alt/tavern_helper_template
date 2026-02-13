@@ -2117,9 +2117,7 @@ function applyDeathFromZeroHealthIfNeeded(
   _.set(stat_data, `${rolePath}.所在房间`, '');
 
   if (debug.offstageHealth) {
-    console.log(
-      `[死亡判定] 「${roleName}」健康<=0，判定死亡 ${safeStringify({ health, reason })}`,
-    );
+    console.log(`[死亡判定] 「${roleName}」健康<=0，判定死亡 ${safeStringify({ health, reason })}`);
   }
 }
 

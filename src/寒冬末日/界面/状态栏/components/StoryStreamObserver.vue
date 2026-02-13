@@ -96,11 +96,14 @@ function armObserver() {
   streamingText.value = '';
   finalizedText.value = '';
   clearTimer();
-  timeoutId = window.setTimeout(() => {
-    if (!isArmed.value) return;
-    status.value = 'error';
-    isArmed.value = false;
-  }, Math.max(5000, Number(props.timeoutMs) || 120000));
+  timeoutId = window.setTimeout(
+    () => {
+      if (!isArmed.value) return;
+      status.value = 'error';
+      isArmed.value = false;
+    },
+    Math.max(5000, Number(props.timeoutMs) || 120000),
+  );
 }
 
 function dismiss() {

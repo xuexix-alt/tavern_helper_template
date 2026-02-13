@@ -15,9 +15,7 @@
     </div>
 
     <div v-if="isCreationMode" class="creation-entry">
-      <div class="creation-entry-hint">
-        在此页面集中进行角色新增与批量创作。点击上方按钮可打开对应创作弹窗。
-      </div>
+      <div class="creation-entry-hint">在此页面集中进行角色新增与批量创作。点击上方按钮可打开对应创作弹窗。</div>
       <div class="creation-entry-actions">
         <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
         <button class="role-add-btn secondary" type="button" @click="openGenerateRole">🧬 生成角色</button>
@@ -155,7 +153,12 @@
         class="role-modal-mask role-modal-mask--overview"
         @click.self="closeWorldInfoModal"
       >
-        <div class="role-modal overview-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+        <div
+          class="role-modal overview-modal"
+          role="dialog"
+          aria-modal="true"
+          :style="{ maxHeight: roleModalMaxHeight }"
+        >
           <div class="role-modal-header">
             <div class="role-modal-title">基础信息</div>
             <div class="role-modal-actions">
@@ -173,7 +176,12 @@
         class="role-modal-mask role-modal-mask--overview"
         @click.self="closeReportDigestModal"
       >
-        <div class="role-modal overview-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+        <div
+          class="role-modal overview-modal"
+          role="dialog"
+          aria-modal="true"
+          :style="{ maxHeight: roleModalMaxHeight }"
+        >
           <div class="role-modal-header">
             <div class="role-modal-title">汇总摘要</div>
             <div class="role-modal-actions">

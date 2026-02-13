@@ -9,9 +9,7 @@
     </div>
     <footer class="eden-story-composer">
       <div class="eden-story-composer-inner">
-        <button type="button" class="eden-story-composer-history" @click="openHistoryPicker">
-          回看
-        </button>
+        <button type="button" class="eden-story-composer-history" @click="openHistoryPicker">回看</button>
         <input
           v-model="composerInput"
           type="text"
@@ -20,12 +18,7 @@
           :disabled="isHistoryMode"
           @keydown.enter.exact.prevent="sendComposerInput"
         />
-        <button
-          type="button"
-          class="eden-story-composer-option"
-          :disabled="isHistoryMode"
-          @click="openChoicesPanel"
-        >
+        <button type="button" class="eden-story-composer-option" :disabled="isHistoryMode" @click="openChoicesPanel">
           选项
           <span class="eden-story-composer-option-count">{{ displayOptions.length }}</span>
         </button>
@@ -41,7 +34,13 @@
         <button
           type="button"
           class="eden-story-composer-send"
-          :disabled="isHistoryMode || composerSending || regenerateSending || deletingFromMessageId !== null || !composerInput.trim()"
+          :disabled="
+            isHistoryMode ||
+            composerSending ||
+            regenerateSending ||
+            deletingFromMessageId !== null ||
+            !composerInput.trim()
+          "
           @click="sendComposerInput"
         >
           {{ composerSending ? '发送中' : '发送' }}
@@ -96,7 +95,9 @@
                   <div class="eden-history-item-top">
                     <span class="eden-history-item-title-group">
                       <span>楼层 #{{ item.message_id }}</span>
-                      <span class="eden-history-mini-role" :class="`is-${item.role}`">{{ item.role === 'user' ? '用户' : 'AI' }}</span>
+                      <span class="eden-history-mini-role" :class="`is-${item.role}`">{{
+                        item.role === 'user' ? '用户' : 'AI'
+                      }}</span>
                     </span>
                     <span class="eden-history-item-id">{{ item.timeLabel }}</span>
                   </div>
@@ -164,7 +165,9 @@ function normalizeBooleanFlag(input: unknown): boolean | undefined {
 }
 
 function normalizeRoleHints(msg: any): { is_user?: boolean; is_system?: boolean } {
-  const role = String(msg?.role ?? msg?.type ?? '').trim().toLowerCase();
+  const role = String(msg?.role ?? msg?.type ?? '')
+    .trim()
+    .toLowerCase();
   const hintUser = normalizeBooleanFlag(msg?.is_user);
   const hintSystem = normalizeBooleanFlag(msg?.is_system);
 
@@ -235,7 +238,8 @@ const displayMessageId = computed(() => {
   return live != null ? live : null;
 });
 const canRegenerate = computed(
-  () => !isHistoryMode.value && !composerSending.value && !regenerateSending.value && deletingFromMessageId.value == null,
+  () =>
+    !isHistoryMode.value && !composerSending.value && !regenerateSending.value && deletingFromMessageId.value == null,
 );
 const regenerateButtonTitle = computed(() => {
   if (isHistoryMode.value) return '回看模式下不可用，请先返回最新楼层';

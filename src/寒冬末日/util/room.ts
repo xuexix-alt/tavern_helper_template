@@ -1,5 +1,8 @@
 export type RoomLocation =
-  | { kind: 'entrance'; room: '临时客房A' | '临时客房B' | '临时客房C' | '临时客房D' | '临时客房E' | '玄关' | '净化/隔离区' }
+  | {
+      kind: 'entrance';
+      room: '临时客房A' | '临时客房B' | '临时客房C' | '临时客房D' | '临时客房E' | '玄关' | '净化/隔离区';
+    }
   | { kind: 'core'; room: '客厅' | '餐厅/厨房' | '主卧室' | '次卧' | '小影院&舞台' | '会议室' | '主浴室' | '书房' }
   | { kind: 'floor'; floor: string; roomNumber: string }
   | { kind: 'outdoor'; area: string }

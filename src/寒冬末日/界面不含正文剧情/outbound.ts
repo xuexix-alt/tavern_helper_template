@@ -142,10 +142,7 @@ function tryEmitSameLayerSendRequest(
   }
 }
 
-function trySendViaHostDom(
-  text: string,
-  debug: { enabled: boolean; toConsole: boolean; toChat: boolean },
-): boolean {
+function trySendViaHostDom(text: string, debug: { enabled: boolean; toConsole: boolean; toChat: boolean }): boolean {
   const resolveDocs = (): Document[] => {
     const out: Document[] = [];
     const pushDoc = (doc: Document | null | undefined) => {

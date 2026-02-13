@@ -21,9 +21,7 @@
           </div>
           <div class="metric-roll-row">
             <div class="value metric-value metric-value--roll">{{ store.data.庇护所.今日投掷点数 }}</div>
-            <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
-              校准
-            </button>
+            <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">校准</button>
           </div>
         </div>
 
@@ -348,10 +346,10 @@
           <template v-if="abilityMatrixRows.length > 0">
             <div class="ability-matrix">
               <section v-for="row in abilityMatrixRows" :key="row.level" class="ability-matrix-row">
-                <div class="ability-row-label">Lv.{{ row.level }} <span v-if="row.label">· {{ row.label }}</span></div>
-                <div
-                  class="ability-row-grid"
-                >
+                <div class="ability-row-label">
+                  Lv.{{ row.level }} <span v-if="row.label">· {{ row.label }}</span>
+                </div>
+                <div class="ability-row-grid">
                   <div v-for="cat in abilityVisibleCategories" :key="`${row.level}-${cat}`" class="ability-grid-cell">
                     <div class="ability-grid-head">{{ cat }}</div>
                     <div class="ability-grid-cards">
@@ -366,7 +364,9 @@
                             <span class="skill-dot" :class="{ on: ab.unlocked }"></span>
                             <span class="skill-icon">{{ ab.icon }}</span>
                             <span class="skill-name">{{ ab.title }}</span>
-                            <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small">NEW</span>
+                            <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small"
+                              >NEW</span
+                            >
                           </div>
                         </article>
                       </template>
@@ -1121,7 +1121,13 @@ function confirmAndSendScope() {
 }
 
 type EntranceRoomKey = 'entrance' | 'guest_a' | 'guest_b' | 'guest_c' | 'guest_d' | 'guest_e';
-type CoreRoomKey = 'living_room' | 'kitchen' | 'master_bedroom' | 'mini_theater_stage' | 'meeting_room' | 'second_bedroom';
+type CoreRoomKey =
+  | 'living_room'
+  | 'kitchen'
+  | 'master_bedroom'
+  | 'mini_theater_stage'
+  | 'meeting_room'
+  | 'second_bedroom';
 
 const entranceRooms: Array<{ key: EntranceRoomKey; label: string; main?: boolean }> = [
   { key: 'entrance', label: '玄关', main: true },

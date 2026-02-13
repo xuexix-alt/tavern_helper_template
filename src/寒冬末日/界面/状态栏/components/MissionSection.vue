@@ -74,12 +74,7 @@
         </div>
         <div class="intel-list">
           <template v-if="intelTotalDisplay > 0">
-            <div
-              v-for="item in visibleIntelEntries"
-              :key="item.key"
-              class="intel-item"
-              :class="item.intel.状态"
-            >
+            <div v-for="item in visibleIntelEntries" :key="item.key" class="intel-item" :class="item.intel.状态">
               <div class="intel-status-ring" :class="item.intel.状态">
                 <svg viewBox="0 0 36 36" class="progress-ring">
                   <circle cx="18" cy="18" r="16" class="ring-bg" />
@@ -151,8 +146,7 @@ const hasMissionNew = computed(() => {
       const createdAt = Number((v as any).created_at ?? 0);
       const exploredAt = Number((v as any).explored_at ?? 0);
       const completedAt = Number((v as any).completed_at ?? 0);
-      if (createdAt === currentId || exploredAt === currentId || completedAt === currentId)
-        return true;
+      if (createdAt === currentId || exploredAt === currentId || completedAt === currentId) return true;
     }
   }
 
@@ -201,8 +195,8 @@ const visibleStageTargets = computed(() =>
 );
 
 const goalsTotalDisplay = computed(() => visibleStageTargets.value.length);
-const completedGoalsDisplay = computed(() =>
-  visibleStageTargets.value.filter(goal => isGoalCompleted(goal.key, Number(goal.key) || 0)).length,
+const completedGoalsDisplay = computed(
+  () => visibleStageTargets.value.filter(goal => isGoalCompleted(goal.key, Number(goal.key) || 0)).length,
 );
 
 const progressPercent = computed(() => {
@@ -243,8 +237,8 @@ const visibleIntelEntries = computed(() =>
 );
 
 const intelTotalDisplay = computed(() => visibleIntelEntries.value.length);
-const intelCompletedDisplay = computed(() =>
-  visibleIntelEntries.value.filter(({ intel }) => intel?.状态 === '已完成').length,
+const intelCompletedDisplay = computed(
+  () => visibleIntelEntries.value.filter(({ intel }) => intel?.状态 === '已完成').length,
 );
 
 function getIntelCleanupHint(key: string, intel: any): string | null {

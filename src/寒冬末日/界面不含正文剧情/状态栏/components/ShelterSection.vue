@@ -15,9 +15,7 @@
           <span v-if="isNewDailyRoll" class="new-tag">NEW</span>
         </div>
         <div class="value">{{ store.data.庇护所.今日投掷点数 }}</div>
-        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">
-          校准
-        </button>
+        <button class="roll-calibrate-btn" :disabled="isCalibrating" @click="calibrateDailyRollDate">校准</button>
       </div>
       <div class="shelter-item distance-item">
         <div class="label">⏳ 距离下次保底升级</div>
@@ -342,10 +340,10 @@
           <template v-if="abilityMatrixRows.length > 0">
             <div class="ability-matrix">
               <section v-for="row in abilityMatrixRows" :key="row.level" class="ability-matrix-row">
-                <div class="ability-row-label">Lv.{{ row.level }} <span v-if="row.label">· {{ row.label }}</span></div>
-                <div
-                  class="ability-row-grid"
-                >
+                <div class="ability-row-label">
+                  Lv.{{ row.level }} <span v-if="row.label">· {{ row.label }}</span>
+                </div>
+                <div class="ability-row-grid">
                   <div v-for="cat in abilityVisibleCategories" :key="`${row.level}-${cat}`" class="ability-grid-cell">
                     <div class="ability-grid-head">{{ cat }}</div>
                     <div class="ability-grid-cards">
@@ -360,7 +358,9 @@
                             <span class="skill-dot" :class="{ on: ab.unlocked }"></span>
                             <span class="skill-icon">{{ ab.icon }}</span>
                             <span class="skill-name">{{ ab.title }}</span>
-                            <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small">NEW</span>
+                            <span v-if="ab.unlocked && isNewAbilityItem(ab.name)" class="new-tag new-tag--small"
+                              >NEW</span
+                            >
                           </div>
                         </article>
                       </template>

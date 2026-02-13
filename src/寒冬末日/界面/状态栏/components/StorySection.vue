@@ -120,7 +120,9 @@
             >
               {{ isImagePromptLoading(seg.text ?? '') ? '生图中…' : '生图' }}
             </button>
-            <button type="button" class="image-prompt-action-btn" @click="onCopyImagePrompt(seg.text ?? '')">复制提示词</button>
+            <button type="button" class="image-prompt-action-btn" @click="onCopyImagePrompt(seg.text ?? '')">
+              复制提示词
+            </button>
             <span
               v-if="getImagePromptStatus(seg.text ?? '').message"
               class="image-prompt-status"
@@ -135,7 +137,9 @@
     </div>
 
     <div v-else class="story-pane story-modules">
-      <div v-if="metaBlocks.length === 0" class="story-modules-empty">当前楼层没有额外模块（如 profile / meow_FM）。</div>
+      <div v-if="metaBlocks.length === 0" class="story-modules-empty">
+        当前楼层没有额外模块（如 profile / meow_FM）。
+      </div>
       <details v-for="block in metaBlocks" :key="block.key" class="meta-block">
         <summary class="meta-block-title">
           <span>{{ block.title }}</span>
@@ -145,7 +149,13 @@
       </details>
     </div>
 
-    <div v-if="imagePreview" class="story-image-preview-overlay" role="dialog" aria-modal="true" @click.self="closeImagePreview">
+    <div
+      v-if="imagePreview"
+      class="story-image-preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeImagePreview"
+    >
       <div class="story-image-preview-panel">
         <div class="story-image-preview-toolbar">
           <span class="story-image-preview-title">{{ imagePreviewCurrent?.alt || '图片预览' }}</span>
@@ -209,7 +219,9 @@
         <p v-if="imagePromptEditorError" class="story-prompt-editor-error">{{ imagePromptEditorError }}</p>
         <div class="story-prompt-editor-actions">
           <button type="button" class="story-prompt-editor-btn" @click="closeImagePromptEditor">取消</button>
-          <button type="button" class="story-prompt-editor-btn primary" @click="onApplyImagePromptEditor">应用并生图</button>
+          <button type="button" class="story-prompt-editor-btn primary" @click="onApplyImagePromptEditor">
+            应用并生图
+          </button>
         </div>
       </div>
     </div>
@@ -680,7 +692,6 @@ function pluginEventOff(eventName: string, handler: (...args: any[]) => void) {
   } catch {
     // ignore
   }
-
 }
 
 function pluginEventEmit(eventName: string, payload: unknown): boolean {
@@ -745,9 +756,12 @@ function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
   let hideButton = coerceBooleanSetting(ext?.dbclike, defaults.hideButton);
   let clickToPreview = coerceBooleanSetting(ext?.clickToPreview, defaults.clickToPreview);
   let longPressToEdit = coerceBooleanSetting(ext?.longPressToEdit, defaults.longPressToEdit);
-  let alignRaw = String(ext?.imageAlignment ?? defaults.imageAlignment).trim().toLowerCase();
+  let alignRaw = String(ext?.imageAlignment ?? defaults.imageAlignment)
+    .trim()
+    .toLowerCase();
 
-  const imageAlignment: Chatu8RuntimeConfig['imageAlignment'] = alignRaw === 'left' || alignRaw === 'right' ? alignRaw : 'center';
+  const imageAlignment: Chatu8RuntimeConfig['imageAlignment'] =
+    alignRaw === 'left' || alignRaw === 'right' ? alignRaw : 'center';
 
   return {
     startTag,
@@ -1124,7 +1138,11 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
-function dispatchHostMouseEvent(target: HTMLElement, type: 'click' | 'dblclick' | 'pointerdown' | 'pointerup', detail = 1): boolean {
+function dispatchHostMouseEvent(
+  target: HTMLElement,
+  type: 'click' | 'dblclick' | 'pointerdown' | 'pointerup',
+  detail = 1,
+): boolean {
   try {
     const doc = target.ownerDocument;
     const view = doc.defaultView;
@@ -1280,7 +1298,9 @@ function resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt: string, message
   if (!normalizedRawPrompt) return null;
 
   const roots = resolveHostScanRoots(messageId);
-  const allButtons = roots.flatMap(root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[]);
+  const allButtons = roots.flatMap(
+    root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[],
+  );
   if (allButtons.length === 1) return allButtons[0];
   let bestButton: HTMLElement | null = null;
   let bestScore = 0;
@@ -1306,7 +1326,8 @@ function resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt: string, message
 
 function isHostImageButtonLoading(button: HTMLElement): boolean {
   const className = String(button.className ?? '').toLowerCase();
-  if (className.includes('loading') || className.includes('generating') || className.includes('is-loading')) return true;
+  if (className.includes('loading') || className.includes('generating') || className.includes('is-loading'))
+    return true;
   const ariaBusy = String(button.getAttribute('aria-busy') ?? '').toLowerCase();
   if (ariaBusy === 'true') return true;
   if ((button as HTMLButtonElement).disabled) return true;
@@ -1316,7 +1337,10 @@ function isHostImageButtonLoading(button: HTMLElement): boolean {
   return text.includes('生图中') || text.includes('生成中') || text.includes('处理中');
 }
 
-function proxyHostImageButtonAction(rawPrompt: string, action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup'): boolean {
+function proxyHostImageButtonAction(
+  rawPrompt: string,
+  action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup',
+): boolean {
   const button = resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt, resolveStoryMessageId());
   if (!button) return false;
 
@@ -1332,7 +1356,9 @@ function readHostRequestIdFromElement(el: Element | null): string {
 }
 
 function normalizeImageSrcForMatch(src: string): string {
-  return String(src ?? '').trim().split('#')[0];
+  return String(src ?? '')
+    .trim()
+    .split('#')[0];
 }
 
 function getImageSourceIdentity(src: string): string {
@@ -1357,7 +1383,12 @@ function isSameImageSource(a: string, b: string): boolean {
     const rightUrl = new URL(right, window.location.href);
     if (leftUrl.href === rightUrl.href) return true;
     if (leftUrl.origin === rightUrl.origin && leftUrl.pathname === rightUrl.pathname) return true;
-    if (leftUrl.origin === rightUrl.origin && leftUrl.pathname === rightUrl.pathname && leftUrl.search === rightUrl.search) return true;
+    if (
+      leftUrl.origin === rightUrl.origin &&
+      leftUrl.pathname === rightUrl.pathname &&
+      leftUrl.search === rightUrl.search
+    )
+      return true;
   } catch {
     // ignore
   }
@@ -1479,7 +1510,10 @@ function proxyHostImageNativeDoubleClickForSegment(seg: Segment): boolean {
   return dispatchHostMouseEvent(target, 'dblclick', 2);
 }
 
-function proxyHostImageButtonActionForSegment(seg: Segment, action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup'): boolean {
+function proxyHostImageButtonActionForSegment(
+  seg: Segment,
+  action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup',
+): boolean {
   const button = resolveHostImageButtonBySegment(seg);
   if (!button) return false;
 
@@ -1573,7 +1607,9 @@ const imagePreviewIndex = computed<number>(() => {
   return _.clamp(Number(state.index) || 0, 0, state.items.length - 1);
 });
 const canPreviewPrev = computed<boolean>(() => imagePreviewTotal.value > 1 && imagePreviewIndex.value > 0);
-const canPreviewNext = computed<boolean>(() => imagePreviewTotal.value > 1 && imagePreviewIndex.value < imagePreviewTotal.value - 1);
+const canPreviewNext = computed<boolean>(
+  () => imagePreviewTotal.value > 1 && imagePreviewIndex.value < imagePreviewTotal.value - 1,
+);
 
 function previewPrev() {
   const state = imagePreview.value;
@@ -1955,9 +1991,13 @@ function collectRenderableStoryImages(root: HTMLElement): ResolvedDisplayedImage
 function getChatu8PromptHashCandidates(rawPrompt: string): string[] {
   const body = parseImagePromptBody(rawPrompt);
   const normalized = normalizeForMatch(body);
-  const compact = String(body ?? '').replace(/[ \t]+\n/g, '\n').trim();
+  const compact = String(body ?? '')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
   const withoutWhitespace = String(body ?? '').replace(/\s+/g, '');
-  return Array.from(new Set([body, normalized, compact, withoutWhitespace].map(x => String(x ?? '').trim()).filter(Boolean)));
+  return Array.from(
+    new Set([body, normalized, compact, withoutWhitespace].map(x => String(x ?? '').trim()).filter(Boolean)),
+  );
 }
 
 function readChatu8StorageMap(): Record<string, Chatu8StorageEntry> {
@@ -2070,13 +2110,11 @@ function resolveImagesFromChatu8Cache(prompts: string[]) {
     const tokens = tokenizePromptForCacheSearch(promptBody);
     if (!tokens.length) continue;
 
-    let best:
-      | {
-          key: string;
-          entry: Chatu8StorageEntry;
-          score: number;
-        }
-      | null = null;
+    let best: {
+      key: string;
+      entry: Chatu8StorageEntry;
+      score: number;
+    } | null = null;
 
     for (const item of searchable) {
       if (usedStorageKeys.has(item.key)) continue;
@@ -2104,7 +2142,8 @@ function resolveImagesFromChatu8Cache(prompts: string[]) {
 }
 
 function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: string[]) {
-  const roots = messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  const roots =
+    messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
   if (roots.length === 0) return resolveImagesFromChatu8Cache(prompts);
 
   const availableImages: ResolvedDisplayedImage[] = [];
@@ -2140,7 +2179,10 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
 
       if (requestId && ownerRoot) {
         const spans = Array.from(ownerRoot.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
-        const span = spans.find(node => String(node.dataset.requestId ?? node.getAttribute('data-request-id') ?? '').trim() === requestId) ?? null;
+        const span =
+          spans.find(
+            node => String(node.dataset.requestId ?? node.getAttribute('data-request-id') ?? '').trim() === requestId,
+          ) ?? null;
         const candidate = span?.querySelector('img') as HTMLImageElement | null;
         if (candidate && isRenderableStoryImage(candidate)) img = candidate;
       }
@@ -2158,7 +2200,9 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     .filter(Boolean) as Array<{ promptNorm: string; image: ResolvedDisplayedImage }>;
 
   const promptEls = roots.flatMap(root =>
-    Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el => normalizeForMatch(el.textContent ?? '').includes('###')),
+    Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el =>
+      normalizeForMatch(el.textContent ?? '').includes('###'),
+    ),
   );
 
   const out: Record<string, ResolvedDisplayedImage[]> = {};
@@ -2229,7 +2273,10 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   return out;
 }
 
-function resolveHostImageButtonState(messageId: number | null, prompts: string[]): Record<string, HostImageButtonState> {
+function resolveHostImageButtonState(
+  messageId: number | null,
+  prompts: string[],
+): Record<string, HostImageButtonState> {
   const out: Record<string, HostImageButtonState> = {};
   for (const prompt of prompts) {
     const button = resolveHostImageButtonByRawPromptAcrossRoots(prompt, messageId);
@@ -2550,7 +2597,8 @@ watchEffect(onCleanup => {
   timers.push(window.setTimeout(run, 2000));
   timers.push(window.setTimeout(run, 5000));
 
-  const observeRoots = messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  const observeRoots =
+    messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
   for (const root of observeRoots) {
     const observer = new MutationObserver(() => {
       run();

@@ -191,7 +191,10 @@ function resolveTriggerSlash(): ((cmd: string) => any) | null {
 
 function normalizeChatText(input: string): string {
   const raw = String(input ?? '');
-  return raw.replace(/\r?\n+/g, ' ').trim().replaceAll('|', '｜');
+  return raw
+    .replace(/\r?\n+/g, ' ')
+    .trim()
+    .replaceAll('|', '｜');
 }
 
 function handleSendRequest(payload: { text?: string; await_trigger?: boolean; source?: string } | null | undefined) {
@@ -250,10 +253,7 @@ function resetBridge(reason: string) {
 }
 
 function resolveCurrentStreamingMessageId(): number | null {
-  const raw =
-    $('#chat > .mes.last_mes').attr('mesid') ??
-    $('#chat .mes.last_mes').last().attr('mesid') ??
-    null;
+  const raw = $('#chat > .mes.last_mes').attr('mesid') ?? $('#chat .mes.last_mes').last().attr('mesid') ?? null;
   const message_id = Number(raw);
   return Number.isFinite(message_id) ? message_id : null;
 }

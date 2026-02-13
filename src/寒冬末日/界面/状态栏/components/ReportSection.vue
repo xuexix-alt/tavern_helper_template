@@ -22,7 +22,12 @@
             </div>
             <div class="report-pane-body report-pane-body--digest">
               <div class="report-quick-list">
-                <div v-for="(line, idx) in quickDigestLines" :key="line.key" class="report-quick-line" :class="line.tone">
+                <div
+                  v-for="(line, idx) in quickDigestLines"
+                  :key="line.key"
+                  class="report-quick-line"
+                  :class="line.tone"
+                >
                   <div class="report-quick-index">0{{ idx + 1 }}</div>
                   <div class="report-quick-content">
                     <div class="report-quick-label">{{ line.label }}</div>
@@ -57,7 +62,9 @@
               <div v-if="activeTokenContext" class="report-float-pop" @click.stop>
                 <div class="report-float-pop-head">
                   <div class="report-float-pop-title">{{ activeTokenContext.token.popupTitle }}</div>
-                  <button class="report-float-pop-close" type="button" @click.stop="activeQuickTokenId = null">关闭</button>
+                  <button class="report-float-pop-close" type="button" @click.stop="activeQuickTokenId = null">
+                    关闭
+                  </button>
                 </div>
                 <ul class="report-float-pop-list">
                   <li
@@ -604,7 +611,9 @@ async function buildReport(): Promise<ReportResult> {
   const prevEpochDay = parseDateToEpochDayLoose(String(prevWorld?.日期 ?? ''));
   const currentEpochDay = parseDateToEpochDayLoose(String(currentWorld?.日期 ?? ''));
   const crossDays =
-    prevEpochDay != null && currentEpochDay != null && currentEpochDay >= prevEpochDay ? currentEpochDay - prevEpochDay : 0;
+    prevEpochDay != null && currentEpochDay != null && currentEpochDay >= prevEpochDay
+      ? currentEpochDay - prevEpochDay
+      : 0;
   const currentClock = extractClockText(String(currentWorld?.时间 ?? ''));
   const timeBrief = `时间：跨+${crossDays}天 · ${deltaHours != null ? `约${deltaHours.toFixed(1)}小时` : '约0.0小时'} · ${currentClock}`;
 
@@ -1080,7 +1089,9 @@ async function buildReport(): Promise<ReportResult> {
     },
     details: {
       missionStage: missionItems.filter(item => item.key === 'mission_stage').map(item => `${item.detail}`),
-      missionGoals: missionItems.filter(item => item.key !== 'mission_stage').map(item => `${item.title}：${item.detail}`),
+      missionGoals: missionItems
+        .filter(item => item.key !== 'mission_stage')
+        .map(item => `${item.title}：${item.detail}`),
       intel: listRowText(intelItems),
       stageOn: stageOnText,
       onstageTotal: allCurrentRoleNames.length || 0,

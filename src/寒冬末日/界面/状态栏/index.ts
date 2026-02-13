@@ -93,7 +93,14 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
   })();
   if (!inIframe) return () => {};
 
-  const chatSelectors = ['#chat', '#chat-wrapper', '#chat-container', '.chat', '.chat-wrapper', '.chat-content'] as const;
+  const chatSelectors = [
+    '#chat',
+    '#chat-wrapper',
+    '#chat-container',
+    '.chat',
+    '.chat-wrapper',
+    '.chat-content',
+  ] as const;
 
   const findParentChatElement = (): HTMLElement | null => {
     try {
