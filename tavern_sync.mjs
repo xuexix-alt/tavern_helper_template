@@ -62535,7 +62535,6 @@ config(en());
 function detailed_parse(schema, data) {
     const result = schema.safeParse(data, { reportInput: true });
     if (!result.success) {
-        console.info(result);
         throw Error(prettifyError(result.error));
     }
     return result.data;
@@ -66291,9 +66290,9 @@ const character_en_Character = strictObject({
     avatar: coerce_string()
         .nullish()
         .describe('角色卡头像: 填写角色卡头像图片路径, 填为 `null` 或不设置该字段则打包时会打包为 JSON 文件'),
-    version: coerce_string(),
-    creator: coerce_string(),
-    creator_notes: coerce_string(),
+    version: coerce_string().default(''),
+    creator: coerce_string().default(''),
+    creator_notes: coerce_string().default(''),
     first_messages: array(object({
         content: coerce_string().optional().describe('内嵌的提示词内容'),
         file: coerce_string().optional().describe('外链的提示词文件路径'),
@@ -66411,7 +66410,7 @@ const extensions_zh_Extensions = looseObject({
         .transform(data => {
         if (data.替换为 !== undefined) {
             _.set(data, '内容', data.替换为);
-            _.unset(data, '内容');
+            _.unset(data, '替换为');
         }
         return data;
     })
@@ -66690,9 +66689,9 @@ const character_zh_Character = strictObject({
     头像: coerce_string()
         .nullish()
         .describe('角色卡头像: 填写角色卡头像图片路径, 填为 `null` 或不设置该字段则打包时会打包为 JSON 文件'),
-    版本: coerce_string(),
-    作者: coerce_string(),
-    备注: coerce_string(),
+    版本: coerce_string().default(''),
+    作者: coerce_string().default(''),
+    备注: coerce_string().default(''),
     第一条消息: array(object({
         内容: coerce_string().optional().describe('内嵌的提示词内容'),
         文件: coerce_string().optional().describe('外链的提示词文件路径'),
@@ -68347,9 +68346,7 @@ function is_abort_error(error) {
 async function download_latest(signal) {
     const urls = [
         'https://raw.githubusercontent.com/StageDog/tavern_sync/refs/heads/main/dist/tavern_sync.mjs',
-        'https://cdn.jsdelivr.net/gh/StageDog/tavern_sync/dist/tavern_sync.mjs',
-        'https://fastly.jsdelivr.net/gh/StageDog/tavern_sync/dist/tavern_sync.mjs',
-        'https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/tavern_sync.mjs',
+        'https://gitgud.io/StageDog/tavern_sync/-/raw/main/dist/tavern_sync.mjs?inline=false',
     ];
     const erorr_data = {};
     const fetches = urls.map(async (url) => {
