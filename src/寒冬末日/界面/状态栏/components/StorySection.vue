@@ -16,10 +16,21 @@
           <span class="story-mini-tab-count">{{ tab.count }}</span>
         </button>
       </div>
-      <div class="story-zoom-controls">
-        <button type="button" class="zoom-btn" @click="zoomOut">−</button>
-        <span class="zoom-value">{{ zoomPercent }}%</span>
-        <button type="button" class="zoom-btn" @click="zoomIn">+</button>
+      <div class="story-toolbar-actions">
+        <div class="story-zoom-controls">
+          <button type="button" class="zoom-btn" @click="zoomOut">−</button>
+          <span class="zoom-value">{{ zoomPercent }}%</span>
+          <button type="button" class="zoom-btn" @click="zoomIn">+</button>
+        </div>
+        <button
+          type="button"
+          class="story-image-menu-btn"
+          title="触发宿主正文双击，呼出生图菜单"
+          aria-label="生图菜单"
+          @click="onOpenHostImageMenu"
+        >
+          生图菜单
+        </button>
       </div>
     </div>
 
@@ -91,22 +102,31 @@
           <pre class="image-prompt">
             <TextHighlight :text="seg.text" :query="query" />
           </pre>
+          <div v-if="isImagePromptLoading(seg.text ?? '')" class="image-prompt-loading-tip" aria-live="polite">
+            <i class="fa-solid fa-image" aria-hidden="true" />
+            <span>ComfyUI 生图中，完成后将自动回填到正文</span>
+          </div>
           <div class="image-prompt-actions">
             <button
               type="button"
               class="image-prompt-action-btn primary"
-              :disabled="getImagePromptUi(seg.text ?? '').isLoading"
-              @click="onGenerateImageRequest(seg.text ?? '')"
+              :disabled="isImagePromptLoading(seg.text ?? '')"
+              @click="onImagePromptPrimaryAction(seg.text ?? '')"
+              @dblclick.prevent="onImagePromptPrimaryDoubleClick(seg.text ?? '')"
+              @pointerdown="onImagePromptPrimaryPointerDown(seg.text ?? '', $event)"
+              @pointerup="onImagePromptPrimaryPointerUp(seg.text ?? '')"
+              @pointerleave="onImagePromptPrimaryPointerUp(seg.text ?? '')"
+              @pointercancel="onImagePromptPrimaryPointerUp(seg.text ?? '')"
             >
-              {{ getImagePromptUi(seg.text ?? '').isLoading ? '生图中…' : '生图' }}
+              {{ isImagePromptLoading(seg.text ?? '') ? '生图中…' : '生图' }}
             </button>
             <button type="button" class="image-prompt-action-btn" @click="onCopyImagePrompt(seg.text ?? '')">复制提示词</button>
             <span
-              v-if="getImagePromptUi(seg.text ?? '').message"
+              v-if="getImagePromptStatus(seg.text ?? '').message"
               class="image-prompt-status"
-              :class="`is-${getImagePromptUi(seg.text ?? '').level}`"
+              :class="`is-${getImagePromptStatus(seg.text ?? '').level}`"
             >
-              {{ getImagePromptUi(seg.text ?? '').message }}
+              {{ getImagePromptStatus(seg.text ?? '').message }}
             </span>
           </div>
         </div>
@@ -128,11 +148,39 @@
     <div v-if="imagePreview" class="story-image-preview-overlay" role="dialog" aria-modal="true" @click.self="closeImagePreview">
       <div class="story-image-preview-panel">
         <div class="story-image-preview-toolbar">
-          <span class="story-image-preview-title">{{ imagePreview.alt || '图片预览' }}</span>
-          <button type="button" class="story-image-preview-close" @click="closeImagePreview">关闭</button>
+          <span class="story-image-preview-title">{{ imagePreviewCurrent?.alt || '图片预览' }}</span>
+          <div class="story-image-preview-toolbar-actions">
+            <span v-if="imagePreviewTotal > 1" class="story-image-preview-counter">
+              {{ imagePreviewIndex + 1 }} / {{ imagePreviewTotal }}
+            </span>
+            <button
+              v-if="imagePreviewTotal > 1"
+              type="button"
+              class="story-image-preview-nav"
+              :disabled="!canPreviewPrev"
+              @click="previewPrev"
+            >
+              上一张
+            </button>
+            <button
+              v-if="imagePreviewTotal > 1"
+              type="button"
+              class="story-image-preview-nav"
+              :disabled="!canPreviewNext"
+              @click="previewNext"
+            >
+              下一张
+            </button>
+            <button type="button" class="story-image-preview-close" @click="closeImagePreview">关闭</button>
+          </div>
         </div>
         <div class="story-image-preview-media-wrap">
-          <img :src="imagePreview.src" :alt="imagePreview.alt || '图片预览'" class="story-image-preview-media" />
+          <img
+            v-if="imagePreviewCurrent?.src"
+            :src="imagePreviewCurrent.src"
+            :alt="imagePreviewCurrent.alt || '图片预览'"
+            class="story-image-preview-media"
+          />
         </div>
       </div>
     </div>
@@ -244,6 +292,10 @@ type ImagePromptUiState = {
   message: string;
   level: ImagePromptUiLevel;
 };
+type HostImageButtonState = {
+  found: boolean;
+  loading: boolean;
+};
 
 type GenerateImageRequestPayload = {
   id: string;
@@ -251,6 +303,8 @@ type GenerateImageRequestPayload = {
   width: number | null;
   height: number | null;
   change?: string | null;
+  retouchPrompt?: string | null;
+  retouchImage?: string | null;
 };
 
 type GenerateImageResponsePayload = {
@@ -260,6 +314,7 @@ type GenerateImageResponsePayload = {
   error?: string;
   prompt?: string;
   change?: string;
+  isVideo?: boolean;
 };
 
 type GenerateImageResponseHandler = (responseData: GenerateImageResponsePayload) => void;
@@ -273,8 +328,9 @@ type ImagePromptOverride = {
   prompt: string;
 };
 type ImagePreviewState = {
-  src: string;
-  alt: string;
+  rawPrompt: string;
+  items: ResolvedDisplayedImage[];
+  index: number;
 };
 type ImagePromptEditorState = {
   rawPrompt: string;
@@ -312,6 +368,7 @@ const IMAGE_TAG_HINTS = ['image', 'img', 'sd', 'draw', 'paint', 'picture', 'pic'
 const resolvedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
 const generatedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
 const imagePromptUi = ref<Record<string, ImagePromptUiState>>({});
+const hostImageButtonStateByPrompt = ref<Record<string, HostImageButtonState>>({});
 const imagePromptOverrides = ref<Record<string, ImagePromptOverride>>({});
 const imagePreview = ref<ImagePreviewState | null>(null);
 const imagePromptEditor = ref<ImagePromptEditorState | null>(null);
@@ -320,18 +377,24 @@ const imagePromptEditorValue = ref('');
 const imagePromptEditorError = ref('');
 const imagePromptRequestHandlers = new Map<string, GenerateImageResponseHandler>();
 const imagePromptRequestTimers = new Map<string, number>();
+const imagePromptPendingRequestIds = new Map<string, Set<string>>();
 const chatu8Runtime = ref<Chatu8RuntimeConfig>({
-  startTag: '',
-  endTag: '',
+  startTag: 'image###',
+  endTag: '###',
   hideButton: false,
   clickToPreview: true,
-  longPressToEdit: true,
+  longPressToEdit: false,
   imageAlignment: 'center',
 });
 let chatu8RuntimeTimer: number | null = null;
 let storyImageClickTimer: number | null = null;
 let storyImageLongPressTimer: number | null = null;
 let storyImageIgnoreClickUntil = 0;
+const HOST_IMAGE_MENU_POLL_MS = 700;
+const HOST_IMAGE_MENU_TIMEOUT_MS = 20_000;
+let hostImageMenuAutoSessionId = 0;
+let hostImageMenuPollTimer: number | null = null;
+let hostImageMenuTimeoutTimer: number | null = null;
 
 function normalizeForMatch(s: string): string {
   return String(s ?? '')
@@ -363,24 +426,93 @@ function mergeImageMap(
   return out;
 }
 
-function mergeImageMapWithPriority(
-  primary: Record<string, ResolvedDisplayedImage[]>,
-  fallback: Record<string, ResolvedDisplayedImage[]>,
-  keys: string[],
-): Record<string, ResolvedDisplayedImage[]> {
-  const out: Record<string, ResolvedDisplayedImage[]> = {};
-  for (const key of keys) {
-    const preferred = primary[key];
-    if (Array.isArray(preferred) && preferred.length > 0) {
-      out[key] = preferred;
-      continue;
+const mergedImagesByPrompt = computed<Record<string, ResolvedDisplayedImage[]>>(() =>
+  mergeImageMap(resolvedImagesByPrompt.value ?? {}, generatedImagesByPrompt.value ?? {}),
+);
+
+function appendImageHistory(
+  source: ResolvedDisplayedImage[],
+  incoming: ResolvedDisplayedImage,
+): ResolvedDisplayedImage[] {
+  const out = Array.isArray(source) ? source.slice() : [];
+  const key = `${incoming.src}@@${incoming.alt ?? ''}`;
+  const seen = new Set(out.map(it => `${it.src}@@${it.alt ?? ''}`));
+  if (!seen.has(key)) out.push({ src: incoming.src, alt: incoming.alt ?? '' });
+  return out;
+}
+
+function normalizePromptBodyForCompare(rawPrompt: string): string {
+  const body = parseImagePromptBody(rawPrompt);
+  const source = body || String(rawPrompt ?? '');
+  // 去掉 st-chatu8 的分角色占位块，避免同语义提示词因 ${...}$ 与展开文本形式不同而失配。
+  const withoutRolePlaceholders = source.replace(/\$\{[\s\S]*?\}\$/g, ' ');
+  return normalizeForMatch(withoutRolePlaceholders).toLowerCase();
+}
+
+function tokenizePromptForCompare(rawPrompt: string): string[] {
+  const normalized = normalizePromptBodyForCompare(rawPrompt);
+  if (!normalized) return [];
+  const tokens = normalized
+    .split(/[^a-z0-9\u4e00-\u9fa5_]+/i)
+    .map(token => token.trim())
+    .filter(token => token.length >= 3);
+  return Array.from(new Set(tokens));
+}
+
+function scorePromptSimilarity(rawPromptA: string, rawPromptB: string): number {
+  const normA = normalizePromptBodyForCompare(rawPromptA);
+  const normB = normalizePromptBodyForCompare(rawPromptB);
+  if (!normA || !normB) return 0;
+  if (normA === normB) return 1;
+  if (normA.includes(normB) || normB.includes(normA)) return 0.92;
+
+  const tokensA = tokenizePromptForCompare(rawPromptA);
+  const tokensB = tokenizePromptForCompare(rawPromptB);
+  if (tokensA.length === 0 || tokensB.length === 0) return 0;
+
+  const setB = new Set(tokensB);
+  let intersection = 0;
+  for (const token of tokensA) {
+    if (setB.has(token)) intersection++;
+  }
+  if (intersection < 5) return 0;
+  return intersection / Math.max(tokensA.length, tokensB.length);
+}
+
+function resolveImageHitsByPrompt(
+  mapped: Record<string, ResolvedDisplayedImage[]>,
+  rawPrompt: string,
+): ResolvedDisplayedImage[] {
+  const direct = mapped?.[rawPrompt];
+  if (Array.isArray(direct) && direct.length > 0) return direct;
+
+  const bodyNorm = normalizePromptBodyForCompare(rawPrompt);
+  if (!bodyNorm) return [];
+
+  let bestScore = 0;
+  let bestHits: ResolvedDisplayedImage[] = [];
+  for (const [candidatePrompt, hits] of Object.entries(mapped ?? {})) {
+    if (!Array.isArray(hits) || hits.length === 0) continue;
+    const candidateBody = normalizePromptBodyForCompare(candidatePrompt);
+    if (!candidateBody) continue;
+    if (candidateBody === bodyNorm || candidateBody.includes(bodyNorm) || bodyNorm.includes(candidateBody)) {
+      return hits;
     }
-    const backup = fallback[key];
-    if (Array.isArray(backup) && backup.length > 0) {
-      out[key] = backup;
+
+    const score = scorePromptSimilarity(rawPrompt, candidatePrompt);
+    if (score > bestScore) {
+      bestScore = score;
+      bestHits = hits;
     }
   }
-  return out;
+
+  return bestScore >= 0.45 ? bestHits : [];
+}
+
+function pickLatestImageHit(hits: ResolvedDisplayedImage[]): ResolvedDisplayedImage | null {
+  if (!Array.isArray(hits) || hits.length === 0) return null;
+  const last = hits[hits.length - 1];
+  return last?.src ? last : null;
 }
 
 function getImagePromptUi(rawPrompt: string): ImagePromptUiState {
@@ -391,6 +523,36 @@ function getImagePromptUi(rawPrompt: string): ImagePromptUiState {
       level: 'idle',
     }
   );
+}
+
+function getHostImageButtonState(rawPrompt: string): HostImageButtonState {
+  return (
+    hostImageButtonStateByPrompt.value?.[rawPrompt] ?? {
+      found: false,
+      loading: false,
+    }
+  );
+}
+
+function isImagePromptLoading(rawPrompt: string): boolean {
+  const pendingSet = imagePromptPendingRequestIds.get(rawPrompt);
+  if (pendingSet && pendingSet.size > 0) return true;
+  const host = getHostImageButtonState(rawPrompt);
+  if (host.loading) return true;
+  return getImagePromptUi(rawPrompt).isLoading;
+}
+
+function getImagePromptStatus(rawPrompt: string): ImagePromptUiState {
+  const ui = getImagePromptUi(rawPrompt);
+  if (ui.message) return ui;
+  if (isImagePromptLoading(rawPrompt)) {
+    return {
+      isLoading: true,
+      message: '插件生图中…',
+      level: 'loading',
+    };
+  }
+  return ui;
 }
 
 function setImagePromptUi(rawPrompt: string, patch: Partial<ImagePromptUiState>) {
@@ -404,31 +566,144 @@ function setImagePromptUi(rawPrompt: string, patch: Partial<ImagePromptUiState>)
   };
 }
 
-function readHostWindow(): (Window & typeof globalThis) | null {
+function setPromptPendingRequest(rawPrompt: string, requestId: string, pending: boolean) {
+  const key = String(rawPrompt ?? '').trim();
+  const rid = String(requestId ?? '').trim();
+  if (!key || !rid) return;
+
+  const current = imagePromptPendingRequestIds.get(key) ?? new Set<string>();
+  if (pending) {
+    current.add(rid);
+    imagePromptPendingRequestIds.set(key, current);
+  } else {
+    current.delete(rid);
+    if (current.size > 0) imagePromptPendingRequestIds.set(key, current);
+    else imagePromptPendingRequestIds.delete(key);
+  }
+}
+
+function listReachableHostWindows(): Array<Window & typeof globalThis> {
+  const out: Array<Window & typeof globalThis> = [];
+  const seen = new Set<Window>();
+
+  const push = (candidate: Window | null | undefined) => {
+    if (!candidate) return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    out.push(candidate as Window & typeof globalThis);
+  };
+
   try {
-    if (window.parent && window.parent !== window) return window.parent as Window & typeof globalThis;
+    if (window.parent && window.parent !== window) push(window.parent);
   } catch {
     // ignore
   }
-  return window;
+  try {
+    if (window.top && window.top !== window) push(window.top);
+  } catch {
+    // ignore
+  }
+  push(window);
+  return out;
 }
 
-function readHostDocument(): Document | null {
-  const hostWindow = readHostWindow();
-  if (hostWindow?.document) return hostWindow.document;
-  return typeof document !== 'undefined' ? document : null;
+function readHostWindow(): (Window & typeof globalThis) | null {
+  const candidates = listReachableHostWindows();
+  if (candidates.length === 0) return window;
+
+  for (const candidate of candidates) {
+    try {
+      const host = candidate as any;
+      if (host?.SillyTavern || host?.eventSource) return candidate;
+    } catch {
+      // ignore
+    }
+  }
+  return candidates[0] ?? window;
 }
 
-function readHostInputValue(doc: Document, id: string): string | null {
-  const el = doc.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-  if (!el) return null;
-  return String(el.value ?? '').trim();
+function readHostEventSource(): any | null {
+  for (const hostWindow of listReachableHostWindows()) {
+    try {
+      const source = (hostWindow as any)?.eventSource;
+      if (source && typeof source.on === 'function' && typeof source.emit === 'function') return source;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
 }
 
-function readHostCheckboxValue(doc: Document, id: string): boolean | null {
-  const el = doc.getElementById(id) as HTMLInputElement | null;
-  if (!el || el.type !== 'checkbox') return null;
-  return Boolean(el.checked);
+function pluginEventOn(eventName: string, handler: (...args: any[]) => void): boolean {
+  try {
+    const source = readHostEventSource();
+    if (source && typeof source.on === 'function') {
+      source.on(eventName, handler);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    if (typeof eventOn === 'function') {
+      eventOn(eventName as any, handler as any);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+
+function pluginEventOff(eventName: string, handler: (...args: any[]) => void) {
+  try {
+    const source = readHostEventSource();
+    if (source && typeof source.off === 'function') {
+      source.off(eventName, handler);
+      return;
+    }
+    if (source && typeof source.removeListener === 'function') {
+      source.removeListener(eventName, handler);
+      return;
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    if (typeof eventRemoveListener === 'function') {
+      eventRemoveListener(eventName as any, handler as any);
+      return;
+    }
+  } catch {
+    // ignore
+  }
+
+}
+
+function pluginEventEmit(eventName: string, payload: unknown): boolean {
+  try {
+    const source = readHostEventSource();
+    if (source && typeof source.emit === 'function') {
+      source.emit(eventName, payload);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    if (typeof eventEmit === 'function') {
+      eventEmit(eventName as any, payload as any);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+
+  return false;
 }
 
 function coerceBooleanSetting(value: unknown, fallback: boolean): boolean {
@@ -456,11 +731,11 @@ function readChatu8ExtensionSettings(): Record<string, any> | null {
 
 function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
   const defaults: Chatu8RuntimeConfig = {
-    startTag: '',
-    endTag: '',
+    startTag: 'image###',
+    endTag: '###',
     hideButton: false,
     clickToPreview: true,
-    longPressToEdit: true,
+    longPressToEdit: false,
     imageAlignment: 'center',
   };
   const ext = readChatu8ExtensionSettings();
@@ -471,23 +746,6 @@ function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
   let clickToPreview = coerceBooleanSetting(ext?.clickToPreview, defaults.clickToPreview);
   let longPressToEdit = coerceBooleanSetting(ext?.longPressToEdit, defaults.longPressToEdit);
   let alignRaw = String(ext?.imageAlignment ?? defaults.imageAlignment).trim().toLowerCase();
-
-  const hostDoc = readHostDocument();
-  if (hostDoc) {
-    const startTagFromDom = readHostInputValue(hostDoc, 'startTag');
-    const endTagFromDom = readHostInputValue(hostDoc, 'endTag');
-    const hideFromDom = readHostCheckboxValue(hostDoc, 'dbclike');
-    const previewFromDom = readHostCheckboxValue(hostDoc, 'clickToPreview');
-    const longPressFromDom = readHostCheckboxValue(hostDoc, 'longPressToEdit');
-    const alignFromDom = readHostInputValue(hostDoc, 'imageAlignment');
-
-    if (startTagFromDom !== null) startTag = startTagFromDom;
-    if (endTagFromDom !== null) endTag = endTagFromDom;
-    if (hideFromDom !== null) hideButton = hideFromDom;
-    if (previewFromDom !== null) clickToPreview = previewFromDom;
-    if (longPressFromDom !== null) longPressToEdit = longPressFromDom;
-    if (alignFromDom !== null) alignRaw = alignFromDom.toLowerCase();
-  }
 
   const imageAlignment: Chatu8RuntimeConfig['imageAlignment'] = alignRaw === 'left' || alignRaw === 'right' ? alignRaw : 'center';
 
@@ -609,22 +867,19 @@ function collectImagePromptMatches(input: string): Array<{ raw: string; tag: str
   return out.sort((a, b) => a.index - b.index);
 }
 
-function clearImagePromptRequest(rawPrompt: string) {
-  const handler = imagePromptRequestHandlers.get(rawPrompt);
+function clearImagePromptRequest(requestId: string) {
+  const rid = String(requestId ?? '').trim();
+  if (!rid) return;
+
+  const handler = imagePromptRequestHandlers.get(rid);
   if (handler) {
-    try {
-      if (typeof eventRemoveListener === 'function') {
-        eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, handler as any);
-      }
-    } catch {
-      // ignore
-    }
-    imagePromptRequestHandlers.delete(rawPrompt);
+    pluginEventOff(EventType.GENERATE_IMAGE_RESPONSE, handler as any);
+    imagePromptRequestHandlers.delete(rid);
   }
-  const timer = imagePromptRequestTimers.get(rawPrompt);
+  const timer = imagePromptRequestTimers.get(rid);
   if (typeof timer === 'number') {
     window.clearTimeout(timer);
-    imagePromptRequestTimers.delete(rawPrompt);
+    imagePromptRequestTimers.delete(rid);
   }
 }
 
@@ -675,7 +930,7 @@ function getSegmentPromptKey(seg: Segment): string {
 }
 
 function getSegmentPromptUi(seg: Segment): ImagePromptUiState {
-  return getImagePromptUi(getSegmentPromptKey(seg));
+  return getImagePromptStatus(getSegmentPromptKey(seg));
 }
 
 function shouldShowGenerateFab(): boolean {
@@ -698,90 +953,113 @@ function getStoryImageTitle(seg: Segment): string {
   return detail || String(seg.altText ?? '').trim();
 }
 
+function normalizeGeneratedImageData(imageData: string): string {
+  const raw = String(imageData ?? '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('data:image/')) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('/')) return raw;
+  return `data:image/png;base64,${raw}`;
+}
+
+function pickRequestedImageSize(): { width: number | null; height: number | null } {
+  const ext = readChatu8ExtensionSettings() ?? {};
+  const candidates: Array<[string, string]> = [
+    ['sd_cwidth', 'sd_cheight'],
+    ['sd_width', 'sd_height'],
+    ['comfyui_width', 'comfyui_height'],
+    ['novelai_width', 'novelai_height'],
+    ['banana_width', 'banana_height'],
+    ['width', 'height'],
+  ];
+
+  for (const [widthKey, heightKey] of candidates) {
+    const w = Number((ext as any)?.[widthKey]);
+    const h = Number((ext as any)?.[heightKey]);
+    const width = Number.isFinite(w) && w > 0 ? Math.round(w) : null;
+    const height = Number.isFinite(h) && h > 0 ? Math.round(h) : null;
+    if (width || height) return { width, height };
+  }
+  return { width: null, height: null };
+}
+
 async function onGenerateImageRequest(rawPrompt: string, options: GenerateImageRequestOptions = {}) {
-  const effectivePrompt = String(options.promptOverride ?? getEffectiveImagePrompt(rawPrompt)).trim();
-  if (!effectivePrompt) {
-    setImagePromptUi(rawPrompt, { isLoading: false, message: '提示词为空', level: 'error' });
+  const key = String(rawPrompt ?? '').trim();
+  if (!key) return;
+
+  const promptOverride = String(options.promptOverride ?? '').trim();
+  const prompt = promptOverride || getEffectiveImagePrompt(key);
+  if (!prompt) {
+    setImagePromptUi(key, { isLoading: false, message: '提示词为空', level: 'error' });
     toastr?.warning?.('提示词为空，无法生图');
     return;
   }
 
-  if (typeof eventEmit !== 'function' || typeof eventOn !== 'function' || typeof eventRemoveListener !== 'function') {
-    setImagePromptUi(rawPrompt, { isLoading: false, message: '宿主未注入事件接口', level: 'error' });
-    toastr?.error?.('当前环境不支持插件生图事件');
-    return;
-  }
-
-  clearImagePromptRequest(rawPrompt);
   const requestId = makeImageRequestId();
-  const originalPrompt = parseImagePromptBody(rawPrompt);
-  const promptOverride = String(options.promptOverride ?? '').trim();
-  const changeOverride = String(options.changeOverride ?? '').trim();
-
-  // 兼容 st-chatu8: 当传入“覆盖提示词”时，优先走 prompt + change 协议。
-  let requestPrompt = effectivePrompt;
-  let requestChange: string | null = null;
-  if (changeOverride) {
-    requestChange = changeOverride;
-  } else if (promptOverride && originalPrompt && promptOverride !== originalPrompt) {
-    requestPrompt = originalPrompt;
-    requestChange = promptOverride;
-  }
-
+  const { width, height } = pickRequestedImageSize();
   const payload: GenerateImageRequestPayload = {
     id: requestId,
-    prompt: requestPrompt,
-    width: null,
-    height: null,
-    change: requestChange,
+    prompt,
+    width,
+    height,
   };
+  const change = String(options.changeOverride ?? '').trim();
+  if (change) payload.change = change;
 
-  setImagePromptUi(rawPrompt, { isLoading: true, message: '已发送生图请求，等待响应…', level: 'loading' });
+  const handler: GenerateImageResponseHandler = (responseData: GenerateImageResponsePayload) => {
+    const responseId = String(responseData?.id ?? '').trim();
+    if (!responseId || responseId !== requestId) return;
 
-  const imageResponseHandler: GenerateImageResponseHandler = (responseData: GenerateImageResponsePayload) => {
-    if (!responseData || responseData.id !== requestId) return;
+    clearImagePromptRequest(requestId);
+    setPromptPendingRequest(key, requestId, false);
 
-    try {
-      eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler as any);
-    } catch {
-      // ignore
-    }
-
-    clearImagePromptRequest(rawPrompt);
-    const { success, imageData, error, prompt: responsePrompt, change: responseChange } = responseData;
-
-    if (success && imageData) {
-      const displayPrompt = String(responseChange ?? responsePrompt ?? requestChange ?? effectivePrompt ?? '').trim();
-      generatedImagesByPrompt.value = {
-        ...(generatedImagesByPrompt.value ?? {}),
-        [rawPrompt]: [{ src: imageData, alt: displayPrompt ? `生成图片：${displayPrompt}` : '生成图片' }],
-      };
-      setImagePromptUi(rawPrompt, { isLoading: false, message: '生图完成', level: 'success' });
-      scheduleResize();
+    if (responseData?.success === false) {
+      const reason = String(responseData?.error ?? '').trim() || '插件返回失败';
+      setImagePromptUi(key, { isLoading: false, message: reason, level: 'error' });
       return;
     }
 
-    const reason = String(error ?? '生图失败');
-    setImagePromptUi(rawPrompt, { isLoading: false, message: reason, level: 'error' });
+    const imageSrc = normalizeGeneratedImageData(String(responseData?.imageData ?? ''));
+    if (imageSrc) {
+      const prev = generatedImagesByPrompt.value?.[key] ?? [];
+      generatedImagesByPrompt.value = {
+        ...(generatedImagesByPrompt.value ?? {}),
+        [key]: appendImageHistory(prev, { src: imageSrc, alt: prompt }),
+      };
+      setImagePromptUi(key, { isLoading: false, message: '生图成功', level: 'success' });
+      window.setTimeout(() => {
+        const ui = getImagePromptUi(key);
+        if (ui.level === 'success') setImagePromptUi(key, { message: '', level: 'idle' });
+      }, 1800);
+      return;
+    }
+
+    // 某些插件路径会只更新宿主 DOM，不回传 imageData，此时保持成功态并等待观察器回填。
+    setImagePromptUi(key, { isLoading: false, message: '已提交，等待图片回填', level: 'success' });
   };
 
-  eventOn(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler as any);
+  if (!pluginEventOn(EventType.GENERATE_IMAGE_RESPONSE, handler as any)) {
+    setImagePromptUi(key, { isLoading: false, message: '无法监听插件响应事件', level: 'error' });
+    toastr?.error?.('st-chatu8 响应监听失败');
+    return;
+  }
 
-  imagePromptRequestHandlers.set(rawPrompt, imageResponseHandler);
-  imagePromptRequestTimers.set(
-    rawPrompt,
-    window.setTimeout(() => {
-      clearImagePromptRequest(rawPrompt);
-      setImagePromptUi(rawPrompt, { isLoading: false, message: '生图超时，请重试', level: 'error' });
-    }, 90_000),
-  );
+  imagePromptRequestHandlers.set(requestId, handler);
+  const timer = window.setTimeout(() => {
+    clearImagePromptRequest(requestId);
+    setPromptPendingRequest(key, requestId, false);
+    setImagePromptUi(key, { isLoading: false, message: '等待插件响应超时', level: 'error' });
+  }, 90_000);
+  imagePromptRequestTimers.set(requestId, timer);
+  setPromptPendingRequest(key, requestId, true);
+  setImagePromptUi(key, { isLoading: true, message: '生图中…', level: 'loading' });
 
-  try {
-    await eventEmit(EventType.GENERATE_IMAGE_REQUEST, payload as any);
-  } catch (error) {
-    clearImagePromptRequest(rawPrompt);
-    const reason = error instanceof Error ? error.message : String(error ?? '发送请求失败');
-    setImagePromptUi(rawPrompt, { isLoading: false, message: reason, level: 'error' });
+  const emitted = pluginEventEmit(EventType.GENERATE_IMAGE_REQUEST, payload);
+  if (!emitted) {
+    clearImagePromptRequest(requestId);
+    setPromptPendingRequest(key, requestId, false);
+    setImagePromptUi(key, { isLoading: false, message: '未能发送插件生图事件', level: 'error' });
+    toastr?.error?.('st-chatu8 请求发送失败');
   }
 }
 
@@ -824,17 +1102,495 @@ function clearStoryImageLongPressTimer() {
   }
 }
 
+function triggerHostElementClick(target: HTMLElement): boolean {
+  try {
+    if (typeof target.click === 'function') {
+      target.click();
+      return true;
+    }
+    const doc = target.ownerDocument;
+    const view = doc.defaultView;
+    if (!view) return false;
+    target.dispatchEvent(
+      new view.MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      }),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function dispatchHostMouseEvent(target: HTMLElement, type: 'click' | 'dblclick' | 'pointerdown' | 'pointerup', detail = 1): boolean {
+  try {
+    const doc = target.ownerDocument;
+    const view = doc.defaultView;
+    if (!view) return false;
+
+    const rect = target.getBoundingClientRect();
+    const width = Math.max(rect.width, 14);
+    const height = Math.max(rect.height, 14);
+    const clientX = Math.round(rect.left + Math.min(width - 7, Math.max(7, width * 0.5)));
+    const clientY = Math.round(rect.top + Math.min(height - 7, Math.max(7, height * 0.5)));
+
+    if ((type === 'pointerdown' || type === 'pointerup') && typeof (view as any).PointerEvent === 'function') {
+      target.dispatchEvent(
+        new (view as any).PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true,
+          button: 0,
+          buttons: type === 'pointerdown' ? 1 : 0,
+          clientX,
+          clientY,
+          detail,
+        }),
+      );
+    } else {
+      target.dispatchEvent(
+        new view.MouseEvent(type === 'pointerdown' ? 'mousedown' : type === 'pointerup' ? 'mouseup' : type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          view,
+          button: 0,
+          buttons: type === 'pointerdown' ? 1 : 0,
+          clientX,
+          clientY,
+          detail,
+        }),
+      );
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function collectHostDocuments(): Document[] {
+  const docs: Document[] = [];
+  const pushDoc = (doc: Document | null | undefined) => {
+    if (!doc) return;
+    if (docs.includes(doc)) return;
+    docs.push(doc);
+  };
+
+  pushDoc(document);
+  try {
+    pushDoc(window.parent?.document);
+  } catch {
+    // ignore
+  }
+  try {
+    pushDoc(window.top?.document);
+  } catch {
+    // ignore
+  }
+  return docs;
+}
+
+function resolveHostMessageRoots(messageId: number | null): HTMLElement[] {
+  if (messageId == null || !Number.isFinite(messageId)) return [];
+  const roots: HTMLElement[] = [];
+  const pushRoot = (root: HTMLElement | null | undefined) => {
+    if (!root) return;
+    if (roots.includes(root)) return;
+    roots.push(root);
+  };
+
+  if (typeof retrieveDisplayedMessage === 'function') {
+    const $mes = retrieveDisplayedMessage(messageId);
+    pushRoot($mes?.get?.(0) as HTMLElement | undefined);
+  }
+
+  const mesid = Math.trunc(messageId);
+  for (const doc of collectHostDocuments()) {
+    const selectors = [`#chat > .mes[mesid='${mesid}']`, `#chat .mes[mesid='${mesid}']`, `.mes[mesid='${mesid}']`];
+    for (const selector of selectors) {
+      const found = doc.querySelector(selector) as HTMLElement | null;
+      if (found) pushRoot(found);
+    }
+  }
+
+  return roots;
+}
+
+function resolveHostChatRoots(): HTMLElement[] {
+  const roots: HTMLElement[] = [];
+  for (const doc of collectHostDocuments()) {
+    const chatRoot = doc.querySelector('#chat') as HTMLElement | null;
+    if (!chatRoot) continue;
+    if (roots.includes(chatRoot)) continue;
+    roots.push(chatRoot);
+  }
+  return roots;
+}
+
+function resolveHostScanRoots(messageId: number | null): HTMLElement[] {
+  const messageRoots = resolveHostMessageRoots(messageId);
+  const needsChatFallback = messageRoots.every(
+    root => !root.querySelector('.st-chatu8-image-button, .st-chatu8-image-span img, .mes_text img, .message_text img'),
+  );
+  if (!needsChatFallback) return messageRoots;
+
+  const out = messageRoots.slice();
+  for (const root of resolveHostChatRoots()) {
+    if (!out.includes(root)) out.push(root);
+  }
+  return out;
+}
+
+function resolveHostMessageRoot(messageId: number | null): HTMLElement | null {
+  return resolveHostMessageRoots(messageId)[0] ?? null;
+}
+
+function resolveHostImageButtonByRawPrompt(root: ParentNode, rawPrompt: string): HTMLElement | null {
+  const normalizedRawPrompt = String(rawPrompt ?? '').trim();
+  if (!normalizedRawPrompt) return null;
+  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  if (buttons.length === 0) return null;
+  if (buttons.length === 1) return buttons[0];
+
+  let bestButton: HTMLElement | null = null;
+  let bestScore = 0;
+  for (const button of buttons) {
+    const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+    if (!payload) continue;
+    const candidateRaw = normalizeExternalPromptRawToken(payload);
+    if (!candidateRaw) continue;
+
+    let score = scorePromptSimilarity(normalizedRawPrompt, candidateRaw);
+    if (candidateRaw === normalizedRawPrompt) score = 1;
+    if (score > bestScore) {
+      bestScore = score;
+      bestButton = button;
+    }
+  }
+  return bestButton && bestScore >= 0.28 ? bestButton : null;
+}
+
+function resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt: string, messageId: number | null): HTMLElement | null {
+  const normalizedRawPrompt = String(rawPrompt ?? '').trim();
+  if (!normalizedRawPrompt) return null;
+
+  const roots = resolveHostScanRoots(messageId);
+  const allButtons = roots.flatMap(root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[]);
+  if (allButtons.length === 1) return allButtons[0];
+  let bestButton: HTMLElement | null = null;
+  let bestScore = 0;
+  for (const root of roots) {
+    const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+    if (buttons.length === 0) continue;
+    for (const button of buttons) {
+      const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+      if (!payload) continue;
+      const candidateRaw = normalizeExternalPromptRawToken(payload);
+      if (!candidateRaw) continue;
+
+      let score = scorePromptSimilarity(normalizedRawPrompt, candidateRaw);
+      if (candidateRaw === normalizedRawPrompt) score = 1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestButton = button;
+      }
+    }
+  }
+  return bestButton && bestScore >= 0.28 ? bestButton : null;
+}
+
+function isHostImageButtonLoading(button: HTMLElement): boolean {
+  const className = String(button.className ?? '').toLowerCase();
+  if (className.includes('loading') || className.includes('generating') || className.includes('is-loading')) return true;
+  const ariaBusy = String(button.getAttribute('aria-busy') ?? '').toLowerCase();
+  if (ariaBusy === 'true') return true;
+  if ((button as HTMLButtonElement).disabled) return true;
+  const html = String(button.innerHTML ?? '').toLowerCase();
+  if (html.includes('spinner') || html.includes('fa-spinner') || html.includes('circle-notch')) return true;
+  const text = normalizeForMatch(button.textContent ?? '').toLowerCase();
+  return text.includes('生图中') || text.includes('生成中') || text.includes('处理中');
+}
+
+function proxyHostImageButtonAction(rawPrompt: string, action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup'): boolean {
+  const button = resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt, resolveStoryMessageId());
+  if (!button) return false;
+
+  if (action === 'click') return triggerHostElementClick(button);
+  if (action === 'dblclick') return dispatchHostMouseEvent(button, 'dblclick', 2);
+  return dispatchHostMouseEvent(button, action, 1);
+}
+
+function readHostRequestIdFromElement(el: Element | null): string {
+  if (!el) return '';
+  const node = el as HTMLElement;
+  return String(node.dataset?.requestId ?? node.getAttribute?.('data-request-id') ?? '').trim();
+}
+
+function normalizeImageSrcForMatch(src: string): string {
+  return String(src ?? '').trim().split('#')[0];
+}
+
+function getImageSourceIdentity(src: string): string {
+  const normalized = normalizeImageSrcForMatch(src);
+  if (!normalized) return '';
+  try {
+    const url = new URL(normalized, window.location.href);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return normalized;
+  }
+}
+
+function isSameImageSource(a: string, b: string): boolean {
+  const left = normalizeImageSrcForMatch(a);
+  const right = normalizeImageSrcForMatch(b);
+  if (!left || !right) return false;
+  if (left === right) return true;
+
+  try {
+    const leftUrl = new URL(left, window.location.href);
+    const rightUrl = new URL(right, window.location.href);
+    if (leftUrl.href === rightUrl.href) return true;
+    if (leftUrl.origin === rightUrl.origin && leftUrl.pathname === rightUrl.pathname) return true;
+    if (leftUrl.origin === rightUrl.origin && leftUrl.pathname === rightUrl.pathname && leftUrl.search === rightUrl.search) return true;
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+
+function logHostResolveDiagnostic(tag: string, seg: Segment) {
+  try {
+    const messageId = resolveStoryMessageId();
+    const roots = resolveHostScanRoots(messageId);
+    const rawPrompt = getSegmentRawPrompt(seg);
+    const imageUrl = String(seg.imageUrl ?? '').trim();
+    const bySegButton = resolveHostImageButtonBySegment(seg);
+    const bySegImage = resolveHostImageNodeBySegment(seg);
+    const byPromptButton = rawPrompt ? resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt, messageId) : null;
+    console.warn('[StorySection][st-chatu8]', tag, {
+      messageId,
+      roots: roots.length,
+      imageUrl,
+      hasRawPrompt: !!rawPrompt,
+      foundBySegButton: !!bySegButton,
+      foundBySegImage: !!bySegImage,
+      foundByPromptButton: !!byPromptButton,
+    });
+  } catch {
+    // ignore
+  }
+}
+
+function resolveHostImageButtonFromImageNode(img: HTMLImageElement, fallbackRoot: HTMLElement): HTMLElement | null {
+  const span = img.closest('.st-chatu8-image-span') as HTMLElement | null;
+  const requestId = readHostRequestIdFromElement(span);
+  const ownerRoot = (img.closest('.mes') as HTMLElement | null) ?? fallbackRoot;
+
+  if (requestId) {
+    const buttonByRequestId = Array.from(ownerRoot.querySelectorAll('.st-chatu8-image-button')).find(
+      node => readHostRequestIdFromElement(node as HTMLElement) === requestId,
+    ) as HTMLElement | undefined;
+    if (buttonByRequestId) return buttonByRequestId;
+  }
+
+  // 兜底：在图片前方兄弟层级里找最近的生图按钮。
+  let cur: Element | null = img;
+  while (cur) {
+    let prev = cur.previousElementSibling;
+    while (prev) {
+      if ((prev as HTMLElement).classList?.contains('st-chatu8-image-button')) return prev as HTMLElement;
+      const nested = prev.querySelector?.('.st-chatu8-image-button') as HTMLElement | null;
+      if (nested) return nested;
+      prev = prev.previousElementSibling;
+    }
+    cur = cur.parentElement;
+  }
+
+  return null;
+}
+
+function resolveHostImageButtonBySegment(seg: Segment): HTMLElement | null {
+  const messageId = resolveStoryMessageId();
+  const roots = resolveHostScanRoots(messageId);
+  if (roots.length === 0) return null;
+
+  const imageUrl = String(seg.imageUrl ?? '').trim();
+  if (imageUrl) {
+    for (const root of roots) {
+      const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+      for (const img of imgs) {
+        if (!isRenderableStoryImage(img)) continue;
+        const src = getImageSrc(img);
+        if (!isSameImageSource(src, imageUrl)) continue;
+        const button = resolveHostImageButtonFromImageNode(img, root);
+        if (button) return button;
+      }
+    }
+  }
+
+  const rawPrompt = getSegmentRawPrompt(seg);
+  if (rawPrompt) {
+    return resolveHostImageButtonByRawPromptAcrossRoots(rawPrompt, messageId);
+  }
+
+  return null;
+}
+
+function resolveHostImageNodeBySegment(seg: Segment): HTMLImageElement | null {
+  const messageId = resolveStoryMessageId();
+  const roots = resolveHostScanRoots(messageId);
+  if (roots.length === 0) return null;
+
+  const imageUrl = String(seg.imageUrl ?? '').trim();
+  if (imageUrl) {
+    for (const root of roots) {
+      const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+      for (const img of imgs) {
+        if (!isRenderableStoryImage(img)) continue;
+        const src = getImageSrc(img);
+        if (isSameImageSource(src, imageUrl)) return img;
+      }
+    }
+  }
+
+  for (const root of roots) {
+    const target = resolveHostImagePreviewTarget(root, seg);
+    if (!target) continue;
+    if (target instanceof HTMLImageElement && isRenderableStoryImage(target)) return target;
+    if ((target as HTMLElement).classList?.contains('st-chatu8-image-button')) {
+      const candidate = findNextImageElement(target);
+      if (candidate && isRenderableStoryImage(candidate)) return candidate;
+    }
+  }
+
+  return null;
+}
+
+function proxyHostImageNativeDoubleClickForSegment(seg: Segment): boolean {
+  const target = resolveHostImageNodeBySegment(seg);
+  if (!target) return false;
+  return dispatchHostMouseEvent(target, 'dblclick', 2);
+}
+
+function proxyHostImageButtonActionForSegment(seg: Segment, action: 'click' | 'dblclick' | 'pointerdown' | 'pointerup'): boolean {
+  const button = resolveHostImageButtonBySegment(seg);
+  if (!button) return false;
+
+  if (action === 'click') return triggerHostElementClick(button);
+  if (action === 'dblclick') return dispatchHostMouseEvent(button, 'dblclick', 2);
+  return dispatchHostMouseEvent(button, action, 1);
+}
+
+function resolveHostImagePreviewTarget(root: HTMLElement, seg: Segment): HTMLElement | null {
+  const rawPrompt = getSegmentRawPrompt(seg);
+  const imageUrl = String(seg.imageUrl ?? '').trim();
+
+  if (rawPrompt) {
+    const bestButton = resolveHostImageButtonByRawPrompt(root, rawPrompt);
+    if (bestButton) {
+      const requestId = String(bestButton.dataset.requestId ?? bestButton.getAttribute('data-request-id') ?? '').trim();
+      if (requestId) {
+        const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
+        const span = spans.find(node => String(node.dataset.requestId ?? '').trim() === requestId) ?? null;
+        const img = span?.querySelector('img') as HTMLImageElement | null;
+        if (img && isRenderableStoryImage(img)) return img;
+      }
+      const nextImg = findNextImageElement(bestButton);
+      if (nextImg && isRenderableStoryImage(nextImg)) return nextImg;
+      return bestButton;
+    }
+  }
+
+  if (imageUrl) {
+    const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+    const direct = imgs.find(img => String(img.currentSrc || img.src || '').trim() === imageUrl);
+    if (direct && isRenderableStoryImage(direct)) return direct;
+  }
+
+  return null;
+}
+
+function openHostImagePreview(seg: Segment): boolean {
+  const messageId = resolveStoryMessageId();
+  const roots = resolveHostScanRoots(messageId);
+  for (const root of roots) {
+    const target = resolveHostImagePreviewTarget(root, seg);
+    if (!target) continue;
+    if (triggerHostElementClick(target)) return true;
+  }
+  return false;
+}
+
 function openImagePreview(seg: Segment) {
   const src = String(seg.imageUrl ?? '').trim();
   if (!src) return;
+
+  const rawPrompt = getSegmentRawPrompt(seg);
+  const mapped = rawPrompt ? resolveImageHitsByPrompt(mergedImagesByPrompt.value ?? {}, rawPrompt) : [];
+  const items = (Array.isArray(mapped) ? mapped : [])
+    .filter(item => !!String(item?.src ?? '').trim())
+    .map(item => ({ src: String(item.src), alt: String(item.alt ?? '') }));
+  if (items.length === 0) {
+    items.push({
+      src,
+      alt: String(seg.altText ?? '').trim(),
+    });
+  }
+  let index = items.findIndex(item => item.src === src);
+  if (index < 0) index = items.length - 1;
+
   imagePreview.value = {
-    src,
-    alt: String(seg.altText ?? '').trim(),
+    rawPrompt,
+    items,
+    index: _.clamp(index, 0, Math.max(0, items.length - 1)),
   };
 }
 
 function closeImagePreview() {
   imagePreview.value = null;
+}
+
+const imagePreviewCurrent = computed<ResolvedDisplayedImage | null>(() => {
+  const state = imagePreview.value;
+  if (!state || !Array.isArray(state.items) || state.items.length === 0) return null;
+  const index = _.clamp(Number(state.index) || 0, 0, state.items.length - 1);
+  const current = state.items[index];
+  if (!current?.src) return null;
+  return current;
+});
+
+const imagePreviewTotal = computed<number>(() => imagePreview.value?.items?.length ?? 0);
+const imagePreviewIndex = computed<number>(() => {
+  const state = imagePreview.value;
+  if (!state || !Array.isArray(state.items) || state.items.length === 0) return 0;
+  return _.clamp(Number(state.index) || 0, 0, state.items.length - 1);
+});
+const canPreviewPrev = computed<boolean>(() => imagePreviewTotal.value > 1 && imagePreviewIndex.value > 0);
+const canPreviewNext = computed<boolean>(() => imagePreviewTotal.value > 1 && imagePreviewIndex.value < imagePreviewTotal.value - 1);
+
+function previewPrev() {
+  const state = imagePreview.value;
+  if (!state || !canPreviewPrev.value) return;
+  imagePreview.value = {
+    ...state,
+    index: _.clamp(imagePreviewIndex.value - 1, 0, state.items.length - 1),
+  };
+}
+
+function previewNext() {
+  const state = imagePreview.value;
+  if (!state || !canPreviewNext.value) return;
+  imagePreview.value = {
+    ...state,
+    index: _.clamp(imagePreviewIndex.value + 1, 0, state.items.length - 1),
+  };
 }
 
 function openImagePromptEditor(seg: Segment) {
@@ -863,16 +1619,21 @@ async function onApplyImagePromptEditor() {
     return;
   }
 
+  const key = String(editor.rawPrompt ?? '').trim();
+  if (!key) {
+    imagePromptEditorError.value = '未找到可编辑的目标提示词';
+    return;
+  }
+
   imagePromptOverrides.value = {
     ...(imagePromptOverrides.value ?? {}),
-    [editor.rawPrompt]: {
-      tag,
-      prompt,
-    },
+    [key]: { tag, prompt },
   };
 
   closeImagePromptEditor();
-  await onGenerateImageRequest(editor.rawPrompt, { promptOverride: prompt, changeOverride: prompt });
+  await onGenerateImageRequest(key, {
+    promptOverride: prompt,
+  });
 }
 
 function onStoryImageClick(seg: Segment) {
@@ -880,9 +1641,33 @@ function onStoryImageClick(seg: Segment) {
   if (Date.now() < storyImageIgnoreClickUntil) return;
   clearStoryImageClickTimer();
   storyImageClickTimer = window.setTimeout(() => {
-    openImagePreview(seg);
+    if (!openHostImagePreview(seg)) openImagePreview(seg);
     storyImageClickTimer = null;
   }, 220);
+}
+
+function onImagePromptPrimaryAction(rawPrompt: string) {
+  const key = String(rawPrompt ?? '').trim();
+  if (!key) return;
+  if (proxyHostImageButtonAction(key, 'click')) return;
+  setImagePromptUi(key, { isLoading: false, message: '未找到插件生图按钮', level: 'error' });
+  toastr?.warning?.('未找到 st-chatu8 生图按钮，无法按插件原生方式触发');
+}
+
+function onImagePromptPrimaryDoubleClick(rawPrompt: string) {
+  const key = String(rawPrompt ?? '').trim();
+  if (!key) return;
+  if (proxyHostImageButtonAction(key, 'dblclick')) return;
+  setImagePromptUi(key, { isLoading: false, message: '未找到插件重绘按钮', level: 'error' });
+  toastr?.warning?.('未找到 st-chatu8 重绘按钮，无法按插件原生方式触发');
+}
+
+function onImagePromptPrimaryPointerDown(_rawPrompt: string, _event: PointerEvent) {
+  // 纯插件事件模式：不再模拟宿主按钮按压事件。
+}
+
+function onImagePromptPrimaryPointerUp(_rawPrompt: string) {
+  // 纯插件事件模式：不再模拟宿主按钮抬起事件。
 }
 
 function onStoryImagePointerDown(seg: Segment, event: PointerEvent) {
@@ -910,21 +1695,196 @@ function onStoryImageDoubleClick(seg: Segment) {
   clearStoryImageLongPressTimer();
   storyImageIgnoreClickUntil = Date.now() + 320;
   closeImagePreview();
+
+  if (proxyHostImageNativeDoubleClickForSegment(seg)) return;
+  if (proxyHostImageButtonActionForSegment(seg, 'dblclick')) return;
+
   const rawPrompt = getSegmentRawPrompt(seg);
-  if (!rawPrompt) {
-    openImagePromptEditor(seg);
-    return;
-  }
-  onGenerateImageRequest(rawPrompt);
+  if (rawPrompt && proxyHostImageButtonAction(rawPrompt, 'dblclick')) return;
+  logHostResolveDiagnostic('double_click_miss', seg);
+  toastr?.warning?.('未找到 st-chatu8 图片/按钮，无法按插件原生方式重绘');
 }
 
 function onStoryImageGenerate(seg: Segment) {
+  if (proxyHostImageButtonActionForSegment(seg, 'click')) return;
+
   const rawPrompt = getSegmentRawPrompt(seg);
   if (!rawPrompt) {
-    openImagePromptEditor(seg);
+    logHostResolveDiagnostic('generate_click_no_prompt', seg);
+    toastr?.warning?.('该图片缺少原始提示词，无法生图');
     return;
   }
-  onGenerateImageRequest(rawPrompt);
+  if (proxyHostImageButtonAction(rawPrompt, 'click')) return;
+  logHostResolveDiagnostic('generate_click_miss', seg);
+  toastr?.warning?.('未找到 st-chatu8 生图按钮，无法按插件原生方式触发');
+}
+
+function getFirstStoryPromptRaw(): string {
+  const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
+  const mainText = extractMainStoryText(normalizedRaw);
+  const text = normalizeStoryText(mainText);
+  return collectImagePromptMatches(text)[0]?.raw ?? '';
+}
+
+type ImagePromptCandidate = {
+  raw: string;
+  source: 'story' | 'dom';
+};
+type HostPromptButtonCandidate = {
+  raw: string;
+  signature: string;
+  requestId: string;
+  button: HTMLElement;
+};
+
+function collectPromptRawsFromStoryRaw(): string[] {
+  const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
+  const mainText = extractMainStoryText(normalizedRaw);
+  const text = normalizeStoryText(mainText);
+  return collectImagePromptMatches(text)
+    .map(m => String(m.raw ?? '').trim())
+    .filter(Boolean);
+}
+
+function buildRawPromptFromPlainPrompt(prompt: string): string {
+  const normalizedPrompt = String(prompt ?? '').trim();
+  if (!normalizedPrompt) return '';
+
+  const startTag = String(chatu8Runtime.value.startTag ?? '').trim();
+  const endTag = String(chatu8Runtime.value.endTag ?? '').trim() || '###';
+  if (startTag && endTag) return `${startTag}${normalizedPrompt}${endTag}`;
+
+  const tag = extractTagFromStartTag(startTag) || 'image';
+  return `${tag}###${normalizedPrompt}###`;
+}
+
+function normalizeExternalPromptRawToken(value: string): string {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  const parsed = collectImagePromptMatches(text)[0];
+  if (parsed?.raw) return String(parsed.raw).trim();
+  return buildRawPromptFromPlainPrompt(text);
+}
+
+function collectHostPromptButtonCandidates(messageId: number | null): HostPromptButtonCandidate[] {
+  const roots = resolveHostScanRoots(messageId);
+  if (roots.length === 0) return [];
+
+  const out: HostPromptButtonCandidate[] = [];
+  const seenButtons = new Set<HTMLElement>();
+  let localIndex = 0;
+
+  for (const root of roots) {
+    const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+    for (const btn of buttons) {
+      if (seenButtons.has(btn)) continue;
+      seenButtons.add(btn);
+
+      const payload = String(btn.getAttribute('data-image-tag') ?? btn.getAttribute('data-link') ?? '').trim();
+      const raw = normalizeExternalPromptRawToken(payload);
+      if (!raw) continue;
+
+      const requestId = String(btn.dataset.requestId ?? btn.getAttribute('data-request-id') ?? '').trim();
+      const signature = `${raw}@@${requestId || `idx:${localIndex++}`}`;
+      out.push({ raw, signature, requestId, button: btn });
+    }
+  }
+  return out;
+}
+
+function collectPromptRawsFromDisplayedButtons(messageId: number | null): string[] {
+  return collectHostPromptButtonCandidates(messageId).map(item => item.raw);
+}
+
+function collectPromptCandidatesForAutoGenerate(messageId: number | null): ImagePromptCandidate[] {
+  const storyCandidates = collectPromptRawsFromStoryRaw().map(raw => ({ raw, source: 'story' as const }));
+  const domCandidates = collectPromptRawsFromDisplayedButtons(messageId).map(raw => ({ raw, source: 'dom' as const }));
+  return [...storyCandidates, ...domCandidates];
+}
+
+function buildPromptCounts(candidates: ImagePromptCandidate[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const candidate of candidates) {
+    const key = String(candidate.raw ?? '').trim();
+    if (!key) continue;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function stopHostImageMenuAutoGenerate() {
+  if (hostImageMenuPollTimer !== null) {
+    window.clearInterval(hostImageMenuPollTimer);
+    hostImageMenuPollTimer = null;
+  }
+  if (hostImageMenuTimeoutTimer !== null) {
+    window.clearTimeout(hostImageMenuTimeoutTimer);
+    hostImageMenuTimeoutTimer = null;
+  }
+}
+
+function startHostImageMenuAutoGenerate(messageId: number | null) {
+  void messageId;
+  stopHostImageMenuAutoGenerate();
+}
+
+function resolveHostStoryTriggerTarget(messageId: number | null): HTMLElement | null {
+  if (messageId == null || !Number.isFinite(messageId)) return null;
+  if (typeof retrieveDisplayedMessage !== 'function') return null;
+  const $mes = retrieveDisplayedMessage(messageId);
+  const root = $mes?.get?.(0) as HTMLElement | undefined;
+  if (!root) return null;
+
+  return (
+    (root.querySelector('.mes_text') as HTMLElement | null) ??
+    (root.querySelector('.mes_block') as HTMLElement | null) ??
+    (root.querySelector('.message_text') as HTMLElement | null) ??
+    root
+  );
+}
+
+function dispatchHostDoubleClick(target: HTMLElement): boolean {
+  try {
+    const doc = target.ownerDocument;
+    const view = doc.defaultView;
+    if (!view) return false;
+
+    const rect = target.getBoundingClientRect();
+    const width = Math.max(rect.width, 16);
+    const height = Math.max(rect.height, 16);
+    const clientX = Math.round(rect.left + Math.min(width - 8, Math.max(8, width * 0.3)));
+    const clientY = Math.round(rect.top + Math.min(height - 8, Math.max(8, height * 0.35)));
+
+    const eventInit: MouseEventInit = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view,
+      clientX,
+      clientY,
+      button: 0,
+      buttons: 1,
+    };
+
+    target.dispatchEvent(new view.MouseEvent('dblclick', { ...eventInit, detail: 2 }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function onOpenHostImageMenu() {
+  const messageId = resolveStoryMessageId();
+  const triggerTarget = resolveHostStoryTriggerTarget(messageId);
+  if (triggerTarget) {
+    if (dispatchHostDoubleClick(triggerTarget)) {
+      const messageHint = messageId != null && Number.isFinite(messageId) ? `楼层 #${messageId}` : '当前楼层';
+      toastr?.info?.(`已触发${messageHint}的插件生图菜单`);
+      return;
+    }
+  }
+
+  toastr?.warning?.('未能触发宿主插件生图菜单；纯插件模式下无法兜底代发请求');
 }
 
 function findNextImageElement(start: Element): HTMLImageElement | null {
@@ -960,6 +1920,7 @@ function isRenderableStoryImage(img: HTMLImageElement): boolean {
   if (lower.startsWith('about:blank')) return false;
   if (lower.includes('/thumbnail?type=avatar')) return false;
   if (lower.includes('/thumbnail?type=persona')) return false;
+  if (img.closest('.st-chatu8-image-span')) return true;
 
   // 排除头像及消息操作区图片，避免把头像/图标误识别为正文生图结果。
   const blockedContainer = img.closest('.avatar, .mesAvatarWrapper, .mes_buttons, .swipe_left, .swipe_right');
@@ -1031,13 +1992,16 @@ function resolveImageFromStorageEntry(entry: Chatu8StorageEntry): ResolvedDispla
   const images = Array.isArray(entry?.images) ? entry.images : [];
   if (images.length === 0) return [];
 
-  const rawIndex = Number(entry?.index);
-  const index = Number.isFinite(rawIndex) ? _.clamp(Math.trunc(rawIndex), 0, images.length - 1) : images.length - 1;
-  const selected = images[index] ?? images[images.length - 1];
-  const src = normalizeStoredImageSrc(selected?.path ?? selected?.thumbnail_path ?? '');
-  if (!src) return [];
-
-  return [{ src, alt: '缓存图片' }];
+  const out: ResolvedDisplayedImage[] = [];
+  const seen = new Set<string>();
+  for (const image of images) {
+    const src = normalizeStoredImageSrc(image?.path ?? image?.thumbnail_path ?? '');
+    if (!src || seen.has(src)) continue;
+    seen.add(src);
+    out.push({ src, alt: '缓存图片' });
+  }
+  if (out.length === 0) return [];
+  return out;
 }
 
 function tokenizePromptForCacheSearch(prompt: string): string[] {
@@ -1140,25 +2104,43 @@ function resolveImagesFromChatu8Cache(prompts: string[]) {
 }
 
 function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: string[]) {
-  if (!messageId || !Number.isFinite(messageId)) return {};
-  if (typeof retrieveDisplayedMessage !== 'function') return {};
+  const roots = messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  if (roots.length === 0) return resolveImagesFromChatu8Cache(prompts);
 
-  const $mes = retrieveDisplayedMessage(messageId);
-  const root = $mes?.get?.(0) as HTMLElement | undefined;
-  if (!root) return {};
-  const availableImages = collectRenderableStoryImages(root);
-  const stChatu8Buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  const availableImages: ResolvedDisplayedImage[] = [];
+  const seenImages = new Set<string>();
+  for (const root of roots) {
+    for (const image of collectRenderableStoryImages(root)) {
+      const key = `${image.src}@@${image.alt ?? ''}`;
+      if (seenImages.has(key)) continue;
+      seenImages.add(key);
+      availableImages.push(image);
+    }
+  }
+
+  const stChatu8Buttons: HTMLElement[] = [];
+  const seenButtons = new Set<HTMLElement>();
+  for (const root of roots) {
+    const list = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+    for (const button of list) {
+      if (seenButtons.has(button)) continue;
+      seenButtons.add(button);
+      stChatu8Buttons.push(button);
+    }
+  }
   const stChatu8PromptToImage = stChatu8Buttons
     .map(btn => {
       const prompt = String(btn.getAttribute('data-image-tag') ?? btn.getAttribute('data-link') ?? '').trim();
       if (!prompt) return null;
 
       const requestId = String(btn.dataset.requestId ?? btn.getAttribute('data-request-id') ?? '').trim();
+      const owner = btn.closest('.mes') as HTMLElement | null;
+      const ownerRoot = owner ?? (btn.parentElement as HTMLElement | null) ?? null;
       let img: HTMLImageElement | null = null;
 
-      if (requestId) {
-        const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
-        const span = spans.find(node => String(node.dataset.requestId ?? '').trim() === requestId) ?? null;
+      if (requestId && ownerRoot) {
+        const spans = Array.from(ownerRoot.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
+        const span = spans.find(node => String(node.dataset.requestId ?? node.getAttribute('data-request-id') ?? '').trim() === requestId) ?? null;
         const candidate = span?.querySelector('img') as HTMLImageElement | null;
         if (candidate && isRenderableStoryImage(candidate)) img = candidate;
       }
@@ -1175,8 +2157,8 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     })
     .filter(Boolean) as Array<{ promptNorm: string; image: ResolvedDisplayedImage }>;
 
-  const promptEls = Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el =>
-    normalizeForMatch(el.textContent ?? '').includes('###'),
+  const promptEls = roots.flatMap(root =>
+    Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el => normalizeForMatch(el.textContent ?? '').includes('###')),
   );
 
   const out: Record<string, ResolvedDisplayedImage[]> = {};
@@ -1186,14 +2168,22 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     if (!needle) continue;
     const bodyNeedle = normalizeForMatch(parseImagePromptBody(rawPrompt));
 
-    const mappedByButton = stChatu8PromptToImage.find(item => {
-      if (!item.promptNorm) return false;
-      if (bodyNeedle && item.promptNorm.includes(bodyNeedle)) return true;
-      if (bodyNeedle && bodyNeedle.includes(item.promptNorm)) return true;
-      return item.promptNorm.includes(needle) || needle.includes(item.promptNorm);
-    });
+    let mappedByButton: ResolvedDisplayedImage | null = null;
+    for (let idx = stChatu8PromptToImage.length - 1; idx >= 0; idx -= 1) {
+      const item = stChatu8PromptToImage[idx];
+      if (!item.promptNorm) continue;
+      const matched =
+        (bodyNeedle && item.promptNorm.includes(bodyNeedle)) ||
+        (bodyNeedle && bodyNeedle.includes(item.promptNorm)) ||
+        item.promptNorm.includes(needle) ||
+        needle.includes(item.promptNorm);
+      if (matched) {
+        mappedByButton = item.image;
+        break;
+      }
+    }
     if (mappedByButton) {
-      out[rawPrompt] = [mappedByButton.image];
+      out[rawPrompt] = [mappedByButton];
       continue;
     }
 
@@ -1226,6 +2216,28 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     }
   }
 
+  // 兜底：同层桥接隐藏楼层时，插件可能只更新 jiuguanStorage 而未刷新对应楼层 DOM。
+  const stillMissing = prompts.filter(p => !out[p]);
+  if (stillMissing.length > 0) {
+    const fromCache = resolveImagesFromChatu8Cache(stillMissing);
+    for (const rawPrompt of stillMissing) {
+      const hit = fromCache[rawPrompt];
+      if (Array.isArray(hit) && hit.length > 0) out[rawPrompt] = hit;
+    }
+  }
+
+  return out;
+}
+
+function resolveHostImageButtonState(messageId: number | null, prompts: string[]): Record<string, HostImageButtonState> {
+  const out: Record<string, HostImageButtonState> = {};
+  for (const prompt of prompts) {
+    const button = resolveHostImageButtonByRawPromptAcrossRoots(prompt, messageId);
+    out[prompt] = {
+      found: !!button,
+      loading: !!button && isHostImageButtonLoading(button),
+    };
+  }
   return out;
 }
 
@@ -1238,28 +2250,96 @@ const segments = computed<Segment[]>(() => {
   if (!text.trim()) return [{ key: 'empty', text: '(暂无正文)' }];
   const segs = buildSegments(text);
 
-  const mapped = mergeImageMap(resolvedImagesByPrompt.value ?? {}, generatedImagesByPrompt.value ?? {});
+  const mapped = mergedImagesByPrompt.value;
   const out: Segment[] = [];
+  const renderedImageSources = new Set<string>();
+  const storyPromptSet = new Set<string>();
+  const promptHistorySources = new Set<string>();
+  const promptLatestSources = new Set<string>();
   let id = 0;
+
+  for (const seg of segs) {
+    if (seg.className !== 'image-prompt' || !seg.text) continue;
+    const hits = resolveImageHitsByPrompt(mapped, seg.text);
+    for (const hit of hits) {
+      const sourceId = getImageSourceIdentity(hit.src);
+      if (sourceId) promptHistorySources.add(sourceId);
+    }
+    const latestHit = pickLatestImageHit(hits);
+    if (latestHit?.src) {
+      const sourceId = getImageSourceIdentity(latestHit.src);
+      if (sourceId) promptLatestSources.add(sourceId);
+    }
+  }
+
   for (const seg of segs) {
     if (seg.className === 'image-prompt' && seg.text) {
-      const hits = mapped[seg.text] ?? [];
-      if (hits.length > 0) {
-        for (const hit of hits) {
+      storyPromptSet.add(seg.text);
+      const hits = resolveImageHitsByPrompt(mapped, seg.text);
+      const latestHit = pickLatestImageHit(hits);
+      if (latestHit) {
+        const sourceId = getImageSourceIdentity(latestHit.src);
+        if (!sourceId || !renderedImageSources.has(sourceId)) {
+          if (sourceId) renderedImageSources.add(sourceId);
           out.push({
             key: `img_resolved_${id++}`,
             isImage: true,
-            imageUrl: hit.src,
-            altText: hit.alt || '生成图片',
+            imageUrl: latestHit.src,
+            altText: latestHit.alt || '生成图片',
             imagePromptRaw: seg.text,
-            text: hit.src,
+            text: latestHit.src,
           });
         }
         // 已有图片时默认不再显示提示词，避免占位刷屏
         continue;
       }
     }
+
+    if (seg.isImage && seg.imageUrl) {
+      const sourceId = getImageSourceIdentity(seg.imageUrl);
+      if (sourceId) {
+        // 当图片命中提示词历史，但不是该提示词“最新图”时，视为过期重绘图，不在正文重复展示。
+        if (promptHistorySources.has(sourceId) && !promptLatestSources.has(sourceId)) continue;
+        if (renderedImageSources.has(sourceId)) continue;
+        renderedImageSources.add(sourceId);
+      }
+    }
+
     out.push(seg);
+  }
+
+  // 若提示词只存在于插件宿主按钮（而不在正文文本中），也要在 UI 中展示加载占位或最终图片。
+  for (const prompt of Object.keys(hostImageButtonStateByPrompt.value ?? {})) {
+    const rawPrompt = String(prompt ?? '').trim();
+    if (!rawPrompt) continue;
+    if (storyPromptSet.has(rawPrompt)) continue;
+
+    const hits = resolveImageHitsByPrompt(mapped, rawPrompt);
+    const latestHit = pickLatestImageHit(hits);
+    if (latestHit) {
+      const sourceId = getImageSourceIdentity(latestHit.src);
+      if (!sourceId || !renderedImageSources.has(sourceId)) {
+        if (sourceId) renderedImageSources.add(sourceId);
+        out.push({
+          key: `img_resolved_host_${id++}`,
+          isImage: true,
+          imageUrl: latestHit.src,
+          altText: latestHit.alt || '生成图片',
+          imagePromptRaw: rawPrompt,
+          text: latestHit.src,
+        });
+      }
+      continue;
+    }
+
+    const hostState = getHostImageButtonState(rawPrompt);
+    if (!hostState.found && !isImagePromptLoading(rawPrompt)) continue;
+    out.push({
+      key: `img_prompt_host_${id++}`,
+      className: 'image-prompt',
+      text: rawPrompt,
+      imagePromptRaw: rawPrompt,
+    });
   }
 
   return out.length ? out : [{ key: 'empty', text: '(暂无正文)' }];
@@ -1408,17 +2488,31 @@ const metaBlocks = computed<MetaBlock[]>(() => {
 });
 
 function resolveStoryMessageId(): number | null {
-  const fromProp = Number(props.messageId);
-  if (Number.isFinite(fromProp)) return fromProp;
-  if (typeof getCurrentMessageId !== 'function') return null;
+  const rawPropId = props.messageId;
+  if (rawPropId !== null && rawPropId !== undefined && `${rawPropId}`.trim() !== '') {
+    const fromProp = Number(rawPropId);
+    if (Number.isFinite(fromProp) && fromProp >= 0) return Math.trunc(fromProp);
+  }
+  if (typeof getCurrentMessageId === 'function') {
+    try {
+      const fromIframe = Number(getCurrentMessageId() as any);
+      if (Number.isFinite(fromIframe) && fromIframe >= 0) return Math.trunc(fromIframe);
+    } catch {
+      // 同层卡脚本挂载上下文会抛错：不要对全局脚本 iframe 调用 getMessageId
+      // ignore
+    }
+  }
 
   try {
-    const fromIframe = Number(getCurrentMessageId() as any);
-    return Number.isFinite(fromIframe) ? fromIframe : null;
+    const getLast = (globalThis as any)?.getLastMessageId;
+    if (typeof getLast === 'function') {
+      const fromLast = Number(getLast());
+      if (Number.isFinite(fromLast) && fromLast >= 0) return Math.trunc(fromLast);
+    }
   } catch {
-    // 同层卡脚本挂载上下文会抛错：不要对全局脚本 iframe 调用 getMessageId
-    return null;
+    // ignore
   }
+  return null;
 }
 
 watchEffect(onCleanup => {
@@ -1428,22 +2522,26 @@ watchEffect(onCleanup => {
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
   const text = normalizeStoryText(mainText);
-  const prompts = Array.from(new Set(collectImagePromptMatches(text).map(m => m.raw)));
+  const storyPrompts = collectImagePromptMatches(text).map(m => m.raw);
+  const domPrompts = collectPromptRawsFromDisplayedButtons(messageId);
+  const prompts = Array.from(new Set([...storyPrompts, ...domPrompts]));
 
   let canceled = false;
   const timers: number[] = [];
-  let observer: MutationObserver | null = null;
+  const observers: MutationObserver[] = [];
 
   const run = () => {
     if (canceled) return;
-    const fromCache = resolveImagesFromChatu8Cache(prompts);
-    const fromDisplayed = resolveImagesFromDisplayedMessage(messageId, prompts);
-    const next = mergeImageMapWithPriority(fromDisplayed, fromCache, prompts);
+    const next = resolveImagesFromDisplayedMessage(messageId, prompts);
+    const nextHostState = resolveHostImageButtonState(messageId, prompts);
     // 只有在结果有变化时才写入，避免无意义触发重渲染
     const prev = resolvedImagesByPrompt.value ?? {};
     const prevJson = JSON.stringify(prev);
     const nextJson = JSON.stringify(next);
     if (prevJson !== nextJson) resolvedImagesByPrompt.value = next;
+    const prevHostJson = JSON.stringify(hostImageButtonStateByPrompt.value ?? {});
+    const nextHostJson = JSON.stringify(nextHostState);
+    if (prevHostJson !== nextHostJson) hostImageButtonStateByPrompt.value = nextHostState;
   };
 
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
@@ -1452,26 +2550,25 @@ watchEffect(onCleanup => {
   timers.push(window.setTimeout(run, 2000));
   timers.push(window.setTimeout(run, 5000));
 
-  if (messageId && Number.isFinite(messageId) && typeof retrieveDisplayedMessage === 'function') {
-    const $mes = retrieveDisplayedMessage(messageId);
-    const root = $mes?.get?.(0) as HTMLElement | undefined;
-    if (root) {
-      observer = new MutationObserver(() => {
-        run();
-      });
-      observer.observe(root, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['src', 'data-src'],
-      });
-    }
+  const observeRoots = messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  for (const root of observeRoots) {
+    const observer = new MutationObserver(() => {
+      run();
+    });
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['src', 'data-src', 'class', 'aria-busy', 'disabled', 'data-request-id'],
+    });
+    observers.push(observer);
   }
 
   onCleanup(() => {
     canceled = true;
-    observer?.disconnect();
+    for (const observer of observers) observer.disconnect();
     for (const t of timers) window.clearTimeout(t);
+    hostImageButtonStateByPrompt.value = {};
   });
 });
 
@@ -1487,22 +2584,18 @@ onBeforeUnmount(() => {
     window.clearInterval(chatu8RuntimeTimer);
     chatu8RuntimeTimer = null;
   }
+  stopHostImageMenuAutoGenerate();
   clearStoryImageClickTimer();
   clearStoryImageLongPressTimer();
   for (const handler of imagePromptRequestHandlers.values()) {
-    try {
-      if (typeof eventRemoveListener === 'function') {
-        eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, handler as any);
-      }
-    } catch {
-      // ignore
-    }
+    pluginEventOff(EventType.GENERATE_IMAGE_RESPONSE, handler as any);
   }
   imagePromptRequestHandlers.clear();
   for (const timer of imagePromptRequestTimers.values()) {
     window.clearTimeout(timer);
   }
   imagePromptRequestTimers.clear();
+  imagePromptPendingRequestIds.clear();
 });
 
 let __resizeScheduled = false;
@@ -2232,10 +3325,40 @@ function formatTableCell(cell: string): string {
   gap: 10px;
 }
 
+.story-image-preview-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .story-image-preview-title {
   color: var(--text-strong, #f2f2f2);
   font-size: 0.9em;
   line-height: 1.35;
+}
+
+.story-image-preview-counter {
+  font-size: 0.78em;
+  color: var(--text-dim, rgba(255, 255, 255, 0.72));
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.story-image-preview-nav {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color, #fff);
+  font-size: 0.82em;
+}
+
+.story-image-preview-nav:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
 }
 
 .story-image-preview-close {
@@ -2444,6 +3567,25 @@ function formatTableCell(cell: string): string {
   margin-top: 6px;
 }
 
+.image-prompt-loading-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(241, 250, 140, 0.36);
+  background: rgba(241, 250, 140, 0.09);
+  color: var(--accent-gold, #f1fa8c);
+  font-size: 0.74em;
+  line-height: 1.25;
+}
+
+.image-prompt-loading-tip i {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
 .image-prompt-action-btn {
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
@@ -2561,6 +3703,13 @@ function formatTableCell(cell: string): string {
   flex: 0 0 auto;
 }
 
+.story-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
 .zoom-btn {
   width: 22px;
   height: 22px;
@@ -2577,6 +3726,28 @@ function formatTableCell(cell: string): string {
   text-align: center;
   font-size: 0.72em;
   opacity: 0.85;
+}
+
+.story-image-menu-btn {
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  font-size: 0.68em;
+  line-height: 1;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.story-image-menu-btn:hover {
+  border-color: rgba(139, 233, 253, 0.45);
+  background: rgba(139, 233, 253, 0.14);
+}
+
+.story-image-menu-btn:active {
+  transform: translateY(1px);
 }
 
 .story-pane {
