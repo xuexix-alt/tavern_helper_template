@@ -375,6 +375,33 @@ function appendImageHistory(
   return out;
 }
 
+function upsertPromptImage(
+  source: Record<string, ResolvedDisplayedImage[]>,
+  promptLike: string,
+  image: ResolvedDisplayedImage,
+): Record<string, ResolvedDisplayedImage[]> {
+  const prompt = String(promptLike ?? '').trim();
+  if (!prompt || !String(image?.src ?? '').trim()) return source ?? {};
+
+  const next = { ...(source ?? {}) };
+  const upsertAtKey = (key: string) => {
+    const normalizedKey = String(key ?? '').trim();
+    if (!normalizedKey) return;
+    const current = next[normalizedKey] ?? [];
+    next[normalizedKey] = appendImageHistory(current, image);
+  };
+
+  const rawPrompt = normalizeExternalPromptRawToken(prompt);
+  const primaryKey = rawPrompt || prompt;
+  upsertAtKey(primaryKey);
+
+  // 同时维护 normalized key，降低 raw token 形态变化导致的匹配失败概率。
+  const normalizedPromptKey = normalizePromptBodyForCompare(primaryKey);
+  if (normalizedPromptKey && normalizedPromptKey !== primaryKey) upsertAtKey(normalizedPromptKey);
+
+  return next;
+}
+
 function normalizePromptBodyForCompare(rawPrompt: string): string {
   const body = parseImagePromptBody(rawPrompt);
   const source = body || String(rawPrompt ?? '');
@@ -698,16 +725,11 @@ function onChatu8ImageResponse(payload: unknown, channel: RequestChannel) {
 
   const current = generatedImagesByPrompt.value?.[pending.rawPrompt] ?? [];
   const imageEntry = { src, alt: '生成图片' };
-  const updated = {
+  let updated = {
     ...(generatedImagesByPrompt.value ?? {}),
     [pending.rawPrompt]: appendImageHistory(current, imageEntry),
   };
-  // 同时写入 normalized key（如果与 rawPrompt 不同），确保跨渲染周期查找稳定
-  const normalizedKey = normalizePromptBodyForCompare(pending.rawPrompt);
-  if (normalizedKey && normalizedKey !== pending.rawPrompt) {
-    const normalizedCurrent = updated[normalizedKey] ?? [];
-    updated[normalizedKey] = appendImageHistory(normalizedCurrent, imageEntry);
-  }
+  updated = upsertPromptImage(updated, pending.rawPrompt, imageEntry);
   generatedImagesByPrompt.value = updated;
   setImagePromptUi(pending.rawPrompt, {
     isLoading: false,
@@ -918,7 +940,10 @@ function readChatu8ExtensionSettings(): Record<string, any> | null {
   }
 }
 
-function readChatu8CacheFromHost(messageId: number | null): Record<string, ResolvedDisplayedImage[]> {
+function readChatu8CacheFromHost(
+  messageId: number | null,
+  promptAllowlist: string[] = [],
+): Record<string, ResolvedDisplayedImage[]> {
   const hostWindow = readHostWindow() as any;
   try {
     const ctx = hostWindow?.SillyTavern?.getContext?.();
@@ -929,25 +954,54 @@ function readChatu8CacheFromHost(messageId: number | null): Record<string, Resol
     const entries = (chatMeta as any).imageCache ?? (chatMeta as any).images ?? chatMeta;
     if (!entries || typeof entries !== 'object') return {};
 
-    const out: Record<string, ResolvedDisplayedImage[]> = {};
+    const allowPromptNormSet = new Set(
+      (promptAllowlist ?? [])
+        .map(item => normalizePromptBodyForCompare(String(item ?? '').trim()))
+        .filter(Boolean),
+    );
+
+    const parsedEntries: Array<{ prompt: string; promptNorm: string; src: string; entryMsgId: number | null }> = [];
     for (const [key, value] of Object.entries(entries)) {
       if (!value) continue;
-      const entryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
-      if (messageId != null && entryMsgId != null && Number(entryMsgId) !== messageId) continue;
+      const rawEntryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
+      const parsedEntryMsgId = Number(rawEntryMsgId);
+      const entryMsgId = Number.isFinite(parsedEntryMsgId) ? Math.trunc(parsedEntryMsgId) : null;
 
       const prompt = String((value as any)?.prompt ?? (value as any)?.tag ?? key ?? '').trim();
       if (!prompt) continue;
+      const promptNorm = normalizePromptBodyForCompare(prompt);
+      if (!promptNorm) continue;
 
       const imgData = (value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src;
       if (!imgData) continue;
 
       const src = normalizeImageDataToSrc(imgData);
       if (!src) continue;
+      parsedEntries.push({ prompt, promptNorm, src, entryMsgId });
+    }
 
-      const rawPrompt = normalizeExternalPromptRawToken(prompt);
-      const storeKey = rawPrompt || prompt;
-      if (!out[storeKey]) out[storeKey] = [];
-      out[storeKey].push({ src, alt: '缓存图片' });
+    let selectedEntries = parsedEntries;
+    if (allowPromptNormSet.size > 0) {
+      const promptMatched = parsedEntries.filter(item => allowPromptNormSet.has(item.promptNorm));
+      if (promptMatched.length > 0) {
+        selectedEntries = promptMatched;
+      } else if (messageId != null) {
+        selectedEntries = parsedEntries.filter(item => item.entryMsgId === messageId || item.entryMsgId == null);
+      }
+    } else if (messageId != null) {
+      selectedEntries = parsedEntries.filter(item => item.entryMsgId === messageId || item.entryMsgId == null);
+    }
+
+    chatu8DebugLog('cache_query_direct_select', {
+      messageId,
+      allowPromptCount: allowPromptNormSet.size,
+      totalEntries: parsedEntries.length,
+      selectedEntries: selectedEntries.length,
+    });
+
+    let out: Record<string, ResolvedDisplayedImage[]> = {};
+    for (const item of selectedEntries) {
+      out = upsertPromptImage(out, item.prompt, { src: item.src, alt: '缓存图片' });
     }
     return out;
   } catch {
@@ -955,11 +1009,18 @@ function readChatu8CacheFromHost(messageId: number | null): Record<string, Resol
   }
 }
 
-async function queryChatu8Cache(messageId: number | null): Promise<Record<string, ResolvedDisplayedImage[]>> {
+async function queryChatu8Cache(
+  messageId: number | null,
+  promptAllowlist: string[] = [],
+): Promise<Record<string, ResolvedDisplayedImage[]>> {
   // 快速通道：直接从宿主读取
-  const directResult = readChatu8CacheFromHost(messageId);
+  const directResult = readChatu8CacheFromHost(messageId, promptAllowlist);
   if (Object.keys(directResult).length > 0) {
-    chatu8DebugLog('cache_query_direct_hit', { messageId, keys: Object.keys(directResult).length });
+    chatu8DebugLog('cache_query_direct_hit', {
+      messageId,
+      keys: Object.keys(directResult).length,
+      allowPromptCount: promptAllowlist.length,
+    });
     return directResult;
   }
 
@@ -997,21 +1058,22 @@ async function queryChatu8Cache(messageId: number | null): Promise<Record<string
         return;
       }
 
-      const out: Record<string, ResolvedDisplayedImage[]> = {};
+      let out: Record<string, ResolvedDisplayedImage[]> = {};
       for (const [prompt, list] of Object.entries(rawImages)) {
         if (!Array.isArray(list) || list.length === 0) continue;
-        const rawPrompt = normalizeExternalPromptRawToken(prompt);
-        const storeKey = rawPrompt || prompt;
-        out[storeKey] = list
-          .filter(it => it?.src)
-          .map(it => ({ src: normalizeImageDataToSrc(it.src), alt: it.alt || '缓存图片' }));
+        for (const item of list) {
+          if (!item?.src) continue;
+          const normalizedSrc = normalizeImageDataToSrc(item.src);
+          if (!normalizedSrc) continue;
+          out = upsertPromptImage(out, prompt, { src: normalizedSrc, alt: item.alt || '缓存图片' });
+        }
       }
       chatu8DebugLog('cache_query_bridge_hit', { queryId, keys: Object.keys(out).length });
       done(out);
     };
 
     sameLayerEventOn(BridgeEventType.CACHE_RESPONSE, onResponse);
-    sameLayerEventEmit(BridgeEventType.CACHE_QUERY, { queryId, messageId });
+    sameLayerEventEmit(BridgeEventType.CACHE_QUERY, { queryId, messageId, prompts: promptAllowlist });
     timeoutId = window.setTimeout(() => {
       chatu8DebugLog('cache_query_bridge_timeout', { queryId });
       done({});
@@ -1462,9 +1524,14 @@ function normalizeImageSrcForMatch(src: string): string {
 function getImageSourceIdentity(src: string): string {
   const normalized = normalizeImageSrcForMatch(src);
   if (!normalized) return '';
+  if (normalized.startsWith('data:')) {
+    // data URI 使用完整串作为 identity，避免不同图片在同路径场景下被误去重。
+    return normalized;
+  }
   try {
     const url = new URL(normalized, window.location.href);
-    return `${url.origin}${url.pathname}`;
+    // 保留 query：st-chatu8 /thumbnail 常用 query 区分不同图片。
+    return `${url.origin}${url.pathname}${url.search}`;
   } catch {
     return normalized;
   }
@@ -1480,7 +1547,6 @@ function isSameImageSource(a: string, b: string): boolean {
     const leftUrl = new URL(left, window.location.href);
     const rightUrl = new URL(right, window.location.href);
     if (leftUrl.href === rightUrl.href) return true;
-    if (leftUrl.origin === rightUrl.origin && leftUrl.pathname === rightUrl.pathname) return true;
     if (
       leftUrl.origin === rightUrl.origin &&
       leftUrl.pathname === rightUrl.pathname &&
@@ -2149,7 +2215,11 @@ const segments = computed<Segment[]>(() => {
       .filter(Boolean),
   );
   const promptCandidates = Array.from(
-    new Set([...Object.keys(hostImageButtonStateByPrompt.value ?? {}), ...externalPromptSet]),
+    new Set([
+      ...Object.keys(hostImageButtonStateByPrompt.value ?? {}),
+      ...Object.keys(cachedImagesByPrompt.value ?? {}),
+      ...externalPromptSet,
+    ]),
   );
   for (const prompt of promptCandidates) {
     const rawPrompt = String(prompt ?? '').trim();
@@ -2418,7 +2488,7 @@ watchEffect(onCleanup => {
     });
     if (missingPrompts.length === 0 && Object.keys(cachedImagesByPrompt.value ?? {}).length > 0) return;
 
-    void queryChatu8Cache(messageId).then(result => {
+    void queryChatu8Cache(messageId, prompts).then(result => {
       if (canceled) return;
       const prevCacheJson = JSON.stringify(cachedImagesByPrompt.value ?? {});
       const nextCacheJson = JSON.stringify(result);

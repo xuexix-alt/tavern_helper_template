@@ -605,10 +605,26 @@ function onPluginEvent(eventName: string, listener: (...args: any[]) => void): S
   return onAnyEvent(eventName, listener);
 }
 
-function handleChatu8CacheQuery(payload: { messageId?: number; queryId?: string } | null | undefined) {
+function normalizePromptForCacheCompare(raw: unknown): string {
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+  const compact = text.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const bodyMatch = compact.match(/^[^#<>\n]+###([\s\S]*?)###$/);
+  const source = (bodyMatch?.[1] ?? compact).replace(/\$\{[\s\S]*?\}\$/g, ' ');
+  return source.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function handleChatu8CacheQuery(
+  payload: { messageId?: number; queryId?: string; prompts?: unknown[] } | null | undefined,
+) {
   const queryId = String(payload?.queryId ?? '').trim();
   if (!queryId) return;
   const messageId = payload?.messageId ?? null;
+  const allowPromptNormSet = new Set(
+    (Array.isArray(payload?.prompts) ? payload?.prompts : [])
+      .map(item => normalizePromptForCacheCompare(item))
+      .filter(Boolean),
+  );
 
   try {
     const ctx = readContext();
@@ -627,6 +643,7 @@ function handleChatu8CacheQuery(payload: { messageId?: number; queryId?: string 
     const extSettings = ctx.extensionSettings?.['st-chatu8'];
     const chatMeta = ctx.chatMetadata?.['st-chatu8'];
     const images: Record<string, Array<{ src: string; alt: string }>> = {};
+    const parsedEntries: Array<{ prompt: string; promptNorm: string; src: string; entryMsgId: number | null }> = [];
 
     // 从 chatMetadata 中提取图片缓存（插件通常将生成结果存储在此）
     if (chatMeta && typeof chatMeta === 'object') {
@@ -634,23 +651,40 @@ function handleChatu8CacheQuery(payload: { messageId?: number; queryId?: string 
       if (entries && typeof entries === 'object') {
         for (const [key, value] of Object.entries(entries)) {
           if (!value) continue;
-          // 按 messageId 过滤（如果提供了）
-          const entryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
-          if (messageId != null && entryMsgId != null && Number(entryMsgId) !== messageId) continue;
+          const rawEntryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
+          const parsedEntryMsgId = Number(rawEntryMsgId);
+          const entryMsgId = Number.isFinite(parsedEntryMsgId) ? Math.trunc(parsedEntryMsgId) : null;
 
           const prompt = String((value as any)?.prompt ?? (value as any)?.tag ?? key ?? '').trim();
           if (!prompt) continue;
+          const promptNorm = normalizePromptForCacheCompare(prompt);
+          if (!promptNorm) continue;
 
           const imgData = (value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src;
           if (!imgData) continue;
 
           const src = String(imgData).trim();
           if (!src) continue;
-
-          if (!images[prompt]) images[prompt] = [];
-          images[prompt].push({ src, alt: '缓存图片' });
+          parsedEntries.push({ prompt, promptNorm, src, entryMsgId });
         }
       }
+    }
+
+    let selectedEntries = parsedEntries;
+    if (allowPromptNormSet.size > 0) {
+      const promptMatched = parsedEntries.filter(item => allowPromptNormSet.has(item.promptNorm));
+      if (promptMatched.length > 0) {
+        selectedEntries = promptMatched;
+      } else if (messageId != null) {
+        selectedEntries = parsedEntries.filter(item => item.entryMsgId === messageId || item.entryMsgId == null);
+      }
+    } else if (messageId != null) {
+      selectedEntries = parsedEntries.filter(item => item.entryMsgId === messageId || item.entryMsgId == null);
+    }
+
+    for (const item of selectedEntries) {
+      if (!images[item.prompt]) images[item.prompt] = [];
+      images[item.prompt].push({ src: item.src, alt: '缓存图片' });
     }
 
     emitEvent(SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE, {
@@ -659,6 +693,12 @@ function handleChatu8CacheQuery(payload: { messageId?: number; queryId?: string 
       images,
       source: 'bridge',
       ok: true,
+      meta: {
+        allowPromptCount: allowPromptNormSet.size,
+        totalEntries: parsedEntries.length,
+        selectedEntries: selectedEntries.length,
+        hasExtSettings: !!extSettings,
+      },
     });
   } catch (err) {
     emitEvent(SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE, {
@@ -776,9 +816,12 @@ $(() => {
     }),
   );
   stops.push(
-    onAnyEvent(SAMELAYER_EVENTS.CHATU8_CACHE_QUERY, (payload: { messageId?: number; queryId?: string } | null) => {
+    onAnyEvent(
+      SAMELAYER_EVENTS.CHATU8_CACHE_QUERY,
+      (payload: { messageId?: number; queryId?: string; prompts?: unknown[] } | null) => {
       handleChatu8CacheQuery(payload);
-    }),
+      },
+    ),
   );
   stops.push(
     onAnyEvent(SAMELAYER_EVENTS.SEND_REQUEST, (payload: { text?: string; await_trigger?: boolean; source?: string }) =>
