@@ -78,17 +78,17 @@ function hasPinnedAnchorPreference(): boolean {
 
 function syncAnchorToLatestAssistant() {
   if (hasPinnedAnchorPreference()) return;
-  const latest = resolveSameLayerLatestAssistantMessageId();
-  if (latest == null) return;
-  if (state.anchor_message_id === latest) return;
-  state.anchor_message_id = latest;
+  const fallback_anchor = resolveSameLayerAnchorMessageId();
+  if (fallback_anchor == null) return;
+  if (state.anchor_message_id === fallback_anchor) return;
+  state.anchor_message_id = fallback_anchor;
 }
 
 function followAnchorToMessage(message_id: number) {
   if (hasPinnedAnchorPreference()) return;
   if (!Number.isFinite(message_id)) return;
-  if (state.anchor_message_id === message_id) return;
-  state.anchor_message_id = message_id;
+  // 同层桥接默认固定在锚点楼层（通常是 0 楼），不随最新消息漂移。
+  syncAnchorToLatestAssistant();
 }
 
 function listReachableHostWindows(): (Window & typeof globalThis)[] {
@@ -526,7 +526,7 @@ function handleStreamToken(message: string) {
   followAnchorToMessage(message_id);
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
   // 首轮生成时可能还没有可解析锚点，兜底为当前流式助手楼层，避免隐藏策略失效。
-  if (state.anchor_message_id == null) state.anchor_message_id = message_id;
+  if (state.anchor_message_id == null) state.anchor_message_id = resolveSameLayerAnchorMessageId() ?? message_id;
   if (state.anchor_message_id != null && message_id !== state.anchor_message_id) {
     setMessageHidden(message_id, true);
   }
@@ -548,7 +548,7 @@ function handleMessageReceived(message_id: number) {
   syncAnchorToLatestAssistant();
   followAnchorToMessage(message_id);
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
-  if (state.anchor_message_id == null) state.anchor_message_id = message_id;
+  if (state.anchor_message_id == null) state.anchor_message_id = resolveSameLayerAnchorMessageId() ?? message_id;
   if (state.anchor_message_id != null && message_id !== state.anchor_message_id) {
     setMessageHidden(message_id, true);
   }

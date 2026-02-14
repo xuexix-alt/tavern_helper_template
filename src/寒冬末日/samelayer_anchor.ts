@@ -71,8 +71,8 @@ export function resolveSameLayerAnchorMessageId(): number | null {
 
   const preferred = readPreferredAnchorId();
   if (preferred != null && ids.includes(preferred)) return preferred;
-  // 默认锚点改为“最新助手楼层”，避免与变量重处理的最新楼层语义错位。
-  return ids[ids.length - 1] ?? null;
+  if (ids.includes(0)) return 0;
+  return ids[0] ?? null;
 }
 
 export function resolveSameLayerLatestAssistantMessageId(): number | null {
