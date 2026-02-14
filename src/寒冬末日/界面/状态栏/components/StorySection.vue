@@ -308,11 +308,79 @@ let chatu8RuntimeTimer: number | null = null;
 let chatu8BridgeReady: boolean | null = null;
 let chatu8BridgeProbePending: Promise<boolean> | null = null;
 let chatu8BridgeLastProbeAt = 0;
+const CHAUT8_DEBUG_SWITCH_KEY = '__edenStoryChatu8Debug';
+let chatu8DebugExposeToken = 0;
+const chatu8DebugExposedWindows = new Set<Window & typeof globalThis>();
 const CHATU8_BRIDGE_REPROBE_MS = 1200;
 let lastStoryMessageId: number | null = null;
 
 function isChatu8DebugEnabled(): boolean {
   return chatu8DebugManual.value === true || chatu8Runtime.value.debugLog === true;
+}
+
+function collectChatu8DebugExposeWindows(): Array<Window & typeof globalThis> {
+  const out: Array<Window & typeof globalThis> = [];
+  const seen = new Set<Window>();
+  const push = (candidate: Window | null | undefined) => {
+    if (!candidate) return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    out.push(candidate as Window & typeof globalThis);
+  };
+
+  push(window);
+  try {
+    push(window.parent);
+  } catch {
+    // ignore
+  }
+  try {
+    push(window.top);
+  } catch {
+    // ignore
+  }
+
+  return out;
+}
+
+function exposeChatu8DebugSwitch() {
+  chatu8DebugExposeToken = Date.now() + Math.floor(Math.random() * 1000);
+  const debugSwitch = (enabled?: boolean) => {
+    if (typeof enabled === 'boolean') {
+      chatu8DebugManual.value = enabled;
+    }
+    const status = isChatu8DebugEnabled();
+    console.info('[StorySection][st-chatu8][debug] switch', {
+      manual: chatu8DebugManual.value,
+      runtime: chatu8Runtime.value.debugLog,
+      enabled: status,
+    });
+    return status;
+  };
+  (debugSwitch as any).__eden_owner_token = chatu8DebugExposeToken;
+
+  for (const hostWindow of collectChatu8DebugExposeWindows()) {
+    try {
+      (hostWindow as any)[CHAUT8_DEBUG_SWITCH_KEY] = debugSwitch;
+      chatu8DebugExposedWindows.add(hostWindow);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function cleanupChatu8DebugSwitch() {
+  for (const hostWindow of chatu8DebugExposedWindows) {
+    try {
+      const current = (hostWindow as any)[CHAUT8_DEBUG_SWITCH_KEY];
+      if (typeof current !== 'function') continue;
+      if ((current as any).__eden_owner_token !== chatu8DebugExposeToken) continue;
+      delete (hostWindow as any)[CHAUT8_DEBUG_SWITCH_KEY];
+    } catch {
+      // ignore
+    }
+  }
+  chatu8DebugExposedWindows.clear();
 }
 
 function chatu8DebugLog(tag: string, payload?: Record<string, unknown>) {
@@ -363,6 +431,7 @@ const mergedImagesByPrompt = computed<Record<string, ResolvedDisplayedImage[]>>(
   const base = mergeImageMap(cachedImagesByPrompt.value ?? {}, resolvedImagesByPrompt.value ?? {});
   return mergeImageMap(base, generatedImagesByPrompt.value ?? {});
 });
+const standaloneHostImages = ref<ResolvedDisplayedImage[]>([]);
 
 function appendImageHistory(
   source: ResolvedDisplayedImage[],
@@ -1773,12 +1842,72 @@ function onStoryImagePointerUp(seg: Segment, event: PointerEvent) {
   void proxyHostImageButtonAction(rawPrompt, 'pointerup');
 }
 
-function onStoryImageDoubleClick(seg: Segment) {
-  if (proxyHostImageNativeDoubleClickForSegment(seg)) return;
-  if (proxyHostImageButtonActionForSegment(seg, 'dblclick')) return;
+function scheduleStoryImageDoubleClickFallback(seg: Segment, rawPrompt: string) {
+  const prompt = String(rawPrompt ?? '').trim();
 
+  window.setTimeout(() => {
+    // 若宿主已进入生图中，则不再重复触发，避免双发。
+    if (prompt && isImagePromptLoading(prompt)) return;
+
+    // 优先按“当前图片楼层定位”触发，避免依赖 rawPrompt。
+    if (proxyHostImageButtonActionForSegment(seg, 'click')) {
+      if (prompt) {
+        setImagePromptUi(prompt, {
+          isLoading: true,
+          message: '已触发宿主生图…',
+          level: 'loading',
+        });
+      }
+      chatu8DebugLog('double_click_fallback_segment_click', {
+        promptLength: prompt.length,
+        key: seg.key,
+      });
+      return;
+    }
+
+    if (prompt && proxyHostImageButtonAction(prompt, 'click')) {
+      setImagePromptUi(prompt, {
+        isLoading: true,
+        message: '已触发宿主生图…',
+        level: 'loading',
+      });
+      chatu8DebugLog('double_click_fallback_host_click', {
+        promptLength: prompt.length,
+        key: seg.key,
+      });
+      return;
+    }
+
+    if (!prompt) {
+      chatu8DebugLog('double_click_fallback_no_prompt', { key: seg.key });
+      return;
+    }
+
+    void requestImageByPrompt(prompt, 'story_image_dblclick_fallback').then(ok => {
+      if (!ok) {
+        chatu8DebugLog('double_click_fallback_request_miss', {
+          promptLength: prompt.length,
+          key: seg.key,
+        });
+      }
+    });
+  }, 260);
+}
+
+function onStoryImageDoubleClick(seg: Segment) {
   const rawPrompt = getSegmentRawPrompt(seg);
-  if (rawPrompt && proxyHostImageButtonAction(rawPrompt, 'dblclick')) return;
+  const triggeredNative =
+    proxyHostImageNativeDoubleClickForSegment(seg) ||
+    proxyHostImageButtonActionForSegment(seg, 'dblclick') ||
+    (!!rawPrompt && proxyHostImageButtonAction(rawPrompt, 'dblclick'));
+
+  // 部分宿主配置下，双击仅会打开生图面板并生成提示词，不会直接发起生图。
+  // 因此在原生双击成功后补一个短延迟兜底：若仍未进入“生图中”，则主动触发一次生图。
+  if (triggeredNative) {
+    scheduleStoryImageDoubleClickFallback(seg, rawPrompt ?? '');
+    return;
+  }
+
   if (rawPrompt && proxyHostImageButtonAction(rawPrompt, 'click')) return;
   logHostResolveDiagnostic('double_click_miss', seg);
   toastr?.warning?.('未找到 st-chatu8 图片/按钮，无法按插件原生方式重绘');
@@ -2126,6 +2255,35 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   return out;
 }
 
+function collectStandaloneHostImages(messageId: number | null): ResolvedDisplayedImage[] {
+  const roots = resolveHostMessageScopedRoots(messageId);
+  if (roots.length === 0) return [];
+
+  const floorHidden = isMessageFloorHidden(messageId);
+  const out: ResolvedDisplayedImage[] = [];
+  const seen = new Set<string>();
+  const pushImage = (img: HTMLImageElement) => {
+    if (!isRenderableStoryImage(img)) return;
+    if (!floorHidden && !isHostElementVisible(img)) return;
+    // 仅兜底 st-chatu8 相关图片，避免把普通插图误当作生图结果。
+    if (!img.closest('.st-chatu8-image-span')) return;
+    const resolved = toResolvedDisplayedImage(img);
+    const sourceId = getImageSourceIdentity(resolved.src) || `${resolved.src}@@${resolved.alt}`;
+    if (!sourceId) return;
+    if (seen.has(sourceId)) return;
+    seen.add(sourceId);
+    out.push(resolved);
+  };
+
+  for (const root of roots) {
+    const imgs = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+    for (const img of imgs) {
+      pushImage(img);
+    }
+  }
+  return out;
+}
+
 function resolveHostImageButtonState(
   messageId: number | null,
   prompts: string[],
@@ -2151,6 +2309,11 @@ const segments = computed<Segment[]>(() => {
   const segs = buildSegments(text);
 
   const mapped = mergedImagesByPrompt.value;
+  chatu8DebugLog('segment_build', {
+    segCount: segs.length,
+    mappedKeys: Object.keys(mapped),
+    mappedDetail: Object.entries(mapped).map(([k, v]) => ({ prompt: k.slice(0, 40), images: v.length })),
+  });
   const out: Segment[] = [];
   const renderedImageSources = new Set<string>();
   const storyPromptSet = new Set<string>();
@@ -2251,6 +2414,20 @@ const segments = computed<Segment[]>(() => {
       className: 'image-prompt',
       text: rawPrompt,
       imagePromptRaw: rawPrompt,
+    });
+  }
+
+  // 兜底：当插件已在楼层 DOM 里渲染出图片，但缺少 prompt/event 映射时，仍展示图片。
+  for (const image of standaloneHostImages.value) {
+    const sourceId = getImageSourceIdentity(image.src);
+    if (sourceId && renderedImageSources.has(sourceId)) continue;
+    if (sourceId) renderedImageSources.add(sourceId);
+    out.push({
+      key: `img_host_standalone_${id++}`,
+      isImage: true,
+      imageUrl: image.src,
+      altText: image.alt || '生成图片',
+      text: image.src,
     });
   }
 
@@ -2438,13 +2615,24 @@ watchEffect(onCleanup => {
     externalPromptRaws.value = [];
     generatedImagesByPrompt.value = {};
     cachedImagesByPrompt.value = {};
+    standaloneHostImages.value = [];
     imagePromptUi.value = {};
   }
 
   const normalizedRaw = normalizeInjectedRaw(props.raw ?? '');
   const mainText = extractMainStoryText(normalizedRaw);
   const text = normalizeStoryText(mainText);
-  const storyPrompts = collectImagePromptMatches(text).map(m => m.raw);
+  const allPromptMatches = collectImagePromptMatches(text);
+  const storyPrompts = allPromptMatches.map(m => m.raw);
+  chatu8DebugLog('prompt_extraction', {
+    messageId,
+    rawLen: props.raw?.length ?? 0,
+    normalizedLen: normalizedRaw.length,
+    mainTextLen: mainText.length,
+    textLen: text.length,
+    promptCount: allPromptMatches.length,
+    prompts: allPromptMatches.map(m => ({ raw: m.raw.slice(0, 50), index: m.index })),
+  });
   const domPromptsRaw = collectPromptRawsFromDisplayedButtons(messageId);
   const domPrompts =
     storyPrompts.length > 0
@@ -2460,6 +2648,7 @@ watchEffect(onCleanup => {
     if (canceled) return;
     const next = resolveImagesFromDisplayedMessage(messageId, prompts);
     const nextHostState = resolveHostImageButtonState(messageId, prompts);
+    const nextStandalone = collectStandaloneHostImages(messageId);
     // 只有在结果有变化时才写入，避免无意义触发重渲染
     const prev = resolvedImagesByPrompt.value ?? {};
     const prevJson = JSON.stringify(prev);
@@ -2468,6 +2657,9 @@ watchEffect(onCleanup => {
     const prevHostJson = JSON.stringify(hostImageButtonStateByPrompt.value ?? {});
     const nextHostJson = JSON.stringify(nextHostState);
     if (prevHostJson !== nextHostJson) hostImageButtonStateByPrompt.value = nextHostState;
+    const prevStandaloneJson = JSON.stringify(standaloneHostImages.value ?? []);
+    const nextStandaloneJson = JSON.stringify(nextStandalone);
+    if (prevStandaloneJson !== nextStandaloneJson) standaloneHostImages.value = nextStandalone;
   };
 
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
@@ -2526,22 +2718,7 @@ onMounted(() => {
   refreshChatu8RuntimeConfig();
   registerChatu8ResponseListeners();
   void probeChatu8Bridge(420, true);
-  try {
-    (globalThis as any).__edenStoryChatu8Debug = (enabled?: boolean) => {
-      if (typeof enabled === 'boolean') {
-        chatu8DebugManual.value = enabled;
-      }
-      const status = isChatu8DebugEnabled();
-      console.info('[StorySection][st-chatu8][debug] switch', {
-        manual: chatu8DebugManual.value,
-        runtime: chatu8Runtime.value.debugLog,
-        enabled: status,
-      });
-      return status;
-    };
-  } catch {
-    // ignore
-  }
+  exposeChatu8DebugSwitch();
   chatu8RuntimeTimer = window.setInterval(() => {
     refreshChatu8RuntimeConfig();
     if (chatu8BridgeReady !== true) {
@@ -2567,11 +2744,7 @@ onBeforeUnmount(() => {
   chatu8BridgeProbePending = null;
   chatu8BridgeReady = null;
   chatu8BridgeLastProbeAt = 0;
-  try {
-    delete (globalThis as any).__edenStoryChatu8Debug;
-  } catch {
-    // ignore
-  }
+  cleanupChatu8DebugSwitch();
 });
 
 let __resizeScheduled = false;
