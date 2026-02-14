@@ -123,6 +123,9 @@ function getMockData(): InjectedData {
 export function useInjectedData() {
   const options = ref<string[]>([]);
   const stopHandles: StopHandle[] = [];
+  let lastBridgeTxSeq = -1;
+  let lastBridgeTxId = '';
+  let lastBridgeChatId: string | null = null;
 
   // 开发模式检测 (通过 URL 查询参数)
   const search = new URLSearchParams(window.location.search);
@@ -148,6 +151,36 @@ export function useInjectedData() {
   const applyBridgePayload = (payload: SameLayerPayload) => {
     if (!payload || typeof payload !== 'object') return;
     if (!isPayloadForCurrentChat(payload)) return;
+    const payloadChatId = payload?.chat_id == null ? null : String(payload.chat_id);
+    const payloadTxSeq = Number(payload?.tx_seq);
+    const payloadTxId = String(payload?.tx_id ?? '');
+
+    if (payloadChatId && lastBridgeChatId && payloadChatId !== lastBridgeChatId) {
+      lastBridgeTxSeq = -1;
+      lastBridgeTxId = '';
+    }
+
+    if (Number.isFinite(payloadTxSeq)) {
+      const normalizedSeq = Math.trunc(payloadTxSeq);
+      if (normalizedSeq === lastBridgeTxSeq && payloadTxId && payloadTxId === lastBridgeTxId) return;
+      if (normalizedSeq < lastBridgeTxSeq) {
+        if (isDebug) {
+          console.debug('[无正文状态栏][InjectedData] 丢弃过期桥接包', {
+            txSeq: normalizedSeq,
+            lastTxSeq: lastBridgeTxSeq,
+            txId: payloadTxId || null,
+            lastTxId: lastBridgeTxId || null,
+            phase: payload.phase,
+          });
+        }
+        return;
+      }
+
+      lastBridgeTxSeq = normalizedSeq;
+      lastBridgeTxId = payloadTxId || lastBridgeTxId;
+      lastBridgeChatId = payloadChatId;
+    }
+
     const rawText = String(payload.raw ?? '');
     const parsed = parseInjectedText(rawText);
     options.value = parsed.options;
@@ -177,6 +210,11 @@ export function useInjectedData() {
     if (typeof eventOn !== 'function') return;
     try {
       const stop = eventOn(eventName as any, () => {
+        if (eventName === (tavern_events.CHAT_CHANGED as any)) {
+          lastBridgeTxSeq = -1;
+          lastBridgeTxId = '';
+          lastBridgeChatId = null;
+        }
         refresh();
       });
       stopHandles.push(stop);

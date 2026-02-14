@@ -250,6 +250,7 @@ const regenerateButtonTitle = computed(() => {
 const latestFollowStateLabel = computed(
   () => `容器#${containerMessageId.value ?? '?'} / 跟随#${latestLiveMessageId.value ?? '?'}`,
 );
+const REGENERATE_TRIGGER_TIMEOUT_MS = 45000;
 
 function stripForPreview(input: string): string {
   return String(input ?? '')
@@ -277,7 +278,7 @@ function extractOptionsFromRaw(raw: string): string[] {
 function readMessageRawById(message_id: number): string {
   try {
     const msg = getChatMessages(message_id)?.[0] as any;
-    return String(msg?.message ?? '');
+    return readMessageText(msg);
   } catch {
     return '';
   }
@@ -538,7 +539,16 @@ async function regenerateFromLatestUserInput() {
       if (idsToDelete.length > 0) await deleteChatMessages(idsToDelete, { refresh: 'all' });
     }
 
-    await Promise.resolve(slash('/trigger await=true'));
+    const triggerSettled = await runRegenerateTriggerWithTimeout(slash, REGENERATE_TRIGGER_TIMEOUT_MS);
+    if (!triggerSettled) {
+      try {
+        await Promise.resolve(slash('/trigger'));
+        toastr?.warning?.('重新生成等待超时，已切换为非阻塞触发');
+      } catch (fallbackErr: any) {
+        throw new Error(`重生等待超时，且降级触发失败：${fallbackErr?.message ?? String(fallbackErr)}`);
+      }
+    }
+
     setViewMessageLatest('story-page:regenerate');
     historyCandidates.value = buildHistoryCandidates();
     syncHistoryPayload();
@@ -659,6 +669,30 @@ function resolveTriggerSlashForRegenerate(): ((command: string) => Promise<any> 
   return null;
 }
 
+async function runRegenerateTriggerWithTimeout(
+  slash: (command: string) => Promise<any> | any,
+  timeoutMs: number,
+): Promise<boolean> {
+  const normalizedTimeout = Math.max(1500, Math.trunc(timeoutMs || 0));
+  let timeoutId = 0;
+
+  const timeoutPromise = new Promise<'timeout'>(resolve => {
+    timeoutId = window.setTimeout(() => resolve('timeout'), normalizedTimeout);
+  });
+  const triggerPromise = Promise.resolve(slash('/trigger await=true'))
+    .then(() => 'done' as const)
+    .catch((err: any) => {
+      throw err;
+    });
+
+  try {
+    const result = await Promise.race([triggerPromise, timeoutPromise]);
+    return result === 'done';
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 function tryClickHostRegenerateButton(): boolean {
   const docs: Document[] = [];
   const pushDoc = (doc: Document | null | undefined) => {
@@ -717,6 +751,12 @@ function tryClickHostRegenerateButton(): boolean {
 }
 
 function selectHistoryMessage(message_id: number) {
+  // 语义归一：若用户在回看列表点击的正好是“当前最新楼层”，
+  // 则直接切回 latest 模式，避免出现“同号不同态（按钮灰/可用不一致）”。
+  if (latestLiveMessageId.value != null && Number(message_id) === Number(latestLiveMessageId.value)) {
+    switchToLatest();
+    return;
+  }
   const ok = setViewMessageHistory(message_id, 'story-page');
   if (!ok) {
     toastr?.warning?.('无效楼层号');
@@ -749,6 +789,14 @@ function ensureHistorySelectionValid() {
   const selected = historyMessageId.value;
   if (selected == null) {
     setViewMessageLatest('story-page:auto-fix-empty-history');
+    return;
+  }
+
+  // 语义归一：history 选中楼层与当前最新楼层一致时，自动回到 latest 模式。
+  // 这样“最新楼层 #N”与“楼层 #N”不会再出现交互差异。
+  const liveId = latestLiveMessageId.value;
+  if (liveId != null && selected === liveId) {
+    setViewMessageLatest('story-page:auto-fix-history-equals-latest');
     return;
   }
 

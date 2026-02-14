@@ -2,7 +2,6 @@ import _ from 'lodash';
 import { ROLE_ALIAS_MAP, ROLE_CATALOG, RoleCatalogItem } from '../../roleCatalog';
 import {
   CHAT_VAR_KEYS_ROLE,
-  applyPendingUnlocks,
   createDefaultRoleSelectorState,
   normalizeRoleSelectorState,
   readRoleSelectorStateFromChatVars,
@@ -13,16 +12,14 @@ type RoleSelectorStateLike = ReturnType<typeof createDefaultRoleSelectorState>;
 const SCRIPT_NAME = '开局角色选择器';
 const ROOT_ATTR = 'data-eden-role-selector-root';
 const STYLE_ATTR = 'data-eden-role-selector-style';
-const BTN_OPEN = '角色选择';
-const BTN_RESET = '重置角色选择';
-const BTN_APPLY_PENDING = '应用剧情解锁';
+const BTN_OPEN = '角色批量删除';
+const BTN_RESET = '清空删除标记';
 const BTN_TOGGLE_DOSSIER_DEBUG = '切换档案注入调试';
 const BTN_CREATE_ROLE = '创建角色';
 const BTN_REFRESH_LIST = '刷新名单';
 const ROLE_CREATOR_OPEN_EVENT = 'eden.role_creator.open';
 const ROLE_SELECTOR_OPEN_EVENT = 'eden.role_selector.open';
 const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
-const DELETE_UNSELECTED_KEY = 'eden.role_selector.delete_unselected';
 const DOSSIER_INJECT_DEBUG_KEY = 'debug.角色档案动态注入';
 const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
   '末世寒冬-星穹秩序2.0',
@@ -62,22 +59,6 @@ function getChatVars(): any {
   } catch {
     return {};
   }
-}
-
-function readDeleteUnselectedFlag(): boolean {
-  const vars = getChatVars();
-  return _.get(vars, DELETE_UNSELECTED_KEY, false) === true;
-}
-
-function saveDeleteUnselectedFlag(value: boolean) {
-  if (typeof updateVariablesWith !== 'function') return;
-  updateVariablesWith(
-    vars => {
-      _.set(vars, DELETE_UNSELECTED_KEY, value === true);
-      return vars;
-    },
-    { type: 'chat' },
-  );
 }
 
 function readDossierInjectDebugFlag(): boolean {
@@ -127,6 +108,11 @@ type DossierIndexItem = {
   defaultSelected?: boolean;
 };
 
+type RoleSelectorYamlApi = {
+  parse: (input: string) => any;
+  stringify: (input: any) => string;
+};
+
 function parseDossierIndex(text: string): DossierIndexItem[] {
   try {
     const data = JSON.parse(String(text ?? ''));
@@ -150,6 +136,161 @@ function parseDossierIndex(text: string): DossierIndexItem[] {
   } catch {
     return [];
   }
+}
+
+function buildDossierIndexText(list: DossierIndexItem[]): string {
+  return JSON.stringify(list, null, 2);
+}
+
+function normalizeRoleListCanonical(list: any): string[] {
+  if (!Array.isArray(list)) return [];
+  return _.uniq(
+    list
+      .map(name => canonicalizeRoleName(name))
+      .filter(Boolean),
+  );
+}
+
+function readDeletedRoleSet(state: RoleSelectorStateLike | null | undefined): Set<string> {
+  const list = normalizeRoleListCanonical((state as any)?.deleted_roles ?? []);
+  return new Set(list);
+}
+
+function getYamlApi(): RoleSelectorYamlApi | null {
+  const yaml = (window as any)?.YAML;
+  if (!yaml || typeof yaml.parse !== 'function' || typeof yaml.stringify !== 'function') return null;
+  return yaml as RoleSelectorYamlApi;
+}
+
+function pruneNameFromInitvarRooms(root: any, canonicalName: string) {
+  if (!root || typeof root !== 'object') return;
+  const rooms = _.get(root, '房间', null);
+  if (!rooms || typeof rooms !== 'object') return;
+
+  const shouldKeep = (x: any) => canonicalizeRoleName(x) !== canonicalName;
+  const prunePath = (path: string) => {
+    const list = _.get(rooms, path, null);
+    if (!Array.isArray(list)) return;
+    _.set(rooms, path, list.filter(shouldKeep));
+  };
+
+  const fixedPaths = [
+    '玄关.净化隔离区入住者',
+    '玄关.临时客房A入住者',
+    '玄关.临时客房B入住者',
+    '玄关.临时客房C入住者',
+    '玄关.临时客房D入住者',
+    '玄关.临时客房E入住者',
+    '核心区.客厅使用者',
+    '核心区.餐厅厨房使用者',
+    '核心区.主卧室使用者',
+    '核心区.次卧使用者',
+    '核心区.小影院舞台使用者',
+    '核心区.会议室使用者',
+    '核心区.书房使用者',
+    '核心区.主浴室使用者',
+  ];
+  for (const p of fixedPaths) prunePath(p);
+
+  const floorBases = ['楼层房间.楼层20房间', '楼层房间.楼层19房间'];
+  for (const base of floorBases) {
+    const record = _.get(rooms, base, null);
+    if (!record || typeof record !== 'object') continue;
+    for (const roomNo of Object.keys(record)) {
+      prunePath(`${base}.${roomNo}.入住者`);
+    }
+  }
+}
+
+async function pruneDossierIndexByRemovedRoles(worldbookName: string, removedSet: Set<string>) {
+  if (!removedSet.size || typeof updateWorldbookWith !== 'function') return;
+  await updateWorldbookWith(
+    worldbookName,
+    worldbook => {
+      const idx = worldbook.findIndex(entry => String(entry?.name ?? '').trim() === '角色档案索引');
+      if (idx === -1) return worldbook;
+      const entry = worldbook[idx];
+      const list = parseDossierIndex(String(entry?.content ?? ''));
+      const next = list.filter(item => !removedSet.has(canonicalizeRoleName(item.name)));
+      if (_.isEqual(next, list)) return worldbook;
+      worldbook[idx] = { ...entry, content: buildDossierIndexText(next) };
+      return worldbook;
+    },
+    { render: 'immediate' },
+  );
+}
+
+async function pruneInitvarByRemovedRoles(worldbookName: string, removedSet: Set<string>) {
+  if (!removedSet.size || typeof updateWorldbookWith !== 'function') return;
+  const yaml = getYamlApi();
+  if (!yaml) {
+    throw new Error('YAML 解析器不可用，无法同步裁剪 initvar');
+  }
+
+  await updateWorldbookWith(
+    worldbookName,
+    worldbook => {
+      const idx = worldbook.findIndex(entry => {
+        const name = String(entry?.name ?? '').trim();
+        return name === '[initvar]变量初始化勿开' || name === '[initvar]变量初始化';
+      });
+      if (idx === -1) return worldbook;
+
+      const entry = worldbook[idx];
+      const raw = String(entry?.content ?? '');
+      if (!raw.trim()) return worldbook;
+
+      let data: any = null;
+      try {
+        data = yaml.parse(raw);
+      } catch {
+        return worldbook;
+      }
+      if (!data || typeof data !== 'object') return worldbook;
+
+      for (const roleName of Array.from(removedSet)) {
+        for (const key of Object.keys(data)) {
+          if (canonicalizeRoleName(key) !== roleName) continue;
+          delete data[key];
+        }
+        const tempNpc = _.get(data, '临时NPC', null);
+        if (tempNpc && typeof tempNpc === 'object') {
+          for (const key of Object.keys(tempNpc)) {
+            if (canonicalizeRoleName(key) !== roleName) continue;
+            delete tempNpc[key];
+          }
+        }
+        pruneNameFromInitvarRooms(data, roleName);
+      }
+
+      // 同步裁剪 initvar 中的角色控制，避免重开聊天时复活已删角色。
+      const roleControlPath = ['主线任务', '$meta', '角色控制'];
+      const roleControl = _.get(data, roleControlPath, null);
+      if (roleControl && typeof roleControl === 'object') {
+        const trimList = (list: any) =>
+          normalizeRoleListCanonical(list).filter(name => !removedSet.has(name));
+        _.set(roleControl, 'selected_roles', trimList(_.get(roleControl, 'selected_roles', [])));
+        _.set(roleControl, 'revealed_roles', trimList(_.get(roleControl, 'revealed_roles', [])));
+        _.set(roleControl, 'pending_unlock', trimList(_.get(roleControl, 'pending_unlock', [])));
+        _.set(
+          roleControl,
+          'deleted_roles',
+          _.uniq([...normalizeRoleListCanonical(_.get(roleControl, 'deleted_roles', [])), ...Array.from(removedSet)]),
+        );
+      }
+
+      let next = '';
+      try {
+        next = yaml.stringify(data);
+      } catch {
+        return worldbook;
+      }
+      if (!next.trim()) return worldbook;
+      worldbook[idx] = { ...entry, content: next };
+      return worldbook;
+    },
+    { render: 'immediate' },
+  );
 }
 
 async function resolveDefaultWorldbookName(): Promise<string | null> {
@@ -207,20 +348,32 @@ function normalizeCatalogItem(item: RoleCatalogItem): RoleCatalogItem {
   };
 }
 
-function mergeRoleCatalog(base: RoleCatalogItem[], extra: RoleCatalogItem[], selected: string[]): RoleCatalogItem[] {
+function mergeRoleCatalog(
+  base: RoleCatalogItem[],
+  extra: RoleCatalogItem[],
+  selected: string[],
+  deletedSet: Set<string>,
+): RoleCatalogItem[] {
   const map = new Map<string, RoleCatalogItem>();
+  const findExistingKeyByCanonical = (canonicalName: string): string | undefined =>
+    Array.from(map.keys()).find(key => canonicalizeRoleName(key) === canonicalName);
   for (const item of base) {
+    const canonicalName = canonicalizeRoleName(item.name);
+    if (!canonicalName || deletedSet.has(canonicalName)) continue;
     map.set(item.name, normalizeCatalogItem(item));
   }
 
   for (const item of extra) {
+    const canonicalName = canonicalizeRoleName(item.name);
+    if (!canonicalName || deletedSet.has(canonicalName)) continue;
     const normalized = normalizeCatalogItem(item);
-    if (!map.has(normalized.name)) {
+    const existingKey = findExistingKeyByCanonical(canonicalName);
+    if (!existingKey) {
       map.set(normalized.name, normalized);
       continue;
     }
-    const cur = map.get(normalized.name)!;
-    map.set(normalized.name, {
+    const cur = map.get(existingKey)!;
+    map.set(existingKey, {
       ...cur,
       ...normalized,
       identity: normalized.identity || cur.identity,
@@ -232,7 +385,8 @@ function mergeRoleCatalog(base: RoleCatalogItem[], extra: RoleCatalogItem[], sel
 
   for (const name of selected) {
     const roleName = String(name ?? '').trim();
-    if (!roleName || map.has(roleName)) continue;
+    const canonicalName = canonicalizeRoleName(roleName);
+    if (!canonicalName || deletedSet.has(canonicalName) || findExistingKeyByCanonical(canonicalName)) continue;
     map.set(roleName, normalizeCatalogItem({ name: roleName, identity: '自定义角色', summary: '', location: '' }));
   }
 
@@ -246,86 +400,11 @@ function mergeRoleCatalog(base: RoleCatalogItem[], extra: RoleCatalogItem[], sel
     .filter((item): item is RoleCatalogItem => !!item)
     .concat(extras);
 
-  return merged;
+  return merged.filter(item => !deletedSet.has(canonicalizeRoleName(item.name)));
 }
 
 function isRoleLike(val: any): boolean {
   return !!(val && typeof val === 'object' && !Array.isArray(val) && '登场状态' in val && '健康' in val);
-}
-
-function normalizeInitialRoomFromCatalog(item?: RoleCatalogItem): string {
-  const raw = String(item?.location ?? '').trim();
-  if (!raw || raw === '未设置位置') return '';
-  if (/^楼层\d+\/\d+$/.test(raw)) return raw;
-  if (raw === '玄关' || raw.startsWith('玄关/') || raw.startsWith('核心区/')) return raw;
-  return '';
-}
-
-function createDefaultRolePayload(name: string, item?: RoleCatalogItem): any {
-  return {
-    姓名: name,
-    关系: '无',
-    关系倾向: '中立',
-    秩序刻印: 0,
-    秩序刻印更新原因: '0, 无变化',
-    健康: 100,
-    健康更新原因: '0, 无变化',
-    健康状况: '健康',
-    衣着: '',
-    舌唇: '',
-    胸乳: '',
-    私穴: '',
-    神态样貌: '',
-    动作姿势: '',
-    内心想法: '',
-    所在房间: normalizeInitialRoomFromCatalog(item),
-    登场状态: '登场',
-  };
-}
-
-function materializeSelectedRoles(
-  stat_data: any,
-  enabledSet: Set<string>,
-  catalogByName: Map<string, RoleCatalogItem>,
-) {
-  for (const name of enabledSet) {
-    const roleName = canonicalizeRoleName(name);
-    if (!roleName) continue;
-
-    const roleKey =
-      Object.keys(stat_data ?? {}).find(key => {
-        if (RESERVED_KEYS.has(key)) return false;
-        const val = _.get(stat_data, [key]);
-        if (!isRoleLike(val)) return false;
-        return canonicalizeRoleName(key) === roleName;
-      }) ?? roleName;
-
-    const coreRole = _.get(stat_data, [roleKey]);
-    if (isRoleLike(coreRole)) {
-      _.set(stat_data, [roleKey, '姓名'], String(_.get(coreRole, '姓名', '') || roleName));
-      _.set(stat_data, [roleKey, '登场状态'], '登场');
-      continue;
-    }
-
-    const tempRoleKey =
-      Object.keys(_.get(stat_data, '临时NPC', {}) ?? {}).find(key => canonicalizeRoleName(key) === roleName) ??
-      roleName;
-    const tempRole = _.get(stat_data, ['临时NPC', tempRoleKey]);
-    if (isRoleLike(tempRole)) {
-      const migrated = _.cloneDeep(tempRole);
-      _.set(migrated, '姓名', String(_.get(migrated, '姓名', '') || roleName));
-      _.set(migrated, '登场状态', '登场');
-      _.set(stat_data, [roleName], migrated);
-      _.unset(stat_data, ['临时NPC', tempRoleKey]);
-      continue;
-    }
-
-    _.set(
-      stat_data,
-      [roleName],
-      createDefaultRolePayload(roleName, catalogByName.get(roleName) ?? catalogByName.get(canonicalizeRoleName(name))),
-    );
-  }
 }
 
 function removeNameFromRooms(stat_data: any, name: string) {
@@ -370,46 +449,39 @@ function removeNameFromRooms(stat_data: any, name: string) {
   }
 }
 
-function applySelectionToStatData(stat_data: any, enabledSet: Set<string>, deleteUnselected: boolean) {
-  if (!stat_data || typeof stat_data !== 'object') return;
+function applySelectionToStatData(stat_data: any, enabledSet: Set<string>): Set<string> {
+  if (!stat_data || typeof stat_data !== 'object') return new Set<string>();
 
   const enabledCanonicalSet = new Set(
     Array.from(enabledSet)
       .map(name => canonicalizeRoleName(name))
       .filter(Boolean),
   );
+  const removedCanonicalSet = new Set<string>();
 
   for (const [key, val] of Object.entries(stat_data)) {
     if (RESERVED_KEYS.has(key)) continue;
     if (!isRoleLike(val)) continue;
-    if (enabledCanonicalSet.has(canonicalizeRoleName(key))) continue;
-
-    if (deleteUnselected) {
-      _.unset(stat_data, [key]);
-      removeNameFromRooms(stat_data, key);
-    } else {
-      _.set(stat_data, [key, '登场状态'], '离场');
-      _.set(stat_data, [key, '所在房间'], '');
-      removeNameFromRooms(stat_data, key);
-    }
+    const canonical = canonicalizeRoleName(key);
+    if (!canonical || enabledCanonicalSet.has(canonical)) continue;
+    removedCanonicalSet.add(canonical);
+    _.unset(stat_data, [key]);
+    removeNameFromRooms(stat_data, key);
   }
 
   const tempNpc = _.get(stat_data, '临时NPC', {});
   if (tempNpc && typeof tempNpc === 'object') {
     for (const [name, role] of Object.entries(tempNpc)) {
       if (!isRoleLike(role)) continue;
-      if (enabledCanonicalSet.has(canonicalizeRoleName(name))) continue;
-
-      if (deleteUnselected) {
-        _.unset(stat_data, ['临时NPC', name]);
-        removeNameFromRooms(stat_data, name);
-      } else {
-        _.set(stat_data, ['临时NPC', name, '登场状态'], '离场');
-        _.set(stat_data, ['临时NPC', name, '所在房间'], '');
-        removeNameFromRooms(stat_data, name);
-      }
+      const canonical = canonicalizeRoleName(name);
+      if (!canonical || enabledCanonicalSet.has(canonical)) continue;
+      removedCanonicalSet.add(canonical);
+      _.unset(stat_data, ['临时NPC', name]);
+      removeNameFromRooms(stat_data, name);
     }
   }
+
+  return removedCanonicalSet;
 }
 
 async function replaceLatestStatData(mutator: (stat_data: any) => void) {
@@ -450,23 +522,37 @@ async function notifyRoleSelectorUpdated() {
 function ensureCss() {
   if ($(`head style[${STYLE_ATTR}]`).length > 0) return;
   const css = `
-  [${ROOT_ATTR}] { position: fixed; inset: 0; z-index: 999999; display: flex; justify-content: center; align-items: center; background: rgba(2,10,20,.72); }
-  [${ROOT_ATTR}] .eden-rs-modal { width: min(92vw, 760px); max-height: 82vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid #1a7fc5; background: linear-gradient(180deg,#031727,#041226); color: #d8f1ff; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+  [${ROOT_ATTR}] { position: fixed; inset: 0; z-index: 999999; display: flex; justify-content: center; align-items: center; background: rgba(2,10,20,.72); padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); box-sizing: border-box; }
+  [${ROOT_ATTR}] .eden-rs-modal { width: min(96vw, 760px); max-height: calc(100dvh - 16px); overflow: hidden; display: flex; flex-direction: column; border-radius: 16px; border: 1px solid #1a7fc5; background: linear-gradient(180deg,#031727,#041226); color: #d8f1ff; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
   [${ROOT_ATTR}] .eden-rs-head { padding: 14px 16px; border-bottom: 1px solid rgba(80,180,255,.25); font-size: 18px; font-weight: 700; }
   [${ROOT_ATTR}] .eden-rs-desc { padding: 10px 16px 0; font-size: 13px; color: #a7d8f8; }
-  [${ROOT_ATTR}] .eden-rs-list { padding: 12px 16px 16px; overflow: auto; display: grid; gap: 10px; }
+  [${ROOT_ATTR}] .eden-rs-tools { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 16px 0; align-items: center; }
+  [${ROOT_ATTR}] .eden-rs-search { min-height: 38px; border: 1px solid rgba(80,180,255,.35); border-radius: 10px; background: rgba(8,24,46,.72); color: #eaf8ff; padding: 0 11px; outline: none; width: 100%; box-sizing: border-box; }
+  [${ROOT_ATTR}] .eden-rs-search::placeholder { color: rgba(167,216,248,.7); }
+  [${ROOT_ATTR}] .eden-rs-count-chip { white-space: nowrap; font-size: 12px; color: #a7d8f8; border: 1px solid rgba(80,180,255,.28); border-radius: 999px; padding: 4px 10px; background: rgba(8,24,46,.45); }
+  [${ROOT_ATTR}] .eden-rs-list { padding: 12px 16px 16px; overflow: auto; display: grid; gap: 10px; -webkit-overflow-scrolling: touch; }
   [${ROOT_ATTR}] .eden-rs-item { border: 1px solid rgba(80,180,255,.3); border-radius: 12px; padding: 10px 12px; background: rgba(8,24,46,.6); }
-  [${ROOT_ATTR}] .eden-rs-line { display: flex; align-items: center; gap: 8px; }
-  [${ROOT_ATTR}] .eden-rs-name { font-size: 16px; font-weight: 700; color: #f0fbff; }
-  [${ROOT_ATTR}] .eden-rs-identity { font-size: 12px; color: #9ccff3; }
-  [${ROOT_ATTR}] .eden-rs-summary { margin-top: 6px; font-size: 13px; line-height: 1.5; color: #c9e6fb; }
-  [${ROOT_ATTR}] .eden-rs-loc { margin-top: 6px; font-size: 12px; color: #89c4ed; }
-  [${ROOT_ATTR}] .eden-rs-foot { padding: 12px 16px 16px; border-top: 1px solid rgba(80,180,255,.25); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  [${ROOT_ATTR}] .eden-rs-line { display: flex; align-items: flex-start; gap: 8px; }
+  [${ROOT_ATTR}] .eden-rs-line input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: #4ab8ff; flex: 0 0 auto; }
+  [${ROOT_ATTR}] .eden-rs-name { font-size: 16px; font-weight: 700; color: #f0fbff; line-height: 1.3; word-break: break-word; }
+  [${ROOT_ATTR}] .eden-rs-identity { font-size: 12px; color: #9ccff3; line-height: 1.35; }
+  [${ROOT_ATTR}] .eden-rs-summary { margin-top: 6px; font-size: 13px; line-height: 1.5; color: #c9e6fb; word-break: break-word; }
+  [${ROOT_ATTR}] .eden-rs-loc { margin-top: 6px; font-size: 12px; color: #89c4ed; word-break: break-word; }
+  [${ROOT_ATTR}] .eden-rs-foot { padding: 12px 16px 16px; border-top: 1px solid rgba(80,180,255,.25); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(3, 17, 36, .95); }
   [${ROOT_ATTR}] .eden-rs-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  [${ROOT_ATTR}] .eden-rs-btn { border: 1px solid #2a91d6; border-radius: 10px; padding: 8px 12px; background: #0a2742; color: #e7f6ff; cursor: pointer; }
+  [${ROOT_ATTR}] .eden-rs-btn { border: 1px solid #2a91d6; border-radius: 10px; padding: 9px 12px; min-height: 38px; background: #0a2742; color: #e7f6ff; cursor: pointer; font-size: 13px; }
   [${ROOT_ATTR}] .eden-rs-btn.primary { background: #0b5a88; border-color: #47b8ff; }
   [${ROOT_ATTR}] .eden-rs-btn:disabled { opacity: .5; cursor: not-allowed; }
   [${ROOT_ATTR}] .eden-rs-count { font-size: 12px; color: #9dd2f6; }
+  @media (max-width: 760px) {
+    [${ROOT_ATTR}] { padding: 0; align-items: stretch; }
+    [${ROOT_ATTR}] .eden-rs-modal { width: 100vw; max-height: 100dvh; border-radius: 0; }
+    [${ROOT_ATTR}] .eden-rs-head { position: sticky; top: 0; z-index: 2; background: rgba(3, 23, 39, .98); }
+    [${ROOT_ATTR}] .eden-rs-tools { grid-template-columns: 1fr; }
+    [${ROOT_ATTR}] .eden-rs-foot { position: sticky; bottom: 0; z-index: 2; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    [${ROOT_ATTR}] .eden-rs-actions { width: 100%; }
+    [${ROOT_ATTR}] .eden-rs-btn { flex: 1 1 calc(50% - 8px); }
+  }
   `;
   $('<style></style>').attr(STYLE_ATTR, '1').text(css).appendTo('head');
 }
@@ -478,7 +564,7 @@ function closeSelector() {
 function renderSelector(options: {
   state: RoleSelectorStateLike;
   catalog: RoleCatalogItem[];
-  onConfirm: (selected: string[], deleteUnselected: boolean) => Promise<void>;
+  onConfirm: (selected: string[]) => Promise<void>;
   onRefresh?: () => void;
   onOpenCreator?: () => void;
 }) {
@@ -486,27 +572,49 @@ function renderSelector(options: {
   ensureCss();
 
   const catalog = options.catalog ?? [];
-  const selectedSet = new Set(options.state.selected_roles);
-  let deleteUnselected = readDeleteUnselectedFlag();
+  const selectedSet = new Set(normalizeRoleListCanonical(options.state.selected_roles ?? []));
   const $root = $('<div></div>').attr(ROOT_ATTR, '1');
   const $modal = $('<div class="eden-rs-modal"></div>').appendTo($root);
-  $('<div class="eden-rs-head">开局角色选择器</div>').appendTo($modal);
+  $('<div class="eden-rs-head">角色批量删除器</div>').appendTo($modal);
   $(
-    '<div class="eden-rs-desc">请勾选本次开局要出场的角色。未勾选角色会被初始化为离场，不显示、不触发；后续可通过剧情或按钮解锁。</div>',
+    '<div class="eden-rs-desc">请勾选“保留”的角色。未勾选角色将被永久删除（当前变量 / 角色档案索引 / initvar），并加入删除标记，不会再参与动态档案注入。</div>',
   ).appendTo($modal);
+  const $tools = $('<div class="eden-rs-tools"></div>').appendTo($modal);
+  const $search = $('<input class="eden-rs-search" type="search" placeholder="搜索角色 / 简介 / 位置…" />').appendTo($tools);
+  const $visibleCount = $('<div class="eden-rs-count-chip"></div>').appendTo($tools);
 
   const $list = $('<div class="eden-rs-list"></div>').appendTo($modal);
   const updateCount = () => {
     $count.text(`已勾选 ${selectedSet.size} / ${catalog.length}`);
+    const visible = $list.children(':visible').length;
+    $visibleCount.text(`显示 ${visible} / ${catalog.length}`);
+  };
+
+  const applyFilter = () => {
+    const q = String($search.val() ?? '')
+      .trim()
+      .toLowerCase();
+    $list.children('.eden-rs-item').each((_, el) => {
+      const $el = $(el);
+      if (!q) {
+        $el.show();
+        return;
+      }
+      const haystack = String($el.attr('data-search') ?? '').toLowerCase();
+      $el.toggle(haystack.includes(q));
+    });
+    updateCount();
   };
 
   for (const role of catalog) {
-    const checked = selectedSet.has(role.name);
+    const canonical = canonicalizeRoleName(role.name);
+    const checked = canonical ? selectedSet.has(canonical) : false;
     const id = `eden-rs-${role.name}`;
     const identityText = role.identity?.trim() || '自定义角色';
     const summaryText = role.summary?.trim() || '（暂无简介）';
     const locationText = role.location?.trim() || '未设置位置';
-    const $item = $('<label class="eden-rs-item"></label>').appendTo($list);
+    const searchText = [role.name, identityText, summaryText, locationText, ...(role.aliases ?? [])].join('\n');
+    const $item = $('<label class="eden-rs-item"></label>').attr('data-search', searchText).appendTo($list);
     const $line = $('<div class="eden-rs-line"></div>').appendTo($item);
     const $check = $('<input type="checkbox" />').attr('id', id).prop('checked', checked).appendTo($line);
     $('<span class="eden-rs-name"></span>').text(role.name).appendTo($line);
@@ -515,8 +623,9 @@ function renderSelector(options: {
     $('<div class="eden-rs-loc"></div>').text(`所在位置：${locationText}`).appendTo($item);
 
     $check.on('change', () => {
-      if ($check.is(':checked')) selectedSet.add(role.name);
-      else selectedSet.delete(role.name);
+      if (!canonical) return;
+      if ($check.is(':checked')) selectedSet.add(canonical);
+      else selectedSet.delete(canonical);
       updateCount();
     });
   }
@@ -529,17 +638,7 @@ function renderSelector(options: {
   const $btnAll = $('<button class="eden-rs-btn" type="button">全选</button>').appendTo($actions);
   const $btnNone = $('<button class="eden-rs-btn" type="button">清空</button>').appendTo($actions);
   const $btnCancel = $('<button class="eden-rs-btn" type="button">取消</button>').appendTo($actions);
-  const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认并初始化</button>').appendTo($actions);
-  const $deleteLabel = $(
-    '<label class="eden-rs-count" style="display:flex;gap:6px;align-items:center;"></label>',
-  ).appendTo($foot);
-  const $deleteInput = $('<input type="checkbox" />').prop('checked', deleteUnselected).appendTo($deleteLabel);
-  $('<span>未勾选角色彻底删除（等同X按钮）</span>').appendTo($deleteLabel);
-
-  $deleteInput.on('change', () => {
-    deleteUnselected = $deleteInput.is(':checked');
-    saveDeleteUnselectedFlag(deleteUnselected);
-  });
+  const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认删除未勾选</button>').appendTo($actions);
 
   $btnCreate.on('click', () => {
     options.onOpenCreator?.();
@@ -551,7 +650,10 @@ function renderSelector(options: {
 
   $btnAll.on('click', () => {
     selectedSet.clear();
-    catalog.forEach(role => selectedSet.add(role.name));
+    catalog.forEach(role => {
+      const canonical = canonicalizeRoleName(role.name);
+      if (canonical) selectedSet.add(canonical);
+    });
     $list.find('input[type="checkbox"]').prop('checked', true);
     updateCount();
   });
@@ -562,33 +664,38 @@ function renderSelector(options: {
     updateCount();
   });
 
+  $search.on('input', () => {
+    applyFilter();
+  });
+
   $btnCancel.on('click', () => {
     closeSelector();
   });
 
   $btnConfirm.on('click', async () => {
     const selected = Array.from(selectedSet.values());
-    if (selected.length === 0) {
-      toastr.warning('请至少勾选 1 位角色');
+    if (selected.length === 0 && !window.confirm('当前未勾选任何角色，将删除全部可见角色数据。确认继续吗？')) {
       return;
     }
 
-    $btnConfirm.prop('disabled', true).text('初始化中...');
+    $btnConfirm.prop('disabled', true).text('处理中...');
     try {
-      await options.onConfirm(selected, deleteUnselected);
+      await options.onConfirm(selected);
       closeSelector();
     } finally {
-      $btnConfirm.prop('disabled', false).text('确认并初始化');
+      $btnConfirm.prop('disabled', false).text('确认删除未勾选');
     }
   });
 
   updateCount();
+  applyFilter();
   $('body').append($root);
 }
 
 async function buildMergedCatalog(state: RoleSelectorStateLike): Promise<RoleCatalogItem[]> {
   const extra = await loadCatalogFromWorldbookIndex();
-  return mergeRoleCatalog(ROLE_CATALOG, extra, state.selected_roles ?? []);
+  const deletedSet = readDeletedRoleSet(state);
+  return mergeRoleCatalog(ROLE_CATALOG, extra, state.selected_roles ?? [], deletedSet);
 }
 
 function openRoleCreatorFromSelector() {
@@ -600,35 +707,60 @@ function openRoleCreatorFromSelector() {
   toastr.warning('未检测到角色创建器事件接口');
 }
 
-async function applyRoleSelection(selected: string[], deleteUnselected: boolean) {
+async function applyRoleSelection(selected: string[]) {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
   const catalog = await buildMergedCatalog(state);
-  const catalogByName = new Map(catalog.map(item => [canonicalizeRoleName(item.name), item]));
+  const catalogCanonical = _.uniq(
+    catalog
+      .map(item => canonicalizeRoleName(item.name))
+      .filter(Boolean),
+  );
+  const catalogCanonicalSet = new Set(catalogCanonical);
   const normalizedSelected = _(selected)
     .map(name => canonicalizeRoleName(name))
+    .filter(name => catalogCanonicalSet.has(name))
     .filter(Boolean)
     .uniq()
     .value();
+  const selectedSet = new Set(normalizedSelected);
+  const removedFromSelectionSet = new Set(catalogCanonical.filter(name => !selectedSet.has(name)));
+  const mergedDeleted = _.uniq([...(state.deleted_roles ?? []), ...Array.from(removedFromSelectionSet)]);
   const nextState = normalizeRoleSelectorState({
     ...state,
     version: state.version || 1,
     initialized: true,
     selected_roles: normalizedSelected,
     revealed_roles: normalizedSelected,
+    deleted_roles: mergedDeleted,
+    pending_unlock: (state.pending_unlock ?? []).filter(name => !removedFromSelectionSet.has(canonicalizeRoleName(name))),
     initialized_at_message_id: getCurrentMessageIdSafe(),
   });
 
   saveRoleSelectorStateToChat(nextState);
 
-  const enabledSet = new Set(nextState.revealed_roles);
+  let removedFromStatData = new Set<string>();
   await replaceLatestStatData(stat_data => {
-    materializeSelectedRoles(stat_data, enabledSet, catalogByName);
-    applySelectionToStatData(stat_data, enabledSet, deleteUnselected);
+    removedFromStatData = applySelectionToStatData(stat_data, selectedSet);
     _.set(stat_data, '主线任务.$meta.角色控制', nextState);
   });
+  const removedSet = new Set([...Array.from(removedFromSelectionSet), ...Array.from(removedFromStatData)]);
+
+  const worldbookName = await resolveDefaultWorldbookName();
+  if (worldbookName) {
+    try {
+      await pruneDossierIndexByRemovedRoles(worldbookName, removedSet);
+      await pruneInitvarByRemovedRoles(worldbookName, removedSet);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      toastr.warning(`世界书同步裁剪失败：${reason}`);
+    }
+  } else if (removedSet.size > 0) {
+    toastr.warning('未找到世界书，已仅删除当前变量中的未勾选角色');
+  }
+
   await notifyRoleSelectorUpdated();
 
-  toastr.success(`角色选择已保存：${nextState.selected_roles.length} 位角色`);
+  toastr.success(`角色删除已完成：保留 ${nextState.selected_roles.length} 位，删除 ${removedSet.size} 位`);
   reloadIframe();
 }
 
@@ -645,37 +777,25 @@ async function openSelector() {
 }
 
 async function resetSelectionToDefault() {
-  const nextState = createDefaultRoleSelectorState();
-  nextState.initialized = true;
-  nextState.initialized_at_message_id = getCurrentMessageIdSafe();
+  const state = readRoleSelectorStateFromChatVars(getChatVars());
+  const defaults = createDefaultRoleSelectorState();
+  const nextState = normalizeRoleSelectorState({
+    ...state,
+    initialized: true,
+    selected_roles: defaults.selected_roles,
+    revealed_roles: defaults.revealed_roles,
+    deleted_roles: [],
+    pending_unlock: [],
+    initialized_at_message_id: getCurrentMessageIdSafe(),
+  });
   saveRoleSelectorStateToChat(nextState);
 
-  const enabledSet = new Set(nextState.revealed_roles);
-  const catalogByName = new Map(ROLE_CATALOG.map(item => [item.name, item]));
   await replaceLatestStatData(stat_data => {
-    materializeSelectedRoles(stat_data, enabledSet, catalogByName);
-    applySelectionToStatData(stat_data, enabledSet, false);
     _.set(stat_data, '主线任务.$meta.角色控制', nextState);
   });
   await notifyRoleSelectorUpdated();
 
-  toastr.success('已重置为默认角色选择');
-  reloadIframe();
-}
-
-async function applyPendingUnlockFromChat() {
-  const state = readRoleSelectorStateFromChatVars(getChatVars());
-  const next = applyPendingUnlocks(state);
-  if (_.isEqual(next, state)) {
-    toastr.info('没有待应用的剧情解锁角色');
-    return;
-  }
-  saveRoleSelectorStateToChat(next);
-  await replaceLatestStatData(stat_data => {
-    _.set(stat_data, '主线任务.$meta.角色控制', next);
-  });
-  await notifyRoleSelectorUpdated();
-  toastr.success(`已应用剧情解锁：当前可见角色 ${next.revealed_roles.length} 位`);
+  toastr.success('已清空删除标记并恢复默认勾选（不会自动恢复已删除角色数据）');
   reloadIframe();
 }
 
@@ -702,7 +822,6 @@ function ensureButtons() {
   appendInexistentScriptButtons([
     { name: BTN_OPEN, visible: true },
     { name: BTN_RESET, visible: true },
-    { name: BTN_APPLY_PENDING, visible: true },
     { name: BTN_TOGGLE_DOSSIER_DEBUG, visible: true },
   ]);
 }
@@ -716,10 +835,6 @@ function bindButtons() {
 
   eventOn(getButtonEvent(BTN_RESET), () => {
     void resetSelectionToDefault();
-  });
-
-  eventOn(getButtonEvent(BTN_APPLY_PENDING), () => {
-    void applyPendingUnlockFromChat();
   });
 
   eventOn(getButtonEvent(BTN_TOGGLE_DOSSIER_DEBUG), () => {

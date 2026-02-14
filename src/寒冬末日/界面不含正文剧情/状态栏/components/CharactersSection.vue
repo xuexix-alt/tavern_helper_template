@@ -2,7 +2,16 @@
   <section id="characters-section" class="section">
     <div class="section-header">
       <h2 class="section-title">👤 登场角色 👤</h2>
-      <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
+      <div class="section-header-actions">
+        <button class="role-add-btn secondary" type="button" @click="openRoleSelectorFromUi">
+          {{ roleSelectorButtonText }}
+        </button>
+        <button class="role-add-btn" type="button" @click="openAddRole">+ 添加角色</button>
+      </div>
+    </div>
+    <div v-if="isHistoryMode" class="history-mode-banner">
+      <span>当前回看楼层 #{{ historyMessageId ?? '?' }}，角色数据按该楼层显示</span>
+      <button class="history-mode-back-btn" type="button" @click="switchCharactersToLatest">返回最新</button>
     </div>
     <div class="status-tabs-container">
       <template v-if="active_character_keys.length > 0">
@@ -609,7 +618,7 @@ import {
   readRoleSelectorStateFromStatData,
 } from '../../../role_control';
 import { useDataStore } from '../../store';
-import { getViewMessageState, resolveViewMessageId } from '../../../界面/viewMessage';
+import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../../界面/viewMessage';
 
 // 扩展 CharacterKey 以包含临时 NPC 的 key (格式: "临时NPC:姓名")
 type TempNpcKey = `临时NPC:${string}`;
@@ -650,8 +659,26 @@ const roleModalMaxHeightPx = computed(() => {
 });
 const roleModalMaxHeight = computed(() => `${roleModalMaxHeightPx.value}px`);
 const roleModalBodyMaxHeight = computed(() => `${Math.max(200, roleModalMaxHeightPx.value - 160)}px`);
+const isHistoryMode = computed(() => store.viewMessageState.mode === 'history');
+const historyMessageId = computed(() => {
+  const id = Number(store.viewMessageState.message_id);
+  if (!Number.isFinite(id) || id < 0) return null;
+  return Math.trunc(id);
+});
 
 const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
+
+function openRoleSelectorFromUi() {
+  if (typeof eventEmit === 'function') {
+    eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
+    return;
+  }
+  toastr.warning('未检测到角色选择器脚本，请先启用「开局角色选择器」');
+}
+
+function switchCharactersToLatest() {
+  setViewMessageLatest('characters-section');
+}
 
 function isRoleLike(val: any): boolean {
   if (!val || typeof val !== 'object') return false;
@@ -668,22 +695,31 @@ function listExtraCoreKeys(): string[] {
     .sort();
 }
 
+const roleSelectorStateForUi = computed(() => {
+  const data = store.data as Record<string, any>;
+  try {
+    const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
+    const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
+    if (roleRoot && typeof roleRoot === 'object') {
+      return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
+    }
+  } catch {
+    // ignore and fallback
+  }
+  return readRoleSelectorStateFromStatData(data);
+});
+
+const roleSelectorButtonText = computed(() => {
+  const selectedCount = roleSelectorStateForUi.value?.selected_roles?.length ?? 0;
+  const deletedCount = roleSelectorStateForUi.value?.deleted_roles?.length ?? 0;
+  return `角色批量删除（启用${selectedCount} / 已删${deletedCount}）`;
+});
+
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
 
   const data = store.data as Record<string, any>;
-  const roleSelector = (() => {
-    try {
-      const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
-      const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
-      if (roleRoot && typeof roleRoot === 'object') {
-        return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
-      }
-    } catch {
-      // ignore and fallback
-    }
-    return readRoleSelectorStateFromStatData(data);
-  })();
+  const roleSelector = roleSelectorStateForUi.value;
   const isEnabled = (roleName: string) => isRoleEnabledBySelectorState(roleSelector, roleName);
 
   // 1. 固定角色按固定顺序
@@ -2874,6 +2910,44 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.section-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.history-mode-banner {
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 214, 102, 0.45);
+  background: rgba(255, 214, 102, 0.15);
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82em;
+  color: #fff6d7;
+}
+
+.history-mode-back-btn {
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.history-mode-back-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .role-add-btn {
   padding: 6px 12px;
   border-radius: 999px;
@@ -2890,6 +2964,21 @@ onBeforeUnmount(() => {
 .role-add-btn:hover {
   transform: translateY(-1px);
   background: rgba(0, 180, 216, 0.2);
+}
+
+.role-add-btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.role-add-btn.secondary {
+  border-color: rgba(188, 161, 255, 0.5);
+  background: rgba(188, 161, 255, 0.12);
+}
+
+.role-add-btn.secondary:hover {
+  background: rgba(188, 161, 255, 0.2);
 }
 
 .role-modal-mask {
@@ -3335,5 +3424,21 @@ onBeforeUnmount(() => {
 .role-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .section-header {
+    align-items: flex-start;
+  }
+
+  .section-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .role-add-btn {
+    font-size: 0.76em;
+    padding: 5px 10px;
+  }
 }
 </style>

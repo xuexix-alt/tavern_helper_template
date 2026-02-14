@@ -92,6 +92,7 @@ const 角色控制Schema = z
     initialized: z.boolean().prefault(false),
     selected_roles: z.array(z.string()).prefault([]),
     revealed_roles: z.array(z.string()).prefault([]),
+    deleted_roles: z.array(z.string()).prefault([]),
     initialized_at_message_id: z.coerce
       .number()
       .int()
@@ -105,6 +106,7 @@ const 角色控制Schema = z
     initialized: false,
     selected_roles: [],
     revealed_roles: [],
+    deleted_roles: [],
     initialized_at_message_id: 0,
     pending_unlock: [],
     debug_dossier_inject: false,
@@ -419,6 +421,7 @@ export const Schema = z
               initialized: false,
               selected_roles: [],
               revealed_roles: [],
+              deleted_roles: [],
               initialized_at_message_id: 0,
               pending_unlock: [],
               debug_dossier_inject: false,

@@ -535,6 +535,7 @@
               "initialized": false,
               "selected_roles": [],
               "revealed_roles": [],
+              "deleted_roles": [],
               "initialized_at_message_id": 0,
               "pending_unlock": [],
               "debug_dossier_inject": false
@@ -599,6 +600,7 @@
                 "initialized": false,
                 "selected_roles": [],
                 "revealed_roles": [],
+                "deleted_roles": [],
                 "initialized_at_message_id": 0,
                 "pending_unlock": [],
                 "debug_dossier_inject": false
@@ -622,6 +624,13 @@
                   }
                 },
                 "revealed_roles": {
+                  "default": [],
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "deleted_roles": {
                   "default": [],
                   "type": "array",
                   "items": {

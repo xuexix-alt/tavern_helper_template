@@ -1,7 +1,10 @@
 import { Schema } from '../schema';
-import { getViewMessageState, onViewMessageChanged } from '../界面/viewMessage';
+import { autoReprocessWhenLatestMessageMutated, reprocessLatestMessageVariables } from '../mvu_reprocess';
+import { getViewMessageState, onViewMessageChanged, resolveViewMessageId } from '../界面/viewMessage';
+import { normalizeRoomTag, parseRoomTag } from '../util/room';
 
 const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
+const RESERVED_TOP_LEVEL_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
 
 // 完整的初始默认值 - 使用 Schema.parse({}) 会自动应用所有 prefault
 const initialData: z.output<typeof Schema> = Schema.parse({});
@@ -24,6 +27,77 @@ function readUiStoreDebugFlag(): boolean {
   } catch {
     return false;
   }
+}
+
+function isObjectRecord(val: any): val is Record<string, any> {
+  return !!val && typeof val === 'object' && !Array.isArray(val);
+}
+
+function sanitizeRoleObjectInPlace(role: any) {
+  if (!isObjectRecord(role)) return;
+  const roomRaw = String(_.get(role, '所在房间', '') ?? '');
+  const normalized = normalizeRoomTag(roomRaw);
+  _.set(role, '所在房间', parseRoomTag(normalized).kind === 'none' ? '' : normalized);
+}
+
+function sanitizeStatDataForUi(raw: any): Record<string, any> {
+  if (!isObjectRecord(raw)) return {};
+  const next = _.cloneDeep(raw) as Record<string, any>;
+
+  for (const key of Object.keys(next)) {
+    const val = next[key];
+    if (RESERVED_TOP_LEVEL_KEYS.has(key)) {
+      if (key === '临时NPC') {
+        if (!isObjectRecord(val)) {
+          next[key] = {};
+          continue;
+        }
+        for (const npcName of Object.keys(val)) {
+          if (!isObjectRecord(val[npcName])) {
+            delete val[npcName];
+            continue;
+          }
+          sanitizeRoleObjectInPlace(val[npcName]);
+        }
+      } else if (!isObjectRecord(val)) {
+        next[key] = {};
+      }
+      continue;
+    }
+
+    if (!isObjectRecord(val)) {
+      delete next[key];
+      continue;
+    }
+    sanitizeRoleObjectInPlace(val);
+  }
+
+  return next;
+}
+
+function countRoleLikeEntries(statData: any): number {
+  if (!isObjectRecord(statData)) return 0;
+  let count = 0;
+
+  for (const key of Object.keys(statData)) {
+    if (RESERVED_TOP_LEVEL_KEYS.has(key)) continue;
+    const role = statData[key];
+    if (isObjectRecord(role) && '登场状态' in role && '健康' in role) {
+      count += 1;
+    }
+  }
+
+  const tempNpc = statData.临时NPC;
+  if (isObjectRecord(tempNpc)) {
+    for (const npcName of Object.keys(tempNpc)) {
+      const role = tempNpc[npcName];
+      if (isObjectRecord(role) && '登场状态' in role && '健康' in role) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
 }
 
 export const useDataStore = defineStore(
@@ -56,7 +130,18 @@ export const useDataStore = defineStore(
 
         const parsed = Schema.safeParse(raw_stat_data);
         if (!parsed.success) {
-          const firstIssue = parsed.error.issues[0];
+          const sanitized = sanitizeStatDataForUi(raw_stat_data);
+          const reparsed = Schema.safeParse(sanitized);
+          if (reparsed.success) {
+            // eslint-disable-next-line no-console
+            console.warn?.('[eden/ui_store] sanitized invalid stat_data for UI rendering', {
+              source,
+              issue: parsed.error.issues[0]?.message ?? 'schema_parse_failed',
+            });
+            return { ok: true, source, data: reparsed.data };
+          }
+
+          const firstIssue = reparsed.error.issues[0] ?? parsed.error.issues[0];
           const issuePath = firstIssue?.path?.length ? firstIssue.path.join('.') : 'root';
           return { ok: false, reason: `${source}: ${issuePath} ${firstIssue?.message ?? 'schema_parse_failed'}` };
         }
@@ -86,11 +171,8 @@ export const useDataStore = defineStore(
     };
 
     const resolveTargetMessageId = (): number | 'latest' => {
-      const mode = viewMessageState.value.mode;
-      const selectedId = Number(viewMessageState.value.message_id);
-      if (mode === 'history' && Number.isFinite(selectedId) && selectedId >= 0) {
-        return Math.trunc(selectedId);
-      }
+      const resolved = Number(resolveViewMessageId({ preferHistory: true }));
+      if (Number.isFinite(resolved) && resolved >= 0) return Math.trunc(resolved);
 
       const latestAssistantId = resolveLatestAssistantMessageId();
       if (latestAssistantId != null) return latestAssistantId;
@@ -98,13 +180,6 @@ export const useDataStore = defineStore(
       try {
         const lastId = typeof getLastMessageId === 'function' ? Number(getLastMessageId()) : NaN;
         if (Number.isFinite(lastId) && lastId >= 0) return Math.trunc(lastId);
-      } catch {
-        // ignore
-      }
-
-      try {
-        const currentId = Number(getCurrentMessageId?.());
-        if (Number.isFinite(currentId) && currentId >= 0) return Math.trunc(currentId);
       } catch {
         // ignore
       }
@@ -176,7 +251,31 @@ export const useDataStore = defineStore(
 
       refresh_from_mvu();
 
-      eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, refresh_from_mvu);
+      eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (variables: any, variables_before_update: any) => {
+        refresh_from_mvu();
+
+        // 兜底：某些“重新处理变量”流程会导致整份角色结构被清空，检测到从有到无时强制按最新楼层重算一次。
+        const beforeCount = countRoleLikeEntries(_.get(variables_before_update, 'stat_data', {}));
+        const afterCount = countRoleLikeEntries(_.get(variables, 'stat_data', {}));
+        if (beforeCount > 0 && afterCount === 0) {
+          void reprocessLatestMessageVariables({
+            allowHistory: true,
+            force: true,
+            emitRoleSelectorUpdated: true,
+            refreshMessage: false,
+          }).then(result => {
+            if (result.status === 'applied') {
+              refresh_from_mvu();
+              if (isDebug) {
+                // eslint-disable-next-line no-console
+                console.debug?.('[eden/ui_store(no_story)] repaired empty-role collapse after VARIABLE_UPDATE_ENDED', {
+                  message_id: result.message_id,
+                });
+              }
+            }
+          });
+        }
+      });
       eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh_from_mvu);
 
       // 角色选择器保存后会主动广播该事件，避免必须手动重载 UI。
@@ -184,9 +283,25 @@ export const useDataStore = defineStore(
 
       // 兼容：当外部通过 setChatMessages(refresh:'affected'|'all') 刷新楼层时，主动同步一次。
       if (typeof tavern_events !== 'undefined') {
-        eventOn(tavern_events.MESSAGE_UPDATED as any, (_updated_message_id: number) => {
+        const onMessageMutated = (updated_message_id: number) => {
           refresh_from_mvu();
-        });
+          void autoReprocessWhenLatestMessageMutated(updated_message_id).then(result => {
+            if (result.status === 'applied') {
+              refresh_from_mvu();
+              if (isDebug) {
+                // eslint-disable-next-line no-console
+                console.debug?.('[eden/ui_store(no_story)] auto reprocessed latest message after mutation', {
+                  message_id: result.message_id,
+                });
+              }
+            }
+          });
+        };
+
+        eventOn(tavern_events.MESSAGE_UPDATED as any, onMessageMutated as any);
+        eventOn(tavern_events.MESSAGE_EDITED as any, onMessageMutated as any);
+        eventOn(tavern_events.MESSAGE_SWIPED as any, onMessageMutated as any);
+
         eventOn(tavern_events.MESSAGE_RECEIVED as any, (_message_id: number) => {
           refresh_from_mvu();
         });

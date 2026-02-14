@@ -1,5 +1,14 @@
 const ANCHOR_STORAGE_KEY = 'eden:samelayer:anchor_message_id';
 
+function normalizeAnchorCandidate(raw: unknown): number | null {
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  if (!text) return null;
+  const value = Number(text);
+  if (!Number.isFinite(value)) return null;
+  return Math.trunc(value);
+}
+
 function readContext(): any {
   try {
     return (window as any).SillyTavern?.getContext?.() ?? null;
@@ -34,15 +43,15 @@ function readAssistantIdsFromDom(): number[] {
 
 function readPreferredAnchorId(): number | null {
   try {
-    const fromWindow = Number((window as any).__EDEN_SAMELAYER_ANCHOR_ID);
-    if (Number.isFinite(fromWindow)) return fromWindow;
+    const fromWindow = normalizeAnchorCandidate((window as any).__EDEN_SAMELAYER_ANCHOR_ID);
+    if (fromWindow != null) return fromWindow;
   } catch {
     // ignore
   }
 
   try {
-    const fromStorage = Number(localStorage.getItem(ANCHOR_STORAGE_KEY));
-    if (Number.isFinite(fromStorage)) return fromStorage;
+    const fromStorage = normalizeAnchorCandidate(localStorage.getItem(ANCHOR_STORAGE_KEY));
+    if (fromStorage != null) return fromStorage;
   } catch {
     // ignore
   }
@@ -62,9 +71,8 @@ export function resolveSameLayerAnchorMessageId(): number | null {
 
   const preferred = readPreferredAnchorId();
   if (preferred != null && ids.includes(preferred)) return preferred;
-
-  if (ids.includes(0)) return 0;
-  return ids[0] ?? null;
+  // 默认锚点改为“最新助手楼层”，避免与变量重处理的最新楼层语义错位。
+  return ids[ids.length - 1] ?? null;
 }
 
 export function resolveSameLayerLatestAssistantMessageId(): number | null {

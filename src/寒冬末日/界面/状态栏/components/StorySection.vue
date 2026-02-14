@@ -259,6 +259,8 @@ const BridgeEventType = {
   GENERATE_RESPONSE: SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE,
   LLM_PROMPT_REQUEST: SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_REQUEST,
   LLM_PROMPT_RESPONSE: SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_RESPONSE,
+  CACHE_QUERY: SAMELAYER_EVENTS.CHATU8_CACHE_QUERY,
+  CACHE_RESPONSE: SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE,
 } as const;
 
 const Chatu8EventType = {
@@ -287,6 +289,7 @@ const IMAGE_TAG_HINTS = ['image', 'img', 'sd', 'draw', 'paint', 'picture', 'pic'
 // 因此这里尝试从 retrieveDisplayedMessage(message_id) 中，把 xxx###...### 对应的图片 src 解析出来。
 const resolvedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
 const generatedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
+const cachedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
 const imagePromptUi = ref<Record<string, ImagePromptUiState>>({});
 const hostImageButtonStateByPrompt = ref<Record<string, HostImageButtonState>>({});
 const externalPromptRaws = ref<string[]>([]);
@@ -342,12 +345,12 @@ function mergeImageMap(
     if (!Array.isArray(list) || list.length === 0) continue;
     const prev = Array.isArray(out[prompt]) ? out[prompt] : [];
     const merged = [...prev];
-    const seen = new Set(prev.map(it => `${it.src}@@${it.alt}`));
+    const seen = new Set(prev.map(it => getImageSourceIdentity(it.src) || `${it.src}@@${it.alt}`));
     for (const item of list) {
       if (!item?.src) continue;
-      const key = `${item.src}@@${item.alt ?? ''}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      const identity = getImageSourceIdentity(item.src) || `${item.src}@@${item.alt ?? ''}`;
+      if (seen.has(identity)) continue;
+      seen.add(identity);
       merged.push({ src: item.src, alt: item.alt ?? '' });
     }
     out[prompt] = merged;
@@ -355,18 +358,20 @@ function mergeImageMap(
   return out;
 }
 
-const mergedImagesByPrompt = computed<Record<string, ResolvedDisplayedImage[]>>(() =>
-  mergeImageMap(resolvedImagesByPrompt.value ?? {}, generatedImagesByPrompt.value ?? {}),
-);
+const mergedImagesByPrompt = computed<Record<string, ResolvedDisplayedImage[]>>(() => {
+  // 合并优先级：缓存(最低) → DOM抓取(中) → 事件通道(最高)
+  const base = mergeImageMap(cachedImagesByPrompt.value ?? {}, resolvedImagesByPrompt.value ?? {});
+  return mergeImageMap(base, generatedImagesByPrompt.value ?? {});
+});
 
 function appendImageHistory(
   source: ResolvedDisplayedImage[],
   incoming: ResolvedDisplayedImage,
 ): ResolvedDisplayedImage[] {
   const out = Array.isArray(source) ? source.slice() : [];
-  const key = `${incoming.src}@@${incoming.alt ?? ''}`;
-  const seen = new Set(out.map(it => `${it.src}@@${it.alt ?? ''}`));
-  if (!seen.has(key)) out.push({ src: incoming.src, alt: incoming.alt ?? '' });
+  const identity = getImageSourceIdentity(incoming.src) || `${incoming.src}@@${incoming.alt ?? ''}`;
+  const seen = new Set(out.map(it => getImageSourceIdentity(it.src) || `${it.src}@@${it.alt ?? ''}`));
+  if (!seen.has(identity)) out.push({ src: incoming.src, alt: incoming.alt ?? '' });
   return out;
 }
 
@@ -692,10 +697,18 @@ function onChatu8ImageResponse(payload: unknown, channel: RequestChannel) {
   }
 
   const current = generatedImagesByPrompt.value?.[pending.rawPrompt] ?? [];
-  generatedImagesByPrompt.value = {
+  const imageEntry = { src, alt: '生成图片' };
+  const updated = {
     ...(generatedImagesByPrompt.value ?? {}),
-    [pending.rawPrompt]: appendImageHistory(current, { src, alt: '生成图片' }),
+    [pending.rawPrompt]: appendImageHistory(current, imageEntry),
   };
+  // 同时写入 normalized key（如果与 rawPrompt 不同），确保跨渲染周期查找稳定
+  const normalizedKey = normalizePromptBodyForCompare(pending.rawPrompt);
+  if (normalizedKey && normalizedKey !== pending.rawPrompt) {
+    const normalizedCurrent = updated[normalizedKey] ?? [];
+    updated[normalizedKey] = appendImageHistory(normalizedCurrent, imageEntry);
+  }
+  generatedImagesByPrompt.value = updated;
   setImagePromptUi(pending.rawPrompt, {
     isLoading: false,
     message: '已收到图片',
@@ -714,6 +727,8 @@ function onChatu8LlmPromptResponse(payload: unknown, channel: RequestChannel) {
   window.clearTimeout(pending.timeoutId);
 
   const source = String(data.source ?? data.from ?? '').trim();
+  const success = data.success === true || data.ok === true;
+  const errorText = String(data.error ?? data.reason ?? '').trim();
   const promptText = String(data.prompt ?? data.result ?? '').trim();
 
   chatu8DebugLog('llm_prompt_response', {
@@ -721,8 +736,15 @@ function onChatu8LlmPromptResponse(payload: unknown, channel: RequestChannel) {
     requestChannel: pending.channel,
     channel,
     source,
+    success,
+    error: errorText || null,
     promptLength: promptText.length,
   });
+
+  if (!success && errorText) {
+    toastr?.warning?.(errorText);
+    return;
+  }
 
   if (!promptText) {
     toastr?.warning?.('未收到 LLM 提示词');
@@ -894,6 +916,107 @@ function readChatu8ExtensionSettings(): Record<string, any> | null {
   } catch {
     return null;
   }
+}
+
+function readChatu8CacheFromHost(messageId: number | null): Record<string, ResolvedDisplayedImage[]> {
+  const hostWindow = readHostWindow() as any;
+  try {
+    const ctx = hostWindow?.SillyTavern?.getContext?.();
+    if (!ctx) return {};
+    const chatMeta = ctx.chatMetadata?.['st-chatu8'];
+    if (!chatMeta || typeof chatMeta !== 'object') return {};
+
+    const entries = (chatMeta as any).imageCache ?? (chatMeta as any).images ?? chatMeta;
+    if (!entries || typeof entries !== 'object') return {};
+
+    const out: Record<string, ResolvedDisplayedImage[]> = {};
+    for (const [key, value] of Object.entries(entries)) {
+      if (!value) continue;
+      const entryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
+      if (messageId != null && entryMsgId != null && Number(entryMsgId) !== messageId) continue;
+
+      const prompt = String((value as any)?.prompt ?? (value as any)?.tag ?? key ?? '').trim();
+      if (!prompt) continue;
+
+      const imgData = (value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src;
+      if (!imgData) continue;
+
+      const src = normalizeImageDataToSrc(imgData);
+      if (!src) continue;
+
+      const rawPrompt = normalizeExternalPromptRawToken(prompt);
+      const storeKey = rawPrompt || prompt;
+      if (!out[storeKey]) out[storeKey] = [];
+      out[storeKey].push({ src, alt: '缓存图片' });
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+async function queryChatu8Cache(messageId: number | null): Promise<Record<string, ResolvedDisplayedImage[]>> {
+  // 快速通道：直接从宿主读取
+  const directResult = readChatu8CacheFromHost(messageId);
+  if (Object.keys(directResult).length > 0) {
+    chatu8DebugLog('cache_query_direct_hit', { messageId, keys: Object.keys(directResult).length });
+    return directResult;
+  }
+
+  // 慢速通道：通过桥接事件查询
+  const bridgeReady = await probeChatu8Bridge(320, false);
+  if (!bridgeReady) return {};
+
+  return new Promise<Record<string, ResolvedDisplayedImage[]>>(resolve => {
+    const queryId = createChatu8RequestId('cache');
+    let finished = false;
+    let timeoutId = 0;
+
+    const done = (result: Record<string, ResolvedDisplayedImage[]>) => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timeoutId);
+      sameLayerEventOff(BridgeEventType.CACHE_RESPONSE, onResponse);
+      resolve(result);
+    };
+
+    const onResponse = (payload: unknown) => {
+      const data = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
+      if (String(data.queryId ?? '').trim() !== queryId) return;
+
+      const ok = data.ok === true;
+      if (!ok) {
+        chatu8DebugLog('cache_query_bridge_fail', { queryId, reason: data.reason });
+        done({});
+        return;
+      }
+
+      const rawImages = data.images as Record<string, Array<{ src: string; alt: string }>> | undefined;
+      if (!rawImages || typeof rawImages !== 'object') {
+        done({});
+        return;
+      }
+
+      const out: Record<string, ResolvedDisplayedImage[]> = {};
+      for (const [prompt, list] of Object.entries(rawImages)) {
+        if (!Array.isArray(list) || list.length === 0) continue;
+        const rawPrompt = normalizeExternalPromptRawToken(prompt);
+        const storeKey = rawPrompt || prompt;
+        out[storeKey] = list
+          .filter(it => it?.src)
+          .map(it => ({ src: normalizeImageDataToSrc(it.src), alt: it.alt || '缓存图片' }));
+      }
+      chatu8DebugLog('cache_query_bridge_hit', { queryId, keys: Object.keys(out).length });
+      done(out);
+    };
+
+    sameLayerEventOn(BridgeEventType.CACHE_RESPONSE, onResponse);
+    sameLayerEventEmit(BridgeEventType.CACHE_QUERY, { queryId, messageId });
+    timeoutId = window.setTimeout(() => {
+      chatu8DebugLog('cache_query_bridge_timeout', { queryId });
+      done({});
+    }, 2000);
+  });
 }
 
 function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
@@ -1250,6 +1373,16 @@ function isHostElementVisible(el: Element | null): boolean {
     // ignore
   }
   return node.getClientRects().length > 0;
+}
+
+function isMessageFloorHidden(messageId: number | null): boolean {
+  if (messageId == null) return false;
+  for (const doc of collectHostDocuments()) {
+    const el = doc.querySelector(`.mes[mesid='${messageId}']`) as HTMLElement | null;
+    if (!el) continue;
+    if (el.classList.contains('eden-samelayer-hidden')) return true;
+  }
+  return false;
 }
 
 function resolveHostImageButtonByRawPrompt(root: ParentNode, rawPrompt: string): HTMLElement | null {
@@ -1621,7 +1754,7 @@ function normalizeExternalPromptRawToken(value: string): string {
 }
 
 function collectPromptRawsFromDisplayedButtons(messageId: number | null): string[] {
-  // 仅采集“当前楼层”按钮，避免把整聊天历史里的按钮提示词混入正文渲染。
+  // 仅采集"当前楼层"按钮，避免把整聊天历史里的按钮提示词混入正文渲染。
   const roots = resolveHostMessageScopedRoots(messageId);
   if (roots.length === 0) {
     chatu8DebugLog('collect_prompt_raws_skip_no_message_root', {
@@ -1630,6 +1763,7 @@ function collectPromptRawsFromDisplayedButtons(messageId: number | null): string
     return [];
   }
 
+  const floorHidden = isMessageFloorHidden(messageId);
   const out: string[] = [];
   const seenButtons = new Set<HTMLElement>();
   const seenRaws = new Set<string>();
@@ -1639,7 +1773,7 @@ function collectPromptRawsFromDisplayedButtons(messageId: number | null): string
     for (const btn of buttons) {
       if (seenButtons.has(btn)) continue;
       seenButtons.add(btn);
-      if (!isHostElementVisible(btn)) continue;
+      if (!floorHidden && !isHostElementVisible(btn)) continue;
 
       const payload = String(btn.getAttribute('data-image-tag') ?? btn.getAttribute('data-link') ?? '').trim();
       const raw = normalizeExternalPromptRawToken(payload);
@@ -1778,6 +1912,8 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     return {};
   }
 
+  const floorHidden = isMessageFloorHidden(messageId);
+
   const stChatu8Buttons: Array<{
     rawPrompt: string;
     promptBodyNorm: string;
@@ -1790,7 +1926,8 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   for (const root of roots) {
     const all = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
     const visible = all.filter(btn => isHostElementVisible(btn));
-    const list = visible.length > 0 ? visible : all;
+    // 当楼层被桥接隐藏时，所有按钮都不可见，直接使用全部按钮
+    const list = floorHidden ? all : (visible.length > 0 ? visible : all);
     for (const button of list) {
       if (seenButtons.has(button)) continue;
       seenButtons.add(button);
@@ -1879,7 +2016,7 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     }
 
     const el = promptEls.find(node => {
-      if (!isHostElementVisible(node)) return false;
+      if (!floorHidden && !isHostElementVisible(node)) return false;
       const textNorm = normalizePromptBodyForCompare(node.textContent ?? '');
       if (!textNorm) return false;
       return textNorm === bodyNeedle || isSameRawPromptToken(node.textContent ?? '', rawPrompt);
@@ -2230,6 +2367,7 @@ watchEffect(onCleanup => {
     lastStoryMessageId = messageId;
     externalPromptRaws.value = [];
     generatedImagesByPrompt.value = {};
+    cachedImagesByPrompt.value = {};
     imagePromptUi.value = {};
   }
 
@@ -2267,6 +2405,29 @@ watchEffect(onCleanup => {
   timers.push(window.setTimeout(run, 600));
   timers.push(window.setTimeout(run, 2000));
   timers.push(window.setTimeout(run, 5000));
+
+  // DOM 扫描之后，尝试从插件缓存补全未命中的 prompt 图片
+  const tryCacheQuery = () => {
+    if (canceled) return;
+    const resolved = resolvedImagesByPrompt.value ?? {};
+    const generated = generatedImagesByPrompt.value ?? {};
+    const missingPrompts = prompts.filter(p => {
+      const hasResolved = Array.isArray(resolved[p]) && resolved[p].length > 0;
+      const hasGenerated = Array.isArray(generated[p]) && generated[p].length > 0;
+      return !hasResolved && !hasGenerated;
+    });
+    if (missingPrompts.length === 0 && Object.keys(cachedImagesByPrompt.value ?? {}).length > 0) return;
+
+    void queryChatu8Cache(messageId).then(result => {
+      if (canceled) return;
+      const prevCacheJson = JSON.stringify(cachedImagesByPrompt.value ?? {});
+      const nextCacheJson = JSON.stringify(result);
+      if (prevCacheJson !== nextCacheJson) cachedImagesByPrompt.value = result;
+    });
+  };
+  // 首次加载和延迟重试时都尝试缓存查询
+  timers.push(window.setTimeout(tryCacheQuery, 800));
+  timers.push(window.setTimeout(tryCacheQuery, 3000));
 
   const observeRoots =
     messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
@@ -3217,6 +3378,7 @@ function formatTableCell(cell: string): string {
 
 .story-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
@@ -3236,12 +3398,22 @@ function formatTableCell(cell: string): string {
   gap: 4px;
   flex: 1 1 auto;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.story-mini-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .story-mini-tab {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-color);
@@ -3288,6 +3460,7 @@ function formatTableCell(cell: string): string {
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .zoom-btn {
@@ -3453,6 +3626,51 @@ function formatTableCell(cell: string): string {
 }
 
 @media (max-width: 480px) {
+  .story-toolbar {
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .story-mini-tabs {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .story-mini-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .story-mini-tab {
+    flex: 0 0 auto;
+  }
+
+  .story-toolbar-actions {
+    flex: 1 1 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    align-items: center;
+  }
+
+  .story-zoom-controls {
+    min-width: 0;
+  }
+
+  .story-image-menu-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 0.64em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .story-pane {
     padding: 6px 7px;
   }

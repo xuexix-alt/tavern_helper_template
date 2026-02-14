@@ -8,10 +8,17 @@
           <button class="role-add-btn secondary" type="button" @click="openGenerateRole">🧬 生成角色</button>
         </template>
         <template v-else>
+          <button class="section-view-btn" type="button" @click="openRoleSelectorFromUi">
+            {{ roleSelectorButtonText }}
+          </button>
           <button class="section-view-btn" type="button" @click="openWorldInfoModal">基础信息</button>
           <button class="section-view-btn" type="button" @click="openReportDigestModal">汇总摘要</button>
         </template>
       </div>
+    </div>
+    <div v-if="!isCreationMode && isHistoryMode" class="history-mode-banner">
+      <span>当前回看楼层 #{{ historyMessageId ?? '?' }}，角色数据按该楼层显示</span>
+      <button class="history-mode-back-btn" type="button" @click="switchCharactersToLatest">返回最新</button>
     </div>
 
     <div v-if="isCreationMode" class="creation-entry">
@@ -673,7 +680,7 @@ import {
   readRoleSelectorStateFromStatData,
 } from '../../../role_control';
 import { useDataStore } from '../../store';
-import { getViewMessageState, resolveViewMessageId } from '../../viewMessage';
+import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
 import ReportSection from './ReportSection.vue';
 import TextHighlight from './TextHighlight.vue';
 import WorldSection from './WorldSection.vue';
@@ -733,6 +740,12 @@ const roleModalMaxHeight = computed(() => `${roleModalMaxHeightPx.value}px`);
 const roleModalBodyMaxHeight = computed(() => `${Math.max(200, roleModalMaxHeightPx.value - 160)}px`);
 const worldInfoModalOpen = ref(false);
 const reportDigestModalOpen = ref(false);
+const isHistoryMode = computed(() => store.viewMessageState.mode === 'history');
+const historyMessageId = computed(() => {
+  const id = Number(store.viewMessageState.message_id);
+  if (!Number.isFinite(id) || id < 0) return null;
+  return Math.trunc(id);
+});
 
 function openWorldInfoModal() {
   if (isCreationMode.value) return;
@@ -752,6 +765,19 @@ function openReportDigestModal() {
 
 function closeReportDigestModal() {
   reportDigestModalOpen.value = false;
+}
+
+function openRoleSelectorFromUi() {
+  if (isCreationMode.value) return;
+  if (typeof eventEmit === 'function') {
+    eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
+    return;
+  }
+  toastr.warning('未检测到角色选择器脚本，请先启用「开局角色选择器」');
+}
+
+function switchCharactersToLatest() {
+  setViewMessageLatest('characters-section');
 }
 
 const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
@@ -803,22 +829,31 @@ function matchCharacterByQuery(key: CharacterKey): boolean {
     .includes(normalizedQuery.value);
 }
 
+const roleSelectorStateForUi = computed(() => {
+  const data = store.data as Record<string, any>;
+  try {
+    const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
+    const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
+    if (roleRoot && typeof roleRoot === 'object') {
+      return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
+    }
+  } catch {
+    // ignore and fallback
+  }
+  return readRoleSelectorStateFromStatData(data);
+});
+
+const roleSelectorButtonText = computed(() => {
+  const selectedCount = roleSelectorStateForUi.value?.selected_roles?.length ?? 0;
+  const deletedCount = roleSelectorStateForUi.value?.deleted_roles?.length ?? 0;
+  return `角色批量删除（启用${selectedCount} / 已删${deletedCount}）`;
+});
+
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
 
   const data = store.data as Record<string, any>;
-  const roleSelector = (() => {
-    try {
-      const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
-      const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
-      if (roleRoot && typeof roleRoot === 'object') {
-        return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
-      }
-    } catch {
-      // ignore and fallback
-    }
-    return readRoleSelectorStateFromStatData(data);
-  })();
+  const roleSelector = roleSelectorStateForUi.value;
   const isEnabled = (roleName: string) => isRoleEnabledBySelectorState(roleSelector, roleName);
 
   // 1. 固定角色按固定顺序
@@ -3025,6 +3060,36 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
+.history-mode-banner {
+  margin-top: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 214, 102, 0.45);
+  background: rgba(255, 214, 102, 0.15);
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82em;
+  color: #fff6d7;
+}
+
+.history-mode-back-btn {
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.history-mode-back-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .section-view-btn {
   padding: 5px 11px;
   border-radius: 999px;
@@ -3042,6 +3107,12 @@ onBeforeUnmount(() => {
 .section-view-btn:hover {
   transform: translateY(-1px);
   background: rgba(139, 233, 253, 0.22);
+}
+
+.section-view-btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .role-add-btn {

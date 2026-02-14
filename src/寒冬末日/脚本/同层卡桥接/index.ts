@@ -3,6 +3,7 @@ import { resolveSameLayerAnchorMessageId, resolveSameLayerLatestAssistantMessage
 
 const HIDDEN_CLASS = 'eden-samelayer-hidden';
 const STYLE_ID = 'eden-samelayer-style';
+const ANCHOR_STORAGE_KEY = 'eden:samelayer:anchor_message_id';
 const STREAM_SCROLL_THROTTLE_MS = 120;
 const CHATU8_EVENT_TYPE = {
   GENERATE_IMAGE_REQUEST: 'generate-image-request',
@@ -10,8 +11,19 @@ const CHATU8_EVENT_TYPE = {
   LLM_PROMPT_REQUEST: 'ch-llm-image-gen-get-prompt-request',
   LLM_PROMPT_RESPONSE: 'ch-llm-image-gen-get-prompt-response',
 } as const;
+const ACTION_LOCK_TTL_MS = {
+  SEND: 2500,
+  CHATU8_GENERATE: 45000,
+} as const;
+
+type BridgeAction = 'send' | 'chatu8_generate';
 
 type StopHandle = { stop?: () => void } | null;
+type ActionLock = {
+  action: BridgeAction;
+  chat_key: string;
+  expires_at: number;
+};
 
 type BridgeState = {
   anchor_message_id: number | null;
@@ -19,6 +31,9 @@ type BridgeState = {
   raw: string;
   during_streaming: boolean;
   chat_id: string | null;
+  tx_id: string;
+  tx_seq: number;
+  tx_version: number;
 };
 
 const state: BridgeState = {
@@ -27,8 +42,54 @@ const state: BridgeState = {
   raw: '',
   during_streaming: false,
   chat_id: null,
+  tx_id: 'boot:0',
+  tx_seq: 0,
+  tx_version: 0,
 };
 let last_stream_scroll_at = 0;
+const actionLocks = new Map<string, ActionLock>();
+
+function normalizeAnchorCandidate(raw: unknown): number | null {
+  if (raw == null) return null;
+  const text = String(raw).trim();
+  if (!text) return null;
+  const value = Number(text);
+  if (!Number.isFinite(value)) return null;
+  return Math.trunc(value);
+}
+
+function hasPinnedAnchorPreference(): boolean {
+  try {
+    const fromWindow = normalizeAnchorCandidate((window as any).__EDEN_SAMELAYER_ANCHOR_ID);
+    if (fromWindow != null) return true;
+  } catch {
+    // ignore
+  }
+
+  try {
+    const fromStorage = normalizeAnchorCandidate(localStorage.getItem(ANCHOR_STORAGE_KEY));
+    if (fromStorage != null) return true;
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+
+function syncAnchorToLatestAssistant() {
+  if (hasPinnedAnchorPreference()) return;
+  const latest = resolveSameLayerLatestAssistantMessageId();
+  if (latest == null) return;
+  if (state.anchor_message_id === latest) return;
+  state.anchor_message_id = latest;
+}
+
+function followAnchorToMessage(message_id: number) {
+  if (hasPinnedAnchorPreference()) return;
+  if (!Number.isFinite(message_id)) return;
+  if (state.anchor_message_id === message_id) return;
+  state.anchor_message_id = message_id;
+}
 
 function listReachableHostWindows(): (Window & typeof globalThis)[] {
   const out: Array<Window & typeof globalThis> = [];
@@ -82,6 +143,77 @@ function readChatId(): string | null {
   } catch {
     return null;
   }
+}
+
+function resolveActionChatKey(): string {
+  const chat_id = state.chat_id ?? readChatId();
+  return chat_id && String(chat_id).trim() ? String(chat_id) : 'unknown-chat';
+}
+
+function actionLockKey(chat_key: string, action: BridgeAction): string {
+  return `${chat_key}::${action}`;
+}
+
+function cleanupExpiredActionLocks() {
+  const now = Date.now();
+  for (const [key, lock] of actionLocks.entries()) {
+    if (lock.expires_at <= now) actionLocks.delete(key);
+  }
+}
+
+function tryAcquireActionLock(action: BridgeAction, ttl_ms: number): boolean {
+  cleanupExpiredActionLocks();
+  const chat_key = resolveActionChatKey();
+  const key = actionLockKey(chat_key, action);
+  const now = Date.now();
+  const current = actionLocks.get(key);
+  if (current && current.expires_at > now) return false;
+  actionLocks.set(key, {
+    action,
+    chat_key,
+    expires_at: now + Math.max(400, Math.trunc(ttl_ms)),
+  });
+  return true;
+}
+
+function releaseActionLock(action: BridgeAction, chat_key = resolveActionChatKey()) {
+  actionLocks.delete(actionLockKey(chat_key, action));
+}
+
+function clearActionLocksForChat(chat_key: string | null | undefined) {
+  const normalized = String(chat_key ?? '').trim();
+  if (!normalized) return;
+  for (const key of actionLocks.keys()) {
+    if (key.startsWith(`${normalized}::`)) actionLocks.delete(key);
+  }
+}
+
+function resolveCurrentAnchorForGate(): number | null {
+  const anchor = state.anchor_message_id ?? resolveSameLayerAnchorMessageId();
+  if (anchor == null || !Number.isFinite(anchor)) return null;
+  return Math.trunc(anchor);
+}
+
+function isLatestViewAligned(): boolean {
+  const latest = resolveSameLayerLatestAssistantMessageId();
+  if (latest == null) return true;
+  const anchor = resolveCurrentAnchorForGate();
+  if (anchor == null) return true;
+  return anchor === latest;
+}
+
+function buildNotLatestReason(prefix = '仅最新楼层可执行该操作'): string {
+  const anchor = resolveCurrentAnchorForGate();
+  const latest = resolveSameLayerLatestAssistantMessageId();
+  if (latest == null) return prefix;
+  if (anchor == null) return `${prefix}（最新#${latest}）`;
+  return `${prefix}（当前锚点#${anchor}，最新#${latest}）`;
+}
+
+function bumpPayloadTransaction(reason: string) {
+  state.tx_version += 1;
+  const chat_key = resolveActionChatKey();
+  state.tx_id = `${chat_key}:v${state.tx_version}:${reason}`;
 }
 
 function isAssistantMessage(message_id: number): boolean {
@@ -178,12 +310,16 @@ function buildPayload(
   partial: Partial<BridgeState> = {},
   meta: Pick<SameLayerPayload, 'phase' | 'source'> = {},
 ): SameLayerPayload {
+  const next_tx_seq = state.tx_seq + 1;
+  state.tx_seq = next_tx_seq;
   return {
     anchor_message_id: partial.anchor_message_id ?? state.anchor_message_id,
     message_id: partial.message_id ?? state.message_id,
     raw: partial.raw ?? state.raw,
     during_streaming: partial.during_streaming ?? state.during_streaming,
     chat_id: partial.chat_id ?? state.chat_id,
+    tx_id: partial.tx_id ?? state.tx_id,
+    tx_seq: partial.tx_seq ?? next_tx_seq,
     phase: meta.phase,
     source: meta.source,
   };
@@ -247,8 +383,29 @@ function handleSendRequest(payload: { text?: string; await_trigger?: boolean; so
     return;
   }
 
+  if (!isLatestViewAligned()) {
+    emitEvent(SAMELAYER_EVENTS.SEND_RESULT, {
+      ok: false,
+      reason: buildNotLatestReason('回看楼层不可发送'),
+      text: sentText,
+      source: 'bridge',
+    } as any);
+    return;
+  }
+
+  if (!tryAcquireActionLock('send', ACTION_LOCK_TTL_MS.SEND)) {
+    emitEvent(SAMELAYER_EVENTS.SEND_RESULT, {
+      ok: false,
+      reason: '发送过于频繁，请稍后重试',
+      text: sentText,
+      source: 'bridge',
+    } as any);
+    return;
+  }
+
   const slash = resolveTriggerSlash();
   if (!slash) {
+    releaseActionLock('send');
     emitEvent(SAMELAYER_EVENTS.SEND_RESULT, {
       ok: false,
       reason: 'triggerSlash 不可用',
@@ -263,6 +420,7 @@ function handleSendRequest(payload: { text?: string; await_trigger?: boolean; so
     slash(cmd);
     emitEvent(SAMELAYER_EVENTS.SEND_RESULT, { ok: true, reason: '', text: sentText, source: 'bridge' } as any);
   } catch (err) {
+    releaseActionLock('send');
     emitEvent(SAMELAYER_EVENTS.SEND_RESULT, {
       ok: false,
       reason: err instanceof Error ? err.message : String(err),
@@ -323,8 +481,13 @@ function emitPluginEvent(eventName: string, payload: unknown): boolean {
 }
 
 function refreshAnchorAndChatId() {
+  const prev_chat_id = state.chat_id;
   state.chat_id = readChatId();
+  if (prev_chat_id && state.chat_id !== prev_chat_id) {
+    clearActionLocksForChat(prev_chat_id);
+  }
   state.anchor_message_id = resolveSameLayerAnchorMessageId();
+  syncAnchorToLatestAssistant();
 }
 
 function refreshSnapshotFromHistory() {
@@ -336,8 +499,11 @@ function refreshSnapshotFromHistory() {
 }
 
 function resetBridge(reason: string) {
+  releaseActionLock('send');
+  releaseActionLock('chatu8_generate');
   refreshAnchorAndChatId();
   refreshSnapshotFromHistory();
+  bumpPayloadTransaction(`reset:${reason}`);
   applyHidePolicy();
   scheduleAnchorScroll(true, 'end');
   emitSnapshotLegacyAndShow(SAMELAYER_EVENTS.RESET, 'reset', { raw: state.raw });
@@ -353,7 +519,11 @@ function resolveCurrentStreamingMessageId(): number | null {
 function handleStreamToken(message: string) {
   const message_id = resolveCurrentStreamingMessageId();
   if (message_id == null || !isAssistantMessage(message_id)) return;
+  const is_new_message = state.message_id !== message_id;
+  if (is_new_message) bumpPayloadTransaction(`stream:${message_id}`);
 
+  syncAnchorToLatestAssistant();
+  followAnchorToMessage(message_id);
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
   // 首轮生成时可能还没有可解析锚点，兜底为当前流式助手楼层，避免隐藏策略失效。
   if (state.anchor_message_id == null) state.anchor_message_id = message_id;
@@ -371,7 +541,12 @@ function handleStreamToken(message: string) {
 
 function handleMessageReceived(message_id: number) {
   if (!Number.isFinite(message_id) || !isAssistantMessage(message_id)) return;
+  const is_new_message = state.message_id !== message_id;
+  if (is_new_message) bumpPayloadTransaction(`final:${message_id}`);
+  releaseActionLock('send');
 
+  syncAnchorToLatestAssistant();
+  followAnchorToMessage(message_id);
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
   if (state.anchor_message_id == null) state.anchor_message_id = message_id;
   if (state.anchor_message_id != null && message_id !== state.anchor_message_id) {
@@ -388,6 +563,9 @@ function handleMessageReceived(message_id: number) {
 
 function handleMessageUpdated(message_id: number) {
   if (!Number.isFinite(message_id) || !isAssistantMessage(message_id)) return;
+  releaseActionLock('send');
+  syncAnchorToLatestAssistant();
+  followAnchorToMessage(message_id);
   if (message_id !== state.message_id) return;
   state.raw = readMessageText(message_id);
   applyHidePolicy();
@@ -397,6 +575,10 @@ function handleMessageUpdated(message_id: number) {
 
 function handleMessageSwiped(message_id: number) {
   if (!Number.isFinite(message_id) || !isAssistantMessage(message_id)) return;
+  bumpPayloadTransaction(`swipe:${message_id}`);
+  releaseActionLock('send');
+  syncAnchorToLatestAssistant();
+  followAnchorToMessage(message_id);
   if (state.anchor_message_id == null) refreshAnchorAndChatId();
 
   state.message_id = message_id;
@@ -423,6 +605,73 @@ function onPluginEvent(eventName: string, listener: (...args: any[]) => void): S
   return onAnyEvent(eventName, listener);
 }
 
+function handleChatu8CacheQuery(payload: { messageId?: number; queryId?: string } | null | undefined) {
+  const queryId = String(payload?.queryId ?? '').trim();
+  if (!queryId) return;
+  const messageId = payload?.messageId ?? null;
+
+  try {
+    const ctx = readContext();
+    if (!ctx) {
+      emitEvent(SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE, {
+        queryId,
+        messageId,
+        images: {},
+        source: 'bridge',
+        ok: false,
+        reason: 'no context',
+      });
+      return;
+    }
+
+    const extSettings = ctx.extensionSettings?.['st-chatu8'];
+    const chatMeta = ctx.chatMetadata?.['st-chatu8'];
+    const images: Record<string, Array<{ src: string; alt: string }>> = {};
+
+    // 从 chatMetadata 中提取图片缓存（插件通常将生成结果存储在此）
+    if (chatMeta && typeof chatMeta === 'object') {
+      const entries = (chatMeta as any).imageCache ?? (chatMeta as any).images ?? chatMeta;
+      if (entries && typeof entries === 'object') {
+        for (const [key, value] of Object.entries(entries)) {
+          if (!value) continue;
+          // 按 messageId 过滤（如果提供了）
+          const entryMsgId = (value as any)?.messageId ?? (value as any)?.message_id;
+          if (messageId != null && entryMsgId != null && Number(entryMsgId) !== messageId) continue;
+
+          const prompt = String((value as any)?.prompt ?? (value as any)?.tag ?? key ?? '').trim();
+          if (!prompt) continue;
+
+          const imgData = (value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src;
+          if (!imgData) continue;
+
+          const src = String(imgData).trim();
+          if (!src) continue;
+
+          if (!images[prompt]) images[prompt] = [];
+          images[prompt].push({ src, alt: '缓存图片' });
+        }
+      }
+    }
+
+    emitEvent(SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE, {
+      queryId,
+      messageId,
+      images,
+      source: 'bridge',
+      ok: true,
+    });
+  } catch (err) {
+    emitEvent(SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE, {
+      queryId,
+      messageId,
+      images: {},
+      source: 'bridge',
+      ok: false,
+      reason: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
 $(() => {
   ensureHideStyle();
   resetBridge('init');
@@ -446,6 +695,7 @@ $(() => {
   );
   stops.push(
     onAnyEvent(tavern_events.MESSAGE_SENT, () => {
+      releaseActionLock('send');
       applyHidePolicy();
       scheduleAnchorScroll(true, 'end');
     }),
@@ -464,7 +714,49 @@ $(() => {
   );
   stops.push(
     onAnyEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_REQUEST, payload => {
-      void emitPluginEvent(CHATU8_EVENT_TYPE.GENERATE_IMAGE_REQUEST, payload);
+      const data = payload && typeof payload === 'object' ? (payload as Record<string, any>) : {};
+      const requestId = String(data.id ?? '').trim();
+
+      if (!requestId) {
+        emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, {
+          id: '',
+          success: false,
+          error: '缺少请求ID',
+          source: 'bridge',
+        });
+        return;
+      }
+
+      if (!isLatestViewAligned()) {
+        emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, {
+          id: requestId,
+          success: false,
+          error: buildNotLatestReason('回看楼层不可触发生图'),
+          source: 'bridge',
+        });
+        return;
+      }
+
+      if (!tryAcquireActionLock('chatu8_generate', ACTION_LOCK_TTL_MS.CHATU8_GENERATE)) {
+        emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, {
+          id: requestId,
+          success: false,
+          error: '已有生图任务进行中，请稍后重试',
+          source: 'bridge',
+        });
+        return;
+      }
+
+      const ok = emitPluginEvent(CHATU8_EVENT_TYPE.GENERATE_IMAGE_REQUEST, payload);
+      if (!ok) {
+        releaseActionLock('chatu8_generate');
+        emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, {
+          id: requestId,
+          success: false,
+          error: '生图插件事件通道不可用',
+          source: 'bridge',
+        });
+      }
     }),
   );
   stops.push(
@@ -474,12 +766,18 @@ $(() => {
   );
   stops.push(
     onPluginEvent(CHATU8_EVENT_TYPE.GENERATE_IMAGE_RESPONSE, payload => {
+      releaseActionLock('chatu8_generate');
       emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, payload);
     }),
   );
   stops.push(
     onPluginEvent(CHATU8_EVENT_TYPE.LLM_PROMPT_RESPONSE, payload => {
       emitEvent(SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_RESPONSE, payload);
+    }),
+  );
+  stops.push(
+    onAnyEvent(SAMELAYER_EVENTS.CHATU8_CACHE_QUERY, (payload: { messageId?: number; queryId?: string } | null) => {
+      handleChatu8CacheQuery(payload);
     }),
   );
   stops.push(
@@ -490,6 +788,7 @@ $(() => {
 
   $(window).on('pagehide', () => {
     stops.forEach(s => s?.stop?.());
+    actionLocks.clear();
     $(`#${STYLE_ID}`).remove();
     listChatMessageElements().removeClass(HIDDEN_CLASS);
     if (typeof eventClearAll === 'function') eventClearAll();

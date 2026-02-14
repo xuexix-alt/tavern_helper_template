@@ -222,6 +222,11 @@ export function useInjectedData() {
   const raw = ref<string>('');
   const options = ref<string[]>([]);
   const stopHandles: StopHandle[] = [];
+  let lastBridgeApplyAt = 0;
+  let lastBridgeTxSeq = -1;
+  let lastBridgeTxId = '';
+  let lastBridgeChatId: string | null = null;
+  const BRIDGE_GUARD_MS = 600;
 
   // 开发模式检测 (通过 URL 查询参数)
   const search = new URLSearchParams(window.location.search);
@@ -235,6 +240,10 @@ export function useInjectedData() {
       options.value = mockData.options;
       return;
     }
+
+    // 桥接刚刚提供了数据时，跳过 refresh 避免用锚点楼层的旧文本覆盖桥接传来的最新文本。
+    // 典型场景：插件双击菜单生图后 MESSAGE_UPDATED 触发 refresh，但桥接已先一步推送了正确的更新文本。
+    if (Date.now() - lastBridgeApplyAt < BRIDGE_GUARD_MS) return;
 
     const fromMsg = fetchFromCurrentMessage(isDebug); // 同步调用
     if (fromMsg) {
@@ -251,11 +260,41 @@ export function useInjectedData() {
   const applyBridgePayload = (payload: SameLayerPayload) => {
     if (!payload || typeof payload !== 'object') return;
     if (!isPayloadForCurrentChat(payload)) return;
+    const payloadChatId = payload?.chat_id == null ? null : String(payload.chat_id);
+    const payloadTxSeq = Number(payload?.tx_seq);
+    const payloadTxId = String(payload?.tx_id ?? '');
+
+    if (payloadChatId && lastBridgeChatId && payloadChatId !== lastBridgeChatId) {
+      lastBridgeTxSeq = -1;
+      lastBridgeTxId = '';
+    }
+
+    if (Number.isFinite(payloadTxSeq)) {
+      const normalizedSeq = Math.trunc(payloadTxSeq);
+      if (normalizedSeq === lastBridgeTxSeq && payloadTxId && payloadTxId === lastBridgeTxId) return;
+      if (normalizedSeq < lastBridgeTxSeq) {
+        if (isDebug) {
+          console.debug('[状态栏][InjectedData] 丢弃过期桥接包', {
+            txSeq: normalizedSeq,
+            lastTxSeq: lastBridgeTxSeq,
+            txId: payloadTxId || null,
+            lastTxId: lastBridgeTxId || null,
+            phase: payload.phase,
+          });
+        }
+        return;
+      }
+
+      lastBridgeTxSeq = normalizedSeq;
+      lastBridgeTxId = payloadTxId || lastBridgeTxId;
+      lastBridgeChatId = payloadChatId;
+    }
 
     const rawText = String(payload.raw ?? '');
     const parsed = parseInjectedText(rawText);
     raw.value = rawText;
     options.value = parsed.options;
+    lastBridgeApplyAt = Date.now();
 
     if (isDebug) {
       console.debug('[状态栏][InjectedData] 使用同层桥接数据', {
@@ -281,6 +320,11 @@ export function useInjectedData() {
     if (typeof eventOn !== 'function') return;
     try {
       const stop = eventOn(eventName as any, () => {
+        if (eventName === (tavern_events.CHAT_CHANGED as any)) {
+          lastBridgeTxSeq = -1;
+          lastBridgeTxId = '';
+          lastBridgeChatId = null;
+        }
         refresh();
       });
       stopHandles.push(stop);

@@ -220,6 +220,61 @@ const roleSelectorSelected = (() => {
   if (selected.length === 0) return null;
   return selected;
 })();
+const roleSelectorRevealed = (() => {
+  if (!roleSelectorState) return null;
+  const revealed = normalizeRoleList(roleSelectorState.revealed_roles);
+  if (revealed.length === 0) return null;
+  return revealed;
+})();
+const roleSelectorDeleted = (() => {
+  if (!roleSelectorState) return null;
+  const deleted = normalizeRoleList(roleSelectorState.deleted_roles);
+  if (deleted.length === 0) return null;
+  return deleted;
+})();
+const roleSelectorDeletedSet = (() => {
+  if (!Array.isArray(roleSelectorDeleted) || roleSelectorDeleted.length === 0) return null;
+  const set = {};
+  for (let i = 0; i < roleSelectorDeleted.length; i++) {
+    const k = String(roleSelectorDeleted[i] || '').trim();
+    if (k) set[k] = true;
+  }
+  return set;
+})();
+
+const roleSelectorStrictMode = !!(roleSelectorState && roleSelectorState.initialized === true);
+
+function buildRoleAllowSet(list) {
+  const normalized = normalizeRoleList(list);
+  if (!normalized.length) return null;
+  const set = {};
+  for (let i = 0; i < normalized.length; i++) {
+    const k = String(normalized[i] || '').trim();
+    if (roleSelectorDeletedSet && roleSelectorDeletedSet[k] === true) continue;
+    if (k) set[k] = true;
+  }
+  return set;
+}
+
+const roleSelectorAllowSet = (() => {
+  // 严格模式：初始化后仅 selected 生效，revealed 仅代表“可见可选”。
+  if (roleSelectorStrictMode) return buildRoleAllowSet(roleSelectorSelected) || {};
+
+  // 兼容模式：旧存档/未初始化时，允许 selected + revealed 并集。
+  const all = []
+    .concat(Array.isArray(roleSelectorSelected) ? roleSelectorSelected : [])
+    .concat(Array.isArray(roleSelectorRevealed) ? roleSelectorRevealed : []);
+  return buildRoleAllowSet(all);
+})();
+
+function isRoleAllowedBySelector(roleName) {
+  const name = String(roleName || '').trim();
+  if (!name) return false;
+  if (roleSelectorDeletedSet && roleSelectorDeletedSet[name] === true) return false;
+  // 未初始化选择器时不做限制，保持兼容历史存档。
+  if (!roleSelectorAllowSet) return true;
+  return roleSelectorAllowSet[name] === true;
+}
 
 let dossierIndex = [];
 try {
@@ -329,6 +384,7 @@ if (mentionText && typeof getEnabledWorldInfoEntries === 'function') {
       const comment = String((e && e.comment) || '').trim();
       if (!comment || comment.indexOf('角色档案') === -1) continue;
       const parsedRoleName = extractRoleNameFromComment(comment);
+      if (parsedRoleName && !isRoleAllowedBySelector(parsedRoleName)) continue;
       const keys = []
         .concat(Array.isArray(e && e.key) ? e.key : [])
         .concat(Array.isArray(e && e.keysecondary) ? e.keysecondary : []);
@@ -345,6 +401,7 @@ const mentionTargets = [];
 if (mentionText) {
   for (let i = 0; i < dossierIndex.length; i++) {
     const name = dossierIndex[i].name;
+    if (!isRoleAllowedBySelector(name)) continue;
     const aliases = dossierIndex[i].aliases;
     const hit = mentionText.indexOf(name) !== -1 || includesAny(mentionText, aliases);
     if (!hit) continue;
@@ -361,6 +418,7 @@ for (const k in stat) {
   if (!isOnstageRole(v) || isDeadRole(v)) continue;
   const roleName = String(k).trim();
   if (!roleName) continue;
+  if (!isRoleAllowedBySelector(roleName)) continue;
   uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
 }
 
@@ -373,25 +431,16 @@ if (isRecord(tempNpc)) {
     if (!isOnstageRole(v) || isDeadRole(v)) continue;
     const roleName = String(k).trim();
     if (!roleName) continue;
+    if (!isRoleAllowedBySelector(roleName)) continue;
     uniqPushByKey(onstageTargets, 'role:' + roleName, { key: 'role:' + roleName, roleName, label: '角色档案 - ' + roleName });
   }
 }
 
-// 3) 选择器勾选：若角色在选择器中被勾选，且世界书里存在角色档案条目，则强制注入（不依赖提及/登场）
+// 3) 选择器策略：只做“过滤白名单”，不再做“强制补注入”。
+// 说明：以前会把所有勾选角色都注入给 LLM，容易引入无关角色档案。
 const selectorTargets = [];
-if (Array.isArray(roleSelectorSelected) && roleSelectorSelected.length > 0) {
-  for (let i = 0; i < roleSelectorSelected.length; i++) {
-    const roleName = String(roleSelectorSelected[i] || '').trim();
-    if (!roleName) continue;
-    uniqPushByKey(selectorTargets, 'role:' + roleName, {
-      key: 'role:' + roleName,
-      roleName,
-      label: '角色档案 - ' + roleName,
-    });
-  }
-}
 
-// 合并：动态命中 uid 优先，其次提及命中角色名，再次登场角色名，最后补齐“选择器勾选强制注入”
+// 合并：动态命中 uid 优先，其次提及命中角色名，再次登场角色名。
 const finalTargets = [];
 for (let i = 0; i < hitEntries.length; i++) {
   finalTargets.push(hitEntries[i]);
@@ -403,9 +452,6 @@ for (let i = 0; i < mentionTargets.length; i++) {
 onstageTargets.sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
 for (let i = 0; i < onstageTargets.length; i++) {
   uniqPushByKey(finalTargets, onstageTargets[i].key, onstageTargets[i]);
-}
-for (let i = 0; i < selectorTargets.length; i++) {
-  uniqPushByKey(finalTargets, selectorTargets[i].key, selectorTargets[i]);
 }
 
 function debugRoleLabel(t) {
@@ -421,6 +467,8 @@ function printInjectDebugBlock(finalTargetsList) {
   const mentionNames = mentionTargets.map(debugRoleLabel).filter(Boolean);
   const onstageNames = onstageTargets.map(debugRoleLabel).filter(Boolean);
   const selectorNames = selectorTargets.map(debugRoleLabel).filter(Boolean);
+  const selectorAllowNames = roleSelectorAllowSet ? Object.keys(roleSelectorAllowSet).sort() : [];
+  const selectorDeletedNames = roleSelectorDeletedSet ? Object.keys(roleSelectorDeletedSet).sort() : [];
   const uidNames = hitEntries.map(debugRoleLabel).filter(Boolean);
   const finalNames = (finalTargetsList || []).map(debugRoleLabel).filter(Boolean);
   const textPreview = mentionText
@@ -431,9 +479,12 @@ function printInjectDebugBlock(finalTargetsList) {
 
   print('\n<角色档案_动态注入_调试>\n');
   print('开关: 开启\n');
+  print('选择器模式: ' + (roleSelectorStrictMode ? '严格（仅selected生效）' : '兼容（selected/revealed）') + '\n');
   print('提及命中: ' + (mentionNames.length > 0 ? mentionNames.join('、') : '无') + '\n');
   print('登场命中: ' + (onstageNames.length > 0 ? onstageNames.join('、') : '无') + '\n');
-  print('选择器命中: ' + (selectorNames.length > 0 ? selectorNames.join('、') : '无') + '\n');
+  print('选择器白名单: ' + (selectorAllowNames.length > 0 ? selectorAllowNames.join('、') : '未启用') + '\n');
+  print('选择器已删除: ' + (selectorDeletedNames.length > 0 ? selectorDeletedNames.join('、') : '无') + '\n');
+  print('选择器补注入: ' + (selectorNames.length > 0 ? selectorNames.join('、') : '已关闭') + '\n');
   print('UID命中: ' + (uidNames.length > 0 ? uidNames.join('、') : '无') + '\n');
   print('最终注入: ' + (finalNames.length > 0 ? finalNames.join('、') : '无') + '\n');
   print('命中文本预览: ' + textPreview + '\n');
