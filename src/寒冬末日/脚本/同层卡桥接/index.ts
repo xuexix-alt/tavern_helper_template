@@ -4,6 +4,12 @@ import { resolveSameLayerAnchorMessageId, resolveSameLayerLatestAssistantMessage
 const HIDDEN_CLASS = 'eden-samelayer-hidden';
 const STYLE_ID = 'eden-samelayer-style';
 const STREAM_SCROLL_THROTTLE_MS = 120;
+const CHATU8_EVENT_TYPE = {
+  GENERATE_IMAGE_REQUEST: 'generate-image-request',
+  GENERATE_IMAGE_RESPONSE: 'generate-image-response',
+  LLM_PROMPT_REQUEST: 'ch-llm-image-gen-get-prompt-request',
+  LLM_PROMPT_RESPONSE: 'ch-llm-image-gen-get-prompt-response',
+} as const;
 
 type StopHandle = { stop?: () => void } | null;
 
@@ -23,6 +29,42 @@ const state: BridgeState = {
   chat_id: null,
 };
 let last_stream_scroll_at = 0;
+
+function listReachableHostWindows(): (Window & typeof globalThis)[] {
+  const out: Array<Window & typeof globalThis> = [];
+  const seen = new Set<Window>();
+  const push = (candidate: Window | null | undefined) => {
+    if (!candidate) return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    out.push(candidate as Window & typeof globalThis);
+  };
+
+  push(window);
+  try {
+    push(window.parent);
+  } catch {
+    // ignore
+  }
+  try {
+    push(window.top);
+  } catch {
+    // ignore
+  }
+  return out;
+}
+
+function readHostEventSource(): any | null {
+  for (const hostWindow of listReachableHostWindows()) {
+    try {
+      const source = (hostWindow as any)?.eventSource;
+      if (source && typeof source.on === 'function' && typeof source.emit === 'function') return source;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
 
 function readContext(): any {
   try {
@@ -147,7 +189,7 @@ function buildPayload(
   };
 }
 
-function emitEvent(eventName: string, payload: SameLayerPayload) {
+function emitEvent(eventName: string, payload: unknown) {
   if (typeof eventEmit !== 'function') return;
   void eventEmit(eventName as any, payload);
 }
@@ -228,6 +270,56 @@ function handleSendRequest(payload: { text?: string; await_trigger?: boolean; so
       source: 'bridge',
     } as any);
   }
+}
+
+function onHostEventSource(eventName: string, listener: (...args: any[]) => void): StopHandle {
+  const source = readHostEventSource();
+  if (!source || typeof source.on !== 'function') return null;
+
+  try {
+    source.on(eventName, listener);
+  } catch {
+    return null;
+  }
+
+  return {
+    stop: () => {
+      try {
+        if (typeof source.off === 'function') {
+          source.off(eventName, listener);
+          return;
+        }
+        if (typeof source.removeListener === 'function') {
+          source.removeListener(eventName, listener);
+        }
+      } catch {
+        // ignore
+      }
+    },
+  };
+}
+
+function emitPluginEvent(eventName: string, payload: unknown): boolean {
+  const source = readHostEventSource();
+  if (source && typeof source.emit === 'function') {
+    try {
+      source.emit(eventName, payload);
+      return true;
+    } catch {
+      // ignore
+    }
+  }
+
+  if (typeof eventEmit === 'function') {
+    try {
+      void eventEmit(eventName as any, payload as any);
+      return true;
+    } catch {
+      // ignore
+    }
+  }
+
+  return false;
 }
 
 function refreshAnchorAndChatId() {
@@ -325,6 +417,12 @@ function onAnyEvent(eventName: string, listener: (...args: any[]) => void): Stop
   }
 }
 
+function onPluginEvent(eventName: string, listener: (...args: any[]) => void): StopHandle {
+  const hostStop = onHostEventSource(eventName, listener);
+  if (hostStop) return hostStop;
+  return onAnyEvent(eventName, listener);
+}
+
 $(() => {
   ensureHideStyle();
   resetBridge('init');
@@ -355,6 +453,35 @@ $(() => {
   stops.push(onAnyEvent(tavern_events.CHAT_CHANGED, () => resetBridge('chat_changed')));
   stops.push(onAnyEvent(SAMELAYER_EVENTS.SYNC_REQUEST, () => emitSyncDataSnapshot()));
   stops.push(onAnyEvent(SAMELAYER_EVENTS.REQUIRE_DATA, () => emitSyncDataSnapshot()));
+  stops.push(
+    onAnyEvent(SAMELAYER_EVENTS.CHATU8_PROXY_PING, payload => {
+      const base = payload && typeof payload === 'object' ? (payload as Record<string, any>) : {};
+      emitEvent(SAMELAYER_EVENTS.CHATU8_PROXY_PONG, {
+        ...base,
+        source: 'bridge',
+      });
+    }),
+  );
+  stops.push(
+    onAnyEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_REQUEST, payload => {
+      void emitPluginEvent(CHATU8_EVENT_TYPE.GENERATE_IMAGE_REQUEST, payload);
+    }),
+  );
+  stops.push(
+    onAnyEvent(SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_REQUEST, payload => {
+      void emitPluginEvent(CHATU8_EVENT_TYPE.LLM_PROMPT_REQUEST, payload);
+    }),
+  );
+  stops.push(
+    onPluginEvent(CHATU8_EVENT_TYPE.GENERATE_IMAGE_RESPONSE, payload => {
+      emitEvent(SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE, payload);
+    }),
+  );
+  stops.push(
+    onPluginEvent(CHATU8_EVENT_TYPE.LLM_PROMPT_RESPONSE, payload => {
+      emitEvent(SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_RESPONSE, payload);
+    }),
+  );
   stops.push(
     onAnyEvent(SAMELAYER_EVENTS.SEND_REQUEST, (payload: { text?: string; await_trigger?: boolean; source?: string }) =>
       handleSendRequest(payload),

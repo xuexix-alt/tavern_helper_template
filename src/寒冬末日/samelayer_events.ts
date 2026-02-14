@@ -12,6 +12,13 @@ export const SAMELAYER_EVENTS = {
   SYNC_RESPONSE: 'eden:samelayer:sync-response',
   SEND_REQUEST: 'eden:samelayer:send-request',
   SEND_RESULT: 'eden:samelayer:send-result',
+  // st-chatu8 生图桥接协议
+  CHATU8_PROXY_PING: 'eden:samelayer:chatu8:proxy-ping',
+  CHATU8_PROXY_PONG: 'eden:samelayer:chatu8:proxy-pong',
+  CHATU8_GENERATE_REQUEST: 'eden:samelayer:chatu8:generate-request',
+  CHATU8_GENERATE_RESPONSE: 'eden:samelayer:chatu8:generate-response',
+  CHATU8_LLM_PROMPT_REQUEST: 'eden:samelayer:chatu8:llm-prompt-request',
+  CHATU8_LLM_PROMPT_RESPONSE: 'eden:samelayer:chatu8:llm-prompt-response',
 } as const;
 
 export type SameLayerPayload = {

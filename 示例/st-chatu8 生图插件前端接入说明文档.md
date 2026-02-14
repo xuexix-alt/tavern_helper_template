@@ -1,0 +1,282 @@
+前端接入
+
+
+主要简单通过 前端助手的事件来沟通
+eventEmit 发送事件 
+eventOn  监听事件 
+
+const EventType = {
+    GENERATE_IMAGE_REQUEST: 'generate-image-request',
+    GENERATE_IMAGE_RESPONSE: 'generate-image-response',
+};
+
+const requestData = { id: requestId, prompt: prompt, width: null, height: null };
+
+requestId 是要你自己生成唯一的。
+
+
+const imageResponseHandler = (responseData) => {
+          if (responseData.id !== requestId) return;//id不一样 不对
+eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler);//取消监听
+const { success, imageData, error, prompt, change } = responseData;
+//imageData就是base64的图片了
+
+}
+
+
+eventOn(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler);//开启监听
+
+await eventEmit(EventType.GENERATE_IMAGE_REQUEST, requestData);//发送请求
+
+
+
+
+
+示例:（放入酒馆的消息。需要安装前端助手）Change是覆盖Prompt 的，Change参数在这里没用啊。
+```html
+```
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图像生成事件客户端测试</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            line-height: 1.6; 
+            padding: 20px; 
+            max-width: 800px; 
+            margin: auto; 
+            background-color: #f8f9fa; 
+            color: #212529; 
+        }
+        h1 { color: #343a40; border-bottom: 2px solid #dee2e6; padding-bottom: 10px; }
+        p { color: #6c757d; }
+        small { color: #6c757d; font-size: 0.875em; }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 20px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+
+        label { font-weight: 600; margin-bottom: 5px; }
+        input[type="text"], input[type="number"], textarea { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            border: 1px solid #ced4da; 
+            border-radius: 4px; 
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        textarea { resize: vertical; }
+
+        button { 
+            padding: 12px 25px; 
+            cursor: pointer; 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        button:hover:not(:disabled) { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+
+        .loader {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #status { 
+            background-color: #343a40; 
+            color: #f8f9fa;
+            border: 1px solid #495057; 
+            border-radius: 4px; 
+            padding: 15px; 
+            margin-top: 20px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace; 
+            min-height: 100px; 
+        }
+        #image-container img { 
+            max-width: 100%; 
+            border: 1px solid #dee2e6; 
+            margin-top: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
+        }
+    </style>
+</head>
+<body>
+
+    <h1>图像生成事件客户端测试</h1>
+    <p>此页面是用于测试图像生成的客户端。它会收集下方设置并发送事件，依赖宿主环境来处理请求并返回结果。</p>
+
+    <div class="settings-grid">
+        <div class="form-group full-width">
+            <label for="prompt-input"><strong>提示词 (Prompt)</strong></label>
+            <textarea id="prompt-input" rows="4">1girl, masterpiece, best quality, blue sky</textarea>
+        </div>
+        <div class="form-group full-width">
+            <label for="change-input"><strong>修改/添加 (Change)</strong></label>
+            <textarea id="change-input" rows="2"></textarea>
+            <small>此部分会附加或替换主提示词，具体行为取决于后端逻辑。</small>
+        </div>
+        <div class="form-group">
+            <label for="width-input">宽度 (Width)</label>
+            <input type="number" id="width-input" value="1024" placeholder="例如: 1024">
+            <small>留空则使用后端默认值</small>
+        </div>
+        <div class="form-group">
+            <label for="height-input">高度 (Height)</label>
+            <input type="number" id="height-input" value="1024" placeholder="例如: 1024">
+            <small>留空则使用后端默认值</small>
+        </div>
+    </div>
+
+    <button id="generate-btn">
+        <span id="btn-text">发送生成请求</span>
+        <span id="btn-loader" class="loader" style="display: none;"></span>
+    </button>
+
+    <div id="status">等待操作...</div>
+    <div id="image-container"></div>
+
+    <script>
+        // 假设 eventOn, eventEmit, eventRemoveListener 是由宿主环境（如SillyTavern）提供的全局函数。
+        // 如果在普通浏览器中直接打开此文件，这些函数会是 undefined，点击按钮将报错。
+
+        const EventType = {
+            GENERATE_IMAGE_REQUEST: 'generate-image-request',
+            GENERATE_IMAGE_RESPONSE: 'generate-image-response',
+        };
+
+        const statusEl = document.getElementById('status');
+        const imageContainerEl = document.getElementById('image-container');
+        const generateBtn = document.getElementById('generate-btn');
+        const promptInput = document.getElementById('prompt-input');
+
+        // 用于生成唯一ID的辅助函数
+        const generateUniqueId = () => {
+            return 'req-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        };
+
+        // 记录日志到状态区域
+        const logStatus = (message) => {
+            console.log(message);
+            const time = new Date().toLocaleTimeString();
+            statusEl.textContent += `\n[${time}] ${message}`;
+        };
+
+        // 点击生成按钮的逻辑
+        generateBtn.addEventListener('click', async () => {
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+
+            // 检查事件函数是否存在
+            if (typeof eventEmit !== 'function' || typeof eventOn !== 'function' || typeof eventRemoveListener !== 'function') {
+                statusEl.textContent = `错误：事件函数 (eventEmit, eventOn, eventRemoveListener) 未定义。\n请在正确的宿主环境中运行此页面。`;
+                return;
+            }
+
+            statusEl.textContent = '...'; // 清空日志
+            imageContainerEl.innerHTML = ''; // 清空图片
+            
+            const prompt = promptInput.value;
+            const change = document.getElementById('change-input').value;
+            const width = document.getElementById('width-input').value;
+            const height = document.getElementById('height-input').value;
+
+            if (!prompt) {
+                logStatus('错误：提示词不能为空！');
+                return;
+            }
+
+            const requestId = generateUniqueId();
+            const requestData = { 
+                id: requestId, 
+                prompt: prompt, 
+                change: change,
+                width: width ? parseInt(width, 10) : null, 
+                height: height ? parseInt(height, 10) : null,
+            };
+
+            logStatus(`准备发送请求，ID: ${requestId}`);
+            logStatus(`请求数据: ${JSON.stringify(requestData, null, 2)}`);
+
+            // 2. 定义本次请求对应的响应处理器
+            const imageResponseHandler = (responseData) => {
+                if (!responseData || responseData.id !== requestId) {
+                    return;
+                }
+
+                logStatus(`收到匹配的响应 (ID: ${responseData.id})`);
+                
+                // 恢复按钮状态
+                generateBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+
+                // 4. 处理完后，取消监听
+                eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler);
+                logStatus(`已取消对 ID: ${requestId} 的监听。`);
+
+                const { success, imageData, error } = responseData;
+
+                if (success) {
+                    logStatus('图像生成成功！');
+                    const img = document.createElement('img');
+                    img.src = imageData;
+                    img.alt = `生成的图片: ${prompt}`;
+                    imageContainerEl.appendChild(img);
+                } else {
+                    logStatus(`图像生成失败: ${error}`);
+                }
+            };
+
+            // 1. 开启监听
+            eventOn(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler);
+            logStatus(`已开启对 ID: ${requestId} 的响应监听。`);
+
+            // 更新按钮为加载状态
+            generateBtn.disabled = true;
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline-block';
+
+            // 3. 发送请求
+            logStatus(`发送生成请求...`);
+            await eventEmit(EventType.GENERATE_IMAGE_REQUEST, requestData);
+            logStatus('请求已发送，等待后端响应...');
+        });
+    </script>
+
+</body>
+</html>
+```
