@@ -178,9 +178,19 @@ const progressPercent = computed(() => {
 
 function isGoalCompleted(goalKey: string, idx: number): boolean {
   const status = store.data.主线任务.目标完成状态 ?? {};
-  if (goalKey in status) return status[goalKey] === true;
   const fallbackKey = String(idx);
-  return status[fallbackKey] === true;
+  if (status[fallbackKey] === true) return true;
+  if (status[goalKey] === true) return true;
+  const goal = stageTargets.value.find(item => item.key === goalKey) ?? stageTargets.value[idx];
+  if (!goal || typeof goal !== 'object') return false;
+
+  const numericValues = Object.values(goal as Record<string, unknown>)
+    .map(v => Number(v))
+    .filter(v => Number.isFinite(v));
+  if (numericValues.length < 2) return false;
+
+  const [current, target] = numericValues;
+  return target > 0 && current >= target;
 }
 
 function getGoalText(goal: any): string {

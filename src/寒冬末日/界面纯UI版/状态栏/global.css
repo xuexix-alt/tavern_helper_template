@@ -15,10 +15,10 @@
   --accent-blue: #bd93f9;
   --accent-cyan: #00b4d8;
   --health-bar-color: #50fa7b;
-  --border-radius: 12px;
-  --section-gap: 12px;
-  --inner-padding: 13px;
-  --transition-speed: 0.3s;
+  --border-radius: 10px;
+  --section-gap: 8px;
+  --inner-padding: 10px;
+  --transition-speed: 0.2s;
   --font-main:
     'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
@@ -116,6 +116,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: var(--section-gap);
+  height: auto;
 }
 
 .section {
@@ -127,13 +128,13 @@ main {
 }
 
 .section-title {
-  font-size: 1.12em;
+  font-size: 0.95em;
   font-weight: bold;
   color: var(--text-strong);
   text-align: center;
-  margin: 0 0 10px 0;
-  border-bottom: 2px solid var(--border-color);
-  padding-bottom: 6px;
+  margin: 0 0 6px 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 4px;
 }
 
 .choices-title {
@@ -711,9 +712,9 @@ main {
 
 .progress-bar-container {
   width: 100%;
-  height: 12px;
+  height: 8px;
   background-color: var(--bg-dark);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -1036,7 +1037,7 @@ main {
 }
 
 .floor-grid {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(8, 1fr);
 }
 
 .expansion-grid {
@@ -1047,12 +1048,12 @@ main {
 
 .room-cell {
   background-color: var(--bg-medium);
-  padding: 8px 6px;
-  border-radius: 6px;
+  padding: 4px 3px;
+  border-radius: 4px;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: all var(--transition-speed);
-  min-height: 56px;
+  min-height: 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1088,23 +1089,23 @@ main {
 }
 
 .room-number {
-  font-size: 0.8em;
+  font-size: 0.7em;
   font-weight: bold;
   color: var(--text-strong);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .room-value {
-  font-size: 0.75em;
+  font-size: 0.65em;
   color: var(--accent-blue);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .room-resident {
-  font-size: 0.7em;
+  font-size: 0.6em;
   color: var(--text-color);
   opacity: 0.8;
   white-space: nowrap;

@@ -222,6 +222,7 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
 }
 
 let stopHostFrameHeightSync: (() => void) | null = null;
+const ENABLE_LEGACY_HOST_FRAME_HEIGHT_SYNC = false;
 
 $(async () => {
   // 等待所有依赖注入完成
@@ -267,7 +268,9 @@ $(async () => {
   app.mount('#app');
 
   // 对齐楼层 iframe 高度，避免异步加载时被初始占位高度卡住。
-  stopHostFrameHeightSync = createHostFrameHeightSync({ minHeightPx: 320 });
+  if (ENABLE_LEGACY_HOST_FRAME_HEIGHT_SYNC) {
+    stopHostFrameHeightSync = createHostFrameHeightSync({ minHeightPx: 320 });
+  }
 
   // 进入楼层 iframe 时，总是从顶部开始，避免出现“加载后停在最后一行”
   scrollToTopOnce();

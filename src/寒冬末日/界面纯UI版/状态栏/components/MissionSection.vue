@@ -33,13 +33,13 @@
         <div class="goals-list">
           <template v-if="visibleStageTargets.length > 0">
             <div
-              v-for="goal in visibleStageTargets"
+              v-for="(goal, idx) in visibleStageTargets"
               :key="goal.key"
               class="goal-item"
-              :class="{ completed: isGoalCompleted(goal.key, Number(goal.key) || 0) }"
+              :class="{ completed: isGoalCompleted(goal.key, idx) }"
             >
               <div class="goal-checkbox">
-                <svg v-if="isGoalCompleted(goal.key, Number(goal.key) || 0)" viewBox="0 0 24 24" class="check-icon">
+                <svg v-if="isGoalCompleted(goal.key, idx)" viewBox="0 0 24 24" class="check-icon">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
                 <svg v-else viewBox="0 0 24 24" class="check-icon empty">
@@ -47,13 +47,13 @@
                 </svg>
               </div>
               <div class="goal-content">
-                <div class="goal-text" :class="{ completed: isGoalCompleted(goal.key, Number(goal.key) || 0) }">
+                <div class="goal-text" :class="{ completed: isGoalCompleted(goal.key, idx) }">
                   <TextHighlight :text="getGoalText(goal)" :query="query" />
                 </div>
                 <div v-if="hasGoalProgress(goal)" class="goal-meta">
                   <span class="meta-chip">进度：{{ goal.当前值 ?? 0 }}/{{ goal.目标值 ?? 0 }}</span>
                 </div>
-                <span v-if="isGoalCompleted(goal.key, Number(goal.key) || 0)" class="goal-status-tag">已完成</span>
+                <span v-if="isGoalCompleted(goal.key, idx)" class="goal-status-tag">已完成</span>
               </div>
             </div>
           </template>
@@ -196,7 +196,7 @@ const visibleStageTargets = computed(() =>
 
 const goalsTotalDisplay = computed(() => visibleStageTargets.value.length);
 const completedGoalsDisplay = computed(
-  () => visibleStageTargets.value.filter(goal => isGoalCompleted(goal.key, Number(goal.key) || 0)).length,
+  () => visibleStageTargets.value.filter((goal, idx) => isGoalCompleted(goal.key, idx)).length,
 );
 
 const progressPercent = computed(() => {
@@ -207,9 +207,19 @@ const progressPercent = computed(() => {
 
 function isGoalCompleted(goalKey: string, idx: number): boolean {
   const status = store.data.主线任务.目标完成状态 ?? {};
-  if (goalKey in status) return status[goalKey] === true;
   const fallbackKey = String(idx);
-  return status[fallbackKey] === true;
+  if (status[fallbackKey] === true) return true;
+  if (status[goalKey] === true) return true;
+  const goal = stageTargets.value.find(item => item.key === goalKey) ?? stageTargets.value[idx];
+  if (!goal || typeof goal !== 'object') return false;
+
+  const numericValues = Object.values(goal as Record<string, unknown>)
+    .map(v => Number(v))
+    .filter(v => Number.isFinite(v));
+  if (numericValues.length < 2) return false;
+
+  const [current, target] = numericValues;
+  return target > 0 && current >= target;
 }
 
 function getGoalText(goal: any): string {

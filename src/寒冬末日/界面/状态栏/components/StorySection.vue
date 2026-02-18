@@ -300,7 +300,9 @@ const CHAUT8_DEBUG_SWITCH_KEY = '__edenStoryChatu8Debug';
 let chatu8DebugExposeToken = 0;
 const chatu8DebugExposedWindows = new Set<Window & typeof globalThis>();
 const CHATU8_BRIDGE_REPROBE_MS = 1200;
+const STORY_OBSERVER_THROTTLE_MS = 160;
 let lastStoryMessageId: number | null = null;
+const storySectionActive = ref(true);
 
 function isChatu8DebugEnabled(): boolean {
   return chatu8DebugManual.value === true || chatu8Runtime.value.debugLog === true;
@@ -2254,9 +2256,9 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   }
 
   const promptEls = roots.flatMap(root =>
-    Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el =>
-      normalizeForMatch(el.textContent ?? '').includes('###'),
-    ),
+    Array.from(
+      root.querySelectorAll('pre, code, .image-prompt, .st-chatu8-image-button, [data-image-tag], [data-link]'),
+    ).filter(el => normalizeForMatch(el.textContent ?? '').includes('###')),
   );
 
   const out: Record<string, ResolvedDisplayedImage[]> = {};
@@ -2690,6 +2692,9 @@ function resolveStoryMessageId(): number | null {
 }
 
 watchEffect(onCleanup => {
+  const isActive = storySectionActive.value;
+  if (!isActive) return;
+
   // 优先使用外部传入的 messageId，同层脚本挂载时避免调用 getCurrentMessageId 抛错
   const messageId = resolveStoryMessageId();
   if (messageId !== lastStoryMessageId) {
@@ -2728,6 +2733,7 @@ watchEffect(onCleanup => {
   let canceled = false;
   const timers: number[] = [];
   const observers: MutationObserver[] = [];
+  let observerThrottleTimer: number | null = null;
 
   const run = () => {
     if (canceled) return;
@@ -2745,6 +2751,15 @@ watchEffect(onCleanup => {
     const prevStandaloneJson = JSON.stringify(standaloneHostImages.value ?? []);
     const nextStandaloneJson = JSON.stringify(nextStandalone);
     if (prevStandaloneJson !== nextStandaloneJson) standaloneHostImages.value = nextStandalone;
+  };
+
+  const scheduleObservedRun = () => {
+    if (canceled) return;
+    if (observerThrottleTimer !== null) return;
+    observerThrottleTimer = window.setTimeout(() => {
+      observerThrottleTimer = null;
+      run();
+    }, STORY_OBSERVER_THROTTLE_MS);
   };
 
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
@@ -2776,11 +2791,10 @@ watchEffect(onCleanup => {
   timers.push(window.setTimeout(tryCacheQuery, 800));
   timers.push(window.setTimeout(tryCacheQuery, 3000));
 
-  const observeRoots =
-    messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  const observeRoots = resolveHostMessageScopedRoots(messageId);
   for (const root of observeRoots) {
     const observer = new MutationObserver(() => {
-      run();
+      scheduleObservedRun();
     });
     observer.observe(root, {
       childList: true,
@@ -2793,30 +2807,56 @@ watchEffect(onCleanup => {
 
   onCleanup(() => {
     canceled = true;
+    if (observerThrottleTimer !== null) {
+      window.clearTimeout(observerThrottleTimer);
+      observerThrottleTimer = null;
+    }
     for (const observer of observers) observer.disconnect();
     for (const t of timers) window.clearTimeout(t);
     hostImageButtonStateByPrompt.value = {};
   });
 });
 
-onMounted(() => {
-  refreshChatu8RuntimeConfig();
-  void probeChatu8Bridge(420, true);
-  exposeChatu8DebugSwitch();
+function stopChatu8RuntimeTimer() {
+  if (chatu8RuntimeTimer !== null) {
+    window.clearInterval(chatu8RuntimeTimer);
+    chatu8RuntimeTimer = null;
+  }
+}
+
+function startChatu8RuntimeTimer() {
+  if (chatu8RuntimeTimer !== null) return;
   chatu8RuntimeTimer = window.setInterval(() => {
     refreshChatu8RuntimeConfig();
     if (chatu8BridgeReady !== true) {
       void probeChatu8Bridge(280, true);
     }
   }, 1500);
+}
+
+onMounted(() => {
+  refreshChatu8RuntimeConfig();
+  void probeChatu8Bridge(420, true);
+  exposeChatu8DebugSwitch();
+  startChatu8RuntimeTimer();
+});
+
+onActivated(() => {
+  storySectionActive.value = true;
+  refreshChatu8RuntimeConfig();
+  startChatu8RuntimeTimer();
+});
+
+onDeactivated(() => {
+  storySectionActive.value = false;
+  clearPendingChatu8Requests('component_deactivated');
+  stopChatu8RuntimeTimer();
 });
 
 onBeforeUnmount(() => {
+  storySectionActive.value = false;
   clearPendingChatu8Requests('component_unmount');
-  if (chatu8RuntimeTimer !== null) {
-    window.clearInterval(chatu8RuntimeTimer);
-    chatu8RuntimeTimer = null;
-  }
+  stopChatu8RuntimeTimer();
   chatu8BridgeProbePending = null;
   chatu8BridgeReady = null;
   chatu8BridgeLastProbeAt = 0;

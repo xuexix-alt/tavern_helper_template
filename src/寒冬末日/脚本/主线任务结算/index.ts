@@ -441,7 +441,9 @@ function applyMissionGoalCompletion(stat_data: any) {
   if (stageGoals.length === 0) return;
 
   const status = _.get(mission, '目标完成状态', {}) ?? {};
-  const nextStatus: Record<string, boolean> = { ...(typeof status === 'object' ? status : {}) };
+  const prevStatus: Record<string, boolean> =
+    status && typeof status === 'object' ? (status as Record<string, boolean>) : {};
+  const nextStatus: Record<string, boolean> = {};
 
   let doneCount = 0;
   const changedIndexes: string[] = [];
@@ -450,7 +452,7 @@ function applyMissionGoalCompletion(stat_data: any) {
     const done = isGoalDone(goal);
     if (done) doneCount += 1;
     const idxKey = String(i);
-    if (!_.isEqual(nextStatus[idxKey], done)) changedIndexes.push(idxKey);
+    if (!_.isEqual(prevStatus[idxKey], done)) changedIndexes.push(idxKey);
     nextStatus[idxKey] = done;
   }
 

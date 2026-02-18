@@ -20,22 +20,47 @@
           <span class="eden-tab-label">{{ tab.label }}</span>
         </button>
       </nav>
-      <div class="eden-version" aria-label="状态栏版本">v{{ STATUSBAR_VERSION }}</div>
+      <div class="eden-shell-footer-bottom">
+        <button
+          type="button"
+          class="eden-quick-options-btn"
+          :disabled="quickOptions.length === 0"
+          @click="openQuickChoicesPanel"
+        >
+          选项
+          <span class="eden-quick-options-count">{{ quickOptions.length }}</span>
+        </button>
+        <div class="eden-version" aria-label="状态栏版本">v{{ STATUSBAR_VERSION }}</div>
+      </div>
     </footer>
   </main>
+
+  <Teleport to="body">
+    <div v-if="quickChoicesPanelOpen" class="eden-quick-choices-mask" @click.self="closeQuickChoicesPanel">
+      <div class="eden-quick-choices-modal">
+        <div class="eden-quick-choices-head">
+          <strong class="eden-quick-choices-title">剧情选项</strong>
+          <button type="button" class="eden-quick-choices-close" @click="closeQuickChoicesPanel">关闭</button>
+        </div>
+        <div class="eden-quick-choices-body">
+          <ChoicesSection :options="quickOptions" :query="''" @choice-sent="onQuickChoiceSent" />
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import ChoicesSection from './components/ChoicesSection.vue';
 import CharactersPage from './pages/CharactersPage.vue';
 import CreationPage from './pages/CreationPage.vue';
 import MissionPage from './pages/MissionPage.vue';
 import ShelterPage from './pages/ShelterPage.vue';
+import { useInjectedData } from './useInjectedData';
 
 const STATUSBAR_VERSION = '3.0';
-const MIN_SHELL_HEIGHT = 300;
-const MAX_SHELL_HEIGHT = 980;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const tabs = [
   { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },
@@ -46,17 +71,25 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]['key'];
 
-const activeTabKey = ref<TabKey>('shelter');
-const shellHeight = ref<number>(Math.max(MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
+const activeTabKey = ref<TabKey>('characters');
+const shellHeight = ref<number | null>(null);
 const shellMainRef = ref<HTMLElement | null>(null);
+const quickChoicesPanelOpen = ref(false);
 const tabScrollPosition = new Map<TabKey, number>(tabs.map(tab => [tab.key, 0] as const));
+const { options } = useInjectedData();
 
 const activeTab = computed(() => tabs.find(tab => tab.key === activeTabKey.value) ?? tabs[0]);
 const activeTabProps = computed<Record<string, unknown>>(() => ({ query: '' }));
+const quickOptions = computed(() => options.value.filter(opt => String(opt ?? '').trim().length > 0));
 
-const shellStyle = computed<Record<string, string>>(() => ({
-  '--eden-shell-height': `${shellHeight.value}px`,
-}));
+const shellStyle = computed<Record<string, string>>(() => {
+  if (shellHeight.value === null) {
+    return {};
+  }
+  return {
+    '--eden-shell-height': `${shellHeight.value}px`,
+  };
+});
 
 function getActiveScrollContainer() {
   const shellMain = shellMainRef.value;
@@ -118,21 +151,53 @@ function getHostChatHeight() {
   return null;
 }
 
+function getFrameContainerHeight() {
+  try {
+    const frameEl = window.frameElement as HTMLElement | null;
+    if (!frameEl) return null;
+    const rect = frameEl.getBoundingClientRect();
+    if (Number.isFinite(rect.height) && rect.height > 0) return rect.height;
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 function calculateShellHeight() {
-  const hostChatHeight = getHostChatHeight();
-  const candidate = hostChatHeight ?? getViewportHeight();
-  return Math.min(MAX_SHELL_HEIGHT, Math.max(MIN_SHELL_HEIGHT, Math.floor(candidate)));
+  const frameContainerHeight = getFrameContainerHeight();
+  if (frameContainerHeight != null) {
+    return Math.max(1, Math.floor(frameContainerHeight));
+  }
+  return null;
 }
 
 function syncShellHeight() {
   const nextHeight = calculateShellHeight();
-  if (Math.abs(nextHeight - shellHeight.value) >= 1) {
+  if (nextHeight === null) {
+    shellHeight.value = null;
+  } else if (Math.abs((shellHeight.value ?? 0) - nextHeight) >= 1) {
     shellHeight.value = nextHeight;
   }
 }
 
 function notifyLayoutChanged() {
   requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+
+function openQuickChoicesPanel() {
+  if (quickOptions.value.length === 0) {
+    toastr?.info?.('当前没有可用选项');
+    return;
+  }
+  quickChoicesPanelOpen.value = true;
+}
+
+function closeQuickChoicesPanel() {
+  quickChoicesPanelOpen.value = false;
+}
+
+function onQuickChoiceSent() {
+  closeQuickChoicesPanel();
 }
 
 let frameResizeObserver: ResizeObserver | null = null;
@@ -207,6 +272,7 @@ onBeforeUnmount(() => {
     for (const timer of initialSyncTimers) window.clearTimeout(timer);
     initialSyncTimers = [];
   }
+  quickChoicesPanelOpen.value = false;
 });
 
 </script>
@@ -225,6 +291,7 @@ onBeforeUnmount(() => {
 
 #eden-shell {
   font-size: var(--font-size-main, 16px);
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   box-shadow:
     0 0 25px 0px var(--border-shadow-color),
@@ -235,12 +302,22 @@ onBeforeUnmount(() => {
   margin: 0;
   padding: 0;
   gap: 0;
-  height: var(--eden-shell-height, 560px);
-  max-height: var(--eden-shell-height, 560px);
-  min-height: 300px;
+  height: var(--eden-shell-height, auto);
+  max-height: 100%;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
+}
+
+#eden-shell:not([style*='--eden-shell-height']) {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#eden-shell:not([style*='--eden-shell-height']) .eden-shell-main {
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .eden-shell-main {
@@ -248,9 +325,17 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+#eden-shell:not([style*='--eden-shell-height']) .eden-shell-main {
+  overflow: visible;
+}
+
 .eden-pane {
   height: 100%;
   min-height: 0;
+}
+
+#eden-shell:not([style*='--eden-shell-height']) .eden-pane {
+  height: auto;
 }
 
 .eden-shell-footer {
@@ -260,6 +345,51 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.eden-shell-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eden-quick-options-btn {
+  flex: 1 1 auto;
+  min-height: 34px;
+  border-radius: 9px;
+  border: 1px solid rgba(139, 233, 253, 0.55);
+  background: rgba(139, 233, 253, 0.16);
+  color: var(--text-strong);
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.eden-quick-options-btn:hover:not(:disabled) {
+  background: rgba(139, 233, 253, 0.24);
+  box-shadow: 0 0 10px rgba(139, 233, 253, 0.25);
+}
+
+.eden-quick-options-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.eden-quick-options-count {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.76em;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 4px;
 }
 
 .eden-tabbar {
@@ -308,11 +438,66 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-@media (max-width: 520px) {
-  #eden-shell {
-    min-height: 280px;
-  }
+.eden-quick-choices-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2588;
+  background: rgba(0, 0, 0, 0.52);
+  padding: calc(40px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
+    calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
 
+.eden-quick-choices-modal {
+  width: min(680px, 100%);
+  max-height: calc(100% - 12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(18, 21, 29, 0.98);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.eden-quick-choices-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.eden-quick-choices-title {
+  font-size: 0.96em;
+  font-weight: 600;
+}
+
+.eden-quick-choices-close {
+  min-height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-color);
+  font: inherit;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.eden-quick-choices-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.eden-quick-choices-body :deep(.section) {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
   .eden-shell-footer {
     padding-left: 6px;
     padding-right: 6px;
@@ -325,6 +510,11 @@ onBeforeUnmount(() => {
 
   .eden-tab-label {
     font-size: 0.64em;
+  }
+
+  .eden-quick-options-btn {
+    min-height: 32px;
+    border-radius: 8px;
   }
 }
 

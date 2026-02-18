@@ -28,6 +28,16 @@ import CharactersSection from '../components/CharactersSection.vue';
   scrollbar-gutter: stable;
 }
 
+#eden-shell:not([style*='--eden-shell-height']) .eden-page {
+  height: auto;
+}
+
+#eden-shell:not([style*='--eden-shell-height']) .eden-page-scroll {
+  height: auto;
+  overflow-y: visible;
+  overflow-x: visible;
+}
+
 @media (max-width: 420px) {
   .eden-page-scroll {
     padding: 6px 6px 8px;
