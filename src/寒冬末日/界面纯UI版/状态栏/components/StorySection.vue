@@ -156,7 +156,6 @@
         <pre class="meta-block-body"><TextHighlight :text="block.content" :query="query" /></pre>
       </details>
     </div>
-
   </section>
 </template>
 
@@ -1109,9 +1108,7 @@ function readChatu8CacheFromHost(
     if (!entries || typeof entries !== 'object') return {};
 
     const allowPromptNormSet = new Set(
-      (promptAllowlist ?? [])
-        .map(item => normalizePromptBodyForCompare(String(item ?? '').trim()))
-        .filter(Boolean),
+      (promptAllowlist ?? []).map(item => normalizePromptBodyForCompare(String(item ?? '').trim())).filter(Boolean),
     );
 
     const parsedEntries: Array<{ prompt: string; promptNorm: string; src: string; entryMsgId: number | null }> = [];
@@ -2207,7 +2204,7 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
     const all = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
     const visible = all.filter(btn => isHostElementVisible(btn));
     // 当楼层被桥接隐藏时，所有按钮都不可见，直接使用全部按钮
-    const list = floorHidden ? all : (visible.length > 0 ? visible : all);
+    const list = floorHidden ? all : visible.length > 0 ? visible : all;
     for (const button of list) {
       if (seenButtons.has(button)) continue;
       seenButtons.add(button);
@@ -2270,15 +2267,15 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
       requestId: string;
       imageSource: 'request_id' | 'neighbor';
     } | null = null;
-      for (let idx = stChatu8Buttons.length - 1; idx >= 0; idx -= 1) {
-        const item = stChatu8Buttons[idx];
-        if (!item.promptBodyNorm) continue;
-        const matched = item.promptBodyNorm === bodyNeedle || isSameRawPromptToken(item.rawPrompt, rawPrompt);
-        if (matched) {
-          mappedByButton = item.image;
-          mappedByButtonMeta = {
-            requestId: item.requestId,
-            imageSource: item.imageSource,
+    for (let idx = stChatu8Buttons.length - 1; idx >= 0; idx -= 1) {
+      const item = stChatu8Buttons[idx];
+      if (!item.promptBodyNorm) continue;
+      const matched = item.promptBodyNorm === bodyNeedle || isSameRawPromptToken(item.rawPrompt, rawPrompt);
+      if (matched) {
+        mappedByButton = item.image;
+        mappedByButtonMeta = {
+          requestId: item.requestId,
+          imageSource: item.imageSource,
         };
         break;
       }
@@ -2457,11 +2454,7 @@ const segments = computed<Segment[]>(() => {
   }
 
   // 若提示词只存在于插件宿主按钮/LLM 回传（而不在正文文本中），也要在 UI 中展示加载占位或最终图片。
-  const externalPromptSet = new Set(
-    externalPromptRaws.value
-      .map(item => String(item ?? '').trim())
-      .filter(Boolean),
-  );
+  const externalPromptSet = new Set(externalPromptRaws.value.map(item => String(item ?? '').trim()).filter(Boolean));
   const promptCandidates = Array.from(
     new Set([
       ...Object.keys(hostImageButtonStateByPrompt.value ?? {}),
@@ -2721,7 +2714,9 @@ watchEffect(onCleanup => {
   const domPromptsRaw = collectPromptRawsFromDisplayedButtons(messageId);
   const domPrompts =
     storyPrompts.length > 0
-      ? domPromptsRaw.filter(rawPrompt => storyPrompts.some(storyPrompt => isSameRawPromptToken(storyPrompt, rawPrompt)))
+      ? domPromptsRaw.filter(rawPrompt =>
+          storyPrompts.some(storyPrompt => isSameRawPromptToken(storyPrompt, rawPrompt)),
+        )
       : domPromptsRaw.slice(-1);
   const prompts = Array.from(new Set([...storyPrompts, ...domPrompts, ...externalPromptRaws.value]));
 

@@ -274,7 +274,6 @@ onBeforeUnmount(() => {
   }
   quickChoicesPanelOpen.value = false;
 });
-
 </script>
 
 <style scoped>

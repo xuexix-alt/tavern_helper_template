@@ -60,28 +60,31 @@ function readGuardMap(): Record<string, string> {
 
 function writeGuardDigest(messageId: number, digest: string) {
   try {
-    updateVariablesWith(vars => {
-      const next = vars && typeof vars === 'object' ? vars : {};
-      const guard = _.get(next, REPROCESS_GUARD_PATH, {});
-      const nextGuard: Record<string, string> =
-        guard && typeof guard === 'object' ? { ...(guard as Record<string, string>) } : {};
-      nextGuard[String(messageId)] = digest;
+    updateVariablesWith(
+      vars => {
+        const next = vars && typeof vars === 'object' ? vars : {};
+        const guard = _.get(next, REPROCESS_GUARD_PATH, {});
+        const nextGuard: Record<string, string> =
+          guard && typeof guard === 'object' ? { ...(guard as Record<string, string>) } : {};
+        nextGuard[String(messageId)] = digest;
 
-      const keys = Object.keys(nextGuard);
-      if (keys.length > REPROCESS_GUARD_MAX_ENTRIES) {
-        const toDrop = keys
-          .map(key => Number(key))
-          .filter(id => Number.isFinite(id))
-          .sort((a, b) => a - b)
-          .slice(0, Math.max(0, keys.length - REPROCESS_GUARD_MAX_ENTRIES));
-        for (const id of toDrop) {
-          delete nextGuard[String(id)];
+        const keys = Object.keys(nextGuard);
+        if (keys.length > REPROCESS_GUARD_MAX_ENTRIES) {
+          const toDrop = keys
+            .map(key => Number(key))
+            .filter(id => Number.isFinite(id))
+            .sort((a, b) => a - b)
+            .slice(0, Math.max(0, keys.length - REPROCESS_GUARD_MAX_ENTRIES));
+          for (const id of toDrop) {
+            delete nextGuard[String(id)];
+          }
         }
-      }
 
-      _.set(next, REPROCESS_GUARD_PATH, nextGuard);
-      return next;
-    }, { type: 'chat' });
+        _.set(next, REPROCESS_GUARD_PATH, nextGuard);
+        return next;
+      },
+      { type: 'chat' },
+    );
   } catch {
     // ignore guard write failure
   }

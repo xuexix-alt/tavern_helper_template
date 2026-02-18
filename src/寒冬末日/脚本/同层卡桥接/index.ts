@@ -608,10 +608,19 @@ function onPluginEvent(eventName: string, listener: (...args: any[]) => void): S
 function normalizePromptForCacheCompare(raw: unknown): string {
   const text = String(raw ?? '').trim();
   if (!text) return '';
-  const compact = text.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const compact = text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const bodyMatch = compact.match(/^[^#<>\n]+###([\s\S]*?)###$/);
   const source = (bodyMatch?.[1] ?? compact).replace(/\$\{[\s\S]*?\}\$/g, ' ');
-  return source.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  return source
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 function handleChatu8CacheQuery(
@@ -819,7 +828,7 @@ $(() => {
     onAnyEvent(
       SAMELAYER_EVENTS.CHATU8_CACHE_QUERY,
       (payload: { messageId?: number; queryId?: string; prompts?: unknown[] } | null) => {
-      handleChatu8CacheQuery(payload);
+        handleChatu8CacheQuery(payload);
       },
     ),
   );

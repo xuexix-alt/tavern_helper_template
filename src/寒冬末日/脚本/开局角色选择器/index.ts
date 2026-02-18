@@ -144,11 +144,7 @@ function buildDossierIndexText(list: DossierIndexItem[]): string {
 
 function normalizeRoleListCanonical(list: any): string[] {
   if (!Array.isArray(list)) return [];
-  return _.uniq(
-    list
-      .map(name => canonicalizeRoleName(name))
-      .filter(Boolean),
-  );
+  return _.uniq(list.map(name => canonicalizeRoleName(name)).filter(Boolean));
 }
 
 function readDeletedRoleSet(state: RoleSelectorStateLike | null | undefined): Set<string> {
@@ -267,8 +263,7 @@ async function pruneInitvarByRemovedRoles(worldbookName: string, removedSet: Set
       const roleControlPath = ['主线任务', '$meta', '角色控制'];
       const roleControl = _.get(data, roleControlPath, null);
       if (roleControl && typeof roleControl === 'object') {
-        const trimList = (list: any) =>
-          normalizeRoleListCanonical(list).filter(name => !removedSet.has(name));
+        const trimList = (list: any) => normalizeRoleListCanonical(list).filter(name => !removedSet.has(name));
         _.set(roleControl, 'selected_roles', trimList(_.get(roleControl, 'selected_roles', [])));
         _.set(roleControl, 'revealed_roles', trimList(_.get(roleControl, 'revealed_roles', [])));
         _.set(roleControl, 'pending_unlock', trimList(_.get(roleControl, 'pending_unlock', [])));
@@ -580,7 +575,9 @@ function renderSelector(options: {
     '<div class="eden-rs-desc">请勾选“保留”的角色。未勾选角色将被永久删除（当前变量 / 角色档案索引 / initvar），并加入删除标记，不会再参与动态档案注入。</div>',
   ).appendTo($modal);
   const $tools = $('<div class="eden-rs-tools"></div>').appendTo($modal);
-  const $search = $('<input class="eden-rs-search" type="search" placeholder="搜索角色 / 简介 / 位置…" />').appendTo($tools);
+  const $search = $('<input class="eden-rs-search" type="search" placeholder="搜索角色 / 简介 / 位置…" />').appendTo(
+    $tools,
+  );
   const $visibleCount = $('<div class="eden-rs-count-chip"></div>').appendTo($tools);
 
   const $list = $('<div class="eden-rs-list"></div>').appendTo($modal);
@@ -710,11 +707,7 @@ function openRoleCreatorFromSelector() {
 async function applyRoleSelection(selected: string[]) {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
   const catalog = await buildMergedCatalog(state);
-  const catalogCanonical = _.uniq(
-    catalog
-      .map(item => canonicalizeRoleName(item.name))
-      .filter(Boolean),
-  );
+  const catalogCanonical = _.uniq(catalog.map(item => canonicalizeRoleName(item.name)).filter(Boolean));
   const catalogCanonicalSet = new Set(catalogCanonical);
   const normalizedSelected = _(selected)
     .map(name => canonicalizeRoleName(name))
@@ -732,7 +725,9 @@ async function applyRoleSelection(selected: string[]) {
     selected_roles: normalizedSelected,
     revealed_roles: normalizedSelected,
     deleted_roles: mergedDeleted,
-    pending_unlock: (state.pending_unlock ?? []).filter(name => !removedFromSelectionSet.has(canonicalizeRoleName(name))),
+    pending_unlock: (state.pending_unlock ?? []).filter(
+      name => !removedFromSelectionSet.has(canonicalizeRoleName(name)),
+    ),
     initialized_at_message_id: getCurrentMessageIdSafe(),
   });
 
