@@ -7,7 +7,6 @@
     </section>
 
     <footer class="eden-shell-footer">
-      <StoryStreamObserver :active="isStoryTab" />
       <nav class="eden-tabbar" aria-label="状态栏页面切换">
         <button
           v-for="tab in tabs"
@@ -29,22 +28,16 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
-import { watchDebounced } from '@vueuse/core';
 import CharactersPage from './pages/CharactersPage.vue';
 import CreationPage from './pages/CreationPage.vue';
 import MissionPage from './pages/MissionPage.vue';
-import StoryStreamObserver from './components/StoryStreamObserver.vue';
 import ShelterPage from './pages/ShelterPage.vue';
-import StoryPage from './pages/StoryPage.vue';
-import { useInjectedData } from './useInjectedData';
 
 const STATUSBAR_VERSION = '3.0';
 const MIN_SHELL_HEIGHT = 300;
 const MAX_SHELL_HEIGHT = 980;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
-const { raw, options } = useInjectedData();
 const tabs = [
-  { key: 'story', label: '剧情', icon: '📖', component: StoryPage },
   { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },
   { key: 'mission', label: '任务', icon: '🎯', component: MissionPage },
   { key: 'characters', label: '角色', icon: '🧑‍🤝‍🧑', component: CharactersPage },
@@ -53,18 +46,13 @@ const tabs = [
 
 type TabKey = (typeof tabs)[number]['key'];
 
-const activeTabKey = ref<TabKey>('story');
+const activeTabKey = ref<TabKey>('shelter');
 const shellHeight = ref<number>(Math.max(MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
 const shellMainRef = ref<HTMLElement | null>(null);
 const tabScrollPosition = new Map<TabKey, number>(tabs.map(tab => [tab.key, 0] as const));
 
 const activeTab = computed(() => tabs.find(tab => tab.key === activeTabKey.value) ?? tabs[0]);
-const isStoryTab = computed(() => activeTab.value.key === 'story');
-const activeTabProps = computed<Record<string, unknown>>(() => {
-  const baseProps: Record<string, unknown> = { query: '' };
-  if (activeTab.value.key === 'story') return { ...baseProps, raw: raw.value, options: options.value };
-  return baseProps;
-});
+const activeTabProps = computed<Record<string, unknown>>(() => ({ query: '' }));
 
 const shellStyle = computed<Record<string, string>>(() => ({
   '--eden-shell-height': `${shellHeight.value}px`,
@@ -221,13 +209,6 @@ onBeforeUnmount(() => {
   }
 });
 
-watchDebounced(
-  () => [raw.value],
-  () => {
-    window.dispatchEvent(new Event('resize'));
-  },
-  { debounce: 200 },
-);
 </script>
 
 <style scoped>
