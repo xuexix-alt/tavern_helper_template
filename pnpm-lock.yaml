@@ -1,9 +1,5 @@
 lockfileVersion: '9.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 importers:
 
   .:
@@ -183,12 +179,9 @@ importers:
       mini-css-extract-plugin:
         specifier: ^2.10.0
         version: 2.10.0(webpack@5.105.2)
-<<<<<<< HEAD
       playwright:
         specifier: ^1.58.2
         version: 1.58.2
-=======
->>>>>>> 5c392d920d8716df90a81df5e7a51219e546142b
       postcss:
         specifier: ^8.5.6
         version: 8.5.6
@@ -3277,7 +3270,6 @@ packages:
     engines: {node: '>=0.6.0', teleport: '>=0.2.0'}
     deprecated: |-
       You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
-
       (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
 
   quansync@0.2.11:
