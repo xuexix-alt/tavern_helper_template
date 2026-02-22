@@ -1391,6 +1391,7 @@ function formatRoomResidents(
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .scope-modal-header {
@@ -1458,7 +1459,11 @@ function formatRoomResidents(
 
 .scope-modal-body {
   padding: 0 12px 12px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scope-floor + .scope-floor {
@@ -1575,11 +1580,14 @@ function formatRoomResidents(
 
 .scope-modal-footer {
   padding: 10px 12px 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(25, 28, 35, 0.98);
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .scope-footer-hint {
