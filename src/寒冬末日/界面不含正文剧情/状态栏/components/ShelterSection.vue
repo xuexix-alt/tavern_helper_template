@@ -180,7 +180,12 @@
             <div class="scope-modal" role="dialog" aria-modal="true">
               <div class="scope-modal-header">
                 <div class="scope-modal-title">🛡️ 设置生存庇护范围</div>
-                <button class="scope-icon-btn" type="button" aria-label="关闭" @click="closeScopeEditor">✕</button>
+                <div class="scope-modal-header-actions">
+                  <button class="scope-btn scope-btn--primary scope-btn--mini" type="button" @click="confirmAndSendScope">
+                    确定并发送
+                  </button>
+                  <button class="scope-icon-btn" type="button" aria-label="关闭" @click="closeScopeEditor">✕</button>
+                </div>
               </div>
 
               <div class="scope-modal-subtitle">
@@ -1375,16 +1380,18 @@ function formatRoomResidents(
   background: rgba(0, 0, 0, 0.55);
   padding-top: calc(12px + env(safe-area-inset-top));
   padding-right: calc(12px + env(safe-area-inset-right));
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
   padding-left: calc(12px + env(safe-area-inset-left));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scope-modal {
   width: min(560px, calc(100% - 8px));
-  max-height: calc(100% - 8px);
+  max-height: 100%;
   background: rgba(25, 28, 35, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
@@ -1399,6 +1406,16 @@ function formatRoomResidents(
   align-items: center;
   justify-content: space-between;
   padding: 12px 12px 8px;
+}
+
+.scope-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-modal-header-actions .scope-btn {
+  white-space: nowrap;
 }
 
 .scope-modal-title {
@@ -1585,14 +1602,18 @@ function formatRoomResidents(
   background: rgba(25, 28, 35, 0.98);
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   align-items: center;
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 
 .scope-footer-hint {
   flex: 1 1 100%;
-  order: -1;
+  order: 1;
   margin-bottom: 4px;
   padding: 8px 12px;
   border-radius: 6px;
@@ -1612,7 +1633,7 @@ function formatRoomResidents(
 }
 
 .scope-footer-spacer {
-  flex: 1;
+  display: none;
 }
 
 .shelter-redesign .shelter-grid {
