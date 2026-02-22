@@ -674,9 +674,7 @@
 import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
-import {
-  readRoleSelectorStateFromChatVars,
-} from '../../../role_control';
+import { readRoleSelectorStateFromChatVars } from '../../../role_control';
 import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
@@ -849,11 +847,7 @@ const roleSelectorButtonText = computed(() => {
 const deletedRoleNameSetForUi = computed(() => {
   const raw = roleSelectorStateForUi.value?.deleted_roles ?? [];
   if (!Array.isArray(raw)) return new Set<string>();
-  return new Set(
-    raw
-      .map(name => canonicalizeRoleName(name))
-      .filter(Boolean),
-  );
+  return new Set(raw.map(name => canonicalizeRoleName(name)).filter(Boolean));
 });
 
 const active_character_keys = computed<CharacterKey[]>(() => {
@@ -863,12 +857,10 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   const data = store.data as Record<string, any>;
 
   // 1. 固定角色按固定顺序
-  const fixedKeys = CHARACTER_ORDER
-    .filter(key => isRoleLike(data[key]))
-    .filter(key => {
-      const canonical = canonicalizeRoleName(key);
-      return !canonical || !deletedSet.has(canonical);
-    });
+  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key])).filter(key => {
+    const canonical = canonicalizeRoleName(key);
+    return !canonical || !deletedSet.has(canonical);
+  });
   const fixedActive = fixedKeys.filter(isActive);
   const fixedInactive = fixedKeys.filter(k => !isActive(k));
 
