@@ -181,7 +181,11 @@
               <div class="scope-modal-header">
                 <div class="scope-modal-title">🛡️ 设置生存庇护范围</div>
                 <div class="scope-modal-header-actions">
-                  <button class="scope-btn scope-btn--primary scope-btn--mini" type="button" @click="confirmAndSendScope">
+                  <button
+                    class="scope-btn scope-btn--primary scope-btn--mini"
+                    type="button"
+                    @click="confirmAndSendScope"
+                  >
                     确定并发送
                   </button>
                   <button class="scope-icon-btn" type="button" aria-label="关闭" @click="closeScopeEditor">✕</button>
