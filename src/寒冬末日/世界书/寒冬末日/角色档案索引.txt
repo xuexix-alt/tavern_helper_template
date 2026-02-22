@@ -11,10 +11,7 @@
   { "name": "陈幺妹", "aliases": ["幺妹", "Yaomei"] },
   { "name": "凌音", "aliases": [] },
   { "name": "相田哲也", "aliases": ["哲也"] },
-  { "name": "爱宫 心爱", "aliases": ["爱宫心爱", "爱宫_心爱", "心爱"] },
-  { "name": "小泽花", "aliases": ["小泽", "小花"] },
   { "name": "桃乐丝・泽巴哈", "aliases": ["桃乐丝", "泽巴哈"] },
-  { "name": "爱宫 铃", "aliases": ["爱宫铃", "爱宫_铃"] },
   { "name": "何铃", "aliases": [] },
   { "name": "王静", "aliases": [] }
 ]

@@ -36,7 +36,7 @@ import OverviewPage from './pages/OverviewPage.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import { useInjectedData } from './useInjectedData';
 
-const UI_VERSION = '2.2';
+const UI_VERSION = '2.3';
 const { options } = useInjectedData();
 const tabs = [
   { key: 'overview', label: '总览', icon: '📡', component: OverviewPage },

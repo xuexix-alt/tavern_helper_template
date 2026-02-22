@@ -60,7 +60,7 @@ import MissionPage from './pages/MissionPage.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import { useInjectedData } from './useInjectedData';
 
-const STATUSBAR_VERSION = '3.0';
+const STATUSBAR_VERSION = '3.1';
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const tabs = [
   { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },

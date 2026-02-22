@@ -1234,9 +1234,6 @@ function getFloorRoomNames(floor: string, room: string): string {
   const data = getFloorRoomData(floor, room);
   if (data.入住者.length === 0) return '';
 
-  // 特殊房间：1901 固定家庭（避免 AI/变量波动导致 UI 显示不稳定）
-  if (room === '1901') return '爱宫铃 & 爱宫心爱';
-
   return formatRoomResidents(data.入住者, { maxShown: room === '2001' ? 3 : 4, showTotal: room === '2001' });
 }
 

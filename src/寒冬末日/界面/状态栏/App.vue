@@ -38,7 +38,7 @@ import ShelterPage from './pages/ShelterPage.vue';
 import StoryPage from './pages/StoryPage.vue';
 import { useInjectedData } from './useInjectedData';
 
-const STATUSBAR_VERSION = '3.0';
+const STATUSBAR_VERSION = '3.1';
 const MIN_SHELL_HEIGHT = 300;
 const MAX_SHELL_HEIGHT = 980;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;

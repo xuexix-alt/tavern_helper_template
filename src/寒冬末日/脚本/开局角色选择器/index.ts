@@ -21,6 +21,8 @@ const ROLE_CREATOR_OPEN_EVENT = 'eden.role_creator.open';
 const ROLE_SELECTOR_OPEN_EVENT = 'eden.role_selector.open';
 const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
 const DOSSIER_INJECT_DEBUG_KEY = 'debug.角色档案动态注入';
+const AUTO_OPENED_ONCE_KEY = 'eden.role_selector.auto_opened_once';
+const AUTO_OPEN_MAX_MESSAGE_ID = 2;
 const DEFAULT_WORLDBOOK_NAME_CANDIDATES = [
   '末世寒冬-星穹秩序2.0',
   '寒冬末日-星穹秩序',
@@ -89,6 +91,36 @@ function saveRoleSelectorStateToChat(state: RoleSelectorStateLike) {
   );
 }
 
+function readAutoOpenedOnce(): boolean {
+  try {
+    const vars = getChatVars();
+    return _.get(vars, AUTO_OPENED_ONCE_KEY, false) === true;
+  } catch {
+    return false;
+  }
+}
+
+function markAutoOpenedOnce() {
+  if (typeof updateVariablesWith !== 'function') return;
+  updateVariablesWith(
+    vars => {
+      _.set(vars, AUTO_OPENED_ONCE_KEY, true);
+      return vars;
+    },
+    { type: 'chat' },
+  );
+}
+
+function isLikelyOpeningStage(): boolean {
+  try {
+    const last = typeof getLastMessageId === 'function' ? Number(getLastMessageId()) : NaN;
+    if (Number.isFinite(last) && last >= 0) return last <= AUTO_OPEN_MAX_MESSAGE_ID;
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
 function getCurrentMessageIdSafe(): number {
   try {
     const id = Number(getCurrentMessageId());
@@ -144,7 +176,11 @@ function buildDossierIndexText(list: DossierIndexItem[]): string {
 
 function normalizeRoleListCanonical(list: any): string[] {
   if (!Array.isArray(list)) return [];
-  return _.uniq(list.map(name => canonicalizeRoleName(name)).filter(Boolean));
+  return _.uniq(
+    list
+      .map(name => canonicalizeRoleName(name))
+      .filter(Boolean),
+  );
 }
 
 function readDeletedRoleSet(state: RoleSelectorStateLike | null | undefined): Set<string> {
@@ -263,7 +299,8 @@ async function pruneInitvarByRemovedRoles(worldbookName: string, removedSet: Set
       const roleControlPath = ['主线任务', '$meta', '角色控制'];
       const roleControl = _.get(data, roleControlPath, null);
       if (roleControl && typeof roleControl === 'object') {
-        const trimList = (list: any) => normalizeRoleListCanonical(list).filter(name => !removedSet.has(name));
+        const trimList = (list: any) =>
+          normalizeRoleListCanonical(list).filter(name => !removedSet.has(name));
         _.set(roleControl, 'selected_roles', trimList(_.get(roleControl, 'selected_roles', [])));
         _.set(roleControl, 'revealed_roles', trimList(_.get(roleControl, 'revealed_roles', [])));
         _.set(roleControl, 'pending_unlock', trimList(_.get(roleControl, 'pending_unlock', [])));
@@ -444,21 +481,22 @@ function removeNameFromRooms(stat_data: any, name: string) {
   }
 }
 
-function applySelectionToStatData(stat_data: any, enabledSet: Set<string>): Set<string> {
+function applySelectionToStatData(stat_data: any, deletingSet: Set<string>): Set<string> {
   if (!stat_data || typeof stat_data !== 'object') return new Set<string>();
 
-  const enabledCanonicalSet = new Set(
-    Array.from(enabledSet)
+  const deletingCanonicalSet = new Set(
+    Array.from(deletingSet)
       .map(name => canonicalizeRoleName(name))
       .filter(Boolean),
   );
   const removedCanonicalSet = new Set<string>();
+  if (deletingCanonicalSet.size === 0) return removedCanonicalSet;
 
   for (const [key, val] of Object.entries(stat_data)) {
     if (RESERVED_KEYS.has(key)) continue;
     if (!isRoleLike(val)) continue;
     const canonical = canonicalizeRoleName(key);
-    if (!canonical || enabledCanonicalSet.has(canonical)) continue;
+    if (!canonical || !deletingCanonicalSet.has(canonical)) continue;
     removedCanonicalSet.add(canonical);
     _.unset(stat_data, [key]);
     removeNameFromRooms(stat_data, key);
@@ -469,7 +507,7 @@ function applySelectionToStatData(stat_data: any, enabledSet: Set<string>): Set<
     for (const [name, role] of Object.entries(tempNpc)) {
       if (!isRoleLike(role)) continue;
       const canonical = canonicalizeRoleName(name);
-      if (!canonical || enabledCanonicalSet.has(canonical)) continue;
+      if (!canonical || !deletingCanonicalSet.has(canonical)) continue;
       removedCanonicalSet.add(canonical);
       _.unset(stat_data, ['临时NPC', name]);
       removeNameFromRooms(stat_data, name);
@@ -559,7 +597,7 @@ function closeSelector() {
 function renderSelector(options: {
   state: RoleSelectorStateLike;
   catalog: RoleCatalogItem[];
-  onConfirm: (selected: string[]) => Promise<void>;
+  onConfirm: (deletingRoles: string[]) => Promise<void>;
   onRefresh?: () => void;
   onOpenCreator?: () => void;
 }) {
@@ -567,22 +605,20 @@ function renderSelector(options: {
   ensureCss();
 
   const catalog = options.catalog ?? [];
-  const selectedSet = new Set(normalizeRoleListCanonical(options.state.selected_roles ?? []));
+  const deletingSet = new Set<string>();
   const $root = $('<div></div>').attr(ROOT_ATTR, '1');
   const $modal = $('<div class="eden-rs-modal"></div>').appendTo($root);
   $('<div class="eden-rs-head">角色批量删除器</div>').appendTo($modal);
   $(
-    '<div class="eden-rs-desc">请勾选“保留”的角色。未勾选角色将被永久删除（当前变量 / 角色档案索引 / initvar），并加入删除标记，不会再参与动态档案注入。</div>',
+    '<div class="eden-rs-desc">请勾选“要删除”的角色。确认后会删除角色变量、initvar 条目、角色档案索引名单，并写入删除标记。</div>',
   ).appendTo($modal);
   const $tools = $('<div class="eden-rs-tools"></div>').appendTo($modal);
-  const $search = $('<input class="eden-rs-search" type="search" placeholder="搜索角色 / 简介 / 位置…" />').appendTo(
-    $tools,
-  );
+  const $search = $('<input class="eden-rs-search" type="search" placeholder="搜索角色 / 简介 / 位置…" />').appendTo($tools);
   const $visibleCount = $('<div class="eden-rs-count-chip"></div>').appendTo($tools);
 
   const $list = $('<div class="eden-rs-list"></div>').appendTo($modal);
   const updateCount = () => {
-    $count.text(`已勾选 ${selectedSet.size} / ${catalog.length}`);
+    $count.text(`待删除 ${deletingSet.size} / ${catalog.length}`);
     const visible = $list.children(':visible').length;
     $visibleCount.text(`显示 ${visible} / ${catalog.length}`);
   };
@@ -605,7 +641,7 @@ function renderSelector(options: {
 
   for (const role of catalog) {
     const canonical = canonicalizeRoleName(role.name);
-    const checked = canonical ? selectedSet.has(canonical) : false;
+    const checked = canonical ? deletingSet.has(canonical) : false;
     const id = `eden-rs-${role.name}`;
     const identityText = role.identity?.trim() || '自定义角色';
     const summaryText = role.summary?.trim() || '（暂无简介）';
@@ -621,8 +657,8 @@ function renderSelector(options: {
 
     $check.on('change', () => {
       if (!canonical) return;
-      if ($check.is(':checked')) selectedSet.add(canonical);
-      else selectedSet.delete(canonical);
+      if ($check.is(':checked')) deletingSet.add(canonical);
+      else deletingSet.delete(canonical);
       updateCount();
     });
   }
@@ -632,10 +668,10 @@ function renderSelector(options: {
   const $actions = $('<div class="eden-rs-actions"></div>').appendTo($foot);
   const $btnCreate = $(`<button class="eden-rs-btn" type="button">${BTN_CREATE_ROLE}</button>`).appendTo($actions);
   const $btnRefresh = $(`<button class="eden-rs-btn" type="button">${BTN_REFRESH_LIST}</button>`).appendTo($actions);
-  const $btnAll = $('<button class="eden-rs-btn" type="button">全选</button>').appendTo($actions);
+  const $btnAll = $('<button class="eden-rs-btn" type="button">全选待删</button>').appendTo($actions);
   const $btnNone = $('<button class="eden-rs-btn" type="button">清空</button>').appendTo($actions);
   const $btnCancel = $('<button class="eden-rs-btn" type="button">取消</button>').appendTo($actions);
-  const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认删除未勾选</button>').appendTo($actions);
+  const $btnConfirm = $('<button class="eden-rs-btn primary" type="button">确认删除已勾选</button>').appendTo($actions);
 
   $btnCreate.on('click', () => {
     options.onOpenCreator?.();
@@ -646,17 +682,17 @@ function renderSelector(options: {
   });
 
   $btnAll.on('click', () => {
-    selectedSet.clear();
+    deletingSet.clear();
     catalog.forEach(role => {
       const canonical = canonicalizeRoleName(role.name);
-      if (canonical) selectedSet.add(canonical);
+      if (canonical) deletingSet.add(canonical);
     });
     $list.find('input[type="checkbox"]').prop('checked', true);
     updateCount();
   });
 
   $btnNone.on('click', () => {
-    selectedSet.clear();
+    deletingSet.clear();
     $list.find('input[type="checkbox"]').prop('checked', false);
     updateCount();
   });
@@ -670,17 +706,18 @@ function renderSelector(options: {
   });
 
   $btnConfirm.on('click', async () => {
-    const selected = Array.from(selectedSet.values());
-    if (selected.length === 0 && !window.confirm('当前未勾选任何角色，将删除全部可见角色数据。确认继续吗？')) {
+    const deletingRoles = Array.from(deletingSet.values());
+    if (deletingRoles.length === 0) {
+      toastr.info('请先勾选要删除的角色');
       return;
     }
 
     $btnConfirm.prop('disabled', true).text('处理中...');
     try {
-      await options.onConfirm(selected);
+      await options.onConfirm(deletingRoles);
       closeSelector();
     } finally {
-      $btnConfirm.prop('disabled', false).text('确认删除未勾选');
+      $btnConfirm.prop('disabled', false).text('确认删除已勾选');
     }
   });
 
@@ -704,30 +741,38 @@ function openRoleCreatorFromSelector() {
   toastr.warning('未检测到角色创建器事件接口');
 }
 
-async function applyRoleSelection(selected: string[]) {
+async function applyRoleSelection(deletingRoles: string[]) {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
   const catalog = await buildMergedCatalog(state);
-  const catalogCanonical = _.uniq(catalog.map(item => canonicalizeRoleName(item.name)).filter(Boolean));
+  const catalogCanonical = _.uniq(
+    catalog
+      .map(item => canonicalizeRoleName(item.name))
+      .filter(Boolean),
+  );
   const catalogCanonicalSet = new Set(catalogCanonical);
-  const normalizedSelected = _(selected)
+  const normalizedDeleting = _(deletingRoles)
     .map(name => canonicalizeRoleName(name))
     .filter(name => catalogCanonicalSet.has(name))
     .filter(Boolean)
     .uniq()
     .value();
-  const selectedSet = new Set(normalizedSelected);
-  const removedFromSelectionSet = new Set(catalogCanonical.filter(name => !selectedSet.has(name)));
-  const mergedDeleted = _.uniq([...(state.deleted_roles ?? []), ...Array.from(removedFromSelectionSet)]);
+  if (normalizedDeleting.length === 0) {
+    toastr.info('没有匹配到可删除的角色');
+    return;
+  }
+
+  const deletingSet = new Set(normalizedDeleting);
+  const nextSelected = normalizeRoleListCanonical(state.selected_roles ?? []).filter(name => !deletingSet.has(name));
+  const nextRevealed = normalizeRoleListCanonical(state.revealed_roles ?? []).filter(name => !deletingSet.has(name));
+  const mergedDeleted = _.uniq([...(state.deleted_roles ?? []), ...Array.from(deletingSet)]);
   const nextState = normalizeRoleSelectorState({
     ...state,
     version: state.version || 1,
     initialized: true,
-    selected_roles: normalizedSelected,
-    revealed_roles: normalizedSelected,
+    selected_roles: nextSelected,
+    revealed_roles: nextRevealed,
     deleted_roles: mergedDeleted,
-    pending_unlock: (state.pending_unlock ?? []).filter(
-      name => !removedFromSelectionSet.has(canonicalizeRoleName(name)),
-    ),
+    pending_unlock: (state.pending_unlock ?? []).filter(name => !deletingSet.has(canonicalizeRoleName(name))),
     initialized_at_message_id: getCurrentMessageIdSafe(),
   });
 
@@ -735,10 +780,10 @@ async function applyRoleSelection(selected: string[]) {
 
   let removedFromStatData = new Set<string>();
   await replaceLatestStatData(stat_data => {
-    removedFromStatData = applySelectionToStatData(stat_data, selectedSet);
+    removedFromStatData = applySelectionToStatData(stat_data, deletingSet);
     _.set(stat_data, '主线任务.$meta.角色控制', nextState);
   });
-  const removedSet = new Set([...Array.from(removedFromSelectionSet), ...Array.from(removedFromStatData)]);
+  const removedSet = new Set([...Array.from(deletingSet), ...Array.from(removedFromStatData)]);
 
   const worldbookName = await resolveDefaultWorldbookName();
   if (worldbookName) {
@@ -755,7 +800,7 @@ async function applyRoleSelection(selected: string[]) {
 
   await notifyRoleSelectorUpdated();
 
-  toastr.success(`角色删除已完成：保留 ${nextState.selected_roles.length} 位，删除 ${removedSet.size} 位`);
+  toastr.success(`角色删除已完成：删除 ${removedSet.size} 位`);
   reloadIframe();
 }
 
@@ -846,7 +891,9 @@ function bindExternalEvents() {
 
 function shouldAutoOpenOnFirstRun(): boolean {
   const state = readRoleSelectorStateFromChatVars(getChatVars());
-  return state.initialized !== true;
+  if (state.initialized === true) return false;
+  if (readAutoOpenedOnce()) return false;
+  return isLikelyOpeningStage();
 }
 
 $(async () => {
@@ -856,6 +903,7 @@ $(async () => {
   bindExternalEvents();
 
   if (shouldAutoOpenOnFirstRun()) {
+    markAutoOpenedOnce();
     void openSelector();
   }
 

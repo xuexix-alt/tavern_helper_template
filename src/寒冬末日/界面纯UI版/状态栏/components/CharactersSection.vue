@@ -675,10 +675,9 @@ import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
 import {
-  CHAT_VAR_KEYS_ROLE,
-  isRoleEnabledBySelectorState,
-  readRoleSelectorStateFromStatData,
+  readRoleSelectorStateFromChatVars,
 } from '../../../role_control';
+import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
 import ReportSection from './ReportSection.vue';
@@ -695,19 +694,12 @@ type CharacterKey =
 const CHARACTER_ORDER = [
   '浅见亚美',
   '相田哲也',
-  '星野琉璃',
-  '早川遥',
-  '早川舞',
-  '藤井雪乃',
-  '中村惠子',
-  // '爱宫心爱',
-  // '爱宫铃',
+  '雪乃',
   '桃乐丝・泽巴哈',
   // '何铃',
   '王静',
   // '康绮月',
   // '薛萍',
-  '小泽花',
 ] as const;
 
 const store = useDataStore();
@@ -773,7 +765,7 @@ function openRoleSelectorFromUi() {
     eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
     return;
   }
-  toastr.warning('未检测到角色选择器脚本，请先启用「开局角色选择器」');
+  toastr.warning('未检测到角色删除脚本，请先启用「开局角色选择器」');
 }
 
 function switchCharactersToLatest() {
@@ -787,11 +779,21 @@ function isRoleLike(val: any): boolean {
   return '登场状态' in val && '健康' in val;
 }
 
-function listExtraCoreKeys(): string[] {
+function canonicalizeRoleName(raw: any): string {
+  const key = String(raw ?? '').trim();
+  if (!key) return '';
+  return ROLE_ALIAS_MAP[key] ?? key;
+}
+
+function listExtraCoreKeys(deletedSet: Set<string>): string[] {
   const data = store.data as Record<string, any>;
   return Object.keys(data)
     .filter(key => !RESERVED_KEYS.has(key))
     .filter(key => !CHARACTER_ORDER.includes(key as (typeof CHARACTER_ORDER)[number]))
+    .filter(key => {
+      const canonical = canonicalizeRoleName(key);
+      return !canonical || !deletedSet.has(canonical);
+    })
     .filter(key => typeof key === 'string' && key.length > 0 && !key.startsWith('_'))
     .filter(key => isRoleLike(data[key]))
     .sort();
@@ -830,39 +832,48 @@ function matchCharacterByQuery(key: CharacterKey): boolean {
 }
 
 const roleSelectorStateForUi = computed(() => {
-  const data = store.data as Record<string, any>;
   try {
     const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
-    const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
-    if (roleRoot && typeof roleRoot === 'object') {
-      return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
-    }
+    return readRoleSelectorStateFromChatVars(chatVars);
   } catch {
-    // ignore and fallback
+    // ignore
   }
-  return readRoleSelectorStateFromStatData(data);
+  return null;
 });
 
 const roleSelectorButtonText = computed(() => {
-  const selectedCount = roleSelectorStateForUi.value?.selected_roles?.length ?? 0;
   const deletedCount = roleSelectorStateForUi.value?.deleted_roles?.length ?? 0;
-  return `角色批量删除（启用${selectedCount} / 已删${deletedCount}）`;
+  return `角色批量删除（已删${deletedCount}）`;
+});
+
+const deletedRoleNameSetForUi = computed(() => {
+  const raw = roleSelectorStateForUi.value?.deleted_roles ?? [];
+  if (!Array.isArray(raw)) return new Set<string>();
+  return new Set(
+    raw
+      .map(name => canonicalizeRoleName(name))
+      .filter(Boolean),
+  );
 });
 
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
+  const deletedSet = deletedRoleNameSetForUi.value;
 
   const data = store.data as Record<string, any>;
-  const roleSelector = roleSelectorStateForUi.value;
-  const isEnabled = (roleName: string) => isRoleEnabledBySelectorState(roleSelector, roleName);
 
   // 1. 固定角色按固定顺序
-  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]) && isEnabled(key));
+  const fixedKeys = CHARACTER_ORDER
+    .filter(key => isRoleLike(data[key]))
+    .filter(key => {
+      const canonical = canonicalizeRoleName(key);
+      return !canonical || !deletedSet.has(canonical);
+    });
   const fixedActive = fixedKeys.filter(isActive);
   const fixedInactive = fixedKeys.filter(k => !isActive(k));
 
   // 2. 追加角色（顶层非固定角色）
-  const extraKeys = listExtraCoreKeys().filter(key => isEnabled(String(key)));
+  const extraKeys = listExtraCoreKeys(deletedSet);
   const extraActive = extraKeys.filter(isActive);
   const extraInactive = extraKeys.filter(k => !isActive(k));
 
@@ -872,7 +883,10 @@ const active_character_keys = computed<CharacterKey[]>(() => {
   const tempNPCs = store.data.临时NPC;
   if (tempNPCs && typeof tempNPCs === 'object') {
     const npcNames = Object.keys(tempNPCs)
-      .filter(name => isEnabled(name))
+      .filter(name => {
+        const canonical = canonicalizeRoleName(name);
+        return !canonical || !deletedSet.has(canonical);
+      })
       .sort();
     const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
     const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));

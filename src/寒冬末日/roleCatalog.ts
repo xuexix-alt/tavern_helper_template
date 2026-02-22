@@ -23,39 +23,11 @@ export const ROLE_CATALOG: RoleCatalogItem[] = [
     aliases: ['哲也', '相田'],
   },
   {
-    name: '星野琉璃',
-    identity: '明星模特 / 女王气场',
-    summary: '骄傲强势但在末日压力下逐步破防，价值与安全感高度绑定。',
-    location: '楼层20/2003',
-    aliases: ['琉璃', '星野'],
-  },
-  {
-    name: '早川遥',
-    identity: '双胞胎姐姐 / 温柔知性',
-    summary: '更偏理性与照料型决策，常在风险场景中优先考虑团队稳定。',
-    location: '楼层20/2004',
-    aliases: ['遥', '早川遥姐'],
-  },
-  {
-    name: '早川舞',
-    identity: '双胞胎妹妹 / 元气外放',
-    summary: '情绪表达直接，行动力强，容易在高压下作出冲动但真诚的选择。',
-    location: '楼层20/2004',
-    aliases: ['舞', '早川舞'],
-  },
-  {
-    name: '藤井雪乃',
+    name: '雪乃',
     identity: '稳重执行者',
     summary: '谨慎内敛、执行力强，在资源紧张时更关注规则与可持续分配。',
     location: '楼层20/2005',
-    aliases: ['雪乃', '藤井'],
-  },
-  {
-    name: '中村惠子',
-    identity: '现实主义幸存者',
-    summary: '对风险与收益高度敏感，行为务实，重视可验证的安全承诺。',
-    location: '楼层20/2005',
-    aliases: ['惠子', '中村'],
+    aliases: [],
   },
   {
     name: '桃乐丝・泽巴哈',
@@ -70,13 +42,6 @@ export const ROLE_CATALOG: RoleCatalogItem[] = [
     summary: '警惕心强，先求活再谈信任，关系推进依赖持续兑现与低风险互动。',
     location: '楼层20/2006',
     aliases: ['王静'],
-  },
-  {
-    name: '小泽花',
-    identity: '年轻幸存者',
-    summary: '情绪敏感但可塑性高，对稳定环境与可靠引导的反馈显著。',
-    location: '楼层20/2007',
-    aliases: ['小泽花', '小花'],
   },
 ];
 
