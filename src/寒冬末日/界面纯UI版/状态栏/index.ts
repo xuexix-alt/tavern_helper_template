@@ -149,10 +149,10 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
     const chatHeight = Math.floor(getChatHeight());
     const contentHeight = Math.floor(getContentHeight());
 
-    // 酒馆可视聊天区存在时，严格贴齐其高度，避免“一屏不够两屏又多”。
+    // 酒馆可视聊天区存在时，取聊天区高度和内容高度的较大值，确保内容完整显示
     const nextHeight =
       Number.isFinite(chatHeight) && chatHeight > 0
-        ? Math.max(minHeightPx, chatHeight)
+        ? Math.max(minHeightPx, Math.max(chatHeight, contentHeight))
         : Math.max(minHeightPx, contentHeight);
     const next = `${nextHeight}px`;
     if (frameEl.style.height !== next) {

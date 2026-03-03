@@ -79,7 +79,7 @@ window.addEventListener('app-backend:streaming:enable', (event: Event) => {
 window.addEventListener('app-backend:streaming:disable', () => disableStreaming());
 
 const streamTagPattern = /<(content|game|summary|option|roleplay_options)[^>]*>/i;
-const shopPattern = /\[(店铺|套餐)\]|shops\s*:|\"shops\"\s*:|店铺列表/i;
+const shopPattern = /\[(店铺|套餐)\]|shops\s*:|"shops"\s*:|店铺列表/i;
 
 $(() => {
   const app = createApp(App);

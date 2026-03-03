@@ -1,0 +1,507 @@
+{
+  "meta": {
+    "generatedAt": "2026-03-03T06:07:58.346Z",
+    "url": "http://127.0.0.1:8002/"
+  },
+  "ready": {
+    "recentChatCount": 8,
+    "bodyTextLen": 17207,
+    "title": "SillyTavern"
+  },
+  "click": {
+    "ok": true,
+    "total": 8,
+    "text": "末世寒冬 - 星穹秩序 – 末世寒冬 - 星穹秩序 - 2026-02-27@19h03m56s474ms 2026/3/3 [metacognition] - 确认输出语言为：简体中文 - 必须使用**第三人称视角**，叙述人称：他、她、角色名称 - 禁止使用“你”指代任何角色 - 之前发生了什么？剧情进展到哪里？ 小哥哥醒来，查看了全楼的监控情况。伊甸系统播报了当前楼层的危急情况，重点是2005的雪乃和凌音面临失温致死的威胁。小哥哥在上一轮给出的指令是：【谨慎建联】联系2002室的浅见亚美与相田哲也：先交换信息，询问他们对“风雪强度波动/地下通路”的观察；再提出在玄关进行视频沟通，约定最小"
+  },
+  "frames": [
+    {
+      "name": "TH-message--4--0",
+      "url": "blob:http://127.0.0.1:8002/299a17fe-e6e7-4d51-b4e4-1f23707022e9",
+      "ready": "loading",
+      "hasEventOn": false,
+      "hasEventEmit": false,
+      "hasBtn": false,
+      "btnTexts": [],
+      "hasApp": false,
+      "appInnerLen": 0,
+      "bodyTextLen": 0
+    },
+    {
+      "name": "TH-message--2--0",
+      "url": "blob:http://127.0.0.1:8002/6a4fdac0-219b-47ca-8776-1ca794679112",
+      "ready": "loading",
+      "hasEventOn": false,
+      "hasEventEmit": false,
+      "hasBtn": false,
+      "btnTexts": [],
+      "hasApp": false,
+      "appInnerLen": 0,
+      "bodyTextLen": 0
+    },
+    {
+      "name": "TH-message--0--0",
+      "url": "blob:http://127.0.0.1:8002/ea937e3a-a75d-47ab-93b4-dfc694bba2e4",
+      "ready": "loading",
+      "hasEventOn": false,
+      "hasEventEmit": false,
+      "hasBtn": false,
+      "btnTexts": [],
+      "hasApp": false,
+      "appInnerLen": 0,
+      "bodyTextLen": 0
+    }
+  ],
+  "frameProbe": {
+    "frameName": null,
+    "reason": "no frame with eventOn+story buttons"
+  },
+  "screenshots": [
+    ".tmp/playwright/mcp_pw_resume_00_ready.png",
+    ".tmp/playwright/mcp_pw_resume_01_after_click.png",
+    ".tmp/playwright/mcp_pw_resume_02_final.png"
+  ],
+  "requestTail": [
+    {
+      "ts": 1772518078592,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/lib/structured-clone/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080186,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/translate/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080195,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/translate/index.html",
+      "status": 200
+    },
+    {
+      "ts": 1772518080195,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/connection-manager/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080228,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/ST-Prompt-Template/dist/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080498,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080509,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/attachments/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080526,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/caption/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080545,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/expressions/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080562,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/gallery/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080571,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080626,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/character/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518080709,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518081900,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/memory/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518081987,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/stable-diffusion/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518082007,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/tts/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518082252,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/quick-reply/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518082779,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/assets/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518082789,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/token-counter/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518082797,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.css",
+      "status": 200
+    },
+    {
+      "ts": 1772518082860,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518083243,
+      "type": "response",
+      "url": "http://127.0.0.1:8002/scripts/extensions/vectors/index.js",
+      "status": 200
+    },
+    {
+      "ts": 1772518090426,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090426,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090426,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090426,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090427,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518090428,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "ts": 1772518104068,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+      "error": "net::ERR_CONNECTION_CLOSED"
+    },
+    {
+      "ts": 1772518104664,
+      "type": "requestfailed",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+      "error": "net::ERR_CONNECTION_CLOSED"
+    }
+  ],
+  "consoleTail": [
+    {
+      "ts": 1772518080564,
+      "type": "debug",
+      "text": "Activating extension third-party/st-chatu8",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 504,
+      "col": 24
+    },
+    {
+      "ts": 1772518080587,
+      "type": "log",
+      "text": "[Aircraft, BitcoinAddressFamily, BitcoinNetwork, CssFunction, CssSpace, Faker, FakerError, IPv4Network, Sex, SimpleFaker, af_ZA, allFakers, allLocales, ar, az, base, bn_BD, cs_CZ, cy, da, de, de_AT, de_CH, dv, el, en, en_AU, en_AU_ocker, en_BORK, en_CA, en_GB, en_GH, en_HK, en_IE, en_IN, en_NG, en_US, en_ZA, eo, es, es_MX, fa, faker, fakerAF_ZA, fakerAR, fakerAZ, fakerBASE, fakerBN_BD, fakerCS_CZ, fakerCY, fakerDA, fakerDE, fakerDE_AT, fakerDE_CH, fakerDV, fakerEL, fakerEN, fakerEN_AU, fakerEN_AU_ocker, fakerEN_BORK, fakerEN_CA, fakerEN_GB, fakerEN_GH, fakerEN_HK, fakerEN_IE, fakerEN_IN, fakerEN_NG, fakerEN_US, fakerEN_ZA, fakerEO, fakerES, fakerES_MX, fakerFA, fakerFI, fakerFR, fakerFR_BE, fakerFR_CA, fakerFR_CH, fakerFR_LU, fakerFR_SN, fakerHE, fakerHR, fakerHU, fakerHY, fakerID_ID, fakerIT, fakerJA, fakerKA_GE, fakerKO, fakerLV, fakerMK, fakerNB_NO, fakerNE, fakerNL, fakerNL_BE, fakerPL, fakerPT_BR, fakerPT_PT, fakerRO, fakerRO_MD]",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/ST-Prompt-Template/dist/index.js",
+      "line": 0,
+      "col": 241629
+    },
+    {
+      "ts": 1772518082320,
+      "type": "log",
+      "text": "[st-chatu8] autoLLMClick module initialized",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 46945
+    },
+    {
+      "ts": 1772518082361,
+      "type": "log",
+      "text": "[st-chatu8] 加载正则配置: {配置名称: 默认, 配置是否存在: true, 条目数量: 19}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 147370
+    },
+    {
+      "ts": 1772518082366,
+      "type": "log",
+      "text": "[st-chatu8] 渲染正则条目: {容器ID: ch-regex-entries-container, 条目数: 19, 条目名称: Array(19)}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 43477
+    },
+    {
+      "ts": 1772518082430,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1770953856187.png",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518082431,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1768468078450.png",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518083266,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '::-webkit-scrollbar-track:focus-visible { background-color: rgba(126, 126, 126, 0.2); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772518083272,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772518083275,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772518092454,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://raw.githubusercontent.com/damoshen123/st-chatu8/master/manifest.json?t=1772518082445",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518092454,
+      "type": "error",
+      "text": "Error checking for updates: TypeError: Failed to fetch\n    at checkForUpdates (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js:1:10234)\n    at async initUpdateCheck (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js:1:15931)",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js",
+      "line": 0,
+      "col": 12629
+    },
+    {
+      "ts": 1772518092975,
+      "type": "log",
+      "text": "[st-chatu8] GENERATION_STARTED data: normal",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 22793
+    },
+    {
+      "ts": 1772518092975,
+      "type": "log",
+      "text": "[st-chatu8] Chat array length: 5",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24018
+    },
+    {
+      "ts": 1772518092975,
+      "type": "log",
+      "text": "[st-chatu8] Last message swipes length: 1",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24107
+    },
+    {
+      "ts": 1772518094064,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518094083,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://gitlab.com/api/v4/projects/novi028%2FJS-Slash-Runner/repository/files/manifest.json/raw?ref=main",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518094083,
+      "type": "error",
+      "text": "TypeError: Failed to fetch\n    at xM (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:38:32619)\n    at SM (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:38:32916)\n    at http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:52:45507\n    at http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:12726\n    at Gv (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:38)\n    at Wv (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:109)\n    at t.__weh.t.__weh (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:12609)\n    at a_ (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:1500)\n    at G (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:34582)\n    at mount (http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js:17:16847)",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/JS-Slash-Runner/dist/index.js",
+      "line": 16,
+      "col": 640
+    },
+    {
+      "ts": 1772518094658,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518094659,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518100405,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518100407,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518100413,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518102458,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://raw.githubusercontent.com/damoshen123/st-chatu8/master/manifest.json?t=1772518082445",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518102458,
+      "type": "error",
+      "text": "Error checking for updates: TypeError: Failed to fetch\n    at checkForUpdates (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js:1:27400)\n    at async main (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js:1:35222)",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js",
+      "line": 0,
+      "col": 31548
+    },
+    {
+      "ts": 1772518104068,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518104664,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772518104664,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_CLOSED",
+      "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+      "line": 0,
+      "col": 0
+    }
+  ]
+}

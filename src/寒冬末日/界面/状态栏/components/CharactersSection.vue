@@ -162,6 +162,7 @@
       >
         <div
           class="role-modal overview-modal"
+          :class="{ 'is-compact': compactRoleModal }"
           role="dialog"
           aria-modal="true"
           :style="{ maxHeight: roleModalMaxHeight }"
@@ -185,6 +186,7 @@
       >
         <div
           class="role-modal overview-modal"
+          :class="{ 'is-compact': compactRoleModal }"
           role="dialog"
           aria-modal="true"
           :style="{ maxHeight: roleModalMaxHeight }"
@@ -202,7 +204,13 @@
       </div>
 
       <div v-if="isCreationMode && addRoleOpen" class="role-modal-mask">
-        <div class="role-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+        <div
+          class="role-modal"
+          :class="{ 'is-compact': compactRoleModal }"
+          role="dialog"
+          aria-modal="true"
+          :style="{ maxHeight: roleModalMaxHeight }"
+        >
           <div class="role-modal-header">
             <div class="role-modal-title">✨ 添加角色</div>
             <div class="role-modal-actions">
@@ -319,7 +327,13 @@
       </div>
 
       <div v-if="isCreationMode && generateRoleOpen" class="role-generate-mask">
-        <div class="role-generate-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
+        <div
+          class="role-generate-modal"
+          :class="{ 'is-compact': compactRoleModal }"
+          role="dialog"
+          aria-modal="true"
+          :style="{ maxHeight: roleModalMaxHeight }"
+        >
           <div class="role-generate-header">
             <div class="role-modal-title">🧬 生成角色面板</div>
             <div class="role-generate-header-actions">
@@ -672,7 +686,7 @@
 
 <script setup lang="ts">
 import _ from 'lodash';
-import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
+import { useElementSize, useTextareaAutosize, useVirtualList, useWindowSize } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
 import {
   CHAT_VAR_KEYS_ROLE,
@@ -725,12 +739,26 @@ onMounted(() => {
 });
 
 const { height: viewportHeight } = useElementSize(rootEl);
+const { width: viewportWidth } = useWindowSize();
+const roleModalViewportHeight = computed(() => {
+  const vv = window.visualViewport;
+  const visualHeight = vv?.height;
+  if (Number.isFinite(visualHeight) && Number(visualHeight) > 0) return Number(visualHeight);
+  const measured = Number(viewportHeight.value);
+  if (Number.isFinite(measured) && measured > 0) return measured;
+  return window.innerHeight || 0;
+});
 const roleModalMaxHeightPx = computed(() => {
-  const h = Number(viewportHeight.value) || window.innerHeight || 0;
-  return Math.max(320, Math.floor(h * 0.7));
+  const h = roleModalViewportHeight.value;
+  const edgePadding = h <= 540 ? 10 : h <= 760 ? 16 : 28;
+  return Math.max(300, Math.floor(h - edgePadding * 2));
 });
 const roleModalMaxHeight = computed(() => `${roleModalMaxHeightPx.value}px`);
-const roleModalBodyMaxHeight = computed(() => `${Math.max(200, roleModalMaxHeightPx.value - 160)}px`);
+const roleModalBodyMaxHeight = computed(() => {
+  const chromeHeight = viewportWidth.value <= 680 ? 196 : 172;
+  return `${Math.max(180, roleModalMaxHeightPx.value - chromeHeight)}px`;
+});
+const compactRoleModal = computed(() => roleModalViewportHeight.value <= 760 || viewportWidth.value <= 680);
 const worldInfoModalOpen = ref(false);
 const reportDigestModalOpen = ref(false);
 const isHistoryMode = computed(() => store.viewMessageState.mode === 'history');
@@ -3163,9 +3191,13 @@ onBeforeUnmount(() => {
   background: rgba(10, 12, 24, 0.72);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px;
+  overflow: auto;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-right: calc(12px + env(safe-area-inset-right));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  padding-left: calc(12px + env(safe-area-inset-left));
   z-index: 999;
 }
 
@@ -3182,8 +3214,8 @@ onBeforeUnmount(() => {
 }
 
 .role-modal {
-  width: min(82vw, 920px);
-  max-height: 76vh;
+  width: min(96vw, 920px);
+  max-width: calc(100vw - 16px);
   background: rgba(18, 20, 36, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
@@ -3196,6 +3228,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 16px 20px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -3209,6 +3242,8 @@ onBeforeUnmount(() => {
 .role-modal-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3236,15 +3271,19 @@ onBeforeUnmount(() => {
   background: rgba(6, 8, 20, 0.78);
   backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px;
+  overflow: auto;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-right: calc(12px + env(safe-area-inset-right));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  padding-left: calc(12px + env(safe-area-inset-left));
   z-index: 1001;
 }
 
 .role-generate-modal {
-  width: min(82vw, 940px);
-  max-height: 76vh;
+  width: min(96vw, 940px);
+  max-width: calc(100vw - 16px);
   background: rgba(16, 18, 32, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
@@ -3257,6 +3296,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 16px 20px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -3264,6 +3304,8 @@ onBeforeUnmount(() => {
 .role-generate-header-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3614,7 +3656,100 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
+.role-modal.is-compact,
+.role-generate-modal.is-compact {
+  width: min(100%, 940px);
+  max-width: calc(100vw - 10px);
+  border-radius: 14px;
+}
+
+.role-modal.is-compact .role-modal-header,
+.role-generate-modal.is-compact .role-generate-header {
+  padding: 12px 14px 10px;
+  align-items: flex-start;
+}
+
+.role-modal.is-compact .role-modal-body,
+.role-generate-modal.is-compact .role-generate-body {
+  padding: 12px 14px;
+}
+
+.role-modal.is-compact .role-modal-footer {
+  padding: 10px 14px 14px;
+}
+
 @media (max-width: 640px) {
+  .role-modal-mask,
+  .role-generate-mask {
+    padding-top: calc(8px + env(safe-area-inset-top));
+    padding-right: calc(8px + env(safe-area-inset-right));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    padding-left: calc(8px + env(safe-area-inset-left));
+  }
+
+  .role-modal,
+  .role-generate-modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 12px;
+  }
+
+  .role-modal-header,
+  .role-generate-header {
+    align-items: flex-start;
+    padding: 11px 12px 9px;
+  }
+
+  .role-modal-title {
+    font-size: 0.96em;
+  }
+
+  .role-modal-actions,
+  .role-generate-header-actions {
+    gap: 8px;
+  }
+
+  .role-header-btn {
+    padding: 6px 10px;
+    font-size: 0.82em;
+  }
+
+  .role-modal-body,
+  .role-generate-body {
+    padding: 10px 12px;
+  }
+
+  .role-modal-footer {
+    padding: 10px 12px 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .role-modal-footer .role-btn {
+    flex: 1 1 44%;
+    min-width: 120px;
+  }
+
+  .role-form-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .role-generate-actions.toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .role-generate-toggle-group {
+    flex-wrap: wrap;
+  }
+
+  .role-generate-input,
+  .role-generate-review-input {
+    min-height: 64px;
+  }
+
   .section-header {
     align-items: flex-start;
   }

@@ -1,0 +1,440 @@
+{
+  "meta": {
+    "url": "http://127.0.0.1:8002/",
+    "frameFound": false,
+    "frameUrl": null,
+    "generatedAt": "2026-02-28T16:46:35.530Z"
+  },
+  "checklist": {
+    "image_button": {
+      "ok": false,
+      "reason": "story frame not found"
+    },
+    "llm_button": {
+      "ok": false,
+      "reason": "story frame not found"
+    },
+    "cache_backfill": {
+      "ok": false,
+      "reason": "story frame not found"
+    },
+    "timeout_hint": {
+      "ok": false,
+      "reason": "story frame not found"
+    },
+    "concurrency_join": {
+      "ok": false,
+      "reason": "story frame not found"
+    }
+  },
+  "pageErrors": [],
+  "logsFiltered": [
+    {
+      "ts": 1772297167221,
+      "type": "debug",
+      "text": "Activating extension third-party/st-chatu8",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 504,
+      "col": 24,
+      "args": [
+        "Activating extension",
+        "third-party/st-chatu8"
+      ]
+    },
+    {
+      "ts": 1772297167247,
+      "type": "log",
+      "text": "[Aircraft, BitcoinAddressFamily, BitcoinNetwork, CssFunction, CssSpace, Faker, FakerError, IPv4Network, Sex, SimpleFaker, af_ZA, allFakers, allLocales, ar, az, base, bn_BD, cs_CZ, cy, da, de, de_AT, de_CH, dv, el, en, en_AU, en_AU_ocker, en_BORK, en_CA, en_GB, en_GH, en_HK, en_IE, en_IN, en_NG, en_US, en_ZA, eo, es, es_MX, fa, faker, fakerAF_ZA, fakerAR, fakerAZ, fakerBASE, fakerBN_BD, fakerCS_CZ, fakerCY, fakerDA, fakerDE, fakerDE_AT, fakerDE_CH, fakerDV, fakerEL, fakerEN, fakerEN_AU, fakerEN_AU_ocker, fakerEN_BORK, fakerEN_CA, fakerEN_GB, fakerEN_GH, fakerEN_HK, fakerEN_IE, fakerEN_IN, fakerEN_NG, fakerEN_US, fakerEN_ZA, fakerEO, fakerES, fakerES_MX, fakerFA, fakerFI, fakerFR, fakerFR_BE, fakerFR_CA, fakerFR_CH, fakerFR_LU, fakerFR_SN, fakerHE, fakerHR, fakerHU, fakerHY, fakerID_ID, fakerIT, fakerJA, fakerKA_GE, fakerKO, fakerLV, fakerMK, fakerNB_NO, fakerNE, fakerNL, fakerNL_BE, fakerPL, fakerPT_BR, fakerPT_PT, fakerRO, fakerRO_MD]",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/ST-Prompt-Template/dist/index.js",
+      "line": 0,
+      "col": 241629,
+      "args": [
+        [
+          "Aircraft",
+          "BitcoinAddressFamily",
+          "BitcoinNetwork",
+          "CssFunction",
+          "CssSpace",
+          "Faker",
+          "FakerError",
+          "IPv4Network",
+          "Sex",
+          "SimpleFaker",
+          "af_ZA",
+          "allFakers",
+          "allLocales",
+          "ar",
+          "az",
+          "base",
+          "bn_BD",
+          "cs_CZ",
+          "cy",
+          "da",
+          "de",
+          "de_AT",
+          "de_CH",
+          "dv",
+          "el",
+          "en",
+          "en_AU",
+          "en_AU_ocker",
+          "en_BORK",
+          "en_CA",
+          "en_GB",
+          "en_GH",
+          "en_HK",
+          "en_IE",
+          "en_IN",
+          "en_NG",
+          "en_US",
+          "en_ZA",
+          "eo",
+          "es",
+          "es_MX",
+          "fa",
+          "faker",
+          "fakerAF_ZA",
+          "fakerAR",
+          "fakerAZ",
+          "fakerBASE",
+          "fakerBN_BD",
+          "fakerCS_CZ",
+          "fakerCY",
+          "fakerDA",
+          "fakerDE",
+          "fakerDE_AT",
+          "fakerDE_CH",
+          "fakerDV",
+          "fakerEL",
+          "fakerEN",
+          "fakerEN_AU",
+          "fakerEN_AU_ocker",
+          "fakerEN_BORK",
+          "fakerEN_CA",
+          "fakerEN_GB",
+          "fakerEN_GH",
+          "fakerEN_HK",
+          "fakerEN_IE",
+          "fakerEN_IN",
+          "fakerEN_NG",
+          "fakerEN_US",
+          "fakerEN_ZA",
+          "fakerEO",
+          "fakerES",
+          "fakerES_MX",
+          "fakerFA",
+          "fakerFI",
+          "fakerFR",
+          "fakerFR_BE",
+          "fakerFR_CA",
+          "fakerFR_CH",
+          "fakerFR_LU",
+          "fakerFR_SN",
+          "fakerHE",
+          "fakerHR",
+          "fakerHU",
+          "fakerHY",
+          "fakerID_ID",
+          "fakerIT",
+          "fakerJA",
+          "fakerKA_GE",
+          "fakerKO",
+          "fakerLV",
+          "fakerMK",
+          "fakerNB_NO",
+          "fakerNE",
+          "fakerNL",
+          "fakerNL_BE",
+          "fakerPL",
+          "fakerPT_BR",
+          "fakerPT_PT",
+          "fakerRO",
+          "fakerRO_MD",
+          "fakerRU",
+          "fakerSK",
+          "fakerSR_RS_latin",
+          "fakerSV",
+          "fakerTA_IN",
+          "fakerTH",
+          "fakerTR",
+          "fakerUK",
+          "fakerUR",
+          "fakerUZ_UZ_latin",
+          "fakerVI",
+          "fakerYO_NG",
+          "fakerZH_CN",
+          "fakerZH_TW",
+          "fakerZU_ZA",
+          "fi",
+          "fr",
+          "fr_BE",
+          "fr_CA",
+          "fr_CH",
+          "fr_LU",
+          "fr_SN",
+          "generateMersenne32Randomizer",
+          "generateMersenne53Randomizer",
+          "he",
+          "hr",
+          "hu",
+          "hy",
+          "id_ID",
+          "it",
+          "ja",
+          "ka_GE",
+          "ko",
+          "lv",
+          "mergeLocales",
+          "mk",
+          "nb_NO",
+          "ne",
+          "nl",
+          "nl_BE",
+          "pl",
+          "pt_BR",
+          "pt_PT",
+          "ro",
+          "ro_MD",
+          "ru",
+          "simpleFaker",
+          "sk",
+          "sr_RS_latin",
+          "sv",
+          "ta_IN",
+          "th",
+          "tr",
+          "uk",
+          "ur",
+          "uz_UZ_latin",
+          "vi",
+          "yo_NG",
+          "zh_CN",
+          "zh_TW",
+          "zu_ZA"
+        ]
+      ]
+    },
+    {
+      "ts": 1772297170072,
+      "type": "log",
+      "text": "[st-chatu8] autoLLMClick module initialized",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 46945,
+      "args": [
+        "[st-chatu8] autoLLMClick module initialized"
+      ]
+    },
+    {
+      "ts": 1772297170074,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1770953856187.png",
+      "line": 0,
+      "col": 0,
+      "args": []
+    },
+    {
+      "ts": 1772297170074,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1768468078450.png",
+      "line": 0,
+      "col": 0,
+      "args": []
+    },
+    {
+      "ts": 1772297170092,
+      "type": "log",
+      "text": "[st-chatu8] 加载正则配置: {配置名称: 默认, 配置是否存在: true, 条目数量: 19}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 147370,
+      "args": [
+        "[st-chatu8] 加载正则配置:",
+        {
+          "配置名称": "默认",
+          "配置是否存在": true,
+          "条目数量": 19
+        }
+      ]
+    },
+    {
+      "ts": 1772297170092,
+      "type": "log",
+      "text": "[st-chatu8] 渲染正则条目: {容器ID: ch-regex-entries-container, 条目数: 19, 条目名称: Array(19)}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 43477,
+      "args": [
+        "[st-chatu8] 渲染正则条目:",
+        {
+          "容器ID": "ch-regex-entries-container",
+          "条目数": 19,
+          "条目名称": [
+            "不显示且不发送当前准则",
+            "纯UI",
+            "对 AI 隐藏选项",
+            "[美化]变量更新中",
+            "[美化]完整变量更新",
+            "MoM可选-[5]小剧场修复（1012）@电波系@yuki",
+            "MoM美化-[9]超级序言（1123） @电波系",
+            "MoM美化-[10]顶部状态栏夜间版@电波系@maru",
+            "MoM美化-[11]摘要幽灵模式@fawn(1010)",
+            "st-chatu8-隐藏imgthink",
+            "不显示且不发送当前准则",
+            "纯UI",
+            "对 AI 隐藏选项",
+            "[美化]变量更新中",
+            "[美化]完整变量更新",
+            "MoM可选-[5]小剧场修复（1012）@电波系@yuki",
+            "MoM美化-[9]超级序言（1123） @电波系",
+            "MoM美化-[10]顶部状态栏夜间版@电波系@maru",
+            "MoM美化-[11]摘要幽灵模式@fawn(1010)"
+          ]
+        }
+      ]
+    },
+    {
+      "ts": 1772297170606,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '::-webkit-scrollbar-track:focus-visible { background-color: rgba(126, 126, 126, 0.2); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24,
+      "args": [
+        "Failed to insert focus rule:",
+        {
+          "name": "SyntaxError"
+        }
+      ]
+    },
+    {
+      "ts": 1772297170606,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24,
+      "args": [
+        "Failed to insert focus rule:",
+        {
+          "name": "SyntaxError"
+        }
+      ]
+    },
+    {
+      "ts": 1772297170606,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24,
+      "args": [
+        "Failed to insert focus rule:",
+        {
+          "name": "SyntaxError"
+        }
+      ]
+    },
+    {
+      "ts": 1772297175017,
+      "type": "log",
+      "text": "[st-chatu8] GENERATION_STARTED data: normal",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 22793,
+      "args": [
+        "[st-chatu8] GENERATION_STARTED data:",
+        "normal"
+      ]
+    },
+    {
+      "ts": 1772297175017,
+      "type": "log",
+      "text": "[st-chatu8] Chat array length: 3",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24018,
+      "args": [
+        "[st-chatu8] Chat array length:",
+        3
+      ]
+    },
+    {
+      "ts": 1772297175017,
+      "type": "log",
+      "text": "[st-chatu8] Last message swipes length: 1",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24107,
+      "args": [
+        "[st-chatu8] Last message swipes length:",
+        1
+      ]
+    },
+    {
+      "ts": 1772297175186,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E8%84%9A%E6%9C%AC/%E5%90%8C%E5%B1%82%E5%8D%A1%E6%A1%A5%E6%8E%A5/index.js",
+      "line": 0,
+      "col": 0,
+      "args": []
+    },
+    {
+      "ts": 1772297178335,
+      "type": "log",
+      "text": "[st-chatu8] GENERATION_STARTED data: normal",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 22793,
+      "args": [
+        "[st-chatu8] GENERATION_STARTED data:",
+        "normal"
+      ]
+    },
+    {
+      "ts": 1772297178336,
+      "type": "log",
+      "text": "[st-chatu8] Chat array length: 3",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24018,
+      "args": [
+        "[st-chatu8] Chat array length:",
+        3
+      ]
+    },
+    {
+      "ts": 1772297178336,
+      "type": "log",
+      "text": "[st-chatu8] Last message swipes length: 1",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24107,
+      "args": [
+        "[st-chatu8] Last message swipes length:",
+        1
+      ]
+    },
+    {
+      "ts": 1772297186901,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+      "line": 0,
+      "col": 0,
+      "args": []
+    },
+    {
+      "ts": 1772297187134,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+      "line": 0,
+      "col": 0,
+      "args": []
+    }
+  ]
+}

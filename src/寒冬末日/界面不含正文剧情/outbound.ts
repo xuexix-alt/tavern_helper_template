@@ -70,7 +70,7 @@ function resolveTriggerSlash(): ((cmd: string) => any) | null {
     try {
       const ctx = (targetWindow as any)?.SillyTavern?.getContext?.();
       if (typeof ctx?.executeSlashCommandsWithOptions === 'function') {
-        return (cmd: string) => ctx.executeSlashCommandsWithOptions(cmd, { source: 'eden-ui-no-story' });
+        return (cmd: string) => ctx.executeSlashCommandsWithOptions(cmd, { source: 'eden-ui' });
       }
       if (typeof ctx?.executeSlashCommands === 'function') {
         return ctx.executeSlashCommands.bind(ctx);
@@ -117,75 +117,39 @@ function truncateText(text: string, max = 200): string {
   return `${s.slice(0, max)}…`;
 }
 
-function tryEmitSameLayerSendRequest(
+function createCommandRequestId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function tryEmitSameLayerCommandSendRequest(
   text: string,
   awaitTrigger: boolean,
   debug: { enabled: boolean; toConsole: boolean; toChat: boolean },
 ): boolean {
   if (typeof eventEmit !== 'function') return false;
+  const requestId = createCommandRequestId('send');
   try {
-    void eventEmit(SAMELAYER_EVENTS.SEND_REQUEST as any, {
-      text,
-      await_trigger: awaitTrigger,
-      source: 'ui-no-story',
+    void eventEmit(SAMELAYER_EVENTS.COMMAND_REQUEST as any, {
+      id: requestId,
+      command: 'send_message',
+      payload: {
+        text,
+        await_trigger: awaitTrigger,
+      },
+      source: 'ui',
     });
-    debugLog(debug, 'sendToChat:emit_request', { ok: true, text: truncateText(text), awaitTrigger });
+    debugLog(debug, 'sendToChat:emit_command', { ok: true, requestId, text: truncateText(text), awaitTrigger });
     return true;
   } catch (err) {
-    debugLog(debug, 'sendToChat:emit_request', {
+    debugLog(debug, 'sendToChat:emit_command', {
       ok: false,
+      requestId,
       reason: err instanceof Error ? err.message : String(err),
       text: truncateText(text),
       awaitTrigger,
     });
     return false;
   }
-}
-
-function trySendViaHostDom(text: string, debug: { enabled: boolean; toConsole: boolean; toChat: boolean }): boolean {
-  const resolveDocs = (): Document[] => {
-    const out: Document[] = [];
-    const pushDoc = (doc: Document | null | undefined) => {
-      if (!doc) return;
-      if (out.includes(doc)) return;
-      out.push(doc);
-    };
-    pushDoc(document);
-    try {
-      pushDoc(window.parent?.document);
-    } catch {
-      // ignore
-    }
-    try {
-      pushDoc(window.top?.document);
-    } catch {
-      // ignore
-    }
-    return out;
-  };
-
-  for (const doc of resolveDocs()) {
-    try {
-      const input = doc.getElementById('send_textarea') as HTMLTextAreaElement | HTMLInputElement | null;
-      const sendBtn = doc.getElementById('send_but') as HTMLElement | null;
-      if (!input || !sendBtn) continue;
-
-      input.value = text;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      const view = doc.defaultView ?? window;
-      sendBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view }));
-      debugLog(debug, 'sendToChat:dom_send', { ok: true, text: truncateText(text) });
-      return true;
-    } catch (err) {
-      debugLog(debug, 'sendToChat:dom_send', {
-        ok: false,
-        reason: err instanceof Error ? err.message : String(err),
-        text: truncateText(text),
-      });
-    }
-  }
-  return false;
 }
 
 function setDeep(obj: any, path: string, value: any) {
@@ -224,7 +188,6 @@ function debugLog(
   };
 
   if (debug.toConsole) {
-    // eslint-disable-next-line no-console
     console.debug?.('[eden/outbound]', record);
   }
 
@@ -276,16 +239,13 @@ export function sendToChat(
     return { ok: false, method: 'unavailable', reason, sentText };
   }
 
+  if (tryEmitSameLayerCommandSendRequest(sentText, awaitTrigger, debugResolved)) {
+    if (toast) toastr?.success?.('已转交桥接发送');
+    return { ok: true, method: 'triggerSlash', sentText };
+  }
+
   const slash = resolveTriggerSlash();
   if (!slash) {
-    if (tryEmitSameLayerSendRequest(sentText, awaitTrigger, debugResolved)) {
-      if (toast) toastr?.success?.('已转交桥接发送');
-      return { ok: true, method: 'triggerSlash', sentText };
-    }
-    if (trySendViaHostDom(sentText, debugResolved)) {
-      if (toast) toastr?.success?.('已通过宿主输入框发送');
-      return { ok: true, method: 'triggerSlash', sentText };
-    }
     if (toast) toastr?.error?.(unavailableMessage);
     debugLog(debugResolved, 'sendToChat', {
       ok: false,
@@ -304,12 +264,8 @@ export function sendToChat(
     return { ok: true, method: 'triggerSlash', sentText };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
-    if (tryEmitSameLayerSendRequest(sentText, awaitTrigger, debugResolved)) {
+    if (tryEmitSameLayerCommandSendRequest(sentText, awaitTrigger, debugResolved)) {
       if (toast) toastr?.success?.('已转交桥接发送');
-      return { ok: true, method: 'triggerSlash', sentText };
-    }
-    if (trySendViaHostDom(sentText, debugResolved)) {
-      if (toast) toastr?.success?.('已通过宿主输入框发送');
       return { ok: true, method: 'triggerSlash', sentText };
     }
     if (toast) toastr?.error?.(failureMessage);

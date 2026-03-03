@@ -905,8 +905,8 @@ const filteredAbilityEntries = computed(() => {
       }
       if (mode === 'level_desc') {
         if (a.level !== b.level) return b.level - a.level;
-      } else {
-        if (a.level !== b.level) return a.level - b.level;
+      } else if (a.level !== b.level) {
+        return a.level - b.level;
       }
       const ca = SHELTER_CATEGORY_ORDER_RAW.indexOf(a.category);
       const cb = SHELTER_CATEGORY_ORDER_RAW.indexOf(b.category);

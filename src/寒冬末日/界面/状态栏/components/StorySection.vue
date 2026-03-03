@@ -22,6 +22,21 @@
           <span class="zoom-value">{{ zoomPercent }}%</span>
           <button type="button" class="zoom-btn" @click="zoomIn">+</button>
         </div>
+        <div class="story-height-controls" title="限制正文可视高度，防止内容无限撑高">
+          <label class="story-height-label" for="story-height-slider">正文高</label>
+          <input
+            id="story-height-slider"
+            v-model.number="storyPaneHeightLimit"
+            class="story-height-slider"
+            type="range"
+            :min="STORY_PANE_HEIGHT_MIN"
+            :max="STORY_PANE_HEIGHT_MAX"
+            step="20"
+            @input="onStoryPaneHeightInput"
+          />
+          <span class="story-height-value">{{ storyPaneHeightLimit }}px</span>
+          <button type="button" class="story-height-reset" @click="resetStoryPaneHeight">重置</button>
+        </div>
         <button
           type="button"
           class="story-image-menu-btn"
@@ -144,7 +159,7 @@
       </template>
     </div>
 
-    <div v-else class="story-pane story-modules">
+    <div v-else class="story-pane story-modules" :style="storyPaneStyle">
       <div v-if="metaBlocks.length === 0" class="story-modules-empty">
         当前楼层没有额外模块（如 profile / meow_FM）。
       </div>
@@ -161,8 +176,11 @@
 
 <script setup lang="ts">
 import TextHighlight from './TextHighlight.vue';
-import { SAMELAYER_EVENTS } from '../../../samelayer_events';
-import { RequestImageError, cancelPendingImageRequests, requestImage } from '@util/requestImage';
+import {
+  SAMELAYER_EVENTS,
+  type SameLayerCommandName,
+  type SameLayerCommandResponsePayload,
+} from '../../../samelayer_events';
 import { RequestEventError, cancelPendingEventRequests, requestEventPayload } from '@util/requestEvent';
 
 type Segment = {
@@ -206,6 +224,10 @@ const storyTabs = computed<ReadonlyArray<{ key: StoryTab; label: string; count: 
 
 const activeStoryTab = useLocalStorage<StoryTab>('eden:story_active_tab', 'story');
 const storyZoom = useLocalStorage<number>('eden:story_zoom', 1);
+const STORY_PANE_HEIGHT_MIN = 260;
+const STORY_PANE_HEIGHT_DEFAULT = 680;
+const STORY_PANE_HEIGHT_MAX = 1400;
+const storyPaneHeight = useLocalStorage<number>('eden:story_pane_height', STORY_PANE_HEIGHT_DEFAULT);
 const chatu8DebugManual = useLocalStorage<boolean>('eden:story_chatu8_debug', false);
 const enabledSegmentKinds = useLocalStorage<SegmentKind[]>('eden:story_segment_kinds', [
   'narrative',
@@ -215,10 +237,33 @@ const enabledSegmentKinds = useLocalStorage<SegmentKind[]>('eden:story_segment_k
   'image',
   'image_prompt',
 ]);
+const storyPaneHeightLimit = computed<number>({
+  get() {
+    const raw = Number(storyPaneHeight.value || STORY_PANE_HEIGHT_DEFAULT);
+    return _.clamp(Math.trunc(raw), STORY_PANE_HEIGHT_MIN, STORY_PANE_HEIGHT_MAX);
+  },
+  set(next) {
+    const value = Number(next || STORY_PANE_HEIGHT_DEFAULT);
+    storyPaneHeight.value = _.clamp(Math.trunc(value), STORY_PANE_HEIGHT_MIN, STORY_PANE_HEIGHT_MAX);
+  },
+});
 const zoomPercent = computed(() => Math.round(storyZoom.value * 100));
+const storyPaneStyle = computed<Record<string, string>>(() => ({
+  '--story-pane-max-height': `${storyPaneHeightLimit.value}px`,
+}));
 const storyContentStyle = computed<Record<string, string>>(() => ({
+  ...storyPaneStyle.value,
   '--story-font-size': `${storyZoom.value.toFixed(2)}em`,
 }));
+
+function onStoryPaneHeightInput() {
+  scheduleResize();
+}
+
+function resetStoryPaneHeight() {
+  storyPaneHeightLimit.value = STORY_PANE_HEIGHT_DEFAULT;
+  scheduleResize();
+}
 
 function zoomIn() {
   storyZoom.value = _.clamp(Number((storyZoom.value + 0.08).toFixed(2)), 0.84, 1.32);
@@ -253,25 +298,19 @@ type Chatu8RuntimeConfig = {
   debugLog: boolean;
 };
 
-const BridgeEventType = {
-  PROXY_PING: SAMELAYER_EVENTS.CHATU8_PROXY_PING,
-  PROXY_PONG: SAMELAYER_EVENTS.CHATU8_PROXY_PONG,
-  GENERATE_REQUEST: SAMELAYER_EVENTS.CHATU8_GENERATE_REQUEST,
-  GENERATE_RESPONSE: SAMELAYER_EVENTS.CHATU8_GENERATE_RESPONSE,
-  LLM_PROMPT_REQUEST: SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_REQUEST,
-  LLM_PROMPT_RESPONSE: SAMELAYER_EVENTS.CHATU8_LLM_PROMPT_RESPONSE,
-  CACHE_QUERY: SAMELAYER_EVENTS.CHATU8_CACHE_QUERY,
-  CACHE_RESPONSE: SAMELAYER_EVENTS.CHATU8_CACHE_RESPONSE,
+const STORY_COMMAND_TIMEOUT_MS = {
+  PING: 1200,
+  GENERATE_IMAGE: 45000,
+  GET_LLM_PROMPT: 45000,
+  QUERY_IMAGE_CACHE: 2500,
 } as const;
 
-const Chatu8EventType = {
-  GENERATE_REQUEST: 'generate-image-request',
-  GENERATE_RESPONSE: 'generate-image-response',
-  LLM_PROMPT_REQUEST: 'ch-llm-image-gen-get-prompt-request',
-  LLM_PROMPT_RESPONSE: 'ch-llm-image-gen-get-prompt-response',
+const STORY_COMMAND_CONCURRENCY_KEY = {
+  PING: 'eden:story:cmd:ping',
+  GENERATE_IMAGE: 'eden:story:cmd:generate_image',
+  GET_LLM_PROMPT: 'eden:story:cmd:get_llm_prompt',
+  QUERY_IMAGE_CACHE: 'eden:story:cmd:query_image_cache',
 } as const;
-
-type RequestChannel = 'direct' | 'bridge';
 
 const IMAGE_TAG_HINTS = ['image', 'img', 'sd', 'draw', 'paint', 'picture', 'pic', '生图', '绘图', '图片', '插画'];
 
@@ -299,9 +338,7 @@ const CHAUT8_DEBUG_SWITCH_KEY = '__edenStoryChatu8Debug';
 let chatu8DebugExposeToken = 0;
 const chatu8DebugExposedWindows = new Set<Window & typeof globalThis>();
 const CHATU8_BRIDGE_REPROBE_MS = 1200;
-const STORY_OBSERVER_THROTTLE_MS = 160;
 let lastStoryMessageId: number | null = null;
-const storySectionActive = ref(true);
 
 function isChatu8DebugEnabled(): boolean {
   return chatu8DebugManual.value === true || chatu8Runtime.value.debugLog === true;
@@ -607,42 +644,56 @@ function readHostWindow(): (Window & typeof globalThis) | null {
   return candidates[0] ?? window;
 }
 
-function sameLayerEventOn(eventName: string, handler: (...args: any[]) => void): boolean {
-  try {
-    if (typeof eventOn === 'function') {
-      eventOn(eventName as any, handler as any);
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  return false;
-}
-
-function sameLayerEventOff(eventName: string, handler: (...args: any[]) => void) {
-  try {
-    if (typeof eventRemoveListener === 'function') {
-      eventRemoveListener(eventName as any, handler as any);
-    }
-  } catch {
-    // ignore
-  }
-}
-
-function sameLayerEventEmit(eventName: string, payload: unknown): boolean {
-  try {
-    if (typeof eventEmit === 'function') {
-      eventEmit(eventName as any, payload as any);
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  return false;
-}
-
 function createChatu8RequestId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type BridgeCommand = Extract<SameLayerCommandName, 'ping' | 'generate_image' | 'get_llm_prompt' | 'query_image_cache'>;
+
+type RequestBridgeCommandOptions<TData> = {
+  command: BridgeCommand;
+  payload?: Record<string, unknown>;
+  timeoutMs: number;
+  concurrency?: 'allow' | 'join' | 'reject';
+  concurrencyKey?: string;
+  transformData: (response: SameLayerCommandResponsePayload) => TData;
+};
+
+async function requestBridgeCommand<TData>(
+  options: RequestBridgeCommandOptions<TData>,
+): Promise<Awaited<ReturnType<typeof requestEventPayload<Record<string, unknown>, TData>>>> {
+  return requestEventPayload<Record<string, unknown>, TData>({
+    requestEvent: SAMELAYER_EVENTS.COMMAND_REQUEST,
+    responseEvent: SAMELAYER_EVENTS.COMMAND_RESPONSE,
+    payload: {
+      command: options.command,
+      payload: options.payload ?? {},
+      source: 'story',
+    },
+    timeoutMs: options.timeoutMs,
+    concurrency: options.concurrency ?? 'allow',
+    concurrencyKey: options.concurrencyKey,
+    transformResponse: rawPayload => {
+      const response = rawPayload as SameLayerCommandResponsePayload;
+      if (!response || typeof response !== 'object' || Array.isArray(response)) {
+        throw new RequestEventError('Bridge response is malformed', { code: 'MALFORMED_RESPONSE' });
+      }
+      if (response.command !== options.command) {
+        throw new RequestEventError(`Bridge command mismatch: ${String(response.command ?? '')}`, {
+          code: 'MALFORMED_RESPONSE',
+          details: { command: options.command, response },
+        });
+      }
+      if (response.ok !== true) {
+        const errorText = String(response.error ?? `${options.command} failed`).trim();
+        throw new RequestEventError(errorText || `${options.command} failed`, {
+          code: 'RESPONSE_ERROR',
+          details: { response },
+        });
+      }
+      return options.transformData(response);
+    },
+  });
 }
 
 async function probeChatu8Bridge(timeoutMs = 320, force = false): Promise<boolean> {
@@ -658,42 +709,40 @@ async function probeChatu8Bridge(timeoutMs = 320, force = false): Promise<boolea
   }
 
   chatu8BridgeLastProbeAt = Date.now();
-  chatu8BridgeProbePending = new Promise<boolean>(resolve => {
-    const pingId = createChatu8RequestId('bridge-ping');
-    let finished = false;
-    let timeoutId = 0;
-
-    const done = (ok: boolean) => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timeoutId);
-      sameLayerEventOff(BridgeEventType.PROXY_PONG, onPong);
-      chatu8BridgeReady = ok;
+  const pingId = createChatu8RequestId('bridge-ping');
+  chatu8BridgeProbePending = requestBridgeCommand<boolean>({
+    command: 'ping',
+    payload: { pingId },
+    timeoutMs: Math.max(300, Math.trunc(timeoutMs)),
+    concurrency: 'join',
+    concurrencyKey: STORY_COMMAND_CONCURRENCY_KEY.PING,
+    transformData: response => {
+      const data = (response.data ?? {}) as Record<string, unknown>;
+      return data.ready !== false;
+    },
+  })
+    .then(() => {
+      chatu8BridgeReady = true;
       chatu8BridgeLastProbeAt = Date.now();
+      chatu8DebugLog('bridge_probe_result', { pingId, ok: true });
+      return true;
+    })
+    .catch(error => {
+      chatu8BridgeReady = false;
+      chatu8BridgeLastProbeAt = Date.now();
+      chatu8DebugLog('bridge_probe_result', {
+        pingId,
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    })
+    .finally(() => {
       chatu8BridgeProbePending = null;
-      chatu8DebugLog('bridge_probe_result', { pingId, ok });
-      resolve(ok);
-    };
-
-    const onPong = (payload: unknown) => {
-      const data = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
-      const id = String(data.id ?? '').trim();
-      if (id !== pingId) return;
-      done(true);
-    };
-
-    sameLayerEventOn(BridgeEventType.PROXY_PONG, onPong);
-    sameLayerEventEmit(BridgeEventType.PROXY_PING, {
-      id: pingId,
-      source: 'story',
-      ts: Date.now(),
     });
-    timeoutId = window.setTimeout(() => done(false), timeoutMs);
-  });
 
   return chatu8BridgeProbePending;
 }
-
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
@@ -703,25 +752,7 @@ function normalizeImageDataToSrc(input: unknown): string {
   return `data:image/png;base64,${raw}`;
 }
 
-async function emitChatu8Request(
-  directEventName: string,
-  bridgeEventName: string,
-  payload: Record<string, unknown>,
-): Promise<RequestChannel | null> {
-  const bridgeReady = await probeChatu8Bridge(320, chatu8BridgeReady !== true);
-  if (bridgeReady) {
-    if (sameLayerEventEmit(bridgeEventName, payload)) return 'bridge';
-    if (sameLayerEventEmit(directEventName, payload)) return 'direct';
-    return null;
-  }
-
-  if (sameLayerEventEmit(directEventName, payload)) return 'direct';
-  if (sameLayerEventEmit(bridgeEventName, payload)) return 'bridge';
-  return null;
-}
-
 function clearPendingChatu8Requests(reason: string) {
-  cancelPendingImageRequests(`请求已取消（${reason}）`);
   cancelPendingEventRequests(`请求已取消（${reason}）`);
   const nextPromptUi: Record<string, ImagePromptUiState> = { ...(imagePromptUi.value ?? {}) };
   for (const [rawPrompt, ui] of Object.entries(nextPromptUi)) {
@@ -743,48 +774,27 @@ function pushExternalPromptRaw(rawPrompt: string) {
   externalPromptRaws.value = [...externalPromptRaws.value, normalized];
 }
 
-type ImageRequestAttempt = {
-  channel: RequestChannel;
-  requestEvent: string;
-  responseEvent: string;
-};
-
-function buildImageRequestAttempts(preferBridge: boolean): ImageRequestAttempt[] {
-  const directAttempt: ImageRequestAttempt = {
-    channel: 'direct',
-    requestEvent: Chatu8EventType.GENERATE_REQUEST,
-    responseEvent: Chatu8EventType.GENERATE_RESPONSE,
-  };
-  const bridgeAttempt: ImageRequestAttempt = {
-    channel: 'bridge',
-    requestEvent: BridgeEventType.GENERATE_REQUEST,
-    responseEvent: BridgeEventType.GENERATE_RESPONSE,
-  };
-
-  return preferBridge ? [bridgeAttempt, directAttempt] : [directAttempt, bridgeAttempt];
-}
-
 function resolveRequestImageErrorMessage(error: unknown): string {
-  if (error instanceof RequestImageError) {
+  if (error instanceof RequestEventError) {
     switch (error.code) {
       case 'TIMEOUT':
-        return '生图请求超时';
-      case 'GENERATION_FAILED':
+        return 'Image request timed out';
+      case 'RESPONSE_ERROR':
       case 'MALFORMED_RESPONSE':
-        return String(error.message || '生图失败').trim() || '生图失败';
+        return String(error.message || 'Image generation failed').trim() || 'Image generation failed';
       case 'EVENT_API_UNAVAILABLE':
       case 'EMIT_FAILED':
-        return '生图插件事件通道不可用';
+        return 'Bridge event channel unavailable';
       case 'CANCELED':
-        return String(error.message || '请求已取消').trim() || '请求已取消';
+        return String(error.message || 'Request canceled').trim() || 'Request canceled';
       default:
-        return String(error.message || '生图失败').trim() || '生图失败';
+        return String(error.message || 'Image generation failed').trim() || 'Image generation failed';
     }
   }
   if (error instanceof Error) {
-    return String(error.message || '生图失败').trim() || '生图失败';
+    return String(error.message || 'Image generation failed').trim() || 'Image generation failed';
   }
-  return '生图失败';
+  return 'Image generation failed';
 }
 
 function applyGeneratedImage(rawPrompt: string, src: string) {
@@ -792,7 +802,7 @@ function applyGeneratedImage(rawPrompt: string, src: string) {
   if (!normalizedSrc) return;
 
   const current = generatedImagesByPrompt.value?.[rawPrompt] ?? [];
-  const imageEntry = { src: normalizedSrc, alt: '生成图片' };
+  const imageEntry = { src: normalizedSrc, alt: 'generated image' };
   let updated = {
     ...(generatedImagesByPrompt.value ?? {}),
     [rawPrompt]: appendImageHistory(current, imageEntry),
@@ -801,79 +811,27 @@ function applyGeneratedImage(rawPrompt: string, src: string) {
   generatedImagesByPrompt.value = updated;
 }
 
-type LlmPromptRequestAttempt = {
-  channel: RequestChannel;
-  requestEvent: string;
-  responseEvent: string;
-};
-
-function buildLlmPromptRequestAttempts(preferBridge: boolean): LlmPromptRequestAttempt[] {
-  const directAttempt: LlmPromptRequestAttempt = {
-    channel: 'direct',
-    requestEvent: Chatu8EventType.LLM_PROMPT_REQUEST,
-    responseEvent: Chatu8EventType.LLM_PROMPT_RESPONSE,
-  };
-  const bridgeAttempt: LlmPromptRequestAttempt = {
-    channel: 'bridge',
-    requestEvent: BridgeEventType.LLM_PROMPT_REQUEST,
-    responseEvent: BridgeEventType.LLM_PROMPT_RESPONSE,
-  };
-  return preferBridge ? [bridgeAttempt, directAttempt] : [directAttempt, bridgeAttempt];
-}
-
-function parseLlmPromptResponse(raw: unknown): string {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    throw new RequestEventError('LLM 提示词响应格式异常', { code: 'MALFORMED_RESPONSE' });
-  }
-
-  const data = raw as Record<string, unknown>;
-  const success = data.success === true || data.ok === true;
-  const errorText = String(data.error ?? data.reason ?? '').trim();
-  const promptText = String(data.prompt ?? data.result ?? '').trim();
-  if (!success) {
-    throw new RequestEventError(errorText || 'LLM 提示词请求失败', {
-      code: 'RESPONSE_ERROR',
-      details: { raw: data },
-    });
-  }
-  if (!promptText) {
-    throw new RequestEventError('未收到 LLM 提示词', {
-      code: 'MALFORMED_RESPONSE',
-      details: { raw: data },
-    });
-  }
-
-  const rawPrompt = normalizeExternalPromptRawToken(promptText);
-  if (!rawPrompt) {
-    throw new RequestEventError('LLM 提示词为空，无法显示', {
-      code: 'MALFORMED_RESPONSE',
-      details: { raw: data },
-    });
-  }
-  return rawPrompt;
-}
-
 function resolveLlmPromptRequestErrorMessage(error: unknown): string {
   if (error instanceof RequestEventError) {
     switch (error.code) {
       case 'TIMEOUT':
-        return 'LLM 提示词请求超时';
+        return 'LLM prompt request timed out';
       case 'EVENT_API_UNAVAILABLE':
       case 'EMIT_FAILED':
-        return 'LLM 提示词事件通道不可用';
+        return 'Bridge event channel unavailable';
       case 'RESPONSE_ERROR':
       case 'MALFORMED_RESPONSE':
-        return String(error.message || 'LLM 提示词请求失败').trim() || 'LLM 提示词请求失败';
+        return String(error.message || 'LLM prompt request failed').trim() || 'LLM prompt request failed';
       case 'CANCELED':
-        return String(error.message || '请求已取消').trim() || '请求已取消';
+        return String(error.message || 'Request canceled').trim() || 'Request canceled';
       default:
-        return String(error.message || 'LLM 提示词请求失败').trim() || 'LLM 提示词请求失败';
+        return String(error.message || 'LLM prompt request failed').trim() || 'LLM prompt request failed';
     }
   }
   if (error instanceof Error) {
-    return String(error.message || 'LLM 提示词请求失败').trim() || 'LLM 提示词请求失败';
+    return String(error.message || 'LLM prompt request failed').trim() || 'LLM prompt request failed';
   }
-  return 'LLM 提示词请求失败';
+  return 'LLM prompt request failed';
 }
 
 async function requestImageByPrompt(rawPrompt: string, source: string): Promise<boolean> {
@@ -881,197 +839,188 @@ async function requestImageByPrompt(rawPrompt: string, source: string): Promise<
   const promptBody = parseImagePromptBody(rawPrompt);
   if (!promptBody) return false;
 
+  const bridgeReady = await probeChatu8Bridge(320, chatu8BridgeReady !== true);
+  if (!bridgeReady) {
+    setImagePromptUi(rawPrompt, {
+      isLoading: false,
+      message: 'Bridge unavailable',
+      level: 'error',
+    });
+    return false;
+  }
+
   setImagePromptUi(rawPrompt, {
     isLoading: true,
-    message: '已发送生图请求…',
+    message: 'Image request sent...',
     level: 'loading',
   });
 
-  const preferBridge = await probeChatu8Bridge(320, chatu8BridgeReady !== true);
-  const attempts = buildImageRequestAttempts(preferBridge);
-  const runAttempt = (index: number): boolean => {
-    if (!getImagePromptUi(rawPrompt).isLoading) return false;
-    const attempt = attempts[index];
-    let promise: Promise<Awaited<ReturnType<typeof requestImage>>>;
-
-    try {
-      promise = requestImage(promptBody, {
+  let promise: Promise<Awaited<ReturnType<typeof requestBridgeCommand<{ id: string; imageData: string }>>>>;
+  try {
+    promise = requestBridgeCommand<{ id: string; imageData: string }>({
+      command: 'generate_image',
+      payload: {
+        prompt: promptBody,
         change: null,
         width: null,
         height: null,
-        timeoutMs: 45000,
-        requestEvent: attempt.requestEvent,
-        responseEvent: attempt.responseEvent,
-        concurrency: 'join',
-        concurrencyKey: rawPrompt,
+      },
+      timeoutMs: STORY_COMMAND_TIMEOUT_MS.GENERATE_IMAGE,
+      concurrency: 'join',
+      concurrencyKey: `${STORY_COMMAND_CONCURRENCY_KEY.GENERATE_IMAGE}:${rawPrompt}`,
+      transformData: response => {
+        const data = (response.data ?? {}) as Record<string, unknown>;
+        const result = (data.result ?? {}) as Record<string, unknown>;
+        const imageData = normalizeImageDataToSrc(result.imageData ?? result.image);
+        const success = result.success === true || (response.ok === true && !!imageData);
+        if (!success || !imageData) {
+          const errorText = String(result.error ?? response.error ?? 'Image generation failed').trim();
+          throw new RequestEventError(errorText || 'Image generation failed', {
+            code: 'RESPONSE_ERROR',
+            details: { response, result },
+          });
+        }
+        return {
+          id: String(result.id ?? response.id ?? '').trim(),
+          imageData,
+        };
+      },
+    });
+  } catch (error) {
+    if (!getImagePromptUi(rawPrompt).isLoading) return false;
+    setImagePromptUi(rawPrompt, {
+      isLoading: false,
+      message: resolveRequestImageErrorMessage(error),
+      level: 'error',
+    });
+    return false;
+  }
+
+  chatu8DebugLog('image_request', {
+    source,
+    command: 'generate_image',
+    promptLength: promptBody.length,
+    bridgeReady: chatu8BridgeReady,
+  });
+
+  void promise
+    .then(result => {
+      if (!getImagePromptUi(rawPrompt).isLoading) return;
+      applyGeneratedImage(rawPrompt, result.data.imageData);
+      setImagePromptUi(rawPrompt, {
+        isLoading: false,
+        message: 'Image received',
+        level: 'success',
       });
-    } catch (error) {
-      const canFallback =
-        index < attempts.length - 1 &&
-        error instanceof RequestImageError &&
-        (error.code === 'EVENT_API_UNAVAILABLE' || error.code === 'EMIT_FAILED');
-      chatu8DebugLog('image_request_setup_failed', {
+      chatu8DebugLog('image_response', {
         source,
-        channel: attempt.channel,
-        promptLength: promptBody.length,
-        error: resolveRequestImageErrorMessage(error),
-        errorCode: error instanceof RequestImageError ? error.code : null,
+        requestId: result.id,
+        command: 'generate_image',
+        hasImage: !!result.data.imageData,
       });
-      if (canFallback) {
-        return runAttempt(index + 1);
-      }
-      if (!getImagePromptUi(rawPrompt).isLoading) return false;
+    })
+    .catch(error => {
+      if (!getImagePromptUi(rawPrompt).isLoading) return;
       setImagePromptUi(rawPrompt, {
         isLoading: false,
         message: resolveRequestImageErrorMessage(error),
         level: 'error',
       });
-      return false;
-    }
-
-    chatu8DebugLog('image_request', {
-      source,
-      channel: attempt.channel,
-      promptLength: promptBody.length,
-      bridgeReady: chatu8BridgeReady,
-    });
-
-    void promise
-      .then(result => {
-        if (!getImagePromptUi(rawPrompt).isLoading) return;
-        applyGeneratedImage(rawPrompt, result.imageData);
-        setImagePromptUi(rawPrompt, {
-          isLoading: false,
-          message: '已收到图片',
-          level: 'success',
-        });
-        chatu8DebugLog('image_response', {
-          source,
-          requestId: result.id,
-          channel: attempt.channel,
-          hasImage: !!result.imageData,
-        });
-      })
-      .catch(error => {
-        const canFallback =
-          index < attempts.length - 1 &&
-          error instanceof RequestImageError &&
-          (error.code === 'EVENT_API_UNAVAILABLE' || error.code === 'EMIT_FAILED');
-        const errorMessage = resolveRequestImageErrorMessage(error);
-        chatu8DebugLog('image_request_failed', {
-          source,
-          channel: attempt.channel,
-          promptLength: promptBody.length,
-          error: errorMessage,
-          errorCode: error instanceof RequestImageError ? error.code : null,
-          fallback: canFallback,
-        });
-        if (!getImagePromptUi(rawPrompt).isLoading) return;
-        if (canFallback) {
-          runAttempt(index + 1);
-          return;
-        }
-        setImagePromptUi(rawPrompt, {
-          isLoading: false,
-          message: errorMessage,
-          level: 'error',
-        });
+      chatu8DebugLog('image_request_failed', {
+        source,
+        command: 'generate_image',
+        promptLength: promptBody.length,
+        error: resolveRequestImageErrorMessage(error),
+        errorCode: error instanceof RequestEventError ? error.code : null,
       });
-    return true;
-  };
-
-  return runAttempt(0);
+    });
+  return true;
 }
 
 async function requestLlmPrompt(source: string): Promise<boolean> {
-  const preferBridge = await probeChatu8Bridge(320, chatu8BridgeReady !== true);
-  const attempts = buildLlmPromptRequestAttempts(preferBridge);
-  const requestId = createChatu8RequestId('llm');
+  const bridgeReady = await probeChatu8Bridge(320, chatu8BridgeReady !== true);
+  if (!bridgeReady) {
+    toastr?.warning?.('Bridge unavailable');
+    return false;
+  }
 
-  const runAttempt = (index: number): boolean => {
-    const attempt = attempts[index];
-    let promise: Promise<Awaited<ReturnType<typeof requestEventPayload<Record<string, unknown>, string>>>>;
-    try {
-      promise = requestEventPayload<Record<string, unknown>, string>({
-        requestEvent: attempt.requestEvent,
-        responseEvent: attempt.responseEvent,
-        payload: {},
-        requestId,
-        timeoutMs: 45000,
-        concurrency: 'join',
-        concurrencyKey: 'chatu8-llm-prompt',
-        transformResponse: parseLlmPromptResponse,
+  const requestId = createChatu8RequestId('llm');
+  let promise: Promise<Awaited<ReturnType<typeof requestBridgeCommand<string>>>>;
+  try {
+    promise = requestBridgeCommand<string>({
+      command: 'get_llm_prompt',
+      payload: {},
+      timeoutMs: STORY_COMMAND_TIMEOUT_MS.GET_LLM_PROMPT,
+      concurrency: 'join',
+      concurrencyKey: STORY_COMMAND_CONCURRENCY_KEY.GET_LLM_PROMPT,
+      transformData: response => {
+        const data = (response.data ?? {}) as Record<string, unknown>;
+        const result = (data.result ?? {}) as Record<string, unknown>;
+        const promptText = String(result.prompt ?? '').trim();
+        if (!promptText) {
+          throw new RequestEventError('LLM prompt missing', {
+            code: 'MALFORMED_RESPONSE',
+            details: { response, result },
+          });
+        }
+        const rawPrompt = normalizeExternalPromptRawToken(promptText);
+        if (!rawPrompt) {
+          throw new RequestEventError('LLM prompt cannot be normalized', {
+            code: 'MALFORMED_RESPONSE',
+            details: { response, result },
+          });
+        }
+        return rawPrompt;
+      },
+    });
+  } catch (error) {
+    const message = resolveLlmPromptRequestErrorMessage(error);
+    chatu8DebugLog('llm_prompt_request_setup_failed', {
+      requestId,
+      source,
+      error: message,
+      errorCode: error instanceof RequestEventError ? error.code : null,
+    });
+    toastr?.warning?.(message);
+    return false;
+  }
+
+  chatu8DebugLog('llm_prompt_request', {
+    requestId,
+    source,
+    command: 'get_llm_prompt',
+    bridgeReady: chatu8BridgeReady,
+  });
+
+  void promise
+    .then(result => {
+      const responseData = result.raw;
+      const responseSource = String(responseData?.source ?? responseData?.from ?? '').trim();
+      pushExternalPromptRaw(result.data);
+      setImagePromptUi(result.data, {
+        isLoading: false,
+        message: 'LLM prompt received',
+        level: 'success',
       });
-    } catch (error) {
-      const canFallback =
-        index < attempts.length - 1 &&
-        error instanceof RequestEventError &&
-        (error.code === 'EVENT_API_UNAVAILABLE' || error.code === 'EMIT_FAILED');
-      chatu8DebugLog('llm_prompt_request_setup_failed', {
+      chatu8DebugLog('llm_prompt_response', {
+        requestId: result.id,
+        source: responseSource,
+        success: true,
+        promptLength: result.data.length,
+      });
+    })
+    .catch(error => {
+      const message = resolveLlmPromptRequestErrorMessage(error);
+      chatu8DebugLog('llm_prompt_request_failed', {
         requestId,
-        channel: attempt.channel,
         source,
-        error: resolveLlmPromptRequestErrorMessage(error),
+        error: message,
         errorCode: error instanceof RequestEventError ? error.code : null,
       });
-      if (canFallback) {
-        return runAttempt(index + 1);
-      }
-      toastr?.warning?.(resolveLlmPromptRequestErrorMessage(error));
-      return false;
-    }
-
-    chatu8DebugLog('llm_prompt_request', {
-      requestId,
-      channel: attempt.channel,
-      source,
-      bridgeReady: chatu8BridgeReady,
+      toastr?.warning?.(message);
     });
-
-    void promise
-      .then(result => {
-        const responseData = result.raw;
-        const responseSource = String(responseData?.source ?? responseData?.from ?? '').trim();
-        pushExternalPromptRaw(result.data);
-        setImagePromptUi(result.data, {
-          isLoading: false,
-          message: 'LLM 提示词已回传',
-          level: 'success',
-        });
-        chatu8DebugLog('llm_prompt_response', {
-          requestId: result.id,
-          requestChannel: attempt.channel,
-          source: responseSource,
-          success: true,
-          promptLength: result.data.length,
-        });
-      })
-      .catch(error => {
-        const canFallback =
-          index < attempts.length - 1 &&
-          error instanceof RequestEventError &&
-          (error.code === 'EVENT_API_UNAVAILABLE' || error.code === 'EMIT_FAILED');
-        const errorMessage = resolveLlmPromptRequestErrorMessage(error);
-        chatu8DebugLog('llm_prompt_request_failed', {
-          requestId,
-          channel: attempt.channel,
-          source,
-          error: errorMessage,
-          errorCode: error instanceof RequestEventError ? error.code : null,
-          fallback: canFallback,
-        });
-        if (canFallback) {
-          runAttempt(index + 1);
-          return;
-        }
-        toastr?.warning?.(errorMessage);
-      });
-    return true;
-  };
-
-  return runAttempt(0);
+  return true;
 }
-
 function coerceBooleanSetting(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
@@ -1166,7 +1115,7 @@ async function queryChatu8Cache(
   messageId: number | null,
   promptAllowlist: string[] = [],
 ): Promise<Record<string, ResolvedDisplayedImage[]>> {
-  // 快速通道：直接从宿主读取
+  // Fast path: read cache directly from host context.
   const directResult = readChatu8CacheFromHost(messageId, promptAllowlist);
   if (Object.keys(directResult).length > 0) {
     chatu8DebugLog('cache_query_direct_hit', {
@@ -1177,63 +1126,53 @@ async function queryChatu8Cache(
     return directResult;
   }
 
-  // 慢速通道：通过桥接事件查询
+  // Slow path: ask bridge command bus.
   const bridgeReady = await probeChatu8Bridge(320, false);
   if (!bridgeReady) return {};
 
-  return new Promise<Record<string, ResolvedDisplayedImage[]>>(resolve => {
-    const queryId = createChatu8RequestId('cache');
-    let finished = false;
-    let timeoutId = 0;
+  const queryId = createChatu8RequestId('cache');
+  try {
+    const result = await requestBridgeCommand<Record<string, ResolvedDisplayedImage[]>>({
+      command: 'query_image_cache',
+      payload: {
+        messageId,
+        prompts: promptAllowlist,
+      },
+      timeoutMs: STORY_COMMAND_TIMEOUT_MS.QUERY_IMAGE_CACHE,
+      concurrency: 'join',
+      concurrencyKey: STORY_COMMAND_CONCURRENCY_KEY.QUERY_IMAGE_CACHE,
+      transformData: response => {
+        const data = (response.data ?? {}) as Record<string, unknown>;
+        const resultPayload = (data.result ?? {}) as Record<string, unknown>;
+        const rawImages = resultPayload.images as Record<string, Array<{ src: string; alt: string }>> | undefined;
+        if (!rawImages || typeof rawImages !== 'object') return {};
 
-    const done = (result: Record<string, ResolvedDisplayedImage[]>) => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timeoutId);
-      sameLayerEventOff(BridgeEventType.CACHE_RESPONSE, onResponse);
-      resolve(result);
-    };
-
-    const onResponse = (payload: unknown) => {
-      const data = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
-      if (String(data.queryId ?? '').trim() !== queryId) return;
-
-      const ok = data.ok === true;
-      if (!ok) {
-        chatu8DebugLog('cache_query_bridge_fail', { queryId, reason: data.reason });
-        done({});
-        return;
-      }
-
-      const rawImages = data.images as Record<string, Array<{ src: string; alt: string }>> | undefined;
-      if (!rawImages || typeof rawImages !== 'object') {
-        done({});
-        return;
-      }
-
-      let out: Record<string, ResolvedDisplayedImage[]> = {};
-      for (const [prompt, list] of Object.entries(rawImages)) {
-        if (!Array.isArray(list) || list.length === 0) continue;
-        for (const item of list) {
-          if (!item?.src) continue;
-          const normalizedSrc = normalizeImageDataToSrc(item.src);
-          if (!normalizedSrc) continue;
-          out = upsertPromptImage(out, prompt, { src: normalizedSrc, alt: item.alt || '缓存图片' });
+        let out: Record<string, ResolvedDisplayedImage[]> = {};
+        for (const [prompt, list] of Object.entries(rawImages)) {
+          if (!Array.isArray(list) || list.length === 0) continue;
+          for (const item of list) {
+            if (!item?.src) continue;
+            const normalizedSrc = normalizeImageDataToSrc(item.src);
+            if (!normalizedSrc) continue;
+            out = upsertPromptImage(out, prompt, {
+              src: normalizedSrc,
+              alt: item.alt || 'cached image',
+            });
+          }
         }
-      }
-      chatu8DebugLog('cache_query_bridge_hit', { queryId, keys: Object.keys(out).length });
-      done(out);
-    };
-
-    sameLayerEventOn(BridgeEventType.CACHE_RESPONSE, onResponse);
-    sameLayerEventEmit(BridgeEventType.CACHE_QUERY, { queryId, messageId, prompts: promptAllowlist });
-    timeoutId = window.setTimeout(() => {
-      chatu8DebugLog('cache_query_bridge_timeout', { queryId });
-      done({});
-    }, 2000);
-  });
+        return out;
+      },
+    });
+    chatu8DebugLog('cache_query_bridge_hit', { queryId, keys: Object.keys(result.data).length });
+    return result.data;
+  } catch (error) {
+    chatu8DebugLog('cache_query_bridge_fail', {
+      queryId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
 }
-
 function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
   const defaults: Chatu8RuntimeConfig = {
     startTag: 'image###',
@@ -2253,9 +2192,9 @@ function resolveImagesFromDisplayedMessage(messageId: number | null, prompts: st
   }
 
   const promptEls = roots.flatMap(root =>
-    Array.from(
-      root.querySelectorAll('pre, code, .image-prompt, .st-chatu8-image-button, [data-image-tag], [data-link]'),
-    ).filter(el => normalizeForMatch(el.textContent ?? '').includes('###')),
+    Array.from(root.querySelectorAll('pre, code, p, div, span')).filter(el =>
+      normalizeForMatch(el.textContent ?? '').includes('###'),
+    ),
   );
 
   const out: Record<string, ResolvedDisplayedImage[]> = {};
@@ -2685,9 +2624,6 @@ function resolveStoryMessageId(): number | null {
 }
 
 watchEffect(onCleanup => {
-  const isActive = storySectionActive.value;
-  if (!isActive) return;
-
   // 优先使用外部传入的 messageId，同层脚本挂载时避免调用 getCurrentMessageId 抛错
   const messageId = resolveStoryMessageId();
   if (messageId !== lastStoryMessageId) {
@@ -2728,7 +2664,6 @@ watchEffect(onCleanup => {
   let canceled = false;
   const timers: number[] = [];
   const observers: MutationObserver[] = [];
-  let observerThrottleTimer: number | null = null;
 
   const run = () => {
     if (canceled) return;
@@ -2746,15 +2681,6 @@ watchEffect(onCleanup => {
     const prevStandaloneJson = JSON.stringify(standaloneHostImages.value ?? []);
     const nextStandaloneJson = JSON.stringify(nextStandalone);
     if (prevStandaloneJson !== nextStandaloneJson) standaloneHostImages.value = nextStandalone;
-  };
-
-  const scheduleObservedRun = () => {
-    if (canceled) return;
-    if (observerThrottleTimer !== null) return;
-    observerThrottleTimer = window.setTimeout(() => {
-      observerThrottleTimer = null;
-      run();
-    }, STORY_OBSERVER_THROTTLE_MS);
   };
 
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
@@ -2786,10 +2712,11 @@ watchEffect(onCleanup => {
   timers.push(window.setTimeout(tryCacheQuery, 800));
   timers.push(window.setTimeout(tryCacheQuery, 3000));
 
-  const observeRoots = resolveHostMessageScopedRoots(messageId);
+  const observeRoots =
+    messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
   for (const root of observeRoots) {
     const observer = new MutationObserver(() => {
-      scheduleObservedRun();
+      run();
     });
     observer.observe(root, {
       childList: true,
@@ -2802,56 +2729,37 @@ watchEffect(onCleanup => {
 
   onCleanup(() => {
     canceled = true;
-    if (observerThrottleTimer !== null) {
-      window.clearTimeout(observerThrottleTimer);
-      observerThrottleTimer = null;
-    }
     for (const observer of observers) observer.disconnect();
     for (const t of timers) window.clearTimeout(t);
     hostImageButtonStateByPrompt.value = {};
   });
 });
 
-function stopChatu8RuntimeTimer() {
-  if (chatu8RuntimeTimer !== null) {
-    window.clearInterval(chatu8RuntimeTimer);
-    chatu8RuntimeTimer = null;
-  }
-}
+watch(
+  () => storyPaneHeightLimit.value,
+  () => {
+    scheduleResize();
+  },
+);
 
-function startChatu8RuntimeTimer() {
-  if (chatu8RuntimeTimer !== null) return;
+onMounted(() => {
+  refreshChatu8RuntimeConfig();
+  void probeChatu8Bridge(420, true);
+  exposeChatu8DebugSwitch();
   chatu8RuntimeTimer = window.setInterval(() => {
     refreshChatu8RuntimeConfig();
     if (chatu8BridgeReady !== true) {
       void probeChatu8Bridge(280, true);
     }
   }, 1500);
-}
-
-onMounted(() => {
-  refreshChatu8RuntimeConfig();
-  void probeChatu8Bridge(420, true);
-  exposeChatu8DebugSwitch();
-  startChatu8RuntimeTimer();
-});
-
-onActivated(() => {
-  storySectionActive.value = true;
-  refreshChatu8RuntimeConfig();
-  startChatu8RuntimeTimer();
-});
-
-onDeactivated(() => {
-  storySectionActive.value = false;
-  clearPendingChatu8Requests('component_deactivated');
-  stopChatu8RuntimeTimer();
 });
 
 onBeforeUnmount(() => {
-  storySectionActive.value = false;
   clearPendingChatu8Requests('component_unmount');
-  stopChatu8RuntimeTimer();
+  if (chatu8RuntimeTimer !== null) {
+    window.clearInterval(chatu8RuntimeTimer);
+    chatu8RuntimeTimer = null;
+  }
   chatu8BridgeProbePending = null;
   chatu8BridgeReady = null;
   chatu8BridgeLastProbeAt = 0;
@@ -3812,9 +3720,56 @@ function formatTableCell(cell: string): string {
 .story-toolbar-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   flex: 0 0 auto;
   margin-left: auto;
+}
+
+.story-height-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 188px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.story-height-label {
+  font-size: 0.68em;
+  opacity: 0.84;
+  white-space: nowrap;
+}
+
+.story-height-slider {
+  width: 108px;
+  accent-color: rgba(139, 233, 253, 0.88);
+}
+
+.story-height-value {
+  min-width: 46px;
+  font-size: 0.68em;
+  text-align: right;
+  opacity: 0.88;
+}
+
+.story-height-reset {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color);
+  font-size: 0.66em;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.story-height-reset:hover {
+  border-color: rgba(139, 233, 253, 0.45);
+  background: rgba(139, 233, 253, 0.14);
 }
 
 .zoom-btn {
@@ -3862,6 +3817,12 @@ function formatTableCell(cell: string): string {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 7px 8px;
+  min-height: 220px;
+  max-height: var(--story-pane-max-height, 680px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .content-text.story-pane {
@@ -4007,13 +3968,25 @@ function formatTableCell(cell: string): string {
     flex: 1 1 100%;
     min-width: 0;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     align-items: center;
   }
 
   .story-zoom-controls {
     min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .story-height-controls {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .story-height-slider {
+    flex: 1 1 auto;
+    min-width: 88px;
   }
 
   .story-image-menu-btn {

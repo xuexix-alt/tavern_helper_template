@@ -1,21 +1,23 @@
-import { SAMELAYER_EVENTS, type SameLayerPayload } from '../../samelayer_events';
+import {
+  SAMELAYER_EVENTS,
+  type SameLayerCommandResponsePayload,
+  type SameLayerPayload,
+} from '../../samelayer_events';
+import { requestEventPayload } from '@util/requestEvent';
 
 type InjectedData = {
+  raw: string;
   options: string[];
 };
+
 type StopHandle = { stop?: () => void } | null;
 
-const __edenInjectedDataDebugOnce = new Set<number>();
-
-// 要过滤/隐藏的自定义标签列表（仅隐藏思维链类内容）。
-// 注意：不要在这里移除 imageprompt/genimage，这些块可能承载生图插件回传的有效提示词。
-// 注意：避免使用 `\\b`（JSON 会将 `\\b` 反转义为 backspace），使用更稳健的“空白或 >”边界。
+const SNAPSHOT_TIMEOUT_MS = 1200;
 const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt'];
 
 function stripHiddenBlocks(raw: string): string {
   let cleaned = raw;
   for (const tag of HIDDEN_BLOCK_TAGS) {
-    // 匹配 <tag ...>...</tag>（不区分大小写，非贪婪匹配）
     cleaned = cleaned.replace(new RegExp('<' + tag + '(?:\\s[^>]*)?>[\\s\\S]*?<\\/' + tag + '>', 'gi'), '');
   }
   return cleaned;
@@ -23,7 +25,6 @@ function stripHiddenBlocks(raw: string): string {
 
 function parseInjectedText(raw: string): InjectedData {
   const cleaned = stripHiddenBlocks(raw);
-
   const optionMatch = cleaned.match(/(<option(?:\s[^>]*)?>(?![\s\S]*?<option(?:\s[^>]*)?>)[\s\S]*?(?:<\/option>|$))/i);
 
   const optionsRaw = optionMatch
@@ -40,19 +41,7 @@ function parseInjectedText(raw: string): InjectedData {
         .filter(Boolean)
     : [];
 
-  return { options };
-}
-
-function readMessageRaw(msg: unknown): string {
-  const data = msg as any;
-  if (Array.isArray(data?.swipes) && data.swipes.length > 0) {
-    const swipeId = Number(data?.swipe_id);
-    if (Number.isFinite(swipeId) && swipeId >= 0 && swipeId < data.swipes.length) {
-      return String(data.swipes[swipeId] ?? '');
-    }
-    return String(data.swipes[data.swipes.length - 1] ?? '');
-  }
-  return String(data?.message ?? data?.data?.extra_text ?? data?.text ?? '');
+  return { raw, options };
 }
 
 function readCurrentChatId(): string | null {
@@ -73,84 +62,43 @@ function isPayloadForCurrentChat(payload: SameLayerPayload): boolean {
   return payloadChatId === currentChatId;
 }
 
-function fetchFromCurrentMessage(isDebug: boolean): InjectedData | null {
-  const getCurrentMessageIdSafe = (): number | null => {
-    if (typeof getCurrentMessageId !== 'function') return null;
-    try {
-      const id = Number(getCurrentMessageId());
-      return Number.isFinite(id) ? id : null;
-    } catch (err) {
-      if (isDebug) console.debug('[状态栏][InjectedData] getCurrentMessageId 不可用，已跳过当前楼层解析', err);
-      return null;
-    }
-  };
-
-  try {
-    // 仅解析“当前 iframe 所在楼层”的消息文本
-    const messageId = getCurrentMessageIdSafe();
-    if (messageId == null) return null;
-
-    const msg = getChatMessages(messageId)?.[0];
-    const raw = readMessageRaw(msg);
-    if (!raw.trim()) return null;
-
-    const parsed = parseInjectedText(raw);
-
-    if (isDebug && !__edenInjectedDataDebugOnce.has(messageId)) {
-      __edenInjectedDataDebugOnce.add(messageId);
-      console.debug('[状态栏][InjectedData] 当前楼层解析', {
-        messageId,
-        rawLen: raw.length,
-        optionsCount: parsed.options.length,
-        optionsPreview: parsed.options.slice(0, 3),
-      });
-    }
-
-    if (parsed.options.length === 0) return null;
-    return parsed;
-  } catch (e) {
-    console.error('[InjectedData] 错误:', e);
-    return null;
-  }
-}
-
 function getMockData(): InjectedData {
   return {
-    options: ['前往尖叫声传来的方向查看', '立刻寻找房间躲避', '呼叫其他幸存者支援'],
+    raw: `
+<content>
+  <p><strong>开发模式示例正文：</strong>当前界面已切换到 mock 数据。</p>
+  <p>你可以在 URL 加上 <code>?debug</code> 查看桥接请求日志。</p>
+</content>
+<option>
+继续前进
+检查状态
+</option>
+`,
+    options: ['继续前进', '检查状态'],
   };
 }
 
 export function useInjectedData() {
+  const raw = ref<string>('');
   const options = ref<string[]>([]);
   const stopHandles: StopHandle[] = [];
   let lastBridgeTxSeq = -1;
   let lastBridgeTxId = '';
   let lastBridgeChatId: string | null = null;
 
-  // 开发模式检测 (通过 URL 查询参数)
   const search = new URLSearchParams(window.location.search);
   const isDevMode = search.has('dev');
   const isDebug = isDevMode || search.has('debug');
 
-  const refresh = () => {
-    if (isDevMode) {
-      const mockData = getMockData();
-      options.value = mockData.options;
-      return;
-    }
-
-    const fromMsg = fetchFromCurrentMessage(isDebug); // 同步调用
-    if (fromMsg) {
-      options.value = fromMsg.options;
-      return;
-    }
-
+  const clearData = () => {
+    raw.value = '';
     options.value = [];
   };
 
   const applyBridgePayload = (payload: SameLayerPayload) => {
     if (!payload || typeof payload !== 'object') return;
     if (!isPayloadForCurrentChat(payload)) return;
+
     const payloadChatId = payload?.chat_id == null ? null : String(payload.chat_id);
     const payloadTxSeq = Number(payload?.tx_seq);
     const payloadTxId = String(payload?.tx_id ?? '');
@@ -165,7 +113,7 @@ export function useInjectedData() {
       if (normalizedSeq === lastBridgeTxSeq && payloadTxId && payloadTxId === lastBridgeTxId) return;
       if (normalizedSeq < lastBridgeTxSeq) {
         if (isDebug) {
-          console.debug('[无正文状态栏][InjectedData] 丢弃过期桥接包', {
+          console.debug('[状态栏][InjectedData] drop outdated snapshot', {
             txSeq: normalizedSeq,
             lastTxSeq: lastBridgeTxSeq,
             txId: payloadTxId || null,
@@ -183,17 +131,76 @@ export function useInjectedData() {
 
     const rawText = String(payload.raw ?? '');
     const parsed = parseInjectedText(rawText);
+    raw.value = rawText;
     options.value = parsed.options;
 
     if (isDebug) {
-      // eslint-disable-next-line no-console
-      console.debug('[无正文状态栏][InjectedData] 使用同层桥接数据', {
+      console.debug('[状态栏][InjectedData] apply show payload', {
         messageId: payload.message_id,
         phase: payload.phase,
         rawLen: rawText.length,
         optionsCount: parsed.options.length,
       });
     }
+  };
+
+  const requestCommandSnapshot = async (reason: string): Promise<boolean> => {
+    if (typeof eventOn !== 'function' || typeof eventEmit !== 'function') return false;
+    try {
+      const result = await requestEventPayload<Record<string, unknown>, SameLayerPayload>({
+        requestEvent: SAMELAYER_EVENTS.COMMAND_REQUEST,
+        responseEvent: SAMELAYER_EVENTS.COMMAND_RESPONSE,
+        payload: {
+          command: 'get_snapshot',
+          source: 'ui',
+        },
+        timeoutMs: SNAPSHOT_TIMEOUT_MS,
+        concurrency: 'join',
+        concurrencyKey: 'eden:statusbar:get_snapshot',
+        transformResponse: rawPayload => {
+          const response = rawPayload as SameLayerCommandResponsePayload;
+          if (!response || typeof response !== 'object') throw new Error('invalid response payload');
+          if (response.command !== 'get_snapshot') throw new Error('unexpected command response');
+          if (response.ok !== true) throw new Error(String(response.error ?? 'snapshot request failed'));
+          const data = (response.data ?? {}) as Record<string, unknown>;
+          const snapshot = data.snapshot;
+          if (!snapshot || typeof snapshot !== 'object') throw new Error('missing snapshot');
+          return snapshot as SameLayerPayload;
+        },
+      });
+
+      applyBridgePayload(result.data);
+      if (isDebug) {
+        console.debug('[状态栏][InjectedData] use command snapshot', {
+          reason,
+          messageId: result.data.message_id,
+          txSeq: result.data.tx_seq ?? null,
+          phase: result.data.phase ?? null,
+        });
+      }
+      return true;
+    } catch (error) {
+      if (isDebug) {
+        console.debug('[状态栏][InjectedData] command snapshot failed', {
+          reason,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      return false;
+    }
+  };
+
+  const refresh = () => {
+    if (isDevMode) {
+      const mockData = getMockData();
+      raw.value = mockData.raw;
+      options.value = mockData.options;
+      return;
+    }
+
+    void requestCommandSnapshot('manual_refresh').then(ok => {
+      if (!ok) clearData();
+    });
   };
 
   const onAnyEvent = (eventName: string, listener: (payload: SameLayerPayload) => void) => {
@@ -206,16 +213,16 @@ export function useInjectedData() {
     }
   };
 
-  const bindRefreshOnTavernEvent = (eventName: string) => {
-    if (typeof eventOn !== 'function') return;
+  const bindSnapshotOnChatChanged = () => {
+    if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') return;
     try {
-      const stop = eventOn(eventName as any, () => {
-        if (eventName === (tavern_events.CHAT_CHANGED as any)) {
-          lastBridgeTxSeq = -1;
-          lastBridgeTxId = '';
-          lastBridgeChatId = null;
-        }
-        refresh();
+      const stop = eventOn(tavern_events.CHAT_CHANGED as any, () => {
+        lastBridgeTxSeq = -1;
+        lastBridgeTxId = '';
+        lastBridgeChatId = null;
+        void requestCommandSnapshot('event:chat_changed').then(ok => {
+          if (!ok) clearData();
+        });
       });
       stopHandles.push(stop);
     } catch {
@@ -224,31 +231,17 @@ export function useInjectedData() {
   };
 
   onMounted(() => {
-    refresh();
-
     onAnyEvent(SAMELAYER_EVENTS.SHOW, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.SYNC_DATA, applyBridgePayload);
 
-    // 兼容旧协议事件，逐步迁移期间不丢数据。
-    onAnyEvent(SAMELAYER_EVENTS.STREAM, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.FINAL, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.RESET, applyBridgePayload);
-    onAnyEvent(SAMELAYER_EVENTS.SYNC_RESPONSE, applyBridgePayload);
-
-    if (typeof tavern_events !== 'undefined') {
-      bindRefreshOnTavernEvent(tavern_events.MESSAGE_SWIPED as any);
-      bindRefreshOnTavernEvent(tavern_events.MESSAGE_UPDATED as any);
-      bindRefreshOnTavernEvent(tavern_events.MESSAGE_EDITED as any);
-      bindRefreshOnTavernEvent(tavern_events.MESSAGE_RECEIVED as any);
-      bindRefreshOnTavernEvent(tavern_events.CHARACTER_MESSAGE_RENDERED as any);
-      bindRefreshOnTavernEvent(tavern_events.USER_MESSAGE_RENDERED as any);
-      bindRefreshOnTavernEvent(tavern_events.CHAT_CHANGED as any);
+    if (isDevMode) {
+      refresh();
+      return;
     }
 
-    if (typeof eventEmit === 'function') {
-      void eventEmit(SAMELAYER_EVENTS.REQUIRE_DATA as any);
-      void eventEmit(SAMELAYER_EVENTS.SYNC_REQUEST as any);
-    }
+    void requestCommandSnapshot('mounted').then(ok => {
+      if (!ok) clearData();
+    });
+    bindSnapshotOnChatChanged();
   });
 
   onBeforeUnmount(() => {
@@ -256,5 +249,6 @@ export function useInjectedData() {
     stopHandles.length = 0;
   });
 
-  return { options, refresh };
+  return { raw, options, refresh };
 }
+

@@ -7,9 +7,90 @@
       </div>
       <StorySection :raw="displayRaw" :query="query" :message-id="displayMessageId" />
     </div>
+    <transition name="eden-story-accordion">
+      <section
+        v-if="activeAccordionPanel"
+        ref="accordionPanelRef"
+        class="eden-story-accordion"
+        :class="[{ 'is-compact': compactAccordionPanel }, `is-${activeAccordionPanel}`]"
+        :style="accordionPanelStyle"
+      >
+        <div class="eden-story-choices-modal">
+          <div class="eden-story-choices-head">
+            <strong class="eden-story-choices-title">{{
+              choicesPanelOpen ? '剧情选项' : '回看过往剧情楼层'
+            }}</strong>
+            <button type="button" class="eden-story-choices-close" @click="closeAccordionPanel">
+              {{ choicesPanelOpen ? '收起选项' : '收起回看' }}
+            </button>
+          </div>
+          <div class="eden-story-choices-body">
+            <template v-if="choicesPanelOpen">
+              <ChoicesSection :options="displayOptions" :query="query" @choice-sent="onChoiceSent" />
+            </template>
+            <template v-else>
+              <div class="eden-history-list">
+                <button
+                  type="button"
+                  class="eden-history-item is-latest"
+                  :class="{ active: !isHistoryMode }"
+                  @click="switchToLatest"
+                >
+                  <div class="eden-history-item-top">
+                    <span>最新楼层 #{{ latestLiveMessageId ?? '?' }}</span>
+                    <div class="eden-history-item-id-group">
+                      <span class="eden-history-item-id">自动跟随</span>
+                      <span class="eden-history-follow-state">{{ latestFollowStateLabel }}</span>
+                    </div>
+                  </div>
+                </button>
+                <div
+                  v-for="item in historyCandidates"
+                  :key="item.message_id"
+                  class="eden-history-item"
+                  :class="[{ active: historyMessageId === item.message_id }, `is-${item.role}`]"
+                >
+                  <button type="button" class="eden-history-item-main" @click="selectHistoryMessage(item.message_id)">
+                    <div class="eden-history-item-top">
+                      <span class="eden-history-item-title-group">
+                        <span>楼层 #{{ item.message_id }}</span>
+                        <span class="eden-history-mini-role" :class="`is-${item.role}`">{{
+                          item.role === 'user' ? '用户' : 'AI'
+                        }}</span>
+                      </span>
+                      <span class="eden-history-item-id">{{ item.timeLabel }}</span>
+                    </div>
+                    <div class="eden-history-item-preview">{{ item.preview }}</div>
+                  </button>
+                  <div class="eden-history-item-actions">
+                    <span class="eden-history-role-tag" :class="`is-${item.role}`">{{ item.roleLabel }}</span>
+                    <button
+                      type="button"
+                      class="eden-history-item-delete"
+                      :disabled="deletingFromMessageId !== null"
+                      @click.stop="deleteFromMessage(item)"
+                    >
+                      {{ deletingFromMessageId === item.message_id ? '删除中…' : '回退删除' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </section>
+    </transition>
+
     <footer class="eden-story-composer">
       <div class="eden-story-composer-inner">
-        <button type="button" class="eden-story-composer-history" @click="openHistoryPicker">回看</button>
+        <button
+          type="button"
+          class="eden-story-composer-history"
+          :class="{ active: historyPickerOpen }"
+          @click="openHistoryPicker"
+        >
+          回看
+        </button>
         <input
           v-model="composerInput"
           type="text"
@@ -18,7 +99,13 @@
           :disabled="isHistoryMode"
           @keydown.enter.exact.prevent="sendComposerInput"
         />
-        <button type="button" class="eden-story-composer-option" :disabled="isHistoryMode" @click="openChoicesPanel">
+        <button
+          type="button"
+          class="eden-story-composer-option"
+          :class="{ active: choicesPanelOpen }"
+          :disabled="isHistoryMode"
+          @click="openChoicesPanel"
+        >
           选项
           <span class="eden-story-composer-option-count">{{ displayOptions.length }}</span>
         </button>
@@ -47,84 +134,12 @@
         </button>
       </div>
     </footer>
-
-    <Teleport to="body">
-      <div v-if="choicesPanelOpen" class="eden-story-choices-mask" @click.self="closeChoicesPanel">
-        <div class="eden-story-choices-modal">
-          <div class="eden-story-choices-head">
-            <strong class="eden-story-choices-title">剧情选项</strong>
-            <button type="button" class="eden-story-choices-close" @click="closeChoicesPanel">关闭</button>
-          </div>
-          <div class="eden-story-choices-body">
-            <ChoicesSection :options="displayOptions" :query="query" @choice-sent="onChoiceSent" />
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <Teleport to="body">
-      <div v-if="historyPickerOpen" class="eden-story-choices-mask" @click.self="closeHistoryPicker">
-        <div class="eden-story-choices-modal">
-          <div class="eden-story-choices-head">
-            <strong class="eden-story-choices-title">回看过往剧情楼层</strong>
-            <button type="button" class="eden-story-choices-close" @click="closeHistoryPicker">关闭</button>
-          </div>
-          <div class="eden-story-choices-body">
-            <div class="eden-history-list">
-              <button
-                type="button"
-                class="eden-history-item is-latest"
-                :class="{ active: !isHistoryMode }"
-                @click="switchToLatest"
-              >
-                <div class="eden-history-item-top">
-                  <span>最新楼层 #{{ latestLiveMessageId ?? '?' }}</span>
-                  <div class="eden-history-item-id-group">
-                    <span class="eden-history-item-id">自动跟随</span>
-                    <span class="eden-history-follow-state">{{ latestFollowStateLabel }}</span>
-                  </div>
-                </div>
-              </button>
-              <div
-                v-for="item in historyCandidates"
-                :key="item.message_id"
-                class="eden-history-item"
-                :class="[{ active: historyMessageId === item.message_id }, `is-${item.role}`]"
-              >
-                <button type="button" class="eden-history-item-main" @click="selectHistoryMessage(item.message_id)">
-                  <div class="eden-history-item-top">
-                    <span class="eden-history-item-title-group">
-                      <span>楼层 #{{ item.message_id }}</span>
-                      <span class="eden-history-mini-role" :class="`is-${item.role}`">{{
-                        item.role === 'user' ? '用户' : 'AI'
-                      }}</span>
-                    </span>
-                    <span class="eden-history-item-id">{{ item.timeLabel }}</span>
-                  </div>
-                  <div class="eden-history-item-preview">{{ item.preview }}</div>
-                </button>
-                <div class="eden-history-item-actions">
-                  <span class="eden-history-role-tag" :class="`is-${item.role}`">{{ item.roleLabel }}</span>
-                  <button
-                    type="button"
-                    class="eden-history-item-delete"
-                    :disabled="deletingFromMessageId !== null"
-                    @click.stop="deleteFromMessage(item)"
-                  >
-                    {{ deletingFromMessageId === item.message_id ? '删除中…' : '回退删除' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount } from 'vue';
+import { nextTick, onBeforeUnmount } from 'vue';
+import { useWindowSize } from '@vueuse/core';
 import ChoicesSection from '../components/ChoicesSection.vue';
 import StorySection from '../components/StorySection.vue';
 import { sendToChat } from '../../outbound';
@@ -151,6 +166,7 @@ type HistoryRecord = {
   is_system?: boolean;
   send_date?: string;
 };
+type AccordionPanel = 'choices' | 'history';
 
 function normalizeBooleanFlag(input: unknown): boolean | undefined {
   if (typeof input === 'boolean') return input;
@@ -204,8 +220,9 @@ const latestUserInput = ref('');
 const latestUserInputMessageId = ref<number | null>(null);
 const latestLiveMessageId = ref<number | null>(null);
 const containerMessageId = ref<number | null>(null);
-const choicesPanelOpen = ref(false);
-const historyPickerOpen = ref(false);
+const { width: viewportWidth, height: viewportHeight } = useWindowSize({ includeScrollbar: true });
+const activeAccordionPanel = ref<AccordionPanel | null>(null);
+const accordionPanelRef = ref<HTMLElement | null>(null);
 const historyCandidates = ref<HistoryCandidate[]>([]);
 const deletingFromMessageId = ref<number | null>(null);
 const viewMessageState = ref(getViewMessageState());
@@ -250,7 +267,34 @@ const regenerateButtonTitle = computed(() => {
 const latestFollowStateLabel = computed(
   () => `容器#${containerMessageId.value ?? '?'} / 跟随#${latestLiveMessageId.value ?? '?'}`,
 );
+const choicesPanelOpen = computed(() => activeAccordionPanel.value === 'choices');
+const historyPickerOpen = computed(() => activeAccordionPanel.value === 'history');
+const compactAccordionPanel = computed(() => Number(viewportWidth.value || 0) <= 540);
+const accordionPanelMaxHeightPx = computed(() => {
+  const vvHeight = Number(window.visualViewport?.height || 0);
+  const viewport = vvHeight > 0 ? vvHeight : Number(viewportHeight.value || 0);
+  const reserve = compactAccordionPanel.value ? 188 : 236;
+  const adaptive = viewport > 0 ? Math.floor(viewport - reserve) : 420;
+  return _.clamp(adaptive, 220, 820);
+});
+const accordionPanelStyle = computed<Record<string, string>>(() => ({
+  '--eden-story-accordion-max-height': `${accordionPanelMaxHeightPx.value}px`,
+}));
 const REGENERATE_TRIGGER_TIMEOUT_MS = 45000;
+
+function closeAccordionPanel() {
+  activeAccordionPanel.value = null;
+}
+
+function revealAccordionPanel() {
+  nextTick(() => {
+    accordionPanelRef.value?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: 'smooth',
+    });
+  });
+}
 
 function stripForPreview(input: string): string {
   return String(input ?? '')
@@ -476,11 +520,13 @@ function openChoicesPanel() {
     toastr?.info?.('回看模式仅查看，不能发送选项。请先返回最新楼层。');
     return;
   }
-  choicesPanelOpen.value = true;
+  activeAccordionPanel.value = choicesPanelOpen.value ? null : 'choices';
+  if (activeAccordionPanel.value) revealAccordionPanel();
 }
 
 function closeChoicesPanel() {
-  choicesPanelOpen.value = false;
+  if (!choicesPanelOpen.value) return;
+  closeAccordionPanel();
 }
 
 function sendComposerInput() {
@@ -566,11 +612,13 @@ async function regenerateFromLatestUserInput() {
 function openHistoryPicker() {
   refreshLiveMessageId();
   historyCandidates.value = buildHistoryCandidates();
-  historyPickerOpen.value = true;
+  activeAccordionPanel.value = historyPickerOpen.value ? null : 'history';
+  if (activeAccordionPanel.value) revealAccordionPanel();
 }
 
 function closeHistoryPicker() {
-  historyPickerOpen.value = false;
+  if (!historyPickerOpen.value) return;
+  closeAccordionPanel();
 }
 
 function resolveLastMessageId(): number | null {
@@ -768,6 +816,7 @@ function selectHistoryMessage(message_id: number) {
 function switchToLatest() {
   setViewMessageLatest('story-page');
   refreshLiveMessageId();
+  closeAccordionPanel();
   closeHistoryPicker();
 }
 
@@ -840,6 +889,14 @@ onMounted(() => {
 });
 
 watch(
+  () => activeAccordionPanel.value,
+  panel => {
+    if (!panel) return;
+    revealAccordionPanel();
+  },
+);
+
+watch(
   () => props.raw,
   () => {
     refreshLatestUserInput();
@@ -850,6 +907,7 @@ watch(
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onWindowKeydown);
+  closeAccordionPanel();
   stopViewMessageChanged?.();
   stopViewMessageChanged = null;
 });
@@ -889,7 +947,7 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 6px;
 }
 
@@ -903,6 +961,28 @@ onBeforeUnmount(() => {
   gap: var(--section-gap);
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+.eden-story-accordion {
+  margin: 0 8px;
+  overflow: hidden;
+}
+
+.eden-story-accordion.is-compact {
+  margin: 0 6px;
+}
+
+.eden-story-accordion-enter-active,
+.eden-story-accordion-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.eden-story-accordion-enter-from,
+.eden-story-accordion-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 .eden-story-composer {
@@ -934,6 +1014,11 @@ onBeforeUnmount(() => {
 
 .eden-story-composer-history:hover {
   background: rgba(255, 214, 102, 0.3);
+}
+
+.eden-story-composer-history.active {
+  border-color: rgba(255, 214, 102, 0.72);
+  background: rgba(255, 214, 102, 0.32);
 }
 
 .eden-story-composer-input {
@@ -972,6 +1057,11 @@ onBeforeUnmount(() => {
 
 .eden-story-composer-option:hover {
   background: rgba(139, 233, 253, 0.2);
+}
+
+.eden-story-composer-option.active {
+  border-color: rgba(139, 233, 253, 0.58);
+  background: rgba(139, 233, 253, 0.3);
 }
 
 .eden-story-composer-option-count {
@@ -1183,21 +1273,9 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-.eden-story-choices-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 2200;
-  padding: 54px 12px 10px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  background: rgba(8, 12, 20, 0.55);
-  backdrop-filter: blur(2px);
-}
-
 .eden-story-choices-modal {
-  width: min(100%, 900px);
-  max-height: min(72vh, 820px);
+  width: 100%;
+  max-height: var(--eden-story-accordion-max-height, 420px);
   border-radius: 12px;
   border: 1px solid rgba(139, 233, 253, 0.4);
   background: linear-gradient(180deg, rgba(20, 26, 40, 0.96), rgba(10, 14, 22, 0.97));
@@ -1263,6 +1341,43 @@ onBeforeUnmount(() => {
   font-size: 15px;
 }
 
+@media (max-width: 640px) {
+  .eden-story-composer-inner {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas:
+      'history input input input'
+      'option option regenerate send';
+  }
+
+  .eden-story-composer-history {
+    grid-area: history;
+  }
+
+  .eden-story-composer-input {
+    grid-area: input;
+  }
+
+  .eden-story-composer-option {
+    grid-area: option;
+  }
+
+  .eden-story-composer-regenerate {
+    grid-area: regenerate;
+  }
+
+  .eden-story-composer-send {
+    grid-area: send;
+  }
+
+  .eden-story-composer-history,
+  .eden-story-composer-option,
+  .eden-story-composer-regenerate,
+  .eden-story-composer-send {
+    width: 100%;
+    text-align: center;
+  }
+}
+
 @media (max-width: 420px) {
   .eden-page-scroll {
     padding: 6px 6px 8px;
@@ -1294,13 +1409,8 @@ onBeforeUnmount(() => {
     padding: 5px 7px;
   }
 
-  .eden-story-choices-mask {
-    padding: 44px 8px 8px;
-    align-items: flex-start;
-  }
-
   .eden-story-choices-modal {
-    max-height: min(78vh, 940px);
+    max-height: var(--eden-story-accordion-max-height, 420px);
   }
 }
 </style>

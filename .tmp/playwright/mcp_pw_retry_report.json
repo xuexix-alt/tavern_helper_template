@@ -1,0 +1,564 @@
+{
+  "generatedAt": "2026-03-03T06:17:31.864Z",
+  "successAttempt": null,
+  "all": [
+    {
+      "attempt": 1,
+      "ok": false,
+      "frames": [
+        {
+          "name": "TH-message--4--0",
+          "url": "blob:http://127.0.0.1:8002/8e257df0-ec44-488a-b3a4-002dc741bc24",
+          "ready": "loading",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/6985a0ad-1300-4c5e-b4eb-d1eb8955a5e2",
+          "ready": "loading",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/f1b0b269-15ff-414c-8ed1-f5ab6816d9f8",
+          "ready": "loading",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        }
+      ],
+      "badTail": [
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui-touch-punch",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "failed",
+          "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery/dist/jquery.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/themes/base/theme.min.css",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui-touch-punch",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui-touch-punch",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui-touch-punch",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        }
+      ],
+      "screenshot": ".tmp/playwright/mcp_pw_retry_1.png"
+    },
+    {
+      "attempt": 2,
+      "ok": false,
+      "frames": [
+        {
+          "name": "TH-message--4--0",
+          "url": "blob:http://127.0.0.1:8002/e97c3244-dc73-4886-a4c8-76d26dc4e205",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/97d6b03b-c57a-4370-8266-a797d5129fb7",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/48c401ee-58d1-4040-b206-93f6af291bc8",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        }
+      ],
+      "badTail": [
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E8%84%9A%E6%9C%AC/%E5%90%8C%E5%B1%82%E5%8D%A1%E6%A1%A5%E6%8E%A5/index.js",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-api@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-api@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/runtime-dom@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/runtime-dom@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-kit@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-kit@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/shared@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/shared@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-shared@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/runtime-core@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/devtools-shared@7.7.7/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/runtime-core@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/reactivity@3.5.22/+esm",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/@vue/reactivity@3.5.22/+esm",
+          "status": 200
+        }
+      ],
+      "screenshot": ".tmp/playwright/mcp_pw_retry_2.png"
+    },
+    {
+      "attempt": 3,
+      "ok": false,
+      "frames": [
+        {
+          "name": "TH-message--4--0",
+          "url": "blob:http://127.0.0.1:8002/3b070507-e5e4-4deb-8b76-0cb4327412a6",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/ea914575-c221-415c-9cf9-05bc796742aa",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/e00ac89e-f1a2-4395-b3c4-7101f9a08dbd",
+          "ready": "complete",
+          "hasBtn": false,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "bodyTextLen": 0
+        }
+      ],
+      "badTail": [
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/jquery-ui/dist/jquery-ui.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue/dist/vue.runtime.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "resp",
+          "url": "https://testingcf.jsdelivr.net/npm/vue-router/dist/vue-router.global.prod.min.js",
+          "status": 200
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E8%84%9A%E6%9C%AC/%E5%90%8C%E5%B1%82%E5%8D%A1%E6%A1%A5%E6%8E%A5/index.js",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        },
+        {
+          "type": "failed",
+          "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%95%8C%E9%9D%A2/%E7%8A%B6%E6%80%81%E6%A0%8F/index.html",
+          "error": "net::ERR_FAILED"
+        }
+      ],
+      "screenshot": ".tmp/playwright/mcp_pw_retry_3.png"
+    }
+  ]
+}

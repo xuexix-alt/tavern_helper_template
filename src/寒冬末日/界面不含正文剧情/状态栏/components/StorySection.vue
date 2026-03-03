@@ -1,7 +1,7 @@
 <template>
-  <!-- 占位文件，仅便于编辑器识别，本界面不会导入。 -->
+  <div aria-hidden="true" style="display: none"></div>
 </template>
 
 <script setup lang="ts">
-// 空组件，仅解决 tsconfig 遍历问题。
+// Placeholder component for tooling only.
 </script>

@@ -1,7 +1,7 @@
 <template>
   <!-- Desktop dock -->
   <aside
-    class="hidden w-[320px] min-w-[280px] flex-col rounded-2xl border border-emerald-500/20 bg-slate-950/60 shadow-2xl shadow-emerald-500/10 backdrop-blur-xl lg:flex lg:sticky lg:top-4"
+    class="hidden w-[320px] min-w-[280px] flex-col rounded-2xl border border-emerald-500/20 bg-slate-950/60 shadow-2xl shadow-emerald-500/10 backdrop-blur-xl lg:sticky lg:top-4 lg:flex"
     :class="{ 'link-text': isTextLinked }"
     @click="focusMarket"
   >

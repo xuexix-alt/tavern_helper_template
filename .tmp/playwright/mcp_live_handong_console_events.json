@@ -1,0 +1,1128 @@
+{
+  "meta": {
+    "generatedAt": "2026-03-03T03:58:06.276Z",
+    "url": "http://127.0.0.1:8002/",
+    "clickRes": {
+      "ok": true,
+      "text": "末世寒冬 - 星穹秩序 – 末世寒冬 - 星穹秩序 - 2026-02-27@19h03m56s474ms 2026/2/28 『末日纪元，9527年12月14日-星期五–14:02-星穹公寓2001室-暴风雪（极寒）』 <content> 浅梦散去，【伊甸】那磁性而略微机械的合成音在耳畔响起，打断了你最后的余温。房间内不仅温暖，甚至透着顶级空气净化系统过滤后特有的微甜。墙壁上流动的几何光影映射在黑曜石操作台上，那是这个时代最后的奢侈。 <image>image###Scen",
+      "total": 8
+    },
+    "hookInfo": {
+      "hooked": false,
+      "reason": "eventOn-unavailable"
+    }
+  },
+  "hostEvents": [],
+  "consoleFiltered": [
+    {
+      "ts": 1772510251399,
+      "type": "debug",
+      "text": "Activating extension third-party/st-chatu8",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 504,
+      "col": 24
+    },
+    {
+      "ts": 1772510251424,
+      "type": "log",
+      "text": "[Aircraft, BitcoinAddressFamily, BitcoinNetwork, CssFunction, CssSpace, Faker, FakerError, IPv4Network, Sex, SimpleFaker, af_ZA, allFakers, allLocales, ar, az, base, bn_BD, cs_CZ, cy, da, de, de_AT, de_CH, dv, el, en, en_AU, en_AU_ocker, en_BORK, en_CA, en_GB, en_GH, en_HK, en_IE, en_IN, en_NG, en_US, en_ZA, eo, es, es_MX, fa, faker, fakerAF_ZA, fakerAR, fakerAZ, fakerBASE, fakerBN_BD, fakerCS_CZ, fakerCY, fakerDA, fakerDE, fakerDE_AT, fakerDE_CH, fakerDV, fakerEL, fakerEN, fakerEN_AU, fakerEN_AU_ocker, fakerEN_BORK, fakerEN_CA, fakerEN_GB, fakerEN_GH, fakerEN_HK, fakerEN_IE, fakerEN_IN, fakerEN_NG, fakerEN_US, fakerEN_ZA, fakerEO, fakerES, fakerES_MX, fakerFA, fakerFI, fakerFR, fakerFR_BE, fakerFR_CA, fakerFR_CH, fakerFR_LU, fakerFR_SN, fakerHE, fakerHR, fakerHU, fakerHY, fakerID_ID, fakerIT, fakerJA, fakerKA_GE, fakerKO, fakerLV, fakerMK, fakerNB_NO, fakerNE, fakerNL, fakerNL_BE, fakerPL, fakerPT_BR, fakerPT_PT, fakerRO, fakerRO_MD]",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/ST-Prompt-Template/dist/index.js",
+      "line": 0,
+      "col": 241629
+    },
+    {
+      "ts": 1772510253178,
+      "type": "log",
+      "text": "[st-chatu8] autoLLMClick module initialized",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 46945
+    },
+    {
+      "ts": 1772510253220,
+      "type": "log",
+      "text": "[st-chatu8] 加载正则配置: {配置名称: 默认, 配置是否存在: true, 条目数量: 19}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 147370
+    },
+    {
+      "ts": 1772510253226,
+      "type": "log",
+      "text": "[st-chatu8] 渲染正则条目: {容器ID: ch-regex-entries-container, 条目数: 19, 条目名称: Array(19)}",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/regex.js",
+      "line": 0,
+      "col": 43477
+    },
+    {
+      "ts": 1772510253286,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1770953856187.png",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772510253287,
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:8002/user/images/chatu8_config/1768468078450.png",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772510253832,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_RESET",
+      "url": "https://raw.githubusercontent.com/damoshen123/st-chatu8/master/manifest.json?t=1772510253295",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772510253833,
+      "type": "error",
+      "text": "Error checking for updates: TypeError: Failed to fetch\n    at checkForUpdates (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js:1:27400)\n    at async main (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js:1:35222)",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/index.js",
+      "line": 0,
+      "col": 31548
+    },
+    {
+      "ts": 1772510253833,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_CONNECTION_RESET",
+      "url": "https://raw.githubusercontent.com/damoshen123/st-chatu8/master/manifest.json?t=1772510253294",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772510253834,
+      "type": "error",
+      "text": "Error checking for updates: TypeError: Failed to fetch\n    at checkForUpdates (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js:1:10234)\n    at async initUpdateCheck (http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js:1:15931)",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/settings/update.js",
+      "line": 0,
+      "col": 12629
+    },
+    {
+      "ts": 1772510254013,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '::-webkit-scrollbar-track:focus-visible { background-color: rgba(126, 126, 126, 0.2); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772510254019,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772510254023,
+      "type": "warning",
+      "text": "Failed to insert focus rule: SyntaxError: Failed to execute 'insertRule' on 'CSSStyleSheet': Failed to parse the rule '.st-chatu8-content-modal-body::-webkit-scrollbar-thumb:focus-visible { background: var(--st-chatu8-accent-secondary, rgba(255, 255, 255, 0.5)); }'.\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:145:34\n    at Array.forEach (<anonymous>)\n    at applyDynamicFocusStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:118:16)\n    at http://127.0.0.1:8002/scripts/dynamic-styles.js:193:13\n    at Array.forEach (<anonymous>)\n    at initDynamicStyles (http://127.0.0.1:8002/scripts/dynamic-styles.js:191:38)\n    at firstLoadInit (http://127.0.0.1:8002/script.js:704:5)\n    at async HTMLDocument.<anonymous> (http://127.0.0.1:8002/script.js:12322:5)",
+      "url": "http://127.0.0.1:8002/scripts/dynamic-styles.js",
+      "line": 146,
+      "col": 24
+    },
+    {
+      "ts": 1772510256782,
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "url": "http://localhost:5500/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E8%84%9A%E6%9C%AC/%E5%90%8C%E5%B1%82%E5%8D%A1%E6%A1%A5%E6%8E%A5/index.js",
+      "line": 0,
+      "col": 0
+    },
+    {
+      "ts": 1772510271142,
+      "type": "log",
+      "text": "[st-chatu8] GENERATION_STARTED data: normal",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 22793
+    },
+    {
+      "ts": 1772510271143,
+      "type": "log",
+      "text": "[st-chatu8] Chat array length: 3",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24018
+    },
+    {
+      "ts": 1772510271143,
+      "type": "log",
+      "text": "[st-chatu8] Last message swipes length: 1",
+      "url": "http://127.0.0.1:8002/scripts/extensions/third-party/st-chatu8/utils/iframe/autoLLMClick.js",
+      "line": 0,
+      "col": 24107
+    }
+  ],
+  "consoleTail": [
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 110461 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 703403 from '末世寒冬-星穹秩序2.0' processing {uid: 703403, world: 末世寒冬-星穹秩序2.0, displayIndex: 28, comment: 角色补丁 - 陈幺妹, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 703403 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 478066 from '末世寒冬-星穹秩序2.0' processing {uid: 478066, world: 末世寒冬-星穹秩序2.0, displayIndex: 27, comment: 角色补丁 - 陈雪, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 478066 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 179878 from '末世寒冬-星穹秩序2.0' processing {uid: 179878, world: 末世寒冬-星穹秩序2.0, displayIndex: 26, comment: 角色补丁 - 佐伯惠理, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 179878 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 597042 from '末世寒冬-星穹秩序2.0' processing {uid: 597042, world: 末世寒冬-星穹秩序2.0, displayIndex: 25, comment: 角色补丁 - 佐伯诗织, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 597042 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271474,
+      "type": "debug",
+      "text": "[WI] Entry 135250 from '末世寒冬-星穹秩序2.0' processing {uid: 135250, world: 末世寒冬-星穹秩序2.0, displayIndex: 24, comment: 角色档案 - 陈幺妹, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 135250 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 865998 from '末世寒冬-星穹秩序2.0' processing {uid: 865998, world: 末世寒冬-星穹秩序2.0, displayIndex: 9, comment: [mvu_update]角色变量结构示意, disable: false}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 865998 suppressed by exclude recursion",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 230351 from '末世寒冬-星穹秩序2.0' processing {uid: 230351, world: 末世寒冬-星穹秩序2.0, displayIndex: 23, comment: 角色档案 - 陈雪, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 230351 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 480963 from '末世寒冬-星穹秩序2.0' processing {uid: 480963, world: 末世寒冬-星穹秩序2.0, displayIndex: 18, comment: 角色档案 - 佐伯龙一, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 480963 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 250424 from '末世寒冬-星穹秩序2.0' processing {uid: 250424, world: 末世寒冬-星穹秩序2.0, displayIndex: 35, comment: 文明阶段规则, disable: false}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 250424 suppressed by exclude recursion",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 787206 from '末世寒冬-星穹秩序2.0' processing {uid: 787206, world: 末世寒冬-星穹秩序2.0, displayIndex: 17, comment: 角色档案 - 佐伯惠理, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 787206 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 66919 from '末世寒冬-星穹秩序2.0' processing {uid: 66919, world: 末世寒冬-星穹秩序2.0, displayIndex: 14, comment: 角色补丁 - 浅见亚美NSFW档案, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 66919 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 414922 from '末世寒冬-星穹秩序2.0' processing {uid: 414922, world: 末世寒冬-星穹秩序2.0, displayIndex: 16, comment: 角色档案 - 佐伯诗织, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 414922 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 984709 from '末世寒冬-星穹秩序2.0' processing {uid: 984709, world: 末世寒冬-星穹秩序2.0, displayIndex: 4, comment: 庇护所布局, disable: false}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 984709 suppressed by exclude recursion",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 535456 from '末世寒冬-星穹秩序2.0' processing {uid: 535456, world: 末世寒冬-星穹秩序2.0, displayIndex: 15, comment: 角色档案 - 慕小小, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 535456 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 804300 from '末世寒冬-星穹秩序2.0' processing {uid: 804300, world: 末世寒冬-星穹秩序2.0, displayIndex: 13, comment: 角色补丁 - 浅见亚美, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 804300 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 687775 from '末世寒冬-星穹秩序2.0' processing {uid: 687775, world: 末世寒冬-星穹秩序2.0, displayIndex: 12, comment: 角色档案 - 浅见亚美, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 687775 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 74644 from '末世寒冬-星穹秩序2.0' processing {uid: 74644, world: 末世寒冬-星穹秩序2.0, displayIndex: 10, comment: 角色档案索引, disable: true}",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4590,
+      "col": 28
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Entry 74644 disabled",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4593,
+      "col": 24
+    },
+    {
+      "ts": 1772510271475,
+      "type": "debug",
+      "text": "[WI] Search done. Found 0 possible entries.",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4791,
+      "col": 16
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] --- INCLUSION GROUP CHECKS ---",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 5182,
+      "col": 12
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] No inclusion groups found",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 5195,
+      "col": 16
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] --- PROBABILITY CHECKS ---",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4807,
+      "col": 16
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] No probability checks to do",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4808,
+      "col": 38
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] --- LOOP #2 RESULT ---",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4875,
+      "col": 16
+    },
+    {
+      "ts": 1772510271485,
+      "type": "debug",
+      "text": "[WI] No new entries activated.",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4877,
+      "col": 20
+    },
+    {
+      "ts": 1772510271486,
+      "type": "debug",
+      "text": "[WI] Scan done. No new entries to prompt. Stopping.",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4885,
+      "col": 35
+    },
+    {
+      "ts": 1772510271486,
+      "type": "debug",
+      "text": "[WI] Setting scan state [NONE, 0]",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4886,
+      "col": 20
+    },
+    {
+      "ts": 1772510271486,
+      "type": "debug",
+      "text": "Event emitted: worldinfo_scan_done",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    },
+    {
+      "ts": 1772510271486,
+      "type": "debug",
+      "text": "[WI] --- BUILDING PROMPT ---",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 4982,
+      "col": 12
+    },
+    {
+      "ts": 1772510271486,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271487,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10",
+      "url": "http://127.0.0.1:8002/scripts/extensions/regex/engine.js",
+      "line": 363,
+      "col": 28
+    },
+    {
+      "ts": 1772510271488,
+      "type": "log",
+      "text": "[WI] Hypothetically adding 11 entries to prompt [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object]",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 5071,
+      "col": 12
+    },
+    {
+      "ts": 1772510271488,
+      "type": "debug",
+      "text": "[WI] --- DONE (DRY RUN) ---",
+      "url": "http://127.0.0.1:8002/scripts/world-info.js",
+      "line": 5072,
+      "col": 12
+    },
+    {
+      "ts": 1772510271488,
+      "type": "log",
+      "text": "skipWIAN not active, adding WIAN",
+      "url": "http://127.0.0.1:8002/script.js",
+      "line": 4495,
+      "col": 16
+    },
+    {
+      "ts": 1772510271492,
+      "type": "debug",
+      "text": "calling runGenerate",
+      "url": "http://127.0.0.1:8002/script.js",
+      "line": 4804,
+      "col": 12
+    },
+    {
+      "ts": 1772510271492,
+      "type": "debug",
+      "text": "generating prompt",
+      "url": "http://127.0.0.1:8002/script.js",
+      "line": 4822,
+      "col": 16
+    },
+    {
+      "ts": 1772510271492,
+      "type": "debug",
+      "text": "---calling setPromptString 0",
+      "url": "http://127.0.0.1:8002/script.js",
+      "line": 4957,
+      "col": 16
+    },
+    {
+      "ts": 1772510271492,
+      "type": "debug",
+      "text": "Event emitted: generate_after_combine_prompts",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    },
+    {
+      "ts": 1772510271495,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271495,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271495,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271495,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271495,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271496,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271497,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271497,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271497,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271498,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271498,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271499,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271499,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271499,
+      "type": "debug",
+      "text": "Debounced metadata save cancelled",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 70,
+      "col": 16
+    },
+    {
+      "ts": 1772510271779,
+      "type": "debug",
+      "text": "Event emitted: chat_completion_prompt_ready",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    },
+    {
+      "ts": 1772510271779,
+      "type": "debug",
+      "text": "Event emitted: generate_after_data",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    },
+    {
+      "ts": 1772510272501,
+      "type": "debug",
+      "text": "Saving metadata...",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 96,
+      "col": 16
+    },
+    {
+      "ts": 1772510272623,
+      "type": "debug",
+      "text": "Chat Completions: saving token cache",
+      "url": "http://127.0.0.1:8002/scripts/tokenizers.js",
+      "line": 179,
+      "col": 16
+    },
+    {
+      "ts": 1772510272623,
+      "type": "debug",
+      "text": "Saved metadata...",
+      "url": "http://127.0.0.1:8002/scripts/extensions.js",
+      "line": 98,
+      "col": 16
+    },
+    {
+      "ts": 1772510279050,
+      "type": "info",
+      "text": "变量结构注册成功",
+      "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js",
+      "line": 9,
+      "col": 6
+    },
+    {
+      "ts": 1772510279050,
+      "type": "info",
+      "text": "[变量结构] 已加载 v1.3",
+      "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js",
+      "line": 9,
+      "col": 6
+    },
+    {
+      "ts": 1772510286269,
+      "type": "debug",
+      "text": "Event emitted: message_iframe_render_ended",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    },
+    {
+      "ts": 1772510286269,
+      "type": "debug",
+      "text": "Event emitted: message_iframe_render_ended",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js",
+      "line": 134,
+      "col": 16
+    }
+  ],
+  "screenshots": [
+    ".tmp/playwright/mcp_live_00_home.png",
+    ".tmp/playwright/mcp_live_01_after_click.png"
+  ]
+}

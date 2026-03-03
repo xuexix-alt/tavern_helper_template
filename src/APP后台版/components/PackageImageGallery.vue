@@ -103,7 +103,7 @@
           {{ ui.packageImages.viewLarge }}
         </div>
         <div
-          class="pointer-events-none absolute bottom-2 right-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm"
+          class="pointer-events-none absolute right-2 bottom-2 rounded-full border border-white/10 bg-black/30 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm"
         >
           {{ slot.label }}
         </div>

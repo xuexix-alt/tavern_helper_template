@@ -1,0 +1,521 @@
+{
+  "generatedAt": "2026-02-28T17:16:04.594Z",
+  "final": {
+    "t": 13,
+    "frames": [
+      {
+        "name": "TH-message--2--0",
+        "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+        "hasCode": true,
+        "ready": "complete",
+        "bodyTextLen": 0,
+        "hasApp": true,
+        "appInnerLen": 0,
+        "hasBtn": false,
+        "hasEventEmit": true
+      },
+      {
+        "name": "TH-message--0--0",
+        "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+        "hasCode": true,
+        "ready": "complete",
+        "bodyTextLen": 0,
+        "hasApp": true,
+        "appInnerLen": 0,
+        "hasBtn": false,
+        "hasEventEmit": true
+      }
+    ]
+  },
+  "timeline": [
+    {
+      "t": 0,
+      "frames": []
+    },
+    {
+      "t": 1,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 2,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 3,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 4,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 5,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 6,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 7,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 8,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 9,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 10,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 11,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 12,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": false,
+          "ready": "loading",
+          "bodyTextLen": 0,
+          "hasApp": false,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": false
+        }
+      ]
+    },
+    {
+      "t": 13,
+      "frames": [
+        {
+          "name": "TH-message--2--0",
+          "url": "blob:http://127.0.0.1:8002/8960a7a3-95d8-4a37-a0bd-fafe0d12b81c",
+          "hasCode": true,
+          "ready": "complete",
+          "bodyTextLen": 0,
+          "hasApp": true,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": true
+        },
+        {
+          "name": "TH-message--0--0",
+          "url": "blob:http://127.0.0.1:8002/a3c836cf-f4ec-4e51-8e03-ee51b73bed5e",
+          "hasCode": true,
+          "ready": "complete",
+          "bodyTextLen": 0,
+          "hasApp": true,
+          "appInnerLen": 0,
+          "hasBtn": false,
+          "hasEventEmit": true
+        }
+      ]
+    }
+  ],
+  "sameLogs": [
+    {
+      "ts": 1772298929655,
+      "type": "debug",
+      "text": "Registering preset manager for API: kobold",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929656,
+      "type": "debug",
+      "text": "Registering preset manager for API: novel",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: openai",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: textgenerationwebui",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: context",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: instruct",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: sysprompt",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298929657,
+      "type": "debug",
+      "text": "Registering preset manager for API: reasoning",
+      "url": "http://127.0.0.1:8002/scripts/preset-manager.js"
+    },
+    {
+      "ts": 1772298930199,
+      "type": "debug",
+      "text": "Preset samplers order: 6,0,1,2,3,4,5",
+      "url": "http://127.0.0.1:8002/scripts/kai-settings.js"
+    },
+    {
+      "ts": 1772298930202,
+      "type": "debug",
+      "text": "Preset samplers order: 1,5,0,2,3,4",
+      "url": "http://127.0.0.1:8002/scripts/nai-settings.js"
+    },
+    {
+      "ts": 1772298930216,
+      "type": "debug",
+      "text": "Preset samplers order: 6,0,1,3,4,2,5",
+      "url": "http://127.0.0.1:8002/scripts/textgen-settings.js"
+    },
+    {
+      "ts": 1772298930216,
+      "type": "debug",
+      "text": "Preset samplers order:  [repetition_penalty, presence_penalty, frequency_penalty, dry, temperature, dynamic_temperature, quadratic_sampling, top_n_sigma, top_k, top_p, typical_p, epsilon_cutoff, eta_cutoff, tfs, top_a, min_p, mirostat, xtc, encoder_repetition_penalty, no_repeat_ngram]",
+      "url": "http://127.0.0.1:8002/scripts/textgen-settings.js"
+    },
+    {
+      "ts": 1772298930216,
+      "type": "debug",
+      "text": "Preset samplers order:  [penalties, dry, top_n_sigma, top_k, typ_p, tfs_z, typical_p, xtc, top_p, adaptive_p, min_p, temperature]",
+      "url": "http://127.0.0.1:8002/scripts/textgen-settings.js"
+    },
+    {
+      "ts": 1772298930216,
+      "type": "debug",
+      "text": "Preset samplers order:  [dry, penalties, no_repeat_ngram, temperature, top_nsigma, top_p_top_k, top_a, min_p, tfs, eta_cutoff, epsilon_cutoff, typical_p, quadratic, xtc]",
+      "url": "http://127.0.0.1:8002/scripts/textgen-settings.js"
+    },
+    {
+      "ts": 1772298930279,
+      "type": "debug",
+      "text": "aborting MUI reset 0",
+      "url": "http://127.0.0.1:8002/scripts/power-user.js"
+    },
+    {
+      "ts": 1772298930283,
+      "type": "debug",
+      "text": "aborting MUI reset 0",
+      "url": "http://127.0.0.1:8002/scripts/power-user.js"
+    },
+    {
+      "ts": 1772298936419,
+      "type": "debug",
+      "text": "Event emitted: eden:samelayer:reset",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js"
+    },
+    {
+      "ts": 1772298936419,
+      "type": "debug",
+      "text": "Event emitted: eden:samelayer:show-ui",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js"
+    },
+    {
+      "ts": 1772298936420,
+      "type": "debug",
+      "text": "[eden/samelayer] reset {reason: init, anchor_message_id: 0, message_id: 0, raw: If you're connected to an API, try asking me somet…welcome page assistant from their \"More...\" menu., during_streaming: false}",
+      "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js"
+    },
+    {
+      "ts": 1772298951572,
+      "type": "debug",
+      "text": "Event emitted: eden:samelayer:reset",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js"
+    },
+    {
+      "ts": 1772298951572,
+      "type": "debug",
+      "text": "Event emitted: eden:samelayer:show-ui",
+      "url": "http://127.0.0.1:8002/lib/eventemitter.js"
+    },
+    {
+      "ts": 1772298951573,
+      "type": "debug",
+      "text": "[eden/samelayer] reset {reason: chat_changed, anchor_message_id: 0, message_id: 2, raw: 『末日纪元，9527年12月14日-星期五–14:02-星穹公寓2001室-暴风雪（极寒）』\n\n<c…atch>\n</UpdateVariable>\n\n<StatusPlaceHolderImpl/>, during_streaming: false}",
+      "url": "https://testingcf.jsdelivr.net/gh/N0VI028/JS-Slash-Runner/src/iframe/node_modules/log.js"
+    }
+  ]
+}

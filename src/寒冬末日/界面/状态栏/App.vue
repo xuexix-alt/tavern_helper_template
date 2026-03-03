@@ -39,8 +39,9 @@ import StoryPage from './pages/StoryPage.vue';
 import { useInjectedData } from './useInjectedData';
 
 const STATUSBAR_VERSION = '3.1';
-const MIN_SHELL_HEIGHT = 300;
-const MAX_SHELL_HEIGHT = 980;
+const BASE_MIN_SHELL_HEIGHT = 320;
+const STORY_MIN_SHELL_HEIGHT = 420;
+const MAX_SHELL_HEIGHT = 4096;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const { raw, options } = useInjectedData();
 const tabs = [
@@ -54,7 +55,7 @@ const tabs = [
 type TabKey = (typeof tabs)[number]['key'];
 
 const activeTabKey = ref<TabKey>('story');
-const shellHeight = ref<number>(Math.max(MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
+const shellHeight = ref<number>(Math.max(BASE_MIN_SHELL_HEIGHT, Math.floor(getViewportHeight())));
 const shellMainRef = ref<HTMLElement | null>(null);
 const tabScrollPosition = new Map<TabKey, number>(tabs.map(tab => [tab.key, 0] as const));
 
@@ -101,6 +102,7 @@ function switchTab(nextTab: TabKey) {
   if (activeTabKey.value === nextTab) return;
   saveCurrentTabScroll(activeTabKey.value);
   activeTabKey.value = nextTab;
+  syncShellHeight();
   nextTick(() => {
     restoreTabScroll(nextTab);
     notifyLayoutChanged();
@@ -111,7 +113,14 @@ function getViewportHeight() {
   const vv = window.visualViewport;
   if (vv?.height && Number.isFinite(vv.height) && vv.height > 0) return vv.height;
   if (window.innerHeight > 0) return window.innerHeight;
-  return document.documentElement.clientHeight || MIN_SHELL_HEIGHT;
+  return document.documentElement.clientHeight || BASE_MIN_SHELL_HEIGHT;
+}
+
+function getStableMinShellHeight(baseline: number) {
+  const adaptive = Math.floor(baseline * 0.58);
+  const baseMin = Math.max(BASE_MIN_SHELL_HEIGHT, Math.min(760, adaptive));
+  if (activeTabKey.value === 'story') return Math.max(baseMin, STORY_MIN_SHELL_HEIGHT);
+  return baseMin;
 }
 
 function getHostChatHeight() {
@@ -131,9 +140,12 @@ function getHostChatHeight() {
 }
 
 function calculateShellHeight() {
-  const hostChatHeight = getHostChatHeight();
-  const candidate = hostChatHeight ?? getViewportHeight();
-  return Math.min(MAX_SHELL_HEIGHT, Math.max(MIN_SHELL_HEIGHT, Math.floor(candidate)));
+  const hostChatHeight = getHostChatHeight() ?? 0;
+  const viewportHeight = getViewportHeight();
+  // In message iframes, prefer host chat height to avoid iframe<->viewport positive feedback loops.
+  const candidate = hostChatHeight > 0 ? hostChatHeight : viewportHeight;
+  const minHeight = getStableMinShellHeight(candidate);
+  return Math.min(MAX_SHELL_HEIGHT, Math.max(minHeight, Math.floor(candidate)));
 }
 
 function syncShellHeight() {
@@ -256,7 +268,7 @@ watchDebounced(
   gap: 0;
   height: var(--eden-shell-height, 560px);
   max-height: var(--eden-shell-height, 560px);
-  min-height: 300px;
+  min-height: 320px;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   overflow: hidden;
@@ -329,7 +341,7 @@ watchDebounced(
 
 @media (max-width: 520px) {
   #eden-shell {
-    min-height: 280px;
+    min-height: 300px;
   }
 
   .eden-shell-footer {
