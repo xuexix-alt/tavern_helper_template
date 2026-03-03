@@ -16,7 +16,17 @@
           <span class="story-mini-tab-count">{{ tab.count }}</span>
         </button>
       </div>
-      <div class="story-toolbar-actions">
+      <button
+        v-if="isCompactToolbar"
+        type="button"
+        class="story-toolbar-toggle"
+        :aria-label="storyToolbarToggleLabel"
+        :aria-expanded="storyToolbarAdvancedVisible"
+        @click="toggleStoryToolbarAdvanced"
+      >
+        {{ storyToolbarToggleLabel }}
+      </button>
+      <div class="story-toolbar-actions" :class="{ collapsed: !storyToolbarAdvancedVisible }">
         <div class="story-zoom-controls">
           <button type="button" class="zoom-btn" @click="zoomOut">−</button>
           <span class="zoom-value">{{ zoomPercent }}%</span>
@@ -175,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+import { useWindowSize } from '@vueuse/core';
 import TextHighlight from './TextHighlight.vue';
 import {
   SAMELAYER_EVENTS,
@@ -224,6 +235,11 @@ const storyTabs = computed<ReadonlyArray<{ key: StoryTab; label: string; count: 
 
 const activeStoryTab = useLocalStorage<StoryTab>('eden:story_active_tab', 'story');
 const storyZoom = useLocalStorage<number>('eden:story_zoom', 1);
+const { width: viewportWidth } = useWindowSize({ includeScrollbar: true });
+const isCompactToolbar = computed(() => Number(viewportWidth.value || 0) <= 520);
+const storyToolbarAdvancedOpen = useLocalStorage<boolean>('eden:story_toolbar_advanced', false);
+const storyToolbarAdvancedVisible = computed(() => !isCompactToolbar.value || storyToolbarAdvancedOpen.value);
+const storyToolbarToggleLabel = computed(() => (storyToolbarAdvancedVisible.value ? '收起工具' : '展开工具'));
 const STORY_PANE_HEIGHT_MIN = 260;
 const STORY_PANE_HEIGHT_DEFAULT = 680;
 const STORY_PANE_HEIGHT_MAX = 1400;
@@ -265,6 +281,12 @@ function resetStoryPaneHeight() {
   scheduleResize();
 }
 
+function toggleStoryToolbarAdvanced() {
+  if (!isCompactToolbar.value) return;
+  storyToolbarAdvancedOpen.value = !storyToolbarAdvancedOpen.value;
+  scheduleResize();
+}
+
 function zoomIn() {
   storyZoom.value = _.clamp(Number((storyZoom.value + 0.08).toFixed(2)), 0.84, 1.32);
 }
@@ -294,6 +316,8 @@ type Chatu8RuntimeConfig = {
   endTag: string;
   hideButton: boolean;
   clickToPreview: boolean;
+  autoClickGenerate: boolean;
+  autoLlmImageGen: boolean;
   imageAlignment: 'left' | 'center' | 'right';
   debugLog: boolean;
 };
@@ -327,6 +351,8 @@ const chatu8Runtime = ref<Chatu8RuntimeConfig>({
   endTag: '###',
   hideButton: false,
   clickToPreview: true,
+  autoClickGenerate: false,
+  autoLlmImageGen: false,
   imageAlignment: 'center',
   debugLog: false,
 });
@@ -774,6 +800,110 @@ function pushExternalPromptRaw(rawPrompt: string) {
   externalPromptRaws.value = [...externalPromptRaws.value, normalized];
 }
 
+type PromptPersistResult =
+  | { ok: true; status: 'already_exists' | 'inserted'; messageId: number }
+  | { ok: false; status: 'skip' | 'api_unavailable' | 'message_missing' | 'message_unchanged' | 'error'; reason: string };
+
+function messageContainsPromptToken(messageRaw: string, rawPrompt: string): boolean {
+  const needle = String(rawPrompt ?? '').trim();
+  if (!needle) return false;
+  const text = String(messageRaw ?? '');
+  if (!text) return false;
+  const hits = collectImagePromptMatches(text);
+  return hits.some(hit => isSameRawPromptToken(hit.raw ?? '', needle));
+}
+
+function injectPromptTokenIntoMessageRaw(messageRaw: string, rawPrompt: string): string {
+  const token = String(rawPrompt ?? '').trim();
+  if (!token) return String(messageRaw ?? '');
+  const raw = String(messageRaw ?? '');
+  if (!raw) return token;
+  if (messageContainsPromptToken(raw, token)) return raw;
+
+  const blocks = findTagBlocks(raw);
+  if (blocks.length > 0) {
+    const target = blocks[blocks.length - 1];
+    const beforeClose = raw.slice(0, target.closeStart);
+    const afterClose = raw.slice(target.closeStart);
+    const head = /\n\s*$/.test(beforeClose) ? beforeClose : `${beforeClose}\n`;
+    return `${head}${token}\n${afterClose}`;
+  }
+
+  const optionRe = /<option(?:\s[^>]*)?>[\s\S]*?<\/option>/i;
+  const optionMatch = optionRe.exec(raw);
+  if (optionMatch && Number.isFinite(optionMatch.index)) {
+    const split = optionMatch.index ?? raw.length;
+    const beforeOption = raw.slice(0, split);
+    const optionBlock = raw.slice(split);
+    const head = /\n\s*$/.test(beforeOption) ? beforeOption : `${beforeOption}\n`;
+    return `${head}${token}\n${optionBlock}`;
+  }
+
+  const suffix = /\n\s*$/.test(raw) ? '' : '\n';
+  return `${raw}${suffix}${token}`;
+}
+
+async function persistPromptTokenToCurrentMessage(rawPrompt: string, source: string): Promise<PromptPersistResult> {
+  const normalized = normalizeExternalPromptRawToken(rawPrompt);
+  if (!normalized) {
+    return { ok: false, status: 'skip', reason: 'prompt is empty' };
+  }
+
+  const messageId = resolveStoryMessageId();
+  if (messageId == null || !Number.isFinite(messageId)) {
+    return { ok: false, status: 'skip', reason: 'message_id unavailable' };
+  }
+
+  if (typeof getChatMessages !== 'function' || typeof setChatMessages !== 'function') {
+    return { ok: false, status: 'api_unavailable', reason: 'chat message API unavailable' };
+  }
+
+  try {
+    const currentMessage = getChatMessages(messageId)?.[0] as { message?: unknown } | undefined;
+    const currentRaw = String(currentMessage?.message ?? '');
+    if (!currentRaw) {
+      return { ok: false, status: 'message_missing', reason: 'message content missing' };
+    }
+
+    if (messageContainsPromptToken(currentRaw, normalized)) {
+      return { ok: true, status: 'already_exists', messageId };
+    }
+
+    const nextRaw = injectPromptTokenIntoMessageRaw(currentRaw, normalized);
+    if (!nextRaw || nextRaw === currentRaw) {
+      return { ok: false, status: 'message_unchanged', reason: 'message unchanged' };
+    }
+
+    await setChatMessages(
+      [
+        {
+          message_id: messageId,
+          message: nextRaw,
+        },
+      ],
+      { refresh: 'affected' },
+    );
+
+    chatu8DebugLog('image_prompt_persisted', {
+      source,
+      messageId,
+      promptLength: normalized.length,
+      oldLen: currentRaw.length,
+      newLen: nextRaw.length,
+    });
+    return { ok: true, status: 'inserted', messageId };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    chatu8DebugLog('image_prompt_persist_failed', {
+      source,
+      messageId,
+      promptLength: normalized.length,
+      reason,
+    });
+    return { ok: false, status: 'error', reason };
+  }
+}
+
 function resolveRequestImageErrorMessage(error: unknown): string {
   if (error instanceof RequestEventError) {
     switch (error.code) {
@@ -904,12 +1034,19 @@ async function requestImageByPrompt(rawPrompt: string, source: string): Promise<
   });
 
   void promise
-    .then(result => {
+    .then(async result => {
       if (!getImagePromptUi(rawPrompt).isLoading) return;
       applyGeneratedImage(rawPrompt, result.data.imageData);
+      const persistResult = await persistPromptTokenToCurrentMessage(rawPrompt, source);
+      const persistSuffix =
+        persistResult.ok && persistResult.status === 'inserted'
+          ? ' · 已写回正文'
+          : persistResult.ok
+            ? ''
+            : ' · 正文写回失败';
       setImagePromptUi(rawPrompt, {
         isLoading: false,
-        message: 'Image received',
+        message: `Image received${persistSuffix}`,
         level: 'success',
       });
       chatu8DebugLog('image_response', {
@@ -917,6 +1054,7 @@ async function requestImageByPrompt(rawPrompt: string, source: string): Promise<
         requestId: result.id,
         command: 'generate_image',
         hasImage: !!result.data.imageData,
+        promptPersist: persistResult,
       });
     })
     .catch(error => {
@@ -1002,6 +1140,23 @@ async function requestLlmPrompt(source: string): Promise<boolean> {
         message: 'LLM prompt received',
         level: 'success',
       });
+      const shouldAutoGenerate = chatu8Runtime.value.autoClickGenerate || chatu8Runtime.value.autoLlmImageGen;
+      if (shouldAutoGenerate) {
+        chatu8DebugLog('llm_prompt_auto_generate_start', {
+          requestId: result.id,
+          source: responseSource || source,
+          promptLength: result.data.length,
+          autoClickGenerate: chatu8Runtime.value.autoClickGenerate,
+          autoLlmImageGen: chatu8Runtime.value.autoLlmImageGen,
+        });
+        void requestImageByPrompt(result.data, 'llm_prompt_auto').then(ok => {
+          chatu8DebugLog('llm_prompt_auto_generate_result', {
+            requestId: result.id,
+            source: responseSource || source,
+            ok,
+          });
+        });
+      }
       chatu8DebugLog('llm_prompt_response', {
         requestId: result.id,
         source: responseSource,
@@ -1179,6 +1334,8 @@ function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
     endTag: '###',
     hideButton: false,
     clickToPreview: true,
+    autoClickGenerate: false,
+    autoLlmImageGen: false,
     imageAlignment: 'center',
     debugLog: false,
   };
@@ -1188,6 +1345,10 @@ function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
   const endTag = String(ext?.endTag ?? defaults.endTag).trim();
   const hideButton = coerceBooleanSetting(ext?.dbclike, defaults.hideButton);
   const clickToPreview = coerceBooleanSetting(ext?.clickToPreview, defaults.clickToPreview);
+  const autoClickGenerate =
+    coerceBooleanSetting(ext?.zidongdianji, defaults.autoClickGenerate) ||
+    coerceBooleanSetting(ext?.zidongdianji2, defaults.autoClickGenerate);
+  const autoLlmImageGen = coerceBooleanSetting(ext?.autoLLMImageGen, defaults.autoLlmImageGen);
   const debugLog = coerceBooleanSetting(ext?.debugLog ?? ext?.debug ?? ext?.enableDebugLog, defaults.debugLog);
   const alignRaw = String(ext?.imageAlignment ?? defaults.imageAlignment)
     .trim()
@@ -1201,6 +1362,8 @@ function readChatu8RuntimeConfig(): Chatu8RuntimeConfig {
     endTag,
     hideButton,
     clickToPreview,
+    autoClickGenerate,
+    autoLlmImageGen,
     imageAlignment,
     debugLog,
   };
@@ -1211,6 +1374,8 @@ function refreshChatu8RuntimeConfig() {
   chatu8DebugLog('runtime_refresh', {
     startTag: chatu8Runtime.value.startTag,
     endTag: chatu8Runtime.value.endTag,
+    autoClickGenerate: chatu8Runtime.value.autoClickGenerate,
+    autoLlmImageGen: chatu8Runtime.value.autoLlmImageGen,
     debugLog: chatu8Runtime.value.debugLog,
     debugManual: chatu8DebugManual.value,
   });
@@ -1971,52 +2136,115 @@ function normalizeExternalPromptRawToken(value: string): string {
   return buildRawPromptFromPlainPrompt(text);
 }
 
-function collectPromptRawsFromDisplayedButtons(messageId: number | null): string[] {
-  // 仅采集"当前楼层"按钮，避免把整聊天历史里的按钮提示词混入正文渲染。
-  const roots = resolveHostMessageScopedRoots(messageId);
-  if (roots.length === 0) {
-    chatu8DebugLog('collect_prompt_raws_skip_no_message_root', {
-      messageId,
-    });
-    return [];
-  }
-
-  const floorHidden = isMessageFloorHidden(messageId);
+function collectPromptRawsFromButtons(buttons: HTMLElement[], requireVisible: boolean): string[] {
   const out: string[] = [];
   const seenButtons = new Set<HTMLElement>();
   const seenRaws = new Set<string>();
 
-  for (const root of roots) {
-    const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
-    for (const btn of buttons) {
-      if (seenButtons.has(btn)) continue;
-      seenButtons.add(btn);
-      if (!floorHidden && !isHostElementVisible(btn)) continue;
+  for (const btn of buttons) {
+    if (!btn) continue;
+    if (seenButtons.has(btn)) continue;
+    seenButtons.add(btn);
+    if (requireVisible && !isHostElementVisible(btn)) continue;
 
-      const payload = String(btn.getAttribute('data-image-tag') ?? btn.getAttribute('data-link') ?? '').trim();
-      const raw = normalizeExternalPromptRawToken(payload);
-      if (!raw) continue;
-      if (seenRaws.has(raw)) continue;
-      seenRaws.add(raw);
-      out.push(raw);
-    }
+    const payload = String(btn.getAttribute('data-image-tag') ?? btn.getAttribute('data-link') ?? '').trim();
+    const raw = normalizeExternalPromptRawToken(payload);
+    if (!raw) continue;
+    if (seenRaws.has(raw)) continue;
+    seenRaws.add(raw);
+    out.push(raw);
   }
+
   return out;
 }
 
-function resolveHostStoryTriggerTarget(messageId: number | null): HTMLElement | null {
-  if (messageId == null || !Number.isFinite(messageId)) return null;
-  if (typeof retrieveDisplayedMessage !== 'function') return null;
-  const $mes = retrieveDisplayedMessage(messageId);
-  const root = $mes?.get?.(0) as HTMLElement | undefined;
-  if (!root) return null;
+function collectPromptRawsFromDisplayedButtons(messageId: number | null): string[] {
+  // 优先采集“当前楼层”按钮；若 messageId 暂时漂移或宿主未完成重排，再回退到“最后可见楼层/聊天根”兜底。
+  const roots = resolveHostMessageScopedRoots(messageId);
+  const floorHidden = isMessageFloorHidden(messageId);
 
-  return (
-    (root.querySelector('.mes_text') as HTMLElement | null) ??
-    (root.querySelector('.mes_block') as HTMLElement | null) ??
-    (root.querySelector('.message_text') as HTMLElement | null) ??
-    root
-  );
+  if (roots.length > 0) {
+    const scopedButtons = roots.flatMap(root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[]);
+    const scoped = collectPromptRawsFromButtons(scopedButtons, !floorHidden);
+    if (scoped.length > 0) return scoped;
+
+    chatu8DebugLog('collect_prompt_raws_scoped_empty', {
+      messageId,
+      roots: roots.length,
+      floorHidden,
+    });
+  }
+
+  const chatRoots = resolveHostChatRoots();
+  if (chatRoots.length === 0) {
+    chatu8DebugLog('collect_prompt_raws_skip_no_chat_root', { messageId });
+    return [];
+  }
+
+  // 先尝试只抓取最后楼层，避免把历史提示词误混入当前正文。
+  let fallbackButtons: HTMLElement[] = [];
+  for (const root of chatRoots) {
+    const inLastMes = Array.from(root.querySelectorAll('.mes.last_mes .st-chatu8-image-button')) as HTMLElement[];
+    fallbackButtons.push(...inLastMes);
+  }
+  let fallback = collectPromptRawsFromButtons(fallbackButtons, true);
+  if (fallback.length > 0) {
+    chatu8DebugLog('collect_prompt_raws_fallback_last_mes', {
+      messageId,
+      count: fallback.length,
+    });
+    return fallback;
+  }
+
+  // 再兜底扫描聊天根可见按钮（上限截断，防止历史噪声扩散）。
+  fallbackButtons = [];
+  for (const root of chatRoots) {
+    const all = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+    fallbackButtons.push(...all);
+  }
+  fallback = collectPromptRawsFromButtons(fallbackButtons, true);
+  if (fallback.length > 8) {
+    return fallback.slice(-8);
+  }
+  if (fallback.length > 0) {
+    chatu8DebugLog('collect_prompt_raws_fallback_chat_root', {
+      messageId,
+      count: fallback.length,
+    });
+  } else {
+    chatu8DebugLog('collect_prompt_raws_fallback_empty', {
+      messageId,
+      chatRoots: chatRoots.length,
+    });
+  }
+  return fallback;
+}
+
+function resolveHostStoryTriggerTargets(messageId: number | null): HTMLElement[] {
+  const roots =
+    messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
+  if (roots.length === 0) return [];
+
+  const out: HTMLElement[] = [];
+  const push = (candidate: Element | null | undefined) => {
+    if (!candidate) return;
+    const node = candidate as HTMLElement;
+    if (out.includes(node)) return;
+    out.push(node);
+  };
+
+  for (const root of roots) {
+    // 优先命中正文容器，再退化到楼层/聊天根节点。
+    push(root.querySelector('.mes.last_mes .mes_text'));
+    push(root.querySelector('.mes.last_mes .mes_block'));
+    push(root.querySelector('.mes.last_mes .message_text'));
+    push(root.querySelector('.mes_text'));
+    push(root.querySelector('.mes_block'));
+    push(root.querySelector('.message_text'));
+    push(root);
+  }
+
+  return out.filter(node => !!node && node.isConnected);
 }
 
 function dispatchHostDoubleClick(target: HTMLElement): boolean {
@@ -2051,16 +2279,35 @@ function dispatchHostDoubleClick(target: HTMLElement): boolean {
 
 async function onOpenHostImageMenu() {
   const messageId = resolveStoryMessageId();
-  const triggerTarget = resolveHostStoryTriggerTarget(messageId);
-  if (triggerTarget) {
-    if (dispatchHostDoubleClick(triggerTarget)) {
-      const messageHint = messageId != null && Number.isFinite(messageId) ? `楼层 #${messageId}` : '当前楼层';
-      toastr?.info?.(`已触发${messageHint}的插件生图菜单`);
-      return;
-    }
+  const triggerTargets = resolveHostStoryTriggerTargets(messageId);
+  let dispatched = 0;
+  for (const target of triggerTargets) {
+    if (!dispatchHostDoubleClick(target)) continue;
+    dispatched += 1;
+    // 已找到可派发目标后不再继续，避免同一次点击触发多次宿主逻辑。
+    break;
   }
 
-  toastr?.warning?.('未能触发宿主插件生图菜单；纯插件模式下无法兜底代发请求');
+  if (dispatched > 0) {
+    const messageHint = messageId != null && Number.isFinite(messageId) ? `楼层 #${messageId}` : '当前楼层';
+    toastr?.info?.(`已触发${messageHint}的插件生图菜单`);
+    chatu8DebugLog('open_menu_triggered', {
+      messageId,
+      dispatched,
+      candidates: triggerTargets.length,
+    });
+    return;
+  }
+
+  chatu8DebugLog('open_menu_miss', {
+    messageId,
+    candidates: triggerTargets.length,
+  });
+  if (await requestLlmPrompt('toolbar_menu_fallback')) {
+    toastr?.info?.('未能直接拉起菜单，已改为请求 LLM 提示词');
+    return;
+  }
+  toastr?.warning?.('未能触发宿主插件生图菜单，且 LLM 提示词通道不可用');
 }
 
 async function onRequestLlmPrompt() {
@@ -2740,6 +2987,16 @@ watch(
   () => {
     scheduleResize();
   },
+);
+
+watch(
+  isCompactToolbar,
+  compact => {
+    if (!compact && storyToolbarAdvancedOpen.value !== true) {
+      storyToolbarAdvancedOpen.value = true;
+    }
+  },
+  { immediate: true },
 );
 
 onMounted(() => {
@@ -3642,7 +3899,7 @@ function formatTableCell(cell: string): string {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   margin-bottom: 6px;
   position: sticky;
   top: 0;
@@ -3665,6 +3922,22 @@ function formatTableCell(cell: string): string {
   padding-bottom: 2px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+}
+
+.story-toolbar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 233, 253, 0.42);
+  background: rgba(139, 233, 253, 0.18);
+  color: var(--text-color);
+  font-size: 0.72em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .story-mini-tabs::-webkit-scrollbar {
@@ -3721,9 +3994,13 @@ function formatTableCell(cell: string): string {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 5px;
   flex: 0 0 auto;
   margin-left: auto;
+}
+
+.story-toolbar-actions.collapsed {
+  display: none;
 }
 
 .story-height-controls {
@@ -3773,8 +4050,9 @@ function formatTableCell(cell: string): string {
 }
 
 .zoom-btn {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.06);
@@ -3791,12 +4069,12 @@ function formatTableCell(cell: string): string {
 }
 
 .story-image-menu-btn {
-  height: 22px;
+  min-height: 28px;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-color);
-  font-size: 0.68em;
+  font-size: 0.72em;
   line-height: 1;
   padding: 0 8px;
   cursor: pointer;
@@ -3940,7 +4218,7 @@ function formatTableCell(cell: string): string {
   padding: 8px 9px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .story-toolbar {
     flex-wrap: wrap;
     align-items: stretch;
@@ -3964,6 +4242,13 @@ function formatTableCell(cell: string): string {
     flex: 0 0 auto;
   }
 
+  .story-toolbar-toggle {
+    display: inline-flex;
+    margin-left: auto;
+    min-height: 32px;
+    padding: 0 12px;
+  }
+
   .story-toolbar-actions {
     flex: 1 1 100%;
     min-width: 0;
@@ -3973,15 +4258,26 @@ function formatTableCell(cell: string): string {
     align-items: center;
   }
 
+  .story-toolbar-actions.collapsed {
+    display: none;
+  }
+
   .story-zoom-controls {
     min-width: 0;
     justify-content: flex-start;
+  }
+
+  .zoom-btn {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
   }
 
   .story-height-controls {
     grid-column: 1 / -1;
     width: 100%;
     min-width: 0;
+    padding: 4px 6px;
   }
 
   .story-height-slider {
@@ -3992,8 +4288,9 @@ function formatTableCell(cell: string): string {
   .story-image-menu-btn {
     width: 100%;
     min-width: 0;
-    padding: 0 6px;
-    font-size: 0.64em;
+    min-height: 32px;
+    padding: 0 7px;
+    font-size: 0.7em;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -4005,16 +4302,34 @@ function formatTableCell(cell: string): string {
   .story-mini-tab {
     padding: 3px 7px;
     font-size: 0.72em;
+    min-height: 30px;
   }
 
   .story-filter-chip {
     font-size: 0.7em;
     padding: 3px 7px;
+    min-height: 30px;
+  }
+
+  .story-filter-action-btn,
+  .story-height-reset {
+    min-height: 30px;
   }
 
   .story-filter-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+}
+
+@media (max-width: 360px) {
+  .story-toolbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .story-zoom-controls {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

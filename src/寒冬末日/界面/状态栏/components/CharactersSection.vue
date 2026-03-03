@@ -114,37 +114,45 @@
               </div>
             </div>
 
-            <div class="details-grid">
-              <div class="status-item">
-                <div class="label">👚 衣着</div>
-                <div class="value">{{ getCharacter(key)?.衣着 ?? '--' }}</div>
-              </div>
-              <div class="status-item">
-                <div class="label">👅 舌唇</div>
-                <div class="value">{{ getCharacter(key)?.舌唇 ?? '--' }}</div>
-              </div>
-              <div class="status-item">
-                <div class="label">🍈 胸乳</div>
-                <div class="value">{{ getCharacter(key)?.胸乳 ?? '--' }}</div>
-              </div>
-              <div class="status-item">
-                <div class="label">🌸 私穴</div>
-                <div class="value">{{ getCharacter(key)?.私穴 ?? '--' }}</div>
-              </div>
-              <div class="status-item">
-                <div class="label">😊 神态样貌</div>
-                <div class="value">{{ getCharacter(key)?.神态样貌 ?? '--' }}</div>
-              </div>
-              <div class="status-item">
-                <div class="label">💃 动作姿势</div>
-                <div class="value">{{ getCharacter(key)?.动作姿势 ?? '--' }}</div>
-              </div>
-            </div>
+            <details class="character-detail-fold" :open="!compactCharacterDetails">
+              <summary class="character-detail-summary">
+                <span>详细状态</span>
+                <span class="character-detail-summary-hint">{{ compactCharacterDetails ? '点按展开' : '展开/收起' }}</span>
+              </summary>
+              <div class="character-detail-body">
+                <div class="details-grid">
+                  <div class="status-item">
+                    <div class="label">👚 衣着</div>
+                    <div class="value">{{ getCharacter(key)?.衣着 ?? '--' }}</div>
+                  </div>
+                  <div class="status-item">
+                    <div class="label">👅 舌唇</div>
+                    <div class="value">{{ getCharacter(key)?.舌唇 ?? '--' }}</div>
+                  </div>
+                  <div class="status-item">
+                    <div class="label">🍈 胸乳</div>
+                    <div class="value">{{ getCharacter(key)?.胸乳 ?? '--' }}</div>
+                  </div>
+                  <div class="status-item">
+                    <div class="label">🌸 私穴</div>
+                    <div class="value">{{ getCharacter(key)?.私穴 ?? '--' }}</div>
+                  </div>
+                  <div class="status-item">
+                    <div class="label">😊 神态样貌</div>
+                    <div class="value">{{ getCharacter(key)?.神态样貌 ?? '--' }}</div>
+                  </div>
+                  <div class="status-item">
+                    <div class="label">💃 动作姿势</div>
+                    <div class="value">{{ getCharacter(key)?.动作姿势 ?? '--' }}</div>
+                  </div>
+                </div>
 
-            <div class="status-item">
-              <div class="label">💭 内心想法</div>
-              <div class="value thought-text">{{ getCharacter(key)?.内心想法 ?? '--' }}</div>
-            </div>
+                <div class="status-item">
+                  <div class="label">💭 内心想法</div>
+                  <div class="value thought-text">{{ getCharacter(key)?.内心想法 ?? '--' }}</div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </template>
@@ -759,6 +767,7 @@ const roleModalBodyMaxHeight = computed(() => {
   return `${Math.max(180, roleModalMaxHeightPx.value - chromeHeight)}px`;
 });
 const compactRoleModal = computed(() => roleModalViewportHeight.value <= 760 || viewportWidth.value <= 680);
+const compactCharacterDetails = computed(() => viewportWidth.value <= 640);
 const worldInfoModalOpen = ref(false);
 const reportDigestModalOpen = ref(false);
 const isHistoryMode = computed(() => store.viewMessageState.mode === 'history');
@@ -3045,6 +3054,48 @@ onBeforeUnmount(() => {
   background: #f1fa8c11;
 }
 
+.character-detail-fold {
+  margin-top: 2px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.character-detail-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.82em;
+  font-weight: 700;
+  color: rgba(220, 243, 255, 0.96);
+  list-style: none;
+  user-select: none;
+}
+
+.character-detail-summary::-webkit-details-marker {
+  display: none;
+}
+
+.character-detail-summary-hint {
+  font-size: 0.75em;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
+.character-detail-body {
+  padding: 0 2px 2px;
+  display: grid;
+  gap: 10px;
+}
+
+.character-detail-fold:not([open]) .character-detail-body {
+  display: none;
+}
+
 .tab-buttons.virtual {
   display: block;
   overflow-x: auto;
@@ -3763,6 +3814,14 @@ onBeforeUnmount(() => {
   .role-add-btn {
     font-size: 0.76em;
     padding: 5px 10px;
+  }
+
+  .character-detail-summary {
+    padding: 8px 10px;
+  }
+
+  .character-detail-summary-hint {
+    font-size: 0.72em;
   }
 }
 </style>

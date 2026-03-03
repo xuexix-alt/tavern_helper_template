@@ -13,6 +13,7 @@ type InjectedData = {
 type StopHandle = { stop?: () => void } | null;
 
 const SNAPSHOT_TIMEOUT_MS = 1200;
+const EVENT_SNAPSHOT_THROTTLE_MS = 260;
 const HIDDEN_BLOCK_TAGS = ['imgthink', 'drawprompt'];
 
 function stripHiddenBlocks(raw: string): string {
@@ -85,6 +86,8 @@ export function useInjectedData() {
   let lastBridgeTxSeq = -1;
   let lastBridgeTxId = '';
   let lastBridgeChatId: string | null = null;
+  let eventSnapshotTimer = 0;
+  let eventSnapshotReason = '';
 
   const search = new URLSearchParams(window.location.search);
   const isDevMode = search.has('dev');
@@ -230,6 +233,40 @@ export function useInjectedData() {
     }
   };
 
+  const queueEventSnapshot = (reason: string) => {
+    if (isDevMode) return;
+    eventSnapshotReason = reason;
+    if (eventSnapshotTimer) return;
+    eventSnapshotTimer = window.setTimeout(() => {
+      eventSnapshotTimer = 0;
+      const nextReason = eventSnapshotReason || 'event:fallback';
+      eventSnapshotReason = '';
+      // 事件兜底刷新：失败时不清空 UI，避免短时桥接抖动导致正文闪空。
+      void requestCommandSnapshot(nextReason);
+    }, EVENT_SNAPSHOT_THROTTLE_MS);
+  };
+
+  const bindSnapshotOnMessageMutations = () => {
+    if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') return;
+    const bindings: Array<{ eventName: any; reason: string }> = [
+      { eventName: tavern_events.STREAM_TOKEN_RECEIVED, reason: 'event:stream_token' },
+      { eventName: tavern_events.MESSAGE_UPDATED, reason: 'event:message_updated' },
+      { eventName: tavern_events.MESSAGE_RECEIVED, reason: 'event:message_received' },
+      { eventName: tavern_events.MESSAGE_SWIPED, reason: 'event:message_swiped' },
+    ];
+
+    for (const binding of bindings) {
+      try {
+        const stop = eventOn(binding.eventName as any, () => {
+          queueEventSnapshot(binding.reason);
+        });
+        stopHandles.push(stop);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   onMounted(() => {
     onAnyEvent(SAMELAYER_EVENTS.SHOW, applyBridgePayload);
 
@@ -242,13 +279,18 @@ export function useInjectedData() {
       if (!ok) clearData();
     });
     bindSnapshotOnChatChanged();
+    bindSnapshotOnMessageMutations();
   });
 
   onBeforeUnmount(() => {
     stopHandles.forEach(s => s?.stop?.());
     stopHandles.length = 0;
+    if (eventSnapshotTimer) {
+      window.clearTimeout(eventSnapshotTimer);
+      eventSnapshotTimer = 0;
+    }
+    eventSnapshotReason = '';
   });
 
   return { raw, options, refresh };
 }
-

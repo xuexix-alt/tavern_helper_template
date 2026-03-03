@@ -286,8 +286,9 @@ watchDebounced(
 
 .eden-shell-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.18));
-  padding: 4px 8px calc(6px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(3, 8, 20, 0.4), rgba(3, 8, 20, 0.72));
+  backdrop-filter: blur(4px);
+  padding: 5px 8px calc(7px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -302,7 +303,7 @@ watchDebounced(
 .eden-tab-btn {
   flex: 1 1 0;
   min-width: 0;
-  min-height: 38px;
+  min-height: 40px;
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.06);
@@ -319,6 +320,11 @@ watchDebounced(
 
 .eden-tab-btn:hover {
   background: rgba(139, 233, 253, 0.2);
+}
+
+.eden-tab-btn:focus-visible {
+  outline: 2px solid rgba(139, 233, 253, 0.56);
+  outline-offset: 1px;
 }
 
 .eden-tab-btn.active {
@@ -350,7 +356,7 @@ watchDebounced(
   }
 
   .eden-tab-btn {
-    min-height: 36px;
+    min-height: 38px;
     border-radius: 8px;
   }
 

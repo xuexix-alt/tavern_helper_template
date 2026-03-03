@@ -89,13 +89,13 @@
           :class="{ active: historyPickerOpen }"
           @click="openHistoryPicker"
         >
-          回看
+          {{ historyButtonLabel }}
         </button>
         <input
           v-model="composerInput"
           type="text"
           class="eden-story-composer-input text_pole"
-          :placeholder="isHistoryMode ? '回看模式仅查看，请先返回最新' : '输入内容发送给AI（Enter 快捷发送）'"
+          :placeholder="composerPlaceholder"
           :disabled="isHistoryMode"
           @keydown.enter.exact.prevent="sendComposerInput"
         />
@@ -106,17 +106,18 @@
           :disabled="isHistoryMode"
           @click="openChoicesPanel"
         >
-          选项
+          {{ optionButtonLabel }}
           <span class="eden-story-composer-option-count">{{ displayOptions.length }}</span>
         </button>
         <button
           type="button"
           class="eden-story-composer-regenerate"
+          :class="{ armed: regenerateConfirmArmed }"
           :disabled="!canRegenerate"
           :title="regenerateButtonTitle"
           @click="regenerateFromLatestUserInput"
         >
-          {{ regenerateSending ? '重生中' : '重新生成' }}
+          {{ regenerateButtonLabel }}
         </button>
         <button
           type="button"
@@ -130,7 +131,7 @@
           "
           @click="sendComposerInput"
         >
-          {{ composerSending ? '发送中' : '发送' }}
+          {{ sendButtonLabel }}
         </button>
       </div>
     </footer>
@@ -230,9 +231,27 @@ const historyRaw = ref('');
 const historyOptions = ref<string[]>([]);
 const latestModeRaw = ref('');
 const latestModeOptions = ref<string[]>([]);
+const regenerateConfirmArmed = ref(false);
 let stopViewMessageChanged: (() => void) | null = null;
+let regenerateConfirmTimer = 0;
 
 const isHistoryMode = computed(() => viewMessageState.value.mode === 'history');
+const compactComposerPanel = computed(() => Number(viewportWidth.value || 0) <= 420);
+const mobileComposerPanel = computed(() => Number(viewportWidth.value || 0) <= 640);
+const historyButtonLabel = computed(() => (compactComposerPanel.value ? '历史' : '回看'));
+const optionButtonLabel = computed(() => (compactComposerPanel.value ? '选项' : '选项'));
+const sendButtonLabel = computed(() => (composerSending.value ? '发送中' : '发送'));
+const regenerateConfirmEnabled = computed(() => mobileComposerPanel.value);
+const regenerateButtonLabel = computed(() => {
+  if (regenerateSending.value) return '重生中';
+  if (regenerateConfirmEnabled.value && regenerateConfirmArmed.value) return compactComposerPanel.value ? '确认' : '确认重生';
+  return compactComposerPanel.value ? '重生' : '重新生成';
+});
+const composerPlaceholder = computed(() => {
+  if (isHistoryMode.value) return '回看模式仅查看，请先返回最新';
+  if (compactComposerPanel.value) return '输入后回车或点发送';
+  return '输入内容发送给AI（Enter 快捷发送）';
+});
 const historyMessageId = computed(() => {
   const id = Number(viewMessageState.value.message_id);
   return Number.isFinite(id) ? id : null;
@@ -260,6 +279,8 @@ const canRegenerate = computed(
 );
 const regenerateButtonTitle = computed(() => {
   if (isHistoryMode.value) return '回看模式下不可用，请先返回最新楼层';
+  if (regenerateConfirmEnabled.value && !regenerateConfirmArmed.value) return '移动端防误触：再次点击确认重生';
+  if (regenerateConfirmEnabled.value && regenerateConfirmArmed.value) return '点击确认重生';
   if (!String(latestUserInput.value ?? '').trim()) return '未找到最近一次用户输入，将按当前聊天上下文尝试重生';
   if (regenerateSending.value) return '正在以最近一次用户输入重新生成…';
   return `以楼层 #${latestUserInputMessageId.value ?? '?'} 的最新用户输入重新生成`;
@@ -555,13 +576,36 @@ function sendComposerInput() {
   }
 }
 
+function disarmRegenerateConfirm() {
+  regenerateConfirmArmed.value = false;
+  if (regenerateConfirmTimer) {
+    window.clearTimeout(regenerateConfirmTimer);
+    regenerateConfirmTimer = 0;
+  }
+}
+
+function armRegenerateConfirm() {
+  regenerateConfirmArmed.value = true;
+  if (regenerateConfirmTimer) window.clearTimeout(regenerateConfirmTimer);
+  regenerateConfirmTimer = window.setTimeout(() => {
+    regenerateConfirmArmed.value = false;
+    regenerateConfirmTimer = 0;
+  }, 2400);
+}
+
 async function regenerateFromLatestUserInput() {
   if (regenerateSending.value || composerSending.value || deletingFromMessageId.value != null) return;
   if (isHistoryMode.value) {
     toastr?.info?.('回看模式仅查看，不能重新生成。请先返回最新楼层。');
     return;
   }
+  if (regenerateConfirmEnabled.value && !regenerateConfirmArmed.value) {
+    armRegenerateConfirm();
+    toastr?.info?.('再次点击“重生”以确认');
+    return;
+  }
 
+  disarmRegenerateConfirm();
   regenerateSending.value = true;
   try {
     if (tryClickHostRegenerateButton()) {
@@ -908,6 +952,7 @@ watch(
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onWindowKeydown);
   closeAccordionPanel();
+  disarmRegenerateConfirm();
   stopViewMessageChanged?.();
   stopViewMessageChanged = null;
 });
@@ -1082,6 +1127,12 @@ onBeforeUnmount(() => {
 
 .eden-story-composer-regenerate:hover:not(:disabled) {
   background: rgba(255, 214, 102, 0.28);
+}
+
+.eden-story-composer-regenerate.armed {
+  border-color: rgba(255, 120, 120, 0.75);
+  background: rgba(255, 120, 120, 0.24);
+  color: #ffe8e8;
 }
 
 .eden-story-composer-send {
@@ -1343,10 +1394,11 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .eden-story-composer-inner {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      'history input input input'
-      'option option regenerate send';
+      'input send'
+      'history option'
+      'regenerate regenerate';
   }
 
   .eden-story-composer-history {
@@ -1367,6 +1419,7 @@ onBeforeUnmount(() => {
 
   .eden-story-composer-send {
     grid-area: send;
+    min-width: 64px;
   }
 
   .eden-story-composer-history,
@@ -1375,6 +1428,7 @@ onBeforeUnmount(() => {
   .eden-story-composer-send {
     width: 100%;
     text-align: center;
+    min-height: 32px;
   }
 }
 
@@ -1399,14 +1453,11 @@ onBeforeUnmount(() => {
 
   .eden-story-composer-option,
   .eden-story-composer-regenerate,
-  .eden-story-composer-send {
-    min-width: 34px;
-    padding: 5px 7px;
-  }
-
+  .eden-story-composer-send,
   .eden-story-composer-history {
     min-width: 34px;
     padding: 5px 7px;
+    min-height: 32px;
   }
 
   .eden-story-choices-modal {
