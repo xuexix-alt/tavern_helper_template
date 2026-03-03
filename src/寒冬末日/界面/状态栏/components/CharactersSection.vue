@@ -117,7 +117,9 @@
             <details class="character-detail-fold" :open="!compactCharacterDetails">
               <summary class="character-detail-summary">
                 <span>详细状态</span>
-                <span class="character-detail-summary-hint">{{ compactCharacterDetails ? '点按展开' : '展开/收起' }}</span>
+                <span class="character-detail-summary-hint">{{
+                  compactCharacterDetails ? '点按展开' : '展开/收起'
+                }}</span>
               </summary>
               <div class="character-detail-body">
                 <div class="details-grid">

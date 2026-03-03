@@ -802,7 +802,11 @@ function pushExternalPromptRaw(rawPrompt: string) {
 
 type PromptPersistResult =
   | { ok: true; status: 'already_exists' | 'inserted'; messageId: number }
-  | { ok: false; status: 'skip' | 'api_unavailable' | 'message_missing' | 'message_unchanged' | 'error'; reason: string };
+  | {
+      ok: false;
+      status: 'skip' | 'api_unavailable' | 'message_missing' | 'message_unchanged' | 'error';
+      reason: string;
+    };
 
 function messageContainsPromptToken(messageRaw: string, rawPrompt: string): boolean {
   const needle = String(rawPrompt ?? '').trim();
@@ -2164,7 +2168,9 @@ function collectPromptRawsFromDisplayedButtons(messageId: number | null): string
   const floorHidden = isMessageFloorHidden(messageId);
 
   if (roots.length > 0) {
-    const scopedButtons = roots.flatMap(root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[]);
+    const scopedButtons = roots.flatMap(
+      root => Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[],
+    );
     const scoped = collectPromptRawsFromButtons(scopedButtons, !floorHidden);
     if (scoped.length > 0) return scoped;
 

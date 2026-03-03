@@ -178,7 +178,11 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx
     if (hasStoryPane) stableMinHeight = Math.max(stableMinHeight, 460);
 
     // Combine host chat height, content natural height and a stable minimum floor.
-    let nextHeight = Math.max(stableMinHeight, contentHeight, Number.isFinite(chatHeight) && chatHeight > 0 ? chatHeight : 0);
+    let nextHeight = Math.max(
+      stableMinHeight,
+      contentHeight,
+      Number.isFinite(chatHeight) && chatHeight > 0 ? chatHeight : 0,
+    );
     nextHeight = Math.min(maxHeightPx, nextHeight);
 
     if (lastAppliedHeight > 0 && nextHeight < lastAppliedHeight) {

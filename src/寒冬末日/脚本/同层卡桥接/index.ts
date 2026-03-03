@@ -411,9 +411,12 @@ function normalizeChatText(input: string): string {
     .replaceAll('|', '/');
 }
 
-function executeSendRequest(
-  payload: { text?: string; await_trigger?: boolean; source?: string } | null | undefined,
-): { ok: boolean; reason: string; text: string; source: 'bridge' } {
+function executeSendRequest(payload: { text?: string; await_trigger?: boolean; source?: string } | null | undefined): {
+  ok: boolean;
+  reason: string;
+  text: string;
+  source: 'bridge';
+} {
   const sentText = normalizeChatText(String(payload?.text ?? ''));
   const awaitTrigger = payload?.await_trigger !== false;
   if (!sentText) {
@@ -527,12 +530,15 @@ function waitPluginResponseById(
       return;
     }
 
-    timeoutId = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      stop?.stop?.();
-      reject(new Error(`plugin response timeout: ${eventName}`));
-    }, Math.max(300, Math.trunc(timeoutMs)));
+    timeoutId = window.setTimeout(
+      () => {
+        if (settled) return;
+        settled = true;
+        stop?.stop?.();
+        reject(new Error(`plugin response timeout: ${eventName}`));
+      },
+      Math.max(300, Math.trunc(timeoutMs)),
+    );
   });
 }
 
@@ -955,16 +961,22 @@ function onPluginEvent(eventName: string, listener: (...args: any[]) => void): S
 function normalizePromptForCacheCompare(raw: unknown): string {
   const text = String(raw ?? '').trim();
   if (!text) return '';
-  const compact = text.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const compact = text
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
   const bodyMatch = compact.match(/^[^#<>\n]+###([\s\S]*?)###$/);
   const source = (bodyMatch?.[1] ?? compact).replace(/\$\{[\s\S]*?\}\$/g, ' ');
-  return source.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  return source
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
-function queryChatu8CacheData(payload: {
-  messageId?: number | null;
-  prompts?: unknown[];
-}): {
+function queryChatu8CacheData(payload: { messageId?: number | null; prompts?: unknown[] }): {
   ok: boolean;
   reason: string;
   messageId: number | null;
@@ -1099,6 +1111,3 @@ $(() => {
     if (typeof eventClearAll === 'function') eventClearAll();
   });
 });
-
-
-

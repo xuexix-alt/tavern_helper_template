@@ -1,8 +1,4 @@
-import {
-  SAMELAYER_EVENTS,
-  type SameLayerCommandResponsePayload,
-  type SameLayerPayload,
-} from '../../samelayer_events';
+import { SAMELAYER_EVENTS, type SameLayerCommandResponsePayload, type SameLayerPayload } from '../../samelayer_events';
 import { requestEventPayload } from '@util/requestEvent';
 
 type InjectedData = {
@@ -251,4 +247,3 @@ export function useInjectedData() {
 
   return { raw, options, refresh };
 }
-

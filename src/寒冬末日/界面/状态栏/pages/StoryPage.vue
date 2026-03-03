@@ -17,9 +17,7 @@
       >
         <div class="eden-story-choices-modal">
           <div class="eden-story-choices-head">
-            <strong class="eden-story-choices-title">{{
-              choicesPanelOpen ? '剧情选项' : '回看过往剧情楼层'
-            }}</strong>
+            <strong class="eden-story-choices-title">{{ choicesPanelOpen ? '剧情选项' : '回看过往剧情楼层' }}</strong>
             <button type="button" class="eden-story-choices-close" @click="closeAccordionPanel">
               {{ choicesPanelOpen ? '收起选项' : '收起回看' }}
             </button>
@@ -244,7 +242,8 @@ const sendButtonLabel = computed(() => (composerSending.value ? '发送中' : '�
 const regenerateConfirmEnabled = computed(() => mobileComposerPanel.value);
 const regenerateButtonLabel = computed(() => {
   if (regenerateSending.value) return '重生中';
-  if (regenerateConfirmEnabled.value && regenerateConfirmArmed.value) return compactComposerPanel.value ? '确认' : '确认重生';
+  if (regenerateConfirmEnabled.value && regenerateConfirmArmed.value)
+    return compactComposerPanel.value ? '确认' : '确认重生';
   return compactComposerPanel.value ? '重生' : '重新生成';
 });
 const composerPlaceholder = computed(() => {
