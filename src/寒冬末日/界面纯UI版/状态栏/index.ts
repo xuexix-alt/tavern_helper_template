@@ -1,7 +1,7 @@
 import App from './App.vue';
 import './global.css';
 
-// 声明全局类型
+// Declare globals injected by Tavern Helper runtime.
 declare const Mvu: {
   events: {
     VARIABLE_UPDATE_ENDED: string;
@@ -11,12 +11,12 @@ declare const Mvu: {
 };
 declare const eventOn: <T extends string>(event_type: T, listener: (...args: any[]) => void) => { stop: () => void };
 
-// 等待依赖注入的辅助函数
+// Wait until injected helpers are available in this iframe context.
 async function waitForDependencies(maxWait = 15000): Promise<void> {
   const checkInterval = 100;
   const startTime = Date.now();
 
-  // 检查关键依赖是否可用
+  // Collect missing dependencies for diagnostics.
   const getMissingDeps = (): string[] => {
     const missing: string[] = [];
     if (typeof getCurrentMessageId !== 'function') missing.push('getCurrentMessageId');
@@ -27,10 +27,10 @@ async function waitForDependencies(maxWait = 15000): Promise<void> {
 
   const checkDeps = (): boolean => getMissingDeps().length === 0;
 
-  // 先快速检查一次
+  // Fast path: dependencies are already present.
   if (checkDeps()) return;
 
-  // 等待依赖注入
+  // Wait for dependency injection from host runtime.
   while (Date.now() - startTime < maxWait) {
     await new Promise(resolve => setTimeout(resolve, checkInterval));
     if (checkDeps()) return;
@@ -79,8 +79,9 @@ async function waitForMvuReady(maxWait = 15000): Promise<boolean> {
   return typeof Mvu !== 'undefined';
 }
 
-function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
-  const minHeightPx = options?.minHeightPx ?? 320;
+function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx?: number }) {
+  const minHeightPx = options?.minHeightPx ?? 360;
+  const maxHeightPx = options?.maxHeightPx ?? 4096;
   const frameEl = window.frameElement as HTMLIFrameElement | null;
   if (!frameEl) return () => {};
 
@@ -101,6 +102,12 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
     '.chat-wrapper',
     '.chat-content',
   ] as const;
+
+  const viewHeight = () => {
+    const vv = window.visualViewport;
+    if (vv?.height && Number.isFinite(vv.height) && vv.height > 0) return vv.height;
+    return window.innerHeight || document.documentElement.clientHeight || minHeightPx;
+  };
 
   const findParentChatElement = (): HTMLElement | null => {
     try {
@@ -129,36 +136,65 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
   };
 
   const getContentHeight = () => {
-    const app = document.getElementById('app');
-    const body = document.body;
-    const root = document.documentElement;
+    const pageScrollNodes = Array.from(document.querySelectorAll<HTMLElement>('.eden-page-scroll'));
+    const storyPaneNodes = Array.from(document.querySelectorAll<HTMLElement>('.story-pane'));
+    const roleGenerateModal = document.querySelector<HTMLElement>('.role-generate-modal');
+    const roleModal = document.querySelector<HTMLElement>('.role-modal');
+    const measuredStoryPaneHeights = storyPaneNodes.map(node => {
+      const rectHeight = node.getBoundingClientRect().height;
+      const clientHeight = node.clientHeight;
+      const style = window.getComputedStyle(node);
+      const hasInnerScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      // Scrollable panes (story text with slider cap) should use visible height,
+      // otherwise scrollHeight can incorrectly re-expand outer iframe.
+      if (hasInnerScroll) {
+        return Math.max(clientHeight, rectHeight);
+      }
+      return Math.max(node.scrollHeight, clientHeight, rectHeight);
+    });
     const heights = [
-      app?.scrollHeight,
-      app?.offsetHeight,
-      body?.scrollHeight,
-      body?.offsetHeight,
-      root?.scrollHeight,
-      root?.offsetHeight,
+      ...pageScrollNodes.map(node => node.scrollHeight),
+      ...measuredStoryPaneHeights,
+      roleGenerateModal
+        ? Math.max(roleGenerateModal.scrollHeight, roleGenerateModal.getBoundingClientRect().height) + 36
+        : 0,
+      roleModal ? Math.max(roleModal.scrollHeight, roleModal.getBoundingClientRect().height) + 24 : 0,
     ].filter((v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0);
-    return heights.length ? Math.max(...heights) : 0;
+    return heights.length ? Math.ceil(Math.max(...heights) + 8) : 0;
   };
 
   let rafId = 0;
+  let lastAppliedHeight = 0;
   const apply = () => {
     rafId = 0;
     const chatHeight = Math.floor(getChatHeight());
+    const viewportHeight = Math.floor(viewHeight());
     const contentHeight = Math.floor(getContentHeight());
+    const baseline = Math.max(chatHeight, viewportHeight);
+    const hasStoryPane = !!document.querySelector('.story-pane');
 
-    // 酒馆可视聊天区存在时，取聊天区高度和内容高度的较大值，确保内容完整显示
-    const nextHeight =
-      Number.isFinite(chatHeight) && chatHeight > 0
-        ? Math.max(minHeightPx, Math.max(chatHeight, contentHeight))
-        : Math.max(minHeightPx, contentHeight);
+    let stableMinHeight = Math.max(minHeightPx, Math.floor(baseline * 0.72));
+    stableMinHeight = Math.min(stableMinHeight, 1080);
+    if (hasStoryPane) stableMinHeight = Math.max(stableMinHeight, 460);
+
+    // Combine host chat height, content natural height and a stable minimum floor.
+    let nextHeight = Math.max(stableMinHeight, contentHeight, Number.isFinite(chatHeight) && chatHeight > 0 ? chatHeight : 0);
+    nextHeight = Math.min(maxHeightPx, nextHeight);
+
+    if (lastAppliedHeight > 0 && nextHeight < lastAppliedHeight) {
+      const shrinkFloor = Math.floor(lastAppliedHeight * 0.82);
+      nextHeight = Math.max(nextHeight, shrinkFloor, stableMinHeight);
+    }
+
     const next = `${nextHeight}px`;
+    const nextMin = `${stableMinHeight}px`;
+    const nextMax = `${maxHeightPx}px`;
+    if (frameEl.style.minHeight !== nextMin) frameEl.style.minHeight = nextMin;
+    if (frameEl.style.maxHeight !== nextMax) frameEl.style.maxHeight = nextMax;
     if (frameEl.style.height !== next) {
       frameEl.style.height = next;
-      frameEl.style.maxHeight = next;
       frameEl.style.display = 'block';
+      lastAppliedHeight = nextHeight;
     }
   };
 
@@ -193,6 +229,21 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
     resizeObserver = null;
   }
 
+  let mutationObserver: MutationObserver | null = null;
+  try {
+    if (typeof MutationObserver !== 'undefined') {
+      mutationObserver = new MutationObserver(() => schedule());
+      mutationObserver.observe(document.getElementById('app') ?? document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+      });
+    }
+  } catch {
+    mutationObserver = null;
+  }
+
   let stopRenderEnded: (() => void) | null = null;
   try {
     if (typeof eventOn === 'function' && typeof iframe_events !== 'undefined' && typeof getIframeName === 'function') {
@@ -216,18 +267,20 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number }) {
     window.removeEventListener('orientationchange', schedule);
     if (removeParentResize) removeParentResize();
     if (resizeObserver) resizeObserver.disconnect();
+    if (mutationObserver) mutationObserver.disconnect();
     if (stopRenderEnded) stopRenderEnded();
     if (rafId) window.cancelAnimationFrame(rafId);
   };
 }
 
 let stopHostFrameHeightSync: (() => void) | null = null;
+const ENABLE_LEGACY_HOST_FRAME_HEIGHT_SYNC = true;
 
 $(async () => {
-  // 等待所有依赖注入完成
+  // Wait for all injected helpers to become available.
   await waitForDependencies();
 
-  // 再等待 MVU 框架初始化完成（单独等待，避免把 Mvu 误判为“前置注入失败”）
+  // Wait for MVU initialization; this is independent from helper injection timing.
   const mvuReady = await waitForMvuReady();
   if (!mvuReady) {
     console.warn('[状态栏] 未检测到 Mvu 全局对象，请确认脚本库中的 MVU 脚本已启用', {
@@ -254,25 +307,27 @@ $(async () => {
         }
       };
 
-      // 多次尝试：覆盖浏览器/iframe恢复滚动、以及首帧布局抖动
+      // Retry several times to defeat BFCache/initial layout jitter.
       run();
       requestAnimationFrame(run);
       setTimeout(run, 150);
     };
   })();
 
-  // 挂载 Vue 应用
+  // Mount Vue app
   const app = createApp(App);
   app.use(createPinia());
   app.mount('#app');
 
-  // 对齐楼层 iframe 高度，避免异步加载时被初始占位高度卡住。
-  stopHostFrameHeightSync = createHostFrameHeightSync({ minHeightPx: 320 });
+  // Keep iframe height in sync with content + host chat area.
+  if (ENABLE_LEGACY_HOST_FRAME_HEIGHT_SYNC) {
+    stopHostFrameHeightSync = createHostFrameHeightSync({ minHeightPx: 360, maxHeightPx: 4096 });
+  }
 
-  // 进入楼层 iframe 时，总是从顶部开始，避免出现“加载后停在最后一行”
+  // Always start from the top when entering this iframe.
   scrollToTopOnce();
 
-  // BFCache/页面恢复时也强制回到顶部
+  // Restore-top on BFCache resume as well.
   window.addEventListener(
     'pageshow',
     () => {
@@ -282,7 +337,7 @@ $(async () => {
   );
 });
 
-// 卸载时清理资源
+// Cleanup on unload
 $(window).on('pagehide', () => {
   if (stopHostFrameHeightSync) {
     stopHostFrameHeightSync();

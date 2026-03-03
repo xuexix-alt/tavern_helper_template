@@ -3249,15 +3249,19 @@ onBeforeUnmount(() => {
   background: rgba(6, 8, 20, 0.78);
   backdrop-filter: blur(6px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px;
+  overflow: auto;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-right: calc(12px + env(safe-area-inset-right));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  padding-left: calc(12px + env(safe-area-inset-left));
   z-index: 1001;
 }
 
 .role-generate-modal {
-  width: min(82vw, 940px);
-  max-height: 76vh;
+  width: min(96vw, 940px);
+  max-width: calc(100vw - 16px);
   background: rgba(16, 18, 32, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
