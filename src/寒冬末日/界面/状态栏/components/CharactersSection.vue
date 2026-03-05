@@ -674,7 +674,11 @@
 import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
-import { CHAT_VAR_KEYS_ROLE, isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../../role_control';
+import {
+  CHAT_VAR_KEYS_ROLE,
+  isRoleEnabledBySelectorState,
+  readRoleSelectorStateFromStatData,
+} from '../../../role_control';
 import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';

@@ -2189,7 +2189,10 @@ function formatRoomResidents(
 .shelter-redesign .shelter-ability-block .collapse-toggle-btn {
   border-radius: 12px;
   border: 1px solid rgba(241, 216, 121, 0.36);
-  background: var(--shelter-ability-toggle-bg, linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52)));
+  background: var(
+    --shelter-ability-toggle-bg,
+    linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52))
+  );
   box-shadow: inset 0 0 0 1px rgba(255, 244, 201, 0.08);
 }
 

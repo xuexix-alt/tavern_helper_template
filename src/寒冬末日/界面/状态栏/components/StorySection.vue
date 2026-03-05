@@ -138,7 +138,9 @@
                 <span class="chip-count">{{ item.count }}</span>
               </button>
               <div class="story-filter-actions">
-                <button type="button" class="story-filter-action-btn" @click="enableImageOnlySegmentKinds">仅图片</button>
+                <button type="button" class="story-filter-action-btn" @click="enableImageOnlySegmentKinds">
+                  仅图片
+                </button>
                 <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优选</button>
               </div>
             </div>

@@ -67,7 +67,6 @@
         </div>
       </div>
     </Teleport>
-
   </section>
 </template>
 
@@ -165,7 +164,6 @@ async function confirmChoiceDialog() {
   if (choiceSending.value) return;
   await sendChoiceText(choiceDialogDraft.value);
 }
-
 </script>
 
 <style scoped>
