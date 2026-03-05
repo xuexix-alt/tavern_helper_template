@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - 20260211
     paths-ignore:
       - dist/**
   workflow_dispatch:
