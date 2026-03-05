@@ -80,15 +80,7 @@
     </transition>
 
     <footer class="eden-story-composer">
-      <div class="eden-story-composer-inner">
-        <button
-          type="button"
-          class="eden-story-composer-history"
-          :class="{ active: historyPickerOpen }"
-          @click="openHistoryPicker"
-        >
-          {{ historyButtonLabel }}
-        </button>
+      <div class="eden-story-composer-inner" :class="{ 'is-mobile': mobileComposerPanel }">
         <input
           v-model="composerInput"
           type="text"
@@ -98,6 +90,16 @@
           @keydown.enter.exact.prevent="sendComposerInput"
         />
         <button
+          v-if="!mobileComposerPanel"
+          type="button"
+          class="eden-story-composer-history"
+          :class="{ active: historyPickerOpen }"
+          @click="onComposerHistoryClick"
+        >
+          {{ historyButtonLabel }}
+        </button>
+        <button
+          v-if="!mobileComposerPanel"
           type="button"
           class="eden-story-composer-option"
           :class="{ active: choicesPanelOpen }"
@@ -108,6 +110,7 @@
           <span class="eden-story-composer-option-count">{{ displayOptions.length }}</span>
         </button>
         <button
+          v-if="!mobileComposerPanel"
           type="button"
           class="eden-story-composer-regenerate"
           :class="{ armed: regenerateConfirmArmed }"
@@ -131,6 +134,51 @@
         >
           {{ sendButtonLabel }}
         </button>
+        <button
+          v-if="mobileComposerPanel"
+          type="button"
+          class="eden-story-composer-drawer-toggle"
+          :class="{ active: composerActionDrawerOpen }"
+          :aria-expanded="composerActionDrawerOpen"
+          aria-label="展开或收起历史和重生操作"
+          @click="toggleComposerActionDrawer"
+        >
+          <span class="eden-story-composer-drawer-label">{{ composerActionDrawerOpen ? '收起' : '更多' }}</span>
+          <span class="eden-story-composer-drawer-arrow" :class="{ open: composerActionDrawerOpen }">▾</span>
+        </button>
+
+        <transition name="eden-composer-accordion">
+          <div v-if="showComposerSecondaryActions" class="eden-story-composer-secondary">
+            <button
+              type="button"
+              class="eden-story-composer-history"
+              :class="{ active: historyPickerOpen }"
+              @click="onComposerHistoryClick"
+            >
+              {{ historyButtonLabel }}
+            </button>
+            <button
+              type="button"
+              class="eden-story-composer-option"
+              :class="{ active: choicesPanelOpen }"
+              :disabled="isHistoryMode"
+              @click="onComposerChoicesClick"
+            >
+              {{ optionButtonLabel }}
+              <span class="eden-story-composer-option-count">{{ displayOptions.length }}</span>
+            </button>
+            <button
+              type="button"
+              class="eden-story-composer-regenerate"
+              :class="{ armed: regenerateConfirmArmed }"
+              :disabled="!canRegenerate"
+              :title="regenerateButtonTitle"
+              @click="onComposerRegenerateClick"
+            >
+              {{ regenerateButtonLabel }}
+            </button>
+          </div>
+        </transition>
       </div>
     </footer>
   </section>
@@ -138,10 +186,11 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount } from 'vue';
-import { useWindowSize } from '@vueuse/core';
+import { useWindowSize, watchDebounced } from '@vueuse/core';
 import ChoicesSection from '../components/ChoicesSection.vue';
 import StorySection from '../components/StorySection.vue';
 import { sendToChat } from '../../outbound';
+import { parseOptionsFromRaw } from '../optionParser';
 import {
   getViewMessageState,
   onViewMessageChanged,
@@ -230,6 +279,7 @@ const historyOptions = ref<string[]>([]);
 const latestModeRaw = ref('');
 const latestModeOptions = ref<string[]>([]);
 const regenerateConfirmArmed = ref(false);
+const composerActionDrawerOpen = ref(false);
 let stopViewMessageChanged: (() => void) | null = null;
 let regenerateConfirmTimer = 0;
 
@@ -239,6 +289,7 @@ const mobileComposerPanel = computed(() => Number(viewportWidth.value || 0) <= 6
 const historyButtonLabel = computed(() => (compactComposerPanel.value ? '历史' : '回看'));
 const optionButtonLabel = computed(() => (compactComposerPanel.value ? '选项' : '选项'));
 const sendButtonLabel = computed(() => (composerSending.value ? '发送中' : '发送'));
+const showComposerSecondaryActions = computed(() => mobileComposerPanel.value && composerActionDrawerOpen.value);
 const regenerateConfirmEnabled = computed(() => mobileComposerPanel.value);
 const regenerateButtonLabel = computed(() => {
   if (regenerateSending.value) return '重生中';
@@ -293,9 +344,9 @@ const compactAccordionPanel = computed(() => Number(viewportWidth.value || 0) <=
 const accordionPanelMaxHeightPx = computed(() => {
   const vvHeight = Number(window.visualViewport?.height || 0);
   const viewport = vvHeight > 0 ? vvHeight : Number(viewportHeight.value || 0);
-  const reserve = compactAccordionPanel.value ? 188 : 236;
+  const reserve = compactAccordionPanel.value ? 204 : 236;
   const adaptive = viewport > 0 ? Math.floor(viewport - reserve) : 420;
-  return _.clamp(adaptive, 220, 820);
+  return _.clamp(adaptive, 180, 820);
 });
 const accordionPanelStyle = computed<Record<string, string>>(() => ({
   '--eden-story-accordion-max-height': `${accordionPanelMaxHeightPx.value}px`,
@@ -304,6 +355,16 @@ const REGENERATE_TRIGGER_TIMEOUT_MS = 45000;
 
 function closeAccordionPanel() {
   activeAccordionPanel.value = null;
+}
+
+function toggleComposerActionDrawer() {
+  if (!mobileComposerPanel.value) return;
+  composerActionDrawerOpen.value = !composerActionDrawerOpen.value;
+}
+
+function collapseComposerActionDrawer() {
+  if (!mobileComposerPanel.value) return;
+  composerActionDrawerOpen.value = false;
 }
 
 function revealAccordionPanel() {
@@ -324,19 +385,7 @@ function stripForPreview(input: string): string {
 }
 
 function extractOptionsFromRaw(raw: string): string[] {
-  const cleaned = String(raw ?? '');
-  const optionMatch = cleaned.match(/(<option(?:\s[^>]*)?>(?![\s\S]*?<option(?:\s[^>]*)?>)[\s\S]*?(?:<\/option>|$))/i);
-  const optionsRaw = optionMatch
-    ? optionMatch[1]
-        .replace(/^<option(?:\s[^>]*)?>/i, '')
-        .replace(/<\/option>\s*$/i, '')
-        .trim()
-    : '';
-  if (!optionsRaw) return [];
-  return optionsRaw
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
+  return parseOptionsFromRaw(raw);
 }
 
 function readMessageRawById(message_id: number): string {
@@ -542,6 +591,7 @@ function openChoicesPanel() {
   }
   activeAccordionPanel.value = choicesPanelOpen.value ? null : 'choices';
   if (activeAccordionPanel.value) revealAccordionPanel();
+  collapseComposerActionDrawer();
 }
 
 function closeChoicesPanel() {
@@ -569,7 +619,10 @@ function sendComposerInput() {
       failureMessage: '发送失败，已尝试复制，请手动发送',
       unavailableMessage: '无法直接发送，已尝试复制，请手动发送',
     });
-    if (res.ok) composerInput.value = '';
+    if (res.ok) {
+      composerInput.value = '';
+      collapseComposerActionDrawer();
+    }
   } finally {
     composerSending.value = false;
   }
@@ -657,6 +710,7 @@ function openHistoryPicker() {
   historyCandidates.value = buildHistoryCandidates();
   activeAccordionPanel.value = historyPickerOpen.value ? null : 'history';
   if (activeAccordionPanel.value) revealAccordionPanel();
+  collapseComposerActionDrawer();
 }
 
 function closeHistoryPicker() {
@@ -868,6 +922,20 @@ function onChoiceSent() {
   setViewMessageLatest('story-page:choice-sent');
   refreshLatestUserInput();
   refreshLiveMessageId();
+  collapseComposerActionDrawer();
+}
+
+function onComposerHistoryClick() {
+  openHistoryPicker();
+}
+
+function onComposerChoicesClick() {
+  openChoicesPanel();
+}
+
+function onComposerRegenerateClick() {
+  collapseComposerActionDrawer();
+  void regenerateFromLatestUserInput();
 }
 
 function onWindowKeydown(event: KeyboardEvent) {
@@ -934,18 +1002,29 @@ onMounted(() => {
 watch(
   () => activeAccordionPanel.value,
   panel => {
+    if (panel && mobileComposerPanel.value) {
+      composerActionDrawerOpen.value = false;
+    }
     if (!panel) return;
     revealAccordionPanel();
   },
 );
 
 watch(
+  () => mobileComposerPanel.value,
+  isMobile => {
+    if (!isMobile) composerActionDrawerOpen.value = false;
+  },
+);
+
+watchDebounced(
   () => props.raw,
   () => {
     refreshLatestUserInput();
     refreshLiveMessageId();
     ensureHistorySelectionValid();
   },
+  { debounce: 120, maxWait: 260 },
 );
 
 onBeforeUnmount(() => {
@@ -967,14 +1046,14 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   border: 1px solid rgba(255, 214, 102, 0.42);
   background: rgba(255, 214, 102, 0.16);
-  color: #fff6d7;
+  color: var(--text-color);
   font-size: 0.82em;
 }
 
 .eden-history-back-btn {
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: inherit;
   font: inherit;
   font-size: 0.85em;
@@ -1034,17 +1113,33 @@ onBeforeUnmount(() => {
 }
 
 .eden-story-composer-inner {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
   gap: 4px;
   border-radius: 9px;
   padding: 4px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.05));
+}
+
+.eden-story-composer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.eden-story-composer-secondary {
+  display: none;
+}
+
+.eden-story-composer-drawer-toggle {
+  display: none;
 }
 
 .eden-story-composer-history {
   flex: 0 0 auto;
+  min-height: 40px;
+  white-space: nowrap;
   border-radius: 7px;
   border: 1px solid rgba(255, 214, 102, 0.55);
   background: rgba(255, 214, 102, 0.18);
@@ -1068,9 +1163,10 @@ onBeforeUnmount(() => {
 .eden-story-composer-input {
   min-width: 0;
   width: 100%;
+  min-height: 40px;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--theme-input-bg, rgba(0, 0, 0, 0.22));
   color: var(--text-color);
   padding: 6px 8px;
   font: inherit;
@@ -1078,13 +1174,15 @@ onBeforeUnmount(() => {
 }
 
 .eden-story-composer-input::placeholder {
-  color: rgba(248, 248, 242, 0.55);
+  color: var(--theme-placeholder-color, rgba(248, 248, 242, 0.55));
 }
 
 .eden-story-composer-option,
 .eden-story-composer-regenerate,
 .eden-story-composer-send {
   flex: 0 0 auto;
+  min-height: 40px;
+  white-space: nowrap;
   border-radius: 7px;
   color: var(--text-color);
   font: inherit;
@@ -1149,6 +1247,19 @@ onBeforeUnmount(() => {
   opacity: 0.5;
 }
 
+.eden-composer-accordion-enter-active,
+.eden-composer-accordion-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.eden-composer-accordion-enter-from,
+.eden-composer-accordion-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
 .eden-history-list {
   display: grid;
   gap: 6px;
@@ -1158,7 +1269,7 @@ onBeforeUnmount(() => {
   border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-left-width: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.05));
   color: var(--text-color);
   padding: 8px 10px;
   display: grid;
@@ -1328,8 +1439,12 @@ onBeforeUnmount(() => {
   max-height: var(--eden-story-accordion-max-height, 420px);
   border-radius: 12px;
   border: 1px solid rgba(139, 233, 253, 0.4);
-  background: linear-gradient(180deg, rgba(20, 26, 40, 0.96), rgba(10, 14, 22, 0.97));
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+  background: linear-gradient(
+    180deg,
+    var(--theme-pane-grad-start, rgba(20, 26, 40, 0.96)),
+    var(--theme-pane-grad-end, rgba(10, 14, 22, 0.97))
+  );
+  box-shadow: var(--theme-elevated-shadow, 0 18px 40px rgba(0, 0, 0, 0.36));
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1383,51 +1498,79 @@ onBeforeUnmount(() => {
   border-radius: 7px;
 }
 
-.eden-story-choices-body :deep(.palette-button) {
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  font-size: 15px;
-}
-
 @media (max-width: 640px) {
-  .eden-story-composer-inner {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .eden-story-composer-inner.is-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      'input send'
-      'history option'
-      'regenerate regenerate';
+      'input send drawer'
+      'secondary secondary secondary';
   }
 
-  .eden-story-composer-history {
-    grid-area: history;
-  }
-
-  .eden-story-composer-input {
+  .eden-story-composer-inner.is-mobile .eden-story-composer-input {
     grid-area: input;
   }
 
-  .eden-story-composer-option {
-    grid-area: option;
-  }
-
-  .eden-story-composer-regenerate {
-    grid-area: regenerate;
-  }
-
-  .eden-story-composer-send {
+  .eden-story-composer-inner.is-mobile .eden-story-composer-send {
     grid-area: send;
-    min-width: 64px;
+    min-width: 62px;
+    min-height: 40px;
   }
 
-  .eden-story-composer-history,
-  .eden-story-composer-option,
-  .eden-story-composer-regenerate,
-  .eden-story-composer-send {
+  .eden-story-composer-drawer-toggle {
+    grid-area: drawer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 58px;
+    min-height: 40px;
+    border-radius: 7px;
+    border: 1px solid rgba(139, 233, 253, 0.45);
+    background: rgba(139, 233, 253, 0.18);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 0.72em;
+    cursor: pointer;
+  }
+
+  .eden-story-composer-drawer-toggle.active {
+    border-color: rgba(139, 233, 253, 0.68);
+    background: rgba(139, 233, 253, 0.3);
+    color: var(--text-strong);
+  }
+
+  .eden-story-composer-drawer-label {
+    line-height: 1;
+  }
+
+  .eden-story-composer-drawer-arrow {
+    line-height: 1;
+    transition: transform 0.18s ease;
+  }
+
+  .eden-story-composer-drawer-arrow.open {
+    transform: rotate(180deg);
+  }
+
+  .eden-story-composer-inner.is-mobile .eden-story-composer-secondary {
+    grid-area: secondary;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .eden-story-composer-inner.is-mobile .eden-story-composer-regenerate {
+    grid-column: 1 / -1;
+  }
+
+  .eden-story-composer-inner.is-mobile .eden-story-composer-history,
+  .eden-story-composer-inner.is-mobile .eden-story-composer-option,
+  .eden-story-composer-inner.is-mobile .eden-story-composer-regenerate,
+  .eden-story-composer-inner.is-mobile .eden-story-composer-send {
     width: 100%;
     text-align: center;
-    min-height: 32px;
+    min-height: 40px;
   }
 }
 
@@ -1446,8 +1589,8 @@ onBeforeUnmount(() => {
   }
 
   .eden-story-composer-input {
-    font-size: 0.84em;
-    padding: 6px 7px;
+    font-size: 0.86em;
+    padding: 7px 8px;
   }
 
   .eden-story-composer-option,
@@ -1455,8 +1598,8 @@ onBeforeUnmount(() => {
   .eden-story-composer-send,
   .eden-story-composer-history {
     min-width: 34px;
-    padding: 5px 7px;
-    min-height: 32px;
+    padding: 6px 8px;
+    min-height: 38px;
   }
 
   .eden-story-choices-modal {

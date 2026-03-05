@@ -114,47 +114,37 @@
               </div>
             </div>
 
-            <details class="character-detail-fold" :open="!compactCharacterDetails">
-              <summary class="character-detail-summary">
-                <span>详细状态</span>
-                <span class="character-detail-summary-hint">{{
-                  compactCharacterDetails ? '点按展开' : '展开/收起'
-                }}</span>
-              </summary>
-              <div class="character-detail-body">
-                <div class="details-grid">
-                  <div class="status-item">
-                    <div class="label">👚 衣着</div>
-                    <div class="value">{{ getCharacter(key)?.衣着 ?? '--' }}</div>
-                  </div>
-                  <div class="status-item">
-                    <div class="label">👅 舌唇</div>
-                    <div class="value">{{ getCharacter(key)?.舌唇 ?? '--' }}</div>
-                  </div>
-                  <div class="status-item">
-                    <div class="label">🍈 胸乳</div>
-                    <div class="value">{{ getCharacter(key)?.胸乳 ?? '--' }}</div>
-                  </div>
-                  <div class="status-item">
-                    <div class="label">🌸 私穴</div>
-                    <div class="value">{{ getCharacter(key)?.私穴 ?? '--' }}</div>
-                  </div>
-                  <div class="status-item">
-                    <div class="label">😊 神态样貌</div>
-                    <div class="value">{{ getCharacter(key)?.神态样貌 ?? '--' }}</div>
-                  </div>
-                  <div class="status-item">
-                    <div class="label">💃 动作姿势</div>
-                    <div class="value">{{ getCharacter(key)?.动作姿势 ?? '--' }}</div>
-                  </div>
-                </div>
-
-                <div class="status-item">
-                  <div class="label">💭 内心想法</div>
-                  <div class="value thought-text">{{ getCharacter(key)?.内心想法 ?? '--' }}</div>
-                </div>
+            <div class="details-grid">
+              <div class="status-item">
+                <div class="label">👚 衣着</div>
+                <div class="value">{{ getCharacter(key)?.衣着 ?? '--' }}</div>
               </div>
-            </details>
+              <div class="status-item">
+                <div class="label">👅 舌唇</div>
+                <div class="value">{{ getCharacter(key)?.舌唇 ?? '--' }}</div>
+              </div>
+              <div class="status-item">
+                <div class="label">🍈 胸乳</div>
+                <div class="value">{{ getCharacter(key)?.胸乳 ?? '--' }}</div>
+              </div>
+              <div class="status-item">
+                <div class="label">🌸 私穴</div>
+                <div class="value">{{ getCharacter(key)?.私穴 ?? '--' }}</div>
+              </div>
+              <div class="status-item">
+                <div class="label">😊 神态样貌</div>
+                <div class="value">{{ getCharacter(key)?.神态样貌 ?? '--' }}</div>
+              </div>
+              <div class="status-item">
+                <div class="label">💃 动作姿势</div>
+                <div class="value">{{ getCharacter(key)?.动作姿势 ?? '--' }}</div>
+              </div>
+            </div>
+
+            <div class="status-item">
+              <div class="label">💭 内心想法</div>
+              <div class="value thought-text">{{ getCharacter(key)?.内心想法 ?? '--' }}</div>
+            </div>
           </div>
         </div>
       </template>
@@ -172,7 +162,6 @@
       >
         <div
           class="role-modal overview-modal"
-          :class="{ 'is-compact': compactRoleModal }"
           role="dialog"
           aria-modal="true"
           :style="{ maxHeight: roleModalMaxHeight }"
@@ -196,7 +185,6 @@
       >
         <div
           class="role-modal overview-modal"
-          :class="{ 'is-compact': compactRoleModal }"
           role="dialog"
           aria-modal="true"
           :style="{ maxHeight: roleModalMaxHeight }"
@@ -214,13 +202,7 @@
       </div>
 
       <div v-if="isCreationMode && addRoleOpen" class="role-modal-mask">
-        <div
-          class="role-modal"
-          :class="{ 'is-compact': compactRoleModal }"
-          role="dialog"
-          aria-modal="true"
-          :style="{ maxHeight: roleModalMaxHeight }"
-        >
+        <div class="role-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-modal-header">
             <div class="role-modal-title">✨ 添加角色</div>
             <div class="role-modal-actions">
@@ -337,13 +319,7 @@
       </div>
 
       <div v-if="isCreationMode && generateRoleOpen" class="role-generate-mask">
-        <div
-          class="role-generate-modal"
-          :class="{ 'is-compact': compactRoleModal }"
-          role="dialog"
-          aria-modal="true"
-          :style="{ maxHeight: roleModalMaxHeight }"
-        >
+        <div class="role-generate-modal" role="dialog" aria-modal="true" :style="{ maxHeight: roleModalMaxHeight }">
           <div class="role-generate-header">
             <div class="role-modal-title">🧬 生成角色面板</div>
             <div class="role-generate-header-actions">
@@ -696,13 +672,10 @@
 
 <script setup lang="ts">
 import _ from 'lodash';
-import { useElementSize, useTextareaAutosize, useVirtualList, useWindowSize } from '@vueuse/core';
+import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
 import type { Schema as SchemaType } from '../../../schema';
-import {
-  CHAT_VAR_KEYS_ROLE,
-  isRoleEnabledBySelectorState,
-  readRoleSelectorStateFromStatData,
-} from '../../../role_control';
+import { CHAT_VAR_KEYS_ROLE, isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../../role_control';
+import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
 import ReportSection from './ReportSection.vue';
@@ -749,27 +722,12 @@ onMounted(() => {
 });
 
 const { height: viewportHeight } = useElementSize(rootEl);
-const { width: viewportWidth } = useWindowSize();
-const roleModalViewportHeight = computed(() => {
-  const vv = window.visualViewport;
-  const visualHeight = vv?.height;
-  if (Number.isFinite(visualHeight) && Number(visualHeight) > 0) return Number(visualHeight);
-  const measured = Number(viewportHeight.value);
-  if (Number.isFinite(measured) && measured > 0) return measured;
-  return window.innerHeight || 0;
-});
 const roleModalMaxHeightPx = computed(() => {
-  const h = roleModalViewportHeight.value;
-  const edgePadding = h <= 540 ? 10 : h <= 760 ? 16 : 28;
-  return Math.max(300, Math.floor(h - edgePadding * 2));
+  const h = Number(viewportHeight.value) || window.innerHeight || 0;
+  return Math.max(320, Math.floor(h * 0.7));
 });
 const roleModalMaxHeight = computed(() => `${roleModalMaxHeightPx.value}px`);
-const roleModalBodyMaxHeight = computed(() => {
-  const chromeHeight = viewportWidth.value <= 680 ? 196 : 172;
-  return `${Math.max(180, roleModalMaxHeightPx.value - chromeHeight)}px`;
-});
-const compactRoleModal = computed(() => roleModalViewportHeight.value <= 760 || viewportWidth.value <= 680);
-const compactCharacterDetails = computed(() => viewportWidth.value <= 640);
+const roleModalBodyMaxHeight = computed(() => `${Math.max(200, roleModalMaxHeightPx.value - 160)}px`);
 const worldInfoModalOpen = ref(false);
 const reportDigestModalOpen = ref(false);
 const isHistoryMode = computed(() => store.viewMessageState.mode === 'history');
@@ -805,7 +763,7 @@ function openRoleSelectorFromUi() {
     eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
     return;
   }
-  toastr.warning('未检测到角色选择器脚本，请先启用「开局角色选择器」');
+  toastr.warning('未检测到角色删除脚本，请先启用「开局角色选择器」');
 }
 
 function switchCharactersToLatest() {
@@ -817,6 +775,12 @@ const RESERVED_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', 
 function isRoleLike(val: any): boolean {
   if (!val || typeof val !== 'object') return false;
   return '登场状态' in val && '健康' in val;
+}
+
+function canonicalizeRoleName(raw: any): string {
+  const key = String(raw ?? '').trim();
+  if (!key) return '';
+  return ROLE_ALIAS_MAP[key] ?? key;
 }
 
 function listExtraCoreKeys(): string[] {
@@ -883,37 +847,47 @@ const roleSelectorButtonText = computed(() => {
 
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
-
   const data = store.data as Record<string, any>;
   const roleSelector = roleSelectorStateForUi.value;
-  const isEnabled = (roleName: string) => isRoleEnabledBySelectorState(roleSelector, roleName);
 
-  // 1. 固定角色按固定顺序
-  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]) && isEnabled(key));
-  const fixedActive = fixedKeys.filter(isActive);
-  const fixedInactive = fixedKeys.filter(k => !isActive(k));
+  const buildOrdered = (useSelectorFilter: boolean): CharacterKey[] => {
+    const isEnabled = (roleName: string) => {
+      if (!useSelectorFilter) return true;
+      const normalizedName = canonicalizeRoleName(roleName);
+      return isRoleEnabledBySelectorState(roleSelector, normalizedName || roleName);
+    };
 
-  // 2. 追加角色（顶层非固定角色）
-  const extraKeys = listExtraCoreKeys().filter(key => isEnabled(String(key)));
-  const extraActive = extraKeys.filter(isActive);
-  const extraInactive = extraKeys.filter(k => !isActive(k));
+    // 1. 固定角色按固定顺序
+    const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]) && isEnabled(key));
+    const fixedActive = fixedKeys.filter(isActive);
+    const fixedInactive = fixedKeys.filter(k => !isActive(k));
 
-  // 3. 临时 NPC（按名称字典序）
-  const tempActive: CharacterKey[] = [];
-  const tempInactive: CharacterKey[] = [];
-  const tempNPCs = store.data.临时NPC;
-  if (tempNPCs && typeof tempNPCs === 'object') {
-    const npcNames = Object.keys(tempNPCs)
-      .filter(name => isEnabled(name))
-      .sort();
-    const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
-    const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
-    npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
-    npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
-  }
+    // 2. 追加角色（顶层非固定角色）
+    const extraKeys = listExtraCoreKeys().filter(key => isEnabled(String(key)));
+    const extraActive = extraKeys.filter(isActive);
+    const extraInactive = extraKeys.filter(k => !isActive(k));
 
-  // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
-  const ordered = [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
+    // 3. 临时 NPC（按名称字典序）
+    const tempActive: CharacterKey[] = [];
+    const tempInactive: CharacterKey[] = [];
+    const tempNPCs = store.data.临时NPC;
+    if (tempNPCs && typeof tempNPCs === 'object') {
+      const npcNames = Object.keys(tempNPCs)
+        .filter(name => isEnabled(name))
+        .sort();
+      const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
+      const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
+      npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
+      npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
+    }
+
+    // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
+    return [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
+  };
+
+  const orderedBySelector = buildOrdered(true);
+  const orderedRaw = buildOrdered(false);
+  const ordered = orderedBySelector.length === 0 && orderedRaw.length > 0 ? orderedRaw : orderedBySelector;
   if (!normalizedQuery.value) return ordered;
   return ordered.filter(matchCharacterByQuery);
 });
@@ -3056,48 +3030,6 @@ onBeforeUnmount(() => {
   background: #f1fa8c11;
 }
 
-.character-detail-fold {
-  margin-top: 2px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  overflow: hidden;
-}
-
-.character-detail-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 10px;
-  cursor: pointer;
-  font-size: 0.82em;
-  font-weight: 700;
-  color: rgba(220, 243, 255, 0.96);
-  list-style: none;
-  user-select: none;
-}
-
-.character-detail-summary::-webkit-details-marker {
-  display: none;
-}
-
-.character-detail-summary-hint {
-  font-size: 0.75em;
-  font-weight: 500;
-  opacity: 0.72;
-}
-
-.character-detail-body {
-  padding: 0 2px 2px;
-  display: grid;
-  gap: 10px;
-}
-
-.character-detail-fold:not([open]) .character-detail-body {
-  display: none;
-}
-
 .tab-buttons.virtual {
   display: block;
   overflow-x: auto;
@@ -3167,9 +3099,9 @@ onBeforeUnmount(() => {
 .section-view-btn {
   padding: 5px 11px;
   border-radius: 999px;
-  border: 1px solid rgba(139, 233, 253, 0.4);
-  background: rgba(139, 233, 253, 0.14);
-  color: #e8f7ff;
+  border: 1px solid var(--btn-border, rgba(139, 233, 253, 0.4));
+  background: var(--btn-bg, rgba(139, 233, 253, 0.14));
+  color: var(--btn-text, #e8f7ff);
   font-size: 0.78em;
   font-weight: 700;
   cursor: pointer;
@@ -3180,11 +3112,15 @@ onBeforeUnmount(() => {
 
 .section-view-btn:hover {
   transform: translateY(-1px);
-  background: rgba(139, 233, 253, 0.22);
+  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.22));
+  color: var(--btn-hover-text, var(--btn-text, #e8f7ff));
 }
 
 .section-view-btn:disabled {
-  opacity: 0.56;
+  border-color: var(--btn-disabled-border, rgba(130, 142, 168, 0.24));
+  background: var(--btn-disabled-bg, rgba(130, 142, 168, 0.16));
+  color: var(--btn-disabled-text, rgba(208, 216, 232, 0.64));
+  opacity: 1;
   cursor: not-allowed;
   transform: none;
 }
@@ -3192,9 +3128,9 @@ onBeforeUnmount(() => {
 .role-add-btn {
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 180, 216, 0.45);
-  background: rgba(0, 180, 216, 0.12);
-  color: #e5faff;
+  border: 1px solid var(--btn-primary-border, rgba(0, 180, 216, 0.45));
+  background: var(--btn-primary-bg, rgba(0, 180, 216, 0.12));
+  color: var(--btn-primary-text, #e5faff);
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -3204,16 +3140,18 @@ onBeforeUnmount(() => {
 
 .role-add-btn:hover {
   transform: translateY(-1px);
-  background: rgba(0, 180, 216, 0.2);
+  background: var(--btn-primary-hover-bg, rgba(0, 180, 216, 0.2));
 }
 
 .role-add-btn.secondary {
-  border-color: rgba(188, 161, 255, 0.5);
-  background: rgba(188, 161, 255, 0.12);
+  border-color: var(--btn-border, rgba(188, 161, 255, 0.5));
+  background: var(--btn-bg, rgba(188, 161, 255, 0.12));
+  color: var(--btn-text, var(--text-color));
 }
 
 .role-add-btn.secondary:hover {
-  background: rgba(188, 161, 255, 0.2);
+  background: var(--btn-hover-bg, rgba(188, 161, 255, 0.2));
+  color: var(--btn-hover-text, var(--btn-text, var(--text-color)));
 }
 
 .creation-entry {
@@ -3244,13 +3182,9 @@ onBeforeUnmount(() => {
   background: rgba(10, 12, 24, 0.72);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  overflow: auto;
-  padding-top: calc(14px + env(safe-area-inset-top));
-  padding-right: calc(12px + env(safe-area-inset-right));
-  padding-bottom: calc(14px + env(safe-area-inset-bottom));
-  padding-left: calc(12px + env(safe-area-inset-left));
+  padding: 24px 16px;
   z-index: 999;
 }
 
@@ -3267,8 +3201,8 @@ onBeforeUnmount(() => {
 }
 
 .role-modal {
-  width: min(96vw, 920px);
-  max-width: calc(100vw - 16px);
+  width: min(82vw, 920px);
+  max-height: 76vh;
   background: rgba(18, 20, 36, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
@@ -3281,7 +3215,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
   padding: 16px 20px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -3295,8 +3228,6 @@ onBeforeUnmount(() => {
 .role-modal-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3321,7 +3252,7 @@ onBeforeUnmount(() => {
 .role-generate-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 8, 20, 0.78);
+  background: var(--theme-overlay-mask, rgba(6, 8, 20, 0.78));
   backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-start;
@@ -3337,10 +3268,10 @@ onBeforeUnmount(() => {
 .role-generate-modal {
   width: min(96vw, 940px);
   max-width: calc(100vw - 16px);
-  background: rgba(16, 18, 32, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--theme-modal-bg, var(--card-surface-bg-elevated, rgba(16, 18, 32, 0.98)));
+  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
   border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--theme-elevated-shadow, 0 24px 60px rgba(0, 0, 0, 0.45));
   display: flex;
   flex-direction: column;
 }
@@ -3349,16 +3280,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
   padding: 16px 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
 }
 
 .role-generate-header-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -3421,7 +3349,7 @@ onBeforeUnmount(() => {
 
 .role-generate-title {
   font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--text-strong);
   font-weight: 700;
 }
 
@@ -3434,15 +3362,16 @@ onBeforeUnmount(() => {
 .role-chip {
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(80, 250, 123, 0.15);
-  border: 1px solid rgba(80, 250, 123, 0.35);
-  color: #c8ffd9;
+  background: var(--btn-active-bg, rgba(80, 250, 123, 0.15));
+  border: 1px solid var(--btn-active-border, rgba(80, 250, 123, 0.35));
+  color: var(--btn-active-text, var(--text-strong));
   font-size: 0.82em;
 }
 
 .role-generate-empty {
   font-size: 0.85em;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-color);
+  opacity: 0.66;
 }
 
 .role-generate-toggle {
@@ -3454,8 +3383,8 @@ onBeforeUnmount(() => {
   gap: 14px;
   padding: 12px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
+  background: var(--card-surface-bg, rgba(255, 255, 255, 0.04));
   margin-bottom: 16px;
 }
 
@@ -3473,18 +3402,19 @@ onBeforeUnmount(() => {
 
 .role-generate-meta {
   font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-color);
+  opacity: 0.72;
 }
 
 .role-generate-worldbook-list {
   max-height: 180px;
   overflow: auto;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
   padding: 8px;
   display: grid;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.03));
 }
 
 .role-generate-worldbook-item {
@@ -3492,7 +3422,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.85em;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-color);
 }
 
 .role-worldbook-label.disabled {
@@ -3506,14 +3436,14 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  background: linear-gradient(135deg, rgba(14, 116, 144, 0.2), rgba(15, 23, 42, 0.3));
-  box-shadow: 0 12px 24px rgba(14, 116, 144, 0.25);
+  border: 1px solid var(--btn-primary-border, rgba(56, 189, 248, 0.45));
+  background: var(--card-surface-bg-elevated, rgba(15, 23, 42, 0.3));
+  box-shadow: var(--card-surface-shadow, 0 12px 24px rgba(14, 116, 144, 0.25));
 }
 
 .role-generate-input-block.primary .role-generate-title {
   font-size: 1em;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--text-strong);
 }
 
 .role-generate-tabs {
@@ -3525,9 +3455,9 @@ onBeforeUnmount(() => {
 .role-tab-btn {
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.12));
+  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
+  color: var(--btn-text, rgba(255, 255, 255, 0.85));
   font-size: 0.85em;
   cursor: pointer;
   display: inline-flex;
@@ -3536,8 +3466,9 @@ onBeforeUnmount(() => {
 }
 
 .role-tab-btn.active {
-  border-color: rgba(80, 250, 123, 0.6);
-  background: rgba(80, 250, 123, 0.12);
+  border-color: var(--btn-active-border, rgba(80, 250, 123, 0.6));
+  background: var(--btn-active-bg, rgba(80, 250, 123, 0.12));
+  color: var(--btn-active-text, var(--text-strong));
 }
 
 .role-status {
@@ -3568,7 +3499,8 @@ onBeforeUnmount(() => {
 
 .role-form-hint {
   font-size: 0.88em;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-color);
+  opacity: 0.82;
   margin-bottom: 12px;
 }
 
@@ -3586,7 +3518,8 @@ onBeforeUnmount(() => {
   display: block;
   font-size: 0.85em;
   margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--text-color);
+  opacity: 0.88;
 }
 
 .role-form-input,
@@ -3594,12 +3527,12 @@ onBeforeUnmount(() => {
 .role-form-textarea {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
+  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
   padding: 8px 10px;
   font-size: 0.95em;
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 .role-form-textarea {
@@ -3607,8 +3540,8 @@ onBeforeUnmount(() => {
 }
 
 .role-form-select option {
-  background: #0f172a;
-  color: #e5e7eb;
+  background: var(--theme-modal-bg, var(--bg-light));
+  color: var(--text-color);
 }
 
 .role-form-toggle {
@@ -3632,7 +3565,7 @@ onBeforeUnmount(() => {
   width: 42px;
   height: 24px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--btn-disabled-bg, rgba(255, 255, 255, 0.2));
   position: relative;
   transition: background 0.2s ease;
 }
@@ -3650,7 +3583,7 @@ onBeforeUnmount(() => {
 }
 
 .role-switch input:checked + .role-switch-slider {
-  background: rgba(0, 180, 216, 0.65);
+  background: var(--btn-active-bg, rgba(0, 180, 216, 0.65));
 }
 
 .role-switch input:checked + .role-switch-slider::after {
@@ -3659,15 +3592,16 @@ onBeforeUnmount(() => {
 
 .role-switch-text {
   font-size: 0.9em;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-color);
+  opacity: 0.9;
 }
 
 .role-form-error {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 90, 90, 0.15);
-  color: rgba(255, 200, 200, 0.95);
+  background: var(--btn-danger-bg, rgba(255, 90, 90, 0.15));
+  color: var(--btn-danger-text, rgba(255, 200, 200, 0.95));
   font-size: 0.9em;
 }
 
@@ -3676,133 +3610,45 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
 }
 
 .role-btn {
   padding: 8px 16px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-color);
+  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
+  background: var(--btn-bg, rgba(255, 255, 255, 0.08));
+  color: var(--btn-text, var(--text-color));
   cursor: pointer;
   font-weight: 700;
 }
 
 .role-btn.primary {
-  border-color: rgba(0, 180, 216, 0.55);
-  background-color: rgba(0, 180, 216, 0.2);
-  color: #e8fbff;
+  border-color: var(--btn-primary-border, rgba(0, 180, 216, 0.55));
+  background-color: var(--btn-primary-bg, rgba(0, 180, 216, 0.2));
+  color: var(--btn-primary-text, #e8fbff);
 }
 
 .role-btn.danger {
-  border-color: rgba(255, 90, 90, 0.55);
-  background-color: rgba(255, 90, 90, 0.18);
-  color: rgba(255, 215, 215, 0.95);
+  border-color: var(--btn-danger-border, rgba(255, 90, 90, 0.55));
+  background-color: var(--btn-danger-bg, rgba(255, 90, 90, 0.18));
+  color: var(--btn-danger-text, rgba(255, 215, 215, 0.95));
 }
 .role-btn.ghost {
   background: transparent;
+  color: var(--btn-text, var(--text-color));
 }
 
 .role-btn:disabled {
-  opacity: 0.6;
+  border-color: var(--btn-disabled-border, rgba(130, 142, 168, 0.24));
+  background: var(--btn-disabled-bg, rgba(130, 142, 168, 0.16));
+  color: var(--btn-disabled-text, rgba(208, 216, 232, 0.64));
+  opacity: 1;
   cursor: not-allowed;
-}
-
-.role-modal.is-compact,
-.role-generate-modal.is-compact {
-  width: min(100%, 940px);
-  max-width: calc(100vw - 10px);
-  border-radius: 14px;
-}
-
-.role-modal.is-compact .role-modal-header,
-.role-generate-modal.is-compact .role-generate-header {
-  padding: 12px 14px 10px;
-  align-items: flex-start;
-}
-
-.role-modal.is-compact .role-modal-body,
-.role-generate-modal.is-compact .role-generate-body {
-  padding: 12px 14px;
-}
-
-.role-modal.is-compact .role-modal-footer {
-  padding: 10px 14px 14px;
+  filter: saturate(0.75);
 }
 
 @media (max-width: 640px) {
-  .role-modal-mask,
-  .role-generate-mask {
-    padding-top: calc(8px + env(safe-area-inset-top));
-    padding-right: calc(8px + env(safe-area-inset-right));
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
-    padding-left: calc(8px + env(safe-area-inset-left));
-  }
-
-  .role-modal,
-  .role-generate-modal {
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100dvh - 16px);
-    border-radius: 12px;
-  }
-
-  .role-modal-header,
-  .role-generate-header {
-    align-items: flex-start;
-    padding: 11px 12px 9px;
-  }
-
-  .role-modal-title {
-    font-size: 0.96em;
-  }
-
-  .role-modal-actions,
-  .role-generate-header-actions {
-    gap: 8px;
-  }
-
-  .role-header-btn {
-    padding: 6px 10px;
-    font-size: 0.82em;
-  }
-
-  .role-modal-body,
-  .role-generate-body {
-    padding: 10px 12px;
-  }
-
-  .role-modal-footer {
-    padding: 10px 12px 14px;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .role-modal-footer .role-btn {
-    flex: 1 1 44%;
-    min-width: 120px;
-  }
-
-  .role-form-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .role-generate-actions.toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .role-generate-toggle-group {
-    flex-wrap: wrap;
-  }
-
-  .role-generate-input,
-  .role-generate-review-input {
-    min-height: 64px;
-  }
-
   .section-header {
     align-items: flex-start;
   }
@@ -3817,13 +3663,132 @@ onBeforeUnmount(() => {
     font-size: 0.76em;
     padding: 5px 10px;
   }
+}
 
-  .character-detail-summary {
-    padding: 8px 10px;
-  }
+:global(:root[data-theme='jade_green']) .history-mode-banner,
+:global(:root[data-theme='parchment']) .history-mode-banner,
+:global(:root[data-theme='milky']) .history-mode-banner {
+  border-color: rgba(207, 160, 60, 0.42);
+  background: rgba(247, 216, 128, 0.2);
+  color: #3f3318;
+}
 
-  .character-detail-summary-hint {
-    font-size: 0.72em;
-  }
+:global(:root[data-theme='jade_green']) .history-mode-back-btn,
+:global(:root[data-theme='parchment']) .history-mode-back-btn,
+:global(:root[data-theme='milky']) .history-mode-back-btn {
+  border-color: rgba(88, 108, 136, 0.34);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text-color);
+}
+
+:global(:root[data-theme='jade_green']) .creation-entry,
+:global(:root[data-theme='parchment']) .creation-entry,
+:global(:root[data-theme='milky']) .creation-entry {
+  border-color: rgba(70, 122, 178, 0.3);
+  background: rgba(88, 145, 204, 0.1);
+}
+
+:global(:root[data-theme='jade_green']) .creation-entry-hint,
+:global(:root[data-theme='parchment']) .creation-entry-hint,
+:global(:root[data-theme='milky']) .creation-entry-hint {
+  color: rgba(46, 68, 96, 0.92);
+}
+
+:global(:root[data-theme='jade_green']) .role-modal-mask,
+:global(:root[data-theme='parchment']) .role-modal-mask,
+:global(:root[data-theme='milky']) .role-modal-mask {
+  background: rgba(24, 32, 48, 0.4);
+}
+
+:global(:root[data-theme='jade_green']) .role-generate-mask,
+:global(:root[data-theme='parchment']) .role-generate-mask,
+:global(:root[data-theme='milky']) .role-generate-mask {
+  background: rgba(24, 32, 48, 0.34);
+}
+
+:global(:root[data-theme='jade_green']) .role-modal,
+:global(:root[data-theme='jade_green']) .role-generate-modal,
+:global(:root[data-theme='parchment']) .role-modal,
+:global(:root[data-theme='parchment']) .role-generate-modal,
+:global(:root[data-theme='milky']) .role-modal,
+:global(:root[data-theme='milky']) .role-generate-modal {
+  background: var(--card-surface-bg-elevated, var(--bg-light));
+  border-color: var(--card-surface-border, rgba(88, 108, 136, 0.28));
+  box-shadow:
+    0 24px 54px rgba(20, 32, 54, 0.22),
+    var(--card-surface-shadow, 0 4px 14px rgba(20, 32, 54, 0.08));
+}
+
+:global(:root[data-theme='jade_green']) .role-modal-title,
+:global(:root[data-theme='parchment']) .role-modal-title,
+:global(:root[data-theme='milky']) .role-modal-title {
+  color: var(--text-strong);
+}
+
+:global(:root[data-theme='jade_green']) .role-icon-btn,
+:global(:root[data-theme='parchment']) .role-icon-btn,
+:global(:root[data-theme='milky']) .role-icon-btn {
+  border-color: var(--btn-border, rgba(88, 108, 136, 0.32));
+  background: var(--btn-bg, rgba(255, 255, 255, 0.55));
+  color: var(--btn-text, var(--text-color));
+}
+
+:global(:root[data-theme='jade_green']) .role-form-hint,
+:global(:root[data-theme='parchment']) .role-form-hint,
+:global(:root[data-theme='milky']) .role-form-hint,
+:global(:root[data-theme='jade_green']) .role-form-label,
+:global(:root[data-theme='parchment']) .role-form-label,
+:global(:root[data-theme='milky']) .role-form-label,
+:global(:root[data-theme='jade_green']) .role-switch-text,
+:global(:root[data-theme='parchment']) .role-switch-text,
+:global(:root[data-theme='milky']) .role-switch-text,
+:global(:root[data-theme='jade_green']) .role-generate-title,
+:global(:root[data-theme='parchment']) .role-generate-title,
+:global(:root[data-theme='milky']) .role-generate-title,
+:global(:root[data-theme='jade_green']) .role-generate-meta,
+:global(:root[data-theme='parchment']) .role-generate-meta,
+:global(:root[data-theme='milky']) .role-generate-meta,
+:global(:root[data-theme='jade_green']) .role-generate-worldbook-item,
+:global(:root[data-theme='parchment']) .role-generate-worldbook-item,
+:global(:root[data-theme='milky']) .role-generate-worldbook-item {
+  color: var(--text-color);
+}
+
+:global(:root[data-theme='jade_green']) .role-form-input,
+:global(:root[data-theme='jade_green']) .role-form-select,
+:global(:root[data-theme='jade_green']) .role-form-textarea,
+:global(:root[data-theme='parchment']) .role-form-input,
+:global(:root[data-theme='parchment']) .role-form-select,
+:global(:root[data-theme='parchment']) .role-form-textarea,
+:global(:root[data-theme='milky']) .role-form-input,
+:global(:root[data-theme='milky']) .role-form-select,
+:global(:root[data-theme='milky']) .role-form-textarea {
+  border-color: var(--card-surface-border, rgba(92, 116, 152, 0.3));
+  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.72));
+  color: var(--text-color);
+  color-scheme: light;
+}
+
+:global(:root[data-theme='jade_green']) .role-form-select option,
+:global(:root[data-theme='parchment']) .role-form-select option,
+:global(:root[data-theme='milky']) .role-form-select option {
+  background: var(--bg-light);
+  color: var(--text-color);
+}
+
+:global(:root[data-theme='jade_green']) .role-switch-slider,
+:global(:root[data-theme='parchment']) .role-switch-slider,
+:global(:root[data-theme='milky']) .role-switch-slider {
+  background: rgba(88, 108, 136, 0.2);
+}
+
+:global(:root[data-theme='jade_green']) .role-generate-settings,
+:global(:root[data-theme='parchment']) .role-generate-settings,
+:global(:root[data-theme='milky']) .role-generate-settings,
+:global(:root[data-theme='jade_green']) .role-generate-worldbook-list,
+:global(:root[data-theme='parchment']) .role-generate-worldbook-list,
+:global(:root[data-theme='milky']) .role-generate-worldbook-list {
+  border-color: var(--card-surface-border, rgba(88, 108, 136, 0.22));
+  background: var(--card-surface-bg, rgba(255, 255, 255, 0.5));
 }
 </style>

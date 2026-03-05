@@ -3,87 +3,148 @@
     <h2 class="section-title story-header-title">📖 正文剧情 📖</h2>
 
     <div class="story-toolbar">
-      <div class="story-mini-tabs" role="tablist" aria-label="正文视图切换">
-        <button
-          v-for="tab in storyTabs"
-          :key="tab.key"
-          type="button"
-          class="story-mini-tab"
-          :class="{ active: activeStoryTab === tab.key }"
-          @click="activeStoryTab = tab.key"
-        >
-          <span>{{ tab.label }}</span>
-          <span class="story-mini-tab-count">{{ tab.count }}</span>
-        </button>
-      </div>
-      <button
-        v-if="isCompactToolbar"
-        type="button"
-        class="story-toolbar-toggle"
-        :aria-label="storyToolbarToggleLabel"
-        :aria-expanded="storyToolbarAdvancedVisible"
-        @click="toggleStoryToolbarAdvanced"
-      >
-        {{ storyToolbarToggleLabel }}
-      </button>
-      <div class="story-toolbar-actions" :class="{ collapsed: !storyToolbarAdvancedVisible }">
-        <div class="story-zoom-controls">
-          <button type="button" class="zoom-btn" @click="zoomOut">−</button>
-          <span class="zoom-value">{{ zoomPercent }}%</span>
-          <button type="button" class="zoom-btn" @click="zoomIn">+</button>
-        </div>
-        <div class="story-height-controls" title="限制正文可视高度，防止内容无限撑高">
-          <label class="story-height-label" for="story-height-slider">正文高</label>
-          <input
-            id="story-height-slider"
-            v-model.number="storyPaneHeightLimit"
-            class="story-height-slider"
-            type="range"
-            :min="STORY_PANE_HEIGHT_MIN"
-            :max="STORY_PANE_HEIGHT_MAX"
-            step="20"
-            @input="onStoryPaneHeightInput"
-          />
-          <span class="story-height-value">{{ storyPaneHeightLimit }}px</span>
-          <button type="button" class="story-height-reset" @click="resetStoryPaneHeight">重置</button>
+      <div class="story-toolbar-head">
+        <div class="story-mini-tabs" role="tablist" aria-label="正文视图切换">
+          <button
+            v-for="tab in storyTabs"
+            :key="tab.key"
+            type="button"
+            class="story-mini-tab"
+            :class="{ active: activeStoryTab === tab.key }"
+            @click="activeStoryTab = tab.key"
+          >
+            <span>{{ tab.label }}</span>
+            <span class="story-mini-tab-count">{{ tab.count }}</span>
+          </button>
         </div>
         <button
           type="button"
-          class="story-image-menu-btn"
-          title="触发宿主正文双击，呼出生图菜单"
-          aria-label="生图菜单"
-          @click="onOpenHostImageMenu"
+          class="story-toolbar-drawer-handle"
+          aria-label="展开或收起控件面板"
+          :aria-expanded="isToolbarDrawerOpen"
+          @click="toggleToolbarDrawer"
         >
-          生图菜单
-        </button>
-        <button
-          type="button"
-          class="story-image-menu-btn"
-          title="调用 st-chatu8 LLM 提示词接口"
-          aria-label="获取LLM提示词"
-          @click="onRequestLlmPrompt"
-        >
-          LLM提示词
+          <span class="story-toolbar-drawer-label">{{ isToolbarDrawerOpen ? '收起控件' : '展开控件' }}</span>
+          <span class="story-toolbar-drawer-arrow" :class="{ open: isToolbarDrawerOpen }" aria-hidden="true">▾</span>
         </button>
       </div>
-    </div>
 
-    <div v-if="activeStoryTab === 'story'" class="story-filter-panel story-filter-panel-pinned">
-      <button
-        v-for="item in segmentFilterItems"
-        :key="item.key"
-        type="button"
-        class="story-filter-chip"
-        :class="{ active: enabledSegmentKinds.includes(item.key) }"
-        @click="toggleSegmentKind(item.key)"
-      >
-        <span>{{ item.label }}</span>
-        <span class="chip-count">{{ item.count }}</span>
-      </button>
-      <div class="story-filter-actions">
-        <button type="button" class="story-filter-action-btn" @click="enableImageOnlySegmentKinds">仅图片</button>
-        <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优选</button>
-      </div>
+      <transition name="story-toolbar-accordion">
+        <div v-if="isToolbarDrawerOpen" class="story-toolbar-accordion story-toolbar-drawer">
+          <div class="story-toolbar-drawer-head">
+            <button
+              type="button"
+              class="story-toolbar-toggle"
+              :class="{ active: isToolsPanelOpen }"
+              aria-label="切换到工具面板"
+              :aria-expanded="isToolsPanelOpen"
+              @click="setToolbarPanel('tools')"
+            >
+              工具
+            </button>
+            <button
+              v-if="activeStoryTab === 'story'"
+              type="button"
+              class="story-toolbar-toggle"
+              :class="{ active: isFilterPanelOpen }"
+              aria-label="切换到筛选面板"
+              :aria-expanded="isFilterPanelOpen"
+              @click="setToolbarPanel('filter')"
+            >
+              筛选
+            </button>
+          </div>
+
+          <div v-if="isToolsPanelOpen" class="story-toolbar-tools">
+            <div class="story-toolbar-actions">
+              <div class="story-zoom-controls">
+                <button type="button" class="zoom-btn" @click="zoomOut">−</button>
+                <span class="zoom-value">{{ zoomPercent }}%</span>
+                <button type="button" class="zoom-btn" @click="zoomIn">+</button>
+              </div>
+              <div class="story-typography-controls" title="设置正文字号档位与行距档位">
+                <label class="story-typography-label">
+                  <span>字号</span>
+                  <select
+                    v-model="storyFontPreset"
+                    class="story-typography-select"
+                    @change="onStoryTypographyPresetChange"
+                  >
+                    <option v-for="item in storyFontPresetItems" :key="item.key" :value="item.key">
+                      {{ item.label }}
+                    </option>
+                  </select>
+                </label>
+                <label class="story-typography-label">
+                  <span>行距</span>
+                  <select
+                    v-model="storyLineHeightPreset"
+                    class="story-typography-select"
+                    @change="onStoryTypographyPresetChange"
+                  >
+                    <option v-for="item in storyLineHeightPresetItems" :key="item.key" :value="item.key">
+                      {{ item.label }}
+                    </option>
+                  </select>
+                </label>
+              </div>
+              <div class="story-height-controls" title="限制正文可视高度，防止内容无限撑高">
+                <label class="story-height-label" for="story-height-slider">正文高</label>
+                <input
+                  id="story-height-slider"
+                  v-model.number="storyPaneHeightLimit"
+                  class="story-height-slider"
+                  type="range"
+                  :min="STORY_PANE_HEIGHT_MIN"
+                  :max="STORY_PANE_HEIGHT_MAX"
+                  step="20"
+                  @input="onStoryPaneHeightInput"
+                />
+                <span class="story-height-value">{{ storyPaneHeightLimit }}px</span>
+                <button type="button" class="story-height-reset" @click="resetStoryPaneHeight">重置</button>
+              </div>
+              <button
+                type="button"
+                class="story-image-menu-btn"
+                title="触发宿主正文双击，呼出生图菜单"
+                aria-label="生图菜单"
+                @click="onOpenHostImageMenu"
+              >
+                生图菜单
+              </button>
+              <button
+                type="button"
+                class="story-image-menu-btn"
+                title="调用 st-chatu8 LLM 提示词接口"
+                aria-label="获取LLM提示词"
+                @click="onRequestLlmPrompt"
+              >
+                LLM提示词
+              </button>
+            </div>
+          </div>
+
+          <div v-else-if="activeStoryTab === 'story'" class="story-toolbar-filter">
+            <div class="story-filter-panel">
+              <button
+                v-for="item in segmentFilterItems"
+                :key="item.key"
+                type="button"
+                class="story-filter-chip"
+                :class="{ active: enabledSegmentKinds.includes(item.key) }"
+                @click="toggleSegmentKind(item.key)"
+              >
+                <span>{{ item.label }}</span>
+                <span class="chip-count">{{ item.count }}</span>
+              </button>
+              <div class="story-filter-actions">
+                <button type="button" class="story-filter-action-btn" @click="enableImageOnlySegmentKinds">仅图片</button>
+                <button type="button" class="story-filter-action-btn" @click="enableCoreSegmentKinds">正文优选</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
 
     <div v-if="activeStoryTab === 'story'" class="story-pane content-text" :style="storyContentStyle">
@@ -185,7 +246,6 @@
 </template>
 
 <script setup lang="ts">
-import { useWindowSize } from '@vueuse/core';
 import TextHighlight from './TextHighlight.vue';
 import {
   SAMELAYER_EVENTS,
@@ -209,6 +269,9 @@ type Segment = {
 };
 type SegmentKind = 'narrative' | 'dialog' | 'system' | 'table' | 'image' | 'image_prompt';
 type StoryTab = 'story' | 'modules';
+type StoryToolbarPanel = 'none' | 'tools' | 'filter';
+type StoryFontPreset = 'micro' | 'tiny' | 'compact' | 'standard' | 'comfortable' | 'large';
+type StoryLineHeightPreset = 'ultra_compact' | 'tight' | 'compact' | 'standard' | 'comfortable' | 'reading';
 type MetaBlock = {
   key: string;
   tag: string;
@@ -235,11 +298,28 @@ const storyTabs = computed<ReadonlyArray<{ key: StoryTab; label: string; count: 
 
 const activeStoryTab = useLocalStorage<StoryTab>('eden:story_active_tab', 'story');
 const storyZoom = useLocalStorage<number>('eden:story_zoom', 1);
-const { width: viewportWidth } = useWindowSize({ includeScrollbar: true });
-const isCompactToolbar = computed(() => Number(viewportWidth.value || 0) <= 520);
-const storyToolbarAdvancedOpen = useLocalStorage<boolean>('eden:story_toolbar_advanced', false);
-const storyToolbarAdvancedVisible = computed(() => !isCompactToolbar.value || storyToolbarAdvancedOpen.value);
-const storyToolbarToggleLabel = computed(() => (storyToolbarAdvancedVisible.value ? '收起工具' : '展开工具'));
+const storyFontPreset = useLocalStorage<StoryFontPreset>('eden:story_font_preset', 'standard');
+const storyLineHeightPreset = useLocalStorage<StoryLineHeightPreset>('eden:story_lineheight_preset', 'standard');
+const storyToolbarPanel = ref<StoryToolbarPanel>('none');
+const isToolbarDrawerOpen = computed(() => storyToolbarPanel.value !== 'none');
+const isToolsPanelOpen = computed(() => storyToolbarPanel.value === 'tools');
+const isFilterPanelOpen = computed(() => storyToolbarPanel.value === 'filter');
+const storyFontPresetItems: ReadonlyArray<{ key: StoryFontPreset; label: string; scale: number }> = [
+  { key: 'micro', label: '极小 80%', scale: 0.8 },
+  { key: 'tiny', label: '更小 86%', scale: 0.86 },
+  { key: 'compact', label: '紧凑 92%', scale: 0.92 },
+  { key: 'standard', label: '标准 100%', scale: 1.0 },
+  { key: 'comfortable', label: '舒适 108%', scale: 1.08 },
+  { key: 'large', label: '大字 116%', scale: 1.16 },
+];
+const storyLineHeightPresetItems: ReadonlyArray<{ key: StoryLineHeightPreset; label: string; value: number }> = [
+  { key: 'ultra_compact', label: '极紧 1.40', value: 1.4 },
+  { key: 'tight', label: '更紧 1.48', value: 1.48 },
+  { key: 'compact', label: '紧凑 1.55', value: 1.55 },
+  { key: 'standard', label: '标准 1.70', value: 1.7 },
+  { key: 'comfortable', label: '舒适 1.85', value: 1.85 },
+  { key: 'reading', label: '阅读 2.00', value: 2.0 },
+];
 const STORY_PANE_HEIGHT_MIN = 260;
 const STORY_PANE_HEIGHT_DEFAULT = 680;
 const STORY_PANE_HEIGHT_MAX = 1400;
@@ -263,14 +343,27 @@ const storyPaneHeightLimit = computed<number>({
     storyPaneHeight.value = _.clamp(Math.trunc(value), STORY_PANE_HEIGHT_MIN, STORY_PANE_HEIGHT_MAX);
   },
 });
-const zoomPercent = computed(() => Math.round(storyZoom.value * 100));
+const storyFontScale = computed<number>(() => {
+  const item = storyFontPresetItems.find(v => v.key === storyFontPreset.value);
+  return item?.scale ?? 1.0;
+});
+const storyLineHeightValue = computed<number>(() => {
+  const item = storyLineHeightPresetItems.find(v => v.key === storyLineHeightPreset.value);
+  return item?.value ?? 1.7;
+});
+const zoomPercent = computed(() => Math.round(storyZoom.value * storyFontScale.value * 100));
 const storyPaneStyle = computed<Record<string, string>>(() => ({
   '--story-pane-max-height': `${storyPaneHeightLimit.value}px`,
 }));
 const storyContentStyle = computed<Record<string, string>>(() => ({
   ...storyPaneStyle.value,
-  '--story-font-size': `${storyZoom.value.toFixed(2)}em`,
+  '--story-font-size': `${(storyZoom.value * storyFontScale.value).toFixed(2)}em`,
+  '--story-line-height': `${storyLineHeightValue.value.toFixed(2)}`,
 }));
+
+function onStoryTypographyPresetChange() {
+  scheduleResize();
+}
 
 function onStoryPaneHeightInput() {
   scheduleResize();
@@ -281,18 +374,34 @@ function resetStoryPaneHeight() {
   scheduleResize();
 }
 
-function toggleStoryToolbarAdvanced() {
-  if (!isCompactToolbar.value) return;
-  storyToolbarAdvancedOpen.value = !storyToolbarAdvancedOpen.value;
+function setToolbarPanel(panel: Exclude<StoryToolbarPanel, 'none'>) {
+  if (panel === 'filter' && activeStoryTab.value !== 'story') return;
+  storyToolbarPanel.value = storyToolbarPanel.value === panel ? 'none' : panel;
+  scheduleResize();
+}
+
+function toggleToolbarDrawer() {
+  if (isToolbarDrawerOpen.value) {
+    storyToolbarPanel.value = 'none';
+    scheduleResize();
+    return;
+  }
+  if (activeStoryTab.value === 'story' && storyToolbarPanel.value === 'filter') {
+    storyToolbarPanel.value = 'filter';
+  } else {
+    storyToolbarPanel.value = 'tools';
+  }
   scheduleResize();
 }
 
 function zoomIn() {
   storyZoom.value = _.clamp(Number((storyZoom.value + 0.08).toFixed(2)), 0.84, 1.32);
+  scheduleResize();
 }
 
 function zoomOut() {
   storyZoom.value = _.clamp(Number((storyZoom.value - 0.08).toFixed(2)), 0.84, 1.32);
+  scheduleResize();
 }
 
 type ResolvedDisplayedImage = {
@@ -2917,6 +3026,7 @@ watchEffect(onCleanup => {
   let canceled = false;
   const timers: number[] = [];
   const observers: MutationObserver[] = [];
+  let runScheduled = false;
 
   const run = () => {
     if (canceled) return;
@@ -2934,6 +3044,14 @@ watchEffect(onCleanup => {
     const prevStandaloneJson = JSON.stringify(standaloneHostImages.value ?? []);
     const nextStandaloneJson = JSON.stringify(nextStandalone);
     if (prevStandaloneJson !== nextStandaloneJson) standaloneHostImages.value = nextStandalone;
+  };
+  const queueRun = () => {
+    if (canceled || runScheduled) return;
+    runScheduled = true;
+    requestAnimationFrame(() => {
+      runScheduled = false;
+      run();
+    });
   };
 
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
@@ -2969,7 +3087,7 @@ watchEffect(onCleanup => {
     messageId != null && Number.isFinite(messageId) ? resolveHostScanRoots(messageId) : resolveHostChatRoots();
   for (const root of observeRoots) {
     const observer = new MutationObserver(() => {
-      run();
+      queueRun();
     });
     observer.observe(root, {
       childList: true,
@@ -2996,13 +3114,21 @@ watch(
 );
 
 watch(
-  isCompactToolbar,
-  compact => {
-    if (!compact && storyToolbarAdvancedOpen.value !== true) {
-      storyToolbarAdvancedOpen.value = true;
+  () => [storyFontPreset.value, storyLineHeightPreset.value] as const,
+  () => {
+    scheduleResize();
+  },
+);
+
+watch(
+  () => activeStoryTab.value,
+  tab => {
+    if (tab !== 'story' && storyToolbarPanel.value === 'filter') {
+      storyToolbarPanel.value = 'none';
+      scheduleResize();
     }
   },
-  { immediate: true },
+  { immediate: false },
 );
 
 onMounted(() => {
@@ -3014,7 +3140,7 @@ onMounted(() => {
     if (chatu8BridgeReady !== true) {
       void probeChatu8Bridge(280, true);
     }
-  }, 1500);
+  }, 2500);
 });
 
 onBeforeUnmount(() => {
@@ -3751,7 +3877,7 @@ function formatTableCell(cell: string): string {
 
 .markdown-table td {
   color: var(--text-color);
-  line-height: 1.5;
+  line-height: var(--story-line-height, 1.7);
 }
 
 .markdown-table td :deep(strong) {
@@ -3772,19 +3898,19 @@ function formatTableCell(cell: string): string {
 }
 
 .markdown-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--theme-surface-softer, rgba(255, 255, 255, 0.03));
 }
 
 /* 系统消息样式（伊甸：消息、>>> 消息 <<<） */
 .system-message {
-  background-color: rgba(0, 180, 216, 0.1);
+  background-color: rgba(0, 180, 216, 0.12);
   border: 1px solid rgba(0, 180, 216, 0.4);
   border-radius: 8px;
   padding: 9px 12px;
   margin: 8px 0;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 0.85em;
-  line-height: 1.5;
+  line-height: var(--story-line-height, 1.7);
   color: var(--accent-cyan, #00b4d8);
   overflow-x: auto;
 }
@@ -3814,7 +3940,7 @@ function formatTableCell(cell: string): string {
 
 .image-prompt {
   display: block;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--theme-surface-soft, rgba(255, 255, 255, 0.05));
   border: 1px dashed rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   padding: 6px 9px;
@@ -3838,7 +3964,7 @@ function formatTableCell(cell: string): string {
   height: 30px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.08));
   color: var(--text-color);
   display: inline-flex;
   align-items: center;
@@ -3902,19 +4028,29 @@ function formatTableCell(cell: string): string {
 }
 
 .story-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 7px;
-  margin-bottom: 6px;
   position: sticky;
   top: 0;
   z-index: 4;
+  margin-bottom: 6px;
   padding: 4px 5px;
   border-radius: 9px;
-  background: linear-gradient(180deg, rgba(26, 27, 38, 0.96), rgba(26, 27, 38, 0.8));
   border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    180deg,
+    var(--theme-toolbar-grad-start, rgba(26, 27, 38, 0.96)),
+    var(--theme-toolbar-grad-end, rgba(26, 27, 38, 0.8))
+  );
   backdrop-filter: blur(2px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.story-toolbar-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .story-mini-tabs {
@@ -3930,11 +4066,11 @@ function formatTableCell(cell: string): string {
   scrollbar-width: none;
 }
 
-.story-toolbar-toggle {
-  display: none;
+.story-toolbar-drawer-handle {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  min-height: 34px;
   padding: 0 10px;
   border-radius: 8px;
   border: 1px solid rgba(139, 233, 253, 0.42);
@@ -3944,6 +4080,77 @@ function formatTableCell(cell: string): string {
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.story-toolbar-drawer-handle:hover {
+  border-color: rgba(139, 233, 253, 0.6);
+  background: rgba(139, 233, 253, 0.24);
+}
+
+.story-toolbar-drawer-label {
+  font-size: 0.72em;
+  line-height: 1;
+}
+
+.story-toolbar-drawer-arrow {
+  margin-left: 5px;
+  font-size: 0.9em;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+
+.story-toolbar-drawer-arrow.open {
+  transform: rotate(180deg);
+}
+
+.story-toolbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(139, 233, 253, 0.42);
+  background: rgba(139, 233, 253, 0.18);
+  color: var(--text-color);
+  font-size: 0.72em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.story-toolbar-toggle.active {
+  border-color: rgba(139, 233, 253, 0.58);
+  background: rgba(139, 233, 253, 0.3);
+  color: var(--text-strong);
+}
+
+.story-toolbar-accordion {
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--theme-input-bg, rgba(8, 12, 26, 0.52));
+  padding: 6px;
+  overflow: hidden;
+}
+
+.story-toolbar-accordion-enter-active,
+.story-toolbar-accordion-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.story-toolbar-accordion-enter-from,
+.story-toolbar-accordion-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.story-toolbar-drawer-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .story-mini-tabs::-webkit-scrollbar {
@@ -3956,12 +4163,13 @@ function formatTableCell(cell: string): string {
   gap: 5px;
   white-space: nowrap;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
   border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 0.75em;
+  padding: 4px 9px;
+  font-size: 0.78em;
   line-height: 1.2;
+  min-height: 34px;
   cursor: pointer;
 }
 
@@ -3973,7 +4181,7 @@ function formatTableCell(cell: string): string {
   padding: 0 4px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.26);
+  background: var(--theme-input-bg, rgba(0, 0, 0, 0.26));
   font-size: 0.78em;
   opacity: 0.9;
 }
@@ -3997,16 +4205,41 @@ function formatTableCell(cell: string): string {
 }
 
 .story-toolbar-actions {
-  display: inline-flex;
+  display: grid;
   align-items: center;
-  flex-wrap: wrap;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   gap: 5px;
-  flex: 0 0 auto;
-  margin-left: auto;
 }
 
-.story-toolbar-actions.collapsed {
-  display: none;
+.story-typography-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 248px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.05));
+}
+
+.story-typography-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68em;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+.story-typography-select {
+  min-height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--theme-input-bg, rgba(0, 0, 0, 0.24));
+  color: var(--text-color);
+  font: inherit;
+  font-size: 1em;
+  padding: 0 6px;
 }
 
 .story-height-controls {
@@ -4017,7 +4250,7 @@ function formatTableCell(cell: string): string {
   padding: 2px 6px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.05));
 }
 
 .story-height-label {
@@ -4042,11 +4275,12 @@ function formatTableCell(cell: string): string {
   flex: 0 0 auto;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.08));
   color: var(--text-color);
   font-size: 0.66em;
   line-height: 1;
-  padding: 4px 6px;
+  min-height: 32px;
+  padding: 5px 7px;
   cursor: pointer;
 }
 
@@ -4056,12 +4290,12 @@ function formatTableCell(cell: string): string {
 }
 
 .zoom-btn {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
   font-size: 0.95em;
   cursor: pointer;
@@ -4075,12 +4309,12 @@ function formatTableCell(cell: string): string {
 }
 
 .story-image-menu-btn {
-  min-height: 28px;
+  min-height: 34px;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
-  font-size: 0.72em;
+  font-size: 0.76em;
   line-height: 1;
   padding: 0 8px;
   cursor: pointer;
@@ -4098,7 +4332,7 @@ function formatTableCell(cell: string): string {
 
 .story-pane {
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-surface-softer, rgba(255, 255, 255, 0.03));
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 7px 8px;
   min-height: 220px;
@@ -4111,6 +4345,7 @@ function formatTableCell(cell: string): string {
 
 .content-text.story-pane {
   font-size: var(--story-font-size, 1em);
+  line-height: var(--story-line-height, 1.7);
 }
 
 .story-filter-panel {
@@ -4118,15 +4353,6 @@ function formatTableCell(cell: string): string {
   flex-wrap: wrap;
   align-items: center;
   gap: 5px;
-  margin-bottom: 8px;
-}
-
-.story-filter-panel-pinned {
-  margin-bottom: 6px;
-  padding: 6px 8px;
-  border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
 }
 
 .story-filter-chip {
@@ -4134,7 +4360,7 @@ function formatTableCell(cell: string): string {
   align-items: center;
   gap: 5px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
   border-radius: 999px;
   padding: 3px 8px;
@@ -4160,7 +4386,7 @@ function formatTableCell(cell: string): string {
 
 .story-filter-action-btn {
   border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
   color: var(--text-color);
   border-radius: 7px;
   padding: 3px 7px;
@@ -4182,7 +4408,7 @@ function formatTableCell(cell: string): string {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 9px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--theme-surface-softer, rgba(255, 255, 255, 0.04));
 }
 
 .meta-block-title {
@@ -4226,13 +4452,15 @@ function formatTableCell(cell: string): string {
 
 @media (max-width: 520px) {
   .story-toolbar {
-    flex-wrap: wrap;
-    align-items: stretch;
     gap: 6px;
   }
 
+  .story-toolbar-head {
+    align-items: stretch;
+  }
+
   .story-mini-tabs {
-    flex: 1 1 100%;
+    flex: 1 1 auto;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -4248,35 +4476,42 @@ function formatTableCell(cell: string): string {
     flex: 0 0 auto;
   }
 
+  .story-toolbar-drawer-handle,
   .story-toolbar-toggle {
-    display: inline-flex;
-    margin-left: auto;
-    min-height: 32px;
-    padding: 0 12px;
+    min-height: 36px;
+    min-width: 86px;
+    padding: 0 10px;
+  }
+
+  .story-toolbar-drawer-label {
+    font-size: 0.7em;
+  }
+
+  .story-toolbar-drawer-head {
+    margin-bottom: 5px;
+  }
+
+  .story-toolbar-accordion {
+    padding: 5px;
   }
 
   .story-toolbar-actions {
-    flex: 1 1 100%;
-    min-width: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     align-items: center;
   }
 
-  .story-toolbar-actions.collapsed {
-    display: none;
-  }
-
   .story-zoom-controls {
-    min-width: 0;
-    justify-content: flex-start;
+    min-width: 100%;
+    justify-content: space-between;
+    grid-column: 1 / -1;
   }
 
   .zoom-btn {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
   }
 
   .story-height-controls {
@@ -4284,6 +4519,25 @@ function formatTableCell(cell: string): string {
     width: 100%;
     min-width: 0;
     padding: 4px 6px;
+  }
+
+  .story-typography-controls {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 5px;
+    padding: 4px 6px;
+  }
+
+  .story-typography-label {
+    font-size: 0.7em;
+  }
+
+  .story-typography-select {
+    min-height: 32px;
+    min-width: 98px;
   }
 
   .story-height-slider {
@@ -4294,9 +4548,9 @@ function formatTableCell(cell: string): string {
   .story-image-menu-btn {
     width: 100%;
     min-width: 0;
-    min-height: 32px;
+    min-height: 36px;
     padding: 0 7px;
-    font-size: 0.7em;
+    font-size: 0.74em;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -4306,34 +4560,53 @@ function formatTableCell(cell: string): string {
   }
 
   .story-mini-tab {
-    padding: 3px 7px;
-    font-size: 0.72em;
-    min-height: 30px;
+    padding: 4px 8px;
+    font-size: 0.76em;
+    min-height: 34px;
   }
 
   .story-filter-chip {
-    font-size: 0.7em;
-    padding: 3px 7px;
-    min-height: 30px;
+    font-size: 0.74em;
+    padding: 4px 8px;
+    min-height: 34px;
   }
 
   .story-filter-action-btn,
   .story-height-reset {
-    min-height: 30px;
+    min-height: 34px;
   }
 
   .story-filter-actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: space-between;
   }
 }
 
 @media (max-width: 360px) {
+  .story-toolbar-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .story-toolbar-drawer-handle {
+    align-self: flex-end;
+  }
+
   .story-toolbar-actions {
     grid-template-columns: 1fr;
   }
 
   .story-zoom-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .story-typography-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .story-typography-label {
     width: 100%;
     justify-content: space-between;
   }

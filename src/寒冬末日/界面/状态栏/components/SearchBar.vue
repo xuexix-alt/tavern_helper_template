@@ -125,9 +125,9 @@ onBeforeUnmount(() => {
 
 .eden-searchbar-label {
   flex: 0 0 auto;
-  font-size: 0.66em;
+  font-size: 0.74em;
   line-height: 1;
-  padding: 3px 7px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: rgba(139, 233, 253, 0.2);
   border: 1px solid rgba(139, 233, 253, 0.45);
@@ -140,15 +140,16 @@ onBeforeUnmount(() => {
   width: 100%;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--theme-input-bg, rgba(0, 0, 0, 0.22));
   color: var(--text-color);
-  padding: 6px 8px;
+  min-height: 40px;
+  padding: 8px 10px;
   font: inherit;
-  font-size: 0.88em;
+  font-size: 0.92em;
 }
 
 .eden-searchbar-input::placeholder {
-  color: rgba(248, 248, 242, 0.55);
+  color: var(--theme-placeholder-color, rgba(248, 248, 242, 0.55));
 }
 
 .eden-searchbar-clear {
@@ -158,9 +159,11 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-color);
   font: inherit;
-  font-size: 0.76em;
+  font-size: 0.82em;
   line-height: 1;
-  padding: 6px 8px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 8px 10px;
   cursor: pointer;
 }
 
@@ -175,9 +178,11 @@ onBeforeUnmount(() => {
   background: rgba(139, 233, 253, 0.25);
   color: var(--text-color);
   font: inherit;
-  font-size: 0.76em;
+  font-size: 0.82em;
   line-height: 1;
-  padding: 6px 9px;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 8px 10px;
   cursor: pointer;
 }
 
@@ -188,9 +193,11 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-color);
   font: inherit;
-  font-size: 0.76em;
+  font-size: 0.82em;
   line-height: 1;
-  padding: 6px 9px;
+  min-width: 44px;
+  min-height: 40px;
+  padding: 8px 10px;
   cursor: pointer;
 }
 
@@ -213,23 +220,27 @@ onBeforeUnmount(() => {
   }
 
   .eden-searchbar-input {
-    font-size: 0.84em;
-    padding: 6px 7px;
+    min-height: 40px;
+    font-size: 0.88em;
+    padding: 8px 8px;
   }
 
   .eden-searchbar-clear {
-    min-width: 30px;
-    padding: 5px 6px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px 8px;
   }
 
   .eden-searchbar-send {
-    min-width: 34px;
-    padding: 5px 7px;
+    min-width: 44px;
+    min-height: 40px;
+    padding: 8px 9px;
   }
 
   .eden-searchbar-option {
-    min-width: 34px;
-    padding: 5px 7px;
+    min-width: 44px;
+    min-height: 40px;
+    padding: 8px 9px;
   }
 }
 </style>

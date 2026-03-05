@@ -1371,7 +1371,7 @@ function formatRoomResidents(
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: var(--shelter-scope-preview-bg, rgba(0, 0, 0, 0.25));
   color: var(--text-color);
   font-size: 0.9em;
   line-height: 1.4;
@@ -1432,7 +1432,7 @@ function formatRoomResidents(
 .scope-modal {
   width: min(560px, calc(100% - 8px));
   max-height: 100%;
-  background: rgba(25, 28, 35, 0.98);
+  background: var(--shelter-scope-modal-bg, rgba(25, 28, 35, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
@@ -1639,7 +1639,7 @@ function formatRoomResidents(
   padding: 10px 12px 12px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 28, 35, 0.98);
+  background: var(--shelter-scope-modal-bg, rgba(25, 28, 35, 0.98));
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -1720,7 +1720,7 @@ function formatRoomResidents(
   flex-direction: column;
   justify-content: center;
   border: 1px solid rgba(150, 169, 214, 0.3);
-  background: linear-gradient(165deg, rgba(16, 22, 38, 0.94), rgba(14, 19, 32, 0.78));
+  background: var(--shelter-metric-card-bg, linear-gradient(165deg, rgba(16, 22, 38, 0.94), rgba(14, 19, 32, 0.78)));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
@@ -1775,7 +1775,7 @@ function formatRoomResidents(
   font-size: 1.34em;
   line-height: 1;
   font-weight: 800;
-  color: #e8f2ff;
+  color: var(--shelter-metric-number-color, #e8f2ff);
   text-shadow: 0 0 14px rgba(155, 211, 255, 0.2);
 }
 
@@ -1835,7 +1835,7 @@ function formatRoomResidents(
   padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid rgba(120, 228, 166, 0.45);
-  background: linear-gradient(180deg, rgba(52, 162, 104, 0.2), rgba(31, 107, 71, 0.18));
+  background: var(--shelter-scope-btn-bg, linear-gradient(180deg, rgba(52, 162, 104, 0.2), rgba(31, 107, 71, 0.18)));
   box-shadow: inset 0 0 0 1px rgba(182, 255, 217, 0.08);
 }
 
@@ -1846,7 +1846,7 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .map-toggle-btn--scope .toggle-icon {
-  color: #bfffd9;
+  color: var(--shelter-scope-btn-icon-color, #bfffd9);
   font-weight: 900;
 }
 
@@ -1855,8 +1855,8 @@ function formatRoomResidents(
   margin-bottom: 8px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(132, 90, 223, 0.14);
-  color: #d9c8ff;
+  background: var(--shelter-scope-hint-bg, rgba(132, 90, 223, 0.14));
+  color: var(--shelter-scope-hint-color, #d9c8ff);
   font-size: 0.76em;
 }
 
@@ -1881,13 +1881,13 @@ function formatRoomResidents(
   margin-bottom: 0;
   border-radius: 9px;
   border: 1px solid rgba(120, 134, 164, 0.22);
-  background: linear-gradient(180deg, rgba(8, 12, 22, 0.64), rgba(8, 12, 22, 0.32));
+  background: var(--shelter-map-zone-bg, linear-gradient(180deg, rgba(8, 12, 22, 0.64), rgba(8, 12, 22, 0.32)));
 }
 
 .shelter-redesign .map-zone--compact {
   padding: 6px;
   border-color: rgba(136, 152, 186, 0.32);
-  background: linear-gradient(165deg, rgba(9, 14, 26, 0.8), rgba(9, 13, 24, 0.46));
+  background: var(--shelter-map-zone-compact-bg, linear-gradient(165deg, rgba(9, 14, 26, 0.8), rgba(9, 13, 24, 0.46)));
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -2189,7 +2189,7 @@ function formatRoomResidents(
 .shelter-redesign .shelter-ability-block .collapse-toggle-btn {
   border-radius: 12px;
   border: 1px solid rgba(241, 216, 121, 0.36);
-  background: linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52));
+  background: var(--shelter-ability-toggle-bg, linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52)));
   box-shadow: inset 0 0 0 1px rgba(255, 244, 201, 0.08);
 }
 
@@ -2255,6 +2255,100 @@ function formatRoomResidents(
 
 .shelter-redesign .skill-main--compact .new-tag--small {
   margin-left: 4px;
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section,
+:global(:root[data-theme='parchment']) #shelter-section,
+:global(:root[data-theme='milky']) #shelter-section {
+  --shelter-metric-card-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.8), rgba(237, 244, 252, 0.72));
+  --shelter-metric-number-color: #1f4468;
+  --shelter-scope-btn-bg: linear-gradient(180deg, rgba(78, 158, 112, 0.22), rgba(56, 132, 90, 0.18));
+  --shelter-scope-btn-icon-color: #246247;
+  --shelter-scope-hint-bg: rgba(124, 98, 186, 0.18);
+  --shelter-scope-hint-color: #4b3877;
+  --shelter-map-zone-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(236, 242, 248, 0.68));
+  --shelter-map-zone-compact-bg: linear-gradient(165deg, rgba(250, 252, 255, 0.82), rgba(231, 238, 247, 0.74));
+  --shelter-ability-toggle-bg: linear-gradient(180deg, rgba(172, 184, 210, 0.35), rgba(150, 164, 194, 0.3));
+  --shelter-scope-modal-bg: rgba(248, 251, 255, 0.98);
+  --shelter-scope-preview-bg: rgba(88, 108, 136, 0.12);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .shelter-item--metric,
+:global(:root[data-theme='parchment']) #shelter-section .shelter-item--metric,
+:global(:root[data-theme='milky']) #shelter-section .shelter-item--metric,
+:global(:root[data-theme='jade_green']) #shelter-section .map-zone,
+:global(:root[data-theme='parchment']) #shelter-section .map-zone,
+:global(:root[data-theme='milky']) #shelter-section .map-zone,
+:global(:root[data-theme='jade_green']) #shelter-section .map-zone--compact,
+:global(:root[data-theme='parchment']) #shelter-section .map-zone--compact,
+:global(:root[data-theme='milky']) #shelter-section .map-zone--compact {
+  border-color: rgba(92, 116, 152, 0.26);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .room-cell:not(.occupied):not(.sheltered),
+:global(:root[data-theme='parchment']) #shelter-section .room-cell:not(.occupied):not(.sheltered),
+:global(:root[data-theme='milky']) #shelter-section .room-cell:not(.occupied):not(.sheltered) {
+  border-color: rgba(104, 124, 152, 0.42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(233, 240, 248, 0.72));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.56);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered),
+:global(:root[data-theme='parchment']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered),
+:global(:root[data-theme='milky']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(236, 243, 250, 0.76));
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .room-cell:not(.occupied):not(.sheltered) .room-number::before,
+:global(:root[data-theme='parchment']) #shelter-section .room-cell:not(.occupied):not(.sheltered) .room-number::before,
+:global(:root[data-theme='milky']) #shelter-section .room-cell:not(.occupied):not(.sheltered) .room-number::before {
+  background: rgba(120, 132, 154, 0.76);
+  box-shadow: 0 0 0 2px rgba(92, 106, 132, 0.18);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .roll-calibrate-btn,
+:global(:root[data-theme='parchment']) #shelter-section .roll-calibrate-btn,
+:global(:root[data-theme='milky']) #shelter-section .roll-calibrate-btn {
+  border-color: rgba(72, 112, 174, 0.42);
+  background: rgba(82, 124, 236, 0.18);
+  color: #15406e;
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .scope-modal,
+:global(:root[data-theme='parchment']) #shelter-section .scope-modal,
+:global(:root[data-theme='milky']) #shelter-section .scope-modal,
+:global(:root[data-theme='jade_green']) #shelter-section .scope-modal-footer,
+:global(:root[data-theme='parchment']) #shelter-section .scope-modal-footer,
+:global(:root[data-theme='milky']) #shelter-section .scope-modal-footer {
+  border-color: rgba(88, 108, 136, 0.26);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .scope-btn,
+:global(:root[data-theme='parchment']) #shelter-section .scope-btn,
+:global(:root[data-theme='milky']) #shelter-section .scope-btn,
+:global(:root[data-theme='jade_green']) #shelter-section .scope-icon-btn,
+:global(:root[data-theme='parchment']) #shelter-section .scope-icon-btn,
+:global(:root[data-theme='milky']) #shelter-section .scope-icon-btn,
+:global(:root[data-theme='jade_green']) #shelter-section .scope-room-chip,
+:global(:root[data-theme='parchment']) #shelter-section .scope-room-chip,
+:global(:root[data-theme='milky']) #shelter-section .scope-room-chip {
+  border-color: rgba(92, 116, 152, 0.26);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--text-color);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .scope-room-chip.selected,
+:global(:root[data-theme='parchment']) #shelter-section .scope-room-chip.selected,
+:global(:root[data-theme='milky']) #shelter-section .scope-room-chip.selected {
+  border-color: rgba(201, 157, 72, 0.56);
+}
+
+:global(:root[data-theme='jade_green']) #shelter-section .zone-scope-hint,
+:global(:root[data-theme='parchment']) #shelter-section .zone-scope-hint,
+:global(:root[data-theme='milky']) #shelter-section .zone-scope-hint {
+  border-color: rgba(201, 157, 72, 0.24);
+  background: rgba(235, 194, 108, 0.14);
+  color: #6d4d16;
 }
 
 @media (max-width: 520px) {
