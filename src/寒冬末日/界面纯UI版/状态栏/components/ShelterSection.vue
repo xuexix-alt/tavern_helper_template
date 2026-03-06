@@ -2030,7 +2030,11 @@ function formatRoomResidents(
 
 .shelter-redesign .room-cell.occupied {
   border-color: var(--shelter-room-occupied-border);
-  background: radial-gradient(circle at 18% 16%, var(--shelter-room-occupied-bg-start), var(--shelter-room-occupied-bg-end) 70%);
+  background: radial-gradient(
+    circle at 18% 16%,
+    var(--shelter-room-occupied-bg-start),
+    var(--shelter-room-occupied-bg-end) 70%
+  );
   box-shadow:
     inset 0 0 0 1px var(--shelter-room-occupied-inner-border),
     0 0 12px var(--shelter-room-occupied-outer-shadow);
@@ -2136,7 +2140,11 @@ function formatRoomResidents(
   border: 1px solid var(--shelter-room-sheltered-border);
   outline: none;
   box-shadow: inset 0 0 16px var(--shelter-room-sheltered-inner-shadow);
-  background: radial-gradient(circle at 18% 12%, var(--shelter-room-sheltered-bg-start), var(--shelter-surface-ultra) 55%);
+  background: radial-gradient(
+    circle at 18% 12%,
+    var(--shelter-room-sheltered-bg-start),
+    var(--shelter-surface-ultra) 55%
+  );
 }
 
 .shelter-redesign .room-cell.sheltered .room-number {
@@ -2263,4 +2271,3 @@ function formatRoomResidents(
   }
 }
 </style>
-

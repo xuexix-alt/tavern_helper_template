@@ -3389,9 +3389,7 @@ function formatTableCell(cell: string): string {
   justify-content: center;
   background: var(--story-fab-gradient);
   color: var(--story-fab-text);
-  box-shadow:
-    var(--story-fab-shadow),
-    var(--story-fab-inset-highlight);
+  box-shadow: var(--story-fab-shadow), var(--story-fab-inset-highlight);
   cursor: pointer;
 }
 

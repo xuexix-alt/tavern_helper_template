@@ -506,7 +506,11 @@
   --shelter-light-scope-pill-text: #4b3877;
   --shelter-light-zone-hint-text: #6d4d16;
   --shelter-metric-card-bg: linear-gradient(165deg, var(--shelter-metric-bg-start), var(--shelter-metric-bg-end));
-  --shelter-scope-btn-bg: linear-gradient(180deg, var(--shelter-scope-toggle-bg-start), var(--shelter-scope-toggle-bg-end));
+  --shelter-scope-btn-bg: linear-gradient(
+    180deg,
+    var(--shelter-scope-toggle-bg-start),
+    var(--shelter-scope-toggle-bg-end)
+  );
   --shelter-scope-btn-icon-color: var(--shelter-scope-toggle-icon);
   --shelter-scope-hint-bg: var(--shelter-scope-pill-bg);
   --shelter-scope-hint-color: var(--shelter-scope-pill-text);
@@ -745,4 +749,3 @@
   --mission-intel-status-explored-text: #163a66;
   --mission-intel-status-completed-text: #11412d;
 }
-

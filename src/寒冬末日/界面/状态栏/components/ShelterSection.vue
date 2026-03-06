@@ -1720,7 +1720,10 @@ function formatRoomResidents(
   flex-direction: column;
   justify-content: center;
   border: 1px solid var(--shelter-metric-border);
-  background: var(--shelter-metric-card-bg, linear-gradient(165deg, var(--shelter-metric-bg-start), var(--shelter-metric-bg-end)));
+  background: var(
+    --shelter-metric-card-bg,
+    linear-gradient(165deg, var(--shelter-metric-bg-start), var(--shelter-metric-bg-end))
+  );
   box-shadow: inset 0 0 0 1px var(--shelter-surface-min);
 }
 
@@ -1835,7 +1838,10 @@ function formatRoomResidents(
   padding: 4px 12px;
   border-radius: 999px;
   border: 1px solid var(--shelter-scope-toggle-border);
-  background: var(--shelter-scope-btn-bg, linear-gradient(180deg, var(--shelter-scope-toggle-bg-start), var(--shelter-scope-toggle-bg-end)));
+  background: var(
+    --shelter-scope-btn-bg,
+    linear-gradient(180deg, var(--shelter-scope-toggle-bg-start), var(--shelter-scope-toggle-bg-end))
+  );
   box-shadow: inset 0 0 0 1px var(--shelter-scope-toggle-inner-shadow);
 }
 
@@ -1881,13 +1887,19 @@ function formatRoomResidents(
   margin-bottom: 0;
   border-radius: 9px;
   border: 1px solid var(--shelter-map-zone-border);
-  background: var(--shelter-map-zone-bg, linear-gradient(180deg, var(--shelter-map-zone-bg-start), var(--shelter-map-zone-bg-end)));
+  background: var(
+    --shelter-map-zone-bg,
+    linear-gradient(180deg, var(--shelter-map-zone-bg-start), var(--shelter-map-zone-bg-end))
+  );
 }
 
 .shelter-redesign .map-zone--compact {
   padding: 6px;
   border-color: var(--shelter-map-zone-compact-border);
-  background: var(--shelter-map-zone-compact-bg, linear-gradient(165deg, var(--shelter-map-zone-compact-bg-start), var(--shelter-map-zone-compact-bg-end)));
+  background: var(
+    --shelter-map-zone-compact-bg,
+    linear-gradient(165deg, var(--shelter-map-zone-compact-bg-start), var(--shelter-map-zone-compact-bg-end))
+  );
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -2030,7 +2042,11 @@ function formatRoomResidents(
 
 .shelter-redesign .room-cell.occupied {
   border-color: var(--shelter-room-occupied-border);
-  background: radial-gradient(circle at 18% 16%, var(--shelter-room-occupied-bg-start), var(--shelter-room-occupied-bg-end) 70%);
+  background: radial-gradient(
+    circle at 18% 16%,
+    var(--shelter-room-occupied-bg-start),
+    var(--shelter-room-occupied-bg-end) 70%
+  );
   box-shadow:
     inset 0 0 0 1px var(--shelter-room-occupied-inner-border),
     0 0 12px var(--shelter-room-occupied-outer-shadow);
@@ -2136,7 +2152,11 @@ function formatRoomResidents(
   border: 1px solid var(--shelter-room-sheltered-border);
   outline: none;
   box-shadow: inset 0 0 16px var(--shelter-room-sheltered-inner-shadow);
-  background: radial-gradient(circle at 18% 12%, var(--shelter-room-sheltered-bg-start), var(--shelter-surface-ultra) 55%);
+  background: radial-gradient(
+    circle at 18% 12%,
+    var(--shelter-room-sheltered-bg-start),
+    var(--shelter-surface-ultra) 55%
+  );
 }
 
 .shelter-redesign .room-cell.sheltered .room-number {
@@ -2263,15 +2283,35 @@ function formatRoomResidents(
 :global(:root[data-theme='jade_green']) #shelter-section,
 :global(:root[data-theme='parchment']) #shelter-section,
 :global(:root[data-theme='milky']) #shelter-section {
-  --shelter-metric-card-bg: linear-gradient(165deg, var(--shelter-light-metric-bg-start), var(--shelter-light-metric-bg-end));
+  --shelter-metric-card-bg: linear-gradient(
+    165deg,
+    var(--shelter-light-metric-bg-start),
+    var(--shelter-light-metric-bg-end)
+  );
   --shelter-metric-number-color: var(--shelter-light-metric-number-color);
-  --shelter-scope-btn-bg: linear-gradient(180deg, var(--shelter-light-toggle-bg-start), var(--shelter-light-toggle-bg-end));
+  --shelter-scope-btn-bg: linear-gradient(
+    180deg,
+    var(--shelter-light-toggle-bg-start),
+    var(--shelter-light-toggle-bg-end)
+  );
   --shelter-scope-btn-icon-color: var(--shelter-light-toggle-icon);
   --shelter-scope-hint-bg: var(--shelter-light-scope-pill-bg);
   --shelter-scope-hint-color: var(--shelter-light-scope-pill-text);
-  --shelter-map-zone-bg: linear-gradient(180deg, var(--shelter-light-map-zone-bg-start), var(--shelter-light-map-zone-bg-end));
-  --shelter-map-zone-compact-bg: linear-gradient(165deg, var(--shelter-light-map-zone-compact-bg-start), var(--shelter-light-map-zone-compact-bg-end));
-  --shelter-ability-toggle-bg: linear-gradient(180deg, var(--shelter-light-ability-toggle-bg-start), var(--shelter-light-ability-toggle-bg-end));
+  --shelter-map-zone-bg: linear-gradient(
+    180deg,
+    var(--shelter-light-map-zone-bg-start),
+    var(--shelter-light-map-zone-bg-end)
+  );
+  --shelter-map-zone-compact-bg: linear-gradient(
+    165deg,
+    var(--shelter-light-map-zone-compact-bg-start),
+    var(--shelter-light-map-zone-compact-bg-end)
+  );
+  --shelter-ability-toggle-bg: linear-gradient(
+    180deg,
+    var(--shelter-light-ability-toggle-bg-start),
+    var(--shelter-light-ability-toggle-bg-end)
+  );
   --shelter-scope-modal-bg: var(--shelter-light-modal-bg);
   --shelter-scope-preview-bg: var(--shelter-light-preview-bg);
 }
@@ -2299,7 +2339,11 @@ function formatRoomResidents(
 :global(:root[data-theme='jade_green']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered),
 :global(:root[data-theme='parchment']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered),
 :global(:root[data-theme='milky']) #shelter-section .room-cell--compact:not(.occupied):not(.sheltered) {
-  background: linear-gradient(180deg, var(--shelter-light-room-compact-bg-start), var(--shelter-light-room-compact-bg-end));
+  background: linear-gradient(
+    180deg,
+    var(--shelter-light-room-compact-bg-start),
+    var(--shelter-light-room-compact-bg-end)
+  );
 }
 
 :global(:root[data-theme='jade_green']) #shelter-section .room-cell:not(.occupied):not(.sheltered) .room-number::before,
@@ -2360,4 +2404,3 @@ function formatRoomResidents(
   }
 }
 </style>
-

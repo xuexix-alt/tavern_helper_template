@@ -3717,9 +3717,7 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='milky']) .role-generate-modal {
   background: var(--card-surface-bg-elevated);
   border-color: var(--card-surface-border);
-  box-shadow:
-    var(--character-light-panel-shadow-deep),
-    var(--character-light-panel-shadow-soft);
+  box-shadow: var(--character-light-panel-shadow-deep), var(--character-light-panel-shadow-soft);
 }
 
 :global(:root[data-theme='jade_green']) .role-modal-title,
