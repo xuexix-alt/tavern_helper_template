@@ -36,6 +36,8 @@ withDefaults(
   flex-direction: column;
   gap: var(--section-gap);
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-gutter: stable;
 }
 

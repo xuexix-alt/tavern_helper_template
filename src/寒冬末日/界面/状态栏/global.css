@@ -1,229 +1,5 @@
 /* 末日伊甸园状态栏（iframe 前端界面）全局样式 */
-:root {
-  color-scheme: dark;
-  --bg-main: #1a1b26;
-  --bg-light: #282a36;
-  --bg-medium: #44475a;
-  --bg-dark: #13141b;
-  --border-color: #8be9fd;
-  --border-shadow-color: #b3f2ff;
-  --text-color: #f8f8f2;
-  --text-strong: #ffffff;
-  --dialog-color: #50fa7b;
-  --thought-color: #ff79c6;
-  --accent-gold: #f1fa8c;
-  --accent-red: #ff5555;
-  --accent-blue: #bd93f9;
-  --accent-cyan: #00b4d8;
-  --health-bar-color: #50fa7b;
-  --border-radius: 10px;
-  --section-gap: 8px;
-  --inner-padding: 10px;
-  --transition-speed: 0.2s;
-  --theme-surface-soft: rgba(255, 255, 255, 0.06);
-  --theme-surface-softer: rgba(255, 255, 255, 0.03);
-  --theme-input-bg: rgba(0, 0, 0, 0.24);
-  --theme-placeholder-color: rgba(248, 248, 242, 0.56);
-  --theme-overlay-mask: rgba(0, 0, 0, 0.58);
-  --theme-modal-bg: rgba(25, 28, 35, 0.98);
-  --theme-elevated-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
-  --theme-footer-grad-start: rgba(3, 8, 20, 0.4);
-  --theme-footer-grad-end: rgba(3, 8, 20, 0.72);
-  --theme-pane-grad-start: rgba(20, 26, 40, 0.96);
-  --theme-pane-grad-end: rgba(10, 14, 22, 0.97);
-  --theme-toolbar-grad-start: rgba(26, 27, 38, 0.96);
-  --theme-toolbar-grad-end: rgba(26, 27, 38, 0.8);
-  --card-surface-bg: rgba(255, 255, 255, 0.045);
-  --card-surface-bg-elevated: rgba(255, 255, 255, 0.075);
-  --card-surface-border: rgba(255, 255, 255, 0.14);
-  --card-surface-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
-  --btn-bg: rgba(255, 255, 255, 0.09);
-  --btn-border: rgba(255, 255, 255, 0.2);
-  --btn-text: var(--text-color);
-  --btn-hover-bg: rgba(139, 233, 253, 0.24);
-  --btn-hover-text: var(--text-strong);
-  --btn-active-bg: rgba(139, 233, 253, 0.3);
-  --btn-active-border: rgba(139, 233, 253, 0.62);
-  --btn-active-text: var(--text-strong);
-  --btn-primary-bg: rgba(0, 180, 216, 0.22);
-  --btn-primary-border: rgba(0, 180, 216, 0.56);
-  --btn-primary-text: #e8fbff;
-  --btn-primary-hover-bg: rgba(0, 180, 216, 0.3);
-  --btn-danger-bg: rgba(255, 90, 90, 0.2);
-  --btn-danger-border: rgba(255, 90, 90, 0.52);
-  --btn-danger-text: #ffd7d7;
-  --btn-disabled-bg: rgba(130, 142, 168, 0.16);
-  --btn-disabled-border: rgba(130, 142, 168, 0.24);
-  --btn-disabled-text: rgba(208, 216, 232, 0.64);
-  --focus-ring-color: rgba(139, 233, 253, 0.56);
-  --font-main:
-    'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-:root[data-theme='jade_green'] {
-  color-scheme: light;
-  --bg-main: #dfe9e3;
-  --bg-light: #edf3ef;
-  --bg-medium: #c8d7ce;
-  --bg-dark: #b0c2b7;
-  --border-color: #2a7f76;
-  --border-shadow-color: #89b8b3;
-  --text-color: #203343;
-  --text-strong: #0f1f2d;
-  --dialog-color: #1e90ff;
-  --thought-color: #6a5acd;
-  --accent-gold: #ffa500;
-  --accent-red: #dc143c;
-  --accent-blue: #4682b4;
-  --accent-cyan: #00b4d8;
-  --health-bar-color: #28a745;
-  --theme-surface-soft: rgba(32, 70, 82, 0.11);
-  --theme-surface-softer: rgba(32, 70, 82, 0.07);
-  --theme-input-bg: rgba(24, 47, 68, 0.12);
-  --theme-placeholder-color: rgba(52, 76, 99, 0.72);
-  --theme-overlay-mask: rgba(24, 34, 49, 0.42);
-  --theme-modal-bg: rgba(236, 243, 239, 0.98);
-  --theme-elevated-shadow: 0 14px 36px rgba(24, 45, 63, 0.26);
-  --theme-footer-grad-start: rgba(203, 218, 210, 0.82);
-  --theme-footer-grad-end: rgba(186, 204, 194, 0.95);
-  --theme-pane-grad-start: rgba(232, 241, 236, 0.97);
-  --theme-pane-grad-end: rgba(219, 231, 224, 0.96);
-  --theme-toolbar-grad-start: rgba(213, 226, 218, 0.97);
-  --theme-toolbar-grad-end: rgba(199, 214, 205, 0.9);
-  --card-surface-bg: rgba(230, 239, 234, 0.86);
-  --card-surface-bg-elevated: rgba(240, 247, 243, 0.96);
-  --card-surface-border: rgba(56, 82, 106, 0.38);
-  --card-surface-shadow: 0 4px 14px rgba(24, 45, 63, 0.11);
-  --btn-bg: rgba(49, 78, 106, 0.17);
-  --btn-border: rgba(49, 78, 106, 0.38);
-  --btn-text: #1a3a5b;
-  --btn-hover-bg: rgba(49, 78, 106, 0.27);
-  --btn-hover-text: #102f4d;
-  --btn-active-bg: rgba(43, 106, 156, 0.3);
-  --btn-active-border: rgba(43, 106, 156, 0.52);
-  --btn-active-text: #0d3353;
-  --btn-primary-bg: rgba(39, 123, 184, 0.3);
-  --btn-primary-border: rgba(39, 123, 184, 0.52);
-  --btn-primary-text: #0d3353;
-  --btn-primary-hover-bg: rgba(39, 123, 184, 0.38);
-  --btn-danger-bg: rgba(188, 86, 86, 0.24);
-  --btn-danger-border: rgba(156, 64, 64, 0.42);
-  --btn-danger-text: #6f2020;
-  --btn-disabled-bg: rgba(102, 117, 137, 0.18);
-  --btn-disabled-border: rgba(102, 117, 137, 0.3);
-  --btn-disabled-text: rgba(53, 67, 86, 0.74);
-  --focus-ring-color: rgba(43, 106, 156, 0.5);
-}
-
-:root[data-theme='parchment'] {
-  color-scheme: light;
-  --bg-main: #e2d2a8;
-  --bg-light: #ead8ad;
-  --bg-medium: #b7945d;
-  --bg-dark: #5c401f;
-  --border-color: #7a5838;
-  --border-shadow-color: #9a7953;
-  --text-color: #2f2216;
-  --text-strong: #20150d;
-  --dialog-color: #1e3a8a;
-  --thought-color: #8b0000;
-  --accent-gold: #c19a49;
-  --accent-red: #8b3a3a;
-  --accent-blue: #2c4875;
-  --accent-cyan: #008b8b;
-  --health-bar-color: #d2691e;
-  --theme-surface-soft: rgba(84, 60, 31, 0.12);
-  --theme-surface-softer: rgba(84, 60, 31, 0.08);
-  --theme-input-bg: rgba(64, 44, 24, 0.14);
-  --theme-placeholder-color: rgba(76, 55, 36, 0.7);
-  --theme-overlay-mask: rgba(42, 29, 15, 0.42);
-  --theme-modal-bg: rgba(236, 223, 191, 0.98);
-  --theme-elevated-shadow: 0 14px 36px rgba(58, 38, 18, 0.28);
-  --theme-footer-grad-start: rgba(214, 194, 151, 0.82);
-  --theme-footer-grad-end: rgba(198, 174, 127, 0.93);
-  --theme-pane-grad-start: rgba(236, 224, 191, 0.97);
-  --theme-pane-grad-end: rgba(224, 208, 169, 0.96);
-  --theme-toolbar-grad-start: rgba(220, 204, 164, 0.96);
-  --theme-toolbar-grad-end: rgba(205, 186, 145, 0.89);
-  --card-surface-bg: rgba(244, 232, 202, 0.8);
-  --card-surface-bg-elevated: rgba(248, 237, 210, 0.93);
-  --card-surface-border: rgba(101, 73, 46, 0.38);
-  --card-surface-shadow: 0 4px 14px rgba(62, 42, 20, 0.13);
-  --btn-bg: rgba(95, 68, 40, 0.18);
-  --btn-border: rgba(95, 68, 40, 0.38);
-  --btn-text: #442b15;
-  --btn-hover-bg: rgba(95, 68, 40, 0.28);
-  --btn-hover-text: #341f0f;
-  --btn-active-bg: rgba(117, 85, 49, 0.32);
-  --btn-active-border: rgba(117, 85, 49, 0.5);
-  --btn-active-text: #2f1b0d;
-  --btn-primary-bg: rgba(86, 126, 182, 0.3);
-  --btn-primary-border: rgba(63, 97, 149, 0.5);
-  --btn-primary-text: #16385c;
-  --btn-primary-hover-bg: rgba(86, 126, 182, 0.4);
-  --btn-danger-bg: rgba(161, 74, 74, 0.24);
-  --btn-danger-border: rgba(128, 52, 52, 0.42);
-  --btn-danger-text: #641b1b;
-  --btn-disabled-bg: rgba(122, 105, 87, 0.2);
-  --btn-disabled-border: rgba(104, 88, 72, 0.3);
-  --btn-disabled-text: rgba(75, 61, 47, 0.72);
-  --focus-ring-color: rgba(86, 126, 182, 0.52);
-}
-
-:root[data-theme='milky'] {
-  color-scheme: light;
-  --bg-main: #e1e7e3;
-  --bg-medium: #c7d2cc;
-  --bg-light: #eaf0ec;
-  --bg-dark: #aebbb4;
-  --border-color: #5d7b68;
-  --border-shadow-color: #97aba0;
-  --text-color: #26343d;
-  --text-strong: #132129;
-  --dialog-color: #4682b4;
-  --thought-color: #6a5acd;
-  --accent-gold: #d2b48c;
-  --accent-red: #cd5c5c;
-  --accent-blue: #5f9ea0;
-  --accent-cyan: #20b2aa;
-  --health-bar-color: #8fbc8f;
-  --theme-surface-soft: rgba(58, 77, 95, 0.12);
-  --theme-surface-softer: rgba(58, 77, 95, 0.08);
-  --theme-input-bg: rgba(43, 63, 84, 0.13);
-  --theme-placeholder-color: rgba(61, 77, 94, 0.72);
-  --theme-overlay-mask: rgba(24, 36, 50, 0.4);
-  --theme-modal-bg: rgba(235, 241, 237, 0.98);
-  --theme-elevated-shadow: 0 14px 36px rgba(27, 42, 56, 0.28);
-  --theme-footer-grad-start: rgba(203, 213, 207, 0.84);
-  --theme-footer-grad-end: rgba(186, 198, 191, 0.95);
-  --theme-pane-grad-start: rgba(230, 237, 233, 0.97);
-  --theme-pane-grad-end: rgba(216, 226, 220, 0.96);
-  --theme-toolbar-grad-start: rgba(211, 221, 215, 0.97);
-  --theme-toolbar-grad-end: rgba(195, 207, 200, 0.9);
-  --card-surface-bg: rgba(232, 239, 235, 0.84);
-  --card-surface-bg-elevated: rgba(241, 247, 244, 0.95);
-  --card-surface-border: rgba(74, 93, 112, 0.36);
-  --card-surface-shadow: 0 4px 14px rgba(31, 46, 61, 0.13);
-  --btn-bg: rgba(64, 84, 106, 0.18);
-  --btn-border: rgba(64, 84, 106, 0.38);
-  --btn-text: #1f3b54;
-  --btn-hover-bg: rgba(64, 84, 106, 0.28);
-  --btn-hover-text: #13324a;
-  --btn-active-bg: rgba(63, 123, 173, 0.31);
-  --btn-active-border: rgba(63, 123, 173, 0.5);
-  --btn-active-text: #0f3553;
-  --btn-primary-bg: rgba(63, 123, 173, 0.31);
-  --btn-primary-border: rgba(63, 123, 173, 0.5);
-  --btn-primary-text: #0f3553;
-  --btn-primary-hover-bg: rgba(63, 123, 173, 0.4);
-  --btn-danger-bg: rgba(176, 78, 78, 0.24);
-  --btn-danger-border: rgba(142, 56, 56, 0.42);
-  --btn-danger-text: #681f1f;
-  --btn-disabled-bg: rgba(101, 116, 136, 0.18);
-  --btn-disabled-border: rgba(101, 116, 136, 0.3);
-  --btn-disabled-text: rgba(53, 67, 86, 0.74);
-  --focus-ring-color: rgba(63, 123, 173, 0.5);
-}
+@import '../shared/theme-tokens.css';
 
 * {
   box-sizing: border-box;
@@ -254,7 +30,7 @@ main {
   border: 1px solid var(--border-color);
   box-shadow:
     0 0 25px 0px var(--border-shadow-color),
-    inset 0 0 15px rgba(255, 255, 255, 0.05);
+    inset 0 0 15px var(--shell-inner-highlight-color);
   background-color: var(--bg-main);
   padding: 14px;
   border-radius: var(--border-radius);
@@ -271,7 +47,7 @@ main {
   background-color: var(--card-surface-bg-elevated, var(--bg-light));
   padding: var(--inner-padding);
   border-radius: var(--border-radius);
-  border: 1px solid var(--card-surface-border, rgba(200, 200, 220, 0.1));
+  border: 1px solid var(--card-surface-border);
   box-shadow: var(--card-surface-shadow, none);
   position: relative;
 }
@@ -303,7 +79,7 @@ main {
   padding: 4px 10px;
   border-radius: 8px;
   background-color: var(--card-surface-bg, var(--bg-medium));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--card-surface-border);
   font-size: 0.9em;
   width: 100%;
   white-space: normal;
@@ -339,18 +115,18 @@ main {
 .system-text {
   color: var(--accent-gold);
   font-weight: bold;
-  text-shadow: 0 0 5px rgba(241, 250, 140, 0.3);
+  text-shadow: var(--text-glow-gold);
   display: inline-block;
   margin: 4px 0;
 }
 
 .eden-text {
-  color: #00ffff; /* 赛博青 */
+  color: var(--eden-text-color); /* 赛博青 */
   font-family: 'Courier New', monospace;
-  background: rgba(0, 255, 255, 0.1);
+  background: var(--eden-text-bg);
   padding: 2px 6px;
   border-radius: 4px;
-  border-left: 2px solid #00ffff;
+  border-left: 2px solid var(--eden-text-border);
   display: block; /* 独占一行 */
   margin: 6px 0;
 }
@@ -361,7 +137,7 @@ main {
   border-radius: 8px;
   margin: 10px 0;
   display: block;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--media-shadow);
 }
 
 .shelter-grid {
@@ -406,8 +182,8 @@ main {
   gap: 5px;
   padding: 4px 6px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--theme-surface-soft);
+  border: 1px solid var(--card-surface-border);
   font-size: 0.76em;
   flex: 0 0 auto;
   max-width: 100%;
@@ -423,9 +199,9 @@ main {
   flex: 0 0 auto;
   min-width: 88px;
   max-width: 124px;
-  background: rgba(8, 12, 24, 0.85);
+  background: var(--theme-input-bg);
   color: var(--text-strong);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--btn-border);
   border-radius: 6px;
   padding: 3px 6px;
   font-size: 0.88em;
@@ -442,25 +218,25 @@ main {
 .ability-legend-item {
   padding: 2px 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(230, 235, 245, 0.95);
+  border: 1px solid var(--card-surface-border);
+  background: var(--theme-surface-soft);
+  color: var(--ability-chip-text);
   white-space: nowrap;
 }
 
 .ability-legend-item.is-green {
-  border-color: rgba(120, 255, 170, 0.4);
-  color: rgba(170, 255, 205, 0.96);
+  border-color: var(--ability-chip-green-border);
+  color: var(--ability-chip-green-text);
 }
 
 .ability-legend-item.is-purple {
-  border-color: rgba(186, 142, 255, 0.45);
-  color: rgba(218, 196, 255, 0.96);
+  border-color: var(--ability-chip-purple-border);
+  color: var(--ability-chip-purple-text);
 }
 
 .ability-legend-item.is-orange {
-  border-color: rgba(255, 192, 120, 0.45);
-  color: rgba(255, 222, 170, 0.96);
+  border-color: var(--ability-chip-orange-border);
+  color: var(--ability-chip-orange-text);
 }
 
 .ability-matrix {
@@ -470,8 +246,8 @@ main {
 }
 
 .ability-matrix-row {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--theme-surface-softer);
+  border: 1px solid var(--card-surface-border);
   border-radius: 10px;
   padding: 8px;
 }
@@ -479,7 +255,7 @@ main {
 .ability-row-label {
   font-size: 0.82em;
   margin-bottom: 8px;
-  color: rgba(180, 220, 255, 0.95);
+  color: var(--ability-row-label-color);
   font-weight: 700;
 }
 
@@ -497,7 +273,7 @@ main {
   font-size: 0.74em;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(200, 220, 255, 0.8);
+  color: var(--ability-grid-head-color);
   margin-bottom: 6px;
 }
 
@@ -510,8 +286,8 @@ main {
 .skill-card {
   border-radius: 10px;
   padding: 7px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(155deg, rgba(63, 70, 97, 0.92), rgba(48, 54, 78, 0.9));
+  border: 1px solid var(--card-surface-border);
+  background: var(--skill-card-bg);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -525,26 +301,20 @@ main {
 
 .skill-card.locked {
   filter: grayscale(0.9) saturate(0.65) brightness(0.78);
-  border-color: rgba(180, 180, 180, 0.2);
+  border-color: var(--skill-locked-border);
   box-shadow: none;
 }
 
 .skill-card.rarity-green.unlocked {
-  box-shadow:
-    inset 0 0 0 1px rgba(120, 255, 170, 0.28),
-    0 0 16px rgba(85, 220, 145, 0.35);
+  box-shadow: var(--skill-rarity-green-glow);
 }
 
 .skill-card.rarity-orange.unlocked {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 196, 120, 0.28),
-    0 0 18px rgba(255, 150, 70, 0.4);
+  box-shadow: var(--skill-rarity-orange-glow);
 }
 
 .skill-card.rarity-purple.unlocked {
-  box-shadow:
-    inset 0 0 0 1px rgba(190, 140, 255, 0.3),
-    0 0 20px rgba(154, 99, 255, 0.45);
+  box-shadow: var(--skill-rarity-purple-glow);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -568,19 +338,19 @@ main {
 
 .skill-icon {
   font-size: 1.05em;
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.4));
+  filter: var(--skill-icon-shadow);
 }
 
 .skill-name {
   font-weight: 800;
-  color: #8ff6ff;
+  color: var(--skill-name-color);
   line-height: 1.2;
   word-break: break-word;
   font-size: 0.88em;
 }
 
 .skill-card.locked .skill-name {
-  color: rgba(220, 225, 240, 0.68);
+  color: var(--skill-name-locked-color);
 }
 
 .skill-foot {
@@ -594,13 +364,13 @@ main {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: rgba(180, 180, 180, 0.7);
+  background: var(--skill-dot-off-bg);
   box-shadow: none;
 }
 
 .skill-dot.on {
-  background: #7fff95;
-  box-shadow: 0 0 8px rgba(110, 255, 150, 0.8);
+  background: var(--skill-dot-on-bg);
+  box-shadow: var(--skill-dot-on-shadow);
 }
 
 .skill-state {
@@ -611,7 +381,7 @@ main {
 .skill-empty {
   min-height: 56px;
   border-radius: 10px;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border: 1px dashed var(--card-surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -628,42 +398,30 @@ main {
 @keyframes skillGlowGreen {
   0%,
   100% {
-    box-shadow:
-      inset 0 0 0 1px rgba(120, 255, 170, 0.24),
-      0 0 11px rgba(85, 220, 145, 0.28);
+    box-shadow: var(--skill-glow-green-start);
   }
   50% {
-    box-shadow:
-      inset 0 0 0 1px rgba(145, 255, 185, 0.36),
-      0 0 22px rgba(105, 240, 160, 0.46);
+    box-shadow: var(--skill-glow-green-peak);
   }
 }
 
 @keyframes skillGlowOrange {
   0%,
   100% {
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 196, 120, 0.24),
-      0 0 13px rgba(255, 150, 70, 0.3);
+    box-shadow: var(--skill-glow-orange-start);
   }
   50% {
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 208, 145, 0.38),
-      0 0 24px rgba(255, 165, 90, 0.5);
+    box-shadow: var(--skill-glow-orange-peak);
   }
 }
 
 @keyframes skillGlowPurple {
   0%,
   100% {
-    box-shadow:
-      inset 0 0 0 1px rgba(190, 140, 255, 0.24),
-      0 0 14px rgba(154, 99, 255, 0.32);
+    box-shadow: var(--skill-glow-purple-start);
   }
   50% {
-    box-shadow:
-      inset 0 0 0 1px rgba(208, 168, 255, 0.4),
-      0 0 26px rgba(170, 120, 255, 0.54);
+    box-shadow: var(--skill-glow-purple-peak);
   }
 }
 
@@ -703,12 +461,12 @@ main {
   padding: 12px;
   border-radius: 6px;
   margin-bottom: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--card-surface-border);
 }
 
 .ability-card.unlocked {
-  border-color: rgba(241, 250, 140, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(241, 250, 140, 0.15);
+  border-color: var(--ability-unlocked-border);
+  box-shadow: var(--ability-unlocked-ring);
 }
 
 .ability-card .name {
@@ -726,16 +484,16 @@ main {
   line-height: 1.4;
   padding: 1px 6px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-surface-border);
+  background: var(--theme-surface-soft);
   color: var(--text-color);
   opacity: 0.8;
 }
 
 .unlock-chip.on {
-  border-color: rgba(241, 250, 140, 0.55);
-  background: rgba(241, 250, 140, 0.16);
-  color: rgba(255, 240, 180, 0.95);
+  border-color: var(--unlock-chip-on-border);
+  background: var(--unlock-chip-on-bg);
+  color: var(--unlock-chip-on-text);
   opacity: 1;
 }
 
@@ -766,7 +524,7 @@ main {
   color: var(--btn-text, var(--text-color));
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--btn-border);
   cursor: pointer;
   font-size: 0.9em;
   white-space: nowrap;
@@ -781,9 +539,9 @@ main {
 .tab-button.active {
   background-color: var(--btn-active-bg, var(--border-color));
   color: var(--btn-active-text, var(--bg-dark));
-  border-color: var(--btn-active-border, rgba(139, 233, 253, 0.62));
+  border-color: var(--btn-active-border);
   font-weight: bold;
-  box-shadow: 0 0 10px var(--btn-active-border, rgba(139, 233, 253, 0.4));
+  box-shadow: 0 0 10px var(--btn-active-border);
 }
 
 .tab-content {
@@ -815,7 +573,7 @@ main {
   background-color: var(--card-surface-bg, var(--bg-light));
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--card-surface-border);
 }
 
 .status-item .label {
@@ -867,7 +625,7 @@ main {
   background-color: var(--bg-dark);
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--card-surface-border);
 }
 
 .progress-bar-value {
@@ -888,7 +646,7 @@ main {
   padding: 10px;
   border-radius: 8px;
   background-color: var(--card-surface-bg, var(--bg-medium));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--card-surface-border);
   margin-bottom: 10px;
 }
 
@@ -912,7 +670,7 @@ main {
   margin-bottom: 8px;
   cursor: pointer;
   transition: all var(--transition-speed);
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--btn-border);
   color: var(--btn-text, inherit);
   font: inherit;
 }
@@ -953,7 +711,7 @@ main {
   background: var(--bg-light);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--panel-shadow);
   padding: 14px;
   display: none;
   z-index: 50;
@@ -985,7 +743,7 @@ main {
   width: 120px;
   padding: 4px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--btn-border);
   background: var(--bg-medium);
   color: var(--text-color);
 }
@@ -1040,7 +798,7 @@ main {
   padding: 10px;
   border-radius: 8px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-surface-border);
   opacity: 0.5;
   transition: all var(--transition-speed);
 }
@@ -1048,7 +806,7 @@ main {
 .expansion-card.unlocked {
   opacity: 1;
   border-color: var(--border-color);
-  box-shadow: 0 0 10px rgba(139, 233, 253, 0.1);
+  box-shadow: var(--expansion-unlocked-shadow);
   background-color: var(--bg-medium);
 }
 
@@ -1151,7 +909,7 @@ main {
   padding: 12px;
   background-color: var(--card-surface-bg, var(--bg-dark));
   border-radius: 10px;
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--card-surface-border);
 }
 
 .zone-label {
@@ -1171,8 +929,8 @@ main {
   opacity: 0.6;
   margin: 8px 0;
   padding: 4px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+  border-top: 1px dashed var(--card-surface-border);
+  border-bottom: 1px dashed var(--card-surface-border);
 }
 
 .room-grid {
@@ -1203,7 +961,7 @@ main {
   padding: 4px 3px;
   border-radius: 4px;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-surface-border);
   transition: all var(--transition-speed);
   min-height: 40px;
   display: flex;
@@ -1213,18 +971,18 @@ main {
 
 .room-cell:hover {
   border-color: var(--border-color);
-  box-shadow: 0 0 8px rgba(139, 233, 253, 0.2);
+  box-shadow: var(--room-hover-shadow);
 }
 
 .room-cell.highlight {
   background-color: var(--bg-light);
   border-color: var(--border-color);
-  box-shadow: 0 0 10px rgba(139, 233, 253, 0.15);
+  box-shadow: var(--room-highlight-shadow);
 }
 
 .room-cell.user-room {
   border-color: var(--accent-gold);
-  background-color: rgba(241, 250, 140, 0.1);
+  background-color: var(--room-user-bg);
 }
 
 .room-cell.user-room .room-number {
@@ -1233,7 +991,7 @@ main {
 
 .room-cell.occupied {
   border-color: var(--dialog-color);
-  background-color: rgba(80, 250, 123, 0.08);
+  background-color: var(--room-occupied-bg);
 }
 
 .room-cell.occupied .room-value {
@@ -1270,7 +1028,7 @@ main {
   padding: 10px 8px;
   border-radius: 8px;
   text-align: center;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--card-surface-border);
   opacity: 0.5;
   transition: all var(--transition-speed);
 }

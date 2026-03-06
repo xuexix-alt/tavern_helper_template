@@ -128,6 +128,7 @@ import { onBeforeUnmount } from 'vue';
 import ChoicesSection from '../components/ChoicesSection.vue';
 import StorySection from '../components/StorySection.vue';
 import { sendToChat } from '../../outbound';
+import { parseOptionsFromRaw } from '../optionParser';
 import {
   getViewMessageState,
   onViewMessageChanged,
@@ -260,19 +261,7 @@ function stripForPreview(input: string): string {
 }
 
 function extractOptionsFromRaw(raw: string): string[] {
-  const cleaned = String(raw ?? '');
-  const optionMatch = cleaned.match(/(<option(?:\s[^>]*)?>(?![\s\S]*?<option(?:\s[^>]*)?>)[\s\S]*?(?:<\/option>|$))/i);
-  const optionsRaw = optionMatch
-    ? optionMatch[1]
-        .replace(/^<option(?:\s[^>]*)?>/i, '')
-        .replace(/<\/option>\s*$/i, '')
-        .trim()
-    : '';
-  if (!optionsRaw) return [];
-  return optionsRaw
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
+  return parseOptionsFromRaw(raw);
 }
 
 function readMessageRawById(message_id: number): string {
@@ -902,6 +891,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: var(--section-gap);
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-gutter: stable;
 }
 

@@ -109,6 +109,20 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx
     return window.innerHeight || document.documentElement.clientHeight || minHeightPx;
   };
 
+  const viewWidth = () => {
+    const vv = window.visualViewport;
+    if (vv?.width && Number.isFinite(vv.width) && vv.width > 0) return vv.width;
+    return window.innerWidth || document.documentElement.clientWidth || 0;
+  };
+
+  const isMobileTouchViewport = (viewportWidth: number) => {
+    if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return false;
+    if (viewportWidth > 920) return false;
+    const coarsePointer = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+    const hasTouch = (navigator?.maxTouchPoints ?? 0) > 0 || 'ontouchstart' in window;
+    return coarsePointer || hasTouch;
+  };
+
   const findParentChatElement = (): HTMLElement | null => {
     try {
       const parentDoc = window.parent?.document;
@@ -136,24 +150,30 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx
   };
 
   const getContentHeight = () => {
+    const shellRoot = document.getElementById('eden-shell');
     const pageScrollNodes = Array.from(document.querySelectorAll<HTMLElement>('.eden-page-scroll'));
     const storyPaneNodes = Array.from(document.querySelectorAll<HTMLElement>('.story-pane'));
     const roleGenerateModal = document.querySelector<HTMLElement>('.role-generate-modal');
     const roleModal = document.querySelector<HTMLElement>('.role-modal');
-    const measuredStoryPaneHeights = storyPaneNodes.map(node => {
+    const measureNodeHeight = (node: HTMLElement) => {
       const rectHeight = node.getBoundingClientRect().height;
       const clientHeight = node.clientHeight;
+      const scrollHeight = node.scrollHeight;
       const style = window.getComputedStyle(node);
       const hasInnerScroll = style.overflowY === 'auto' || style.overflowY === 'scroll';
-      // Scrollable panes (story text with slider cap) should use visible height,
-      // otherwise scrollHeight can incorrectly re-expand outer iframe.
+      // Scrollable containers should use visible height; using scrollHeight would
+      // incorrectly expand outer iframe and create large blank space in chat.
       if (hasInnerScroll) {
         return Math.max(clientHeight, rectHeight);
       }
-      return Math.max(node.scrollHeight, clientHeight, rectHeight);
-    });
+      return Math.max(scrollHeight, clientHeight, rectHeight);
+    };
+    const measuredPageHeights = pageScrollNodes.map(measureNodeHeight);
+    const measuredStoryPaneHeights = storyPaneNodes.map(measureNodeHeight);
+    const shellHeight = shellRoot ? Math.max(shellRoot.getBoundingClientRect().height, shellRoot.clientHeight) : 0;
     const heights = [
-      ...pageScrollNodes.map(node => node.scrollHeight),
+      shellHeight,
+      ...measuredPageHeights,
       ...measuredStoryPaneHeights,
       roleGenerateModal
         ? Math.max(roleGenerateModal.scrollHeight, roleGenerateModal.getBoundingClientRect().height) + 36
@@ -164,42 +184,46 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx
   };
 
   let rafId = 0;
-  let lastAppliedHeight = 0;
   const apply = () => {
     rafId = 0;
     const chatHeight = Math.floor(getChatHeight());
     const viewportHeight = Math.floor(viewHeight());
+    const viewportWidth = Math.floor(viewWidth());
     const contentHeight = Math.floor(getContentHeight());
-    const baseline = Math.max(chatHeight, viewportHeight);
     const hasStoryPane = !!document.querySelector('.story-pane');
+    const baseline = Math.max(chatHeight, viewportHeight);
 
-    let stableMinHeight = Math.max(minHeightPx, Math.floor(baseline * 0.72));
-    stableMinHeight = Math.min(stableMinHeight, 1080);
-    if (hasStoryPane) stableMinHeight = Math.max(stableMinHeight, 460);
+    const commitHeight = (nextHeight: number, stableMinHeight: number) => {
+      const next = `${nextHeight}px`;
+      const nextMin = `${stableMinHeight}px`;
+      const nextMax = `${maxHeightPx}px`;
+      if (frameEl.style.minHeight !== nextMin) frameEl.style.minHeight = nextMin;
+      if (frameEl.style.maxHeight !== nextMax) frameEl.style.maxHeight = nextMax;
+      if (frameEl.style.height !== next) {
+        frameEl.style.height = next;
+        frameEl.style.display = 'block';
+      }
+    };
 
-    // Combine host chat height, content natural height and a stable minimum floor.
-    let nextHeight = Math.max(
-      stableMinHeight,
-      contentHeight,
-      Number.isFinite(chatHeight) && chatHeight > 0 ? chatHeight : 0,
-    );
+    if (isMobileTouchViewport(viewportWidth)) {
+      const candidates = [chatHeight, viewportHeight].filter(v => Number.isFinite(v) && v > 0);
+      const oneScreenHeight = candidates.length > 0 ? Math.min(...candidates) : Math.max(chatHeight, viewportHeight, 0);
+      const keyboardLikelyOpen = Number(window.innerHeight || 0) - viewportHeight >= 90;
+      const mobileMinHeight = keyboardLikelyOpen ? Math.min(minHeightPx, 240) : Math.min(minHeightPx, hasStoryPane ? 320 : 280);
+      const nextHeight = Math.min(maxHeightPx, Math.max(mobileMinHeight, oneScreenHeight));
+      commitHeight(nextHeight, mobileMinHeight);
+      return;
+    }
+
+    let stableMinHeight = minHeightPx;
+    if (hasStoryPane) stableMinHeight = Math.max(stableMinHeight, 360);
+    if (baseline > 0) stableMinHeight = Math.max(stableMinHeight, Math.floor(baseline * 0.36));
+    stableMinHeight = Math.min(stableMinHeight, 720);
+
+    // Content-driven iframe height: avoid pinning to full host chat height.
+    let nextHeight = Math.max(stableMinHeight, contentHeight);
     nextHeight = Math.min(maxHeightPx, nextHeight);
-
-    if (lastAppliedHeight > 0 && nextHeight < lastAppliedHeight) {
-      const shrinkFloor = Math.floor(lastAppliedHeight * 0.82);
-      nextHeight = Math.max(nextHeight, shrinkFloor, stableMinHeight);
-    }
-
-    const next = `${nextHeight}px`;
-    const nextMin = `${stableMinHeight}px`;
-    const nextMax = `${maxHeightPx}px`;
-    if (frameEl.style.minHeight !== nextMin) frameEl.style.minHeight = nextMin;
-    if (frameEl.style.maxHeight !== nextMax) frameEl.style.maxHeight = nextMax;
-    if (frameEl.style.height !== next) {
-      frameEl.style.height = next;
-      frameEl.style.display = 'block';
-      lastAppliedHeight = nextHeight;
-    }
+    commitHeight(nextHeight, stableMinHeight);
   };
 
   const schedule = () => {

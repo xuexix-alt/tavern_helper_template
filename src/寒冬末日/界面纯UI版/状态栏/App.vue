@@ -118,6 +118,7 @@ import CreationPage from './pages/CreationPage.vue';
 import MissionPage from './pages/MissionPage.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import { useInjectedData } from './useInjectedData';
+import { createMobileTouchScrollBridge } from '../../界面/useMobileTouchScrollBridge';
 
 const STATUSBAR_VERSION = '3.1';
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
@@ -164,12 +165,11 @@ const FONT_MAP: Record<string, string> = {
 };
 
 const shellStyle = computed<Record<string, string>>(() => {
-  if (shellHeight.value === null) {
-    return {};
+  const styles: Record<string, string> = {};
+  if (shellHeight.value !== null) {
+    styles['--eden-shell-height'] = `${shellHeight.value}px`;
   }
-  return {
-    '--eden-shell-height': `${shellHeight.value}px`,
-  };
+  return styles;
 });
 
 function getActiveScrollContainer() {
@@ -207,29 +207,6 @@ function switchTab(nextTab: TabKey) {
     restoreTabScroll(nextTab);
     notifyLayoutChanged();
   });
-}
-
-function getViewportHeight() {
-  const vv = window.visualViewport;
-  if (vv?.height && Number.isFinite(vv.height) && vv.height > 0) return vv.height;
-  if (window.innerHeight > 0) return window.innerHeight;
-  return document.documentElement.clientHeight || MIN_SHELL_HEIGHT;
-}
-
-function getHostChatHeight() {
-  try {
-    const hostDoc = window.parent?.document;
-    if (!hostDoc || hostDoc === document) return null;
-    for (const selector of HOST_CHAT_HEIGHT_SELECTORS) {
-      const el = hostDoc.querySelector(selector) as HTMLElement | null;
-      if (!el) continue;
-      const rect = el.getBoundingClientRect();
-      if (Number.isFinite(rect.height) && rect.height > 0) return rect.height;
-    }
-  } catch {
-    // ignore
-  }
-  return null;
 }
 
 function getFrameContainerHeight() {
@@ -340,6 +317,7 @@ let hostChatResizeObserver: ResizeObserver | null = null;
 let removeVisualViewportListener: (() => void) | null = null;
 let initialSyncTimers: number[] = [];
 let removeDisplayClick: (() => void) | null = null;
+let stopTouchScrollBridge: (() => void) | null = null;
 
 onMounted(() => {
   loadPersistedDisplaySettings();
@@ -354,6 +332,9 @@ onMounted(() => {
   nextTick(() => {
     restoreTabScroll(activeTabKey.value);
     notifyLayoutChanged();
+  });
+  stopTouchScrollBridge = createMobileTouchScrollBridge({
+    root: () => shellMainRef.value,
   });
 
   try {
@@ -416,6 +397,8 @@ onBeforeUnmount(() => {
     for (const timer of initialSyncTimers) window.clearTimeout(timer);
     initialSyncTimers = [];
   }
+  stopTouchScrollBridge?.();
+  stopTouchScrollBridge = null;
   quickChoicesPanelOpen.value = false;
 });
 
@@ -458,142 +441,24 @@ watch(
 </script>
 
 <style scoped>
-:global(html),
-:global(body),
-:global(#app) {
-  height: 100%;
-}
-
-:global(body) {
-  overflow: hidden;
-  padding: 0;
-}
+@import '../../界面/shared/shell-layout.css';
 
 #eden-shell {
-  position: relative;
-  font-size: var(--font-size-main, 16px);
-  box-sizing: border-box;
-  border: 1px solid var(--border-color);
-  box-shadow:
-    0 0 25px 0px var(--border-shadow-color),
-    inset 0 0 15px rgba(255, 255, 255, 0.05);
-  background-color: var(--bg-main);
-  border-radius: var(--border-radius);
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  gap: 0;
-  height: var(--eden-shell-height, auto);
-  max-height: 100%;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  overflow: hidden;
-}
-
-.eden-shell-top-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 120;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.eden-mode-toggle-btn,
-.eden-display-settings-btn {
-  min-height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--btn-border, var(--border-color));
-  background: var(--btn-bg, var(--bg-light));
-  color: var(--btn-text, var(--text-color));
-  font: inherit;
-  font-size: 0.74em;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 10px;
-}
-
-.eden-display-settings-btn {
-  min-width: 36px;
-  padding: 0;
-  font-size: 1em;
-}
-
-.eden-mode-toggle-btn:hover,
-.eden-display-settings-btn:hover {
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.2));
-  color: var(--btn-hover-text, var(--text-strong));
-}
-
-.eden-display-panel {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  width: min(280px, calc(100vw - 18px));
-  background: var(--card-surface-bg-elevated, var(--bg-light));
-  border: 1px solid var(--card-surface-border, var(--border-color));
-  border-radius: 12px;
-  box-shadow: var(--theme-elevated-shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
-  padding: 12px;
-  display: none;
-}
-
-.eden-display-panel.show {
-  display: block;
-}
-
-.eden-display-panel h3 {
-  margin: 0 0 8px 0;
-  font-size: 0.98em;
-  color: var(--text-strong);
-}
-
-.eden-display-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.eden-display-option label {
-  font-size: 0.84em;
-  color: var(--text-color);
-}
-
-.eden-display-option select {
-  width: 140px;
-  min-height: 34px;
-  padding: 4px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.16));
-  background: var(--card-surface-bg, var(--bg-medium));
-  color: var(--text-color);
-  color-scheme: light;
-  -webkit-text-fill-color: currentColor;
-}
-
-.eden-display-option select option {
-  color: #1f2f42;
-  background-color: #f6f9fc;
-}
-
-.eden-display-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.eden-display-close {
-  min-height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--btn-primary-border, rgba(255, 255, 255, 0.2));
-  background: var(--btn-primary-bg, rgba(139, 233, 253, 0.25));
-  color: var(--btn-primary-text, var(--text-strong));
-  font: inherit;
-  font-size: 0.84em;
-  padding: 0 10px;
-  cursor: pointer;
+  --eden-shell-height-fallback: auto;
+  --eden-shell-max-height: 100%;
+  --eden-shell-min-height: 0px;
+  --eden-shell-min-height-mobile: 0px;
+  --eden-shell-footer-padding-x: 8px;
+  --eden-tab-btn-min-height: 38px;
+  --eden-tab-btn-min-height-mobile: 36px;
+  --eden-tab-btn-min-height-compact: 34px;
+  --eden-tab-label-font-size: 0.66em;
+  --eden-tab-label-font-size-mobile: 0.64em;
+  --eden-tab-label-display-compact: none;
+  --eden-tab-label-letter-spacing-compact: 0;
+  --eden-shell-mobile-margin-top: 2px;
+  --eden-shell-mobile-margin-bottom: 3px;
+  --eden-shell-mobile-height-offset: 5px;
 }
 
 #eden-shell:not([style*='--eden-shell-height']) {
@@ -607,37 +472,8 @@ watch(
   overflow: visible;
 }
 
-.eden-shell-main {
-  min-height: 0;
-  overflow: hidden;
-  padding-top: 44px;
-}
-
-#eden-shell:not([style*='--eden-shell-height']) .eden-shell-main {
-  overflow: visible;
-}
-
-.eden-pane {
-  height: 100%;
-  min-height: 0;
-}
-
 #eden-shell:not([style*='--eden-shell-height']) .eden-pane {
   height: auto;
-}
-
-.eden-shell-footer {
-  border-top: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
-  background: linear-gradient(
-    180deg,
-    var(--theme-footer-grad-start, rgba(3, 8, 20, 0.4)),
-    var(--theme-footer-grad-end, rgba(3, 8, 20, 0.72))
-  );
-  backdrop-filter: blur(4px);
-  padding: 4px 8px calc(6px + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .eden-shell-footer-bottom {
@@ -651,9 +487,9 @@ watch(
   flex: 1 1 auto;
   min-height: 34px;
   border-radius: 9px;
-  border: 1px solid var(--btn-primary-border, rgba(0, 180, 216, 0.56));
-  background: var(--btn-primary-bg, rgba(0, 180, 216, 0.22));
-  color: var(--btn-primary-text, var(--text-strong));
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   font: inherit;
   display: inline-flex;
   align-items: center;
@@ -664,15 +500,15 @@ watch(
 }
 
 .eden-quick-options-btn:hover:not(:disabled) {
-  background: var(--btn-primary-hover-bg, rgba(0, 180, 216, 0.3));
-  color: var(--btn-primary-text, var(--text-strong));
-  box-shadow: 0 0 10px var(--btn-primary-border, rgba(0, 180, 216, 0.35));
+  background: var(--btn-primary-hover-bg);
+  color: var(--btn-primary-text);
+  box-shadow: 0 0 10px var(--btn-primary-border);
 }
 
 .eden-quick-options-btn:disabled {
-  background: var(--btn-disabled-bg, rgba(130, 142, 168, 0.16));
-  border-color: var(--btn-disabled-border, rgba(130, 142, 168, 0.24));
-  color: var(--btn-disabled-text, rgba(208, 216, 232, 0.64));
+  background: var(--btn-disabled-bg);
+  border-color: var(--btn-disabled-border);
+  color: var(--btn-disabled-text);
   cursor: not-allowed;
 }
 
@@ -680,71 +516,19 @@ watch(
   min-width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: var(--card-surface-bg-elevated, rgba(0, 0, 0, 0.32));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.18));
+  background: var(--card-surface-bg-elevated);
+  border: 1px solid var(--card-surface-border);
   font-size: 0.76em;
   line-height: 18px;
   text-align: center;
   padding: 0 4px;
 }
 
-.eden-tabbar {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-}
-
-.eden-tab-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 38px;
-  border-radius: 9px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
-  color: var(--btn-text, var(--text-color));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  font: inherit;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.eden-tab-btn:hover {
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.2));
-  color: var(--btn-hover-text, var(--text-strong));
-}
-
-.eden-tab-btn:focus-visible {
-  outline: 2px solid var(--focus-ring-color, rgba(139, 233, 253, 0.56));
-  outline-offset: 1px;
-}
-
-.eden-tab-btn.active {
-  background: var(--btn-active-bg, rgba(139, 233, 253, 0.3));
-  border-color: var(--btn-active-border, rgba(139, 233, 253, 0.65));
-  color: var(--btn-active-text, var(--text-strong));
-  box-shadow: 0 0 12px var(--btn-active-border, rgba(139, 233, 253, 0.22));
-}
-
-.eden-tab-icon {
-  line-height: 1;
-  font-size: 0.96em;
-}
-
-.eden-tab-label {
-  line-height: 1;
-  font-size: 0.66em;
-  white-space: nowrap;
-}
-
 .eden-quick-choices-mask {
   position: fixed;
   inset: 0;
   z-index: 2588;
-  background: var(--theme-overlay-mask, rgba(0, 0, 0, 0.52));
+  background: var(--theme-overlay-mask);
   padding: calc(40px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right))
     calc(10px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
   display: flex;
@@ -755,10 +539,10 @@ watch(
 .eden-quick-choices-modal {
   width: min(680px, 100%);
   max-height: calc(100% - 12px);
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--card-surface-border);
   border-radius: 14px;
-  background: var(--theme-modal-bg, rgba(18, 21, 29, 0.98));
-  box-shadow: var(--theme-elevated-shadow, 0 14px 34px rgba(0, 0, 0, 0.45));
+  background: var(--theme-modal-bg);
+  box-shadow: var(--theme-elevated-shadow);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -770,7 +554,7 @@ watch(
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid var(--card-surface-border);
 }
 
 .eden-quick-choices-title {
@@ -781,8 +565,8 @@ watch(
 .eden-quick-choices-close {
   min-height: 30px;
   border-radius: 8px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.2));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
   color: var(--btn-text, var(--text-color));
   font: inherit;
   padding: 0 10px;
@@ -790,13 +574,16 @@ watch(
 }
 
 .eden-quick-choices-close:hover {
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.24));
+  background: var(--btn-hover-bg);
   color: var(--btn-hover-text, var(--text-strong));
 }
 
 .eden-quick-choices-body {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   padding: 8px;
 }
 
@@ -805,53 +592,9 @@ watch(
 }
 
 @media (max-width: 520px) {
-  .eden-shell-top-actions {
-    top: 6px;
-    right: 6px;
-    gap: 4px;
-  }
-
-  .eden-mode-toggle-btn,
-  .eden-display-settings-btn {
-    min-height: 34px;
-  }
-
-  .eden-mode-toggle-btn {
-    padding: 0 8px;
-    font-size: 0.7em;
-  }
-
-  .eden-shell-main {
-    padding-top: 40px;
-  }
-
-  .eden-shell-footer {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .eden-tab-btn {
-    min-height: 36px;
-    border-radius: 8px;
-  }
-
-  .eden-tab-label {
-    font-size: 0.64em;
-  }
-
   .eden-quick-options-btn {
     min-height: 32px;
     border-radius: 8px;
-  }
-}
-
-@media (max-width: 380px) {
-  .eden-tab-label {
-    display: none;
-  }
-
-  .eden-tab-btn {
-    min-height: 34px;
   }
 }
 </style>

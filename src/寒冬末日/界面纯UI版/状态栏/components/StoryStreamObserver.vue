@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { stripOptionBlocks } from '../optionParser';
 
 type StreamStatus = 'idle' | 'waiting' | 'streaming' | 'done' | 'error';
 
@@ -36,6 +37,8 @@ const dismissed = ref(false);
 let timeoutId: number | null = null;
 let stopStreamListener: { stop: () => void } | null = null;
 let stopMessageListener: { stop: () => void } | null = null;
+let pendingStreamChunk = '';
+let streamFlushRaf = 0;
 
 const statusText = computed(() => {
   if (status.value === 'waiting') return '等待响应';
@@ -65,6 +68,22 @@ function clearTimer() {
   }
 }
 
+function clearPendingStreamChunk() {
+  pendingStreamChunk = '';
+  if (streamFlushRaf) {
+    cancelAnimationFrame(streamFlushRaf);
+    streamFlushRaf = 0;
+  }
+}
+
+function flushPendingStreamChunk() {
+  if (!pendingStreamChunk) return;
+  const next = `${streamingText.value}${pendingStreamChunk}`;
+  pendingStreamChunk = '';
+  // 限制显示长度，避免超长响应撑爆布局
+  streamingText.value = next.length > 16000 ? next.slice(next.length - 16000) : next;
+}
+
 function normalizeMessageText(raw: string, role?: string): string {
   const text = String(raw ?? '').trim();
   if (!text) return '';
@@ -75,7 +94,7 @@ function normalizeMessageText(raw: string, role?: string): string {
   const gameMatch = text.match(/<game(?:\s[^>]*)?>([\s\S]*?)<\/game>/i);
   if (gameMatch?.[1]) return gameMatch[1].trim();
 
-  const trimmedOption = text.replace(/<option(?:\s[^>]*)?>[\s\S]*$/i, '').trim();
+  const trimmedOption = stripOptionBlocks(text).trim();
   const hasUpdateTags = /<updatevariable>|<json_patch>|<update>|<initvar>/i.test(trimmedOption);
   if (hasUpdateTags && role !== 'assistant') return '';
 
@@ -83,6 +102,7 @@ function normalizeMessageText(raw: string, role?: string): string {
 }
 
 function finishWithMessage(message: string) {
+  flushPendingStreamChunk();
   finalizedText.value = message.trim();
   status.value = 'done';
   isArmed.value = false;
@@ -112,15 +132,19 @@ function dismiss() {
   isArmed.value = false;
   streamingText.value = '';
   finalizedText.value = '';
+  clearPendingStreamChunk();
   clearTimer();
 }
 
 function handleStreamToken(token: string) {
   if (!isArmed.value) return;
   status.value = 'streaming';
-  const next = `${streamingText.value}${String(token ?? '')}`;
-  // 限制显示长度，避免超长响应撑爆布局
-  streamingText.value = next.length > 16000 ? next.slice(next.length - 16000) : next;
+  pendingStreamChunk += String(token ?? '');
+  if (streamFlushRaf) return;
+  streamFlushRaf = requestAnimationFrame(() => {
+    streamFlushRaf = 0;
+    flushPendingStreamChunk();
+  });
 }
 
 function handleMessageReceived(message_id: number) {
@@ -147,6 +171,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimer();
+  clearPendingStreamChunk();
   stopStreamListener?.stop?.();
   stopMessageListener?.stop?.();
 });

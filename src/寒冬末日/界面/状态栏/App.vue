@@ -84,16 +84,17 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener, useLocalStorage, watchDebounced } from '@vueuse/core';
 import type { Component } from 'vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useEventListener, useLocalStorage, watchDebounced } from '@vueuse/core';
+import { CHAT_VAR_KEYS } from '../outbound';
+import { createMobileTouchScrollBridge } from '../useMobileTouchScrollBridge';
+import StoryStreamObserver from './components/StoryStreamObserver.vue';
 import CharactersPage from './pages/CharactersPage.vue';
 import CreationPage from './pages/CreationPage.vue';
 import MissionPage from './pages/MissionPage.vue';
-import StoryStreamObserver from './components/StoryStreamObserver.vue';
 import ShelterPage from './pages/ShelterPage.vue';
 import StoryPage from './pages/StoryPage.vue';
-import { CHAT_VAR_KEYS } from '../outbound';
 import { useInjectedData } from './useInjectedData';
 
 const STATUSBAR_VERSION = '3.1';
@@ -107,6 +108,7 @@ const MAX_SHELL_HEIGHT = 4096;
 const SHELL_COMFORT_OFFSET_RATIO = 0.03;
 const SHELL_COMFORT_MIN_OFFSET = 12;
 const SHELL_COMFORT_MAX_OFFSET = 36;
+const MOBILE_ONE_SCREEN_MAX_WIDTH = 920;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const { raw, options } = useInjectedData();
 const tabs = [
@@ -283,6 +285,15 @@ function getStableMinShellHeight(baseline: number) {
   return baseMin;
 }
 
+function isMobileTouchViewport() {
+  const viewportWidth = Number(window.visualViewport?.width || window.innerWidth || 0);
+  if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return false;
+  if (viewportWidth > MOBILE_ONE_SCREEN_MAX_WIDTH) return false;
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+  const hasTouch = (navigator?.maxTouchPoints ?? 0) > 0 || 'ontouchstart' in window;
+  return coarsePointer || hasTouch;
+}
+
 function getHostChatHeight() {
   try {
     const hostDoc = window.parent?.document;
@@ -299,7 +310,35 @@ function getHostChatHeight() {
   return null;
 }
 
+function getFrameContainerHeight() {
+  try {
+    const frameEl = window.frameElement as HTMLElement | null;
+    if (!frameEl) return null;
+    const rect = frameEl.getBoundingClientRect();
+    if (Number.isFinite(rect.height) && rect.height > 0) return rect.height;
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 function calculateShellHeight() {
+  if (isMobileTouchViewport()) {
+    const viewportHeight = getViewportHeight();
+    const frameHeight = getFrameContainerHeight();
+    const candidate = frameHeight && frameHeight > 0 ? frameHeight : viewportHeight;
+    const keyboardLikelyOpen = Number(window.innerHeight || 0) - viewportHeight >= 90;
+    const mobileFloor =
+      activeTabKey.value === 'story'
+        ? keyboardLikelyOpen
+          ? MOBILE_KEYBOARD_STORY_MIN_SHELL_HEIGHT
+          : MOBILE_STORY_MIN_SHELL_HEIGHT
+        : keyboardLikelyOpen
+          ? MOBILE_KEYBOARD_MIN_SHELL_HEIGHT
+          : MOBILE_MIN_SHELL_HEIGHT;
+    return Math.min(MAX_SHELL_HEIGHT, Math.max(mobileFloor, Math.floor(candidate)));
+  }
+
   const hostChatHeight = getHostChatHeight() ?? 0;
   const viewportHeight = getViewportHeight();
   // In message iframes, prefer host chat height to avoid iframe<->viewport positive feedback loops.
@@ -328,6 +367,7 @@ let frameResizeObserver: ResizeObserver | null = null;
 let hostChatResizeObserver: ResizeObserver | null = null;
 let removeVisualViewportListener: (() => void) | null = null;
 let initialSyncTimers: number[] = [];
+let stopTouchScrollBridge: (() => void) | null = null;
 
 onMounted(() => {
   loadPersistedDisplaySettings();
@@ -342,6 +382,9 @@ onMounted(() => {
   nextTick(() => {
     restoreTabScroll(activeTabKey.value);
     notifyLayoutChanged();
+  });
+  stopTouchScrollBridge = createMobileTouchScrollBridge({
+    root: () => shellMainRef.value,
   });
 
   try {
@@ -404,6 +447,8 @@ onBeforeUnmount(() => {
     for (const timer of initialSyncTimers) window.clearTimeout(timer);
     initialSyncTimers = [];
   }
+  stopTouchScrollBridge?.();
+  stopTouchScrollBridge = null;
 });
 
 watch(
@@ -453,269 +498,21 @@ watchDebounced(
 </script>
 
 <style scoped>
-:global(html),
-:global(body),
-:global(#app) {
-  height: 100%;
-}
-
-:global(body) {
-  overflow: hidden;
-  padding: 0;
-}
+@import '../shared/shell-layout.css';
 
 #eden-shell {
-  position: relative;
-  font-size: var(--font-size-main, 16px);
-  border: 1px solid var(--border-color);
-  box-shadow:
-    0 0 25px 0px var(--border-shadow-color),
-    inset 0 0 15px rgba(255, 255, 255, 0.05);
-  background-color: var(--bg-main);
-  border-radius: var(--border-radius);
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  gap: 0;
-  height: var(--eden-shell-height, 560px);
-  max-height: var(--eden-shell-height, 560px);
-  min-height: 312px;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  overflow: hidden;
-}
-
-.eden-shell-top-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 120;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.eden-mode-toggle-btn,
-.eden-display-settings-btn {
-  min-height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--btn-border, var(--border-color));
-  background: var(--btn-bg, var(--bg-light));
-  color: var(--btn-text, var(--text-color));
-  font: inherit;
-  font-size: 0.74em;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0 10px;
-}
-
-.eden-display-settings-btn {
-  min-width: 36px;
-  padding: 0;
-  font-size: 1em;
-}
-
-.eden-mode-toggle-btn:hover,
-.eden-display-settings-btn:hover {
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.2));
-  color: var(--btn-hover-text, var(--text-strong));
-}
-
-.eden-display-panel {
-  position: absolute;
-  top: 44px;
-  right: 0;
-  width: min(280px, calc(100vw - 18px));
-  background: var(--card-surface-bg-elevated, var(--bg-light));
-  border: 1px solid var(--card-surface-border, var(--border-color));
-  border-radius: 12px;
-  box-shadow: var(--theme-elevated-shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
-  padding: 12px;
-  display: none;
-}
-
-.eden-display-panel.show {
-  display: block;
-}
-
-.eden-display-panel h3 {
-  margin: 0 0 8px 0;
-  font-size: 0.98em;
-  color: var(--text-strong);
-}
-
-.eden-display-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.eden-display-option label {
-  font-size: 0.84em;
-  color: var(--text-color);
-}
-
-.eden-display-option select {
-  width: 140px;
-  min-height: 34px;
-  padding: 4px 6px;
-  border-radius: 8px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.16));
-  background: var(--card-surface-bg, var(--bg-medium));
-  color: var(--text-color);
-  color-scheme: light;
-  -webkit-text-fill-color: currentColor;
-}
-
-.eden-display-option select option {
-  color: #1f2f42;
-  background-color: #f6f9fc;
-}
-
-.eden-display-buttons {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.eden-display-close {
-  min-height: 34px;
-  border-radius: 8px;
-  border: 1px solid var(--btn-primary-border, rgba(255, 255, 255, 0.2));
-  background: var(--btn-primary-bg, rgba(139, 233, 253, 0.25));
-  color: var(--btn-primary-text, var(--text-strong));
-  font: inherit;
-  font-size: 0.84em;
-  padding: 0 10px;
-  cursor: pointer;
-}
-
-.eden-shell-main {
-  min-height: 0;
-  overflow: hidden;
-  padding-top: 44px;
-}
-
-.eden-pane {
-  height: 100%;
-  min-height: 0;
-}
-
-.eden-shell-footer {
-  border-top: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
-  background: linear-gradient(
-    180deg,
-    var(--theme-footer-grad-start, rgba(3, 8, 20, 0.4)),
-    var(--theme-footer-grad-end, rgba(3, 8, 20, 0.72))
-  );
-  backdrop-filter: blur(4px);
-  padding: 4px 7px calc(6px + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.eden-tabbar {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-}
-
-.eden-tab-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 42px;
-  border-radius: 9px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
-  color: var(--btn-text, var(--text-color));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  font: inherit;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.eden-tab-btn:hover {
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.2));
-  color: var(--btn-hover-text, var(--text-strong));
-}
-
-.eden-tab-btn:focus-visible {
-  outline: 2px solid var(--focus-ring-color, rgba(139, 233, 253, 0.56));
-  outline-offset: 1px;
-}
-
-.eden-tab-btn.active {
-  background: var(--btn-active-bg, rgba(139, 233, 253, 0.3));
-  border-color: var(--btn-active-border, rgba(139, 233, 253, 0.65));
-  color: var(--btn-active-text, var(--text-strong));
-  box-shadow: 0 0 12px var(--btn-active-border, rgba(139, 233, 253, 0.22));
-}
-
-.eden-tab-icon {
-  line-height: 1;
-  font-size: 0.96em;
-}
-
-.eden-tab-label {
-  line-height: 1;
-  font-size: 0.68em;
-  white-space: nowrap;
-}
-
-@media (max-width: 520px) {
-  .eden-shell-top-actions {
-    top: 6px;
-    right: 6px;
-    gap: 4px;
-  }
-
-  .eden-mode-toggle-btn,
-  .eden-display-settings-btn {
-    min-height: 34px;
-  }
-
-  .eden-mode-toggle-btn {
-    padding: 0 8px;
-    font-size: 0.7em;
-  }
-
-  .eden-shell-main {
-    padding-top: 40px;
-  }
-
-  #eden-shell {
-    min-height: 292px;
-  }
-
-  .eden-shell-footer {
-    padding-left: 6px;
-    padding-right: 6px;
-  }
-
-  .eden-tab-btn {
-    min-height: 40px;
-    border-radius: 8px;
-  }
-
-  .eden-tab-label {
-    font-size: 0.64em;
-  }
-}
-
-@media (max-width: 380px) {
-  .eden-tab-label {
-    font-size: 0.6em;
-    letter-spacing: 0.01em;
-  }
-
-  .eden-tab-btn {
-    min-height: 38px;
-  }
+  --eden-shell-height-fallback: 560px;
+  --eden-shell-max-height: var(--eden-shell-height, 560px);
+  --eden-shell-min-height: 312px;
+  --eden-shell-min-height-mobile: 292px;
+  --eden-shell-footer-padding-x: 7px;
+  --eden-tab-btn-min-height: 42px;
+  --eden-tab-btn-min-height-mobile: 40px;
+  --eden-tab-btn-min-height-compact: 38px;
+  --eden-tab-label-font-size: 0.68em;
+  --eden-tab-label-font-size-mobile: 0.64em;
+  --eden-tab-label-font-size-compact: 0.6em;
+  --eden-tab-label-letter-spacing-compact: 0.01em;
+  --eden-tab-label-display-compact: inline;
 }
 </style>

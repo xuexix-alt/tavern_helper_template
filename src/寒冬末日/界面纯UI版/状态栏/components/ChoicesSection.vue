@@ -216,6 +216,9 @@ async function confirmChoiceDialog() {
 .choice-modal-body {
   padding: 6px 10px 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .choice-original-label,

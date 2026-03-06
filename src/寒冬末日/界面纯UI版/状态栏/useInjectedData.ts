@@ -1,5 +1,6 @@
 import { SAMELAYER_EVENTS, type SameLayerCommandResponsePayload, type SameLayerPayload } from '../../samelayer_events';
 import { requestEventPayload } from '@util/requestEvent';
+import { parseOptionsFromRaw } from './optionParser';
 
 type InjectedData = {
   raw: string;
@@ -22,21 +23,7 @@ function stripHiddenBlocks(raw: string): string {
 
 function parseInjectedText(raw: string): InjectedData {
   const cleaned = stripHiddenBlocks(raw);
-  const optionMatch = cleaned.match(/(<option(?:\s[^>]*)?>(?![\s\S]*?<option(?:\s[^>]*)?>)[\s\S]*?(?:<\/option>|$))/i);
-
-  const optionsRaw = optionMatch
-    ? optionMatch[1]
-        .replace(/^<option(?:\s[^>]*)?>/i, '')
-        .replace(/<\/option>\s*$/i, '')
-        .trim()
-    : '';
-
-  const options = optionsRaw
-    ? optionsRaw
-        .split(/\r?\n/)
-        .map((line: string) => line.trim())
-        .filter(Boolean)
-    : [];
+  const options = parseOptionsFromRaw(cleaned);
 
   return { raw, options };
 }

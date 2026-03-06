@@ -4341,7 +4341,10 @@ function formatTableCell(cell: string): string {
   max-height: var(--story-pane-max-height, 680px);
   overflow-y: auto;
   overflow-x: hidden;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: auto;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   scrollbar-gutter: stable;
 }
 
