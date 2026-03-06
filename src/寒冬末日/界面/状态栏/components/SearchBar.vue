@@ -114,13 +114,13 @@ onBeforeUnmount(() => {
   gap: 4px;
   border-radius: 9px;
   padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--search-shell-border);
+  background: var(--search-shell-bg);
 }
 
 .eden-searchbar-inner:focus-within {
-  border-color: rgba(139, 233, 253, 0.6);
-  box-shadow: 0 0 0 2px rgba(139, 233, 253, 0.22);
+  border-color: var(--search-shell-focus-border);
+  box-shadow: 0 0 0 2px var(--search-shell-focus-ring);
 }
 
 .eden-searchbar-label {
@@ -129,9 +129,9 @@ onBeforeUnmount(() => {
   line-height: 1;
   padding: 5px 9px;
   border-radius: 999px;
-  background: rgba(139, 233, 253, 0.2);
-  border: 1px solid rgba(139, 233, 253, 0.45);
-  color: var(--text-color);
+  background: var(--search-mode-pill-bg);
+  border: 1px solid var(--search-mode-pill-border);
+  color: var(--search-mode-pill-text);
 }
 
 .eden-searchbar-input {
@@ -139,9 +139,9 @@ onBeforeUnmount(() => {
   min-width: 0;
   width: 100%;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--theme-input-bg, rgba(0, 0, 0, 0.22));
-  color: var(--text-color);
+  border: 1px solid var(--search-input-border);
+  background: var(--search-input-bg);
+  color: var(--search-input-text);
   min-height: 40px;
   padding: 8px 10px;
   font: inherit;
@@ -149,15 +149,15 @@ onBeforeUnmount(() => {
 }
 
 .eden-searchbar-input::placeholder {
-  color: var(--theme-placeholder-color, rgba(248, 248, 242, 0.55));
+  color: var(--search-input-placeholder);
 }
 
 .eden-searchbar-clear {
   flex: 0 0 auto;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-color);
+  border: 1px solid var(--search-clear-border);
+  background: var(--search-clear-bg);
+  color: var(--search-clear-text);
   font: inherit;
   font-size: 0.82em;
   line-height: 1;
@@ -168,15 +168,15 @@ onBeforeUnmount(() => {
 }
 
 .eden-searchbar-clear:hover {
-  background: rgba(139, 233, 253, 0.2);
+  background: var(--search-clear-hover-bg);
 }
 
 .eden-searchbar-send {
   flex: 0 0 auto;
   border-radius: 7px;
-  border: 1px solid rgba(139, 233, 253, 0.55);
-  background: rgba(139, 233, 253, 0.25);
-  color: var(--text-color);
+  border: 1px solid var(--search-send-border);
+  background: var(--search-send-bg);
+  color: var(--search-send-text);
   font: inherit;
   font-size: 0.82em;
   line-height: 1;
@@ -189,9 +189,9 @@ onBeforeUnmount(() => {
 .eden-searchbar-option {
   flex: 0 0 auto;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-color);
+  border: 1px solid var(--search-option-border);
+  background: var(--search-option-bg);
+  color: var(--search-option-text);
   font: inherit;
   font-size: 0.82em;
   line-height: 1;
@@ -202,11 +202,11 @@ onBeforeUnmount(() => {
 }
 
 .eden-searchbar-option:hover {
-  background: rgba(139, 233, 253, 0.2);
+  background: var(--search-option-hover-bg);
 }
 
 .eden-searchbar-send:hover:not(:disabled) {
-  background: rgba(139, 233, 253, 0.38);
+  background: var(--search-send-hover-bg);
 }
 
 .eden-searchbar-send:disabled {

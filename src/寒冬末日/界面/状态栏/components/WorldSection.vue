@@ -53,9 +53,9 @@ const store = useDataStore();
 
 .world-pane {
   min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--world-pane-border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--world-pane-bg);
   overflow: hidden;
 }
 
@@ -66,8 +66,8 @@ const store = useDataStore();
   font-size: 0.84em;
   font-weight: 700;
   color: var(--accent-gold);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(139, 233, 253, 0.15);
+  border-bottom: 1px solid var(--world-pane-tab-border);
+  background: var(--world-pane-tab-bg);
 }
 
 .world-pane-body {
@@ -83,8 +83,8 @@ const store = useDataStore();
 .world-info-card {
   border-radius: 9px;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--world-card-bg);
+  border: 1px solid var(--world-card-border);
   display: grid;
   gap: 2px;
   min-height: 46px;

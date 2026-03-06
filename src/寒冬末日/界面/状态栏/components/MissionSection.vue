@@ -327,10 +327,10 @@ function getRingProgress(status: string): string {
   height: 8px;
   margin-left: 8px;
   border-radius: 999px;
-  background: rgba(229, 57, 53, 0.9);
+  background: var(--mission-new-dot-bg);
   box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.25),
-    0 0 10px rgba(229, 57, 53, 0.35);
+    0 0 0 2px var(--mission-new-dot-ring),
+    0 0 10px var(--mission-new-dot-glow);
   vertical-align: middle;
 }
 
@@ -344,7 +344,7 @@ function getRingProgress(status: string): string {
   background-color: var(--bg-medium);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--mission-surface-border-soft);
 }
 
 .phase-label {
@@ -365,7 +365,7 @@ function getRingProgress(status: string): string {
   background-color: var(--bg-medium);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--mission-surface-border-soft);
 }
 
 .progress-header {
@@ -427,7 +427,7 @@ function getRingProgress(status: string): string {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--mission-surface-border-soft);
   transition: all 0.2s ease;
 }
 
@@ -442,7 +442,7 @@ function getRingProgress(status: string): string {
 }
 
 .goal-item.completed {
-  background-color: rgba(80, 250, 123, 0.1);
+  background-color: var(--mission-goal-completed-bg);
 }
 
 .goal-checkbox {
@@ -488,9 +488,9 @@ function getRingProgress(status: string): string {
   font-size: 0.75em;
   padding: 2px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--accent-blue);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--mission-meta-chip-bg);
+  color: var(--mission-meta-chip-text);
+  border: 1px solid var(--mission-meta-chip-border);
 }
 
 .goal-text.completed {
@@ -503,7 +503,7 @@ function getRingProgress(status: string): string {
   padding: 2px 6px;
   border-radius: 4px;
   background-color: var(--dialog-color);
-  color: var(--bg-dark);
+  color: var(--mission-goal-status-text);
   font-weight: bold;
 }
 
@@ -512,7 +512,7 @@ function getRingProgress(status: string): string {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background-color: var(--bg-medium);
+  background-color: var(--mission-intel-surface-bg);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -535,12 +535,12 @@ function getRingProgress(status: string): string {
 
 .intel-item.已完成 {
   border-left-color: var(--dialog-color);
-  background-color: rgba(80, 250, 123, 0.08);
+  background-color: var(--mission-intel-completed-bg);
 }
 
 .intel-item.已探索 {
   border-left-color: var(--accent-blue);
-  background-color: rgba(189, 147, 249, 0.08);
+  background-color: var(--mission-intel-explored-bg);
 }
 
 .intel-item.未探索 {
@@ -628,12 +628,12 @@ function getRingProgress(status: string): string {
 }
 
 .intel-status-badge.已探索 {
-  color: var(--bg-dark);
+  color: var(--mission-intel-status-explored-text);
   background-color: var(--accent-blue);
 }
 
 .intel-status-badge.已完成 {
-  color: var(--bg-dark);
+  color: var(--mission-intel-status-completed-text);
   background-color: var(--dialog-color);
 }
 
@@ -679,8 +679,8 @@ function getRingProgress(status: string): string {
 #mission-section .goals-progress-bar {
   padding: 9px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(173, 186, 216, 0.16);
-  background: var(--mission-overview-card-bg, linear-gradient(170deg, rgba(35, 41, 62, 0.92), rgba(21, 25, 42, 0.85)));
+  border: 1px solid var(--mission-overview-card-border);
+  background: var(--mission-overview-card-bg);
 }
 
 #mission-section .phase-label {
@@ -708,8 +708,8 @@ function getRingProgress(status: string): string {
   margin-top: 0;
   padding: 7px;
   border-radius: 10px;
-  border: 1px solid rgba(173, 186, 216, 0.14);
-  background: var(--mission-panel-bg, linear-gradient(180deg, rgba(13, 17, 31, 0.86), rgba(8, 10, 22, 0.88)));
+  border: 1px solid var(--mission-panel-border);
+  background: var(--mission-panel-bg);
 }
 
 #mission-section .mission-panel-title {
@@ -720,8 +720,8 @@ function getRingProgress(status: string): string {
   margin-bottom: 6px;
   padding: 5px 8px;
   border-radius: 8px;
-  border: 1px solid rgba(141, 233, 255, 0.3);
-  background: var(--mission-panel-title-bg, linear-gradient(180deg, rgba(67, 79, 112, 0.55), rgba(54, 63, 92, 0.5)));
+  border: 1px solid var(--mission-panel-title-border);
+  background: var(--mission-panel-title-bg);
 }
 
 #mission-section .panel-title-main {
@@ -733,7 +733,7 @@ function getRingProgress(status: string): string {
 #mission-section .panel-title-count {
   font-size: 0.82em;
   font-weight: 700;
-  color: var(--mission-panel-title-count-color, rgba(237, 241, 255, 0.9));
+  color: var(--mission-panel-title-count-color);
   opacity: 0.95;
 }
 
@@ -823,79 +823,5 @@ function getRingProgress(status: string): string {
   #mission-section .panel-title-main {
     font-size: 0.92em;
   }
-}
-
-:global(:root[data-theme='jade_green']) #mission-section,
-:global(:root[data-theme='parchment']) #mission-section,
-:global(:root[data-theme='milky']) #mission-section {
-  --mission-overview-card-bg: linear-gradient(170deg, rgba(255, 255, 255, 0.78), rgba(240, 246, 255, 0.74));
-  --mission-panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(243, 248, 255, 0.72));
-  --mission-panel-title-bg: linear-gradient(180deg, rgba(130, 156, 196, 0.24), rgba(108, 134, 172, 0.18));
-  --mission-panel-title-count-color: rgba(34, 52, 80, 0.9);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .mission-phase,
-:global(:root[data-theme='jade_green']) #mission-section .goals-progress-bar,
-:global(:root[data-theme='parchment']) #mission-section .mission-phase,
-:global(:root[data-theme='parchment']) #mission-section .goals-progress-bar,
-:global(:root[data-theme='milky']) #mission-section .mission-phase,
-:global(:root[data-theme='milky']) #mission-section .goals-progress-bar,
-:global(:root[data-theme='jade_green']) #mission-section .mission-goals,
-:global(:root[data-theme='jade_green']) #mission-section .mission-intel,
-:global(:root[data-theme='parchment']) #mission-section .mission-goals,
-:global(:root[data-theme='parchment']) #mission-section .mission-intel,
-:global(:root[data-theme='milky']) #mission-section .mission-goals,
-:global(:root[data-theme='milky']) #mission-section .mission-intel {
-  border-color: rgba(88, 108, 136, 0.22);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .goal-item.completed,
-:global(:root[data-theme='parchment']) #mission-section .goal-item.completed,
-:global(:root[data-theme='milky']) #mission-section .goal-item.completed {
-  background-color: rgba(72, 170, 120, 0.16);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .meta-chip,
-:global(:root[data-theme='parchment']) #mission-section .meta-chip,
-:global(:root[data-theme='milky']) #mission-section .meta-chip {
-  background: rgba(71, 118, 184, 0.14);
-  border-color: rgba(71, 118, 184, 0.2);
-  color: #1f4b7e;
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .goal-status-tag,
-:global(:root[data-theme='parchment']) #mission-section .goal-status-tag,
-:global(:root[data-theme='milky']) #mission-section .goal-status-tag {
-  color: #113a29;
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .intel-item,
-:global(:root[data-theme='parchment']) #mission-section .intel-item,
-:global(:root[data-theme='milky']) #mission-section .intel-item {
-  background-color: rgba(255, 255, 255, 0.58);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .intel-item.已完成,
-:global(:root[data-theme='parchment']) #mission-section .intel-item.已完成,
-:global(:root[data-theme='milky']) #mission-section .intel-item.已完成 {
-  background-color: rgba(86, 181, 129, 0.17);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .intel-item.已探索,
-:global(:root[data-theme='parchment']) #mission-section .intel-item.已探索,
-:global(:root[data-theme='milky']) #mission-section .intel-item.已探索 {
-  background-color: rgba(122, 154, 214, 0.18);
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .intel-status-badge.已探索,
-:global(:root[data-theme='parchment']) #mission-section .intel-status-badge.已探索,
-:global(:root[data-theme='milky']) #mission-section .intel-status-badge.已探索 {
-  color: #163a66;
-}
-
-:global(:root[data-theme='jade_green']) #mission-section .intel-status-badge.已完成,
-:global(:root[data-theme='parchment']) #mission-section .intel-status-badge.已完成,
-:global(:root[data-theme='milky']) #mission-section .intel-status-badge.已完成 {
-  color: #11412d;
 }
 </style>

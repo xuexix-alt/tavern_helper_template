@@ -1289,9 +1289,9 @@ function formatRoomResidents(
   min-width: 68px;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(170, 196, 255, 0.45);
-  background: rgba(89, 130, 255, 0.14);
-  color: #dce7ff;
+  border: 1px solid var(--shelter-calibrate-border);
+  background: var(--shelter-calibrate-bg);
+  color: var(--shelter-calibrate-text);
   cursor: pointer;
   font-size: 0.78em;
   line-height: 1.2;
@@ -1312,9 +1312,9 @@ function formatRoomResidents(
   font-size: 0.72em;
   font-weight: 800;
   letter-spacing: 0.02em;
-  color: #fff;
-  background: rgba(229, 57, 53, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--shelter-tag-text);
+  background: var(--shelter-tag-bg);
+  border: 1px solid var(--shelter-surface-border-base);
 }
 
 .new-tag--small {
@@ -1342,24 +1342,24 @@ function formatRoomResidents(
 .scope-hint {
   margin: 2px 0 10px;
   font-size: 0.85em;
-  color: var(--accent-cyan, #00b4d8);
+  color: var(--accent-cyan);
   opacity: 0.9;
 }
 
 .scope-btn {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--shelter-surface-border-strong);
+  background-color: var(--shelter-surface-soft);
   color: var(--text-color);
   cursor: pointer;
   font-size: 0.9em;
 }
 
 .scope-btn--primary {
-  border-color: rgba(0, 180, 216, 0.55);
-  background-color: rgba(0, 180, 216, 0.18);
-  color: #e8fbff;
+  border-color: var(--shelter-primary-border);
+  background-color: var(--shelter-primary-bg);
+  color: var(--shelter-primary-text);
   font-weight: 600;
 }
 
@@ -1371,7 +1371,7 @@ function formatRoomResidents(
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: var(--shelter-preview-bg);
   color: var(--text-color);
   font-size: 0.9em;
   line-height: 1.4;
@@ -1381,7 +1381,7 @@ function formatRoomResidents(
 .scope-preview--editable {
   display: block;
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--shelter-surface-border-base);
   outline: none;
   resize: vertical;
   min-height: 92px;
@@ -1389,8 +1389,8 @@ function formatRoomResidents(
 }
 
 .scope-preview--editable:focus {
-  border-color: rgba(0, 180, 216, 0.55);
-  box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2);
+  border-color: var(--shelter-primary-border);
+  box-shadow: 0 0 0 2px var(--shelter-primary-ring);
 }
 
 .scope-preview-actions {
@@ -1417,7 +1417,7 @@ function formatRoomResidents(
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--shelter-overlay-mask);
   padding-top: calc(12px + env(safe-area-inset-top));
   padding-right: calc(12px + env(safe-area-inset-right));
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
@@ -1432,10 +1432,10 @@ function formatRoomResidents(
 .scope-modal {
   width: min(560px, calc(100% - 8px));
   max-height: 100%;
-  background: rgba(25, 28, 35, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--shelter-modal-bg);
+  border: 1px solid var(--shelter-surface-border-base);
   border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 30px var(--shelter-modal-shadow-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1460,12 +1460,12 @@ function formatRoomResidents(
 
 .scope-modal-title {
   font-weight: 700;
-  color: var(--text-strong, #f1fa8c);
+  color: var(--text-strong);
 }
 
 .scope-icon-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--shelter-surface-border-base);
+  background: var(--shelter-surface-soft);
   color: var(--text-color);
   border-radius: 10px;
   padding: 6px 10px;
@@ -1489,13 +1489,13 @@ function formatRoomResidents(
 .scope-modal-stats .stat {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--shelter-surface-soft);
+  border: 1px solid var(--shelter-surface-border-soft);
   font-size: 0.85em;
 }
 
 .stat-strong {
-  color: var(--accent-cyan, #00b4d8);
+  color: var(--accent-cyan);
   font-weight: 700;
 }
 
@@ -1503,7 +1503,7 @@ function formatRoomResidents(
   margin-left: auto;
   border: none;
   background: transparent;
-  color: var(--accent-cyan, #00b4d8);
+  color: var(--accent-cyan);
   font-size: 0.85em;
   cursor: pointer;
   padding: 6px 8px;
@@ -1552,8 +1552,8 @@ function formatRoomResidents(
   text-align: left;
   border-radius: 12px;
   padding: 10px 10px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--shelter-surface-border-base);
+  background: var(--shelter-surface-soft);
   color: var(--text-color);
   cursor: pointer;
   min-height: 56px;
@@ -1577,8 +1577,8 @@ function formatRoomResidents(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--shelter-surface-subtle);
+  border: 1px solid var(--shelter-surface-border-base);
   font-weight: 800;
   opacity: 0.85;
 }
@@ -1590,23 +1590,23 @@ function formatRoomResidents(
 }
 
 .scope-room-chip.selected {
-  border-color: rgba(241, 250, 140, 0.6);
+  border-color: var(--shelter-room-chip-selected-border);
   background: radial-gradient(
     circle at 30% 20%,
-    rgba(241, 250, 140, 0.18),
-    rgba(241, 250, 140, 0.06) 55%,
-    rgba(255, 255, 255, 0.04)
+    var(--shelter-room-chip-selected-bg-start),
+    var(--shelter-room-chip-core-bg) 55%,
+    var(--shelter-surface-faint)
   );
 }
 
 .scope-room-chip.selected .chip-mark {
-  background: rgba(241, 250, 140, 0.18);
-  border-color: rgba(241, 250, 140, 0.6);
+  background: var(--shelter-room-chip-selected-bg-start);
+  border-color: var(--shelter-room-chip-selected-border);
 }
 
 .scope-room-chip.core {
-  border-color: rgba(241, 250, 140, 0.35);
-  background: rgba(241, 250, 140, 0.06);
+  border-color: var(--shelter-room-chip-core-border);
+  background: var(--shelter-room-chip-core-bg);
 }
 
 .scope-room-chip.disabled {
@@ -1617,16 +1617,16 @@ function formatRoomResidents(
   margin: 6px 0 10px;
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(241, 250, 140, 0.18);
-  background: rgba(241, 250, 140, 0.05);
-  color: rgba(241, 250, 140, 0.92);
+  border: 1px solid var(--shelter-room-chip-selected-bg-start);
+  background: var(--shelter-zone-hint-bg);
+  color: var(--shelter-zone-hint-text);
   font-size: 0.8em;
   line-height: 1.3;
 }
 
 .scope-details {
   margin-top: 14px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  border-top: 1px dashed var(--shelter-surface-border-base);
   padding-top: 10px;
 }
 
@@ -1638,8 +1638,8 @@ function formatRoomResidents(
 .scope-modal-footer {
   padding: 10px 12px 12px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(25, 28, 35, 0.98);
+  border-top: 1px solid var(--shelter-surface-border-soft);
+  background: var(--shelter-modal-bg);
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -1657,10 +1657,10 @@ function formatRoomResidents(
   margin-bottom: 4px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: linear-gradient(135deg, rgba(255, 180, 80, 0.12), rgba(255, 140, 0, 0.08));
-  border: 1px solid rgba(255, 180, 80, 0.25);
+  background: linear-gradient(135deg, var(--shelter-footer-hint-bg-start), var(--shelter-footer-hint-bg-end));
+  border: 1px solid var(--shelter-footer-hint-border);
   font-size: 0.8em;
-  color: rgba(255, 220, 150, 0.95);
+  color: var(--shelter-footer-hint-text);
   line-height: 1.4;
   display: flex;
   align-items: center;
@@ -1719,21 +1719,21 @@ function formatRoomResidents(
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border: 1px solid rgba(150, 169, 214, 0.3);
-  background: linear-gradient(165deg, rgba(16, 22, 38, 0.94), rgba(14, 19, 32, 0.78));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--shelter-metric-border);
+  background: linear-gradient(165deg, var(--shelter-metric-bg-start), var(--shelter-metric-bg-end));
+  box-shadow: inset 0 0 0 1px var(--shelter-surface-min);
 }
 
 .shelter-redesign .shelter-item--level {
-  border-color: rgba(146, 227, 255, 0.34);
+  border-color: var(--shelter-metric-level-border);
 }
 
 .shelter-redesign .shelter-item--roll {
-  border-color: rgba(170, 153, 255, 0.3);
+  border-color: var(--shelter-metric-roll-border);
 }
 
 .shelter-redesign .shelter-item--pity {
-  border-color: rgba(255, 206, 134, 0.3);
+  border-color: var(--shelter-metric-pity-border);
 }
 
 .shelter-redesign .shelter-item--expansion {
@@ -1775,8 +1775,8 @@ function formatRoomResidents(
   font-size: 1.34em;
   line-height: 1;
   font-weight: 800;
-  color: #e8f2ff;
-  text-shadow: 0 0 14px rgba(155, 211, 255, 0.2);
+  color: var(--shelter-metric-number-color);
+  text-shadow: 0 0 14px var(--shelter-metric-number-shadow-color);
 }
 
 .shelter-redesign .metric-unit {
@@ -1811,8 +1811,8 @@ function formatRoomResidents(
   font-size: 0.68em;
   line-height: 1.1;
   align-self: auto;
-  border-color: rgba(150, 190, 255, 0.52);
-  background: rgba(82, 124, 236, 0.16);
+  border-color: var(--shelter-calibrate-mini-border);
+  background: var(--shelter-calibrate-mini-bg);
 }
 
 .shelter-redesign .expansion-list {
@@ -1834,9 +1834,9 @@ function formatRoomResidents(
   margin: 2px 0 0;
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(120, 228, 166, 0.45);
-  background: linear-gradient(180deg, rgba(52, 162, 104, 0.2), rgba(31, 107, 71, 0.18));
-  box-shadow: inset 0 0 0 1px rgba(182, 255, 217, 0.08);
+  border: 1px solid var(--shelter-scope-toggle-border);
+  background: linear-gradient(180deg, var(--shelter-scope-toggle-bg-start), var(--shelter-scope-toggle-bg-end));
+  box-shadow: inset 0 0 0 1px var(--shelter-scope-toggle-inner-shadow);
 }
 
 .shelter-redesign .map-toggle-btn--scope .toggle-text {
@@ -1846,7 +1846,7 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .map-toggle-btn--scope .toggle-icon {
-  color: #bfffd9;
+  color: var(--shelter-scope-toggle-icon);
   font-weight: 900;
 }
 
@@ -1855,8 +1855,8 @@ function formatRoomResidents(
   margin-bottom: 8px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(132, 90, 223, 0.14);
-  color: #d9c8ff;
+  background: var(--shelter-scope-pill-bg);
+  color: var(--shelter-scope-pill-text);
   font-size: 0.76em;
 }
 
@@ -1880,25 +1880,25 @@ function formatRoomResidents(
   padding: 6px;
   margin-bottom: 0;
   border-radius: 9px;
-  border: 1px solid rgba(120, 134, 164, 0.22);
-  background: linear-gradient(180deg, rgba(8, 12, 22, 0.64), rgba(8, 12, 22, 0.32));
+  border: 1px solid var(--shelter-map-zone-border);
+  background: linear-gradient(180deg, var(--shelter-map-zone-bg-start), var(--shelter-map-zone-bg-end));
 }
 
 .shelter-redesign .map-zone--compact {
   padding: 6px;
-  border-color: rgba(136, 152, 186, 0.32);
-  background: linear-gradient(165deg, rgba(9, 14, 26, 0.8), rgba(9, 13, 24, 0.46));
+  border-color: var(--shelter-map-zone-compact-border);
+  background: linear-gradient(165deg, var(--shelter-map-zone-compact-bg-start), var(--shelter-map-zone-compact-bg-end));
   display: flex;
   flex-direction: column;
   min-height: 100%;
 }
 
 .shelter-redesign .map-zone--entrance {
-  box-shadow: inset 0 0 0 1px rgba(105, 180, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--shelter-map-zone-entrance-shadow);
 }
 
 .shelter-redesign .map-zone--core {
-  box-shadow: inset 0 0 0 1px rgba(241, 250, 140, 0.08);
+  box-shadow: inset 0 0 0 1px var(--shelter-room-chip-selected-bg-mid);
 }
 
 .shelter-redesign .map-zone--floor {
@@ -1931,8 +1931,8 @@ function formatRoomResidents(
   opacity: 0.85;
   padding: 1px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(167, 184, 220, 0.25);
-  background: rgba(132, 148, 180, 0.14);
+  border: 1px solid var(--shelter-zone-sub-border);
+  background: var(--shelter-zone-sub-bg);
 }
 
 .shelter-redesign .zone-scope-hint {
@@ -1969,28 +1969,28 @@ function formatRoomResidents(
 
 .shelter-redesign .room-cell {
   position: relative;
-  border: 1px solid rgba(225, 206, 128, 0.26);
+  border: 1px solid var(--shelter-room-border);
   border-radius: 8px;
   padding: 5px 6px;
   min-height: 46px;
-  background: linear-gradient(180deg, rgba(233, 218, 144, 0.12), rgba(172, 152, 92, 0.05));
+  background: linear-gradient(180deg, var(--shelter-room-bg-start), var(--shelter-room-bg-end));
 }
 
 .shelter-redesign .room-cell--compact {
   min-height: 34px;
   padding: 3px 5px;
-  border-color: rgba(225, 206, 128, 0.28);
-  background: linear-gradient(180deg, rgba(236, 222, 148, 0.11), rgba(166, 148, 90, 0.04));
+  border-color: var(--shelter-room-compact-border);
+  background: linear-gradient(180deg, var(--shelter-room-compact-bg-start), var(--shelter-room-compact-bg-end));
 }
 
 .shelter-redesign .room-cell--feature {
-  border-color: rgba(241, 216, 121, 0.32);
-  background: linear-gradient(180deg, rgba(238, 214, 112, 0.14), rgba(161, 141, 78, 0.06));
+  border-color: var(--shelter-room-feature-border);
+  background: linear-gradient(180deg, var(--shelter-room-feature-bg-start), var(--shelter-room-bg-end-strong));
 }
 
 .shelter-redesign .room-cell--entrance-main {
-  border-color: rgba(241, 216, 121, 0.36);
-  background: linear-gradient(180deg, rgba(238, 214, 112, 0.15), rgba(161, 141, 78, 0.06));
+  border-color: var(--shelter-room-entrance-border);
+  background: linear-gradient(180deg, var(--shelter-room-entrance-bg-start), var(--shelter-room-bg-end-strong));
 }
 
 .shelter-redesign .room-cell.scope-editable {
@@ -2018,26 +2018,26 @@ function formatRoomResidents(
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(172, 172, 186, 0.65);
-  box-shadow: 0 0 0 2px rgba(90, 90, 106, 0.15);
+  background: var(--shelter-room-dot-bg);
+  box-shadow: 0 0 0 2px var(--shelter-room-dot-shadow);
   flex: 0 0 auto;
 }
 
 .shelter-redesign .room-cell.occupied .room-number::before {
-  background: #61d88d;
-  box-shadow: 0 0 0 2px rgba(97, 216, 141, 0.26);
+  background: var(--shelter-room-dot-occupied-bg);
+  box-shadow: 0 0 0 2px var(--shelter-room-dot-occupied-shadow);
 }
 
 .shelter-redesign .room-cell.occupied {
-  border-color: rgba(98, 212, 140, 0.55);
-  background: radial-gradient(circle at 18% 16%, rgba(121, 246, 168, 0.22), rgba(30, 88, 58, 0.18) 70%);
+  border-color: var(--shelter-room-occupied-border);
+  background: radial-gradient(circle at 18% 16%, var(--shelter-room-occupied-bg-start), var(--shelter-room-occupied-bg-end) 70%);
   box-shadow:
-    inset 0 0 0 1px rgba(152, 255, 192, 0.18),
-    0 0 12px rgba(98, 212, 140, 0.16);
+    inset 0 0 0 1px var(--shelter-room-occupied-inner-border),
+    0 0 12px var(--shelter-room-occupied-outer-shadow);
 }
 
 .shelter-redesign .room-cell.occupied .room-number {
-  color: #cfffe3;
+  color: var(--shelter-room-occupied-text);
 }
 
 .shelter-redesign .room-value {
@@ -2133,26 +2133,26 @@ function formatRoomResidents(
 }
 
 .shelter-redesign .room-cell.sheltered {
-  border: 1px solid rgba(255, 186, 82, 0.58);
+  border: 1px solid var(--shelter-room-sheltered-border);
   outline: none;
-  box-shadow: inset 0 0 16px rgba(255, 188, 86, 0.16);
-  background: radial-gradient(circle at 18% 12%, rgba(255, 208, 130, 0.2), rgba(255, 255, 255, 0.02) 55%);
+  box-shadow: inset 0 0 16px var(--shelter-room-sheltered-inner-shadow);
+  background: radial-gradient(circle at 18% 12%, var(--shelter-room-sheltered-bg-start), var(--shelter-surface-ultra) 55%);
 }
 
 .shelter-redesign .room-cell.sheltered .room-number {
-  color: #ffd08a;
+  color: var(--shelter-room-sheltered-text);
   text-shadow: none;
 }
 
 .shelter-redesign .room-cell.sheltered.occupied {
-  border-color: rgba(98, 212, 140, 0.62);
+  border-color: var(--shelter-room-sheltered-occupied-border);
   box-shadow:
-    inset 0 0 16px rgba(98, 212, 140, 0.18),
-    0 0 12px rgba(98, 212, 140, 0.16);
+    inset 0 0 16px var(--shelter-room-sheltered-occupied-inner-shadow),
+    0 0 12px var(--shelter-room-occupied-outer-shadow);
 }
 
 .shelter-redesign .room-cell.sheltered.occupied .room-number {
-  color: #cfffe3;
+  color: var(--shelter-room-occupied-text);
 }
 
 .shelter-redesign .room-cell.sheltered .room-number::after {
@@ -2168,16 +2168,16 @@ function formatRoomResidents(
   font-size: 0.62em;
   line-height: 1.35;
   opacity: 0.96;
-  background: rgba(132, 138, 160, 0.22);
-  border: 1px solid rgba(164, 172, 194, 0.35);
-  color: #cfd5e8;
+  background: var(--shelter-badge-bg);
+  border: 1px solid var(--shelter-badge-border);
+  color: var(--shelter-badge-text);
   pointer-events: none;
 }
 
 .shelter-redesign .scope-badge.on {
-  background: rgba(182, 121, 255, 0.2);
-  border-color: rgba(197, 149, 255, 0.58);
-  color: #e8dcff;
+  background: var(--shelter-badge-on-bg);
+  border-color: var(--shelter-badge-on-border);
+  color: var(--shelter-badge-on-text);
 }
 
 .shelter-redesign .ability-list {
@@ -2188,9 +2188,9 @@ function formatRoomResidents(
 
 .shelter-redesign .shelter-ability-block .collapse-toggle-btn {
   border-radius: 12px;
-  border: 1px solid rgba(241, 216, 121, 0.36);
-  background: linear-gradient(180deg, rgba(72, 82, 112, 0.58), rgba(48, 55, 78, 0.52));
-  box-shadow: inset 0 0 0 1px rgba(255, 244, 201, 0.08);
+  border: 1px solid var(--shelter-room-entrance-border);
+  background: linear-gradient(180deg, var(--shelter-ability-toggle-bg-start), var(--shelter-ability-toggle-bg-end));
+  box-shadow: inset 0 0 0 1px var(--shelter-ability-toggle-inner-shadow);
 }
 
 .shelter-redesign .shelter-ability-block .collapse-toggle-btn .toggle-text {
@@ -2263,3 +2263,4 @@ function formatRoomResidents(
   }
 }
 </style>
+

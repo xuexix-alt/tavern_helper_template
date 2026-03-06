@@ -187,8 +187,8 @@ watch(
 <style scoped>
 .eden-stream-observer {
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: var(--theme-input-bg, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--stream-observer-border);
+  background: var(--stream-observer-bg);
   padding: 5px 7px;
   display: flex;
   flex-direction: column;
@@ -204,7 +204,7 @@ watch(
 
 .eden-stream-title {
   font-size: 0.72em;
-  color: rgba(248, 248, 242, 0.86);
+  color: var(--stream-title-color);
   line-height: 1;
 }
 
@@ -217,27 +217,27 @@ watch(
 }
 
 .eden-stream-status.is-waiting {
-  color: #ffd889;
-  border-color: rgba(255, 216, 137, 0.45);
-  background: rgba(255, 216, 137, 0.15);
+  color: var(--stream-status-wait-color);
+  border-color: var(--stream-status-wait-border);
+  background: var(--stream-status-wait-bg);
 }
 
 .eden-stream-status.is-streaming {
-  color: #8be9fd;
-  border-color: rgba(139, 233, 253, 0.5);
-  background: rgba(139, 233, 253, 0.14);
+  color: var(--stream-status-streaming-color);
+  border-color: var(--stream-status-streaming-border);
+  background: var(--stream-status-streaming-bg);
 }
 
 .eden-stream-status.is-done {
-  color: #8be9a4;
-  border-color: rgba(139, 233, 164, 0.5);
-  background: rgba(139, 233, 164, 0.12);
+  color: var(--stream-status-done-color);
+  border-color: var(--stream-status-done-border);
+  background: var(--stream-status-done-bg);
 }
 
 .eden-stream-status.is-error {
-  color: #ff8f8f;
-  border-color: rgba(255, 143, 143, 0.5);
-  background: rgba(255, 143, 143, 0.14);
+  color: var(--stream-status-error-color);
+  border-color: var(--stream-status-error-border);
+  background: var(--stream-status-error-bg);
 }
 
 .eden-stream-close {
@@ -245,8 +245,8 @@ watch(
   flex: 0 0 auto;
   min-height: 34px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--stream-close-border);
+  background: var(--stream-close-bg);
   color: var(--text-color);
   font: inherit;
   font-size: 0.74em;
@@ -256,7 +256,7 @@ watch(
 }
 
 .eden-stream-close:hover {
-  background: rgba(139, 233, 253, 0.2);
+  background: var(--stream-close-hover-bg);
 }
 
 .eden-stream-body {
@@ -266,7 +266,7 @@ watch(
   line-height: 1.35;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--text-color);
+  color: var(--stream-body-color);
   max-height: 132px;
   overflow-y: auto;
 }

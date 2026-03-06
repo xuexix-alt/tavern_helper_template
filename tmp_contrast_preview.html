@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>浅色模式对比度 + UI 框架预览</title>
+    <style>
+      :root {
+        --ok: #1f8f50;
+        --bad: #b33a3a;
+        --panel: #ffffff;
+        --line: #d8dce5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+        background: #f4f6fb;
+        color: #1f2a3d;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+
+      h2 {
+        margin: 24px 0 8px;
+        font-size: 20px;
+      }
+
+      .hint {
+        margin: 0 0 16px;
+        color: #4c5870;
+        font-size: 14px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .card-hd {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 700;
+      }
+
+      .card-bd {
+        padding: 12px;
+      }
+
+      .preview {
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 100px 1fr auto;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .row:last-child {
+        margin-bottom: 0;
+      }
+
+      .row .label {
+        font-size: 12px;
+        color: #5a6478;
+      }
+
+      .fake-input {
+        min-height: 36px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+      }
+
+      .placeholder {
+        font-size: 13px;
+      }
+
+      .ratio {
+        font-size: 12px;
+        min-width: 96px;
+        text-align: right;
+      }
+
+      .badge {
+        display: inline-block;
+        min-width: 44px;
+        text-align: center;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-left: 6px;
+      }
+
+      .pass {
+        background: rgba(31, 143, 80, 0.15);
+        color: var(--ok);
+      }
+
+      .fail {
+        background: rgba(179, 58, 58, 0.12);
+        color: var(--bad);
+      }
+
+      .token {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #5a6478;
+        line-height: 1.5;
+      }
+
+      .token code,
+      .hint code {
+        background: #eef1f7;
+        border-radius: 4px;
+        padding: 1px 5px;
+      }
+
+      .ui-wrap {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      }
+
+      .phone {
+        background: #0f1728;
+        border-radius: 24px;
+        padding: 10px;
+        box-shadow: 0 18px 38px rgba(14, 21, 36, 0.28);
+      }
+
+      .screen {
+        border-radius: 18px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .sage-theme {
+        --ui-shell-height: 560px;
+        --ui-shell-main-padding-top: 44px;
+        --ui-page-scroll-padding: 8px 8px 10px;
+        --ui-page-gap: 8px;
+        --ui-inner-padding: 10px;
+        --ui-footer-padding-x: 7px;
+        --ui-tab-min-height: 42px;
+        --ui-top-action-min-height: 36px;
+        --ui-bg-main: #d1d99a;
+        --ui-bg-light: #f2ecce;
+        --ui-bg-soft: #ced97e;
+        --ui-bg-soft-2: #cbd966;
+        --ui-accent: #5da6a6;
+        --ui-accent-strong: #437f7f;
+        --ui-text: #203343;
+        --ui-text-subtle: rgba(32, 51, 67, 0.78);
+        --ui-border: rgba(67, 96, 90, 0.28);
+      }
+
+      .screen-body {
+        height: var(--ui-shell-height);
+        background: linear-gradient(180deg, var(--ui-bg-light), var(--ui-bg-main));
+        color: var(--ui-text);
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        position: relative;
+        box-shadow:
+          inset 0 0 0 1px rgba(67, 96, 90, 0.35),
+          inset 0 0 15px rgba(255, 255, 255, 0.08);
+      }
+
+      .ui-shell-top-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 6;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .ui-action-btn {
+        min-height: var(--ui-top-action-min-height);
+        border-radius: 10px;
+        border: 1px solid var(--ui-border);
+        background: rgba(242, 236, 206, 0.72);
+        color: var(--ui-text);
+        font-size: 11px;
+        padding: 0 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+      }
+
+      .ui-action-btn.icon {
+        min-width: var(--ui-top-action-min-height);
+        padding: 0;
+        font-size: 14px;
+      }
+
+      .ui-shell-main {
+        min-height: 0;
+        overflow: hidden;
+        padding-top: var(--ui-shell-main-padding-top);
+      }
+
+      .ui-page-scroll {
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: var(--ui-page-scroll-padding);
+        display: grid;
+        gap: var(--ui-page-gap);
+      }
+
+      .ui-section,
+      .panel {
+        border: 1px solid var(--ui-border);
+        border-radius: 10px;
+        background: rgba(242, 236, 206, 0.62);
+        overflow: hidden;
+      }
+
+      .ui-section-body,
+      .panel-bd {
+        padding: var(--ui-inner-padding);
+      }
+
+      .panel-hd {
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--ui-border);
+        font-size: 13px;
+        font-weight: 800;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .search-shell {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid var(--ui-border);
+        border-radius: 9px;
+        background: rgba(242, 236, 206, 0.65);
+        padding: 4px;
+      }
+
+      .mode-pill {
+        border: 1px solid rgba(67, 127, 127, 0.35);
+        background: rgba(93, 166, 166, 0.18);
+        color: var(--ui-accent-strong);
+        border-radius: 999px;
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      .search-input,
+      .ui-composer-input {
+        flex: 1;
+        min-height: 40px;
+        border-radius: 7px;
+        border: 1px solid var(--ui-border);
+        background: rgba(36, 56, 73, 0.2);
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        color: var(--ui-text-subtle);
+        font-size: 13px;
+      }
+
+      .btn-send,
+      .ui-composer-btn {
+        min-height: 40px;
+        border-radius: 7px;
+        border: 1px solid rgba(67, 127, 127, 0.45);
+        background: rgba(93, 166, 166, 0.24);
+        color: var(--ui-accent-strong);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .mission-line {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+
+      .progress {
+        height: 8px;
+        border-radius: 99px;
+        background: rgba(67, 127, 127, 0.16);
+        overflow: hidden;
+      }
+
+      .progress > span {
+        display: block;
+        width: 62%;
+        height: 100%;
+        background: linear-gradient(90deg, var(--ui-accent), var(--ui-bg-soft-2));
+      }
+
+      .char-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .char-item {
+        border: 1px solid var(--ui-border);
+        border-radius: 10px;
+        background: rgba(206, 217, 126, 0.2);
+        padding: 8px;
+      }
+
+      .char-item .name {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .char-item .meta {
+        font-size: 11px;
+        color: var(--ui-text-subtle);
+      }
+
+      .choices {
+        display: grid;
+        gap: 6px;
+      }
+
+      .choice {
+        border: 1px solid var(--ui-border);
+        border-radius: 9px;
+        background: rgba(203, 217, 102, 0.2);
+        padding: 8px 10px;
+        font-size: 12px;
+        text-align: left;
+      }
+
+      .ui-story-composer {
+        padding: 0 8px 8px;
+      }
+
+      .ui-story-composer-inner {
+        display: flex;
+        align-items: stretch;
+        gap: 4px;
+        border-radius: 9px;
+        padding: 4px;
+        border: 1px solid var(--ui-border);
+        background: rgba(242, 236, 206, 0.66);
+      }
+
+      .ui-shell-footer {
+        border-top: 1px solid var(--ui-border);
+        background: linear-gradient(180deg, rgba(242, 236, 206, 0.72), rgba(209, 217, 154, 0.84));
+        padding: 4px var(--ui-footer-padding-x) 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .tabbar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+      }
+
+      .tab {
+        min-height: var(--ui-tab-min-height);
+        border-radius: 9px;
+        border: 1px solid var(--ui-border);
+        background: rgba(242, 236, 206, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 11px;
+        color: var(--ui-text-subtle);
+      }
+
+      .tab.active {
+        background: rgba(93, 166, 166, 0.22);
+        border: 1px solid rgba(67, 127, 127, 0.45);
+        color: var(--ui-accent-strong);
+        font-weight: 700;
+      }
+
+      .ui-version {
+        align-self: flex-end;
+        font-size: 11px;
+        color: rgba(32, 51, 67, 0.62);
+      }
+
+      @media (max-width: 420px) {
+        .sage-theme {
+          --ui-shell-main-padding-top: 40px;
+          --ui-page-scroll-padding: 6px 6px 8px;
+          --ui-tab-min-height: 40px;
+          --ui-top-action-min-height: 34px;
+        }
+
+        .ui-shell-top-actions {
+          top: 6px;
+          right: 6px;
+          gap: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>浅色模式 Placeholder 对比度示意图</h1>
+    <p class="hint">
+      规则：WCAG 2.1 普通文本 AA 需 ≥ 4.5:1。以下对比“当前值”与“建议值（示意）”。
+    </p>
+    <div id="app" class="grid"></div>
+
+    <h2>色卡套用 UI 框架预览（仿寒冬末日）</h2>
+    <p class="hint">
+      颜色卡：<code>#5DA6A6</code> / <code>#CBD966</code> / <code>#CED97E</code> / <code>#D1D99A</code> /
+      <code>#F2ECCE</code><br />
+      区块尺寸参数对齐：<code>shell=560</code>、<code>main padding-top=44</code>、<code>page 8/8/10</code>、
+      <code>section gap=8</code>、<code>footer+tab gap=4</code>、<code>tab min-height=42</code>。
+    </p>
+    <section class="ui-wrap">
+      <article class="phone">
+        <div class="screen sage-theme">
+          <div class="screen-body">
+            <div class="ui-shell-top-actions">
+              <button type="button" class="ui-action-btn">☀️ 浅色</button>
+              <button type="button" class="ui-action-btn icon">🎨</button>
+            </div>
+
+            <section class="ui-shell-main">
+              <div class="ui-page-scroll">
+                <section class="ui-section">
+                  <div class="ui-section-body">
+                    <div class="search-shell">
+                      <span class="mode-pill">检索</span>
+                      <div class="search-input">输入关键词高亮当前页（/ 快捷聚焦）</div>
+                      <button class="btn-send" type="button">发送</button>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-hd">
+                    <span>🎯 MissionSection</span>
+                    <span>第 3 阶段</span>
+                  </div>
+                  <div class="panel-bd">
+                    <div class="mission-line">
+                      <span>主线推进：避难所能源稳定</span>
+                      <strong>62%</strong>
+                    </div>
+                    <div class="progress"><span></span></div>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-hd">
+                    <span>🧬 CharactersSection</span>
+                    <span>4 名</span>
+                  </div>
+                  <div class="panel-bd char-grid">
+                    <article class="char-item">
+                      <div class="name">艾琳</div>
+                      <div class="meta">状态：稳定 · 亲密 +2</div>
+                    </article>
+                    <article class="char-item">
+                      <div class="name">赫伯特</div>
+                      <div class="meta">状态：警戒 · 信任 +1</div>
+                    </article>
+                  </div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-hd">
+                    <span>⚜️ ChoicesSection</span>
+                    <span>2 选项</span>
+                  </div>
+                  <div class="panel-bd choices">
+                    <button class="choice" type="button">前往温室检查温控模块</button>
+                    <button class="choice" type="button">与后勤组复盘夜间巡逻日志</button>
+                  </div>
+                </section>
+
+                <section class="ui-story-composer">
+                  <div class="ui-story-composer-inner">
+                    <div class="ui-composer-input">输入内容发送给AI（Enter 快捷发送）</div>
+                    <button class="ui-composer-btn" type="button">选项</button>
+                    <button class="ui-composer-btn" type="button">发送</button>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <footer class="ui-shell-footer">
+              <nav class="tabbar">
+                <div class="tab active">总览</div>
+                <div class="tab">角色</div>
+                <div class="tab">剧情</div>
+                <div class="tab">任务</div>
+              </nav>
+              <div class="ui-version">v3.1</div>
+            </footer>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <script>
+      const THEMES = [
+        {
+          key: "jade_green",
+          name: "jade_green",
+          bgMain: "#cfdcd4",
+          inputBg: "rgba(20, 40, 58, 0.20)",
+          currentPlaceholder: "rgba(32, 51, 67, 0.88)",
+          suggestedPlaceholder: "rgba(32, 51, 67, 0.92)",
+        },
+        {
+          key: "parchment",
+          name: "parchment",
+          bgMain: "#d4c191",
+          inputBg: "rgba(56, 39, 22, 0.20)",
+          currentPlaceholder: "rgba(47, 34, 22, 0.88)",
+          suggestedPlaceholder: "rgba(47, 34, 22, 0.92)",
+        },
+        {
+          key: "milky",
+          name: "milky",
+          bgMain: "#d1dad4",
+          inputBg: "rgba(37, 56, 74, 0.20)",
+          currentPlaceholder: "rgba(38, 52, 61, 0.88)",
+          suggestedPlaceholder: "rgba(38, 52, 61, 0.92)",
+        },
+      ];
+
+      function parseColor(value) {
+        const v = value.trim();
+        if (v.startsWith("#")) {
+          const hex = v.slice(1);
+          return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+            a: 1,
+          };
+        }
+        const m = v.match(/^rgba?\(([^)]+)\)$/i);
+        if (!m) return null;
+        const p = m[1].split(",").map(x => x.trim());
+        return {
+          r: Number(p[0]),
+          g: Number(p[1]),
+          b: Number(p[2]),
+          a: p[3] == null ? 1 : Number(p[3]),
+        };
+      }
+
+      function blend(fg, bg) {
+        const a = fg.a + bg.a * (1 - fg.a);
+        if (a <= 0) return { r: 0, g: 0, b: 0, a: 0 };
+        return {
+          r: (fg.r * fg.a + bg.r * bg.a * (1 - fg.a)) / a,
+          g: (fg.g * fg.a + bg.g * bg.a * (1 - fg.a)) / a,
+          b: (fg.b * fg.a + bg.b * bg.a * (1 - fg.a)) / a,
+          a,
+        };
+      }
+
+      function linear(v) {
+        const n = v / 255;
+        return n <= 0.03928 ? n / 12.92 : Math.pow((n + 0.055) / 1.055, 2.4);
+      }
+
+      function luminance(c) {
+        return 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b);
+      }
+
+      function contrast(c1, c2) {
+        const l1 = luminance(c1);
+        const l2 = luminance(c2);
+        const hi = Math.max(l1, l2);
+        const lo = Math.min(l1, l2);
+        return (hi + 0.05) / (lo + 0.05);
+      }
+
+      function ratioFor(theme, fgRaw) {
+        const bgMain = parseColor(theme.bgMain);
+        const inputBg = parseColor(theme.inputBg);
+        const fg = parseColor(fgRaw);
+        const inputSolid = inputBg.a < 1 ? blend(inputBg, bgMain) : inputBg;
+        const fgSolid = fg.a < 1 ? blend(fg, bgMain) : fg;
+        return contrast(fgSolid, inputSolid);
+      }
+
+      function renderContrastCards() {
+        const app = document.getElementById("app");
+        for (const theme of THEMES) {
+          const currentRatio = ratioFor(theme, theme.currentPlaceholder);
+          const suggestRatio = ratioFor(theme, theme.suggestedPlaceholder);
+
+          const card = document.createElement("section");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="card-hd">${theme.name}</div>
+            <div class="card-bd">
+              <div class="preview" style="background:${theme.bgMain}">
+                <div class="row">
+                  <div class="label">当前值</div>
+                  <div class="fake-input" style="background:${theme.inputBg}">
+                    <span class="placeholder" style="color:${theme.currentPlaceholder}">请输入关键词...</span>
+                  </div>
+                  <div class="ratio">
+                    ${currentRatio.toFixed(2)}:1
+                    <span class="badge ${currentRatio >= 4.5 ? "pass" : "fail"}">${currentRatio >= 4.5 ? "PASS" : "FAIL"}</span>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="label">建议值</div>
+                  <div class="fake-input" style="background:${theme.inputBg}">
+                    <span class="placeholder" style="color:${theme.suggestedPlaceholder}">请输入关键词...</span>
+                  </div>
+                  <div class="ratio">
+                    ${suggestRatio.toFixed(2)}:1
+                    <span class="badge ${suggestRatio >= 4.5 ? "pass" : "fail"}">${suggestRatio >= 4.5 ? "PASS" : "FAIL"}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="token">
+                底色 <code>--bg-main: ${theme.bgMain}</code><br />
+                输入底色 <code>--theme-input-bg: ${theme.inputBg}</code><br />
+                当前 <code>--theme-placeholder-color: ${theme.currentPlaceholder}</code><br />
+                建议 <code>--theme-placeholder-color: ${theme.suggestedPlaceholder}</code>
+              </div>
+            </div>
+          `;
+          app.appendChild(card);
+        }
+      }
+
+      renderContrastCards();
+    </script>
+  </body>
+</html>

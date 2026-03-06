@@ -171,7 +171,7 @@ async function confirmChoiceDialog() {
   position: fixed;
   inset: 0;
   z-index: 2605;
-  background: var(--theme-overlay-mask, rgba(0, 0, 0, 0.55));
+  background: var(--choices-modal-mask-bg);
   padding-top: calc(38px + env(safe-area-inset-top));
   padding-right: calc(12px + env(safe-area-inset-right));
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
@@ -184,10 +184,10 @@ async function confirmChoiceDialog() {
 .choice-modal {
   width: min(540px, calc(100% - 8px));
   max-height: calc(100% - 20px);
-  background: var(--theme-modal-bg, rgba(25, 28, 35, 0.98));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
+  background: var(--choices-modal-bg);
+  border: 1px solid var(--choices-modal-border);
   border-radius: 14px;
-  box-shadow: var(--theme-elevated-shadow, 0 10px 30px rgba(0, 0, 0, 0.45));
+  box-shadow: var(--choices-modal-shadow);
   display: flex;
   flex-direction: column;
 }
@@ -201,13 +201,13 @@ async function confirmChoiceDialog() {
 
 .choice-modal-title {
   font-weight: 800;
-  color: var(--text-strong, #f1fa8c);
+  color: var(--choices-title-text);
 }
 
 .choice-icon-btn {
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.12));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
-  color: var(--btn-text, var(--text-color));
+  border: 1px solid var(--choices-icon-btn-border);
+  background: var(--choices-icon-btn-bg);
+  color: var(--choices-icon-btn-text);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
@@ -231,8 +231,8 @@ async function confirmChoiceDialog() {
 .choice-original {
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--theme-surface-soft, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
+  background: var(--choices-original-bg);
+  border: 1px solid var(--choices-original-border);
   line-height: 1.45;
   word-break: break-word;
 }
@@ -242,8 +242,8 @@ async function confirmChoiceDialog() {
   margin-top: 4px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--theme-input-bg, rgba(0, 0, 0, 0.22));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
+  background: var(--choices-textarea-bg);
+  border: 1px solid var(--choices-textarea-border);
   color: var(--text-color);
   outline: none;
   resize: vertical;
@@ -251,13 +251,13 @@ async function confirmChoiceDialog() {
 }
 
 .choice-textarea:focus {
-  border-color: var(--btn-primary-border, rgba(0, 180, 216, 0.55));
-  box-shadow: 0 0 0 2px var(--btn-primary-bg, rgba(0, 180, 216, 0.2));
+  border-color: var(--choices-textarea-focus-border);
+  box-shadow: 0 0 0 2px var(--choices-textarea-focus-ring);
 }
 
 .choice-modal-footer {
   padding: 8px 10px 10px;
-  border-top: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
+  border-top: 1px solid var(--choices-footer-border);
   display: flex;
   gap: 8px;
   justify-content: flex-end;
@@ -266,17 +266,17 @@ async function confirmChoiceDialog() {
 .choice-btn {
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
-  background-color: var(--btn-bg, rgba(255, 255, 255, 0.06));
-  color: var(--btn-text, var(--text-color));
+  border: 1px solid var(--choices-btn-border);
+  background-color: var(--choices-btn-bg);
+  color: var(--choices-btn-text);
   cursor: pointer;
   font-size: 0.9em;
 }
 
 .choice-btn--primary {
-  border-color: var(--btn-primary-border, rgba(0, 180, 216, 0.55));
-  background-color: var(--btn-primary-bg, rgba(0, 180, 216, 0.18));
-  color: var(--btn-primary-text, #e8fbff);
+  border-color: var(--choices-btn-primary-border);
+  background-color: var(--choices-btn-primary-bg);
+  color: var(--choices-btn-primary-text);
   font-weight: 700;
 }
 

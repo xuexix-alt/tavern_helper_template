@@ -43,8 +43,8 @@ const highlightedHtml = computed(() => {
 
 <style>
 .eden-search-mark {
-  background: rgba(241, 250, 140, 0.65);
-  color: #121212;
+  background: var(--highlight-mark-bg);
+  color: var(--highlight-mark-text);
   border-radius: 4px;
   padding: 0 1px;
 }

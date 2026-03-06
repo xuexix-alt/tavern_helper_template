@@ -2902,10 +2902,16 @@ function imprintPercent(key: CharacterKey) {
 
 function healthBarGradient(key: CharacterKey) {
   const percent = healthPercent(key);
-  if (percent <= 30) return 'linear-gradient(90deg, #ff5c6c, #ff8a5c)';
-  if (percent <= 60) return 'linear-gradient(90deg, #ff8a5c, #ffd166)';
-  if (percent <= 80) return 'linear-gradient(90deg, #ffd166, #a7f3a0)';
-  return 'linear-gradient(90deg, #7bd389, #34d399)';
+  if (percent <= 30) {
+    return 'linear-gradient(90deg, var(--character-health-critical-start), var(--character-health-critical-end))';
+  }
+  if (percent <= 60) {
+    return 'linear-gradient(90deg, var(--character-health-critical-end), var(--character-health-warning-end))';
+  }
+  if (percent <= 80) {
+    return 'linear-gradient(90deg, var(--character-health-warning-end), var(--character-health-stable-end))';
+  }
+  return 'linear-gradient(90deg, var(--character-health-healthy-start), var(--character-health-healthy-end))';
 }
 
 function getRelationStage(key: CharacterKey) {
@@ -2962,14 +2968,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .health-section .progress-bar-value {
-  background: linear-gradient(90deg, #7aa2f7, #f1fa8c);
+  background: var(--character-imprint-progress-gradient);
 }
 .imprint-section .progress-bar-value {
-  background: linear-gradient(90deg, #7aa2f7, #f1fa8c);
+  background: var(--character-imprint-progress-gradient);
 }
 .imprint-status-subtext {
   margin-top: 4px;
-  color: var(--accent-blue, #8be9fd);
+  color: var(--character-imprint-subtext);
   font-size: 0.9em;
 }
 .imprint-hint {
@@ -2978,7 +2984,7 @@ onBeforeUnmount(() => {
 }
 
 .imprint-change {
-  color: var(--accent-gold, #f1fa8c);
+  color: var(--character-imprint-change-text);
 }
 .imprint-bar {
   margin-top: 6px;
@@ -2991,9 +2997,9 @@ onBeforeUnmount(() => {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 90, 90, 0.55);
-  background: rgba(255, 90, 90, 0.12);
-  color: rgba(255, 150, 150, 0.98);
+  border: 1px solid var(--character-remove-btn-border);
+  background: var(--character-remove-btn-bg);
+  color: var(--character-remove-btn-text);
   font-weight: 900;
   line-height: 1;
   cursor: pointer;
@@ -3020,18 +3026,18 @@ onBeforeUnmount(() => {
   padding: 2px 6px;
   border-radius: 6px;
   font-size: 0.75em;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--character-status-pill-border);
+  background: var(--character-status-pill-bg);
 }
 .status-pill.登场 {
-  color: #50fa7b;
-  border-color: #50fa7b55;
-  background: #50fa7b11;
+  color: var(--character-status-on-text);
+  border-color: var(--character-status-on-border);
+  background: var(--character-status-on-bg);
 }
 .status-pill.离场 {
-  color: #f1fa8c;
-  border-color: #f1fa8c55;
-  background: #f1fa8c11;
+  color: var(--character-status-off-text);
+  border-color: var(--character-status-off-border);
+  background: var(--character-status-off-bg);
 }
 
 .tab-buttons.virtual {
@@ -3073,21 +3079,21 @@ onBeforeUnmount(() => {
 .history-mode-banner {
   margin-top: 8px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 214, 102, 0.45);
-  background: rgba(255, 214, 102, 0.15);
+  border: 1px solid var(--character-history-banner-border);
+  background: var(--character-history-banner-bg);
   padding: 7px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-size: 0.82em;
-  color: #fff6d7;
+  color: var(--character-history-banner-text);
 }
 
 .history-mode-back-btn {
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--character-history-back-border);
+  background: var(--character-history-back-bg);
   color: inherit;
   font: inherit;
   font-size: 0.9em;
@@ -3097,15 +3103,15 @@ onBeforeUnmount(() => {
 }
 
 .history-mode-back-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--character-history-back-hover-bg);
 }
 
 .section-view-btn {
   padding: 5px 11px;
   border-radius: 999px;
-  border: 1px solid var(--btn-border, rgba(139, 233, 253, 0.4));
-  background: var(--btn-bg, rgba(139, 233, 253, 0.14));
-  color: var(--btn-text, #e8f7ff);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 0.78em;
   font-weight: 700;
   cursor: pointer;
@@ -3116,14 +3122,14 @@ onBeforeUnmount(() => {
 
 .section-view-btn:hover {
   transform: translateY(-1px);
-  background: var(--btn-hover-bg, rgba(139, 233, 253, 0.22));
-  color: var(--btn-hover-text, var(--btn-text, #e8f7ff));
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
 }
 
 .section-view-btn:disabled {
-  border-color: var(--btn-disabled-border, rgba(130, 142, 168, 0.24));
-  background: var(--btn-disabled-bg, rgba(130, 142, 168, 0.16));
-  color: var(--btn-disabled-text, rgba(208, 216, 232, 0.64));
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
   opacity: 1;
   cursor: not-allowed;
   transform: none;
@@ -3132,9 +3138,9 @@ onBeforeUnmount(() => {
 .role-add-btn {
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid var(--btn-primary-border, rgba(0, 180, 216, 0.45));
-  background: var(--btn-primary-bg, rgba(0, 180, 216, 0.12));
-  color: var(--btn-primary-text, #e5faff);
+  border: 1px solid var(--btn-primary-border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -3144,24 +3150,24 @@ onBeforeUnmount(() => {
 
 .role-add-btn:hover {
   transform: translateY(-1px);
-  background: var(--btn-primary-hover-bg, rgba(0, 180, 216, 0.2));
+  background: var(--btn-primary-hover-bg);
 }
 
 .role-add-btn.secondary {
-  border-color: var(--btn-border, rgba(188, 161, 255, 0.5));
-  background: var(--btn-bg, rgba(188, 161, 255, 0.12));
+  border-color: var(--btn-border);
+  background: var(--btn-bg);
   color: var(--btn-text, var(--text-color));
 }
 
 .role-add-btn.secondary:hover {
-  background: var(--btn-hover-bg, rgba(188, 161, 255, 0.2));
+  background: var(--btn-hover-bg);
   color: var(--btn-hover-text, var(--btn-text, var(--text-color)));
 }
 
 .creation-entry {
   border-radius: 12px;
-  border: 1px dashed rgba(139, 233, 253, 0.32);
-  background: rgba(139, 233, 253, 0.08);
+  border: 1px dashed var(--character-creation-entry-border);
+  background: var(--character-creation-entry-bg);
   padding: 10px 12px;
   display: grid;
   gap: 10px;
@@ -3170,7 +3176,7 @@ onBeforeUnmount(() => {
 .creation-entry-hint {
   font-size: 0.84em;
   line-height: 1.45;
-  color: rgba(226, 243, 255, 0.92);
+  color: var(--character-creation-entry-hint);
 }
 
 .creation-entry-actions {
@@ -3183,7 +3189,7 @@ onBeforeUnmount(() => {
 .role-modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(10, 12, 24, 0.72);
+  background: var(--character-modal-mask-bg);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -3207,10 +3213,10 @@ onBeforeUnmount(() => {
 .role-modal {
   width: min(82vw, 920px);
   max-height: 76vh;
-  background: rgba(18, 20, 36, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--character-modal-bg);
+  border: 1px solid var(--character-modal-border);
   border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--character-modal-shadow);
   display: flex;
   flex-direction: column;
 }
@@ -3220,13 +3226,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--character-modal-header-border);
 }
 
 .role-modal-title {
   font-size: 1.05em;
   font-weight: 800;
-  color: #f8f9ff;
+  color: var(--character-modal-title);
 }
 
 .role-modal-actions {
@@ -3240,23 +3246,23 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   font-size: 0.9em;
   font-weight: 800;
-  box-shadow: 0 8px 18px rgba(0, 180, 216, 0.25);
+  box-shadow: var(--character-generate-btn-shadow);
 }
 
 .role-icon-btn {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f8f9ff;
+  border: 1px solid var(--character-icon-btn-border);
+  background: var(--character-icon-btn-bg);
+  color: var(--character-icon-btn-text);
   cursor: pointer;
 }
 
 .role-generate-mask {
   position: fixed;
   inset: 0;
-  background: var(--theme-overlay-mask, rgba(6, 8, 20, 0.78));
+  background: var(--character-generate-mask-bg);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: flex-start;
@@ -3272,10 +3278,10 @@ onBeforeUnmount(() => {
 .role-generate-modal {
   width: min(96vw, 940px);
   max-width: calc(100vw - 16px);
-  background: var(--theme-modal-bg, var(--card-surface-bg-elevated, rgba(16, 18, 32, 0.98)));
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
+  background: var(--character-modal-bg);
+  border: 1px solid var(--character-modal-border);
   border-radius: 18px;
-  box-shadow: var(--theme-elevated-shadow, 0 24px 60px rgba(0, 0, 0, 0.45));
+  box-shadow: var(--character-modal-shadow);
   display: flex;
   flex-direction: column;
 }
@@ -3285,7 +3291,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px 10px;
-  border-bottom: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--character-modal-header-border);
 }
 
 .role-generate-header-actions {
@@ -3366,8 +3372,8 @@ onBeforeUnmount(() => {
 .role-chip {
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--btn-active-bg, rgba(80, 250, 123, 0.15));
-  border: 1px solid var(--btn-active-border, rgba(80, 250, 123, 0.35));
+  background: var(--character-chip-bg);
+  border: 1px solid var(--character-chip-border);
   color: var(--btn-active-text, var(--text-strong));
   font-size: 0.82em;
 }
@@ -3387,8 +3393,8 @@ onBeforeUnmount(() => {
   gap: 14px;
   padding: 12px;
   border-radius: 14px;
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
-  background: var(--card-surface-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--card-surface-border);
+  background: var(--card-surface-bg);
   margin-bottom: 16px;
 }
 
@@ -3414,11 +3420,11 @@ onBeforeUnmount(() => {
   max-height: 180px;
   overflow: auto;
   border-radius: 10px;
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--card-surface-border);
   padding: 8px;
   display: grid;
   gap: 6px;
-  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.03));
+  background: var(--card-surface-bg-elevated);
 }
 
 .role-generate-worldbook-item {
@@ -3440,9 +3446,9 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid var(--btn-primary-border, rgba(56, 189, 248, 0.45));
-  background: var(--card-surface-bg-elevated, rgba(15, 23, 42, 0.3));
-  box-shadow: var(--card-surface-shadow, 0 12px 24px rgba(14, 116, 144, 0.25));
+  border: 1px solid var(--character-input-block-border);
+  background: var(--character-input-block-bg);
+  box-shadow: var(--character-input-block-shadow);
 }
 
 .role-generate-input-block.primary .role-generate-title {
@@ -3459,9 +3465,9 @@ onBeforeUnmount(() => {
 .role-tab-btn {
   padding: 6px 10px;
   border-radius: 10px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.12));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.06));
-  color: var(--btn-text, rgba(255, 255, 255, 0.85));
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-size: 0.85em;
   cursor: pointer;
   display: inline-flex;
@@ -3470,8 +3476,8 @@ onBeforeUnmount(() => {
 }
 
 .role-tab-btn.active {
-  border-color: var(--btn-active-border, rgba(80, 250, 123, 0.6));
-  background: var(--btn-active-bg, rgba(80, 250, 123, 0.12));
+  border-color: var(--btn-active-border);
+  background: var(--btn-active-bg);
   color: var(--btn-active-text, var(--text-strong));
 }
 
@@ -3482,13 +3488,13 @@ onBeforeUnmount(() => {
 }
 
 .role-status.success {
-  background: rgba(80, 250, 123, 0.2);
-  color: #b8ffcf;
+  background: var(--character-role-status-success-bg);
+  color: var(--character-role-status-success-text);
 }
 
 .role-status.error {
-  background: rgba(255, 90, 90, 0.2);
-  color: #ffc4c4;
+  background: var(--character-role-status-error-bg);
+  color: var(--character-role-status-error-text);
 }
 
 .role-generate-panel {
@@ -3531,8 +3537,8 @@ onBeforeUnmount(() => {
 .role-form-textarea {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.12));
-  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--card-surface-border);
+  background: var(--card-surface-bg-elevated);
   color: var(--text-color);
   padding: 8px 10px;
   font-size: 0.95em;
@@ -3544,8 +3550,8 @@ onBeforeUnmount(() => {
 }
 
 .role-form-select option {
-  background: var(--theme-modal-bg, var(--bg-light));
-  color: var(--text-color);
+  background: var(--character-select-option-bg);
+  color: var(--character-select-option-text);
 }
 
 .role-form-toggle {
@@ -3569,7 +3575,7 @@ onBeforeUnmount(() => {
   width: 42px;
   height: 24px;
   border-radius: 999px;
-  background: var(--btn-disabled-bg, rgba(255, 255, 255, 0.2));
+  background: var(--character-switch-track-bg);
   position: relative;
   transition: background 0.2s ease;
 }
@@ -3580,14 +3586,14 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--character-switch-thumb-bg);
   top: 3px;
   left: 3px;
   transition: transform 0.2s ease;
 }
 
 .role-switch input:checked + .role-switch-slider {
-  background: var(--btn-active-bg, rgba(0, 180, 216, 0.65));
+  background: var(--character-switch-track-active-bg);
 }
 
 .role-switch input:checked + .role-switch-slider::after {
@@ -3604,8 +3610,8 @@ onBeforeUnmount(() => {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--btn-danger-bg, rgba(255, 90, 90, 0.15));
-  color: var(--btn-danger-text, rgba(255, 200, 200, 0.95));
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
   font-size: 0.9em;
 }
 
@@ -3614,29 +3620,29 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid var(--card-surface-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--card-surface-border);
 }
 
 .role-btn {
   padding: 8px 16px;
   border-radius: 10px;
-  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
   color: var(--btn-text, var(--text-color));
   cursor: pointer;
   font-weight: 700;
 }
 
 .role-btn.primary {
-  border-color: var(--btn-primary-border, rgba(0, 180, 216, 0.55));
-  background-color: var(--btn-primary-bg, rgba(0, 180, 216, 0.2));
-  color: var(--btn-primary-text, #e8fbff);
+  border-color: var(--btn-primary-border);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 .role-btn.danger {
-  border-color: var(--btn-danger-border, rgba(255, 90, 90, 0.55));
-  background-color: var(--btn-danger-bg, rgba(255, 90, 90, 0.18));
-  color: var(--btn-danger-text, rgba(255, 215, 215, 0.95));
+  border-color: var(--btn-danger-border);
+  background-color: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
 }
 .role-btn.ghost {
   background: transparent;
@@ -3644,9 +3650,9 @@ onBeforeUnmount(() => {
 }
 
 .role-btn:disabled {
-  border-color: var(--btn-disabled-border, rgba(130, 142, 168, 0.24));
-  background: var(--btn-disabled-bg, rgba(130, 142, 168, 0.16));
-  color: var(--btn-disabled-text, rgba(208, 216, 232, 0.64));
+  border-color: var(--btn-disabled-border);
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
   opacity: 1;
   cursor: not-allowed;
   filter: saturate(0.75);
@@ -3672,42 +3678,42 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='jade_green']) .history-mode-banner,
 :global(:root[data-theme='parchment']) .history-mode-banner,
 :global(:root[data-theme='milky']) .history-mode-banner {
-  border-color: rgba(207, 160, 60, 0.42);
-  background: rgba(247, 216, 128, 0.2);
-  color: #3f3318;
+  border-color: var(--character-history-banner-light-border);
+  background: var(--character-history-banner-light-bg);
+  color: var(--character-history-banner-light-text);
 }
 
 :global(:root[data-theme='jade_green']) .history-mode-back-btn,
 :global(:root[data-theme='parchment']) .history-mode-back-btn,
 :global(:root[data-theme='milky']) .history-mode-back-btn {
-  border-color: rgba(88, 108, 136, 0.34);
-  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--character-history-back-light-border);
+  background: var(--character-history-back-light-bg);
   color: var(--text-color);
 }
 
 :global(:root[data-theme='jade_green']) .creation-entry,
 :global(:root[data-theme='parchment']) .creation-entry,
 :global(:root[data-theme='milky']) .creation-entry {
-  border-color: rgba(70, 122, 178, 0.3);
-  background: rgba(88, 145, 204, 0.1);
+  border-color: var(--character-creation-entry-light-border);
+  background: var(--character-creation-entry-light-bg);
 }
 
 :global(:root[data-theme='jade_green']) .creation-entry-hint,
 :global(:root[data-theme='parchment']) .creation-entry-hint,
 :global(:root[data-theme='milky']) .creation-entry-hint {
-  color: rgba(46, 68, 96, 0.92);
+  color: var(--character-creation-entry-light-hint);
 }
 
 :global(:root[data-theme='jade_green']) .role-modal-mask,
 :global(:root[data-theme='parchment']) .role-modal-mask,
 :global(:root[data-theme='milky']) .role-modal-mask {
-  background: rgba(24, 32, 48, 0.4);
+  background: var(--character-modal-mask-light-bg);
 }
 
 :global(:root[data-theme='jade_green']) .role-generate-mask,
 :global(:root[data-theme='parchment']) .role-generate-mask,
 :global(:root[data-theme='milky']) .role-generate-mask {
-  background: rgba(24, 32, 48, 0.34);
+  background: var(--character-generate-mask-light-bg);
 }
 
 :global(:root[data-theme='jade_green']) .role-modal,
@@ -3716,11 +3722,11 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='parchment']) .role-generate-modal,
 :global(:root[data-theme='milky']) .role-modal,
 :global(:root[data-theme='milky']) .role-generate-modal {
-  background: var(--card-surface-bg-elevated, var(--bg-light));
-  border-color: var(--card-surface-border, rgba(88, 108, 136, 0.28));
+  background: var(--card-surface-bg-elevated);
+  border-color: var(--card-surface-border);
   box-shadow:
-    0 24px 54px rgba(20, 32, 54, 0.22),
-    var(--card-surface-shadow, 0 4px 14px rgba(20, 32, 54, 0.08));
+    var(--character-light-panel-shadow-deep),
+    var(--character-light-panel-shadow-soft);
 }
 
 :global(:root[data-theme='jade_green']) .role-modal-title,
@@ -3732,8 +3738,8 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='jade_green']) .role-icon-btn,
 :global(:root[data-theme='parchment']) .role-icon-btn,
 :global(:root[data-theme='milky']) .role-icon-btn {
-  border-color: var(--btn-border, rgba(88, 108, 136, 0.32));
-  background: var(--btn-bg, rgba(255, 255, 255, 0.55));
+  border-color: var(--btn-border);
+  background: var(--btn-bg);
   color: var(--btn-text, var(--text-color));
 }
 
@@ -3767,8 +3773,8 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='milky']) .role-form-input,
 :global(:root[data-theme='milky']) .role-form-select,
 :global(:root[data-theme='milky']) .role-form-textarea {
-  border-color: var(--card-surface-border, rgba(92, 116, 152, 0.3));
-  background: var(--card-surface-bg-elevated, rgba(255, 255, 255, 0.72));
+  border-color: var(--card-surface-border);
+  background: var(--card-surface-bg-elevated);
   color: var(--text-color);
   color-scheme: light;
 }
@@ -3783,7 +3789,7 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='jade_green']) .role-switch-slider,
 :global(:root[data-theme='parchment']) .role-switch-slider,
 :global(:root[data-theme='milky']) .role-switch-slider {
-  background: rgba(88, 108, 136, 0.2);
+  background: var(--character-light-switch-track-bg);
 }
 
 :global(:root[data-theme='jade_green']) .role-generate-settings,
@@ -3792,7 +3798,7 @@ onBeforeUnmount(() => {
 :global(:root[data-theme='jade_green']) .role-generate-worldbook-list,
 :global(:root[data-theme='parchment']) .role-generate-worldbook-list,
 :global(:root[data-theme='milky']) .role-generate-worldbook-list {
-  border-color: var(--card-surface-border, rgba(88, 108, 136, 0.22));
-  background: var(--card-surface-bg, rgba(255, 255, 255, 0.5));
+  border-color: var(--card-surface-border);
+  background: var(--card-surface-bg);
 }
 </style>

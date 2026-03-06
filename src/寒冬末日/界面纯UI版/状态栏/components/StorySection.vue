@@ -3387,11 +3387,11 @@ function formatTableCell(cell: string): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 30% 30%, #c8efff 0%, #a8dff7 55%, #84c8ea 100%);
-  color: #ffffff;
+  background: var(--story-fab-gradient);
+  color: var(--story-fab-text);
   box-shadow:
-    0 6px 16px rgba(20, 92, 124, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    var(--story-fab-shadow),
+    var(--story-fab-inset-highlight);
   cursor: pointer;
 }
 
@@ -3410,7 +3410,7 @@ function formatTableCell(cell: string): string {
 
 .story-image-generate-fab i {
   font-size: 0.95rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: var(--story-fab-icon-shadow);
 }
 
 .markdown-table {
@@ -3427,7 +3427,7 @@ function formatTableCell(cell: string): string {
 .markdown-table td {
   padding: 10px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--story-table-row-border);
 }
 
 .markdown-table th {
@@ -3460,20 +3460,20 @@ function formatTableCell(cell: string): string {
 }
 
 .markdown-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: var(--story-table-row-hover-bg);
 }
 
 /* 系统消息样式（伊甸：消息、>>> 消息 <<<） */
 .system-message {
-  background-color: rgba(0, 180, 216, 0.1);
-  border: 1px solid rgba(0, 180, 216, 0.4);
+  background-color: var(--story-system-msg-bg);
+  border: 1px solid var(--story-system-msg-border);
   border-radius: 8px;
   padding: 9px 12px;
   margin: 8px 0;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 0.85em;
   line-height: 1.5;
-  color: var(--accent-cyan, #00b4d8);
+  color: var(--story-system-msg-text);
   overflow-x: auto;
 }
 
@@ -3485,13 +3485,13 @@ function formatTableCell(cell: string): string {
 
 /* 【系统】消息样式 - 黄色 */
 .system-hint {
-  color: var(--accent-gold, #f1fa8c);
+  color: var(--story-system-hint-text);
   font-weight: 500;
 }
 
 /* 【角色名】样式 - 蓝色高亮 */
 .character-name {
-  color: var(--accent-blue, #bd93f9);
+  color: var(--story-character-name-text);
   font-weight: 600;
 }
 
@@ -3502,8 +3502,8 @@ function formatTableCell(cell: string): string {
 
 .image-prompt {
   display: block;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px dashed rgba(255, 255, 255, 0.2);
+  background-color: var(--story-image-prompt-bg);
+  border: 1px dashed var(--story-image-prompt-border);
   border-radius: 4px;
   padding: 6px 9px;
   margin: 6px 0;
@@ -3525,8 +3525,8 @@ function formatTableCell(cell: string): string {
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--story-image-proxy-btn-border);
+  background: var(--story-image-proxy-btn-bg);
   color: var(--text-color);
   display: inline-flex;
   align-items: center;
@@ -3549,9 +3549,9 @@ function formatTableCell(cell: string): string {
   margin-top: 6px;
   padding: 5px 9px;
   border-radius: 8px;
-  border: 1px solid rgba(241, 250, 140, 0.36);
-  background: rgba(241, 250, 140, 0.09);
-  color: var(--accent-gold, #f1fa8c);
+  border: 1px solid var(--story-image-loading-border);
+  background: var(--story-image-loading-bg);
+  color: var(--story-image-loading-text);
   font-size: 0.74em;
   line-height: 1.25;
 }
@@ -3567,19 +3567,19 @@ function formatTableCell(cell: string): string {
 }
 
 .image-prompt-status.is-success {
-  color: var(--accent-cyan, #00b4d8);
+  color: var(--story-status-success-text);
 }
 
 .image-prompt-status.is-error {
-  color: #ff8c8c;
+  color: var(--story-status-error-text);
 }
 
 .image-prompt-status.is-loading {
-  color: var(--accent-gold, #f1fa8c);
+  color: var(--story-status-loading-text);
 }
 
 .inline-bracket {
-  color: var(--accent-blue, #bd93f9);
+  color: var(--story-character-name-text);
   font-weight: 600;
 }
 
@@ -3600,8 +3600,8 @@ function formatTableCell(cell: string): string {
   z-index: 4;
   padding: 4px 5px;
   border-radius: 9px;
-  background: linear-gradient(180deg, rgba(26, 27, 38, 0.96), rgba(26, 27, 38, 0.8));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--story-toolbar-bg);
+  border: 1px solid var(--story-toolbar-border);
   backdrop-filter: blur(2px);
 }
 
@@ -3627,8 +3627,8 @@ function formatTableCell(cell: string): string {
   align-items: center;
   gap: 5px;
   white-space: nowrap;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--story-chip-border);
+  background: var(--story-chip-bg);
   color: var(--text-color);
   border-radius: 999px;
   padding: 3px 8px;
@@ -3644,21 +3644,21 @@ function formatTableCell(cell: string): string {
   min-width: 18px;
   padding: 0 4px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid var(--story-chip-count-border);
+  background: var(--story-chip-count-bg);
   font-size: 0.78em;
   opacity: 0.9;
 }
 
 .story-mini-tab.active {
-  border-color: rgba(139, 233, 253, 0.52);
-  background: rgba(139, 233, 253, 0.22);
+  border-color: var(--story-chip-active-border);
+  background: var(--story-chip-active-bg);
   color: var(--text-strong);
 }
 
 .story-mini-tab.active .story-mini-tab-count {
-  border-color: rgba(139, 233, 253, 0.65);
-  background: rgba(139, 233, 253, 0.24);
+  border-color: var(--story-chip-active-count-border);
+  background: var(--story-chip-active-count-bg);
 }
 
 .story-zoom-controls {
@@ -3680,8 +3680,8 @@ function formatTableCell(cell: string): string {
   width: 22px;
   height: 22px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--story-btn-border);
+  background: var(--story-btn-bg);
   color: var(--text-color);
   font-size: 0.95em;
   cursor: pointer;
@@ -3697,8 +3697,8 @@ function formatTableCell(cell: string): string {
 .story-image-menu-btn {
   height: 22px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--story-btn-border);
+  background: var(--story-btn-bg);
   color: var(--text-color);
   font-size: 0.68em;
   line-height: 1;
@@ -3708,8 +3708,8 @@ function formatTableCell(cell: string): string {
 }
 
 .story-image-menu-btn:hover {
-  border-color: rgba(139, 233, 253, 0.45);
-  background: rgba(139, 233, 253, 0.14);
+  border-color: var(--story-btn-hover-border);
+  background: var(--story-btn-hover-bg);
 }
 
 .story-image-menu-btn:active {
@@ -3718,8 +3718,8 @@ function formatTableCell(cell: string): string {
 
 .story-pane {
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--story-pane-bg);
+  border: 1px solid var(--story-pane-border);
   padding: 7px 8px;
 }
 
@@ -3739,16 +3739,16 @@ function formatTableCell(cell: string): string {
   margin-bottom: 6px;
   padding: 6px 8px;
   border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--story-filter-panel-pinned-border);
+  background: var(--story-filter-panel-pinned-bg);
 }
 
 .story-filter-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--story-filter-chip-border);
+  background: var(--story-filter-chip-bg);
   color: var(--text-color);
   border-radius: 999px;
   padding: 3px 8px;
@@ -3757,8 +3757,8 @@ function formatTableCell(cell: string): string {
 }
 
 .story-filter-chip.active {
-  border-color: rgba(80, 250, 123, 0.45);
-  background: rgba(80, 250, 123, 0.18);
+  border-color: var(--story-filter-chip-active-border);
+  background: var(--story-filter-chip-active-bg);
 }
 
 .chip-count {
@@ -3773,8 +3773,8 @@ function formatTableCell(cell: string): string {
 }
 
 .story-filter-action-btn {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--story-btn-border);
+  background: var(--story-btn-bg);
   color: var(--text-color);
   border-radius: 7px;
   padding: 3px 7px;
@@ -3783,8 +3783,8 @@ function formatTableCell(cell: string): string {
 }
 
 .story-filter-action-btn:hover {
-  border-color: rgba(139, 233, 253, 0.45);
-  background: rgba(139, 233, 253, 0.14);
+  border-color: var(--story-btn-hover-border);
+  background: var(--story-btn-hover-bg);
 }
 
 .story-modules {
@@ -3793,10 +3793,10 @@ function formatTableCell(cell: string): string {
 }
 
 .meta-block {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--story-meta-border);
   border-radius: 9px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--story-meta-bg);
 }
 
 .meta-block-title {
@@ -3824,7 +3824,7 @@ function formatTableCell(cell: string): string {
 
 .meta-block-body {
   margin: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--story-meta-body-border);
   padding: 8px 10px;
   font-size: 0.78em;
   line-height: 1.45;
