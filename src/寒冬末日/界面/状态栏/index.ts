@@ -209,7 +209,9 @@ function createHostFrameHeightSync(options?: { minHeightPx?: number; maxHeightPx
       const candidates = [chatHeight, viewportHeight].filter(v => Number.isFinite(v) && v > 0);
       const oneScreenHeight = candidates.length > 0 ? Math.min(...candidates) : Math.max(chatHeight, viewportHeight, 0);
       const keyboardLikelyOpen = Number(window.innerHeight || 0) - viewportHeight >= 90;
-      const mobileMinHeight = keyboardLikelyOpen ? Math.min(minHeightPx, 240) : Math.min(minHeightPx, hasStoryPane ? 320 : 280);
+      const mobileMinHeight = keyboardLikelyOpen
+        ? Math.min(minHeightPx, 240)
+        : Math.min(minHeightPx, hasStoryPane ? 320 : 280);
       const nextHeight = Math.min(maxHeightPx, Math.max(mobileMinHeight, oneScreenHeight));
       commitHeight(nextHeight, mobileMinHeight);
       return;

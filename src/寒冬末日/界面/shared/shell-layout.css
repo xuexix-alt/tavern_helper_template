@@ -171,11 +171,7 @@
 
 .eden-shell-footer {
   border-top: 1px solid var(--card-surface-border);
-  background: linear-gradient(
-    180deg,
-    var(--theme-footer-grad-start),
-    var(--theme-footer-grad-end)
-  );
+  background: linear-gradient(180deg, var(--theme-footer-grad-start), var(--theme-footer-grad-end));
   backdrop-filter: blur(4px);
   padding: 4px var(--eden-shell-footer-padding-x) calc(6px + env(safe-area-inset-bottom));
   display: flex;
