@@ -3,7 +3,6 @@ import { autoReprocessWhenLatestMessageMutated, reprocessLatestMessageVariables 
 import { getViewMessageState, onViewMessageChanged, resolveViewMessageId } from './viewMessage';
 import { normalizeRoomTag, parseRoomTag } from '../util/room';
 
-const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
 const RESERVED_TOP_LEVEL_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
 
 // 完整的初始默认值 - 使用 Schema.parse({}) 会自动应用所有 prefault
@@ -261,7 +260,6 @@ export const useDataStore = defineStore(
           void reprocessLatestMessageVariables({
             allowHistory: true,
             force: true,
-            emitRoleSelectorUpdated: true,
             refreshMessage: false,
           }).then(result => {
             if (result.status === 'applied') {
@@ -277,9 +275,6 @@ export const useDataStore = defineStore(
         }
       });
       eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh_from_mvu);
-
-      // 角色选择器保存后会主动广播该事件，避免必须手动重载 UI。
-      eventOn(ROLE_SELECTOR_UPDATED_EVENT as any, refresh_from_mvu);
 
       // 兼容：当外部通过 setChatMessages(refresh:'affected'|'all') 刷新楼层时，主动同步一次。
       if (typeof tavern_events !== 'undefined') {

@@ -1,0 +1,21 @@
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Microsoft YaHei', sans-serif;
+  color: #f3f7ff;
+  background: transparent;
+}
+
+button,
+textarea {
+  font: inherit;
+}

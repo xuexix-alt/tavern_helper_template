@@ -36,7 +36,7 @@
       relationship: 猎物与猎手 / 潜在的饲主
       major_event: 曾对{{user}}翻白眼，如今可能为了罐头跪在他脚边。
 
-    浅见亚美:
+    纪宁:
       relationship: 知道这个人，但根本没放在眼里
       major_event: 在她看来，家庭主妇和她不是一个世界的。
 

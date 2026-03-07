@@ -31,21 +31,59 @@
 
     <div v-else class="status-tabs-container">
       <template v-if="active_character_keys.length > 0">
-        <div v-if="useVirtualTabs" class="tab-buttons virtual" v-bind="virtualTabContainerProps">
-          <div v-bind="virtualTabWrapperProps" class="virtual-tabs-wrapper horizontal">
-            <button
-              v-for="item in virtualTabList"
-              :key="item.data.key"
-              class="tab-button"
-              :class="{ active: active_character_key === item.data.key }"
-              type="button"
-              @click="setActiveCharacter(item.data.key)"
-            >
-              <TextHighlight :text="item.data.label" :query="query" />
-              <span class="status-pill" :class="item.data.status">{{ item.data.status }}</span>
-            </button>
+        <!-- 移动端紧凑导航 -->
+        <div v-if="useVirtualTabs" class="character-nav-mobile">
+          <button
+            class="character-nav-btn prev"
+            type="button"
+            :disabled="currentCharacterIndex <= 0"
+            @click="navigateCharacter(-1)"
+          >
+            ‹
+          </button>
+          <div class="character-nav-current" @click="toggleCharacterDropdown">
+            <span class="character-nav-name">{{ currentCharacterLabel }}</span>
+            <span class="status-pill small" :class="currentCharacterStatus">{{ currentCharacterStatus }}</span>
+            <span class="character-nav-count">{{ currentCharacterIndex + 1 }}/{{ tabItems.length }}</span>
+            <span class="character-nav-dropdown-icon">▼</span>
           </div>
+          <button
+            class="character-nav-btn next"
+            type="button"
+            :disabled="currentCharacterIndex >= tabItems.length - 1"
+            @click="navigateCharacter(1)"
+          >
+            ›
+          </button>
+          <!-- 下拉选择器 -->
+          <Teleport to="body">
+            <div v-if="characterDropdownOpen" class="character-dropdown-overlay" @click="characterDropdownOpen = false">
+              <div class="character-dropdown-modal" @click.stop>
+                <div class="character-dropdown-header">
+                  <span>选择角色</span>
+                  <button type="button" class="character-dropdown-close" @click="characterDropdownOpen = false">
+                    ×
+                  </button>
+                </div>
+                <div class="character-dropdown-list">
+                  <button
+                    v-for="(item, idx) in tabItems"
+                    :key="item.key"
+                    type="button"
+                    class="character-dropdown-item"
+                    :class="{ active: active_character_key === item.key }"
+                    @click="selectCharacterFromDropdown(item.key)"
+                  >
+                    <span class="character-dropdown-index">{{ idx + 1 }}</span>
+                    <span class="character-dropdown-name">{{ item.label }}</span>
+                    <span class="status-pill small" :class="item.status">{{ item.status }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Teleport>
         </div>
+        <!-- 桌面端 tab 按钮 -->
         <div v-else class="tab-buttons">
           <button
             v-for="key in active_character_keys"
@@ -694,8 +732,8 @@ type CharacterKey =
   | string;
 
 const CHARACTER_ORDER = [
-  '浅见亚美',
-  '相田哲也',
+  '纪宁',
+  '陈宇',
   '雪乃',
   '桃乐丝・泽巴哈',
   // '何铃',
@@ -763,11 +801,7 @@ function closeReportDigestModal() {
 
 function openRoleSelectorFromUi() {
   if (isCreationMode.value) return;
-  if (typeof eventEmit === 'function') {
-    eventEmit(ROLE_SELECTOR_OPEN_EVENT as any);
-    return;
-  }
-  toastr.warning('未检测到角色删除脚本，请先启用「开局角色选择器」');
+  toastr.info('角色选择器已弃用，角色档案现改为酒馆原生绿灯触发。');
 }
 
 function switchCharactersToLatest() {
@@ -829,69 +863,34 @@ function matchCharacterByQuery(key: CharacterKey): boolean {
     .includes(normalizedQuery.value);
 }
 
-const roleSelectorStateForUi = computed(() => {
-  const data = store.data as Record<string, any>;
-  try {
-    const chatVars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
-    const roleRoot = _.get(chatVars, CHAT_VAR_KEYS_ROLE.ROOT, null);
-    if (roleRoot && typeof roleRoot === 'object') {
-      return readRoleSelectorStateFromStatData({ 主线任务: { $meta: { 角色控制: roleRoot } } });
-    }
-  } catch {
-    // ignore and fallback
-  }
-  return readRoleSelectorStateFromStatData(data);
-});
+const roleSelectorStateForUi = computed(() => null);
 
-const roleSelectorButtonText = computed(() => {
-  const selectedCount = roleSelectorStateForUi.value?.selected_roles?.length ?? 0;
-  const deletedCount = roleSelectorStateForUi.value?.deleted_roles?.length ?? 0;
-  return `角色批量删除（启用${selectedCount} / 已删${deletedCount}）`;
-});
+const roleSelectorButtonText = computed(() => '原生绿灯模式');
 
 const active_character_keys = computed<CharacterKey[]>(() => {
   const isActive = (key: CharacterKey) => getCharacter(key)?.登场状态 === '登场';
   const data = store.data as Record<string, any>;
-  const roleSelector = roleSelectorStateForUi.value;
 
-  const buildOrdered = (useSelectorFilter: boolean): CharacterKey[] => {
-    const isEnabled = (roleName: string) => {
-      if (!useSelectorFilter) return true;
-      const normalizedName = canonicalizeRoleName(roleName);
-      return isRoleEnabledBySelectorState(roleSelector, normalizedName || roleName);
-    };
+  const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]));
+  const fixedActive = fixedKeys.filter(isActive);
+  const fixedInactive = fixedKeys.filter(k => !isActive(k));
 
-    // 1. 固定角色按固定顺序
-    const fixedKeys = CHARACTER_ORDER.filter(key => isRoleLike(data[key]) && isEnabled(key));
-    const fixedActive = fixedKeys.filter(isActive);
-    const fixedInactive = fixedKeys.filter(k => !isActive(k));
+  const extraKeys = listExtraCoreKeys();
+  const extraActive = extraKeys.filter(isActive);
+  const extraInactive = extraKeys.filter(k => !isActive(k));
 
-    // 2. 追加角色（顶层非固定角色）
-    const extraKeys = listExtraCoreKeys().filter(key => isEnabled(String(key)));
-    const extraActive = extraKeys.filter(isActive);
-    const extraInactive = extraKeys.filter(k => !isActive(k));
+  const tempActive: CharacterKey[] = [];
+  const tempInactive: CharacterKey[] = [];
+  const tempNPCs = store.data.临时NPC;
+  if (tempNPCs && typeof tempNPCs === 'object') {
+    const npcNames = Object.keys(tempNPCs).sort();
+    const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
+    const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
+    npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
+    npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
+  }
 
-    // 3. 临时 NPC（按名称字典序）
-    const tempActive: CharacterKey[] = [];
-    const tempInactive: CharacterKey[] = [];
-    const tempNPCs = store.data.临时NPC;
-    if (tempNPCs && typeof tempNPCs === 'object') {
-      const npcNames = Object.keys(tempNPCs)
-        .filter(name => isEnabled(name))
-        .sort();
-      const npcActive = npcNames.filter(name => isActive(`临时NPC:${name}`));
-      const npcInactive = npcNames.filter(name => !isActive(`临时NPC:${name}`));
-      npcActive.forEach(name => tempActive.push(`临时NPC:${name}`));
-      npcInactive.forEach(name => tempInactive.push(`临时NPC:${name}`));
-    }
-
-    // 排序：登场角色优先；登场/离场内部顺序：固定名单 → 追加角色 → 临时NPC
-    return [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
-  };
-
-  const orderedBySelector = buildOrdered(true);
-  const orderedRaw = buildOrdered(false);
-  const ordered = orderedBySelector.length === 0 && orderedRaw.length > 0 ? orderedRaw : orderedBySelector;
+  const ordered = [...fixedActive, ...extraActive, ...tempActive, ...fixedInactive, ...extraInactive, ...tempInactive];
   if (!normalizedQuery.value) return ordered;
   return ordered.filter(matchCharacterByQuery);
 });
@@ -1280,6 +1279,40 @@ const tabItems = computed(() =>
   })),
 );
 const useVirtualTabs = computed(() => tabItems.value.length > 6);
+
+const characterDropdownOpen = ref(false);
+
+const currentCharacterIndex = computed(() => {
+  const idx = tabItems.value.findIndex(item => item.key === active_character_key.value);
+  return idx >= 0 ? idx : 0;
+});
+
+const currentCharacterLabel = computed(() => {
+  const item = tabItems.value[currentCharacterIndex.value];
+  return item?.label ?? '未知角色';
+});
+
+const currentCharacterStatus = computed(() => {
+  const item = tabItems.value[currentCharacterIndex.value];
+  return item?.status ?? '登场';
+});
+
+function navigateCharacter(direction: number) {
+  const newIndex = currentCharacterIndex.value + direction;
+  if (newIndex >= 0 && newIndex < tabItems.value.length) {
+    setActiveCharacter(tabItems.value[newIndex].key);
+  }
+}
+
+function toggleCharacterDropdown() {
+  characterDropdownOpen.value = !characterDropdownOpen.value;
+}
+
+function selectCharacterFromDropdown(key: string) {
+  setActiveCharacter(key);
+  characterDropdownOpen.value = false;
+}
+
 const {
   list: virtualTabList,
   containerProps: virtualTabContainerProps,
@@ -2375,9 +2408,8 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
     worldbook_name,
     [
       {
-        // 与“角色档案_动态注入”保持一致：条目名固定为 `角色档案 - <姓名>`，默认不启用，由 @INJECT 负责按需注入。
         name: `角色档案 - ${name}`,
-        enabled: false,
+        enabled: true,
         strategy: {
           type: 'selective',
           keys: ensuredKeys,
@@ -2398,89 +2430,11 @@ async function writeWorldbookEntry(name: string, content: string, keys: string[]
   );
 }
 
-type DossierIndexItem = {
-  name: string;
-  aliases: string[];
-  identity?: string;
-  summary?: string;
-  location?: string;
-  defaultSelected?: boolean;
-};
-
-function parseDossierIndex(text: string): DossierIndexItem[] {
-  try {
-    const data = JSON.parse(String(text ?? ''));
-    if (!Array.isArray(data)) return [];
-    const out: DossierIndexItem[] = [];
-    for (const row of data) {
-      if (!row || typeof row !== 'object') continue;
-      const name = String((row as any).name ?? '').trim();
-      if (!name) continue;
-      const aliases = Array.isArray((row as any).aliases) ? (row as any).aliases : [];
-      out.push({
-        name,
-        aliases: aliases.map((v: any) => String(v ?? '').trim()).filter(Boolean),
-        identity: typeof (row as any).identity === 'string' ? String((row as any).identity).trim() : undefined,
-        summary: typeof (row as any).summary === 'string' ? String((row as any).summary).trim() : undefined,
-        location: typeof (row as any).location === 'string' ? String((row as any).location).trim() : undefined,
-        defaultSelected: (row as any).defaultSelected === true,
-      });
-    }
-    return out;
-  } catch {
-    return [];
-  }
+async function ensureDossierIndexEntry(_worldbookName: string) {
+  return;
 }
 
-function buildDossierIndexText(list: DossierIndexItem[]): string {
-  // 仅输出 JSON，供 @INJECT EJS 用 JSON.parse() 读取。
-  return JSON.stringify(list, null, 2);
-}
-
-function normalizeDossierAliases(roleName: string, keys: string[]): string[] {
-  const out = _.uniq(
-    (Array.isArray(keys) ? keys : [])
-      .map(k => String(k ?? '').trim())
-      .filter(Boolean)
-      .filter(k => k !== roleName),
-  )
-    .filter(k => k.length >= 2)
-    .slice(0, 12);
-  return out;
-}
-
-async function ensureDossierIndexEntry(worldbookName: string) {
-  const worldbook = await getWorldbook(worldbookName);
-  const exists = worldbook.some(entry => String(entry?.name ?? '').trim() === '角色档案索引');
-  if (exists) return;
-
-  await createWorldbookEntries(
-    worldbookName,
-    [
-      {
-        name: '角色档案索引',
-        enabled: false,
-        strategy: {
-          type: 'constant',
-          keys: [],
-          keys_secondary: { logic: 'and_any', keys: [] },
-          scan_depth: 'same_as_global',
-        },
-        position: {
-          type: 'after_character_definition',
-          role: 'system',
-          depth: 0,
-          order: 8,
-        },
-        recursion: { prevent_incoming: true, prevent_outgoing: true, delay_until: null },
-        content: '[]',
-      },
-    ],
-    { render: 'immediate' },
-  );
-}
-
-async function appendRoleToDossierIndex(options: {
+async function appendRoleToDossierIndex(_options: {
   roleName: string;
   keys: string[];
   identity?: string;
@@ -2488,51 +2442,7 @@ async function appendRoleToDossierIndex(options: {
   location?: string;
   defaultSelected?: boolean;
 }) {
-  const roleName = String(options.roleName ?? '').trim();
-  if (!roleName) return;
-
-  const worldbookName = await resolveDefaultWorldbookName();
-  await ensureDossierIndexEntry(worldbookName);
-
-  const aliases = normalizeDossierAliases(roleName, options.keys ?? []);
-  const identity = typeof options.identity === 'string' ? options.identity.trim() : '';
-  const summary = typeof options.summary === 'string' ? options.summary.trim() : '';
-  const location = typeof options.location === 'string' ? options.location.trim() : '';
-
-  await updateWorldbookWith(
-    worldbookName,
-    worldbook => {
-      const idx = worldbook.findIndex(entry => String(entry?.name ?? '').trim() === '角色档案索引');
-      if (idx === -1) return worldbook;
-
-      const entry = worldbook[idx];
-      const list = parseDossierIndex(String(entry?.content ?? ''));
-      const found = list.find(item => item.name === roleName);
-      if (!found) {
-        const next: DossierIndexItem = { name: roleName, aliases };
-        if (identity) next.identity = identity;
-        if (summary) next.summary = summary;
-        if (location) next.location = location;
-        if (options.defaultSelected === true) next.defaultSelected = true;
-        list.push(next);
-      } else {
-        found.aliases = _.uniq([...(found.aliases ?? []), ...aliases])
-          .map(s => String(s ?? '').trim())
-          .filter(Boolean)
-          .filter(s => s.length >= 2)
-          .slice(0, 12);
-        if (identity) found.identity = identity;
-        if (summary) found.summary = summary;
-        if (location) found.location = location;
-        if (options.defaultSelected === true) found.defaultSelected = true;
-      }
-
-      list.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans'));
-      worldbook[idx] = { ...entry, content: buildDossierIndexText(list) };
-      return worldbook;
-    },
-    { render: 'immediate' },
-  );
+  return;
 }
 
 async function resolveDefaultWorldbookName() {
@@ -2620,32 +2530,16 @@ async function writeRoleData(options: {
   await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: targetMessageId });
 
   let wbError = '';
-  let idxError = '';
   if (writeWorldbook) {
     try {
       await writeWorldbookEntry(name, String(worldbookText ?? ''), worldbookKeys ?? []);
     } catch (err: any) {
       wbError = err?.message ?? String(err);
     }
-
-    if (!wbError) {
-      try {
-        await appendRoleToDossierIndex({
-          roleName: name,
-          keys: worldbookKeys ?? [],
-          summary: String(form?.内心想法 ?? form?.神态样貌 ?? ''),
-          location: String(form?.所在房间 ?? ''),
-        });
-      } catch (err: any) {
-        idxError = err?.message ?? String(err);
-      }
-    }
   }
 
   if (wbError) {
     toastr.warning(`角色已写入，但世界书失败：${wbError}`);
-  } else if (idxError) {
-    toastr.warning(`角色已写入，但角色档案索引更新失败：${idxError}`);
   } else if (writeWorldbook) {
     toastr.success(`已写入角色与世界书「${name}」`);
   } else {
@@ -2749,7 +2643,7 @@ function getTempNpcName(key: CharacterKey): string {
 
 function getRoleNameKey(key: CharacterKey): string {
   if (isTempNpcKey(key)) return getTempNpcName(key);
-  if (typeof key === 'string') return key.replace(/\?/g, '・');
+  if (typeof key === 'string') return (key as string).replace(/\?/g, '・');
   return String(key);
 }
 
@@ -2963,6 +2857,7 @@ onBeforeUnmount(() => {
   reportDigestModalOpen.value = false;
   addRoleOpen.value = false;
   generateRoleOpen.value = false;
+  characterDropdownOpen.value = false;
 });
 </script>
 
@@ -3041,10 +2936,7 @@ onBeforeUnmount(() => {
 }
 
 .tab-buttons.virtual {
-  display: block;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 6px;
+  display: none;
 }
 
 .virtual-tabs-wrapper.horizontal {
@@ -3059,6 +2951,226 @@ onBeforeUnmount(() => {
   justify-content: center;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.character-nav-mobile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 8px;
+}
+
+.character-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--character-nav-btn-border);
+  background: var(--character-nav-btn-bg);
+  color: var(--character-nav-btn-text);
+  font-size: 1.4em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.character-nav-btn:hover:not(:disabled) {
+  background: var(--character-nav-btn-hover-bg);
+  transform: scale(1.05);
+}
+
+.character-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.character-nav-current {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--character-nav-current-border);
+  background: var(--character-nav-current-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.character-nav-current:hover {
+  background: var(--character-nav-current-hover-bg);
+  border-color: var(--character-nav-current-hover-border);
+}
+
+.character-nav-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.92em;
+  color: var(--character-nav-name-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-nav-count {
+  font-size: 0.72em;
+  color: var(--character-nav-count-text);
+  margin-left: 4px;
+}
+
+.character-nav-dropdown-icon {
+  font-size: 0.65em;
+  color: var(--character-nav-dropdown-icon);
+  margin-left: 2px;
+}
+
+.status-pill.small {
+  margin-left: 0;
+  padding: 1px 5px;
+  font-size: 0.68em;
+}
+
+.character-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--character-dropdown-overlay-bg);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 env(safe-area-inset-bottom, 0);
+}
+
+.character-dropdown-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  background: var(--character-dropdown-modal-bg);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--character-dropdown-modal-border);
+  border-bottom: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.character-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--character-dropdown-header-border);
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--character-dropdown-header-text);
+}
+
+.character-dropdown-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--character-dropdown-close-border);
+  background: var(--character-dropdown-close-bg);
+  color: var(--character-dropdown-close-text);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.character-dropdown-close:hover {
+  background: var(--character-dropdown-close-hover-bg);
+}
+
+.character-dropdown-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.character-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.9em;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.character-dropdown-item:hover {
+  background: var(--character-dropdown-item-hover-bg);
+}
+
+.character-dropdown-item.active {
+  background: var(--character-dropdown-item-active-bg);
+  border-color: var(--character-dropdown-item-active-border);
+}
+
+.character-dropdown-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--character-dropdown-index-bg);
+  font-size: 0.78em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--character-dropdown-index-text);
+}
+
+.character-dropdown-item.active .character-dropdown-index {
+  background: var(--character-dropdown-index-active-bg);
+  color: var(--character-dropdown-index-active-text);
+}
+
+.character-dropdown-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+  .character-nav-mobile {
+    display: none;
+  }
+
+  .tab-buttons.virtual {
+    display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+  }
+
+  .character-dropdown-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .character-dropdown-modal {
+    border-radius: 16px;
+    border: 1px solid var(--character-dropdown-modal-border);
+    max-height: 60vh;
+  }
 }
 
 .section-header {

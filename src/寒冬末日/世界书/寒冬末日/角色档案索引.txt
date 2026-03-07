@@ -1,5 +1,5 @@
 [
-  { "name": "浅见亚美", "aliases": ["亚美"] },
+  { "name": "纪宁", "aliases": ["亚美"] },
   { "name": "慕小小", "aliases": ["小小"] },
   { "name": "佐伯惠理", "aliases": ["恵理"] },
   { "name": "佐伯诗织", "aliases": ["詩织"] },
@@ -10,7 +10,7 @@
   { "name": "陈雪", "aliases": ["雪姐"] },
   { "name": "陈幺妹", "aliases": ["幺妹", "Yaomei"] },
   { "name": "凌音", "aliases": [] },
-  { "name": "相田哲也", "aliases": ["哲也"] },
+  { "name": "陈宇", "aliases": ["哲也"] },
   { "name": "桃乐丝・泽巴哈", "aliases": ["桃乐丝", "泽巴哈"] },
   { "name": "何铃", "aliases": [] },
   { "name": "王静", "aliases": [] }

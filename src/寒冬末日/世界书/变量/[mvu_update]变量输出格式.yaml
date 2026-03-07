@@ -78,11 +78,11 @@ format: |-
   <JSONPatch>
   [
     { "op": "replace", "path": "/世界/时间", "value": "..." },
-    { "op": "delta", "path": "/浅见亚美/健康", "value": -1 },
-    { "op": "replace", "path": "/浅见亚美/内心想法", "value": "..." },
-    { "op": "replace", "path": "/浅见亚美/登场状态", "value": "登场" },
+    { "op": "delta", "path": "/纪宁/健康", "value": -1 },
+    { "op": "replace", "path": "/纪宁/内心想法", "value": "..." },
+    { "op": "replace", "path": "/纪宁/登场状态", "value": "登场" },
     { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
-    { "op": "replace", "path": "/浅见亚美/所在房间", "value": "楼层20/2001" },
+    { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
   ]
   </JSONPatch>

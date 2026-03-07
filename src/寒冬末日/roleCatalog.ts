@@ -9,15 +9,15 @@ export type RoleCatalogItem = {
 
 export const ROLE_CATALOG: RoleCatalogItem[] = [
   {
-    name: '浅见亚美',
+    name: '纪宁',
     identity: '邻家护士 / 新婚妻子',
     summary: '高同理与高边界并存，擅长危机沟通与卫生隔离，重视尊严与同意。',
     location: '楼层20/2002',
     aliases: ['亚美', '护士亚美'],
   },
   {
-    name: '相田哲也',
-    identity: '理性观察者 / 亚美丈夫',
+    name: '陈宇',
+    identity: '理性观察者 / 纪宁丈夫',
     summary: '冷静务实，偏工程与分析思维，在混乱环境中擅长建立秩序。',
     location: '楼层20/2002',
     aliases: ['哲也', '相田'],

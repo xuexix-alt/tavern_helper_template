@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import { getViewMessageState, resolveViewMessageId } from './界面/viewMessage';
 
-const ROLE_SELECTOR_UPDATED_EVENT = 'eden.role_selector.updated';
 const REPROCESS_GUARD_PATH = 'eden.mvu_reprocess_guard.by_message';
 const REPROCESS_GUARD_MAX_ENTRIES = 80;
 const ROLE_CONTROL_META_PATH = 'stat_data.主线任务.$meta.角色控制';
@@ -29,7 +28,6 @@ export type ReprocessResult = {
 export type ReprocessOptions = {
   allowHistory?: boolean;
   force?: boolean;
-  emitRoleSelectorUpdated?: boolean;
   refreshMessage?: boolean;
 };
 
@@ -186,9 +184,6 @@ export async function reprocessLatestMessageVariables(options: ReprocessOptions 
 
       writeGuardDigest(targetMessageId, digest);
 
-      if (options.emitRoleSelectorUpdated && typeof eventEmit === 'function') {
-        await eventEmit(ROLE_SELECTOR_UPDATED_EVENT as any);
-      }
       if (options.refreshMessage && typeof setChatMessages === 'function') {
         await setChatMessages([{ message_id: targetMessageId }], { refresh: 'affected' });
       }
@@ -234,7 +229,6 @@ export async function autoReprocessWhenLatestMessageMutated(messageId: number): 
   return reprocessLatestMessageVariables({
     allowHistory: true,
     force: false,
-    emitRoleSelectorUpdated: true,
     refreshMessage: false,
   });
 }

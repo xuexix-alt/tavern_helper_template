@@ -31,21 +31,59 @@
 
     <div v-else class="status-tabs-container">
       <template v-if="active_character_keys.length > 0">
-        <div v-if="useVirtualTabs" class="tab-buttons virtual" v-bind="virtualTabContainerProps">
-          <div v-bind="virtualTabWrapperProps" class="virtual-tabs-wrapper horizontal">
-            <button
-              v-for="item in virtualTabList"
-              :key="item.data.key"
-              class="tab-button"
-              :class="{ active: active_character_key === item.data.key }"
-              type="button"
-              @click="setActiveCharacter(item.data.key)"
-            >
-              <TextHighlight :text="item.data.label" :query="query" />
-              <span class="status-pill" :class="item.data.status">{{ item.data.status }}</span>
-            </button>
+        <!-- 移动端紧凑导航 -->
+        <div v-if="useVirtualTabs" class="character-nav-mobile">
+          <button
+            class="character-nav-btn prev"
+            type="button"
+            :disabled="currentCharacterIndex <= 0"
+            @click="navigateCharacter(-1)"
+          >
+            ‹
+          </button>
+          <div class="character-nav-current" @click="toggleCharacterDropdown">
+            <span class="character-nav-name">{{ currentCharacterLabel }}</span>
+            <span class="status-pill small" :class="currentCharacterStatus">{{ currentCharacterStatus }}</span>
+            <span class="character-nav-count">{{ currentCharacterIndex + 1 }}/{{ tabItems.length }}</span>
+            <span class="character-nav-dropdown-icon">▼</span>
           </div>
+          <button
+            class="character-nav-btn next"
+            type="button"
+            :disabled="currentCharacterIndex >= tabItems.length - 1"
+            @click="navigateCharacter(1)"
+          >
+            ›
+          </button>
+          <!-- 下拉选择器 -->
+          <Teleport to="body">
+            <div v-if="characterDropdownOpen" class="character-dropdown-overlay" @click="characterDropdownOpen = false">
+              <div class="character-dropdown-modal" @click.stop>
+                <div class="character-dropdown-header">
+                  <span>选择角色</span>
+                  <button type="button" class="character-dropdown-close" @click="characterDropdownOpen = false">
+                    ×
+                  </button>
+                </div>
+                <div class="character-dropdown-list">
+                  <button
+                    v-for="(item, idx) in tabItems"
+                    :key="item.key"
+                    type="button"
+                    class="character-dropdown-item"
+                    :class="{ active: active_character_key === item.key }"
+                    @click="selectCharacterFromDropdown(item.key)"
+                  >
+                    <span class="character-dropdown-index">{{ idx + 1 }}</span>
+                    <span class="character-dropdown-name">{{ item.label }}</span>
+                    <span class="status-pill small" :class="item.status">{{ item.status }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Teleport>
         </div>
+        <!-- 桌面端 tab 按钮 -->
         <div v-else class="tab-buttons">
           <button
             v-for="key in active_character_keys"
@@ -671,11 +709,11 @@
 </template>
 
 <script setup lang="ts">
-import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
-import type { Schema as SchemaType } from '../../../schema';
+import _ from 'lodash';
 import { readRoleSelectorStateFromChatVars } from '../../../role_control';
 import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
+import type { Schema as SchemaType } from '../../../schema';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
 import ReportSection from './ReportSection.vue';
@@ -690,8 +728,8 @@ type CharacterKey =
   | string;
 
 const CHARACTER_ORDER = [
-  '浅见亚美',
-  '相田哲也',
+  '纪宁',
+  '陈宇',
   '雪乃',
   '桃乐丝・泽巴哈',
   // '何铃',
@@ -1276,6 +1314,40 @@ const tabItems = computed(() =>
   })),
 );
 const useVirtualTabs = computed(() => tabItems.value.length > 6);
+
+const characterDropdownOpen = ref(false);
+
+const currentCharacterIndex = computed(() => {
+  const idx = tabItems.value.findIndex(item => item.key === active_character_key.value);
+  return idx >= 0 ? idx : 0;
+});
+
+const currentCharacterLabel = computed(() => {
+  const item = tabItems.value[currentCharacterIndex.value];
+  return item?.label ?? '未知角色';
+});
+
+const currentCharacterStatus = computed(() => {
+  const item = tabItems.value[currentCharacterIndex.value];
+  return item?.status ?? '登场';
+});
+
+function navigateCharacter(direction: number) {
+  const newIndex = currentCharacterIndex.value + direction;
+  if (newIndex >= 0 && newIndex < tabItems.value.length) {
+    setActiveCharacter(tabItems.value[newIndex].key);
+  }
+}
+
+function toggleCharacterDropdown() {
+  characterDropdownOpen.value = !characterDropdownOpen.value;
+}
+
+function selectCharacterFromDropdown(key: CharacterKey) {
+  setActiveCharacter(key);
+  characterDropdownOpen.value = false;
+}
+
 const {
   list: virtualTabList,
   containerProps: virtualTabContainerProps,
@@ -2745,7 +2817,7 @@ function getTempNpcName(key: CharacterKey): string {
 
 function getRoleNameKey(key: CharacterKey): string {
   if (isTempNpcKey(key)) return getTempNpcName(key);
-  if (typeof key === 'string') return key.replace(/\?/g, '・');
+  if (typeof key === 'string') return (key as string).replace(/\?/g, '・');
   return String(key);
 }
 
@@ -2959,6 +3031,7 @@ onBeforeUnmount(() => {
   reportDigestModalOpen.value = false;
   addRoleOpen.value = false;
   generateRoleOpen.value = false;
+  characterDropdownOpen.value = false;
 });
 </script>
 
@@ -3037,10 +3110,7 @@ onBeforeUnmount(() => {
 }
 
 .tab-buttons.virtual {
-  display: block;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 6px;
+  display: none;
 }
 
 .virtual-tabs-wrapper.horizontal {
@@ -3055,6 +3125,226 @@ onBeforeUnmount(() => {
   justify-content: center;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.character-nav-mobile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 8px;
+}
+
+.character-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--character-nav-btn-border);
+  background: var(--character-nav-btn-bg);
+  color: var(--character-nav-btn-text);
+  font-size: 1.4em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.character-nav-btn:hover:not(:disabled) {
+  background: var(--character-nav-btn-hover-bg);
+  transform: scale(1.05);
+}
+
+.character-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.character-nav-current {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--character-nav-current-border);
+  background: var(--character-nav-current-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.character-nav-current:hover {
+  background: var(--character-nav-current-hover-bg);
+  border-color: var(--character-nav-current-hover-border);
+}
+
+.character-nav-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.92em;
+  color: var(--character-nav-name-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-nav-count {
+  font-size: 0.72em;
+  color: var(--character-nav-count-text);
+  margin-left: 4px;
+}
+
+.character-nav-dropdown-icon {
+  font-size: 0.65em;
+  color: var(--character-nav-dropdown-icon);
+  margin-left: 2px;
+}
+
+.status-pill.small {
+  margin-left: 0;
+  padding: 1px 5px;
+  font-size: 0.68em;
+}
+
+.character-dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--character-dropdown-overlay-bg);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 env(safe-area-inset-bottom, 0);
+}
+
+.character-dropdown-modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  background: var(--character-dropdown-modal-bg);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--character-dropdown-modal-border);
+  border-bottom: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.character-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--character-dropdown-header-border);
+  font-weight: 700;
+  font-size: 0.95em;
+  color: var(--character-dropdown-header-text);
+}
+
+.character-dropdown-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--character-dropdown-close-border);
+  background: var(--character-dropdown-close-bg);
+  color: var(--character-dropdown-close-text);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.character-dropdown-close:hover {
+  background: var(--character-dropdown-close-hover-bg);
+}
+
+.character-dropdown-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.character-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 0.9em;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s ease;
+}
+
+.character-dropdown-item:hover {
+  background: var(--character-dropdown-item-hover-bg);
+}
+
+.character-dropdown-item.active {
+  background: var(--character-dropdown-item-active-bg);
+  border-color: var(--character-dropdown-item-active-border);
+}
+
+.character-dropdown-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--character-dropdown-index-bg);
+  font-size: 0.78em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--character-dropdown-index-text);
+}
+
+.character-dropdown-item.active .character-dropdown-index {
+  background: var(--character-dropdown-index-active-bg);
+  color: var(--character-dropdown-index-active-text);
+}
+
+.character-dropdown-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+  .character-nav-mobile {
+    display: none;
+  }
+
+  .tab-buttons.virtual {
+    display: block;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+  }
+
+  .character-dropdown-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .character-dropdown-modal {
+    border-radius: 16px;
+    border: 1px solid var(--character-dropdown-modal-border);
+    max-height: 60vh;
+  }
 }
 
 .section-header {
@@ -3123,10 +3413,7 @@ onBeforeUnmount(() => {
 }
 
 .section-view-btn:disabled {
-  border-color: var(--btn-disabled-border);
-  background: var(--btn-disabled-bg);
-  color: var(--btn-disabled-text);
-  opacity: 1;
+  opacity: 0.56;
   cursor: not-allowed;
   transform: none;
 }
@@ -3261,19 +3548,15 @@ onBeforeUnmount(() => {
   background: var(--character-generate-mask-bg);
   backdrop-filter: blur(6px);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  overflow: auto;
-  padding-top: calc(14px + env(safe-area-inset-top));
-  padding-right: calc(12px + env(safe-area-inset-right));
-  padding-bottom: calc(14px + env(safe-area-inset-bottom));
-  padding-left: calc(12px + env(safe-area-inset-left));
+  padding: 24px 16px;
   z-index: 1001;
 }
 
 .role-generate-modal {
-  width: min(96vw, 940px);
-  max-width: calc(100vw - 16px);
+  width: min(82vw, 940px);
+  max-height: 76vh;
   background: var(--character-modal-bg);
   border: 1px solid var(--character-modal-border);
   border-radius: 18px;
@@ -3536,7 +3819,7 @@ onBeforeUnmount(() => {
   color: var(--text-color);
   padding: 8px 10px;
   font-size: 0.95em;
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 .role-form-textarea {
@@ -3643,12 +3926,8 @@ onBeforeUnmount(() => {
 }
 
 .role-btn:disabled {
-  border-color: var(--btn-disabled-border);
-  background: var(--btn-disabled-bg);
-  color: var(--btn-disabled-text);
-  opacity: 1;
+  opacity: 0.6;
   cursor: not-allowed;
-  filter: saturate(0.75);
 }
 
 @media (max-width: 640px) {
@@ -3666,130 +3945,5 @@ onBeforeUnmount(() => {
     font-size: 0.76em;
     padding: 5px 10px;
   }
-}
-
-:global(:root[data-theme='jade_green']) .history-mode-banner,
-:global(:root[data-theme='parchment']) .history-mode-banner,
-:global(:root[data-theme='milky']) .history-mode-banner {
-  border-color: var(--character-history-banner-light-border);
-  background: var(--character-history-banner-light-bg);
-  color: var(--character-history-banner-light-text);
-}
-
-:global(:root[data-theme='jade_green']) .history-mode-back-btn,
-:global(:root[data-theme='parchment']) .history-mode-back-btn,
-:global(:root[data-theme='milky']) .history-mode-back-btn {
-  border-color: var(--character-history-back-light-border);
-  background: var(--character-history-back-light-bg);
-  color: var(--text-color);
-}
-
-:global(:root[data-theme='jade_green']) .creation-entry,
-:global(:root[data-theme='parchment']) .creation-entry,
-:global(:root[data-theme='milky']) .creation-entry {
-  border-color: var(--character-creation-entry-light-border);
-  background: var(--character-creation-entry-light-bg);
-}
-
-:global(:root[data-theme='jade_green']) .creation-entry-hint,
-:global(:root[data-theme='parchment']) .creation-entry-hint,
-:global(:root[data-theme='milky']) .creation-entry-hint {
-  color: var(--character-creation-entry-light-hint);
-}
-
-:global(:root[data-theme='jade_green']) .role-modal-mask,
-:global(:root[data-theme='parchment']) .role-modal-mask,
-:global(:root[data-theme='milky']) .role-modal-mask {
-  background: var(--character-modal-mask-light-bg);
-}
-
-:global(:root[data-theme='jade_green']) .role-generate-mask,
-:global(:root[data-theme='parchment']) .role-generate-mask,
-:global(:root[data-theme='milky']) .role-generate-mask {
-  background: var(--character-generate-mask-light-bg);
-}
-
-:global(:root[data-theme='jade_green']) .role-modal,
-:global(:root[data-theme='jade_green']) .role-generate-modal,
-:global(:root[data-theme='parchment']) .role-modal,
-:global(:root[data-theme='parchment']) .role-generate-modal,
-:global(:root[data-theme='milky']) .role-modal,
-:global(:root[data-theme='milky']) .role-generate-modal {
-  background: var(--card-surface-bg-elevated);
-  border-color: var(--card-surface-border);
-  box-shadow: var(--character-light-panel-shadow-deep), var(--character-light-panel-shadow-soft);
-}
-
-:global(:root[data-theme='jade_green']) .role-modal-title,
-:global(:root[data-theme='parchment']) .role-modal-title,
-:global(:root[data-theme='milky']) .role-modal-title {
-  color: var(--text-strong);
-}
-
-:global(:root[data-theme='jade_green']) .role-icon-btn,
-:global(:root[data-theme='parchment']) .role-icon-btn,
-:global(:root[data-theme='milky']) .role-icon-btn {
-  border-color: var(--btn-border);
-  background: var(--btn-bg);
-  color: var(--btn-text, var(--text-color));
-}
-
-:global(:root[data-theme='jade_green']) .role-form-hint,
-:global(:root[data-theme='parchment']) .role-form-hint,
-:global(:root[data-theme='milky']) .role-form-hint,
-:global(:root[data-theme='jade_green']) .role-form-label,
-:global(:root[data-theme='parchment']) .role-form-label,
-:global(:root[data-theme='milky']) .role-form-label,
-:global(:root[data-theme='jade_green']) .role-switch-text,
-:global(:root[data-theme='parchment']) .role-switch-text,
-:global(:root[data-theme='milky']) .role-switch-text,
-:global(:root[data-theme='jade_green']) .role-generate-title,
-:global(:root[data-theme='parchment']) .role-generate-title,
-:global(:root[data-theme='milky']) .role-generate-title,
-:global(:root[data-theme='jade_green']) .role-generate-meta,
-:global(:root[data-theme='parchment']) .role-generate-meta,
-:global(:root[data-theme='milky']) .role-generate-meta,
-:global(:root[data-theme='jade_green']) .role-generate-worldbook-item,
-:global(:root[data-theme='parchment']) .role-generate-worldbook-item,
-:global(:root[data-theme='milky']) .role-generate-worldbook-item {
-  color: var(--text-color);
-}
-
-:global(:root[data-theme='jade_green']) .role-form-input,
-:global(:root[data-theme='jade_green']) .role-form-select,
-:global(:root[data-theme='jade_green']) .role-form-textarea,
-:global(:root[data-theme='parchment']) .role-form-input,
-:global(:root[data-theme='parchment']) .role-form-select,
-:global(:root[data-theme='parchment']) .role-form-textarea,
-:global(:root[data-theme='milky']) .role-form-input,
-:global(:root[data-theme='milky']) .role-form-select,
-:global(:root[data-theme='milky']) .role-form-textarea {
-  border-color: var(--card-surface-border);
-  background: var(--card-surface-bg-elevated);
-  color: var(--text-color);
-  color-scheme: light;
-}
-
-:global(:root[data-theme='jade_green']) .role-form-select option,
-:global(:root[data-theme='parchment']) .role-form-select option,
-:global(:root[data-theme='milky']) .role-form-select option {
-  background: var(--bg-light);
-  color: var(--text-color);
-}
-
-:global(:root[data-theme='jade_green']) .role-switch-slider,
-:global(:root[data-theme='parchment']) .role-switch-slider,
-:global(:root[data-theme='milky']) .role-switch-slider {
-  background: var(--character-light-switch-track-bg);
-}
-
-:global(:root[data-theme='jade_green']) .role-generate-settings,
-:global(:root[data-theme='parchment']) .role-generate-settings,
-:global(:root[data-theme='milky']) .role-generate-settings,
-:global(:root[data-theme='jade_green']) .role-generate-worldbook-list,
-:global(:root[data-theme='parchment']) .role-generate-worldbook-list,
-:global(:root[data-theme='milky']) .role-generate-worldbook-list {
-  border-color: var(--card-surface-border);
-  background: var(--card-surface-bg);
 }
 </style>
