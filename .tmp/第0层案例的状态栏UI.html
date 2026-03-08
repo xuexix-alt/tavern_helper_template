@@ -1,0 +1,1034 @@
+```html
+<html>
+  <head>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
+      :root {
+        --bg-dark: #050406;
+        --bg-panel: rgba(26, 24, 29, 0.75);
+        --border-metal: #5a3d3d;
+        --accent-blood: #ff4d4d;
+        --accent-blood-glow: rgba(255, 77, 77, 0.5);
+        --accent-mana: #4da6ff;
+        --accent-mana-glow: rgba(77, 166, 255, 0.5);
+        --accent-gold: #ffd700;
+        --accent-gold-glow: rgba(255, 215, 0, 0.3);
+        --accent-exp: #ff9f43;
+        --accent-san: #2ed573;
+        --text-main: #f1f2f6;
+        --text-dim: #a4b0be;
+        --rare-text: #d980fa;
+        --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      body {
+        margin: 0;
+        padding: 10px 0;
+        background-color: transparent;
+        font-family: 'Noto Serif SC', serif;
+        color: var(--text-main);
+        font-size: 14px;
+      }
+      .terminal-container {
+        width: 100%;
+        max-width: 800px;
+        margin: auto;
+        background:
+          radial-gradient(circle at 50% 30%, rgba(30, 40, 50, 0.95), rgba(10, 15, 20, 0.98)),
+          url(https://www.transparenttextures.com/patterns/dark-matter.png);
+        border: 1px solid #333;
+        border-top: 2px solid var(--border-metal);
+        border-bottom: 2px solid var(--border-metal);
+        border-radius: 12px;
+        box-shadow:
+          0 0 40px rgba(0, 0, 0, 0.8),
+          inset 0 0 60px rgba(0, 0, 0, 0.7),
+          0 0 15px rgba(90, 61, 61, 0.3);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        backdrop-filter: blur(5px);
+      }
+      .top-bar {
+        height: 3px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent-blood),
+          var(--accent-gold),
+          var(--accent-mana),
+          transparent
+        );
+        box-shadow: 0 0 15px var(--accent-gold-glow);
+        animation: shimmer 3s infinite linear;
+        background-size: 200% 100%;
+      }
+      .header {
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2));
+      }
+      .guild-badge {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .guild-logo {
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--accent-gold);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-weight: bold;
+        color: var(--accent-gold);
+        background: rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 10px var(--accent-gold-glow);
+        text-shadow: 0 0 5px var(--accent-gold);
+      }
+      .guild-name {
+        font-size: 1.2em;
+        letter-spacing: 2px;
+        font-weight: 700;
+        background: linear-gradient(to bottom, #fff, #bbb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+      .time-display {
+        font-size: 0.9em;
+        color: var(--accent-gold);
+        text-shadow: 0 0 5px var(--accent-gold-glow);
+        font-family: 'JetBrains Mono', monospace;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .content-grid {
+        display: grid;
+        grid-template-columns: 32% 1fr;
+        gap: 0;
+        background-color: transparent;
+        flex-grow: 1;
+      }
+      .status-panel {
+        background-color: rgba(20, 18, 22, 0.6);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+        box-shadow: inset -5px 0 15px rgba(0, 0, 0, 0.3);
+      }
+      .avatar-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        margin-bottom: 10px;
+      }
+      .avatar-frame {
+        width: 100px;
+        height: 100px;
+        border: 2px solid var(--accent-gold);
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+        box-shadow:
+          0 0 15px var(--accent-gold-glow),
+          inset 0 0 10px rgba(0, 0, 0, 0.8);
+        background-color: #000;
+        transform: rotate(0deg);
+        transition: transform 0.3s;
+      }
+      .avatar-frame::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+        animation: shine-rotate 6s infinite linear;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .user_avatar {
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        filter: sepia(10%) contrast(110%);
+        transition: transform 0.5s;
+      }
+      .avatar-frame:hover .user_avatar {
+        transform: scale(1.1);
+      }
+      .rank-tag {
+        background: linear-gradient(135deg, #b8860b, #ffd700, #b8860b);
+        color: #1a0f0f;
+        padding: 4px 12px;
+        font-size: 0.85em;
+        border-radius: 4px;
+        font-weight: 800;
+        margin-top: -12px;
+        z-index: 3;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        letter-spacing: 1px;
+        min-width: 60px;
+        text-align: center;
+      }
+      .stat-group {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .stat-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      .stat-label {
+        font-size: 0.8em;
+        color: var(--text-dim);
+        display: flex;
+        justify-content: space-between;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .progress-bg {
+        width: 100%;
+        height: 8px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+        position: relative;
+      }
+      .progress-fill {
+        height: 100%;
+        width: 0%;
+        transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+        position: relative;
+        border-radius: 5px;
+      }
+      .fill-hp {
+        background: linear-gradient(90deg, #c0392b, #e74c3c);
+        box-shadow: 0 0 5px var(--accent-blood-glow);
+      }
+      .fill-mp {
+        background: linear-gradient(90deg, #2980b9, #3498db);
+        box-shadow: 0 0 5px var(--accent-mana-glow);
+      }
+      .fill-san {
+        background: linear-gradient(90deg, #27ae60, #2ecc71);
+        box-shadow: 0 0 5px rgba(46, 204, 113, 0.4);
+      }
+      .fill-exp {
+        background: linear-gradient(90deg, #d35400, #f39c12);
+        box-shadow: 0 0 5px rgba(243, 156, 18, 0.4);
+      }
+      .main-panel {
+        background-color: transparent;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        min-height: 0;
+      }
+      .nav-tabs {
+        display: flex;
+        background-color: rgba(0, 0, 0, 0.4);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 0 5px;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 12px 2px;
+        background: none;
+        border: none;
+        color: var(--text-dim);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.9em;
+        font-weight: bold;
+        transition: all 0.3s;
+        position: relative;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+      .tab-btn:hover {
+        color: var(--text-main);
+        background: linear-gradient(to top, rgba(255, 255, 255, 0.05), transparent);
+      }
+      .tab-btn.active {
+        color: var(--accent-gold);
+        text-shadow: 0 0 8px var(--accent-gold-glow);
+      }
+      .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 15%;
+        right: 15%;
+        height: 2px;
+        background: var(--accent-gold);
+        box-shadow: 0 0 8px var(--accent-gold);
+      }
+      .tab-content {
+        padding: 20px;
+        flex-grow: 1;
+        overflow-y: auto;
+        max-height: 400px;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-metal) rgba(0, 0, 0, 0.3);
+      }
+      .tab-content::-webkit-scrollbar {
+        width: 6px;
+      }
+      .tab-content::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+      .tab-content::-webkit-scrollbar-thumb {
+        background: var(--border-metal);
+        border-radius: 3px;
+      }
+      .tab-content > p {
+        margin: 0;
+        color: var(--text-dim);
+        font-style: italic;
+      }
+      .info-card,
+      .partner-card,
+      .npc-card,
+      .skill-card,
+      .quest-item {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(145deg, rgba(30, 30, 35, 0.6), rgba(20, 20, 25, 0.8));
+        padding: 15px;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s,
+          border-color 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+      .info-card:hover,
+      .partner-card:hover,
+      .npc-card:hover,
+      .skill-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .info-title {
+        color: var(--accent-gold);
+        font-size: 1.05em;
+        margin-bottom: 10px;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+        padding-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+      }
+      .info-text {
+        font-size: 0.9em;
+        color: #dcdde1;
+        line-height: 1.6;
+      }
+      .danger-text {
+        color: var(--accent-blood);
+        text-shadow: 0 0 3px rgba(217, 79, 79, 0.4);
+      }
+      .rare-text {
+        color: var(--rare-text);
+        text-shadow: 0 0 3px rgba(217, 128, 250, 0.4);
+      }
+      .quest-item {
+        border-left: 3px solid var(--text-dim);
+        padding-left: 15px;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), transparent);
+      }
+      .quest-item:hover {
+        border-left-color: var(--accent-gold);
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.05), transparent);
+      }
+      .partner-card,
+      .npc-card,
+      .skill-card {
+        display: flex;
+        gap: 15px;
+        align-items: flex-start;
+      }
+      .partner-info,
+      .npc-info,
+      .skill-info {
+        flex-grow: 1;
+      }
+      .partner-header,
+      .npc-header,
+      .skill-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 8px;
+      }
+      .partner-name,
+      .npc-name,
+      .skill-name {
+        font-size: 1.15em;
+        font-weight: bold;
+        color: var(--text-main);
+        text-shadow: 0 2px 2px rgba(0, 0, 0, 0.8);
+      }
+      .skill-name {
+        color: var(--accent-gold);
+      }
+      .partner-species,
+      .npc-title,
+      .skill-type {
+        font-size: 0.8em;
+        color: var(--text-dim);
+        margin-left: 8px;
+        font-weight: normal;
+      }
+      .status-badge {
+        font-size: 0.75em;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background-color: #333;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        white-space: nowrap;
+      }
+      .card-stats-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 6px 12px;
+        font-size: 0.85em;
+        margin-top: 10px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 8px;
+        border-radius: 6px;
+      }
+      .card-stats-grid .stat-label {
+        color: var(--text-dim);
+      }
+      .card-stats-grid i {
+        color: #999;
+        font-style: italic;
+        opacity: 0.8;
+      }
+      .npc-info,
+      .skill-info {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .npc-description,
+      .skill-description {
+        font-size: 0.85em;
+        color: #b3b3b3;
+        line-height: 1.5;
+        margin-top: 5px;
+      }
+      .fairy-container {
+        position: absolute;
+        bottom: 5px;
+        right: 20px;
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        z-index: 100;
+        animation: fairy-bob 4s infinite ease-in-out;
+        pointer-events: none;
+      }
+      .fairy-avatar {
+        width: 45px;
+        height: 45px; /* background-image: url('...'); */
+        background-size: cover;
+        background-position: center;
+        border-radius: 50%;
+        cursor: pointer;
+        pointer-events: auto;
+        box-shadow:
+          0 0 20px var(--accent-gold),
+          0 0 30px var(--accent-mana);
+        transition:
+          transform 0.3s,
+          filter 0.3s;
+        border: 2px solid #fff;
+      }
+      .fairy-avatar:hover {
+        transform: scale(1.15) rotate(5deg);
+        filter: brightness(1.2);
+      }
+      .fairy-bubble {
+        max-width: 240px;
+        background: rgba(20, 15, 25, 0.95);
+        border: 1px solid var(--accent-gold);
+        padding: 15px;
+        border-radius: 12px;
+        border-bottom-right-radius: 2px;
+        font-size: 0.9em;
+        color: var(--text-main);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        position: relative;
+        opacity: 0;
+        transform: translateY(10px);
+        transition:
+          opacity 0.3s ease,
+          transform 0.3s ease;
+        backdrop-filter: blur(4px);
+      }
+
+      /* New Modal Styles */
+      .image-modal-overlay {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.9);
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(5px);
+      }
+      .image-modal-content {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+        max-height: 90vh;
+        border-radius: 8px;
+        box-shadow: 0 0 30px var(--accent-gold-glow);
+      }
+      .image-modal-close {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        transition: 0.3s;
+        cursor: pointer;
+        z-index: 10000;
+      }
+      .image-modal-close:hover,
+      .image-modal-close:focus {
+        color: #bbb;
+        text-decoration: none;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+      @keyframes shine-rotate {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes fairy-bob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+      @media (max-width: 700px) {
+        .terminal-container {
+          border-radius: 0;
+          border: none;
+          border-top: 2px solid var(--border-metal);
+          border-bottom: 2px solid var(--border-metal);
+        }
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+        .status-panel {
+          flex-direction: row;
+          padding: 15px;
+          gap: 20px;
+          flex-wrap: wrap;
+          justify-content: center;
+          background-color: rgba(20, 18, 22, 0.8);
+          border-right: none;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .avatar-frame {
+          width: 70px;
+          height: 70px;
+        }
+        .stat-group {
+          flex: 1;
+          min-width: 200px;
+        }
+        .rank-tag {
+          margin-top: -5px;
+        }
+        .tab-content {
+          max-height: 350px;
+          padding: 15px;
+        }
+        .fairy-container {
+          right: 10px;
+          bottom: 10px;
+        }
+        .fairy-bubble {
+          max-width: 180px;
+          font-size: 0.85em;
+          padding: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="data-source" style="display: none">$1</textarea>
+    <div class="terminal-container">
+      <div class="top-bar"></div>
+      <div class="header">
+        <div class="guild-badge">
+          <div class="guild-logo">修</div>
+          <div class="guild-name">面板</div>
+        </div>
+        <div class="time-display" id="env-status"></div>
+      </div>
+      <div class="content-grid">
+        <div class="status-panel">
+          <div class="avatar-wrapper">
+            <div class="avatar-frame"><div class="user_avatar"></div></div>
+            <div class="rank-tag"></div>
+          </div>
+          <div class="stat-group">
+            <div class="stat-row">
+              <div class="stat-label"><span>生命</span><span id="hp-value"></span></div>
+              <div class="progress-bg"><div class="progress-fill fill-hp" id="hp-bar"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label"><span>精血</span><span id="blood-value"></span></div>
+              <div class="progress-bg"><div class="progress-fill fill-hp" id="blood-bar"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label"><span>灵力</span><span id="mp-value"></span></div>
+              <div class="progress-bg"><div class="progress-fill fill-mp" id="mp-bar"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label"><span>修为</span><span id="exp-value"></span></div>
+              <div class="progress-bg"><div class="progress-fill fill-exp" id="exp-bar"></div></div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label">
+                <span>神识</span
+                ><span id="san-value" class="rare-text" style="font-weight: normal; text-align: right"></span>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label">
+                <span>气运</span
+                ><span id="luck-value" class="rare-text" style="font-weight: normal; text-align: right"></span>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label">
+                <span>灵根</span
+                ><span id="spirit-root-value" class="rare-text" style="font-weight: normal; text-align: right"></span>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label">
+                <span>宗门</span
+                ><span id="clan-value" class="rare-text" style="font-weight: normal; text-align: right">无</span>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-label">
+                <span>状态</span
+                ><span id="status-effects" class="rare-text" style="font-weight: normal; text-align: right">无</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="main-panel">
+          <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab(event, 'dashboard')">概览</button>
+            <button class="tab-btn" onclick="switchTab(event, 'skills')">功法</button>
+            <button class="tab-btn" onclick="switchTab(event, 'partners')">道侣</button>
+            <button class="tab-btn" onclick="switchTab(event, 'npcs')">人物</button>
+            <button class="tab-btn" onclick="switchTab(event, 'quests')">机遇</button>
+            <button class="tab-btn" onclick="switchTab(event, 'database')">日志</button>
+          </div>
+          <div id="tab-dashboard" class="tab-content" style="display: block"></div>
+          <div id="tab-skills" class="tab-content" style="display: none"></div>
+          <div id="tab-partners" class="tab-content" style="display: none"></div>
+          <div id="tab-npcs" class="tab-content" style="display: none"></div>
+          <div id="tab-quests" class="tab-content" style="display: none"></div>
+          <div id="tab-database" class="tab-content" style="display: none"><p></p></div>
+        </div>
+      </div>
+      <div class="fairy-container" id="fairy-guide">
+        <div class="fairy-bubble" style="opacity: 0; transform: translateY(10px); pointer-events: none">
+          <span id="fairy-text">...</span>
+        </div>
+        <div class="fairy-avatar" title="点击器灵查看提示, 长按/右键查看大图"></div>
+      </div>
+    </div>
+
+    <!-- New Modal HTML -->
+    <div id="image-modal-overlay" class="image-modal-overlay">
+      <span class="image-modal-close">&times;</span>
+      <img class="image-modal-content" id="modal-image" />
+    </div>
+
+    <script>
+      let globalXmlData = null;
+
+      const fairyImages = [
+        'https://i.postimg.cc/rpz2PCrZ/Image-1765540443504.jpg',
+        'https://i.postimg.cc/B6bsPC8Q/Image-1765540442059.jpg',
+      ];
+      let currentFairyImageIndex = 0;
+
+      function switchTab(event, tabId) {
+        const button = event.currentTarget;
+        const panel = button.closest('.main-panel');
+        if (!panel) return;
+        panel.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        panel.querySelectorAll('.tab-content').forEach(p => (p.style.display = 'none'));
+        const tabToShow = document.getElementById('tab-' + tabId);
+        if (tabToShow) {
+          tabToShow.style.display = 'block';
+        }
+        button.classList.add('active');
+      }
+
+      const fairyGuide = {
+        element: document.getElementById('fairy-guide'),
+        textElement: document.getElementById('fairy-text'),
+        toggleAndShowMessage() {
+          const bubble = this.element.querySelector('.fairy-bubble');
+          const isVisible = bubble.style.opacity === '1';
+
+          if (isVisible) {
+            bubble.style.opacity = '0';
+            bubble.style.transform = 'translateY(10px)';
+            bubble.style.pointerEvents = 'none';
+          } else {
+            if (!globalXmlData) return;
+
+            const getMessagesFromXML = category => {
+              let nodes = globalXmlData.querySelectorAll(`fairy_messages > ${category} > message`);
+              if (nodes.length === 0 && category !== 'generic') {
+                nodes = globalXmlData.querySelectorAll('fairy_messages > generic > message');
+              }
+              if (nodes.length === 0) {
+                return ['道友，此地天机混沌，竟无一言可示...'];
+              }
+              return Array.from(nodes).map(node => node.textContent.trim());
+            };
+
+            const get = tag => globalXmlData.querySelector(tag)?.textContent.trim() || '0';
+            const stats = {
+              hp: parseFloat(get('hp_current')),
+              hpMax: parseFloat(get('hp_max')) || 100,
+              san: parseFloat(get('san_current')),
+              sanMax: parseFloat(get('san_max')) || 100,
+              mp: parseFloat(get('mp_current')),
+              mpMax: parseFloat(get('mp_max')) || 100,
+            };
+
+            let messageCategory;
+            if (stats.hp / stats.hpMax < 0.3) messageCategory = 'lowHealth';
+            else if (stats.san / stats.sanMax < 0.4) messageCategory = 'lowSanity';
+            else if (stats.mp / stats.mpMax < 0.2) messageCategory = 'lowMana';
+            else messageCategory = 'generic';
+
+            const pool = getMessagesFromXML(messageCategory);
+            this.textElement.textContent = pool[Math.floor(Math.random() * pool.length)];
+            bubble.style.opacity = '1';
+            bubble.style.transform = 'translateY(0)';
+            bubble.style.pointerEvents = 'auto';
+          }
+        },
+        init() {
+          const fairyAvatar = this.element.querySelector('.fairy-avatar');
+          // Set initial image
+          fairyAvatar.style.backgroundImage = `url('${fairyImages[currentFairyImageIndex]}')`;
+
+          fairyAvatar.addEventListener('click', e => {
+            if (e.button === 0) {
+              // Left click
+              // Switch to the next image
+              currentFairyImageIndex = (currentFairyImageIndex + 1) % fairyImages.length;
+              fairyAvatar.style.backgroundImage = `url('${fairyImages[currentFairyImageIndex]}')`;
+
+              // Show the message bubble
+              this.toggleAndShowMessage();
+            }
+          });
+        },
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const dataSource = document.getElementById('data-source');
+        fairyGuide.init();
+
+        // New Modal Logic
+        const fairyAvatar = document.querySelector('.fairy-avatar');
+        const modalOverlay = document.getElementById('image-modal-overlay');
+        const modalImage = document.getElementById('modal-image');
+        const closeModal = document.querySelector('.image-modal-close');
+
+        if (fairyAvatar) {
+          fairyAvatar.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            const style = window.getComputedStyle(fairyAvatar);
+            const bgImage = style.backgroundImage;
+            // Extracts URL from `url("...")`
+            const imageUrl = bgImage.slice(5, -2);
+
+            if (imageUrl) {
+              modalImage.src = imageUrl;
+              modalOverlay.style.display = 'flex';
+            }
+          });
+        }
+
+        if (closeModal) {
+          closeModal.onclick = function () {
+            modalOverlay.style.display = 'none';
+          };
+        }
+
+        if (modalOverlay) {
+          modalOverlay.onclick = function (e) {
+            if (e.target === modalOverlay) {
+              modalOverlay.style.display = 'none';
+            }
+          };
+        }
+
+        if (dataSource && dataSource.value.trim()) {
+          const parser = new DOMParser();
+          globalXmlData = parser.parseFromString(dataSource.value, 'text/html');
+          renderUI(globalXmlData);
+        }
+        const firstTab = document.querySelector('.tab-btn');
+        if (firstTab) {
+          firstTab.click();
+        }
+      });
+
+      function renderUI(doc) {
+        const avatarUrl = window.parent.document.querySelector('#user_avatar_image')?.src;
+        const userAvatarElement = document.querySelector('.user_avatar');
+        if (userAvatarElement && avatarUrl) {
+          userAvatarElement.style.backgroundImage = `url('${avatarUrl}')`;
+        }
+
+        const dataRoot = doc.querySelector('data_block') || doc;
+        const getGlobal = tag => dataRoot.querySelector(tag)?.textContent.trim() || '';
+        const getGlobalHtml = tag => {
+          const node = dataRoot.querySelector(tag);
+          if (!node) return '';
+          if (node.firstChild && node.firstChild.nodeType === Node.CDATA_SECTION_NODE) {
+            return node.firstChild.textContent.trim();
+          }
+          return node.innerHTML.trim();
+        };
+        const setTxt = (sel, val) => {
+          const el = document.querySelector(sel);
+          if (el) el.textContent = val;
+        };
+        const setHtml = (sel, val) => {
+          const el = document.querySelector(sel);
+          if (el) el.innerHTML = val;
+        };
+        const updateStat = (name, current, max) => {
+          current = parseFloat(current) || 0;
+          max = parseFloat(max) || 100;
+          const percentage = max > 0 ? (current / max) * 100 : 0;
+          const valueEl = document.getElementById(`${name}-value`);
+          const barEl = document.getElementById(`${name}-bar`);
+          if (valueEl) valueEl.textContent = `${Math.round(current)}/${Math.round(max)}`;
+          if (barEl) barEl.style.width = `${percentage}%`;
+        };
+        setTxt('#env-status', ' ⚜️ {{user}}');
+        setTxt('.rank-tag', getGlobal('rank'));
+        updateStat('hp', getGlobal('hp_current'), getGlobal('hp_max'));
+        updateStat('blood', getGlobal('blood_current'), getGlobal('blood_max'));
+        updateStat('mp', getGlobal('mp_current'), getGlobal('mp_max'));
+        updateStat('exp', getGlobal('exp_current'), getGlobal('exp_max'));
+        setTxt('#san-value', getGlobal('san_status') || '无');
+        setTxt('#luck-value', getGlobal('luck_status') || '无');
+        setTxt('#spirit-root-value', getGlobal('spirit_root_status') || '无');
+        setTxt('#clan-value', getGlobal('clan') || '无');
+        setHtml('#status-effects', getGlobal('status_effects') || '无异常');
+        setHtml(
+          '#tab-dashboard',
+          `
+            <div class="info-card">
+                <div class="info-title"><span>当前所在</span><span>📍</span></div>
+                <div class="info-text">${getGlobalHtml('location')}</div>
+            </div>
+            <div class="info-card" style="border-color: var(--accent-blood);">
+                <div class="info-title" style="color: var(--accent-blood);"><span>天机推演</span><span>⚠️</span></div>
+                <div class="info-text">
+                    ${getGlobalHtml('time')}<br>
+                    危机程度: ${getGlobalHtml('threat_level')}
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="info-title"><span>储物袋</span><span>🎒</span></div>
+                <div class="info-text">${getGlobalHtml('inventory')}</div>
+            </div>`,
+        );
+        setHtml('#tab-database > p', getGlobalHtml('log'));
+        const renderList = (selector, containerSel, factory) => {
+          const items = Array.from(dataRoot.querySelectorAll(selector));
+          setHtml(containerSel, items.length > 0 ? items.map(factory).join('') : '<p>暂无相关记录。</p>');
+        };
+        renderList('skills > skill', '#tab-skills', item => {
+          const get = tag => item.querySelector(tag)?.textContent.trim() || '';
+          const getHtml = tag => {
+            const node = item.querySelector(tag);
+            if (!node) return '';
+            if (node.firstChild && node.firstChild.nodeType === Node.CDATA_SECTION_NODE) {
+              return node.firstChild.textContent.trim();
+            }
+            return node.innerHTML.trim();
+          };
+          const masteryValue = parseFloat(get('mastery')) || 0;
+          return `
+                <div class="skill-card">
+                    <div class="skill-info">
+                        <div class="skill-header"><span class="skill-name">${get('name')}</span><span class="skill-type">${get('type')}</span></div>
+                        <div class="card-stats-grid">
+                            <span class="stat-label">境界/层数</span><span>${get('level')}</span>
+                            <span class="stat-label">熟练度</span>
+                            <div class="progress-bg"><div class="progress-fill fill-exp" style="width: ${masteryValue}%;"></div></div>
+                        </div>
+                        <div class="skill-description">${getHtml('desc')}</div>
+                    </div>
+                </div>`;
+        });
+        renderList('partners > partner', '#tab-partners', item => {
+          const get = tag => item.querySelector(tag)?.textContent.trim() || '';
+          const getHtml = tag => {
+            const node = item.querySelector(tag);
+            if (!node) return '';
+            if (node.firstChild && node.firstChild.nodeType === Node.CDATA_SECTION_NODE) {
+              return node.firstChild.textContent.trim();
+            }
+            return node.innerHTML.trim();
+          };
+          const loyalty = parseFloat(get('loyalty')) || 0;
+          const hp = parseFloat(get('hp')) || 0;
+          const mp = parseFloat(get('mp')) || 0;
+          const personality = get('personality') || '未知';
+          const appearance = getHtml('appearance') || '未知';
+          const realm = get('realm') || '未知';
+          const height = get('height') || '未知';
+          return `
+                <div class="partner-card">
+                    <div class="partner-info">
+                        <div class="partner-header">
+                            <div><span class="partner-name">${get('name')}</span><span class="partner-species">${get('species')}</span></div>
+                            <span class="status-badge ${item.querySelector('status')?.getAttribute('class') || ''}">${get('status')}</span>
+                        </div>
+                        <div class="card-stats-grid">
+                            <span class="stat-label">境界</span><span class="rare-text">${realm}</span>
+                            <span class="stat-label">生命</span><div class="progress-bg"><div class="progress-fill fill-hp" style="width:${hp}%;"></div></div>
+                            <span class="stat-label">灵力</span><div class="progress-bg"><div class="progress-fill fill-mp" style="width:${mp}%;"></div></div>
+                            ${loyalty > 0 ? `<span class="stat-label">亲密</span><div class="progress-bg"><div class="progress-fill fill-san" style="width:${loyalty}%;"></div></div>` : ''}
+                            <span class="stat-label">性格</span><div>${personality}</div>
+                            <span class="stat-label">外观</span><div>${appearance}</div>
+                            <span class="stat-label">身高</span><div>${height}</div>
+                            <span class="stat-label">背景</span><div>${getHtml('desc') || '未知'}</div>
+                            <span class="stat-label">神通</span><div>${getHtml('abilities')}</div>
+                            <span class="stat-label">心声</span><div>${getHtml('thoughts')}</div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        renderList('npcs > npc', '#tab-npcs', item => {
+          const get = tag => item.querySelector(tag)?.textContent.trim() || '';
+          const getHtml = tag => {
+            const node = item.querySelector(tag);
+            if (!node) return '';
+            if (node.firstChild && node.firstChild.nodeType === Node.CDATA_SECTION_NODE) {
+              return node.firstChild.textContent.trim();
+            }
+            return node.innerHTML.trim();
+          };
+          const relation = parseFloat(get('relation')) || 0;
+          const realm = get('realm');
+          const hp = parseFloat(get('hp')) || 0;
+          const mp = parseFloat(get('mp')) || 0;
+          const personality = getHtml('personality') || '未知';
+          return `
+                <div class="npc-card">
+                    <div class="npc-info">
+                        <div class="npc-header">
+                            <span class="npc-name">${get('name')}</span>
+                            <span class="npc-title ${item.querySelector('title')?.getAttribute('class') || ''}">${get('title')}</span>
+                        </div>
+                        <div class="card-stats-grid">
+                            <span class="stat-label">境界</span><span class="rare-text">${realm}</span>
+                            <span class="stat-label">生命</span><div class="progress-bg"><div class="progress-fill fill-hp" style="width:${hp}%;"></div></div>
+                            <span class="stat-label">灵力</span><div class="progress-bg"><div class="progress-fill fill-mp" style="width:${mp}%;"></div></div>
+                            <span class="stat-label">好感</span><div class="progress-bg"><div class="progress-fill ${relation > 50 ? 'fill-san' : 'fill-hp'}" style="width:${relation}%;"></div></div>
+                            <span class="stat-label">性格</span><div>${personality}</div>
+                        </div>
+                        <div class="npc-description">${getHtml('desc')}</div>
+                    </div>
+                </div>`;
+        });
+        renderList('quests > quest', '#tab-quests', item => {
+          const get = tag => item.querySelector(tag)?.textContent.trim() || '';
+          const getHtml = tag => {
+            const node = item.querySelector(tag);
+            if (!node) return '';
+            if (node.firstChild && node.firstChild.nodeType === Node.CDATA_SECTION_NODE) {
+              return node.firstChild.textContent.trim();
+            }
+            return node.innerHTML.trim();
+          };
+          return `
+                <div class="quest-item">
+                    <div class="info-title">
+                        <span style="color:var(--text-main)">${get('title')}</span>
+                        <span class="danger-text" style="font-size:0.8em">难度: ${get('difficulty')}</span>
+                    </div>
+                    <div class="info-text">
+                        <b>目标:</b> ${getHtml('goal')}<br>
+                        <b>机缘:</b> <span style="color:var(--accent-gold)">${get('reward')}</span><br>
+                        <i style="font-size:0.8em; color:#999;">"${get('quote')}"</i>
+                    </div>
+                </div>`;
+        });
+      }
+    </script>
+  </body>
+</html>
+```

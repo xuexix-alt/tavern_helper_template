@@ -1,0 +1,2371 @@
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>道渊</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&display=swap');
+
+      :root {
+        --primary-color: #080c14;
+        --accent-blue: #4a90e2;
+        --accent-blue-glow: #87cefa;
+        --accent-red: #e74c3c; /* 困难模式/反派色调 */
+        --accent-red-glow: #ff7675;
+        --accent-pink: #ff69b4; /* 色情/合欢色调 */
+        --accent-pink-glow: #ffb6c1;
+        --text-color: #d0e0f0;
+        --border-color: #1c3d5e;
+        --gold-color: #d4af37;
+        --input-bg: #101520;
+        --input-border: #2a3a50;
+        --input-focus-border: var(--gold-color);
+        --scroll-bg: #1a202c;
+        --scroll-thumb: #2c3e50;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background-color: var(--primary-color);
+        background-image:
+          radial-gradient(circle at 15% 50%, rgba(74, 144, 226, 0.1), transparent 30%),
+          radial-gradient(circle at 85% 30%, rgba(212, 175, 55, 0.08), transparent 25%);
+        color: var(--text-color);
+        font-family: 'Noto Serif SC', serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100vh;
+        position: relative;
+      }
+
+      #background-particles {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .particle {
+        position: absolute;
+        background-color: var(--accent-blue);
+        border-radius: 50%;
+        opacity: 0;
+        animation: rise 25s infinite linear;
+        box-shadow: 0 0 8px var(--accent-blue-glow);
+      }
+
+      @keyframes rise {
+        0% {
+          transform: translateY(100vh) scale(0.4);
+          opacity: 0;
+        }
+        10% {
+          opacity: 0.5;
+        }
+        90% {
+          opacity: 0.2;
+        }
+        100% {
+          transform: translateY(-10vh) scale(1.3);
+          opacity: 0;
+        }
+      }
+
+      .screen {
+        position: absolute;
+        width: 90%;
+        max-width: 800px;
+        background: rgba(10, 15, 25, 0.75);
+        border: 2px solid var(--border-color);
+        box-shadow:
+          0 0 20px rgba(74, 144, 226, 0.3),
+          inset 0 0 25px rgba(0, 0, 0, 0.8);
+        border-radius: 10px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        transition:
+          opacity 1s,
+          transform 1s,
+          visibility 1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        z-index: 10;
+        visibility: hidden;
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      .screen.active {
+        visibility: visible;
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      #start-screen {
+        justify-content: center;
+      }
+
+      .title {
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 3.5em;
+        color: var(--accent-blue);
+        text-shadow:
+          0 0 8px var(--accent-blue-glow),
+          0 0 15px #000;
+        margin-bottom: 20px;
+        letter-spacing: 4px;
+        animation: glow 3.5s infinite alternate;
+      }
+
+      .warning-text {
+        font-style: normal;
+        font-size: 1.1em;
+        margin-bottom: 40px;
+        color: #a0b0c0;
+        max-width: 80%;
+        line-height: 1.8;
+        text-align: center;
+        font-family: 'Noto Serif SC', serif;
+      }
+
+      .start-button-container {
+        text-align: center;
+      }
+
+      .start-button {
+        --size: 100px;
+        width: var(--size);
+        height: var(--size);
+        background-color: var(--primary-color);
+        border: 3px solid var(--accent-blue);
+        border-radius: 50%;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px var(--accent-blue-glow);
+        animation: pulse 2.5s infinite;
+        margin-bottom: 40px;
+      }
+
+      .start-button:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 35px var(--accent-blue-glow);
+      }
+
+      .start-button-text {
+        font-family: 'Noto Serif SC', serif;
+        font-size: 1.5em;
+        color: var(--gold-color);
+        text-shadow: 0 0 5px var(--gold-color);
+        transition: all 0.3s ease;
+      }
+
+      #mode-selection {
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        pointer-events: none;
+        text-align: center;
+      }
+
+      #mode-selection.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      #character-creation-screen {
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .form-title {
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 2.2em;
+        color: var(--gold-color);
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+      }
+
+      .presets-container {
+        margin-bottom: 20px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .presets-container h3 {
+        font-size: 1.3em;
+        color: #ccc;
+        text-align: center;
+        margin-bottom: 15px;
+        font-family: 'Noto Serif SC', serif;
+      }
+
+      .preset-selection {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .preset-btn {
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-color);
+        padding: 8px 15px;
+        font-family: 'Noto Serif SC', serif;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 4px;
+        position: relative;
+      }
+
+      .preset-btn:hover,
+      .preset-btn.selected {
+        background: var(--accent-blue);
+        border-color: var(--accent-blue-glow);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+      }
+
+      /* True Fortune Style */
+      .preset-btn.true-fortune {
+        background: linear-gradient(135deg, #2c3e50 0%, #d4af37 100%);
+        border: 1px solid #d4af37;
+        color: #fff;
+        text-shadow: 0 0 5px #000;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+      }
+
+      /* Hard Mode Button Style */
+      #hard-mode-btn {
+        border-color: var(--accent-red);
+        color: #ffcccc;
+      }
+      #hard-mode-btn:hover,
+      #hard-mode-btn.selected {
+        background: var(--accent-red);
+        border-color: var(--accent-red-glow);
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+      }
+
+      /* Ero Fortune Style */
+      .preset-btn.ero-fortune {
+        background: linear-gradient(135deg, #2c001e 0%, #8b0046 100%);
+        border: 1px solid #ff69b4;
+        color: #fff;
+        text-shadow: 0 0 5px #ff1493;
+        box-shadow: 0 0 15px rgba(255, 105, 180, 0.5);
+      }
+      .preset-btn.ero-fortune:hover,
+      .preset-btn.ero-fortune.selected {
+        background: #ff1493;
+        border-color: #ffc0cb;
+        box-shadow: 0 0 20px rgba(255, 20, 147, 0.8);
+      }
+
+      .draw-fortune-btn {
+        padding: 10px 20px;
+        font-size: 1.1em;
+        font-family: 'Ma Shan Zheng', cursive;
+        display: block;
+        margin: 0 auto;
+        width: fit-content;
+      }
+
+      #fortune-name-display {
+        color: var(--gold-color);
+        margin-left: 10px;
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 1.1em;
+      }
+
+      .character-form {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 15px;
+        width: 100%;
+        margin-bottom: 30px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+      }
+
+      .form-group label {
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: var(--gold-color);
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
+        color: var(--text-color);
+        padding: 10px;
+        border-radius: 4px;
+        font-family: 'Noto Serif SC', serif;
+        font-size: 1em;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: var(--input-focus-border);
+        box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+      }
+
+      .form-group textarea {
+        min-height: 60px; /* Adjusted height */
+        resize: vertical;
+      }
+
+      .divider-title {
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 1.5em;
+        color: var(--gold-color);
+        margin-top: 25px;
+        margin-bottom: 15px;
+        width: 100%;
+        text-align: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
+      }
+
+      .final-start-button {
+        background: var(--accent-blue);
+        border: 1px solid var(--accent-blue-glow);
+        color: #fff;
+        padding: 12px 25px;
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 1.8em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(74, 144, 226, 0.7);
+      }
+
+      .final-start-button:hover {
+        background: var(--accent-blue-glow);
+        color: var(--primary-color);
+        transform: scale(1.05);
+      }
+
+      /* Gacha Display for Spirit Root */
+      .gacha-display {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px dashed var(--accent-blue);
+        padding: 10px;
+        margin-top: 5px;
+        border-radius: 4px;
+        text-align: center;
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 1.2em;
+        color: var(--accent-blue-glow);
+        min-height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .gacha-display.heaven {
+        color: #ffd700;
+        text-shadow: 0 0 10px #ffd700;
+        border-color: #ffd700;
+      }
+      .gacha-display.earth {
+        color: #c0392b;
+        text-shadow: 0 0 8px #c0392b;
+      }
+      .gacha-display.profound {
+        color: #9b59b6;
+      }
+      .gacha-display.yellow {
+        color: #2ecc71;
+      }
+      .gacha-display.waste {
+        color: #7f8c8d;
+      }
+
+      /* Cheat Toggle Style */
+      .cheat-toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        width: 100%;
+        gap: 20px;
+      }
+
+      .cheat-toggle-label {
+        color: var(--accent-red);
+        margin-right: 10px;
+        font-weight: bold;
+        font-family: 'Noto Serif SC', serif;
+        font-size: 1em;
+      }
+
+      /* Ero Toggle Label */
+      .ero-toggle-label {
+        color: var(--accent-pink);
+        margin-right: 10px;
+        font-weight: bold;
+        font-family: 'Ma Shan Zheng', cursive;
+        font-size: 1.1em;
+        text-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        -webkit-transition: 0.4s;
+        transition: 0.4s;
+        border-radius: 24px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: '';
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: 0.4s;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      /* Red Slider (Cheat) */
+      .cheat-switch input:checked + .slider {
+        background-color: var(--accent-red);
+      }
+      .cheat-switch input:focus + .slider {
+        box-shadow: 0 0 1px var(--accent-red);
+      }
+
+      /* Pink Slider (Ero) */
+      .ero-switch input:checked + .slider {
+        background-color: var(--accent-pink);
+      }
+      .ero-switch input:focus + .slider {
+        box-shadow: 0 0 1px var(--accent-pink);
+      }
+
+      input:checked + .slider:before {
+        -webkit-transform: translateX(26px);
+        -ms-transform: translateX(26px);
+        transform: translateX(26px);
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--scroll-bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--scroll-thumb);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-blue-glow);
+      }
+
+      @keyframes glow {
+        from {
+          text-shadow:
+            0 0 8px var(--accent-blue-glow),
+            0 0 15px #000;
+        }
+        to {
+          text-shadow:
+            0 0 15px var(--accent-blue-glow),
+            0 0 25px var(--accent-blue);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(0.95);
+          box-shadow: 0 0 20px var(--accent-blue-glow);
+        }
+        70% {
+          transform: scale(1);
+          box-shadow: 0 0 30px var(--accent-blue-glow);
+        }
+        100% {
+          transform: scale(0.95);
+          box-shadow: 0 0 20px var(--accent-blue-glow);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .title {
+          font-size: 2.5em;
+        }
+        .warning-text {
+          font-size: 1em;
+          max-width: 95%;
+        }
+        .start-button {
+          --size: 80px;
+        }
+        .start-button-text {
+          font-size: 1.2em;
+        }
+        .character-form {
+          grid-template-columns: 1fr;
+        }
+        .preset-selection {
+          gap: 8px;
+        }
+        .preset-btn {
+          padding: 6px 10px;
+          font-size: 0.9em;
+        }
+        .cheat-toggle-container {
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- disable-default-loading -->
+    <div id="background-particles"></div>
+    <div class="screen active" id="start-screen">
+      <h1 class="title">道渊</h1>
+      <div class="start-button-container">
+        <p class="warning-text" id="initial-warning">
+          “大道三千，殊途同归。然天道无情，以万物为刍狗。汝，欲踏此登仙之路，与天地争一线生机否？”
+        </p>
+        <div class="start-button" id="start-button">
+          <span class="start-button-text">是</span>
+        </div>
+      </div>
+      <div id="mode-selection">
+        <p class="warning-text" style="margin-bottom: 20px">请选择仙途模式</p>
+        <div class="preset-selection">
+          <button class="preset-btn" id="simple-mode-btn" style="padding: 12px 25px; font-size: 1.2em">简单模式</button>
+          <button class="preset-btn" id="normal-mode-btn" style="padding: 12px 25px; font-size: 1.2em">普通模式</button>
+          <button class="preset-btn" id="hard-mode-btn" style="padding: 12px 25px; font-size: 1.2em">困难模式</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="character-creation-screen">
+      <h2 class="form-title">重塑仙缘</h2>
+
+      <div class="character-form">
+        <div class="form-group">
+          <label for="char-name">道号</label>
+          <input type="text" id="char-name" placeholder="你的名讳或道号" />
+        </div>
+        <div class="form-group">
+          <label for="char-gender">性别</label>
+          <input type="text" id="char-gender" placeholder="自定义你的性别" />
+        </div>
+        <!-- 新增：种族输入框 -->
+        <div class="form-group">
+          <label for="char-race">种族</label>
+          <input type="text" id="char-race" placeholder="人族/妖族/先天生灵..." />
+        </div>
+        <div class="form-group">
+          <label for="char-appearance">容貌</label>
+          <textarea id="char-appearance" placeholder="描述你的仙姿玉色"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="char-realm">境界</label>
+          <!-- 修改：境界输入框与下拉选择框共存 -->
+          <input type="text" id="char-realm" placeholder="自定义境界，如：练气期三层" />
+          <select id="char-realm-select" style="display: none">
+            <option value="未修炼">未修炼</option>
+            <option value="练气一层">练气一层</option>
+            <option value="筑基初期">筑基初期</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="char-identity">出身</label>
+          <input type="text" id="char-identity" placeholder="决定你过往的因果" />
+        </div>
+
+        <div class="form-group">
+          <label for="char-spirit-root">灵根</label>
+          <!-- Normal/Simple Mode Input -->
+          <textarea id="char-spirit-root" placeholder="你的天赋根骨，如：天品灵根"></textarea>
+
+          <!-- Hard/Normal Mode Gacha Section -->
+          <div id="hard-mode-spirit-root-section" style="display: none">
+            <div id="spirit-root-result" class="gacha-display">尚未觉醒...</div>
+            <button id="roll-spirit-root-btn" class="preset-btn" style="width: 100%; margin-top: 5px">灵根觉醒</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="char-technique">功法</label>
+          <textarea id="char-technique" placeholder="你修行的主要功法，如：《长春功》"></textarea>
+        </div>
+
+        <div class="presets-container" style="margin-top: 15px">
+          <h3 style="font-size: 1.3em; color: #ccc; text-align: center; margin-bottom: 15px">天道气运</h3>
+
+          <!-- Cheat & Ero Toggle Switch Container -->
+          <div id="cheat-toggle-section" class="cheat-toggle-container" style="display: none">
+            <!-- Cheat Toggle -->
+            <div style="display: flex; align-items: center">
+              <span class="cheat-toggle-label">逆天改命(作弊)</span>
+              <label class="switch cheat-switch">
+                <input type="checkbox" id="cheat-toggle-checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- New Ero Toggle -->
+            <div style="display: flex; align-items: center">
+              <span class="ero-toggle-label">合欢秘辛(慎入)</span>
+              <label class="switch ero-switch">
+                <input type="checkbox" id="ero-toggle-checkbox" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <button id="draw-fortune-btn" class="preset-btn draw-fortune-btn">天机演算，抽取气运</button>
+          <div id="fortune-selection-container" class="preset-selection" style="margin-top: 15px; display: none">
+            <!-- 此处将动态生成气运选项 -->
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="char-fortune">
+            （已选气运）
+            <span id="fortune-name-display"></span>
+          </label>
+          <input type="text" id="char-fortune" placeholder="点击上方抽取，并选择你的气运" readonly />
+        </div>
+
+        <div id="custom-fortune-section">
+          <h3 class="divider-title" style="border: none; margin-top: 10px; margin-bottom: 5px">自定义你的气运</h3>
+          <div class="form-group">
+            <label for="custom-fortune-name">自定义气运名号</label>
+            <input type="text" id="custom-fortune-name" placeholder="如：剑道独尊" />
+          </div>
+          <div class="form-group">
+            <label for="custom-fortune-desc">自定义气运描述</label>
+            <textarea id="custom-fortune-desc" placeholder="详细描述你的独特天命"></textarea>
+          </div>
+        </div>
+
+        <div id="companion-section">
+          <h3 class="divider-title">天定道侣</h3>
+
+          <div class="form-group">
+            <label for="companion-name">姓名</label>
+            <input type="text" id="companion-name" placeholder="你的道侣姓名" />
+          </div>
+          <div class="form-group">
+            <label for="companion-gender">性别</label>
+            <input type="text" id="companion-gender" placeholder="TA的性别" />
+          </div>
+          <div class="form-group">
+            <label for="companion-appearance">容貌</label>
+            <textarea id="companion-appearance" placeholder="TA的容貌描述"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="companion-clothing">衣着</label>
+            <textarea id="companion-clothing" placeholder="TA的衣着打扮"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="companion-race">种族/身份</label>
+            <!-- 原有的道侣种族 -->
+            <input type="text" id="companion-race" placeholder="人/妖/魔/仙..." />
+          </div>
+          <div class="form-group">
+            <label for="companion-class">境界/修为</label>
+            <input type="text" id="companion-class" placeholder="炼气/筑基/金丹/元婴..." />
+          </div>
+          <div class="form-group">
+            <label for="companion-personality">性情</label>
+            <input type="text" id="companion-personality" placeholder="TA的性情" />
+          </div>
+          <div class="form-group">
+            <label for="companion-age">年龄</label>
+            <input type="text" id="companion-age" placeholder="TA的年龄" />
+          </div>
+          <div class="form-group">
+            <label for="companion-abilities">功法/能力</label>
+            <textarea id="companion-abilities" placeholder="TA掌握的功法或特殊能力"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="companion-backstory">与汝渊源</label>
+            <textarea id="companion-backstory" placeholder="你们之间的故事"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <button class="final-start-button" id="confirm-creation-button">开启仙途</button>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const startScreen = document.getElementById('start-screen');
+        const creationScreen = document.getElementById('character-creation-screen');
+        const startButton = document.getElementById('start-button');
+        const initialWarning = document.getElementById('initial-warning');
+        const modeSelection = document.getElementById('mode-selection');
+        const simpleModeBtn = document.getElementById('simple-mode-btn');
+        const normalModeBtn = document.getElementById('normal-mode-btn');
+        const hardModeBtn = document.getElementById('hard-mode-btn');
+
+        const confirmButton = document.getElementById('confirm-creation-button');
+        const drawFortuneBtn = document.getElementById('draw-fortune-btn');
+        const cheatToggleSection = document.getElementById('cheat-toggle-section');
+        const cheatToggle = document.getElementById('cheat-toggle-checkbox');
+        const eroToggle = document.getElementById('ero-toggle-checkbox');
+
+        const nameInput = document.getElementById('char-name');
+        const genderInput = document.getElementById('char-gender');
+        const raceInput = document.getElementById('char-race');
+        const appearanceInput = document.getElementById('char-appearance');
+        const realmInput = document.getElementById('char-realm');
+        const realmSelect = document.getElementById('char-realm-select');
+        const identityInput = document.getElementById('char-identity');
+        const spiritRootTextarea = document.getElementById('char-spirit-root');
+        const techniqueTextarea = document.getElementById('char-technique');
+
+        const hardModeSpiritRootSection = document.getElementById('hard-mode-spirit-root-section');
+        const spiritRootResult = document.getElementById('spirit-root-result');
+        const rollSpiritRootBtn = document.getElementById('roll-spirit-root-btn');
+        let currentMode = 'normal';
+        let spiritRootRollsLeft = 3;
+        let fortuneRollsLeft = 3;
+        let hardModeSpiritRootValue = '';
+
+        const fortuneSelectionContainer = document.getElementById('fortune-selection-container');
+        const fortuneNameDisplay = document.getElementById('fortune-name-display');
+        const fortuneInput = document.getElementById('char-fortune');
+        const customFortuneNameInput = document.getElementById('custom-fortune-name');
+        const customFortuneDescTextarea = document.getElementById('custom-fortune-desc');
+
+        const companionNameInput = document.getElementById('companion-name');
+        const companionGenderInput = document.getElementById('companion-gender');
+        const companionAppearanceInput = document.getElementById('companion-appearance');
+        const companionClothingInput = document.getElementById('companion-clothing');
+        const companionRaceInput = document.getElementById('companion-race');
+        const companionClassInput = document.getElementById('companion-class');
+        const companionPersonalityInput = document.getElementById('companion-personality');
+        const companionAgeInput = document.getElementById('companion-age');
+        const companionAbilitiesTextarea = document.getElementById('companion-abilities');
+        const companionBackstoryTextarea = document.getElementById('companion-backstory');
+
+        const customFortuneSection = document.getElementById('custom-fortune-section');
+        const companionSection = document.getElementById('companion-section');
+
+        // --- 数据源定义 ---
+        // 真·气运 (原版强力效果)
+        const trueFortunePresets = [
+          { name: '真·天命反派', desc: '宿命相克，专门掠夺天命之子机缘，天生与天命之子为敌，阻其道途！' },
+          {
+            name: '真·天命大反派',
+            desc: '心狠手辣，为达目的不择手段。虽然容易招惹正道围剿，但掠夺机缘的效率是常人的十倍，且能压制气运之子。',
+          },
+          { name: '真·尸道宗师', desc: '对尸气有天然的亲和力，炼制的尸傀战力远超同阶，甚至能保留生前神通。' },
+          { name: '真·不化骨', desc: '肉身如僵尸般坚硬，不老不死，不入轮回，跳出三界外，不在五行中。' },
+          { name: '真·黄泉引路人', desc: '能开启鬼门关，召唤阴兵助阵，炼尸时有几率引来游荡的强大残魂附体。' },
+          { name: '真·每日签到系统', desc: '每天醒来签个到，神兵功法、灵丹妙药随机送，修仙生活乐无边。' },
+          { name: '真·深蓝加点', desc: '“深蓝，让我看看你的极限！”只要有足够的能量点，任何功法都能瞬间大圆满。' },
+          { name: '真·人生模拟器', desc: '消耗灵石模拟未来人生，预知吉凶祸福，死亡后可保留修为或记忆，苟道至尊。' },
+          { name: '真·授徒万倍返还', desc: '赐予徒弟机缘，最高可触发万倍暴击返还，徒弟越强，师父越变态。' },
+          { name: '真·神级选择系统', desc: '面临抉择时触发选项，虽然选项内容往往极其离谱，但奖励丰厚到无法拒绝。' },
+          { name: '真·最强反套路', desc: '只要让人震惊、无语或愤怒就能获得装逼值，兑换商城万物。' },
+          { name: '真·功法简化系统', desc: '所有功法自动简化，呼吸就是修炼，睡觉也能变强，摸鱼才是大道的真谛。' },
+          { name: '真·诸天聊天群', desc: '加入跨界聊天群，与荒天帝、叶天帝等大佬吹牛打屁，偶尔抢个红包就是逆天造化。' },
+          { name: '真·挂机修仙', desc: '身体自动托管修炼，不但效率是常人百倍，而且不论在战斗还是如厕都在变强。' },
+          { name: '真·吞噬进化', desc: '开局一张嘴，能力全靠吃。吞噬万物取其精华，无论是法宝还是天劫，皆是口粮。' },
+          { name: '真·长生词条', desc: '每活过一年，就能刷新或升级一个固有词条，只要活得久，废柴也能磨死仙帝。' },
+          { name: '真·直播修仙', desc: '将修仙过程直播给地球观众，观众的打赏和人气能转化为修为和气运。' },
+          { name: '真·家族修仙', desc: '不仅自己变强，还能通过提升家族等级获得全族BUFF，一人得道鸡犬升天。' },
+          { name: '真·氪金成仙', desc: '只要有灵石，境界直接买！天劫也能花钱摆平，有钱真的是可以为所欲为的。' },
+          { name: '真·任务狂魔', desc: '视界中遍布NPC头顶的问号，完成各种奇葩任务获取经验值，升级如喝水。' },
+          { name: '真·至尊骨', desc: '天生胸生至尊骨，铭刻原始宝术，不仅战力无双，更有至尊之姿，注定独断万古。' },
+          { name: '真·重瞳者', desc: '重瞳本是无敌路，何须再借他人骨。一眼生，一眼灭，看破世间一切虚妄。' },
+          { name: '真·混沌体', desc: '古今第一体质，万法不侵，亲和万道，未成仙已拥有镇压当世之力。' },
+          { name: '真·荒古圣体', desc: '肉身成圣，金血沸腾，专治各种不服。大成之后，可叫板大帝，徒手接帝兵。' },
+          { name: '真·先天道胎', desc: '天生近道，与道合真。别人苦修悟道，你吃饭喝水都在悟道，简直是天道的亲儿子。' },
+          { name: '真·苍天霸体', desc: '霸道绝伦，以战养战。流淌着紫血的战斗机器，宿命便是与圣体争锋。' },
+          { name: '真·仙帝转世', desc: '九天十地至高无上的存在重修，自带满级经验包和无上传承，这一世只为超脱。' },
+          { name: '真·伴生帝兵', desc: '出生时天降异象，手握极道帝兵而生，起跑线就在别人的终点之后。' },
+          { name: '真·鸿蒙紫气', desc: '体内蕴含一道成圣之基鸿蒙紫气，气运逆天，注定成圣做祖。' },
+          { name: '真·三足金乌', desc: '身具太阳真火，掌控至阳之道，化身大日，焚煮江海只在一念之间。' },
+          { name: '真·祖龙血脉', desc: '肉身强横无匹，统御水族，一声龙吟万兽臣服，天生自带龙威。' },
+          { name: '真·他化自在', desc: '可化万古，可化岁月，可化他人。能借来过去未来强者的道果，诡异莫测。' },
+          { name: '真·皆字秘', desc: '触发即可提升十倍战力，无论神识、肉身还是法力，全方位十倍增幅，同阶秒杀。' },
+          { name: '真·九秘合一', desc: '集齐道家九秘，攻伐、极速、恢复、推演等皆至极境，同阶无敌。' },
+          { name: '真·源天师', desc: '精通源术，可定龙脉，锁气运。在名山大川中战斗力加倍，更能切出神料仙金。' },
+          { name: '真·神象镇狱', desc: '以气引神，以神成象，举手投足间有八亿四千万神象之力，可摘星拿月。' },
+          { name: '真·佛怒火莲', desc: '控火之术登峰造极，能融合多种异火，搓出的莲花爆炸艺术，越阶杀敌必备。' },
+          { name: '真·草字剑诀', desc: '一株草斩尽日月星辰。剑意煌煌，无物不斩，乃是攻伐第一的无上剑诀。' },
+          { name: '真·鲲鹏宝术', desc: '入海为鲲，入天为鹏。阴阳共济，极速无双，肉身与法术皆是顶尖。' },
+          { name: '真·六道轮回拳', desc: '一拳轰出，六道轮转，仿佛要将敌人打入轮回，霸道无边。' },
+          { name: '真·大荒囚天指', desc: '半指撼天地，一指囚天地，五指动乾坤。指法通神，威力随修为指数级增长。' },
+          {
+            name: '真·莫欺少年穷',
+            desc: '经典废材开局，遭受退婚羞辱。但只要定下三年之约，修炼速度将如坐火箭，必定打脸。',
+          },
+          { name: '真·赘婿战神', desc: '隐藏身份入赘修行世家，受尽白眼。待到一声令下，十万仙兵归位，让岳母后悔莫及。' },
+          { name: '真·龙王归来', desc: '本是上界龙王，遭人陷害重生下界。标志性歪嘴一笑，生死难料，主要靠部下装逼。' },
+          {
+            name: '真·迪化流',
+            desc: '明明很弱或平平无奇，但周围的人（包括敌人）总会脑补你是绝世高人，甚至能把你脑补成仙。',
+          },
+          { name: '真·稳健道祖', desc: '明明实力超群，却过分慎重。杀个练气期都要扬灰三天三夜，底牌永远掀不完。' },
+          { name: '真·大爱仙尊', desc: '为人“真诚善良”，擅长“以理服人”。为炼春秋蝉，不惜献祭整条时间线（包括队友）。' },
+          {
+            name: '真·开局一条狗',
+            desc: '身无分文，只有一条看起来像土狗的伴生兽。但这条狗其实是太古吞天兽，专吃神器。',
+          },
+          { name: '真·九龙拉棺', desc: '从天而降的青铜古棺带你开启星空古路，虽然开局凶险，但也是遮天大帝之路的起点。' },
+          {
+            name: '真·键盘侠道',
+            desc: '以“键”入道，言出法随。只要在道理（喷人）上赢了对方，对方道心就会破碎，修为大跌。',
+          },
+          { name: '真·退婚流', desc: '被退婚后智商瞬间占领高地，原本的废柴体质觉醒，而且通常会捡到戒指里的老爷爷。' },
+          { name: '真·我的宗主父亲', desc: '拼爹流极致，资源随便拿，闯祸有人兜。只要不作死招惹天命之子，基本横着走。' },
+          { name: '真·扫地僧', desc: '宗门里最不起眼的扫地杂役，实际上是隐藏的太上长老，签到百年，出世即无敌。' },
+          { name: '真·炸天帮众', desc: '行事乖张，喜欢抄家底。所到之处，寸草不生，连宗门地皮都给你刮走。' },
+          { name: '真·科学修仙', desc: '用量子力学解释天道，用核聚变炼制金丹。当量即是正义，口径即是真理。' },
+          {
+            name: '真·我儿有大帝之姿',
+            desc: '作为父亲/母亲，虽然自己资质平平，但儿子/女儿是绝世天才，能躺赢成太上皇。',
+          },
+          { name: '真·未婚妻是女帝', desc: '软饭硬吃。不仅未婚妻是转世女帝，而且极其护短，谁动你她灭谁满门。' },
+          { name: '真·复活甲', desc: '拥有一种特殊体质或宝物，死后能原地满血复活，且每次复活都会变强（赛亚人？）。' },
+          {
+            name: '真·百分百空手接白刃',
+            desc: '因果律技能。无论对方多强，只要你双手合十，对方的剑必定会砍在你手里，场面一度尴尬。',
+          },
+          {
+            name: '真·恐怖如斯',
+            desc: '作为旁白型气运，周围人总是对你的行为倒吸凉气，导致全球变暖（划掉），能震慑宵小。',
+          },
+          { name: '真·位面之子', desc: '运气好到不讲逻辑。跳崖捡秘籍，买破烂出神器，路边的乞丐都是隐世高人。' },
+          { name: '真·种田流', desc: '拥有一方随身灵田，种出的灵植效果逆天。不争霸，只种地，最后用灵药堆死大BOSS。' },
+          { name: '真·召唤流', desc: '自身战力一般，但能从异界召唤第四天灾（玩家）或动漫角色助战，打群架无敌。' },
+        ];
+
+        // 限制版气运 (代价版 - 修正为更有游戏性的挑战模式)
+        const restrictedFortunePresets = [
+          {
+            name: '天命反派',
+            desc: '天生站在主角对立面。虽修行速度极快，但容易招惹气运之子，稍有不慎便会成为他人踏脚石。',
+          },
+          {
+            name: '天命大反派',
+            desc: '心性狠辣，行事无所顾忌。虽能通过掠夺快速变强，但举世皆敌，正道人人得而诛之，难以寻找盟友。',
+          },
+          {
+            name: '尸道宗师',
+            desc: '常年与尸体为伍，自身生机被死气侵蚀。虽控尸之术了得，但肉身阴寒，不仅由于外貌被排斥，且难以修习正统阳刚功法。',
+          },
+          {
+            name: '不化骨',
+            desc: '肉身坚硬如铁，刀枪不入，但关节僵硬，身法迟缓。需大量阴煞之气温养，且化形困难，易被当做妖魔斩杀。',
+          },
+          { name: '黄泉引路人', desc: '能通幽冥，役鬼神。但每次开启鬼门都会沾染因果，易招致阴邪反噬，晚年恐遭不详。' },
+          {
+            name: '每日签到系统',
+            desc: '拥有签到系统，但奖励多为凡俗之物，极少出现珍品。且系统发布任务强制性强，若不完成会有厄运缠身。',
+          },
+          {
+            name: '深蓝加点',
+            desc: '可通过消耗资源强制提升功法境界，但根基虚浮，战力低于同阶苦修者。需花费额外精力打磨心境，否则易走火入魔。',
+          },
+          {
+            name: '人生模拟器',
+            desc: '可模拟未来，但每次模拟消耗海量灵石与精神力。且模拟中的死亡阴影会影响现实道心，需长时间恢复。',
+          },
+          {
+            name: '授徒万倍返还',
+            desc: '返还倍率极不稳定，多为低倍率。且徒弟资质参差不齐，教导徒弟极其耗费心力，严重拖慢自身修炼进度。',
+          },
+          {
+            name: '神级选择系统',
+            desc: '选项往往充满陷阱，高风险高回报。虽然奖励丰厚，但常被迫卷入大能纷争或绝地险境，九死一生。',
+          },
+          {
+            name: '最强反套路',
+            desc: '行为必须异于常人才能获得力量，常被人视为疯子或哗众取宠之辈。难以在宗门体系中安稳生存，名声狼藉。',
+          },
+          {
+            name: '功法简化系统',
+            desc: '功法易学难精，虽入门极快，但威力打了折扣。且简化版功法往往存在隐患，上限锁死，难以突破至最高境界。',
+          },
+          {
+            name: '诸天聊天群',
+            desc: '群成员鱼龙混杂，真假难辨。跨界交易需支付高昂代价，且容易被高位面存在顺着网线（因果线）进行降维打击。',
+          },
+          {
+            name: '挂机修仙',
+            desc: '身体自动修炼，但由于没有神识主导，遇到瓶颈无法自动突破。且挂机时对外界感知降低，容易遭遇偷袭。',
+          },
+          {
+            name: '吞噬进化',
+            desc: '可通过吞噬万物变强，但体内杂质淤积，需花费大量时间炼化。若贪得无厌，终将化为只知进食的怪物。',
+          },
+          {
+            name: '长生词条',
+            desc: '寿元无尽，但资质奇差无比。修炼速度如龟爬，只能坐看沧海桑田，亲友离世，承受无尽的孤独岁月。',
+          },
+          {
+            name: '直播修仙',
+            desc: '通过人气获取资源，但行踪完全暴露。仇家可随时掌握你的动向，且为了人气不得不去险地作死，毫无隐私可言。',
+          },
+          {
+            name: '家族修仙',
+            desc: '家族是助力也是枷锁。享受资源的同时，必须承担繁重的家族责任。一旦家族卷入纷争，自身也难以独善其身。',
+          },
+          {
+            name: '氪金成仙',
+            desc: '哪怕呼吸都需要消耗灵石。没有灵石寸步难行，修为会随财富减少而倒退。终其一生都在为赚取灵石而奔波。',
+          },
+          {
+            name: '任务狂魔',
+            desc: '被迫接受各种繁琐任务，无法长时间闭关。任务奖励虽然稳定，但难度逐渐失控，常被迫中断修行去跑腿。',
+          },
+          {
+            name: '至尊骨',
+            desc: '曾被挖去至尊骨，虽涅槃重生但元气大伤。体质虚弱，需海量天材地宝填补亏空，方能重现至尊神威。',
+          },
+          {
+            name: '重瞳者',
+            desc: '看破虚妄，但对神魂消耗极大。常年处于精神疲惫状态，且容易看到不该看的大恐怖，导致精神失常。',
+          },
+          {
+            name: '混沌体',
+            desc: '万气皆可修，但进阶所需资源是常人的百倍。在资源匮乏的修仙界，极易因为资源不足而卡在低境界蹉跎一生。',
+          },
+          {
+            name: '荒古圣体',
+            desc: '肉身无双，但被天地法则压制，不仅突破艰难，且是消耗源石的无底洞。晚年易发生不详异变。',
+          },
+          {
+            name: '先天道胎',
+            desc: '天生近道，情感淡漠。随着修为加深，人性逐渐丧失，最终可能被天道同化，成为无情无欲的规则化身。',
+          },
+          {
+            name: '苍天霸体',
+            desc: '霸道绝伦，但性格偏激易怒，容易被激将法利用。且霸体之血乃是魔修眼中的无上大药，常遭觊觎。',
+          },
+          {
+            name: '仙帝转世',
+            desc: '空有高深境界的感悟，肉身却孱弱不堪。眼高手低，极易因为轻视低阶修士而阴沟翻船，且背负前世因果仇恨。',
+          },
+          {
+            name: '伴生帝兵',
+            desc: '帝兵受损严重，需吸食宿主精血温养。在修复之前，它不仅无法护主，反而是个巨大的累赘和定时炸弹。',
+          },
+          {
+            name: '鸿蒙紫气',
+            desc: '成圣之基，引得天下修士疯狂。怀璧其罪，举世皆敌，在成长起来之前只能隐姓埋名，东躲西藏。',
+          },
+          {
+            name: '三足金乌',
+            desc: '体内至阳火力难以控制，稍有不慎便会焚毁身边之物。难以寻找道侣，且被修习水系功法的大能克制。',
+          },
+          {
+            name: '祖龙血脉',
+            desc: '血脉返祖，外貌异于常人，易被误认为妖族奸细。且龙性本淫，需时刻压制本能欲望，否则道心不稳。',
+          },
+          {
+            name: '他化自在',
+            desc: '借取未来果位需支付巨大代价，每次使用后会陷入长时间的虚弱期。且容易迷失在无数个“自我”之中，分不清虚幻现实。',
+          },
+          {
+            name: '皆字秘',
+            desc: '十倍战力触发概率极低，如同赌博。关键时刻若未触发，便只能任人宰割。且对身体负荷极大。',
+          },
+          {
+            name: '九秘合一',
+            desc: '强行融合九秘极易导致体内灵力紊乱。非大毅力、大机缘者，不仅无法发挥威力，反会经脉寸断而亡。',
+          },
+          {
+            name: '源天师',
+            desc: '寻龙点穴，泄露天机。晚年必遭不详，全身生红毛，神智迷失，成为游荡在禁区的人形怪物。',
+          },
+          {
+            name: '神象镇狱',
+            desc: '肉身成圣之路，每觉醒一颗微粒都需吞噬一方资源的能量。在资源贫瘠之地，此功法形同废纸。',
+          },
+          {
+            name: '佛怒火莲',
+            desc: '玩火自焚。融合异火极其危险，稍有差池便是灰飞烟灭。且异火难寻，往往存在于绝地之中。',
+          },
+          {
+            name: '草字剑诀',
+            desc: '剑意凌厉伤人伤己。修习此剑诀者，身体常年承受剑气切割之痛，寿元较同阶修士更为短暂。',
+          },
+          {
+            name: '鲲鹏宝术',
+            desc: '阴阳二气难以调和。在化鹏与化鲲之间切换时存在僵直期，易被敌人抓住破绽。且食量惊人。',
+          },
+          {
+            name: '六道轮回拳',
+            desc: '拳意霸道，每一拳都在透支生命潜能。年轻时威震天下，年老时气血枯败，往往不得善终。',
+          },
+          {
+            name: '大荒囚天指',
+            desc: '威力巨大，但蓄力时间过长。在瞬息万变的生死搏杀中，极易被打断施法或成为活靶子。',
+          },
+          {
+            name: '莫欺少年穷',
+            desc: '经典废材开局，遭受退婚羞辱。但只要定下三年之约，修炼速度将如坐火箭，必定打脸。',
+          },
+          { name: '赘婿战神', desc: '寄人篱下，受尽白眼。在未展露实力前，需忍受岳母与妻族的各种刁难，心境极易受损。' },
+          {
+            name: '龙王归来',
+            desc: '曾是上位者，如今虎落平阳。难以适应身份落差，行事往往过于高调傲慢，容易在弱小时招惹不可战胜的强敌。',
+          },
+          {
+            name: '迪化流',
+            desc: '自身实力平平，全靠他人脑补。如同在钢丝上行走，一旦露馅，之前建立的威望将瞬间崩塌，死无葬身之地。',
+          },
+          {
+            name: '稳健道祖',
+            desc: '过分谨慎，错失机缘。因害怕沾染因果而不敢出门，虽然活得久，但修为进境极其缓慢，难以登顶。',
+          },
+          {
+            name: '大爱仙尊',
+            desc: '为达目的不择手段，虽获利颇丰，但道心逐渐扭曲。终日活在算计与被算计之中，再无半个可信之人。',
+          },
+          {
+            name: '开局一条狗',
+            desc: '伴生神兽处于幼年期，不仅战力低下，还是个吞金兽。常常偷吃珍贵灵药惹祸，需宿主不断为其擦屁股。',
+          },
+          {
+            name: '九龙拉棺',
+            desc: '开局被传送到灵气枯竭之地。虽有登天之路，但起步艰难，需花费数倍于常人的努力才能走出废弃星域。',
+          },
+          { name: '键盘侠道', desc: '口诛笔伐，只能乱人道心。遇到听不懂人话的凶兽或心如磐石的魔修，毫无还手之力。' },
+          {
+            name: '退婚流',
+            desc: '遭遇退婚羞辱，心魔滋生。戒指里的老爷爷苏醒前会不断吸取宿主修为，导致境界长期停滞不前。',
+          },
+          {
+            name: '我的宗主父亲',
+            desc: '虽背景深厚，但被卷入宗门权力斗争。父亲的政敌视你为眼中钉，时刻面临暗杀与陷害。',
+          },
+          {
+            name: '扫地僧',
+            desc: '身份低微，资源匮乏。虽有悟性，但无名师指点，且需完成繁重杂役，修炼时间被严重压缩。',
+          },
+          {
+            name: '炸天帮众',
+            desc: '行事乖张，由于组织松散，在外惹祸后往往无人撑腰。且喜欢抄家底的作风极易引起公愤，遭群起攻之。',
+          },
+          {
+            name: '科学修仙',
+            desc: '离经叛道，不被传统修仙界接纳。研究过程充满爆炸风险，且所需材料多为稀奇古怪之物，难以收集。',
+          },
+          {
+            name: '我儿有大帝之姿',
+            desc: '自身资质平平，全靠子嗣争气。但若子嗣中途夭折或心生反骨，自身将失去所有依仗，晚景凄凉。',
+          },
+          {
+            name: '未婚妻是女帝',
+            desc: '未婚妻是转世女帝，但记忆严重错乱。她时常将你认作前世的死敌，在“爱侣”与“仇杀”状态间随机切换。你永远不知道下一刻醒来，面对的是温柔还是绝杀。',
+          },
+          {
+            name: '复活甲',
+            desc: '拥有一次复活机会，但复活后修为跌落，且随机传送。若运气不好重生在险地，便是刚出虎口又入狼窝。',
+          },
+          {
+            name: '百分百空手接白刃',
+            desc: '被动防御神技，但只能接剑。面对刀枪棍棒或法术轰炸时毫无作用，且接刃期间身体无法移动。',
+          },
+          {
+            name: '恐怖如斯',
+            desc: '因造成全球变暖被天道针对，渡劫难度倍增。且经常因为吸凉气而导致肺部受损，体质虚弱。',
+          },
+          {
+            name: '位面之子',
+            desc: '气运起伏不定，福祸相依。获得大机缘的同时必伴随大恐怖，每一次提升都是在生死边缘反复横跳。',
+          },
+          {
+            name: '种田流',
+            desc: '虽富甲一方，但战力低下。在强者为尊的世界，如同抱着金砖的孩童，是魔修和强盗眼中的最佳肥羊。',
+          },
+          { name: '召唤流', desc: '自身孱弱，全靠召唤物作战。一旦被敌人近身或切断与召唤物的联系，便只能任人宰割。' },
+          // 新增 50 种限制版气运
+          {
+            name: '天煞孤星',
+            desc: '命犯天煞，注定孤独一生。克父克母克妻克子，虽自身气运极强，往往逢凶化吉，但身边亲近之人皆不得善终，注定独自登上大道之巅。',
+          },
+          {
+            name: '绝世炉鼎',
+            desc: '体质特殊，元阴/元阳极度纯净。虽修行速度一日千里，但不仅战力平平，且在所有高阶修士眼中皆是行走的无上补药，时刻面临被抓去采补的风险。',
+          },
+          {
+            name: '厄难毒体',
+            desc: '天生带毒，触之即死。虽能驾驭万毒，修为随毒性增长，但所过之处生灵涂炭，无人敢近身三尺，终将被正道视为异端邪魔，群起而攻之。',
+          },
+          {
+            name: '九阳绝脉',
+            desc: '体内阳气过盛，经脉如同烈火焚烧。若无极寒之物或纯阴体质调和，活不过二十岁。修行如在刀尖起舞，稍有不慎便引火自焚。',
+          },
+          {
+            name: '九阴绝脉',
+            desc: '体内阴气淤积，血液几近凝固。常年手脚冰凉，需不断吸纳阳气续命。虽适合修炼极阴功法，但极易被心魔入侵，沦为只知杀戮的冰冷兵器。',
+          },
+          {
+            name: '贪狼入命',
+            desc: '性情贪婪多疑，唯利是图。虽擅长在险境中攫取机缘，但因背信弃义而声名狼藉。身边无一可信之人，终日活在被昔日盟友背刺的恐惧中。',
+          },
+          {
+            name: '桃花劫',
+            desc: '容貌绝世，异性缘极佳，却总是烂桃花。所遇道侣非疯即魔，或因争风吃醋引发宗门大战，红颜祸水/蓝颜薄命，情关难过，大道难成。',
+          },
+          {
+            name: '剑痴',
+            desc: '爱剑成痴，除了练剑对万事万物漠不关心。虽剑道天赋绝顶，但人情世故一窍不通，极易得罪权贵。且无剑在手时，战力十不存一。',
+          },
+          {
+            name: '路痴',
+            desc: '对空间方位毫无感知。虽机缘巧合下可能误入上古秘境，但更多时候是在自家宗门迷路，或在被追杀时跑进死胡同，错失最佳逃生路线。',
+          },
+          {
+            name: '非酋附体',
+            desc: '气运极差，喝凉水都塞牙。探索秘境必遇空箱，炼丹必炸炉，渡劫必遇最强雷劫。想要变强，唯有付出别人百倍的努力和准备。',
+          },
+          {
+            name: '招黑体质',
+            desc: '哪怕什么都不做，也会莫名其妙拉满仇恨值。路过的魔头想随手拍死你，正道大能觉得你面目可憎。举世皆敌，只能在追杀中狼狈成长。',
+          },
+          {
+            name: '走火入魔',
+            desc: '心境不稳，极易受到情绪波动影响。战斗中虽能爆发超越极限的力量，但由于理智丧失，往往敌我不分，醒来后还要面对经脉受损的惨痛代价。',
+          },
+          {
+            name: '枯荣之身',
+            desc: '施展强力神通需燃烧寿元。虽能瞬间拥有越阶战力，但每次出手都是在透支生命。若无法寻得延寿圣药，未等成仙，人已老死。',
+          },
+          {
+            name: '饕餮之胃',
+            desc: '每日需摄入海量高阶灵食，否则修为倒退。在资源匮乏的修仙界，为了填饱肚子不得不四处掠夺，最终可能因贪吃而误食诱饵或毒物。',
+          },
+          {
+            name: '睡梦罗汉',
+            desc: '唯有在深度睡眠中才能高效修炼。清醒时浑浑噩噩，反应迟钝。且在闭关沉睡时毫无防备，极易被仇家摸进洞府一锅端。',
+          },
+          {
+            name: '千面魔影',
+            desc: '没有固定容貌，连自己都忘了本来面目。虽擅长伪装潜伏，但灵魂因频繁切换身份而分裂。常在关键时刻因认知错乱而露出破绽。',
+          },
+          {
+            name: '暗夜行者',
+            desc: '只能在黑夜中发挥全部实力，白昼时战力大减，且厌恶阳光。如同阴沟里的老鼠，无法在光天化日之下扬名立万，只能做个见不得光的刺客。',
+          },
+          {
+            name: '五行缺钱',
+            desc: '命格奇特，存不住灵石。无论获得多少机缘财富，总会因为各种意外（如法宝损坏、被人讹诈）而瞬间散尽，永远在贫困线上挣扎。',
+          },
+          {
+            name: '灵兽憎恶',
+            desc: '天生散发让妖兽厌恶的气息。进入山林必遭兽潮围攻，无法驯服任何灵宠。在依赖坐骑和战宠的修仙界，只能靠两条腿跑路。',
+          },
+          {
+            name: '丹毒缠身',
+            desc: '曾因急于求成吞服过量废丹，体内积蓄大量丹毒。虽对大多数毒药免疫，但每隔一段时间便会毒发，痛苦万分，且修为瓶颈比常人更难突破。',
+          },
+          {
+            name: '恶灵附体',
+            desc: '随身携带一把产生灵智的魔兵，器灵时刻想要夺舍宿主。虽能借用魔兵之力大杀四方，但精神时刻处于紧绷状态，稍有松懈便会万劫不复。',
+          },
+          {
+            name: '残魂转世',
+            desc: '灵魂残缺不全，记忆破碎。时常陷入突如其来的昏迷或失忆。且由于魂魄不全，无法修习高深的神魂防御功法，极易被精神攻击秒杀。',
+          },
+          {
+            name: '天妒英才',
+            desc: '悟性极高，任何功法一学就会，但因此遭天道忌惮。每逢大境界突破，雷劫威力倍增，且伴随心魔劫。稍有差池，便是身死道消。',
+          },
+          {
+            name: '闭口禅',
+            desc: '修习特殊功法，一旦开口说话破戒，多年苦修毁于一旦。无法通过言语交流，无法吟唱咒语，在需要沟通或辩解的场合极度吃亏。',
+          },
+          {
+            name: '心眼皆盲',
+            desc: '双目失明，虽练就神识探路，但面对针对神识的幻阵或屏蔽手段时，便如同待宰羔羊。且无法欣赏世间美色，道心易偏向孤僻冷漠。',
+          },
+          {
+            name: '跛足道人',
+            desc: '腿脚不便，身法笨拙。在讲究速度与机动的斗法中极为被动，只能修炼硬桥硬马的防御反击流派，打不赢也跑不掉。',
+          },
+          {
+            name: '断臂求生',
+            desc: '曾遭遇强敌断去一臂，虽勉强续命，但经脉不通，诸多双手结印的高阶术法无法施展。身体残缺导致大道不全，飞升艰难。',
+          },
+          {
+            name: '寒毒入体',
+            desc: '曾深入极寒之地受创，寒毒深入骨髓。每逢阴雨天便如坠冰窟，战力大减。需常年服用火系灵丹压制，是一笔巨大的开销。',
+          },
+          {
+            name: '火毒攻心',
+            desc: '修炼火系功法出了岔子，火毒攻心。性情暴躁易怒，动不动就想杀人泄愤。战斗时容易上头，被敌人引入陷阱而不自知。',
+          },
+          {
+            name: '雷亟之体',
+            desc: '身体是个天然的引雷针。雷雨天不敢出门，否则必遭雷劈。虽对雷法有抗性，但常年被雷劈导致容貌焦黑，经脉酥麻，难以精细操控灵力。',
+          },
+          {
+            name: '万毒不侵',
+            desc: '身体变异，血液皆为剧毒。虽百毒不侵，但无法接受正常的治疗法术和丹药（会被当做毒素化解）。且亲友触之即伤，注定孤独。',
+          },
+          {
+            name: '纸上谈兵',
+            desc: '博览群书，理论知识天下无双，但实战能力几乎为零。面对突发状况常常手忙脚乱，空有一身境界却发挥不出三成实力。',
+          },
+          {
+            name: '借贷修仙',
+            desc: '开局与魔鬼/系统签订契约，借取力量。利息高得吓人，每天一睁眼就欠着巨额灵石或功德。若无法按时还贷，灵魂将被收走抵债。',
+          },
+          {
+            name: '机关傀儡',
+            desc: '肉身已毁，灵魂寄宿于机关傀儡之中。虽无痛觉且不知疲倦，但无法享受丹药加成，且身体损坏需昂贵材料修补，无法通过修炼自愈。',
+          },
+          {
+            name: '阴阳眼',
+            desc: '天生能见鬼神。无论走到哪里都能看到冤魂厉鬼，日夜受其骚扰恐吓。精神衰弱，且容易被厉鬼附身，做出各种怪异举动。',
+          },
+          {
+            name: '合欢弃徒',
+            desc: '曾是合欢宗弟子，因动了真情被逐出师门。身负采补邪功，虽想改邪归正，但体内功法自动运转，难以自控，常被正道人士误解追杀。',
+          },
+          {
+            name: '魔教卧底',
+            desc: '身份敏感，在正道宗门内如履薄冰。既要完成魔教下达的任务，又要防备身份暴露。双重压力下，精神分裂是迟早的事。',
+          },
+          {
+            name: '夺舍重生',
+            desc: '大能夺舍失败，灵魂与原主融合。资质虽改为上乘，但身体与灵魂契合度极差。战斗中可能出现肢体不听使唤的情况，需长期磨合。',
+          },
+          {
+            name: '欺师灭祖',
+            desc: '天生反骨，看谁都不顺眼。总觉得师父藏私，同门迫害。心性凉薄，极易为了利益出卖宗门，最终落得个众叛亲离的下场。',
+          },
+          {
+            name: '散修命',
+            desc: '没有任何宗门愿意收留，只能做个野修。功法全靠捡，丹药全靠抢。没有靠山，在争夺机缘时往往是被大宗门弟子清场的炮灰。',
+          },
+          {
+            name: '禁地体质',
+            desc: '走到哪里都能触发上古禁制或陷阱。虽可能因祸得福发现秘境，但更多时候是被困在杀阵中九死一生，队友见了都要绕道走。',
+          },
+          {
+            name: '古神低语',
+            desc: '脑海中常有不可名状的低语声干扰。修炼时难以入定，施法时容易被打断。随着修为提升，低语声愈发清晰，随时可能理智崩坏。',
+          },
+          {
+            name: '空间错乱',
+            desc: '身体周围的空间极不稳定。可能在走路时突然瞬移到悬崖外，或在战斗中将自己的攻击转移到队友身上。不可控的空间能力是最大的诅咒。',
+          },
+          {
+            name: '储物排斥',
+            desc: '无法使用储物袋或储物戒。所有家当只能背在身上，像个凡人行脚商。不仅行动不便，且财不露白成了奢望，时刻被劫匪盯着。',
+          },
+          {
+            name: '灵气过敏',
+            desc: '对灵气有排斥反应，吸纳灵气如同吞针。修炼过程痛苦万分，且恢复法力极慢。在这个灵气为王的世界，生存难度地狱级。',
+          },
+          {
+            name: '凡人修仙',
+            desc: '伪灵根，甚至无灵根。依靠毅力或旁门左道强行踏上仙途。每前进一步都需付出血的代价，且寿元与凡人无异，时刻在与死神赛跑。',
+          },
+          {
+            name: '杀生证道',
+            desc: '修炼了必须杀戮才能精进的魔功。无法通过打坐提升修为，只能不断寻找猎物。杀气缠身，迷失心智，最终沦为只知杀戮的修罗。',
+          },
+          {
+            name: '药罐子',
+            desc: '体弱多病，经脉脆弱。不修炼会死，修炼猛了也会死。每日需消耗大量名贵药材养护身体，一旦断药，修为尽失，立刻毙命。',
+          },
+          {
+            name: '炉火纯青',
+            desc: '炼器狂人，将身体练成了法宝。防御力惊人，但失去了人类的触觉和味觉。且身体重量惊人，无法御剑飞行，只能在地上狂奔。',
+          },
+          {
+            name: '血海深仇',
+            desc: '开局被灭满门，身负血海深仇。心中只有复仇二字，容易被仇恨蒙蔽双眼。且仇家势力庞大，在复仇成功前，生活只有无尽的逃亡。',
+          },
+        ];
+
+        // --- 新增：合欢宗秘辛气运池 (100个) ---
+        // 女性向 (30个)
+        const femaleEroPresets = [
+          {
+            name: '天生名器',
+            desc: '私处构造举世无双，紧致如初，极易高潮。任何与之交合的男修都会瞬间沦陷，甘愿为其付出一切，只求一夜春宵。',
+          },
+          {
+            name: '极品炉鼎',
+            desc: '体质乃是世间罕见的极品炉鼎，元阴醇厚无比。无需修炼，只需不断与高阶修士交合，便能吸取对方精气反哺自身，躺着就能成仙。',
+          },
+          {
+            name: '淫纹诅咒',
+            desc: '小腹上刻有无法消除的淫纹，每当情欲高涨时便会发光发热。需每日接受阳精灌溉，否则淫纹会带来钻心蚀骨的瘙痒，让人当众出丑。',
+          },
+          {
+            name: '媚骨天成',
+            desc: '天生媚骨，一颦一笑皆含春意。哪怕身着道袍端坐，也会散发令人疯狂的费洛蒙，引得周围雄性生物（包括灵兽）发情。',
+          },
+          {
+            name: '千人骑',
+            desc: '曾流落风尘，通过接待千名恩客证道。身体早已开发完毕，能熟练运用各种房中术伺候男人，在欢愉中掠夺对方修为。',
+          },
+          {
+            name: '乳香四溢',
+            desc: '双乳常年分泌甘甜的灵乳，不仅能滋养肌肤，更是炼丹的绝佳药引。常被当做奶牛囚禁，每日被迫挤奶供宗门高层享用。',
+          },
+          {
+            name: '敏感体质',
+            desc: '肌肤极度敏感，轻微触碰便能引发强烈的快感。战斗中若被敌人击中敏感点，会瞬间瘫软失禁，丧失战斗力，任人摆布。',
+          },
+          {
+            name: '肉便器转世',
+            desc: '前世乃是魔尊专用的肉便器，保留了那份卑微与淫荡的记忆。见到强者便会下意识跪下求欢，渴望被粗暴对待和填满。',
+          },
+          {
+            name: '公用师尊',
+            desc: '身为一派宗师，实则是全宗男弟子的公用泄欲工具。白天授课一脸严肃，晚上在洞府内被徒弟们轮流调教，毫无尊严。',
+          },
+          {
+            name: '碧池仙子',
+            desc: '外表清纯圣洁，实则内心极度淫乱。最爱在道侣面前装纯，背地里却与道侣的兄弟、师尊甚至仇人偷情，享受背德的快感。',
+          },
+          {
+            name: '受孕狂魔',
+            desc: '子宫壁异常肥厚，极易受孕。且怀上的必是灵胎，能提升母体修为。为了变强，不得不四处寻找强大男修借种，终年大着肚子。',
+          },
+          {
+            name: '触手亲和',
+            desc: '对触手类妖兽有天然的吸引力。探险时常被触手怪缠住，注入奇怪的粘液和卵。身体逐渐被改造，变得离不开触手的爱抚。',
+          },
+          {
+            name: '喷水体质',
+            desc: '高潮时会喷出大量含有催情效果的爱液。在战斗中若受到刺激，可能会当场失禁喷水，滑倒敌人（或自己），场面极度淫靡。',
+          },
+          {
+            name: '抖M体质',
+            desc: '在受虐中能获得极大的快感和修为提升。越是被鞭打、羞辱、捆绑，灵力运转越快。常主动挑衅强者，只为求一顿毒打。',
+          },
+          {
+            name: '扶她之身',
+            desc: '因误食阴阳和合散，长出了巨大的阳具。既能享受被插入的快感，又能去侵犯其他女修。双重快感，双倍快乐。',
+          },
+          {
+            name: '淫乱圣女',
+            desc: '表面是受万人敬仰的圣女，要在祭坛上当众表演自慰祈雨。神明降下的恩赐全是催情圣水，每次祭祀都是一场盛大的无遮大会。',
+          },
+          {
+            name: '榨精魅魔',
+            desc: '拥有魅魔血统，无需进食，只需吞噬精液即可生存。为了填饱肚子，每晚都要夜袭男修宿舍，将他们榨得一滴不剩。',
+          },
+          {
+            name: '异种受孕',
+            desc: '子宫能容纳万物，无论是人、妖、魔还是鬼怪的种子都能孕育。为了生下最强后代，不断尝试与各种非人生物交配。',
+          },
+          {
+            name: '暴露狂',
+            desc: '只有在被人窥视或裸露身体时，修炼速度才会倍增。常在闹市或宗门大殿裸体修炼，享受羞耻感带来的快感冲击。',
+          },
+          {
+            name: '后庭之花',
+            desc: '后庭经过特殊开发，紧致且富有弹性。最爱被巨物贯穿后庭，并在其中内射。括约肌能夹断精钢，是男修们梦寐以求的极品名器。',
+          },
+          {
+            name: '无惨女修',
+            desc: '气运极差，总是落入淫贼或魔修手中。每次外出历练都会变成各种本子剧情的女主角，经历轮奸、调教后被玩坏丢弃。',
+          },
+          {
+            name: '精液成瘾',
+            desc: '一日不喝精液便会浑身乏力，修为倒退。随身携带装满精液的水壶，甚至在战斗间隙都要含着男人的阳具补充能量。',
+          },
+          {
+            name: '口技宗师',
+            desc: '樱桃小嘴内有乾坤，舌头灵活如蛇。能用口舌功夫让性冷淡的大能瞬间缴械投降。靠着一张嘴，吸遍天下无敌手。',
+          },
+          {
+            name: '奴隶印记',
+            desc: '灵魂深处被打上了奴隶印记，无法反抗主人的任何命令。哪怕主人让你在大街上像母狗一样爬行交配，身体也会忠实执行。',
+          },
+          {
+            name: '双修玩物',
+            desc: '没有任何战斗能力，纯粹为了双修而生。身体柔软无骨，能摆出任何羞耻的姿势配合男修。被当做礼品在各个大能之间转送。',
+          },
+          {
+            name: '催眠性偶',
+            desc: '精神防御极低，极易被催眠洗脑。常被人植入常识修改的暗示，比如认为精液是美容液，群交是正常的社交礼仪。',
+          },
+          {
+            name: '排泄管理',
+            desc: '被下了禁制，无法自主排泄。只有在获得主人许可，或在高潮时才能失禁排泄。常年憋尿带来的快感让你欲罢不能。',
+          },
+          {
+            name: '淫荡人妻',
+            desc: '即使嫁做人妇，依然水性杨花。最喜欢当着夫君的面被黄毛甚至乞丐侵犯，看着夫君愤怒又无能狂怒的样子达到高潮。',
+          },
+          {
+            name: '扩孔改造',
+            desc: '全身上下的孔洞都被法术强行扩张过。无论是嘴巴、阴道还是后庭，都能容纳拳头甚至更大的物体，毫无松弛感。',
+          },
+          {
+            name: '永恒发情',
+            desc: '一年三百六十五天，天天都是发情期。理智常年被欲望压制，见洞就钻（被钻）。为了止痒，任何长条状物体都是你的好朋友。',
+          },
+        ];
+
+        // 男性向 (70个)
+        const maleEroPresets = [
+          {
+            name: '极乐魔尊',
+            desc: '修炼上古极乐魔功，通过让女修高潮来掠夺其元阴。交合时女方越快乐，你获得的修为越多，被誉为修仙界的人形自走炮。',
+          },
+          {
+            name: '母女双收',
+            desc: '拥有特殊的曹贼气运，专克母女花。无论是宗主夫人与其千金，还是妖后与其公主，统统收入后宫，享受齐人之福。',
+          },
+          {
+            name: '强御万女',
+            desc: '阳具乃是天生神器，坚硬如铁，永不疲软。曾创下一夜御万女的记录，所过之处，女修皆扶墙而走，对你又爱又怕。',
+          },
+          {
+            name: '催眠眼',
+            desc: '双眼拥有强大的催眠能力。只需对视一眼，贞洁烈女也会瞬间变成淫乱母狗，乖乖张开双腿求你临幸，任你予取予求。',
+          },
+          {
+            name: 'NTR系统',
+            desc: '只要睡了别人的道侣或未婚妻，就能获得巨额奖励。此系统专为绿帽而生，致力于给全修仙界的男修戴上绿帽子。',
+          },
+          {
+            name: '双修帝皇',
+            desc: '体内自成阴阳循环，与任何人双修都能获益。建立庞大的水晶宫，三千佳丽皆是你的修炼资源，每日翻牌子选妃侍寝。',
+          },
+          {
+            name: '透视神眼',
+            desc: '能看穿一切衣物遮挡，直视女修肉体。不仅能欣赏美色，还能精准找到对方的敏感点，在战斗中通过语言调戏让对方羞愤高潮。',
+          },
+          {
+            name: '触手召唤',
+            desc: '能随时召唤无数滑腻的触手。触手带有强力催情毒素，能同时调教数十名女修，将她们捆绑悬空，变成你的专属肉便器。',
+          },
+          {
+            name: '时间停止',
+            desc: '每天能停止时间一小时。在静止的时间里，你可以对任何女修做任何事。无论是当众猥亵还是强行插入，对方都毫无知觉。',
+          },
+          {
+            name: '隐身淫贼',
+            desc: '拥有完美的隐身术，连神识都无法探测。最爱潜入女修澡堂或闺房，在对方毫无察觉的情况下进行奸淫，享受偷情的刺激。',
+          },
+          {
+            name: '变身伪娘',
+            desc: '能化身为绝世美女，混入女修宗门内部。白天是贴心好闺蜜，晚上恢复男身夜袭，将整个宗门的女修全部变成你的胯下之臣。',
+          },
+          {
+            name: '阳精灌顶',
+            desc: '你的精液是无上大药，能助人突破瓶颈。女修们为了求得一滴阳精，不惜抛弃尊严，排队跪在你面前张嘴等待恩赐。',
+          },
+          {
+            name: '精神控制',
+            desc: '强大的精神力能直接改写女修的常识。让高傲的女帝认为当你的性奴是无上荣耀，让圣女觉得当众露出是神圣仪式。',
+          },
+          {
+            name: '胯下巨蟒',
+            desc: '阳具尺寸惊人，常态下便有儿臂粗细。勃起后更是如同巨蟒出洞，能直捣黄龙，顶穿女修的花心，让她们体验濒死的快感。',
+          },
+          {
+            name: '强制高潮',
+            desc: '掌握言灵之术，只需说出“高潮”二字，目标女修便会强制达到高潮。战斗中让敌人瞬间腿软喷水，不战而屈人之兵。',
+          },
+          {
+            name: '战败惩罚',
+            desc: '任何被你击败的女修，都会强制进入发情状态。必须在战场上当众与你交合才能解除，否则会爆体而亡。你也乐于当众表演。',
+          },
+          {
+            name: '极品媚香',
+            desc: '体味自带强力催情效果。哪怕只是经过，留下的气味也能让周围的女修湿了内裤，眼神迷离地追随你的身影，渴求你的抚慰。',
+          },
+          {
+            name: '子母河水',
+            desc: '掌握子母河源头，能让任何女修瞬间怀孕。利用怀孕作为威胁或奖励，让那些高高在上的仙子不得不对你言听计从。',
+          },
+          {
+            name: '肉体改造',
+            desc: '精通血肉改造之术。能随意调整女修的身材，隆胸、丰臀、改造私处。将心爱的女修改造成最符合你性癖的完美性爱机器。',
+          },
+          {
+            name: '淫梦行者',
+            desc: '能自由进入女修的梦境。在梦中你可以为所欲为，而女修醒来后会分不清梦境与现实，逐渐对你产生依恋和淫欲。',
+          },
+          {
+            name: '好感度显示',
+            desc: '能看到女修对你的好感度和性欲值。通过精准的攻略选项，快速将好感度刷满，解锁各种高难度体位和羞耻play。',
+          },
+          {
+            name: '师娘杀手',
+            desc: '对年长女性有特攻加成。专攻各个宗门的师娘、长老，利用她们空虚寂寞的弱点，送上温暖（肉棒），让她们焕发第二春。',
+          },
+          {
+            name: '交换身体',
+            desc: '能与女修交换身体。操纵她们的身体去自慰、裸奔或与其他男人调情，最后再换回来，欣赏她们羞愤欲绝的表情。',
+          },
+          {
+            name: '衣物破坏',
+            desc: '攻击附带爆衣效果。每次出手必撕碎女修的衣物，让她们在战斗中春光乍泄。看着她们遮遮掩掩的样子，你的攻击更加凌厉。',
+          },
+          {
+            name: '远程遥控',
+            desc: '能在女修体内植入灵力跳蛋，随时随地进行远程遥控。无论她们在开会还是修炼，只要你动动手指，她们就会当场高潮。',
+          },
+          {
+            name: '鉴女无数',
+            desc: '一眼便能看出女修的敏感点、床技深浅以及是否是处女。作为修仙界的性爱评鉴指南作者，你的点评能决定女修的身价。',
+          },
+          {
+            name: '精尽人亡',
+            desc: '与你交合的女修会陷入无尽的索求中，直到把你榨干为止。好在你拥有无限精气，最后的结局往往是她们被你的大棒操晕过去。',
+          },
+          {
+            name: '无限耐力',
+            desc: '在床上拥有无限的体力，永远不知疲倦。能连续大战三天三夜，把轮番上阵的女修们一个个干趴下，唯你屹立不倒。',
+          },
+          {
+            name: '贞操掠夺',
+            desc: '夺走女修的第一次能获得暴击奖励。热衷于收集各路仙子、圣女的落红，将染血的床单作为战利品挂在洞府炫耀。',
+          },
+          {
+            name: '调教宗师',
+            desc: '精通各种调教手段，皮鞭、蜡烛、木马无一不精。能将最贞烈的女修调教成最听话的母狗，让她们以露出尾巴和项圈为荣。',
+          },
+          {
+            name: '全员痴女',
+            desc: '开启光环后，周围一定范围内的女修智商降低，性欲暴涨。把你当成世间唯一的雄性，疯狂扑上来求交配，赶都赶不走。',
+          },
+          {
+            name: '精液洗脑',
+            desc: '注入体内的精液带有你的意志。随着内射次数增加，女修的思想会逐渐被你同化，最终变成只为你而活的傀儡。',
+          },
+          {
+            name: '无形触手',
+            desc: '能操控看不见的念力触手。在众目睽睽之下侵犯女修，而旁人一无所知，只能看到女修面色潮红、浑身颤抖的怪异模样。',
+          },
+          {
+            name: '性别转换',
+            desc: '能将男修变成女修。看哪个男修不顺眼，就把他变成极品炉鼎，然后亲自开苞享用，让他体验做女人的快乐（痛苦）。',
+          },
+          {
+            name: '淫乱诅咒',
+            desc: '能对女修下咒，让她每走一步都会产生快感。看着她们在路上夹着腿、面红耳赤地艰难行走，是你最大的恶趣味。',
+          },
+          {
+            name: '强制排卵',
+            desc: '通过特殊的按摩手法，能让女修强制排卵，进入极度渴求受孕的状态。此时的她们为了精液愿意做任何事。',
+          },
+          {
+            name: '媚药体液',
+            desc: '你的汗水、唾液甚至血液都是强效媚药。战斗中朝女修吐口水都能让她们发情。常以此强迫女修为你口交或舔舐全身。',
+          },
+          {
+            name: '绝对命令',
+            desc: '拥有王者之气，对修为低于你的女修拥有绝对命令权。一声令下，万千女修齐宽衣，场面壮观至极。',
+          },
+          {
+            name: '采花大盗',
+            desc: '虽然名声狼藉，但身法诡异。专挑大婚之夜动手，当着新郎的面强奸新娘，让喜事变丧事，刺激感拉满。',
+          },
+          {
+            name: '借种计划',
+            desc: '被无法生育的高阶女修大能看中，重金求子。你只需躺着贡献精子，就能获得海量资源和庇护，真正的软饭硬吃。',
+          },
+          {
+            name: '人妻收集',
+            desc: '对少女不感兴趣，只爱成熟丰满的人妻。洞府里关押着各大门派宗主的夫人，每日上演着各种不可描述的剧情。',
+          },
+          {
+            name: '捆绑大师',
+            desc: '随手扔出的绳索都能自动捆绑成龟甲缚。被绑住的女修不仅无法挣脱，还会因为绳索的摩擦而不断高潮。',
+          },
+          {
+            name: '随机传送',
+            desc: '每次传送都会意外落入女修的浴桶、被窝或更衣室。虽然会被追杀，但每次都能大饱眼福并顺手揩油。',
+          },
+          {
+            name: '双修直播',
+            desc: '将双修过程向全界直播。靠着惊世骇俗的体位和持久力走红，打赏的灵石堆成山，女粉遍布天下。',
+          },
+          {
+            name: '妖兽化形',
+            desc: '能变身为巨犬、公牛等妖兽形态。利用巨大的尺寸和野兽的本能，彻底征服那些口味独特或欲求不满的女修。',
+          },
+          {
+            name: '灵魂互换',
+            desc: '在性高潮的瞬间与女修互换灵魂。让她亲自体验被自己大棒贯穿的快感，这种极致的体验往往能直接摧毁她们的理智。',
+          },
+          {
+            name: '百合乱入',
+            desc: '最爱闯入女修们的磨镜现场。用你的巨物强行插入她们之间，将原本的百合情深变成淫乱的三人行。',
+          },
+          {
+            name: '淫纹刻印',
+            desc: '能在女修身上刻下专属淫纹。淫纹会吸收她们的灵力转化为你的经验值，且让她们对你的命令无法抗拒。',
+          },
+          {
+            name: '圣女调教',
+            desc: '专门抓捕圣洁高傲的圣女进行调教。看着她们从宁死不屈到跪地求欢，这种堕落的过程让你欲罢不能。',
+          },
+          {
+            name: '阴阳逆转',
+            desc: '能通过交合逆转女修的性格。让贞洁烈女变荡妇，让冰山美人变热情痴女。整个修仙界的画风都被你带偏了。',
+          },
+          {
+            name: '无尽精库',
+            desc: '睾丸内自成空间，精液无穷无尽。哪怕要灌满一条大河也轻而易举。最爱玩人体注水游戏，把女修肚子灌得像孕妇一样大。',
+          },
+          {
+            name: '快乐至死',
+            desc: '你的性能力太强，曾有女修因为太过快乐而心脏骤停。从此“欲仙欲死”在你这里不再是形容词，而是陈述句。',
+          },
+          {
+            name: '宗门精厕',
+            desc: '将敌对宗门的女修全部抓来，改造成专门处理精液的肉便器。让她们在屈辱中度过余生，成为宗门的免费劳动力。',
+          },
+          {
+            name: '人体家具',
+            desc: '喜欢把女修变成椅子、桌子等家具。坐在柔软的肉体上修炼，感受她们的颤抖和体温，别有一番风味。',
+          },
+          {
+            name: '时间回溯',
+            desc: '如果你在床上表现不好（虽然不可能），可以回溯时间重来。直到不仅让对方满意，更要让对方爽到翻白眼为止。',
+          },
+          {
+            name: '多重分身',
+            desc: '能变出无数实体分身。一个人就是一个军队，能同时满足成百上千名女修的需求，开一场只属于你一个人的无遮大会。',
+          },
+          {
+            name: '感知共享',
+            desc: '能强行共享女修的感知。在侵犯她时，让她同时感受到你攻城略地的快感和她自己被填满的充实感，双倍刺激。',
+          },
+          {
+            name: '弱点看破',
+            desc: '能一眼看穿女修内心最渴望的性幻想。扮演强盗、书生、父亲等各种角色，精准击中她们的性癖，让她们欲罢不能。',
+          },
+          {
+            name: '强制发情',
+            desc: '释放出的灵压带有强制发情效果。修为低于你的女修在你面前只能趴在地上喘息，流水不止，丧失一切抵抗力。',
+          },
+          {
+            name: '肉棒巨大化',
+            desc: '能随意控制阳具的大小。遇到紧致的就变细，遇到松弛的就变粗。总能完美贴合女修的甬道，给予她们最极致的体验。',
+          },
+          {
+            name: '精液印记',
+            desc: '被你内射过的女修，小腹会出现爱心状印记。印记越多，代表你的战绩越辉煌。这是你征服修仙界的勋章。',
+          },
+          {
+            name: '荡妇羞辱',
+            desc: '越是用言语羞辱女修，你的攻击力和性能力越强。在床上骂得越脏，干得越狠，女修反而越兴奋。',
+          },
+          {
+            name: '群交盛宴',
+            desc: '定期举办群交大会，邀请天下女修参加。在大会上表现优异者可获得你的亲传（精液），场面堪比酒池肉林。',
+          },
+          {
+            name: '触手寄生',
+            desc: '在女修体内种下触手种子。触手会即使在你不在时也会自动调教宿主，防止她们出轨或性冷淡。',
+          },
+          {
+            name: '阴蒂增大',
+            desc: '通过秘法让女修的阴蒂变得硕大无比且敏感异常。轻轻一碰就能让她们尖叫高潮，彻底沦为快感的奴隶。',
+          },
+          {
+            name: '贞操带管理员',
+            desc: '拥有世间所有贞操带的钥匙。只有你能解开女修的束缚，给予她们释放的机会。掌握着她们的性福大权。',
+          },
+          {
+            name: '随机性转',
+            desc: '被你击败的男修有概率变成极品美女。这让你在战斗中更加兴奋，期待着每一个手下败将带来的惊喜。',
+          },
+          {
+            name: '催眠常识',
+            desc: '将“精液是货币”植入常识。女修们为了买衣服、住店，不得不向你张开双腿赚取精液，社会秩序彻底崩坏。',
+          },
+          {
+            name: '无尽后宫',
+            desc: '气运加身，永远不会因为后宫起火而烦恼。女修们不仅和睦相处，还会互相切磋床技，只为更好地侍奉你。',
+          },
+          {
+            name: '极度深寒',
+            desc: '修习冰系功法，阳具冰凉刺骨。在炎炎夏日，女修们争抢着要含住你的冰棍解暑，体验冰火两重天的快感。',
+          },
+          // 新增 50 种男性向邪恶气运
+          {
+            name: '活体衣物',
+            desc: '掌握血肉编织之术，能将女修压制并转化为具有意识的紧身衣物。穿着她们不仅能获得属性加成，还能随时随地感受她们紧贴肌肤的颤抖与羞耻。',
+          },
+          {
+            name: '人棍花瓶',
+            desc: '极致的收藏癖。喜欢切除绝色女修的四肢，将其养在特制的灵液花瓶中。虽失去行动能力，但感官被放大十倍，成为只能任你摆布的精美摆件。',
+          },
+          {
+            name: '排泄控制',
+            desc: '在女修体内种下禁制，完全掌控其排泄功能。若无你的允许，她们无法排泄，只能在极致的憋胀感中苦苦哀求，最终不得不屈服于你的便意管理。',
+          },
+          {
+            name: '感官剥夺',
+            desc: '剥夺女修的视觉、听觉和语言能力，仅保留触觉。在无尽的黑暗与寂静中，你成为了她们唯一的感知来源，每一次触碰对她们来说都是救赎与沉沦。',
+          },
+          {
+            name: '痛觉转化',
+            desc: '强制改写女修的神经系统，将所有疼痛转化为极致的快感。无论你如何施虐，她们只会感受到更强烈的性高潮，最终彻底沦为受虐狂。',
+          },
+          {
+            name: '人皮伪装',
+            desc: '剥下心仪女修的皮肤制成伪装，完美继承其外貌与气息。披着她们的皮囊去勾引她们的道侣或亲人，在受害者面前上演最残忍的NTR大戏。',
+          },
+          {
+            name: '亡灵亵渎',
+            desc: '不仅限于活人，连死去的绝代仙子也不放过。能复活并操控女尸，让她们保持生前的美貌与体温，成为不知疲倦、绝对服从的尸姬玩物。',
+          },
+          {
+            name: '石化收藏',
+            desc: '将女修变为拥有意识的石像。她们无法动弹，却能清晰感知外界的一切。你可以在她们面前肆意妄为，或对石像进行各种羞耻play，欣赏她们绝望的眼神。',
+          },
+          {
+            name: '掌中玩物',
+            desc: '能将女修缩小至巴掌大小，随身携带。将她们关在特制的透明笼子或瓶子里，随时拿出来把玩，甚至放入裤裆中贴身调教。',
+          },
+          {
+            name: '子宫折跃',
+            desc: '无视空间距离，直接将精液传送至目标女修的子宫内。无论她们身在何处、是否穿着衣物，都无法逃脱被瞬间内射受孕的命运。',
+          },
+          {
+            name: '逻辑病毒',
+            desc: '植入强制逻辑：拒绝你=剧痛，顺从你=极乐。通过不断的奖惩机制，像训练巴甫洛夫的狗一样，迅速摧毁她们的心理防线，建立绝对服从。',
+          },
+          {
+            name: '存在抹杀',
+            desc: '当你捕获一名女修后，世间关于她的一切记忆与记录都会消失。没有人会来救她，因为在所有人眼中，她从未存在过，彻底成为你的私有物品。',
+          },
+          {
+            name: '血脉诅咒',
+            desc: '对一名女修下咒后，其所有直系女性后代（女儿、孙女等）在成年之日都会自动觉醒奴隶印记，在此后的世世代代中，都会主动前来寻找你并献身。',
+          },
+          {
+            name: '母畜退化',
+            desc: '强行降低女修的智商与认知，使其退化至家畜水平。她们会忘记语言与羞耻，像母狗一样四肢着地行走，只会摇尾乞怜和求欢。',
+          },
+          {
+            name: '产卵改造',
+            desc: '改造女修的生殖系统，使其不再胎生，而是像昆虫一样产卵。每次受精后会产下大量半透明的卵，看着她们痛苦又快乐地排卵是你最大的乐趣。',
+          },
+          {
+            name: '寄生控制',
+            desc: '在女修体内植入微型寄生魔虫。魔虫会潜伏在脊髓或子宫内，平时无害，一旦你想，便能通过魔虫接管她们的身体控制权或带来剧烈高潮。',
+          },
+          {
+            name: '影子魔奴',
+            desc: '赋予女修的影子独立意识与实体。影子会成为你忠实的监视者与调教者，在任何有光的地方，她们都会被自己的影子无情猥亵。',
+          },
+          {
+            name: '失语调教',
+            desc: '切除或封印女修的舌头，剥夺其语言能力。无法求救、无法拒绝，只能发出呜咽声。为了表达意愿，她们必须学会用身体语言来取悦你。',
+          },
+          {
+            name: '盲目肉欲',
+            desc: '夺走女修的双眼，使其陷入永恒的黑暗。在极度缺乏安全感的状态下，她们会本能地依赖并讨好给予她们肉体抚慰的你，成为盲目的肉欲傀儡。',
+          },
+          {
+            name: '虚假记忆',
+            desc: '随意篡改女修的记忆。将她们原本幸福的过去替换为悲惨的奴隶生涯，让她们坚信自己生来就是为了侍奉你，对你感恩戴德。',
+          },
+          {
+            name: '受孕光环',
+            desc: '散发一种特殊的灵力辐射。长期处于你身边的女修，即使不发生性关系，也会受你的灵力感应而怀上灵胎，整个宗门都将成为你的育儿所。',
+          },
+          {
+            name: '恒久泌乳',
+            desc: '诅咒女修使其乳房无休止地分泌乳汁。若不及时排空，便会胀痛难忍。为了缓解痛苦，高傲的仙子也不得不跪求你吸吮或使用挤奶器。',
+          },
+          {
+            name: '高潮地狱',
+            desc: '让女修陷入永续的高潮状态，每一秒都在经历巅峰快感。在这种极致的感官过载下，她们无法思考、无法行动，除了尖叫和抽搐外什么也做不了。',
+          },
+          {
+            name: '镜中囚徒',
+            desc: '将女修的灵魂封印在镜子中。她们只能隔着镜面看着你与其他人交欢，或被你对着镜子自渎时射满一脸，却永远无法触及现实。',
+          },
+          {
+            name: '无限扩张',
+            desc: '赋予女修身体孔洞无限的弹性与恢复力。无论塞入多么巨大的异物都不会受伤，只会带来更深层的充实感，彻底满足你的巨物破坏欲。',
+          },
+          {
+            name: '肉体融合',
+            desc: '通过禁术将多名女修的肉体缝合在一起，创造出拥有多个乳房、多个性器的肉体怪物（Chimera）。这种扭曲的造物是你对生命最大的亵渎与嘲弄。',
+          },
+          {
+            name: '反向贞操',
+            desc: '给女修带上无形的枷锁，一旦停止性交超过一定时间，身体便会产生剧烈疼痛。为了生存，她们必须像不知廉耻的荡妇一样，时刻寻找男人（你）交配。',
+          },
+          {
+            name: '淫乱病毒',
+            desc: '制造一种只针对女性的烈性催情病毒。感染者会丧失理智，变成只知求欢的丧尸。作为唯一的解药携带者，你将成为她们疯狂追逐的猎物。',
+          },
+          {
+            name: '乱伦力场',
+            desc: '释放扭曲伦理的力场。在领域内，女修会对自己有血缘关系的男性产生不可抑制的情欲。你最爱坐看母子、兄妹乱伦的背德好戏。',
+          },
+          {
+            name: '雌堕射线',
+            desc: '发射一种能改变性别的射线。将正道侠士、高冷剑尊等男性强行转化为身材火辣、媚骨天成的女修，然后亲自调教，让其体验身为女人的“快乐”。',
+          },
+          {
+            name: '机械人偶',
+            desc: '抹去女修的人格与自我，将其改造为只会执行命令的生物人偶。她们没有情感，不知疲倦，能完美执行任何高难度的性爱指令，是最理想的工具。',
+          },
+          {
+            name: '恶堕纹章',
+            desc: '在女修身上刻下具有腐蚀心智效果的纹章。随着性爱次数增加，纹章会逐渐扩散至全身，彻底将她们染黑，从圣洁仙子堕落为深渊魔女。',
+          },
+          {
+            name: '幽灵触碰',
+            desc: '获得灵体化的接触能力。可以隔着墙壁、衣物，甚至远距离直接抚摸女修的敏感部位。让她们在众目睽睽之下被无形的鬼手玩弄至高潮。',
+          },
+          {
+            name: '灵魂收藏',
+            desc: '将被玩坏或杀死的女修灵魂抽出，囚禁在戒指或法宝中。在战斗或修炼时，能听到她们灵魂深处的哀嚎与求饶，为你提供精神上的愉悦。',
+          },
+          {
+            name: '精液寄生',
+            desc: '射入女修体内的精液会化作具有活性的史莱姆生物。它们会长期寄宿在子宫或肠道内，不断蠕动刺激内壁，让宿主时刻处于发情状态。',
+          },
+          {
+            name: '肉壁装饰',
+            desc: '将女修活体嵌入墙壁或地板中，只露出头部和性器官。将她们变成洞府的一部分，成为有生命的装饰品和随时可用的便捷肉便器。',
+          },
+          {
+            name: '人格覆写',
+            desc: '利用精神法术，强行覆盖女修的原有人格。植入“专属女仆”、“性奴宠物”等虚假人格设定，让她们心甘情愿地扮演你设定的角色。',
+          },
+          {
+            name: '圣水酿造',
+            desc: '将女修的膀胱改造为特殊的酿酒器官。她们排出的不再是尿液，而是带有催情效果的黄金圣酒。你最爱举办品酒会，邀请宾客品尝这些“佳酿”。',
+          },
+          {
+            name: '直连肠胃',
+            desc: '打通女修的生殖腔与消化系统。通过肛交或子宫内射，精液可以直接被吸收转化为营养。从此她们不再需要进食，只需你的灌溉即可生存。',
+          },
+          {
+            name: '费洛蒙爆弹',
+            desc: '能瞬间释放覆盖全城的超高浓度费洛蒙。吸入者会瞬间理智蒸发，陷入集体狂乱的交配盛宴。而你作为唯一清醒的主宰，可以随意挑选猎物。',
+          },
+          {
+            name: '概念抹除',
+            desc: '利用法则之力，从女修的认知中永久删除“羞耻”这一概念。她们会觉得裸奔、当众排泄、群交等行为像吃饭喝水一样稀松平常。',
+          },
+          {
+            name: '奴隶召唤',
+            desc: '无论被标记的女修身在何处（秘境、闭关室、婚礼现场），你都能随时将其强制召唤到身边。完事后这再送回去，让她们生活在随时的恐惧中。',
+          },
+          {
+            name: '催眠手机',
+            desc: '虽在修仙界，却拥有自带催眠APP的智能手机。对着女修拍照即可修改其认知常识，还能通过视频通话远程控制她们的身体行为。',
+          },
+          {
+            name: '弱点识破',
+            desc: '开启魔眼，能看到女修身上隐藏的极度敏感带。针对这些弱点进行攻击，能造成百倍的快感暴击，瞬间让高阶女修瘫软如泥。',
+          },
+          {
+            name: '附身强奸',
+            desc: '可以灵魂出窍，附身在女修的丈夫、父亲或道侣身上。操控他们亲手侵犯自己的挚爱，享受双倍的背德感与掌控感。',
+          },
+          {
+            name: '伤害转移',
+            desc: '建立灵魂链接，将你受到的所有伤害转移到绑定的女修身上。当你受到攻击时，她们会代替你流血；当你性奋时，她们会代替你承受快感。',
+          },
+          {
+            name: '肉体橡皮',
+            desc: '拥有像捏橡皮泥一样随意重塑肉体的能力。可以随意拉长女修的乳头、封闭她们的孔洞、改变她们的体型，创造出各种猎奇的肉体形态。',
+          },
+          {
+            name: '器官独立',
+            desc: '能将女修的性器官（如乳房、阴道）无痛拆卸下来，并保持其活性与感知。即使本体在千里之外，你依然可以把玩这些离体器官，将感觉传回本体。',
+          },
+          {
+            name: '快感积蓄',
+            desc: '强制封锁女修的高潮，将其受到的刺激不断积蓄。在积累了数月甚至数年的快感后一次性释放，那种恐怖的冲击足以瞬间摧毁她们的灵魂。',
+          },
+          {
+            name: '时间重置',
+            desc: '拥有在一定范围内回溯时间的能力。如果在强奸过程中女修反抗太激烈或自杀，可以读档重来，尝试无数种调教方案，直到达成完美结局。',
+          },
+        ];
+
+        const allEroPresets = [...femaleEroPresets, ...maleEroPresets];
+
+        // 补全缺失的灵根配置
+        const spiritRootConfig = {
+          attributes: [
+            '金灵根',
+            '木灵根',
+            '水灵根',
+            '火灵根',
+            '土灵根',
+            '风灵根',
+            '雷灵根',
+            '冰灵根',
+            '光灵根',
+            '暗灵根',
+          ],
+          grades: [
+            { name: '凡品', probability: 0.45, class: 'waste', desc: '杂乱不堪，四/五灵根混杂' },
+            { name: '黄品', probability: 0.3, class: 'yellow', desc: '三灵根，资质尚可' },
+            { name: '玄品', probability: 0.15, class: 'profound', desc: '双灵根，百里挑一' },
+            { name: '地品', probability: 0.08, class: 'earth', desc: '异灵根或纯净灵根，万中无一' },
+            { name: '天品', probability: 0.02, class: 'heaven', desc: '天灵根，天道宠儿' },
+          ],
+        };
+
+        // Spirit Root Gacha Logic
+        function drawSpiritRoot() {
+          if (spiritRootRollsLeft <= 0) return;
+
+          spiritRootResult.textContent = '觉醒中...';
+          rollSpiritRootBtn.disabled = true;
+
+          setTimeout(() => {
+            const rand = Math.random();
+            let cumulativeProbability = 0;
+            let selectedGrade = spiritRootConfig.grades[0];
+
+            for (const grade of spiritRootConfig.grades) {
+              cumulativeProbability += grade.probability;
+              if (rand < cumulativeProbability) {
+                selectedGrade = grade;
+                break;
+              }
+            }
+
+            let attributePool = spiritRootConfig.attributes.slice(0, 5);
+            if (selectedGrade.name === '地品' || selectedGrade.name === '玄品') {
+              attributePool = [...attributePool, '风灵根', '雷灵根', '冰灵根'];
+            } else if (selectedGrade.name === '天品') {
+              attributePool = [...spiritRootConfig.attributes];
+            }
+
+            const selectedAttr = attributePool[Math.floor(Math.random() * attributePool.length)];
+            const resultText = `${selectedGrade.name} · ${selectedAttr}`;
+
+            spiritRootResult.textContent = resultText;
+            spiritRootResult.className = `gacha-display ${selectedGrade.class}`;
+            spiritRootResult.title = selectedGrade.desc;
+            hardModeSpiritRootValue = `${resultText} (${selectedGrade.desc})`;
+
+            spiritRootRollsLeft--;
+            rollSpiritRootBtn.disabled = spiritRootRollsLeft <= 0;
+            rollSpiritRootBtn.textContent =
+              spiritRootRollsLeft > 0 ? `逆天改命 (剩余次数: ${spiritRootRollsLeft})` : '命数已定';
+          }, 800);
+        }
+
+        rollSpiritRootBtn.addEventListener('click', drawSpiritRoot);
+
+        drawFortuneBtn.addEventListener('click', () => {
+          const isEroMode = eroToggle.checked;
+
+          // 气运次数判断
+          if (currentMode === 'hard' || currentMode === 'normal') {
+            if (fortuneRollsLeft <= 0) return;
+          }
+
+          drawFortuneBtn.textContent = '演算中...';
+          drawFortuneBtn.disabled = true;
+
+          // 作弊逻辑判断
+          const isCheatEnabled = cheatToggle.checked && currentMode !== 'hard';
+
+          setTimeout(() => {
+            fortuneSelectionContainer.innerHTML = '';
+            fortuneSelectionContainer.style.display = 'flex';
+            fortuneNameDisplay.textContent = '';
+            fortuneInput.value = '';
+
+            const generatedButtons = [];
+            const selectedNames = new Set();
+
+            // 核心抽取函数 (封装以便复用)
+            const generateButtonsFromPool = (pool, count, isEroType) => {
+              const availableIndices = Array.from({ length: pool.length }, (_, i) => i);
+              let generatedCount = 0;
+
+              while (generatedCount < count && availableIndices.length > 0) {
+                const randIndexPos = Math.floor(Math.random() * availableIndices.length);
+                const index = availableIndices.splice(randIndexPos, 1)[0];
+                let fortuneData = pool[index];
+                let isTrueFortune = false;
+
+                // 仅在非Ero类型的池子中，且开启作弊时，尝试抽取真·气运
+                if (!isEroType && isCheatEnabled) {
+                  if (Math.random() < 0.05 && index < trueFortunePresets.length) {
+                    fortuneData = trueFortunePresets[index];
+                    isTrueFortune = true;
+                  } else {
+                    // 确保取限制版
+                    if (index < restrictedFortunePresets.length) {
+                      fortuneData = restrictedFortunePresets[index];
+                    }
+                  }
+                } else if (!isEroType && currentMode === 'hard') {
+                  // 困难模式强制限制版
+                  if (index < restrictedFortunePresets.length) {
+                    fortuneData = restrictedFortunePresets[index];
+                  }
+                }
+
+                if (!selectedNames.has(fortuneData.name)) {
+                  selectedNames.add(fortuneData.name);
+                  generatedButtons.push({
+                    data: fortuneData,
+                    isTrue: isTrueFortune,
+                    isEro: isEroType,
+                    type: isEroType ? 'ero' : 'normal', // 标记类型
+                  });
+                  generatedCount++;
+                }
+              }
+            };
+
+            if (isEroMode) {
+              // 合欢模式：抽取 3 个正常 + 3 个色色
+              generateButtonsFromPool(restrictedFortunePresets, 5, false);
+              generateButtonsFromPool(allEroPresets, 5, true);
+            } else {
+              // 正常模式：抽取 5 个正常 (困难模式 3 个)
+              const drawCount = currentMode === 'hard' ? 5 : 10;
+              generateButtonsFromPool(restrictedFortunePresets, drawCount, false);
+            }
+
+            generatedButtons.forEach(item => {
+              const btn = document.createElement('button');
+              // 添加样式类
+              let className = 'preset-btn';
+              if (item.isTrue) className += ' true-fortune';
+              if (item.isEro) className += ' ero-fortune';
+
+              btn.className = className;
+              btn.textContent = item.data.name;
+              btn.dataset.name = item.data.name;
+              btn.dataset.desc = item.data.desc;
+              btn.dataset.type = item.type; // 存储类型
+              btn.title = item.data.desc;
+              fortuneSelectionContainer.appendChild(btn);
+            });
+
+            if (currentMode === 'hard' || currentMode === 'normal') {
+              fortuneRollsLeft--;
+              drawFortuneBtn.textContent = fortuneRollsLeft > 0 ? `再算一次 (${fortuneRollsLeft})` : '天机已泄';
+              drawFortuneBtn.disabled = fortuneRollsLeft <= 0;
+            } else {
+              drawFortuneBtn.textContent = '再算一次';
+              drawFortuneBtn.disabled = false;
+            }
+          }, 800);
+        });
+
+        // 选中逻辑修改
+        fortuneSelectionContainer.addEventListener('click', e => {
+          if (e.target.tagName === 'BUTTON' && e.target.classList.contains('preset-btn')) {
+            const isEroMode = eroToggle.checked;
+            const clickedType = e.target.dataset.type;
+
+            if (isEroMode) {
+              // 合欢模式：允许选中一个 normal 和一个 ero
+              // 1. 清除同类型的其他选中状态
+              const siblings = fortuneSelectionContainer.querySelectorAll(`.preset-btn[data-type="${clickedType}"]`);
+              siblings.forEach(btn => btn.classList.remove('selected'));
+              // 2. 选中当前点击的
+              e.target.classList.add('selected');
+
+              // 3. 更新显示 (合并两个选中的内容)
+              const selectedNormal = fortuneSelectionContainer.querySelector(
+                '.preset-btn.selected[data-type="normal"]',
+              );
+              const selectedEro = fortuneSelectionContainer.querySelector('.preset-btn.selected[data-type="ero"]');
+
+              let displayName = '';
+              let displayDesc = '';
+
+              if (selectedNormal) {
+                displayName += `【${selectedNormal.dataset.name}】`;
+                displayDesc += `${selectedNormal.dataset.desc}`;
+              }
+              if (selectedEro) {
+                displayName += ` & 【${selectedEro.dataset.name}】`;
+                if (displayDesc) displayDesc += '\n\n[合欢]: ';
+                displayDesc += `${selectedEro.dataset.desc}`;
+              }
+
+              fortuneNameDisplay.textContent = displayName;
+              fortuneInput.value = displayDesc;
+            } else {
+              // 正常模式：单选逻辑 (保持不变)
+              const allBtns = fortuneSelectionContainer.querySelectorAll('.preset-btn');
+              allBtns.forEach(btn => btn.classList.remove('selected'));
+              e.target.classList.add('selected');
+              const { name, desc } = e.target.dataset;
+              fortuneNameDisplay.textContent = `【${name}】`;
+              fortuneInput.value = desc;
+            }
+          }
+        });
+
+        const particleContainer = document.getElementById('background-particles');
+        const numParticles = 40;
+        for (let i = 0; i < numParticles; i++) {
+          let particle = document.createElement('div');
+          particle.className = 'particle';
+          let size = Math.random() * 4 + 1.5;
+          particle.style.width = `${size}px`;
+          particle.style.height = `${size}px`;
+          particle.style.left = `${Math.random() * 100}%`;
+          particle.style.animationDelay = `${Math.random() * 25}s`;
+          particle.style.animationDuration = `${Math.random() * 20 + 15}s`;
+          if (Math.random() > 0.8) {
+            particle.style.backgroundColor = 'var(--gold-color)';
+            particle.style.boxShadow = '0 0 8px var(--gold-color)';
+          }
+          particleContainer.appendChild(particle);
+        }
+
+        function transitionToCreation(mode) {
+          currentMode = mode;
+
+          // Reset common fields
+          customFortuneSection.style.display = 'block';
+          companionSection.style.display = 'block';
+          realmInput.style.display = 'block';
+          realmSelect.style.display = 'none';
+          realmInput.disabled = false;
+          spiritRootTextarea.style.display = 'block';
+          hardModeSpiritRootSection.style.display = 'none';
+          realmInput.value = '';
+
+          // Reset Erotic Toggle
+          eroToggle.checked = false;
+
+          // Cheat Toggle Logic
+          if (mode === 'hard') {
+            // Hard Mode: Hide Toggle
+            cheatToggleSection.style.display = 'none';
+            cheatToggle.checked = false;
+          } else {
+            // Simple/Normal: Show Toggle
+            cheatToggleSection.style.display = 'flex';
+          }
+
+          if (mode === 'simple') {
+            customFortuneSection.style.display = 'block';
+            realmInput.disabled = false;
+            spiritRootTextarea.style.display = 'block';
+            hardModeSpiritRootSection.style.display = 'none';
+          } else if (mode === 'normal') {
+            customFortuneSection.style.display = 'none';
+            spiritRootTextarea.style.display = 'none';
+            hardModeSpiritRootSection.style.display = 'block';
+            spiritRootRollsLeft = 10;
+            fortuneRollsLeft = 10;
+            rollSpiritRootBtn.textContent = `灵根觉醒 (剩余次数: ${spiritRootRollsLeft})`;
+            drawFortuneBtn.textContent = '天机演算，抽取气运';
+            drawFortuneBtn.disabled = false;
+            companionSection.style.display = 'none';
+            realmInput.style.display = 'none';
+            realmSelect.style.display = 'block';
+          } else if (mode === 'hard') {
+            customFortuneSection.style.display = 'none';
+            companionSection.style.display = 'none';
+            realmInput.value = '未修炼';
+            realmInput.disabled = true;
+            spiritRootTextarea.style.display = 'none';
+            hardModeSpiritRootSection.style.display = 'block';
+            spiritRootRollsLeft = 3;
+            fortuneRollsLeft = 5;
+            rollSpiritRootBtn.textContent = '灵根觉醒 (剩余次数: 3)';
+            drawFortuneBtn.textContent = '天机演算，抽取气运';
+            drawFortuneBtn.disabled = false;
+          }
+
+          startScreen.classList.remove('active');
+          setTimeout(() => creationScreen.classList.add('active'), 500);
+        }
+
+        startButton.addEventListener('click', () => {
+          startButton.style.display = 'none';
+          initialWarning.style.display = 'none';
+          modeSelection.classList.add('visible');
+        });
+
+        simpleModeBtn.addEventListener('click', () => transitionToCreation('simple'));
+        normalModeBtn.addEventListener('click', () => transitionToCreation('normal'));
+        hardModeBtn.addEventListener('click', () => transitionToCreation('hard'));
+
+        confirmButton.addEventListener('click', () => {
+          let finalSpiritRoot = spiritRootTextarea.value.trim();
+          let finalRealm;
+
+          if (currentMode === 'normal') {
+            finalRealm = realmSelect.value;
+          } else {
+            finalRealm = realmInput.value.trim();
+          }
+
+          if (currentMode === 'hard' || currentMode === 'normal') {
+            if (!hardModeSpiritRootValue) {
+              alert('修仙本逆天而行，汝连灵根都未觉醒，如何踏上仙途？(请抽取灵根)');
+              return;
+            }
+            finalSpiritRoot = hardModeSpiritRootValue;
+
+            if (currentMode === 'hard') {
+              finalRealm = '未修炼';
+            }
+          }
+
+          const customFortuneName = customFortuneNameInput.value.trim();
+          const customFortuneDesc = customFortuneDescTextarea.value.trim();
+
+          let finalFortuneName, finalFortuneDesc;
+
+          if (currentMode === 'simple' && (customFortuneName || customFortuneDesc)) {
+            finalFortuneName = customFortuneName;
+            finalFortuneDesc = customFortuneDesc;
+          } else {
+            finalFortuneName = fortuneNameDisplay.textContent.trim().replace(/【|】/g, '');
+            finalFortuneDesc = fortuneInput.value.trim();
+          }
+
+          let combinedFortune = finalFortuneName ? `【${finalFortuneName}】 ${finalFortuneDesc}` : finalFortuneDesc;
+          if (!combinedFortune.trim()) {
+            combinedFortune = '无';
+          }
+
+          const characterData = {
+            name: nameInput.value.trim(),
+            gender: genderInput.value.trim(),
+            race: raceInput.value.trim(),
+            appearance: appearanceInput.value.trim(),
+            realm: finalRealm,
+            identity: identityInput.value.trim(),
+            spiritRoot: finalSpiritRoot,
+            technique: techniqueTextarea.value.trim(),
+            fortune: combinedFortune,
+          };
+
+          const companionData = {
+            name: companionNameInput.value.trim(),
+            gender: companionGenderInput.value.trim(),
+            appearance: companionAppearanceInput.value.trim(),
+            clothing: companionClothingInput.value.trim(),
+            race: companionRaceInput.value.trim(),
+            class: companionClassInput.value.trim(),
+            personality: companionPersonalityInput.value.trim(),
+            age: companionAgeInput.value.trim(),
+            abilities: companionAbilitiesTextarea.value.trim(),
+            backstory: companionBackstoryTextarea.value.trim(),
+          };
+
+          if (!characterData.name) {
+            nameInput.style.borderColor = 'var(--accent-blue)';
+            nameInput.placeholder = '道号不可为空！';
+            setTimeout(() => {
+              nameInput.style.borderColor = 'var(--input-border)';
+              nameInput.placeholder = '你的名讳或道号';
+            }, 2000);
+            return;
+          }
+
+          document.body.innerHTML =
+            '<div style="display:flex; justify-content:center; align-items:center; height:100vh;"><h1 class="title" style="animation: none; opacity: 1;">...仙途已启...</h1></div>';
+
+          let sysMessage = `/sys [仙缘已定 - ${currentMode === 'hard' ? '困难模式' : currentMode === 'normal' ? '普通模式' : '简单模式'}]\n**道号**: ${characterData.name}\n**性别**: ${characterData.gender}\n**种族**: ${characterData.race}\n**容貌**: ${characterData.appearance}\n**境界**: ${characterData.realm}\n**出身**: ${characterData.identity}\n**灵根**: ${characterData.spiritRoot || '无'}\n**功法**: ${characterData.technique || '无'}\n**气运**: ${characterData.fortune}`;
+
+          if (
+            currentMode !== 'hard' &&
+            currentMode !== 'normal' &&
+            companionSection.style.display !== 'none' &&
+            companionData.name
+          ) {
+            sysMessage += `\n\n[天定道侣]\n**姓名**: ${companionData.name}\n**性别**: ${companionData.gender}\n**容貌**: ${companionData.appearance}\n**衣着**: ${companionData.clothing}\n**种族/身份**: ${companionData.race}\n**境界/修为**: ${companionData.class}\n**性情**: ${companionData.personality}\n**年龄**: ${companionData.age}\n**功法/能力**: ${companionData.abilities}\n**与汝渊源**: ${companionData.backstory}`;
+          }
+
+          sysMessage += `\n\n[仙途开启中...]`;
+
+          const startCommand = `${sysMessage} | /trigger`;
+
+          if (typeof triggerSlash === 'function' && typeof getCurrentMessageId === 'function') {
+            triggerSlash(startCommand);
+            const currentMessageId = getCurrentMessageId();
+            setTimeout(() => {
+              triggerSlash(`/cut ${currentMessageId}`);
+            }, 1500);
+          } else {
+            console.log('无法触发SillyTavern命令，这是生成的命令:', startCommand);
+            alert('仙缘已定！请在SillyTavern环境中使用以自动发送消息。');
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
+```
