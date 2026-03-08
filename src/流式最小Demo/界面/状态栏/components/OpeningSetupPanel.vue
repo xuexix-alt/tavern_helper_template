@@ -37,7 +37,12 @@
     </section>
 
     <section class="opening-form-grid">
-      <div v-for="field in preset.form_schema" :key="field.key" class="opening-form-item" :class="{ full: field.kind === 'textarea' }">
+      <div
+        v-for="field in preset.form_schema"
+        :key="field.key"
+        class="opening-form-item"
+        :class="{ full: field.kind === 'textarea' }"
+      >
         <span class="opening-label">{{ field.label }}</span>
         <textarea
           v-if="field.kind === 'textarea'"

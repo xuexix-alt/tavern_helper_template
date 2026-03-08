@@ -4,10 +4,7 @@
 
     <ContextSummaryCard :summary="readerSummary" />
 
-    <WorkbenchTabs
-      :summary="readerSummary"
-      :logs="logs"
-    />
+    <WorkbenchTabs :summary="readerSummary" :logs="logs" />
 
     <OpeningSetupPanel
       v-if="shouldShowOpeningSetup"
@@ -134,7 +131,6 @@ const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 function jumpLatest() {
   transcriptListRef.value?.scrollToLatest?.();
 }
-
 </script>
 
 <style scoped>

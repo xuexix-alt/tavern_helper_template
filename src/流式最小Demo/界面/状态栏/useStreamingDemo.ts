@@ -163,7 +163,11 @@ function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset):
     .join('\n');
 }
 
-function buildOpeningTranscriptItem(payload: OpeningPayload, preset: OpeningPreset, status: DemoStatus): TranscriptItem {
+function buildOpeningTranscriptItem(
+  payload: OpeningPayload,
+  preset: OpeningPreset,
+  status: DemoStatus,
+): TranscriptItem {
   const renderSource = composeOpeningSeedText(payload, preset);
   const regexText = applyRegexForDisplay(renderSource, 'assistant');
   const finalHtml = buildFinalHtml(renderSource, 0);
@@ -176,7 +180,10 @@ function buildOpeningTranscriptItem(payload: OpeningPayload, preset: OpeningPres
     raw: renderSource,
     renderSource,
     content: payload.opening_content || renderSource,
-    preview: stripTagsForPreview(payload.opening_content || payload.base.first_line || payload.base.world_intro).slice(0, 80),
+    preview: stripTagsForPreview(payload.opening_content || payload.base.first_line || payload.base.world_intro).slice(
+      0,
+      80,
+    ),
     regexText,
     streamHtml: buildStreamStageHtml(regexText),
     finalHtml,
@@ -213,9 +220,7 @@ export function useStreamingDemo() {
 
   const followLatest = computed(() => readingMode.value === 'following_latest');
 
-  const readingModeLabel = computed(() =>
-    readingMode.value === 'following_latest' ? '跟随最新' : '浏览历史',
-  );
+  const readingModeLabel = computed(() => (readingMode.value === 'following_latest' ? '跟随最新' : '浏览历史'));
 
   let patchQueue = Promise.resolve();
   let latestPatchedMessage = '';
@@ -337,9 +342,7 @@ export function useStreamingDemo() {
         return { messageId: null as number | null, count, index: 0, canPrev: false, canNext: false };
       }
       const rawIndex = Number(message?.swipe_id);
-      const index = Number.isFinite(rawIndex)
-        ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1)
-        : count - 1;
+      const index = Number.isFinite(rawIndex) ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1) : count - 1;
       return {
         messageId: item.message_id,
         count,
@@ -456,8 +459,7 @@ export function useStreamingDemo() {
       ...item,
       isLatest: assistantMessageId.value === item.message_id,
       isStreaming:
-        assistantMessageId.value === item.message_id &&
-        (status.value === 'streaming' || item.phase === 'stream'),
+        assistantMessageId.value === item.message_id && (status.value === 'streaming' || item.phase === 'stream'),
     }));
   }
 
@@ -822,7 +824,9 @@ export function useStreamingDemo() {
     errorText.value = '';
 
     try {
-      await setChatMessages([{ message_id: targetId, message: nextText, is_hidden: latestUser.hidden }], { refresh: 'none' });
+      await setChatMessages([{ message_id: targetId, message: nextText, is_hidden: latestUser.hidden }], {
+        refresh: 'none',
+      });
       const trailingIds = readMessagesAfterContainer()
         .map(message => message.message_id)
         .filter(id => id > targetId)
@@ -907,7 +911,11 @@ export function useStreamingDemo() {
       replaceOpeningPayloadInChat(openingPayload.value);
       rebuildTranscript();
       status.value = 'done';
-      appendLog('action', '生成开局', stripTagsForPreview(openingPayload.value.opening_content).slice(0, 80) || '(空开局)');
+      appendLog(
+        'action',
+        '生成开局',
+        stripTagsForPreview(openingPayload.value.opening_content).slice(0, 80) || '(空开局)',
+      );
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);

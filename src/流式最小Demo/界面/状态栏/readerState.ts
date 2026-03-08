@@ -76,4 +76,3 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
     // ignore
   }
 }
-

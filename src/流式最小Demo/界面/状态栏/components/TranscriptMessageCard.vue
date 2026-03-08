@@ -53,7 +53,12 @@
           @input="onEditInput"
         />
         <div class="inline-editor-actions">
-          <button type="button" class="action-btn confirm" :disabled="busy || !trimmedEditDraft" @click="$emit('confirm-edit', item)">
+          <button
+            type="button"
+            class="action-btn confirm"
+            :disabled="busy || !trimmedEditDraft"
+            @click="$emit('confirm-edit', item)"
+          >
             ✓ 确认
           </button>
           <button type="button" class="action-btn" :disabled="busy" @click="$emit('cancel-edit')">取消</button>
@@ -64,8 +69,12 @@
     </div>
 
     <footer v-if="showSwipeControls" class="swipe-actions">
-      <button type="button" class="swipe-btn" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">←</button>
-      <button type="button" class="swipe-btn" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">→</button>
+      <button type="button" class="swipe-btn" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
+        ←
+      </button>
+      <button type="button" class="swipe-btn" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
+        →
+      </button>
     </footer>
   </article>
 </template>
@@ -108,7 +117,8 @@ const showBody = computed(() => {
   if (props.isEditingUser) return true;
   if (props.showEditRegenerate) return true;
   if (props.density === 'comfortable') return true;
-  if (props.density === 'compact') return props.item.isLatest || props.item.isStreaming || props.item.role === 'assistant';
+  if (props.density === 'compact')
+    return props.item.isLatest || props.item.isStreaming || props.item.role === 'assistant';
   return props.item.isLatest || props.item.isStreaming;
 });
 

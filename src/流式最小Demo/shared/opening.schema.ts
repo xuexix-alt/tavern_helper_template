@@ -31,24 +31,26 @@ export const OpeningPresetSchema = z.object({
   }),
 });
 
-export const OpeningPayloadSchema = z.object({
-  version: z.literal(1),
-  state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
-  preset_id: z.string().default('default-apocalypse-opening'),
-  base: z.object({
-    world_intro: z.string().default(''),
-    first_line: z.string().default(''),
-  }),
-  meta: z.object({
-    time: z.string().default(''),
-    location: z.string().default(''),
-    character: z.string().default(''),
-  }),
-  user_input: z.record(z.string(), z.string()).default({}),
-  prompt_echo: z.string().default(''),
-  opening_content: z.string().default(''),
-  options: z.array(z.string()).default([]),
-}).prefault({});
+export const OpeningPayloadSchema = z
+  .object({
+    version: z.literal(1),
+    state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
+    preset_id: z.string().default('default-apocalypse-opening'),
+    base: z.object({
+      world_intro: z.string().default(''),
+      first_line: z.string().default(''),
+    }),
+    meta: z.object({
+      time: z.string().default(''),
+      location: z.string().default(''),
+      character: z.string().default(''),
+    }),
+    user_input: z.record(z.string(), z.string()).default({}),
+    prompt_echo: z.string().default(''),
+    opening_content: z.string().default(''),
+    options: z.array(z.string()).default([]),
+  })
+  .prefault({});
 
 export type OpeningFormField = z.infer<typeof OpeningFormFieldSchema>;
 export type OpeningPreset = z.infer<typeof OpeningPresetSchema>;
