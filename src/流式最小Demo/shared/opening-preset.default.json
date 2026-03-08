@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "preset_id": "default-apocalypse-opening",
+  "world_intro": "极寒末日已持续数日，秩序正在瓦解，公寓内每一户都在资源、信任与尊严之间挣扎。",
+  "first_line": "伊甸的冷静播报声响起，你必须决定第一步要如何介入这个正在滑向崩塌的世界。",
+  "meta_template": {
+    "time_label": "时间",
+    "location_label": "地点",
+    "character_label": "主角"
+  },
+  "default_meta": {
+    "time": "9527年12月14日·14:00",
+    "location": "星穹国际公寓2001室",
+    "character": "指挥官"
+  },
+  "form_schema": [
+    {
+      "key": "player_identity",
+      "label": "你的身份",
+      "kind": "text",
+      "required": true,
+      "placeholder": "例如：公寓观察者 / 指挥官 / 避难所主人"
+    },
+    {
+      "key": "start_focus_target",
+      "label": "开局关注对象",
+      "kind": "text",
+      "required": true,
+      "placeholder": "例如：凌音 / 纪宁 / 慕小小"
+    },
+    {
+      "key": "opening_goal",
+      "label": "开局意图",
+      "kind": "textarea",
+      "required": true,
+      "placeholder": "例如：先救人 / 先试探 / 先建立秩序"
+    },
+    {
+      "key": "opening_style",
+      "label": "开局风格",
+      "kind": "select",
+      "required": true,
+      "options": ["冷峻压迫", "轻小说叙事", "悬疑观察", "高信息密度"]
+    },
+    {
+      "key": "known_info",
+      "label": "你已知的信息",
+      "kind": "textarea",
+      "placeholder": "例如：知道2005室有人濒危，2002室有护士，2008室物资见底"
+    }
+  ],
+  "prompt_rules": {
+    "should_echo_setup": true,
+    "output_tags": ["opening_prompt_echo", "content", "option"]
+  }
+}

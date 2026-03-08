@@ -13,22 +13,8 @@
         @input="onInput"
       />
       <div class="composer-actions">
-        <button
-          type="button"
-          class="send-btn secondary"
-          :disabled="busy || !canRegenerate"
-          @click="$emit('regenerate')"
-        >
-          重生
-        </button>
-        <button
-          type="button"
-          class="send-btn secondary"
-          :disabled="busy || !canRegenerateEdited"
-          @click="$emit('regenerate-edited')"
-        >
-          改词重生
-        </button>
+        <button type="button" class="send-btn secondary mini" @click="$emit('jump-latest')">最新</button>
+        <button type="button" class="send-btn secondary mini" @click="$emit('refresh')">刷新</button>
         <button type="button" class="send-btn" :disabled="busy" @click="$emit('submit')">
           {{ busy ? '生成中…' : '发送' }}
         </button>
@@ -44,15 +30,13 @@ const props = defineProps<{
   modelValue: string;
   busy: boolean;
   status: DemoStatus;
-  canRegenerate: boolean;
-  canRegenerateEdited: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
   (event: 'submit'): void;
-  (event: 'regenerate'): void;
-  (event: 'regenerate-edited'): void;
+  (event: 'jump-latest'): void;
+  (event: 'refresh'): void;
 }>();
 
 const statusLabel = computed(() => {
@@ -79,8 +63,8 @@ function onInput(event: Event) {
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(20, 28, 46, 0.96);
-  border: 1px solid rgba(126, 160, 255, 0.18);
+  background: var(--demo-surface-card-sticky);
+  border: 1px solid var(--demo-border-accent);
   backdrop-filter: blur(10px);
 }
 
@@ -96,25 +80,25 @@ function onInput(event: Event) {
   border-radius: 999px;
   padding: 3px 8px;
   font-size: 11px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--demo-surface-neutral-strong);
 }
 
 .status-pill.is-streaming {
-  background: rgba(95, 208, 255, 0.16);
+  background: var(--demo-surface-accent);
 }
 
 .status-pill.is-done,
 .status-pill.is-persisting {
-  background: rgba(137, 255, 184, 0.16);
+  background: var(--demo-surface-success);
 }
 
 .status-pill.is-error {
-  background: rgba(255, 120, 120, 0.16);
+  background: var(--demo-surface-danger);
 }
 
 .composer-tip {
   font-size: 11px;
-  color: rgba(230, 236, 255, 0.64);
+  color: var(--demo-text-subtle);
 }
 
 .composer-main {
@@ -136,9 +120,9 @@ function onInput(event: Event) {
   resize: vertical;
   min-height: 88px;
   border-radius: 10px;
-  border: 1px solid rgba(126, 160, 255, 0.25);
-  background: rgba(7, 11, 20, 0.92);
-  color: #f3f7ff;
+  border: 1px solid var(--demo-border-accent-strong);
+  background: var(--demo-surface-panel-strong);
+  color: var(--demo-text-primary);
   padding: 10px;
 }
 
@@ -146,15 +130,28 @@ function onInput(event: Event) {
   flex: 0 0 88px;
   border: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, #78a0ff, #5fd0ff);
-  color: #07111f;
+  background: var(--demo-gradient-primary);
+  color: var(--demo-text-inverse);
   font-weight: 700;
 }
 
 .send-btn.secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f3f7ff;
-  border: 1px solid rgba(126, 160, 255, 0.2);
+  background: var(--demo-surface-neutral-strong);
+  color: var(--demo-text-primary);
+  border: 1px solid var(--demo-border-accent-muted);
+}
+
+.send-btn.danger {
+  background: var(--demo-surface-danger-soft);
+  color: var(--demo-text-danger);
+  border: 1px solid var(--demo-border-danger);
+}
+
+.send-btn.mini {
+  flex-basis: auto;
+  min-width: 70px;
+  font-size: 12px;
+  padding-inline: 10px;
 }
 
 .send-btn:disabled {

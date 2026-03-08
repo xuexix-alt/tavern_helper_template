@@ -11,7 +11,7 @@ body,
 
 body {
   font-family: 'Microsoft YaHei', sans-serif;
-  color: #f3f7ff;
+  color: var(--demo-text-primary);
   background: transparent;
 }
 

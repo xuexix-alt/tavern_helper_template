@@ -45,8 +45,8 @@ const previewText = computed(() => {
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(20, 28, 46, 0.9);
-  border: 1px solid rgba(126, 160, 255, 0.18);
+  background: var(--demo-surface-card);
+  border: 1px solid var(--demo-border-accent);
 }
 
 .demo-head {
@@ -70,24 +70,24 @@ const previewText = computed(() => {
 
 .demo-status.is-idle,
 .demo-status.is-preparing {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: var(--demo-surface-neutral-strong);
+  border-color: var(--demo-border-neutral-strong);
 }
 
 .demo-status.is-streaming {
-  background: rgba(95, 208, 255, 0.16);
-  border-color: rgba(95, 208, 255, 0.35);
+  background: var(--demo-surface-accent);
+  border-color: var(--demo-border-cyan-strong);
 }
 
 .demo-status.is-persisting,
 .demo-status.is-done {
-  background: rgba(137, 255, 184, 0.16);
-  border-color: rgba(137, 255, 184, 0.35);
+  background: var(--demo-surface-success);
+  border-color: var(--demo-border-success);
 }
 
 .demo-status.is-error {
-  background: rgba(255, 120, 120, 0.16);
-  border-color: rgba(255, 120, 120, 0.35);
+  background: var(--demo-surface-danger);
+  border-color: var(--demo-border-danger-strong);
 }
 
 .demo-preview {
@@ -97,7 +97,7 @@ const previewText = computed(() => {
   max-height: 220px;
   overflow: auto;
   border-radius: 10px;
-  background: rgba(7, 11, 20, 0.92);
+  background: var(--demo-surface-panel-strong);
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 13px;
@@ -109,11 +109,11 @@ const previewText = computed(() => {
   justify-content: space-between;
   gap: 8px;
   font-size: 11px;
-  color: rgba(230, 236, 255, 0.68);
+  color: var(--demo-text-muted);
 }
 
 .demo-error {
-  color: #ff9f9f;
+  color: var(--demo-text-danger-soft);
   font-size: 12px;
 }
 </style>

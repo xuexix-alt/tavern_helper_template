@@ -39,6 +39,7 @@
         <span>消息 {{ totalCount }}</span>
         <span>助手 {{ assistantCount }}</span>
         <span>当前占位 #{{ assistantMessageId ?? '-' }}</span>
+        <span>模式 {{ readingModeLabel }}</span>
       </div>
       <button type="button" class="jump-btn" :disabled="atLatest" @click="$emit('jump-latest')">
         {{ atLatest ? '已在最新' : '回到最新' }}
@@ -57,6 +58,7 @@ defineProps<{
   assistantCount: number;
   assistantMessageId: number | null;
   atLatest: boolean;
+  readingModeLabel: string;
 }>();
 
 defineEmits<{
@@ -84,8 +86,8 @@ const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
   gap: 10px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(20, 28, 46, 0.9);
-  border: 1px solid rgba(126, 160, 255, 0.18);
+  background: var(--demo-surface-card);
+  border: 1px solid var(--demo-border-accent);
 }
 
 .toolbar-row {
@@ -105,7 +107,7 @@ const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
 
 .toolbar-label {
   font-size: 12px;
-  color: rgba(230, 236, 255, 0.72);
+  color: var(--demo-text-tertiary);
 }
 
 .toolbar-segmented {
@@ -118,15 +120,15 @@ const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
 .jump-btn {
   min-height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(126, 160, 255, 0.2);
-  background: rgba(7, 11, 20, 0.9);
-  color: #f3f7ff;
+  border: 1px solid var(--demo-border-accent-muted);
+  background: var(--demo-surface-panel);
+  color: var(--demo-text-primary);
   padding: 6px 12px;
 }
 
 .toolbar-chip.active {
-  background: linear-gradient(135deg, rgba(120, 160, 255, 0.34), rgba(95, 208, 255, 0.28));
-  border-color: rgba(120, 160, 255, 0.45);
+  background: var(--demo-gradient-chip-active);
+  border-color: var(--demo-border-accent-active);
 }
 
 .meta-row {
@@ -138,7 +140,7 @@ const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
   flex-wrap: wrap;
   gap: 8px;
   font-size: 11px;
-  color: rgba(230, 236, 255, 0.64);
+  color: var(--demo-text-subtle);
 }
 
 .jump-btn:disabled {

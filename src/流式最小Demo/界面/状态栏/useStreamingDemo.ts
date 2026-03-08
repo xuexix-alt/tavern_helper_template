@@ -7,7 +7,34 @@ import {
   stripStreamDemoRuntimeTags,
   stripTagsForPreview,
 } from '../../shared/message';
-import type { DemoStatus, TranscriptDensity, TranscriptFilterMode, TranscriptItem } from './types';
+import {
+  buildOpeningPrompt,
+  extractOpeningContent,
+  extractOpeningOptions,
+  extractOpeningPromptEcho,
+  getDefaultOpeningPayload,
+  getDefaultOpeningPreset,
+  readOpeningPayloadFromChat,
+  replaceOpeningPayloadInChat,
+} from '../../shared/opening';
+import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
+import {
+  normalizeDensity,
+  normalizeMessageId,
+  normalizeReadingMode,
+  patchReaderChatState,
+  readReaderChatState,
+  READER_CHAT_STATE_VERSION,
+} from './readerState';
+import type {
+  DemoStatus,
+  ReaderLogItem,
+  ReaderSummary,
+  ReadingMode,
+  TranscriptDensity,
+  TranscriptFilterMode,
+  TranscriptItem,
+} from './types';
 
 type StopHandle = { stop?: () => void } | null;
 
@@ -116,6 +143,53 @@ function buildTranscriptItem(input: {
   };
 }
 
+function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
+  return items.slice().sort((a, b) => a.message_id - b.message_id);
+}
+
+function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset): string {
+  return [
+    payload.base.world_intro,
+    '',
+    payload.base.first_line,
+    '',
+    `${preset.meta_template.character_label}：${payload.meta.character || '未设定'}`,
+    `${preset.meta_template.time_label}：${payload.meta.time || '未设定'}`,
+    `${preset.meta_template.location_label}：${payload.meta.location || '未设定'}`,
+    '',
+    payload.opening_content || '开局尚未生成，请先完成开局配置。',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function buildOpeningTranscriptItem(payload: OpeningPayload, preset: OpeningPreset, status: DemoStatus): TranscriptItem {
+  const renderSource = composeOpeningSeedText(payload, preset);
+  const regexText = applyRegexForDisplay(renderSource, 'assistant');
+  const finalHtml = buildFinalHtml(renderSource, 0);
+
+  return {
+    message_id: 0,
+    role: 'assistant',
+    roleLabel: '开局',
+    isOpening: true,
+    raw: renderSource,
+    renderSource,
+    content: payload.opening_content || renderSource,
+    preview: stripTagsForPreview(payload.opening_content || payload.base.first_line || payload.base.world_intro).slice(0, 80),
+    regexText,
+    streamHtml: buildStreamStageHtml(regexText),
+    finalHtml,
+    options: payload.options,
+    hidden: false,
+    phase: payload.state === 'generating' || status === 'streaming' ? 'stream' : 'done',
+    isLatest: false,
+    isStreaming: payload.state === 'generating' || status === 'streaming',
+    canOpenDetail: true,
+    canDeleteFrom: false,
+  };
+}
+
 export function useStreamingDemo() {
   const input = ref('');
   const busy = ref(false);
@@ -127,8 +201,21 @@ export function useStreamingDemo() {
   const transcript = ref<TranscriptItem[]>([]);
   const filterMode = ref<TranscriptFilterMode>('assistant');
   const density = ref<TranscriptDensity>('comfortable');
-  const followLatest = ref(true);
+  const readingMode = ref<ReadingMode>('following_latest');
   const selectedItem = ref<TranscriptItem | null>(null);
+  const openingExpanded = ref(true);
+  const logs = ref<ReaderLogItem[]>([]);
+  const editingUserMessageId = ref<number | null>(null);
+  const editingUserDraft = ref('');
+  const rollbackConfirmMessageId = ref<number | null>(null);
+  const openingPreset = ref<OpeningPreset>(getDefaultOpeningPreset());
+  const openingPayload = ref<OpeningPayload>(getDefaultOpeningPayload(openingPreset.value));
+
+  const followLatest = computed(() => readingMode.value === 'following_latest');
+
+  const readingModeLabel = computed(() =>
+    readingMode.value === 'following_latest' ? '跟随最新' : '浏览历史',
+  );
 
   let patchQueue = Promise.resolve();
   let latestPatchedMessage = '';
@@ -137,16 +224,22 @@ export function useStreamingDemo() {
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
   let hidePolicyRerun = false;
+  let externalSyncTimer = 0;
+  let readerStatePersistTimer = 0;
 
   const visibleTranscript = computed(() => {
     if (filterMode.value === 'all') return transcript.value;
-    return transcript.value.filter(item => item.role === 'assistant' || item.isOpening);
+    return transcript.value.filter(
+      item => item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id,
+    );
   });
 
   const transcriptStats = computed(() => ({
     total: transcript.value.length,
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
+
+  const shouldShowOpeningSetup = computed(() => openingPayload.value.state !== 'ready');
 
   const latestUserItem = computed(() => {
     for (let i = transcript.value.length - 1; i >= 0; i -= 1) {
@@ -158,17 +251,240 @@ export function useStreamingDemo() {
 
   const inputHasText = computed(() => String(input.value ?? '').trim().length > 0);
 
+  function queuePersistReaderChatState() {
+    if (readerStatePersistTimer) window.clearTimeout(readerStatePersistTimer);
+    readerStatePersistTimer = window.setTimeout(() => {
+      readerStatePersistTimer = 0;
+      patchReaderChatState({
+        initialized: true,
+        opening_message_id: transcript.value.find(item => item.isOpening)?.message_id ?? null,
+        latest_user_message_id: latestUserItem.value?.message_id ?? null,
+        latest_assistant_message_id: latestAssistantItem.value?.message_id ?? null,
+        reading_mode: readingMode.value,
+        density: density.value,
+        opening_expanded: openingExpanded.value,
+      });
+    }, 80);
+  }
+
+  function restoreReaderChatState() {
+    const containerId = readCurrentContainerMessageId();
+    if (containerId !== 0) {
+      return;
+    }
+
+    const state = readReaderChatState();
+    const restoredMode = normalizeReadingMode(state.reading_mode);
+    const restoredDensity = normalizeDensity(state.density);
+    const restoredAssistant = normalizeMessageId(state.latest_assistant_message_id);
+    if (restoredMode) readingMode.value = restoredMode;
+    if (restoredDensity) density.value = restoredDensity;
+    if (typeof state.opening_expanded === 'boolean') openingExpanded.value = state.opening_expanded;
+    if (restoredAssistant != null) assistantMessageId.value = restoredAssistant;
+    if (state.version !== READER_CHAT_STATE_VERSION) {
+      queuePersistReaderChatState();
+    }
+
+    const restoredOpeningPayload = readOpeningPayloadFromChat();
+    if (restoredOpeningPayload) {
+      openingPayload.value = restoredOpeningPayload;
+    } else {
+      replaceOpeningPayloadInChat(openingPayload.value);
+    }
+  }
+
+  function appendLog(type: ReaderLogItem['type'], title: string, detail: string) {
+    logs.value = [
+      {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type,
+        title,
+        detail,
+        createdAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+      },
+      ...logs.value,
+    ].slice(0, 30);
+  }
+
+  const statusLabel = computed(() => {
+    if (status.value === 'preparing') return '准备中';
+    if (status.value === 'streaming') return '流式中';
+    if (status.value === 'persisting') return '写回中';
+    if (status.value === 'done') return '已完成';
+    if (status.value === 'error') return '错误';
+    return '空闲';
+  });
+
+  const latestAssistantItem = computed(() => {
+    for (let i = transcript.value.length - 1; i >= 0; i -= 1) {
+      const item = transcript.value[i];
+      if (item.role === 'assistant') return item;
+    }
+    return null;
+  });
+
+  const latestAssistantSwipeState = computed(() => {
+    const item = latestAssistantItem.value;
+    if (!item || item.isOpening) {
+      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
+    }
+
+    try {
+      const message = getChatMessages(item.message_id, { include_swipes: true, hide_state: 'all' })[0] as any;
+      const swipes = Array.isArray(message?.swipes) ? message.swipes : [];
+      const count = swipes.length;
+      if (count <= 1) {
+        return { messageId: null as number | null, count, index: 0, canPrev: false, canNext: false };
+      }
+      const rawIndex = Number(message?.swipe_id);
+      const index = Number.isFinite(rawIndex)
+        ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1)
+        : count - 1;
+      return {
+        messageId: item.message_id,
+        count,
+        index,
+        canPrev: index > 0,
+        canNext: index < count - 1,
+      };
+    } catch {
+      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
+    }
+  });
+
+  const latestAssistantSwipeMessageId = computed(() => latestAssistantSwipeState.value.messageId);
+  const canSwipeLatestAssistantPrev = computed(() => latestAssistantSwipeState.value.canPrev);
+  const canSwipeLatestAssistantNext = computed(() => latestAssistantSwipeState.value.canNext);
+
+  const readerSummary = computed<ReaderSummary>(() => {
+    const turnCount = transcript.value.filter(item => item.role === 'assistant' && !item.isOpening).length;
+    const latestUserPreview = latestUserItem.value?.preview ?? '';
+    const latestAssistantPreview = latestAssistantItem.value?.preview ?? '';
+    const assistantAnchorLabel = assistantMessageId.value != null ? `#${assistantMessageId.value}` : '-';
+    const storySummary = (() => {
+      const source = latestAssistantItem.value?.preview || transcript.value.find(item => item.isOpening)?.preview || '';
+      return source.slice(0, 120);
+    })();
+
+    return {
+      turnCount,
+      latestUserPreview,
+      latestAssistantPreview,
+      readingModeLabel: readingModeLabel.value,
+      statusLabel: statusLabel.value,
+      assistantAnchorLabel,
+      storySummary,
+    };
+  });
+
   function closeDetail() {
     selectedItem.value = null;
+  }
+
+  function updateOpeningMeta(key: 'character' | 'time' | 'location', value: string) {
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      meta: {
+        ...openingPayload.value.meta,
+        [key]: String(value ?? ''),
+      },
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function updateOpeningField(key: string, value: string) {
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      user_input: {
+        ...openingPayload.value.user_input,
+        [key]: String(value ?? ''),
+      },
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function setReadingMode(nextMode: ReadingMode) {
+    if (readingMode.value === nextMode) return;
+    readingMode.value = nextMode;
+    queuePersistReaderChatState();
+  }
+
+  function toggleOpeningExpanded() {
+    openingExpanded.value = !openingExpanded.value;
+    queuePersistReaderChatState();
   }
 
   function openDetail(item: TranscriptItem) {
     selectedItem.value = item;
   }
 
+  function setEditingUserDraft(value: string) {
+    editingUserDraft.value = String(value ?? '');
+  }
+
+  function cancelInlineEdit() {
+    editingUserMessageId.value = null;
+    editingUserDraft.value = '';
+  }
+
+  function startInlineEdit(item: TranscriptItem) {
+    if (busy.value || item.role !== 'user' || item.message_id !== latestUserItem.value?.message_id) return;
+    rollbackConfirmMessageId.value = null;
+    editingUserMessageId.value = item.message_id;
+    editingUserDraft.value = item.raw;
+  }
+
+  function cancelRollbackDelete() {
+    rollbackConfirmMessageId.value = null;
+  }
+
+  function requestRollbackDelete(item: TranscriptItem) {
+    if (busy.value || item.isOpening || item.canDeleteFrom !== true) return;
+    cancelInlineEdit();
+    rollbackConfirmMessageId.value = item.message_id;
+  }
+
   function clearGenerationListeners() {
     generationStops.forEach(stop => stop?.stop?.());
     generationStops = [];
+  }
+
+  function syncTranscriptFlags(items: TranscriptItem[]): TranscriptItem[] {
+    return items.map(item => ({
+      ...item,
+      isLatest: assistantMessageId.value === item.message_id,
+      isStreaming:
+        assistantMessageId.value === item.message_id &&
+        (status.value === 'streaming' || item.phase === 'stream'),
+    }));
+  }
+
+  function createLocalTranscriptItem(input: {
+    id: number;
+    role: TranscriptItem['role'];
+    raw: string;
+    hidden: boolean;
+    isOpening?: boolean;
+  }): TranscriptItem {
+    return buildTranscriptItem({
+      id: input.id,
+      role: input.role,
+      raw: input.raw,
+      hidden: input.hidden,
+      isOpening: input.isOpening,
+      latestAssistantId: assistantMessageId.value,
+      status: status.value,
+    });
+  }
+
+  function upsertTranscriptItem(nextItem: TranscriptItem) {
+    const current = transcript.value.filter(item => item.message_id !== nextItem.message_id);
+    transcript.value = syncTranscriptFlags(sortTranscriptItems([...current, nextItem]));
+    if (selectedItem.value?.message_id === nextItem.message_id) {
+      selectedItem.value = transcript.value.find(item => item.message_id === nextItem.message_id) ?? null;
+    }
   }
 
   function readMessagesAfterContainer(): BaseChatMessage[] {
@@ -188,6 +504,46 @@ export function useStreamingDemo() {
     }
   }
 
+  function collectHostDocuments(): Document[] {
+    const docs: Document[] = [];
+    const push = (doc: Document | null | undefined) => {
+      if (!doc || docs.includes(doc)) return;
+      docs.push(doc);
+    };
+
+    push(document);
+    try {
+      push(window.parent?.document);
+    } catch {
+      // ignore
+    }
+    try {
+      push(window.top?.document);
+    } catch {
+      // ignore
+    }
+    return docs;
+  }
+
+  function clickHostSwipeControl(messageId: number, direction: 'prev' | 'next'): boolean {
+    const selector = direction === 'prev' ? '.swipe_left' : '.swipe_right';
+    for (const doc of collectHostDocuments()) {
+      const $roots = $(
+        `#chat > .mes[mesid='${messageId}'], #chat .mes[mesid='${messageId}'], .mes[mesid='${messageId}']`,
+        doc,
+      ) as JQuery<HTMLElement>;
+      for (const root of $roots.toArray()) {
+        const $controls = $(root).find(selector) as JQuery<HTMLElement>;
+        for (const control of $controls.toArray()) {
+          if ((control as HTMLButtonElement).disabled) continue;
+          $(control).trigger('click');
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   async function applyHidePolicy(reason: string) {
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
@@ -201,7 +557,7 @@ export function useStreamingDemo() {
           .filter(item => item.is_hidden !== true)
           .map(item => ({ message_id: item.message_id, is_hidden: true }));
         if (patch.length === 0) continue;
-        await setChatMessages(patch, { refresh: 'affected' });
+        await setChatMessages(patch, { refresh: 'none' });
       } while (hidePolicyRerun);
     } catch (error) {
       console.warn('[stream-demo] hide policy failed', {
@@ -221,27 +577,58 @@ export function useStreamingDemo() {
     }, 80);
   }
 
+  function queueExternalSync(reason: string) {
+    if (externalSyncTimer) window.clearTimeout(externalSyncTimer);
+    externalSyncTimer = window.setTimeout(() => {
+      externalSyncTimer = 0;
+      rebuildTranscript();
+      queueHidePolicy(`external:${reason}`);
+    }, 80);
+  }
+
+  function handleHostRefreshEvent(name: string) {
+    if (
+      busy.value &&
+      (name === tavern_events.GENERATION_STARTED ||
+        name === tavern_events.STREAM_TOKEN_RECEIVED ||
+        name === tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED)
+    ) {
+      readingMode.value = 'following_latest';
+      status.value = 'streaming';
+      queuePersistReaderChatState();
+    }
+
+    queueExternalSync(String(name));
+  }
+
   function rebuildTranscript() {
     const containerId = readCurrentContainerMessageId();
     try {
       const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
       const all = Array.isArray(list) ? list : [];
       const normalized: TranscriptItem[] = [];
+      let nextLatestAssistantId: number | null = null;
 
-      if (containerId != null) {
-        const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
-        if (opening) {
-          normalized.push(
-            buildTranscriptItem({
-              id: containerId,
-              role: ((opening?.role as string) || 'assistant') as TranscriptItem['role'],
-              raw: String(opening?.message ?? ''),
-              hidden: opening?.is_hidden === true,
-              isOpening: true,
-              latestAssistantId: assistantMessageId.value,
-              status: status.value,
-            }),
-          );
+      if (containerId === 0) {
+        if (openingPayload.value.state !== 'placeholder') {
+          normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
+        } else {
+          const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
+          if (opening) {
+            const openingRole = ((opening?.role as string) || 'assistant') as TranscriptItem['role'];
+            if (openingRole === 'assistant') nextLatestAssistantId = containerId;
+            normalized.push(
+              buildTranscriptItem({
+                id: containerId,
+                role: openingRole,
+                raw: String(opening?.message ?? ''),
+                hidden: opening?.is_hidden === true,
+                isOpening: true,
+                latestAssistantId: null,
+                status: status.value,
+              }),
+            );
+          }
         }
       }
 
@@ -250,27 +637,31 @@ export function useStreamingDemo() {
         if (!Number.isFinite(message_id)) continue;
         const id = Math.trunc(message_id);
         if (containerId != null && id <= containerId) continue;
+        const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
+        if (role === 'assistant') nextLatestAssistantId = id;
 
         normalized.push(
           buildTranscriptItem({
             id,
-            role: ((message?.role as string) || 'assistant') as TranscriptItem['role'],
+            role,
             raw: String(message?.message ?? ''),
             hidden: message?.is_hidden === true,
-            latestAssistantId: assistantMessageId.value,
+            latestAssistantId: null,
             status: status.value,
           }),
         );
       }
 
-      transcript.value = normalized;
+      assistantMessageId.value = nextLatestAssistantId;
+      transcript.value = syncTranscriptFlags(normalized);
       if (selectedItem.value) {
-        selectedItem.value = normalized.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
+        selectedItem.value = transcript.value.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
       }
     } catch {
       transcript.value = [];
     }
     queueHidePolicy('rebuild');
+    queuePersistReaderChatState();
   }
 
   async function patchAssistantMessage(phase: 'stream' | 'done') {
@@ -286,7 +677,14 @@ export function useStreamingDemo() {
 
     patchQueue = patchQueue.then(async () => {
       await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: true }], { refresh: 'none' });
-      rebuildTranscript();
+      upsertTranscriptItem(
+        createLocalTranscriptItem({
+          id: messageId,
+          role: 'assistant',
+          raw: nextMessage,
+          hidden: true,
+        }),
+      );
     });
     await patchQueue;
   }
@@ -305,7 +703,10 @@ export function useStreamingDemo() {
       assistantMessageId.value = null;
     }
     latestPatchedMessage = '';
+    cancelInlineEdit();
+    cancelRollbackDelete();
     rebuildTranscript();
+    appendLog('action', '回退删除', `已删除楼层 #${ids[0]} 到 #${ids[ids.length - 1]}`);
   }
 
   async function runGenerationFlow(options: { prompt: string; createUser: boolean }) {
@@ -323,21 +724,33 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
-        await createChatMessages([{ role: 'user', message: prompt, is_hidden: true }], { refresh: 'affected' });
-        rebuildTranscript();
+        await createChatMessages([{ role: 'user', message: prompt, is_hidden: true }], { refresh: 'none' });
+        const userId = Number(getLastMessageId?.());
+        if (Number.isFinite(userId)) {
+          upsertTranscriptItem(
+            createLocalTranscriptItem({
+              id: Math.trunc(userId),
+              role: 'user',
+              raw: prompt,
+              hidden: true,
+            }),
+          );
+        }
+        appendLog('action', '发送用户输入', stripTagsForPreview(prompt).slice(0, 80) || '(空输入)');
       }
 
       const generatePromise = generate({ should_stream: true });
       await createAssistantPlaceholder();
-      followLatest.value = true;
+      readingMode.value = 'following_latest';
 
       const result = String(await generatePromise).trim();
       finalText.value = result;
       status.value = 'persisting';
       await patchAssistantMessage('done');
       status.value = 'done';
-      rebuildTranscript();
+      transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
+      appendLog('action', '生成完成', stripTagsForPreview(result).slice(0, 80) || '(空回复)');
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
@@ -349,59 +762,183 @@ export function useStreamingDemo() {
           // ignore
         }
       }
-      rebuildTranscript();
+      transcript.value = syncTranscriptFlags(transcript.value);
       toastr?.error?.(`流式 demo 失败：${errorText.value}`);
+      appendLog('error', '生成失败', errorText.value || '未知错误');
     } finally {
       clearGenerationListeners();
       busy.value = false;
     }
   }
 
-  async function regenerateLatest() {
-    const latestUser = latestUserItem.value;
-    if (!latestUser || latestUser.role !== 'user') {
-      toastr?.warning?.('未找到可用于重生的最近用户输入');
+  async function triggerNativeRegenerate(anchorMessageId: number) {
+    if (busy.value) return;
+    if (typeof triggerSlash !== 'function') {
+      toastr?.error?.('当前环境不可用 triggerSlash，无法走酒馆原生重生链');
       return;
     }
-    const ids = readMessagesAfterContainer()
-      .map(item => item.message_id)
-      .filter(id => id > latestUser.message_id)
-      .sort((a, b) => a - b);
-    if (ids.length > 0) {
-      await deleteChatMessages(ids, { refresh: 'all' });
+
+    busy.value = true;
+    status.value = 'preparing';
+    errorText.value = '';
+    streamText.value = '';
+    finalText.value = '';
+    readingMode.value = 'following_latest';
+    queuePersistReaderChatState();
+
+    try {
+      await triggerSlash('/trigger await=true');
+      status.value = 'done';
+      rebuildTranscript();
+      queueHidePolicy('native_regenerate');
+      appendLog('action', '重新生成', `已按楼层 #${anchorMessageId} 走酒馆原生链重生`);
+    } catch (error) {
+      status.value = 'error';
+      errorText.value = error instanceof Error ? error.message : String(error);
+      toastr?.error?.(`重生失败：${errorText.value}`);
+      appendLog('error', '重新生成失败', errorText.value || '未知错误');
+    } finally {
+      busy.value = false;
     }
-    await runGenerationFlow({ prompt: latestUser.raw, createUser: false });
   }
 
-  async function regenerateWithEditedInput() {
-    const edited = String(input.value ?? '').trim();
-    if (!edited) {
+  async function confirmInlineEditRegenerate(item: TranscriptItem) {
+    const latestUser = latestUserItem.value;
+    const targetId = Math.trunc(Number(item.message_id));
+    const nextText = String(editingUserDraft.value ?? '').trim();
+    if (!latestUser || latestUser.role !== 'user' || latestUser.message_id !== targetId) {
+      toastr?.warning?.('只能修改最后一条 user 输入');
+      cancelInlineEdit();
+      return;
+    }
+    if (!nextText) {
       toastr?.warning?.('请输入修改后的提示词');
       return;
     }
-    const latestUser = latestUserItem.value;
-    if (latestUser?.role === 'user') {
-      await deleteFromMessageId(latestUser.message_id);
+    if (busy.value) return;
+
+    busy.value = true;
+    status.value = 'preparing';
+    errorText.value = '';
+
+    try {
+      await setChatMessages([{ message_id: targetId, message: nextText, is_hidden: latestUser.hidden }], { refresh: 'none' });
+      const trailingIds = readMessagesAfterContainer()
+        .map(message => message.message_id)
+        .filter(id => id > targetId)
+        .sort((a, b) => a - b);
+      if (trailingIds.length > 0) {
+        await deleteChatMessages(trailingIds, { refresh: 'none' });
+      }
+      appendLog('action', '改词重生', stripTagsForPreview(nextText).slice(0, 80) || '(空输入)');
+      cancelInlineEdit();
+      rebuildTranscript();
+    } catch (error) {
+      status.value = 'error';
+      errorText.value = error instanceof Error ? error.message : String(error);
+      busy.value = false;
+      toastr?.error?.(`改词失败：${errorText.value}`);
+      appendLog('error', '改词失败', errorText.value || '未知错误');
+      return;
     }
-    await runGenerationFlow({ prompt: edited, createUser: true });
-    input.value = '';
+
+    busy.value = false;
+    await triggerNativeRegenerate(targetId);
+  }
+
+  async function confirmRollbackDelete(item: TranscriptItem) {
+    if (rollbackConfirmMessageId.value !== item.message_id) {
+      rollbackConfirmMessageId.value = item.message_id;
+      return;
+    }
+    await deleteFromMessageId(item.message_id);
+  }
+
+  async function swipeLatestAssistant(direction: 'prev' | 'next') {
+    const messageId = latestAssistantSwipeMessageId.value;
+    if (messageId == null) {
+      toastr?.info?.('当前最新 assistant 没有可切换的 swipe');
+      return;
+    }
+    if (direction === 'prev' && !canSwipeLatestAssistantPrev.value) return;
+    if (direction === 'next' && !canSwipeLatestAssistantNext.value) return;
+    if (!clickHostSwipeControl(messageId, direction)) {
+      toastr?.warning?.('未定位到宿主原生 swipe 按钮');
+      return;
+    }
+    appendLog('action', '切换 Swipe', `${direction === 'prev' ? '切到上一页' : '切到下一页'}（楼层 #${messageId}）`);
+    queueExternalSync(`swipe:${direction}`);
+  }
+
+  async function generateOpening() {
+    if (busy.value) return;
+
+    const missing = openingPreset.value.form_schema.find(
+      field => field.required && !String(openingPayload.value.user_input[field.key] ?? '').trim(),
+    );
+    if (missing) {
+      toastr?.warning?.(`请先填写：${missing.label}`);
+      return;
+    }
+
+    busy.value = true;
+    status.value = 'preparing';
+    errorText.value = '';
+
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'generating',
+      prompt_echo: '',
+      opening_content: '',
+      options: [],
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+    rebuildTranscript();
+
+    try {
+      const result = await generate({ user_input: buildOpeningPrompt(openingPreset.value, openingPayload.value) });
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'ready',
+        prompt_echo: extractOpeningPromptEcho(result),
+        opening_content: extractOpeningContent(result),
+        options: extractOpeningOptions(result),
+      };
+      replaceOpeningPayloadInChat(openingPayload.value);
+      rebuildTranscript();
+      status.value = 'done';
+      appendLog('action', '生成开局', stripTagsForPreview(openingPayload.value.opening_content).slice(0, 80) || '(空开局)');
+    } catch (error) {
+      status.value = 'error';
+      errorText.value = error instanceof Error ? error.message : String(error);
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'configuring',
+      };
+      replaceOpeningPayloadInChat(openingPayload.value);
+      toastr?.error?.(`开局生成失败：${errorText.value}`);
+    } finally {
+      busy.value = false;
+    }
   }
 
   function bindHistoryRefreshEvents() {
     if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') return;
     const names = [
       tavern_events.CHAT_CHANGED,
-      tavern_events.MESSAGE_UPDATED,
+      tavern_events.GENERATION_STARTED,
+      tavern_events.GENERATION_ENDED,
+      tavern_events.MESSAGE_EDITED,
       tavern_events.MESSAGE_RECEIVED,
+      tavern_events.MESSAGE_UPDATED,
       tavern_events.MESSAGE_SWIPED,
       tavern_events.MESSAGE_DELETED,
+      tavern_events.STREAM_TOKEN_RECEIVED,
+      tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED,
     ];
     historyStops = names.map(name => {
       try {
-        return eventOn(name as any, () => {
-          rebuildTranscript();
-          queueHidePolicy(`event:${String(name)}`);
-        });
+        return eventOn(name as any, () => handleHostRefreshEvent(String(name)));
       } catch {
         return null;
       }
@@ -416,7 +953,7 @@ export function useStreamingDemo() {
       generationStops.push(
         eventOn(iframe_events.GENERATION_STARTED as any, () => {
           status.value = 'streaming';
-          rebuildTranscript();
+          transcript.value = syncTranscriptFlags(transcript.value);
         }),
       );
     } catch {
@@ -453,21 +990,54 @@ export function useStreamingDemo() {
     const id = Number(getLastMessageId?.());
     assistantMessageId.value = Number.isFinite(id) ? Math.trunc(id) : null;
     latestPatchedMessage = '';
-    rebuildTranscript();
+    if (assistantMessageId.value != null) {
+      upsertTranscriptItem(
+        createLocalTranscriptItem({
+          id: assistantMessageId.value,
+          role: 'assistant',
+          raw: buildStreamDemoMessage('', 'stream'),
+          hidden: true,
+        }),
+      );
+    }
     await patchAssistantMessage('stream');
   }
 
   async function runDemo() {
+    if (openingPayload.value.state !== 'ready') {
+      toastr?.info?.('请先完成开局配置并生成 opening');
+      return;
+    }
     const prompt = String(input.value ?? '').trim();
     await runGenerationFlow({ prompt, createUser: true });
     input.value = '';
   }
 
   onMounted(() => {
+    restoreReaderChatState();
     rebuildTranscript();
     bindHistoryRefreshEvents();
     queueHidePolicy('mounted');
   });
+
+  watch(
+    () => latestUserItem.value?.message_id ?? null,
+    latestId => {
+      if (editingUserMessageId.value != null && editingUserMessageId.value !== latestId) {
+        cancelInlineEdit();
+      }
+    },
+  );
+
+  watch(
+    () => transcript.value.map(item => item.message_id).join(','),
+    ids => {
+      if (rollbackConfirmMessageId.value == null) return;
+      if (!ids.split(',').includes(String(rollbackConfirmMessageId.value))) {
+        cancelRollbackDelete();
+      }
+    },
+  );
 
   onBeforeUnmount(() => {
     clearGenerationListeners();
@@ -476,6 +1046,14 @@ export function useStreamingDemo() {
     if (hidePolicyTimer) {
       window.clearTimeout(hidePolicyTimer);
       hidePolicyTimer = 0;
+    }
+    if (externalSyncTimer) {
+      window.clearTimeout(externalSyncTimer);
+      externalSyncTimer = 0;
+    }
+    if (readerStatePersistTimer) {
+      window.clearTimeout(readerStatePersistTimer);
+      readerStatePersistTimer = 0;
     }
   });
 
@@ -489,17 +1067,43 @@ export function useStreamingDemo() {
     assistantMessageId,
     filterMode,
     density,
+    readingMode,
+    readingModeLabel,
     followLatest,
+    openingExpanded,
     selectedItem,
     transcript,
     visibleTranscript,
     transcriptStats,
     latestUserItem,
+    latestAssistantItem,
     inputHasText,
+    editingUserMessageId,
+    editingUserDraft,
+    rollbackConfirmMessageId,
+    latestAssistantSwipeMessageId,
+    canSwipeLatestAssistantPrev,
+    canSwipeLatestAssistantNext,
+    openingPreset,
+    openingPayload,
+    shouldShowOpeningSetup,
+    readerSummary,
+    logs,
     runDemo,
-    regenerateLatest,
-    regenerateWithEditedInput,
+    updateOpeningMeta,
+    updateOpeningField,
+    generateOpening,
     deleteFromMessageId,
+    startInlineEdit,
+    setEditingUserDraft,
+    cancelInlineEdit,
+    confirmInlineEditRegenerate,
+    requestRollbackDelete,
+    cancelRollbackDelete,
+    confirmRollbackDelete,
+    swipeLatestAssistant,
+    setReadingMode,
+    toggleOpeningExpanded,
     rebuildTranscript,
     openDetail,
     closeDetail,

@@ -42,8 +42,8 @@ function onInput(event: Event) {
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(20, 28, 46, 0.9);
-  border: 1px solid rgba(126, 160, 255, 0.18);
+  background: var(--demo-surface-card);
+  border: 1px solid var(--demo-border-accent);
 }
 
 .demo-card-title {
@@ -57,9 +57,9 @@ function onInput(event: Event) {
   resize: vertical;
   min-height: 96px;
   border-radius: 10px;
-  border: 1px solid rgba(126, 160, 255, 0.25);
-  background: rgba(7, 11, 20, 0.92);
-  color: #f3f7ff;
+  border: 1px solid var(--demo-border-accent-strong);
+  background: var(--demo-surface-panel-strong);
+  color: var(--demo-text-primary);
   padding: 10px;
 }
 
@@ -71,16 +71,16 @@ function onInput(event: Event) {
 .demo-button {
   border: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, #78a0ff, #5fd0ff);
-  color: #07111f;
+  background: var(--demo-gradient-primary);
+  color: var(--demo-text-inverse);
   font-weight: 700;
   padding: 9px 12px;
   min-height: 40px;
 }
 
 .demo-button.ghost {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f3f7ff;
+  background: var(--demo-surface-neutral-strong);
+  color: var(--demo-text-primary);
 }
 
 .demo-button:disabled {

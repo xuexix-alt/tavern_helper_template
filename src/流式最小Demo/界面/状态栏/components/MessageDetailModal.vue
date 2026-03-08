@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div v-if="item" class="detail-mask" @click.self="$emit('close')">
-      <div class="detail-modal" role="dialog" aria-modal="true">
+      <aside class="detail-drawer" role="dialog" aria-modal="false">
         <header class="detail-head">
           <div>
             <h3>楼层 #{{ item.message_id }} 详情</h3>
@@ -10,17 +10,7 @@
               {{ item.phase }}
             </p>
           </div>
-          <div class="detail-head-actions">
-            <button
-              type="button"
-              class="detail-danger"
-              :disabled="busy || !item.canDeleteFrom"
-              @click="$emit('delete-from', item)"
-            >
-              从此回退删除
-            </button>
-            <button type="button" class="detail-close" @click="$emit('close')">关闭</button>
-          </div>
+          <button type="button" class="detail-close" @click="$emit('close')">关闭</button>
         </header>
 
         <section class="detail-section">
@@ -58,7 +48,7 @@
           <h4>最终渲染预览</h4>
           <div class="detail-html" v-html="item.finalHtml || '<p>(空)</p>'"></div>
         </section>
-      </div>
+      </aside>
     </div>
   </Teleport>
 </template>
@@ -68,12 +58,10 @@ import type { TranscriptItem } from '../types';
 
 defineProps<{
   item: TranscriptItem | null;
-  busy?: boolean;
 }>();
 
 defineEmits<{
   (event: 'close'): void;
-  (event: 'delete-from', item: TranscriptItem): void;
 }>();
 </script>
 
@@ -82,21 +70,21 @@ defineEmits<{
   position: fixed;
   inset: 0;
   z-index: 2600;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--demo-surface-overlay);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
 }
 
-.detail-modal {
-  width: min(820px, 100%);
-  max-height: min(88vh, 920px);
+.detail-drawer {
+  width: min(560px, 100%);
+  height: 100%;
   overflow: auto;
-  border-radius: 14px;
-  background: rgba(13, 17, 28, 0.98);
-  border: 1px solid rgba(126, 160, 255, 0.2);
-  padding: 12px;
+  background: var(--demo-surface-modal);
+  border-left: 1px solid var(--demo-border-accent);
+  box-shadow: var(--demo-shadow-drawer);
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -107,12 +95,11 @@ defineEmits<{
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
-}
-
-.detail-head-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 6px;
+  background: var(--demo-surface-modal);
 }
 
 .detail-head h3,
@@ -124,26 +111,17 @@ defineEmits<{
 .detail-head p {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(230, 236, 255, 0.68);
+  color: var(--demo-text-muted);
 }
 
 .detail-close {
   border-radius: 10px;
-  border: 1px solid rgba(126, 160, 255, 0.2);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f3f7ff;
+  border: 1px solid var(--demo-border-accent-muted);
+  background: var(--demo-surface-neutral-soft);
+  color: var(--demo-text-primary);
   padding: 8px 12px;
 }
 
-.detail-danger {
-  border-radius: 10px;
-  border: 1px solid rgba(255, 120, 120, 0.28);
-  background: rgba(255, 120, 120, 0.14);
-  color: #ffd8d8;
-  padding: 8px 12px;
-}
-
-.detail-danger:disabled,
 .detail-close:disabled {
   opacity: 0.55;
 }
@@ -161,7 +139,13 @@ defineEmits<{
   margin: 0;
   padding: 10px;
   border-radius: 10px;
-  background: rgba(7, 11, 20, 0.92);
+  background: var(--demo-surface-panel-strong);
+}
+
+@media (max-width: 680px) {
+  .detail-drawer {
+    width: 100%;
+  }
 }
 
 .detail-pre {
@@ -178,7 +162,7 @@ defineEmits<{
 
 .detail-empty {
   font-size: 12px;
-  color: rgba(230, 236, 255, 0.68);
+  color: var(--demo-text-muted);
 }
 
 .detail-html :deep(p) {

@@ -31,8 +31,8 @@ defineProps<{
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(20, 28, 46, 0.9);
-  border: 1px solid rgba(126, 160, 255, 0.18);
+  background: var(--demo-surface-card);
+  border: 1px solid var(--demo-border-accent);
 }
 
 .demo-card-title {
@@ -42,7 +42,7 @@ defineProps<{
 
 .demo-empty {
   font-size: 12px;
-  color: rgba(230, 236, 255, 0.72);
+  color: var(--demo-text-tertiary);
 }
 
 .demo-list {
@@ -57,7 +57,7 @@ defineProps<{
 .demo-list-item {
   padding: 8px;
   border-radius: 10px;
-  background: rgba(7, 11, 20, 0.92);
+  background: var(--demo-surface-panel-strong);
 }
 
 .demo-list-head {
@@ -65,7 +65,7 @@ defineProps<{
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  color: rgba(230, 236, 255, 0.72);
+  color: var(--demo-text-tertiary);
 }
 
 .demo-list-body {
