@@ -1078,3 +1078,246 @@ rg -n --glob '*.vue' --glob '*.css' --glob '*.scss' "#(?:[0-9a-fA-F]{3,8})\b|rgb
   - 保持“0 楼只做容器”的原则，不再回退到“正文写 0 楼”的旧做法。
 - 如果后续继续做原生提示词对齐：
   - 保持“真实聊天楼层可进入原生 history”的方向，不再依赖 `is_hidden` 做数据层隐藏。
+
+## 22. 2026-03-10 开发记录
+
+### 22.1 opening 结构升级：从普通表单到“世界观档位 + 主流派”入口
+
+本轮把 `流式最小Demo` 的 opening 入口从普通的开场参数填写页，升级成了“世界观配置 + 主流派偏置 + 用户偏好”的结构化入口。
+
+新增或调整的核心字段包括：
+
+- `world_mode_id`
+- `route_id`
+- `use_stream`
+- `world_mode_brief`
+- `streaming_raw`
+- `update_variable_block`
+
+表单语义同步调整为：
+
+- `末日前职业/身份（选填）`
+- `个人简介（选填）`
+- `前期剧情基调`
+- `开局风格`
+- `补充设定（选填）`
+
+并补了两个默认值：
+
+- 主角默认值：`{{user}}`
+- 开局风格默认值：`轻小说叙事`
+
+### 22.2 opening prompt 升级为“导演版”
+
+本轮 opening prompt 不再只是资料堆叠，而是被强制组织成“导演任务”。
+
+当前 prompt 会显式要求模型：
+
+- 使用“灾变递进蒙太奇 + 当前时刻切入”的结构
+- 至少给出 2~4 个房间 / 人物切片
+- 明确制造 `2001` 庇护所内外反差
+- 以伊甸系统播报 / 干预提问收尾
+- 同时体现：
+  - 系统压力
+  - 尚未解决的短板
+  - 立即可做的现实选择
+  - 流派专属爽点入口
+  - 与世界观档位匹配的外部矛盾源
+
+这一步的目的，是把 opening 从“解释设定”改成“真正的第一幕”。
+
+### 22.3 opening 输出格式新增 `<UpdateVariable>` 强约束
+
+本轮新增要求：opening 生成结果除了 `world_mode_brief / opening_prompt_echo / content / option` 外，还必须包含一个完整的：
+
+```text
+<UpdateVariable>
+<Analysis>
+……
+</Analysis>
+<JSONPatch>
+……
+</JSONPatch>
+</UpdateVariable>
+```
+
+对应接线如下：
+
+- prompt 中强制要求该结构
+- 流式阶段使用 loose 提取器实时提取 `UpdateVariable`
+- 最终 assistant 文本写回时，把 `<UpdateVariable>...</UpdateVariable>` 一起保留到消息里
+
+> 注意：本轮只是把该块保留下来，**没有**在 opening 生成完成后自动执行一次“重新处理变量”。这是明确保留给后续独立判断的项。
+
+### 22.4 世界观 / 主流派 / 点数构筑：静态配置源已落库
+
+本轮新增三份静态配置源，作为 opening 构筑与 prompt 生成的 source of truth：
+
+- `src/寒冬末日/世界书/寒冬末日/世界观配置集.yaml`
+- `src/寒冬末日/世界书/寒冬末日/主流派起始偏置表.yaml`
+- `src/寒冬末日/世界书/寒冬末日/开局点数构筑规则.yaml`
+
+当前用途：
+
+- `世界观配置集.yaml`：定义 `A / B / C` 世界运行档位、参数词典和文明阶段偏移矩阵
+- `主流派起始偏置表.yaml`：定义 `守 / 养 / 管` 三主流派的镜头、短板、冲突来源与禁漂移规则
+- `开局点数构筑规则.yaml`：定义开局 point 公式、候选池生成、cost 和 DIY 槽约束
+
+### 22.5 opening 的流式请求与可视化流式
+
+本轮对 opening 的“流式”做了两层处理：
+
+1. 表单增加了流式开关
+2. 勾选后，opening 会监听 `STREAM_TOKEN_RECEIVED_INCREMENTALLY`，实时更新：
+   - `world_mode_brief`
+   - `opening_prompt_echo`
+   - `opening_content`
+   - `update_variable_block`
+
+同时修正了一个关键显示逻辑：
+
+- opening 页只在 `placeholder / configuring` 时显示
+- 一旦进入 `generating / ready`，立即切换到阅读器视图
+
+这样“点击生成后阅读器出不来”的问题被收口。
+
+### 22.6 顶部辅助区折叠、正文主视觉优先
+
+为了保持阅读器主体更强，本轮把原本顶上的辅助信息区改成了默认折叠：
+
+- `ReadingHeader`
+- `ContextSummaryCard`
+- `WorkbenchTabs`
+
+统一包进一个折叠卡片，默认把正文 transcript 放在更突出的位置。
+
+### 22.7 Swipe 按钮先隐藏
+
+由于 swipe 功能尚未完全收稳，本轮临时隐藏了两个位置的相关交互：
+
+- `BottomComposer` 底部的 swipe 左右切换按钮
+- `TranscriptMessageCard` 内部的 swipe 控件
+
+当前策略是：
+
+- 保留内部数据结构与状态计算
+- UI 先不暴露，避免误导使用
+
+### 22.8 MVU 最小只读人物面板：以示例骨架重建，不搬重型 CharactersSection
+
+本轮没有直接搬 `寒冬末日` 现有的重型 `CharactersSection.vue`，而是采用了你指定的轻量策略：
+
+- 骨架：`示例/角色卡示例/界面/状态栏`
+- 数据结构：`src/寒冬末日/schema.ts`
+- 容错思路：`src/寒冬末日/界面/store.ts`
+
+新增文件：
+
+- `src/流式最小Demo/界面/状态栏/mvuRoleStore.ts`
+- `src/流式最小Demo/界面/状态栏/components/MvuRolePanel.vue`
+
+特点：
+
+- 只读，不写
+- 只展示主要角色 / 临时NPC
+- 只保留少量状态字段
+- 当前目标楼层没有合法 `stat_data` 时，会 fallback 到 `latest`
+
+已保留字段：
+
+- `姓名`
+- `登场状态`
+- `健康`
+- `健康状况`
+- `秩序刻印`
+- `关系`
+- `关系倾向`
+- `衣着`
+- `神态样貌`
+- `动作姿势`
+- `所在房间`
+- `内心想法`
+
+明确移除字段：
+
+- `舌唇`
+- `胸乳`
+- `私穴`
+
+### 22.9 人物面板最终挂载方式：右侧抽屉
+
+人物面板最终没有留在折叠辅助区里，而是改成了独立的右侧抽屉：
+
+- 页面右侧放置“整高拉手”
+- 任何滚动高度下都可点击拉出
+- 抽屉中先分：
+  - `主要角色`
+  - `临时NPC`
+
+同时，`主要角色` 内部排序改为：
+
+- **登场优先**
+- 再按姓名排序
+
+交互风格参考 `界面纯UI版`：
+
+- 移动端：左右切换 + 当前角色下拉选择
+- 桌面端：tab 切换
+
+这样避免了“所有角色一字排开，高度无限高”的问题。
+
+### 22.10 关于 MVU “重新处理变量” 与“额外模型解析”的当前状态
+
+本轮已经确认：
+
+- 仓库中存在现成的“重新处理变量”工具：`src/寒冬末日/mvu_reprocess.ts`
+- `示例/角色卡示例/界面/状态栏` 提供了最小 MVU 显示链的正确骨架
+- MVU bundle 中存在“额外模型解析”设置与 `extra_analysis` 运行态变量
+
+本轮做的兼容是：
+
+- 在正文完成后，补发官方事件：
+  - `MESSAGE_RECEIVED`
+  - `GENERATION_ENDED`
+  - `MESSAGE_UPDATED`
+
+目的：
+
+- 让 MVU 脚本在“额外模型解析”模式下，按它自己的官方设置决定是否继续处理
+- 而不是由当前阅读器硬编码额外解析逻辑
+
+当前**未做**的事：
+
+- opening 生成完成后自动调用 `mvu_reprocess.ts`
+- 在阅读器内手动接管 MVU 的额外模型解析流程
+
+这两项保留给后续单独判断，以避免在生成链内引入额外副作用。
+
+### 22.11 当前相关文件索引
+
+opening：
+
+- `src/流式最小Demo/shared/opening.schema.ts`
+- `src/流式最小Demo/shared/opening.ts`
+- `src/流式最小Demo/shared/opening-preset.default.json`
+- `src/流式最小Demo/界面/状态栏/components/OpeningSetupPanel.vue`
+- `src/流式最小Demo/界面/状态栏/useStreamingDemo.ts`
+
+静态配置：
+
+- `src/寒冬末日/世界书/寒冬末日/世界观配置集.yaml`
+- `src/寒冬末日/世界书/寒冬末日/主流派起始偏置表.yaml`
+- `src/寒冬末日/世界书/寒冬末日/开局点数构筑规则.yaml`
+
+人物抽屉：
+
+- `src/流式最小Demo/界面/状态栏/mvuRoleStore.ts`
+- `src/流式最小Demo/界面/状态栏/components/MvuRolePanel.vue`
+- `src/流式最小Demo/界面/状态栏/components/WorkbenchTabs.vue`
+- `src/流式最小Demo/界面/状态栏/pages/StoryPage.vue`
+
+参考实现：
+
+- `示例/角色卡示例/界面/状态栏/store.ts`
+- `src/寒冬末日/界面/store.ts`
+- `src/寒冬末日/mvu_reprocess.ts`
