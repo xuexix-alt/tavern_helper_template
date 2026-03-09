@@ -170,10 +170,7 @@ function buildOpeningAssistantText(payload: OpeningPayload): string {
     ? payload.options.map(option => String(option ?? '').trim()).filter(Boolean)
     : [];
 
-  return [
-    body,
-    options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '',
-  ]
+  return [body, options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '']
     .filter(Boolean)
     .join('\n\n')
     .trim();
@@ -528,7 +525,14 @@ export function useStreamingDemo() {
 
     if (existing) {
       await setChatMessages(
-        [{ message_id: Math.trunc(Number(existing.message_id)), message: nextMessage, is_hidden: false, data: nextData }],
+        [
+          {
+            message_id: Math.trunc(Number(existing.message_id)),
+            message: nextMessage,
+            is_hidden: false,
+            data: nextData,
+          },
+        ],
         { refresh },
       );
       return;
@@ -540,10 +544,10 @@ export function useStreamingDemo() {
       .map(message => Math.trunc(Number(message?.message_id)))
       .find(id => Number.isFinite(id) && id > 0);
 
-    await createChatMessages(
-      [{ role: 'assistant', is_hidden: false, message: nextMessage, data: nextData }],
-      { insert_before: firstAfterZero ?? 'end', refresh },
-    );
+    await createChatMessages([{ role: 'assistant', is_hidden: false, message: nextMessage, data: nextData }], {
+      insert_before: firstAfterZero ?? 'end',
+      refresh,
+    });
   }
 
   function setEditingUserDraft(value: string) {
