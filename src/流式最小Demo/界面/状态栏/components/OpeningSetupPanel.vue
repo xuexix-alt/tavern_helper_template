@@ -32,9 +32,7 @@
       <div class="opening-form-item">
         <span class="opening-label">世界观档位</span>
         <select class="opening-select" :value="payload.world_mode_id" @change="emitWorldMode($event)">
-          <option v-for="mode in worldModes" :key="mode.id" :value="mode.id">
-            {{ mode.id }} · {{ mode.name }}
-          </option>
+          <option v-for="mode in worldModes" :key="mode.id" :value="mode.id">{{ mode.id }} · {{ mode.name }}</option>
         </select>
       </div>
 
@@ -160,7 +158,9 @@ const emit = defineEmits<{
   (event: 'submit'): void;
 }>();
 
-const selectedWorldMode = computed(() => props.worldModes.find(mode => mode.id === props.payload.world_mode_id) ?? null);
+const selectedWorldMode = computed(
+  () => props.worldModes.find(mode => mode.id === props.payload.world_mode_id) ?? null,
+);
 const selectedRoute = computed(() => props.routes.find(route => route.name === props.payload.route_id) ?? null);
 
 function readInputValue(event: Event): string {

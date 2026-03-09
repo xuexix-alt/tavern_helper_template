@@ -32,7 +32,12 @@
 
     <template v-else>
       <div class="character-nav-mobile">
-        <button class="character-nav-btn prev" type="button" :disabled="currentCharacterIndex <= 0" @click="navigateCharacter(-1)">
+        <button
+          class="character-nav-btn prev"
+          type="button"
+          :disabled="currentCharacterIndex <= 0"
+          @click="navigateCharacter(-1)"
+        >
           ‹
         </button>
         <div class="character-nav-current" @click="toggleCharacterDropdown">
@@ -106,7 +111,9 @@
               <div class="value">{{ String(activeCharacter.role.秩序刻印 ?? '--') }}</div>
             </div>
             <div class="imprint-status-subtext">
-              {{ String(activeCharacter.role.关系 ?? '--') }} · 关系倾向：{{ String(activeCharacter.role.关系倾向 ?? '--') }}
+              {{ String(activeCharacter.role.关系 ?? '--') }} · 关系倾向：{{
+                String(activeCharacter.role.关系倾向 ?? '--')
+              }}
             </div>
           </div>
 
@@ -155,7 +162,8 @@ const targetMessageId = computed(() => props.targetMessageId ?? null);
 const { width } = useWindowSize();
 const useVirtualTabs = computed(() => width.value <= 760);
 
-const { ready, source, isDuringExtraAnalysis, hasAnyRole, mainRoleEntries, tempNpcEntries } = useMvuRoleStore(targetMessageId);
+const { ready, source, isDuringExtraAnalysis, hasAnyRole, mainRoleEntries, tempNpcEntries } =
+  useMvuRoleStore(targetMessageId);
 
 const topTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
@@ -171,9 +179,13 @@ const currentCharacterIndex = computed(() => {
   return idx >= 0 ? idx : 0;
 });
 
-const activeCharacter = computed(() => activeEntries.value.find(entry => entry.key === activeCharacterKey.value) ?? activeEntries.value[0] ?? null);
+const activeCharacter = computed(
+  () => activeEntries.value.find(entry => entry.key === activeCharacterKey.value) ?? activeEntries.value[0] ?? null,
+);
 const currentCharacterLabel = computed(() => (activeCharacter.value ? roleName(activeCharacter.value) : '暂无角色'));
-const currentCharacterStatus = computed(() => (activeCharacter.value ? statusClass(activeCharacter.value) : 'status-neutral'));
+const currentCharacterStatus = computed(() =>
+  activeCharacter.value ? statusClass(activeCharacter.value) : 'status-neutral',
+);
 
 const sourceLabel = computed(() => {
   if (source.value === 'current') return '当前楼层';

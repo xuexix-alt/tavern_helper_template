@@ -28,7 +28,9 @@ export const OpeningPresetSchema = z.object({
   form_schema: z.array(OpeningFormFieldSchema).default([]),
   prompt_rules: z.object({
     should_echo_setup: z.boolean().default(true),
-    output_tags: z.array(z.string()).default(['world_mode_brief', 'opening_prompt_echo', 'content', 'option', 'UpdateVariable']),
+    output_tags: z
+      .array(z.string())
+      .default(['world_mode_brief', 'opening_prompt_echo', 'content', 'option', 'UpdateVariable']),
   }),
 });
 

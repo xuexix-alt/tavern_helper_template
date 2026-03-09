@@ -640,7 +640,6 @@ export function useStreamingDemo() {
       insert_before: firstAfterZero ?? 'end',
       refresh,
     });
-
   }
 
   function setEditingUserDraft(value: string) {

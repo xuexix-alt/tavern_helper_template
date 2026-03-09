@@ -181,7 +181,11 @@ export function replaceOpeningPayloadInChat(payload: OpeningPayload) {
 
 function stringifyValue(value: unknown): string {
   if (value == null) return '';
-  if (Array.isArray(value)) return value.map(item => String(item ?? '').trim()).filter(Boolean).join(' / ');
+  if (Array.isArray(value))
+    return value
+      .map(item => String(item ?? '').trim())
+      .filter(Boolean)
+      .join(' / ');
   if (typeof value === 'object') {
     const pairs = Object.entries(value as Record<string, unknown>)
       .map(([key, item]) => `${key}: ${stringifyValue(item)}`)
@@ -225,16 +229,22 @@ function buildRoutePromptBlock(route: OpeningRouteOption | null): string[] {
     `<core_fantasy>${route.core_fantasy}</core_fantasy>`,
     `<world_lens>${route.world_lens}</world_lens>`,
     '<recommended_world_modes>',
-    route.recommended_world_modes.length > 0 ? route.recommended_world_modes.map(item => `- ${item}`).join('\n') : '- 无',
+    route.recommended_world_modes.length > 0
+      ? route.recommended_world_modes.map(item => `- ${item}`).join('\n')
+      : '- 无',
     '</recommended_world_modes>',
     '<guaranteed_opening_elements>',
-    route.guaranteed_opening_elements.length > 0 ? route.guaranteed_opening_elements.map(item => `- ${item}`).join('\n') : '- 无',
+    route.guaranteed_opening_elements.length > 0
+      ? route.guaranteed_opening_elements.map(item => `- ${item}`).join('\n')
+      : '- 无',
     '</guaranteed_opening_elements>',
     '<starting_liabilities>',
     route.starting_liabilities.length > 0 ? route.starting_liabilities.map(item => `- ${item}`).join('\n') : '- 无',
     '</starting_liabilities>',
     '<opening_conflict_sources>',
-    route.opening_conflict_sources.length > 0 ? route.opening_conflict_sources.map(item => `- ${item}`).join('\n') : '- 无',
+    route.opening_conflict_sources.length > 0
+      ? route.opening_conflict_sources.map(item => `- ${item}`).join('\n')
+      : '- 无',
     '</opening_conflict_sources>',
     '<forbidden_drift>',
     route.forbidden_drift.length > 0 ? route.forbidden_drift.map(item => `- ${item}`).join('\n') : '- 无',
