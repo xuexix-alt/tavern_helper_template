@@ -18,25 +18,6 @@
         <button type="button" class="send-btn secondary mini" :disabled="busy || !canRoll" @click="$emit('roll')">
           ROLL
         </button>
-        <div v-if="swipeLabel" class="composer-swipe-group">
-          <button
-            type="button"
-            class="send-btn secondary mini"
-            :disabled="busy || !canSwipePrev"
-            @click="$emit('swipe', 'prev')"
-          >
-            ←
-          </button>
-          <span class="composer-swipe-label">{{ swipeLabel }}</span>
-          <button
-            type="button"
-            class="send-btn secondary mini"
-            :disabled="busy || !canSwipeNext"
-            @click="$emit('swipe', 'next')"
-          >
-            →
-          </button>
-        </div>
         <button type="button" class="send-btn" :disabled="busy" @click="$emit('submit')">
           {{ busy ? '生成中…' : '发送' }}
         </button>

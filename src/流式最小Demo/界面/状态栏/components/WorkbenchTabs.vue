@@ -42,11 +42,6 @@
       </section>
     </div>
 
-    <div v-else-if="activeTab === 'characters'" class="workbench-panel placeholder-panel">
-      <strong>人物面板预留</strong>
-      <p>这里后续接 zod mvu 的专业角色/道侣/人物面板，不在当前 demo 阶段展开。</p>
-    </div>
-
     <div v-else class="workbench-panel logs-panel">
       <section class="log-summary">
         <div class="log-summary-block">
@@ -79,7 +74,7 @@
 <script setup lang="ts">
 import type { ReaderLogItem, ReaderSummary } from '../types';
 
-type WorkbenchTab = 'overview' | 'characters' | 'logs';
+type WorkbenchTab = 'overview' | 'logs';
 
 defineProps<{
   summary: ReaderSummary;
@@ -91,7 +86,6 @@ defineEmits<{}>();
 const activeTab = ref<WorkbenchTab>('overview');
 const tabs: Array<{ key: WorkbenchTab; label: string }> = [
   { key: 'overview', label: '概览' },
-  { key: 'characters', label: '人物' },
   { key: 'logs', label: '日志' },
 ];
 </script>

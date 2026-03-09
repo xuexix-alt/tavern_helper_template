@@ -1,0 +1,561 @@
+version: 1
+
+meta:
+  id: world_mode_profiles
+  name: 世界观配置集
+  world: 寒冬末日-星穹秩序
+  authoring_note: >
+    开局描述世界观总览
+    对后续剧情发展提供基调和限制
+    设定要整体、连贯
+  source_of_truth: true
+
+rules:
+  selection_timing: opening_only
+  can_switch_after_sealed: false
+  brief_generation_allowed: true
+  brief_generation_scope:
+    - 环境体感
+    - 主要威胁
+    - 社会状态
+    - 路线提示
+  brief_generation_forbidden:
+    - 改写温度
+    - 改写行动窗口
+    - 改写社会残存度
+    - 改写威胁主因
+    - 改写生产残余度
+    - 改写冲突密度
+    - 发明新灾难规则
+  interpretation_priority:
+    - 数值范围优先于标签词
+    - 若 label 与数值冲突，以数值为准
+    - threat subtype 不得越界扩写
+
+world_mode_axis_dictionary:
+  version: 1
+
+  气候压力:
+    unit: score_0_100
+    labels:
+      低:
+        score_range: [0, 19]
+        outdoor_survival:
+          unprotected_minutes: [180, 360]
+          protected_hours: [8, 24]
+        description: 低温暴雪天气占多数，但人类行动能力尚存，交通、电力、生产设施少部分残余
+      中低:
+        score_range: [20, 39]
+        outdoor_survival:
+          unprotected_minutes: [60, 180]
+          protected_hours: [4, 12]
+        description: 皮肤和身体裸露室外有冻伤风险，无防寒护具外出无法生存，交通、电力、生产设施在持续严寒下逐渐瘫痪
+      中:
+        score_range: [40, 59]
+        outdoor_survival:
+          unprotected_minutes: [20, 60]
+          protected_hours: [2, 6]
+        description: 无防寒护具外出30分钟后失温，无法室外逗留和长距离（徒步1公里半径内移动）
+      中高:
+        score_range: [60, 74]
+        outdoor_survival:
+          unprotected_minutes: [5, 20]
+          protected_hours: [1, 3]
+        description: 极端低温下金属暴露风雪中也会失去坚韧，人无防护无法室外生存
+      极高:
+        score_range: [75, 89]
+        outdoor_survival:
+          unprotected_minutes: [1, 5]
+          protected_hours: [0.5, 2]
+        description: 除经过伊甸等特殊改造的护具和装备防护外，基本无法在室外存活，无天气窗口
+
+  行动窗口:
+    unit: hours_per_7_days
+    labels:
+      极短:
+        hours_range: [0, 6]
+        occurrences_per_7_days: [0, 1]
+        description: 几乎没有外出机会，需伊甸特制护具
+      短:
+        hours_range: [6, 18]
+        occurrences_per_7_days: [1, 2]
+        description: 需要抢窗口（每周有1-2天晴天中午有1小时左右升温10度），需要防寒护具
+      中:
+        hours_range: [18, 36]
+        occurrences_per_7_days: [2, 4]
+        description: 窗口期变长（每周有3-4天晴天中午有2小时左右升温15度），可规划无护具短行动（徒步1公里范围），
+      长:
+        hours_range: [36, 72]
+        occurrences_per_7_days: [4, 7]
+        description: 暴风雪每日间歇性来临，无法长期室外逗留，可以短暂巡逻、清剿、接触与回收
+      稳定:
+        hours_range: [72, 168]
+        occurrences_per_7_days: [7, 14]
+        description: 有概率遇到暴风雪天气，摧毁修好的基础设施、电力，积雪仍瘫痪大规模大范围交通
+
+  社会残存度:
+    unit: score_0_100
+    labels:
+      极低:
+        score_range: [0, 19]
+        structured_groups_ratio: [0.0, 0.1]
+        trade_activity: [0.0, 0.1]
+        description: 组织性几乎消失，只剩零散苟活，无电力、无生产、无交通
+      低:
+        score_range: [20, 39]
+        structured_groups_ratio: [0.1, 0.25]
+        trade_activity: [0.1, 0.25]
+        description: 少量据点存在，但社会联系脆弱，无电力、无交通
+      中:
+        score_range: [40, 64]
+        structured_groups_ratio: [0.25, 0.5]
+        trade_activity: [0.25, 0.5]
+        description: 仍有局部组织、交易与协作惯性，自运行电力、局部个人交通工具、局部自循环水源
+      高:
+        score_range: [65, 100]
+        structured_groups_ratio: [0.5, 0.8]
+        trade_activity: [0.5, 0.8]
+        description: 社会结构尚存，原社会结构受到剧烈冲击，人与人可争夺治理权。电力、水务、小规模交通
+
+  生产残余度:
+    unit: percent_of_pre_disaster_capacity
+    labels:
+      极低:
+        capacity_range: [0, 5]
+        description: 近乎只剩库存消耗，无法稳定生产，无可靠交通工具
+      低:
+        capacity_range: [5, 15]
+        description: 只能维持零星修补、拆解和自循环手工生产，无可靠交通工具
+      中:
+        capacity_range: [15, 35]
+        description: 存在少量组织化生产与维修制造能力，原始油气化交通工具
+      高:
+        capacity_range: [35, 60]
+        description: 高维持成本下的残余工业/社区供给能力，稀缺电气化交通工具
+
+  冲突密度:
+    unit: major_incidents_per_10_days_per_region
+    labels:
+      低:
+        incidents_range: [0, 1]
+        description: 冲突不是常态，更多是局部摩擦，以争夺社会主导权和生产资源为主，极端情况下爆发大规模战争/冲突
+      中:
+        incidents_range: [2, 4]
+        description: 冲突是常态，为争夺存量资源你死我活，存在幸存者社区冲突和暴徒劫掠，弱肉强食无法建立有效治安
+      高:
+        incidents_range: [5, 8]
+        description: 基本无法维持社会秩序，劫掠、暴力是社会主旋律，交易只存在稳定社区之间和少部分幸存者群体间
+      极高:
+        incidents_range: [9, 15]
+        description: 无社会秩序、无生存规则、人吃人、人劫掠人、人欺压人，暴力是唯一的生存手段，交易只存在势均力敌下的谈判过程中
+
+  外部威胁主因:
+    unit: enum
+    labels:
+      环境:
+        allowed_subtypes: [失温, 冻伤, 病亡, 雪晶腐蚀, 供暖中断]
+      暴徒:
+        allowed_subtypes: [掠夺者, 楼层暴徒, 武装团伙, 饥民围堵]
+      异变体:
+        allowed_subtypes: [雪晶畸变体, 僵尸, 基因异化生物]
+      野化生物:
+        allowed_subtypes: [冰野人, 雪狼, 雪豹, 齿虎]
+      组织博弈:
+        allowed_subtypes: [联盟争夺, 规则冲突, 管辖竞争, 渗透]
+      交易秩序争夺:
+        allowed_subtypes: [资源控制, 存量争夺, 生产垄断, 价格战争]
+
+  外出死亡风险:
+    unit: fatality_probability_per_unprepared_trip
+    labels:
+      低:
+        range: [0.0, 0.1]
+      中:
+        range: [0.1, 0.3]
+      高:
+        range: [0.3, 0.6]
+      极高:
+        range: [0.6, 0.95]
+
+  据点化程度:
+    unit: structured_control_ratio
+    labels:
+      低:
+        range: [0.0, 0.2]
+      中:
+        range: [0.2, 0.5]
+      高:
+        range: [0.5, 0.8]
+      极高:
+        range: [0.8, 1.0]
+
+profiles:
+  A:
+    id: A
+    key: siege_fortress
+    name: 围猎堡垒型
+    slogan: 自然压力下降，外部敌意上升
+    core_pleasure: 战斗 / 防御 / 征服 / 清场
+    recommended_main_route: 守
+    secondary_routes: [扩, 行]
+
+    environment:
+      常态气温区间: "-5℃ ~ -15℃"
+      暴雪频率: 中
+      腐蚀雪晶活性: 低到中
+      外出能力: 保留
+      visibility_note: 低温仍危险，但不再等于出门即死
+
+    axes:
+      气候压力:
+        label: 中
+        score: 52
+      行动窗口:
+        label: 长
+        hours_per_7_days: 48
+      社会残存度:
+        label: 低
+        score: 32
+      外部威胁主因:
+        label: 暴徒
+        subtype: 武装团伙
+      生产残余度:
+        label: 低
+        capacity_percent: 12
+      冲突密度:
+        label: 高
+        incidents_per_10_days_per_region: 6
+      外出死亡风险:
+        label: 中
+        probability_per_unprepared_trip: 0.22
+      据点化程度:
+        label: 高
+        structured_control_ratio: 0.62
+
+    society:
+      organization_trend: 小型武装团体、楼层据点、掠夺集团活跃
+      moral_state: 文明残余迅速流失，强者秩序与恐惧威慑并存
+
+    threat:
+      threat_pack_mode: single_primary
+      threat_pack_candidates:
+        - 人祸包
+        - 异变包
+        - 野化包
+      default_threat_pack: 人祸包
+      packs:
+        人祸包:
+          - 武装掠夺者
+          - 楼层暴徒
+          - 流窜劫匪
+        异变包:
+          - 雪晶畸变体
+          - 腐蚀性残留区
+          - 失控实验产物
+        野化包:
+          - 野化猎群
+          - 异常大型生物
+          - 觅食迁徙兽群
+
+    build_modifiers:
+      point_base: 8
+      imp_efficiency_modifier: 0.9
+      expansion_risk_modifier: 1.3
+      combat_pressure_modifier: 1.4
+      logistics_pressure_modifier: 0.9
+
+    playstyle_bias:
+      守:
+        score: 1.4
+        note: 庇护所更像堡垒与清剿中心
+      扩:
+        score: 1.15
+        note: 通过扫清威胁扩大控制面
+      行:
+        score: 1.1
+        note: 适合巡逻、侦察、追猎
+      养:
+        score: 0.9
+      管:
+        score: 0.95
+      慰:
+        score: 0.85
+
+    ai_brief_seed:
+      环境体感: 低温危险但尚可行动，真正压迫感来自外部敌对存在
+      主要威胁: 武装掠夺、袭击、围堵、清场冲突
+      社会状态: 幸存者据点化，小团体互相试探、掠夺、吞并
+      路线提示: 守流在此档最容易把庇护所塑造成绝对秩序核心
+
+  B:
+    id: B
+    key: polar_holding
+    name: 极寒守成型
+    slogan: 环境即天敌，活下去本身就是胜利
+    core_pleasure: 生存 / 维持 / 种田 / 人口保全
+    recommended_main_route: 养
+    secondary_routes: [管, 慰]
+
+    environment:
+      常态气温区间: "-35℃ ~ -45℃"
+      暴雪频率: 高
+      腐蚀雪晶活性: 高
+      外出能力: 高度受限
+      visibility_note: 外界不是舞台，而是持续吞噬生命的高危区
+
+    axes:
+      气候压力:
+        label: 极高
+        score: 93
+      行动窗口:
+        label: 极短
+        hours_per_7_days: 4
+      社会残存度:
+        label: 低
+        score: 28
+      外部威胁主因:
+        label: 环境
+        subtype: 失温
+      生产残余度:
+        label: 极低
+        capacity_percent: 3
+      冲突密度:
+        label: 中
+        incidents_per_10_days_per_region: 3
+      外出死亡风险:
+        label: 极高
+        probability_per_unprepared_trip: 0.82
+      据点化程度:
+        label: 中
+        structured_control_ratio: 0.34
+
+    society:
+      organization_trend: 幸存者蜷缩于残余据点，人口与健康比扩张更重要
+      moral_state: 并非人人作恶，但绝望会迅速放大脆弱与自私
+
+    threat:
+      threat_pack_mode: mixed_fixed
+      threat_pack_candidates:
+        - 环境失温
+        - 冻伤病亡
+        - 后勤崩盘
+      default_threat_pack: 环境失温
+
+    build_modifiers:
+      point_base: 10
+      imp_efficiency_modifier: 1.2
+      expansion_risk_modifier: 1.1
+      combat_pressure_modifier: 0.8
+      logistics_pressure_modifier: 1.5
+
+    playstyle_bias:
+      养:
+        score: 1.45
+        note: 维持、循环、医疗、保温与配给是核心快感
+      管:
+        score: 1.1
+        note: 良好秩序直接提升生存率
+      慰:
+        score: 1.05
+        note: 士气与恢复关系到庇护所持续运转
+      守:
+        score: 0.9
+      扩:
+        score: 0.8
+      行:
+        score: 0.7
+
+    ai_brief_seed:
+      环境体感: 寒冷、腐蚀与失温随时都在消耗生命
+      主要威胁: 不是敌人有多强，而是系统一旦失衡就会死人
+      社会状态: 活着的人仍多，但真正稳定维持的据点极少
+      路线提示: 养流在此档最能把庇护所变成真正的生命支持系统
+
+  C:
+    id: C
+    key: order_window
+    name: 窗口秩序型
+    slogan: 灾变重创社会，但规则仍有重建空间
+    core_pleasure: 治理 / 联盟 / 交易 / 制度建设
+    recommended_main_route: 管
+    secondary_routes: [扩, 行, 慰]
+
+    environment:
+      常态气温区间: "-8℃ ~ -18℃"
+      暴雪频率: 阶段性
+      腐蚀雪晶活性: 中低
+      外出能力: 中等可行
+      visibility_note: 环境危险仍在，但不足以抹平全部社会结构
+
+    axes:
+      气候压力:
+        label: 中低
+        score: 34
+      行动窗口:
+        label: 稳定
+        hours_per_7_days: 96
+      社会残存度:
+        label: 高
+        score: 72
+      外部威胁主因:
+        label: 组织博弈
+        subtype: 联盟争夺
+      生产残余度:
+        label: 中
+        capacity_percent: 24
+      冲突密度:
+        label: 中
+        incidents_per_10_days_per_region: 4
+      外出死亡风险:
+        label: 中
+        probability_per_unprepared_trip: 0.18
+      据点化程度:
+        label: 高
+        structured_control_ratio: 0.68
+
+    society:
+      organization_trend: 仍有交易网络、社区据点、组织残余、制度竞争
+      moral_state: 善恶并存，关键在谁来制定规则、谁来执行规则
+
+    threat:
+      threat_pack_mode: mixed_fixed
+      threat_pack_candidates:
+        - 利益冲突
+        - 商路争夺
+        - 治理真空
+        - 组织渗透
+      default_threat_pack: 利益冲突
+
+    build_modifiers:
+      point_base: 9
+      imp_efficiency_modifier: 1.0
+      expansion_risk_modifier: 1.0
+      combat_pressure_modifier: 1.0
+      logistics_pressure_modifier: 1.0
+
+    playstyle_bias:
+      管:
+        score: 1.45
+        note: 谁能组织、分配、谈判、接管，谁就能赢
+      扩:
+        score: 1.1
+        note: 接口延展与楼层纳管空间更大
+      行:
+        score: 1.05
+        note: 侦察、交易、接触外部势力收益更高
+      慰:
+        score: 1.05
+        note: 稳定人心与提高协作度价值更大
+      养:
+        score: 0.95
+      守:
+        score: 0.95
+
+    ai_brief_seed:
+      环境体感: 灾难并未结束，但人类社会残余仍可被重新组织
+      主要威胁: 利益冲突、制度真空、势力试探与渗透
+      社会状态: 交易、联盟、背叛、接管会长期并存
+      路线提示: 管流在此档最容易把庇护所升级为治理核心
+
+civilization_stage_matrix:
+  A:
+    阶段一:
+      资源压力: 中
+      环境压力: 中
+      暴力显性化: 高
+      组织成型速度: 高
+      交易活跃度: 中
+      外出可行性: 中高
+      narrative_focus: 武装试探、楼层冲突、早期据点化
+    阶段二:
+      资源压力: 高
+      环境压力: 中
+      暴力显性化: 高
+      组织成型速度: 高
+      交易活跃度: 中低
+      外出可行性: 中
+      narrative_focus: 劫掠、吞并、反击、清场
+    阶段三:
+      资源压力: 高
+      环境压力: 中
+      暴力显性化: 极高
+      组织成型速度: 极高
+      交易活跃度: 低
+      外出可行性: 中
+      narrative_focus: 强者据点、围猎网络、镇压与扩张
+    阶段四:
+      资源压力: 高
+      环境压力: 中
+      暴力显性化: 极高
+      组织成型速度: 极高
+      交易活跃度: 中
+      外出可行性: 中
+      narrative_focus: 领地秩序、大型武装势力、区域征服
+
+  B:
+    阶段一:
+      资源压力: 高
+      环境压力: 极高
+      暴力显性化: 低
+      组织成型速度: 低
+      交易活跃度: 低
+      外出可行性: 极低
+      narrative_focus: 保暖、配给、失温、基础维持
+    阶段二:
+      资源压力: 极高
+      环境压力: 极高
+      暴力显性化: 中
+      组织成型速度: 中
+      交易活跃度: 低
+      外出可行性: 极低
+      narrative_focus: 冻伤病亡、后勤崩盘、医疗缺口
+    阶段三:
+      资源压力: 极高
+      环境压力: 极高
+      暴力显性化: 中
+      组织成型速度: 中
+      交易活跃度: 极低
+      外出可行性: 低
+      narrative_focus: 微型堡垒、人口保全、供暖与医疗控制
+    阶段四:
+      资源压力: 极高
+      环境压力: 高
+      暴力显性化: 中高
+      组织成型速度: 中高
+      交易活跃度: 低
+      外出可行性: 低
+      narrative_focus: 高协作人口、稳定循环、长期维持资本
+
+  C:
+    阶段一:
+      资源压力: 中
+      环境压力: 中低
+      暴力显性化: 低
+      组织成型速度: 中
+      交易活跃度: 高
+      外出可行性: 高
+      narrative_focus: 邻里互助、交易残余、秩序惯性
+    阶段二:
+      资源压力: 中高
+      环境压力: 中
+      暴力显性化: 中
+      组织成型速度: 中高
+      交易活跃度: 高
+      外出可行性: 中高
+      narrative_focus: 利益失衡、协调失败、权威真空
+    阶段三:
+      资源压力: 高
+      环境压力: 中
+      暴力显性化: 中高
+      组织成型速度: 高
+      交易活跃度: 中高
+      外出可行性: 中
+      narrative_focus: 自治据点、商路争夺、半正式治理结构
+    阶段四:
+      资源压力: 高
+      环境压力: 中
+      暴力显性化: 高
+      组织成型速度: 极高
+      交易活跃度: 高
+      外出可行性: 中高
+      narrative_focus: 规则、征税、联盟、保护与秩序竞争

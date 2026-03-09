@@ -10,10 +10,21 @@ import {
 import {
   buildOpeningPrompt,
   extractOpeningContent,
+  extractOpeningContentLoose,
   extractOpeningOptions,
   extractOpeningPromptEcho,
+  extractOpeningPromptEchoLoose,
+  extractUpdateVariableBlock,
+  extractUpdateVariableBlockLoose,
+  formatUpdateVariableBlock,
+  extractOpeningWorldModeBrief,
+  extractOpeningWorldModeBriefLoose,
   getDefaultOpeningPayload,
   getDefaultOpeningPreset,
+  getOpeningRoute,
+  getOpeningRoutes,
+  getOpeningWorldMode,
+  getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
 } from '../../shared/opening';
@@ -149,14 +160,20 @@ function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
 }
 
 function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset): string {
+  const worldMode = getOpeningWorldMode(payload.world_mode_id);
+  const route = getOpeningRoute(payload.route_id);
   return [
     payload.base.world_intro,
     '',
     payload.base.first_line,
     '',
+    `世界观档位：${worldMode ? `${worldMode.id} · ${worldMode.name}` : payload.world_mode_id || '未设定'}`,
+    `开局主流派：${route?.name || payload.route_id || '未设定'}`,
     `${preset.meta_template.character_label}：${payload.meta.character || '未设定'}`,
     `${preset.meta_template.time_label}：${payload.meta.time || '未设定'}`,
     `${preset.meta_template.location_label}：${payload.meta.location || '未设定'}`,
+    '',
+    payload.world_mode_brief,
     '',
     payload.opening_content || '开局尚未生成，请先完成开局配置。',
   ]
@@ -169,8 +186,13 @@ function buildOpeningAssistantText(payload: OpeningPayload): string {
   const options = Array.isArray(payload.options)
     ? payload.options.map(option => String(option ?? '').trim()).filter(Boolean)
     : [];
+  const updateVariableBlock = formatUpdateVariableBlock(payload.update_variable_block);
 
-  return [body, options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '']
+  return [
+    body,
+    options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '',
+    updateVariableBlock,
+  ]
     .filter(Boolean)
     .join('\n\n')
     .trim();
@@ -215,6 +237,7 @@ function buildOpeningTranscriptItem(
 }
 
 export function useStreamingDemo() {
+  const initialContainerMessageId = readCurrentContainerMessageId();
   const input = ref('');
   const busy = ref(false);
   const status = ref<DemoStatus>('idle');
@@ -234,6 +257,9 @@ export function useStreamingDemo() {
   const rollbackConfirmMessageId = ref<number | null>(null);
   const openingPreset = ref<OpeningPreset>(getDefaultOpeningPreset());
   const openingPayload = ref<OpeningPayload>(getDefaultOpeningPayload(openingPreset.value));
+  const openingWorldModes = getOpeningWorldModes();
+  const openingRoutes = getOpeningRoutes();
+  const isOpeningWorkbenchHost = initialContainerMessageId === 0;
 
   const followLatest = computed(() => readingMode.value === 'following_latest');
 
@@ -242,6 +268,7 @@ export function useStreamingDemo() {
   let patchQueue = Promise.resolve();
   let latestPatchedMessage = '';
   let generationStops: StopHandle[] = [];
+  let openingGenerationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
@@ -264,7 +291,9 @@ export function useStreamingDemo() {
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
 
-  const shouldShowOpeningSetup = computed(() => openingPayload.value.state !== 'ready');
+  const shouldShowOpeningSetup = computed(
+    () => isOpeningWorkbenchHost && ['placeholder', 'configuring'].includes(openingPayload.value.state),
+  );
 
   const latestUserItem = computed(() => {
     for (let i = transcript.value.length - 1; i >= 0; i -= 1) {
@@ -426,6 +455,69 @@ export function useStreamingDemo() {
     replaceOpeningPayloadInChat(openingPayload.value);
   }
 
+  function updateOpeningWorldMode(value: string) {
+    const worldMode = getOpeningWorldMode(value) ?? openingWorldModes[0] ?? null;
+    const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '';
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      world_mode_id: worldMode?.id || value,
+      route_id: nextRouteId,
+      world_mode_brief: '',
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function updateOpeningRoute(value: string) {
+    const route = getOpeningRoute(value) ?? openingRoutes[0] ?? null;
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      route_id: route?.name || value,
+      world_mode_brief: '',
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function updateOpeningStream(value: boolean) {
+    openingPayload.value = {
+      ...openingPayload.value,
+      use_stream: value === true,
+    };
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function clearOpeningGenerationListeners() {
+    openingGenerationStops.forEach(stop => stop?.stop?.());
+    openingGenerationStops = [];
+  }
+
+  function bindOpeningGenerationListeners() {
+    clearOpeningGenerationListeners();
+    let streamedRaw = '';
+
+    try {
+      openingGenerationStops.push(
+        eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, (token: string) => {
+          streamedRaw += String(token ?? '');
+          status.value = 'streaming';
+          openingPayload.value = {
+            ...openingPayload.value,
+            state: 'generating',
+            streaming_raw: streamedRaw,
+            world_mode_brief: extractOpeningWorldModeBriefLoose(streamedRaw),
+            prompt_echo: extractOpeningPromptEchoLoose(streamedRaw),
+            opening_content: extractOpeningContentLoose(streamedRaw),
+            update_variable_block: extractUpdateVariableBlockLoose(streamedRaw),
+          };
+          rebuildTranscript();
+        }),
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   function updateOpeningField(key: string, value: string) {
     openingPayload.value = {
       ...openingPayload.value,
@@ -548,6 +640,7 @@ export function useStreamingDemo() {
       insert_before: firstAfterZero ?? 'end',
       refresh,
     });
+
   }
 
   function setEditingUserDraft(value: string) {
@@ -579,6 +672,29 @@ export function useStreamingDemo() {
   function clearGenerationListeners() {
     generationStops.forEach(stop => stop?.stop?.());
     generationStops = [];
+  }
+
+  async function emitOfficialGenerationLifecycle(messageId: number | null | undefined, type: 'normal' | 'regenerate') {
+    const normalizedId = Number(messageId);
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+
+    try {
+      await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
+    } catch {
+      // ignore
+    }
+
+    try {
+      await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
+    } catch {
+      // ignore
+    }
+
+    try {
+      await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
+    } catch {
+      // ignore
+    }
   }
 
   function syncTranscriptFlags(items: TranscriptItem[]): TranscriptItem[] {
@@ -860,6 +976,7 @@ export function useStreamingDemo() {
       finalText.value = result;
       status.value = 'persisting';
       await patchAssistantMessage('done');
+      await emitOfficialGenerationLifecycle(assistantMessageId.value, options.createUser ? 'normal' : 'regenerate');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
@@ -981,6 +1098,15 @@ export function useStreamingDemo() {
   async function generateOpening() {
     if (busy.value) return;
 
+    if (!getOpeningWorldMode(openingPayload.value.world_mode_id)) {
+      toastr?.warning?.('请先选择有效的世界观档位');
+      return;
+    }
+    if (!getOpeningRoute(openingPayload.value.route_id)) {
+      toastr?.warning?.('请先选择有效的开局主流派');
+      return;
+    }
+
     const missing = openingPreset.value.form_schema.find(
       field => field.required && !String(openingPayload.value.user_input[field.key] ?? '').trim(),
     );
@@ -996,21 +1122,33 @@ export function useStreamingDemo() {
     openingPayload.value = {
       ...openingPayload.value,
       state: 'generating',
+      streaming_raw: '',
+      world_mode_brief: '',
       prompt_echo: '',
       opening_content: '',
       options: [],
+      update_variable_block: '',
     };
     replaceOpeningPayloadInChat(openingPayload.value);
     rebuildTranscript();
 
     try {
-      const result = await generate({ user_input: buildOpeningPrompt(openingPreset.value, openingPayload.value) });
+      if (openingPayload.value.use_stream) {
+        bindOpeningGenerationListeners();
+      }
+      const result = await generate({
+        user_input: buildOpeningPrompt(openingPreset.value, openingPayload.value),
+        should_stream: openingPayload.value.use_stream,
+      });
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
+        streaming_raw: '',
+        world_mode_brief: extractOpeningWorldModeBrief(result),
         prompt_echo: extractOpeningPromptEcho(result),
         opening_content: extractOpeningContent(result),
         options: extractOpeningOptions(result),
+        update_variable_block: extractUpdateVariableBlock(result),
       };
       replaceOpeningPayloadInChat(openingPayload.value);
       await syncOpeningAssistantMessage('none', true);
@@ -1027,10 +1165,13 @@ export function useStreamingDemo() {
       openingPayload.value = {
         ...openingPayload.value,
         state: 'configuring',
+        streaming_raw: '',
+        update_variable_block: '',
       };
       replaceOpeningPayloadInChat(openingPayload.value);
       toastr?.error?.(`开局生成失败：${errorText.value}`);
     } finally {
+      clearOpeningGenerationListeners();
       busy.value = false;
     }
   }
@@ -1172,6 +1313,7 @@ export function useStreamingDemo() {
       window.clearTimeout(readerStatePersistTimer);
       readerStatePersistTimer = 0;
     }
+    clearOpeningGenerationListeners();
   });
 
   return {
@@ -1204,6 +1346,8 @@ export function useStreamingDemo() {
     latestAssistantSwipeLabel,
     openingPreset,
     openingPayload,
+    openingWorldModes,
+    openingRoutes,
     shouldShowOpeningSetup,
     readerSummary,
     logs,
@@ -1212,6 +1356,9 @@ export function useStreamingDemo() {
     refreshWorkbench,
     updateOpeningMeta,
     updateOpeningField,
+    updateOpeningWorldMode,
+    updateOpeningRoute,
+    updateOpeningStream,
     generateOpening,
     deleteFromMessageId,
     startInlineEdit,

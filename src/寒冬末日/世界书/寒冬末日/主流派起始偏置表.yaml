@@ -1,0 +1,258 @@
+version: 1
+
+meta:
+  id: shelter_route_profiles
+  name: 庇护所主流派起始偏置表
+  world: 寒冬末日-星穹秩序
+  authoring_note: >
+    该配置用于开局构筑阶段，为主流派提供起始 build 偏置、世界镜头、
+    开局冲突来源与禁漂移规则。AI 不应仅依据“流派名”自由发挥，
+    必须读取这里的结构化偏置后再生成 opening seed 与初始世界状态。
+  source_of_truth: true
+
+rules:
+  route_selection_timing: opening_only
+  route_count_primary: 1
+  route_count_secondary: [0, 2]
+  route_lock_after_sealed: true
+  interpretation_priority:
+    - guaranteed_opening_elements 高于 flavor 文案
+    - starting_liabilities 必须真实进入开局
+    - forbidden_drift 高于 AI 的自由发挥
+    - world_mode 与 route 若冲突，以 world_mode 硬参数为准，但 route 决定叙事镜头
+
+route_dictionary:
+  fields_meaning:
+    core_fantasy: 玩家这一局主要爽点
+    world_lens: AI 写世界时应优先强调的观察角度
+    branch_bias: 六主分支的初始偏置权重
+    starter_package_candidates: 可用于抽取/分配的起始能力包
+    guaranteed_opening_elements: 开局必须出现的系统要素
+    starting_liabilities: 起始缺口/缺陷/短板，禁止省略
+    opening_conflict_sources: 第一阶段优先生成的矛盾源
+    npc_release_style: NPC 应该以什么状态被放入舞台
+    forbidden_drift: AI 禁止把本流派写偏成什么样
+
+profiles:
+  守:
+    id: guard
+    name: 守
+    role_type: primary
+    core_fantasy: 堡垒、防线、压制、清场、征服威胁
+    world_lens: >
+      世界应首先被写成“威胁网络与防御需求”的集合。
+      AI 优先描写危险源、观察接口、防线缺口、可控空间和待清理目标。
+    recommended_world_modes: [A]
+    fallback_world_modes: [C]
+
+    branch_bias:
+      守: 1.45
+      行: 1.15
+      扩: 1.10
+      管: 0.95
+      养: 0.90
+      慰: 0.75
+
+    point_bias:
+      safe_cost_discount: 1
+      action_cost_discount: 1
+      comfort_cost_penalty: 1
+      governance_cost_penalty: 0
+
+    starter_package_candidates:
+      - safe.perimeter_alpha
+      - safe.foyer_control
+      - safe.nonlethal_response
+      - action.recon_patrol
+      - expand.control_anchor
+
+    guaranteed_opening_elements:
+      - 至少存在一个明确敌对来源
+      - 至少存在一个可观测但未清理的危险点
+      - 庇护所核心区必须体现“安全但非全知”
+      - 开局必须让玩家感觉“守得住”和“还没全稳住”同时成立
+      - 第一阶段必须有清场/镇压/防线修补类选择
+
+    starting_liabilities:
+      - 人口协作基础偏弱
+      - 舒适恢复能力偏低
+      - 长期治理与安抚手段不足
+      - 容易依赖压制解决问题，后期可能引发反弹
+      - 对外扩张会显著提高围堵和报复概率
+
+    opening_conflict_sources:
+      - 楼层暴徒试探
+      - 走廊监控盲区
+      - 物资投送暴露风险
+      - 邻近据点敌意侦察
+      - 受惊幸存者误判防御行为
+
+    npc_release_style:
+      primary_npc_state: 惶恐、防备、观望、试探
+      hostile_npc_ratio: 高
+      cooperative_npc_ratio: 低
+      neutral_npc_ratio: 中
+      note: NPC 应更多以威胁、麻烦、待判断对象进入舞台，而非天然可治理对象
+
+    opening_task_bias:
+      - 修补防线
+      - 识别敌意
+      - 确定优先清理目标
+      - 建立最小压制秩序
+      - 选择是否提前外扩
+
+    forbidden_drift:
+      - 禁止把守流写成轻松种田日常
+      - 禁止开局就写成“所有敌人都被吓住”
+      - 禁止把庇护所写成自动清场、自动支配、全图无死角
+      - 禁止把治理问题提前消解
+      - 禁止把 NPC 大量写成主动依附
+
+  养:
+    id: sustain
+    name: 养
+    role_type: primary
+    core_fantasy: 维持、保命、循环、种田、人口保全
+    world_lens: >
+      世界应首先被写成“系统平衡正在吃人”的环境。
+      AI 优先描写供暖、净化、医疗、配给、疲劳、病痛和人口维持压力。
+    recommended_world_modes: [B]
+    fallback_world_modes: [C]
+
+    branch_bias:
+      养: 1.50
+      管: 1.10
+      慰: 1.05
+      守: 0.90
+      扩: 0.80
+      行: 0.70
+
+    point_bias:
+      sustain_cost_discount: 1
+      comfort_cost_discount: 0
+      action_cost_penalty: 1
+      expansion_cost_penalty: 1
+
+    starter_package_candidates:
+      - sustain.thermal_loop
+      - sustain.basic_med_support
+      - sustain.ration_control
+      - governance.shift_schedule
+      - comfort.stable_rest
+
+    guaranteed_opening_elements:
+      - 至少出现一个真实生命维持压力
+      - 至少出现一个需要取舍的配给或医疗问题
+      - 至少出现一个“救谁 / 先维持哪里”的决策点
+      - 庇护所必须表现为生命支持系统，而非万能工厂
+      - 开局必须让玩家明确感知“多活一个人就是多一份系统资本”
+
+    starting_liabilities:
+      - 对外行动能力弱
+      - 防御压制能力有限
+      - 外部清场效率低
+      - 资源循环一旦失衡会迅速连锁出问题
+      - 对高协作人口依赖极强
+
+    opening_conflict_sources:
+      - 供暖不足
+      - 病患抢救
+      - 基础药品缺口
+      - 配给分配争议
+      - 临时收容导致系统超载
+
+    npc_release_style:
+      primary_npc_state: 虚弱、求生、依赖边缘、带伤、需要照料
+      hostile_npc_ratio: 低
+      cooperative_npc_ratio: 中
+      neutral_npc_ratio: 高
+      note: NPC 应更多作为“维持对象 / 配给对象 / 医疗对象 / 协作来源”进入舞台
+
+    opening_task_bias:
+      - 稳定温控与净化
+      - 确定医疗优先级
+      - 组织轮值与照料
+      - 维持最小人口存活
+      - 决定是否冒险外出换取关键物资
+
+    forbidden_drift:
+      - 禁止把养流写成随手无限生产
+      - 禁止把医疗与供暖写成无代价常驻外挂
+      - 禁止开局就轻易外扩扫楼
+      - 禁止把人口管理写成纯数字游戏而失去人物代价
+      - 禁止削弱环境压力到不再重要
+
+  管:
+    id: govern
+    name: 管
+    role_type: primary
+    core_fantasy: 治理、接管、协调、谈判、秩序建构
+    world_lens: >
+      世界应首先被写成“规则真空与秩序竞争”的舞台。
+      AI 优先描写谁在组织、谁在分配、谁在交易、谁在破坏规则，
+      而不是只写生存或纯战斗。
+    recommended_world_modes: [C]
+    fallback_world_modes: [B, A]
+
+    branch_bias:
+      管: 1.50
+      扩: 1.10
+      行: 1.05
+      慰: 1.05
+      养: 0.95
+      守: 0.95
+
+    point_bias:
+      governance_cost_discount: 1
+      expansion_cost_discount: 0
+      comfort_cost_discount: 0
+      brute_force_cost_penalty: 1
+
+    starter_package_candidates:
+      - governance.rule_kernel
+      - governance.distribution_protocol
+      - expand.interface_registry
+      - action.contact_window
+      - comfort.morale_buffer
+
+    guaranteed_opening_elements:
+      - 至少存在两个不同立场的组织/群体/楼层对象
+      - 至少存在一个“规则怎么定”的现实问题
+      - 至少存在一个交易、协商或接管机会
+      - 庇护所必须表现为治理核心，而不是单纯堡垒或工厂
+      - 开局必须让玩家看到“秩序本身就是资源”
+
+    starting_liabilities:
+      - 纯战斗压制能力不突出
+      - 资源循环不如养流稳定
+      - 若规则失信，系统信誉会快速崩塌
+      - 容易被多方势力试探、讨价还价、渗透
+      - 过早扩权可能导致管理失控
+
+    opening_conflict_sources:
+      - 分配标准争议
+      - 邻近房间/楼层的治理真空
+      - 中立商路试探
+      - 协议破坏与规则失信
+      - 人情、利益与秩序之间的冲突
+
+    npc_release_style:
+      primary_npc_state: 谈判、观望、带条件合作、保留筹码
+      hostile_npc_ratio: 中
+      cooperative_npc_ratio: 中
+      neutral_npc_ratio: 高
+      note: NPC 应更多作为“可谈判对象 / 可治理对象 / 有筹码的主体”进入舞台
+
+    opening_task_bias:
+      - 制定第一轮规则
+      - 组织最小配给制度
+      - 确认谁受庇护、谁需纳管
+      - 建立交易与接触窗口
+      - 判断何时从协商转向控制
+
+    forbidden_drift:
+      - 禁止把管流写成纸上谈兵的空制度
+      - 禁止开局就让所有 NPC 自动认同秩序
+      - 禁止只写话术，不写执行成本
+      - 禁止把矛盾都转成单纯武力解决
+      - 禁止削弱“信任、信誉、规则执行”在本流派中的核心地位

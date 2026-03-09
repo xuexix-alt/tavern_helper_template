@@ -1,0 +1,223 @@
+version: 1
+
+meta:
+  id: opening_build_rules
+  name: 开局点数构筑规则
+  world: 寒冬末日-星穹秩序
+  authoring_note: >
+    该配置用于开局阶段生成本局庇护所 build。
+    规则目标是让玩家拥有有限自由组合能力，同时保留真实短板、世界压力和后续线性演化空间。
+    开局确认后 build 进入封板状态，后续只允许在线性规则内升级、补强与扩展。
+  source_of_truth: true
+
+rules:
+  selection_timing: opening_only
+  build_confirmation_required: true
+  can_rebuild_after_sealed: false
+  interpretation_priority:
+    - 世界观配置硬参数 高于 主流派偏置
+    - 主流派偏置 高于 AI 的 flavor 发挥
+    - starting_liabilities 必须真实进入 opening
+    - 开局 build 必须保留至少 2 个短板
+    - 封板后禁止大洗牌，只允许线性演化
+
+build_flow:
+  - 选择世界观档位
+  - 选择主流派
+  - 选择副偏向
+  - 生成候选能力池
+  - 计算起始点数
+  - 购买能力与模块
+  - 可选启用 DIY 槽
+  - 编译 build 摘要
+  - 确认并封板
+
+point_system:
+  total_point_formula: 世界档位基值 + 主流派修正 + 副偏向修正 + 难度修正 + 开局补正
+
+  world_mode_base:
+    A: 8
+    B: 10
+    C: 9
+
+  primary_route_modifier:
+    守: 0
+    养: 0
+    管: 0
+
+  secondary_route_modifier:
+    none: 0
+    one: 1
+    two: 2
+
+  difficulty_modifier:
+    宽松: 1
+    标准: 0
+    严苛: -1
+
+  opening_bonus_default: 0
+  opening_bonus_note: 用于特殊背景、特殊角色特质或事件奖励，默认不加
+
+  runtime_relation_with_imp:
+    point_generation: 开局点数不直接由 IMP 决定
+    runtime_maintenance: IMP 用于决定运行维持值、功能 uptime、升级前置与扩张承载力
+
+cost_rules:
+  base_cost_by_tier:
+    T1: 1
+    T2: 2
+    T3: 3
+    T4: 4
+
+  additive_modifiers:
+    multi_room_or_multi_floor_effect: 1
+    persistent_passive_structure_effect: 1
+    reshapes_order_or_production_structure: 1
+    has_clear_load_or_cooldown_or_scope_limit: -1
+
+  same_branch_escalation:
+    starts_from_pick_index: 2
+    extra_cost_per_additional_pick: 1
+    note: 同一主分支从第 2 个起每多买 1 个额外 +1 cost，防止开局单线点满
+
+starter_pool_rules:
+  total_candidate_count_range: [10, 14]
+  primary_pool_count_range: [5, 7]
+  secondary_pool_count_range_per_route: [2, 3]
+  general_pool_count_range: [2, 3]
+
+  generation_logic:
+    base_pool: 世界档位允许池 与 主流派推荐池 的交集
+    secondary_pool: 按副偏向附加候选
+    guaranteed_pool: 每个主流派至少 3 个必出候选
+    risk_pool: 每个世界档位额外加入 1 到 2 个高风险候选
+
+  candidate_pool_constraints:
+    - 不展示全量能力库
+    - 候选池必须体现主流派偏置
+    - 候选池必须体现世界观档位压力
+    - 候选池中必须至少存在 1 个高回报高风险节点
+
+opening_build_constraints:
+  mandatory_primary_route_pick_count: 1
+  max_secondary_route_pick_total: 2
+  total_equipped_ability_count_range: [4, 6]
+
+  max_pick_per_branch:
+    primary_route: 3
+    secondary_route: 2
+    non_focus_route: 1
+
+  route_priority_constraint:
+    - 副偏向总投入不得超过主流派投入
+    - 扩 / 行 / 慰 在开局阶段不得盖过主流派镜头
+
+liability_rules:
+  guaranteed_liability_count: 2
+  must_keep_unresolved_shortcomings: true
+  note: 开局必须保留真实问题，禁止生成“万能完成体”
+
+  route_required_liabilities:
+    守:
+      - 治理短板
+      - 舒适短板
+      - 协作短板
+    养:
+      - 外出短板
+      - 压制短板
+      - 外扩短板
+    管:
+      - 硬压制短板
+      - 稳定生产短板
+      - 信誉崩塌风险
+
+diy_slot_rules:
+  enabled: true
+  slot_count: 1
+  unlock_method:
+    type: point_purchase
+    diy_slot_cost: 2
+    note: 至少保留 2 点或直接支付 2 点以开启 DIY 槽
+
+  required_fields:
+    - key
+    - name
+    - category
+    - desc
+    - boundary
+    - cost
+    - activation
+    - scope
+    - cannot_do
+    - fallback
+
+  hard_limits:
+    - 不得跨越当前世界档位硬边界
+    - 不得覆盖约束协议层
+    - 不得声明无限、全图、无代价、无冷却、无痕、绝对支配
+    - 不得直接创造完整新系统，只允许单槽能力
+
+  recommended_cost:
+    base_single_slot: 2
+    multi_room_or_multi_target: 3
+    persistent_structure_effect: 4
+
+build_compilation:
+  required_outputs:
+    - 总点数
+    - 已消耗点数
+    - 剩余点数
+    - 主流派
+    - 副偏向
+    - 当前装配能力_keys
+    - DIY 槽内容
+    - 初始短板
+    - 约束摘要
+    - ability_call_keys
+    - opening_world_seed
+
+  write_targets:
+    chat_variables:
+      - eden.opening.shelter_build
+      - eden.blueprint_overlay.custom_abilities
+      - eden.blueprint_overlay.custom_wings
+    mvu_stat_data:
+      - 庇护所.当前装配能力
+      - 庇护所.DIY能力槽
+      - 庇护所.约束边界
+      - 庇护所.编译摘要
+
+seal_rules:
+  sealed_field: eden.opening.shelter_build.sealed
+  set_to_true_when_confirmed: true
+  forbidden_after_sealed:
+    - 重抽候选池
+    - 重置主流派
+    - 改写 DIY 文本
+    - 大规模替换已装配能力
+  allowed_after_sealed:
+    - 解锁新能力
+    - 升级已装配能力
+    - 新增少量模块
+    - 极少量剧情事件替换 1 个非核心模块
+
+opening_generation_hard_rules:
+  opening_must_include:
+    - 一个立即可见的系统压力
+    - 一个必须做选择的现实问题
+    - 一个流派专属爽点入口
+    - 一个尚未解决的短板
+    - 一个与世界档位匹配的外部矛盾源
+  opening_forbidden:
+    - 把所有短板在开局消掉
+    - 把 build 写成万能
+    - 把副偏向写成主流派
+    - 忽略约束协议层
+
+recommended_defaults:
+  mandatory_pick_count: 1
+  max_same_branch_pick: 3
+  diy_slot_enabled: true
+  diy_slot_cost: 2
+  starter_pool_size: 12
+  guaranteed_liability_count: 2
