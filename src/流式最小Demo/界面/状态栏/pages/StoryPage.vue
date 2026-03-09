@@ -41,6 +41,7 @@
       :editing-user-draft="editingUserDraft"
       :rollback-confirm-message-id="rollbackConfirmMessageId"
       :swipe-message-id="latestAssistantSwipeMessageId"
+      :swipe-label="latestAssistantSwipeLabel"
       :can-swipe-prev="canSwipeLatestAssistantPrev"
       :can-swipe-next="canSwipeLatestAssistantNext"
       @open-detail="openDetail"
@@ -60,9 +61,15 @@
       v-model="input"
       :busy="busy"
       :status="status"
+      :can-roll="Boolean(latestUserItem)"
+      :swipe-label="latestAssistantSwipeLabel"
+      :can-swipe-prev="canSwipeLatestAssistantPrev"
+      :can-swipe-next="canSwipeLatestAssistantNext"
       @submit="runDemo"
+      @roll="rollLatestTurn"
+      @swipe="swipeLatestAssistant"
       @jump-latest="jumpLatest"
-      @refresh="rebuildTranscript"
+      @refresh="refreshWorkbench"
     />
 
     <MessageDetailModal :item="selectedItem" @close="closeDetail" />
@@ -104,10 +111,13 @@ const {
   latestAssistantSwipeMessageId,
   canSwipeLatestAssistantPrev,
   canSwipeLatestAssistantNext,
+  latestAssistantSwipeLabel,
   openingPreset,
   openingPayload,
   shouldShowOpeningSetup,
   runDemo,
+  rollLatestTurn,
+  refreshWorkbench,
   updateOpeningMeta,
   updateOpeningField,
   generateOpening,
@@ -121,7 +131,6 @@ const {
   swipeLatestAssistant,
   setReadingMode,
   toggleOpeningExpanded,
-  rebuildTranscript,
   openDetail,
   closeDetail,
 } = useStreamingDemo();

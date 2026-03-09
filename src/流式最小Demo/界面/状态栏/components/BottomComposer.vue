@@ -15,6 +15,16 @@
       <div class="composer-actions">
         <button type="button" class="send-btn secondary mini" @click="$emit('jump-latest')">最新</button>
         <button type="button" class="send-btn secondary mini" @click="$emit('refresh')">刷新</button>
+        <button type="button" class="send-btn secondary mini" :disabled="busy || !canRoll" @click="$emit('roll')">ROLL</button>
+        <div v-if="swipeLabel" class="composer-swipe-group">
+          <button type="button" class="send-btn secondary mini" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
+            ←
+          </button>
+          <span class="composer-swipe-label">{{ swipeLabel }}</span>
+          <button type="button" class="send-btn secondary mini" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
+            →
+          </button>
+        </div>
         <button type="button" class="send-btn" :disabled="busy" @click="$emit('submit')">
           {{ busy ? '生成中…' : '发送' }}
         </button>
@@ -30,11 +40,17 @@ const props = defineProps<{
   modelValue: string;
   busy: boolean;
   status: DemoStatus;
+  canRoll?: boolean;
+  swipeLabel?: string;
+  canSwipePrev?: boolean;
+  canSwipeNext?: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
   (event: 'submit'): void;
+  (event: 'roll'): void;
+  (event: 'swipe', direction: 'prev' | 'next'): void;
   (event: 'jump-latest'): void;
   (event: 'refresh'): void;
 }>();
@@ -111,6 +127,21 @@ function onInput(event: Event) {
   display: flex;
   gap: 8px;
   flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.composer-swipe-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.composer-swipe-label {
+  min-width: 42px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--demo-text-muted);
 }
 
 .composer-textarea {

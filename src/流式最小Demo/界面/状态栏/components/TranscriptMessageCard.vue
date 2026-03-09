@@ -72,6 +72,7 @@
       <button type="button" class="swipe-btn" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
         ←
       </button>
+      <span v-if="swipeLabel" class="swipe-label">{{ swipeLabel }}</span>
       <button type="button" class="swipe-btn" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
         →
       </button>
@@ -91,6 +92,7 @@ const props = defineProps<{
   showEditRegenerate?: boolean;
   showRollbackConfirm?: boolean;
   showSwipeControls?: boolean;
+  swipeLabel?: string;
   canSwipePrev?: boolean;
   canSwipeNext?: boolean;
 }>();
@@ -292,6 +294,13 @@ function onEditInput(event: Event) {
   min-width: 38px;
   font-size: 14px;
   font-weight: 700;
+}
+
+.swipe-label {
+  min-width: 42px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--demo-text-muted);
 }
 
 .action-btn:disabled,

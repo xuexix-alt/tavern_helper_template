@@ -1,0 +1,145 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.2",
+    "lastTouchedAt": "2026-03-06T02:17:33.878Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-06T02:00:43.289Z",
+    "lastRunVersion": "2026.3.2",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "auth": {
+    "profiles": {
+      "minimax-cn:default": {
+        "provider": "minimax-cn",
+        "mode": "api_key"
+      },
+      "codex-vip:default": {
+        "provider": "codex-vip",
+        "mode": "api_key"
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "minimax-cn": {
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "api": "anthropic-messages",
+        "authHeader": true,
+        "models": [
+          {
+            "id": "MiniMax-M2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": true,
+            "input": ["text"],
+            "cost": {
+              "input": 0.3,
+              "output": 1.2,
+              "cacheRead": 0.03,
+              "cacheWrite": 0.12
+            },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      },
+      "codex-vip": {
+        "baseUrl": "https://apiport.cc.cd",
+        "apiKey": "sk-790cc59f41c6e67e3ca6038179bd52ba861b5f4a7120534827128545baab316c",
+        "api": "openai-responses",
+        "models": [
+          {
+            "id": "gpt-5.2",
+            "name": "gpt-5.2",
+            "reasoning": false,
+            "input": ["text", "image"],
+            "contextWindow": 40000,
+            "maxTokens": 8192,
+            "cost": {
+              "input": 1.75,
+              "output": 14,
+              "cacheRead": 0.175,
+              "cacheWrite": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "minimax-cn/MiniMax-M2.5",
+        "fallbacks": []
+      },
+      "imageModel": {
+        "primary": "codex-vip/gpt-5.2",
+        "fallbacks": []
+      },
+      "models": {
+        "minimax-cn/MiniMax-M2.5": { "alias": "Minimax" },
+        "codex-vip/gpt-5.2": { "alias": "GPT-5.2" }
+      },
+      "workspace": "/home/xjia/.openclaw/workspace",
+      "compaction": { "mode": "safeguard" }
+    }
+  },
+  "tools": { "profile": "full" },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "text": true,
+    "bash": false,
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "scope": "per-sender",
+    "dmScope": "per-channel-peer"
+  },
+  "hooks": { "enabled": false },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "botToken": "8681798462:AAHLlcmbec_imv9T0jyJqwlMFjrI29EOmTk",
+      "allowFrom": [6133156702],
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "replyToMode": "first",
+      "historyLimit": 50,
+      "linkPreview": true,
+      "actions": {
+        "reactions": true,
+        "sendMessage": true
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "mode": "token",
+      "token": "35988624f6776a9cde02cceffbd426fdb489e2360ea04709"
+    },
+    "tailscale": { "mode": "off", "resetOnExit": false },
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "contacts.add",
+        "calendar.add",
+        "reminders.add",
+        "sms.send"
+      ]
+    }
+  },
+  "skills": {
+    "install": { "nodeManager": "npm" },
+    "allowBundled": []
+  }
+}

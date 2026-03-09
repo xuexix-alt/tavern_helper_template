@@ -21,14 +21,7 @@ alwaysApply: true
 - 如果文件夹中既有 `index.ts` 文件也有 `index.html` 文件, 则是前端界面项目. 例如, `示例/界面示例` 是一个前端界面项目.
 - 如果文件夹中仅有 `index.ts` 文件, 则是脚本项目. 例如, `示例/脚本示例`、`示例/流式楼层界面示例` 是一个脚本项目.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-你可以在 `模板/**/新建为src文件夹中的文件夹` 中找到前端界面和脚本项目的初始模板.
-=======
-你可以在 `模板/*/新建为src文件夹中的文件夹` 中找到前端界面和脚本项目的初始模板.
-=======
 你可以在 `初始模板/*/新建为src文件夹中的文件夹` 中找到前端界面和脚本项目的初始模板.
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
 
 ### 流式楼层界面
 
@@ -54,12 +47,7 @@ alwaysApply: true
   - 会在 `pnpm build` 或 `pnpm watch` 时生成对应的 json schema 文件 `示例/角色卡示例/schema.json`, 便于编写变量初始值文件 initvar.yaml `# yaml-language-server: $schema=schema文件路径`
 - `util/mvu.ts` 中提供了 `defineMvuDataStore` 函数, 它基于 pinia 实现了本项目推荐的前端界面获取、修改 MVU 变量方式, 支持与酒馆实际变量之间的双向同步; `示例/角色卡示例/界面/store.ts` 中的 `useDataStore` 就是用它获取和修改界面所在楼层变量的.
 
-<<<<<<< HEAD
-你同样可以在 `模板/角色卡/新建为src文件夹中的文件夹` 中找到 MVU zod 角色卡的初始模板.
->>>>>>> 640d7d7c3f446a2c95904767cd9075c4284f5111
-=======
 你同样可以在 `初始模板/角色卡/新建为src文件夹中的文件夹` 中找到 MVU zod 角色卡的初始模板.
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
 
 ## 项目参考文件
 
@@ -104,65 +92,11 @@ import something from 'https://cdn.jsdelivr.net/npm/package-name@version/+esm';
 
 ### 接口使用规范
 
-<<<<<<< HEAD
-**@types 目录限制**
-
-- `@types` 目录包含了所有酒馆和酒馆助手提供的依赖函数、接口和类型定义
-- **禁止超出** `@types` 文件夹中定义的函数和接口进行开发
-- 不得自建接口或使用未在 `@types` 中定义的全局函数
-
-**@types 目录结构**
-
-`@types` 目录包含以下核心模块，所有可用的接口和函数均定义于此：
-
-**function/ 目录 - 核心功能函数：**
-- `variables.d.ts` - 变量操作：`getVariables`、`replaceVariables`、`klona`
-- `chat_message.d.ts` - 消息处理：`getChatMessages`、`sendMessage`、`getCurrentMessageId`
-- `slash.d.ts` - STScript命令：`triggerSlash`、`waitGlobalInitialized`
-- `script.d.ts` - 脚本管理：`getScriptId`、`eventOn`、`getButtonEvent`
-- `builtin.d.ts` - 内置工具：`toastr`、`$`、`jQuery`
-- `generate.d.ts` - 内容生成：`generate`
-- `character.d.ts` - 角色卡：`getCurrentCharacterId`、`getCharacterCard`
-- `global.d.ts` - 全局API：`getIframeName`、`window`、`document`
-- `audio.d.ts` - 音频播放：`playAudio`
-- `lorebook.d.ts` - 世界书：`replaceWorldbook`
-- `util.d.ts` - 工具函数：`klona`
-
-**iframe/ 目录 - 框架和插件接口：**
-- `exported.sillytavern.d.ts` - 酒馆原生API
-- `exported.tavernhelper.d.ts` - 酒馆助手API
-- `exported.mvu.d.ts` - MVU变量框架：`Mvu.getMvuData`、`Mvu.parseMessage`
-- `exported.ejstemplate.d.ts` - EJS模板引擎
-- `event.d.ts` - 事件系统：`tavern_events`
-- `script.d.ts` - 脚本框架：`waitForInit`
-- `util.d.ts` - iframe工具
-- `variables.d.ts` - iframe变量操作
-
-**所有酒馆交互功能必须使用上述接口**，例如：
-- 变量操作：`getVariables({type: 'script', script_id: getScriptId()})`
-- 消息处理：`getChatMessages(getCurrentMessageId())`
-- 事件监听：`eventOn(getButtonEvent('按钮名'), callback)`
-
-**webpack.config.ts 禁止修改**
-
-- `webpack.config.ts` 是项目的构建配置文件，**不允许修改**
-- 该文件已配置好所有必要的loader、插件和优化选项，包括：
-  - Vue Loader（用于Vue SFC编译）
-  - TypeScript Loader（用于.ts/.tsx文件编译）
-  - SCSS Loader（用于.scss文件编译和提取）
-  - MiniCssExtractPlugin（用于CSS提取）
-  - HtmlWebpackPlugin（用于HTML打包）
-  - VueUse自动导入组件和指令
-  - 代码混淆和压缩优化
-- 修改此文件可能导致构建失败或功能异常
-- 如需调整构建行为，请通过项目提供的配置项或环境变量进行
-=======
 在 `util` 中定义了一些工具函数:
 
 - `util/script.ts`: 脚本可能使用的函数
 - `util/common.ts`: 前端界面或脚本可能使用的函数
 - `util/mvu.ts`: MVU 角色卡可能使用的函数
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
 
 ## 特殊导入方式
 
@@ -292,11 +226,7 @@ $(window).on('pagehide', () => {
 
 ### 重载前端界面或脚本
 
-<<<<<<< HEAD
-如果有完全重载前端界面或脚本的需求, 你应该使用 `window.location.reload()`. 如聊天文件变更时重新载入前端界面或脚本:
-=======
 如果有完全重载前端界面或脚本的需求, 你应该使用 `window.location.reload()`. 如聊天文件变更时重新载入前端界面或脚本, 你可以用 `util/script.ts` 中定义好了的工具函数:
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
 
 ```ts
 let chat_id = SillyTavern.getCurrentChatId();

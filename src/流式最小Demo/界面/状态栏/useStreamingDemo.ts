@@ -37,6 +37,7 @@ import type {
 } from './types';
 
 type StopHandle = { stop?: () => void } | null;
+type HideRefreshMode = 'none' | 'affected';
 
 type BaseChatMessage = {
   message_id: number;
@@ -163,6 +164,25 @@ function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset):
     .join('\n');
 }
 
+function buildOpeningAssistantText(payload: OpeningPayload): string {
+  const body = String(payload.opening_content ?? '').trim();
+  const options = Array.isArray(payload.options)
+    ? payload.options.map(option => String(option ?? '').trim()).filter(Boolean)
+    : [];
+
+  return [
+    body,
+    options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+    .trim();
+}
+
+function isOpeningAssistantMessage(message: any): boolean {
+  return _.get(message, 'data.stream_demo.opening_assistant') === true;
+}
+
 function buildOpeningTranscriptItem(
   payload: OpeningPayload,
   preset: OpeningPreset,
@@ -231,6 +251,9 @@ export function useStreamingDemo() {
   let hidePolicyRerun = false;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
+
+  const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
+  const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
 
   const visibleTranscript = computed(() => {
     if (filterMode.value === 'all') return transcript.value;
@@ -329,27 +352,32 @@ export function useStreamingDemo() {
   });
 
   const latestAssistantSwipeState = computed(() => {
-    const item = latestAssistantItem.value;
-    if (!item || item.isOpening) {
-      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
-    }
-
     try {
-      const message = getChatMessages(item.message_id, { include_swipes: true, hide_state: 'all' })[0] as any;
-      const swipes = Array.isArray(message?.swipes) ? message.swipes : [];
-      const count = swipes.length;
-      if (count <= 1) {
-        return { messageId: null as number | null, count, index: 0, canPrev: false, canNext: false };
+      const list = getChatMessages('0-{{lastMessageId}}', { include_swipes: true, hide_state: 'all' }) as any[];
+      const messages = Array.isArray(list) ? list : [];
+
+      for (let indexFromEnd = messages.length - 1; indexFromEnd >= 0; indexFromEnd -= 1) {
+        const message = messages[indexFromEnd];
+        const messageId = Math.trunc(Number(message?.message_id));
+        if (!Number.isFinite(messageId)) continue;
+        if (((message?.role as string) || 'assistant') !== 'assistant') continue;
+
+        const swipes = Array.isArray(message?.swipes) ? message.swipes : [];
+        const count = swipes.length;
+        if (count <= 1) continue;
+
+        const rawIndex = Number(message?.swipe_id);
+        const index = Number.isFinite(rawIndex) ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1) : count - 1;
+        return {
+          messageId,
+          count,
+          index,
+          canPrev: index > 0,
+          canNext: index < count - 1,
+        };
       }
-      const rawIndex = Number(message?.swipe_id);
-      const index = Number.isFinite(rawIndex) ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1) : count - 1;
-      return {
-        messageId: item.message_id,
-        count,
-        index,
-        canPrev: index > 0,
-        canNext: index < count - 1,
-      };
+
+      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
     } catch {
       return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
     }
@@ -358,6 +386,11 @@ export function useStreamingDemo() {
   const latestAssistantSwipeMessageId = computed(() => latestAssistantSwipeState.value.messageId);
   const canSwipeLatestAssistantPrev = computed(() => latestAssistantSwipeState.value.canPrev);
   const canSwipeLatestAssistantNext = computed(() => latestAssistantSwipeState.value.canNext);
+  const latestAssistantSwipeLabel = computed(() => {
+    const swipeState = latestAssistantSwipeState.value;
+    if (swipeState.messageId == null || swipeState.count <= 1) return '';
+    return `${swipeState.index + 1}/${swipeState.count}`;
+  });
 
   const readerSummary = computed<ReaderSummary>(() => {
     const turnCount = transcript.value.filter(item => item.role === 'assistant' && !item.isOpening).length;
@@ -421,6 +454,96 @@ export function useStreamingDemo() {
 
   function openDetail(item: TranscriptItem) {
     selectedItem.value = item;
+  }
+
+  function refreshWorkbench() {
+    rebuildTranscript();
+    queueHidePolicy('manual_refresh');
+    appendLog('info', '手动刷新', '已刷新 transcript，并重新收口 hidden 状态');
+    toastr?.info?.('已刷新工作台');
+  }
+
+  function collectHostDocuments(): Document[] {
+    const docs: Document[] = [];
+    const push = (doc: Document | null | undefined) => {
+      if (!doc || docs.includes(doc)) return;
+      docs.push(doc);
+    };
+
+    push(document);
+    try {
+      push(window.parent?.document);
+    } catch {
+      // ignore
+    }
+    try {
+      push(window.top?.document);
+    } catch {
+      // ignore
+    }
+    return docs;
+  }
+
+  function setHostTranscriptVisibility(active: boolean) {
+    for (const doc of collectHostDocuments()) {
+      const body = doc.body;
+      const head = doc.head;
+      if (!body || !head) continue;
+
+      const existing = doc.getElementById(HOST_VISIBILITY_STYLE_ID);
+      if (active) {
+        if (!existing) {
+          const style = doc.createElement('style');
+          style.id = HOST_VISIBILITY_STYLE_ID;
+          style.textContent = `
+            body.${HOST_VISIBILITY_CLASS} #chat > .mes[mesid]:not([mesid='0']) {
+              display: none !important;
+            }
+          `;
+          head.appendChild(style);
+        }
+        body.classList.add(HOST_VISIBILITY_CLASS);
+      } else {
+        body.classList.remove(HOST_VISIBILITY_CLASS);
+        existing?.remove();
+      }
+    }
+  }
+
+  async function syncOpeningAssistantMessage(refresh: HideRefreshMode = 'none', createIfMissing = true) {
+    if (readCurrentContainerMessageId() !== 0) return;
+    if (openingPayload.value.state !== 'ready') return;
+
+    const nextMessage = buildOpeningAssistantText(openingPayload.value);
+    if (!nextMessage) return;
+
+    const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
+    const all = Array.isArray(list) ? list : [];
+    const existing = all.find(message => {
+      const id = Math.trunc(Number(message?.message_id));
+      return Number.isFinite(id) && id > 0 && isOpeningAssistantMessage(message);
+    });
+    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
+    _.set(nextData, 'stream_demo.opening_assistant', true);
+
+    if (existing) {
+      await setChatMessages(
+        [{ message_id: Math.trunc(Number(existing.message_id)), message: nextMessage, is_hidden: false, data: nextData }],
+        { refresh },
+      );
+      return;
+    }
+
+    if (!createIfMissing) return;
+
+    const firstAfterZero = all
+      .map(message => Math.trunc(Number(message?.message_id)))
+      .find(id => Number.isFinite(id) && id > 0);
+
+    await createChatMessages(
+      [{ role: 'assistant', is_hidden: false, message: nextMessage, data: nextData }],
+      { insert_before: firstAfterZero ?? 'end', refresh },
+    );
   }
 
   function setEditingUserDraft(value: string) {
@@ -506,47 +629,25 @@ export function useStreamingDemo() {
     }
   }
 
-  function collectHostDocuments(): Document[] {
-    const docs: Document[] = [];
-    const push = (doc: Document | null | undefined) => {
-      if (!doc || docs.includes(doc)) return;
-      docs.push(doc);
-    };
-
-    push(document);
-    try {
-      push(window.parent?.document);
-    } catch {
-      // ignore
-    }
-    try {
-      push(window.top?.document);
-    } catch {
-      // ignore
-    }
-    return docs;
+  function resolveHidePolicyRefresh(reason: string): HideRefreshMode {
+    if (reason === 'mounted') return 'affected';
+    if (reason.startsWith('external:chat_id_changed')) return 'affected';
+    if (reason.startsWith('external:message_sent')) return 'affected';
+    if (reason.startsWith('external:message_received')) return 'affected';
+    if (reason.startsWith('external:more_messages_loaded')) return 'affected';
+    return 'none';
   }
 
-  function clickHostSwipeControl(messageId: number, direction: 'prev' | 'next'): boolean {
-    const selector = direction === 'prev' ? '.swipe_left' : '.swipe_right';
-    for (const doc of collectHostDocuments()) {
-      const $roots = $(
-        `#chat > .mes[mesid='${messageId}'], #chat .mes[mesid='${messageId}'], .mes[mesid='${messageId}']`,
-        doc,
-      ) as JQuery<HTMLElement>;
-      for (const root of $roots.toArray()) {
-        const $controls = $(root).find(selector) as JQuery<HTMLElement>;
-        for (const control of $controls.toArray()) {
-          if ((control as HTMLButtonElement).disabled) continue;
-          $(control).trigger('click');
-          return true;
-        }
-      }
-    }
-    return false;
+  function resolveHidePolicyDelay(reason: string): number {
+    return resolveHidePolicyRefresh(reason) === 'affected' ? 0 : 80;
   }
 
   async function applyHidePolicy(reason: string) {
+    if (readCurrentContainerMessageId() !== 0) {
+      setHostTranscriptVisibility(false);
+      return;
+    }
+    setHostTranscriptVisibility(true);
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
       return;
@@ -555,11 +656,12 @@ export function useStreamingDemo() {
     try {
       do {
         hidePolicyRerun = false;
+        const refresh = resolveHidePolicyRefresh(reason);
         const patch = readMessagesAfterContainer()
-          .filter(item => item.is_hidden !== true)
-          .map(item => ({ message_id: item.message_id, is_hidden: true }));
+          .filter(item => item.is_hidden === true)
+          .map(item => ({ message_id: item.message_id, is_hidden: false }));
         if (patch.length === 0) continue;
-        await setChatMessages(patch, { refresh: 'none' });
+        await setChatMessages(patch, { refresh });
       } while (hidePolicyRerun);
     } catch (error) {
       console.warn('[stream-demo] hide policy failed', {
@@ -576,16 +678,17 @@ export function useStreamingDemo() {
     hidePolicyTimer = window.setTimeout(() => {
       hidePolicyTimer = 0;
       void applyHidePolicy(reason);
-    }, 80);
+    }, resolveHidePolicyDelay(reason));
   }
 
   function queueExternalSync(reason: string) {
     if (externalSyncTimer) window.clearTimeout(externalSyncTimer);
+    const scopedReason = `external:${reason}`;
     externalSyncTimer = window.setTimeout(() => {
       externalSyncTimer = 0;
       rebuildTranscript();
-      queueHidePolicy(`external:${reason}`);
-    }, 80);
+      queueHidePolicy(scopedReason);
+    }, resolveHidePolicyDelay(scopedReason));
   }
 
   function handleHostRefreshEvent(name: string) {
@@ -639,6 +742,7 @@ export function useStreamingDemo() {
         if (!Number.isFinite(message_id)) continue;
         const id = Math.trunc(message_id);
         if (containerId != null && id <= containerId) continue;
+        if (isOpeningAssistantMessage(message)) continue;
         const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
         if (role === 'assistant') nextLatestAssistantId = id;
 
@@ -678,13 +782,13 @@ export function useStreamingDemo() {
     latestPatchedMessage = nextMessage;
 
     patchQueue = patchQueue.then(async () => {
-      await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: true }], { refresh: 'none' });
+      await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], { refresh: 'none' });
       upsertTranscriptItem(
         createLocalTranscriptItem({
           id: messageId,
           role: 'assistant',
           raw: nextMessage,
-          hidden: true,
+          hidden: false,
         }),
       );
     });
@@ -726,7 +830,7 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
-        await createChatMessages([{ role: 'user', message: prompt, is_hidden: true }], { refresh: 'none' });
+        await createChatMessages([{ role: 'user', message: prompt, is_hidden: false }], { refresh: 'none' });
         const userId = Number(getLastMessageId?.());
         if (Number.isFinite(userId)) {
           upsertTranscriptItem(
@@ -734,14 +838,17 @@ export function useStreamingDemo() {
               id: Math.trunc(userId),
               role: 'user',
               raw: prompt,
-              hidden: true,
+              hidden: false,
             }),
           );
         }
         appendLog('action', '发送用户输入', stripTagsForPreview(prompt).slice(0, 80) || '(空输入)');
       }
 
-      const generatePromise = generate({ should_stream: true });
+      const generatePromise = generate({
+        should_stream: true,
+        max_chat_history: 'all',
+      });
       await createAssistantPlaceholder();
       readingMode.value = 'following_latest';
 
@@ -774,34 +881,26 @@ export function useStreamingDemo() {
   }
 
   async function triggerNativeRegenerate(anchorMessageId: number) {
+    const latestUser = latestUserItem.value;
     if (busy.value) return;
-    if (typeof triggerSlash !== 'function') {
-      toastr?.error?.('当前环境不可用 triggerSlash，无法走酒馆原生重生链');
+    if (!latestUser || latestUser.role !== 'user' || latestUser.message_id !== anchorMessageId) {
+      toastr?.warning?.('未定位到最后一条 user，无法重生');
       return;
     }
 
-    busy.value = true;
-    status.value = 'preparing';
-    errorText.value = '';
-    streamText.value = '';
-    finalText.value = '';
     readingMode.value = 'following_latest';
     queuePersistReaderChatState();
+    appendLog('action', '重新生成', `已按楼层 #${anchorMessageId} 走受控 hidden 链重生`);
+    await runGenerationFlow({ prompt: latestUser.raw, createUser: false });
+  }
 
-    try {
-      await triggerSlash('/trigger await=true');
-      status.value = 'done';
-      rebuildTranscript();
-      queueHidePolicy('native_regenerate');
-      appendLog('action', '重新生成', `已按楼层 #${anchorMessageId} 走酒馆原生链重生`);
-    } catch (error) {
-      status.value = 'error';
-      errorText.value = error instanceof Error ? error.message : String(error);
-      toastr?.error?.(`重生失败：${errorText.value}`);
-      appendLog('error', '重新生成失败', errorText.value || '未知错误');
-    } finally {
-      busy.value = false;
+  async function rollLatestTurn() {
+    const latestUser = latestUserItem.value;
+    if (!latestUser || latestUser.role !== 'user') {
+      toastr?.info?.('当前还没有可重新生成的 user 楼层');
+      return;
     }
+    await triggerNativeRegenerate(latestUser.message_id);
   }
 
   async function confirmInlineEditRegenerate(item: TranscriptItem) {
@@ -859,19 +958,20 @@ export function useStreamingDemo() {
   }
 
   async function swipeLatestAssistant(direction: 'prev' | 'next') {
-    const messageId = latestAssistantSwipeMessageId.value;
+    const swipeState = latestAssistantSwipeState.value;
+    const messageId = swipeState.messageId;
     if (messageId == null) {
       toastr?.info?.('当前最新 assistant 没有可切换的 swipe');
       return;
     }
     if (direction === 'prev' && !canSwipeLatestAssistantPrev.value) return;
     if (direction === 'next' && !canSwipeLatestAssistantNext.value) return;
-    if (!clickHostSwipeControl(messageId, direction)) {
-      toastr?.warning?.('未定位到宿主原生 swipe 按钮');
-      return;
-    }
+    const nextSwipeId = direction === 'prev' ? swipeState.index - 1 : swipeState.index + 1;
+    if (nextSwipeId < 0 || nextSwipeId >= swipeState.count) return;
+    await setChatMessages([{ message_id: messageId, swipe_id: nextSwipeId, is_hidden: false }], { refresh: 'none' });
     appendLog('action', '切换 Swipe', `${direction === 'prev' ? '切到上一页' : '切到下一页'}（楼层 #${messageId}）`);
-    queueExternalSync(`swipe:${direction}`);
+    rebuildTranscript();
+    queueHidePolicy(`swipe:${direction}`);
   }
 
   async function generateOpening() {
@@ -909,6 +1009,7 @@ export function useStreamingDemo() {
         options: extractOpeningOptions(result),
       };
       replaceOpeningPayloadInChat(openingPayload.value);
+      await syncOpeningAssistantMessage('none', true);
       rebuildTranscript();
       status.value = 'done';
       appendLog(
@@ -936,11 +1037,13 @@ export function useStreamingDemo() {
       tavern_events.CHAT_CHANGED,
       tavern_events.GENERATION_STARTED,
       tavern_events.GENERATION_ENDED,
+      tavern_events.MESSAGE_SENT,
       tavern_events.MESSAGE_EDITED,
       tavern_events.MESSAGE_RECEIVED,
       tavern_events.MESSAGE_UPDATED,
       tavern_events.MESSAGE_SWIPED,
       tavern_events.MESSAGE_DELETED,
+      tavern_events.MORE_MESSAGES_LOADED,
       tavern_events.STREAM_TOKEN_RECEIVED,
       tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED,
     ];
@@ -992,7 +1095,7 @@ export function useStreamingDemo() {
   }
 
   async function createAssistantPlaceholder() {
-    await createChatMessages([{ role: 'assistant', is_hidden: true, message: buildStreamDemoMessage('', 'stream') }], {
+    await createChatMessages([{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage('', 'stream') }], {
       refresh: 'none',
     });
     const id = Number(getLastMessageId?.());
@@ -1004,7 +1107,7 @@ export function useStreamingDemo() {
           id: assistantMessageId.value,
           role: 'assistant',
           raw: buildStreamDemoMessage('', 'stream'),
-          hidden: true,
+          hidden: false,
         }),
       );
     }
@@ -1023,6 +1126,7 @@ export function useStreamingDemo() {
 
   onMounted(() => {
     restoreReaderChatState();
+    void syncOpeningAssistantMessage('none', false);
     rebuildTranscript();
     bindHistoryRefreshEvents();
     queueHidePolicy('mounted');
@@ -1048,6 +1152,7 @@ export function useStreamingDemo() {
   );
 
   onBeforeUnmount(() => {
+    setHostTranscriptVisibility(false);
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
     historyStops = [];
@@ -1092,12 +1197,15 @@ export function useStreamingDemo() {
     latestAssistantSwipeMessageId,
     canSwipeLatestAssistantPrev,
     canSwipeLatestAssistantNext,
+    latestAssistantSwipeLabel,
     openingPreset,
     openingPayload,
     shouldShowOpeningSetup,
     readerSummary,
     logs,
     runDemo,
+    rollLatestTurn,
+    refreshWorkbench,
     updateOpeningMeta,
     updateOpeningField,
     generateOpening,

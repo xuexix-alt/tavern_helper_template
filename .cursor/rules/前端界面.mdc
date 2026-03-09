@@ -26,65 +26,17 @@ description: 当需要编写前端界面时, 你应该参考本文件
 - 禁止在 `index.html` 中用 `<script src="./index.ts">` 来引用 `index.ts` 或其他本地脚本. `index.ts` 及它导入的文件会由 webpack 直接加入到最终打包好的 `dist/**/index.html` 中.
 - 在 `index.html` 中填入 `<img>` 标签时, 禁止使用 `src=""` 占位. 要么引用实际的图片, 要么不要有这个属性, 否则会导致 webpack 打包错误.
 
-<<<<<<< HEAD
-## 样式设计
-
-### 简单内嵌样式
-
-对于简单的样式, 你可以在 `index.html` 中直接使用 tailwindcss 书写. 为此需要新建一个内容有 `@import 'tailwindcss'` 的 css 文件并 `import ./文件.css`.
-
-### 复杂外链样式
-
-如果样式复杂到需要使用 `<style>` 标签, 则你不应该直接在 html 里书写 `<style>`, 而应该
-
-- (优先) 设计 vue 组件, 并在 Typescript 文件中 `import Component from './文件.vue'` 再将其 `mount` 到界面上.
-- 或新建 scss 文件并在 Typescript 文件中以 `import './index.scss'` 的形式应用到界面上.
-
-### iframe 适配要求
-=======
 ## 图标使用
 
 你可以任意使用 fontawesome 的免费图标.
 
 ## iframe 适配要求
->>>>>>> 015fe6d61b620f2c5622b7906b2ee5079f1ab1e9
 
 - 当对前端界面高度进行调整时, 禁止使用 `vh` 单位等会受宿主高度影响的单位, 而是使用 `width` 和 `aspect-ratio` 来让高度根据宽度动态调整.
-<<<<<<< HEAD
-- 避免使用会强制撑高父容器的元素 (如 `min-height`、`overflow: auto`)
-- 页面整体应适配容器宽度，不产生横向滚动条
-- 如果样式更适合卡片形状，则不要有背景颜色，除非用户有明确要求
-
-## CDN资源引用
-
-项目支持通过CDN引用外部资源, 特别是第三方库.
-
-**国内访问优化**：
-- 使用 `https://testingcf.jsdelivr.net` 镜像确保国内网络环境可正常访问
-- 不推荐使用 `https://cdn.jsdelivr.net`（国内可能无法访问）
-
-**通过pnpm添加第三方库（推荐）**：
-```bash
-pnpm add lodash
-pnpm add gsap
-```
-模板已配置webpack，会自动将第三方库转换为CDN链接，避免重复打包。
-
-**手动引用CDN资源**：
-如果需要直接引用CDN资源，请使用：
-```typescript
-// ✅ 正确：使用国内可访问的镜像
-import something from 'https://testingcf.jsdelivr.net/npm/package-name@version/+esm';
-
-// ❌ 错误：可能无法在国内访问
-import something from 'https://cdn.jsdelivr.net/npm/package-name@version/+esm';
-```
-=======
 - 避免使用会强制撑高父容器的元素 (如 `min-height`、`overflow: auto`).
 - 页面必须有外部支撑, 主体内容不能使用 `position: absolute` 等会脱离文档流的样式.
 - 页面整体应适配容器宽度，不产生横向滚动条.
 - 如果样式更适合卡片形状，则不要有背景颜色，除非用户有明确要求.
->>>>>>> 640d7d7c3f446a2c95904767cd9075c4284f5111
 
 ## VueUse 规范（轻量）
 

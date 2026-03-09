@@ -16,6 +16,7 @@
         :show-edit-regenerate="item.role === 'user' && item.message_id === latestUserMessageId"
         :show-rollback-confirm="rollbackConfirmMessageId === item.message_id"
         :show-swipe-controls="item.role === 'assistant' && item.message_id === swipeMessageId"
+        :swipe-label="item.role === 'assistant' && item.message_id === swipeMessageId ? swipeLabel : ''"
         :can-swipe-prev="item.role === 'assistant' && item.message_id === swipeMessageId && canSwipePrev"
         :can-swipe-next="item.role === 'assistant' && item.message_id === swipeMessageId && canSwipeNext"
         @open-detail="openDetail"
@@ -49,6 +50,7 @@ const props = defineProps<{
   editingUserDraft?: string;
   rollbackConfirmMessageId?: number | null;
   swipeMessageId?: number | null;
+  swipeLabel?: string;
   canSwipePrev?: boolean;
   canSwipeNext?: boolean;
 }>();
