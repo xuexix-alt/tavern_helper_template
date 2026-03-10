@@ -34,7 +34,7 @@ export const OpeningPresetSchema = z.object({
 
 export const OpeningPayloadSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
     world_mode_id: z.string().default('B'),
     route_id: z.string().default('养'),
@@ -44,10 +44,16 @@ export const OpeningPayloadSchema = z
       location: z.string().default(''),
       character: z.string().default(''),
     }),
-    user_input: z.record(z.string(), z.string()).default({}),
-    user_draft: z.record(z.string(), z.string()).default({}),
-    opening_content: z.string().default(''),
-    options: z.array(z.string()).default([]),
+    form_values: z.record(z.string(), z.string()).default({}),
+    result: z
+      .object({
+        raw: z.string().default(''),
+        content: z.string().default(''),
+        options: z.array(z.string()).default([]),
+        generated_at: z.string().default(''),
+      })
+      .nullable()
+      .default(null),
   })
   .prefault({});
 

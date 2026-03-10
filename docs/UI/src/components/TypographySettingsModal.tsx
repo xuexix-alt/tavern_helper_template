@@ -11,9 +11,11 @@ export function TypographySettingsModal({ isOpen, onClose }: TypographySettingsM
   const { typography, setTypography } = useTypography();
 
   const fonts: { id: FontFamily; label: string; class: string }[] = [
-    { id: 'sans', label: '无衬线 (现代)', class: 'font-sans' },
-    { id: 'serif', label: '衬线 (经典)', class: 'font-serif' },
-    { id: 'mono', label: '等宽 (终端)', class: 'font-mono' },
+    { id: 'sans', label: '无衬线', class: 'font-sans' },
+    { id: 'outfit', label: '几何 (Outfit)', class: 'font-outfit' },
+    { id: 'quicksand', label: '圆润 (Quicksand)', class: 'font-quicksand' },
+    { id: 'serif', label: '衬线', class: 'font-serif' },
+    { id: 'mono', label: '等宽', class: 'font-mono' },
   ];
 
   const sizes: { id: FontSize; label: string }[] = [
@@ -39,14 +41,14 @@ export function TypographySettingsModal({ isOpen, onClose }: TypographySettingsM
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] bg-background/40 backdrop-blur-md"
           />
           
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 z-[110] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 border border-primary/30 bg-surface/95 p-6 shadow-2xl clip-corner backdrop-blur-xl"
+            className="fixed left-1/2 top-1/2 z-[110] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 border border-primary/30 bg-surface/40 p-6 shadow-[0_10px_40px_var(--shadow-color)] clip-corner backdrop-blur-2xl"
           >
             {/* Header */}
             <div className="mb-6 flex items-center justify-between border-b border-primary/20 pb-4">
@@ -129,7 +131,7 @@ export function TypographySettingsModal({ isOpen, onClose }: TypographySettingsM
                 <div className="absolute top-0 left-0 w-1 h-full bg-primary/30"></div>
                 <p
                   className={`text-primary/90 transition-all duration-300 ${
-                    { sans: 'font-sans', serif: 'font-serif', mono: 'font-mono' }[typography.fontFamily]
+                    { sans: 'font-sans', serif: 'font-serif', mono: 'font-mono', outfit: 'font-outfit', quicksand: 'font-quicksand' }[typography.fontFamily]
                   } ${
                     { sm: 'text-sm', base: 'text-base', lg: 'text-lg', xl: 'text-xl' }[typography.fontSize]
                   } ${

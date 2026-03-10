@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type FontFamily = 'sans' | 'serif' | 'mono';
+export type FontFamily = 'sans' | 'serif' | 'mono' | 'outfit' | 'quicksand';
 export type FontSize = 'sm' | 'base' | 'lg' | 'xl';
 export type LineHeight = 'tight' | 'normal' | 'relaxed' | 'loose';
 

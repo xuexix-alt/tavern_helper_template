@@ -1,13 +1,13 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { AlignJustify, AlignLeft, Minus, Terminal, Moon, Sun, Layers, Type, Diamond } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { AlignJustify, AlignLeft, Minus, Terminal, Moon, Sun, Layers, Type, Diamond, Target, Smartphone, ChevronDown, Music, Activity } from 'lucide-react';
 import { Density } from '../types';
 
 interface TopBarProps {
   density: Density;
   setDensity: (density: Density) => void;
-  theme: 'light' | 'dark' | 'gold';
-  setTheme: (theme: 'light' | 'dark' | 'gold') => void;
+  theme: 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber';
+  setTheme: (theme: 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber') => void;
   onOpenShowcase: () => void;
   onOpenTasks: () => void;
   onOpenMap: () => void;
@@ -15,19 +15,24 @@ interface TopBarProps {
 }
 
 export function TopBar({ density, setDensity, theme, setTheme, onOpenShowcase, onOpenTasks, onOpenMap, onOpenTypography }: TopBarProps) {
-  const toggleTheme = () => {
-    if (theme === 'light') setTheme('dark');
-    else if (theme === 'dark') setTheme('gold');
-    else setTheme('light');
-  };
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+
+  const themes = [
+    { id: 'tech', label: '科技', icon: <Terminal size={12} /> },
+    { id: 'dark', label: '暗黑', icon: <Moon size={12} /> },
+    { id: 'gold', label: '鎏金', icon: <Diamond size={12} /> },
+    { id: 'ios', label: 'IOS', icon: <Smartphone size={12} /> },
+    { id: 'ipod', label: 'iPod', icon: <Music size={12} /> },
+    { id: 'amber', label: '琥珀', icon: <Activity size={12} /> },
+  ] as const;
 
   return (
-    <header className="relative z-50 flex h-14 shrink-0 items-center justify-between px-3 sm:px-6 border-b border-primary/30 bg-background/90 backdrop-blur-md">
+    <header className="relative z-50 flex h-14 shrink-0 items-center justify-between px-3 sm:px-6 border-b border-primary/20 bg-background/40 backdrop-blur-2xl shadow-[0_4px_30px_var(--shadow-color)]">
       {/* Left: Branding / Title */}
       <div className="flex items-center gap-2 sm:gap-4">
         <div className="font-mono text-primary font-bold tracking-widest text-glow flex items-center gap-2">
-          <Terminal size={16} className="shrink-0" />
-          <span className="hidden md:inline">[ 系统读取 // 零层 ]</span>
+          <Target size={16} className="shrink-0" />
+          <span className="hidden md:inline">NEXUS // CORE_SYNC</span>
         </div>
       </div>
 
@@ -82,13 +87,46 @@ export function TopBar({ density, setDensity, theme, setTheme, onOpenShowcase, o
             <span className="hidden lg:inline">排版</span>
           </button>
 
-          <button
-            onClick={toggleTheme}
-            className="flex h-7 w-7 items-center justify-center border border-primary/30 text-primary hover:bg-primary/10 hover:text-glow transition-all clip-corner-sm shrink-0"
-            title="切换主题"
-          >
-            {theme === 'light' ? <Sun size={12} /> : theme === 'dark' ? <Moon size={12} /> : <Diamond size={12} />}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+              className="flex h-7 px-2 sm:px-3 items-center justify-center gap-2 border border-primary/30 text-primary hover:bg-primary/10 hover:text-glow transition-all clip-corner-sm shrink-0"
+              title="切换主题"
+            >
+              {themes.find(t => t.id === theme)?.icon}
+              <span className="hidden lg:inline">{themes.find(t => t.id === theme)?.label}</span>
+              <ChevronDown size={12} className={`transition-transform ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {isThemeDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 top-full mt-2 w-32 border border-primary/30 bg-surface/90 backdrop-blur-md shadow-[0_4px_20px_var(--shadow-color)] clip-corner-sm z-50 flex flex-col p-1"
+                >
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setTheme(t.id);
+                        setIsThemeDropdownOpen(false);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 text-xs font-mono transition-colors clip-corner-sm ${
+                        theme === t.id 
+                          ? 'bg-primary text-background' 
+                          : 'text-primary hover:bg-primary/10'
+                      }`}
+                    >
+                      {t.icon}
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div className="hidden sm:flex items-center gap-1 border border-primary/30 p-1 bg-surface/50 clip-corner-sm">
             <DensityButton

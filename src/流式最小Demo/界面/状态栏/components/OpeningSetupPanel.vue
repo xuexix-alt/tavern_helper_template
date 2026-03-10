@@ -4,7 +4,7 @@
       <div>
         <span class="opening-setup-kicker">OPENING SETUP</span>
         <h3>开局配置</h3>
-        <p>先由 UI 组装预制背景与用户定制化信息，再生成 opening，避免直接复读酒馆原始 0 层正文。</p>
+        <p>按提示词变量直接填表；世界观变量和边界约束由当前选择自动带入。</p>
       </div>
       <div class="opening-head-actions">
         <label class="stream-toggle">
@@ -17,16 +17,6 @@
         </button>
       </div>
     </header>
-
-    <section class="opening-preview-block">
-      <span class="opening-label">基础世界观背景</span>
-      <div class="opening-preview-text">{{ preset.world_intro }}</div>
-    </section>
-
-    <section class="opening-preview-block">
-      <span class="opening-label">开局第一句话</span>
-      <div class="opening-preview-text">{{ preset.first_line }}</div>
-    </section>
 
     <section class="opening-profile-grid">
       <div class="opening-form-item">
@@ -46,35 +36,15 @@
       </div>
     </section>
 
-    <section class="opening-profile-grid">
-      <div class="opening-preview-block">
-        <span class="opening-label">世界观配置</span>
-        <div class="opening-preview-text">
-          <template v-if="selectedWorldMode">
-            <strong>{{ selectedWorldMode.name }}</strong>
-            <br />
-            {{ selectedWorldMode.slogan || '未设定口号' }}
-            <br />
-            核心爽点：{{ selectedWorldMode.core_pleasure || '未设定' }}
-            <br />
-            推荐主流派：{{ selectedWorldMode.recommended_main_route || '未设定' }}
-          </template>
-          <template v-else>未选择世界观档位</template>
-        </div>
+    <section class="opening-form-grid">
+      <div class="opening-form-item full">
+        <span class="opening-label">世界观变量</span>
+        <textarea class="opening-textarea opening-textarea-readonly" :rows="8" :value="worldModeAxisDictionaryText" readonly />
       </div>
 
-      <div class="opening-preview-block">
-        <span class="opening-label">主流派偏置</span>
-        <div class="opening-preview-text">
-          <template v-if="selectedRoute">
-            <strong>{{ selectedRoute.name }}</strong>
-            <br />
-            核心幻想：{{ selectedRoute.core_fantasy || '未设定' }}
-            <br />
-            世界镜头：{{ selectedRoute.world_lens || '未设定' }}
-          </template>
-          <template v-else>未选择主流派</template>
-        </div>
+      <div class="opening-form-item full">
+        <span class="opening-label">边界约束</span>
+        <textarea class="opening-textarea opening-textarea-readonly" :rows="4" :value="forbiddenDriftText" readonly />
       </div>
     </section>
 
@@ -106,13 +76,13 @@
           class="opening-textarea"
           :rows="4"
           :placeholder="field.placeholder"
-          :value="payload.user_draft[field.key] || payload.user_input[field.key] || ''"
+          :value="payload.form_values[field.key] || ''"
           @input="emitField(field.key, $event)"
         />
         <select
           v-else-if="field.kind === 'select'"
           class="opening-select"
-          :value="payload.user_input[field.key] || ''"
+          :value="payload.form_values[field.key] || ''"
           @change="emitField(field.key, $event)"
         >
           <option value="">请选择</option>
@@ -122,7 +92,7 @@
           v-else
           class="opening-input"
           :placeholder="field.placeholder"
-          :value="payload.user_draft[field.key] || payload.user_input[field.key] || ''"
+          :value="payload.form_values[field.key] || ''"
           @input="emitField(field.key, $event)"
         />
       </div>
@@ -157,6 +127,38 @@ const selectedWorldMode = computed(
   () => props.worldModes.find(mode => mode.id === props.payload.world_mode_id) ?? null,
 );
 const selectedRoute = computed(() => props.routes.find(route => route.name === props.payload.route_id) ?? null);
+
+const worldModeAxisDictionaryText = computed(() => {
+  const worldMode = selectedWorldMode.value;
+  if (!worldMode) return '未设定';
+
+  const axisOrder = ['气候压力', '行动窗口', '社会残存度', '外部威胁主因', '生产残余度', '冲突密度', '外出死亡风险', '据点化程度'];
+
+  return axisOrder
+    .map(axisName => {
+      const axis = worldMode.axes?.[axisName] as Record<string, unknown> | undefined;
+      if (!axis || typeof axis !== 'object') return '';
+
+      const label = String(axis.label ?? '').trim();
+      const subtype = String(axis.subtype ?? '').trim();
+      const numericParts = Object.entries(axis)
+        .filter(([key, value]) => key !== 'label' && key !== 'subtype' && value != null && String(value).trim())
+        .map(([key, value]) => `${key}=${String(value)}`);
+
+      return [
+        `${axisName}：${label || '未设定'}`,
+        subtype ? `（${subtype}）` : '',
+        numericParts.length > 0 ? `；${numericParts.join('，')}` : '',
+      ].join('');
+    })
+    .filter(Boolean)
+    .join('\n');
+});
+
+const forbiddenDriftText = computed(() => {
+  const items = selectedRoute.value?.forbidden_drift ?? [];
+  return items.length > 0 ? items.map(item => `- ${item}`).join('\n') : '未设定';
+});
 
 function readInputValue(event: Event): string {
   const target = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
@@ -339,6 +341,11 @@ function emitStreamToggle(event: Event) {
 .opening-textarea {
   resize: vertical;
   min-height: 96px;
+}
+
+.opening-textarea-readonly {
+  opacity: 0.92;
+  background: color-mix(in srgb, var(--demo-surface-panel) 88%, black 12%);
 }
 
 @media (max-width: 680px) {

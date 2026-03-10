@@ -23,14 +23,14 @@ export function TasksModal({ isOpen, onClose }: TasksModalProps) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 sm:p-6"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-background/40 backdrop-blur-md p-4 sm:p-6"
       >
         <motion.div
           initial={{ scale: 0.95, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-surface border border-primary/30 shadow-[0_0_30px_rgba(var(--primary-rgb),0.15)] clip-corner"
+          className="relative w-full max-w-4xl max-h-[85vh] flex flex-col bg-surface/40 backdrop-blur-2xl border border-primary/30 shadow-[0_10px_40px_var(--shadow-color)] clip-corner"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-primary/20 bg-primary/5">

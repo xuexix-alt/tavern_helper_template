@@ -44,7 +44,7 @@ function AppContent() {
   const [density, setDensity] = useState<Density>('comfortable');
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'gold'>('light');
+  const [theme, setTheme] = useState<'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber'>('tech');
   const [showUIShowcase, setShowUIShowcase] = useState(false);
   const [activeCharId, setActiveCharId] = useState<string>(CHARACTERS[0]?.id || '');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -54,8 +54,8 @@ function AppContent() {
 
   // Apply theme to HTML element
   useEffect(() => {
-    document.documentElement.classList.remove('theme-dark', 'theme-gold');
-    if (theme !== 'light') {
+    document.documentElement.classList.remove('theme-dark', 'theme-gold', 'theme-ios', 'theme-ipod', 'theme-amber');
+    if (theme !== 'tech') {
       document.documentElement.classList.add(`theme-${theme}`);
     }
   }, [theme]);
@@ -127,45 +127,38 @@ function AppContent() {
   }, []);
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background text-foreground font-sans overflow-hidden selection:bg-primary/40 transition-colors duration-300 relative">
-      {/* CRT Overlay & Scanlines */}
-      <div className="pointer-events-none absolute inset-0 z-[100] crt-overlay mix-blend-overlay"></div>
-      <div className="pointer-events-none absolute inset-0 z-[99] scanlines opacity-30 mix-blend-overlay"></div>
-      
-      {/* Moving Scan Line */}
-      <div className="pointer-events-none absolute inset-0 z-[98] overflow-hidden">
-        <div className="w-full h-[10vh] bg-gradient-to-b from-transparent via-primary/5 to-transparent animate-scan-line"></div>
-      </div>
+    <div className="flex h-screen w-full flex-col text-foreground font-sans overflow-hidden selection:bg-primary/40 transition-colors duration-300 relative" style={{ background: 'var(--bg-gradient)' }}>
+      {/* High-Tech HUD Background */}
+      <div className="pointer-events-none absolute inset-0 z-0 tech-grid opacity-30"></div>
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_0%,var(--background)_100%)]"></div>
 
-      {/* Animated Tech Grid */}
-      <div className="pointer-events-none absolute inset-0 z-0 tech-grid"></div>
-
-      {/* Subtle Tech Background Texture */}
-      <div className="pointer-events-none absolute inset-0 z-0 flex justify-center opacity-20">
-        <div className="h-full w-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-surface via-background to-background"></div>
-      </div>
-
-      {/* Decorative Sidebars (Cyberpunk UI elements) */}
-      <div className="pointer-events-none absolute left-4 top-20 bottom-24 w-8 border-r border-primary/20 hidden xl:flex flex-col justify-between py-4 font-mono text-[10px] text-primary/40 z-10">
-        <div className="flex flex-col gap-1">
-          <span>系统</span>
-          <span>就绪</span>
-          <span className="mt-4 animate-pulse">_</span>
+      {/* Decorative Sidebars (HUD Sci-Fi) */}
+      <div className="hud-deco pointer-events-none absolute left-4 top-20 bottom-24 w-12 hidden xl:flex flex-col justify-between py-4 z-10">
+        <div className="w-full h-32 border-l-2 border-t-2 border-primary/40 clip-corner-sm relative">
+          <div className="absolute top-2 left-2 w-2 h-2 bg-primary animate-pulse"></div>
+          <div className="absolute -right-4 top-0 font-mono text-[8px] text-primary/60 tracking-widest" style={{ writingMode: 'vertical-rl' }}>SYS.OP.01</div>
         </div>
-        <div className="flex flex-col gap-1 opacity-50" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-          0x00F9A2 • 0x11B4C
-        </div>
-      </div>
-      
-      <div className="pointer-events-none absolute right-4 top-20 bottom-24 w-8 border-l border-primary/20 hidden xl:flex flex-col items-end justify-between py-4 font-mono text-[10px] text-primary/40 z-10">
-        <div className="flex flex-col gap-1 items-end">
-          <span>网络</span>
-          <span>上行</span>
-        </div>
-        <div className="flex flex-col gap-2 items-end">
-          {[1,2,3,4,5].map(i => (
+        <div className="flex flex-col gap-2">
+          {[1,2,3,4].map(i => (
             <div key={i} className="w-full h-1 bg-primary/20" style={{ width: `${Math.random() * 100}%` }}></div>
           ))}
+        </div>
+        <div className="w-full h-32 border-l-2 border-b-2 border-primary/40 clip-corner-sm relative">
+          <div className="absolute bottom-2 left-2 font-mono text-[10px] text-primary/80">0x99</div>
+        </div>
+      </div>
+      
+      <div className="hud-deco pointer-events-none absolute right-4 top-20 bottom-24 w-12 hidden xl:flex flex-col items-end justify-between py-4 z-10">
+        <div className="w-full h-32 border-r-2 border-t-2 border-primary/40 clip-corner-sm relative">
+          <div className="absolute top-2 right-2 w-2 h-2 bg-primary animate-pulse"></div>
+          <div className="absolute -left-4 top-0 font-mono text-[8px] text-primary/60 tracking-widest" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>NET.UPLINK</div>
+        </div>
+        <div className="w-8 h-8 rounded-full border border-primary/40 flex items-center justify-center relative">
+          <div className="w-6 h-6 rounded-full border border-primary/20 border-t-primary animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center font-mono text-[8px] text-primary">OK</div>
+        </div>
+        <div className="w-full h-32 border-r-2 border-b-2 border-primary/40 clip-corner-sm relative">
+          <div className="absolute bottom-2 right-2 font-mono text-[10px] text-primary/80">88%</div>
         </div>
       </div>
 

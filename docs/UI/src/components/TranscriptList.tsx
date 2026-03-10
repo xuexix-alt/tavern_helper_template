@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Message, Density } from '../types';
 import { MessageItem } from './MessageItem';
 import { BookOpen } from 'lucide-react';
+import { useTypography } from '../contexts/TypographyContext';
 
 interface TranscriptListProps {
   messages: Message[];
@@ -10,6 +11,29 @@ interface TranscriptListProps {
 
 export function TranscriptList({ messages, density }: TranscriptListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { typography } = useTypography();
+
+  const fontClass = {
+    sans: 'font-sans',
+    serif: 'font-serif',
+    mono: 'font-mono',
+    outfit: 'font-outfit',
+    quicksand: 'font-quicksand'
+  }[typography.fontFamily];
+
+  const sizeClass = {
+    sm: 'text-sm',
+    base: 'text-base',
+    lg: 'text-lg',
+    xl: 'text-xl'
+  }[typography.fontSize];
+
+  const leadingClass = {
+    tight: 'leading-tight',
+    normal: 'leading-normal',
+    relaxed: 'leading-relaxed',
+    loose: 'leading-loose'
+  }[typography.lineHeight];
 
   // Auto-scroll to bottom when messages change, especially during streaming
   useEffect(() => {
@@ -25,7 +49,7 @@ export function TranscriptList({ messages, density }: TranscriptListProps) {
   return (
     <div 
       ref={scrollRef}
-      className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-40 pt-4"
+      className={`flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-40 pt-4 ${fontClass} ${sizeClass} ${leadingClass}`}
     >
       <div className="mx-auto flex max-w-4xl flex-col px-4">
         {messages.length === 0 ? (

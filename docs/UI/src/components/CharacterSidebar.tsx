@@ -31,14 +31,14 @@ export function CharacterSidebar({ isOpen, setIsOpen, activeCharId, onSelectChar
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex h-24 w-6 items-center justify-center border border-l-0 border-primary/50 bg-surface/90 text-primary hover:bg-primary/20 hover:text-glow transition-all clip-corner-sm ${isOpen ? 'translate-x-[320px]' : 'translate-x-0'}`}
+        className={`absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex h-24 w-6 items-center justify-center border border-l-0 border-primary/30 bg-background/40 backdrop-blur-xl shadow-[4px_0_15px_var(--shadow-color)] text-primary hover:bg-primary/20 hover:text-glow transition-all clip-corner-sm ${isOpen ? 'translate-x-[320px]' : 'translate-x-0'}`}
         style={{ transitionDuration: '400ms' }}
       >
         <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
           <ChevronRight size={16} />
         </motion.div>
         <div className="absolute -right-8 font-mono text-[10px] tracking-widest text-primary/50" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-          [ 名单 ]
+          [ ROSTER ]
         </div>
       </button>
 
@@ -50,7 +50,7 @@ export function CharacterSidebar({ isOpen, setIsOpen, activeCharId, onSelectChar
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '-100%', opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="absolute left-0 top-14 bottom-0 w-[320px] z-50 border-r border-primary/30 bg-background/95 backdrop-blur-xl flex flex-col"
+            className="absolute left-0 top-14 bottom-0 w-[320px] z-50 border-r border-primary/20 bg-background/40 backdrop-blur-2xl shadow-[4px_0_30px_var(--shadow-color)] flex flex-col clip-corner"
           >
             {/* Header with Tabs */}
             <div className="flex border-b border-primary/20 shrink-0">
@@ -59,14 +59,14 @@ export function CharacterSidebar({ isOpen, setIsOpen, activeCharId, onSelectChar
                 className={`flex-1 p-4 flex items-center justify-center gap-2 font-mono text-xs tracking-widest transition-colors ${activeTab === 'characters' ? 'text-primary bg-primary/10 border-b-2 border-primary' : 'text-primary/50 hover:text-primary/80 hover:bg-primary/5'}`}
               >
                 <Users size={16} />
-                <span className="font-bold">角色</span>
+                <span className="font-bold">AGENTS</span>
               </button>
               <button
                 onClick={() => setActiveTab('system')}
                 className={`flex-1 p-4 flex items-center justify-center gap-2 font-mono text-xs tracking-widest transition-colors ${activeTab === 'system' ? 'text-primary bg-primary/10 border-b-2 border-primary' : 'text-primary/50 hover:text-primary/80 hover:bg-primary/5'}`}
               >
                 <Cpu size={16} />
-                <span className="font-bold">系统</span>
+                <span className="font-bold">SYSTEM</span>
               </button>
             </div>
 
@@ -85,7 +85,7 @@ export function CharacterSidebar({ isOpen, setIsOpen, activeCharId, onSelectChar
                         {/* Accordion Header */}
                         <button
                           onClick={() => onSelectChar(char.id)}
-                          className="w-full flex items-center justify-between p-3 text-left"
+                          className="w-full flex items-center justify-between p-3 text-left hover:bg-primary/5 transition-colors"
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-1.5 h-1.5 ${char.status === '活跃' ? 'bg-primary animate-pulse' : char.status === '待命' ? 'bg-yellow-500/50' : 'bg-red-500/50'}`}></div>
@@ -135,8 +135,8 @@ export function CharacterSidebar({ isOpen, setIsOpen, activeCharId, onSelectChar
                                 </div>
 
                                 {/* Action Button */}
-                                <button className="w-full py-1.5 border border-primary/40 bg-primary/10 font-mono text-[10px] tracking-widest text-primary hover:bg-primary hover:text-background transition-colors mt-2">
-                                  [ 建立连接 ]
+                                <button className="w-full py-1.5 border border-primary/40 bg-primary/10 font-mono text-[10px] tracking-widest text-primary hover:bg-primary hover:text-background transition-colors mt-2 clip-corner-sm">
+                                  [ INIT_CONNECTION ]
                                 </button>
                               </div>
                             </motion.div>

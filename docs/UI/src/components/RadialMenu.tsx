@@ -34,41 +34,115 @@ function describeArc(x: number, y: number, innerRadius: number, outerRadius: num
 
 export function RadialMenu({ activeCharId, onSelectChar, onOpenSidebar }: RadialMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSticky, setIsSticky] = useState(false);
+  const [isPressing, setIsPressing] = useState(false);
   const [menuCenter, setMenuCenter] = useState({ x: 0, y: 0 });
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const lastOpenTime = useRef<number>(0);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const startTime = useRef<number>(0);
   const isDragging = useRef(false);
+  const startPos = useRef({ x: 0, y: 0 });
+  const MOVE_THRESHOLD = 10;
 
   if (CHARACTERS.length === 0) return null;
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    // Removed e.preventDefault() to allow framer-motion drag to work properly
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
     
+    startPos.current = { x: e.clientX, y: e.clientY };
     isDragging.current = false;
+    setIsPressing(true);
+    startTime.current = Date.now();
     
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+
     pressTimer.current = setTimeout(() => {
       if (!isDragging.current) {
         setMenuCenter({ x: cx, y: cy });
         setIsOpen(true);
+        setIsSticky(false);
+        lastOpenTime.current = Date.now();
+        
+        // Haptic feedback simulation
+        if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+          try { window.navigator.vibrate(10); } catch (e) {}
+        }
       }
-    }, 250); // 250ms long press threshold
+    }, 350); // Increased for better stability between tap and long press
   };
 
-  const handlePointerUpGlobal = () => {
+  const handlePointerMoveButton = (e: React.PointerEvent) => {
+    if (pressTimer.current && !isDragging.current) {
+      const dx = e.clientX - startPos.current.x;
+      const dy = e.clientY - startPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // If moved beyond threshold, it's likely a drag or swipe, not a long press
+      if (distance > MOVE_THRESHOLD) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    }
+  };
+
+  const handleTap = (cx: number, cy: number) => {
+    if (isDragging.current) return;
+
+    if (!isOpen) {
+      setMenuCenter({ x: cx, y: cy });
+      setIsOpen(true);
+      setIsSticky(true);
+      lastOpenTime.current = Date.now();
+    } else if (isSticky) {
+      setIsOpen(false);
+      setIsSticky(false);
+    }
+  };
+
+  const handlePointerUpButton = (e: React.PointerEvent) => {
+    setIsPressing(false);
     if (pressTimer.current) {
       clearTimeout(pressTimer.current);
       pressTimer.current = null;
     }
-    if (isOpen) {
+  };
+
+  const handlePointerUpGlobal = (e: PointerEvent) => {
+    if (!isOpen) return;
+
+    // If it was a long press (not sticky), select and close on release
+    if (!isSticky) {
       if (hoveredIndex !== null && CHARACTERS[hoveredIndex]) {
         onSelectChar(CHARACTERS[hoveredIndex].id);
         onOpenSidebar();
       }
       setIsOpen(false);
       setHoveredIndex(null);
+    } else {
+      // Sticky mode: check if we clicked on a slice or outside
+      // Guard against the initial release that opened the menu
+      if (Date.now() - lastOpenTime.current < 300) return;
+
+      if (hoveredIndex !== null && CHARACTERS[hoveredIndex]) {
+        onSelectChar(CHARACTERS[hoveredIndex].id);
+        onOpenSidebar();
+        setIsOpen(false);
+        setIsSticky(false);
+        setHoveredIndex(null);
+      } else {
+        // Check if clicked outside the menu area
+        const dx = e.clientX - menuCenter.x;
+        const dy = e.clientY - menuCenter.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance > 200 || distance < 30) {
+          setIsOpen(false);
+          setIsSticky(false);
+          setHoveredIndex(null);
+        }
+      }
     }
   };
 
@@ -78,8 +152,8 @@ export function RadialMenu({ activeCharId, onSelectChar, onOpenSidebar }: Radial
     const dy = e.clientY - menuCenter.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance < 40) {
-      setHoveredIndex(null); // Deadzone in the middle
+    if (distance < 50 || distance > 220) {
+      setHoveredIndex(null); // Deadzone in the middle or too far away
       return;
     }
 
@@ -134,9 +208,18 @@ export function RadialMenu({ activeCharId, onSelectChar, onOpenSidebar }: Radial
             isDragging.current = false;
           }, 50);
         }}
+        onTap={(e) => {
+          // @ts-ignore - framer-motion event types
+          const rect = e.target?.getBoundingClientRect?.() || { left: 0, top: 0, width: 0, height: 0 };
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          handleTap(cx, cy);
+        }}
         onPointerDown={handlePointerDown}
-        className="fixed right-4 bottom-48 md:right-8 md:bottom-32 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-primary/50 bg-surface/80 text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] backdrop-blur-md transition-colors hover:bg-primary/20 hover:shadow-[0_0_25px_rgba(var(--primary-rgb),0.6)] cursor-grab active:cursor-grabbing"
-        title="长按打开轮盘菜单，拖拽移动"
+        onPointerMove={handlePointerMoveButton}
+        onPointerUp={handlePointerUpButton}
+        className={`fixed right-4 bottom-48 md:right-8 md:bottom-32 z-[110] flex h-14 w-14 items-center justify-center rounded-full border border-primary/30 bg-background/40 text-primary shadow-[0_4px_20px_var(--shadow-color)] backdrop-blur-2xl transition-all hover:bg-primary/20 hover:shadow-[0_0_25px_rgba(var(--primary-rgb),0.6)] cursor-grab active:cursor-grabbing ${isPressing && !isOpen ? 'scale-90 bg-primary/20 border-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.5)]' : ''}`}
+        title="长按滑动选取，单击展开选取，拖拽移动"
       >
         <Radar size={24} className="animate-[spin_4s_linear_infinite]" />
         <div className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-background">
@@ -151,7 +234,7 @@ export function RadialMenu({ activeCharId, onSelectChar, onOpenSidebar }: Radial
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-background/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] bg-background/40 backdrop-blur-md"
           >
             <div 
               className="absolute"

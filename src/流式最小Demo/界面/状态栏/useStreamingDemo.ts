@@ -1,4 +1,3 @@
-import openingTestPromptRaw from '../../../../docs/提示词.txt?raw';
 import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
@@ -9,8 +8,7 @@ import {
   stripTagsForPreview,
 } from '../../shared/message';
 import {
-  buildOpeningContextBrief,
-  buildOpeningCompiledBrief,
+  buildOpeningGeneratePrompt,
   extractOpeningContent,
   extractOpeningContentLoose,
   extractOpeningOptions,
@@ -22,8 +20,6 @@ import {
   getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
-  shouldStoreOpeningDraft,
-  summarizeOpeningDraftValue,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import {
@@ -45,8 +41,6 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
-
-const OPENING_USE_TEST_PROMPT = false;
 
 type BaseChatMessage = {
   message_id: number;
@@ -113,16 +107,7 @@ function normalizeRoleLabel(role: TranscriptItem['role']): string {
 }
 
 function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPayload) {
-  if (OPENING_USE_TEST_PROMPT) {
-    return [
-      String(openingTestPromptRaw ?? '').trim(),
-      String(payload.user_draft.personal_profile ?? payload.user_input.personal_profile ?? '').trim(),
-    ]
-      .filter(Boolean)
-      .join('\n\n');
-  }
-
-  return buildOpeningCompiledBrief(preset, payload);
+  return buildOpeningGeneratePrompt(preset, payload);
 }
 
 function buildTranscriptItem(input: {
@@ -170,33 +155,10 @@ function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
   return items.slice().sort((a, b) => a.message_id - b.message_id);
 }
 
-function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset): string {
-  const worldMode = getOpeningWorldMode(payload.world_mode_id);
-  const route = getOpeningRoute(payload.route_id);
-  const contextBrief = buildOpeningContextBrief(payload.world_mode_id, payload.route_id);
-  return [
-    preset.world_intro,
-    '',
-    preset.first_line,
-    '',
-    `故事开始请根据以下世界观进行基础设定：${worldMode ? `${worldMode.id} · ${worldMode.name}` : payload.world_mode_id || '未设定'}`,
-    `故事的演进方向是：${route?.name || payload.route_id || '未设定'}`,
-    `${preset.meta_template.character_label}：${payload.meta.character || '未设定'}`,
-    `${preset.meta_template.time_label}：${payload.meta.time || '未设定'}`,
-    `${preset.meta_template.location_label}：${payload.meta.location || '未设定'}`,
-    '',
-    contextBrief,
-    '',
-    payload.opening_content || '开局尚未生成，请先完成开局配置。',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
 function buildOpeningAssistantText(payload: OpeningPayload): string {
-  const body = String(payload.opening_content ?? '').trim();
-  const options = Array.isArray(payload.options)
-    ? payload.options.map(option => String(option ?? '').trim()).filter(Boolean)
+  const body = String(payload.result?.content ?? '').trim();
+  const options = Array.isArray(payload.result?.options)
+    ? payload.result.options.map(option => String(option ?? '').trim()).filter(Boolean)
     : [];
 
   return [body, options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '']
@@ -214,7 +176,7 @@ function buildOpeningTranscriptItem(
   preset: OpeningPreset,
   status: DemoStatus,
 ): TranscriptItem {
-  const renderSource = composeOpeningSeedText(payload, preset);
+  const renderSource = String(payload.result?.content ?? '').trim() || '开局尚未生成，请先完成开局配置。';
   const regexText = applyRegexForDisplay(renderSource, 'assistant');
   const finalHtml = buildFinalHtml(renderSource, 0);
 
@@ -225,12 +187,12 @@ function buildOpeningTranscriptItem(
     isOpening: true,
     raw: renderSource,
     renderSource,
-    content: payload.opening_content || renderSource,
-    preview: stripTagsForPreview(payload.opening_content || preset.first_line || preset.world_intro).slice(0, 80),
+    content: renderSource,
+    preview: stripTagsForPreview(renderSource || preset.first_line || preset.world_intro).slice(0, 80),
     regexText,
     streamHtml: buildStreamStageHtml(regexText),
     finalHtml,
-    options: payload.options,
+    options: payload.result?.options ?? [],
     hidden: false,
     phase: payload.state === 'generating' || status === 'streaming' ? 'stream' : 'done',
     isLatest: false,
@@ -463,7 +425,7 @@ export function useStreamingDemo() {
         ...openingPayload.value.meta,
         [key]: String(value ?? ''),
       },
-      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
+      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -477,7 +439,7 @@ export function useStreamingDemo() {
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       world_mode_id: worldMode?.id || value,
       route_id: nextRouteId,
-      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
+      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -489,7 +451,7 @@ export function useStreamingDemo() {
       ...openingPayload.value,
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       route_id: route?.name || value,
-      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
+      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -519,8 +481,12 @@ export function useStreamingDemo() {
           openingPayload.value = {
             ...openingPayload.value,
             state: 'generating',
-            opening_content: extractOpeningContentLoose(streamedRaw),
-            options: extractOpeningOptions(streamedRaw),
+            result: {
+              raw: streamedRaw,
+              content: extractOpeningContentLoose(streamedRaw),
+              options: extractOpeningOptions(streamedRaw),
+              generated_at: String(openingPayload.value.result?.generated_at ?? ''),
+            },
           };
           rebuildTranscript();
         }),
@@ -532,25 +498,16 @@ export function useStreamingDemo() {
 
   function updateOpeningField(key: string, value: string) {
     const shouldResetResult = openingPayload.value.state === 'ready';
-    const field = openingPreset.value.form_schema.find(item => item.key === key) ?? null;
     const normalizedValue = String(value ?? '');
-    const nextUserInput = {
-      ...openingPayload.value.user_input,
-      [key]: shouldStoreOpeningDraft(field) ? summarizeOpeningDraftValue(key, normalizedValue) : normalizedValue,
-    };
-    const nextUserDraft = shouldStoreOpeningDraft(field)
-      ? {
-          ...openingPayload.value.user_draft,
-          [key]: normalizedValue,
-        }
-      : openingPayload.value.user_draft;
 
     openingPayload.value = {
       ...openingPayload.value,
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
-      user_input: nextUserInput,
-      user_draft: nextUserDraft,
-      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
+      form_values: {
+        ...openingPayload.value.form_values,
+        [key]: normalizedValue,
+      },
+      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -1132,13 +1089,7 @@ export function useStreamingDemo() {
     }
 
     const missing = openingPreset.value.form_schema.find(
-      field =>
-        field.required &&
-        !String(
-          shouldStoreOpeningDraft(field)
-            ? (openingPayload.value.user_draft[field.key] ?? '')
-            : (openingPayload.value.user_input[field.key] ?? ''),
-        ).trim(),
+      field => field.required && !String(openingPayload.value.form_values[field.key] ?? '').trim(),
     );
     if (missing) {
       toastr?.warning?.(`请先填写：${missing.label}`);
@@ -1152,8 +1103,7 @@ export function useStreamingDemo() {
     openingPayload.value = {
       ...openingPayload.value,
       state: 'generating',
-      opening_content: '',
-      options: [],
+      result: null,
     };
     persistOpeningPayloadNow();
     rebuildTranscript();
@@ -1176,8 +1126,12 @@ export function useStreamingDemo() {
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
-        opening_content: extractOpeningContent(result),
-        options: extractOpeningOptions(result),
+        result: {
+          raw: String(result ?? '').trim(),
+          content: extractOpeningContent(result),
+          options: extractOpeningOptions(result),
+          generated_at: new Date().toISOString(),
+        },
       };
       persistOpeningPayloadNow();
       await syncOpeningAssistantMessage('none', true);
@@ -1186,7 +1140,7 @@ export function useStreamingDemo() {
       appendLog(
         'action',
         '生成开局',
-        stripTagsForPreview(openingPayload.value.opening_content).slice(0, 80) || '(空开局)',
+        stripTagsForPreview(openingPayload.value.result?.content ?? '').slice(0, 80) || '(空开局)',
       );
     } catch (error) {
       status.value = 'error';
