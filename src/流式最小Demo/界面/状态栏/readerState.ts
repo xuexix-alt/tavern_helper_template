@@ -36,10 +36,15 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
   try {
     updateVariablesWith(
       (vars: Record<string, unknown>) => {
-        const current = migrateReaderChatState((_.get(vars, READER_CHAT_STATE_PATH, {}) ?? {}) as Partial<ReaderChatState>);
+        const current = migrateReaderChatState(
+          (_.get(vars, READER_CHAT_STATE_PATH, {}) ?? {}) as Partial<ReaderChatState>,
+        );
         _.set(vars, READER_CHAT_STATE_PATH, {
           version: READER_CHAT_STATE_VERSION,
-          reading_mode: normalizeReadingMode(patch.reading_mode) ?? normalizeReadingMode(current.reading_mode) ?? 'following_latest',
+          reading_mode:
+            normalizeReadingMode(patch.reading_mode) ??
+            normalizeReadingMode(current.reading_mode) ??
+            'following_latest',
           density: normalizeDensity(patch.density) ?? normalizeDensity(current.density) ?? 'comfortable',
           opening_expanded:
             typeof patch.opening_expanded === 'boolean'

@@ -42,11 +42,7 @@
         <span class="meta-preview">{{ latestUserPreview || '暂无' }}</span>
       </div>
       <div class="toolbar-actions">
-        <span
-          v-if="isBrowsingHistory"
-          class="history-indicator"
-          title="当前正在浏览历史"
-          aria-label="当前正在浏览历史"
+        <span v-if="isBrowsingHistory" class="history-indicator" title="当前正在浏览历史" aria-label="当前正在浏览历史"
           >⌁</span
         >
         <button type="button" class="jump-btn" :disabled="atLatest" @click="$emit('jump-latest')">

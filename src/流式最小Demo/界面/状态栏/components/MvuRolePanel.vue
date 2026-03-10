@@ -255,7 +255,10 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
       }
     });
 
-  if (normalizedTargetMessageId.value != null && !options.some(option => option.targetMessageId === normalizedTargetMessageId.value)) {
+  if (
+    normalizedTargetMessageId.value != null &&
+    !options.some(option => option.targetMessageId === normalizedTargetMessageId.value)
+  ) {
     options.push({
       key: `message:${normalizedTargetMessageId.value}`,
       label: `#${normalizedTargetMessageId.value}`,
@@ -277,8 +280,16 @@ const selectedTargetMessageId = computed(
 const { width } = useWindowSize();
 const useVirtualTabs = computed(() => width.value <= 760);
 
-const { ready, source, resolvedMessageId, isDuringExtraAnalysis, hasAnyRole, mainRoleEntries, tempNpcEntries, refresh } =
-  useMvuRoleStore(selectedTargetMessageId);
+const {
+  ready,
+  source,
+  resolvedMessageId,
+  isDuringExtraAnalysis,
+  hasAnyRole,
+  mainRoleEntries,
+  tempNpcEntries,
+  refresh,
+} = useMvuRoleStore(selectedTargetMessageId);
 
 const topTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
@@ -301,15 +312,14 @@ const currentCharacterLabel = computed(() => (activeCharacter.value ? roleName(a
 const currentCharacterStatusClass = computed(() =>
   activeCharacter.value ? statusClass(activeCharacter.value) : 'status-neutral',
 );
-const currentCharacterStatusText = computed(() =>
-  activeCharacter.value ? statusText(activeCharacter.value) : '未知',
-);
+const currentCharacterStatusText = computed(() => (activeCharacter.value ? statusText(activeCharacter.value) : '未知'));
 
 const sourceLabel = computed(() => {
   const selected = selectedSourceOption.value;
   if (!selected) return 'latest';
   if (source.value === 'default') return `${selected.pillLabel} · 无数据`;
-  if (source.value === 'latest' && selected.targetMessageId !== 'latest') return `${selected.pillLabel} · 已回退 latest`;
+  if (source.value === 'latest' && selected.targetMessageId !== 'latest')
+    return `${selected.pillLabel} · 已回退 latest`;
   if (selected.targetMessageId === 'latest') {
     return resolvedMessageId.value === 'latest' ? 'latest' : `latest · #${resolvedMessageId.value}`;
   }

@@ -1136,8 +1136,8 @@ export function useStreamingDemo() {
         field.required &&
         !String(
           shouldStoreOpeningDraft(field)
-            ? openingPayload.value.user_draft[field.key] ?? ''
-            : openingPayload.value.user_input[field.key] ?? '',
+            ? (openingPayload.value.user_draft[field.key] ?? '')
+            : (openingPayload.value.user_input[field.key] ?? ''),
         ).trim(),
     );
     if (missing) {
