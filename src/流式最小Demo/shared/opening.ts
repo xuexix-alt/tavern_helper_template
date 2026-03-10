@@ -132,16 +132,14 @@ function getDefaultNearbyFactions(): string {
     return matches.join('；');
   }
 
-  const early = [
-    '地下停车场/地铁站难民',
-    '超市/便利店废墟据点',
-    '医院急诊楼幸存者',
-  ];
+  const early = ['地下停车场/地铁站难民', '超市/便利店废墟据点', '医院急诊楼幸存者'];
   return early.join('；');
 }
 
 function getDefaultNearbySurvivorTypes(): string {
-  const sources = [muXiaoxiaoRaw, dorothyRaw, zhaoWeiguoRaw, linYuehuaRaw, chenXueRaw, wangJingRaw].map(item => String(item ?? ''));
+  const sources = [muXiaoxiaoRaw, dorothyRaw, zhaoWeiguoRaw, linYuehuaRaw, chenXueRaw, wangJingRaw].map(item =>
+    String(item ?? ''),
+  );
   const identities = new Set<string>();
 
   sources.forEach(source => {
@@ -155,7 +153,14 @@ function getDefaultNearbySurvivorTypes(): string {
         .split('/')
         .map(item => trimText(item))
         .filter(Boolean)
-        .filter(item => !item.includes('{{user}}') && !item.includes('邻居') && !item.includes('表妹') && !item.includes('姐姐') && !item.includes('妹妹'))
+        .filter(
+          item =>
+            !item.includes('{{user}}') &&
+            !item.includes('邻居') &&
+            !item.includes('表妹') &&
+            !item.includes('姐姐') &&
+            !item.includes('妹妹'),
+        )
         .forEach(item => identities.add(item));
     });
   });
@@ -191,27 +196,30 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
     ? (_.get(source, 'options', []) as unknown[]).map(item => trimText(item)).filter(Boolean)
     : [];
   const rawResult = (_.get(source, 'result', null) ?? null) as Record<string, unknown> | null;
-  const nextResult = rawResult || legacyContent || legacyOptions.length > 0
-    ? {
-        raw: trimText(rawResult?.raw ?? legacyContent),
-        content: trimText(rawResult?.content ?? legacyContent),
-        options: Array.isArray(rawResult?.options)
-          ? (rawResult.options as unknown[]).map(item => trimText(item)).filter(Boolean)
-          : legacyOptions,
-        generated_at: trimText(rawResult?.generated_at),
-      }
-    : null;
+  const nextResult =
+    rawResult || legacyContent || legacyOptions.length > 0
+      ? {
+          raw: trimText(rawResult?.raw ?? legacyContent),
+          content: trimText(rawResult?.content ?? legacyContent),
+          options: Array.isArray(rawResult?.options)
+            ? (rawResult.options as unknown[]).map(item => trimText(item)).filter(Boolean)
+            : legacyOptions,
+          generated_at: trimText(rawResult?.generated_at),
+        }
+      : null;
 
   const nextStateSource = normalizeOpeningState(_.get(source, 'state', 'placeholder'));
   const nextState = nextResult
-    ? (['ready', 'generating'].includes(nextStateSource) ? nextStateSource : 'ready')
+    ? ['ready', 'generating'].includes(nextStateSource)
+      ? nextStateSource
+      : 'ready'
     : nextStateSource === 'placeholder'
       ? 'placeholder'
-    : nextStateSource === 'generating'
-      ? 'generating'
-      : nextFormValues && Object.values(nextFormValues).some(Boolean)
-        ? 'configuring'
-        : 'placeholder';
+      : nextStateSource === 'generating'
+        ? 'generating'
+        : nextFormValues && Object.values(nextFormValues).some(Boolean)
+          ? 'configuring'
+          : 'placeholder';
 
   return OpeningPayloadSchema.parse({
     version: 2,
@@ -354,8 +362,8 @@ function formatWorldModeAxisLine(axisName: string, axisValue: unknown): string {
   const numericParts = Object.entries(axisRecord)
     .filter(([key, value]) => key !== 'label' && key !== 'subtype' && value != null && String(value).trim())
     .map(([key, value]) => `${key}=${formatUnknownValue(value)}`);
-  const dictionaryRecord =
-    (_.get(__worldModeDoc, ['world_mode_axis_dictionary', axisName, 'labels', label], {}) ?? {}) as Record<string, unknown>;
+  const dictionaryRecord = (_.get(__worldModeDoc, ['world_mode_axis_dictionary', axisName, 'labels', label], {}) ??
+    {}) as Record<string, unknown>;
   const description = trimText(dictionaryRecord.description);
 
   return [

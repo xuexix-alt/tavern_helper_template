@@ -39,7 +39,12 @@
     <section class="opening-form-grid">
       <div class="opening-form-item full">
         <span class="opening-label">世界观变量</span>
-        <textarea class="opening-textarea opening-textarea-readonly" :rows="8" :value="worldModeAxisDictionaryText" readonly />
+        <textarea
+          class="opening-textarea opening-textarea-readonly"
+          :rows="8"
+          :value="worldModeAxisDictionaryText"
+          readonly
+        />
       </div>
 
       <div class="opening-form-item full">
@@ -132,7 +137,16 @@ const worldModeAxisDictionaryText = computed(() => {
   const worldMode = selectedWorldMode.value;
   if (!worldMode) return '未设定';
 
-  const axisOrder = ['气候压力', '行动窗口', '社会残存度', '外部威胁主因', '生产残余度', '冲突密度', '外出死亡风险', '据点化程度'];
+  const axisOrder = [
+    '气候压力',
+    '行动窗口',
+    '社会残存度',
+    '外部威胁主因',
+    '生产残余度',
+    '冲突密度',
+    '外出死亡风险',
+    '据点化程度',
+  ];
 
   return axisOrder
     .map(axisName => {
