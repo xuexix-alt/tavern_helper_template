@@ -40,9 +40,14 @@ export function injectStreamingMessageContext(): Readonly<StreamingMessageContex
  */
 export function mountStreamingMessages(
   creator: () => App,
-  options: { host?: 'iframe' | 'div'; filter?: (message_id: number, message: string) => boolean; prefix?: string } = {},
+  options: {
+    host?: 'iframe' | 'div';
+    filter?: (message_id: number, message: string) => boolean;
+    prefix?: string;
+    iframe_tailwind?: boolean;
+  } = {},
 ): { unmount: () => void } {
-  const { host = 'iframe', filter, prefix = uuidv4() } = options;
+  const { host = 'iframe', filter, prefix = uuidv4(), iframe_tailwind = true } = options;
 
   const states: Map<number, { app: App; data: Reactive<StreamingMessageContext>; destroy: () => void }> = new Map();
   let has_stoped = false;
@@ -105,7 +110,9 @@ export function mountStreamingMessages(
         .insertAfter($mes_text);
     }
 
-    $host = (host === 'iframe' ? createScriptIdIframe().addClass('w-full') : createScriptIdDiv())
+    $host = (host === 'iframe'
+      ? createScriptIdIframe({ tailwind: iframe_tailwind }).addClass('w-full')
+      : createScriptIdDiv())
       .attr('id', `${prefix}-${message_id}`)
       .appendTo($mes_streaming);
 

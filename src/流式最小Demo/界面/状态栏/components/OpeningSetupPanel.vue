@@ -20,12 +20,12 @@
 
     <section class="opening-preview-block">
       <span class="opening-label">基础世界观背景</span>
-      <div class="opening-preview-text">{{ payload.base.world_intro }}</div>
+      <div class="opening-preview-text">{{ preset.world_intro }}</div>
     </section>
 
     <section class="opening-preview-block">
       <span class="opening-label">开局第一句话</span>
-      <div class="opening-preview-text">{{ payload.base.first_line }}</div>
+      <div class="opening-preview-text">{{ preset.first_line }}</div>
     </section>
 
     <section class="opening-profile-grid">
@@ -78,11 +78,6 @@
       </div>
     </section>
 
-    <section v-if="payload.world_mode_brief" class="opening-preview-block">
-      <span class="opening-label">最近一次世界观短写</span>
-      <div class="opening-preview-text">{{ payload.world_mode_brief }}</div>
-    </section>
-
     <section class="opening-meta-grid">
       <div class="opening-meta-item">
         <span class="opening-label">{{ preset.meta_template.character_label }}</span>
@@ -111,7 +106,7 @@
           class="opening-textarea"
           :rows="4"
           :placeholder="field.placeholder"
-          :value="payload.user_input[field.key] || ''"
+          :value="payload.user_draft[field.key] || payload.user_input[field.key] || ''"
           @input="emitField(field.key, $event)"
         />
         <select
@@ -127,7 +122,7 @@
           v-else
           class="opening-input"
           :placeholder="field.placeholder"
-          :value="payload.user_input[field.key] || ''"
+          :value="payload.user_draft[field.key] || payload.user_input[field.key] || ''"
           @input="emitField(field.key, $event)"
         />
       </div>

@@ -4,7 +4,7 @@
       <div class="opening-banner">
         <span class="opening-kicker">CHAPTER OPENING</span>
         <strong class="opening-title">章节开场</strong>
-        <span class="opening-desc">以下内容直接联动酒馆真实开局楼层，作为 transcript 的起点。</span>
+        <span class="opening-desc">开局剧情影响整体故事偏好</span>
       </div>
 
       <div class="transcript-title-row">

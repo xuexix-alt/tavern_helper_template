@@ -35,7 +35,7 @@ rules:
 world_mode_axis_dictionary:
   version: 1
 
-  气候压力:
+  超自然极端天气:
     unit: score_0_100
     labels:
       低:
@@ -83,7 +83,7 @@ world_mode_axis_dictionary:
       中:
         hours_range: [18, 36]
         occurrences_per_7_days: [2, 4]
-        description: 窗口期变长（每周有3-4天晴天中午有2小时左右升温15度），可规划无护具短行动（徒步1公里范围），
+        description: 每周有3-4天晴天中午有2小时左右升温15度，可规划无护具短行动（徒步1公里范围），
       长:
         hours_range: [36, 72]
         occurrences_per_7_days: [4, 7]
@@ -110,7 +110,7 @@ world_mode_axis_dictionary:
         score_range: [40, 64]
         structured_groups_ratio: [0.25, 0.5]
         trade_activity: [0.25, 0.5]
-        description: 仍有局部组织、交易与协作惯性，自运行电力、局部个人交通工具、局部自循环水源
+        description: 只剩局部保持社会组织，社会交往方式只剩交易与协作惯性，生产力要素退化为仅剩自运行电力、局部个人交通工具、局部自循环水源
       高:
         score_range: [65, 100]
         structured_groups_ratio: [0.5, 0.8]
@@ -128,7 +128,7 @@ world_mode_axis_dictionary:
         description: 只能维持零星修补、拆解和自循环手工生产，无可靠交通工具
       中:
         capacity_range: [15, 35]
-        description: 存在少量组织化生产与维修制造能力，原始油气化交通工具
+        description: 少量组织化生产与维修制造能力，原始油气化交通工具
       高:
         capacity_range: [35, 60]
         description: 高维持成本下的残余工业/社区供给能力，稀缺电气化交通工具
@@ -138,22 +138,22 @@ world_mode_axis_dictionary:
     labels:
       低:
         incidents_range: [0, 1]
-        description: 冲突不是常态，更多是局部摩擦，以争夺社会主导权和生产资源为主，极端情况下爆发大规模战争/冲突
+        description: 冲突主要发生在不同组织群体，但不是常态，且多为局部摩擦。规模较大的社区群体间以争夺社会主导权和生产资源发生争斗，小规模社区面临大社区的吞并剥削。社会秩序极为脆弱，治安状况聊胜于无
       中:
         incidents_range: [2, 4]
-        description: 冲突是常态，为争夺存量资源你死我活，存在幸存者社区冲突和暴徒劫掠，弱肉强食无法建立有效治安
+        description: 各残余幸存者组成小规模社区，但彼此冲突成为常态，且时常为争夺资源展开殊死争斗，一部分比较有武力的暴徒四处劫掠，弱肉强食下只有少部分社群能建立脆弱的基础秩序，社会治安更是无从谈起
       高:
         incidents_range: [5, 8]
-        description: 基本无法维持社会秩序，劫掠、暴力是社会主旋律，交易只存在稳定社区之间和少部分幸存者群体间
+        description: 基本无法维持社会秩序，有稳定武装能力和生产来源的社群对零散组织和个体的劫掠、暴力、奴役、盘剥是主旋律，交易只存在实力对等主体间，完全丛林法则弱肉强食
       极高:
         incidents_range: [9, 15]
-        description: 无社会秩序、无生存规则、人吃人、人劫掠人、人欺压人，暴力是唯一的生存手段，交易只存在势均力敌下的谈判过程中
+        description: 暴力、杀戮是唯一的生存手段，只有杀戮和被杀、劫掠和被劫掠
 
   外部威胁主因:
     unit: enum
     labels:
       环境:
-        allowed_subtypes: [失温, 冻伤, 病亡, 雪晶腐蚀, 供暖中断]
+        allowed_subtypes: [失温, 冻伤, 病亡, 雪晶腐蚀]
       暴徒:
         allowed_subtypes: [掠夺者, 楼层暴徒, 武装团伙, 饥民围堵]
       异变体:
@@ -200,7 +200,7 @@ profiles:
     secondary_routes: [扩, 行]
 
     environment:
-      常态气温区间: "-5℃ ~ -15℃"
+      常态气温区间: '-5℃ ~ -15℃'
       暴雪频率: 中
       腐蚀雪晶活性: 低到中
       外出能力: 保留
@@ -297,7 +297,7 @@ profiles:
     secondary_routes: [管, 慰]
 
     environment:
-      常态气温区间: "-35℃ ~ -45℃"
+      常态气温区间: '-35℃ ~ -45℃'
       暴雪频率: 高
       腐蚀雪晶活性: 高
       外出能力: 高度受限
@@ -381,7 +381,7 @@ profiles:
     secondary_routes: [扩, 行, 慰]
 
     environment:
-      常态气温区间: "-8℃ ~ -18℃"
+      常态气温区间: '-8℃ ~ -18℃'
       暴雪频率: 阶段性
       腐蚀雪晶活性: 中低
       外出能力: 中等可行

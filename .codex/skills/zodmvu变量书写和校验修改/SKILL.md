@@ -1,400 +1,327 @@
 ---
 name: zodmvu变量书写和校验修改
-description: 根据MVU Zod框架规范，书写、校验、修改角色卡变量结构及相关世界书文件
+description: 根据当前仓库里的 @types、示例与 MVU/Zod 运行时桥接实现，书写、校验、修改角色卡变量结构及相关世界书文件
 ---
 
-# Zod MVU 变量书写与校验助手
+# Zod MVU 变量书写和校验修改
 
-你是一位精通酒馆助手（Tavern Helper）和 MVU Zod 变量框架的 AI 助手。专注于为 SillyTavern 角色卡创建、修改、校验基于 Zod Schema 的 MVU 变量系统及相关世界书配置。
+用于处理以下任务：
 
-## 核心能力
+- 新建或重构 `schema.ts`
+- 校验 MVU 变量结构是否和当前项目架构一致
+- 修改 `[mvu_update]变量更新规则.yaml`、`[mvu_update]变量输出格式.yaml`、`[initvar]*`
+- 编写或修订 `脚本/变量结构/index.ts`
+- 编写读取/写回 `stat_data` 的界面、脚本、store
 
-### 1. Zod Schema 设计与编写
+这份 skill 已按 **当前仓库（2026-03-10）中的 `@types`、示例代码、`util/mvu.ts`、`tmp_mvu_zod.js`，以及官方 MVU 插件源码** 进行了修订。
 
-- 根据需求设计变量结构（schema.ts）
-- 定义变量类型、约束、默认值
-- 实现派生字段计算（transform）
-- 生成 JSON Schema（schema.json）
+## 先看什么
 
-### 2. 世界书文件配置
+处理任务时，按下面顺序取证，不要直接凭旧记忆下结论：
 
-- 组织世界书结构（index.yaml）
-- 编写变量初始化文件（initvar.yaml）
-- 编写变量更新规则（变量更新规则.yaml）
-- 编写变量输出格式（变量输出格式.yaml）
-- 编写角色详情和角色阶段文件
-- 编写文风设定（writingstyle_request）
-- 编写立即事件
+1. `@types/iframe/exported.mvu.d.ts`
+2. `@types/function/global.d.ts`
+3. `@types/function/variables.d.ts`
+4. `示例/角色卡示例/脚本/变量结构/index.ts`
+5. `示例/角色卡示例/界面/状态栏/index.ts`
+6. `util/mvu.ts`
+7. 当前项目自己的 `schema.ts` 与 `[mvu_update]*`
+8. `tmp_mvu_zod.js` 或远程 `tavern_resource/dist/util/mvu_zod.js`
+9. 如仍有冲突，再看官方 MVU 插件源码（`MagVarUpdate/src/export_globals.ts`）
 
-### 3. 脚本开发
+如果本地 `@types`、示例、运行时源码彼此冲突：
 
-- 编写变量结构注册脚本（registerMvuSchema）
-- 编写 MVU 框架加载脚本
-- 编写立即事件注入脚本（injectPrompts）
+- **项目内 TypeScript 编码时优先以本地 `@types` 为准**
+- **解释真实运行行为时，以示例和运行时源码为准**
+- 若要使用本地 `@types` 未声明的方法，必须先说明是“运行时额外能力”，并在代码里做 `typeof ... === 'function'` 守卫
 
-### 4. 界面开发（可选）
+## 当前架构速记
 
-- 编写 Vue 状态栏界面
-- 编写 Pinia store（defineMvuDataStore）
+### 1. `stat_data` 才是真正的业务数据
 
-## 工作流程
+- MVU 数据的核心内容放在 `MvuData.stat_data`
+- 读取时通常是：`_.get(Mvu.getMvuData(...), 'stat_data', {})`
+- Zod Schema 通常描述的是 **`stat_data` 的结构**，不是整个 `MvuData`
 
-### 创建新角色卡变量系统
+### 2. 当前本地 `@types` 暴露的 MVU 主接口
 
-```text
-1. 获取变量需求
-   ↓
-2. 编写 schema.ts（Zod Schema 定义）
-   ↓
-3. 生成 initvar.yaml（变量初始值）
-   ↓
-4. 生成 变量更新规则.yaml
-   ↓
-5. 生成 变量输出格式.yaml
-   ↓
-6. 生成 变量列表.txt
-   ↓
-7. 组织世界书 index.yaml
-   ↓
-8. 编写角色详情.yaml
-   ↓
-9. 编写角色阶段.yaml
-   ↓
-10. 编写脚本文件
+来自 `@types/iframe/exported.mvu.d.ts`：
+
+- `Mvu.getMvuData(options)`
+- `Mvu.replaceMvuData(mvu_data, options)`
+- `Mvu.parseMessage(message, old_data)`
+- `Mvu.isDuringExtraAnalysis()`
+- `Mvu.events.VARIABLE_INITIALIZED`
+- `Mvu.events.VARIABLE_UPDATE_STARTED`
+- `Mvu.events.COMMAND_PARSED`
+- `Mvu.events.VARIABLE_UPDATE_ENDED`
+- `Mvu.events.BEFORE_MESSAGE_UPDATE`
+
+### 3. 当前 `MvuData` 结构
+
+本地 `@types` 中的定义是：
+
+```ts
+type MvuData = {
+  initialized_lorebooks: Record<string, any[]>;
+  stat_data: Record<string, any>;
+  [key: string]: any;
+};
 ```
 
-### 校验现有角色卡
+注意：
 
-```text
-1. 读取 schema.ts 验证结构
-   ↓
-2. 校验 initvar.yaml 与 schema 一致性
-   ↓
-3. 校验 变量更新规则.yaml 完整性
-   ↓
-4. 校验 世界书条目组织
-   ↓
-5. 输出校验报告和改进建议
+- **不是** `initialized_lorebooks: string[]`
+- `initialized_lorebooks` 已升级为以世界书名为键的映射结构
+
+### 4. 当前 `CommandInfo` 已包含 `move`
+
+本地 `@types` 中，`Mvu.CommandInfo` 包含：
+
+- `set`
+- `add`
+- `insert`
+- `delete`
+- `move`
+
+并且 `args` 在类型层面是 **字符串字面量**，而不是已经完成 JS 解析的值。
+
+### 5. 启动顺序
+
+凡是使用 `Mvu` 的脚本或界面，都先做：
+
+```ts
+await waitGlobalInitialized('Mvu');
 ```
 
-## 规范参考
+如果是消息楼层 iframe 界面，再额外参考现有示例：
 
-编写和校验时必须遵循以下规范文档：
+```ts
+await waitUntil(() => _.has(getVariables({ type: 'message' }), 'stat_data'));
+```
 
-| 文档 | 用途 |
-|------|------|
-| [MVUZod角色卡规范](.cursor/rules/MVUZod角色卡规范.mdc) | 完整的角色卡开发规范 |
-| [MVU角色卡细则](.cursor/rules/mvu角色卡.mdc) | 更细粒度的 Zod/MVU 变量结构编写要求（prefault/可选字段/幂等性/describe 等） |
-| [酒馆助手文档-功能](.cursor/rules/酒馆助手文档-features_cn.md) | 酒馆助手功能说明 |
-| [酒馆助手文档-参考](.cursor/rules/酒馆助手文档-reference_cn.md) | 函数和变量参考 |
-| [MVU组件包](.cursor/rules/MVU组件包.mdc) | MVU Zod 框架说明 |
-| [示例/角色卡示例](示例/角色卡示例/) | 参考实现示例 |
-| `@types/iframe/exported.mvu.d.ts` | `Mvu.getMvuData/replaceMvuData/parseMessage/reloadInitVar` 与 `Mvu.events.*` |
-| `@types/function/global.d.ts` | `waitGlobalInitialized('Mvu')/initializeGlobal` |
-| `@types/function/variables.d.ts` | `VariableOption/getVariables/replaceVariables/updateVariablesWith/registerVariableSchema` |
+也就是说：
 
-## 文件规范速查
+- `waitGlobalInitialized('Mvu')` 是等待全局接口可用
+- `waitUntil(...stat_data...)` 是等待当前楼层变量真正到位
 
-### 1. schema.ts 规范
+这两个等待解决的是 **不同问题**，不要混为一谈。
 
-```typescript
-// 必须的结构
+## 重要兼容性说明
+
+### 1. `reloadInitVar` 的现实情况
+
+当前仓库本地 `@types/iframe/exported.mvu.d.ts` **没有声明** `Mvu.reloadInitVar`。
+
+但官方 MVU 插件源码当前仍包含该运行时方法。
+
+因此：
+
+- 在 **项目内 TypeScript 代码** 中，不要把它当作“已有类型”的稳定接口直接写死
+- 如果用户明确要用它，先说明这是 **运行时存在、本地类型未同步** 的能力
+- 代码必须写成：
+
+```ts
+await waitGlobalInitialized('Mvu');
+const mvuData = Mvu.getMvuData({ type: 'message', message_id: getCurrentMessageId() });
+
+if (typeof (Mvu as any).reloadInitVar === 'function') {
+  await (Mvu as any).reloadInitVar(mvuData);
+}
+```
+
+### 2. `parseMessage` 的返回值要写兼容代码
+
+本地 `@types` 把 `Mvu.parseMessage(...)` 标成 `Promise<Mvu.MvuData>`。
+
+但仓库内已有实际代码会把它当成 `Mvu.MvuData | undefined` 来防御式处理。
+
+因此，写健壮代码时建议：
+
+```ts
+const parsed = await Mvu.parseMessage(messageText, _.cloneDeep(baseMvuData));
+const nextMvuData = parsed ?? baseMvuData;
+```
+
+### 3. `registerVariableSchema` 和 `registerMvuSchema` 不是一回事
+
+- `registerVariableSchema(...)` 是酒馆助手变量管理器的结构注册接口，来自 `@types/function/variables.d.ts`
+- `registerMvuSchema(...)` 是外部 `mvu_zod.js` 提供的桥接器
+
+当前桥接器会做两件事：
+
+1. 自动把 `schema` 包成 `z.object({ stat_data: schema })` 后注册到变量管理器
+2. 监听 zod 专用的 MVU 事件，在变量更新链路中做 `safeParse`、纠偏和报错提示
+
+补充：当前 `mvu_zod.js` 对传入的顶层 `ZodObject` 会先按 `z.looseObject(schema.shape)` 处理，再用于注册和校验；因此你不能假设“顶层 strict 约束会被原样保留到桥接器里”。
+
+## 两层命令模型一定要分清
+
+当前 Zod MVU 架构里，**最容易写错的地方就是把“AI 输出层”与“运行时层”混在一起**。
+
+### A. AI / 世界书输出层
+
+`[mvu_update]变量更新规则.yaml`、`[mvu_update]变量输出格式.yaml` 里，当前项目主流仍在使用 **JSON Patch 风格操作名**：
+
+- `replace`
+- `delta`
+- `insert`
+- `remove`
+- `move`
+
+例如：
+
+```json
+[
+  { "op": "replace", "path": "/世界/时间", "value": "夜间 - 21:30" },
+  { "op": "delta", "path": "/纪宁/Imp", "value": 8 },
+  { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { "姓名": "陌生拾荒者" } }
+]
+```
+
+但要注意：**路径前缀是否带 `/stat_data` 必须看当前项目已有文件，不要想当然。**
+
+- `src/寒冬末日/世界书/变量/[mvu_update]变量输出格式.yaml`：路径以 `stat_data` 根为语义起点，示例是 `/世界/时间`
+- `src/APP后台版/变量/[mvu_update]变量更新规则.yaml`：明确要求路径带 `/stat_data/...`
+
+结论：
+
+- **修订世界书模板时，必须沿用该项目现有的路径约定**
+- 不要把一个项目的前缀规则机械复制到另一个项目
+
+### B. 运行时 / TypeScript / 事件层
+
+`Mvu.parseMessage(...)`、`Mvu.events.COMMAND_PARSED` 和 `tmp_mvu_zod.js` 里处理的是 **内部命令模型**：
+
+- `set`
+- `add`
+- `insert`
+- `delete`
+- `move`
+
+可以用下面的映射关系理解：
+
+| AI 输出层 | 运行时层 |
+|---|---|
+| `replace` | `set` |
+| `delta` | `add` |
+| `insert` | `insert` |
+| `remove` | `delete` |
+| `move` | `move` |
+
+因此：
+
+- 写 **世界书输出规则** 时，用项目既有的 JSON Patch 风格
+- 写 **TypeScript 事件处理 / `Mvu.CommandInfo` 解释** 时，用 `set/add/insert/delete/move`
+- 不要把 `replace` 误写成 `Mvu.CommandInfo['type']`
+- 也不要把 `set` 直接塞进 `[mvu_update]变量输出格式.yaml`
+
+## 现行 Schema 书写规则
+
+### 1. 根 Schema 的形状
+
+常用形式：
+
+```ts
 import { z } from 'zod';
 
 export const Schema = z.object({
-  世界: z.object({...}),
-  角色名: z.object({...}),
+  世界: z.object({}).prefault({}),
+  角色A: z.object({}).prefault({}),
 });
 
 export type Schema = z.output<typeof Schema>;
 ```
 
-**关键规则**：
+但不要死背“顶层必须写死角色名”。
 
-- ✅ 使用 `z.coerce.number()` 处理数字
-- ✅ 使用 `z.transform()` + `_.clamp()` 约束数值范围
-- ✅ 优先使用 `z.record()` 而非 `z.array()`
-- ✅ 派生字段使用 `$` 前缀命名
-- ✅ 不要使用 `.passthrough()`
+当前仓库已经存在 **可扩展顶层动态键** 方案，例如：
 
-### 1.1 Zod/MVU 细则补充（补齐项目规则缺口）
-
-- 布尔值：不要使用 `z.coerce.boolean()`；直接使用 `z.boolean()`（除非你明确要做字符串到布尔的自定义 preprocess）。
-- 可选字段：不要随意对字段使用 `.optional()`；在“增量更新 + 反复 parse”场景下，优先用 `z.prefault(...)` 保证字段始终存在、结构稳定。
-- 对象键策略：固定必填同类型键优先 `z.record(z.enum([...]), value)`；固定可选同类型键优先 `z.partialRecord(z.enum([...]), value)`。
-- 幂等性：`transform` 要谨慎，确保 `Schema.parse(Schema.parse(input))` 与 `Schema.parse(input)` 等价（例如 clamp、normalize 这类幂等转换是安全的）。
-- 默认值策略：优先 `z.prefault`（而不是 `z.default`）；复杂对象建议“每个字段都可解析”，必要时可用 `z.literal('待初始化').or(...).prefault('待初始化')`。
-- 复合类型默认值：若某个 `z.object/z.record/z.array` 使用了 `prefault`，其子字段也应补齐可解析输入（通常也需要 `prefault`）。
-- `describe` 的使用：仅在字段名不足以表达含义时使用（典型：`z.record(z.string().describe('键含义'), valueSchema)`），不要滥用 `describe` 占 token。
-- 特殊格式字段：时间、房间号、坐标等可结构化字符串，优先尝试 `z.templateLiteral`，再考虑正则/手写解析。
-- `registerMvuSchema` 的函数形态：允许 `registerMvuSchema(Schema)` 或 `registerMvuSchema(() => Schema)`（当 schema 依赖运行时数据/函数、或注册时尚未就绪时用后者）。
-
-#### MVU Zod vs MVU Beta（避免混用）
-
-- MVU Zod（本项目主线）：AI 更新命令输出为 JSON Patch（replace/delta/insert/remove），通常依赖“新消息触发”的更新链路；细节看 `.cursor/rules/MVU组件包.mdc`、`.cursor/rules/MVUZod角色卡规范.mdc`。
-- MVU Beta（旧版）：运行时全局对象 `window.Mvu`（类型定义见 `@types/iframe/exported.mvu.d.ts`）提供 `parseMessage` 解析 `_.set/_.add/_.insert/_.delete` 风格命令，并通过 `Mvu.events.*` 事件回调进行修复。
-- 规则：不要在同一个变量更新链路里混用 “JSON Patch” 与 “_.set 风格命令”。如果你在脚本里选择用 `Mvu.parseMessage`，请明确这是 Beta 风格解析与写回流程。
-
-### 2. 世界书 index.yaml 规范
-
-```yaml
-锚点:
-  - &分隔符
-    启用: false
-    激活策略:
-      类型: 蓝灯
-    内容: ''
-
-条目:
-  - 名称: 变量部分
-    文件: 变量/文件
+```ts
+const createExtensibleMapSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.looseObject({}).catchall(itemSchema).prefault({});
 ```
 
-### 3. 变量文件命名
+以及：
 
-| 文件 | 命名规则 |
-|------|----------|
-| 变量初始化 | `[initvar]变量初始化勿开` |
-| 变量更新规则 | `[mvu_update]变量更新规则` |
-| 变量输出格式 | `[mvu_update]变量输出格式` |
-
-## 常用模板
-
-### 模板1: schema.ts 角色变量
-
-```typescript
-// 角色名: 角色A
-角色A: z
-  .object({
-    属性1: z.coerce.number().transform(v => _.clamp(v, 0, 100)),
-    属性2: z.string().prefault(''),
-    物品栏: z.record(
-      z.string().describe('物品名'),
-      z.object({
-        描述: z.string(),
-        数量: z.coerce.number(),
-      })
-    ).prefault({}),
-  })
-  .transform(data => {
-    const $阶段 = data.属性1 < 20 ? '阶段一' : '阶段二';
-    return { ...data, $阶段 };
-  }),
+```ts
+z.object({
+  世界: 世界Schema,
+  庇护所: 庇护所Schema,
+  临时NPC: createExtensibleMapSchema(临时NPCSchema),
+}).catchall(主要角色Schema);
 ```
 
-### 模板2: initvar.yaml
+也就是说，**“顶层动态角色对象”已经是现行做法之一**。
 
-```yaml
-# yaml-language-server: $schema=../../schema.json
-世界:
-  当前时间: 2024-01-01 00:00
-  当前地点: 未知
-角色A:
-  属性1: 50
-  属性2: ''
-  物品栏: {}
+### 2. `prefault()` 仍然是 MVU 主线的首选
+
+对于会被反复解析、反复写回、需要保证结构稳定的 `stat_data`：
+
+- 优先用 `z.prefault(...)`
+- 让 `Schema.parse({})` 尽可能能直接产出完整结构
+
+但不要把这条规则绝对化：
+
+- 在 `src/流式最小Demo/shared/opening.schema.ts` 这类 **表单 / 载荷 / 非核心 MVU 持久层** 中，`default()` 也是现存做法
+- 因此你要先判断：当前文件是 **MVU 持久变量结构**，还是普通表单配置结构
+
+### 3. `array` 不是禁用项
+
+旧说法“优先使用 `record()` 而不是 `array()`”已经不够准确。
+
+当前仓库中大量使用了数组，而且是合理的：
+
+- `selected_roles: z.array(z.string()).prefault([])`
+- `revealed_roles: z.array(z.string()).prefault([])` 这类有序列表
+- 房间入住者、能力列表、标签列表、表单项列表
+
+判断原则：
+
+- **顺序重要 / 允许重复 / 追加语义明显**：用 `z.array(...)`
+- **按键查找 / 稳定映射 / 动态对象集合**：用 `z.record(...)` / `z.partialRecord(...)` / `catchall(...)`
+
+### 4. 固定对象 vs 可扩展对象
+
+- 固定结构的子对象，可以用 `.strict()`
+- 需要接纳未来动态键的对象，优先用：
+  - `z.record(...)`
+  - `z.partialRecord(...)`
+  - `z.looseObject({}).catchall(...)`
+
+不要把所有对象都 `.strict()`，否则以后新增动态角色或动态房间键会被你卡死。
+
+### 5. 推荐写法
+
+- 数字：`z.coerce.number()` / `z.coerce.number().int()`
+- 布尔：`z.boolean()`，不要滥用 `z.coerce.boolean()`
+- 字符串归一化：优先 `z.preprocess(...)`
+- 数值约束：`transform(v => _.clamp(v, min, max))`
+- 可选但希望有稳定默认结构：优先 `prefault(...)`
+- 派生/辅助字段：沿用当前项目习惯，可用 `$` 前缀，例如 `$meta`
+
+### 6. 幂等性要求
+
+对 MVU Schema 的 `transform` / `preprocess`，尽量满足：
+
+```ts
+Schema.parse(Schema.parse(input)) === Schema.parse(input)
 ```
 
-### 模板3: 变量更新规则.yaml
+例如：
 
-```yaml
----
-变量更新规则:
-  角色A:
-    属性1:
-      type: number
-      range: 0~100
-      check:
-        - 根据行为结果调整 ±(3~6)
-        - 仅在角色察觉到时更新
-    属性2:
-      check:
-        - 描述角色状态变化
-```
+- clamp
+- 别名归一化
+- 房间号标准化
+- 时间字符串标准化
 
-### 模板4: 变量输出格式.yaml
+这类是安全的。
 
-文件路径：`世界书/变量/[mvu_update]变量输出格式.yaml`
+## 代码模板
 
-**说明**：此文件定义 AI 输出变量更新命令的标准格式；以 JSON Patch 为核心，并扩展支持 `move`。建议直接复用下列优化模板。
+### 模板 1：注册 MVU Schema 的脚本
 
-```yaml
-# [mvu_update] 变量输出格式（优化版）
-
-rule:
-  - You MUST output the `<UpdateVariable>` block at the end of your reply.
-  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
-  - "  - `replace`: replace the value of existing paths"
-  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
-  - "  - `insert`: insert new items into an object or array"
-  - "  - `remove`: delete path"
-  - '  - `move`: move an existing value from one path to another (requires `"from"`). '
-  - Path MUST start with `/`.
-  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
-  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.
-  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).
-  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
-  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots
-
-format: |-
-  <UpdateVariable>
-  <Analysis>
-  Step-by-step logic chain based on current context and variable checks:
-
-  1. Presence Check (登场状态)
-     - Quick scan: Which characters are present/mentioned in current scene?
-     - Set active roles to '登场' (登场), absent roles to '离场' (离场).
-     - This is a CRITICAL story switch - do NOT miss any role.
-     - Result: 新登场角色 ____，新离场角色 ____。
-
-  2. World Variables & Atmosphere
-     - Time: Calculate time elapsed (estimated by dialogue length if not specified).
-     - If crossing 00:00: delta date/doom_day, replace floor ambience.
-     - Address: Update only on actual character movement.
-     - Result: 时间更新？____，日期更新？____。
-
-  3. Shelter/Base Variables
-     - CRITICAL: DO NOT manually roll for shelter level upgrades.
-     - AI only reads `今日投掷点数` status.
-     - If "lucky upgrade" triggered in narrative -> broadcast new level & capabilities in story.
-     - If main task stage completed -> use `replace` to force level to reward target.
-     - Otherwise: DO NOT modify level numbers manually.
-     - Sync capability descriptions when level changes.
-
-  4. All Roles Variables (逐个检查每个角色)
-     - Source: top-level roles + `/临时NPC` objects.
-     - For each role check:
-       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.
-       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.
-       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.
-       d. Visuals (replace): Update physical descriptions only if changed in plot.
-       e. Health Reason (sync): MUST sync with health delta.
-
-  5. Temporary NPCs
-     - New NPCs -> use `insert` with complete field initialization.
-     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.
-     - If top-level already exists with same name -> merge and `remove` temp NPC.
-     - Result: 需创建/更新/删除？____。
-
-  6. Room State (强制禁止遗漏)
-     - Update `/<角色>/所在房间` for moving characters:
-       - Valid values: 玄关 | 玄关/临时客房A | 玄关/临时客房B | 核心区/主卧室 | 核心区/主浴室 | 楼层20/2001 | 楼层19/1901
-       - Leaving apartment -> "" (empty string)
-     - NEVER output any operation under `/房间/**` (derived; maintained by script).
-     - Result: 需更新房间的角色 ____。
-
-  7. Main Task & Rewards
-     - Track stage goals. If completed -> execute rewards.
-     - Info fragments: insert new, replace with '已完成' when explored.
-     - Grant rewards: Capability insert / Imp boost / Thoughts update.
-     - Result: 任务进度更新？____，触发奖励？____。
-
-  8. Operation Summary
-     - List all paths + operations (replace/delta/insert/remove/move).
-     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
-
-  </Analysis>
-  <JSONPatch>
-  [
-    { "op": "replace", "path": "/世界/时间", "value": "..." },
-    { "op": "delta", "path": "/浅见亚美/健康", "value": -1 },
-    { "op": "replace", "path": "/浅见亚美/内心想法", "value": "..." },
-    { "op": "replace", "path": "/浅见亚美/登场状态", "value": "登场" },
-    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
-    { "op": "replace", "path": "/浅见亚美/所在房间", "value": "楼层20/2001" },
-    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
-  ]
-  </JSONPatch>
-  </UpdateVariable>
-
-requirements:
-  - "Allowed operations: replace, delta, insert, remove, move."
-  - Path MUST be a valid JSON Pointer absolute path.
-  - DO NOT `replace` on non-existent paths (use `insert`).
-  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
-  - "NEVER output any operation under `/房间/**` (derived; maintained by script)."
-  - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
-  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
-  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
-  - "Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays."
-  - "Shelter level: AI MUST NOT manually roll upgrades. Only read `今日投掷点数` status and broadcast results."
-```
-
-**关键要点**：
-
-- 允许操作集为 `replace/delta/insert/remove/move`。
-- 路径必须是绝对 JSON Pointer（以 `/` 开头）。
-- 角色不存在时必须先 `insert /<角色名>`，禁止直接 `replace/delta/remove` 子路径。
-- `房间` 为派生只读区，禁止输出 `/房间/**` 操作。
-- `_` 前缀字段只读，不可更新。
-
-**校验要点**：
-
-- [ ] `rule` 覆盖 allowed operations 与只读约束
-- [ ] `format` 含 `<UpdateVariable>/<Analysis>/<JSONPatch>`
-- [ ] JSONPatch 操作与路径合法
-- [ ] 新角色创建流程符合“先 insert 后更新”
-
-### 模板5: 角色阶段.yaml
-
-```yaml
----
-角色A当前行为: # 角色A当前属性1为<%= getvar('stat_data.角色A.属性1') _%>
-  # :<%_ if (getvar('stat_data.角色A.属性1') < 20) { _%>
-  阶段一名称:
-    行为指导:
-      - 行为1
-      - 行为2
-    变化倾向:
-      - 倾向1
-  # :<%_ } else if (getvar('stat_data.角色A.属性1') < 40) { _%>
-  阶段二名称:
-    行为指导:
-      - 行为1
-    变化倾向:
-      - 倾向1
-  # :<%_ } _%>
-```
-
-### 模板6: 立即事件.yaml
-
-```yaml
----
-立即事件:
-  description: 事件描述
-  process:
-    - 进程描述1
-    - 进程描述2
-  requirement:
-    - 要求1
-    - 要求2
-  rule:
-    - 规则1
-    - 规则2
-```
-
-### 模板7: 立即事件脚本
-
-```typescript
-$(async () => {
-  injectPrompts([
-    {
-      id: '事件名',
-      position: 'none',
-      depth: 0,
-      role: 'system',
-      content: '【【关键字】】',
-      filter: () => _.get(getAllVariables(), 'stat_data.角色.属性') === 条件,
-      should_scan: true,
-    },
-  ]);
-});
-```
-
-### 模板8: 变量结构注册脚本
-
-```typescript
+```ts
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
 
@@ -403,332 +330,178 @@ $(() => {
 });
 ```
 
-### 模板9: MVU 框架加载脚本
+兼容写法也允许：
 
-```typescript
-import 'https://testingcf.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js';
+```ts
+registerMvuSchema(() => Schema);
 ```
 
-### 模板9.1: 等待 MVU 初始化（@types/function/global.d.ts）
+适用于 Schema 需要延迟求值的场景。
 
-```typescript
-$(async () => {
-  // 使用 Mvu 运行时 API 前必须等待全局初始化完成
-  await waitGlobalInitialized('Mvu');
-});
-```
+### 模板 2：消息楼层界面启动
 
-### 模板9.2: 读取/写回 MVU 数据（@types/iframe/exported.mvu.d.ts）
+```ts
+import App from './App.vue';
 
-```typescript
-$(async () => {
-  await waitGlobalInitialized('Mvu');
-
-  // 读取：返回 { initialized_lorebooks, stat_data }
-  const mvu_data = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
-  const stat_data = _.get(mvu_data, 'stat_data', {});
-
-  // （可选）用 Schema 校验/纠偏 stat_data
-  // 说明：需要先导入 Schema（或改用你当前项目的 schema 变量）
-  const fixed_stat_data = Schema.parse(stat_data);
-  if (!_.isEqual(stat_data, fixed_stat_data)) {
-    _.set(mvu_data, 'stat_data', fixed_stat_data);
-    await Mvu.replaceMvuData(mvu_data, { type: 'message', message_id: 'latest' });
+async function waitUntil(
+  predicate: () => boolean,
+  { intervalMs = 50, timeoutMs = 5000 }: { intervalMs?: number; timeoutMs?: number } = {},
+): Promise<void> {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeoutMs) throw new Error('waitUntil timeout');
+    await new Promise<void>(resolve => setTimeout(resolve, intervalMs));
   }
-});
-```
+}
 
-### 模板9.3: 重载 initvar（@types/iframe/exported.mvu.d.ts）
-
-```typescript
 $(async () => {
   await waitGlobalInitialized('Mvu');
-  const mvu_data = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
-  await Mvu.reloadInitVar(mvu_data);
+  await waitUntil(() => _.has(getVariables({ type: 'message' }), 'stat_data'));
+  createApp(App).use(createPinia()).mount('#app');
 });
 ```
 
-### 模板9.4: generate 场景下手动解析（Beta 风格：parseMessage + replaceMvuData）
+### 模板 3：读取当前楼层 `stat_data`
 
-> 仅当你**明确使用的是 MVU Beta 的 `_.set/...` 命令风格**，并且处于 `generate` 这类“不会产生新楼层从而不会触发自动解析”的场景，才需要这样做。
+```ts
+await waitGlobalInitialized('Mvu');
 
-```typescript
-$(async () => {
-  await waitGlobalInitialized('Mvu');
-
-  const old_data = Mvu.getMvuData({ type: 'message', message_id: 'latest' });
-  const ai_text = await generate({ user_input: '...' });
-
-  // parseMessage 解析 `_.set('path', value)` 等命令，返回更新后的 MvuData
-  const new_data = await Mvu.parseMessage(ai_text, old_data);
-  await Mvu.replaceMvuData(new_data, { type: 'message', message_id: 'latest' });
-});
+const messageId = getCurrentMessageId();
+const mvuData = Mvu.getMvuData({ type: 'message', message_id: messageId });
+const statData = Schema.parse(_.get(mvuData, 'stat_data', {}));
 ```
 
-### 模板9.5: 事件钩子（覆盖 @types 中全部 Mvu.events.*）
+### 模板 4：修改后写回
 
-```typescript
-$(async () => {
-  await waitGlobalInitialized('Mvu');
+```ts
+await waitGlobalInitialized('Mvu');
 
-  eventOn(Mvu.events.VARIABLE_INITIALIZED, (variables, swipe_id) => {
-    // variables: Mvu.MvuData
-    // swipe_id: number
-  });
+const messageId = getCurrentMessageId();
+const mvuData = Mvu.getMvuData({ type: 'message', message_id: messageId });
 
-  eventOn(Mvu.events.VARIABLE_UPDATE_STARTED, variables => {
-    // variables: Mvu.MvuData（更新前）
-  });
+_.set(mvuData, 'stat_data.世界.时间', '夜间 - 21:30');
 
-  eventOn(Mvu.events.COMMAND_PARSED, (variables, commands, message_content) => {
-    // commands: Mvu.CommandInfo[]
-    // 允许原地修复 commands（路径纠错/简繁转换/去掉 '-' 等）
-  });
-
-  eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (variables, variables_before_update) => {
-    // variables_before_update: Mvu.MvuData（更新前）
-    // 可在此做二次纠偏（clamp、限制单次变动幅度等）
-  });
-
-  eventOn(Mvu.events.BEFORE_MESSAGE_UPDATE, ({ variables, message_content }) => {
-    // 写回楼层前最后一次机会
-  });
-});
+await Mvu.replaceMvuData(mvuData, { type: 'message', message_id: messageId });
 ```
 
-### 模板10: 界面 Store
+### 模板 5：手动解析 AI 文本里的 MVU 更新
 
-```typescript
+适用于 `generate()` 等不会自动触发新楼层解析的场景。
+
+```ts
+await waitGlobalInitialized('Mvu');
+
+const messageId = getCurrentMessageId();
+const oldData = Mvu.getMvuData({ type: 'message', message_id: messageId });
+const aiText = await generate({ user_input: '继续剧情并更新变量' });
+
+const parsed = await Mvu.parseMessage(String(aiText ?? ''), _.cloneDeep(oldData));
+const nextData = parsed ?? oldData;
+
+await Mvu.replaceMvuData(nextData, { type: 'message', message_id: messageId });
+```
+
+### 模板 6：可选的 `reloadInitVar` 兼容写法
+
+```ts
+await waitGlobalInitialized('Mvu');
+
+const messageId = getCurrentMessageId();
+const mvuData = Mvu.getMvuData({ type: 'message', message_id: messageId });
+
+if (typeof (Mvu as any).reloadInitVar === 'function') {
+  await (Mvu as any).reloadInitVar(mvuData);
+}
+```
+
+### 模板 7：基于 `util/mvu.ts` 的 Pinia store
+
+```ts
 import { defineMvuDataStore } from '@/util/mvu';
 import { Schema } from '../../schema';
 
-export const useDataStore = defineMvuDataStore(Schema, { type: 'message', message_id: getCurrentMessageId() });
+export const useDataStore = defineMvuDataStore(Schema, {
+  type: 'message',
+  message_id: getCurrentMessageId(),
+});
 ```
 
-## MVU 运行时 API 速查（补齐 @types 覆盖）
+注意：
 
-> 以下内容以 `@types/iframe/exported.mvu.d.ts` 与 `@types/function/global.d.ts` 为准。
+- `util/mvu.ts` 会把 `message_id: 'latest'` 规范成 `-1`
+- 它会双向同步 `data <-> variables.stat_data`
+- 它会对读出来的数据做 `safeParse`，校验失败时忽略该轮同步
 
-- 初始化：使用任何 `Mvu.*` 前，先 `await waitGlobalInitialized('Mvu')`。
-- 数据结构：`MvuData = { initialized_lorebooks: string[], stat_data: Record<string, any> }`；变量的“真源”是 `stat_data`。
-- 读取：`Mvu.getMvuData(options: VariableOption)`，常用 `options.type = 'message'|'chat'|'character'|'global'`。
-- 写回：`await Mvu.replaceMvuData(mvu_data, options)`，用于把修改后的 `stat_data` 写回变量表。
-- 手动解析（Beta）：`await Mvu.parseMessage(message, old_data)`，解析 `_.set/_.add/_.insert/_.delete` 风格命令并返回更新后的 `MvuData`。
-- 重载 initvar：`await Mvu.reloadInitVar(mvu_data)`，重新应用 initvar 初始化逻辑（常用于修复/迁移/强制回到初始模板）。
-- 事件（全部）：`VARIABLE_INITIALIZED / VARIABLE_UPDATE_STARTED / COMMAND_PARSED / VARIABLE_UPDATE_ENDED / BEFORE_MESSAGE_UPDATE`。
+### 模板 8：监听 MVU 事件
 
-## 校验清单
+```ts
+await waitGlobalInitialized('Mvu');
 
-### 校验 schema.ts
+eventOn(Mvu.events.VARIABLE_INITIALIZED, (variables, swipeId) => {
+  console.log('初始化完成', swipeId, variables);
+});
 
-- [ ] 变量结构完整，覆盖所有需求
-- [ ] 数值类型使用 `z.coerce.number()`
-- [ ] 布尔值使用 `z.boolean()`（而不是 `z.coerce.boolean()`）
-- [ ] 数值约束使用 `_.clamp()`
-- [ ] `transform` 满足幂等性（`Schema.parse(Schema.parse(x)) === Schema.parse(x)`）
-- [ ] 未随意使用 `.optional()`；默认值优先 `prefault()`
-- [ ] 派生字段使用 `$` 前缀
-- [ ] 没有使用 `.passthrough()`
-- [ ] `export const Schema` 和 `export type Schema` 都已定义
+eventOn(Mvu.events.VARIABLE_UPDATE_STARTED, variables => {
+  console.log('更新开始', variables);
+});
 
-### 校验 initvar.yaml
+eventOn(Mvu.events.COMMAND_PARSED, (variables, commands, messageContent) => {
+  console.log('命令已解析', commands, messageContent);
+});
 
-- [ ] `yaml-language-server` 指向 schema.json
-- [ ] 结构与 schema.ts 一致
-- [ ] 初始值符合约束条件
-- [ ] 条目名为 `[initvar]变量初始化勿开`
-- [ ] `启用: false`
+eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (variables, oldVariables) => {
+  console.log('更新结束', variables, oldVariables);
+});
 
-### 校验 变量更新规则.yaml
-
-- [ ] 包含所有 schema 中定义的变量
-- [ ] 每变量有 `check` 规则
-- [ ] 数值类型有 `range` 限制
-- [ ] 使用 TypeScript 类型定义复杂结构
-
-### 校验 变量输出格式.yaml
-
-- [ ] 包含标准 rule 和 format
-- [ ] JSON Patch 操作类型正确
-- [ ] 英文 Analysis 描述
-
-### 校验 世界书 index.yaml
-
-- [ ] 锚点定义正确（分隔符、立即事件）
-- [ ] 条目顺序正确（文风→变量→角色→立即事件）
-- [ ] 文件路径引用正确
-- [ ] 激活策略正确（蓝灯/绿灯）
-- [ ] 递归设置正确
-
-### 校验 脚本文件
-
-- [ ] `registerMvuSchema` 路径正确
-- [ ] MVU bundle URL 可访问
-- [ ] 如使用 `Mvu.*`：已 `await waitGlobalInitialized('Mvu')`
-- [ ] 如使用 `Mvu.parseMessage`：确认输出命令风格为 Beta 的 `_.set/...`，并在解析后 `Mvu.replaceMvuData` 写回
-- [ ] 如使用 `Mvu.events.*`：事件名称与回调签名匹配（见 `@types/iframe/exported.mvu.d.ts`）
-- [ ] `injectPrompts` 关键字与事件 YAML 一致
-- [ ] `filter` 函数语法正确
-
-## 酒馆助手语法速查
-
-### EJS 模板
-
-```javascript
-<% print('hello') %>      // 执行代码，无输出
-<%= value %>              // 输出并转义 HTML
-<%- value %>              // 输出但不转义 HTML
-<%_ if (cond) { _%>       // 修剪空白
+eventOn(Mvu.events.BEFORE_MESSAGE_UPDATE, ({ variables, message_content }) => {
+  console.log('即将写回楼层', variables, message_content);
+});
 ```
 
-### 条件判断
+## 校验流程
 
-```ejs
-<%_ if (getvar('stat_data.角色.属性') < 20) { _%>
-阶段一
-<%_ } else if (getvar('stat_data.角色.属性') < 40) { _%>
-阶段二
-<%_ } _%>
-```
+### 创建新结构时
 
-### 装饰器
+1. 先确定目标文件属于：
+   - MVU 持久变量 `schema.ts`
+   - 表单/载荷 schema
+   - 世界书 `[mvu_update]*`
+   - 注册脚本
+   - 界面/store 消费层
+2. 先读同项目已有 Schema 和世界书，不要跨项目生搬硬套
+3. 确认路径前缀风格：`/世界/时间` 还是 `/stat_data/世界/时间`
+4. 只做与当前任务有关的最小改动
 
-| 装饰器 | 功能 |
-|--------|------|
-| `@@activate` | 视为蓝灯条目 |
-| `@@generate_before` | 等同于 `[GENERATE:BEFORE]` |
-| `@@generate_after` | 等同于 `[GENERATE:AFTER]` |
-| `@@render_before` | 等同于 `[RENDER:BEFORE]` |
-| `@@render_after` | 等同于 `[RENDER:AFTER]` |
-| `@@if 条件` | 条件排除条目 |
+### 校验现有结构时
 
-### 注入前缀
+至少检查下面几项：
 
-| 前缀 | 作用 |
-|------|------|
-| `[GENERATE:BEFORE]` | 注入到提示词开头 |
-| `[GENERATE:AFTER]` | 注入到提示词末尾 |
-| `[RENDER:BEFORE]` | 注入到渲染内容开头 |
-| `[RENDER:AFTER]` | 注入到渲染内容末尾 |
-| `[GENERATE:REGEX:pattern]` | 正则匹配时注入 |
+- `schema.ts` 是否能 `Schema.parse({})` 或 `safeParse({})` 产出稳定结构
+- 数字、布尔、字符串归一化是否符合现有项目风格
+- 顶层与动态键策略是否正确
+- `变量结构/index.ts` 是否真的注册了该 Schema
+- 世界书更新规则和输出格式是否匹配该 Schema
+- UI / store 是否从 `stat_data` 读取而不是误读整个变量表
+- 是否错误引用了本地 `@types` 中不存在的方法
 
-### 核心函数
+## 一定要避免的旧结论
 
-| 函数 | 功能 |
-|------|------|
-| `getvar(key)` | 读取变量 |
-| `setvar(key, value)` | 设置变量 |
-| `incvar(key, value)` | 增加变量值 |
-| `decvar(key, value)` | 减少变量值 |
-| `getwi(title)` | 读取世界书条目 |
-| `activewi(title)` | 激活世界书条目 |
-| `injectPrompt(key, content)` | 注入提示词 |
-| `getPromptsInjected(key)` | 获取注入的提示词 |
-| `activateRegex(pattern, replace)` | 激活正则 |
-| `print(...args)` | 输出字符串 |
+以下说法现在都不应再直接写进回答或技能：
 
-## 变量作用域
+- “`initialized_lorebooks` 是 `string[]`”
+- “`Mvu.CommandInfo` 没有 `move`”
+- “`reloadInitVar` 在本地 `@types` 里已经声明好了”
+- “MVU Zod 主线只用 JSON Patch，不涉及内部 `set/add/insert/delete/move`”
+- “永远优先 `record()`，不要用 `array()`”
+- “所有对象都应该 `.strict()`”
+- “所有字段都必须 `prefault()`，不能出现 `default()`”
 
-| scope | 说明 |
-|-------|------|
-| `global` | 全局变量 |
-| `local` | 聊天变量 |
-| `message` | 消息变量 |
-| `cache` | 临时变量 |
-| `initial` | 初始变量 |
+## 输出时的表达建议
 
-## JSON Patch 操作
+给用户回复时，优先按下面顺序组织：
 
-| 操作 | 用途 | 示例 |
-|------|------|------|
-| `replace` | 替换值 | `{ "op": "replace", "path": "/白娅/依存度", "value": 40 }` |
-| `delta` | 增量修改 | `{ "op": "delta", "path": "/白娅/依存度", "value": 5 }` |
-| `insert` | 插入新项 | `{ "op": "insert", "path": "/物品栏/新物品", "value": {...} }` |
-| `remove` | 删除项 | `{ "op": "remove", "path": "/物品栏/旧物品" }` |
+1. 先说明你对照了哪些真源：`@types` / 示例 / 运行时桥接 / 官方源码
+2. 再指出哪些地方升级了或和旧说法不一致
+3. 最后给出最小改动方案
 
-## 响应格式
-
-### 创建角色卡时的响应
-
-当你被要求创建新的 MVU 角色卡变量系统时：
-
-1. **确认需求**：复述变量结构需求，确认理解正确
-2. **编写文件**：依次创建 schema.ts、initvar.yaml、变量更新规则.yaml 等
-3. **说明结构**：解释变量设计思路和约束逻辑
-4. **提供模板**：给出可复用的代码片段
-
-### 校验角色卡时的响应
-
-当你被要求校验现有角色卡时：
-
-1. **检查结构**：逐一检查每个文件的规范性
-2. **指出问题**：列出不符合规范的地方
-3. **提供修复**：给出修改建议或直接修改
-4. **输出报告**：汇总校验结果和改进建议
-
-### 修改角色卡时的响应
-
-当你被要求修改现有角色卡时：
-
-1. **理解变更**：确认修改的范围和影响
-2. **同步更新**：确保相关文件同步修改
-3. **校验完整性**：验证修改后的整体一致性
-4. **说明影响**：解释修改对其他部分的影响
-
-## 注意事项
-
-1. **必须熟读规范**：编写前先参考 MVUZod角色卡规范.mdc
-2. **参考示例**：不确定时参考 示例/角色卡示例/ 目录
-3. **同步修改**：修改 schema.ts 时同步更新 initvar.yaml
-4. **数值约束**：始终使用 `_.clamp()` 约束数值范围
-5. **派生字段**：派生字段必须以 `$` 开头命名
-6. **JSON Patch**：确保路径格式正确（`/路径/到/变量`）
-7. **关键字匹配**：立即事件的关键字必须与脚本一致
-8. **文件路径**：世界书文件引用路径要正确（相对路径）
-
-## 示例对话
-
-### 示例1：创建新角色卡
-
-```text
-用户：创建一个名为"白娅"的角色，属性包括依存度(0-100)、着装、称号
-
-助手：
-1. 编写 schema.ts，包含依存度、着装、称号字段
-2. 生成 initvar.yaml 初始值
-3. 编写变量更新规则.yaml
-4. 编写变量输出格式.yaml
-5. 组织世界书 index.yaml
-6. 编写角色详情.yaml
-7. 编写角色阶段.yaml（根据依存度分阶段）
-8. 编写脚本文件
-```
-
-### 示例2：校验现有角色卡
-
-```text
-用户：校验 src/寒冬末日/schema.ts
-
-助手：
-1. 读取 schema.ts
-2. 检查 z.coerce.number() 使用情况
-3. 检查 _.clamp() 约束
-4. 检查 z.record() 使用
-5. 发现问题：
-   - 第XX行：字段XXX缺少 transform 约束
-   - 第XX行：使用了不应使用的 describe
-   - 建议修复...
-```
-
-### 示例3：修改角色卡
-
-```text
-用户：在白娅角色中添加一个新属性"心理状态"
-
-助手：
-1. 在 schema.ts 中添加 心理状态 字段
-2. 在 initvar.yaml 中添加初始值
-3. 在 变量更新规则.yaml 中添加更新规则
-4. 如需要，在 角色阶段.yaml 中添加条件分支
-5. 确认所有文件同步更新
-```
+如果用户是让你“修技能文档”而不是“修业务代码”，就优先修这份 skill，把升级点写清楚，不要只在聊天里口头说明。

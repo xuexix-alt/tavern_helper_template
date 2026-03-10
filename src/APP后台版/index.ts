@@ -92,6 +92,7 @@ $(() => {
   const { unmount } = canStream
     ? mountStreamingMessages(() => createApp(StreamingApp), {
         host: 'iframe',
+        iframe_tailwind: false,
         prefix: 'app-backend-stream',
         filter: (_message_id, message) => {
           if (!streamGate.enabled) return false;

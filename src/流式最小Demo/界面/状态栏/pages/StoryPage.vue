@@ -25,16 +25,12 @@
 
       <details class="reader-fold-card">
         <summary class="reader-fold-summary">
-          <span>阅读器辅助面板</span>
-          <small>点击展开概览 / 摘要 / 日志</small>
+          <span class="reader-fold-summary-label">日志</span>
+          <small>展开</small>
         </summary>
 
         <div class="reader-fold-body">
-          <ReadingHeader :summary="readerSummary" />
-
-          <ContextSummaryCard :summary="readerSummary" />
-
-          <WorkbenchTabs :summary="readerSummary" :logs="logs" />
+          <WorkbenchTabs :logs="logs" />
         </div>
       </details>
 
@@ -42,14 +38,11 @@
         v-model:filter-mode="filterMode"
         v-model:density="density"
         :total-count="transcriptStats.total"
-        :assistant-count="transcriptStats.assistant"
-        :assistant-message-id="assistantMessageId"
+        :latest-user-preview="readerSummary.latestUserPreview"
         :at-latest="followLatest"
-        :reading-mode-label="readingModeLabel"
+        :is-browsing-history="readingMode === 'browsing_history'"
         @jump-latest="jumpLatest"
       />
-
-      <HistoryModeBanner :visible="readingMode === 'browsing_history'" @jump-latest="jumpLatest" />
 
       <TranscriptList
         ref="transcriptListRef"
@@ -104,7 +97,7 @@
           <button type="button" class="role-drawer-close" @click="closeRoleDrawer">✕</button>
         </div>
         <div class="role-drawer-body">
-          <MvuRolePanel :target-message-id="latestAssistantItem?.message_id ?? assistantMessageId ?? null" />
+          <MvuRolePanel :transcript-items="transcript" />
         </div>
       </aside>
 
@@ -115,12 +108,9 @@
 
 <script setup lang="ts">
 import BottomComposer from '../components/BottomComposer.vue';
-import ContextSummaryCard from '../components/ContextSummaryCard.vue';
-import HistoryModeBanner from '../components/HistoryModeBanner.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../components/OpeningSetupPanel.vue';
-import ReadingHeader from '../components/ReadingHeader.vue';
 import TopToolbar from '../components/TopToolbar.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import TranscriptList from '../components/TranscriptList.vue';
@@ -130,14 +120,13 @@ const {
   input,
   busy,
   status,
-  assistantMessageId,
   filterMode,
   density,
   readingMode,
-  readingModeLabel,
   followLatest,
   openingExpanded,
   selectedItem,
+  transcript,
   visibleTranscript,
   transcriptStats,
   latestUserItem,
@@ -247,21 +236,35 @@ function closeRoleDrawer() {
 }
 
 .reader-fold-card {
-  border-radius: 12px;
+  align-self: flex-end;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
   background: var(--demo-surface-card-strong);
   border: 1px solid var(--demo-border-accent);
   overflow: hidden;
 }
 
+.reader-fold-card[open] {
+  align-self: stretch;
+  width: 100%;
+  border-radius: 12px;
+}
+
 .reader-fold-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 10px;
   cursor: pointer;
   list-style: none;
   color: var(--demo-text-primary);
+}
+
+.reader-fold-summary-label {
+  font-size: 11px;
+  line-height: 1;
 }
 
 .reader-fold-summary::-webkit-details-marker {
@@ -270,14 +273,14 @@ function closeRoleDrawer() {
 
 .reader-fold-summary small {
   color: var(--demo-text-subtle);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .reader-fold-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 0 0 12px;
+  padding: 10px 0 12px;
 }
 
 .role-drawer-overlay {
@@ -342,8 +345,7 @@ function closeRoleDrawer() {
 
 @media (max-width: 680px) {
   .reader-fold-summary {
-    flex-direction: column;
-    align-items: flex-start;
+    justify-content: center;
   }
 
   .role-drawer {

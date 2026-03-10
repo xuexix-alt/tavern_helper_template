@@ -47,12 +47,7 @@ export type ReaderLogItem = {
 
 export type ReaderChatState = {
   version: number;
-  initialized: boolean;
-  opening_message_id: number | null;
-  latest_user_message_id: number | null;
-  latest_assistant_message_id: number | null;
   reading_mode: ReadingMode;
   density: TranscriptDensity;
   opening_expanded: boolean;
-  updated_at: number;
 };

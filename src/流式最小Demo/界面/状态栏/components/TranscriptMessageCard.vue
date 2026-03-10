@@ -117,11 +117,10 @@ const cardClass = computed(() => [
 
 const showBody = computed(() => {
   if (props.isEditingUser) return true;
-  if (props.showEditRegenerate) return true;
   if (props.density === 'comfortable') return true;
   if (props.density === 'compact')
     return props.item.isLatest || props.item.isStreaming || props.item.role === 'assistant';
-  return props.item.isLatest || props.item.isStreaming;
+  return props.item.isStreaming || (props.item.role === 'assistant' && props.item.isLatest);
 });
 
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());

@@ -1,3 +1,4 @@
+import openingTestPromptRaw from '../../../../docs/提示词.txt?raw';
 import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
@@ -8,17 +9,11 @@ import {
   stripTagsForPreview,
 } from '../../shared/message';
 import {
-  buildOpeningPrompt,
+  buildOpeningContextBrief,
+  buildOpeningCompiledBrief,
   extractOpeningContent,
   extractOpeningContentLoose,
   extractOpeningOptions,
-  extractOpeningPromptEcho,
-  extractOpeningPromptEchoLoose,
-  extractUpdateVariableBlock,
-  extractUpdateVariableBlockLoose,
-  formatUpdateVariableBlock,
-  extractOpeningWorldModeBrief,
-  extractOpeningWorldModeBriefLoose,
   getDefaultOpeningPayload,
   getDefaultOpeningPreset,
   getOpeningRoute,
@@ -27,15 +22,16 @@ import {
   getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
+  shouldStoreOpeningDraft,
+  summarizeOpeningDraftValue,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import {
   normalizeDensity,
-  normalizeMessageId,
   normalizeReadingMode,
   patchReaderChatState,
-  readReaderChatState,
   READER_CHAT_STATE_VERSION,
+  readReaderChatState,
 } from './readerState';
 import type {
   DemoStatus,
@@ -49,6 +45,8 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
+
+const OPENING_USE_TEST_PROMPT = false;
 
 type BaseChatMessage = {
   message_id: number;
@@ -114,6 +112,19 @@ function normalizeRoleLabel(role: TranscriptItem['role']): string {
   return '助手';
 }
 
+function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPayload) {
+  if (OPENING_USE_TEST_PROMPT) {
+    return [
+      String(openingTestPromptRaw ?? '').trim(),
+      String(payload.user_draft.personal_profile ?? payload.user_input.personal_profile ?? '').trim(),
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  return buildOpeningCompiledBrief(preset, payload);
+}
+
 function buildTranscriptItem(input: {
   id: number;
   role: TranscriptItem['role'];
@@ -162,18 +173,19 @@ function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
 function composeOpeningSeedText(payload: OpeningPayload, preset: OpeningPreset): string {
   const worldMode = getOpeningWorldMode(payload.world_mode_id);
   const route = getOpeningRoute(payload.route_id);
+  const contextBrief = buildOpeningContextBrief(payload.world_mode_id, payload.route_id);
   return [
-    payload.base.world_intro,
+    preset.world_intro,
     '',
-    payload.base.first_line,
+    preset.first_line,
     '',
-    `世界观档位：${worldMode ? `${worldMode.id} · ${worldMode.name}` : payload.world_mode_id || '未设定'}`,
-    `开局主流派：${route?.name || payload.route_id || '未设定'}`,
+    `故事开始请根据以下世界观进行基础设定：${worldMode ? `${worldMode.id} · ${worldMode.name}` : payload.world_mode_id || '未设定'}`,
+    `故事的演进方向是：${route?.name || payload.route_id || '未设定'}`,
     `${preset.meta_template.character_label}：${payload.meta.character || '未设定'}`,
     `${preset.meta_template.time_label}：${payload.meta.time || '未设定'}`,
     `${preset.meta_template.location_label}：${payload.meta.location || '未设定'}`,
     '',
-    payload.world_mode_brief,
+    contextBrief,
     '',
     payload.opening_content || '开局尚未生成，请先完成开局配置。',
   ]
@@ -186,13 +198,8 @@ function buildOpeningAssistantText(payload: OpeningPayload): string {
   const options = Array.isArray(payload.options)
     ? payload.options.map(option => String(option ?? '').trim()).filter(Boolean)
     : [];
-  const updateVariableBlock = formatUpdateVariableBlock(payload.update_variable_block);
 
-  return [
-    body,
-    options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '',
-    updateVariableBlock,
-  ]
+  return [body, options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '']
     .filter(Boolean)
     .join('\n\n')
     .trim();
@@ -219,10 +226,7 @@ function buildOpeningTranscriptItem(
     raw: renderSource,
     renderSource,
     content: payload.opening_content || renderSource,
-    preview: stripTagsForPreview(payload.opening_content || payload.base.first_line || payload.base.world_intro).slice(
-      0,
-      80,
-    ),
+    preview: stripTagsForPreview(payload.opening_content || preset.first_line || preset.world_intro).slice(0, 80),
     regexText,
     streamHtml: buildStreamStageHtml(regexText),
     finalHtml,
@@ -275,6 +279,7 @@ export function useStreamingDemo() {
   let hidePolicyRerun = false;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
+  let openingPayloadPersistTimer = 0;
 
   const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
   const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
@@ -310,15 +315,23 @@ export function useStreamingDemo() {
     readerStatePersistTimer = window.setTimeout(() => {
       readerStatePersistTimer = 0;
       patchReaderChatState({
-        initialized: true,
-        opening_message_id: transcript.value.find(item => item.isOpening)?.message_id ?? null,
-        latest_user_message_id: latestUserItem.value?.message_id ?? null,
-        latest_assistant_message_id: latestAssistantItem.value?.message_id ?? null,
         reading_mode: readingMode.value,
         density: density.value,
         opening_expanded: openingExpanded.value,
       });
     }, 80);
+  }
+
+  function persistOpeningPayloadNow() {
+    replaceOpeningPayloadInChat(openingPayload.value);
+  }
+
+  function queuePersistOpeningPayload(delay = 160) {
+    if (openingPayloadPersistTimer) window.clearTimeout(openingPayloadPersistTimer);
+    openingPayloadPersistTimer = window.setTimeout(() => {
+      openingPayloadPersistTimer = 0;
+      persistOpeningPayloadNow();
+    }, delay);
   }
 
   function restoreReaderChatState() {
@@ -330,11 +343,9 @@ export function useStreamingDemo() {
     const state = readReaderChatState();
     const restoredMode = normalizeReadingMode(state.reading_mode);
     const restoredDensity = normalizeDensity(state.density);
-    const restoredAssistant = normalizeMessageId(state.latest_assistant_message_id);
     if (restoredMode) readingMode.value = restoredMode;
     if (restoredDensity) density.value = restoredDensity;
     if (typeof state.opening_expanded === 'boolean') openingExpanded.value = state.opening_expanded;
-    if (restoredAssistant != null) assistantMessageId.value = restoredAssistant;
     if (state.version !== READER_CHAT_STATE_VERSION) {
       queuePersistReaderChatState();
     }
@@ -343,7 +354,7 @@ export function useStreamingDemo() {
     if (restoredOpeningPayload) {
       openingPayload.value = restoredOpeningPayload;
     } else {
-      replaceOpeningPayloadInChat(openingPayload.value);
+      persistOpeningPayloadNow();
     }
   }
 
@@ -444,39 +455,43 @@ export function useStreamingDemo() {
   }
 
   function updateOpeningMeta(key: 'character' | 'time' | 'location', value: string) {
+    const shouldResetResult = openingPayload.value.state === 'ready';
     openingPayload.value = {
       ...openingPayload.value,
-      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       meta: {
         ...openingPayload.value.meta,
         [key]: String(value ?? ''),
       },
+      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    queuePersistOpeningPayload();
   }
 
   function updateOpeningWorldMode(value: string) {
     const worldMode = getOpeningWorldMode(value) ?? openingWorldModes[0] ?? null;
     const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '';
+    const shouldResetResult = openingPayload.value.state === 'ready';
     openingPayload.value = {
       ...openingPayload.value,
-      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       world_mode_id: worldMode?.id || value,
       route_id: nextRouteId,
-      world_mode_brief: '',
+      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    queuePersistOpeningPayload();
   }
 
   function updateOpeningRoute(value: string) {
     const route = getOpeningRoute(value) ?? openingRoutes[0] ?? null;
+    const shouldResetResult = openingPayload.value.state === 'ready';
     openingPayload.value = {
       ...openingPayload.value,
-      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
+      state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       route_id: route?.name || value,
-      world_mode_brief: '',
+      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    queuePersistOpeningPayload();
   }
 
   function updateOpeningStream(value: boolean) {
@@ -484,7 +499,7 @@ export function useStreamingDemo() {
       ...openingPayload.value,
       use_stream: value === true,
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    queuePersistOpeningPayload();
   }
 
   function clearOpeningGenerationListeners() {
@@ -504,11 +519,8 @@ export function useStreamingDemo() {
           openingPayload.value = {
             ...openingPayload.value,
             state: 'generating',
-            streaming_raw: streamedRaw,
-            world_mode_brief: extractOpeningWorldModeBriefLoose(streamedRaw),
-            prompt_echo: extractOpeningPromptEchoLoose(streamedRaw),
             opening_content: extractOpeningContentLoose(streamedRaw),
-            update_variable_block: extractUpdateVariableBlockLoose(streamedRaw),
+            options: extractOpeningOptions(streamedRaw),
           };
           rebuildTranscript();
         }),
@@ -519,15 +531,28 @@ export function useStreamingDemo() {
   }
 
   function updateOpeningField(key: string, value: string) {
+    const shouldResetResult = openingPayload.value.state === 'ready';
+    const field = openingPreset.value.form_schema.find(item => item.key === key) ?? null;
+    const normalizedValue = String(value ?? '');
+    const nextUserInput = {
+      ...openingPayload.value.user_input,
+      [key]: shouldStoreOpeningDraft(field) ? summarizeOpeningDraftValue(key, normalizedValue) : normalizedValue,
+    };
+    const nextUserDraft = shouldStoreOpeningDraft(field)
+      ? {
+          ...openingPayload.value.user_draft,
+          [key]: normalizedValue,
+        }
+      : openingPayload.value.user_draft;
+
     openingPayload.value = {
       ...openingPayload.value,
-      state: openingPayload.value.state === 'ready' ? 'configuring' : openingPayload.value.state,
-      user_input: {
-        ...openingPayload.value.user_input,
-        [key]: String(value ?? ''),
-      },
+      state: shouldResetResult ? 'configuring' : openingPayload.value.state,
+      user_input: nextUserInput,
+      user_draft: nextUserDraft,
+      ...(shouldResetResult ? { opening_content: '', options: [] } : {}),
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    queuePersistOpeningPayload();
   }
 
   function setReadingMode(nextMode: ReadingMode) {
@@ -1107,7 +1132,13 @@ export function useStreamingDemo() {
     }
 
     const missing = openingPreset.value.form_schema.find(
-      field => field.required && !String(openingPayload.value.user_input[field.key] ?? '').trim(),
+      field =>
+        field.required &&
+        !String(
+          shouldStoreOpeningDraft(field)
+            ? openingPayload.value.user_draft[field.key] ?? ''
+            : openingPayload.value.user_input[field.key] ?? '',
+        ).trim(),
     );
     if (missing) {
       toastr?.warning?.(`请先填写：${missing.label}`);
@@ -1121,14 +1152,10 @@ export function useStreamingDemo() {
     openingPayload.value = {
       ...openingPayload.value,
       state: 'generating',
-      streaming_raw: '',
-      world_mode_brief: '',
-      prompt_echo: '',
       opening_content: '',
       options: [],
-      update_variable_block: '',
     };
-    replaceOpeningPayloadInChat(openingPayload.value);
+    persistOpeningPayloadNow();
     rebuildTranscript();
 
     try {
@@ -1136,20 +1163,23 @@ export function useStreamingDemo() {
         bindOpeningGenerationListeners();
       }
       const result = await generate({
-        user_input: buildOpeningPrompt(openingPreset.value, openingPayload.value),
+        user_input: buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value),
         should_stream: openingPayload.value.use_stream,
+        max_chat_history: 0,
+        overrides: {
+          chat_history: {
+            with_depth_entries: false,
+            prompts: [],
+          },
+        },
       });
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
-        streaming_raw: '',
-        world_mode_brief: extractOpeningWorldModeBrief(result),
-        prompt_echo: extractOpeningPromptEcho(result),
         opening_content: extractOpeningContent(result),
         options: extractOpeningOptions(result),
-        update_variable_block: extractUpdateVariableBlock(result),
       };
-      replaceOpeningPayloadInChat(openingPayload.value);
+      persistOpeningPayloadNow();
       await syncOpeningAssistantMessage('none', true);
       rebuildTranscript();
       status.value = 'done';
@@ -1164,10 +1194,8 @@ export function useStreamingDemo() {
       openingPayload.value = {
         ...openingPayload.value,
         state: 'configuring',
-        streaming_raw: '',
-        update_variable_block: '',
       };
-      replaceOpeningPayloadInChat(openingPayload.value);
+      persistOpeningPayloadNow();
       toastr?.error?.(`开局生成失败：${errorText.value}`);
     } finally {
       clearOpeningGenerationListeners();
@@ -1311,6 +1339,10 @@ export function useStreamingDemo() {
     if (readerStatePersistTimer) {
       window.clearTimeout(readerStatePersistTimer);
       readerStatePersistTimer = 0;
+    }
+    if (openingPayloadPersistTimer) {
+      window.clearTimeout(openingPayloadPersistTimer);
+      openingPayloadPersistTimer = 0;
     }
     clearOpeningGenerationListeners();
   });

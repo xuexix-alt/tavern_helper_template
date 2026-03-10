@@ -36,14 +36,23 @@
 
     <div class="toolbar-row meta-row">
       <div class="toolbar-meta">
-        <span>消息 {{ totalCount }}</span>
-        <span>助手 {{ assistantCount }}</span>
-        <span>当前占位 #{{ assistantMessageId ?? '-' }}</span>
-        <span>模式 {{ readingModeLabel }}</span>
+        <span>总楼层 {{ totalCount }}</span>
+        <span class="meta-divider">·</span>
+        <span>正文</span>
+        <span class="meta-preview">{{ latestUserPreview || '暂无' }}</span>
       </div>
-      <button type="button" class="jump-btn" :disabled="atLatest" @click="$emit('jump-latest')">
-        {{ atLatest ? '已在最新' : '回到最新' }}
-      </button>
+      <div class="toolbar-actions">
+        <span
+          v-if="isBrowsingHistory"
+          class="history-indicator"
+          title="当前正在浏览历史"
+          aria-label="当前正在浏览历史"
+          >⌁</span
+        >
+        <button type="button" class="jump-btn" :disabled="atLatest" @click="$emit('jump-latest')">
+          {{ atLatest ? '已在最新' : '回到最新' }}
+        </button>
+      </div>
     </div>
   </section>
 </template>
@@ -55,10 +64,9 @@ defineProps<{
   filterMode: TranscriptFilterMode;
   density: TranscriptDensity;
   totalCount: number;
-  assistantCount: number;
-  assistantMessageId: number | null;
+  latestUserPreview: string;
   atLatest: boolean;
-  readingModeLabel: string;
+  isBrowsingHistory: boolean;
 }>();
 
 defineEmits<{
@@ -73,8 +81,7 @@ const filterItems: Array<{ label: string; value: TranscriptFilterMode }> = [
 ];
 
 const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
-  { label: '舒适', value: 'comfortable' },
-  { label: '紧凑', value: 'compact' },
+  { label: '正常', value: 'comfortable' },
   { label: '极简', value: 'minimal' },
 ];
 </script>
@@ -137,10 +144,44 @@ const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
 
 .toolbar-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 11px;
   color: var(--demo-text-subtle);
+}
+
+.meta-divider {
+  opacity: 0.6;
+}
+
+.meta-preview {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.history-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--demo-border-warning-soft);
+  background: var(--demo-surface-user-soft);
+  color: var(--demo-text-warning-soft);
+  font-size: 12px;
+  line-height: 1;
 }
 
 .jump-btn:disabled {

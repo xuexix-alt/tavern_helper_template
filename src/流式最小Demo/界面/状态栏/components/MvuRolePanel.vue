@@ -11,6 +11,17 @@
       </div>
     </header>
 
+    <div class="mvu-role-source-bar">
+      <label class="mvu-role-source-picker">
+        <span class="source-picker-label">显示楼层变量</span>
+        <select v-model="selectedSourceKey" class="source-picker-select">
+          <option v-for="option in sourceOptions" :key="option.key" :value="option.key">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+    </div>
+
     <div class="mvu-role-top-tabs" role="tablist" aria-label="角色分类">
       <button
         v-for="tab in topTabs"
@@ -42,7 +53,7 @@
         </button>
         <div class="character-nav-current" @click="toggleCharacterDropdown">
           <span class="character-nav-name">{{ currentCharacterLabel }}</span>
-          <span class="status-pill small" :class="currentCharacterStatus">{{ currentCharacterStatus }}</span>
+          <span class="status-pill small" :class="currentCharacterStatusClass">{{ currentCharacterStatusText }}</span>
           <span class="character-nav-count">{{ currentCharacterIndex + 1 }}/{{ activeEntries.length }}</span>
           <span class="character-nav-dropdown-icon">▼</span>
         </div>
@@ -147,23 +158,127 @@
 </template>
 
 <script setup lang="ts">
+import type { TranscriptItem } from '../types';
+
 import { useWindowSize } from '@vueuse/core';
 
 import { useMvuRoleStore } from '../mvuRoleStore';
 
 const props = defineProps<{
   targetMessageId?: number | null;
+  transcriptItems?: TranscriptItem[];
 }>();
 
 type RoleTab = 'main' | 'temp';
+type RoleSourceOption = {
+  key: string;
+  label: string;
+  pillLabel: string;
+  targetMessageId: number | 'latest';
+  sortId: number;
+};
 
 const activeTab = ref<RoleTab>('main');
-const targetMessageId = computed(() => props.targetMessageId ?? null);
+const normalizedTargetMessageId = computed(() => {
+  const numeric = Number(props.targetMessageId);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return Math.trunc(numeric);
+});
+const selectedSourceKey = ref('latest');
+
+const sourceOptions = computed<RoleSourceOption[]>(() => {
+  const options: RoleSourceOption[] = [
+    {
+      key: 'latest',
+      label: 'latest（自动跟随）',
+      pillLabel: 'latest',
+      targetMessageId: 'latest',
+      sortId: Number.MAX_SAFE_INTEGER,
+    },
+  ];
+
+  const transcriptItems = Array.isArray(props.transcriptItems) ? props.transcriptItems : [];
+  const filtered = transcriptItems
+    .filter(item => item.isOpening || item.role === 'assistant' || item.role === 'user')
+    .sort((a, b) => a.message_id - b.message_id);
+
+  let previousAssistantLikeId: number | null = null;
+  const derived: RoleSourceOption[] = [];
+
+  for (const item of filtered) {
+    let effectiveId: number | null = null;
+    if (item.isOpening || item.role === 'assistant') {
+      effectiveId = item.message_id;
+      previousAssistantLikeId = item.message_id;
+    } else if (item.role === 'user') {
+      effectiveId = previousAssistantLikeId;
+    }
+
+    if (effectiveId == null) continue;
+
+    if (item.isOpening) {
+      derived.push({
+        key: `message:${item.message_id}`,
+        label: `#${item.message_id} 开局`,
+        pillLabel: `#${item.message_id} 开局`,
+        targetMessageId: effectiveId,
+        sortId: item.message_id,
+      });
+      continue;
+    }
+
+    if (item.role === 'user' && effectiveId !== item.message_id) {
+      derived.push({
+        key: `message:${item.message_id}`,
+        label: `#${item.message_id} user（变量同 #${effectiveId} assistant）`,
+        pillLabel: `#${item.message_id} user → #${effectiveId}`,
+        targetMessageId: effectiveId,
+        sortId: item.message_id,
+      });
+      continue;
+    }
+
+    derived.push({
+      key: `message:${item.message_id}`,
+      label: `#${item.message_id} ${item.role}`,
+      pillLabel: `#${item.message_id} ${item.role}`,
+      targetMessageId: effectiveId,
+      sortId: item.message_id,
+    });
+  }
+
+  derived
+    .sort((a, b) => b.sortId - a.sortId)
+    .forEach(option => {
+      if (!options.some(existing => existing.key === option.key)) {
+        options.push(option);
+      }
+    });
+
+  if (normalizedTargetMessageId.value != null && !options.some(option => option.targetMessageId === normalizedTargetMessageId.value)) {
+    options.push({
+      key: `message:${normalizedTargetMessageId.value}`,
+      label: `#${normalizedTargetMessageId.value}`,
+      pillLabel: `#${normalizedTargetMessageId.value}`,
+      targetMessageId: normalizedTargetMessageId.value,
+      sortId: normalizedTargetMessageId.value,
+    });
+  }
+
+  return options;
+});
+
+const selectedSourceOption = computed(
+  () => sourceOptions.value.find(option => option.key === selectedSourceKey.value) ?? sourceOptions.value[0] ?? null,
+);
+const selectedTargetMessageId = computed(
+  () => selectedSourceOption.value?.targetMessageId ?? normalizedTargetMessageId.value ?? 'latest',
+);
 const { width } = useWindowSize();
 const useVirtualTabs = computed(() => width.value <= 760);
 
-const { ready, source, isDuringExtraAnalysis, hasAnyRole, mainRoleEntries, tempNpcEntries } =
-  useMvuRoleStore(targetMessageId);
+const { ready, source, resolvedMessageId, isDuringExtraAnalysis, hasAnyRole, mainRoleEntries, tempNpcEntries, refresh } =
+  useMvuRoleStore(selectedTargetMessageId);
 
 const topTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
@@ -183,14 +298,36 @@ const activeCharacter = computed(
   () => activeEntries.value.find(entry => entry.key === activeCharacterKey.value) ?? activeEntries.value[0] ?? null,
 );
 const currentCharacterLabel = computed(() => (activeCharacter.value ? roleName(activeCharacter.value) : '暂无角色'));
-const currentCharacterStatus = computed(() =>
+const currentCharacterStatusClass = computed(() =>
   activeCharacter.value ? statusClass(activeCharacter.value) : 'status-neutral',
+);
+const currentCharacterStatusText = computed(() =>
+  activeCharacter.value ? statusText(activeCharacter.value) : '未知',
 );
 
 const sourceLabel = computed(() => {
-  if (source.value === 'current') return '当前楼层';
-  if (source.value === 'latest') return '回退最新';
-  return '默认空值';
+  const selected = selectedSourceOption.value;
+  if (!selected) return 'latest';
+  if (source.value === 'default') return `${selected.pillLabel} · 无数据`;
+  if (source.value === 'latest' && selected.targetMessageId !== 'latest') return `${selected.pillLabel} · 已回退 latest`;
+  if (selected.targetMessageId === 'latest') {
+    return resolvedMessageId.value === 'latest' ? 'latest' : `latest · #${resolvedMessageId.value}`;
+  }
+  return selected.pillLabel;
+});
+
+watch(
+  sourceOptions,
+  options => {
+    if (!options.some(option => option.key === selectedSourceKey.value)) {
+      selectedSourceKey.value = 'latest';
+    }
+  },
+  { immediate: true },
+);
+
+watch(selectedTargetMessageId, () => {
+  refresh();
 });
 
 watch(
@@ -322,6 +459,10 @@ function selectCharacterFromDropdown(key: string) {
   opacity: 0.78;
 }
 
+.status-neutral {
+  opacity: 0.7;
+}
+
 .meta-pill.is-analysis {
   color: var(--demo-text-warning);
   border-color: var(--demo-border-warning-soft);
@@ -336,6 +477,32 @@ function selectCharacterFromDropdown(key: string) {
   background: var(--demo-surface-panel);
   color: var(--demo-text-primary);
   padding: 6px 12px;
+}
+
+.mvu-role-source-bar {
+  display: flex;
+}
+
+.mvu-role-source-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.source-picker-label {
+  font-size: 11px;
+  color: var(--demo-text-subtle);
+}
+
+.source-picker-select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: var(--demo-surface-panel);
+  color: var(--demo-text-primary);
+  padding: 6px 10px;
 }
 
 .mvu-role-top-tab.active,

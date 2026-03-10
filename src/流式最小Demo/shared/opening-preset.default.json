@@ -52,6 +52,6 @@
   ],
   "prompt_rules": {
     "should_echo_setup": true,
-    "output_tags": ["world_mode_brief", "opening_prompt_echo", "content", "option", "UpdateVariable"]
+    "output_tags": ["content", "option"]
   }
 }

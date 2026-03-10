@@ -243,10 +243,9 @@
 
 - 运行态数据，负责：
   - 当前流程状态：`placeholder / configuring / generating / ready`
-  - 当前使用的 preset
+  - 世界观档位 / 主流派选择
   - meta（时间/地点/主角）
   - 用户输入结果
-  - prompt echo
   - opening content
   - opening options
 
@@ -277,12 +276,15 @@
 
 #### 阶段 C：生成 opening
 
-- UI 用 preset + 用户输入组装 opening prompt
-- 调 `generate({ user_input })`
+- UI 先把细字段编译成 4 块合同：
+  - 世界硬约束
+  - 流派合同
+  - 主角切口
+  - 导演任务
+- 调 `generate({ user_input: compiledBrief })`
 - AI 按固定标签输出：
-  - `<opening_prompt_echo>`
   - `<content>`
-  - `<option>`
+  - `<option>`（可选）
 - 生成结果写回 opening payload，再由 transcript opening 卡渲染。
 
 ### 12.5 当前已落地文件
@@ -618,21 +620,17 @@ rg -n --glob '*.vue' --glob '*.css' --glob '*.scss' "#(?:[0-9a-fA-F]{3,8})\b|rgb
 - `stream_demo.reader_state`
   - 存阅读器状态：
     - `version`
-    - `initialized`
-    - `opening_message_id`
-    - `latest_user_message_id`
-    - `latest_assistant_message_id`
     - `reading_mode`
     - `density`
     - `opening_expanded`
-    - `updated_at`
 - `stream_demo.opening`
   - 存 opening payload：
-    - `preset_id`
-    - `base`
+    - `world_mode_id`
+    - `route_id`
+    - `use_stream`
     - `meta`
-    - `user_input`
-    - `prompt_echo`
+    - `user_input`（prompt 用短摘要）
+    - `user_draft`（界面编辑用原文草稿）
     - `opening_content`
     - `options`
     - `state`
@@ -764,9 +762,9 @@ rg -n --glob '*.vue' --glob '*.css' --glob '*.scss' "#(?:[0-9a-fA-F]{3,8})\b|rgb
   1. 展示 preset 里的世界观 / 第一行 / 默认 meta；
   2. 用户填写 `form_schema`；
   3. `generateOpening()` 校验必填项；
-  4. 用 `buildOpeningPrompt()` 组装 prompt；
-  5. 调 `generate({ user_input })`；
-  6. 解析 `<opening_prompt_echo>`、`<content>`、`<option>`；
+  4. 用 opening compiler 组装 4 块合同；
+  5. 调 `generate({ user_input: compiledBrief, max_chat_history: 0, overrides.chat_history.prompts=[] })`；
+  6. 解析 `<content>`、`<option>`；
   7. 写回 `stream_demo.opening`；
   8. `rebuildTranscript()` 重新渲染 opening 卡。
 
@@ -1180,6 +1178,51 @@ rg -n --glob '*.vue' --glob '*.css' --glob '*.scss' "#(?:[0-9a-fA-F]{3,8})\b|rgb
 - 一旦进入 `generating / ready`，立即切换到阅读器视图
 
 这样“点击生成后阅读器出不来”的问题被收口。
+
+### 22.5A opening prompt / 输出协议瘦身：切到 compiledBrief + 4 块合同
+
+在本轮深修中，opening 生成链做了一个明确转向：
+
+- 不再把原始细字段直接喂给模型
+- 改为先编译出一份 `compiledBrief`
+- 再用 `generate()` 走现有预设输出正文，但显式限制历史注入：
+  - `max_chat_history: 0`
+  - `overrides.chat_history.prompts = []`
+  - `overrides.chat_history.with_depth_entries = false`
+
+4 块合同分别是：
+
+- 世界硬约束
+- 流派合同
+- 主角切口
+- 导演任务
+
+同时，输出协议从之前的：
+
+- `world_mode_brief`
+- `opening_prompt_echo`
+- `content`
+- `option`
+- `UpdateVariable`
+
+收缩为：
+
+- `<content>`
+- `<option>`（可选）
+
+这样做的目的，是把模型注意力从“解释输入、回显设定、顺带写变量块”重新拉回“写出真正有指导性的第一幕正文”。
+
+与之配套，`stream_demo.opening` 也做了瘦身：
+
+- 删除 `base`
+- 删除 `prompt_echo`
+- 删除 `streaming_raw`
+- 删除 `world_mode_brief`
+- 删除 `update_variable_block`
+- `user_input` 改为 prompt 用短摘要
+- 新增 `user_draft` 保存原文草稿
+
+只保留恢复开局界面、再次生成 opening 和渲染 transcript 真正需要的最小字段。
 
 ### 22.6 顶部辅助区折叠、正文主视觉优先
 

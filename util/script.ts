@@ -1,5 +1,10 @@
 import iframe_srcdoc from './iframe_srcdoc.html';
 
+const iframe_srcdoc_without_tailwind = iframe_srcdoc.replace(
+  /\s*<script src="https:\/\/testingcf\.jsdelivr\.net\/gh\/n0vi028\/JS-Slash-Runner\/lib\/tailwindcss\.min\.js"><\/script>\s*/,
+  '\n',
+);
+
 export async function loadReadme(url: string): Promise<boolean> {
   const readme = await fetch(url);
   if (!readme.ok) {
@@ -23,11 +28,13 @@ export function teleportStyle(
   };
 }
 
-export function createScriptIdIframe(): JQuery<HTMLIFrameElement> {
+export function createScriptIdIframe(options: { tailwind?: boolean } = {}): JQuery<HTMLIFrameElement> {
+  const { tailwind = true } = options;
+
   return $(`<iframe>`).attr({
     script_id: getScriptId(),
     frameborder: 0,
-    srcdoc: iframe_srcdoc,
+    srcdoc: tailwind ? iframe_srcdoc : iframe_srcdoc_without_tailwind,
   }) as JQuery<HTMLIFrameElement>;
 }
 

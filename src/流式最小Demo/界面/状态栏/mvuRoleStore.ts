@@ -1,3 +1,5 @@
+import { useIntervalFn } from '@vueuse/core';
+
 import { Schema } from '../../../寒冬末日/schema';
 import { normalizeRoomTag, parseRoomTag } from '../../../寒冬末日/util/room';
 
@@ -53,13 +55,30 @@ function sanitizeStatDataForUi(raw: any): Record<string, any> {
   return next;
 }
 
-function readMvuStatData(messageId: number | 'latest'): { ok: true; data: SchemaType } | { ok: false } {
+function hasDisplayableRoles(data: SchemaType): boolean {
+  const hasMainRoles = Object.entries(data).some(
+    ([key, value]) => !RESERVED_TOP_LEVEL_KEYS.has(key) && isObjectRecord(value),
+  );
+  if (hasMainRoles) return true;
+
+  const tempNpc = _.get(data, '临时NPC', {});
+  return isObjectRecord(tempNpc) && Object.values(tempNpc).some(value => isObjectRecord(value));
+}
+
+function readMvuStatData(
+  messageId: number | 'latest',
+): { ok: true; data: SchemaType; messageId: number | 'latest' } | { ok: false } {
   try {
     const mvuData = Mvu.getMvuData({ type: 'message', message_id: messageId });
-    const statData = sanitizeStatDataForUi(_.get(mvuData, 'stat_data', {}));
+    const rawStatData = _.get(mvuData, 'stat_data', null);
+    if (!isObjectRecord(rawStatData) || Object.keys(rawStatData).length === 0) {
+      return { ok: false };
+    }
+
+    const statData = sanitizeStatDataForUi(rawStatData);
     const result = Schema.safeParse(statData);
-    if (result.success) {
-      return { ok: true, data: result.data };
+    if (result.success && hasDisplayableRoles(result.data)) {
+      return { ok: true, data: result.data, messageId };
     }
   } catch {
     // ignore
@@ -67,37 +86,53 @@ function readMvuStatData(messageId: number | 'latest'): { ok: true; data: Schema
   return { ok: false };
 }
 
-function resolveTargetMessageId(rawTarget: number | null | undefined): number | 'latest' {
+function resolveTargetMessageId(rawTarget: number | 'latest' | null | undefined): number | 'latest' {
+  if (rawTarget === 'latest') return 'latest';
   const numeric = Number(rawTarget);
   if (Number.isFinite(numeric) && numeric >= 0) return Math.trunc(numeric);
   return 'latest';
 }
 
-export function useMvuRoleStore(targetMessageId: Ref<number | null | undefined>) {
+export function useMvuRoleStore(targetMessageId: Ref<number | 'latest' | null | undefined>) {
   const data = ref<SchemaType>(initialData);
   const ready = ref(false);
   const source = ref<'current' | 'latest' | 'default'>('default');
   const resolvedMessageId = ref<number | 'latest'>('latest');
   const isDuringExtraAnalysis = ref(false);
+  const refreshTicket = ref(0);
+  const stopHandles: EventOnReturn[] = [];
+
+  const { pause: pausePolling, resume: resumePolling } = useIntervalFn(
+    () => {
+      refresh();
+    },
+    1500,
+    { immediate: false },
+  );
 
   function refresh() {
+    const ticket = refreshTicket.value + 1;
+    refreshTicket.value = ticket;
+
     const target = resolveTargetMessageId(targetMessageId.value);
-    resolvedMessageId.value = target;
 
     const current = readMvuStatData(target);
     if (current.ok) {
       data.value = current.data;
-      source.value = 'current';
+      source.value = target === 'latest' ? 'latest' : 'current';
+      resolvedMessageId.value = current.messageId;
       ready.value = true;
     } else {
-      const latest = readMvuStatData('latest');
+      const latest = target === 'latest' ? current : readMvuStatData('latest');
       if (latest.ok) {
         data.value = latest.data;
         source.value = 'latest';
+        resolvedMessageId.value = latest.messageId;
         ready.value = true;
       } else {
         data.value = initialData;
         source.value = 'default';
+        resolvedMessageId.value = 'latest';
         ready.value = false;
       }
     }
@@ -109,6 +144,8 @@ export function useMvuRoleStore(targetMessageId: Ref<number | null | undefined>)
     } catch {
       isDuringExtraAnalysis.value = false;
     }
+
+    if (refreshTicket.value !== ticket) return;
   }
 
   const mainRoleEntries = computed(() =>
@@ -140,20 +177,33 @@ export function useMvuRoleStore(targetMessageId: Ref<number | null | undefined>)
     (async () => {
       await waitGlobalInitialized('Mvu');
       refresh();
+      resumePolling();
 
-      eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, refresh);
-      eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh);
+      stopHandles.push(
+        eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, refresh),
+        eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh),
+        eventOn(Mvu.events.VARIABLE_UPDATE_STARTED, refresh),
+      );
 
       if (typeof tavern_events !== 'undefined') {
-        eventOn(tavern_events.MESSAGE_RECEIVED as any, refresh as any);
-        eventOn(tavern_events.MESSAGE_UPDATED as any, refresh as any);
-        eventOn(tavern_events.MESSAGE_EDITED as any, refresh as any);
-        eventOn(tavern_events.MESSAGE_SWIPED as any, refresh as any);
+        stopHandles.push(eventOn(tavern_events.MESSAGE_RECEIVED as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.MESSAGE_UPDATED as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.MESSAGE_EDITED as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.MESSAGE_SWIPED as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.MESSAGE_SENT as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.CHAT_CHANGED as any, refresh as any));
       }
     })();
   });
 
-  watch(targetMessageId, refresh);
+  onBeforeUnmount(() => {
+    pausePolling();
+    stopHandles.forEach(stopHandle => stopHandle?.stop?.());
+  });
+
+  watch(targetMessageId, () => {
+    refresh();
+  });
 
   return {
     data,
