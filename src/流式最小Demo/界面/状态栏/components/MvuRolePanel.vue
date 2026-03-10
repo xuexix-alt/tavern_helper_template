@@ -584,7 +584,7 @@ function selectCharacterFromDropdown(key: string) {
 
 .character-dropdown-modal {
   width: min(100%, 420px);
-  max-height: min(70vh, 560px);
+  max-height: 560px;
   border-radius: 14px;
   background: var(--demo-surface-card-strong);
   border: 1px solid var(--demo-border-accent);
@@ -611,7 +611,7 @@ function selectCharacterFromDropdown(key: string) {
   gap: 8px;
   padding: 12px;
   overflow-y: auto;
-  max-height: calc(min(70vh, 560px) - 56px);
+  max-height: 504px;
 }
 
 .character-dropdown-item {

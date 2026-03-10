@@ -1,7 +1,7 @@
 <template>
-  <article class="transcript-item opening" :class="[`is-${density}`, { collapsed: !expanded }]">
+  <article class="transcript-item opening clip-corner" :class="[`is-${density}`, { collapsed: !expanded }]">
     <header class="transcript-head">
-      <div class="opening-banner">
+      <div class="opening-banner clip-corner-sm">
         <span class="opening-kicker">CHAPTER OPENING</span>
         <strong class="opening-title">章节开场</strong>
         <span class="opening-desc">开局剧情影响整体故事偏好</span>
@@ -16,10 +16,10 @@
 
       <div class="transcript-actions">
         <span class="transcript-preview">{{ item.preview || '(空消息)' }}</span>
-        <button type="button" class="toggle-btn" @click="$emit('toggle-opening')">
+        <button type="button" class="toggle-btn clip-corner-sm" @click="$emit('toggle-opening')">
           {{ expanded ? '收起开场' : '展开开场' }}
         </button>
-        <button v-if="item.canOpenDetail" type="button" class="detail-btn" @click="$emit('open-detail', item)">
+        <button v-if="item.canOpenDetail" type="button" class="detail-btn clip-corner-sm" @click="$emit('open-detail', item)">
           详情
         </button>
       </div>
@@ -59,57 +59,55 @@ const showBody = computed(() => {
 .transcript-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
   border: 1px solid var(--demo-border-warning-stronger);
   background:
-    radial-gradient(circle at top left, var(--demo-surface-user-muted), transparent 42%),
-    linear-gradient(180deg, var(--demo-surface-opening-shadow), var(--demo-surface-panel-strong));
-  box-shadow:
-    0 0 0 1px var(--demo-surface-user-muted) inset,
-    0 10px 24px var(--demo-surface-shadow-soft);
+    radial-gradient(circle at top left, rgba(191, 158, 96, 0.12), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 95%, transparent), color-mix(in srgb, var(--surface) 98%, black 2%));
+  box-shadow: 0 18px 34px var(--demo-surface-shadow-soft);
 }
 
 .transcript-item.is-compact {
-  padding: 8px 9px;
+  padding: 10px;
 }
 
 .transcript-item.is-minimal {
-  padding: 8px;
+  padding: 9px;
 }
 
 .transcript-head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .opening-banner {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--demo-surface-user-soft);
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
   border: 1px solid var(--demo-border-warning);
 }
 
 .opening-kicker {
+  font-family: var(--demo-font-mono);
   font-size: 10px;
   letter-spacing: 0.16em;
   color: var(--demo-text-opening);
 }
 
 .opening-title {
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.2;
   color: var(--demo-text-warning);
 }
 
 .opening-desc {
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--demo-text-opening-muted);
 }
 
@@ -123,8 +121,12 @@ const showBody = computed(() => {
 
 .role-pill,
 .meta-pill,
-.detail-btn {
-  border-radius: 999px;
+.detail-btn,
+.toggle-btn {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px 8px;
   font-size: 11px;
 }
@@ -135,7 +137,7 @@ const showBody = computed(() => {
 }
 
 .meta-pill {
-  background: var(--demo-surface-neutral-strong);
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
   color: var(--demo-text-muted);
 }
 
@@ -151,7 +153,7 @@ const showBody = computed(() => {
 
 .detail-btn {
   border: 1px solid var(--demo-border-accent);
-  background: var(--demo-surface-neutral-soft);
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
   color: var(--demo-text-primary);
 }
 
@@ -159,14 +161,14 @@ const showBody = computed(() => {
   border: 1px solid var(--demo-border-warning-soft);
   background: var(--demo-surface-user-soft);
   color: var(--demo-text-warning);
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 11px;
 }
 
 .transcript-body {
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
+  border: 1px solid rgba(191, 158, 96, 0.18);
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
+  padding: 12px;
 }
 
 .opening-body.compact {
@@ -192,7 +194,7 @@ const showBody = computed(() => {
 }
 
 .html-body {
-  padding: 4px 2px 0;
+  padding: 2px 0 0;
 }
 
 .html-body :deep(p),

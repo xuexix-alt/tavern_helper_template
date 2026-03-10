@@ -1,8 +1,10 @@
-export type DemoStatus = 'idle' | 'preparing' | 'streaming' | 'persisting' | 'done' | 'error';
+﻿export type DemoStatus = 'idle' | 'preparing' | 'streaming' | 'persisting' | 'done' | 'error';
 
 export type TranscriptFilterMode = 'assistant' | 'all';
 
 export type TranscriptDensity = 'comfortable' | 'compact' | 'minimal';
+
+export type DemoTheme = 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber';
 
 export type ReadingMode = 'following_latest' | 'browsing_history';
 
@@ -49,5 +51,6 @@ export type ReaderChatState = {
   version: number;
   reading_mode: ReadingMode;
   density: TranscriptDensity;
+  theme: DemoTheme;
   opening_expanded: boolean;
 };

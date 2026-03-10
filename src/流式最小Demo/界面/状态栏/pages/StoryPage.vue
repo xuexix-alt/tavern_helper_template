@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="demo-page">
     <OpeningSetupPanel
       v-if="shouldShowOpeningSetup"
@@ -16,16 +16,9 @@
     />
 
     <template v-else>
-      <button type="button" class="role-drawer-handle" :class="{ active: roleDrawerOpen }" @click="toggleRoleDrawer">
-        <span class="role-drawer-handle-inner">
-          <span class="role-drawer-handle-arrow">{{ roleDrawerOpen ? '→' : '←' }}</span>
-          <span class="role-drawer-handle-text">人物</span>
-        </span>
-      </button>
-
-      <details class="reader-fold-card">
+      <details class="reader-fold-card hud-panel clip-corner-sm">
         <summary class="reader-fold-summary">
-          <span class="reader-fold-summary-label">日志</span>
+          <span class="reader-fold-summary-label">系统日志</span>
           <small>展开</small>
         </summary>
 
@@ -35,6 +28,7 @@
       </details>
 
       <TopToolbar
+        v-model:theme="theme"
         v-model:filter-mode="filterMode"
         v-model:density="density"
         :total-count="transcriptStats.total"
@@ -44,33 +38,56 @@
         @jump-latest="jumpLatest"
       />
 
-      <TranscriptList
-        ref="transcriptListRef"
-        :items="visibleTranscript"
-        :density="density"
-        :busy="busy"
-        :should-follow-latest="followLatest"
-        :opening-expanded="openingExpanded"
-        :latest-user-message-id="latestUserItem?.message_id ?? null"
-        :editing-user-message-id="editingUserMessageId"
-        :editing-user-draft="editingUserDraft"
-        :rollback-confirm-message-id="rollbackConfirmMessageId"
-        :swipe-message-id="latestAssistantSwipeMessageId"
-        :swipe-label="latestAssistantSwipeLabel"
-        :can-swipe-prev="canSwipeLatestAssistantPrev"
-        :can-swipe-next="canSwipeLatestAssistantNext"
-        @open-detail="openDetail"
-        @reading-mode-change="setReadingMode"
-        @toggle-opening="toggleOpeningExpanded"
-        @start-edit-user="startInlineEdit"
-        @update-edit-draft="setEditingUserDraft"
-        @confirm-edit-user="confirmInlineEditRegenerate"
-        @cancel-edit-user="cancelInlineEdit"
-        @request-rollback="requestRollbackDelete"
-        @confirm-rollback="confirmRollbackDelete"
-        @cancel-rollback="cancelRollbackDelete"
-        @swipe-assistant="swipeLatestAssistant"
-      />
+      <div class="transcript-stage">
+        <button type="button" class="role-drawer-handle" :class="{ active: roleDrawerOpen }" @click="toggleRoleDrawer">
+          <span class="role-drawer-handle-inner">
+            <span class="role-drawer-handle-arrow">{{ roleDrawerOpen ? '→' : '←' }}</span>
+            <span class="role-drawer-handle-text">人物</span>
+          </span>
+        </button>
+
+        <TranscriptList
+          ref="transcriptListRef"
+          :items="visibleTranscript"
+          :density="density"
+          :busy="busy"
+          :should-follow-latest="followLatest"
+          :opening-expanded="openingExpanded"
+          :latest-user-message-id="latestUserItem?.message_id ?? null"
+          :editing-user-message-id="editingUserMessageId"
+          :editing-user-draft="editingUserDraft"
+          :rollback-confirm-message-id="rollbackConfirmMessageId"
+          :swipe-message-id="latestAssistantSwipeMessageId"
+          :swipe-label="latestAssistantSwipeLabel"
+          :can-swipe-prev="canSwipeLatestAssistantPrev"
+          :can-swipe-next="canSwipeLatestAssistantNext"
+          @open-detail="openDetail"
+          @reading-mode-change="setReadingMode"
+          @toggle-opening="toggleOpeningExpanded"
+          @start-edit-user="startInlineEdit"
+          @update-edit-draft="setEditingUserDraft"
+          @confirm-edit-user="confirmInlineEditRegenerate"
+          @cancel-edit-user="cancelInlineEdit"
+          @request-rollback="requestRollbackDelete"
+          @confirm-rollback="confirmRollbackDelete"
+          @cancel-rollback="cancelRollbackDelete"
+          @swipe-assistant="swipeLatestAssistant"
+        />
+
+        <transition name="role-drawer-fade">
+          <div v-if="roleDrawerOpen" class="role-drawer-overlay" @click="closeRoleDrawer"></div>
+        </transition>
+
+        <aside class="role-drawer" :class="{ open: roleDrawerOpen }" aria-label="人物面板抽屉">
+          <div class="role-drawer-head">
+            <strong>登场角色</strong>
+            <button type="button" class="role-drawer-close" @click="closeRoleDrawer">✕</button>
+          </div>
+          <div class="role-drawer-body">
+            <MvuRolePanel :transcript-items="transcript" />
+          </div>
+        </aside>
+      </div>
 
       <BottomComposer
         v-model="input"
@@ -86,20 +103,6 @@
         @jump-latest="jumpLatest"
         @refresh="refreshWorkbench"
       />
-
-      <transition name="role-drawer-fade">
-        <div v-if="roleDrawerOpen" class="role-drawer-overlay" @click="closeRoleDrawer"></div>
-      </transition>
-
-      <aside class="role-drawer" :class="{ open: roleDrawerOpen }" aria-label="人物面板抽屉">
-        <div class="role-drawer-head">
-          <strong>登场角色</strong>
-          <button type="button" class="role-drawer-close" @click="closeRoleDrawer">✕</button>
-        </div>
-        <div class="role-drawer-body">
-          <MvuRolePanel :transcript-items="transcript" />
-        </div>
-      </aside>
 
       <MessageDetailModal :item="selectedItem" @close="closeDetail" />
     </template>
@@ -122,6 +125,7 @@ const {
   status,
   filterMode,
   density,
+  theme,
   readingMode,
   followLatest,
   openingExpanded,
@@ -187,23 +191,30 @@ function closeRoleDrawer() {
 .demo-page {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   position: relative;
 }
 
+.transcript-stage {
+  position: relative;
+  padding-right: 28px;
+}
+
 .role-drawer-handle {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   z-index: 18;
-  width: 26px;
-  border: 0;
-  border-left: 1px solid var(--demo-border-accent-muted);
-  background: color-mix(in srgb, var(--demo-surface-card-strong) 88%, transparent);
+  width: 28px;
+  border: 1px solid var(--demo-border-accent-soft);
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
   color: var(--demo-text-primary);
   padding: 0;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 24px var(--demo-surface-shadow-soft);
 }
 
 .role-drawer-handle.active {
@@ -230,9 +241,10 @@ function closeRoleDrawer() {
 
 .role-drawer-handle-text {
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   writing-mode: vertical-rl;
   text-orientation: mixed;
+  font-family: var(--demo-font-mono);
 }
 
 .reader-fold-card {
@@ -240,23 +252,21 @@ function closeRoleDrawer() {
   width: fit-content;
   max-width: 100%;
   border-radius: 999px;
-  background: var(--demo-surface-card-strong);
-  border: 1px solid var(--demo-border-accent);
   overflow: hidden;
 }
 
 .reader-fold-card[open] {
   align-self: stretch;
   width: 100%;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .reader-fold-summary {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 5px 10px;
+  gap: 8px;
+  padding: 8px 14px;
   cursor: pointer;
   list-style: none;
   color: var(--demo-text-primary);
@@ -265,6 +275,9 @@ function closeRoleDrawer() {
 .reader-fold-summary-label {
   font-size: 11px;
   line-height: 1;
+  font-family: var(--demo-font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .reader-fold-summary::-webkit-details-marker {
@@ -284,24 +297,24 @@ function closeRoleDrawer() {
 }
 
 .role-drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.28);
+  position: absolute;
+  inset: 0 28px 0 0;
+  background: var(--demo-surface-overlay);
   z-index: 19;
 }
 
 .role-drawer {
-  position: fixed;
+  position: absolute;
   top: 0;
   right: 0;
+  bottom: 0;
   z-index: 20;
-  width: min(420px, 92vw);
-  height: 100vh;
+  width: min(420px, calc(100% - 12px));
   display: flex;
   flex-direction: column;
   background: var(--demo-surface-card-strong);
   border-left: 1px solid var(--demo-border-accent);
-  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.24);
+  box-shadow: var(--demo-shadow-drawer);
   transform: translateX(calc(100% - 1px));
   transition: transform 0.24s ease;
 }
@@ -315,15 +328,18 @@ function closeRoleDrawer() {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px;
+  padding: 14px;
   border-bottom: 1px solid var(--demo-border-accent-soft);
 }
 
 .role-drawer-close {
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--demo-border-accent-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
   color: var(--demo-text-primary);
-  font-size: 18px;
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
 }
 
 .role-drawer-body {
@@ -344,12 +360,20 @@ function closeRoleDrawer() {
 }
 
 @media (max-width: 680px) {
+  .transcript-stage {
+    padding-right: 22px;
+  }
+
   .reader-fold-summary {
     justify-content: center;
   }
 
+  .role-drawer-overlay {
+    inset-inline-end: 22px;
+  }
+
   .role-drawer {
-    width: 100vw;
+    width: 100%;
   }
 
   .role-drawer-handle {

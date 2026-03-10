@@ -1,19 +1,19 @@
 <template>
-  <article class="transcript-item" :class="cardClass">
+  <article class="transcript-item clip-corner-sm" :class="cardClass">
     <header class="transcript-head">
       <div class="transcript-title-row">
+        <span class="channel-pill">{{ channelLabel }}</span>
         <strong>#{{ item.message_id }}</strong>
         <span class="role-pill" :class="`is-${item.role}`">{{ item.roleLabel }}</span>
         <span v-if="item.hidden" class="meta-pill">hidden</span>
-        <span v-if="item.isStreaming" class="meta-pill is-live">流式中</span>
+        <span v-if="item.isStreaming" class="meta-pill is-live">stream</span>
       </div>
 
       <div class="transcript-actions">
-        <span class="transcript-preview">{{ item.preview || '(空消息)' }}</span>
         <button
           v-if="showEditRegenerate && !isEditingUser"
           type="button"
-          class="action-btn"
+          class="action-btn clip-corner-sm"
           :disabled="busy"
           @click="$emit('start-edit', item)"
         >
@@ -22,28 +22,30 @@
         <template v-if="item.canDeleteFrom">
           <template v-if="showRollbackConfirm">
             <span class="rollback-tip">将删除当前楼层及其后续所有楼层</span>
-            <button type="button" class="action-btn danger" :disabled="busy" @click="$emit('confirm-rollback', item)">
+            <button type="button" class="action-btn danger clip-corner-sm" :disabled="busy" @click="$emit('confirm-rollback', item)">
               确认回退
             </button>
-            <button type="button" class="action-btn" :disabled="busy" @click="$emit('cancel-rollback')">取消</button>
+            <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-rollback')">取消</button>
           </template>
           <button
             v-else
             type="button"
-            class="action-btn danger"
+            class="action-btn danger clip-corner-sm"
             :disabled="busy"
             @click="$emit('request-rollback', item)"
           >
             回退删除
           </button>
         </template>
-        <button v-if="item.canOpenDetail" type="button" class="detail-btn" @click="$emit('open-detail', item)">
+        <button v-if="item.canOpenDetail" type="button" class="detail-btn clip-corner-sm" @click="$emit('open-detail', item)">
           详情
         </button>
       </div>
     </header>
 
-    <div v-if="showBody" class="transcript-body">
+    <div class="transcript-preview">{{ item.preview || '(空消息)' }}</div>
+
+    <div v-if="showBody" class="transcript-body-shell clip-corner-sm">
       <template v-if="isEditingUser">
         <textarea
           :value="editDraft"
@@ -55,25 +57,25 @@
         <div class="inline-editor-actions">
           <button
             type="button"
-            class="action-btn confirm"
+            class="action-btn confirm clip-corner-sm"
             :disabled="busy || !trimmedEditDraft"
             @click="$emit('confirm-edit', item)"
           >
             ✓ 确认
           </button>
-          <button type="button" class="action-btn" :disabled="busy" @click="$emit('cancel-edit')">取消</button>
+          <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-edit')">取消</button>
         </div>
       </template>
-      <div v-else-if="item.isStreaming" class="html-body is-stream-stage" v-html="item.streamHtml"></div>
-      <div v-else class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
+      <div v-else-if="item.isStreaming" class="transcript-body html-body is-stream-stage" v-html="item.streamHtml"></div>
+      <div v-else class="transcript-body html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
 
     <footer v-if="showSwipeControls" class="swipe-actions">
-      <button type="button" class="swipe-btn" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
+      <button type="button" class="swipe-btn clip-corner-sm" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
         ←
       </button>
       <span v-if="swipeLabel" class="swipe-label">{{ swipeLabel }}</span>
-      <button type="button" class="swipe-btn" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
+      <button type="button" class="swipe-btn clip-corner-sm" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
         →
       </button>
     </footer>
@@ -118,12 +120,19 @@ const cardClass = computed(() => [
 const showBody = computed(() => {
   if (props.isEditingUser) return true;
   if (props.density === 'comfortable') return true;
-  if (props.density === 'compact')
+  if (props.density === 'compact') {
     return props.item.isLatest || props.item.isStreaming || props.item.role === 'assistant';
+  }
   return props.item.isStreaming || (props.item.role === 'assistant' && props.item.isLatest);
 });
 
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
+
+const channelLabel = computed(() => {
+  if (props.item.role === 'assistant') return 'AST';
+  if (props.item.role === 'user') return 'USR';
+  return 'SYS';
+});
 
 function onEditInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
@@ -133,17 +142,23 @@ function onEditInput(event: Event) {
 
 <style scoped>
 .transcript-item {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
   border: 1px solid var(--demo-border-neutral);
-  background: var(--demo-surface-panel);
+  background: var(--demo-assistant-card-bg);
+  box-shadow: 0 12px 24px rgba(18, 22, 20, 0.05);
 }
 
 .transcript-item.is-user {
-  border-color: var(--demo-border-warning);
+  margin-left: auto;
+  width: min(100%, 88%);
+  border-color: rgba(26, 36, 33, 0.42);
+  background: var(--demo-user-card-bg);
+  color: var(--demo-user-card-text);
 }
 
 .transcript-item.is-assistant.latest {
@@ -151,16 +166,22 @@ function onEditInput(event: Event) {
   box-shadow: var(--demo-shadow-accent-inset);
 }
 
+.transcript-item.is-system {
+  align-self: center;
+  width: min(100%, 72%);
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
+}
+
 .transcript-item.streaming {
   border-color: var(--demo-border-cyan-stronger);
 }
 
 .transcript-item.is-compact {
-  padding: 8px 9px;
+  padding: 10px;
 }
 
 .transcript-item.is-minimal {
-  padding: 8px;
+  padding: 9px;
 }
 
 .transcript-item.is-minimal .transcript-preview {
@@ -169,26 +190,47 @@ function onEditInput(event: Event) {
 
 .transcript-head {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .transcript-title-row,
-.transcript-actions {
+.transcript-actions,
+.inline-editor-actions,
+.swipe-actions {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
+.transcript-actions {
+  justify-content: flex-end;
+}
+
+.channel-pill,
 .role-pill,
 .meta-pill,
 .detail-btn,
 .action-btn,
 .swipe-btn {
-  border-radius: 999px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 3px 8px;
   font-size: 11px;
+}
+
+.channel-pill {
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--demo-text-tertiary);
 }
 
 .role-pill.is-assistant {
@@ -197,17 +239,17 @@ function onEditInput(event: Event) {
 }
 
 .role-pill.is-user {
-  background: var(--demo-surface-user);
+  background: color-mix(in srgb, var(--primary-foreground) 12%, transparent);
   color: var(--demo-text-user);
 }
 
 .role-pill.is-system {
-  background: var(--demo-surface-neutral-strong);
+  background: color-mix(in srgb, var(--surface) 54%, transparent);
   color: var(--demo-text-strong);
 }
 
 .meta-pill {
-  background: var(--demo-surface-neutral-strong);
+  background: color-mix(in srgb, var(--surface) 30%, transparent);
   color: var(--demo-text-muted);
 }
 
@@ -217,25 +259,48 @@ function onEditInput(event: Event) {
 }
 
 .transcript-preview {
-  flex: 1 1 auto;
   min-width: 0;
   font-size: 12px;
   color: var(--demo-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-bottom: 2px;
+}
+
+.transcript-item.is-user .transcript-preview,
+.transcript-item.is-user .channel-pill,
+.transcript-item.is-user strong,
+.transcript-item.is-user .meta-pill,
+.transcript-item.is-user .rollback-tip {
+  color: color-mix(in srgb, var(--demo-user-card-text) 86%, transparent);
+}
+
+.transcript-item.is-user .channel-pill,
+.transcript-item.is-user .meta-pill,
+.transcript-item.is-user .detail-btn,
+.transcript-item.is-user .action-btn,
+.transcript-item.is-user .swipe-btn {
+  background: color-mix(in srgb, var(--primary-foreground) 8%, transparent);
+  border-color: color-mix(in srgb, var(--primary-foreground) 14%, transparent);
+}
+
+.transcript-item.is-user .detail-btn,
+.transcript-item.is-user .action-btn,
+.transcript-item.is-user .swipe-btn {
+  color: var(--demo-text-user);
 }
 
 .detail-btn {
   border: 1px solid var(--demo-border-accent);
-  background: var(--demo-surface-neutral-soft);
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
   color: var(--demo-text-primary);
 }
 
 .action-btn,
 .swipe-btn {
   border: 1px solid var(--demo-surface-neutral-stronger);
-  background: var(--demo-surface-neutral);
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
   color: var(--demo-text-primary);
 }
 
@@ -256,9 +321,21 @@ function onEditInput(event: Event) {
   color: var(--demo-text-danger-strong);
 }
 
+.transcript-body-shell {
+  position: relative;
+  border: 1px solid rgba(118, 132, 103, 0.16);
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
+  padding: 12px;
+}
+
+.transcript-item.is-user .transcript-body-shell {
+  border-color: color-mix(in srgb, var(--primary-foreground) 12%, transparent);
+  background: color-mix(in srgb, var(--primary-foreground) 4%, transparent);
+}
+
 .transcript-body {
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .inline-editor {
@@ -271,18 +348,6 @@ function onEditInput(event: Event) {
   color: var(--demo-text-primary);
   padding: 10px;
   min-height: 120px;
-}
-
-.inline-editor-actions,
-.swipe-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.inline-editor-actions {
-  margin-top: 8px;
 }
 
 .swipe-actions {
@@ -333,6 +398,24 @@ function onEditInput(event: Event) {
   margin: 0 0 0.6em;
 }
 
+.html-body :deep(ul),
+.html-body :deep(ol) {
+  margin: 0.4em 0 0.7em;
+  padding-left: 1.2em;
+}
+
+.html-body :deep(code) {
+  font-family: var(--demo-font-mono);
+  font-size: 0.92em;
+  background: rgba(18, 22, 20, 0.06);
+  padding: 0.1em 0.34em;
+  border-radius: 5px;
+}
+
+.transcript-item.is-user .html-body :deep(code) {
+  background: color-mix(in srgb, var(--primary-foreground) 12%, transparent);
+}
+
 .html-body :deep(p:last-child) {
   margin-bottom: 0;
 }
@@ -340,8 +423,21 @@ function onEditInput(event: Event) {
 .html-body.is-stream-stage :deep(.stream-stage-pre) {
   margin: 0;
   white-space: pre-wrap;
-  word-break: break-word;
-  font: inherit;
-  line-height: 1.55;
+}
+
+@media (max-width: 680px) {
+  .transcript-item,
+  .transcript-item.is-user,
+  .transcript-item.is-system {
+    width: 100%;
+  }
+
+  .transcript-head {
+    flex-direction: column;
+  }
+
+  .transcript-actions {
+    justify-content: flex-start;
+  }
 }
 </style>

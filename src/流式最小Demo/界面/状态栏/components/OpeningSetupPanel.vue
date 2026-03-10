@@ -1,5 +1,5 @@
 <template>
-  <section class="opening-setup-card">
+  <section class="opening-setup-card hud-panel clip-corner">
     <header class="opening-setup-head">
       <div>
         <span class="opening-setup-kicker">OPENING SETUP</span>
@@ -12,7 +12,7 @@
           <span class="stream-toggle-slider"></span>
           <span class="stream-toggle-label">流式生成</span>
         </label>
-        <button type="button" class="opening-generate-btn" :disabled="busy" @click="$emit('submit')">
+        <button type="button" class="opening-generate-btn clip-corner-sm" :disabled="busy" @click="$emit('submit')">
           {{ busy ? '生成中…' : '生成开局' }}
         </button>
       </div>
@@ -108,7 +108,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import type { OpeningRouteOption, OpeningWorldModeOption } from '../../../shared/opening';
+import { buildWorldModeAxisDictionary, type OpeningRouteOption, type OpeningWorldModeOption } from '../../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../../shared/opening.schema';
 
 const props = defineProps<{
@@ -135,38 +135,7 @@ const selectedRoute = computed(() => props.routes.find(route => route.name === p
 
 const worldModeAxisDictionaryText = computed(() => {
   const worldMode = selectedWorldMode.value;
-  if (!worldMode) return '未设定';
-
-  const axisOrder = [
-    '气候压力',
-    '行动窗口',
-    '社会残存度',
-    '外部威胁主因',
-    '生产残余度',
-    '冲突密度',
-    '外出死亡风险',
-    '据点化程度',
-  ];
-
-  return axisOrder
-    .map(axisName => {
-      const axis = worldMode.axes?.[axisName] as Record<string, unknown> | undefined;
-      if (!axis || typeof axis !== 'object') return '';
-
-      const label = String(axis.label ?? '').trim();
-      const subtype = String(axis.subtype ?? '').trim();
-      const numericParts = Object.entries(axis)
-        .filter(([key, value]) => key !== 'label' && key !== 'subtype' && value != null && String(value).trim())
-        .map(([key, value]) => `${key}=${String(value)}`);
-
-      return [
-        `${axisName}：${label || '未设定'}`,
-        subtype ? `（${subtype}）` : '',
-        numericParts.length > 0 ? `；${numericParts.join('，')}` : '',
-      ].join('');
-    })
-    .filter(Boolean)
-    .join('\n');
+  return buildWorldModeAxisDictionary(worldMode);
 });
 
 const forbiddenDriftText = computed(() => {
@@ -205,11 +174,9 @@ function emitStreamToggle(event: Event) {
 .opening-setup-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: var(--demo-surface-card-strong);
-  border: 1px solid var(--demo-border-warning);
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
 }
 
 .opening-setup-head {
@@ -228,6 +195,7 @@ function emitStreamToggle(event: Event) {
 }
 
 .opening-setup-kicker {
+  font-family: var(--demo-font-mono);
   font-size: 10px;
   letter-spacing: 0.14em;
   color: var(--demo-text-warning);
@@ -239,20 +207,19 @@ function emitStreamToggle(event: Event) {
 }
 
 .opening-setup-head p {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.55;
   color: var(--demo-text-tertiary);
 }
 
 .opening-generate-btn {
-  flex: 0 0 auto;
-  min-height: 38px;
-  border-radius: 10px;
+  min-height: 40px;
   border: 1px solid var(--demo-border-warning-soft);
-  background: var(--demo-surface-user-soft);
-  color: var(--demo-text-warning);
-  padding: 8px 12px;
+  background: var(--demo-gradient-primary);
+  color: var(--demo-text-inverse);
+  padding: 8px 14px;
+  font-weight: 700;
 }
 
 .stream-toggle {
@@ -272,7 +239,7 @@ function emitStreamToggle(event: Event) {
   width: 34px;
   height: 20px;
   border-radius: 999px;
-  background: var(--demo-surface-panel-strong);
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
   border: 1px solid var(--demo-border-accent-strong);
   transition: background-color 0.2s ease;
 }
@@ -304,27 +271,17 @@ function emitStreamToggle(event: Event) {
 }
 
 .opening-label {
+  font-family: var(--demo-font-mono);
   font-size: 11px;
+  letter-spacing: 0.08em;
   color: var(--demo-text-subtle);
 }
 
-.opening-preview-block,
 .opening-meta-item,
 .opening-form-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.opening-preview-text {
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--demo-surface-panel);
-  border: 1px solid var(--demo-border-accent-soft);
-  font-size: 13px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .opening-meta-grid,
@@ -345,9 +302,9 @@ function emitStreamToggle(event: Event) {
 .opening-select {
   width: 100%;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--demo-border-accent-strong);
-  background: var(--demo-surface-panel-strong);
+  background: color-mix(in srgb, var(--surface) 46%, transparent);
   color: var(--demo-text-primary);
   padding: 10px;
 }
@@ -359,7 +316,7 @@ function emitStreamToggle(event: Event) {
 
 .opening-textarea-readonly {
   opacity: 0.92;
-  background: color-mix(in srgb, var(--demo-surface-panel) 88%, black 12%);
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
 }
 
 @media (max-width: 680px) {

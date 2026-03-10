@@ -1,7 +1,7 @@
-import type { ReaderChatState, ReadingMode, TranscriptDensity } from './types';
+﻿import type { DemoTheme, ReaderChatState, ReadingMode, TranscriptDensity } from './types';
 
 export const READER_CHAT_STATE_PATH = 'stream_demo.reader_state';
-export const READER_CHAT_STATE_VERSION = 2;
+export const READER_CHAT_STATE_VERSION = 3;
 
 export function normalizeReadingMode(input: unknown): ReadingMode | null {
   return input === 'following_latest' || input === 'browsing_history' ? input : null;
@@ -13,11 +13,18 @@ export function normalizeDensity(input: unknown): TranscriptDensity | null {
   return null;
 }
 
+export function normalizeTheme(input: unknown): DemoTheme | null {
+  return input === 'tech' || input === 'dark' || input === 'gold' || input === 'ios' || input === 'ipod' || input === 'amber'
+    ? input
+    : null;
+}
+
 export function migrateReaderChatState(raw: Partial<ReaderChatState>): Partial<ReaderChatState> {
   return {
     version: READER_CHAT_STATE_VERSION,
     reading_mode: normalizeReadingMode(raw?.reading_mode) ?? 'following_latest',
     density: normalizeDensity(raw?.density) ?? 'comfortable',
+    theme: normalizeTheme(raw?.theme) ?? 'tech',
     opening_expanded: typeof raw?.opening_expanded === 'boolean' ? raw.opening_expanded : true,
   };
 }
@@ -46,6 +53,7 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
             normalizeReadingMode(current.reading_mode) ??
             'following_latest',
           density: normalizeDensity(patch.density) ?? normalizeDensity(current.density) ?? 'comfortable',
+          theme: normalizeTheme(patch.theme) ?? normalizeTheme(current.theme) ?? 'tech',
           opening_expanded:
             typeof patch.opening_expanded === 'boolean'
               ? patch.opening_expanded
@@ -58,6 +66,5 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
       { type: 'chat' },
     );
   } catch {
-    // ignore
   }
 }

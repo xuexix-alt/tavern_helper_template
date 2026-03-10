@@ -1,5 +1,13 @@
 <template>
-  <section class="transcript-card">
+  <section class="transcript-card hud-panel clip-corner">
+    <header class="transcript-headbar">
+      <div>
+        <span class="demo-kicker">LIVE TRANSCRIPT</span>
+        <strong>当前阅读层</strong>
+      </div>
+      <span class="transcript-headbar-tip">assistant hidden 楼层在此重建</span>
+    </header>
+
     <div ref="scrollerRef" class="transcript-scroller" @scroll="handleScroll">
       <div v-if="items.length === 0" class="transcript-empty">暂无消息。发送后将在这里模拟酒馆楼层阅读。</div>
 
@@ -112,31 +120,60 @@ defineExpose({ scrollToLatest });
 <style scoped>
 .transcript-card {
   min-height: 320px;
-  border-radius: 12px;
-  background: var(--demo-surface-card);
-  border: 1px solid var(--demo-border-accent);
+  border-radius: 16px;
   overflow: hidden;
 }
 
+.transcript-headbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 0;
+}
+
+.transcript-headbar strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.transcript-headbar-tip {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 34%, transparent);
+  border: 1px solid var(--demo-border-accent-soft);
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--demo-text-tertiary);
+}
+
 .transcript-scroller {
-  max-height: min(64vh, 760px);
+  max-height: 760px;
   overflow: auto;
-  padding: 10px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .transcript-empty {
-  padding: 24px 12px;
+  padding: 42px 12px;
   text-align: center;
   font-size: 13px;
   color: var(--demo-text-muted);
 }
 
 @media (max-width: 520px) {
+  .transcript-headbar {
+    flex-direction: column;
+    padding: 12px 12px 0;
+  }
+
   .transcript-scroller {
-    max-height: min(58vh, 620px);
+    max-height: 620px;
+    padding: 10px 12px 12px;
   }
 }
 </style>

@@ -25,6 +25,7 @@ import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema'
 import {
   normalizeDensity,
   normalizeReadingMode,
+  normalizeTheme,
   patchReaderChatState,
   READER_CHAT_STATE_VERSION,
   readReaderChatState,
@@ -32,6 +33,7 @@ import {
 import type {
   DemoStatus,
   ReaderLogItem,
+  DemoTheme,
   ReaderSummary,
   ReadingMode,
   TranscriptDensity,
@@ -41,6 +43,17 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
+
+const DEMO_THEME_CLASS_NAMES = ['theme-tech', 'theme-dark', 'theme-gold', 'theme-ios', 'theme-ipod', 'theme-amber'] as const;
+
+function applyDemoTheme(theme: DemoTheme) {
+  const className = `theme-${theme}`;
+  const roots = [document.documentElement, document.body].filter(Boolean) as HTMLElement[];
+  roots.forEach(root => {
+    root.classList.remove(...DEMO_THEME_CLASS_NAMES);
+    root.classList.add(className);
+  });
+}
 
 type BaseChatMessage = {
   message_id: number;
@@ -214,6 +227,7 @@ export function useStreamingDemo() {
   const transcript = ref<TranscriptItem[]>([]);
   const filterMode = ref<TranscriptFilterMode>('assistant');
   const density = ref<TranscriptDensity>('comfortable');
+  const theme = ref<DemoTheme>('tech');
   const readingMode = ref<ReadingMode>('following_latest');
   const selectedItem = ref<TranscriptItem | null>(null);
   const openingExpanded = ref(true);
@@ -280,6 +294,7 @@ export function useStreamingDemo() {
         reading_mode: readingMode.value,
         density: density.value,
         opening_expanded: openingExpanded.value,
+        theme: theme.value,
       });
     }, 80);
   }
@@ -305,8 +320,10 @@ export function useStreamingDemo() {
     const state = readReaderChatState();
     const restoredMode = normalizeReadingMode(state.reading_mode);
     const restoredDensity = normalizeDensity(state.density);
+    const restoredTheme = normalizeTheme(state.theme);
     if (restoredMode) readingMode.value = restoredMode;
     if (restoredDensity) density.value = restoredDensity;
+    if (restoredTheme) theme.value = restoredTheme;
     if (typeof state.opening_expanded === 'boolean') openingExpanded.value = state.opening_expanded;
     if (state.version !== READER_CHAT_STATE_VERSION) {
       queuePersistReaderChatState();
@@ -1258,6 +1275,15 @@ export function useStreamingDemo() {
     queueHidePolicy('mounted');
   });
 
+  watch(theme, value => {
+    applyDemoTheme(value);
+    queuePersistReaderChatState();
+  }, { immediate: true });
+
+  watch(density, () => {
+    queuePersistReaderChatState();
+  });
+
   watch(
     () => latestUserItem.value?.message_id ?? null,
     latestId => {
@@ -1311,6 +1337,7 @@ export function useStreamingDemo() {
     assistantMessageId,
     filterMode,
     density,
+    theme,
     readingMode,
     readingModeLabel,
     followLatest,

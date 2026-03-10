@@ -1,10 +1,10 @@
 <template>
-  <section class="workbench-card">
+  <section class="workbench-card hud-panel clip-corner-sm">
     <section class="workbench-panel logs-panel">
       <span class="block-label">最近操作</span>
       <div v-if="logs.length === 0" class="empty-log">暂无日志</div>
       <ul v-else class="log-list">
-        <li v-for="log in logs" :key="log.id" class="log-item" :class="`is-${log.type}`">
+        <li v-for="log in logs" :key="log.id" class="log-item clip-corner-sm" :class="`is-${log.type}`">
           <div class="log-head">
             <strong>{{ log.title }}</strong>
             <span>{{ log.createdAt }}</span>
@@ -29,10 +29,8 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  background: var(--demo-surface-card-strong);
-  border: 1px solid var(--demo-border-accent);
+  padding: 12px;
+  border-radius: 14px;
 }
 
 .workbench-panel {
@@ -42,11 +40,13 @@ defineProps<{
 }
 
 .block-label {
+  font-family: var(--demo-font-mono);
   font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--demo-text-subtle);
 }
 
-.block-text,
 .log-detail {
   font-size: 13px;
   line-height: 1.55;
@@ -65,8 +65,7 @@ defineProps<{
 
 .log-item {
   padding: 10px;
-  border-radius: 10px;
-  background: var(--demo-surface-panel-strong);
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
   border: 1px solid var(--demo-border-accent-soft);
 }
 

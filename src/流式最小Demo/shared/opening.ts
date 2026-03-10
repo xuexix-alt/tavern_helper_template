@@ -355,39 +355,82 @@ export function replaceOpeningPayloadInChat(payload: OpeningPayload) {
   }
 }
 
+const OPENING_AXIS_VIEW = [
+  { axisKey: '气候压力', sourceKey: '超自然极端天气', label: '超自然极端天气' },
+  { axisKey: '行动窗口', sourceKey: '行动窗口', label: '行动窗口' },
+  { axisKey: '社会残存度', sourceKey: '社会残存度', label: '社会组织度' },
+  { axisKey: '生产残余度', sourceKey: '生产残余度', label: '生产残余度' },
+  { axisKey: '冲突密度', sourceKey: '冲突密度', label: '冲突密度' },
+  { axisKey: '外部威胁主因', sourceKey: '外部威胁主因', label: '外部威胁主因' },
+  { axisKey: '外出死亡风险', sourceKey: '外出死亡风险', label: '外出死亡风险' },
+  { axisKey: '据点化程度', sourceKey: '据点化程度', label: '据点化程度' },
+] as const;
+
+function describeThreatCause(label: string, subtype: string): string {
+  if (label === '环境') {
+    return `人出到室外，要面临${subtype || '失温'}等环境威胁，灾难初期大部分人因此丧命。`;
+  }
+  if (label === '野化生物') {
+    return `在城市或远郊还有${subtype || '野化生物'}持续威胁，它们超自然地进化成适应极端低温，并以任意活体为食，攻击性很强。`;
+  }
+  if (label === '异变体') {
+    return `除了极端环境，还存在${subtype || '异变体'}造成的直接生存威胁，这类目标危险、不可预测且难以正面处理。`;
+  }
+  if (label === '暴徒') {
+    return `人类内部还要面对${subtype || '暴徒'}带来的直接暴力威胁，掠夺、围堵和伤亡随时可能发生。`;
+  }
+  if (label === '组织博弈') {
+    return `人类内部还要面对不同阵营组织间的${subtype || '组织博弈'}，时有伤亡，试探、渗透和争斗会持续升级。`;
+  }
+  if (label === '交易秩序争夺') {
+    return `在气候窗口存在的情况下，各组织间会因${subtype || '资源控制'}展开争夺，普通人很难脱离被盘剥的位置。`;
+  }
+  return label ? `当前外部威胁以${label}${subtype ? `（${subtype}）` : ''}为主。` : '未设定';
+}
+
+function describeTripFatality(label: string): string {
+  if (label === '低') return '无准备外出仍然危险，但只要抓住窗口并做好基础防护，尚不至于等同送命。';
+  if (label === '中') return '无准备外出有明显死亡风险，任何离开庇护的决定都必须谨慎评估。';
+  if (label === '高') return '无准备外出接近拿命赌博，短时间暴露也可能直接造成重伤或死亡。';
+  if (label === '极高') return '无准备外出几乎等同送命，离开掩体本身就是极高风险行为。';
+  return '未设定';
+}
+
+function describeStrongholdLevel(label: string): string {
+  if (label === '低') return '稳定据点极少，幸存者大多以零散个体或脆弱小团体形式苟活，很难形成持续控制区。';
+  if (label === '中') return '存在少量中小型据点和局部控制区，但整体仍分散脆弱，随时可能被吞并、瓦解或改旗易帜。';
+  if (label === '高') return '多个据点已经形成稳定控制范围，幸存者开始围绕据点、规则和资源重新组织生活。';
+  if (label === '极高') return '据点和控制区高度成型，区域秩序、势力边界与统治关系已经非常清晰。';
+  return '未设定';
+}
+
 function formatWorldModeAxisLine(axisName: string, axisValue: unknown): string {
   const axisRecord = axisValue && typeof axisValue === 'object' ? (axisValue as Record<string, unknown>) : {};
   const label = trimText(axisRecord.label);
   const subtype = trimText(axisRecord.subtype);
-  const numericParts = Object.entries(axisRecord)
-    .filter(([key, value]) => key !== 'label' && key !== 'subtype' && value != null && String(value).trim())
-    .map(([key, value]) => `${key}=${formatUnknownValue(value)}`);
-  const dictionaryRecord = (_.get(__worldModeDoc, ['world_mode_axis_dictionary', axisName, 'labels', label], {}) ??
-    {}) as Record<string, unknown>;
+  const view = OPENING_AXIS_VIEW.find(item => item.axisKey === axisName);
+  const sourceKey = view?.sourceKey || axisName;
+  const dictionaryRecord =
+    (_.get(__worldModeDoc, ['world_mode_axis_dictionary', sourceKey, 'labels', label], {}) ?? {}) as Record<string, unknown>;
   const description = trimText(dictionaryRecord.description);
 
-  return [
-    `${axisName}：${label || '未设定'}`,
-    subtype ? `（${subtype}）` : '',
-    numericParts.length > 0 ? `；${numericParts.join('，')}` : '',
-    description ? `；${description}` : '',
-  ].join('');
+  let resolvedDescription = description;
+  if (!resolvedDescription && axisName === '外部威胁主因') {
+    resolvedDescription = describeThreatCause(label, subtype);
+  }
+  if (!resolvedDescription && axisName === '外出死亡风险') {
+    resolvedDescription = describeTripFatality(label);
+  }
+  if (!resolvedDescription && axisName === '据点化程度') {
+    resolvedDescription = describeStrongholdLevel(label);
+  }
+
+  return `${view?.label || axisName}：${resolvedDescription || '未设定'}`;
 }
 
-function buildWorldModeAxisDictionary(worldMode: OpeningWorldModeOption | null): string {
+export function buildWorldModeAxisDictionary(worldMode: OpeningWorldModeOption | null): string {
   if (!worldMode) return '未设定';
-  const orderedAxes = [
-    '气候压力',
-    '行动窗口',
-    '社会残存度',
-    '外部威胁主因',
-    '生产残余度',
-    '冲突密度',
-    '外出死亡风险',
-    '据点化程度',
-  ];
-
-  const lines = orderedAxes
+  const lines = OPENING_AXIS_VIEW.map(item => item.axisKey)
     .map(axisName => formatWorldModeAxisLine(axisName, worldMode.axes[axisName]))
     .filter(Boolean);
 
@@ -408,7 +451,7 @@ function fillTemplateValue(context: Record<string, string>, key: string): string
 export function compileOpeningPromptTemplate(template: string, context: Record<string, string>): string {
   return String(template ?? '')
     .replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g, (_match, key: string) => fillTemplateValue(context, trimText(key)))
-    .replace(/\{\s*([^{}\n]+?)\s*\}/g, (_match, key: string) => fillTemplateValue(context, trimText(key)));
+    .replace(/(?<!\{)\{\s*([^{}\n]+?)\s*\}(?!\})/g, (_match, key: string) => fillTemplateValue(context, trimText(key)));
 }
 
 export function buildOpeningPromptContext(preset: OpeningPreset, payload: OpeningPayload): Record<string, string> {
@@ -471,9 +514,10 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
 export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: OpeningPayload): string {
   const context = buildOpeningPromptContext(preset, payload);
   const compiledTemplate = compileOpeningPromptTemplate(String(openingPromptTemplateRaw ?? '').trim(), context);
+  const finalTemplate = typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
 
   return [
-    compiledTemplate,
+    finalTemplate,
     '输出要求：只输出 <content>...</content>，可选输出一个 <option>...</option> 作为开局后的可选行动。',
   ]
     .filter(Boolean)
