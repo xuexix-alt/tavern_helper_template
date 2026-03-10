@@ -108,7 +108,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import { buildWorldModeAxisDictionary, type OpeningRouteOption, type OpeningWorldModeOption } from '../../../shared/opening';
+import {
+  buildWorldModeAxisDictionary,
+  type OpeningRouteOption,
+  type OpeningWorldModeOption,
+} from '../../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../../shared/opening.schema';
 
 const props = defineProps<{

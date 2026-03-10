@@ -13,8 +13,8 @@
   --shadow-color: rgba(18, 22, 20, 0.15);
   --glass-bg: rgba(235, 229, 213, 0.5);
   --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: 'Cormorant Garamond', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 .theme-dark {
@@ -60,8 +60,8 @@
   --muted-foreground: #f2cb05;
   --shadow-color: rgba(0, 0, 0, 0.5);
   --glass-bg: rgba(13, 13, 13, 0.65);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 .theme-ipod {
@@ -77,7 +77,7 @@
   --muted-foreground: #a5b4fc;
   --shadow-color: rgba(122, 142, 245, 0.08);
   --glass-bg: rgba(255, 255, 255, 0.45);
-  --font-sans: "Outfit", sans-serif;
+  --font-sans: 'Outfit', sans-serif;
 }
 
 .theme-amber {
@@ -182,13 +182,33 @@
   --demo-border-warning-stronger: color-mix(in srgb, var(--primary) 54%, transparent);
   --demo-border-input-warning: color-mix(in srgb, var(--primary) 48%, transparent);
 
-  --demo-gradient-primary: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 68%, var(--muted-foreground) 32%) 100%);
-  --demo-gradient-chip-active: linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, transparent) 0%, color-mix(in srgb, var(--primary) 20%, transparent) 100%);
-  --demo-gradient-opening-fade: linear-gradient(180deg, color-mix(in srgb, var(--surface) 0%, transparent) 0%, color-mix(in srgb, var(--surface) 96%, transparent) 100%);
-  --demo-gradient-transcript-fade: linear-gradient(180deg, color-mix(in srgb, var(--surface) 0%, transparent) 0%, color-mix(in srgb, var(--surface) 98%, transparent) 100%);
+  --demo-gradient-primary: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    color-mix(in srgb, var(--primary) 68%, var(--muted-foreground) 32%) 100%
+  );
+  --demo-gradient-chip-active: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 8%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 20%, transparent) 100%
+  );
+  --demo-gradient-opening-fade: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 0%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 96%, transparent) 100%
+  );
+  --demo-gradient-transcript-fade: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 0%, transparent) 0%,
+    color-mix(in srgb, var(--surface) 98%, transparent) 100%
+  );
 
-  --demo-shadow-shell: 0 24px 60px color-mix(in srgb, var(--shadow-color) 80%, transparent), inset 0 1px 0 color-mix(in srgb, white 45%, transparent);
-  --demo-shadow-accent-inset: 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent) inset, 0 12px 28px color-mix(in srgb, var(--primary) 8%, transparent);
+  --demo-shadow-shell:
+    0 24px 60px color-mix(in srgb, var(--shadow-color) 80%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 45%, transparent);
+  --demo-shadow-accent-inset:
+    0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent) inset,
+    0 12px 28px color-mix(in srgb, var(--primary) 8%, transparent);
   --demo-shadow-drawer: -24px 0 48px color-mix(in srgb, var(--shadow-color) 90%, transparent);
   --demo-bg-gradient: var(--bg-gradient);
 
@@ -297,8 +317,10 @@
 .theme-ipod .hud-panel {
   border-radius: 32px !important;
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
-  box-shadow: 0 10px 40px rgba(122, 142, 245, 0.05), inset 0 2px 10px rgba(255, 255, 255, 0.9) !important;
-  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%) !important;
+  box-shadow:
+    0 10px 40px rgba(122, 142, 245, 0.05),
+    inset 0 2px 10px rgba(255, 255, 255, 0.9) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 100%) !important;
 }
 
 .theme-amber .clip-corner {
@@ -320,7 +342,8 @@
 
 .theme-amber .demo-grid-bg {
   opacity: 0.05 !important;
-  background-image: linear-gradient(var(--primary) 1px, transparent 1px), linear-gradient(90deg, var(--primary) 1px, transparent 1px) !important;
+  background-image:
+    linear-gradient(var(--primary) 1px, transparent 1px), linear-gradient(90deg, var(--primary) 1px, transparent 1px) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

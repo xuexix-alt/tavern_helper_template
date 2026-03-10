@@ -19,7 +19,12 @@
         <button type="button" class="toggle-btn clip-corner-sm" @click="$emit('toggle-opening')">
           {{ expanded ? '收起开场' : '展开开场' }}
         </button>
-        <button v-if="item.canOpenDetail" type="button" class="detail-btn clip-corner-sm" @click="$emit('open-detail', item)">
+        <button
+          v-if="item.canOpenDetail"
+          type="button"
+          class="detail-btn clip-corner-sm"
+          @click="$emit('open-detail', item)"
+        >
           详情
         </button>
       </div>
@@ -65,7 +70,11 @@ const showBody = computed(() => {
   border: 1px solid var(--demo-border-warning-stronger);
   background:
     radial-gradient(circle at top left, rgba(191, 158, 96, 0.12), transparent 42%),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 95%, transparent), color-mix(in srgb, var(--surface) 98%, black 2%));
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 95%, transparent),
+      color-mix(in srgb, var(--surface) 98%, black 2%)
+    );
   box-shadow: 0 18px 34px var(--demo-surface-shadow-soft);
 }
 

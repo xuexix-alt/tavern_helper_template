@@ -35,7 +35,12 @@
 
         <button type="button" class="send-btn secondary mini clip-corner-sm" @click="$emit('jump-latest')">最新</button>
         <button type="button" class="send-btn secondary mini clip-corner-sm" @click="$emit('refresh')">刷新</button>
-        <button type="button" class="send-btn secondary mini clip-corner-sm" :disabled="busy || !canRoll" @click="$emit('roll')">
+        <button
+          type="button"
+          class="send-btn secondary mini clip-corner-sm"
+          :disabled="busy || !canRoll"
+          @click="$emit('roll')"
+        >
           ROLL
         </button>
         <button type="button" class="send-btn clip-corner-sm" :disabled="busy" @click="$emit('submit')">

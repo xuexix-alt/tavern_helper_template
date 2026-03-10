@@ -22,10 +22,17 @@
         <template v-if="item.canDeleteFrom">
           <template v-if="showRollbackConfirm">
             <span class="rollback-tip">将删除当前楼层及其后续所有楼层</span>
-            <button type="button" class="action-btn danger clip-corner-sm" :disabled="busy" @click="$emit('confirm-rollback', item)">
+            <button
+              type="button"
+              class="action-btn danger clip-corner-sm"
+              :disabled="busy"
+              @click="$emit('confirm-rollback', item)"
+            >
               确认回退
             </button>
-            <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-rollback')">取消</button>
+            <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-rollback')">
+              取消
+            </button>
           </template>
           <button
             v-else
@@ -37,7 +44,12 @@
             回退删除
           </button>
         </template>
-        <button v-if="item.canOpenDetail" type="button" class="detail-btn clip-corner-sm" @click="$emit('open-detail', item)">
+        <button
+          v-if="item.canOpenDetail"
+          type="button"
+          class="detail-btn clip-corner-sm"
+          @click="$emit('open-detail', item)"
+        >
           详情
         </button>
       </div>
@@ -63,19 +75,35 @@
           >
             ✓ 确认
           </button>
-          <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-edit')">取消</button>
+          <button type="button" class="action-btn clip-corner-sm" :disabled="busy" @click="$emit('cancel-edit')">
+            取消
+          </button>
         </div>
       </template>
-      <div v-else-if="item.isStreaming" class="transcript-body html-body is-stream-stage" v-html="item.streamHtml"></div>
+      <div
+        v-else-if="item.isStreaming"
+        class="transcript-body html-body is-stream-stage"
+        v-html="item.streamHtml"
+      ></div>
       <div v-else class="transcript-body html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
 
     <footer v-if="showSwipeControls" class="swipe-actions">
-      <button type="button" class="swipe-btn clip-corner-sm" :disabled="busy || !canSwipePrev" @click="$emit('swipe', 'prev')">
+      <button
+        type="button"
+        class="swipe-btn clip-corner-sm"
+        :disabled="busy || !canSwipePrev"
+        @click="$emit('swipe', 'prev')"
+      >
         ←
       </button>
       <span v-if="swipeLabel" class="swipe-label">{{ swipeLabel }}</span>
-      <button type="button" class="swipe-btn clip-corner-sm" :disabled="busy || !canSwipeNext" @click="$emit('swipe', 'next')">
+      <button
+        type="button"
+        class="swipe-btn clip-corner-sm"
+        :disabled="busy || !canSwipeNext"
+        @click="$emit('swipe', 'next')"
+      >
         →
       </button>
     </footer>

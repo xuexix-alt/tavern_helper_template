@@ -410,8 +410,8 @@ function formatWorldModeAxisLine(axisName: string, axisValue: unknown): string {
   const subtype = trimText(axisRecord.subtype);
   const view = OPENING_AXIS_VIEW.find(item => item.axisKey === axisName);
   const sourceKey = view?.sourceKey || axisName;
-  const dictionaryRecord =
-    (_.get(__worldModeDoc, ['world_mode_axis_dictionary', sourceKey, 'labels', label], {}) ?? {}) as Record<string, unknown>;
+  const dictionaryRecord = (_.get(__worldModeDoc, ['world_mode_axis_dictionary', sourceKey, 'labels', label], {}) ??
+    {}) as Record<string, unknown>;
   const description = trimText(dictionaryRecord.description);
 
   let resolvedDescription = description;

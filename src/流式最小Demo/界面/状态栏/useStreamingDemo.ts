@@ -44,7 +44,14 @@ import type {
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
 
-const DEMO_THEME_CLASS_NAMES = ['theme-tech', 'theme-dark', 'theme-gold', 'theme-ios', 'theme-ipod', 'theme-amber'] as const;
+const DEMO_THEME_CLASS_NAMES = [
+  'theme-tech',
+  'theme-dark',
+  'theme-gold',
+  'theme-ios',
+  'theme-ipod',
+  'theme-amber',
+] as const;
 
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
@@ -1275,10 +1282,14 @@ export function useStreamingDemo() {
     queueHidePolicy('mounted');
   });
 
-  watch(theme, value => {
-    applyDemoTheme(value);
-    queuePersistReaderChatState();
-  }, { immediate: true });
+  watch(
+    theme,
+    value => {
+      applyDemoTheme(value);
+      queuePersistReaderChatState();
+    },
+    { immediate: true },
+  );
 
   watch(density, () => {
     queuePersistReaderChatState();

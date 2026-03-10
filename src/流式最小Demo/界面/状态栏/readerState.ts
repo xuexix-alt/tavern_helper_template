@@ -14,7 +14,12 @@ export function normalizeDensity(input: unknown): TranscriptDensity | null {
 }
 
 export function normalizeTheme(input: unknown): DemoTheme | null {
-  return input === 'tech' || input === 'dark' || input === 'gold' || input === 'ios' || input === 'ipod' || input === 'amber'
+  return input === 'tech' ||
+    input === 'dark' ||
+    input === 'gold' ||
+    input === 'ios' ||
+    input === 'ipod' ||
+    input === 'amber'
     ? input
     : null;
 }
@@ -65,6 +70,5 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
       },
       { type: 'chat' },
     );
-  } catch {
-  }
+  } catch {}
 }
