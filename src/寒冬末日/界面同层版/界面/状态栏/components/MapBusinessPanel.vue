@@ -1,39 +1,5 @@
 <template>
   <section class="map-panel">
-    <div class="map-top-metrics">
-      <article class="metric-box clip-corner-sm">
-        <div class="metric-title">🛡 庇护所等级</div>
-        <div class="metric-value">
-          <strong>{{ shelterLevel }}</strong
-          ><span>级</span>
-        </div>
-      </article>
-      <article class="metric-box clip-corner-sm">
-        <div class="metric-row">
-          <div class="metric-title">🎲 今日投掷点数</div>
-          <button type="button" class="metric-action">校准</button>
-        </div>
-        <div class="metric-text">{{ dailyRoll }}</div>
-      </article>
-      <article class="metric-box clip-corner-sm">
-        <div class="metric-title">⏳ 距离上次保底升级</div>
-        <div class="metric-text">{{ pityText }}</div>
-      </article>
-    </div>
-    <section class="map-section">
-      <div class="section-title">🔒 可扩展区域状态</div>
-      <div class="expansion-list">
-        <div class="expansion-card clip-corner-sm" :class="{ unlocked: expansion.medical !== '未解锁' }">
-          <strong>医疗翼</strong><span>{{ expansion.medical }}</span>
-        </div>
-        <div class="expansion-card clip-corner-sm" :class="{ unlocked: expansion.workshop !== '未解锁' }">
-          <strong>制造工坊</strong><span>{{ expansion.workshop }}</span>
-        </div>
-        <div class="expansion-card clip-corner-sm" :class="{ unlocked: expansion.hangar !== '未解锁' }">
-          <strong>载具格纳库</strong><span>{{ expansion.hangar }}</span>
-        </div>
-      </div>
-    </section>
     <section class="map-section">
       <div class="section-title">🗺 伊甸空间地图</div>
       <button type="button" class="scope-btn clip-corner-sm">+ +庇护范围</button>
@@ -111,14 +77,6 @@ import { useShelterScopeStore } from '../../../../界面/shelterScopeStore';
 import { floorRoomCapacity, isRoomSheltered } from '../../../../util/shelter_scope';
 const store = useDataStore();
 const scopeStore = useShelterScopeStore();
-const shelterLevel = computed(() => String(_.get(store.data, '庇护所.庇护所等级', '--')));
-const dailyRoll = computed(() => String(_.get(store.data, '庇护所.今日投掷点数', '--')) || '--');
-const pityText = computed(() => String(_.get(store.data, '庇护所.距离上次升级', '--')) || '--');
-const expansion = computed(() => ({
-  medical: String(_.get(store.data, '庇护所.可扩展区域.医疗翼', '未解锁')),
-  workshop: String(_.get(store.data, '庇护所.可扩展区域.制造工坊', '未解锁')),
-  hangar: String(_.get(store.data, '庇护所.可扩展区域.载具格纳库', '未解锁')),
-}));
 function namesAt(path: string) {
   const raw = _.get(store.data, path, []);
   return Array.isArray(raw) ? raw.map(item => String(item ?? '').trim()).filter(Boolean) : [];
@@ -234,38 +192,23 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   flex-direction: column;
   gap: 22px;
 }
-.map-top-metrics,
-.map-zone-grid,
-.expansion-list {
+.map-zone-grid {
   display: grid;
   gap: 16px;
 }
-.map-top-metrics {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.metric-box,
 .zone-card,
-.floor-card,
-.expansion-card {
+.floor-card {
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 24%, transparent);
 }
-.metric-box {
-  padding: 16px;
-}
-.metric-title,
 .section-title,
 .floor-title,
 .zone-title,
 .zone-tag,
-.metric-action,
-.metric-row,
-.metric-text,
 .room-card strong,
 .room-card span {
   font-family: var(--demo-font-mono);
 }
-.metric-title,
 .section-title,
 .floor-title,
 .zone-title {
@@ -273,64 +216,14 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   font-size: 14px;
   font-weight: 700;
 }
-.metric-row,
 .zone-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-.metric-value {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 10px;
-}
-.metric-value strong {
-  font-size: 46px;
-  line-height: 1;
-  color: var(--demo-text-accent);
-}
-.metric-value span {
-  font-size: 18px;
-  color: var(--demo-text-secondary);
-}
-.metric-action {
-  min-height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--demo-border-accent-active);
-  background: transparent;
-  color: var(--demo-text-accent);
-  font-size: 12px;
-}
-.metric-text {
-  margin-top: 10px;
-  font-size: 18px;
-  color: var(--demo-text-accent);
-}
 .section-title {
   font-size: 16px;
-}
-.expansion-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.expansion-card {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.expansion-card strong {
-  font-size: 18px;
-  color: var(--demo-text-primary);
-}
-.expansion-card span {
-  font-size: 16px;
-  color: var(--demo-color-danger);
-}
-.expansion-card.unlocked span {
-  color: var(--demo-text-accent);
 }
 .scope-btn {
   width: fit-content;
@@ -419,8 +312,6 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   border-radius: 12px;
 }
 @media (max-width: 980px) {
-  .map-top-metrics,
-  .expansion-list,
   .map-zone-grid {
     grid-template-columns: 1fr;
   }
@@ -432,12 +323,86 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   }
 }
 @media (max-width: 760px) {
-  .metric-value strong {
-    font-size: 38px;
+  .map-panel,
+  .map-section {
+    gap: 10px;
   }
-  .floor-grid,
+
+  .section-title {
+    font-size: 14px;
+  }
+
+  .scope-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  .compact-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .floor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .zone-card,
+  .floor-card {
+    padding: 9px;
+    gap: 8px;
+  }
+  .zone-head {
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .zone-tag {
+    min-height: 22px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .floor-warn {
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.3;
+    border-radius: 8px;
+  }
+  .room-grid {
+    gap: 5px;
+  }
+  .room-card {
+    min-height: 50px;
+    padding: 6px;
+    gap: 3px;
+    border-radius: 8px;
+  }
+  .room-dot {
+    width: 6px;
+    height: 6px;
+  }
+  .room-card strong {
+    font-size: 11px;
+    line-height: 1.1;
+  }
+  .room-card span {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 420px) {
   .compact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .floor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .room-card {
+    min-height: 46px;
+    padding: 5px;
+  }
+  .room-card strong {
+    font-size: 10px;
+  }
+  .room-card span {
+    font-size: 8px;
   }
 }
 </style>

@@ -226,4 +226,18 @@ const showBody = computed(() => {
 .html-body :deep(p:last-child) {
   margin-bottom: 0;
 }
+
+@media (max-width: 760px) {
+  .transcript-item {
+    padding: 10px 8px;
+  }
+
+  .opening-banner {
+    padding: 10px 10px;
+  }
+
+  .transcript-body {
+    padding: 10px 8px;
+  }
+}
 </style>

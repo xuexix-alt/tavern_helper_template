@@ -6,26 +6,19 @@
         <span class="ui-brand-copy">NEXUS // CORE_SYNC</span>
       </div>
 
-      <div class="ui-topbar-center">
-        <button type="button" class="ui-signal-btn" @click="workbenchModalOpen = true">
-          <span>系统</span>
-          <span class="ui-bars">
-            <i v-for="i in 8" :key="`log-${i}`" :class="{ active: i <= 5 }"></i>
-          </span>
-        </button>
-
-        <button type="button" class="ui-signal-btn" @click="mapModalOpen = true">
-          <span>地图</span>
-          <span class="ui-bars">
-            <i v-for="i in 8" :key="`map-${i}`" :class="{ active: i <= 3 }"></i>
-          </span>
-        </button>
-      </div>
-
       <div class="ui-topbar-actions">
         <span class="ui-online">● 在线</span>
 
-        <button type="button" class="ui-icon-btn" @click="roleDrawerOpen = true">人物</button>
+        <button
+          type="button"
+          class="ui-icon-btn"
+          @click="
+            closeUtilityDrawer();
+            roleDrawerOpen = true;
+          "
+        >
+          人物
+        </button>
 
         <button type="button" class="ui-icon-btn" @click="settingsModalOpen = true">排版</button>
 
@@ -43,23 +36,10 @@
         </div>
 
         <div class="theme-dropdown">
-          <button type="button" class="ui-icon-btn theme-trigger" @click="themeDropdownOpen = !themeDropdownOpen">
+          <button type="button" class="ui-icon-btn theme-trigger" @click="themeModalOpen = true">
             {{ currentThemeLabel }}
-            <span :class="['theme-caret', { open: themeDropdownOpen }]">⌄</span>
+            <span class="theme-caret">⌄</span>
           </button>
-          <div v-if="themeDropdownOpen" class="theme-dropdown-menu clip-corner-sm">
-            <button
-              v-for="item in themeItems"
-              :key="item.value"
-              type="button"
-              class="theme-option"
-              :class="{ active: theme === item.value }"
-              @click="selectTheme(item.value)"
-            >
-              <span>{{ item.label }}</span>
-              <span v-if="theme === item.value">✓</span>
-            </button>
-          </div>
         </div>
       </div>
     </header>
@@ -73,7 +53,10 @@
         type="button"
         class="ui-sidebar-toggle"
         :class="{ open: roleDrawerOpen }"
-        @click="roleDrawerOpen = !roleDrawerOpen"
+        @click="
+          closeUtilityDrawer();
+          roleDrawerOpen = !roleDrawerOpen;
+        "
       >
         <span class="ui-sidebar-toggle-arrow">›</span>
         <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
@@ -94,30 +77,13 @@
             :active-character-key="activeRoleKey"
             @select-character="handleRoleSelect"
             @roster-change="handleRosterChange"
+            @collapse="closeRoleDrawer"
           />
         </div>
       </aside>
 
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
-          <div class="ui-transcript-head">
-            <div>
-              <span class="demo-kicker">TRANSCRIPT // LIVE_VIEW</span>
-              <strong>第 0 层同层阅读工作台</strong>
-              <p>{{ readerSummary.storySummary || '等待首段剧情建立当前阅读上下文。' }}</p>
-            </div>
-
-            <div class="ui-transcript-meta">
-              <span class="ui-meta-pill">总楼层 {{ transcriptStats.total }}</span>
-              <span class="ui-meta-pill">助手 {{ transcriptStats.assistant }}</span>
-              <span class="ui-meta-pill">{{ readerSummary.statusLabel }}</span>
-              <span class="ui-meta-pill">{{ readerSummary.readingModeLabel }}</span>
-              <button type="button" class="ui-meta-pill action" :disabled="followLatest" @click="jumpLatest">
-                {{ followLatest ? '已在最新' : '回到最新' }}
-              </button>
-            </div>
-          </div>
-
           <div class="ui-transcript-stage">
             <TranscriptList
               ref="transcriptListRef"
@@ -150,36 +116,78 @@
         </section>
 
         <section class="ui-bottom-dock">
-          <div class="ui-bottom-quickline">
-            <div class="ui-quick-card">
-              <span class="demo-kicker">LATEST USER</span>
-              <strong>{{ readerSummary.latestUserPreview || '暂无用户输入' }}</strong>
-            </div>
-            <div class="ui-quick-card">
-              <span class="demo-kicker">LATEST ASSISTANT</span>
-              <strong>{{ readerSummary.latestAssistantPreview || '等待流式输出' }}</strong>
-            </div>
-            <div class="ui-quick-card compact">
-              <span class="demo-kicker">SWIPE</span>
-              <strong>{{ latestAssistantSwipeLabel || '1/1' }}</strong>
+          <transition name="utility-mask-fade">
+            <div v-if="activeUtilityDrawer" class="ui-utility-mask" @click="closeUtilityDrawer"></div>
+          </transition>
+
+          <div class="ui-bottom-tools">
+            <transition name="utility-drawer-rise">
+              <section
+                v-if="activeUtilityDrawer"
+                class="ui-bottom-drawer clip-corner"
+                :class="`is-${activeUtilityDrawer}`"
+              >
+                <header class="ui-bottom-drawer-head">
+                  <div>
+                    <span class="demo-kicker">{{ activeUtilityMeta.eyebrow }}</span>
+                    <strong>{{ activeUtilityMeta.title }}</strong>
+                    <p>{{ activeUtilityMeta.subtitle }}</p>
+                  </div>
+                  <button type="button" class="ui-close-btn inline" @click="closeUtilityDrawer">✕</button>
+                </header>
+
+                <div class="ui-bottom-drawer-body" :class="`is-${activeUtilityDrawer}`">
+                  <WorkbenchTabs
+                    v-if="activeUtilityDrawer === 'system'"
+                    :logs="logs"
+                    :busy="busy"
+                    :transcript-total="transcriptStats.total"
+                    :assistant-count="transcriptStats.assistant"
+                    :latest-swipe-label="latestAssistantSwipeLabel"
+                  />
+                  <MapBusinessPanel v-else-if="activeUtilityDrawer === 'map'" />
+                </div>
+              </section>
+            </transition>
+
+            <div class="ui-bottom-tool-row">
+              <button
+                type="button"
+                class="ui-signal-btn"
+                :class="{ active: activeUtilityDrawer === 'system' }"
+                @click="toggleUtilityDrawer('system')"
+              >
+                <span>系统</span>
+                <span class="ui-bars">
+                  <i v-for="i in 8" :key="`log-${i}`" :class="{ active: i <= 5 }"></i>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="ui-signal-btn"
+                :class="{ active: activeUtilityDrawer === 'map' }"
+                @click="toggleUtilityDrawer('map')"
+              >
+                <span>地图</span>
+                <span class="ui-bars">
+                  <i v-for="i in 8" :key="`map-${i}`" :class="{ active: i <= 3 }"></i>
+                </span>
+              </button>
             </div>
           </div>
 
           <BottomComposer
+            ref="composerAnchorRef"
             v-model="input"
             :busy="busy"
-            :status="status"
             :can-roll="Boolean(latestUserItem)"
-            :swipe-label="latestAssistantSwipeLabel"
-            :can-swipe-prev="canSwipeLatestAssistantPrev"
-            :can-swipe-next="canSwipeLatestAssistantNext"
+            :choice-options="latestAssistantItem?.options ?? []"
             :role-tabs="roleTabs"
             :active-role-key="activeRoleKey"
             @submit="runDemo"
             @roll="rollLatestTurn"
             @swipe="swipeLatestAssistant"
-            @jump-latest="jumpLatest"
-            @refresh="refreshWorkbench"
             @open-role="openRoleFromComposer"
           />
         </section>
@@ -187,37 +195,6 @@
     </div>
 
     <RadialQuickMenu :items="roleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
-
-    <HudModal
-      :open="workbenchModalOpen"
-      title="系统 TAB"
-      subtitle="这里开始承接 docs/UI 的系统页签、进度条、告警块和确认窗语义。"
-      variant="tasks"
-      icon="▦"
-      eyebrow="TASKS // SYSTEM"
-      @close="workbenchModalOpen = false"
-    >
-      <WorkbenchTabs
-        :logs="logs"
-        :busy="busy"
-        :transcript-total="transcriptStats.total"
-        :assistant-count="transcriptStats.assistant"
-        :latest-swipe-label="latestAssistantSwipeLabel"
-      />
-    </HudModal>
-
-    <HudModal
-      :open="mapModalOpen"
-      title="战术地图"
-      subtitle="使用 docs/UI 的地图卡片语言渲染真实业务数据，而不是复用旧地图外观。"
-      variant="map"
-      icon="🗺"
-      eyebrow="MAP // TACTICAL"
-      wide
-      @close="mapModalOpen = false"
-    >
-      <MapBusinessPanel />
-    </HudModal>
 
     <HudModal
       :open="componentLibraryOpen"
@@ -230,6 +207,30 @@
       @close="componentLibraryOpen = false"
     >
       <ComponentLibraryPanel />
+    </HudModal>
+
+    <HudModal
+      :open="themeModalOpen"
+      title="主题选择"
+      subtitle="选择当前阅读界面的主题外观。"
+      variant="typography"
+      icon="◌"
+      eyebrow="THEME // SELECT"
+      @close="themeModalOpen = false"
+    >
+      <div class="theme-modal-list">
+        <button
+          v-for="item in themeItems"
+          :key="item.value"
+          type="button"
+          class="theme-modal-option clip-corner-sm"
+          :class="{ active: theme === item.value }"
+          @click="selectTheme(item.value)"
+        >
+          <span>{{ item.label }}</span>
+          <span v-if="theme === item.value">✓</span>
+        </button>
+      </div>
     </HudModal>
 
     <HudModal
@@ -302,7 +303,6 @@ import { useStreamingDemo } from '../useStreamingDemo';
 const {
   input,
   busy,
-  status,
   filterMode,
   density,
   theme,
@@ -314,6 +314,7 @@ const {
   visibleTranscript,
   transcriptStats,
   latestUserItem,
+  latestAssistantItem,
   readerSummary,
   logs,
   editingUserMessageId,
@@ -330,7 +331,6 @@ const {
   shouldShowOpeningSetup,
   runDemo,
   rollLatestTurn,
-  refreshWorkbench,
   updateOpeningMeta,
   updateOpeningField,
   updateOpeningWorldMode,
@@ -353,12 +353,11 @@ const {
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 const roleDrawerOpen = ref(false);
-const workbenchModalOpen = ref(false);
-const mapModalOpen = ref(false);
 const settingsModalOpen = ref(false);
 const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
-const themeDropdownOpen = ref(false);
+const themeModalOpen = ref(false);
+const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 const roleTabs = ref<Array<{ key: string; label: string; statusClass?: string; statusText?: string }>>([]);
 const activeRoleKey = ref<string | null>(null);
 
@@ -377,6 +376,21 @@ const themeItems: Array<{ label: string; value: DemoTheme }> = [
 ];
 
 const currentThemeLabel = computed(() => themeItems.find(item => item.value === theme.value)?.label ?? '科技');
+const activeUtilityMeta = computed(() => {
+  if (activeUtilityDrawer.value === 'map') {
+    return {
+      title: '战术地图',
+      subtitle: '地图、区域和战术信息从这里向上展开。',
+      eyebrow: 'MAP // TACTICAL',
+    };
+  }
+
+  return {
+    title: '系统 TAB',
+    subtitle: '日志、统计和工作台辅助信息从这里向上展开。',
+    eyebrow: 'TASKS // SYSTEM',
+  };
+});
 
 function jumpLatest() {
   transcriptListRef.value?.scrollToLatest?.();
@@ -384,6 +398,15 @@ function jumpLatest() {
 
 function closeRoleDrawer() {
   roleDrawerOpen.value = false;
+}
+
+function toggleUtilityDrawer(type: 'system' | 'map') {
+  roleDrawerOpen.value = false;
+  activeUtilityDrawer.value = activeUtilityDrawer.value === type ? null : type;
+}
+
+function closeUtilityDrawer() {
+  activeUtilityDrawer.value = null;
 }
 
 function handleRosterChange(roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>) {
@@ -400,23 +423,23 @@ function handleRoleSelect(key: string) {
 
 function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
+  closeUtilityDrawer();
   roleDrawerOpen.value = true;
 }
 
 function selectTheme(nextTheme: DemoTheme) {
   theme.value = nextTheme;
-  themeDropdownOpen.value = false;
+  themeModalOpen.value = false;
 }
 
 useEventListener(window, 'keydown', event => {
   if (event.key !== 'Escape') return;
   if (roleDrawerOpen.value) roleDrawerOpen.value = false;
-  else if (themeDropdownOpen.value) themeDropdownOpen.value = false;
+  else if (activeUtilityDrawer.value) activeUtilityDrawer.value = null;
+  else if (themeModalOpen.value) themeModalOpen.value = false;
   else if (componentLibraryOpen.value) componentLibraryOpen.value = false;
-  else if (mapModalOpen.value) mapModalOpen.value = false;
   else if (openingModalOpen.value) openingModalOpen.value = false;
   else if (settingsModalOpen.value) settingsModalOpen.value = false;
-  else if (workbenchModalOpen.value) workbenchModalOpen.value = false;
 });
 </script>
 
@@ -445,19 +468,14 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-topbar-brand,
-.ui-topbar-center,
 .ui-topbar-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.ui-topbar-center {
-  flex: 1 1 auto;
-  justify-content: center;
-}
-
 .ui-topbar-actions {
+  margin-left: auto;
   justify-content: flex-end;
 }
 
@@ -508,6 +526,11 @@ useEventListener(window, 'keydown', event => {
   padding: 0 12px;
   border-radius: 12px;
 }
+.ui-signal-btn.active {
+  color: var(--demo-text-accent);
+  border-color: var(--demo-border-accent-active);
+  background: var(--demo-gradient-chip-active);
+}
 
 .ui-bars {
   display: inline-flex;
@@ -552,40 +575,30 @@ useEventListener(window, 'keydown', event => {
   gap: 8px;
 }
 .theme-caret {
-  transition: transform 0.18s ease;
+  display: inline-flex;
 }
-.theme-caret.open {
-  transform: rotate(180deg);
+.theme-modal-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
-.theme-dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  min-width: 150px;
-  padding: 6px;
-  border: 1px solid var(--demo-border-accent-soft);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--shadow-color) 72%, transparent);
-  z-index: 15;
-}
-.theme-option {
-  width: 100%;
-  min-height: 36px;
+.theme-modal-option {
+  min-height: 42px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
   color: var(--demo-text-primary);
   font-family: var(--demo-font-mono);
   font-size: 12px;
 }
-.theme-option.active {
+.theme-modal-option.active {
   color: var(--demo-text-accent);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: var(--demo-border-accent-active);
+  background: var(--demo-gradient-chip-active);
 }
 
 .ui-host-body {
@@ -720,46 +733,6 @@ useEventListener(window, 'keydown', event => {
   padding: 14px;
 }
 
-.ui-transcript-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ui-transcript-head strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 18px;
-}
-
-.ui-transcript-head p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--demo-text-secondary);
-}
-
-.ui-transcript-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.ui-meta-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 10px;
-  border-radius: 999px;
-}
-
-.ui-meta-pill.action:disabled {
-  opacity: 0.6;
-}
-
 .ui-transcript-stage {
   min-width: 0;
 }
@@ -769,35 +742,121 @@ useEventListener(window, 'keydown', event => {
   flex-direction: column;
   gap: 10px;
   padding: 0 14px 14px;
+  position: relative;
+  z-index: 5;
 }
 
-.ui-bottom-quickline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 130px;
-  gap: 10px;
+.ui-bottom-tools {
+  position: relative;
+  z-index: 16;
 }
 
-.ui-quick-card {
+.ui-bottom-tool-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 12px;
-  border-radius: 16px;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 18px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 24%, transparent);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 
-.ui-quick-card strong {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--demo-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ui-bottom-drawer {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  width: min(100%, 56rem);
+  max-height: min(72vh, 42rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 -10px 34px color-mix(in srgb, var(--shadow-color) 72%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
-.ui-quick-card.compact {
+.ui-bottom-drawer.is-map {
+  width: min(100%, 72rem);
+}
+
+.ui-bottom-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--demo-border-accent-soft);
+}
+
+.ui-bottom-drawer-head strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+}
+
+.ui-bottom-drawer-head p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--demo-text-secondary);
+}
+
+.ui-bottom-drawer-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 18%, transparent), transparent);
+}
+
+.ui-bottom-drawer-body.is-map {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), transparent),
+    linear-gradient(to right, color-mix(in srgb, var(--border) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 14%, transparent) 1px, transparent 1px);
+  background-size:
+    auto,
+    48px 48px,
+    48px 48px;
+}
+
+.ui-bottom-drawer-body.is-map :deep(#shelter-section) {
+  background: transparent;
+  padding: 0;
+}
+
+.ui-bottom-drawer-body.is-map :deep(#shelter-section > .section-title) {
+  display: none;
+}
+
+.ui-bottom-drawer-body.is-map :deep(.shelter-grid) {
+  gap: 18px;
+}
+
+.ui-bottom-drawer-body.is-map :deep(.shelter-item),
+.ui-bottom-drawer-body.is-map :deep(.map-zone),
+.ui-bottom-drawer-body.is-map :deep(.floor-zone),
+.ui-bottom-drawer-body.is-map :deep(.expansion-card),
+.ui-bottom-drawer-body.is-map :deep(.room-cell) {
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.ui-bottom-drawer-body.is-map :deep(.map-container),
+.ui-bottom-drawer-body.is-map :deep(.floor-zone),
+.ui-bottom-drawer-body.is-map :deep(.map-zone) {
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.ui-close-btn.inline {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -808,14 +867,38 @@ useEventListener(window, 'keydown', event => {
   background: color-mix(in srgb, black 42%, transparent);
 }
 
+.ui-utility-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  background: color-mix(in srgb, black 26%, transparent);
+}
+
 .sidebar-mask-fade-enter-active,
-.sidebar-mask-fade-leave-active {
+.sidebar-mask-fade-leave-active,
+.utility-mask-fade-enter-active,
+.utility-mask-fade-leave-active {
   transition: opacity 0.18s ease;
 }
 
 .sidebar-mask-fade-enter-from,
-.sidebar-mask-fade-leave-to {
+.sidebar-mask-fade-leave-to,
+.utility-mask-fade-enter-from,
+.utility-mask-fade-leave-to {
   opacity: 0;
+}
+
+.utility-drawer-rise-enter-active,
+.utility-drawer-rise-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.24s ease;
+}
+
+.utility-drawer-rise-enter-from,
+.utility-drawer-rise-leave-to {
+  opacity: 0;
+  transform: translateY(14px);
 }
 
 :deep(.transcript-card) {
@@ -844,12 +927,6 @@ useEventListener(window, 'keydown', event => {
     flex-wrap: wrap;
   }
 
-  .ui-topbar-center {
-    order: 3;
-    width: 100%;
-    justify-content: flex-start;
-  }
-
   .ui-sidebar {
     position: fixed;
     top: 58px;
@@ -870,8 +947,8 @@ useEventListener(window, 'keydown', event => {
   .ui-topbar,
   .ui-transcript-panel,
   .ui-bottom-dock {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
   .ui-topbar-actions,
@@ -884,16 +961,59 @@ useEventListener(window, 'keydown', event => {
     flex-wrap: wrap;
   }
 
-  .ui-transcript-head {
-    flex-direction: column;
-  }
-
-  .ui-transcript-meta {
-    justify-content: flex-start;
-  }
-
-  .ui-bottom-quickline {
+  .theme-modal-list {
     grid-template-columns: 1fr;
+  }
+
+  .ui-bottom-tool-row {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .ui-bottom-tool-row .ui-signal-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .ui-bottom-drawer {
+    left: 0;
+    right: 0;
+    width: 100%;
+    bottom: calc(100% + 6px);
+    max-height: calc(100dvh - 110px);
+    border-radius: 18px 18px 12px 12px;
+  }
+
+  .ui-bottom-drawer.is-map {
+    max-height: calc(100dvh - 96px);
+  }
+
+  .ui-bottom-drawer-head {
+    padding: 10px 12px 8px;
+    gap: 8px;
+  }
+
+  .ui-bottom-drawer-head strong {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .ui-bottom-drawer-head p {
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .ui-bottom-drawer.is-map .ui-bottom-drawer-head p {
+    display: none;
+  }
+
+  .ui-bottom-drawer-body {
+    padding: 10px 12px 12px;
+  }
+
+  .ui-bottom-drawer-body.is-map {
+    padding: 8px 10px 10px;
   }
 
   .ui-sidebar {

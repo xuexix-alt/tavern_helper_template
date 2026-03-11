@@ -6,6 +6,7 @@
         <select v-model="selectedSourceKey" class="source-select clip-corner-sm">
           <option v-for="option in sourceOptions" :key="option.key" :value="option.key">{{ option.label }}</option>
         </select>
+        <small class="source-caption">当前显示：{{ sourceLabel }}</small>
       </label>
       <div v-if="isDuringExtraAnalysis" class="analysis-flag">解析中</div>
     </div>
@@ -18,6 +19,8 @@
         SYSTEM
       </button>
     </div>
+
+    <button type="button" class="collapse-btn clip-corner-sm" @click="emit('collapse')">[ COLLAPSE_PANEL ]</button>
 
     <template v-if="pageTab === 'agents'">
       <div class="tab-row" role="tablist" aria-label="角色分类">
@@ -54,35 +57,62 @@
           </button>
 
           <div v-if="selectedCharacterKey === entry.key" class="accordion-body">
-            <div class="meta-row">
-              <span class="meta-box">职业：{{ String(entry.role.职业 ?? '--') }}</span>
+            <div class="meta-row meta-row-top">
+              <span class="meta-box">关系：{{ displayText(entry.role.关系, '无') }}</span>
+              <span class="meta-box">倾向：{{ displayText(entry.role.关系倾向, '中立') }}</span>
+              <span class="meta-box">状态：{{ statusText(entry) }}</span>
               <span class="meta-code">编号：{{ characterCode(entry) }}</span>
             </div>
 
-            <div class="stat-list">
-              <div class="stat-row">
-                <span>力量</span>
-                <div class="stat-track"><i :style="statWidth(entry.role.力量)" /></div>
-                <strong>{{ safeNumber(entry.role.力量) }}</strong>
-              </div>
-              <div class="stat-row">
-                <span>智力</span>
-                <div class="stat-track"><i :style="statWidth(entry.role.智力)" /></div>
-                <strong>{{ safeNumber(entry.role.智力) }}</strong>
-              </div>
-              <div class="stat-row">
-                <span>敏捷</span>
-                <div class="stat-track"><i :style="statWidth(entry.role.敏捷)" /></div>
-                <strong>{{ safeNumber(entry.role.敏捷) }}</strong>
-              </div>
+            <div class="metric-grid">
+              <section class="metric-card clip-corner-sm">
+                <div class="metric-head">
+                  <span class="metric-title">健康</span>
+                  <strong class="metric-value">{{ safeNumber(entry.role.健康) }}</strong>
+                </div>
+                <div class="stat-track"><i :style="statWidth(entry.role.健康)" /></div>
+                <p class="metric-caption">
+                  {{ displayText(entry.role.健康状况, '健康') }}
+                </p>
+                <p class="metric-caption muted">
+                  {{ displayText(entry.role.健康更新原因, '暂无健康值变动原因') }}
+                </p>
+              </section>
+
+              <section class="metric-card clip-corner-sm">
+                <div class="metric-head">
+                  <span class="metric-title">秩序刻印</span>
+                  <strong class="metric-value">{{ safeNumber(entry.role.秩序刻印) }}</strong>
+                </div>
+                <div class="stat-track"><i :style="statWidth(entry.role.秩序刻印)" /></div>
+                <p class="metric-caption">
+                  {{ displayText(entry.role.关系, '无') }} · 关系倾向：{{ displayText(entry.role.关系倾向, '中立') }}
+                </p>
+                <p class="metric-caption muted">
+                  {{ displayText(entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
+                </p>
+              </section>
             </div>
 
-            <div class="bio-box">
+            <div class="bio-box thought-box">
               <div class="bio-stripe"></div>
-              <p>{{ String(entry.role.内心想法 ?? entry.role.神态样貌 ?? '暂无详细描述') || '暂无详细描述' }}</p>
+              <p>{{ displayLongText(entry.role.内心想法, entry.role.神态样貌, entry.role.动作姿势) }}</p>
             </div>
 
-            <button type="button" class="action-btn clip-corner-sm">[ INIT_CONNECTION ]</button>
+            <div class="detail-grid">
+              <div class="detail-card clip-corner-sm">
+                <span class="detail-label">衣着</span>
+                <strong class="detail-value">{{ displayText(entry.role.衣着) }}</strong>
+              </div>
+              <div class="detail-card clip-corner-sm">
+                <span class="detail-label">神态样貌</span>
+                <strong class="detail-value">{{ displayText(entry.role.神态样貌) }}</strong>
+              </div>
+            </div>
+
+            <button type="button" class="action-btn clip-corner-sm" @click="emit('collapse')">
+              [ COLLAPSE_PANEL ]
+            </button>
           </div>
         </article>
       </div>
@@ -152,6 +182,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'select-character', key: string): void;
   (event: 'roster-change', roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>): void;
+  (event: 'collapse'): void;
 }>();
 
 type RoleTab = 'main' | 'temp';
@@ -194,12 +225,37 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
     if (item.isOpening || item.role === 'assistant') {
       effectiveId = item.message_id;
       previousAssistantLikeId = item.message_id;
-    } else if (item.role === 'user') effectiveId = previousAssistantLikeId;
+    } else if (item.role === 'user') {
+      effectiveId = previousAssistantLikeId;
+    }
     if (effectiveId == null) continue;
+
+    if (item.isOpening) {
+      derived.push({
+        key: `message:${item.message_id}`,
+        label: `#${item.message_id} 开局`,
+        pillLabel: `#${item.message_id} 开局`,
+        targetMessageId: effectiveId,
+        sortId: item.message_id,
+      });
+      continue;
+    }
+
+    if (item.role === 'user' && effectiveId !== item.message_id) {
+      derived.push({
+        key: `message:${item.message_id}`,
+        label: `#${item.message_id} user（变量同 #${effectiveId} assistant）`,
+        pillLabel: `#${item.message_id} user → #${effectiveId}`,
+        targetMessageId: effectiveId,
+        sortId: item.message_id,
+      });
+      continue;
+    }
+
     derived.push({
       key: `message:${item.message_id}`,
-      label: item.isOpening ? `#${item.message_id} 开局` : `#${item.message_id} ${item.role}`,
-      pillLabel: item.isOpening ? `#${item.message_id} 开局` : `#${item.message_id} ${item.role}`,
+      label: `#${item.message_id} ${item.role}`,
+      pillLabel: `#${item.message_id} ${item.role}`,
       targetMessageId: effectiveId,
       sortId: item.message_id,
     });
@@ -320,6 +376,24 @@ function setActiveCharacter(key: string) {
   internalSelectedKey.value = key;
   emit('select-character', key);
 }
+
+function displayText(input: unknown, fallback = '--') {
+  const text = String(input ?? '').trim();
+  return text || fallback;
+}
+
+function displayLongText(...values: unknown[]) {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '暂无详细描述';
+}
+
+function hasMeaningfulText(input: unknown) {
+  return String(input ?? '').trim() !== '';
+}
+
 function characterCode(entry: { key: string }) {
   const m = String(entry.key).match(/(\d+)/);
   return m?.[1] ?? '01';
@@ -366,6 +440,7 @@ function statWidth(input: unknown) {
   flex: 1 1 auto;
 }
 .source-field span,
+.source-caption,
 .section-kicker,
 .system-block-title,
 .sidebar-footer {
@@ -374,6 +449,11 @@ function statWidth(input: unknown) {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--demo-text-subtle);
+}
+.source-caption {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: none;
 }
 .source-select {
   min-height: 40px;
@@ -393,6 +473,7 @@ function statWidth(input: unknown) {
 }
 .page-tab,
 .tab-btn,
+.collapse-btn,
 .mini-pill,
 .action-btn,
 .meta-box {
@@ -414,6 +495,13 @@ function statWidth(input: unknown) {
   color: var(--demo-text-accent);
   border-color: var(--demo-border-accent-active);
   background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.collapse-btn {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 14%, transparent);
+  color: var(--demo-text-secondary);
 }
 .sidebar-empty {
   font-size: 13px;
@@ -496,6 +584,9 @@ function statWidth(input: unknown) {
   gap: 12px;
   flex-wrap: wrap;
 }
+.meta-row-top {
+  align-items: flex-start;
+}
 .meta-box {
   display: inline-flex;
   align-items: center;
@@ -510,6 +601,63 @@ function statWidth(input: unknown) {
   font-family: var(--demo-font-mono);
   font-size: 11px;
   color: var(--demo-text-secondary);
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.metric-card,
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 20%, transparent);
+}
+.metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.metric-title,
+.detail-label {
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--demo-text-subtle);
+}
+.metric-value,
+.detail-value {
+  color: var(--demo-text-primary);
+}
+.metric-value {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--demo-text-accent);
+}
+.metric-caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--demo-text-secondary);
+}
+.metric-caption.muted {
+  color: color-mix(in srgb, var(--demo-text-secondary) 72%, transparent);
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.detail-value {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .stat-list {
   display: flex;
@@ -534,7 +682,9 @@ function statWidth(input: unknown) {
   color: var(--demo-text-accent);
 }
 .stat-track {
-  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
   height: 10px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--primary) 10%, transparent);
@@ -542,6 +692,8 @@ function statWidth(input: unknown) {
 }
 .stat-track i {
   display: block;
+  width: 0;
+  min-width: 0;
   height: 100%;
   background: linear-gradient(90deg, var(--demo-color-neon), color-mix(in srgb, var(--primary) 72%, white 8%));
   border-radius: 999px;
@@ -551,6 +703,9 @@ function statWidth(input: unknown) {
   padding: 12px 14px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 14%, transparent);
+}
+.thought-box {
+  margin-top: -2px;
 }
 .bio-stripe {
   position: absolute;
@@ -681,6 +836,10 @@ function statWidth(input: unknown) {
   .meta-row {
     flex-direction: column;
     align-items: stretch;
+  }
+  .metric-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
   .page-tabs,
   .tab-row {

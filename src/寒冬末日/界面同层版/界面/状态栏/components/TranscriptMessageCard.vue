@@ -106,13 +106,6 @@
               {{ metaOpen ? 'HIDE_META' : 'SHOW_META' }}
             </button>
           </div>
-          <div class="assistant-meta-row">
-            <span class="meta-chip">{{ item.roleLabel }}</span>
-            <span v-if="item.hidden" class="meta-chip">hidden</span>
-            <span v-if="item.isStreaming" class="meta-chip">stream</span>
-            <span class="meta-chip">{{ item.phase }}</span>
-            <span v-if="item.options.length > 0" class="meta-chip">options {{ item.options.length }}</span>
-          </div>
         </div>
 
         <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
@@ -301,7 +294,6 @@ function onEditInput(event: Event) {
 .assistant-footer {
   justify-content: space-between;
 }
-.assistant-meta-row,
 .message-actions,
 .editor-actions,
 .assistant-meta-grid {
@@ -401,7 +393,14 @@ function onEditInput(event: Event) {
 @media (max-width: 760px) {
   .assistant-card {
     max-width: 100%;
-    padding: 18px 16px;
+    padding: 12px 10px 10px;
+  }
+  .assistant-headline {
+    gap: 10px;
+    font-size: 11px;
+  }
+  .assistant-body-wrap {
+    padding-top: 2px;
   }
   .assistant-body {
     font-size: 14px;
@@ -412,9 +411,18 @@ function onEditInput(event: Event) {
   .assistant-meta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .assistant-meta-panel {
+    padding: 10px;
+  }
   .user-message,
   .inline-editor {
     max-width: 100%;
+  }
+  .user-message {
+    padding: 10px 12px;
+  }
+  .inline-editor {
+    padding: 10px 12px;
   }
 }
 </style>

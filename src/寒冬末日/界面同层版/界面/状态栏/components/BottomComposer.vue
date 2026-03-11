@@ -16,8 +16,6 @@
       </div>
 
       <div class="composer-quick-actions">
-        <button type="button" class="quick-btn clip-corner-sm" @click="$emit('jump-latest')">最新</button>
-        <button type="button" class="quick-btn clip-corner-sm" @click="$emit('refresh')">刷新</button>
         <button type="button" class="quick-btn clip-corner-sm" :disabled="busy || !canRoll" @click="$emit('roll')">
           RE-SYNC
         </button>
@@ -25,7 +23,15 @@
     </div>
 
     <div class="composer-input-shell clip-corner">
-      <div class="composer-input-icon">◎</div>
+      <button
+        type="button"
+        class="composer-input-icon composer-option-trigger"
+        :disabled="choiceOptions.length === 0"
+        :title="choiceOptions.length > 0 ? `查看选项（${choiceOptions.length}）` : '当前无选项'"
+        @click="openChoiceModal"
+      >
+        ◎
+      </button>
       <div class="composer-input-main">
         <textarea
           :value="modelValue"
@@ -40,27 +46,78 @@
       </button>
     </div>
 
-    <div class="composer-status-row">
-      <span class="status-pill clip-corner-sm" :class="`is-${status}`">{{ statusLabel }}</span>
-      <span class="composer-tip">assistant hidden 楼层仅在当前 transcript 中重建显示。</span>
-      <span v-if="swipeLabel" class="composer-swipe-label">{{ swipeLabel }}</span>
-    </div>
+    <Teleport to="body">
+      <div v-if="choiceModalOpen" class="choice-modal-mask" @click.self="closeChoiceModal">
+        <div class="choice-modal clip-corner" role="dialog" aria-modal="true">
+          <div class="choice-modal-header">
+            <div>
+              <span class="demo-kicker">OPTIONS // QUICK SEND</span>
+              <div class="choice-modal-title">剧情选项</div>
+            </div>
+            <button type="button" class="choice-icon-btn clip-corner-sm" @click="closeChoiceModal">✕</button>
+          </div>
+
+          <div class="choice-modal-body">
+            <div class="choice-option-list">
+              <button
+                v-for="(option, index) in choiceOptions"
+                :key="`${index}-${option}`"
+                type="button"
+                class="choice-item clip-corner-sm"
+                :class="{ active: choiceDraft.trim() === String(option ?? '').trim() }"
+                @click="pickChoice(option)"
+              >
+                {{ option }}
+              </button>
+              <div v-if="choiceOptions.length === 0" class="choice-empty clip-corner-sm">当前无选项，请自由行动。</div>
+            </div>
+
+            <div class="choice-edit-label">编辑后发送</div>
+            <textarea
+              ref="choiceTextareaRef"
+              v-model="choiceDraft"
+              class="choice-textarea"
+              rows="6"
+              placeholder="在此补充或修改……"
+            />
+          </div>
+
+          <div class="choice-modal-footer">
+            <button
+              type="button"
+              class="choice-btn choice-btn--ghost clip-corner-sm"
+              :disabled="choiceSending"
+              @click="closeChoiceModal"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              class="choice-btn choice-btn--primary clip-corner-sm"
+              :disabled="choiceSending || !choiceDraft.trim()"
+              @click="confirmChoice"
+            >
+              {{ choiceSending ? '发送中…' : '确认发送' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
 
 <script setup lang="ts">
-import type { DemoStatus } from '../types';
+import { nextTick } from 'vue';
+
+import { copyText, sendToChat } from '../../../../界面/outbound';
 
 const props = defineProps<{
   modelValue: string;
   busy: boolean;
-  status: DemoStatus;
   canRoll?: boolean;
-  swipeLabel?: string;
-  canSwipePrev?: boolean;
-  canSwipeNext?: boolean;
   roleTabs?: Array<{ key: string; label: string; statusClass?: string; statusText?: string }>;
   activeRoleKey?: string | null;
+  choiceOptions?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -68,23 +125,65 @@ const emit = defineEmits<{
   (event: 'submit'): void;
   (event: 'roll'): void;
   (event: 'swipe', direction: 'prev' | 'next'): void;
-  (event: 'jump-latest'): void;
   (event: 'refresh'): void;
   (event: 'open-role', key: string): void;
 }>();
 
-const statusLabel = computed(() => {
-  if (props.status === 'preparing') return '准备中';
-  if (props.status === 'streaming') return '流式中';
-  if (props.status === 'persisting') return '写回中';
-  if (props.status === 'done') return '已完成';
-  if (props.status === 'error') return '错误';
-  return '空闲';
-});
-
 function onInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   emit('update:modelValue', target?.value ?? '');
+}
+
+const choiceModalOpen = ref(false);
+const choiceDraft = ref('');
+const choiceSending = ref(false);
+const choiceTextareaRef = ref<HTMLTextAreaElement | null>(null);
+const choiceOptions = computed(() =>
+  Array.isArray(props.choiceOptions)
+    ? props.choiceOptions.map(option => String(option ?? '').trim()).filter(Boolean)
+    : [],
+);
+
+async function openChoiceModal() {
+  choiceDraft.value = choiceOptions.value[0] ?? '';
+  choiceModalOpen.value = true;
+  await nextTick();
+  choiceTextareaRef.value?.focus?.();
+}
+
+function closeChoiceModal() {
+  choiceModalOpen.value = false;
+  choiceSending.value = false;
+}
+
+function pickChoice(option: string) {
+  choiceDraft.value = String(option ?? '');
+  nextTick(() => choiceTextareaRef.value?.focus?.());
+}
+
+async function confirmChoice() {
+  const text = choiceDraft.value.trim();
+  if (!text || choiceSending.value) return;
+
+  choiceSending.value = true;
+  try {
+    const result = sendToChat(text, {
+      toast: true,
+      successMessage: '已发送',
+      failureMessage: '发送失败，已尝试复制，请手动发送',
+      unavailableMessage: '无法直接发送，已尝试复制，请手动发送',
+    });
+
+    if (result.ok) {
+      closeChoiceModal();
+      return;
+    }
+
+    await copyText(text, { toast: false });
+    toastr?.error?.('无法直接发送，已尝试复制，请手动发送');
+  } finally {
+    choiceSending.value = false;
+  }
 }
 </script>
 
@@ -93,8 +192,7 @@ function onInput(event: Event) {
 .composer-toolbar,
 .composer-role-tabs,
 .composer-quick-actions,
-.composer-input-shell,
-.composer-status-row {
+.composer-input-shell {
   display: flex;
 }
 .composer-shell {
@@ -120,8 +218,7 @@ function onInput(event: Event) {
 }
 .role-tab-chip,
 .quick-btn,
-.send-btn,
-.status-pill {
+.send-btn {
   font-family: var(--demo-font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -189,6 +286,15 @@ function onInput(event: Event) {
   font-size: 22px;
   color: var(--demo-text-accent);
 }
+.composer-option-trigger:disabled {
+  opacity: 0.45;
+}
+.composer-option-trigger:not(:disabled) {
+  cursor: pointer;
+}
+.composer-option-trigger:not(:disabled):hover {
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface) 92%);
+}
 .composer-input-main {
   flex: 1 1 auto;
   display: flex;
@@ -223,36 +329,111 @@ function onInput(event: Event) {
   font-size: 12px;
   font-weight: 700;
 }
-.composer-status-row {
+.choice-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2605;
+  padding: 16px;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  justify-content: center;
+  background: color-mix(in srgb, black 46%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
-.status-pill {
-  min-height: 32px;
-  padding: 0 12px;
+.choice-modal {
+  width: min(680px, 100%);
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--demo-border-accent-soft);
-  background: color-mix(in srgb, var(--surface) 36%, transparent);
-  font-size: 12px;
-  color: var(--demo-text-tertiary);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--shadow-color) 78%, transparent);
 }
-.status-pill.is-streaming {
-  background: var(--demo-surface-accent);
+.choice-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--demo-border-accent-soft);
+}
+.choice-modal-title {
+  margin-top: 6px;
+  font-size: 16px;
+  color: var(--demo-text-primary);
+}
+.choice-icon-btn {
+  min-height: 36px;
+  min-width: 36px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 30%, transparent);
+  color: var(--demo-text-primary);
+}
+.choice-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  overflow: auto;
+}
+.choice-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.choice-item,
+.choice-empty {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  color: var(--demo-text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+}
+.choice-item.active {
+  border-color: var(--demo-border-accent-active);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
   color: var(--demo-text-accent);
 }
-.status-pill.is-done,
-.status-pill.is-persisting {
-  background: var(--demo-surface-success);
-  color: var(--demo-text-success);
-}
-.status-pill.is-error {
-  background: var(--demo-surface-danger);
-  color: var(--demo-text-danger);
-}
-.composer-tip,
-.composer-swipe-label {
+.choice-edit-label {
   font-size: 12px;
-  color: var(--demo-text-subtle);
+  color: var(--demo-text-secondary);
+}
+.choice-textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 14%, transparent);
+  color: var(--demo-text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.65;
+  resize: vertical;
+}
+.choice-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--demo-border-accent-soft);
+}
+.choice-btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--demo-border-accent-soft);
+  color: var(--demo-text-primary);
+}
+.choice-btn--ghost {
+  background: transparent;
+}
+.choice-btn--primary {
+  border-color: var(--demo-border-accent-active);
+  background: var(--demo-gradient-chip-active);
+  color: var(--demo-text-accent);
 }
 @media (max-width: 760px) {
   .composer-toolbar {
@@ -263,10 +444,11 @@ function onInput(event: Event) {
     width: 100%;
   }
   .composer-quick-actions {
-    width: 100%;
+    width: auto;
+    margin-left: auto;
   }
   .quick-btn {
-    flex: 1 1 0;
+    flex: 0 0 auto;
   }
   .composer-input-icon {
     width: 48px;
@@ -278,6 +460,17 @@ function onInput(event: Event) {
   }
   .send-btn {
     min-width: 78px;
+  }
+  .choice-modal-mask {
+    padding: 10px;
+    align-items: flex-end;
+  }
+  .choice-modal {
+    width: 100%;
+    max-height: min(82vh, 720px);
+  }
+  .choice-modal-footer {
+    flex-direction: column;
   }
 }
 </style>

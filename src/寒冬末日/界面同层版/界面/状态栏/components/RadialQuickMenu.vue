@@ -40,12 +40,12 @@
     <button
       type="button"
       class="radial-trigger"
+      title="长按滑动切换角色，拖动可移动"
       :class="{ pressing: mode === 'press', active: open }"
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMoveButton"
       @pointerup="handlePointerUpButton"
       @pointercancel="handlePointerUpButton"
-      title="长按滑动切换角色，拖动可移动"
     >
       <span class="radial-count">{{ items.length }}</span>
       ◎
@@ -67,9 +67,17 @@ const emit = defineEmits<{
   (event: 'select', key: string): void;
 }>();
 
+function defaultButtonPos() {
+  if (typeof window === 'undefined') return { x: 160, y: 104 };
+  return {
+    x: Math.min(Math.max(12, window.innerWidth - 220), Math.max(12, window.innerWidth - 78)),
+    y: 104,
+  };
+}
+
 const open = ref(false);
 const hoveredIndex = ref<number | null>(null);
-const buttonPos = ref({ x: 18, y: 18 });
+const buttonPos = ref(defaultButtonPos());
 const pressTimer = ref<number | null>(null);
 const startPos = ref({ x: 0, y: 0 });
 const dragOrigin = ref({ x: 18, y: 18 });
@@ -319,5 +327,18 @@ useEventListener(window, 'pointercancel', () => {
 .radial-fade-enter-from,
 .radial-fade-leave-to {
   opacity: 0;
+}
+@media (max-width: 760px) {
+  .radial-trigger {
+    width: 58px;
+    height: 58px;
+    font-size: 21px;
+  }
+
+  .radial-count {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
 }
 </style>
