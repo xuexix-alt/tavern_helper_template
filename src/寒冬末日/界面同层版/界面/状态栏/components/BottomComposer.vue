@@ -30,7 +30,7 @@
         :title="choiceOptions.length > 0 ? `查看选项（${choiceOptions.length}）` : '当前无选项'"
         @click="openChoiceModal"
       >
-        ◎
+        选项
       </button>
       <div class="composer-input-main">
         <textarea
@@ -148,7 +148,9 @@ async function openChoiceModal() {
   choiceDraft.value = choiceOptions.value[0] ?? '';
   choiceModalOpen.value = true;
   await nextTick();
-  choiceTextareaRef.value?.focus?.();
+  if (!window.matchMedia('(max-width: 760px)').matches) {
+    choiceTextareaRef.value?.focus?.();
+  }
 }
 
 function closeChoiceModal() {
@@ -283,7 +285,8 @@ async function confirmChoice() {
   justify-content: center;
   border-right: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
   font-family: var(--demo-font-mono);
-  font-size: 22px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   color: var(--demo-text-accent);
 }
 .composer-option-trigger:disabled {
@@ -451,8 +454,8 @@ async function confirmChoice() {
     flex: 0 0 auto;
   }
   .composer-input-icon {
-    width: 48px;
-    flex-basis: 48px;
+    width: 60px;
+    flex-basis: 60px;
   }
   .composer-textarea {
     min-height: 68px;
@@ -462,15 +465,26 @@ async function confirmChoice() {
     min-width: 78px;
   }
   .choice-modal-mask {
-    padding: 10px;
+    padding: 8px;
     align-items: flex-end;
   }
   .choice-modal {
     width: 100%;
-    max-height: min(82vh, 720px);
+    max-height: min(68vh, 560px);
+    border-radius: 18px 18px 12px 12px;
+  }
+  .choice-modal-header {
+    padding: 10px 12px 8px;
+  }
+  .choice-modal-body {
+    padding: 10px 12px;
+  }
+  .choice-textarea {
+    min-height: 96px;
   }
   .choice-modal-footer {
     flex-direction: column;
+    padding: 10px 12px 12px;
   }
 }
 </style>

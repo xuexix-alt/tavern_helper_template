@@ -8,6 +8,7 @@
           :is="item.isOpening ? TranscriptOpeningCard : TranscriptMessageCard"
           :item="item"
           :density="density"
+          :font-mode="fontMode"
           :busy="busy"
           :expanded="openingExpanded"
           :is-editing-user="editingUserMessageId === item.message_id"
@@ -35,13 +36,14 @@
 </template>
 
 <script setup lang="ts">
-import type { ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
+import type { ReaderFontMode, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
 
 const props = defineProps<{
   items: TranscriptItem[];
   density: TranscriptDensity;
+  fontMode: ReaderFontMode;
   busy: boolean;
   shouldFollowLatest?: boolean;
   openingExpanded?: boolean;

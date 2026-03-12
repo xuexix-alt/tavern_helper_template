@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="ui-host-shell">
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
@@ -22,25 +22,6 @@
 
         <button type="button" class="ui-icon-btn" @click="settingsModalOpen = true">排版</button>
 
-        <div class="ui-chip-group">
-          <button
-            v-for="item in densityItems"
-            :key="item.value"
-            type="button"
-            class="ui-chip"
-            :class="{ active: density === item.value }"
-            @click="density = item.value"
-          >
-            {{ item.label }}
-          </button>
-        </div>
-
-        <div class="theme-dropdown">
-          <button type="button" class="ui-icon-btn theme-trigger" @click="themeModalOpen = true">
-            {{ currentThemeLabel }}
-            <span class="theme-caret">⌄</span>
-          </button>
-        </div>
       </div>
     </header>
 
@@ -89,6 +70,7 @@
               ref="transcriptListRef"
               :items="visibleTranscript"
               :density="density"
+              :font-mode="fontMode"
               :busy="busy"
               :should-follow-latest="followLatest"
               :opening-expanded="openingExpanded"
@@ -210,33 +192,9 @@
     </HudModal>
 
     <HudModal
-      :open="themeModalOpen"
-      title="主题选择"
-      subtitle="选择当前阅读界面的主题外观。"
-      variant="typography"
-      icon="◌"
-      eyebrow="THEME // SELECT"
-      @close="themeModalOpen = false"
-    >
-      <div class="theme-modal-list">
-        <button
-          v-for="item in themeItems"
-          :key="item.value"
-          type="button"
-          class="theme-modal-option clip-corner-sm"
-          :class="{ active: theme === item.value }"
-          @click="selectTheme(item.value)"
-        >
-          <span>{{ item.label }}</span>
-          <span v-if="theme === item.value">✓</span>
-        </button>
-      </div>
-    </HudModal>
-
-    <HudModal
       :open="settingsModalOpen"
       title="阅读与排版设置"
-      subtitle="细调主题、筛选、密度与阅读跳转。"
+      subtitle="细调主题、字体、密度与阅读跳转。"
       variant="typography"
       icon="T"
       eyebrow="TYPE // SETTINGS"
@@ -246,6 +204,7 @@
         v-model:theme="theme"
         v-model:filter-mode="filterMode"
         v-model:density="density"
+        v-model:font-mode="fontMode"
         :total-count="transcriptStats.total"
         :latest-user-preview="readerSummary.latestUserPreview"
         :at-latest="followLatest"
@@ -297,7 +256,7 @@ import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
-import type { DemoTheme, TranscriptDensity } from '../types';
+import type { TranscriptDensity } from '../types';
 import { useStreamingDemo } from '../useStreamingDemo';
 
 const {
@@ -306,6 +265,7 @@ const {
   filterMode,
   density,
   theme,
+  fontMode,
   readingMode,
   followLatest,
   openingExpanded,
@@ -356,26 +316,11 @@ const roleDrawerOpen = ref(false);
 const settingsModalOpen = ref(false);
 const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
-const themeModalOpen = ref(false);
 const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 const roleTabs = ref<Array<{ key: string; label: string; statusClass?: string; statusText?: string }>>([]);
 const activeRoleKey = ref<string | null>(null);
 
-const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
-  { label: '舒适', value: 'comfortable' },
-  { label: '紧凑', value: 'minimal' },
-];
 
-const themeItems: Array<{ label: string; value: DemoTheme }> = [
-  { label: '科技', value: 'tech' },
-  { label: '暗黑', value: 'dark' },
-  { label: '鎏金', value: 'gold' },
-  { label: 'iOS', value: 'ios' },
-  { label: 'iPod', value: 'ipod' },
-  { label: '琥珀', value: 'amber' },
-];
-
-const currentThemeLabel = computed(() => themeItems.find(item => item.value === theme.value)?.label ?? '科技');
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
     return {
@@ -427,16 +372,12 @@ function openRoleFromComposer(key: string) {
   roleDrawerOpen.value = true;
 }
 
-function selectTheme(nextTheme: DemoTheme) {
-  theme.value = nextTheme;
-  themeModalOpen.value = false;
-}
+
 
 useEventListener(window, 'keydown', event => {
   if (event.key !== 'Escape') return;
   if (roleDrawerOpen.value) roleDrawerOpen.value = false;
   else if (activeUtilityDrawer.value) activeUtilityDrawer.value = null;
-  else if (themeModalOpen.value) themeModalOpen.value = false;
   else if (componentLibraryOpen.value) componentLibraryOpen.value = false;
   else if (openingModalOpen.value) openingModalOpen.value = false;
   else if (settingsModalOpen.value) settingsModalOpen.value = false;
@@ -944,6 +885,10 @@ useEventListener(window, 'keydown', event => {
 }
 
 @media (max-width: 760px) {
+  .ui-host-body {
+    padding-left: 18px;
+  }
+
   .ui-topbar,
   .ui-transcript-panel,
   .ui-bottom-dock {
@@ -1018,10 +963,12 @@ useEventListener(window, 'keydown', event => {
 
   .ui-sidebar {
     top: auto;
-    width: 100%;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    width: calc(100% - 20px);
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-height: calc(100dvh - 72px);
+    border-radius: 22px;
     transform: translateY(100%);
   }
 
@@ -1029,14 +976,47 @@ useEventListener(window, 'keydown', event => {
     transform: translateY(0);
   }
 
+  .ui-sidebar-head {
+    gap: 10px;
+    padding: 12px 12px 10px;
+  }
+
+  .ui-sidebar-head strong {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .ui-sidebar-body {
+    padding: 10px;
+  }
+
   .ui-sidebar-toggle {
-    top: auto;
-    bottom: 120px;
+    position: fixed;
+    top: 58px;
+    bottom: 0;
+    left: 0;
+    width: 18px;
+    min-height: calc(100dvh - 58px);
+    height: auto;
+    padding: 0;
+    border-radius: 0 14px 14px 0;
+    border-top: 0;
+    border-bottom: 0;
+    z-index: 32;
     transform: none;
   }
 
   .ui-sidebar-toggle.open {
-    transform: translateY(-320px);
+    transform: none;
+  }
+
+  .ui-sidebar-toggle-label {
+    display: none;
+  }
+
+  .ui-sidebar-toggle-arrow {
+    font-size: 18px;
   }
 }
 </style>
+

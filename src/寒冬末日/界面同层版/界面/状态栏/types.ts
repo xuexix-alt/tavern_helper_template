@@ -2,7 +2,9 @@
 
 export type TranscriptFilterMode = 'assistant' | 'all';
 
-export type TranscriptDensity = 'comfortable' | 'compact' | 'minimal';
+export type TranscriptDensity = 'comfortable' | 'minimal';
+
+export type ReaderFontMode = 'hud' | 'reading';
 
 export type DemoTheme = 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber';
 
@@ -52,5 +54,6 @@ export type ReaderChatState = {
   reading_mode: ReadingMode;
   density: TranscriptDensity;
   theme: DemoTheme;
+  font_mode: ReaderFontMode;
   opening_expanded: boolean;
 };

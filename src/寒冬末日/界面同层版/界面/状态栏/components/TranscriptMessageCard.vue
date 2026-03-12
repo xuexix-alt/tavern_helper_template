@@ -1,5 +1,5 @@
 <template>
-  <article class="message-shell" :class="`is-${item.role}`">
+  <article class="message-shell" :class="[`is-${item.role}`, `density-${density}`, `font-${fontMode}`]">
     <div v-if="item.role === 'system'" class="system-message clip-corner-sm">
       <span class="system-icon">⚠</span>
       <span class="system-text">[ SYS_ALERT ] {{ item.preview || item.content || '(系统消息)' }}</span>
@@ -134,11 +134,12 @@
 </template>
 
 <script setup lang="ts">
-import type { TranscriptDensity, TranscriptItem } from '../types';
+import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
 
 const props = defineProps<{
   item: TranscriptItem;
   density: TranscriptDensity;
+  fontMode: ReaderFontMode;
   busy?: boolean;
   isEditingUser?: boolean;
   editDraft?: string;
@@ -213,6 +214,20 @@ function onEditInput(event: Event) {
   color: var(--demo-text-primary);
   text-align: right;
 }
+
+.message-shell.font-reading .user-message,
+.message-shell.font-reading .assistant-body,
+.message-shell.font-reading .meta-preview-box p,
+.message-shell.font-reading .inline-editor {
+  font-family: var(--demo-font-sans);
+}
+
+.message-shell.density-minimal .user-message {
+  max-width: min(100%, 36rem);
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+}
 .assistant-card {
   position: relative;
   display: flex;
@@ -220,6 +235,11 @@ function onEditInput(event: Event) {
   gap: 14px;
   max-width: 60rem;
   padding: 24px 28px 18px;
+}
+
+.message-shell.density-minimal .assistant-card {
+  gap: 10px;
+  padding: 16px 18px 14px;
 }
 .assistant-corners {
   position: absolute;
@@ -267,6 +287,11 @@ function onEditInput(event: Event) {
   color: var(--demo-text-accent);
   text-transform: uppercase;
 }
+
+.message-shell.density-minimal .assistant-headline {
+  gap: 10px;
+  font-size: 11px;
+}
 .assistant-headline span {
   color: var(--demo-text-secondary);
 }
@@ -277,6 +302,15 @@ function onEditInput(event: Event) {
   font-size: 15px;
   line-height: 1.9;
   color: var(--demo-text-panel-strong);
+}
+
+.message-shell.density-minimal .assistant-body {
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.message-shell.density-minimal .assistant-corners {
+  display: none;
 }
 .assistant-body-wrap :deep(p) {
   margin: 0 0 1em;
@@ -315,6 +349,15 @@ function onEditInput(event: Event) {
   text-transform: uppercase;
   color: var(--demo-text-secondary);
 }
+
+.message-shell.density-minimal .meta-chip,
+.message-shell.density-minimal .detail-toggle,
+.message-shell.density-minimal .meta-toggle,
+.message-shell.density-minimal .action-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 10px;
+}
 .detail-toggle,
 .meta-toggle,
 .action-btn {
@@ -327,6 +370,10 @@ function onEditInput(event: Event) {
   padding: 14px;
   border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
   background: color-mix(in srgb, var(--surface) 12%, transparent);
+}
+
+.message-shell.density-minimal .assistant-meta-panel {
+  padding: 10px;
 }
 .assistant-meta-grid {
   display: grid;

@@ -97,12 +97,24 @@
 
 :root,
 .theme-tech,
+.theme-ipod {
+  color-scheme: light;
+}
+
+.theme-dark,
+.theme-gold,
+.theme-ios,
+.theme-amber {
+  color-scheme: dark;
+}
+
+:root,
+.theme-tech,
 .theme-dark,
 .theme-gold,
 .theme-ios,
 .theme-ipod,
 .theme-amber {
-  color-scheme: light;
   --demo-font-sans: var(--font-sans);
   --demo-font-mono: var(--font-mono);
 

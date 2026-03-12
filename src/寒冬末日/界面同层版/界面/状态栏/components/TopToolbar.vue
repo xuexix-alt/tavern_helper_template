@@ -61,6 +61,22 @@
         </div>
       </div>
 
+      <div class="toolbar-block">
+        <span class="toolbar-label">字体风格</span>
+        <div class="toolbar-segmented">
+          <button
+            v-for="item in fontItems"
+            :key="item.value"
+            type="button"
+            class="toolbar-chip clip-corner-sm"
+            :class="{ active: fontMode === item.value }"
+            @click="$emit('update:fontMode', item.value)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </div>
+
       <button type="button" class="jump-btn clip-corner-sm" :disabled="atLatest" @click="$emit('jump-latest')">
         {{ atLatest ? '已在最新' : '回到最新' }}
       </button>
@@ -83,12 +99,13 @@
 </template>
 
 <script setup lang="ts">
-import type { DemoTheme, TranscriptDensity, TranscriptFilterMode } from '../types';
+import type { DemoTheme, ReaderFontMode, TranscriptDensity, TranscriptFilterMode } from '../types';
 
 defineProps<{
   theme: DemoTheme;
   filterMode: TranscriptFilterMode;
   density: TranscriptDensity;
+  fontMode: ReaderFontMode;
   totalCount: number;
   latestUserPreview: string;
   atLatest: boolean;
@@ -99,6 +116,7 @@ defineEmits<{
   (event: 'update:theme', value: DemoTheme): void;
   (event: 'update:filterMode', value: TranscriptFilterMode): void;
   (event: 'update:density', value: TranscriptDensity): void;
+  (event: 'update:fontMode', value: ReaderFontMode): void;
   (event: 'jump-latest'): void;
 }>();
 
@@ -117,8 +135,13 @@ const filterItems: Array<{ label: string; value: TranscriptFilterMode }> = [
 ];
 
 const densityItems: Array<{ label: string; value: TranscriptDensity }> = [
-  { label: '正常', value: 'comfortable' },
+  { label: '舒适', value: 'comfortable' },
   { label: '极简', value: 'minimal' },
+];
+
+const fontItems: Array<{ label: string; value: ReaderFontMode }> = [
+  { label: 'HUD', value: 'hud' },
+  { label: '阅读', value: 'reading' },
 ];
 </script>
 

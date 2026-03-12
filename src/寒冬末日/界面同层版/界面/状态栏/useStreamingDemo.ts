@@ -1,4 +1,4 @@
-import {
+﻿import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
   extractStreamDemoOptions,
@@ -24,6 +24,7 @@ import {
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import {
   normalizeDensity,
+  normalizeFontMode,
   normalizeReadingMode,
   normalizeTheme,
   patchReaderChatState,
@@ -34,6 +35,7 @@ import type {
   DemoStatus,
   ReaderLogItem,
   DemoTheme,
+  ReaderFontMode,
   ReaderSummary,
   ReadingMode,
   TranscriptDensity,
@@ -235,6 +237,7 @@ export function useStreamingDemo() {
   const filterMode = ref<TranscriptFilterMode>('assistant');
   const density = ref<TranscriptDensity>('comfortable');
   const theme = ref<DemoTheme>('tech');
+  const fontMode = ref<ReaderFontMode>('hud');
   const readingMode = ref<ReadingMode>('following_latest');
   const selectedItem = ref<TranscriptItem | null>(null);
   const openingExpanded = ref(true);
@@ -302,6 +305,7 @@ export function useStreamingDemo() {
         density: density.value,
         opening_expanded: openingExpanded.value,
         theme: theme.value,
+        font_mode: fontMode.value,
       });
     }, 80);
   }
@@ -328,9 +332,11 @@ export function useStreamingDemo() {
     const restoredMode = normalizeReadingMode(state.reading_mode);
     const restoredDensity = normalizeDensity(state.density);
     const restoredTheme = normalizeTheme(state.theme);
+    const restoredFontMode = normalizeFontMode(state.font_mode);
     if (restoredMode) readingMode.value = restoredMode;
     if (restoredDensity) density.value = restoredDensity;
     if (restoredTheme) theme.value = restoredTheme;
+    if (restoredFontMode) fontMode.value = restoredFontMode;
     if (typeof state.opening_expanded === 'boolean') openingExpanded.value = state.opening_expanded;
     if (state.version !== READER_CHAT_STATE_VERSION) {
       queuePersistReaderChatState();
@@ -1295,6 +1301,10 @@ export function useStreamingDemo() {
     queuePersistReaderChatState();
   });
 
+  watch(fontMode, () => {
+    queuePersistReaderChatState();
+  });
+
   watch(
     () => latestUserItem.value?.message_id ?? null,
     latestId => {
@@ -1349,6 +1359,7 @@ export function useStreamingDemo() {
     filterMode,
     density,
     theme,
+    fontMode,
     readingMode,
     readingModeLabel,
     followLatest,
@@ -1399,3 +1410,4 @@ export function useStreamingDemo() {
     closeDetail,
   };
 }
+

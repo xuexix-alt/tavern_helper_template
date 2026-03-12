@@ -1,5 +1,5 @@
 <template>
-  <article class="transcript-item opening clip-corner" :class="[`is-${density}`, { collapsed: !expanded }]">
+  <article class="transcript-item opening clip-corner" :class="[`is-${density}`, `font-${fontMode}`, { collapsed: !expanded }]">
     <header class="transcript-head">
       <div class="opening-banner clip-corner-sm">
         <span class="opening-kicker">CHAPTER OPENING</span>
@@ -33,7 +33,7 @@
     <div
       v-if="showBody"
       class="transcript-body opening-body"
-      :class="{ compact: density === 'compact', collapsed: !expanded }"
+      :class="{ collapsed: !expanded }"
     >
       <div class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TranscriptDensity, TranscriptItem } from '../types';
+import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
 
 defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
@@ -51,6 +51,7 @@ defineEmits<{
 const props = defineProps<{
   item: TranscriptItem;
   density: TranscriptDensity;
+  fontMode: ReaderFontMode;
   expanded: boolean;
 }>();
 
@@ -78,12 +79,12 @@ const showBody = computed(() => {
   box-shadow: 0 18px 34px var(--demo-surface-shadow-soft);
 }
 
-.transcript-item.is-compact {
-  padding: 10px;
-}
-
 .transcript-item.is-minimal {
   padding: 9px;
+}
+
+.transcript-item.is-minimal .opening-banner {
+  padding: 10px 12px;
 }
 
 .transcript-head {
@@ -180,9 +181,19 @@ const showBody = computed(() => {
   padding: 12px;
 }
 
-.opening-body.compact {
-  max-height: 220px;
-  overflow: auto;
+.transcript-item.is-minimal .transcript-body {
+  padding: 10px;
+}
+
+.transcript-item.is-minimal .transcript-preview {
+  font-size: 11px;
+}
+
+.transcript-item.font-reading .transcript-body,
+.transcript-item.font-reading .html-body :deep(p),
+.transcript-item.font-reading .html-body :deep(li),
+.transcript-item.font-reading .html-body :deep(blockquote) {
+  font-family: var(--demo-font-sans);
 }
 
 .opening-body.collapsed {

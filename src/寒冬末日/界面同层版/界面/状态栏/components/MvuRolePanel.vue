@@ -12,15 +12,15 @@
     </div>
 
     <div class="page-tabs" role="tablist" aria-label="侧栏主分类">
-      <button type="button" class="page-tab" :class="{ active: pageTab === 'agents' }" @click="pageTab = 'agents'">
+      <button type="button" class="page-tab" :class="{ active: pageTab === 'agents' }" @click="setPageTab('agents')">
         AGENTS
       </button>
-      <button type="button" class="page-tab" :class="{ active: pageTab === 'system' }" @click="pageTab = 'system'">
+      <button type="button" class="page-tab" :class="{ active: pageTab === 'system' }" @click="setPageTab('system')">
         SYSTEM
       </button>
     </div>
 
-    <button type="button" class="collapse-btn clip-corner-sm" @click="emit('collapse')">[ COLLAPSE_PANEL ]</button>
+    <button type="button" class="collapse-btn clip-corner-sm" @click="emit('collapse')">关闭</button>
 
     <template v-if="pageTab === 'agents'">
       <div class="tab-row" role="tablist" aria-label="角色分类">
@@ -99,6 +99,10 @@
               <p>{{ displayLongText(entry.role.内心想法, entry.role.神态样貌, entry.role.动作姿势) }}</p>
             </div>
 
+            <button type="button" class="collapse-btn collapse-btn-inline clip-corner-sm" @click="emit('collapse')">
+              关闭
+            </button>
+
             <div class="detail-grid">
               <div class="detail-card clip-corner-sm">
                 <span class="detail-label">衣着</span>
@@ -111,7 +115,7 @@
             </div>
 
             <button type="button" class="action-btn clip-corner-sm" @click="emit('collapse')">
-              [ COLLAPSE_PANEL ]
+              关闭
             </button>
           </div>
         </article>
@@ -162,8 +166,19 @@
     </template>
 
     <footer class="sidebar-footer">
-      <span>DB_SYNC: OK</span>
-      <span>ENTITIES: {{ activeEntries.length }}</span>
+      <div class="page-tabs page-tabs-bottom" role="tablist" aria-label="侧栏主分类（底部）">
+        <button type="button" class="page-tab" :class="{ active: pageTab === 'agents' }" @click="setPageTab('agents')">
+          AGENTS
+        </button>
+        <button type="button" class="page-tab" :class="{ active: pageTab === 'system' }" @click="setPageTab('system')">
+          SYSTEM
+        </button>
+      </div>
+      <button type="button" class="collapse-btn collapse-btn-footer clip-corner-sm" @click="emit('collapse')">关闭</button>
+      <div class="sidebar-footer-meta">
+        <span>DB_SYNC: OK</span>
+        <span>ENTITIES: {{ activeEntries.length }}</span>
+      </div>
     </footer>
   </section>
 </template>
@@ -198,6 +213,11 @@ type RoleSourceOption = {
 const store = useDataStore();
 const pageTab = ref<PageTab>('agents');
 const activeTab = ref<RoleTab>('main');
+
+function setPageTab(nextTab: PageTab) {
+  pageTab.value = nextTab;
+}
+
 const normalizedTargetMessageId = computed(() => {
   const numeric = Number(props.targetMessageId);
   if (!Number.isFinite(numeric) || numeric < 0) return null;
@@ -502,6 +522,14 @@ function statWidth(input: unknown) {
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 14%, transparent);
   color: var(--demo-text-secondary);
+}
+
+.collapse-btn-inline {
+  margin-top: 2px;
+}
+
+.collapse-btn-footer {
+  margin-top: 2px;
 }
 .sidebar-empty {
   font-size: 13px;
@@ -831,6 +859,19 @@ function statWidth(input: unknown) {
   padding-top: 10px;
   border-top: 1px solid var(--demo-border-accent-soft);
 }
+
+.sidebar-footer-meta {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.page-tabs-bottom {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .sidebar-tools,
   .meta-row {
@@ -844,6 +885,29 @@ function statWidth(input: unknown) {
   .page-tabs,
   .tab-row {
     flex-wrap: wrap;
+  }
+
+  .page-tab {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .collapse-btn,
+  .action-btn {
+    min-height: 36px;
+  }
+
+  .sidebar-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .page-tabs-bottom {
+    display: flex;
+    gap: 8px;
   }
 }
 </style>
