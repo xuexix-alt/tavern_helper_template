@@ -21,7 +21,6 @@
         </button>
 
         <button type="button" class="ui-icon-btn" @click="settingsModalOpen = true">排版</button>
-
       </div>
     </header>
 
@@ -320,7 +319,6 @@ const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 const roleTabs = ref<Array<{ key: string; label: string; statusClass?: string; statusText?: string }>>([]);
 const activeRoleKey = ref<string | null>(null);
 
-
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
     return {
@@ -371,8 +369,6 @@ function openRoleFromComposer(key: string) {
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
 }
-
-
 
 useEventListener(window, 'keydown', event => {
   if (event.key !== 'Escape') return;
@@ -1019,4 +1015,3 @@ useEventListener(window, 'keydown', event => {
   }
 }
 </style>
-

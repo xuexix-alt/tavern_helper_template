@@ -1,5 +1,8 @@
 <template>
-  <article class="transcript-item opening clip-corner" :class="[`is-${density}`, `font-${fontMode}`, { collapsed: !expanded }]">
+  <article
+    class="transcript-item opening clip-corner"
+    :class="[`is-${density}`, `font-${fontMode}`, { collapsed: !expanded }]"
+  >
     <header class="transcript-head">
       <div class="opening-banner clip-corner-sm">
         <span class="opening-kicker">CHAPTER OPENING</span>
@@ -30,11 +33,7 @@
       </div>
     </header>
 
-    <div
-      v-if="showBody"
-      class="transcript-body opening-body"
-      :class="{ collapsed: !expanded }"
-    >
+    <div v-if="showBody" class="transcript-body opening-body" :class="{ collapsed: !expanded }">
       <div class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
   </article>

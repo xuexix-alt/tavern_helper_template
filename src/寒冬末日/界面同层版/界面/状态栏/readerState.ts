@@ -78,4 +78,3 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
     );
   } catch {}
 }
-

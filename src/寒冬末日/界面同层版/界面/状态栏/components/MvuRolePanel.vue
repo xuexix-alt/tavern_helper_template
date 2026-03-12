@@ -114,9 +114,7 @@
               </div>
             </div>
 
-            <button type="button" class="action-btn clip-corner-sm" @click="emit('collapse')">
-              关闭
-            </button>
+            <button type="button" class="action-btn clip-corner-sm" @click="emit('collapse')">关闭</button>
           </div>
         </article>
       </div>
@@ -174,7 +172,9 @@
           SYSTEM
         </button>
       </div>
-      <button type="button" class="collapse-btn collapse-btn-footer clip-corner-sm" @click="emit('collapse')">关闭</button>
+      <button type="button" class="collapse-btn collapse-btn-footer clip-corner-sm" @click="emit('collapse')">
+        关闭
+      </button>
       <div class="sidebar-footer-meta">
         <span>DB_SYNC: OK</span>
         <span>ENTITIES: {{ activeEntries.length }}</span>
