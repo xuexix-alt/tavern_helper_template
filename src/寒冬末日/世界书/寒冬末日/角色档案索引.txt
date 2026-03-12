@@ -13,5 +13,6 @@
   { "name": "陈宇", "aliases": ["哲也"] },
   { "name": "桃乐丝・泽巴哈", "aliases": ["桃乐丝", "泽巴哈"] },
   { "name": "何铃", "aliases": [] },
-  { "name": "王静", "aliases": [] }
+  { "name": "王静", "aliases": [] },
+  { "name": "艾琳", "aliases": ["四季酒店服务员", "酒店服务员"] }
 ]
