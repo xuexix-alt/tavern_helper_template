@@ -486,53 +486,7 @@ useEventListener(window, 'keydown', event => {
   background: color-mix(in srgb, var(--primary) 78%, transparent);
 }
 
-.ui-chip-group {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.ui-chip {
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-}
-
-.ui-chip.active,
 .ui-meta-pill.action:not(:disabled) {
-  color: var(--demo-text-accent);
-  border-color: var(--demo-border-accent-active);
-  background: var(--demo-gradient-chip-active);
-}
-
-.theme-dropdown {
-  position: relative;
-}
-.theme-trigger {
-  gap: 8px;
-}
-.theme-caret {
-  display: inline-flex;
-}
-.theme-modal-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.theme-modal-option {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 12px;
-  border: 1px solid var(--demo-border-accent-soft);
-  background: color-mix(in srgb, var(--surface) 18%, transparent);
-  color: var(--demo-text-primary);
-  font-family: var(--demo-font-mono);
-  font-size: 12px;
-}
-.theme-modal-option.active {
   color: var(--demo-text-accent);
   border-color: var(--demo-border-accent-active);
   background: var(--demo-gradient-chip-active);
@@ -892,6 +846,11 @@ useEventListener(window, 'keydown', event => {
     padding-right: 6px;
   }
 
+  .ui-topbar {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
   .ui-topbar-actions,
   .theme-group {
     width: 100%;
@@ -899,11 +858,18 @@ useEventListener(window, 'keydown', event => {
 
   .ui-topbar-actions {
     justify-content: flex-start;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 8px;
   }
 
-  .theme-modal-list {
-    grid-template-columns: 1fr;
+  .ui-online {
+    display: none;
+  }
+
+  .ui-icon-btn {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 10px;
   }
 
   .ui-bottom-tool-row {
