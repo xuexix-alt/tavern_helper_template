@@ -114,12 +114,14 @@ function getDefaultShelterAbilitySummary(): string {
     .filter((item): item is Record<string, unknown> => Boolean(item))
     .slice(0, 5)
     .map(item => {
+      const promptBrief = trimText(_.get(item, 'summary.prompt_brief', ''));
+      if (promptBrief) return promptBrief;
       const name = trimText(item.name);
       const desc = trimText(item.desc);
       return [name || '未命名能力', desc].filter(Boolean).join('：');
     });
 
-  return parts.join('；') || '未设定';
+  return parts.join('\n') || '未设定';
 }
 
 function getDefaultNearbyFactions(): string {

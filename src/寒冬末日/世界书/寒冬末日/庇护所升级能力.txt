@@ -3,19 +3,21 @@ meta:
   id: eden_shelter_ability_master
   name: 伊甸庇护所能力总表
   world: 寒冬末日-星穹秩序
-  authoring_note: 严格YAML；该文件是庇护所能力的唯一总表（UI与脚本应按能力键查询描述）
+  authoring_note: 严格YAML；该文件是庇护所能力的唯一总表（UI与脚本应按能力键查询描述）。1-5级已按六大系统重构，高阶能力后续继续收束为区域控制权成长。
   source_of_truth: true
 
 rules:
   level_range: [1, 10]
-  categories: [安全, 生存, 舒适, 扩展, 远征, 限制]
+  categories: [能源, 安全, 维生, 生活, 社交, 开拓]
+  system_lines: [energy, security, sustain, life, social, expansion]
   progression_style: 小步快走
   balancing_principles:
     - 低等级优先生存，不给压制级战斗能力
     - 单级能力数量适中，避免跨级质变过猛
     - 强能力必须绑定成本、门槛或冷却
-    - 舒适类不直接转化为战斗优势
-    - 远征类强调“能出去”，不保证“无损回来”
+    - 生活类不直接转化为战斗优势
+    - 开拓类强调“能推进”，不保证“无损拿下”
+    - 前五级优先体现“有优势但仍需进取”的成长压力
 
 maintenance:
   imp_support:
@@ -38,56 +40,50 @@ maintenance:
 
 levels:
   "1":
-    label: 霜墙火种
+    label: 房间求生
     unlocks:
-      - safe.sealed_bulkhead
-      - safe.foyer_aegis_grid
-      - survive.thermal_loop_seed
-      - survive.water_air_loop_seed
-      - survive.basic_ration_fabricator
-      - comfort.quiet_mind_channel
-      - expand.core_safe_zone_anchor
-      - limit.imp_support_protocol_alpha
+      - energy.core_heat_grid_t1
+      - security.entry_bulkhead_t1
+      - sustain.basic_survival_loop_t1
+      - life.rest_privacy_t1
+      - social.rule_seed_t1
+      - expansion.core_anchor_t1
   "2":
-    label: 稳态筑巢
+    label: 核心区稳态
     unlocks:
-      - safe.peephole_mesh
-      - safe.corridor_echo_probe
-      - survive.sanitation_capsule
-      - survive.heat_budget_allocator
-      - comfort.archive_gallery_local
-      - expand.utility_interface_s1
-      - limit.threshold_tuning_beta
+      - energy.load_dispatch_t2
+      - security.nearfield_watch_t2
+      - sustain.hygiene_medical_t2
+      - life.clean_rhythm_t2
+      - social.shift_ration_protocol_t2
+      - expansion.threshold_interface_t2
   "3":
-    label: 玄关前哨
+    label: 走出房门
     unlocks:
-      - safe.nonlethal_latch
-      - safe.panic_path_lamp
-      - survive.clinic_pod_t0
-      - comfort.circadian_symphony
-      - expand.shelter_radius_20f_s1
-      - expand.heating_radius_20f_s1
-      - limit.support_quota_beta
+      - energy.hallway_heat_reach_t3
+      - security.hallway_control_t3
+      - sustain.group_care_t3
+      - life.community_rhythm_t3
+      - social.admission_protocol_t3
+      - expansion.floor20_anchor_t3
   "4":
-    label: 楼层洞察
+    label: 楼层感知
     unlocks:
-      - safe.nightglass_swarm
-      - safe.hallway_threat_score
-      - survive.nutri_variety_primer
-      - comfort.digital_arcadia_v1
-      - expand.resource_interface_20f_s1
-      - expedition.signal_scout_pack
-      - limit.threshold_tuning_gamma
+      - energy.floor_budget_t4
+      - security.floor_awareness_t4
+      - sustain.multi_patient_support_t4
+      - life.civil_buffer_t4
+      - social.contact_trade_window_t4
+      - expansion.floor20_control_zone_t4
   "5":
-    label: 合作化秩序
+    label: 小共同体成形
     unlocks:
-      - safe.response_drill_grid
-      - survive.clinic_pod_t1
-      - survive.pharma_replicator_t0
-      - comfort.social_hearth_room
-      - expand.shelter_radius_20f_s2
-      - expedition.relay_cache_box
-      - limit.support_quota_gamma
+      - energy.anchor_network_t5
+      - security.rapid_response_t5
+      - sustain.community_support_t5
+      - life.settlement_identity_t5
+      - social.population_strata_t5
+      - expansion.floor20_governance_zone_t5
   "6":
     label: 跨层联结
     unlocks:
@@ -140,718 +136,1695 @@ levels:
       - limit.maintenance_compact_omega
 
 abilities:
-  safe.sealed_bulkhead:
-    name: "🛡️密封霜墙门闩"
-    category: 安全
+  energy.core_heat_grid_t1:
+    name: "♨️核心供暖电网T1"
+    category: 能源
     unlock_level: 1
-    desc: 核心入口获得双层气密门闩与合金滑轨，能抵御大多数暴力破门与低温冲击。
-    effects: [入口防护+1, 破门延迟]
-    balance:
-      cost: 低
-      limit: 仅核心入口生效
-
-  safe.foyer_aegis_grid:
-    name: "⚡玄关静电裁断网"
-    category: 安全
-    unlock_level: 1
-    desc: 玄关地板植入低致伤静电网，识别敌意动作后触发麻痹性击退。
-    effects: [非致命制止, 入侵减速]
-    balance:
-      cost: 低
-      limit: 对重装目标效果有限
-
-  survive.thermal_loop_seed:
-    name: "🌡️恒温循环底座"
-    category: 生存
-    unlock_level: 1
-    desc: 建立基础热循环，2001核心区维持稳定体感温度，显著降低寒冷导致的健康损耗。
-    effects: [核心区恒温, 寒冷伤害缓解]
+    system_line: energy
+    tier: 1
+    growth_target: 让2001核心区具备最低生存级供暖与供电。
+    player_advantage: 有稳定温度和基础开机能力，不再完全受外界寒潮摆布。
+    insufficiency: 只能维持核心区，不能外扩供能，系统负载冗余很低。
+    desc: 维持2001核心区的基础供暖与最低供电，确保人能活、系统能开机。
+    effects: [核心区供暖, 最小供电]
     balance:
       cost: 低
       limit: 仅核心区
+    upkeep:
+      - 负荷冗余低
+      - 超载时优先保障核心生存功能
+    summary:
+      prompt_brief: "可维持2001核心区的基础供暖与最低供电，保证人能活、系统能开机；范围仅核心区，无法支撑外扩。"
+    boundary:
+      cannot:
+        - "不能写成整层稳定供暖或整栋持续供电"
+        - "不能写成无限能源或无成本常驻高负载"
+        - "不能把核心区外也写成同等供能效果"
+    writing_contract:
+      must_avoid:
+        - "避免写成万能能源中枢"
+        - "避免省略超载与负荷压力"
 
-  survive.water_air_loop_seed:
-    name: "💧空气-净水双循环"
-    category: 生存
+  security.entry_bulkhead_t1:
+    name: "🛡️核心入口防线T1"
+    category: 安全
     unlock_level: 1
-    desc: 启动初级空气净化与净水回路，确保基础可呼吸与可饮用条件。
-    effects: [基础净水, 基础净化]
+    system_line: security
+    tier: 1
+    growth_target: 让2001门口不再是一踹就开的薄弱点。
+    player_advantage: 能延缓破门、争取观察与应对时间。
+    insufficiency: 只能守住入口，守不住整层，也无法替代主动清场。
+    desc: 强化2001核心入口的门体、门闩与缓冲防线，提升强闯门槛。
+    effects: [入口强化, 争取时间]
     balance:
       cost: 低
-      limit: 对污染峰值响应较慢
+      limit: 仅入口有效
+    upkeep:
+      - 长时间承压会损耗门体结构
+    summary:
+      prompt_brief: "可强化2001核心入口防护并延缓强闯，为观察、后撤和反应争取时间；仅入口有效，不能覆盖整层。"
+    boundary:
+      cannot:
+        - "不能写成整层无死角防御"
+        - "不能写成自动反杀或永久压制所有入侵者"
+        - "不能把入口防线写成走廊级控制权"
+    writing_contract:
+      must_avoid:
+        - "避免写成开门即秒杀的自动炮塔系统"
+        - "避免把局部防线写成整层统治"
 
-  survive.basic_ration_fabricator:
-    name: "🍞基础口粮织造器"
-    category: 生存
+  sustain.basic_survival_loop_t1:
+    name: "🍞基础生存循环T1"
+    category: 维生
     unlock_level: 1
-    desc: 提供稳定但单调的高热量口粮，保障最低生存线。
-    effects: [饥饿缓解, 基础供给]
+    system_line: sustain
+    tier: 1
+    growth_target: 确保口粮、净水、空气与卫生都达到最低生存线。
+    player_advantage: 可以稳定保住自己和极少数人的生命底线。
+    insufficiency: 只能维持基础配给，无法承托伤病、多人收容或高质量生活。
+    desc: 提供基础口粮、净水、空气净化与最低卫生保障，维持少量人口不崩盘。
+    effects: [基础口粮, 基础净水, 空气净化]
     balance:
       cost: 低
-      limit: 口味与营养结构单一
+      limit: 仅少量人口最低生存线
+    upkeep:
+      - 配给单一
+      - 人口增加会迅速压缩余量
+    summary:
+      prompt_brief: "可提供基础口粮、净水、空气净化与最低卫生保障，保证少量人口不因基础生存要素直接崩盘；产出与承载都很有限。"
+    boundary:
+      cannot:
+        - "不能写成无限制供养多人"
+        - "不能写成一次解决全部食物、饮水、卫生问题"
+        - "不能写成高品质生活供给系统"
+    writing_contract:
+      must_avoid:
+        - "避免写成万能工厂或无限后勤"
+        - "避免忽略人口增加带来的系统压力"
 
-  comfort.quiet_mind_channel:
-    name: "🎧静心白噪通道"
-    category: 舒适
+  life.rest_privacy_t1:
+    name: "🛏️睡眠与私密恢复T1"
+    category: 生活
     unlock_level: 1
-    desc: 提供基础降噪与睡前音景，缓和长期高压下的精神紧绷。
-    effects: [压力缓解]
+    system_line: life
+    tier: 1
+    growth_target: 让2001从避难点变成勉强能住的房间。
+    player_advantage: 人可以睡、能缓口气，精神不会立刻被高压拖垮。
+    insufficiency: 只能缓冲崩溃，不能抹平长期创伤，也不提供真正娱乐和共同体体验。
+    desc: 提供基础降噪、保暖与睡眠恢复，让核心区具备最低居住感。
+    effects: [睡眠恢复, 基础私密]
     balance:
       cost: 低
-      limit: 不提供强娱乐刺激
+      limit: 仅基础恢复
+    upkeep:
+      - 依赖核心区稳定温控
+    summary:
+      prompt_brief: "可提供基础降噪、保暖与睡眠恢复，让核心区从单纯避难点变成能住人的空间；只能缓冲压力，不能直接消除长期精神创伤。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或绝对忠诚来源"
+        - "不能写成彻底治愈长期心理创伤"
+        - "不能把基础居住感写成完整文明恢复"
+    writing_contract:
+      must_avoid:
+        - "避免把生活模块写成万能安抚装置"
+        - "避免把短期恢复写成深层疗愈"
 
-  expand.core_safe_zone_anchor:
-    name: "📍核心安全锚点"
-    category: 扩展
+  social.rule_seed_t1:
+    name: "📜最小规则内核T1"
+    category: 社交
     unlock_level: 1
-    desc: 定义2001为绝对安全锚点，后续所有扩展范围均以此为基准。
-    effects: [范围系统初始化]
+    system_line: social
+    tier: 1
+    growth_target: 让庇护所内部第一次有“谁说了算、资源怎么分”的最小秩序。
+    player_advantage: 能分配、记录、发出命令，避免内部完全混乱。
+    insufficiency: 规则只在少量人和核心区内部有效，缺乏外部信誉和执行冗余。
+    desc: 在2001内部建立最小配给、指令与记录规则，让少量人口按同一套秩序运转。
+    effects: [基础配给规则, 指令记录]
+    balance:
+      cost: 低
+      limit: 仅核心区内部有效
+    population_dependency:
+      - 执行高度依赖主角个人威信与监督
+    summary:
+      prompt_brief: "可在2001内部建立最小配给与指令规则，让少量人口按同一套秩序运转；只适用于核心区内部，外部人未必认账。"
+    boundary:
+      cannot:
+        - "不能写成所有人天然服从"
+        - "不能写成一套规则就自动稳定共同体"
+        - "不能把内部规则写成对外治理权"
+    writing_contract:
+      must_avoid:
+        - "避免把秩序写成无成本口头命令"
+        - "避免忽略执行与监督代价"
+
+  expansion.core_anchor_t1:
+    name: "📍核心安全锚点T1"
+    category: 开拓
+    unlock_level: 1
+    system_line: expansion
+    tier: 1
+    growth_target: 把2001定义为一切庇护与控制能力的基准原点。
+    player_advantage: 让后续所有外扩、纳管、供暖、防线都有明确起点。
+    insufficiency: 这只是原点，不等于已经具备向外控制能力。
+    desc: 将2001定义为庇护、供能、防线与接管的统一原点。
+    effects: [安全原点, 外扩起点]
     balance:
       cost: 低
       limit: 无直接外扩能力
+    summary:
+      prompt_brief: "可将2001定义为绝对安全锚点，为后续供暖、防线、收容与外扩提供原点；自身不等于已经完成外扩。"
+    boundary:
+      cannot:
+        - "不能写成已经控制整层或整栋"
+        - "不能默认附带供暖、防线、治理全部同步外扩"
+        - "不能把原点写成现成地盘"
+    writing_contract:
+      must_avoid:
+        - "避免把锚点写成自动永久安全区"
+        - "避免跳过从房间向外推进的过程"
 
-  limit.imp_support_protocol_alpha:
-    name: "📐维持协议α"
-    category: 限制
-    unlock_level: 1
-    desc: 启用“高Imp协作人口”维持规则：每名达标幸存者可额外维持伊甸运行天数。
-    effects: [维持系统启用]
+  energy.load_dispatch_t2:
+    name: "⚙️负载调度网T2"
+    category: 能源
+    unlock_level: 2
+    system_line: energy
+    tier: 2
+    growth_target: 建立核心区的配电优先级与热量预算。
+    player_advantage: 能把有限能源用在刀刃上，夜间和紧急状态更稳。
+    insufficiency: 仍然没有多余冗余，错配和超载会快速拖垮系统。
+    desc: 对核心区供暖与配电进行优先级调度，减少浪费并提升关键时段稳定性。
+    effects: [配电优先级, 热量预算]
     balance:
-      cost: 中
-      limit: 初始阈值高（Imp>=70）
+      cost: 低
+      limit: 仍受总负荷限制
+    upkeep:
+      - 调度错误会放大波动
+    summary:
+      prompt_brief: "可对核心区供暖与配电进行优先级调度，减少浪费并提升关键时段稳定性；仍受总负荷限制，无法像充裕能源那样随意开机。"
+    boundary:
+      cannot:
+        - "不能写成能源彻底充裕"
+        - "不能写成开多少系统都不会超载"
+        - "不能把调度优化写成新增大量能源"
+    writing_contract:
+      must_avoid:
+        - "避免把节流写成扩容"
+        - "避免忽略错配和超载风险"
 
-  safe.peephole_mesh:
-    name: "🔍门外蜂眼网"
+  security.nearfield_watch_t2:
+    name: "🔍门外近域观察T2"
     category: 安全
     unlock_level: 2
-    desc: 门外近距盲区被蜂眼镜头补齐，可识别尾随与伏击动作。
-    effects: [盲区补足]
+    system_line: security
+    tier: 2
+    growth_target: 把感知从门内推进到门外和短距走廊。
+    player_advantage: 能识别尾随、伏击、走廊短时风险，不再完全被动挨打。
+    insufficiency: 只能看见近域，不是全楼监控，也不保证情报绝对准确。
+    desc: 对门外和短距走廊进行近域观察与风险预估，辅助接触、避让和拦截。
+    effects: [近域观察, 风险预估]
     balance:
       cost: 低
-      limit: 仅门外短距
+      limit: 仅覆盖近距
+    summary:
+      prompt_brief: "可对门外和短距走廊进行近域观察与风险预估，辅助判断接触、避让和拦截；只覆盖近距，不是全楼监控。"
+    boundary:
+      cannot:
+        - "不能写成整层实时监控"
+        - "不能写成情报绝对准确、无盲区"
+        - "不能把近域观察写成远距追踪"
+    writing_contract:
+      must_avoid:
+        - "避免写成全图视野"
+        - "避免省略噪声、遮挡和误判"
 
-  safe.corridor_echo_probe:
-    name: "📶走廊回声探针"
+  sustain.hygiene_medical_t2:
+    name: "🧼卫生医疗闭环T2"
+    category: 维生
+    unlock_level: 2
+    system_line: sustain
+    tier: 2
+    growth_target: 建立基础消杀、轻伤处理与失温/感染处置流程。
+    player_advantage: 轻伤病不再等于连锁崩盘，收容一个伤员也有了现实基础。
+    insufficiency: 只能处理基础和轻中度问题，重伤与多人救治仍会迅速超载。
+    desc: 建立基础消杀、轻伤处理与失温感染处置流程，让核心区具备最小医疗闭环。
+    effects: [基础消杀, 轻伤处理, 感染控制]
+    balance:
+      cost: 中
+      limit: 仅能处理轻中度问题
+    upkeep:
+      - 依赖基础耗材和轮值照护
+    summary:
+      prompt_brief: "可建立基础消杀、轻伤处理与失温感染处置流程，让核心区具备最小医疗闭环；只能应对轻中度问题，无法承担复杂抢救。"
+    boundary:
+      cannot:
+        - "不能写成高级医疗中心"
+        - "不能写成重伤多人抢救也能轻松兜住"
+        - "不能忽略耗材和照护压力"
+    writing_contract:
+      must_avoid:
+        - "避免写成奇迹治疗"
+        - "避免把基础闭环写成完整医院"
+
+  life.clean_rhythm_t2:
+    name: "🪥清洁与作息秩序T2"
+    category: 生活
+    unlock_level: 2
+    system_line: life
+    tier: 2
+    growth_target: 让“活着”开始转向“能持续住下去”。
+    player_advantage: 人能洗漱、休息、保持节律，居住体验和服从度都会提高。
+    insufficiency: 仍属于基础恢复，不能靠舒适系统直接换来忠诚和高士气。
+    desc: 提供基础清洁、睡眠恢复与作息节律，让核心区进入可持续居住状态。
+    effects: [清洁恢复, 作息稳定]
+    balance:
+      cost: 低
+      limit: 仅基础恢复增益
+    summary:
+      prompt_brief: "可提供基础清洁、睡眠恢复与作息节律，让核心区从求生状态进入可持续居住状态；只能改善恢复，不等于天然凝聚人心。"
+    boundary:
+      cannot:
+        - "不能写成自动提高绝对忠诚和高士气"
+        - "不能写成完全抹掉长期压力"
+        - "不能把基础生活秩序写成稳定繁荣社会"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适提升写成无条件忠诚"
+        - "避免忽略外界压力对内部状态的持续侵蚀"
+
+  social.shift_ration_protocol_t2:
+    name: "📦轮值配给协议T2"
+    category: 社交
+    unlock_level: 2
+    system_line: social
+    tier: 2
+    growth_target: 让庇护所出现可执行的轮值、职责和配给制度。
+    player_advantage: 协作效率比完全混乱时明显提升，系统第一次把人口变成秩序资本。
+    insufficiency: 规则仍很脆弱，执行高度依赖少量可信对象和持续监督。
+    desc: 建立轮值、职责与基础配给制度，让少量协作人口真正参与庇护所运转。
+    effects: [轮值制度, 配给执行]
+    balance:
+      cost: 中
+      limit: 规则执行脆弱
+    population_dependency:
+      - 需要少量稳定协作者
+    summary:
+      prompt_brief: "可建立轮值、职责与基础配给制度，让少量协作人口真正参与维持庇护所运转；规则执行仍脆弱，不能默认所有人都自觉配合。"
+    boundary:
+      cannot:
+        - "不能写成自带高效官僚体系"
+        - "不能写成不需要监督也能稳定运行"
+        - "不能写成对外治理已成熟"
+    writing_contract:
+      must_avoid:
+        - "避免把制度写成自动生效"
+        - "避免忽略关键人的作用与执行成本"
+
+  expansion.threshold_interface_t2:
+    name: "🚪近域接口门槛T2"
+    category: 开拓
+    unlock_level: 2
+    system_line: expansion
+    tier: 2
+    growth_target: 让庇护所第一次拥有“接触门外世界”的最小接口能力。
+    player_advantage: 可以对门外近邻释放有限的水、电、收容和接触信号。
+    insufficiency: 只是接口，不是全面纳管，更不是随意向外供养所有人。
+    desc: 开启2001对门外近域的最小资源与接触接口，用于试探、救助或建立联系。
+    effects: [近域接口, 有限接触]
+    balance:
+      cost: 中
+      limit: 只是门槛能力
+    summary:
+      prompt_brief: "可开启2001对门外近域的最小资源与接触接口，用于试探、救助或建立联系；只是门槛能力，不等于完成外扩纳管。"
+    boundary:
+      cannot:
+        - "不能写成已经稳定控制门外人群"
+        - "不能写成能长期对外无差别供养"
+        - "不能把接口写成完成外扩的结果"
+    writing_contract:
+      must_avoid:
+        - "避免跳过试探和接触阶段"
+        - "避免把门槛接口写成成熟治理体系"
+
+  energy.hallway_heat_reach_t3:
+    name: "🔥近域供能延伸T3"
+    category: 能源
+    unlock_level: 3
+    system_line: energy
+    tier: 3
+    growth_target: 让供暖/供电第一次从2001延伸到20层近域节点。
+    player_advantage: 你开始能把内部优势投射到门外，不只是关门自保。
+    insufficiency: 外扩范围很小，维持成本显著提高，无法长期全域覆盖。
+    desc: 将供暖与基础供能短距外扩到20层近域节点，支撑局部行动、收容或据守。
+    effects: [近域供能, 节点支撑]
+    balance:
+      cost: 中
+      limit: 范围和时长都有限
+    upkeep:
+      - 外扩后负荷显著提高
+    summary:
+      prompt_brief: "可将供暖与基础供能短距外扩到20层近域节点，支撑局部行动、收容或据守；范围和时长都有限，无法长期全域覆盖。"
+    boundary:
+      cannot:
+        - "不能写成整层持续供能"
+        - "不能写成外扩后仍无负荷压力"
+        - "不能把节点支撑写成稳定区域供能网"
+    writing_contract:
+      must_avoid:
+        - "避免把第一次外扩写成成熟网络"
+        - "避免忽略外扩带来的高消耗"
+
+  security.hallway_control_t3:
+    name: "🚧走廊控制链T3"
     category: 安全
-    unlock_level: 2
-    desc: 通过声纹回声估算走廊活动密度，提前规避短时拥堵与冲突点。
-    effects: [风险预估]
-    balance:
-      cost: 低
-      limit: 精度受环境噪声影响
-
-  survive.sanitation_capsule:
-    name: "🧼卫生净化舱"
-    category: 生存
-    unlock_level: 2
-    desc: 建立基础消杀流程，降低常见感染风险并改善居住卫生水平。
-    effects: [感染风险下降]
-    balance:
-      cost: 低
-      limit: 仅基础病原防护
-
-  survive.heat_budget_allocator:
-    name: "🔥热量配额调度器"
-    category: 生存
-    unlock_level: 2
-    desc: 对供暖进行时段化调度，减少无效能耗并提升夜间舒适稳定性。
-    effects: [供暖效率提升]
-    balance:
-      cost: 低
-      limit: 不能提高绝对供暖上限
-
-  comfort.archive_gallery_local:
-    name: "📚离线档案长廊"
-    category: 舒适
-    unlock_level: 2
-    desc: 激活旧世界离线影像与文献库，提供低带宽文化娱乐与学习资源。
-    effects: [娱乐与信息恢复]
-    balance:
-      cost: 低
-      limit: 内容更新慢
-
-  expand.utility_interface_s1:
-    name: "🔌基础资源接口S1"
-    category: 扩展
-    unlock_level: 2
-    desc: 开通最小对外资源接口，可对外提供低强度水电支援。
-    effects: [小规模水电接口]
+    unlock_level: 3
+    system_line: security
+    tier: 3
+    growth_target: 让防线从门体升级为走廊级局部控制。
+    player_advantage: 可以对近域强闯、踩踏、突发混乱做出更快更稳的控制。
+    insufficiency: 仍然是局部控制，不是整层压制，也不意味着主动出击必赢。
+    desc: 在20层近域走廊建立局部封锁、引导和非致命控制能力。
+    effects: [局部封锁, 非致命控制]
     balance:
       cost: 中
-      limit: 吞吐低、暴露风险上升
+      limit: 仅局部近域
+    summary:
+      prompt_brief: "可在20层近域走廊建立局部封锁、引导和非致命控制能力，提升对强闯和混乱的应对效率；只能控局部，不是整层压制。"
+    boundary:
+      cannot:
+        - "不能写成整层完全压制"
+        - "不能写成主动清场必胜"
+        - "不能把局部控制写成全楼治安体系"
+    writing_contract:
+      must_avoid:
+        - "避免把走廊控制写成全图镇压"
+        - "避免忽略多人冲击和连续事件下的压力"
 
-  limit.threshold_tuning_beta:
-    name: "🧮阈值校准β"
-    category: 限制
-    unlock_level: 2
-    desc: 对维持规则进行第一轮校准，适度降低达标Imp阈值，提高可调度性。
-    effects: [imp_threshold -5]
+  sustain.group_care_t3:
+    name: "🫂小群体维持T3"
+    category: 维生
+    unlock_level: 3
+    system_line: sustain
+    tier: 3
+    growth_target: 从“保住几个人”升级为“能维持一个小群体”。
+    player_advantage: 可以处理多人的基础照料、轻伤病与配给波动。
+    insufficiency: 人口一多、病情一重、回收一断，系统仍会迅速吃紧。
+    desc: 对小规模群体提供配给、照料与基础伤病维持，支撑共同体雏形。
+    effects: [小群体配给, 伤病维持]
     balance:
       cost: 中
-      limit: 仅降低阈值，不增加单人产能
+      limit: 承载上限不高
+    upkeep:
+      - 对轮值与配给制度依赖明显
+    summary:
+      prompt_brief: "可对小规模群体提供配给、照料与基础伤病维持，支撑最初的共同体雏形；承载上限不高，超量很快会引发系统吃紧。"
+    boundary:
+      cannot:
+        - "不能写成可以轻松养活大批人口"
+        - "不能写成多人伤病也不会超载"
+        - "不能把雏形共同体写成稳定大据点"
+    writing_contract:
+      must_avoid:
+        - "避免把共同体雏形写成成熟福利体系"
+        - "避免忽略人口和伤病的连锁压力"
 
-  safe.nonlethal_latch:
-    name: "🪤非致命束止栓"
-    category: 安全
+  life.community_rhythm_t3:
+    name: "🏠共同体生活节律T3"
+    category: 生活
     unlock_level: 3
-    desc: 玄关新增可控束止器，对闯入目标实施定点禁锢，便于审讯与驱离。
-    effects: [非致命控制提升]
-    balance:
-      cost: 中
-      limit: 连续触发存在冷却
-
-  safe.panic_path_lamp:
-    name: "🚨惊厥路径警示灯"
-    category: 安全
-    unlock_level: 3
-    desc: 在核心动线中投射高可见引导，紧急情况下减少踩踏与误判。
-    effects: [紧急撤离效率提升]
+    system_line: life
+    tier: 3
+    growth_target: 让“大家一起住”开始有秩序，而不是互相消耗。
+    player_advantage: 人们会更像住在共同体里，而不是挤在避难所里。
+    insufficiency: 还称不上文明恢复，只是让共同生活不那么快崩。
+    desc: 建立小共同体的日常节律、作息、清洁与基础休息秩序。
+    effects: [共同体节律, 居住稳定]
     balance:
       cost: 低
-      limit: 仅内部生效
+      limit: 仅能稳态缓冲
+    summary:
+      prompt_brief: "可建立小共同体的日常节律、作息、清洁与基础休息秩序，让多人共同居住不至于迅速崩坏；只能稳态缓冲，谈不上真正文明恢复。"
+    boundary:
+      cannot:
+        - "不能写成已经恢复末日前生活"
+        - "不能写成共同生活再无矛盾和摩擦"
+        - "不能把节律稳定写成高度繁荣"
+    writing_contract:
+      must_avoid:
+        - "避免把日常秩序写成乌托邦"
+        - "避免抹去多人共居的压力与冲突"
 
-  survive.clinic_pod_t0:
-    name: "⚕️临床舱T0"
-    category: 生存
+  social.admission_protocol_t3:
+    name: "🪪收容与服从门槛T3"
+    category: 社交
     unlock_level: 3
-    desc: 提供常见外伤与轻中度感染处置，建立最小医疗闭环。
-    effects: [基础医疗]
+    system_line: social
+    tier: 3
+    growth_target: 让“谁能进、谁要遵守什么”第一次有可执行边界。
+    player_advantage: 可以开始对近邻建立收容、观察、配给和责任义务的第一层秩序。
+    insufficiency: 规则仍依赖你的个人威信和持续执行，谈不上稳定治理。
+    desc: 为近邻建立收容、观察、配给与责任义务的第一层规则。
+    effects: [收容门槛, 责任义务]
     balance:
       cost: 中
-      limit: 不支持复杂外科
+      limit: 执行高度依赖主角
+    summary:
+      prompt_brief: "可为近邻建立收容、观察、配给与责任义务的第一层规则，开始区分“受庇护者”和“待观察对象”；执行仍高度依赖你本人。"
+    boundary:
+      cannot:
+        - "不能写成所有收容对象都会自然服从"
+        - "不能写成规则一出就有稳定治理"
+        - "不能写成近邻已经完全纳管"
+    writing_contract:
+      must_avoid:
+        - "避免把边界规则写成绝对控制"
+        - "避免忽略执行时的人情、风险与反弹"
 
-  comfort.circadian_symphony:
-    name: "🌙昼夜韵律编排"
-    category: 舒适
+  expansion.floor20_anchor_t3:
+    name: "🏢20层庇护节点T3"
+    category: 开拓
     unlock_level: 3
-    desc: 根据作息自动调节光色、音景与气味，减少失眠和情绪失衡。
-    effects: [休息质量提升]
-    balance:
-      cost: 低
-      limit: 对重度创伤无直接治疗效果
-
-  expand.shelter_radius_20f_s1:
-    name: "🛡️20层庇护半径S1"
-    category: 扩展
-    unlock_level: 3
-    desc: 允许将20层少量房间纳入“生存庇护范围”，提供基础防护与环境维持。
-    effects: [20层安全范围初次扩展]
+    system_line: expansion
+    tier: 3
+    growth_target: 让20层少量房间第一次进入庇护半径。
+    player_advantage: 你开始拥有门外可经营的点位，而不是只有一个房间。
+    insufficiency: 名额有限，维护困难，任何外扩都要付出真实成本。
+    desc: 将20层少量房间纳入初级庇护半径，形成最早的门外据守节点。
+    effects: [少量外扩节点, 初级庇护半径]
     balance:
       cost: 中
       limit: 名额有限
+    summary:
+      prompt_brief: "可将20层少量房间纳入初级庇护半径，形成最早的门外据守节点；名额和维护能力都有限，无法一口气铺开整层。"
+    boundary:
+      cannot:
+        - "不能写成整层尽入掌握"
+        - "不能写成外扩节点毫无维护成本"
+        - "不能把据守点写成稳定治理区"
+    writing_contract:
+      must_avoid:
+        - "避免把点状节点写成整层控制权"
+        - "避免忽略名额和维护上限"
 
-  expand.heating_radius_20f_s1:
-    name: "♨️20层供暖半径S1"
-    category: 扩展
-    unlock_level: 3
-    desc: 供暖网络首次外扩到20层部分房间，减轻寒冷被动损耗。
-    effects: [20层恒温范围初次扩展]
+  energy.floor_budget_t4:
+    name: "📊楼层能耗预算T4"
+    category: 能源
+    unlock_level: 4
+    system_line: energy
+    tier: 4
+    growth_target: 让楼层节点供能进入可管理状态，而不是临时拼命顶住。
+    player_advantage: 可以在多节点之间做真实调度，支持外部控制区维持。
+    insufficiency: 每次扩节点都意味着更高天气、人力、维护压力。
+    desc: 对20层多个节点的供暖与供能做预算调度，支持局部控制区稳定维持。
+    effects: [多节点调度, 控制区维持]
     balance:
       cost: 中
-      limit: 仅温度维持，不含安防加成
+      limit: 外扩越多压力越高
+    summary:
+      prompt_brief: "可对20层多个节点的供暖与供能做预算调度，支持局部控制区稳定维持；外扩越多，系统越容易因天气和负载吃紧。"
+    boundary:
+      cannot:
+        - "不能写成多节点供能后就进入高冗余时代"
+        - "不能写成天气和外扩不再重要"
+        - "不能把预算调度写成区域能源霸权"
+    writing_contract:
+      must_avoid:
+        - "避免把多节点调度写成全域稳态"
+        - "避免忽略扩张与能耗的线性压力"
 
-  limit.support_quota_beta:
-    name: "📊维持配额β"
-    category: 限制
-    unlock_level: 3
-    desc: 改善调度后勤，每名达标协作幸存者的维持贡献轻微提高。
-    effects: [bonus_days_per_qualified_survivor +0.5]
-    balance:
-      cost: 中
-      limit: 受总天数上限约束
-
-  safe.nightglass_swarm:
-    name: "👁️夜晶侦巡群"
+  security.floor_awareness_t4:
+    name: "👁️楼层威胁感知T4"
     category: 安全
     unlock_level: 4
-    desc: 侦查无人机升级夜视与热成像，在低能见度环境维持中距离预警。
-    effects: [中距侦查]
+    system_line: security
+    tier: 4
+    growth_target: 让你第一次能对20层进行中距离预警和威胁排序。
+    player_advantage: 可以主动判断哪块危险点先清、哪类人该接触、哪类人该拦截。
+    insufficiency: 不是全知视角，恶劣环境和复杂局势仍会制造误判。
+    desc: 对20层局部进行中距离预警、威胁评分与风险排序，辅助决定行动优先级。
+    effects: [中距预警, 威胁排序]
     balance:
       cost: 中
-      limit: 恶劣暴雪下有效半径衰减
+      limit: 并非全知
+    summary:
+      prompt_brief: "可对20层局部进行中距离预警、威胁评分与风险排序，辅助决定接触、避让和清理优先级；并非全知，误判仍会存在。"
+    boundary:
+      cannot:
+        - "不能写成楼层全知视角"
+        - "不能写成永远不会误判和漏判"
+        - "不能把局部感知写成整栋掌控"
+    writing_contract:
+      must_avoid:
+        - "避免把预警写成神谕"
+        - "避免忽略环境与人心的不确定性"
 
-  safe.hallway_threat_score:
-    name: "📈走廊威胁评分"
+  sustain.multi_patient_support_t4:
+    name: "🏥多人维持支持T4"
+    category: 维生
+    unlock_level: 4
+    system_line: sustain
+    tier: 4
+    growth_target: 让庇护所能承接更复杂的伤病和更多的基础配给需求。
+    player_advantage: 可以开始稳定承托一个小共同体，而不是一两名个体。
+    insufficiency: 药品、食物、净化和照护都开始进入真实瓶颈管理。
+    desc: 为一个小共同体提供更稳定的配给、净化、药品与基础照护。
+    effects: [多人照护, 稳定配给]
+    balance:
+      cost: 中
+      limit: 长期承压明显
+    upkeep:
+      - 药品、照护和净化压力同步增长
+    summary:
+      prompt_brief: "可为一个小共同体提供更稳定的配给、净化、药品与基础照护，承托多人持续生存；系统会在药品、食物和照护负荷上持续承压。"
+    boundary:
+      cannot:
+        - "不能写成多人长期照护没有瓶颈"
+        - "不能写成大规模共同体也可轻松兜住"
+        - "不能忽略药品和照护资源消耗"
+    writing_contract:
+      must_avoid:
+        - "避免把小共同体承托写成成熟福利国家"
+        - "避免省略维持多人时的管理压力"
+
+  life.civil_buffer_t4:
+    name: "🎞️文明缓冲层T4"
+    category: 生活
+    unlock_level: 4
+    system_line: life
+    tier: 4
+    growth_target: 让庇护所第一次显出“这里和外面不一样”的文明感。
+    player_advantage: 提升休息、娱乐、学习和日常秩序，增强留驻意愿。
+    insufficiency: 只是缓冲崩坏，不是直接抹平外界恐惧与内部矛盾。
+    desc: 为庇护所提供稳定的休息、低带宽娱乐与学习恢复，让内部生活开始显出文明缓冲层。
+    effects: [文明缓冲, 娱乐学习恢复]
+    balance:
+      cost: 中
+      limit: 只能缓冲崩坏
+    summary:
+      prompt_brief: "可为庇护所提供稳定的休息、低带宽娱乐与学习恢复，让内部生活开始显出文明缓冲层；只能缓冲崩坏，不能直接消除矛盾。"
+    boundary:
+      cannot:
+        - "不能写成已经恢复末日前文明密度"
+        - "不能写成生活改善后就不再有内部矛盾"
+        - "不能把文明缓冲写成区域统治力"
+    writing_contract:
+      must_avoid:
+        - "避免把文明感写成乌托邦"
+        - "避免忽略外界压力对内部的反复冲击"
+
+  social.contact_trade_window_t4:
+    name: "🤝接触与交易窗口T4"
+    category: 社交
+    unlock_level: 4
+    system_line: social
+    tier: 4
+    growth_target: 让外部接触第一次成为系统化资源，而不是临时冒险行为。
+    player_advantage: 可以谈、换、试探、建立信誉与边界。
+    insufficiency: 信誉仍不稳，任何失信、失控或弱势暴露都会反噬你。
+    desc: 建立对外接触、试探和小规模交易窗口，让信誉、资源和规则开始互相转化。
+    effects: [对外接触, 小规模交易, 信誉积累]
+    balance:
+      cost: 中
+      limit: 信誉仍脆弱
+    summary:
+      prompt_brief: "可建立对外接触、试探和小规模交易窗口，让信誉、资源和规则开始互相转化；信誉仍脆弱，失信会快速反噬秩序。"
+    boundary:
+      cannot:
+        - "不能写成天然掌握稳定商路"
+        - "不能写成一次交易就建立牢固秩序"
+        - "不能把接触窗口写成对外全面支配"
+    writing_contract:
+      must_avoid:
+        - "避免把信誉写成一劳永逸"
+        - "避免忽略谈判破裂和反噬风险"
+
+  expansion.floor20_control_zone_t4:
+    name: "🗺️20层控制区T4"
+    category: 开拓
+    unlock_level: 4
+    system_line: expansion
+    tier: 4
+    growth_target: 让20层局部从“可去”升级为“可经营、可保、可纳管”。
+    player_advantage: 你第一次拥有真正可经营的门外控制区。
+    insufficiency: 控制区仍是局部点状，无法默认整层都被你掌控。
+    desc: 在20层形成局部控制区，支撑供能、防线、配给与接触的联动经营。
+    effects: [控制区经营, 局部纳管]
+    balance:
+      cost: 中
+      limit: 控制区仍是点状和局部的
+    summary:
+      prompt_brief: "可在20层形成局部控制区，支撑供能、防线、配给与接触的联动经营；控制区是点状和局部的，不等于整层尽入掌握。"
+    boundary:
+      cannot:
+        - "不能写成整层完整控制权"
+        - "不能写成控制区自带绝对稳定"
+        - "不能把局部经营写成区域统治"
+    writing_contract:
+      must_avoid:
+        - "避免把局部控制区写成全楼地盘"
+        - "避免忽略控制区外的危险和真空"
+
+  energy.anchor_network_t5:
+    name: "🔋锚点供能网络T5"
+    category: 能源
+    unlock_level: 5
+    system_line: energy
+    tier: 5
+    growth_target: 让核心区与楼层节点形成稳定维持网络。
+    player_advantage: 你开始拥有真正的多点稳态运转能力。
+    insufficiency: 负荷、天气、人口和扩张速度都会决定网络是否掉线。
+    desc: 让核心区与20层节点形成稳定供能与维持网络，支撑更长时间的多点运转。
+    effects: [多点稳态运转, 网络供能]
+    balance:
+      cost: 高
+      limit: 网络仍受负荷与天气制约
+    summary:
+      prompt_brief: "可让核心区与20层节点形成稳定供能与维持网络，支撑更长时间的多点运转；网络仍受负荷、天气和人口结构制约。"
+    boundary:
+      cannot:
+        - "不能写成高阶稳态后就不再有能源压力"
+        - "不能写成想扩到哪就扩到哪"
+        - "不能把楼层网络写成跨层成熟体系"
+    writing_contract:
+      must_avoid:
+        - "避免把稳定网络写成无限网络"
+        - "避免忽略网络掉线与维护成本"
+
+  security.rapid_response_t5:
+    name: "🚨快速响应防线T5"
     category: 安全
-    unlock_level: 4
-    desc: 基于轨迹与行为片段给出威胁评分，辅助决定接触、避让或拦截。
-    effects: [决策辅助]
-    balance:
-      cost: 低
-      limit: 属概率判断，不保证绝对正确
-
-  survive.nutri_variety_primer:
-    name: "🥣营养谱系引擎·初型"
-    category: 生存
-    unlock_level: 4
-    desc: 从单一口粮过渡到多营养配比，降低长期缺乏导致的隐性损耗。
-    effects: [营养结构改善]
-    balance:
-      cost: 中
-      limit: 高级食材尚未解锁
-
-  comfort.digital_arcadia_v1:
-    name: "🌐数字乐园V1"
-    category: 舒适
-    unlock_level: 4
-    desc: 解锁稳定影音与互动娱乐，恢复“像末日前那样消磨夜晚”的体验。
-    effects: [中等娱乐恢复]
-    balance:
-      cost: 低
-      limit: 不提供实体享乐设施
-
-  expand.resource_interface_20f_s1:
-    name: "🚰20层资源接口S1"
-    category: 扩展
-    unlock_level: 4
-    desc: 对20层开放第一档资源接口，支持小规模供水、供电与应急燃气调配。
-    effects: [20层资源接口初次扩展]
-    balance:
-      cost: 中
-      limit: 吞吐受限，频繁调用会暴露秩序中心
-
-  expedition.signal_scout_pack:
-    name: "📡信标侦搜包"
-    category: 远征
-    unlock_level: 4
-    desc: 可部署短时信标与回传节点，为楼内外探索建立最小闭环导航。
-    effects: [短程远征辅助]
-    balance:
-      cost: 中
-      limit: 续航有限，需要回收维护
-
-  limit.threshold_tuning_gamma:
-    name: "🧠阈值校准γ"
-    category: 限制
-    unlock_level: 4
-    desc: 进一步降低维持阈值，让中高协作人群也可稳定贡献运行时长。
-    effects: [imp_threshold -5]
-    balance:
-      cost: 中
-      limit: 仍需满足秩序归属与管辖条件
-
-  safe.response_drill_grid:
-    name: "🧱响应演训网格"
-    category: 安全
     unlock_level: 5
-    desc: 内部应急动作标准化，遭遇突发时减少决策迟滞与误伤。
-    effects: [团队响应效率提升]
+    system_line: security
+    tier: 5
+    growth_target: 让防线从“单点防住”成长为“局部区域能守住”。
+    player_advantage: 可以对走廊、节点和控制区进行更快的防守、修补和压制响应。
+    insufficiency: 仍然无法把整个楼层写成自动清场和完全支配的区域。
+    desc: 对20层控制区进行快速防守、修补和局部压制响应，让你守住的是一片区域而不只是一个门。
+    effects: [快速防守, 局部压制, 防线修补]
+    balance:
+      cost: 高
+      limit: 仍非整层自动清场
+    summary:
+      prompt_brief: "可对20层控制区进行快速防守、修补和局部压制响应，让你守住的是一片区域而不只是一个门；仍然不能视作整层自动清场。"
+    boundary:
+      cannot:
+        - "不能写成整层自动清场系统"
+        - "不能写成对所有敌对力量都绝对压制"
+        - "不能把区域防线写成楼栋级支配权"
+    writing_contract:
+      must_avoid:
+        - "避免把区域防线写成无敌领域"
+        - "避免忽略反扑、报复和连续冲突压力"
+
+  sustain.community_support_t5:
+    name: "🥣共同体维持体系T5"
+    category: 维生
+    unlock_level: 5
+    system_line: sustain
+    tier: 5
+    growth_target: 支撑稳定人口、配给、基础药物和持续照护。
+    player_advantage: 你终于能“养共同体”，而不是只能救人后继续超载。
+    insufficiency: 一旦人口结构失衡或补给中断，系统仍会连锁出问题。
+    desc: 支撑稳定人口的配给、基础药物、照护与日常生存，让庇护所真正进入共同体维持阶段。
+    effects: [稳定人口配给, 持续照护]
+    balance:
+      cost: 高
+      limit: 人口结构失衡会引发连锁问题
+    population_dependency:
+      - 多活一个人也是负荷与资本的双重增加
+    summary:
+      prompt_brief: "可支撑稳定人口的配给、基础药物、照护与日常生存，让庇护所真正进入共同体维持阶段；人口结构失衡和补给断裂仍会引发连锁问题。"
+    boundary:
+      cannot:
+        - "不能写成稳定人口后就进入无限供养"
+        - "不能写成补给断裂也不会出事"
+        - "不能把共同体维持写成大规模城市保障"
+    writing_contract:
+      must_avoid:
+        - "避免把共同体维持写成无代价福利"
+        - "避免忽略人口结构和补给链的核心地位"
+
+  life.settlement_identity_t5:
+    name: "🏡定居吸附层T5"
+    category: 生活
+    unlock_level: 5
+    system_line: life
+    tier: 5
+    growth_target: 让人开始因为庇护所而想留下，而不是只想躲一阵。
+    player_advantage: 提升留驻意愿、情绪韧性和共同体身份感。
+    insufficiency: 不能靠生活质量自动抹平利益冲突、权力斗争和外部诱惑。
+    desc: 让庇护所具备明显的定居吸附力，提升留驻意愿、恢复质量和共同体身份感。
+    effects: [留驻意愿, 身份感, 恢复质量]
     balance:
       cost: 中
-      limit: 依赖人员执行度
+      limit: 不能自动化解政治与利益问题
+    summary:
+      prompt_brief: "可让庇护所具备明显的定居吸附力，提升留驻意愿、恢复质量和共同体身份感；不能仅靠生活优势自动消除利益冲突与权力问题。"
+    boundary:
+      cannot:
+        - "不能写成只靠生活质量就自动收服人心"
+        - "不能写成没有矛盾、没有背叛、没有外部诱惑"
+        - "不能把定居吸附写成绝对控制"
+    writing_contract:
+      must_avoid:
+        - "避免把生活吸附力写成无条件忠诚"
+        - "避免忽略人心与利益的复杂性"
 
-  survive.clinic_pod_t1:
-    name: "🏥临床舱T1"
-    category: 生存
+  social.population_strata_t5:
+    name: "📚人口分层与纳管T5"
+    category: 社交
     unlock_level: 5
-    desc: 提升伤病处理吞吐与稳定性，可支撑小规模集体护理。
-    effects: [中级医疗]
+    system_line: social
+    tier: 5
+    growth_target: 让受庇护者、协作者、交易对象和待纳管对象开始分层。
+    player_advantage: 你第一次像一个治理核心，而不是只会发命令的屋主。
+    insufficiency: 一旦失信、失衡或过度扩权，秩序会反过来吞你。
+    desc: 对受庇护者、协作者、交易对象和待纳管对象进行分层管理，让规则、信誉和服从形成治理雏形。
+    effects: [人口分层, 纳管雏形, 信誉治理]
     balance:
-      cost: 中
-      limit: 复杂手术仍需外科台
+      cost: 高
+      limit: 失信与过度扩权会反噬秩序
+    population_dependency:
+      - 需要稳定协作者支撑制度执行
+    summary:
+      prompt_brief: "可对受庇护者、协作者、交易对象和待纳管对象进行分层管理，让规则、信誉和服从第一次形成治理雏形；失信和过度扩权会快速反噬你。"
+    boundary:
+      cannot:
+        - "不能写成已经建立成熟政体"
+        - "不能写成所有对象都接受你的分层"
+        - "不能忽略信誉崩塌和权力反噬"
+    writing_contract:
+      must_avoid:
+        - "避免把治理雏形写成稳定统治"
+        - "避免省略信誉和执行成本"
 
-  survive.pharma_replicator_t0:
-    name: "💊药剂复构台T0"
-    category: 生存
+  expansion.floor20_governance_zone_t5:
+    name: "🏙️20层治理区T5"
+    category: 开拓
     unlock_level: 5
-    desc: 可复构常见药物与基础耗材，缓解药品断供压力。
-    effects: [基础药品供给]
+    system_line: expansion
+    tier: 5
+    growth_target: 让20层从控制点升级为可稳定经营、收编和接管的治理区。
+    player_advantage: 你第一次拥有真正意义上的门外地盘。
+    insufficiency: 这只是楼层级治理的起点，更大的地盘会带来更系统性的反扑与消耗。
+    desc: 让20层形成稳定治理区，支撑控制、收编、纳管与持续经营。
+    effects: [楼层治理区, 收编接管, 持续经营]
     balance:
-      cost: 中
-      limit: 稀有药与高危药物不可批量生成
-
-  comfort.social_hearth_room:
-    name: "🔥群体暖炉会客厅"
-    category: 舒适
-    unlock_level: 5
-    desc: 提供可社交的温暖会客环境，缓和隔离导致的关系断裂。
-    effects: [社交舒适提升]
-    balance:
-      cost: 低
-      limit: 间接收益，不直接加战力
-
-  expand.shelter_radius_20f_s2:
-    name: "🛡️20层庇护半径S2"
-    category: 扩展
-    unlock_level: 5
-    desc: 20层可纳入庇护的房间名额提升，秩序影响力向同层扩散。
-    effects: [20层安全范围二次扩展]
-    balance:
-      cost: 中
-      limit: 扩展越快，治理压力越高
-
-  expedition.relay_cache_box:
-    name: "📦中继补给箱"
-    category: 远征
-    unlock_level: 5
-    desc: 可在楼层关键点布设临时补给箱，提升探索回程成功率。
-    effects: [中程远征续航]
-    balance:
-      cost: 中
-      limit: 易被夺取，需要守护
-
-  limit.support_quota_gamma:
-    name: "📊维持配额γ"
-    category: 限制
-    unlock_level: 5
-    desc: 调度模型更新后，达标协作者的维持贡献再次小幅增长。
-    effects: [bonus_days_per_qualified_survivor +0.5]
-    balance:
-      cost: 中
-      limit: 超过人数阈值后触发递减收益
+      cost: 高
+      limit: 仅是楼层级治理起点
+    summary:
+      prompt_brief: "可让20层形成稳定治理区，支撑控制、收编、纳管与持续经营，意味着你第一次真正拥有门外地盘；这只是楼层级治理起点，不代表后续扩张没有代价。"
+    boundary:
+      cannot:
+        - "不能写成整栋楼甚至片区已经完全归你"
+        - "不能写成治理区稳定后就没有反扑与消耗"
+        - "不能把楼层级地盘写成区域级秩序中心"
+    writing_contract:
+      must_avoid:
+        - "避免把第一次拥有地盘写成终局统治"
+        - "避免忽略收编、接管和维持的长期代价"
 
   safe.tactical_jammer_node:
     name: "📻战术干扰节点"
     category: 安全
     unlock_level: 6
+    system_line: security
+    tier: 6
     desc: 对局部通信进行短时压制，打断敌对协同与远程呼叫。
     effects: [局部通信干扰]
     balance:
       cost: 中
       limit: 使用窗口短，冷却较长
 
+    summary:
+      prompt_brief: "📻战术干扰节点：对局部通信进行短时压制，打断敌对协同与远程呼叫；常见表现：局部通信干扰；限制：使用窗口短，冷却较长。"
+    boundary:
+      cannot:
+        - "不能写成整栋公寓或整层楼自动无死角防御"
+        - "不能写成无条件秒杀或永久压制所有入侵者"
+        - "不能忽略“使用窗口短，冷却较长”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免写成“开了能力就全图无敌”"
+        - "避免把局部防御模块写成主动清场兵器"
+        - "避免把“使用窗口短，冷却较长”写成不存在"
+
   survive.surgery_table_t0:
     name: "🔬外科台T0"
     category: 生存
     unlock_level: 6
+    system_line: sustain
+    tier: 6
     desc: 支持中等复杂度外科处理，显著提升重伤存活率。
     effects: [外科处理能力]
     balance:
       cost: 高
       limit: 依赖专业流程与耗材
 
+    summary:
+      prompt_brief: "🔬外科台T0：支持中等复杂度外科处理，显著提升重伤存活率；常见表现：外科处理能力；限制：依赖专业流程与耗材。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“依赖专业流程与耗材”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“依赖专业流程与耗材”写成不存在"
+
   comfort.holo_stage_chamber:
     name: "🎭全息舞台舱"
     category: 舒适
     unlock_level: 6
+    system_line: life
+    tier: 6
     desc: 在封闭环境中复现演出、景观与情境互动，恢复“被文明拥抱”的感觉。
     effects: [沉浸娱乐提升]
     balance:
       cost: 中
       limit: 能耗较高
 
+    summary:
+      prompt_brief: "🎭全息舞台舱：在封闭环境中复现演出、景观与情境互动，恢复“被文明拥抱”的感觉；常见表现：沉浸娱乐提升；限制：能耗较高。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或全面生产增幅"
+        - "不能写成仅靠舒适模块就彻底消除长期创伤与压力"
+        - "不能忽略“能耗较高”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适、安抚、娱乐模块写成万能洗脑或绝对忠诚来源"
+        - "避免把氛围改善写成对外部环境的实质性统治"
+        - "避免把“能耗较高”写成不存在"
+
   expand.shelter_radius_19f_s1:
     name: "🛡️19层庇护半径S1"
     category: 扩展
     unlock_level: 6
+    system_line: expansion
+    tier: 6
     desc: 庇护能力首次下贯至19层，形成跨层安全节点。
     effects: [19层安全范围初次扩展]
     balance:
       cost: 高
       limit: 初始名额较少
 
+    summary:
+      prompt_brief: "🛡️19层庇护半径S1：庇护能力首次下贯至19层，形成跨层安全节点；常见表现：19层安全范围初次扩展；限制：初始名额较少。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“初始名额较少”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“初始名额较少”写成不存在"
+
   expand.heating_radius_19f_s1:
     name: "♨️19层供暖半径S1"
     category: 扩展
     unlock_level: 6
+    system_line: expansion
+    tier: 6
     desc: 供暖网络跨层下沉，19层指定房间可获得稳定温控。
     effects: [19层恒温范围初次扩展]
     balance:
       cost: 高
       limit: 供暖与安防并不绑定
 
+    summary:
+      prompt_brief: "♨️19层供暖半径S1：供暖网络跨层下沉，19层指定房间可获得稳定温控；常见表现：19层恒温范围初次扩展；限制：供暖与安防并不绑定。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“供暖与安防并不绑定”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“供暖与安防并不绑定”写成不存在"
+
   expedition.weather_trace_array:
     name: "🌨️风雪轨迹阵列"
     category: 远征
     unlock_level: 6
+    system_line: expansion
+    tier: 6
     desc: 对短期风雪窗口进行预测，为跨层行动选择低风险时段。
     effects: [天气窗口预测]
     balance:
       cost: 中
       limit: 极端气候下误差增大
 
+    summary:
+      prompt_brief: "🌨️风雪轨迹阵列：对短期风雪窗口进行预测，为跨层行动选择低风险时段；常见表现：天气窗口预测；限制：极端气候下误差增大。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“极端气候下误差增大”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“极端气候下误差增大”写成不存在"
+
   limit.threshold_tuning_delta:
     name: "📉阈值校准δ"
     category: 限制
     unlock_level: 6
+    system_line: social
+    tier: 6
+    migration_role: embedded_constraint
     desc: 维持阈值进一步下调，扩大可持续协作人口池。
     effects: [imp_threshold -5]
     balance:
       cost: 中
       limit: 不能绕过忠诚与秩序边界
 
+    summary:
+      prompt_brief: "📉阈值校准δ：维持阈值进一步下调，扩大可持续协作人口池；常见表现：imp_threshold -5；限制：不能绕过忠诚与秩序边界。"
+    boundary:
+      cannot:
+        - "不能写成取消代价、取消阈值或取消上限的纯增益"
+        - "不能写成绕过反滚雪球与维持规则的万能豁免"
+        - "不能忽略“不能绕过忠诚与秩序边界”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把限制类模块写成单纯福利而不体现边界"
+        - "避免忽略阈值、配额、上限和递减机制"
+        - "避免把“不能绕过忠诚与秩序边界”写成不存在"
+
   safe.perimeter_drone_ring:
     name: "🛸周界巡航环"
     category: 安全
     unlock_level: 7
+    system_line: security
+    tier: 7
     desc: 形成楼体周界巡航闭环，提前发现中距离接近威胁。
     effects: [周界预警]
     balance:
       cost: 高
       limit: 维护成本明显上升
 
+    summary:
+      prompt_brief: "🛸周界巡航环：形成楼体周界巡航闭环，提前发现中距离接近威胁；常见表现：周界预警；限制：维护成本明显上升。"
+    boundary:
+      cannot:
+        - "不能写成整栋公寓或整层楼自动无死角防御"
+        - "不能写成无条件秒杀或永久压制所有入侵者"
+        - "不能忽略“维护成本明显上升”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免写成“开了能力就全图无敌”"
+        - "避免把局部防御模块写成主动清场兵器"
+        - "避免把“维护成本明显上升”写成不存在"
+
   survive.field_med_kit_line:
     name: "🩹远征急救链"
     category: 生存
     unlock_level: 7
+    system_line: sustain
+    tier: 7
     desc: 建立外出场景专用急救链路，降低远征途中可避免死亡。
     effects: [远征医疗保障]
     balance:
       cost: 中
       limit: 对致命创伤仅延缓，不保证治愈
 
+    summary:
+      prompt_brief: "🩹远征急救链：建立外出场景专用急救链路，降低远征途中可避免死亡；常见表现：远征医疗保障；限制：对致命创伤仅延缓，不保证治愈。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“对致命创伤仅延缓，不保证治愈”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“对致命创伤仅延缓，不保证治愈”写成不存在"
+
   comfort.deep_rest_suite:
     name: "🛌深度复原寝舱"
     category: 舒适
     unlock_level: 7
+    system_line: life
+    tier: 7
     desc: 通过睡眠环境调谐提升恢复质量，缓冲长期高压导致的崩溃风险。
     effects: [恢复效率提升]
     balance:
       cost: 中
       limit: 对急性危机无即时效果
 
+    summary:
+      prompt_brief: "🛌深度复原寝舱：通过睡眠环境调谐提升恢复质量，缓冲长期高压导致的崩溃风险；常见表现：恢复效率提升；限制：对急性危机无即时效果。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或全面生产增幅"
+        - "不能写成仅靠舒适模块就彻底消除长期创伤与压力"
+        - "不能忽略“对急性危机无即时效果”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适、安抚、娱乐模块写成万能洗脑或绝对忠诚来源"
+        - "避免把氛围改善写成对外部环境的实质性统治"
+        - "避免把“对急性危机无即时效果”写成不存在"
+
   expand.resource_interface_19f_s1:
     name: "🚰19层资源接口S1"
     category: 扩展
     unlock_level: 7
+    system_line: expansion
+    tier: 7
     desc: 资源接口首次下沉至19层，允许有限的跨层生存支援。
     effects: [19层资源接口初次扩展]
     balance:
       cost: 高
       limit: 吞吐低且需严格配额
 
+    summary:
+      prompt_brief: "🚰19层资源接口S1：资源接口首次下沉至19层，允许有限的跨层生存支援；常见表现：19层资源接口初次扩展；限制：吞吐低且需严格配额。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“吞吐低且需严格配额”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“吞吐低且需严格配额”写成不存在"
+
   expedition.pioneer_vehicle_mk1:
     name: "🚗先驱者载具Mk.I"
     category: 远征
     unlock_level: 7
+    system_line: expansion
+    tier: 7
     desc: 解锁首台中短程雪地远征载具，实现“可带回资源”的机动能力。
     effects: [短中程机动远征]
     balance:
       cost: 高
       limit: 装甲与续航有限
 
+    summary:
+      prompt_brief: "🚗先驱者载具Mk.I：解锁首台中短程雪地远征载具，实现“可带回资源”的机动能力；常见表现：短中程机动远征；限制：装甲与续航有限。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能把“装甲与续航有限”写成不存在"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“装甲与续航有限”写成不存在"
+
   expedition.mobile_relief_pod:
     name: "🧯临时救助舱"
     category: 远征
     unlock_level: 7
+    system_line: expansion
+    tier: 7
     desc: 可快速部署临时保温/补氧点，为撤离和救助争取黄金窗口。
     effects: [临时救助节点]
     balance:
       cost: 中
       limit: 持续时间短
 
+    summary:
+      prompt_brief: "🧯临时救助舱：可快速部署临时保温/补氧点，为撤离和救助争取黄金窗口；常见表现：临时救助节点；限制：持续时间短。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“持续时间短”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“持续时间短”写成不存在"
+
   limit.support_quota_delta:
     name: "📊维持配额δ"
     category: 限制
     unlock_level: 7
+    system_line: social
+    tier: 7
+    migration_role: embedded_constraint
     desc: 协作配额模型优化，达标协作者贡献再提升，但进入递减区间更早。
     effects: [bonus_days_per_qualified_survivor +0.5]
     balance:
       cost: 中
       limit: 强递减约束
 
+    summary:
+      prompt_brief: "📊维持配额δ：协作配额模型优化，达标协作者贡献再提升，但进入递减区间更早；常见表现：bonus_days_per_qualified_survivor +0.5；限制：强递减约束。"
+    boundary:
+      cannot:
+        - "不能写成取消代价、取消阈值或取消上限的纯增益"
+        - "不能写成绕过反滚雪球与维持规则的万能豁免"
+        - "不能忽略“强递减约束”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把限制类模块写成单纯福利而不体现边界"
+        - "避免忽略阈值、配额、上限和递减机制"
+        - "避免把“强递减约束”写成不存在"
+
   safe.heavy_nonlethal_turret:
     name: "🛡️重型非致命炮塔"
     category: 安全
     unlock_level: 8
+    system_line: security
+    tier: 8
     desc: 在关键走廊部署高压抑制炮塔，强化群体冲突管控能力。
     effects: [群体非致命压制]
     balance:
       cost: 高
       limit: 对装甲武装仍非决定性
 
+    summary:
+      prompt_brief: "🛡️重型非致命炮塔：在关键走廊部署高压抑制炮塔，强化群体冲突管控能力；常见表现：群体非致命压制；限制：对装甲武装仍非决定性。"
+    boundary:
+      cannot:
+        - "不能写成整栋公寓或整层楼自动无死角防御"
+        - "不能写成无条件秒杀或永久压制所有入侵者"
+        - "不能忽略“对装甲武装仍非决定性”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免写成“开了能力就全图无敌”"
+        - "避免把局部防御模块写成主动清场兵器"
+        - "避免把“对装甲武装仍非决定性”写成不存在"
+
   survive.pharma_replicator_t1:
     name: "🧪药剂复构台T1"
     category: 生存
     unlock_level: 8
+    system_line: sustain
+    tier: 8
     desc: 扩展药品谱系与稳定性，提升长期伤病管理能力。
     effects: [中高级药品供给]
     balance:
       cost: 高
       limit: 受原料与伦理规则约束
 
+    summary:
+      prompt_brief: "🧪药剂复构台T1：扩展药品谱系与稳定性，提升长期伤病管理能力；常见表现：中高级药品供给；限制：受原料与伦理规则约束。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“受原料与伦理规则约束”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“受原料与伦理规则约束”写成不存在"
+
   comfort.virtual_biome_voyage:
     name: "🌴亚空间仿生游览舱"
     category: 舒适
     unlock_level: 8
+    system_line: life
+    tier: 8
     desc: 提供高沉浸仿生环境漫游，短时缓解“永久冬夜”心理磨损。
     effects: [高阶舒适体验]
     balance:
       cost: 中
       limit: 心理疗效因人而异
 
+    summary:
+      prompt_brief: "🌴亚空间仿生游览舱：提供高沉浸仿生环境漫游，短时缓解“永久冬夜”心理磨损；常见表现：高阶舒适体验；限制：心理疗效因人而异。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或全面生产增幅"
+        - "不能写成仅靠舒适模块就彻底消除长期创伤与压力"
+        - "不能忽略“心理疗效因人而异”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适、安抚、娱乐模块写成万能洗脑或绝对忠诚来源"
+        - "避免把氛围改善写成对外部环境的实质性统治"
+        - "避免把“心理疗效因人而异”写成不存在"
+
   expand.shelter_radius_20f_s3:
     name: "🛡️20层庇护半径S3"
     category: 扩展
     unlock_level: 8
+    system_line: expansion
+    tier: 8
     desc: 20层庇护名额再扩容，形成稳定治理走廊。
     effects: [20层安全范围三次扩展]
     balance:
       cost: 高
       limit: 治理维护负担显著增加
 
+    summary:
+      prompt_brief: "🛡️20层庇护半径S3：20层庇护名额再扩容，形成稳定治理走廊；常见表现：20层安全范围三次扩展；限制：治理维护负担显著增加。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“治理维护负担显著增加”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“治理维护负担显著增加”写成不存在"
+
   expedition.long_range_sensor_mast:
     name: "📡远距感知桅杆"
     category: 远征
     unlock_level: 8
+    system_line: expansion
+    tier: 8
     desc: 构建更远距离感知链路，可为外部探索提供提前量更高的情报。
     effects: [远距侦查]
     balance:
       cost: 高
       limit: 对抗式干扰下精度下降
 
+    summary:
+      prompt_brief: "📡远距感知桅杆：构建更远距离感知链路，可为外部探索提供提前量更高的情报；常见表现：远距侦查；限制：对抗式干扰下精度下降。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“对抗式干扰下精度下降”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“对抗式干扰下精度下降”写成不存在"
+
   expedition.convoy_dock_node:
     name: "🚚补给车队泊接点"
     category: 远征
     unlock_level: 8
+    system_line: expansion
+    tier: 8
     desc: 建立车队回收与再出发节点，提升外勤周转效率。
     effects: [远征周转提升]
     balance:
       cost: 高
       limit: 对内部物流调度要求高
 
+    summary:
+      prompt_brief: "🚚补给车队泊接点：建立车队回收与再出发节点，提升外勤周转效率；常见表现：远征周转提升；限制：对内部物流调度要求高。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“对内部物流调度要求高”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“对内部物流调度要求高”写成不存在"
+
   limit.threshold_tuning_epsilon:
     name: "📉阈值校准ε"
     category: 限制
     unlock_level: 8
+    system_line: social
+    tier: 8
+    migration_role: embedded_constraint
     desc: 维持阈值完成高阶下调，兼顾扩张期的人口结构波动。
     effects: [imp_threshold -5]
     balance:
       cost: 中
       limit: 受最低阈值封顶保护
 
+    summary:
+      prompt_brief: "📉阈值校准ε：维持阈值完成高阶下调，兼顾扩张期的人口结构波动；常见表现：imp_threshold -5；限制：受最低阈值封顶保护。"
+    boundary:
+      cannot:
+        - "不能写成取消代价、取消阈值或取消上限的纯增益"
+        - "不能写成绕过反滚雪球与维持规则的万能豁免"
+        - "不能忽略“受最低阈值封顶保护”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把限制类模块写成单纯福利而不体现边界"
+        - "避免忽略阈值、配额、上限和递减机制"
+        - "避免把“受最低阈值封顶保护”写成不存在"
+
   safe.counterstrike_doctrine_lock:
     name: "🎯反制条令锁"
     category: 安全
     unlock_level: 9
+    system_line: security
+    tier: 9
     desc: 安防系统进入条令化反制模式，能对高危入侵执行分层应对。
     effects: [高危威胁处置提升]
     balance:
       cost: 高
       limit: 需人工授权关键步骤
 
+    summary:
+      prompt_brief: "🎯反制条令锁：安防系统进入条令化反制模式，能对高危入侵执行分层应对；常见表现：高危威胁处置提升；限制：需人工授权关键步骤。"
+    boundary:
+      cannot:
+        - "不能写成整栋公寓或整层楼自动无死角防御"
+        - "不能写成无条件秒杀或永久压制所有入侵者"
+        - "不能忽略“需人工授权关键步骤”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免写成“开了能力就全图无敌”"
+        - "避免把局部防御模块写成主动清场兵器"
+        - "避免把“需人工授权关键步骤”写成不存在"
+
   survive.eco_farm_vertical:
     name: "🌱垂直生态农场"
     category: 生存
     unlock_level: 9
+    system_line: sustain
+    tier: 9
     desc: 建立可持续食物生产闭环，降低对外部补给依赖。
     effects: [高阶食物自给]
     balance:
       cost: 高
       limit: 前期建设周期长
 
+    summary:
+      prompt_brief: "🌱垂直生态农场：建立可持续食物生产闭环，降低对外部补给依赖；常见表现：高阶食物自给；限制：前期建设周期长。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“前期建设周期长”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“前期建设周期长”写成不存在"
+
   survive.surgery_table_t1:
     name: "🩺外科台T1"
     category: 生存
     unlock_level: 9
+    system_line: sustain
+    tier: 9
     desc: 支持更高复杂度组织修复与康复流程，进一步降低致残概率。
     effects: [高阶外科]
     balance:
       cost: 高
       limit: 仍需专业操作条件
 
+    summary:
+      prompt_brief: "🩺外科台T1：支持更高复杂度组织修复与康复流程，进一步降低致残概率；常见表现：高阶外科；限制：仍需专业操作条件。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“仍需专业操作条件”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“仍需专业操作条件”写成不存在"
+
   comfort.hydro_thermal_pool:
     name: "🏊恒温水疗池"
     category: 舒适
     unlock_level: 9
+    system_line: life
+    tier: 9
     desc: 提供低冲击恢复与高质量放松场景，强化长期生存中的精神韧性。
     effects: [高阶舒适恢复]
     balance:
       cost: 中
       limit: 占用较高水热预算
 
+    summary:
+      prompt_brief: "🏊恒温水疗池：提供低冲击恢复与高质量放松场景，强化长期生存中的精神韧性；常见表现：高阶舒适恢复；限制：占用较高水热预算。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或全面生产增幅"
+        - "不能写成仅靠舒适模块就彻底消除长期创伤与压力"
+        - "不能忽略“占用较高水热预算”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适、安抚、娱乐模块写成万能洗脑或绝对忠诚来源"
+        - "避免把氛围改善写成对外部环境的实质性统治"
+        - "避免把“占用较高水热预算”写成不存在"
+
   expand.shelter_radius_19f_s2:
     name: "🛡️19层庇护半径S2"
     category: 扩展
     unlock_level: 9
+    system_line: expansion
+    tier: 9
     desc: 19层庇护名额提升，形成双层协同秩序网。
     effects: [19层安全范围二次扩展]
     balance:
       cost: 高
       limit: 跨层治理复杂度陡升
 
+    summary:
+      prompt_brief: "🛡️19层庇护半径S2：19层庇护名额提升，形成双层协同秩序网；常见表现：19层安全范围二次扩展；限制：跨层治理复杂度陡升。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“跨层治理复杂度陡升”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“跨层治理复杂度陡升”写成不存在"
+
   expedition.pioneer_vehicle_mk2:
     name: "🚙先驱者载具Mk.II"
     category: 远征
     unlock_level: 9
+    system_line: expansion
+    tier: 9
     desc: 强化装甲与续航的二代载具，可承担更远半径探索与回收任务。
     effects: [中远程机动远征]
     balance:
       cost: 高
       limit: 维护开销大
 
+    summary:
+      prompt_brief: "🚙先驱者载具Mk.II：强化装甲与续航的二代载具，可承担更远半径探索与回收任务；常见表现：中远程机动远征；限制：维护开销大。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“维护开销大”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“维护开销大”写成不存在"
+
   limit.support_quota_epsilon:
     name: "📊维持配额ε"
     category: 限制
     unlock_level: 9
+    system_line: social
+    tier: 9
+    migration_role: embedded_constraint
     desc: 达标协作贡献达到上限档，系统整体维持效率进入高位稳定区。
     effects: [bonus_days_per_qualified_survivor +0.5]
     balance:
       cost: 高
       limit: 单人贡献受上限约束
 
+    summary:
+      prompt_brief: "📊维持配额ε：达标协作贡献达到上限档，系统整体维持效率进入高位稳定区；常见表现：bonus_days_per_qualified_survivor +0.5；限制：单人贡献受上限约束。"
+    boundary:
+      cannot:
+        - "不能写成取消代价、取消阈值或取消上限的纯增益"
+        - "不能写成绕过反滚雪球与维持规则的万能豁免"
+        - "不能忽略“单人贡献受上限约束”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把限制类模块写成单纯福利而不体现边界"
+        - "避免忽略阈值、配额、上限和递减机制"
+        - "避免把“单人贡献受上限约束”写成不存在"
+
   safe.optic_veil_field:
     name: "🌌光学匿迹场"
     category: 安全
     unlock_level: 10
+    system_line: security
+    tier: 10
     desc: 关键时段可扭曲可见与热特征，降低被远距锁定的概率。
     effects: [高阶隐蔽]
     balance:
       cost: 极高
       limit: 不能持续常开
 
+    summary:
+      prompt_brief: "🌌光学匿迹场：关键时段可扭曲可见与热特征，降低被远距锁定的概率；常见表现：高阶隐蔽；限制：不能持续常开。"
+    boundary:
+      cannot:
+        - "不能写成整栋公寓或整层楼自动无死角防御"
+        - "不能写成无条件秒杀或永久压制所有入侵者"
+        - "不能忽略“不能持续常开”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免写成“开了能力就全图无敌”"
+        - "避免把局部防御模块写成主动清场兵器"
+        - "避免把“不能持续常开”写成不存在"
+
   survive.genesis_core_regulator:
     name: "⚛️创世纪核心稳压器"
     category: 生存
     unlock_level: 10
+    system_line: energy
+    tier: 10
     desc: 为全系统提供高冗余稳态能源，支撑高负载下的持续运转。
     effects: [全局能源稳定]
     balance:
       cost: 极高
       limit: 仍需防范系统级故障链
 
+    summary:
+      prompt_brief: "⚛️创世纪核心稳压器：为全系统提供高冗余稳态能源，支撑高负载下的持续运转；常见表现：全局能源稳定；限制：仍需防范系统级故障链。"
+    boundary:
+      cannot:
+        - "不能写成无限制产出物资或无成本长期维持"
+        - "不能写成一次解除了所有生存、医疗或补给问题"
+        - "不能忽略“仍需防范系统级故障链”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把基础生存模块写成完整工业或无限后勤系统"
+        - "避免把恢复、供给写成没有流程和耗材约束的奇迹治疗"
+        - "避免把“仍需防范系统级故障链”写成不存在"
+
   comfort.ark_theatre_infinite:
     name: "🎬方舟剧院·无尽季"
     category: 舒适
     unlock_level: 10
+    system_line: life
+    tier: 10
     desc: 融合叙事、互动与环境沉浸的终阶娱乐系统，近似复原末日前夜生活密度。
     effects: [终阶娱乐恢复]
     balance:
       cost: 高
       limit: 不提供直接战斗收益
 
+    summary:
+      prompt_brief: "🎬方舟剧院·无尽季：融合叙事、互动与环境沉浸的终阶娱乐系统，近似复原末日前夜生活密度；常见表现：终阶娱乐恢复；限制：不提供直接战斗收益。"
+    boundary:
+      cannot:
+        - "不能直接写成稳定战斗优势或全面生产增幅"
+        - "不能写成仅靠舒适模块就彻底消除长期创伤与压力"
+        - "不能额外补写直接战斗收益能力"
+    writing_contract:
+      must_avoid:
+        - "避免把舒适、安抚、娱乐模块写成万能洗脑或绝对忠诚来源"
+        - "避免把氛围改善写成对外部环境的实质性统治"
+        - "避免把“不提供直接战斗收益”写成不存在"
+
   expand.omni_interface_network:
     name: "🔗全域接口网络"
     category: 扩展
     unlock_level: 10
+    system_line: expansion
+    tier: 10
     desc: 融合安全、供暖与资源接口为统一调度网络，实现高效跨区协同。
     effects: [范围与接口统一调度]
     balance:
       cost: 极高
       limit: 调度错误会导致连锁波动
 
+    summary:
+      prompt_brief: "🔗全域接口网络：融合安全、供暖与资源接口为统一调度网络，实现高效跨区协同；常见表现：范围与接口统一调度；限制：调度错误会导致连锁波动。"
+    boundary:
+      cannot:
+        - "不能写成自动把整层、整栋或外部区域完全纳入控制"
+        - "不能默认附带安全、供暖、资源、治理全部能力同步扩张"
+        - "不能忽略“调度错误会导致连锁波动”这一限制"
+    writing_contract:
+      must_avoid:
+        - "避免把“半径/接口/锚点”写成整片区域自动永久安全"
+        - "避免省略扩展后的名额、范围与配套条件"
+        - "避免把“调度错误会导致连锁波动”写成不存在"
+
   expedition.stratos_probe_lance:
     name: "🚀平流层探针枪"
     category: 远征
     unlock_level: 10
+    system_line: expansion
+    tier: 10
     desc: 可发射高空探针建立更远域感知，为跨区域战略行动提供前置情报。
     effects: [战略级侦查]
     balance:
       cost: 极高
       limit: 发射频率受严格配额限制
 
+    summary:
+      prompt_brief: "🚀平流层探针枪：可发射高空探针建立更远域感知，为跨区域战略行动提供前置情报；常见表现：战略级侦查；限制：发射频率受严格配额限制。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“发射频率受严格配额限制”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“发射频率受严格配额限制”写成不存在"
+
   expedition.frontier_command_hub:
     name: "🧭前沿指挥枢纽"
     category: 远征
     unlock_level: 10
+    system_line: expansion
+    tier: 10
     desc: 统一远征编组、补给、撤离与回收决策，形成可持续外拓能力。
     effects: [战略远征协同]
     balance:
       cost: 极高
       limit: 依赖高成熟组织度
 
+    summary:
+      prompt_brief: "🧭前沿指挥枢纽：统一远征编组、补给、撤离与回收决策，形成可持续外拓能力；常见表现：战略远征协同；限制：依赖高成熟组织度。"
+    boundary:
+      cannot:
+        - "不能写成无风险、无损耗、全天候远征"
+        - "不能写成自动获得全域侦查、回收或跨区统治能力"
+        - "不能忽略“依赖高成熟组织度”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把远征模块写成稳定碾压外界的一键征服能力"
+        - "避免忽略天气、补给、组织度和回收风险"
+        - "避免把“依赖高成熟组织度”写成不存在"
+
   limit.maintenance_compact_omega:
     name: "∞维持契约Ω"
     category: 限制
     unlock_level: 10
+    system_line: social
+    tier: 10
+    migration_role: embedded_constraint
     desc: 维持规则终阶整合，阈值与贡献达到平衡上限，同时强化反滚雪球约束。
     effects: [维持系统上限档]
     balance:
       cost: 高
       limit: 严格受总天数上限与递减规则约束
 
+    summary:
+      prompt_brief: "∞维持契约Ω：维持规则终阶整合，阈值与贡献达到平衡上限，同时强化反滚雪球约束；常见表现：维持系统上限档；限制：严格受总天数上限与递减规则约束。"
+    boundary:
+      cannot:
+        - "不能写成取消代价、取消阈值或取消上限的纯增益"
+        - "不能写成绕过反滚雪球与维持规则的万能豁免"
+        - "不能忽略“严格受总天数上限与递减规则约束”这一前提"
+    writing_contract:
+      must_avoid:
+        - "避免把限制类模块写成单纯福利而不体现边界"
+        - "避免忽略阈值、配额、上限和递减机制"
+        - "避免把“严格受总天数上限与递减规则约束”写成不存在"
+
 custom:
   note: 用户自定义能力扩展区（建议使用自定义前缀，如 custom.xxx）
   abilities: {}
   level_overrides: {}
-
