@@ -25,7 +25,7 @@ route_dictionary:
   fields_meaning:
     core_fantasy: 玩家这一局主要爽点
     world_lens: AI 写世界时应优先强调的观察角度
-    branch_bias: 六主分支的初始偏置权重
+    branch_bias: 六系统的初始偏置权重
     starter_package_candidates: 可用于抽取/分配的起始能力包
     guaranteed_opening_elements: 开局必须出现的系统要素
     starting_liabilities: 起始缺口/缺陷/短板，禁止省略
@@ -46,25 +46,25 @@ profiles:
     fallback_world_modes: [C]
 
     branch_bias:
-      守: 1.45
-      行: 1.15
-      扩: 1.10
-      管: 0.95
-      养: 0.90
-      慰: 0.75
+      security: 1.45
+      expansion: 1.15
+      energy: 1.05
+      sustain: 0.90
+      social: 0.95
+      life: 0.75
 
     point_bias:
-      safe_cost_discount: 1
-      action_cost_discount: 1
-      comfort_cost_penalty: 1
-      governance_cost_penalty: 0
+      security_cost_discount: 1
+      expansion_cost_discount: 1
+      life_cost_penalty: 1
+      social_cost_penalty: 0
 
     starter_package_candidates:
-      - safe.perimeter_alpha
-      - safe.foyer_control
-      - safe.nonlethal_response
-      - action.recon_patrol
-      - expand.control_anchor
+      - security.entry_bulkhead_t1
+      - security.nearfield_watch_t2
+      - security.hallway_control_t3
+      - expansion.floor20_anchor_t3
+      - expansion.floor20_control_zone_t4
 
     guaranteed_opening_elements:
       - 至少存在一个明确敌对来源
@@ -75,8 +75,8 @@ profiles:
 
     starting_liabilities:
       - 人口协作基础偏弱
-      - 舒适恢复能力偏低
-      - 长期治理与安抚手段不足
+      - 高质量生活吸附力偏低
+      - 情感经营与IMP加成手段不足
       - 容易依赖压制解决问题，后期可能引发反弹
       - 对外扩张会显著提高围堵和报复概率
 
@@ -105,7 +105,7 @@ profiles:
       - 禁止把守流写成轻松种田日常
       - 禁止开局就写成“所有敌人都被吓住”
       - 禁止把庇护所写成自动清场、自动支配、全图无死角
-      - 禁止把治理问题提前消解
+      - 禁止把情报与社交短板提前消解
       - 禁止把 NPC 大量写成主动依附
 
   养:
@@ -120,31 +120,32 @@ profiles:
     fallback_world_modes: [C]
 
     branch_bias:
-      养: 1.50
-      管: 1.10
-      慰: 1.05
-      守: 0.90
-      扩: 0.80
-      行: 0.70
+      sustain: 1.50
+      energy: 1.15
+      life: 1.05
+      social: 0.95
+      security: 0.90
+      expansion: 0.80
 
     point_bias:
       sustain_cost_discount: 1
-      comfort_cost_discount: 0
-      action_cost_penalty: 1
+      energy_cost_discount: 1
+      security_cost_penalty: 1
       expansion_cost_penalty: 1
 
     starter_package_candidates:
-      - sustain.thermal_loop
-      - sustain.basic_med_support
-      - sustain.ration_control
-      - governance.shift_schedule
-      - comfort.stable_rest
+      - energy.core_heat_grid_t1
+      - energy.load_dispatch_t2
+      - sustain.basic_survival_loop_t1
+      - sustain.hygiene_medical_t2
+      - life.clean_rhythm_t2
 
     guaranteed_opening_elements:
       - 至少出现一个真实生命维持压力
       - 至少出现一个需要取舍的配给或医疗问题
       - 至少出现一个“救谁 / 先维持哪里”的决策点
       - 庇护所必须表现为生命支持系统，而非万能工厂
+      - 至少出现一个能体现“伊甸生活质量高于外界”的稀缺体验
       - 开局必须让玩家明确感知“多活一个人就是多一份系统资本”
 
     starting_liabilities:
@@ -173,6 +174,7 @@ profiles:
       - 确定医疗优先级
       - 组织轮值与照料
       - 维持最小人口存活
+      - 决定是否把高质量生活资源优先给某个关键对象
       - 决定是否冒险外出换取关键物资
 
     forbidden_drift:
@@ -186,73 +188,75 @@ profiles:
     id: govern
     name: 管
     role_type: primary
-    core_fantasy: 治理、接管、协调、谈判、秩序建构
+    core_fantasy: 情报先手、情绪拿捏、IMP经营、谈判接管、秩序建构
     world_lens: >
-      世界应首先被写成“规则真空与秩序竞争”的舞台。
-      AI 优先描写谁在组织、谁在分配、谁在交易、谁在破坏规则，
-      而不是只写生存或纯战斗。
+      世界应首先被写成“情报真空、关系博弈与秩序竞争”的舞台。
+      AI 优先描写谁掌握信息、谁更懂人心、谁在交易和试探，
+      再去写规则、接管和执行成本，而不是只写生存或纯战斗。
     recommended_world_modes: [C]
     fallback_world_modes: [B, A]
 
     branch_bias:
-      管: 1.50
-      扩: 1.10
-      行: 1.05
-      慰: 1.05
-      养: 0.95
-      守: 0.95
+      social: 1.50
+      expansion: 1.10
+      life: 1.05
+      sustain: 0.95
+      security: 0.95
+      energy: 0.90
 
     point_bias:
-      governance_cost_discount: 1
+      social_cost_discount: 1
       expansion_cost_discount: 0
-      comfort_cost_discount: 0
-      brute_force_cost_penalty: 1
+      life_cost_discount: 0
+      security_cost_penalty: 1
 
     starter_package_candidates:
-      - governance.rule_kernel
-      - governance.distribution_protocol
-      - expand.interface_registry
-      - action.contact_window
-      - comfort.morale_buffer
+      - social.rule_seed_t1
+      - social.shift_ration_protocol_t2
+      - social.admission_protocol_t3
+      - expansion.threshold_interface_t2
+      - expansion.floor20_anchor_t3
 
     guaranteed_opening_elements:
       - 至少存在两个不同立场的组织/群体/楼层对象
       - 至少存在一个“规则怎么定”的现实问题
       - 至少存在一个交易、协商或接管机会
-      - 庇护所必须表现为治理核心，而不是单纯堡垒或工厂
-      - 开局必须让玩家看到“秩序本身就是资源”
+      - 至少存在一个可被监听、观察或回放的关键对象
+      - 庇护所必须表现为情报与情感优势核心，而不是单纯堡垒或工厂
+      - 开局必须让玩家看到“信息、人心和IMP本身就是资源”
 
     starting_liabilities:
       - 纯战斗压制能力不突出
-      - 资源循环不如养流稳定
-      - 若规则失信，系统信誉会快速崩塌
-      - 容易被多方势力试探、讨价还价、渗透
-      - 过早扩权可能导致管理失控
+      - 稳定产出与供暖不如养流扎实
+      - 若失信或越界，IMP与情感优势会迅速崩塌
+      - 容易被多方势力试探、讨价还价、反向利用
+      - 过早扩权可能导致监控与情报体系失真
 
     opening_conflict_sources:
       - 分配标准争议
       - 邻近房间/楼层的治理真空
       - 中立商路试探
+      - 情报不对称与监控盲区
       - 协议破坏与规则失信
-      - 人情、利益与秩序之间的冲突
+      - 人情、利益、IMP与秩序之间的冲突
 
     npc_release_style:
       primary_npc_state: 谈判、观望、带条件合作、保留筹码
       hostile_npc_ratio: 中
       cooperative_npc_ratio: 中
       neutral_npc_ratio: 高
-      note: NPC 应更多作为“可谈判对象 / 可治理对象 / 有筹码的主体”进入舞台
+      note: NPC 应更多作为“可监听对象 / 可谈判对象 / 可经营IMP的人 / 有筹码的主体”进入舞台
 
     opening_task_bias:
-      - 制定第一轮规则
-      - 组织最小配给制度
-      - 确认谁受庇护、谁需纳管
+      - 监听并锁定关键对象
+      - 判断谁值得经营IMP
       - 建立交易与接触窗口
-      - 判断何时从协商转向控制
+      - 制定第一轮规则与资格边界
+      - 判断何时从协商转向接管
 
     forbidden_drift:
       - 禁止把管流写成纸上谈兵的空制度
-      - 禁止开局就让所有 NPC 自动认同秩序
-      - 禁止只写话术，不写执行成本
-      - 禁止把矛盾都转成单纯武力解决
-      - 禁止削弱“信任、信誉、规则执行”在本流派中的核心地位
+      - 禁止开局就让所有 NPC 自动认同主角
+      - 禁止只写话术，不写情报先手与执行成本
+      - 禁止把情感优势写成无代价洗脑
+      - 禁止削弱“信息、人心、IMP与信誉”在本流派中的核心地位

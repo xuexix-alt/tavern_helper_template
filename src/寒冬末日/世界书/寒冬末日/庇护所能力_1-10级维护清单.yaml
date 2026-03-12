@@ -1,0 +1,508 @@
+version: 1
+
+meta:
+  id: eden_shelter_ability_maintain_list_l1_l10
+  name: 庇护所能力 1-10级维护清单
+  purpose: >
+    作为《庇护所升级能力.txt》的可读维护底稿。
+    这份文件不接入运行时世界书，只用于集中修改 1-10 级能力设计，
+    后续如有调整，应优先修改本文件，再回灌到总表。
+  runtime_input: false
+  design_principles:
+    - 同一套能力库服务守 / 养 / 管三种开局流派
+    - 每级都要同时体现“优势、短板、进取方向”
+    - 能力优先写成系统级合同，而不是设备炫技
+    - 高阶成长统一收束为区域控制权，而不是设施拼盘
+  maintenance_workflow:
+    - 先改本清单
+    - 再同步庇护所升级能力.txt
+    - 如需导出世界书，再执行 tavern_sync bundle
+
+system_lines:
+  - energy
+  - security
+  - sustain
+  - life
+  - social
+  - expansion
+
+levels:
+  "1":
+    stage: 房间求生
+    territory: 2001核心区
+    player_feeling: 有一个终于能活下来的地方，但只稳住了脚下这一块地。
+    abilities:
+      energy:
+        ability_id: energy.core_heat_grid_t1
+        name: 核心供暖电网T1
+        growth_target: 让2001核心区具备最低生存级供暖与供电。
+        player_advantage: 有稳定温度和基础开机能力，不再完全受外界寒潮摆布。
+        insufficiency: 只能维持核心区，不能外扩供能，系统负载冗余很低。
+        prompt_brief_seed: 可维持2001核心区的基础供暖与最低供电，保证人能活、系统能开机；范围仅核心区，无法支撑外扩。
+      security:
+        ability_id: security.entry_bulkhead_t1
+        name: 核心入口防线T1
+        growth_target: 让2001门口不再是一踹就开的薄弱点。
+        player_advantage: 能延缓破门、争取观察与应对时间。
+        insufficiency: 只能守住入口，守不住整层，也无法替代主动清场。
+        prompt_brief_seed: 可强化2001核心入口防护并延缓强闯，为观察、后撤和反应争取时间；仅入口有效，不能覆盖整层。
+      sustain:
+        ability_id: sustain.basic_survival_loop_t1
+        name: 基础生存循环T1
+        growth_target: 确保口粮、净水、空气与卫生都达到最低生存线。
+        player_advantage: 可以稳定保住自己和极少数人的生命底线。
+        insufficiency: 只能维持基础配给，无法承托伤病、多人收容或高质量生活。
+        prompt_brief_seed: 可提供基础口粮、净水、空气净化与最低卫生保障，保证少量人口不因基础生存要素直接崩盘；产出与承载都很有限。
+      life:
+        ability_id: life.rest_privacy_t1
+        name: 热水清洁间T1
+        growth_target: 让主角第一次拥有末日里别人享受不到的热水清洁条件。
+        player_advantage: 可以洗热水澡、换上温热干净的衣物，立刻拉开与外部幸存者的生活质量差距。
+        insufficiency: 热水量和使用时段都很紧，只够核心区少数人短时享受，远谈不上奢侈生活。
+        prompt_brief_seed: 可在2001核心区提供稀缺的热水清洁与换洗条件，让主角第一次享受末日下别人没有的体面生活；热水量和时段都有限，只够少数人短时使用。
+      social:
+        ability_id: social.rule_seed_t1
+        name: 近域监听台T1
+        growth_target: 让主角先获得门口和短距走廊的情报优势，而不是只会被动开门。
+        player_advantage: 可以偷听门外动静、捕捉短距语音和情绪波动，为接触、交易和威慑抢到先手。
+        insufficiency: 监听范围极小，且只能得到零碎线索，远远不到全局掌控。
+        prompt_brief_seed: 可监听门口与短距走廊的动静、语音与情绪波动，让主角在接触和试探前先拿到情报优势；范围很小，只能获得零碎线索。
+      expansion:
+        ability_id: expansion.core_anchor_t1
+        name: 核心安全锚点T1
+        growth_target: 把2001定义为一切庇护与控制能力的基准原点。
+        player_advantage: 让后续所有外扩、纳管、供暖、防线都有明确起点。
+        insufficiency: 这只是原点，不等于已经具备向外控制能力。
+        prompt_brief_seed: 可将2001定义为绝对安全锚点，为后续供暖、防线、收容与外扩提供原点；自身不等于已经完成外扩。
+
+  "2":
+    stage: 核心区稳态
+    territory: 2001室完整可用
+    player_feeling: 庇护所开始像一个系统，不再只是几个勉强能用的模块。
+    abilities:
+      energy:
+        ability_id: energy.load_dispatch_t2
+        name: 负载调度网T2
+        growth_target: 建立核心区的配电优先级与热量预算。
+        player_advantage: 能把有限能源用在刀刃上，夜间和紧急状态更稳。
+        insufficiency: 仍然没有多余冗余，错配和超载会快速拖垮系统。
+        prompt_brief_seed: 可对核心区供暖与配电进行优先级调度，减少浪费并提升关键时段稳定性；仍受总负荷限制，无法像充裕能源那样随意开机。
+      security:
+        ability_id: security.nearfield_watch_t2
+        name: 门外近域观察T2
+        growth_target: 把感知从门内推进到门外和短距走廊。
+        player_advantage: 能识别尾随、伏击、走廊短时风险，不再完全被动挨打。
+        insufficiency: 只能看见近域，不是全楼监控，也不保证情报绝对准确。
+        prompt_brief_seed: 可对门外和短距走廊进行近域观察与风险预估，辅助判断接触、避让和拦截；只覆盖近距，不是全楼监控。
+      sustain:
+        ability_id: sustain.hygiene_medical_t2
+        name: 卫生医疗闭环T2
+        growth_target: 建立基础消杀、轻伤处理与失温/感染处置流程。
+        player_advantage: 轻伤病不再等于连锁崩盘，收容一个伤员也有了现实基础。
+        insufficiency: 只能处理基础和轻中度问题，重伤与多人救治仍会迅速超载。
+        prompt_brief_seed: 可建立基础消杀、轻伤处理与失温感染处置流程，让核心区具备最小医疗闭环；只能应对轻中度问题，无法承担复杂抢救。
+      life:
+        ability_id: life.clean_rhythm_t2
+        name: 私享洗浴套间T2
+        growth_target: 把热水清洁升级为稳定可感知的末日奢侈体验。
+        player_advantage: 可以稳定提供热水淋浴、温热毛巾、基础香氛与洁净换装，让进入庇护所的人立刻感到这里和外面不是一个世界。
+        insufficiency: 高度消耗水热预算，只能支撑核心区的小规模使用，不能随便开放给所有人。
+        prompt_brief_seed: 可在核心区稳定提供热水淋浴、洁净换装与基础香氛，让进入庇护所的人立刻感知到末日稀缺的奢侈生活；水热预算吃紧，仍只能小规模使用。
+      social:
+        ability_id: social.shift_ration_protocol_t2
+        name: 全息观察窗T2
+        growth_target: 让主角获得稳定的近域全息观察与直播能力。
+        player_advantage: 可以查看短距区域的实时全息画面与直播切片，在交易、收容和防备前先看到对方状态。
+        insufficiency: 只能覆盖有限范围，仍有盲区和遮挡，不能当成整层监控系统。
+        prompt_brief_seed: 可对门外近域开启实时全息观察与直播切片，让主角在交易、收容和防备前先看到对方状态；覆盖范围有限，仍有盲区和遮挡。
+      expansion:
+        ability_id: expansion.threshold_interface_t2
+        name: 近域接口门槛T2
+        growth_target: 让庇护所第一次拥有接触门外世界的最小接口能力。
+        player_advantage: 可以对门外近邻释放有限的水、电、收容和接触信号。
+        insufficiency: 只是接口，不是全面纳管，更不是随意向外供养所有人。
+        prompt_brief_seed: 可开启2001对门外近域的最小资源与接触接口，用于试探、救助或建立联系；只是门槛能力，不等于完成外扩纳管。
+
+  "3":
+    stage: 走出房门
+    territory: 2001 + 20层近域
+    player_feeling: 庇护所优势第一次从房间内部溢出到公共空间。
+    abilities:
+      energy:
+        ability_id: energy.hallway_heat_reach_t3
+        name: 近域供能延伸T3
+        growth_target: 让供暖与供电第一次从2001延伸到20层近域节点。
+        player_advantage: 你开始能把内部优势投射到门外，不只是关门自保。
+        insufficiency: 外扩范围很小，维持成本显著提高，无法长期全域覆盖。
+        prompt_brief_seed: 可将供暖与基础供能短距外扩到20层近域节点，支撑局部行动、收容或据守；范围和时长都有限，无法长期全域覆盖。
+      security:
+        ability_id: security.hallway_control_t3
+        name: 走廊控制链T3
+        growth_target: 让防线从门体升级为走廊级局部控制。
+        player_advantage: 可以对近域强闯、踩踏、突发混乱做出更快更稳的控制。
+        insufficiency: 仍然是局部控制，不是整层压制，也不意味着主动出击必赢。
+        prompt_brief_seed: 可在20层近域走廊建立局部封锁、引导和非致命控制能力，提升对强闯和混乱的应对效率；只能控局部，不是整层压制。
+      sustain:
+        ability_id: sustain.group_care_t3
+        name: 小群体维持T3
+        growth_target: 从保住几个人升级为能维持一个小群体。
+        player_advantage: 可以处理多人的基础照料、轻伤病与配给波动。
+        insufficiency: 人口一多、病情一重、回收一断，系统仍会迅速吃紧。
+        prompt_brief_seed: 可对小规模群体提供配给、照料与基础伤病维持，支撑最初的共同体雏形；承载上限不高，超量很快会引发系统吃紧。
+      life:
+        ability_id: life.community_rhythm_t3
+        name: 影音休憩厅T3
+        growth_target: 让庇护所第一次拥有能让人主动停留的娱乐空间。
+        player_advantage: 可以提供小型影院、音乐播放和柔性沙发休憩区，让角色们第一次因为舒服和好玩而想进入庇护所。
+        insufficiency: 仍只是小体量娱乐厅，谈不上高规格沉浸体验，也无法覆盖所有人的口味。
+        prompt_brief_seed: 可在庇护所内提供小型影院、音乐播放与休憩厅，让角色们第一次因为舒服和好玩而想主动留下；体量仍小，离高规格娱乐还很远。
+      social:
+        ability_id: social.admission_protocol_t3
+        name: 场景回放台T3
+        growth_target: 让主角第一次能回放短时段内的关键场景，建立证据与判断优势。
+        player_advantage: 可以回看近域里刚发生的对话、动作和冲突片段，在谈判、责问和筛选对象时更占主动。
+        insufficiency: 回放窗口很短，且只能调取已记录区域，不能回溯整层过去。
+        prompt_brief_seed: 可回放近域里刚发生的对话、动作和冲突片段，让主角在谈判、责问和筛选对象时更占主动；回放窗口很短，只限已记录区域。
+      expansion:
+        ability_id: expansion.floor20_anchor_t3
+        name: 20层庇护节点T3
+        growth_target: 让20层少量房间第一次进入庇护半径。
+        player_advantage: 你开始拥有门外可经营的点位，而不是只有一个房间。
+        insufficiency: 名额有限，维护困难，任何外扩都要付出真实成本。
+        prompt_brief_seed: 可将20层少量房间纳入初级庇护半径，形成最早的门外据守节点；名额和维护能力都有限，无法一口气铺开整层。
+
+  "4":
+    stage: 楼层感知
+    territory: 20层局部可控
+    player_feeling: 你开始不只是活着，而是能看懂楼层局势并做选择。
+    abilities:
+      energy:
+        ability_id: energy.floor_budget_t4
+        name: 楼层能耗预算T4
+        growth_target: 让楼层节点供能进入可管理状态，而不是临时拼命顶住。
+        player_advantage: 可以在多节点之间做真实调度，支持外部控制区维持。
+        insufficiency: 每次扩节点都意味着更高天气、人力、维护压力。
+        prompt_brief_seed: 可对20层多个节点的供暖与供能做预算调度，支持局部控制区稳定维持；外扩越多，系统越容易因天气和负载吃紧。
+      security:
+        ability_id: security.floor_awareness_t4
+        name: 楼层威胁感知T4
+        growth_target: 让你第一次能对20层进行中距离预警和威胁排序。
+        player_advantage: 可以主动判断哪块危险点先清、哪类人该接触、哪类人该拦截。
+        insufficiency: 不是全知视角，恶劣环境和复杂局势仍会制造误判。
+        prompt_brief_seed: 可对20层局部进行中距离预警、威胁评分与风险排序，辅助决定接触、避让和清理优先级；并非全知，误判仍会存在。
+      sustain:
+        ability_id: sustain.multi_patient_support_t4
+        name: 多人维持支持T4
+        growth_target: 让庇护所能承接更复杂的伤病和更多的基础配给需求。
+        player_advantage: 可以开始稳定承托一个小共同体，而不是一两名个体。
+        insufficiency: 药品、食物、净化和照护都开始进入真实瓶颈管理。
+        prompt_brief_seed: 可为一个小共同体提供更稳定的配给、净化、药品与基础照护，承托多人持续生存；系统会在药品、食物和照护负荷上持续承压。
+      life:
+        ability_id: life.civil_buffer_t4
+        name: 舞台酒廊T4
+        growth_target: 让庇护所第一次出现可以表演、聚会和展示魅力的生活舞台。
+        player_advantage: 可以提供小型舞台、酒廊氛围与社交娱乐空间，让角色在这里唱歌、跳舞、放松、取悦或竞争关注。
+        insufficiency: 仍只是局部生活场景，不可能用一个舞台解决所有情绪创伤和人际矛盾。
+        prompt_brief_seed: 可在庇护所内提供小型舞台和酒廊氛围，让角色在这里表演、放松、取悦或竞争关注，进一步强化这里的生活吸引力；这仍只是局部生活场景，不能化解所有矛盾。
+      social:
+        ability_id: social.contact_trade_window_t4
+        name: 情绪画像库T4
+        growth_target: 把碎片情报升级为人物情绪与偏好画像，形成稳定的情感优势。
+        player_advantage: 可以更快判断角色的软肋、偏好、恐惧和讨好点，在交易、收容与暧昧互动中更容易拿到高质量反馈。
+        insufficiency: 画像依赖持续观察和样本积累，初次接触的人物仍可能误判。
+        prompt_brief_seed: 可为接触对象建立情绪、偏好与恐惧画像，让主角在交易、收容与情感互动中获得明显优势；画像依赖持续观察，初次接触仍可能误判。
+      expansion:
+        ability_id: expansion.floor20_control_zone_t4
+        name: 20层控制区T4
+        growth_target: 让20层局部从可去升级为可经营、可保、可纳管。
+        player_advantage: 你第一次拥有真正可经营的门外控制区。
+        insufficiency: 控制区仍是局部点状，无法默认整层都被你掌控。
+        prompt_brief_seed: 可在20层形成局部控制区，支撑供能、防线、配给与接触的联动经营；控制区是点状和局部的，不等于整层尽入掌握。
+
+  "5":
+    stage: 小共同体成形
+    territory: 20层稳定锚点网络
+    player_feeling: 庇护所从你的个人优势，变成一群人围绕运转的核心系统。
+    abilities:
+      energy:
+        ability_id: energy.anchor_network_t5
+        name: 锚点供能网络T5
+        growth_target: 让核心区与楼层节点形成稳定维持网络。
+        player_advantage: 你开始拥有真正的多点稳态运转能力。
+        insufficiency: 负荷、天气、人口和扩张速度都会决定网络是否掉线。
+        prompt_brief_seed: 可让核心区与20层节点形成稳定供能与维持网络，支撑更长时间的多点运转；网络仍受负荷、天气和人口结构制约。
+      security:
+        ability_id: security.rapid_response_t5
+        name: 快速响应防线T5
+        growth_target: 让防线从单点防住成长为局部区域能守住。
+        player_advantage: 可以对走廊、节点和控制区进行更快的防守、修补和压制响应。
+        insufficiency: 仍然无法把整个楼层写成自动清场和完全支配的区域。
+        prompt_brief_seed: 可对20层控制区进行快速防守、修补和局部压制响应，让你守住的是一片区域而不只是一个门；仍然不能视作整层自动清场。
+      sustain:
+        ability_id: sustain.community_support_t5
+        name: 共同体维持体系T5
+        growth_target: 支撑稳定人口、配给、基础药物和持续照护。
+        player_advantage: 你终于能养共同体，而不是只能救人后继续超载。
+        insufficiency: 一旦人口结构失衡或补给中断，系统仍会连锁出问题。
+        prompt_brief_seed: 可支撑稳定人口的配给、基础药物、照护与日常生存，让庇护所真正进入共同体维持阶段；人口结构失衡和补给断裂仍会引发连锁问题。
+      life:
+        ability_id: life.settlement_identity_t5
+        name: 恒温享乐层T5
+        growth_target: 让庇护所的生活品质从舒适升级为让人上瘾的末日稀缺享受。
+        player_advantage: 热水浴、柔软寝具、精致餐饮角和稳定娱乐被整合为一层，角色会明显意识到住进来等于得到外界完全没有的生活。
+        insufficiency: 享乐感越强，越会引发依赖、嫉妒与争夺，不能默认所有人因此就忠诚。
+        prompt_brief_seed: 可将热水浴、舒适寝具、精致餐饮角和稳定娱乐整合成恒温享乐层，让角色明显意识到住进来等于得到外界完全没有的生活；这会引发依赖与争夺，不等于天然忠诚。
+      social:
+        ability_id: social.population_strata_t5
+        name: IMP共鸣加成T5
+        growth_target: 让庇护所第一次对角色好感与依赖形成系统级增益。
+        player_advantage: 在庇护所内被照料、娱乐、安抚和优待的角色，其 IMP 增长会得到稳定加成，主角第一次真正拥有情感经营红利。
+        insufficiency: 这只是加成，不是洗脑；越界、失信和羞辱依旧会让 IMP 大幅下跌。
+        prompt_brief_seed: 可让在庇护所内被照料、娱乐和优待的角色获得稳定的 IMP 增长加成，使主角第一次真正拥有情感经营红利；这不是洗脑，越界和失信依旧会让 IMP 大幅下跌。
+      expansion:
+        ability_id: expansion.floor20_governance_zone_t5
+        name: 20层治理区T5
+        growth_target: 让20层从控制点升级为可稳定经营、收编和接管的治理区。
+        player_advantage: 你第一次拥有真正意义上的门外地盘。
+        insufficiency: 这只是楼层级治理的起点，更大的地盘会带来更系统性的反扑与消耗。
+        prompt_brief_seed: 可让20层形成稳定治理区，支撑控制、收编、纳管与持续经营，意味着你第一次真正拥有门外地盘；这只是楼层级治理起点，不代表后续扩张没有代价。
+
+  "6":
+    stage: 跨层触达
+    territory: 20层核心区 + 19层前沿节点
+    player_feeling: 庇护所第一次从单层据点变成跨层系统。
+    abilities:
+      energy:
+        ability_id: energy.crossfloor_spine_t6
+        name: 跨层供能脊线T6
+        growth_target: 让20层核心区与19层前沿节点形成可调度的跨层供能关系。
+        player_advantage: 首次把庇护所从单层网络推进为立体系统，前沿节点真正能接上后方能力。
+        insufficiency: 跨层损耗、检修难度与故障连锁明显上升，不能把两层都写成同等稳定。
+        prompt_brief_seed: 可建立20层至19层的跨层供能脊线，让前沿据点真正接上后方电热支持；跨层损耗和故障连锁明显上升，无法把多层都写成同等稳态。
+      security:
+        ability_id: security.frontier_layers_t6
+        name: 前沿分层防线T6
+        growth_target: 让19层前沿节点与20层核心区形成分层预警和互相支援。
+        player_advantage: 防线从平面走廊变成立体网络，可以更早识别并拖住跨层威胁。
+        insufficiency: 这只是分层防守，不是整栋封控；前沿拉太长时仍会出现漏点和迟滞。
+        prompt_brief_seed: 可在核心区、楼梯口与19层前沿节点之间建立分层预警和撤回保护链，让防线首次具备立体感；仍有跨层盲点，不能视作整栋封控。
+      sustain:
+        ability_id: sustain.midcare_supply_t6
+        name: 多点救治补给T6
+        growth_target: 让中级医疗和多点补给第一次能同时存在。
+        player_advantage: 可以扛住更复杂伤病与更多人口，不必每个伤员都往2001核心区挤。
+        insufficiency: 仍受耗材、护理人手和转运效率限制，复杂病例会迅速吃光冗余。
+        prompt_brief_seed: 可形成核心区与前沿节点之间的中级医疗、伤员转运和多点补给闭环，支撑跨层行动后的持续处理；耗材和护理压力很大，复杂病例仍会迅速超载。
+      life:
+        ability_id: life.crossfloor_civil_order_t6
+        name: 跨层温室庭院T6
+        growth_target: 让庇护所第一次出现近似室外桃源的生活景观，而且能跨层延展。
+        player_advantage: 可以在核心区与前沿区之间维持温室庭院、暖光步道和仿户外休闲角，让人第一次觉得这里不像避难所，而像被保护起来的另一个世界。
+        insufficiency: 这种桃源感仍是人工维持的局部景观，覆盖范围有限，且非常吃能源与维护。
+        prompt_brief_seed: 可在核心区与前沿区之间维持温室庭院、暖光步道与仿户外休闲角，让人第一次觉得这里像被保护起来的室外桃源；范围有限且极其吃能源维护。
+      social:
+        ability_id: social.multizone_protocol_t6
+        name: 跨层监控网T6
+        growth_target: 把情报优势从近域观察升级为跨层全息监控与记录。
+        player_advantage: 可以跨20层与19层查看实时全息画面、调取重点区域记录，显著增强对目标、交易对象和内部成员的掌控。
+        insufficiency: 仍不是全知系统，只覆盖接入区域；盲区、断点和误读仍然存在。
+        prompt_brief_seed: 可跨20层与19层查看实时全息画面并调取重点区域记录，显著增强主角对目标、交易对象和内部成员的掌控；仍只覆盖接入区域，盲区和误读依旧存在。
+      expansion:
+        ability_id: expansion.floor19_forward_anchor_t6
+        name: 19层前沿锚点T6
+        growth_target: 让19层正式成为可经营、可防守、可收编的前沿据点，而不是一次性踏板。
+        player_advantage: 跨层扩张第一次有现实落脚点，可以布局前沿、试探收编路线。
+        insufficiency: 前沿锚点仍然脆弱，守住它就意味着承担更长补给线和更高冲突密度。
+        prompt_brief_seed: 可在19层建立正式前沿锚点，让跨层扩张第一次有现实落脚点，并开始试探收编路线；前沿补给线更长、冲突更密，仍远不是稳定地盘。
+
+  "7":
+    stage: 外勤成形
+    territory: 楼层网络 + 短程外勤
+    player_feeling: 你终于能出去，但出去不是稳赢，而是把内部优势投射到外部。
+    abilities:
+      energy:
+        ability_id: energy.expedition_support_t7
+        name: 外勤能源包线T7
+        growth_target: 让庇护所能源第一次能稳定支持短程外勤反复出动。
+        player_advantage: 外勤装备、临时保温和返程补能开始连成一条链，内部优势可以被带出门外。
+        insufficiency: 回收和补能压力显著增加，外勤距离与频次仍受严格限制。
+        prompt_brief_seed: 可形成外勤装备供能、临时保温和返程补能链，让短程外勤能反复出动并把内部优势投射到门外；回收和补能压力显著增加，距离与频次仍受严格限制。
+      security:
+        ability_id: security.outer_ring_patrol_t7
+        name: 外围机动警戒T7
+        growth_target: 让警戒从楼内前沿推进到楼体外围与短程外勤撤回线。
+        player_advantage: 可以更早发现接近威胁，并为外勤队伍提供撤回保护和机动防守。
+        insufficiency: 外围警戒仍不是控场霸权，遭遇复杂包夹或极端天气时照样可能被压穿。
+        prompt_brief_seed: 可建立楼体外围、撤回线和临时外勤点之间的机动警戒与掩护体系，让外勤不再完全裸奔；复杂地形和极端天气仍会让外围警戒失效。
+      sustain:
+        ability_id: sustain.field_recovery_chain_t7
+        name: 外勤回收救护T7
+        growth_target: 建立外勤医疗、临时补给和返程救护的专用链路。
+        player_advantage: 可显著降低外出任务中的可避免死亡，让资源与伤员都有更高回收率。
+        insufficiency: 对致命创伤只能争取时间，不能把外勤风险写成可随意承受。
+        prompt_brief_seed: 可为外勤队伍建立急救、保温、补水和返程救护流程，显著提升任务后的存活与回收效率；对致命创伤只能争取时间，外勤风险依然真实。
+      life:
+        ability_id: life.reentry_recovery_loop_t7
+        name: 旧世界影院T7
+        growth_target: 让庇护所第一次能高质量复现旧世界的文化娱乐体验。
+        player_advantage: 可以提供高质量影院、沉浸音响和精选旧世界影像，让角色在末日里重新体验文明记忆，这会极大增强庇护所吸引力。
+        insufficiency: 影院只能带来短时沉浸，不能真正把人带回旧世界，且怀旧也可能触发失落与情绪波动。
+        prompt_brief_seed: 可提供高质量影院、沉浸音响与精选旧世界影像，让角色在末日里重新体验文明记忆，极大增强庇护所吸引力；这只能带来短时沉浸，无法真正回到旧世界。
+      social:
+        ability_id: social.external_contact_channels_t7
+        name: 谈判直播台T7
+        growth_target: 让情报优势可以被主动展示和利用，变成交易与心理压制工具。
+        player_advantage: 可以向对手或交易对象定向展示实时全息直播、精选证据与环境画面，在谈判时制造更强的情报压迫与情绪优势。
+        insufficiency: 暴露得越多，被反向分析和渗透的风险也越高，不能把直播展示当成无代价压制。
+        prompt_brief_seed: 可向对手或交易对象定向展示实时全息直播、精选证据与环境画面，在谈判时制造更强的情报压迫与情绪优势；展示越多，被反向分析和渗透的风险也越高。
+      expansion:
+        ability_id: expansion.outfield_route_t7
+        name: 短程外拓路线T7
+        growth_target: 让楼层网络第一次真正伸出楼外，形成短程外拓路线。
+        player_advantage: 外部安全点、补给点和可争夺节点开始进入你的实际行动半径。
+        insufficiency: 路线只是可用，不是稳固；任何一次断线、暴雪或伏击都可能把优势打回楼内。
+        prompt_brief_seed: 可建立通向楼外安全点、补给点和争夺节点的短程外拓路线，让庇护所第一次真正伸出楼外；路线并不稳固，断线、暴雪和伏击都可能把优势打回楼内。
+
+  "8":
+    stage: 区域优势
+    territory: 楼栋 / 周边片区优势
+    player_feeling: 庇护所不只是能活，而是开始主导局部规则与资源流向。
+    abilities:
+      energy:
+        ability_id: energy.area_grid_advantage_t8
+        name: 区域能源优势T8
+        growth_target: 让多节点运转不再只是勉强维持，而是开始形成局部能源优势。
+        player_advantage: 你能更稳定地维持多点开机、多区供暖和关键节点连续运行。
+        insufficiency: 这是局部优势，不是无限能源；极端天气和错误调度仍可能把整个网络拖入波动。
+        prompt_brief_seed: 可把楼层网络、外勤补能点和前沿据点纳入更稳定的区域级能源调度体系，开始形成局部能源优势；这仍不是无限能源，极端天气和误调度照样会拖垮网络。
+      security:
+        ability_id: security.zone_control_grid_t8
+        name: 控面防守网络T8
+        growth_target: 让防守从守点正式转入控面，建立区域级联动反应能力。
+        player_advantage: 可以组织主动压制、局部围堵和区域防守，真正开始主导一片区域的冲突节奏。
+        insufficiency: 你能控面，不等于能抹去所有威胁；多点同时爆发仍会把反应链条拉满。
+        prompt_brief_seed: 可把楼层核心、楼外路线和关键节点接入同一套控面预警与支援网络，真正开始主导一片区域的冲突节奏；多点同时爆发仍会压垮反应链条。
+      sustain:
+        ability_id: sustain.large_scale_supply_t8
+        name: 规模供给体系T8
+        growth_target: 稳定支撑更大人口与更复杂的配给结构。
+        player_advantage: 庇护所终于能像真正共同体那样处理多层级人口、伤病和资源分配。
+        insufficiency: 规模一大，浪费、腐败、错配与中断都会放大，不能把大体系写成自动顺滑。
+        prompt_brief_seed: 可建立覆盖多节点、多身份人口和多级配给的规模供给体系，让庇护所真正具备复杂共同体承载力；体系越大，错配、中断和内部消耗也会被同步放大。
+      life:
+        ability_id: life.settlement_gradient_t8
+        name: 折景旅游舱T8
+        growth_target: 让庇护所第一次能提供近似亲临旧世界的高阶折叠空间旅游体验。
+        player_advantage: 可以短时间带角色进入高拟真旧世界场景，像逛商场、海边、街区或节日夜景一样享受外界已不复存在的生活。
+        insufficiency: 体验时长有限、负荷极高，且再真实也只是折景，不是重新获得真正的世界。
+        prompt_brief_seed: 可短时间带角色进入高拟真旧世界场景，体验近似亲临的折叠空间旅游，像重新逛商场、海边和节日夜景一样；时长有限、负荷极高，再真实也只是折景。
+      social:
+        ability_id: social.regional_credit_t8
+        name: 社区舆情场T8
+        growth_target: 让主角获得社区级的情感引导和 IMP 增益优势。
+        player_advantage: 可以通过公开全息广播、活动展示和情绪引导，稳定提高庇护所内外接触对象的好感与 IMP 增长效率。
+        insufficiency: 舆情越强，反噬也越大；一旦现实与展示割裂，社区好感会成片掉落。
+        prompt_brief_seed: 可通过公开全息广播、活动展示与情绪引导，稳定提高接触对象的好感与 IMP 增长效率，形成社区级情感优势；若现实与展示割裂，舆情反噬也会成片出现。
+      expansion:
+        ability_id: expansion.route_node_hegemony_t8
+        name: 线路节点优势T8
+        growth_target: 让区域节点化完成，并把争夺重心推进到线路、通道和控制区。
+        player_advantage: 你开始不只是占点，而是能决定哪条线通、哪条线断、谁能进出哪些节点。
+        insufficiency: 节点越多，守线和判线的代价越高；你能主导局部流向，却还不是全域支配者。
+        prompt_brief_seed: 可把楼内外关键线路、补给点和可争夺节点编织成控制网，开始决定哪条线通、哪条线断、谁能使用哪些节点；线网越大越难完全覆盖，你仍不是全域支配者。
+
+  "9":
+    stage: 楼栋核心
+    territory: 整栋楼 / 多楼层联动
+    player_feeling: 你不再只是一个强据点，而是别人必须围绕其判断立场的秩序核心。
+    abilities:
+      energy:
+        ability_id: energy.building_stability_core_t9
+        name: 楼栋稳态核心T9
+        growth_target: 让高负荷稳态维持真正具备楼栋级意义。
+        player_advantage: 能源和维持能力开始成为支配工具，谁接入、谁掉线都开始受你影响。
+        insufficiency: 楼栋级稳态依然受总负荷、维护体系和故障链约束，不能写成永不熄火的神迹核心。
+        prompt_brief_seed: 可建立面向多楼层、多节点和高负荷周期的楼栋稳态能源核心，让能源与维持能力开始具备支配意义；总负荷和故障链依然真实，不能写成永不熄火的神迹。
+      security:
+        ability_id: security.building_deterrence_arch_t9
+        name: 楼栋威慑架构T9
+        growth_target: 建立整栋楼级的威慑、压制、响应与封控逻辑。
+        player_advantage: 你不只是防守者，而是别人进楼、出楼、冲楼前必须重新计算代价的秩序核心。
+        insufficiency: 威慑并不等于绝对镇压；遇到强敌、长期围耗或内部失稳时，整栋逻辑也会被撕开。
+        prompt_brief_seed: 可把多楼层响应、封锁节点和冲突升级规则整合为统一的楼栋防务架构，让别人进楼前必须重算代价；威慑并不等于绝对镇压，长期围耗和内部失稳仍会撕开防务逻辑。
+      sustain:
+        ability_id: sustain.community_production_loop_t9
+        name: 共同体生产闭环T9
+        growth_target: 让人口、伤病、配给和生产第一次具备真正共同体规模。
+        player_advantage: 你不再只是分配存量，而是开始拥有能维持和再生产共同体的基础。
+        insufficiency: 生产闭环越大，越依赖组织度、纪律和长期维护，不能写成一劳永逸的丰饶机器。
+        prompt_brief_seed: 可把食物、基础药品、日常耗材和照护流程整合成楼栋级共同体生产闭环，让你开始拥有维持和再生产共同体的基础；这不是一劳永逸的丰饶机器，高度依赖组织度与纪律。
+      life:
+        ability_id: life.civil_core_atmosphere_t9
+        name: 乐园居住区T9
+        growth_target: 让庇护所真正形成末日里别人梦不到的高阶居住乐园。
+        player_advantage: 热浴、影院、舞台、庭院、精致起居与旧世界体验被整合为完整生活区，主角和核心角色可以长期享受接近末日前上流区的生活。
+        insufficiency: 乐园化越明显，越会放大内外落差、嫉妒和争夺，维护成本也极高。
+        prompt_brief_seed: 可将热浴、影院、舞台、庭院与高质量起居整合为完整乐园居住区，让主角和核心角色长期享受接近末日前上流区的生活；这会放大嫉妒、争夺和高昂维护成本。
+      social:
+        ability_id: social.governance_credit_regime_t9
+        name: 时空回溯厅T9
+        growth_target: 让主角第一次能对重点目标和关键事件进行高价值场景回溯。
+        player_advantage: 可以回放特定区域、特定时间窗内的关键情景，直接增强审问、判断、取证、威慑和情感操控优势。
+        insufficiency: 回溯并非全知神迹，只能抓到片段和视角受限的事实，不能读取人心或任意伪造真相。
+        prompt_brief_seed: 可回放特定区域、特定时间窗内的关键情景，直接增强主角在审问、判断、取证、威慑和情感操控上的优势；回溯只抓到片段事实，不能读取人心或任意伪造真相。
+      expansion:
+        ability_id: expansion.building_takeover_grid_t9
+        name: 楼栋接管网络T9
+        growth_target: 让扩张从占点正式转入接管体系。
+        player_advantage: 你开始能决定谁被纳入、谁被排除、哪些楼层按你的秩序运转。
+        insufficiency: 接管越深，治理、救助、封控和反扑成本越高，不能把接管写成单向吞并。
+        prompt_brief_seed: 可把多楼层节点、关键通路和纳管对象纳入统一接管网络，推进整栋楼级控制格局，并开始决定谁被纳入、谁被排除；接管越深，治理与反扑成本也越高。
+
+  "10":
+    stage: 区域秩序中心
+    territory: 楼栋核心 + 周边片区辐射
+    player_feeling: 庇护所成长为真正的区域级伊甸，不是无敌外挂，而是资源、秩序、人口、控制权的综合中心。
+    abilities:
+      energy:
+        ability_id: energy.regional_dispatch_core_t10
+        name: 区域调度核心T10
+        growth_target: 让多区域供能与长周期维持进入成熟调度阶段。
+        player_advantage: 你终于可以把不同楼层、节点和外部触点放进一个更稳定的长周期能源安排里。
+        insufficiency: 成熟调度不等于无限资源，总负荷、维护体系和极端损伤仍会决定上限。
+        prompt_brief_seed: 可建立面向楼栋核心与周边片区触点的区域调度核心，把不同楼层、节点和外部触点纳入更稳定的长周期能源安排；这仍不是无限资源，总负荷和重大误调度都会直接决定上限。
+      security:
+        ability_id: security.regional_threat_shield_t10
+        name: 区域威慑屏障T10
+        growth_target: 形成区域级安全与威慑体系，但仍保留真实外部风险。
+        player_advantage: 你能够对楼栋核心与周边片区触点建立统一的威慑表达、威胁分级和响应姿态。
+        insufficiency: 威慑屏障只能提高代价，不能抹去所有风险；真正的大敌、长期围困和系统级破坏依然危险。
+        prompt_brief_seed: 可把楼栋核心、外围通路和片区触点纳入同一套威胁分级与威慑展示体系，形成区域级安全姿态；威慑只能提高代价，不能抹去长期围困和系统级外部风险。
+      sustain:
+        ability_id: sustain.high_order_relief_system_t10
+        name: 高阶共同体保障T10
+        growth_target: 让人口承载、医疗恢复和补给体系达到高阶共同体水平。
+        player_advantage: 你能真正稳定承托更大规模的人口、伤病和恢复需求，这是区域秩序中心的基础底盘。
+        insufficiency: 高阶保障依然依赖庞大组织和补给链，任何一次系统性中断都会造成剧烈震荡。
+        prompt_brief_seed: 可把人口承载、医疗恢复、基础生产和配给网络整合为高阶共同体保障体系，让庇护所真正具备区域秩序中心的底盘；这仍高度依赖组织和补给链，系统性中断会造成剧烈震荡。
+      life:
+        ability_id: life.cultural_hearth_t10
+        name: 室外桃源穹顶T10
+        growth_target: 让庇护所生活系统成长为真正的末日室外桃源。
+        player_advantage: 可以提供近似真实天空、庭院、暖风、景观与漫步体验，让主角和角色们在末日里享受外界根本不存在的安逸桃源生活。
+        insufficiency: 这仍是穹顶下的人造乐园，不是真正征服了外部世界；维持它本身就是极重的系统负担。
+        prompt_brief_seed: 可在穹顶下提供近似真实天空、庭院、暖风与景观漫步体验，让主角和角色们在末日里享受外界根本不存在的安逸室外桃源生活；这仍是人造乐园，维持成本极重。
+      social:
+        ability_id: social.regional_rule_network_t10
+        name: 群星共感网T10
+        growth_target: 让情报优势、情感优势与 IMP 增益统一成区域级社会支配能力。
+        player_advantage: 可以在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP 增长加成。
+        insufficiency: 共感网只能放大已有优势，不能强行制造真爱或忠诚；一旦发生重大失信，反噬范围也会同步放大。
+        prompt_brief_seed: 可在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP 增长加成；这不能强行制造忠诚，重大失信时反噬范围也会同步放大。
+      expansion:
+        ability_id: expansion.order_center_radiance_t10
+        name: 秩序中心辐射T10
+        growth_target: 让庇护所从楼栋扩张完成到区域秩序中心定型。
+        player_advantage: 你不只是拥有地盘，而是拥有能向周边片区持续辐射规则、资源与控制力的中心。
+        insufficiency: 区域中心不是终局无敌，辐射越远，治理缝隙、维护负担和外部敌意也会同步放大。
+        prompt_brief_seed: 可把楼栋核心、周边触点和纳管片区收束为能持续辐射秩序、资源和控制力的区域中心，让庇护所真正进入治理地盘阶段；辐射越远，治理缝隙、维护负担和外部敌意也会同步放大。

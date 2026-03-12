@@ -60,7 +60,7 @@ point_system:
 
   runtime_relation_with_imp:
     point_generation: 开局点数不直接由 IMP 决定
-    runtime_maintenance: IMP 用于决定运行维持值、功能 uptime、升级前置与扩张承载力
+    runtime_maintenance: IMP 用于决定运行维持值、情感经营收益、功能 uptime、升级前置与扩张承载力
 
 cost_rules:
   base_cost_by_tier:
@@ -110,7 +110,7 @@ opening_build_constraints:
 
   route_priority_constraint:
     - 副偏向总投入不得超过主流派投入
-    - 扩 / 行 / 慰 在开局阶段不得盖过主流派镜头
+    - life / social / expansion 在开局阶段不得整体盖过主流派主镜头
 
 liability_rules:
   guaranteed_liability_count: 2
@@ -119,17 +119,17 @@ liability_rules:
 
   route_required_liabilities:
     守:
-      - 治理短板
-      - 舒适短板
+      - 情感经营短板
+      - 高质量生活短板
       - 协作短板
     养:
       - 外出短板
       - 压制短板
-      - 外扩短板
+      - 远距情报短板
     管:
       - 硬压制短板
       - 稳定生产短板
-      - 信誉崩塌风险
+      - 情报失真与信誉崩塌风险
 
 diy_slot_rules:
   enabled: true
@@ -208,11 +208,15 @@ opening_generation_hard_rules:
     - 一个流派专属爽点入口
     - 一个尚未解决的短板
     - 一个与世界档位匹配的外部矛盾源
+    - 若 build 包含 life 能力，必须让角色明确感知“伊甸生活质量高于外界”
+    - 若 build 包含 social 能力，必须让主角明确获得情报优势、情感优势或 IMP 经营优势
   opening_forbidden:
     - 把所有短板在开局消掉
     - 把 build 写成万能
     - 把副偏向写成主流派
     - 忽略约束协议层
+    - 把 life 写成普通睡觉休息模块，而不体现末日稀缺生活设施
+    - 把 social 写成空泛治理文案，而不体现监听、直播、回放、画像或 IMP 加成
 
 recommended_defaults:
   mandatory_pick_count: 1
