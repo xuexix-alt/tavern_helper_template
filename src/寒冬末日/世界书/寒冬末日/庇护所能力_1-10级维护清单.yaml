@@ -27,39 +27,39 @@ system_lines:
   - expansion
 
 levels:
-  "1":
+  '1':
     stage: 房间求生
     territory: 2001核心区
     player_feeling: 有一个终于能活下来的地方，但只稳住了脚下这一块地。
     abilities:
       energy:
         ability_id: energy.core_heat_grid_t1
-        name: 核心供暖电网T1
-        growth_target: 让2001核心区具备最低生存级供暖与供电。
-        player_advantage: 有稳定温度和基础开机能力，不再完全受外界寒潮摆布。
-        insufficiency: 只能维持核心区，不能外扩供能，系统负载冗余很低。
-        prompt_brief_seed: 可维持2001核心区的基础供暖与最低供电，保证人能活、系统能开机；范围仅核心区，无法支撑外扩。
+        name: 供电保暖T1
+        growth_target: 让2001室内具备最低生存级供暖与供电。
+        player_advantage: 保障适宜的温度和民用功率电力，不受室外寒潮影响恢复生活用电
+        insufficiency: 只能2001室内，不能外扩供能，除生活用无负载能力。
+        prompt_brief_seed: 维持2001室内的基础供暖与最低供电，保证人能活、系统能开机；范围仅核心区，无法支撑外扩。
       security:
         ability_id: security.entry_bulkhead_t1
-        name: 核心入口防线T1
+        name: 金属防撞门T1
         growth_target: 让2001门口不再是一踹就开的薄弱点。
         player_advantage: 能延缓破门、争取观察与应对时间。
-        insufficiency: 只能守住入口，守不住整层，也无法替代主动清场。
-        prompt_brief_seed: 可强化2001核心入口防护并延缓强闯，为观察、后撤和反应争取时间；仅入口有效，不能覆盖整层。
+        insufficiency: 因坚固而形成被动防御，只防破门。
+        prompt_brief_seed: 是2001的唯一入口，为观察、后撤和反应争取时间。
       sustain:
         ability_id: sustain.basic_survival_loop_t1
-        name: 基础生存循环T1
-        growth_target: 确保口粮、净水、空气与卫生都达到最低生存线。
+        name: 口粮制造器T1
+        growth_target: 元素级合成制造设备，生产口粮、净水。
         player_advantage: 可以稳定保住自己和极少数人的生命底线。
-        insufficiency: 只能维持基础配给，无法承托伤病、多人收容或高质量生活。
-        prompt_brief_seed: 可提供基础口粮、净水、空气净化与最低卫生保障，保证少量人口不因基础生存要素直接崩盘；产出与承载都很有限。
+        insufficiency: 只能制造最初级口粮，如面粉、压缩干粮和纯水。无法生产肉类、蔬菜、酒、饮料等高级货。
+        prompt_brief_seed: 产出很有限，饿不死但吃不好。
       life:
         ability_id: life.rest_privacy_t1
-        name: 热水清洁间T1
-        growth_target: 让主角第一次拥有末日里别人享受不到的热水清洁条件。
-        player_advantage: 可以洗热水澡、换上温热干净的衣物，立刻拉开与外部幸存者的生活质量差距。
-        insufficiency: 热水量和使用时段都很紧，只够核心区少数人短时享受，远谈不上奢侈生活。
-        prompt_brief_seed: 可在2001核心区提供稀缺的热水清洁与换洗条件，让主角第一次享受末日下别人没有的体面生活；热水量和时段都有限，只够少数人短时使用。
+        name: 短时恒温热水器T1
+        growth_target: 短暂洗几分钟热水澡
+        player_advantage: 可以洗热水澡
+        insufficiency: 热水量和使用时段都很紧，每天不超过3次使用机会
+        prompt_brief_seed: 可在2001核心区提供稀缺的热水清洁与洗衣条件，量和时段都受限
       social:
         ability_id: social.rule_seed_t1
         name: 近域监听台T1
@@ -75,7 +75,7 @@ levels:
         insufficiency: 这只是原点，不等于已经具备向外控制能力。
         prompt_brief_seed: 可将2001定义为绝对安全锚点，为后续供暖、防线、收容与外扩提供原点；自身不等于已经完成外扩。
 
-  "2":
+  '2':
     stage: 核心区稳态
     territory: 2001室完整可用
     player_feeling: 庇护所开始像一个系统，不再只是几个勉强能用的模块。
@@ -123,7 +123,7 @@ levels:
         insufficiency: 只是接口，不是全面纳管，更不是随意向外供养所有人。
         prompt_brief_seed: 可开启2001对门外近域的最小资源与接触接口，用于试探、救助或建立联系；只是门槛能力，不等于完成外扩纳管。
 
-  "3":
+  '3':
     stage: 走出房门
     territory: 2001 + 20层近域
     player_feeling: 庇护所优势第一次从房间内部溢出到公共空间。
@@ -171,7 +171,7 @@ levels:
         insufficiency: 名额有限，维护困难，任何外扩都要付出真实成本。
         prompt_brief_seed: 可将20层少量房间纳入初级庇护半径，形成最早的门外据守节点；名额和维护能力都有限，无法一口气铺开整层。
 
-  "4":
+  '4':
     stage: 楼层感知
     territory: 20层局部可控
     player_feeling: 你开始不只是活着，而是能看懂楼层局势并做选择。
@@ -219,7 +219,7 @@ levels:
         insufficiency: 控制区仍是局部点状，无法默认整层都被你掌控。
         prompt_brief_seed: 可在20层形成局部控制区，支撑供能、防线、配给与接触的联动经营；控制区是点状和局部的，不等于整层尽入掌握。
 
-  "5":
+  '5':
     stage: 小共同体成形
     territory: 20层稳定锚点网络
     player_feeling: 庇护所从你的个人优势，变成一群人围绕运转的核心系统。
@@ -267,7 +267,7 @@ levels:
         insufficiency: 这只是楼层级治理的起点，更大的地盘会带来更系统性的反扑与消耗。
         prompt_brief_seed: 可让20层形成稳定治理区，支撑控制、收编、纳管与持续经营，意味着你第一次真正拥有门外地盘；这只是楼层级治理起点，不代表后续扩张没有代价。
 
-  "6":
+  '6':
     stage: 跨层触达
     territory: 20层核心区 + 19层前沿节点
     player_feeling: 庇护所第一次从单层据点变成跨层系统。
@@ -315,7 +315,7 @@ levels:
         insufficiency: 前沿锚点仍然脆弱，守住它就意味着承担更长补给线和更高冲突密度。
         prompt_brief_seed: 可在19层建立正式前沿锚点，让跨层扩张第一次有现实落脚点，并开始试探收编路线；前沿补给线更长、冲突更密，仍远不是稳定地盘。
 
-  "7":
+  '7':
     stage: 外勤成形
     territory: 楼层网络 + 短程外勤
     player_feeling: 你终于能出去，但出去不是稳赢，而是把内部优势投射到外部。
@@ -363,7 +363,7 @@ levels:
         insufficiency: 路线只是可用，不是稳固；任何一次断线、暴雪或伏击都可能把优势打回楼内。
         prompt_brief_seed: 可建立通向楼外安全点、补给点和争夺节点的短程外拓路线，让庇护所第一次真正伸出楼外；路线并不稳固，断线、暴雪和伏击都可能把优势打回楼内。
 
-  "8":
+  '8':
     stage: 区域优势
     territory: 楼栋 / 周边片区优势
     player_feeling: 庇护所不只是能活，而是开始主导局部规则与资源流向。
@@ -411,7 +411,7 @@ levels:
         insufficiency: 节点越多，守线和判线的代价越高；你能主导局部流向，却还不是全域支配者。
         prompt_brief_seed: 可把楼内外关键线路、补给点和可争夺节点编织成控制网，开始决定哪条线通、哪条线断、谁能使用哪些节点；线网越大越难完全覆盖，你仍不是全域支配者。
 
-  "9":
+  '9':
     stage: 楼栋核心
     territory: 整栋楼 / 多楼层联动
     player_feeling: 你不再只是一个强据点，而是别人必须围绕其判断立场的秩序核心。
@@ -459,7 +459,7 @@ levels:
         insufficiency: 接管越深，治理、救助、封控和反扑成本越高，不能把接管写成单向吞并。
         prompt_brief_seed: 可把多楼层节点、关键通路和纳管对象纳入统一接管网络，推进整栋楼级控制格局，并开始决定谁被纳入、谁被排除；接管越深，治理与反扑成本也越高。
 
-  "10":
+  '10':
     stage: 区域秩序中心
     territory: 楼栋核心 + 周边片区辐射
     player_feeling: 庇护所成长为真正的区域级伊甸，不是无敌外挂，而是资源、秩序、人口、控制权的综合中心。

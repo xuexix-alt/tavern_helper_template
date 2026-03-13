@@ -8,6 +8,8 @@ type RoleLike = SchemaType[string & keyof SchemaType] | Record<string, any>;
 
 const RESERVED_TOP_LEVEL_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
 const initialData: SchemaType = Schema.parse({});
+const MVU_REFRESH_DEBOUNCE_MS = 80;
+const MVU_TRANSIENT_RETRY_MS = 180;
 
 function isObjectRecord(val: unknown): val is Record<string, any> {
   return !!val && typeof val === 'object' && !Array.isArray(val);
@@ -93,59 +95,121 @@ function resolveTargetMessageId(rawTarget: number | 'latest' | null | undefined)
   return 'latest';
 }
 
+function readExtraAnalysisFlag(): boolean {
+  try {
+    return (
+      (typeof Mvu?.isDuringExtraAnalysis === 'function' && Mvu.isDuringExtraAnalysis() === true) ||
+      _.get(getVariables({ type: 'global' }) ?? {}, 'extra_analysis', false) === true
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function useMvuRoleStore(targetMessageId: Ref<number | 'latest' | null | undefined>) {
   const data = ref<SchemaType>(initialData);
   const ready = ref(false);
   const source = ref<'current' | 'latest' | 'default'>('default');
   const resolvedMessageId = ref<number | 'latest'>('latest');
   const isDuringExtraAnalysis = ref(false);
+  const isRetrying = ref(false);
   const refreshTicket = ref(0);
   const stopHandles: EventOnReturn[] = [];
+  let refreshTimer = 0;
+  let transientRetryTimer = 0;
 
   const { pause: pausePolling, resume: resumePolling } = useIntervalFn(
     () => {
-      refresh();
+      queueRefresh(0);
     },
     1500,
     { immediate: false },
   );
+
+  function clearRefreshTimer() {
+    if (!refreshTimer) return;
+    window.clearTimeout(refreshTimer);
+    refreshTimer = 0;
+  }
+
+  function clearTransientRetryTimer() {
+    if (!transientRetryTimer) return;
+    window.clearTimeout(transientRetryTimer);
+    transientRetryTimer = 0;
+  }
+
+  function queueRefresh(delay = MVU_REFRESH_DEBOUNCE_MS) {
+    clearRefreshTimer();
+    refreshTimer = window.setTimeout(() => {
+      refreshTimer = 0;
+      refresh();
+    }, delay);
+  }
+
+  function queueTransientRetry() {
+    clearTransientRetryTimer();
+    transientRetryTimer = window.setTimeout(() => {
+      transientRetryTimer = 0;
+      refresh();
+    }, MVU_TRANSIENT_RETRY_MS);
+  }
 
   function refresh() {
     const ticket = refreshTicket.value + 1;
     refreshTicket.value = ticket;
 
     const target = resolveTargetMessageId(targetMessageId.value);
+    const extraAnalysis = readExtraAnalysisFlag();
+    const keepStableSnapshot =
+      ready.value === true &&
+      ((target === 'latest' && source.value === 'latest') ||
+        (typeof target === 'number' && source.value === 'current' && resolvedMessageId.value === target));
 
     const current = readMvuStatData(target);
     if (current.ok) {
+      if (refreshTicket.value !== ticket) return;
       data.value = current.data;
       source.value = target === 'latest' ? 'latest' : 'current';
       resolvedMessageId.value = current.messageId;
       ready.value = true;
+      isDuringExtraAnalysis.value = extraAnalysis;
+      isRetrying.value = false;
+      clearTransientRetryTimer();
     } else {
+      if (keepStableSnapshot) {
+        isDuringExtraAnalysis.value = extraAnalysis;
+        isRetrying.value = true;
+        queueTransientRetry();
+        return;
+      }
+
       const latest = target === 'latest' ? current : readMvuStatData('latest');
       if (latest.ok) {
+        if (refreshTicket.value !== ticket) return;
         data.value = latest.data;
         source.value = 'latest';
         resolvedMessageId.value = latest.messageId;
         ready.value = true;
+        isDuringExtraAnalysis.value = extraAnalysis;
+        isRetrying.value = false;
+        clearTransientRetryTimer();
       } else {
+        if (extraAnalysis && ready.value) {
+          isDuringExtraAnalysis.value = extraAnalysis;
+          isRetrying.value = true;
+          queueTransientRetry();
+          return;
+        }
+        if (refreshTicket.value !== ticket) return;
         data.value = initialData;
         source.value = 'default';
         resolvedMessageId.value = 'latest';
         ready.value = false;
+        isDuringExtraAnalysis.value = extraAnalysis;
+        isRetrying.value = false;
+        clearTransientRetryTimer();
       }
     }
-
-    try {
-      isDuringExtraAnalysis.value =
-        (typeof Mvu?.isDuringExtraAnalysis === 'function' && Mvu.isDuringExtraAnalysis() === true) ||
-        _.get(getVariables({ type: 'global' }) ?? {}, 'extra_analysis', false) === true;
-    } catch {
-      isDuringExtraAnalysis.value = false;
-    }
-
-    if (refreshTicket.value !== ticket) return;
   }
 
   const mainRoleEntries = computed(() =>
@@ -180,29 +244,28 @@ export function useMvuRoleStore(targetMessageId: Ref<number | 'latest' | null | 
       resumePolling();
 
       stopHandles.push(
-        eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, refresh),
-        eventOn(Mvu.events.VARIABLE_INITIALIZED, refresh),
-        eventOn(Mvu.events.VARIABLE_UPDATE_STARTED, refresh),
+        eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, () => queueRefresh(0)),
+        eventOn(Mvu.events.VARIABLE_INITIALIZED, () => queueRefresh(0)),
+        eventOn(Mvu.events.VARIABLE_UPDATE_STARTED, () => {
+          isDuringExtraAnalysis.value = readExtraAnalysisFlag();
+        }),
       );
 
       if (typeof tavern_events !== 'undefined') {
-        stopHandles.push(eventOn(tavern_events.MESSAGE_RECEIVED as any, refresh as any));
-        stopHandles.push(eventOn(tavern_events.MESSAGE_UPDATED as any, refresh as any));
-        stopHandles.push(eventOn(tavern_events.MESSAGE_EDITED as any, refresh as any));
-        stopHandles.push(eventOn(tavern_events.MESSAGE_SWIPED as any, refresh as any));
-        stopHandles.push(eventOn(tavern_events.MESSAGE_SENT as any, refresh as any));
-        stopHandles.push(eventOn(tavern_events.CHAT_CHANGED as any, refresh as any));
+        stopHandles.push(eventOn(tavern_events.CHAT_CHANGED as any, (() => queueRefresh(0)) as any));
       }
     })();
   });
 
   onBeforeUnmount(() => {
     pausePolling();
+    clearRefreshTimer();
+    clearTransientRetryTimer();
     stopHandles.forEach(stopHandle => stopHandle?.stop?.());
   });
 
   watch(targetMessageId, () => {
-    refresh();
+    queueRefresh(0);
   });
 
   return {
@@ -211,6 +274,7 @@ export function useMvuRoleStore(targetMessageId: Ref<number | 'latest' | null | 
     source,
     resolvedMessageId,
     isDuringExtraAnalysis,
+    isRetrying,
     hasAnyRole,
     mainRoleEntries,
     tempNpcEntries,

@@ -29,6 +29,7 @@ export type TranscriptItem = {
   isStreaming: boolean;
   canOpenDetail: boolean;
   canDeleteFrom: boolean;
+  canReroll: boolean;
 };
 
 export type ReaderSummary = {

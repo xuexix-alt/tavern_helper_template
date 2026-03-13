@@ -1,9 +1,9 @@
-﻿<template>
-  <section class="ui-host-shell">
+<template>
+  <section class="ui-host-shell" :style="shellStyleVars">
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
         <span class="ui-dot"></span>
-        <span class="ui-brand-copy">NEXUS // CORE_SYNC</span>
+        <span class="ui-brand-copy">EDEN-STAR</span>
       </div>
 
       <div class="ui-topbar-actions">
@@ -17,7 +17,7 @@
             roleDrawerOpen = true;
           "
         >
-          人物
+          角色
         </button>
 
         <button type="button" class="ui-icon-btn" @click="settingsModalOpen = true">排版</button>
@@ -46,7 +46,7 @@
         <div class="ui-sidebar-head">
           <div>
             <span class="demo-kicker">CHARACTER // SIDEBAR</span>
-            <strong>登场角色与房间态势</strong>
+            <strong>角色&房间</strong>
           </div>
           <button type="button" class="ui-close-btn" @click="closeRoleDrawer">✕</button>
         </div>
@@ -84,6 +84,7 @@
               @open-detail="openDetail"
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
+              @reroll-opening="rerollOpening"
               @start-edit-user="startInlineEdit"
               @update-edit-draft="setEditingUserDraft"
               @confirm-edit-user="confirmInlineEditRegenerate"
@@ -109,10 +110,16 @@
                 :class="`is-${activeUtilityDrawer}`"
               >
                 <header class="ui-bottom-drawer-head">
-                  <div>
+                  <div class="ui-bottom-drawer-head-copy">
                     <span class="demo-kicker">{{ activeUtilityMeta.eyebrow }}</span>
                     <strong>{{ activeUtilityMeta.title }}</strong>
                     <p>{{ activeUtilityMeta.subtitle }}</p>
+                    <div class="ui-drawer-pills">
+                      <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
+                        <small>{{ pill.label }}</small>
+                        <strong>{{ pill.value }}</strong>
+                      </span>
+                    </div>
                   </div>
                   <button type="button" class="ui-close-btn inline" @click="closeUtilityDrawer">✕</button>
                 </header>
@@ -155,6 +162,10 @@
                   <i v-for="i in 8" :key="`map-${i}`" :class="{ active: i <= 3 }"></i>
                 </span>
               </button>
+
+              <button type="button" class="ui-signal-btn ui-tool-desktop-only" :disabled="busy || !latestUserItem" @click="rollLatestTurn">
+                <span>RE-SYNC</span>
+              </button>
             </div>
           </div>
 
@@ -163,8 +174,9 @@
             v-model="input"
             :busy="busy"
             :can-roll="Boolean(latestUserItem)"
+            :desktop-tool-row-mode="true"
             :choice-options="latestAssistantItem?.options ?? []"
-            :role-tabs="roleTabs"
+            :role-tabs="visibleRoleTabs"
             :active-role-key="activeRoleKey"
             @submit="runDemo"
             @roll="rollLatestTurn"
@@ -175,7 +187,7 @@
       </main>
     </div>
 
-    <RadialQuickMenu :items="roleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
+    <RadialQuickMenu :items="visibleRoleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
 
     <HudModal
       :open="componentLibraryOpen"
@@ -214,11 +226,12 @@
 
     <HudModal
       :open="openingModalOpen || shouldShowOpeningSetup"
-      title="开局设定 / Opening Setup"
-      subtitle="这部分保留 demo 的开局业务链，但显示形态改成 docs/UI 式宿主弹层，而不是单独页面。"
+      title="世界观自定义 / Opening Start"
+      subtitle="这选择你喜欢的开局，包含外界环境和主流玩法，也可以在<补充设定>那里补充一些世界观细节。"
       variant="workspace"
-      icon="◈"
-      eyebrow="MODAL // WORKSPACE"
+      :icon-src="openingModalIcon"
+      icon-alt="故事开始"
+      eyebrow="故事开始"
       wide
       @close="openingModalOpen = false"
     >
@@ -255,7 +268,7 @@ import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
-import type { TranscriptDensity } from '../types';
+import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { useStreamingDemo } from '../useStreamingDemo';
 
 const {
@@ -296,6 +309,7 @@ const {
   updateOpeningRoute,
   updateOpeningStream,
   generateOpening,
+  rerollOpening,
   startInlineEdit,
   setEditingUserDraft,
   cancelInlineEdit,
@@ -311,29 +325,107 @@ const {
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
+const readerShellHeight = ref('720px');
 const roleDrawerOpen = ref(false);
 const settingsModalOpen = ref(false);
 const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
 const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
-const roleTabs = ref<Array<{ key: string; label: string; statusClass?: string; statusText?: string }>>([]);
+type RoleTabItem = { key: string; label: string; statusClass?: string; statusText?: string };
+
+const roleTabs = ref<RoleTabItem[]>([]);
 const activeRoleKey = ref<string | null>(null);
+const visibleRoleTabs = computed(() =>
+  roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active'),
+);
 
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
     return {
       title: '战术地图',
-      subtitle: '地图、区域和战术信息从这里向上展开。',
+      subtitle: '先看庇护所态势，再向下查看区域与房间。',
       eyebrow: 'MAP // TACTICAL',
     };
   }
 
   return {
     title: '系统 TAB',
-    subtitle: '日志、统计和工作台辅助信息从这里向上展开。',
+    subtitle: '压缩展示日志、状态和关键工作台指标。',
     eyebrow: 'TASKS // SYSTEM',
   };
 });
+
+const activeUtilityPills = computed(() => {
+  if (activeUtilityDrawer.value === 'map') {
+    return [
+      { label: '登场角色', value: `${visibleRoleTabs.value.length}` },
+      { label: '楼层总数', value: `${transcriptStats.value.total}` },
+      { label: '阅读模式', value: followLatest.value ? '跟随最新' : '浏览历史' },
+    ];
+  }
+
+  return [
+    { label: '日志', value: `${logs.value.length}` },
+    { label: '楼层', value: `${transcriptStats.value.total}` },
+    { label: 'Swipe', value: latestAssistantSwipeLabel.value || '1/1' },
+  ];
+});
+
+const shellStyleVars = computed(() => ({
+  '--reader-shell-height': readerShellHeight.value,
+}));
+
+function readHostViewportHeight() {
+  const candidates: number[] = [];
+
+  const push = (value: unknown) => {
+    const numeric = Math.trunc(Number(value));
+    if (Number.isFinite(numeric) && numeric > 0) candidates.push(numeric);
+  };
+
+  try {
+    push(window.top?.visualViewport?.height);
+  } catch {
+    // ignore
+  }
+
+  try {
+    push(window.parent?.visualViewport?.height);
+  } catch {
+    // ignore
+  }
+
+  try {
+    push(window.visualViewport?.height);
+  } catch {
+    // ignore
+  }
+
+  try {
+    push(window.top?.innerHeight);
+  } catch {
+    // ignore
+  }
+
+  try {
+    push(window.parent?.innerHeight);
+  } catch {
+    // ignore
+  }
+
+  push(window.innerHeight);
+
+  return candidates[0] ?? 0;
+}
+
+function updateReaderShellHeight() {
+  if (typeof window === 'undefined') return;
+  const viewportHeight = readHostViewportHeight();
+  const safeViewportHeight = Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 900;
+  const shellPadding = safeViewportHeight < 720 ? 8 : 16;
+  const targetHeight = Math.max(520, safeViewportHeight - shellPadding);
+  readerShellHeight.value = `${targetHeight}px`;
+}
 
 function jumpLatest() {
   transcriptListRef.value?.scrollToLatest?.();
@@ -352,11 +444,12 @@ function closeUtilityDrawer() {
   activeUtilityDrawer.value = null;
 }
 
-function handleRosterChange(roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>) {
+function handleRosterChange(roles: RoleTabItem[]) {
   roleTabs.value = roles;
-  if (!activeRoleKey.value && roles[0]) activeRoleKey.value = roles[0].key;
-  if (activeRoleKey.value && !roles.some(role => role.key === activeRoleKey.value)) {
-    activeRoleKey.value = roles[0]?.key ?? null;
+  const visibleRoles = roles.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
+  if (!activeRoleKey.value && visibleRoles[0]) activeRoleKey.value = visibleRoles[0].key;
+  if (activeRoleKey.value && !visibleRoles.some(role => role.key === activeRoleKey.value)) {
+    activeRoleKey.value = visibleRoles[0]?.key ?? null;
   }
 }
 
@@ -368,6 +461,17 @@ function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
+}
+
+onMounted(() => {
+  updateReaderShellHeight();
+});
+
+useEventListener(window, 'resize', updateReaderShellHeight, { passive: true });
+
+if (typeof window !== 'undefined' && window.visualViewport) {
+  useEventListener(window.visualViewport, 'resize', updateReaderShellHeight, { passive: true });
+  useEventListener(window.visualViewport, 'scroll', updateReaderShellHeight, { passive: true });
 }
 
 useEventListener(window, 'keydown', event => {
@@ -387,6 +491,10 @@ useEventListener(window, 'keydown', event => {
   display: flex;
   flex-direction: column;
   width: 100%;
+  height: var(--reader-shell-height, 720px);
+  max-height: var(--reader-shell-height, 720px);
+  min-height: 360px;
+  overflow: hidden;
 }
 
 .ui-topbar {
@@ -496,11 +604,16 @@ useEventListener(window, 'keydown', event => {
   position: relative;
   display: flex;
   align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .ui-sidebar {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   left: 0;
   top: 0;
   bottom: 0;
@@ -515,6 +628,7 @@ useEventListener(window, 'keydown', event => {
     inset -1px 0 0 color-mix(in srgb, var(--primary) 12%, transparent);
   transform: translateX(-100%);
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
 }
 
 .ui-sidebar.open {
@@ -524,8 +638,8 @@ useEventListener(window, 'keydown', event => {
 .ui-sidebar-toggle {
   position: absolute;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 18px;
+  transform: none;
   z-index: 30;
   display: inline-flex;
   align-items: center;
@@ -556,7 +670,7 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-sidebar-toggle.open {
-  transform: translateY(-50%) translateX(320px);
+  transform: translateX(320px);
 }
 
 .ui-sidebar-toggle-arrow {
@@ -607,25 +721,48 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-sidebar-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   padding: 12px;
 }
 
 .ui-main-panel {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .ui-transcript-panel {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
   padding: 14px;
+  overflow: hidden;
 }
 
 .ui-transcript-stage {
+  flex: 1 1 auto;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
+}
+
+.ui-transcript-stage :deep(.transcript-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-transcript-stage :deep(.transcript-scroller) {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .ui-bottom-dock {
@@ -655,6 +792,10 @@ useEventListener(window, 'keydown', event => {
   box-shadow: 0 10px 26px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 
+.ui-tool-desktop-only {
+  display: inline-flex;
+}
+
 .ui-bottom-drawer {
   position: absolute;
   left: 0;
@@ -681,27 +822,67 @@ useEventListener(window, 'keydown', event => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px 12px;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid var(--demo-border-accent-soft);
+}
+
+.ui-bottom-drawer-head-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ui-bottom-drawer-head strong {
   display: block;
-  margin-top: 6px;
-  font-size: 16px;
+  margin-top: 4px;
+  font-size: 15px;
 }
 
 .ui-bottom-drawer-head p {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
   color: var(--demo-text-secondary);
+}
+
+.ui-drawer-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ui-drawer-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+.ui-drawer-pill small,
+.ui-drawer-pill strong {
+  font-family: var(--demo-font-mono);
+}
+
+.ui-drawer-pill small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--demo-text-subtle);
+}
+
+.ui-drawer-pill strong {
+  font-size: 12px;
+  color: var(--demo-text-accent);
 }
 
 .ui-bottom-drawer-body {
   min-height: 0;
   overflow: auto;
-  padding: 16px 18px 18px;
+  padding: 12px 14px 14px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 18%, transparent), transparent);
 }
 
@@ -877,6 +1058,10 @@ useEventListener(window, 'keydown', event => {
     justify-content: stretch;
   }
 
+  .ui-tool-desktop-only {
+    display: none;
+  }
+
   .ui-bottom-tool-row .ui-signal-btn {
     flex: 1 1 0;
     justify-content: center;
@@ -955,15 +1140,13 @@ useEventListener(window, 'keydown', event => {
   .ui-sidebar-toggle {
     position: fixed;
     top: 58px;
-    bottom: 0;
     left: 0;
     width: 18px;
-    min-height: calc(100dvh - 58px);
-    height: auto;
+    height: 112px;
+    min-height: 112px;
     padding: 0;
     border-radius: 0 14px 14px 0;
     border-top: 0;
-    border-bottom: 0;
     z-index: 32;
     transform: none;
   }

@@ -689,7 +689,7 @@ export type Schema = z.output<typeof Schema>;
 
 ```yaml
 ---
-角色名当前行为: # 角色名当前<变量>为<%= getvar('stat_data.角色名.变量') _%>，因此将倾向于进行与以下示例类似的行为
+角色名当前行为: # 角色名当前<变量>为<%= getvar('stat_data.角色名.变量') %>，因此将倾向于进行与以下示例类似的行为
   # :<%_ if (getvar('stat_data.角色名.变量') < 20) { _%>
   阶段一名称:
     行为指导:
@@ -711,7 +711,7 @@ export type Schema = z.output<typeof Schema>;
 
 ```yaml
 ---
-白娅当前行为: # 白娅当前依存度为<%= getvar('stat_data.白娅.依存度') _%>，因此将倾向于进行与以下示例类似的行为
+白娅当前行为: # 白娅当前依存度为<%= getvar('stat_data.白娅.依存度') %>，因此将倾向于进行与以下示例类似的行为
   # :<%_ if (getvar('stat_data.白娅.依存度') < 20) { _%>
   消极自毁:
     行为指导:

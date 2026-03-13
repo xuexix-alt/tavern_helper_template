@@ -4,7 +4,7 @@
       <div>
         <span class="opening-setup-kicker">OPENING SETUP</span>
         <h3>开局配置</h3>
-        <p>按提示词变量直接填表；世界观变量和边界约束由当前选择自动带入。</p>
+        <p>表单内容会影响整个故事，请你按照你的喜好进行填写。</p>
       </div>
       <div class="opening-head-actions">
         <label class="stream-toggle">
@@ -27,7 +27,7 @@
       </div>
 
       <div class="opening-form-item">
-        <span class="opening-label">开局主流派</span>
+        <span class="opening-label">游玩流派</span>
         <select class="opening-select" :value="payload.route_id" @change="emitRoute($event)">
           <option v-for="route in routes" :key="route.id" :value="route.name">
             {{ route.name }}
@@ -38,7 +38,7 @@
 
     <section class="opening-form-grid">
       <div class="opening-form-item full">
-        <span class="opening-label">世界观变量</span>
+        <span class="opening-label">世界观档位</span>
         <textarea
           class="opening-textarea opening-textarea-readonly"
           :rows="8"
@@ -48,7 +48,7 @@
       </div>
 
       <div class="opening-form-item full">
-        <span class="opening-label">边界约束</span>
+        <span class="opening-label">禁止事项</span>
         <textarea class="opening-textarea opening-textarea-readonly" :rows="4" :value="forbiddenDriftText" readonly />
       </div>
     </section>

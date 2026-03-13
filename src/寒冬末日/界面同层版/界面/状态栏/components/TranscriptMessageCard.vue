@@ -30,7 +30,7 @@
           回退删除
         </button>
         <template v-if="item.canDeleteFrom && showRollbackConfirm">
-          <span class="rollback-tip">将删除当前楼层及其后续所有楼层</span>
+          <span class="rollback-tip">删除当前及后续所有楼层</span>
           <button
             type="button"
             class="action-btn danger clip-corner-sm"
@@ -58,7 +58,7 @@
           :value="editDraft"
           class="inline-editor"
           rows="4"
-          placeholder="直接修改这条最新 user 输入，然后确认重生。"
+          placeholder="修改并确认后，重新生成"
           @input="onEditInput"
         />
         <div class="editor-actions">
@@ -84,11 +84,13 @@
         <div class="assistant-corners br"></div>
 
         <div class="assistant-headline">
-          ◎ DATA_MODULE_SECURE <span>ID: MSG-{{ item.message_id }}</span>
+          ◎ 正文和剧情 <span>ID: MSG-{{ item.message_id }}</span>
         </div>
 
         <div class="assistant-body-wrap">
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-if="item.isStreaming" class="assistant-body html-body is-stream-stage" v-html="item.streamHtml"></div>
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-else class="assistant-body html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
         </div>
 

@@ -29,6 +29,7 @@
           @cancel-rollback="emit('cancel-rollback')"
           @swipe="emit('swipe-assistant', $event)"
           @toggle-opening="emit('toggle-opening')"
+          @reroll-opening="emit('reroll-opening')"
         />
       </div>
     </div>
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'toggle-opening'): void;
+  (event: 'reroll-opening'): void;
   (event: 'start-edit-user', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
   (event: 'confirm-edit-user', item: TranscriptItem): void;

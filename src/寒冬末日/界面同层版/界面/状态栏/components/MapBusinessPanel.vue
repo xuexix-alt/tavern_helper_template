@@ -3,6 +3,24 @@
     <section class="map-section">
       <div class="section-title">🗺 伊甸空间地图</div>
       <button type="button" class="scope-btn clip-corner-sm">+ +庇护范围</button>
+      <section class="map-summary-strip">
+        <article class="map-summary-chip clip-corner-sm">
+          <small>庇护所等级</small>
+          <strong>{{ levelNumber }}</strong>
+        </article>
+        <article class="map-summary-chip clip-corner-sm">
+          <small>20层入住</small>
+          <strong>{{ floor20Count }}/{{ floor20Max }}</strong>
+        </article>
+        <article class="map-summary-chip clip-corner-sm">
+          <small>19层入住</small>
+          <strong>{{ floor19Count }}/{{ floor19Max }}</strong>
+        </article>
+        <article class="map-summary-chip clip-corner-sm">
+          <small>核心区域</small>
+          <strong>{{ occupiedCoreCount }}/{{ coreRooms.length }}</strong>
+        </article>
+      </section>
       <div class="map-zone-grid">
         <section class="zone-card clip-corner-sm">
           <div class="zone-head">
@@ -183,6 +201,7 @@ const floor20Max = computed(() => floorRoomCapacity(levelNumber.value, '20'));
 const floor19Max = computed(() => floorRoomCapacity(levelNumber.value, '19'));
 const floor20Count = computed(() => (scopeStore.scope['20'] ?? []).length);
 const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
+const occupiedCoreCount = computed(() => coreRooms.value.filter(room => room.active).length);
 </script>
 
 <style scoped>
@@ -190,8 +209,42 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
 .map-section {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
 }
+
+.map-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.map-summary-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+.map-summary-chip small,
+.map-summary-chip strong {
+  font-family: var(--demo-font-mono);
+}
+
+.map-summary-chip small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--demo-text-subtle);
+}
+
+.map-summary-chip strong {
+  font-size: 13px;
+  color: var(--demo-text-accent);
+}
+
 .map-zone-grid {
   display: grid;
   gap: 16px;
@@ -312,6 +365,9 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   border-radius: 12px;
 }
 @media (max-width: 980px) {
+  .map-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .map-zone-grid {
     grid-template-columns: 1fr;
   }
@@ -326,6 +382,23 @@ const floor19Count = computed(() => (scopeStore.scope['19'] ?? []).length);
   .map-panel,
   .map-section {
     gap: 10px;
+  }
+
+  .map-summary-strip {
+    gap: 6px;
+  }
+
+  .map-summary-chip {
+    min-height: 46px;
+    padding: 8px 9px;
+  }
+
+  .map-summary-chip small {
+    font-size: 9px;
+  }
+
+  .map-summary-chip strong {
+    font-size: 12px;
   }
 
   .section-title {

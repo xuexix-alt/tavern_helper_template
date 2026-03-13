@@ -224,11 +224,17 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
           : 'placeholder';
 
   return OpeningPayloadSchema.parse({
-    version: 2,
+    version: 3,
     state: nextState,
     world_mode_id: _.get(source, 'world_mode_id', getDefaultWorldModeId()),
     route_id: _.get(source, 'route_id', getDefaultRouteId(_.get(source, 'world_mode_id', getDefaultWorldModeId()))),
     use_stream: _.get(source, 'use_stream', false),
+    opening_seed_user_message_id: Number.isFinite(Number(_.get(source, 'opening_seed_user_message_id', null)))
+      ? Math.trunc(Number(_.get(source, 'opening_seed_user_message_id', null)))
+      : null,
+    opening_result_message_id: Number.isFinite(Number(_.get(source, 'opening_result_message_id', null)))
+      ? Math.trunc(Number(_.get(source, 'opening_result_message_id', null)))
+      : null,
     meta: {
       time: compactText(_.get(source, 'meta.time', preset.default_meta.time)),
       location: compactText(_.get(source, 'meta.location', preset.default_meta.location)),
@@ -321,11 +327,13 @@ export function getDefaultOpeningPayload(preset = getDefaultOpeningPreset()): Op
   const route_id = getDefaultRouteId(world_mode_id);
 
   return OpeningPayloadSchema.parse({
-    version: 2,
+    version: 3,
     state: 'placeholder',
     world_mode_id,
     route_id,
     use_stream: false,
+    opening_seed_user_message_id: null,
+    opening_result_message_id: null,
     meta: preset.default_meta,
     form_values: buildDefaultOpeningFormValues(preset),
     result: null,
@@ -343,11 +351,44 @@ export function readOpeningPayloadFromChat(): OpeningPayload | null {
   }
 }
 
+const OPENING_PERSISTED_FORM_KEYS = [
+  'pre_disaster_identity',
+  'early_story_tone',
+  'supplemental_setting',
+  'word_count',
+] as const;
+
+function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
+  const compactFormValues = Object.fromEntries(
+    OPENING_PERSISTED_FORM_KEYS.map(key => [key, trimText(payload.form_values?.[key])]).filter(([, value]) => Boolean(value)),
+  );
+
+  return {
+    version: 3,
+    state: payload.state,
+    world_mode_id: trimText(payload.world_mode_id) || getDefaultWorldModeId(),
+    route_id: trimText(payload.route_id) || getDefaultRouteId(trimText(payload.world_mode_id) || getDefaultWorldModeId()),
+    use_stream: payload.use_stream === true,
+    opening_seed_user_message_id:
+      Number.isFinite(Number(payload.opening_seed_user_message_id)) && Number(payload.opening_seed_user_message_id) > 0
+        ? Math.trunc(Number(payload.opening_seed_user_message_id))
+        : null,
+    opening_result_message_id:
+      Number.isFinite(Number(payload.opening_result_message_id)) && Number(payload.opening_result_message_id) > 0
+        ? Math.trunc(Number(payload.opening_result_message_id))
+        : null,
+    meta: {
+      character: compactText(payload.meta.character) || '{{user}}',
+    },
+    form_values: compactFormValues,
+  };
+}
+
 export function replaceOpeningPayloadInChat(payload: OpeningPayload) {
   try {
     updateVariablesWith(
       (vars: Record<string, unknown>) => {
-        _.set(vars, OPENING_CHAT_STATE_PATH, OpeningPayloadSchema.parse(payload));
+        _.set(vars, OPENING_CHAT_STATE_PATH, buildCompactOpeningPayloadForChat(payload));
         return vars;
       },
       { type: 'chat' },
@@ -446,14 +487,17 @@ function buildWorldModeSummary(worldMode: OpeningWorldModeOption | null): string
     .join('；');
 }
 
-function fillTemplateValue(context: Record<string, string>, key: string): string {
-  return trimText(context[key]) || '未设定';
+function resolveTemplateValue(context: Record<string, string>, key: string): string | null {
+  const normalizedKey = trimText(key);
+  if (!normalizedKey) return null;
+  const resolved = trimText(context[normalizedKey]);
+  return resolved || null;
 }
 
 export function compileOpeningPromptTemplate(template: string, context: Record<string, string>): string {
   return String(template ?? '')
-    .replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g, (_match, key: string) => fillTemplateValue(context, trimText(key)))
-    .replace(/(?<!\{)\{\s*([^{}\n]+?)\s*\}(?!\})/g, (_match, key: string) => fillTemplateValue(context, trimText(key)));
+    .replace(/\$\{\s*([^{}\n]+?)\s*\}/g, (match, key: string) => resolveTemplateValue(context, key) ?? match)
+    .replace(/\{\{\s*([^{}\n]+?)\s*\}\}/g, (match, key: string) => resolveTemplateValue(context, key) ?? match);
 }
 
 export function buildOpeningPromptContext(preset: OpeningPreset, payload: OpeningPayload): Record<string, string> {
@@ -493,6 +537,7 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     世界观变量: worldVariable,
     world_variable: worldVariable,
     pre_disaster_identity: trimText(formValues.pre_disaster_identity) || '未设定',
+    '职业/身份': trimText(formValues.pre_disaster_identity) || '未设定',
     early_story_tone: trimText(formValues.early_story_tone) || '未设定',
     opening_style: trimText(formValues.opening_style) || '未设定',
     supplemental_setting: supplementalSetting,

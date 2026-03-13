@@ -98,11 +98,6 @@
               <div class="bio-stripe"></div>
               <p>{{ displayLongText(entry.role.内心想法, entry.role.神态样貌, entry.role.动作姿势) }}</p>
             </div>
-
-            <button type="button" class="collapse-btn collapse-btn-inline clip-corner-sm" @click="emit('collapse')">
-              关闭
-            </button>
-
             <div class="detail-grid">
               <div class="detail-card clip-corner-sm">
                 <span class="detail-label">衣着</span>
@@ -228,7 +223,7 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
   const options: RoleSourceOption[] = [
     {
       key: 'latest',
-      label: 'latest（自动跟随）',
+      label: 'latest',
       pillLabel: 'latest',
       targetMessageId: 'latest',
       sortId: Number.MAX_SAFE_INTEGER,
@@ -253,8 +248,8 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
     if (item.isOpening) {
       derived.push({
         key: `message:${item.message_id}`,
-        label: `#${item.message_id} 开局`,
-        pillLabel: `#${item.message_id} 开局`,
+        label: `${item.message_id}#`,
+        pillLabel: `${item.message_id}#`,
         targetMessageId: effectiveId,
         sortId: item.message_id,
       });
@@ -264,8 +259,8 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
     if (item.role === 'user' && effectiveId !== item.message_id) {
       derived.push({
         key: `message:${item.message_id}`,
-        label: `#${item.message_id} user（变量同 #${effectiveId} assistant）`,
-        pillLabel: `#${item.message_id} user → #${effectiveId}`,
+        label: `${item.message_id}#`,
+        pillLabel: `${effectiveId}#`,
         targetMessageId: effectiveId,
         sortId: item.message_id,
       });
@@ -274,8 +269,8 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
 
     derived.push({
       key: `message:${item.message_id}`,
-      label: `#${item.message_id} ${item.role}`,
-      pillLabel: `#${item.message_id} ${item.role}`,
+      label: `${item.message_id}#`,
+      pillLabel: `${effectiveId}#`,
       targetMessageId: effectiveId,
       sortId: item.message_id,
     });
@@ -291,8 +286,8 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
   )
     options.push({
       key: `message:${normalizedTargetMessageId.value}`,
-      label: `#${normalizedTargetMessageId.value}`,
-      pillLabel: `#${normalizedTargetMessageId.value}`,
+      label: `${normalizedTargetMessageId.value}#`,
+      pillLabel: `${normalizedTargetMessageId.value}#`,
       targetMessageId: normalizedTargetMessageId.value,
       sortId: normalizedTargetMessageId.value,
     });
@@ -309,10 +304,10 @@ const {
   source,
   resolvedMessageId,
   isDuringExtraAnalysis,
+  isRetrying,
   hasAnyRole,
   mainRoleEntries,
   tempNpcEntries,
-  refresh,
 } = useMvuRoleStore(selectedTargetMessageId);
 const agentTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
@@ -324,12 +319,16 @@ const selectedCharacterKey = computed(() => props.activeCharacterKey ?? internal
 const sourceLabel = computed(() => {
   const selected = selectedSourceOption.value;
   if (!selected) return 'latest';
-  if (source.value === 'default') return `${selected.pillLabel} · 无数据`;
-  if (source.value === 'latest' && selected.targetMessageId !== 'latest')
-    return `${selected.pillLabel} · 已回退 latest`;
-  if (selected.targetMessageId === 'latest')
-    return resolvedMessageId.value === 'latest' ? 'latest' : `latest · #${resolvedMessageId.value}`;
-  return selected.pillLabel;
+  if (isRetrying.value) return `目标楼层 ${selected.pillLabel} 正在重试`;
+  if (source.value === 'default') return `目标楼层 ${selected.pillLabel} 暂无数据`;
+  if (source.value === 'latest' && selected.targetMessageId !== 'latest') {
+    const latestLabel = resolvedMessageId.value === 'latest' ? 'latest' : `${resolvedMessageId.value}#`;
+    return `目标楼层 ${selected.pillLabel} 临时回退 latest（${latestLabel}）`;
+  }
+  if (selected.targetMessageId === 'latest') {
+    return resolvedMessageId.value === 'latest' ? '当前数据来自 latest' : `当前数据来自 latest（${resolvedMessageId.value}#）`;
+  }
+  return `当前数据来自目标楼层 ${selected.pillLabel}`;
 });
 const shelterLevel = computed(() => `${String(_.get(store.data, '庇护所.庇护所等级', '--'))}`);
 const dailyRollText = computed(() => String(_.get(store.data, '庇护所.今日投掷点数', '--')) || '--');
@@ -347,9 +346,6 @@ watch(
   },
   { immediate: true },
 );
-watch(selectedTargetMessageId, () => {
-  refresh();
-});
 watch(
   activeEntries,
   entries => {

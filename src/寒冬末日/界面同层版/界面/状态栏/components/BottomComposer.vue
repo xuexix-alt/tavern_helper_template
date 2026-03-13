@@ -1,5 +1,5 @@
 <template>
-  <section class="composer-shell">
+  <section class="composer-shell" :class="{ 'desktop-tool-row-mode': desktopToolRowMode }">
     <div class="composer-toolbar">
       <div class="composer-role-tabs" role="tablist" aria-label="快速角色切换">
         <button
@@ -41,7 +41,7 @@
           @input="onInput"
         />
       </div>
-      <button type="button" class="send-btn clip-corner-sm" :disabled="busy" @click="$emit('submit')">
+      <button type="button" class="send-btn clip-corner-sm" :disabled="busy" @click="submitFromComposer">
         {{ busy ? '生成中…' : '发送' }}
       </button>
     </div>
@@ -94,7 +94,7 @@
             <button
               type="button"
               class="choice-btn choice-btn--primary clip-corner-sm"
-              :disabled="choiceSending || !choiceDraft.trim()"
+              :disabled="busy || choiceSending || !choiceDraft.trim()"
               @click="confirmChoice"
             >
               {{ choiceSending ? '发送中…' : '确认发送' }}
@@ -109,12 +109,11 @@
 <script setup lang="ts">
 import { nextTick } from 'vue';
 
-import { copyText, sendToChat } from '../../../../界面/outbound';
-
 const props = defineProps<{
   modelValue: string;
   busy: boolean;
   canRoll?: boolean;
+  desktopToolRowMode?: boolean;
   roleTabs?: Array<{ key: string; label: string; statusClass?: string; statusText?: string }>;
   activeRoleKey?: string | null;
   choiceOptions?: string[];
@@ -122,7 +121,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
-  (event: 'submit'): void;
+  (event: 'submit', value?: string): void;
   (event: 'roll'): void;
   (event: 'swipe', direction: 'prev' | 'next'): void;
   (event: 'refresh'): void;
@@ -132,6 +131,18 @@ const emit = defineEmits<{
 function onInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   emit('update:modelValue', target?.value ?? '');
+}
+
+function requestSubmit(rawValue: string) {
+  const text = String(rawValue ?? '').trim();
+  if (!text || props.busy) return false;
+  emit('update:modelValue', text);
+  emit('submit', text);
+  return true;
+}
+
+function submitFromComposer() {
+  requestSubmit(props.modelValue);
 }
 
 const choiceModalOpen = ref(false);
@@ -165,24 +176,13 @@ function pickChoice(option: string) {
 
 async function confirmChoice() {
   const text = choiceDraft.value.trim();
-  if (!text || choiceSending.value) return;
+  if (!text || props.busy || choiceSending.value) return;
 
   choiceSending.value = true;
   try {
-    const result = sendToChat(text, {
-      toast: true,
-      successMessage: '已发送',
-      failureMessage: '发送失败，已尝试复制，请手动发送',
-      unavailableMessage: '无法直接发送，已尝试复制，请手动发送',
-    });
-
-    if (result.ok) {
+    if (requestSubmit(text)) {
       closeChoiceModal();
-      return;
     }
-
-    await copyText(text, { toast: false });
-    toastr?.error?.('无法直接发送，已尝试复制，请手动发送');
   } finally {
     choiceSending.value = false;
   }
@@ -485,6 +485,12 @@ async function confirmChoice() {
   .choice-modal-footer {
     flex-direction: column;
     padding: 10px 12px 12px;
+  }
+}
+
+@media (min-width: 761px) {
+  .composer-shell.desktop-tool-row-mode .composer-quick-actions {
+    display: none;
   }
 }
 </style>

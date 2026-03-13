@@ -67,7 +67,7 @@ declare const EjsTemplate: {
    *
    * @example
    * const env    = await EjsTemplate.prepareContext({ a: 1 });
-   * const result = await EjsTemplate.evalTemplate('a is <%= a _%>', env);
+   * const result = await EjsTemplate.evalTemplate('a is <%= a %>', env);
    * => result === 'a is 1'
    * // 但这种用法更推荐用 _.template 来做, 具体见于 https://lodash.com/docs/4.17.15#template
    * const compiled = _.template('hello <%= user %>!');

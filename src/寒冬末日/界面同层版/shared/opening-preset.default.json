@@ -6,7 +6,7 @@
   "meta_template": {
     "time_label": "时间",
     "location_label": "地点",
-    "character_label": "主角"
+    "character_label": "主角（取个名字）"
   },
   "default_meta": {
     "time": "9527年12月14日·14:00",
@@ -16,60 +16,60 @@
   "form_schema": [
     {
       "key": "pre_disaster_identity",
-      "label": "职业/身份",
+      "label": "末日前职业",
       "kind": "text",
-      "required": true,
-      "placeholder": "例如：护士 / 销售总监 / 保安队长 / 物业经理"
+      "required": false,
+      "placeholder": "例如：经常 / 职业经理 / 退伍老兵 / 工程师 / 医生 / 教授 / loser / 其他"
     },
     {
       "key": "shelter_ability_summary",
-      "label": "庇护所能力变量",
+      "label": "庇护所能力",
       "kind": "textarea",
       "required": true,
-      "placeholder": "例如：绝对安全屏障、内部安防、基础资源供应、环境循环、侦察网络"
+      "placeholder": "例如：安全、生活、社交、医疗、侦察等"
     },
     {
       "key": "early_story_tone",
       "label": "剧情基调",
       "kind": "textarea",
-      "required": true,
-      "placeholder": "例如：种马、种田、生活、战斗；也可以详细描述你希望前期剧情的重点"
+      "required": false,
+      "placeholder": "例如：种马文、种田文、生活日常、战斗探索、科幻世界、宏大叙事；"
     },
     {
       "key": "opening_style",
       "label": "文风",
       "kind": "select",
       "required": true,
-      "options": ["冷峻压迫", "轻小说叙事", "悬疑观察", "高信息密度"],
-      "default_value": "轻小说叙事"
+      "options": ["现代科幻", "轻小说", "毛姆文学作品", "《三体》风格"],
+      "default_value": "现代科幻"
     },
     {
       "key": "nearby_factions",
-      "label": "社会组织",
+      "label": "社会生态",
       "kind": "textarea",
       "required": false,
       "placeholder": "尽量从现成设定源自动带入，必要时再补充"
     },
     {
       "key": "nearby_survivor_types",
-      "label": "其他幸存者类别",
+      "label": "其他NPC类型",
       "kind": "textarea",
       "required": false,
-      "placeholder": "尽量从现成设定源自动带入，必要时再补充"
+      "placeholder": "增加你喜欢的NPC类型或具体名称（也可同人作品设定）"
     },
     {
       "key": "supplemental_setting",
       "label": "补充设定",
       "kind": "textarea",
-      "placeholder": "例如：想加入的特殊规则、人物关系、隐藏前情、偏好的开局事件"
+      "placeholder": "例如：XXX同人、XXX人物关系、隐藏前情、偏好的开局事件"
     },
     {
       "key": "word_count",
       "label": "字数",
       "kind": "text",
       "required": true,
-      "default_value": "1500",
-      "placeholder": "默认 1500"
+      "default_value": "3000",
+      "placeholder": "默认 3000"
     }
   ],
   "prompt_rules": {

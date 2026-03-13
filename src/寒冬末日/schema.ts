@@ -196,12 +196,70 @@ export const Schema = z
         日期: z.string().prefault(''),
         时间: z.preprocess(normalizeTimeText, 时间格式Schema).prefault('上午 - 08:00').catch('上午 - 08:00'),
         末日天数: z.coerce.number().prefault(0),
+        开局配置: z
+          .object({
+            sealed: z.boolean().prefault(false),
+            world_mode_id: z.string().prefault(''),
+            route_id: z.string().prefault(''),
+            pre_disaster_identity: z.string().prefault(''),
+            early_story_tone: z.string().prefault(''),
+            opening_seed_user_message_id: z.coerce.number().int().prefault(0),
+            opening_result_message_id: z.coerce.number().int().prefault(0),
+            form_values: z
+              .object({
+                supplemental_setting: z.string().prefault(''),
+              })
+              .prefault({
+                supplemental_setting: '',
+              }),
+            meta: z
+              .object({
+                source: z.string().prefault('opening_ui'),
+                version: z.coerce.number().int().prefault(1),
+              })
+              .prefault({
+                source: 'opening_ui',
+                version: 1,
+              }),
+          })
+          .prefault({
+            sealed: false,
+            world_mode_id: '',
+            route_id: '',
+            pre_disaster_identity: '',
+            early_story_tone: '',
+            opening_seed_user_message_id: 0,
+            opening_result_message_id: 0,
+            form_values: {
+              supplemental_setting: '',
+            },
+            meta: {
+              source: 'opening_ui',
+              version: 1,
+            },
+          }),
       })
       .prefault({
         地址: '',
         日期: '',
         时间: '上午 - 08:00',
         末日天数: 0,
+        开局配置: {
+          sealed: false,
+          world_mode_id: '',
+          route_id: '',
+          pre_disaster_identity: '',
+          early_story_tone: '',
+          opening_seed_user_message_id: 0,
+          opening_result_message_id: 0,
+          form_values: {
+            supplemental_setting: '',
+          },
+          meta: {
+            source: 'opening_ui',
+            version: 1,
+          },
+        },
       }),
 
     庇护所: z

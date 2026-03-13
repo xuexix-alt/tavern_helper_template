@@ -7,7 +7,7 @@
       <div class="opening-banner clip-corner-sm">
         <span class="opening-kicker">CHAPTER OPENING</span>
         <strong class="opening-title">章节开场</strong>
-        <span class="opening-desc">开局剧情影响整体故事偏好</span>
+        <span class="opening-desc">寒冬末日-星穹秩序</span>
       </div>
 
       <div class="transcript-title-row">
@@ -19,8 +19,17 @@
 
       <div class="transcript-actions">
         <span class="transcript-preview">{{ item.preview || '(空消息)' }}</span>
+        <button
+          v-if="item.canReroll"
+          type="button"
+          class="reroll-btn clip-corner-sm"
+          :disabled="busy"
+          @click="$emit('reroll-opening')"
+        >
+          重ROLL
+        </button>
         <button type="button" class="toggle-btn clip-corner-sm" @click="$emit('toggle-opening')">
-          {{ expanded ? '收起开场' : '展开开场' }}
+          {{ expanded ? '收起' : '展开' }}
         </button>
         <button
           v-if="item.canOpenDetail"
@@ -34,6 +43,7 @@
     </header>
 
     <div v-if="showBody" class="transcript-body opening-body" :class="{ collapsed: !expanded }">
+      <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
   </article>
@@ -45,6 +55,7 @@ import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types
 defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
   (event: 'toggle-opening'): void;
+  (event: 'reroll-opening'): void;
 }>();
 
 const props = defineProps<{
@@ -52,6 +63,7 @@ const props = defineProps<{
   density: TranscriptDensity;
   fontMode: ReaderFontMode;
   expanded: boolean;
+  busy?: boolean;
 }>();
 
 const showBody = computed(() => {
@@ -170,6 +182,12 @@ const showBody = computed(() => {
   border: 1px solid var(--demo-border-warning-soft);
   background: var(--demo-surface-user-soft);
   color: var(--demo-text-warning);
+}
+
+.reroll-btn {
+  border: 1px solid var(--demo-border-accent);
+  background: color-mix(in srgb, var(--surface) 44%, transparent);
+  color: var(--demo-text-primary);
 }
 
 .transcript-body {

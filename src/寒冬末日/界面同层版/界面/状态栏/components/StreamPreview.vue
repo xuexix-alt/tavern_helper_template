@@ -6,7 +6,7 @@
     </div>
     <pre class="demo-preview">{{ previewText }}</pre>
     <div class="demo-meta">
-      <span>占位助手楼层：#{{ assistantMessageId ?? '-' }}</span>
+      <span>UI挂载：#{{ assistantMessageId ?? '-' }}</span>
       <span>最终长度：{{ finalText.length }}</span>
     </div>
     <div v-if="errorText" class="demo-error">{{ errorText }}</div>
@@ -32,9 +32,9 @@ const statusLabel = computed(() => {
 });
 
 const previewText = computed(() => {
-  if (props.status === 'idle') return '点击发送后，这里会显示 generate 的 token 流。';
+  if (props.status === 'idle') return '点击发送生成剧情';
   if (props.status === 'error') return props.errorText || '生成失败';
-  return props.streamText || props.finalText || '等待首个 token…';
+  return props.streamText || props.finalText || '等待AI回复';
 });
 </script>
 

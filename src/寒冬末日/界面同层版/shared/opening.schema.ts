@@ -34,11 +34,13 @@ export const OpeningPresetSchema = z.object({
 
 export const OpeningPayloadSchema = z
   .object({
-    version: z.literal(2),
+    version: z.literal(3),
     state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
     world_mode_id: z.string().default('B'),
     route_id: z.string().default('养'),
     use_stream: z.boolean().default(false),
+    opening_seed_user_message_id: z.number().int().positive().nullable().default(null),
+    opening_result_message_id: z.number().int().positive().nullable().default(null),
     meta: z.object({
       time: z.string().default(''),
       location: z.string().default(''),

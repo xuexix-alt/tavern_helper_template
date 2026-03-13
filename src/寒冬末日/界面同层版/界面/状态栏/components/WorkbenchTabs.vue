@@ -1,5 +1,24 @@
 <template>
   <section class="workbench-card">
+    <section class="workbench-summary-strip">
+      <article class="summary-chip clip-corner-sm">
+        <small>日志</small>
+        <strong>{{ logs.length }}</strong>
+      </article>
+      <article class="summary-chip clip-corner-sm">
+        <small>楼层</small>
+        <strong>{{ transcriptTotal ?? 0 }}</strong>
+      </article>
+      <article class="summary-chip clip-corner-sm">
+        <small>状态</small>
+        <strong>{{ busy ? '忙碌中' : '稳定' }}</strong>
+      </article>
+      <article class="summary-chip clip-corner-sm">
+        <small>Swipe</small>
+        <strong>{{ latestSwipeLabel || '1/1' }}</strong>
+      </article>
+    </section>
+
     <div class="system-tabs" role="tablist" aria-label="系统面板页签">
       <button
         v-for="tab in tabs"
@@ -17,18 +36,32 @@
       <span class="block-label">最近操作</span>
       <div v-if="logs.length === 0" class="empty-log">暂无日志</div>
       <ul v-else class="log-list">
-        <li v-for="log in logs" :key="log.id" class="log-item clip-corner-sm" :class="`is-${log.type}`">
+        <li v-for="log in compactLogs" :key="log.id" class="log-item clip-corner-sm" :class="`is-${log.type}`">
           <div class="log-head">
             <strong>{{ log.title }}</strong>
             <span>{{ log.createdAt }}</span>
           </div>
-          <div class="log-detail">{{ log.detail }}</div>
+          <div class="log-detail">{{ log.shortDetail }}</div>
         </li>
       </ul>
     </section>
 
     <section v-else-if="activeTab === 'status'" class="workbench-panel status-panel">
       <span class="block-label">Progress & Data</span>
+      <div class="status-chip-row">
+        <article class="status-chip clip-corner-sm">
+          <small>助手</small>
+          <strong>{{ assistantCount ?? 0 }}</strong>
+        </article>
+        <article class="status-chip clip-corner-sm">
+          <small>日志</small>
+          <strong>{{ logs.length }}</strong>
+        </article>
+        <article class="status-chip clip-corner-sm">
+          <small>模式</small>
+          <strong>{{ busy ? '同步中' : '待命' }}</strong>
+        </article>
+      </div>
       <div class="progress-row">
         <div class="progress-copy">
           <strong>系统升级中 (DETERMINATE)</strong>
@@ -94,7 +127,7 @@
 <script setup lang="ts">
 import type { ReaderLogItem } from '../types';
 
-defineProps<{
+const props = defineProps<{
   logs: ReaderLogItem[];
   busy?: boolean;
   transcriptTotal?: number;
@@ -108,15 +141,60 @@ const tabs = [
   { id: 'alerts', label: '告警' },
 ] as const;
 
-const activeTab = ref<(typeof tabs)[number]['id']>('logs');
+const activeTab = ref<(typeof tabs)[number]['id']>('status');
+
+const compactLogs = computed(() =>
+  props.logs.slice(0, 6).map(log => ({
+    ...log,
+    shortDetail: String(log.detail ?? '').replace(/\s+/g, ' ').trim().slice(0, 72) || '无详情',
+  })),
+);
 </script>
 
 <style scoped>
+.workbench-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-chip,
+.status-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+.summary-chip small,
+.summary-chip strong,
+.status-chip small,
+.status-chip strong {
+  font-family: var(--demo-font-mono);
+}
+
+.summary-chip small,
+.status-chip small {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--demo-text-subtle);
+}
+
+.summary-chip strong,
+.status-chip strong {
+  font-size: 13px;
+  color: var(--demo-text-accent);
+}
+
 .workbench-card,
 .workbench-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .system-tabs,
 .log-head,
@@ -162,10 +240,10 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .log-item {
-  padding: 12px;
+  padding: 8px 10px;
   background: color-mix(in srgb, var(--surface) 42%, transparent);
   border: 1px solid var(--demo-border-accent-soft);
 }
@@ -178,12 +256,15 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
 .log-head {
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11px;
+  align-items: baseline;
 }
 .log-detail {
-  font-size: 13px;
-  line-height: 1.55;
-  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   word-break: break-word;
 }
 .empty-log {
@@ -193,6 +274,12 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
 .progress-row {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.status-chip-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 .progress-copy {
@@ -227,8 +314,8 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
 }
 .stepper-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
 }
 .ring-stat {
@@ -238,17 +325,17 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
   gap: 8px;
 }
 .ring-shell {
-  width: 86px;
-  height: 86px;
+  width: 68px;
+  height: 68px;
   border-radius: 999px;
-  border: 8px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  border: 6px solid color-mix(in srgb, var(--primary) 16%, transparent);
   border-top-color: #00ff85;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--demo-text-accent);
   font-family: var(--demo-font-mono);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
 }
 .ring-stat small {
@@ -259,7 +346,7 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
 .stepper-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -269,8 +356,8 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
   gap: 12px;
 }
 .stepper-list li span {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 2px solid color-mix(in srgb, var(--primary) 18%, transparent);
   display: inline-flex;
@@ -285,14 +372,14 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
 }
 .stepper-list strong {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
 }
 .stepper-list small {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--demo-text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 11px;
+  line-height: 1.35;
 }
 .alert-card,
 .confirm-card {
@@ -340,6 +427,10 @@ const activeTab = ref<(typeof tabs)[number]['id']>('logs');
   border-color: var(--demo-border-accent-active);
 }
 @media (max-width: 760px) {
+  .workbench-summary-strip,
+  .status-chip-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .stepper-row {
     grid-template-columns: 1fr;
   }

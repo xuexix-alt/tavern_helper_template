@@ -7,7 +7,23 @@
         "地址": "",
         "日期": "",
         "时间": "上午 - 08:00",
-        "末日天数": 0
+        "末日天数": 0,
+        "开局配置": {
+          "sealed": false,
+          "world_mode_id": "",
+          "route_id": "",
+          "pre_disaster_identity": "",
+          "early_story_tone": "",
+          "opening_seed_user_message_id": 0,
+          "opening_result_message_id": 0,
+          "form_values": {
+            "supplemental_setting": ""
+          },
+          "meta": {
+            "source": "opening_ui",
+            "version": 1
+          }
+        }
       },
       "type": "object",
       "properties": {
@@ -24,6 +40,82 @@
         },
         "末日天数": {
           "type": "number"
+        },
+        "开局配置": {
+          "default": {
+            "sealed": false,
+            "world_mode_id": "",
+            "route_id": "",
+            "pre_disaster_identity": "",
+            "early_story_tone": "",
+            "opening_seed_user_message_id": 0,
+            "opening_result_message_id": 0,
+            "form_values": {
+              "supplemental_setting": ""
+            },
+            "meta": {
+              "source": "opening_ui",
+              "version": 1
+            }
+          },
+          "type": "object",
+          "properties": {
+            "sealed": {
+              "type": "boolean"
+            },
+            "world_mode_id": {
+              "type": "string"
+            },
+            "route_id": {
+              "type": "string"
+            },
+            "pre_disaster_identity": {
+              "type": "string"
+            },
+            "early_story_tone": {
+              "type": "string"
+            },
+            "opening_seed_user_message_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "opening_result_message_id": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "form_values": {
+              "default": {
+                "supplemental_setting": ""
+              },
+              "type": "object",
+              "properties": {
+                "supplemental_setting": {
+                  "type": "string"
+                }
+              }
+            },
+            "meta": {
+              "default": {
+                "source": "opening_ui",
+                "version": 1
+              },
+              "type": "object",
+              "properties": {
+                "source": {
+                  "default": "opening_ui",
+                  "type": "string"
+                },
+                "version": {
+                  "default": 1,
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              }
+            }
+          }
         }
       }
     },

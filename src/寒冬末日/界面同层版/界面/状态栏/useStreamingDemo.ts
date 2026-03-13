@@ -138,6 +138,7 @@ function buildTranscriptItem(input: {
   raw: string;
   hidden: boolean;
   isOpening?: boolean;
+  canReroll?: boolean;
   latestAssistantId: number | null;
   status: DemoStatus;
 }): TranscriptItem {
@@ -170,6 +171,7 @@ function buildTranscriptItem(input: {
     isStreaming: input.latestAssistantId === input.id && (input.status === 'streaming' || phase === 'stream'),
     canOpenDetail: true,
     canDeleteFrom: input.isOpening !== true,
+    canReroll: input.canReroll === true,
   };
 }
 
@@ -193,12 +195,18 @@ function isOpeningAssistantMessage(message: any): boolean {
   return _.get(message, 'data.stream_demo.opening_assistant') === true;
 }
 
+function isOpeningSeedMessage(message: any): boolean {
+  return _.get(message, 'data.stream_demo.opening_seed') === true;
+}
+
 function buildOpeningTranscriptItem(
   payload: OpeningPayload,
   preset: OpeningPreset,
   status: DemoStatus,
 ): TranscriptItem {
-  const renderSource = String(payload.result?.content ?? '').trim() || '开局尚未生成，请先完成开局配置。';
+  const streamedContent = String(payload.result?.content ?? '').trim();
+  const isOpeningStreaming = payload.state === 'generating' || status === 'streaming';
+  const renderSource = streamedContent || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');
   const regexText = applyRegexForDisplay(renderSource, 'assistant');
   const finalHtml = buildFinalHtml(renderSource, 0);
 
@@ -216,11 +224,12 @@ function buildOpeningTranscriptItem(
     finalHtml,
     options: payload.result?.options ?? [],
     hidden: false,
-    phase: payload.state === 'generating' || status === 'streaming' ? 'stream' : 'done',
+    phase: isOpeningStreaming ? 'stream' : 'done',
     isLatest: false,
-    isStreaming: payload.state === 'generating' || status === 'streaming',
+    isStreaming: isOpeningStreaming,
     canOpenDetail: true,
     canDeleteFrom: false,
+    canReroll: Boolean(payload.opening_seed_user_message_id) && payload.state === 'ready',
   };
 }
 
@@ -617,41 +626,15 @@ export function useStreamingDemo() {
 
     const nextMessage = buildOpeningAssistantText(openingPayload.value);
     if (!nextMessage) return;
-
-    const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
-    const all = Array.isArray(list) ? list : [];
-    const existing = all.find(message => {
-      const id = Math.trunc(Number(message?.message_id));
-      return Number.isFinite(id) && id > 0 && isOpeningAssistantMessage(message);
-    });
-    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
-    _.set(nextData, 'stream_demo.opening_assistant', true);
-
-    if (existing) {
-      await setChatMessages(
-        [
-          {
-            message_id: Math.trunc(Number(existing.message_id)),
-            message: nextMessage,
-            is_hidden: false,
-            data: nextData,
-          },
-        ],
-        { refresh },
-      );
-      return;
+    const resultId = await upsertOpeningResultMessage(nextMessage, refresh, createIfMissing);
+    if (!createIfMissing && resultId == null) return;
+    if (resultId != null) {
+      openingPayload.value = {
+        ...openingPayload.value,
+        opening_result_message_id: resultId,
+      };
+      persistOpeningPayloadNow();
     }
-
-    if (!createIfMissing) return;
-
-    const firstAfterZero = all
-      .map(message => Math.trunc(Number(message?.message_id)))
-      .find(id => Number.isFinite(id) && id > 0);
-
-    await createChatMessages([{ role: 'assistant', is_hidden: false, message: nextMessage, data: nextData }], {
-      insert_before: firstAfterZero ?? 'end',
-      refresh,
-    });
   }
 
   function setEditingUserDraft(value: string) {
@@ -774,10 +757,7 @@ export function useStreamingDemo() {
   }
 
   async function applyHidePolicy(reason: string) {
-    if (readCurrentContainerMessageId() !== 0) {
-      setHostTranscriptVisibility(false);
-      return;
-    }
+    if (!isOpeningWorkbenchHost || readCurrentContainerMessageId() !== 0) return;
     setHostTranscriptVisibility(true);
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
@@ -822,6 +802,151 @@ export function useStreamingDemo() {
     }, resolveHidePolicyDelay(scopedReason));
   }
 
+  function listAllChatMessages() {
+    try {
+      const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
+      return Array.isArray(list) ? list : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function findFirstChatIdAfterZero(messages: any[]) {
+    return messages
+      .map(message => Math.trunc(Number(message?.message_id)))
+      .find(id => Number.isFinite(id) && id > 0);
+  }
+
+  function findOpeningSeedChatMessage(messages: any[]) {
+    const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
+    if (Number.isFinite(preferredId) && preferredId > 0) {
+      const matched = messages.find(message => Math.trunc(Number(message?.message_id)) === preferredId);
+      if (matched) return matched;
+    }
+    return messages.find(message => isOpeningSeedMessage(message));
+  }
+
+  function findOpeningResultChatMessage(messages: any[]) {
+    const preferredId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
+    if (Number.isFinite(preferredId) && preferredId > 0) {
+      const matched = messages.find(message => Math.trunc(Number(message?.message_id)) === preferredId);
+      if (matched) return matched;
+    }
+    return messages.find(message => isOpeningAssistantMessage(message));
+  }
+
+  function canRerollOpeningFromMessages(messages: any[]) {
+    const resultId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
+    if (!Number.isFinite(resultId) || resultId <= 0) return false;
+    return !messages.some(message => {
+      const id = Math.trunc(Number(message?.message_id));
+      if (!Number.isFinite(id) || id <= resultId) return false;
+      if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
+      return true;
+    });
+  }
+
+  async function upsertOpeningSeedMessage(prompt: string, refresh: HideRefreshMode = 'none') {
+    const messages = listAllChatMessages();
+    const existing = findOpeningSeedChatMessage(messages);
+    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
+    _.set(nextData, 'stream_demo.opening_seed', true);
+
+    if (existing) {
+      const message_id = Math.trunc(Number(existing?.message_id));
+      await setChatMessages([{ message_id, message: prompt, is_hidden: false, data: nextData }], { refresh });
+      return message_id;
+    }
+
+    const firstAfterZero = findFirstChatIdAfterZero(messages);
+    await createChatMessages([{ role: 'user', is_hidden: false, message: prompt, data: nextData }], {
+      insert_before: firstAfterZero ?? 'end',
+      refresh,
+    });
+    const createdId = Math.trunc(Number(getLastMessageId?.()));
+    return Number.isFinite(createdId) ? createdId : null;
+  }
+
+  async function upsertOpeningResultMessage(message: string, refresh: HideRefreshMode = 'none', createIfMissing = true) {
+    const messages = listAllChatMessages();
+    const existing = findOpeningResultChatMessage(messages);
+    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
+    _.set(nextData, 'stream_demo.opening_assistant', true);
+
+    if (existing) {
+      const message_id = Math.trunc(Number(existing?.message_id));
+      await setChatMessages([{ message_id, message, is_hidden: false, data: nextData }], { refresh });
+      return message_id;
+    }
+
+    if (!createIfMissing) return null;
+
+    const firstAfterZero = findFirstChatIdAfterZero(messages);
+    await createChatMessages([{ role: 'assistant', is_hidden: false, message, data: nextData }], {
+      insert_before: firstAfterZero ?? 'end',
+      refresh,
+    });
+    const createdId = Math.trunc(Number(getLastMessageId?.()));
+    return Number.isFinite(createdId) ? createdId : null;
+  }
+
+  async function syncOpeningConfigToResultMvu(messageId: number | null | undefined) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId <= 0) return;
+    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return;
+
+    try {
+      await waitGlobalInitialized('Mvu');
+      const current = Mvu.getMvuData({ type: 'message', message_id: normalizedId });
+      const next = current && typeof current === 'object' ? _.cloneDeep(current) : ({ stat_data: {} } as any);
+      const stat_data =
+        _.get(next, 'stat_data', null) && typeof _.get(next, 'stat_data', null) === 'object'
+          ? (_.get(next, 'stat_data', {}) as Record<string, unknown>)
+          : {};
+
+      const openingShelterSummary = String(openingPayload.value.form_values?.shelter_ability_summary ?? '').trim();
+
+      if (!_.get(stat_data, '庇护所') || typeof _.get(stat_data, '庇护所') !== 'object') {
+        _.set(stat_data, '庇护所', {});
+      }
+      if (!Number.isFinite(Number(_.get(stat_data, '庇护所.庇护所等级', null)))) {
+        _.set(stat_data, '庇护所.庇护所等级', 1);
+      }
+      if (openingShelterSummary) {
+        _.set(stat_data, '庇护所.庇护所能力总述', openingShelterSummary);
+      }
+
+      _.set(stat_data, '世界.开局配置', {
+        sealed: true,
+        world_mode_id: String(openingPayload.value.world_mode_id ?? '').trim(),
+        route_id: String(openingPayload.value.route_id ?? '').trim(),
+        pre_disaster_identity: String(openingPayload.value.form_values?.pre_disaster_identity ?? '').trim(),
+        early_story_tone: String(openingPayload.value.form_values?.early_story_tone ?? '').trim(),
+        opening_seed_user_message_id:
+          Number.isFinite(Number(openingPayload.value.opening_seed_user_message_id)) &&
+          Number(openingPayload.value.opening_seed_user_message_id) > 0
+            ? Math.trunc(Number(openingPayload.value.opening_seed_user_message_id))
+            : 0,
+        opening_result_message_id: normalizedId,
+        form_values: {
+          supplemental_setting: String(openingPayload.value.form_values?.supplemental_setting ?? '').trim(),
+        },
+        meta: {
+          source: 'opening_ui',
+          version: 1,
+        },
+      });
+
+      _.set(next, 'stat_data', stat_data);
+      await Mvu.replaceMvuData(next as any, { type: 'message', message_id: normalizedId });
+    } catch (error) {
+      console.warn('[stream-demo] opening config -> mvu sync failed', {
+        messageId: normalizedId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   function handleHostRefreshEvent(name: string) {
     if (
       busy.value &&
@@ -846,7 +971,11 @@ export function useStreamingDemo() {
       let nextLatestAssistantId: number | null = null;
 
       if (containerId === 0) {
-        if (openingPayload.value.state !== 'placeholder') {
+        const hasPersistedOpeningResult =
+          Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
+          Number(openingPayload.value.opening_result_message_id) > 0;
+
+        if (openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult) {
           normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
         } else {
           const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
@@ -873,8 +1002,9 @@ export function useStreamingDemo() {
         if (!Number.isFinite(message_id)) continue;
         const id = Math.trunc(message_id);
         if (containerId != null && id <= containerId) continue;
-        if (isOpeningAssistantMessage(message)) continue;
+        if (isOpeningSeedMessage(message)) continue;
         const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
+        const isOpeningResult = isOpeningAssistantMessage(message);
         if (role === 'assistant') nextLatestAssistantId = id;
 
         normalized.push(
@@ -883,6 +1013,8 @@ export function useStreamingDemo() {
             role,
             raw: String(message?.message ?? ''),
             hidden: message?.is_hidden === true,
+            isOpening: isOpeningResult,
+            canReroll: isOpeningResult && canRerollOpeningFromMessages(all),
             latestAssistantId: null,
             status: status.value,
           }),
@@ -1129,10 +1261,32 @@ export function useStreamingDemo() {
     busy.value = true;
     status.value = 'preparing';
     errorText.value = '';
+    const compiledPrompt = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);
+    const messages = listAllChatMessages();
+    const resultId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
+    const hasFollowUpTurns =
+      Number.isFinite(resultId) &&
+      resultId > 0 &&
+      messages.some(message => {
+        const id = Math.trunc(Number(message?.message_id));
+        if (!Number.isFinite(id) || id <= resultId) return false;
+        if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
+        return true;
+      });
+
+    if (hasFollowUpTurns) {
+      busy.value = false;
+      status.value = 'idle';
+      toastr?.warning?.('已有正式剧情楼层，暂不支持在此阶段重ROLL开局');
+      return;
+    }
+
+    const seedMessageId = await upsertOpeningSeedMessage(compiledPrompt, 'none');
 
     openingPayload.value = {
       ...openingPayload.value,
       state: 'generating',
+      opening_seed_user_message_id: seedMessageId,
       result: null,
     };
     persistOpeningPayloadNow();
@@ -1143,28 +1297,29 @@ export function useStreamingDemo() {
         bindOpeningGenerationListeners();
       }
       const result = await generate({
-        user_input: buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value),
         should_stream: openingPayload.value.use_stream,
-        max_chat_history: 0,
-        overrides: {
-          chat_history: {
-            with_depth_entries: false,
-            prompts: [],
-          },
-        },
+        max_chat_history: 'all',
       });
+      const nextResult = {
+        raw: String(result ?? '').trim(),
+        content: extractOpeningContent(result),
+        options: extractOpeningOptions(result),
+        generated_at: new Date().toISOString(),
+      };
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
-        result: {
-          raw: String(result ?? '').trim(),
-          content: extractOpeningContent(result),
-          options: extractOpeningOptions(result),
-          generated_at: new Date().toISOString(),
-        },
+        result: nextResult,
+      };
+      const openingResultMessageId = await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'ready',
+        opening_result_message_id: openingResultMessageId,
+        result: nextResult,
       };
       persistOpeningPayloadNow();
-      await syncOpeningAssistantMessage('none', true);
+      await syncOpeningConfigToResultMvu(openingResultMessageId);
       rebuildTranscript();
       status.value = 'done';
       appendLog(
@@ -1187,7 +1342,17 @@ export function useStreamingDemo() {
     }
   }
 
+  async function rerollOpening() {
+    if (busy.value) return;
+    if (!openingPayload.value.opening_seed_user_message_id) {
+      toastr?.info?.('当前还没有可重ROLL的开局 seed');
+      return;
+    }
+    await generateOpening();
+  }
+
   function bindHistoryRefreshEvents() {
+    if (!isOpeningWorkbenchHost) return;
     if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') return;
     const names = [
       tavern_events.CHAT_CHANGED,
@@ -1270,22 +1435,26 @@ export function useStreamingDemo() {
     await patchAssistantMessage('stream');
   }
 
-  async function runDemo() {
+  async function runDemo(nextPrompt?: string) {
     if (openingPayload.value.state !== 'ready') {
       toastr?.info?.('请先完成开局配置并生成 opening');
       return;
     }
-    const prompt = String(input.value ?? '').trim();
+    const prompt = String(nextPrompt ?? input.value ?? '').trim();
     await runGenerationFlow({ prompt, createUser: true });
-    input.value = '';
+    if (nextPrompt == null || prompt === String(input.value ?? '').trim()) {
+      input.value = '';
+    }
   }
 
   onMounted(() => {
     restoreReaderChatState();
     void syncOpeningAssistantMessage('none', false);
     rebuildTranscript();
-    bindHistoryRefreshEvents();
-    queueHidePolicy('mounted');
+    if (isOpeningWorkbenchHost) {
+      bindHistoryRefreshEvents();
+      queueHidePolicy('mounted');
+    }
   });
 
   watch(
@@ -1325,7 +1494,9 @@ export function useStreamingDemo() {
   );
 
   onBeforeUnmount(() => {
-    setHostTranscriptVisibility(false);
+    if (isOpeningWorkbenchHost) {
+      setHostTranscriptVisibility(false);
+    }
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
     historyStops = [];
@@ -1394,6 +1565,7 @@ export function useStreamingDemo() {
     updateOpeningRoute,
     updateOpeningStream,
     generateOpening,
+    rerollOpening,
     deleteFromMessageId,
     startInlineEdit,
     setEditingUserDraft,

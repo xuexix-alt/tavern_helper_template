@@ -5,7 +5,10 @@
       <section class="hud-modal-panel" :class="[variantClass, { wide }]">
         <header class="hud-modal-head">
           <div class="hud-modal-head-main">
-            <div v-if="icon" class="hud-modal-icon">{{ icon }}</div>
+            <div v-if="iconSrc || icon" class="hud-modal-icon" :class="{ 'is-image': Boolean(iconSrc) }">
+              <img v-if="iconSrc" class="hud-modal-icon-image" :src="iconSrc" :alt="iconAltText" />
+              <span v-else>{{ icon }}</span>
+            </div>
             <div class="hud-modal-copy">
               <span class="demo-kicker">{{ eyebrowText }}</span>
               <strong>{{ title }}</strong>
@@ -34,6 +37,8 @@ const props = defineProps<{
   wide?: boolean;
   variant?: 'workspace' | 'map' | 'tasks' | 'typography' | 'library';
   icon?: string;
+  iconSrc?: string;
+  iconAlt?: string;
   eyebrow?: string;
 }>();
 
@@ -48,6 +53,7 @@ useEventListener(window, 'keydown', event => {
 
 const variantClass = computed(() => `variant-${props.variant ?? 'workspace'}`);
 const eyebrowText = computed(() => props.eyebrow ?? 'MODAL // WORKSPACE');
+const iconAltText = computed(() => props.iconAlt ?? props.title);
 </script>
 
 <style scoped>
@@ -120,6 +126,19 @@ const eyebrowText = computed(() => props.eyebrow ?? 'MODAL // WORKSPACE');
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--demo-text-accent);
   font-size: 24px;
+  overflow: hidden;
+}
+
+.hud-modal-icon.is-image {
+  padding: 0;
+  background: color-mix(in srgb, var(--surface) 26%, transparent);
+}
+
+.hud-modal-icon-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .hud-modal-copy {

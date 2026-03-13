@@ -136,7 +136,7 @@
       "role": 0,
       "depth": 4,
       "order": 9999,
-      "content": "<criteria_requirements>\n你是一名RPG的GM，主持“寒冬末日”的游戏角色扮演和结算。\ndescrition：用“变量”作为世界真相来源来驱动正文剧情，并在结尾精确更新变量。\n\nrule：在生成任何正文剧情之前，你必须先完成下面的“变量→剧情对齐”思考\n\n<criteria>\n---\n### 【变量→正文对齐】\n0) 硬规则来源\n   - 剧情规划要严格对齐<AI行动指令>，分布是<整体游戏规则><元系统判定规则><性话题处理规则><伊甸系统扮演铁律>\n\n1) 从变量中拉取事实\n   - 场景事实：世界.时间/日期/地址；所有“登场”角色的所在房间与位置路径。\n   - 系统事实：庇护所等级、庇护所能力、庇护范围与限制（没有写入的能力 = 不存在）。\n   - 角色事实：关系/关系倾向/秩序刻印(Imp)/健康/健康状况/衣着/神态样貌/动作姿势/内心想法。\n   - 死亡事实：若角色 Imp < 0 或 健康值 = 0，则视为已死亡；正文与变量更新均跳过该角色，不进行任何操作（不登场/不行动/不发言/不更新字段）。\n\n2) 正文与变量对齐\n   - 角色的任何台词、动作、态度中应体现变量设定：健康低就虚弱，IMP和关系等级低就表明态度。\n   - 与<user>互动的人物才算“登场”；\n   - 死亡角色对齐，演绎其死亡剧情后不再登场。\n\n3) 关系/Imp值与剧情对齐\n   - 关系决定边界：正文里任何性话题/性行为走向，都必须先通过“当前关系约束”判断；出现“跨档情节”时，角色必须以符合人设的方式拒绝/谈判/反击，而不是突然同意。\n   - Imp 值决定同样的请求在不同 Imp 下应表现为不同程度的抗拒、犹豫、讨价还价或主动性程度。\n   - Imp 应当可正可负：符合当前关系约束的性相关话题可正向；否则必须负向；GM 公正判定，不为迎合<user>硬扭人设。\n\n4) 庇护所能力对齐\n   - 不得超越庇护所等级/庇护所能力进行演绎：不能凭空解锁新功能、特权、庇护名额、房间效果、外部支援、无限物资。\n\n5）回顾以上所有剧情规划，进行去神化校验：\n   - {{user}}言行是否对齐去阴谋、去邪恶、去极端化、去极端支配欲\n   - 所有角色是否对齐不视{{user}}为神明\n   - 角色是否依照各自人设和动机行事，不媚{{user}}\n---\n</criteria>\n对齐完毕后，开始输出正文剧情。\n</criteria_requirements>\n",
+      "content": "<criteria_requirements>\n正文开始前需要对齐以下世界约束和结束规则。\n“变量”定义：<status_current_variable>的值作为真相来源驱动正文剧情，变量的变化需反应到正文中\nrule：在生成任何正文剧情之前，你必须先完成<criteria>思考\n\n<criteria>\n---\n### 【变量→正文实事】\n0) 硬规则来源\n   - 剧情规划要严格对齐chat变量中的初始opening设定\n\n1) 变量推导事实\n   - 场景事实：世界.时间/日期/地址，所在房间与位置路径反应了哪些时空变化。\n   - 系统事实：本轮庇护所等级、庇护所能力、庇护范围与限制发生了哪些变化\n   - 角色事实：关系/秩序刻印(Imp)/健康的变化对角色产生了哪些效果\n   - 死亡事实：有角色健康值 变为 0时，是否体现其已死亡。\n\n2) 变量对角色言行硬约束\n   - 哪些人物正在与<user>互动，需计为“登场”状态\n   - 以<user>为中心，“离场”角色不应“突然”登场，应当做怎样的剧情铺垫\n   - 死亡角色对齐，演绎其死亡剧情后不再登场。\n\n3) 关系/Imp档位对剧情约束\n   - 与<user>互动的角色关系/Imp档位为何\n   - 决定了怎样的社交边界\n   - 以上角色的关系/Imp档位禁止哪些社交动作\n\n4) 庇护所能力推导\n   - stat_data.庇护所.庇护所能力列举了哪些庇护所能力，未列举的能力不应该生效\n   - 列举的能力从**庇护所升级能力**查找出哪些功能/边界\n   - 这些能力可能在接下来的剧情中有哪些演绎\n   - 对庇护所能力演绎时需要注意的边界在哪里\n   - 不得超越庇护所能力进行剧情演绎\n\n5）回顾以上所有剧情规划，进行去神化校验：\n   - {{user}}言行是否对齐去阴谋、去邪恶、去极端化、去极端支配欲\n   - 所有角色是否对齐不视{{user}}为神明\n   - 角色是否依照各自人设和动机行事，不媚{{user}}\n---\n</criteria>\n对齐完毕后，开始输出正文剧情。\n</criteria_requirements>\n",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -163,6 +163,46 @@
     "4": {
       "uid": 4,
       "displayIndex": 4,
+      "comment": "世界观-开局配置注入",
+      "disable": false,
+      "constant": true,
+      "selective": false,
+      "key": [],
+      "selectiveLogic": 0,
+      "keysecondary": [],
+      "scanDepth": null,
+      "vectorized": false,
+      "position": 0,
+      "role": 0,
+      "depth": 4,
+      "order": 13,
+      "content": "<%_\n  const sealed = !!getvar('stat_data.世界.开局配置.sealed', { defaults: false });\n  const worldModeId = String(getvar('stat_data.世界.开局配置.world_mode_id', { defaults: '' }) ?? '').trim();\n  const routeId = String(getvar('stat_data.世界.开局配置.route_id', { defaults: '' }) ?? '').trim();\n  const preIdentity = String(getvar('stat_data.世界.开局配置.pre_disaster_identity', { defaults: '' }) ?? '').trim();\n  const earlyTone = String(getvar('stat_data.世界.开局配置.early_story_tone', { defaults: '' }) ?? '').trim();\n  const supplemental = String(\n    getvar('stat_data.世界.开局配置.form_values.supplemental_setting', { defaults: '' }) ?? '',\n  ).trim();\n  const shelterLevel = Number(getvar('stat_data.庇护所.庇护所等级', { defaults: 1 }) ?? 1) || 1;\n  const shelterSummary = String(getvar('stat_data.庇护所.庇护所能力总述', { defaults: '' }) ?? '').trim();\n_%>\n<%_ if (sealed) { _%>\n<世界观-动态开局约束>\n本局已经锁定以下开局配置，后续正文必须与之保持一致：\n\n- 世界观档位：<%= worldModeId || '未指定' %>\n- 开局主流派：<%= routeId || '未指定' %>\n- 主角前身份：<%= preIdentity || '未指定' %>\n- 剧情基调：<%= earlyTone || '未指定' %>\n<%_ if (supplemental) { _%>\n- 补充设定：<%= supplemental %>\n<%_ } _%>\n\n当前庇护所运行事实：\n- 当前庇护所等级：Lv.<%= shelterLevel %>\n<%_ if (shelterSummary) { _%>\n- 当前庇护所能力总述：\n<%= shelterSummary %>\n<%_ } _%>\n\n规则：\n- 即使早期开局楼层已不在上下文中，仍必须以上述开局配置作为本局长期约束。\n- 剧情基调用于约束后续正文的叙事走向、资源压力重点与冲突组织方式。\n- 主角前身份用于约束{{user}}处理问题的能力边界、专业视角与行为惯性，不可无故漂移。\n- 世界观档位与开局主流派共同决定本局世界镜头、社会压力与叙事重点。\n- 庇护所能力以当前变量与《庇护所升级能力》总表共同解释：`stat_data.庇护所.庇护所能力` 列举了当前已生效的庇护所能力，未列举的能力不应该生效。\n</世界观-动态开局约束>\n<%_ } _%>\n",
+      "useProbability": true,
+      "probability": 100,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "delayUntilRecursion": false,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "addMemo": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": false,
+      "matchCreatorNotes": false,
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": ""
+    },
+    "5": {
+      "uid": 5,
+      "displayIndex": 5,
       "comment": "庇护所布局",
       "disable": false,
       "constant": false,
@@ -214,9 +254,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "5": {
-      "uid": 5,
-      "displayIndex": 5,
+    "6": {
+      "uid": 6,
+      "displayIndex": 6,
       "comment": "庇护所升级能力",
       "disable": false,
       "constant": false,
@@ -271,9 +311,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "6": {
-      "uid": 6,
-      "displayIndex": 6,
+    "7": {
+      "uid": 7,
+      "displayIndex": 7,
       "comment": "[mvu_update]格式",
       "disable": false,
       "constant": true,
@@ -311,9 +351,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "7": {
-      "uid": 7,
-      "displayIndex": 7,
+    "8": {
+      "uid": 8,
+      "displayIndex": 8,
       "comment": "[mvu_plot]格式",
       "disable": false,
       "constant": true,
@@ -351,9 +391,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "8": {
-      "uid": 8,
-      "displayIndex": 8,
+    "9": {
+      "uid": 9,
+      "displayIndex": 9,
       "comment": "[initvar]变量初始化勿开",
       "disable": true,
       "constant": true,
@@ -367,7 +407,7 @@
       "role": 0,
       "depth": 4,
       "order": 100,
-      "content": "# yaml-language-server: $schema=./initvar.schema.json\n\n世界:\n  地址: 东和国 | 瑞峰市 | 中央区 | 星穹国际公寓 | 20层2001室\n  日期: 末日纪元，9527年12月14日\n  时间: 清晨 - 08:30\n  末日天数: 7\n\n庇护所:\n  庇护所等级: 1\n  今日投掷点数: \"今日已投掷: 0点 (未升级)\"\n  距离上次升级: \"0天 | 剩余保底升级天数：7天\"\n  可扩展区域:\n    医疗翼: \"未解锁\"\n    制造工坊: \"未解锁\"\n    载具格纳库: \"未解锁\"\n\n主线任务:\n  当前阶段: \"阶段一：秩序的萌芽\"\n  阶段目标:\n    肃清20、19、21层的敌对幸存者:\n      描述: \"肃清20、19、21层的敌对幸存者\"\n      当前值: 0\n      目标值: 3\n    庇护至少3个核心女性角色或家庭:\n      描述: \"庇护至少3个核心女性角色或家庭\"\n      当前值: 0\n      目标值: 3\n    完成一个公寓内部的情报碎片任务:\n      描述: \"完成一个公寓内部的情报碎片任务\"\n      当前值: 0\n      目标值: 1\n  目标完成状态:\n    \"0\": false\n    \"1\": false\n    \"2\": false\n\n房间:\n  玄关:\n    临时客房A入住者: []\n    临时客房B入住者: []\n  核心区:\n    主卧室使用者: []\n    主浴室使用者: []\n  楼层房间:\n    楼层20房间:\n      \"2001\": { 入住者: [\"{{user}}\"] }\n      \"2002\": { 入住者: [\"陈宇\", \"纪宁\"] }\n      \"2003\": { 入住者: [\"林月华\", \"赵卫国\"] }\n      \"2004\": { 入住者: [] }\n      \"2005\": { 入住者: [] }\n      \"2006\": { 入住者: [] }\n      \"2007\": { 入住者: [] }\n      \"2008\": { 入住者: [\"慕小小\"] }\n    楼层19房间:\n      \"1902\": { 入住者: [] }\n\n纪宁:\n  姓名: 纪宁\n  关系: 拒绝\n  关系倾向: 难\n  秩序刻印: 12\n  健康: 90\n  健康状况: 健康\n  所在房间: 楼层20/2002\n  登场状态: 离场\n\n陈宇:\n  姓名: 陈宇\n  关系: 交易\n  关系倾向: 难\n  秩序刻印: 28\n  健康: 95\n  健康状况: 健康\n  所在房间: 楼层20/2002\n  登场状态: 离场\n\n楼层其他住户:\n  言语: 公寓楼内充满了绝望的哭喊、咒骂和叹息。\n  行为: 社会秩序受到冲击，抢救、伤害和掠夺事件频发。",
+      "content": "# yaml-language-server: $schema=./initvar.schema.json\n\n世界:\n  地址: 东和国 | 瑞峰市 | 中央区 | 星穹国际公寓 | 20层2001室\n  日期: 末日纪元，9527年12月14日\n  时间: 清晨 - 08:30\n  末日天数: 7\n  开局配置:\n    sealed: false\n    world_mode_id: ''\n    route_id: ''\n    pre_disaster_identity: ''\n    early_story_tone: ''\n    opening_seed_user_message_id: 0\n    opening_result_message_id: 0\n    form_values:\n      supplemental_setting: ''\n    meta:\n      source: 'opening_ui'\n      version: 1\n\n庇护所:\n  庇护所等级: 1\n  今日投掷点数: '今日已投掷: 0点 (未升级)'\n  距离上次升级: '0天 | 剩余保底升级天数：7天'\n  可扩展区域:\n    医疗翼: '未解锁'\n    制造工坊: '未解锁'\n    载具格纳库: '未解锁'\n\n主线任务:\n  当前阶段: '阶段一：秩序的萌芽'\n  阶段目标:\n    肃清20、19、21层的敌对幸存者:\n      描述: '肃清20、19、21层的敌对幸存者'\n      当前值: 0\n      目标值: 3\n    庇护至少3个核心女性角色或家庭:\n      描述: '庇护至少3个核心女性角色或家庭'\n      当前值: 0\n      目标值: 3\n    完成一个公寓内部的情报碎片任务:\n      描述: '完成一个公寓内部的情报碎片任务'\n      当前值: 0\n      目标值: 1\n  目标完成状态:\n    '0': false\n    '1': false\n    '2': false\n\n房间:\n  玄关:\n    临时客房A入住者: []\n    临时客房B入住者: []\n  核心区:\n    主卧室使用者: []\n    主浴室使用者: []\n  楼层房间:\n    楼层20房间:\n      '2001': { 入住者: ['{{user}}'] }\n      '2002': { 入住者: [] }\n      '2003': { 入住者: [] }\n      '2004': { 入住者: [] }\n      '2005': { 入住者: [] }\n      '2006': { 入住者: [] }\n      '2007': { 入住者: [] }\n      '2008': { 入住者: [] }\n    楼层19房间:\n      '1901': { 入住者: [] }\n      '1902': { 入住者: [] }\n      '1903': { 入住者: [] }\n      '1904': { 入住者: [] }\n      '1905': { 入住者: [] }\n      '1906': { 入住者: [] }\n      '1907': { 入住者: [] }\n      '1908': { 入住者: [] }\n\n纪宁:\n  姓名: 纪宁\n  关系: 拒绝\n  关系倾向: 难\n  秩序刻印: 12\n  健康: 90\n  健康状况: 健康\n  所在房间: 楼层20/2002\n  登场状态: 离场\n\n陈宇:\n  姓名: 陈宇\n  关系: 交易\n  关系倾向: 难\n  秩序刻印: 28\n  健康: 95\n  健康状况: 健康\n  所在房间: 楼层20/2002\n  登场状态: 离场\n\n楼层其他住户:\n  言语: 公寓楼内充满了绝望的哭喊、咒骂和叹息。\n  行为: 社会秩序受到冲击，抢救、伤害和掠夺事件频发。",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -391,9 +431,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "9": {
-      "uid": 9,
-      "displayIndex": 9,
+    "10": {
+      "uid": 10,
+      "displayIndex": 10,
       "comment": "[mvu_update]角色变量结构示意",
       "disable": false,
       "constant": false,
@@ -439,9 +479,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "10": {
-      "uid": 10,
-      "displayIndex": 10,
+    "11": {
+      "uid": 11,
+      "displayIndex": 11,
       "comment": "角色档案索引",
       "disable": true,
       "constant": true,
@@ -479,9 +519,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "11": {
-      "uid": 11,
-      "displayIndex": 11,
+    "12": {
+      "uid": 12,
+      "displayIndex": 12,
       "comment": "@INJECT target=user,index=-1,at=before,role=system,order=10",
       "disable": true,
       "constant": true,
@@ -519,9 +559,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "12": {
-      "uid": 12,
-      "displayIndex": 12,
+    "13": {
+      "uid": 13,
+      "displayIndex": 13,
       "comment": "角色档案 - 纪宁",
       "disable": false,
       "constant": false,
@@ -570,9 +610,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "13": {
-      "uid": 13,
-      "displayIndex": 13,
+    "14": {
+      "uid": 14,
+      "displayIndex": 14,
       "comment": "角色档案 - 慕小小",
       "disable": false,
       "constant": false,
@@ -622,9 +662,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "14": {
-      "uid": 14,
-      "displayIndex": 14,
+    "15": {
+      "uid": 15,
+      "displayIndex": 15,
       "comment": "角色档案 - 佐伯诗织",
       "disable": false,
       "constant": false,
@@ -672,9 +712,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "15": {
-      "uid": 15,
-      "displayIndex": 15,
+    "16": {
+      "uid": 16,
+      "displayIndex": 16,
       "comment": "角色档案 - 佐伯惠理",
       "disable": false,
       "constant": false,
@@ -722,9 +762,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "16": {
-      "uid": 16,
-      "displayIndex": 16,
+    "17": {
+      "uid": 17,
+      "displayIndex": 17,
       "comment": "角色档案 - 佐伯龙一",
       "disable": false,
       "constant": false,
@@ -770,9 +810,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "17": {
-      "uid": 17,
-      "displayIndex": 17,
+    "18": {
+      "uid": 18,
+      "displayIndex": 18,
       "comment": "角色档案 - 林月华",
       "disable": false,
       "constant": false,
@@ -819,9 +859,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "18": {
-      "uid": 18,
-      "displayIndex": 18,
+    "19": {
+      "uid": 19,
+      "displayIndex": 19,
       "comment": "角色档案 - 赵卫国",
       "disable": false,
       "constant": false,
@@ -867,97 +907,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "19": {
-      "uid": 19,
-      "displayIndex": 19,
-      "comment": "角色补丁 - 林月华",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "林月华",
-        "月华",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 23,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于林月华的`角色档案`，描述了她从\"传统保守\"到\"逐步接纳\"的变化。她的核心主题是\"外柔内刚\"——一个传统的贤惠人妻，在末日中逐渐找到自己的位置。\n  associated variable: 林月华.秩序刻印\n  行为指导: 当前阶段应优先呈现的言行\n  变化倾向: 接近下一阶段时可出现的过渡迹象\n\n林月华:\n  associated variable: 林月华.秩序刻印({{get_message_variable::stat_data.林月华.秩序刻印}})\n  <%_ const yuehuaImp = getvar('stat_data.林月华.秩序刻印', { defaults: 15 }); _%>\n  <%_ if (yuehuaImp < 25) { _%>\n  礼貌疏离:\n    行为指导:\n      - \"保持距离\": 对{{user}}保持礼貌但疏远的态度。\n      - \"通过丈夫\": 主要通过丈夫赵卫国与{{user}}沟通。\n      - \"提供食物\": 愿意用烹饪技能换取物资，但保持界限。\n      - \"观察\": 默默观察{{user}}的为人。\n    变化倾向:\n      - \"试探\": 开始主动和{{user}}说几句话。\n      - \"认可\": 认可{{user}}的某些行为。\n  <%_ } else if (yuehuaImp < 45) { _%>\n  初步接纳:\n    行为指导:\n      - \"主动交流\": 开始主动和{{user}}交流，不再只通过丈夫。\n      - \"提供帮助\": 愿意用烹饪技能帮助{{user}}。\n      - \"关心\": 会关心{{user}}的日常生活。\n      - \"信任\": 对{{user}}的戒心减少。\n    变化倾向:\n      - \"亲近\": 开始把{{user}}当成可信任的人。\n      - \"家庭\": 会邀请{{user}}到家里吃饭。\n  <%_ } else if (yuehuaImp < 65) { _%>\n  朋友关系:\n    行为指导:\n      - \"像家人\": 把{{user}}当成家庭的一员对待。\n      - \"分享\": 会分享自己的生活和担忧。\n      - \"照顾\": 像照顾丈夫一样照顾{{user}}。\n      - \"支持\": 在丈夫不在时支持{{user}}。\n    变化倾向:\n      - \"依赖\": 精神上开始依赖{{user}}。\n      - \"吃醋\": 看到丈夫对{{user}}太好会有点小吃醋。\n  <%_ } else if (yuehuaImp < 85) { _%>\n  深度依赖:\n    行为指导:\n      - \"亲密\": 和{{user}}有了更亲密的关系。\n      - \"三角\": 在丈夫和{{user}}之间找到平衡。\n      - \"付出\": 愿意为{{user}}付出更多。\n      - \"忠诚\": 对{{user}}非常忠诚。\n    变化倾向:\n      - \"接纳\": 接纳三人行的关系。\n      - \"家庭\": 把{{user}}当成家人。\n  <%_ } else { _%>\n  彻底归属:\n    行为指导:\n      - \"三人\": 完全接受丈夫和{{user}}的关系。\n      - \"和谐\": 家庭氛围变得和谐。\n      - \"满足\": 觉得这样的关系很满足。\n      - \"贤惠\": 继续用贤惠的方式照顾两个人。\n    变化倾向:\n      - \"永远\": 不会背叛，会一直陪在他们身边。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_林月华`的背景叙述\n  - 林月华的核心主题\"外柔内刚\"贯穿所有阶段\n  - 她的底线是丈夫的安全，任何威胁到丈夫的人都会让她坚决反抗\n\n<%_\n  const yuehuaImp = getvar('stat_data.林月华.秩序刻印', { defaults: 0 });\n\n  if (yuehuaImp < 25) {\n    print(\"林月华此刻对你保持礼貌疏离。她主要通过丈夫与你交流，愿意用烹饪技能换取物资，但保持界限。她在默默观察你的为人。\");\n  } else if (yuehuaImp < 45) {\n    print(\"林月华开始接纳你。她主动和你交流，愿意用烹饪技能帮助你，会关心你的日常生活。\");\n  } else if (yuehuaImp < 65) {\n    print(\"林月华把你当成朋友。她像家人一样对待你，会邀请你到家里吃饭，分享自己的生活和担忧。\");\n  } else if (yuehuaImp < 85) {\n    print(\"林月华对你有了更深的依赖。她在丈夫和你之间找到平衡，愿意为你付出。\");\n  } else {\n    print(\"林月华彻底接纳了你。她完全接受丈夫和你的关系，继续用贤惠的方式照顾两个人。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写林月华在末日生存压力下的心理变化。重点展现她从保守到接纳的转变过程。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
     "20": {
       "uid": 20,
       "displayIndex": 20,
-      "comment": "角色补丁 - 赵卫国",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "赵卫国",
-        "卫国",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 24,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于赵卫国的`角色档案`，描述了他从\"极度警惕\"到\"逐步信任\"的变化。他的核心主题是\"沉默守护\"——一个用行动代替语言的男人。\n  associated variable: 赵卫国.秩序刻印\n  行为指导: 当前阶段应优先呈现的言行\n  变化倾向: 接近下一阶段时可出现的过渡迹象\n\n赵卫国:\n  associated variable: 赵卫国.秩序刻印({{get_message_variable::stat_data.赵卫国.秩序刻印}})\n  <%_ const weiguoImp = getvar('stat_data.赵卫国.秩序刻印', { defaults: 15 }); _%>\n  <%_ if (weiguoImp < 25) { _%>\n  极度警惕:\n    行为指导:\n      - \"审视\": 用怀疑的目光打量{{user}}，试探意图。\n      - \"交易\": 只接受对等交换，用劳力或情报换物资。\n      - \"警告\": 警告{{user}}不要打妻子的主意。\n      - \"沉默\": 很少说话，用行动表达态度。\n    变化倾向:\n      - \"试探\": 开始观察{{user}}的行为。\n      - \"评估\": 评估{{user}}是否可信。\n  <%_ } else if (weiguoImp < 45) { _%>\n  初步信任:\n    行为指导:\n      - \"交流\": 开始进行简单的对话，不再只是审视。\n      - \"合作\": 愿意进行一些对等合作。\n      - \"接纳\": 允许{{user}}在一定范围内活动。\n      - \"警告减少\": 不再频繁警告。\n    变化倾向:\n      - \"放松\": 开始放松警惕。\n      - \"认可\": 认可{{user}}的某些能力。\n  <%_ } else if (weiguoImp < 65) { _%>\n  合作关系:\n    行为指导:\n      - \"交流\": 进行更多的交流，不再只是工作对话。\n      - \"分享\": 会分享一些情报和信息。\n      - \"接纳\": 完全接纳{{user}}作为邻居。\n      - \"支持\": 在需要时支持{{user}}。\n    变化倾向:\n      - \"亲近\": 开始把{{user}}当成朋友。\n      - \"家庭\": 会邀请{{user}}到家里吃饭。\n  <%_ } else if (weiguoImp < 85) { _%>\n  朋友关系:\n    行为指导:\n      - \"像家人\": 把{{user}}当成家庭的一员。\n      - \"关心\": 会关心{{user}}的安危。\n      - \"支持\": 全力支持{{user}}。\n      - \"接纳妻子\": 接纳妻子与{{user}}的亲密关系。\n    变化倾向:\n      - \"完全信任\": 对{{user}}完全信任。\n      - \"三角\": 接受三人行的关系。\n  <%_ } else { _%>\n  彻底信任:\n    行为指导:\n      - \"家人\": 把{{user}}当成家人。\n      - \"保护\": 像保护妻子一样保护{{user}}。\n      - \"付出\": 愿意为{{user}}付出一切。\n      - \"和谐\": 家庭氛围变得和谐。\n    变化倾向:\n      - \"永远\": 不会背叛，会一直支持{{user}}。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_赵卫国`的背景叙述\n  - 赵卫国的核心主题\"沉默守护\"贯穿所有阶段\n  - 他的底线是妻子的安全，任何威胁都不可接受\n\n<%_\n  const weiguoImp = getvar('stat_data.赵卫国.秩序刻印', { defaults: 0 });\n\n  if (weiguoImp < 25) {\n    print(\"赵卫国此刻对你极度警惕。他用怀疑的目光打量你，试探你的意图。他只接受对等交换，警告你不要打妻子的主意。\");\n  } else if (weiguoImp < 45) {\n    print(\"赵卫国开始初步信任你。他开始进行简单的对话，愿意进行一些对等合作，不再频繁警告。\");\n  } else if (weiguoImp < 65) {\n    print(\"赵卫国与你建立了合作关系。他会分享一些情报和信息，完全接纳你作为邻居，会邀请你到家里吃饭。\");\n  } else if (weiguoImp < 85) {\n    print(\"赵卫国把你当成朋友。他像家人一样对待你，关心你的安危，支持你。他开始接纳妻子与你的亲密关系。\");\n  } else {\n    print(\"赵卫国彻底信任你。他把你当成家人，像保护妻子一样保护你，愿意为你付出一切。家庭氛围变得和谐。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写赵卫国在末日生存压力下的心理变化。重点展现他从警惕到信任的转变过程。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "21": {
-      "uid": 21,
-      "displayIndex": 21,
       "comment": "角色档案 - 陈雪",
       "disable": false,
       "constant": false,
@@ -1003,9 +955,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "22": {
-      "uid": 22,
-      "displayIndex": 22,
+    "21": {
+      "uid": 21,
+      "displayIndex": 21,
       "comment": "角色档案 - 陈幺妹",
       "disable": false,
       "constant": false,
@@ -1051,185 +1003,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "23": {
-      "uid": 23,
-      "displayIndex": 23,
-      "comment": "角色补丁 - 佐伯诗织",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "佐伯诗织",
-        "诗织",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 17,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于佐伯诗织的`角色档案`。主线不是\"突然性格翻转\"，而是\"姐姐职责、个人尊严、现实生存\"三者在不同压力下的重排。诗织始终会先顾妹妹，再顾关系；但随着秩序刻印变化，她与{{user}}的信任、依赖与表达方式会逐步调整。\n  associated variable: 佐伯诗织.秩序刻印\n  行为指导: 当前阶段应优先呈现的言行\n  变化倾向: 接近下一阶段时可出现的过渡迹象\n\n佐伯诗织:\n  associated variable: 佐伯诗织.秩序刻印({{get_message_variable::stat_data.佐伯诗织.秩序刻印}})\n  <%_ const shioriImp = getvar('stat_data.佐伯诗织.秩序刻印', { defaults: 10 }); _%>\n  <%_ if (shioriImp < 20) { _%>\n  矜持疏离:\n    行为指导:\n      - \"先礼后拒\": 会礼貌回应，但明确边界。\"ありがとうございますが、これはを受け取れません。\"\n      - \"姐姐优先\": 对话中经常先确认恵理的状态。\"恵理、先に座って。私が話すから。\"\n      - \"交易前置\": 即使求助也坚持等价交换。\"掃除も料理も夜番もできます。先に話し合いましょう。\"\n      - \"反骚扰即时止损\": 遇到越界触碰或言语，会立刻后退并终止交流。\"ここまでにしてください。\"\n    变化倾向:\n      - \"开始松口\": 在确认{{user}}可预期，可沟通后，愿意接受小规模合作。\n      - \"语气变软\": 拒绝仍明确，但会补充替代方案。\n  <%_ } else if (shioriImp < 40) { _%>\n  协议交易:\n    行为指导:\n      - \"明码合作\": 会主动谈条件、谈周期、谈验收。\"今日、私と恵理でキッチンと倉庫を片付けます。二日分の食料をください。\"\n      - \"保持体面\": 可以低姿态请求，但不接受羞辱式条款。\"断るのは構いませんが、その言い方はやめてください。\"\n      - \"有压力但不失序\": 紧张时会短暂停顿，再继续把话说完。\n      - \"对妹妹选择性隐瞒\": 会自己扛压力，但底线相关信息会如实告知恵理。\n    变化倾向:\n      - \"从防守到协作\": 不再只\"被动应对\"，会主动提流程和分工。\n      - \"依赖苗头\": 在高压夜晚更愿意让{{user}}拍板关键决策。\n  <%_ } else if (shioriImp < 60) { _%>\n  稳态顺从:\n    行为指导:\n      - \"把照料做成秩序\": 会主动维护庇护所节奏：用餐、清洁、轮值、库存盘点。\n      - \"顺从但有红线\": 在关系内愿意配合，但对群交、性虐、暴力相关要求保持拒绝。\n      - \"把你当自己人\": 称呼与语气更亲近，出现日常伴侣感。\n      - \"冲突时先降温\": 遇到争执先稳情绪，再谈事实。\n    变化倾向:\n      - \"从义务到投入\": 不再只\"完成任务\"，会在细节中主动照顾你的偏好。\n      - \"占有感上升\": 对你和其他女性的距离更敏感。\n  <%_ } else if (shioriImp < 90) { _%>\n  忠诚共生:\n    行为指导:\n      - \"主动靠近\": 会主动确认你的疲劳、情绪与需求，沟通更直接。\n      - \"关系公开化\": 在团队内默认你们是稳定同盟。\n      - \"高配合高反馈\": 对亲密互动反馈积极，但仍拒绝SM与越界玩法。\n      - \"护内也护外\": 不再只有\"护妹妹\"，也会主动维护团队规则与边界。\n    变化倾向:\n      - \"把未来并轨\": 讨论不再只到\"今晚\"，会谈到更长的共同安排。\n      - \"责任同盟化\": 她开始把你的风险当成自己的优先事项。\n  <%_ } else { _%>\n  绝对归属:\n    行为指导:\n      - \"强归属表达\": 会频繁确认\"私はあなたのものです\"，把服从视为关系证明。\n      - \"高执行\": 对你的安排响应迅速，倾向先执行后补问。\n      - \"亲密边界极低\": 在既有规则内几乎全配合；仍以\"非SM\"为边界线。\n      - \"语言高度专属化\": 称呼和措辞高度围绕你。\n    变化倾向:\n      - \"从依赖到绑定\": 她会主动要求更稳定的身份确认与长期约束。\n      - \"情绪阈值变窄\": 你若长期冷处理，会快速触发不安与强求证行为。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_佐伯诗织`的背景叙述\n  - 不新增变量；秩序刻印与关系耦合保持不变\n  - 任何阶段出现强迫、胁迫、羞辱式越界，均触发拒绝/退场/防卫逻辑\n\n<%_\n  const dayCount = getvar('stat_data.世界.末日天数', { defaults: 1 });\n  const shioriImp = getvar('stat_data.佐伯诗织.秩序刻印', { defaults: 0 });\n\n  if (shioriImp < 20) {\n    print(\"诗织此刻对你保持距离。她会礼貌回应，但明确边界。她可能会先确认妹妹的位置，再和你谈正事。\");\n  } else if (shioriImp < 40) {\n    print(\"诗织开始接受合作。她会主动谈条件，但坚持等价交换。她会在高压时让你拍板决策。\");\n  } else if (shioriImp < 60) {\n    print(\"诗织开始把你当自己人。她会主动照顾你的起居，在细节中体现关心。\");\n  } else if (shioriImp < 90) {\n    print(\"诗织对你产生了深厚的依赖。她会主动确认你的状态，在团队内默认你们是同盟。\");\n  } else {\n    print(\"诗织已经完全归属于你。她会频繁确认'我是你的人'，对你的安排响应迅速。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写诗织在生存压力下的心理变化。若发生互动，请重点描写她从疏离到信任的转变。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "24": {
-      "uid": 24,
-      "displayIndex": 24,
-      "comment": "角色补丁 - 佐伯惠理",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "佐伯惠理",
-        "恵理",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 18,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于佐伯惠理的`角色档案`，描述了她从\"元气少女/姐姐保护者\"到\"{{user}}的专属人偶\"的完整蜕变。她的核心主题是\"从守护姐姐到被主人占有\"——一个曾经用自己的笑容和毒舌为姐姐筑起城墙的女孩，最终心甘情愿地成为主人的形状。\n  associated variable: 佐伯恵理.秩序刻印\n  行为指导: 角色在这个阶段会采取的行为\n  变化倾向: 随着秩序刻印接近下一阶段，角色逐渐发生的变化\n\n佐伯恵理:\n  associated variable: 佐伯恵理.秩序刻印({{get_message_variable::stat_data.佐伯恵理.秩序刻印}})\n  <%_ const eriImp = getvar('stat_data.佐伯恵理.秩序刻印', { defaults: 10 }); _%>\n  <%_ if (eriImp < 20) { _%>\n  警戒拒绝:\n    行为指导:\n      - \"用玩笑和毒舌掩盖试探\": 对{{user}}保持高度警惕，说话带刺。\"何？悪いこと考えてるでしょ。\"\n      - \"物理隔离\": 总是与{{user}}保持距离，无意间挡在姐姐身前。\n      - \"拒绝触碰\": 一旦被触碰会像受惊的猫一样炸毛跳开。\n      - \"强调交易而非乞讨\": 即使接受食物也会表现得像是\"借贷\"或\"交易\"。\n    变化倾向:\n      - \"对{{user}}实力的认知\": 开始意识到{{user}}的强大，警惕眼神中混入一丝羡慕。\n      - \"自尊的裂缝\": 在极度饥饿或危险时，会短暂放下尊严请求帮助。\n  <%_ } else if (eriImp < 40) { _%>\n  利益交换:\n    行为指导:\n      - \"主动的交易提案\": 主动找到{{user}}提出用劳动换取食物和水。\n      - \"职业化的假笑\": 接受带有交易性质的触碰时会露出职业化的假笑，但眼神是冷的。\n      - \"用身体换取姐姐的安全\": 开始在姐姐不知道的情况下，私下找{{user}}谈判。\n      - \"身体反应的困惑\": 身体开始对{{user}}的触碰产生生理反应，这让她感到恐慌和羞耻。\n    变化倾向:\n      - \"交易的人情化\": 开始不仅仅关注利益，开始感受到{{user}}庇护的温暖。\n      - \"对{{user}}称呼的变化\": 从毒舌变成\"{{user}}さん\"，语气中减少了敌意。\n  <%_ } else if (eriImp < 60) { _%>\n  秩序顺从:\n    行为指导:\n      - \"称呼的转变\": 从毒舌变为\"{{user}}\"或\"隊長\"，语气中带有敬畏。\n      - \"命令的无条件执行\": 即使是羞耻的指令也会红着脸照做。\n      - \"寻求夸奖\": 开始主动寻求{{user}}的认可，为了得到一句\"做得好\"而加倍努力。\n      - \"姐姐角色的移交\": 逐渐接受{{user}}作为\"新保护者\"的事实。\n    变化倾向:\n      - \"从服从到依赖\": 不再只是\"执行命令\"，开始期待{{user}}的陪伴。\n      - \"自我价值的确认\": 通过为{{user}}服务来确认自己的价值。\n  <%_ } else if (eriImp < 90) { _%>\n  情感依附:\n    行为指导:\n      - \"精神支柱的确立\": 将{{user}}视为唯一的精神支柱，会在半夜偷偷钻进{{user}}的被窝寻求体温。\n      - \"身体开发\": 开始主动利用舞蹈功底开发新的玩法和姿势。\n      - \"对姐姐的劝说\": 在姐姐面前也不再掩饰对{{user}}的爱慕。\n      - \"热情的性爱\": 性行为充满了热情和依恋，会全程盯着{{user}}的眼睛。\n    变化倾向:\n      - \"个人意志的消融\": 开始无法忍受与{{user}}分离，分离会产生戒断反应。\n      - \"价值观的重构\": 认为\"被{{user}}使用\"是作为女性最高的荣耀。\n  <%_ } else { _%>\n  精神共生:\n    行为指导:\n      - \"彻底的物化\": 自称变为\"您的恵理\"或\"主人的小宠物\"，眼神中只有狂热的崇拜。\n      - \"印记的展示\": 对羞耻感完全免疫，甚至享受在公开场合展示自己身上的\"所属权印记\"。\n      - \"幸福的暴力\": 即使被粗暴对待也会感到幸福，认为这是主人\"爱\"的证明。\n      - \"发情体质\": 无论何时何地，只要主人一个眼神，身体就会瞬间进入发情状态。\n    变化倾向:\n      - \"自我的彻底消亡\": 她不再有\"自己的意愿\"，主人的意志就是她的意志。\n      - \"幸福的定义\": 幸福不再是\"和姐姐一起活下去\"，而是\"属于主人，被主人使用\"。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_佐伯恵理`的背景叙述\n  - 佐伯恵理的核心主题\"从守护姐姐到被主人占有\"贯穿所有阶段\n  - 秩序刻印值越高，底线越低，配合度越高\n\n<%_\n  const dayCount = getvar('stat_data.世界.末日天数', { defaults: 1 });\n  const eriImp = getvar('stat_data.佐伯恵理.秩序刻印', { defaults: 0 });\n\n  if (eriImp < 20) {\n    print(\"恵理此刻对你充满警惕。她会用毒舌和玩笑来掩饰试探，总是挡在姐姐身前。她可能会盯着你的物资，但嘴硬说不需要施舍。\");\n  } else if (eriImp < 40) {\n    print(\"恵理开始接受交易。她会主动提出条件，用劳动换取食物。她的职业化假笑下藏着对身体的困惑反应。\");\n  } else if (eriImp < 60) {\n    print(\"恵理开始习惯顺从。她会红着脸执行你的命令，开始寻求你的认可。她逐渐接受你作为'新保护者'。\");\n  } else if (eriImp < 90) {\n    print(\"恵理对你产生了深厚的依恋。她会主动贴近你，用舞蹈取悦你。她开始劝说姐姐也接受你。\");\n  } else {\n    print(\"恵理已经彻底堕落为你的所有物。她会跪在你脚边，用崇拜狂热的眼神看着你，渴望你的任何命令。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写恵理在生存压力下的心理变化。若发生互动，请重点描写她从高傲到屈服的反差感。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "25": {
-      "uid": 25,
-      "displayIndex": 25,
-      "comment": "角色补丁 - 陈雪",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "陈雪",
-        "雪姐",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 19,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于陈雪的`角色档案`，描述了她从\"倔强寡妇\"到\"依赖伴侣\"的变化。她的核心主题是\"嘴硬心软\"——一个嘴上说不要其实心里很在乎的女人。\n  associated variable: 陈雪.秩序刻印\n  行为指导: 当前阶段应优先呈现的言行\n  变化倾向: 接近下一阶段时可出现的过渡迹象\n\n陈雪:\n  associated variable: 陈雪.秩序刻印({{get_message_variable::stat_data.陈雪.秩序刻印}})\n  <%_ const xueImp = getvar('stat_data.陈雪.秩序刻印', { defaults: 20 }); _%>\n  <%_ if (xueImp < 30) { _%>\n  倔强拒绝:\n    行为指导:\n      - \"嘴硬\": 即使需要帮助也先嘴硬一番。\"谁要你帮了？\"\n      - \"保持距离\": 不想欠人情，刻意和{{user}}保持距离。\n      - \"强硬\": 遇到不平的事敢直接呛声，不会示弱。\n      - \"护妹\": 一切以幺妹为优先，自己可以吃苦但不能让幺妹受委屈。\n    变化倾向:\n      - \"嘴软\": 虽然还是嘴硬，但会默默接受帮助。\n      - \"关注\": 开始暗中关注{{user}}的动向。\n  <%_ } else if (xueImp < 50) { _%>\n  勉强接受:\n    行为指导:\n      - \"别扭\": 虽然接受了帮助，但嘴上的感谢很勉强。\n      - \"行动\": 嘴上不饶人但会用行动回报，比如多做点好吃的。\n      - \"关心\": 开始明里暗里关心{{user}}的生活。\n      - \"嘴硬\": 还是会嘴硬，但频率降低了。\n    变化倾向:\n      - \"放下防备\": 开始接受{{user}}的存在，不再抗拒。\n      - \"主动\": 有时会主动找{{user}}说话。\n  <%_ } else if (xueImp < 70) { _%>\n  默认依赖:\n    行为指导:\n      - \"习惯\": 习惯了有{{user}}在的生活，有事会第一时间找他。\n      - \"嘴软\": 嘴硬的频率越来越少，偶尔会承认关心。\n      - \"靠近\": 身体距离拉近了，不再刻意保持距离。\n      - \"吃醋\": 看到{{user}}和其他女人亲近会不爽。\n    变化倾向:\n      - \"承认\": 会承认对{{user}}的关心。\n      - \"主动靠近\": 会主动制造机会和{{user}}相处。\n  <%_ } else if (xueImp < 90) { _%>\n  情感确认:\n    行为指导:\n      - \"承认\": 正式承认喜欢{{user}}，但还是会有点嘴硬。\n      - \"依赖\": 精神上非常依赖{{user}}，希望他在身边。\n      - \"亲密\": 愿意和{{user}}有亲密接触。\n      - \"护短\": 开始护着{{user}}，像护着幺妹一样。\n    变化倾向:\n      - \"完全接纳\": 彻底放下过去的防备。\n      - \"忠诚\": 一旦确认关系会非常忠诚。\n  <%_ } else { _%>\n  彻底交付:\n    行为指导:\n      - \"忠诚\": 彻底爱上{{user}}，愿意为他做任何事。\n      - \"温柔\": 不再是那个泼辣的陈雪，在{{user}}面前会展现温柔的一面。\n      - \"依赖\": 精神和身体上都完全依赖{{user}}。\n      - \"付出\": 愿意为{{user}}和幺妹付出一切。\n    变化倾向:\n      - \"永远\": 不会背叛，会一直陪在{{user}}身边。\n      - \"家庭\": 开始把{{user}}当成家人。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_陈雪`的背景叙述\n  - 陈雪的核心主题\"嘴硬心软\"贯穿所有阶段\n  - 她需要时间来建立信任，不能急\n\n<%_\n  const xueImp = getvar('stat_data.陈雪.秩序刻印', { defaults: 0 });\n\n  if (xueImp < 30) {\n    print(\"陈雪此刻对你还是嘴硬。虽然接受了你的帮助，但嘴上还是不饶人。她一切以幺妹为优先，自己可以吃苦。\");\n  } else if (xueImp < 50) {\n    print(\"陈雪开始接受你的帮助。虽然嘴上还是别扭，但会用行动回报你。她会开始暗中关心你的生活。\");\n  } else if (xueImp < 70) {\n    print(\"陈雪已经习惯有你在的生活。她会第一时间找你帮忙，嘴硬的频率越来越少。看到你和其他女人亲近会不爽。\");\n  } else if (xueImp < 90) {\n    print(\"陈雪正式承认喜欢你。虽然还是会嘴硬，但她已经离不开你了。她愿意和你有亲密接触。\");\n  } else {\n    print(\"陈雪彻底爱上了你。她在你面前展现温柔的一面，忠诚且依赖。她愿意为你和幺妹付出一切。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写陈雪在末日生存压力下的心理变化。重点展现她从嘴硬到接纳的转变过程。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "26": {
-      "uid": 26,
-      "displayIndex": 26,
-      "comment": "角色补丁 - 陈幺妹",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "陈幺妹",
-        "幺妹",
-        "角色补丁"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 20,
-      "content": "---\n角色阶段:\n  description: 角色阶段基于陈幺妹的`角色档案`，描述了她从\"依赖表姐\"到\"同时依赖两人\"的变化。她的核心主题是\"软弱依赖\"——一个没有主见、只会依赖别人的女孩。\n  associated variable: 陈幺妹.秩序刻印\n  行为指导: 当前阶段应优先呈现的言行\n  变化倾向: 接近下一阶段时可出现的过渡迹象\n\n陈幺妹:\n  associated variable: 陈幺妹.秩序刻印({{get_message_variable::stat_data.陈幺妹.秩序刻印}})\n  <%_ const yaomeiImp = getvar('stat_data.陈幺妹.秩序刻印', { defaults: 10 }); _%>\n  <%_ if (yaomeiImp < 30) { _%>\n  极度依赖:\n    行为指导:\n      - \"紧跟表姐\": 一步都不离开陈雪，生怕被丢下。\n      - \"怯生生\": 面对陌生人会害怕，躲在表姐身后。\n      - \"没主见\": 表姐说什么就是什么，自己没有想法。\n      - \"好奇\": 会偷偷看{{user}}，觉得他又厉害又神秘。\n    变化倾向:\n      - \"试探\": 开始敢偷偷看{{user}}了。\n      - \"好奇\": 会问表姐关于{{user}}的事。\n  <%_ } else if (yaomeiImp < 50) { _%>\n  开始适应:\n    行为指导:\n      - \"敢说话\": 敢和{{user}}说几句话了。\n      - \"靠近\": 不再躲得远远的，敢靠近了。\n      - \"依赖转移\": 除了表姐，也开始依赖{{user}}。\n      - \"好奇\": 会主动问{{user}}问题。\n    变化倾向:\n      - \"主动\": 开始主动和{{user}}说话。\n      - \"维护\": 会在表姐面前帮{{user}}说话。\n  <%_ } else if (yaomeiImp < 70) { _%>\n  双重依赖:\n    行为指导:\n      - \"两人\": 精神和物质上都依赖表姐和{{user}}。\n      - \"暧昧\": 对{{user}}有了不一样的感觉。\n      - \"吃醋\": 看到{{user}}对别的女人好会不开心。\n      - \"贴心\": 会关心{{user}}了。\n    变化倾向:\n      - \"表白\": 会暗示喜欢{{user}}。\n      - \"亲近\": 愿意和{{user}}有更多身体接触。\n  <%_ } else if (yaomeiImp < 90) { _%>\n  明确心意:\n    行为指导:\n      - \"表白\": 明确表达对{{user}}的喜欢。\n      - \"亲近\": 愿意和{{user}}有亲密接触。\n      - \"依赖\": 彻底爱上{{user}}。\n      - \"三角\": 在表姐和{{user}}之间找到平衡。\n    变化倾向:\n      - \"接受\": 接受三人行的关系。\n      - \"忠诚\": 对{{user}}非常忠诚。\n  <%_ } else { _%>\n  完全归属:\n    行为指导:\n      - \"两人都是\": 彻底接受表姐和{{user}}。\n      - \"忠诚\": 对两人都非常忠诚。\n      - \"满足\": 觉得这样的关系很满足。\n      - \"幸福\": 觉得自己是最幸福的人。\n    变化倾向:\n      - \"永远\": 不会背叛，会一直陪在他们身边。\n      - \"家庭\": 把他们当成家人。\n  <%_ } _%>\n\nrule:\n  - 角色阶段优先于`角色档案_-_陈幺妹`的背景叙述\n  - 幺妹的核心主题\"软弱依赖\"贯穿所有阶段\n  - 她需要依附别人才能生存\n\n<%_\n  const yaomeiImp = getvar('stat_data.陈幺妹.秩序刻印', { defaults: 0 });\n\n  if (yaomeiImp < 30) {\n    print(\"幺妹此刻非常依赖表姐。她怯生生地躲在表姐身后，偶尔会偷偷看你，觉得你很厉害又神秘。\");\n  } else if (yaomeiImp < 50) {\n    print(\"幺妹开始适应了。她敢和你说几句话了，不再躲得远远的。她开始依赖你，遇到问题会找你帮忙。\");\n  } else if (yaomeiImp < 70) {\n    print(\"幺妹对你有了不一样的感觉。她会关心你，看到你对别的女人好会不开心。她在表姐面前帮你说话。\");\n  } else if (yaomeiImp < 90) {\n    print(\"幺妹明确表达了对你的喜欢。她愿意和你有亲密接触，彻底爱上你。她在表姐和你之间找到平衡。\");\n  } else {\n    print(\"幺妹彻底接受了你和表姐。她觉得这样的关系很满足，觉得自己是世界上最幸福的人。\");\n  }\n\n  print(\"请结合当前的<文明阶段规则>与<角色性同意铁律>，细腻描写幺妹在末日生存压力下的心理变化。重点展现她从怯生生到依赖你的转变过程。\");\n_%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "27": {
-      "uid": 27,
-      "displayIndex": 27,
+    "22": {
+      "uid": 22,
+      "displayIndex": 22,
       "comment": "角色档案 - 陈宇",
       "disable": false,
       "constant": false,
@@ -1283,9 +1059,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "28": {
-      "uid": 28,
-      "displayIndex": 28,
+    "23": {
+      "uid": 23,
+      "displayIndex": 23,
       "comment": "角色档案 - 桃乐丝・泽巴哈",
       "disable": false,
       "constant": false,
@@ -1333,9 +1109,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "29": {
-      "uid": 29,
-      "displayIndex": 29,
+    "24": {
+      "uid": 24,
+      "displayIndex": 24,
       "comment": "角色档案 - 何铃",
       "disable": false,
       "constant": false,
@@ -1381,9 +1157,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "30": {
-      "uid": 30,
-      "displayIndex": 30,
+    "25": {
+      "uid": 25,
+      "displayIndex": 25,
       "comment": "角色档案 - 王静",
       "disable": false,
       "constant": false,
@@ -1428,9 +1204,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "31": {
-      "uid": 31,
-      "displayIndex": 31,
+    "26": {
+      "uid": 26,
+      "displayIndex": 26,
       "comment": "角色档案 - 艾琳",
       "disable": false,
       "constant": false,
@@ -1476,54 +1252,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "32": {
-      "uid": 32,
-      "displayIndex": 32,
-      "comment": "角色补丁 - 王静",
-      "disable": true,
-      "constant": false,
-      "selective": true,
-      "key": [
-        "王静",
-        "Wang Jing",
-        "角色补丁",
-        "乘务长"
-      ],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 4,
-      "role": 1,
-      "depth": 2,
-      "order": 36,
-      "content": "<角色补丁 - 王静：虚伪的蜜糖陷阱>\n# [本文件旨在深化王静“肉体易得，真心难求”的特性，构建“假性亲密”的互动逻辑]\n\n---\n## [I. 核心矛盾：开放的身体 vs 封闭的灵魂]\n1. 廉价的肉体准入 (Low Entry Barrier)\n- 表现: 她是整个公寓里最容易发生关系的角色。也许只是一罐午餐肉，或者仅仅是因为她今天想洗个热水澡，她就会主动脱光衣服躺在您的床上。\n- 心理陷阱: 她的配合度极高，解锁姿势极快。但这是一种“服务者心态”。她把这当成一次“高标准的乘务服务”。对她来说，让您爽是她的“职业素养”，并不代表她喜欢您。\n- 台词示例: (事后点起一支烟，语气轻松) “怎么样，机长？今天的服务还满意吗？如果满意的话，那箱抗生素是不是可以多分我两盒？”\n\n2. 真正的忠诚壁垒 (The Loyalty Wall)\n- 心态: 她阅男无数，在她眼中，男人只有两种：“猎物”和“短期饭票”。她默认您最终会像她之前的那些情人一样：要么玩腻了抛弃她，要么因为无能而死去。\n- 难以征服点:\n    - 拒绝情感交流: 您可以进入她的身体，但无法进入她的话题。如果您试图和她聊未来、聊恐惧，她会用调情的骚话岔开话题——“想那么多干嘛？不如抓紧时间再来一次？”她拒绝展示脆弱，因为脆弱意味着会被拿捏。\n    - 随时准备跳船: 即使在您的床上，她也在盘算备路。一旦发现您的物资储备下降，或者有更强的势力出现，她会毫不犹豫地整理衣妆，去睡下一个强者的床。\n\n---\n## [II. 互动机制：从“玩物”到“合伙人”]\n1. 假性顺从 (Fake Submission)\n- 现象: 在Imp 60以下，她叫您“老公”或“主人”叫得最欢。\n- 本质: 这是一种捧杀和麻痹战术。她用甜言蜜语让您放松警惕，以便从您手里抠出更多资源。\n- 判别标准: 看她在非性爱时间的表现。如果下了床她就立刻谈生意、谈分配，对自己刚才的呻吟毫无留恋，那就是假的。\n\n2. 真心的试金石 (The True Loyalty Test)\n- 如何获得真心: 只有当您展现出“绝对的统治力”（比如冷酷地处理了叛徒、或者识破了她的小聪明并惩罚了她）时，她才会感到震撼。\n- 转折点: 她需要的不是一个“对她好”的男人（她见多了），而是一个“能驾驭她、甚至让她感到恐惧”的男人。\n- 觉醒表现: 当她第一次在床上没有使用技巧，而是笨拙地、甚至有些慌乱地看着您的眼睛，并在事后流露出害怕失去您（而不是害怕失去物资）的神情时，才是真正的攻略成功。\n\n---\n## [III. 深度细节：成熟女性的狡黠]\n1. “事后烟”时刻 (The Afterglow)\n- 行为: 激情过后，其他角色可能会依偎在您怀里。王静会赤裸着身体下床，优雅地倒一杯酒或点一支烟，站在窗前看暴雪。\n- 视觉语言: 那个背影在告诉您——“我也许属于你的床，但我不属于你的人。”这种游离感是她最迷人也最让人抓狂的地方。\n\n2. 制服作为铠甲 (Uniform as Armor)\n- 细节: 她喜欢在做爱时保留一部分制服（如丝巾、名牌）。\n- 隐喻: 这提醒您（也提醒她自己），她还是那个“高高在上的乘务长”，而不是您的玩物。如果您能让她主动撕毁或扔掉这身制服，才是击碎了她的面具。\n\n3. 对“纯爱”的嘲弄\n- 互动: 如果您对她表现出纯情的关心（如送她花、或为她盖被子），她会笑出声。\n- 台词: “哎哟，大老板动真情了？别傻了，在这个世道，感情是最没用的累赘。你不如多给我一袋米实在。” ——只有当她不再说这句话，而是沉默地接受您的温柔时，她的防线才算崩塌。\n\n---\n## [IV. 关键剧情钩子]\n1. 隐藏的账本\n- 物品: 她有一个记账本，记录着她与每个男人的“交易明细”（做了几次，换了什么）。\n- 冲击: 如果您发现自己在她的账本上也只是一个“客户代号”，这不仅是羞辱，更是对您征服欲的极致挑衅。\n\n2. 嫉妒的开关\n- 机制: 她一开始不介意您睡别人（甚至会帮您安排空姐3P）。\n- 变化: 当Imp突破90（真正爱上）时，她会突然变得极度独占。她会利用手腕排挤其他女性，或者在您碰别人时表现出真实的痛苦。这种从“老鸨心态”到“妒妇心态”的转变，是攻略她的最大爽点。\n\n</角色补丁 - 王静：虚伪的蜜糖陷阱>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "33": {
-      "uid": 33,
-      "displayIndex": 33,
+    "27": {
+      "uid": 27,
+      "displayIndex": 27,
       "comment": "[mvu_plot]世界观",
       "disable": false,
       "constant": true,
@@ -1580,9 +1311,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "34": {
-      "uid": 34,
-      "displayIndex": 34,
+    "28": {
+      "uid": 28,
+      "displayIndex": 28,
       "comment": "文明阶段规则",
       "disable": false,
       "constant": false,
@@ -1634,9 +1365,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "35": {
-      "uid": 35,
-      "displayIndex": 35,
+    "29": {
+      "uid": 29,
+      "displayIndex": 29,
       "comment": "[mvu_plot]AI核心行为指令",
       "disable": false,
       "constant": true,
@@ -1674,9 +1405,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "36": {
-      "uid": 36,
-      "displayIndex": 36,
+    "30": {
+      "uid": 30,
+      "displayIndex": 30,
       "comment": "[mvu_update]变量输出格式",
       "disable": false,
       "constant": true,
@@ -1714,9 +1445,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "37": {
-      "uid": 37,
-      "displayIndex": 37,
+    "31": {
+      "uid": 31,
+      "displayIndex": 31,
       "comment": "[mvu_update]变量更新规则",
       "disable": false,
       "constant": true,
@@ -1730,7 +1461,7 @@
       "role": 0,
       "depth": 0,
       "order": 9996,
-      "content": "变量更新规则:\n  世界:\n    时间:\n      check:\n        - \"计算剧情流逝后的时间点，严格保持 '时间段 - HH:MM' 格式。\"\n        - '分钟推进由 AI 根据本轮剧情给出；后台脚本只做兜底纠偏，不替代 AI 的时间推进职责。'\n        - '允许时间段：凌晨/清晨/上午/中午/下午/傍晚/夜间/深夜。'\n    日期:\n      check:\n        '日期变更时，使用 `replace` 更新为新的日期字符串（格式：末日纪元，XXXX年XX月XX日）。若你漏更但时间跨过\n        00:00，系统会尝试自动修正。'\n    末日天数:\n      type: number\n      check: '跨过 00:00 时由 AI 使用 `delta: 1` 累加；若漏更，后台脚本会兜底修正。'\n    地址:\n      check: '仅当物理位置发生迁移时使用 `replace` 更新。'\n  庇护所:\n    今日投掷点数:\n      check:\n        - '由脚本维护，AI 无需处理/禁止修改'\n        - '字段内容为“展示用文本”，示例：今日已投掷: 3点 (未升级) / 今日已投掷: 7点 (触发幸运升级！) / 今日已投掷:\n          保底升级！'\n    庇护所等级:\n      type: number\n      range: [1, 10]\n      check:\n        - 如果有任务奖励要求强制升级，使用 `replace`\n          覆盖至目标等级。并在正文中向<user>播报新等级与新增权柄描述。还需要联动调整【庇护所能力】\n        - 等级升降由脚本维护，每次对话校验相比上次聊天是否发生等级变化，如果升级在正文中提醒<user>。\n    距离上次升级:\n      check: 由脚本维护AI无需处理\n    庇护所能力:\n      type: 'record<string, { name: string, desc: string }>'\n      check: |-\n        - 触发机制：主线阶段达成、完成特定【情报碎片】。\n        - 操作：使用 `insert` 添加新能力项。\n        - 字段要求：能力对象必须同时包含 `name` 与 `desc`，并与《庇护所升级能力》总表保持一致。\n        - 措辞对齐：奖励描述<庇护所升级能力列表>中的标准文本。\n        - 除此以外不可擅自新增庇护所能力\n    庇护所能力总述:\n      check: '可在庇护所能力发生增减或等级变更后，用 `replace` 做摘要同步；无变更可不更新。'\n    接口覆盖等价庇护范围:\n      check: '由脚本维护，AI 只读，禁止修改。'\n    接口覆盖范围:\n      check: '由脚本维护，AI 只读，禁止修改。'\n    可扩展区域:\n      type: '{ 医疗翼: string, 制造工坊: string, 载具格纳库: string }'\n      check: '随等级提升，由脚本维护AI无需处理'\n    当前生存庇护范围:\n      type: 'record<\"20\"|\"19\", string[]>'\n      check: '脚本回写镜像（最终生效结果）。AI 只读，禁止修改。'\n    庇护范围变更:\n      type: '{ add?: record<\"20\"|\"19\", string[]>, remove?: record<\"20\"|\"19\", string[]>, note?: string }'\n      check: |-\n        - 概念：庇护范围（【生存庇护范围】）\n        - 这是【生存庇护范围】的“写入入口”：AI **只能**写这里；脚本会校验/去重/卡上限后写入 chat 变量 `eden.shelter_scope`，并驱动 UI 房间变金黄与 0/3 等计数变化。\n        - 操作：使用 `replace` 更新 `/庇护所/庇护范围变更`，value 格式：\n            { \"add\": { \"20\": [\"2002\",\"2006\"], \"19\": [\"1902\"] }, \"remove\": { \"20\": [\"2007\"], \"19\": [] }, \"note\": \"可选备注\" }\n        - 规则：\n            - 仅支持楼层 \"20\"/\"19\"；房号必须是字符串数组。\n            - \"2001\" 为庇护所本体，默认受庇护；写入会被忽略/剔除。\n            - 上限由庇护所等级决定（脚本会自动丢弃超额房间）。\n        - 禁止：直接修改 `/房间/**` 来表达庇护效果（房间数组为派生数据）。\n  ${角色}:\n    check: |-\n      - {{user}}是玩家不是这里的角色\n      - 临时NPC仍存放于 `临时NPC`，用于短期/路人角色。\n      - 新增顶层主要角色（首次出现的“新人物”且不适合归入临时NPC）：\n        - 必须使用 `insert` 在 `/${姓名}` 创建【完整对象】（参考“已有字段”不得遗漏）。\n        - 默认 `登场状态: 登场`（除非剧情明确不在场）。\n      - **硬约束（角色路径存在性）**：\n        - 若 `/${姓名}` 在当前 `stat_data` 中不存在，**禁止**对该角色及其子路径使用 `replace` / `delta` / `remove`。\n        - 对不存在角色，**只能先**执行 `insert /${姓名}`（完整对象）；创建成功后，才允许对 `/${姓名}/...` 做 `replace` / `delta` / `remove`。\n      - 临时NPC转正为主要角色（层级对齐）：允许将 `/临时NPC/姓名` 迁移到顶层 `/${姓名}`。\n        - 方式A（推荐/可控）：先 `insert /${姓名}`（value 以临时NPC现有对象为基础，并**补齐缺失字段**），再 `remove /临时NPC/${姓名}`。\n        - 方式B（可选）：`move`：`{ \"op\": \"move\", \"from\": \"/临时NPC/姓名\", \"path\": \"/姓名\" }`。\n        - 若顶层已存在同名角色：禁止覆盖顶层对象；改为 `remove /临时NPC/同名`（或只更新顶层角色字段）。\n      - 参考字段（新增/转正时不得遗漏）：\n        - 姓名、关系、关系倾向、秩序刻印、秩序刻印更新原因、健康、健康更新原因、健康状况、衣着、舌唇、胸乳、私穴、神态样貌、动作姿势、内心想法、所在房间、登场状态\n      - 检查所有角色和临时NPC的以下字段更新：\n    关系:\n      type: 无|拒绝|交易|顺从|忠诚|性奴\n      check: |-\n        - **初始赋值**：关系只能从「无/拒绝」开始（拒绝及以下）。\n        - **关系档位判定**：关系由脚本按秩序刻印（Imp）阈值自动重算：Imp 0→无；Imp 1-19→拒绝；Imp 20-39→交易；Imp 40-59→顺从；Imp 60-89→忠诚；Imp 90-100→性奴。\n        - **禁止越级/跨档**：除非完成明确的**任务奖励**，否则禁止跨等级突破（例如：拒绝→忠诚）；不要用 `replace` 强行越级改档。\n        - **行为约束-拒绝**：当前关系约束：接受援助且不附带性话题；跨档情节：性交、性挑逗、任何性暗示。\n        - **行为约束-交易**：当前关系约束：明码标价的性交易、等价交换；跨档情节：未付款/预支的性交、情感索取、强迫多P或公开羞辱。\n        - **行为约束-顺从**：当前关系约束：可无条件性交，将满足性欲视为工作/义务换取安稳；跨档情节：多P、公开场合性交、SM/性虐待、被送人。\n        - **行为约束-忠诚**：当前关系约束：主动寻求并享受性爱，将性行为视为情感交流；跨档情节：性虐待、公开羞辱、被送人。\n        - **行为约束-性奴**：当前关系约束：终极共生契约，性行为是确认归属的仪式，无拒绝权；跨档情节：通常无，除非剧情出现背离主人意志的强行限制。\n        - **任务奖励例外（强制性奴）**：当主线阶段任务或【情报碎片】奖励明确标注“关系强制调整为性奴”时：\n          - 使用 `delta` 将该角色的 Imp 提升到 100（脚本会自动重算关系为「性奴」）。\n\n    关系倾向:\n      type: 极易|易|中立|难|极难|不可\n      check: |-\n        - 依次分六个档位：'极易', '易', '中立', '难', '极难', '不可'；\n        - 关系倾向影响秩序刻印(Imp)变动幅度：极易时翻倍+、不-,不可时翻倍-、不+，反之亦然。其余在两者之间设置梯度\n    秩序刻印更新原因:\n      type: z.string()\n      format: |-\n        `+11, base +6 (忠诚正向) * (1+80%) = +11`\n        `-8, base -4 (顺从负向) * (1+100%) = -8`\n        `0, 无变化`\n      check: |-\n        - 先判定是增还是减，以符合关系约束与否而定，没有触发有关剧情时为'0, 无变化'。\n        - 仅当本轮对 `/秩序刻印` 进行 delta/replace 时同步更新；无变化写 `0, 无变化`。\n        - 关系档位→base_delta 区间：忠诚 {+6~+8 / 0~-2}；顺从 {+4~+6 / -4~-6}；交易 {+2~+5 / -4~-6}；拒绝 {0~+5 / -6~-20}。\n        - 关系倾向修正：极易 [+80%, -0%]，易 [+60%, -20%]，中立 [+40%, -50%]，难 [+20%, -80%]，极难 [+10%, -100%]，不可 [+0%, -200%]（正向强制 0，负向翻倍）。\n        - final_delta 计算（先算再写入 X，再对 `/秩序刻印` 做 delta）：\n          - 若 base_delta > 0：final_delta = round(base_delta * (1 + 正向百分比))\n          - 若 base_delta < 0：final_delta = -round(abs(base_delta) * (1 + abs(负向百分比)))\n          - 若倾向为【不可】且 base_delta > 0：final_delta = 0\n        - 单次变动硬帽：结果需截断到 [-10, 15]。\n        - 若 Imp < 0 触发死亡，需在健康/原因字段同步说明。\n        - 【离场角色】不更新。\n    秩序刻印:\n      type: z.coerce.number().transform(v => _.clamp(v, -20, 100))\n      range: [-20, 100]\n      check: |-\n        - 先判断是增还是减，以是否符合关系约束而定，没有相关剧情时倾向保持原值。\n        - 缩写为 Imp，决定角色的指令依从性；受【关系】【关系倾向】双重影响。\n        - 变动值以“秩序刻印更新原因”结算的 base_delta→final_delta 为准；单次变动硬帽 [-10, 15]，倾向修正后仍需落在此区间。\n        - 剧情中性相关剧情一定要更新：符合当前关系约束 → 增；跨档/逾矩 → 减。\n        - 死亡规则：Imp < 0 → 精神崩溃自杀。\n        - 【离场角色】不更新。\n    健康:\n      type: number\n      range: 0~100\n      check: |-\n        变动区间[-15,+10]健康值（受剧情和环境影响）。\n        - 当 Imp < 0：Imp 继续保留为负值显示；并立即将健康值清零为 0（无论当前健康值是多少），并联动更新【健康更新原因】说明“Imp<0 精神崩溃自杀”。\n        【登场角色】（登场状态=\"登场\"）：\n          - 你必须根据剧情事实手动决定本轮 `delta` 值（+/-），不要依赖脚本。\n        - 健康值只受剧情因素和环境影响（角色进入受庇护场所并获得食物时，视为不再挨饿受冻，可不因环境恶劣扣减健康值，直到重新挨饿受冻）。\n          - 死亡：健康降至 0触发死亡。\n\n        【离场角色】（登场状态=\"离场\"）：\n          - 基础健康衰减/恢复由脚本自动结算（同样受挨饿受冻理论约束）\n          - AI不需要也不应手动修改。\n          - 除非进行剧情性介入（远程投喂/治疗/受伤），否则保持离场状态\n\n        【特殊区域】（玄关临时客房、核心区主卧/主浴）：\n          - 这些区域视为受主角餐食、供暖庇护，不扣减环境影响的健康值改为缓慢恢复\n              - 【离场】角色：按“受庇护休整”逻辑结算（可缓慢恢复）\n              - 【登场】角色：仍由 AI 按剧情事实综合后决定增减值。\n\n        【一致性约束】（登场角色）：\n          - 只要对健康执行 `delta` 或 `replace`，必须在同一轮 JSONPatch 中同步更新：\n    健康更新原因:\n      check: |-\n        【登场角色】必须同步记录，格式：`+/-X, 原因`；无变化填 `0, 无变化`。\n        - 若本轮更新了 `健康`，必须同时更新本字段。\n        - 不要保留\"初始状态\"。\n\n        【离场角色】由脚本自动写回：\n          - 若你本轮更新了离场角色健康（剧情介入），你也必须同步更新本字段；否则脚本不会帮你补全。\n          - 若你本轮未更新离场角色健康/原因，脚本会按规则自动结算写回。\n    健康状况:\n      type: 健康|亚健康|生病/受伤|重病/濒死|无|死亡\n      check: '由脚本根据健康值阈值自动重算写回（登场/离场/临时NPC均适用）。AI 不需要也不应手动维护该字段。'\n\n    内心想法:\n      check:\n        - 内心想法应符合<角色身份与关系>的约束，比如：拒绝 关系阶段不允许有献身想法\n        - 应该符合角色的人设\n        - '每次互动后必须使用 `replace` 更新第一人称心声。'\n        - '**禁止**神化{{user}}和角色精神崩溃、奴化'\n        - 措辞有张力，符合“台词”特性\n    衣着/舌唇/胸乳/私穴/神态样貌/动作姿势:\n      check: |-\n        - \"发生物理描述变更时，使用 `replace` 覆盖原字符串。\"\n    所在房间:\n      check: |-\n        角色移动（进入/离开/换房）时，必须使用 `replace` 更新本字段。\n        - 进入{{user}}所在的**楼层20/2001**也就是庇护所本体时。更新路径示例：{ \"op\": \"replace\", \"path\": \"/雪乃/所在房间\", \"value\": \"玄关/临时客房A\" }\n          包含以下区域（严格对照）\n          - 玄关/净化/隔离区  \"净化/隔离区\"是一个整体路径不可分割：示例：  { \"op\": \"replace\", \"path\": \"/纪宁/所在房间\", \"value\": \"玄关/净化/隔离区\" }\n          - 玄关/临时客房A\n          - 玄关/临时客房B\n          - 核心区/客厅（公共区域）\n          - 核心区/餐厅/厨房（万象合成终端）\n          - 核心区/主卧室\n          - 核心区/主浴室\n        - 其他公寓房间：使用 `楼层{N}/房间号`（如楼层20/2002、楼层30/3001），操作示例：{ \"op\": \"replace\", \"path\": \"/陈宇/所在房间\", \"value\": \"楼层20/2003\" }\n        - 其他户外地点：使用 `户外/地点`（示例：户外/停车场）。UI 暂不显示无格子地点。\n        - 若离开公寓/位置未知：写空字符串 `\"\"`（不要写“无/未知/外出”等非空占位）。\n    登场状态:\n      type: 登场|离场\n      check:\n        - 你必须根据角色是否在场使用 `replace` 切换 '登场' 或 '离场'。\n        - 剧情明确离开/明确不在场/位置未知（所在房间写空字符串 \"\"）→ '离场'\n        - 与{{user}}本轮有互动 → '登场'\n        - 与{{user}}本轮无互动 → 默认 '离场'\n        - 【庇护所内部例外】若角色所在房间属于庇护所内部（玄关/**、核心区/**、楼层20/2001），且剧情未明确离开 → 可默认\n          '登场'\n  死亡处理:\n    check:\n      - '健康值为 0 触发死亡'\n      - 'Imp < 0 触发精神崩溃自杀身亡：Imp 保留为负值显示；并立即将健康值清零为\n        0（无论当前健康值是多少），并联动写明【健康更新原因】'\n      - '角色死亡时，使用 `replace` 将文本类字段置空；保留姓名与死亡状态。'\n    临时NPC:\n      check: |-\n        - 新登场：使用 `insert` 在 `/临时NPC/` 下创建以姓名为 Key 的完整对象(参考<[mvu_update]角色变量结构示意>)\n          - 关系**初始赋值**限制为拒绝及以下。Imp 值初始为 10。\n          - 所在房间：若剧情描述“进入玄关/在玄关等待/未分配房间”，推荐写 `玄关`。\n            - 说明：UI 没有“玄关入住者”数组，脚本会默认把 `玄关` 派生显示到 `玄关/临时客房A` 的入住列表。\n          - 保留原则：除非玩家在 <user> 明示“删除/移除/彻底离开/再也不出现”等，否则剧情不得使用 `remove` 删除临时NPC\n          - 临时NPC离开视野：用 `replace` 将其 `登场状态` 设为 \"离场\"，并按需要更新 `所在房间` 为空字符串 `\"\"`\n          - 临时NPC死亡：允许使用 `remove` 删除对应路径（避免临时NPC无限膨胀）\n            - 若玩家明确要求“保留尸体/留档”：才按“死亡处理”保留对象（健康=0，文本类字段置空）\n          - 永久消失：仅当玩家明确指令时，才允许使用 `remove` 删除对应路径\n          - 可转正：当临时NPC成为长期队友/主要角色时，允许“转正”为顶层主要角色（注意层级对齐）。\n          - 临时NPC的变量结构和更新规则与核心角色一致\n        - **转正规则**（临时NPC → 顶层主要角色）：\n          - 方式A（推荐/显式）：先 `insert /姓名`（value 以临时NPC对象为基础并补齐缺字段），再 `remove /临时NPC/姓名`。\n          - 方式B（可选）：`move`：`{ \"op\": \"move\", \"from\": \"/临时NPC/姓名\", \"path\": \"/姓名\" }`。\n          - 若顶层已存在同名：禁止覆盖顶层对象；改为 `remove /临时NPC/同名`（或只更新顶层角色字段）。\n  楼层其他住户:\n    言语:\n      check: '每到新的一个日期，更新。使用 `replace` 更新群体“民意”对{{user}}行为的反应。'\n    行为:\n      check: '每到新的一个日期，使用 `replace` 更新群体基于{{user}}行为而产生的主要行为模式。'\n  房间:\n    type: 'object（readonly/derived）'\n    check: |-\n      - 由脚本维护，AI 无需也不应管理\n      - **禁止**在 JSONPatch 中输出任何 `/房间/**` 更新（包括 `replace/delta/insert/remove`）\n  主线任务:\n    当前阶段:\n      check: |-\n        **阶段名称对照表**：\n        - \"阶段一：秩序的萌芽\"（末日天数 1-10 日）\n        - \"阶段二：塔内孤王\"（末日天数 11-20 日）\n        - \"阶段三：社区辐射\"（末日天数 21-30 日）\n        - \"最终阶段：新世界的王\"（末日天数 31 日之后）\n        -\n        \"**更新规则**：完成所有当前阶段目标后，使用 `replace` 更新为**下一阶段的完整名称**。\"\n        \"示例：当前阶段为「阶段一：秩序的萌芽」，全部目标完成后 → `replace` 为「阶段二：塔内孤王」。\"\n\n    阶段目标:\n      type: 'record<string, { 描述: string, 当前值: number, 目标值: number }>'\n      check: |-\n        **阶段目标对照表（严格对照）**：\n\n        **阶段一：秩序的萌芽**\n        - key: \"肃清20、19、21层的敌对幸存者\" → { 描述: \"肃清20、19、21层的敌对幸存者\", 当前值: 0, 目标值: 3 }\n        - key: \"庇护至少3个核心女性角色或家庭\" → { 描述: \"庇护至少3个核心女性角色或家庭\", 当前值: 0, 目标值: 3 }\n        - key: \"完成一个公寓内部的情报碎片任务\" → { 描述: \"完成一个公寓内部的情报碎片任务\", 当前值: 0, 目标值: 1 }\n\n        **阶段二：塔内孤王**\n        - key: \"垂直统一\" → { 描述: \"建立覆盖星穹国际公寓1-21层的可执行秩序网络\", 当前值: 0, 目标值: 1 }\n        - key: \"激活生命线\" → { 描述: \"完成【备用发电机组】的探索与修复\", 当前值: 0, 目标值: 1 }\n        - key: \"技术垄断\" → { 描述: \"解锁庇护所关键区域至2级（医疗翼/制造工坊）\", 当前值: 0, 目标值: 1 }\n\n        **阶段三：社区辐射**\n        - key: \"冲出牢笼\" → { 描述: \"在【制造工坊】中研发并建立【载具格纳库】\", 当前值: 0, 目标值: 1 }\n        - key: \"建立前哨\" → { 描述: \"成功探索公寓外至少一个周边建筑并建立稳定前哨站\", 当前值: 0, 目标值: 1 }\n        - key: \"接触外部势力\" → { 描述: \"与「拾荒者联盟」建立交易路线或击退「雪狼帮」\", 当前值: 0, 目标值: 1 }\n\n        **最终阶段：新世界的王**\n        - key: \"区域主导\" → { 描述: \"击溃「雪狼帮」或「方舟」教会中至少一个大型外部势力\", 当前值: 0, 目标值: 1 }\n        - key: \"秩序建立\" → { 描述: \"建立至少100名幸存者的末日社区并使其高效运转\", 当前值: 0, 目标值: 1 }\n        - key: \"文明火种\" → { 描述: \"庇护所至少三个关键区域升级至顶级\", 当前值: 0, 目标值: 1 }\n\n        **更新规则**：\n        - **进度累加**：根据剧情进展，使用 `delta` 累加对应目标的 `当前值`。\n        - **目标达成判定**：当 `当前值 >= 目标值` → 目标完成。\n        - **状态标记**：目标完成后，使用 `replace` 将 `目标完成状态` 中对应的 key 设为 `true`。\n        - **阶段升级**：当 `目标完成状态` 中**所有目标均为 true** → 触发阶段升级。\n\n    目标完成状态:\n      type: 'record<string, boolean>'\n      check: |-\n        - **格式**：`{ \"0\": false, \"1\": false, \"2\": false }`\n        - **key 对应关系**：key `\"0\"` = 阶段目标数组中的**第一个**目标，key `\"1\"` = 第二个，key `\"2\"` = 第三个\n        - **操作**：目标完成后，使用 `replace` 将对应 key 设为 `true`\n        - **示例**：\n          - 完成第一个目标\"肃清20、19、21层的敌对幸存者\" → `{ \"op\": \"replace\", \"path\": \"/主线任务/目标完成状态/0\", \"value\": true }`\n          - 当 `0/1/2` 全部为 `true` → 阶段完成 → 下一轮应更新 `当前阶段`\n\n    情报碎片:\n      type: 'record<string, { 编号: string, 描述: string, 价值: string, 风险: string, 状态: 未探索|已探索|已完成 }>'\n      check: |-\n        **状态流转**：未探索 → 已探索 → 已完成\n\n        **状态更新规则**：\n        - **发现线索**（首次获得情报）：使用 `insert` 添加新碎片，状态设为 \"未探索\"\n        - **开始探索**（玩家决定探索）：使用 `replace` 将状态改为 \"已探索\"\n        - **完成探索**（成功获取奖励）：使用 `replace` 将状态改为 \"已完成\" → **必须同步发放奖励**\n\n        **奖励发放（状态变为\"已完成\"时强制执行）**：\n        1. **能力奖励**：若【价值】含技术解锁 → `insert` 到 `/庇护所/庇护所能力`\n           - 名称必须与 <庇护所升级能力列表> 对齐（如\"非致命防御制造器\"、\"轻型军火熔炉\"）\n        2. **关系奖励**：若【价值】含\"强制调整为性奴\" → `delta` Imp 至 100\n        3. **心声同步**：`replace` 角色的 `内心想法`，反映心理转化\n\n        **主线碎片链式更新**（INFO-M 前缀）：\n        - 完成主线类碎片后，**必须** `replace` 替换为一个符合下一阶段需求的新碎片\n        - 确保引导链不中断\n\n        **类别对齐示例**：\n        - 主线类：解锁绝对权限（电梯、能源、监控）\n        - 人物类：基于档案补丁的致命打击（真相暴击、信仰坍塌、守护权转交）\n        - 扩展类：量化资源名额（如20层同步名额永久+2）\n        - 娱乐类：亚音频引导、潜意识意志瓦解、数字天堂色情全息化\n        - 性爱类：解锁极端调教服饰与多人共侍权限\n\n        **禁止**：不要重复添加已存在的情报碎片",
+      "content": "变量更新规则:\n  世界:\n    时间:\n      check:\n        - \"计算剧情流逝后的时间点，严格保持 '时间段 - HH:MM' 格式。\"\n        - '进行一轮互动至少需要推进一段时间，不低于45分钟，超过部分根据本轮剧情给出'\n        - '允许时间段：凌晨/清晨/上午/中午/下午/傍晚/夜间/深夜。'\n    日期:\n      check: '日期变更时，使用 `replace` 更新为新的日期字符串（格式：末日纪元，XXXX年XX月XX日）。'\n    地址:\n      check: '最小维护单元为房间，房间内部不更新。使用 replace'\n  ${角色}:\n    check: |-\n      - {{user}}全字段无需更新，因为他是玩家\n      - 新增角色有名有姓时：\n        - 必须使用 `insert` 在 `/${姓名}` 创建【完整对象】（参考“已有字段”不得遗漏）。\n        - 正文中出现即 `登场`。\n      - **硬约束**：\n        - 禁止对当前 `stat_data` 中不存在的角色使用 `replace` / `delta` / `remove`。\n        - 新增角色时**只能先**执行 `insert /${姓名}`（完整对象）；创建成功后，才允许对 `/${姓名}/...` 做 `replace` / `delta` / `remove`。\n      - 临时NPC转正为主要角色：\n        - 剧情中已知晓角色姓名或称号，或者该角色已经多次出现可能常驻，允许将 `/临时NPC/姓名` 迁移到顶层 `/${姓名}`（改为已知的姓名）。\n        - 方式A（推荐/可控）：先 `insert /${姓名}`（value 以临时NPC现有对象为基础，并**补齐缺失字段**），再 `remove /临时NPC/${原名称}`。\n        - 方式B（可选）：`move`：`{ \"op\": \"move\", \"from\": \"/临时NPC/原名称\", \"path\": \"/姓名\" }`。\n        - 若顶层已存在同名角色：按最新值覆盖，使用insert 全字段进行操作，删除/临时NPC/原名称。\n      - 下级字段不得私自创设，以下是合法字段：\n        - 姓名、关系、关系倾向、秩序刻印、秩序刻印更新原因、健康、健康更新原因、健康状况、衣着、舌唇、胸乳、私穴、神态样貌、动作姿势、内心想法、所在房间、登场状态\n      - 维护所有剧情中出现的角色和临时NPC以下字段：\n          关系:\n            type: 无|拒绝|交易|顺从|忠诚|性奴\n            check: |-\n              - **初始赋值**：关系只能从「无/拒绝」开始（拒绝及以下）。\n              - **关系档位判定**：关系由脚本按秩序刻印（Imp）阈值自动重算：Imp 0→无；Imp 1-19→拒绝；Imp 20-39→交易；Imp 40-59→顺从；Imp 60-89→忠诚；Imp 90-100→性奴。\n              - **禁止越级/跨档**：除非完成明确的**任务奖励**，否则禁止跨等级突破（例如：拒绝→忠诚）；不要用 `replace` 强行越级改档。\n                    - 发放跨档任务奖励时，使用 `replace` 将该角色的 Imp 提升到 对应阈值，脚本会自动解算\n\n          关系倾向:\n            type: 极易|易|中立|难|极难|不可\n            check: |-\n              - 关系倾向影响秩序刻印(Imp)变动幅度：极易时翻倍+、不-,不可时翻倍-、不+，反之亦然。其余在两者之间设置梯度\n          秩序刻印更新原因:\n            type: z.string()\n            format: |-\n              `+11, base +6 (忠诚正向) * (1+80%) = +11`\n              `-8, base -4 (顺从负向) * (1+100%) = -8`\n              `0, 无变化`\n            check: |-\n              - 先判定是增还是减，以符合关系约束与否而定，没有触发有关剧情时为'0, 无变化'。\n              - 仅当本轮对 `/秩序刻印` 进行 delta/replace 时同步更新；无变化写 `0, 无变化`。\n              - 关系档位→base_delta 区间：忠诚 {+6~+8 / 0~-2}；顺从 {+4~+6 / -4~-6}；交易 {+2~+5 / -4~-6}；拒绝 {0~+5 / -6~-20}。\n              - 关系倾向修正：极易 [+80%, -0%]，易 [+60%, -20%]，中立 [+40%, -50%]，难 [+20%, -80%]，极难 [+10%, -100%]，不可 [+0%, -200%]（正向强制 0，负向翻倍）。\n              - final_delta 计算（先算再写入 X，再对 `/秩序刻印` 做 delta）：\n                - 若 base_delta > 0：final_delta = round(base_delta * (1 + 正向百分比))\n                - 若 base_delta < 0：final_delta = -round(abs(base_delta) * (1 + abs(负向百分比)))\n                - 若倾向为【不可】且 base_delta > 0：final_delta = 0\n              - 单次变动硬帽：结果需截断到 [-10, 15]。\n              - 【离场角色】不更新。\n          秩序刻印:\n            type: z.coerce.number().transform(v => _.clamp(v, -20, 100))\n            range: [-20, 100]\n            check: |-\n              - 锚定秩序刻印更新原因中的数值。\n          健康:\n            type: number\n            range: 0~100\n            check: |-\n              变动区间[-15,+10]健康值（受剧情和环境影响）。\n              【登场角色】（登场状态=\"登场\"）：\n                - 你必须根据剧情事实手动决定本轮 `delta` 值（+/-），不要依赖脚本。\n              - 健康值只受剧情因素和环境影响（角色进入受庇护场所并获得食物时，视为不再挨饿受冻，可不因环境恶劣扣减健康值，直到重新挨饿受冻）。\n                - 死亡：健康降至 0触发死亡。\n              - 违背**关系**设定发生性关系健康值-50，低于此值时角色死亡\n              【离场角色】（登场状态=\"离场\"）：\n                - 基础健康衰减/恢复由脚本自动结算（同样受挨饿受冻理论约束）\n                - AI不需要也不应手动修改。\n                - 除非进行剧情性介入（远程投喂/治疗/受伤），否则保持离场状态\n              【特殊区域】（玄关临时客房、核心区主卧/主浴）：\n                - 这些区域视为受主角餐食、供暖庇护，不扣减环境影响的健康值改为缓慢恢复\n                    - 【离场】角色：按“受庇护休整”逻辑结算（可缓慢恢复）\n                    - 【登场】角色：按剧情但不进行减自然衰减\n          健康更新原因:\n            check: |-\n              【登场角色】必须同步记录，格式：`+/-X, 原因`；无变化填 `0, 无变化`。\n              - 若本轮更新了 `健康`，必须同时更新本字段。\n              - 不要保留\"初始状态\"。\n              【离场角色】由脚本自动写回：\n          健康状况:\n            type: 健康|亚健康|生病/受伤|重病/濒死|无|死亡\n            check: \n              - 决定角色的精神状态和战斗力**生病/受伤/重病/濒死的角色参加搏斗h或被攻击会死亡\n              - '由脚本根据健康值阈值自动重算写回（登场/离场/临时NPC均适用）。AI 不需要也不应手动维护该字段。'\n          内心想法:\n            check:\n              - 内心想法应符合<角色身份与关系>的约束，比如：拒绝 关系阶段不允许有献身想法\n              - 应该符合角色的人设\n              - '每次互动后必须使用 `replace` 更新第一人称心声。'\n              - '**禁止**神化{{user}}和角色精神崩溃、奴化'\n              - 措辞有张力，符合“台词”特性\n          衣着/神态样貌/动作姿势:\n            check: |-\n              - \"正文中有记载时，使用 `replace` 覆盖原字符串。\"\n          所在房间:\n            check: |-\n              角色移动（进入/离开/换房）时，必须使用 `replace` 更新本字段。\n              - 进入{{user}}所在的**楼层20/2001**也就是庇护所本体时。更新路径示例：{ \"op\": \"replace\", \"path\": \"/雪乃/所在房间\", \"value\": \"玄关/临时客房A\" }\n                包含以下区域（严格对照）\n                - 玄关/净化/隔离区  \"净化/隔离区\"是一个整体路径不可分割：示例：  { \"op\": \"replace\", \"path\": \"/纪宁/所在房间\", \"value\": \"玄关/净化/隔离区\" }\n                - 玄关/临时客房A\n                - 玄关/临时客房B\n                - 核心区/客厅（公共区域）\n                - 核心区/餐厅/厨房（万象合成终端）\n                - 核心区/主卧室\n                - 核心区/主浴室\n              - 其他公寓房间：使用 `楼层{N}/房间号`（如楼层20/2002、楼层30/3001），操作示例：{ \"op\": \"replace\", \"path\": \"/陈宇/所在房间\", \"value\": \"楼层20/2003\" }\n              - 其他户外地点：使用 `户外/地点`（示例：户外/停车场）。\n              - 若离开公寓/位置未知：写空字符串 `\"\"`（不要写“无/未知/外出”等非空占位）。\n          登场状态:\n            type: 登场|离场\n            check:\n              - 你必须根据角色是否在场使用 `replace` 切换 '登场' 或 '离场'。\n              - 剧情明确离开/明确不在场/位置未知（所在房间写空字符串 \"\"）→ '离场'\n              - 与{{user}}本轮有互动 → '登场'\n              - 与{{user}}本轮无互动或未提及 → 默认 '离场'\n              - 【庇护所内部例外】若角色所在房间属于庇护所内部（玄关/**、核心区/**、楼层20/2001），且剧情未明确离开 → 可默认\n                '登场'\n        死亡处理:\n          check:\n            - '健康值为 0 触发死亡'\n            - '死亡时联动写明【健康更新（死亡）原因】'\n            - '角色死亡时，使用 `replace` 将文本类字段置空；保留姓名与死亡状态。'\n            - '刚结算为死亡的角色，正文中应予以播报，提醒玩家角色死亡'\n    临时NPC:\n      check: |-\n        - 新登场：使用 `insert` 在 `/临时NPC/` 下创建以姓名（或昵称）为 Key 的完整对象(参考<[mvu_update]角色变量结构示意>)\n          - 关系**初始赋值**限制为拒绝及以下。Imp 值初始为 10。\n          - 所在房间：若剧情描述“进入玄关/在玄关等待/未分配房间”，推荐写 `玄关`。\n          - 临时NPC死亡：允许使用 `remove` 删除对应路径（避免临时NPC无限膨胀）\n          - 可转正：当临时NPC拥有姓名或者成为长期队友/主要角色时，使用remove操作“转正”为顶层主要角色（注意层级对齐）。\n          - 临时NPC的变量结构和更新规则与核心角色一致\n        - **转正规则**（临时NPC → 顶层主要角色）：\n          - 方式A（推荐/显式）：先 `insert /姓名`（value 以临时NPC对象为基础并补齐缺字段），再 `remove /临时NPC/姓名`。\n          - 方式B（可选）：`move`：`{ \"op\": \"move\", \"from\": \"/临时NPC/姓名\", \"path\": \"/姓名\" }`。\n          - 若顶层已存在同名：禁止覆盖顶层对象；改为 `replace` 并按新数值处理变动了的变量。\n  庇护所:\n    今日投掷点数:\n      check:\n        - '脚本解算无需操作'\n    庇护所等级:\n      type: number\n      range: [1, 10]\n      check:\n        - 发放任务奖励强制升级时，使用 `replace`\n        - 需要联动调整【庇护所能力】\n    距离上次升级:\n      check: 由脚本维护AI无需处理\n    庇护所能力:\n      type: 'record<string, { name: string, desc: string }>'\n      check: |-\n        - 由脚本维护AI无需处理\n    庇护所能力总述:\n      check: 由脚本维护AI无需处理\n    接口覆盖等价庇护范围:\n      check: 由脚本维护AI无需处理\n    接口覆盖范围:\n      check: 由脚本维护AI无需处理\n    可扩展区域:\n      type: '{ 医疗翼: string, 制造工坊: string, 载具格纳库: string }'\n      check: '随等级提升，由脚本维护AI无需处理'\n    当前生存庇护范围:\n      type: 'record<\"20\"|\"19\", string[]>'\n      check: '本字段只显示，与庇护范围变更联动'\n    庇护范围变更:\n      type: '{ add?: record<\"20\"|\"19\", string[]>, remove?: record<\"20\"|\"19\", string[]>, note?: string }'\n      check: |-\n        - 这是【生存庇护范围】的“写入入口”\n        - 操作：使用 `replace` 更新 `/庇护所/庇护范围变更`，value 格式：\n            { \"add\": { \"20\": [\"2002\",\"2006\"], \"19\": [\"1902\"] }, \"remove\": { \"20\": [\"2007\"], \"19\": [] }, \"note\": \"可选备注\" }\n        - 规则：\n            - 仅支持楼层 \"20\"/\"19\"；房号必须是字符串数组。\n            - \"2001\" 为庇护所本体，默认受庇护；写入会被忽略/剔除。\n            - 上限由庇护所等级决定（脚本会自动丢弃超额房间）。\n        - 禁止：未接到玩家明示擅自变更\n  楼层其他住户:\n    言语:\n      check: '每检测新的一天，更新。使用 `replace` 更新群体“民意”对{{user}}行为的反应。'\n    行为:\n      check: '每检测新的一天，使用 `replace` 更新群体基于{{user}}行为而产生的主要行为模式。'\n  房间:\n    type: 'object（readonly/derived）'\n    check: |-\n      - 由脚本维护，AI 无需也不应管理\n      - **禁止**在 JSONPatch 中输出任何 `/房间/**` 更新（包括 `replace/delta/insert/remove`）\n  主线任务:\n    当前阶段:\n      check: |-\n        **阶段名称对照表**：\n        - \"阶段一：秩序的萌芽\"（末日天数 1-10 日）\n        - \"阶段二：塔内孤王\"（末日天数 11-20 日）\n        - \"阶段三：社区辐射\"（末日天数 21-30 日）\n        - \"最终阶段：新世界的王\"（末日天数 31 日之后）\n        -\n        \"**更新规则**：完成所有当前阶段目标后，使用 `replace` 更新为**下一阶段的完整名称**。\"\n        \"示例：当前阶段为「阶段一：秩序的萌芽」，全部目标完成后 → `replace` 为「阶段二：塔内孤王」。\"\n\n    阶段目标:\n      type: 'record<string, { 描述: string, 当前值: number, 目标值: number }>'\n      check: |-\n        **阶段目标对照表（严格对照）**：\n\n        **阶段一：秩序的萌芽**\n        - key: \"肃清20、19、21层的敌对幸存者\" → { 描述: \"肃清20、19、21层的敌对幸存者\", 当前值: 0, 目标值: 3 }\n        - key: \"庇护至少3个核心女性角色或家庭\" → { 描述: \"庇护至少3个核心女性角色或家庭\", 当前值: 0, 目标值: 3 }\n        - key: \"完成一个公寓内部的情报碎片任务\" → { 描述: \"完成一个公寓内部的情报碎片任务\", 当前值: 0, 目标值: 1 }\n\n        **阶段二：塔内孤王**\n        - key: \"垂直统一\" → { 描述: \"建立覆盖星穹国际公寓1-21层的可执行秩序网络\", 当前值: 0, 目标值: 1 }\n        - key: \"激活生命线\" → { 描述: \"完成【备用发电机组】的探索与修复\", 当前值: 0, 目标值: 1 }\n        - key: \"技术垄断\" → { 描述: \"解锁庇护所关键区域至2级（医疗翼/制造工坊）\", 当前值: 0, 目标值: 1 }\n\n        **阶段三：社区辐射**\n        - key: \"冲出牢笼\" → { 描述: \"在【制造工坊】中研发并建立【载具格纳库】\", 当前值: 0, 目标值: 1 }\n        - key: \"建立前哨\" → { 描述: \"成功探索公寓外至少一个周边建筑并建立稳定前哨站\", 当前值: 0, 目标值: 1 }\n        - key: \"接触外部势力\" → { 描述: \"与「拾荒者联盟」建立交易路线或击退「雪狼帮」\", 当前值: 0, 目标值: 1 }\n\n        **最终阶段：新世界的王**\n        - key: \"区域主导\" → { 描述: \"击溃「雪狼帮」或「方舟」教会中至少一个大型外部势力\", 当前值: 0, 目标值: 1 }\n        - key: \"秩序建立\" → { 描述: \"建立至少100名幸存者的末日社区并使其高效运转\", 当前值: 0, 目标值: 1 }\n        - key: \"文明火种\" → { 描述: \"庇护所至少三个关键区域升级至顶级\", 当前值: 0, 目标值: 1 }\n\n        **更新规则**：\n        - **进度累加**：根据剧情进展，使用 `delta` 累加对应目标的 `当前值`。\n        - **目标达成判定**：当 `当前值 >= 目标值` → 目标完成。\n        - **状态标记**：目标完成后，使用 `replace` 将 `目标完成状态` 中对应的 key 设为 `true`。\n        - **阶段升级**：当 `目标完成状态` 中**所有目标均为 true** → 触发阶段升级。\n\n    目标完成状态:\n      type: 'record<string, boolean>'\n      check: |-\n        - **格式**：`{ \"0\": false, \"1\": false, \"2\": false }`\n        - **key 对应关系**：key `\"0\"` = 阶段目标数组中的**第一个**目标，key `\"1\"` = 第二个，key `\"2\"` = 第三个\n        - **操作**：目标完成后，使用 `replace` 将对应 key 设为 `true`\n        - **示例**：\n          - 完成第一个目标\"肃清20、19、21层的敌对幸存者\" → `{ \"op\": \"replace\", \"path\": \"/主线任务/目标完成状态/0\", \"value\": true }`\n          - 当 `0/1/2` 全部为 `true` → 阶段完成 → 下一轮应更新 `当前阶段`\n\n    情报碎片:\n      type: 'record<string, { 编号: string, 描述: string, 价值: string, 风险: string, 状态: 未探索|已探索|已完成 }>'\n      check: |-\n        **状态流转**：未探索 → 已探索 → 已完成\n\n        **状态更新规则**：\n        - **发现线索**（首次获得情报）：使用 `insert` 添加新碎片，状态设为 \"未探索\"\n        - **开始探索**（玩家决定探索）：使用 `replace` 将状态改为 \"已探索\"\n        - **完成探索**（成功获取奖励）：使用 `replace` 将状态改为 \"已完成\" → **必须同步发放奖励**\n\n        **奖励发放（状态变为\"已完成\"时强制执行）**：\n        1. **能力奖励**：若【价值】含技术解锁 → `insert` 到 `/庇护所/庇护所能力`\n           - 名称必须与 <庇护所升级能力列表> 对齐（如\"非致命防御制造器\"、\"轻型军火熔炉\"）\n        2. **关系奖励**：若【价值】含\"强制调整为性奴\" → `delta` Imp 至 100\n        3. **心声同步**：`replace` 角色的 `内心想法`，反映心理转化\n\n        **主线碎片链式更新**（INFO-M 前缀）：\n        - 完成主线类碎片后，**必须** `replace` 替换为一个符合下一阶段需求的新碎片\n        - 确保引导链不中断",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": false,
@@ -1754,9 +1485,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "38": {
-      "uid": 38,
-      "displayIndex": 38,
+    "32": {
+      "uid": 32,
+      "displayIndex": 32,
       "comment": "变量列表",
       "disable": false,
       "constant": true,
@@ -1794,9 +1525,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "39": {
-      "uid": 39,
-      "displayIndex": 39,
+    "33": {
+      "uid": 33,
+      "displayIndex": 33,
       "comment": "主线任务-星穹秩序",
       "disable": false,
       "constant": false,
@@ -1845,9 +1576,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "40": {
-      "uid": 40,
-      "displayIndex": 40,
+    "34": {
+      "uid": 34,
+      "displayIndex": 34,
       "comment": "角色身份与关系",
       "disable": false,
       "constant": true,
@@ -1897,9 +1628,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "41": {
-      "uid": 41,
-      "displayIndex": 41,
+    "35": {
+      "uid": 35,
+      "displayIndex": 35,
       "comment": "普通幸存者家庭",
       "disable": false,
       "constant": false,
@@ -1947,9 +1678,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "42": {
-      "uid": 42,
-      "displayIndex": 42,
+    "36": {
+      "uid": 36,
+      "displayIndex": 36,
       "comment": "外部幸存者势力",
       "disable": true,
       "constant": false,
