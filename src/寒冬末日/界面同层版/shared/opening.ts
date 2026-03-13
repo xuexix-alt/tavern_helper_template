@@ -360,14 +360,17 @@ const OPENING_PERSISTED_FORM_KEYS = [
 
 function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
   const compactFormValues = Object.fromEntries(
-    OPENING_PERSISTED_FORM_KEYS.map(key => [key, trimText(payload.form_values?.[key])]).filter(([, value]) => Boolean(value)),
+    OPENING_PERSISTED_FORM_KEYS.map(key => [key, trimText(payload.form_values?.[key])]).filter(([, value]) =>
+      Boolean(value),
+    ),
   );
 
   return {
     version: 3,
     state: payload.state,
     world_mode_id: trimText(payload.world_mode_id) || getDefaultWorldModeId(),
-    route_id: trimText(payload.route_id) || getDefaultRouteId(trimText(payload.world_mode_id) || getDefaultWorldModeId()),
+    route_id:
+      trimText(payload.route_id) || getDefaultRouteId(trimText(payload.world_mode_id) || getDefaultWorldModeId()),
     use_stream: payload.use_stream === true,
     opening_seed_user_message_id:
       Number.isFinite(Number(payload.opening_seed_user_message_id)) && Number(payload.opening_seed_user_message_id) > 0

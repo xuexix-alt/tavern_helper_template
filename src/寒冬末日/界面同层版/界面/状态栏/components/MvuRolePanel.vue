@@ -326,7 +326,9 @@ const sourceLabel = computed(() => {
     return `目标楼层 ${selected.pillLabel} 临时回退 latest（${latestLabel}）`;
   }
   if (selected.targetMessageId === 'latest') {
-    return resolvedMessageId.value === 'latest' ? '当前数据来自 latest' : `当前数据来自 latest（${resolvedMessageId.value}#）`;
+    return resolvedMessageId.value === 'latest'
+      ? '当前数据来自 latest'
+      : `当前数据来自 latest（${resolvedMessageId.value}#）`;
   }
   return `当前数据来自目标楼层 ${selected.pillLabel}`;
 });

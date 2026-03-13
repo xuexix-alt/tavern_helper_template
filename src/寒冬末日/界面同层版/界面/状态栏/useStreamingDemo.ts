@@ -812,9 +812,7 @@ export function useStreamingDemo() {
   }
 
   function findFirstChatIdAfterZero(messages: any[]) {
-    return messages
-      .map(message => Math.trunc(Number(message?.message_id)))
-      .find(id => Number.isFinite(id) && id > 0);
+    return messages.map(message => Math.trunc(Number(message?.message_id))).find(id => Number.isFinite(id) && id > 0);
   }
 
   function findOpeningSeedChatMessage(messages: any[]) {
@@ -867,7 +865,11 @@ export function useStreamingDemo() {
     return Number.isFinite(createdId) ? createdId : null;
   }
 
-  async function upsertOpeningResultMessage(message: string, refresh: HideRefreshMode = 'none', createIfMissing = true) {
+  async function upsertOpeningResultMessage(
+    message: string,
+    refresh: HideRefreshMode = 'none',
+    createIfMissing = true,
+  ) {
     const messages = listAllChatMessages();
     const existing = findOpeningResultChatMessage(messages);
     const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
@@ -1311,7 +1313,10 @@ export function useStreamingDemo() {
         state: 'ready',
         result: nextResult,
       };
-      const openingResultMessageId = await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      const openingResultMessageId = await upsertOpeningResultMessage(
+        buildOpeningAssistantText(openingPayload.value),
+        'none',
+      );
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',

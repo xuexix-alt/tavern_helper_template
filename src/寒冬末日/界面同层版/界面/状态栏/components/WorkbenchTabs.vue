@@ -146,7 +146,11 @@ const activeTab = ref<(typeof tabs)[number]['id']>('status');
 const compactLogs = computed(() =>
   props.logs.slice(0, 6).map(log => ({
     ...log,
-    shortDetail: String(log.detail ?? '').replace(/\s+/g, ' ').trim().slice(0, 72) || '无详情',
+    shortDetail:
+      String(log.detail ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 72) || '无详情',
   })),
 );
 </script>

@@ -163,7 +163,12 @@
                 </span>
               </button>
 
-              <button type="button" class="ui-signal-btn ui-tool-desktop-only" :disabled="busy || !latestUserItem" @click="rollLatestTurn">
+              <button
+                type="button"
+                class="ui-signal-btn ui-tool-desktop-only"
+                :disabled="busy || !latestUserItem"
+                @click="rollLatestTurn"
+              >
                 <span>RE-SYNC</span>
               </button>
             </div>
