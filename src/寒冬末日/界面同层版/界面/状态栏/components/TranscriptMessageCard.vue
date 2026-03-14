@@ -87,27 +87,25 @@
           ◎ 正文和剧情 <span>ID: MSG-{{ item.message_id }}</span>
         </div>
 
+        <div class="assistant-toolbar">
+          <button
+            v-if="item.canOpenDetail"
+            type="button"
+            class="detail-toggle clip-corner-sm"
+            @click="emit('open-detail', item)"
+          >
+            SHOW_DIAGNOSTICS
+          </button>
+          <button type="button" class="meta-toggle clip-corner-sm" @click="metaOpen = !metaOpen">
+            {{ metaOpen ? 'HIDE_META' : 'SHOW_META' }}
+          </button>
+        </div>
+
         <div class="assistant-body-wrap">
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-if="item.isStreaming" class="assistant-body html-body is-stream-stage" v-html="item.streamHtml"></div>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div v-else class="assistant-body html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
-        </div>
-
-        <div class="assistant-footer">
-          <div class="assistant-footer-left">
-            <button
-              v-if="item.canOpenDetail"
-              type="button"
-              class="detail-toggle clip-corner-sm"
-              @click="emit('open-detail', item)"
-            >
-              SHOW_DIAGNOSTICS
-            </button>
-            <button type="button" class="meta-toggle clip-corner-sm" @click="metaOpen = !metaOpen">
-              {{ metaOpen ? 'HIDE_META' : 'SHOW_META' }}
-            </button>
-          </div>
         </div>
 
         <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
@@ -320,12 +318,21 @@ function onEditInput(event: Event) {
 .assistant-body-wrap :deep(p:last-child) {
   margin-bottom: 0;
 }
+
+.assistant-body-wrap :deep(.dialog-inline) {
+  color: inherit;
+  font: inherit;
+}
+.assistant-toolbar,
 .assistant-footer,
 .assistant-footer-left {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+.assistant-toolbar {
+  justify-content: flex-start;
 }
 .assistant-footer {
   justify-content: space-between;
@@ -440,6 +447,16 @@ function onEditInput(event: Event) {
   justify-content: flex-end;
 }
 @media (max-width: 760px) {
+  .meta-chip,
+  .detail-toggle,
+  .meta-toggle,
+  .action-btn {
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
   .assistant-card {
     max-width: 100%;
     padding: 12px 10px 10px;
@@ -447,6 +464,9 @@ function onEditInput(event: Event) {
   .assistant-headline {
     gap: 10px;
     font-size: 11px;
+  }
+  .assistant-toolbar {
+    gap: 6px;
   }
   .assistant-body-wrap {
     padding-top: 2px;

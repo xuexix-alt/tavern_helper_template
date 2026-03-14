@@ -38,7 +38,6 @@
           roleDrawerOpen = !roleDrawerOpen;
         "
       >
-        <span class="ui-sidebar-toggle-arrow">›</span>
         <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
       </button>
 
@@ -165,6 +164,18 @@
 
               <button
                 type="button"
+                class="ui-signal-btn"
+                :disabled="(latestAssistantItem?.options ?? []).length === 0"
+                @click="openChoiceModalFromToolbar"
+              >
+                <span>选项</span>
+                <span class="ui-bars">
+                  <i v-for="i in 4" :key="`choice-${i}`" :class="{ active: i <= ((latestAssistantItem?.options ?? []).length || 0) }"></i>
+                </span>
+              </button>
+
+              <button
+                type="button"
                 class="ui-signal-btn ui-tool-desktop-only"
                 :disabled="busy || !latestUserItem"
                 @click="rollLatestTurn"
@@ -175,7 +186,7 @@
           </div>
 
           <BottomComposer
-            ref="composerAnchorRef"
+            ref="composerRef"
             v-model="input"
             :busy="busy"
             :can-roll="Boolean(latestUserItem)"
@@ -183,6 +194,8 @@
             :choice-options="latestAssistantItem?.options ?? []"
             :role-tabs="visibleRoleTabs"
             :active-role-key="activeRoleKey"
+            :show-option-trigger="false"
+            :show-toolbar="false"
             @submit="runDemo"
             @roll="rollLatestTurn"
             @swipe="swipeLatestAssistant"
@@ -238,7 +251,7 @@
       icon-alt="故事开始"
       eyebrow="故事开始"
       wide
-      @close="openingModalOpen = false"
+      @close="closeOpeningModal"
     >
       <OpeningSetupPanel
         :preset="openingPreset"
@@ -251,7 +264,7 @@
         @update-world-mode="updateOpeningWorldMode"
         @update-route="updateOpeningRoute"
         @update-stream="updateOpeningStream"
-        @submit="generateOpening"
+        @submit="handleOpeningSubmit"
       />
     </HudModal>
 
@@ -330,6 +343,7 @@ const {
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
+const composerRef = ref<InstanceType<typeof BottomComposer> | null>(null);
 const readerShellHeight = ref('720px');
 const roleDrawerOpen = ref(false);
 const settingsModalOpen = ref(false);
@@ -466,6 +480,20 @@ function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
+}
+
+async function handleOpeningSubmit() {
+  openingModalOpen.value = false;
+  await generateOpening();
+}
+
+function closeOpeningModal() {
+  if (shouldShowOpeningSetup.value) return;
+  openingModalOpen.value = false;
+}
+
+function openChoiceModalFromToolbar() {
+  composerRef.value?.openChoiceModal?.();
 }
 
 onMounted(() => {
@@ -649,7 +677,7 @@ useEventListener(window, 'keydown', event => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: 22px;
   height: 108px;
   border: 1px solid var(--demo-border-accent-soft);
   border-left: 0;
@@ -678,19 +706,9 @@ useEventListener(window, 'keydown', event => {
   transform: translateX(320px);
 }
 
-.ui-sidebar-toggle-arrow {
-  font-family: var(--demo-font-mono);
-  font-size: 16px;
-  transition: transform 0.3s ease;
-}
-
-.ui-sidebar-toggle.open .ui-sidebar-toggle-arrow {
-  transform: rotate(180deg);
-}
-
 .ui-sidebar-toggle-label {
   position: absolute;
-  right: -34px;
+  right: -32px;
   font-family: var(--demo-font-mono);
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -787,8 +805,10 @@ useEventListener(window, 'keydown', event => {
 .ui-bottom-tool-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   width: fit-content;
+  margin: 0 auto;
   max-width: 100%;
   padding: 8px 10px;
   border-radius: 18px;
@@ -1022,7 +1042,7 @@ useEventListener(window, 'keydown', event => {
 
 @media (max-width: 760px) {
   .ui-host-body {
-    padding-left: 18px;
+    padding-left: 14px;
   }
 
   .ui-topbar,
@@ -1032,20 +1052,18 @@ useEventListener(window, 'keydown', event => {
     padding-right: 6px;
   }
 
-  .ui-topbar {
-    gap: 8px;
-    padding: 10px 12px;
+  .ui-bottom-dock {
+    padding-bottom: 8px;
+    gap: 6px;
   }
 
-  .ui-topbar-actions,
-  .theme-group {
-    width: 100%;
+  .ui-topbar {
+    gap: 8px;
+    padding: 8px 10px;
   }
 
   .ui-topbar-actions {
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    gap: 8px;
+    display: none;
   }
 
   .ui-online {
@@ -1060,16 +1078,36 @@ useEventListener(window, 'keydown', event => {
 
   .ui-bottom-tool-row {
     width: 100%;
-    justify-content: stretch;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 14px;
   }
 
   .ui-tool-desktop-only {
     display: none;
   }
 
+  .ui-bottom-tool-row {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
   .ui-bottom-tool-row .ui-signal-btn {
     flex: 1 1 0;
     justify-content: center;
+    min-height: 28px;
+    padding: 0 6px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .ui-bottom-tool-row .ui-signal-btn .ui-bars {
+    display: inline-flex;
+  }
+
+  .ui-bottom-tool-row .ui-signal-btn .ui-bars i {
+    width: 3px;
+    height: 8px;
   }
 
   .ui-bottom-drawer {
@@ -1115,11 +1153,11 @@ useEventListener(window, 'keydown', event => {
 
   .ui-sidebar {
     top: auto;
-    width: calc(100% - 20px);
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    max-height: calc(100dvh - 72px);
+    width: calc(100% - 12px);
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    max-height: calc(100dvh - 64px);
     border-radius: 22px;
     transform: translateY(100%);
   }
@@ -1129,24 +1167,24 @@ useEventListener(window, 'keydown', event => {
   }
 
   .ui-sidebar-head {
-    gap: 10px;
-    padding: 12px 12px 10px;
+    gap: 8px;
+    padding: 10px 10px 8px;
   }
 
   .ui-sidebar-head strong {
-    margin-top: 4px;
-    font-size: 14px;
+    margin-top: 2px;
+    font-size: 13px;
   }
 
   .ui-sidebar-body {
-    padding: 10px;
+    padding: 8px;
   }
 
   .ui-sidebar-toggle {
     position: fixed;
     top: 58px;
     left: 0;
-    width: 18px;
+    width: 28px;
     height: 112px;
     min-height: 112px;
     padding: 0;
@@ -1161,11 +1199,13 @@ useEventListener(window, 'keydown', event => {
   }
 
   .ui-sidebar-toggle-label {
-    display: none;
-  }
-
-  .ui-sidebar-toggle-arrow {
-    font-size: 18px;
+    display: block;
+    position: static;
+    right: auto;
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    text-align: center;
   }
 }
 </style>

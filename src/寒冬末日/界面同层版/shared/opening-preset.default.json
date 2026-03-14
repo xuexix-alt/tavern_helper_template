@@ -10,7 +10,7 @@
   },
   "default_meta": {
     "time": "9527年12月14日·14:00",
-    "location": "星穹国际公寓2001室",
+    "location": "中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室",
     "character": "{{user}}"
   },
   "form_schema": [
@@ -41,7 +41,7 @@
       "kind": "select",
       "required": true,
       "options": ["现代科幻", "轻小说", "毛姆文学作品", "《三体》风格"],
-      "default_value": "现代科幻"
+      "default_value": "轻小说"
     },
     {
       "key": "nearby_factions",
@@ -68,8 +68,8 @@
       "label": "字数",
       "kind": "text",
       "required": true,
-      "default_value": "3000",
-      "placeholder": "默认 3000"
+      "default_value": "1500",
+      "placeholder": "默认 1500"
     }
   ],
   "prompt_rules": {

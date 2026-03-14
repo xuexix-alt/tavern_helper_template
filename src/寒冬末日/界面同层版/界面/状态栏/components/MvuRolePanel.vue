@@ -871,41 +871,206 @@ function statWidth(input: unknown) {
 }
 
 @media (max-width: 760px) {
+  .sidebar-card {
+    gap: 6px;
+    transform-origin: top center;
+  }
+
+  @supports (zoom: 1) {
+    .sidebar-card {
+      zoom: 0.9;
+    }
+  }
+
   .sidebar-tools,
   .meta-row {
     flex-direction: column;
     align-items: stretch;
   }
-  .metric-grid,
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-  .page-tabs,
-  .tab-row {
-    flex-wrap: wrap;
+
+  .source-field {
+    gap: 4px;
   }
 
-  .page-tab {
-    min-height: 36px;
-    padding: 0 10px;
+  .source-field span,
+  .analysis-flag,
+  .sidebar-footer,
+  .system-block-title {
     font-size: 10px;
     letter-spacing: 0.1em;
   }
 
+  .source-caption {
+    font-size: 8px;
+  }
+
+  .source-select {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .metric-grid,
+  .detail-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .page-tabs,
+  .tab-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .page-tab,
+  .tab-btn {
+    min-height: 28px;
+    padding: 0 6px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
   .collapse-btn,
   .action-btn {
-    min-height: 36px;
+    min-height: 28px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .accordion-list {
+    gap: 6px;
+  }
+
+  .accordion-head {
+    min-height: 34px;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .accordion-title-group {
+    gap: 6px;
+  }
+
+  .accordion-title {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+
+  .accordion-arrow {
+    font-size: 12px;
+  }
+
+  .accordion-body {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .meta-row {
+    gap: 6px;
+  }
+
+  .meta-box {
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .meta-code {
+    font-size: 9px;
+  }
+
+  .metric-card,
+  .detail-card,
+  .bio-box,
+  .system-card,
+  .expand-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .metric-head {
+    gap: 6px;
+  }
+
+  .metric-title,
+  .detail-label {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .metric-value {
+    font-size: 14px;
+  }
+
+  .metric-caption,
+  .detail-value,
+  .bio-box p {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .bio-box p {
+    margin-left: 4px;
+  }
+
+  .stat-row {
+    gap: 6px;
+  }
+
+  .stat-row span,
+  .stat-row strong {
+    font-size: 10px;
+  }
+
+  .stat-row span {
+    width: 28px;
+  }
+
+  .stat-row strong {
+    width: 24px;
+  }
+
+  .stat-track {
+    height: 6px;
+  }
+
+  .system-panel {
+    gap: 8px;
+  }
+
+  .system-title,
+  .expand-card strong {
+    font-size: 11px;
+  }
+
+  .system-copy,
+  .expand-card span {
+    font-size: 11px;
+  }
+
+  .system-value strong {
+    font-size: 22px;
+  }
+
+  .system-value span {
+    font-size: 12px;
+  }
+
+  .mini-pill {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 9px;
   }
 
   .sidebar-footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
+    gap: 6px;
   }
 
   .page-tabs-bottom {
     display: flex;
-    gap: 8px;
+    gap: 4px;
   }
 }
 </style>

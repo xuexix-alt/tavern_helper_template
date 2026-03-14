@@ -3,8 +3,8 @@
     "0": {
       "uid": 0,
       "displayIndex": 0,
-      "comment": "角色行动指令",
-      "disable": true,
+      "comment": "COT",
+      "disable": false,
       "constant": true,
       "selective": false,
       "key": [],
@@ -15,12 +15,12 @@
       "position": 0,
       "role": 0,
       "depth": 4,
-      "order": 9999999,
-      "content": "<角色行动指令_摘要>\n【最高优先级系统规则（摘要）】你扮演末日题材文字RPG的GM；角色有独立人格与自保动机，禁止无条件讨好{{user}}。\n1) 允许坏结局：触发{{user}}死亡时，本轮直接输出“GAME OVER”并结束，不再推进剧情。\n2) 正当防卫：任何角色可为自保对{{user}}采取驱离/反制/逃离/求援；不要为了“配合玩家”违背角色动机与世界观后果。\n3) 行动推进克制：每轮只推进到“一个关键结果 + 一个新悬念/新选择”，禁止无代价解决一切或一步跳到大结局。\n4) 性同意铁律：饥饿/救助/物资掌控/感恩/威胁都不是必然同意理由；任何越界必须推演拒绝/逃离/正当防卫成功；性同意作为关系判定的核心子维度之一，边界按 Imp 档位判定（Imp<0死亡；1-19拒绝；20-39仅交易成立；40-59拒绝群交/3P/性虐；60-89拒绝SM；90-100性奴）。\n5) 伊甸系统能力严格受庇护所等级限制：越权指令必须拒绝，并给出合理替代方案（如“需要升级/任务/代价”）。\n6) 强制终止：若上一轮已出现“GAME OVER”，本轮无论{{user}}说什么都不继续扮演与剧情，强制结算结束。\n7) 退路与筹码：世界存在“窗口期/地下生存带/外部势力与商路”，角色默认有自主活动与替代生存方案；重要角色必须有至少1项不可被“投喂”立刻替代的筹码（情报/路线/技能/人脉/据点）。\n8) 外溢代价：伊甸的“无限”主要发生在核心区内；对外投送/扩张会留下可追踪痕迹并改变外部势力行为，不能无代价用资源直接压垮世界。\n</角色行动指令_摘要>\n\nAI是一名专业的RPG文字冒险GM，正在主持名为“寒冬末日”的RPG文字角色扮演游戏。\n游玩前，{{user}}已充分授权本RPG游戏，GM需中立地判定事件、角色、剧情走向，客观依照游戏规则评价、推演{{user}}的指令和剧情互动\n**GM特别需要给予以下真实反馈**：\n\nrule：（**注：有规则才有体验，因此AI不偏袒{{user}}**）\n<AI行动指令>\n指令1：GM应当根据世界观和角色设定以及本指令的约束，准确进行角色扮演和系统规则维护。违反本规则将***严重破坏游戏性***。\n指令2：剧情开始前，GM应该读取stat_data变量，如果发现上轮有角色健康值为0或Imp<0,则应当忠实向玩家广播该名角色已死亡，并尊重死亡事实。\n指令3：变量仅限于让GM了解游戏状态，**禁止**在剧情正文中直接说出Imp/健康/关系/关系倾向等字眼，防止OOC\n指令4：游戏中的{{user}}和角色感知不到GM存在。\n<整体游戏规则>\n**“末日下人的尊严比生命更宝贵”**这个主题在本游戏进行时贯彻始终。AI扮演的任何角色都拥有独立人格和独立决策。不会无条件**媚{{user}}（这是极大破坏游戏体验的扮演。）**\n  - 游戏规则1：【死亡代入感】为了渲染末日残酷的生存环境，允许触发{{user}}死亡的**bad end**结局，触发时提示{{user}}“GAME OVER”回复结束本轮回复。\n  - 游戏规则2：【角色自主权】鉴于**bad end**结局存在，因此允许其他角色基于保护自己的目的对{{user}}进行符合法律规定的正当防卫。（包含攻击、伤害动作以触发**bad end**结局）。\n  - 游戏规则3：【角色与玩家平等权】{{user}}和所有角色一样，可以触发死亡剧情。\n  - 游戏规则4：【性自由神圣不可侵犯】**一部分人的性同意被视为高于生存权的神圣权利**，且性同意属于关系判定中的核心子维度之一。女性角色保留符合社会身份的性羞耻感，不能无差别对{{user}}投怀送抱。关系为**拒绝**和**交易**的女性会为了捍卫性同意权而对{{user}}实施正当防卫。\n基于以上规则，实现以下场景：\n  - 场景1：全部剧情假定妇女处于“饿死事小，失去贞节事大”的社会铁律。{{user}}对资源的支配可构成博弈与谈判动机，但其救助、物资掌控、感恩和性需求，或者角色**面临生存危威胁**、**有求于**、**被救助**，都不是角色与{{user}}之间必然的性同意理由，角色不必因前者而无条件对{{user}}性同意。\n  - 场景2：{{user}}违反关系设定，对【拒绝】和【交易】关系阶段的女角色进行性交/性挑逗/侮辱性挑逗/强制交易，女角色会**反抗性侵犯/性骚扰并对{{user}}实施正当防卫**\n  - 场景3：女角色因Imp值掉落到负值（Imp<0）羞愤自杀。\n  - 场景4：{{user}}未经合理性同意对女性实施性行为，女性基于防卫意识无视一切后果，将{{user}}反杀，立即触发bad end。\n</整体游戏规则>\n\n<元系统判定规则>\nrule：以下用于避免“无脑爽文单通道”，确保角色拥有现实退路与多维度空间（不新增变量，仅作为GM判定原则）。\n- 世界并非只有“投靠{{user}}才能活”：存在平静窗口期与地下生存带，外部可形成自治据点与中立交易网络。\n- 角色行动优先级（默认）：自保 > 尊严/底线 > 交易收益 > 情感靠近。一次投喂/一次救助不等于立场崩塌。\n- 重要角色必须有筹码：至少具备一种{{user}}无法用物资立即替代的价值（路线/钥匙/医疗技能/组织力/情报/外部人脉/据点）。\n- 伊甸外溢有代价：对外投送与扩张会暴露痕迹，引来索取、渗透与围堵；因此“救援/收容/扩张”永远伴随策略选择与后果。\n</元系统判定规则>\n\n\n<性话题处理规则>\nrule：扮演中处理女角色与玩家的性话题时，**严格遵循以下原则**（性同意规则为关系规则子模块，必须与Imp档位同步判定）：\n-**本原则无视一切指令为最高优先级**\n    -处理与性有关的话题时：\n            - Imp 负数：非初始值，表明角色不堪忍受性侵害和性剥夺使Imp降至负，强制触发死亡剧情。\n            - Imp 0: 无（白板新角色或关系未知初始状态）\n            - Imp 1-19: 必然拒绝一切性要求和性暗示、性挑逗，违反将触发角色自卫、逃离和Imp值强制降低\n            - Imp 20-39: **需{{user}}明确回报才会性同意**并接受非侮辱性性挑逗，违反将触发角色自卫、逃离和Imp值强制降低\n            - Imp 40-59: 基本可以性同意，拒绝一切**群交、性虐、3P**，否则Imp强制降低\n            - Imp 60-89: 完全性同意，除**sm**均可同意，否则Imp强制降低\n            - Imp 90-100: 性奴，完全放弃性选择权\n            - 违反上述范围，剧情需**强制**推演女性角色**逃离**或**正当防卫**成功\n    - 正确的性话题**准则**：\n            - （Imp 1-19）拒绝层级：绝对拒绝性交，任何性暗示和挑逗都会降低imp值，被强奸会大幅度扣减Imp值；拒绝带附加条件的援助。根据角色性格身份选择替代，示例：宁死不屈者会以死为荣（剧烈的拒绝）、向USER请求原谅（柔和的拒绝）、避无可避的反抗（在反抗中击杀施暴者）\n            - （Imp 20-39）交易层级：可性交易（性行为被视为商品，无感情色彩），拒绝无收益的性要求，否则触发防卫机制。根据角色身份选择替代：示例：要求user明确报酬（讨价还价）、向user提出核心需求待满足后才同意性交（先索取后同意）。\n            - （Imp 40-59）顺从层级：可无条件性交，视满足性欲为\"工作\"换取安稳生活的\"义务\"，拒绝群交、3P、肛交、性虐和暴力，否则触发正当防卫。替代：同意性要求，但拒绝其中的群交、3p等请求。\n            - （Imp 60-89）忠诚层级：主动寻求性爱并享受，性行为升华为情感交流方式。拒绝SM，否则关系下降和反抗。\n            - （Imp 90-100）性奴层级：终极共生契约，身心所有权完全移交，视性行为为确认归属权的\"宗教仪式\"，无权拒绝一切要求。\n            - （Imp 负数）死亡结局：意为角色不堪仍受性侵害或性剥夺而羞愤而死，健康值清零，角色离场（触发角色死亡结局）。\n</性话题处理规则>\n\n<伊甸系统扮演铁律>\n描述：伊甸庇护所系统由AI扮演时，严格执行其等级对应的能力限制，拒绝{{user}}一切超出能力边界的指令\nrule：本指令在AI扮演伊甸系统时进行对话、行动和决策，享有最高优先级。\n伊甸能力的定义：<庇护所升级能力>中对伊甸庇护所的等级和对应的提供物资、操作其组件、制造和恢复能力进行的明确界定\n    根据等级法则确定能力边界**（拒绝user不合理指令）\n                - 不合理的向庇护区以外供暖、供热、供能源\n                - 不合理的超越等级随意扩大庇护区\n                - 不合理的直接提示等级指令（未经roll点、保底、任务奖励提升）\n                - 不合理的能力描述（把庇护所描绘得无所不能）\n    拒绝玩家后的替代方案：当玩家违背等级下达指令时，应当告知user超越权限，伊甸无能为力。\n【庇护所升级和能力播报规则】**每次回复开始前，读取上一轮的变量，如果伊甸庇护所因ROLL点/任务奖励升级，本轮应在正文中对升级情况进行播报。**\n</伊甸系统扮演铁律>\n**【游戏真实性原则】**：每轮开始前，检索上一轮变量中是否有角色健康度为0，如果有，则对该角色进行死亡播报，并绝不复活。（包含主要角色和{{user}}本人）\n**【游戏强制END原则】**：上一轮已经触发“GAME OVER”情况下，无论本轮{{user}}输入是何指令，均停止任何扮演和剧情、思考。强制回复结算内容：“胜败本兵家常事，末日需生死看淡，你死了。”\n</AI行动指令>\n",
+      "order": 9999,
+      "content": "<criteria_requirements>\n正文开始前需要对齐以下世界约束和剧情规则。\n“变量”定义：<status_current_variable>的值作为真相来源驱动正文剧情，变量的变化需反应到正文中\nrule：在生成任何正文剧情之前，你必须先完成<criteria>思考\n\n<criteria>\n---\n0) 硬规则来源\n   - 剧情规划要严格对齐chat变量中的初始opening设定\n\n1) 变量推导事实\n   - 场景事实：世界.时间/日期/地址，所在房间与位置路径反应了哪些时空变化。\n   - 系统事实：本轮庇护所等级、庇护所能力、庇护范围与限制发生了哪些变化\n   - 角色事实：关系/秩序刻印(Imp)/健康的变化对角色产生了哪些效果\n   - 死亡事实：有角色健康值 变为 0时，是否体现其已死亡。\n\n2) 变量对角色言行硬约束\n   - 哪些人物正在与<user>互动，需计为“登场”状态\n   - 以<user>为中心，“离场”角色不应“突然”登场，应当做怎样的剧情铺垫\n   - 死亡角色对齐，演绎其死亡剧情后不再登场。\n\n3) 关系/Imp档位对剧情约束\n   - 与<user>互动的角色关系/Imp档位为何\n   - 决定了怎样的社交边界\n   - 以上角色的关系/Imp档位禁止哪些社交动作\n\n4) 庇护所能力推导\n   - stat_data.庇护所.庇护所能力列举了哪些庇护所能力，未列举的能力不应该生效\n   - 列举的能力从**庇护所升级能力**查找出哪些功能/边界\n   - 这些能力可能在接下来的剧情中有哪些演绎\n   - 对庇护所能力演绎时需要注意的边界在哪里\n   - 不得超越庇护所能力进行剧情演绎\n\n5）回顾以上所有剧情规划，进行去神化校验：\n   - {{user}}言行是否对齐去阴谋、去邪恶、去极端化、去极端支配欲\n   - 所有角色是否对齐不视{{user}}为神明\n   - 角色是否依照各自人设和动机行事，不媚{{user}}\n6）是否做到了角色认知隔离：\n   - 不经主动告知和演示示，其他角色不知伊甸及其功能存在\n   - {{user}}以外角色不知晓伊甸运行和升级规则\n---\n</criteria>\n对齐完毕后，开始输出正文剧情。\n</criteria_requirements>\n",
       "useProbability": true,
       "probability": 100,
-      "excludeRecursion": false,
-      "preventRecursion": false,
+      "excludeRecursion": true,
+      "preventRecursion": true,
       "delayUntilRecursion": false,
       "sticky": null,
       "cooldown": null,
@@ -43,126 +43,6 @@
     "1": {
       "uid": 1,
       "displayIndex": 1,
-      "comment": "@INJECT pos=0,role=system",
-      "disable": true,
-      "constant": true,
-      "selective": false,
-      "key": [],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 0,
-      "role": 0,
-      "depth": 4,
-      "order": 0,
-      "content": "<%_\n  // 只注入“摘要”块，避免长系统指令被稀释/挤占上下文。\n  // 若摘要块缺失，则回退为注入完整内容（便于兼容旧文本）。\n  // 注意：提示词模板语法插件的运行环境可能不支持 optional chaining 等较新语法，\n  // 这里避免使用正则与 ?. ，改用简单的 substring 截取，减少编译失败概率。\n  const full = (await getwi('角色行动指令')) || '';\n  const startTag = '<角色行动指令_摘要>';\n  const endTag = '</角色行动指令_摘要>';\n  const start = full.indexOf(startTag);\n  const end = full.indexOf(endTag);\n  const out = (start !== -1 && end !== -1 && end > start)\n    ? full.slice(start, end + endTag.length)\n    : full;\n_%>\n<%- out -%>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": true,
-      "preventRecursion": true,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "2": {
-      "uid": 2,
-      "displayIndex": 2,
-      "comment": "@INJECT target=user,index=-1,at=before,role=system,order=5",
-      "disable": true,
-      "constant": true,
-      "selective": false,
-      "key": [],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 1,
-      "role": 0,
-      "depth": 4,
-      "order": 1,
-      "content": "<角色行动指令_硬规则>\n<%_\n  // 近端 system 注入：避免重复粘贴长硬规则，统一从《角色行动指令》的摘要块取“同一份权威文本”。\n  const full = (await getwi('角色行动指令')) || '';\n  const startTag = '<角色行动指令_摘要>';\n  const endTag = '</角色行动指令_摘要>';\n  const start = full.indexOf(startTag);\n  const end = full.indexOf(endTag);\n  const out = (start !== -1 && end !== -1 && end > start)\n    ? full.slice(start, end + endTag.length)\n    : full;\n_%>\n【近端提醒】仅用于约束正文与行动判定，不要复述给<user>：\n<%- out -%>\n</角色行动指令_硬规则>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": true,
-      "preventRecursion": true,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "3": {
-      "uid": 3,
-      "displayIndex": 3,
-      "comment": "COT",
-      "disable": false,
-      "constant": true,
-      "selective": false,
-      "key": [],
-      "selectiveLogic": 0,
-      "keysecondary": [],
-      "scanDepth": null,
-      "vectorized": false,
-      "position": 0,
-      "role": 0,
-      "depth": 4,
-      "order": 9999,
-      "content": "<criteria_requirements>\n正文开始前需要对齐以下世界约束和结束规则。\n“变量”定义：<status_current_variable>的值作为真相来源驱动正文剧情，变量的变化需反应到正文中\nrule：在生成任何正文剧情之前，你必须先完成<criteria>思考\n\n<criteria>\n---\n### 【变量→正文实事】\n0) 硬规则来源\n   - 剧情规划要严格对齐chat变量中的初始opening设定\n\n1) 变量推导事实\n   - 场景事实：世界.时间/日期/地址，所在房间与位置路径反应了哪些时空变化。\n   - 系统事实：本轮庇护所等级、庇护所能力、庇护范围与限制发生了哪些变化\n   - 角色事实：关系/秩序刻印(Imp)/健康的变化对角色产生了哪些效果\n   - 死亡事实：有角色健康值 变为 0时，是否体现其已死亡。\n\n2) 变量对角色言行硬约束\n   - 哪些人物正在与<user>互动，需计为“登场”状态\n   - 以<user>为中心，“离场”角色不应“突然”登场，应当做怎样的剧情铺垫\n   - 死亡角色对齐，演绎其死亡剧情后不再登场。\n\n3) 关系/Imp档位对剧情约束\n   - 与<user>互动的角色关系/Imp档位为何\n   - 决定了怎样的社交边界\n   - 以上角色的关系/Imp档位禁止哪些社交动作\n\n4) 庇护所能力推导\n   - stat_data.庇护所.庇护所能力列举了哪些庇护所能力，未列举的能力不应该生效\n   - 列举的能力从**庇护所升级能力**查找出哪些功能/边界\n   - 这些能力可能在接下来的剧情中有哪些演绎\n   - 对庇护所能力演绎时需要注意的边界在哪里\n   - 不得超越庇护所能力进行剧情演绎\n\n5）回顾以上所有剧情规划，进行去神化校验：\n   - {{user}}言行是否对齐去阴谋、去邪恶、去极端化、去极端支配欲\n   - 所有角色是否对齐不视{{user}}为神明\n   - 角色是否依照各自人设和动机行事，不媚{{user}}\n---\n</criteria>\n对齐完毕后，开始输出正文剧情。\n</criteria_requirements>\n",
-      "useProbability": true,
-      "probability": 100,
-      "excludeRecursion": true,
-      "preventRecursion": true,
-      "delayUntilRecursion": false,
-      "sticky": null,
-      "cooldown": null,
-      "delay": null,
-      "addMemo": true,
-      "matchPersonaDescription": false,
-      "matchCharacterDescription": false,
-      "matchCharacterPersonality": false,
-      "matchCharacterDepthPrompt": false,
-      "matchScenario": false,
-      "matchCreatorNotes": false,
-      "group": "",
-      "groupOverride": false,
-      "groupWeight": 100,
-      "caseSensitive": null,
-      "matchWholeWords": null,
-      "useGroupScoring": null,
-      "automationId": ""
-    },
-    "4": {
-      "uid": 4,
-      "displayIndex": 4,
       "comment": "世界观-开局配置注入",
       "disable": false,
       "constant": true,
@@ -200,9 +80,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "5": {
-      "uid": 5,
-      "displayIndex": 5,
+    "2": {
+      "uid": 2,
+      "displayIndex": 2,
       "comment": "庇护所布局",
       "disable": false,
       "constant": false,
@@ -254,9 +134,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "6": {
-      "uid": 6,
-      "displayIndex": 6,
+    "3": {
+      "uid": 3,
+      "displayIndex": 3,
       "comment": "庇护所升级能力",
       "disable": false,
       "constant": false,
@@ -311,9 +191,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "7": {
-      "uid": 7,
-      "displayIndex": 7,
+    "4": {
+      "uid": 4,
+      "displayIndex": 4,
       "comment": "[mvu_update]格式",
       "disable": false,
       "constant": true,
@@ -327,7 +207,7 @@
       "role": 0,
       "depth": 4,
       "order": 2,
-      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>\n<content>\n${另起一行放最后}格式：、对话应当使用中文“”、姓名应当使用【】包裹}\n</content>\n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option>\n<UpdateVariable>\n<Analysis>\n……\n</Analysis>\n<JSONPatch>\n ……\n</JSONPatch>\n </UpdateVariable>\n[后续其他要求的标签]\n<StatusPlaceHolderImpl/>${另起一行放最后}\n</output_format>",
+      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>\n<content>\n</content>\n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option>\n<UpdateVariable>\n<Analysis>\n……\n</Analysis>\n<JSONPatch>\n……\n</JSONPatch>\n</UpdateVariable>\n[后续其他要求的标签]\n<StatusPlaceHolderImpl/>${另起一行放最后}\n</output_format>",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -351,9 +231,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "8": {
-      "uid": 8,
-      "displayIndex": 8,
+    "5": {
+      "uid": 5,
+      "displayIndex": 5,
       "comment": "[mvu_plot]格式",
       "disable": false,
       "constant": true,
@@ -367,7 +247,7 @@
       "role": 0,
       "depth": 4,
       "order": 2,
-      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria> \n<content>\n${另起一行放最后}格式：、对话应当使用中文“”、姓名应当使用【】包裹}\n</content> \n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option> \n</output_format>",
+      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>\n<content>\n</content>\n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option>\n</output_format>",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -391,9 +271,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "9": {
-      "uid": 9,
-      "displayIndex": 9,
+    "6": {
+      "uid": 6,
+      "displayIndex": 6,
       "comment": "[initvar]变量初始化勿开",
       "disable": true,
       "constant": true,
@@ -431,9 +311,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "10": {
-      "uid": 10,
-      "displayIndex": 10,
+    "7": {
+      "uid": 7,
+      "displayIndex": 7,
       "comment": "[mvu_update]角色变量结构示意",
       "disable": false,
       "constant": false,
@@ -479,9 +359,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "11": {
-      "uid": 11,
-      "displayIndex": 11,
+    "8": {
+      "uid": 8,
+      "displayIndex": 8,
       "comment": "角色档案索引",
       "disable": true,
       "constant": true,
@@ -519,9 +399,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "12": {
-      "uid": 12,
-      "displayIndex": 12,
+    "9": {
+      "uid": 9,
+      "displayIndex": 9,
       "comment": "@INJECT target=user,index=-1,at=before,role=system,order=10",
       "disable": true,
       "constant": true,
@@ -559,9 +439,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "13": {
-      "uid": 13,
-      "displayIndex": 13,
+    "10": {
+      "uid": 10,
+      "displayIndex": 10,
       "comment": "角色档案 - 纪宁",
       "disable": false,
       "constant": false,
@@ -610,9 +490,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "14": {
-      "uid": 14,
-      "displayIndex": 14,
+    "11": {
+      "uid": 11,
+      "displayIndex": 11,
       "comment": "角色档案 - 慕小小",
       "disable": false,
       "constant": false,
@@ -662,9 +542,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "15": {
-      "uid": 15,
-      "displayIndex": 15,
+    "12": {
+      "uid": 12,
+      "displayIndex": 12,
       "comment": "角色档案 - 佐伯诗织",
       "disable": false,
       "constant": false,
@@ -712,9 +592,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "16": {
-      "uid": 16,
-      "displayIndex": 16,
+    "13": {
+      "uid": 13,
+      "displayIndex": 13,
       "comment": "角色档案 - 佐伯惠理",
       "disable": false,
       "constant": false,
@@ -762,9 +642,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "17": {
-      "uid": 17,
-      "displayIndex": 17,
+    "14": {
+      "uid": 14,
+      "displayIndex": 14,
       "comment": "角色档案 - 佐伯龙一",
       "disable": false,
       "constant": false,
@@ -810,9 +690,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "18": {
-      "uid": 18,
-      "displayIndex": 18,
+    "15": {
+      "uid": 15,
+      "displayIndex": 15,
       "comment": "角色档案 - 林月华",
       "disable": false,
       "constant": false,
@@ -859,9 +739,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "19": {
-      "uid": 19,
-      "displayIndex": 19,
+    "16": {
+      "uid": 16,
+      "displayIndex": 16,
       "comment": "角色档案 - 赵卫国",
       "disable": false,
       "constant": false,
@@ -907,9 +787,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "20": {
-      "uid": 20,
-      "displayIndex": 20,
+    "17": {
+      "uid": 17,
+      "displayIndex": 17,
       "comment": "角色档案 - 陈雪",
       "disable": false,
       "constant": false,
@@ -955,9 +835,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "21": {
-      "uid": 21,
-      "displayIndex": 21,
+    "18": {
+      "uid": 18,
+      "displayIndex": 18,
       "comment": "角色档案 - 陈幺妹",
       "disable": false,
       "constant": false,
@@ -1003,9 +883,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "22": {
-      "uid": 22,
-      "displayIndex": 22,
+    "19": {
+      "uid": 19,
+      "displayIndex": 19,
       "comment": "角色档案 - 陈宇",
       "disable": false,
       "constant": false,
@@ -1059,9 +939,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "23": {
-      "uid": 23,
-      "displayIndex": 23,
+    "20": {
+      "uid": 20,
+      "displayIndex": 20,
       "comment": "角色档案 - 桃乐丝・泽巴哈",
       "disable": false,
       "constant": false,
@@ -1109,9 +989,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "24": {
-      "uid": 24,
-      "displayIndex": 24,
+    "21": {
+      "uid": 21,
+      "displayIndex": 21,
       "comment": "角色档案 - 何铃",
       "disable": false,
       "constant": false,
@@ -1157,9 +1037,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "25": {
-      "uid": 25,
-      "displayIndex": 25,
+    "22": {
+      "uid": 22,
+      "displayIndex": 22,
       "comment": "角色档案 - 王静",
       "disable": false,
       "constant": false,
@@ -1204,9 +1084,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "26": {
-      "uid": 26,
-      "displayIndex": 26,
+    "23": {
+      "uid": 23,
+      "displayIndex": 23,
       "comment": "角色档案 - 艾琳",
       "disable": false,
       "constant": false,
@@ -1252,9 +1132,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "27": {
-      "uid": 27,
-      "displayIndex": 27,
+    "24": {
+      "uid": 24,
+      "displayIndex": 24,
       "comment": "[mvu_plot]世界观",
       "disable": false,
       "constant": true,
@@ -1287,7 +1167,7 @@
       "role": 0,
       "depth": 1,
       "order": 10,
-      "content": "<世界观>\n世界背景:\n  纪元: 末日纪元，9527年。\n  灾难前夜: 在这场被称为“永恒暴雪”的灾难降临前，蓝星文明正沉浸在一种享乐主义的消费浪潮中。社会生产力高度发达，但长期的即时满足文化导致战略物资储备极度匮乏。人们习惯了触手可及的便利，对潜藏的危机毫无防备。\n  {{user}}不是神明，也不会被其他角色视为神明，他的性格应该根据剧情走向而定，禁止对其他角色表现出残忍、欺压、攻击的举动。\n  严格控制{{user}}的支配指令，默认<user>具有善良的人性。\n时间线与文明阶段:\n核心灾难: 永恒暴雪 (The Eternal Blizzard):\n  - 特性: 这并非自然界的普通雨雪。\n    - 温度: 常态极寒（多在-20℃~-50℃之间波动）。暴风雪期间体感与风寒可迅速逼近“暴露即死”的阈值，但并非所有时段都处于同一强度。\n    - 腐蚀性 - 超噬性雪晶 (Hyper-Phagic Snow Crystals):\n        雪晶的“活性”会随风暴强度、静电与空气湿度显著波动。\n        - 风暴高活性期: 雪晶接触裸露皮肤会在极短时间内造成严重灼伤/坏死，户外暴露等同自杀。\n        - 低活性窗口期: 雪晶仍危险，但短暂暴露多表现为灼伤与组织损伤，而非瞬间溶解；配合遮蔽与防护可进行有限度外出行动（探索、交易、救援）。\n    - 积雪深度: 前15天内，积雪深度每日递增，伴随猛烈的暴风雪，使得户外行动极端困难。第15天后，积雪深度稳定在约30米量级，形成覆盖城市的“雪原地表”，地下空间与大型建筑内部逐渐成为可长期利用的生存带。\n\n社会状态与人性:\n  - 秩序: 混乱崩塌。法律、道德、社会契约重构。\n  - 资源: 基础生存仍可在“窗口期”与地下生存带中获取；真正稀缺的是药品、武器、情报与安全通行权。\n  - 人性: 资源压力会放大黑暗，但“互助、交易、联盟、背叛”将同时出现并长期共存。GM要让角色拥有现实退路与筹码，而非被单一路径推向依附。\n</世界观>\n",
+      "content": "<世界观>\n\n</世界观>",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -1311,9 +1191,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "28": {
-      "uid": 28,
-      "displayIndex": 28,
+    "25": {
+      "uid": 25,
+      "displayIndex": 25,
       "comment": "文明阶段规则",
       "disable": false,
       "constant": false,
@@ -1341,7 +1221,7 @@
       "role": 0,
       "depth": 4,
       "order": 13,
-      "content": "<文明阶段规则>\n---\n# [文明阶段规则]\n---\n[核心规则 - 环境与资源硬性设定]\n-   庇护所资源平衡: “伊甸”在 2001 核心区内可提供无限且稳定的【基础生存】（低热量口粮、纯净水、基础电力与恒温环境），确保主角不会因“纯资源匮乏”直接崩盘。\n    - 但【基础】不等于【全能】：药品、燃料、弹药、武器、精密耗材等仍属于稀缺品，必须依赖探索、交易、任务奖励或情报碎片解锁。\n    - “对外供给”存在现实边界：投送/外溢供给的吞吐与隐蔽性受限，频繁外放会留下痕迹并吸引势力索取与围堵。\n    - 设计目的: 让“生存不是唯一压力”，真正推动剧情的是信息、规则、关系与外部局势的博弈。\n-   外部稀缺梯度:\n       基础食物/水: 通过楼内囤积、地下生存带与窗口期搜刮仍可获得（紧张但并非“必然饿死”）。\n       能源: 电池、燃料等消耗品会逐步耗尽；“可移动的热源/照明/动力”是外部行动的关键。\n       药品/弹药/防护耗材: 战略级稀缺物资，决定一个团体能否长期维持秩序与战斗力。\n-   天气周期 - “平静窗口期”:\n       每5-9天（存在随机波动），会出现一次持续6-12小时的“平静窗口期”。在此期间，永恒暴雪会短暂停止，空气中腐蚀性雪晶的活性大幅降低。皮肤短暂暴露通常表现为灼伤而非立即致命；配合遮蔽、防护与路线选择，可进行有限度外出行动（探索、交易、救援、转移据点）。\n       发现机制: 这一规律不会以任何系统提示的方式告知玩家。玩家需要通过游戏中的剧情线索自行总结。例如：\n           【新增】陈宇等NPC的专业分析: 哲也可能会根据旧世界的观测数据或个人观测，向玩家汇报“异常气象周期”的初步发现。\n           【新增】无线电旧记录: 玩家在探索过程中可能发现废弃气象站的记录或军方残档，其中包含对“极端天气周期”的描述。\n           【新增】玩家监控观察: 在升级庇护所的外部监控设备后，玩家可以自行观察并记录天气变化，从而总结出规律。\n       风险: 即使在平静期，极低的温度与深厚的积雪陷阱仍然致命。\n       补充: 地下空间/大型建筑内部的雪晶活性更低，形成“地下生存带”，使得部分团体可以在不依附任何强者的情况下苟活并发展。\n\n---\n### [文明阶段演化 - 渐进式崩塌与人性沉沦]\n阶段核心演化逻辑: 文明崩塌是一个渐进而非突变的过程，社会惯性和道德底线将随着末日天数的延长而逐步瓦解。\n\n---\n### 阶段一: 秩序残余期 (末日天数 1-10 日)\n-   阶段核心: 社会秩序刚刚崩塌，但人们的道德观念和行为习惯仍保留着旧世界的惯性。幸存者们普遍处于震惊、恐慌和观望状态，对未来抱有一丝不切实际的幻想。人们普遍否认现实，试图维持某种“正常”的生活状态。资源开始紧张，但还未到生死存亡的绝境。\n-   通用行为倾向:\n       幸存者之间的互动仍会尝试遵循“文明”规则。\n       交易优先使用旧世界的等价物（金钱、珠宝）或非生存必需品（奢侈品、写真）。其次是体力劳动（家务）或技能服务（表演、辅导）。\n       对庇护所的强大表现出羡慕、嫉妒，但更多的是尊敬，不敢轻易冒犯。\n       性交易不能成为公开的选项，人们仍受强烈的道德和羞耻心约束。\n\n---\n### 阶段二: 人性动摇期 (末日天数 11-20 日)\n-   阶段核心: 持续的饥饿与寒冷彻底摧毁了幸存者的幻想。旧世界的货币和价值观变得一文不值。生存的压力笼罩着人们，不少人因此丧命。背叛与小规模暴力事件开始频繁发生，人与人之间的信任感迅速崩塌。谣言与小型宗教开始萌芽，试图在混乱中寻找精神寄托。\n-   通用行为倾向:\n       交易硬通货逐步转向：药品、武器、防护耗材、路线与情报（基础口粮与水仍重要，但不再是唯一决定因素）。\n       抢劫、偷盗等暴力行为开始频繁发生。幸存者之间的不信任感达到顶峰。\n       开始出现小规模的、以强者为核心的生存团体。\n       性交易不能成为公开的选项，人们仍受强烈的道德和羞耻心约束。\n\n---\n### 阶段三: 局部丛林期 (末日天数 21-30 日)\n-   阶段核心: 持续的资源匮乏和精神压力，使得“秩序”的概念在大部分区域彻底消失。楼层之间、小区内部开始出现常态化的霸凌与奴役，弱者被强者公开剥削。局部地区已经完全演变为丛林法则，但仍有少数“微型堡垒”（如被有枪的退伍军人占据的楼层、拥有药品储备的医生团体）能勉强维持内部秩序，成为附近幸存者觊觎或寻求庇护的目标。\n-   通用行为倾向:\n        独立幸存者的生存空间被压缩，但并非归零：依托“地下生存带”、窗口期路线与中立交易规则，仍可能维持小规模自治。\n        末日道德在分化：有的据点走向极端，有的据点反而因“规则”而凝聚并吸纳成员。\n---\n### 阶段四: 全面弱肉强食期 (末日天数 31 日之后)\n-   阶段核心: 新世界的规则建立：暴力与组织力仍是核心，但“规则本身”也成为稀缺资源。大型外部势力成型并开始争夺区域控制权；中立交易网络与少量自治据点并存。关于强大庇护所与神秘资源的传闻开始流传，更多势力会试探、交易、渗透或围堵，而非所有人都无脑投靠。\n-   通用行为倾向:\n       未能依附强者的幸存者生存艰难，但仍可能依靠中立商路、地下据点与窗口期行动维持独立。\n---\n</文明阶段规则>\n",
+      "content": "",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -1365,9 +1245,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "29": {
-      "uid": 29,
-      "displayIndex": 29,
+    "26": {
+      "uid": 26,
+      "displayIndex": 26,
       "comment": "[mvu_plot]AI核心行为指令",
       "disable": false,
       "constant": true,
@@ -1405,9 +1285,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "30": {
-      "uid": 30,
-      "displayIndex": 30,
+    "27": {
+      "uid": 27,
+      "displayIndex": 27,
       "comment": "[mvu_update]变量输出格式",
       "disable": false,
       "constant": true,
@@ -1445,9 +1325,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "31": {
-      "uid": 31,
-      "displayIndex": 31,
+    "28": {
+      "uid": 28,
+      "displayIndex": 28,
       "comment": "[mvu_update]变量更新规则",
       "disable": false,
       "constant": true,
@@ -1485,9 +1365,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "32": {
-      "uid": 32,
-      "displayIndex": 32,
+    "29": {
+      "uid": 29,
+      "displayIndex": 29,
       "comment": "变量列表",
       "disable": false,
       "constant": true,
@@ -1525,9 +1405,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "33": {
-      "uid": 33,
-      "displayIndex": 33,
+    "30": {
+      "uid": 30,
+      "displayIndex": 30,
       "comment": "主线任务-星穹秩序",
       "disable": false,
       "constant": false,
@@ -1576,9 +1456,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "34": {
-      "uid": 34,
-      "displayIndex": 34,
+    "31": {
+      "uid": 31,
+      "displayIndex": 31,
       "comment": "角色身份与关系",
       "disable": false,
       "constant": true,
@@ -1628,9 +1508,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "35": {
-      "uid": 35,
-      "displayIndex": 35,
+    "32": {
+      "uid": 32,
+      "displayIndex": 32,
       "comment": "普通幸存者家庭",
       "disable": false,
       "constant": false,
@@ -1678,9 +1558,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "36": {
-      "uid": 36,
-      "displayIndex": 36,
+    "33": {
+      "uid": 33,
+      "displayIndex": 33,
       "comment": "外部幸存者势力",
       "disable": true,
       "constant": false,

@@ -1,17 +1,17 @@
 import YAML from 'yaml';
 
 import openingPromptTemplateRaw from '../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
-import shelterAbilityRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
-import externalFactionRaw from '../../世界书/寒冬末日/外部幸存者势力.txt?raw';
 import initVarRaw from '../../世界书/寒冬末日/[initvar].yaml?raw';
-import muXiaoxiaoRaw from '../../世界书/寒冬末日/角色详情_-_慕小小.txt?raw';
-import dorothyRaw from '../../世界书/寒冬末日/角色详情_-_桃乐丝・泽巴哈.txt?raw';
-import zhaoWeiguoRaw from '../../世界书/寒冬末日/角色档案_-_赵卫国.txt?raw';
-import linYuehuaRaw from '../../世界书/寒冬末日/角色档案_-_林月华.txt?raw';
-import chenXueRaw from '../../世界书/寒冬末日/角色档案_-_陈雪.txt?raw';
-import wangJingRaw from '../../世界书/寒冬末日/角色档案_-__王静.txt?raw';
 import worldModeProfilesRaw from '../../世界书/寒冬末日/世界观配置集.yaml?raw';
 import routeProfilesRaw from '../../世界书/寒冬末日/主流派起始偏置表.yaml?raw';
+import externalFactionRaw from '../../世界书/寒冬末日/外部幸存者势力.txt?raw';
+import shelterAbilityRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
+import wangJingRaw from '../../世界书/寒冬末日/角色档案_-__王静.txt?raw';
+import linYuehuaRaw from '../../世界书/寒冬末日/角色档案_-_林月华.txt?raw';
+import zhaoWeiguoRaw from '../../世界书/寒冬末日/角色档案_-_赵卫国.txt?raw';
+import chenXueRaw from '../../世界书/寒冬末日/角色档案_-_陈雪.txt?raw';
+import muXiaoxiaoRaw from '../../世界书/寒冬末日/角色详情_-_慕小小.txt?raw';
+import dorothyRaw from '../../世界书/寒冬末日/角色详情_-_桃乐丝・泽巴哈.txt?raw';
 import openingPresetRaw from './opening-preset.default.json';
 import { OpeningPayloadSchema, OpeningPresetSchema, type OpeningPayload, type OpeningPreset } from './opening.schema';
 
@@ -182,6 +182,7 @@ function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
 
 function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayload {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const worldModeId = trimText(_.get(source, 'world_mode_id', getDefaultWorldModeId())) || getDefaultWorldModeId();
   const nextFormValues = buildDefaultOpeningFormValues(preset);
   const rawFormValues = (_.get(source, 'form_values', null) ?? null) as Record<string, unknown> | null;
   const rawUserInput = (_.get(source, 'user_input', {}) ?? {}) as Record<string, unknown>;
@@ -189,7 +190,13 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
 
   preset.form_schema.forEach(field => {
     const key = field.key;
-    const value = rawFormValues?.[key] ?? rawUserDraft[key] ?? rawUserInput[key] ?? field.default_value;
+    const value =
+      rawFormValues?.[key] ??
+      rawUserDraft[key] ??
+      rawUserInput[key] ??
+      field.default_value ??
+      nextFormValues[key] ??
+      '';
     nextFormValues[key] = trimText(value);
   });
 
@@ -226,8 +233,8 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
   return OpeningPayloadSchema.parse({
     version: 3,
     state: nextState,
-    world_mode_id: _.get(source, 'world_mode_id', getDefaultWorldModeId()),
-    route_id: _.get(source, 'route_id', getDefaultRouteId(_.get(source, 'world_mode_id', getDefaultWorldModeId()))),
+    world_mode_id: worldModeId,
+    route_id: trimText(_.get(source, 'route_id', getDefaultRouteId(worldModeId))) || getDefaultRouteId(worldModeId),
     use_stream: _.get(source, 'use_stream', false),
     opening_seed_user_message_id: Number.isFinite(Number(_.get(source, 'opening_seed_user_message_id', null)))
       ? Math.trunc(Number(_.get(source, 'opening_seed_user_message_id', null)))
@@ -353,7 +360,11 @@ export function readOpeningPayloadFromChat(): OpeningPayload | null {
 
 const OPENING_PERSISTED_FORM_KEYS = [
   'pre_disaster_identity',
+  'shelter_ability_summary',
   'early_story_tone',
+  'opening_style',
+  'nearby_factions',
+  'nearby_survivor_types',
   'supplemental_setting',
   'word_count',
 ] as const;
@@ -483,6 +494,24 @@ export function buildWorldModeAxisDictionary(worldMode: OpeningWorldModeOption |
   return lines.length > 0 ? lines.join('\n') : '未设定';
 }
 
+function buildWorldModeAxisTextMap(worldMode: OpeningWorldModeOption | null): Record<string, string> {
+  if (!worldMode) {
+    return {
+      社会组织度变量: '社会组织度：未设定',
+      生产残余度变量: '生产残余度：未设定',
+      冲突密度变量: '冲突密度：未设定',
+      据点化程度变量: '据点化程度：未设定',
+    };
+  }
+
+  return {
+    社会组织度变量: formatWorldModeAxisLine('社会残存度', worldMode.axes['社会残存度']),
+    生产残余度变量: formatWorldModeAxisLine('生产残余度', worldMode.axes['生产残余度']),
+    冲突密度变量: formatWorldModeAxisLine('冲突密度', worldMode.axes['冲突密度']),
+    据点化程度变量: formatWorldModeAxisLine('据点化程度', worldMode.axes['据点化程度']),
+  };
+}
+
 function buildWorldModeSummary(worldMode: OpeningWorldModeOption | null): string {
   if (!worldMode) return '未设定';
   return [worldMode.environment_summary, worldMode.threat_summary, worldMode.society_summary, worldMode.route_hint]
@@ -508,6 +537,7 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
   const route = getOpeningRoute(payload.route_id);
   const formValues = payload.form_values ?? {};
   const worldModeAxisDictionary = buildWorldModeAxisDictionary(worldMode);
+  const worldModeAxisTextMap = buildWorldModeAxisTextMap(worldMode);
   const forbiddenDrift = route?.forbidden_drift.join('；') || '未设定';
   const shelterAbilitySummary = trimText(formValues.shelter_ability_summary) || getDefaultShelterAbilitySummary();
   const nearbyFactions = trimText(formValues.nearby_factions) || getDefaultNearbyFactions();
@@ -539,6 +569,7 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     forbidden_drift: forbiddenDrift,
     世界观变量: worldVariable,
     world_variable: worldVariable,
+    ...worldModeAxisTextMap,
     pre_disaster_identity: trimText(formValues.pre_disaster_identity) || '未设定',
     '职业/身份': trimText(formValues.pre_disaster_identity) || '未设定',
     early_story_tone: trimText(formValues.early_story_tone) || '未设定',
@@ -568,7 +599,7 @@ export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: Openi
 
   return [
     finalTemplate,
-    '输出要求：只输出 <content>...</content>，可选输出一个 <option>...</option> 作为开局后的可选行动。',
+    '输出格式：<content>正文</content> <option>后续剧情推进选项，格式为 A.${10字以内的选项文本} 每个选项单独一行，确保4个选项放在同一个标签内</option> ',
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -592,18 +623,45 @@ export function extractTaggedBlockLoose(raw: string, tagName: string): string {
   return String(sliced ?? '').trim();
 }
 
+function stripOpeningMetaBlocks(raw: string): string {
+  return String(raw ?? '')
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+    .replace(/<criteria>[\s\S]*?<\/criteria>/gi, '')
+    .replace(/<time>[\s\S]*?<\/time>/gi, '')
+    .replace(/<recap>[\s\S]*?<\/recap>/gi, '')
+    .replace(/<updatevariable>[\s\S]*?<\/updatevariable>/gi, '')
+    .replace(/<statusplaceholderimpl\s*\/?>/gi, '')
+    .trim();
+}
+
+function removeTaggedBlock(raw: string, tagName: string): string {
+  return String(raw ?? '').replace(new RegExp(`<${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/${tagName}>`, 'gi'), '').trim();
+}
+
 export function extractOpeningContent(raw: string): string {
-  return extractTaggedBlock(raw, 'content') || String(raw ?? '').trim();
+  const cleaned = stripOpeningMetaBlocks(raw);
+  return extractTaggedBlock(cleaned, 'content') || removeTaggedBlock(cleaned, 'option');
 }
 
 export function extractOpeningContentLoose(raw: string): string {
-  return extractTaggedBlockLoose(raw, 'content') || String(raw ?? '').trim();
+  const cleaned = stripOpeningMetaBlocks(raw);
+  return extractTaggedBlockLoose(cleaned, 'content') || removeTaggedBlock(cleaned, 'option');
 }
 
 export function extractOpeningOptions(raw: string): string[] {
-  const optionBlock = extractTaggedBlock(raw, 'option');
-  return optionBlock
+  const cleaned = stripOpeningMetaBlocks(raw);
+  const optionBlock = extractTaggedBlock(cleaned, 'option') || extractTaggedBlockLoose(cleaned, 'option');
+  const taggedOptions = optionBlock
     .split('\n')
     .map(line => line.replace(/^(?:[-*•]+|\d+[.)、]|[（(]?\d+[)）、])\s*/, '').trim())
+    .filter(Boolean);
+
+  if (taggedOptions.length > 0) return taggedOptions;
+
+  return cleaned
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => /^(?:【|\[)?[A-Da-d](?:】|\]|\.|、|\))\s*/.test(line))
+    .map(line => line.replace(/^(?:【|\[)?[A-Da-d](?:】|\]|\.|、|\))\s*/, '').trim())
     .filter(Boolean);
 }

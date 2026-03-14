@@ -1,6 +1,6 @@
 <template>
   <section class="composer-shell" :class="{ 'desktop-tool-row-mode': desktopToolRowMode }">
-    <div class="composer-toolbar">
+    <div v-if="showToolbar !== false" class="composer-toolbar">
       <div class="composer-role-tabs" role="tablist" aria-label="快速角色切换">
         <button
           v-for="role in roleTabs"
@@ -24,6 +24,7 @@
 
     <div class="composer-input-shell clip-corner">
       <button
+        v-if="showOptionTrigger !== false"
         type="button"
         class="composer-input-icon composer-option-trigger"
         :disabled="choiceOptions.length === 0"
@@ -117,6 +118,8 @@ const props = defineProps<{
   roleTabs?: Array<{ key: string; label: string; statusClass?: string; statusText?: string }>;
   activeRoleKey?: string | null;
   choiceOptions?: string[];
+  showOptionTrigger?: boolean;
+  showToolbar?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -187,6 +190,10 @@ async function confirmChoice() {
     choiceSending.value = false;
   }
 }
+
+defineExpose({
+  openChoiceModal,
+});
 </script>
 
 <style scoped>
@@ -439,30 +446,64 @@ async function confirmChoice() {
   color: var(--demo-text-accent);
 }
 @media (max-width: 760px) {
+  .composer-shell {
+    gap: 6px;
+  }
+
   .composer-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 6px;
   }
+
   .composer-role-tabs {
     width: 100%;
+    gap: 4px;
+    padding-bottom: 0;
   }
+
+  .role-tab-chip {
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
   .composer-quick-actions {
     width: auto;
     margin-left: auto;
   }
+
   .quick-btn {
     flex: 0 0 auto;
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 9px;
   }
+
   .composer-input-icon {
-    width: 60px;
-    flex-basis: 60px;
+    width: 40px;
+    flex-basis: 40px;
+    font-size: 10px;
   }
+
+  .composer-input-main {
+    padding: 0 8px;
+  }
+
   .composer-textarea {
-    min-height: 68px;
+    min-height: 44px;
+    max-height: 80px;
     font-size: 13px;
+    padding: 8px 0;
   }
+
   .send-btn {
-    min-width: 78px;
+    min-width: 56px;
+    min-height: 32px;
+    margin: 4px;
+    padding: 0 10px;
+    font-size: 10px;
   }
   .choice-modal-mask {
     padding: 8px;

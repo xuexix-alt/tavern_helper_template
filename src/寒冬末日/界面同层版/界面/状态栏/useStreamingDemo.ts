@@ -102,15 +102,21 @@ function buildStreamStageHtml(regexText: string): string {
   return `<pre class="stream-stage-pre">${escapeHtml(source)}</pre>`;
 }
 
+function normalizeDisplayedHtml(html: string): string {
+  return String(html ?? '')
+    .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
+    .replace(/<\/q>/gi, '</span>');
+}
+
 function buildFinalHtml(renderSource: string, message_id: number): string {
   try {
     if (typeof formatAsDisplayedMessage === 'function') {
-      return formatAsDisplayedMessage(renderSource || '(空回复)', { message_id });
+      return normalizeDisplayedHtml(formatAsDisplayedMessage(renderSource || '(空回复)', { message_id }));
     }
   } catch {
     // ignore
   }
-  return `<p>${escapeHtml(renderSource || '(空回复)')}</p>`;
+  return normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
 }
 
 function readCurrentContainerMessageId(): number | null {
@@ -132,6 +138,14 @@ function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPa
   return buildOpeningGeneratePrompt(preset, payload);
 }
 
+function buildOpeningGenerateConfig(preset: OpeningPreset, payload: OpeningPayload) {
+  return {
+    user_input: buildOpeningCompiledUserInput(preset, payload),
+    should_stream: payload.use_stream,
+    max_chat_history: 0,
+  } as GenerateConfig;
+}
+
 function buildTranscriptItem(input: {
   id: number;
   role: TranscriptItem['role'];
@@ -143,14 +157,20 @@ function buildTranscriptItem(input: {
   status: DemoStatus;
 }): TranscriptItem {
   const isDemoAssistant = input.role === 'assistant' && isStreamDemoMessage(input.raw);
+  const structuredOptions = input.role === 'assistant' ? extractOpeningOptions(input.raw) : [];
+  const hasStructuredContent = input.role === 'assistant' && /<content(?:\s[^>]*)?>/i.test(input.raw);
   const phase = isDemoAssistant ? extractStreamDemoPhase(input.raw) : 'plain';
-  const content = isDemoAssistant ? extractStreamDemoContent(input.raw) : input.raw.trim();
-  const options = isDemoAssistant ? extractStreamDemoOptions(input.raw) : [];
+  const content = isDemoAssistant
+    ? extractStreamDemoContent(input.raw)
+    : hasStructuredContent
+      ? extractOpeningContentLoose(input.raw)
+      : input.raw.trim();
+  const options = isDemoAssistant ? extractStreamDemoOptions(input.raw) : structuredOptions;
   const renderSource = isDemoAssistant ? stripStreamDemoRuntimeTags(input.raw) : input.raw.trim();
   const regexText = applyRegexForDisplay(renderSource, input.role);
-  const streamHtml = buildStreamStageHtml(regexText);
+  const streamHtml = buildStreamStageHtml(renderSource);
   const finalHtml = buildFinalHtml(renderSource, input.id);
-  const preview = stripTagsForPreview(regexText || content).slice(0, 80);
+  const preview = stripTagsForPreview(content || regexText).slice(0, 80);
 
   return {
     message_id: input.id,
@@ -180,6 +200,9 @@ function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
 }
 
 function buildOpeningAssistantText(payload: OpeningPayload): string {
+  const raw = String(payload.result?.raw ?? '').trim();
+  if (raw) return raw;
+
   const body = String(payload.result?.content ?? '').trim();
   const options = Array.isArray(payload.result?.options)
     ? payload.result.options.map(option => String(option ?? '').trim()).filter(Boolean)
@@ -220,7 +243,7 @@ function buildOpeningTranscriptItem(
     content: renderSource,
     preview: stripTagsForPreview(renderSource || preset.first_line || preset.world_intro).slice(0, 80),
     regexText,
-    streamHtml: buildStreamStageHtml(regexText),
+    streamHtml: buildStreamStageHtml(renderSource),
     finalHtml,
     options: payload.result?.options ?? [],
     hidden: false,
@@ -291,8 +314,13 @@ export function useStreamingDemo() {
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
 
+  const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
+
   const shouldShowOpeningSetup = computed(
-    () => isOpeningWorkbenchHost && ['placeholder', 'configuring'].includes(openingPayload.value.state),
+    () =>
+      isOpeningWorkbenchHost &&
+      !hasStoryMessagesBeyondOpening.value &&
+      ['placeholder', 'configuring'].includes(openingPayload.value.state),
   );
 
   const latestUserItem = computed(() => {
@@ -331,6 +359,41 @@ export function useStreamingDemo() {
     }, delay);
   }
 
+  function hydrateOpeningPayloadDefaults() {
+    const fallback = getDefaultOpeningPayload(openingPreset.value);
+    let changed = false;
+    const nextFormValues = {
+      ...(openingPayload.value.form_values ?? {}),
+    } as Record<string, string>;
+
+    for (const field of openingPreset.value.form_schema) {
+      const key = field.key;
+      const currentValue = String(nextFormValues[key] ?? '').trim();
+      const fallbackValue = String(fallback.form_values?.[key] ?? '').trim();
+      if (!currentValue && fallbackValue) {
+        nextFormValues[key] = fallbackValue;
+        changed = true;
+      }
+    }
+
+    const nextWorldModeId = String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
+    const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || String(fallback.route_id ?? '').trim();
+
+    if (
+      changed ||
+      nextWorldModeId !== String(openingPayload.value.world_mode_id ?? '').trim() ||
+      nextRouteId !== String(openingPayload.value.route_id ?? '').trim()
+    ) {
+      openingPayload.value = {
+        ...openingPayload.value,
+        world_mode_id: nextWorldModeId,
+        route_id: nextRouteId,
+        form_values: nextFormValues,
+      };
+      persistOpeningPayloadNow();
+    }
+  }
+
   function restoreReaderChatState() {
     const containerId = readCurrentContainerMessageId();
     if (containerId !== 0) {
@@ -354,7 +417,9 @@ export function useStreamingDemo() {
     const restoredOpeningPayload = readOpeningPayloadFromChat();
     if (restoredOpeningPayload) {
       openingPayload.value = restoredOpeningPayload;
+      hydrateOpeningPayloadDefaults();
     } else {
+      hydrateOpeningPayloadDefaults();
       persistOpeningPayloadNow();
     }
   }
@@ -511,10 +576,35 @@ export function useStreamingDemo() {
   function bindOpeningGenerationListeners() {
     clearOpeningGenerationListeners();
     let streamedRaw = '';
+    let hasFullStreamEvent = false;
+
+    try {
+      openingGenerationStops.push(
+        eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY as any, (text: string) => {
+          hasFullStreamEvent = true;
+          streamedRaw = String(text ?? '');
+          status.value = 'streaming';
+          openingPayload.value = {
+            ...openingPayload.value,
+            state: 'generating',
+            result: {
+              raw: streamedRaw,
+              content: streamedRaw,
+              options: extractOpeningOptions(streamedRaw),
+              generated_at: String(openingPayload.value.result?.generated_at ?? ''),
+            },
+          };
+          rebuildTranscript();
+        }),
+      );
+    } catch {
+      // ignore
+    }
 
     try {
       openingGenerationStops.push(
         eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, (token: string) => {
+          if (hasFullStreamEvent) return;
           streamedRaw += String(token ?? '');
           status.value = 'streaming';
           openingPayload.value = {
@@ -522,7 +612,7 @@ export function useStreamingDemo() {
             state: 'generating',
             result: {
               raw: streamedRaw,
-              content: extractOpeningContentLoose(streamedRaw),
+              content: streamedRaw,
               options: extractOpeningOptions(streamedRaw),
               generated_at: String(openingPayload.value.result?.generated_at ?? ''),
             },
@@ -815,10 +905,27 @@ export function useStreamingDemo() {
     return messages.map(message => Math.trunc(Number(message?.message_id))).find(id => Number.isFinite(id) && id > 0);
   }
 
+  function readMessageId(message: any): number | null {
+    const id = Math.trunc(Number(message?.message_id));
+    return Number.isFinite(id) ? id : null;
+  }
+
+  function findFirstStoryChatIdAfterOpening(messages: any[]) {
+    for (const message of messages) {
+      const id = readMessageId(message);
+      if (id == null || id <= 0) continue;
+      if (isOpeningSeedMessage(message)) continue;
+      return id;
+    }
+    return null;
+  }
+
   function findOpeningSeedChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message => Math.trunc(Number(message?.message_id)) === preferredId);
+      const matched = messages.find(
+        message => readMessageId(message) === preferredId && isOpeningSeedMessage(message),
+      );
       if (matched) return matched;
     }
     return messages.find(message => isOpeningSeedMessage(message));
@@ -827,17 +934,19 @@ export function useStreamingDemo() {
   function findOpeningResultChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message => Math.trunc(Number(message?.message_id)) === preferredId);
+      const matched = messages.find(
+        message => readMessageId(message) === preferredId && isOpeningAssistantMessage(message),
+      );
       if (matched) return matched;
     }
     return messages.find(message => isOpeningAssistantMessage(message));
   }
 
   function canRerollOpeningFromMessages(messages: any[]) {
-    const resultId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
-    if (!Number.isFinite(resultId) || resultId <= 0) return false;
+    const resultId = readMessageId(findOpeningResultChatMessage(messages));
+    if (resultId == null || resultId <= 0) return false;
     return !messages.some(message => {
-      const id = Math.trunc(Number(message?.message_id));
+      const id = readMessageId(message);
       if (!Number.isFinite(id) || id <= resultId) return false;
       if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
       return true;
@@ -852,7 +961,9 @@ export function useStreamingDemo() {
 
     if (existing) {
       const message_id = Math.trunc(Number(existing?.message_id));
-      await setChatMessages([{ message_id, message: prompt, is_hidden: false, data: nextData }], { refresh });
+      await setChatMessages([{ message_id, role: 'user', message: prompt, is_hidden: false, data: nextData }], {
+        refresh,
+      });
       return message_id;
     }
 
@@ -861,8 +972,10 @@ export function useStreamingDemo() {
       insert_before: firstAfterZero ?? 'end',
       refresh,
     });
-    const createdId = Math.trunc(Number(getLastMessageId?.()));
-    return Number.isFinite(createdId) ? createdId : null;
+    const created = listAllChatMessages().find(
+      message => isOpeningSeedMessage(message) && String(message?.message ?? '') === prompt,
+    );
+    return readMessageId(created);
   }
 
   async function upsertOpeningResultMessage(
@@ -877,19 +990,45 @@ export function useStreamingDemo() {
 
     if (existing) {
       const message_id = Math.trunc(Number(existing?.message_id));
-      await setChatMessages([{ message_id, message, is_hidden: false, data: nextData }], { refresh });
+      await setChatMessages([{ message_id, role: 'assistant', message, is_hidden: false, data: nextData }], {
+        refresh,
+      });
       return message_id;
     }
 
     if (!createIfMissing) return null;
 
-    const firstAfterZero = findFirstChatIdAfterZero(messages);
+    const firstStoryMessageId = findFirstStoryChatIdAfterOpening(messages);
     await createChatMessages([{ role: 'assistant', is_hidden: false, message, data: nextData }], {
-      insert_before: firstAfterZero ?? 'end',
+      insert_before: firstStoryMessageId ?? 'end',
       refresh,
     });
-    const createdId = Math.trunc(Number(getLastMessageId?.()));
-    return Number.isFinite(createdId) ? createdId : null;
+    const created = listAllChatMessages().find(
+      item => isOpeningAssistantMessage(item) && String(item?.message ?? '') === message,
+    );
+    return readMessageId(created);
+  }
+
+  async function normalizeOpeningMessageOrder(refresh: HideRefreshMode = 'none') {
+    const currentMessages = listAllChatMessages();
+    const currentSeedId = readMessageId(findOpeningSeedChatMessage(currentMessages));
+    const currentResultId = readMessageId(findOpeningResultChatMessage(currentMessages));
+
+    if (
+      currentSeedId != null &&
+      currentResultId != null &&
+      currentSeedId > 0 &&
+      currentResultId > 0 &&
+      currentSeedId > currentResultId
+    ) {
+      await rotateChatMessages(currentResultId, currentSeedId, currentSeedId + 1, { refresh });
+    }
+
+    const nextMessages = listAllChatMessages();
+    return {
+      seedMessageId: readMessageId(findOpeningSeedChatMessage(nextMessages)),
+      resultMessageId: readMessageId(findOpeningResultChatMessage(nextMessages)),
+    };
   }
 
   async function syncOpeningConfigToResultMvu(messageId: number | null | undefined) {
@@ -1243,6 +1382,8 @@ export function useStreamingDemo() {
   async function generateOpening() {
     if (busy.value) return;
 
+    hydrateOpeningPayloadDefaults();
+
     if (!getOpeningWorldMode(openingPayload.value.world_mode_id)) {
       toastr?.warning?.('请先选择有效的世界观档位');
       return;
@@ -1265,12 +1406,12 @@ export function useStreamingDemo() {
     errorText.value = '';
     const compiledPrompt = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);
     const messages = listAllChatMessages();
-    const resultId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
+    const resultId = readMessageId(findOpeningResultChatMessage(messages));
     const hasFollowUpTurns =
-      Number.isFinite(resultId) &&
+      resultId != null &&
       resultId > 0 &&
       messages.some(message => {
-        const id = Math.trunc(Number(message?.message_id));
+        const id = readMessageId(message);
         if (!Number.isFinite(id) || id <= resultId) return false;
         if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
         return true;
@@ -1284,11 +1425,14 @@ export function useStreamingDemo() {
     }
 
     const seedMessageId = await upsertOpeningSeedMessage(compiledPrompt, 'none');
+    const { seedMessageId: normalizedSeedMessageId, resultMessageId: normalizedResultMessageId } =
+      await normalizeOpeningMessageOrder('none');
 
     openingPayload.value = {
       ...openingPayload.value,
       state: 'generating',
-      opening_seed_user_message_id: seedMessageId,
+      opening_seed_user_message_id: normalizedSeedMessageId ?? seedMessageId,
+      opening_result_message_id: normalizedResultMessageId,
       result: null,
     };
     persistOpeningPayloadNow();
@@ -1298,10 +1442,7 @@ export function useStreamingDemo() {
       if (openingPayload.value.use_stream) {
         bindOpeningGenerationListeners();
       }
-      const result = await generate({
-        should_stream: openingPayload.value.use_stream,
-        max_chat_history: 'all',
-      });
+      const result = await generate(buildOpeningGenerateConfig(openingPreset.value, openingPayload.value));
       const nextResult = {
         raw: String(result ?? '').trim(),
         content: extractOpeningContent(result),
@@ -1313,13 +1454,13 @@ export function useStreamingDemo() {
         state: 'ready',
         result: nextResult,
       };
-      const openingResultMessageId = await upsertOpeningResultMessage(
-        buildOpeningAssistantText(openingPayload.value),
-        'none',
-      );
+      await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      const { seedMessageId: normalizedSeedMessageId, resultMessageId: openingResultMessageId } =
+        await normalizeOpeningMessageOrder('none');
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
+        opening_seed_user_message_id: normalizedSeedMessageId,
         opening_result_message_id: openingResultMessageId,
         result: nextResult,
       };

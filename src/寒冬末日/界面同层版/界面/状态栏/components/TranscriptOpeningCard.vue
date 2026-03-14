@@ -44,7 +44,13 @@
 
     <div v-if="showBody" class="transcript-body opening-body" :class="{ collapsed: !expanded }">
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
+      <div
+        v-if="item.isStreaming"
+        class="html-body is-stream-stage"
+        v-html="item.streamHtml || '<pre class=&quot;stream-stage-pre&quot;>等待 token…</pre>'"
+      ></div>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div v-else class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
   </article>
 </template>
@@ -234,10 +240,22 @@ const showBody = computed(() => {
   padding: 2px 0 0;
 }
 
+.html-body.is-stream-stage {
+  white-space: normal;
+}
+
 .html-body :deep(p),
 .html-body :deep(li),
 .html-body :deep(blockquote) {
   color: var(--demo-text-opening-strong);
+}
+
+.html-body :deep(.stream-stage-pre) {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--demo-text-opening-strong);
+  font: inherit;
 }
 
 .html-body :deep(h1),
@@ -253,6 +271,11 @@ const showBody = computed(() => {
 
 .html-body :deep(p:last-child) {
   margin-bottom: 0;
+}
+
+.html-body :deep(.dialog-inline) {
+  color: inherit;
+  font: inherit;
 }
 
 @media (max-width: 760px) {
