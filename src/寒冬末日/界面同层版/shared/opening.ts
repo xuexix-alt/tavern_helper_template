@@ -635,7 +635,9 @@ function stripOpeningMetaBlocks(raw: string): string {
 }
 
 function removeTaggedBlock(raw: string, tagName: string): string {
-  return String(raw ?? '').replace(new RegExp(`<${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/${tagName}>`, 'gi'), '').trim();
+  return String(raw ?? '')
+    .replace(new RegExp(`<${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/${tagName}>`, 'gi'), '')
+    .trim();
 }
 
 export function extractOpeningContent(raw: string): string {

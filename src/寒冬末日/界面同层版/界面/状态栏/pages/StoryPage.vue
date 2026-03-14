@@ -170,7 +170,11 @@
               >
                 <span>选项</span>
                 <span class="ui-bars">
-                  <i v-for="i in 4" :key="`choice-${i}`" :class="{ active: i <= ((latestAssistantItem?.options ?? []).length || 0) }"></i>
+                  <i
+                    v-for="i in 4"
+                    :key="`choice-${i}`"
+                    :class="{ active: i <= ((latestAssistantItem?.options ?? []).length || 0) }"
+                  ></i>
                 </span>
               </button>
 

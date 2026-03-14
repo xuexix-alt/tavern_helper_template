@@ -376,7 +376,8 @@ export function useStreamingDemo() {
       }
     }
 
-    const nextWorldModeId = String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
+    const nextWorldModeId =
+      String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
     const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || String(fallback.route_id ?? '').trim();
 
     if (
@@ -923,9 +924,7 @@ export function useStreamingDemo() {
   function findOpeningSeedChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(
-        message => readMessageId(message) === preferredId && isOpeningSeedMessage(message),
-      );
+      const matched = messages.find(message => readMessageId(message) === preferredId && isOpeningSeedMessage(message));
       if (matched) return matched;
     }
     return messages.find(message => isOpeningSeedMessage(message));
