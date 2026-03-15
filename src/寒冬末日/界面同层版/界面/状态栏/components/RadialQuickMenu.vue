@@ -104,7 +104,9 @@ function isMobileViewport() {
 }
 
 function normalizeWheelLabel(label: string) {
-  return String(label ?? '').replace(/\s+/g, ' ').trim();
+  return String(label ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function splitLabelSmart(label: string, total: number) {
@@ -120,7 +122,10 @@ function splitLabelSmart(label: string, total: number) {
     const words = normalized.split(/[\s/-]+/).filter(Boolean);
     if (words.length > 1) {
       const first = words[0].slice(0, mobile ? 5 : 7);
-      const second = words.slice(1).join(' ').slice(0, mobile ? 5 : 7);
+      const second = words
+        .slice(1)
+        .join(' ')
+        .slice(0, mobile ? 5 : 7);
       return [first, second].filter(Boolean).slice(0, maxLines);
     }
   }
@@ -132,7 +137,9 @@ function splitLabelSmart(label: string, total: number) {
     lines.push(next);
   }
   if (chars.length > maxPerLine * maxLines && lines.length > 0) {
-    lines[lines.length - 1] = `${Array.from(lines[lines.length - 1]).slice(0, Math.max(1, maxPerLine - 1)).join('')}…`;
+    lines[lines.length - 1] = `${Array.from(lines[lines.length - 1])
+      .slice(0, Math.max(1, maxPerLine - 1))
+      .join('')}…`;
   }
   return lines;
 }

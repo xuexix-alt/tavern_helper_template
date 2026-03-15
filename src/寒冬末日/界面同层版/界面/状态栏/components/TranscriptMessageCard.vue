@@ -344,7 +344,11 @@ function onEditInput(event: Event) {
   border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), color-mix(in srgb, var(--surface) 10%, transparent)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 22%, transparent),
+      color-mix(in srgb, var(--surface) 10%, transparent)
+    ),
     radial-gradient(circle at top, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, white 4%, transparent),

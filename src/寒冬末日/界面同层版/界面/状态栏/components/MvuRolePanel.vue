@@ -93,7 +93,9 @@
                 <div class="stat-track"><i :style="statWidth(entry.role.健康)" /></div>
                 <p
                   class="metric-caption inline-summary"
-                  :title="buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')"
+                  :title="
+                    buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')
+                  "
                 >
                   {{ buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因') }}
                 </p>
@@ -107,7 +109,9 @@
                 <div class="stat-track"><i :style="statWidth(entry.role.秩序刻印)" /></div>
                 <p
                   class="metric-caption inline-summary"
-                  :title="buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')"
+                  :title="
+                    buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')
+                  "
                 >
                   {{ buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
                 </p>
@@ -379,7 +383,7 @@ watch(
     }
     if (!selectedCharacterKey.value || !keys.includes(selectedCharacterKey.value)) {
       const matchedByName = preferredRoleName.value
-        ? entries.find(entry => roleName(entry) === preferredRoleName.value)?.key ?? null
+        ? (entries.find(entry => roleName(entry) === preferredRoleName.value)?.key ?? null)
         : null;
       internalSelectedKey.value = matchedByName ?? keys[0];
     }
@@ -469,12 +473,7 @@ function statWidth(input: unknown) {
   return { width: `${Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0}%` };
 }
 
-function buildMetricSummary(
-  primary: unknown,
-  primaryFallback = '--',
-  reason: unknown,
-  reasonFallback = '--',
-) {
+function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: unknown, reasonFallback = '--') {
   const head = displayText(primary, primaryFallback);
   const tail = displayText(reason, reasonFallback);
   return `${head} ${tail}`.trim();

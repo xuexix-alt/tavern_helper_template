@@ -101,16 +101,11 @@ const filteredEntries = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
   return props.entries.filter(entry => {
     if (activeFilter.value === 'named' && !entry.characterName) return false;
-    if (activeFilter.value === 'recent' && entry.messageId < Math.max(0, (props.activeMessageId ?? 0) - 12)) return false;
+    if (activeFilter.value === 'recent' && entry.messageId < Math.max(0, (props.activeMessageId ?? 0) - 12))
+      return false;
     if (!keyword) return true;
 
-    const haystack = [
-      entry.title,
-      entry.characterName,
-      entry.promptToken,
-      entry.anchorText,
-      `#${entry.messageId}`,
-    ]
+    const haystack = [entry.title, entry.characterName, entry.promptToken, entry.anchorText, `#${entry.messageId}`]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
@@ -122,7 +117,9 @@ const filteredEntries = computed(() => {
 const filters = computed(() => {
   const allCount = props.entries.length;
   const namedCount = props.entries.filter(entry => entry.characterName).length;
-  const recentCount = props.entries.filter(entry => entry.messageId >= Math.max(0, (props.activeMessageId ?? 0) - 12)).length;
+  const recentCount = props.entries.filter(
+    entry => entry.messageId >= Math.max(0, (props.activeMessageId ?? 0) - 12),
+  ).length;
   return [
     { key: 'all' as const, label: '全部', value: `${allCount}` },
     { key: 'named' as const, label: '带名', value: `${namedCount}` },
@@ -177,7 +174,11 @@ const groupedEntries = computed(() => {
   border: 1px solid var(--demo-border-accent-soft);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 28%, transparent), color-mix(in srgb, var(--surface) 12%, transparent)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 28%, transparent),
+      color-mix(in srgb, var(--surface) 12%, transparent)
+    ),
     radial-gradient(circle at top right, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%);
   box-shadow: var(--demo-shadow-card);
 }
@@ -242,7 +243,10 @@ const groupedEntries = computed(() => {
   background: color-mix(in srgb, var(--surface) 16%, transparent);
   color: inherit;
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
 .gallery-filter.active {
@@ -364,7 +368,11 @@ const groupedEntries = computed(() => {
   position: sticky;
   bottom: 0;
   padding-top: 2px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--background) 0%, transparent), color-mix(in srgb, var(--background) 92%, transparent) 18%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 0%, transparent),
+    color-mix(in srgb, var(--background) 92%, transparent) 18%
+  );
 }
 
 .gallery-close-btn {

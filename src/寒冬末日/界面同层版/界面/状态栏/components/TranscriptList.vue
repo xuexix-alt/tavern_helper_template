@@ -225,7 +225,14 @@ onMounted(async () => {
   emitScrollState(el);
 });
 
-defineExpose({ scrollToLatest, scrollToBottom, scrollToTop, currentVisibleEntryTop, scrollToCurrentEntryTop, scrollToMessage });
+defineExpose({
+  scrollToLatest,
+  scrollToBottom,
+  scrollToTop,
+  currentVisibleEntryTop,
+  scrollToCurrentEntryTop,
+  scrollToMessage,
+});
 </script>
 
 <style scoped>

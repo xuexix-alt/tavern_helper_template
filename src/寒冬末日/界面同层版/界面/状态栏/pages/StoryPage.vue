@@ -173,7 +173,11 @@
                       <strong>{{ activeUtilityMeta.title }}</strong>
                       <p>{{ activeUtilityMeta.subtitle }}</p>
                       <div class="ui-drawer-pills">
-                        <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
+                        <span
+                          v-for="pill in activeUtilityPills"
+                          :key="pill.label"
+                          class="ui-drawer-pill clip-corner-sm"
+                        >
                           <small>{{ pill.label }}</small>
                           <strong>{{ pill.value }}</strong>
                         </span>
@@ -670,7 +674,9 @@ function decodePromptToken(value: string): string {
 }
 
 function normalizeImageSrcForCompare(input: string): string {
-  return String(input ?? '').trim().replace(/&amp;/g, '&');
+  return String(input ?? '')
+    .trim()
+    .replace(/&amp;/g, '&');
 }
 
 function extractPromptToken(input: string): string {
@@ -887,14 +893,18 @@ function handleTranscriptDoubleClickCapture(event: MouseEvent) {
 function handleGeneratedImageClickCapture(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   if (!(target instanceof HTMLImageElement)) return;
-  const carrier = target.closest('.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image') as HTMLElement | null;
+  const carrier = target.closest(
+    '.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image',
+  ) as HTMLElement | null;
   if (!carrier) return;
 
   const messageId = Number(carrier.dataset.messageId ?? target.dataset.messageId ?? '');
   const promptToken = decodePromptToken(String(carrier.dataset.promptToken ?? target.dataset.promptToken ?? ''));
   const requestId = String(carrier.dataset.requestId ?? target.dataset.requestId ?? '').trim();
   const imageSrc = decodePromptToken(
-    String(carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? ''),
+    String(
+      carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? '',
+    ),
   );
   if (!Number.isFinite(messageId)) return;
 
@@ -910,14 +920,18 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
 function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   if (!(target instanceof HTMLImageElement)) return;
-  const carrier = target.closest('.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image') as HTMLElement | null;
+  const carrier = target.closest(
+    '.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image',
+  ) as HTMLElement | null;
   if (!carrier) return;
 
   const messageId = Number(carrier.dataset.messageId ?? target.dataset.messageId ?? '');
   const promptToken = decodePromptToken(String(carrier.dataset.promptToken ?? target.dataset.promptToken ?? ''));
   const requestId = String(carrier.dataset.requestId ?? target.dataset.requestId ?? '').trim();
   const imageSrc = decodePromptToken(
-    String(carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? ''),
+    String(
+      carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? '',
+    ),
   );
   if (!Number.isFinite(messageId)) return;
 
@@ -1290,7 +1304,6 @@ useEventListener(window, 'keydown', event => {
   overflow: hidden;
 }
 
-
 .ui-transcript-stage :deep(.transcript-card) {
   height: 100%;
   display: flex;
@@ -1323,7 +1336,11 @@ useEventListener(window, 'keydown', event => {
   padding: 10px 14px;
   border: 1px solid var(--demo-border-accent-soft);
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), color-mix(in srgb, var(--surface) 12%, transparent)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface) 22%, transparent),
+      color-mix(in srgb, var(--surface) 12%, transparent)
+    ),
     color-mix(in srgb, var(--background) 46%, transparent);
   box-shadow:
     0 12px 28px color-mix(in srgb, var(--shadow-color) 36%, transparent),

@@ -208,7 +208,9 @@ function normalizeImageDataToSrc(input: unknown): string {
 }
 
 function normalizeImageSrcForCompare(input: unknown): string {
-  return String(input ?? '').trim().replace(/&amp;/g, '&');
+  return String(input ?? '')
+    .trim()
+    .replace(/&amp;/g, '&');
 }
 
 function buildPromptTokenFromCachePrompt(rawPrompt: unknown): string {
@@ -290,7 +292,9 @@ function createGeneratedImageFigureHtml(
   messageId?: number | null,
 ): string {
   const messageIdAttr =
-    messageId != null && Number.isFinite(Number(messageId)) ? ` data-message-id="${Math.trunc(Number(messageId))}"` : '';
+    messageId != null && Number.isFinite(Number(messageId))
+      ? ` data-message-id="${Math.trunc(Number(messageId))}"`
+      : '';
   const promptTokenAttr = image.promptToken
     ? ` data-prompt-token="${encodeDataAttr(image.promptToken)}"`
     : ' data-prompt-token=""';
@@ -338,12 +342,7 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
 
   let selectedEntries: any[] = [];
   if (Array.isArray(extraImages)) {
-    if (
-      swipeId != null &&
-      swipeId >= 0 &&
-      Array.isArray(extraImages[swipeId]) &&
-      extraImages[swipeId].length > 0
-    ) {
+    if (swipeId != null && swipeId >= 0 && Array.isArray(extraImages[swipeId]) && extraImages[swipeId].length > 0) {
       selectedEntries = extraImages[swipeId] as any[];
     } else if (extraImages.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
       selectedEntries = extraImages as any[];
@@ -351,7 +350,9 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
       selectedEntries = extraImages.flatMap(item => (Array.isArray(item) ? item : []));
     }
   } else if (extraImages && typeof extraImages === 'object') {
-    selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item => (Array.isArray(item) ? item : [item]));
+    selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item =>
+      Array.isArray(item) ? item : [item],
+    );
   }
 
   const out: RenderableGeneratedImage[] = [];
@@ -417,7 +418,10 @@ function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLE
     const text = normalizeAnchorText(candidate.textContent ?? '');
     if (!text) continue;
     if (text.includes(needle) || needle.includes(text)) return candidate;
-    if (!fallback && (text.includes(needle.slice(0, Math.min(24, needle.length))) || needle.includes(text.slice(-24)))) {
+    if (
+      !fallback &&
+      (text.includes(needle.slice(0, Math.min(24, needle.length))) || needle.includes(text.slice(-24)))
+    ) {
       fallback = candidate;
     }
   }
@@ -585,7 +589,10 @@ function findContentBlocks(raw: string): ContentBlock[] {
 }
 
 function buildPersistedPromptMarkup(promptTokens: string[]): string {
-  return promptTokens.map(token => String(token ?? '').trim()).filter(Boolean).join('\n');
+  return promptTokens
+    .map(token => String(token ?? '').trim())
+    .filter(Boolean)
+    .join('\n');
 }
 
 function injectPromptTokensIntoRawMessage(raw: string, promptTokens: string[]): string {
@@ -635,7 +642,9 @@ function extractPromptTokensFromDisplayedMessage(messageId: number): string[] {
   const domTokens = roots.length > 0 ? extractPromptTokensFromRoots(roots) : [];
   if (domTokens.length > 0) return domTokens;
 
-  const cacheTokens = readChatu8CacheEntries(messageId).map(item => item.promptToken).filter(Boolean);
+  const cacheTokens = readChatu8CacheEntries(messageId)
+    .map(item => item.promptToken)
+    .filter(Boolean);
   return Array.from(new Set(cacheTokens));
 }
 
@@ -803,7 +812,10 @@ function extractCharacterNameFromPrompt(promptToken: string): string {
   const firstSegment = prompt
     .split(/[,，|\n]/)
     .map(segment => normalizeGalleryLabel(segment, ''))
-    .find(segment => segment.length >= 2 && segment.length <= 24 && !/\b(masterpiece|best quality|1girl|solo)\b/i.test(segment));
+    .find(
+      segment =>
+        segment.length >= 2 && segment.length <= 24 && !/\b(masterpiece|best quality|1girl|solo)\b/i.test(segment),
+    );
   return firstSegment ?? '';
 }
 
@@ -1124,18 +1136,19 @@ export function useStreamingDemo() {
       .filter(message => message.role === 'assistant')
       .sort((a, b) => a.message_id - b.message_id);
 
-    return messages.flatMap((message, index) => buildGalleryEntriesForMessage(message, index)).sort((a, b) => {
-      if (a.messageId !== b.messageId) return b.messageId - a.messageId;
-      return a.createdOrder - b.createdOrder;
-    });
+    return messages
+      .flatMap((message, index) => buildGalleryEntriesForMessage(message, index))
+      .sort((a, b) => {
+        if (a.messageId !== b.messageId) return b.messageId - a.messageId;
+        return a.createdOrder - b.createdOrder;
+      });
   });
 
   const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
 
   const shouldShowOpeningSetup = computed(
     () =>
-      isOpeningWorkbenchHost &&
-      shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value),
+      isOpeningWorkbenchHost && shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value),
   );
 
   const latestUserItem = computed(() => {
@@ -1745,7 +1758,12 @@ export function useStreamingDemo() {
       do {
         promptPersistRerun = false;
         const assistantMessages = listAssistantMessagesForPromptPersistence();
-        const patch: Array<{ message_id: number; message: string; is_hidden: boolean; data?: Record<string, unknown> }> = [];
+        const patch: Array<{
+          message_id: number;
+          message: string;
+          is_hidden: boolean;
+          data?: Record<string, unknown>;
+        }> = [];
 
         for (const item of assistantMessages) {
           const promptTokens = extractPromptTokensFromDisplayedMessage(item.message_id);
@@ -1782,10 +1800,13 @@ export function useStreamingDemo() {
 
   function queuePersistDisplayedImagePrompts(reason: string, delay = 180) {
     if (promptPersistTimer) window.clearTimeout(promptPersistTimer);
-    promptPersistTimer = window.setTimeout(() => {
-      promptPersistTimer = 0;
-      void persistDisplayedImagePrompts(reason);
-    }, Math.max(0, Math.trunc(delay)));
+    promptPersistTimer = window.setTimeout(
+      () => {
+        promptPersistTimer = 0;
+        void persistDisplayedImagePrompts(reason);
+      },
+      Math.max(0, Math.trunc(delay)),
+    );
   }
 
   function bindDisplayedImagePromptObserver() {

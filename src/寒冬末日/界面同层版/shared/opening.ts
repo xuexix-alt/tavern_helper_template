@@ -193,8 +193,7 @@ export function hasOpeningResult(payload: Partial<OpeningPayload> | null | undef
   const result = payload.result;
   if (!result) return false;
 
-  const hasOptions =
-    Array.isArray(result.options) && result.options.some(option => Boolean(trimText(option)));
+  const hasOptions = Array.isArray(result.options) && result.options.some(option => Boolean(trimText(option)));
 
   return Boolean(trimText(result.raw) || trimText(result.content) || trimText(result.generated_at) || hasOptions);
 }
@@ -255,13 +254,13 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
       : 'ready'
     : hasPersistedOpeningResult
       ? 'ready'
-    : nextStateSource === 'placeholder'
-      ? 'placeholder'
-      : nextStateSource === 'generating'
-        ? 'generating'
-        : nextFormValues && Object.values(nextFormValues).some(Boolean)
-          ? 'configuring'
-          : 'placeholder';
+      : nextStateSource === 'placeholder'
+        ? 'placeholder'
+        : nextStateSource === 'generating'
+          ? 'generating'
+          : nextFormValues && Object.values(nextFormValues).some(Boolean)
+            ? 'configuring'
+            : 'placeholder';
 
   return OpeningPayloadSchema.parse({
     version: 3,
