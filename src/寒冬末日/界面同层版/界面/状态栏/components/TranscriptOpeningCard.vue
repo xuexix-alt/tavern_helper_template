@@ -278,6 +278,19 @@ const showBody = computed(() => {
   font: inherit;
 }
 
+@media (min-width: 761px) {
+  .transcript-item {
+    max-width: min(100%, var(--reader-content-max, 72rem));
+    border-color: var(--demo-border-warning-soft);
+    box-shadow: 0 14px 28px color-mix(in srgb, var(--shadow-color) 38%, transparent);
+  }
+
+  .opening-banner,
+  .transcript-body {
+    border-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  }
+}
+
 @media (max-width: 760px) {
   .transcript-item {
     padding: 10px 8px;

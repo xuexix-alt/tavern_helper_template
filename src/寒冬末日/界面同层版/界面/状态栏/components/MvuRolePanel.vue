@@ -1,13 +1,10 @@
 <template>
   <section class="sidebar-card">
     <div class="sidebar-tools">
-      <label class="source-field">
+      <div class="source-field">
         <span>变量来源</span>
-        <select v-model="selectedSourceKey" class="source-select clip-corner-sm">
-          <option v-for="option in sourceOptions" :key="option.key" :value="option.key">{{ option.label }}</option>
-        </select>
-        <small class="source-caption">当前显示：{{ sourceLabel }}</small>
-      </label>
+        <small class="source-caption">{{ sourceLabel }}</small>
+      </div>
       <div v-if="isDuringExtraAnalysis" class="analysis-flag">解析中</div>
     </div>
 
@@ -57,11 +54,34 @@
           </button>
 
           <div v-if="selectedCharacterKey === entry.key" class="accordion-body">
+            <div class="source-nav clip-corner-sm">
+              <button
+                type="button"
+                class="source-nav-btn"
+                :disabled="!canPrevSource"
+                @click.stop="selectSourceByOffset(-1)"
+              >
+                ‹
+              </button>
+              <div class="source-nav-main">
+                <strong>{{ currentSourcePill }}</strong>
+                <span>{{ currentSourcePosition }}</span>
+              </div>
+              <button
+                type="button"
+                class="source-nav-btn"
+                :disabled="!canNextSource"
+                @click.stop="selectSourceByOffset(1)"
+              >
+                ›
+              </button>
+            </div>
+
             <div class="meta-row meta-row-top">
-              <span class="meta-box">关系：{{ displayText(entry.role.关系, '无') }}</span>
-              <span class="meta-box">倾向：{{ displayText(entry.role.关系倾向, '中立') }}</span>
-              <span class="meta-box">状态：{{ statusText(entry) }}</span>
-              <span class="meta-code">编号：{{ characterCode(entry) }}</span>
+              <span class="meta-box">关系 {{ displayText(entry.role.关系, '无') }}</span>
+              <span class="meta-box">倾向 {{ displayText(entry.role.关系倾向, '中立') }}</span>
+              <span class="meta-box">状态 {{ statusText(entry) }}</span>
+              <span class="meta-box meta-box-code">#{{ characterCode(entry) }}</span>
             </div>
 
             <div class="metric-grid">
@@ -71,11 +91,11 @@
                   <strong class="metric-value">{{ safeNumber(entry.role.健康) }}</strong>
                 </div>
                 <div class="stat-track"><i :style="statWidth(entry.role.健康)" /></div>
-                <p class="metric-caption">
-                  {{ displayText(entry.role.健康状况, '健康') }}
-                </p>
-                <p class="metric-caption muted">
-                  {{ displayText(entry.role.健康更新原因, '暂无健康值变动原因') }}
+                <p
+                  class="metric-caption inline-summary"
+                  :title="buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')"
+                >
+                  {{ buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因') }}
                 </p>
               </section>
 
@@ -85,11 +105,11 @@
                   <strong class="metric-value">{{ safeNumber(entry.role.秩序刻印) }}</strong>
                 </div>
                 <div class="stat-track"><i :style="statWidth(entry.role.秩序刻印)" /></div>
-                <p class="metric-caption">
-                  {{ displayText(entry.role.关系, '无') }} · 关系倾向：{{ displayText(entry.role.关系倾向, '中立') }}
-                </p>
-                <p class="metric-caption muted">
-                  {{ displayText(entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
+                <p
+                  class="metric-caption inline-summary"
+                  :title="buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')"
+                >
+                  {{ buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
                 </p>
               </section>
             </div>
@@ -180,7 +200,7 @@
 
 <script setup lang="ts">
 import type { TranscriptItem } from '../types';
-import { useMvuRoleStore } from '../mvuRoleStore';
+import { readMvuStatData, useMvuRoleStore } from '../mvuRoleStore';
 import { useDataStore } from '../../../../界面/store';
 
 const props = defineProps<{
@@ -208,6 +228,7 @@ type RoleSourceOption = {
 const store = useDataStore();
 const pageTab = ref<PageTab>('agents');
 const activeTab = ref<RoleTab>('main');
+const mvuReady = ref(false);
 
 function setPageTab(nextTab: PageTab) {
   pageTab.value = nextTab;
@@ -229,38 +250,22 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
       sortId: Number.MAX_SAFE_INTEGER,
     },
   ];
+  if (!mvuReady.value) return options;
   const transcriptItems = Array.isArray(props.transcriptItems) ? props.transcriptItems : [];
   const filtered = transcriptItems
-    .filter(item => item.isOpening || item.role === 'assistant' || item.role === 'user')
+    .filter(item => item.isOpening || item.role === 'assistant')
     .sort((a, b) => a.message_id - b.message_id);
-  let previousAssistantLikeId: number | null = null;
   const derived: RoleSourceOption[] = [];
   for (const item of filtered) {
-    let effectiveId: number | null = null;
-    if (item.isOpening || item.role === 'assistant') {
-      effectiveId = item.message_id;
-      previousAssistantLikeId = item.message_id;
-    } else if (item.role === 'user') {
-      effectiveId = previousAssistantLikeId;
-    }
+    const effectiveId = item.message_id;
     if (effectiveId == null) continue;
+    if (!readMvuStatData(effectiveId).ok) continue;
 
     if (item.isOpening) {
       derived.push({
         key: `message:${item.message_id}`,
         label: `${item.message_id}#`,
         pillLabel: `${item.message_id}#`,
-        targetMessageId: effectiveId,
-        sortId: item.message_id,
-      });
-      continue;
-    }
-
-    if (item.role === 'user' && effectiveId !== item.message_id) {
-      derived.push({
-        key: `message:${item.message_id}`,
-        label: `${item.message_id}#`,
-        pillLabel: `${effectiveId}#`,
         targetMessageId: effectiveId,
         sortId: item.message_id,
       });
@@ -282,7 +287,8 @@ const sourceOptions = computed<RoleSourceOption[]>(() => {
     });
   if (
     normalizedTargetMessageId.value != null &&
-    !options.some(option => option.targetMessageId === normalizedTargetMessageId.value)
+    !options.some(option => option.targetMessageId === normalizedTargetMessageId.value) &&
+    readMvuStatData(normalizedTargetMessageId.value).ok
   )
     options.push({
       key: `message:${normalizedTargetMessageId.value}`,
@@ -315,7 +321,21 @@ const agentTabs = computed(() => [
 ]);
 const activeEntries = computed(() => (activeTab.value === 'main' ? mainRoleEntries.value : tempNpcEntries.value));
 const internalSelectedKey = ref<string | null>(null);
+const preferredRoleName = ref('');
 const selectedCharacterKey = computed(() => props.activeCharacterKey ?? internalSelectedKey.value);
+const currentSourceIndex = computed(() => {
+  const index = sourceOptions.value.findIndex(option => option.key === selectedSourceKey.value);
+  return index >= 0 ? index : 0;
+});
+const canPrevSource = computed(() => currentSourceIndex.value > 0);
+const canNextSource = computed(() => currentSourceIndex.value < sourceOptions.value.length - 1);
+const currentSourcePill = computed(() => {
+  if (source.value === 'latest') {
+    return resolvedMessageId.value === 'latest' ? 'latest' : `${resolvedMessageId.value}#`;
+  }
+  return selectedSourceOption.value?.pillLabel ?? 'latest';
+});
+const currentSourcePosition = computed(() => `${currentSourceIndex.value + 1}/${sourceOptions.value.length || 1}`);
 const sourceLabel = computed(() => {
   const selected = selectedSourceOption.value;
   if (!selected) return 'latest';
@@ -357,7 +377,12 @@ watch(
       emit('roster-change', []);
       return;
     }
-    if (!selectedCharacterKey.value || !keys.includes(selectedCharacterKey.value)) internalSelectedKey.value = keys[0];
+    if (!selectedCharacterKey.value || !keys.includes(selectedCharacterKey.value)) {
+      const matchedByName = preferredRoleName.value
+        ? entries.find(entry => roleName(entry) === preferredRoleName.value)?.key ?? null
+        : null;
+      internalSelectedKey.value = matchedByName ?? keys[0];
+    }
     emit(
       'roster-change',
       entries.map(entry => ({
@@ -378,6 +403,15 @@ watch(
   { immediate: true },
 );
 
+onMounted(async () => {
+  try {
+    await waitGlobalInitialized('Mvu');
+    mvuReady.value = true;
+  } catch {
+    mvuReady.value = false;
+  }
+});
+
 function roleName(entry: { key: string; role: Record<string, any> }) {
   return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
 }
@@ -392,7 +426,17 @@ function switchTopTab(tab: RoleTab) {
 }
 function setActiveCharacter(key: string) {
   internalSelectedKey.value = key;
+  preferredRoleName.value = roleName(activeEntries.value.find(entry => entry.key === key) ?? { key, role: {} });
   emit('select-character', key);
+}
+
+function selectSourceByOffset(offset: -1 | 1) {
+  const nextIndex = currentSourceIndex.value + offset;
+  const nextOption = sourceOptions.value[nextIndex];
+  if (!nextOption) return;
+  const currentEntry = activeEntries.value.find(entry => entry.key === selectedCharacterKey.value);
+  preferredRoleName.value = currentEntry ? roleName(currentEntry) : preferredRoleName.value;
+  selectedSourceKey.value = nextOption.key;
 }
 
 function displayText(input: unknown, fallback = '--') {
@@ -423,6 +467,17 @@ function safeNumber(input: unknown) {
 function statWidth(input: unknown) {
   const n = Number(input);
   return { width: `${Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0}%` };
+}
+
+function buildMetricSummary(
+  primary: unknown,
+  primaryFallback = '--',
+  reason: unknown,
+  reasonFallback = '--',
+) {
+  const head = displayText(primary, primaryFallback);
+  const tail = displayText(reason, reasonFallback);
+  return `${head} ${tail}`.trim();
 }
 </script>
 
@@ -484,6 +539,49 @@ function statWidth(input: unknown) {
   font-family: var(--demo-font-mono);
   font-size: 11px;
   color: var(--demo-text-warning);
+}
+.source-nav,
+.source-nav-main {
+  display: flex;
+  align-items: center;
+}
+.source-nav {
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+}
+.source-nav-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--demo-font-mono);
+  color: var(--demo-text-secondary);
+}
+.source-nav-main strong {
+  font-size: 12px;
+  color: var(--demo-text-accent);
+  letter-spacing: 0.1em;
+}
+.source-nav-main span {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.source-nav-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--demo-border-accent-soft);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+  color: var(--demo-text-accent);
+  font-family: var(--demo-font-mono);
+  font-size: 16px;
+  line-height: 1;
+}
+.source-nav-btn:disabled {
+  opacity: 0.35;
 }
 .page-tabs,
 .tab-row {
@@ -670,6 +768,11 @@ function statWidth(input: unknown) {
   font-size: 12px;
   line-height: 1.6;
   color: var(--demo-text-secondary);
+}
+.metric-caption.inline-summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .metric-caption.muted {
   color: color-mix(in srgb, var(--demo-text-secondary) 72%, transparent);
@@ -908,6 +1011,29 @@ function statWidth(input: unknown) {
     min-height: 30px;
     padding: 0 8px;
     font-size: 11px;
+  }
+
+  .source-nav {
+    gap: 6px;
+    padding: 4px 6px;
+  }
+
+  .source-nav-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+
+  .source-nav-main {
+    gap: 6px;
+  }
+
+  .source-nav-main strong {
+    font-size: 10px;
+  }
+
+  .source-nav-main span {
+    font-size: 8px;
   }
 
   .metric-grid,

@@ -15,19 +15,28 @@
             />
             <text
               :x="textPosition(index, items.length).x"
-              :y="textPosition(index, items.length).y - 10"
+              :y="textPosition(index, items.length).y"
               text-anchor="middle"
               class="radial-label"
+              :class="{ compact: labelLayout(item, items.length).lines.length > 1 }"
             >
-              {{ item.label }}
+              <tspan
+                v-for="(line, lineIndex) in labelLayout(item, items.length).lines"
+                :key="`${item.key}-line-${lineIndex}`"
+                :x="textPosition(index, items.length).x"
+                :dy="lineIndex === 0 ? `${labelLayout(item, items.length).offsetY}em` : '1.08em'"
+              >
+                {{ line }}
+              </tspan>
             </text>
             <text
+              v-if="labelLayout(item, items.length).showStatus"
               :x="textPosition(index, items.length).x"
-              :y="textPosition(index, items.length).y + 12"
+              :y="textPosition(index, items.length).y + labelLayout(item, items.length).statusOffset"
               text-anchor="middle"
               class="radial-sub"
             >
-              {{ item.statusText }}
+              {{ labelLayout(item, items.length).statusText }}
             </text>
           </g>
           <circle cx="160" cy="160" r="58" class="radial-core" />
@@ -42,6 +51,8 @@
       class="radial-trigger"
       title="长按滑动切换角色，拖动可移动"
       :class="{ pressing: mode === 'press', active: open }"
+      @contextmenu.prevent
+      @dragstart.prevent
       @pointerdown="handlePointerDown"
       @pointermove="handlePointerMoveButton"
       @pointerup="handlePointerUpButton"
@@ -87,6 +98,57 @@ const isPointerActive = ref(false);
 const rootStyle = computed(() => ({ right: `${buttonPos.value.x}px`, bottom: `${buttonPos.value.y}px` }));
 const overlayStyle = computed(() => ({ right: '-127px', bottom: '-127px' }));
 
+function isMobileViewport() {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(max-width: 760px)').matches;
+}
+
+function normalizeWheelLabel(label: string) {
+  return String(label ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function splitLabelSmart(label: string, total: number) {
+  const normalized = normalizeWheelLabel(label);
+  if (!normalized) return ['未命名'];
+
+  const mobile = isMobileViewport();
+  const chars = Array.from(normalized);
+  const maxPerLine = mobile ? (total >= 5 ? 2 : 3) : total >= 6 ? 2 : 3;
+  const maxLines = 2;
+
+  if (/[\s/-]/.test(normalized) && !/[\u4e00-\u9fff]/.test(normalized)) {
+    const words = normalized.split(/[\s/-]+/).filter(Boolean);
+    if (words.length > 1) {
+      const first = words[0].slice(0, mobile ? 5 : 7);
+      const second = words.slice(1).join(' ').slice(0, mobile ? 5 : 7);
+      return [first, second].filter(Boolean).slice(0, maxLines);
+    }
+  }
+
+  if (chars.length <= maxPerLine) return [normalized];
+  const lines: string[] = [];
+  for (let i = 0; i < chars.length && lines.length < maxLines; i += maxPerLine) {
+    const next = chars.slice(i, i + maxPerLine).join('');
+    lines.push(next);
+  }
+  if (chars.length > maxPerLine * maxLines && lines.length > 0) {
+    lines[lines.length - 1] = `${Array.from(lines[lines.length - 1]).slice(0, Math.max(1, maxPerLine - 1)).join('')}…`;
+  }
+  return lines;
+}
+
+function labelLayout(item: RadialItem, total: number) {
+  const lines = splitLabelSmart(item.label, total);
+  const showStatus = Boolean(item.statusText) && !isMobileViewport() && total <= 4 && lines.length === 1;
+  return {
+    lines,
+    offsetY: showStatus ? -0.25 : lines.length > 1 ? -0.45 : 0.12,
+    statusOffset: lines.length > 1 ? 26 : 18,
+    showStatus,
+    statusText: String(item.statusText ?? '').trim(),
+  };
+}
+
 function polarToCartesian(cx: number, cy: number, radius: number, angle: number) {
   const rad = ((angle - 90) * Math.PI) / 180;
   return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
@@ -124,6 +186,22 @@ function clearPressTimer() {
 }
 
 function handlePointerDown(event: PointerEvent) {
+  if (isMobileViewport()) {
+    event.preventDefault();
+    startPos.value = { x: event.clientX, y: event.clientY };
+    dragOrigin.value = { ...buttonPos.value };
+    mode.value = 'press';
+    isPointerActive.value = true;
+    hoveredIndex.value = null;
+    clearPressTimer();
+    pressTimer.value = window.setTimeout(() => {
+      if (!isPointerActive.value || mode.value !== 'press') return;
+      mode.value = 'radial';
+      open.value = true;
+    }, 120);
+    return;
+  }
+
   startPos.value = { x: event.clientX, y: event.clientY };
   dragOrigin.value = { ...buttonPos.value };
   mode.value = 'press';
@@ -181,10 +259,18 @@ function finalizePointer() {
 }
 
 function handlePointerMoveButton(event: PointerEvent) {
+  if (isMobileViewport()) event.preventDefault();
   handlePointerMove(event);
 }
 
 function handlePointerUpButton() {
+  if (isMobileViewport() && mode.value === 'press') {
+    clearPressTimer();
+    mode.value = 'radial';
+    open.value = true;
+    hoveredIndex.value = null;
+    return;
+  }
   finalizePointer();
 }
 
@@ -275,6 +361,10 @@ useEventListener(window, 'pointercancel', () => {
   font-size: 12px;
   letter-spacing: 0.08em;
 }
+.radial-label.compact {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
 .radial-sub {
   fill: color-mix(in srgb, var(--demo-text-panel-strong) 72%, transparent);
   font-size: 9px;
@@ -289,6 +379,10 @@ useEventListener(window, 'pointercancel', () => {
   color: var(--demo-text-accent);
   font-size: 24px;
   box-shadow: 0 12px 30px color-mix(in srgb, var(--shadow-color) 80%, transparent);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease,
@@ -329,6 +423,14 @@ useEventListener(window, 'pointercancel', () => {
   opacity: 0;
 }
 @media (max-width: 760px) {
+  .radial-label {
+    font-size: 10px;
+  }
+
+  .radial-label.compact {
+    font-size: 9px;
+  }
+
   .radial-trigger {
     width: 58px;
     height: 58px;

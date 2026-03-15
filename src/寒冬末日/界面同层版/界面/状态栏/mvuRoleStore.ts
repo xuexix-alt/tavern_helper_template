@@ -67,7 +67,7 @@ function hasDisplayableRoles(data: SchemaType): boolean {
   return isObjectRecord(tempNpc) && Object.values(tempNpc).some(value => isObjectRecord(value));
 }
 
-function readMvuStatData(
+export function readMvuStatData(
   messageId: number | 'latest',
 ): { ok: true; data: SchemaType; messageId: number | 'latest' } | { ok: false } {
   try {

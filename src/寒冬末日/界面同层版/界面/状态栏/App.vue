@@ -40,6 +40,13 @@ import StoryPage from './pages/StoryPage.vue';
     linear-gradient(180deg, transparent, color-mix(in srgb, black 14%, transparent));
 }
 
+@media (min-width: 761px) {
+  .doc-shell-root {
+    border-color: transparent;
+    box-shadow: 0 22px 56px color-mix(in srgb, var(--shadow-color) 54%, transparent);
+  }
+}
+
 @media (max-width: 760px) {
   .doc-shell-root {
     border-radius: 18px;

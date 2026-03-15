@@ -74,6 +74,12 @@ function compactText(input: unknown): string {
     .trim();
 }
 
+function normalizePositiveInteger(input: unknown): number | null {
+  const value = Number(input);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.trunc(value);
+}
+
 function formatUnknownValue(input: unknown): string {
   if (input == null) return '';
   if (typeof input === 'string') return trimText(input);
@@ -180,6 +186,28 @@ function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
   return 'placeholder';
 }
 
+export function hasOpeningResult(payload: Partial<OpeningPayload> | null | undefined): boolean {
+  if (!payload) return false;
+  if (normalizePositiveInteger(payload.opening_result_message_id) != null) return true;
+
+  const result = payload.result;
+  if (!result) return false;
+
+  const hasOptions =
+    Array.isArray(result.options) && result.options.some(option => Boolean(trimText(option)));
+
+  return Boolean(trimText(result.raw) || trimText(result.content) || trimText(result.generated_at) || hasOptions);
+}
+
+export function shouldLoadOpeningGenerator(
+  payload: Partial<OpeningPayload> | null | undefined,
+  hasStoryMessagesBeyondOpening = false,
+): boolean {
+  if (hasStoryMessagesBeyondOpening) return false;
+  if (normalizeOpeningState(payload?.state) === 'generating') return false;
+  return !hasOpeningResult(payload);
+}
+
 function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayload {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const worldModeId = trimText(_.get(source, 'world_mode_id', getDefaultWorldModeId())) || getDefaultWorldModeId();
@@ -218,10 +246,15 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
       : null;
 
   const nextStateSource = normalizeOpeningState(_.get(source, 'state', 'placeholder'));
+  const nextSeedUserMessageId = normalizePositiveInteger(_.get(source, 'opening_seed_user_message_id', null));
+  const nextResultMessageId = normalizePositiveInteger(_.get(source, 'opening_result_message_id', null));
+  const hasPersistedOpeningResult = nextResultMessageId != null;
   const nextState = nextResult
     ? ['ready', 'generating'].includes(nextStateSource)
       ? nextStateSource
       : 'ready'
+    : hasPersistedOpeningResult
+      ? 'ready'
     : nextStateSource === 'placeholder'
       ? 'placeholder'
       : nextStateSource === 'generating'
@@ -236,12 +269,8 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
     world_mode_id: worldModeId,
     route_id: trimText(_.get(source, 'route_id', getDefaultRouteId(worldModeId))) || getDefaultRouteId(worldModeId),
     use_stream: _.get(source, 'use_stream', false),
-    opening_seed_user_message_id: Number.isFinite(Number(_.get(source, 'opening_seed_user_message_id', null)))
-      ? Math.trunc(Number(_.get(source, 'opening_seed_user_message_id', null)))
-      : null,
-    opening_result_message_id: Number.isFinite(Number(_.get(source, 'opening_result_message_id', null)))
-      ? Math.trunc(Number(_.get(source, 'opening_result_message_id', null)))
-      : null,
+    opening_seed_user_message_id: nextSeedUserMessageId,
+    opening_result_message_id: nextResultMessageId,
     meta: {
       time: compactText(_.get(source, 'meta.time', preset.default_meta.time)),
       location: compactText(_.get(source, 'meta.location', preset.default_meta.location)),

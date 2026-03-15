@@ -206,7 +206,7 @@ defineExpose({
 }
 .composer-shell {
   width: 100%;
-  max-width: 1040px;
+  max-width: min(100%, var(--reader-content-max, 72rem));
   margin: 0 auto;
   flex-direction: column;
   gap: 12px;
@@ -492,10 +492,11 @@ defineExpose({
   }
 
   .composer-textarea {
-    min-height: 44px;
-    max-height: 80px;
+    min-height: 30px;
+    max-height: 64px;
     font-size: 13px;
-    padding: 8px 0;
+    line-height: 1.45;
+    padding: 4px 0;
   }
 
   .send-btn {

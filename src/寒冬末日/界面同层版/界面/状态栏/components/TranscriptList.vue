@@ -33,6 +33,29 @@
         />
       </div>
     </div>
+
+    <div class="transcript-fab-stack" aria-label="阅读滚动控制">
+      <button
+        type="button"
+        class="transcript-fab transcript-fab-top"
+        :disabled="atTop"
+        title="回到顶部"
+        aria-label="回到顶部"
+        @click="scrollToTop()"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        class="transcript-fab transcript-fab-bottom"
+        :disabled="atBottom"
+        title="回到底部"
+        aria-label="回到底部"
+        @click="scrollToBottom()"
+      >
+        ↓
+      </button>
+    </div>
   </section>
 </template>
 
@@ -61,6 +84,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
+  (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;
   (event: 'reroll-opening'): void;
   (event: 'start-edit-user', item: TranscriptItem): void;
@@ -74,15 +98,31 @@ const emit = defineEmits<{
 }>();
 
 const listRef = ref<HTMLElement | null>(null);
+const atTop = ref(true);
+const atBottom = ref(true);
 
 function isNearBottom(element: HTMLElement): boolean {
   const remain = element.scrollHeight - element.scrollTop - element.clientHeight;
   return remain <= 48;
 }
 
+function isNearTop(element: HTMLElement): boolean {
+  return element.scrollTop <= 32;
+}
+
+function emitScrollState(element: HTMLElement) {
+  atTop.value = isNearTop(element);
+  atBottom.value = isNearBottom(element);
+  emit('scroll-state-change', {
+    atTop: atTop.value,
+    atBottom: atBottom.value,
+  });
+}
+
 function handleScroll() {
   const el = listRef.value;
   if (!el) return;
+  emitScrollState(el);
   emit('reading-mode-change', isNearBottom(el) ? 'following_latest' : 'browsing_history');
 }
 
@@ -90,18 +130,28 @@ function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
 }
 
-function scrollToLatest() {
+function scrollToLatest(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
-  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  el.scrollTo({ top: el.scrollHeight, behavior });
+  emitScrollState(el);
   emit('reading-mode-change', 'following_latest');
 }
 
-function scrollToBottom() {
+function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
-  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  el.scrollTo({ top: el.scrollHeight, behavior });
+  emitScrollState(el);
   emit('reading-mode-change', 'following_latest');
+}
+
+function scrollToTop(behavior: ScrollBehavior = 'smooth') {
+  const el = listRef.value;
+  if (!el) return;
+  el.scrollTo({ top: 0, behavior });
+  emitScrollState(el);
+  emit('reading-mode-change', 'browsing_history');
 }
 
 function currentVisibleEntryTop(offset = 118) {
@@ -140,6 +190,20 @@ function scrollToCurrentEntryTop(offset = 24) {
   });
 }
 
+function scrollToMessage(messageId: number, behavior: ScrollBehavior = 'smooth') {
+  const el = listRef.value;
+  if (!el) return false;
+  const entry = el.querySelector<HTMLElement>(`.transcript-entry[data-message-id='${Math.trunc(messageId)}']`);
+  if (!entry) return false;
+
+  el.scrollTo({
+    top: Math.max(0, entry.offsetTop - 12),
+    behavior,
+  });
+  emitScrollState(el);
+  return true;
+}
+
 watch(
   () => props.items.map(item => `${item.message_id}:${item.phase}:${item.preview}:${item.content.length}`).join('|'),
   async () => {
@@ -150,22 +214,35 @@ watch(
       el.scrollTop = el.scrollHeight;
       emit('reading-mode-change', 'following_latest');
     }
+    emitScrollState(el);
   },
 );
 
-defineExpose({ scrollToLatest, scrollToBottom, currentVisibleEntryTop, scrollToCurrentEntryTop });
+onMounted(async () => {
+  await nextTick();
+  const el = listRef.value;
+  if (!el) return;
+  emitScrollState(el);
+});
+
+defineExpose({ scrollToLatest, scrollToBottom, scrollToTop, currentVisibleEntryTop, scrollToCurrentEntryTop, scrollToMessage });
 </script>
 
 <style scoped>
 .transcript-card {
+  position: relative;
   width: 100%;
-  max-width: 1040px;
+  max-width: none;
   margin: 0 auto;
+  --transcript-content-max: var(--reader-content-max, 72rem);
+  --transcript-fab-size: 34px;
+  --transcript-fab-gap: 8px;
 }
 .transcript-scroller {
   max-height: 680px;
   overflow: auto;
   padding: 2px 0 12px;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -175,6 +252,7 @@ defineExpose({ scrollToLatest, scrollToBottom, currentVisibleEntryTop, scrollToC
   flex-direction: column;
 }
 .transcript-empty {
+  max-width: 100%;
   padding: 42px 16px;
   text-align: center;
   font-size: 13px;
@@ -183,12 +261,73 @@ defineExpose({ scrollToLatest, scrollToBottom, currentVisibleEntryTop, scrollToC
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 18%, transparent);
 }
+
+.transcript-fab-stack {
+  position: absolute;
+  top: 12px;
+  right: max(8px, calc((100% - var(--transcript-content-max)) / 2 + 10px));
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.transcript-fab {
+  width: var(--transcript-fab-size);
+  height: var(--transcript-fab-size);
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 84%, transparent);
+  color: var(--demo-text-accent);
+  box-shadow:
+    0 8px 20px color-mix(in srgb, var(--shadow-color) 44%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--primary) 8%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--demo-font-mono);
+  font-size: 15px;
+  line-height: 1;
+  pointer-events: auto;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.transcript-fab:not(:disabled):hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--primary) 10%, var(--background) 90%);
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+.transcript-fab:disabled {
+  opacity: 0.3;
+}
+
 @media (max-width: 760px) {
   .transcript-card {
     max-width: 100%;
+    --transcript-fab-size: 30px;
   }
   .transcript-scroller {
     max-height: 560px;
+    padding-right: 42px;
+  }
+
+  .transcript-fab-stack {
+    top: 10px;
+    right: 6px;
+    bottom: 10px;
+  }
+
+  .transcript-fab {
+    font-size: 13px;
   }
 }
 </style>

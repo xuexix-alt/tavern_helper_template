@@ -20,6 +20,7 @@ import {
   getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
+  shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import {
@@ -33,6 +34,7 @@ import {
 } from './readerState';
 import type {
   DemoStatus,
+  ReaderGalleryEntry,
   ReaderLogItem,
   DemoTheme,
   ReaderFontMode,
@@ -45,6 +47,27 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
+type ContentBlock = {
+  start: number;
+  end: number;
+  closeStart: number;
+  tagName: 'content' | 'game';
+  inner: string;
+};
+type Chatu8CacheEntry = {
+  messageId: number | null;
+  promptToken: string;
+  src: string;
+  alt: string;
+  requestId?: string;
+};
+type RenderableGeneratedImage = {
+  src: string;
+  alt: string;
+  promptToken?: string;
+  requestId?: string;
+  anchorText?: string;
+};
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -54,6 +77,9 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-ipod',
   'theme-amber',
 ] as const;
+const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
+const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
+const CHATU8_PROMPT_TOKEN_RE = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
 
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
@@ -94,12 +120,24 @@ function escapeHtml(input: string): string {
     .replaceAll("'", '&#39;');
 }
 
-function buildStreamStageHtml(regexText: string): string {
-  const source = String(regexText ?? '').trim();
+function encodeDataAttr(input: string): string {
+  return encodeURIComponent(String(input ?? ''));
+}
+
+function buildStreamStageHtml(renderSource: string, role: TranscriptItem['role'], message_id: number): string {
+  const source = String(renderSource ?? '').trim();
   if (!source) return '<pre class="stream-stage-pre">等待 token…</pre>';
-  const maybeHtml = /<\/?[a-z][^>]*>/i.test(source);
-  if (maybeHtml) return source;
-  return `<pre class="stream-stage-pre">${escapeHtml(source)}</pre>`;
+
+  try {
+    return buildFinalHtml(source, message_id);
+  } catch {
+    // ignore
+  }
+
+  const regexText = applyRegexForDisplay(source, role);
+  const maybeHtml = /<\/?[a-z][^>]*>/i.test(regexText);
+  if (maybeHtml) return normalizeDisplayedHtml(regexText);
+  return `<pre class="stream-stage-pre">${escapeHtml(regexText || source)}</pre>`;
 }
 
 function normalizeDisplayedHtml(html: string): string {
@@ -109,14 +147,769 @@ function normalizeDisplayedHtml(html: string): string {
 }
 
 function buildFinalHtml(renderSource: string, message_id: number): string {
+  let html = '';
   try {
     if (typeof formatAsDisplayedMessage === 'function') {
-      return normalizeDisplayedHtml(formatAsDisplayedMessage(renderSource || '(空回复)', { message_id }));
+      html = normalizeDisplayedHtml(formatAsDisplayedMessage(renderSource || '(空回复)', { message_id }));
     }
   } catch {
     // ignore
   }
-  return normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
+  if (!html) {
+    html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
+  }
+  return appendChatu8ArtifactsToHtml(html, renderSource, message_id);
+}
+
+function listReachableHostWindows(): Array<Window & typeof globalThis> {
+  const windows: Array<Window & typeof globalThis> = [];
+  const seen = new Set<Window>();
+  const push = (candidate: Window | null | undefined) => {
+    if (!candidate) return;
+    if (seen.has(candidate)) return;
+    seen.add(candidate);
+    windows.push(candidate as Window & typeof globalThis);
+  };
+
+  push(window);
+  try {
+    push(window.parent);
+  } catch {
+    // ignore
+  }
+  try {
+    push(window.top);
+  } catch {
+    // ignore
+  }
+
+  return windows;
+}
+
+function readHostContext(): any {
+  for (const hostWindow of listReachableHostWindows()) {
+    try {
+      const ctx = (hostWindow as any)?.SillyTavern?.getContext?.();
+      if (ctx) return ctx;
+    } catch {
+      // ignore
+    }
+  }
+  return null;
+}
+
+function normalizeImageDataToSrc(input: unknown): string {
+  const raw = String(input ?? '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('data:')) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('/')) return raw;
+  return `data:image/png;base64,${raw}`;
+}
+
+function normalizeImageSrcForCompare(input: unknown): string {
+  return String(input ?? '').trim().replace(/&amp;/g, '&');
+}
+
+function buildPromptTokenFromCachePrompt(rawPrompt: unknown): string {
+  const prompt = String(rawPrompt ?? '').trim();
+  if (!prompt) return '';
+  const existing = collectChatu8PromptTokens(prompt)[0];
+  if (existing) return existing;
+  return `image###${prompt}###`;
+}
+
+function readChatu8CacheEntries(messageId?: number | null): Chatu8CacheEntry[] {
+  const ctx = readHostContext();
+  const chatMeta = ctx?.chatMetadata?.['st-chatu8'];
+  if (!chatMeta || typeof chatMeta !== 'object') return [];
+
+  const entries = (chatMeta as any).imageCache ?? (chatMeta as any).images ?? chatMeta;
+  if (!entries || typeof entries !== 'object') return [];
+
+  const normalizedMessageId =
+    messageId != null && Number.isFinite(Number(messageId)) ? Math.trunc(Number(messageId)) : null;
+  const out: Chatu8CacheEntry[] = [];
+
+  for (const [key, value] of Object.entries(entries)) {
+    if (!value || typeof value !== 'object') continue;
+
+    const rawEntryMessageId = Number((value as any)?.messageId ?? (value as any)?.message_id);
+    const entryMessageId = Number.isFinite(rawEntryMessageId) ? Math.trunc(rawEntryMessageId) : null;
+    if (normalizedMessageId != null && entryMessageId != null && entryMessageId !== normalizedMessageId) continue;
+
+    const promptToken = buildPromptTokenFromCachePrompt((value as any)?.prompt ?? (value as any)?.tag ?? key);
+    const src = normalizeImageDataToSrc((value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src);
+    if (!promptToken || !src) continue;
+
+    const requestId = String((value as any)?.requestId ?? (value as any)?.request_id ?? '').trim();
+    out.push({
+      messageId: entryMessageId,
+      promptToken,
+      src,
+      alt: String((value as any)?.alt ?? 'generated image').trim(),
+      requestId: requestId || undefined,
+    });
+  }
+
+  return out;
+}
+
+function collectImageSourceIdentitiesFromHtml(html: string): Set<string> {
+  const identities = new Set<string>();
+  const source = String(html ?? '').trim();
+  if (!source) return identities;
+
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = source;
+  const images = Array.from(doc.body.querySelectorAll('img')) as HTMLImageElement[];
+  for (const image of images) {
+    const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
+    if (!src) continue;
+    identities.add(src);
+  }
+  return identities;
+}
+
+function normalizeAnchorText(input: string): string {
+  return String(input ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildAnchorSnippet(input: string): string {
+  const normalized = normalizeAnchorText(input);
+  if (!normalized) return '';
+  if (normalized.length <= 72) return normalized;
+  return normalized.slice(-72);
+}
+
+function createGeneratedImageFigureHtml(
+  image: RenderableGeneratedImage,
+  className: string,
+  messageId?: number | null,
+): string {
+  const messageIdAttr =
+    messageId != null && Number.isFinite(Number(messageId)) ? ` data-message-id="${Math.trunc(Number(messageId))}"` : '';
+  const promptTokenAttr = image.promptToken
+    ? ` data-prompt-token="${encodeDataAttr(image.promptToken)}"`
+    : ' data-prompt-token=""';
+  const requestIdAttr = image.requestId ? ` data-request-id="${escapeHtml(image.requestId)}"` : ' data-request-id=""';
+  const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
+  return `<figure class="${className}"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
+}
+
+function readChatMessageDetail(messageId: number): any | null {
+  try {
+    const list = getChatMessages(messageId, { hide_state: 'all' }) as any[];
+    return Array.isArray(list) ? (list[0] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readPersistedGeneratedImages(messageId: number): RenderableGeneratedImage[] {
+  const message = readChatMessageDetail(messageId);
+  const list = _.get(message, 'data.stream_demo.generated_images', []);
+  if (!Array.isArray(list)) return [];
+
+  const out: RenderableGeneratedImage[] = [];
+  const seen = new Set<string>();
+  for (const item of list) {
+    const src = String((item as any)?.src ?? '').trim();
+    if (!src || seen.has(src)) continue;
+    seen.add(src);
+    out.push({
+      src,
+      alt: String((item as any)?.alt ?? 'generated image').trim(),
+      promptToken: String((item as any)?.promptToken ?? '').trim(),
+      requestId: String((item as any)?.requestId ?? '').trim() || undefined,
+      anchorText: String((item as any)?.anchorText ?? '').trim() || undefined,
+    });
+  }
+  return out;
+}
+
+function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
+  const message = readChatMessageDetail(messageId);
+  const extraImages = _.get(message, 'extra.images', null);
+  const rawSwipeId = Number(_.get(message, 'swipe_id', null));
+  const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : null;
+
+  let selectedEntries: any[] = [];
+  if (Array.isArray(extraImages)) {
+    if (
+      swipeId != null &&
+      swipeId >= 0 &&
+      Array.isArray(extraImages[swipeId]) &&
+      extraImages[swipeId].length > 0
+    ) {
+      selectedEntries = extraImages[swipeId] as any[];
+    } else if (extraImages.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+      selectedEntries = extraImages as any[];
+    } else {
+      selectedEntries = extraImages.flatMap(item => (Array.isArray(item) ? item : []));
+    }
+  } else if (extraImages && typeof extraImages === 'object') {
+    selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item => (Array.isArray(item) ? item : [item]));
+  }
+
+  const out: RenderableGeneratedImage[] = [];
+  const seen = new Set<string>();
+  for (const entry of selectedEntries) {
+    if (!entry || typeof entry !== 'object') continue;
+    const src = normalizeImageDataToSrc(
+      (entry as any).src ??
+        (entry as any).image ??
+        (entry as any).imageData ??
+        (entry as any).path ??
+        (entry as any).url,
+    );
+    if (!src || seen.has(src)) continue;
+    seen.add(src);
+    out.push({
+      src,
+      alt: String((entry as any).alt ?? 'generated image').trim(),
+      promptToken: buildPromptTokenFromCachePrompt((entry as any).tag ?? (entry as any).prompt ?? ''),
+      requestId: String((entry as any).requestId ?? (entry as any).request_id ?? '').trim() || undefined,
+    });
+  }
+  return out;
+}
+
+function createPromptTokenMarkup(promptTokens: string[]): string {
+  if (promptTokens.length === 0) return '';
+  const items = promptTokens
+    .map(token => `<pre class="assistant-image-prompt-token">${escapeHtml(token)}</pre>`)
+    .join('');
+  return `<section class="assistant-image-prompt-list">${items}</section>`;
+}
+
+function createGeneratedImageFigureElement(
+  doc: Document,
+  image: RenderableGeneratedImage,
+  className: string,
+  messageId?: number | null,
+): HTMLElement {
+  const wrapper = doc.createElement('div');
+  wrapper.innerHTML = createGeneratedImageFigureHtml(image, className, messageId);
+  return (wrapper.firstElementChild as HTMLElement | null) ?? doc.createElement('figure');
+}
+
+function collectInlineAnchorCandidates(root: HTMLElement): HTMLElement[] {
+  const preferred = Array.from(root.querySelectorAll('p, pre, blockquote, li, div')) as HTMLElement[];
+  return preferred.filter(node => {
+    if (node.closest('.assistant-generated-gallery, .assistant-image-prompt-list')) return false;
+    if (node.matches('.assistant-generated-image, .assistant-inline-generated-image')) return false;
+    if (node.querySelector('img, figure')) return false;
+    if (node.tagName === 'DIV' && node.querySelector('p, pre, blockquote, li')) return false;
+    return normalizeAnchorText(node.textContent ?? '').length >= 12;
+  });
+}
+
+function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLElement | null {
+  const needle = buildAnchorSnippet(anchorText);
+  if (!needle) return null;
+  const candidates = collectInlineAnchorCandidates(root);
+  let fallback: HTMLElement | null = null;
+
+  for (const candidate of candidates) {
+    const text = normalizeAnchorText(candidate.textContent ?? '');
+    if (!text) continue;
+    if (text.includes(needle) || needle.includes(text)) return candidate;
+    if (!fallback && (text.includes(needle.slice(0, Math.min(24, needle.length))) || needle.includes(text.slice(-24)))) {
+      fallback = candidate;
+    }
+  }
+
+  return fallback;
+}
+
+function injectGeneratedImagesIntoHtml(html: string, images: RenderableGeneratedImage[], messageId: number): string {
+  if (images.length === 0) return html;
+
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = html;
+  const insertionRefs = new Map<HTMLElement, HTMLElement>();
+  const fallbackFigures: HTMLElement[] = [];
+
+  for (const image of images) {
+    const figure = createGeneratedImageFigureElement(doc, image, 'assistant-inline-generated-image', messageId);
+    const anchor = image.anchorText ? resolveInlineAnchorTarget(doc.body, image.anchorText) : null;
+    if (!anchor) {
+      fallbackFigures.push(figure);
+      continue;
+    }
+    const reference = insertionRefs.get(anchor) ?? anchor;
+    reference.after(figure);
+    insertionRefs.set(anchor, figure);
+  }
+
+  for (const figure of fallbackFigures) {
+    doc.body.append(figure);
+  }
+
+  return doc.body.innerHTML;
+}
+
+function appendChatu8ArtifactsToHtml(html: string, renderSource: string, messageId: number): string {
+  const promptTokens = collectChatu8PromptTokens(renderSource);
+  const promptTokenSet = new Set(promptTokens);
+  const images = [
+    ...readPersistedGeneratedImages(messageId),
+    ...readChatu8ExtraImages(messageId),
+    ...readChatu8CacheEntries(messageId).map(item => ({
+      src: item.src,
+      alt: item.alt,
+      promptToken: item.promptToken,
+      requestId: item.requestId,
+    })),
+  ];
+
+  const existingSources = collectImageSourceIdentitiesFromHtml(html);
+  const dedupedImages: RenderableGeneratedImage[] = [];
+  const seenSources = new Set<string>();
+  for (const image of images) {
+    const normalizedSrc = normalizeImageSrcForCompare(image.src);
+    if (!normalizedSrc || existingSources.has(image.src) || seenSources.has(normalizedSrc)) continue;
+    if (image.promptToken && promptTokenSet.size > 0 && !promptTokenSet.has(image.promptToken)) continue;
+    seenSources.add(normalizedSrc);
+    dedupedImages.push(image);
+  }
+
+  const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId);
+  const promptMarkup = createPromptTokenMarkup(promptTokens);
+  if (!promptMarkup) return htmlWithImages;
+  return `${htmlWithImages}${promptMarkup}`;
+}
+
+function collectReachableHostDocuments(): Document[] {
+  const docs: Document[] = [];
+  const pushDoc = (doc: Document | null | undefined) => {
+    if (!doc) return;
+    if (docs.includes(doc)) return;
+    docs.push(doc);
+  };
+
+  pushDoc(document);
+  try {
+    pushDoc(window.parent?.document);
+  } catch {
+    // ignore
+  }
+  try {
+    pushDoc(window.top?.document);
+  } catch {
+    // ignore
+  }
+
+  return docs;
+}
+
+function resolveDisplayedMessageRoots(messageId: number): HTMLElement[] {
+  const roots: HTMLElement[] = [];
+  const pushRoot = (root: HTMLElement | null | undefined) => {
+    if (!root) return;
+    if (roots.includes(root)) return;
+    roots.push(root);
+  };
+
+  try {
+    if (typeof retrieveDisplayedMessage === 'function') {
+      const $mes = retrieveDisplayedMessage(messageId);
+      pushRoot($mes?.get?.(0) as HTMLElement | undefined);
+    }
+  } catch {
+    // ignore
+  }
+
+  const mesid = Math.trunc(messageId);
+  for (const doc of collectReachableHostDocuments()) {
+    const selectors = [`#chat > .mes[mesid='${mesid}']`, `#chat .mes[mesid='${mesid}']`, `.mes[mesid='${mesid}']`];
+    for (const selector of selectors) {
+      pushRoot(doc.querySelector(selector) as HTMLElement | null);
+    }
+  }
+
+  return roots;
+}
+
+function resolveIframeAssistantRoots(messageId: number): HTMLElement[] {
+  const roots: HTMLElement[] = [];
+  const selector = `.assistant-body[data-message-id='${Math.trunc(messageId)}']`;
+  for (const doc of collectReachableHostDocuments()) {
+    if (doc !== document) continue;
+    const nodes = Array.from(doc.querySelectorAll(selector)) as HTMLElement[];
+    for (const node of nodes) {
+      if (roots.includes(node)) continue;
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+function collectChatu8PromptTokens(input: string): string[] {
+  const text = String(input ?? '');
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const match of text.matchAll(CHATU8_PROMPT_TOKEN_RE)) {
+    const raw = String(match[0] ?? '').trim();
+    const prompt = String(match[2] ?? '').trim();
+    if (!raw || !prompt) continue;
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    out.push(raw);
+  }
+
+  return out;
+}
+
+function collectExistingPromptTokenSet(raw: string): Set<string> {
+  return new Set(collectChatu8PromptTokens(raw));
+}
+
+function findContentBlocks(raw: string): ContentBlock[] {
+  const blocks: ContentBlock[] = [];
+  const re = /<(content|game)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi;
+  for (const match of raw.matchAll(re)) {
+    const full = String(match[0] ?? '');
+    const tagName = (String(match[1] ?? 'content').toLowerCase() as ContentBlock['tagName']) || 'content';
+    const inner = String(match[2] ?? '');
+    const start = match.index ?? 0;
+    const end = start + full.length;
+    const closeStart = end - `</${tagName}>`.length;
+    blocks.push({ start, end, closeStart, tagName, inner });
+  }
+  return blocks;
+}
+
+function buildPersistedPromptMarkup(promptTokens: string[]): string {
+  return promptTokens.map(token => String(token ?? '').trim()).filter(Boolean).join('\n');
+}
+
+function injectPromptTokensIntoRawMessage(raw: string, promptTokens: string[]): string {
+  const source = String(raw ?? '');
+  if (!source.trim()) return source;
+
+  const existing = collectExistingPromptTokenSet(source);
+  const missing = promptTokens
+    .map(token => String(token ?? '').trim())
+    .filter(Boolean)
+    .filter(token => !existing.has(token));
+
+  if (missing.length === 0) return source;
+
+  const injection = buildPersistedPromptMarkup(Array.from(new Set(missing)));
+  const blocks = findContentBlocks(source);
+  if (blocks.length > 0) {
+    const lastBlock = blocks[blocks.length - 1];
+    return `${source.slice(0, lastBlock.closeStart)}\n\n${injection}\n${source.slice(lastBlock.closeStart)}`;
+  }
+
+  const trimmedEnd = source.replace(/\s+$/g, '');
+  return trimmedEnd ? `${trimmedEnd}\n\n${injection}` : injection;
+}
+
+function extractPromptTokensFromRoots(roots: HTMLElement[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const root of roots) {
+    const buttons = Array.from(root.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
+    for (const button of buttons) {
+      const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+      if (!payload) continue;
+      for (const token of collectChatu8PromptTokens(payload)) {
+        if (seen.has(token)) continue;
+        seen.add(token);
+        out.push(token);
+      }
+    }
+  }
+
+  return out;
+}
+
+function extractPromptTokensFromDisplayedMessage(messageId: number): string[] {
+  const roots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
+  const domTokens = roots.length > 0 ? extractPromptTokensFromRoots(roots) : [];
+  if (domTokens.length > 0) return domTokens;
+
+  const cacheTokens = readChatu8CacheEntries(messageId).map(item => item.promptToken).filter(Boolean);
+  return Array.from(new Set(cacheTokens));
+}
+
+function extractAnchorTextForImageNode(node: Element, root: HTMLElement): string {
+  const snippets: string[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(candidate) {
+      const text = normalizeAnchorText(candidate.textContent ?? '');
+      if (text.length < 10) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  let current = walker.nextNode();
+  while (current) {
+    const relation = current.compareDocumentPosition(node);
+    if (relation & Node.DOCUMENT_POSITION_FOLLOWING) {
+      snippets.push(buildAnchorSnippet(current.textContent ?? ''));
+      if (snippets.length > 3) snippets.shift();
+      current = walker.nextNode();
+      continue;
+    }
+    break;
+  }
+
+  return snippets.reverse().find(Boolean) ?? '';
+}
+
+function resolvePromptButtonForImageSpan(span: HTMLElement, root: HTMLElement): HTMLElement | null {
+  const requestId = String(span.dataset.requestId ?? span.getAttribute('data-request-id') ?? '').trim();
+  const buttons = Array.from(root.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
+  if (requestId) {
+    const matched = buttons.find(button => {
+      const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+      return buttonRequestId === requestId;
+    });
+    if (matched) return matched;
+  }
+
+  let sibling: Element | null = span.previousElementSibling;
+  while (sibling) {
+    if (sibling instanceof HTMLElement && sibling.matches(CHATU8_IMAGE_BUTTON_SELECTOR)) return sibling;
+    sibling = sibling.previousElementSibling;
+  }
+
+  return buttons[0] ?? null;
+}
+
+function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedImage[] {
+  const out: RenderableGeneratedImage[] = [];
+  const seen = new Set<string>();
+
+  const pushImage = (
+    srcLike: unknown,
+    altLike: unknown,
+    promptLike?: unknown,
+    requestIdLike?: unknown,
+    anchorTextLike?: unknown,
+  ) => {
+    const src = normalizeImageSrcForCompare(srcLike);
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    out.push({
+      src,
+      alt: String(altLike ?? 'generated image').trim(),
+      promptToken: buildPromptTokenFromCachePrompt(promptLike),
+      requestId: String(requestIdLike ?? '').trim() || undefined,
+      anchorText: buildAnchorSnippet(String(anchorTextLike ?? '')) || undefined,
+    });
+  };
+
+  for (const root of resolveIframeAssistantRoots(messageId)) {
+    const images = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
+    for (const image of images) {
+      pushImage(
+        image.getAttribute('src') ?? image.currentSrc,
+        image.getAttribute('alt') ?? image.getAttribute('title'),
+        undefined,
+        image.dataset.requestId ?? image.getAttribute('data-request-id'),
+        extractAnchorTextForImageNode(image, root),
+      );
+    }
+  }
+
+  for (const root of resolveDisplayedMessageRoots(messageId)) {
+    const spans = Array.from(root.querySelectorAll(CHATU8_IMAGE_SPAN_SELECTOR)) as HTMLElement[];
+    for (const span of spans) {
+      const image = span.querySelector('img') as HTMLImageElement | null;
+      if (!image) continue;
+      const button = resolvePromptButtonForImageSpan(span, root);
+      pushImage(
+        image.getAttribute('src') ?? image.currentSrc,
+        image.getAttribute('alt') ?? image.getAttribute('title'),
+        button?.getAttribute('data-image-tag') ?? button?.getAttribute('data-link') ?? '',
+        span.dataset.requestId ?? span.getAttribute('data-request-id') ?? button?.dataset.requestId ?? '',
+        extractAnchorTextForImageNode(span, root),
+      );
+    }
+  }
+
+  for (const item of readChatu8CacheEntries(messageId)) {
+    pushImage(item.src, item.alt, item.promptToken, item.requestId);
+  }
+
+  return out;
+}
+
+function parsePromptBodyFromToken(promptToken: string): string {
+  const token = String(promptToken ?? '').trim();
+  if (!token) return '';
+  const match = token.match(/^[^#]+###([\s\S]*?)###$/);
+  return String(match?.[1] ?? token).trim();
+}
+
+function normalizeGalleryLabel(input: string, fallback = '未命名图像'): string {
+  const value = String(input ?? '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return value || fallback;
+}
+
+function pickFirstNonEmpty(...values: unknown[]): string {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function extractTitleFromAnchor(anchorText: string): string {
+  const anchor = normalizeGalleryLabel(anchorText, '');
+  if (!anchor) return '';
+  return anchor.length > 26 ? `${anchor.slice(0, 26)}…` : anchor;
+}
+
+function extractTitleFromSrc(src: string): string {
+  const source = String(src ?? '').trim();
+  if (!source || source.startsWith('data:')) return '';
+  try {
+    const pathname = source.startsWith('http') ? new URL(source).pathname : source;
+    const filename = pathname.split('/').pop() ?? '';
+    const stem = filename.replace(/\.[a-z0-9]+$/i, '');
+    return normalizeGalleryLabel(stem, '');
+  } catch {
+    const filename = source.split('/').pop() ?? '';
+    const stem = filename.replace(/\.[a-z0-9]+$/i, '');
+    return normalizeGalleryLabel(stem, '');
+  }
+}
+
+function extractCharacterNameFromPrompt(promptToken: string): string {
+  const prompt = parsePromptBodyFromToken(promptToken);
+  if (!prompt) return '';
+
+  const loraMatch = prompt.match(/<lora:([^:>]+)(?::[\d.]+)?>/i);
+  if (loraMatch?.[1]) return normalizeGalleryLabel(loraMatch[1]);
+
+  const namedMatch = prompt.match(/(?:角色|人物|character|name)\s*[:：]\s*([^,，|\n<>]{1,32})/i);
+  if (namedMatch?.[1]) return normalizeGalleryLabel(namedMatch[1]);
+
+  const quoteMatch = prompt.match(/[“"'「『]([^“”"'」』]{1,24})[”"'」』]/);
+  if (quoteMatch?.[1]) return normalizeGalleryLabel(quoteMatch[1]);
+
+  const firstSegment = prompt
+    .split(/[,，|\n]/)
+    .map(segment => normalizeGalleryLabel(segment, ''))
+    .find(segment => segment.length >= 2 && segment.length <= 24 && !/\b(masterpiece|best quality|1girl|solo)\b/i.test(segment));
+  return firstSegment ?? '';
+}
+
+function extractGalleryTitleFromPrompt(promptToken: string): string {
+  const prompt = parsePromptBodyFromToken(promptToken);
+  if (!prompt) return '';
+
+  const cleaned = prompt.replace(/<lora:[^>]+>/gi, '').trim();
+  const firstSegment = cleaned
+    .split(/[,，|\n]/)
+    .map(segment => normalizeGalleryLabel(segment, ''))
+    .find(Boolean);
+  if (!firstSegment) return '';
+  return firstSegment.length > 32 ? `${firstSegment.slice(0, 32)}…` : firstSegment;
+}
+
+function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: number): ReaderGalleryEntry[] {
+  const messageId = Math.trunc(Number(message.message_id));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+
+  const promptTokens = collectChatu8PromptTokens(message.message);
+  const srcList: string[] = [];
+  const promptBySrc = new Map<string, string>();
+  const requestBySrc = new Map<string, string>();
+  const anchorBySrc = new Map<string, string>();
+  const titleBySrc = new Map<string, string>();
+  const characterBySrc = new Map<string, string>();
+
+  const mergeImage = (image: RenderableGeneratedImage) => {
+    const src = normalizeImageSrcForCompare(image.src);
+    if (!src) return;
+    if (!srcList.includes(src)) srcList.push(src);
+    const promptToken = String(image.promptToken ?? '').trim();
+    const requestId = String(image.requestId ?? '').trim();
+    const anchorText = String(image.anchorText ?? '').trim();
+    const characterName = extractCharacterNameFromPrompt(promptToken);
+    const title = extractGalleryTitleFromPrompt(promptToken) || characterName;
+
+    if (promptToken && !promptBySrc.has(src)) promptBySrc.set(src, promptToken);
+    if (requestId && !requestBySrc.has(src)) requestBySrc.set(src, requestId);
+    if (anchorText && !anchorBySrc.has(src)) anchorBySrc.set(src, anchorText);
+    if (title && !titleBySrc.has(src)) titleBySrc.set(src, title);
+    if (characterName && !characterBySrc.has(src)) characterBySrc.set(src, characterName);
+  };
+
+  const images = [
+    ...readPersistedGeneratedImages(messageId),
+    ...readChatu8ExtraImages(messageId),
+    ...readChatu8CacheEntries(messageId).map(item => ({
+      src: item.src,
+      alt: item.alt,
+      promptToken: item.promptToken,
+      requestId: item.requestId,
+    })),
+  ];
+
+  for (const image of images) mergeImage(image);
+
+  let index = 0;
+  return srcList.map(src => {
+    const promptToken = promptBySrc.get(src) ?? promptTokens[index] ?? '';
+    const anchorText = anchorBySrc.get(src) || undefined;
+    const characterNameValue = pickFirstNonEmpty(characterBySrc.get(src), extractCharacterNameFromPrompt(promptToken));
+    const characterName = characterNameValue || undefined;
+    const title = pickFirstNonEmpty(
+      titleBySrc.get(src),
+      extractGalleryTitleFromPrompt(promptToken),
+      characterName,
+      extractTitleFromAnchor(anchorText ?? ''),
+      extractTitleFromSrc(src),
+      `楼层 #${messageId} · 图 ${index + 1}`,
+    );
+    const requestId = requestBySrc.get(src) || undefined;
+    const entry: ReaderGalleryEntry = {
+      id: `${messageId}:${requestId ?? src}:${index}`,
+      messageId,
+      src,
+      alt: 'generated image',
+      promptToken,
+      requestId,
+      anchorText,
+      title: normalizeGalleryLabel(title),
+      characterName: characterName ? normalizeGalleryLabel(characterName) : undefined,
+      createdOrder: createdOrder * 100 + index,
+    };
+    index += 1;
+    return entry;
+  });
+}
+
+function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
+  const matchesRelevantNode = (node: Node | null | undefined) => {
+    if (!(node instanceof HTMLElement)) return false;
+    if (node.matches(CHATU8_IMAGE_BUTTON_SELECTOR) || node.matches(CHATU8_IMAGE_SPAN_SELECTOR)) return true;
+    if (node.querySelector(CHATU8_IMAGE_BUTTON_SELECTOR) || node.querySelector(CHATU8_IMAGE_SPAN_SELECTOR)) return true;
+    return false;
+  };
+
+  if (matchesRelevantNode(record.target)) return true;
+  for (const node of Array.from(record.addedNodes)) {
+    if (matchesRelevantNode(node)) return true;
+  }
+  for (const node of Array.from(record.removedNodes)) {
+    if (matchesRelevantNode(node)) return true;
+  }
+  return false;
 }
 
 function readCurrentContainerMessageId(): number | null {
@@ -167,8 +960,9 @@ function buildTranscriptItem(input: {
       : input.raw.trim();
   const options = isDemoAssistant ? extractStreamDemoOptions(input.raw) : structuredOptions;
   const renderSource = isDemoAssistant ? stripStreamDemoRuntimeTags(input.raw) : input.raw.trim();
+  const streamRenderSource = isDemoAssistant ? content : renderSource;
   const regexText = applyRegexForDisplay(renderSource, input.role);
-  const streamHtml = buildStreamStageHtml(renderSource);
+  const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
   const finalHtml = buildFinalHtml(renderSource, input.id);
   const preview = stripTagsForPreview(content || regexText).slice(0, 80);
 
@@ -243,7 +1037,7 @@ function buildOpeningTranscriptItem(
     content: renderSource,
     preview: stripTagsForPreview(renderSource || preset.first_line || preset.world_intro).slice(0, 80),
     regexText,
-    streamHtml: buildStreamStageHtml(renderSource),
+    streamHtml: buildStreamStageHtml(renderSource, 'assistant', 0),
     finalHtml,
     options: payload.result?.options ?? [],
     hidden: false,
@@ -298,6 +1092,10 @@ export function useStreamingDemo() {
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
+  let promptPersistTimer = 0;
+  let promptPersistRunning = false;
+  let promptPersistRerun = false;
+  let promptObserver: MutationObserver | null = null;
 
   const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
   const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
@@ -314,13 +1112,30 @@ export function useStreamingDemo() {
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
 
+  const galleryEntries = computed<ReaderGalleryEntry[]>(() => {
+    const messages = listAllChatMessages()
+      .map(message => ({
+        message_id: Math.trunc(Number(message?.message_id)),
+        role: ((message?.role as string) || 'assistant') as BaseChatMessage['role'],
+        message: String(message?.message ?? ''),
+        is_hidden: message?.is_hidden === true,
+      }))
+      .filter(message => Number.isFinite(message.message_id))
+      .filter(message => message.role === 'assistant')
+      .sort((a, b) => a.message_id - b.message_id);
+
+    return messages.flatMap((message, index) => buildGalleryEntriesForMessage(message, index)).sort((a, b) => {
+      if (a.messageId !== b.messageId) return b.messageId - a.messageId;
+      return a.createdOrder - b.createdOrder;
+    });
+  });
+
   const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
 
   const shouldShowOpeningSetup = computed(
     () =>
       isOpeningWorkbenchHost &&
-      !hasStoryMessagesBeyondOpening.value &&
-      ['placeholder', 'configuring'].includes(openingPayload.value.state),
+      shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value),
   );
 
   const latestUserItem = computed(() => {
@@ -889,8 +1704,119 @@ export function useStreamingDemo() {
     externalSyncTimer = window.setTimeout(() => {
       externalSyncTimer = 0;
       rebuildTranscript();
+      queuePersistDisplayedImagePrompts(scopedReason);
       queueHidePolicy(scopedReason);
     }, resolveHidePolicyDelay(scopedReason));
+  }
+
+  function listAssistantMessagesForPromptPersistence(): BaseChatMessage[] {
+    const all = listAllChatMessages();
+    const transcriptAssistantIds = transcript.value
+      .filter(item => item.role === 'assistant')
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0);
+
+    const containerId = readCurrentContainerMessageId();
+    const candidateIds = new Set<number>(transcriptAssistantIds);
+    if (containerId != null && Number.isFinite(containerId) && containerId >= 0) {
+      candidateIds.add(Math.trunc(containerId));
+    }
+
+    return all
+      .map(message => ({
+        message_id: Math.trunc(Number(message?.message_id)),
+        role: ((message?.role as string) || 'assistant') as BaseChatMessage['role'],
+        message: String(message?.message ?? ''),
+        is_hidden: message?.is_hidden === true,
+      }))
+      .filter(item => Number.isFinite(item.message_id))
+      .filter(item => item.role === 'assistant')
+      .filter(item => candidateIds.has(item.message_id));
+  }
+
+  async function persistDisplayedImagePrompts(reason: string) {
+    if (promptPersistRunning) {
+      promptPersistRerun = true;
+      return;
+    }
+
+    promptPersistRunning = true;
+    try {
+      do {
+        promptPersistRerun = false;
+        const assistantMessages = listAssistantMessagesForPromptPersistence();
+        const patch: Array<{ message_id: number; message: string; is_hidden: boolean; data?: Record<string, unknown> }> = [];
+
+        for (const item of assistantMessages) {
+          const promptTokens = extractPromptTokensFromDisplayedMessage(item.message_id);
+          const generatedImages = extractRenderedImagesFromRoots(item.message_id);
+          const nextMessage = injectPromptTokensIntoRawMessage(item.message, promptTokens);
+          const fullMessage = readChatMessageDetail(item.message_id);
+          const nextData = fullMessage?.data ? _.cloneDeep(fullMessage.data) : {};
+          _.set(nextData, 'stream_demo.generated_images', generatedImages);
+          const prevImages = _.get(fullMessage, 'data.stream_demo.generated_images', []);
+          const imagesChanged = JSON.stringify(prevImages ?? []) !== JSON.stringify(generatedImages);
+          if (promptTokens.length === 0 && generatedImages.length === 0 && !imagesChanged) continue;
+          if (nextMessage === item.message && !imagesChanged) continue;
+          patch.push({
+            message_id: item.message_id,
+            message: nextMessage,
+            is_hidden: item.is_hidden,
+            data: nextData,
+          });
+        }
+
+        if (patch.length === 0) continue;
+        await setChatMessages(patch, { refresh: 'none' });
+        rebuildTranscript();
+      } while (promptPersistRerun);
+    } catch (error) {
+      console.warn('[stream-demo] persist displayed image prompts failed', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      promptPersistRunning = false;
+    }
+  }
+
+  function queuePersistDisplayedImagePrompts(reason: string, delay = 180) {
+    if (promptPersistTimer) window.clearTimeout(promptPersistTimer);
+    promptPersistTimer = window.setTimeout(() => {
+      promptPersistTimer = 0;
+      void persistDisplayedImagePrompts(reason);
+    }, Math.max(0, Math.trunc(delay)));
+  }
+
+  function bindDisplayedImagePromptObserver() {
+    if (promptObserver) promptObserver.disconnect();
+
+    const roots: HTMLElement[] = [];
+    const pushRoot = (root: HTMLElement | null | undefined) => {
+      if (!root) return;
+      if (roots.includes(root)) return;
+      roots.push(root);
+    };
+
+    pushRoot(document.body);
+    for (const doc of collectReachableHostDocuments()) {
+      pushRoot(doc.querySelector('#chat') as HTMLElement | null);
+    }
+    if (roots.length === 0) return;
+
+    promptObserver = new MutationObserver(records => {
+      if (!records.some(hasRelevantChatu8Mutation)) return;
+      queuePersistDisplayedImagePrompts('mutation:st-chatu8', 120);
+    });
+
+    for (const root of roots) {
+      promptObserver.observe(root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'data-image-tag', 'data-link', 'data-request-id', 'src'],
+      });
+    }
   }
 
   function listAllChatMessages() {
@@ -1099,6 +2025,7 @@ export function useStreamingDemo() {
       queuePersistReaderChatState();
     }
 
+    queuePersistDisplayedImagePrompts(`event:${name}`);
     queueExternalSync(String(name));
   }
 
@@ -1581,7 +2508,7 @@ export function useStreamingDemo() {
   }
 
   async function runDemo(nextPrompt?: string) {
-    if (openingPayload.value.state !== 'ready') {
+    if (shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value)) {
       toastr?.info?.('请先完成开局配置并生成 opening');
       return;
     }
@@ -1598,6 +2525,8 @@ export function useStreamingDemo() {
     rebuildTranscript();
     if (isOpeningWorkbenchHost) {
       bindHistoryRefreshEvents();
+      bindDisplayedImagePromptObserver();
+      queuePersistDisplayedImagePrompts('mounted', 240);
       queueHidePolicy('mounted');
     }
   });
@@ -1653,6 +2582,10 @@ export function useStreamingDemo() {
       window.clearTimeout(externalSyncTimer);
       externalSyncTimer = 0;
     }
+    if (promptPersistTimer) {
+      window.clearTimeout(promptPersistTimer);
+      promptPersistTimer = 0;
+    }
     if (readerStatePersistTimer) {
       window.clearTimeout(readerStatePersistTimer);
       readerStatePersistTimer = 0;
@@ -1662,6 +2595,8 @@ export function useStreamingDemo() {
       openingPayloadPersistTimer = 0;
     }
     clearOpeningGenerationListeners();
+    promptObserver?.disconnect();
+    promptObserver = null;
   });
 
   return {
@@ -1684,6 +2619,7 @@ export function useStreamingDemo() {
     transcript,
     visibleTranscript,
     transcriptStats,
+    galleryEntries,
     latestUserItem,
     latestAssistantItem,
     inputHasText,

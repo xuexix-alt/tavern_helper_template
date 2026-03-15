@@ -77,7 +77,7 @@
     </template>
 
     <template v-else>
-      <section class="assistant-card hud-panel clip-corner">
+      <section class="assistant-card hud-panel clip-corner" :data-message-id="item.message_id">
         <div class="assistant-corners tl"></div>
         <div class="assistant-corners tr"></div>
         <div class="assistant-corners bl"></div>
@@ -103,9 +103,19 @@
 
         <div class="assistant-body-wrap">
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="item.isStreaming" class="assistant-body html-body is-stream-stage" v-html="item.streamHtml"></div>
+          <div
+            v-if="item.isStreaming"
+            class="assistant-body html-body is-stream-stage"
+            :data-message-id="item.message_id"
+            v-html="item.streamHtml"
+          ></div>
           <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-else class="assistant-body html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
+          <div
+            v-else
+            class="assistant-body html-body"
+            :data-message-id="item.message_id"
+            v-html="item.finalHtml || '<p>(空回复)</p>'"
+          ></div>
         </div>
 
         <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
@@ -323,6 +333,86 @@ function onEditInput(event: Event) {
   color: inherit;
   font: inherit;
 }
+
+.assistant-body-wrap :deep(.assistant-generated-gallery) {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), color-mix(in srgb, var(--surface) 10%, transparent)),
+    radial-gradient(circle at top, color-mix(in srgb, var(--primary) 10%, transparent), transparent 58%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 4%, transparent),
+    0 10px 24px color-mix(in srgb, var(--shadow-color) 24%, transparent);
+}
+
+.assistant-body-wrap :deep(.assistant-generated-image) {
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  overflow: hidden;
+  box-shadow:
+    0 8px 18px color-mix(in srgb, black 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
+}
+
+.assistant-body-wrap :deep(.assistant-generated-image img) {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+  cursor: pointer;
+}
+
+.assistant-body-wrap :deep(.assistant-image-prompt-list) {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.assistant-body-wrap :deep(.assistant-image-prompt-token) {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--surface) 14%, transparent);
+  color: var(--demo-text-secondary);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.assistant-body-wrap :deep(.assistant-inline-generated-image) {
+  display: block;
+  margin: 16px 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  border-radius: 16px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  box-shadow:
+    0 10px 24px color-mix(in srgb, black 24%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
+}
+
+.assistant-body-wrap :deep(.assistant-inline-generated-image img) {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(72vh, 42rem);
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+  cursor: pointer;
+}
+
 .assistant-toolbar,
 .assistant-footer,
 .assistant-footer-left {
@@ -446,7 +536,43 @@ function onEditInput(event: Event) {
 .editor-actions {
   justify-content: flex-end;
 }
+
+@media (min-width: 761px) {
+  .assistant-card {
+    max-width: min(100%, var(--reader-content-max, 72rem));
+    border-color: var(--demo-border-accent-soft);
+    box-shadow: 0 14px 30px color-mix(in srgb, var(--shadow-color) 42%, transparent);
+  }
+
+  .assistant-card::before,
+  .assistant-card::after,
+  .assistant-corners {
+    display: none;
+  }
+
+  .assistant-meta-panel {
+    border-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+}
+
 @media (max-width: 760px) {
+  .assistant-body-wrap :deep(.assistant-generated-gallery) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .assistant-body-wrap :deep(.assistant-generated-image) {
+    border-radius: 12px;
+  }
+
+  .assistant-body-wrap :deep(.assistant-inline-generated-image) {
+    margin: 12px 0;
+    border-radius: 12px;
+  }
+
   .meta-chip,
   .detail-toggle,
   .meta-toggle,

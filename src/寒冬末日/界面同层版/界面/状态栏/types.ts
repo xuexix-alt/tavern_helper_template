@@ -50,6 +50,19 @@ export type ReaderLogItem = {
   createdAt: string;
 };
 
+export type ReaderGalleryEntry = {
+  id: string;
+  messageId: number;
+  src: string;
+  alt: string;
+  promptToken: string;
+  requestId?: string;
+  anchorText?: string;
+  title: string;
+  characterName?: string;
+  createdOrder: number;
+};
+
 export type ReaderChatState = {
   version: number;
   reading_mode: ReadingMode;
