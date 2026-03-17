@@ -1,11 +1,11 @@
-import { z } from 'zod';
 import YAML from 'yaml';
+import { z } from 'zod';
+import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../role_control';
 import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
 import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation } from '../../util/room';
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
 import { diffWorldHours } from '../../util/time';
 import { CHAT_VAR_KEYS } from '../../界面/outbound';
-import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../role_control';
 
 import shelterBlueprintRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 
@@ -1754,14 +1754,14 @@ function readDebugFlagsFromChat(): { dateLogic: boolean; offstageHealth: boolean
   };
 }
 
-function relationStageFromImprint(mark: number): '无' | '拒绝' | '交易' | '顺从' | '忠诚' | '性奴' {
+function relationStageFromImprint(mark: number): '无' | '逃离' | '交易' | '协作' | '忠诚' | '归附' {
   const v = _.clamp(Number(mark) || 0, 0, 100);
   if (v <= 0) return '无';
-  if (v < 20) return '拒绝';
+  if (v < 20) return '逃离';
   if (v < 40) return '交易';
-  if (v < 60) return '顺从';
+  if (v < 60) return '协作';
   if (v < 90) return '忠诚';
-  return '性奴';
+  return '归附';
 }
 
 function readHealthRulesFromChat(): HealthRules {

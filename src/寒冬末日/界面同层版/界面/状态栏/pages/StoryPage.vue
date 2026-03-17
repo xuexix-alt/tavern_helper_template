@@ -1262,6 +1262,30 @@ useEventListener(window, 'keydown', event => {
     padding-left: 14px;
     padding-right: 14px;
   }
+
+  /* 修复非移动端底部抽屉显示问题 */
+  .ui-bottom-drawer {
+    /* 改为相对于可视区域定位，避免被overflow:hidden裁剪 */
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    /* 从地图按钮上方拉出，宽度和父容器相同 */
+    bottom: auto;
+    top: 50%;
+    margin-top: -240px;
+    /* 宽度与父容器相同 */
+    width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    height: 480px;
+    max-height: 480px;
+  }
+
+  .ui-bottom-drawer.is-map {
+    width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    height: 500px;
+    max-height: 500px;
+  }
 }
 
 .ui-sidebar {

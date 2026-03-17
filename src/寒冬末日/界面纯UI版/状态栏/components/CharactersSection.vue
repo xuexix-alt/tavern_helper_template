@@ -1000,7 +1000,7 @@ type GeneratedRoleItem = {
   errorMessage: string;
 };
 
-const relationStageOptions = ['无', '拒绝', '交易', '顺从', '忠诚', '性奴'] as const;
+const relationStageOptions = ['无', '逃离', '交易', '协作', '忠诚', '归附'] as const;
 const relationTendencyOptions = ['极易', '易', '中立', '难', '极难', '不可'] as const;
 const healthStatusOptions = ['健康', '亚健康', '生病/受伤', '重病/濒死', '无', '死亡'] as const;
 const presenceOptions = ['登场', '离场'] as const;
@@ -2989,11 +2989,11 @@ function getRelationStage(key: CharacterKey) {
   const mark = typeof char?.秩序刻印 === 'number' ? char.秩序刻印 : null;
   if (mark === null) return '未知';
   if (mark <= 0) return '无';
-  if (mark < 20) return '拒绝';
+  if (mark < 20) return '逃离';
   if (mark < 40) return '交易';
-  if (mark < 60) return '顺从';
+  if (mark < 60) return '协作';
   if (mark < 90) return '忠诚';
-  return '性奴';
+  return '归附';
 }
 
 function getRelationTendency(key: CharacterKey) {
@@ -3006,15 +3006,15 @@ function getRelationRangeText(key: CharacterKey) {
   switch (relation) {
     case '无':
       return '-20 - 0';
-    case '拒绝':
+    case '逃离':
       return '1 - 19';
     case '交易':
       return '20 - 39';
-    case '顺从':
+    case '协作':
       return '40 - 59';
     case '忠诚':
       return '60 - 89';
-    case '性奴':
+    case '归附':
       return '90 - 100';
     default:
       return '-20 - 100';

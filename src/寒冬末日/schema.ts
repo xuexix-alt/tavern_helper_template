@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
 
-const 主要角色关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
-const 临时NPC关系档位Schema = z.enum(['无', '拒绝', '交易', '顺从', '忠诚', '性奴']).prefault('无');
+const 主要角色关系档位Schema = z.enum(['无', '逃离', '交易', '协作', '忠诚', '归附']).prefault('无');
+const 临时NPC关系档位Schema = z.enum(['无', '逃离', '交易', '协作', '忠诚', '归附']).prefault('无');
 const 关系倾向Schema = z.enum(['极易', '易', '中立', '难', '极难', '不可']).prefault('中立');
 const 健康状况Schema = z
   .preprocess(
