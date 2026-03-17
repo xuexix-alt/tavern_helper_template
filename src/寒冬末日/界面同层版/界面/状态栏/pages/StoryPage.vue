@@ -22,12 +22,7 @@
         <div v-if="roleDrawerOpen || galleryDrawerOpen" class="ui-sidebar-mask" @click="closeSideDrawers"></div>
       </transition>
 
-      <button
-        type="button"
-        class="ui-sidebar-toggle"
-        :class="{ open: roleDrawerOpen }"
-        @click="toggleRoleDrawer"
-      >
+      <button type="button" class="ui-sidebar-toggle" :class="{ open: roleDrawerOpen }" @click="toggleRoleDrawer">
         <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
       </button>
 
@@ -342,10 +337,7 @@ import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
-import {
-  convertIframePointToHostPoint,
-  resolveHostTriggerTargetFromPoint,
-} from '../hostCoordinateTarget';
+import { convertIframePointToHostPoint, resolveHostTriggerTargetFromPoint } from '../hostCoordinateTarget';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -904,7 +896,10 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
-function dispatchHostDoubleClick(target: HTMLElement, hostPoint?: { clientX: number; clientY: number } | null): boolean {
+function dispatchHostDoubleClick(
+  target: HTMLElement,
+  hostPoint?: { clientX: number; clientY: number } | null,
+): boolean {
   try {
     const doc = target.ownerDocument;
     const view = doc.defaultView;

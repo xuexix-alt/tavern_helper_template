@@ -93,15 +93,14 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
     const bufferedIndex = bufferedResponses.findIndex(
       item => item.requestId === requestId || item.promptToken === promptToken || item.prompt === prompt,
     );
-    const bufferedResponse =
-      bufferedIndex >= 0 ? bufferedResponses.splice(bufferedIndex, 1)[0] ?? null : null;
+    const bufferedResponse = bufferedIndex >= 0 ? (bufferedResponses.splice(bufferedIndex, 1)[0] ?? null) : null;
 
     const task =
       tasks
         .slice()
         .reverse()
         .find(item => item.collectingUntil >= referenceTime) ??
-      (bufferedResponse ? tasks[tasks.length - 1] ?? null : null);
+      (bufferedResponse ? (tasks[tasks.length - 1] ?? null) : null);
 
     if (!task) {
       if (bufferedResponse != null) bufferedResponses.push(bufferedResponse);

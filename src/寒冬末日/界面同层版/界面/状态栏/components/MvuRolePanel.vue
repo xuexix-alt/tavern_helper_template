@@ -276,7 +276,9 @@ const currentSourceIndex = computed(() => {
   return index;
 });
 const canPrevSource = computed(() => currentSourceIndex.value > 0);
-const canNextSource = computed(() => currentSourceIndex.value >= 0 && currentSourceIndex.value < sourceOptions.value.length - 1);
+const canNextSource = computed(
+  () => currentSourceIndex.value >= 0 && currentSourceIndex.value < sourceOptions.value.length - 1,
+);
 const currentSourcePill = computed(() => {
   return selectedSourceOption.value?.pillLabel ?? '--';
 });

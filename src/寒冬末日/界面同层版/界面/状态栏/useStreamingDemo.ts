@@ -75,9 +75,7 @@ type RenderableGeneratedImage = {
   requestId?: string;
   anchorText?: string;
 };
-type ImageRequestBindingResult = ReturnType<
-  ReturnType<typeof createImagePendingTaskManager>['registerRequest']
->;
+type ImageRequestBindingResult = ReturnType<ReturnType<typeof createImagePendingTaskManager>['registerRequest']>;
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -1842,10 +1840,14 @@ export function useStreamingDemo() {
               }>,
             listTokenMarkers: () =>
               Array.from(
-                document.querySelectorAll('.assistant-image-prompt-token, [data-prompt-token], .mes[mesid] [data-prompt-token]'),
+                document.querySelectorAll(
+                  '.assistant-image-prompt-token, [data-prompt-token], .mes[mesid] [data-prompt-token]',
+                ),
               ) as Array<{
                 getAttribute: (name: string) => string | null;
-                closest: (selector: string) => { dataset?: Record<string, unknown>; getAttribute?: (name: string) => string | null } | null;
+                closest: (
+                  selector: string,
+                ) => { dataset?: Record<string, unknown>; getAttribute?: (name: string) => string | null } | null;
                 textContent?: string | null;
               }>,
           });
@@ -1863,7 +1865,9 @@ export function useStreamingDemo() {
         }
         logImageBridge('request-received', {
           requestId: String(payload?.id ?? '').trim(),
-          promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+          promptPreview: String(payload?.prompt ?? '')
+            .trim()
+            .slice(0, 120),
           targetMessageId,
           tasks: imagePendingTaskManager.getDebugState(),
         });
@@ -1889,7 +1893,9 @@ export function useStreamingDemo() {
         if (!imageData) {
           logImageBridge('response-skip-empty-image', {
             requestId: String(payload?.id ?? '').trim(),
-            promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+            promptPreview: String(payload?.prompt ?? '')
+              .trim()
+              .slice(0, 120),
           });
           return;
         }
@@ -1901,7 +1907,9 @@ export function useStreamingDemo() {
         if (!matched) {
           logImageBridge('response-unmatched', {
             requestId: String(payload?.id ?? '').trim(),
-            promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+            promptPreview: String(payload?.prompt ?? '')
+              .trim()
+              .slice(0, 120),
             tasks: imagePendingTaskManager.getDebugState(),
           });
           return;
@@ -2026,7 +2034,13 @@ export function useStreamingDemo() {
           const imagesChanged = JSON.stringify(prevImages ?? []) !== JSON.stringify(generatedImages);
           const extraImagesChanged = JSON.stringify(prevExtraImages ?? []) !== JSON.stringify(nextExtra.images ?? []);
           const lockedTagsChanged = JSON.stringify(prevLockedTags ?? []) !== JSON.stringify(nextExtra.lockedTags ?? []);
-          if (promptTokenEntries.length === 0 && fallbackPromptTokens.length === 0 && generatedImages.length === 0 && !imagesChanged) continue;
+          if (
+            promptTokenEntries.length === 0 &&
+            fallbackPromptTokens.length === 0 &&
+            generatedImages.length === 0 &&
+            !imagesChanged
+          )
+            continue;
           if (nextMessage === item.message && !imagesChanged && !extraImagesChanged && !lockedTagsChanged) continue;
           patch.push({
             message_id: item.message_id,

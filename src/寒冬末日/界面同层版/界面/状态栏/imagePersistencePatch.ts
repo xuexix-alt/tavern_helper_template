@@ -208,8 +208,12 @@ export function syncDisplayedGeneratedImagesToExtra(
 
   const nextSwipeEntries = normalizedImages.map(image => {
     const matchedExisting =
-      currentSwipeEntries.find((entry: any) => String(entry?.requestId ?? entry?.request_id ?? '').trim() === image.requestId) ??
-      currentSwipeEntries.find((entry: any) => String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim() === image.src) ??
+      currentSwipeEntries.find(
+        (entry: any) => String(entry?.requestId ?? entry?.request_id ?? '').trim() === image.requestId,
+      ) ??
+      currentSwipeEntries.find(
+        (entry: any) => String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim() === image.src,
+      ) ??
       {};
 
     return {
@@ -229,13 +233,7 @@ export function syncDisplayedGeneratedImagesToExtra(
   swipeEntries[swipeId] = nextSwipeEntries;
   nextExtra.images = swipeEntries;
 
-  const nextLockedTags = Array.from(
-    new Set(
-      normalizedImages
-        .map(image => image.prompt)
-        .filter(Boolean),
-    ),
-  );
+  const nextLockedTags = Array.from(new Set(normalizedImages.map(image => image.prompt).filter(Boolean)));
   nextExtra.lockedTags = nextLockedTags;
 
   return nextExtra;
