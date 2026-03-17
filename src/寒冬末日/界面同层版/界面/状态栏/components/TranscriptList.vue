@@ -20,6 +20,7 @@
           :can-swipe-prev="false"
           :can-swipe-next="false"
           @open-detail="openDetail"
+          @image-intent="emit('image-intent', item)"
           @start-edit="emit('start-edit-user', item)"
           @update-edit-draft="emit('update-edit-draft', $event)"
           @confirm-edit="emit('confirm-edit-user', item)"
@@ -83,6 +84,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
+  (event: 'image-intent', item: TranscriptItem): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;

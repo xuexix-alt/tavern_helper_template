@@ -1,12 +1,6 @@
 <template>
   <section class="gallery-panel">
     <header class="gallery-tools">
-      <div class="gallery-hero">
-        <span class="demo-kicker">IMAGES // ARCHIVE</span>
-        <strong>楼层图廊</strong>
-        <p>按 assistant 楼层回看所有生图，支持搜索、跳楼层和宿主预览。</p>
-      </div>
-
       <label class="gallery-search">
         <span>检索</span>
         <input v-model="searchText" type="search" placeholder="角色名、提示词、楼层号" />
@@ -70,10 +64,6 @@
         </div>
       </section>
     </div>
-
-    <footer class="gallery-footer">
-      <button type="button" class="gallery-close-btn" @click="emit('close')">关闭图廊</button>
-    </footer>
   </section>
 </template>
 
@@ -163,10 +153,12 @@ const groupedEntries = computed(() => {
 
 <style scoped>
 .gallery-panel {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
-  min-height: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .gallery-tools,
@@ -187,28 +179,9 @@ const groupedEntries = computed(() => {
   padding: 16px;
 }
 
-.gallery-hero {
-  display: grid;
-  gap: 6px;
-}
-
-.gallery-hero strong {
-  font-family: 'Noto Serif JP', serif;
-  font-size: 24px;
-  letter-spacing: 0.03em;
-}
-
-.gallery-hero p {
-  margin: 0;
-  color: var(--demo-text-secondary);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
 .gallery-search {
   display: grid;
   gap: 6px;
-  margin-top: 14px;
 }
 
 .gallery-search span {
@@ -263,6 +236,10 @@ const groupedEntries = computed(() => {
 .gallery-groups {
   display: grid;
   gap: 14px;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 6px;
+  align-content: start;
 }
 
 .gallery-group {
@@ -356,34 +333,13 @@ const groupedEntries = computed(() => {
 }
 
 .gallery-empty {
-  flex: 1 1 auto;
+  min-height: 0;
   padding: 28px 18px;
   border: 1px dashed var(--demo-border-accent-soft);
   border-radius: 20px;
   text-align: center;
   color: var(--demo-text-muted);
-}
-
-.gallery-footer {
-  position: sticky;
-  bottom: 0;
-  padding-top: 2px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--background) 0%, transparent),
-    color-mix(in srgb, var(--background) 92%, transparent) 18%
-  );
-}
-
-.gallery-close-btn {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 20%, transparent);
-  color: inherit;
-  cursor: pointer;
-  font-weight: 600;
+  overflow: auto;
 }
 
 @media (max-width: 720px) {

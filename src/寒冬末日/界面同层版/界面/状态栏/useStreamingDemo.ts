@@ -32,6 +32,27 @@ import {
   READER_CHAT_STATE_VERSION,
   readReaderChatState,
 } from './readerState';
+import {
+  buildPromptTokenFromCachePrompt,
+  collectChatu8CacheEntries,
+  sanitizeChatu8CacheMeta,
+  type Chatu8CacheEntry,
+} from './galleryCache';
+import { createImagePendingTaskManager } from './imagePendingTaskManager';
+import { getFallbackImageClasses } from './imageFallbackClasses';
+import { chooseImageRenderMode } from './imageRenderPriority';
+import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
+import {
+  buildPluginImageExtraSanitizePatch,
+  buildGeneratedImagePersistencePatch,
+  sanitizePluginImageExtra,
+  syncDisplayedGeneratedImagesToExtra,
+} from './imagePersistencePatch';
+import { createImageRecentIntentStore } from './imageRecentIntent';
+import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
+import { mergePromptTokensIntoRawMessage } from './promptTokenPersistence';
+import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
+import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
   ReaderGalleryEntry,
@@ -47,20 +68,6 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
-type ContentBlock = {
-  start: number;
-  end: number;
-  closeStart: number;
-  tagName: 'content' | 'game';
-  inner: string;
-};
-type Chatu8CacheEntry = {
-  messageId: number | null;
-  promptToken: string;
-  src: string;
-  alt: string;
-  requestId?: string;
-};
 type RenderableGeneratedImage = {
   src: string;
   alt: string;
@@ -68,6 +75,9 @@ type RenderableGeneratedImage = {
   requestId?: string;
   anchorText?: string;
 };
+type ImageRequestBindingResult = ReturnType<
+  ReturnType<typeof createImagePendingTaskManager>['registerRequest']
+>;
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -80,6 +90,7 @@ const DEMO_THEME_CLASS_NAMES = [
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const CHATU8_PROMPT_TOKEN_RE = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
+const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
@@ -213,48 +224,10 @@ function normalizeImageSrcForCompare(input: unknown): string {
     .replace(/&amp;/g, '&');
 }
 
-function buildPromptTokenFromCachePrompt(rawPrompt: unknown): string {
-  const prompt = String(rawPrompt ?? '').trim();
-  if (!prompt) return '';
-  const existing = collectChatu8PromptTokens(prompt)[0];
-  if (existing) return existing;
-  return `image###${prompt}###`;
-}
-
 function readChatu8CacheEntries(messageId?: number | null): Chatu8CacheEntry[] {
   const ctx = readHostContext();
   const chatMeta = ctx?.chatMetadata?.['st-chatu8'];
-  if (!chatMeta || typeof chatMeta !== 'object') return [];
-
-  const entries = (chatMeta as any).imageCache ?? (chatMeta as any).images ?? chatMeta;
-  if (!entries || typeof entries !== 'object') return [];
-
-  const normalizedMessageId =
-    messageId != null && Number.isFinite(Number(messageId)) ? Math.trunc(Number(messageId)) : null;
-  const out: Chatu8CacheEntry[] = [];
-
-  for (const [key, value] of Object.entries(entries)) {
-    if (!value || typeof value !== 'object') continue;
-
-    const rawEntryMessageId = Number((value as any)?.messageId ?? (value as any)?.message_id);
-    const entryMessageId = Number.isFinite(rawEntryMessageId) ? Math.trunc(rawEntryMessageId) : null;
-    if (normalizedMessageId != null && entryMessageId != null && entryMessageId !== normalizedMessageId) continue;
-
-    const promptToken = buildPromptTokenFromCachePrompt((value as any)?.prompt ?? (value as any)?.tag ?? key);
-    const src = normalizeImageDataToSrc((value as any)?.imageData ?? (value as any)?.image ?? (value as any)?.src);
-    if (!promptToken || !src) continue;
-
-    const requestId = String((value as any)?.requestId ?? (value as any)?.request_id ?? '').trim();
-    out.push({
-      messageId: entryMessageId,
-      promptToken,
-      src,
-      alt: String((value as any)?.alt ?? 'generated image').trim(),
-      requestId: requestId || undefined,
-    });
-  }
-
-  return out;
+  return collectChatu8CacheEntries(chatMeta, messageId);
 }
 
 function collectImageSourceIdentitiesFromHtml(html: string): Set<string> {
@@ -400,8 +373,8 @@ function createGeneratedImageFigureElement(
 function collectInlineAnchorCandidates(root: HTMLElement): HTMLElement[] {
   const preferred = Array.from(root.querySelectorAll('p, pre, blockquote, li, div')) as HTMLElement[];
   return preferred.filter(node => {
-    if (node.closest('.assistant-generated-gallery, .assistant-image-prompt-list')) return false;
-    if (node.matches('.assistant-generated-image, .assistant-inline-generated-image')) return false;
+    if (node.closest(`.${FALLBACK_IMAGE_CLASSES.gallery}, .assistant-image-prompt-list`)) return false;
+    if (node.matches(`.${FALLBACK_IMAGE_CLASSES.item}, .${FALLBACK_IMAGE_CLASSES.inline}`)) return false;
     if (node.querySelector('img, figure')) return false;
     if (node.tagName === 'DIV' && node.querySelector('p, pre, blockquote, li')) return false;
     return normalizeAnchorText(node.textContent ?? '').length >= 12;
@@ -438,7 +411,7 @@ function injectGeneratedImagesIntoHtml(html: string, images: RenderableGenerated
   const fallbackFigures: HTMLElement[] = [];
 
   for (const image of images) {
-    const figure = createGeneratedImageFigureElement(doc, image, 'assistant-inline-generated-image', messageId);
+    const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
     const anchor = image.anchorText ? resolveInlineAnchorTarget(doc.body, image.anchorText) : null;
     if (!anchor) {
       fallbackFigures.push(figure);
@@ -459,8 +432,9 @@ function injectGeneratedImagesIntoHtml(html: string, images: RenderableGenerated
 function appendChatu8ArtifactsToHtml(html: string, renderSource: string, messageId: number): string {
   const promptTokens = collectChatu8PromptTokens(renderSource);
   const promptTokenSet = new Set(promptTokens);
-  const images = [
-    ...readPersistedGeneratedImages(messageId),
+  const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
+  const compatibilityImages = readPersistedGeneratedImages(messageId);
+  const pluginNativeImages = [
     ...readChatu8ExtraImages(messageId),
     ...readChatu8CacheEntries(messageId).map(item => ({
       src: item.src,
@@ -469,6 +443,19 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
       requestId: item.requestId,
     })),
   ];
+
+  const renderMode = chooseImageRenderMode({
+    hasPluginNativeDom: countPluginNativeImageArtifacts(existingRoots) > 0,
+    pluginNativeCount: pluginNativeImages.length,
+    compatibilityCount: compatibilityImages.length,
+  });
+
+  const images =
+    renderMode === 'compatibility'
+      ? compatibilityImages
+      : renderMode === 'plugin-native-data'
+        ? pluginNativeImages
+        : [];
 
   const existingSources = collectImageSourceIdentitiesFromHtml(html);
   const dedupedImages: RenderableGeneratedImage[] = [];
@@ -567,55 +554,6 @@ function collectChatu8PromptTokens(input: string): string[] {
   }
 
   return out;
-}
-
-function collectExistingPromptTokenSet(raw: string): Set<string> {
-  return new Set(collectChatu8PromptTokens(raw));
-}
-
-function findContentBlocks(raw: string): ContentBlock[] {
-  const blocks: ContentBlock[] = [];
-  const re = /<(content|game)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi;
-  for (const match of raw.matchAll(re)) {
-    const full = String(match[0] ?? '');
-    const tagName = (String(match[1] ?? 'content').toLowerCase() as ContentBlock['tagName']) || 'content';
-    const inner = String(match[2] ?? '');
-    const start = match.index ?? 0;
-    const end = start + full.length;
-    const closeStart = end - `</${tagName}>`.length;
-    blocks.push({ start, end, closeStart, tagName, inner });
-  }
-  return blocks;
-}
-
-function buildPersistedPromptMarkup(promptTokens: string[]): string {
-  return promptTokens
-    .map(token => String(token ?? '').trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
-function injectPromptTokensIntoRawMessage(raw: string, promptTokens: string[]): string {
-  const source = String(raw ?? '');
-  if (!source.trim()) return source;
-
-  const existing = collectExistingPromptTokenSet(source);
-  const missing = promptTokens
-    .map(token => String(token ?? '').trim())
-    .filter(Boolean)
-    .filter(token => !existing.has(token));
-
-  if (missing.length === 0) return source;
-
-  const injection = buildPersistedPromptMarkup(Array.from(new Set(missing)));
-  const blocks = findContentBlocks(source);
-  if (blocks.length > 0) {
-    const lastBlock = blocks[blocks.length - 1];
-    return `${source.slice(0, lastBlock.closeStart)}\n\n${injection}\n${source.slice(lastBlock.closeStart)}`;
-  }
-
-  const trimmedEnd = source.replace(/\s+$/g, '');
-  return trimmedEnd ? `${trimmedEnd}\n\n${injection}` : injection;
 }
 
 function extractPromptTokensFromRoots(roots: HTMLElement[]): string[] {
@@ -1098,6 +1036,8 @@ export function useStreamingDemo() {
   let generationStops: StopHandle[] = [];
   let openingGenerationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
+  let imageBridgeStops: StopHandle[] = [];
+  let mvuStops: StopHandle[] = [];
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
   let hidePolicyRerun = false;
@@ -1111,6 +1051,14 @@ export function useStreamingDemo() {
 
   const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
   const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
+  const galleryRevision = ref(0);
+  const mvuSourceRevision = ref(0);
+  const imagePendingTaskManager = createImagePendingTaskManager();
+  const imageRecentIntentStore = createImageRecentIntentStore();
+
+  function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
+    console.info(`[stream-demo:image-bridge] ${step}`, detail);
+  }
 
   const visibleTranscript = computed(() => {
     if (filterMode.value === 'all') return transcript.value;
@@ -1125,6 +1073,7 @@ export function useStreamingDemo() {
   }));
 
   const galleryEntries = computed<ReaderGalleryEntry[]>(() => {
+    const galleryRevisionSeed = galleryRevision.value;
     const messages = listAllChatMessages()
       .map(message => ({
         message_id: Math.trunc(Number(message?.message_id)),
@@ -1137,7 +1086,7 @@ export function useStreamingDemo() {
       .sort((a, b) => a.message_id - b.message_id);
 
     return messages
-      .flatMap((message, index) => buildGalleryEntriesForMessage(message, index))
+      .flatMap((message, index) => buildGalleryEntriesForMessage(message, index + galleryRevisionSeed * 0))
       .sort((a, b) => {
         if (a.messageId !== b.messageId) return b.messageId - a.messageId;
         return a.createdOrder - b.createdOrder;
@@ -1711,15 +1660,268 @@ export function useStreamingDemo() {
     }, resolveHidePolicyDelay(reason));
   }
 
-  function queueExternalSync(reason: string) {
+  function queueExternalSync(reason: string, options: { includeGallery?: boolean } = {}) {
     if (externalSyncTimer) window.clearTimeout(externalSyncTimer);
     const scopedReason = `external:${reason}`;
     externalSyncTimer = window.setTimeout(() => {
       externalSyncTimer = 0;
       rebuildTranscript();
-      queuePersistDisplayedImagePrompts(scopedReason);
+      if (options.includeGallery) queuePersistDisplayedImagePrompts(scopedReason);
       queueHidePolicy(scopedReason);
     }, resolveHidePolicyDelay(scopedReason));
+  }
+
+  function scheduleUiRefresh(domains: RefreshDomain[], reason: string) {
+    if (domains.includes('mvuSources')) {
+      mvuSourceRevision.value += 1;
+    }
+
+    if (domains.includes('transcript')) {
+      queueExternalSync(reason, { includeGallery: domains.includes('gallery') });
+      return;
+    }
+
+    if (domains.includes('gallery')) {
+      queuePersistDisplayedImagePrompts(reason);
+    }
+  }
+
+  function mapHostRefreshType(name: string): string {
+    switch (name) {
+      case tavern_events.GENERATION_STARTED:
+        return 'host.generation_started';
+      case tavern_events.GENERATION_ENDED:
+        return 'host.generation_ended';
+      case tavern_events.MESSAGE_SENT:
+        return 'host.message_sent';
+      case tavern_events.MESSAGE_EDITED:
+        return 'host.message_edited';
+      case tavern_events.MESSAGE_RECEIVED:
+        return 'host.message_received';
+      case tavern_events.MESSAGE_UPDATED:
+        return 'host.message_updated';
+      case tavern_events.MESSAGE_SWIPED:
+        return 'host.message_swiped';
+      case tavern_events.MESSAGE_DELETED:
+        return 'host.message_deleted';
+      case tavern_events.MORE_MESSAGES_LOADED:
+        return 'host.more_messages_loaded';
+      case tavern_events.STREAM_TOKEN_RECEIVED:
+        return 'host.stream_token_received';
+      case tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED:
+        return 'host.smooth_stream_token_received';
+      case tavern_events.CHAT_CHANGED:
+        return 'host.chat_changed';
+      default:
+        return `host.${String(name ?? '').toLowerCase()}`;
+    }
+  }
+
+  function beginPendingImageTask(messageId: number) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    imagePendingTaskManager.startTask(normalizedId);
+    imageRecentIntentStore.mark(normalizedId, 'transcript');
+    logImageBridge('start-task', {
+      messageId: normalizedId,
+      tasks: imagePendingTaskManager.getDebugState(),
+    });
+  }
+
+  function markRecentImageIntent(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    imageRecentIntentStore.mark(normalizedId, source);
+    logImageBridge('mark-intent', {
+      messageId: normalizedId,
+      source,
+      intent: imageRecentIntentStore.read(),
+    });
+  }
+
+  async function persistGeneratedImageResponse(result: {
+    messageId: number;
+    requestId: string;
+    prompt: string;
+    promptToken: string;
+    imageData: string;
+  }) {
+    const fullMessage = readChatMessageDetail(result.messageId);
+    if (!fullMessage) {
+      logImageBridge('persist-skip-missing-message', {
+        messageId: result.messageId,
+        requestId: result.requestId,
+        promptToken: result.promptToken,
+      });
+      return;
+    }
+
+    logImageBridge('persist-begin', {
+      messageId: result.messageId,
+      requestId: result.requestId,
+      promptToken: result.promptToken,
+      hasExtraImages: Array.isArray(fullMessage?.extra?.images),
+      previousGeneratedCount: Array.isArray(fullMessage?.data?.stream_demo?.generated_images)
+        ? fullMessage.data.stream_demo.generated_images.length
+        : 0,
+    });
+
+    const patch = buildGeneratedImagePersistencePatch({
+      message: fullMessage,
+      response: {
+        requestId: result.requestId,
+        prompt: result.prompt,
+        promptToken: result.promptToken,
+        imageData: result.imageData,
+      },
+    });
+
+    await setChatMessages(
+      [
+        {
+          message_id: result.messageId,
+          data: patch.nextData,
+          extra: patch.nextExtra,
+        } as any,
+      ],
+      { refresh: 'affected' },
+    );
+
+    logImageBridge('persist-success', {
+      messageId: result.messageId,
+      requestId: result.requestId,
+      promptToken: result.promptToken,
+      generatedCount: Array.isArray(patch.nextData?.stream_demo?.generated_images)
+        ? patch.nextData.stream_demo.generated_images.length
+        : 0,
+      extraImagesShape: Array.isArray(patch.nextExtra?.images)
+        ? patch.nextExtra.images.map((item: unknown) => (Array.isArray(item) ? item.length : 0))
+        : [],
+    });
+
+    scheduleUiRefresh(['transcript', 'gallery'], `image:persist:${result.messageId}`);
+  }
+
+  function bindImagePersistenceEvents() {
+    if (!isOpeningWorkbenchHost) return;
+    if (typeof eventOn !== 'function') return;
+
+    const bind = (eventName: string, listener: (...args: any[]) => void) => {
+      try {
+        return eventOn(eventName as any, listener as any);
+      } catch {
+        return null;
+      }
+    };
+
+    imageBridgeStops = [
+      bind('generate-image-request', (payload: Record<string, unknown>) => {
+        let requestBinding: ImageRequestBindingResult = imagePendingTaskManager.registerRequest(payload ?? {});
+        let targetMessageId = requestBinding?.messageId ?? null;
+        if (targetMessageId == null) {
+          const recentIntent = imageRecentIntentStore.read();
+          if (recentIntent) {
+            imagePendingTaskManager.startTask(recentIntent.messageId);
+            requestBinding = imagePendingTaskManager.registerRequest(payload ?? {});
+            targetMessageId = requestBinding?.messageId ?? null;
+            logImageBridge('request-fallback-intent', {
+              requestId: String(payload?.id ?? '').trim(),
+              recentIntent,
+              reboundMessageId: targetMessageId,
+              tasks: imagePendingTaskManager.getDebugState(),
+            });
+          }
+        }
+        if (targetMessageId == null) {
+          const domResolvedMessageId = resolveImageRequestTargetMessageId({
+            prompt: String(payload?.prompt ?? ''),
+            listButtons: () =>
+              Array.from(document.querySelectorAll('.st-chatu8-image-button')) as Array<{
+                getAttribute: (name: string) => string | null;
+                closest: (selector: string) => { dataset?: Record<string, unknown> } | null;
+              }>,
+            listTokenMarkers: () =>
+              Array.from(
+                document.querySelectorAll('.assistant-image-prompt-token, [data-prompt-token], .mes[mesid] [data-prompt-token]'),
+              ) as Array<{
+                getAttribute: (name: string) => string | null;
+                closest: (selector: string) => { dataset?: Record<string, unknown>; getAttribute?: (name: string) => string | null } | null;
+                textContent?: string | null;
+              }>,
+          });
+          if (domResolvedMessageId != null) {
+            imagePendingTaskManager.startTask(domResolvedMessageId);
+            requestBinding = imagePendingTaskManager.registerRequest(payload ?? {});
+            targetMessageId = requestBinding?.messageId ?? null;
+            logImageBridge('request-fallback-dom', {
+              requestId: String(payload?.id ?? '').trim(),
+              domResolvedMessageId,
+              reboundMessageId: targetMessageId,
+              tasks: imagePendingTaskManager.getDebugState(),
+            });
+          }
+        }
+        logImageBridge('request-received', {
+          requestId: String(payload?.id ?? '').trim(),
+          promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+          targetMessageId,
+          tasks: imagePendingTaskManager.getDebugState(),
+        });
+
+        if (requestBinding?.bufferedResponse) {
+          logImageBridge('request-replay-buffered-response', {
+            messageId: requestBinding.bufferedResponse.messageId,
+            requestId: requestBinding.bufferedResponse.requestId,
+            promptToken: requestBinding.bufferedResponse.promptToken,
+          });
+
+          void persistGeneratedImageResponse(requestBinding.bufferedResponse).catch(error => {
+            logImageBridge('persist-failed', {
+              messageId: requestBinding?.bufferedResponse?.messageId ?? null,
+              requestId: requestBinding?.bufferedResponse?.requestId ?? '',
+              error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
+      }),
+      bind('generate-image-response', (payload: Record<string, unknown>) => {
+        const imageData = String(payload?.imageData ?? payload?.image ?? '').trim();
+        if (!imageData) {
+          logImageBridge('response-skip-empty-image', {
+            requestId: String(payload?.id ?? '').trim(),
+            promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+          });
+          return;
+        }
+        const matched = imagePendingTaskManager.consumeResponse({
+          id: payload?.id,
+          prompt: payload?.prompt,
+          imageData,
+        });
+        if (!matched) {
+          logImageBridge('response-unmatched', {
+            requestId: String(payload?.id ?? '').trim(),
+            promptPreview: String(payload?.prompt ?? '').trim().slice(0, 120),
+            tasks: imagePendingTaskManager.getDebugState(),
+          });
+          return;
+        }
+
+        logImageBridge('response-matched', {
+          messageId: matched.messageId,
+          requestId: matched.requestId,
+          promptToken: matched.promptToken,
+        });
+
+        void persistGeneratedImageResponse(matched).catch(error => {
+          logImageBridge('persist-failed', {
+            messageId: matched.messageId,
+            requestId: matched.requestId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+      }),
+    ].filter(Boolean) as StopHandle[];
   }
 
   function listAssistantMessagesForPromptPersistence(): BaseChatMessage[] {
@@ -1747,6 +1949,41 @@ export function useStreamingDemo() {
       .filter(item => candidateIds.has(item.message_id));
   }
 
+  async function sanitizePluginImageExtrasInCurrentChat(reason: string) {
+    try {
+      const messages = listAllChatMessages();
+      const patch = buildPluginImageExtraSanitizePatch(messages);
+
+      if (patch.length === 0) return;
+      await setChatMessages(patch as any, { refresh: 'none' });
+      console.info('[stream-demo] sanitized plugin image extras', { reason, count: patch.length });
+    } catch (error) {
+      console.warn('[stream-demo] sanitize plugin image extras failed', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  function sanitizePluginImageCacheMeta(reason: string) {
+    try {
+      const ctx = readHostContext();
+      const originalMeta = _.cloneDeep(ctx?.chatMetadata?.['st-chatu8'] ?? null);
+      if (!originalMeta || typeof originalMeta !== 'object') return;
+      const nextMeta = sanitizeChatu8CacheMeta(originalMeta);
+      if (JSON.stringify(originalMeta) === JSON.stringify(nextMeta)) return;
+      if (ctx?.chatMetadata && typeof ctx.chatMetadata === 'object') {
+        ctx.chatMetadata['st-chatu8'] = nextMeta;
+      }
+      console.info('[stream-demo] sanitized plugin image cache meta', { reason });
+    } catch (error) {
+      console.warn('[stream-demo] sanitize plugin image cache meta failed', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   async function persistDisplayedImagePrompts(reason: string) {
     if (promptPersistRunning) {
       promptPersistRerun = true;
@@ -1763,24 +2000,40 @@ export function useStreamingDemo() {
           message: string;
           is_hidden: boolean;
           data?: Record<string, unknown>;
+          extra?: Record<string, unknown>;
         }> = [];
 
         for (const item of assistantMessages) {
-          const promptTokens = extractPromptTokensFromDisplayedMessage(item.message_id);
           const generatedImages = extractRenderedImagesFromRoots(item.message_id);
-          const nextMessage = injectPromptTokensIntoRawMessage(item.message, promptTokens);
+          const promptTokenEntries = generatedImages
+            .map(image => ({
+              promptToken: image.promptToken ?? '',
+              anchorText: image.anchorText ?? '',
+            }))
+            .filter(entry => entry.promptToken);
+          const fallbackPromptTokens = extractPromptTokensFromDisplayedMessage(item.message_id);
+          const nextMessage = mergePromptTokensIntoRawMessage(
+            item.message,
+            promptTokenEntries.length > 0 ? promptTokenEntries : fallbackPromptTokens,
+          );
           const fullMessage = readChatMessageDetail(item.message_id);
           const nextData = fullMessage?.data ? _.cloneDeep(fullMessage.data) : {};
           _.set(nextData, 'stream_demo.generated_images', generatedImages);
+          const nextExtra = syncDisplayedGeneratedImagesToExtra(fullMessage ?? {}, generatedImages);
           const prevImages = _.get(fullMessage, 'data.stream_demo.generated_images', []);
+          const prevExtraImages = _.get(fullMessage, 'extra.images', []);
+          const prevLockedTags = _.get(fullMessage, 'extra.lockedTags', []);
           const imagesChanged = JSON.stringify(prevImages ?? []) !== JSON.stringify(generatedImages);
-          if (promptTokens.length === 0 && generatedImages.length === 0 && !imagesChanged) continue;
-          if (nextMessage === item.message && !imagesChanged) continue;
+          const extraImagesChanged = JSON.stringify(prevExtraImages ?? []) !== JSON.stringify(nextExtra.images ?? []);
+          const lockedTagsChanged = JSON.stringify(prevLockedTags ?? []) !== JSON.stringify(nextExtra.lockedTags ?? []);
+          if (promptTokenEntries.length === 0 && fallbackPromptTokens.length === 0 && generatedImages.length === 0 && !imagesChanged) continue;
+          if (nextMessage === item.message && !imagesChanged && !extraImagesChanged && !lockedTagsChanged) continue;
           patch.push({
             message_id: item.message_id,
             message: nextMessage,
             is_hidden: item.is_hidden,
             data: nextData,
+            extra: nextExtra,
           });
         }
 
@@ -2041,13 +2294,40 @@ export function useStreamingDemo() {
         name === tavern_events.STREAM_TOKEN_RECEIVED ||
         name === tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED)
     ) {
-      readingMode.value = 'following_latest';
       status.value = 'streaming';
       queuePersistReaderChatState();
     }
 
-    queuePersistDisplayedImagePrompts(`event:${name}`);
-    queueExternalSync(String(name));
+    const domains = resolveRefreshDomainsForEvent({
+      type: mapHostRefreshType(name),
+    });
+    scheduleUiRefresh(domains, `event:${name}`);
+  }
+
+  async function bindMvuRefreshEvents() {
+    if (!isOpeningWorkbenchHost) return;
+    if (typeof eventOn !== 'function') return;
+    try {
+      await waitGlobalInitialized('Mvu');
+    } catch {
+      return;
+    }
+
+    const bind = (eventName: string, type: string) => {
+      try {
+        return eventOn(eventName as any, () => {
+          scheduleUiRefresh(resolveRefreshDomainsForEvent({ type }), type);
+        });
+      } catch {
+        return null;
+      }
+    };
+
+    mvuStops = [
+      bind(Mvu.events.VARIABLE_INITIALIZED, 'mvu.variable_initialized'),
+      bind(Mvu.events.VARIABLE_UPDATE_STARTED, 'mvu.variable_update_started'),
+      bind(Mvu.events.VARIABLE_UPDATE_ENDED, 'mvu.variable_update_ended'),
+    ].filter(Boolean) as StopHandle[];
   }
 
   function rebuildTranscript() {
@@ -2117,6 +2397,7 @@ export function useStreamingDemo() {
     } catch {
       transcript.value = [];
     }
+    galleryRevision.value += 1;
     queueHidePolicy('rebuild');
     queuePersistReaderChatState();
   }
@@ -2207,6 +2488,15 @@ export function useStreamingDemo() {
       finalText.value = result;
       status.value = 'persisting';
       await patchAssistantMessage('done');
+      if (assistantMessageId.value != null) {
+        const reprocessResult = await reprocessMessageVariablesById(assistantMessageId.value, {
+          force: true,
+          refreshMessage: true,
+        });
+        if (reprocessResult.status === 'error') {
+          console.warn('[stream-demo] direct MVU reprocess failed', reprocessResult);
+        }
+      }
       await emitOfficialGenerationLifecycle(assistantMessageId.value, options.createUser ? 'normal' : 'regenerate');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
@@ -2545,7 +2835,11 @@ export function useStreamingDemo() {
     void syncOpeningAssistantMessage('none', false);
     rebuildTranscript();
     if (isOpeningWorkbenchHost) {
+      sanitizePluginImageCacheMeta('mounted');
+      void sanitizePluginImageExtrasInCurrentChat('mounted');
       bindHistoryRefreshEvents();
+      void bindMvuRefreshEvents();
+      bindImagePersistenceEvents();
       bindDisplayedImagePromptObserver();
       queuePersistDisplayedImagePrompts('mounted', 240);
       queueHidePolicy('mounted');
@@ -2595,6 +2889,10 @@ export function useStreamingDemo() {
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
     historyStops = [];
+    imageBridgeStops.forEach(stop => stop?.stop?.());
+    imageBridgeStops = [];
+    mvuStops.forEach(stop => stop?.stop?.());
+    mvuStops = [];
     if (hidePolicyTimer) {
       window.clearTimeout(hidePolicyTimer);
       hidePolicyTimer = 0;
@@ -2641,6 +2939,7 @@ export function useStreamingDemo() {
     visibleTranscript,
     transcriptStats,
     galleryEntries,
+    mvuSourceRevision,
     latestUserItem,
     latestAssistantItem,
     inputHasText,
@@ -2658,6 +2957,8 @@ export function useStreamingDemo() {
     shouldShowOpeningSetup,
     readerSummary,
     logs,
+    beginPendingImageTask,
+    markRecentImageIntent,
     runDemo,
     rollLatestTurn,
     refreshWorkbench,

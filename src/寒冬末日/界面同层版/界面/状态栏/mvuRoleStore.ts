@@ -2,6 +2,7 @@ import { useIntervalFn } from '@vueuse/core';
 
 import { Schema } from '../../../schema';
 import { normalizeRoomTag, parseRoomTag } from '../../../util/room';
+import { resolveMvuSnapshotState } from './mvuSnapshotPolicy';
 
 type SchemaType = z.output<typeof Schema>;
 type RoleLike = SchemaType[string & keyof SchemaType] | Record<string, any>;
@@ -88,11 +89,12 @@ export function readMvuStatData(
   return { ok: false };
 }
 
-function resolveTargetMessageId(rawTarget: number | 'latest' | null | undefined): number | 'latest' {
+function resolveTargetMessageId(rawTarget: number | 'latest' | null | undefined): number | 'latest' | null {
+  if (rawTarget == null) return null;
   if (rawTarget === 'latest') return 'latest';
   const numeric = Number(rawTarget);
-  if (Number.isFinite(numeric) && numeric >= 0) return Math.trunc(numeric);
-  return 'latest';
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return Math.trunc(numeric);
 }
 
 function readExtraAnalysisFlag(): boolean {
@@ -160,56 +162,48 @@ export function useMvuRoleStore(targetMessageId: Ref<number | 'latest' | null | 
 
     const target = resolveTargetMessageId(targetMessageId.value);
     const extraAnalysis = readExtraAnalysisFlag();
-    const keepStableSnapshot =
-      ready.value === true &&
-      ((target === 'latest' && source.value === 'latest') ||
-        (typeof target === 'number' && source.value === 'current' && resolvedMessageId.value === target));
-
-    const current = readMvuStatData(target);
-    if (current.ok) {
+    if (target == null) {
       if (refreshTicket.value !== ticket) return;
-      data.value = current.data;
-      source.value = target === 'latest' ? 'latest' : 'current';
-      resolvedMessageId.value = current.messageId;
-      ready.value = true;
+      data.value = initialData;
+      source.value = 'default';
+      resolvedMessageId.value = 'latest';
+      ready.value = false;
       isDuringExtraAnalysis.value = extraAnalysis;
       isRetrying.value = false;
       clearTransientRetryTimer();
-    } else {
-      if (keepStableSnapshot) {
-        isDuringExtraAnalysis.value = extraAnalysis;
-        isRetrying.value = true;
-        queueTransientRetry();
-        return;
-      }
-
-      const latest = target === 'latest' ? current : readMvuStatData('latest');
-      if (latest.ok) {
-        if (refreshTicket.value !== ticket) return;
-        data.value = latest.data;
-        source.value = 'latest';
-        resolvedMessageId.value = latest.messageId;
-        ready.value = true;
-        isDuringExtraAnalysis.value = extraAnalysis;
-        isRetrying.value = false;
-        clearTransientRetryTimer();
-      } else {
-        if (extraAnalysis && ready.value) {
-          isDuringExtraAnalysis.value = extraAnalysis;
-          isRetrying.value = true;
-          queueTransientRetry();
-          return;
-        }
-        if (refreshTicket.value !== ticket) return;
-        data.value = initialData;
-        source.value = 'default';
-        resolvedMessageId.value = 'latest';
-        ready.value = false;
-        isDuringExtraAnalysis.value = extraAnalysis;
-        isRetrying.value = false;
-        clearTransientRetryTimer();
-      }
+      return;
     }
+
+    const current = readMvuStatData(target);
+    const nextState = resolveMvuSnapshotState({
+      target,
+      current,
+      ready: ready.value,
+      previousSource: source.value,
+      previousResolvedMessageId: resolvedMessageId.value,
+      extraAnalysis,
+    });
+
+    if (refreshTicket.value !== ticket) return;
+
+    isDuringExtraAnalysis.value = extraAnalysis;
+    isRetrying.value = nextState.isRetrying;
+
+    if (nextState.mode === 'resolved') {
+      data.value = nextState.data;
+      source.value = nextState.source;
+      resolvedMessageId.value = nextState.resolvedMessageId;
+      ready.value = nextState.ready;
+      clearTransientRetryTimer();
+      return;
+    }
+
+    data.value = initialData;
+    source.value = nextState.source;
+    resolvedMessageId.value = nextState.resolvedMessageId;
+    ready.value = nextState.ready;
+    if (nextState.isRetrying) queueTransientRetry();
+    else clearTransientRetryTimer();
   }
 
   const mainRoleEntries = computed(() =>

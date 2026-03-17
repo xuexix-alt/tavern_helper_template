@@ -77,7 +77,12 @@
     </template>
 
     <template v-else>
-      <section class="assistant-card hud-panel clip-corner" :data-message-id="item.message_id">
+      <section
+        class="assistant-card hud-panel clip-corner"
+        :data-message-id="item.message_id"
+        @pointerdown.capture="emit('image-intent', item)"
+        @click.capture="emit('image-intent', item)"
+      >
         <div class="assistant-corners tl"></div>
         <div class="assistant-corners tr"></div>
         <div class="assistant-corners bl"></div>
@@ -102,6 +107,13 @@
         </div>
 
         <div class="assistant-body-wrap">
+          <button
+            type="button"
+            class="assistant-body-proxy"
+            :data-message-id="item.message_id"
+            tabindex="-1"
+            aria-label="触发原楼层图片生成"
+          ></button>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="item.isStreaming"
@@ -163,6 +175,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
+  (event: 'image-intent', item: TranscriptItem): void;
   (event: 'start-edit', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
   (event: 'confirm-edit', item: TranscriptItem): void;
@@ -306,9 +319,26 @@ function onEditInput(event: Event) {
   color: var(--demo-text-secondary);
 }
 .assistant-body-wrap {
+  position: relative;
   padding-top: 6px;
 }
+.assistant-body-proxy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+}
+.assistant-body-proxy:focus {
+  outline: none;
+}
 .assistant-body {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
   font-size: 15px;
   line-height: 1.9;
   color: var(--demo-text-panel-strong);
@@ -329,12 +359,16 @@ function onEditInput(event: Event) {
   margin-bottom: 0;
 }
 
+.assistant-body-wrap :deep(*) {
+  pointer-events: none;
+}
+
 .assistant-body-wrap :deep(.dialog-inline) {
   color: inherit;
   font: inherit;
 }
 
-.assistant-body-wrap :deep(.assistant-generated-gallery) {
+.assistant-body-wrap :deep(.assistant-fallback-generated-gallery) {
   clear: both;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -355,28 +389,32 @@ function onEditInput(event: Event) {
     0 10px 24px color-mix(in srgb, var(--shadow-color) 24%, transparent);
 }
 
-.assistant-body-wrap :deep(.assistant-generated-image) {
+.assistant-body-wrap :deep(.assistant-fallback-generated-image) {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
   margin: 0;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  background: color-mix(in srgb, var(--surface) 12%, transparent);
   overflow: hidden;
   box-shadow:
-    0 8px 18px color-mix(in srgb, black 24%, transparent),
+    0 6px 14px color-mix(in srgb, black 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
 }
 
-.assistant-body-wrap :deep(.assistant-generated-image img) {
+.assistant-body-wrap :deep(.assistant-fallback-generated-image img) {
   display: block;
   width: 100%;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: color-mix(in srgb, var(--surface) 22%, transparent);
-  cursor: pointer;
+  opacity: 0.88;
 }
 
 .assistant-body-wrap :deep(.assistant-image-prompt-list) {
+  pointer-events: auto;
   display: grid;
   gap: 8px;
   margin-top: 16px;
@@ -395,26 +433,36 @@ function onEditInput(event: Event) {
   word-break: break-word;
 }
 
-.assistant-body-wrap :deep(.assistant-inline-generated-image) {
+.assistant-body-wrap :deep(.assistant-fallback-inline-image) {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
   display: block;
   margin: 16px 0;
   border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   border-radius: 16px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  background: color-mix(in srgb, var(--surface) 12%, transparent);
   box-shadow:
-    0 10px 24px color-mix(in srgb, black 24%, transparent),
+    0 8px 18px color-mix(in srgb, black 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
 }
 
-.assistant-body-wrap :deep(.assistant-inline-generated-image img) {
+.assistant-body-wrap :deep(.assistant-fallback-inline-image img) {
   display: block;
   width: 100%;
   height: auto;
   max-height: min(72vh, 42rem);
   object-fit: cover;
   background: color-mix(in srgb, var(--surface) 22%, transparent);
-  cursor: pointer;
+  opacity: 0.88;
+}
+
+.assistant-body-wrap :deep(.st-chatu8-image-button),
+.assistant-body-wrap :deep(.st-chatu8-image-span) {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
 }
 
 .assistant-toolbar,
@@ -560,7 +608,7 @@ function onEditInput(event: Event) {
 }
 
 @media (max-width: 760px) {
-  .assistant-body-wrap :deep(.assistant-generated-gallery) {
+  .assistant-body-wrap :deep(.assistant-fallback-generated-gallery) {
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
     margin-top: 14px;
@@ -568,11 +616,11 @@ function onEditInput(event: Event) {
     border-radius: 14px;
   }
 
-  .assistant-body-wrap :deep(.assistant-generated-image) {
+  .assistant-body-wrap :deep(.assistant-fallback-generated-image) {
     border-radius: 12px;
   }
 
-  .assistant-body-wrap :deep(.assistant-inline-generated-image) {
+  .assistant-body-wrap :deep(.assistant-fallback-inline-image) {
     margin: 12px 0;
     border-radius: 12px;
   }

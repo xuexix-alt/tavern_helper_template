@@ -204,13 +204,14 @@
 
 <script setup lang="ts">
 import type { TranscriptItem } from '../types';
+import { buildMvuSourceOptions } from '../mvuSourceOptions';
 import { readMvuStatData, useMvuRoleStore } from '../mvuRoleStore';
-import { useDataStore } from '../../../../界面/store';
 
 const props = defineProps<{
   targetMessageId?: number | null;
   transcriptItems?: TranscriptItem[];
   activeCharacterKey?: string | null;
+  refreshRevision?: number;
 }>();
 
 const emit = defineEmits<{
@@ -221,18 +222,10 @@ const emit = defineEmits<{
 
 type RoleTab = 'main' | 'temp';
 type PageTab = 'agents' | 'system';
-type RoleSourceOption = {
-  key: string;
-  label: string;
-  pillLabel: string;
-  targetMessageId: number | 'latest';
-  sortId: number;
-};
-
-const store = useDataStore();
 const pageTab = ref<PageTab>('agents');
 const activeTab = ref<RoleTab>('main');
 const mvuReady = ref(false);
+const sourceRevision = ref(0);
 
 function setPageTab(nextTab: PageTab) {
   pageTab.value = nextTab;
@@ -243,76 +236,27 @@ const normalizedTargetMessageId = computed(() => {
   if (!Number.isFinite(numeric) || numeric < 0) return null;
   return Math.trunc(numeric);
 });
-const selectedSourceKey = ref('latest');
-const sourceOptions = computed<RoleSourceOption[]>(() => {
-  const options: RoleSourceOption[] = [
-    {
-      key: 'latest',
-      label: 'latest',
-      pillLabel: 'latest',
-      targetMessageId: 'latest',
-      sortId: Number.MAX_SAFE_INTEGER,
+const selectedSourceKey = ref('');
+const sourceOptions = computed(() => {
+  const refreshRevision = sourceRevision.value;
+  if (!mvuReady.value) return [];
+  return buildMvuSourceOptions({
+    transcriptItems: Array.isArray(props.transcriptItems) ? props.transcriptItems : [],
+    targetMessageId: normalizedTargetMessageId.value,
+    refreshRevision,
+    hasStatData(messageId) {
+      return readMvuStatData(messageId).ok;
     },
-  ];
-  if (!mvuReady.value) return options;
-  const transcriptItems = Array.isArray(props.transcriptItems) ? props.transcriptItems : [];
-  const filtered = transcriptItems
-    .filter(item => item.isOpening || item.role === 'assistant')
-    .sort((a, b) => a.message_id - b.message_id);
-  const derived: RoleSourceOption[] = [];
-  for (const item of filtered) {
-    const effectiveId = item.message_id;
-    if (effectiveId == null) continue;
-    if (!readMvuStatData(effectiveId).ok) continue;
-
-    if (item.isOpening) {
-      derived.push({
-        key: `message:${item.message_id}`,
-        label: `${item.message_id}#`,
-        pillLabel: `${item.message_id}#`,
-        targetMessageId: effectiveId,
-        sortId: item.message_id,
-      });
-      continue;
-    }
-
-    derived.push({
-      key: `message:${item.message_id}`,
-      label: `${item.message_id}#`,
-      pillLabel: `${effectiveId}#`,
-      targetMessageId: effectiveId,
-      sortId: item.message_id,
-    });
-  }
-  derived
-    .sort((a, b) => b.sortId - a.sortId)
-    .forEach(option => {
-      if (!options.some(existing => existing.key === option.key)) options.push(option);
-    });
-  if (
-    normalizedTargetMessageId.value != null &&
-    !options.some(option => option.targetMessageId === normalizedTargetMessageId.value) &&
-    readMvuStatData(normalizedTargetMessageId.value).ok
-  )
-    options.push({
-      key: `message:${normalizedTargetMessageId.value}`,
-      label: `${normalizedTargetMessageId.value}#`,
-      pillLabel: `${normalizedTargetMessageId.value}#`,
-      targetMessageId: normalizedTargetMessageId.value,
-      sortId: normalizedTargetMessageId.value,
-    });
-  return options;
+  });
 });
 const selectedSourceOption = computed(
   () => sourceOptions.value.find(option => option.key === selectedSourceKey.value) ?? sourceOptions.value[0] ?? null,
 );
-const selectedTargetMessageId = computed(
-  () => selectedSourceOption.value?.targetMessageId ?? normalizedTargetMessageId.value ?? 'latest',
-);
+const selectedTargetMessageId = computed(() => selectedSourceOption.value?.targetMessageId ?? null);
 const {
+  data: mvuData,
   ready,
   source,
-  resolvedMessageId,
   isDuringExtraAnalysis,
   isRetrying,
   hasAnyRole,
@@ -329,46 +273,41 @@ const preferredRoleName = ref('');
 const selectedCharacterKey = computed(() => props.activeCharacterKey ?? internalSelectedKey.value);
 const currentSourceIndex = computed(() => {
   const index = sourceOptions.value.findIndex(option => option.key === selectedSourceKey.value);
-  return index >= 0 ? index : 0;
+  return index;
 });
 const canPrevSource = computed(() => currentSourceIndex.value > 0);
-const canNextSource = computed(() => currentSourceIndex.value < sourceOptions.value.length - 1);
+const canNextSource = computed(() => currentSourceIndex.value >= 0 && currentSourceIndex.value < sourceOptions.value.length - 1);
 const currentSourcePill = computed(() => {
-  if (source.value === 'latest') {
-    return resolvedMessageId.value === 'latest' ? 'latest' : `${resolvedMessageId.value}#`;
-  }
-  return selectedSourceOption.value?.pillLabel ?? 'latest';
+  return selectedSourceOption.value?.pillLabel ?? '--';
 });
-const currentSourcePosition = computed(() => `${currentSourceIndex.value + 1}/${sourceOptions.value.length || 1}`);
+const currentSourcePosition = computed(() => {
+  if (sourceOptions.value.length === 0 || currentSourceIndex.value < 0) return '0/0';
+  return `${currentSourceIndex.value + 1}/${sourceOptions.value.length}`;
+});
 const sourceLabel = computed(() => {
   const selected = selectedSourceOption.value;
-  if (!selected) return 'latest';
-  if (isRetrying.value) return `目标楼层 ${selected.pillLabel} 正在重试`;
-  if (source.value === 'default') return `目标楼层 ${selected.pillLabel} 暂无数据`;
-  if (source.value === 'latest' && selected.targetMessageId !== 'latest') {
-    const latestLabel = resolvedMessageId.value === 'latest' ? 'latest' : `${resolvedMessageId.value}#`;
-    return `目标楼层 ${selected.pillLabel} 临时回退 latest（${latestLabel}）`;
-  }
-  if (selected.targetMessageId === 'latest') {
-    return resolvedMessageId.value === 'latest'
-      ? '当前数据来自 latest'
-      : `当前数据来自 latest（${resolvedMessageId.value}#）`;
-  }
-  return `当前数据来自目标楼层 ${selected.pillLabel}`;
+  if (!selected) return '当前暂无可用变量楼层';
+  if (isRetrying.value) return `目标楼层 ${selected.pillLabel} 等待变量稳定`;
+  if (source.value === 'default') return `目标楼层 ${selected.pillLabel} 暂无 stat_data`;
+  return selected.isLatest
+    ? `当前数据来自最新变量楼层 ${selected.pillLabel}`
+    : `当前数据来自变量楼层 ${selected.pillLabel}`;
 });
-const shelterLevel = computed(() => `${String(_.get(store.data, '庇护所.庇护所等级', '--'))}`);
-const dailyRollText = computed(() => String(_.get(store.data, '庇护所.今日投掷点数', '--')) || '--');
-const pityText = computed(() => String(_.get(store.data, '庇护所.距离上次升级', '--')) || '--');
+const shelterLevel = computed(() => `${String(_.get(mvuData.value, '庇护所.庇护所等级', '--'))}`);
+const dailyRollText = computed(() => String(_.get(mvuData.value, '庇护所.今日投掷点数', '--')) || '--');
+const pityText = computed(() => String(_.get(mvuData.value, '庇护所.距离上次升级', '--')) || '--');
 const expansionState = computed(() => ({
-  medical: String(_.get(store.data, '庇护所.可扩展区域.医疗翼', '未解锁')),
-  workshop: String(_.get(store.data, '庇护所.可扩展区域.制造工坊', '未解锁')),
-  hangar: String(_.get(store.data, '庇护所.可扩展区域.载具格纳库', '未解锁')),
+  medical: String(_.get(mvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
+  workshop: String(_.get(mvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
+  hangar: String(_.get(mvuData.value, '庇护所.可扩展区域.载具格纳库', '未解锁')),
 }));
 
 watch(
   sourceOptions,
   options => {
-    if (!options.some(option => option.key === selectedSourceKey.value)) selectedSourceKey.value = 'latest';
+    if (!options.some(option => option.key === selectedSourceKey.value)) {
+      selectedSourceKey.value = options[0]?.key ?? '';
+    }
   },
   { immediate: true },
 );
@@ -416,6 +355,14 @@ onMounted(async () => {
   }
 });
 
+watch(
+  () => props.refreshRevision ?? 0,
+  value => {
+    sourceRevision.value = Number(value) || 0;
+  },
+  { immediate: true },
+);
+
 function roleName(entry: { key: string; role: Record<string, any> }) {
   return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
 }
@@ -435,7 +382,8 @@ function setActiveCharacter(key: string) {
 }
 
 function selectSourceByOffset(offset: -1 | 1) {
-  const nextIndex = currentSourceIndex.value + offset;
+  const baseIndex = currentSourceIndex.value >= 0 ? currentSourceIndex.value : 0;
+  const nextIndex = baseIndex + offset;
   const nextOption = sourceOptions.value[nextIndex];
   if (!nextOption) return;
   const currentEntry = activeEntries.value.find(entry => entry.key === selectedCharacterKey.value);

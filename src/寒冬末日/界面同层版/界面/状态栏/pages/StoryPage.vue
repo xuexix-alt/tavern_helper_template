@@ -9,30 +9,11 @@
       <div class="ui-topbar-actions">
         <span class="ui-online">● 在线</span>
 
-        <button
-          type="button"
-          class="ui-icon-btn"
-          @click="
-            closeUtilityDrawer();
-            roleDrawerOpen = true;
-          "
-        >
-          角色
-        </button>
+        <button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色</button>
 
-        <button
-          type="button"
-          class="ui-icon-btn"
-          @click="
-            closeUtilityDrawer();
-            galleryDrawerOpen = true;
-            roleDrawerOpen = false;
-          "
-        >
-          图库
-        </button>
+        <button type="button" class="ui-icon-btn" @click="openGalleryDrawer">图库</button>
 
-        <button type="button" class="ui-icon-btn" @click="settingsModalOpen = true">排版</button>
+        <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
       </div>
     </header>
 
@@ -45,10 +26,7 @@
         type="button"
         class="ui-sidebar-toggle"
         :class="{ open: roleDrawerOpen }"
-        @click="
-          closeUtilityDrawer();
-          roleDrawerOpen = !roleDrawerOpen;
-        "
+        @click="toggleRoleDrawer"
       >
         <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
       </button>
@@ -57,7 +35,7 @@
         <div class="ui-sidebar-head">
           <div>
             <span class="demo-kicker">CHARACTER // SIDEBAR</span>
-            <strong>角色&房间</strong>
+            <strong>角色&伊甸</strong>
           </div>
           <button type="button" class="ui-close-btn" @click="closeRoleDrawer">✕</button>
         </div>
@@ -65,6 +43,7 @@
         <div class="ui-sidebar-body">
           <MvuRolePanel
             :transcript-items="transcript"
+            :refresh-revision="mvuSourceRevision"
             :active-character-key="activeRoleKey"
             @select-character="handleRoleSelect"
             @roster-change="handleRosterChange"
@@ -77,11 +56,7 @@
         type="button"
         class="ui-sidebar-toggle ui-sidebar-toggle-right"
         :class="{ open: galleryDrawerOpen }"
-        @click="
-          closeUtilityDrawer();
-          roleDrawerOpen = false;
-          galleryDrawerOpen = !galleryDrawerOpen;
-        "
+        @click="toggleGalleryDrawer"
       >
         <span class="ui-sidebar-toggle-label">[ GALLERY ]</span>
       </button>
@@ -95,14 +70,20 @@
           <button type="button" class="ui-close-btn" @click="closeGalleryDrawer">✕</button>
         </div>
 
-        <div class="ui-sidebar-body">
+        <div class="ui-sidebar-body ui-sidebar-body-gallery">
           <ImageGalleryPanel
+            class="ui-gallery-panel-host"
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @jump-message="jumpToTranscriptMessage"
             @close="closeGalleryDrawer"
           />
         </div>
+        <footer class="ui-sidebar-footer ui-sidebar-footer-gallery">
+          <button type="button" class="ui-sidebar-footer-btn clip-corner-sm" @click="closeGalleryDrawer">
+            关闭图廊
+          </button>
+        </footer>
       </aside>
 
       <main class="ui-main-panel">
@@ -125,6 +106,7 @@
               :can-swipe-prev="canSwipeLatestAssistantPrev"
               :can-swipe-next="canSwipeLatestAssistantNext"
               @open-detail="openDetail"
+              @image-intent="handleTranscriptImageIntent"
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
               @reroll-opening="rerollOpening"
@@ -359,6 +341,14 @@ import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
+import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
+import {
+  convertIframePointToHostPoint,
+  resolveHostTriggerTargetFromPoint,
+} from '../hostCoordinateTarget';
+import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
+import { resolveWithRetry } from '../hostTargetRetry';
+import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { useStreamingDemo } from '../useStreamingDemo';
 
 const {
@@ -376,10 +366,13 @@ const {
   visibleTranscript,
   transcriptStats,
   galleryEntries,
+  mvuSourceRevision,
   latestUserItem,
   latestAssistantItem,
   readerSummary,
   logs,
+  beginPendingImageTask,
+  markRecentImageIntent,
   editingUserMessageId,
   editingUserDraft,
   rollbackConfirmMessageId,
@@ -540,6 +533,38 @@ function closeGalleryDrawer() {
   galleryDrawerOpen.value = false;
 }
 
+function openRoleDrawer() {
+  closeUtilityDrawer();
+  closeGalleryDrawer();
+  roleDrawerOpen.value = true;
+}
+
+function openGalleryDrawer() {
+  closeUtilityDrawer();
+  closeRoleDrawer();
+  galleryDrawerOpen.value = true;
+}
+
+function openSettingsModal() {
+  settingsModalOpen.value = true;
+}
+
+function toggleRoleDrawer() {
+  if (roleDrawerOpen.value) {
+    closeRoleDrawer();
+    return;
+  }
+  openRoleDrawer();
+}
+
+function toggleGalleryDrawer() {
+  if (galleryDrawerOpen.value) {
+    closeGalleryDrawer();
+    return;
+  }
+  openGalleryDrawer();
+}
+
 function closeSideDrawers() {
   roleDrawerOpen.value = false;
   galleryDrawerOpen.value = false;
@@ -617,6 +642,29 @@ function collectReachableHostDocuments(): Document[] {
   return docs;
 }
 
+function collectReachableHostWindows(): Window[] {
+  const windows: Window[] = [];
+  const pushWindow = (hostWindow: Window | null | undefined) => {
+    if (!hostWindow) return;
+    if (windows.includes(hostWindow)) return;
+    windows.push(hostWindow);
+  };
+
+  pushWindow(window);
+  try {
+    pushWindow(window.parent);
+  } catch {
+    // ignore
+  }
+  try {
+    pushWindow(window.top);
+  } catch {
+    // ignore
+  }
+
+  return windows;
+}
+
 function resolveHostMessageTriggerTarget(messageId: number): HTMLElement | null {
   try {
     if (typeof retrieveDisplayedMessage === 'function') {
@@ -651,6 +699,31 @@ function resolveHostMessageTriggerTarget(messageId: number): HTMLElement | null 
   }
 
   return null;
+}
+
+function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: MouseEvent | null): HTMLElement | null {
+  if (event) {
+    try {
+      const frameElement = window.frameElement as HTMLElement | null;
+      const frameRect = frameElement?.getBoundingClientRect?.();
+      if (frameRect) {
+        const hostPoint = convertIframePointToHostPoint(
+          { clientX: event.clientX, clientY: event.clientY },
+          { left: frameRect.left, top: frameRect.top },
+        );
+
+        for (const hostWindow of collectReachableHostWindows()) {
+          const hostDocument = hostWindow.document;
+          const target = resolveHostTriggerTargetFromPoint(hostDocument as any, hostPoint) as HTMLElement | null;
+          if (target) return target;
+        }
+      }
+    } catch {
+      // ignore and fallback to message id lookup
+    }
+  }
+
+  return resolveHostMessageTriggerTarget(messageId);
 }
 
 function resolveHostMessageRoot(messageId: number): HTMLElement | null {
@@ -707,7 +780,7 @@ function resolveHostImageButtonByPromptToken(messageId: number, promptToken: str
     if (!payload) continue;
     if (normalizePromptTokenForCompare(payload) === needle) return button;
   }
-  return buttons[0] ?? null;
+  return null;
 }
 
 function resolveHostImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
@@ -831,7 +904,7 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
-function dispatchHostDoubleClick(target: HTMLElement): boolean {
+function dispatchHostDoubleClick(target: HTMLElement, hostPoint?: { clientX: number; clientY: number } | null): boolean {
   try {
     const doc = target.ownerDocument;
     const view = doc.defaultView;
@@ -839,8 +912,14 @@ function dispatchHostDoubleClick(target: HTMLElement): boolean {
     const rect = target.getBoundingClientRect();
     const width = Math.max(rect.width, 16);
     const height = Math.max(rect.height, 16);
-    const clientX = Math.round(rect.left + Math.min(width - 8, Math.max(8, width * 0.3)));
-    const clientY = Math.round(rect.top + Math.min(height - 8, Math.max(8, height * 0.35)));
+    const clientX =
+      hostPoint?.clientX != null
+        ? Number(hostPoint.clientX)
+        : Math.round(rect.left + Math.min(width - 8, Math.max(8, width * 0.3)));
+    const clientY =
+      hostPoint?.clientY != null
+        ? Number(hostPoint.clientY)
+        : Math.round(rect.top + Math.min(height - 8, Math.max(8, height * 0.35)));
     target.dispatchEvent(
       new view.MouseEvent('dblclick', {
         bubbles: true,
@@ -860,52 +939,75 @@ function dispatchHostDoubleClick(target: HTMLElement): boolean {
   }
 }
 
-function proxyImageMenuToHost(item: TranscriptItem) {
+async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
   const messageId = Math.trunc(Number(item?.message_id));
   if (!Number.isFinite(messageId) || messageId < 0) return;
-  const target = resolveHostMessageTriggerTarget(messageId);
+  const hostPoint = (() => {
+    if (!event) return null;
+    try {
+      const frameElement = window.frameElement as HTMLElement | null;
+      const frameRect = frameElement?.getBoundingClientRect?.();
+      if (!frameRect) return null;
+      return convertIframePointToHostPoint(
+        { clientX: event.clientX, clientY: event.clientY },
+        { left: frameRect.left, top: frameRect.top },
+      );
+    } catch {
+      return null;
+    }
+  })();
+
+  const target = await resolveWithRetry(() => resolveHostMessageTriggerTargetFromEvent(messageId, event), {
+    attempts: 5,
+    delayMs: 90,
+  });
   if (!target) {
     toastr?.warning?.(`未找到楼层 #${messageId} 的原生正文节点`);
     return;
   }
-  if (!dispatchHostDoubleClick(target)) {
+  if (!dispatchHostDoubleClick(target, hostPoint)) {
     toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
   }
 }
 
 function handleTranscriptDoubleClickCapture(event: MouseEvent) {
-  const target = event.target as HTMLElement | null;
-  if (!target) return;
-  if (target.closest('.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image')) return;
-  const body = target.closest('.assistant-body[data-message-id]') as HTMLElement | null;
-  if (!body) return;
-
-  const rawMessageId = Number(body.dataset.messageId ?? '');
-  if (!Number.isFinite(rawMessageId) || rawMessageId < 0) return;
+  const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
+  if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
 
   event.preventDefault();
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
-  proxyImageMenuToHost({ message_id: Math.trunc(rawMessageId) } as TranscriptItem);
+  beginPendingImageTask(Math.trunc(rawMessageId));
+  void proxyImageMenuToHost({ message_id: Math.trunc(rawMessageId) } as TranscriptItem, event);
+}
+
+function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchEvent) {
+  const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
+  if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
+  markRecentImageIntent(Math.trunc(rawMessageId), 'transcript');
+}
+
+function handleTranscriptImageIntent(item: TranscriptItem) {
+  const messageId = Math.trunc(Number(item?.message_id));
+  if (!Number.isFinite(messageId) || messageId < 0) return;
+  markRecentImageIntent(messageId, 'transcript');
 }
 
 function handleGeneratedImageClickCapture(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   if (!(target instanceof HTMLImageElement)) return;
-  const carrier = target.closest(
-    '.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image',
-  ) as HTMLElement | null;
+  if (!isPluginNativeImageElement(target)) return;
+  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier) return;
 
-  const messageId = Number(carrier.dataset.messageId ?? target.dataset.messageId ?? '');
-  const promptToken = decodePromptToken(String(carrier.dataset.promptToken ?? target.dataset.promptToken ?? ''));
-  const requestId = String(carrier.dataset.requestId ?? target.dataset.requestId ?? '').trim();
-  const imageSrc = decodePromptToken(
-    String(
-      carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? '',
-    ),
-  );
+  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+    carrierDataset: carrier.dataset,
+    targetDataset: target.dataset,
+    targetAttrSrc: target.getAttribute('src'),
+    targetCurrentSrc: target.currentSrc,
+    targetSrc: target.getAttribute('src'),
+  });
   if (!Number.isFinite(messageId)) return;
 
   const { hostImage } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
@@ -920,19 +1022,17 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
 function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   if (!(target instanceof HTMLImageElement)) return;
-  const carrier = target.closest(
-    '.assistant-generated-image, .assistant-inline-generated-image, .assistant-gallery-image',
-  ) as HTMLElement | null;
+  if (!isPluginNativeImageElement(target)) return;
+  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier) return;
 
-  const messageId = Number(carrier.dataset.messageId ?? target.dataset.messageId ?? '');
-  const promptToken = decodePromptToken(String(carrier.dataset.promptToken ?? target.dataset.promptToken ?? ''));
-  const requestId = String(carrier.dataset.requestId ?? target.dataset.requestId ?? '').trim();
-  const imageSrc = decodePromptToken(
-    String(
-      carrier.dataset.imageSrc ?? target.dataset.imageSrc ?? target.getAttribute('src') ?? target.currentSrc ?? '',
-    ),
-  );
+  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+    carrierDataset: carrier.dataset,
+    targetDataset: target.dataset,
+    targetAttrSrc: target.getAttribute('src'),
+    targetCurrentSrc: target.currentSrc,
+    targetSrc: target.getAttribute('src'),
+  });
   if (!Number.isFinite(messageId)) return;
 
   const { hostImage, hostButton } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
@@ -942,10 +1042,55 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
+  markRecentImageIntent(Math.trunc(messageId), 'gallery');
+  beginPendingImageTask(Math.trunc(messageId));
   dispatchHostDoubleClick(targetNode);
 }
 
+function handleGeneratedImagePointerDownCapture(event: PointerEvent) {
+  if (event.pointerType !== 'touch') return;
+  const target = event.target as HTMLElement | null;
+  if (!(target instanceof HTMLImageElement)) return;
+  if (!isPluginNativeImageElement(target)) return;
+  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier) return;
+
+  event.stopPropagation();
+  const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
+  nativeEvent.stopImmediatePropagation?.();
+}
+
+function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
+  if (event.pointerType !== 'touch') return;
+  const target = event.target as HTMLElement | null;
+  if (!(target instanceof HTMLImageElement)) return;
+  if (!isPluginNativeImageElement(target)) return;
+  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier) return;
+
+  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+    carrierDataset: carrier.dataset,
+    targetDataset: target.dataset,
+    targetAttrSrc: target.getAttribute('src'),
+    targetCurrentSrc: target.currentSrc,
+    targetSrc: target.getAttribute('src'),
+  });
+  if (!Number.isFinite(messageId)) return;
+
+  const { hostImage } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
+  if (!hostImage) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
+  nativeEvent.stopImmediatePropagation?.();
+  triggerHostElementClick(hostImage);
+}
+
+useEventListener(document, 'pointerdown', handleTranscriptIntentCapture, { capture: true });
+useEventListener(document, 'click', handleTranscriptIntentCapture, { capture: true });
 useEventListener(document, 'dblclick', handleTranscriptDoubleClickCapture, { capture: true });
+useEventListener(document, 'pointerdown', handleGeneratedImagePointerDownCapture, { capture: true });
+useEventListener(document, 'pointerup', handleGeneratedImagePointerUpCapture, { capture: true });
 useEventListener(document, 'click', handleGeneratedImageClickCapture, { capture: true });
 useEventListener(document, 'dblclick', handleGeneratedImageDoubleClickCapture, { capture: true });
 
@@ -1126,8 +1271,8 @@ useEventListener(window, 'keydown', event => {
 
 .ui-sidebar {
   position: absolute;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   left: 0;
   top: 0;
   bottom: 0;
@@ -1198,6 +1343,8 @@ useEventListener(window, 'keydown', event => {
 
 .ui-sidebar-toggle.open {
   transform: translateX(320px) translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ui-sidebar-toggle-right {
@@ -1218,6 +1365,8 @@ useEventListener(window, 'keydown', event => {
 
 .ui-sidebar-toggle-right.open {
   transform: translateX(-320px) translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ui-sidebar-toggle-right .ui-sidebar-toggle-label {
@@ -1269,12 +1418,49 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-sidebar-body {
-  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: auto;
   padding: 12px;
+}
+
+.ui-sidebar-body-gallery {
+  overflow: hidden;
+}
+
+.ui-gallery-panel-host {
+  flex: 1 1 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.ui-sidebar-footer {
+  flex: 0 0 auto;
+  padding: 0 12px 12px;
+}
+
+.ui-sidebar-footer-gallery {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 0%, transparent),
+    color-mix(in srgb, var(--background) 92%, transparent) 20%
+  );
+}
+
+.ui-sidebar-footer-btn {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 28%, transparent);
+  color: var(--demo-text-primary);
+  font-family: var(--demo-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 .ui-main-panel {
@@ -1317,6 +1503,7 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-bottom-dock {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1326,6 +1513,7 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-bottom-console-strip {
+  flex-shrink: 0;
   width: 100%;
   max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
   margin: 0 auto;
@@ -1654,6 +1842,12 @@ useEventListener(window, 'keydown', event => {
     box-shadow: 14px 0 34px color-mix(in srgb, var(--shadow-color) 82%, transparent);
   }
 
+  .ui-sidebar-right {
+    left: auto;
+    right: 0;
+    box-shadow: -14px 0 34px color-mix(in srgb, var(--shadow-color) 82%, transparent);
+  }
+
   .ui-close-btn {
     display: inline-flex;
     align-items: center;
@@ -1705,10 +1899,16 @@ useEventListener(window, 'keydown', event => {
   .ui-topbar {
     gap: 8px;
     padding: 8px 10px;
+    align-items: flex-start;
   }
 
   .ui-topbar-actions {
-    display: none;
+    display: flex;
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .ui-online {
@@ -1717,8 +1917,12 @@ useEventListener(window, 'keydown', event => {
 
   .ui-icon-btn {
     min-height: 30px;
-    padding: 0 10px;
+    flex: 1 1 calc(33.333% - 4px);
+    justify-content: center;
+    min-width: 0;
+    padding: 0 8px;
     font-size: 10px;
+    letter-spacing: 0.08em;
   }
 
   .ui-bottom-tool-row {
@@ -1827,6 +2031,10 @@ useEventListener(window, 'keydown', event => {
 
   .ui-sidebar-body {
     padding: 8px;
+  }
+
+  .ui-sidebar-footer {
+    padding: 0 8px 8px;
   }
 
   .ui-sidebar-toggle {

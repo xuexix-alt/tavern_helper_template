@@ -111,18 +111,16 @@ function finalizeParsedMvuData(parsed: any, fallback: Mvu.MvuData): Mvu.MvuData 
   return next;
 }
 
-export async function reprocessLatestMessageVariables(options: ReprocessOptions = {}): Promise<ReprocessResult> {
-  const allowHistory = options.allowHistory === true;
-  if (!allowHistory && getViewMessageState().mode === 'history') {
-    return { status: 'blocked', reason: 'history_mode', message_id: null };
-  }
-
-  const resolved = Number(resolveViewMessageId({ preferHistory: false }));
-  if (!Number.isFinite(resolved) || resolved < 0) {
+export async function reprocessMessageVariablesById(
+  messageId: number,
+  options: ReprocessOptions = {},
+): Promise<ReprocessResult> {
+  const normalizedMessageId = Number(messageId);
+  if (!Number.isFinite(normalizedMessageId) || normalizedMessageId < 0) {
     return { status: 'blocked', reason: 'invalid_message_id', message_id: null };
   }
 
-  const targetMessageId = Math.trunc(resolved);
+  const targetMessageId = Math.trunc(normalizedMessageId);
   const inFlight = inFlightByMessageId.get(targetMessageId);
   if (inFlight) {
     return inFlight;
@@ -209,6 +207,19 @@ export async function reprocessLatestMessageVariables(options: ReprocessOptions 
   }
 }
 
+export async function reprocessLatestMessageVariables(options: ReprocessOptions = {}): Promise<ReprocessResult> {
+  const allowHistory = options.allowHistory === true;
+  if (!allowHistory && getViewMessageState().mode === 'history') {
+    return { status: 'blocked', reason: 'history_mode', message_id: null };
+  }
+
+  const resolved = Number(resolveViewMessageId({ preferHistory: false }));
+  if (!Number.isFinite(resolved) || resolved < 0) {
+    return { status: 'blocked', reason: 'invalid_message_id', message_id: null };
+  }
+  return reprocessMessageVariablesById(Math.trunc(resolved), options);
+}
+
 export async function autoReprocessWhenLatestMessageMutated(messageId: number): Promise<ReprocessResult> {
   const updatedMessageId = Number(messageId);
   if (!Number.isFinite(updatedMessageId) || updatedMessageId < 0) {
@@ -226,7 +237,7 @@ export async function autoReprocessWhenLatestMessageMutated(messageId: number): 
     return { status: 'skipped', reason: 'not_latest_message_mutation', message_id: normalizedUpdated };
   }
 
-  return reprocessLatestMessageVariables({
+  return reprocessMessageVariablesById(normalizedUpdated, {
     allowHistory: true,
     force: false,
     refreshMessage: false,
