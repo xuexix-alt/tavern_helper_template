@@ -1,13 +1,16 @@
+import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
 import { collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache.ts';
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;
+  markerId?: string;
   imageId?: string;
   requestId?: string;
   promptToken?: string;
 };
 
 export type ResolvedGeneratedImageSource = {
+  markerId: string;
   imageId: string;
   requestId?: string;
   promptToken?: string;
@@ -44,14 +47,27 @@ function buildEntryImageId(entry: Record<string, any>): string {
   );
 }
 
+function buildEntryMarkerId(entry: Record<string, any>, messageId: number | null): string {
+  return buildGeneratedImageMarkerId({
+    messageId: messageId ?? 0,
+    markerId: normalizeKey(entry?.markerId),
+    imageId: buildEntryImageId(entry),
+    requestId: normalizeKey(entry?.requestId ?? entry?.request_id),
+    promptToken: normalizeKey(entry?.promptToken),
+  });
+}
+
 function matchesImageRef(reference: GeneratedImageSourceRef, entry: Record<string, any>): boolean {
+  const markerId = normalizeKey(reference.markerId);
   const imageId = normalizeKey(reference.imageId);
   const requestId = normalizeKey(reference.requestId);
   const promptToken = normalizeKey(reference.promptToken);
+  const entryMarkerId = buildEntryMarkerId(entry, reference.messageId);
   const entryImageId = buildEntryImageId(entry);
   const entryRequestId = normalizeKey(entry?.requestId ?? entry?.request_id);
   const entryPromptToken = normalizeKey(entry?.promptToken);
 
+  if (markerId && entryMarkerId === markerId) return true;
   if (imageId && entryImageId === imageId) return true;
   if (requestId && entryRequestId === requestId) return true;
   if (promptToken && entryPromptToken === promptToken) return true;
@@ -61,6 +77,7 @@ function matchesImageRef(reference: GeneratedImageSourceRef, entry: Record<strin
 function normalizeResolvedSource(
   entry: Record<string, any>,
   source: ResolvedGeneratedImageSource['source'],
+  messageId: number | null,
 ): ResolvedGeneratedImageSource | null {
   const src = normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData);
   if (!src) return null;
@@ -69,6 +86,7 @@ function normalizeResolvedSource(
   if (!imageId) return null;
 
   return {
+    markerId: buildEntryMarkerId(entry, messageId),
     imageId,
     requestId: normalizeKey(entry?.requestId ?? entry?.request_id) || undefined,
     promptToken: normalizeKey(entry?.promptToken) || undefined,
@@ -80,6 +98,7 @@ function normalizeResolvedSource(
 
 function normalizeCacheEntry(entry: Chatu8CacheEntry): Record<string, any> {
   return {
+    markerId: normalizeKey((entry as any).markerId),
     imageId: normalizeKey(entry.imageId ?? entry.requestId ?? entry.promptToken ?? entry.src),
     requestId: normalizeKey(entry.requestId),
     promptToken: normalizeKey(entry.promptToken),
@@ -98,10 +117,14 @@ export function resolveGeneratedImageSource(
   const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
     ? message.data.stream_demo.generated_images
     : [];
+  const normalizedMessageId =
+    Number.isFinite(Number(reference.messageId)) && Number(reference.messageId) >= 0
+      ? Math.trunc(Number(reference.messageId))
+      : null;
   for (const entry of streamDemoEntries) {
     if (!entry || typeof entry !== 'object') continue;
     if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
-    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo');
+    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo', normalizedMessageId);
     if (resolved) return resolved;
   }
 
@@ -117,14 +140,14 @@ export function resolveGeneratedImageSource(
   for (const entry of swipeEntries) {
     if (!entry || typeof entry !== 'object') continue;
     if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
-    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'extra');
+    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'extra', normalizedMessageId);
     if (resolved) return resolved;
   }
 
   for (const entry of cacheEntries) {
     const normalized = normalizeCacheEntry(entry);
     if (!matchesImageRef(reference, normalized)) continue;
-    const resolved = normalizeResolvedSource(normalized, 'cache');
+    const resolved = normalizeResolvedSource(normalized, 'cache', normalizedMessageId);
     if (resolved) return resolved;
   }
 

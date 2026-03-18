@@ -3,7 +3,12 @@
     <div ref="listRef" class="transcript-scroller" @scroll="handleScroll">
       <div v-if="items.length === 0" class="transcript-empty">暂无消息。发送后将在这里重建真实楼层阅读视图。</div>
 
-      <div v-for="item in items" :key="item.message_id" class="transcript-entry" :data-message-id="item.message_id">
+      <div
+        v-for="item in items"
+        :key="buildTranscriptEntryKey(item.message_id, renderRevision)"
+        class="transcript-entry"
+        :data-message-id="item.message_id"
+      >
         <component
           :is="item.isOpening ? TranscriptOpeningCard : TranscriptMessageCard"
           :item="item"
@@ -31,6 +36,8 @@
           @swipe="emit('swipe-assistant', $event)"
           @toggle-opening="emit('toggle-opening')"
           @reroll-opening="emit('reroll-opening')"
+          @open-image="emit('open-image', $event)"
+          @regenerate-image="emit('regenerate-image', $event)"
         />
       </div>
     </div>
@@ -62,6 +69,7 @@
 
 <script setup lang="ts">
 import type { ReaderFontMode, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
+import { buildTranscriptEntryKey } from '../transcriptDomRefresh.ts';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
 
@@ -80,6 +88,7 @@ const props = defineProps<{
   swipeLabel?: string;
   canSwipePrev?: boolean;
   canSwipeNext?: boolean;
+  renderRevision?: number;
 }>();
 
 const emit = defineEmits<{
@@ -97,6 +106,8 @@ const emit = defineEmits<{
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
   (event: 'swipe-assistant', direction: 'prev' | 'next'): void;
+  (event: 'open-image', image: TranscriptItem['generatedImages'][number]): void;
+  (event: 'regenerate-image', image: TranscriptItem['generatedImages'][number]): void;
 }>();
 
 const listRef = ref<HTMLElement | null>(null);

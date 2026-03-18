@@ -71,6 +71,8 @@
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @jump-message="jumpToTranscriptMessage"
+            @open-image="handleGeneratedImageOpen($event, 'gallery')"
+            @regenerate-image="handleGeneratedImageRegenerate($event, 'gallery')"
             @close="closeGalleryDrawer"
           />
         </div>
@@ -100,8 +102,11 @@
               :swipe-label="latestAssistantSwipeLabel"
               :can-swipe-prev="canSwipeLatestAssistantPrev"
               :can-swipe-next="canSwipeLatestAssistantNext"
+              :render-revision="transcriptDomRevision"
               @open-detail="openDetail"
               @image-intent="handleTranscriptImageIntent"
+              @open-image="handleGeneratedImageOpen"
+              @regenerate-image="handleGeneratedImageRegenerate"
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
               @reroll-opening="rerollOpening"
@@ -118,9 +123,51 @@
         </section>
 
         <section class="ui-bottom-dock">
-          <transition name="utility-mask-fade">
-            <div v-if="activeUtilityDrawer" class="ui-utility-mask" @click="closeUtilityDrawer"></div>
-          </transition>
+          <!-- Teleport遮罩和抽屉到body，突破iframe层级限制 -->
+          <Teleport to="body">
+            <transition name="utility-mask-fade">
+              <div v-if="activeUtilityDrawer" class="ui-utility-mask" @click="closeUtilityDrawer"></div>
+            </transition>
+
+            <transition name="utility-drawer-rise">
+              <section
+                v-if="activeUtilityDrawer"
+                class="ui-bottom-drawer clip-corner"
+                :class="`is-${activeUtilityDrawer}`"
+              >
+                <header class="ui-bottom-drawer-head">
+                  <div class="ui-bottom-drawer-head-copy">
+                    <span class="demo-kicker">{{ activeUtilityMeta.eyebrow }}</span>
+                    <strong>{{ activeUtilityMeta.title }}</strong>
+                    <p>{{ activeUtilityMeta.subtitle }}</p>
+                    <div class="ui-drawer-pills">
+                      <span
+                        v-for="pill in activeUtilityPills"
+                        :key="pill.label"
+                        class="ui-drawer-pill clip-corner-sm"
+                      >
+                        <small>{{ pill.label }}</small>
+                        <strong>{{ pill.value }}</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <button type="button" class="ui-close-btn inline" @click="closeUtilityDrawer">✕</button>
+                </header>
+
+                <div class="ui-bottom-drawer-body" :class="`is-${activeUtilityDrawer}`">
+                  <WorkbenchTabs
+                    v-if="activeUtilityDrawer === 'system'"
+                    :logs="logs"
+                    :busy="busy"
+                    :transcript-total="transcriptStats.total"
+                    :assistant-count="transcriptStats.assistant"
+                    :latest-swipe-label="latestAssistantSwipeLabel"
+                  />
+                  <MapBusinessPanel v-else-if="activeUtilityDrawer === 'map'" />
+                </div>
+              </section>
+            </transition>
+          </Teleport>
 
           <div class="ui-bottom-console-strip clip-corner">
             <div v-if="visibleRoleTabs.length" class="ui-role-rack" role="tablist" aria-label="角色快捷入口">
@@ -138,45 +185,6 @@
             </div>
 
             <div class="ui-bottom-tools">
-              <transition name="utility-drawer-rise">
-                <section
-                  v-if="activeUtilityDrawer"
-                  class="ui-bottom-drawer clip-corner"
-                  :class="`is-${activeUtilityDrawer}`"
-                >
-                  <header class="ui-bottom-drawer-head">
-                    <div class="ui-bottom-drawer-head-copy">
-                      <span class="demo-kicker">{{ activeUtilityMeta.eyebrow }}</span>
-                      <strong>{{ activeUtilityMeta.title }}</strong>
-                      <p>{{ activeUtilityMeta.subtitle }}</p>
-                      <div class="ui-drawer-pills">
-                        <span
-                          v-for="pill in activeUtilityPills"
-                          :key="pill.label"
-                          class="ui-drawer-pill clip-corner-sm"
-                        >
-                          <small>{{ pill.label }}</small>
-                          <strong>{{ pill.value }}</strong>
-                        </span>
-                      </div>
-                    </div>
-                    <button type="button" class="ui-close-btn inline" @click="closeUtilityDrawer">✕</button>
-                  </header>
-
-                  <div class="ui-bottom-drawer-body" :class="`is-${activeUtilityDrawer}`">
-                    <WorkbenchTabs
-                      v-if="activeUtilityDrawer === 'system'"
-                      :logs="logs"
-                      :busy="busy"
-                      :transcript-total="transcriptStats.total"
-                      :assistant-count="transcriptStats.assistant"
-                      :latest-swipe-label="latestAssistantSwipeLabel"
-                    />
-                    <MapBusinessPanel v-else-if="activeUtilityDrawer === 'map'" />
-                  </div>
-                </section>
-              </transition>
-
               <div class="ui-bottom-tool-row">
                 <button
                   type="button"
@@ -321,7 +329,7 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
-import type { TranscriptItem } from '../types';
+import type { GeneratedImageRef, TranscriptItem } from '../types';
 
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
@@ -337,6 +345,7 @@ import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
+import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget.ts';
 import { convertIframePointToHostPoint, resolveHostTriggerTargetFromPoint } from '../hostCoordinateTarget';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveWithRetry } from '../hostTargetRetry';
@@ -361,6 +370,7 @@ const {
   mvuSourceRevision,
   latestUserItem,
   latestAssistantItem,
+  transcriptDomRevision,
   readerSummary,
   logs,
   beginPendingImageTask,
@@ -915,17 +925,20 @@ function resolveHostImageTarget(
   requestId: string,
   imageSrc: string,
 ): {
+  hostMessageRoot: HTMLElement | null;
   hostImage: HTMLImageElement | null;
   hostButton: HTMLElement | null;
   iframeImage: HTMLImageElement | null;
   iframeButton: HTMLElement | null;
 } {
+  const hostMessageRoot = resolveHostMessageTriggerTarget(messageId);
   const buttonByRequestId = requestId ? resolveHostImageButtonByRequestId(messageId, requestId) : null;
   const imageByRequestId = requestId ? resolveHostImageNodeByRequestId(messageId, requestId) : null;
   const iframeButtonByRequestId = requestId ? resolveIframeImageButtonByRequestId(messageId, requestId) : null;
   const iframeImageByRequestId = requestId ? resolveIframeImageNodeByRequestId(messageId, requestId) : null;
   if (imageByRequestId || buttonByRequestId) {
     return {
+      hostMessageRoot,
       hostImage: imageByRequestId ?? resolveHostImageNodeByPromptToken(messageId, promptToken),
       hostButton: buttonByRequestId ?? resolveHostImageButtonByPromptToken(messageId, promptToken),
       iframeImage: iframeImageByRequestId ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
@@ -935,6 +948,7 @@ function resolveHostImageTarget(
 
   if (iframeImageByRequestId || iframeButtonByRequestId) {
     return {
+      hostMessageRoot,
       hostImage: imageByRequestId ?? resolveHostImageNodeByPromptToken(messageId, promptToken),
       hostButton: buttonByRequestId ?? resolveHostImageButtonByPromptToken(messageId, promptToken),
       iframeImage: iframeImageByRequestId ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
@@ -948,6 +962,7 @@ function resolveHostImageTarget(
     const span = imageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
     const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
     return {
+      hostMessageRoot,
       hostImage: imageBySrc,
       hostButton:
         resolveHostImageButtonByRequestId(messageId, spanRequestId) ??
@@ -963,6 +978,7 @@ function resolveHostImageTarget(
     const span = iframeImageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
     const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
     return {
+      hostMessageRoot,
       hostImage: resolveHostImageNodeByPromptToken(messageId, promptToken),
       hostButton: resolveHostImageButtonByPromptToken(messageId, promptToken),
       iframeImage: iframeImageBySrc,
@@ -973,6 +989,7 @@ function resolveHostImageTarget(
   }
 
   return {
+    hostMessageRoot,
     hostImage: resolveHostImageNodeByPromptToken(messageId, promptToken),
     hostButton: resolveHostImageButtonByPromptToken(messageId, promptToken),
     iframeImage: resolveIframeImageNodeByPromptToken(messageId, promptToken),
@@ -1003,13 +1020,26 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
-function resolveGeneratedImageTriggerTarget(input: {
-  hostButton: HTMLElement | null;
-  hostImage: HTMLImageElement | null;
-  iframeButton: HTMLElement | null;
-  iframeImage: HTMLImageElement | null;
-}) {
-  return input.hostButton ?? input.iframeButton ?? input.hostImage ?? input.iframeImage ?? null;
+function resolveGeneratedImageTriggerTarget(
+  input: {
+    hostMessageRoot: HTMLElement | null;
+    hostButton: HTMLElement | null;
+    hostImage: HTMLImageElement | null;
+    iframeButton: HTMLElement | null;
+    iframeImage: HTMLImageElement | null;
+  },
+  action: 'open' | 'regenerate',
+) {
+  return selectGeneratedImageTriggerTarget(
+    {
+      hostButton: input.hostButton,
+      hostImage: input.hostImage,
+      hostMessageRoot: input.hostMessageRoot,
+      iframeButton: input.iframeButton,
+      iframeImage: input.iframeImage,
+    },
+    action,
+  );
 }
 
 function dispatchHostDoubleClick(
@@ -1108,11 +1138,77 @@ function handleTranscriptImageIntent(item: TranscriptItem) {
   markRecentImageIntent(messageId, 'transcript');
 }
 
+function triggerGeneratedImageAction(
+  entry: GeneratedImageRef,
+  action: 'open' | 'regenerate',
+  source: 'transcript' | 'gallery' = 'transcript',
+) {
+  const messageId = Math.trunc(Number(entry?.messageId));
+  if (!Number.isFinite(messageId) || messageId < 0) return;
+  markRecentImageIntent(messageId, source);
+
+  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+    messageId,
+    String(entry?.promptToken ?? '').trim(),
+    String(entry?.requestId ?? '').trim(),
+    '',
+  );
+  const targetNode = resolveGeneratedImageTriggerTarget(
+    {
+      hostMessageRoot,
+      hostButton,
+      hostImage,
+      iframeButton,
+      iframeImage,
+    },
+    action,
+  );
+
+  if (!targetNode) {
+    const verb = action === 'regenerate' ? '重生' : '查看';
+    toastr?.warning?.(`楼层 #${messageId} 的图片${verb}触发目标未找到`);
+    return;
+  }
+
+  if (action === 'regenerate') {
+    if (!dispatchHostDoubleClick(targetNode)) {
+      toastr?.warning?.(`楼层 #${messageId} 的图片重生触发失败`);
+    }
+    return;
+  }
+
+  if (!triggerHostElementClick(targetNode)) {
+    toastr?.warning?.(`楼层 #${messageId} 的图片查看触发失败`);
+  }
+}
+
+function handleGeneratedImageOpen(
+  entry: GeneratedImageRef,
+  source: 'transcript' | 'gallery' = 'transcript',
+) {
+  triggerGeneratedImageAction(entry, 'open', source);
+}
+
+function handleGeneratedImageRegenerate(
+  entry: GeneratedImageRef,
+  source: 'transcript' | 'gallery' = 'transcript',
+) {
+  triggerGeneratedImageAction(entry, 'regenerate', source);
+}
+
+function shouldBypassGeneratedImageBridge(target: HTMLElement | null, carrier: HTMLElement | null) {
+  if (!target || !carrier) return false;
+  if (target.classList.contains('generated-image-asset')) return true;
+  if (carrier.querySelector('img.generated-image-asset')) return true;
+  return false;
+}
+
 function handleGeneratedImageClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
   const target = event.target as HTMLElement | null;
   const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return;
+  if (shouldBypassGeneratedImageBridge(target, carrier)) return;
 
   const targetImage = target instanceof HTMLImageElement ? target : null;
   const parsed = parseGeneratedImageActivationPayload({
@@ -1135,18 +1231,19 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
   const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
     Math.trunc(messageId),
     promptToken,
     requestId,
     imageSrc,
   );
   const targetNode = resolveGeneratedImageTriggerTarget({
+    hostMessageRoot,
     hostButton,
     hostImage,
     iframeButton,
     iframeImage,
-  });
+  }, 'open');
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1162,6 +1259,7 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return;
+  if (shouldBypassGeneratedImageBridge(target, carrier)) return;
 
   const targetImage = target instanceof HTMLImageElement ? target : null;
   const parsed = parseGeneratedImageActivationPayload({
@@ -1184,18 +1282,19 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
     Math.trunc(messageId),
     promptToken,
     requestId,
     imageSrc,
   );
   const targetNode = resolveGeneratedImageTriggerTarget({
+    hostMessageRoot,
     hostButton,
     hostImage,
     iframeButton,
     iframeImage,
-  });
+  }, 'regenerate');
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1248,18 +1347,19 @@ function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
   const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
     Math.trunc(messageId),
     promptToken,
     requestId,
     imageSrc,
   );
   const targetNode = resolveGeneratedImageTriggerTarget({
+    hostMessageRoot,
     hostButton,
     hostImage,
     iframeButton,
     iframeImage,
-  });
+  }, 'open');
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1454,26 +1554,24 @@ useEventListener(window, 'keydown', event => {
 
   /* 修复非移动端底部抽屉显示问题 */
   .ui-bottom-drawer {
-    /* 改为相对于可视区域定位，避免被overflow:hidden裁剪 */
+    /* 使用 fixed 定位覆盖视口，参考选项弹窗的成功方式 */
     position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    /* 从地图按钮上方拉出，宽度和父容器相同 */
-    bottom: auto;
-    top: 50%;
-    margin-top: -240px;
-    /* 宽度与父容器相同 */
-    width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    left: 12px;
+    right: 12px;
+    bottom: 60px;
+    width: auto;
     max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
-    height: 480px;
-    max-height: 480px;
+    margin: 0 auto;
+    height: auto;
+    max-height: 80vh;
+    z-index: 2501;
   }
 
   .ui-bottom-drawer.is-map {
-    width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
+    width: auto;
     max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
-    height: 500px;
-    max-height: 500px;
+    height: 80vh;
+    max-height: 80vh;
   }
 }
 
@@ -1523,7 +1621,7 @@ useEventListener(window, 'keydown', event => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  width: 16px;
   height: 108px;
   padding: 6px 0;
   border: 1px solid var(--demo-border-accent-soft);
@@ -1843,7 +1941,7 @@ useEventListener(window, 'keydown', event => {
   left: 0;
   bottom: calc(100% + 10px);
   width: min(100%, 56rem);
-  max-height: min(72vh, 42rem);
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--demo-border-accent-soft);
@@ -1984,7 +2082,7 @@ useEventListener(window, 'keydown', event => {
 .ui-utility-mask {
   position: fixed;
   inset: 0;
-  z-index: 14;
+  z-index: 2500;
   background: color-mix(in srgb, black 26%, transparent);
 }
 
@@ -2068,6 +2166,10 @@ useEventListener(window, 'keydown', event => {
     padding-left: 14px;
   }
 
+  .ui-sidebar {
+    width: 85vw;
+  }
+
   .ui-topbar,
   .ui-transcript-panel,
   .ui-bottom-dock {
@@ -2076,8 +2178,8 @@ useEventListener(window, 'keydown', event => {
   }
 
   .ui-bottom-dock {
-    padding-bottom: 8px;
-    gap: 6px;
+    padding-bottom: 4px;
+    gap: 4px;
   }
 
   .ui-bottom-console-strip {
@@ -2086,7 +2188,7 @@ useEventListener(window, 'keydown', event => {
     align-items: center;
     justify-content: center;
     gap: 0;
-    padding: 6px;
+    padding: 4px;
     clip-path: none;
     border-radius: 18px;
   }
@@ -2147,10 +2249,10 @@ useEventListener(window, 'keydown', event => {
   .ui-bottom-tool-row .ui-signal-btn {
     flex: 1 1 auto;
     justify-content: center;
-    min-height: 28px;
+    min-height: 24px;
     min-width: 0;
-    padding: 0 8px;
-    gap: 4px;
+    padding: 0 6px;
+    gap: 3px;
     font-size: 9px;
     white-space: nowrap;
   }
@@ -2165,12 +2267,14 @@ useEventListener(window, 'keydown', event => {
   }
 
   .ui-bottom-drawer {
-    left: 0;
-    right: 0;
-    width: 100%;
-    bottom: calc(100% + 6px);
-    max-height: calc(100dvh - 110px);
+    position: fixed;
+    left: 6px;
+    right: 6px;
+    bottom: 60px;
+    width: auto;
+    max-height: calc(100dvh - 96px);
     border-radius: 18px 18px 12px 12px;
+    z-index: 2501;
   }
 
   .ui-bottom-drawer.is-map {
@@ -2224,6 +2328,7 @@ useEventListener(window, 'keydown', event => {
   .ui-sidebar-right {
     left: 6px;
     right: 6px;
+    width: calc(100% - 12px);
     transform: translateY(100%);
   }
 
@@ -2249,7 +2354,7 @@ useEventListener(window, 'keydown', event => {
     position: fixed;
     top: 50%;
     left: 0;
-    width: 28px;
+    width: 20px;
     height: 112px;
     min-height: 112px;
     padding: 0;

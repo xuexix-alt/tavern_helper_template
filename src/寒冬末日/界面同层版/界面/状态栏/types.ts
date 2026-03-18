@@ -54,6 +54,7 @@ export type ReaderLogItem = {
 export type GeneratedImageRef = {
   id: string;
   messageId: number;
+  markerId?: string;
   imageId?: string;
   promptToken: string;
   requestId?: string;

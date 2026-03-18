@@ -107,13 +107,6 @@
         </div>
 
         <div class="assistant-body-wrap">
-          <button
-            type="button"
-            class="assistant-body-proxy"
-            :data-message-id="item.message_id"
-            tabindex="-1"
-            aria-label="触发原楼层图片生成"
-          ></button>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="item.isStreaming"
@@ -134,6 +127,8 @@
               :key="image.id"
               :entry="image"
               variant="inline"
+              @open="emit('open-image', $event)"
+              @regenerate="emit('regenerate-image', $event)"
             />
           </div>
         </div>
@@ -193,6 +188,8 @@ const emit = defineEmits<{
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
   (event: 'swipe', direction: 'prev' | 'next'): void;
+  (event: 'open-image', image: TranscriptItem['generatedImages'][number]): void;
+  (event: 'regenerate-image', image: TranscriptItem['generatedImages'][number]): void;
 }>();
 
 const metaOpen = ref(false);
@@ -332,23 +329,10 @@ function onEditInput(event: Event) {
   position: relative;
   padding-top: 6px;
 }
-.assistant-body-proxy {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: transparent;
-  cursor: pointer;
-}
-.assistant-body-proxy:focus {
-  outline: none;
-}
 .assistant-body {
   position: relative;
   z-index: 1;
-  pointer-events: none;
+  pointer-events: auto;
   font-size: 15px;
   line-height: 1.9;
   color: var(--demo-text-panel-strong);
@@ -367,10 +351,6 @@ function onEditInput(event: Event) {
 }
 .assistant-body-wrap :deep(p:last-child) {
   margin-bottom: 0;
-}
-
-.assistant-body-wrap :deep(*) {
-  pointer-events: none;
 }
 
 .assistant-body-wrap :deep(.dialog-inline) {

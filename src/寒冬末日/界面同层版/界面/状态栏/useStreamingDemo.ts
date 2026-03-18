@@ -33,14 +33,23 @@ import {
   readReaderChatState,
 } from './readerState';
 import { buildPromptTokenFromCachePrompt, collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
+import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision.ts';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
+import { buildGeneratedImageMembership } from './generatedImageMembership.ts';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
 import { buildGeneratedImagePersistencePatch, sanitizePluginImageExtra } from './imagePersistencePatch';
 import { createImageRecentIntentStore } from './imageRecentIntent';
+import {
+  buildHostTranscriptVisibilitySelector,
+  HOST_VISIBILITY_CLASS,
+  HOST_VISIBILITY_STYLE_ID,
+} from './hostTranscriptVisibility.ts';
 import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
+import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
@@ -59,6 +68,7 @@ import type {
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
 type RenderableGeneratedImage = {
+  markerId?: string;
   imageId?: string;
   src: string;
   alt: string;
@@ -158,7 +168,7 @@ function buildFinalHtml(renderSource: string, message_id: number): string {
   if (!html) {
     html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
   }
-  return html;
+  return appendChatu8ArtifactsToHtml(html, renderSource, message_id);
 }
 
 function listReachableHostWindows(): Array<Window & typeof globalThis> {
@@ -248,6 +258,32 @@ function buildAnchorSnippet(input: string): string {
   return normalized.slice(-72);
 }
 
+function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string): string {
+  const token = String(promptToken ?? '').trim();
+  if (!token) return '';
+
+  const normalizedRaw = stripStreamDemoRuntimeTags(String(rawMessage ?? '')).replace(/\r\n/g, '\n');
+  const promptBody = parsePromptBodyFromToken(token);
+  const candidates = [token, promptBody].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const index = normalizedRaw.indexOf(candidate);
+    if (index < 0) continue;
+    const prefix = normalizedRaw
+      .slice(0, index)
+      .split(/\n{2,}/)
+      .pop();
+    const stripped = String(prefix ?? '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const snippet = buildAnchorSnippet(stripped);
+    if (snippet) return snippet;
+  }
+
+  return '';
+}
+
 function createGeneratedImageFigureHtml(
   image: RenderableGeneratedImage,
   className: string,
@@ -260,9 +296,10 @@ function createGeneratedImageFigureHtml(
   const promptTokenAttr = image.promptToken
     ? ` data-prompt-token="${encodeDataAttr(image.promptToken)}"`
     : ' data-prompt-token=""';
+  const markerIdAttr = image.markerId ? ` data-marker-id="${escapeHtml(image.markerId)}"` : ' data-marker-id=""';
   const requestIdAttr = image.requestId ? ` data-request-id="${escapeHtml(image.requestId)}"` : ' data-request-id=""';
   const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
-  return `<figure class="${className}"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
+  return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
 }
 
 function readChatMessageDetail(messageId: number): any | null {
@@ -286,6 +323,7 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
     if (!src || seen.has(src)) continue;
     seen.add(src);
     out.push({
+      markerId: String((item as any)?.markerId ?? '').trim() || undefined,
       imageId: String((item as any)?.imageId ?? '').trim() || undefined,
       src,
       alt: String((item as any)?.alt ?? 'generated image').trim(),
@@ -295,6 +333,22 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
     });
   }
   return out;
+}
+
+function readPersistedGeneratedImageIndex(messageId: number) {
+  const message = readChatMessageDetail(messageId);
+  const list = _.get(message, 'data.stream_demo.generated_images', []);
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .filter(item => item && typeof item === 'object')
+    .map(item => ({
+      markerId: String((item as any)?.markerId ?? '').trim() || undefined,
+      imageId: String((item as any)?.imageId ?? '').trim() || undefined,
+      promptToken: String((item as any)?.promptToken ?? '').trim(),
+      requestId: String((item as any)?.requestId ?? '').trim() || undefined,
+      anchorText: String((item as any)?.anchorText ?? '').trim() || undefined,
+    }));
 }
 
 function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
@@ -332,11 +386,15 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
     if (!src || seen.has(src)) continue;
     seen.add(src);
     out.push({
+      markerId: String((entry as any).markerId ?? '').trim() || undefined,
       imageId: String((entry as any).imageId ?? '').trim() || undefined,
       src,
       alt: String((entry as any).alt ?? 'generated image').trim(),
-      promptToken: buildPromptTokenFromCachePrompt((entry as any).tag ?? (entry as any).prompt ?? ''),
+      promptToken: buildPromptTokenFromCachePrompt(
+        (entry as any).promptToken ?? (entry as any).tag ?? (entry as any).prompt ?? '',
+      ),
       requestId: String((entry as any).requestId ?? (entry as any).request_id ?? '').trim() || undefined,
+      anchorText: String((entry as any).regex ?? '').trim() || undefined,
     });
   }
   return out;
@@ -638,6 +696,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
     if (!src || seen.has(src)) return;
     seen.add(src);
     out.push({
+      markerId: undefined,
       src,
       alt: String(altLike ?? 'generated image').trim(),
       promptToken: buildPromptTokenFromCachePrompt(promptLike),
@@ -772,73 +831,57 @@ function buildGeneratedImageRefsForMessage(input: {
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
-  const imageKeys: string[] = [];
-  const promptByKey = new Map<string, string>();
-  const requestByKey = new Map<string, string>();
-  const anchorByKey = new Map<string, string>();
-  const titleByKey = new Map<string, string>();
-  const characterByKey = new Map<string, string>();
-
-  const mergeImage = (image: RenderableGeneratedImage) => {
-    const src = normalizeImageSrcForCompare(image.src);
-    const imageId = String(image.imageId ?? '').trim();
-    const promptToken = String(image.promptToken ?? '').trim();
-    const requestId = String(image.requestId ?? '').trim();
-    const anchorText = String(image.anchorText ?? '').trim();
-    const imageKey = imageId || requestId || src || promptToken || anchorText;
-    if (!imageKey) return;
-    if (!imageKeys.includes(imageKey)) imageKeys.push(imageKey);
-    const characterName = extractCharacterNameFromPrompt(promptToken);
-    const title = extractGalleryTitleFromPrompt(promptToken) || characterName;
-
-    if (promptToken && !promptByKey.has(imageKey)) promptByKey.set(imageKey, promptToken);
-    if (requestId && !requestByKey.has(imageKey)) requestByKey.set(imageKey, requestId);
-    if (anchorText && !anchorByKey.has(imageKey)) anchorByKey.set(imageKey, anchorText);
-    if (title && !titleByKey.has(imageKey)) titleByKey.set(imageKey, title);
-    if (characterName && !characterByKey.has(imageKey)) characterByKey.set(imageKey, characterName);
-  };
-
-  const images = [
-    ...readPersistedGeneratedImages(messageId),
-    ...readChatu8ExtraImages(messageId),
-    ...readChatu8CacheEntries(messageId).map(item => ({
-      src: item.src,
-      alt: item.alt,
-      promptToken: item.promptToken,
-      requestId: item.requestId,
-    })),
-  ];
-
-  for (const image of images) mergeImage(image);
+  const persistedMembers = readPersistedGeneratedImageIndex(messageId).map(image => ({
+    markerId: String(image.markerId ?? '').trim() || undefined,
+    imageId: String(image.imageId ?? '').trim() || undefined,
+    promptToken: String(image.promptToken ?? '').trim(),
+    requestId: String(image.requestId ?? '').trim() || undefined,
+    anchorText: String(image.anchorText ?? '').trim() || undefined,
+  }));
+  const members = buildGeneratedImageMembership({
+    messageId,
+    promptTokens,
+    persistedEntries: persistedMembers,
+    createdOrderBase,
+  });
 
   let index = 0;
-  return imageKeys.map(imageKey => {
-    const promptToken = promptByKey.get(imageKey) ?? promptTokens[index] ?? '';
-    const anchorText = anchorByKey.get(imageKey) || undefined;
+  return members.map(member => {
+    const markerId =
+      String(member.markerId ?? '').trim() ||
+      buildGeneratedImageMarkerId({
+        messageId,
+        imageId: member.imageId,
+        requestId: member.requestId,
+        promptToken: member.promptToken,
+        anchorText: member.anchorText,
+        order: index,
+      });
+    const promptToken = String(member.promptToken ?? '').trim();
+    const anchorText = String(member.anchorText ?? '').trim() || undefined;
     const characterNameValue = pickFirstNonEmpty(
-      characterByKey.get(imageKey),
       extractCharacterNameFromPrompt(promptToken),
     );
     const characterName = characterNameValue || undefined;
     const title = pickFirstNonEmpty(
-      titleByKey.get(imageKey),
       extractGalleryTitleFromPrompt(promptToken),
       characterName,
       extractTitleFromAnchor(anchorText ?? ''),
-      extractTitleFromSrc(imageKey),
+      extractTitleFromSrc(String(member.imageId ?? markerId)),
       `楼层 #${messageId} · 图 ${index + 1}`,
     );
-    const requestId = requestByKey.get(imageKey) || undefined;
+    const requestId = String(member.requestId ?? '').trim() || undefined;
     const entry: GeneratedImageRef = {
-      id: `${messageId}:${requestId ?? imageKey}:${index}`,
+      id: markerId,
       messageId,
-      imageId: requestId || imageKey,
+      markerId,
+      imageId: String(member.imageId ?? requestId ?? markerId).trim() || undefined,
       promptToken,
       requestId,
       anchorText,
       title: normalizeGalleryLabel(title),
       characterName: characterName ? normalizeGalleryLabel(characterName) : undefined,
-      createdOrder: createdOrderBase * 100 + index,
+      createdOrder: member.createdOrder,
     };
     index += 1;
     return entry;
@@ -1034,6 +1077,7 @@ export function useStreamingDemo() {
   const fontMode = ref<ReaderFontMode>('hud');
   const readingMode = ref<ReadingMode>('following_latest');
   const selectedItem = ref<TranscriptItem | null>(null);
+  const transcriptDomRevision = ref(0);
   const openingExpanded = ref(true);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
@@ -1062,9 +1106,9 @@ export function useStreamingDemo() {
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
+  let generatedImageDomMutationTimer = 0;
+  let generatedImageDomObserver: MutationObserver | null = null;
 
-  const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
-  const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
   const galleryRevision = ref(0);
   const mvuSourceRevision = ref(0);
   const imagePendingTaskManager = createImagePendingTaskManager();
@@ -1477,6 +1521,7 @@ export function useStreamingDemo() {
   }
 
   function setHostTranscriptVisibility(active: boolean) {
+    const containerMessageId = readCurrentContainerMessageId();
     for (const doc of collectHostDocuments()) {
       const body = doc.body;
       const head = doc.head;
@@ -1488,7 +1533,7 @@ export function useStreamingDemo() {
           const style = doc.createElement('style');
           style.id = HOST_VISIBILITY_STYLE_ID;
           style.textContent = `
-            body.${HOST_VISIBILITY_CLASS} #chat > .mes[mesid]:not([mesid='0']) {
+            ${buildHostTranscriptVisibilitySelector(containerMessageId ?? 0)} {
               position: absolute !important;
               left: -200vw !important;
               top: 0 !important;
@@ -1697,12 +1742,24 @@ export function useStreamingDemo() {
     }, resolveHidePolicyDelay(scopedReason));
   }
 
+  function queueGeneratedImageEntityRefresh() {
+    if (generatedImageDomMutationTimer) window.clearTimeout(generatedImageDomMutationTimer);
+    generatedImageDomMutationTimer = window.setTimeout(() => {
+      generatedImageDomMutationTimer = 0;
+      bumpGeneratedImageEntityRevision();
+      galleryRevision.value += 1;
+    }, 40);
+  }
+
   function scheduleUiRefresh(domains: RefreshDomain[], reason: string) {
     if (domains.includes('mvuSources')) {
       mvuSourceRevision.value += 1;
     }
 
     if (domains.includes('transcript')) {
+      if (shouldForceTranscriptDomRefresh(reason)) {
+        transcriptDomRevision.value += 1;
+      }
       queueExternalSync(reason);
       return;
     }
@@ -1796,6 +1853,7 @@ export function useStreamingDemo() {
         promptToken: result.promptToken,
         imageData: result.imageData,
       },
+      anchorText: extractAnchorTextFromRawMessage(String(fullMessage?.message ?? ''), result.promptToken),
     });
 
     await setChatMessages(
@@ -1821,6 +1879,7 @@ export function useStreamingDemo() {
         : [],
     });
 
+    bumpGeneratedImageEntityRevision();
     scheduleUiRefresh(['transcript', 'gallery'], `image:persist:${result.messageId}`);
   }
 
@@ -1895,6 +1954,9 @@ export function useStreamingDemo() {
           targetMessageId,
           tasks: imagePendingTaskManager.getDebugState(),
         });
+        if (targetMessageId != null) {
+          scheduleUiRefresh(['transcript'], `image:request:${targetMessageId}`);
+        }
 
         if (requestBinding?.bufferedResponse) {
           logImageBridge('request-replay-buffered-response', {
@@ -2727,6 +2789,17 @@ export function useStreamingDemo() {
       void bindMvuRefreshEvents();
       bindImagePersistenceEvents();
       queueHidePolicy('mounted');
+      if (document.body && typeof MutationObserver !== 'undefined') {
+        generatedImageDomObserver = new MutationObserver(records => {
+          if (!records.some(hasRelevantChatu8Mutation)) return;
+          queueGeneratedImageEntityRefresh();
+        });
+        generatedImageDomObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+        });
+      }
     }
   });
 
@@ -2793,6 +2866,12 @@ export function useStreamingDemo() {
       window.clearTimeout(openingPayloadPersistTimer);
       openingPayloadPersistTimer = 0;
     }
+    if (generatedImageDomMutationTimer) {
+      window.clearTimeout(generatedImageDomMutationTimer);
+      generatedImageDomMutationTimer = 0;
+    }
+    generatedImageDomObserver?.disconnect();
+    generatedImageDomObserver = null;
     clearOpeningGenerationListeners();
   });
 
@@ -2835,6 +2914,7 @@ export function useStreamingDemo() {
     shouldShowOpeningSetup,
     readerSummary,
     logs,
+    transcriptDomRevision,
     beginPendingImageTask,
     markRecentImageIntent,
     runDemo,

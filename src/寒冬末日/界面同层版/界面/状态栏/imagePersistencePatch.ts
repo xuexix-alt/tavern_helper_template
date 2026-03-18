@@ -1,3 +1,5 @@
+import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
+
 type GeneratedImageResponsePayload = {
   requestId: string;
   prompt: string;
@@ -8,9 +10,12 @@ type GeneratedImageResponsePayload = {
 type BuildGeneratedImagePersistencePatchInput = {
   message: Record<string, any>;
   response: GeneratedImageResponsePayload;
+  anchorText?: string;
 };
 
 type DisplayedGeneratedImageInput = {
+  imageId?: string;
+  markerId?: string;
   src?: string;
   alt?: string;
   promptToken?: string;
@@ -51,12 +56,17 @@ function parsePromptBodyFromToken(promptToken: string): string {
 }
 
 function sanitizeImageEntry(entry: Record<string, any>) {
+  const { prompt: _prompt, ...rest } = entry ?? {};
   const requestId = String(entry?.requestId ?? entry?.request_id ?? '').trim();
   const src = String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim();
+  const promptToken = String(entry?.promptToken ?? '').trim();
   const prompt = String(entry?.prompt ?? '').trim();
-  const tag = String(entry?.tag ?? prompt).trim();
+  const tag = String(entry?.tag ?? promptToken ?? prompt).trim();
+  const markerId = String(entry?.markerId ?? '').trim();
   const sanitized: Record<string, any> = {
-    ...entry,
+    ...rest,
+    markerId,
+    promptToken,
     requestId,
     request_id: requestId,
     tag,
@@ -66,7 +76,6 @@ function sanitizeImageEntry(entry: Record<string, any>) {
     src,
     alt: String(entry?.alt ?? 'generated image').trim() || 'generated image',
   };
-  if (prompt) sanitized.prompt = prompt;
   return sanitized;
 }
 
@@ -76,22 +85,39 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
   const nextExtra = clone(message.extra ?? {});
   const currentList = getNestedValue(nextData, 'stream_demo.generated_images');
   const nextList = Array.isArray(currentList) ? clone(currentList) : [];
+  const messageId = Math.trunc(Number(message.message_id));
+  const markerId = buildGeneratedImageMarkerId({
+    messageId: Number.isFinite(messageId) ? messageId : 0,
+    requestId: input.response.requestId,
+    promptToken: input.response.promptToken,
+    order: nextList.length,
+  });
+  const anchorText = String(input.anchorText ?? '').trim();
 
   const imageEntry = {
+    markerId,
     imageId: input.response.requestId,
-    src: input.response.imageData,
-    alt: 'generated image',
     promptToken: input.response.promptToken,
     requestId: input.response.requestId,
+    anchorText: anchorText || undefined,
+    order: nextList.length,
   };
 
-  const hasExisting = nextList.some(item => {
+  const existingIndex = nextList.findIndex(item => {
     if (!item || typeof item !== 'object') return false;
     return String((item as any).requestId ?? '').trim() === input.response.requestId;
   });
 
-  if (!hasExisting) {
+  if (existingIndex < 0) {
     nextList.push(imageEntry);
+  } else if (anchorText) {
+    nextList[existingIndex] = {
+      ...(nextList[existingIndex] ?? {}),
+      anchorText,
+      markerId: String((nextList[existingIndex] as any)?.markerId ?? '').trim() || markerId,
+      promptToken:
+        String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
+    };
   }
 
   setNestedValue(nextData, 'stream_demo.generated_images', nextList);
@@ -108,9 +134,10 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
     )
   ) {
     targetSwipeEntries.push({
+      markerId,
       imageId: input.response.requestId,
       requestId: input.response.requestId,
-      prompt: input.response.prompt,
+      promptToken: input.response.promptToken,
       tag: input.response.prompt,
       regex: '',
       imageData: input.response.imageData,
@@ -119,13 +146,17 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
       alt: 'generated image',
     });
   }
-  sanitizedExtra.images = swipeEntries;
-
-  const existingLockedTags = Array.isArray(sanitizedExtra.lockedTags) ? clone(sanitizedExtra.lockedTags) : [];
-  if (!existingLockedTags.some(item => String(item ?? '').trim() === input.response.prompt.trim())) {
-    existingLockedTags.push(input.response.prompt);
+  const currentEntry = targetSwipeEntries.find(
+    (item: any) => String(item?.requestId ?? item?.request_id ?? '').trim() === input.response.requestId,
+  );
+  if (currentEntry) {
+    currentEntry.markerId = String(currentEntry.markerId ?? '').trim() || markerId;
+    currentEntry.promptToken = String(currentEntry.promptToken ?? '').trim() || input.response.promptToken;
+    currentEntry.tag = String(currentEntry.tag ?? '').trim() || input.response.prompt;
+    if (anchorText) currentEntry.regex = anchorText;
   }
-  sanitizedExtra.lockedTags = existingLockedTags;
+  sanitizedExtra.images = swipeEntries;
+  sanitizedExtra.lockedTags = [];
 
   return {
     nextData,
@@ -145,7 +176,7 @@ export function sanitizePluginImageExtra(extra: Record<string, any>) {
   }
 
   if (Array.isArray(nextExtra.lockedTags)) {
-    nextExtra.lockedTags = nextExtra.lockedTags.map(item => String(item ?? '').trim());
+    nextExtra.lockedTags = [];
   } else {
     nextExtra.lockedTags = [];
   }
@@ -189,29 +220,32 @@ export function syncDisplayedGeneratedImagesToExtra(
       const promptToken = String(image?.promptToken ?? '').trim();
       const requestId = String(image?.requestId ?? '').trim();
       const imageId = String(image?.imageId ?? image?.requestId ?? '').trim();
+      const markerId = String(image?.markerId ?? '').trim();
       if (!src) return null;
       const prompt = parsePromptBodyFromToken(promptToken);
       return {
         src,
         alt: String(image?.alt ?? 'generated image').trim() || 'generated image',
+        markerId,
         promptToken,
         imageId,
-        prompt,
         requestId,
         regex: String(image?.anchorText ?? '').trim(),
+        tag: prompt,
       };
     })
     .filter(Boolean) as Array<{
     src: string;
     alt: string;
+    markerId: string;
     promptToken: string;
     imageId: string;
-    prompt: string;
     requestId: string;
     regex: string;
+    tag: string;
   }>;
 
-  const nextSwipeEntries = normalizedImages.map(image => {
+  const nextSwipeEntries = normalizedImages.map((image, index) => {
     const matchedExisting =
       currentSwipeEntries.find(
         (entry: any) => String(entry?.requestId ?? entry?.request_id ?? '').trim() === image.requestId,
@@ -220,14 +254,26 @@ export function syncDisplayedGeneratedImagesToExtra(
         (entry: any) => String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim() === image.src,
       ) ??
       {};
+    const { prompt: _prompt, ...existingWithoutPrompt } = matchedExisting as Record<string, any>;
 
     return {
-      ...matchedExisting,
+      ...existingWithoutPrompt,
+      markerId:
+        image.markerId ||
+        String(matchedExisting?.markerId ?? '').trim() ||
+        buildGeneratedImageMarkerId({
+          messageId: Math.trunc(Number(message?.message_id)),
+          imageId: image.imageId,
+          requestId: image.requestId,
+          promptToken: image.promptToken,
+          anchorText: image.regex,
+          order: index,
+        }),
       imageId: image.imageId,
       requestId: image.requestId,
       request_id: image.requestId,
-      prompt: image.prompt,
-      tag: image.prompt,
+      promptToken: image.promptToken,
+      tag: image.tag,
       regex: image.regex,
       imageData: image.src,
       image: image.src,
@@ -238,9 +284,7 @@ export function syncDisplayedGeneratedImagesToExtra(
 
   swipeEntries[swipeId] = nextSwipeEntries;
   nextExtra.images = swipeEntries;
-
-  const nextLockedTags = Array.from(new Set(normalizedImages.map(image => image.prompt).filter(Boolean)));
-  nextExtra.lockedTags = nextLockedTags;
+  nextExtra.lockedTags = [];
 
   return nextExtra;
 }

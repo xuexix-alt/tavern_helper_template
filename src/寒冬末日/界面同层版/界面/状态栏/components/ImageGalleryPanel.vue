@@ -1,24 +1,38 @@
 <template>
   <section class="gallery-panel">
-    <header class="gallery-tools">
-      <label class="gallery-search">
-        <span>检索</span>
-        <input v-model="searchText" type="search" placeholder="角色名、提示词、楼层号" />
-      </label>
+    <header class="gallery-tools" :class="{ collapsed: toolsCollapsed }">
+      <!-- 收起时显示的紧凑栏 -->
+      <button v-if="toolsCollapsed" type="button" class="gallery-tools-collapsed" @click="toolsCollapsed = false">
+        <span class="gallery-tools-collapsed-search">检索</span>
+        <span class="gallery-tools-collapsed-count">全部 {{ filters[0].value }}</span>
+        <span class="gallery-tools-collapsed-arrow">∨</span>
+      </button>
 
-      <div class="gallery-filter-row" role="tablist" aria-label="图廊筛选">
-        <button
-          v-for="filter in filters"
-          :key="filter.key"
-          type="button"
-          class="gallery-filter"
-          :class="{ active: activeFilter === filter.key }"
-          @click="activeFilter = filter.key"
-        >
-          <small>{{ filter.label }}</small>
-          <strong>{{ filter.value }}</strong>
-        </button>
-      </div>
+      <!-- 展开时的完整内容 -->
+      <template v-else>
+        <label class="gallery-search">
+          <span>检索</span>
+          <input v-model="searchText" type="search" placeholder="角色名、提示词、楼层号" />
+        </label>
+
+        <div class="gallery-filter-row" role="tablist" aria-label="图廊筛选">
+          <button
+            v-for="filter in filters"
+            :key="filter.key"
+            type="button"
+            class="gallery-filter"
+            :class="{ active: activeFilter === filter.key }"
+            @click="activeFilter = filter.key"
+          >
+            <small>{{ filter.label }}</small>
+            <strong>{{ filter.value }}</strong>
+          </button>
+          <button type="button" class="gallery-filter-collapse-btn" @click="toolsCollapsed = true">
+            <small>收起</small>
+            <strong>∧</strong>
+          </button>
+        </div>
+      </template>
     </header>
 
     <div v-if="groupedEntries.length === 0" class="gallery-empty">当前还没有可展示的楼层图片。</div>
@@ -46,6 +60,8 @@
             :entry="entry"
             variant="gallery"
             :show-caption="true"
+            @open="emit('open-image', $event)"
+            @regenerate="emit('regenerate-image', $event)"
           />
         </div>
       </section>
@@ -65,10 +81,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'jump-message', messageId: number): void;
   (event: 'close'): void;
+  (event: 'open-image', entry: ReaderGalleryEntry): void;
+  (event: 'regenerate-image', entry: ReaderGalleryEntry): void;
 }>();
 
 const searchText = ref('');
 const activeFilter = ref<'all' | 'named' | 'recent'>('recent');
+const toolsCollapsed = ref(true);
 
 const filteredEntries = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
@@ -216,6 +235,58 @@ const groupedEntries = computed(() => {
   text-align: left;
 }
 
+.gallery-filter-collapse-btn {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.gallery-filter-collapse-btn small,
+.gallery-filter-collapse-btn strong {
+  text-align: left;
+}
+
+.gallery-tools-collapsed {
+  display: none;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.gallery-tools-collapsed-search {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--demo-text-muted);
+}
+
+.gallery-tools-collapsed-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--demo-text-primary);
+}
+
+.gallery-tools-collapsed-arrow {
+  font-size: 12px;
+  color: var(--demo-text-muted);
+}
+
 .gallery-groups {
   display: grid;
   gap: 14px;
@@ -292,6 +363,40 @@ const groupedEntries = computed(() => {
 @media (max-width: 720px) {
   .gallery-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gallery-tools {
+    padding: 10px 12px;
+  }
+
+  .gallery-tools.collapsed {
+    padding: 8px 12px;
+  }
+
+  /* 折叠状态：只显示紧凑栏 */
+  .gallery-tools.collapsed .gallery-tools-collapsed {
+    display: flex;
+  }
+
+  .gallery-tools.collapsed .gallery-search {
+    display: none;
+  }
+
+  .gallery-tools.collapsed .gallery-filter-row {
+    display: none;
+  }
+
+  /* 展开状态：显示完整内容 */
+  .gallery-tools:not(.collapsed) .gallery-tools-collapsed {
+    display: none;
+  }
+
+  .gallery-tools:not(.collapsed) .gallery-search {
+    display: grid;
+  }
+
+  .gallery-tools:not(.collapsed) .gallery-filter-row {
+    display: grid;
   }
 }
 </style>

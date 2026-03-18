@@ -85,11 +85,13 @@ function sanitizeCacheImageEntry(entry: Record<string, unknown>) {
       (entry as any)?.path ??
       (entry as any)?.url,
   );
+  const promptToken = String((entry as any)?.promptToken ?? '').trim();
   const prompt = String((entry as any)?.prompt ?? '').trim();
-  const tag = String((entry as any)?.tag ?? prompt).trim();
+  const tag = String((entry as any)?.tag ?? promptToken ?? prompt).trim();
 
   const sanitized: Record<string, unknown> = {
     ...entry,
+    promptToken,
     requestId,
     request_id: requestId,
     tag,
@@ -100,7 +102,6 @@ function sanitizeCacheImageEntry(entry: Record<string, unknown>) {
     alt: String((entry as any)?.alt ?? 'generated image').trim() || 'generated image',
   };
 
-  if (prompt) sanitized.prompt = prompt;
   return sanitized;
 }
 
@@ -145,7 +146,9 @@ export function collectChatu8CacheEntries(chatMeta: unknown, messageId?: number 
         : inferMessageIdFromAncestors(ancestors);
       if (normalizedMessageId != null && entryMessageId != null && entryMessageId !== normalizedMessageId) continue;
 
-      const promptToken = buildPromptTokenFromCachePrompt((value as any)?.prompt ?? (value as any)?.tag ?? key);
+      const promptToken = buildPromptTokenFromCachePrompt(
+        (value as any)?.promptToken ?? (value as any)?.prompt ?? (value as any)?.tag ?? key,
+      );
       const src = normalizeImageDataToSrc(
         (value as any)?.src ??
           (value as any)?.image ??

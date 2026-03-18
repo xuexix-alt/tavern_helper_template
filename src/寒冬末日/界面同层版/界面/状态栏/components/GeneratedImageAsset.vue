@@ -1,10 +1,18 @@
 <template>
   <figure
     :class="rootClass"
+    tabindex="0"
+    role="button"
+    :aria-label="secondaryText"
     :data-message-id="entry.messageId"
+    :data-marker-id="entry.markerId || ''"
     :data-image-id="entry.imageId || ''"
     :data-prompt-token="encodePromptToken(entry.promptToken)"
     :data-request-id="entry.requestId ?? ''"
+    @click.stop="queueOpen"
+    @dblclick.stop.prevent="triggerRegenerate"
+    @keydown.enter.prevent="emit('open', entry)"
+    @keydown.space.prevent="emit('open', entry)"
   >
     <img
       v-if="resolvedSource"
@@ -13,6 +21,7 @@
       :alt="resolvedSource.alt || entry.title"
       loading="lazy"
       :data-message-id="entry.messageId"
+      :data-marker-id="resolvedSource.markerId"
       :data-image-id="resolvedSource.imageId"
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
@@ -21,6 +30,7 @@
       v-else
       class="generated-image-placeholder"
       :data-message-id="entry.messageId"
+      :data-marker-id="entry.markerId || ''"
       :data-image-id="entry.imageId || ''"
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
@@ -39,6 +49,7 @@
 
 <script setup lang="ts">
 import type { GeneratedImageRef } from '../types';
+import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision.ts';
 import { readGeneratedImageSource, type ResolvedGeneratedImageSource } from '../generatedImageSourceResolver';
 
 const props = defineProps<{
@@ -46,8 +57,14 @@ const props = defineProps<{
   variant?: 'inline' | 'gallery';
   showCaption?: boolean;
 }>();
+const emit = defineEmits<{
+  (event: 'open', entry: GeneratedImageRef): void;
+  (event: 'regenerate', entry: GeneratedImageRef): void;
+}>();
 
 const resolvedSource = ref<ResolvedGeneratedImageSource | null>(null);
+const generatedImageEntityRevision = useGeneratedImageEntityRevision();
+let clickTimer = 0;
 
 const rootClass = computed(() =>
   props.variant === 'gallery'
@@ -62,9 +79,29 @@ function encodePromptToken(value: string) {
   return encodeURIComponent(String(value ?? ''));
 }
 
+function clearClickTimer() {
+  if (!clickTimer) return;
+  window.clearTimeout(clickTimer);
+  clickTimer = 0;
+}
+
+function queueOpen() {
+  clearClickTimer();
+  clickTimer = window.setTimeout(() => {
+    clickTimer = 0;
+    emit('open', props.entry);
+  }, 220);
+}
+
+function triggerRegenerate() {
+  clearClickTimer();
+  emit('regenerate', props.entry);
+}
+
 function resolveSource() {
   resolvedSource.value = readGeneratedImageSource({
     messageId: props.entry.messageId,
+    markerId: props.entry.markerId,
     imageId: props.entry.imageId,
     requestId: props.entry.requestId,
     promptToken: props.entry.promptToken,
@@ -72,12 +109,24 @@ function resolveSource() {
 }
 
 watch(
-  () => [props.entry.messageId, props.entry.imageId, props.entry.requestId, props.entry.promptToken].join('::'),
+  () =>
+    [
+      props.entry.messageId,
+      props.entry.markerId,
+      props.entry.imageId,
+      props.entry.requestId,
+      props.entry.promptToken,
+      generatedImageEntityRevision.value,
+    ].join('::'),
   () => {
     resolveSource();
   },
   { immediate: true },
 );
+
+onBeforeUnmount(() => {
+  clearClickTimer();
+});
 </script>
 
 <style scoped>

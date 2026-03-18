@@ -42,6 +42,8 @@ import StoryPage from './pages/StoryPage.vue';
 
 @media (min-width: 761px) {
   .doc-shell-root {
+    overflow: visible;
+    isolation: auto;
     border-color: transparent;
     box-shadow: 0 22px 56px color-mix(in srgb, var(--shadow-color) 54%, transparent);
   }

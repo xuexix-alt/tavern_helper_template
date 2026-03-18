@@ -482,28 +482,28 @@ defineExpose({
   }
 
   .composer-input-icon {
-    width: 40px;
-    flex-basis: 40px;
+    width: 32px;
+    flex-basis: 32px;
     font-size: 10px;
   }
 
   .composer-input-main {
-    padding: 0 8px;
+    padding: 0 6px;
   }
 
   .composer-textarea {
-    min-height: 30px;
-    max-height: 64px;
+    min-height: 24px;
+    max-height: 48px;
     font-size: 13px;
     line-height: 1.45;
-    padding: 4px 0;
+    padding: 2px 0;
   }
 
   .send-btn {
-    min-width: 56px;
-    min-height: 32px;
-    margin: 4px;
-    padding: 0 10px;
+    min-width: 44px;
+    min-height: 26px;
+    margin: 3px;
+    padding: 0 8px;
     font-size: 10px;
   }
   .choice-modal-mask {
