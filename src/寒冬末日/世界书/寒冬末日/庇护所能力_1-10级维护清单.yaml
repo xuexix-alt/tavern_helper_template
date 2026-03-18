@@ -47,33 +47,33 @@ levels:
         insufficiency: 因坚固而形成被动防御，只防破门。
         prompt_brief_seed: 是2001的唯一入口，为观察、后撤和反应争取时间。
       sustain:
-        ability_id: sustain.basic_survival_loop_t1
-        name: 口粮制造器T1
-        growth_target: 元素级合成制造设备，生产口粮、净水。
-        player_advantage: 可以稳定保住自己和极少数人的生命底线。
-        insufficiency: 只能制造最初级口粮，如面粉、压缩干粮和纯水。无法生产肉类、蔬菜、酒、饮料等高级货。
-        prompt_brief_seed: 产出很有限，饿不死但吃不好。
+        ability_id: sustain.wanxiang_synth_t1
+        name: 万象合成终端T1
+        growth_target: 元素重构级合成干粮、罐头、面粉、大米等基础食材和纯水的终端设备。
+        player_advantage: 可以稳定合成基础食材和纯水，保障生存底线。
+        insufficiency: T1款功率有限，无法大规模生产，无法合成肉类、蔬菜、酒、饮料等高级货。
+        prompt_brief_seed: 万象合成终端：元素重构级合成干粮、罐头、面粉、大米等基础食材和纯水的终端设备，T1款功率有限无法大规模生产。
       life:
-        ability_id: life.rest_privacy_t1
-        name: 短时恒温热水器T1
-        growth_target: 短暂洗几分钟热水澡
-        player_advantage: 可以洗热水澡
-        insufficiency: 热水量和使用时段都很紧，每天不超过3次使用机会
-        prompt_brief_seed: 可在2001核心区提供稀缺的热水清洁与洗衣条件，量和时段都受限
+        ability_id: life.water_heater_t1
+        name: 恒温热水器T1
+        growth_target: 短暂洗几分钟热水澡的基础热水供应。
+        player_advantage: 可以洗热水澡，提供基础清洁与舒适。
+        insufficiency: 热水量和使用时段都很紧，每天不超过3次使用机会。
+        prompt_brief_seed: 可在2001核心区提供稀缺的热水清洁与洗衣条件，量和时段都受限。
       social:
-        ability_id: social.rule_seed_t1
+        ability_id: social.nearfield_monitor_t1
         name: 近域监听台T1
         growth_target: 让主角先获得门口和短距走廊的情报优势，而不是只会被动开门。
         player_advantage: 可以偷听门外动静、捕捉短距语音和情绪波动，为接触、交易和威慑抢到先手。
         insufficiency: 监听范围极小，且只能得到零碎线索，远远不到全局掌控。
         prompt_brief_seed: 可监听门口与短距走廊的动静、语音与情绪波动，让主角在接触和试探前先拿到情报优势；范围很小，只能获得零碎线索。
       expansion:
-        ability_id: expansion.core_anchor_t1
-        name: 核心安全锚点T1
-        growth_target: 把2001定义为一切庇护与控制能力的基准原点。
-        player_advantage: 让后续所有外扩、纳管、供暖、防线都有明确起点。
-        insufficiency: 这只是原点，不等于已经具备向外控制能力。
-        prompt_brief_seed: 可将2001定义为绝对安全锚点，为后续供暖、防线、收容与外扩提供原点；自身不等于已经完成外扩。
+        ability_id: expansion.cold_protection_t1
+        name: 核心保暖T1
+        growth_target: 让2001室具备基础保暖能力，不再受严寒威胁。
+        player_advantage: 核心区可以维持适宜温度，抵御室外极寒。
+        insufficiency: 只能维持2001核心区，无法向走廊或外部延伸。
+        prompt_brief_seed: 2001核心区具备基础保暖能力，抵御室外严寒，范围仅核心区，无法支撑外扩。
 
   '2':
     stage: 核心区稳态
@@ -116,12 +116,12 @@ levels:
         insufficiency: 只能覆盖有限范围，仍有盲区和遮挡，不能当成整层监控系统。
         prompt_brief_seed: 可对门外近域开启实时全息观察与直播切片，让主角在交易、收容和防备前先看到对方状态；覆盖范围有限，仍有盲区和遮挡。
       expansion:
-        ability_id: expansion.threshold_interface_t2
-        name: 近域接口门槛T2
-        growth_target: 让庇护所第一次拥有接触门外世界的最小接口能力。
-        player_advantage: 可以对门外近邻释放有限的水、电、收容和接触信号。
-        insufficiency: 只是接口，不是全面纳管，更不是随意向外供养所有人。
-        prompt_brief_seed: 可开启2001对门外近域的最小资源与接触接口，用于试探、救助或建立联系；只是门槛能力，不等于完成外扩纳管。
+        ability_id: expansion.cold_protection_t2
+        name: 扩展保暖T2
+        growth_target: 让保暖能力从核心区向走廊和相邻区域延伸。
+        player_advantage: 可以对门外近邻释放有限的热量，提升走廊和相邻区域的基础温度。
+        insufficiency: 热量衰减明显，延伸范围有限，无法形成大规模供暖。
+        prompt_brief_seed: 可将保暖能力从核心区向走廊和相邻区域延伸，提升局部温度，但热量衰减明显，延伸范围有限。
 
   '3':
     stage: 走出房门
@@ -150,15 +150,15 @@ levels:
         insufficiency: 人口一多、病情一重、回收一断，系统仍会迅速吃紧。
         prompt_brief_seed: 可对小规模群体提供配给、照料与基础伤病维持，支撑最初的共同体雏形；承载上限不高，超量很快会引发系统吃紧。
       life:
-        ability_id: life.community_rhythm_t3
-        name: 影音休憩厅T3
+        ability_id: life.legacy_theater_t3
+        name: 旧剧院T3
         growth_target: 让庇护所第一次拥有能让人主动停留的娱乐空间。
         player_advantage: 可以提供小型影院、音乐播放和柔性沙发休憩区，让角色们第一次因为舒服和好玩而想进入庇护所。
         insufficiency: 仍只是小体量娱乐厅，谈不上高规格沉浸体验，也无法覆盖所有人的口味。
         prompt_brief_seed: 可在庇护所内提供小型影院、音乐播放与休憩厅，让角色们第一次因为舒服和好玩而想主动留下；体量仍小，离高规格娱乐还很远。
       social:
-        ability_id: social.admission_protocol_t3
-        name: 场景回放台T3
+        ability_id: social.video_intercom_t3
+        name: 视频对讲系统T3
         growth_target: 让主角第一次能回放短时段内的关键场景，建立证据与判断优势。
         player_advantage: 可以回看近域里刚发生的对话、动作和冲突片段，在谈判、责问和筛选对象时更占主动。
         insufficiency: 回放窗口很短，且只能调取已记录区域，不能回溯整层过去。
@@ -191,26 +191,26 @@ levels:
         insufficiency: 不是全知视角，恶劣环境和复杂局势仍会制造误判。
         prompt_brief_seed: 可对20层局部进行中距离预警、威胁评分与风险排序，辅助决定接触、避让和清理优先级；并非全知，误判仍会存在。
       sustain:
-        ability_id: sustain.multi_patient_support_t4
-        name: 多人维持支持T4
-        growth_target: 让庇护所能承接更复杂的伤病和更多的基础配给需求。
-        player_advantage: 可以开始稳定承托一个小共同体，而不是一两名个体。
-        insufficiency: 药品、食物、净化和照护都开始进入真实瓶颈管理。
-        prompt_brief_seed: 可为一个小共同体提供更稳定的配给、净化、药品与基础照护，承托多人持续生存；系统会在药品、食物和照护负荷上持续承压。
+        ability_id: sustain.wanxiang_gourmet_t4
+        name: 万象生成终端-高端食材模块T4
+        growth_target: 让万象合成终端可以生成任何末日前有的食材饮品。
+        player_advantage: 可以生成高端食材、饮品，提供超越基础生存的美食体验。
+        insufficiency: 无法供应超过20人以上的量，更多供应仍需实现自主生产。
+        prompt_brief_seed: 可生成任何末日前有的食材饮品，无法供应超过20人以上的量，更多供应仍需实现自主生产。
       life:
-        ability_id: life.civil_buffer_t4
+        ability_id: life.stage_lounge_t4
         name: 舞台酒廊T4
         growth_target: 让庇护所第一次出现可以表演、聚会和展示魅力的生活舞台。
         player_advantage: 可以提供小型舞台、酒廊氛围与社交娱乐空间，让角色在这里唱歌、跳舞、放松、取悦或竞争关注。
         insufficiency: 仍只是局部生活场景，不可能用一个舞台解决所有情绪创伤和人际矛盾。
         prompt_brief_seed: 可在庇护所内提供小型舞台和酒廊氛围，让角色在这里表演、放松、取悦或竞争关注，进一步强化这里的生活吸引力；这仍只是局部生活场景，不能化解所有矛盾。
       social:
-        ability_id: social.contact_trade_window_t4
-        name: 情绪画像库T4
-        growth_target: 把碎片情报升级为人物情绪与偏好画像，形成稳定的情感优势。
-        player_advantage: 可以更快判断角色的软肋、偏好、恐惧和讨好点，在交易、收容与暧昧互动中更容易拿到高质量反馈。
-        insufficiency: 画像依赖持续观察和样本积累，初次接触的人物仍可能误判。
-        prompt_brief_seed: 可为接触对象建立情绪、偏好与恐惧画像，让主角在交易、收容与情感互动中获得明显优势；画像依赖持续观察，初次接触仍可能误判。
+        ability_id: social.eden_phone_mass_t4
+        name: 伊甸手机终端-量产版T4
+        growth_target: 让庇护所成员可以持有伊甸手机终端进行通信和信息交换。
+        player_advantage: 成员之间可以实时通信、传递信息，形成更紧密的社交网络。
+        insufficiency: 量产版功能有限，信号覆盖范围受限于庇护所控制区域。
+        prompt_brief_seed: 可让庇护所成员持有伊甸手机终端进行通信和信息交换，形成更紧密的社交网络；量产版功能有限，信号覆盖范围受限。
       expansion:
         ability_id: expansion.floor20_control_zone_t4
         name: 20层控制区T4

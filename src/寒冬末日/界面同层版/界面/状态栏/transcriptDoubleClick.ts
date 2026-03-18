@@ -13,7 +13,9 @@ export function resolveTranscriptDoubleClickMessageId(target: EventTarget | null
   const element = target as ClosestCapableElement | null;
   if (!element || typeof element.closest !== 'function') return null;
 
-  const generatedCarrier = element.closest('.st-chatu8-image-span, .assistant-gallery-image');
+  const generatedCarrier = element.closest(
+    '.st-chatu8-image-span, .assistant-gallery-image, .assistant-fallback-inline-image, .assistant-fallback-generated-image',
+  );
   if (generatedCarrier) return null;
 
   const messageCarrier = element.closest('.assistant-body-proxy[data-message-id], .assistant-body[data-message-id]');

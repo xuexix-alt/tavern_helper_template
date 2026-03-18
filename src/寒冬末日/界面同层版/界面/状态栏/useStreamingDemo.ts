@@ -35,7 +35,6 @@ import {
 import {
   buildPromptTokenFromCachePrompt,
   collectChatu8CacheEntries,
-  sanitizeChatu8CacheMeta,
   type Chatu8CacheEntry,
 } from './galleryCache';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
@@ -43,18 +42,16 @@ import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
 import {
-  buildPluginImageExtraSanitizePatch,
   buildGeneratedImagePersistencePatch,
   sanitizePluginImageExtra,
-  syncDisplayedGeneratedImagesToExtra,
 } from './imagePersistencePatch';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
-import { mergePromptTokensIntoRawMessage } from './promptTokenPersistence';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
+  GeneratedImageRef,
   ReaderGalleryEntry,
   ReaderLogItem,
   DemoTheme,
@@ -69,6 +66,7 @@ import type {
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
 type RenderableGeneratedImage = {
+  imageId?: string;
   src: string;
   alt: string;
   promptToken?: string;
@@ -167,7 +165,7 @@ function buildFinalHtml(renderSource: string, message_id: number): string {
   if (!html) {
     html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
   }
-  return appendChatu8ArtifactsToHtml(html, renderSource, message_id);
+  return html;
 }
 
 function listReachableHostWindows(): Array<Window & typeof globalThis> {
@@ -295,6 +293,7 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
     if (!src || seen.has(src)) continue;
     seen.add(src);
     out.push({
+      imageId: String((item as any)?.imageId ?? '').trim() || undefined,
       src,
       alt: String((item as any)?.alt ?? 'generated image').trim(),
       promptToken: String((item as any)?.promptToken ?? '').trim(),
@@ -340,6 +339,7 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
     if (!src || seen.has(src)) continue;
     seen.add(src);
     out.push({
+      imageId: String((entry as any).imageId ?? '').trim() || undefined,
       src,
       alt: String((entry as any).alt ?? 'generated image').trim(),
       promptToken: buildPromptTokenFromCachePrompt((entry as any).tag ?? (entry as any).prompt ?? ''),
@@ -435,6 +435,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const pluginNativeImages = [
     ...readChatu8ExtraImages(messageId),
     ...readChatu8CacheEntries(messageId).map(item => ({
+      imageId: item.imageId,
       src: item.src,
       alt: item.alt,
       promptToken: item.promptToken,
@@ -768,33 +769,40 @@ function extractGalleryTitleFromPrompt(promptToken: string): string {
   return firstSegment.length > 32 ? `${firstSegment.slice(0, 32)}…` : firstSegment;
 }
 
-function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: number): ReaderGalleryEntry[] {
-  const messageId = Math.trunc(Number(message.message_id));
+function buildGeneratedImageRefsForMessage(input: {
+  messageId: number;
+  rawMessage: string;
+  createdOrderBase?: number;
+}): GeneratedImageRef[] {
+  const messageId = Math.trunc(Number(input.messageId));
   if (!Number.isFinite(messageId) || messageId < 0) return [];
 
-  const promptTokens = collectChatu8PromptTokens(message.message);
-  const srcList: string[] = [];
-  const promptBySrc = new Map<string, string>();
-  const requestBySrc = new Map<string, string>();
-  const anchorBySrc = new Map<string, string>();
-  const titleBySrc = new Map<string, string>();
-  const characterBySrc = new Map<string, string>();
+  const promptTokens = collectChatu8PromptTokens(input.rawMessage);
+  const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
+  const imageKeys: string[] = [];
+  const promptByKey = new Map<string, string>();
+  const requestByKey = new Map<string, string>();
+  const anchorByKey = new Map<string, string>();
+  const titleByKey = new Map<string, string>();
+  const characterByKey = new Map<string, string>();
 
   const mergeImage = (image: RenderableGeneratedImage) => {
     const src = normalizeImageSrcForCompare(image.src);
-    if (!src) return;
-    if (!srcList.includes(src)) srcList.push(src);
+    const imageId = String(image.imageId ?? '').trim();
     const promptToken = String(image.promptToken ?? '').trim();
     const requestId = String(image.requestId ?? '').trim();
     const anchorText = String(image.anchorText ?? '').trim();
+    const imageKey = imageId || requestId || src || promptToken || anchorText;
+    if (!imageKey) return;
+    if (!imageKeys.includes(imageKey)) imageKeys.push(imageKey);
     const characterName = extractCharacterNameFromPrompt(promptToken);
     const title = extractGalleryTitleFromPrompt(promptToken) || characterName;
 
-    if (promptToken && !promptBySrc.has(src)) promptBySrc.set(src, promptToken);
-    if (requestId && !requestBySrc.has(src)) requestBySrc.set(src, requestId);
-    if (anchorText && !anchorBySrc.has(src)) anchorBySrc.set(src, anchorText);
-    if (title && !titleBySrc.has(src)) titleBySrc.set(src, title);
-    if (characterName && !characterBySrc.has(src)) characterBySrc.set(src, characterName);
+    if (promptToken && !promptByKey.has(imageKey)) promptByKey.set(imageKey, promptToken);
+    if (requestId && !requestByKey.has(imageKey)) requestByKey.set(imageKey, requestId);
+    if (anchorText && !anchorByKey.has(imageKey)) anchorByKey.set(imageKey, anchorText);
+    if (title && !titleByKey.has(imageKey)) titleByKey.set(imageKey, title);
+    if (characterName && !characterByKey.has(imageKey)) characterByKey.set(imageKey, characterName);
   };
 
   const images = [
@@ -811,34 +819,41 @@ function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: n
   for (const image of images) mergeImage(image);
 
   let index = 0;
-  return srcList.map(src => {
-    const promptToken = promptBySrc.get(src) ?? promptTokens[index] ?? '';
-    const anchorText = anchorBySrc.get(src) || undefined;
-    const characterNameValue = pickFirstNonEmpty(characterBySrc.get(src), extractCharacterNameFromPrompt(promptToken));
+  return imageKeys.map(imageKey => {
+    const promptToken = promptByKey.get(imageKey) ?? promptTokens[index] ?? '';
+    const anchorText = anchorByKey.get(imageKey) || undefined;
+    const characterNameValue = pickFirstNonEmpty(characterByKey.get(imageKey), extractCharacterNameFromPrompt(promptToken));
     const characterName = characterNameValue || undefined;
     const title = pickFirstNonEmpty(
-      titleBySrc.get(src),
+      titleByKey.get(imageKey),
       extractGalleryTitleFromPrompt(promptToken),
       characterName,
       extractTitleFromAnchor(anchorText ?? ''),
-      extractTitleFromSrc(src),
+      extractTitleFromSrc(imageKey),
       `楼层 #${messageId} · 图 ${index + 1}`,
     );
-    const requestId = requestBySrc.get(src) || undefined;
-    const entry: ReaderGalleryEntry = {
-      id: `${messageId}:${requestId ?? src}:${index}`,
+    const requestId = requestByKey.get(imageKey) || undefined;
+    const entry: GeneratedImageRef = {
+      id: `${messageId}:${requestId ?? imageKey}:${index}`,
       messageId,
-      src,
-      alt: 'generated image',
+      imageId: requestId || imageKey,
       promptToken,
       requestId,
       anchorText,
       title: normalizeGalleryLabel(title),
       characterName: characterName ? normalizeGalleryLabel(characterName) : undefined,
-      createdOrder: createdOrder * 100 + index,
+      createdOrder: createdOrderBase * 100 + index,
     };
     index += 1;
     return entry;
+  });
+}
+
+function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: number): ReaderGalleryEntry[] {
+  return buildGeneratedImageRefsForMessage({
+    messageId: message.message_id,
+    rawMessage: message.message,
+    createdOrderBase: createdOrder,
   });
 }
 
@@ -912,6 +927,13 @@ function buildTranscriptItem(input: {
   const regexText = applyRegexForDisplay(renderSource, input.role);
   const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
   const finalHtml = buildFinalHtml(renderSource, input.id);
+  const generatedImages =
+    input.role === 'assistant'
+      ? buildGeneratedImageRefsForMessage({
+          messageId: input.id,
+          rawMessage: renderSource,
+        })
+      : [];
   const preview = stripTagsForPreview(content || regexText).slice(0, 80);
 
   return {
@@ -926,6 +948,7 @@ function buildTranscriptItem(input: {
     regexText,
     streamHtml,
     finalHtml,
+    generatedImages,
     options,
     hidden: input.hidden,
     phase,
@@ -987,6 +1010,7 @@ function buildOpeningTranscriptItem(
     regexText,
     streamHtml: buildStreamStageHtml(renderSource, 'assistant', 0),
     finalHtml,
+    generatedImages: [],
     options: payload.result?.options ?? [],
     hidden: false,
     phase: isOpeningStreaming ? 'stream' : 'done',
@@ -1042,10 +1066,6 @@ export function useStreamingDemo() {
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
-  let promptPersistTimer = 0;
-  let promptPersistRunning = false;
-  let promptPersistRerun = false;
-  let promptObserver: MutationObserver | null = null;
 
   const HOST_VISIBILITY_CLASS = 'stream-demo-workbench-active';
   const HOST_VISIBILITY_STYLE_ID = 'stream-demo-host-visibility-style';
@@ -1473,7 +1493,20 @@ export function useStreamingDemo() {
           style.id = HOST_VISIBILITY_STYLE_ID;
           style.textContent = `
             body.${HOST_VISIBILITY_CLASS} #chat > .mes[mesid]:not([mesid='0']) {
-              display: none !important;
+              position: absolute !important;
+              left: -200vw !important;
+              top: 0 !important;
+              width: 1px !important;
+              max-width: 1px !important;
+              height: 1px !important;
+              max-height: 1px !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+              opacity: 0 !important;
+              pointer-events: none !important;
+              clip: rect(0 0 0 0) !important;
+              clip-path: inset(50%) !important;
             }
           `;
           head.appendChild(style);
@@ -1658,13 +1691,12 @@ export function useStreamingDemo() {
     }, resolveHidePolicyDelay(reason));
   }
 
-  function queueExternalSync(reason: string, options: { includeGallery?: boolean } = {}) {
+  function queueExternalSync(reason: string) {
     if (externalSyncTimer) window.clearTimeout(externalSyncTimer);
     const scopedReason = `external:${reason}`;
     externalSyncTimer = window.setTimeout(() => {
       externalSyncTimer = 0;
       rebuildTranscript();
-      if (options.includeGallery) queuePersistDisplayedImagePrompts(scopedReason);
       queueHidePolicy(scopedReason);
     }, resolveHidePolicyDelay(scopedReason));
   }
@@ -1675,12 +1707,8 @@ export function useStreamingDemo() {
     }
 
     if (domains.includes('transcript')) {
-      queueExternalSync(reason, { includeGallery: domains.includes('gallery') });
+      queueExternalSync(reason);
       return;
-    }
-
-    if (domains.includes('gallery')) {
-      queuePersistDisplayedImagePrompts(reason);
     }
   }
 
@@ -1955,156 +1983,6 @@ export function useStreamingDemo() {
       .filter(item => Number.isFinite(item.message_id))
       .filter(item => item.role === 'assistant')
       .filter(item => candidateIds.has(item.message_id));
-  }
-
-  async function sanitizePluginImageExtrasInCurrentChat(reason: string) {
-    try {
-      const messages = listAllChatMessages();
-      const patch = buildPluginImageExtraSanitizePatch(messages);
-
-      if (patch.length === 0) return;
-      await setChatMessages(patch as any, { refresh: 'none' });
-      console.info('[stream-demo] sanitized plugin image extras', { reason, count: patch.length });
-    } catch (error) {
-      console.warn('[stream-demo] sanitize plugin image extras failed', {
-        reason,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  function sanitizePluginImageCacheMeta(reason: string) {
-    try {
-      const ctx = readHostContext();
-      const originalMeta = _.cloneDeep(ctx?.chatMetadata?.['st-chatu8'] ?? null);
-      if (!originalMeta || typeof originalMeta !== 'object') return;
-      const nextMeta = sanitizeChatu8CacheMeta(originalMeta);
-      if (JSON.stringify(originalMeta) === JSON.stringify(nextMeta)) return;
-      if (ctx?.chatMetadata && typeof ctx.chatMetadata === 'object') {
-        ctx.chatMetadata['st-chatu8'] = nextMeta;
-      }
-      console.info('[stream-demo] sanitized plugin image cache meta', { reason });
-    } catch (error) {
-      console.warn('[stream-demo] sanitize plugin image cache meta failed', {
-        reason,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  async function persistDisplayedImagePrompts(reason: string) {
-    if (promptPersistRunning) {
-      promptPersistRerun = true;
-      return;
-    }
-
-    promptPersistRunning = true;
-    try {
-      do {
-        promptPersistRerun = false;
-        const assistantMessages = listAssistantMessagesForPromptPersistence();
-        const patch: Array<{
-          message_id: number;
-          message: string;
-          is_hidden: boolean;
-          data?: Record<string, unknown>;
-          extra?: Record<string, unknown>;
-        }> = [];
-
-        for (const item of assistantMessages) {
-          const generatedImages = extractRenderedImagesFromRoots(item.message_id);
-          const promptTokenEntries = generatedImages
-            .map(image => ({
-              promptToken: image.promptToken ?? '',
-              anchorText: image.anchorText ?? '',
-            }))
-            .filter(entry => entry.promptToken);
-          const fallbackPromptTokens = extractPromptTokensFromDisplayedMessage(item.message_id);
-          const nextMessage = mergePromptTokensIntoRawMessage(
-            item.message,
-            promptTokenEntries.length > 0 ? promptTokenEntries : fallbackPromptTokens,
-          );
-          const fullMessage = readChatMessageDetail(item.message_id);
-          const nextData = fullMessage?.data ? _.cloneDeep(fullMessage.data) : {};
-          _.set(nextData, 'stream_demo.generated_images', generatedImages);
-          const nextExtra = syncDisplayedGeneratedImagesToExtra(fullMessage ?? {}, generatedImages);
-          const prevImages = _.get(fullMessage, 'data.stream_demo.generated_images', []);
-          const prevExtraImages = _.get(fullMessage, 'extra.images', []);
-          const prevLockedTags = _.get(fullMessage, 'extra.lockedTags', []);
-          const imagesChanged = JSON.stringify(prevImages ?? []) !== JSON.stringify(generatedImages);
-          const extraImagesChanged = JSON.stringify(prevExtraImages ?? []) !== JSON.stringify(nextExtra.images ?? []);
-          const lockedTagsChanged = JSON.stringify(prevLockedTags ?? []) !== JSON.stringify(nextExtra.lockedTags ?? []);
-          if (
-            promptTokenEntries.length === 0 &&
-            fallbackPromptTokens.length === 0 &&
-            generatedImages.length === 0 &&
-            !imagesChanged
-          )
-            continue;
-          if (nextMessage === item.message && !imagesChanged && !extraImagesChanged && !lockedTagsChanged) continue;
-          patch.push({
-            message_id: item.message_id,
-            message: nextMessage,
-            is_hidden: item.is_hidden,
-            data: nextData,
-            extra: nextExtra,
-          });
-        }
-
-        if (patch.length === 0) continue;
-        await setChatMessages(patch, { refresh: 'none' });
-        rebuildTranscript();
-      } while (promptPersistRerun);
-    } catch (error) {
-      console.warn('[stream-demo] persist displayed image prompts failed', {
-        reason,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      promptPersistRunning = false;
-    }
-  }
-
-  function queuePersistDisplayedImagePrompts(reason: string, delay = 180) {
-    if (promptPersistTimer) window.clearTimeout(promptPersistTimer);
-    promptPersistTimer = window.setTimeout(
-      () => {
-        promptPersistTimer = 0;
-        void persistDisplayedImagePrompts(reason);
-      },
-      Math.max(0, Math.trunc(delay)),
-    );
-  }
-
-  function bindDisplayedImagePromptObserver() {
-    if (promptObserver) promptObserver.disconnect();
-
-    const roots: HTMLElement[] = [];
-    const pushRoot = (root: HTMLElement | null | undefined) => {
-      if (!root) return;
-      if (roots.includes(root)) return;
-      roots.push(root);
-    };
-
-    pushRoot(document.body);
-    for (const doc of collectReachableHostDocuments()) {
-      pushRoot(doc.querySelector('#chat') as HTMLElement | null);
-    }
-    if (roots.length === 0) return;
-
-    promptObserver = new MutationObserver(records => {
-      if (!records.some(hasRelevantChatu8Mutation)) return;
-      queuePersistDisplayedImagePrompts('mutation:st-chatu8', 120);
-    });
-
-    for (const root of roots) {
-      promptObserver.observe(root, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class', 'data-image-tag', 'data-link', 'data-request-id', 'src'],
-      });
-    }
   }
 
   function listAllChatMessages() {
@@ -2849,13 +2727,9 @@ export function useStreamingDemo() {
     void syncOpeningAssistantMessage('none', false);
     rebuildTranscript();
     if (isOpeningWorkbenchHost) {
-      sanitizePluginImageCacheMeta('mounted');
-      void sanitizePluginImageExtrasInCurrentChat('mounted');
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
       bindImagePersistenceEvents();
-      bindDisplayedImagePromptObserver();
-      queuePersistDisplayedImagePrompts('mounted', 240);
       queueHidePolicy('mounted');
     }
   });
@@ -2915,10 +2789,6 @@ export function useStreamingDemo() {
       window.clearTimeout(externalSyncTimer);
       externalSyncTimer = 0;
     }
-    if (promptPersistTimer) {
-      window.clearTimeout(promptPersistTimer);
-      promptPersistTimer = 0;
-    }
     if (readerStatePersistTimer) {
       window.clearTimeout(readerStatePersistTimer);
       readerStatePersistTimer = 0;
@@ -2928,8 +2798,6 @@ export function useStreamingDemo() {
       openingPayloadPersistTimer = 0;
     }
     clearOpeningGenerationListeners();
-    promptObserver?.disconnect();
-    promptObserver = null;
   });
 
   return {

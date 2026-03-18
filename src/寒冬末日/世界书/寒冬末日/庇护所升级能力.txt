@@ -44,10 +44,10 @@ levels:
     unlocks:
       - energy.core_heat_grid_t1
       - security.entry_bulkhead_t1
-      - sustain.basic_survival_loop_t1
-      - life.rest_privacy_t1
-      - social.rule_seed_t1
-      - expansion.core_anchor_t1
+      - sustain.wanxiang_synth_t1
+      - life.water_heater_t1
+      - social.nearfield_monitor_t1
+      - expansion.cold_protection_t1
   "2":
     label: 核心区稳态
     unlocks:
@@ -546,10 +546,10 @@ abilities:
     unlock_level: 4
     system_line: energy
     tier: 4
-    growth_target: 让楼层节点供能进入可管理状态，经{{user}}主动授权，20层全楼可实现基础供电供暖
+    growth_target: "让楼层节点供能进入可管理状态，经{{user}}主动授权，20层全楼可实现基础供电供暖"
     player_advantage: 20楼全部供电供暖
     insufficiency: 无法涵盖20楼外
-    desc: 能耗预算显著增加，可以对20层实现全部供电供暖，但需{{user}}主动授权
+    desc: "能耗预算显著增加，可以对20层实现全部供电供暖，但需{{user}}主动授权"
     effects: [全楼供暖供电覆盖]
     balance:
       cost: 中
@@ -650,10 +650,10 @@ abilities:
     unlock_level: 4
     system_line: social
     tier: 4
-    growth_target: 伊甸手机终端实现量产如果{{user}}愿意可以人手一台
-    player_advantage: 伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台
-    insufficiency: {{user}}可以远程关闭某人的终端功能
-    desc: 伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台
+    growth_target: "伊甸手机终端实现量产，如果{{user}}愿意可以人手一台"
+    player_advantage: "伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台"
+    insufficiency: "{{user}}可以远程关闭某人的终端功能"
+    desc: "伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台"
     effects: [移动互联网时代]
     balance:
       cost: 中

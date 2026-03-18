@@ -619,7 +619,6 @@ function collectReachableHostDocuments(): Document[] {
     docs.push(doc);
   };
 
-  pushDoc(document);
   try {
     pushDoc(window.parent?.document);
   } catch {
@@ -658,23 +657,6 @@ function collectReachableHostWindows(): Window[] {
 }
 
 function resolveHostMessageTriggerTarget(messageId: number): HTMLElement | null {
-  try {
-    if (typeof retrieveDisplayedMessage === 'function') {
-      const $mes = retrieveDisplayedMessage(messageId);
-      const root = $mes?.get?.(0) as HTMLElement | undefined;
-      if (root) {
-        return (
-          (root.querySelector('.mes_text') as HTMLElement | null) ??
-          (root.querySelector('.mes_block') as HTMLElement | null) ??
-          (root.querySelector('.message_text') as HTMLElement | null) ??
-          root
-        );
-      }
-    }
-  } catch {
-    // ignore
-  }
-
   const mesid = Math.trunc(messageId);
   for (const doc of collectReachableHostDocuments()) {
     const root =
@@ -694,6 +676,9 @@ function resolveHostMessageTriggerTarget(messageId: number): HTMLElement | null 
 }
 
 function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: MouseEvent | null): HTMLElement | null {
+  const directTarget = resolveHostMessageTriggerTarget(messageId);
+  if (directTarget) return directTarget;
+
   if (event) {
     try {
       const frameElement = window.frameElement as HTMLElement | null;
@@ -736,6 +721,17 @@ function decodePromptToken(value: string): string {
   } catch {
     return String(value ?? '');
   }
+}
+
+const BRIDGED_EVENT_FLAG = '__streamDemoBridge';
+
+function isBridgedEvent(event: Event | null | undefined): boolean {
+  return Boolean((event as Event & Record<string, unknown> | null | undefined)?.[BRIDGED_EVENT_FLAG]);
+}
+
+function markBridgedEvent<T extends Event>(event: T): T {
+  (event as T & Record<string, unknown>)[BRIDGED_EVENT_FLAG] = true;
+  return event;
 }
 
 function normalizeImageSrcForCompare(input: string): string {
@@ -841,22 +837,113 @@ function resolveHostImageNodeByPromptToken(messageId: number, promptToken: strin
   return findNextImageElement(button);
 }
 
+function resolveIframeMessageRoot(messageId: number): HTMLElement | null {
+  const mesid = Math.trunc(messageId);
+  return (
+    (document.querySelector(`.assistant-body[data-message-id='${mesid}']`) as HTMLElement | null) ??
+    (document.querySelector(`.transcript-entry[data-message-id='${mesid}'] .assistant-body`) as HTMLElement | null) ??
+    null
+  );
+}
+
+function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: string): HTMLElement | null {
+  const root = resolveIframeMessageRoot(messageId);
+  if (!root) return null;
+  const needle = normalizePromptTokenForCompare(promptToken);
+  if (!needle) return null;
+  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  for (const button of buttons) {
+    const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+    if (!payload) continue;
+    if (normalizePromptTokenForCompare(payload) === needle) return button;
+  }
+  return null;
+}
+
+function resolveIframeImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
+  const root = resolveIframeMessageRoot(messageId);
+  if (!root || !requestId) return null;
+  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  return (
+    buttons.find(button => {
+      const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+      return buttonRequestId === requestId;
+    }) ?? null
+  );
+}
+
+function resolveIframeImageNodeByRequestId(messageId: number, requestId: string): HTMLImageElement | null {
+  const root = resolveIframeMessageRoot(messageId);
+  if (!root || !requestId) return null;
+  const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
+  for (const span of spans) {
+    const spanRequestId = String(span.dataset.requestId ?? span.getAttribute('data-request-id') ?? '').trim();
+    if (spanRequestId !== requestId) continue;
+    const image = span.querySelector('img') as HTMLImageElement | null;
+    if (image) return image;
+  }
+  return null;
+}
+
+function resolveIframeImageNodeBySrc(messageId: number, imageSrc: string): HTMLImageElement | null {
+  const root = resolveIframeMessageRoot(messageId);
+  if (!root || !imageSrc) return null;
+  const needle = normalizeImageSrcForCompare(imageSrc);
+  if (!needle) return null;
+  const images = Array.from(root.querySelectorAll('.st-chatu8-image-span img')) as HTMLImageElement[];
+  for (const image of images) {
+    const candidate = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
+    if (candidate === needle) return image;
+  }
+  return null;
+}
+
+function resolveIframeImageNodeByPromptToken(messageId: number, promptToken: string): HTMLImageElement | null {
+  const button = resolveIframeImageButtonByPromptToken(messageId, promptToken);
+  if (!button) return null;
+  const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+  if (requestId) {
+    const image = resolveIframeImageNodeByRequestId(messageId, requestId);
+    if (image) return image;
+  }
+  return findNextImageElement(button);
+}
+
 function resolveHostImageTarget(
   messageId: number,
   promptToken: string,
   requestId: string,
   imageSrc: string,
-): { hostImage: HTMLImageElement | null; hostButton: HTMLElement | null } {
+): {
+  hostImage: HTMLImageElement | null;
+  hostButton: HTMLElement | null;
+  iframeImage: HTMLImageElement | null;
+  iframeButton: HTMLElement | null;
+} {
   const buttonByRequestId = requestId ? resolveHostImageButtonByRequestId(messageId, requestId) : null;
   const imageByRequestId = requestId ? resolveHostImageNodeByRequestId(messageId, requestId) : null;
+  const iframeButtonByRequestId = requestId ? resolveIframeImageButtonByRequestId(messageId, requestId) : null;
+  const iframeImageByRequestId = requestId ? resolveIframeImageNodeByRequestId(messageId, requestId) : null;
   if (imageByRequestId || buttonByRequestId) {
     return {
       hostImage: imageByRequestId ?? resolveHostImageNodeByPromptToken(messageId, promptToken),
       hostButton: buttonByRequestId ?? resolveHostImageButtonByPromptToken(messageId, promptToken),
+      iframeImage: iframeImageByRequestId ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
+      iframeButton: iframeButtonByRequestId ?? resolveIframeImageButtonByPromptToken(messageId, promptToken),
+    };
+  }
+
+  if (iframeImageByRequestId || iframeButtonByRequestId) {
+    return {
+      hostImage: imageByRequestId ?? resolveHostImageNodeByPromptToken(messageId, promptToken),
+      hostButton: buttonByRequestId ?? resolveHostImageButtonByPromptToken(messageId, promptToken),
+      iframeImage: iframeImageByRequestId ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
+      iframeButton: iframeButtonByRequestId ?? resolveIframeImageButtonByPromptToken(messageId, promptToken),
     };
   }
 
   const imageBySrc = imageSrc ? resolveHostImageNodeBySrc(messageId, imageSrc) : null;
+  const iframeImageBySrc = imageSrc ? resolveIframeImageNodeBySrc(messageId, imageSrc) : null;
   if (imageBySrc) {
     const span = imageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
     const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
@@ -865,12 +952,31 @@ function resolveHostImageTarget(
       hostButton:
         resolveHostImageButtonByRequestId(messageId, spanRequestId) ??
         resolveHostImageButtonByPromptToken(messageId, promptToken),
+      iframeImage: iframeImageBySrc ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
+      iframeButton:
+        resolveIframeImageButtonByRequestId(messageId, spanRequestId) ??
+        resolveIframeImageButtonByPromptToken(messageId, promptToken),
+    };
+  }
+
+  if (iframeImageBySrc) {
+    const span = iframeImageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
+    const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
+    return {
+      hostImage: resolveHostImageNodeByPromptToken(messageId, promptToken),
+      hostButton: resolveHostImageButtonByPromptToken(messageId, promptToken),
+      iframeImage: iframeImageBySrc,
+      iframeButton:
+        resolveIframeImageButtonByRequestId(messageId, spanRequestId) ??
+        resolveIframeImageButtonByPromptToken(messageId, promptToken),
     };
   }
 
   return {
     hostImage: resolveHostImageNodeByPromptToken(messageId, promptToken),
     hostButton: resolveHostImageButtonByPromptToken(messageId, promptToken),
+    iframeImage: resolveIframeImageNodeByPromptToken(messageId, promptToken),
+    iframeButton: resolveIframeImageButtonByPromptToken(messageId, promptToken),
   };
 }
 
@@ -883,17 +989,27 @@ function triggerHostElementClick(target: HTMLElement): boolean {
     const doc = target.ownerDocument;
     const view = doc.defaultView;
     if (!view) return false;
-    target.dispatchEvent(
+    const clickEvent = markBridgedEvent(
       new view.MouseEvent('click', {
         bubbles: true,
         cancelable: true,
         composed: true,
       }),
     );
+    target.dispatchEvent(clickEvent);
     return true;
   } catch {
     return false;
   }
+}
+
+function resolveGeneratedImageTriggerTarget(input: {
+  hostButton: HTMLElement | null;
+  hostImage: HTMLImageElement | null;
+  iframeButton: HTMLElement | null;
+  iframeImage: HTMLImageElement | null;
+}) {
+  return input.hostButton ?? input.iframeButton ?? input.hostImage ?? input.iframeImage ?? null;
 }
 
 function dispatchHostDoubleClick(
@@ -915,7 +1031,7 @@ function dispatchHostDoubleClick(
       hostPoint?.clientY != null
         ? Number(hostPoint.clientY)
         : Math.round(rect.top + Math.min(height - 8, Math.max(8, height * 0.35)));
-    target.dispatchEvent(
+    const dblClickEvent = markBridgedEvent(
       new view.MouseEvent('dblclick', {
         bubbles: true,
         cancelable: true,
@@ -928,6 +1044,7 @@ function dispatchHostDoubleClick(
         detail: 2,
       }),
     );
+    target.dispatchEvent(dblClickEvent);
     return true;
   } catch {
     return false;
@@ -966,6 +1083,7 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
 }
 
 function handleTranscriptDoubleClickCapture(event: MouseEvent) {
+  if (isBridgedEvent(event)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
 
@@ -978,6 +1096,7 @@ function handleTranscriptDoubleClickCapture(event: MouseEvent) {
 }
 
 function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchEvent) {
+  if (isBridgedEvent(event)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
   markRecentImageIntent(Math.trunc(rawMessageId), 'transcript');
@@ -990,48 +1109,93 @@ function handleTranscriptImageIntent(item: TranscriptItem) {
 }
 
 function handleGeneratedImageClickCapture(event: MouseEvent) {
+  if (isBridgedEvent(event)) return;
   const target = event.target as HTMLElement | null;
-  if (!(target instanceof HTMLImageElement)) return;
-  if (!isPluginNativeImageElement(target)) return;
-  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier) return;
+  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier || !isPluginNativeImageElement(carrier)) return;
 
-  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+  const targetImage = target instanceof HTMLImageElement ? target : null;
+  const parsed = parseGeneratedImageActivationPayload({
     carrierDataset: carrier.dataset,
     targetDataset: target.dataset,
-    targetAttrSrc: target.getAttribute('src'),
-    targetCurrentSrc: target.currentSrc,
-    targetSrc: target.getAttribute('src'),
+    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
+    targetCurrentSrc: targetImage?.currentSrc ?? null,
+    targetSrc: targetImage?.getAttribute('src') ?? null,
   });
+  const fallbackMessageId = Number(
+    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
+      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
+      '',
+  );
+  const messageId = Number.isFinite(parsed.messageId)
+    ? Number(parsed.messageId)
+    : Number.isFinite(fallbackMessageId)
+      ? Math.trunc(fallbackMessageId)
+      : null;
+  const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
-  if (!hostImage) return;
+  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+    Math.trunc(messageId),
+    promptToken,
+    requestId,
+    imageSrc,
+  );
+  const targetNode = resolveGeneratedImageTriggerTarget({
+    hostButton,
+    hostImage,
+    iframeButton,
+    iframeImage,
+  });
+  if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
-  triggerHostElementClick(hostImage);
+  if (!triggerHostElementClick(targetNode)) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
+  }
 }
 
 function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
+  if (isBridgedEvent(event)) return;
   const target = event.target as HTMLElement | null;
-  if (!(target instanceof HTMLImageElement)) return;
-  if (!isPluginNativeImageElement(target)) return;
-  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier) return;
+  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier || !isPluginNativeImageElement(carrier)) return;
 
-  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+  const targetImage = target instanceof HTMLImageElement ? target : null;
+  const parsed = parseGeneratedImageActivationPayload({
     carrierDataset: carrier.dataset,
     targetDataset: target.dataset,
-    targetAttrSrc: target.getAttribute('src'),
-    targetCurrentSrc: target.currentSrc,
-    targetSrc: target.getAttribute('src'),
+    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
+    targetCurrentSrc: targetImage?.currentSrc ?? null,
+    targetSrc: targetImage?.getAttribute('src') ?? null,
   });
+  const fallbackMessageId = Number(
+    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
+      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
+      '',
+  );
+  const messageId = Number.isFinite(parsed.messageId)
+    ? Number(parsed.messageId)
+    : Number.isFinite(fallbackMessageId)
+      ? Math.trunc(fallbackMessageId)
+      : null;
+  const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage, hostButton } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
-  const targetNode = hostButton ?? hostImage;
+  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+    Math.trunc(messageId),
+    promptToken,
+    requestId,
+    imageSrc,
+  );
+  const targetNode = resolveGeneratedImageTriggerTarget({
+    hostButton,
+    hostImage,
+    iframeButton,
+    iframeImage,
+  });
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1039,16 +1203,17 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   nativeEvent.stopImmediatePropagation?.();
   markRecentImageIntent(Math.trunc(messageId), 'gallery');
   beginPendingImageTask(Math.trunc(messageId));
-  dispatchHostDoubleClick(targetNode);
+  if (!dispatchHostDoubleClick(targetNode)) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
+  }
 }
 
 function handleGeneratedImagePointerDownCapture(event: PointerEvent) {
+  if (isBridgedEvent(event)) return;
   if (event.pointerType !== 'touch') return;
   const target = event.target as HTMLElement | null;
-  if (!(target instanceof HTMLImageElement)) return;
-  if (!isPluginNativeImageElement(target)) return;
-  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier) return;
+  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier || !isPluginNativeImageElement(carrier)) return;
 
   event.stopPropagation();
   const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
@@ -1056,29 +1221,53 @@ function handleGeneratedImagePointerDownCapture(event: PointerEvent) {
 }
 
 function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
+  if (isBridgedEvent(event)) return;
   if (event.pointerType !== 'touch') return;
   const target = event.target as HTMLElement | null;
-  if (!(target instanceof HTMLImageElement)) return;
-  if (!isPluginNativeImageElement(target)) return;
-  const carrier = target.closest(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier) return;
+  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier || !isPluginNativeImageElement(carrier)) return;
 
-  const { messageId, promptToken, requestId, imageSrc } = parseGeneratedImageActivationPayload({
+  const targetImage = target instanceof HTMLImageElement ? target : null;
+  const parsed = parseGeneratedImageActivationPayload({
     carrierDataset: carrier.dataset,
     targetDataset: target.dataset,
-    targetAttrSrc: target.getAttribute('src'),
-    targetCurrentSrc: target.currentSrc,
-    targetSrc: target.getAttribute('src'),
+    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
+    targetCurrentSrc: targetImage?.currentSrc ?? null,
+    targetSrc: targetImage?.getAttribute('src') ?? null,
   });
+  const fallbackMessageId = Number(
+    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
+      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
+      '',
+  );
+  const messageId = Number.isFinite(parsed.messageId)
+    ? Number(parsed.messageId)
+    : Number.isFinite(fallbackMessageId)
+      ? Math.trunc(fallbackMessageId)
+      : null;
+  const { promptToken, requestId, imageSrc } = parsed;
   if (!Number.isFinite(messageId)) return;
 
-  const { hostImage } = resolveHostImageTarget(Math.trunc(messageId), promptToken, requestId, imageSrc);
-  if (!hostImage) return;
+  const { hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+    Math.trunc(messageId),
+    promptToken,
+    requestId,
+    imageSrc,
+  );
+  const targetNode = resolveGeneratedImageTriggerTarget({
+    hostButton,
+    hostImage,
+    iframeButton,
+    iframeImage,
+  });
+  if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
   const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
-  triggerHostElementClick(hostImage);
+  if (!triggerHostElementClick(targetNode)) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
+  }
 }
 
 useEventListener(document, 'pointerdown', handleTranscriptIntentCapture, { capture: true });

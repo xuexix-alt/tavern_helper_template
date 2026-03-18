@@ -69,6 +69,108 @@ assertEqual(
   'extra.lockedTags should include the prompt/tag used for the generated image',
 );
 
+const duplicateByRequestPatch = buildGeneratedImagePersistencePatch({
+  message: {
+    message_id: 6,
+    swipe_id: 0,
+    data: {
+      stream_demo: {
+        generated_images: [
+          {
+            src: 'data:image/png;base64,aaa',
+            alt: 'generated image',
+            promptToken: 'image###角色A###',
+            requestId: 'req-1',
+          },
+        ],
+      },
+    },
+    extra: {
+      images: [
+        [
+          {
+            requestId: 'req-1',
+            request_id: 'req-1',
+            src: 'data:image/png;base64,aaa',
+            image: 'data:image/png;base64,aaa',
+            imageData: 'data:image/png;base64,aaa',
+            alt: 'generated image',
+          },
+        ],
+      ],
+      lockedTags: ['image###角色A###'],
+    },
+  },
+  response: {
+    requestId: 'req-1',
+    prompt: 'image###角色A###',
+    promptToken: 'image###角色A###',
+    imageData: 'data:image/png;base64,aaa',
+  },
+});
+
+assertEqual(
+  duplicateByRequestPatch.nextData.stream_demo.generated_images.length,
+  1,
+  'duplicate request id should not append a second generated image entry',
+);
+assertEqual(
+  duplicateByRequestPatch.nextExtra.images[0].length,
+  1,
+  'duplicate request id should not append a second extra.images entry',
+);
+
+const duplicateBySrcPatch = buildGeneratedImagePersistencePatch({
+  message: {
+    message_id: 7,
+    swipe_id: 0,
+    data: {
+      stream_demo: {
+        generated_images: [
+          {
+            src: 'data:image/png;base64,same-src',
+            alt: 'generated image',
+            promptToken: '',
+            requestId: '',
+          },
+        ],
+      },
+    },
+    extra: {
+      images: [
+        [
+          {
+            requestId: '',
+            request_id: '',
+            src: 'data:image/png;base64,same-src',
+            image: 'data:image/png;base64,same-src',
+            imageData: 'data:image/png;base64,same-src',
+            alt: 'generated image',
+          },
+        ],
+      ],
+      lockedTags: [],
+    },
+  },
+  response: {
+    requestId: '',
+    prompt: 'image###角色C###',
+    promptToken: 'image###角色C###',
+    imageData: 'data:image/png;base64,same-src',
+  },
+});
+
+assertEqual(
+  duplicateBySrcPatch.nextData.stream_demo.generated_images.length,
+  1,
+  'duplicate image src should not append a second generated image entry when request id is missing',
+);
+assertEqual(
+  duplicateBySrcPatch.nextExtra.images[0].length,
+  1,
+  'duplicate image src should not append a second extra.images entry when request id is missing',
+);
+
 const syncedExtra = syncDisplayedGeneratedImagesToExtra(
   {
     swipe_id: 0,

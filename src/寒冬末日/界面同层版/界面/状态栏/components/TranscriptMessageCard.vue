@@ -128,6 +128,14 @@
             :data-message-id="item.message_id"
             v-html="item.finalHtml || '<p>(空回复)</p>'"
           ></div>
+          <div v-if="item.generatedImages.length > 0" class="assistant-inline-image-strip">
+            <GeneratedImageAsset
+              v-for="image in item.generatedImages"
+              :key="image.id"
+              :entry="image"
+              variant="inline"
+            />
+          </div>
         </div>
 
         <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
@@ -157,6 +165,7 @@
 
 <script setup lang="ts">
 import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
+import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -188,6 +197,7 @@ const emit = defineEmits<{
 
 const metaOpen = ref(false);
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
+
 function onEditInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   if (!target) return;
@@ -436,7 +446,7 @@ function onEditInput(event: Event) {
 .assistant-body-wrap :deep(.assistant-fallback-inline-image) {
   position: relative;
   z-index: 2;
-  pointer-events: none;
+  pointer-events: auto;
   display: block;
   margin: 16px 0;
   border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
@@ -448,14 +458,10 @@ function onEditInput(event: Event) {
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
 }
 
-.assistant-body-wrap :deep(.assistant-fallback-inline-image img) {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: min(72vh, 42rem);
-  object-fit: cover;
-  background: color-mix(in srgb, var(--surface) 22%, transparent);
-  opacity: 0.88;
+.assistant-inline-image-strip {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .assistant-body-wrap :deep(.st-chatu8-image-button),

@@ -22,6 +22,7 @@ export type TranscriptItem = {
   regexText: string;
   streamHtml: string;
   finalHtml: string;
+  generatedImages: GeneratedImageRef[];
   options: string[];
   hidden: boolean;
   phase: 'stream' | 'done' | 'plain';
@@ -50,11 +51,10 @@ export type ReaderLogItem = {
   createdAt: string;
 };
 
-export type ReaderGalleryEntry = {
+export type GeneratedImageRef = {
   id: string;
   messageId: number;
-  src: string;
-  alt: string;
+  imageId?: string;
   promptToken: string;
   requestId?: string;
   anchorText?: string;
@@ -62,6 +62,8 @@ export type ReaderGalleryEntry = {
   characterName?: string;
   createdOrder: number;
 };
+
+export type ReaderGalleryEntry = GeneratedImageRef;
 
 export type ReaderChatState = {
   version: number;

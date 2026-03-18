@@ -304,11 +304,15 @@ const expansionState = computed(() => ({
   hangar: String(_.get(mvuData.value, '庇护所.可扩展区域.载具格纳库', '未解锁')),
 }));
 
+// 当变量更新时（sourceOptions变化），自动切换到最新楼层
 watch(
   sourceOptions,
   options => {
-    if (!options.some(option => option.key === selectedSourceKey.value)) {
-      selectedSourceKey.value = options[0]?.key ?? '';
+    if (options.length > 0) {
+      const latestOption = options[0]; // 第一个选项是最新的
+      if (selectedSourceKey.value !== latestOption?.key) {
+        selectedSourceKey.value = latestOption?.key ?? '';
+      }
     }
   },
   { immediate: true },

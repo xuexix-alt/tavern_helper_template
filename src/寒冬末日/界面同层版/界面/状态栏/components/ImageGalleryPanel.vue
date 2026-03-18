@@ -40,27 +40,13 @@
         </button>
 
         <div class="gallery-grid">
-          <figure
+          <GeneratedImageAsset
             v-for="entry in group.entries"
             :key="entry.id"
-            class="assistant-gallery-image"
-            :data-message-id="entry.messageId"
-            :data-prompt-token="encodePromptToken(entry.promptToken)"
-            :data-request-id="entry.requestId ?? ''"
-          >
-            <img
-              :src="entry.src"
-              :alt="entry.title"
-              loading="lazy"
-              :data-message-id="entry.messageId"
-              :data-prompt-token="encodePromptToken(entry.promptToken)"
-              :data-request-id="entry.requestId ?? ''"
-            />
-            <figcaption class="gallery-caption">
-              <strong>{{ entry.characterName || entry.title }}</strong>
-              <small>{{ entry.title }}</small>
-            </figcaption>
-          </figure>
+            :entry="entry"
+            variant="gallery"
+            :show-caption="true"
+          />
         </div>
       </section>
     </div>
@@ -69,6 +55,7 @@
 
 <script setup lang="ts">
 import type { ReaderGalleryEntry } from '../types';
+import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
 const props = defineProps<{
   entries: ReaderGalleryEntry[];
@@ -82,10 +69,6 @@ const emit = defineEmits<{
 
 const searchText = ref('');
 const activeFilter = ref<'all' | 'named' | 'recent'>('recent');
-
-function encodePromptToken(value: string) {
-  return encodeURIComponent(String(value ?? ''));
-}
 
 const filteredEntries = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
@@ -294,42 +277,6 @@ const groupedEntries = computed(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.assistant-gallery-image {
-  margin: 0;
-  display: grid;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.assistant-gallery-image img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
-  background: color-mix(in srgb, var(--surface) 20%, transparent);
-  box-shadow:
-    0 10px 24px color-mix(in srgb, black 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
-}
-
-.gallery-caption {
-  display: grid;
-  gap: 2px;
-}
-
-.gallery-caption strong,
-.gallery-caption small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gallery-caption small {
-  color: var(--demo-text-muted);
 }
 
 .gallery-empty {

@@ -78,6 +78,7 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
   const nextList = Array.isArray(currentList) ? clone(currentList) : [];
 
   const imageEntry = {
+    imageId: input.response.requestId,
     src: input.response.imageData,
     alt: 'generated image',
     promptToken: input.response.promptToken,
@@ -106,10 +107,11 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
       (item: any) => String(item?.requestId ?? item?.request_id ?? '').trim() === input.response.requestId,
     )
   ) {
-    targetSwipeEntries.push({
-      requestId: input.response.requestId,
-      prompt: input.response.prompt,
-      tag: input.response.prompt,
+      targetSwipeEntries.push({
+      imageId: input.response.requestId,
+        requestId: input.response.requestId,
+        prompt: input.response.prompt,
+        tag: input.response.prompt,
       regex: '',
       imageData: input.response.imageData,
       image: input.response.imageData,
@@ -186,12 +188,14 @@ export function syncDisplayedGeneratedImagesToExtra(
       const src = String(image?.src ?? '').trim();
       const promptToken = String(image?.promptToken ?? '').trim();
       const requestId = String(image?.requestId ?? '').trim();
+      const imageId = String(image?.imageId ?? image?.requestId ?? '').trim();
       if (!src) return null;
       const prompt = parsePromptBodyFromToken(promptToken);
       return {
         src,
         alt: String(image?.alt ?? 'generated image').trim() || 'generated image',
         promptToken,
+        imageId,
         prompt,
         requestId,
         regex: String(image?.anchorText ?? '').trim(),
@@ -201,6 +205,7 @@ export function syncDisplayedGeneratedImagesToExtra(
     src: string;
     alt: string;
     promptToken: string;
+    imageId: string;
     prompt: string;
     requestId: string;
     regex: string;
@@ -218,6 +223,7 @@ export function syncDisplayedGeneratedImagesToExtra(
 
     return {
       ...matchedExisting,
+      imageId: image.imageId,
       requestId: image.requestId,
       request_id: image.requestId,
       prompt: image.prompt,

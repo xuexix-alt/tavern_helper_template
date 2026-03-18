@@ -1,5 +1,6 @@
 export type Chatu8CacheEntry = {
   messageId: number | null;
+  imageId?: string;
   promptToken: string;
   src: string;
   alt: string;
@@ -161,6 +162,11 @@ export function collectChatu8CacheEntries(chatMeta: unknown, messageId?: number 
 
       out.push({
         messageId: entryMessageId,
+        imageId:
+          String((value as any)?.imageId ?? (value as any)?.image_id ?? '').trim() ||
+          requestId ||
+          promptToken ||
+          undefined,
         promptToken,
         src,
         alt: String((value as any)?.alt ?? 'generated image').trim(),
