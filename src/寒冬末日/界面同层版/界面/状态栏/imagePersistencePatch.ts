@@ -115,8 +115,7 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
       ...(nextList[existingIndex] ?? {}),
       anchorText,
       markerId: String((nextList[existingIndex] as any)?.markerId ?? '').trim() || markerId,
-      promptToken:
-        String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
+      promptToken: String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
     };
   }
 

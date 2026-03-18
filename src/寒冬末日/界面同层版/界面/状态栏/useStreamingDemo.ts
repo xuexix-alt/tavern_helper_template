@@ -859,9 +859,7 @@ function buildGeneratedImageRefsForMessage(input: {
       });
     const promptToken = String(member.promptToken ?? '').trim();
     const anchorText = String(member.anchorText ?? '').trim() || undefined;
-    const characterNameValue = pickFirstNonEmpty(
-      extractCharacterNameFromPrompt(promptToken),
-    );
+    const characterNameValue = pickFirstNonEmpty(extractCharacterNameFromPrompt(promptToken));
     const characterName = characterNameValue || undefined;
     const title = pickFirstNonEmpty(
       extractGalleryTitleFromPrompt(promptToken),

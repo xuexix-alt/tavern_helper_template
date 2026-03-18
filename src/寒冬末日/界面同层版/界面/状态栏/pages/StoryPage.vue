@@ -141,11 +141,7 @@
                     <strong>{{ activeUtilityMeta.title }}</strong>
                     <p>{{ activeUtilityMeta.subtitle }}</p>
                     <div class="ui-drawer-pills">
-                      <span
-                        v-for="pill in activeUtilityPills"
-                        :key="pill.label"
-                        class="ui-drawer-pill clip-corner-sm"
-                      >
+                      <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
                         <small>{{ pill.label }}</small>
                         <strong>{{ pill.value }}</strong>
                       </span>
@@ -1182,17 +1178,11 @@ function triggerGeneratedImageAction(
   }
 }
 
-function handleGeneratedImageOpen(
-  entry: GeneratedImageRef,
-  source: 'transcript' | 'gallery' = 'transcript',
-) {
+function handleGeneratedImageOpen(entry: GeneratedImageRef, source: 'transcript' | 'gallery' = 'transcript') {
   triggerGeneratedImageAction(entry, 'open', source);
 }
 
-function handleGeneratedImageRegenerate(
-  entry: GeneratedImageRef,
-  source: 'transcript' | 'gallery' = 'transcript',
-) {
+function handleGeneratedImageRegenerate(entry: GeneratedImageRef, source: 'transcript' | 'gallery' = 'transcript') {
   triggerGeneratedImageAction(entry, 'regenerate', source);
 }
 
@@ -1237,13 +1227,16 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
     requestId,
     imageSrc,
   );
-  const targetNode = resolveGeneratedImageTriggerTarget({
-    hostMessageRoot,
-    hostButton,
-    hostImage,
-    iframeButton,
-    iframeImage,
-  }, 'open');
+  const targetNode = resolveGeneratedImageTriggerTarget(
+    {
+      hostMessageRoot,
+      hostButton,
+      hostImage,
+      iframeButton,
+      iframeImage,
+    },
+    'open',
+  );
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1288,13 +1281,16 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
     requestId,
     imageSrc,
   );
-  const targetNode = resolveGeneratedImageTriggerTarget({
-    hostMessageRoot,
-    hostButton,
-    hostImage,
-    iframeButton,
-    iframeImage,
-  }, 'regenerate');
+  const targetNode = resolveGeneratedImageTriggerTarget(
+    {
+      hostMessageRoot,
+      hostButton,
+      hostImage,
+      iframeButton,
+      iframeImage,
+    },
+    'regenerate',
+  );
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
@@ -1353,13 +1349,16 @@ function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
     requestId,
     imageSrc,
   );
-  const targetNode = resolveGeneratedImageTriggerTarget({
-    hostMessageRoot,
-    hostButton,
-    hostImage,
-    iframeButton,
-    iframeImage,
-  }, 'open');
+  const targetNode = resolveGeneratedImageTriggerTarget(
+    {
+      hostMessageRoot,
+      hostButton,
+      hostImage,
+      iframeButton,
+      iframeImage,
+    },
+    'open',
+  );
   if (!targetNode) return;
   event.preventDefault();
   event.stopPropagation();
