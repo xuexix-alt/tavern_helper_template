@@ -107,11 +107,11 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
       (item: any) => String(item?.requestId ?? item?.request_id ?? '').trim() === input.response.requestId,
     )
   ) {
-      targetSwipeEntries.push({
+    targetSwipeEntries.push({
       imageId: input.response.requestId,
-        requestId: input.response.requestId,
-        prompt: input.response.prompt,
-        tag: input.response.prompt,
+      requestId: input.response.requestId,
+      prompt: input.response.prompt,
+      tag: input.response.prompt,
       regex: '',
       imageData: input.response.imageData,
       image: input.response.imageData,

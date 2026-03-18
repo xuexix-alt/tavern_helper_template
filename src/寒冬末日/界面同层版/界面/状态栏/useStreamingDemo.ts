@@ -32,19 +32,12 @@ import {
   READER_CHAT_STATE_VERSION,
   readReaderChatState,
 } from './readerState';
-import {
-  buildPromptTokenFromCachePrompt,
-  collectChatu8CacheEntries,
-  type Chatu8CacheEntry,
-} from './galleryCache';
+import { buildPromptTokenFromCachePrompt, collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
-import {
-  buildGeneratedImagePersistencePatch,
-  sanitizePluginImageExtra,
-} from './imagePersistencePatch';
+import { buildGeneratedImagePersistencePatch, sanitizePluginImageExtra } from './imagePersistencePatch';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
@@ -822,7 +815,10 @@ function buildGeneratedImageRefsForMessage(input: {
   return imageKeys.map(imageKey => {
     const promptToken = promptByKey.get(imageKey) ?? promptTokens[index] ?? '';
     const anchorText = anchorByKey.get(imageKey) || undefined;
-    const characterNameValue = pickFirstNonEmpty(characterByKey.get(imageKey), extractCharacterNameFromPrompt(promptToken));
+    const characterNameValue = pickFirstNonEmpty(
+      characterByKey.get(imageKey),
+      extractCharacterNameFromPrompt(promptToken),
+    );
     const characterName = characterNameValue || undefined;
     const title = pickFirstNonEmpty(
       titleByKey.get(imageKey),

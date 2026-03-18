@@ -726,7 +726,7 @@ function decodePromptToken(value: string): string {
 const BRIDGED_EVENT_FLAG = '__streamDemoBridge';
 
 function isBridgedEvent(event: Event | null | undefined): boolean {
-  return Boolean((event as Event & Record<string, unknown> | null | undefined)?.[BRIDGED_EVENT_FLAG]);
+  return Boolean((event as (Event & Record<string, unknown>) | null | undefined)?.[BRIDGED_EVENT_FLAG]);
 }
 
 function markBridgedEvent<T extends Event>(event: T): T {
