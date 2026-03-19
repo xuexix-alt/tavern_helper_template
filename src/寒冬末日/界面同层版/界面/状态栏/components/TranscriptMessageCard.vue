@@ -107,9 +107,21 @@
         </div>
 
         <div class="assistant-body-wrap">
+<<<<<<< HEAD
+=======
+          <div class="assistant-body-sentinel" aria-hidden="true"></div>
+          <button
+            type="button"
+            class="assistant-body-proxy"
+            :data-message-id="item.message_id"
+            tabindex="-1"
+            aria-label="触发原楼层图片生成"
+          ></button>
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="item.isStreaming"
+            ref="assistantBodyRef"
             class="assistant-body html-body is-stream-stage"
             :data-message-id="item.message_id"
             v-html="item.streamHtml"
@@ -117,6 +129,7 @@
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-else
+            ref="assistantBodyRef"
             class="assistant-body html-body"
             :data-message-id="item.message_id"
             v-html="item.finalHtml || '<p>(空回复)</p>'"
@@ -127,8 +140,13 @@
               :key="image.id"
               :entry="image"
               variant="inline"
+<<<<<<< HEAD
               @open="emit('open-image', $event)"
               @regenerate="emit('regenerate-image', $event)"
+=======
+              @view="emit('image-view', $event)"
+              @regenerate="emit('image-regenerate', $event)"
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
             />
           </div>
         </div>
@@ -159,7 +177,13 @@
 </template>
 
 <script setup lang="ts">
+import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
+import { loadImage } from '../imageStore';
+import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
+import { hydratePersistedImageElements } from '../transcriptImagePersistence';
+import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
 import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
 const props = defineProps<{
@@ -180,6 +204,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
   (event: 'image-intent', item: TranscriptItem): void;
+  (event: 'image-view', payload: GeneratedImageActivationPayload): void;
+  (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
   (event: 'start-edit', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
   (event: 'confirm-edit', item: TranscriptItem): void;
@@ -193,6 +219,8 @@ const emit = defineEmits<{
 }>();
 
 const metaOpen = ref(false);
+const assistantBodyRef = ref<HTMLElement | null>(null);
+const assistantBodyCleanup = ref<Array<() => void>>([]);
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 
 function onEditInput(event: Event) {
@@ -200,6 +228,153 @@ function onEditInput(event: Event) {
   if (!target) return;
   emit('update-edit-draft', target.value);
 }
+
+async function resolvePersistedImageSrc(src: string) {
+  if (!isIdbSrc(src)) return src;
+  const parsed = parseIdbSrc(src);
+  if (!parsed) return null;
+  try {
+    return await loadImage(parsed.messageId, parsed.requestId);
+  } catch {
+    return null;
+  }
+}
+
+async function hydrateAssistantBodyImages() {
+  const root = assistantBodyRef.value;
+  if (!root) return;
+  const images = Array.from(
+    root.querySelectorAll('img[src^="idb://"], img[data-persisted-image-src]'),
+  ) as HTMLImageElement[];
+  if (images.length === 0) return;
+  await hydratePersistedImageElements({
+    elements: images,
+    resolveSrc: async (src, element) => {
+      const persistedSrc = String(element.getAttribute('data-persisted-image-src') ?? src).trim();
+      return resolvePersistedImageSrc(persistedSrc);
+    },
+  });
+}
+
+function clearAssistantBodyInteractionBindings() {
+  assistantBodyCleanup.value.forEach(dispose => dispose());
+  assistantBodyCleanup.value = [];
+}
+
+function stopEvent(event: Event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const nativeEvent = event as Event & { stopImmediatePropagation?: () => void };
+  nativeEvent.stopImmediatePropagation?.();
+}
+
+function bindAssistantBodyInteractions() {
+  clearAssistantBodyInteractionBindings();
+  const root = assistantBodyRef.value;
+  if (!root) return;
+
+  const carriers = Array.from(
+    root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
+  ) as HTMLElement[];
+
+  assistantBodyCleanup.value = carriers.map(carrier => {
+    let hitArea = carrier.querySelector('.generated-image-hitarea') as HTMLButtonElement | null;
+    if (!hitArea) {
+      hitArea = document.createElement('button');
+      hitArea.type = 'button';
+      hitArea.className = 'generated-image-hitarea';
+      hitArea.setAttribute('aria-label', '查看或重生图片');
+      carrier.appendChild(hitArea);
+    }
+    const image = carrier.querySelector('img') as HTMLImageElement | null;
+    const payload = () =>
+      parseGeneratedImageActivationPayload({
+        carrierDataset: carrier.dataset,
+        targetDataset: hitArea?.dataset ?? image?.dataset ?? {},
+        targetAttrSrc: image?.getAttribute('src') ?? null,
+        targetCurrentSrc: image?.currentSrc ?? null,
+        targetSrc: image?.getAttribute('src') ?? null,
+      });
+
+    if (image) {
+      image.style.pointerEvents = 'none';
+      hitArea.dataset.messageId = image.dataset.messageId ?? carrier.dataset.messageId ?? '';
+      hitArea.dataset.imageId = image.dataset.imageId ?? carrier.dataset.imageId ?? '';
+      hitArea.dataset.promptToken = image.dataset.promptToken ?? carrier.dataset.promptToken ?? '';
+      hitArea.dataset.requestId = image.dataset.requestId ?? carrier.dataset.requestId ?? '';
+      hitArea.dataset.imageSrc = encodeURIComponent(image.getAttribute('src') ?? image.currentSrc ?? '');
+    }
+
+    const controller = createGeneratedImageGestureController({
+      onView() {
+        emit('image-view', payload());
+      },
+      onRegenerate() {
+        emit('image-regenerate', payload());
+      },
+    });
+
+    const handleClick = (event: Event) => {
+      stopEvent(event);
+      controller.handleClick();
+    };
+    const handleDoubleClick = (event: Event) => {
+      stopEvent(event);
+      controller.handleDoubleClick();
+    };
+    const handlePointerDown = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      stopEvent(event);
+      controller.handleTouchStart();
+    };
+    const handlePointerUp = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      stopEvent(event);
+      controller.handleTouchEnd();
+    };
+    const handlePointerCancel = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      stopEvent(event);
+      controller.handleTouchCancel();
+    };
+
+    hitArea.addEventListener('click', handleClick, true);
+    hitArea.addEventListener('dblclick', handleDoubleClick, true);
+    hitArea.addEventListener('pointerdown', handlePointerDown, true);
+    hitArea.addEventListener('pointerup', handlePointerUp, true);
+    hitArea.addEventListener('pointercancel', handlePointerCancel, true);
+
+    return () => {
+      hitArea?.removeEventListener('click', handleClick, true);
+      hitArea?.removeEventListener('dblclick', handleDoubleClick, true);
+      hitArea?.removeEventListener('pointerdown', handlePointerDown, true);
+      hitArea?.removeEventListener('pointerup', handlePointerUp, true);
+      hitArea?.removeEventListener('pointercancel', handlePointerCancel, true);
+      controller.dispose();
+    };
+  });
+}
+
+onMounted(() => {
+  void hydrateAssistantBodyImages();
+  nextTick(() => {
+    bindAssistantBodyInteractions();
+  });
+});
+
+onUpdated(() => {
+  void hydrateAssistantBodyImages();
+  nextTick(() => {
+    bindAssistantBodyInteractions();
+  });
+});
+
+onBeforeUnmount(() => {
+  clearAssistantBodyInteractionBindings();
+});
 </script>
 
 <style scoped>
@@ -329,6 +504,25 @@ function onEditInput(event: Event) {
   position: relative;
   padding-top: 6px;
 }
+<<<<<<< HEAD
+=======
+.assistant-body-sentinel {
+  display: none;
+}
+.assistant-body-proxy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  pointer-events: none;
+}
+.assistant-body-proxy:focus {
+  outline: none;
+}
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 .assistant-body {
   position: relative;
   z-index: 1;
@@ -436,6 +630,18 @@ function onEditInput(event: Event) {
   box-shadow:
     0 8px 18px color-mix(in srgb, black 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
+}
+
+.assistant-body-wrap :deep(.generated-image-hitarea) {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
 }
 
 .assistant-inline-image-strip {

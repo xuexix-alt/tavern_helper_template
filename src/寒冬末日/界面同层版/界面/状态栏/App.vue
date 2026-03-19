@@ -1,5 +1,5 @@
 <template>
-  <main class="doc-shell-root">
+  <main class="doc-shell-root" :class="{ 'is-fullscreen': isFullscreen }">
     <div class="doc-shell-grid demo-grid-bg"></div>
     <div class="doc-shell-vignette"></div>
     <StoryPage />
@@ -7,7 +7,10 @@
 </template>
 
 <script setup lang="ts">
+import { inject, ref } from 'vue';
 import StoryPage from './pages/StoryPage.vue';
+
+const isFullscreen = inject('isFullscreen', ref(false));
 </script>
 
 <style scoped>
@@ -53,5 +56,13 @@ import StoryPage from './pages/StoryPage.vue';
   .doc-shell-root {
     border-radius: 18px;
   }
+}
+
+/* 全屏模式：去掉外壳装饰，让内容铺满 */
+.doc-shell-root.is-fullscreen {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
 }
 </style>

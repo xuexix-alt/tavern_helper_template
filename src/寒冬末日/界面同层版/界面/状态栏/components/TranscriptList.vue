@@ -26,6 +26,8 @@
           :can-swipe-next="false"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
+          @image-view="emit('image-view', $event)"
+          @image-regenerate="emit('image-regenerate', $event)"
           @start-edit="emit('start-edit-user', item)"
           @update-edit-draft="emit('update-edit-draft', $event)"
           @confirm-edit="emit('confirm-edit-user', item)"
@@ -68,6 +70,7 @@
 </template>
 
 <script setup lang="ts">
+import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import type { ReaderFontMode, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
 import { buildTranscriptEntryKey } from '../transcriptDomRefresh.ts';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
@@ -94,6 +97,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
   (event: 'image-intent', item: TranscriptItem): void;
+  (event: 'image-view', payload: GeneratedImageActivationPayload): void;
+  (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;

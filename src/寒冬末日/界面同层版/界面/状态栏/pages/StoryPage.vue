@@ -1,5 +1,5 @@
 <template>
-  <section class="ui-host-shell" :style="shellStyleVars">
+  <section class="ui-host-shell" :class="{ 'is-fullscreen': isFullscreen }" :style="shellStyleVars">
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
         <span class="ui-dot"></span>
@@ -14,6 +14,10 @@
         <button type="button" class="ui-icon-btn" @click="openGalleryDrawer">图库</button>
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
+
+        <button type="button" class="ui-icon-btn ui-fullscreen-btn" @click="toggleFullscreen">
+          {{ isFullscreen ? '退出全屏' : '全屏' }}
+        </button>
       </div>
     </header>
 
@@ -71,8 +75,13 @@
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @jump-message="jumpToTranscriptMessage"
+<<<<<<< HEAD
             @open-image="handleGeneratedImageOpen($event, 'gallery')"
             @regenerate-image="handleGeneratedImageRegenerate($event, 'gallery')"
+=======
+            @image-view="activateGeneratedImageView"
+            @image-regenerate="activateGeneratedImageRegenerate"
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
             @close="closeGalleryDrawer"
           />
         </div>
@@ -105,8 +114,13 @@
               :render-revision="transcriptDomRevision"
               @open-detail="openDetail"
               @image-intent="handleTranscriptImageIntent"
+<<<<<<< HEAD
               @open-image="handleGeneratedImageOpen"
               @regenerate-image="handleGeneratedImageRegenerate"
+=======
+              @image-view="activateGeneratedImageView"
+              @image-regenerate="activateGeneratedImageRegenerate"
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
               @reroll-opening="rerollOpening"
@@ -123,7 +137,11 @@
         </section>
 
         <section class="ui-bottom-dock">
+<<<<<<< HEAD
           <!-- Teleport遮罩和抽屉到body，突破iframe层级限制 -->
+=======
+          <!-- 遮罩和抽屉面板 Teleport 到 body，脱离 .ui-host-shell 的 overflow:hidden 裁剪 -->
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
           <Teleport to="body">
             <transition name="utility-mask-fade">
               <div v-if="activeUtilityDrawer" class="ui-utility-mask" @click="closeUtilityDrawer"></div>
@@ -141,7 +159,15 @@
                     <strong>{{ activeUtilityMeta.title }}</strong>
                     <p>{{ activeUtilityMeta.subtitle }}</p>
                     <div class="ui-drawer-pills">
+<<<<<<< HEAD
                       <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
+=======
+                      <span
+                        v-for="pill in activeUtilityPills"
+                        :key="pill.label"
+                        class="ui-drawer-pill clip-corner-sm"
+                      >
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
                         <small>{{ pill.label }}</small>
                         <strong>{{ pill.value }}</strong>
                       </span>
@@ -181,6 +207,10 @@
             </div>
 
             <div class="ui-bottom-tools">
+<<<<<<< HEAD
+=======
+
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
               <div class="ui-bottom-tool-row">
                 <button
                   type="button"
@@ -256,7 +286,9 @@
       </main>
     </div>
 
-    <RadialQuickMenu :items="visibleRoleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
+    <Teleport to="body">
+      <RadialQuickMenu :items="visibleRoleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
+    </Teleport>
 
     <HudModal
       :open="componentLibraryOpen"
@@ -325,7 +357,12 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
+<<<<<<< HEAD
 import type { GeneratedImageRef, TranscriptItem } from '../types';
+=======
+import type { TranscriptItem } from '../types';
+import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
@@ -340,11 +377,20 @@ import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
+<<<<<<< HEAD
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget.ts';
+=======
+import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
+import {
+  pickGeneratedImageActivationTarget,
+  resolveGeneratedImageActivationTarget,
+} from '../generatedImageInteraction';
+import { buildIframeMessageRootSelectors } from '../generatedImageDom';
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 import { convertIframePointToHostPoint, resolveHostTriggerTargetFromPoint } from '../hostCoordinateTarget';
-import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveWithRetry } from '../hostTargetRetry';
+import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { useStreamingDemo } from '../useStreamingDemo';
 
@@ -409,6 +455,8 @@ const {
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 const composerRef = ref<InstanceType<typeof BottomComposer> | null>(null);
 const readerShellHeight = ref('720px');
+const isFullscreen = ref(false);
+provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
@@ -508,6 +556,14 @@ function updateReaderShellHeight() {
   if (typeof window === 'undefined') return;
   const viewportHeight = readHostViewportHeight();
   const safeViewportHeight = Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 900;
+
+  if (isFullscreen.value) {
+    // iframe 自身全屏：window.innerHeight 即为全屏高度
+    const fsHeight = Math.trunc(window.innerHeight);
+    readerShellHeight.value = `${fsHeight > 0 ? fsHeight : safeViewportHeight}px`;
+    return;
+  }
+
   const shellPadding = safeViewportHeight < 720 ? 8 : 16;
   const targetHeight = Math.max(520, safeViewportHeight - shellPadding);
   readerShellHeight.value = `${targetHeight}px`;
@@ -575,6 +631,20 @@ function toggleUtilityDrawer(type: 'system' | 'map') {
 
 function closeUtilityDrawer() {
   activeUtilityDrawer.value = null;
+}
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.();
+  } else {
+    document.documentElement.requestFullscreen().catch(console.error);
+  }
+}
+
+function exitFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.();
+  }
 }
 
 function handleRosterChange(roles: RoleTabItem[]) {
@@ -844,12 +914,11 @@ function resolveHostImageNodeByPromptToken(messageId: number, promptToken: strin
 }
 
 function resolveIframeMessageRoot(messageId: number): HTMLElement | null {
-  const mesid = Math.trunc(messageId);
-  return (
-    (document.querySelector(`.assistant-body[data-message-id='${mesid}']`) as HTMLElement | null) ??
-    (document.querySelector(`.transcript-entry[data-message-id='${mesid}'] .assistant-body`) as HTMLElement | null) ??
-    null
-  );
+  for (const selector of buildIframeMessageRootSelectors(messageId)) {
+    const resolved = document.querySelector(selector) as HTMLElement | null;
+    if (resolved) return resolved;
+  }
+  return null;
 }
 
 function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: string): HTMLElement | null {
@@ -1016,6 +1085,7 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
+<<<<<<< HEAD
 function resolveGeneratedImageTriggerTarget(
   input: {
     hostMessageRoot: HTMLElement | null;
@@ -1036,6 +1106,88 @@ function resolveGeneratedImageTriggerTarget(
     },
     action,
   );
+=======
+/**
+ * 全屏挂起辅助：若当前 iframe 处于全屏，先退出全屏，执行 action，
+ * 再用 MutationObserver 监测宿主 body 直接子节点的增删来感知菜单关闭，
+ * 菜单消失后自动恢复全屏。若 30s 内未触发则超时恢复。
+ */
+async function withFullscreenSuspended(action: () => void): Promise<void> {
+  if (!document.fullscreenElement) {
+    action();
+    return;
+  }
+
+  // 获取宿主 document.body 用于监测菜单
+  let hostBody: HTMLElement | null = null;
+  try {
+    hostBody = window.top?.document?.body ?? null;
+  } catch {
+    // 跨域时无法访问宿主，直接执行不恢复
+    action();
+    return;
+  }
+
+  // 退出全屏
+  await document.exitFullscreen?.().catch(() => {});
+  // 等待 fullscreenchange 确认退出
+  await new Promise<void>(resolve => {
+    if (!document.fullscreenElement) { resolve(); return; }
+    const handler = () => { document.removeEventListener('fullscreenchange', handler); resolve(); };
+    document.addEventListener('fullscreenchange', handler);
+    setTimeout(resolve, 500);
+  });
+
+  // 执行生图触发
+  action();
+
+  if (!hostBody) return;
+
+  // 监测宿主 body 直接子节点：等新浮层节点出现后消失，再恢复全屏
+  await new Promise<void>(resolve => {
+    const TIMEOUT_MS = 30_000;
+    let addedNode: Node | null = null;
+    const timeoutId = setTimeout(() => { observer.disconnect(); resolve(); }, TIMEOUT_MS);
+
+    const observer = new MutationObserver(mutations => {
+      for (const mut of mutations) {
+        if (addedNode === null) {
+          // 等待新节点被加入
+          for (const node of Array.from(mut.addedNodes)) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              addedNode = node;
+              break;
+            }
+          }
+        } else {
+          // 等待已追踪节点被移除
+          for (const node of Array.from(mut.removedNodes)) {
+            if (node === addedNode) {
+              clearTimeout(timeoutId);
+              observer.disconnect();
+              resolve();
+              return;
+            }
+          }
+        }
+      }
+    });
+
+    observer.observe(hostBody!, { childList: true });
+
+    // 若 300ms 内没有新节点加入，说明菜单可能没有走 body appendChild 流程，直接 resolve
+    setTimeout(() => {
+      if (addedNode === null) {
+        clearTimeout(timeoutId);
+        observer.disconnect();
+        resolve();
+      }
+    }, 300);
+  });
+
+  // 恢复全屏
+  document.documentElement.requestFullscreen().catch(() => {});
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function dispatchHostDoubleClick(
@@ -1103,9 +1255,11 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
     toastr?.warning?.(`未找到楼层 #${messageId} 的原生正文节点`);
     return;
   }
-  if (!dispatchHostDoubleClick(target, hostPoint)) {
-    toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
-  }
+  await withFullscreenSuspended(() => {
+    if (!dispatchHostDoubleClick(target, hostPoint)) {
+      toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
+    }
+  });
 }
 
 function handleTranscriptDoubleClickCapture(event: MouseEvent) {
@@ -1134,6 +1288,7 @@ function handleTranscriptImageIntent(item: TranscriptItem) {
   markRecentImageIntent(messageId, 'transcript');
 }
 
+<<<<<<< HEAD
 function triggerGeneratedImageAction(
   entry: GeneratedImageRef,
   action: 'open' | 'regenerate',
@@ -1199,28 +1354,24 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
   const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return;
   if (shouldBypassGeneratedImageBridge(target, carrier)) return;
+=======
+function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {
+  const element = target as HTMLElement | null;
+  const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!carrier || !isPluginNativeImageElement(carrier)) return null;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
-  const targetImage = target instanceof HTMLImageElement ? target : null;
-  const parsed = parseGeneratedImageActivationPayload({
+  const targetImage = element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
+  return parseGeneratedImageActivationPayload({
     carrierDataset: carrier.dataset,
-    targetDataset: target.dataset,
+    targetDataset: targetImage?.dataset ?? {},
     targetAttrSrc: targetImage?.getAttribute('src') ?? null,
     targetCurrentSrc: targetImage?.currentSrc ?? null,
     targetSrc: targetImage?.getAttribute('src') ?? null,
   });
-  const fallbackMessageId = Number(
-    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
-      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
-      '',
-  );
-  const messageId = Number.isFinite(parsed.messageId)
-    ? Number(parsed.messageId)
-    : Number.isFinite(fallbackMessageId)
-      ? Math.trunc(fallbackMessageId)
-      : null;
-  const { promptToken, requestId, imageSrc } = parsed;
-  if (!Number.isFinite(messageId)) return;
+}
 
+<<<<<<< HEAD
   const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
     Math.trunc(messageId),
     promptToken,
@@ -1242,11 +1393,36 @@ function handleGeneratedImageClickCapture(event: MouseEvent) {
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
+=======
+async function activateGeneratedImageView(payload: GeneratedImageActivationPayload) {
+  const messageId = Number(payload?.messageId);
+  if (!Number.isFinite(messageId)) return;
+  const promptToken = String(payload?.promptToken ?? '');
+  const requestId = String(payload?.requestId ?? '').trim();
+  const imageSrc = String(payload?.imageSrc ?? '').trim();
+
+  const targetNode = await resolveGeneratedImageActivationTarget('view', {
+    attempts: 5,
+    delayMs: 90,
+    resolveNodes: () =>
+      resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      ),
+  });
+  if (!targetNode) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
+    return;
+  }
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   if (!triggerHostElementClick(targetNode)) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
   }
 }
 
+<<<<<<< HEAD
 function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
   const target = event.target as HTMLElement | null;
@@ -1273,8 +1449,16 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
       ? Math.trunc(fallbackMessageId)
       : null;
   const { promptToken, requestId, imageSrc } = parsed;
+=======
+async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
+  const messageId = Number(payload?.messageId);
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   if (!Number.isFinite(messageId)) return;
+  const promptToken = String(payload?.promptToken ?? '');
+  const requestId = String(payload?.requestId ?? '').trim();
+  const imageSrc = String(payload?.imageSrc ?? '').trim();
 
+<<<<<<< HEAD
   const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
     Math.trunc(messageId),
     promptToken,
@@ -1296,15 +1480,35 @@ function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
+=======
+  const targetNode = await resolveGeneratedImageActivationTarget('regenerate', {
+    attempts: 5,
+    delayMs: 90,
+    resolveNodes: () =>
+      resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      ),
+  });
+  if (!targetNode) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
+    return;
+  }
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   markRecentImageIntent(Math.trunc(messageId), 'gallery');
   beginPendingImageTask(Math.trunc(messageId));
-  if (!dispatchHostDoubleClick(targetNode)) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
-  }
+  await withFullscreenSuspended(() => {
+    if (!dispatchHostDoubleClick(targetNode)) {
+      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
+    }
+  });
 }
 
-function handleGeneratedImagePointerDownCapture(event: PointerEvent) {
+function handleGeneratedImageWindowDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
+<<<<<<< HEAD
   if (event.pointerType !== 'touch') return;
   const target = event.target as HTMLElement | null;
   const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
@@ -1360,22 +1564,20 @@ function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
     'open',
   );
   if (!targetNode) return;
+=======
+  const payload = resolveGeneratedImagePayloadFromDomTarget(event.target);
+  if (!payload) return;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   event.preventDefault();
   event.stopPropagation();
-  const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
-  nativeEvent.stopImmediatePropagation?.();
-  if (!triggerHostElementClick(targetNode)) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
-  }
+  event.stopImmediatePropagation?.();
+  void activateGeneratedImageRegenerate(payload);
 }
 
 useEventListener(document, 'pointerdown', handleTranscriptIntentCapture, { capture: true });
 useEventListener(document, 'click', handleTranscriptIntentCapture, { capture: true });
 useEventListener(document, 'dblclick', handleTranscriptDoubleClickCapture, { capture: true });
-useEventListener(document, 'pointerdown', handleGeneratedImagePointerDownCapture, { capture: true });
-useEventListener(document, 'pointerup', handleGeneratedImagePointerUpCapture, { capture: true });
-useEventListener(document, 'click', handleGeneratedImageClickCapture, { capture: true });
-useEventListener(document, 'dblclick', handleGeneratedImageDoubleClickCapture, { capture: true });
+useEventListener(window, 'dblclick', handleGeneratedImageWindowDoubleClickCapture, { capture: true });
 
 function openChoiceModalFromToolbar() {
   composerRef.value?.openChoiceModal?.();
@@ -1409,6 +1611,12 @@ if (typeof window !== 'undefined' && window.visualViewport) {
   useEventListener(window.visualViewport, 'scroll', updateReaderShellHeight, { passive: true });
 }
 
+// 同步浏览器原生全屏状态
+useEventListener(document, 'fullscreenchange', () => {
+  isFullscreen.value = !!document.fullscreenElement;
+  updateReaderShellHeight();
+});
+
 useEventListener(window, 'keydown', event => {
   if (event.key !== 'Escape') return;
   if (roleDrawerOpen.value || galleryDrawerOpen.value) closeSideDrawers();
@@ -1416,6 +1624,7 @@ useEventListener(window, 'keydown', event => {
   else if (componentLibraryOpen.value) componentLibraryOpen.value = false;
   else if (openingModalOpen.value) openingModalOpen.value = false;
   else if (settingsModalOpen.value) settingsModalOpen.value = false;
+  else if (document.fullscreenElement) exitFullscreen();
 });
 </script>
 
@@ -1551,8 +1760,9 @@ useEventListener(window, 'keydown', event => {
     padding-right: 14px;
   }
 
-  /* 修复非移动端底部抽屉显示问题 */
+  /* 桌面端抽屉尺寸微调（定位已在默认样式中统一为 fixed 居中） */
   .ui-bottom-drawer {
+<<<<<<< HEAD
     /* 使用 fixed 定位覆盖视口，参考选项弹窗的成功方式 */
     position: fixed;
     left: 12px;
@@ -1571,6 +1781,17 @@ useEventListener(window, 'keydown', event => {
     max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
     height: 80vh;
     max-height: 80vh;
+=======
+    width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
+    height: 480px;
+    max-height: 480px;
+  }
+
+  .ui-bottom-drawer.is-map {
+    width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
+    height: 500px;
+    max-height: 500px;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   }
 }
 
@@ -1935,12 +2156,23 @@ useEventListener(window, 'keydown', event => {
   display: inline-flex;
 }
 
+/* 抽屉面板已 Teleport 到 body，统一使用 fixed 定位 */
 .ui-bottom-drawer {
+<<<<<<< HEAD
   position: absolute;
   left: 0;
   bottom: calc(100% + 10px);
   width: min(100%, 56rem);
   max-height: 80vh;
+=======
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2600;
+  width: min(94vw, 56rem);
+  max-height: min(80vh, 42rem);
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   display: flex;
   flex-direction: column;
   border: 1px solid var(--demo-border-accent-soft);
@@ -1953,7 +2185,7 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-bottom-drawer.is-map {
-  width: min(100%, 72rem);
+  width: min(94vw, 72rem);
 }
 
 .ui-bottom-drawer-head {
@@ -2078,10 +2310,15 @@ useEventListener(window, 'keydown', event => {
   background: color-mix(in srgb, black 42%, transparent);
 }
 
+/* 遮罩已 Teleport 到 body，z-index 需低于抽屉(2600)但高于页面内容 */
 .ui-utility-mask {
   position: fixed;
   inset: 0;
+<<<<<<< HEAD
   z-index: 2500;
+=======
+  z-index: 2599;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   background: color-mix(in srgb, black 26%, transparent);
 }
 
@@ -2106,10 +2343,11 @@ useEventListener(window, 'keydown', event => {
     transform 0.24s ease;
 }
 
+/* 动画需保留居中的 translate(-50%,-50%)，在此基础上叠加 Y 偏移 */
 .utility-drawer-rise-enter-from,
 .utility-drawer-rise-leave-to {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translate(-50%, -50%) translateY(14px);
 }
 
 :deep(.transcript-card) {
@@ -2265,13 +2503,24 @@ useEventListener(window, 'keydown', event => {
     height: 8px;
   }
 
+  /* 移动端抽屉：固定在视口底部偏上，覆盖大部分屏幕 */
   .ui-bottom-drawer {
+<<<<<<< HEAD
     position: fixed;
     left: 6px;
     right: 6px;
     bottom: 60px;
     width: auto;
     max-height: calc(100dvh - 96px);
+=======
+    top: auto;
+    left: 3vw;
+    right: 3vw;
+    bottom: 80px;
+    width: 94vw;
+    max-height: calc(100dvh - 110px);
+    transform: none;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
     border-radius: 18px 18px 12px 12px;
     z-index: 2501;
   }
@@ -2382,6 +2631,161 @@ useEventListener(window, 'keydown', event => {
     line-height: 1;
     letter-spacing: 0.06em;
     text-align: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   全屏模式
+   运行在 iframe 内，不能用 position:fixed 突破，
+   改为：JS 读取宿主视口高度（不减 padding）→ 铺满 iframe → 去圆角
+   ═══════════════════════════════════════════════ */
+
+.ui-host-shell.is-fullscreen {
+  /* 不用 fixed —— iframe 中 fixed 仅限 iframe 内部 */
+  min-height: 0;
+  border-radius: 0;
+}
+
+/* 全屏 - 顶栏：紧凑化 */
+.ui-host-shell.is-fullscreen .ui-topbar {
+  padding: 8px 20px;
+  gap: 16px;
+}
+
+/* 全屏 - 内容区域：去除 padding，让 main-panel 自己居中 */
+.ui-host-shell.is-fullscreen .ui-host-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 全屏 - main-panel：居中，左侧留出 toggle 按钮空间 */
+.ui-host-shell.is-fullscreen .ui-main-panel {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  /* 左侧给 sidebar-toggle (22px) 留出视觉空间，右侧对称 */
+  padding-left: 26px;
+  padding-right: 26px;
+  box-sizing: border-box;
+}
+
+/* 全屏 - 对话区域：阅读内边距 */
+.ui-host-shell.is-fullscreen .ui-transcript-panel {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* 全屏 - 底部 dock */
+.ui-host-shell.is-fullscreen .ui-bottom-dock {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* 全屏 - 侧边栏加宽 */
+.ui-host-shell.is-fullscreen .ui-sidebar {
+  width: 360px;
+}
+
+/* 桌面端全屏（≥761px） */
+@media (min-width: 761px) {
+  .ui-host-shell.is-fullscreen .ui-topbar {
+    padding: 10px 28px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-host-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-main-panel {
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-transcript-panel {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-bottom-dock {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-sidebar {
+    width: 380px;
+  }
+}
+
+/* 宽屏全屏（≥1200px）：内容列居中，自适应宽度 */
+@media (min-width: 1200px) {
+  .ui-host-shell.is-fullscreen .ui-main-panel {
+    max-width: min(82vw, 1400px);
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-transcript-panel {
+    padding-left: 36px;
+    padding-right: 36px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-bottom-dock {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-sidebar {
+    width: 400px;
+  }
+}
+
+/* 超宽屏全屏（≥1600px） */
+@media (min-width: 1600px) {
+  .ui-host-shell.is-fullscreen .ui-main-panel {
+    max-width: min(78vw, 1800px);
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-transcript-panel {
+    padding-left: 56px;
+    padding-right: 56px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-bottom-dock {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
+
+/* 2K+ 全屏（≥2200px） */
+@media (min-width: 2200px) {
+  .ui-host-shell.is-fullscreen .ui-main-panel {
+    max-width: min(72vw, 2200px);
+  }
+}
+
+/* 移动端全屏 */
+@media (max-width: 760px) {
+  .ui-host-shell.is-fullscreen .ui-topbar {
+    padding: 6px 10px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-main-panel {
+    padding-left: 22px;
+    padding-right: 0;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-transcript-panel {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .ui-host-shell.is-fullscreen .ui-bottom-dock {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 8px;
   }
 }
 </style>

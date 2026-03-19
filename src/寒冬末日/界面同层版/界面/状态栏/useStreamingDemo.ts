@@ -39,8 +39,15 @@ import { buildGeneratedImageMembership } from './generatedImageMembership.ts';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
+import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
+<<<<<<< HEAD
 import { buildGeneratedImagePersistencePatch, sanitizePluginImageExtra } from './imagePersistencePatch';
+=======
+import {
+  buildGeneratedImagePersistencePatch,
+} from './imagePersistencePatch';
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import {
   buildHostTranscriptVisibilitySelector,
@@ -49,7 +56,11 @@ import {
 } from './hostTranscriptVisibility.ts';
 import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
+<<<<<<< HEAD
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
+=======
+import { applyTranscriptArtifacts } from './transcriptImagePersistence';
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
@@ -75,6 +86,8 @@ type RenderableGeneratedImage = {
   promptToken?: string;
   requestId?: string;
   anchorText?: string;
+  title?: string;
+  characterName?: string;
 };
 type ImageRequestBindingResult = ReturnType<ReturnType<typeof createImagePendingTaskManager>['registerRequest']>;
 
@@ -168,7 +181,16 @@ function buildFinalHtml(renderSource: string, message_id: number): string {
   if (!html) {
     html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
   }
+<<<<<<< HEAD
   return appendChatu8ArtifactsToHtml(html, renderSource, message_id);
+=======
+  return applyTranscriptArtifacts({
+    html,
+    renderSource,
+    messageId: message_id,
+    appendArtifacts: appendChatu8ArtifactsToHtml,
+  });
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function listReachableHostWindows(): Array<Window & typeof globalThis> {
@@ -211,6 +233,7 @@ function readHostContext(): any {
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
+  if (raw.startsWith('idb://')) return raw;
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith('/')) return raw;
@@ -258,6 +281,7 @@ function buildAnchorSnippet(input: string): string {
   return normalized.slice(-72);
 }
 
+<<<<<<< HEAD
 function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string): string {
   const token = String(promptToken ?? '').trim();
   if (!token) return '';
@@ -282,6 +306,21 @@ function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string
   }
 
   return '';
+=======
+function normalizeAnchorCompare(input: string): string {
+  return normalizeAnchorText(input)
+    .replace(/[“”"'`‘’《》【】\[\]（）(){}<>]/g, '')
+    .replace(/[，。！？；：、…,.!?;:]/g, '')
+    .trim();
+}
+
+function splitAnchorFragments(input: string): string[] {
+  return normalizeAnchorText(input)
+    .split(/[，。！？；：、…,.!?;:\n\r]+/)
+    .map(segment => segment.trim())
+    .filter(segment => segment.length >= 8)
+    .sort((a, b) => b.length - a.length);
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function createGeneratedImageFigureHtml(
@@ -299,7 +338,15 @@ function createGeneratedImageFigureHtml(
   const markerIdAttr = image.markerId ? ` data-marker-id="${escapeHtml(image.markerId)}"` : ' data-marker-id=""';
   const requestIdAttr = image.requestId ? ` data-request-id="${escapeHtml(image.requestId)}"` : ' data-request-id=""';
   const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
+<<<<<<< HEAD
   return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
+=======
+  const persistedSrcAttr = image.src.startsWith('idb://')
+    ? ` data-persisted-image-src="${encodeDataAttr(image.src)}"`
+    : '';
+  const imgSrcAttr = image.src.startsWith('idb://') ? '' : ` src="${escapeHtml(image.src)}"`;
+  return `<figure class="${className}"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr}${persistedSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function readChatMessageDetail(messageId: number): any | null {
@@ -330,6 +377,8 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
       promptToken: String((item as any)?.promptToken ?? '').trim(),
       requestId: String((item as any)?.requestId ?? '').trim() || undefined,
       anchorText: String((item as any)?.anchorText ?? '').trim() || undefined,
+      title: String((item as any)?.title ?? '').trim() || undefined,
+      characterName: String((item as any)?.characterName ?? '').trim() || undefined,
     });
   }
   return out;
@@ -394,7 +443,11 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
         (entry as any).promptToken ?? (entry as any).tag ?? (entry as any).prompt ?? '',
       ),
       requestId: String((entry as any).requestId ?? (entry as any).request_id ?? '').trim() || undefined,
+<<<<<<< HEAD
       anchorText: String((entry as any).regex ?? '').trim() || undefined,
+=======
+      anchorText: buildAnchorSnippet(String((entry as any).regex ?? '').trim()) || undefined,
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
     });
   }
   return out;
@@ -433,13 +486,31 @@ function collectInlineAnchorCandidates(root: HTMLElement): HTMLElement[] {
 function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLElement | null {
   const needle = buildAnchorSnippet(anchorText);
   if (!needle) return null;
+  const needleComparable = normalizeAnchorCompare(needle);
+  const anchorFragments = splitAnchorFragments(anchorText);
   const candidates = collectInlineAnchorCandidates(root);
   let fallback: HTMLElement | null = null;
 
   for (const candidate of candidates) {
     const text = normalizeAnchorText(candidate.textContent ?? '');
+    const comparableText = normalizeAnchorCompare(text);
     if (!text) continue;
     if (text.includes(needle) || needle.includes(text)) return candidate;
+    if (needleComparable && comparableText && (comparableText.includes(needleComparable) || needleComparable.includes(comparableText))) {
+      return candidate;
+    }
+    if (
+      anchorFragments.some(fragment => {
+        const comparableFragment = normalizeAnchorCompare(fragment);
+        return (
+          fragment.length >= 8 &&
+          (text.includes(fragment) ||
+            (comparableFragment && comparableText.includes(comparableFragment)))
+        );
+      })
+    ) {
+      return candidate;
+    }
     if (
       !fallback &&
       (text.includes(needle.slice(0, Math.min(24, needle.length))) || needle.includes(text.slice(-24)))
@@ -451,19 +522,25 @@ function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLE
   return fallback;
 }
 
-function injectGeneratedImagesIntoHtml(html: string, images: RenderableGeneratedImage[], messageId: number): string {
+function injectGeneratedImagesIntoHtml(
+  html: string,
+  images: RenderableGeneratedImage[],
+  messageId: number,
+  options: { appendUnanchoredToEnd?: boolean } = {},
+): string {
   if (images.length === 0) return html;
 
   const doc = document.implementation.createHTMLDocument('');
   doc.body.innerHTML = html;
   const insertionRefs = new Map<HTMLElement, HTMLElement>();
   const fallbackFigures: HTMLElement[] = [];
+  const appendUnanchoredToEnd = options.appendUnanchoredToEnd !== false;
 
   for (const image of images) {
     const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
     const anchor = image.anchorText ? resolveInlineAnchorTarget(doc.body, image.anchorText) : null;
     if (!anchor) {
-      fallbackFigures.push(figure);
+      if (appendUnanchoredToEnd) fallbackFigures.push(figure);
       continue;
     }
     const reference = insertionRefs.get(anchor) ?? anchor;
@@ -483,16 +560,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const promptTokenSet = new Set(promptTokens);
   const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
   const compatibilityImages = readPersistedGeneratedImages(messageId);
-  const pluginNativeImages = [
-    ...readChatu8ExtraImages(messageId),
-    ...readChatu8CacheEntries(messageId).map(item => ({
-      imageId: item.imageId,
-      src: item.src,
-      alt: item.alt,
-      promptToken: item.promptToken,
-      requestId: item.requestId,
-    })),
-  ];
+  const pluginNativeImages = readChatu8ExtraImages(messageId);
 
   const renderMode = chooseImageRenderMode({
     hasPluginNativeDom: countPluginNativeImageArtifacts(existingRoots) > 0,
@@ -501,10 +569,10 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   });
 
   const images =
-    renderMode === 'compatibility'
-      ? compatibilityImages
-      : renderMode === 'plugin-native-data'
-        ? pluginNativeImages
+    renderMode === 'plugin-native-data'
+      ? pluginNativeImages
+      : shouldInjectTranscriptImages(renderMode)
+        ? compatibilityImages
         : [];
 
   const existingSources = collectImageSourceIdentitiesFromHtml(html);
@@ -518,7 +586,9 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
     dedupedImages.push(image);
   }
 
-  const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId);
+  const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
+    appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
+  });
   const promptMarkup = createPromptTokenMarkup(promptTokens);
   if (!promptMarkup) return htmlWithImages;
   return `${htmlWithImages}${promptMarkup}`;
@@ -577,13 +647,20 @@ function resolveDisplayedMessageRoots(messageId: number): HTMLElement[] {
 
 function resolveIframeAssistantRoots(messageId: number): HTMLElement[] {
   const roots: HTMLElement[] = [];
-  const selector = `.assistant-body[data-message-id='${Math.trunc(messageId)}']`;
+  const mesid = Math.trunc(messageId);
+  const selectors = [
+    `.assistant-body[data-message-id='${mesid}']`,
+    `.transcript-entry[data-message-id='${mesid}'] .assistant-body-wrap`,
+    `.transcript-entry[data-message-id='${mesid}'] .assistant-body`,
+  ];
   for (const doc of collectReachableHostDocuments()) {
     if (doc !== document) continue;
-    const nodes = Array.from(doc.querySelectorAll(selector)) as HTMLElement[];
-    for (const node of nodes) {
-      if (roots.includes(node)) continue;
-      roots.push(node);
+    for (const selector of selectors) {
+      const nodes = Array.from(doc.querySelectorAll(selector)) as HTMLElement[];
+      for (const node of nodes) {
+        if (roots.includes(node)) continue;
+        roots.push(node);
+      }
     }
   }
   return roots;
@@ -831,6 +908,7 @@ function buildGeneratedImageRefsForMessage(input: {
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
+<<<<<<< HEAD
   const persistedMembers = readPersistedGeneratedImageIndex(messageId).map(image => ({
     markerId: String(image.markerId ?? '').trim() || undefined,
     imageId: String(image.imageId ?? '').trim() || undefined,
@@ -844,6 +922,46 @@ function buildGeneratedImageRefsForMessage(input: {
     persistedEntries: persistedMembers,
     createdOrderBase,
   });
+=======
+  const imageKeys: string[] = [];
+  const promptByKey = new Map<string, string>();
+  const requestByKey = new Map<string, string>();
+  const anchorByKey = new Map<string, string>();
+  const titleByKey = new Map<string, string>();
+  const characterByKey = new Map<string, string>();
+
+  const mergeImage = (image: RenderableGeneratedImage) => {
+    const src = normalizeImageSrcForCompare(image.src);
+    const imageId = String(image.imageId ?? '').trim();
+    const promptToken = String(image.promptToken ?? '').trim();
+    const requestId = String(image.requestId ?? '').trim();
+    const anchorText = String(image.anchorText ?? '').trim();
+    const imageKey = imageId || requestId || src || promptToken || anchorText;
+    if (!imageKey) return;
+    if (!imageKeys.includes(imageKey)) imageKeys.push(imageKey);
+    const characterName = String(image.characterName ?? '').trim() || extractCharacterNameFromPrompt(promptToken);
+    const title = String(image.title ?? '').trim() || extractGalleryTitleFromPrompt(promptToken) || characterName;
+
+    if (promptToken && !promptByKey.has(imageKey)) promptByKey.set(imageKey, promptToken);
+    if (requestId && !requestByKey.has(imageKey)) requestByKey.set(imageKey, requestId);
+    if (anchorText && !anchorByKey.has(imageKey)) anchorByKey.set(imageKey, anchorText);
+    if (title && !titleByKey.has(imageKey)) titleByKey.set(imageKey, title);
+    if (characterName && !characterByKey.has(imageKey)) characterByKey.set(imageKey, characterName);
+  };
+
+  const images = [
+    ...readPersistedGeneratedImages(messageId),
+    ...readChatu8ExtraImages(messageId),
+    ...readChatu8CacheEntries(messageId).map(item => ({
+      src: item.src,
+      alt: item.alt,
+      promptToken: item.promptToken,
+      requestId: item.requestId,
+    })),
+  ];
+
+  for (const image of images) mergeImage(image);
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
   let index = 0;
   return members.map(member => {
@@ -1838,11 +1956,31 @@ export function useStreamingDemo() {
       requestId: result.requestId,
       promptToken: result.promptToken,
       hasExtraImages: Array.isArray(fullMessage?.extra?.images),
-      previousGeneratedCount: Array.isArray(fullMessage?.data?.stream_demo?.generated_images)
-        ? fullMessage.data.stream_demo.generated_images.length
-        : 0,
     });
 
+    // 1. 图片实体存入 IndexedDB（不进聊天 JSON）
+    try {
+      const { storeImage } = await import('./imageStore');
+      await storeImage({
+        messageId: result.messageId,
+        requestId: result.requestId,
+        promptToken: result.promptToken,
+        prompt: result.prompt,
+        imageData: result.imageData,
+      });
+      logImageBridge('idb-store-success', {
+        messageId: result.messageId,
+        requestId: result.requestId,
+      });
+    } catch (idbError) {
+      logImageBridge('idb-store-failed', {
+        messageId: result.messageId,
+        requestId: result.requestId,
+        error: idbError instanceof Error ? idbError.message : String(idbError),
+      });
+    }
+
+    // 2. 聊天 JSON 只存轻量引用（idb:// src，无 base64）
     const patch = buildGeneratedImagePersistencePatch({
       message: fullMessage,
       response: {

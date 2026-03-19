@@ -60,8 +60,13 @@
             :entry="entry"
             variant="gallery"
             :show-caption="true"
+<<<<<<< HEAD
             @open="emit('open-image', $event)"
             @regenerate="emit('regenerate-image', $event)"
+=======
+            @view="emit('image-view', $event)"
+            @regenerate="emit('image-regenerate', $event)"
+>>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
           />
         </div>
       </section>
@@ -70,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import type { ReaderGalleryEntry } from '../types';
 import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
@@ -80,6 +86,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'jump-message', messageId: number): void;
+  (event: 'image-view', payload: GeneratedImageActivationPayload): void;
+  (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
   (event: 'close'): void;
   (event: 'open-image', entry: ReaderGalleryEntry): void;
   (event: 'regenerate-image', entry: ReaderGalleryEntry): void;
