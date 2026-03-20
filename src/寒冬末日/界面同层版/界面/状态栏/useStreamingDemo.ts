@@ -41,17 +41,25 @@ import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
-import { buildGeneratedImagePersistencePatch } from './imagePersistencePatch';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import {
   buildHostTranscriptVisibilitySelector,
+  createHostTranscriptVisibilityController,
   HOST_VISIBILITY_CLASS,
   HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility.ts';
-import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
+import { LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED } from './legacyImagePersistenceRuntime.ts';
+import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup.ts';
+import {
+  readNativeFirstImageArtifacts,
+  readNativeFirstMembershipEntries,
+  readNativeFirstPromptTokens,
+  type NativeFirstArtifactSource,
+  type NativeFirstImageArtifact,
+} from './pluginNativeImageArtifacts.ts';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
@@ -80,7 +88,9 @@ type RenderableGeneratedImage = {
   title?: string;
   characterName?: string;
 };
-type ImageRequestBindingResult = ReturnType<ReturnType<typeof createImagePendingTaskManager>['registerRequest']>;
+type NativeFirstRenderableGeneratedImage = RenderableGeneratedImage & {
+  source: NativeFirstArtifactSource;
+};
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -155,9 +165,11 @@ function buildStreamStageHtml(renderSource: string, role: TranscriptItem['role']
 }
 
 function normalizeDisplayedHtml(html: string): string {
-  return String(html ?? '')
+  return stripPluginNativePlaceholderHtml(
+    String(html ?? '')
     .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
-    .replace(/<\/q>/gi, '</span>');
+    .replace(/<\/q>/gi, '</span>'),
+  );
 }
 
 function buildFinalHtml(renderSource: string, message_id: number): string {
@@ -220,7 +232,7 @@ function readHostContext(): any {
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
-  if (raw.startsWith('idb://')) return raw;
+  if (raw.startsWith('idb:')) return '';
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith('/')) return raw;
@@ -325,11 +337,8 @@ function createGeneratedImageFigureHtml(
   const markerIdAttr = image.markerId ? ` data-marker-id="${escapeHtml(image.markerId)}"` : ' data-marker-id=""';
   const requestIdAttr = image.requestId ? ` data-request-id="${escapeHtml(image.requestId)}"` : ' data-request-id=""';
   const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
-  const persistedSrcAttr = image.src.startsWith('idb://')
-    ? ` data-persisted-image-src="${encodeDataAttr(image.src)}"`
-    : '';
-  const imgSrcAttr = image.src.startsWith('idb://') ? '' : ` src="${escapeHtml(image.src)}"`;
-  return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr}${persistedSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
+  const imgSrcAttr = image.src ? ` src="${escapeHtml(image.src)}"` : '';
+  return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
 }
 
 function readChatMessageDetail(messageId: number): any | null {
@@ -349,7 +358,7 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
   const out: RenderableGeneratedImage[] = [];
   const seen = new Set<string>();
   for (const item of list) {
-    const src = String((item as any)?.src ?? '').trim();
+    const src = normalizeImageDataToSrc((item as any)?.src ?? '');
     if (!src || seen.has(src)) continue;
     seen.add(src);
     out.push({
@@ -365,22 +374,6 @@ function readPersistedGeneratedImages(messageId: number): RenderableGeneratedIma
     });
   }
   return out;
-}
-
-function readPersistedGeneratedImageIndex(messageId: number) {
-  const message = readChatMessageDetail(messageId);
-  const list = _.get(message, 'data.stream_demo.generated_images', []);
-  if (!Array.isArray(list)) return [];
-
-  return list
-    .filter(item => item && typeof item === 'object')
-    .map(item => ({
-      markerId: String((item as any)?.markerId ?? '').trim() || undefined,
-      imageId: String((item as any)?.imageId ?? '').trim() || undefined,
-      promptToken: String((item as any)?.promptToken ?? '').trim(),
-      requestId: String((item as any)?.requestId ?? '').trim() || undefined,
-      anchorText: String((item as any)?.anchorText ?? '').trim() || undefined,
-    }));
 }
 
 function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
@@ -430,6 +423,90 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
     });
   }
   return out;
+}
+
+function toRenderableImageFromNativeArtifact(artifact: NativeFirstImageArtifact): NativeFirstRenderableGeneratedImage | null {
+  const src = normalizeImageSrcForCompare(artifact.src ?? '');
+  if (!src) return null;
+  return {
+    source: artifact.source,
+    markerId: String(artifact.markerId ?? '').trim() || undefined,
+    imageId: String(artifact.imageId ?? '').trim() || undefined,
+    src,
+    alt: String(artifact.alt ?? 'generated image').trim() || 'generated image',
+    promptToken: String(artifact.promptToken ?? '').trim() || undefined,
+    requestId: String(artifact.requestId ?? '').trim() || undefined,
+    anchorText: buildAnchorSnippet(String(artifact.anchorText ?? '')) || undefined,
+  };
+}
+
+function readNativeFirstArtifactsForMessage(input: {
+  messageId: number;
+  rawMessage?: string;
+  hostDomArtifacts?: RenderableGeneratedImage[];
+}): NativeFirstImageArtifact[] {
+  const messageId = Math.trunc(Number(input.messageId));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+
+  const message = readChatMessageDetail(messageId);
+  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  return readNativeFirstImageArtifacts({
+    messageId,
+    rawMessage,
+    hostDomArtifacts: input.hostDomArtifacts ?? [],
+    extraImages: readChatu8ExtraImages(messageId),
+    cacheArtifacts: readChatu8CacheEntries(messageId),
+    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
+  });
+}
+
+function readNativeFirstRenderableImagesForMessage(input: {
+  messageId: number;
+  rawMessage?: string;
+  hostDomArtifacts?: RenderableGeneratedImage[];
+}): NativeFirstRenderableGeneratedImage[] {
+  const out: NativeFirstRenderableGeneratedImage[] = [];
+  const seen = new Set<string>();
+
+  for (const artifact of readNativeFirstArtifactsForMessage(input)) {
+    const rendered = toRenderableImageFromNativeArtifact(artifact);
+    if (!rendered) continue;
+    if (seen.has(rendered.src)) continue;
+    seen.add(rendered.src);
+    out.push(rendered);
+  }
+
+  return out;
+}
+
+function readNativeFirstPromptTokensForMessage(input: { messageId: number; rawMessage?: string }): string[] {
+  const messageId = Math.trunc(Number(input.messageId));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+
+  const message = readChatMessageDetail(messageId);
+  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  return readNativeFirstPromptTokens({
+    messageId,
+    rawMessage,
+    extraImages: readChatu8ExtraImages(messageId),
+    cacheArtifacts: readChatu8CacheEntries(messageId),
+    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
+  });
+}
+
+function readNativeFirstMembershipForMessage(input: { messageId: number; rawMessage?: string }) {
+  const messageId = Math.trunc(Number(input.messageId));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+
+  const message = readChatMessageDetail(messageId);
+  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  return readNativeFirstMembershipEntries({
+    messageId,
+    rawMessage,
+    extraImages: readChatu8ExtraImages(messageId),
+    cacheArtifacts: readChatu8CacheEntries(messageId),
+    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
+  });
 }
 
 function createPromptTokenMarkup(promptTokens: string[]): string {
@@ -541,8 +618,17 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const promptTokens = collectChatu8PromptTokens(renderSource);
   const promptTokenSet = new Set(promptTokens);
   const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
-  const compatibilityImages = readPersistedGeneratedImages(messageId);
-  const pluginNativeImages = readChatu8ExtraImages(messageId);
+  const nativeFirstImages = readNativeFirstRenderableImagesForMessage({
+    messageId,
+    rawMessage: renderSource,
+    hostDomArtifacts: extractRenderedImagesFromRoots(messageId),
+  });
+  const pluginNativeImages = nativeFirstImages.filter(image =>
+    image.source === 'host_dom' || image.source === 'extra' || image.source === 'mes_tag',
+  );
+  const compatibilityImages = nativeFirstImages.filter(
+    image => image.source === 'cache' || image.source === 'legacy_stream_demo',
+  );
   const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(existingRoots) > 0;
 
   const renderMode = chooseImageRenderMode({
@@ -691,10 +777,7 @@ function extractPromptTokensFromDisplayedMessage(messageId: number): string[] {
   const domTokens = roots.length > 0 ? extractPromptTokensFromRoots(roots) : [];
   if (domTokens.length > 0) return domTokens;
 
-  const cacheTokens = readChatu8CacheEntries(messageId)
-    .map(item => item.promptToken)
-    .filter(Boolean);
-  return Array.from(new Set(cacheTokens));
+  return readNativeFirstPromptTokensForMessage({ messageId });
 }
 
 function extractAnchorTextForImageNode(node: Element, root: HTMLElement): string {
@@ -795,10 +878,6 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
     }
   }
 
-  for (const item of readChatu8CacheEntries(messageId)) {
-    pushImage(item.src, item.alt, item.promptToken, item.requestId);
-  }
-
   return out;
 }
 
@@ -892,7 +971,11 @@ function buildGeneratedImageRefsForMessage(input: {
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
-  const persistedMembers = readPersistedGeneratedImageIndex(messageId).map(image => ({
+  const nativeFirstMembers = readNativeFirstMembershipForMessage({
+    messageId,
+    rawMessage: input.rawMessage,
+  });
+  const persistedMembers = nativeFirstMembers.map(image => ({
     markerId: String(image.markerId ?? '').trim() || undefined,
     imageId: String(image.imageId ?? '').trim() || undefined,
     promptToken: String(image.promptToken ?? '').trim(),
@@ -1189,6 +1272,7 @@ export function useStreamingDemo() {
   let generatedImageDomMutationTimer = 0;
   let generatedImageDomObserver: MutationObserver | null = null;
   let hostPluginMutationObservers: MutationObserver[] = [];
+  const hostTranscriptVisibilityController = createHostTranscriptVisibilityController();
 
   const galleryRevision = ref(0);
   const mvuSourceRevision = ref(0);
@@ -1823,6 +1907,10 @@ export function useStreamingDemo() {
 
   async function applyHidePolicy(reason: string) {
     if (!isOpeningWorkbenchHost || readCurrentContainerMessageId() !== 0) return;
+    if (hostTranscriptVisibilityController.isSuspended()) {
+      setHostTranscriptVisibility(false);
+      return;
+    }
     setHostTranscriptVisibility(true);
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
@@ -1865,6 +1953,23 @@ export function useStreamingDemo() {
       rebuildTranscript();
       queueHidePolicy(scopedReason);
     }, resolveHidePolicyDelay(scopedReason));
+  }
+
+  async function withHostTranscriptVisible<T>(action: () => Promise<T> | T): Promise<T> {
+    const release = hostTranscriptVisibilityController.suspend();
+    if (hidePolicyTimer) {
+      window.clearTimeout(hidePolicyTimer);
+      hidePolicyTimer = 0;
+    }
+    setHostTranscriptVisibility(false);
+    try {
+      return await action();
+    } finally {
+      release();
+      if (!hostTranscriptVisibilityController.isSuspended()) {
+        queueHidePolicy('bridge_resume');
+      }
+    }
   }
 
   function queueGeneratedImageEntityRefresh() {
@@ -1950,219 +2055,20 @@ export function useStreamingDemo() {
     promptToken: string;
     imageData: string;
   }) {
-    const fullMessage = readChatMessageDetail(result.messageId);
-    if (!fullMessage) {
-      logImageBridge('persist-skip-missing-message', {
-        messageId: result.messageId,
-        requestId: result.requestId,
-        promptToken: result.promptToken,
-      });
-      return;
-    }
-
-    logImageBridge('persist-begin', {
+    logImageBridge('persist-runtime-disabled', {
       messageId: result.messageId,
       requestId: result.requestId,
       promptToken: result.promptToken,
-      hasExtraImages: Array.isArray(fullMessage?.extra?.images),
+      enabled: LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED,
     });
-
-    // 1. 图片实体存入 IndexedDB（不进聊天 JSON）
-    try {
-      const { storeImage } = await import('./imageStore');
-      await storeImage({
-        messageId: result.messageId,
-        requestId: result.requestId,
-        promptToken: result.promptToken,
-        prompt: result.prompt,
-        imageData: result.imageData,
-      });
-      logImageBridge('idb-store-success', {
-        messageId: result.messageId,
-        requestId: result.requestId,
-      });
-    } catch (idbError) {
-      logImageBridge('idb-store-failed', {
-        messageId: result.messageId,
-        requestId: result.requestId,
-        error: idbError instanceof Error ? idbError.message : String(idbError),
-      });
-    }
-
-    // 2. 聊天 JSON 只存轻量引用（idb:// src，无 base64）
-    const patch = buildGeneratedImagePersistencePatch({
-      message: fullMessage,
-      response: {
-        requestId: result.requestId,
-        prompt: result.prompt,
-        promptToken: result.promptToken,
-        imageData: result.imageData,
-      },
-      anchorText: extractAnchorTextFromRawMessage(String(fullMessage?.message ?? ''), result.promptToken),
-    });
-
-    await setChatMessages(
-      [
-        {
-          message_id: result.messageId,
-          data: patch.nextData,
-          extra: patch.nextExtra,
-        } as any,
-      ],
-      { refresh: 'affected' },
-    );
-
-    logImageBridge('persist-success', {
-      messageId: result.messageId,
-      requestId: result.requestId,
-      promptToken: result.promptToken,
-      generatedCount: Array.isArray(patch.nextData?.stream_demo?.generated_images)
-        ? patch.nextData.stream_demo.generated_images.length
-        : 0,
-      extraImagesShape: Array.isArray(patch.nextExtra?.images)
-        ? patch.nextExtra.images.map((item: unknown) => (Array.isArray(item) ? item.length : 0))
-        : [],
-    });
-
-    bumpGeneratedImageEntityRevision();
-    scheduleUiRefresh(['transcript', 'gallery'], `image:persist:${result.messageId}`);
   }
 
   function bindImagePersistenceEvents() {
-    if (!isOpeningWorkbenchHost) return;
-    if (typeof eventOn !== 'function') return;
-
-    const bind = (eventName: string, listener: (...args: any[]) => void) => {
-      try {
-        return eventOn(eventName as any, listener as any);
-      } catch {
-        return null;
-      }
-    };
-
-    imageBridgeStops = [
-      bind('generate-image-request', (payload: Record<string, unknown>) => {
-        syncPendingRequestHintsFromDom();
-        let requestBinding: ImageRequestBindingResult = imagePendingTaskManager.registerRequest(payload ?? {});
-        let targetMessageId = requestBinding?.messageId ?? null;
-        if (targetMessageId == null) {
-          const recentIntent = imageRecentIntentStore.read();
-          if (recentIntent) {
-            imagePendingTaskManager.startTask(recentIntent.messageId);
-            requestBinding = imagePendingTaskManager.registerRequest(payload ?? {});
-            targetMessageId = requestBinding?.messageId ?? null;
-            logImageBridge('request-fallback-intent', {
-              requestId: String(payload?.id ?? '').trim(),
-              recentIntent,
-              reboundMessageId: targetMessageId,
-              tasks: imagePendingTaskManager.getDebugState(),
-            });
-          }
-        }
-        if (targetMessageId == null) {
-          const domResolvedMessageId = resolveImageRequestTargetMessageId({
-            prompt: String(payload?.prompt ?? ''),
-            listButtons: () =>
-              Array.from(document.querySelectorAll('.st-chatu8-image-button')) as Array<{
-                getAttribute: (name: string) => string | null;
-                closest: (selector: string) => { dataset?: Record<string, unknown> } | null;
-              }>,
-            listTokenMarkers: () =>
-              Array.from(
-                document.querySelectorAll(
-                  '.assistant-image-prompt-token, [data-prompt-token], .mes[mesid] [data-prompt-token]',
-                ),
-              ) as Array<{
-                getAttribute: (name: string) => string | null;
-                closest: (
-                  selector: string,
-                ) => { dataset?: Record<string, unknown>; getAttribute?: (name: string) => string | null } | null;
-                textContent?: string | null;
-              }>,
-          });
-          if (domResolvedMessageId != null) {
-            imagePendingTaskManager.startTask(domResolvedMessageId);
-            requestBinding = imagePendingTaskManager.registerRequest(payload ?? {});
-            targetMessageId = requestBinding?.messageId ?? null;
-            logImageBridge('request-fallback-dom', {
-              requestId: String(payload?.id ?? '').trim(),
-              domResolvedMessageId,
-              reboundMessageId: targetMessageId,
-              tasks: imagePendingTaskManager.getDebugState(),
-            });
-          }
-        }
-        logImageBridge('request-received', {
-          requestId: String(payload?.id ?? '').trim(),
-          promptPreview: String(payload?.prompt ?? '')
-            .trim()
-            .slice(0, 120),
-          targetMessageId,
-          tasks: imagePendingTaskManager.getDebugState(),
-        });
-        if (targetMessageId != null) {
-          scheduleUiRefresh(['transcript'], `image:request:${targetMessageId}`);
-        }
-
-        if (requestBinding?.bufferedResponse) {
-          logImageBridge('request-replay-buffered-response', {
-            messageId: requestBinding.bufferedResponse.messageId,
-            requestId: requestBinding.bufferedResponse.requestId,
-            promptToken: requestBinding.bufferedResponse.promptToken,
-          });
-
-          void persistGeneratedImageResponse(requestBinding.bufferedResponse).catch(error => {
-            logImageBridge('persist-failed', {
-              messageId: requestBinding?.bufferedResponse?.messageId ?? null,
-              requestId: requestBinding?.bufferedResponse?.requestId ?? '',
-              error: error instanceof Error ? error.message : String(error),
-            });
-          });
-        }
-      }),
-      bind('generate-image-response', (payload: Record<string, unknown>) => {
-        syncPendingRequestHintsFromDom();
-        const imageData = String(payload?.imageData ?? payload?.image ?? '').trim();
-        if (!imageData) {
-          logImageBridge('response-skip-empty-image', {
-            requestId: String(payload?.id ?? '').trim(),
-            promptPreview: String(payload?.prompt ?? '')
-              .trim()
-              .slice(0, 120),
-          });
-          return;
-        }
-        const matched = imagePendingTaskManager.consumeResponse({
-          id: payload?.id,
-          prompt: payload?.prompt,
-          imageData,
-        });
-        if (!matched) {
-          logImageBridge('response-unmatched', {
-            requestId: String(payload?.id ?? '').trim(),
-            promptPreview: String(payload?.prompt ?? '')
-              .trim()
-              .slice(0, 120),
-            tasks: imagePendingTaskManager.getDebugState(),
-          });
-          return;
-        }
-
-        logImageBridge('response-matched', {
-          messageId: matched.messageId,
-          requestId: matched.requestId,
-          promptToken: matched.promptToken,
-        });
-
-        void persistGeneratedImageResponse(matched).catch(error => {
-          logImageBridge('persist-failed', {
-            messageId: matched.messageId,
-            requestId: matched.requestId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-      }),
-    ].filter(Boolean) as StopHandle[];
+    imageBridgeStops.forEach(stop => stop?.stop?.());
+    imageBridgeStops = [];
+    logImageBridge('persist-bridge-disabled', {
+      enabled: LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED,
+    });
   }
 
   function listAssistantMessagesForPromptPersistence(): BaseChatMessage[] {
@@ -2934,7 +2840,6 @@ export function useStreamingDemo() {
     if (isOpeningWorkbenchHost) {
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
-      bindImagePersistenceEvents();
       queueHidePolicy('mounted');
       if (document.body && typeof MutationObserver !== 'undefined') {
         generatedImageDomObserver = new MutationObserver(records => {
@@ -2992,6 +2897,11 @@ export function useStreamingDemo() {
     },
   );
 
+  function clearTimer(id: number): number {
+    if (id) window.clearTimeout(id);
+    return 0;
+  }
+
   onBeforeUnmount(() => {
     if (isOpeningWorkbenchHost) {
       setHostTranscriptVisibility(false);
@@ -3003,26 +2913,11 @@ export function useStreamingDemo() {
     imageBridgeStops = [];
     mvuStops.forEach(stop => stop?.stop?.());
     mvuStops = [];
-    if (hidePolicyTimer) {
-      window.clearTimeout(hidePolicyTimer);
-      hidePolicyTimer = 0;
-    }
-    if (externalSyncTimer) {
-      window.clearTimeout(externalSyncTimer);
-      externalSyncTimer = 0;
-    }
-    if (readerStatePersistTimer) {
-      window.clearTimeout(readerStatePersistTimer);
-      readerStatePersistTimer = 0;
-    }
-    if (openingPayloadPersistTimer) {
-      window.clearTimeout(openingPayloadPersistTimer);
-      openingPayloadPersistTimer = 0;
-    }
-    if (generatedImageDomMutationTimer) {
-      window.clearTimeout(generatedImageDomMutationTimer);
-      generatedImageDomMutationTimer = 0;
-    }
+    hidePolicyTimer = clearTimer(hidePolicyTimer);
+    externalSyncTimer = clearTimer(externalSyncTimer);
+    readerStatePersistTimer = clearTimer(readerStatePersistTimer);
+    openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
+    generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());
@@ -3096,5 +2991,6 @@ export function useStreamingDemo() {
     rebuildTranscript,
     openDetail,
     closeDetail,
+    withHostTranscriptVisible,
   };
 }
