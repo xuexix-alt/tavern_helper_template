@@ -169,8 +169,8 @@ function buildStreamStageHtml(renderSource: string, role: TranscriptItem['role']
 function normalizeDisplayedHtml(html: string): string {
   return stripPluginNativePlaceholderHtml(
     String(html ?? '')
-    .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
-    .replace(/<\/q>/gi, '</span>'),
+      .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
+      .replace(/<\/q>/gi, '</span>'),
   );
 }
 
@@ -427,7 +427,9 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
   return out;
 }
 
-function toRenderableImageFromNativeArtifact(artifact: NativeFirstImageArtifact): NativeFirstRenderableGeneratedImage | null {
+function toRenderableImageFromNativeArtifact(
+  artifact: NativeFirstImageArtifact,
+): NativeFirstRenderableGeneratedImage | null {
   const src = normalizeImageSrcForCompare(artifact.src ?? '');
   if (!src) return null;
   return {
@@ -625,8 +627,8 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
     rawMessage: renderSource,
     hostDomArtifacts: extractRenderedImagesFromRoots(messageId),
   });
-  const pluginNativeImages = nativeFirstImages.filter(image =>
-    image.source === 'host_dom' || image.source === 'extra' || image.source === 'mes_tag',
+  const pluginNativeImages = nativeFirstImages.filter(
+    image => image.source === 'host_dom' || image.source === 'extra' || image.source === 'mes_tag',
   );
   const compatibilityImages = nativeFirstImages.filter(
     image => image.source === 'cache' || image.source === 'legacy_stream_demo',

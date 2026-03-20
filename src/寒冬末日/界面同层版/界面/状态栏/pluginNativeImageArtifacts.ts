@@ -79,10 +79,7 @@ function buildArtifactFromRecord(input: {
   record: Record<string, any>;
 }): NativeFirstImageArtifact | null {
   const { record } = input;
-  const promptToken =
-    normalizeKey(record?.promptToken) ||
-    normalizeKey(record?.tag) ||
-    normalizeKey(record?.rawTag);
+  const promptToken = normalizeKey(record?.promptToken) || normalizeKey(record?.tag) || normalizeKey(record?.rawTag);
   const requestId = normalizeKey(record?.requestId ?? record?.request_id);
   const markerId = normalizeKey(record?.markerId);
   const imageId =
@@ -265,7 +262,9 @@ export function readNativeFirstPromptTokens(input: ReadNativeFirstImageArtifacts
   return out;
 }
 
-export function readNativeFirstMembershipEntries(input: ReadNativeFirstImageArtifactsInput): NativeFirstMembershipEntry[] {
+export function readNativeFirstMembershipEntries(
+  input: ReadNativeFirstImageArtifactsInput,
+): NativeFirstMembershipEntry[] {
   const out: NativeFirstMembershipEntry[] = [];
 
   for (const artifact of readNativeFirstImageArtifacts(input)) {

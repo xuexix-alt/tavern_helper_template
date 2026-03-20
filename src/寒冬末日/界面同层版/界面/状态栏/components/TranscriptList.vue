@@ -224,7 +224,7 @@ const itemsSignature = computed(() =>
     id: item.message_id,
     phase: item.phase,
     len: item.content.length,
-  }))
+  })),
 );
 
 watch(itemsSignature, async () => {

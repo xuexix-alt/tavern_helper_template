@@ -52,10 +52,7 @@ type HostDispatchPlan =
       source: 'none';
     };
 
-async function resolveWithRetry<T>(
-  resolver: () => T | null | undefined,
-  options: RetryLike = {},
-): Promise<T | null> {
+async function resolveWithRetry<T>(resolver: () => T | null | undefined, options: RetryLike = {}): Promise<T | null> {
   const attempts = Math.max(1, Math.trunc(Number(options.attempts ?? 1)));
   const delayMs = Math.max(0, Math.trunc(Number(options.delayMs ?? 0)));
 
@@ -136,9 +133,7 @@ export function resolveHostDispatchPlan(input: HostDispatchPlanInput): HostDispa
   };
 }
 
-export async function resolveHostDispatchPlanWithRetry(
-  input: HostDispatchPlanRetryInput,
-): Promise<HostDispatchPlan> {
+export async function resolveHostDispatchPlanWithRetry(input: HostDispatchPlanRetryInput): Promise<HostDispatchPlan> {
   const directTarget = await resolveWithRetry(input.resolveDirectTarget, input.directRetry);
   if (directTarget) {
     return resolveHostDispatchPlan({

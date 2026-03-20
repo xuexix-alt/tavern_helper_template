@@ -353,11 +353,11 @@ import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
-  import {
-    convertIframePointToHostPoint,
-    resolveHostDispatchPlanWithRetry,
-    resolveHostMessageTargetFromPoint,
-  } from '../hostCoordinateTarget';
+import {
+  convertIframePointToHostPoint,
+  resolveHostDispatchPlanWithRetry,
+  resolveHostMessageTargetFromPoint,
+} from '../hostCoordinateTarget';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -1290,7 +1290,9 @@ async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
     markRecentImageIntent(messageId, 'transcript');
     void proxyImageMenuToHost({ message_id: messageId } as TranscriptItem, event);
   } finally {
-    setTimeout(() => { imageGenerationLock = false; }, 2000);
+    setTimeout(() => {
+      imageGenerationLock = false;
+    }, 2000);
   }
 }
 

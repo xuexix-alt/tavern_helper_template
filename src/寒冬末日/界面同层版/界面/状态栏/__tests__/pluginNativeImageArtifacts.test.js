@@ -38,10 +38,7 @@ test('extra images beat cache fallback for the same artifact key', () => {
 test('mes tag parser results beat cache fallback when extra images are absent', () => {
   const result = readNativeFirstImageArtifacts({
     messageId: 8,
-    rawMessage: [
-      '她把围巾往上提了提。',
-      'image###Scene Composition:sfw,1girl,ruins###',
-    ].join('\n'),
+    rawMessage: ['她把围巾往上提了提。', 'image###Scene Composition:sfw,1girl,ruins###'].join('\n'),
     cacheArtifacts: [
       {
         promptToken: 'image###Scene Composition:sfw,1girl,ruins###',
@@ -116,16 +113,16 @@ test('legacy stream_demo artifacts are ignored when any native data exists', () 
 
   assert.equal(result.length, 1);
   assert.equal(result[0].source, 'extra');
-  assert.equal(result.some(item => item.source === 'legacy_stream_demo'), false);
+  assert.equal(
+    result.some(item => item.source === 'legacy_stream_demo'),
+    false,
+  );
 });
 
 test('native-first helper prompt-token fallback does not start from cache and ignores legacy when native exists', () => {
   const promptTokens = readNativeFirstPromptTokens({
     messageId: 19,
-    rawMessage: [
-      '她抬起下巴，看向破损的天花板。',
-      'image###Scene Composition:native-mes###',
-    ].join('\n'),
+    rawMessage: ['她抬起下巴，看向破损的天花板。', 'image###Scene Composition:native-mes###'].join('\n'),
     extraImages: [
       {
         requestId: 'native-extra',
@@ -248,10 +245,7 @@ test('resolver uses mes-tag derived entries before cache fallback', () => {
       promptToken: 'image###Scene Composition:sfw,1girl,ruins###',
     },
     {
-      message: [
-        '她把围巾往上提了提。',
-        'image###Scene Composition:sfw,1girl,ruins###',
-      ].join('\n'),
+      message: ['她把围巾往上提了提。', 'image###Scene Composition:sfw,1girl,ruins###'].join('\n'),
       swipe_id: 0,
       extra: {
         images: [],

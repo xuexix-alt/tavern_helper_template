@@ -1,5 +1,4 @@
-const PLACEHOLDER_SELECTOR =
-  '.image-tag-button, .image-tag-placeholder, .image-tag-container, .ai-image-container';
+const PLACEHOLDER_SELECTOR = '.image-tag-button, .image-tag-placeholder, .image-tag-container, .ai-image-container';
 
 export function stripPluginNativePlaceholderHtml(html: string): string {
   const source = String(html ?? '').trim();

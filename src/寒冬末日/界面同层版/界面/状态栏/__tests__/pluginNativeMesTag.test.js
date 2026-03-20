@@ -37,12 +37,7 @@ test('parseNativeMesImageTags extracts ordered image tags with anchor text from 
 });
 
 test('extractNativeMesAnchorText derives nearby body text for target tag', () => {
-  const rawMessage = [
-    '第一段正文。',
-    '第二段正文，描述她的神情。',
-    'image###foo###',
-    '后文。',
-  ].join('\n');
+  const rawMessage = ['第一段正文。', '第二段正文，描述她的神情。', 'image###foo###', '后文。'].join('\n');
 
   const anchor = extractNativeMesAnchorText({
     rawMessage,

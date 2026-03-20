@@ -74,10 +74,7 @@ export function extractNativeMesAnchorText(input: {
   return pickAnchorFromPrefix(prefix);
 }
 
-export function parseNativeMesImageTags(input: {
-  messageId: number;
-  rawMessage: string;
-}): NativeMesTagEntry[] {
+export function parseNativeMesImageTags(input: { messageId: number; rawMessage: string }): NativeMesTagEntry[] {
   const messageId = Math.trunc(Number(input?.messageId));
   const rawMessage = String(input?.rawMessage ?? '').replace(/\r\n/g, '\n');
   if (!Number.isFinite(messageId) || !rawMessage) return [];

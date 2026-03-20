@@ -8,7 +8,9 @@ function mountApp() {
   const app = createApp(App);
   app.use(createPinia());
   app.mount('#app');
-  window.addEventListener('pagehide', () => { app.unmount(); });
+  window.addEventListener('pagehide', () => {
+    app.unmount();
+  });
 }
 
 if (document.readyState === 'loading') {
