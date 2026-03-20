@@ -420,6 +420,7 @@ const {
   openDetail,
   closeDetail,
   withHostTranscriptVisible,
+  ensureHostMesTextRendered,
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
@@ -1203,6 +1204,7 @@ function dispatchHostDoubleClick(
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
   const messageId = Math.trunc(Number(item?.message_id));
   if (!Number.isFinite(messageId) || messageId < 0) return;
+  await ensureHostMesTextRendered(messageId);
   await withHostTranscriptVisible(async () => {
     const hostPoint = (() => {
       if (!event) return null;
@@ -1969,7 +1971,8 @@ useEventListener(window, 'keydown', event => {
     0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
-.ui-bottom-drawer.is-map {
+.ui-bottom-drawer.is-map,
+.ui-bottom-drawer.is-system {
   width: min(94vw, 72rem);
   top: 10px;
   bottom: 100px;
