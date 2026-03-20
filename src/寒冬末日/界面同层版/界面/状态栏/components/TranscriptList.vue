@@ -38,8 +38,6 @@
           @swipe="emit('swipe-assistant', $event)"
           @toggle-opening="emit('toggle-opening')"
           @reroll-opening="emit('reroll-opening')"
-          @open-image="emit('open-image', $event)"
-          @regenerate-image="emit('regenerate-image', $event)"
         />
       </div>
     </div>
@@ -111,8 +109,6 @@ const emit = defineEmits<{
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
   (event: 'swipe-assistant', direction: 'prev' | 'next'): void;
-  (event: 'open-image', image: TranscriptItem['generatedImages'][number]): void;
-  (event: 'regenerate-image', image: TranscriptItem['generatedImages'][number]): void;
 }>();
 
 const listRef = ref<HTMLElement | null>(null);

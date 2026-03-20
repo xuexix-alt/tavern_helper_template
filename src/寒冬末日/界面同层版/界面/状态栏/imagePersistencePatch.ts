@@ -1,6 +1,5 @@
-<<<<<<< HEAD
 import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
-=======
+
 /**
  * 图片持久化补丁 (v2 - IndexedDB)
  *
@@ -9,7 +8,6 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
  * - 图片实体由 imageStore.ts 存入 IndexedDB
  * - data.stream_demo.generated_images 同样只存引用，不存 base64
  */
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
 type GeneratedImageResponsePayload = {
   requestId: string;
@@ -31,7 +29,6 @@ type DisplayedGeneratedImageInput = {
   alt?: string;
   promptToken?: string;
   requestId?: string;
-  imageId?: string;
   anchorText?: string;
   title?: string;
   characterName?: string;
@@ -69,71 +66,64 @@ function parsePromptBodyFromToken(promptToken: string): string {
   return String(match?.[1] ?? token).trim();
 }
 
-<<<<<<< HEAD
-function sanitizeImageEntry(entry: Record<string, any>) {
-  const { prompt: _prompt, ...rest } = entry ?? {};
-  const requestId = String(entry?.requestId ?? entry?.request_id ?? '').trim();
-  const src = String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim();
-  const promptToken = String(entry?.promptToken ?? '').trim();
-  const prompt = String(entry?.prompt ?? '').trim();
-  const tag = String(entry?.tag ?? promptToken ?? prompt).trim();
-  const markerId = String(entry?.markerId ?? '').trim();
-  const sanitized: Record<string, any> = {
-    ...rest,
-    markerId,
-    promptToken,
-    requestId,
-    request_id: requestId,
-    tag,
-    regex: String(entry?.regex ?? '').trim(),
-    imageData: String(entry?.imageData ?? src).trim(),
-    image: String(entry?.image ?? src).trim(),
-    src,
-    alt: String(entry?.alt ?? 'generated image').trim() || 'generated image',
-  };
-  return sanitized;
-=======
-/** 判断 src 是否为 base64 数据 */
 function isBase64Src(src: string): boolean {
   return src.startsWith('data:') || /^[A-Za-z0-9+/=]{100,}/.test(src);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
-/** 构建 idb:// 引用 URI，用于标记图片存储在 IndexedDB */
 export function buildIdbSrc(messageId: number, requestId: string): string {
   return `idb://${messageId}/${requestId}`;
 }
 
-/** 判断 src 是否为 idb:// 引用 */
 export function isIdbSrc(src: string): boolean {
   return src.startsWith('idb://');
 }
 
-/** 从 idb:// URI 解析 messageId 和 requestId */
 export function parseIdbSrc(src: string): { messageId: number; requestId: string } | null {
   const match = src.match(/^idb:\/\/(\d+)\/(.+)$/);
   if (!match) return null;
   return { messageId: Number(match[1]), requestId: match[2] };
 }
 
-/**
- * 构建持久化补丁 (v2)
- * - data.stream_demo.generated_images: 只存引用 (idb:// src)
- * - extra.images[swipeId]: 只存引用 (idb:// src)
- * - 不再写入 base64
- */
+function sanitizeImageEntry(entry: Record<string, any>) {
+  const requestId = String(entry?.requestId ?? entry?.request_id ?? '').trim();
+  const messageId = Math.trunc(Number(entry?.messageId ?? entry?.message_id ?? 0));
+  let src = String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim();
+  if (isBase64Src(src) && requestId && Number.isFinite(messageId)) {
+    src = buildIdbSrc(messageId, requestId);
+  }
+
+  const promptToken = String(entry?.promptToken ?? '').trim();
+  const prompt = String(entry?.prompt ?? '').trim();
+  const tag = String(entry?.tag ?? promptToken ?? prompt).trim();
+
+  return {
+    ...entry,
+    markerId: String(entry?.markerId ?? '').trim(),
+    imageId: String(entry?.imageId ?? entry?.image_id ?? requestId).trim(),
+    requestId,
+    request_id: requestId,
+    promptToken,
+    tag,
+    regex: String(entry?.regex ?? '').trim(),
+    src,
+    image: src,
+    imageData: src,
+    alt: String(entry?.alt ?? 'generated image').trim() || 'generated image',
+    title: String(entry?.title ?? '').trim(),
+    characterName: String(entry?.characterName ?? '').trim(),
+    ...(prompt ? { prompt } : {}),
+  };
+}
+
 export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePersistencePatchInput) {
   const message = input.message ?? {};
   const messageId = Math.trunc(Number(message.message_id ?? 0));
   const nextData = clone(message.data ?? {});
   const nextExtra = clone(message.extra ?? {});
-
   const idbSrc = buildIdbSrc(messageId, input.response.requestId);
 
-  // --- stream_demo.generated_images: 轻量引用 ---
   const currentList = getNestedValue(nextData, 'stream_demo.generated_images');
   const nextList = Array.isArray(currentList) ? clone(currentList) : [];
-  const messageId = Math.trunc(Number(message.message_id));
   const markerId = buildGeneratedImageMarkerId({
     messageId: Number.isFinite(messageId) ? messageId : 0,
     requestId: input.response.requestId,
@@ -142,12 +132,13 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
   });
   const anchorText = String(input.anchorText ?? '').trim();
 
-<<<<<<< HEAD
   const imageEntry = {
     markerId,
     imageId: input.response.requestId,
     promptToken: input.response.promptToken,
     requestId: input.response.requestId,
+    src: idbSrc,
+    alt: 'generated image',
     anchorText: anchorText || undefined,
     order: nextList.length,
   };
@@ -159,29 +150,19 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
 
   if (existingIndex < 0) {
     nextList.push(imageEntry);
-  } else if (anchorText) {
+  } else {
     nextList[existingIndex] = {
       ...(nextList[existingIndex] ?? {}),
-      anchorText,
+      ...imageEntry,
       markerId: String((nextList[existingIndex] as any)?.markerId ?? '').trim() || markerId,
-      promptToken: String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
+      promptToken:
+        String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
+      anchorText:
+        anchorText || String((nextList[existingIndex] as any)?.anchorText ?? '').trim() || undefined,
     };
-=======
-  const hasExisting = nextList.some((item: any) =>
-    String(item?.requestId ?? '').trim() === input.response.requestId,
-  );
-  if (!hasExisting) {
-    nextList.push({
-      imageId: input.response.requestId,
-      src: idbSrc,
-      alt: 'generated image',
-      requestId: input.response.requestId,
-    });
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   }
   setNestedValue(nextData, 'stream_demo.generated_images', nextList);
 
-  // --- extra.images[swipeId]: 轻量引用 ---
   const swipeId = normalizeSwipeId(message.swipe_id);
   const sanitizedExtra = sanitizePluginImageExtra(nextExtra);
   const existingExtraImages = sanitizedExtra.images;
@@ -195,68 +176,37 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
     )
   ) {
     targetSwipeEntries.push({
-<<<<<<< HEAD
       markerId,
       imageId: input.response.requestId,
       requestId: input.response.requestId,
-      promptToken: input.response.promptToken,
-=======
-      imageId: input.response.requestId,
-      requestId: input.response.requestId,
       request_id: input.response.requestId,
-      prompt: input.response.prompt,
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
+      promptToken: input.response.promptToken,
       tag: input.response.prompt,
-      regex: '',
+      regex: anchorText,
       src: idbSrc,
       alt: 'generated image',
     });
   }
-<<<<<<< HEAD
+
   const currentEntry = targetSwipeEntries.find(
     (item: any) => String(item?.requestId ?? item?.request_id ?? '').trim() === input.response.requestId,
   );
   if (currentEntry) {
     currentEntry.markerId = String(currentEntry.markerId ?? '').trim() || markerId;
+    currentEntry.imageId = String(currentEntry.imageId ?? '').trim() || input.response.requestId;
+    currentEntry.requestId = input.response.requestId;
+    currentEntry.request_id = input.response.requestId;
     currentEntry.promptToken = String(currentEntry.promptToken ?? '').trim() || input.response.promptToken;
     currentEntry.tag = String(currentEntry.tag ?? '').trim() || input.response.prompt;
+    currentEntry.src = idbSrc;
+    currentEntry.alt = String(currentEntry.alt ?? 'generated image').trim() || 'generated image';
     if (anchorText) currentEntry.regex = anchorText;
-=======
-  sanitizedExtra.images = swipeEntries;
-
-  // --- lockedTags ---
-  const existingLockedTags = Array.isArray(sanitizedExtra.lockedTags) ? clone(sanitizedExtra.lockedTags) : [];
-  if (!existingLockedTags.some((item: any) => String(item ?? '').trim() === input.response.prompt.trim())) {
-    existingLockedTags.push(input.response.prompt);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   }
+
   sanitizedExtra.images = swipeEntries;
   sanitizedExtra.lockedTags = [];
 
   return { nextData, nextExtra: sanitizedExtra };
-}
-
-/** 清理 extra.images 中的条目格式（保留兼容性，但剥离 base64） */
-function sanitizeImageEntry(entry: Record<string, any>) {
-  const requestId = String(entry?.requestId ?? entry?.request_id ?? '').trim();
-  let src = String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim();
-  // 如果 src 是 base64 且有 requestId，替换为 idb:// 引用
-  if (isBase64Src(src) && requestId) {
-    const messageId = Math.trunc(Number(entry?.messageId ?? entry?.message_id ?? 0));
-    src = buildIdbSrc(messageId, requestId);
-  }
-  const prompt = String(entry?.prompt ?? '').trim();
-  const tag = String(entry?.tag ?? prompt).trim();
-  return {
-    ...entry,
-    requestId,
-    request_id: requestId,
-    tag,
-    regex: String(entry?.regex ?? '').trim(),
-    src,
-    alt: String(entry?.alt ?? 'generated image').trim() || 'generated image',
-    ...(prompt ? { prompt } : {}),
-  };
 }
 
 export function sanitizePluginImageExtra(extra: Record<string, any>) {
@@ -270,16 +220,7 @@ export function sanitizePluginImageExtra(extra: Record<string, any>) {
     });
   }
 
-  if (Array.isArray(nextExtra.lockedTags)) {
-<<<<<<< HEAD
-    nextExtra.lockedTags = [];
-=======
-    nextExtra.lockedTags = nextExtra.lockedTags.map((item: any) => String(item ?? '').trim());
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
-  } else {
-    nextExtra.lockedTags = [];
-  }
-
+  nextExtra.lockedTags = [];
   return nextExtra;
 }
 
@@ -316,17 +257,13 @@ export function syncDisplayedGeneratedImagesToExtra(
       const promptToken = String(image?.promptToken ?? '').trim();
       const requestId = String(image?.requestId ?? '').trim();
       const imageId = String(image?.imageId ?? image?.requestId ?? '').trim();
-<<<<<<< HEAD
       const markerId = String(image?.markerId ?? '').trim();
-=======
       if (!src && !requestId) return null;
-      // 如果 src 是 base64，替换为 idb 引用
       if (isBase64Src(src) && requestId) {
         const messageId = Math.trunc(Number(message?.message_id ?? 0));
         src = buildIdbSrc(messageId, requestId);
       }
       if (!src) src = requestId ? buildIdbSrc(Math.trunc(Number(message?.message_id ?? 0)), requestId) : '';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
       if (!src) return null;
       const prompt = parsePromptBodyFromToken(promptToken);
       return {
@@ -337,8 +274,9 @@ export function syncDisplayedGeneratedImagesToExtra(
         imageId,
         requestId,
         regex: String(image?.anchorText ?? '').trim(),
-<<<<<<< HEAD
         tag: prompt,
+        title: String(image?.title ?? '').trim(),
+        characterName: String(image?.characterName ?? '').trim(),
       };
     })
     .filter(Boolean) as Array<{
@@ -350,24 +288,9 @@ export function syncDisplayedGeneratedImagesToExtra(
     requestId: string;
     regex: string;
     tag: string;
+    title: string;
+    characterName: string;
   }>;
-=======
-        title: String(image?.title ?? '').trim(),
-        characterName: String(image?.characterName ?? '').trim(),
-      };
-    })
-    .filter(Boolean) as Array<{
-      src: string;
-      alt: string;
-      promptToken: string;
-      imageId: string;
-      prompt: string;
-      requestId: string;
-      regex: string;
-      title: string;
-      characterName: string;
-    }>;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
   const nextSwipeEntries = normalizedImages.map((image, index) => {
     const matchedExisting =
@@ -396,6 +319,8 @@ export function syncDisplayedGeneratedImagesToExtra(
       tag: image.tag,
       regex: image.regex,
       src: image.src,
+      image: image.src,
+      imageData: image.src,
       alt: image.alt,
       title: image.title,
       characterName: image.characterName,

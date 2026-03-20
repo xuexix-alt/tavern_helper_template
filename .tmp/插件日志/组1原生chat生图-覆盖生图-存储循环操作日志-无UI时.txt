@@ -1,0 +1,544 @@
+17:12:27.560 ClickTrigger.js:1 [点击触发] 桌面端双击, target: DIV mes_text
+17:12:27.560 ClickTrigger.js:1 [点击触发] context: {accountStorage: AccountStorage, chat: Array(5), characters: Array(67), groups: Array(0), name1: '小哥哥', …}
+17:12:27.561 ClickTrigger.js:1 [点击触发] 双击触发成功
+17:12:27.635 ClickTrigger.js:1 [点击触发] 定位信息(Overlay内部): {targetX: 671, targetY: 460, viewportWidth: 1131, viewportHeight: 799, bubbleWidth: 170, …}
+17:12:27.635 ClickTrigger.js:1 [点击触发] 最终定位(Overlay内部): {newLeft: 676, newTop: 465}
+17:12:28.511 ClickTrigger.js:1 [点击触发] 触发图片生成
+17:12:28.678 chatDataUtils.js:1 [chatDataUtils] chatId: 4
+17:12:28.679 chatDataUtils.js:1 [chatDataUtils] Retrieved texts: (2) ['[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠…【D】强化自身&暂时不理会外界，检查伊甸庇护所的各项功能，思考下一步升级计划。\n</option>', '[stream-demo:minimal]\n<demo_phase>stream</demo_pha…atch>\n</UpdateVariable>\n\n<StatusPlaceHolderImpl/>']
+17:12:28.727 regex.js:1 [st-chatu8] collectRegexEntriesFromUI 调试: {缓存容器存在: true, 缓存容器在文档中: true, 新选择器找到的容器: true, 新选择器找到的条目数: 19, 缓存容器找到的条目数: 19}
+17:12:28.731 regex.js:1 [st-chatu8] collectRegexEntriesFromUI 调试: {缓存容器存在: true, 缓存容器在文档中: true, 新选择器找到的容器: true, 新选择器找到的条目数: 19, 缓存容器找到的条目数: 19}
+17:12:29.115 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:29.116 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:29.125 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:29.126 placeholder.js:1 [iframe] Matched from chat[4].extra.images[0], tags: 4
+17:12:29.248 chatDataUtils.js:1 [chatDataUtils] Processed retexts: (2) ['[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠…【D】强化自身&暂时不理会外界，检查伊甸庇护所的各项功能，思考下一步升级计划。\n</option>', '[stream-demo:minimal]\n<demo_phase>stream</demo_pha…”秋青子把脸蹭了蹭明月的肩膀，“我不会的。我会让慕小小活起来，让她像个真正的大明星，即使在末日里也']
+17:12:29.248 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+17:12:29.249 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+17:12:29.249 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+17:12:29.251 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+17:12:29.290 llmRequest.js:1 插图吧：请求正文图片生成 LLM (ID: a4d64742-c8fd-4664-8b1b-98fc1fc3fbf1)
+17:12:29.293 taskQueue.js:1 [TaskQueue] 任务已添加: mmyokq5nez5lo - LLM: 正文图片生成
+17:12:29.295 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyokq5nez5lo -> running
+17:12:32.901 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:32.902 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:32.910 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:32.912 placeholder.js:1 [iframe] Matched from chat[4].extra.images[0], tags: 4
+17:12:36.792 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:36.793 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:36.805 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:36.806 placeholder.js:1 [iframe] Matched from chat[4].extra.images[0], tags: 4
+17:12:40.786 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:40.787 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:40.834 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:40.836 placeholder.js:1 [iframe] Matched from chat[4].extra.images[0], tags: 4
+17:12:44.801 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:44.802 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:44.816 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:44.817 placeholder.js:1 [iframe] Matched from chat[4].extra.images[0], tags: 4
+17:12:45.453 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyokq5nez5lo -> completed
+17:12:45.454 llmRequest.js:1 插图吧：已收到正文图片生成 LLM 执行结果 (ID: a4d64742-c8fd-4664-8b1b-98fc1fc3fbf1): {success: true, result: '\n\n<thinking>\n0.需求检查\n  - 用户输入为“继续”，需承接上文情境：末日一年后的星穹…\nCharacter 1 UC:background characters,nude,nsfw,p', id: 'a4d64742-c8fd-4664-8b1b-98fc1fc3fbf1', testMode: false}
+17:12:45.456 imageInserter.js:1 [parseImagesFromPrompt] 开始解析，文本长度: 1987
+17:12:45.456 imageInserter.js:1 [parseImagesFromPrompt] 未找到 <images> 容器，使用完整文本
+17:12:45.456 imageInserter.js:1 [parseImagesFromPrompt] 找到 1 个 <image> 块
+17:12:45.456 imageInserter.js:1 [parseImagesFromPrompt] 解析第 1 个 <image> 块，内容长度: 915
+17:12:45.457 imageInserter.js:1 [parseImagesFromPrompt] tagthinkEcho=false, 仅提取纯 tag: "image###Scene Composition:sfw,no humans,scenic,pos..."
+17:12:45.457 imageInserter.js:1 [parseImagesFromPrompt] 块 1 结果: regex="那些平平无奇的降雪.*成为旧世界的葬礼...", tag="image###Scene Composition:sfw,no humans,scenic,pos..."
+17:12:45.457 imageInserter.js:1 [parseImagesFromPrompt] 解析完成，共 1 个有效图片
+17:12:45.457 imageInserter.js:1 [parseImagesFromPrompt] 解析结果详情
+17:12:45.457 imageInserter.js:1 图片 1
+17:12:45.457 imageInserter.js:1 regex: 那些平平无奇的降雪.*成为旧世界的葬礼
+17:12:45.457 imageInserter.js:1 tag 完整内容:
+17:12:45.458 imageInserter.js:1 image###Scene Composition:sfw,no humans,scenic,post-apocalyptic,ruins,cityscape,building,skyscraper,snow,blizzard,ice,frozen,frozen city,cold,winter,cloudy sky,overcast,dread atmosphere,gloomy,desolate,cinematic angle,wide shot,aerial view,grand scene,depth of field,vanishing point,highres,masterpiece,8k;
+Background:1.3::frozen skyscrapers::,ice-covered buildings,abandoned cars covered in snow,dead trees,broken windows,shattered glass,1.2::heavy snow falling::,thick fog,dim light,1.2::cool color palette::,blue tint,grey sky,1.1::desolate street::,cracked pavement under ice,statue-like frozen figures in distance,0.8::ruined billboard::|centers:C3;
+Character 1 UC:human,girl,boy,crowd,sunlight,warm colors;###
+17:12:45.458 imageInserter.js:1 [insertImagesIntoElement] Cleaned up existing image elements
+17:12:45.459 imageInserter.js:1 [insertImagesIntoElement] insertOriginalText 快速路径 - 直接用原文匹配
+17:12:45.459 imageInserter.js:1 [imageInserter] saveImageGroup - el 详细信息
+17:12:45.460 imageInserter.js:1 el 对象: <div class=​"mes_text" data-gesture-bindied=​"true" data-chatu8-processed=​"true" data-chatu8-content-length=​"10424">​…​</div>​
+17:12:45.460 imageInserter.js:1 el.tagName: DIV
+17:12:45.460 imageInserter.js:1 el.className: mes_text
+17:12:45.460 imageInserter.js:1 el.id:
+17:12:45.460 imageInserter.js:1 el 是否在 document 中: true
+17:12:45.461 imageInserter.js:1 el.ownerDocument: 主文档
+17:12:45.461 imageInserter.js:1 父元素链: DIV.mes_block → DIV.mes → DIV#chat → DIV#sheld → BODY.drop_target
+17:12:45.461 imageInserter.js:1 textContent 长度: 10424
+17:12:45.461 imageInserter.js:1 textContent 中间 20 字特征: "更新原因**: `0, 无变化`。   "
+17:12:45.461 imageInserter.js:1 是 mes_text: true
+17:12:45.461 imageInserter.js:1 data-mesid: null
+17:12:45.462 imageInserter.js:1 [imageInserter] insertOriginalText mode - mesId: 4 mes.length: 7575
+17:12:45.462 imageInserter.js:1 [imageInserter] Locked tags: []
+17:12:45.463 imageInserter.js:1 [imageInserter] Total images to insert: 1 (locked: 0 , new: 1 )
+17:12:45.464 imageInserter.js:1 [imageInserter] insertOriginalText: thinkingEndOffset = 0
+17:12:45.483 imageInserter.js:1 [fuzzyMatchLine] Target: 那些平平无奇的降雪.*成为旧世界的葬礼
+17:12:45.483 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+17:12:45.483 imageInserter.js:1   1. [Line 19] Score: 21.2% ✓ SELECTED
+17:12:45.483 imageInserter.js:1      "“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣。所以角色的首要目标..."
+17:12:45.484 imageInserter.js:1   2. [Line 11] Score: 15.8%
+17:12:45.484 imageInserter.js:1      "“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月..."
+17:12:45.484 imageInserter.js:1   3. [Line 31] Score: 13.2%
+17:12:45.484 imageInserter.js:1      "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可..."
+17:12:45.484 imageInserter.js:1   4. [Line 51] Score: 13.2%
+17:12:45.484 imageInserter.js:1      "1.  **紧急任务分析 (Emergency Task Analysis)**: 根据`<must..."
+17:12:45.485 imageInserter.js:1   5. [Line 63] Score: 13.2%
+17:12:45.485 imageInserter.js:1      "        *   **健康 (Health)**: 作为顶级明星，她对身体保养极度在意，但灾难..."
+17:12:45.485 imageInserter.js:1 [imageInserter] insertOriginalText: clearing old extra.images[0] to avoid conflict
+17:12:45.811 imageInserter.js:1 [imageInserter] Rendering message: 4
+17:12:45.842 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+17:12:45.849 imageInserter.js:1 [imageInserter] Saved to chat[4].mes (insertOriginalText mode)
+17:12:45.855 taskQueue.js:1 [TaskQueue] 任务已添加: mmyol2xpfmdic - 自动批量生图 (1 张)
+17:12:45.856 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyol2xpfmdic -> running
+17:12:46.799 placeholder.js:1 [iframe] Element marked processed but no buttons found, re-processing
+17:12:46.799 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:46.811 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:48.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:48.709 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:52.697 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:52.712 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:12:56.693 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:12:56.705 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:00.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:00.706 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:04.693 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:04.707 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:08.693 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:08.704 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:10.035 ClickTrigger.js:1 [点击触发] 桌面端双击, target: DIV mes_text
+17:13:10.035 ClickTrigger.js:1 [点击触发] context: {accountStorage: AccountStorage, chat: Array(5), characters: Array(67), groups: Array(0), name1: '小哥哥', …}
+17:13:10.036 ClickTrigger.js:1 [点击触发] 双击触发成功
+17:13:10.116 ClickTrigger.js:1 [点击触发] 定位信息(Overlay内部): {targetX: 693, targetY: 456, viewportWidth: 1131, viewportHeight: 799, bubbleWidth: 170, …}
+17:13:10.116 ClickTrigger.js:1 [点击触发] 最终定位(Overlay内部): {newLeft: 698, newTop: 461}
+17:13:11.216 ClickTrigger.js:1 [点击触发] 触发图片生成
+17:13:11.368 chatDataUtils.js:1 [chatDataUtils] chatId: 4
+17:13:11.368 chatDataUtils.js:1 [chatDataUtils] Retrieved texts: (2) ['[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠…【D】强化自身&暂时不理会外界，检查伊甸庇护所的各项功能，思考下一步升级计划。\n</option>', '[stream-demo:minimal]\n<demo_phase>stream</demo_pha…atch>\n</UpdateVariable>\n\n<StatusPlaceHolderImpl/>']
+17:13:11.409 regex.js:1 [st-chatu8] collectRegexEntriesFromUI 调试: {缓存容器存在: true, 缓存容器在文档中: true, 新选择器找到的容器: true, 新选择器找到的条目数: 19, 缓存容器找到的条目数: 19}
+17:13:11.414 regex.js:1 [st-chatu8] collectRegexEntriesFromUI 调试: {缓存容器存在: true, 缓存容器在文档中: true, 新选择器找到的容器: true, 新选择器找到的条目数: 19, 缓存容器找到的条目数: 19}
+17:13:11.945 chatDataUtils.js:1 [chatDataUtils] Processed retexts: (2) ['[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠…【D】强化自身&暂时不理会外界，检查伊甸庇护所的各项功能，思考下一步升级计划。\n</option>', '[stream-demo:minimal]\n<demo_phase>stream</demo_pha…”秋青子把脸蹭了蹭明月的肩膀，“我不会的。我会让慕小小活起来，让她像个真正的大明星，即使在末日里也']
+17:13:11.945 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+17:13:11.946 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+17:13:11.946 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+17:13:11.947 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+17:13:11.976 llmRequest.js:1 插图吧：请求正文图片生成 LLM (ID: 81ddca51-1492-4ee7-b59e-e9500808f31f)
+17:13:11.979 taskQueue.js:1 [TaskQueue] 任务已添加: mmyoln3drwjg4 - LLM: 正文图片生成
+17:13:11.980 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyoln3drwjg4 -> running
+17:13:12.698 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:12.712 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:16.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:16.705 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:20.694 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:20.702 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:24.696 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:24.711 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:28.698 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:28.712 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:32.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:32.707 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:36.698 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:36.710 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:40.491 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyoln3drwjg4 -> completed
+17:13:40.492 llmRequest.js:1 插图吧：已收到正文图片生成 LLM 执行结果 (ID: 81ddca51-1492-4ee7-b59e-e9500808f31f): {success: true, result: '\n\n<thinking>\n0.需求检查\n  -用户要求根据前文剧情插图。前文背景：末世“永恒暴雪”，…oexisting with its own limitations.\n</disclaimer>', id: '81ddca51-1492-4ee7-b59e-e9500808f31f', testMode: false}
+17:13:40.508 imageInserter.js:1 [parseImagesFromPrompt] 开始解析，文本长度: 3808
+17:13:40.509 imageInserter.js:1 [parseImagesFromPrompt] 找到 1 个 <images> 容器，已合并所有内容（总长度: 3343 ）
+17:13:40.509 imageInserter.js:1 [parseImagesFromPrompt] 找到 4 个 <image> 块
+17:13:40.509 imageInserter.js:1 [parseImagesFromPrompt] 解析第 1 个 <image> 块，内容长度: 974
+17:13:40.509 imageInserter.js:1 [parseImagesFromPrompt] tagthinkEcho=false, 仅提取纯 tag: "image###Scene Composition:sfw,1girl,1boy,hetero,in..."
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] 块 1 结果: regex="秋青子的尾巴缠在他小腿上...", tag="image###Scene Composition:sfw,1girl,1boy,hetero,in..."
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] 解析第 2 个 <image> 块，内容长度: 689
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] tagthinkEcho=false, 仅提取纯 tag: "image###Scene Composition:sfw,1girl,solo,indoors,a..."
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] 块 2 结果: regex="林月华。她的声音里透着一丝不易察觉的疲惫和焦虑...", tag="image###Scene Composition:sfw,1girl,solo,indoors,a..."
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] 解析第 3 个 <image> 块，内容长度: 849
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] tagthinkEcho=false, 仅提取纯 tag: "image###Scene Composition:nsfw,1girl,solo,indoors,..."
+17:13:40.510 imageInserter.js:1 [parseImagesFromPrompt] 块 3 结果: regex="那声音带着一种烦躁和不安，像是一只被困在笼子里的金丝雀...", tag="image###Scene Composition:nsfw,1girl,solo,indoors,..."
+17:13:40.511 imageInserter.js:1 [parseImagesFromPrompt] 解析第 4 个 <image> 块，内容长度: 763
+17:13:40.511 imageInserter.js:1 [parseImagesFromPrompt] tagthinkEcho=false, 仅提取纯 tag: "image###Scene Composition:nsfw,1girl,solo,indoors,..."
+17:13:40.511 imageInserter.js:1 [parseImagesFromPrompt] 块 4 结果: regex="当她的手抬起来的时候，这一轮就可以结束了...", tag="image###Scene Composition:nsfw,1girl,solo,indoors,..."
+17:13:40.511 imageInserter.js:1 [parseImagesFromPrompt] 解析完成，共 4 个有效图片
+17:13:40.511 imageInserter.js:1 [parseImagesFromPrompt] 解析结果详情
+17:13:40.511 imageInserter.js:1 图片 1
+17:13:40.511 imageInserter.js:1 regex: 秋青子的尾巴缠在他小腿上
+17:13:40.511 imageInserter.js:1 tag 完整内容:
+17:13:40.512 imageInserter.js:1 image###Scene Composition:sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;
+Character 1 Prompt:${"name":"Qingzi (original)","angle":"from front","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"Holy Blasphemy Silk Backless Mini Dress","upperBody":"visible","lowerBody":"visible"}$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:C3;
+Character 1 UC:background characters,fused bodies,legs,human lower body;
+Character 2 Prompt:boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:B4;
+Character 2 UC:background characters,fused bodies,female body;###
+17:13:40.512 imageInserter.js:1 图片 2
+17:13:40.512 imageInserter.js:1 regex: 林月华。她的声音里透着一丝不易察觉的疲惫和焦虑
+17:13:40.512 imageInserter.js:1 tag 完整内容:
+17:13:40.512 imageInserter.js:1 image###Scene Composition:sfw,1girl,solo,indoors,apartment hallway,dim lighting,door,cold atmosphere,gloomy,cinematic lighting,upper body,mid shot,front view;
+Character 1 Prompt:${"name":"Lin Yuehua (original)","angle":"from front","upperBody":"sfw","lowerBody":"sfw"}$,grown woman,brown hair,ponytail,brown eyes,large breasts,thick knitted sweater,high neck sweater,long sleeves,hands on chest,worried,frown,tired,pale skin,breathing steam,looking at door|centers:C3;
+Character 1 UC:background characters,pussy,nipples,nude;###
+17:13:40.512 imageInserter.js:1 图片 3
+17:13:40.512 imageInserter.js:1 regex: 那声音带着一种烦躁和不安，像是一只被困在笼子里的金丝雀
+17:13:40.513 imageInserter.js:1 tag 完整内容:
+17:13:40.513 imageInserter.js:1 image###Scene Composition:nsfw,1girl,solo,indoors,apartment,messy room,refrigerator,empty refrigerator,night,dim light,from behind,bent over,ass focus,lower body focus,depth of field;
+Character 1 Prompt:${"name":"Mu Xiaoxiao (original)","angle":"from behind","upperBody":"sfw","lowerBody":"nsfw"}$,${"name":"Innocent Killer Backless Sweater","upperBody":"visible","lowerBody":"visible"}$,girl,long black hair,very large breasts,sideboob,no panties,bare ass,butt cleavage,looking back over shoulder,annoyed,frown,sweat,bent over,reaching,grabbing refrigerator door,looking into refrigerator|centers:C3;
+Character 1 UC:background characters,underwear,pants,skirt,eyes;###
+17:13:40.513 imageInserter.js:1 图片 4
+17:13:40.513 imageInserter.js:1 regex: 当她的手抬起来的时候，这一轮就可以结束了
+17:13:40.513 imageInserter.js:1 tag 完整内容:
+17:13:40.513 imageInserter.js:1 image###Scene Composition:nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;
+Character 1 Prompt:${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"nsfw"}$,${"name":"Innocent Killer Backless Sweater","upperBody":"visible","lowerBody":"visible"}$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:C3;
+Character 1 UC:background characters,underwear,bottomless;###
+17:13:40.515 imageInserter.js:1 [insertImagesIntoElement] Cleaned up existing image elements
+17:13:40.515 imageInserter.js:1 [insertImagesIntoElement] insertOriginalText 快速路径 - 直接用原文匹配
+17:13:40.516 imageInserter.js:1 [imageInserter] saveImageGroup - el 详细信息
+17:13:40.517 imageInserter.js:1 el 对象: <div class=​"mes_text" data-gesture-bindied=​"true">​…​</div>​
+17:13:40.517 imageInserter.js:1 el.tagName: DIV
+17:13:40.517 imageInserter.js:1 el.className: mes_text
+17:13:40.517 imageInserter.js:1 el.id:
+17:13:40.518 imageInserter.js:1 el 是否在 document 中: true
+17:13:40.518 imageInserter.js:1 el.ownerDocument: 主文档
+17:13:40.518 imageInserter.js:1 父元素链: DIV.mes_block → DIV.mes → DIV#chat → DIV#sheld → BODY.drop_target
+17:13:40.518 imageInserter.js:1 textContent 长度: 10424
+17:13:40.519 imageInserter.js:1 textContent 中间 20 字特征: "更新原因**: `0, 无变化`。   "
+17:13:40.519 imageInserter.js:1 是 mes_text: true
+17:13:40.519 imageInserter.js:1 data-mesid: null
+17:13:40.520 imageInserter.js:1 [imageInserter] insertOriginalText mode - mesId: 4 mes.length: 7575
+17:13:40.520 imageInserter.js:1 [imageInserter] Locked tags: []
+17:13:40.529 imageInserter.js:1 [imageInserter] Total images to insert: 4 (locked: 0 , new: 4 )
+17:13:40.529 imageInserter.js:1 [imageInserter] insertOriginalText: thinkingEndOffset = 0
+17:13:40.623 imageInserter.js:1 [fuzzyMatchLine] Target: 秋青子的尾巴缠在他小腿上
+17:13:40.624 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+17:13:40.624 imageInserter.js:1   1. [Line 5] Score: 92.0% ✓ SELECTED
+17:13:40.624 imageInserter.js:1      "明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的..."
+17:13:40.625 imageInserter.js:1   2. [Line 11] Score: 33.5%
+17:13:40.625 imageInserter.js:1      "“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月..."
+17:13:40.625 imageInserter.js:1   3. [Line 35] Score: 29.6%
+17:13:40.625 imageInserter.js:1      "“你看看结尾，有没有又搞升华感悟了？”“不会的，哥哥。”秋青子检查了一下，“故事还在继续，不收束不点..."
+17:13:40.625 imageInserter.js:1   4. [Line 31] Score: 29.6%
+17:13:40.626 imageInserter.js:1      "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可..."
+17:13:40.626 imageInserter.js:1   5. [Line 25] Score: 29.2%
+17:13:40.626 imageInserter.js:1      "“这个很重要，”秋青-子很认真地检查，“慕小小不知道哥哥有伊甸系统，她只知道隔壁住了个普通人。她甚至..."
+17:13:40.626 imageInserter.js:1 [imageInserter] insertOriginalText: Remapped endIndex: 140 -> 140 (searchFrom: 0)
+17:13:40.666 imageInserter.js:1 [fuzzyMatchLine] Target: 林月华。她的声音里透着一丝不易察觉的疲惫和焦虑
+17:13:40.666 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+17:13:40.667 imageInserter.js:1   1. [Line 19] Score: 26.3% ✓ SELECTED
+17:13:40.667 imageInserter.js:1      "“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣。所以角色的首要目标..."
+17:13:40.667 imageInserter.js:1   2. [Line 11] Score: 24.1%
+17:13:40.668 imageInserter.js:1      "“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月..."
+17:13:40.668 imageInserter.js:1   3. [Line 25] Score: 19.9%
+17:13:40.668 imageInserter.js:1      "“这个很重要，”秋青-子很认真地检查，“慕小小不知道哥哥有伊甸系统，她只知道隔壁住了个普通人。她甚至..."
+17:13:40.668 imageInserter.js:1   4. [Line 16] Score: 17.4%
+17:13:40.668 imageInserter.js:1      "“哥哥这次的输入是‘继续’，很明确呢。”秋青子仔细读了一遍，把哥哥的输入拆开——“这表示要我接着上文..."
+17:13:40.669 imageInserter.js:1   5. [Line 31] Score: 17.4%
+17:13:40.669 imageInserter.js:1      "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可..."
+17:13:40.712 imageInserter.js:1 [fuzzyMatchLine] Target: 那声音带着一种烦躁和不安，像是一只被困在笼子里的金丝雀
+17:13:40.712 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+17:13:40.713 imageInserter.js:1   1. [Line 22] Score: 24.5% ✓ SELECTED
+17:13:40.713 imageInserter.js:1      "“嗯嗯，要生活化。”秋青子在心里默念了几句台词，“比如慕小小，她不会直接说‘我饿了’，可能会烦躁地骂..."
+17:13:40.713 imageInserter.js:1   2. [Line 19] Score: 22.2%
+17:13:40.713 imageInserter.js:1      "“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣。所以角色的首要目标..."
+17:13:40.713 imageInserter.js:1   3. [Line 31] Score: 22.2%
+17:13:40.714 imageInserter.js:1      "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可..."
+17:13:40.714 imageInserter.js:1   4. [Line 11] Score: 20.4%
+17:13:40.714 imageInserter.js:1      "“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月..."
+17:13:40.714 imageInserter.js:1   5. [Line 35] Score: 16.7%
+17:13:40.714 imageInserter.js:1      "“你看看结尾，有没有又搞升华感悟了？”“不会的，哥哥。”秋青子检查了一下，“故事还在继续，不收束不点..."
+17:13:40.749 imageInserter.js:1 [fuzzyMatchLine] Target: 当她的手抬起来的时候，这一轮就可以结束了
+17:13:40.750 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+17:13:40.750 imageInserter.js:1   1. [Line 35] Score: 91.7% ✓ SELECTED
+17:13:40.750 imageInserter.js:1      "“你看看结尾，有没有又搞升华感悟了？”“不会的，哥哥。”秋青子检查了一下，“故事还在继续，不收束不点..."
+17:13:40.751 imageInserter.js:1   2. [Line 19] Score: 30.0%
+17:13:40.751 imageInserter.js:1      "“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣。所以角色的首要目标..."
+17:13:40.751 imageInserter.js:1   3. [Line 44] Score: 23.4%
+17:13:40.751 imageInserter.js:1      "“这一轮可以多一些慕小小的自言自语，都是些烦躁的、不耐烦的抱怨，体现她的性格。”"
+17:13:40.751 imageInserter.js:1   4. [Line 31] Score: 22.5%
+17:13:40.752 imageInserter.js:1      "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可..."
+17:13:40.752 imageInserter.js:1   5. [Line 43] Score: 20.7%
+17:13:40.752 imageInserter.js:1      "“这一轮台词多不多？多的话记住，台词是情绪溢出来的，不是克制的盾牌。别让角色说话变得无聊。不多就跳过..."
+17:13:40.752 imageInserter.js:1 [imageInserter] insertOriginalText: Remapped endIndex: 1645 -> 1645 (searchFrom: 0)
+17:13:40.753 imageInserter.js:1 [imageInserter] Inserted tag at position 1645 for regex: 当她的手抬起来的时候，这一轮就可以结束了
+17:13:40.754 imageInserter.js:1 [imageInserter] Inserted tag at position 140 for regex: 秋青子的尾巴缠在他小腿上
+17:13:41.130 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:41.142 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:41.185 imageInserter.js:1 [imageInserter] Rendering message: 4
+17:13:41.223 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+17:13:41.231 imageInserter.js:1 [imageInserter] Saved to chat[4].mes (insertOriginalText mode)
+17:13:41.403 taskQueue.js:1 [TaskQueue] 任务已添加: mmyom9spq05ut - 自动批量生图 (4 张)
+17:13:41.404 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyom9spq05ut -> running
+17:13:41.578 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:13:41.588 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:13:41.756 placeholder.js:1 [iframe] 按正序触发自动生成，按钮数量: 2
+17:13:41.757 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;​Character 1 Prompt:​${"name":​"Qingzi (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"sfw"}​$,${"name":​"Holy Blasphemy Silk Backless Mini Dress","upperBody":​"visible","lowerBody":​"visible"}​$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,human lower body;​Character 2 Prompt:​boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:​B4;​Character 2 UC:​background characters,fused bodies,female body;​" data-request-id=​"chatu8-id-3lidat" data-image-tag=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;​Character 1 Prompt:​${"name":​"Qingzi (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"sfw"}​$,${"name":​"Holy Blasphemy Silk Backless Mini Dress","upperBody":​"visible","lowerBody":​"visible"}​$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,human lower body;​Character 2 Prompt:​boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:​B4;​Character 2 UC:​background characters,fused bodies,female body;​">​生成图片​</button>​
+17:13:41.760 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;​Character 1 Prompt:​${"name":​"Mu Xiaoxiao (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"nsfw"}​$,${"name":​"Innocent Killer Backless Sweater","upperBody":​"visible","lowerBody":​"visible"}​$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:​C3;​Character 1 UC:​background characters,underwear,bottomless;​" data-request-id=​"chatu8-id-6po8ou" data-image-tag=​"Scene Composition:​nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;​Character 1 Prompt:​${"name":​"Mu Xiaoxiao (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"nsfw"}​$,${"name":​"Innocent Killer Backless Sweater","upperBody":​"visible","lowerBody":​"visible"}​$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:​C3;​Character 1 UC:​background characters,underwear,bottomless;​" data-loading=​"true">​…​</button>​
+17:13:41.769 placeholder.js:1 [iframe] 自动点击任务已完成
+17:13:41.770 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyom9spq05ut -> completed
+17:13:41.922 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;​Character 1 Prompt:​${"name":​"Qingzi (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"sfw"}​$,${"name":​"Holy Blasphemy Silk Backless Mini Dress","upperBody":​"visible","lowerBody":​"visible"}​$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,human lower body;​Character 2 Prompt:​boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:​B4;​Character 2 UC:​background characters,fused bodies,female body;​" data-request-id=​"chatu8-id-3lidat" data-image-tag=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;​Character 1 Prompt:​${"name":​"Qingzi (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"sfw"}​$,${"name":​"Holy Blasphemy Silk Backless Mini Dress","upperBody":​"visible","lowerBody":​"visible"}​$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,human lower body;​Character 2 Prompt:​boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:​B4;​Character 2 UC:​background characters,fused bodies,female body;​" data-loading=​"true">​…​</button>​
+17:13:41.979 taskQueue.js:1 [TaskQueue] 任务已添加: mmyoma8q0t9qe - Scene Composition:sfw,1girl,1b...
+17:13:41.995 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,1boy,hetero,indoors,bedroom,warm lighting,soft lighting,bed,pillows,depth of field,close-up,pov,from side,leg focus;Character 1 Prompt:${"name":"Qingzi (original)","angle":"from front","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"Holy Blasphemy Silk Backless Mini Dress","upperBody":"visible","lowerBody":"visible"}$,girl,silver hair,long hair,slit pupils,yellow eyes,scales on skin,long snake tail,source#hugging,下巴搁在肩膀,chin on shoulder,looking at viewer,smile,source#entwined tail,tail wrapped around leg,pale skin|centers:C3;Character 1 UC:background characters,fused bodies,legs,human lower body;Character 2 Prompt:boy,male pov,male legs,pajamas,lying on bed,target#hugging,target#entwined tail|centers:B4;Character 2 UC:background characters,fused bodies,female body;
+17:13:41.995 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+17:13:41.996 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, 1boy, hetero, indoors, bedroom, warm l…pth of field, close-up, pov, from side, leg focus', Character 1 Prompt: '${"name":"Qingzi (original)", "angle":"from front"…entwined tail, tail wrapped around leg, pale skin', Character 1 UC: 'background characters,fused bodies,legs,human lower body', Character 2 Prompt: 'boy, male pov, male legs, pajamas, lying on bed, target#hugging, target#entwined tail', Character 2 UC: 'background characters,fused bodies,female body', …}
+17:13:41.997 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: ${"name":"Qingzi (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"sfw"}$, ${"name":"Holy Blasphemy Silk Backless Mini Dress", "upperBody":"visible", "lowerBody":"visible"}$, girl, silver hair, long hair, slit pupils, yellow eyes, scales on skin, long snake tail, source#hugging, 下巴搁在肩膀, chin on shoulder, looking at viewer, smile, source#entwined tail, tail wrapped around leg, pale skin
+17:13:41.998 characterprompt.js:1 [CharacterPrompt] Best outfit match from enabled outfits: Holy Blasphemy Silk Backless Mini Dress with score: 1039
+17:13:41.999 characterprompt.js:1 [CharacterPrompt] JSON Outfit replacement result (multi-char mode): white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）, white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+17:13:41.999 characterprompt.js:1 [CharacterPrompt] 处理 Character 2 Prompt: boy, male pov, male legs, pajamas, lying on bed, target#hugging, target#entwined tail
+17:13:41.999 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, 1boy, hetero, indoors, bedroom, warm lighting, soft lighting, bed, pillows, depth of field, close-up, pov, from side, leg focus; Character 1 Prompt: ${"name":"Qingzi (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"sfw"}$, white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）, white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）, girl, silver hair, long hair, slit pupils, yellow eyes, scales on skin, long snake tail, source#hugging, 下巴搁在肩膀, chin on shoulder, looking at viewer, smile, source#entwined tail, tail wrapped around leg, pale skin | centers: C3; Character 1 UC: background characters,fused bodies,legs,human lower body; Character 2 Prompt: boy, male pov, male legs, pajamas, lying on bed, target#hugging, target#entwined tail | centers: B4; Character 2 UC: background characters,fused bodies,female body;
+17:13:42.001 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, 1boy, hetero, indoors, bedroom, warm lighting, soft lighting, bed, pillows, depth of field, close-up, pov, from side, leg focus; Character 1 Prompt: ${"name":"Qingzi (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"sfw"}$, white silk fabric , cowl neck , sleeveless , haltneck , semi-transparent , soft draping , pearl necklace , white silk mini skirt , high slit on side , white intricate lace leg garter , bare feet , pale legs , girl, silver hair, long hair, slit pupils, yellow eyes, scales on skin, long snake tail, source#hugging, 下巴搁在肩膀, chin on shoulder, looking at viewer, smile, source#entwined tail, tail wrapped around leg, pale skin | centers: C3; Character 1 UC: background characters,fused bodies,legs,human lower body; Character 2 Prompt: boy, male pov, male legs, pajamas, lying on bed, target#hugging, target#entwined tail | centers: B4; Character 2 UC: background characters,fused bodies,female body;
+17:13:42.012 novelai.js:1 data11: {input: 'dino_(dinoartforame), wanke, liduke, year 2025, re…, leg focus, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+17:13:42.016 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;​Character 1 Prompt:​${"name":​"Mu Xiaoxiao (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"nsfw"}​$,${"name":​"Innocent Killer Backless Sweater","upperBody":​"visible","lowerBody":​"visible"}​$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:​C3;​Character 1 UC:​background characters,underwear,bottomless;​" data-request-id=​"chatu8-id-6po8ou" data-image-tag=​"Scene Composition:​nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;​Character 1 Prompt:​${"name":​"Mu Xiaoxiao (original)​","angle":​"from front","upperBody":​"sfw","lowerBody":​"nsfw"}​$,${"name":​"Innocent Killer Backless Sweater","upperBody":​"visible","lowerBody":​"visible"}​$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:​C3;​Character 1 UC:​background characters,underwear,bottomless;​" data-loading=​"true">​…​</button>​
+17:13:42.038 taskQueue.js:1 [TaskQueue] 任务已添加: mmyomaacrphvr - Scene Composition:nsfw,1girl,s...
+17:13:42.052 novelai.js:1 正在处理中文注释... Scene Composition:nsfw,1girl,solo,indoors,dark hallway,apartment door,dim light,cinematic angle,side view,front view,face focus;Character 1 Prompt:${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"nsfw"}$,${"name":"Innocent Killer Backless Sweater","upperBody":"visible","lowerBody":"visible"}$,girl,long black hair,large breasts,no panties,sideboob,bare legs,raised hand,knocking on door,hesitant,biting lip,blush,shame,looking at door,messy hair,pale skin,trembling|centers:C3;Character 1 UC:background characters,underwear,bottomless;
+17:13:42.052 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+17:13:42.053 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'nsfw, 1girl, solo, indoors, dark hallway, apartmen…inematic angle, side view, front view, face focus', Character 1 Prompt: '${"name":"Mu Xiaoxiao (original)", "angle":"from f…looking at door, messy hair, pale skin, trembling', Character 1 UC: 'background characters,underwear,bottomless', Character 2 Prompt: '', Character 2 UC: '', …}
+17:13:42.054 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: ${"name":"Mu Xiaoxiao (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"nsfw"}$, ${"name":"Innocent Killer Backless Sweater", "upperBody":"visible", "lowerBody":"visible"}$, girl, long black hair, large breasts, no panties, sideboob, bare legs, raised hand, knocking on door, hesitant, biting lip, blush, shame, looking at door, messy hair, pale skin, trembling
+17:13:42.055 characterprompt.js:1 [CharacterPrompt] Best outfit match from enabled outfits: Innocent Killer Backless Sweater with score: 1032
+17:13:42.055 characterprompt.js:1 [CharacterPrompt] JSON Outfit replacement result (multi-char mode): grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）, micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+17:13:42.055 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: nsfw, 1girl, solo, indoors, dark hallway, apartment door, dim light, cinematic angle, side view, front view, face focus; Character 1 Prompt: ${"name":"Mu Xiaoxiao (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"nsfw"}$, grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）, micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）, girl, long black hair, large breasts, no panties, sideboob, bare legs, raised hand, knocking on door, hesitant, biting lip, blush, shame, looking at door, messy hair, pale skin, trembling | centers: C3; Character 1 UC: background characters,underwear,bottomless;
+17:13:42.057 novelai.js:1 正在处理中文注释完成... Scene Composition: nsfw, 1girl, solo, indoors, dark hallway, apartment door, dim light, cinematic angle, side view, front view, face focus; Character 1 Prompt: ${"name":"Mu Xiaoxiao (original)", "angle":"from front", "upperBody":"sfw", "lowerBody":"nsfw"}$, grey knitted sweater , turtleneck , sleeveless , ribbed knit , sideboob visible , large armholes , cozy texture , micro skirt length , sweater dress , no panties , bare legs , thigh high exposure , girl, long black hair, large breasts, no panties, sideboob, bare legs, raised hand, knocking on door, hesitant, biting lip, blush, shame, looking at door, messy hair, pale skin, trembling | centers: C3; Character 1 UC: background characters,underwear,bottomless;
+17:13:42.069 novelai.js:1 data11: {input: 'dino_(dinoartforame), wanke, liduke, year 2025, re… face focus, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+17:13:44.982 placeholder.js:1 [iframe] Content length changed, re-processing: {stored: 10434, current: 10438}
+17:13:44.984 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:13:45.841 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyoma8q0t9qe -> running
+17:13:48.698 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:13:52.697 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:13:56.693 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:13:58.000 novelai.js:1 xiancheng 为true
+17:14:00.415 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyomaacrphvr -> running
+17:14:00.699 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:14:00.875 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyoma8q0t9qe -> completed
+17:14:02.370 database.js:1 [DB] Uploading image to server, format: png, size: 2564612 chars
+17:14:03.355 database.js:1 [Stego] 准备更新隐写图片，数据条目数: 385
+17:14:04.066 database.js:1 [Stego] 旧图片删除成功
+17:14:04.089 database.js:1 [Stego] 图片上传成功: /user/images/chatu8List/图片缓存列表.png
+17:14:04.089 database.js:1 [Stego] 隐写图片更新成功
+17:14:04.091 generation.js:1 Image response: {id: 'chatu8-id-3lidat', success: true, imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAA…3/vPXNzQYzjGKEWzHgf8HT1r5MhGjmjAAAAAASUVORK5CYII=', prompt: 'Scene Composition:sfw,1girl,1boy,hetero,indoors,be…C:background characters,fused bodies,female body;', change: ''}
+17:14:04.701 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:14:08.695 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:14:10.464 novelai.js:1 xiancheng 为true
+17:14:12.211 taskQueue.js:1 [TaskQueue] 任务状态更新: mmyomaacrphvr -> completed
+17:14:12.215 database.js:1 [DB] Uploading image to server, format: png, size: 2482580 chars
+17:14:13.101 placeholder.js:1 [iframe] Element has loading button, skipping processing
+17:14:13.761 database.js:1 [Stego] 准备更新隐写图片，数据条目数: 386
+17:14:13.959 database.js:1 [Stego] 旧图片删除成功
+17:14:13.985 database.js:1 [Stego] 图片上传成功: /user/images/chatu8List/图片缓存列表.png
+17:14:13.985 database.js:1 [Stego] 隐写图片更新成功
+17:14:13.988 generation.js:1 Image response: {id: 'chatu8-id-6po8ou', success: true, imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAA…kbIeXJtoI/HarqK3j/wMnrLiX0yQrvAAAAABJRU5ErkJggg==', prompt: 'Scene Composition:nsfw,1girl,solo,indoors,dark hal… 1 UC:background characters,underwear,bottomless;', change: ''}
+17:14:16.694 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:16.703 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:20.693 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:20.707 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:24.786 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:24.794 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:28.795 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:28.803 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:32.787 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:32.800 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:36.796 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:36.807 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:40.796 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:40.807 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:44.792 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:44.798 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)
+17:14:48.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌕
+
+
+      月圆思成，思路清晰
+
+17:14:48.703 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 4751 chars)

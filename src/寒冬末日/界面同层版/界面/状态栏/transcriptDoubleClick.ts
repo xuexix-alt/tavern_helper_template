@@ -18,7 +18,9 @@ export function resolveTranscriptDoubleClickMessageId(target: EventTarget | null
   );
   if (generatedCarrier) return null;
 
-  const messageCarrier = element.closest('.assistant-body-proxy[data-message-id], .assistant-body[data-message-id]');
+  const messageCarrier = element.closest(
+    '.assistant-body-proxy[data-message-id], .assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
+  );
   if (!messageCarrier) return null;
 
   return toFiniteMessageId(messageCarrier.dataset?.messageId);

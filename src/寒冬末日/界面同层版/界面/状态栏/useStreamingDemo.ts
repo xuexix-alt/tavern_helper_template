@@ -39,15 +39,9 @@ import { buildGeneratedImageMembership } from './generatedImageMembership.ts';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { chooseImageRenderMode } from './imageRenderPriority';
-import { shouldInjectTranscriptImages } from './generatedImageInteraction';
-import { countPluginNativeImageArtifacts } from './pluginNativeImageDom';
-<<<<<<< HEAD
-import { buildGeneratedImagePersistencePatch, sanitizePluginImageExtra } from './imagePersistencePatch';
-=======
-import {
-  buildGeneratedImagePersistencePatch,
-} from './imagePersistencePatch';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
+import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
+import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
+import { buildGeneratedImagePersistencePatch } from './imagePersistencePatch';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import {
   buildHostTranscriptVisibilitySelector,
@@ -56,11 +50,8 @@ import {
 } from './hostTranscriptVisibility.ts';
 import { resolveImageRequestTargetMessageId } from './imageRequestTargetResolver';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
-<<<<<<< HEAD
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
-=======
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
@@ -181,16 +172,12 @@ function buildFinalHtml(renderSource: string, message_id: number): string {
   if (!html) {
     html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
   }
-<<<<<<< HEAD
-  return appendChatu8ArtifactsToHtml(html, renderSource, message_id);
-=======
   return applyTranscriptArtifacts({
     html,
     renderSource,
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function listReachableHostWindows(): Array<Window & typeof globalThis> {
@@ -281,7 +268,6 @@ function buildAnchorSnippet(input: string): string {
   return normalized.slice(-72);
 }
 
-<<<<<<< HEAD
 function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string): string {
   const token = String(promptToken ?? '').trim();
   if (!token) return '';
@@ -306,10 +292,12 @@ function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string
   }
 
   return '';
-=======
+}
+
 function normalizeAnchorCompare(input: string): string {
   return normalizeAnchorText(input)
-    .replace(/[“”"'`‘’《》【】\[\]（）(){}<>]/g, '')
+    .replace(/[“”"'`‘’《》【】（）(){}<>]/g, '')
+    .replace(/\[|\]/g, '')
     .replace(/[，。！？；：、…,.!?;:]/g, '')
     .trim();
 }
@@ -320,7 +308,6 @@ function splitAnchorFragments(input: string): string[] {
     .map(segment => segment.trim())
     .filter(segment => segment.length >= 8)
     .sort((a, b) => b.length - a.length);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function createGeneratedImageFigureHtml(
@@ -338,15 +325,11 @@ function createGeneratedImageFigureHtml(
   const markerIdAttr = image.markerId ? ` data-marker-id="${escapeHtml(image.markerId)}"` : ' data-marker-id=""';
   const requestIdAttr = image.requestId ? ` data-request-id="${escapeHtml(image.requestId)}"` : ' data-request-id=""';
   const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
-<<<<<<< HEAD
-  return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
-=======
   const persistedSrcAttr = image.src.startsWith('idb://')
     ? ` data-persisted-image-src="${encodeDataAttr(image.src)}"`
     : '';
   const imgSrcAttr = image.src.startsWith('idb://') ? '' : ` src="${escapeHtml(image.src)}"`;
-  return `<figure class="${className}"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr}${persistedSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
+  return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr}${persistedSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
 }
 
 function readChatMessageDetail(messageId: number): any | null {
@@ -443,11 +426,7 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
         (entry as any).promptToken ?? (entry as any).tag ?? (entry as any).prompt ?? '',
       ),
       requestId: String((entry as any).requestId ?? (entry as any).request_id ?? '').trim() || undefined,
-<<<<<<< HEAD
-      anchorText: String((entry as any).regex ?? '').trim() || undefined,
-=======
       anchorText: buildAnchorSnippet(String((entry as any).regex ?? '').trim()) || undefined,
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
     });
   }
   return out;
@@ -561,9 +540,10 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
   const compatibilityImages = readPersistedGeneratedImages(messageId);
   const pluginNativeImages = readChatu8ExtraImages(messageId);
+  const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(existingRoots) > 0;
 
   const renderMode = chooseImageRenderMode({
-    hasPluginNativeDom: countPluginNativeImageArtifacts(existingRoots) > 0,
+    hasPluginNativeDom: hasPluginNativeArtifacts,
     pluginNativeCount: pluginNativeImages.length,
     compatibilityCount: compatibilityImages.length,
   });
@@ -589,6 +569,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
     appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
   });
+  if (!shouldAppendTranscriptPromptTokens(renderMode, hasPluginNativeArtifacts)) return htmlWithImages;
   const promptMarkup = createPromptTokenMarkup(promptTokens);
   if (!promptMarkup) return htmlWithImages;
   return `${htmlWithImages}${promptMarkup}`;
@@ -908,7 +889,6 @@ function buildGeneratedImageRefsForMessage(input: {
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
-<<<<<<< HEAD
   const persistedMembers = readPersistedGeneratedImageIndex(messageId).map(image => ({
     markerId: String(image.markerId ?? '').trim() || undefined,
     imageId: String(image.imageId ?? '').trim() || undefined,
@@ -922,46 +902,6 @@ function buildGeneratedImageRefsForMessage(input: {
     persistedEntries: persistedMembers,
     createdOrderBase,
   });
-=======
-  const imageKeys: string[] = [];
-  const promptByKey = new Map<string, string>();
-  const requestByKey = new Map<string, string>();
-  const anchorByKey = new Map<string, string>();
-  const titleByKey = new Map<string, string>();
-  const characterByKey = new Map<string, string>();
-
-  const mergeImage = (image: RenderableGeneratedImage) => {
-    const src = normalizeImageSrcForCompare(image.src);
-    const imageId = String(image.imageId ?? '').trim();
-    const promptToken = String(image.promptToken ?? '').trim();
-    const requestId = String(image.requestId ?? '').trim();
-    const anchorText = String(image.anchorText ?? '').trim();
-    const imageKey = imageId || requestId || src || promptToken || anchorText;
-    if (!imageKey) return;
-    if (!imageKeys.includes(imageKey)) imageKeys.push(imageKey);
-    const characterName = String(image.characterName ?? '').trim() || extractCharacterNameFromPrompt(promptToken);
-    const title = String(image.title ?? '').trim() || extractGalleryTitleFromPrompt(promptToken) || characterName;
-
-    if (promptToken && !promptByKey.has(imageKey)) promptByKey.set(imageKey, promptToken);
-    if (requestId && !requestByKey.has(imageKey)) requestByKey.set(imageKey, requestId);
-    if (anchorText && !anchorByKey.has(imageKey)) anchorByKey.set(imageKey, anchorText);
-    if (title && !titleByKey.has(imageKey)) titleByKey.set(imageKey, title);
-    if (characterName && !characterByKey.has(imageKey)) characterByKey.set(imageKey, characterName);
-  };
-
-  const images = [
-    ...readPersistedGeneratedImages(messageId),
-    ...readChatu8ExtraImages(messageId),
-    ...readChatu8CacheEntries(messageId).map(item => ({
-      src: item.src,
-      alt: item.alt,
-      promptToken: item.promptToken,
-      requestId: item.requestId,
-    })),
-  ];
-
-  for (const image of images) mergeImage(image);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
   let index = 0;
   return members.map(member => {
@@ -1013,12 +953,7 @@ function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: n
 }
 
 function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
-  const matchesRelevantNode = (node: Node | null | undefined) => {
-    if (!(node instanceof HTMLElement)) return false;
-    if (node.matches(CHATU8_IMAGE_BUTTON_SELECTOR) || node.matches(CHATU8_IMAGE_SPAN_SELECTOR)) return true;
-    if (node.querySelector(CHATU8_IMAGE_BUTTON_SELECTOR) || node.querySelector(CHATU8_IMAGE_SPAN_SELECTOR)) return true;
-    return false;
-  };
+  const matchesRelevantNode = (node: Node | null | undefined) => isPluginNativeMutationNode(node);
 
   if (matchesRelevantNode(record.target)) return true;
   for (const node of Array.from(record.addedNodes)) {
@@ -1028,6 +963,34 @@ function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
     if (matchesRelevantNode(node)) return true;
   }
   return false;
+}
+
+function bindHostPluginMutationObservers(
+  onRelevantMutation: (records: MutationRecord[]) => void,
+): MutationObserver[] {
+  if (typeof MutationObserver === 'undefined') return [];
+
+  const observers: MutationObserver[] = [];
+  const hostDocs = collectReachableHostDocuments().filter(doc => doc && doc !== document);
+  for (const hostDoc of hostDocs) {
+    const target = (hostDoc.querySelector('#chat') as HTMLElement | null) ?? hostDoc.body;
+    if (!target) continue;
+
+    const observer = new MutationObserver(records => {
+      if (!records.some(hasRelevantChatu8Mutation)) return;
+      onRelevantMutation(records);
+    });
+
+    observer.observe(target, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: false,
+    });
+    observers.push(observer);
+  }
+
+  return observers;
 }
 
 function readCurrentContainerMessageId(): number | null {
@@ -1224,6 +1187,7 @@ export function useStreamingDemo() {
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
   let generatedImageDomObserver: MutationObserver | null = null;
+  let hostPluginMutationObservers: MutationObserver[] = [];
 
   const galleryRevision = ref(0);
   const mvuSourceRevision = ref(0);
@@ -1232,6 +1196,51 @@ export function useStreamingDemo() {
 
   function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
     console.info(`[stream-demo:image-bridge] ${step}`, detail);
+  }
+
+  function syncPendingRequestHintsFromDom() {
+    const seen = new Set<string>();
+    let registered = 0;
+
+    for (const doc of collectReachableHostDocuments()) {
+      const buttons = Array.from(doc.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
+      for (const button of buttons) {
+        const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+        if (!requestId || seen.has(requestId)) continue;
+
+        const prompt = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+        const carrier =
+          (button.closest(
+            '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
+          ) as HTMLElement | null) ??
+          (button.closest('.mes[mesid]') as HTMLElement | null);
+
+        const messageId =
+          Number(
+            carrier?.dataset?.messageId ??
+              carrier?.getAttribute?.('data-message-id') ??
+              carrier?.getAttribute?.('mesid') ??
+              '',
+          ) || 0;
+        const normalizedMessageId = Number.isFinite(messageId) && messageId >= 0 ? Math.trunc(messageId) : null;
+        if (normalizedMessageId == null) continue;
+
+        seen.add(requestId);
+        imagePendingTaskManager.registerHint({
+          messageId: normalizedMessageId,
+          requestId,
+          prompt,
+        });
+        registered += 1;
+      }
+    }
+
+    if (registered > 0) {
+      logImageBridge('request-hints-synced', {
+        registered,
+        tasks: imagePendingTaskManager.getDebugState(),
+      });
+    }
   }
 
   const visibleTranscript = computed(() => {
@@ -2033,6 +2042,7 @@ export function useStreamingDemo() {
 
     imageBridgeStops = [
       bind('generate-image-request', (payload: Record<string, unknown>) => {
+        syncPendingRequestHintsFromDom();
         let requestBinding: ImageRequestBindingResult = imagePendingTaskManager.registerRequest(payload ?? {});
         let targetMessageId = requestBinding?.messageId ?? null;
         if (targetMessageId == null) {
@@ -2111,6 +2121,7 @@ export function useStreamingDemo() {
         }
       }),
       bind('generate-image-response', (payload: Record<string, unknown>) => {
+        syncPendingRequestHintsFromDom();
         const imageData = String(payload?.imageData ?? payload?.image ?? '').trim();
         if (!imageData) {
           logImageBridge('response-skip-empty-image', {
@@ -2928,6 +2939,7 @@ export function useStreamingDemo() {
       if (document.body && typeof MutationObserver !== 'undefined') {
         generatedImageDomObserver = new MutationObserver(records => {
           if (!records.some(hasRelevantChatu8Mutation)) return;
+          syncPendingRequestHintsFromDom();
           queueGeneratedImageEntityRefresh();
         });
         generatedImageDomObserver.observe(document.body, {
@@ -2936,6 +2948,11 @@ export function useStreamingDemo() {
           attributes: false,
         });
       }
+      hostPluginMutationObservers = bindHostPluginMutationObservers(() => {
+        syncPendingRequestHintsFromDom();
+        queueGeneratedImageEntityRefresh();
+        scheduleUiRefresh(['transcript', 'gallery'], 'host.plugin_native_dom_mutation');
+      });
     }
   });
 
@@ -3008,6 +3025,8 @@ export function useStreamingDemo() {
     }
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
+    hostPluginMutationObservers.forEach(observer => observer.disconnect());
+    hostPluginMutationObservers = [];
     clearOpeningGenerationListeners();
   });
 

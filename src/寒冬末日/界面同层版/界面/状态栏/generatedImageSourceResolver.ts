@@ -1,11 +1,7 @@
-<<<<<<< HEAD
 import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
 import { collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache.ts';
-=======
-import { collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
 import { loadImage } from './imageStore';
 import { isIdbSrc, parseIdbSrc } from './imagePersistencePatch';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;
@@ -122,14 +118,14 @@ export function resolveGeneratedImageSource(
 ): ResolvedGeneratedImageSource | null {
   if (!message || typeof message !== 'object') return null;
 
-<<<<<<< HEAD
-  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
-    ? message.data.stream_demo.generated_images
-    : [];
   const normalizedMessageId =
     Number.isFinite(Number(reference.messageId)) && Number(reference.messageId) >= 0
       ? Math.trunc(Number(reference.messageId))
       : null;
+
+  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
+    ? message.data.stream_demo.generated_images
+    : [];
   for (const entry of streamDemoEntries) {
     if (!entry || typeof entry !== 'object') continue;
     if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
@@ -137,9 +133,6 @@ export function resolveGeneratedImageSource(
     if (resolved) return resolved;
   }
 
-=======
-  // 优先级 1: extra.images[swipeId] — 持久化层（含 idb:// 引用）
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   const swipeId = normalizeSwipeId(message?.swipe_id);
   const extraImages = message?.extra?.images;
   const swipeEntries =
@@ -156,22 +149,10 @@ export function resolveGeneratedImageSource(
     if (resolved) return resolved;
   }
 
-  // 优先级 2: chatMetadata['st-chatu8'] 插件缓存（兜底）
   for (const entry of cacheEntries) {
     const normalized = normalizeCacheEntry(entry);
     if (!matchesImageRef(reference, normalized)) continue;
     const resolved = normalizeResolvedSource(normalized, 'cache', normalizedMessageId);
-    if (resolved) return resolved;
-  }
-
-  // 优先级 3: data.stream_demo.generated_images（旧数据兼容）
-  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
-    ? message.data.stream_demo.generated_images
-    : [];
-  for (const entry of streamDemoEntries) {
-    if (!entry || typeof entry !== 'object') continue;
-    if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
-    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo');
     if (resolved) return resolved;
   }
 
@@ -235,17 +216,12 @@ export function readGeneratedImageSource(reference: GeneratedImageSourceRef): Re
   return resolveGeneratedImageSource(reference, message, cacheEntries);
 }
 
-/**
- * 异步版本：解析图片源，如果 src 是 idb:// 引用则从 IndexedDB 加载真实 base64。
- * 用于组件渲染时获取可显示的图片数据。
- */
 export async function readGeneratedImageSourceAsync(
   reference: GeneratedImageSourceRef,
 ): Promise<ResolvedGeneratedImageSource | null> {
   const resolved = readGeneratedImageSource(reference);
   if (!resolved) return null;
 
-  // 如果 src 是 idb:// 引用，从 IndexedDB 加载
   if (isIdbSrc(resolved.src)) {
     const parsed = parseIdbSrc(resolved.src);
     if (parsed) {
@@ -254,7 +230,6 @@ export async function readGeneratedImageSourceAsync(
         return { ...resolved, src: imageData, source: 'idb' };
       }
     }
-    // IndexedDB 中找不到，返回 null（图片丢失）
     return null;
   }
 

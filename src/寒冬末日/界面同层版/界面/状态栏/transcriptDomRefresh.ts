@@ -1,6 +1,10 @@
 export function shouldForceTranscriptDomRefresh(reason: string): boolean {
   const normalized = String(reason ?? '').trim();
-  return normalized.startsWith('image:request:') || normalized.startsWith('image:persist:');
+  return (
+    normalized.startsWith('image:request:') ||
+    normalized.startsWith('image:persist:') ||
+    normalized === 'host.plugin_native_dom_mutation'
+  );
 }
 
 export function buildTranscriptEntryKey(messageId: number, domRevision = 0): string {

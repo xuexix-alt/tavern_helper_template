@@ -3,15 +3,24 @@ const assert = require('node:assert/strict');
 
 const {
   shouldInjectTranscriptImages,
+  shouldAppendTranscriptPromptTokens,
   pickGeneratedImageActivationTarget,
   resolveGeneratedImageActivationTarget,
-} = require('../generatedImageInteraction');
+} = require('../generatedImageInteraction.ts');
 
 test('shouldInjectTranscriptImages only injects fallback images for compatibility mode', () => {
   assert.equal(shouldInjectTranscriptImages('compatibility'), true);
   assert.equal(shouldInjectTranscriptImages('plugin-native'), false);
   assert.equal(shouldInjectTranscriptImages('plugin-native-data'), false);
   assert.equal(shouldInjectTranscriptImages('none'), false);
+});
+
+test('shouldAppendTranscriptPromptTokens avoids duplicate prompt dumps when native st-chatu8 artifacts already exist', () => {
+  assert.equal(shouldAppendTranscriptPromptTokens('compatibility', false), true);
+  assert.equal(shouldAppendTranscriptPromptTokens('compatibility', true), false);
+  assert.equal(shouldAppendTranscriptPromptTokens('plugin-native', false), false);
+  assert.equal(shouldAppendTranscriptPromptTokens('plugin-native-data', false), false);
+  assert.equal(shouldAppendTranscriptPromptTokens('none', false), false);
 });
 
 test('pickGeneratedImageActivationTarget prefers image nodes for viewer actions', () => {

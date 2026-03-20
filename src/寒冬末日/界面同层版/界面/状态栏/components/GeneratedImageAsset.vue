@@ -1,18 +1,11 @@
 <template>
   <figure
     :class="rootClass"
-    tabindex="0"
-    role="button"
-    :aria-label="secondaryText"
     :data-message-id="entry.messageId"
     :data-marker-id="entry.markerId || ''"
     :data-image-id="entry.imageId || ''"
     :data-prompt-token="encodePromptToken(entry.promptToken)"
     :data-request-id="entry.requestId ?? ''"
-    @click.stop="queueOpen"
-    @dblclick.stop.prevent="triggerRegenerate"
-    @keydown.enter.prevent="emit('open', entry)"
-    @keydown.space.prevent="emit('open', entry)"
   >
     <img
       v-if="resolvedSource"
@@ -48,7 +41,7 @@
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
       :data-image-src="encodePromptToken(activationPayload.imageSrc)"
-      aria-label="查看或重生图片"
+      :aria-label="secondaryText"
       @click.capture="handleClick"
       @dblclick.capture="handleDoubleClick"
       @pointerdown.capture="handlePointerDown"
@@ -64,29 +57,21 @@
 </template>
 
 <script setup lang="ts">
-import type { GeneratedImageRef } from '../types';
-<<<<<<< HEAD
+import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
+import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision.ts';
-import { readGeneratedImageSource, type ResolvedGeneratedImageSource } from '../generatedImageSourceResolver';
-=======
 import {
   readGeneratedImageSource,
   readGeneratedImageSourceAsync,
   type ResolvedGeneratedImageSource,
 } from '../generatedImageSourceResolver';
-import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import { isIdbSrc } from '../imagePersistencePatch';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
+import type { GeneratedImageRef } from '../types';
 
 const props = defineProps<{
   entry: GeneratedImageRef;
   variant?: 'inline' | 'gallery';
   showCaption?: boolean;
-}>();
-const emit = defineEmits<{
-  (event: 'open', entry: GeneratedImageRef): void;
-  (event: 'regenerate', entry: GeneratedImageRef): void;
 }>();
 
 const emit = defineEmits<{
@@ -96,7 +81,6 @@ const emit = defineEmits<{
 
 const resolvedSource = ref<ResolvedGeneratedImageSource | null>(null);
 const generatedImageEntityRevision = useGeneratedImageEntityRevision();
-let clickTimer = 0;
 
 const rootClass = computed(() =>
   props.variant === 'gallery'
@@ -127,29 +111,6 @@ function encodePromptToken(value: string) {
   return encodeURIComponent(String(value ?? ''));
 }
 
-<<<<<<< HEAD
-function clearClickTimer() {
-  if (!clickTimer) return;
-  window.clearTimeout(clickTimer);
-  clickTimer = 0;
-}
-
-function queueOpen() {
-  clearClickTimer();
-  clickTimer = window.setTimeout(() => {
-    clickTimer = 0;
-    emit('open', props.entry);
-  }, 220);
-}
-
-function triggerRegenerate() {
-  clearClickTimer();
-  emit('regenerate', props.entry);
-}
-
-function resolveSource() {
-  resolvedSource.value = readGeneratedImageSource({
-=======
 function stopEvent(event: Event) {
   event.preventDefault();
   event.stopPropagation();
@@ -186,9 +147,7 @@ function handlePointerCancel(event: PointerEvent) {
 }
 
 async function resolveSource() {
-  // 先同步尝试
   const syncResult = readGeneratedImageSource({
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
     messageId: props.entry.messageId,
     markerId: props.entry.markerId,
     imageId: props.entry.imageId,
@@ -196,19 +155,20 @@ async function resolveSource() {
     promptToken: props.entry.promptToken,
   });
 
-  // 如果 src 是 idb:// 引用，需要异步从 IndexedDB 加载
   if (syncResult && isIdbSrc(syncResult.src)) {
-    resolvedSource.value = null; // 先显示占位
+    resolvedSource.value = null;
     const asyncResult = await readGeneratedImageSourceAsync({
       messageId: props.entry.messageId,
+      markerId: props.entry.markerId,
       imageId: props.entry.imageId,
       requestId: props.entry.requestId,
       promptToken: props.entry.promptToken,
     });
     resolvedSource.value = asyncResult;
-  } else {
-    resolvedSource.value = syncResult;
+    return;
   }
+
+  resolvedSource.value = syncResult;
 }
 
 watch(
@@ -228,11 +188,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
-<<<<<<< HEAD
-  clearClickTimer();
-=======
   gestureController.dispose();
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 });
 </script>
 
@@ -242,7 +198,6 @@ onBeforeUnmount(() => {
   margin: 0;
   display: grid;
   gap: 8px;
-  cursor: pointer;
 }
 
 .generated-image-asset {

@@ -75,13 +75,8 @@
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @jump-message="jumpToTranscriptMessage"
-<<<<<<< HEAD
-            @open-image="handleGeneratedImageOpen($event, 'gallery')"
-            @regenerate-image="handleGeneratedImageRegenerate($event, 'gallery')"
-=======
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
             @close="closeGalleryDrawer"
           />
         </div>
@@ -114,13 +109,8 @@
               :render-revision="transcriptDomRevision"
               @open-detail="openDetail"
               @image-intent="handleTranscriptImageIntent"
-<<<<<<< HEAD
-              @open-image="handleGeneratedImageOpen"
-              @regenerate-image="handleGeneratedImageRegenerate"
-=======
               @image-view="activateGeneratedImageView"
               @image-regenerate="activateGeneratedImageRegenerate"
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
               @reroll-opening="rerollOpening"
@@ -137,11 +127,7 @@
         </section>
 
         <section class="ui-bottom-dock">
-<<<<<<< HEAD
-          <!-- Teleport遮罩和抽屉到body，突破iframe层级限制 -->
-=======
           <!-- 遮罩和抽屉面板 Teleport 到 body，脱离 .ui-host-shell 的 overflow:hidden 裁剪 -->
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
           <Teleport to="body">
             <transition name="utility-mask-fade">
               <div v-if="activeUtilityDrawer" class="ui-utility-mask" @click="closeUtilityDrawer"></div>
@@ -159,15 +145,11 @@
                     <strong>{{ activeUtilityMeta.title }}</strong>
                     <p>{{ activeUtilityMeta.subtitle }}</p>
                     <div class="ui-drawer-pills">
-<<<<<<< HEAD
-                      <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
-=======
                       <span
                         v-for="pill in activeUtilityPills"
                         :key="pill.label"
                         class="ui-drawer-pill clip-corner-sm"
                       >
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
                         <small>{{ pill.label }}</small>
                         <strong>{{ pill.value }}</strong>
                       </span>
@@ -207,10 +189,6 @@
             </div>
 
             <div class="ui-bottom-tools">
-<<<<<<< HEAD
-=======
-
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
               <div class="ui-bottom-tool-row">
                 <button
                   type="button"
@@ -357,12 +335,9 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
-<<<<<<< HEAD
-import type { GeneratedImageRef, TranscriptItem } from '../types';
-=======
 import type { TranscriptItem } from '../types';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
+import { parseGeneratedImageActivationPayload, type GeneratedImageActivationPayload } from '../generatedImageActivation';
 
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
@@ -377,17 +352,8 @@ import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
-<<<<<<< HEAD
-import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
-import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget.ts';
-=======
-import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import {
-  pickGeneratedImageActivationTarget,
-  resolveGeneratedImageActivationTarget,
-} from '../generatedImageInteraction';
+import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 import { convertIframePointToHostPoint, resolveHostTriggerTargetFromPoint } from '../hostCoordinateTarget';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
@@ -791,14 +757,6 @@ function resolveHostMessageRoot(messageId: number): HTMLElement | null {
   return null;
 }
 
-function decodePromptToken(value: string): string {
-  try {
-    return decodeURIComponent(String(value ?? ''));
-  } catch {
-    return String(value ?? '');
-  }
-}
-
 const BRIDGED_EVENT_FLAG = '__streamDemoBridge';
 
 function isBridgedEvent(event: Event | null | undefined): boolean {
@@ -806,7 +764,8 @@ function isBridgedEvent(event: Event | null | undefined): boolean {
 }
 
 function markBridgedEvent<T extends Event>(event: T): T {
-  (event as T & Record<string, unknown>)[BRIDGED_EVENT_FLAG] = true;
+  const bridgedEvent = event as Event & Record<string, unknown>;
+  bridgedEvent[BRIDGED_EVENT_FLAG] = true;
   return event;
 }
 
@@ -1085,7 +1044,6 @@ function triggerHostElementClick(target: HTMLElement): boolean {
   }
 }
 
-<<<<<<< HEAD
 function resolveGeneratedImageTriggerTarget(
   input: {
     hostMessageRoot: HTMLElement | null;
@@ -1106,7 +1064,8 @@ function resolveGeneratedImageTriggerTarget(
     },
     action,
   );
-=======
+}
+
 /**
  * 全屏挂起辅助：若当前 iframe 处于全屏，先退出全屏，执行 action，
  * 再用 MutationObserver 监测宿主 body 直接子节点的增删来感知菜单关闭，
@@ -1187,7 +1146,6 @@ async function withFullscreenSuspended(action: () => void): Promise<void> {
 
   // 恢复全屏
   document.documentElement.requestFullscreen().catch(() => {});
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 }
 
 function dispatchHostDoubleClick(
@@ -1288,78 +1246,10 @@ function handleTranscriptImageIntent(item: TranscriptItem) {
   markRecentImageIntent(messageId, 'transcript');
 }
 
-<<<<<<< HEAD
-function triggerGeneratedImageAction(
-  entry: GeneratedImageRef,
-  action: 'open' | 'regenerate',
-  source: 'transcript' | 'gallery' = 'transcript',
-) {
-  const messageId = Math.trunc(Number(entry?.messageId));
-  if (!Number.isFinite(messageId) || messageId < 0) return;
-  markRecentImageIntent(messageId, source);
-
-  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-    messageId,
-    String(entry?.promptToken ?? '').trim(),
-    String(entry?.requestId ?? '').trim(),
-    '',
-  );
-  const targetNode = resolveGeneratedImageTriggerTarget(
-    {
-      hostMessageRoot,
-      hostButton,
-      hostImage,
-      iframeButton,
-      iframeImage,
-    },
-    action,
-  );
-
-  if (!targetNode) {
-    const verb = action === 'regenerate' ? '重生' : '查看';
-    toastr?.warning?.(`楼层 #${messageId} 的图片${verb}触发目标未找到`);
-    return;
-  }
-
-  if (action === 'regenerate') {
-    if (!dispatchHostDoubleClick(targetNode)) {
-      toastr?.warning?.(`楼层 #${messageId} 的图片重生触发失败`);
-    }
-    return;
-  }
-
-  if (!triggerHostElementClick(targetNode)) {
-    toastr?.warning?.(`楼层 #${messageId} 的图片查看触发失败`);
-  }
-}
-
-function handleGeneratedImageOpen(entry: GeneratedImageRef, source: 'transcript' | 'gallery' = 'transcript') {
-  triggerGeneratedImageAction(entry, 'open', source);
-}
-
-function handleGeneratedImageRegenerate(entry: GeneratedImageRef, source: 'transcript' | 'gallery' = 'transcript') {
-  triggerGeneratedImageAction(entry, 'regenerate', source);
-}
-
-function shouldBypassGeneratedImageBridge(target: HTMLElement | null, carrier: HTMLElement | null) {
-  if (!target || !carrier) return false;
-  if (target.classList.contains('generated-image-asset')) return true;
-  if (carrier.querySelector('img.generated-image-asset')) return true;
-  return false;
-}
-
-function handleGeneratedImageClickCapture(event: MouseEvent) {
-  if (isBridgedEvent(event)) return;
-  const target = event.target as HTMLElement | null;
-  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier || !isPluginNativeImageElement(carrier)) return;
-  if (shouldBypassGeneratedImageBridge(target, carrier)) return;
-=======
 function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {
   const element = target as HTMLElement | null;
   const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return null;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 
   const targetImage = element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
   return parseGeneratedImageActivationPayload({
@@ -1371,29 +1261,6 @@ function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): 
   });
 }
 
-<<<<<<< HEAD
-  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-    Math.trunc(messageId),
-    promptToken,
-    requestId,
-    imageSrc,
-  );
-  const targetNode = resolveGeneratedImageTriggerTarget(
-    {
-      hostMessageRoot,
-      hostButton,
-      hostImage,
-      iframeButton,
-      iframeImage,
-    },
-    'open',
-  );
-  if (!targetNode) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
-  nativeEvent.stopImmediatePropagation?.();
-=======
 async function activateGeneratedImageView(payload: GeneratedImageActivationPayload) {
   const messageId = Number(payload?.messageId);
   if (!Number.isFinite(messageId)) return;
@@ -1401,102 +1268,62 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
 
-  const targetNode = await resolveGeneratedImageActivationTarget('view', {
-    attempts: 5,
-    delayMs: 90,
-    resolveNodes: () =>
-      resolveHostImageTarget(
-        Math.trunc(messageId),
-        promptToken,
-        requestId,
-        imageSrc,
-      ),
-  });
+  const targetNode = await resolveWithRetry(() => {
+    const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+      Math.trunc(messageId),
+      promptToken,
+      requestId,
+      imageSrc,
+    );
+    return resolveGeneratedImageTriggerTarget(
+      {
+        hostMessageRoot,
+        hostButton,
+        hostImage,
+        iframeButton,
+        iframeImage,
+      },
+      'open',
+    );
+  }, { attempts: 5, delayMs: 90 });
   if (!targetNode) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
     return;
   }
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   if (!triggerHostElementClick(targetNode)) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
   }
 }
 
-<<<<<<< HEAD
-function handleGeneratedImageDoubleClickCapture(event: MouseEvent) {
-  if (isBridgedEvent(event)) return;
-  const target = event.target as HTMLElement | null;
-  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier || !isPluginNativeImageElement(carrier)) return;
-  if (shouldBypassGeneratedImageBridge(target, carrier)) return;
-
-  const targetImage = target instanceof HTMLImageElement ? target : null;
-  const parsed = parseGeneratedImageActivationPayload({
-    carrierDataset: carrier.dataset,
-    targetDataset: target.dataset,
-    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
-    targetCurrentSrc: targetImage?.currentSrc ?? null,
-    targetSrc: targetImage?.getAttribute('src') ?? null,
-  });
-  const fallbackMessageId = Number(
-    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
-      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
-      '',
-  );
-  const messageId = Number.isFinite(parsed.messageId)
-    ? Number(parsed.messageId)
-    : Number.isFinite(fallbackMessageId)
-      ? Math.trunc(fallbackMessageId)
-      : null;
-  const { promptToken, requestId, imageSrc } = parsed;
-=======
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
   const messageId = Number(payload?.messageId);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   if (!Number.isFinite(messageId)) return;
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
 
-<<<<<<< HEAD
-  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-    Math.trunc(messageId),
-    promptToken,
-    requestId,
-    imageSrc,
-  );
-  const targetNode = resolveGeneratedImageTriggerTarget(
-    {
-      hostMessageRoot,
-      hostButton,
-      hostImage,
-      iframeButton,
-      iframeImage,
-    },
-    'regenerate',
-  );
-  if (!targetNode) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
-  nativeEvent.stopImmediatePropagation?.();
-=======
-  const targetNode = await resolveGeneratedImageActivationTarget('regenerate', {
-    attempts: 5,
-    delayMs: 90,
-    resolveNodes: () =>
-      resolveHostImageTarget(
-        Math.trunc(messageId),
-        promptToken,
-        requestId,
-        imageSrc,
-      ),
-  });
+  const targetNode = await resolveWithRetry(() => {
+    const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+      Math.trunc(messageId),
+      promptToken,
+      requestId,
+      imageSrc,
+    );
+    return resolveGeneratedImageTriggerTarget(
+      {
+        hostMessageRoot,
+        hostButton,
+        hostImage,
+        iframeButton,
+        iframeImage,
+      },
+      'regenerate',
+    );
+  }, { attempts: 5, delayMs: 90 });
   if (!targetNode) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
     return;
   }
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   markRecentImageIntent(Math.trunc(messageId), 'gallery');
   beginPendingImageTask(Math.trunc(messageId));
   await withFullscreenSuspended(() => {
@@ -1508,66 +1335,8 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
 
 function handleGeneratedImageWindowDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
-<<<<<<< HEAD
-  if (event.pointerType !== 'touch') return;
-  const target = event.target as HTMLElement | null;
-  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier || !isPluginNativeImageElement(carrier)) return;
-
-  event.stopPropagation();
-  const nativeEvent = event as PointerEvent & { stopImmediatePropagation?: () => void };
-  nativeEvent.stopImmediatePropagation?.();
-}
-
-function handleGeneratedImagePointerUpCapture(event: PointerEvent) {
-  if (isBridgedEvent(event)) return;
-  if (event.pointerType !== 'touch') return;
-  const target = event.target as HTMLElement | null;
-  const carrier = target?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
-  if (!carrier || !isPluginNativeImageElement(carrier)) return;
-
-  const targetImage = target instanceof HTMLImageElement ? target : null;
-  const parsed = parseGeneratedImageActivationPayload({
-    carrierDataset: carrier.dataset,
-    targetDataset: target.dataset,
-    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
-    targetCurrentSrc: targetImage?.currentSrc ?? null,
-    targetSrc: targetImage?.getAttribute('src') ?? null,
-  });
-  const fallbackMessageId = Number(
-    carrier.closest('[data-message-id]')?.getAttribute('data-message-id') ??
-      target?.closest?.('[data-message-id]')?.getAttribute?.('data-message-id') ??
-      '',
-  );
-  const messageId = Number.isFinite(parsed.messageId)
-    ? Number(parsed.messageId)
-    : Number.isFinite(fallbackMessageId)
-      ? Math.trunc(fallbackMessageId)
-      : null;
-  const { promptToken, requestId, imageSrc } = parsed;
-  if (!Number.isFinite(messageId)) return;
-
-  const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-    Math.trunc(messageId),
-    promptToken,
-    requestId,
-    imageSrc,
-  );
-  const targetNode = resolveGeneratedImageTriggerTarget(
-    {
-      hostMessageRoot,
-      hostButton,
-      hostImage,
-      iframeButton,
-      iframeImage,
-    },
-    'open',
-  );
-  if (!targetNode) return;
-=======
   const payload = resolveGeneratedImagePayloadFromDomTarget(event.target);
   if (!payload) return;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
@@ -1762,26 +1531,6 @@ useEventListener(window, 'keydown', event => {
 
   /* 桌面端抽屉尺寸微调（定位已在默认样式中统一为 fixed 居中） */
   .ui-bottom-drawer {
-<<<<<<< HEAD
-    /* 使用 fixed 定位覆盖视口，参考选项弹窗的成功方式 */
-    position: fixed;
-    left: 12px;
-    right: 12px;
-    bottom: 60px;
-    width: auto;
-    max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
-    margin: 0 auto;
-    height: auto;
-    max-height: 80vh;
-    z-index: 2501;
-  }
-
-  .ui-bottom-drawer.is-map {
-    width: auto;
-    max-width: min(100%, calc(var(--reader-content-max, 72rem) + 180px));
-    height: 80vh;
-    max-height: 80vh;
-=======
     width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
     height: 480px;
     max-height: 480px;
@@ -1791,7 +1540,6 @@ useEventListener(window, 'keydown', event => {
     width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
     height: 500px;
     max-height: 500px;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   }
 }
 
@@ -2158,13 +1906,6 @@ useEventListener(window, 'keydown', event => {
 
 /* 抽屉面板已 Teleport 到 body，统一使用 fixed 定位 */
 .ui-bottom-drawer {
-<<<<<<< HEAD
-  position: absolute;
-  left: 0;
-  bottom: calc(100% + 10px);
-  width: min(100%, 56rem);
-  max-height: 80vh;
-=======
   position: fixed;
   left: 50%;
   top: 50%;
@@ -2172,7 +1913,6 @@ useEventListener(window, 'keydown', event => {
   z-index: 2600;
   width: min(94vw, 56rem);
   max-height: min(80vh, 42rem);
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   display: flex;
   flex-direction: column;
   border: 1px solid var(--demo-border-accent-soft);
@@ -2314,11 +2054,7 @@ useEventListener(window, 'keydown', event => {
 .ui-utility-mask {
   position: fixed;
   inset: 0;
-<<<<<<< HEAD
-  z-index: 2500;
-=======
   z-index: 2599;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
   background: color-mix(in srgb, black 26%, transparent);
 }
 
@@ -2505,14 +2241,6 @@ useEventListener(window, 'keydown', event => {
 
   /* 移动端抽屉：固定在视口底部偏上，覆盖大部分屏幕 */
   .ui-bottom-drawer {
-<<<<<<< HEAD
-    position: fixed;
-    left: 6px;
-    right: 6px;
-    bottom: 60px;
-    width: auto;
-    max-height: calc(100dvh - 96px);
-=======
     top: auto;
     left: 3vw;
     right: 3vw;
@@ -2520,9 +2248,8 @@ useEventListener(window, 'keydown', event => {
     width: 94vw;
     max-height: calc(100dvh - 110px);
     transform: none;
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
     border-radius: 18px 18px 12px 12px;
-    z-index: 2501;
+    z-index: 2600;
   }
 
   .ui-bottom-drawer.is-map {

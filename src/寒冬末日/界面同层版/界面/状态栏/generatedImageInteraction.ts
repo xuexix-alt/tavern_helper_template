@@ -32,6 +32,13 @@ export function shouldInjectTranscriptImages(
   return mode === 'compatibility';
 }
 
+export function shouldAppendTranscriptPromptTokens(
+  mode: 'plugin-native' | 'plugin-native-data' | 'compatibility' | 'none',
+  hasPluginNativeArtifacts: boolean,
+): boolean {
+  return mode === 'compatibility' && !hasPluginNativeArtifacts;
+}
+
 export function pickGeneratedImageActivationTarget<T>(
   action: 'view' | 'regenerate',
   input: GeneratedImageTriggerNodes<T>,

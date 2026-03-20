@@ -127,6 +127,7 @@ test('generated image source can resolve entity by markerId when requestId is un
 test('image lifecycle forces transcript DOM refresh for request and persist stages', () => {
   assert.equal(shouldForceTranscriptDomRefresh('image:request:8'), true);
   assert.equal(shouldForceTranscriptDomRefresh('image:persist:8'), true);
+  assert.equal(shouldForceTranscriptDomRefresh('host.plugin_native_dom_mutation'), true);
   assert.equal(shouldForceTranscriptDomRefresh('event:message_received'), false);
 });
 

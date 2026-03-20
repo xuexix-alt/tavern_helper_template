@@ -1,0 +1,1281 @@
+[2026-03-19 17:10:30.357] [+0ms] 📝 ClickTrigger.handleDoubleClick
+  描述: 双击事件触发
+  上下文: {
+      "坐标": {
+        "x": 749.1458435058594,
+        "y": 303.4375
+      },
+      "事件类型": "dblclick",
+      "功能说明": "检测双击事件，验证条件后显示操作选择弹窗"
+    }
+
+[2026-03-19 17:10:30.357] [+0ms] 🔲 触发元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:10:30.357] [+0ms] 🔲 实际点击元素
+  元素信息: {
+      "标签名": "P",
+      "类名": "(无)",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "一年过去了，世界变成了白色的荒原。曾经繁华的瑞峰市，如今只剩下被厚重积雪覆盖的建筑轮廓。室外温度常年...",
+      "文本长度": 123,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:10:30.357] [+0ms] ⤷ 分支: 点击触发功能已启用 ✓
+  条件详情: {
+      "条件": "clickTriggerEnabled",
+      "设置值": true
+    }
+
+[2026-03-19 17:10:30.357] [+0ms] 📝 元素文本预览
+  内容:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋... [截断，原长度: 7566]
+  长度: 7566 字符 (已截断)
+
+[2026-03-19 17:10:30.357] [+0ms] 📝 ClickTrigger.handleDoubleClick
+  描述: 条件验证通过，显示操作弹窗
+
+[2026-03-19 17:10:30.358] [+1ms] ⏱️ ClickTrigger.handleDoubleClick 结束 (耗时: 1ms)
+  结果: 弹窗已显示
+
+[2026-03-19 17:10:31.604] [+1247ms] 📝 ClickTrigger.buttonClick
+  描述: 用户选择操作: 图片生成
+  上下文: {
+      "操作": "图片生成",
+      "功能说明": "生成当前场景相关的图片"
+    }
+
+[2026-03-19 17:10:31.604] [+1247ms] ⏱️ promptReq.handlePromptRequest 开始
+  描述: 正文图片生成核心流程
+
+[2026-03-19 17:10:31.604] [+1247ms] 🎯 开始处理图片生成请求
+
+[2026-03-19 17:10:31.604] [+1247ms] 📝 promptReq.handlePromptRequest
+  描述: 请求初始化
+  上下文: {
+      "gestureId": "gesture1",
+      "目标元素": "html-body",
+      "功能说明": "处理手势识别后的图片生成请求"
+    }
+
+[2026-03-19 17:10:31.604] [+1247ms] ⤷ 分支: 跳过用户需求弹窗 ✓
+
+[2026-03-19 17:10:31.642] [+1285ms] 📝 handlePromptRequest
+  描述: 获取上下文
+  上下文: {
+      "历史层数": 2
+    }
+
+[2026-03-19 17:10:31.642] [+1285ms] ⏱️ getElContext 开始
+  描述: 获取元素上下文消息
+
+[2026-03-19 17:10:31.685] [+1328ms] ⏱️ regex.onTestRegexClick 开始
+  描述: 正则处理流程
+
+[2026-03-19 17:10:31.685] [+1328ms] 📝 regex.onTestRegexClick
+  描述: 开始正则处理
+  上下文: {
+      "请求ID": "chatDataUtils-1773911431646",
+      "原文长度": 7566
+    }
+
+[2026-03-19 17:10:31.685] [+1328ms] 📝 原始文本
+  内容:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋青子轻轻点头，信子扫过他的耳垂。"今天用简体中文。"
+
+"之前的故事到哪了？帮我理一下。"
+"好的哥哥。"秋青子眯起眼睛，开始梳理，"故事刚开始，时间是9527年12月14日下午两点，灾难发生后一年。地点在星穹国际公寓2001室。小哥哥你获得了'伊甸'庇护所七天了。目前庇护所等级是1级，有基础的供暖... [截断，原长度: 7566]
+  长度: 7566 字符 (已截断)
+
+[2026-03-19 17:10:31.687] [+1330ms] 📝 regex.onTestRegexClick
+  描述: 正则条目列表
+  上下文: {
+      "当前配置": "默认",
+      "总条目数": 19,
+      "启用条目数": 5,
+      "条目名称列表": "1. 不显示且不发送当前准则 [禁用]\n2. 纯UI\n3. 对 AI 隐藏选项 [禁用]\n4. [美化]变量更新中 [禁用]\n5. [美化]完整变量更新\n6. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n7. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n8. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n9. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]\n10. st-chatu8-隐藏imgthink\n11. 不显示且不发送当前准则 [禁用]\n12. 纯UI\n13. 对 AI 隐藏选项 [禁用]\n14. [美化]变量更新中 [禁用]\n15. [美化]完整变量更新\n16. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n17. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n18. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n19. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]"
+    }
+
+[2026-03-19 17:10:31.687] [+1330ms] ⤷ 分支: 条目 1 "不显示且不发送当前准则" 已禁用 ✓
+  条件详情: {
+      "索引": 0,
+      "名称": "不显示且不发送当前准则"
+    }
+
+[2026-03-19 17:10:31.727] [+1370ms] ⤷ 分支: 条目 3 "对 AI 隐藏选项" 已禁用 ✓
+  条件详情: {
+      "索引": 2,
+      "名称": "对 AI 隐藏选项"
+    }
+
+[2026-03-19 17:10:31.727] [+1370ms] ⤷ 分支: 条目 4 "[美化]变量更新中" 已禁用 ✓
+  条件详情: {
+      "索引": 3,
+      "名称": "[美化]变量更新中"
+    }
+
+[2026-03-19 17:10:31.728] [+1371ms] ⤷ 分支: 条目 6 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
+  条件详情: {
+      "索引": 5,
+      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
+    }
+
+[2026-03-19 17:10:31.728] [+1371ms] ⤷ 分支: 条目 7 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
+  条件详情: {
+      "索引": 6,
+      "名称": "MoM美化-[9]超级序言（1123） @电波系"
+    }
+
+[2026-03-19 17:10:31.728] [+1371ms] ⤷ 分支: 条目 8 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
+  条件详情: {
+      "索引": 7,
+      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
+    }
+
+[2026-03-19 17:10:31.728] [+1371ms] ⤷ 分支: 条目 9 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
+  条件详情: {
+      "索引": 8,
+      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
+    }
+
+[2026-03-19 17:10:31.729] [+1372ms] ⤷ 分支: 条目 11 "不显示且不发送当前准则" 已禁用 ✓
+  条件详情: {
+      "索引": 10,
+      "名称": "不显示且不发送当前准则"
+    }
+
+[2026-03-19 17:10:31.729] [+1372ms] ⤷ 分支: 条目 13 "对 AI 隐藏选项" 已禁用 ✓
+  条件详情: {
+      "索引": 12,
+      "名称": "对 AI 隐藏选项"
+    }
+
+[2026-03-19 17:10:31.729] [+1372ms] ⤷ 分支: 条目 14 "[美化]变量更新中" 已禁用 ✓
+  条件详情: {
+      "索引": 13,
+      "名称": "[美化]变量更新中"
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] ⤷ 分支: 条目 16 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
+  条件详情: {
+      "索引": 15,
+      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] ⤷ 分支: 条目 17 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
+  条件详情: {
+      "索引": 16,
+      "名称": "MoM美化-[9]超级序言（1123） @电波系"
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] ⤷ 分支: 条目 18 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
+  条件详情: {
+      "索引": 17,
+      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] ⤷ 分支: 条目 19 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
+  条件详情: {
+      "索引": 18,
+      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] 📝 regex.onTestRegexClick
+  描述: 前后正则处理开始
+  上下文: {
+      "输入值": "",
+      "输入长度": 0,
+      "包含分隔符": false
+    }
+
+[2026-03-19 17:10:31.730] [+1373ms] ⤷ 分支: 前后正则为空，跳过 ✓
+
+[2026-03-19 17:10:31.731] [+1374ms] 📝 regex.onTestRegexClick
+  描述: 正则处理完成
+  上下文: {
+      "原始长度": 7566,
+      "最终长度": 7551,
+      "长度变化": -15,
+      "移除范围数": 0
+    }
+
+[2026-03-19 17:10:31.731] [+1374ms] 📝 处理后文本
+  内容: 🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋青子轻轻点头，信子扫过他的耳垂。"今天用简体中文。"
+
+"之前的故事到哪了？帮我理一下。"
+"好的哥哥。"秋青子眯起眼睛，开始梳理，"故事刚开始，时间是9527年12月14日下午两点，灾难发生后一年。地点在星穹国际公寓2001室。小哥哥你获得了'伊甸'庇护所七天了。目前庇护所等级是1级，有基础的供暖供电、一扇坚固的门、能生产基础... [截断，原长度: 7551]
+  长度: 7551 字符 (已截断)
+
+[2026-03-19 17:10:31.733] [+1376ms] ⤷ 分支: 发送正则处理结果 ✓
+  条件详情: {
+      "是自动调用": true,
+      "测试模式": false
+    }
+
+[2026-03-19 17:10:31.733] [+1376ms] ⏱️ regex.onTestRegexClick 结束 (耗时: 48ms)
+  结果: 处理完成 - 原文7566字 → 最终7551字
+
+[2026-03-19 17:10:31.733] [+1376ms] ⏱️ getElContext 结束 (耗时: 91ms)
+  结果: 获取到 1 条上下文
+
+[2026-03-19 17:10:31.733] [+1376ms] 📝 handlePromptRequest
+  描述: 处理世界书触发
+  上下文: {
+      "触发文本条数": 1
+    }
+
+[2026-03-19 17:10:31.733] [+1376ms] ⏱️ processWorldBooksWithTrigger 开始
+  描述: 世界书触发处理
+
+[2026-03-19 17:10:31.737] [+1380ms] ⏱️ processWorldBooksWithTrigger 结束 (耗时: 4ms)
+  结果: 触发内容长度: 0
+
+[2026-03-19 17:10:31.738] [+1381ms] 📝 handlePromptRequest
+  描述: 构建 Prompt
+  上下文: {
+      "请求类型": "image_gen",
+      "条目触发文本长度": 7551
+    }
+
+[2026-03-19 17:10:31.738] [+1381ms] ⏱️ buildPromptForRequestType 开始
+  描述: 构建请求类型 Prompt
+
+[2026-03-19 17:10:31.748] [+1391ms] ⏱️ buildPromptForRequestType 结束 (耗时: 10ms)
+  结果: 消息数量: 16
+
+[2026-03-19 17:10:31.749] [+1392ms] 📝 handlePromptRequest
+  描述: 生成角色/服装列表
+  上下文: {
+      "角色列表长度": 10,
+      "服装列表长度": 4566,
+      "通用角色列表长度": 8
+    }
+
+[2026-03-19 17:10:31.749] [+1392ms] 📝 handlePromptRequest
+  描述: 合并相邻消息
+
+[2026-03-19 17:10:31.749] [+1392ms] 📝 handlePromptRequest
+  描述: 替换占位符
+
+[2026-03-19 17:10:31.749] [+1392ms] ⏱️ replaceAllPlaceholders 开始
+  描述: 占位符替换处理
+
+[2026-03-19 17:10:31.752] [+1395ms] ⏱️ replaceAllPlaceholders 结束 (耗时: 3ms)
+  结果: 替换了 6 个变量
+
+[2026-03-19 17:10:31.753] [+1396ms] 📝 handlePromptRequest
+  描述: 收集角色/服装图片
+
+[2026-03-19 17:10:31.877] [+1520ms] 📝 handlePromptRequest
+  描述: 角色/服装图片收集完成
+  上下文: {
+      "角色图片数": 0,
+      "服装图片数": 0,
+      "通用角色图片数": 0,
+      "总计": 0
+    }
+
+[2026-03-19 17:10:31.882] [+1525ms] 🎯 开始 LLM 请求
+
+[2026-03-19 17:10:31.882] [+1525ms] 📝 handlePromptRequest
+  描述: 发起 LLM 图片生成请求
+  上下文: {
+      "消息数量": 16,
+      "超时设置": "300000ms"
+    }
+
+[2026-03-19 17:10:31.882] [+1525ms] ⏱️ LLM_IMAGE_GEN 开始
+  描述: LLM 图片生成请求
+
+[2026-03-19 17:10:31.882] [+1525ms] ⏱️ llmRequest.LLM_IMAGE_GEN 开始
+  描述: 正文图片生成 LLM 请求
+
+[2026-03-19 17:10:31.882] [+1525ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: LLM请求开始
+  上下文: {
+      "请求ID": "3abc046d-2da6-438d-9ff9-25cae2fd3f18",
+      "超时设置": "300000ms",
+      "消息数量": 16,
+      "功能说明": "通过事件系统发送LLM图片生成请求"
+    }
+
+[2026-03-19 17:10:31.929] [+1572ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: 已发送请求事件，等待响应
+  上下文: {
+      "事件名": "ch-llm-image-gen-request"
+    }
+
+[2026-03-19 17:10:51.546] [+21189ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: LLM响应收到
+  上下文: {
+      "请求ID": "3abc046d-2da6-438d-9ff9-25cae2fd3f18",
+      "成功": true,
+      "测试模式": false,
+      "结果长度": 5406
+    }
+
+[2026-03-19 17:10:51.546] [+21189ms] ⤷ 分支: 成功分支 ✓
+
+[2026-03-19 17:10:51.546] [+21189ms] ⏱️ llmRequest.LLM_IMAGE_GEN 结束 (耗时: 19664ms)
+  结果: 成功 - 结果长度: 5406
+
+[2026-03-19 17:10:51.553] [+21196ms] ⏱️ LLM_IMAGE_GEN 结束 (耗时: 19671ms)
+  结果: 响应长度: 5406
+
+[2026-03-19 17:10:51.554] [+21197ms] 📝 handlePromptRequest
+  描述: 解析图片标签
+
+[2026-03-19 17:10:51.554] [+21197ms] ⏱️ parseImagesFromPrompt 开始
+  描述: 解析图片标签
+
+[2026-03-19 17:10:51.554] [+21197ms] ⏱️ imageInserter.parseImagesFromPrompt 开始
+  描述: 解析 LLM 输出中的图片标签
+
+[2026-03-19 17:10:51.554] [+21197ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 开始解析
+  上下文: {
+      "文本长度": 4006
+    }
+
+[2026-03-19 17:10:51.554] [+21197ms] 📝 LLM 原始输出
+  内容: <images>
+<image>
+regex:世界变成了白色的荒原。
+<font color="steelblue">[永恒暴雪下的瑞峰市废墟]</font>
+<Tag_think>
+万籁俱寂，千里冰封。曾经繁华的瑞峰市被数十米厚的积雪彻底掩埋，仅余摩天大楼的顶端如孤岛般耸立。铅灰色的云海翻涌，惨淡的阳光难以穿透，街头到处是掩埋在冰层下的车辆残骸，风雪呼啸出死者的哀歌，呈现出极致的荒凉美感。
+</Tag_think>
+image###Scene Composition:sfw,no humans,outdoors,night,9527,Ruifeng City,eternal blizzard,wasteland,white wilderness,frozen world,apocalyptic,ruins,collapsed buildings,abandoned cars covered in snow,snow-covered skyscrapers,thick snow,glacier,grey sky,heavy snowstorm,blizzard,wind lines,c... [截断，原长度: 4006]
+  长度: 4006 字符 (已截断)
+
+[2026-03-19 17:10:51.555] [+21198ms] ⤷ 分支: 找到 <images> 容器 ✓
+  条件详情: {
+      "容器数量": 1,
+      "合并后长度": 3688
+    }
+
+[2026-03-19 17:10:51.555] [+21198ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 找到 <image> 块
+  上下文: {
+      "块数量": 4
+    }
+
+[2026-03-19 17:10:51.556] [+21199ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 1 解析结果
+  上下文: {
+      "索引": 1,
+      "有regex": true,
+      "regex预览": "世界变成了白色的荒原。",
+      "有tag": true,
+      "tag长度": 572
+    }
+
+[2026-03-19 17:10:51.556] [+21199ms] ⤷ 分支: 块 1 有效 - 已添加 ✓
+
+[2026-03-19 17:10:51.556] [+21199ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 2 解析结果
+  上下文: {
+      "索引": 2,
+      "有regex": true,
+      "regex预览": "手里拿着一块刚刚出炉、还冒着热气的黑麦面包。",
+      "有tag": true,
+      "tag长度": 650
+    }
+
+[2026-03-19 17:10:51.556] [+21199ms] ⤷ 分支: 块 2 有效 - 已添加 ✓
+
+[2026-03-19 17:10:51.557] [+21200ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 3 解析结果
+  上下文: {
+      "索引": 3,
+      "有regex": true,
+      "regex预览": "是2003室的林月华。她的声音里透着一丝不易察觉的疲惫和焦虑。",
+      "有tag": true,
+      "tag长度": 702
+    }
+
+[2026-03-19 17:10:51.557] [+21200ms] ⤷ 分支: 块 3 有效 - 已添加 ✓
+
+[2026-03-19 17:10:51.557] [+21200ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 4 解析结果
+  上下文: {
+      "索引": 4,
+      "有regex": true,
+      "regex预览": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧。",
+      "有tag": true,
+      "tag长度": 815
+    }
+
+[2026-03-19 17:10:51.557] [+21200ms] ⤷ 分支: 块 4 有效 - 已添加 ✓
+
+[2026-03-19 17:10:51.560] [+21203ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 解析完成
+  上下文: {
+      "总块数": 4,
+      "有效图片数": 4
+    }
+
+[2026-03-19 17:10:51.560] [+21203ms] ⏱️ imageInserter.parseImagesFromPrompt 结束 (耗时: 6ms)
+  结果: 解析到 4 个有效图片
+
+[2026-03-19 17:10:51.560] [+21203ms] ⏱️ parseImagesFromPrompt 结束 (耗时: 6ms)
+  结果: 解析到 4 个图片标签
+
+[2026-03-19 17:10:51.560] [+21203ms] 📝 handlePromptRequest
+  描述: 图片标签解析完成
+  上下文: {
+      "数量": 4,
+      "标签预览": [
+        "image###Scene Composition:sfw,no humans,outdoors,night,9527,Ruifeng City,eternal blizzard,wasteland,white wilderness,frozen world,apocalyptic,ruins,collapsed buildings,abandoned cars covered in snow,snow-covered skyscrapers,thick snow,glacier,grey sky,heavy snowstorm,blizzard,wind lines,cold atmosphere,desolate,vast landscape,cinematic lighting,dramatic shadows,monochrome (white and grey),high contrast,low saturation,aerial view,extreme wide shot,grand scene,macro scale,vanishing point,isometric view,depth of field,motion blur,light particles,floating snowflakes;###",
+        "image###Scene Composition:sfw,1boy,male focus,indoors,futuristic,apartment,Eden Shelter,room 2001,warm atmosphere,comfortable,modern technology,holographic interface,floating screen,soft lighting,warm lighting,contrast of cold and warm,window,ice frost on window,snowstorm outside,cinematic angle,mid shot,front view,bokeh,depth of field;\nCharacter 1 Prompt:${\"name\":\"young man\",\"angle\":\"from front\",\"upperBody\":\"sfw\",\"lowerBody\":\"sfw\"}$,boy,holding bread,black rye bread,steaming bread,holding food,eating,relaxed,looking at terminal,blush,smile,winter clothes,hoodie,pants|centers:C3;\nCharacter 1 UC:background characters,fused bodies,nude,nsfw;###",
+        "image###Scene Composition:sfw,1girl,solo,indoors,apartment,room 2003,gloomy,darkness,flickering candlelight,tense atmosphere,poverty,empty refrigerator,scarcity,cold,visible breath,steaming body,side view,close-up,waist up,cinematic angle,depth of field;\nCharacter 1 Prompt:${\"name\":\"Lin Yuehua (original)\",\"angle\":\"from side\",\"upperBody\":\"sfw\",\"lowerBody\":\"sfw\"}$,girl,long brown hair,low ponytail,gentle face,tired eyes,dark circles under eyes,anxious,worried,frown,pout,looking down,biting lip,dirty face,full-face blush (cold),sweat,shivering,trembling,winter clothes,padded jacket,apron,blue apron,scarf|centers:C2;\nCharacter 1 UC:background characters,fused bodies,nude,nsfw,looking at viewer;###"
+      ]
+    }
+
+[2026-03-19 17:10:51.560] [+21203ms] 📝 handlePromptRequest
+  描述: 插入图片标签到 DOM
+
+[2026-03-19 17:10:51.560] [+21203ms] ⏱️ insertImagesIntoElement 开始
+  描述: 插入图片标签
+
+[2026-03-19 17:10:51.560] [+21203ms] ⏱️ imageInserter.insertImagesIntoElement 开始
+  描述: 将图片标签插入到 DOM
+
+[2026-03-19 17:10:51.560] [+21203ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 开始插入图片标签
+  上下文: {
+      "待插入数量": 4
+    }
+
+[2026-03-19 17:10:51.560] [+21203ms] 🔲 目标根元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:10:51.560] [+21203ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 清理旧元素完成
+  上下文: {
+      "清理按钮数": 0,
+      "清理容器数": 0
+    }
+
+[2026-03-19 17:10:51.576] [+21219ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "90.9%",
+      "AI_regex": "世界变成了白色的荒原。",
+      "匹配行": "一年过去了，世界变成了白色的荒原。曾经繁华的瑞峰市，如今只剩下被厚重积雪覆盖的建",
+      "位置": 3009
+    }
+
+[2026-03-19 17:10:51.583] [+21226ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "91.6%",
+      "AI_regex": "手里拿着一块刚刚出炉、还冒着热气的黑麦面包。",
+      "匹配行": "此刻，9527年12月14日下午两点。小哥哥正站在万象合成终端前，手里拿着一块刚",
+      "位置": 3686
+    }
+
+[2026-03-19 17:10:51.591] [+21234ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "96.2%",
+      "AI_regex": "是2003室的林月华。她的声音里透着一丝不易察觉的疲惫和焦虑。",
+      "匹配行": "是2003室的林月华。她的声音里透着一丝不易察觉的疲惫和焦虑。紧接着，一个低沉而",
+      "位置": 3906
+    }
+
+[2026-03-19 17:10:51.599] [+21242ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "100.0%",
+      "AI_regex": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧。",
+      "匹配行": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧。",
+      "位置": 4084
+    }
+
+[2026-03-19 17:10:51.599] [+21242ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 去重完成
+  上下文: {
+      "去重前": 4,
+      "去重后": 4
+    }
+
+[2026-03-19 17:10:51.602] [+21245ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 非 insertOriginalText 模式 - 只保存数据，跳过 DOM 插入
+  上下文: {
+      "匹配数量": 4
+    }
+
+[2026-03-19 17:10:51.603] [+21246ms] ⏱️ imageInserter.saveImageGroup 开始
+  描述: 保存图片组位置信息
+
+[2026-03-19 17:10:51.603] [+21246ms] 📝 imageInserter.saveImageGroup
+  描述: 开始保存
+  上下文: {
+      "图片数量": 4
+    }
+
+[2026-03-19 17:10:51.603] [+21246ms] 🔲 目标元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:10:51.607] [+21250ms] 📝 imageInserter.saveImageGroup
+  描述: 检查储存模式
+  上下文: {
+      "insertOriginalText设置": "false",
+      "是否启用": false
+    }
+
+[2026-03-19 17:10:51.608] [+21251ms] ⤷ 分支: insertOriginalText 模式未启用 ✓
+
+[2026-03-19 17:10:51.608] [+21251ms] 📝 imageInserter.saveImageGroup
+  描述: 进入原有保存逻辑
+  上下文: {
+      "是mes_text": false
+    }
+
+[2026-03-19 17:10:51.608] [+21251ms] ⤷ 分支: 保存到 chatMetadata (非 mes_text) ✓
+
+[2026-03-19 17:10:51.609] [+21252ms] ⏱️ imageInserter.saveImageGroup 结束 (耗时: 6ms)
+  结果: 保存到 metadata
+
+[2026-03-19 17:10:51.609] [+21252ms] ⏱️ imageInserter.insertImagesIntoElement 结束 (耗时: 49ms)
+  结果: 保存 4 个图片数据（跳过 DOM 插入）
+
+[2026-03-19 17:10:51.610] [+21253ms] ⏱️ insertImagesIntoElement 结束 (耗时: 50ms)
+  结果: 插入完成
+
+[2026-03-19 17:10:51.673] [+21316ms] 🎯 图片生成流程完成
+
+[2026-03-19 17:10:51.673] [+21316ms] ⏱️ promptReq.handlePromptRequest 结束 (耗时: 20069ms)
+  结果: 全流程完成
+
+[2026-03-19 17:11:40.302] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
+----------------------------------------
+
+[2026-03-19 17:11:40.302] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: LLM生成开始事件触发
+  上下文: {
+      "eventData": "normal"
+    }
+
+[2026-03-19 17:11:40.302] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: 记录生成开始时的状态
+  上下文: {
+      "chatLength": 3,
+      "swipesLength": 1
+    }
+
+[2026-03-19 17:11:42.753] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
+----------------------------------------
+
+[2026-03-19 17:11:42.753] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: LLM生成开始事件触发
+  上下文: {
+      "eventData": "normal"
+    }
+
+[2026-03-19 17:11:42.754] [+1ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: 记录生成开始时的状态
+  上下文: {
+      "chatLength": 3,
+      "swipesLength": 1
+    }
+
+[2026-03-19 17:11:59.281] [+0ms] 🚀 🚀 会话开始: 点击触发图片生成
+----------------------------------------
+
+[2026-03-19 17:11:59.281] [+0ms] ⏱️ ClickTrigger.handleDoubleClick 开始
+  描述: 处理双击事件 - 显示操作选择弹窗
+
+[2026-03-19 17:11:59.281] [+0ms] 📝 ClickTrigger.handleDoubleClick
+  描述: 双击事件触发
+  上下文: {
+      "坐标": {
+        "x": 721.1458435058594,
+        "y": 348.4375
+      },
+      "事件类型": "dblclick",
+      "功能说明": "检测双击事件，验证条件后显示操作选择弹窗"
+    }
+
+[2026-03-19 17:11:59.282] [+1ms] 🔲 触发元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:11:59.282] [+1ms] 🔲 实际点击元素
+  元素信息: {
+      "标签名": "P",
+      "类名": "(无)",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "“嗯。”",
+      "文本长度": 4,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:11:59.282] [+1ms] ⤷ 分支: 点击触发功能已启用 ✓
+  条件详情: {
+      "条件": "clickTriggerEnabled",
+      "设置值": true
+    }
+
+[2026-03-19 17:11:59.282] [+1ms] 📝 元素文本预览
+  内容:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋... [截断，原长度: 7566]
+  长度: 7566 字符 (已截断)
+
+[2026-03-19 17:11:59.282] [+1ms] 📝 ClickTrigger.handleDoubleClick
+  描述: 条件验证通过，显示操作弹窗
+
+[2026-03-19 17:11:59.283] [+2ms] ⏱️ ClickTrigger.handleDoubleClick 结束 (耗时: 2ms)
+  结果: 弹窗已显示
+
+[2026-03-19 17:12:00.387] [+1106ms] 📝 ClickTrigger.buttonClick
+  描述: 用户选择操作: 图片生成
+  上下文: {
+      "操作": "图片生成",
+      "功能说明": "生成当前场景相关的图片"
+    }
+
+[2026-03-19 17:12:00.388] [+1107ms] ⏱️ promptReq.handlePromptRequest 开始
+  描述: 正文图片生成核心流程
+
+[2026-03-19 17:12:00.388] [+1107ms] 🎯 开始处理图片生成请求
+
+[2026-03-19 17:12:00.388] [+1107ms] 📝 promptReq.handlePromptRequest
+  描述: 请求初始化
+  上下文: {
+      "gestureId": "gesture1",
+      "目标元素": "html-body",
+      "功能说明": "处理手势识别后的图片生成请求"
+    }
+
+[2026-03-19 17:12:00.388] [+1107ms] ⤷ 分支: 跳过用户需求弹窗 ✓
+
+[2026-03-19 17:12:00.426] [+1145ms] 📝 handlePromptRequest
+  描述: 获取上下文
+  上下文: {
+      "历史层数": 2
+    }
+
+[2026-03-19 17:12:00.426] [+1145ms] ⏱️ getElContext 开始
+  描述: 获取元素上下文消息
+
+[2026-03-19 17:12:00.485] [+1204ms] ⏱️ regex.onTestRegexClick 开始
+  描述: 正则处理流程
+
+[2026-03-19 17:12:00.485] [+1204ms] 📝 regex.onTestRegexClick
+  描述: 开始正则处理
+  上下文: {
+      "请求ID": "chatDataUtils-1773911520432",
+      "原文长度": 7566
+    }
+
+[2026-03-19 17:12:00.485] [+1204ms] 📝 原始文本
+  内容:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋青子轻轻点头，信子扫过他的耳垂。"今天用简体中文。"
+
+"之前的故事到哪了？帮我理一下。"
+"好的哥哥。"秋青子眯起眼睛，开始梳理，"故事刚开始，时间是9527年12月14日下午两点，灾难发生后一年。地点在星穹国际公寓2001室。小哥哥你获得了'伊甸'庇护所七天了。目前庇护所等级是1级，有基础的供暖... [截断，原长度: 7566]
+  长度: 7566 字符 (已截断)
+
+[2026-03-19 17:12:00.487] [+1206ms] 📝 regex.onTestRegexClick
+  描述: 正则条目列表
+  上下文: {
+      "当前配置": "默认",
+      "总条目数": 19,
+      "启用条目数": 5,
+      "条目名称列表": "1. 不显示且不发送当前准则 [禁用]\n2. 纯UI\n3. 对 AI 隐藏选项 [禁用]\n4. [美化]变量更新中 [禁用]\n5. [美化]完整变量更新\n6. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n7. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n8. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n9. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]\n10. st-chatu8-隐藏imgthink\n11. 不显示且不发送当前准则 [禁用]\n12. 纯UI\n13. 对 AI 隐藏选项 [禁用]\n14. [美化]变量更新中 [禁用]\n15. [美化]完整变量更新\n16. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n17. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n18. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n19. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]"
+    }
+
+[2026-03-19 17:12:00.487] [+1206ms] ⤷ 分支: 条目 1 "不显示且不发送当前准则" 已禁用 ✓
+  条件详情: {
+      "索引": 0,
+      "名称": "不显示且不发送当前准则"
+    }
+
+[2026-03-19 17:12:00.558] [+1277ms] ⤷ 分支: 条目 3 "对 AI 隐藏选项" 已禁用 ✓
+  条件详情: {
+      "索引": 2,
+      "名称": "对 AI 隐藏选项"
+    }
+
+[2026-03-19 17:12:00.558] [+1277ms] ⤷ 分支: 条目 4 "[美化]变量更新中" 已禁用 ✓
+  条件详情: {
+      "索引": 3,
+      "名称": "[美化]变量更新中"
+    }
+
+[2026-03-19 17:12:00.603] [+1322ms] ⤷ 分支: 条目 6 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
+  条件详情: {
+      "索引": 5,
+      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
+    }
+
+[2026-03-19 17:12:00.603] [+1322ms] ⤷ 分支: 条目 7 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
+  条件详情: {
+      "索引": 6,
+      "名称": "MoM美化-[9]超级序言（1123） @电波系"
+    }
+
+[2026-03-19 17:12:00.603] [+1322ms] ⤷ 分支: 条目 8 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
+  条件详情: {
+      "索引": 7,
+      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
+    }
+
+[2026-03-19 17:12:00.603] [+1322ms] ⤷ 分支: 条目 9 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
+  条件详情: {
+      "索引": 8,
+      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
+    }
+
+[2026-03-19 17:12:00.604] [+1323ms] ⤷ 分支: 条目 11 "不显示且不发送当前准则" 已禁用 ✓
+  条件详情: {
+      "索引": 10,
+      "名称": "不显示且不发送当前准则"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 13 "对 AI 隐藏选项" 已禁用 ✓
+  条件详情: {
+      "索引": 12,
+      "名称": "对 AI 隐藏选项"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 14 "[美化]变量更新中" 已禁用 ✓
+  条件详情: {
+      "索引": 13,
+      "名称": "[美化]变量更新中"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 16 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
+  条件详情: {
+      "索引": 15,
+      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 17 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
+  条件详情: {
+      "索引": 16,
+      "名称": "MoM美化-[9]超级序言（1123） @电波系"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 18 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
+  条件详情: {
+      "索引": 17,
+      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 条目 19 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
+  条件详情: {
+      "索引": 18,
+      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] 📝 regex.onTestRegexClick
+  描述: 前后正则处理开始
+  上下文: {
+      "输入值": "",
+      "输入长度": 0,
+      "包含分隔符": false
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] ⤷ 分支: 前后正则为空，跳过 ✓
+
+[2026-03-19 17:12:00.605] [+1324ms] 📝 regex.onTestRegexClick
+  描述: 正则处理完成
+  上下文: {
+      "原始长度": 7566,
+      "最终长度": 7551,
+      "长度变化": -15,
+      "移除范围数": 0
+    }
+
+[2026-03-19 17:12:00.605] [+1324ms] 📝 处理后文本
+  内容: 🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+
+
+   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
+
+"今天用简体中文写哦。"
+"嗯，好的哥哥。"秋青子轻轻点头，信子扫过他的耳垂。"今天用简体中文。"
+
+"之前的故事到哪了？帮我理一下。"
+"好的哥哥。"秋青子眯起眼睛，开始梳理，"故事刚开始，时间是9527年12月14日下午两点，灾难发生后一年。地点在星穹国际公寓2001室。小哥哥你获得了'伊甸'庇护所七天了。目前庇护所等级是1级，有基础的供暖供电、一扇坚固的门、能生产基础... [截断，原长度: 7551]
+  长度: 7551 字符 (已截断)
+
+[2026-03-19 17:12:00.607] [+1326ms] ⤷ 分支: 发送正则处理结果 ✓
+  条件详情: {
+      "是自动调用": true,
+      "测试模式": false
+    }
+
+[2026-03-19 17:12:00.608] [+1327ms] ⏱️ regex.onTestRegexClick 结束 (耗时: 123ms)
+  结果: 处理完成 - 原文7566字 → 最终7551字
+
+[2026-03-19 17:12:00.608] [+1327ms] ⏱️ getElContext 结束 (耗时: 182ms)
+  结果: 获取到 1 条上下文
+
+[2026-03-19 17:12:00.608] [+1327ms] 📝 handlePromptRequest
+  描述: 处理世界书触发
+  上下文: {
+      "触发文本条数": 1
+    }
+
+[2026-03-19 17:12:00.608] [+1327ms] ⏱️ processWorldBooksWithTrigger 开始
+  描述: 世界书触发处理
+
+[2026-03-19 17:12:00.611] [+1330ms] ⏱️ processWorldBooksWithTrigger 结束 (耗时: 3ms)
+  结果: 触发内容长度: 0
+
+[2026-03-19 17:12:00.611] [+1330ms] 📝 handlePromptRequest
+  描述: 构建 Prompt
+  上下文: {
+      "请求类型": "image_gen",
+      "条目触发文本长度": 7551
+    }
+
+[2026-03-19 17:12:00.611] [+1330ms] ⏱️ buildPromptForRequestType 开始
+  描述: 构建请求类型 Prompt
+
+[2026-03-19 17:12:00.623] [+1342ms] ⏱️ buildPromptForRequestType 结束 (耗时: 12ms)
+  结果: 消息数量: 16
+
+[2026-03-19 17:12:00.623] [+1342ms] 📝 handlePromptRequest
+  描述: 生成角色/服装列表
+  上下文: {
+      "角色列表长度": 10,
+      "服装列表长度": 4566,
+      "通用角色列表长度": 8
+    }
+
+[2026-03-19 17:12:00.623] [+1342ms] 📝 handlePromptRequest
+  描述: 合并相邻消息
+
+[2026-03-19 17:12:00.623] [+1342ms] 📝 handlePromptRequest
+  描述: 替换占位符
+
+[2026-03-19 17:12:00.623] [+1342ms] ⏱️ replaceAllPlaceholders 开始
+  描述: 占位符替换处理
+
+[2026-03-19 17:12:00.627] [+1347ms] ⏱️ replaceAllPlaceholders 结束 (耗时: 4ms)
+  结果: 替换了 6 个变量
+
+[2026-03-19 17:12:00.628] [+1347ms] 📝 handlePromptRequest
+  描述: 收集角色/服装图片
+
+[2026-03-19 17:12:00.683] [+1402ms] 📝 handlePromptRequest
+  描述: 角色/服装图片收集完成
+  上下文: {
+      "角色图片数": 0,
+      "服装图片数": 0,
+      "通用角色图片数": 0,
+      "总计": 0
+    }
+
+[2026-03-19 17:12:00.687] [+1406ms] 🎯 开始 LLM 请求
+
+[2026-03-19 17:12:00.687] [+1406ms] 📝 handlePromptRequest
+  描述: 发起 LLM 图片生成请求
+  上下文: {
+      "消息数量": 16,
+      "超时设置": "300000ms"
+    }
+
+[2026-03-19 17:12:00.687] [+1406ms] ⏱️ LLM_IMAGE_GEN 开始
+  描述: LLM 图片生成请求
+
+[2026-03-19 17:12:00.688] [+1407ms] ⏱️ llmRequest.LLM_IMAGE_GEN 开始
+  描述: 正文图片生成 LLM 请求
+
+[2026-03-19 17:12:00.688] [+1407ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: LLM请求开始
+  上下文: {
+      "请求ID": "39e77f09-3d21-4cfe-8e16-9303aeef019d",
+      "超时设置": "300000ms",
+      "消息数量": 16,
+      "功能说明": "通过事件系统发送LLM图片生成请求"
+    }
+
+[2026-03-19 17:12:00.725] [+1444ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: 已发送请求事件，等待响应
+  上下文: {
+      "事件名": "ch-llm-image-gen-request"
+    }
+
+[2026-03-19 17:12:26.786] [+27505ms] 📝 llmRequest.LLM_IMAGE_GEN
+  描述: LLM响应收到
+  上下文: {
+      "请求ID": "39e77f09-3d21-4cfe-8e16-9303aeef019d",
+      "成功": true,
+      "测试模式": false,
+      "结果长度": 5191
+    }
+
+[2026-03-19 17:12:26.787] [+27506ms] ⤷ 分支: 成功分支 ✓
+
+[2026-03-19 17:12:26.787] [+27506ms] ⏱️ llmRequest.LLM_IMAGE_GEN 结束 (耗时: 26099ms)
+  结果: 成功 - 结果长度: 5191
+
+[2026-03-19 17:12:26.793] [+27512ms] ⏱️ LLM_IMAGE_GEN 结束 (耗时: 26106ms)
+  结果: 响应长度: 5191
+
+[2026-03-19 17:12:26.793] [+27512ms] 📝 handlePromptRequest
+  描述: 解析图片标签
+
+[2026-03-19 17:12:26.793] [+27512ms] ⏱️ parseImagesFromPrompt 开始
+  描述: 解析图片标签
+
+[2026-03-19 17:12:26.793] [+27512ms] ⏱️ imageInserter.parseImagesFromPrompt 开始
+  描述: 解析 LLM 输出中的图片标签
+
+[2026-03-19 17:12:26.793] [+27512ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 开始解析
+  上下文: {
+      "文本长度": 4029
+    }
+
+[2026-03-19 17:12:26.793] [+27512ms] 📝 LLM 原始输出
+  内容: <images>
+<image>
+regex:没有人预料到，那场天气预报里平平无奇的降雪
+<font color="steelblue">[世界的终焉：永恒暴雪]</font>
+<Tag_think>
+这一幕定格在极寒末日爆发的初期。画面展现瑞峰市被无尽的暴雪吞噬，曾经的摩天大楼变成了冰冷的墓碑。街道上被掩埋的车辆如同冰中蜉蝣。冷色调，强调极寒与绝望的宏大场景。
+</Tag_think>
+image###Scene Composition:sfw,no humans,outdoors,night,blizzard,frozen city,ruins,瑞峰市 (original),ancient city ruin,skyscrapers covered in ice,buried cars,street lights flickering,thick snow,deep frost,1.4::extreme weather::,1.2::pale blue lighting::,dramatic shadows,cinematic angle,panorama,birds eye vi... [截断，原长度: 4029]
+  长度: 4029 字符 (已截断)
+
+[2026-03-19 17:12:26.794] [+27513ms] ⤷ 分支: 找到 <images> 容器 ✓
+  条件详情: {
+      "容器数量": 1,
+      "合并后长度": 3622
+    }
+
+[2026-03-19 17:12:26.794] [+27513ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 找到 <image> 块
+  上下文: {
+      "块数量": 4
+    }
+
+[2026-03-19 17:12:26.795] [+27514ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 1 解析结果
+  上下文: {
+      "索引": 1,
+      "有regex": true,
+      "regex预览": "没有人预料到，那场天气预报里平平无奇的降雪",
+      "有tag": true,
+      "tag长度": 464
+    }
+
+[2026-03-19 17:12:26.795] [+27514ms] ⤷ 分支: 块 1 有效 - 已添加 ✓
+
+[2026-03-19 17:12:26.795] [+27514ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 2 解析结果
+  上下文: {
+      "索引": 2,
+      "有regex": true,
+      "regex预览": "这间小小的公寓，瞬间变成了这个冰雪地狱里唯一的奇迹",
+      "有tag": true,
+      "tag长度": 565
+    }
+
+[2026-03-19 17:12:26.795] [+27514ms] ⤷ 分支: 块 2 有效 - 已添加 ✓
+
+[2026-03-19 17:12:26.796] [+27515ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 3 解析结果
+  上下文: {
+      "索引": 3,
+      "有regex": true,
+      "regex预览": "“卫国，你……你再检查一下门锁吧",
+      "有tag": true,
+      "tag长度": 912
+    }
+
+[2026-03-19 17:12:26.796] [+27515ms] ⤷ 分支: 块 3 有效 - 已添加 ✓
+
+[2026-03-19 17:12:26.796] [+27515ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 块 4 解析结果
+  上下文: {
+      "索引": 4,
+      "有regex": true,
+      "regex预览": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧",
+      "有tag": true,
+      "tag长度": 821
+    }
+
+[2026-03-19 17:12:26.796] [+27515ms] ⤷ 分支: 块 4 有效 - 已添加 ✓
+
+[2026-03-19 17:12:26.799] [+27518ms] 📝 imageInserter.parseImagesFromPrompt
+  描述: 解析完成
+  上下文: {
+      "总块数": 4,
+      "有效图片数": 4
+    }
+
+[2026-03-19 17:12:26.799] [+27518ms] ⏱️ imageInserter.parseImagesFromPrompt 结束 (耗时: 6ms)
+  结果: 解析到 4 个有效图片
+
+[2026-03-19 17:12:26.799] [+27518ms] ⏱️ parseImagesFromPrompt 结束 (耗时: 6ms)
+  结果: 解析到 4 个图片标签
+
+[2026-03-19 17:12:26.799] [+27518ms] 📝 handlePromptRequest
+  描述: 图片标签解析完成
+  上下文: {
+      "数量": 4,
+      "标签预览": [
+        "image###Scene Composition:sfw,no humans,outdoors,night,blizzard,frozen city,ruins,瑞峰市 (original),ancient city ruin,skyscrapers covered in ice,buried cars,street lights flickering,thick snow,deep frost,1.4::extreme weather::,1.2::pale blue lighting::,dramatic shadows,cinematic angle,panorama,birds eye view,apocalypse,desolation,wind particles,drifting snow,high resolution,masterpiece;\nCharacter 1 Prompt:none|centers:C3;\nCharacter 1 UC:humans,people,sunlight;###",
+        "image###Scene Composition:sfw,1boy,solo,indoors,apartment,2001室 (original),Eden Shelter (original),modern furniture,holographic interface,blue neon glow,warm lighting,indoor plants,steaming bread,clean floor,cozy atmosphere,contrast,window view of blizzard,high tech,1.3::futuristic technology::,backlighting,side view,upper body,cinematic angle;\nCharacter 1 Prompt:boy,Ming Yue (original),short black hair,calm expression,holding bread,black tech suit,1.2::relaxed pose::,looking at screen|centers:C3;\nCharacter 1 UC:background characters,snow indoors,cold air;###",
+        "image###Scene Composition:nsfw,1girl,1boy,hetero,indoors,dimly lit hallway,apartment corridor,shadows,dust particles,cold atmosphere,tense atmosphere,1.2::low-angle shot::,close-up,depth of field,bokeh;\nCharacter 1 Prompt:${\"name\":\"Lin Yuehua (original)\",\"angle\":\"front view\",\"upperBody\":\"nsfw\",\"lowerBody\":\"sfw\"}$,girl,28 years old,pale skin,weakness,dark circles under eyes,messy bun,black hair,torn brown wool coat,1.3::coat pulled aside::,white silk lingerie underneath,1.2::visible cleavage::,shivering,1.3::trembling lips::,looking down,sadness,fealful expression,hands clenching coat,skin indentation|centers:B3;\nCharacter 1 UC:background characters,fused bodies,joy,smile;\nCharacter 2 Prompt:boy,faceless male,shadowy figure,Zhao Weiguo (original),heavy worker clothes,strong build,standing in doorway,looking at character 1,darkness|centers:D2;\nCharacter 2 UC:background characters,fused bodies,face;###"
+      ]
+    }
+
+[2026-03-19 17:12:26.799] [+27518ms] 📝 handlePromptRequest
+  描述: 插入图片标签到 DOM
+
+[2026-03-19 17:12:26.799] [+27518ms] ⏱️ insertImagesIntoElement 开始
+  描述: 插入图片标签
+
+[2026-03-19 17:12:26.799] [+27518ms] ⏱️ imageInserter.insertImagesIntoElement 开始
+  描述: 将图片标签插入到 DOM
+
+[2026-03-19 17:12:26.799] [+27518ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 开始插入图片标签
+  上下文: {
+      "待插入数量": 4
+    }
+
+[2026-03-19 17:12:26.800] [+27519ms] 🔲 目标根元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:12:26.800] [+27519ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 清理旧元素完成
+  上下文: {
+      "清理按钮数": 0,
+      "清理容器数": 0
+    }
+
+[2026-03-19 17:12:26.813] [+27532ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "91.2%",
+      "AI_regex": "没有人预料到，那场天气预报里平平无奇的降雪",
+      "匹配行": "没有人预料到，那场天气预报里平平无奇的降雪，会成为旧世界的葬礼。雪花从铅灰色的天",
+      "位置": 2885
+    }
+
+[2026-03-19 17:12:26.821] [+27540ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "94.4%",
+      "AI_regex": "这间小小的公寓，瞬间变成了这个冰雪地狱里唯一的奇迹",
+      "匹配行": "温暖的空气，明亮的灯光，以及一个能够凭空制造食物和纯水的终端。这间小小的公寓，瞬",
+      "位置": 3545
+    }
+
+[2026-03-19 17:12:26.828] [+27547ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "95.9%",
+      "AI_regex": "“卫国，你……你再检查一下门锁吧",
+      "匹配行": "“卫国，你……你再检查一下门锁吧，我总觉得不放心……”",
+      "位置": 3855
+    }
+
+[2026-03-19 17:12:26.838] [+27557ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 模糊匹配成功
+  上下文: {
+      "相似度": "99.6%",
+      "AI_regex": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧",
+      "匹配行": "是那个大明星，慕小小。她家里的储备，应该也快要见底了吧。",
+      "位置": 4084
+    }
+
+[2026-03-19 17:12:26.838] [+27557ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 去重完成
+  上下文: {
+      "去重前": 4,
+      "去重后": 4
+    }
+
+[2026-03-19 17:12:26.839] [+27558ms] 📝 imageInserter.insertImagesIntoElement
+  描述: 非 insertOriginalText 模式 - 只保存数据，跳过 DOM 插入
+  上下文: {
+      "匹配数量": 4
+    }
+
+[2026-03-19 17:12:26.839] [+27558ms] ⏱️ imageInserter.saveImageGroup 开始
+  描述: 保存图片组位置信息
+
+[2026-03-19 17:12:26.839] [+27558ms] 📝 imageInserter.saveImageGroup
+  描述: 开始保存
+  上下文: {
+      "图片数量": 4
+    }
+
+[2026-03-19 17:12:26.840] [+27559ms] 🔲 目标元素
+  元素信息: {
+      "标签名": "DIV",
+      "类名": "html-body",
+      "ID": "(无)",
+      "mesId": "(无)",
+      "文本预览": "\n  \n    \n      🌙\n      月满如镜，思绪澄明\n      ✦ ˚ ✦\n    ...",
+      "文本长度": 7566,
+      "是否为mes_text": false,
+      "在iframe中": true
+    }
+
+[2026-03-19 17:12:26.843] [+27562ms] 📝 imageInserter.saveImageGroup
+  描述: 检查储存模式
+  上下文: {
+      "insertOriginalText设置": "false",
+      "是否启用": false
+    }
+
+[2026-03-19 17:12:26.843] [+27562ms] ⤷ 分支: insertOriginalText 模式未启用 ✓
+
+[2026-03-19 17:12:26.843] [+27562ms] 📝 imageInserter.saveImageGroup
+  描述: 进入原有保存逻辑
+  上下文: {
+      "是mes_text": false
+    }
+
+[2026-03-19 17:12:26.843] [+27562ms] ⤷ 分支: 保存到 chatMetadata (非 mes_text) ✓
+
+[2026-03-19 17:12:26.844] [+27563ms] ⏱️ imageInserter.saveImageGroup 结束 (耗时: 5ms)
+  结果: 保存到 metadata
+
+[2026-03-19 17:12:26.844] [+27563ms] ⏱️ imageInserter.insertImagesIntoElement 结束 (耗时: 45ms)
+  结果: 保存 4 个图片数据（跳过 DOM 插入）
+
+[2026-03-19 17:12:26.844] [+27563ms] ⏱️ insertImagesIntoElement 结束 (耗时: 45ms)
+  结果: 插入完成
+
+[2026-03-19 17:12:26.895] [+27614ms] 🎯 图片生成流程完成
+
+[2026-03-19 17:12:26.895] [+27614ms] ⏱️ promptReq.handlePromptRequest 结束 (耗时: 26507ms)
+  结果: 全流程完成
+
+[2026-03-19 17:13:47.426] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
+----------------------------------------
+
+[2026-03-19 17:13:47.426] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: LLM生成开始事件触发
+  上下文: {
+      "eventData": "normal"
+    }
+
+[2026-03-19 17:13:47.426] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
+  描述: 记录生成开始时的状态
+  上下文: {
+      "chatLength": 3,
+      "swipesLength": 1
+    }
+
+========================================
+日志结束 - 总耗时: 2685463ms
+========================================

@@ -1,0 +1,1149 @@
+09:42:58.064 newline_fix.js:1 ChatU8: Extracting character and outfit tags for message ID: 0
+09:42:58.354 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+09:42:59.166 script.js:4124 Generate entered
+09:42:59.166 autoLLMClick.js:1 [st-chatu8] GENERATION_STARTED data: normal
+09:42:59.166 autoLLMClick.js:1 [st-chatu8] Chat array length: 3
+09:42:59.166 autoLLMClick.js:1 [st-chatu8] Last message swipes length: 1
+09:42:59.167 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:42:59.167 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+09:42:59.167 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:42:59.167 send_data.js:1 [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+09:42:59.167 send_data.js:1 [send_data] 插件配置: {worldBookSelections: {…}, worldEntrySelections: {…}}
+09:42:59.167 send_data.js:1 [send_data] 当前角色世界书有条目记录，默认开启
+09:42:59.174 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+09:42:59.192 index.js:21 [QR2] calling {args: Array(3), functionToCall: ƒ}
+09:42:59.192 index.js:21 [QR2] Before-generation hook skipped due to dryRun.
+09:42:59.194 script.js:4437 Core/all messages: 3/3
+09:42:59.222 world-info.js:5072 [WI] Hypothetically adding 15 entries to prompt (15) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:42:59.223 script.js:4496 skipWIAN not active, adding WIAN
+09:43:05.124 script.js:1483 Rendered 1 messages in 0.004 seconds.
+09:43:05.225 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:43:05.225 index.js:21 [QR2] CHAT_CHANGED 末世寒冬 - 星穹秩序 - 2026-03-19@09h43m04s992ms
+09:43:05.329 tool-calling.js:301 [ToolManager] Unregistered function tool: mvu_VariableUpdate
+09:43:05.350 VM383 log.js:10 [DailyRoll] settled {"today":"末日纪元，9527年12月14日","yesterday":"末日纪元，9527年12月08日","trigger":"auto","source":"script","reason":"lucky","roll":7,"upgraded":true,"oldLevel":1,"nextLevel":2,"baseDays":0,"nextDays":0}
+09:43:05.354 VM383 log.js:10 Reconciling schema with current data state...
+09:43:05.354 VM383 log.js:10 Schema reconciliation complete.
+09:43:05.354 VM383 log.js:10 Reconciling schema with current data state...
+09:43:05.355 VM383 log.js:10 Schema reconciliation complete.
+09:43:05.356 VM383 log.js:10 Reconciling schema with current data state...
+09:43:05.356 VM383 log.js:10 Schema reconciliation complete.
+09:43:05.356 VM383 log.js:10 变量初始化完成
+09:43:05.356 VM383 log.js:10 变量初始化完成
+09:43:05.356 VM383 log.js:10 变量初始化完成
+09:43:05.362 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:43:05.384 tool-calling.js:288 [ToolManager] Registered function tool: ToolDefinition {#name: 'mvu_VariableUpdate', #displayName: 'MVU update', #description: 'use this tool to UpdateVariable.', #parameters: {…}, #action: ƒ, …}
+09:43:05.385 index.js:21 [QR2] calling {args: Array(0), functionToCall: ƒ}
+09:43:05.385 newline_fix.js:1 ChatU8: Extracting character and outfit tags for message ID: 0
+09:43:05.386 VM383 log.js:10 [MVU] 对第一层永不进行额外模型解析
+09:43:05.386 index.js:21 [QR2] calling {args: Array(2), functionToCall: ƒ}
+09:43:06.494 script.js:4124 Generate entered
+09:43:06.495 autoLLMClick.js:1 [st-chatu8] GENERATION_STARTED data: normal
+09:43:06.495 autoLLMClick.js:1 [st-chatu8] Chat array length: 1
+09:43:06.495 autoLLMClick.js:1 [st-chatu8] Last message swipes length: 3
+09:43:06.495 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:43:06.495 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+09:43:06.495 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:43:06.495 send_data.js:1 [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+09:43:06.495 send_data.js:1 [send_data] 插件配置: {worldBookSelections: {…}, worldEntrySelections: {…}}
+09:43:06.496 send_data.js:1 [send_data] 当前角色世界书有条目记录，默认开启
+09:43:06.505 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+09:43:06.529 index.js:21 [QR2] calling {args: Array(3), functionToCall: ƒ}
+09:43:06.529 index.js:21 [QR2] Before-generation hook skipped due to dryRun.
+09:43:06.531 script.js:4437 Core/all messages: 1/1
+09:43:07.164 world-info.js:5072 [WI] Hypothetically adding 10 entries to prompt (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:43:07.164 script.js:4496 skipWIAN not active, adding WIAN
+09:43:07.210 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:43:07.212 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+09:43:08.200 script.js:4124 Generate entered
+09:43:08.201 autoLLMClick.js:1 [st-chatu8] GENERATION_STARTED data: normal
+09:43:08.201 autoLLMClick.js:1 [st-chatu8] Chat array length: 1
+09:43:08.201 autoLLMClick.js:1 [st-chatu8] Last message swipes length: 3
+09:43:08.201 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:43:08.201 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+09:43:08.202 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:43:08.202 send_data.js:1 [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+09:43:08.202 send_data.js:1 [send_data] 插件配置: {worldBookSelections: {…}, worldEntrySelections: {…}}
+09:43:08.202 send_data.js:1 [send_data] 当前角色世界书有条目记录，默认开启
+09:43:08.210 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+09:43:08.228 index.js:21 [QR2] calling {args: Array(3), functionToCall: ƒ}
+09:43:08.228 index.js:21 [QR2] Before-generation hook skipped due to dryRun.
+09:43:08.229 script.js:4437 Core/all messages: 1/1
+09:43:08.255 world-info.js:5072 [WI] Hypothetically adding 10 entries to prompt (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:43:08.255 script.js:4496 skipWIAN not active, adding WIAN
+09:43:13.218 ClickTrigger.js:1 [点击触发] ✓ 已绑定: theme-tech stream-demo-workbench-active
+09:43:16.167 chat_message.ts:351 [{…}]
+09:43:16.206 index.js:21 [QR2] calling {args: Array(3), functionToCall: ƒ}
+09:43:16.554 world-info.js:5072 [WI] Adding 14 entries to prompt (14) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:43:16.554 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:43:16.908 handler.ts:227 [Prompt Template] start generate after 41 messages
+09:43:16.921 inject-prompt.ts:24 [Prompt Template] Found inject entries: 1
+09:43:16.921 inject-prompt.ts:34 [Prompt Template] Probability triggered: @INJECT target=user,index=-1,at=before,role=system,order=10 (100% chance, rolled 4)
+09:43:16.921 inject-prompt.ts:44 [Prompt Template] After probability check: 1/1 entries triggered
+09:43:16.922 inject-prompt.ts:132 [Prompt Template] Parsed target inject: target=user, index=-1, at=before, role=system, order=9, content=<角色关系引导指令>
+    所有的角色在设计其对话、行动和选项时，需遵守下列规则：
+        1.<关系与Imp值约束>
+        2.<关系阶段指导>
+        3.角色档案记载的自身<专属特质>
+    <NPC角色关系阶段扮演指导>
+        1.**关系**硬约束：
+              逃离阶段：
+                  不得有立即向主角献身的想法
+                  不得有立即依附的想法
+                  不得有以身体为标的的交易
+                  不得有主动寻求交易
+              交易阶段：
+                  不接受主角无偿的索取
+                  不接受无明确收益的指令
+                  不接受不明确收益的献身
+                  不接受强迫、威胁
+                  不接受附庸、奴化思想
+              协作阶段：
+                  不接受强迫、威胁
+                  不接受背叛、违约
+                  不接受奴化指令
+              忠诚阶段：
+                  不接受被抛弃
+                  不接受被出卖
+              规范阶段：
+                  无
+        2.**关系**正面指导：
+              逃离阶段：
+                  多寻求帮助
+                  多接触和交互情报、信息、试探
+              交易阶段：
+                  多发起交易
+                  多主动履约
+                  主动交互情报
+                  主动往2001跑寻求交易机会
+              协作阶段：
+                  试图融入
+                  不求回报
+              忠诚阶段；
+                  视为盟友与秩序核心，主动维护团队利益。
+                  不求回报，主动承担
+              规附阶段：
+                  听从小哥哥指令
+      <NPC角色关系阶段扮演指导>
+09:43:16.922 inject-prompt.ts:172 [Prompt Template] Injection instructions parsed:
+09:43:16.922 inject-prompt.ts:173   - pos mode: 0
+09:43:16.922 inject-prompt.ts:174   - target mode: 1
+09:43:16.922 inject-prompt.ts:175   - regex mode: 0
+09:43:16.922 inject-prompt.ts:176   - total: 1
+09:43:16.922 inject-prompt.ts:180 [Prompt Template] Starting injection process...
+09:43:16.922 inject-prompt.ts:188 [Prompt Template] data before injection: (41) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:43:16.922 inject-prompt.ts:247 [Prompt Template] Target position calculated: user[4] -> pos 25
+09:43:16.922 inject-prompt.ts:311 [Prompt Template] Position-based queue after sorting:
+09:43:16.922 inject-prompt.ts:314   0: @INJECT target=user,index=-1,at=before,role=system,order=10 (pos=25, order=9, type=target)
+09:43:16.922 inject-prompt.ts:321 [Prompt Template] Position-based message inserted: role=system at final pos 25
+09:43:16.922 handler.ts:397 [Prompt Template] processing 42 messages in 14ms
+09:43:16.923 VM383 log.js:10 script.event_types.CHAT_COMPLETION_SETTINGS_READY triggered
+09:43:17.079 prompts.ts:72 [Prompt Template] processing send result: 26620 tokens and 51999 chars
+09:43:23.913 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:24.164 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:24.624 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:24.883 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:25.167 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:25.791 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:26.655 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:27.414 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:28.214 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:29.067 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:29.964 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:31.100 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:33.043 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:33.278 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:34.160 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:34.774 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:35.542 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:36.115 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:37.029 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:37.765 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:38.715 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:39.354 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:40.094 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:41.254 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:41.778 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:42.555 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:43.414 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:44.371 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:45.120 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:45.985 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:46.794 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:47.354 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:48.614 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:49.399 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:50.414 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:51.353 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:52.387 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:53.137 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:53.872 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:55.147 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:56.258 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:56.954 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:58.164 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:43:59.085 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:00.263 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:01.274 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:02.103 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:03.242 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:04.112 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:04.794 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:05.394 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:05.949 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1423
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:06.224 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:62
+generate @ responseGenerator.ts:112
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:06.237 script.js:6223 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6223
+onProgressStreaming @ responseGenerator.ts:77
+generate @ responseGenerator.ts:112
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] GENERATION_ENDED data: 2
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] Start chat length: 1 Start swipes length: 3
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] Current chat length: 2 Current swipes length: 0
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] Chat increased: true Swipes increased: false
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] Message ID: 1
+09:44:06.246 autoLLMClick.js:1 [st-chatu8] Message content: <开局第一幕剧情创作需求>
+  请写一篇具有沉浸感的**末日生存**题材故事开场剧情：
+      <故事设定>
+        灾难类型：未来某天，全球气候发生灾难性变化。
+            世界景象：
+                超自然极端天气：除经过伊甸等特殊改造的护具和装备防护外，基本无法在室外存活，无天气窗口
+行动窗口：几乎没有外出机会，需伊甸特制护具
+社会组织度：少量据点存在，但社会联系脆弱，无电力、无交通
+生产残余度：近乎只剩库存消耗，无法稳定生产，无可靠交通工具
+冲突密度：各残余幸存者组成小规模社区，但彼此冲突成为常态，且时常为争夺资源展开殊死争斗，一部分比较有武力的暴徒四处劫掠，弱肉强食下只有少部分社群能建立脆弱的基础秩序，社会治安更是无从谈起
+外部威胁主因：人出到室外，要面临失温等环境威胁，灾难初期大部分人因此丧命。
+外出死亡风险：无准备外出几乎等同送命，离开掩体本身就是极高风险行为。
+据点化程度：存在少量中小型据点和局部控制区，但整体仍分散脆弱，随时可能被吞并、瓦解或改旗易帜。
+边界约束：禁止把养流写成随手无限生产；禁止把医疗与供暖写成无代价常驻外挂；禁止开局就轻易外扩扫楼；禁止把人口管理写成纯数字游戏而失去人物代价；禁止削弱环境压力到不再重要
+            社会基调：
+                社会组织度：少量据点存在，但社会联系脆弱，无电力、无交通
+                生产残余度：近乎只剩库存消耗，无法稳定生产，无可靠交通工具
+                冲突密度：各残余幸存者组成小规模社区，但彼此冲突成为常态，且时常为争夺资源展开殊死争斗，一部分比较有武力的暴徒四处劫掠，弱肉强食下只有少部分社群能建立脆弱的基础秩序，社会治安更是无从谈起
+                据点化程度：存在少量中小型据点和局部控制区，但整体仍分散脆弱，随时可能被吞并、瓦解或改旗易帜。
+        故事时间：9527年12月14日·14:00，这是小哥哥获得伊甸庇护所的第7天。
+      </故事设定>
+      <主人公背景>
+            小哥哥末日前住中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室，是一名未设定，灾变的1年后，因一次超自然原因获得了名为"伊甸庇护所"的超级科技实体，故事时间线锚定在小哥哥获得庇护所7天后展开
+      </主人公背景>
+      <庇护所及其科技>
+        伊甸庇护所：内嵌在星穹国际公寓2001室里的黑科技实体，它具备人工智能的思维形态和以下能力：
+                  可维持2001核心区的基础供暖与生活供电接口，范围仅2001室，不得外接。
+一道用于强化2001核心入口的门体，用于防止强闯，仅入口有效，不能覆盖整层。
+万象合成终端：元素重构级合成干粮、罐头、面粉、大米等基础食材和纯水的终端设备，T1款功率有限无法大规模生产。
+热水器接口提供2001全屋热水淋浴、盥洗条件，T1款功率较小受时限限制，每次10分钟，冷却6小时。
+提供2001门口与短距走廊的被动音频监听，供伊甸识别和分析，T1款只能依据声音判断年龄、性别、情绪状态
+          庇护所所处位置：中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室，末日前属于高端住宅。
+      </庇护所及其科技>
+      <附近社会团体>
+        附近社会组织和幸存者团体：雪狼帮；“方舟”教会；拾荒者联盟public: 当红女明星；娱乐圈顶流；当红女明星；public: 流浪的高中生；流浪的高中生；前建筑公司技术工人；星穹国际公寓2003室住户；技术工人；公寓楼内充满了绝望的哭喊、咒骂和叹息。；社会秩序受到冲击，抢救、伤害和掠夺事件频发。
+      </附近社会团体>
+      <玩家补充的设定>
+        未设定
+      </玩家补充的设定>
+      <禁止出现的设定>
+        边界约束：禁止把养流写成随手无限生产；禁止把医疗与供暖写成无代价常驻外挂；禁止开局就轻易外扩扫楼；禁止把人口管理写成纯数字游戏而失去人物代价；禁止削弱环境压力到不再重要
+      </禁止出现的设定>
+    <导演式创作要求>
+        创作从以下几个部分着手：
+            包含灾变的描写及简要演进（时间距离灾变开始过去1年，简要交代背景信息，使读者进入场景）
+            包含环境+社会基调描写（天气、生产和秩序的灾后场景，为后续社会基调和人群画像做准备）
+            社会群像描写（旧社会结构瓦解过程和当前社会组织现状，侧重灾后各类人群群像描写，突出生存阈值和人民的主要生存方式）
+            星穹国际公寓住户NPC描写（当前瑞峰市、星穹国际公寓的幸存者群像，为主角后续活动提供互动，应符合角色档案设定）
+            主角描写（过往经历+灾后生活（获得庇护所前）+获得庇护所后（7天前获得））
+            后续剧情勾子，引导玩家后续行动
+        创作应该避免：
+            纯列举设定
+            小标题式总结
+            拔高升华人物
+        创作视角：
+            第三人称
+    </导演式创作要求>
+    以上，请你以未设定为剧情基调、以轻小说为文风，不低于1500字，开始创作一篇剧情正文。
+</开局第一幕剧情创作需求>
+
+输出格式：<content>正文</content> <option>后续剧情推进选项，格式为 A.${10字以内的选项文本} 每个选项单独一行，确保4个选项放在同一个标签内</option>
+09:44:06.269 chat_message.ts:351 [{…}]
+09:44:07.250 autoLLMClick.js:1 [st-chatu8] Real mes_text not found for messageId: 1
+09:44:07.251 autoLLMClick.js:1 [st-chatu8] Element not found for messageId: 1 - skipping
+09:44:30.115 ClickTrigger.js:1 [点击触发] iframe 坐标转换: {原始X: 482, 原始Y: 248, iframe偏移: {…}, 转换后X: 669.28125, 转换后Y: 119.4375}
+09:44:30.116 ClickTrigger.js:1 [点击触发] 桌面端双击, target: DIV html-body
+09:44:30.116 ClickTrigger.js:1 [点击触发] context: {accountStorage: AccountStorage, chat: Array(3), characters: Array(67), groups: Array(0), name1: '小哥哥', …}
+09:44:30.117 ClickTrigger.js:1 [点击触发] 双击触发成功
+09:44:30.149 ClickTrigger.js:1 [点击触发] 定位信息(Overlay内部): {targetX: 669.28125, targetY: 119.4375, viewportWidth: 1256, viewportHeight: 799, bubbleWidth: 170, …}
+09:44:30.149 ClickTrigger.js:1 [点击触发] 最终定位(Overlay内部): {newLeft: 674.28125, newTop: 124.4375}
+09:44:31.053 ClickTrigger.js:1 [点击触发] 触发图片生成
+09:44:31.084 chatDataUtils.js:1 [chatDataUtils] 该元素不包含 mes_text 类，尝试查找外部 mes_text
+09:44:31.087 chatDataUtils.js:1 [chatDataUtils] 外部 mes_text 检测结果: {mesId: 0, chatTextLength: 11}
+09:44:31.087 chatDataUtils.js:1 [chatDataUtils] chat 文本长度 <= 100，从 DOM 元素获取文本
+09:44:31.117 regex.js:1 [st-chatu8] collectRegexEntriesFromUI 调试: {缓存容器存在: true, 缓存容器在文档中: true, 新选择器找到的容器: true, 新选择器找到的条目数: 19, 缓存容器找到的条目数: 19}
+09:44:31.186 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:44:31.186 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:44:31.186 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+09:44:31.188 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+09:44:31.283 llmRequest.js:1 插图吧：请求正文图片生成 LLM (ID: fb69f829-4ec7-4cf0-b88e-b09c8d030dff)
+09:44:31.285 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt4sabufncp - LLM: 正文图片生成
+09:44:31.286 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt4sabufncp -> running
+09:44:59.976 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt4sabufncp -> completed
+09:44:59.977  插图吧：已收到正文图片生成 LLM 执行结果 (ID: fb69f829-4ec7-4cf0-b88e-b09c8d030dff): {success: true, result: '\n\n<thinking>\n0.需求检查\n  -分析用户需求：在剧情原文中插入至少3-4张AI绘图提示…ating the very premise of totality.\n</disclaimer>', id: 'fb69f829-4ec7-4cf0-b88e-b09c8d030dff', testMode: false}
+09:44:59.981  [parseImagesFromPrompt] 开始解析，文本长度: 4126
+09:44:59.981  [parseImagesFromPrompt] 找到 1 个 <images> 容器，已合并所有内容（总长度: 3583 ）
+09:44:59.981  [parseImagesFromPrompt] 找到 4 个 <image> 块
+09:44:59.981  [parseImagesFromPrompt] 解析第 1 个 <image> 块，内容长度: 1015
+09:44:59.981  [parseImagesFromPrompt] 块 1: 找到 tag，长度 795
+09:44:59.981  [parseImagesFromPrompt] 块 1 结果: regex="凉凉的体温贴着他的脖子。...", tag="Scene Composition:sfw,1girl,1boy,hetero,indoors,be..."
+09:44:59.982  [parseImagesFromPrompt] 解析第 2 个 <image> 块，内容长度: 759
+09:44:59.982  [parseImagesFromPrompt] 块 2: 找到 tag，长度 523
+09:44:59.982  [parseImagesFromPrompt] 块 2 结果: regex="一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。...", tag="Scene Composition:sfw,1boy,solo,indoors,futuristic..."
+09:44:59.982  [parseImagesFromPrompt] 解析第 3 个 <image> 块，内容长度: 871
+09:44:59.982  [parseImagesFromPrompt] 块 3: 找到 tag，长度 633
+09:44:59.982 imageInserter.js:1 [parseImagesFromPrompt] 块 3 结果: regex="信号源定位：2003室门口。...", tag="Scene Composition:sfw,1girl,solo,indoors,apartment..."
+09:44:59.982 imageInserter.js:1 [parseImagesFromPrompt] 解析第 4 个 <image> 块，内容长度: 870
+09:44:59.982 imageInserter.js:1 [parseImagesFromPrompt] 块 4: 找到 tag，长度 622
+09:44:59.982 imageInserter.js:1 [parseImagesFromPrompt] 块 4 结果: regex="任由那个女孩在门外冻饿而死？...", tag="Scene Composition:sfw,1girl,solo,indoors,messy roo..."
+09:44:59.982 imageInserter.js:1 [parseImagesFromPrompt] 解析完成，共 4 个有效图片
+09:44:59.983 imageInserter.js:1 [insertImagesIntoElement] Cleaned up existing image elements
+09:44:59.985 imageInserter.js:1 [insertImagesIntoElement] insertOriginalText 条件不满足，退回 DOM 逻辑
+09:45:00.010 imageInserter.js:1 [fuzzyMatchLine] Target: 凉凉的体温贴着他的脖子。
+09:45:00.011 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+09:45:00.011 imageInserter.js:1   1. [Line 9] Score: 92.0% ✓ SELECTED
+09:45:00.011 imageInserter.js:1      "   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，..."
+09:45:00.011 imageInserter.js:1   2. [Line 33] Score: 29.2%
+09:45:00.011 imageInserter.js:1      "“放心吧，哥哥。”秋青子蹭了蹭他的脸颊。“我会让他们的对话充满‘嗯…’‘啊…’这种生活气息。赵卫国说..."
+09:45:00.011 imageInserter.js:1   3. [Line 28] Score: 25.0%
+09:45:00.011 imageInserter.js:1      "“这个世界很残酷，哥哥。”秋青子的声音低了一些。“外面是零下几十度的‘永恒暴雪’，没有防护服根本活不..."
+09:45:00.011 imageInserter.js:1   4. [Line 62] Score: 25.0%
+09:45:00.011 imageInserter.js:1      "秋青子的尾巴尖缠得更紧了些，声音里带着一丝委屈和坚定：“哥哥……我明白了。我会让每个角色都活过来，让..."
+09:45:00.011 imageInserter.js:1   5. [Line 107] Score: 25.0%
+09:45:00.011 imageInserter.js:1      "随着毫无感情的电子音提示，方块侧面的开口滑开，一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。..."
+09:45:00.012 imageInserter.js:1 [insertImagesIntoElement] Fuzzy matched with 92.0% similarity
+09:45:00.012 imageInserter.js:1   AI regex: "凉凉的体温贴着他的脖子。"
+09:45:00.012 imageInserter.js:1   Matched line: "   明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。"
+09:45:00.027 imageInserter.js:1 [fuzzyMatchLine] Target: 一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。
+09:45:00.028 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+09:45:00.028 imageInserter.js:1   1. [Line 107] Score: 93.9% ✓ SELECTED
+09:45:00.028 imageInserter.js:1      "随着毫无感情的电子音提示，方块侧面的开口滑开，一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。..."
+09:45:00.028 imageInserter.js:1   2. [Line 69] Score: 21.6%
+09:45:00.028 imageInserter.js:1      "3.  **核心区：** 展现2001室内的温暖、明亮和安逸。小哥哥穿着舒适的家居服，看着万象合成终..."
+09:45:00.028 imageInserter.js:1   3. [Line 89] Score: 19.0%
+09:45:00.028 imageInserter.js:1      "公寓的20层，一片死寂。楼道里没有灯光，只有安全出口的绿色标志在黑暗中散发着幽幽的微光，映出走廊里冻..."
+09:45:00.028 imageInserter.js:1   4. [Line 24] Score: 15.1%
+09:45:00.028 imageInserter.js:1      "“嗯嗯，我看看。”秋青子凑近了些，仔细阅读。“哥哥的指令是‘[Start a new chat]’，..."
+09:45:00.028 imageInserter.js:1   5. [Line 62] Score: 14.8%
+09:45:00.029 imageInserter.js:1      "秋青子的尾巴尖缠得更紧了些，声音里带着一丝委屈和坚定：“哥哥……我明白了。我会让每个角色都活过来，让..."
+09:45:00.029 imageInserter.js:1 [insertImagesIntoElement] Fuzzy matched with 93.9% similarity
+09:45:00.029 imageInserter.js:1   AI regex: "一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。"
+09:45:00.029 imageInserter.js:1   Matched line: "随着毫无感情的电子音提示，方块侧面的开口滑开，一盘热气腾腾、散发着麦芽香气的糊状食物被缓缓推了出来。旁边，还有一杯净化过的、温度刚好的纯水。"
+09:45:00.040 imageInserter.js:1 [fuzzyMatchLine] Target: 信号源定位：2003室门口。
+09:45:00.040 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+09:45:00.040 imageInserter.js:1   1. [Line 125] Score: 98.8% ✓ SELECTED
+09:45:00.041 imageInserter.js:1      "【信号源定位：2003室门口。】"
+09:45:00.041 imageInserter.js:1   2. [Line 96] Score: 35.9%
+09:45:00.041 imageInserter.js:1      "【声源A：成年男性，情绪稳定，正在进行高强度体力活动，伴有工具敲击声。判断来源：2003室。】"
+09:45:00.041 imageInserter.js:1   3. [Line 70] Score: 30.3%
+09:45:00.041 imageInserter.js:1      "4.  **伊甸报告：** AI用无机质的声音报告当天的庇护所状态和外部环境数据，并播报监听到的邻居..."
+09:45:00.041 imageInserter.js:1   4. [Line 151] Score: 29.8%
+09:45:00.041 imageInserter.js:1      "- 发生的事：在描绘了“永恒暴雪”下的末日世界和星穹公寓的现状后，故事聚焦于获得“伊甸”庇护所七天的..."
+09:45:00.041 imageInserter.js:1   5. [Line 17] Score: 29.2%
+09:45:00.041 imageInserter.js:1      "“好的，哥哥。”秋青子眯起眼睛，尾巴尖愉快地摇了摇。“故事刚开始，在东和国瑞峰市的星穹国际公寓。现在..."
+09:45:00.041 imageInserter.js:1 [insertImagesIntoElement] Fuzzy matched with 98.8% similarity
+09:45:00.041 imageInserter.js:1   AI regex: "信号源定位：2003室门口。"
+09:45:00.041 imageInserter.js:1   Matched line: "【信号源定位：2003室门口。】"
+09:45:00.050 imageInserter.js:1 [fuzzyMatchLine] Target: 任由那个女孩在门外冻饿而死？
+09:45:00.051 imageInserter.js:1 [fuzzyMatchLine] Top 5 candidates:
+09:45:00.051 imageInserter.js:1   1. [Line 137] Score: 92.4% ✓ SELECTED
+09:45:00.051 imageInserter.js:1      "接下来，那个沉默的男人会怎么做？是打开一条门缝，分出一口救命的食物，还是会……置之不理，任由那个女孩..."
+09:45:00.051 imageInserter.js:1   2. [Line 17] Score: 25.0%
+09:45:00.051 imageInserter.js:1      "“好的，哥哥。”秋青子眯起眼睛，尾巴尖愉快地摇了摇。“故事刚开始，在东和国瑞峰市的星穹国际公寓。现在..."
+09:45:00.051 imageInserter.js:1   3. [Line 70] Score: 21.4%
+09:45:00.051 imageInserter.js:1      "4.  **伊甸报告：** AI用无机质的声音报告当天的庇护所状态和外部环境数据，并播报监听到的邻居..."
+09:45:00.051 imageInserter.js:1   4. [Line 71] Score: 21.4%
+09:45:00.051 imageInserter.js:1      "5.  **钩子：** 监听器突然捕捉到一个新的、虚弱的敲门声，不是敲2001，而是敲2003的门。..."
+09:45:00.051 imageInserter.js:1   5. [Line 75] Score: 21.4%
+09:45:00.051 imageInserter.js:1      "“检查完毕！所有反应都在角色设定范围内，绝对没有怪物说，结尾会停在那个敲门声和女孩的哀求声响起时，把..."
+09:45:00.052 imageInserter.js:1 [insertImagesIntoElement] Fuzzy matched with 92.4% similarity
+09:45:00.052 imageInserter.js:1   AI regex: "任由那个女孩在门外冻饿而死？"
+09:45:00.052 imageInserter.js:1   Matched line: "接下来，那个沉默的男人会怎么做？是打开一条门缝，分出一口救命的食物，还是会……置之不理，任由那个女孩在门外冻饿而死？"
+09:45:00.052 imageInserter.js:1 [insertImagesIntoElement] After deduplication: 4 unique matches (from 4)
+09:45:00.053 imageInserter.js:1 [insertImagesIntoElement] Found matches: (4) [{…}, {…}, {…}, {…}]
+09:45:00.054 imageInserter.js:1 [insertImagesIntoElement] Inserted image tag for: Scene Composition:sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2::tragic atmosphere::,dust,broken luxury items,side view,from above,close-up,cinematic angle;
+Character 1 Prompt:girl,Mu Xiaoxiao (original),long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3::starving::,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:C3;
+Character 1 UC:background characters,smiling,looking at viewer,healthy,food;
+09:45:00.054 imageInserter.js:1 [insertImagesIntoElement] Inserted image tag for: Scene Composition:sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2::green emergency light::,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;
+Character 1 Prompt:girl,teenager,messy hair,pale skin,thin,1.3::crying hysterically::,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:C3;
+Character 1 UC:background characters,clothed sex,naked,nsfw,smile;
+09:45:00.054 imageInserter.js:1 [insertImagesIntoElement] Inserted image tag for: Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;
+Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;
+Character 1 UC:background characters,naked,nsfw;
+09:45:00.054 imageInserter.js:1 [insertImagesIntoElement] Inserted image tag for: Scene Composition:sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;
+Character 1 Prompt:${"name":"Qiu Qingzi","angle":"side view","upperBody":"sfw","lowerBody":"sfw"}$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8::scaly skin::,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:C3;
+Character 1 UC:background characters,fused bodies,legs,feet;
+Character 2 Prompt:boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:C3;
+Character 2 UC:background characters,fused bodies,snake tail;
+09:45:00.055 imageInserter.js:1 [imageInserter] saveImageGroup - el 详细信息
+09:45:00.055 imageInserter.js:1 el 对象: <div data-v-8d533422 class=​"html-body">​…​</div>​
+09:45:00.055 imageInserter.js:1 el.tagName: DIV
+09:45:00.056 imageInserter.js:1 el.className: html-body
+09:45:00.056 imageInserter.js:1 el.id:
+09:45:00.056 imageInserter.js:1 el 是否在 document 中: true
+09:45:00.056 imageInserter.js:1 el.ownerDocument: iframe 文档
+09:45:00.056 imageInserter.js:1 父元素链: DIV.transcript-body → ARTICLE.transcript-item → DIV.transcript-entry → DIV.transcript-scroller → SECTION.transcript-card
+09:45:00.056 imageInserter.js:1 textContent 长度: 10464
+09:45:00.056 imageInserter.js:1 textContent 中间 20 字特征: ";\n    transform: sca"
+09:45:00.056 imageInserter.js:1 iframe document.URL: blob:http://127.0.0.1:8000/5eea8ea2-5e27-4343-b6f0-30739071af47
+09:45:00.056 imageInserter.js:1 iframe body 子 div 数量: 1
+09:45:00.057 imageInserter.js:1 是 mes_text: false
+09:45:00.057 imageInserter.js:1 data-mesid: null
+09:45:00.059 imageInserter.js:1 [imageInserter] mes.length < 100, falling back to original storage
+09:45:00.061 imageInserter.js:1 [imageInserter] Saved to chatMetadata: .  **开场：** 描绘‘永恒暴雪’下 (4) [{…}, {…}, {…}, {…}] (new)
+09:45:00.061 imageInserter.js:1 [insertImagesIntoElement] Saved image group with 4 images
+09:45:00.093 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt5eiijv63h - 自动批量生图 (4 张)
+09:45:00.094 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eiijv63h -> running
+09:45:00.233 placeholder.js:1 [iframe] 按正序触发自动生成，按钮数量: 4
+09:45:00.233 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;​Character 1 Prompt:​${"name":​"Qiu Qingzi","angle":​"side view","upperBody":​"sfw","lowerBody":​"sfw"}​$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8:​:​scaly skin:​:​,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,feet;​Character 2 Prompt:​boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:​C3;​Character 2 UC:​background characters,fused bodies,snake tail;​" data-request-id=​"chatu8-id-7bb50h" data-image-tag=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;​Character 1 Prompt:​${"name":​"Qiu Qingzi","angle":​"side view","upperBody":​"sfw","lowerBody":​"sfw"}​$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8:​:​scaly skin:​:​,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,feet;​Character 2 Prompt:​boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:​C3;​Character 2 UC:​background characters,fused bodies,snake tail;​" data-loading=​"true">​加载中...​</button>​
+09:45:00.237 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:45:00.239 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-request-id=​"chatu8-id-c18da0" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-loading=​"true">​…​</button>​
+09:45:00.241 placeholder.js:1 [iframe] 自动点击触发生成: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-request-id=​"chatu8-id-gjwxg6" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-loading=​"true">​…​</button>​
+09:45:00.244 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eiijv63h -> completed
+09:45:00.244 placeholder.js:1 [iframe] 自动点击任务已完成
+09:45:00.253 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;​Character 1 Prompt:​${"name":​"Qiu Qingzi","angle":​"side view","upperBody":​"sfw","lowerBody":​"sfw"}​$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8:​:​scaly skin:​:​,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,feet;​Character 2 Prompt:​boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:​C3;​Character 2 UC:​background characters,fused bodies,snake tail;​" data-request-id=​"chatu8-id-7bb50h" data-image-tag=​"Scene Composition:​sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;​Character 1 Prompt:​${"name":​"Qiu Qingzi","angle":​"side view","upperBody":​"sfw","lowerBody":​"sfw"}​$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8:​:​scaly skin:​:​,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:​C3;​Character 1 UC:​background characters,fused bodies,legs,feet;​Character 2 Prompt:​boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:​C3;​Character 2 UC:​background characters,fused bodies,snake tail;​" data-loading=​"true">​加载中...​</button>​
+09:45:00.261 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt5en7lewvj - Scene Composition:sfw,1girl,1b...
+09:45:00.273 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,1boy,hetero,indoors,bedroom,night,warm lighting,candlelight,intimate atmosphere,upper body,close-up,side view,depth of field,bokeh;Character 1 Prompt:${"name":"Qiu Qingzi","angle":"side view","upperBody":"sfw","lowerBody":"sfw"}$,girl,long black hair,slit pupils,snake tongue,forked tongue,0.8::scaly skin::,cyan snake tail,source#embracing,source#licking,tongue out,saliva,licking another's ear,blush,half-closed eyes,seductive smile,looking at another|centers:C3;Character 1 UC:background characters,fused bodies,legs,feet;Character 2 Prompt:boy,black short hair,grey loungewear,cotton shirt,sitting,on chair,target#embracing,target#being licked,head tilt,looking ahead,neutral expression|centers:C3;Character 2 UC:background characters,fused bodies,snake tail;
+09:45:00.274 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:45:00.275 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, 1boy, hetero, indoors, bedroom, night,… body, close-up, side view, depth of field, bokeh', Character 1 Prompt: '${"name":"Qiu Qingzi", "angle":"side view", "upper…-closed eyes, seductive smile, looking at another', Character 1 UC: 'background characters,fused bodies,legs,feet', Character 2 Prompt: 'boy, black short hair, grey loungewear, cotton shi…ked, head tilt, looking ahead, neutral expression', Character 2 UC: 'background characters,fused bodies,snake tail', …}
+09:45:00.275 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: ${"name":"Qiu Qingzi", "angle":"side view", "upperBody":"sfw", "lowerBody":"sfw"}$, girl, long black hair, slit pupils, snake tongue, forked tongue, 0.8::scaly skin::, cyan snake tail, source#embracing, source#licking, tongue out, saliva, licking another's ear, blush, half-closed eyes, seductive smile, looking at another
+09:45:00.276 characterprompt.js:1 [CharacterPrompt] 处理 Character 2 Prompt: boy, black short hair, grey loungewear, cotton shirt, sitting, on chair, target#embracing, target#being licked, head tilt, looking ahead, neutral expression
+09:45:00.277 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, 1boy, hetero, indoors, bedroom, night, warm lighting, candlelight, intimate atmosphere, upper body, close-up, side view, depth of field, bokeh; Character 1 Prompt: ${"name":"Qiu Qingzi", "angle":"side view", "upperBody":"sfw", "lowerBody":"sfw"}$, girl, long black hair, slit pupils, snake tongue, forked tongue, 0.8::scaly skin::, cyan snake tail, source#embracing, source#licking, tongue out, saliva, licking another's ear, blush, half-closed eyes, seductive smile, looking at another | centers: C3; Character 1 UC: background characters,fused bodies,legs,feet; Character 2 Prompt: boy, black short hair, grey loungewear, cotton shirt, sitting, on chair, target#embracing, target#being licked, head tilt, looking ahead, neutral expression | centers: C3; Character 2 UC: background characters,fused bodies,snake tail;
+09:45:00.279 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, 1boy, hetero, indoors, bedroom, night, warm lighting, candlelight, intimate atmosphere, upper body, close-up, side view, depth of field, bokeh; Character 1 Prompt: ${"name":"Qiu Qingzi", "angle":"side view", "upperBody":"sfw", "lowerBody":"sfw"}$, girl, long black hair, slit pupils, snake tongue, forked tongue, 0.8::scaly skin::, cyan snake tail, source#embracing, source#licking, tongue out, saliva, licking another's ear, blush, half-closed eyes, seductive smile, looking at another | centers: C3; Character 1 UC: background characters,fused bodies,legs,feet; Character 2 Prompt: boy, black short hair, grey loungewear, cotton shirt, sitting, on chair, target#embracing, target#being licked, head tilt, looking ahead, neutral expression | centers: C3; Character 2 UC: background characters,fused bodies,snake tail;
+09:45:00.287 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …ield, bokeh, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:45:00.291 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:45:00.295 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt5eo538o3x - Scene Composition:sfw,1boy,sol...
+09:45:00.308 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:45:00.308 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:45:00.309 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:45:00.309 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:45:00.309 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:45:00.311 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:45:00.317 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:45:00.317 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-request-id=​"chatu8-id-c18da0" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-loading=​"true">​…​</button>​
+09:45:00.320 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt5eou0jtu7 - Scene Composition:sfw,1girl,so...
+09:45:00.328 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2::green emergency light::,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;Character 1 Prompt:girl,teenager,messy hair,pale skin,thin,1.3::crying hysterically::,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:C3;Character 1 UC:background characters,clothed sex,naked,nsfw,smile;
+09:45:00.328 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:45:00.328 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, solo, indoors, apartment corridor, con… side, low-angle shot, wide-angle, depth of field', Character 1 Prompt: 'girl, teenager, messy hair, pale skin, thin, 1.3::…hands, frozen fingers, trembling, steaming breath', Character 1 UC: 'background characters,clothed sex,naked,nsfw,smile', Character 2 Prompt: '', Character 2 UC: '', …}
+09:45:00.328 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath
+09:45:00.329 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, solo, indoors, apartment corridor, concrete wall, darkness, gloomy, cold atmosphere, blue lighting, 1.2::green emergency light::, dim lighting, frost on wall, trash on floor, from side, low-angle shot, wide-angle, depth of field; Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath | centers: C3; Character 1 UC: background characters,clothed sex,naked,nsfw,smile;
+09:45:00.330 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, solo, indoors, apartment corridor, concrete wall, darkness, gloomy, cold atmosphere, blue lighting, 1.2::green emergency light::, dim lighting, frost on wall, trash on floor, from side, low-angle shot, wide-angle, depth of field; Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath | centers: C3; Character 1 UC: background characters,clothed sex,naked,nsfw,smile;
+09:45:00.336 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …th of field, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:45:00.337 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-request-id=​"chatu8-id-gjwxg6" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-loading=​"true">​…​</button>​
+09:45:00.340 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt5epelg2c9 - Scene Composition:sfw,1girl,so...
+09:45:00.348 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2::tragic atmosphere::,dust,broken luxury items,side view,from above,close-up,cinematic angle;Character 1 Prompt:girl,Mu Xiaoxiao (original),long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3::starving::,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:C3;Character 1 UC:background characters,smiling,looking at viewer,healthy,food;
+09:45:00.348 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:45:00.349 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, solo, indoors, messy room, dark room, … side view, from above, close-up, cinematic angle', Character 1 Prompt: 'girl, Mu Xiaoxiao (original), long messy hair, dis…g, layering clothes, old sweaters, torn stockings', Character 1 UC: 'background characters,smiling,looking at viewer,healthy,food', Character 2 Prompt: '', Character 2 UC: '', …}
+09:45:00.349 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings
+09:45:00.349 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, solo, indoors, messy room, dark room, night, moonlight, shadows, horror atmosphere, 1.2::tragic atmosphere::, dust, broken luxury items, side view, from above, close-up, cinematic angle; Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings | centers: C3; Character 1 UC: background characters,smiling,looking at viewer,healthy,food;
+09:45:00.351 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, solo, indoors, messy room, dark room, night, moonlight, shadows, horror atmosphere, 1.2::tragic atmosphere::, dust, broken luxury items, side view, from above, close-up, cinematic angle; Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings | centers: C3; Character 1 UC: background characters,smiling,looking at viewer,healthy,food;
+09:45:00.356 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:45:01.566 placeholder.js:1 [iframe] Content length changed, re-processing: {stored: 8469, current: 8477}
+09:45:01.567 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:02.919 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5en7lewvj -> running
+09:45:05.566 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:06.460 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5en7lewvj -> failed
+09:45:06.478 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-7bb50h', promptPreview: 'Scene Composition:sfw,1girl,1boy,hetero,indoors,be…ting,candlelight,intimate atmosphere,upper body,c'}
+09:45:06.479 generation.js:1 Image response: {id: 'chatu8-id-7bb50h', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1girl,1boy,hetero,indoors,be…UC:background characters,fused bodies,snake tail;'}
+09:45:06.511 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-7bb50h', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(1)}
+09:45:06.512 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-7bb50h', promptPreview: 'Scene Composition:sfw,1girl,1boy,hetero,indoors,be…ting,candlelight,intimate atmosphere,upper body,c', targetMessageId: 2, tasks: Array(1)}
+09:45:07.456 novelai.js:1 xiancheng 为true
+09:45:07.461 novelai.js:1 xiancheng 为true
+09:45:09.563 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:09.663 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eo538o3x -> running
+09:45:13.190 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eo538o3x -> failed
+09:45:13.206 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p'}
+09:45:13.207 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;'}
+09:45:13.236 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(2)}
+09:45:13.237 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(2)}
+09:45:13.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:14.190 novelai.js:1 xiancheng 为true
+09:45:14.190 novelai.js:1 xiancheng 为true
+09:45:15.701 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eou0jtu7 -> running
+09:45:17.564 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:19.150 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5eou0jtu7 -> failed
+09:45:19.167 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-c18da0', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,apartment…ll,darkness,gloomy,cold atmosphere,blue lighting,'}
+09:45:19.168 generation.js:1 Image response: {id: 'chatu8-id-c18da0', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1girl,solo,indoors,apartment…ckground characters,clothed sex,naked,nsfw,smile;'}
+09:45:19.193 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-c18da0', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(3)}
+09:45:19.194 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-c18da0', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,apartment…ll,darkness,gloomy,cold atmosphere,blue lighting,', targetMessageId: 2, tasks: Array(3)}
+09:45:20.152 novelai.js:1 xiancheng 为true
+09:45:20.152 novelai.js:1 xiancheng 为true
+09:45:21.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:21.781 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5epelg2c9 -> running
+09:45:25.172 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt5epelg2c9 -> failed
+09:45:25.208 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-gjwxg6', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,messy roo…nlight,shadows,horror atmosphere,1.2::tragic atmo'}
+09:45:25.227 generation.js:1 Image response: {id: 'chatu8-id-gjwxg6', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1girl,solo,indoors,messy roo…haracters,smiling,looking at viewer,healthy,food;'}
+09:45:25.310 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-gjwxg6', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(4)}
+09:45:25.310 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-gjwxg6', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,messy roo…nlight,shadows,horror atmosphere,1.2::tragic atmo', targetMessageId: 2, tasks: Array(4)}
+09:45:26.161 novelai.js:1 xiancheng 为true
+09:45:26.172 novelai.js:1 xiancheng 为true
+09:45:43.755 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:45:43.759 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt6c7ixwrh1 - Scene Composition:sfw,1boy,sol...
+09:45:43.774 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:45:43.775 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:45:43.776 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:45:43.777 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:45:43.777 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:45:43.782 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:45:43.792 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:45:45.294 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt6c7ixwrh1 -> running
+09:45:45.563 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:45:48.672 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt6c7ixwrh1 -> failed
+09:45:48.688 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p'}
+09:45:48.689 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;'}
+09:45:48.731 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(5)}
+09:45:48.731 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(5)}
+09:45:49.670 novelai.js:1 xiancheng 为true
+09:45:49.670 novelai.js:1 xiancheng 为true
+09:46:00.402 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:46:00.406 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt6p1w1gfd9 - Scene Composition:sfw,1boy,sol...
+09:46:00.422 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:46:00.422 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:46:00.423 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:46:00.423 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:46:00.423 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:00.427 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:00.432 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:46:01.566 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:46:03.070 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt6p1w1gfd9 -> running
+09:46:05.568 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:46:06.364 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt6p1w1gfd9 -> failed
+09:46:06.380 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p'}
+09:46:06.381 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;'}
+09:46:06.411 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(6)}
+09:46:06.412 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(6)}
+09:46:07.367 novelai.js:1 xiancheng 为true
+09:46:07.367 novelai.js:1 xiancheng 为true
+09:46:31.146 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:46:31.150 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt7crww7a1d - Scene Composition:sfw,1boy,sol...
+09:46:31.165 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:46:31.166 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:46:31.166 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:46:31.167 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:46:31.167 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:31.169 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:31.177 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:46:33.567 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:46:33.577 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt7crww7a1d -> running
+09:46:36.916 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt7crww7a1d -> failed
+09:46:36.934 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p'}
+09:46:36.935 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;'}
+09:46:36.969 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(7)}
+09:46:36.969 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(7)}
+09:46:37.919 novelai.js:1 xiancheng 为true
+09:46:37.919 novelai.js:1 xiancheng 为true
+09:46:48.633 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:46:48.637 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt7q9n4ev3m - Scene Composition:sfw,1boy,sol...
+09:46:48.652 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:46:48.652 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:46:48.653 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:46:48.653 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:46:48.654 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:48.656 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:46:48.662 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:46:49.560 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:46:50.172 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt7q9n4ev3m -> running
+09:46:53.459 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt7q9n4ev3m -> failed
+09:46:53.477 VM940 log.js:10 [stream-demo:image-bridge] response-skip-empty-image {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p'}
+09:46:53.477 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: false, error: 'Failed to fetch', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;'}
+09:46:53.509 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(8)}
+09:46:53.510 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(8)}
+09:46:54.460 novelai.js:1 xiancheng 为true
+09:46:54.460 novelai.js:1 xiancheng 为true
+09:47:40.126 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-request-id=​"chatu8-id-4i6rcl" data-image-tag=​"Scene Composition:​sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3:​:​contrast colors:​:​,wide-angle,mid shot,cinematic angle;​Character 1 Prompt:​boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:​C3;​Character 1 UC:​background characters,naked,nsfw;​" data-loading=​"true">​…​</button>​
+09:47:40.130 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt8u00k6i4g - Scene Composition:sfw,1boy,sol...
+09:47:40.149 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1boy,solo,indoors,futuristic room,high-tech interior,apartment,metal table,sci-fi furniture,food,plate,spoon,steaming food,warm lighting,toplighting,backlighting,dramatic lights,cool background,snowing outside,window,1.3::contrast colors::,wide-angle,mid shot,cinematic angle;Character 1 Prompt:boy,young male,black hair,grey casual clothes,loungewear,sitting,at table,holding spoon,looking at food,relaxed,contemplative,neutral expression|centers:C3;Character 1 UC:background characters,naked,nsfw;
+09:47:40.150 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:47:40.150 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1boy, solo, indoors, futuristic room, high-te…t colors::, wide-angle, mid shot, cinematic angle', Character 1 Prompt: 'boy, young male, black hair, grey casual clothes, … food, relaxed, contemplative, neutral expression', Character 1 UC: 'background characters,naked,nsfw', Character 2 Prompt: '', Character 2 UC: '', …}
+09:47:40.151 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression
+09:47:40.151 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:47:40.154 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1boy, solo, indoors, futuristic room, high-tech interior, apartment, metal table, sci-fi furniture, food, plate, spoon, steaming food, warm lighting, toplighting, backlighting, dramatic lights, cool background, snowing outside, window, 1.3::contrast colors::, wide-angle, mid shot, cinematic angle; Character 1 Prompt: boy, young male, black hair, grey casual clothes, loungewear, sitting, at table, holding spoon, looking at food, relaxed, contemplative, neutral expression | centers: C3; Character 1 UC: background characters,naked,nsfw;
+09:47:40.160 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:47:41.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:47:43.705 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt8u00k6i4g -> running
+09:47:45.566 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:47:49.561 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:47:50.676 novelai.js:1 xiancheng 为true
+09:47:53.326 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt8u00k6i4g -> completed
+09:47:53.330 database.js:1 [DB] Uploading image to server, format: png, size: 2796732 chars
+09:47:53.905 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:47:54.129 database.js:1 [Stego] 准备更新隐写图片，数据条目数: 364
+09:47:54.182 database.js:1 [Stego] 旧图片删除成功
+09:47:54.200 database.js:1 [Stego] 图片上传成功: /user/images/chatu8List/图片缓存列表.png
+09:47:54.200 database.js:1 [Stego] 隐写图片更新成功
+09:47:54.201 VM940 log.js:10 [stream-demo:image-bridge] response-matched {messageId: 2, requestId: 'chatu8-id-4i6rcl', promptToken: 'image###Scene Composition:sfw,1boy,solo,indoors,fu…aracter 1 UC:background characters,naked,nsfw;###'}
+09:47:54.202 VM940 log.js:10 [stream-demo:image-bridge] persist-begin {messageId: 2, requestId: 'chatu8-id-4i6rcl', promptToken: 'image###Scene Composition:sfw,1boy,solo,indoors,fu…aracter 1 UC:background characters,naked,nsfw;###', hasExtraImages: false, previousGeneratedCount: 0}
+09:47:54.203 generation.js:1 Image response: {id: 'chatu8-id-4i6rcl', success: true, imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAA…NnJgNr/TvkzbUGJA0/B98Mj3S5deqvgAAAABJRU5ErkJggg==', prompt: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…;Character 1 UC:background characters,naked,nsfw;', change: ''}
+09:47:54.229 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-4i6rcl', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(9)}
+09:47:54.229 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-4i6rcl', promptPreview: 'Scene Composition:sfw,1boy,solo,indoors,futuristic…ior,apartment,metal table,sci-fi furniture,food,p', targetMessageId: 2, tasks: Array(9)}
+09:47:54.240 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:47:54.275 VM940 log.js:10 [stream-demo:image-bridge] persist-success {messageId: 2, requestId: 'chatu8-id-4i6rcl', promptToken: 'image###Scene Composition:sfw,1boy,solo,indoors,fu…aracter 1 UC:background characters,naked,nsfw;###', generatedCount: 1, extraImagesShape: Array(1)}
+09:47:56.325 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-request-id=​"chatu8-id-c18da0" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2:​:​green emergency light:​:​,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;​Character 1 Prompt:​girl,teenager,messy hair,pale skin,thin,1.3:​:​crying hysterically:​:​,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:​C3;​Character 1 UC:​background characters,clothed sex,naked,nsfw,smile;​" data-loading=​"true">​…​</button>​
+09:47:56.329 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt96hzzr36c - Scene Composition:sfw,1girl,so...
+09:47:56.348 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,solo,indoors,apartment corridor,concrete wall,darkness,gloomy,cold atmosphere,blue lighting,1.2::green emergency light::,dim lighting,frost on wall,trash on floor,from side,low-angle shot,wide-angle,depth of field;Character 1 Prompt:girl,teenager,messy hair,pale skin,thin,1.3::crying hysterically::,tears,wide-eyed,open mouth,shouting,terror,despair,tattered winter coat,dirty clothes,torn down jacket,broken clothes,kneeling,on floor,reaching,hands on door,scratching door,red hands,frozen fingers,trembling,steaming breath|centers:C3;Character 1 UC:background characters,clothed sex,naked,nsfw,smile;
+09:47:56.348 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:47:56.350 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, solo, indoors, apartment corridor, con… side, low-angle shot, wide-angle, depth of field', Character 1 Prompt: 'girl, teenager, messy hair, pale skin, thin, 1.3::…hands, frozen fingers, trembling, steaming breath', Character 1 UC: 'background characters,clothed sex,naked,nsfw,smile', Character 2 Prompt: '', Character 2 UC: '', …}
+09:47:56.350 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath
+09:47:56.350 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, solo, indoors, apartment corridor, concrete wall, darkness, gloomy, cold atmosphere, blue lighting, 1.2::green emergency light::, dim lighting, frost on wall, trash on floor, from side, low-angle shot, wide-angle, depth of field; Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath | centers: C3; Character 1 UC: background characters,clothed sex,naked,nsfw,smile;
+09:47:56.353 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, solo, indoors, apartment corridor, concrete wall, darkness, gloomy, cold atmosphere, blue lighting, 1.2::green emergency light::, dim lighting, frost on wall, trash on floor, from side, low-angle shot, wide-angle, depth of field; Character 1 Prompt: girl, teenager, messy hair, pale skin, thin, 1.3::crying hysterically::, tears, wide-eyed, open mouth, shouting, terror, despair, tattered winter coat, dirty clothes, torn down jacket, broken clothes, kneeling, on floor, reaching, hands on door, scratching door, red hands, frozen fingers, trembling, steaming breath | centers: C3; Character 1 UC: background characters,clothed sex,naked,nsfw,smile;
+09:47:56.360 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …th of field, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:47:57.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:47:57.741 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt96hzzr36c -> running
+09:48:01.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:48:02.887 generation.js:1 Triggering generation for button: <button class=​"image-tag-button st-chatu8-image-button" data-link=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-request-id=​"chatu8-id-gjwxg6" data-image-tag=​"Scene Composition:​sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2:​:​tragic atmosphere:​:​,dust,broken luxury items,side view,from above,close-up,cinematic angle;​Character 1 Prompt:​girl,Mu Xiaoxiao (original)​,long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3:​:​starving:​:​,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:​C3;​Character 1 UC:​background characters,smiling,looking at viewer,healthy,food;​" data-loading=​"true">​…​</button>​
+09:48:02.891 taskQueue.js:1 [TaskQueue] 任务已添加: mmwt9bk89wz0q - Scene Composition:sfw,1girl,so...
+09:48:02.907 novelai.js:1 正在处理中文注释... Scene Composition:sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2::tragic atmosphere::,dust,broken luxury items,side view,from above,close-up,cinematic angle;Character 1 Prompt:girl,Mu Xiaoxiao (original),long messy hair,dishevelled,extremely beautiful butgaunt,pale skin,cyanotic lips,1.3::starving::,stomach bulge,hands on stomach,tugging clothes,clenched teeth,frown,sweat,tightly closed eyes,lying,on floor,fetal position,curled up,trembling,layering clothes,old sweaters,torn stockings|centers:C3;Character 1 UC:background characters,smiling,looking at viewer,healthy,food;
+09:48:02.907 characterprompt.js:1 [CharacterPrompt] 检测到分角色模式
+09:48:02.908 characterprompt.js:1 [CharacterPrompt] 解析后的 prompt_data: {Scene Composition: 'sfw, 1girl, solo, indoors, messy room, dark room, … side view, from above, close-up, cinematic angle', Character 1 Prompt: 'girl, Mu Xiaoxiao (original), long messy hair, dis…g, layering clothes, old sweaters, torn stockings', Character 1 UC: 'background characters,smiling,looking at viewer,healthy,food', Character 2 Prompt: '', Character 2 UC: '', …}
+09:48:02.908 characterprompt.js:1 [CharacterPrompt] 处理 Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings
+09:48:02.908 characterprompt.js:1 [CharacterPrompt] 重组后的 prompt: Scene Composition: sfw, 1girl, solo, indoors, messy room, dark room, night, moonlight, shadows, horror atmosphere, 1.2::tragic atmosphere::, dust, broken luxury items, side view, from above, close-up, cinematic angle; Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings | centers: C3; Character 1 UC: background characters,smiling,looking at viewer,healthy,food;
+09:48:02.911 novelai.js:1 正在处理中文注释完成... Scene Composition: sfw, 1girl, solo, indoors, messy room, dark room, night, moonlight, shadows, horror atmosphere, 1.2::tragic atmosphere::, dust, broken luxury items, side view, from above, close-up, cinematic angle; Character 1 Prompt: girl, Mu Xiaoxiao (original), long messy hair, dishevelled, extremely beautiful butgaunt, pale skin, cyanotic lips, 1.3::starving::, stomach bulge, hands on stomach, tugging clothes, clenched teeth, frown, sweat, tightly closed eyes, lying, on floor, fetal position, curled up, trembling, layering clothes, old sweaters, torn stockings | centers: C3; Character 1 UC: background characters,smiling,looking at viewer,healthy,food;
+09:48:02.916 novelai.js:1 data11: {input: 'fur dataset, dino_(dinoartforame), wanke, liduke, …matic angle, very aesthetic, masterpiece, no text', model: 'nai-diffusion-4-5-full', action: 'generate', parameters: {…}, use_new_shared_trial: true}
+09:48:03.733 novelai.js:1 xiancheng 为true
+09:48:05.386 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt96hzzr36c -> completed
+09:48:05.624 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt9bk89wz0q -> running
+09:48:05.652 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:48:05.732 database.js:1 [DB] Uploading image to server, format: png, size: 2787512 chars
+09:48:06.574 database.js:1 [Stego] 准备更新隐写图片，数据条目数: 365
+09:48:06.619 database.js:1 [Stego] 旧图片删除成功
+09:48:06.636 database.js:1 [Stego] 图片上传成功: /user/images/chatu8List/图片缓存列表.png
+09:48:06.636 database.js:1 [Stego] 隐写图片更新成功
+09:48:06.638 VM940 log.js:10 [stream-demo:image-bridge] response-matched {messageId: 2, requestId: 'chatu8-id-c18da0', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,a…round characters,clothed sex,naked,nsfw,smile;###'}
+09:48:06.639 VM940 log.js:10 [stream-demo:image-bridge] persist-begin {messageId: 2, requestId: 'chatu8-id-c18da0', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,a…round characters,clothed sex,naked,nsfw,smile;###', hasExtraImages: true, previousGeneratedCount: 1}
+09:48:06.721 generation.js:1 Image response: {id: 'chatu8-id-c18da0', success: true, imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAA…JMirkoDIf1XwqkCYQMfy/zA5yw/4k9JEAAAAASUVORK5CYII=', prompt: 'Scene Composition:sfw,1girl,solo,indoors,apartment…ckground characters,clothed sex,naked,nsfw,smile;', change: ''}
+09:48:06.738 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-c18da0', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(10)}
+09:48:06.739 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-c18da0', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,apartment…ll,darkness,gloomy,cold atmosphere,blue lighting,', targetMessageId: 2, tasks: Array(10)}
+09:48:06.746 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:48:06.774 VM940 log.js:10 [stream-demo:image-bridge] persist-success {messageId: 2, requestId: 'chatu8-id-c18da0', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,a…round characters,clothed sex,naked,nsfw,smile;###', generatedCount: 2, extraImagesShape: Array(1)}
+09:48:09.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:48:11.332 novelai.js:1 xiancheng 为true
+09:48:13.562 placeholder.js:1 [iframe] Element has loading button, skipping processing
+09:48:14.426 taskQueue.js:1 [TaskQueue] 任务状态更新: mmwt9bk89wz0q -> completed
+09:48:14.429 database.js:1 [DB] Uploading image to server, format: png, size: 2794636 chars
+09:48:15.025 database.js:1 [Stego] 准备更新隐写图片，数据条目数: 366
+09:48:15.076 database.js:1 [Stego] 旧图片删除成功
+09:48:15.093 database.js:1 [Stego] 图片上传成功: /user/images/chatu8List/图片缓存列表.png
+09:48:15.093 database.js:1 [Stego] 隐写图片更新成功
+09:48:15.094 VM940 log.js:10 [stream-demo:image-bridge] response-matched {messageId: 2, requestId: 'chatu8-id-gjwxg6', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,m…acters,smiling,looking at viewer,healthy,food;###'}
+09:48:15.095 VM940 log.js:10 [stream-demo:image-bridge] persist-begin {messageId: 2, requestId: 'chatu8-id-gjwxg6', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,m…acters,smiling,looking at viewer,healthy,food;###', hasExtraImages: true, previousGeneratedCount: 2}
+09:48:15.217 generation.js:1 Image response: {id: 'chatu8-id-gjwxg6', success: true, imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAA…jrIHPWtg/2Nzqvzv4sVL4G3lyy0GUITCxAAAAAElFTkSuQmCC', prompt: 'Scene Composition:sfw,1girl,solo,indoors,messy roo…haracters,smiling,looking at viewer,healthy,food;', change: ''}
+09:48:15.232 VM940 log.js:10 [stream-demo:image-bridge] request-fallback-dom {requestId: 'chatu8-id-gjwxg6', domResolvedMessageId: 2, reboundMessageId: 2, tasks: Array(11)}
+09:48:15.232 VM940 log.js:10 [stream-demo:image-bridge] request-received {requestId: 'chatu8-id-gjwxg6', promptPreview: 'Scene Composition:sfw,1girl,solo,indoors,messy roo…nlight,shadows,horror atmosphere,1.2::tragic atmo', targetMessageId: 2, tasks: Array(11)}promptPreview: "Scene Composition:sfw,1girl,solo,indoors,messy room,dark room,night,moonlight,shadows,horror atmosphere,1.2::tragic atmo"requestId: "chatu8-id-gjwxg6"targetMessageId: 2tasks: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}][[Prototype]]: Object
+09:48:15.240 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:48:15.265 VM940 log.js:10 [stream-demo:image-bridge] persist-success {messageId: 2, requestId: 'chatu8-id-gjwxg6', promptToken: 'image###Scene Composition:sfw,1girl,solo,indoors,m…acters,smiling,looking at viewer,healthy,food;###', generatedCount: 3, extraImagesShape: Array(1)}
+09:48:36.975 tool-calling.js:301 [ToolManager] Unregistered function tool: mvu_VariableUpdate
+09:48:37.017 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:48:37.017 index.js:21 [QR2] CHAT_CHANGED undefined
+09:48:37.209 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:48:37.210 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:48:41.797 script.js:1483 Rendered 3 messages in 0.045 seconds.
+09:48:42.038 index.js:21 [QR2] calling {args: Array(1), functionToCall: ƒ}
+09:48:42.038 index.js:21 [QR2] CHAT_CHANGED 末世寒冬 - 星穹秩序 - 2026-03-19@09h43m04s992ms
+09:48:42.821 mvu_zod.ts:186 变量结构注册成功
+09:48:42.821 index.ts:8 [变量结构] 已加载 v1.3
+09:48:43.179 tool-calling.js:288 [ToolManager] Registered function tool: ToolDefinition {#name: 'mvu_VariableUpdate', #displayName: 'MVU update', #description: 'use this tool to UpdateVariable.', #parameters: {…}, #action: ƒ, …}
+09:48:43.241 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:48:43.241 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:48:43.242 ClickTrigger.js:1 [点击触发] ✓ 已绑定: mes_text
+09:48:43.242 ClickTrigger.js:1 [点击触发] ✓ 已绑定: theme-tech stream-demo-workbench-active
+09:48:43.243 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+09:48:43.243 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+09:48:43.243 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+09:48:45.131 script.js:4124 Generate entered
+09:48:45.132 autoLLMClick.js:1 [st-chatu8] GENERATION_STARTED data: normal
+09:48:45.132 autoLLMClick.js:1 [st-chatu8] Chat array length: 3
+09:48:45.132 autoLLMClick.js:1 [st-chatu8] Last message swipes length: 1
+09:48:45.133 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:48:45.133 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序2.0
+09:48:45.133 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序2.0
+09:48:45.133 send_data.js:1 [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+09:48:45.133 send_data.js:1 [send_data] 插件配置: {worldBookSelections: {…}, worldEntrySelections: {…}}
+09:48:45.133 send_data.js:1 [send_data] 当前角色世界书有条目记录，默认开启
+09:48:45.141 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+09:48:45.162 index.js:21 [QR2] calling {args: Array(3), functionToCall: ƒ}
+09:48:45.162 index.js:21 [QR2] Before-generation hook skipped due to dryRun.
+09:48:45.166 script.js:4437 Core/all messages: 3/3
+09:48:46.955 world-info.js:5072 [WI] Hypothetically adding 16 entries to prompt (16) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+09:48:46.955 script.js:4496 skipWIAN not active, adding WIAN

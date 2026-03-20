@@ -107,17 +107,6 @@
         </div>
 
         <div class="assistant-body-wrap">
-<<<<<<< HEAD
-=======
-          <div class="assistant-body-sentinel" aria-hidden="true"></div>
-          <button
-            type="button"
-            class="assistant-body-proxy"
-            :data-message-id="item.message_id"
-            tabindex="-1"
-            aria-label="触发原楼层图片生成"
-          ></button>
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="item.isStreaming"
@@ -140,13 +129,8 @@
               :key="image.id"
               :entry="image"
               variant="inline"
-<<<<<<< HEAD
-              @open="emit('open-image', $event)"
-              @regenerate="emit('regenerate-image', $event)"
-=======
               @view="emit('image-view', $event)"
               @regenerate="emit('image-regenerate', $event)"
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
             />
           </div>
         </div>
@@ -214,8 +198,6 @@ const emit = defineEmits<{
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
   (event: 'swipe', direction: 'prev' | 'next'): void;
-  (event: 'open-image', image: TranscriptItem['generatedImages'][number]): void;
-  (event: 'regenerate-image', image: TranscriptItem['generatedImages'][number]): void;
 }>();
 
 const metaOpen = ref(false);
@@ -504,25 +486,6 @@ onBeforeUnmount(() => {
   position: relative;
   padding-top: 6px;
 }
-<<<<<<< HEAD
-=======
-.assistant-body-sentinel {
-  display: none;
-}
-.assistant-body-proxy {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: transparent;
-  pointer-events: none;
-}
-.assistant-body-proxy:focus {
-  outline: none;
-}
->>>>>>> 148cf3e (feat: stabilize same-layer image persistence and interaction)
 .assistant-body {
   position: relative;
   z-index: 1;
