@@ -353,7 +353,11 @@ import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
-import { convertIframePointToHostPoint, resolveHostTriggerTargetFromPoint } from '../hostCoordinateTarget';
+import {
+  convertIframePointToHostPoint,
+  resolveHostDispatchPlan,
+  resolveHostMessageTargetFromPoint,
+} from '../hostCoordinateTarget';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -415,6 +419,7 @@ const {
   toggleOpeningExpanded,
   openDetail,
   closeDetail,
+  withHostTranscriptVisible,
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
@@ -732,7 +737,7 @@ function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: Mou
 
         for (const hostWindow of collectReachableHostWindows()) {
           const hostDocument = hostWindow.document;
-          const target = resolveHostTriggerTargetFromPoint(hostDocument as any, hostPoint) as HTMLElement | null;
+          const target = resolveHostMessageTargetFromPoint(hostDocument as any, hostPoint) as HTMLElement | null;
           if (target) return target;
         }
       }
@@ -1198,33 +1203,46 @@ function dispatchHostDoubleClick(
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
   const messageId = Math.trunc(Number(item?.message_id));
   if (!Number.isFinite(messageId) || messageId < 0) return;
-  const hostPoint = (() => {
-    if (!event) return null;
-    try {
-      const frameElement = window.frameElement as HTMLElement | null;
-      const frameRect = frameElement?.getBoundingClientRect?.();
-      if (!frameRect) return null;
-      return convertIframePointToHostPoint(
-        { clientX: event.clientX, clientY: event.clientY },
-        { left: frameRect.left, top: frameRect.top },
-      );
-    } catch {
-      return null;
-    }
-  })();
+  await withHostTranscriptVisible(async () => {
+    const hostPoint = (() => {
+      if (!event) return null;
+      try {
+        const frameElement = window.frameElement as HTMLElement | null;
+        const frameRect = frameElement?.getBoundingClientRect?.();
+        if (!frameRect) return null;
+        return convertIframePointToHostPoint(
+          { clientX: event.clientX, clientY: event.clientY },
+          { left: frameRect.left, top: frameRect.top },
+        );
+      } catch {
+        return null;
+      }
+    })();
 
-  const target = await resolveWithRetry(() => resolveHostMessageTriggerTargetFromEvent(messageId, event), {
-    attempts: 5,
-    delayMs: 90,
-  });
-  if (!target) {
-    toastr?.warning?.(`未找到楼层 #${messageId} 的原生正文节点`);
-    return;
-  }
-  await withFullscreenSuspended(() => {
-    if (!dispatchHostDoubleClick(target, hostPoint)) {
-      toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
+    const directTarget = resolveHostMessageTriggerTarget(messageId);
+    const pointFallbackTarget =
+      directTarget == null
+        ? await resolveWithRetry(() => resolveHostMessageTriggerTargetFromEvent(messageId, event), {
+            attempts: 5,
+            delayMs: 90,
+          })
+        : null;
+
+    const dispatchPlan = resolveHostDispatchPlan({
+      directTarget,
+      pointFallbackTarget,
+      hostPoint,
+    });
+
+    if (!dispatchPlan.target) {
+      toastr?.warning?.(`未找到楼层 #${messageId} 的原生正文节点`);
+      return;
     }
+    await withFullscreenSuspended(() => {
+      if (!dispatchHostDoubleClick(dispatchPlan.target as HTMLElement, dispatchPlan.hostPoint)) {
+        toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
+      }
+    });
   });
 }
 
@@ -2261,14 +2279,14 @@ useEventListener(window, 'keydown', event => {
     right: 3vw;
     bottom: 80px;
     width: 94vw;
-    max-height: calc(100dvh - 110px);
+    max-height: calc(100% - 30px);
     transform: none;
     border-radius: 18px 18px 12px 12px;
     z-index: 2600;
   }
 
   .ui-bottom-drawer.is-map {
-    max-height: calc(100dvh - 96px);
+    max-height: calc(100% - 16px);
   }
 
   .ui-bottom-drawer-head {
@@ -2301,12 +2319,12 @@ useEventListener(window, 'keydown', event => {
 
   .ui-sidebar {
     top: auto;
-    height: min(calc(100dvh - 64px), 46rem);
+    height: auto;
+    max-height: min(94%, 46rem);
     width: calc(100% - 12px);
     left: 6px;
     right: 6px;
     bottom: 6px;
-    max-height: calc(100dvh - 64px);
     border-radius: 22px;
     transform: translateY(100%);
   }
