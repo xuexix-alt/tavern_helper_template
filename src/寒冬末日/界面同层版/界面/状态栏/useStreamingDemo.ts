@@ -475,7 +475,11 @@ function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLE
     const comparableText = normalizeAnchorCompare(text);
     if (!text) continue;
     if (text.includes(needle) || needle.includes(text)) return candidate;
-    if (needleComparable && comparableText && (comparableText.includes(needleComparable) || needleComparable.includes(comparableText))) {
+    if (
+      needleComparable &&
+      comparableText &&
+      (comparableText.includes(needleComparable) || needleComparable.includes(comparableText))
+    ) {
       return candidate;
     }
     if (
@@ -483,8 +487,7 @@ function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLE
         const comparableFragment = normalizeAnchorCompare(fragment);
         return (
           fragment.length >= 8 &&
-          (text.includes(fragment) ||
-            (comparableFragment && comparableText.includes(comparableFragment)))
+          (text.includes(fragment) || (comparableFragment && comparableText.includes(comparableFragment)))
         );
       })
     ) {
@@ -965,9 +968,7 @@ function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
   return false;
 }
 
-function bindHostPluginMutationObservers(
-  onRelevantMutation: (records: MutationRecord[]) => void,
-): MutationObserver[] {
+function bindHostPluginMutationObservers(onRelevantMutation: (records: MutationRecord[]) => void): MutationObserver[] {
   if (typeof MutationObserver === 'undefined') return [];
 
   const observers: MutationObserver[] = [];
@@ -1212,8 +1213,7 @@ export function useStreamingDemo() {
         const carrier =
           (button.closest(
             '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
-          ) as HTMLElement | null) ??
-          (button.closest('.mes[mesid]') as HTMLElement | null);
+          ) as HTMLElement | null) ?? (button.closest('.mes[mesid]') as HTMLElement | null);
 
         const messageId =
           Number(

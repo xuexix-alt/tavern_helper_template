@@ -7,9 +7,9 @@ test('buildIframeMessageRootSelectors includes assistant body wrap before body-o
   const selectors = buildIframeMessageRootSelectors(4);
 
   assert.deepEqual(selectors, [
-    '.assistant-body-wrap[data-message-id=\'4\']',
-    '.assistant-body[data-message-id=\'4\']',
-    '.transcript-entry[data-message-id=\'4\'] .assistant-body-wrap',
-    '.transcript-entry[data-message-id=\'4\'] .assistant-body',
+    ".assistant-body-wrap[data-message-id='4']",
+    ".assistant-body[data-message-id='4']",
+    ".transcript-entry[data-message-id='4'] .assistant-body-wrap",
+    ".transcript-entry[data-message-id='4'] .assistant-body",
   ]);
 });

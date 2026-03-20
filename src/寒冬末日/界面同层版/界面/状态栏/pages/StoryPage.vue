@@ -145,11 +145,7 @@
                     <strong>{{ activeUtilityMeta.title }}</strong>
                     <p>{{ activeUtilityMeta.subtitle }}</p>
                     <div class="ui-drawer-pills">
-                      <span
-                        v-for="pill in activeUtilityPills"
-                        :key="pill.label"
-                        class="ui-drawer-pill clip-corner-sm"
-                      >
+                      <span v-for="pill in activeUtilityPills" :key="pill.label" class="ui-drawer-pill clip-corner-sm">
                         <small>{{ pill.label }}</small>
                         <strong>{{ pill.value }}</strong>
                       </span>
@@ -337,7 +333,10 @@
 import { useEventListener } from '@vueuse/core';
 import type { TranscriptItem } from '../types';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
-import { parseGeneratedImageActivationPayload, type GeneratedImageActivationPayload } from '../generatedImageActivation';
+import {
+  parseGeneratedImageActivationPayload,
+  type GeneratedImageActivationPayload,
+} from '../generatedImageActivation';
 
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
@@ -1091,8 +1090,14 @@ async function withFullscreenSuspended(action: () => void): Promise<void> {
   await document.exitFullscreen?.().catch(() => {});
   // 等待 fullscreenchange 确认退出
   await new Promise<void>(resolve => {
-    if (!document.fullscreenElement) { resolve(); return; }
-    const handler = () => { document.removeEventListener('fullscreenchange', handler); resolve(); };
+    if (!document.fullscreenElement) {
+      resolve();
+      return;
+    }
+    const handler = () => {
+      document.removeEventListener('fullscreenchange', handler);
+      resolve();
+    };
     document.addEventListener('fullscreenchange', handler);
     setTimeout(resolve, 500);
   });
@@ -1106,7 +1111,10 @@ async function withFullscreenSuspended(action: () => void): Promise<void> {
   await new Promise<void>(resolve => {
     const TIMEOUT_MS = 30_000;
     let addedNode: Node | null = null;
-    const timeoutId = setTimeout(() => { observer.disconnect(); resolve(); }, TIMEOUT_MS);
+    const timeoutId = setTimeout(() => {
+      observer.disconnect();
+      resolve();
+    }, TIMEOUT_MS);
 
     const observer = new MutationObserver(mutations => {
       for (const mut of mutations) {
@@ -1251,7 +1259,8 @@ function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): 
   const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return null;
 
-  const targetImage = element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
+  const targetImage =
+    element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
   return parseGeneratedImageActivationPayload({
     carrierDataset: carrier.dataset,
     targetDataset: targetImage?.dataset ?? {},
@@ -1268,24 +1277,27 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
 
-  const targetNode = await resolveWithRetry(() => {
-    const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-      Math.trunc(messageId),
-      promptToken,
-      requestId,
-      imageSrc,
-    );
-    return resolveGeneratedImageTriggerTarget(
-      {
-        hostMessageRoot,
-        hostButton,
-        hostImage,
-        iframeButton,
-        iframeImage,
-      },
-      'open',
-    );
-  }, { attempts: 5, delayMs: 90 });
+  const targetNode = await resolveWithRetry(
+    () => {
+      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      );
+      return resolveGeneratedImageTriggerTarget(
+        {
+          hostMessageRoot,
+          hostButton,
+          hostImage,
+          iframeButton,
+          iframeImage,
+        },
+        'open',
+      );
+    },
+    { attempts: 5, delayMs: 90 },
+  );
   if (!targetNode) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
     return;
@@ -1302,24 +1314,27 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
 
-  const targetNode = await resolveWithRetry(() => {
-    const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-      Math.trunc(messageId),
-      promptToken,
-      requestId,
-      imageSrc,
-    );
-    return resolveGeneratedImageTriggerTarget(
-      {
-        hostMessageRoot,
-        hostButton,
-        hostImage,
-        iframeButton,
-        iframeImage,
-      },
-      'regenerate',
-    );
-  }, { attempts: 5, delayMs: 90 });
+  const targetNode = await resolveWithRetry(
+    () => {
+      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      );
+      return resolveGeneratedImageTriggerTarget(
+        {
+          hostMessageRoot,
+          hostButton,
+          hostImage,
+          iframeButton,
+          iframeImage,
+        },
+        'regenerate',
+      );
+    },
+    { attempts: 5, delayMs: 90 },
+  );
   if (!targetNode) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
     return;

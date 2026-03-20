@@ -155,10 +155,8 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
       ...(nextList[existingIndex] ?? {}),
       ...imageEntry,
       markerId: String((nextList[existingIndex] as any)?.markerId ?? '').trim() || markerId,
-      promptToken:
-        String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
-      anchorText:
-        anchorText || String((nextList[existingIndex] as any)?.anchorText ?? '').trim() || undefined,
+      promptToken: String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
+      anchorText: anchorText || String((nextList[existingIndex] as any)?.anchorText ?? '').trim() || undefined,
     };
   }
   setNestedValue(nextData, 'stream_demo.generated_images', nextList);
@@ -294,7 +292,9 @@ export function syncDisplayedGeneratedImagesToExtra(
 
   const nextSwipeEntries = normalizedImages.map((image, index) => {
     const matchedExisting =
-      currentSwipeEntries.find((entry: any) => String(entry?.requestId ?? entry?.request_id ?? '').trim() === image.requestId) ??
+      currentSwipeEntries.find(
+        (entry: any) => String(entry?.requestId ?? entry?.request_id ?? '').trim() === image.requestId,
+      ) ??
       currentSwipeEntries.find((entry: any) => String(entry?.src ?? '').trim() === image.src) ??
       {};
     const { prompt: _prompt, ...existingWithoutPrompt } = matchedExisting as Record<string, any>;

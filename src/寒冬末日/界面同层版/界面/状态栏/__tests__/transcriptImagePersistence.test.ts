@@ -1,10 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  applyTranscriptArtifacts,
-  hydratePersistedImageElements,
-} = require('../transcriptImagePersistence');
+const { applyTranscriptArtifacts, hydratePersistedImageElements } = require('../transcriptImagePersistence');
 
 function createFakeImage(initialSrc) {
   const attrs = new Map([['src', initialSrc]]);

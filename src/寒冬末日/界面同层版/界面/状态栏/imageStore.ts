@@ -54,9 +54,13 @@ function readCurrentChatId(): string {
       try {
         const id = (w as any)?.SillyTavern?.getCurrentChatId?.();
         if (id) return String(id);
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'unknown';
 }
 
@@ -90,10 +94,7 @@ export async function storeImage(input: {
   });
 }
 
-export async function loadImage(
-  messageId: number,
-  requestId: string,
-): Promise<string | null> {
+export async function loadImage(messageId: number, requestId: string): Promise<string | null> {
   const chatId = readCurrentChatId();
   const key = buildKey(chatId, messageId, requestId);
   const db = await openDb();
