@@ -259,6 +259,10 @@ defineExpose({
   --transcript-content-max: var(--reader-content-max, 72rem);
   --transcript-fab-size: 34px;
   --transcript-fab-gap: 8px;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
 }
 .transcript-scroller {
   flex: 1 1 0;
@@ -339,7 +343,6 @@ defineExpose({
     --transcript-fab-size: 30px;
   }
   .transcript-scroller {
-    max-height: 560px;
     padding-right: 42px;
   }
 
