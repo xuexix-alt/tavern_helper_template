@@ -2,7 +2,11 @@
  * IndexedDB 图片存储
  * 将生成的图片 base64 存入浏览器本地 IndexedDB，避免写入聊天 JSON 导致文件膨胀。
  * 同设备同浏览器持久化，无需跨设备。
+ *
+ * @deprecated Native-first runtime已停用该路径。仅保留兼容层结构。
  */
+
+export const LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED = false;
 
 const DB_NAME = 'chatu8-ui-image-store';
 const DB_VERSION = 1;
@@ -73,6 +77,7 @@ export async function storeImage(input: {
   prompt: string;
   imageData: string;
 }): Promise<string> {
+  if (!LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED) return '';
   const chatId = readCurrentChatId();
   const key = buildKey(chatId, input.messageId, input.requestId);
   const record: StoredImage = {
@@ -95,6 +100,7 @@ export async function storeImage(input: {
 }
 
 export async function loadImage(messageId: number, requestId: string): Promise<string | null> {
+  if (!LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED) return null;
   const chatId = readCurrentChatId();
   const key = buildKey(chatId, messageId, requestId);
   const db = await openDb();
@@ -107,6 +113,7 @@ export async function loadImage(messageId: number, requestId: string): Promise<s
 }
 
 export async function loadImagesByMessage(messageId: number): Promise<StoredImage[]> {
+  if (!LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED) return [];
   const chatId = readCurrentChatId();
   const db = await openDb();
   return new Promise<StoredImage[]>((resolve, reject) => {
@@ -119,6 +126,7 @@ export async function loadImagesByMessage(messageId: number): Promise<StoredImag
 }
 
 export async function loadAllImagesForChat(): Promise<StoredImage[]> {
+  if (!LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED) return [];
   const chatId = readCurrentChatId();
   const db = await openDb();
   return new Promise<StoredImage[]>((resolve, reject) => {
@@ -131,6 +139,7 @@ export async function loadAllImagesForChat(): Promise<StoredImage[]> {
 }
 
 export async function deleteImage(messageId: number, requestId: string): Promise<void> {
+  if (!LEGACY_INDEXED_DB_IMAGE_STORE_ENABLED) return;
   const chatId = readCurrentChatId();
   const key = buildKey(chatId, messageId, requestId);
   const db = await openDb();

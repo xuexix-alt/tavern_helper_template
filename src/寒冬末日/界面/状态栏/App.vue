@@ -74,7 +74,7 @@
           :class="{ active: activeTabKey === tab.key }"
           @click="switchTab(tab.key)"
         >
-          <span class="eden-tab-icon" aria-hidden="true">{{ tab.icon }}</span>
+          <i class="eden-tab-icon" :class="tab.icon" aria-hidden="true" />
           <span class="eden-tab-label">{{ tab.label }}</span>
         </button>
       </nav>
@@ -112,11 +112,11 @@ const MOBILE_ONE_SCREEN_MAX_WIDTH = 920;
 const HOST_CHAT_HEIGHT_SELECTORS = ['#chat', '#sheld'] as const;
 const { raw, options } = useInjectedData();
 const tabs = [
-  { key: 'story', label: '剧情', icon: '📖', component: StoryPage },
-  { key: 'shelter', label: '庇护', icon: '🛡️', component: ShelterPage },
-  { key: 'mission', label: '任务', icon: '🎯', component: MissionPage },
-  { key: 'characters', label: '角色', icon: '🧑‍🤝‍🧑', component: CharactersPage },
-  { key: 'creation', label: '创作', icon: '🛠️', component: CreationPage },
+  { key: 'story', label: '剧情', icon: 'fa-solid fa-book-open', component: StoryPage },
+  { key: 'shelter', label: '庇护', icon: 'fa-solid fa-shield-halved', component: ShelterPage },
+  { key: 'mission', label: '任务', icon: 'fa-solid fa-bullseye', component: MissionPage },
+  { key: 'characters', label: '角色', icon: 'fa-solid fa-users', component: CharactersPage },
+  { key: 'creation', label: '创作', icon: 'fa-solid fa-toolbox', component: CreationPage },
 ] as const satisfies ReadonlyArray<{ key: string; label: string; icon: string; component: Component }>;
 
 type TabKey = (typeof tabs)[number]['key'];

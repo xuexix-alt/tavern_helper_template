@@ -7,7 +7,11 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
  * - extra.images[swipeId] 只存轻量引用（requestId / promptToken / idb:// src）
  * - 图片实体由 imageStore.ts 存入 IndexedDB
  * - data.stream_demo.generated_images 同样只存引用，不存 base64
+ *
+ * @deprecated Native-first runtime已停用该写入路径。此模块仅保留兼容逻辑。
  */
+
+export const LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED = false;
 
 type GeneratedImageResponsePayload = {
   requestId: string;
@@ -71,6 +75,7 @@ function isBase64Src(src: string): boolean {
 }
 
 export function buildIdbSrc(messageId: number, requestId: string): string {
+  if (!LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED) return '';
   return `idb://${messageId}/${requestId}`;
 }
 
@@ -88,7 +93,7 @@ function sanitizeImageEntry(entry: Record<string, any>) {
   const requestId = String(entry?.requestId ?? entry?.request_id ?? '').trim();
   const messageId = Math.trunc(Number(entry?.messageId ?? entry?.message_id ?? 0));
   let src = String(entry?.src ?? entry?.image ?? entry?.imageData ?? '').trim();
-  if (isBase64Src(src) && requestId && Number.isFinite(messageId)) {
+  if (LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED && isBase64Src(src) && requestId && Number.isFinite(messageId)) {
     src = buildIdbSrc(messageId, requestId);
   }
 
@@ -117,6 +122,12 @@ function sanitizeImageEntry(entry: Record<string, any>) {
 
 export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePersistencePatchInput) {
   const message = input.message ?? {};
+  if (!LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED) {
+    return {
+      nextData: clone(message.data ?? {}),
+      nextExtra: sanitizePluginImageExtra(message.extra ?? {}),
+    };
+  }
   const messageId = Math.trunc(Number(message.message_id ?? 0));
   const nextData = clone(message.data ?? {});
   const nextExtra = clone(message.extra ?? {});
@@ -257,11 +268,16 @@ export function syncDisplayedGeneratedImagesToExtra(
       const imageId = String(image?.imageId ?? image?.requestId ?? '').trim();
       const markerId = String(image?.markerId ?? '').trim();
       if (!src && !requestId) return null;
-      if (isBase64Src(src) && requestId) {
+      if (LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED && isBase64Src(src) && requestId) {
         const messageId = Math.trunc(Number(message?.message_id ?? 0));
         src = buildIdbSrc(messageId, requestId);
       }
-      if (!src) src = requestId ? buildIdbSrc(Math.trunc(Number(message?.message_id ?? 0)), requestId) : '';
+      if (!src) {
+        src =
+          LEGACY_IMAGE_PERSISTENCE_PATCH_ENABLED && requestId
+            ? buildIdbSrc(Math.trunc(Number(message?.message_id ?? 0)), requestId)
+            : '';
+      }
       if (!src) return null;
       const prompt = parsePromptBodyFromToken(promptToken);
       return {

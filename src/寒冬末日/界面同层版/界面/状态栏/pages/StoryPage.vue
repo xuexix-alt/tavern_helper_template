@@ -361,6 +361,7 @@ import { buildIframeMessageRootSelectors } from '../generatedImageDom';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
+import { shouldSkipTranscriptImageTrigger } from '../transcriptImageTriggerDeduper';
 import { useStreamingDemo } from '../useStreamingDemo';
 
 const {
@@ -431,6 +432,10 @@ provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
+const transcriptImageTriggerGuard = {
+  messageId: null as number | null,
+  timestampMs: 0,
+};
 const settingsModalOpen = ref(false);
 const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
@@ -1204,7 +1209,6 @@ function dispatchHostDoubleClick(
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
   const messageId = Math.trunc(Number(item?.message_id));
   if (!Number.isFinite(messageId) || messageId < 0) return;
-  await ensureHostMesTextRendered(messageId);
   await withHostTranscriptVisible(async () => {
     const hostPoint = (() => {
       if (!event) return null;
@@ -1247,17 +1251,47 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
   });
 }
 
-function handleTranscriptDoubleClickCapture(event: MouseEvent) {
+let imageGenerationLock = false;
+
+async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
+  if (imageGenerationLock) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
+  const messageId = Math.trunc(rawMessageId);
 
   event.preventDefault();
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
-  beginPendingImageTask(Math.trunc(rawMessageId));
-  void proxyImageMenuToHost({ message_id: Math.trunc(rawMessageId) } as TranscriptItem, event);
+  const clickTraceId = `${messageId}:${Math.trunc(Number(event.timeStamp) || Date.now())}:${event.detail ?? 0}`;
+  console.log('[image] transcript-dblclick', {
+    traceId: clickTraceId,
+    messageId,
+    timestamp: new Date().toISOString(),
+    eventTimeStamp: event.timeStamp,
+    detail: event.detail,
+    target: (event.target as HTMLElement | null)?.tagName ?? null,
+  });
+  if (shouldSkipTranscriptImageTrigger(messageId, transcriptImageTriggerGuard, Date.now(), 300)) {
+    console.log('[image] transcript-dblclick-skipped', {
+      traceId: clickTraceId,
+      messageId,
+    });
+    return;
+  }
+  imageGenerationLock = true;
+  try {
+    const rendered = await ensureHostMesTextRendered(messageId);
+    if (!rendered) {
+      console.warn('[image] mes_text 注入失败，mesid:', messageId);
+    }
+    beginPendingImageTask(messageId);
+    markRecentImageIntent(messageId, 'transcript');
+    void proxyImageMenuToHost({ message_id: messageId } as TranscriptItem, event);
+  } finally {
+    setTimeout(() => { imageGenerationLock = false; }, 2000);
+  }
 }
 
 function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchEvent) {

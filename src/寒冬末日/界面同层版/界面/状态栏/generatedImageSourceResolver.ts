@@ -1,7 +1,6 @@
 import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
 import { collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache.ts';
-import { loadImage } from './imageStore';
-import { isIdbSrc, parseIdbSrc } from './imagePersistencePatch';
+import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag.ts';
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;
@@ -16,10 +15,10 @@ export type ResolvedGeneratedImageSource = {
   imageId: string;
   requestId?: string;
   promptToken?: string;
-  /** src 可能是 data: / http(s): / / 开头的路径 / idb:// 引用 */
+  /** src 可能是 data: / http(s): / / 开头的路径 */
   src: string;
   alt: string;
-  source: 'stream_demo' | 'extra' | 'cache' | 'idb';
+  source: 'extra' | 'mes_tag' | 'cache' | 'stream_demo';
 };
 
 function normalizeSwipeId(input: unknown): number {
@@ -31,7 +30,7 @@ function normalizeSwipeId(input: unknown): number {
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
-  if (raw.startsWith('idb://')) return raw;
+  if (raw.startsWith('idb:')) return '';
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith('/')) return raw;
@@ -123,16 +122,6 @@ export function resolveGeneratedImageSource(
       ? Math.trunc(Number(reference.messageId))
       : null;
 
-  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
-    ? message.data.stream_demo.generated_images
-    : [];
-  for (const entry of streamDemoEntries) {
-    if (!entry || typeof entry !== 'object') continue;
-    if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
-    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo', normalizedMessageId);
-    if (resolved) return resolved;
-  }
-
   const swipeId = normalizeSwipeId(message?.swipe_id);
   const extraImages = message?.extra?.images;
   const swipeEntries =
@@ -149,10 +138,54 @@ export function resolveGeneratedImageSource(
     if (resolved) return resolved;
   }
 
+  const mesTagEntries = mergeNativeMesTagsWithExtraEntries({
+    tags: parseNativeMesImageTags({
+      messageId: normalizedMessageId ?? 0,
+      rawMessage: String(message?.message ?? ''),
+    }),
+    extraImages: swipeEntries,
+  });
+
+  for (const entry of mesTagEntries) {
+    if (!entry || typeof entry !== 'object') continue;
+    if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
+
+    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'mes_tag', normalizedMessageId);
+    if (resolved) return resolved;
+
+    const cacheMatch = cacheEntries.find(cacheEntry =>
+      matchesImageRef(reference, {
+        ...entry,
+        ...normalizeCacheEntry(cacheEntry),
+      }),
+    );
+    if (!cacheMatch) continue;
+
+    const fromCache = normalizeResolvedSource(
+      {
+        ...normalizeCacheEntry(cacheMatch),
+        promptToken: normalizeKey((entry as any)?.promptToken) || normalizeKey(cacheMatch.promptToken),
+      },
+      'mes_tag',
+      normalizedMessageId,
+    );
+    if (fromCache) return fromCache;
+  }
+
   for (const entry of cacheEntries) {
     const normalized = normalizeCacheEntry(entry);
     if (!matchesImageRef(reference, normalized)) continue;
     const resolved = normalizeResolvedSource(normalized, 'cache', normalizedMessageId);
+    if (resolved) return resolved;
+  }
+
+  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
+    ? message.data.stream_demo.generated_images
+    : [];
+  for (const entry of streamDemoEntries) {
+    if (!entry || typeof entry !== 'object') continue;
+    if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
+    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo', normalizedMessageId);
     if (resolved) return resolved;
   }
 
@@ -219,19 +252,5 @@ export function readGeneratedImageSource(reference: GeneratedImageSourceRef): Re
 export async function readGeneratedImageSourceAsync(
   reference: GeneratedImageSourceRef,
 ): Promise<ResolvedGeneratedImageSource | null> {
-  const resolved = readGeneratedImageSource(reference);
-  if (!resolved) return null;
-
-  if (isIdbSrc(resolved.src)) {
-    const parsed = parseIdbSrc(resolved.src);
-    if (parsed) {
-      const imageData = await loadImage(parsed.messageId, parsed.requestId);
-      if (imageData) {
-        return { ...resolved, src: imageData, source: 'idb' };
-      }
-    }
-    return null;
-  }
-
-  return resolved;
+  return readGeneratedImageSource(reference);
 }

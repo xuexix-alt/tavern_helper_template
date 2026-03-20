@@ -1,13 +1,71 @@
-src\寒冬末日\界面同层版\开发文档.md
-src\寒冬末日\界面同层版\界面\状态栏
-以上是项目开发文档和项目路径。这个项目前后开发了好几版，都没有成功。
-项目是  界面同层版\界面\状态栏  的子功能。目的是在 界面同层版UI 里实现通过 st-chatu8 插件进行文生图操作。
-我的核心需求：1.在UI界面进行LLm提示词发起/图片生产/显示；2.UI生出的图片能进入插件给酒馆设置的图片缓存文件夹存储/加载持久化（无需跨设备跨聊天档案）。3.UI生出的图片能在正文正确位置进行图文穿插展示/交互（含单击、双击、长按），图廊作为侧边栏做图片的收集展示（最好也可以交互）。
-以上需求，插件的功能都有，说明文档在：docs\前端接入插件的说明.txt 区别在于，我的 界面同层版UI 只挂载在酒馆chat的0层，通过特殊的路由机制隐藏了酒馆0以后的chat并把它们的内容抓到UI里显示。而插件对UI界面中的生图请求和原酒馆chat里的生图请求做了两套处理机制，分别是html-body 和sec text。插件和控制台日志文件放在：.tmp\st-chatu8插件日志 难点在于：插件会认UI发起的生图请求为html-body模式，实行不同的存储策略，而UI在ifrme重载刷新后，插件对后续持久化缓存没有做处理，导致**重载失效**难点就是解决这个重载失效的问题。
-当前的代码根据开发文档.md 的描述开发。基本不能用：原因是把图片base64码和提示词封到酒馆的聊天记录json里（变量和记录正文都进聊天记录json），示例：.tmp\末世寒冬 - 星穹秩序 - 2026-03-13@19h44m57s029ms.jsonl   几张图片就100M，酒馆后台直接奔溃
-我的实现预期：要么继续在UI中接过插件没做完的缓存-读取持久化，要么做个转接和引导接入插件中的sec text 路线，使得UI的代码成本最小。
-现在的版本是基于后一个思路做的，但是实现上不够聪明。
+3月21日0点25分，当前测得在多张图片已经有提示词，插件每生产一张图片会“刷新”一次正文，导致已经生产的图片短暂“不可见”（露出提示词内容），等刚生好的图一起加载回来，直到下一张生好又一起“消失”一点（露出提示词）。这个和原版插件实现有出入，原版新图加载是不影响其他图的，是无感的。
+正文核验指令：
+(() => {
+  const pickDoc = () => {
+    try {
+      if (window.top?.document?.querySelectorAll('.mes .mes_text').length > 0) {
+        return { scope: 'top', doc: window.top.document };
+      }
+    } catch {}
+    return { scope: 'self', doc: document };
+  };
 
-请你，重新评估现有项目根据我的需求，提出重新开发方案。
+  const { scope, doc } = pickDoc();
 
+  return {
+    scope,
+    allMesTextCount: doc.querySelectorAll('.mes .mes_text').length,
+    targets: [2, 4, 6,8,10].map(id => {
+      const el = doc.querySelector(`div.mes[mesid="${id}"] .mes_text`);
+      const rect = el?.getBoundingClientRect?.();
+      const style = el ? getComputedStyle(el) : null;
+      return {
+        mesid: id,
+        exists: !!el,
+        textLen: el?.textContent?.length ?? 0,
+        preview: (el?.textContent ?? '').slice(0, 120),
+        rect: rect
+          ? {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+            }
+          : null,
+        style: style
+          ? {
+              display: style.display,
+              visibility: style.visibility,
+              opacity: style.opacity,
+            }
+          : null,
+      };
+    }),
+  };
+})();
+第一步：确认注入节点存在
+javascript(() => {
+  const doc = window.top?.document ?? document;
+  const nodes = Array.from(doc.querySelectorAll('.mes[data-ui-injected-mes]'));
+  return nodes.map(el => ({
+    mesid: el.getAttribute('mesid'),
+    textLen: el.querySelector('.mes_text')?.textContent?.trim().length ?? 0,
+    preview: el.querySelector('.mes_text')?.textContent?.trim().slice(0, 80),
+  }));
+})();
+预期：能看到你目标楼层的 mesid 和正文预览，textLen > 100。
 
+第二步：模拟插件的查找逻辑
+把 mesid 换成你实际的楼层号（比如 2）：
+javascript(() => {
+  const doc = window.top?.document ?? document;
+  const mesid = 2; // 换成实际楼层号
+  const el = doc.querySelector(`div.mes[mesid="${mesid}"] .mes_text`);
+  return {
+    found: !!el,
+    textLen: el?.textContent?.trim().length ?? 0,
+    preview: el?.textContent?.trim().slice(0, 120),
+  };
+})();
+预期：found: true，textLen > 100，preview 是真实正文开头。
+两步都通过，说明插件能正确读到正文，生图就能拿到上下文了。

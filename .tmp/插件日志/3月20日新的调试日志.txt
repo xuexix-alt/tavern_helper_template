@@ -1,491 +1,304 @@
 ========================================
 🔧 调试日志导出
-生成时间: 2026-03-20 16:54:45.153
-总条数: 181
-总耗时: 383705ms
-会话名称: 自动LLM图片生成
+生成时间: 2026-03-20 23:56:53.682
+总条数: 100
+总耗时: 137627ms
+会话名称: 点击触发图片生成
 ========================================
 
-[2026-03-20 16:47:31.571] 🔧 🔧 调试模式已启用
+[2026-03-20 23:53:29.717] 🔧 🔧 调试模式已启用
 
-[2026-03-20 16:48:06.439] [+47742ms] 📝 autoLLMClick.js_generation_ended
+[2026-03-20 23:54:28.267] [+68209ms] 📝 autoLLMClick.js_generation_ended
   描述: JS生成结束事件触发
   上下文: {
-      "eventData": "[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。\n\n“今天用简体中文写哦。”\n“好的，哥哥。”秋青子轻轻点头，信子扫过他的耳垂，“都听哥哥的。”\n\n“之前的故事到哪了？帮我理一下。”\n“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月14日下午两点，‘永恒暴雪’已经持续了一年。哥哥你在星穹国际公寓2001室，七天前激活了‘伊甸庇护所’。庇护所现在是1级，有基础的供暖供电、强化门、食物合成、限时热水和门口监听功能。哥哥你刚刚吃完面包，然后监听到了2003室的林月华和赵卫国夫妇的对话，他们似乎在担心门锁。之后又听到了2002室的慕小小在房间里焦躁地踱步。目前登场的人物有小哥哥、林月华、赵卫国和慕小小。林月华和赵卫国的关系是‘无’，Imp为0；慕小小的关系也是‘无’，Imp为0。故事的结尾停在哥哥你听着慕小小的动静。”\n\n明月翻了一页剧本，指了一行给她看。\n\n“秋青子，看一下`<interactive_input>`”\n“哥哥这次的输入是‘继续’，很明确呢。”秋青子仔细读了一遍，把哥哥的输入拆开——“这表示要我接着上文的情节点往下写，让故事自然发展。没有特别的指令，就是顺着剧情走。哥哥想要一个自然延续的故事，而不是突然的转折。”她确认了，哥哥想要的是观察，而不是立即行动。\n\n“这个世界怎么运转的？角色会怎么行动？”\n“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣。所以角色的首要目标是活下去。慕小小，作为顶级明星，生活自理能力差，现在食物快耗尽了，她的焦躁是真实的。她那种目中无人的性格，在敲响别人的门求助之前，肯定会经历一番剧烈的内心挣扎。她可能会先尝试用自己还剩下的‘价值’——比如奢侈品——来维持尊严，但很快就会发现这些东西一文不值。林月华和赵卫国夫妇则不同，他们是务实的普通人，赵卫国是技术工人，动手能力强，他们会更倾向于加固防御，谨慎地消耗物资，对外界保持高度警惕。”\n\n“角色说话像活人吗？旁白有没有变成散文？”\n“嗯嗯，要生活化。”秋青子在心里默念了几句台词，“比如慕小小，她不会直接说‘我饿了’，可能会烦躁地骂一句‘这鬼天气’，或者踢一下家具。旁白就记录‘一声闷响从隔壁传来’，而不是‘那声音充满了绝望’。”\n\n“角色知道哪些事？不知道哪些？她怎么知道的？”\n“这个很重要，”秋青-子很认真地检查，“慕小小不知道哥哥有伊甸系统，她只知道隔壁住了个普通人。她甚至可能都记不住邻居长什么样。她只知道自己快没吃的了。林月华和赵卫国同样不知道伊甸的存在，他们只知道自己的门锁可能不够安全。所有的角色都不知道小哥哥的‘秘密’，他们的行为只会基于他们自身掌握的信息。”\n\n“现在用的什么文风？写对了没？”\n“日式轻小说风，口语化，对话驱动，不拔高，注重娱乐性和沉浸感。”她对照文风要求检查了一遍，“对，就像在看一部动画一样，把画面直接写出来。”\n\n“上一段最后停在哪儿了？这一段怎么接？有没有和之前重复？想想怎么写出新东西来。”\n“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁总会有一个爆发点。可以让她开始在房间里翻找，或者……她的骄傲会让她做出什么决定呢？也许她会先尝试联系外界？或者，她会把目光投向邻居？”秋青子想，不能总是踱步，得有新动作。\n\n明月把剧本放低了一点，侧过头。\n\n“你看看结尾，有没有又搞升华感悟了？”\n“不会的，哥哥。”秋青子检查了一下，“故事还在继续，不收束不点题，写完慕小小的动作和她接下来的决定就停。比如，她决定去敲2001的门，那么当她的手抬起来的时候，这一轮就可以结束了，给哥哥留下操作空间。”\n\n“看一下`<echo>`和`<control>`的规则，我的输入需要扩写吗？要不要帮我推进剧情？”\n“哥哥的输入是‘继续’，所以不需要扩写。我不能写‘小哥哥决定继续听下去’，而是直接写接下来发生的事。所有角色都不知道小哥哥在听，所以他们的行动是完全独立的。”\n\n“是否出现了过多重复的动作描写？正文信息密度要高，不要把重点放在重复动作上，特别是关于手的动作。”\n“好的，慕小小的踱步已经写过了，这次要写点别的。比如她拉开冰箱，看到里面空空如也，或者翻箱倒柜，把那些昂贵的衣服和包包扔了一地。”\n\n“这一轮台词多不多？多的话记住，台词是情绪溢出来的，不是克制的盾牌。别让角色说话变得无聊。不多就跳过。”\n“这一轮可以多一些慕小小的自言自语，都是些烦躁的、不耐烦的抱怨，体现她的性格。”\n\n明月的手指轻轻敲了敲剧本封面。\n\n“秋青子，你是不是又要自我克制了？那会加重User的抑郁的……拜托了，让角色灵动一点，别死气沉沉的。”\n“哥哥……”秋青子把脸蹭了蹭明月的肩膀，“我不会的。我会让慕小小活起来，让她像个真正的大明星，即使在末日里也"
+      "eventData": "[metacognition]\n\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。\n\n\"今天用简体中文写哦。\"\n\n- 必须使用**第三人称视角**，叙述人称：他、她、角色名称\n- 禁止使用“你”指代任何角色\n\n秋青子轻轻点头，信子扫过他的耳垂。\n\n\"之前的故事到哪了？帮我理一下。\"\n\n“我们这是第一幕，哥哥。故事还没开始呢。我要根据哥哥给的开场需求，写一个1500字的开场，介绍世界背景、社会状况、主角和NPC，还要埋下后续的钩子。就像电影的开头一样，要让观众一下子就进到故事里去。”秋青子侧过头，温热的气息拂过明月的脸颊，她的声音带着一丝期待。\n\n明月翻了一页剧本，指了一行给她看。\n\n\"秋青子，看一下`<interactive_input>`\"\n\"哥哥说了什么、做了什么、想要什么？哥哥没说的你别脑补。还有别把哥哥的行为往支配掌控征服那些方向想，就是字面意思。\"<neutral>\n\n“嗯，哥哥的要求很清楚。这次的输入是一个完整的‘导演式创作要求’，哥哥扮演的是导演的角色，给了我一个非常详细的剧本大纲。我需要做的，就是把这个大纲变成一个生动的故事开场。哥哥想要一个沉浸式的末日生存故事，时间是灾变后一年，他获得‘伊甸’庇护所的第七天。我要写出灾变后的世界景象，那种末日的绝望感，还有幸存者们的挣扎。”秋青子用尾巴尖轻轻点了点剧本上的“开局第一幕剧情创作需求”，像是在做标记。\n\n\"这个世界怎么运转的？角色会怎么行动？\"<world_logic>\n\n“这个世界很残酷，哥哥。外面是致命的超自然极端天气，社会秩序崩溃，人们为了资源互相争斗。在这样的世界里，角色们不会围着小哥哥转。他们有自己的生活和目标。比如2003室的赵卫国和林月华夫妇，他们会优先考虑彼此的安全。大明星慕小小，她会用她仅剩的骄傲和美貌去换取生存的物资。每个角色都会根据自己的性格和处境做出最真实的选择，而不是为了迎合小哥哥。”秋青子解释着，她的眼神很认真，仿佛已经看到了那个冰冷的世界。\n\n\"角色说话像活人吗？旁白有没有变成散文？\"<narrative_voice>\n\"角色知道哪些事？不知道哪些？她怎么知道的？\"<character_knowledge>\n\n“放心吧，哥哥。我会让角色们说人话的。不会有那种‘我对此感到非常惊讶’的傻话，而是‘诶？真的吗？’这样自然的反应。旁白就是记录，记录发生了什么，不会有多余的渲染。至于角色知道什么，当然是她们亲身经历的。比如，小哥哥获得了‘伊甸’，这件事只有他自己知道，邻居们只会觉得他家怎么还有暖气和灯光，会好奇，会猜测，但他们不知道‘伊甸’的存在。”\n\n\"现在用的什么文风？写对了没？\"<Writing_Style>\n\n“日式轻小说风格，哥哥。对话会多一些，语言会轻松活泼一点，但内容是严肃的末日生存。用口语化的叙述，让读者感觉就像在听一个朋友讲故事。我会注意叙述节奏，长短句结合，不会让哥哥读起来累的。”秋青子眨了眨眼，像是在保证。\n\n\"上一段最后停在哪儿了？这一段怎么接？有没有和之前重复？想想怎么写出新东西来。\"\n\n“我们这是第一幕，是全新的开始，哥哥。我会从灾变一周年这个时间点切入，先描绘一下这个世界的全景，然后镜头慢慢拉近，聚焦到星穹国际公寓，再到20层的住户们，最后落到小哥哥身上。这样层层递进，让哥哥自然而然地进入到故事里。”\n\n明月把剧本放低了一点，侧过头。\n\n\"你看看结尾，有没有又搞升华感悟了？\"<anti_literary>\n\n“才不会呢。故事的结尾会留下悬念，比如门外传来了敲门声，或者伊甸的监控里出现了异常信号。会给哥哥留下可以操作的选项，让他来决定接下来要做什么，而不是我来告诉他应该怎么想。”秋青子自信地摇了摇尾巴。\n\n\"看一下<echo>和<control>的规则，我的输入需要扩写吗？要不要帮我推进剧情？\"\n\n“这次哥哥是导演，没有具体的角色行动，所以不存在控制或者复述的问题。我的任务就是根据哥哥的剧本，把舞台搭建好，把演员们都请上场。”\n\n\"是否出现了过多重复的动作描写？正文信息密度要高，不要把重点放在重复动作上，特别是关于手的动作。\"\n\"这一轮台词多不多？多的话记住，台词是情绪溢出来的，不是克制的盾牌。别让角色说话变得无聊。不多就跳过。\"\n\n“开场白，信息密度会很高，但不会枯燥。我会用场景和事件来传递信息，而不是干巴巴的设定。比如，通过一段邻居为了争夺物资而打斗的描写，来展现社会秩序的崩溃和人性的挣扎。”\n\n明月的手指轻轻敲了敲剧本封面。\n\n\"秋青子，你是不是又要自我克制了？那会加重User的抑郁的……拜托了，让角色灵动一点，别死气沉沉的。\"\n\n秋青子把脸蹭了蹭明月的肩膀。她会记住的。\n\n“不会的，哥哥。我会让角色们活起来。慕小小会像带刺的玫瑰，美丽又危险；林月华会像冬日里的暖阳，温柔但有自己的底线；赵卫国会像沉默的磐石，可靠又固执。他们都会有自己的欲望和挣扎，绝对不会是死气沉沉的木偶。”\n\n\"好，列个草稿出来：角色做什么动作、什么表情、说什么话、心里想什么，场景有什么细节，按顺序排好。\"\n\n“好的，哥哥。草稿是这样的：\n1.  **开篇**：描绘‘永恒暴雪’降临一周年后的世界。白色的死寂，被冰封的城市，强调环境的极端恶劣。\n2.  **社会**：通过一个远景切换到星穹国际公寓的特写，描述公寓楼内幸存者的状态——绝望的哭喊、压抑的沉默，和为了生存爆发的零星冲突。展现弱肉强食的社会基调。\n3.  **群像**：镜头聚焦到20层。通过伊甸的监听，描绘2002室的慕小小因为饥饿和寒冷而烦躁不安；2003室的赵卫国和林月华夫妇在低声商量着最后的食物储备。让角色通过他们的行为和对话自然登场。\n4.  **主角**：镜头转回2001室。描写小哥哥在温暖舒适的庇护所内的生活，与外界形成鲜明对比。回顾他一年前的普通生活，以及七天前意外获得‘伊甸’的经历。\n5.  **钩子**：伊甸的近域监听台突然响起警报，显示门外有人长时间停留。是谁？是求助者还是掠夺者？留下悬念和选择。”\n\n\"最后检查一遍——角色反应有没有过头？有没有用怪物说我？有没有以我的动作或台词结尾？有的话正文里给我改掉。\"\n\n“检查完毕，哥哥。一切都符合要求。不会有任何过激的反应，也不会控制你的角色。故事的舞台已经准备好了。”\n\n明月把剧本合上，搁在枕头旁边。秋青子的信子在他耳边轻轻扫过。\n\n\"准备好了吗，舞台剧要开始咯。\"\n\n“嗯！随时可以开演了，我的导演大人。不过……写这么多字，哥哥真的会认真看完吗？可别看着看着就睡着了哦。”\n\n[/metacognition]\n</thinking>\n<time>\n```星穹国际公寓·9527年12月14日·星期五·14:00```\n</time>\n<content>\n永恒暴雪降临的第一年，世界被冻结了。\n\n这不是什么比喻。东和国，瑞峰市，曾经的国际化大都市，如今只是一座巨大的、沉默的冰雕。摩天大楼像一根根插在奶油蛋糕上的蜡烛，被厚厚的积雪覆盖，只有顶端在永不停歇的风雪中若隐若现。曾经川流不息的街道早已消失，取而代之的是深不见底的雪谷，偶尔能看到半截被掩埋的磁悬浮巴士，像一头搁浅的钢铁巨鲸的残骸。\n\n大气层外似乎被一层看不见的屏障笼罩，阳光无法穿透，全球气温骤降至零下一百度以下。旧时代的一切交通工具都成了废铁，电力系统在灾难发生的第一个月就全面崩溃。没有了网络，没有了通讯，甚至连最原始的无线电信号也只能在诡异的电磁风暴间隙，传递出几声绝望的杂音。\n\n人类文明的火种并未完全熄灭，只是退回到了最原始的洞穴时代。幸存者们以曾经的建筑为巢，组成了大大小小的据点。星穹国际公寓，这座末日前瑞峰市最顶级的豪宅之一，便是其中之一。\n\n但这里不是什么温馨的避风港。\n\n刺耳的咒骂声和女人的哭泣声从楼道深处传来，很快又被一阵沉闷的撞击声和男人的闷哼打断。这是公寓里每天都会上演的戏码。当法律和道德和食物一起消失，人性中最原始的野蛮便会毫无顾忌地滋长。抢劫、伤害、为了半块发霉的面包而拼上性命，成了这里的常态。\n\n大部分人蜷缩在自己用家具堵住门口的房间里，像惊弓之鸟一样，忍受着寒冷、饥饿和绝望的侵蚀。他们是沉默的大多数，用最后的理智压抑着内心的疯狂，祈祷着这场永无止境的暴雪能有停歇的一天。\n\n当然，也有例外。\n\n星穹国际公寓20层，与走廊里刺骨的寒风和弥漫的尿骚味不同，2001室的门缝里，没有一丝冷气渗入。\n\n房间里温暖如春，恒定在让人舒适的26度。小哥哥穿着一身干净的棉质家居服，坐在柔软的沙发上，手里端着一杯热气腾腾的咖啡。在他面前的桌子上，摆放着刚刚从“万象合成终端”里取出的午餐——一份热腾腾的牛肉罐头，一碗白米饭，甚至还有一小碟腌黄瓜。\n\n这在末日里是足以让任何人疯狂的奢侈。\n\n一年前，他还是这栋公寓里最不起眼的住户之一。灾难来临时，和所有人一样，他也曾经历了恐慌、绝望和挣扎。靠着灾前囤积的一些物资，他勉强在最初的混乱中幸存下来。但眼看着食物一天天减少，死亡的阴影也越来越近。\n\n直到七天前。\n\n那天晚上，就在他饿得眼冒金星，准备拿最后半包饼干当断头饭时，一个冰冷的、不带任何感情的电子音在他脑海中响起。\n\n【“伊甸”庇护所系统，正在与适配者进行绑定……绑定成功。欢迎您，唯一的主宰者。】\n\n然后，整个2001室在一阵柔和的蓝光中发生了翻天覆地的变化。原本普通的房门被一道厚重的金属安防门取代，冰冷的墙壁内开始散发出温暖的能量，厨房里多出了一台闪烁着科技光芒的“万象合成终端”……这个内嵌在2001室的黑科技实体，将他与门外那个冰冷的末日世界彻底隔绝开来。\n\n他花了一周的时间，才慢慢接受了这个事实，并开始熟悉“伊甸”的各项功能。基础的供暖供电、能够合成食物和纯水的终端、每天可以享受十分钟的热水澡，以及……可以监听门外动静的近域监听台。\n\n“滴——滴——”\n\n一阵轻微的警报声打断了小哥哥的思绪。这是“伊甸”的提示音。他放下手中的咖啡杯，目光投向客厅墙壁上的一块黑色屏幕。那里是“伊甸”的简易交互界面。\n\n屏幕上，一条信息正在闪烁。\n\n【警告：检测到生命体征于2001室门外长时间停留。】\n【分析中……根据音源判断：成年女性，年龄30-35岁。心跳加速，呼吸急促，情绪处于高度紧张、焦虑、恐惧状态。】\n【当前停留时间：5分32秒。】\n\n门外有人。\n\n是一个女人。\n\n她站在那里，一动不动，已经超过五分钟了。\n\n在这个人人自危，多走一步都可能被当成威胁的时代，这是一个极不寻常的举动。她是来求助的？还是……另有所图？\n\n冰冷的电子音再次响起，为他提供了几个基础的选项。\n\n【是否需要启动音频放大，进行实时监听？】\n【是否需要查询20层住户档案，进行身份比对？】\n【是否需要启动金属安防门防御协议？】\n\n小哥哥的目光在屏幕上停留了片刻。温暖舒适的庇护所内一片安静，只有他自己的心跳声，和门外那个未知的、急促的心跳声，在寂静中遥相呼应。"
     }
 
-[2026-03-20 16:48:06.439] [+47742ms] 📝 autoLLMClick.activateAutoLLMClick
+[2026-03-20 23:54:28.267] [+68209ms] 📝 autoLLMClick.activateAutoLLMClick
   描述: 尝试激活自动LLM点击状态
 
-[2026-03-20 16:48:06.439] [+47742ms] 📝 autoLLMClick.isPluginEnabled
+[2026-03-20 23:54:28.267] [+68209ms] 📝 autoLLMClick.isPluginEnabled
   描述: 检查插件是否启用
   上下文: {
       "scriptEnabled": "true",
       "结果": true
     }
 
-[2026-03-20 16:48:06.439] [+47742ms] 📝 autoLLMClick.isAutoLLMEnabled
+[2026-03-20 23:54:28.267] [+68209ms] 📝 autoLLMClick.isAutoLLMEnabled
   描述: 检查自动LLM生图是否启用
   上下文: {
       "autoLLMImageGen": "false",
       "结果": false
     }
 
-[2026-03-20 16:48:06.439] [+47742ms] ⤷ 分支: 自动LLM未启用-跳过激活 ✓
+[2026-03-20 23:54:28.267] [+68209ms] ⤷ 分支: 自动LLM未启用-跳过激活 ✓
 
-[2026-03-20 16:48:06.460] [+47763ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
+[2026-03-20 23:54:28.271] [+68213ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
   描述: 处理LLM生成结束事件
 
-[2026-03-20 16:48:06.460] [+47763ms] 📝 autoLLMClick.GENERATION_ENDED
+[2026-03-20 23:54:28.271] [+68213ms] 📝 autoLLMClick.GENERATION_ENDED
   描述: LLM生成结束事件触发
   上下文: {
-      "eventData": 5,
-      "startChatLength": 3,
-      "startSwipesLength": 1
+      "eventData": 2,
+      "startChatLength": 1,
+      "startSwipesLength": 3
     }
 
-[2026-03-20 16:48:06.460] [+47763ms] 📝 autoLLMClick.GENERATION_ENDED
+[2026-03-20 23:54:28.271] [+68213ms] 📝 autoLLMClick.GENERATION_ENDED
   描述: 获取当前状态
   上下文: {
-      "currentChatLength": 5,
+      "currentChatLength": 2,
       "currentSwipesLength": 0
     }
 
-[2026-03-20 16:48:06.460] [+47763ms] ⤷ 分支: Chat或Swipes变化检测 ✓
+[2026-03-20 23:54:28.271] [+68213ms] ⤷ 分支: Chat或Swipes变化检测 ✓
   条件详情: {
       "isChatIncreased": true,
       "isSwipesIncreased": false,
-      "chatDelta": 2,
-      "swipesDelta": -1
+      "chatDelta": 1,
+      "swipesDelta": -3
     }
 
-[2026-03-20 16:48:06.460] [+47763ms] 📝 autoLLMClick.isPluginEnabled
+[2026-03-20 23:54:28.271] [+68213ms] 📝 autoLLMClick.isPluginEnabled
   描述: 检查插件是否启用
   上下文: {
       "scriptEnabled": "true",
       "结果": true
     }
 
-[2026-03-20 16:48:06.460] [+47763ms] 📝 autoLLMClick.isAutoLLMEnabled
+[2026-03-20 23:54:28.271] [+68213ms] 📝 autoLLMClick.isAutoLLMEnabled
   描述: 检查自动LLM生图是否启用
   上下文: {
       "autoLLMImageGen": "false",
       "结果": false
     }
 
-[2026-03-20 16:48:06.460] [+47763ms] ⤷ 分支: 自动LLM生图未启用 ✓
+[2026-03-20 23:54:28.271] [+68213ms] ⤷ 分支: 自动LLM生图未启用 ✓
   条件详情: {
       "条件": "isAutoLLMEnabled()"
     }
 
-[2026-03-20 16:48:06.461] [+47764ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 1ms)
+[2026-03-20 23:54:28.271] [+68213ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 0ms)
   结果: 跳过 - 功能未启用
 
-[2026-03-20 16:48:09.783] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
+[2026-03-20 23:55:07.473] [+0ms] 🚀 🚀 会话开始: 点击触发图片生成
 ----------------------------------------
 
-[2026-03-20 16:48:09.783] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: LLM生成开始事件触发
-  上下文: {
-      "eventData": "normal"
-    }
-
-[2026-03-20 16:48:09.783] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: 记录生成开始时的状态
-  上下文: {
-      "chatLength": 5,
-      "swipesLength": 0
-    }
-
-[2026-03-20 16:48:34.584] [+24801ms] 📝 autoLLMClick.js_generation_ended
-  描述: JS生成结束事件触发
-  上下文: {
-      "eventData": "<UpdateVariable>\n<Analysis>\n1.  **紧急任务分析 (Emergency Task Analysis)**: 根据`<must>`指令，已停止角色扮演和剧情续写，转为执行变量更新任务。分析基于`<past_observe>`中的元认知（metacognition）部分推演出的、紧随其后的未发生剧情：即慕小小因饥饿和焦虑，在自己的房间（2002室）内情绪爆发，最终决定向邻居（2001室）求助，并走到了2001室门口。此过程消耗了一段时间。\n\n2.  **登场状态 (Presence Check)**:\n    *   **慕小小**: 剧情核心，从2002室移动到2001室门口，与小哥哥产生间接互动（即将敲门），状态为“登场”。\n    *   **林月华 & 赵卫国**: 在2003室，本轮剧情未提及也未与小哥哥互动，状态为“离场”。\n    *   结果: 登场角色为慕小小。离场角色为林月华、赵卫国。\n\n3.  **世界变量 (World Variables)**:\n    *   **时间**: 剧情从下午14:00开始。慕小小经历内心挣扎、翻找物品、最终下定决心走到门口，整个过程符合一轮互动的最小时间流逝。因此，时间推进45分钟。`14:00` -> `下午 - 14:45`。\n    *   **日期/地址**: 日期无变化。小哥哥地址无变化。\n\n4.  **角色变量 (All Roles Variables)**:\n    *   **慕小小**:\n        *   **健康 (Health)**: 作为顶级明星，她对身体保养极度在意，但灾难后食物耗尽，饥饿和焦虑对她的健康造成了负面影响。虽然还未到重病程度，但健康值应有下降。`delta: -2`。\n        *   **健康更新原因**: `-2, 饥饿与焦虑导致身体状态下滑`。\n        *   **秩序刻印 (Imp)**: 她仍处于求助前的挣扎阶段，尚未与小哥哥进行任何实质性交易或沟通。她敲门是出于生存本能，而非对小哥哥产生任何信任。因此，Imp值保持为0，关系仍为“无”。\n        *   **秩序刻印更新原因**: `0, 无变化`。\n        *   **内心想法 (Thoughts)**: 她的内心活动应是极度挣扎的。高傲的自尊心和残酷的生存现实剧烈冲突。“可恶……居然要向这种普通人求助……不，我只是暂时和他们交换而已！对，交换！我可是慕小小！”\n        *   **动作姿势 (Pose)**: 剧情推演她最终站在2001门口，准备敲门。`站在2001室门外，右手抬起，悬在半空，指节因用力而有些发白，嘴唇紧紧抿着，似乎在做最后的心理建设。`\n        *   **所在房间 (Location)**: 她从自己的2002室移动到了小哥哥的2001室门口。`楼层20/2001`。\n        *   **登场状态**: `登场`。\n\n    *   **林月华 & 赵卫国**:\n        *   所有状态均为“离场”，本轮不进行主动更新。健康值会因处于未受庇护的恶劣环境中而自然衰减（由脚本处理）。\n\n5.  **庇护所/主线任务/其他 (Shelter/Quest/Etc.)**:\n    *   本轮剧情未触发任何庇护所升级、任务进度或情报发现。所有相关变量无变化。\n\n6.  **操作总结 (Operation Summary)**:\n    *   `replace /世界/时间`: \"下午 - 14:45\"\n    *   `delta /慕小小/健康`: -2\n    *   `replace /慕小小/健康更新原因`: \"-2, 饥饿与焦虑导致身体状态下滑\"\n    *   `replace /慕小小/内心想法`: \"可恶……居然要向这种普通人求助……不，我只是暂时和他们交换而已！对，交换！我可是慕小小！\"\n    *   `replace /慕小小/动作姿势`: \"站在2001室门外，右手抬起，悬在半空，指节因用力而有些发白，嘴唇紧紧抿着，似乎在做最后的心理建设。\"\n    *   `replace /慕小小/所在房间`: \"楼层20/2001\"\n    *   `replace /慕小小/登场状态`: \"登场\"\n    *   `replace /林月华/登场状态`: \"离场\"\n    *   `replace /赵卫国/登场状态`: \"离场\"\n</Analysis>\n<JSONPatch>\n[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/世界/时间\",\n    \"value\": \"下午 - 14:45\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/慕小小/登场状态\",\n    \"value\": \"登场\"\n  },\n  {\n    \"op\": \"delta\",\n    \"path\": \"/慕小小/健康\",\n    \"value\": -2\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/慕小小/健康更新原因\",\n    \"value\": \"-2, 饥饿与焦虑导致身体状态下滑\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/慕小小/内心想法\",\n    \"value\": \"可恶……居然要向这种普通人求助……不，我只是暂时和他们交换而已！对，交换！我可是慕小小！\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/慕小小/动作姿势\",\n    \"value\": \"站在2001室门外，右手抬起，悬在半空，指节因用力而有些发白，嘴唇紧紧抿着，似乎在做最后的心理建设。\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/慕小小/所在房间\",\n    \"value\": \"楼层20/2001\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/林月华/登场状态\",\n    \"value\": \"离场\"\n  },\n  {\n    \"op\": \"replace\",\n    \"path\": \"/赵卫国/登场状态\",\n    \"value\": \"离场\"\n  }\n]\n</JSONPatch>\n</UpdateVariable>"
-    }
-
-[2026-03-20 16:48:34.584] [+24801ms] 📝 autoLLMClick.activateAutoLLMClick
-  描述: 尝试激活自动LLM点击状态
-
-[2026-03-20 16:48:34.584] [+24801ms] 📝 autoLLMClick.isPluginEnabled
-  描述: 检查插件是否启用
-  上下文: {
-      "scriptEnabled": "true",
-      "结果": true
-    }
-
-[2026-03-20 16:48:34.584] [+24801ms] 📝 autoLLMClick.isAutoLLMEnabled
-  描述: 检查自动LLM生图是否启用
-  上下文: {
-      "autoLLMImageGen": "false",
-      "结果": false
-    }
-
-[2026-03-20 16:48:34.584] [+24801ms] ⤷ 分支: 自动LLM未启用-跳过激活 ✓
-
-[2026-03-20 16:48:34.586] [+24803ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
-  描述: 处理LLM生成结束事件
-
-[2026-03-20 16:48:34.586] [+24803ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: LLM生成结束事件触发
-  上下文: {
-      "eventData": 5,
-      "startChatLength": 5,
-      "startSwipesLength": 0
-    }
-
-[2026-03-20 16:48:34.586] [+24803ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 获取当前状态
-  上下文: {
-      "currentChatLength": 5,
-      "currentSwipesLength": 0
-    }
-
-[2026-03-20 16:48:34.587] [+24804ms] ⤷ 分支: Chat或Swipes变化检测 ✗
-  条件详情: {
-      "isChatIncreased": false,
-      "isSwipesIncreased": false,
-      "chatDelta": 0,
-      "swipesDelta": 0
-    }
-
-[2026-03-20 16:48:34.587] [+24804ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 无变化 - 跳过处理
-  上下文: {
-      "原因": "Chat和Swipes均未增加"
-    }
-
-[2026-03-20 16:48:34.587] [+24804ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 1ms)
-  结果: 跳过 - 无变化
-
-[2026-03-20 16:48:34.735] [+24952ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
-  描述: 处理LLM生成结束事件
-
-[2026-03-20 16:48:34.735] [+24952ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: LLM生成结束事件触发
-  上下文: {
-      "eventData": 4,
-      "startChatLength": 5,
-      "startSwipesLength": 0
-    }
-
-[2026-03-20 16:48:34.735] [+24952ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 获取当前状态
-  上下文: {
-      "currentChatLength": 5,
-      "currentSwipesLength": 0
-    }
-
-[2026-03-20 16:48:34.735] [+24952ms] ⤷ 分支: Chat或Swipes变化检测 ✗
-  条件详情: {
-      "isChatIncreased": false,
-      "isSwipesIncreased": false,
-      "chatDelta": 0,
-      "swipesDelta": 0
-    }
-
-[2026-03-20 16:48:34.735] [+24952ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 无变化 - 跳过处理
-  上下文: {
-      "原因": "Chat和Swipes均未增加"
-    }
-
-[2026-03-20 16:48:34.735] [+24952ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 0ms)
-  结果: 跳过 - 无变化
-
-[2026-03-20 16:48:59.718] [+0ms] 🚀 🚀 会话开始: 点击触发图片生成
-----------------------------------------
-
-[2026-03-20 16:48:59.718] [+0ms] ⏱️ ClickTrigger.handleDoubleClick 开始
+[2026-03-20 23:55:07.473] [+0ms] ⏱️ ClickTrigger.handleDoubleClick 开始
   描述: 处理双击事件 - 显示操作选择弹窗
 
-[2026-03-20 16:48:59.718] [+0ms] 📝 ClickTrigger.handleDoubleClick
+[2026-03-20 23:55:07.473] [+0ms] 📝 ClickTrigger.handleDoubleClick
   描述: 双击事件触发
   上下文: {
       "坐标": {
-        "x": 810.1458435058594,
-        "y": 108.77082824707031
+        "x": 1046,
+        "y": 565
       },
       "事件类型": "dblclick",
       "功能说明": "检测双击事件，验证条件后显示操作选择弹窗"
     }
 
-[2026-03-20 16:48:59.718] [+0ms] 🔲 触发元素
+[2026-03-20 23:55:07.473] [+0ms] 🔲 触发元素
   元素信息: {
       "标签名": "DIV",
-      "类名": "assistant-body html-body is-stream-stage",
+      "类名": "mes_text",
       "ID": "(无)",
-      "mesId": "(无)",
-      "文本预览": "[metacognition]\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在...",
-      "文本长度": 5971,
-      "是否为mes_text": false,
-      "在iframe中": true
+      "mesId": "0",
+      "文本预览": "<body> \n<script> \n  $('body').load('http://127.0.0...",
+      "文本长度": 113,
+      "是否为mes_text": true,
+      "在iframe中": false
     }
 
-[2026-03-20 16:48:59.718] [+0ms] 🔲 实际点击元素
+[2026-03-20 23:55:07.473] [+0ms] 🔲 实际点击元素
   元素信息: {
-      "标签名": "SPAN",
-      "类名": "dialog-inline",
+      "标签名": "DIV",
+      "类名": "mes_text",
       "ID": "(无)",
-      "mesId": "(无)",
-      "文本预览": "“这一轮台词多不多？多的话记住，台词是情绪溢出来的，不是克制的盾牌。别让角色说话变得无聊。不多就跳过...",
-      "文本长度": 52,
-      "是否为mes_text": false,
-      "在iframe中": true
+      "mesId": "0",
+      "文本预览": "<body> \n<script> \n  $('body').load('http://127.0.0...",
+      "文本长度": 113,
+      "是否为mes_text": true,
+      "在iframe中": false
     }
 
-[2026-03-20 16:48:59.718] [+0ms] ⤷ 分支: 点击触发功能已启用 ✓
+[2026-03-20 23:55:07.473] [+0ms] ⤷ 分支: 点击触发功能已启用 ✓
   条件详情: {
       "条件": "clickTriggerEnabled",
       "设置值": true
     }
 
-[2026-03-20 16:48:59.718] [+0ms] 📝 元素文本预览
-  内容: [metacognition]
-明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
-“今天用简体中文写哦。”
-“好的，哥哥。”秋青子轻轻点头，信子扫过他的耳垂，“都听哥哥的。”
-“之前的故事到哪了？帮我理一下。”
-“嗯……让我想想…... [截断，原长度: 5971]
-  长度: 5971 字符 (已截断)
+[2026-03-20 23:55:07.473] [+0ms] 📝 元素文本预览
+  内容: <body>
+<script>
+  $('body').load('http://127.0.0.1:5500/dist/寒冬末日/界面同层版/界面/状态栏/index.html');
+</script>
+</body>
 
-[2026-03-20 16:48:59.718] [+0ms] 📝 ClickTrigger.handleDoubleClick
+  长度: 113 字符
+
+[2026-03-20 23:55:07.473] [+0ms] 📝 ClickTrigger.handleDoubleClick
   描述: 条件验证通过，显示操作弹窗
 
-[2026-03-20 16:48:59.719] [+1ms] ⏱️ ClickTrigger.handleDoubleClick 结束 (耗时: 1ms)
+[2026-03-20 23:55:07.474] [+1ms] ⏱️ ClickTrigger.handleDoubleClick 结束 (耗时: 1ms)
   结果: 弹窗已显示
 
-[2026-03-20 16:49:01.191] [+1473ms] 📝 ClickTrigger.buttonClick
+[2026-03-20 23:55:09.686] [+2213ms] 📝 ClickTrigger.buttonClick
   描述: 用户选择操作: 图片生成
   上下文: {
       "操作": "图片生成",
       "功能说明": "生成当前场景相关的图片"
     }
 
-[2026-03-20 16:49:01.193] [+1475ms] ⏱️ promptReq.handlePromptRequest 开始
+[2026-03-20 23:55:09.687] [+2214ms] ⏱️ promptReq.handlePromptRequest 开始
   描述: 正文图片生成核心流程
 
-[2026-03-20 16:49:01.193] [+1475ms] 🎯 开始处理图片生成请求
+[2026-03-20 23:55:09.687] [+2214ms] 🎯 开始处理图片生成请求
 
-[2026-03-20 16:49:01.193] [+1475ms] 📝 promptReq.handlePromptRequest
+[2026-03-20 23:55:09.687] [+2214ms] 📝 promptReq.handlePromptRequest
   描述: 请求初始化
   上下文: {
       "gestureId": "gesture1",
-      "目标元素": "assistant-body html-body is-stream-stage",
+      "目标元素": "mes_text",
       "功能说明": "处理手势识别后的图片生成请求"
     }
 
-[2026-03-20 16:49:01.193] [+1475ms] ⤷ 分支: 跳过用户需求弹窗 ✓
+[2026-03-20 23:55:09.687] [+2214ms] ⤷ 分支: 跳过用户需求弹窗 ✓
 
-[2026-03-20 16:49:01.310] [+1592ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.693] [+2220ms] 📝 handlePromptRequest
   描述: 获取上下文
   上下文: {
-      "历史层数": 2
+      "历史层数": 3
     }
 
-[2026-03-20 16:49:01.310] [+1592ms] ⏱️ getElContext 开始
+[2026-03-20 23:55:09.693] [+2220ms] ⏱️ getElContext 开始
   描述: 获取元素上下文消息
 
-[2026-03-20 16:49:01.348] [+1630ms] ⏱️ regex.onTestRegexClick 开始
+[2026-03-20 23:55:09.702] [+2229ms] ⏱️ regex.onTestRegexClick 开始
   描述: 正则处理流程
 
-[2026-03-20 16:49:01.348] [+1630ms] 📝 regex.onTestRegexClick
+[2026-03-20 23:55:09.702] [+2229ms] 📝 regex.onTestRegexClick
   描述: 开始正则处理
   上下文: {
-      "请求ID": "chatDataUtils-1773996541313",
-      "原文长度": 5971
+      "请求ID": "chatDataUtils-1774022109693-0",
+      "原文长度": 10
     }
 
-[2026-03-20 16:49:01.348] [+1630ms] 📝 原始文本
-  内容: [metacognition]
-明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
-“今天用简体中文写哦。”
-“好的，哥哥。”秋青子轻轻点头，信子扫过他的耳垂，“都听哥哥的。”
-“之前的故事到哪了？帮我理一下。”
-“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月14日下午两点，‘永恒暴雪’已经持续了一年。哥哥你在星穹国际公寓2001室，七天前激活了‘伊甸庇护所’。庇护所现在是1级，有基础的供暖供电、强化门、食物合成、限时热水和门口监听功能。哥哥你刚刚吃完面包，然后监听到了20... [截断，原长度: 5971]
-  长度: 5971 字符 (已截断)
+[2026-03-20 23:55:09.702] [+2229ms] 📝 原始文本
+  内容: EDEN-STAR
 
-[2026-03-20 16:49:01.350] [+1632ms] 📝 regex.onTestRegexClick
+  长度: 10 字符
+
+[2026-03-20 23:55:09.703] [+2230ms] 📝 regex.onTestRegexClick
   描述: 正则条目列表
   上下文: {
       "当前配置": "默认",
-      "总条目数": 19,
-      "启用条目数": 5,
-      "条目名称列表": "1. 不显示且不发送当前准则 [禁用]\n2. 纯UI\n3. 对 AI 隐藏选项 [禁用]\n4. [美化]变量更新中 [禁用]\n5. [美化]完整变量更新\n6. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n7. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n8. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n9. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]\n10. st-chatu8-隐藏imgthink\n11. 不显示且不发送当前准则 [禁用]\n12. 纯UI\n13. 对 AI 隐藏选项 [禁用]\n14. [美化]变量更新中 [禁用]\n15. [美化]完整变量更新\n16. MoM可选-[5]小剧场修复（1012）@电波系@yuki [禁用]\n17. MoM美化-[9]超级序言（1123） @电波系 [禁用]\n18. MoM美化-[10]顶部状态栏夜间版@电波系@maru [禁用]\n19. MoM美化-[11]摘要幽灵模式@fawn(1010) [禁用]"
+      "总条目数": 10,
+      "启用条目数": 9,
+      "条目名称列表": "1. 隐藏imgthink\n2. [美化]完整变量更新\n3. 不显示且不发送当前准则\n4. 对 AI 隐藏选项\n5. MoM必选-[1]清除多余内容(0927) [禁用]\n6. MoM美化-[9]超级序言（1123） @电波系\n7. MoM美化-[10]顶部状态栏夜间版@电波系@maru\n8. MoM美化-[11]摘要幽灵模式@fawn(1010)\n9. MoM美化-[13]角色表美化@YUKI（1116）\n10. 状态栏标签隐藏"
     }
 
-[2026-03-20 16:49:01.350] [+1632ms] ⤷ 分支: 条目 1 "不显示且不发送当前准则" 已禁用 ✓
+[2026-03-20 23:55:09.719] [+2246ms] ⤷ 分支: 条目 5 "MoM必选-[1]清除多余内容(0927)" 已禁用 ✓
   条件详情: {
-      "索引": 0,
-      "名称": "不显示且不发送当前准则"
+      "索引": 4,
+      "名称": "MoM必选-[1]清除多余内容(0927)"
     }
 
-[2026-03-20 16:49:01.696] [+1978ms] ⤷ 分支: 条目 3 "对 AI 隐藏选项" 已禁用 ✓
-  条件详情: {
-      "索引": 2,
-      "名称": "对 AI 隐藏选项"
-    }
-
-[2026-03-20 16:49:01.696] [+1978ms] ⤷ 分支: 条目 4 "[美化]变量更新中" 已禁用 ✓
-  条件详情: {
-      "索引": 3,
-      "名称": "[美化]变量更新中"
-    }
-
-[2026-03-20 16:49:01.974] [+2256ms] ⤷ 分支: 条目 6 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
-  条件详情: {
-      "索引": 5,
-      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
-    }
-
-[2026-03-20 16:49:01.974] [+2256ms] ⤷ 分支: 条目 7 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
-  条件详情: {
-      "索引": 6,
-      "名称": "MoM美化-[9]超级序言（1123） @电波系"
-    }
-
-[2026-03-20 16:49:01.974] [+2256ms] ⤷ 分支: 条目 8 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
-  条件详情: {
-      "索引": 7,
-      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
-    }
-
-[2026-03-20 16:49:01.974] [+2256ms] ⤷ 分支: 条目 9 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
-  条件详情: {
-      "索引": 8,
-      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
-    }
-
-[2026-03-20 16:49:01.979] [+2261ms] ⤷ 分支: 条目 11 "不显示且不发送当前准则" 已禁用 ✓
-  条件详情: {
-      "索引": 10,
-      "名称": "不显示且不发送当前准则"
-    }
-
-[2026-03-20 16:49:01.980] [+2262ms] ⤷ 分支: 条目 13 "对 AI 隐藏选项" 已禁用 ✓
-  条件详情: {
-      "索引": 12,
-      "名称": "对 AI 隐藏选项"
-    }
-
-[2026-03-20 16:49:01.980] [+2262ms] ⤷ 分支: 条目 14 "[美化]变量更新中" 已禁用 ✓
-  条件详情: {
-      "索引": 13,
-      "名称": "[美化]变量更新中"
-    }
-
-[2026-03-20 16:49:01.981] [+2263ms] ⤷ 分支: 条目 16 "MoM可选-[5]小剧场修复（1012）@电波系@yuki" 已禁用 ✓
-  条件详情: {
-      "索引": 15,
-      "名称": "MoM可选-[5]小剧场修复（1012）@电波系@yuki"
-    }
-
-[2026-03-20 16:49:01.981] [+2263ms] ⤷ 分支: 条目 17 "MoM美化-[9]超级序言（1123） @电波系" 已禁用 ✓
-  条件详情: {
-      "索引": 16,
-      "名称": "MoM美化-[9]超级序言（1123） @电波系"
-    }
-
-[2026-03-20 16:49:01.981] [+2263ms] ⤷ 分支: 条目 18 "MoM美化-[10]顶部状态栏夜间版@电波系@maru" 已禁用 ✓
-  条件详情: {
-      "索引": 17,
-      "名称": "MoM美化-[10]顶部状态栏夜间版@电波系@maru"
-    }
-
-[2026-03-20 16:49:01.981] [+2263ms] ⤷ 分支: 条目 19 "MoM美化-[11]摘要幽灵模式@fawn(1010)" 已禁用 ✓
-  条件详情: {
-      "索引": 18,
-      "名称": "MoM美化-[11]摘要幽灵模式@fawn(1010)"
-    }
-
-[2026-03-20 16:49:01.981] [+2263ms] 📝 regex.onTestRegexClick
+[2026-03-20 23:55:09.732] [+2259ms] 📝 regex.onTestRegexClick
   描述: 前后正则处理开始
   上下文: {
-      "输入值": "",
-      "输入长度": 0,
+      "输入值": "<StatusPlaceHolderImpl/>",
+      "输入长度": 24,
       "包含分隔符": false
     }
 
-[2026-03-20 16:49:01.981] [+2263ms] ⤷ 分支: 前后正则为空，跳过 ✓
+[2026-03-20 23:55:09.732] [+2259ms] 📝 regex.onTestRegexClick
+  描述: ⚠️ 前后正则缺少分隔符
+  上下文: {
+      "输入": "<StatusPlaceHolderImpl/>",
+      "提示": "格式应为: 前边界|后边界，使用 | 作为分隔符"
+    }
 
-[2026-03-20 16:49:01.983] [+2265ms] 📝 regex.onTestRegexClick
+[2026-03-20 23:55:09.732] [+2259ms] 📝 regex.onTestRegexClick
   描述: 正则处理完成
   上下文: {
-      "原始长度": 5971,
-      "最终长度": 5971,
-      "长度变化": 0,
+      "原始长度": 10,
+      "最终长度": 9,
+      "长度变化": -1,
       "移除范围数": 0
     }
 
-[2026-03-20 16:49:01.983] [+2265ms] 📝 处理后文本
-  内容: [metacognition]
-明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
-“今天用简体中文写哦。”
-“好的，哥哥。”秋青子轻轻点头，信子扫过他的耳垂，“都听哥哥的。”
-“之前的故事到哪了？帮我理一下。”
-“嗯……让我想想……”秋青子眯起眼睛，把前面发生的事从头到尾捋了一遍——“故事开始在9527年12月14日下午两点，‘永恒暴雪’已经持续了一年。哥哥你在星穹国际公寓2001室，七天前激活了‘伊甸庇护所’。庇护所现在是1级，有基础的供暖供电、强化门、食物合成、限时热水和门口监听功能。哥哥你刚刚吃完面包，然后监听到了20... [截断，原长度: 5971]
-  长度: 5971 字符 (已截断)
+[2026-03-20 23:55:09.732] [+2259ms] 📝 处理后文本
+  内容: EDEN-STAR
+  长度: 9 字符
 
-[2026-03-20 16:49:01.984] [+2266ms] ⤷ 分支: 发送正则处理结果 ✓
+[2026-03-20 23:55:09.732] [+2259ms] ⤷ 分支: 发送正则处理结果 ✓
   条件详情: {
       "是自动调用": true,
       "测试模式": false
     }
 
-[2026-03-20 16:49:01.985] [+2267ms] ⏱️ regex.onTestRegexClick 结束 (耗时: 637ms)
-  结果: 处理完成 - 原文5971字 → 最终5971字
+[2026-03-20 23:55:09.732] [+2259ms] ⏱️ regex.onTestRegexClick 结束 (耗时: 30ms)
+  结果: 处理完成 - 原文10字 → 最终9字
 
-[2026-03-20 16:49:01.985] [+2267ms] ⏱️ getElContext 结束 (耗时: 675ms)
+[2026-03-20 23:55:09.732] [+2259ms] ⏱️ getElContext 结束 (耗时: 39ms)
   结果: 获取到 1 条上下文
 
-[2026-03-20 16:49:01.985] [+2267ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.732] [+2259ms] 📝 handlePromptRequest
   描述: 处理世界书触发
   上下文: {
-      "触发文本条数": 1
+      "触发文本条数": 2
     }
 
-[2026-03-20 16:49:01.985] [+2267ms] ⏱️ processWorldBooksWithTrigger 开始
+[2026-03-20 23:55:09.732] [+2259ms] ⏱️ processWorldBooksWithTrigger 开始
   描述: 世界书触发处理
 
-[2026-03-20 16:49:01.989] [+2271ms] ⏱️ processWorldBooksWithTrigger 结束 (耗时: 4ms)
-  结果: 触发内容长度: 0
+[2026-03-20 23:55:09.734] [+2261ms] ⏱️ processWorldBooksWithTrigger 结束 (耗时: 2ms)
+  结果: 触发内容长度: 75682
 
-[2026-03-20 16:49:01.989] [+2271ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.734] [+2261ms] 📝 handlePromptRequest
+  描述: 世界书触发内容已获取
+  上下文: {
+      "内容预览": "=== 电影大师变量正式版 ===\n```\n# FM_DNA v3.0 更新规则\n\n## 格式 (放回复末尾)\n<UpdateVariable>\n<Analysis>\n- Trigger: yes/n..."
+    }
+
+[2026-03-20 23:55:09.734] [+2261ms] 📝 handlePromptRequest
   描述: 构建 Prompt
   上下文: {
       "请求类型": "image_gen",
-      "条目触发文本长度": 5971
+      "条目触发文本长度": 117
     }
 
-[2026-03-20 16:49:01.989] [+2271ms] ⏱️ buildPromptForRequestType 开始
+[2026-03-20 23:55:09.734] [+2261ms] ⏱️ buildPromptForRequestType 开始
   描述: 构建请求类型 Prompt
 
-[2026-03-20 16:49:01.999] [+2281ms] ⏱️ buildPromptForRequestType 结束 (耗时: 10ms)
+[2026-03-20 23:55:09.736] [+2263ms] ⏱️ buildPromptForRequestType 结束 (耗时: 2ms)
   结果: 消息数量: 16
 
-[2026-03-20 16:49:01.999] [+2281ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.739] [+2266ms] 📝 handlePromptRequest
   描述: 生成角色/服装列表
   上下文: {
       "角色列表长度": 10,
-      "服装列表长度": 4566,
-      "通用角色列表长度": 8
+      "服装列表长度": 11126,
+      "通用角色列表长度": 254
     }
 
-[2026-03-20 16:49:01.999] [+2281ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.739] [+2266ms] 📝 handlePromptRequest
   描述: 合并相邻消息
 
-[2026-03-20 16:49:01.999] [+2281ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.739] [+2266ms] 📝 handlePromptRequest
   描述: 替换占位符
 
-[2026-03-20 16:49:01.999] [+2281ms] ⏱️ replaceAllPlaceholders 开始
+[2026-03-20 23:55:09.739] [+2266ms] ⏱️ replaceAllPlaceholders 开始
   描述: 占位符替换处理
 
-[2026-03-20 16:49:02.004] [+2286ms] ⏱️ replaceAllPlaceholders 结束 (耗时: 5ms)
-  结果: 替换了 6 个变量
+[2026-03-20 23:55:09.741] [+2268ms] ⏱️ replaceAllPlaceholders 结束 (耗时: 2ms)
+  结果: 替换了 8 个变量
 
-[2026-03-20 16:49:02.004] [+2286ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.741] [+2268ms] 📝 handlePromptRequest
   描述: 收集角色/服装图片
 
-[2026-03-20 16:49:02.017] [+2299ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.772] [+2299ms] 📝 handlePromptRequest
   描述: 角色/服装图片收集完成
   上下文: {
       "角色图片数": 0,
@@ -494,548 +307,231 @@
       "总计": 0
     }
 
-[2026-03-20 16:49:02.026] [+2308ms] 🎯 开始 LLM 请求
+[2026-03-20 23:55:09.775] [+2302ms] 🎯 开始 LLM 请求
 
-[2026-03-20 16:49:02.027] [+2309ms] 📝 handlePromptRequest
+[2026-03-20 23:55:09.775] [+2302ms] 📝 handlePromptRequest
   描述: 发起 LLM 图片生成请求
   上下文: {
       "消息数量": 16,
       "超时设置": "300000ms"
     }
 
-[2026-03-20 16:49:02.027] [+2309ms] ⏱️ LLM_IMAGE_GEN 开始
+[2026-03-20 23:55:09.775] [+2302ms] ⏱️ LLM_IMAGE_GEN 开始
   描述: LLM 图片生成请求
 
-[2026-03-20 16:49:02.028] [+2310ms] ⏱️ llmRequest.LLM_IMAGE_GEN 开始
+[2026-03-20 23:55:09.775] [+2302ms] ⏱️ llmRequest.LLM_IMAGE_GEN 开始
   描述: 正文图片生成 LLM 请求
 
-[2026-03-20 16:49:02.028] [+2310ms] 📝 llmRequest.LLM_IMAGE_GEN
+[2026-03-20 23:55:09.775] [+2302ms] 📝 llmRequest.LLM_IMAGE_GEN
   描述: LLM请求开始
   上下文: {
-      "请求ID": "aba3db1c-824c-4055-8344-219372e59951",
+      "请求ID": "bba98df7-9483-4f46-855d-5eb74f34a5d4",
       "超时设置": "300000ms",
       "消息数量": 16,
       "功能说明": "通过事件系统发送LLM图片生成请求"
     }
 
-[2026-03-20 16:49:02.170] [+2452ms] 📝 llmRequest.LLM_IMAGE_GEN
+[2026-03-20 23:55:09.789] [+2316ms] 📝 llmRequest.LLM_IMAGE_GEN
   描述: 已发送请求事件，等待响应
   上下文: {
       "事件名": "ch-llm-image-gen-request"
     }
 
-[2026-03-20 16:49:28.274] [+28556ms] 📝 llmRequest.LLM_IMAGE_GEN
+[2026-03-20 23:55:47.114] [+39641ms] 📝 llmRequest.LLM_IMAGE_GEN
   描述: LLM响应收到
   上下文: {
-      "请求ID": "aba3db1c-824c-4055-8344-219372e59951",
+      "请求ID": "bba98df7-9483-4f46-855d-5eb74f34a5d4",
       "成功": true,
       "测试模式": false,
-      "结果长度": 5672
+      "结果长度": 6671
     }
 
-[2026-03-20 16:49:28.274] [+28556ms] ⤷ 分支: 成功分支 ✓
+[2026-03-20 23:55:47.114] [+39641ms] ⤷ 分支: 成功分支 ✓
 
-[2026-03-20 16:49:28.274] [+28556ms] ⏱️ llmRequest.LLM_IMAGE_GEN 结束 (耗时: 26246ms)
-  结果: 成功 - 结果长度: 5672
+[2026-03-20 23:55:47.114] [+39641ms] ⏱️ llmRequest.LLM_IMAGE_GEN 结束 (耗时: 37339ms)
+  结果: 成功 - 结果长度: 6671
 
-[2026-03-20 16:49:28.275] [+28557ms] ⏱️ LLM_IMAGE_GEN 结束 (耗时: 26248ms)
-  结果: 响应长度: 5672
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ LLM_IMAGE_GEN 结束 (耗时: 37341ms)
+  结果: 响应长度: 6671
 
-[2026-03-20 16:49:28.276] [+28558ms] 📝 handlePromptRequest
+[2026-03-20 23:55:47.116] [+39643ms] 📝 handlePromptRequest
   描述: 解析图片标签
 
-[2026-03-20 16:49:28.276] [+28558ms] ⏱️ parseImagesFromPrompt 开始
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ parseImagesFromPrompt 开始
   描述: 解析图片标签
 
-[2026-03-20 16:49:28.276] [+28558ms] ⏱️ imageInserter.parseImagesFromPrompt 开始
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ imageInserter.parseImagesFromPrompt 开始
   描述: 解析 LLM 输出中的图片标签
 
-[2026-03-20 16:49:28.276] [+28558ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 开始解析
   上下文: {
-      "文本长度": 4429
+      "文本长度": 4339
     }
 
-[2026-03-20 16:49:28.276] [+28558ms] 📝 LLM 原始输出
-  内容: 明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
-
-<images>
+[2026-03-20 23:55:47.116] [+39643ms] 📝 LLM 原始输出
+  内容: <images>
 <image>
-regex:秋青子的尾巴缠在他小腿上，下巴搁在他肩膀
-<font color="steelblue">[蛇女青子的亲昵依偎]</font>
+regex:EDEN-STAR
+<font color="steelblue">[星空下的红裙咏叹调]</font>
 <Tag_think>
-昏暗的庇护所室内，明月（User）半躺，秋青子作为非人生物，蛇尾缠绕其腿部，上半身紧贴其后背，下巴搁在明月左肩。青子肤色苍白，金黄色竖瞳在黑暗中微亮，黑发如瀑。
+林舒婉穿着高定的红色丝绒鱼尾裙，站在唯美的星空庭院中。裙摆在星光下闪烁，她面带自信且温柔的微笑，完全没有害羞。周围是干净华丽的建筑与星尘。展示全身构图。
 </Tag_think>
-image###Scene Composition:sfw,1girl,1boy,hetero,indoors,cozy atmosphere,low lighting,bedroom,soft lighting,depth of field,pov,close-up,upper body;
-Character 1 Prompt:1girl,${"name":"Qiu Qingzi (original)","angle":"from side","upperBody":"sfw","lo... [截断，原长度: 4429]
-  长度: 4429 字符 (已截断)
+image###Scene Composition:sfw,1girl,solo,science fiction,space observatory,starry sky,nebula,galaxy,glowing stardust,night,clean environment,elegant atmosphere,luxurious,cinematic lighting,moonlight,full body,wide shot,front view,cinematic angle,depth of field;
+Character 1 Prompt:${"name":"Lin Shuwan", "angle":"from fron... [截断，原长度: 4339]
+  长度: 4339 字符 (已截断)
 
-[2026-03-20 16:49:28.277] [+28559ms] ⤷ 分支: 找到 <images> 容器 ✓
+[2026-03-20 23:55:47.116] [+39643ms] ⤷ 分支: 找到 <images> 容器 ✓
   条件详情: {
-      "容器数量": 3,
-      "合并后长度": 3733
+      "容器数量": 1,
+      "合并后长度": 3826
     }
 
-[2026-03-20 16:49:28.277] [+28559ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 找到 <image> 块
   上下文: {
       "块数量": 4
     }
 
-[2026-03-20 16:49:28.278] [+28560ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 块 1 解析结果
   上下文: {
       "索引": 1,
       "有regex": true,
-      "regex预览": "秋青子的尾巴缠在他小腿上，下巴搁在他肩膀",
+      "regex预览": "EDEN-STAR",
       "有tag": true,
-      "tag长度": 934
+      "tag长度": 786
     }
 
-[2026-03-20 16:49:28.278] [+28560ms] ⤷ 分支: 块 1 有效 - 已添加 ✓
+[2026-03-20 23:55:47.116] [+39643ms] ⤷ 分支: 块 1 有效 - 已添加 ✓
 
-[2026-03-20 16:49:28.278] [+28560ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 块 2 解析结果
   上下文: {
       "索引": 2,
       "有regex": true,
-      "regex预览": "她这种目中无人的性格，在敲响别人的门求助之前，肯定会经历一番剧烈的内心挣扎。",
+      "regex预览": "EDEN-STAR",
       "有tag": true,
-      "tag长度": 666
+      "tag长度": 754
     }
 
-[2026-03-20 16:49:28.278] [+28560ms] ⤷ 分支: 块 2 有效 - 已添加 ✓
+[2026-03-20 23:55:47.116] [+39643ms] ⤷ 分支: 块 2 有效 - 已添加 ✓
 
-[2026-03-20 16:49:28.278] [+28560ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 块 3 解析结果
   上下文: {
       "索引": 3,
       "有regex": true,
-      "regex预览": "或者……她的骄傲会让她做出什么决定呢？也许她会把目光投向邻居？",
+      "regex预览": "EDEN-STAR",
       "有tag": true,
-      "tag长度": 632
+      "tag长度": 747
     }
 
-[2026-03-20 16:49:28.278] [+28560ms] ⤷ 分支: 块 3 有效 - 已添加 ✓
+[2026-03-20 23:55:47.116] [+39643ms] ⤷ 分支: 块 3 有效 - 已添加 ✓
 
-[2026-03-20 16:49:28.278] [+28560ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 块 4 解析结果
   上下文: {
       "索引": 4,
       "有regex": true,
-      "regex预览": "写完慕小小的动作和她接下来的决定就停。比如，她决定去敲2001的门，那么当她的手",
+      "regex预览": "EDEN-STAR",
       "有tag": true,
-      "tag长度": 621
+      "tag长度": 779
     }
 
-[2026-03-20 16:49:28.278] [+28560ms] ⤷ 分支: 块 4 有效 - 已添加 ✓
+[2026-03-20 23:55:47.116] [+39643ms] ⤷ 分支: 块 4 有效 - 已添加 ✓
 
-[2026-03-20 16:49:28.281] [+28563ms] 📝 imageInserter.parseImagesFromPrompt
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.parseImagesFromPrompt
   描述: 解析完成
   上下文: {
       "总块数": 4,
       "有效图片数": 4
     }
 
-[2026-03-20 16:49:28.281] [+28563ms] ⏱️ imageInserter.parseImagesFromPrompt 结束 (耗时: 5ms)
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ imageInserter.parseImagesFromPrompt 结束 (耗时: 0ms)
   结果: 解析到 4 个有效图片
 
-[2026-03-20 16:49:28.281] [+28563ms] ⏱️ parseImagesFromPrompt 结束 (耗时: 5ms)
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ parseImagesFromPrompt 结束 (耗时: 0ms)
   结果: 解析到 4 个图片标签
 
-[2026-03-20 16:49:28.282] [+28564ms] 📝 handlePromptRequest
+[2026-03-20 23:55:47.116] [+39643ms] 📝 handlePromptRequest
   描述: 图片标签解析完成
   上下文: {
       "数量": 4,
       "标签预览": [
-        "image###Scene Composition:sfw,1girl,1boy,hetero,indoors,cozy atmosphere,low lighting,bedroom,soft lighting,depth of field,pov,close-up,upper body;\nCharacter 1 Prompt:1girl,${\"name\":\"Qiu Qingzi (original)\",\"angle\":\"from side\",\"upperBody\":\"sfw\",\"lowerBody\":\"hidden\"}$,black hair,long hair,straight hair,bangs,yellow eyes,slit pupils,pale skin,serpent tail,snake tail,monster girl,non-human,1.3::source#resting head on another's shoulder::,1.2::mutual#hugging::,leaning on another,head on shoulder,source#looking at viewer,gentle smile,parted lips,blush,1.2::flickering tongue::,snake tongue|centers:C2;\nCharacter 1 UC:background characters,fused bodies,legs,feet,human lower body;\nCharacter 2 Prompt:1boy,Ming Yue (original),short hair,black hair,male focus,lying,arm support,holding script,target#resting head on another's shoulder,target#hugging,looking at script|centers:D3;\nCharacter 2 UC:background characters,fused bodies,feet;###",
-        "image###Scene Composition:nsfw,1girl,solo,indoors,luxury room,messy room,living room,winter morning,cold atmosphere,natural lighting,wide-angle,from above,full body;\nCharacter 1 Prompt:1girl,${\"name\":\"Mu Xiaoxiao (original)\",\"angle\":\"from above\",\"upperBody\":\"nsfw\",\"lowerBody\":\"sfw\"}$,long hair,blonde hair,wavy hair,blue eyes,mole under eye,1.4::huge breasts::,cleavage,nipples,1.3::white silk bathrobe::,open bathrobe,kneeling,on floor,arms reaching,searching,looking down,1.3::anxious::,frown,sweat,disheveled hair,messy clothes,hungry,trembling,pout,biting lip,1.2::clenched teeth::|centers:C3;\nCharacter 1 UC:background characters,bra,panties,standing,smile;###",
-        "image###Scene Composition:nsfw,1girl,solo,indoors,bedroom,mirror,reflection,cold lighting,side lighting,cinematic angle,depth of field,upper body;\nCharacter 1 Prompt:1girl,${\"name\":\"Mu Xiaoxiao (original)\",\"angle\":\"from side\",\"upperBody\":\"nsfw\",\"lowerBody\":\"sfw\"}$,long wavy blonde hair,blue eyes,1.2::mole under eye::,1.4::gigantic breasts::,erect nipples,nude,holding clothes,1.2::grey knitted sweater::,half-dressed,standing,looking at mirror,expression of shame,blush,tearing up,1.2::conflicted expression::,clenched teeth,sexy,waist cutout,skinny but curvy|centers:C3;\nCharacter 1 UC:background characters,panties,bra,smile;###"
+        "Scene Composition:sfw,1girl,solo,science fiction,space observatory,starry sky,nebula,galaxy,glowing stardust,night,clean environment,elegant atmosphere,luxurious,cinematic lighting,moonlight,full body,wide shot,front view,cinematic angle,depth of field;\nCharacter 1 Prompt:${\"name\":\"Lin Shuwan\", \"angle\":\"from front\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$,${\"name\":\"Crimson Diva Haute Couture Mermaid Gown\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$,slender,beautiful,masterpiece,standing,graceful posture,hands resting on hips,1.2::red velvet dress::,mermaid skirt,flaring hem,bare shoulders,gentle smile,calm,looking at viewer,confident,bright eyes|centers:C3;\nCharacter 1 UC:background characters,fused bodies,blush,tears,messy,dirty,crying,afraid,flushed face,fear,chubby,fat;",
+        "Scene Composition:sfw,1girl,solo,fantasy,ancient temple,white marble pillars,glowing light,sunlight,god rays,tyndall effect,day,holy atmosphere,ethereal atmosphere,masterpiece,breathtaking landscape,immaculate,from above,panorama,dynamic angle,bokeh;\nCharacter 1 Prompt:${\"name\":\"Su Wanqing\", \"angle\":\"from above\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$,${\"name\":\"Holy Blasphemy Silk Backless Mini Dress\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$,slender,beautiful,standing,looking up,arms outstretched,1.2::white silk fabric::,cowl neck,bare feet,1.2::soft draping::,calm,gentle smile,peaceful expression,glowing skin|centers:C3;\nCharacter 1 UC:background characters,fused bodies,blush,tears,messy,dirty,crying,afraid,flushed face,fear,chubby,fat;",
+        "Scene Composition:sfw,1girl,solo,cyberpunk,futuristic city,concert stage,hologram,neon lights,laser beams,clean environment,vibrant colors,sidelighting,rim lighting,upper body,mid shot,from side,side profile,dutch angle;\nCharacter 1 Prompt:${\"name\":\"Asami Ami\", \"angle\":\"from side\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$,${\"name\":\"Avant-garde Sheer Techwear Club Outfit\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$,slender,masterpiece,beautiful,standing,turning around,hand on chin,1.2::transparent PVC cropped jacket::,black fishnet tank top,silver choker,confident smile,sharp gaze,cool,smirk,looking at viewer|centers:C3;\nCharacter 1 UC:background characters,fused bodies,blush,tears,messy,dirty,crying,afraid,flushed face,fear,chubby,fat;"
       ]
     }
 
-[2026-03-20 16:49:28.282] [+28564ms] 📝 handlePromptRequest
+[2026-03-20 23:55:47.116] [+39643ms] 📝 handlePromptRequest
   描述: 插入图片标签到 DOM
 
-[2026-03-20 16:49:28.282] [+28564ms] ⏱️ insertImagesIntoElement 开始
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ insertImagesIntoElement 开始
   描述: 插入图片标签
 
-[2026-03-20 16:49:28.282] [+28564ms] ⏱️ imageInserter.insertImagesIntoElement 开始
+[2026-03-20 23:55:47.116] [+39643ms] ⏱️ imageInserter.insertImagesIntoElement 开始
   描述: 将图片标签插入到 DOM
 
-[2026-03-20 16:49:28.282] [+28564ms] 📝 imageInserter.insertImagesIntoElement
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.insertImagesIntoElement
   描述: 开始插入图片标签
   上下文: {
       "待插入数量": 4
     }
 
-[2026-03-20 16:49:28.282] [+28564ms] 🔲 目标根元素
+[2026-03-20 23:55:47.116] [+39643ms] 🔲 目标根元素
   元素信息: {
       "标签名": "DIV",
-      "类名": "assistant-body html-body is-stream-stage",
+      "类名": "mes_text",
       "ID": "(无)",
-      "mesId": "(无)",
-      "文本预览": "[metacognition]\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在...",
-      "文本长度": 5971,
-      "是否为mes_text": false,
-      "在iframe中": true
+      "mesId": "0",
+      "文本预览": "<body> \n<script> \n  $('body').load('http://127.0.0...",
+      "文本长度": 113,
+      "是否为mes_text": true,
+      "在iframe中": false
     }
 
-[2026-03-20 16:49:28.282] [+28564ms] 📝 imageInserter.insertImagesIntoElement
+[2026-03-20 23:55:47.116] [+39643ms] 📝 imageInserter.insertImagesIntoElement
   描述: 清理旧元素完成
   上下文: {
       "清理按钮数": 0,
       "清理容器数": 0
     }
 
-[2026-03-20 16:49:28.319] [+28601ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 模糊匹配成功
-  上下文: {
-      "相似度": "93.4%",
-      "AI_regex": "秋青子的尾巴缠在他小腿上，下巴搁在他肩膀",
-      "匹配行": "明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下",
-      "位置": 75
-    }
-
-[2026-03-20 16:49:28.348] [+28630ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 模糊匹配成功
-  上下文: {
-      "相似度": "56.9%",
-      "AI_regex": "她这种目中无人的性格，在敲响别人的门求助之前，肯定会经历一番剧烈的内心挣扎。",
-      "匹配行": "“嗯……”她顺着世界的逻辑往下推：“世界的核心是末日生存，资源极度匮乏，环境恶劣",
-      "位置": 885
-    }
-
-[2026-03-20 16:49:28.367] [+28649ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 模糊匹配成功
-  上下文: {
-      "相似度": "62.2%",
-      "AI_regex": "或者……她的骄傲会让她做出什么决定呢？也许她会把目光投向邻居？",
-      "匹配行": "“上一段停在监听慕小小的动静。现在可以让她做出一些行动了。既然她焦躁，那这种焦躁",
-      "位置": 1438
-    }
-
-[2026-03-20 16:49:28.389] [+28671ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 模糊匹配成功
-  上下文: {
-      "相似度": "93.8%",
-      "AI_regex": "写完慕小小的动作和她接下来的决定就停。比如，她决定去敲2001的门，那么当她的手",
-      "匹配行": "“你看看结尾，有没有又搞升华感悟了？”“不会的，哥哥。”秋青子检查了一下，“故事",
-      "位置": 1575
-    }
-
-[2026-03-20 16:49:28.389] [+28671ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 去重完成
-  上下文: {
-      "去重前": 4,
-      "去重后": 4
-    }
-
-[2026-03-20 16:49:28.393] [+28675ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 插入标签成功
-  上下文: {
-      "tag预览": "image###Scene Composition:sfw,1girl,solo",
-      "位置": 1575
-    }
-
-[2026-03-20 16:49:28.395] [+28677ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 插入标签成功
-  上下文: {
-      "tag预览": "image###Scene Composition:nsfw,1girl,sol",
-      "位置": 1438
-    }
-
-[2026-03-20 16:49:28.397] [+28679ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 插入标签成功
-  上下文: {
-      "tag预览": "image###Scene Composition:nsfw,1girl,sol",
-      "位置": 885
-    }
-
-[2026-03-20 16:49:28.399] [+28681ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 插入标签成功
-  上下文: {
-      "tag预览": "image###Scene Composition:sfw,1girl,1boy",
-      "位置": 75
-    }
-
-[2026-03-20 16:49:28.399] [+28681ms] 📝 imageInserter.insertImagesIntoElement
-  描述: 插入完成
-  上下文: {
-      "成功插入": 4,
-      "跳过": 0,
-      "总计": 4
-    }
-
-[2026-03-20 16:49:28.399] [+28681ms] ⏱️ imageInserter.saveImageGroup 开始
-  描述: 保存图片组位置信息
-
-[2026-03-20 16:49:28.399] [+28681ms] 📝 imageInserter.saveImageGroup
-  描述: 开始保存
-  上下文: {
-      "图片数量": 4
-    }
-
-[2026-03-20 16:49:28.399] [+28681ms] 🔲 目标元素
-  元素信息: {
-      "标签名": "DIV",
-      "类名": "assistant-body html-body is-stream-stage",
-      "ID": "(无)",
-      "mesId": "(无)",
-      "文本预览": "[metacognition]\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在...",
-      "文本长度": 8824,
-      "是否为mes_text": false,
-      "在iframe中": true
-    }
-
-[2026-03-20 16:49:28.404] [+28686ms] 📝 imageInserter.saveImageGroup
-  描述: 检查储存模式
-  上下文: {
-      "insertOriginalText设置": "true",
-      "是否启用": true
-    }
-
-[2026-03-20 16:49:28.404] [+28686ms] ⤷ 分支: insertOriginalText 模式已启用 ✓
-
-[2026-03-20 16:49:28.405] [+28687ms] 📝 imageInserter.saveImageGroup
-  描述: insertOriginalText 定位结果
-  上下文: {
-      "找到mes_text": true,
-      "mesId": 0,
-      "mesId有效": true
-    }
-
-[2026-03-20 16:49:28.405] [+28687ms] ⤷ 分支: mes 长度不足 - 退回原有逻辑 ✓
+[2026-03-20 23:55:47.117] [+39644ms] ⤷ 分支: 模糊匹配失败 ✓
   条件详情: {
-      "mes长度": 9,
-      "阈值": 100
+      "AI_regex": "EDEN-STAR"
     }
 
-[2026-03-20 16:49:28.406] [+28688ms] 📝 imageInserter.saveImageGroup
-  描述: 进入原有保存逻辑
-  上下文: {
-      "是mes_text": false
+[2026-03-20 23:55:47.117] [+39644ms] ⤷ 分支: 模糊匹配失败 ✓
+  条件详情: {
+      "AI_regex": "EDEN-STAR"
     }
 
-[2026-03-20 16:49:28.406] [+28688ms] ⤷ 分支: 保存到 chatMetadata (非 mes_text) ✓
+[2026-03-20 23:55:47.117] [+39644ms] ⤷ 分支: 模糊匹配失败 ✓
+  条件详情: {
+      "AI_regex": "EDEN-STAR"
+    }
 
-[2026-03-20 16:49:28.409] [+28691ms] ⏱️ imageInserter.saveImageGroup 结束 (耗时: 10ms)
-  结果: 保存到 metadata
+[2026-03-20 23:55:47.117] [+39644ms] ⤷ 分支: 模糊匹配失败 ✓
+  条件详情: {
+      "AI_regex": "EDEN-STAR"
+    }
 
-[2026-03-20 16:49:28.409] [+28691ms] ⏱️ imageInserter.insertImagesIntoElement 结束 (耗时: 127ms)
-  结果: 插入 4 个标签
+[2026-03-20 23:55:47.117] [+39644ms] ⤷ 分支: 没有任何匹配 - 结束 ✓
 
-[2026-03-20 16:49:28.409] [+28691ms] ⏱️ insertImagesIntoElement 结束 (耗时: 127ms)
+[2026-03-20 23:55:47.117] [+39644ms] ⏱️ imageInserter.insertImagesIntoElement 结束 (耗时: 1ms)
+  结果: 没有匹配
+
+[2026-03-20 23:55:47.145] [+39672ms] ⏱️ insertImagesIntoElement 结束 (耗时: 29ms)
   结果: 插入完成
 
-[2026-03-20 16:49:28.780] [+29062ms] 🎯 图片生成流程完成
+[2026-03-20 23:55:47.344] [+39871ms] 🎯 图片生成流程完成
 
-[2026-03-20 16:49:28.780] [+29062ms] ⏱️ promptReq.handlePromptRequest 结束 (耗时: 27587ms)
+[2026-03-20 23:55:47.344] [+39871ms] ⏱️ promptReq.handlePromptRequest 结束 (耗时: 37657ms)
   结果: 全流程完成
 
-[2026-03-20 16:52:22.492] [+0ms] 🚀 🚀 会话开始: 点击触发图片生成
-----------------------------------------
-
-[2026-03-20 16:52:22.492] [+0ms] ⏱️ ClickTrigger.handleDoubleClick 开始
-  描述: 处理双击事件 - 显示操作选择弹窗
-
-[2026-03-20 16:52:22.492] [+0ms] 📝 ClickTrigger.handleDoubleClick
-  描述: 双击事件触发
-  上下文: {
-      "坐标": {
-        "x": -2108,
-        "y": 29206
-      },
-      "事件类型": "dblclick",
-      "功能说明": "检测双击事件，验证条件后显示操作选择弹窗"
-    }
-
-[2026-03-20 16:52:22.492] [+0ms] 🔲 触发元素
-  元素信息: {
-      "标签名": "DIV",
-      "类名": "mes_text",
-      "ID": "(无)",
-      "mesId": "2",
-      "文本预览": "[metacognition]\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在...",
-      "文本长度": 4046,
-      "是否为mes_text": true,
-      "在iframe中": false
-    }
-
-[2026-03-20 16:52:22.492] [+0ms] 🔲 实际点击元素
-  元素信息: {
-      "标签名": "DIV",
-      "类名": "mes_text",
-      "ID": "(无)",
-      "mesId": "2",
-      "文本预览": "[metacognition]\n明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在...",
-      "文本长度": 4046,
-      "是否为mes_text": true,
-      "在iframe中": false
-    }
-
-[2026-03-20 16:52:22.492] [+0ms] ⤷ 分支: 点击触发功能已启用 ✓
-  条件详情: {
-      "条件": "clickTriggerEnabled",
-      "设置值": true
-    }
-
-[2026-03-20 16:52:22.492] [+0ms] 📝 元素文本预览
-  内容: [metacognition]
-明月翻了个身，把手里的剧本举到两个人都能看到的高度。秋青子的尾巴缠在他小腿上，下巴搁在他肩膀，凉凉的体温贴着他的脖子。
-"今天用简体中文写哦。"
-"嗯，好的哥哥。"秋青子轻轻点头，信子扫过他的耳垂。"今天用简体中文。"
-"之前的故事到哪了？帮我理一下。"
-"好的哥哥。... [截断，原长度: 4046]
-  长度: 4046 字符 (已截断)
-
-[2026-03-20 16:52:22.492] [+0ms] 📝 ClickTrigger.handleDoubleClick
-  描述: 条件验证通过，显示操作弹窗
-
-[2026-03-20 16:52:22.494] [+2ms] ⏱️ ClickTrigger.handleDoubleClick 结束 (耗时: 2ms)
-  结果: 弹窗已显示
-
-[2026-03-20 16:52:23.650] [+1158ms] 📝 ClickTrigger.buttonClick
-  描述: 用户选择操作: 取消
-  上下文: {
-      "操作": "取消",
-      "功能说明": "无描述"
-    }
-
-[2026-03-20 16:53:04.496] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
-----------------------------------------
-
-[2026-03-20 16:53:04.496] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: LLM生成开始事件触发
-  上下文: {
-      "eventData": "normal"
-    }
-
-[2026-03-20 16:53:04.496] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: 记录生成开始时的状态
-  上下文: {
-      "chatLength": 5,
-      "swipesLength": 0
-    }
-
-[2026-03-20 16:53:26.258] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
-----------------------------------------
-
-[2026-03-20 16:53:26.258] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: LLM生成开始事件触发
-  上下文: {
-      "eventData": "normal"
-    }
-
-[2026-03-20 16:53:26.258] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: 记录生成开始时的状态
-  上下文: {
-      "chatLength": 5,
-      "swipesLength": 0
-    }
-
-[2026-03-20 16:53:27.238] [+980ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
-  描述: 处理LLM生成结束事件
-
-[2026-03-20 16:53:27.239] [+981ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: LLM生成结束事件触发
-  上下文: {
-      "eventData": 5,
-      "startChatLength": 5,
-      "startSwipesLength": 0
-    }
-
-[2026-03-20 16:53:27.239] [+981ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 获取当前状态
-  上下文: {
-      "currentChatLength": 5,
-      "currentSwipesLength": 0
-    }
-
-[2026-03-20 16:53:27.239] [+981ms] ⤷ 分支: Chat或Swipes变化检测 ✗
-  条件详情: {
-      "isChatIncreased": false,
-      "isSwipesIncreased": false,
-      "chatDelta": 0,
-      "swipesDelta": 0
-    }
-
-[2026-03-20 16:53:27.239] [+981ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 无变化 - 跳过处理
-  上下文: {
-      "原因": "Chat和Swipes均未增加"
-    }
-
-[2026-03-20 16:53:27.239] [+981ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 1ms)
-  结果: 跳过 - 无变化
-
-[2026-03-20 16:53:39.076] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
-----------------------------------------
-
-[2026-03-20 16:53:39.076] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: LLM生成开始事件触发
-  上下文: {
-      "eventData": "normal"
-    }
-
-[2026-03-20 16:53:39.076] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: 记录生成开始时的状态
-  上下文: {
-      "chatLength": 5,
-      "swipesLength": 0
-    }
-
-[2026-03-20 16:53:40.064] [+988ms] ⏱️ autoLLMClick.GENERATION_ENDED 开始
-  描述: 处理LLM生成结束事件
-
-[2026-03-20 16:53:40.064] [+988ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: LLM生成结束事件触发
-  上下文: {
-      "eventData": 5,
-      "startChatLength": 5,
-      "startSwipesLength": 0
-    }
-
-[2026-03-20 16:53:40.064] [+988ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 获取当前状态
-  上下文: {
-      "currentChatLength": 5,
-      "currentSwipesLength": 0
-    }
-
-[2026-03-20 16:53:40.064] [+988ms] ⤷ 分支: Chat或Swipes变化检测 ✗
-  条件详情: {
-      "isChatIncreased": false,
-      "isSwipesIncreased": false,
-      "chatDelta": 0,
-      "swipesDelta": 0
-    }
-
-[2026-03-20 16:53:40.064] [+988ms] 📝 autoLLMClick.GENERATION_ENDED
-  描述: 无变化 - 跳过处理
-  上下文: {
-      "原因": "Chat和Swipes均未增加"
-    }
-
-[2026-03-20 16:53:40.064] [+988ms] ⏱️ autoLLMClick.GENERATION_ENDED 结束 (耗时: 0ms)
-  结果: 跳过 - 无变化
-
-[2026-03-20 16:53:55.275] [+0ms] 🚀 🚀 会话开始: 自动LLM图片生成
-----------------------------------------
-
-[2026-03-20 16:53:55.275] [+0ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: LLM生成开始事件触发
-  上下文: {
-      "eventData": "normal"
-    }
-
-[2026-03-20 16:53:55.276] [+1ms] 📝 autoLLMClick.GENERATION_STARTED
-  描述: 记录生成开始时的状态
-  上下文: {
-      "chatLength": 5,
-      "swipesLength": 0
-    }
-
 ========================================
-日志结束 - 总耗时: 383705ms
+日志结束 - 总耗时: 137627ms
 ========================================

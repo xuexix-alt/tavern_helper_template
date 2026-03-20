@@ -775,4 +775,8 @@
   --mission-intel-explored-bg: rgba(122, 154, 214, 0.18);
   --mission-intel-status-explored-text: #163a66;
   --mission-intel-status-completed-text: #11412d;
+  /* 浅色主题下 eden-text 使用深青色以保证可读性 */
+  --eden-text-color: #005566;
+  --eden-text-bg: rgba(0, 85, 102, 0.1);
+  --eden-text-border: #005566;
 }

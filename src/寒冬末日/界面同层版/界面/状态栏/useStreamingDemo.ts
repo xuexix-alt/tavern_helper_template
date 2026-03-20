@@ -48,6 +48,8 @@ import {
   HOST_VISIBILITY_CLASS,
   HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility.ts';
+import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode.ts';
+import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender.ts';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
@@ -2026,6 +2028,22 @@ export function useStreamingDemo() {
     }
   }
 
+  async function ensureHostMesTextRendered(messageId: number): Promise<boolean> {
+    return ensureHostMesTextRenderedWithRefresh(
+      messageId,
+      {
+        currentDocument: document,
+        collectHostDocuments,
+        readChatMessageDetail,
+        setChatMessages,
+      },
+      {
+        attempts: 6,
+        delayMs: 50,
+      },
+    );
+  }
+
   function beginPendingImageTask(messageId: number) {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
@@ -2417,7 +2435,9 @@ export function useStreamingDemo() {
     latestPatchedMessage = nextMessage;
 
     patchQueue = patchQueue.then(async () => {
-      await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], { refresh: 'none' });
+      await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
+        refresh: resolveAssistantMessageRefreshMode(phase),
+      });
       upsertTranscriptItem(
         createLocalTranscriptItem({
           id: messageId,
@@ -2992,5 +3012,6 @@ export function useStreamingDemo() {
     openDetail,
     closeDetail,
     withHostTranscriptVisible,
+    ensureHostMesTextRendered,
   };
 }
