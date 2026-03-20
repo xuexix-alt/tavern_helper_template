@@ -109,7 +109,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref } from 'vue';
-import { useTextareaAutosize } from '@vueuse/core';
+import { useTextareaAutosize, useBreakpoints } from '@vueuse/core';
 
 const props = defineProps<{
   modelValue: string;
@@ -155,6 +155,8 @@ const choiceSending = ref(false);
 const choiceTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const composerTextareaRef = ref<HTMLTextAreaElement | null>(null);
 useTextareaAutosize({ element: composerTextareaRef, input: () => props.modelValue ?? '' });
+const breakpoints = useBreakpoints({ mobile: 760 });
+const isMobile = breakpoints.smallerOrEqual('mobile');
 const choiceOptions = computed(() =>
   Array.isArray(props.choiceOptions)
     ? props.choiceOptions.map(option => String(option ?? '').trim()).filter(Boolean)
@@ -165,7 +167,7 @@ async function openChoiceModal() {
   choiceDraft.value = choiceOptions.value[0] ?? '';
   choiceModalOpen.value = true;
   await nextTick();
-  if (!window.matchMedia('(max-width: 760px)').matches) {
+  if (!isMobile.value) {
     choiceTextareaRef.value?.focus?.();
   }
 }
