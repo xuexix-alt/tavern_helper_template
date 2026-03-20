@@ -261,7 +261,8 @@ defineExpose({
   --transcript-fab-gap: 8px;
 }
 .transcript-scroller {
-  max-height: 680px;
+  flex: 1 1 0;
+  min-height: 0;
   overflow: auto;
   padding: 2px 0 12px;
   scrollbar-gutter: stable;
