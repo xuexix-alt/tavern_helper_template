@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import type { ReaderFontMode, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
 import { buildTranscriptEntryKey } from '../transcriptDomRefresh.ts';
@@ -133,12 +134,12 @@ function emitScrollState(element: HTMLElement) {
   });
 }
 
-function handleScroll() {
+const handleScroll = useThrottleFn(() => {
   const el = listRef.value;
   if (!el) return;
   emitScrollState(el);
   emit('reading-mode-change', isNearBottom(el) ? 'following_latest' : 'browsing_history');
-}
+}, 80);
 
 function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
