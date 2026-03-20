@@ -2546,7 +2546,7 @@ useEventListener(window, 'keydown', event => {
 
   .ui-host-shell.is-fullscreen .ui-main-panel {
     padding-left: 22px;
-    padding-right: 0;
+    padding-right: 22px;
   }
 
   .ui-host-shell.is-fullscreen .ui-transcript-panel {
