@@ -219,19 +219,24 @@ function scrollToMessage(messageId: number, behavior: ScrollBehavior = 'smooth')
   return true;
 }
 
-watch(
-  () => props.items.map(item => `${item.message_id}:${item.phase}:${item.preview}:${item.content.length}`).join('|'),
-  async () => {
-    await nextTick();
-    const el = listRef.value;
-    if (!el) return;
-    if (props.shouldFollowLatest || isNearBottom(el)) {
-      el.scrollTop = el.scrollHeight;
-      emit('reading-mode-change', 'following_latest');
-    }
-    emitScrollState(el);
-  },
+const itemsSignature = computed(() =>
+  props.items.map(item => ({
+    id: item.message_id,
+    phase: item.phase,
+    len: item.content.length,
+  }))
 );
+
+watch(itemsSignature, async () => {
+  await nextTick();
+  const el = listRef.value;
+  if (!el) return;
+  if (props.shouldFollowLatest || isNearBottom(el)) {
+    el.scrollTop = el.scrollHeight;
+    emit('reading-mode-change', 'following_latest');
+  }
+  emitScrollState(el);
+}, { deep: true });
 
 onMounted(async () => {
   await nextTick();
