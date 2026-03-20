@@ -353,11 +353,11 @@ import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
-import {
-  convertIframePointToHostPoint,
-  resolveHostDispatchPlan,
-  resolveHostMessageTargetFromPoint,
-} from '../hostCoordinateTarget';
+  import {
+    convertIframePointToHostPoint,
+    resolveHostDispatchPlanWithRetry,
+    resolveHostMessageTargetFromPoint,
+  } from '../hostCoordinateTarget';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -1219,19 +1219,18 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
       }
     })();
 
-    const directTarget = resolveHostMessageTriggerTarget(messageId);
-    const pointFallbackTarget =
-      directTarget == null
-        ? await resolveWithRetry(() => resolveHostMessageTriggerTargetFromEvent(messageId, event), {
-            attempts: 5,
-            delayMs: 90,
-          })
-        : null;
-
-    const dispatchPlan = resolveHostDispatchPlan({
-      directTarget,
-      pointFallbackTarget,
+    const dispatchPlan = await resolveHostDispatchPlanWithRetry({
+      resolveDirectTarget: () => resolveHostMessageTriggerTarget(messageId),
+      resolvePointFallbackTarget: () => resolveHostMessageTriggerTargetFromEvent(messageId, event),
       hostPoint,
+      directRetry: {
+        attempts: 8,
+        delayMs: 80,
+      },
+      pointRetry: {
+        attempts: 5,
+        delayMs: 90,
+      },
     });
 
     if (!dispatchPlan.target) {
@@ -1431,6 +1430,19 @@ useEventListener(window, 'keydown', event => {
 </script>
 
 <style scoped>
+/*
+ * Z-INDEX 层级表（本文件内）
+ *   1      — ui-host-shell 基础层
+ *   5      — ui-sidebar-mask 遮罩
+ *  16      — ui-topbar（固定在顶）
+ *  20      — ui-sidebar-toggle 按钮
+ *  24      — ui-bottom-console-strip
+ *  25      — ui-sidebar（侧边抽屉）/ ui-bottom-dock
+ *  30      — 设置弹窗等 modal
+ *  32      — 全屏时 modal 提升层
+ * 2599    — ui-utility-mask（Teleport 到 body）
+ * 2600    — ui-bottom-drawer（Teleport 到 body）
+ */
 .ui-host-shell {
   position: relative;
   z-index: 1;
