@@ -1974,10 +1974,7 @@ useEventListener(window, 'keydown', event => {
 .ui-bottom-drawer.is-map,
 .ui-bottom-drawer.is-system {
   width: min(94vw, 72rem);
-  top: 10px;
-  bottom: 100px;
-  transform: translateX(-50%);
-  max-height: none;
+  max-height: min(92%, 80rem);
 }
 
 .ui-bottom-drawer-head {
