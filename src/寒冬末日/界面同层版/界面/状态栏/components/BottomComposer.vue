@@ -35,9 +35,9 @@
       </button>
       <div class="composer-input-main">
         <textarea
+          ref="composerTextareaRef"
           :value="modelValue"
           class="composer-textarea"
-          rows="2"
           placeholder="AWAITING_COMMAND..."
           @input="onInput"
         />
@@ -108,7 +108,8 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
+import { useTextareaAutosize } from '@vueuse/core';
 
 const props = defineProps<{
   modelValue: string;
@@ -152,6 +153,8 @@ const choiceModalOpen = ref(false);
 const choiceDraft = ref('');
 const choiceSending = ref(false);
 const choiceTextareaRef = ref<HTMLTextAreaElement | null>(null);
+const composerTextareaRef = ref<HTMLTextAreaElement | null>(null);
+useTextareaAutosize({ element: composerTextareaRef, input: () => props.modelValue ?? '' });
 const choiceOptions = computed(() =>
   Array.isArray(props.choiceOptions)
     ? props.choiceOptions.map(option => String(option ?? '').trim()).filter(Boolean)
@@ -313,8 +316,10 @@ defineExpose({
 }
 .composer-textarea {
   width: 100%;
-  min-height: 74px;
-  resize: vertical;
+  min-height: 1.5em;
+  max-height: 120px;
+  resize: none;
+  overflow-y: auto;
   border: 0;
   background: transparent;
   color: var(--demo-text-primary);
@@ -446,6 +451,9 @@ defineExpose({
   color: var(--demo-text-accent);
 }
 @media (max-width: 760px) {
+  .composer-textarea {
+    max-height: 80px;
+  }
   .composer-shell {
     gap: 6px;
   }
@@ -492,8 +500,8 @@ defineExpose({
   }
 
   .composer-textarea {
-    min-height: 24px;
-    max-height: 48px;
+    min-height: 1.5em;
+    max-height: 80px;
     font-size: 13px;
     line-height: 1.45;
     padding: 2px 0;
