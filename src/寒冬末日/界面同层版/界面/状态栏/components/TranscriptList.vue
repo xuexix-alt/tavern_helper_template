@@ -236,7 +236,7 @@ watch(itemsSignature, async () => {
     emit('reading-mode-change', 'following_latest');
   }
   emitScrollState(el);
-}, { deep: true });
+});
 
 onMounted(async () => {
   await nextTick();
