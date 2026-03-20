@@ -1971,6 +1971,10 @@ useEventListener(window, 'keydown', event => {
 
 .ui-bottom-drawer.is-map {
   width: min(94vw, 72rem);
+  top: 10px;
+  bottom: 100px;
+  transform: translateX(-50%);
+  max-height: none;
 }
 
 .ui-bottom-drawer-head {
@@ -2036,6 +2040,7 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-bottom-drawer-body {
+  flex: 1 1 0;
   min-height: 0;
   overflow: auto;
   padding: 12px 14px 14px;
