@@ -4,12 +4,15 @@ import '../../../界面/shared/theme-tokens.css';
 import './theme-tokens.css';
 import './global.css';
 
-document.addEventListener('DOMContentLoaded', () => {
+function mountApp() {
   const app = createApp(App);
   app.use(createPinia());
   app.mount('#app');
+  window.addEventListener('pagehide', () => { app.unmount(); });
+}
 
-  window.addEventListener('pagehide', () => {
-    app.unmount();
-  });
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
+}
