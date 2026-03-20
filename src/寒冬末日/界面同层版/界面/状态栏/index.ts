@@ -4,12 +4,12 @@ import '../../../界面/shared/theme-tokens.css';
 import './theme-tokens.css';
 import './global.css';
 
-$(() => {
+document.addEventListener('DOMContentLoaded', () => {
   const app = createApp(App);
   app.use(createPinia());
   app.mount('#app');
 
-  $(window).on('pagehide', () => {
+  window.addEventListener('pagehide', () => {
     app.unmount();
   });
 });
