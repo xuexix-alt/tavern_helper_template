@@ -8,6 +8,7 @@
         :key="buildTranscriptEntryKey(item.message_id, renderRevision)"
         class="transcript-entry"
         :data-message-id="item.message_id"
+        style="position: relative;"
       >
         <component
           :is="item.isOpening ? TranscriptOpeningCard : TranscriptMessageCard"
@@ -39,6 +40,21 @@
           @toggle-opening="emit('toggle-opening')"
           @reroll-opening="emit('reroll-opening')"
         />
+
+        <!-- 🎨 楼层生图按钮，只在 assistant 楼层显示 -->
+        <template v-if="item.role === 'assistant' && !item.isOpening">
+          <button
+            type="button"
+            class="transcript-image-fab"
+            :title="messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'"
+            @click="emit('generate-image', item.message_id)"
+          >
+            <span>{{ messageImageCount(item.message_id) > 0 ? '📷' : '🎨' }}</span>
+            <span v-if="messageImageCount(item.message_id) > 0" class="transcript-image-fab-badge">
+              {{ messageImageCount(item.message_id) }}
+            </span>
+          </button>
+        </template>
       </div>
     </div>
 
@@ -70,7 +86,7 @@
 <script setup lang="ts">
 import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import type { ReaderFontMode, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
+import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
 import { buildTranscriptEntryKey } from '../transcriptDomRefresh.ts';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
@@ -91,6 +107,7 @@ const props = defineProps<{
   canSwipePrev?: boolean;
   canSwipeNext?: boolean;
   renderRevision?: number;
+  galleryEntries?: ReaderGalleryEntry[];
 }>();
 
 const emit = defineEmits<{
@@ -98,6 +115,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'generate-image', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;
@@ -143,6 +161,10 @@ const handleScroll = useThrottleFn(() => {
 
 function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
+}
+
+function messageImageCount(messageId: number): number {
+  return (props.galleryEntries ?? []).filter(e => e.messageId === messageId).length;
 }
 
 function scrollToLatest(behavior: ScrollBehavior = 'smooth') {
@@ -360,5 +382,40 @@ defineExpose({
   .transcript-fab {
     font-size: 13px;
   }
+}
+
+.transcript-image-fab {
+  position: absolute;
+  bottom: 8px;
+  right: calc(var(--transcript-fab-size) + 16px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.transcript-image-fab:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+.transcript-image-fab-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  font-size: 9px;
+  background: #e74c3c;
+  color: white;
+  border-radius: 999px;
+  padding: 0 3px;
+  min-width: 14px;
+  line-height: 14px;
+  text-align: center;
 }
 </style>

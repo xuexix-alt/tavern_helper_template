@@ -11,7 +11,7 @@
 
         <button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色</button>
 
-        <button type="button" class="ui-icon-btn" @click="openGalleryDrawer">图库</button>
+        <!-- <button type="button" class="ui-icon-btn" @click="openGalleryDrawer">图库</button> -->
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
@@ -23,7 +23,7 @@
 
     <div class="ui-host-body">
       <transition name="sidebar-mask-fade">
-        <div v-if="roleDrawerOpen || galleryDrawerOpen" class="ui-sidebar-mask" @click="closeSideDrawers"></div>
+        <div v-if="roleDrawerOpen" class="ui-sidebar-mask" @click="closeSideDrawers"></div>
       </transition>
 
       <button type="button" class="ui-sidebar-toggle" :class="{ open: roleDrawerOpen }" @click="toggleRoleDrawer">
@@ -51,6 +51,7 @@
         </div>
       </aside>
 
+      <!--
       <button
         type="button"
         class="ui-sidebar-toggle ui-sidebar-toggle-right"
@@ -72,7 +73,7 @@
         <div class="ui-sidebar-body ui-sidebar-body-gallery">
           <ImageGalleryPanel
             class="ui-gallery-panel-host"
-            :entries="galleryEntries"
+            :entries="simpleGalleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @jump-message="jumpToTranscriptMessage"
             @image-view="activateGeneratedImageView"
@@ -86,6 +87,7 @@
           </button>
         </footer>
       </aside>
+      -->
 
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
@@ -107,6 +109,7 @@
               :can-swipe-prev="canSwipeLatestAssistantPrev"
               :can-swipe-next="canSwipeLatestAssistantNext"
               :render-revision="transcriptDomRevision"
+              @generate-image="handleTranscriptGenerateImage"
               @open-detail="openDetail"
               @image-intent="handleTranscriptImageIntent"
               @image-view="activateGeneratedImageView"
@@ -331,28 +334,28 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
-import type { TranscriptItem } from '../types';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import {
   parseGeneratedImageActivationPayload,
   type GeneratedImageActivationPayload,
 } from '../generatedImageActivation';
+import type { TranscriptItem } from '../types';
 
+import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
 import HudModal from '../components/HudModal.vue';
-import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
+// import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
+import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../components/OpeningSetupPanel.vue';
 import RadialQuickMenu from '../components/RadialQuickMenu.vue';
-import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
-import openingModalIcon from '../assets/opening-modal-icon.png?url';
-import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
+import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
   convertIframePointToHostPoint,
   resolveHostDispatchPlanWithRetry,
@@ -378,7 +381,7 @@ const {
   transcript,
   visibleTranscript,
   transcriptStats,
-  galleryEntries,
+  // galleryEntries,
   mvuSourceRevision,
   latestUserItem,
   latestAssistantItem,
@@ -422,6 +425,7 @@ const {
   closeDetail,
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
+  triggerImageGenerationForMessage,
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
@@ -431,7 +435,56 @@ const isFullscreen = ref(false);
 provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
-const galleryDrawerOpen = ref(false);
+// const galleryDrawerOpen = ref(false);
+// const simpleGalleryEntries = ref<ReaderGalleryEntry[]>([]);
+
+// function scanGalleryFromDom(): void {
+//   const results: ReaderGalleryEntry[] = [];
+//   const seen = new Set<string>();
+//
+//   for (const item of transcript.value) {
+//     if (item.role !== 'assistant') continue;
+//     const mesid = Math.trunc(Number(item.message_id));
+//
+//     const mesEl = document.querySelector<HTMLElement>(`.mes[mesid="${mesid}"]`);
+//     if (!mesEl) continue;
+//
+//     const imgs = Array.from(
+//       mesEl.querySelectorAll<HTMLImageElement>('.st-chatu8-image-span img, img[data-request-id]'),
+//     );
+//     let order = 0;
+//     for (const img of imgs) {
+//       const src = img.getAttribute('src') ?? img.currentSrc ?? '';
+//       if (!src || src.startsWith('/thumbnail') || seen.has(src)) continue;
+//       seen.add(src);
+//
+//       const span = img.closest<HTMLElement>('.st-chatu8-image-span');
+//       const button = span?.querySelector<HTMLElement>('.st-chatu8-image-button');
+//       const promptToken = button?.getAttribute('data-image-tag') ?? button?.getAttribute('data-link') ?? '';
+//       const requestId = span?.dataset.requestId ?? img.dataset.requestId ?? '';
+//       const markerId = requestId || `${mesid}-${order}`;
+//
+//       results.push({
+//         id: markerId,
+//         messageId: mesid,
+//         markerId,
+//         imageId: requestId || markerId,
+//         promptToken,
+//         requestId: requestId || undefined,
+//         anchorText: undefined,
+//         title: `楼层 #${mesid} · 图 ${order + 1}`,
+//         characterName: undefined,
+//         createdOrder: order,
+//         src,
+//         alt: img.getAttribute('alt') ?? 'generated image',
+//       });
+//       order++;
+//     }
+//   }
+//
+//   simpleGalleryEntries.value = results;
+// }
+
 const transcriptImageTriggerGuard = {
   messageId: null as number | null,
   timestampMs: 0,
@@ -559,21 +612,22 @@ function closeRoleDrawer() {
   roleDrawerOpen.value = false;
 }
 
-function closeGalleryDrawer() {
-  galleryDrawerOpen.value = false;
-}
+// function closeGalleryDrawer() {
+//   galleryDrawerOpen.value = false;
+// }
 
 function openRoleDrawer() {
   closeUtilityDrawer();
-  closeGalleryDrawer();
+  // closeGalleryDrawer();
   roleDrawerOpen.value = true;
 }
 
-function openGalleryDrawer() {
-  closeUtilityDrawer();
-  closeRoleDrawer();
-  galleryDrawerOpen.value = true;
-}
+// function openGalleryDrawer() {
+//   closeUtilityDrawer();
+//   closeRoleDrawer();
+//   scanGalleryFromDom();
+//   galleryDrawerOpen.value = true;
+// }
 
 function openSettingsModal() {
   settingsModalOpen.value = true;
@@ -587,17 +641,17 @@ function toggleRoleDrawer() {
   openRoleDrawer();
 }
 
-function toggleGalleryDrawer() {
-  if (galleryDrawerOpen.value) {
-    closeGalleryDrawer();
-    return;
-  }
-  openGalleryDrawer();
-}
+// function toggleGalleryDrawer() {
+//   if (galleryDrawerOpen.value) {
+//     closeGalleryDrawer();
+//     return;
+//   }
+//   openGalleryDrawer();
+// }
 
 function closeSideDrawers() {
   roleDrawerOpen.value = false;
-  galleryDrawerOpen.value = false;
+  // galleryDrawerOpen.value = false;
 }
 
 function toggleUtilityDrawer(type: 'system' | 'map') {
@@ -639,7 +693,7 @@ function handleRoleSelect(key: string) {
 function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
   closeUtilityDrawer();
-  closeGalleryDrawer();
+  // closeGalleryDrawer();
   roleDrawerOpen.value = true;
 }
 
@@ -649,7 +703,7 @@ function jumpToTranscriptMessage(messageId: number) {
   transcriptListRef.value?.scrollToMessage?.(targetId, 'smooth');
   readingMode.value = 'browsing_history';
   if (window.innerWidth <= 960) {
-    closeGalleryDrawer();
+    // closeGalleryDrawer();
   }
 }
 
@@ -1309,6 +1363,37 @@ function handleTranscriptImageIntent(item: TranscriptItem) {
   markRecentImageIntent(messageId, 'transcript');
 }
 
+function hoistPluginMenuIntoFullscreen(): void {
+  const fullscreenEl = document.fullscreenElement as HTMLElement | null;
+  if (!fullscreenEl) return;
+
+  const hostBody = window.top?.document?.body;
+  if (!hostBody) return;
+
+  const observer = new MutationObserver(mutations => {
+    for (const mut of mutations) {
+      for (const node of Array.from(mut.addedNodes)) {
+        if (!(node instanceof HTMLElement)) continue;
+        if (node.classList.contains('st-chatu8-click-trigger-overlay')) {
+          fullscreenEl.appendChild(node);
+          observer.disconnect();
+          return;
+        }
+      }
+    }
+  });
+
+  observer.observe(hostBody, { childList: true });
+  setTimeout(() => observer.disconnect(), 300);
+}
+
+async function handleTranscriptGenerateImage(messageId: number) {
+  if (document.fullscreenElement) {
+    hoistPluginMenuIntoFullscreen();
+  }
+  await triggerImageGenerationForMessage(messageId);
+}
+
 function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {
   const element = target as HTMLElement | null;
   const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
@@ -1418,6 +1503,38 @@ useEventListener(document, 'click', handleTranscriptIntentCapture, { capture: tr
 useEventListener(document, 'dblclick', handleTranscriptDoubleClickCapture, { capture: true });
 useEventListener(window, 'dblclick', handleGeneratedImageWindowDoubleClickCapture, { capture: true });
 
+// 移动端：touchstart 比插件的 touchend 更早触发
+// 用来提前注入 mes_text 节点，确保插件处理时能读到正文
+let touchStartTime = 0;
+let lastTouchTarget: EventTarget | null = null;
+
+useEventListener(
+  document,
+  'touchstart',
+  (event: TouchEvent) => {
+    if (isBridgedEvent(event)) return;
+    const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
+    if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
+
+    const now = Date.now();
+    const messageId = Math.trunc(rawMessageId as number);
+
+    // 检测双击：两次 touchstart 间隔 < 300ms 且目标相同楼层
+    if (now - touchStartTime < 300 && lastTouchTarget === event.target) {
+      // 双击确认，提前注入
+      void ensureHostMesTextRendered(messageId).then(rendered => {
+        if (!rendered) console.warn('[image] 移动端 mes_text 注入失败，mesid:', messageId);
+      });
+      beginPendingImageTask(messageId);
+      markRecentImageIntent(messageId, 'transcript');
+    }
+
+    touchStartTime = now;
+    lastTouchTarget = event.target;
+  },
+  { capture: true },
+);
+
 function openChoiceModalFromToolbar() {
   composerRef.value?.openChoiceModal?.();
 }
@@ -1458,7 +1575,7 @@ useEventListener(document, 'fullscreenchange', () => {
 
 useEventListener(window, 'keydown', event => {
   if (event.key !== 'Escape') return;
-  if (roleDrawerOpen.value || galleryDrawerOpen.value) closeSideDrawers();
+  if (roleDrawerOpen.value) closeSideDrawers();
   else if (activeUtilityDrawer.value) activeUtilityDrawer.value = null;
   else if (componentLibraryOpen.value) componentLibraryOpen.value = false;
   else if (openingModalOpen.value) openingModalOpen.value = false;

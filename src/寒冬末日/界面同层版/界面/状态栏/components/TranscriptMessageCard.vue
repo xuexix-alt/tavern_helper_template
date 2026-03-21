@@ -123,16 +123,6 @@
             :data-message-id="item.message_id"
             v-html="item.finalHtml || '<p>(空回复)</p>'"
           ></div>
-          <div v-if="item.generatedImages.length > 0" class="assistant-inline-image-strip">
-            <GeneratedImageAsset
-              v-for="image in item.generatedImages"
-              :key="image.id"
-              :entry="image"
-              variant="inline"
-              @view="emit('image-view', $event)"
-              @regenerate="emit('image-regenerate', $event)"
-            />
-          </div>
         </div>
 
         <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
@@ -168,7 +158,6 @@ import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
 import { hydratePersistedImageElements } from '../transcriptImagePersistence';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
-import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
 const props = defineProps<{
   item: TranscriptItem;

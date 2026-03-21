@@ -169,6 +169,16 @@ async function resolveSource() {
   }
 
   resolvedSource.value = syncResult;
+
+  // resolver 找不到时，直接用 DOM 扫描写入的 src
+  if (!resolvedSource.value && props.entry.src) {
+    resolvedSource.value = {
+      src: props.entry.src,
+      alt: props.entry.alt ?? props.entry.title,
+      imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
+      messageId: props.entry.messageId,
+    };
+  }
 }
 
 watch(

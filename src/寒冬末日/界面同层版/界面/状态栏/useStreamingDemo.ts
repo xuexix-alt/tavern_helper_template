@@ -1,4 +1,5 @@
-﻿import {
+﻿import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
+import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
   extractStreamDemoOptions,
@@ -23,6 +24,33 @@ import {
   shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
+import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
+import { buildPromptTokenFromCachePrompt, collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
+import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
+import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker';
+import { buildGeneratedImageMembership } from './generatedImageMembership';
+import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
+import {
+  buildHostTranscriptVisibilitySelector,
+  createHostTranscriptVisibilityController,
+  HOST_VISIBILITY_CLASS,
+  HOST_VISIBILITY_STYLE_ID,
+} from './hostTranscriptVisibility';
+import { getFallbackImageClasses } from './imageFallbackClasses';
+import { createImagePendingTaskManager } from './imagePendingTaskManager';
+import { createImageRecentIntentStore } from './imageRecentIntent';
+import { chooseImageRenderMode } from './imageRenderPriority';
+import { LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED } from './legacyImagePersistenceRuntime';
+import {
+  readNativeFirstImageArtifacts,
+  readNativeFirstMembershipEntries,
+  readNativeFirstPromptTokens,
+  type NativeFirstArtifactSource,
+  type NativeFirstImageArtifact,
+} from './pluginNativeImageArtifacts';
+import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
+import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
   normalizeDensity,
   normalizeFontMode,
@@ -32,44 +60,16 @@ import {
   READER_CHAT_STATE_VERSION,
   readReaderChatState,
 } from './readerState';
-import { buildPromptTokenFromCachePrompt, collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
-import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision.ts';
-import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
-import { buildGeneratedImageMembership } from './generatedImageMembership.ts';
-import { createImagePendingTaskManager } from './imagePendingTaskManager';
-import { getFallbackImageClasses } from './imageFallbackClasses';
-import { chooseImageRenderMode } from './imageRenderPriority';
-import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
-import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
-import { createImageRecentIntentStore } from './imageRecentIntent';
-import {
-  buildHostTranscriptVisibilitySelector,
-  createHostTranscriptVisibilityController,
-  HOST_VISIBILITY_CLASS,
-  HOST_VISIBILITY_STYLE_ID,
-} from './hostTranscriptVisibility.ts';
-import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode.ts';
-import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender.ts';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
-import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh.ts';
+import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
-import { LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED } from './legacyImagePersistenceRuntime.ts';
-import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup.ts';
-import {
-  readNativeFirstImageArtifacts,
-  readNativeFirstMembershipEntries,
-  readNativeFirstPromptTokens,
-  type NativeFirstArtifactSource,
-  type NativeFirstImageArtifact,
-} from './pluginNativeImageArtifacts.ts';
-import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import type {
   DemoStatus,
+  DemoTheme,
   GeneratedImageRef,
+  ReaderFontMode,
   ReaderGalleryEntry,
   ReaderLogItem,
-  DemoTheme,
-  ReaderFontMode,
   ReaderSummary,
   ReadingMode,
   TranscriptDensity,
@@ -345,6 +345,9 @@ function createGeneratedImageFigureHtml(
 
 function readChatMessageDetail(messageId: number): any | null {
   try {
+    const ctx = readHostContext();
+    const chat = ctx?.chat;
+    if (Array.isArray(chat)) return chat[messageId] ?? null;
     const list = getChatMessages(messageId, { hide_state: 'all' }) as any[];
     return Array.isArray(list) ? (list[0] ?? null) : null;
   } catch {
@@ -649,12 +652,21 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
         : [];
 
   const existingSources = collectImageSourceIdentitiesFromHtml(html);
+  const extraSources = new Set<string>();
+  for (const img of nativeFirstImages) {
+    const s = normalizeImageSrcForCompare(img.src);
+    if (s) extraSources.add(s);
+  }
   const dedupedImages: RenderableGeneratedImage[] = [];
   const seenSources = new Set<string>();
   for (const image of images) {
     const normalizedSrc = normalizeImageSrcForCompare(image.src);
     if (!normalizedSrc || existingSources.has(image.src) || seenSources.has(normalizedSrc)) continue;
     if (image.promptToken && promptTokenSet.size > 0 && !promptTokenSet.has(image.promptToken)) continue;
+    // Also skip if this src is already covered by extraImages (plugin-native path).
+    // This prevents duplicate injection when extra images are managed by the
+    // image strip but were temporarily missing from existingSources (DOM not yet updated).
+    if (extraSources.has(normalizedSrc)) continue;
     seenSources.add(normalizedSrc);
     dedupedImages.push(image);
   }
@@ -662,10 +674,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
     appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
   });
-  if (!shouldAppendTranscriptPromptTokens(renderMode, hasPluginNativeArtifacts)) return htmlWithImages;
-  const promptMarkup = createPromptTokenMarkup(promptTokens);
-  if (!promptMarkup) return htmlWithImages;
-  return `${htmlWithImages}${promptMarkup}`;
+  return htmlWithImages;
 }
 
 function collectReachableHostDocuments(): Document[] {
@@ -1043,6 +1052,13 @@ function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: n
 }
 
 function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
+  if (record.type === 'attributes' && record.attributeName === 'src') {
+    const target = record.target as HTMLElement;
+    if (target.tagName === 'IMG' && target.closest('.st-chatu8-image-span, .mes')) {
+      return true;
+    }
+  }
+
   const matchesRelevantNode = (node: Node | null | undefined) => isPluginNativeMutationNode(node);
 
   if (matchesRelevantNode(record.target)) return true;
@@ -1133,13 +1149,7 @@ function buildTranscriptItem(input: {
   const regexText = applyRegexForDisplay(renderSource, input.role);
   const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
   const finalHtml = buildFinalHtml(renderSource, input.id);
-  const generatedImages =
-    input.role === 'assistant'
-      ? buildGeneratedImageRefsForMessage({
-          messageId: input.id,
-          rawMessage: renderSource,
-        })
-      : [];
+  const generatedImages: GeneratedImageRef[] = [];
   const preview = stripTagsForPreview(content || regexText).slice(0, 80);
 
   return {
@@ -1345,6 +1355,8 @@ export function useStreamingDemo() {
 
   const galleryEntries = computed<ReaderGalleryEntry[]>(() => {
     const galleryRevisionSeed = galleryRevision.value;
+    console.log('[GalleryDebug] revision:', galleryRevisionSeed);
+
     const messages = listAllChatMessages()
       .map(message => ({
         message_id: Math.trunc(Number(message?.message_id)),
@@ -1356,12 +1368,21 @@ export function useStreamingDemo() {
       .filter(message => message.role === 'assistant')
       .sort((a, b) => a.message_id - b.message_id);
 
-    return messages
-      .flatMap((message, index) => buildGalleryEntriesForMessage(message, index + galleryRevisionSeed * 0))
+    console.log('[GalleryDebug] assistant messages:', messages.length, messages.map(m => ({id: m.message_id, hidden: m.is_hidden})));
+
+    const entries = messages
+      .flatMap((message, index) => {
+        const built = buildGalleryEntriesForMessage(message, index + galleryRevisionSeed * 0);
+        console.log(`[GalleryDebug] message#${message.message_id} entries:`, built.length, built);
+        return built;
+      })
       .sort((a, b) => {
         if (a.messageId !== b.messageId) return b.messageId - a.messageId;
         return a.createdOrder - b.createdOrder;
       });
+
+    console.log('[GalleryDebug] total entries:', entries.length);
+    return entries;
   });
 
   const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
@@ -1831,6 +1852,9 @@ export function useStreamingDemo() {
       // ignore
     }
 
+    // 在 emit 生命周期事件前注入宿主 DOM 节点
+    // autoLLMClick 的 findElement 在 GENERATION_ENDED 后立即查 DOM
+    await ensureHostMesTextRendered(Math.trunc(normalizedId));
     try {
       await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
     } catch {
@@ -1990,12 +2014,15 @@ export function useStreamingDemo() {
       mvuSourceRevision.value += 1;
     }
 
+    if (domains.includes('gallery')) {
+      galleryRevision.value += 1;
+    }
+
     if (domains.includes('transcript')) {
       if (shouldForceTranscriptDomRefresh(reason)) {
         transcriptDomRevision.value += 1;
       }
       queueExternalSync(reason);
-      return;
     }
   }
 
@@ -2036,7 +2063,17 @@ export function useStreamingDemo() {
       {
         currentDocument: document,
         collectHostDocuments,
-        readChatMessageDetail,
+        readChatMessageDetail: (id: number) => {
+          try {
+            const ctx = readHostContext();
+            const chat = ctx?.chat;
+            if (!Array.isArray(chat)) return null;
+            // chat 数组没有 message_id 字段，index 即 mesid
+            return chat[id] ?? null;
+          } catch {
+            return null;
+          }
+        },
         setChatMessages,
       },
       {
@@ -2066,6 +2103,36 @@ export function useStreamingDemo() {
       source,
       intent: imageRecentIntentStore.read(),
     });
+  }
+
+  async function triggerImageGenerationForMessage(messageId: number): Promise<void> {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+
+    // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
+    const rendered = await ensureHostMesTextRendered(normalizedId);
+    if (!rendered) {
+      console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
+    }
+
+    // Step 2: 注册持久化任务（imagePendingTaskManager 用）
+    beginPendingImageTask(normalizedId);
+    markRecentImageIntent(normalizedId, 'transcript');
+
+    // Step 3: 向注入节点派发合成 dblclick，让插件走完整 ClickTrigger 链路
+    const mesText = document.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null;
+    if (!mesText) {
+      console.warn('[image] 注入节点未找到，mesid:', normalizedId);
+      return;
+    }
+
+    mesText.dispatchEvent(
+      new MouseEvent('dblclick', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }),
+    );
   }
 
   async function persistGeneratedImageResponse(result: {
@@ -2169,7 +2236,7 @@ export function useStreamingDemo() {
     if (resultId == null || resultId <= 0) return false;
     return !messages.some(message => {
       const id = readMessageId(message);
-      if (!Number.isFinite(id) || id <= resultId) return false;
+      if (id == null || !Number.isFinite(id) || id <= resultId) return false;
       if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
       return true;
     });
@@ -2319,6 +2386,7 @@ export function useStreamingDemo() {
     ) {
       status.value = 'streaming';
       queuePersistReaderChatState();
+      return; // 流式进行中，宿主 token 事件不触发 transcript 重建（由 bindGenerationEvents 的 iframe_events 链路独立维护）
     }
 
     const domains = resolveRefreshDomainsForEvent({
@@ -2674,7 +2742,7 @@ export function useStreamingDemo() {
       resultId > 0 &&
       messages.some(message => {
         const id = readMessageId(message);
-        if (!Number.isFinite(id) || id <= resultId) return false;
+        if (id == null || !Number.isFinite(id) || id <= resultId) return false;
         if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
         return true;
       });
@@ -2872,7 +2940,8 @@ export function useStreamingDemo() {
         generatedImageDomObserver.observe(document.body, {
           childList: true,
           subtree: true,
-          attributes: false,
+          attributes: true,
+          attributeFilter: ['src'],
         });
       }
       hostPluginMutationObservers = bindHostPluginMutationObservers(() => {
@@ -3015,5 +3084,6 @@ export function useStreamingDemo() {
     closeDetail,
     withHostTranscriptVisible,
     ensureHostMesTextRendered,
+    triggerImageGenerationForMessage,
   };
 }

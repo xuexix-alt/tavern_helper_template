@@ -231,6 +231,9 @@ function readHostContext(): any {
 
 function readChatMessageDetail(messageId: number): Record<string, any> | null {
   try {
+    const ctx = readHostContext();
+    const chat = ctx?.chat;
+    if (Array.isArray(chat)) return (chat[messageId] as Record<string, any>) ?? null;
     const list = getChatMessages(messageId, { hide_state: 'all' }) as Record<string, any>[];
     return Array.isArray(list) ? (list[0] ?? null) : null;
   } catch {

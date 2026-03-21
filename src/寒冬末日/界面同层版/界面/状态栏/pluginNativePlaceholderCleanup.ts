@@ -1,4 +1,5 @@
-const PLACEHOLDER_SELECTOR = '.image-tag-button, .image-tag-placeholder, .image-tag-container, .ai-image-container';
+const PLACEHOLDER_SELECTOR =
+  '.image-tag-button, .image-tag-placeholder, .image-tag-container, .ai-image-container, .assistant-image-prompt-list';
 
 export function stripPluginNativePlaceholderHtml(html: string): string {
   const source = String(html ?? '').trim();
@@ -10,6 +11,7 @@ export function stripPluginNativePlaceholderHtml(html: string): string {
       .replace(/<span\b[^>]*class="[^"]*\bimage-tag-placeholder\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '')
       .replace(/<span\b[^>]*class="[^"]*\bimage-tag-container\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi, '')
       .replace(/<div\b[^>]*class="[^"]*\bai-image-container\b[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<section\b[^>]*class="[^"]*\bassistant-image-prompt-list\b[^"]*"[^>]*>[\s\S]*?<\/section>/gi, '')
       .trim();
   }
 

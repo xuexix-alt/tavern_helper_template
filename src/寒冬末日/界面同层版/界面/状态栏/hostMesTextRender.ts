@@ -50,11 +50,9 @@ function resolveHostDocument(currentDocument: Document, collectHostDocuments: ()
  * 插件读的是 mes_text.textContent，所以只需纯文本，不需要 HTML 格式化。
  */
 function extractRawText(message: any): string {
-  const raw = String(message?.message ?? '').trim();
+  // SillyTavern chat 对象用 mes 字段，兼容 message 字段
+  const raw = String(message?.mes ?? message?.message ?? '').trim();
   if (!raw) return '';
-
-  // 去掉 [stream-demo:minimal] wrapper，只保留正文部分
-  // 插件的 removeThinkingTextOnly 会处理 <thinking> 标签，这里不需要重复处理
   return raw;
 }
 
