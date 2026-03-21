@@ -8,7 +8,7 @@
         :key="buildTranscriptEntryKey(item.message_id, renderRevision)"
         class="transcript-entry"
         :data-message-id="item.message_id"
-        style="position: relative;"
+        style="position: relative"
       >
         <component
           :is="item.isOpening ? TranscriptOpeningCard : TranscriptMessageCard"
@@ -46,7 +46,9 @@
           <button
             type="button"
             class="transcript-image-fab"
-            :title="messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'"
+            :title="
+              messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'
+            "
             @click="emit('generate-image', item.message_id)"
           >
             <span>{{ messageImageCount(item.message_id) > 0 ? '📷' : '🎨' }}</span>

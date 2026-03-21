@@ -1368,7 +1368,11 @@ export function useStreamingDemo() {
       .filter(message => message.role === 'assistant')
       .sort((a, b) => a.message_id - b.message_id);
 
-    console.log('[GalleryDebug] assistant messages:', messages.length, messages.map(m => ({id: m.message_id, hidden: m.is_hidden})));
+    console.log(
+      '[GalleryDebug] assistant messages:',
+      messages.length,
+      messages.map(m => ({ id: m.message_id, hidden: m.is_hidden })),
+    );
 
     const entries = messages
       .flatMap((message, index) => {
