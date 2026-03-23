@@ -1,4 +1,4 @@
-﻿import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
+import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
@@ -2794,7 +2794,9 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
-        await createChatMessages([{ role: 'user', message: prompt, is_hidden: false }], { refresh: 'none' });
+        const lastAssistantMessage = getChatMessages(-2)?.[0];
+        const userData = lastAssistantMessage?.data ? _.cloneDeep(lastAssistantMessage.data) : {};
+        await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], { refresh: 'none' });
         const userId = Number(getLastMessageId?.());
         recordLifecycleTrace(
           'runGenerationFlow',

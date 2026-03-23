@@ -1,10 +1,11 @@
 <template>
   <section class="transcript-card">
     <div ref="listRef" class="transcript-scroller" @scroll="handleScroll">
+      <div v-if="hasMoreAbove" class="transcript-load-more" @click="loadMoreAbove">↑ 加载更多</div>
       <div v-if="items.length === 0" class="transcript-empty">暂无消息。发送后将在这里重建真实楼层阅读视图。</div>
 
       <div
-        v-for="item in items"
+        v-for="item in visibleItems"
         :key="buildTranscriptEntryKey(item.message_id, renderRevision)"
         class="transcript-entry"
         :data-message-id="item.message_id"
@@ -136,6 +137,21 @@ const emit = defineEmits<{
 const listRef = ref<HTMLElement | null>(null);
 const atTop = ref(true);
 const atBottom = ref(true);
+const PAGE_SIZE = 6;
+const startIndex = ref(0);
+
+const visibleItems = computed(() => props.items.slice(startIndex.value));
+const hasMoreAbove = computed(() => startIndex.value > 0);
+
+async function loadMoreAbove() {
+  const el = listRef.value;
+  const prevScrollHeight = el ? el.scrollHeight : 0;
+  startIndex.value = Math.max(0, startIndex.value - PAGE_SIZE);
+  await nextTick();
+  if (el) {
+    el.scrollTop += el.scrollHeight - prevScrollHeight;
+  }
+}
 
 function isNearBottom(element: HTMLElement): boolean {
   const remain = element.scrollHeight - element.scrollTop - element.clientHeight;
@@ -230,9 +246,15 @@ function scrollToCurrentEntryTop(offset = 24) {
   });
 }
 
-function scrollToMessage(messageId: number, behavior: ScrollBehavior = 'smooth') {
+async function scrollToMessage(messageId: number, behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return false;
+  // 确保目标楼在可见范围内
+  const targetIndex = props.items.findIndex(item => item.message_id === Math.trunc(messageId));
+  if (targetIndex >= 0 && targetIndex < startIndex.value) {
+    startIndex.value = targetIndex;
+    await nextTick();
+  }
   const entry = el.querySelector<HTMLElement>(`.transcript-entry[data-message-id='${Math.trunc(messageId)}']`);
   if (!entry) return false;
 
@@ -256,7 +278,10 @@ watch(itemsSignature, async () => {
   await nextTick();
   const el = listRef.value;
   if (!el) return;
+  // 新楼层到来时，若用户在底部则追尾并确保最新楼可见
   if (props.shouldFollowLatest || isNearBottom(el)) {
+    startIndex.value = Math.max(0, props.items.length - PAGE_SIZE);
+    await nextTick();
     el.scrollTop = el.scrollHeight;
     emit('reading-mode-change', 'following_latest');
   }
@@ -264,9 +289,11 @@ watch(itemsSignature, async () => {
 });
 
 onMounted(async () => {
+  startIndex.value = Math.max(0, props.items.length - PAGE_SIZE);
   await nextTick();
   const el = listRef.value;
   if (!el) return;
+  el.scrollTop = el.scrollHeight;
   emitScrollState(el);
 });
 
@@ -317,6 +344,21 @@ defineExpose({
   border: 1px solid var(--demo-border-accent-soft);
   border-radius: 18px;
   background: color-mix(in srgb, var(--surface) 18%, transparent);
+}
+
+.transcript-load-more {
+  text-align: center;
+  padding: 10px 0;
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--demo-text-accent);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.transcript-load-more:hover {
+  opacity: 1;
 }
 
 .transcript-fab-stack {

@@ -802,7 +802,8 @@ onBeforeUnmount(() => {
 
 @media (min-width: 761px) {
   .assistant-card {
-    max-width: min(100%, var(--reader-content-max, 72rem));
+    width: 100%;
+    max-width: 100%;
     border-color: var(--demo-border-accent-soft);
     box-shadow: 0 14px 30px color-mix(in srgb, var(--shadow-color) 42%, transparent);
   }

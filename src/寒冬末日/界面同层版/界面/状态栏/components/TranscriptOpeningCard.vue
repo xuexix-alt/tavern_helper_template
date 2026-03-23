@@ -280,7 +280,8 @@ const showBody = computed(() => {
 
 @media (min-width: 761px) {
   .transcript-item {
-    max-width: min(100%, var(--reader-content-max, 72rem));
+    width: 100%;
+    max-width: 100%;
     border-color: var(--demo-border-warning-soft);
     box-shadow: 0 14px 28px color-mix(in srgb, var(--shadow-color) 38%, transparent);
   }
