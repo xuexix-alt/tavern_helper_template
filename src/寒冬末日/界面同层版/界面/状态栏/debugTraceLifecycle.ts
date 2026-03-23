@@ -13,7 +13,9 @@ type GenerationListenerEpochController = {
 };
 
 function normalizeText(input: unknown): string {
-  return String(input ?? '').replace(/\r\n/g, '\n').trim();
+  return String(input ?? '')
+    .replace(/\r\n/g, '\n')
+    .trim();
 }
 
 export function buildDebugMessageSignature(input: unknown): string {
@@ -79,10 +81,7 @@ export function createGenerationListenerEpochController(initialEpoch = 0): Gener
   };
 }
 
-export function buildDemoAssistantFinalBodySource(input: {
-  content: string;
-  strippedRenderSource: string;
-}): string {
+export function buildDemoAssistantFinalBodySource(input: { content: string; strippedRenderSource: string }): string {
   const content = normalizeText(input.content);
   if (content) return content;
   return normalizeText(input.strippedRenderSource);

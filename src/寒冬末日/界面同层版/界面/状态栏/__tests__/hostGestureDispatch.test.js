@@ -19,7 +19,7 @@ function createFakeTarget({ mobile = false } = {}) {
     MouseEvent: FakeMouseEvent,
     navigator: { maxTouchPoints: mobile ? 5 : 0 },
     innerWidth: mobile ? 390 : 1280,
-    ontouchstart: mobile ? (() => {}) : undefined,
+    ontouchstart: mobile ? () => {} : undefined,
   };
 
   const target = {

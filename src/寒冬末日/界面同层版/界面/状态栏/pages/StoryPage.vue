@@ -11,7 +11,9 @@
 
         <button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色</button>
 
-        <button type="button" class="ui-icon-btn" :class="{ active: galleryDrawerOpen }" @click="toggleGalleryDrawer">画廊</button>
+        <button type="button" class="ui-icon-btn" :class="{ active: galleryDrawerOpen }" @click="toggleGalleryDrawer">
+          画廊
+        </button>
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 

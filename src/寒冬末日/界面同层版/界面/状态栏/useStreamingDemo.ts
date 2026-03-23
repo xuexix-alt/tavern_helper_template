@@ -25,12 +25,7 @@ import {
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
-import {
-  createDebugTraceStore,
-  createTraceId,
-  installDebugTraceRuntime,
-  recordDebugTrace,
-} from './debugTrace';
+import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
   buildDemoAssistantFinalBodySource,
   buildDebugMessageSignature,
@@ -1841,17 +1836,27 @@ export function useStreamingDemo() {
       String(tavern_events.MESSAGE_UPDATED),
     ];
 
-    recordLifecycleTrace('emitOfficialGenerationLifecycle', 'start', {
-      messageId: Math.trunc(normalizedId),
-      type,
-    }, traceId);
+    recordLifecycleTrace(
+      'emitOfficialGenerationLifecycle',
+      'start',
+      {
+        messageId: Math.trunc(normalizedId),
+        type,
+      },
+      traceId,
+    );
 
     try {
       await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
-      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'message_received_emitted', {
-        messageId: Math.trunc(normalizedId),
-        type,
-      }, traceId);
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'message_received_emitted',
+        {
+          messageId: Math.trunc(normalizedId),
+          type,
+        },
+        traceId,
+      );
     } catch {
       // ignore
     }
@@ -1859,24 +1864,39 @@ export function useStreamingDemo() {
     // 在 emit 生命周期事件前注入宿主 DOM 节点
     // autoLLMClick 的 findElement 在 GENERATION_ENDED 后立即查 DOM
     const hostRendered = await ensureHostMesTextRendered(Math.trunc(normalizedId));
-    recordLifecycleTrace('emitOfficialGenerationLifecycle', 'host_mes_text_checked', {
-      messageId: Math.trunc(normalizedId),
-      hostRendered,
-    }, traceId);
+    recordLifecycleTrace(
+      'emitOfficialGenerationLifecycle',
+      'host_mes_text_checked',
+      {
+        messageId: Math.trunc(normalizedId),
+        hostRendered,
+      },
+      traceId,
+    );
     try {
       await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
-      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'generation_ended_emitted', {
-        messageId: Math.trunc(normalizedId),
-      }, traceId);
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'generation_ended_emitted',
+        {
+          messageId: Math.trunc(normalizedId),
+        },
+        traceId,
+      );
     } catch {
       // ignore
     }
 
     try {
       await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
-      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'message_updated_emitted', {
-        messageId: Math.trunc(normalizedId),
-      }, traceId);
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'message_updated_emitted',
+        {
+          messageId: Math.trunc(normalizedId),
+        },
+        traceId,
+      );
     } catch {
       // ignore
     }
@@ -2539,10 +2559,15 @@ export function useStreamingDemo() {
       }
     } catch {
       transcript.value = [];
-      recordLifecycleTrace('rebuildTranscript', 'error', {
-        reason,
-        sequence,
-      }, traceId);
+      recordLifecycleTrace(
+        'rebuildTranscript',
+        'error',
+        {
+          reason,
+          sequence,
+        },
+        traceId,
+      );
     }
     queueHidePolicy('rebuild');
     queuePersistReaderChatState();
@@ -2552,9 +2577,14 @@ export function useStreamingDemo() {
     const messageId = assistantMessageId.value;
     const traceId = resolveTraceId('patch');
     if (messageId == null) {
-      recordLifecycleTrace('patchAssistantMessage', 'skip_missing_message_id', {
-        phase,
-      }, traceId);
+      recordLifecycleTrace(
+        'patchAssistantMessage',
+        'skip_missing_message_id',
+        {
+          phase,
+        },
+        traceId,
+      );
       return;
     }
 
@@ -2565,31 +2595,46 @@ export function useStreamingDemo() {
     const nextSignature = buildDebugMessageSignature(nextMessage);
     const previousSignature = buildDebugMessageSignature(latestPatchedMessage);
     const sequence = ++patchSequence;
-    recordLifecycleTrace('patchAssistantMessage', 'requested', {
-      phase,
-      sequence,
-      messageId,
-      nextSignature,
-      previousSignature,
-    }, traceId);
-    if (nextMessage === latestPatchedMessage) {
-      recordLifecycleTrace('patchAssistantMessage', 'skip_same_content', {
+    recordLifecycleTrace(
+      'patchAssistantMessage',
+      'requested',
+      {
         phase,
         sequence,
         messageId,
         nextSignature,
-      }, traceId);
+        previousSignature,
+      },
+      traceId,
+    );
+    if (nextMessage === latestPatchedMessage) {
+      recordLifecycleTrace(
+        'patchAssistantMessage',
+        'skip_same_content',
+        {
+          phase,
+          sequence,
+          messageId,
+          nextSignature,
+        },
+        traceId,
+      );
       return;
     }
     latestPatchedMessage = nextMessage;
 
     patchQueue = patchQueue.then(async () => {
-      recordLifecycleTrace('patchAssistantMessage', 'commit_start', {
-        phase,
-        sequence,
-        messageId,
-        nextSignature,
-      }, traceId);
+      recordLifecycleTrace(
+        'patchAssistantMessage',
+        'commit_start',
+        {
+          phase,
+          sequence,
+          messageId,
+          nextSignature,
+        },
+        traceId,
+      );
       await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
         refresh: resolveAssistantMessageRefreshMode(phase),
       });
@@ -2601,13 +2646,18 @@ export function useStreamingDemo() {
           hidden: false,
         }),
       );
-      recordLifecycleTrace('patchAssistantMessage', 'commit_done', {
-        phase,
-        sequence,
-        messageId,
-        nextSignature,
-        transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
-      }, traceId);
+      recordLifecycleTrace(
+        'patchAssistantMessage',
+        'commit_done',
+        {
+          phase,
+          sequence,
+          messageId,
+          nextSignature,
+          transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+        },
+        traceId,
+      );
     });
     await patchQueue;
     if (
@@ -2621,19 +2671,29 @@ export function useStreamingDemo() {
       if (phase === 'stream' && hostRendered) {
         hostMesTextPrimedForCurrentGeneration = true;
       }
-      recordLifecycleTrace('patchAssistantMessage', 'host_mes_text_prewarmed', {
+      recordLifecycleTrace(
+        'patchAssistantMessage',
+        'host_mes_text_prewarmed',
+        {
+          phase,
+          sequence,
+          messageId,
+          hostRendered,
+        },
+        traceId,
+      );
+    }
+    recordLifecycleTrace(
+      'patchAssistantMessage',
+      'queue_settled',
+      {
         phase,
         sequence,
         messageId,
-        hostRendered,
-      }, traceId);
-    }
-    recordLifecycleTrace('patchAssistantMessage', 'queue_settled', {
-      phase,
-      sequence,
-      messageId,
-      nextSignature,
-    }, traceId);
+        nextSignature,
+      },
+      traceId,
+    );
   }
 
   async function ensureAssistantPlaceholderReady(reason: 'first_token' | 'finalize_fallback') {
@@ -2697,11 +2757,16 @@ export function useStreamingDemo() {
     const prompt = String(options.prompt ?? '').trim();
     const traceId = createTraceId(options.createUser ? 'send' : 'regenerate');
     if (!prompt || busy.value) {
-      recordLifecycleTrace('runGenerationFlow', 'skip', {
-        reason: !prompt ? 'empty_prompt' : 'busy',
-        createUser: options.createUser,
-        promptSignature: buildDebugMessageSignature(prompt),
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'skip',
+        {
+          reason: !prompt ? 'empty_prompt' : 'busy',
+          createUser: options.createUser,
+          promptSignature: buildDebugMessageSignature(prompt),
+        },
+        traceId,
+      );
       return;
     }
 
@@ -2716,20 +2781,30 @@ export function useStreamingDemo() {
     latestPatchedMessage = '';
     hostMesTextPrimedForCurrentGeneration = false;
     bindGenerationEvents();
-    recordLifecycleTrace('runGenerationFlow', 'start', {
-      createUser: options.createUser,
-      promptPreview: stripTagsForPreview(prompt).slice(0, 80),
-      promptSignature: buildDebugMessageSignature(prompt),
-    }, traceId);
+    recordLifecycleTrace(
+      'runGenerationFlow',
+      'start',
+      {
+        createUser: options.createUser,
+        promptPreview: stripTagsForPreview(prompt).slice(0, 80),
+        promptSignature: buildDebugMessageSignature(prompt),
+      },
+      traceId,
+    );
 
     try {
       if (options.createUser) {
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false }], { refresh: 'none' });
         const userId = Number(getLastMessageId?.());
-        recordLifecycleTrace('runGenerationFlow', 'user_created', {
-          userId: Number.isFinite(userId) ? Math.trunc(userId) : null,
-          promptSignature: buildDebugMessageSignature(prompt),
-        }, traceId);
+        recordLifecycleTrace(
+          'runGenerationFlow',
+          'user_created',
+          {
+            userId: Number.isFinite(userId) ? Math.trunc(userId) : null,
+            promptSignature: buildDebugMessageSignature(prompt),
+          },
+          traceId,
+        );
         if (Number.isFinite(userId)) {
           upsertTranscriptItem(
             createLocalTranscriptItem({
@@ -2747,9 +2822,14 @@ export function useStreamingDemo() {
         should_stream: true,
         max_chat_history: 'all',
       });
-      recordLifecycleTrace('runGenerationFlow', 'generate_requested', {
-        createUser: options.createUser,
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'generate_requested',
+        {
+          createUser: options.createUser,
+        },
+        traceId,
+      );
 
       const result = String(await generatePromise).trim();
       finalText.value = result;
@@ -2763,9 +2843,14 @@ export function useStreamingDemo() {
       ) {
         await ensureAssistantPlaceholderReady('finalize_fallback');
       }
-      recordLifecycleTrace('runGenerationFlow', 'generate_resolved', {
-        resultSignature: buildDebugMessageSignature(result),
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'generate_resolved',
+        {
+          resultSignature: buildDebugMessageSignature(result),
+        },
+        traceId,
+      );
       await patchAssistantMessage('done');
       if (assistantMessageId.value != null) {
         const reprocessResult = await reprocessMessageVariablesById(assistantMessageId.value, {
@@ -2775,28 +2860,43 @@ export function useStreamingDemo() {
         if (reprocessResult.status === 'error') {
           console.warn('[stream-demo] direct MVU reprocess failed', reprocessResult);
         }
-        recordLifecycleTrace('runGenerationFlow', 'mvu_reprocess_completed', {
-          assistantMessageId: assistantMessageId.value,
-          reprocessStatus: reprocessResult.status,
-        }, traceId);
+        recordLifecycleTrace(
+          'runGenerationFlow',
+          'mvu_reprocess_completed',
+          {
+            assistantMessageId: assistantMessageId.value,
+            reprocessStatus: reprocessResult.status,
+          },
+          traceId,
+        );
       }
       await emitOfficialGenerationLifecycle(assistantMessageId.value, options.createUser ? 'normal' : 'regenerate');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
-      recordLifecycleTrace('runGenerationFlow', 'done', {
-        assistantMessageId: assistantMessageId.value,
-        finalSignature: buildDebugMessageSignature(result),
-        transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'done',
+        {
+          assistantMessageId: assistantMessageId.value,
+          finalSignature: buildDebugMessageSignature(result),
+          transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+        },
+        traceId,
+      );
       appendLog('action', '生成完成', stripTagsForPreview(result).slice(0, 80) || '(空回复)');
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
-      recordLifecycleTrace('runGenerationFlow', 'error', {
-        assistantMessageId: assistantMessageId.value,
-        message: errorText.value,
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'error',
+        {
+          assistantMessageId: assistantMessageId.value,
+          message: errorText.value,
+        },
+        traceId,
+      );
       if (assistantMessageId.value != null) {
         finalText.value = `生成失败：${errorText.value}`;
         try {
@@ -2812,10 +2912,15 @@ export function useStreamingDemo() {
       clearGenerationListeners();
       busy.value = false;
       hostMesTextPrimedForCurrentGeneration = false;
-      recordLifecycleTrace('runGenerationFlow', 'finally', {
-        assistantMessageId: assistantMessageId.value,
-        finalStatus: status.value,
-      }, traceId);
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'finally',
+        {
+          assistantMessageId: assistantMessageId.value,
+          finalStatus: status.value,
+        },
+        traceId,
+      );
       activeGenerationTraceId = '';
     }
   }
@@ -3070,17 +3175,27 @@ export function useStreamingDemo() {
       generationStops.push(
         eventOn(iframe_events.GENERATION_STARTED as any, () => {
           if (isStaleListener()) {
-            recordLifecycleTrace('bindGenerationEvents', 'generation_started_ignored_stale', {
-              listenerEpoch,
-            }, traceId);
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'generation_started_ignored_stale',
+              {
+                listenerEpoch,
+              },
+              traceId,
+            );
             return;
           }
           status.value = 'streaming';
           transcript.value = syncTranscriptFlags(transcript.value);
-          recordLifecycleTrace('bindGenerationEvents', 'generation_started', {
-            listenerEpoch,
-            transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
-          }, traceId);
+          recordLifecycleTrace(
+            'bindGenerationEvents',
+            'generation_started',
+            {
+              listenerEpoch,
+              transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+            },
+            traceId,
+          );
         }),
       );
     } catch {
@@ -3091,21 +3206,31 @@ export function useStreamingDemo() {
       generationStops.push(
         eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, (token: string) => {
           if (isStaleListener()) {
-            recordLifecycleTrace('bindGenerationEvents', 'token_incremental_ignored_stale', {
-              listenerEpoch,
-              tokenLength: String(token ?? '').length,
-            }, traceId);
-              return;
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'token_incremental_ignored_stale',
+              {
+                listenerEpoch,
+                tokenLength: String(token ?? '').length,
+              },
+              traceId,
+            );
+            return;
           }
           void (async () => {
             const tokenText = String(token ?? '');
             streamText.value += tokenText;
             status.value = 'streaming';
-            recordLifecycleTrace('bindGenerationEvents', 'token_incremental', {
-              listenerEpoch,
-              tokenLength: tokenText.length,
-              streamSignature: buildDebugMessageSignature(streamText.value),
-            }, traceId);
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'token_incremental',
+              {
+                listenerEpoch,
+                tokenLength: tokenText.length,
+                streamSignature: buildDebugMessageSignature(streamText.value),
+              },
+              traceId,
+            );
             if (
               shouldCreateAssistantPlaceholderOnFirstToken({
                 assistantMessageId: assistantMessageId.value,
@@ -3128,16 +3253,26 @@ export function useStreamingDemo() {
       generationStops.push(
         eventOn(iframe_events.GENERATION_ENDED as any, (text: string) => {
           if (isStaleListener()) {
-            recordLifecycleTrace('bindGenerationEvents', 'generation_ended_ignored_stale', {
-              listenerEpoch,
-            }, traceId);
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'generation_ended_ignored_stale',
+              {
+                listenerEpoch,
+              },
+              traceId,
+            );
             return;
           }
           finalText.value = String(text ?? '').trim();
-          recordLifecycleTrace('bindGenerationEvents', 'generation_ended', {
-            listenerEpoch,
-            finalSignature: buildDebugMessageSignature(finalText.value),
-          }, traceId);
+          recordLifecycleTrace(
+            'bindGenerationEvents',
+            'generation_ended',
+            {
+              listenerEpoch,
+              finalSignature: buildDebugMessageSignature(finalText.value),
+            },
+            traceId,
+          );
         }),
       );
     } catch {
@@ -3163,10 +3298,15 @@ export function useStreamingDemo() {
         }),
       );
     }
-    recordLifecycleTrace('createAssistantPlaceholder', 'created', {
-      assistantMessageId: assistantMessageId.value,
-      placeholderSignature: buildDebugMessageSignature(buildStreamDemoMessage('', 'stream')),
-    }, traceId);
+    recordLifecycleTrace(
+      'createAssistantPlaceholder',
+      'created',
+      {
+        assistantMessageId: assistantMessageId.value,
+        placeholderSignature: buildDebugMessageSignature(buildStreamDemoMessage('', 'stream')),
+      },
+      traceId,
+    );
     await patchAssistantMessage('stream');
   }
 
@@ -3288,9 +3428,7 @@ export function useStreamingDemo() {
     }
     return groups;
   });
-  const galleryEntries = computed<GeneratedImageRef[]>(() =>
-    galleryGroups.value.flatMap(g => g.images),
-  );
+  const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));
 
   return {
     input,
