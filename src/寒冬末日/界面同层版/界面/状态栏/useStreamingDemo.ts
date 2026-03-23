@@ -2796,7 +2796,9 @@ export function useStreamingDemo() {
       if (options.createUser) {
         const lastAssistantMessage = getChatMessages(-2)?.[0];
         const userData = lastAssistantMessage?.data ? _.cloneDeep(lastAssistantMessage.data) : {};
-        await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], { refresh: 'none' });
+        await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], {
+          refresh: 'none',
+        });
         const userId = Number(getLastMessageId?.());
         recordLifecycleTrace(
           'runGenerationFlow',
