@@ -29,6 +29,7 @@
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
           @image-regenerate="emit('image-regenerate', $event)"
+          @generate-image="emit('generate-image', $event)"
           @start-edit="emit('start-edit-user', item)"
           @update-edit-draft="emit('update-edit-draft', $event)"
           @confirm-edit="emit('confirm-edit-user', item)"

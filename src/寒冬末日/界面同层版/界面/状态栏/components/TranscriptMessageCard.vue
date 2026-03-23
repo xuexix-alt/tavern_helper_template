@@ -179,6 +179,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'generate-image', messageId: number): void;
   (event: 'start-edit', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
   (event: 'confirm-edit', item: TranscriptItem): void;
@@ -243,6 +244,18 @@ function bindAssistantBodyInteractions() {
   clearAssistantBodyInteractionBindings();
   const root = assistantBodyRef.value;
   if (!root) return;
+
+  const promptButtons = Array.from(root.querySelectorAll('button.image-tag-button')) as HTMLButtonElement[];
+  for (const button of promptButtons) {
+    const handleClick = (event: Event) => {
+      stopEvent(event);
+      emit('generate-image', props.item.message_id);
+    };
+    button.addEventListener('click', handleClick, true);
+    assistantBodyCleanup.value.push(() => {
+      button.removeEventListener('click', handleClick, true);
+    });
+  }
 
   const carriers = Array.from(
     root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
@@ -502,6 +515,60 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.dialog-inline) {
   color: inherit;
   font: inherit;
+}
+
+.assistant-body-wrap :deep(.ai-image-container) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.assistant-body-wrap :deep(.image-tag-button) {
+  position: relative;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--background) 70%, transparent);
+  color: var(--demo-text-accent);
+  font-family: var(--demo-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  box-shadow:
+    0 8px 18px color-mix(in srgb, var(--shadow-color) 28%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, white 4%, transparent);
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.assistant-body-wrap :deep(.image-tag-button)::before {
+  content: '🎨';
+  margin-right: 6px;
+  font-size: 14px;
+}
+
+.assistant-body-wrap :deep(.image-tag-button:hover),
+.assistant-body-wrap :deep(.image-tag-button:active) {
+  background: color-mix(in srgb, var(--primary) 12%, var(--background) 88%);
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+.assistant-body-wrap :deep(.image-tag-placeholder),
+.assistant-body-wrap :deep(.image-tag-container) {
+  display: inline-flex;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 .assistant-body-wrap :deep(.assistant-fallback-generated-gallery) {

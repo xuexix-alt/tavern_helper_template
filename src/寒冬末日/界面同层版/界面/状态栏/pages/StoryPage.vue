@@ -11,7 +11,7 @@
 
         <button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色</button>
 
-        <!-- <button type="button" class="ui-icon-btn" @click="openGalleryDrawer">图库</button> -->
+        <button type="button" class="ui-icon-btn" :class="{ active: galleryDrawerOpen }" @click="toggleGalleryDrawer">画廊</button>
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
@@ -23,7 +23,7 @@
 
     <div class="ui-host-body">
       <transition name="sidebar-mask-fade">
-        <div v-if="roleDrawerOpen" class="ui-sidebar-mask" @click="closeSideDrawers"></div>
+        <div v-if="roleDrawerOpen || galleryDrawerOpen" class="ui-sidebar-mask" @click="closeSideDrawers"></div>
       </transition>
 
       <button type="button" class="ui-sidebar-toggle" :class="{ open: roleDrawerOpen }" @click="toggleRoleDrawer">
@@ -51,43 +51,26 @@
         </div>
       </aside>
 
-      <!--
-      <button
-        type="button"
-        class="ui-sidebar-toggle ui-sidebar-toggle-right"
-        :class="{ open: galleryDrawerOpen }"
-        @click="toggleGalleryDrawer"
-      >
-        <span class="ui-sidebar-toggle-label">[ GALLERY ]</span>
-      </button>
-
+      <!-- 画廊抽屉（右侧） -->
       <aside class="ui-sidebar ui-sidebar-right" :class="{ open: galleryDrawerOpen }">
         <div class="ui-sidebar-head">
           <div>
-            <span class="demo-kicker">IMAGE // SIDEBAR</span>
-            <strong>生图图廊</strong>
+            <span class="demo-kicker">GALLERY // IMAGES</span>
+            <strong>图片画廊</strong>
           </div>
           <button type="button" class="ui-close-btn" @click="closeGalleryDrawer">✕</button>
         </div>
-
-        <div class="ui-sidebar-body ui-sidebar-body-gallery">
+        <div class="ui-sidebar-body">
           <ImageGalleryPanel
-            class="ui-gallery-panel-host"
-            :entries="simpleGalleryEntries"
+            :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
-            @jump-message="jumpToTranscriptMessage"
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
+            @jump-message="jumpToTranscriptMessage"
             @close="closeGalleryDrawer"
           />
         </div>
-        <footer class="ui-sidebar-footer ui-sidebar-footer-gallery">
-          <button type="button" class="ui-sidebar-footer-btn clip-corner-sm" @click="closeGalleryDrawer">
-            关闭图廊
-          </button>
-        </footer>
       </aside>
-      -->
 
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
@@ -109,9 +92,9 @@
               :can-swipe-prev="canSwipeLatestAssistantPrev"
               :can-swipe-next="canSwipeLatestAssistantNext"
               :render-revision="transcriptDomRevision"
+              :gallery-entries="galleryEntries"
               @generate-image="handleTranscriptGenerateImage"
               @open-detail="openDetail"
-              @image-intent="handleTranscriptImageIntent"
               @image-view="activateGeneratedImageView"
               @image-regenerate="activateGeneratedImageRegenerate"
               @reading-mode-change="setReadingMode"
@@ -345,13 +328,13 @@ import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
 import HudModal from '../components/HudModal.vue';
-// import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
 import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../components/OpeningSetupPanel.vue';
 import RadialQuickMenu from '../components/RadialQuickMenu.vue';
 import TopToolbar from '../components/TopToolbar.vue';
+import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
@@ -361,6 +344,7 @@ import {
   resolveHostDispatchPlanWithRetry,
   resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
+import { dispatchHostPrimaryTrigger } from '../hostGestureDispatch';
 import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -381,15 +365,14 @@ const {
   transcript,
   visibleTranscript,
   transcriptStats,
-  // galleryEntries,
   mvuSourceRevision,
   latestUserItem,
   latestAssistantItem,
   transcriptDomRevision,
+  galleryEntries,
   readerSummary,
   logs,
   beginPendingImageTask,
-  markRecentImageIntent,
   editingUserMessageId,
   editingUserDraft,
   rollbackConfirmMessageId,
@@ -435,56 +418,7 @@ const isFullscreen = ref(false);
 provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
-// const galleryDrawerOpen = ref(false);
-// const simpleGalleryEntries = ref<ReaderGalleryEntry[]>([]);
-
-// function scanGalleryFromDom(): void {
-//   const results: ReaderGalleryEntry[] = [];
-//   const seen = new Set<string>();
-//
-//   for (const item of transcript.value) {
-//     if (item.role !== 'assistant') continue;
-//     const mesid = Math.trunc(Number(item.message_id));
-//
-//     const mesEl = document.querySelector<HTMLElement>(`.mes[mesid="${mesid}"]`);
-//     if (!mesEl) continue;
-//
-//     const imgs = Array.from(
-//       mesEl.querySelectorAll<HTMLImageElement>('.st-chatu8-image-span img, img[data-request-id]'),
-//     );
-//     let order = 0;
-//     for (const img of imgs) {
-//       const src = img.getAttribute('src') ?? img.currentSrc ?? '';
-//       if (!src || src.startsWith('/thumbnail') || seen.has(src)) continue;
-//       seen.add(src);
-//
-//       const span = img.closest<HTMLElement>('.st-chatu8-image-span');
-//       const button = span?.querySelector<HTMLElement>('.st-chatu8-image-button');
-//       const promptToken = button?.getAttribute('data-image-tag') ?? button?.getAttribute('data-link') ?? '';
-//       const requestId = span?.dataset.requestId ?? img.dataset.requestId ?? '';
-//       const markerId = requestId || `${mesid}-${order}`;
-//
-//       results.push({
-//         id: markerId,
-//         messageId: mesid,
-//         markerId,
-//         imageId: requestId || markerId,
-//         promptToken,
-//         requestId: requestId || undefined,
-//         anchorText: undefined,
-//         title: `楼层 #${mesid} · 图 ${order + 1}`,
-//         characterName: undefined,
-//         createdOrder: order,
-//         src,
-//         alt: img.getAttribute('alt') ?? 'generated image',
-//       });
-//       order++;
-//     }
-//   }
-//
-//   simpleGalleryEntries.value = results;
-// }
-
+const galleryDrawerOpen = ref(false);
 const transcriptImageTriggerGuard = {
   messageId: null as number | null,
   timestampMs: 0,
@@ -612,22 +546,10 @@ function closeRoleDrawer() {
   roleDrawerOpen.value = false;
 }
 
-// function closeGalleryDrawer() {
-//   galleryDrawerOpen.value = false;
-// }
-
 function openRoleDrawer() {
   closeUtilityDrawer();
-  // closeGalleryDrawer();
   roleDrawerOpen.value = true;
 }
-
-// function openGalleryDrawer() {
-//   closeUtilityDrawer();
-//   closeRoleDrawer();
-//   scanGalleryFromDom();
-//   galleryDrawerOpen.value = true;
-// }
 
 function openSettingsModal() {
   settingsModalOpen.value = true;
@@ -641,17 +563,27 @@ function toggleRoleDrawer() {
   openRoleDrawer();
 }
 
-// function toggleGalleryDrawer() {
-//   if (galleryDrawerOpen.value) {
-//     closeGalleryDrawer();
-//     return;
-//   }
-//   openGalleryDrawer();
-// }
+function closeGalleryDrawer() {
+  galleryDrawerOpen.value = false;
+}
+
+function openGalleryDrawer() {
+  closeUtilityDrawer();
+  roleDrawerOpen.value = false;
+  galleryDrawerOpen.value = true;
+}
+
+function toggleGalleryDrawer() {
+  if (galleryDrawerOpen.value) {
+    closeGalleryDrawer();
+    return;
+  }
+  openGalleryDrawer();
+}
 
 function closeSideDrawers() {
   roleDrawerOpen.value = false;
-  // galleryDrawerOpen.value = false;
+  galleryDrawerOpen.value = false;
 }
 
 function toggleUtilityDrawer(type: 'system' | 'map') {
@@ -693,7 +625,6 @@ function handleRoleSelect(key: string) {
 function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
   closeUtilityDrawer();
-  // closeGalleryDrawer();
   roleDrawerOpen.value = true;
 }
 
@@ -703,7 +634,7 @@ function jumpToTranscriptMessage(messageId: number) {
   transcriptListRef.value?.scrollToMessage?.(targetId, 'smooth');
   readingMode.value = 'browsing_history';
   if (window.innerWidth <= 960) {
-    // closeGalleryDrawer();
+    closeSideDrawers();
   }
 }
 
@@ -1225,39 +1156,7 @@ function dispatchHostDoubleClick(
   target: HTMLElement,
   hostPoint?: { clientX: number; clientY: number } | null,
 ): boolean {
-  try {
-    const doc = target.ownerDocument;
-    const view = doc.defaultView;
-    if (!view) return false;
-    const rect = target.getBoundingClientRect();
-    const width = Math.max(rect.width, 16);
-    const height = Math.max(rect.height, 16);
-    const clientX =
-      hostPoint?.clientX != null
-        ? Number(hostPoint.clientX)
-        : Math.round(rect.left + Math.min(width - 8, Math.max(8, width * 0.3)));
-    const clientY =
-      hostPoint?.clientY != null
-        ? Number(hostPoint.clientY)
-        : Math.round(rect.top + Math.min(height - 8, Math.max(8, height * 0.35)));
-    const dblClickEvent = markBridgedEvent(
-      new view.MouseEvent('dblclick', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view,
-        clientX,
-        clientY,
-        button: 0,
-        buttons: 1,
-        detail: 2,
-      }),
-    );
-    target.dispatchEvent(dblClickEvent);
-    return true;
-  } catch {
-    return false;
-  }
+  return dispatchHostPrimaryTrigger(target, { hostPoint });
 }
 
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
@@ -1307,9 +1206,25 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
 
 let imageGenerationLock = false;
 
+async function startTranscriptHostImageProxy(messageId: number, event?: MouseEvent | null) {
+  if (imageGenerationLock) return;
+  imageGenerationLock = true;
+  try {
+    const rendered = await ensureHostMesTextRendered(messageId);
+    if (!rendered) {
+      console.warn('[image] mes_text 注入失败，mesid:', messageId);
+    }
+    beginPendingImageTask(messageId);
+    void proxyImageMenuToHost({ message_id: messageId } as TranscriptItem, event ?? null);
+  } finally {
+    setTimeout(() => {
+      imageGenerationLock = false;
+    }, 2000);
+  }
+}
+
 async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
-  if (imageGenerationLock) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
   const messageId = Math.trunc(rawMessageId);
@@ -1334,33 +1249,14 @@ async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
     });
     return;
   }
-  imageGenerationLock = true;
-  try {
-    const rendered = await ensureHostMesTextRendered(messageId);
-    if (!rendered) {
-      console.warn('[image] mes_text 注入失败，mesid:', messageId);
-    }
-    beginPendingImageTask(messageId);
-    markRecentImageIntent(messageId, 'transcript');
-    void proxyImageMenuToHost({ message_id: messageId } as TranscriptItem, event);
-  } finally {
-    setTimeout(() => {
-      imageGenerationLock = false;
-    }, 2000);
-  }
+  void startTranscriptHostImageProxy(messageId, event);
 }
 
 function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchEvent) {
   if (isBridgedEvent(event)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
-  markRecentImageIntent(Math.trunc(rawMessageId), 'transcript');
-}
-
-function handleTranscriptImageIntent(item: TranscriptItem) {
-  const messageId = Math.trunc(Number(item?.message_id));
-  if (!Number.isFinite(messageId) || messageId < 0) return;
-  markRecentImageIntent(messageId, 'transcript');
+  void ensureHostMesTextRendered(Math.trunc(rawMessageId as number));
 }
 
 function hoistPluginMenuIntoFullscreen(): void {
@@ -1479,7 +1375,6 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
     return;
   }
-  markRecentImageIntent(Math.trunc(messageId), 'gallery');
   beginPendingImageTask(Math.trunc(messageId));
   await withFullscreenSuspended(() => {
     if (!dispatchHostDoubleClick(targetNode)) {
@@ -1503,10 +1398,27 @@ useEventListener(document, 'click', handleTranscriptIntentCapture, { capture: tr
 useEventListener(document, 'dblclick', handleTranscriptDoubleClickCapture, { capture: true });
 useEventListener(window, 'dblclick', handleGeneratedImageWindowDoubleClickCapture, { capture: true });
 
-// 移动端：touchstart 比插件的 touchend 更早触发
-// 用来提前注入 mes_text 节点，确保插件处理时能读到正文
+// 移动端：touchstart 比插件的 touchend 更早触发。
+// 这里不能再要求两次 tap 命中完全同一个 DOM 节点：
+// 同一条消息里二次 tap 常会落到不同的 span/text wrapper，导致代理失效，
+// 插件继续消费 iframe 内 html-body，并回退到 mesId:0。
 let touchStartTime = 0;
-let lastTouchTarget: EventTarget | null = null;
+let lastTouchMessageId: number | null = null;
+let mobileBridgeSuppressUntilMs = 0;
+let mobileBridgeSuppressMessageId: number | null = null;
+
+function suppressRecentMobileGhostEvent(event: MouseEvent | TouchEvent): boolean {
+  if (Date.now() > mobileBridgeSuppressUntilMs) return false;
+  const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
+  if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return false;
+  const messageId = Math.trunc(rawMessageId);
+  if (mobileBridgeSuppressMessageId != null && mobileBridgeSuppressMessageId !== messageId) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const nativeEvent = event as (MouseEvent | TouchEvent) & { stopImmediatePropagation?: () => void };
+  nativeEvent.stopImmediatePropagation?.();
+  return true;
+}
 
 useEventListener(
   document,
@@ -1519,18 +1431,42 @@ useEventListener(
     const now = Date.now();
     const messageId = Math.trunc(rawMessageId as number);
 
-    // 检测双击：两次 touchstart 间隔 < 300ms 且目标相同楼层
-    if (now - touchStartTime < 300 && lastTouchTarget === event.target) {
-      // 双击确认，提前注入
-      void ensureHostMesTextRendered(messageId).then(rendered => {
-        if (!rendered) console.warn('[image] 移动端 mes_text 注入失败，mesid:', messageId);
-      });
-      beginPendingImageTask(messageId);
-      markRecentImageIntent(messageId, 'transcript');
+    // 第一次 tap 就预热宿主正文，缩短第二次 tap 命中宿主原生链的窗口。
+    void ensureHostMesTextRendered(messageId);
+
+    // 检测双击：两次 touchstart 间隔 < 300ms 且属于同一楼层
+    if (now - touchStartTime < 300 && lastTouchMessageId === messageId) {
+      // 阻止 iframe 继续消费此次 touch，防止 ClickTrigger 抢走 html-body
+      event.preventDefault();
+      event.stopPropagation();
+      const nativeTouchEvent = event as TouchEvent & { stopImmediatePropagation?: () => void };
+      nativeTouchEvent.stopImmediatePropagation?.();
+      mobileBridgeSuppressUntilMs = now + 900;
+      mobileBridgeSuppressMessageId = messageId;
+      // 与桌面端对齐：预热 mes_text + 挂起任务 + 改道宿主 mes_text
+      void startTranscriptHostImageProxy(messageId);
     }
 
     touchStartTime = now;
-    lastTouchTarget = event.target;
+    lastTouchMessageId = messageId;
+  },
+  { capture: true, passive: false },
+);
+
+useEventListener(
+  document,
+  'touchend',
+  (event: TouchEvent) => {
+    void suppressRecentMobileGhostEvent(event);
+  },
+  { capture: true, passive: false },
+);
+
+useEventListener(
+  document,
+  'click',
+  (event: MouseEvent) => {
+    void suppressRecentMobileGhostEvent(event);
   },
   { capture: true },
 );
@@ -1899,30 +1835,9 @@ useEventListener(window, 'keydown', event => {
   padding: 12px;
 }
 
-.ui-sidebar-body-gallery {
-  overflow: hidden;
-}
-
-.ui-gallery-panel-host {
-  flex: 1 1 0;
-  height: 100%;
-  min-height: 0;
-}
-
 .ui-sidebar-footer {
   flex: 0 0 auto;
   padding: 0 12px 12px;
-}
-
-.ui-sidebar-footer-gallery {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--background) 0%, transparent),
-    color-mix(in srgb, var(--background) 92%, transparent) 20%
-  );
 }
 
 .ui-sidebar-footer-btn {

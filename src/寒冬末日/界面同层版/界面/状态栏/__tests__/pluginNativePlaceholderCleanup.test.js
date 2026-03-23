@@ -3,12 +3,13 @@ const assert = require('node:assert/strict');
 
 const { stripPluginNativePlaceholderHtml } = require('../pluginNativePlaceholderCleanup.ts');
 
-test('stripPluginNativePlaceholderHtml removes native placeholder buttons and empty containers from transcript html', () => {
+test('stripPluginNativePlaceholderHtml preserves native placeholder/button chain while stripping debug prompt list', () => {
   const html = `
     <p>正文第一段。</p>
     <button class="image-tag-button" data-link="image###foo###">🎨</button>
     <span class="image-tag-placeholder image-tag-container" data-stable-id="abc"></span>
     <div class="ai-image-container"></div>
+    <section class="assistant-image-prompt-list"><pre>debug</pre></section>
     <p>正文第二段。</p>
   `;
 
@@ -16,9 +17,10 @@ test('stripPluginNativePlaceholderHtml removes native placeholder buttons and em
 
   assert.match(cleaned, /正文第一段/);
   assert.match(cleaned, /正文第二段/);
-  assert.doesNotMatch(cleaned, /image-tag-button/);
-  assert.doesNotMatch(cleaned, /image-tag-placeholder/);
-  assert.doesNotMatch(cleaned, /ai-image-container/);
+  assert.match(cleaned, /image-tag-button/);
+  assert.match(cleaned, /image-tag-placeholder/);
+  assert.match(cleaned, /ai-image-container/);
+  assert.doesNotMatch(cleaned, /assistant-image-prompt-list/);
 });
 
 test('stripPluginNativePlaceholderHtml keeps unrelated content intact', () => {

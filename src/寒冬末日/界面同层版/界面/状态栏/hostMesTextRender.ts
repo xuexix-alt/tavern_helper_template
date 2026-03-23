@@ -114,7 +114,21 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
 export function cleanupInjectedMesNodes(currentDocument: Document, collectHostDocuments: () => Document[]): void {
   const hostDoc = resolveHostDocument(currentDocument, collectHostDocuments);
   const nodes = Array.from(hostDoc.querySelectorAll(`.mes[${INJECTED_ATTR}]`));
-  for (const node of nodes) node.remove();
+  for (const node of nodes) {
+    if (typeof (node as any).remove === 'function') {
+      (node as any).remove();
+      continue;
+    }
+    const parent = (node as any)?.parentNode;
+    if (parent && typeof parent.removeChild === 'function') {
+      parent.removeChild(node);
+      continue;
+    }
+    if (parent && Array.isArray((parent as any).children)) {
+      (parent as any).children = (parent as any).children.filter((child: unknown) => child !== node);
+      (node as any).parentNode = null;
+    }
+  }
 }
 
 /**

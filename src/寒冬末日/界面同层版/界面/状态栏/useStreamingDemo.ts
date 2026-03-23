@@ -25,12 +25,29 @@ import {
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
-import { buildPromptTokenFromCachePrompt, collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache';
+import {
+  createDebugTraceStore,
+  createTraceId,
+  installDebugTraceRuntime,
+  recordDebugTrace,
+} from './debugTrace';
+import {
+  buildDemoAssistantFinalBodySource,
+  buildDebugMessageSignature,
+  createGenerationListenerEpochController,
+  shouldCreateAssistantPlaceholderOnFirstToken,
+  shouldEnsureAssistantPlaceholderBeforeFinalize,
+  shouldIgnoreHostRefreshDuringBusy,
+  shouldPrewarmHostMesTextAfterPatch,
+  shouldSuppressLifecycleEchoHostRefresh,
+  summarizeTranscriptForDebug,
+} from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import { buildGeneratedImageMembership } from './generatedImageMembership';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
+import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import {
   buildHostTranscriptVisibilitySelector,
   createHostTranscriptVisibilityController,
@@ -41,7 +58,7 @@ import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
-import { LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED } from './legacyImagePersistenceRuntime';
+import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
   readNativeFirstImageArtifacts,
   readNativeFirstMembershipEntries,
@@ -68,7 +85,6 @@ import type {
   DemoTheme,
   GeneratedImageRef,
   ReaderFontMode,
-  ReaderGalleryEntry,
   ReaderLogItem,
   ReaderSummary,
   ReadingMode,
@@ -174,7 +190,7 @@ function normalizeDisplayedHtml(html: string): string {
   );
 }
 
-function buildFinalHtml(renderSource: string, message_id: number): string {
+function buildFinalHtml(renderSource: string, message_id: number, artifactSource?: string): string {
   let html = '';
   try {
     if (typeof formatAsDisplayedMessage === 'function') {
@@ -188,7 +204,7 @@ function buildFinalHtml(renderSource: string, message_id: number): string {
   }
   return applyTranscriptArtifacts({
     html,
-    renderSource,
+    renderSource: artifactSource ?? renderSource,
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
@@ -247,10 +263,9 @@ function normalizeImageSrcForCompare(input: unknown): string {
     .replace(/&amp;/g, '&');
 }
 
-function readChatu8CacheEntries(messageId?: number | null): Chatu8CacheEntry[] {
+function readChatu8CacheEntries(messageId?: number | null): unknown[] {
   const ctx = readHostContext();
-  const chatMeta = ctx?.chatMetadata?.['st-chatu8'];
-  return collectChatu8CacheEntries(chatMeta, messageId);
+  return collectPluginNativeCacheArtifacts(ctx?.chatMetadata?.['st-chatu8'], messageId);
 }
 
 function collectImageSourceIdentitiesFromHtml(html: string): Set<string> {
@@ -355,32 +370,6 @@ function readChatMessageDetail(messageId: number): any | null {
   }
 }
 
-function readPersistedGeneratedImages(messageId: number): RenderableGeneratedImage[] {
-  const message = readChatMessageDetail(messageId);
-  const list = _.get(message, 'data.stream_demo.generated_images', []);
-  if (!Array.isArray(list)) return [];
-
-  const out: RenderableGeneratedImage[] = [];
-  const seen = new Set<string>();
-  for (const item of list) {
-    const src = normalizeImageDataToSrc((item as any)?.src ?? '');
-    if (!src || seen.has(src)) continue;
-    seen.add(src);
-    out.push({
-      markerId: String((item as any)?.markerId ?? '').trim() || undefined,
-      imageId: String((item as any)?.imageId ?? '').trim() || undefined,
-      src,
-      alt: String((item as any)?.alt ?? 'generated image').trim(),
-      promptToken: String((item as any)?.promptToken ?? '').trim(),
-      requestId: String((item as any)?.requestId ?? '').trim() || undefined,
-      anchorText: String((item as any)?.anchorText ?? '').trim() || undefined,
-      title: String((item as any)?.title ?? '').trim() || undefined,
-      characterName: String((item as any)?.characterName ?? '').trim() || undefined,
-    });
-  }
-  return out;
-}
-
 function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
   const message = readChatMessageDetail(messageId);
   const extraImages = _.get(message, 'extra.images', null);
@@ -420,9 +409,7 @@ function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
       imageId: String((entry as any).imageId ?? '').trim() || undefined,
       src,
       alt: String((entry as any).alt ?? 'generated image').trim(),
-      promptToken: buildPromptTokenFromCachePrompt(
-        (entry as any).promptToken ?? (entry as any).tag ?? (entry as any).prompt ?? '',
-      ),
+      promptToken: String((entry as any).promptToken ?? (entry as any).tag ?? (entry as any).prompt ?? '').trim(),
       requestId: String((entry as any).requestId ?? (entry as any).request_id ?? '').trim() || undefined,
       anchorText: buildAnchorSnippet(String((entry as any).regex ?? '').trim()) || undefined,
     });
@@ -463,7 +450,6 @@ function readNativeFirstArtifactsForMessage(input: {
     hostDomArtifacts: input.hostDomArtifacts ?? [],
     extraImages: readChatu8ExtraImages(messageId),
     cacheArtifacts: readChatu8CacheEntries(messageId),
-    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
   });
 }
 
@@ -497,7 +483,6 @@ function readNativeFirstPromptTokensForMessage(input: { messageId: number; rawMe
     rawMessage,
     extraImages: readChatu8ExtraImages(messageId),
     cacheArtifacts: readChatu8CacheEntries(messageId),
-    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
   });
 }
 
@@ -512,7 +497,6 @@ function readNativeFirstMembershipForMessage(input: { messageId: number; rawMess
     rawMessage,
     extraImages: readChatu8ExtraImages(messageId),
     cacheArtifacts: readChatu8CacheEntries(messageId),
-    legacyGeneratedImages: readPersistedGeneratedImages(messageId),
   });
 }
 
@@ -538,7 +522,7 @@ function createGeneratedImageFigureElement(
 function collectInlineAnchorCandidates(root: HTMLElement): HTMLElement[] {
   const preferred = Array.from(root.querySelectorAll('p, pre, blockquote, li, div')) as HTMLElement[];
   return preferred.filter(node => {
-    if (node.closest(`.${FALLBACK_IMAGE_CLASSES.gallery}, .assistant-image-prompt-list`)) return false;
+    if (node.closest(`.assistant-image-prompt-list`)) return false;
     if (node.matches(`.${FALLBACK_IMAGE_CLASSES.item}, .${FALLBACK_IMAGE_CLASSES.inline}`)) return false;
     if (node.querySelector('img, figure')) return false;
     if (node.tagName === 'DIV' && node.querySelector('p, pre, blockquote, li')) return false;
@@ -633,9 +617,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const pluginNativeImages = nativeFirstImages.filter(
     image => image.source === 'host_dom' || image.source === 'extra' || image.source === 'mes_tag',
   );
-  const compatibilityImages = nativeFirstImages.filter(
-    image => image.source === 'cache' || image.source === 'legacy_stream_demo',
-  );
+  const compatibilityImages = nativeFirstImages.filter(image => image.source === 'cache');
   const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(existingRoots) > 0;
 
   const renderMode = chooseImageRenderMode({
@@ -856,7 +838,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
       markerId: undefined,
       src,
       alt: String(altLike ?? 'generated image').trim(),
-      promptToken: buildPromptTokenFromCachePrompt(promptLike),
+      promptToken: String(promptLike ?? '').trim(),
       requestId: String(requestIdLike ?? '').trim() || undefined,
       anchorText: buildAnchorSnippet(String(anchorTextLike ?? '')) || undefined,
     });
@@ -901,7 +883,7 @@ function parsePromptBodyFromToken(promptToken: string): string {
   return String(match?.[1] ?? token).trim();
 }
 
-function normalizeGalleryLabel(input: string, fallback = '未命名图像'): string {
+function normalizeImageLabel(input: string, fallback = '未命名图像'): string {
   const value = String(input ?? '')
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -918,7 +900,7 @@ function pickFirstNonEmpty(...values: unknown[]): string {
 }
 
 function extractTitleFromAnchor(anchorText: string): string {
-  const anchor = normalizeGalleryLabel(anchorText, '');
+  const anchor = normalizeImageLabel(anchorText, '');
   if (!anchor) return '';
   return anchor.length > 26 ? `${anchor.slice(0, 26)}…` : anchor;
 }
@@ -930,11 +912,11 @@ function extractTitleFromSrc(src: string): string {
     const pathname = source.startsWith('http') ? new URL(source).pathname : source;
     const filename = pathname.split('/').pop() ?? '';
     const stem = filename.replace(/\.[a-z0-9]+$/i, '');
-    return normalizeGalleryLabel(stem, '');
+    return normalizeImageLabel(stem, '');
   } catch {
     const filename = source.split('/').pop() ?? '';
     const stem = filename.replace(/\.[a-z0-9]+$/i, '');
-    return normalizeGalleryLabel(stem, '');
+    return normalizeImageLabel(stem, '');
   }
 }
 
@@ -943,17 +925,17 @@ function extractCharacterNameFromPrompt(promptToken: string): string {
   if (!prompt) return '';
 
   const loraMatch = prompt.match(/<lora:([^:>]+)(?::[\d.]+)?>/i);
-  if (loraMatch?.[1]) return normalizeGalleryLabel(loraMatch[1]);
+  if (loraMatch?.[1]) return normalizeImageLabel(loraMatch[1]);
 
   const namedMatch = prompt.match(/(?:角色|人物|character|name)\s*[:：]\s*([^,，|\n<>]{1,32})/i);
-  if (namedMatch?.[1]) return normalizeGalleryLabel(namedMatch[1]);
+  if (namedMatch?.[1]) return normalizeImageLabel(namedMatch[1]);
 
   const quoteMatch = prompt.match(/[“"'「『]([^“”"'」』]{1,24})[”"'」』]/);
-  if (quoteMatch?.[1]) return normalizeGalleryLabel(quoteMatch[1]);
+  if (quoteMatch?.[1]) return normalizeImageLabel(quoteMatch[1]);
 
   const firstSegment = prompt
     .split(/[,，|\n]/)
-    .map(segment => normalizeGalleryLabel(segment, ''))
+    .map(segment => normalizeImageLabel(segment, ''))
     .find(
       segment =>
         segment.length >= 2 && segment.length <= 24 && !/\b(masterpiece|best quality|1girl|solo)\b/i.test(segment),
@@ -961,14 +943,14 @@ function extractCharacterNameFromPrompt(promptToken: string): string {
   return firstSegment ?? '';
 }
 
-function extractGalleryTitleFromPrompt(promptToken: string): string {
+function extractImageTitleFromPrompt(promptToken: string): string {
   const prompt = parsePromptBodyFromToken(promptToken);
   if (!prompt) return '';
 
   const cleaned = prompt.replace(/<lora:[^>]+>/gi, '').trim();
   const firstSegment = cleaned
     .split(/[,，|\n]/)
-    .map(segment => normalizeGalleryLabel(segment, ''))
+    .map(segment => normalizeImageLabel(segment, ''))
     .find(Boolean);
   if (!firstSegment) return '';
   return firstSegment.length > 32 ? `${firstSegment.slice(0, 32)}…` : firstSegment;
@@ -1019,7 +1001,7 @@ function buildGeneratedImageRefsForMessage(input: {
     const characterNameValue = pickFirstNonEmpty(extractCharacterNameFromPrompt(promptToken));
     const characterName = characterNameValue || undefined;
     const title = pickFirstNonEmpty(
-      extractGalleryTitleFromPrompt(promptToken),
+      extractImageTitleFromPrompt(promptToken),
       characterName,
       extractTitleFromAnchor(anchorText ?? ''),
       extractTitleFromSrc(String(member.imageId ?? markerId)),
@@ -1034,20 +1016,12 @@ function buildGeneratedImageRefsForMessage(input: {
       promptToken,
       requestId,
       anchorText,
-      title: normalizeGalleryLabel(title),
-      characterName: characterName ? normalizeGalleryLabel(characterName) : undefined,
+      title: normalizeImageLabel(title),
+      characterName: characterName ? normalizeImageLabel(characterName) : undefined,
       createdOrder: member.createdOrder,
     };
     index += 1;
     return entry;
-  });
-}
-
-function buildGalleryEntriesForMessage(message: BaseChatMessage, createdOrder: number): ReaderGalleryEntry[] {
-  return buildGeneratedImageRefsForMessage({
-    messageId: message.message_id,
-    rawMessage: message.message,
-    createdOrderBase: createdOrder,
   });
 }
 
@@ -1143,12 +1117,18 @@ function buildTranscriptItem(input: {
     : hasStructuredContent
       ? extractOpeningContentLoose(input.raw)
       : input.raw.trim();
+  const strippedRenderSource = isDemoAssistant ? stripStreamDemoRuntimeTags(input.raw) : input.raw.trim();
   const options = isDemoAssistant ? extractStreamDemoOptions(input.raw) : structuredOptions;
-  const renderSource = isDemoAssistant ? stripStreamDemoRuntimeTags(input.raw) : input.raw.trim();
+  const renderSource = isDemoAssistant
+    ? buildDemoAssistantFinalBodySource({
+        content,
+        strippedRenderSource,
+      })
+    : strippedRenderSource;
   const streamRenderSource = isDemoAssistant ? content : renderSource;
   const regexText = applyRegexForDisplay(renderSource, input.role);
   const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
-  const finalHtml = buildFinalHtml(renderSource, input.id);
+  const finalHtml = buildFinalHtml(renderSource, input.id, strippedRenderSource);
   const generatedImages: GeneratedImageRef[] = [];
   const preview = stripTagsForPreview(content || regexText).slice(0, 80);
 
@@ -1270,12 +1250,23 @@ export function useStreamingDemo() {
 
   const readingModeLabel = computed(() => (readingMode.value === 'following_latest' ? '跟随最新' : '浏览历史'));
 
+  const debugTraceRuntime =
+    typeof window !== 'undefined'
+      ? installDebugTraceRuntime({ target: window as any, maxEvents: 500 })
+      : createDebugTraceStore({ enabled: false });
+
   let patchQueue = Promise.resolve();
   let latestPatchedMessage = '';
+  let activeGenerationTraceId = '';
+  let latestLifecycleTraceId = '';
+  let rebuildSequence = 0;
+  let patchSequence = 0;
+  let assistantPlaceholderCreating = false;
+  let hostMesTextPrimedForCurrentGeneration = false;
+  const generationListenerEpochController = createGenerationListenerEpochController();
   let generationStops: StopHandle[] = [];
   let openingGenerationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
-  let imageBridgeStops: StopHandle[] = [];
   let mvuStops: StopHandle[] = [];
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
@@ -1287,11 +1278,39 @@ export function useStreamingDemo() {
   let generatedImageDomObserver: MutationObserver | null = null;
   let hostPluginMutationObservers: MutationObserver[] = [];
   const hostTranscriptVisibilityController = createHostTranscriptVisibilityController();
+  let lifecycleEchoSuppressUntilMs = 0;
+  let lifecycleEchoSuppressedHostEvents: string[] = [];
 
-  const galleryRevision = ref(0);
   const mvuSourceRevision = ref(0);
   const imagePendingTaskManager = createImagePendingTaskManager();
   const imageRecentIntentStore = createImageRecentIntentStore();
+
+  function resolveTraceId(fallbackPrefix = 'trace') {
+    return activeGenerationTraceId || latestLifecycleTraceId || createTraceId(fallbackPrefix);
+  }
+
+  function recordLifecycleTrace(
+    scope: string,
+    event: string,
+    payload: Record<string, unknown> = {},
+    traceId = resolveTraceId(scope),
+  ) {
+    const entry = recordDebugTrace(debugTraceRuntime, {
+      traceId,
+      scope,
+      event,
+      payload: {
+        busy: busy.value,
+        status: status.value,
+        assistantMessageId: assistantMessageId.value,
+        ...payload,
+      },
+    });
+    if (entry) {
+      console.debug(`[stream-demo:debug] ${scope}.${event}`, entry);
+    }
+    return entry;
+  }
 
   function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
     console.info(`[stream-demo:image-bridge] ${step}`, detail);
@@ -1352,42 +1371,6 @@ export function useStreamingDemo() {
     total: transcript.value.length,
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
-
-  const galleryEntries = computed<ReaderGalleryEntry[]>(() => {
-    const galleryRevisionSeed = galleryRevision.value;
-    console.log('[GalleryDebug] revision:', galleryRevisionSeed);
-
-    const messages = listAllChatMessages()
-      .map(message => ({
-        message_id: Math.trunc(Number(message?.message_id)),
-        role: ((message?.role as string) || 'assistant') as BaseChatMessage['role'],
-        message: String(message?.message ?? ''),
-        is_hidden: message?.is_hidden === true,
-      }))
-      .filter(message => Number.isFinite(message.message_id))
-      .filter(message => message.role === 'assistant')
-      .sort((a, b) => a.message_id - b.message_id);
-
-    console.log(
-      '[GalleryDebug] assistant messages:',
-      messages.length,
-      messages.map(m => ({ id: m.message_id, hidden: m.is_hidden })),
-    );
-
-    const entries = messages
-      .flatMap((message, index) => {
-        const built = buildGalleryEntriesForMessage(message, index + galleryRevisionSeed * 0);
-        console.log(`[GalleryDebug] message#${message.message_id} entries:`, built.length, built);
-        return built;
-      })
-      .sort((a, b) => {
-        if (a.messageId !== b.messageId) return b.messageId - a.messageId;
-        return a.createdOrder - b.createdOrder;
-      });
-
-    console.log('[GalleryDebug] total entries:', entries.length);
-    return entries;
-  });
 
   const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
 
@@ -1844,29 +1827,56 @@ export function useStreamingDemo() {
   function clearGenerationListeners() {
     generationStops.forEach(stop => stop?.stop?.());
     generationStops = [];
+    generationListenerEpochController.invalidate();
   }
 
   async function emitOfficialGenerationLifecycle(messageId: number | null | undefined, type: 'normal' | 'regenerate') {
     const normalizedId = Number(messageId);
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    const traceId = resolveTraceId('lifecycle');
+    lifecycleEchoSuppressUntilMs = Date.now() + 1200;
+    lifecycleEchoSuppressedHostEvents = [
+      String(tavern_events.MESSAGE_RECEIVED),
+      String(tavern_events.GENERATION_ENDED),
+      String(tavern_events.MESSAGE_UPDATED),
+    ];
+
+    recordLifecycleTrace('emitOfficialGenerationLifecycle', 'start', {
+      messageId: Math.trunc(normalizedId),
+      type,
+    }, traceId);
 
     try {
       await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
+      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'message_received_emitted', {
+        messageId: Math.trunc(normalizedId),
+        type,
+      }, traceId);
     } catch {
       // ignore
     }
 
     // 在 emit 生命周期事件前注入宿主 DOM 节点
     // autoLLMClick 的 findElement 在 GENERATION_ENDED 后立即查 DOM
-    await ensureHostMesTextRendered(Math.trunc(normalizedId));
+    const hostRendered = await ensureHostMesTextRendered(Math.trunc(normalizedId));
+    recordLifecycleTrace('emitOfficialGenerationLifecycle', 'host_mes_text_checked', {
+      messageId: Math.trunc(normalizedId),
+      hostRendered,
+    }, traceId);
     try {
       await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
+      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'generation_ended_emitted', {
+        messageId: Math.trunc(normalizedId),
+      }, traceId);
     } catch {
       // ignore
     }
 
     try {
       await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
+      recordLifecycleTrace('emitOfficialGenerationLifecycle', 'message_updated_emitted', {
+        messageId: Math.trunc(normalizedId),
+      }, traceId);
     } catch {
       // ignore
     }
@@ -1980,9 +1990,15 @@ export function useStreamingDemo() {
   function queueExternalSync(reason: string) {
     if (externalSyncTimer) window.clearTimeout(externalSyncTimer);
     const scopedReason = `external:${reason}`;
+    recordLifecycleTrace('queueExternalSync', 'queued', {
+      reason: scopedReason,
+    });
     externalSyncTimer = window.setTimeout(() => {
       externalSyncTimer = 0;
-      rebuildTranscript();
+      recordLifecycleTrace('queueExternalSync', 'flush', {
+        reason: scopedReason,
+      });
+      rebuildTranscript(scopedReason);
       queueHidePolicy(scopedReason);
     }, resolveHidePolicyDelay(scopedReason));
   }
@@ -2009,17 +2025,16 @@ export function useStreamingDemo() {
     generatedImageDomMutationTimer = window.setTimeout(() => {
       generatedImageDomMutationTimer = 0;
       bumpGeneratedImageEntityRevision();
-      galleryRevision.value += 1;
     }, 40);
   }
 
   function scheduleUiRefresh(domains: RefreshDomain[], reason: string) {
+    recordLifecycleTrace('scheduleUiRefresh', 'received', {
+      reason,
+      domains,
+    });
     if (domains.includes('mvuSources')) {
       mvuSourceRevision.value += 1;
-    }
-
-    if (domains.includes('gallery')) {
-      galleryRevision.value += 1;
     }
 
     if (domains.includes('transcript')) {
@@ -2098,7 +2113,7 @@ export function useStreamingDemo() {
     });
   }
 
-  function markRecentImageIntent(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
+  function markRecentImageIntent(messageId: number, source: 'transcript' = 'transcript') {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
     imageRecentIntentStore.mark(normalizedId, source);
@@ -2123,43 +2138,19 @@ export function useStreamingDemo() {
     beginPendingImageTask(normalizedId);
     markRecentImageIntent(normalizedId, 'transcript');
 
-    // Step 3: 向注入节点派发合成 dblclick，让插件走完整 ClickTrigger 链路
-    const mesText = document.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null;
+    // Step 3: 向宿主 mes_text 派发合成 dblclick，让插件走完整 ClickTrigger 链路
+    const mesText =
+      collectHostDocuments()
+        .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
+        .find(Boolean) ?? null;
     if (!mesText) {
       console.warn('[image] 注入节点未找到，mesid:', normalizedId);
       return;
     }
 
-    mesText.dispatchEvent(
-      new MouseEvent('dblclick', {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-      }),
-    );
-  }
-
-  async function persistGeneratedImageResponse(result: {
-    messageId: number;
-    requestId: string;
-    prompt: string;
-    promptToken: string;
-    imageData: string;
-  }) {
-    logImageBridge('persist-runtime-disabled', {
-      messageId: result.messageId,
-      requestId: result.requestId,
-      promptToken: result.promptToken,
-      enabled: LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED,
-    });
-  }
-
-  function bindImagePersistenceEvents() {
-    imageBridgeStops.forEach(stop => stop?.stop?.());
-    imageBridgeStops = [];
-    logImageBridge('persist-bridge-disabled', {
-      enabled: LEGACY_IMAGE_PERSISTENCE_RUNTIME_ENABLED,
-    });
+    if (!dispatchHostPrimaryTrigger(mesText)) {
+      console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
+    }
   }
 
   function listAssistantMessagesForPromptPersistence(): BaseChatMessage[] {
@@ -2382,19 +2373,50 @@ export function useStreamingDemo() {
   }
 
   function handleHostRefreshEvent(name: string) {
-    if (
-      busy.value &&
-      (name === tavern_events.GENERATION_STARTED ||
-        name === tavern_events.STREAM_TOKEN_RECEIVED ||
-        name === tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED)
-    ) {
+    const shouldSuppressLifecycleEcho = shouldSuppressLifecycleEchoHostRefresh({
+      eventName: name,
+      nowMs: Date.now(),
+      suppressUntilMs: lifecycleEchoSuppressUntilMs,
+      suppressedEventNames: lifecycleEchoSuppressedHostEvents,
+    });
+    const shouldIgnore = shouldIgnoreHostRefreshDuringBusy({
+      busy: busy.value,
+      eventName: name,
+      generationStartedEventName: String(tavern_events.GENERATION_STARTED),
+      generationEndedEventName: String(tavern_events.GENERATION_ENDED),
+      streamTokenEventName: String(tavern_events.STREAM_TOKEN_RECEIVED),
+      smoothStreamTokenEventName: String(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED),
+    });
+    recordLifecycleTrace('handleHostRefreshEvent', 'received', {
+      name,
+      lifecycleEchoSuppressed: shouldSuppressLifecycleEcho,
+      ignored: shouldIgnore,
+    });
+
+    if (shouldSuppressLifecycleEcho) {
+      recordLifecycleTrace('handleHostRefreshEvent', 'ignored_lifecycle_echo', {
+        name,
+      });
+      return;
+    }
+
+    if (shouldIgnore) {
       status.value = 'streaming';
       queuePersistReaderChatState();
+      recordLifecycleTrace('handleHostRefreshEvent', 'ignored_busy_token', {
+        name,
+      });
       return; // 流式进行中，宿主 token 事件不触发 transcript 重建（由 bindGenerationEvents 的 iframe_events 链路独立维护）
     }
 
+    const refreshType = mapHostRefreshType(name);
     const domains = resolveRefreshDomainsForEvent({
-      type: mapHostRefreshType(name),
+      type: refreshType,
+    });
+    recordLifecycleTrace('handleHostRefreshEvent', 'scheduled', {
+      name,
+      refreshType,
+      domains,
     });
     scheduleUiRefresh(domains, `event:${name}`);
   }
@@ -2425,8 +2447,21 @@ export function useStreamingDemo() {
     ].filter(Boolean) as StopHandle[];
   }
 
-  function rebuildTranscript() {
+  function rebuildTranscript(reason = 'manual') {
     const containerId = readCurrentContainerMessageId();
+    const traceId = resolveTraceId('rebuild');
+    const sequence = ++rebuildSequence;
+    recordLifecycleTrace(
+      'rebuildTranscript',
+      'start',
+      {
+        reason,
+        sequence,
+        previousTranscriptCount: transcript.value.length,
+        previousAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+      },
+      traceId,
+    );
     try {
       const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
       const all = Array.isArray(list) ? list : [];
@@ -2486,29 +2521,75 @@ export function useStreamingDemo() {
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
+      recordLifecycleTrace(
+        'rebuildTranscript',
+        'done',
+        {
+          reason,
+          sequence,
+          chatCount: all.length,
+          nextLatestAssistantId,
+          transcriptCount: transcript.value.length,
+          assistantSummary: summarizeTranscriptForDebug(transcript.value),
+        },
+        traceId,
+      );
       if (selectedItem.value) {
         selectedItem.value = transcript.value.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
       }
     } catch {
       transcript.value = [];
+      recordLifecycleTrace('rebuildTranscript', 'error', {
+        reason,
+        sequence,
+      }, traceId);
     }
-    galleryRevision.value += 1;
     queueHidePolicy('rebuild');
     queuePersistReaderChatState();
   }
 
   async function patchAssistantMessage(phase: 'stream' | 'done') {
     const messageId = assistantMessageId.value;
-    if (messageId == null) return;
+    const traceId = resolveTraceId('patch');
+    if (messageId == null) {
+      recordLifecycleTrace('patchAssistantMessage', 'skip_missing_message_id', {
+        phase,
+      }, traceId);
+      return;
+    }
 
     const nextMessage = buildStreamDemoMessage(
       phase === 'done' ? finalText.value || streamText.value : streamText.value,
       phase,
     );
-    if (nextMessage === latestPatchedMessage) return;
+    const nextSignature = buildDebugMessageSignature(nextMessage);
+    const previousSignature = buildDebugMessageSignature(latestPatchedMessage);
+    const sequence = ++patchSequence;
+    recordLifecycleTrace('patchAssistantMessage', 'requested', {
+      phase,
+      sequence,
+      messageId,
+      nextSignature,
+      previousSignature,
+    }, traceId);
+    if (nextMessage === latestPatchedMessage) {
+      recordLifecycleTrace('patchAssistantMessage', 'skip_same_content', {
+        phase,
+        sequence,
+        messageId,
+        nextSignature,
+      }, traceId);
+      return;
+    }
     latestPatchedMessage = nextMessage;
 
     patchQueue = patchQueue.then(async () => {
+      recordLifecycleTrace('patchAssistantMessage', 'commit_start', {
+        phase,
+        sequence,
+        messageId,
+        nextSignature,
+      }, traceId);
       await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
         refresh: resolveAssistantMessageRefreshMode(phase),
       });
@@ -2520,8 +2601,76 @@ export function useStreamingDemo() {
           hidden: false,
         }),
       );
+      recordLifecycleTrace('patchAssistantMessage', 'commit_done', {
+        phase,
+        sequence,
+        messageId,
+        nextSignature,
+        transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+      }, traceId);
     });
     await patchQueue;
+    if (
+      shouldPrewarmHostMesTextAfterPatch({
+        phase,
+        assistantMessageId: messageId,
+        hostMesTextPrimed: hostMesTextPrimedForCurrentGeneration,
+      })
+    ) {
+      const hostRendered = await ensureHostMesTextRendered(messageId);
+      if (phase === 'stream' && hostRendered) {
+        hostMesTextPrimedForCurrentGeneration = true;
+      }
+      recordLifecycleTrace('patchAssistantMessage', 'host_mes_text_prewarmed', {
+        phase,
+        sequence,
+        messageId,
+        hostRendered,
+      }, traceId);
+    }
+    recordLifecycleTrace('patchAssistantMessage', 'queue_settled', {
+      phase,
+      sequence,
+      messageId,
+      nextSignature,
+    }, traceId);
+  }
+
+  async function ensureAssistantPlaceholderReady(reason: 'first_token' | 'finalize_fallback') {
+    if (assistantMessageId.value != null || assistantPlaceholderCreating) {
+      recordLifecycleTrace('createAssistantPlaceholder', 'ensure_skipped', {
+        reason,
+        assistantMessageId: assistantMessageId.value,
+        placeholderCreating: assistantPlaceholderCreating,
+      });
+      return;
+    }
+
+    assistantPlaceholderCreating = true;
+    try {
+      recordLifecycleTrace('createAssistantPlaceholder', 'ensure_start', {
+        reason,
+      });
+      await createAssistantPlaceholder();
+      readingMode.value = 'following_latest';
+      if (assistantMessageId.value != null) {
+        const hostRendered = await ensureHostMesTextRendered(assistantMessageId.value);
+        if (hostRendered) {
+          hostMesTextPrimedForCurrentGeneration = true;
+        }
+        recordLifecycleTrace('createAssistantPlaceholder', 'host_mes_text_prewarmed', {
+          reason,
+          assistantMessageId: assistantMessageId.value,
+          hostRendered,
+        });
+      }
+      recordLifecycleTrace('createAssistantPlaceholder', 'ensure_done', {
+        reason,
+        assistantMessageId: assistantMessageId.value,
+      });
+    } finally {
+      assistantPlaceholderCreating = false;
+    }
   }
 
   async function deleteFromMessageId(messageId: number) {
@@ -2546,8 +2695,18 @@ export function useStreamingDemo() {
 
   async function runGenerationFlow(options: { prompt: string; createUser: boolean }) {
     const prompt = String(options.prompt ?? '').trim();
-    if (!prompt || busy.value) return;
+    const traceId = createTraceId(options.createUser ? 'send' : 'regenerate');
+    if (!prompt || busy.value) {
+      recordLifecycleTrace('runGenerationFlow', 'skip', {
+        reason: !prompt ? 'empty_prompt' : 'busy',
+        createUser: options.createUser,
+        promptSignature: buildDebugMessageSignature(prompt),
+      }, traceId);
+      return;
+    }
 
+    activeGenerationTraceId = traceId;
+    latestLifecycleTraceId = traceId;
     busy.value = true;
     status.value = 'preparing';
     streamText.value = '';
@@ -2555,12 +2714,22 @@ export function useStreamingDemo() {
     errorText.value = '';
     assistantMessageId.value = null;
     latestPatchedMessage = '';
+    hostMesTextPrimedForCurrentGeneration = false;
     bindGenerationEvents();
+    recordLifecycleTrace('runGenerationFlow', 'start', {
+      createUser: options.createUser,
+      promptPreview: stripTagsForPreview(prompt).slice(0, 80),
+      promptSignature: buildDebugMessageSignature(prompt),
+    }, traceId);
 
     try {
       if (options.createUser) {
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false }], { refresh: 'none' });
         const userId = Number(getLastMessageId?.());
+        recordLifecycleTrace('runGenerationFlow', 'user_created', {
+          userId: Number.isFinite(userId) ? Math.trunc(userId) : null,
+          promptSignature: buildDebugMessageSignature(prompt),
+        }, traceId);
         if (Number.isFinite(userId)) {
           upsertTranscriptItem(
             createLocalTranscriptItem({
@@ -2578,12 +2747,25 @@ export function useStreamingDemo() {
         should_stream: true,
         max_chat_history: 'all',
       });
-      await createAssistantPlaceholder();
-      readingMode.value = 'following_latest';
+      recordLifecycleTrace('runGenerationFlow', 'generate_requested', {
+        createUser: options.createUser,
+      }, traceId);
 
       const result = String(await generatePromise).trim();
       finalText.value = result;
       status.value = 'persisting';
+      if (
+        shouldEnsureAssistantPlaceholderBeforeFinalize({
+          assistantMessageId: assistantMessageId.value,
+          placeholderCreating: assistantPlaceholderCreating,
+          finalText: result,
+        })
+      ) {
+        await ensureAssistantPlaceholderReady('finalize_fallback');
+      }
+      recordLifecycleTrace('runGenerationFlow', 'generate_resolved', {
+        resultSignature: buildDebugMessageSignature(result),
+      }, traceId);
       await patchAssistantMessage('done');
       if (assistantMessageId.value != null) {
         const reprocessResult = await reprocessMessageVariablesById(assistantMessageId.value, {
@@ -2593,15 +2775,28 @@ export function useStreamingDemo() {
         if (reprocessResult.status === 'error') {
           console.warn('[stream-demo] direct MVU reprocess failed', reprocessResult);
         }
+        recordLifecycleTrace('runGenerationFlow', 'mvu_reprocess_completed', {
+          assistantMessageId: assistantMessageId.value,
+          reprocessStatus: reprocessResult.status,
+        }, traceId);
       }
       await emitOfficialGenerationLifecycle(assistantMessageId.value, options.createUser ? 'normal' : 'regenerate');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
+      recordLifecycleTrace('runGenerationFlow', 'done', {
+        assistantMessageId: assistantMessageId.value,
+        finalSignature: buildDebugMessageSignature(result),
+        transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+      }, traceId);
       appendLog('action', '生成完成', stripTagsForPreview(result).slice(0, 80) || '(空回复)');
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
+      recordLifecycleTrace('runGenerationFlow', 'error', {
+        assistantMessageId: assistantMessageId.value,
+        message: errorText.value,
+      }, traceId);
       if (assistantMessageId.value != null) {
         finalText.value = `生成失败：${errorText.value}`;
         try {
@@ -2616,6 +2811,12 @@ export function useStreamingDemo() {
     } finally {
       clearGenerationListeners();
       busy.value = false;
+      hostMesTextPrimedForCurrentGeneration = false;
+      recordLifecycleTrace('runGenerationFlow', 'finally', {
+        assistantMessageId: assistantMessageId.value,
+        finalStatus: status.value,
+      }, traceId);
+      activeGenerationTraceId = '';
     }
   }
 
@@ -2860,12 +3061,26 @@ export function useStreamingDemo() {
   function bindGenerationEvents() {
     clearGenerationListeners();
     if (typeof eventOn !== 'function' || typeof iframe_events === 'undefined') return;
+    const traceId = resolveTraceId('iframe');
+    const listenerEpoch = generationListenerEpochController.activateNext();
+    const isStaleListener = () => !generationListenerEpochController.isCurrent(listenerEpoch);
+    recordLifecycleTrace('bindGenerationEvents', 'bind', { listenerEpoch }, traceId);
 
     try {
       generationStops.push(
         eventOn(iframe_events.GENERATION_STARTED as any, () => {
+          if (isStaleListener()) {
+            recordLifecycleTrace('bindGenerationEvents', 'generation_started_ignored_stale', {
+              listenerEpoch,
+            }, traceId);
+            return;
+          }
           status.value = 'streaming';
           transcript.value = syncTranscriptFlags(transcript.value);
+          recordLifecycleTrace('bindGenerationEvents', 'generation_started', {
+            listenerEpoch,
+            transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+          }, traceId);
         }),
       );
     } catch {
@@ -2875,9 +3090,34 @@ export function useStreamingDemo() {
     try {
       generationStops.push(
         eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, (token: string) => {
-          streamText.value += String(token ?? '');
-          status.value = 'streaming';
-          void patchAssistantMessage('stream');
+          if (isStaleListener()) {
+            recordLifecycleTrace('bindGenerationEvents', 'token_incremental_ignored_stale', {
+              listenerEpoch,
+              tokenLength: String(token ?? '').length,
+            }, traceId);
+              return;
+          }
+          void (async () => {
+            const tokenText = String(token ?? '');
+            streamText.value += tokenText;
+            status.value = 'streaming';
+            recordLifecycleTrace('bindGenerationEvents', 'token_incremental', {
+              listenerEpoch,
+              tokenLength: tokenText.length,
+              streamSignature: buildDebugMessageSignature(streamText.value),
+            }, traceId);
+            if (
+              shouldCreateAssistantPlaceholderOnFirstToken({
+                assistantMessageId: assistantMessageId.value,
+                placeholderCreating: assistantPlaceholderCreating,
+                token: tokenText,
+              })
+            ) {
+              await ensureAssistantPlaceholderReady('first_token');
+              return;
+            }
+            await patchAssistantMessage('stream');
+          })();
         }),
       );
     } catch {
@@ -2887,7 +3127,17 @@ export function useStreamingDemo() {
     try {
       generationStops.push(
         eventOn(iframe_events.GENERATION_ENDED as any, (text: string) => {
+          if (isStaleListener()) {
+            recordLifecycleTrace('bindGenerationEvents', 'generation_ended_ignored_stale', {
+              listenerEpoch,
+            }, traceId);
+            return;
+          }
           finalText.value = String(text ?? '').trim();
+          recordLifecycleTrace('bindGenerationEvents', 'generation_ended', {
+            listenerEpoch,
+            finalSignature: buildDebugMessageSignature(finalText.value),
+          }, traceId);
         }),
       );
     } catch {
@@ -2896,6 +3146,7 @@ export function useStreamingDemo() {
   }
 
   async function createAssistantPlaceholder() {
+    const traceId = resolveTraceId('placeholder');
     await createChatMessages([{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage('', 'stream') }], {
       refresh: 'none',
     });
@@ -2912,6 +3163,10 @@ export function useStreamingDemo() {
         }),
       );
     }
+    recordLifecycleTrace('createAssistantPlaceholder', 'created', {
+      assistantMessageId: assistantMessageId.value,
+      placeholderSignature: buildDebugMessageSignature(buildStreamDemoMessage('', 'stream')),
+    }, traceId);
     await patchAssistantMessage('stream');
   }
 
@@ -2951,7 +3206,7 @@ export function useStreamingDemo() {
       hostPluginMutationObservers = bindHostPluginMutationObservers(() => {
         syncPendingRequestHintsFromDom();
         queueGeneratedImageEntityRefresh();
-        scheduleUiRefresh(['transcript', 'gallery'], 'host.plugin_native_dom_mutation');
+        scheduleUiRefresh(['transcript'], 'host.plugin_native_dom_mutation');
       });
     }
   });
@@ -3004,8 +3259,6 @@ export function useStreamingDemo() {
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
     historyStops = [];
-    imageBridgeStops.forEach(stop => stop?.stop?.());
-    imageBridgeStops = [];
     mvuStops.forEach(stop => stop?.stop?.());
     mvuStops = [];
     hidePolicyTimer = clearTimer(hidePolicyTimer);
@@ -3019,6 +3272,25 @@ export function useStreamingDemo() {
     hostPluginMutationObservers = [];
     clearOpeningGenerationListeners();
   });
+
+  type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
+  const galleryGroups = computed<GalleryGroup[]>(() => {
+    void transcriptDomRevision.value;
+    const groups: GalleryGroup[] = [];
+    for (const item of transcript.value) {
+      if (item.role !== 'assistant' || item.isOpening) continue;
+      const images = buildGeneratedImageRefsForMessage({
+        messageId: item.message_id,
+        rawMessage: item.raw,
+      });
+      if (images.length === 0) continue;
+      groups.push({ messageId: item.message_id, images });
+    }
+    return groups;
+  });
+  const galleryEntries = computed<GeneratedImageRef[]>(() =>
+    galleryGroups.value.flatMap(g => g.images),
+  );
 
   return {
     input,
@@ -3040,7 +3312,6 @@ export function useStreamingDemo() {
     transcript,
     visibleTranscript,
     transcriptStats,
-    galleryEntries,
     mvuSourceRevision,
     latestUserItem,
     latestAssistantItem,
@@ -3060,6 +3331,8 @@ export function useStreamingDemo() {
     readerSummary,
     logs,
     transcriptDomRevision,
+    galleryGroups,
+    galleryEntries,
     beginPendingImageTask,
     markRecentImageIntent,
     runDemo,

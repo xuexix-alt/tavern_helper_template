@@ -3,9 +3,9 @@ import {
   parseNativeMesImageTags,
   type NativeMesTagEntry,
   type NativeMesTagEntryWithHints,
-} from './pluginNativeMesTag.ts';
+} from './pluginNativeMesTag';
 
-export type NativeFirstArtifactSource = 'host_dom' | 'extra' | 'mes_tag' | 'cache' | 'legacy_stream_demo';
+export type NativeFirstArtifactSource = 'host_dom' | 'extra' | 'mes_tag' | 'cache';
 
 export type NativeFirstImageArtifact = {
   source: NativeFirstArtifactSource;
@@ -28,7 +28,6 @@ export type ReadNativeFirstImageArtifactsInput = {
   rawMessage?: string;
   mesTagEntries?: NativeMesTagEntry[] | NativeMesTagEntryWithHints[];
   cacheArtifacts?: unknown[];
-  legacyGeneratedImages?: unknown[];
 };
 
 export type NativeFirstMembershipEntry = {
@@ -213,21 +212,6 @@ function collectCacheArtifacts(input: ReadNativeFirstImageArtifactsInput): Nativ
     .filter((item): item is NativeFirstImageArtifact => item !== null);
 }
 
-function collectLegacyArtifacts(input: ReadNativeFirstImageArtifactsInput): NativeFirstImageArtifact[] {
-  const messageId = normalizeMessageId(input.messageId);
-  const entries = flattenEntries(input.legacyGeneratedImages);
-  return entries
-    .map((record, index) =>
-      buildArtifactFromRecord({
-        source: 'legacy_stream_demo',
-        messageId,
-        order: index,
-        record,
-      }),
-    )
-    .filter((item): item is NativeFirstImageArtifact => item !== null);
-}
-
 export function readNativeFirstImageArtifacts(input: ReadNativeFirstImageArtifactsInput): NativeFirstImageArtifact[] {
   const hostArtifacts = collectHostArtifacts(input);
   const extraArtifacts = collectExtraArtifacts(input);
@@ -245,7 +229,7 @@ export function readNativeFirstImageArtifacts(input: ReadNativeFirstImageArtifac
     return cacheArtifacts;
   }
 
-  return collectLegacyArtifacts(input);
+  return [];
 }
 
 export function readNativeFirstPromptTokens(input: ReadNativeFirstImageArtifactsInput): string[] {

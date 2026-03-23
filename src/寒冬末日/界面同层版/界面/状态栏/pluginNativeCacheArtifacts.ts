@@ -1,10 +1,11 @@
-export type Chatu8CacheEntry = {
+export type PluginNativeCacheArtifact = {
   messageId: number | null;
   imageId?: string;
   promptToken: string;
   src: string;
   alt: string;
   requestId?: string;
+  anchorText?: string;
 };
 
 type RawEntryCandidate = {
@@ -16,28 +17,27 @@ type RawEntryCandidate = {
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
-  if (raw.startsWith('idb://')) return raw;
+  if (raw.startsWith('idb://')) return '';
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith('/')) return raw;
   return `data:image/png;base64,${raw}`;
 }
 
-function collectChatu8PromptTokens(input: string): string[] {
-  const text = String(input ?? '');
+function collectPromptTokens(input: string): string[] {
   const out: string[] = [];
   const regex = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
   let match: RegExpExecArray | null;
-  while ((match = regex.exec(text))) {
-    out.push(match[0]?.trim() ?? '');
+  while ((match = regex.exec(String(input ?? '')))) {
+    out.push(String(match[0] ?? '').trim());
   }
   return out;
 }
 
-export function buildPromptTokenFromCachePrompt(rawPrompt: unknown): string {
+function buildPromptToken(rawPrompt: unknown): string {
   const prompt = String(rawPrompt ?? '').trim();
   if (!prompt) return '';
-  const existing = collectChatu8PromptTokens(prompt)[0];
+  const existing = collectPromptTokens(prompt)[0];
   if (existing) return existing;
   return `image###${prompt}###`;
 }
@@ -57,13 +57,7 @@ function collectRawEntryCandidates(input: unknown, ancestors: string[] = []): Ra
 
   if (!isObjectRecord(input)) return [];
   if (looksLikeImageEntry(input)) {
-    return [
-      {
-        key: ancestors[ancestors.length - 1] ?? '',
-        value: input,
-        ancestors,
-      },
-    ];
+    return [{ key: ancestors[ancestors.length - 1] ?? '', value: input, ancestors }];
   }
 
   return Object.entries(input).flatMap(([key, value]) => collectRawEntryCandidates(value, [...ancestors, key]));
@@ -77,58 +71,15 @@ function inferMessageIdFromAncestors(ancestors: string[]): number | null {
   return null;
 }
 
-function sanitizeCacheImageEntry(entry: Record<string, unknown>) {
-  const requestId = String((entry as any)?.requestId ?? (entry as any)?.request_id ?? '').trim();
-  const src = normalizeImageDataToSrc(
-    (entry as any)?.src ??
-      (entry as any)?.image ??
-      (entry as any)?.imageData ??
-      (entry as any)?.path ??
-      (entry as any)?.url,
-  );
-  const promptToken = String((entry as any)?.promptToken ?? '').trim();
-  const prompt = String((entry as any)?.prompt ?? '').trim();
-  const tag = String((entry as any)?.tag ?? promptToken ?? prompt).trim();
-
-  const sanitized: Record<string, unknown> = {
-    ...entry,
-    promptToken,
-    requestId,
-    request_id: requestId,
-    tag,
-    regex: String((entry as any)?.regex ?? '').trim(),
-    src,
-    image: String((entry as any)?.image ?? src).trim(),
-    imageData: String((entry as any)?.imageData ?? src).trim(),
-    alt: String((entry as any)?.alt ?? 'generated image').trim() || 'generated image',
-  };
-
-  return sanitized;
-}
-
-function sanitizeCacheTree(input: unknown): unknown {
-  if (Array.isArray(input)) return input.map(item => sanitizeCacheTree(item));
-  if (!isObjectRecord(input)) return input;
-  if (looksLikeImageEntry(input)) return sanitizeCacheImageEntry(input);
-
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(input)) {
-    out[key] = sanitizeCacheTree(value);
-  }
-  return out;
-}
-
-export function sanitizeChatu8CacheMeta(chatMeta: unknown): unknown {
-  if (!isObjectRecord(chatMeta)) return chatMeta;
-  return sanitizeCacheTree(chatMeta);
-}
-
-export function collectChatu8CacheEntries(chatMeta: unknown, messageId?: number | null): Chatu8CacheEntry[] {
+export function collectPluginNativeCacheArtifacts(
+  chatMeta: unknown,
+  messageId?: number | null,
+): PluginNativeCacheArtifact[] {
   if (!chatMeta || typeof chatMeta !== 'object') return [];
 
   const normalizedMessageId =
     messageId != null && Number.isFinite(Number(messageId)) ? Math.trunc(Number(messageId)) : null;
-  const out: Chatu8CacheEntry[] = [];
+  const out: PluginNativeCacheArtifact[] = [];
   const seen = new Set<string>();
 
   const candidateRoots = [
@@ -147,7 +98,7 @@ export function collectChatu8CacheEntries(chatMeta: unknown, messageId?: number 
         : inferMessageIdFromAncestors(ancestors);
       if (normalizedMessageId != null && entryMessageId != null && entryMessageId !== normalizedMessageId) continue;
 
-      const promptToken = buildPromptTokenFromCachePrompt(
+      const promptToken = buildPromptToken(
         (value as any)?.promptToken ?? (value as any)?.prompt ?? (value as any)?.tag ?? key,
       );
       const src = normalizeImageDataToSrc(
@@ -173,8 +124,9 @@ export function collectChatu8CacheEntries(chatMeta: unknown, messageId?: number 
           undefined,
         promptToken,
         src,
-        alt: String((value as any)?.alt ?? 'generated image').trim(),
+        alt: String((value as any)?.alt ?? 'generated image').trim() || 'generated image',
         requestId: requestId || undefined,
+        anchorText: String((value as any)?.regex ?? (value as any)?.anchorText ?? '').trim() || undefined,
       });
     }
   }

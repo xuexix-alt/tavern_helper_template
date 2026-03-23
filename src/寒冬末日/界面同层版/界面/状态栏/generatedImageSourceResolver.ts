@@ -1,5 +1,5 @@
 import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
-import { collectChatu8CacheEntries, type Chatu8CacheEntry } from './galleryCache.ts';
+import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts.ts';
 import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag.ts';
 
 export type GeneratedImageSourceRef = {
@@ -18,7 +18,7 @@ export type ResolvedGeneratedImageSource = {
   /** src 可能是 data: / http(s): / / 开头的路径 */
   src: string;
   alt: string;
-  source: 'extra' | 'mes_tag' | 'cache' | 'stream_demo';
+  source: 'extra' | 'mes_tag' | 'cache';
 };
 
 function normalizeSwipeId(input: unknown): number {
@@ -99,21 +99,23 @@ function normalizeResolvedSource(
   };
 }
 
-function normalizeCacheEntry(entry: Chatu8CacheEntry): Record<string, any> {
+function normalizeCacheEntry(entry: PluginNativeCacheArtifact): Record<string, any> {
   return {
+    messageId: entry.messageId,
     markerId: normalizeKey((entry as any).markerId),
     imageId: normalizeKey(entry.imageId ?? entry.requestId ?? entry.promptToken ?? entry.src),
     requestId: normalizeKey(entry.requestId),
     promptToken: normalizeKey(entry.promptToken),
     src: entry.src,
     alt: entry.alt,
+    anchorText: normalizeKey(entry.anchorText),
   };
 }
 
 export function resolveGeneratedImageSource(
   reference: GeneratedImageSourceRef,
   message: Record<string, any> | null | undefined,
-  cacheEntries: Chatu8CacheEntry[] = [],
+  cacheEntries: PluginNativeCacheArtifact[] = [],
 ): ResolvedGeneratedImageSource | null {
   if (!message || typeof message !== 'object') return null;
 
@@ -166,7 +168,7 @@ export function resolveGeneratedImageSource(
         ...normalizeCacheEntry(cacheMatch),
         promptToken: normalizeKey((entry as any)?.promptToken) || normalizeKey(cacheMatch.promptToken),
       },
-      'mes_tag',
+      'cache',
       normalizedMessageId,
     );
     if (fromCache) return fromCache;
@@ -176,16 +178,6 @@ export function resolveGeneratedImageSource(
     const normalized = normalizeCacheEntry(entry);
     if (!matchesImageRef(reference, normalized)) continue;
     const resolved = normalizeResolvedSource(normalized, 'cache', normalizedMessageId);
-    if (resolved) return resolved;
-  }
-
-  const streamDemoEntries = Array.isArray(message?.data?.stream_demo?.generated_images)
-    ? message.data.stream_demo.generated_images
-    : [];
-  for (const entry of streamDemoEntries) {
-    if (!entry || typeof entry !== 'object') continue;
-    if (!matchesImageRef(reference, entry as Record<string, any>)) continue;
-    const resolved = normalizeResolvedSource(entry as Record<string, any>, 'stream_demo', normalizedMessageId);
     if (resolved) return resolved;
   }
 
@@ -248,7 +240,7 @@ export function readGeneratedImageSource(reference: GeneratedImageSourceRef): Re
   const normalizedMessageId = Math.trunc(messageId);
   const message = readChatMessageDetail(normalizedMessageId);
   const ctx = readHostContext();
-  const cacheEntries = collectChatu8CacheEntries(ctx?.chatMetadata?.['st-chatu8'], normalizedMessageId);
+  const cacheEntries = collectPluginNativeCacheArtifacts(ctx?.chatMetadata?.['st-chatu8'], normalizedMessageId);
   return resolveGeneratedImageSource(reference, message, cacheEntries);
 }
 

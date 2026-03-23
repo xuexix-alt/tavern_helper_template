@@ -6,7 +6,6 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
  * 不再将 base64 写入聊天 JSON。
  * - extra.images[swipeId] 只存轻量引用（requestId / promptToken / idb:// src）
  * - 图片实体由 imageStore.ts 存入 IndexedDB
- * - data.stream_demo.generated_images 同样只存引用，不存 base64
  *
  * @deprecated Native-first runtime已停用该写入路径。此模块仅保留兼容逻辑。
  */
@@ -46,21 +45,6 @@ function normalizeSwipeId(input: unknown): number {
   const numeric = Number(input);
   if (!Number.isFinite(numeric) || numeric < 0) return 0;
   return Math.trunc(numeric);
-}
-
-function getNestedValue(target: Record<string, any>, path: string) {
-  return path.split('.').reduce<any>((current, key) => (current == null ? undefined : current[key]), target);
-}
-
-function setNestedValue(target: Record<string, any>, path: string, value: unknown) {
-  const keys = path.split('.');
-  let current: Record<string, any> = target;
-  for (let index = 0; index < keys.length - 1; index += 1) {
-    const key = keys[index];
-    if (!current[key] || typeof current[key] !== 'object' || Array.isArray(current[key])) current[key] = {};
-    current = current[key];
-  }
-  current[keys[keys.length - 1]] = value;
 }
 
 function parsePromptBodyFromToken(promptToken: string): string {
@@ -132,45 +116,13 @@ export function buildGeneratedImagePersistencePatch(input: BuildGeneratedImagePe
   const nextData = clone(message.data ?? {});
   const nextExtra = clone(message.extra ?? {});
   const idbSrc = buildIdbSrc(messageId, input.response.requestId);
-
-  const currentList = getNestedValue(nextData, 'stream_demo.generated_images');
-  const nextList = Array.isArray(currentList) ? clone(currentList) : [];
   const markerId = buildGeneratedImageMarkerId({
     messageId: Number.isFinite(messageId) ? messageId : 0,
     requestId: input.response.requestId,
     promptToken: input.response.promptToken,
-    order: nextList.length,
+    order: 0,
   });
   const anchorText = String(input.anchorText ?? '').trim();
-
-  const imageEntry = {
-    markerId,
-    imageId: input.response.requestId,
-    promptToken: input.response.promptToken,
-    requestId: input.response.requestId,
-    src: idbSrc,
-    alt: 'generated image',
-    anchorText: anchorText || undefined,
-    order: nextList.length,
-  };
-
-  const existingIndex = nextList.findIndex(item => {
-    if (!item || typeof item !== 'object') return false;
-    return String((item as any).requestId ?? '').trim() === input.response.requestId;
-  });
-
-  if (existingIndex < 0) {
-    nextList.push(imageEntry);
-  } else {
-    nextList[existingIndex] = {
-      ...(nextList[existingIndex] ?? {}),
-      ...imageEntry,
-      markerId: String((nextList[existingIndex] as any)?.markerId ?? '').trim() || markerId,
-      promptToken: String((nextList[existingIndex] as any)?.promptToken ?? '').trim() || input.response.promptToken,
-      anchorText: anchorText || String((nextList[existingIndex] as any)?.anchorText ?? '').trim() || undefined,
-    };
-  }
-  setNestedValue(nextData, 'stream_demo.generated_images', nextList);
 
   const swipeId = normalizeSwipeId(message.swipe_id);
   const sanitizedExtra = sanitizePluginImageExtra(nextExtra);

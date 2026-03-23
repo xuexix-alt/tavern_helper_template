@@ -102,6 +102,9 @@ function matchesSelector(node, selector) {
   if (selector === '.mes[mesid="2"][data-ui-injected-mes]') {
     return hasMesId(node, '2') && classList(node).includes('mes') && node.hasAttribute('data-ui-injected-mes');
   }
+  if (selector === '.mes[mesid="4"][data-ui-injected-mes]') {
+    return hasMesId(node, '4') && classList(node).includes('mes') && node.hasAttribute('data-ui-injected-mes');
+  }
   if (selector === '.mes[mesid="8"][data-ui-injected-mes]') {
     return hasMesId(node, '8') && classList(node).includes('mes') && node.hasAttribute('data-ui-injected-mes');
   }

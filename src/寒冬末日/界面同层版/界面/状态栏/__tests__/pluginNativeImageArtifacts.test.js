@@ -92,7 +92,7 @@ test('cache is only used as last fallback when host/extra/mes-tag are all empty'
   assert.equal(fallbackOnly[0].requestId, 'cache-1');
 });
 
-test('legacy stream_demo artifacts are ignored when any native data exists', () => {
+test('cache fallback is ignored when any native data exists and no legacy source remains', () => {
   const result = readNativeFirstImageArtifacts({
     messageId: 15,
     extraImages: [
@@ -102,11 +102,11 @@ test('legacy stream_demo artifacts are ignored when any native data exists', () 
         image: 'https://example.com/native.png',
       },
     ],
-    legacyGeneratedImages: [
+    cacheArtifacts: [
       {
-        requestId: 'req-legacy',
-        promptToken: 'image###legacy###',
-        image: 'https://example.com/legacy.png',
+        requestId: 'req-cache',
+        promptToken: 'image###cache###',
+        image: 'https://example.com/cache.png',
       },
     ],
   });
@@ -114,12 +114,12 @@ test('legacy stream_demo artifacts are ignored when any native data exists', () 
   assert.equal(result.length, 1);
   assert.equal(result[0].source, 'extra');
   assert.equal(
-    result.some(item => item.source === 'legacy_stream_demo'),
+    result.some(item => item.source === 'cache'),
     false,
   );
 });
 
-test('native-first helper prompt-token fallback does not start from cache and ignores legacy when native exists', () => {
+test('native-first helper prompt-token fallback does not start from cache when native exists', () => {
   const promptTokens = readNativeFirstPromptTokens({
     messageId: 19,
     rawMessage: ['她抬起下巴，看向破损的天花板。', 'image###Scene Composition:native-mes###'].join('\n'),
@@ -137,21 +137,13 @@ test('native-first helper prompt-token fallback does not start from cache and ig
         src: 'https://example.com/cache-only.png',
       },
     ],
-    legacyGeneratedImages: [
-      {
-        requestId: 'legacy-only',
-        promptToken: 'image###legacy-only###',
-        src: 'https://example.com/legacy-only.png',
-      },
-    ],
   });
 
   assert.deepEqual(promptTokens, ['image###native-extra###']);
   assert.equal(promptTokens.includes('image###cache-only###'), false);
-  assert.equal(promptTokens.includes('image###legacy-only###'), false);
 });
 
-test('native-first helper membership falls back to cache before legacy, and only uses legacy when native/cache are absent', () => {
+test('native-first helper membership only falls back to cache when native sources are absent', () => {
   const fromCache = readNativeFirstMembershipEntries({
     messageId: 20,
     rawMessage: '没有原生图 tag。',
@@ -162,38 +154,14 @@ test('native-first helper membership falls back to cache before legacy, and only
         src: 'https://example.com/cache-20.png',
       },
     ],
-    legacyGeneratedImages: [
-      {
-        requestId: 'legacy-20',
-        promptToken: 'image###legacy-20###',
-        src: 'https://example.com/legacy-20.png',
-      },
-    ],
   });
 
   assert.equal(fromCache.length, 1);
   assert.equal(fromCache[0].source, 'cache');
   assert.equal(fromCache[0].promptToken, 'image###cache-20###');
-
-  const fromLegacyOnly = readNativeFirstMembershipEntries({
-    messageId: 20,
-    rawMessage: '没有任何 native 或 cache。',
-    cacheArtifacts: [],
-    legacyGeneratedImages: [
-      {
-        requestId: 'legacy-20',
-        promptToken: 'image###legacy-20###',
-        src: 'https://example.com/legacy-20.png',
-      },
-    ],
-  });
-
-  assert.equal(fromLegacyOnly.length, 1);
-  assert.equal(fromLegacyOnly[0].source, 'legacy_stream_demo');
-  assert.equal(fromLegacyOnly[0].promptToken, 'image###legacy-20###');
 });
 
-test('resolver prefers extra.images over legacy stream_demo and cache for the same key', () => {
+test('resolver prefers extra.images over cache fallback for the same key', () => {
   const result = resolveGeneratedImageSource(
     {
       messageId: 16,
@@ -211,17 +179,6 @@ test('resolver prefers extra.images over legacy stream_demo and cache for the sa
             },
           ],
         ],
-      },
-      data: {
-        stream_demo: {
-          generated_images: [
-            {
-              requestId: 'req-native-first',
-              promptToken: 'image###native###',
-              src: 'idb://16/req-native-first',
-            },
-          ],
-        },
       },
     },
     [
@@ -250,11 +207,6 @@ test('resolver uses mes-tag derived entries before cache fallback', () => {
       extra: {
         images: [],
       },
-      data: {
-        stream_demo: {
-          generated_images: [],
-        },
-      },
     },
     [
       {
@@ -266,14 +218,20 @@ test('resolver uses mes-tag derived entries before cache fallback', () => {
   );
 
   assert.ok(result);
-  assert.equal(result?.source, 'mes_tag');
+  assert.equal(result?.source, 'cache');
   assert.equal(result?.promptToken, 'image###Scene Composition:sfw,1girl,ruins###');
+  assert.equal(result?.src, 'https://example.com/cache.png');
 });
 
-test('task6 runtime path does not keep the legacy UI-owned persistence bridge active', () => {
+test('runtime path removes legacy UI-owned persistence symbols entirely', () => {
   const statusBarDir = path.resolve(__dirname, '..');
   const useStreamingDemoSource = fs.readFileSync(path.join(statusBarDir, 'useStreamingDemo.ts'), 'utf8');
   const resolverSource = fs.readFileSync(path.join(statusBarDir, 'generatedImageSourceResolver.ts'), 'utf8');
+  const artifactSource = fs.readFileSync(path.join(statusBarDir, 'pluginNativeImageArtifacts.ts'), 'utf8');
+  const removedReadFn = ['read', 'PersistedGeneratedImages('].join('');
+  const removedResolverPath = ['stream_demo', '.generated_images'].join('');
+  const removedLegacyInput = ['legacy', 'GeneratedImages'].join('');
+  const removedLegacySource = ['legacy_', 'stream_demo'].join('');
 
   assert.equal(
     useStreamingDemoSource.includes('bindImagePersistenceEvents();'),
@@ -281,9 +239,9 @@ test('task6 runtime path does not keep the legacy UI-owned persistence bridge ac
     'onMounted runtime should not mount bindImagePersistenceEvents() in active flow',
   );
   assert.equal(
-    useStreamingDemoSource.includes('void persistGeneratedImageResponse('),
+    useStreamingDemoSource.includes(removedReadFn),
     false,
-    'normal runtime flow should not invoke persistGeneratedImageResponse()',
+    'runtime path should not keep the removed legacy read helper',
   );
   assert.equal(
     useStreamingDemoSource.includes("await import('./imageStore')"),
@@ -296,8 +254,18 @@ test('task6 runtime path does not keep the legacy UI-owned persistence bridge ac
     'runtime path should not buildGeneratedImagePersistencePatch() for active writes',
   );
   assert.equal(
-    resolverSource.includes('idb://'),
+    resolverSource.includes(removedResolverPath),
     false,
-    'active source resolver should not keep idb:// references in source priority path',
+    'resolver should not keep the removed stream_demo fallback path',
+  );
+  assert.equal(
+    artifactSource.includes(removedLegacyInput),
+    false,
+    'native artifact reader should not keep the removed legacy input',
+  );
+  assert.equal(
+    artifactSource.includes(removedLegacySource),
+    false,
+    'native artifact reader should not emit the removed legacy source name',
   );
 });
