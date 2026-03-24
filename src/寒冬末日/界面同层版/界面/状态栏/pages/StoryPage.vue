@@ -1718,6 +1718,10 @@ useEventListener(window, 'keydown', event => {
   transform: translateX(100%);
 }
 
+.ui-sidebar-right.open {
+  transform: translateX(0);
+}
+
 .ui-sidebar-toggle {
   position: absolute;
   left: 0;

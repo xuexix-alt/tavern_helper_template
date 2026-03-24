@@ -280,7 +280,12 @@ watch(itemsSignature, async () => {
   if (!el) return;
   // 新楼层到来时，若用户在底部则追尾并确保最新楼可见
   if (props.shouldFollowLatest || isNearBottom(el)) {
-    startIndex.value = Math.max(0, props.items.length - PAGE_SIZE);
+    // 修复：只有当楼层数超过PAGE_SIZE时才启用分页
+    if (props.items.length > PAGE_SIZE) {
+      startIndex.value = props.items.length - PAGE_SIZE;
+    } else {
+      startIndex.value = 0;
+    }
     await nextTick();
     el.scrollTop = el.scrollHeight;
     emit('reading-mode-change', 'following_latest');
@@ -289,7 +294,12 @@ watch(itemsSignature, async () => {
 });
 
 onMounted(async () => {
-  startIndex.value = Math.max(0, props.items.length - PAGE_SIZE);
+  // 修复：只有当楼层数超过PAGE_SIZE时才启用分页
+  if (props.items.length > PAGE_SIZE) {
+    startIndex.value = props.items.length - PAGE_SIZE;
+  } else {
+    startIndex.value = 0;
+  }
   await nextTick();
   const el = listRef.value;
   if (!el) return;
