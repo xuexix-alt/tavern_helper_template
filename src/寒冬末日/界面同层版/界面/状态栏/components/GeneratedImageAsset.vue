@@ -97,6 +97,8 @@ const activationPayload = computed<GeneratedImageActivationPayload>(() => ({
   imageSrc: String(resolvedSource.value?.src ?? '').trim(),
 }));
 
+let suppressNextClick = false;
+
 const gestureController = createGeneratedImageGestureController({
   onView() {
     emit('view', activationPayload.value);
@@ -118,12 +120,22 @@ function stopEvent(event: Event) {
 }
 
 function handleClick(event: MouseEvent) {
+  console.log('[GalleryAsset] handleClick called, suppressNextClick:', suppressNextClick);
+  if (suppressNextClick) {
+    suppressNextClick = false;
+    console.log('[GalleryAsset] handleClick suppressed');
+    return;
+  }
   stopEvent(event);
   gestureController.handleClick();
+  console.log('[GalleryAsset] handleClick -> gestureController.handleClick()');
 }
 
 function handleDoubleClick(event: MouseEvent) {
+  console.log('[GalleryAsset] handleDoubleClick called');
   stopEvent(event);
+  suppressNextClick = true;
+  console.log('[GalleryAsset] handleDoubleClick -> gestureController.handleDoubleClick()');
   gestureController.handleDoubleClick();
 }
 

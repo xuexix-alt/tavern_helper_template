@@ -262,6 +262,7 @@ function bindAssistantBodyInteractions() {
   ) as HTMLElement[];
 
   assistantBodyCleanup.value = carriers.map(carrier => {
+    let suppressNextClick = false;
     let hitArea = carrier.querySelector('.generated-image-hitarea') as HTMLButtonElement | null;
     if (!hitArea) {
       hitArea = document.createElement('button');
@@ -299,11 +300,21 @@ function bindAssistantBodyInteractions() {
     });
 
     const handleClick = (event: Event) => {
+      console.log('[TranscriptCard] handleClick called, suppressNextClick:', suppressNextClick);
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        console.log('[TranscriptCard] handleClick suppressed');
+        return;
+      }
       stopEvent(event);
+      console.log('[TranscriptCard] handleClick -> controller.handleClick(), messageId:', props.item.message_id);
       controller.handleClick();
     };
     const handleDoubleClick = (event: Event) => {
+      console.log('[TranscriptCard] handleDoubleClick called');
       stopEvent(event);
+      suppressNextClick = true;
+      console.log('[TranscriptCard] handleDoubleClick -> controller.handleDoubleClick(), messageId:', props.item.message_id);
       controller.handleDoubleClick();
     };
     const handlePointerDown = (event: Event) => {

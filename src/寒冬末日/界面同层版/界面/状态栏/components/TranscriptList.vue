@@ -43,7 +43,7 @@
           @reroll-opening="emit('reroll-opening')"
         />
 
-        <!-- 🎨 楼层生图按钮，只在 assistant 楼层显示 -->
+        <!-- 🎨/📷 楼层图片按钮，只在 assistant 楼层显示 -->
         <template v-if="item.role === 'assistant' && !item.isOpening">
           <button
             type="button"
@@ -51,7 +51,7 @@
             :title="
               messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'
             "
-            @click="emit('generate-image', item.message_id)"
+            @click="handleImageButtonClick(item.message_id)"
           >
             <span>{{ messageImageCount(item.message_id) > 0 ? '📷' : '🎨' }}</span>
             <span v-if="messageImageCount(item.message_id) > 0" class="transcript-image-fab-badge">
@@ -120,6 +120,7 @@ const emit = defineEmits<{
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
   (event: 'generate-image', messageId: number): void;
+  (event: 'open-gallery', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;
@@ -180,6 +181,15 @@ const handleScroll = useThrottleFn(() => {
 
 function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
+}
+
+function handleImageButtonClick(messageId: number) {
+  const count = messageImageCount(messageId);
+  if (count > 0) {
+    emit('open-gallery', messageId);
+  } else {
+    emit('generate-image', messageId);
+  }
 }
 
 function messageImageCount(messageId: number): number {

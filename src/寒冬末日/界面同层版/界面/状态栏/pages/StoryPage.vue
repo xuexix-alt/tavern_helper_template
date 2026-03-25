@@ -29,11 +29,11 @@
       </transition>
 
       <button type="button" class="ui-sidebar-toggle" :class="{ open: roleDrawerOpen }" @click="toggleRoleDrawer">
-        <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
+        <span class="ui-sidebar-toggle-label">[ 角色&系统 ]</span>
       </button>
 
-      <button type="button" class="ui-sidebar-toggle" :class="{ open: galleryDrawerOpen }" @click="toggleGalleryDrawer">
-        <span class="ui-sidebar-toggle-label">[ GALLERY ]</span>
+      <button type="button" class="ui-sidebar-toggle ui-sidebar-toggle-right" :class="{ open: galleryDrawerOpen }" @click="toggleGalleryDrawer">
+        <span class="ui-sidebar-toggle-label">[ 画廊&图片 ]</span>
       </button>
 
       <aside class="ui-sidebar" :class="{ open: roleDrawerOpen }">
@@ -100,6 +100,7 @@
               :render-revision="transcriptDomRevision"
               :gallery-entries="galleryEntries"
               @generate-image="handleTranscriptGenerateImage"
+              @open-gallery="handleOpenGallery"
               @open-detail="openDetail"
               @image-view="activateGeneratedImageView"
               @image-regenerate="activateGeneratedImageRegenerate"
@@ -1247,6 +1248,8 @@ async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
     eventTimeStamp: event.timeStamp,
     detail: event.detail,
     target: (event.target as HTMLElement | null)?.tagName ?? null,
+    targetClassName: (event.target as HTMLElement | null)?.className?.slice(0, 100) ?? null,
+    targetParentClassName: (event.target as HTMLElement | null)?.parentElement?.className?.slice(0, 100) ?? null,
   });
   if (shouldSkipTranscriptImageTrigger(messageId, transcriptImageTriggerGuard, Date.now(), 300)) {
     console.log('[image] transcript-dblclick-skipped', {
@@ -1294,6 +1297,10 @@ async function handleTranscriptGenerateImage(messageId: number) {
     hoistPluginMenuIntoFullscreen();
   }
   await triggerImageGenerationForMessage(messageId);
+}
+
+function handleOpenGallery(messageId: number) {
+  openGalleryDrawer();
 }
 
 function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {

@@ -40,15 +40,23 @@ export function createGeneratedImageGestureController(input: {
 
   return {
     handleClick() {
-      if (Date.now() < suppressClickUntil) return;
+      console.log('[Gesture] handleClick called, suppressClickUntil:', suppressClickUntil, 'now:', Date.now());
+      if (Date.now() < suppressClickUntil) {
+        console.log('[Gesture] handleClick blocked by suppressClickUntil');
+        return;
+      }
       clearClickTimer();
       clickTimer = scheduleTimeout(() => {
         clickTimer = 0;
+        console.log('[Gesture] handleClick timeout -> onView()');
         input.onView();
       }, clickDelayMs);
     },
     handleDoubleClick() {
+      console.log('[Gesture] handleDoubleClick called');
       clearClickTimer();
+      suppressClickUntil = Date.now() + 500;
+      console.log('[Gesture] handleDoubleClick -> onRegenerate(), suppressClickUntil set to', Date.now() + 500);
       input.onRegenerate();
     },
     handleTouchStart() {
