@@ -1,42 +1,42 @@
 import _ from 'lodash';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import {
-    buildStreamDemoMessage,
-    extractStreamDemoContent,
-    extractStreamDemoOptions,
-    extractStreamDemoPhase,
-    isStreamDemoMessage,
-    stripStreamDemoRuntimeTags,
-    stripTagsForPreview,
+  buildStreamDemoMessage,
+  extractStreamDemoContent,
+  extractStreamDemoOptions,
+  extractStreamDemoPhase,
+  isStreamDemoMessage,
+  stripStreamDemoRuntimeTags,
+  stripTagsForPreview,
 } from '../../shared/message';
 import {
-    buildOpeningGeneratePrompt,
-    extractOpeningContent,
-    extractOpeningContentLoose,
-    extractOpeningOptions,
-    getDefaultOpeningPayload,
-    getDefaultOpeningPreset,
-    getOpeningRoute,
-    getOpeningRoutes,
-    getOpeningWorldMode,
-    getOpeningWorldModes,
-    readOpeningPayloadFromChat,
-    replaceOpeningPayloadInChat,
-    shouldLoadOpeningGenerator,
+  buildOpeningGeneratePrompt,
+  extractOpeningContent,
+  extractOpeningContentLoose,
+  extractOpeningOptions,
+  getDefaultOpeningPayload,
+  getDefaultOpeningPreset,
+  getOpeningRoute,
+  getOpeningRoutes,
+  getOpeningWorldMode,
+  getOpeningWorldModes,
+  readOpeningPayloadFromChat,
+  replaceOpeningPayloadInChat,
+  shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
-    buildDebugMessageSignature,
-    buildDemoAssistantFinalBodySource,
-    createGenerationListenerEpochController,
-    shouldCreateAssistantPlaceholderOnFirstToken,
-    shouldEnsureAssistantPlaceholderBeforeFinalize,
-    shouldIgnoreHostRefreshDuringBusy,
-    shouldPrewarmHostMesTextAfterPatch,
-    shouldSuppressLifecycleEchoHostRefresh,
-    summarizeTranscriptForDebug,
+  buildDebugMessageSignature,
+  buildDemoAssistantFinalBodySource,
+  createGenerationListenerEpochController,
+  shouldCreateAssistantPlaceholderOnFirstToken,
+  shouldEnsureAssistantPlaceholderBeforeFinalize,
+  shouldIgnoreHostRefreshDuringBusy,
+  shouldPrewarmHostMesTextAfterPatch,
+  shouldSuppressLifecycleEchoHostRefresh,
+  summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
@@ -44,10 +44,10 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import {
-    buildHostTranscriptVisibilitySelector,
-    createHostTranscriptVisibilityController,
-    HOST_VISIBILITY_CLASS,
-    HOST_VISIBILITY_STYLE_ID,
+  buildHostTranscriptVisibilitySelector,
+  createHostTranscriptVisibilityController,
+  HOST_VISIBILITY_CLASS,
+  HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
@@ -55,37 +55,37 @@ import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
-    readNativeFirstImageArtifacts,
-    readNativeFirstMembershipEntries,
-    readNativeFirstPromptTokens,
-    type NativeFirstArtifactSource,
-    type NativeFirstImageArtifact,
+  readNativeFirstImageArtifacts,
+  readNativeFirstMembershipEntries,
+  readNativeFirstPromptTokens,
+  type NativeFirstArtifactSource,
+  type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
 import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
-    normalizeDensity,
-    normalizeFontMode,
-    normalizeReadingMode,
-    normalizeTheme,
-    patchReaderChatState,
-    READER_CHAT_STATE_VERSION,
-    readReaderChatState,
+  normalizeDensity,
+  normalizeFontMode,
+  normalizeReadingMode,
+  normalizeTheme,
+  patchReaderChatState,
+  READER_CHAT_STATE_VERSION,
+  readReaderChatState,
 } from './readerState';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import type {
-    DemoStatus,
-    DemoTheme,
-    GeneratedImageRef,
-    ReaderFontMode,
-    ReaderLogItem,
-    ReaderSummary,
-    ReadingMode,
-    TranscriptDensity,
-    TranscriptFilterMode,
-    TranscriptItem,
+  DemoStatus,
+  DemoTheme,
+  GeneratedImageRef,
+  ReaderFontMode,
+  ReaderLogItem,
+  ReaderSummary,
+  ReadingMode,
+  TranscriptDensity,
+  TranscriptFilterMode,
+  TranscriptItem,
 } from './types';
 
 type StopHandle = { stop?: () => void } | null;
@@ -909,10 +909,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
       `.transcript-entry[data-message-id='${mesid}'] .assistant-body-wrap`,
       `.transcript-entry[data-message-id='${mesid}'] .assistant-body`,
     ];
-    const displayedSelectors = [
-      `.mes[data-message-id='${mesid}']`,
-      `.mes[mesid='${mesid}']`,
-    ];
+    const displayedSelectors = [`.mes[data-message-id='${mesid}']`, `.mes[mesid='${mesid}']`];
     for (const selector of [...iframeSelectors, ...displayedSelectors]) {
       for (const el of Array.from(doc.querySelectorAll(selector)) as HTMLElement[]) {
         allRoots.add(el);
@@ -923,10 +920,14 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
   searchInDocument(document);
   try {
     searchInDocument(window.parent?.document);
-  } catch { /* cross-origin */ }
+  } catch {
+    /* cross-origin */
+  }
   try {
     searchInDocument(window.top?.document);
-  } catch { /* cross-origin */ }
+  } catch {
+    /* cross-origin */
+  }
 
   // 只从 .st-chatu8-image-container 中获取图片，避免收集头像和画廊自己的图片
   for (const root of allRoots) {
@@ -1084,11 +1085,12 @@ function buildGeneratedImageRefsForMessage(input: {
       promptToken,
       order: i,
     });
-    const title = pickFirstNonEmpty(
-      extractImageTitleFromPrompt(promptToken),
-      extractCharacterNameFromPrompt(promptToken),
-      `楼层 #${messageId} · 图 ${i + 1}`,
-    ) || `楼层 #${messageId} · 图 ${i + 1}`;
+    const title =
+      pickFirstNonEmpty(
+        extractImageTitleFromPrompt(promptToken),
+        extractCharacterNameFromPrompt(promptToken),
+        `楼层 #${messageId} · 图 ${i + 1}`,
+      ) || `楼层 #${messageId} · 图 ${i + 1}`;
 
     result.push({
       id: markerId,
@@ -1451,11 +1453,19 @@ export function useStreamingDemo() {
     const filtered = transcript.value.filter(
       item => item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id,
     );
-    console.log('[visibleTranscript Debug] filterMode=', filterMode.value, ', transcript长度=', transcript.value.length, ', filtered长度=', filtered.length);
+    console.log(
+      '[visibleTranscript Debug] filterMode=',
+      filterMode.value,
+      ', transcript长度=',
+      transcript.value.length,
+      ', filtered长度=',
+      filtered.length,
+    );
     if (filtered.length !== transcript.value.length) {
       for (let i = 0; i < transcript.value.length; i++) {
         const item = transcript.value[i];
-        const kept = item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id;
+        const kept =
+          item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id;
         if (!kept) {
           console.log(`  [${i}] messageId=${item.message_id}, role=${item.role}, isOpening=${item.isOpening} - 被过滤`);
         }
@@ -2596,7 +2606,7 @@ export function useStreamingDemo() {
         console.log('Assistant 消息数:', assistantMessages.length);
         console.log('消息 ID 范围:', {
           min: Math.min(...all.map(m => Number(m?.message_id) || 0)),
-          max: Math.max(...all.map(m => Number(m?.message_id) || 0))
+          max: Math.max(...all.map(m => Number(m?.message_id) || 0)),
         });
         console.log('containerId:', containerId);
         console.groupEnd();
@@ -3541,11 +3551,15 @@ export function useStreamingDemo() {
     // 调试日志：检查 transcript 中的消息
     const assistantItems = transcript.value.filter(item => item.role === 'assistant');
     const nonOpeningItems = assistantItems.filter(item => !item.isOpening);
-    console.group(`[Gallery Debug] transcript 状态: 总数=${transcript.value.length}, assistant=${assistantItems.length}, 非opening=${nonOpeningItems.length}`);
+    console.group(
+      `[Gallery Debug] transcript 状态: 总数=${transcript.value.length}, assistant=${assistantItems.length}, 非opening=${nonOpeningItems.length}`,
+    );
     for (let i = 0; i < transcript.value.length; i++) {
       const item = transcript.value[i];
       if (item.role === 'assistant') {
-        console.log(`  [${i}] messageId=${item.message_id}, isOpening=${item.isOpening}, raw长度=${item.raw?.length || 0}`);
+        console.log(
+          `  [${i}] messageId=${item.message_id}, isOpening=${item.isOpening}, raw长度=${item.raw?.length || 0}`,
+        );
       }
     }
 

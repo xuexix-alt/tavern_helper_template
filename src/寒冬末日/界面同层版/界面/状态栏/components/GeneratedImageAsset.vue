@@ -61,9 +61,9 @@ import type { GeneratedImageActivationPayload } from '../generatedImageActivatio
 import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision.ts';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
-    readGeneratedImageSource,
-    readGeneratedImageSourceAsync,
-    type ResolvedGeneratedImageSource,
+  readGeneratedImageSource,
+  readGeneratedImageSourceAsync,
+  type ResolvedGeneratedImageSource,
 } from '../generatedImageSourceResolver';
 import type { GeneratedImageRef } from '../types';
 
@@ -158,9 +158,7 @@ async function resolveSource() {
   }
 
   // 备用：从 transcript-entry 的 DOM 中获取，按顺序分配
-  const entryEl = document.querySelector(
-    `.transcript-entry[data-message-id="${props.entry.messageId}"]`
-  );
+  const entryEl = document.querySelector(`.transcript-entry[data-message-id="${props.entry.messageId}"]`);
   if (entryEl) {
     // 获取所有容器
     const containers = Array.from(entryEl.querySelectorAll('.st-chatu8-image-container'));
