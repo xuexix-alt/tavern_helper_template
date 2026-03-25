@@ -314,7 +314,10 @@ function bindAssistantBodyInteractions() {
       console.log('[TranscriptCard] handleDoubleClick called');
       stopEvent(event);
       suppressNextClick = true;
-      console.log('[TranscriptCard] handleDoubleClick -> controller.handleDoubleClick(), messageId:', props.item.message_id);
+      console.log(
+        '[TranscriptCard] handleDoubleClick -> controller.handleDoubleClick(), messageId:',
+        props.item.message_id,
+      );
       controller.handleDoubleClick();
     };
     const handlePointerDown = (event: Event) => {

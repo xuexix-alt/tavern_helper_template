@@ -32,7 +32,12 @@
         <span class="ui-sidebar-toggle-label">[ 角色&系统 ]</span>
       </button>
 
-      <button type="button" class="ui-sidebar-toggle ui-sidebar-toggle-right" :class="{ open: galleryDrawerOpen }" @click="toggleGalleryDrawer">
+      <button
+        type="button"
+        class="ui-sidebar-toggle ui-sidebar-toggle-right"
+        :class="{ open: galleryDrawerOpen }"
+        @click="toggleGalleryDrawer"
+      >
         <span class="ui-sidebar-toggle-label">[ 画廊&图片 ]</span>
       </button>
 
