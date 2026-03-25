@@ -58,14 +58,13 @@
 
 <script setup lang="ts">
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision.ts';
+import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
-  readGeneratedImageSource,
-  readGeneratedImageSourceAsync,
-  type ResolvedGeneratedImageSource,
+    readGeneratedImageSource,
+    readGeneratedImageSourceAsync,
+    type ResolvedGeneratedImageSource,
 } from '../generatedImageSourceResolver';
-import { isIdbSrc } from '../imagePersistencePatch';
 import type { GeneratedImageRef } from '../types';
 
 const props = defineProps<{
@@ -147,6 +146,40 @@ function handlePointerCancel(event: PointerEvent) {
 }
 
 async function resolveSource() {
+  // 优先使用 entry 中已有的 src（从 hostDomArtifacts 传递过来）
+  if (props.entry.src) {
+    resolvedSource.value = {
+      src: props.entry.src,
+      alt: props.entry.alt ?? props.entry.title,
+      imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
+      messageId: props.entry.messageId,
+    };
+    return;
+  }
+
+  // 备用：从 transcript-entry 的 DOM 中获取，按顺序分配
+  const entryEl = document.querySelector(
+    `.transcript-entry[data-message-id="${props.entry.messageId}"]`
+  );
+  if (entryEl) {
+    // 获取所有容器
+    const containers = Array.from(entryEl.querySelectorAll('.st-chatu8-image-container'));
+    // 使用 createdOrder 或 index 作为容器索引
+    const containerIndex = Math.min(props.entry.createdOrder ?? 0, containers.length - 1);
+    const container = containers[containerIndex];
+    const img = container?.querySelector('img');
+    if (img && img.src && img.src.startsWith('data:image')) {
+      resolvedSource.value = {
+        src: img.src,
+        alt: img.alt || props.entry.title,
+        imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
+        messageId: props.entry.messageId,
+      };
+      return;
+    }
+  }
+
+  // 备用2：使用 readGeneratedImageSource
   const syncResult = readGeneratedImageSource({
     messageId: props.entry.messageId,
     markerId: props.entry.markerId,
@@ -155,30 +188,20 @@ async function resolveSource() {
     promptToken: props.entry.promptToken,
   });
 
-  if (syncResult && isIdbSrc(syncResult.src)) {
-    resolvedSource.value = null;
-    const asyncResult = await readGeneratedImageSourceAsync({
-      messageId: props.entry.messageId,
-      markerId: props.entry.markerId,
-      imageId: props.entry.imageId,
-      requestId: props.entry.requestId,
-      promptToken: props.entry.promptToken,
-    });
-    resolvedSource.value = asyncResult;
+  if (syncResult) {
+    resolvedSource.value = syncResult;
     return;
   }
 
-  resolvedSource.value = syncResult;
-
-  // resolver 找不到时，直接用 DOM 扫描写入的 src
-  if (!resolvedSource.value && props.entry.src) {
-    resolvedSource.value = {
-      src: props.entry.src,
-      alt: props.entry.alt ?? props.entry.title,
-      imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
-      messageId: props.entry.messageId,
-    };
-  }
+  // 备用3：异步从 IndexedDB 加载
+  const asyncResult = await readGeneratedImageSourceAsync({
+    messageId: props.entry.messageId,
+    markerId: props.entry.markerId,
+    imageId: props.entry.imageId,
+    requestId: props.entry.requestId,
+    promptToken: props.entry.promptToken,
+  });
+  resolvedSource.value = asyncResult;
 }
 
 watch(

@@ -1,53 +1,53 @@
+import _ from 'lodash';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import {
-  buildStreamDemoMessage,
-  extractStreamDemoContent,
-  extractStreamDemoOptions,
-  extractStreamDemoPhase,
-  isStreamDemoMessage,
-  stripStreamDemoRuntimeTags,
-  stripTagsForPreview,
+    buildStreamDemoMessage,
+    extractStreamDemoContent,
+    extractStreamDemoOptions,
+    extractStreamDemoPhase,
+    isStreamDemoMessage,
+    stripStreamDemoRuntimeTags,
+    stripTagsForPreview,
 } from '../../shared/message';
 import {
-  buildOpeningGeneratePrompt,
-  extractOpeningContent,
-  extractOpeningContentLoose,
-  extractOpeningOptions,
-  getDefaultOpeningPayload,
-  getDefaultOpeningPreset,
-  getOpeningRoute,
-  getOpeningRoutes,
-  getOpeningWorldMode,
-  getOpeningWorldModes,
-  readOpeningPayloadFromChat,
-  replaceOpeningPayloadInChat,
-  shouldLoadOpeningGenerator,
+    buildOpeningGeneratePrompt,
+    extractOpeningContent,
+    extractOpeningContentLoose,
+    extractOpeningOptions,
+    getDefaultOpeningPayload,
+    getDefaultOpeningPreset,
+    getOpeningRoute,
+    getOpeningRoutes,
+    getOpeningWorldMode,
+    getOpeningWorldModes,
+    readOpeningPayloadFromChat,
+    replaceOpeningPayloadInChat,
+    shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
-  buildDemoAssistantFinalBodySource,
-  buildDebugMessageSignature,
-  createGenerationListenerEpochController,
-  shouldCreateAssistantPlaceholderOnFirstToken,
-  shouldEnsureAssistantPlaceholderBeforeFinalize,
-  shouldIgnoreHostRefreshDuringBusy,
-  shouldPrewarmHostMesTextAfterPatch,
-  shouldSuppressLifecycleEchoHostRefresh,
-  summarizeTranscriptForDebug,
+    buildDebugMessageSignature,
+    buildDemoAssistantFinalBodySource,
+    createGenerationListenerEpochController,
+    shouldCreateAssistantPlaceholderOnFirstToken,
+    shouldEnsureAssistantPlaceholderBeforeFinalize,
+    shouldIgnoreHostRefreshDuringBusy,
+    shouldPrewarmHostMesTextAfterPatch,
+    shouldSuppressLifecycleEchoHostRefresh,
+    summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
-import { shouldAppendTranscriptPromptTokens, shouldInjectTranscriptImages } from './generatedImageInteraction';
+import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
-import { buildGeneratedImageMembership } from './generatedImageMembership';
-import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
+import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import {
-  buildHostTranscriptVisibilitySelector,
-  createHostTranscriptVisibilityController,
-  HOST_VISIBILITY_CLASS,
-  HOST_VISIBILITY_STYLE_ID,
+    buildHostTranscriptVisibilitySelector,
+    createHostTranscriptVisibilityController,
+    HOST_VISIBILITY_CLASS,
+    HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
@@ -55,37 +55,37 @@ import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
-  readNativeFirstImageArtifacts,
-  readNativeFirstMembershipEntries,
-  readNativeFirstPromptTokens,
-  type NativeFirstArtifactSource,
-  type NativeFirstImageArtifact,
+    readNativeFirstImageArtifacts,
+    readNativeFirstMembershipEntries,
+    readNativeFirstPromptTokens,
+    type NativeFirstArtifactSource,
+    type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
 import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
-  normalizeDensity,
-  normalizeFontMode,
-  normalizeReadingMode,
-  normalizeTheme,
-  patchReaderChatState,
-  READER_CHAT_STATE_VERSION,
-  readReaderChatState,
+    normalizeDensity,
+    normalizeFontMode,
+    normalizeReadingMode,
+    normalizeTheme,
+    patchReaderChatState,
+    READER_CHAT_STATE_VERSION,
+    readReaderChatState,
 } from './readerState';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import type {
-  DemoStatus,
-  DemoTheme,
-  GeneratedImageRef,
-  ReaderFontMode,
-  ReaderLogItem,
-  ReaderSummary,
-  ReadingMode,
-  TranscriptDensity,
-  TranscriptFilterMode,
-  TranscriptItem,
+    DemoStatus,
+    DemoTheme,
+    GeneratedImageRef,
+    ReaderFontMode,
+    ReaderLogItem,
+    ReaderSummary,
+    ReadingMode,
+    TranscriptDensity,
+    TranscriptFilterMode,
+    TranscriptItem,
 } from './types';
 
 type StopHandle = { stop?: () => void } | null;
@@ -438,7 +438,7 @@ function readNativeFirstArtifactsForMessage(input: {
   if (!Number.isFinite(messageId) || messageId < 0) return [];
 
   const message = readChatMessageDetail(messageId);
-  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  const rawMessage = String(input.rawMessage ?? message?.mes ?? '');
   return readNativeFirstImageArtifacts({
     messageId,
     rawMessage,
@@ -472,7 +472,7 @@ function readNativeFirstPromptTokensForMessage(input: { messageId: number; rawMe
   if (!Number.isFinite(messageId) || messageId < 0) return [];
 
   const message = readChatMessageDetail(messageId);
-  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  const rawMessage = String(input.rawMessage ?? message?.mes ?? '');
   return readNativeFirstPromptTokens({
     messageId,
     rawMessage,
@@ -481,15 +481,20 @@ function readNativeFirstPromptTokensForMessage(input: { messageId: number; rawMe
   });
 }
 
-function readNativeFirstMembershipForMessage(input: { messageId: number; rawMessage?: string }) {
+function readNativeFirstMembershipForMessage(input: {
+  messageId: number;
+  rawMessage?: string;
+  hostDomArtifacts?: RenderableGeneratedImage[];
+}) {
   const messageId = Math.trunc(Number(input.messageId));
   if (!Number.isFinite(messageId) || messageId < 0) return [];
 
   const message = readChatMessageDetail(messageId);
-  const rawMessage = String(input.rawMessage ?? message?.message ?? '');
+  const rawMessage = String(input.rawMessage ?? message?.mes ?? '');
   return readNativeFirstMembershipEntries({
     messageId,
     rawMessage,
+    hostDomArtifacts: input.hostDomArtifacts ?? [],
     extraImages: readChatu8ExtraImages(messageId),
     cacheArtifacts: readChatu8CacheEntries(messageId),
   });
@@ -695,8 +700,38 @@ function resolveDisplayedMessageRoots(messageId: number): HTMLElement[] {
   }
 
   const mesid = Math.trunc(messageId);
+  const selectors = [`#chat > .mes[mesid='${mesid}']`, `#chat .mes[mesid='${mesid}']`, `.mes[mesid='${mesid}']`];
+
+  // 方式1：通过 SillyTavern 全局 window 对象直接查询宿主 DOM
+  try {
+    const hostWindow = globalThis.parent as WindowProxy & typeof globalThis;
+    const hostDoc = hostWindow?.document;
+    if (hostDoc) {
+      for (const selector of selectors) {
+        const el = hostDoc.querySelector(selector) as HTMLElement | null;
+        if (el) pushRoot(el);
+      }
+    }
+  } catch {
+    // 跨域时忽略
+  }
+
+  // 方式2：尝试 retrieveDisplayedMessage 找到的父容器（它返回的是 mes_text，需要向上找 .mes）
+  try {
+    if (typeof retrieveDisplayedMessage === 'function') {
+      const $mes = retrieveDisplayedMessage(messageId);
+      const el = $mes?.get?.(0) as HTMLElement | undefined;
+      if (el) {
+        const parentMes = el.closest?.('.mes');
+        if (parentMes) pushRoot(parentMes as HTMLElement);
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 方式3：回退搜索 collectReachableHostDocuments
   for (const doc of collectReachableHostDocuments()) {
-    const selectors = [`#chat > .mes[mesid='${mesid}']`, `#chat .mes[mesid='${mesid}']`, `.mes[mesid='${mesid}']`];
     for (const selector of selectors) {
       pushRoot(doc.querySelector(selector) as HTMLElement | null);
     }
@@ -709,12 +744,32 @@ function resolveIframeAssistantRoots(messageId: number): HTMLElement[] {
   const roots: HTMLElement[] = [];
   const mesid = Math.trunc(messageId);
   const selectors = [
+    `.mes[data-message-id='${mesid}']`,
+    `.mes[mesid='${mesid}']`,
     `.assistant-body[data-message-id='${mesid}']`,
     `.transcript-entry[data-message-id='${mesid}'] .assistant-body-wrap`,
     `.transcript-entry[data-message-id='${mesid}'] .assistant-body`,
   ];
+
+  // 通过 SillyTavern 全局 window 对象直接查询宿主 DOM
+  try {
+    const hostWindow = globalThis.parent as WindowProxy & typeof globalThis;
+    const hostDoc = hostWindow?.document;
+    if (hostDoc) {
+      for (const selector of selectors) {
+        const nodes = Array.from(hostDoc.querySelectorAll(selector)) as HTMLElement[];
+        for (const node of nodes) {
+          if (roots.includes(node)) continue;
+          roots.push(node);
+        }
+      }
+    }
+  } catch {
+    // 跨域时忽略
+  }
+
+  // 回退：搜索 collectReachableHostDocuments
   for (const doc of collectReachableHostDocuments()) {
-    if (doc !== document) continue;
     for (const selector of selectors) {
       const nodes = Array.from(doc.querySelectorAll(selector)) as HTMLElement[];
       for (const node of nodes) {
@@ -818,6 +873,7 @@ function resolvePromptButtonForImageSpan(span: HTMLElement, root: HTMLElement): 
 function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedImage[] {
   const out: RenderableGeneratedImage[] = [];
   const seen = new Set<string>();
+  const mesid = Math.trunc(messageId);
 
   const pushImage = (
     srcLike: unknown,
@@ -839,20 +895,61 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
     });
   };
 
+  const allRoots = new Set<HTMLElement>();
   for (const root of resolveIframeAssistantRoots(messageId)) {
-    const images = Array.from(root.querySelectorAll('img')) as HTMLImageElement[];
-    for (const image of images) {
-      pushImage(
-        image.getAttribute('src') ?? image.currentSrc,
-        image.getAttribute('alt') ?? image.getAttribute('title'),
-        undefined,
-        image.dataset.requestId ?? image.getAttribute('data-request-id'),
-        extractAnchorTextForImageNode(image, root),
-      );
+    allRoots.add(root);
+  }
+  for (const root of resolveDisplayedMessageRoots(messageId)) {
+    allRoots.add(root);
+  }
+
+  const searchInDocument = (doc: Document) => {
+    const iframeSelectors = [
+      `.transcript-entry[data-message-id='${mesid}']`,
+      `.transcript-entry[data-message-id='${mesid}'] .assistant-body-wrap`,
+      `.transcript-entry[data-message-id='${mesid}'] .assistant-body`,
+    ];
+    const displayedSelectors = [
+      `.mes[data-message-id='${mesid}']`,
+      `.mes[mesid='${mesid}']`,
+    ];
+    for (const selector of [...iframeSelectors, ...displayedSelectors]) {
+      for (const el of Array.from(doc.querySelectorAll(selector)) as HTMLElement[]) {
+        allRoots.add(el);
+      }
+    }
+  };
+
+  searchInDocument(document);
+  try {
+    searchInDocument(window.parent?.document);
+  } catch { /* cross-origin */ }
+  try {
+    searchInDocument(window.top?.document);
+  } catch { /* cross-origin */ }
+
+  // 只从 .st-chatu8-image-container 中获取图片，避免收集头像和画廊自己的图片
+  for (const root of allRoots) {
+    const stChatu8Containers = Array.from(root.querySelectorAll('.st-chatu8-image-container')) as HTMLElement[];
+    for (const container of stChatu8Containers) {
+      const images = Array.from(container.querySelectorAll('img')) as HTMLImageElement[];
+      for (const image of images) {
+        const src = image.getAttribute('src') ?? image.currentSrc;
+        // 只收集 data:image 的图片（base64 或 blob）
+        if (src && (src.startsWith('data:image') || src.startsWith('blob:'))) {
+          pushImage(
+            src,
+            image.getAttribute('alt') ?? image.getAttribute('title'),
+            undefined,
+            image.dataset.requestId ?? image.getAttribute('data-request-id'),
+            extractAnchorTextForImageNode(image, container),
+          );
+        }
+      }
     }
   }
 
-  for (const root of resolveDisplayedMessageRoots(messageId)) {
+  for (const root of allRoots) {
     const spans = Array.from(root.querySelectorAll(CHATU8_IMAGE_SPAN_SELECTOR)) as HTMLElement[];
     for (const span of spans) {
       const image = span.querySelector('img') as HTMLImageElement | null;
@@ -955,69 +1052,60 @@ function buildGeneratedImageRefsForMessage(input: {
   messageId: number;
   rawMessage: string;
   createdOrderBase?: number;
+  hostDomArtifacts?: RenderableGeneratedImage[];
 }): GeneratedImageRef[] {
   const messageId = Math.trunc(Number(input.messageId));
   if (!Number.isFinite(messageId) || messageId < 0) return [];
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
-  const nativeFirstMembers = readNativeFirstMembershipForMessage({
-    messageId,
-    rawMessage: input.rawMessage,
-  });
-  const persistedMembers = nativeFirstMembers.map(image => ({
-    markerId: String(image.markerId ?? '').trim() || undefined,
-    imageId: String(image.imageId ?? '').trim() || undefined,
-    promptToken: String(image.promptToken ?? '').trim(),
-    requestId: String(image.requestId ?? '').trim() || undefined,
-    anchorText: String(image.anchorText ?? '').trim() || undefined,
-  }));
-  const members = buildGeneratedImageMembership({
-    messageId,
-    promptTokens,
-    persistedEntries: persistedMembers,
-    createdOrderBase,
-  });
+  const hostDomArtifacts = input.hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId);
 
-  let index = 0;
-  return members.map(member => {
-    const markerId =
-      String(member.markerId ?? '').trim() ||
-      buildGeneratedImageMarkerId({
-        messageId,
-        imageId: member.imageId,
-        requestId: member.requestId,
-        promptToken: member.promptToken,
-        anchorText: member.anchorText,
-        order: index,
-      });
-    const promptToken = String(member.promptToken ?? '').trim();
-    const anchorText = String(member.anchorText ?? '').trim() || undefined;
-    const characterNameValue = pickFirstNonEmpty(extractCharacterNameFromPrompt(promptToken));
-    const characterName = characterNameValue || undefined;
+  // 调试日志
+  if (messageId > 0 && (promptTokens.length > 0 || hostDomArtifacts.length > 0)) {
+    console.group(`[Gallery Debug] 楼层 ${messageId} 图片收集`);
+    console.log('promptTokens:', promptTokens);
+    console.log('hostDomArtifacts:', hostDomArtifacts);
+    console.log('rawMessage 前100字符:', input.rawMessage.slice(0, 100));
+    console.groupEnd();
+  }
+
+  // 简单路径：直接按 promptTokens 数量创建 refs，src 按顺序从 hostDomArtifacts 映射
+  // 忽略 nativeFirstMembers 和 buildGeneratedImageMembership，直接构建
+  const domSrcs = hostDomArtifacts.map(a => a.src);
+  const result: GeneratedImageRef[] = [];
+
+  for (let i = 0; i < promptTokens.length; i++) {
+    const promptToken = promptTokens[i];
+    const src = i < domSrcs.length ? domSrcs[i] : undefined;
+
+    const markerId = buildGeneratedImageMarkerId({
+      messageId,
+      promptToken,
+      order: i,
+    });
     const title = pickFirstNonEmpty(
       extractImageTitleFromPrompt(promptToken),
-      characterName,
-      extractTitleFromAnchor(anchorText ?? ''),
-      extractTitleFromSrc(String(member.imageId ?? markerId)),
-      `楼层 #${messageId} · 图 ${index + 1}`,
-    );
-    const requestId = String(member.requestId ?? '').trim() || undefined;
-    const entry: GeneratedImageRef = {
+      extractCharacterNameFromPrompt(promptToken),
+      `楼层 #${messageId} · 图 ${i + 1}`,
+    ) || `楼层 #${messageId} · 图 ${i + 1}`;
+
+    result.push({
       id: markerId,
       messageId,
       markerId,
-      imageId: String(member.imageId ?? requestId ?? markerId).trim() || undefined,
+      imageId: undefined,
       promptToken,
-      requestId,
-      anchorText,
-      title: normalizeImageLabel(title),
-      characterName: characterName ? normalizeImageLabel(characterName) : undefined,
-      createdOrder: member.createdOrder,
-    };
-    index += 1;
-    return entry;
-  });
+      requestId: undefined,
+      anchorText: undefined,
+      title,
+      characterName: extractCharacterNameFromPrompt(promptToken) || undefined,
+      createdOrder: createdOrderBase * 100 + i,
+      src,
+    });
+  }
+
+  return result;
 }
 
 function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
@@ -1356,10 +1444,24 @@ export function useStreamingDemo() {
   }
 
   const visibleTranscript = computed(() => {
-    if (filterMode.value === 'all') return transcript.value;
-    return transcript.value.filter(
+    if (filterMode.value === 'all') {
+      console.log('[visibleTranscript Debug] filterMode=all, transcript长度=', transcript.value.length);
+      return transcript.value;
+    }
+    const filtered = transcript.value.filter(
       item => item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id,
     );
+    console.log('[visibleTranscript Debug] filterMode=', filterMode.value, ', transcript长度=', transcript.value.length, ', filtered长度=', filtered.length);
+    if (filtered.length !== transcript.value.length) {
+      for (let i = 0; i < transcript.value.length; i++) {
+        const item = transcript.value[i];
+        const kept = item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id;
+        if (!kept) {
+          console.log(`  [${i}] messageId=${item.message_id}, role=${item.role}, isOpening=${item.isOpening} - 被过滤`);
+        }
+      }
+    }
+    return filtered;
   });
 
   const transcriptStats = computed(() => ({
@@ -2485,6 +2587,21 @@ export function useStreamingDemo() {
     try {
       const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
       const all = Array.isArray(list) ? list : [];
+
+      // 调试日志：检查消息读取
+      if (all.length > 0) {
+        console.group(`[Transcript Debug] 共读取 ${all.length} 条消息`);
+        const assistantMessages = all.filter(m => (m?.role as string) === 'assistant');
+        console.log('总消息数:', all.length);
+        console.log('Assistant 消息数:', assistantMessages.length);
+        console.log('消息 ID 范围:', {
+          min: Math.min(...all.map(m => Number(m?.message_id) || 0)),
+          max: Math.max(...all.map(m => Number(m?.message_id) || 0))
+        });
+        console.log('containerId:', containerId);
+        console.groupEnd();
+      }
+
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
 
@@ -3420,6 +3537,18 @@ export function useStreamingDemo() {
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
   const galleryGroups = computed<GalleryGroup[]>(() => {
     void transcriptDomRevision.value;
+
+    // 调试日志：检查 transcript 中的消息
+    const assistantItems = transcript.value.filter(item => item.role === 'assistant');
+    const nonOpeningItems = assistantItems.filter(item => !item.isOpening);
+    console.group(`[Gallery Debug] transcript 状态: 总数=${transcript.value.length}, assistant=${assistantItems.length}, 非opening=${nonOpeningItems.length}`);
+    for (let i = 0; i < transcript.value.length; i++) {
+      const item = transcript.value[i];
+      if (item.role === 'assistant') {
+        console.log(`  [${i}] messageId=${item.message_id}, isOpening=${item.isOpening}, raw长度=${item.raw?.length || 0}`);
+      }
+    }
+
     const groups: GalleryGroup[] = [];
     for (const item of transcript.value) {
       if (item.role !== 'assistant' || item.isOpening) continue;
@@ -3430,6 +3559,10 @@ export function useStreamingDemo() {
       if (images.length === 0) continue;
       groups.push({ messageId: item.message_id, images });
     }
+
+    console.log(`[Gallery Debug] 最终收集到 ${groups.length} 组图片`);
+    console.groupEnd();
+
     return groups;
   });
   const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));

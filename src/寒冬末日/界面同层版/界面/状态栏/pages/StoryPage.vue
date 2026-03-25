@@ -32,6 +32,10 @@
         <span class="ui-sidebar-toggle-label">[ ROSTER ]</span>
       </button>
 
+      <button type="button" class="ui-sidebar-toggle" :class="{ open: galleryDrawerOpen }" @click="toggleGalleryDrawer">
+        <span class="ui-sidebar-toggle-label">[ GALLERY ]</span>
+      </button>
+
       <aside class="ui-sidebar" :class="{ open: roleDrawerOpen }">
         <div class="ui-sidebar-head">
           <div>
@@ -321,8 +325,8 @@
 import { useEventListener } from '@vueuse/core';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import {
-  parseGeneratedImageActivationPayload,
-  type GeneratedImageActivationPayload,
+    parseGeneratedImageActivationPayload,
+    type GeneratedImageActivationPayload,
 } from '../generatedImageActivation';
 import type { TranscriptItem } from '../types';
 
@@ -330,21 +334,21 @@ import openingModalIcon from '../assets/opening-modal-icon.png?url';
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
 import HudModal from '../components/HudModal.vue';
+import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
 import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../components/OpeningSetupPanel.vue';
 import RadialQuickMenu from '../components/RadialQuickMenu.vue';
 import TopToolbar from '../components/TopToolbar.vue';
-import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
-  convertIframePointToHostPoint,
-  resolveHostDispatchPlanWithRetry,
-  resolveHostMessageTargetFromPoint,
+    convertIframePointToHostPoint,
+    resolveHostDispatchPlanWithRetry,
+    resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
 import { dispatchHostPrimaryTrigger } from '../hostGestureDispatch';
 import { resolveWithRetry } from '../hostTargetRetry';

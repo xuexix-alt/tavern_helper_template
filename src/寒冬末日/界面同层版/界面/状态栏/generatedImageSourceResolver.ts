@@ -143,7 +143,7 @@ export function resolveGeneratedImageSource(
   const mesTagEntries = mergeNativeMesTagsWithExtraEntries({
     tags: parseNativeMesImageTags({
       messageId: normalizedMessageId ?? 0,
-      rawMessage: String(message?.message ?? ''),
+      rawMessage: String(message?.mes ?? message?.message ?? ''),
     }),
     extraImages: swipeEntries,
   });
