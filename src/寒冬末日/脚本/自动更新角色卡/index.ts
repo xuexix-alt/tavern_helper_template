@@ -3,9 +3,12 @@ import { z } from 'zod';
 
 import { checkAndUpdateCharacter } from '@util/common';
 
-const SCRIPT_VERSION = '0.1.0';
+const SCRIPT_VERSION = '1.0.0';
 const ACTIVE_INSTANCE_KEY = '__winter_auto_update_active_instance__';
 const INSTANCE_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const CHARACTER_NAME = '末世寒冬-星穹秩序';
+const BASE_URL = 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template@20260211/dist/寒冬末日';
 
 const BTN_CHECK = '角色卡更新-检查';
 const BTN_APPLY = '角色卡更新-执行';
@@ -15,12 +18,8 @@ const SettingsSchema = z
   .object({
     enabled: z.boolean().prefault(true),
     auto_apply: z.boolean().prefault(false),
-    check_on_load: z.boolean().prefault(false),
+    check_on_load: z.boolean().prefault(true),
     notify_latest: z.boolean().prefault(false),
-
-    manual_character_name: z.string().prefault(''),
-    remote_index_url: z.string().prefault(''),
-    remote_png_url: z.string().prefault(''),
 
     last_remote_version: z.string().prefault(''),
     last_check_at: z.string().prefault(''),
@@ -29,11 +28,8 @@ const SettingsSchema = z
   .prefault({
     enabled: true,
     auto_apply: false,
-    check_on_load: false,
+    check_on_load: true,
     notify_latest: false,
-    manual_character_name: '',
-    remote_index_url: '',
-    remote_png_url: '',
     last_remote_version: '',
     last_check_at: '',
     last_error: '',
@@ -121,30 +117,10 @@ function toErrMsg(error: unknown): string {
   return String(error ?? 'unknown error');
 }
 
-async function resolveCharacterName(settings: AutoUpdateSettings): Promise<string> {
-  const manual = String(settings.manual_character_name ?? '').trim();
-  if (manual) return manual;
-
-  const raw = getCharData('current');
-  const name = String(raw?.name ?? '').trim();
-  if (!name) throw new Error('未能读取当前角色卡名称');
-  return name;
-}
-
-function resolveRemoteUrls(settings: AutoUpdateSettings, characterName: string) {
-  const index = String(settings.remote_index_url ?? '').trim();
-  const png = String(settings.remote_png_url ?? '').trim();
-  if (index && png) {
-    return { index_url: index, png_url: png, derived: false };
-  }
-
-  const encoded = encodeURIComponent(characterName);
-  const base = `https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/${encoded}`;
-
+function resolveRemoteUrls() {
   return {
-    index_url: index || `${base}/index.yaml`,
-    png_url: png || `${base}/${encoded}.png`,
-    derived: true,
+    index_url: `${BASE_URL}/index.yaml`,
+    png_url: `${BASE_URL}/寒冬末日.png`,
   };
 }
 
@@ -158,7 +134,7 @@ async function fetchRemoteVersion(indexUrl: string): Promise<string> {
   const data = YAML.parse(text);
   const version = String(_.get(data, '版本', '')).trim();
   if (!version) {
-    throw new Error(`远程 index.yaml 缺少“版本”字段: ${indexUrl}`);
+    throw new Error(`远程 index.yaml 缺少"版本"字段: ${indexUrl}`);
   }
   return version;
 }
@@ -175,10 +151,9 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
   }
 
   try {
-    const characterName = await resolveCharacterName(settings);
-    const remote = resolveRemoteUrls(settings, characterName);
+    const remote = resolveRemoteUrls();
     const remoteVersion = await fetchRemoteVersion(remote.index_url);
-    const current = await getCharacter(characterName);
+    const current = await getCharacter(CHARACTER_NAME);
     const currentVersion = String(current?.version ?? '0.0.0').trim() || '0.0.0';
     const needUpdate = safeCompareLt(currentVersion, remoteVersion);
 
@@ -192,11 +167,11 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
     if (needUpdate) {
       const shouldApply = settings.auto_apply || forceApply;
       if (shouldApply) {
-        await checkAndUpdateCharacter(characterName, remoteVersion, remote.png_url);
-        toastr.success(`[自动更新] 已更新 ${characterName}: ${currentVersion} -> ${remoteVersion}`, '自动更新角色卡');
+        await checkAndUpdateCharacter(CHARACTER_NAME, remoteVersion, remote.png_url);
+        toastr.success(`[自动更新] 已更新 ${CHARACTER_NAME}: ${currentVersion} -> ${remoteVersion}`, '自动更新角色卡');
       } else {
         toastr.info(
-          `[自动更新] 检测到新版本 ${remoteVersion}（当前 ${currentVersion}），点击“${BTN_APPLY}”可执行更新`,
+          `[自动更新] 检测到新版本 ${remoteVersion}（当前 ${currentVersion}），点击"${BTN_APPLY}"可执行更新`,
           '自动更新角色卡',
         );
       }
@@ -204,8 +179,7 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
     }
 
     if (settings.notify_latest || fromButton) {
-      const suffix = remote.derived ? '（URL为自动推导）' : '';
-      toastr.success(`[自动更新] 已是最新版本 ${currentVersion}${suffix}`, '自动更新角色卡');
+      toastr.success(`[自动更新] 已是最新版本 ${currentVersion}`, '自动更新角色卡');
     }
   } catch (error) {
     const msg = toErrMsg(error);
@@ -251,7 +225,7 @@ $(() => {
   registerButtons();
 
   const settings = readSettings();
-  console.info(`[自动更新角色卡] 已加载 v${SCRIPT_VERSION}; auto_apply=${settings.auto_apply}`);
+  console.info(`[自动更新角色卡] 寒冬末日 v${SCRIPT_VERSION}; auto_apply=${settings.auto_apply}`);
 
   if (settings.enabled && settings.check_on_load) {
     void runUpdateFlow();

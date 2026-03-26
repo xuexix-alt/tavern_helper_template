@@ -132,3 +132,31 @@ export function parseString(content: string): any {
     }
   }
 }
+
+export async function checkAndUpdateCharacter(
+  characterName: string,
+  _version: string,
+  pngUrl: string,
+): Promise<void> {
+  const yamlUrl = `${pngUrl.replace(/\/[^/]+\.png$/, '/index.yaml')}`;
+
+  const [yamlResponse, pngResponse] = await Promise.all([
+    fetch(yamlUrl, { cache: 'no-store' }),
+    fetch(pngUrl, { cache: 'no-store' }),
+  ]);
+
+  if (!yamlResponse.ok) {
+    throw new Error(`拉取角色卡 YAML 失败（${yamlResponse.status}）: ${yamlUrl}`);
+  }
+  if (!pngResponse.ok) {
+    throw new Error(`拉取角色卡头像失败（${pngResponse.status}）: ${pngUrl}`);
+  }
+
+  const [yamlText, pngBlob] = await Promise.all([yamlResponse.text(), pngResponse.blob()]);
+
+  const yamlBlob = new Blob([yamlText], { type: 'text/yaml' });
+  await importRawCharacter(`${characterName}.yaml`, yamlBlob);
+  if (pngBlob && pngBlob.size > 0) {
+    await importRawCharacter(`${characterName}.png`, pngBlob);
+  }
+}

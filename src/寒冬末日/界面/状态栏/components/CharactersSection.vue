@@ -709,15 +709,10 @@
 </template>
 
 <script setup lang="ts">
-import _ from 'lodash';
 import { useElementSize, useTextareaAutosize, useVirtualList } from '@vueuse/core';
-import type { Schema as SchemaType } from '../../../schema';
-import {
-  CHAT_VAR_KEYS_ROLE,
-  isRoleEnabledBySelectorState,
-  readRoleSelectorStateFromStatData,
-} from '../../../role_control';
+import _ from 'lodash';
 import { ROLE_ALIAS_MAP } from '../../../roleCatalog';
+import type { Schema as SchemaType } from '../../../schema';
 import { useDataStore } from '../../store';
 import { getViewMessageState, resolveViewMessageId, setViewMessageLatest } from '../../viewMessage';
 import ReportSection from './ReportSection.vue';
@@ -1308,7 +1303,7 @@ function toggleCharacterDropdown() {
   characterDropdownOpen.value = !characterDropdownOpen.value;
 }
 
-function selectCharacterFromDropdown(key: string) {
+function selectCharacterFromDropdown(key: CharacterKey) {
   setActiveCharacter(key);
   characterDropdownOpen.value = false;
 }
