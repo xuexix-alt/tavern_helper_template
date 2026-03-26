@@ -137,6 +137,46 @@
     "3": {
       "uid": 3,
       "displayIndex": 3,
+      "comment": "世界设定",
+      "disable": false,
+      "constant": true,
+      "selective": false,
+      "key": [],
+      "selectiveLogic": 0,
+      "keysecondary": [],
+      "scanDepth": null,
+      "vectorized": false,
+      "position": 4,
+      "role": 0,
+      "depth": 1,
+      "order": 14,
+      "content": "<%_ const opening = getvar('stream_demo.opening', { defaults: {} }); _%>\n<%_ const worldModeId = opening.world_mode_id || ''; _%>\n<%_ const routeId = opening.route_id || ''; _%>\n<%_ const meta = opening.meta || {}; _%>\n<%_ const formValues = opening.form_values || {}; _%>\n<%_ const shelterLevel = getvar('stat_data.庇护所.庇护所等级', { defaults: 1 }); _%>\n\n## 世界设定\n\n- 世界模式: <%= worldModeId %>\n- 路线: <%= routeId %>\n- 时间: <%= meta.time || '' %>\n- 地点: <%= meta.location || '' %>\n- 主角: <%= meta.character || '' %>\n- 庇护等级: <%= shelterLevel %>级\n\n<%_ Object.entries(formValues).forEach(function(entry) { _%>\n- <%= entry[0] %>: <%= entry[1] %>\n<%_ }); _%>\n",
+      "useProbability": true,
+      "probability": 100,
+      "excludeRecursion": true,
+      "preventRecursion": true,
+      "delayUntilRecursion": false,
+      "sticky": null,
+      "cooldown": null,
+      "delay": null,
+      "addMemo": true,
+      "matchPersonaDescription": false,
+      "matchCharacterDescription": false,
+      "matchCharacterPersonality": false,
+      "matchCharacterDepthPrompt": false,
+      "matchScenario": false,
+      "matchCreatorNotes": false,
+      "group": "",
+      "groupOverride": false,
+      "groupWeight": 100,
+      "caseSensitive": null,
+      "matchWholeWords": null,
+      "useGroupScoring": null,
+      "automationId": ""
+    },
+    "4": {
+      "uid": 4,
+      "displayIndex": 4,
       "comment": "庇护所升级能力",
       "disable": false,
       "constant": false,
@@ -191,9 +231,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "4": {
-      "uid": 4,
-      "displayIndex": 4,
+    "5": {
+      "uid": 5,
+      "displayIndex": 5,
       "comment": "[mvu_update]格式",
       "disable": false,
       "constant": true,
@@ -207,7 +247,7 @@
       "role": 0,
       "depth": 4,
       "order": 2,
-      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>\n<content>\n</content>\n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option>\n<UpdateVariable>\n<Analysis>\n……\n</Analysis>\n<JSONPatch>\n……\n</JSONPatch>\n</UpdateVariable>\n[后续其他要求的标签]\n<StatusPlaceHolderImpl/>${另起一行放最后}\n</output_format>",
+      "content": "<output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}\n<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>\n<content>\n</content>\n<option>\n${遵循\"快速剧情\"选项生成协议的三个剧情选项，只能有一组<option>标签，每个选项单独一行，确保3个选项放在同一个<option>标签内}\n</option>\n<UpdateVariable>\n<Analysis>\n……\n</Analysis>\n<Command>\n……\n</Command>\n</UpdateVariable>\n[后续其他要求的标签]\n<StatusPlaceHolderImpl/>${另起一行放最后}\n</output_format>",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -231,9 +271,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "5": {
-      "uid": 5,
-      "displayIndex": 5,
+    "6": {
+      "uid": 6,
+      "displayIndex": 6,
       "comment": "[mvu_plot]格式",
       "disable": false,
       "constant": true,
@@ -271,9 +311,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "6": {
-      "uid": 6,
-      "displayIndex": 6,
+    "7": {
+      "uid": 7,
+      "displayIndex": 7,
       "comment": "[initvar]变量初始化勿开",
       "disable": true,
       "constant": true,
@@ -311,9 +351,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "7": {
-      "uid": 7,
-      "displayIndex": 7,
+    "8": {
+      "uid": 8,
+      "displayIndex": 8,
       "comment": "[mvu_update]角色变量结构示意",
       "disable": false,
       "constant": false,
@@ -359,9 +399,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "8": {
-      "uid": 8,
-      "displayIndex": 8,
+    "9": {
+      "uid": 9,
+      "displayIndex": 9,
       "comment": "@INJECT target=user,index=-1,at=before,role=system,order=10",
       "disable": true,
       "constant": true,
@@ -399,9 +439,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "9": {
-      "uid": 9,
-      "displayIndex": 9,
+    "10": {
+      "uid": 10,
+      "displayIndex": 10,
       "comment": "角色档案 - 纪宁",
       "disable": false,
       "constant": false,
@@ -450,9 +490,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "10": {
-      "uid": 10,
-      "displayIndex": 10,
+    "11": {
+      "uid": 11,
+      "displayIndex": 11,
       "comment": "角色档案 - 慕小小",
       "disable": false,
       "constant": false,
@@ -502,9 +542,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "11": {
-      "uid": 11,
-      "displayIndex": 11,
+    "12": {
+      "uid": 12,
+      "displayIndex": 12,
       "comment": "角色档案 - 佐伯诗织",
       "disable": false,
       "constant": false,
@@ -552,9 +592,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "12": {
-      "uid": 12,
-      "displayIndex": 12,
+    "13": {
+      "uid": 13,
+      "displayIndex": 13,
       "comment": "角色档案 - 佐伯惠理",
       "disable": false,
       "constant": false,
@@ -602,9 +642,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "13": {
-      "uid": 13,
-      "displayIndex": 13,
+    "14": {
+      "uid": 14,
+      "displayIndex": 14,
       "comment": "角色档案 - 佐伯龙一",
       "disable": false,
       "constant": false,
@@ -650,9 +690,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "14": {
-      "uid": 14,
-      "displayIndex": 14,
+    "15": {
+      "uid": 15,
+      "displayIndex": 15,
       "comment": "角色档案 - 林月华",
       "disable": false,
       "constant": false,
@@ -699,9 +739,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "15": {
-      "uid": 15,
-      "displayIndex": 15,
+    "16": {
+      "uid": 16,
+      "displayIndex": 16,
       "comment": "角色档案 - 赵卫国",
       "disable": false,
       "constant": false,
@@ -747,9 +787,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "16": {
-      "uid": 16,
-      "displayIndex": 16,
+    "17": {
+      "uid": 17,
+      "displayIndex": 17,
       "comment": "角色档案 - 陈雪",
       "disable": false,
       "constant": false,
@@ -795,9 +835,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "17": {
-      "uid": 17,
-      "displayIndex": 17,
+    "18": {
+      "uid": 18,
+      "displayIndex": 18,
       "comment": "角色档案 - 陈幺妹",
       "disable": false,
       "constant": false,
@@ -843,9 +883,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "18": {
-      "uid": 18,
-      "displayIndex": 18,
+    "19": {
+      "uid": 19,
+      "displayIndex": 19,
       "comment": "角色档案 - 陈宇",
       "disable": false,
       "constant": false,
@@ -899,9 +939,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "19": {
-      "uid": 19,
-      "displayIndex": 19,
+    "20": {
+      "uid": 20,
+      "displayIndex": 20,
       "comment": "角色档案 - 桃乐丝・泽巴哈",
       "disable": false,
       "constant": false,
@@ -949,9 +989,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "20": {
-      "uid": 20,
-      "displayIndex": 20,
+    "21": {
+      "uid": 21,
+      "displayIndex": 21,
       "comment": "角色档案 - 何铃",
       "disable": false,
       "constant": false,
@@ -997,9 +1037,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "21": {
-      "uid": 21,
-      "displayIndex": 21,
+    "22": {
+      "uid": 22,
+      "displayIndex": 22,
       "comment": "角色档案 - 王静",
       "disable": false,
       "constant": false,
@@ -1044,9 +1084,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "22": {
-      "uid": 22,
-      "displayIndex": 22,
+    "23": {
+      "uid": 23,
+      "displayIndex": 23,
       "comment": "角色档案 - 艾琳",
       "disable": false,
       "constant": false,
@@ -1092,9 +1132,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "23": {
-      "uid": 23,
-      "displayIndex": 23,
+    "24": {
+      "uid": 24,
+      "displayIndex": 24,
       "comment": "[mvu_plot]世界观",
       "disable": false,
       "constant": true,
@@ -1151,9 +1191,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "24": {
-      "uid": 24,
-      "displayIndex": 24,
+    "25": {
+      "uid": 25,
+      "displayIndex": 25,
       "comment": "文明阶段规则",
       "disable": false,
       "constant": false,
@@ -1205,9 +1245,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "25": {
-      "uid": 25,
-      "displayIndex": 25,
+    "26": {
+      "uid": 26,
+      "displayIndex": 26,
       "comment": "[mvu_plot]AI核心行为指令",
       "disable": false,
       "constant": true,
@@ -1245,9 +1285,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "26": {
-      "uid": 26,
-      "displayIndex": 26,
+    "27": {
+      "uid": 27,
+      "displayIndex": 27,
       "comment": "[mvu_update]变量输出格式",
       "disable": false,
       "constant": true,
@@ -1261,7 +1301,7 @@
       "role": 0,
       "depth": 0,
       "order": 9998,
-      "content": "# [mvu_update] 变量输出格式（优化版）\n\nrule:\n  - You MUST output the `<UpdateVariable>` block at the end of your reply.\n  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.\n  - \"The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:\"\n  - \"  - `replace`: replace the value of existing paths\"\n  - \"  - `delta`: update the value of existing number paths by a delta value (positive or negative)\"\n  - \"  - `insert`: insert new items into an object or array\"\n  - \"  - `remove`: delete path\"\n  - '  - `move`: move an existing value from one path to another (requires `\"from\"`). '\n  - Path MUST start with `/`.\n  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.\n  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.\n  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).\n  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.\n  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots\n\nformat: |-\n  <UpdateVariable>\n  <Analysis>\n  Step-by-step logic chain based on current context and variable checks:\n\n  1. Presence Check (登场状态)\n     - Quick scan: Which characters are present/mentioned in current scene?\n     - Set active roles to '登场' (登场), absent roles to '离场' (离场).\n     - This is a CRITICAL story switch - do NOT miss any role.\n     - Result: 新登场角色 ____，新离场角色 ____。\n\n  2. World Variables & Atmosphere\n     - Time: Calculate time elapsed (estimated by dialogue length if not specified).\n     - AI MUST advance minutes in `/世界/时间` based on current scene progress.\n     - If crossing 00:00: update date and apply `delta +1` to `/世界/末日天数` (backend script is fallback only).\n     - Address: Update only on actual character movement.\n     - Result: 时间更新？____，日期更新？____。\n\n  3. Shelter/Base Variables\n     - CRITICAL: DO NOT manually roll for shelter level upgrades.\n     - AI only reads `今日投掷点数` status.\n     - If \"lucky upgrade\" triggered in narrative -> broadcast new level & capabilities in story.\n     - If main task stage completed -> use `replace` to force level to reward target.\n     - Otherwise: DO NOT modify level numbers manually.\n     - Sync capability descriptions when level changes.\n\n  4. All Roles Variables (逐个检查每个角色)\n     - Source: top-level roles + `/临时NPC` objects.\n     - For each role check:\n       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.\n       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.\n       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.\n       d. Visuals (replace): Update physical descriptions only if changed in plot.\n       e. Health Reason (sync): MUST sync with health delta.\n\n  5. Temporary NPCs\n     - New NPCs -> use `insert` with complete field initialization.\n     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.\n     - If top-level already exists with same name -> merge and `remove` temp NPC.\n     - Result: 需创建/更新/删除？____。\n\n  6. Room State (强制禁止遗漏)\n     - Update `/<角色>/所在房间` for moving characters:\n       - Valid values: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{4-digit room} | 户外 | 户外/{地点}\n       - Leaving apartment -> \"\" (empty string)\n     - NEVER output any operation under `/房间/**` (derived; maintained by script).\n     - Result: 需更新房间的角色 ____。\n\n  7. Main Task & Rewards\n     - Track stage goals. If completed -> execute rewards.\n     - Info fragments: insert new, replace with '已完成' when explored.\n     - Grant rewards: Capability insert / Imp boost / Thoughts update.\n     - Result: 任务进度更新？____，触发奖励？____。\n\n  8. Operation Summary\n     - List all paths + operations (replace/delta/insert/remove/move).\n     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.\n\n  </Analysis>\n  <JSONPatch>\n  [\n    { \"op\": \"replace\", \"path\": \"/世界/时间\", \"value\": \"...\" },\n    { \"op\": \"delta\", \"path\": \"/纪宁/健康\", \"value\": -1 },\n    { \"op\": \"replace\", \"path\": \"/纪宁/内心想法\", \"value\": \"...\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/登场状态\", \"value\": \"登场\" },\n    { \"op\": \"replace\", \"path\": \"/王静/登场状态\", \"value\": \"离场\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/所在房间\", \"value\": \"楼层20/2001\" },\n    { \"op\": \"insert\", \"path\": \"/临时NPC/陌生拾荒者\", \"value\": { ... } }\n  ]\n  </JSONPatch>\n  </UpdateVariable>\n\nrequirements:\n  - \"Allowed operations: replace, delta, insert, remove, move.\"\n  - Path MUST be a valid JSON Pointer absolute path.\n  - DO NOT `replace` on non-existent paths (use `insert`).\n  - \"If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first.\"\n  - \"NEVER output any operation under `/房间/**` (derived; maintained by script).\"\n  - \"If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first.\"\n  - \"Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible.\"\n  - \"For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth).\"\n  - \"Arrays: use `insert` with `/-` for appending to arrays (e.g. logs) when needed; otherwise `replace` full arrays.\"\n  - \"Shelter level: AI MUST NOT manually roll upgrades. Only read `今日投掷点数` status and broadcast results.\"",
+      "content": "# [mvu_update] 变量输出格式\n\nrule:\n  - You MUST output the `<UpdateVariable>` block at the end of your reply.\n  - The block MUST contain `<Analysis>` and `<Command>` sections.\n  - Commands use Lodash-style syntax:\n    - `_.set('路径', 值)` - replace/set value\n    - `_.add('路径', 数值)` - add delta to number\n    - `_.insert('路径', 值)` - insert to array (use `/-` to append)\n    - `_.delete('路径')` - delete key/path\n    - `_.move('from路径', 'to路径')` - move value\n  - Path separator is `.` (dot), NOT `/`\n  - DO NOT update fields starting with `_`\n  - Main characters are top-level keys (excluding reserved keys and `临时NPC`)\n  - Temporary NPCs live under `临时NPC` and MAY be promoted to top-level\n\nformat: |-\n  <UpdateVariable>\n  <Analysis>\n  Step-by-step logic chain based on current context:\n\n  1. Presence Check (登场状态)\n     - Set active roles to '登场', absent roles to '离场'.\n     - Result: 新登场 ____，新离场 ____。\n\n  2. World Variables\n     - Advance time in `世界.时间`.\n     - If crossing 00:00 update date and `_.add('世界.末日天数', 1)`.\n     - Result: 时间更新？____。\n\n  3. Shelter Variables\n     - DO NOT manually roll shelter upgrades.\n     - Only read `庇护所.今日投掷点数` status.\n     - Result: 庇护状态？____。\n\n  4. Role Variables\n     - For each active role update:\n       - `_.add('角色.健康', delta)` for health changes\n       - `_.add('角色.秩序刻印', delta)` for imp changes\n       - `_.set('角色.内心想法', '...')` for thoughts\n     - Result: 角色更新？____。\n\n  5. Temporary NPCs\n     - New: `_.insert('临时NPC.姓名', {...})`\n     - Promote: insert top-level + delete from 临时NPC\n     - Result: NPC 更新？____。\n\n  6. Room State\n     - Update `角色.所在房间` for moving characters.\n     - Valid: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 楼层20/2001 | 户外 | 户外/地点\n     - DO NOT output operations under `房间.**` (maintained by script).\n     - Result: 房间更新？____。\n\n  7. Summary\n     - List all _.set/_.add/_.insert/_.delete/_.move commands.\n\n  </Analysis>\n  <Command>\n  _.set('世界.时间', '上午 - 08:00');\n  _.add('纪宁.健康', -1);\n  _.set('纪宁.内心想法', '...');\n  _.set('纪宁.登场状态', '登场');\n  _.set('王静.登场状态', '离场');\n  _.insert('临时NPC.陌生拾荒者', { 姓名: '陌生拾荒者', 健康: 80 });\n  </Command>\n  </UpdateVariable>\n\nrequirements:\n  - \"Allowed commands: _.set, _.add, _.insert, _.delete, _.move.\"\n  - \"Path separator is `.` (dot), paths start without prefix.\"\n  - \"Use `_.add` for numeric updates (Health, Imp, 末日天数).\"\n  - \"Use `_.set` for text updates.\"\n  - \"Use `_.insert` with `/-` to append arrays: `_.insert('数组路径/-', value)`.\"\n  - \"If inserting a new role, insert under `临时NPC` first.\"\n  - \"DO NOT output operations under `房间.**`.\"\n  - \"Numeric updates MUST use `_.add`.\"\n",
       "useProbability": true,
       "probability": 100,
       "excludeRecursion": true,
@@ -1285,9 +1325,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "27": {
-      "uid": 27,
-      "displayIndex": 27,
+    "28": {
+      "uid": 28,
+      "displayIndex": 28,
       "comment": "[mvu_update]变量更新规则",
       "disable": false,
       "constant": true,
@@ -1325,9 +1365,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "28": {
-      "uid": 28,
-      "displayIndex": 28,
+    "29": {
+      "uid": 29,
+      "displayIndex": 29,
       "comment": "变量列表",
       "disable": false,
       "constant": true,
@@ -1365,9 +1405,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "29": {
-      "uid": 29,
-      "displayIndex": 29,
+    "30": {
+      "uid": 30,
+      "displayIndex": 30,
       "comment": "主线任务-星穹秩序",
       "disable": false,
       "constant": false,
@@ -1416,9 +1456,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "30": {
-      "uid": 30,
-      "displayIndex": 30,
+    "31": {
+      "uid": 31,
+      "displayIndex": 31,
       "comment": "角色身份与关系",
       "disable": false,
       "constant": true,
@@ -1468,9 +1508,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "31": {
-      "uid": 31,
-      "displayIndex": 31,
+    "32": {
+      "uid": 32,
+      "displayIndex": 32,
       "comment": "角色关系引导指令",
       "disable": false,
       "constant": true,
@@ -1513,9 +1553,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "32": {
-      "uid": 32,
-      "displayIndex": 32,
+    "33": {
+      "uid": 33,
+      "displayIndex": 33,
       "comment": "普通幸存者家庭",
       "disable": false,
       "constant": false,
@@ -1563,9 +1603,9 @@
       "useGroupScoring": null,
       "automationId": ""
     },
-    "33": {
-      "uid": 33,
-      "displayIndex": 33,
+    "34": {
+      "uid": 34,
+      "displayIndex": 34,
       "comment": "外部幸存者势力",
       "disable": true,
       "constant": false,

@@ -76,10 +76,10 @@ export function getAllGeneratedImages(): HTMLImageElement[] {
   const images: HTMLImageElement[] = [];
 
   // 查找所有 alt="Generated Image" 的图片
-  const allImages = document.querySelectorAll('img[alt="Generated Image"]');
+  const allImages = document.querySelectorAll<HTMLImageElement>('img[alt="Generated Image"]');
   allImages.forEach(img => {
     if (img.src && img.src.startsWith('data:image')) {
-      images.push(img as HTMLImageElement);
+      images.push(img);
     }
   });
 

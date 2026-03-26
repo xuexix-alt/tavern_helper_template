@@ -1,6 +1,15 @@
 <template>
   <section class="transcript-card">
-    <div ref="listRef" class="transcript-scroller" @scroll="handleScroll">
+    <div
+      ref="listRef"
+      class="transcript-scroller"
+      @scroll="handleScroll"
+      @wheel.passive="handleWheel"
+      @touchstart.passive="handleTouchStart"
+      @touchmove.passive="handleTouchMove"
+      @touchend.passive="resetTouchGestureState"
+      @touchcancel.passive="resetTouchGestureState"
+    >
       <div v-if="hasMoreAbove" class="transcript-load-more" @click="loadMoreAbove">↑ 加载更多</div>
       <div v-if="items.length === 0" class="transcript-empty">暂无消息。发送后将在这里重建真实楼层阅读视图。</div>
 
@@ -90,8 +99,13 @@
 <script setup lang="ts">
 import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
+import {
+  resolveTailPageStart,
+  resolveTranscriptStartIndexOnItemsChange,
+  shouldRevealOlderPageOnUpwardIntent,
+} from '../transcriptPagination';
 import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
-import { buildTranscriptEntryKey } from '../transcriptDomRefresh.ts';
+import { buildTranscriptEntryKey } from '../transcriptDomRefresh';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
 
@@ -140,17 +154,26 @@ const atTop = ref(true);
 const atBottom = ref(true);
 const PAGE_SIZE = 6;
 const startIndex = ref(0);
+let touchStartY: number | null = null;
+let revealedDuringTouchGesture = false;
+let loadingMoreAbove = false;
 
 const visibleItems = computed(() => props.items.slice(startIndex.value));
 const hasMoreAbove = computed(() => startIndex.value > 0);
 
 async function loadMoreAbove() {
+  if (loadingMoreAbove) return;
+  loadingMoreAbove = true;
   const el = listRef.value;
   const prevScrollHeight = el ? el.scrollHeight : 0;
-  startIndex.value = Math.max(0, startIndex.value - PAGE_SIZE);
-  await nextTick();
-  if (el) {
-    el.scrollTop += el.scrollHeight - prevScrollHeight;
+  try {
+    startIndex.value = Math.max(0, startIndex.value - PAGE_SIZE);
+    await nextTick();
+    if (el) {
+      el.scrollTop += el.scrollHeight - prevScrollHeight;
+    }
+  } finally {
+    loadingMoreAbove = false;
   }
 }
 
@@ -178,6 +201,47 @@ const handleScroll = useThrottleFn(() => {
   emitScrollState(el);
   emit('reading-mode-change', isNearBottom(el) ? 'following_latest' : 'browsing_history');
 }, 80);
+
+function handleWheel(event: WheelEvent) {
+  const el = listRef.value;
+  if (!el) return;
+  if (
+    shouldRevealOlderPageOnUpwardIntent({
+      hasMoreAbove: hasMoreAbove.value,
+      scrollTop: el.scrollTop,
+      deltaY: event.deltaY,
+    })
+  ) {
+    void loadMoreAbove();
+  }
+}
+
+function handleTouchStart(event: TouchEvent) {
+  touchStartY = event.touches[0]?.clientY ?? null;
+  revealedDuringTouchGesture = false;
+}
+
+function handleTouchMove(event: TouchEvent) {
+  if (revealedDuringTouchGesture) return;
+  const el = listRef.value;
+  const currentY = event.touches[0]?.clientY ?? null;
+  if (!el || touchStartY == null || currentY == null) return;
+  if (
+    shouldRevealOlderPageOnUpwardIntent({
+      hasMoreAbove: hasMoreAbove.value,
+      scrollTop: el.scrollTop,
+      deltaY: currentY - touchStartY,
+    })
+  ) {
+    revealedDuringTouchGesture = true;
+    void loadMoreAbove();
+  }
+}
+
+function resetTouchGestureState() {
+  touchStartY = null;
+  revealedDuringTouchGesture = false;
+}
 
 function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
@@ -285,31 +349,28 @@ const itemsSignature = computed(() =>
 );
 
 watch(itemsSignature, async () => {
-  await nextTick();
   const el = listRef.value;
-  if (!el) return;
-  // 新楼层到来时，若用户在底部则追尾并确保最新楼可见
-  if (props.shouldFollowLatest || isNearBottom(el)) {
-    // 修复：只有当楼层数超过PAGE_SIZE时才启用分页
-    if (props.items.length > PAGE_SIZE) {
-      startIndex.value = props.items.length - PAGE_SIZE;
-    } else {
-      startIndex.value = 0;
-    }
-    await nextTick();
+  const nextStartIndex = resolveTranscriptStartIndexOnItemsChange({
+    currentStartIndex: startIndex.value,
+    totalItems: props.items.length,
+    pageSize: PAGE_SIZE,
+    shouldFollowLatest: props.shouldFollowLatest === true,
+    isNearBottom: el ? isNearBottom(el) : false,
+  });
+  const shouldAnchorBottom = props.shouldFollowLatest === true || (el ? isNearBottom(el) : false);
+  startIndex.value = nextStartIndex;
+  await nextTick();
+  if (el && shouldAnchorBottom) {
     el.scrollTop = el.scrollHeight;
     emit('reading-mode-change', 'following_latest');
   }
-  emitScrollState(el);
+  if (el) {
+    emitScrollState(el);
+  }
 });
 
 onMounted(async () => {
-  // 修复：只有当楼层数超过PAGE_SIZE时才启用分页
-  if (props.items.length > PAGE_SIZE) {
-    startIndex.value = props.items.length - PAGE_SIZE;
-  } else {
-    startIndex.value = 0;
-  }
+  startIndex.value = resolveTailPageStart(props.items.length, PAGE_SIZE);
   await nextTick();
   const el = listRef.value;
   if (!el) return;

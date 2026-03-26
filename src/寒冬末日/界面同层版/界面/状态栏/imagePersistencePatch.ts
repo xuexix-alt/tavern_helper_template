@@ -1,4 +1,4 @@
-import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 
 /**
  * 图片持久化补丁 (v2 - IndexedDB)

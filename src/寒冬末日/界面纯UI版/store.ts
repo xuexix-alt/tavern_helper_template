@@ -132,7 +132,7 @@ export const useDataStore = defineStore(
           const sanitized = sanitizeStatDataForUi(raw_stat_data);
           const reparsed = Schema.safeParse(sanitized);
           if (reparsed.success) {
-            // eslint-disable-next-line no-console
+             
             console.warn?.('[eden/ui_store] sanitized invalid stat_data for UI rendering', {
               source,
               issue: parsed.error.issues[0]?.message ?? 'schema_parse_failed',
@@ -201,7 +201,7 @@ export const useDataStore = defineStore(
       if (latest.ok) {
         if (!hasWarnedFallback) {
           hasWarnedFallback = true;
-          // eslint-disable-next-line no-console
+           
           console.warn?.('[eden/ui_store] current message has no valid stat_data, fallback to latest', {
             target_message_id: target,
             reason: current.reason,
@@ -212,7 +212,7 @@ export const useDataStore = defineStore(
 
       if (!hasWarnedFallback) {
         hasWarnedFallback = true;
-        // eslint-disable-next-line no-console
+         
         console.warn?.('[eden/ui_store] failed to load stat_data from current/latest, fallback to defaults', {
           target_message_id: target,
           reason_current: current.reason,
@@ -229,7 +229,7 @@ export const useDataStore = defineStore(
       if (!_.isEqual(next, data.value)) {
         data.value = next;
         if (isDebug) {
-          // eslint-disable-next-line no-console
+           
           console.debug?.('[eden/ui_store] refreshed from MVU', {
             source: resolved.source,
             target_message_id: resolved.target,
@@ -244,7 +244,7 @@ export const useDataStore = defineStore(
       await waitGlobalInitialized('Mvu');
 
       if (isDebug) {
-        // eslint-disable-next-line no-console
+         
         console.debug?.('[eden/ui_store] MVU initialized; binding listeners');
       }
 
@@ -265,7 +265,7 @@ export const useDataStore = defineStore(
             if (result.status === 'applied') {
               refresh_from_mvu();
               if (isDebug) {
-                // eslint-disable-next-line no-console
+                 
                 console.debug?.('[eden/ui_store] repaired empty-role collapse after VARIABLE_UPDATE_ENDED', {
                   message_id: result.message_id,
                 });
@@ -284,7 +284,7 @@ export const useDataStore = defineStore(
             if (result.status === 'applied') {
               refresh_from_mvu();
               if (isDebug) {
-                // eslint-disable-next-line no-console
+                 
                 console.debug?.('[eden/ui_store] auto reprocessed latest message after mutation', {
                   message_id: result.message_id,
                 });

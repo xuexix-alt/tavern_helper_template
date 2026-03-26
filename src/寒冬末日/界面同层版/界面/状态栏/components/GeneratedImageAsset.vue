@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision.ts';
+import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
   readGeneratedImageSource,
@@ -164,6 +164,8 @@ async function resolveSource() {
       src: props.entry.src,
       alt: props.entry.alt ?? props.entry.title,
       imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
+      markerId: props.entry.markerId ?? props.entry.id ?? '',
+      source: 'extra',
       messageId: props.entry.messageId,
     };
     return;
@@ -183,6 +185,8 @@ async function resolveSource() {
         src: img.src,
         alt: img.alt || props.entry.title,
         imageId: props.entry.imageId ?? props.entry.markerId ?? props.entry.id,
+        markerId: props.entry.markerId ?? props.entry.id ?? '',
+        source: 'extra',
         messageId: props.entry.messageId,
       };
       return;

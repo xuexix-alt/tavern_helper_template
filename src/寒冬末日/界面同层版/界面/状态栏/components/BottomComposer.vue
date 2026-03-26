@@ -108,8 +108,8 @@
 </template>
 
 <script setup lang="ts">
+import { useBreakpoints, useTextareaAutosize } from '@vueuse/core';
 import { nextTick, ref } from 'vue';
-import { useTextareaAutosize, useBreakpoints } from '@vueuse/core';
 
 const props = defineProps<{
   modelValue: string;
@@ -154,7 +154,7 @@ const choiceDraft = ref('');
 const choiceSending = ref(false);
 const choiceTextareaRef = ref<HTMLTextAreaElement | null>(null);
 const composerTextareaRef = ref<HTMLTextAreaElement | null>(null);
-useTextareaAutosize({ element: composerTextareaRef, input: () => props.modelValue ?? '' });
+useTextareaAutosize({ element: composerTextareaRef, input: props.modelValue ?? '' });
 const breakpoints = useBreakpoints({ mobile: 760 });
 const isMobile = breakpoints.smallerOrEqual('mobile');
 const choiceOptions = computed(() =>

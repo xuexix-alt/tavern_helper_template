@@ -76,5 +76,7 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
       },
       { type: 'chat' },
     );
-  } catch {}
+  } catch {
+    // setVariable failure is non-fatal; caller cannot recover
+  }
 }

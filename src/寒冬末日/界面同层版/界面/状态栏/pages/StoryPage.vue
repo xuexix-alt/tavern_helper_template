@@ -331,8 +331,8 @@
 import { useEventListener } from '@vueuse/core';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import {
-  parseGeneratedImageActivationPayload,
-  type GeneratedImageActivationPayload,
+    parseGeneratedImageActivationPayload,
+    type GeneratedImageActivationPayload,
 } from '../generatedImageActivation';
 import type { TranscriptItem } from '../types';
 
@@ -352,9 +352,9 @@ import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
-  convertIframePointToHostPoint,
-  resolveHostDispatchPlanWithRetry,
-  resolveHostMessageTargetFromPoint,
+    convertIframePointToHostPoint,
+    resolveHostDispatchPlanWithRetry,
+    resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
 import { dispatchHostPrimaryTrigger } from '../hostGestureDispatch';
 import { resolveWithRetry } from '../hostTargetRetry';
@@ -1304,7 +1304,7 @@ async function handleTranscriptGenerateImage(messageId: number) {
   await triggerImageGenerationForMessage(messageId);
 }
 
-function handleOpenGallery(messageId: number) {
+function handleOpenGallery(_messageId: number) {
   openGalleryDrawer();
 }
 

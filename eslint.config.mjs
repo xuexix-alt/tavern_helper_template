@@ -76,6 +76,13 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
+  // Test files: allow Node.js built-in imports used by node:test runner
+  {
+    files: ['src/**/__tests__/**/*.{mjs,js,ts}'],
+    rules: {
+      'import-x/no-nodejs-modules': 'off',
+    },
+  },
   eslintConfigPrettier,
   globalIgnores([
     'dist/**',

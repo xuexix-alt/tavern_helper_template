@@ -1,0 +1,19 @@
+<%_ const opening = getvar('stream_demo.opening', { defaults: {} }); _%>
+<%_ const worldModeId = opening.world_mode_id || ''; _%>
+<%_ const routeId = opening.route_id || ''; _%>
+<%_ const meta = opening.meta || {}; _%>
+<%_ const formValues = opening.form_values || {}; _%>
+<%_ const shelterLevel = getvar('stat_data.庇护所.庇护所等级', { defaults: 1 }); _%>
+
+## 世界设定
+
+- 世界模式: <%= worldModeId %>
+- 路线: <%= routeId %>
+- 时间: <%= meta.time || '' %>
+- 地点: <%= meta.location || '' %>
+- 主角: <%= meta.character || '' %>
+- 庇护等级: <%= shelterLevel %>级
+
+<%_ Object.entries(formValues).forEach(function(entry) { _%>
+- <%= entry[0] %>: <%= entry[1] %>
+<%_ }); _%>

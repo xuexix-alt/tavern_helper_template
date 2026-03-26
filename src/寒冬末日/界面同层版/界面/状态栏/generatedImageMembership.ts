@@ -1,4 +1,4 @@
-import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 
 export type GeneratedImageMembershipPersistedEntry = {
   markerId?: string;

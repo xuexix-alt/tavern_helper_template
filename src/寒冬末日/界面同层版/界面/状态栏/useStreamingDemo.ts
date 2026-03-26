@@ -1,42 +1,42 @@
 import _ from 'lodash';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import {
-  buildStreamDemoMessage,
-  extractStreamDemoContent,
-  extractStreamDemoOptions,
-  extractStreamDemoPhase,
-  isStreamDemoMessage,
-  stripStreamDemoRuntimeTags,
-  stripTagsForPreview,
+    buildStreamDemoMessage,
+    extractStreamDemoContent,
+    extractStreamDemoOptions,
+    extractStreamDemoPhase,
+    isStreamDemoMessage,
+    stripStreamDemoRuntimeTags,
+    stripTagsForPreview,
 } from '../../shared/message';
 import {
-  buildOpeningGeneratePrompt,
-  extractOpeningContent,
-  extractOpeningContentLoose,
-  extractOpeningOptions,
-  getDefaultOpeningPayload,
-  getDefaultOpeningPreset,
-  getOpeningRoute,
-  getOpeningRoutes,
-  getOpeningWorldMode,
-  getOpeningWorldModes,
-  readOpeningPayloadFromChat,
-  replaceOpeningPayloadInChat,
-  shouldLoadOpeningGenerator,
+    buildOpeningGeneratePrompt,
+    extractOpeningContent,
+    extractOpeningContentLoose,
+    extractOpeningOptions,
+    getDefaultOpeningPayload,
+    getDefaultOpeningPreset,
+    getOpeningRoute,
+    getOpeningRoutes,
+    getOpeningWorldMode,
+    getOpeningWorldModes,
+    readOpeningPayloadFromChat,
+    replaceOpeningPayloadInChat,
+    shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
-  buildDebugMessageSignature,
-  buildDemoAssistantFinalBodySource,
-  createGenerationListenerEpochController,
-  shouldCreateAssistantPlaceholderOnFirstToken,
-  shouldEnsureAssistantPlaceholderBeforeFinalize,
-  shouldIgnoreHostRefreshDuringBusy,
-  shouldPrewarmHostMesTextAfterPatch,
-  shouldSuppressLifecycleEchoHostRefresh,
-  summarizeTranscriptForDebug,
+    buildDebugMessageSignature,
+    buildDemoAssistantFinalBodySource,
+    createGenerationListenerEpochController,
+    shouldCreateAssistantPlaceholderOnFirstToken,
+    shouldEnsureAssistantPlaceholderBeforeFinalize,
+    shouldIgnoreHostRefreshDuringBusy,
+    shouldPrewarmHostMesTextAfterPatch,
+    shouldSuppressLifecycleEchoHostRefresh,
+    summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
@@ -44,48 +44,55 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import {
-  buildHostTranscriptVisibilitySelector,
-  createHostTranscriptVisibilityController,
-  HOST_VISIBILITY_CLASS,
-  HOST_VISIBILITY_STYLE_ID,
+    buildHostTranscriptVisibilitySelector,
+    createHostTranscriptVisibilityController,
+    HOST_VISIBILITY_CLASS,
+    HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
+import {
+    hasOpeningAssistantFlag,
+    hasOpeningSeedFlag,
+    isCurrentOpeningAssistantMessageByPayload,
+    isCurrentOpeningSeedMessageByPayload,
+    sanitizeInheritedMessageData,
+} from './openingMessageFlags';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
-  readNativeFirstImageArtifacts,
-  readNativeFirstMembershipEntries,
-  readNativeFirstPromptTokens,
-  type NativeFirstArtifactSource,
-  type NativeFirstImageArtifact,
+    readNativeFirstImageArtifacts,
+    readNativeFirstMembershipEntries,
+    readNativeFirstPromptTokens,
+    type NativeFirstArtifactSource,
+    type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
 import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
-  normalizeDensity,
-  normalizeFontMode,
-  normalizeReadingMode,
-  normalizeTheme,
-  patchReaderChatState,
-  READER_CHAT_STATE_VERSION,
-  readReaderChatState,
+    normalizeDensity,
+    normalizeFontMode,
+    normalizeReadingMode,
+    normalizeTheme,
+    patchReaderChatState,
+    READER_CHAT_STATE_VERSION,
+    readReaderChatState,
 } from './readerState';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import type {
-  DemoStatus,
-  DemoTheme,
-  GeneratedImageRef,
-  ReaderFontMode,
-  ReaderLogItem,
-  ReaderSummary,
-  ReadingMode,
-  TranscriptDensity,
-  TranscriptFilterMode,
-  TranscriptItem,
+    DemoStatus,
+    DemoTheme,
+    GeneratedImageRef,
+    ReaderFontMode,
+    ReaderLogItem,
+    ReaderSummary,
+    ReadingMode,
+    TranscriptDensity,
+    TranscriptFilterMode,
+    TranscriptItem,
 } from './types';
 
 type StopHandle = { stop?: () => void } | null;
@@ -292,7 +299,7 @@ function buildAnchorSnippet(input: string): string {
   return normalized.slice(-72);
 }
 
-function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string): string {
+export function extractAnchorTextFromRawMessage(rawMessage: string, promptToken: string): string {
   const token = String(promptToken ?? '').trim();
   if (!token) return '';
 
@@ -481,7 +488,7 @@ function readNativeFirstPromptTokensForMessage(input: { messageId: number; rawMe
   });
 }
 
-function readNativeFirstMembershipForMessage(input: {
+export function readNativeFirstMembershipForMessage(input: {
   messageId: number;
   rawMessage?: string;
   hostDomArtifacts?: RenderableGeneratedImage[];
@@ -500,7 +507,7 @@ function readNativeFirstMembershipForMessage(input: {
   });
 }
 
-function createPromptTokenMarkup(promptTokens: string[]): string {
+export function createPromptTokenMarkup(promptTokens: string[]): string {
   if (promptTokens.length === 0) return '';
   const items = promptTokens
     .map(token => `<pre class="assistant-image-prompt-token">${escapeHtml(token)}</pre>`)
@@ -817,7 +824,7 @@ function extractPromptTokensFromRoots(roots: HTMLElement[]): string[] {
   return out;
 }
 
-function extractPromptTokensFromDisplayedMessage(messageId: number): string[] {
+export function extractPromptTokensFromDisplayedMessage(messageId: number): string[] {
   const roots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
   const domTokens = roots.length > 0 ? extractPromptTokensFromRoots(roots) : [];
   if (domTokens.length > 0) return domTokens;
@@ -919,12 +926,12 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
 
   searchInDocument(document);
   try {
-    searchInDocument(window.parent?.document);
+    if (window.parent) searchInDocument(window.parent.document);
   } catch {
     /* cross-origin */
   }
   try {
-    searchInDocument(window.top?.document);
+    if (window.top) searchInDocument(window.top.document);
   } catch {
     /* cross-origin */
   }
@@ -992,13 +999,13 @@ function pickFirstNonEmpty(...values: unknown[]): string {
   return '';
 }
 
-function extractTitleFromAnchor(anchorText: string): string {
+export function extractTitleFromAnchor(anchorText: string): string {
   const anchor = normalizeImageLabel(anchorText, '');
   if (!anchor) return '';
   return anchor.length > 26 ? `${anchor.slice(0, 26)}…` : anchor;
 }
 
-function extractTitleFromSrc(src: string): string {
+export function extractTitleFromSrc(src: string): string {
   const source = String(src ?? '').trim();
   if (!source || source.startsWith('data:')) return '';
   try {
@@ -1175,11 +1182,10 @@ function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPa
   return buildOpeningGeneratePrompt(preset, payload);
 }
 
-function buildOpeningGenerateConfig(preset: OpeningPreset, payload: OpeningPayload) {
+function buildOpeningGenerateConfig(_preset: OpeningPreset, payload: OpeningPayload) {
   return {
-    user_input: buildOpeningCompiledUserInput(preset, payload),
     should_stream: payload.use_stream,
-    max_chat_history: 0,
+    max_chat_history: 1,
   } as GenerateConfig;
 }
 
@@ -1261,11 +1267,11 @@ function buildOpeningAssistantText(payload: OpeningPayload): string {
 }
 
 function isOpeningAssistantMessage(message: any): boolean {
-  return _.get(message, 'data.stream_demo.opening_assistant') === true;
+  return hasOpeningAssistantFlag(message);
 }
 
 function isOpeningSeedMessage(message: any): boolean {
-  return _.get(message, 'data.stream_demo.opening_seed') === true;
+  return hasOpeningSeedFlag(message);
 }
 
 function buildOpeningTranscriptItem(
@@ -1313,7 +1319,7 @@ export function useStreamingDemo() {
   const errorText = ref('');
   const assistantMessageId = ref<number | null>(null);
   const transcript = ref<TranscriptItem[]>([]);
-  const filterMode = ref<TranscriptFilterMode>('assistant');
+  const filterMode = ref<TranscriptFilterMode>('all');
   const density = ref<TranscriptDensity>('comfortable');
   const theme = ref<DemoTheme>('tech');
   const fontMode = ref<ReaderFontMode>('hud');
@@ -1739,27 +1745,31 @@ export function useStreamingDemo() {
 
   function bindOpeningGenerationListeners() {
     clearOpeningGenerationListeners();
+    if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') {
+      console.warn('[opening] tavern_events not available, stream listeners skipped');
+      return;
+    }
     let streamedRaw = '';
-    let hasFullStreamEvent = false;
+
+    const handleToken = (token: string) => {
+      streamedRaw += String(token ?? '');
+      status.value = 'streaming';
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'generating',
+        result: {
+          raw: streamedRaw,
+          content: extractOpeningContentLoose(streamedRaw),
+          options: extractOpeningOptions(streamedRaw),
+          generated_at: String(openingPayload.value.result?.generated_at ?? ''),
+        },
+      };
+      rebuildTranscript();
+    };
 
     try {
       openingGenerationStops.push(
-        eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY as any, (text: string) => {
-          hasFullStreamEvent = true;
-          streamedRaw = String(text ?? '');
-          status.value = 'streaming';
-          openingPayload.value = {
-            ...openingPayload.value,
-            state: 'generating',
-            result: {
-              raw: streamedRaw,
-              content: streamedRaw,
-              options: extractOpeningOptions(streamedRaw),
-              generated_at: String(openingPayload.value.result?.generated_at ?? ''),
-            },
-          };
-          rebuildTranscript();
-        }),
+        eventOn(tavern_events.STREAM_TOKEN_RECEIVED as any, handleToken),
       );
     } catch {
       // ignore
@@ -1767,22 +1777,7 @@ export function useStreamingDemo() {
 
     try {
       openingGenerationStops.push(
-        eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, (token: string) => {
-          if (hasFullStreamEvent) return;
-          streamedRaw += String(token ?? '');
-          status.value = 'streaming';
-          openingPayload.value = {
-            ...openingPayload.value,
-            state: 'generating',
-            result: {
-              raw: streamedRaw,
-              content: streamedRaw,
-              options: extractOpeningOptions(streamedRaw),
-              generated_at: String(openingPayload.value.result?.generated_at ?? ''),
-            },
-          };
-          rebuildTranscript();
-        }),
+        eventOn(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED as any, handleToken),
       );
     } catch {
       // ignore
@@ -2332,7 +2327,7 @@ export function useStreamingDemo() {
     for (const message of messages) {
       const id = readMessageId(message);
       if (id == null || id <= 0) continue;
-      if (isOpeningSeedMessage(message)) continue;
+      if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
       return id;
     }
     return null;
@@ -2341,21 +2336,21 @@ export function useStreamingDemo() {
   function findOpeningSeedChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message => readMessageId(message) === preferredId && isOpeningSeedMessage(message));
+      const matched = messages.find(message => isCurrentOpeningSeedMessageByPayload(message, { opening_seed_user_message_id: preferredId }));
       if (matched) return matched;
     }
-    return messages.find(message => isOpeningSeedMessage(message));
+    return messages.find(message => hasOpeningSeedFlag(message));
   }
 
   function findOpeningResultChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
       const matched = messages.find(
-        message => readMessageId(message) === preferredId && isOpeningAssistantMessage(message),
+        message => isCurrentOpeningAssistantMessageByPayload(message, { opening_result_message_id: preferredId }),
       );
       if (matched) return matched;
     }
-    return messages.find(message => isOpeningAssistantMessage(message));
+    return messages.find(message => hasOpeningAssistantFlag(message));
   }
 
   function canRerollOpeningFromMessages(messages: any[]) {
@@ -2364,7 +2359,11 @@ export function useStreamingDemo() {
     return !messages.some(message => {
       const id = readMessageId(message);
       if (id == null || !Number.isFinite(id) || id <= resultId) return false;
-      if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
+      if (
+        isCurrentOpeningSeedMessageByPayload(message, openingPayload.value) ||
+        isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value)
+      )
+        return false;
       return true;
     });
   }
@@ -2615,6 +2614,16 @@ export function useStreamingDemo() {
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
 
+      console.log('[Opening Payload Debug]', {
+        state: openingPayload.value.state,
+        opening_result_message_id: openingPayload.value.opening_result_message_id,
+        hasPersistedOpeningResult: Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
+          Number(openingPayload.value.opening_result_message_id) > 0,
+        shouldPushOpeningItem: openingPayload.value.state !== 'placeholder' &&
+          !(Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
+            Number(openingPayload.value.opening_result_message_id) > 0),
+      });
+
       if (containerId === 0) {
         const hasPersistedOpeningResult =
           Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
@@ -2642,14 +2651,24 @@ export function useStreamingDemo() {
         }
       }
 
+      const loopLog: { id: number; role: string; skipped: string | null }[] = [];
       for (const message of all) {
         const message_id = Number(message?.message_id);
-        if (!Number.isFinite(message_id)) continue;
+        if (!Number.isFinite(message_id)) {
+          loopLog.push({ id: message_id, role: 'unknown', skipped: 'notFinite' });
+          continue;
+        }
         const id = Math.trunc(message_id);
-        if (containerId != null && id <= containerId) continue;
-        if (isOpeningSeedMessage(message)) continue;
+        if (containerId != null && id <= containerId) {
+          loopLog.push({ id, role: String(message?.role ?? 'unknown'), skipped: 'id <= containerId' });
+          continue;
+        }
+        if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) {
+          loopLog.push({ id, role: String(message?.role ?? 'unknown'), skipped: 'isOpeningSeed' });
+          continue;
+        }
         const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
-        const isOpeningResult = isOpeningAssistantMessage(message);
+        const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
         if (role === 'assistant') nextLatestAssistantId = id;
 
         normalized.push(
@@ -2664,10 +2683,32 @@ export function useStreamingDemo() {
             status: status.value,
           }),
         );
+        loopLog.push({ id, role, skipped: null });
       }
+      console.log(`[Loop Debug] allLength=${all.length}, normalizedLength=${normalized.length}`);
+       for (let i = 0; i < all.length; i++) {
+         const msg = all[i];
+         const id = Math.trunc(Number(msg?.message_id) || 0);
+         const role = String(msg?.role ?? 'unknown');
+         const isSeed = isCurrentOpeningSeedMessageByPayload(msg, openingPayload.value);
+         const isAsst = isCurrentOpeningAssistantMessageByPayload(msg, openingPayload.value);
+         const isSkipId = containerId != null && id <= containerId;
+         console.log(`  msg[${i}] id=${id} role=${role} seed=${isSeed} asst=${isAsst} skipId=${isSkipId}`);
+       }
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
+      console.group(`[Transcript Build] 重建完成`);
+      console.log('chatCount (酒馆消息数):', all.length);
+      console.log('normalizedCount (处理后):', normalized.length);
+      console.log('transcriptCount (最终):', transcript.value.length);
+      console.log('containerId:', containerId);
+      console.log('filterMode:', filterMode.value);
+      for (let i = 0; i < transcript.value.length; i++) {
+        const item = transcript.value[i];
+        console.log(`  [${i}] messageId=${item.message_id}, role=${item.role}, isOpening=${item.isOpening}`);
+      }
+      console.groupEnd();
       recordLifecycleTrace(
         'rebuildTranscript',
         'done',
@@ -2922,7 +2963,7 @@ export function useStreamingDemo() {
     try {
       if (options.createUser) {
         const lastAssistantMessage = getChatMessages(-2)?.[0];
-        const userData = lastAssistantMessage?.data ? _.cloneDeep(lastAssistantMessage.data) : {};
+        const userData = sanitizeInheritedMessageData(lastAssistantMessage?.data);
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], {
           refresh: 'none',
         });
@@ -2948,6 +2989,9 @@ export function useStreamingDemo() {
         }
         appendLog('action', '发送用户输入', stripTagsForPreview(prompt).slice(0, 80) || '(空输入)');
       }
+
+      // 在 generate() 前主动创建 assistant 占位符，防止 ST 流式回调覆盖已有 assistant 消息
+      await ensureAssistantPlaceholderReady('first_token');
 
       const generatePromise = generate({
         should_stream: true,
@@ -3184,7 +3228,11 @@ export function useStreamingDemo() {
       messages.some(message => {
         const id = readMessageId(message);
         if (id == null || !Number.isFinite(id) || id <= resultId) return false;
-        if (isOpeningSeedMessage(message) || isOpeningAssistantMessage(message)) return false;
+        if (
+          isCurrentOpeningSeedMessageByPayload(message, openingPayload.value) ||
+          isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value)
+        )
+          return false;
         return true;
       });
 
@@ -3210,6 +3258,15 @@ export function useStreamingDemo() {
     rebuildTranscript();
 
     try {
+      // 在 generate() 前创建 result 占位符，避免 ST 流式回调复用 id=0 的 container 消息
+      const placeholderResultId = await upsertOpeningResultMessage('', 'none');
+      if (placeholderResultId != null) {
+        openingPayload.value = {
+          ...openingPayload.value,
+          opening_result_message_id: placeholderResultId,
+        };
+      }
+      console.log('[Opening Stream Debug]', { use_stream: openingPayload.value.use_stream });
       if (openingPayload.value.use_stream) {
         bindOpeningGenerationListeners();
       }
@@ -3237,6 +3294,9 @@ export function useStreamingDemo() {
       };
       persistOpeningPayloadNow();
       await syncOpeningConfigToResultMvu(openingResultMessageId);
+      if (openingResultMessageId != null) {
+        await reprocessMessageVariablesById(openingResultMessageId, { force: true, refreshMessage: true });
+      }
       rebuildTranscript();
       status.value = 'done';
       appendLog(

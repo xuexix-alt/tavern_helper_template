@@ -1,6 +1,6 @@
-import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
-import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts.ts';
-import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag.ts';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker';
+import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts';
+import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag';
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;
@@ -19,6 +19,7 @@ export type ResolvedGeneratedImageSource = {
   src: string;
   alt: string;
   source: 'extra' | 'mes_tag' | 'cache';
+  messageId?: number | null;
 };
 
 function normalizeSwipeId(input: unknown): number {
