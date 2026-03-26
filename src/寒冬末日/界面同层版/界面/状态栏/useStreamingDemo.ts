@@ -2460,9 +2460,7 @@ export function useStreamingDemo() {
         next.initialized_lorebooks = {};
       }
       const stat_data =
-        next.stat_data && typeof next.stat_data === 'object'
-          ? (next.stat_data as Record<string, unknown>)
-          : {};
+        next.stat_data && typeof next.stat_data === 'object' ? (next.stat_data as Record<string, unknown>) : {};
 
       const openingShelterSummary = String(openingPayload.value.form_values?.shelter_ability_summary ?? '').trim();
 

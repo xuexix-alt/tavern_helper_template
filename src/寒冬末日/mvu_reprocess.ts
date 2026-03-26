@@ -106,7 +106,8 @@ function resolveBaseMvuData(targetMessageId: number, currentMvuData: Mvu.MvuData
 function ensureValidMvuData(data: Mvu.MvuData | null | undefined): Mvu.MvuData {
   if (data && typeof data === 'object' && data !== null) {
     const valid: Mvu.MvuData = {
-      initialized_lorebooks: data.initialized_lorebooks && typeof data.initialized_lorebooks === 'object' ? data.initialized_lorebooks : {},
+      initialized_lorebooks:
+        data.initialized_lorebooks && typeof data.initialized_lorebooks === 'object' ? data.initialized_lorebooks : {},
       stat_data: data.stat_data && typeof data.stat_data === 'object' ? data.stat_data : {},
     };
     return valid;
