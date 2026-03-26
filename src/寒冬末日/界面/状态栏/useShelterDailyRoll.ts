@@ -284,7 +284,6 @@ export function useShelterDailyRoll() {
           (Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) === Number(lastMessageId));
         if (!isLatest) {
           if (debug.enabled) {
-             
             console.debug?.('[eden/daily_roll] skip: not latest message', { today, currentMessageId, lastMessageId });
           }
           return;
@@ -295,7 +294,6 @@ export function useShelterDailyRoll() {
           const seededDays = parseDaysSinceUpgrade(store.data.庇护所.距离上次升级);
           writeShelterUpgradeState({ last_roll_date: today, days_since_upgrade: seededDays });
           if (debug.enabled) {
-             
             console.debug?.('[eden/daily_roll] seed state', { today, seededDays });
             appendDailyRollLog({ event: 'seed', today, seededDays }, debug);
           }
@@ -305,7 +303,6 @@ export function useShelterDailyRoll() {
         // 只在“日期向前推进”时才 roll；避免因回看旧楼层而污染 chat 变量
         if (!isDateForward(today, state.last_roll_date)) {
           if (debug.enabled) {
-             
             console.debug?.('[eden/daily_roll] skip: date not forward', { today, last: state.last_roll_date });
           }
           return;
@@ -333,7 +330,6 @@ export function useShelterDailyRoll() {
         const nextDays = upgraded ? 0 : daysSinceUpgrade + 1;
 
         if (debug.enabled) {
-           
           console.info?.('[eden/daily_roll] new day roll', {
             today,
             message_id,

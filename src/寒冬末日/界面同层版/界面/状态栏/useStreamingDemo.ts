@@ -1,42 +1,42 @@
 import _ from 'lodash';
 import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
 import {
-    buildStreamDemoMessage,
-    extractStreamDemoContent,
-    extractStreamDemoOptions,
-    extractStreamDemoPhase,
-    isStreamDemoMessage,
-    stripStreamDemoRuntimeTags,
-    stripTagsForPreview,
+  buildStreamDemoMessage,
+  extractStreamDemoContent,
+  extractStreamDemoOptions,
+  extractStreamDemoPhase,
+  isStreamDemoMessage,
+  stripStreamDemoRuntimeTags,
+  stripTagsForPreview,
 } from '../../shared/message';
 import {
-    buildOpeningGeneratePrompt,
-    extractOpeningContent,
-    extractOpeningContentLoose,
-    extractOpeningOptions,
-    getDefaultOpeningPayload,
-    getDefaultOpeningPreset,
-    getOpeningRoute,
-    getOpeningRoutes,
-    getOpeningWorldMode,
-    getOpeningWorldModes,
-    readOpeningPayloadFromChat,
-    replaceOpeningPayloadInChat,
-    shouldLoadOpeningGenerator,
+  buildOpeningGeneratePrompt,
+  extractOpeningContent,
+  extractOpeningContentLoose,
+  extractOpeningOptions,
+  getDefaultOpeningPayload,
+  getDefaultOpeningPreset,
+  getOpeningRoute,
+  getOpeningRoutes,
+  getOpeningWorldMode,
+  getOpeningWorldModes,
+  readOpeningPayloadFromChat,
+  replaceOpeningPayloadInChat,
+  shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
-    buildDebugMessageSignature,
-    buildDemoAssistantFinalBodySource,
-    createGenerationListenerEpochController,
-    shouldCreateAssistantPlaceholderOnFirstToken,
-    shouldEnsureAssistantPlaceholderBeforeFinalize,
-    shouldIgnoreHostRefreshDuringBusy,
-    shouldPrewarmHostMesTextAfterPatch,
-    shouldSuppressLifecycleEchoHostRefresh,
-    summarizeTranscriptForDebug,
+  buildDebugMessageSignature,
+  buildDemoAssistantFinalBodySource,
+  createGenerationListenerEpochController,
+  shouldCreateAssistantPlaceholderOnFirstToken,
+  shouldEnsureAssistantPlaceholderBeforeFinalize,
+  shouldIgnoreHostRefreshDuringBusy,
+  shouldPrewarmHostMesTextAfterPatch,
+  shouldSuppressLifecycleEchoHostRefresh,
+  summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
@@ -44,55 +44,55 @@ import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import {
-    buildHostTranscriptVisibilitySelector,
-    createHostTranscriptVisibilityController,
-    HOST_VISIBILITY_CLASS,
-    HOST_VISIBILITY_STYLE_ID,
+  buildHostTranscriptVisibilitySelector,
+  createHostTranscriptVisibilityController,
+  HOST_VISIBILITY_CLASS,
+  HOST_VISIBILITY_STYLE_ID,
 } from './hostTranscriptVisibility';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import {
-    hasOpeningAssistantFlag,
-    hasOpeningSeedFlag,
-    isCurrentOpeningAssistantMessageByPayload,
-    isCurrentOpeningSeedMessageByPayload,
-    sanitizeInheritedMessageData,
+  hasOpeningAssistantFlag,
+  hasOpeningSeedFlag,
+  isCurrentOpeningAssistantMessageByPayload,
+  isCurrentOpeningSeedMessageByPayload,
+  sanitizeInheritedMessageData,
 } from './openingMessageFlags';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
-    readNativeFirstImageArtifacts,
-    readNativeFirstMembershipEntries,
-    readNativeFirstPromptTokens,
-    type NativeFirstArtifactSource,
-    type NativeFirstImageArtifact,
+  readNativeFirstImageArtifacts,
+  readNativeFirstMembershipEntries,
+  readNativeFirstPromptTokens,
+  type NativeFirstArtifactSource,
+  type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
 import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
-    normalizeDensity,
-    normalizeFontMode,
-    normalizeReadingMode,
-    normalizeTheme,
-    patchReaderChatState,
-    READER_CHAT_STATE_VERSION,
-    readReaderChatState,
+  normalizeDensity,
+  normalizeFontMode,
+  normalizeReadingMode,
+  normalizeTheme,
+  patchReaderChatState,
+  READER_CHAT_STATE_VERSION,
+  readReaderChatState,
 } from './readerState';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import type {
-    DemoStatus,
-    DemoTheme,
-    GeneratedImageRef,
-    ReaderFontMode,
-    ReaderLogItem,
-    ReaderSummary,
-    ReadingMode,
-    TranscriptDensity,
-    TranscriptFilterMode,
-    TranscriptItem,
+  DemoStatus,
+  DemoTheme,
+  GeneratedImageRef,
+  ReaderFontMode,
+  ReaderLogItem,
+  ReaderSummary,
+  ReadingMode,
+  TranscriptDensity,
+  TranscriptFilterMode,
+  TranscriptItem,
 } from './types';
 
 type StopHandle = { stop?: () => void } | null;
@@ -1768,17 +1768,13 @@ export function useStreamingDemo() {
     };
 
     try {
-      openingGenerationStops.push(
-        eventOn(tavern_events.STREAM_TOKEN_RECEIVED as any, handleToken),
-      );
+      openingGenerationStops.push(eventOn(tavern_events.STREAM_TOKEN_RECEIVED as any, handleToken));
     } catch {
       // ignore
     }
 
     try {
-      openingGenerationStops.push(
-        eventOn(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED as any, handleToken),
-      );
+      openingGenerationStops.push(eventOn(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED as any, handleToken));
     } catch {
       // ignore
     }
@@ -2336,7 +2332,9 @@ export function useStreamingDemo() {
   function findOpeningSeedChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message => isCurrentOpeningSeedMessageByPayload(message, { opening_seed_user_message_id: preferredId }));
+      const matched = messages.find(message =>
+        isCurrentOpeningSeedMessageByPayload(message, { opening_seed_user_message_id: preferredId }),
+      );
       if (matched) return matched;
     }
     return messages.find(message => hasOpeningSeedFlag(message));
@@ -2345,8 +2343,8 @@ export function useStreamingDemo() {
   function findOpeningResultChatMessage(messages: any[]) {
     const preferredId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
     if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(
-        message => isCurrentOpeningAssistantMessageByPayload(message, { opening_result_message_id: preferredId }),
+      const matched = messages.find(message =>
+        isCurrentOpeningAssistantMessageByPayload(message, { opening_result_message_id: preferredId }),
       );
       if (matched) return matched;
     }
@@ -2617,11 +2615,15 @@ export function useStreamingDemo() {
       console.log('[Opening Payload Debug]', {
         state: openingPayload.value.state,
         opening_result_message_id: openingPayload.value.opening_result_message_id,
-        hasPersistedOpeningResult: Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
+        hasPersistedOpeningResult:
+          Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
           Number(openingPayload.value.opening_result_message_id) > 0,
-        shouldPushOpeningItem: openingPayload.value.state !== 'placeholder' &&
-          !(Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
-            Number(openingPayload.value.opening_result_message_id) > 0),
+        shouldPushOpeningItem:
+          openingPayload.value.state !== 'placeholder' &&
+          !(
+            Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
+            Number(openingPayload.value.opening_result_message_id) > 0
+          ),
       });
 
       if (containerId === 0) {
@@ -2686,15 +2688,15 @@ export function useStreamingDemo() {
         loopLog.push({ id, role, skipped: null });
       }
       console.log(`[Loop Debug] allLength=${all.length}, normalizedLength=${normalized.length}`);
-       for (let i = 0; i < all.length; i++) {
-         const msg = all[i];
-         const id = Math.trunc(Number(msg?.message_id) || 0);
-         const role = String(msg?.role ?? 'unknown');
-         const isSeed = isCurrentOpeningSeedMessageByPayload(msg, openingPayload.value);
-         const isAsst = isCurrentOpeningAssistantMessageByPayload(msg, openingPayload.value);
-         const isSkipId = containerId != null && id <= containerId;
-         console.log(`  msg[${i}] id=${id} role=${role} seed=${isSeed} asst=${isAsst} skipId=${isSkipId}`);
-       }
+      for (let i = 0; i < all.length; i++) {
+        const msg = all[i];
+        const id = Math.trunc(Number(msg?.message_id) || 0);
+        const role = String(msg?.role ?? 'unknown');
+        const isSeed = isCurrentOpeningSeedMessageByPayload(msg, openingPayload.value);
+        const isAsst = isCurrentOpeningAssistantMessageByPayload(msg, openingPayload.value);
+        const isSkipId = containerId != null && id <= containerId;
+        console.log(`  msg[${i}] id=${id} role=${role} seed=${isSeed} asst=${isAsst} skipId=${isSkipId}`);
+      }
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
