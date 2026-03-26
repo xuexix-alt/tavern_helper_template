@@ -2452,10 +2452,16 @@ export function useStreamingDemo() {
     try {
       await waitGlobalInitialized('Mvu');
       const current = Mvu.getMvuData({ type: 'message', message_id: normalizedId });
-      const next = current && typeof current === 'object' ? _.cloneDeep(current) : ({ stat_data: {} } as any);
+      const hasValidMvuData = current && typeof current === 'object' && current !== null;
+      const next: Mvu.MvuData = hasValidMvuData
+        ? (_.cloneDeep(current) as Mvu.MvuData)
+        : { initialized_lorebooks: {}, stat_data: {} };
+      if (!next.initialized_lorebooks || typeof next.initialized_lorebooks !== 'object') {
+        next.initialized_lorebooks = {};
+      }
       const stat_data =
-        _.get(next, 'stat_data', null) && typeof _.get(next, 'stat_data', null) === 'object'
-          ? (_.get(next, 'stat_data', {}) as Record<string, unknown>)
+        next.stat_data && typeof next.stat_data === 'object'
+          ? (next.stat_data as Record<string, unknown>)
           : {};
 
       const openingShelterSummary = String(openingPayload.value.form_values?.shelter_ability_summary ?? '').trim();

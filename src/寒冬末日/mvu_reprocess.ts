@@ -90,23 +90,37 @@ function writeGuardDigest(messageId: number, digest: string) {
 
 function resolveBaseMvuData(targetMessageId: number, currentMvuData: Mvu.MvuData): Mvu.MvuData {
   if (targetMessageId <= 0) {
-    return _.cloneDeep(currentMvuData);
+    return ensureValidMvuData(currentMvuData);
   }
   try {
     const prevData = Mvu.getMvuData({ type: 'message', message_id: targetMessageId - 1 });
-    if (prevData && typeof prevData === 'object') {
-      return _.cloneDeep(prevData);
+    if (prevData && typeof prevData === 'object' && prevData !== null) {
+      return ensureValidMvuData(prevData as Mvu.MvuData);
     }
   } catch {
     // ignore and fallback
   }
-  return _.cloneDeep(currentMvuData);
+  return ensureValidMvuData(currentMvuData);
+}
+
+function ensureValidMvuData(data: Mvu.MvuData | null | undefined): Mvu.MvuData {
+  if (data && typeof data === 'object' && data !== null) {
+    const valid: Mvu.MvuData = {
+      initialized_lorebooks: data.initialized_lorebooks && typeof data.initialized_lorebooks === 'object' ? data.initialized_lorebooks : {},
+      stat_data: data.stat_data && typeof data.stat_data === 'object' ? data.stat_data : {},
+    };
+    return valid;
+  }
+  return { initialized_lorebooks: {}, stat_data: {} };
 }
 
 function finalizeParsedMvuData(parsed: any, fallback: Mvu.MvuData): Mvu.MvuData {
   const next = parsed && typeof parsed === 'object' ? (parsed as Mvu.MvuData) : (_.cloneDeep(fallback) as Mvu.MvuData);
   if (!next.stat_data || typeof next.stat_data !== 'object') {
     next.stat_data = {};
+  }
+  if (!next.initialized_lorebooks || typeof next.initialized_lorebooks !== 'object') {
+    next.initialized_lorebooks = {};
   }
   return next;
 }

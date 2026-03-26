@@ -657,7 +657,6 @@ function stripOpeningMetaBlocks(raw: string): string {
     .replace(/<criteria>[\s\S]*?<\/criteria>/gi, '')
     .replace(/<time>[\s\S]*?<\/time>/gi, '')
     .replace(/<recap>[\s\S]*?<\/recap>/gi, '')
-    .replace(/<updatevariable>[\s\S]*?<\/updatevariable>/gi, '')
     .replace(/<statusplaceholderimpl\s*\/?>/gi, '')
     .trim();
 }

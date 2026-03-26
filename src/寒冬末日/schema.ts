@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { normalizeRoomTag, parseRoomTag } from './util/room.ts';
+import { normalizeRoomTag, parseRoomTag } from './util/room';
 
 const 主要角色关系档位Schema = z.enum(['无', '逃离', '交易', '协作', '忠诚', '归附']).prefault('无');
 const 临时NPC关系档位Schema = z.enum(['无', '逃离', '交易', '协作', '忠诚', '归附']).prefault('无');
