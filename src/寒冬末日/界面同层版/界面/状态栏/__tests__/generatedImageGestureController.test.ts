@@ -91,3 +91,48 @@ test('touch long press triggers view once and suppresses tap fallback', async ()
   assert.deepEqual(events, ['view']);
   controller.dispose();
 });
+
+test('double click within extended delay window still triggers regenerate', async () => {
+  const events = [];
+  const controller = createGeneratedImageGestureController({
+    clickDelayMs: 100,
+    longPressMs: 20,
+    onView() {
+      events.push('view');
+    },
+    onRegenerate() {
+      events.push('regenerate');
+    },
+  });
+
+  controller.handleClick();
+  await wait(50);
+  controller.handleDoubleClick();
+  await wait(30);
+
+  assert.deepEqual(events, ['regenerate']);
+  controller.dispose();
+});
+
+test('suppressClickUntil blocks subsequent click after touch', async () => {
+  const events = [];
+  const controller = createGeneratedImageGestureController({
+    clickDelayMs: 100,
+    longPressMs: 20,
+    onView() {
+      events.push('view');
+    },
+    onRegenerate() {
+      events.push('regenerate');
+    },
+  });
+
+  controller.handleTouchStart();
+  await wait(10);
+  controller.handleTouchEnd();
+  controller.handleClick();
+  await wait(120);
+
+  assert.deepEqual(events, []);
+  controller.dispose();
+});

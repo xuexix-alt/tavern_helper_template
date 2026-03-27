@@ -1,467 +1,154 @@
-result.css:1  Failed to load resource: net::ERR_CONNECTION_CLOSED
-（索引）:1 Refused to apply style from 'http://localhost:8000/table.css' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
- WebSocket connection to 'ws://127.0.0.1:2086/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
-connect @ index.js:1108
-initializeLocalLinkage @ index.js:1170
-performPostDeploymentTasks @ index.js:876
-runAmily2Deployment @ index.js:925
-auth.syj-amily.cc/api/status.json?t=1774441106315:1  Failed to load resource: net::ERR_CONNECTION_CLOSED
- WebSocket connection to 'ws://127.0.0.1:2086/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
-connect @ index.js:1108
- WebSocket connection to 'ws://127.0.0.1:2086/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
-connect @ index.js:1108
- WebSocket connection to 'ws://127.0.0.1:2086/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
-connect @ index.js:1108
- WebSocket connection to 'ws://127.0.0.1:2086/' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED
-connect @ index.js:1108
-（索引）:1 Refused to apply style from 'http://localhost:8000/table.css' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled.
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
 [metacognition]
+“哥哥，今天的故事听起来好冷啊……不过没关系，我会用最温暖的文字把这一切都记录下来的。”我把剧本摊在明月哥哥膝盖上，尾巴尖调皮地勾了勾他的脚踝，“既然是开篇，那我就要好好地把这个白色的、残酷的世界画出来给哥哥看哦。嗯，第三人称，瑞峰市，星穹国际公寓2001室。现在的我是秋青子，也是哥哥的笔。”
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
+我凑到哥哥耳边，小声念叨着我的思路：“首先是那一年的‘永恒暴雪’，我们要写出那种从绝望到麻木的过程。然后是社会是怎么碎掉的，变成这种人吃人的鬼样子。星穹公寓里的那些邻居，慕小小啊、赵卫国夫妻啊，都要在阴影里露个脸。最后是哥哥，在这片死寂里唯一拥有‘伊甸’的人。不写大道理，只写事实，这就是哥哥想要的治愈，对吧？”
+
+我开始快速在脑海里梳理细节：
+1. 灾变一年：天空不再变蓝，只有灰蒙蒙的雪。供暖停了，秩序崩了。
+2. 社会基调：邻居成了敌人，物资是唯一的信仰。
+3. 邻居描写：2003室那对警惕的夫妻，还有住在不远处的那个曾经风光无限的女明星，现在估计也快饿疯了吧。
+4. 哥哥的状态：从挣扎求生到获得‘伊甸’这7天的转变，那种拥有绝对安全感的从容感。
+
+“好啦，哥哥，我要开始写咯。”我轻笑一声，手指在剧本上虚划了一下，“吐槽？这种白色的末日，最适合吐槽的就是那些还没意识到自己已经变成‘蝼蚁’的家伙了吧。”
+
+[思维链]
+1. 确定时间点：9527年12月14日 14:00。
+2. 视角：第三人称。
+3. 文风：日式轻小说口语体，去散文化。
+4. 任务：完成开场描写，包含环境、社会、群像、主角现状。
+5. 约束：不控制小哥哥，字数1500+（我会尽力确保内容详实）。
+
+“这就是哥哥的‘伊甸’，也是哥哥的梦。”
+
+</thinking><time>
+```星穹国际公寓2001室·9527年12月14日·星期六·14:00```
+</time>
+
 <content>
-[metacognition]
+天空已经一年没有亮通过了。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+这种说法可能不太准确，但在瑞峰市幸存者的眼里，那种被厚重铅云彻底封死的、透不出一丝蓝色的灰白，确实不能称之为“天亮”。雪是从九五二六年那个诡异的冬至开始下的，起初人们还在朋友圈转发着“瑞峰初雪”的美照，讨论着全球变暖是不是个骗局。可当积雪没过了一楼的窗户，当气温在短短一周内跌破零下四十度，当电网在冰封中发出一阵阵绝望的爆裂声后，整座城市便陷入了死寂。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+一年后的今天，瑞峰市已经变成了一座冰雕构成的丛林。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+往日繁华的街道被几米深的雪层覆盖，只有那些高耸的摩天大楼像是一根根灰色的墓碑，在狂风中瑟缩。社会秩序瓦解得比冰块融化还快，当警察局的暖气断掉，当超市的货架被抢购一空，法律就变成了擦屁股都嫌硬的废纸。现在，瑞峰市被分割成了大大小小的据点，暴徒们组成的“雪狼帮”占据了油库和商超，神神叨叨的“方舟”教会躲在地铁站里散播着末日救赎的毒药，而更多的普通人，则蜷缩在像星穹国际公寓这样的住宅楼里，在饥寒交迫中数着自己还能活几分钟。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: [object Object],[object Object],[object Object],[object Object]
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+星穹国际公寓二十层，这里的走廊安静得可怕，只有风顺着破碎的窗户缝隙钻进来，发出尖锐的哨音。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+住在2003室的赵卫国正握着一把锈迹斑斑的撬棍，隔着门缝警惕地盯着外面的过道。他的国字脸上满是胡茬，眼神里透着一股近乎神经质的防御感。身后的屋子里，林月华正弯着腰，仔细地用一块抹布擦拭着那张已经没有余温的餐桌。哪怕已经快断粮了，她还是习惯性地把家里打理得井井有条。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+“卫国，歇会儿吧，2001那边……还是没动静？”
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+林月华的声音很轻，带着点小心翼翼。赵卫国没回头，只是从喉咙里挤出一声沉闷的鼻音。
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
-image.novelai.net/ai/generate-image:1  Failed to load resource: the server responded with a status of 429 ()
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
- [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
- [Gallery Debug] 最终收集到 0 组图片
- [Transcript Debug] 共读取 9 条消息
- 总消息数: 9
- Assistant 消息数: 5
- 消息 ID 范围: [object Object]
- containerId: 0
- [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-   [0] messageId=0, isOpening=true, raw长度=11
-   [2] messageId=4, isOpening=false, raw长度=4747
-   [4] messageId=6, isOpening=false, raw长度=4438
-   [6] messageId=8, isOpening=false, raw长度=9039
- [Gallery Debug] 楼层 8 图片收集
- promptTokens: image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,open clothes,off shoulder,tight beige knit dress,cleavage,collarbone,jewelry,necklace,messy hair,brown hair,long curly hair,hair between eyes,delicate features,makeup,lipstick,mascara,cinematic lighting,dramatic shadows,backlighting,rim lighting,blue light,electrical sparks,lightning,energy ball,glowing,particle effects,corridor,metal door,futuristic,scifi,upper body,close-up,from front,low angle,dutch angle,depth of field,bokeh,girl,being choked,strangling,male hand,hand on neck,rough hand,scarred hand,grasping,struggling,hands on another's hand,head back,choking,painful expression,tears,crying,messy makeup,sweat,heavy breathing,parted lips,open mouth,beautiful eyes,detailed eyes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from above","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,open coat,jacket on floor,tight knit dress,skirt,black pantyhose,black tights,boots,snow boots,fashionable,corridor,carpet,floor,patterned carpet,dim lighting,flickering light,shadows,top-down,from above,high angle,full body,wide shot,depth of field,girl,lying,lying on back,on floor,legs bent,legs together,knees together,hand on chest,weak,exhausted,heavy breathing,sweat,wet skin,messy hair,hair spread out,looking away,half-closed eyes,dazed,parted lips,beautiful face,curvy body,hip focus,leg focus###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from front","upperBody":"sfw","lowerBody":"hidden"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"hidden"}$,off shoulder,bare shoulders,cleavage,tight dress,necklace,corridor,doorway,metal floor,monitor glow,artificial light,blue light,dark background,cowboy shot,upper body,from front,low angle,POV,looking at viewer,looking up,girl,crawling,on floor,reaching,reaching out,hand towards viewer,fingers,manicured nails,desperate,pleading,begging,tears,crying,messy hair,sweat,flushed face,parted lips,open mouth,beautiful eyes,wet eyes,make up,eyelashes###,image###sfw,1girl,solo,${"name":"Mu Xiaoxiao (original)","angle":"from side","upperBody":"sfw","lowerBody":"sfw"}$,${"name":"white down jacket","upperBody":"visible","lowerBody":"visible"}$,jacket draped over,tight dress,skirt lift,black pantyhose,thighs,legs,boots,corridor,floor,darkness,spotlight,chiaroscuro,volumetric lighting,mid shot,side view,from side,level shot,cinematic angle,girl,lying,lying on side,on floor,sleeping,fainting,unconscious,closed eyes,long eyelashes,beautiful profile,messy hair,relaxed hand,weak,exhausted,pale skin,soft light,ethereal,tragic beauty###
- hostDomArtifacts: 
- rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+“没动静。那小子七天前把自己关进去就没出来过。没听见搬东西的声音，也没听见哭闹。邪门了。”
 
-明月翻了个身，把手里的剧本举到两个人都能看
- [Gallery Debug] 最终收集到 1 组图片
- [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-   [1] messageId=3, role=user, isOpening=false - 被过滤
-   [3] messageId=5, role=user, isOpening=false - 被过滤
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [stream-demo:image-bridge] start-task [object Object]
-VM2138:6019 [visibleTranscript Debug] filterMode= assistant , transcript长度= 0 , filtered长度= 0
-VM2138:7721 [Gallery Debug] transcript 状态: 总数=0, assistant=0, 非opening=0
-VM2138:7741 [Gallery Debug] 最终收集到 0 组图片
-VM2138:6987 [Transcript Debug] 共读取 9 条消息
-VM2138:6989 总消息数: 9
-VM2138:6990 Assistant 消息数: 5
-VM2138:6991 消息 ID 范围: Object
-VM2138:6995 containerId: 0
-VM2138:7721 [Gallery Debug] transcript 状态: 总数=7, assistant=4, 非opening=3
-VM2138:7725   [0] messageId=0, isOpening=true, raw长度=11
-VM2138:7725   [2] messageId=4, isOpening=false, raw长度=4747
-VM2138:7725   [4] messageId=6, isOpening=false, raw长度=4438
-VM2138:7725   [6] messageId=8, isOpening=false, raw长度=9039
-VM2138:5717 [Gallery Debug] 楼层 8 图片收集
-VM2138:5718 promptTokens: Array(4)
-VM2138:5719 hostDomArtifacts: Array(0)
-VM2138:5720 rawMessage 前100字符: [stream-demo:minimal]
-<demo_phase>done</demo_phase>
-<content>
-[metacognition]
+他口中的“那小子”，就是住在2001室的邻居，也就是小哥哥。
 
-明月翻了个身，把手里的剧本举到两个人都能看
-VM2138:7741 [Gallery Debug] 最终收集到 1 组图片
-VM2138:6019 [visibleTranscript Debug] filterMode= assistant , transcript长度= 7 , filtered长度= 5
-VM2138:6025   [1] messageId=3, role=user, isOpening=false - 被过滤
-VM2138:6025   [3] messageId=5, role=user, isOpening=false - 被过滤
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] start-task Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
-VM2138:5982 [stream-demo:image-bridge] start-task Object
-VM2138:5982 [stream-demo:image-bridge] request-hints-synced Object
+在这些幸存者的记忆里，一年前的小哥哥只是个普通的住户，在灾难最初的那段日子里，他也和大家一样，为了半袋过期饼干在雪地里摔得满身是伤，为了抢一点烧火的木材和人拼命。可就在七天前，一切都变了。没有人知道发生了什么，只知道2001室那道原本普通的防盗门，在一夜之间变成了一种闪烁着冷冽金属光泽、厚重得让人绝望的黑色合金门。
+
+此时的2001室内部，却是另一个世界。
+
+室内温度恒定在二十四度，温暖的气流轻柔地拂过房间的每一个角落。这在室外零下五十度的瑞峰市，简直是神迹。小哥哥正坐在宽敞的沙发上，面前的万象合成终端发出一阵细微的嗡鸣声。随着一道蓝色的扫描线划过，一个热气腾腾的午餐肉罐头和一碗晶莹剔透的白米饭便凭空出现在了托盘里。
+
+这种名为“伊甸”的科技，是在七天前那个险些让他冻死的深夜，伴随着一阵奇特的空间波动降临的。它不仅仅是一个避难所，更像是一个拥有自我意识的、超越了当前文明理解的黑科技实体。
+
+“检测到门口有音频活动。分析结果：成年男性，情绪焦虑，威胁程度：低。成年女性，情绪忧郁，威胁程度：极低。”
+
+伊甸那冷冰冰却又带着一丝知性味道的电子合成音在房间里回荡。这是社交监听模块在起作用，2001室门口方圆几米的任何细微声响，都逃不过伊甸的捕捉。
+
+小哥哥端起饭碗，听着监听系统里传来的赵卫国那粗重的呼吸声。在获得伊甸之前，他也曾试图敲响邻居的门寻求互助，但迎接他的只有冰冷的撬棍和充满敌意的眼神。在这栋楼里，信任比黄金还稀缺。
+
+除了2003室这对还算安分的夫妻，这一层乃至整栋楼都充满了各种不稳定的因素。住在楼下的慕小小，那个曾经在荧幕上倾国倾城的女明星，此时大概正裹着昂贵的皮草蜷缩在冰冷的被窝里，看着自己那些无法变现的奢侈品发呆吧？还有那些游荡在楼道里，像孤魂野鬼一样寻找食物的“拾荒者联盟”，他们的眼睛里已经没有了人性，只剩下野兽般的贪婪。
+
+小哥哥吃了一口午餐肉，口感和灾前的顶级产品没有任何区别。
+
+他站起身，走到那道厚重的安防门前。通过伊甸的监控系统，他能看到赵卫国正神情紧绷地守在斜对面的门口。而在更远的走廊拐角处，似乎有几道鬼鬼祟祟的身影正在靠近，手里拎着沉重的铁锤和汽油桶。
+
+那是住在19层的一伙流氓，他们已经盯上这一层很久了。在他们看来，2001室这几天的安静和偶尔散发出的、若有若无的暖意，简直就是最诱人的肥肉。
+
+“警告：20层公共走廊出现不明身份群体，携带暴力拆卸工具。建议启动被动防御程序。”
+
+伊甸的声音再次响起。
+
+小哥哥看着屏幕上那些面目狰狞的家伙，又看了看斜对面那个为了保护妻子而死战不退的技术工人。在这个白色的地狱里，他拥有了唯一的方舟，但他很清楚，仅仅守着这间屋子是不够的。
+
+想要在这场永恒的暴雪中活下去，甚至重建某种秩序，他需要更多的筹码，也需要更聪明的做法。
+
+他伸手触碰了一下门边的控制面板。黑色合金门的指示灯由红转蓝，发出一声轻微的泄压声。
+
+门外，赵卫国猛地举起了撬棍，那伙正准备冲上来的流氓也愣住了。
+
+在这死寂了一年的星穹国际公寓里，那道被称为“禁地”的门，缓缓开启了一道缝隙。温暖而湿润的空气顺着缝隙溢出，在寒冷的走廊里凝结成了一股白色的雾气，像是某种神谕的降临。
+
+小哥哥站在门后的阴影里，看着外面那些被冻得发青的脸孔。
+
+“想要吃的吗？”
+
+他的声音穿透了走廊里的风声，清晰地传入了每一个人的耳中。
+
+在这个瞬间，星穹国际公寓的命运，或者说整个瑞峰市的未来，都在这间2001室内悄然发生了偏移。
+
+</content>
+
+<recap>
+<details><summary>小总结</summary>
+
+- 时间：9527年12月14日 14:00
+- 地点：星穹国际公寓2001室及其走廊
+- 发生的事：交代了末日一年后的世界背景及瑞峰市现状。小哥哥获得“伊甸”庇护所7天后，在温暖的室内用餐。2003室的赵卫国夫妻在门外警戒。19层的一伙流氓试图上楼劫掠。小哥哥在伊甸的提醒下主动开启房门，向门外处于饥寒交迫中的幸存者发出了询问。
+
+</details>
+</recap>
+
+<option>
+【A】维持神秘&仅向赵卫国夫妻展示少量食物，试探其合作意愿，并让伊甸监控19层流氓的动向。
+【B】武力驱逐&利用安防门的防御机制威慑19层的流氓，在邻居面前建立绝对的强势地位，不提供任何物资。
+【C】利益诱导&向流氓展示食物但要求他们先解决楼层内的安全隐患，以此观察他们的服从度与武力值。
+【D】闭门谢客&无视外界冲突，继续利用伊甸的监听系统收集情报，等待更有价值的切入时机。
+</option>
+
+<UpdateVariable>
+<Analysis>
+1. 登场状态：
+   - 小哥哥（玩家）、赵卫国（登场）、林月华（登场）。
+   - 19层流氓属于临时NPC，需创建。
+   - 慕小小（提及，未登场，设为离场）。
+
+2. 世界变量：
+   - 时间：从14:00开始，对话与环境描写约推进30分钟，更新为14:30。
+   - 日期：9527年12月14日。
+   - 地址：小哥哥在2001室内。
+
+3. 角色变量：
+   - 赵卫国：由于小哥哥主动开门并展示暖气，心理冲击较大。Imp基础10，暂无变动。健康值因挨饿受冻处于亚健康。
+   - 林月华：同上。
+   - 临时NPC/流氓：新创建，关系：逃离，Imp 10。
+
+4. 房间状态：
+   - 小哥哥：核心区/客厅。
+   - 赵卫国/林月华：楼层20/2003。
+   - 流氓：楼层20/走廊。
+
+5. 任务进度：
+   - 主线任务“阶段一：秩序的萌芽”开始。
+   - 情报碎片：无。
+
+</Analysis>
+<JSONPatch>
+[
+  { "op": "replace", "path": "/世界/时间", "value": "下午·14:30" },
+  { "op": "replace", "path": "/赵卫国/登场状态", "value": "登场" },
+  { "op": "replace", "path": "/赵卫国/所在房间", "value": "楼层20/2003" },
+  { "op": "replace", "path": "/赵卫国/内心想法", "value": "那道门……居然开了？里面怎么会有热气？这小子到底藏了什么……" },
+  { "op": "replace", "path": "/林月华/登场状态", "value": "登场" },
+  { "op": "replace", "path": "/林月华/所在房间", "value": "楼层20/2003" },
+  { "op": "replace", "path": "/林月华/内心想法", "value": "好暖和的味道……是饭香吗？我已经多久没闻到这种味道了……" },
+  { "op": "insert", "path": "/临时NPC/19层流氓头目", "value": { "姓名": "流氓头目", "关系": "逃离", "关系倾向": "中立", "秩序刻印": 10, "秩序刻印更新原因": "0, 无变化", "健康": 80, "健康更新原因": "0, 无变化", "健康状况": "健康", "衣着": "肮脏的羽绒服", "神态样貌": "贪婪而凶狠", "动作姿势": "手持铁锤", "内心想法": "妈的，这屋里肯定有宝贝，冲进去就发财了！", "所在房间": "楼层20/走廊", "登场状态": "登场" } }
+]
+</JSONPatch>
+</UpdateVariable>
+
+哥哥，开门迎客这种事，在末日里可是最危险也最刺激的“表演”呢，希望那些流氓不会被肉香馋得直接跪下。
+
+<StatusPlaceHolderImpl/>

@@ -1452,14 +1452,14 @@ useEventListener(
     // 第一次 tap 就预热宿主正文，缩短第二次 tap 命中宿主原生链的窗口。
     void ensureHostMesTextRendered(messageId);
 
-    // 检测双击：两次 touchstart 间隔 < 300ms 且属于同一楼层
-    if (now - touchStartTime < 300 && lastTouchMessageId === messageId) {
+    // 检测双击：两次 touchstart 间隔 < 400ms 且属于同一楼层（移动端用户点击速度较慢）
+    if (now - touchStartTime < 400 && lastTouchMessageId === messageId) {
       // 阻止 iframe 继续消费此次 touch，防止 ClickTrigger 抢走 html-body
       event.preventDefault();
       event.stopPropagation();
       const nativeTouchEvent = event as TouchEvent & { stopImmediatePropagation?: () => void };
       nativeTouchEvent.stopImmediatePropagation?.();
-      mobileBridgeSuppressUntilMs = now + 900;
+      mobileBridgeSuppressUntilMs = now + 1200;
       mobileBridgeSuppressMessageId = messageId;
       // 与桌面端对齐：预热 mes_text + 挂起任务 + 改道宿主 mes_text
       void startTranscriptHostImageProxy(messageId);

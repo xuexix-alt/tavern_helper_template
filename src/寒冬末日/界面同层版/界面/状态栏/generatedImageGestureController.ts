@@ -13,7 +13,7 @@ export function createGeneratedImageGestureController(input: {
   onView: () => void;
   onRegenerate: () => void;
 }): GeneratedImageGestureController {
-  const clickDelayMs = Math.max(0, Number(input.clickDelayMs ?? 220));
+  const clickDelayMs = Math.max(0, Number(input.clickDelayMs ?? 350));
   const longPressMs = Math.max(0, Number(input.longPressMs ?? 420));
   const scheduleTimeout = globalThis.setTimeout.bind(globalThis);
   const cancelTimeout = globalThis.clearTimeout.bind(globalThis);
@@ -35,7 +35,7 @@ export function createGeneratedImageGestureController(input: {
   };
 
   const markTouchHandled = () => {
-    suppressClickUntil = Date.now() + 400;
+    suppressClickUntil = Date.now() + 600;
   };
 
   return {
@@ -55,8 +55,8 @@ export function createGeneratedImageGestureController(input: {
     handleDoubleClick() {
       console.log('[Gesture] handleDoubleClick called');
       clearClickTimer();
-      suppressClickUntil = Date.now() + 500;
-      console.log('[Gesture] handleDoubleClick -> onRegenerate(), suppressClickUntil set to', Date.now() + 500);
+      suppressClickUntil = Date.now() + 700;
+      console.log('[Gesture] handleDoubleClick -> onRegenerate(), suppressClickUntil set to', Date.now() + 700);
       input.onRegenerate();
     },
     handleTouchStart() {
