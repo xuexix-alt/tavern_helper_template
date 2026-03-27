@@ -62,9 +62,9 @@ import type { GeneratedImageActivationPayload } from '../generatedImageActivatio
 import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
-    readGeneratedImageSource,
-    readGeneratedImageSourceAsync,
-    type ResolvedGeneratedImageSource,
+  readGeneratedImageSource,
+  readGeneratedImageSourceAsync,
+  type ResolvedGeneratedImageSource,
 } from '../generatedImageSourceResolver';
 import type { GeneratedImageRef } from '../types';
 
