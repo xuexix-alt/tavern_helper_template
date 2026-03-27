@@ -251,6 +251,9 @@ export function createAndShowImage(
       clearTimeout(holdTimer);
       holdTimer = null;
       if (extension_settings[extensionName]['longPressTime'] === 'true' && buttonEl) {
+        // 阻止事件冒泡，防止 ClickTrigger 原生的 dblclick 处理器重复触发
+        e.stopPropagation();
+        e.preventDefault();
         addSmoothShakeEffect(mediaEl);
         triggerGeneration(buttonEl);
       }
@@ -371,6 +374,14 @@ export const triggerGeneration = buttonEl => {
     addLog('[triggerGeneration] 图像生成请求已在进行中: ' + buttonEl.dataset['link']?.substring(0, 30));
     return;
   }
+
+  // ── 阻止 SillyTavern 原生 dblclick 事件重复触发 ──
+  // 标记本次双击已被处理，让原生处理器检查此标记后跳过
+  buttonEl.dataset['_doubleClickHandled'] = 'true';
+  // 延迟清除标记（300ms > dblclick 时间间隔，确保只屏蔽一次）
+  setTimeout(() => {
+    delete buttonEl.dataset['_doubleClickHandled'];
+  }, 300);
 
   const prompt = buttonEl.dataset['link']; // 图像提示词（纯净标签内容）
   const stableId = buttonEl.dataset['stableId']; // 稳定 ID，用于定位对应的 span 占位符

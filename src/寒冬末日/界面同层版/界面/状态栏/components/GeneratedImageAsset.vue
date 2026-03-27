@@ -1,5 +1,6 @@
 <template>
   <figure
+    ref="rootRef"
     :class="rootClass"
     :data-message-id="entry.messageId"
     :data-marker-id="entry.markerId || ''"
@@ -61,9 +62,9 @@ import type { GeneratedImageActivationPayload } from '../generatedImageActivatio
 import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
-  readGeneratedImageSource,
-  readGeneratedImageSourceAsync,
-  type ResolvedGeneratedImageSource,
+    readGeneratedImageSource,
+    readGeneratedImageSourceAsync,
+    type ResolvedGeneratedImageSource,
 } from '../generatedImageSourceResolver';
 import type { GeneratedImageRef } from '../types';
 
@@ -80,6 +81,7 @@ const emit = defineEmits<{
 
 const resolvedSource = ref<ResolvedGeneratedImageSource | null>(null);
 const generatedImageEntityRevision = useGeneratedImageEntityRevision();
+const rootRef = ref<HTMLElement | null>(null);
 
 const rootClass = computed(() =>
   props.variant === 'gallery'
@@ -217,6 +219,17 @@ async function resolveSource() {
   });
   resolvedSource.value = asyncResult;
 }
+
+onMounted(() => {
+  // 阻止 dblclick 冒泡到宿主 ClickTrigger，避免双击已有图片时触发新生图菜单
+  const handleRootDblclickBubbling = (e: Event) => {
+    e.stopPropagation();
+  };
+  rootRef.value?.addEventListener('dblclick', handleRootDblclickBubbling, true);
+  onBeforeUnmount(() => {
+    rootRef.value?.removeEventListener('dblclick', handleRootDblclickBubbling, true);
+  });
+});
 
 watch(
   () =>

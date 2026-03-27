@@ -345,12 +345,19 @@ function bindAssistantBodyInteractions() {
     hitArea.addEventListener('pointerup', handlePointerUp, true);
     hitArea.addEventListener('pointercancel', handlePointerCancel, true);
 
+    // 阻止 dblclick 冒泡到宿主 ClickTrigger，避免双击已有图片时触发新生图菜单
+    const handleCarrierDblclickBubbling = (e: Event) => {
+      e.stopPropagation();
+    };
+    carrier.addEventListener('dblclick', handleCarrierDblclickBubbling, true);
+
     return () => {
       hitArea?.removeEventListener('click', handleClick, true);
       hitArea?.removeEventListener('dblclick', handleDoubleClick, true);
       hitArea?.removeEventListener('pointerdown', handlePointerDown, true);
       hitArea?.removeEventListener('pointerup', handlePointerUp, true);
       hitArea?.removeEventListener('pointercancel', handlePointerCancel, true);
+      carrier?.removeEventListener('dblclick', handleCarrierDblclickBubbling, true);
       controller.dispose();
     };
   });
