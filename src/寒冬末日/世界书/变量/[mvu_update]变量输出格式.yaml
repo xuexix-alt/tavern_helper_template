@@ -1,76 +1,99 @@
-# [mvu_update] 变量输出格式
+# [mvu_update] 变量输出格式（优化版）
 
 rule:
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
-  - The block MUST contain `<Analysis>` and `<Command>` sections.
-  - Commands use Lodash-style syntax:
-    - `_.set('路径', 值)` - replace/set value
-    - `_.add('路径', 数值)` - add delta to number
-    - `_.insert('路径', 值)` - insert to array (use `/-` to append)
-    - `_.delete('路径')` - delete key/path
-    - `_.move('from路径', 'to路径')` - move value
-  - Path separator is `.` (dot), NOT `/`
-  - DO NOT update fields starting with `_`
-  - Main characters are top-level keys (excluding reserved keys and `临时NPC`)
-  - Temporary NPCs live under `临时NPC` and MAY be promoted to top-level
+  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
+  - '  - `move`: move an existing value from one path to another (requires `"from"`). '
+  - Path MUST start with `/`.
+  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
+  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.
+  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).
+  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
+  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots
 
 format: |-
   <UpdateVariable>
   <Analysis>
-  Step-by-step logic chain based on current context:
+  Step-by-step logic chain based on current context and variable checks:
 
   1. Presence Check (登场状态)
-     - Set active roles to '登场', absent roles to '离场'.
-     - Result: 新登场 ____，新离场 ____。
+     - Quick scan: Which characters are present/mentioned in current scene?
+     - Set active roles to '登场' (登场), absent roles to '离场' (离场).
+     - This is a CRITICAL story switch - do NOT miss any role.
+     - Result: 新登场角色 ____，新离场角色 ____。
 
-  2. World Variables
-     - Advance time in `世界.时间`.
-     - If crossing 00:00 update date and `_.add('世界.末日天数', 1)`.
-     - Result: 时间更新？____。
+  2. World Variables & Atmosphere
+     - Time: Calculate time elapsed (estimated by dialogue length if not specified).
+     - AI MUST advance minutes in `/世界/时间` based on current scene progress.
+     - If crossing 00:00: update date and apply `delta +1` to `/世界/末日天数` (backend script is fallback only).
+     - Address: Update only on actual character movement.
+     - Result: 时间更新？____，日期更新？____。
 
-  3. Shelter Variables
-     - DO NOT manually roll shelter upgrades.
-     - Only read `庇护所.今日投掷点数` status.
-     - Result: 庇护状态？____。
+  3. Shelter/Base Variables
+     - CRITICAL: DO NOT manually roll for shelter level upgrades.
+     - AI only reads `今日投掷点数` status.
+     - If "lucky upgrade" triggered in narrative -> broadcast new level & capabilities in story.
+     - If main task stage completed -> use `replace` to force level to reward target.
+     - Otherwise: DO NOT modify level numbers manually.
+     - Sync capability descriptions when level changes.
 
-  4. Role Variables
-     - For each active role update:
-       - `_.add('角色.健康', delta)` for health changes
-       - `_.add('角色.秩序刻印', delta)` for imp changes
-       - `_.set('角色.内心想法', '...')` for thoughts
-     - Result: 角色更新？____。
+  4. All Roles Variables (逐个检查每个角色)
+     - Source: top-level roles + `/临时NPC` objects.
+     - For each role check:
+       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.
+       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.
+       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.
+       d. Visuals (replace): Update physical descriptions only if changed in plot.
+       e. Health Reason (sync): MUST sync with health delta.
 
   5. Temporary NPCs
-     - New: `_.insert('临时NPC.姓名', {...})`
-     - Promote: insert top-level + delete from 临时NPC
-     - Result: NPC 更新？____。
+     - New NPCs -> use `insert` with complete field initialization.
+     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.
+     - If top-level already exists with same name -> merge and `remove` temp NPC.
+     - Result: 需创建/更新/删除？____。
 
-  6. Room State
-     - Update `角色.所在房间` for moving characters.
-     - Valid: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 楼层20/2001 | 户外 | 户外/地点
-     - DO NOT output operations under `房间.**` (maintained by script).
-     - Result: 房间更新？____。
+  6. Room State (强制禁止遗漏)
+     - Update `/<角色>/所在房间` for moving characters:
+       - Valid values: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{4-digit room} | 户外 | 户外/{地点}
+       - Leaving apartment -> "" (empty string)
+     - NEVER output any operation under `/房间/**` (derived; maintained by script).
+     - Result: 需更新房间的角色 ____。
 
-  7. Summary
-     - List all _.set/_.add/_.insert/_.delete/_.move commands.
+  7. Main Task & Rewards
+     - Track stage goals. If completed -> execute rewards.
+     - Info fragments: insert new, replace with '已完成' when explored.
+     - Grant rewards: Capability insert / Imp boost / Thoughts update.
+     - Result: 任务进度更新？____，触发奖励？____。
+
+  8. Operation Summary
+     - List all paths + operations (replace/delta/insert/remove/move).
+     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
 
   </Analysis>
-  <Command>
-  _.set('世界.时间', '上午 - 08:00');
-  _.add('纪宁.健康', -1);
-  _.set('纪宁.内心想法', '...');
-  _.set('纪宁.登场状态', '登场');
-  _.set('王静.登场状态', '离场');
-  _.insert('临时NPC.陌生拾荒者', { 姓名: '陌生拾荒者', 健康: 80 });
-  </Command>
+  <JSONPatch>
+  [
+    { "op": "replace", "path": "/世界/时间", "value": "..." },
+    { "op": "delta", "path": "/纪宁/健康", "value": -1 },
+    { "op": "replace", "path": "/纪宁/内心想法", "value": "..." },
+    { "op": "replace", "path": "/纪宁/登场状态", "value": "登场" },
+    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
+    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
+  ]
+  </JSONPatch>
   </UpdateVariable>
 
 requirements:
-  - "Allowed commands: _.set, _.add, _.insert, _.delete, _.move."
-  - "Path separator is `.` (dot), paths start without prefix."
-  - "Use `_.add` for numeric updates (Health, Imp, 末日天数)."
-  - "Use `_.set` for text updates."
-  - "Use `_.insert` with `/-` to append arrays: `_.insert('数组路径/-', value)`."
-  - "If inserting a new role, insert under `临时NPC` first."
-  - "DO NOT output operations under `房间.**`."
-  - "Numeric updates MUST use `_.add`."
+  - "Allowed operations: replace, delta, insert, remove, move."
+  - Path MUST be a valid JSON Pointer absolute path.
+  - DO NOT `replace` on non-existent paths (use `insert`).
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
+  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
+  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
+

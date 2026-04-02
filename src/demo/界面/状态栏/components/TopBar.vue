@@ -1,104 +1,108 @@
 <template>
-  <header class="relative z-50 flex h-14 shrink-0 items-center justify-between px-3 sm:px-6 border-b border-primary/20 bg-background/40 backdrop-blur-2xl shadow-[0_4px_30px_var(--shadow-color)]">
-    <div class="flex items-center gap-2 sm:gap-4">
-      <div class="font-mono text-primary font-bold tracking-widest text-glow flex items-center gap-2">
-        <span class="text-lg">☢️</span>
-        <span class="hidden md:inline">寒冬末日 // 状态栏</span>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-4 sm:gap-6 font-mono text-[10px] sm:text-xs text-primary/50">
-      <button 
-        class="flex items-center gap-1 sm:gap-2 hover:text-primary transition-colors cursor-pointer group"
-      >
-        <span class="font-bold tracking-widest">任务</span>
-        <div class="hidden lg:flex gap-0.5">
-          <div 
-            v-for="i in 10" 
-            :key="i" 
-            :class="i < 6 ? 'bg-primary/70 group-hover:bg-primary' : 'bg-primary/20 group-hover:bg-primary/40'"
-            class="h-3 w-1.5 transition-colors"
-          ></div>
+  <header class="sticky top-0 z-50 border-b border-primary/15 bg-background/88 backdrop-blur-xl">
+    <div class="mx-auto flex h-12 max-w-[820px] items-center justify-between gap-3 px-4 sm:h-14 sm:px-6">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 shrink-0 rounded-full bg-primary/80"></span>
+          <span class="truncate font-mono text-[11px] font-semibold tracking-[0.24em] text-primary sm:text-xs">
+            寒冬末日 // 状态栏
+          </span>
         </div>
-      </button>
-      <button 
-        class="flex items-center gap-1 sm:gap-2 hover:text-primary transition-colors cursor-pointer group"
-      >
-        <span class="font-bold tracking-widest">地图</span>
-        <div class="hidden lg:flex gap-0.5">
-          <div 
-            v-for="i in 10" 
-            :key="i" 
-            :class="i < 4 ? 'bg-primary/70 group-hover:bg-primary animate-pulse' : 'bg-primary/20 group-hover:bg-primary/40'"
-            class="h-3 w-1.5 transition-colors"
-          ></div>
-        </div>
-      </button>
-    </div>
-
-    <div class="flex items-center gap-2 sm:gap-6 font-mono text-xs">
-      <div class="hidden sm:flex items-center gap-2 text-primary/70 tracking-widest">
-        <span class="animate-pulse text-primary">●</span> 在线
       </div>
 
-      <div class="flex items-center gap-2 sm:gap-3">
-        <button
-          class="flex h-7 px-2 sm:px-3 items-center justify-center gap-2 border border-primary/30 text-primary hover:bg-primary/10 hover:text-glow transition-all clip-corner-sm"
-          title="组件库"
-        >
-          <span>📦</span>
-          <span class="hidden lg:inline">组件库</span>
-        </button>
+      <div class="hidden items-center rounded-full border border-primary/20 bg-surface/35 px-3 py-1 font-mono text-[10px] tracking-[0.22em] text-primary/75 md:flex">
+        阅读
+      </div>
 
+      <div class="flex items-center gap-2">
         <button
-          class="flex h-7 px-2 sm:px-3 items-center justify-center gap-2 border border-primary/30 text-primary hover:bg-primary/10 hover:text-glow transition-all clip-corner-sm"
-          title="排版设置"
+          @click="cycleTheme"
+          class="inline-flex h-8 items-center gap-2 rounded-sm border border-primary/20 bg-surface/35 px-3 font-mono text-[11px] tracking-[0.16em] text-primary/80 transition-colors hover:bg-primary/10 hover:text-primary"
+          title="切换主题"
         >
-          <span>🔤</span>
-          <span class="hidden lg:inline">排版</span>
+          <span>主题</span>
+          <span class="text-primary/50">{{ currentThemeLabel }}</span>
         </button>
 
         <div class="relative">
           <button
-            @click="isThemeDropdownOpen = !isThemeDropdownOpen"
-            class="flex h-7 px-2 sm:px-3 items-center justify-center gap-2 border border-primary/30 text-primary hover:bg-primary/10 hover:text-glow transition-all clip-corner-sm shrink-0"
-            title="切换主题"
+            @click="isMoreMenuOpen = !isMoreMenuOpen"
+            class="inline-flex h-8 items-center gap-2 rounded-sm border border-primary/20 bg-surface/35 px-3 font-mono text-[11px] tracking-[0.16em] text-primary/80 transition-colors hover:bg-primary/10 hover:text-primary"
+            title="更多"
           >
-            <span>{{ currentThemeIcon }}</span>
-            <span class="hidden lg:inline">{{ currentThemeLabel }}</span>
-            <span :class="{ 'rotate-180': isThemeDropdownOpen }" class="transition-transform duration-200">▼</span>
+            <span>更多</span>
+            <span :class="{ 'rotate-180': isMoreMenuOpen }" class="transition-transform duration-200">▾</span>
           </button>
 
           <Transition name="dropdown">
-            <div 
-              v-if="isThemeDropdownOpen"
-              class="absolute right-0 top-full mt-2 w-32 border border-primary/30 bg-surface/90 backdrop-blur-md shadow-[0_4px_20px_var(--shadow-color)] clip-corner-sm z-50 flex flex-col p-1"
+            <div
+              v-if="isMoreMenuOpen"
+              class="absolute right-0 top-full mt-2 flex w-56 flex-col gap-3 rounded-sm border border-primary/20 bg-background/95 p-3 shadow-[0_16px_40px_var(--shadow-color)]"
             >
-              <button
-                v-for="t in themes"
-                :key="t.id"
-                @click="selectTheme(t.id)"
-                class="flex items-center gap-2 px-3 py-2 text-xs font-mono transition-colors clip-corner-sm"
-                :class="theme === t.id ? 'bg-primary text-background' : 'text-primary hover:bg-primary/10'"
-              >
-                <span>{{ t.icon }}</span>
-                <span>{{ t.label }}</span>
-              </button>
+              <div class="flex items-center justify-between border-b border-primary/10 pb-2 font-mono text-[10px] tracking-[0.2em] text-primary/55">
+                <span>阅读设置</span>
+                <span>在线</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <button
+                  class="rounded-sm border border-primary/15 px-3 py-2 text-left font-mono text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  任务
+                </button>
+                <button
+                  class="rounded-sm border border-primary/15 px-3 py-2 text-left font-mono text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  地图
+                </button>
+                <button
+                  @click="$emit('open-sidebar')"
+                  class="rounded-sm border border-primary/15 px-3 py-2 text-left font-mono text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  状态面板
+                </button>
+                <button
+                  class="rounded-sm border border-primary/15 px-3 py-2 text-left font-mono text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary"
+                >
+                  排版
+                </button>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">
+                  阅读密度
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    v-for="d in densities"
+                    :key="d.id"
+                    @click="selectDensity(d.id)"
+                    class="rounded-sm border px-2 py-2 font-mono text-[10px] tracking-[0.16em] transition-colors"
+                    :class="density === d.id ? 'border-primary bg-primary text-background' : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'"
+                  >
+                    {{ d.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">
+                  主题风格
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    v-for="t in themes"
+                    :key="t.id"
+                    @click="selectTheme(t.id)"
+                    class="rounded-sm border px-2 py-2 text-left font-mono text-[10px] tracking-[0.16em] transition-colors"
+                    :class="theme === t.id ? 'border-primary bg-primary text-background' : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'"
+                  >
+                    {{ t.label }}
+                  </button>
+                </div>
+              </div>
             </div>
           </Transition>
-        </div>
-
-        <div class="hidden sm:flex items-center gap-1 border border-primary/30 p-1 bg-surface/50 clip-corner-sm">
-          <button
-            v-for="d in densities"
-            :key="d.id"
-            @click="$emit('update:density', d.id)"
-            :title="d.label"
-            class="relative flex h-6 w-8 items-center justify-center transition-colors duration-300"
-            :class="density === d.id ? 'text-background bg-primary' : 'text-primary/50 hover:text-primary hover:bg-primary/10'"
-          >
-            <span class="relative z-10" v-html="d.icon"></span>
-          </button>
         </div>
       </div>
     </div>
@@ -106,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { Density, Theme } from '../types/message';
 
 const props = defineProps<{
@@ -117,29 +121,33 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:density': [density: Density];
   'update:theme': [theme: Theme];
+  'open-sidebar': [];
 }>();
 
-const isThemeDropdownOpen = ref(false);
+const isMoreMenuOpen = ref(false);
 
 const themes = [
-  { id: 'tech' as Theme, label: '科技', icon: '💻' },
-  { id: 'dark' as Theme, label: '暗黑', icon: '🌙' },
-  { id: 'gold' as Theme, label: '鎏金', icon: '✨' },
-  { id: 'ios' as Theme, label: 'IOS', icon: '📱' },
-  { id: 'ipod' as Theme, label: 'iPod', icon: '🎵' },
-  { id: 'amber' as Theme, label: '琥珀', icon: '🟠' },
+  { id: 'tech' as Theme, label: '科技' },
+  { id: 'dark' as Theme, label: '暗黑' },
+  { id: 'gold' as Theme, label: '鎏金' },
+  { id: 'ios' as Theme, label: 'IOS' },
+  { id: 'ipod' as Theme, label: 'iPod' },
+  { id: 'amber' as Theme, label: '琥珀' },
 ];
 
 const densities = [
-  { id: 'comfortable' as Density, label: '舒适', icon: '≡' },
-  { id: 'compact' as Density, label: '紧凑', icon: '▤' },
-  { id: 'minimal' as Density, label: '极简', icon: '–' },
+  { id: 'comfortable' as Density, label: '舒适' },
+  { id: 'compact' as Density, label: '紧凑' },
+  { id: 'minimal' as Density, label: '极简' },
 ];
 
 const theme = computed(() => props.theme);
+const density = computed(() => props.density);
+const currentThemeLabel = computed(() => themes.find(item => item.id === theme.value)?.label ?? '科技');
 
-const currentThemeIcon = computed(() => themes.find(t => t.id === theme.value)?.icon || '🎨');
-const currentThemeLabel = computed(() => themes.find(t => t.id === theme.value)?.label || '');
+const closeMenus = () => {
+  isMoreMenuOpen.value = false;
+};
 
 const selectTheme = (themeId: Theme) => {
   emit('update:theme', themeId);
@@ -147,18 +155,29 @@ const selectTheme = (themeId: Theme) => {
   if (themeId !== 'tech') {
     document.documentElement.classList.add(`theme-${themeId}`);
   }
-  isThemeDropdownOpen.value = false;
+  closeMenus();
+};
+
+const selectDensity = (densityId: Density) => {
+  emit('update:density', densityId);
+  isMoreMenuOpen.value = false;
+};
+
+const cycleTheme = () => {
+  const currentIndex = themes.findIndex(item => item.id === theme.value);
+  const nextTheme = themes[(currentIndex + 1) % themes.length]?.id ?? 'tech';
+  selectTheme(nextTheme);
 };
 </script>
 
 <style scoped>
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-6px);
 }
 </style>

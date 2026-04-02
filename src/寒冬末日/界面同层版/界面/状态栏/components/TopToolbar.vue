@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section class="toolbar-card hud-panel clip-corner">
     <div class="toolbar-brand-row">
       <div class="toolbar-brand">

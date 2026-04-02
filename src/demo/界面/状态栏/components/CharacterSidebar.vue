@@ -2,11 +2,11 @@
   <div>
     <button
       @click="$emit('toggle')"
-      class="absolute left-0 top-1/2 -translate-y-1/2 z-[60] flex h-24 w-6 items-center justify-center border border-l-0 border-primary/30 bg-background/40 backdrop-blur-xl shadow-[4px_0_15px_var(--shadow-color)] text-primary hover:bg-primary/20 hover:text-glow transition-all clip-corner-sm"
+      class="absolute left-0 top-24 z-[60] hidden h-14 w-8 items-center justify-center border border-l-0 border-primary/20 bg-background/60 text-primary/75 transition-all hover:bg-primary/15 hover:text-primary xl:flex"
       :style="{ left: isOpen ? '320px' : '0', transitionDuration: '400ms' }"
     >
       <span :class="{ 'rotate-180': isOpen }" class="transition-transform duration-300">▶</span>
-      <div class="absolute -right-8 font-mono text-[10px] tracking-widest text-primary/50" style="writing-mode: vertical-rl; transform: rotate(180deg);">
+      <div class="absolute -right-8 font-mono text-[10px] tracking-widest text-primary/40" style="writing-mode: vertical-rl; transform: rotate(180deg);">
         状态面板
       </div>
     </button>

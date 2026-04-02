@@ -17,6 +17,8 @@ export interface UI_Message {
   mesId?: number;
 }
 
+export type Message = UI_Message;
+
 export type Density = 'comfortable' | 'compact' | 'minimal';
 
 export type Theme = 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber';

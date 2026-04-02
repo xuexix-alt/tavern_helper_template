@@ -17,8 +17,13 @@
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
-        <button type="button" class="ui-icon-btn ui-fullscreen-btn" @click="toggleFullscreen">
-          {{ isFullscreen ? '退出全屏' : '全屏' }}
+        <button
+          type="button"
+          class="ui-icon-btn ui-fullscreen-btn"
+          :class="{ 'is-active-fullscreen': isFullscreen }"
+          @click="toggleFullscreen"
+        >
+          {{ isFullscreen ? '✕ 退出全屏' : '全屏' }}
         </button>
       </div>
     </header>
@@ -481,7 +486,7 @@ const activeUtilityPills = computed(() => {
 
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
-  '--reader-content-max': '72rem',
+  '--reader-content-max': isFullscreen.value ? 'min(80vw, 96rem)' : '72rem',
 }));
 
 function readHostViewportHeight() {
@@ -611,7 +616,9 @@ function toggleFullscreen() {
   if (document.fullscreenElement) {
     document.exitFullscreen?.();
   } else {
-    document.documentElement.requestFullscreen().catch(console.error);
+    document.documentElement.requestFullscreen().catch(() => {
+      isFullscreen.value = false;
+    });
   }
 }
 
@@ -1518,7 +1525,15 @@ useEventListener(window, 'resize', updateReaderShellHeight, { passive: true });
 
 if (typeof window !== 'undefined' && window.visualViewport) {
   useEventListener(window.visualViewport, 'resize', updateReaderShellHeight, { passive: true });
-  useEventListener(window.visualViewport, 'scroll', updateReaderShellHeight, { passive: true });
+  // scroll 事件仅在非全屏时有意义（移动端软键盘弹出修正），全屏时跳过
+  useEventListener(
+    window.visualViewport,
+    'scroll',
+    () => {
+      if (!isFullscreen.value) updateReaderShellHeight();
+    },
+    { passive: true },
+  );
 }
 
 // 同步浏览器原生全屏状态
@@ -2517,6 +2532,13 @@ useEventListener(window, 'keydown', event => {
 .ui-host-shell.is-fullscreen .ui-topbar {
   padding: 8px 20px;
   gap: 16px;
+}
+
+/* 全屏 - 退出按钮：高亮提示，让用户能快速找到 */
+.ui-host-shell.is-fullscreen .ui-fullscreen-btn.is-active-fullscreen {
+  color: var(--demo-text-accent);
+  border-color: var(--demo-border-accent-active);
+  background: var(--demo-gradient-chip-active);
 }
 
 /* 全屏 - 内容区域：去除 padding，让 main-panel 自己居中 */

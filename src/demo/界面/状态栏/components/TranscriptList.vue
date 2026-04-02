@@ -1,29 +1,31 @@
 <template>
-  <div 
-    ref="scrollRef"
-    class="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-40 pt-4"
-    :class="[fontClass, sizeClass, leadingClass]"
-  >
-    <div class="mx-auto flex max-w-4xl flex-col px-4">
-      <div v-if="messages.length === 0" class="flex h-full flex-col items-center justify-center pt-40 text-foreground/40">
-        <div class="text-5xl mb-6 opacity-50">📖</div>
-        <div class="font-serif text-2xl italic">对话记录为空</div>
-        <div class="mt-2 font-sans text-sm tracking-wide uppercase">等待您的输入以开始</div>
+  <section class="w-full px-4 pb-10 pt-4 sm:px-6 sm:pb-14 sm:pt-6" :class="[fontClass, leadingClass]">
+    <div ref="contentRef" class="mx-auto flex max-w-[760px] flex-col gap-6">
+      <div
+        v-if="messages.length === 0"
+        class="rounded-sm border border-primary/10 bg-background/55 px-5 py-8 text-center text-foreground/60 sm:px-8 sm:py-10"
+      >
+        <div class="font-mono text-[11px] uppercase tracking-[0.3em] text-primary/55">阅读</div>
+        <div class="mt-3 font-serif text-xl text-foreground/80 sm:text-2xl">尚无剧情记录</div>
+        <div class="mt-3 text-sm leading-7 text-foreground/55 sm:text-[15px]">
+          发送第一条输入后，这里会以长正文阅读方式呈现剧情内容。
+        </div>
       </div>
-      <MessageItem 
+
+      <MessageItem
+        v-for="msg in messages"
         v-else
-        v-for="msg in messages" 
-        :key="msg.id" 
-        :message="msg" 
+        :key="msg.id"
+        :message="msg"
         :density="density"
       />
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
-import type { UI_Message, Density } from '../types/message';
+import { nextTick, ref, watch } from 'vue';
+import type { Density, UI_Message } from '../types/message';
 import { useTypography } from '../contexts/TypographyContext';
 import MessageItem from './MessageItem.vue';
 
@@ -32,17 +34,15 @@ const props = defineProps<{
   density: Density;
 }>();
 
-const scrollRef = ref<HTMLElement | null>(null);
-const { fontClass, sizeClass, leadingClass } = useTypography();
+const contentRef = ref<HTMLElement | null>(null);
+const { fontClass, leadingClass } = useTypography();
 
-watch(() => props.messages, async () => {
-  await nextTick();
-  if (scrollRef.value) {
-    const { scrollHeight, clientHeight } = scrollRef.value;
-    scrollRef.value.scrollTo({
-      top: scrollHeight - clientHeight,
-      behavior: 'smooth',
-    });
-  }
-}, { deep: true });
+watch(
+  () => props.messages.map(message => `${message.id}:${message.isStreaming ? '1' : '0'}`).join('|'),
+  async () => {
+    await nextTick();
+    const lastElement = contentRef.value?.lastElementChild as HTMLElement | null;
+    lastElement?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  },
+);
 </script>

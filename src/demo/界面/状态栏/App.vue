@@ -36,6 +36,7 @@
     <TopBar 
       v-model:density="density"
       v-model:theme="theme"
+      @open-sidebar="isSidebarOpen = true"
     />
 
     <CharacterSidebar 

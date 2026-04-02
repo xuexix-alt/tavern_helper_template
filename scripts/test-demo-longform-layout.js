@@ -19,8 +19,8 @@ const bottomInputVue = read('src/demo/界面/状态栏/components/BottomInput.vu
 
 assert(!appVue.includes('h-screen'), 'App 根容器不应继续使用 h-screen；iframe 长正文需要避免 100vh 方案。');
 assert(
-  transcriptListVue.includes('max-w-[820px]') || transcriptListVue.includes('max-w-3xl'),
-  'TranscriptList 需要收敛为长中文正文可读的稳定阅读宽度。',
+  transcriptListVue.includes('max-w-[760px]'),
+  'TranscriptList 需要进一步收窄到更适合长中文阅读的稳定列宽。',
 );
 assert(
   !transcriptListVue.includes('overflow-y-auto'),
@@ -33,6 +33,10 @@ assert(
 assert(
   !bottomInputVue.includes('absolute bottom-0 left-0 right-0'),
   'BottomInput 不应继续以绝对定位覆盖正文区域。',
+);
+assert(
+  bottomInputVue.includes('min-h-[56px]'),
+  'BottomInput 需要继续压缩默认高度，给正文腾出更多可视空间。',
 );
 assert(
   topBarVue.includes('阅读') && topBarVue.includes('更多'),
