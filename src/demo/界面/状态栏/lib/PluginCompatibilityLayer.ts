@@ -25,18 +25,18 @@ export class PluginCompatibilityLayer {
 
   async initialize() {
     if (this.isInitialized) return;
-    
+
     this.setupImageResponseListener();
-    
+
     this.isInitialized = true;
   }
 
   private setupImageResponseListener() {
     eventOn('generate-image-response' as any, (response: any) => {
       if (this.processedIds.has(response.id)) return;
-      
+
       this.processedIds.add(response.id);
-      
+
       const imageRef: ImageCacheEntry = {
         id: this.generateUniqueId(),
         requestId: response.id,
@@ -62,13 +62,16 @@ export class PluginCompatibilityLayer {
     return this.images.value.find(img => img.requestId === requestId);
   }
 
-  async sendGenerateRequest(prompt: string, options?: {
-    width?: number;
-    height?: number;
-    negativePrompt?: string;
-  }): Promise<string> {
+  async sendGenerateRequest(
+    prompt: string,
+    options?: {
+      width?: number;
+      height?: number;
+      negativePrompt?: string;
+    },
+  ): Promise<string> {
     const requestId = this.generateUniqueId();
-    
+
     const requestData = {
       id: requestId,
       prompt,

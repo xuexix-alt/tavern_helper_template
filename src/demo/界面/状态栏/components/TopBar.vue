@@ -10,7 +10,9 @@
         </div>
       </div>
 
-      <div class="hidden items-center rounded-full border border-primary/20 bg-surface/35 px-3 py-1 font-mono text-[10px] tracking-[0.22em] text-primary/75 md:flex">
+      <div
+        class="hidden items-center rounded-full border border-primary/20 bg-surface/35 px-3 py-1 font-mono text-[10px] tracking-[0.22em] text-primary/75 md:flex"
+      >
         阅读
       </div>
 
@@ -39,7 +41,9 @@
               v-if="isMoreMenuOpen"
               class="absolute right-0 top-full mt-2 flex w-56 flex-col gap-3 rounded-sm border border-primary/20 bg-background/95 p-3 shadow-[0_16px_40px_var(--shadow-color)]"
             >
-              <div class="flex items-center justify-between border-b border-primary/10 pb-2 font-mono text-[10px] tracking-[0.2em] text-primary/55">
+              <div
+                class="flex items-center justify-between border-b border-primary/10 pb-2 font-mono text-[10px] tracking-[0.2em] text-primary/55"
+              >
                 <span>阅读设置</span>
                 <span>在线</span>
               </div>
@@ -69,16 +73,18 @@
               </div>
 
               <div class="flex flex-col gap-2">
-                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">
-                  阅读密度
-                </div>
+                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">阅读密度</div>
                 <div class="grid grid-cols-3 gap-2">
                   <button
                     v-for="d in densities"
                     :key="d.id"
                     @click="selectDensity(d.id)"
                     class="rounded-sm border px-2 py-2 font-mono text-[10px] tracking-[0.16em] transition-colors"
-                    :class="density === d.id ? 'border-primary bg-primary text-background' : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'"
+                    :class="
+                      density === d.id
+                        ? 'border-primary bg-primary text-background'
+                        : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'
+                    "
                   >
                     {{ d.label }}
                   </button>
@@ -86,16 +92,18 @@
               </div>
 
               <div class="flex flex-col gap-2">
-                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">
-                  主题风格
-                </div>
+                <div class="font-mono text-[10px] tracking-[0.18em] text-primary/50">主题风格</div>
                 <div class="grid grid-cols-2 gap-2">
                   <button
                     v-for="t in themes"
                     :key="t.id"
                     @click="selectTheme(t.id)"
                     class="rounded-sm border px-2 py-2 text-left font-mono text-[10px] tracking-[0.16em] transition-colors"
-                    :class="theme === t.id ? 'border-primary bg-primary text-background' : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'"
+                    :class="
+                      theme === t.id
+                        ? 'border-primary bg-primary text-background'
+                        : 'border-primary/15 text-primary/70 hover:bg-primary/10 hover:text-primary'
+                    "
                   >
                     {{ t.label }}
                   </button>
@@ -173,7 +181,9 @@ const cycleTheme = () => {
 <style scoped>
 .dropdown-enter-active,
 .dropdown-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 .dropdown-enter-from,
 .dropdown-leave-to {

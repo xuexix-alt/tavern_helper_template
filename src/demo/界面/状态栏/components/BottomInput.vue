@@ -1,5 +1,7 @@
 <template>
-  <div class="sticky bottom-0 z-20 border-t border-primary/10 bg-background/92 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+  <div
+    class="sticky bottom-0 z-20 border-t border-primary/10 bg-background/92 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4"
+  >
     <div class="mx-auto flex max-w-[760px] flex-col gap-3">
       <div class="flex items-center justify-between gap-3 font-mono text-[10px] tracking-[0.18em] text-primary/55">
         <span>输入</span>
@@ -21,7 +23,7 @@
         class="flex items-end gap-3 rounded-sm border border-primary/20 bg-surface/45 px-3 py-2.5 transition-colors"
         :style="{
           boxShadow: isFocused ? '0 0 24px var(--shadow-color)' : '0 8px 20px var(--shadow-color)',
-          borderColor: isFocused ? 'var(--primary)' : 'color-mix(in srgb, var(--primary) 18%, transparent)'
+          borderColor: isFocused ? 'var(--primary)' : 'color-mix(in srgb, var(--primary) 18%, transparent)',
         }"
       >
         <span class="shrink-0 pt-1 font-mono text-[11px] tracking-[0.18em] text-primary/65">[SYS]&gt;</span>
@@ -41,7 +43,11 @@
           @click="handleSend"
           :disabled="!input.trim() || isStreaming"
           class="inline-flex h-11 shrink-0 items-center justify-center rounded-sm border px-4 font-mono text-[11px] tracking-[0.18em] transition-colors"
-          :class="input.trim() && !isStreaming ? 'border-primary bg-primary text-background hover:bg-primary/85' : 'cursor-not-allowed border-primary/10 text-primary/35'"
+          :class="
+            input.trim() && !isStreaming
+              ? 'border-primary bg-primary text-background hover:bg-primary/85'
+              : 'cursor-not-allowed border-primary/10 text-primary/35'
+          "
         >
           发送
         </button>
@@ -92,7 +98,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 };
 
 onMounted(() => {
-  const tavernInput = document.querySelector('#send_form textarea, #gen-form textarea, textarea.rwmb-textarea') as HTMLTextAreaElement | null;
+  const tavernInput = document.querySelector(
+    '#send_form textarea, #gen-form textarea, textarea.rwmb-textarea',
+  ) as HTMLTextAreaElement | null;
   if (!tavernInput) return;
 
   tavernInput.addEventListener('input', currentEvent => {

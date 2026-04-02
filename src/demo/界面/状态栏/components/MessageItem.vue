@@ -1,6 +1,8 @@
 <template>
   <div v-if="isSystem" class="w-full py-3">
-    <div class="rounded-sm border border-primary/15 bg-surface/45 px-4 py-3 font-mono text-[11px] tracking-[0.18em] text-primary/70">
+    <div
+      class="rounded-sm border border-primary/15 bg-surface/45 px-4 py-3 font-mono text-[11px] tracking-[0.18em] text-primary/70"
+    >
       <div class="flex items-center gap-2">
         <span class="text-primary">SYS</span>
         <span class="opacity-60">/</span>
@@ -13,13 +15,17 @@
   </div>
 
   <div v-else-if="isUser" class="flex w-full justify-end py-2">
-    <div class="max-w-[78%] border-l border-primary/20 bg-primary/[0.03] px-4 py-3 text-right text-[14px] leading-7 text-foreground/78 sm:text-[15px]">
+    <div
+      class="max-w-[78%] border-l border-primary/20 bg-primary/[0.03] px-4 py-3 text-right text-[14px] leading-7 text-foreground/78 sm:text-[15px]"
+    >
       <span class="whitespace-pre-wrap break-words">{{ message.content }}</span>
     </div>
   </div>
 
   <article v-else class="w-full py-2 sm:py-3">
-    <div class="mb-3 flex items-center gap-3 border-b border-primary/10 pb-2 font-mono text-[10px] tracking-[0.2em] text-primary/55">
+    <div
+      class="mb-3 flex items-center gap-3 border-b border-primary/10 pb-2 font-mono text-[10px] tracking-[0.2em] text-primary/55"
+    >
       <span class="rounded-sm border border-primary/15 px-2 py-1">
         {{ message.isStreaming ? '生成中' : '正文' }}
       </span>
@@ -35,7 +41,10 @@
       </div>
     </div>
 
-    <div v-if="message.meta && density !== 'minimal' && !message.isStreaming" class="mt-5 border-t border-primary/10 pt-3">
+    <div
+      v-if="message.meta && density !== 'minimal' && !message.isStreaming"
+      class="mt-5 border-t border-primary/10 pt-3"
+    >
       <button
         @click="showMeta = !showMeta"
         class="inline-flex items-center gap-2 rounded-sm border border-primary/15 px-3 py-1 font-mono text-[10px] tracking-[0.18em] text-primary/60 transition-colors hover:bg-primary/10 hover:text-primary"
@@ -44,7 +53,10 @@
       </button>
 
       <Transition name="fade">
-        <div v-if="showMeta" class="mt-3 space-y-3 rounded-sm border border-primary/10 bg-background/45 px-4 py-4 font-mono text-[11px] text-primary/70">
+        <div
+          v-if="showMeta"
+          class="mt-3 space-y-3 rounded-sm border border-primary/10 bg-background/45 px-4 py-4 font-mono text-[11px] text-primary/70"
+        >
           <div class="flex flex-wrap gap-4">
             <div v-if="message.meta.model">模型：{{ message.meta.model }}</div>
             <div v-if="message.meta.timeMs">耗时：{{ message.meta.timeMs }}ms</div>
@@ -89,7 +101,9 @@ const isSystem = computed(() => props.message.role === 'system');
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-enter-from,

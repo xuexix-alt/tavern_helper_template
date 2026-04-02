@@ -12,13 +12,7 @@
         </div>
       </div>
 
-      <MessageItem
-        v-for="msg in messages"
-        v-else
-        :key="msg.id"
-        :message="msg"
-        :density="density"
-      />
+      <MessageItem v-for="msg in messages" v-else :key="msg.id" :message="msg" :density="density" />
     </div>
   </section>
 </template>

@@ -50,7 +50,7 @@ export class TranscriptManager {
     }
 
     const chatMessages = getChatMessages(`1-${lastId}`, {
-      include_swipes: false
+      include_swipes: false,
     });
 
     this.messages.value = chatMessages.map(msg => ({
@@ -71,7 +71,7 @@ export class TranscriptManager {
 
     eventOn(tavern_events.MESSAGE_RECEIVED, async (messageId: number) => {
       if (this.streamingMessageId.value === messageId) return;
-      
+
       const msg = getChatMessages([messageId], { include_swipes: false })[0];
       if (msg) {
         const existingIndex = this.messages.value.findIndex(m => m.mesId === messageId);
