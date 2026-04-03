@@ -41,14 +41,15 @@ import {
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
+import {
+  collectReachableHostDocuments,
+  normalizeImageDataToSrc,
+  normalizeImageSrcForCompare,
+  readChatMessageDetail,
+  readHostContext,
+} from './hostBridge';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
-import {
-  buildHostTranscriptVisibilitySelector,
-  createHostTranscriptVisibilityController,
-  HOST_VISIBILITY_CLASS,
-  HOST_VISIBILITY_STYLE_ID,
-} from './hostTranscriptVisibility';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
@@ -122,7 +123,6 @@ const DEMO_THEME_CLASS_NAMES = [
 ] as const;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
-const CHATU8_PROMPT_TOKEN_RE = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 function applyDemoTheme(theme: DemoTheme) {
@@ -210,59 +210,6 @@ function buildFinalHtml(renderSource: string, message_id: number, artifactSource
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
-}
-
-function listReachableHostWindows(): Array<Window & typeof globalThis> {
-  const windows: Array<Window & typeof globalThis> = [];
-  const seen = new Set<Window>();
-  const push = (candidate: Window | null | undefined) => {
-    if (!candidate) return;
-    if (seen.has(candidate)) return;
-    seen.add(candidate);
-    windows.push(candidate as Window & typeof globalThis);
-  };
-
-  push(window);
-  try {
-    push(window.parent);
-  } catch {
-    // ignore
-  }
-  try {
-    push(window.top);
-  } catch {
-    // ignore
-  }
-
-  return windows;
-}
-
-function readHostContext(): any {
-  for (const hostWindow of listReachableHostWindows()) {
-    try {
-      const ctx = (hostWindow as any)?.SillyTavern?.getContext?.();
-      if (ctx) return ctx;
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
-
-function normalizeImageDataToSrc(input: unknown): string {
-  const raw = String(input ?? '').trim();
-  if (!raw) return '';
-  if (raw.startsWith('idb:')) return '';
-  if (raw.startsWith('data:')) return raw;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('/')) return raw;
-  return `data:image/png;base64,${raw}`;
-}
-
-function normalizeImageSrcForCompare(input: unknown): string {
-  return String(input ?? '')
-    .trim()
-    .replace(/&amp;/g, '&');
 }
 
 function readChatu8CacheEntries(messageId?: number | null): unknown[] {
@@ -358,18 +305,6 @@ function createGeneratedImageFigureHtml(
   const imageSrcAttr = image.src ? ` data-image-src="${encodeDataAttr(image.src)}"` : ' data-image-src=""';
   const imgSrcAttr = image.src ? ` src="${escapeHtml(image.src)}"` : '';
   return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
-}
-
-function readChatMessageDetail(messageId: number): any | null {
-  try {
-    const ctx = readHostContext();
-    const chat = ctx?.chat;
-    if (Array.isArray(chat)) return chat[messageId] ?? null;
-    const list = getChatMessages(messageId, { hide_state: 'all' }) as any[];
-    return Array.isArray(list) ? (list[0] ?? null) : null;
-  } catch {
-    return null;
-  }
 }
 
 function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
@@ -666,29 +601,6 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   return htmlWithImages;
 }
 
-function collectReachableHostDocuments(): Document[] {
-  const docs: Document[] = [];
-  const pushDoc = (doc: Document | null | undefined) => {
-    if (!doc) return;
-    if (docs.includes(doc)) return;
-    docs.push(doc);
-  };
-
-  pushDoc(document);
-  try {
-    pushDoc(window.parent?.document);
-  } catch {
-    // ignore
-  }
-  try {
-    pushDoc(window.top?.document);
-  } catch {
-    // ignore
-  }
-
-  return docs;
-}
-
 function resolveDisplayedMessageRoots(messageId: number): HTMLElement[] {
   const roots: HTMLElement[] = [];
   const pushRoot = (root: HTMLElement | null | undefined) => {
@@ -789,20 +701,7 @@ function resolveIframeAssistantRoots(messageId: number): HTMLElement[] {
 }
 
 function collectChatu8PromptTokens(input: string): string[] {
-  const text = String(input ?? '');
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  for (const match of text.matchAll(CHATU8_PROMPT_TOKEN_RE)) {
-    const raw = String(match[0] ?? '').trim();
-    const prompt = String(match[2] ?? '').trim();
-    if (!raw || !prompt) continue;
-    if (seen.has(raw)) continue;
-    seen.add(raw);
-    out.push(raw);
-  }
-
-  return out;
+  return collectChatu8PromptTokensShared(input);
 }
 
 function extractPromptTokensFromRoots(roots: HTMLElement[]): string[] {
@@ -1069,17 +968,7 @@ function buildGeneratedImageRefsForMessage(input: {
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
   const hostDomArtifacts = input.hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId);
 
-  // 调试日志
-  if (messageId > 0 && (promptTokens.length > 0 || hostDomArtifacts.length > 0)) {
-    console.group(`[Gallery Debug] 楼层 ${messageId} 图片收集`);
-    console.log('promptTokens:', promptTokens);
-    console.log('hostDomArtifacts:', hostDomArtifacts);
-    console.log('rawMessage 前100字符:', input.rawMessage.slice(0, 100));
-    console.groupEnd();
-  }
-
-  // 简单路径：直接按 promptTokens 数量创建 refs，src 按顺序从 hostDomArtifacts 映射
-  // 忽略 nativeFirstMembers 和 buildGeneratedImageMembership，直接构建
+  // 按 promptTokens 数量创建 refs，src 按顺序从 hostDomArtifacts 映射
   const domSrcs = hostDomArtifacts.map(a => a.src);
   const result: GeneratedImageRef[] = [];
 
@@ -1368,7 +1257,6 @@ export function useStreamingDemo() {
   let generatedImageDomMutationTimer = 0;
   let generatedImageDomObserver: MutationObserver | null = null;
   let hostPluginMutationObservers: MutationObserver[] = [];
-  const hostTranscriptVisibilityController = createHostTranscriptVisibilityController();
   let lifecycleEchoSuppressUntilMs = 0;
   let lifecycleEchoSuppressedHostEvents: string[] = [];
 
@@ -1452,32 +1340,10 @@ export function useStreamingDemo() {
   }
 
   const visibleTranscript = computed(() => {
-    if (filterMode.value === 'all') {
-      console.log('[visibleTranscript Debug] filterMode=all, transcript长度=', transcript.value.length);
-      return transcript.value;
-    }
-    const filtered = transcript.value.filter(
+    if (filterMode.value === 'all') return transcript.value;
+    return transcript.value.filter(
       item => item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id,
     );
-    console.log(
-      '[visibleTranscript Debug] filterMode=',
-      filterMode.value,
-      ', transcript长度=',
-      transcript.value.length,
-      ', filtered长度=',
-      filtered.length,
-    );
-    if (filtered.length !== transcript.value.length) {
-      for (let i = 0; i < transcript.value.length; i++) {
-        const item = transcript.value[i];
-        const kept =
-          item.role === 'assistant' || item.isOpening || item.message_id === latestUserItem.value?.message_id;
-        if (!kept) {
-          console.log(`  [${i}] messageId=${item.message_id}, role=${item.role}, isOpening=${item.isOpening} - 被过滤`);
-        }
-      }
-    }
-    return filtered;
   });
 
   const transcriptStats = computed(() => ({
@@ -1622,47 +1488,6 @@ export function useStreamingDemo() {
       if (item.role === 'assistant') return item;
     }
     return null;
-  });
-
-  const latestAssistantSwipeState = computed(() => {
-    try {
-      const list = getChatMessages('0-{{lastMessageId}}', { include_swipes: true, hide_state: 'all' }) as any[];
-      const messages = Array.isArray(list) ? list : [];
-
-      for (let indexFromEnd = messages.length - 1; indexFromEnd >= 0; indexFromEnd -= 1) {
-        const message = messages[indexFromEnd];
-        const messageId = Math.trunc(Number(message?.message_id));
-        if (!Number.isFinite(messageId)) continue;
-        if (((message?.role as string) || 'assistant') !== 'assistant') continue;
-
-        const swipes = Array.isArray(message?.swipes) ? message.swipes : [];
-        const count = swipes.length;
-        if (count <= 1) continue;
-
-        const rawIndex = Number(message?.swipe_id);
-        const index = Number.isFinite(rawIndex) ? Math.min(Math.max(Math.trunc(rawIndex), 0), count - 1) : count - 1;
-        return {
-          messageId,
-          count,
-          index,
-          canPrev: index > 0,
-          canNext: index < count - 1,
-        };
-      }
-
-      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
-    } catch {
-      return { messageId: null as number | null, count: 0, index: 0, canPrev: false, canNext: false };
-    }
-  });
-
-  const latestAssistantSwipeMessageId = computed(() => latestAssistantSwipeState.value.messageId);
-  const canSwipeLatestAssistantPrev = computed(() => latestAssistantSwipeState.value.canPrev);
-  const canSwipeLatestAssistantNext = computed(() => latestAssistantSwipeState.value.canNext);
-  const latestAssistantSwipeLabel = computed(() => {
-    const swipeState = latestAssistantSwipeState.value;
-    if (swipeState.messageId == null || swipeState.count <= 1) return '';
-    return `${swipeState.index + 1}/${swipeState.count}`;
   });
 
   const readerSummary = computed<ReaderSummary>(() => {
@@ -1819,63 +1644,37 @@ export function useStreamingDemo() {
   }
 
   function collectHostDocuments(): Document[] {
-    const docs: Document[] = [];
-    const push = (doc: Document | null | undefined) => {
-      if (!doc || docs.includes(doc)) return;
-      docs.push(doc);
-    };
-
-    push(document);
-    try {
-      push(window.parent?.document);
-    } catch {
-      // ignore
-    }
-    try {
-      push(window.top?.document);
-    } catch {
-      // ignore
-    }
-    return docs;
+    return collectReachableHostDocuments();
   }
 
-  function setHostTranscriptVisibility(active: boolean) {
-    const containerMessageId = readCurrentContainerMessageId();
-    for (const doc of collectHostDocuments()) {
-      const body = doc.body;
-      const head = doc.head;
-      if (!body || !head) continue;
-
-      const existing = doc.getElementById(HOST_VISIBILITY_STYLE_ID);
-      if (active) {
-        if (!existing) {
-          const style = doc.createElement('style');
-          style.id = HOST_VISIBILITY_STYLE_ID;
-          style.textContent = `
-            ${buildHostTranscriptVisibilitySelector(containerMessageId ?? 0)} {
-              position: absolute !important;
-              left: -200vw !important;
-              top: 0 !important;
-              width: 1px !important;
-              max-width: 1px !important;
-              height: 1px !important;
-              max-height: 1px !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow: hidden !important;
-              opacity: 0 !important;
-              pointer-events: none !important;
-              clip: rect(0 0 0 0) !important;
-              clip-path: inset(50%) !important;
-            }
-          `;
-          head.appendChild(style);
-        }
-        body.classList.add(HOST_VISIBILITY_CLASS);
-      } else {
-        body.classList.remove(HOST_VISIBILITY_CLASS);
-        existing?.remove();
-      }
+  /**
+   * 将容器楼层之后的所有宿主楼层设为 is_hidden，
+   * 让酒馆不渲染它们的 DOM（包括其中的 iframe 前端界面），
+   * 同层 UI 通过 getChatMessages({ hide_state: 'all' }) 自行读取并渲染。
+   */
+  async function applyHidePolicy(reason: string) {
+    if (!isOpeningWorkbenchHost || readCurrentContainerMessageId() !== 0) return;
+    if (hidePolicyRunning) {
+      hidePolicyRerun = true;
+      return;
+    }
+    hidePolicyRunning = true;
+    try {
+      do {
+        hidePolicyRerun = false;
+        const patch = readMessagesAfterContainer()
+          .filter(item => item.is_hidden !== true)
+          .map(item => ({ message_id: item.message_id, is_hidden: true }));
+        if (patch.length === 0) continue;
+        await setChatMessages(patch, { refresh: 'none' });
+      } while (hidePolicyRerun);
+    } catch (error) {
+      console.warn('[stream-demo] hide policy failed', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      hidePolicyRunning = false;
     }
   }
 
@@ -2040,66 +1839,48 @@ export function useStreamingDemo() {
     }
   }
 
-  function readMessagesAfterContainer(): BaseChatMessage[] {
-    const containerId = readCurrentContainerMessageId();
+  /**
+   * 获取 chat 数组的真实最后一个索引，不受 is_hidden 影响。
+   */
+  function getTrueChatLength(): number {
     try {
-      const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
-      return (Array.isArray(list) ? list : [])
-        .map(message => ({
-          message_id: Math.trunc(Number(message?.message_id)),
-          role: ((message?.role as string) || 'assistant') as BaseChatMessage['role'],
-          message: String(message?.message ?? ''),
-          is_hidden: message?.is_hidden === true,
-        }))
-        .filter(item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId));
+      const ctx = readHostContext();
+      const chat = ctx?.chat;
+      if (Array.isArray(chat) && chat.length > 0) return chat.length - 1;
+    } catch {
+      /* ignore */
+    }
+    return getLastMessageId?.() ?? 0;
+  }
+
+  /**
+   * 直接从宿主 context.chat 数组读取所有消息，绕过 getChatMessages 的 hide_state 过滤问题。
+   * 返回的对象同时包含宿主原始字段和酒馆助手 API 格式字段，确保下游代码兼容。
+   */
+  function readAllChatMessagesRaw(): any[] {
+    try {
+      const ctx = readHostContext();
+      const chat = ctx?.chat;
+      if (!Array.isArray(chat)) return [];
+      return chat.map((message: any, index: number) => ({
+        ...message,
+        message_id: index,
+        role: message?.is_user ? 'user' : message?.is_system ? 'system' : 'assistant',
+        message: String(message?.mes ?? ''),
+        is_hidden: message?.is_hidden === true,
+      }));
     } catch {
       return [];
     }
   }
 
-  function resolveHidePolicyRefresh(reason: string): HideRefreshMode {
-    if (reason === 'mounted') return 'affected';
-    if (reason.startsWith('external:chat_id_changed')) return 'affected';
-    if (reason.startsWith('external:message_sent')) return 'affected';
-    if (reason.startsWith('external:message_received')) return 'affected';
-    if (reason.startsWith('external:more_messages_loaded')) return 'affected';
-    return 'none';
-  }
-
-  function resolveHidePolicyDelay(reason: string): number {
-    return resolveHidePolicyRefresh(reason) === 'affected' ? 0 : 80;
-  }
-
-  async function applyHidePolicy(reason: string) {
-    if (!isOpeningWorkbenchHost || readCurrentContainerMessageId() !== 0) return;
-    if (hostTranscriptVisibilityController.isSuspended()) {
-      setHostTranscriptVisibility(false);
-      return;
-    }
-    setHostTranscriptVisibility(true);
-    if (hidePolicyRunning) {
-      hidePolicyRerun = true;
-      return;
-    }
-    hidePolicyRunning = true;
-    try {
-      do {
-        hidePolicyRerun = false;
-        const refresh = resolveHidePolicyRefresh(reason);
-        const patch = readMessagesAfterContainer()
-          .filter(item => item.is_hidden === true)
-          .map(item => ({ message_id: item.message_id, is_hidden: false }));
-        if (patch.length === 0) continue;
-        await setChatMessages(patch, { refresh });
-      } while (hidePolicyRerun);
-    } catch (error) {
-      console.warn('[stream-demo] hide policy failed', {
-        reason,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      hidePolicyRunning = false;
-    }
+  function readMessagesAfterContainer(): BaseChatMessage[] {
+    const containerId = readCurrentContainerMessageId();
+    // 直接从宿主 chat 数组读取，绕过 getChatMessages 对 is_hidden 的潜在过滤
+    const all = readAllChatMessagesRaw();
+    return all.filter(
+      item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
+    );
   }
 
   function queueHidePolicy(reason: string) {
@@ -2107,7 +1888,7 @@ export function useStreamingDemo() {
     hidePolicyTimer = window.setTimeout(() => {
       hidePolicyTimer = 0;
       void applyHidePolicy(reason);
-    }, resolveHidePolicyDelay(reason));
+    }, 0);
   }
 
   function queueExternalSync(reason: string) {
@@ -2123,23 +1904,33 @@ export function useStreamingDemo() {
       });
       rebuildTranscript(scopedReason);
       queueHidePolicy(scopedReason);
-    }, resolveHidePolicyDelay(scopedReason));
+    }, 80);
   }
 
+  /**
+   * 临时将容器之后的楼层设为 is_hidden: false，执行 action，再恢复 is_hidden: true。
+   * 用于图片桥接等需要宿主 DOM 可见的场景。
+   */
   async function withHostTranscriptVisible<T>(action: () => Promise<T> | T): Promise<T> {
-    const release = hostTranscriptVisibilityController.suspend();
     if (hidePolicyTimer) {
       window.clearTimeout(hidePolicyTimer);
       hidePolicyTimer = 0;
     }
-    setHostTranscriptVisibility(false);
+    // 临时取消隐藏
+    const messagesToReveal = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => item.message_id);
+    if (messagesToReveal.length > 0) {
+      await setChatMessages(
+        messagesToReveal.map(id => ({ message_id: id, is_hidden: false })),
+        { refresh: 'none' },
+      );
+    }
     try {
       return await action();
     } finally {
-      release();
-      if (!hostTranscriptVisibilityController.isSuspended()) {
-        queueHidePolicy('bridge_resume');
-      }
+      // 恢复隐藏
+      queueHidePolicy('bridge_resume');
     }
   }
 
@@ -2302,8 +2093,11 @@ export function useStreamingDemo() {
   }
 
   function listAllChatMessages() {
+    const raw = readAllChatMessagesRaw();
+    if (raw.length > 0) return raw;
     try {
-      const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
+      const lastId = getTrueChatLength();
+      const list = getChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[];
       return Array.isArray(list) ? list : [];
     } catch {
       return [];
@@ -2596,39 +2390,15 @@ export function useStreamingDemo() {
       traceId,
     );
     try {
-      const list = getChatMessages('0-{{lastMessageId}}', { hide_state: 'all' }) as any[];
+      // 直接从宿主 chat 数组读取，确保能拿到 is_hidden 的楼层
+      const rawMessages = readAllChatMessagesRaw();
+      const lastId = rawMessages.length > 0 ? rawMessages[rawMessages.length - 1].message_id : getTrueChatLength();
+      const list =
+        rawMessages.length > 0 ? rawMessages : (getChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[]);
       const all = Array.isArray(list) ? list : [];
-
-      // 调试日志：检查消息读取
-      if (all.length > 0) {
-        console.group(`[Transcript Debug] 共读取 ${all.length} 条消息`);
-        const assistantMessages = all.filter(m => (m?.role as string) === 'assistant');
-        console.log('总消息数:', all.length);
-        console.log('Assistant 消息数:', assistantMessages.length);
-        console.log('消息 ID 范围:', {
-          min: Math.min(...all.map(m => Number(m?.message_id) || 0)),
-          max: Math.max(...all.map(m => Number(m?.message_id) || 0)),
-        });
-        console.log('containerId:', containerId);
-        console.groupEnd();
-      }
 
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
-
-      console.log('[Opening Payload Debug]', {
-        state: openingPayload.value.state,
-        opening_result_message_id: openingPayload.value.opening_result_message_id,
-        hasPersistedOpeningResult:
-          Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
-          Number(openingPayload.value.opening_result_message_id) > 0,
-        shouldPushOpeningItem:
-          openingPayload.value.state !== 'placeholder' &&
-          !(
-            Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
-            Number(openingPayload.value.opening_result_message_id) > 0
-          ),
-      });
 
       if (containerId === 0) {
         const hasPersistedOpeningResult =
@@ -2657,22 +2427,12 @@ export function useStreamingDemo() {
         }
       }
 
-      const loopLog: { id: number; role: string; skipped: string | null }[] = [];
       for (const message of all) {
         const message_id = Number(message?.message_id);
-        if (!Number.isFinite(message_id)) {
-          loopLog.push({ id: message_id, role: 'unknown', skipped: 'notFinite' });
-          continue;
-        }
+        if (!Number.isFinite(message_id)) continue;
         const id = Math.trunc(message_id);
-        if (containerId != null && id <= containerId) {
-          loopLog.push({ id, role: String(message?.role ?? 'unknown'), skipped: 'id <= containerId' });
-          continue;
-        }
-        if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) {
-          loopLog.push({ id, role: String(message?.role ?? 'unknown'), skipped: 'isOpeningSeed' });
-          continue;
-        }
+        if (containerId != null && id <= containerId) continue;
+        if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
         const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
         const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
         if (role === 'assistant') nextLatestAssistantId = id;
@@ -2689,32 +2449,10 @@ export function useStreamingDemo() {
             status: status.value,
           }),
         );
-        loopLog.push({ id, role, skipped: null });
-      }
-      console.log(`[Loop Debug] allLength=${all.length}, normalizedLength=${normalized.length}`);
-      for (let i = 0; i < all.length; i++) {
-        const msg = all[i];
-        const id = Math.trunc(Number(msg?.message_id) || 0);
-        const role = String(msg?.role ?? 'unknown');
-        const isSeed = isCurrentOpeningSeedMessageByPayload(msg, openingPayload.value);
-        const isAsst = isCurrentOpeningAssistantMessageByPayload(msg, openingPayload.value);
-        const isSkipId = containerId != null && id <= containerId;
-        console.log(`  msg[${i}] id=${id} role=${role} seed=${isSeed} asst=${isAsst} skipId=${isSkipId}`);
       }
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
-      console.group(`[Transcript Build] 重建完成`);
-      console.log('chatCount (酒馆消息数):', all.length);
-      console.log('normalizedCount (处理后):', normalized.length);
-      console.log('transcriptCount (最终):', transcript.value.length);
-      console.log('containerId:', containerId);
-      console.log('filterMode:', filterMode.value);
-      for (let i = 0; i < transcript.value.length; i++) {
-        const item = transcript.value[i];
-        console.log(`  [${i}] messageId=${item.message_id}, role=${item.role}, isOpening=${item.isOpening}`);
-      }
-      console.groupEnd();
       recordLifecycleTrace(
         'rebuildTranscript',
         'done',
@@ -2798,40 +2536,49 @@ export function useStreamingDemo() {
     latestPatchedMessage = nextMessage;
 
     patchQueue = patchQueue.then(async () => {
-      recordLifecycleTrace(
-        'patchAssistantMessage',
-        'commit_start',
-        {
+      try {
+        recordLifecycleTrace(
+          'patchAssistantMessage',
+          'commit_start',
+          {
+            phase,
+            sequence,
+            messageId,
+            nextSignature,
+          },
+          traceId,
+        );
+        await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
+          refresh: resolveAssistantMessageRefreshMode(phase),
+        });
+        upsertTranscriptItem(
+          createLocalTranscriptItem({
+            id: messageId,
+            role: 'assistant',
+            raw: nextMessage,
+            hidden: false,
+          }),
+        );
+        recordLifecycleTrace(
+          'patchAssistantMessage',
+          'commit_done',
+          {
+            phase,
+            sequence,
+            messageId,
+            nextSignature,
+            transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
+          },
+          traceId,
+        );
+      } catch (error) {
+        console.warn('[stream-demo] patchAssistantMessage commit failed', {
           phase,
           sequence,
           messageId,
-          nextSignature,
-        },
-        traceId,
-      );
-      await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
-        refresh: resolveAssistantMessageRefreshMode(phase),
-      });
-      upsertTranscriptItem(
-        createLocalTranscriptItem({
-          id: messageId,
-          role: 'assistant',
-          raw: nextMessage,
-          hidden: false,
-        }),
-      );
-      recordLifecycleTrace(
-        'patchAssistantMessage',
-        'commit_done',
-        {
-          phase,
-          sequence,
-          messageId,
-          nextSignature,
-          transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
-        },
-        traceId,
-      );
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
     await patchQueue;
     if (
@@ -2999,6 +2746,17 @@ export function useStreamingDemo() {
       // 在 generate() 前主动创建 assistant 占位符，防止 ST 流式回调覆盖已有 assistant 消息
       await ensureAssistantPlaceholderReady('first_token');
 
+      // 临时取消隐藏，让 generate() 能读到完整聊天历史
+      const hiddenIds = readMessagesAfterContainer()
+        .filter(item => item.is_hidden === true)
+        .map(item => item.message_id);
+      if (hiddenIds.length > 0) {
+        await setChatMessages(
+          hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
+          { refresh: 'none' },
+        );
+      }
+
       const generatePromise = generate({
         should_stream: true,
         max_chat_history: 'all',
@@ -3013,6 +2771,15 @@ export function useStreamingDemo() {
       );
 
       const result = String(await generatePromise).trim();
+
+      // 生成完成后重新隐藏
+      if (hiddenIds.length > 0) {
+        await setChatMessages(
+          hiddenIds.map(id => ({ message_id: id, is_hidden: true })),
+          { refresh: 'none' },
+        );
+      }
+
       finalText.value = result;
       status.value = 'persisting';
       if (
@@ -3165,13 +2932,13 @@ export function useStreamingDemo() {
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
-      busy.value = false;
       toastr?.error?.(`改词失败：${errorText.value}`);
       appendLog('error', '改词失败', errorText.value || '未知错误');
       return;
+    } finally {
+      busy.value = false;
     }
 
-    busy.value = false;
     await triggerNativeRegenerate(targetId);
   }
 
@@ -3181,23 +2948,6 @@ export function useStreamingDemo() {
       return;
     }
     await deleteFromMessageId(item.message_id);
-  }
-
-  async function swipeLatestAssistant(direction: 'prev' | 'next') {
-    const swipeState = latestAssistantSwipeState.value;
-    const messageId = swipeState.messageId;
-    if (messageId == null) {
-      toastr?.info?.('当前最新 assistant 没有可切换的 swipe');
-      return;
-    }
-    if (direction === 'prev' && !canSwipeLatestAssistantPrev.value) return;
-    if (direction === 'next' && !canSwipeLatestAssistantNext.value) return;
-    const nextSwipeId = direction === 'prev' ? swipeState.index - 1 : swipeState.index + 1;
-    if (nextSwipeId < 0 || nextSwipeId >= swipeState.count) return;
-    await setChatMessages([{ message_id: messageId, swipe_id: nextSwipeId, is_hidden: false }], { refresh: 'none' });
-    appendLog('action', '切换 Swipe', `${direction === 'prev' ? '切到上一页' : '切到下一页'}（楼层 #${messageId}）`);
-    rebuildTranscript();
-    queueHidePolicy(`swipe:${direction}`);
   }
 
   async function generateOpening() {
@@ -3272,11 +3022,31 @@ export function useStreamingDemo() {
           opening_result_message_id: placeholderResultId,
         };
       }
-      console.log('[Opening Stream Debug]', { use_stream: openingPayload.value.use_stream });
       if (openingPayload.value.use_stream) {
         bindOpeningGenerationListeners();
       }
+
+      // 临时取消隐藏，让 generate() 能读到完整聊天历史
+      const openingHiddenIds = readMessagesAfterContainer()
+        .filter(item => item.is_hidden === true)
+        .map(item => item.message_id);
+      if (openingHiddenIds.length > 0) {
+        await setChatMessages(
+          openingHiddenIds.map(id => ({ message_id: id, is_hidden: false })),
+          { refresh: 'none' },
+        );
+      }
+
       const result = await generate(buildOpeningGenerateConfig(openingPreset.value, openingPayload.value));
+
+      // 生成完成后重新隐藏
+      if (openingHiddenIds.length > 0) {
+        await setChatMessages(
+          openingHiddenIds.map(id => ({ message_id: id, is_hidden: true })),
+          { refresh: 'none' },
+        );
+      }
+
       const nextResult = {
         raw: String(result ?? '').trim(),
         content: extractOpeningContent(result),
@@ -3591,7 +3361,17 @@ export function useStreamingDemo() {
 
   onBeforeUnmount(() => {
     if (isOpeningWorkbenchHost) {
-      setHostTranscriptVisibility(false);
+      // 卸载时恢复所有楼层可见，让酒馆原生渲染接管
+      try {
+        const hiddenMessages = readMessagesAfterContainer()
+          .filter(item => item.is_hidden === true)
+          .map(item => ({ message_id: item.message_id, is_hidden: false }));
+        if (hiddenMessages.length > 0) {
+          void setChatMessages(hiddenMessages, { refresh: 'all' });
+        }
+      } catch {
+        // best-effort cleanup
+      }
     }
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
@@ -3614,21 +3394,6 @@ export function useStreamingDemo() {
   const galleryGroups = computed<GalleryGroup[]>(() => {
     void transcriptDomRevision.value;
 
-    // 调试日志：检查 transcript 中的消息
-    const assistantItems = transcript.value.filter(item => item.role === 'assistant');
-    const nonOpeningItems = assistantItems.filter(item => !item.isOpening);
-    console.group(
-      `[Gallery Debug] transcript 状态: 总数=${transcript.value.length}, assistant=${assistantItems.length}, 非opening=${nonOpeningItems.length}`,
-    );
-    for (let i = 0; i < transcript.value.length; i++) {
-      const item = transcript.value[i];
-      if (item.role === 'assistant') {
-        console.log(
-          `  [${i}] messageId=${item.message_id}, isOpening=${item.isOpening}, raw长度=${item.raw?.length || 0}`,
-        );
-      }
-    }
-
     const groups: GalleryGroup[] = [];
     for (const item of transcript.value) {
       if (item.role !== 'assistant' || item.isOpening) continue;
@@ -3639,9 +3404,6 @@ export function useStreamingDemo() {
       if (images.length === 0) continue;
       groups.push({ messageId: item.message_id, images });
     }
-
-    console.log(`[Gallery Debug] 最终收集到 ${groups.length} 组图片`);
-    console.groupEnd();
 
     return groups;
   });
@@ -3674,10 +3436,6 @@ export function useStreamingDemo() {
     editingUserMessageId,
     editingUserDraft,
     rollbackConfirmMessageId,
-    latestAssistantSwipeMessageId,
-    canSwipeLatestAssistantPrev,
-    canSwipeLatestAssistantNext,
-    latestAssistantSwipeLabel,
     openingPreset,
     openingPayload,
     openingWorldModes,
@@ -3708,7 +3466,6 @@ export function useStreamingDemo() {
     requestRollbackDelete,
     cancelRollbackDelete,
     confirmRollbackDelete,
-    swipeLatestAssistant,
     setReadingMode,
     toggleOpeningExpanded,
     rebuildTranscript,

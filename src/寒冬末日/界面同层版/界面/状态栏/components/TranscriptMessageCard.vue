@@ -152,12 +152,12 @@
 
 <script setup lang="ts">
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
-import { loadImage } from '../imageStore';
-import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
-import { hydratePersistedImageElements } from '../transcriptImagePersistence';
-import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
+import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
+import { loadImage } from '../imageStore';
+import { hydratePersistedImageElements } from '../transcriptImagePersistence';
+import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -168,10 +168,6 @@ const props = defineProps<{
   editDraft?: string;
   showEditRegenerate?: boolean;
   showRollbackConfirm?: boolean;
-  showSwipeControls?: boolean;
-  swipeLabel?: string;
-  canSwipePrev?: boolean;
-  canSwipeNext?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -187,7 +183,6 @@ const emit = defineEmits<{
   (event: 'request-rollback', item: TranscriptItem): void;
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
-  (event: 'swipe', direction: 'prev' | 'next'): void;
 }>();
 
 const metaOpen = ref(false);

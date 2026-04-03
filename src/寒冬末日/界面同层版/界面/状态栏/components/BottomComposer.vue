@@ -127,7 +127,6 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void;
   (event: 'submit', value?: string): void;
   (event: 'roll'): void;
-  (event: 'swipe', direction: 'prev' | 'next'): void;
   (event: 'refresh'): void;
   (event: 'open-role', key: string): void;
 }>();

@@ -1,3 +1,8 @@
+/**
+ * @deprecated 已废弃。CSS 离屏隐藏方案已被 is_hidden: true 方案替代。
+ * 保留文件仅供参考，不再被任何模块导入。
+ */
+
 export const HOST_VISIBILITY_CLASS = 'stream-demo-hide-host-chat';
 export const HOST_VISIBILITY_STYLE_ID = 'stream-demo-hide-host-chat-style';
 

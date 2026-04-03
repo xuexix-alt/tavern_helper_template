@@ -1,154 +1,1272 @@
-[metacognition]
-“哥哥，今天的故事听起来好冷啊……不过没关系，我会用最温暖的文字把这一切都记录下来的。”我把剧本摊在明月哥哥膝盖上，尾巴尖调皮地勾了勾他的脚踝，“既然是开篇，那我就要好好地把这个白色的、残酷的世界画出来给哥哥看哦。嗯，第三人称，瑞峰市，星穹国际公寓2001室。现在的我是秋青子，也是哥哥的笔。”
+17:07:15.894  User Agent Object
+17:07:16.475  No input elements found for key: api_key_comfy_runpod
+updateInputDataLists @ secrets.js:571
+17:07:16.484  Loading locale data from ./locales/zh-cn.json
+17:07:16.551  Registering preset manager for API: kobold
+17:07:16.551  Registering preset manager for API: novel
+17:07:16.551  Registering preset manager for API: openai
+17:07:16.551  Registering preset manager for API: textgenerationwebui
+17:07:16.551  Registering preset manager for API: context
+17:07:16.551  Registering preset manager for API: instruct
+17:07:16.551  Registering preset manager for API: sysprompt
+17:07:16.551  Registering preset manager for API: reasoning
+17:07:17.621  Event emitted: settings_loaded_before
+17:07:17.623  Preset samplers order: 6,0,1,2,3,4,5
+17:07:17.625  Preset samplers order: 1,5,0,2,3,4
+17:07:17.629  Text Completions: loading selected samplers
+17:07:17.649  Preset samplers order: 6,0,1,3,4,2,5
+17:07:17.650  Preset samplers order:  Array(20)
+17:07:17.650  Preset samplers order:  Array(12)
+17:07:17.650  Preset samplers order:  Array(14)
+17:07:17.718  Event emitted: chatcompletion_model_changed
+17:07:17.728  Event emitted: chatcompletion_source_changed
+17:07:17.743  poweruser.chat_display 1
+17:07:17.743  applying bubblechat
+17:07:17.758  aborting MUI reset 0
+17:07:17.764  aborting MUI reset 0
+17:07:17.784  Setting context_story_string to {{#if anchorBefore}}{{anchorBefore}}
+{{/if}}{{#if system}}{{system}}
+{{/if}}{{#if wiBefore}}{{wiBefore}}
+{{/if}}{{#if description}}{{description}}
+{{/if}}{{#if personality}}{{char}}'s personality: {{personality}}
+{{/if}}{{#if scenario}}Scenario: {{scenario}}
+{{/if}}{{#if wiAfter}}{{wiAfter}}
+{{/if}}{{#if persona}}{{persona}}
+{{/if}}{{#if anchorAfter}}{{anchorAfter}}
+{{/if}}
+17:07:17.784  Setting context_example_separator to ***
+17:07:17.784  Setting context_chat_start to ***
+17:07:17.784  Setting context_use_stop_strings to true
+17:07:17.784  Setting context_names_as_stop_strings to true
+17:07:17.784  Setting context_story_string_position to 0
+17:07:17.784  Setting context_story_string_position to 0
+17:07:17.789  Setting context_story_string_depth to 1
+17:07:17.789  Setting context_story_string_role to 0
+17:07:17.792  skipping movingUI state load
+17:07:17.804  Event emitted: settings_loaded_after
+17:07:17.805  value? openai
+17:07:17.805  hiding settings?
+17:07:17.806  returning full samplers array
+17:07:17.821  Event emitted: extensions_first_load
+17:07:17.864  Activating extension translate
+17:07:17.871  Activating extension connection-manager
+17:07:17.882  Activating extension third-party/ST-Prompt-Template
+17:07:18.074  Window resize: 1707x799 -> 1707x799
+17:07:18.074  Zoom: 1.5, X:1707, Y:799, original: 2560.5x1198.5
+17:07:18.135  Activating extension regex
+17:07:18.164  ST-Prompt-Template initialized
+17:07:18.172  Activating extension attachments
+17:07:18.203  Activating extension caption
+17:07:18.227  Activating extension expressions
+17:07:18.261  [Prompt Template] Faker loaded
+17:07:18.261  Array(161)
+17:07:18.279  [Prompt Template] xxhash loaded
+17:07:18.283  skipping movingUI state load
+17:07:18.285  Activating extension gallery
+17:07:18.318  Activating extension third-party/st-chatu8
+17:07:21.688  EventEmitter: Cannot listen to undefined event
+EventEmitter.on @ eventemitter.js:46
+（匿名） @ stream_generate.js:1
+17:07:21.693  Activating extension memory
+17:07:21.704  Settings not ready, scheduling another save
+saveSettings @ script.js:7945
+17:07:21.727  Activating extension stable-diffusion
+17:07:21.738  Initializing..JSZip.
+17:07:21.806  Summary has no content
+17:07:21.813  Summary has no content
+17:07:21.821  Summary has no content
+17:07:21.869  Summary has no content
+17:07:21.911  Initializing..CryptoJS.
+17:07:21.915  Activating extension tts
+17:07:21.923  Initializing..msgpack.
+17:07:21.926  Initializing chatu extension.
+17:07:21.928  Initializing chatu extension. Object
+17:07:21.929  [st-chatu8] 全局错误处理器已安装
+17:07:21.940  [Stego] 开始初始化 jiuguanStorage...
+17:07:22.101  [Stego] 找到隐写图片，开始解码...
+17:07:22.140  [Stego] 从隐写图片加载数据成功，共 468 个条目
+17:07:22.289  Activating extension quick-reply
+17:07:22.319  Using default TTS Provider settings
+17:07:22.319  SystemTTS: Settings loaded
+17:07:22.370  [CharRef] Old character reference UI elements not found - using new system
+17:07:22.380  === applyFabSettings called ===
+17:07:22.380  enable_chatu8_fab: true Type: boolean
+17:07:22.380  enable_chatu8_fab_video: false Type: boolean
+17:07:22.380  chatu8_fab_video_paths: Object
+17:07:22.414  === applyFabSettings called ===
+17:07:22.414  enable_chatu8_fab: true Type: boolean
+17:07:22.414  enable_chatu8_fab_video: false Type: boolean
+17:07:22.414  chatu8_fab_video_paths: Object
+17:07:22.423  [VibeGroup] Validation complete: Object
+17:07:22.425  [st-chatu8] autoLLMClick module initialized
+17:07:22.426  [ComfyUI KeepAlive] 初始化保活模块
+17:07:22.429  [TaskManager] 初始化完成
+17:07:22.454  [Character] Initializing character settings...
+17:07:22.476  [Character] Initializing tag autocomplete...
+17:07:22.477  [Character] Field char_photo_prompt: textarea=true, results=true
+17:07:22.477  [Character] Successfully bound autocomplete to char_photo_prompt
+17:07:22.477  [Character] Field char_characterTraits: textarea=true, results=true
+17:07:22.477  [Character] Successfully bound autocomplete to char_characterTraits
+17:07:22.477  [Character] Field char_facialFeatures: textarea=true, results=true
+17:07:22.477  [Character] Successfully bound autocomplete to char_facialFeatures
+17:07:22.477  [Character] Field char_facialFeaturesBack: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_facialFeaturesBack
+17:07:22.478  [Character] Field char_upperBodySFW: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_upperBodySFW
+17:07:22.478  [Character] Field char_upperBodySFWBack: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_upperBodySFWBack
+17:07:22.478  [Character] Field char_fullBodySFW: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_fullBodySFW
+17:07:22.478  [Character] Field char_fullBodySFWBack: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_fullBodySFWBack
+17:07:22.478  [Character] Field char_upperBodyNSFW: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_upperBodyNSFW
+17:07:22.478  [Character] Field char_upperBodyNSFWBack: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_upperBodyNSFWBack
+17:07:22.478  [Character] Field char_fullBodyNSFW: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_fullBodyNSFW
+17:07:22.478  [Character] Field char_fullBodyNSFWBack: textarea=true, results=true
+17:07:22.478  [Character] Successfully bound autocomplete to char_fullBodyNSFWBack
+17:07:22.478  [Character] Field outfit_upperBody: textarea=true, results=true
+17:07:22.479  [Character] Successfully bound autocomplete to outfit_upperBody
+17:07:22.479  [Character] Field outfit_upperBodyBack: textarea=true, results=true
+17:07:22.479  [Character] Successfully bound autocomplete to outfit_upperBodyBack
+17:07:22.479  [Character] Field outfit_fullBody: textarea=true, results=true
+17:07:22.479  [Character] Successfully bound autocomplete to outfit_fullBody
+17:07:22.479  [Character] Field outfit_fullBodyBack: textarea=true, results=true
+17:07:22.479  [Character] Successfully bound autocomplete to outfit_fullBodyBack
+17:07:22.479  [Character] Tag autocomplete initialized
+17:07:22.480  [Character] Character settings initialized
+17:07:22.508  [st-chatu8] 加载正则配置: Object
+17:07:22.516  [st-chatu8] 渲染正则条目: Object
+17:07:23.002  [DB] 数据库 'chatu8_gallery' v6 打开成功。
+17:07:23.073  [DB] 数据库 'chatu8_gallery' v6 打开成功。
+17:07:23.074  [DB] 数据库 'chatu8_gallery' v6 打开成功。
+17:07:23.074  [DB] 数据库 'chatu8_gallery' v6 打开成功。
+17:07:23.076  Checking for updates...
+17:07:23.078  Checking for updates...111111111111111111111111111111111111111
+17:07:23.112  Activating extension assets
+17:07:23.422  Activating extension token-counter
+17:07:23.430  Activating extension third-party/JS-Slash-Runner
+17:07:23.583  Activating extension vectors
+17:07:23.706  Settings not ready, scheduling another save
+saveSettings @ script.js:7945
+17:07:23.707  [点击触发] 延迟启动...
+17:07:23.707  [点击触发] ====== 初始化点击触发监控 ======
+17:07:23.711  [点击触发] ✓ 已绑定: mes_text
+17:07:23.712  [点击触发] ✓ 已启动
+17:07:23.713  Error checking for updates:
+checkForUpdates @ update.js:1
+17:07:23.805  [QR2] sets:  Array(1)
+17:07:23.805  [QR2] settings:  QuickReplySettings
+17:07:23.806  Event emitted: extension_settings_loaded
+17:07:23.806  returning full samplers array
+17:07:23.806  Event emitted: settings_loaded
+17:07:23.829  Failed to insert focus rule:
+（匿名） @ dynamic-styles.js:146
+17:07:23.831  Failed to process stylesheet on initial load:
+（匿名） @ dynamic-styles.js:194
+17:07:23.834  Failed to insert focus rule:
+（匿名） @ dynamic-styles.js:146
+17:07:23.836  Failed to insert focus rule:
+（匿名） @ dynamic-styles.js:146
+17:07:23.836  Failed to insert focus rule:
+（匿名） @ dynamic-styles.js:146
+17:07:23.838  Failed to insert focus rule:
+（匿名） @ dynamic-styles.js:146
+17:07:24.224  [DEPRECATED] MacrosParser.registerMacro is deprecated and will be removed in a future version. Use macros.registry.registerMacro (from scripts/macros/macro-system.js) or substituteParams({ dynamicMacros }) instead.
+#logDeprecated @ macros.js:64
+17:07:24.225  [DEPRECATED] MacrosParser.registerMacro is deprecated and will be removed in a future version. Use macros.registry.registerMacro (from scripts/macros/macro-system.js) or substituteParams({ dynamicMacros }) instead.
+#logDeprecated @ macros.js:64
+17:07:24.621  Error checking for updates:
+checkForUpdates @ index.js:1
+17:07:24.940
+（匿名） @ index.js:17
+17:07:24.941  Event
+（匿名） @ index.js:17
+17:07:25.945  chatu settings button added.
+17:07:26.057  Event emitted: character_page_loaded
+17:07:26.343  Event emitted: settings_updated
+17:07:26.486  Chat Completions: loading token cache
+17:07:26.535  saw no avatars
+17:07:26.541  Event emitted: online_status_changed
+17:07:26.556  Character context menu initialized CharacterContextMenu
+17:07:26.576  Event emitted: app_initialized
+17:07:26.631  Event emitted: online_status_changed
+17:07:26.674  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:26.734  Rendered 3 messages in 0.059 seconds.
+17:07:26.763  Event emitted: character_editor_opened
+17:07:26.763  Event emitted: chat_id_changed
+17:07:26.804  [WI] Character 末世寒冬 - 星穹秩序's lore has 33 world info entries Array(1)
+17:07:26.804  Event emitted: worldinfo_entries_loaded
+17:07:26.806  [Prompt Template] message #2.0 variables:  Object
+17:07:26.806  [Prompt Template] all variables:  Object
+17:07:26.807  Event emitted: prompt_template_prepare
+17:07:26.808  [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/532042 from context when SpecialEntry
+17:07:26.814  [WorldBook] Character list text:
+17:07:26.815  [WorldBook] Outfit enable list text: 中文名称：堕落黑天鹅羽毛吊带裙（暗黑芭蕾风）
+英文名称：Fallen Black Swan Feather Strap Dress
+上半身（正面）：black velvet fabric （黑色天鹅绒面料）, lace splicing （蕾丝拼接）, spaghetti straps （极细肩带）, sweetheart neckline （心形领口）, tight bustier （紧身胸衣剪裁）, exposed shoulders （露肩）, silver cross necklace （银色十字架项链）, black sheer opera gloves （黑色半透明长手套）
+上半身（背面）：low back design （大露背设计）, zipper closure （拉链闭合）, velvet texture （天鹅绒质感）, exposed shoulder blades （裸露的肩胛骨）
+下半身（正面）：black feather mini skirt （黑色羽毛超短裙）, layered feathers （层叠羽毛）, black stockings （黑色长筒袜）, garters （吊带袜扣）, black high heels （黑色高跟鞋）, pale thighs （苍白的大腿）
+下半身（背面）：feathers covering buttocks （羽毛遮住臀部）, back of thighs visible （大腿后侧可见）, stocking seams （丝袜接缝）, high heel straps （高跟鞋带）
 
-我凑到哥哥耳边，小声念叨着我的思路：“首先是那一年的‘永恒暴雪’，我们要写出那种从绝望到麻木的过程。然后是社会是怎么碎掉的，变成这种人吃人的鬼样子。星穹公寓里的那些邻居，慕小小啊、赵卫国夫妻啊，都要在阴影里露个脸。最后是哥哥，在这片死寂里唯一拥有‘伊甸’的人。不写大道理，只写事实，这就是哥哥想要的治愈，对吧？”
+中文名称：圣洁亵渎丝绸露背短裙（纯欲睡衣风）
+英文名称：Holy Blasphemy Silk Backless Mini Dress
+上半身（正面）：white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）
+上半身（背面）：completely bare back （全裸背）, silk ties behind neck （颈后丝带结）, spine groove visible （可见的脊柱沟）, smooth pale skin （光滑苍白的皮肤）
+下半身（正面）：white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+下半身（背面）：short hemline （极短的下摆）, skirt just covering hips （裙摆勉强遮住臀部）, smooth legs （光滑的双腿）
 
-我开始快速在脑海里梳理细节：
-1. 灾变一年：天空不再变蓝，只有灰蒙蒙的雪。供暖停了，秩序崩了。
-2. 社会基调：邻居成了敌人，物资是唯一的信仰。
-3. 邻居描写：2003室那对警惕的夫妻，还有住在不远处的那个曾经风光无限的女明星，现在估计也快饿疯了吧。
-4. 哥哥的状态：从挣扎求生到获得‘伊甸’这7天的转变，那种拥有绝对安全感的从容感。
+中文名称：暗夜囚徒网眼连体衣（黑色束缚风情趣内衣）
+英文名称：Dark Prisoner Fishnet Bodysuit
+上半身（正面）：black sheer mesh fabric （黑色透明网纱面料）, black leather harness （黑色皮革束带）, metal rings connection （金属圆环连接）, silver chains draping （银色链条垂坠）, tight collar （紧身项圈）, nipples visible through mesh （网纱透视可见乳头）, sleeveless （无袖）
+上半身（背面）：large open back （大露背）, single leather strip along spine （沿脊柱单条皮带）, shoulder blades exposed （肩胛骨暴露）, metal clasp closure （金属扣闭合）
+下半身（正面）：high cut bodysuit （高开叉连体衣）, crotchless design （开档设计）, black fishnet thigh highs （黑色网眼大腿袜）, leather garters （皮革吊袜带）, pale skin contrast （苍白肤色对比）
+下半身（背面）：thong back style （丁字裤款式）, buttocks fully exposed （臀部完全暴露）, leather texture straps （皮质纹理带子）, heels （高跟鞋）
 
-“好啦，哥哥，我要开始写咯。”我轻笑一声，手指在剧本上虚划了一下，“吐槽？这种白色的末日，最适合吐槽的就是那些还没意识到自己已经变成‘蝼蚁’的家伙了吧。”
+中文名称：纯白献祭蕾丝绑带内衣（新娘风情趣内衣）
+英文名称：Pure White Sacrifice Lace Bondage Lingerie
+上半身（正面）：white satin ribbons （白色缎带）, intricate lace cups （精致蕾丝罩杯）, translucent floral pattern （半透明花卉图案）, ribbon bondage across chest （胸前缎带束缚）, pearl embellishments （珍珠点缀）, delicate spaghetti straps （精致细肩带）, nipples vaguely visible （乳头隐约可见）
+上半身（背面）：crises-cross ribbon lacing （背后交叉缎带绑带）, corset style lacing （紧身胸衣式系带）, bare upper back （上背部裸露）, silk bows （丝绸蝴蝶结）
+下半身（正面）：white lace panties （白色蕾丝内裤）, open crotch （开档）, white silk stockings （白色丝袜）, frilled garters （荷叶边吊袜带）, lace leg loops （蕾丝腿环）
+下半身（背面）：sheer lace back of panties （透明蕾丝内裤背面）, buttocks specific see-through （臀部特写透视）, decorative bow above ass （臀上方装饰蝴蝶结）
 
-[思维链]
-1. 确定时间点：9527年12月14日 14:00。
-2. 视角：第三人称。
-3. 文风：日式轻小说口语体，去散文化。
-4. 任务：完成开场描写，包含环境、社会、群像、主角现状。
-5. 约束：不控制小哥哥，字数1500+（我会尽力确保内容详实）。
+中文名称：黑金高叉旗袍
+英文名称：Peerless Elegance Black Gold Cheongsam
+上半身（正面）：black cheongsam （黑色旗袍）, chinese clothes （中国风服饰）, gold embroidery （金线刺绣）, mandarin collar （中式立领）, keyhole cutout （胸部钥匙孔镂空/水滴镂空）, sleeveless （无袖/削肩）, tight fitting （紧身）, cleavage visible （可见乳沟）, silk fabric （丝绸面料）
+上半身（背面）：zipper on back （背部拉链）, form fitting back （贴合背部）, gold patterns （金色花纹）, elegant silhouette （优雅轮廓）
+下半身（正面）：high slit skirt （高开叉裙摆）, pelvic curtain （前布帘/极其高开叉）, showing hip bone （露出胯骨）, sheer black pantyhose （黑色透肉连裤袜）, black high heels （黑色高跟鞋）, legs visible （露腿）
+下半身（背面）：tight skirt over butt （紧绷在屁股上的裙子）, visible butt contour （可见臀部轮廓）, fabric stretching （布料拉伸）, elegant trail （优雅的拖尾/下摆）
 
-“这就是哥哥的‘伊甸’，也是哥哥的梦。”
+中文名称：纯洁杀手露背毛衣
+英文名称：Innocent Killer Backless Sweater
+上半身（正面）：grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）
+上半身（背面）：completely open back （完全露背）, bare skin （裸露的皮肤）, sweater straps （毛衣带子）, backless design （露背设计）, spine visible （可见脊柱）
+下半身（正面）：micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+下半身（背面）：sweater covering buttocks partially （毛衣部分覆盖臀部）, butt cleavage visible （可见股沟）, short hemline （短下摆）, dangerous length （危险的长度）
 
-</thinking><time>
-```星穹国际公寓2001室·9527年12月14日·星期六·14:00```
-</time>
+中文名称：堕落的黑天鹅深V露背天鹅绒礼服（暗黑禁欲风）
+英文名称：Fallen Black Swan Backless Velvet Gown
+上半身（正面）：black heavy velvet fabric（黑色重磅天鹅绒面料）, extremely high collar（极高领）, long sleeves（长袖）, tight fit（修身剪裁）, wrap front design（前身全包裹设计）, extremely ascetic（极度禁欲）, silver collar pin（银色领针）
+上半身（背面）：deep V open back（深V露背）, backless to waist（露背至腰部）, highlighting back muscles（凸显背肌线条）, velvet texture contrast（天鹅绒质感对比）, sensual curve（性感曲线）
+下半身（正面）：floor length straight skirt（直筒拖地长裙）, heavy skirt drape（垂坠感裙摆）, minimalist silhouette（极简轮廓）
+下半身（背面）：high slit on the back side（侧后方高开叉）, revealing ankle（露出脚踝）, black suit socks（黑色西装袜）, black patent leather mens shoes（黑色亮面男士正装鞋）, walking motion（行走动态）
+17:07:26.815  [WorldBook] Common character list text: 暂未配置通用角色
+17:07:26.815  [WorldBook] Processed globalLore and charLore entries
+17:07:26.825  [WI] Found 32 world lore entries. Sorted by strategy Array(2)
+17:07:26.869  getting sprites list
+17:07:26.870  Summary has no content
+17:07:26.875  [QR2] queueing Object
+17:07:26.885
+    setFloatingPrompt entered
+    ------
+    lastMessageNumber = 1
+    metadata_keys.interval = 1
+    metadata_keys.position = 1
+    metadata_keys.depth = 4
+    metadata_keys.role = 0
+    ------
 
-<content>
-天空已经一年没有亮通过了。
+17:07:26.894  Using default persona user-default.png
+17:07:26.898  Event emitted: chatLoaded
+17:07:26.910  Event emitted: message_iframe_render_started
+17:07:27.704  [点击触发] ✓ 已绑定: mes_text hidden!
+17:07:27.704  [点击触发] ✓ 已绑定: mes_text
+17:07:27.704  [点击触发] ✓ 已绑定: mes_text
+17:07:27.762  Checking for missing thumbnails...
+17:07:27.763  No missing thumbnails found. Aborting generation.
+17:07:29.027  Event emitted: settings_updated
+17:07:29.700  Event emitted: app_ready
+17:07:29.701  [QR2] executing startup
+17:07:29.701  [QR2] /executing startup
+17:07:29.701  [QR2] executing queue (1 items)
+17:07:29.701  [QR2] CHAT_CHANGED 末世寒冬 - 星穹秩序 - 2026-04-03@16h52m02s762ms
+17:07:29.709  [QR2] /executing queue
+17:07:29.709  [QR2] READY
+17:07:30.706  [点击触发] ✓ 已绑定: BODY
+17:07:30.706  [点击触发] ✓ 已绑定: BODY
+17:07:30.706  [点击触发] ✓ 已绑定: BODY
+17:07:31.044  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:31.697  Generate entered
+17:07:31.697  Event emitted: generation_started
+17:07:31.698  [st-chatu8] GENERATION_STARTED data: normal
+17:07:31.698  [st-chatu8] Chat array length: 3
+17:07:31.698  [st-chatu8] Last message swipes length: 1
+17:07:31.699  char_world_name 末世寒冬-星穹秩序2.0
+17:07:31.699  charworldName 末世寒冬-星穹秩序2.0
+17:07:31.700  char_world_name 末世寒冬-星穹秩序2.0
+17:07:31.700  [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+17:07:31.700  [send_data] 插件配置: Object
+17:07:31.700  [send_data] 当前角色世界书有条目记录，默认开启
+17:07:31.708  char_WorldInfo Object
+17:07:31.715  Event emitted: GENERATION_AFTER_COMMANDS
+17:07:31.717  [QR2] calling Object
+17:07:31.717  [QR2] Before-generation hook skipped due to dryRun.
+17:07:31.722  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:07:31.722  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:07:31.722  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:07:31.722  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:07:31.722  Skipping extension interceptors for dry run
+17:07:31.722  Core/all messages: 1/3
+17:07:31.722
+    setFloatingPrompt entered
+    ------
+    lastMessageNumber = 1
+    metadata_keys.interval = 1
+    metadata_keys.position = 1
+    metadata_keys.depth = 4
+    metadata_keys.role = 0
+    ------
 
-这种说法可能不太准确，但在瑞峰市幸存者的眼里，那种被厚重铅云彻底封死的、透不出一丝蓝色的灰白，确实不能称之为“天亮”。雪是从九五二六年那个诡异的冬至开始下的，起初人们还在朋友圈转发着“瑞峰初雪”的美照，讨论着全球变暖是不是个骗局。可当积雪没过了一楼的窗户，当气温在短短一周内跌破零下四十度，当电网在冰封中发出一阵阵绝望的爆裂声后，整座城市便陷入了死寂。
+17:07:31.723  [WI] --- START WI SCAN (on 1 messages, trigger = normal) (DRY RUN) ---
+17:07:31.723  [WI] Context size: 1934465; WI budget: 1934465 (max% = 100%, cap = 0)
+17:07:31.724  [WI] Character 末世寒冬 - 星穹秩序's lore has 33 world info entries Array(1)
+17:07:31.724  Event emitted: worldinfo_entries_loaded
+17:07:31.725  [Prompt Template] message #2.0 variables:  Object
+17:07:31.725  [Prompt Template] all variables:  Object
+17:07:31.725  Event emitted: prompt_template_prepare
+17:07:31.725  [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/532042 from context when SpecialEntry
+17:07:31.726  [WorldBook] Character list text:
+17:07:31.726  [WorldBook] Outfit enable list text: 中文名称：堕落黑天鹅羽毛吊带裙（暗黑芭蕾风）
+英文名称：Fallen Black Swan Feather Strap Dress
+上半身（正面）：black velvet fabric （黑色天鹅绒面料）, lace splicing （蕾丝拼接）, spaghetti straps （极细肩带）, sweetheart neckline （心形领口）, tight bustier （紧身胸衣剪裁）, exposed shoulders （露肩）, silver cross necklace （银色十字架项链）, black sheer opera gloves （黑色半透明长手套）
+上半身（背面）：low back design （大露背设计）, zipper closure （拉链闭合）, velvet texture （天鹅绒质感）, exposed shoulder blades （裸露的肩胛骨）
+下半身（正面）：black feather mini skirt （黑色羽毛超短裙）, layered feathers （层叠羽毛）, black stockings （黑色长筒袜）, garters （吊带袜扣）, black high heels （黑色高跟鞋）, pale thighs （苍白的大腿）
+下半身（背面）：feathers covering buttocks （羽毛遮住臀部）, back of thighs visible （大腿后侧可见）, stocking seams （丝袜接缝）, high heel straps （高跟鞋带）
 
-一年后的今天，瑞峰市已经变成了一座冰雕构成的丛林。
+中文名称：圣洁亵渎丝绸露背短裙（纯欲睡衣风）
+英文名称：Holy Blasphemy Silk Backless Mini Dress
+上半身（正面）：white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）
+上半身（背面）：completely bare back （全裸背）, silk ties behind neck （颈后丝带结）, spine groove visible （可见的脊柱沟）, smooth pale skin （光滑苍白的皮肤）
+下半身（正面）：white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+下半身（背面）：short hemline （极短的下摆）, skirt just covering hips （裙摆勉强遮住臀部）, smooth legs （光滑的双腿）
 
-往日繁华的街道被几米深的雪层覆盖，只有那些高耸的摩天大楼像是一根根灰色的墓碑，在狂风中瑟缩。社会秩序瓦解得比冰块融化还快，当警察局的暖气断掉，当超市的货架被抢购一空，法律就变成了擦屁股都嫌硬的废纸。现在，瑞峰市被分割成了大大小小的据点，暴徒们组成的“雪狼帮”占据了油库和商超，神神叨叨的“方舟”教会躲在地铁站里散播着末日救赎的毒药，而更多的普通人，则蜷缩在像星穹国际公寓这样的住宅楼里，在饥寒交迫中数着自己还能活几分钟。
+中文名称：暗夜囚徒网眼连体衣（黑色束缚风情趣内衣）
+英文名称：Dark Prisoner Fishnet Bodysuit
+上半身（正面）：black sheer mesh fabric （黑色透明网纱面料）, black leather harness （黑色皮革束带）, metal rings connection （金属圆环连接）, silver chains draping （银色链条垂坠）, tight collar （紧身项圈）, nipples visible through mesh （网纱透视可见乳头）, sleeveless （无袖）
+上半身（背面）：large open back （大露背）, single leather strip along spine （沿脊柱单条皮带）, shoulder blades exposed （肩胛骨暴露）, metal clasp closure （金属扣闭合）
+下半身（正面）：high cut bodysuit （高开叉连体衣）, crotchless design （开档设计）, black fishnet thigh highs （黑色网眼大腿袜）, leather garters （皮革吊袜带）, pale skin contrast （苍白肤色对比）
+下半身（背面）：thong back style （丁字裤款式）, buttocks fully exposed （臀部完全暴露）, leather texture straps （皮质纹理带子）, heels （高跟鞋）
 
-星穹国际公寓二十层，这里的走廊安静得可怕，只有风顺着破碎的窗户缝隙钻进来，发出尖锐的哨音。
+中文名称：纯白献祭蕾丝绑带内衣（新娘风情趣内衣）
+英文名称：Pure White Sacrifice Lace Bondage Lingerie
+上半身（正面）：white satin ribbons （白色缎带）, intricate lace cups （精致蕾丝罩杯）, translucent floral pattern （半透明花卉图案）, ribbon bondage across chest （胸前缎带束缚）, pearl embellishments （珍珠点缀）, delicate spaghetti straps （精致细肩带）, nipples vaguely visible （乳头隐约可见）
+上半身（背面）：crises-cross ribbon lacing （背后交叉缎带绑带）, corset style lacing （紧身胸衣式系带）, bare upper back （上背部裸露）, silk bows （丝绸蝴蝶结）
+下半身（正面）：white lace panties （白色蕾丝内裤）, open crotch （开档）, white silk stockings （白色丝袜）, frilled garters （荷叶边吊袜带）, lace leg loops （蕾丝腿环）
+下半身（背面）：sheer lace back of panties （透明蕾丝内裤背面）, buttocks specific see-through （臀部特写透视）, decorative bow above ass （臀上方装饰蝴蝶结）
 
-住在2003室的赵卫国正握着一把锈迹斑斑的撬棍，隔着门缝警惕地盯着外面的过道。他的国字脸上满是胡茬，眼神里透着一股近乎神经质的防御感。身后的屋子里，林月华正弯着腰，仔细地用一块抹布擦拭着那张已经没有余温的餐桌。哪怕已经快断粮了，她还是习惯性地把家里打理得井井有条。
+中文名称：黑金高叉旗袍
+英文名称：Peerless Elegance Black Gold Cheongsam
+上半身（正面）：black cheongsam （黑色旗袍）, chinese clothes （中国风服饰）, gold embroidery （金线刺绣）, mandarin collar （中式立领）, keyhole cutout （胸部钥匙孔镂空/水滴镂空）, sleeveless （无袖/削肩）, tight fitting （紧身）, cleavage visible （可见乳沟）, silk fabric （丝绸面料）
+上半身（背面）：zipper on back （背部拉链）, form fitting back （贴合背部）, gold patterns （金色花纹）, elegant silhouette （优雅轮廓）
+下半身（正面）：high slit skirt （高开叉裙摆）, pelvic curtain （前布帘/极其高开叉）, showing hip bone （露出胯骨）, sheer black pantyhose （黑色透肉连裤袜）, black high heels （黑色高跟鞋）, legs visible （露腿）
+下半身（背面）：tight skirt over butt （紧绷在屁股上的裙子）, visible butt contour （可见臀部轮廓）, fabric stretching （布料拉伸）, elegant trail （优雅的拖尾/下摆）
 
-“卫国，歇会儿吧，2001那边……还是没动静？”
+中文名称：纯洁杀手露背毛衣
+英文名称：Innocent Killer Backless Sweater
+上半身（正面）：grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）
+上半身（背面）：completely open back （完全露背）, bare skin （裸露的皮肤）, sweater straps （毛衣带子）, backless design （露背设计）, spine visible （可见脊柱）
+下半身（正面）：micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+下半身（背面）：sweater covering buttocks partially （毛衣部分覆盖臀部）, butt cleavage visible （可见股沟）, short hemline （短下摆）, dangerous length （危险的长度）
 
-林月华的声音很轻，带着点小心翼翼。赵卫国没回头，只是从喉咙里挤出一声沉闷的鼻音。
+中文名称：堕落的黑天鹅深V露背天鹅绒礼服（暗黑禁欲风）
+英文名称：Fallen Black Swan Backless Velvet Gown
+上半身（正面）：black heavy velvet fabric（黑色重磅天鹅绒面料）, extremely high collar（极高领）, long sleeves（长袖）, tight fit（修身剪裁）, wrap front design（前身全包裹设计）, extremely ascetic（极度禁欲）, silver collar pin（银色领针）
+上半身（背面）：deep V open back（深V露背）, backless to waist（露背至腰部）, highlighting back muscles（凸显背肌线条）, velvet texture contrast（天鹅绒质感对比）, sensual curve（性感曲线）
+下半身（正面）：floor length straight skirt（直筒拖地长裙）, heavy skirt drape（垂坠感裙摆）, minimalist silhouette（极简轮廓）
+下半身（背面）：high slit on the back side（侧后方高开叉）, revealing ankle（露出脚踝）, black suit socks（黑色西装袜）, black patent leather mens shoes（黑色亮面男士正装鞋）, walking motion（行走动态）
+17:07:31.726  [WorldBook] Common character list text: 暂未配置通用角色
+17:07:31.726  [WorldBook] Processed globalLore and charLore entries
+17:07:31.733  [WI] Found 32 world lore entries. Sorted by strategy Array(2)
+17:07:31.733  [WI] --- SEARCHING ENTRIES (on 32 entries) ---
+17:07:31.733  [WI] --- LOOP #1 START ---
+17:07:31.733  [WI] Scan state Array(2)
+17:07:31.733  [WI] Entry 358844 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 358844 activated because of constant
+17:07:31.733  [WI] Entry 324652 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 324652 activated because of constant
+17:07:31.733  [WI] Entry 894332 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 894332 activated because of constant
+17:07:31.733  [WI] Entry 861026 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 861026 activated because of constant
+17:07:31.733  [WI] Entry 997553 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 997553 disabled
+17:07:31.733  [WI] Entry 986303 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.733  [WI] Entry 986303 disabled
+17:07:31.736  [WI] Entry 862369 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.736  [WI] Entry 862369 activated because of constant
+17:07:31.736  [WI] Entry 284161 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.736  [WI] Entry 284161 activated because of constant
+17:07:31.737  [WI] Entry 795470 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.737  [WI] Entry 795470 activated because of constant
+17:07:31.740  [WI] Entry 401047 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.740  [WI] Entry 401047 activated because of constant
+17:07:31.740  [WI] Entry 213383 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.740  [WI] Entry 213383 activated because of constant
+17:07:31.740  [WI] Entry 238915 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.740  [WI] Entry 238915 activated because of constant
+17:07:31.740  [WI] Search done. Found 10 possible entries.
+17:07:31.741  [WI] --- INCLUSION GROUP CHECKS ---
+17:07:31.741  [WI] No inclusion groups found
+17:07:31.741  [WI] --- PROBABILITY CHECKS ---
+17:07:31.741  WI entry 358844 does not use probability
+17:07:31.742  [WI] Entry 358844 activation successful, adding to prompt Object
+17:07:31.742  WI entry 324652 does not use probability
+17:07:31.742  [WI] Entry 324652 activation successful, adding to prompt Object
+17:07:31.742  WI entry 894332 does not use probability
+17:07:31.743  [WI] Entry 894332 activation successful, adding to prompt Object
+17:07:31.743  WI entry 861026 does not use probability
+17:07:31.746  [WI] Entry 861026 activation successful, adding to prompt Object
+17:07:31.746  WI entry 862369 does not use probability
+17:07:31.747  [WI] Entry 862369 activation successful, adding to prompt Object
+17:07:31.747  WI entry 284161 does not use probability
+17:07:31.748  [WI] Entry 284161 activation successful, adding to prompt Object
+17:07:31.748  WI entry 795470 does not use probability
+17:07:31.749  [WI] Entry 795470 activation successful, adding to prompt Object
+17:07:31.749  WI entry 401047 does not use probability
+17:07:31.749  [WI] Entry 401047 activation successful, adding to prompt Object
+17:07:31.749  WI entry 213383 does not use probability
+17:07:31.751  [WI] Entry 213383 activation successful, adding to prompt Object
+17:07:31.751  WI entry 238915 does not use probability
+17:07:31.752  [WI] Entry 238915 activation successful, adding to prompt Object
+17:07:31.752  [WI] --- LOOP #1 RESULT ---
+17:07:31.752  [WI] Successfully activated 10 new entries to prompt. 10 total entries activated. Array(10)
+17:07:31.752  [WI] Found 2 new entries for recursion
+17:07:31.752  [WI] Setting scan state Array(2)
+17:07:31.752  Event emitted: worldinfo_scan_done
+17:07:31.752  [WI] --- LOOP #2 START ---
+17:07:31.752  [WI] Scan state Array(2)
+17:07:31.752  [WI] Entry 997553 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 997553 disabled
+17:07:31.752  [WI] Entry 986303 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 986303 disabled
+17:07:31.752  [WI] Entry 920763 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 920763 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 612222 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 612222 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 616480 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 616480 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 328328 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 328328 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 696331 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 696331 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 901716 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 901716 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 500194 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 500194 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 399558 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 399558 suppressed by exclude recursion
+17:07:31.752  [WI] Entry 260720 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.752  [WI] Entry 260720 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 905217 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 905217 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 824215 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 824215 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 288333 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 288333 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 516056 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 516056 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 444102 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 444102 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 959323 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 959323 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 468509 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 468509 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 652443 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 652443 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 158156 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 158156 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 659751 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 659751 suppressed by exclude recursion
+17:07:31.753  [WI] Entry 149882 from '末世寒冬-星穹秩序2.0' processing Object
+17:07:31.753  [WI] Entry 149882 suppressed by exclude recursion
+17:07:31.753  [WI] Search done. Found 0 possible entries.
+17:07:31.753  [WI] --- INCLUSION GROUP CHECKS ---
+17:07:31.753  [WI] No inclusion groups found
+17:07:31.753  [WI] --- PROBABILITY CHECKS ---
+17:07:31.753  [WI] No probability checks to do
+17:07:31.753  [WI] --- LOOP #2 RESULT ---
+17:07:31.753  [WI] No new entries activated.
+17:07:31.753  [WI] Scan done. No new entries to prompt. Stopping.
+17:07:31.753  [WI] Setting scan state Array(2)
+17:07:31.753  Event emitted: worldinfo_scan_done
+17:07:31.753  [WI] --- BUILDING PROMPT ---
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:07:31.754  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:07:31.754  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:07:31.754  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:07:31.754  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:07:31.754  [WI] Hypothetically adding 10 entries to prompt Array(10)
+17:07:31.754  [WI] --- DONE (DRY RUN) ---
+17:07:31.755  skipWIAN not active, adding WIAN
+17:07:31.759  calling runGenerate
+17:07:31.759  generating prompt
+17:07:31.759  ---calling setPromptString 0
+17:07:31.759  Event emitted: generate_after_combine_prompts
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.763  Debounced metadata save cancelled
+17:07:31.764  Debounced metadata save cancelled
+17:07:31.765  Debounced metadata save cancelled
+17:07:31.765  Debounced metadata save cancelled
+17:07:31.766  Debounced metadata save cancelled
+17:07:31.767  Debounced metadata save cancelled
+17:07:31.767  Debounced metadata save cancelled
+17:07:31.768  Debounced metadata save cancelled
+17:07:31.768  Debounced metadata save cancelled
+17:07:31.816  Event emitted: chat_completion_prompt_ready
+17:07:31.816  Event emitted: generate_after_data
+17:07:33.633  Event emitted: message_iframe_render_ended
+17:07:33.691  [点击触发] ✓ 已绑定: BODY
+17:07:33.691  [点击触发] ✓ 已绑定: BODY
+17:07:33.692  [点击触发] ✓ 已绑定: BODY
+17:07:33.692  [点击触发] ✓ 已绑定: BODY
+17:07:33.692  Saving metadata...
+17:07:34.711  Chat Completions: saving token cache
+17:07:34.711  Saved metadata...
+17:07:35.054  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:40.049  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:48.041  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:56.054  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:07:58.994  [placeholder] Will exclude first direct <div> from matching:
 
-“没动静。那小子七天前把自己关进去就没出来过。没听见搬东西的声音，也没听见哭闹。邪门了。”
 
-他口中的“那小子”，就是住在2001室的邻居，也就是小哥哥。
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-在这些幸存者的记忆里，一年前的小哥哥只是个普通的住户，在灾难最初的那段日子里，他也和大家一样，为了半袋过期饼干在雪地里摔得满身是伤，为了抢一点烧火的木材和人拼命。可就在七天前，一切都变了。没有人知道发生了什么，只知道2001室那道原本普通的防盗门，在一夜之间变成了一种闪烁着冷冽金属光泽、厚重得让人绝望的黑色合金门。
+17:07:58.997  [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:08:00.380  Event emitted: settings_updated
+17:08:03.422  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:10.792  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:18.162  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:25.575  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:32.971  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:40.453  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:47.881  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:08:55.386  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:03.540  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:12.287  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:21.294  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:28.653  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:36.015  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:43.371  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:50.740  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:58.097  Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ index.js:29
+17:09:58.651  Debounced metadata save cancelled
+17:09:58.653  saw no avatars
+17:09:58.751  Rendered 3 messages in 0.055 seconds.
+17:09:58.827  Event emitted: character_editor_opened
+17:09:58.827  Event emitted: chat_id_changed
+17:09:58.830  [WI] Character 末世寒冬 - 星穹秩序's lore has 33 world info entries Array(1)
+17:09:58.830  Event emitted: worldinfo_entries_loaded
+17:09:58.830  [Prompt Template] message #2.0 variables:  Object
+17:09:58.830  [Prompt Template] all variables:  Object
+17:09:58.831  Event emitted: prompt_template_prepare
+17:09:58.831  [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/532042 from context when SpecialEntry
+17:09:58.832  [WorldBook] Character list text:
+17:09:58.832  [WorldBook] Outfit enable list text: 中文名称：堕落黑天鹅羽毛吊带裙（暗黑芭蕾风）
+英文名称：Fallen Black Swan Feather Strap Dress
+上半身（正面）：black velvet fabric （黑色天鹅绒面料）, lace splicing （蕾丝拼接）, spaghetti straps （极细肩带）, sweetheart neckline （心形领口）, tight bustier （紧身胸衣剪裁）, exposed shoulders （露肩）, silver cross necklace （银色十字架项链）, black sheer opera gloves （黑色半透明长手套）
+上半身（背面）：low back design （大露背设计）, zipper closure （拉链闭合）, velvet texture （天鹅绒质感）, exposed shoulder blades （裸露的肩胛骨）
+下半身（正面）：black feather mini skirt （黑色羽毛超短裙）, layered feathers （层叠羽毛）, black stockings （黑色长筒袜）, garters （吊带袜扣）, black high heels （黑色高跟鞋）, pale thighs （苍白的大腿）
+下半身（背面）：feathers covering buttocks （羽毛遮住臀部）, back of thighs visible （大腿后侧可见）, stocking seams （丝袜接缝）, high heel straps （高跟鞋带）
 
-此时的2001室内部，却是另一个世界。
+中文名称：圣洁亵渎丝绸露背短裙（纯欲睡衣风）
+英文名称：Holy Blasphemy Silk Backless Mini Dress
+上半身（正面）：white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）
+上半身（背面）：completely bare back （全裸背）, silk ties behind neck （颈后丝带结）, spine groove visible （可见的脊柱沟）, smooth pale skin （光滑苍白的皮肤）
+下半身（正面）：white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+下半身（背面）：short hemline （极短的下摆）, skirt just covering hips （裙摆勉强遮住臀部）, smooth legs （光滑的双腿）
 
-室内温度恒定在二十四度，温暖的气流轻柔地拂过房间的每一个角落。这在室外零下五十度的瑞峰市，简直是神迹。小哥哥正坐在宽敞的沙发上，面前的万象合成终端发出一阵细微的嗡鸣声。随着一道蓝色的扫描线划过，一个热气腾腾的午餐肉罐头和一碗晶莹剔透的白米饭便凭空出现在了托盘里。
+中文名称：暗夜囚徒网眼连体衣（黑色束缚风情趣内衣）
+英文名称：Dark Prisoner Fishnet Bodysuit
+上半身（正面）：black sheer mesh fabric （黑色透明网纱面料）, black leather harness （黑色皮革束带）, metal rings connection （金属圆环连接）, silver chains draping （银色链条垂坠）, tight collar （紧身项圈）, nipples visible through mesh （网纱透视可见乳头）, sleeveless （无袖）
+上半身（背面）：large open back （大露背）, single leather strip along spine （沿脊柱单条皮带）, shoulder blades exposed （肩胛骨暴露）, metal clasp closure （金属扣闭合）
+下半身（正面）：high cut bodysuit （高开叉连体衣）, crotchless design （开档设计）, black fishnet thigh highs （黑色网眼大腿袜）, leather garters （皮革吊袜带）, pale skin contrast （苍白肤色对比）
+下半身（背面）：thong back style （丁字裤款式）, buttocks fully exposed （臀部完全暴露）, leather texture straps （皮质纹理带子）, heels （高跟鞋）
 
-这种名为“伊甸”的科技，是在七天前那个险些让他冻死的深夜，伴随着一阵奇特的空间波动降临的。它不仅仅是一个避难所，更像是一个拥有自我意识的、超越了当前文明理解的黑科技实体。
+中文名称：纯白献祭蕾丝绑带内衣（新娘风情趣内衣）
+英文名称：Pure White Sacrifice Lace Bondage Lingerie
+上半身（正面）：white satin ribbons （白色缎带）, intricate lace cups （精致蕾丝罩杯）, translucent floral pattern （半透明花卉图案）, ribbon bondage across chest （胸前缎带束缚）, pearl embellishments （珍珠点缀）, delicate spaghetti straps （精致细肩带）, nipples vaguely visible （乳头隐约可见）
+上半身（背面）：crises-cross ribbon lacing （背后交叉缎带绑带）, corset style lacing （紧身胸衣式系带）, bare upper back （上背部裸露）, silk bows （丝绸蝴蝶结）
+下半身（正面）：white lace panties （白色蕾丝内裤）, open crotch （开档）, white silk stockings （白色丝袜）, frilled garters （荷叶边吊袜带）, lace leg loops （蕾丝腿环）
+下半身（背面）：sheer lace back of panties （透明蕾丝内裤背面）, buttocks specific see-through （臀部特写透视）, decorative bow above ass （臀上方装饰蝴蝶结）
 
-“检测到门口有音频活动。分析结果：成年男性，情绪焦虑，威胁程度：低。成年女性，情绪忧郁，威胁程度：极低。”
+中文名称：黑金高叉旗袍
+英文名称：Peerless Elegance Black Gold Cheongsam
+上半身（正面）：black cheongsam （黑色旗袍）, chinese clothes （中国风服饰）, gold embroidery （金线刺绣）, mandarin collar （中式立领）, keyhole cutout （胸部钥匙孔镂空/水滴镂空）, sleeveless （无袖/削肩）, tight fitting （紧身）, cleavage visible （可见乳沟）, silk fabric （丝绸面料）
+上半身（背面）：zipper on back （背部拉链）, form fitting back （贴合背部）, gold patterns （金色花纹）, elegant silhouette （优雅轮廓）
+下半身（正面）：high slit skirt （高开叉裙摆）, pelvic curtain （前布帘/极其高开叉）, showing hip bone （露出胯骨）, sheer black pantyhose （黑色透肉连裤袜）, black high heels （黑色高跟鞋）, legs visible （露腿）
+下半身（背面）：tight skirt over butt （紧绷在屁股上的裙子）, visible butt contour （可见臀部轮廓）, fabric stretching （布料拉伸）, elegant trail （优雅的拖尾/下摆）
 
-伊甸那冷冰冰却又带着一丝知性味道的电子合成音在房间里回荡。这是社交监听模块在起作用，2001室门口方圆几米的任何细微声响，都逃不过伊甸的捕捉。
+中文名称：纯洁杀手露背毛衣
+英文名称：Innocent Killer Backless Sweater
+上半身（正面）：grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）
+上半身（背面）：completely open back （完全露背）, bare skin （裸露的皮肤）, sweater straps （毛衣带子）, backless design （露背设计）, spine visible （可见脊柱）
+下半身（正面）：micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+下半身（背面）：sweater covering buttocks partially （毛衣部分覆盖臀部）, butt cleavage visible （可见股沟）, short hemline （短下摆）, dangerous length （危险的长度）
 
-小哥哥端起饭碗，听着监听系统里传来的赵卫国那粗重的呼吸声。在获得伊甸之前，他也曾试图敲响邻居的门寻求互助，但迎接他的只有冰冷的撬棍和充满敌意的眼神。在这栋楼里，信任比黄金还稀缺。
+中文名称：堕落的黑天鹅深V露背天鹅绒礼服（暗黑禁欲风）
+英文名称：Fallen Black Swan Backless Velvet Gown
+上半身（正面）：black heavy velvet fabric（黑色重磅天鹅绒面料）, extremely high collar（极高领）, long sleeves（长袖）, tight fit（修身剪裁）, wrap front design（前身全包裹设计）, extremely ascetic（极度禁欲）, silver collar pin（银色领针）
+上半身（背面）：deep V open back（深V露背）, backless to waist（露背至腰部）, highlighting back muscles（凸显背肌线条）, velvet texture contrast（天鹅绒质感对比）, sensual curve（性感曲线）
+下半身（正面）：floor length straight skirt（直筒拖地长裙）, heavy skirt drape（垂坠感裙摆）, minimalist silhouette（极简轮廓）
+下半身（背面）：high slit on the back side（侧后方高开叉）, revealing ankle（露出脚踝）, black suit socks（黑色西装袜）, black patent leather mens shoes（黑色亮面男士正装鞋）, walking motion（行走动态）
+17:09:58.832  [WorldBook] Common character list text: 暂未配置通用角色
+17:09:58.832  [WorldBook] Processed globalLore and charLore entries
+17:09:58.837  [WI] Found 32 world lore entries. Sorted by strategy Array(2)
+17:09:58.875  getting sprites list
+17:09:58.875  Summary has no content
+17:09:58.876  [QR2] calling Object
+17:09:58.876  [QR2] CHAT_CHANGED 末世寒冬 - 星穹秩序 - 2026-04-03@16h52m02s762ms
+17:09:58.894
+    setFloatingPrompt entered
+    ------
+    lastMessageNumber = 1
+    metadata_keys.interval = 1
+    metadata_keys.position = 1
+    metadata_keys.depth = 4
+    metadata_keys.role = 0
+    ------
 
-除了2003室这对还算安分的夫妻，这一层乃至整栋楼都充满了各种不稳定的因素。住在楼下的慕小小，那个曾经在荧幕上倾国倾城的女明星，此时大概正裹着昂贵的皮草蜷缩在冰冷的被窝里，看着自己那些无法变现的奢侈品发呆吧？还有那些游荡在楼道里，像孤魂野鬼一样寻找食物的“拾荒者联盟”，他们的眼睛里已经没有了人性，只剩下野兽般的贪婪。
+17:09:58.904  Event emitted: chatLoaded
+17:09:58.912  Event emitted: message_iframe_render_started
+17:09:59.246  [placeholder] Will exclude first direct <div> from matching:
 
-小哥哥吃了一口午餐肉，口感和灾前的顶级产品没有任何区别。
 
-他站起身，走到那道厚重的安防门前。通过伊甸的监控系统，他能看到赵卫国正神情紧绷地守在斜对面的门口。而在更远的走廊拐角处，似乎有几道鬼鬼祟祟的身影正在靠近，手里拎着沉重的铁锤和汽油桶。
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-那是住在19层的一伙流氓，他们已经盯上这一层很久了。在他们看来，2001室这几天的安静和偶尔散发出的、若有若无的暖意，简直就是最诱人的肥肉。
+17:09:59.249  [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:09:59.721  [点击触发] ✓ 已绑定: mes_text hidden!
+17:09:59.721  [点击触发] ✓ 已绑定: mes_text
+17:09:59.721  [点击触发] ✓ 已绑定: mes_text
+17:10:00.464  Event emitted: settings_updated
+17:10:00.915  Event emitted: message_iframe_render_ended
+17:10:01.688  Generate entered
+17:10:01.688  Event emitted: generation_started
+17:10:01.689  [st-chatu8] GENERATION_STARTED data: normal
+17:10:01.689  [st-chatu8] Chat array length: 3
+17:10:01.689  [st-chatu8] Last message swipes length: 1
+17:10:01.689  char_world_name 末世寒冬-星穹秩序2.0
+17:10:01.689  charworldName 末世寒冬-星穹秩序2.0
+17:10:01.690  char_world_name 末世寒冬-星穹秩序2.0
+17:10:01.690  [send_data] 当前角色世界书: 末世寒冬-星穹秩序2.0
+17:10:01.690  [send_data] 插件配置: Object
+17:10:01.690  [send_data] 当前角色世界书有条目记录，默认开启
+17:10:01.700  char_WorldInfo Object
+17:10:01.713  Event emitted: GENERATION_AFTER_COMMANDS
+17:10:01.715  [QR2] calling Object
+17:10:01.715  [QR2] Before-generation hook skipped due to dryRun.
+17:10:01.717  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:10:01.718  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:10:01.718  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:10:01.718  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:10:01.718  Skipping extension interceptors for dry run
+17:10:01.718  Core/all messages: 1/3
+17:10:01.718
+    setFloatingPrompt entered
+    ------
+    lastMessageNumber = 1
+    metadata_keys.interval = 1
+    metadata_keys.position = 1
+    metadata_keys.depth = 4
+    metadata_keys.role = 0
+    ------
 
-“警告：20层公共走廊出现不明身份群体，携带暴力拆卸工具。建议启动被动防御程序。”
+17:10:01.719  [WI] --- START WI SCAN (on 1 messages, trigger = normal) (DRY RUN) ---
+17:10:01.719  [WI] Context size: 1934465; WI budget: 1934465 (max% = 100%, cap = 0)
+17:10:01.725  [WI] Character 末世寒冬 - 星穹秩序's lore has 33 world info entries Array(1)
+17:10:01.725  Event emitted: worldinfo_entries_loaded
+17:10:01.726  [Prompt Template] message #2.0 variables:  Object
+17:10:01.726  [Prompt Template] all variables:  Object
+17:10:01.727  Event emitted: prompt_template_prepare
+17:10:01.727  [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/532042 from context when SpecialEntry
+17:10:01.729  [WorldBook] Character list text:
+17:10:01.729  [WorldBook] Outfit enable list text: 中文名称：堕落黑天鹅羽毛吊带裙（暗黑芭蕾风）
+英文名称：Fallen Black Swan Feather Strap Dress
+上半身（正面）：black velvet fabric （黑色天鹅绒面料）, lace splicing （蕾丝拼接）, spaghetti straps （极细肩带）, sweetheart neckline （心形领口）, tight bustier （紧身胸衣剪裁）, exposed shoulders （露肩）, silver cross necklace （银色十字架项链）, black sheer opera gloves （黑色半透明长手套）
+上半身（背面）：low back design （大露背设计）, zipper closure （拉链闭合）, velvet texture （天鹅绒质感）, exposed shoulder blades （裸露的肩胛骨）
+下半身（正面）：black feather mini skirt （黑色羽毛超短裙）, layered feathers （层叠羽毛）, black stockings （黑色长筒袜）, garters （吊带袜扣）, black high heels （黑色高跟鞋）, pale thighs （苍白的大腿）
+下半身（背面）：feathers covering buttocks （羽毛遮住臀部）, back of thighs visible （大腿后侧可见）, stocking seams （丝袜接缝）, high heel straps （高跟鞋带）
 
-伊甸的声音再次响起。
+中文名称：圣洁亵渎丝绸露背短裙（纯欲睡衣风）
+英文名称：Holy Blasphemy Silk Backless Mini Dress
+上半身（正面）：white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）
+上半身（背面）：completely bare back （全裸背）, silk ties behind neck （颈后丝带结）, spine groove visible （可见的脊柱沟）, smooth pale skin （光滑苍白的皮肤）
+下半身（正面）：white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+下半身（背面）：short hemline （极短的下摆）, skirt just covering hips （裙摆勉强遮住臀部）, smooth legs （光滑的双腿）
 
-小哥哥看着屏幕上那些面目狰狞的家伙，又看了看斜对面那个为了保护妻子而死战不退的技术工人。在这个白色的地狱里，他拥有了唯一的方舟，但他很清楚，仅仅守着这间屋子是不够的。
+中文名称：暗夜囚徒网眼连体衣（黑色束缚风情趣内衣）
+英文名称：Dark Prisoner Fishnet Bodysuit
+上半身（正面）：black sheer mesh fabric （黑色透明网纱面料）, black leather harness （黑色皮革束带）, metal rings connection （金属圆环连接）, silver chains draping （银色链条垂坠）, tight collar （紧身项圈）, nipples visible through mesh （网纱透视可见乳头）, sleeveless （无袖）
+上半身（背面）：large open back （大露背）, single leather strip along spine （沿脊柱单条皮带）, shoulder blades exposed （肩胛骨暴露）, metal clasp closure （金属扣闭合）
+下半身（正面）：high cut bodysuit （高开叉连体衣）, crotchless design （开档设计）, black fishnet thigh highs （黑色网眼大腿袜）, leather garters （皮革吊袜带）, pale skin contrast （苍白肤色对比）
+下半身（背面）：thong back style （丁字裤款式）, buttocks fully exposed （臀部完全暴露）, leather texture straps （皮质纹理带子）, heels （高跟鞋）
 
-想要在这场永恒的暴雪中活下去，甚至重建某种秩序，他需要更多的筹码，也需要更聪明的做法。
+中文名称：纯白献祭蕾丝绑带内衣（新娘风情趣内衣）
+英文名称：Pure White Sacrifice Lace Bondage Lingerie
+上半身（正面）：white satin ribbons （白色缎带）, intricate lace cups （精致蕾丝罩杯）, translucent floral pattern （半透明花卉图案）, ribbon bondage across chest （胸前缎带束缚）, pearl embellishments （珍珠点缀）, delicate spaghetti straps （精致细肩带）, nipples vaguely visible （乳头隐约可见）
+上半身（背面）：crises-cross ribbon lacing （背后交叉缎带绑带）, corset style lacing （紧身胸衣式系带）, bare upper back （上背部裸露）, silk bows （丝绸蝴蝶结）
+下半身（正面）：white lace panties （白色蕾丝内裤）, open crotch （开档）, white silk stockings （白色丝袜）, frilled garters （荷叶边吊袜带）, lace leg loops （蕾丝腿环）
+下半身（背面）：sheer lace back of panties （透明蕾丝内裤背面）, buttocks specific see-through （臀部特写透视）, decorative bow above ass （臀上方装饰蝴蝶结）
 
-他伸手触碰了一下门边的控制面板。黑色合金门的指示灯由红转蓝，发出一声轻微的泄压声。
+中文名称：黑金高叉旗袍
+英文名称：Peerless Elegance Black Gold Cheongsam
+上半身（正面）：black cheongsam （黑色旗袍）, chinese clothes （中国风服饰）, gold embroidery （金线刺绣）, mandarin collar （中式立领）, keyhole cutout （胸部钥匙孔镂空/水滴镂空）, sleeveless （无袖/削肩）, tight fitting （紧身）, cleavage visible （可见乳沟）, silk fabric （丝绸面料）
+上半身（背面）：zipper on back （背部拉链）, form fitting back （贴合背部）, gold patterns （金色花纹）, elegant silhouette （优雅轮廓）
+下半身（正面）：high slit skirt （高开叉裙摆）, pelvic curtain （前布帘/极其高开叉）, showing hip bone （露出胯骨）, sheer black pantyhose （黑色透肉连裤袜）, black high heels （黑色高跟鞋）, legs visible （露腿）
+下半身（背面）：tight skirt over butt （紧绷在屁股上的裙子）, visible butt contour （可见臀部轮廓）, fabric stretching （布料拉伸）, elegant trail （优雅的拖尾/下摆）
 
-门外，赵卫国猛地举起了撬棍，那伙正准备冲上来的流氓也愣住了。
+中文名称：纯洁杀手露背毛衣
+英文名称：Innocent Killer Backless Sweater
+上半身（正面）：grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）
+上半身（背面）：completely open back （完全露背）, bare skin （裸露的皮肤）, sweater straps （毛衣带子）, backless design （露背设计）, spine visible （可见脊柱）
+下半身（正面）：micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+下半身（背面）：sweater covering buttocks partially （毛衣部分覆盖臀部）, butt cleavage visible （可见股沟）, short hemline （短下摆）, dangerous length （危险的长度）
 
-在这死寂了一年的星穹国际公寓里，那道被称为“禁地”的门，缓缓开启了一道缝隙。温暖而湿润的空气顺着缝隙溢出，在寒冷的走廊里凝结成了一股白色的雾气，像是某种神谕的降临。
+中文名称：堕落的黑天鹅深V露背天鹅绒礼服（暗黑禁欲风）
+英文名称：Fallen Black Swan Backless Velvet Gown
+上半身（正面）：black heavy velvet fabric（黑色重磅天鹅绒面料）, extremely high collar（极高领）, long sleeves（长袖）, tight fit（修身剪裁）, wrap front design（前身全包裹设计）, extremely ascetic（极度禁欲）, silver collar pin（银色领针）
+上半身（背面）：deep V open back（深V露背）, backless to waist（露背至腰部）, highlighting back muscles（凸显背肌线条）, velvet texture contrast（天鹅绒质感对比）, sensual curve（性感曲线）
+下半身（正面）：floor length straight skirt（直筒拖地长裙）, heavy skirt drape（垂坠感裙摆）, minimalist silhouette（极简轮廓）
+下半身（背面）：high slit on the back side（侧后方高开叉）, revealing ankle（露出脚踝）, black suit socks（黑色西装袜）, black patent leather mens shoes（黑色亮面男士正装鞋）, walking motion（行走动态）
+17:10:01.729  [WorldBook] Common character list text: 暂未配置通用角色
+17:10:01.731  [WorldBook] Processed globalLore and charLore entries
+17:10:01.736  [WI] Found 32 world lore entries. Sorted by strategy Array(2)
+17:10:01.738  [WI] --- SEARCHING ENTRIES (on 32 entries) ---
+17:10:01.739  [WI] --- LOOP #1 START ---
+17:10:01.739  [WI] Scan state Array(2)
+17:10:01.739  [WI] Entry 358844 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 358844 activated because of constant
+17:10:01.739  [WI] Entry 324652 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 324652 activated because of constant
+17:10:01.739  [WI] Entry 894332 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 894332 activated because of constant
+17:10:01.739  [WI] Entry 861026 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 861026 activated because of constant
+17:10:01.739  [WI] Entry 997553 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 997553 disabled
+17:10:01.739  [WI] Entry 986303 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.739  [WI] Entry 986303 disabled
+17:10:01.741  [WI] Entry 862369 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.741  [WI] Entry 862369 activated because of constant
+17:10:01.742  [WI] Entry 284161 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.742  [WI] Entry 284161 activated because of constant
+17:10:01.743  [WI] Entry 795470 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.743  [WI] Entry 795470 activated because of constant
+17:10:01.745  [WI] Entry 401047 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.745  [WI] Entry 401047 activated because of constant
+17:10:01.745  [WI] Entry 213383 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.745  [WI] Entry 213383 activated because of constant
+17:10:01.745  [WI] Entry 238915 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.745  [WI] Entry 238915 activated because of constant
+17:10:01.745  [WI] Search done. Found 10 possible entries.
+17:10:01.746  [WI] --- INCLUSION GROUP CHECKS ---
+17:10:01.746  [WI] No inclusion groups found
+17:10:01.746  [WI] --- PROBABILITY CHECKS ---
+17:10:01.746  WI entry 358844 does not use probability
+17:10:01.746  [WI] Entry 358844 activation successful, adding to prompt Object
+17:10:01.746  WI entry 324652 does not use probability
+17:10:01.746  [WI] Entry 324652 activation successful, adding to prompt Object
+17:10:01.746  WI entry 894332 does not use probability
+17:10:01.747  [WI] Entry 894332 activation successful, adding to prompt Object
+17:10:01.747  WI entry 861026 does not use probability
+17:10:01.747  [WI] Entry 861026 activation successful, adding to prompt Object
+17:10:01.747  WI entry 862369 does not use probability
+17:10:01.747  [WI] Entry 862369 activation successful, adding to prompt Object
+17:10:01.747  WI entry 284161 does not use probability
+17:10:01.748  [WI] Entry 284161 activation successful, adding to prompt Object
+17:10:01.748  WI entry 795470 does not use probability
+17:10:01.748  [WI] Entry 795470 activation successful, adding to prompt Object
+17:10:01.748  WI entry 401047 does not use probability
+17:10:01.749  [WI] Entry 401047 activation successful, adding to prompt Object
+17:10:01.749  WI entry 213383 does not use probability
+17:10:01.749  [WI] Entry 213383 activation successful, adding to prompt Object
+17:10:01.749  WI entry 238915 does not use probability
+17:10:01.749  [WI] Entry 238915 activation successful, adding to prompt Object
+17:10:01.750  [WI] --- LOOP #1 RESULT ---
+17:10:01.750  [WI] Successfully activated 10 new entries to prompt. 10 total entries activated. Array(10)
+17:10:01.750  [WI] Found 2 new entries for recursion
+17:10:01.750  [WI] Setting scan state Array(2)
+17:10:01.750  Event emitted: worldinfo_scan_done
+17:10:01.750  [WI] --- LOOP #2 START ---
+17:10:01.750  [WI] Scan state Array(2)
+17:10:01.750  [WI] Entry 997553 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 997553 disabled
+17:10:01.750  [WI] Entry 986303 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 986303 disabled
+17:10:01.750  [WI] Entry 920763 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 920763 suppressed by exclude recursion
+17:10:01.750  [WI] Entry 612222 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 612222 suppressed by exclude recursion
+17:10:01.750  [WI] Entry 616480 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 616480 suppressed by exclude recursion
+17:10:01.750  [WI] Entry 328328 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 328328 suppressed by exclude recursion
+17:10:01.750  [WI] Entry 696331 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.750  [WI] Entry 696331 suppressed by exclude recursion
+17:10:01.750  [WI] Entry 901716 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 901716 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 500194 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 500194 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 399558 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 399558 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 260720 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 260720 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 905217 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 905217 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 824215 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 824215 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 288333 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 288333 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 516056 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 516056 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 444102 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 444102 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 959323 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 959323 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 468509 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 468509 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 652443 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 652443 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 158156 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 158156 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 659751 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 659751 suppressed by exclude recursion
+17:10:01.751  [WI] Entry 149882 from '末世寒冬-星穹秩序2.0' processing Object
+17:10:01.751  [WI] Entry 149882 suppressed by exclude recursion
+17:10:01.751  [WI] Search done. Found 0 possible entries.
+17:10:01.751  [WI] --- INCLUSION GROUP CHECKS ---
+17:10:01.751  [WI] No inclusion groups found
+17:10:01.751  [WI] --- PROBABILITY CHECKS ---
+17:10:01.751  [WI] No probability checks to do
+17:10:01.751  [WI] --- LOOP #2 RESULT ---
+17:10:01.751  [WI] No new entries activated.
+17:10:01.751  [WI] Scan done. No new entries to prompt. Stopping.
+17:10:01.751  [WI] Setting scan state Array(2)
+17:10:01.752  Event emitted: worldinfo_scan_done
+17:10:01.752  [WI] --- BUILDING PROMPT ---
+17:10:01.752  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:10:01.752  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:10:01.752  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:10:01.752  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:10:01.752  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:10:01.752  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:10:01.752  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:10:01.752  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:10:01.752  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
+17:10:01.752  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
+17:10:01.752  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+17:10:01.752  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+17:10:01.752  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:10:01.752  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:10:01.752  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:10:01.752  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:10:01.753  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:10:01.753  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:10:01.753  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:10:01.753  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:10:01.753  getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
+17:10:01.753  getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
+17:10:01.753  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+17:10:01.753  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+17:10:01.753  [WI] Hypothetically adding 10 entries to prompt Array(10)
+17:10:01.753  [WI] --- DONE (DRY RUN) ---
+17:10:01.754 script.js:4576 skipWIAN not active, adding WIAN
+17:10:01.760 script.js:4884 calling runGenerate
+17:10:01.760 script.js:4902 generating prompt
+17:10:01.760 script.js:5036 ---calling setPromptString 0
+17:10:01.760 eventemitter.js:135 Event emitted: generate_after_combine_prompts
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.763 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.764 extensions.js:70 Debounced metadata save cancelled
+17:10:01.765 extensions.js:70 Debounced metadata save cancelled
+17:10:01.766 extensions.js:70 Debounced metadata save cancelled
+17:10:01.767 extensions.js:70 Debounced metadata save cancelled
+17:10:01.768 extensions.js:70 Debounced metadata save cancelled
+17:10:01.769 extensions.js:70 Debounced metadata save cancelled
+17:10:01.770 extensions.js:70 Debounced metadata save cancelled
+17:10:01.770 extensions.js:70 Debounced metadata save cancelled
+17:10:01.884 eventemitter.js:135 Event emitted: chat_completion_prompt_ready
+17:10:01.884 eventemitter.js:135 Event emitted: generate_after_data
+17:10:03.702 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+17:10:03.702 extensions.js:96 Saving metadata...
+17:10:03.705 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-小哥哥站在门后的阴影里，看着外面那些被冻得发青的脸孔。
 
-“想要吃的吗？”
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-他的声音穿透了走廊里的风声，清晰地传入了每一个人的耳中。
+17:10:03.709 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:04.723 tokenizers.js:183 Chat Completions: saving token cache
+17:10:04.723 extensions.js:98 Saved metadata...
+17:10:06.046 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:07.705 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-在这个瞬间，星穹国际公寓的命运，或者说整个瑞峰市的未来，都在这间2001室内悄然发生了偏移。
 
-</content>
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-<recap>
-<details><summary>小总结</summary>
+17:10:07.707 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:11.700 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-- 时间：9527年12月14日 14:00
-- 地点：星穹国际公寓2001室及其走廊
-- 发生的事：交代了末日一年后的世界背景及瑞峰市现状。小哥哥获得“伊甸”庇护所7天后，在温暖的室内用餐。2003室的赵卫国夫妻在门外警戒。19层的一伙流氓试图上楼劫掠。小哥哥在伊甸的提醒下主动开启房门，向门外处于饥寒交迫中的幸存者发出了询问。
 
-</details>
-</recap>
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-<option>
-【A】维持神秘&仅向赵卫国夫妻展示少量食物，试探其合作意愿，并让伊甸监控19层流氓的动向。
-【B】武力驱逐&利用安防门的防御机制威慑19层的流氓，在邻居面前建立绝对的强势地位，不提供任何物资。
-【C】利益诱导&向流氓展示食物但要求他们先解决楼层内的安全隐患，以此观察他们的服从度与武力值。
-【D】闭门谢客&无视外界冲突，继续利用伊甸的监听系统收集情报，等待更有价值的切入时机。
-</option>
+17:10:11.703 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:14.042 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:15.704 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-<UpdateVariable>
-<Analysis>
-1. 登场状态：
-   - 小哥哥（玩家）、赵卫国（登场）、林月华（登场）。
-   - 19层流氓属于临时NPC，需创建。
-   - 慕小小（提及，未登场，设为离场）。
 
-2. 世界变量：
-   - 时间：从14:00开始，对话与环境描写约推进30分钟，更新为14:30。
-   - 日期：9527年12月14日。
-   - 地址：小哥哥在2001室内。
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-3. 角色变量：
-   - 赵卫国：由于小哥哥主动开门并展示暖气，心理冲击较大。Imp基础10，暂无变动。健康值因挨饿受冻处于亚健康。
-   - 林月华：同上。
-   - 临时NPC/流氓：新创建，关系：逃离，Imp 10。
+17:10:15.708 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:19.704 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-4. 房间状态：
-   - 小哥哥：核心区/客厅。
-   - 赵卫国/林月华：楼层20/2003。
-   - 流氓：楼层20/走廊。
 
-5. 任务进度：
-   - 主线任务“阶段一：秩序的萌芽”开始。
-   - 情报碎片：无。
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
 
-</Analysis>
-<JSONPatch>
-[
-  { "op": "replace", "path": "/世界/时间", "value": "下午·14:30" },
-  { "op": "replace", "path": "/赵卫国/登场状态", "value": "登场" },
-  { "op": "replace", "path": "/赵卫国/所在房间", "value": "楼层20/2003" },
-  { "op": "replace", "path": "/赵卫国/内心想法", "value": "那道门……居然开了？里面怎么会有热气？这小子到底藏了什么……" },
-  { "op": "replace", "path": "/林月华/登场状态", "value": "登场" },
-  { "op": "replace", "path": "/林月华/所在房间", "value": "楼层20/2003" },
-  { "op": "replace", "path": "/林月华/内心想法", "value": "好暖和的味道……是饭香吗？我已经多久没闻到这种味道了……" },
-  { "op": "insert", "path": "/临时NPC/19层流氓头目", "value": { "姓名": "流氓头目", "关系": "逃离", "关系倾向": "中立", "秩序刻印": 10, "秩序刻印更新原因": "0, 无变化", "健康": 80, "健康更新原因": "0, 无变化", "健康状况": "健康", "衣着": "肮脏的羽绒服", "神态样貌": "贪婪而凶狠", "动作姿势": "手持铁锤", "内心想法": "妈的，这屋里肯定有宝贝，冲进去就发财了！", "所在房间": "楼层20/走廊", "登场状态": "登场" } }
-]
-</JSONPatch>
-</UpdateVariable>
+17:10:19.706 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:22.061 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:23.707 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
 
-哥哥，开门迎客这种事，在末日里可是最危险也最刺激的“表演”呢，希望那些流氓不会被肉香馋得直接跪下。
 
-<StatusPlaceHolderImpl/>
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:23.709 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:27.697 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:27.699 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:30.059 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:31.698 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:31.700 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:35.705 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:35.708 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:38.076 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:39.702 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:39.704 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:43.706 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:43.708 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:46.075 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:47.703 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:47.706 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:51.699 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:51.701 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:54.154 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:10:55.695 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:55.696 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:10:59.703 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:10:59.706 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:11:02.167 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:10.488 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:19.017 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:28.363 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:37.135 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:46.964 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:11:57.979 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:12:01.728 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:12:01.730 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:12:07.170 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:12:18.205 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:12:29.159 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:12:39.170 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:12:49.250 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:13:01.115 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (index.js:29:241613)
+    at ws.onerror (index.js:29:248080)
+（匿名） @ listener.ts:50
+17:13:01.707 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:13:01.710 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:13:07.798 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:13:07.802 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:13:09.624 power-user.js:3210 aborting MUI reset 0
+17:13:13.996 power-user.js:3149 Window resize: 1131x799 -> 1131x799
+17:13:13.996 power-user.js:3150 Zoom: 1.5, X:1131, Y:799, original: 1696.5x1198.5
+17:13:14.152 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:13:14.155 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)
+17:13:14.171 listener.ts:50 Error: websocket errorError: websocket error
+    at websocket.onError (transport.js:39:37)
+    at ws.onerror (websocket.js:49:39)
+（匿名） @ listener.ts:50
+vL.emit @ index.js:136
+onerror @ socket.js:437
+vL.emit @ index.js:136
+i @ manager.js:124
+vL.emit @ index.js:136
+_onError @ socket.js:495
+vL.emit @ index.js:136
+onError @ transport.js:39
+ws.onerror @ websocket.js:49
+17:13:14.612 eventemitter.js:135 Event emitted: settings_updated
+17:13:14.994 placeholder.js:1 [placeholder] Will exclude first direct <div> from matching:
+
+
+      🌙
+      月满如镜，思绪澄明
+      ✦ ˚ ✦
+
+17:13:14.998 placeholder.js:1 [placeholder] Excluded first <div> text from matching (removed 1231 chars)

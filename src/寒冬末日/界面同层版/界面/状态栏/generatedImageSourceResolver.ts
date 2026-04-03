@@ -29,13 +29,7 @@ function normalizeSwipeId(input: unknown): number {
 }
 
 function normalizeImageDataToSrc(input: unknown): string {
-  const raw = String(input ?? '').trim();
-  if (!raw) return '';
-  if (raw.startsWith('idb:')) return '';
-  if (raw.startsWith('data:')) return raw;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('/')) return raw;
-  return `data:image/png;base64,${raw}`;
+  return sharedNormalizeImageDataToSrc(input);
 }
 
 function normalizeKey(value: unknown): string {
@@ -185,53 +179,12 @@ export function resolveGeneratedImageSource(
   return null;
 }
 
-function listReachableHostWindows(): Array<Window & typeof globalThis> {
-  const windows: Array<Window & typeof globalThis> = [];
-  const seen = new Set<Window>();
-  const push = (candidate: Window | null | undefined) => {
-    if (!candidate) return;
-    if (seen.has(candidate)) return;
-    seen.add(candidate);
-    windows.push(candidate as Window & typeof globalThis);
-  };
-
-  push(window);
-  try {
-    push(window.parent);
-  } catch {
-    // ignore
-  }
-  try {
-    push(window.top);
-  } catch {
-    // ignore
-  }
-
-  return windows;
-}
-
 function readHostContext(): any {
-  for (const hostWindow of listReachableHostWindows()) {
-    try {
-      const ctx = (hostWindow as any)?.SillyTavern?.getContext?.();
-      if (ctx) return ctx;
-    } catch {
-      // ignore
-    }
-  }
-  return null;
+  return sharedReadHostContext();
 }
 
 function readChatMessageDetail(messageId: number): Record<string, any> | null {
-  try {
-    const ctx = readHostContext();
-    const chat = ctx?.chat;
-    if (Array.isArray(chat)) return (chat[messageId] as Record<string, any>) ?? null;
-    const list = getChatMessages(messageId, { hide_state: 'all' }) as Record<string, any>[];
-    return Array.isArray(list) ? (list[0] ?? null) : null;
-  } catch {
-    return null;
-  }
+  return sharedReadChatMessageDetail(messageId);
 }
 
 export function readGeneratedImageSource(reference: GeneratedImageSourceRef): ResolvedGeneratedImageSource | null {

@@ -13,10 +13,6 @@
         <small>状态</small>
         <strong>{{ busy ? '忙碌中' : '稳定' }}</strong>
       </article>
-      <article class="summary-chip clip-corner-sm">
-        <small>Swipe</small>
-        <strong>{{ latestSwipeLabel || '1/1' }}</strong>
-      </article>
     </section>
 
     <div class="system-tabs" role="tablist" aria-label="系统面板页签">
@@ -113,7 +109,7 @@
       <div class="confirm-card clip-corner-sm">
         <div>
           <strong>确认执行系统刷新？</strong>
-          <p>当前共有 {{ transcriptTotal }} 条楼层，最近助手 swipe 为 {{ latestSwipeLabel || '1/1' }}。</p>
+          <p>当前共有 {{ transcriptTotal }} 条楼层。</p>
         </div>
         <div class="confirm-actions">
           <button type="button" class="action-btn confirm clip-corner-sm">确认</button>
@@ -132,7 +128,6 @@ const props = defineProps<{
   busy?: boolean;
   transcriptTotal?: number;
   assistantCount?: number;
-  latestSwipeLabel?: string;
 }>();
 
 const tabs = [

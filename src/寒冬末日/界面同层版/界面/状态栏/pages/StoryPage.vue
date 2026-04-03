@@ -103,10 +103,6 @@
               :editing-user-message-id="editingUserMessageId"
               :editing-user-draft="editingUserDraft"
               :rollback-confirm-message-id="rollbackConfirmMessageId"
-              :swipe-message-id="latestAssistantSwipeMessageId"
-              :swipe-label="latestAssistantSwipeLabel"
-              :can-swipe-prev="canSwipeLatestAssistantPrev"
-              :can-swipe-next="canSwipeLatestAssistantNext"
               :render-revision="transcriptDomRevision"
               :gallery-entries="galleryEntries"
               @generate-image="handleTranscriptGenerateImage"
@@ -124,7 +120,6 @@
               @request-rollback="requestRollbackDelete"
               @confirm-rollback="confirmRollbackDelete"
               @cancel-rollback="cancelRollbackDelete"
-              @swipe-assistant="swipeLatestAssistant"
             />
           </div>
         </section>
@@ -164,7 +159,6 @@
                     :busy="busy"
                     :transcript-total="transcriptStats.total"
                     :assistant-count="transcriptStats.assistant"
-                    :latest-swipe-label="latestAssistantSwipeLabel"
                   />
                   <MapBusinessPanel v-else-if="activeUtilityDrawer === 'map'" />
                 </div>
@@ -256,7 +250,6 @@
             :show-toolbar="false"
             @submit="runDemo"
             @roll="rollLatestTurn"
-            @swipe="swipeLatestAssistant"
             @open-role="openRoleFromComposer"
           />
         </section>
@@ -357,12 +350,26 @@ import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
+  listReachableHostWindows as collectReachableHostWindows,
+  findNextImageElement,
+  isBridgedEvent,
+  markBridgedEvent,
+  normalizeImageSrcForCompare,
+  normalizePromptTokenForCompare,
+  resolveHostImageButtonByPromptToken,
+  resolveHostImageButtonByRequestId,
+  resolveHostImageNodeByPromptToken,
+  resolveHostImageNodeByRequestId,
+  resolveHostImageNodeBySrc,
+  resolveHostMessageTriggerTarget,
+  resolveWithRetry,
+} from '../hostBridge';
+import {
   convertIframePointToHostPoint,
   resolveHostDispatchPlanWithRetry,
   resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
 import { dispatchHostPrimaryTrigger } from '../hostGestureDispatch';
-import { resolveWithRetry } from '../hostTargetRetry';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { shouldSkipTranscriptImageTrigger } from '../transcriptImageTriggerDeduper';
@@ -393,10 +400,6 @@ const {
   editingUserMessageId,
   editingUserDraft,
   rollbackConfirmMessageId,
-  latestAssistantSwipeMessageId,
-  canSwipeLatestAssistantPrev,
-  canSwipeLatestAssistantNext,
-  latestAssistantSwipeLabel,
   openingPreset,
   openingPayload,
   openingWorldModes,
@@ -418,7 +421,6 @@ const {
   requestRollbackDelete,
   cancelRollbackDelete,
   confirmRollbackDelete,
-  swipeLatestAssistant,
   setReadingMode,
   toggleOpeningExpanded,
   openDetail,
@@ -480,7 +482,6 @@ const activeUtilityPills = computed(() => {
   return [
     { label: '日志', value: `${logs.value.length}` },
     { label: '楼层', value: `${transcriptStats.value.total}` },
-    { label: 'Swipe', value: latestAssistantSwipeLabel.value || '1/1' },
   ];
 });
 
@@ -667,70 +668,6 @@ function closeOpeningModal() {
   openingModalOpen.value = false;
 }
 
-function collectReachableHostDocuments(): Document[] {
-  const docs: Document[] = [];
-  const pushDoc = (doc: Document | null | undefined) => {
-    if (!doc) return;
-    if (docs.includes(doc)) return;
-    docs.push(doc);
-  };
-
-  try {
-    pushDoc(window.parent?.document);
-  } catch {
-    // ignore
-  }
-  try {
-    pushDoc(window.top?.document);
-  } catch {
-    // ignore
-  }
-
-  return docs;
-}
-
-function collectReachableHostWindows(): Window[] {
-  const windows: Window[] = [];
-  const pushWindow = (hostWindow: Window | null | undefined) => {
-    if (!hostWindow) return;
-    if (windows.includes(hostWindow)) return;
-    windows.push(hostWindow);
-  };
-
-  pushWindow(window);
-  try {
-    pushWindow(window.parent);
-  } catch {
-    // ignore
-  }
-  try {
-    pushWindow(window.top);
-  } catch {
-    // ignore
-  }
-
-  return windows;
-}
-
-function resolveHostMessageTriggerTarget(messageId: number): HTMLElement | null {
-  const mesid = Math.trunc(messageId);
-  for (const doc of collectReachableHostDocuments()) {
-    const root =
-      (doc.querySelector(`#chat > .mes[mesid='${mesid}']`) as HTMLElement | null) ??
-      (doc.querySelector(`#chat .mes[mesid='${mesid}']`) as HTMLElement | null) ??
-      (doc.querySelector(`.mes[mesid='${mesid}']`) as HTMLElement | null);
-    if (!root) continue;
-    return (
-      (root.querySelector('.mes_text') as HTMLElement | null) ??
-      (root.querySelector('.mes_block') as HTMLElement | null) ??
-      (root.querySelector('.message_text') as HTMLElement | null) ??
-      root
-    );
-  }
-
-  return null;
-}
-
 function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: MouseEvent | null): HTMLElement | null {
   const directTarget = resolveHostMessageTriggerTarget(messageId);
   if (directTarget) return directTarget;
@@ -757,133 +694,6 @@ function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: Mou
   }
 
   return resolveHostMessageTriggerTarget(messageId);
-}
-
-function resolveHostMessageRoot(messageId: number): HTMLElement | null {
-  const mesid = Math.trunc(messageId);
-  for (const doc of collectReachableHostDocuments()) {
-    const root =
-      (doc.querySelector(`#chat > .mes[mesid='${mesid}']`) as HTMLElement | null) ??
-      (doc.querySelector(`#chat .mes[mesid='${mesid}']`) as HTMLElement | null) ??
-      (doc.querySelector(`.mes[mesid='${mesid}']`) as HTMLElement | null);
-    if (root) return root;
-  }
-  return null;
-}
-
-const BRIDGED_EVENT_FLAG = '__streamDemoBridge';
-
-function isBridgedEvent(event: Event | null | undefined): boolean {
-  return Boolean((event as (Event & Record<string, unknown>) | null | undefined)?.[BRIDGED_EVENT_FLAG]);
-}
-
-function markBridgedEvent<T extends Event>(event: T): T {
-  const bridgedEvent = event as Event & Record<string, unknown>;
-  bridgedEvent[BRIDGED_EVENT_FLAG] = true;
-  return event;
-}
-
-function normalizeImageSrcForCompare(input: string): string {
-  return String(input ?? '')
-    .trim()
-    .replace(/&amp;/g, '&');
-}
-
-function extractPromptToken(input: string): string {
-  const text = String(input ?? '').trim();
-  if (!text) return '';
-  const match = text.match(/([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/);
-  return match?.[0]?.trim() ?? '';
-}
-
-function normalizePromptTokenForCompare(input: string): string {
-  const token = extractPromptToken(input) || String(input ?? '').trim();
-  return token
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
-
-function resolveHostImageButtonByPromptToken(messageId: number, promptToken: string): HTMLElement | null {
-  const root = resolveHostMessageRoot(messageId);
-  if (!root) return null;
-  const needle = normalizePromptTokenForCompare(promptToken);
-  if (!needle) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
-  for (const button of buttons) {
-    const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
-    if (!payload) continue;
-    if (normalizePromptTokenForCompare(payload) === needle) return button;
-  }
-  return null;
-}
-
-function resolveHostImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
-  const root = resolveHostMessageRoot(messageId);
-  if (!root || !requestId) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
-  return (
-    buttons.find(button => {
-      const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
-      return buttonRequestId === requestId;
-    }) ?? null
-  );
-}
-
-function resolveHostImageNodeByRequestId(messageId: number, requestId: string): HTMLImageElement | null {
-  const root = resolveHostMessageRoot(messageId);
-  if (!root || !requestId) return null;
-  const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
-  for (const span of spans) {
-    const spanRequestId = String(span.dataset.requestId ?? span.getAttribute('data-request-id') ?? '').trim();
-    if (spanRequestId !== requestId) continue;
-    const image = span.querySelector('img') as HTMLImageElement | null;
-    if (image) return image;
-  }
-  return null;
-}
-
-function resolveHostImageNodeBySrc(messageId: number, imageSrc: string): HTMLImageElement | null {
-  const root = resolveHostMessageRoot(messageId);
-  if (!root || !imageSrc) return null;
-  const needle = normalizeImageSrcForCompare(imageSrc);
-  if (!needle) return null;
-  const images = Array.from(root.querySelectorAll('.st-chatu8-image-span img')) as HTMLImageElement[];
-  for (const image of images) {
-    const candidate = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
-    if (candidate === needle) return image;
-  }
-  return null;
-}
-
-function findNextImageElement(start: Element): HTMLImageElement | null {
-  let current: Element | null = start;
-  while (current) {
-    let sibling = current.nextElementSibling;
-    while (sibling) {
-      if (sibling instanceof HTMLImageElement) return sibling;
-      const nested = sibling.querySelector?.('img') as HTMLImageElement | null;
-      if (nested) return nested;
-      sibling = sibling.nextElementSibling;
-    }
-    current = current.parentElement;
-  }
-  return null;
-}
-
-function resolveHostImageNodeByPromptToken(messageId: number, promptToken: string): HTMLImageElement | null {
-  const button = resolveHostImageButtonByPromptToken(messageId, promptToken);
-  if (!button) return null;
-  const ownerRoot = (button.closest('.mes') as HTMLElement | null) ?? resolveHostMessageRoot(messageId);
-  const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
-  if (requestId && ownerRoot) {
-    const span = ownerRoot.querySelector(`.st-chatu8-image-span[data-request-id='${requestId}']`) as HTMLElement | null;
-    const image = span?.querySelector('img') as HTMLImageElement | null;
-    if (image) return image;
-  }
-  return findNextImageElement(button);
 }
 
 function resolveIframeMessageRoot(messageId: number): HTMLElement | null {

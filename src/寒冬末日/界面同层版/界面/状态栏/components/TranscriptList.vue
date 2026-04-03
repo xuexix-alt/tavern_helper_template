@@ -32,9 +32,6 @@
           :show-edit-regenerate="item.role === 'user' && item.message_id === latestUserMessageId"
           :show-rollback-confirm="rollbackConfirmMessageId === item.message_id"
           :show-swipe-controls="false"
-          :swipe-label="''"
-          :can-swipe-prev="false"
-          :can-swipe-next="false"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
@@ -47,7 +44,6 @@
           @request-rollback="emit('request-rollback', item)"
           @confirm-rollback="emit('confirm-rollback', item)"
           @cancel-rollback="emit('cancel-rollback')"
-          @swipe="emit('swipe-assistant', $event)"
           @toggle-opening="emit('toggle-opening')"
           @reroll-opening="emit('reroll-opening')"
         />
@@ -99,13 +95,13 @@
 <script setup lang="ts">
 import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
+import { buildTranscriptEntryKey } from '../transcriptDomRefresh';
 import {
   resolveTailPageStart,
   resolveTranscriptStartIndexOnItemsChange,
   shouldRevealOlderPageOnUpwardIntent,
 } from '../transcriptPagination';
 import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
-import { buildTranscriptEntryKey } from '../transcriptDomRefresh';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
 
@@ -120,10 +116,6 @@ const props = defineProps<{
   editingUserMessageId?: number | null;
   editingUserDraft?: string;
   rollbackConfirmMessageId?: number | null;
-  swipeMessageId?: number | null;
-  swipeLabel?: string;
-  canSwipePrev?: boolean;
-  canSwipeNext?: boolean;
   renderRevision?: number;
   galleryEntries?: ReaderGalleryEntry[];
 }>();
@@ -146,7 +138,6 @@ const emit = defineEmits<{
   (event: 'request-rollback', item: TranscriptItem): void;
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
-  (event: 'swipe-assistant', direction: 'prev' | 'next'): void;
 }>();
 
 const listRef = ref<HTMLElement | null>(null);
