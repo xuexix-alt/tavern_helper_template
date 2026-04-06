@@ -23,9 +23,7 @@ export function resolveHostMessageRole(message: any): TranscriptItem['role'] {
   const isSmallSys = message?.extra?.isSmallSys === true;
   const hasSystemType = typeof message?.extra?.type === 'string' && String(message.extra.type).trim().length > 0;
   const hasExplicitSystemIdentity =
-    normalizedName === 'system' ||
-    normalizedName === 'sillytavern system' ||
-    normalizedName === 'comment';
+    normalizedName === 'system' || normalizedName === 'sillytavern system' || normalizedName === 'comment';
 
   const isUser =
     hintUser ??

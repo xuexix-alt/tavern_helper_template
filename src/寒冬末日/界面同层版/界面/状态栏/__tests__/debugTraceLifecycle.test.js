@@ -149,7 +149,8 @@ test('buildAssistantRenderSource prefers extracted opening content for structure
       isDemoAssistant: false,
       hasStructuredContent: true,
       content: '窗外的天空呈现出一种病态的铅灰色。',
-      strippedRenderSource: '[metacognition]\\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\\n<option>A</option>',
+      strippedRenderSource:
+        '[metacognition]\\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\\n<option>A</option>',
     }),
     '窗外的天空呈现出一种病态的铅灰色。',
   );

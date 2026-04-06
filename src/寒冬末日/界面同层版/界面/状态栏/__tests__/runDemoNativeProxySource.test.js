@@ -9,5 +9,8 @@ test('runDemo delegates normal sends to runNativeSendProxy instead of the old cr
   const source = fs.readFileSync(sourcePath, 'utf8');
 
   assert.match(source, /async function runDemo\(nextPrompt\?: string\)[\s\S]*await runNativeSendProxy\(prompt\);/);
-  assert.doesNotMatch(source, /async function runDemo\(nextPrompt\?: string\)[\s\S]*runGenerationFlow\(\{ prompt, createUser: true \}\);/);
+  assert.doesNotMatch(
+    source,
+    /async function runDemo\(nextPrompt\?: string\)[\s\S]*runGenerationFlow\(\{ prompt, createUser: true \}\);/,
+  );
 });

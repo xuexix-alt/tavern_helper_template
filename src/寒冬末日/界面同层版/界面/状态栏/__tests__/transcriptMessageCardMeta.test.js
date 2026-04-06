@@ -3,10 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const componentPath = path.resolve(
-  __dirname,
-  '../components/TranscriptMessageCard.vue',
-);
+const componentPath = path.resolve(__dirname, '../components/TranscriptMessageCard.vue');
 
 test('TranscriptMessageCard no longer exposes SHOW_META meta-debug toggle or panel markup', () => {
   const source = fs.readFileSync(componentPath, 'utf8');

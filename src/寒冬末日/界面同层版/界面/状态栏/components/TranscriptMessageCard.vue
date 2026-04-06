@@ -720,7 +720,6 @@ onBeforeUnmount(() => {
   .assistant-corners {
     display: none;
   }
-
 }
 
 @media (max-width: 760px) {
