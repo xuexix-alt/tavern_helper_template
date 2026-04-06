@@ -1,6 +1,11 @@
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts';
 import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag';
+import {
+  normalizeImageDataToSrc as sharedNormalizeImageDataToSrc,
+  readHostContext as sharedReadHostContext,
+  readChatMessageDetail as sharedReadChatMessageDetail,
+} from './hostBridge';
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;
@@ -28,10 +33,6 @@ function normalizeSwipeId(input: unknown): number {
   return Math.trunc(numeric);
 }
 
-function normalizeImageDataToSrc(input: unknown): string {
-  return sharedNormalizeImageDataToSrc(input);
-}
-
 function normalizeKey(value: unknown): string {
   return String(value ?? '').trim();
 }
@@ -41,7 +42,7 @@ function buildEntryImageId(entry: Record<string, any>): string {
     normalizeKey(entry?.imageId ?? entry?.image_id) ||
     normalizeKey(entry?.requestId ?? entry?.request_id) ||
     normalizeKey(entry?.promptToken) ||
-    normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData)
+    sharedNormalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData)
   );
 }
 
@@ -77,7 +78,7 @@ function normalizeResolvedSource(
   source: ResolvedGeneratedImageSource['source'],
   messageId: number | null,
 ): ResolvedGeneratedImageSource | null {
-  const src = normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData);
+  const src = sharedNormalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData);
   if (!src) return null;
 
   const imageId = buildEntryImageId(entry);
@@ -179,21 +180,13 @@ export function resolveGeneratedImageSource(
   return null;
 }
 
-function readHostContext(): any {
-  return sharedReadHostContext();
-}
-
-function readChatMessageDetail(messageId: number): Record<string, any> | null {
-  return sharedReadChatMessageDetail(messageId);
-}
-
 export function readGeneratedImageSource(reference: GeneratedImageSourceRef): ResolvedGeneratedImageSource | null {
   const messageId = Number(reference.messageId);
   if (!Number.isFinite(messageId) || messageId < 0) return null;
 
   const normalizedMessageId = Math.trunc(messageId);
-  const message = readChatMessageDetail(normalizedMessageId);
-  const ctx = readHostContext();
+  const message = sharedReadChatMessageDetail(normalizedMessageId);
+  const ctx = sharedReadHostContext();
   const cacheEntries = collectPluginNativeCacheArtifacts(ctx?.chatMetadata?.['st-chatu8'], normalizedMessageId);
   return resolveGeneratedImageSource(reference, message, cacheEntries);
 }

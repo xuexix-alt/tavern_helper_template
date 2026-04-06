@@ -2,12 +2,12 @@
   <article class="message-shell" :class="[`is-${item.role}`, `density-${density}`, `font-${fontMode}`]">
     <div v-if="item.role === 'system'" class="system-message clip-corner-sm">
       <span class="system-icon">⚠</span>
-      <span class="system-text">[ SYS_ALERT ] {{ item.preview || item.content || '(系统消息)' }}</span>
+      <span class="system-text">[ SYS_ALERT ] {{ item.content || '(系统消息)' }}</span>
     </div>
 
     <template v-else-if="item.role === 'user'">
       <div class="user-wrap">
-        <div class="user-message">{{ item.content || item.preview || '(空消息)' }}</div>
+        <div class="user-message">{{ item.content || '(空消息)' }}</div>
       </div>
 
       <div v-if="showEditRegenerate || item.canDeleteFrom || item.canOpenDetail" class="message-actions user-actions">
@@ -88,24 +88,6 @@
         <div class="assistant-corners bl"></div>
         <div class="assistant-corners br"></div>
 
-        <div class="assistant-headline">
-          ◎ 正文和剧情 <span>ID: MSG-{{ item.message_id }}</span>
-        </div>
-
-        <div class="assistant-toolbar">
-          <button
-            v-if="item.canOpenDetail"
-            type="button"
-            class="detail-toggle clip-corner-sm"
-            @click="emit('open-detail', item)"
-          >
-            SHOW_DIAGNOSTICS
-          </button>
-          <button type="button" class="meta-toggle clip-corner-sm" @click="metaOpen = !metaOpen">
-            {{ metaOpen ? 'HIDE_META' : 'SHOW_META' }}
-          </button>
-        </div>
-
         <div class="assistant-body-wrap">
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
@@ -123,27 +105,6 @@
             :data-message-id="item.message_id"
             v-html="item.finalHtml || '<p>(空回复)</p>'"
           ></div>
-        </div>
-
-        <div v-if="metaOpen" class="assistant-meta-panel clip-corner-sm">
-          <div class="assistant-meta-grid">
-            <div class="meta-block">
-              <span>MESSAGE_ID</span><strong>#{{ item.message_id }}</strong>
-            </div>
-            <div class="meta-block">
-              <span>RENDER_SOURCE</span><strong>{{ item.renderSource || 'chat' }}</strong>
-            </div>
-            <div class="meta-block">
-              <span>PHASE</span><strong>{{ item.phase }}</strong>
-            </div>
-            <div class="meta-block">
-              <span>OPTIONS</span><strong>{{ item.options.length }}</strong>
-            </div>
-          </div>
-          <div class="meta-preview-box">
-            <span>PREVIEW</span>
-            <p>{{ item.preview || '(空)' }}</p>
-          </div>
         </div>
       </section>
     </template>
@@ -185,7 +146,6 @@ const emit = defineEmits<{
   (event: 'cancel-rollback'): void;
 }>();
 
-const metaOpen = ref(false);
 const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
@@ -422,7 +382,6 @@ onBeforeUnmount(() => {
 
 .message-shell.font-reading .user-message,
 .message-shell.font-reading .assistant-body,
-.message-shell.font-reading .meta-preview-box p,
 .message-shell.font-reading .inline-editor {
   font-family: var(--demo-font-sans);
 }
@@ -477,32 +436,13 @@ onBeforeUnmount(() => {
   border-bottom: 2px solid;
   border-right: 2px solid;
 }
-.assistant-headline,
 .meta-chip,
-.detail-toggle,
 .action-btn {
   font-family: var(--demo-font-mono);
 }
-.assistant-headline {
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  color: var(--demo-text-accent);
-  text-transform: uppercase;
-}
-
-.message-shell.density-minimal .assistant-headline {
-  gap: 10px;
-  font-size: 11px;
-}
-.assistant-headline span {
-  color: var(--demo-text-secondary);
-}
 .assistant-body-wrap {
   position: relative;
-  padding-top: 6px;
+  padding-top: 2px;
 }
 .assistant-body {
   position: relative;
@@ -707,16 +647,13 @@ onBeforeUnmount(() => {
   justify-content: space-between;
 }
 .message-actions,
-.editor-actions,
-.assistant-meta-grid {
+.editor-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 .meta-chip,
-.detail-toggle,
-.meta-toggle,
 .action-btn {
   min-height: 36px;
   padding: 0 12px;
@@ -729,59 +666,13 @@ onBeforeUnmount(() => {
 }
 
 .message-shell.density-minimal .meta-chip,
-.message-shell.density-minimal .detail-toggle,
-.message-shell.density-minimal .meta-toggle,
 .message-shell.density-minimal .action-btn {
   min-height: 32px;
   padding: 0 10px;
   font-size: 10px;
 }
-.detail-toggle,
-.meta-toggle,
 .action-btn {
   color: var(--demo-text-accent);
-}
-.assistant-meta-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
-  background: color-mix(in srgb, var(--surface) 12%, transparent);
-}
-
-.message-shell.density-minimal .assistant-meta-panel {
-  padding: 10px;
-}
-.assistant-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-.meta-block,
-.meta-preview-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.meta-block span,
-.meta-preview-box span {
-  font-family: var(--demo-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: var(--demo-text-subtle);
-  text-transform: uppercase;
-}
-.meta-block strong {
-  font-family: var(--demo-font-mono);
-  font-size: 13px;
-  color: var(--demo-text-primary);
-}
-.meta-preview-box p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--demo-text-secondary);
 }
 .action-btn.danger {
   color: var(--demo-color-danger);
@@ -830,9 +721,6 @@ onBeforeUnmount(() => {
     display: none;
   }
 
-  .assistant-meta-panel {
-    border-color: color-mix(in srgb, var(--primary) 10%, transparent);
-  }
 }
 
 @media (max-width: 760px) {
@@ -855,7 +743,6 @@ onBeforeUnmount(() => {
 
   .meta-chip,
   .detail-toggle,
-  .meta-toggle,
   .action-btn {
     min-height: 28px;
     padding: 0 8px;
@@ -866,10 +753,6 @@ onBeforeUnmount(() => {
   .assistant-card {
     max-width: 100%;
     padding: 12px 10px 10px;
-  }
-  .assistant-headline {
-    gap: 10px;
-    font-size: 11px;
   }
   .assistant-toolbar {
     gap: 6px;
@@ -882,12 +765,6 @@ onBeforeUnmount(() => {
   }
   .assistant-footer {
     align-items: flex-start;
-  }
-  .assistant-meta-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .assistant-meta-panel {
-    padding: 10px;
   }
   .user-message,
   .inline-editor {

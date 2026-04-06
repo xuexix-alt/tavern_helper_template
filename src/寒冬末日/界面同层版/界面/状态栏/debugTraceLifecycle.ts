@@ -87,6 +87,43 @@ export function buildDemoAssistantFinalBodySource(input: { content: string; stri
   return normalizeText(input.strippedRenderSource);
 }
 
+export function buildAssistantRenderSource(input: {
+  isDemoAssistant: boolean;
+  hasStructuredContent: boolean;
+  content: string;
+  strippedRenderSource: string;
+}): string {
+  if (input.isDemoAssistant || input.hasStructuredContent) {
+    return buildDemoAssistantFinalBodySource({
+      content: input.content,
+      strippedRenderSource: input.strippedRenderSource,
+    });
+  }
+  return normalizeText(input.strippedRenderSource);
+}
+
+export function resolveAssistantDisplayRenderSource(input: {
+  isDemoAssistant: boolean;
+  hasStructuredContent: boolean;
+  renderSource: string;
+  strippedRenderSource: string;
+}): string {
+  if (input.isDemoAssistant || input.hasStructuredContent) {
+    return normalizeText(input.strippedRenderSource);
+  }
+  return normalizeText(input.renderSource);
+}
+
+export function resolveTranscriptRole(input: {
+  rawRole: 'assistant' | 'user' | 'system';
+  rawMessage: string;
+  isOpeningResult: boolean;
+}): 'assistant' | 'user' | 'system' {
+  if (input.isOpeningResult) return 'assistant';
+  if (String(input.rawMessage ?? '').includes('[stream-demo:minimal]')) return 'assistant';
+  return input.rawRole;
+}
+
 export function shouldSuppressLifecycleEchoHostRefresh(input: {
   eventName: string;
   nowMs: number;

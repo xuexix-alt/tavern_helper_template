@@ -75,13 +75,38 @@ export function readHostContext(): any {
   return null;
 }
 
+/** 通过宿主窗口调用 getChatMessages（避免 iframe scope 中 getChatMessages 不存在的问题） */
+export function callHostGetChatMessages(range: string | number, options?: { hide_state?: string }): any[] | null {
+  for (const hostWindow of listReachableHostWindows()) {
+    try {
+      const fn = (hostWindow as any)?.getChatMessages;
+      if (typeof fn === 'function') {
+        return fn(range, options) as any[];
+      }
+    } catch {
+      /* cross-origin */
+    }
+  }
+  return null;
+}
+
 /** 通过宿主 context.chat 或 getChatMessages 读取单条消息详情 */
 export function readChatMessageDetail(messageId: number): any | null {
   try {
     const ctx = readHostContext();
     const chat = ctx?.chat;
-    if (Array.isArray(chat)) return chat[messageId] ?? null;
-    const list = getChatMessages(messageId, { hide_state: 'all' }) as any[];
+    // ctx.chat 可能是真数组、Proxy 包装、或普通对象，只要有数字索引访问能力即可
+    const chatIsIndexed = chat != null && typeof chat === 'object' && !Array.isArray(chat);
+    if (chatIsIndexed) {
+      const msg = (chat as any)[messageId];
+      if (msg && typeof msg === 'object') return msg;
+    }
+    // 如果 ctx.chat 是真数组（某些 SillyTavern 版本）
+    if (Array.isArray(chat)) {
+      return chat[messageId] ?? null;
+    }
+    // 备用：直接通过宿主窗口调用 getChatMessages
+    const list = callHostGetChatMessages(messageId, { hide_state: 'all' });
     return Array.isArray(list) ? (list[0] ?? null) : null;
   } catch {
     return null;

@@ -1,8 +1,10 @@
 <template>
   <section class="map-panel">
     <section class="map-section">
-      <div class="section-title">🗺 伊甸空间地图</div>
-      <button type="button" class="scope-btn clip-corner-sm">+ +庇护范围</button>
+      <div class="map-header-row">
+        <div class="section-title">🗺 伊甸空间地图</div>
+        <button type="button" class="scope-btn">＋ 庇护范围</button>
+      </div>
       <section class="map-summary-strip">
         <article class="map-summary-chip clip-corner-sm">
           <small>庇护所等级</small>
@@ -205,27 +207,71 @@ const occupiedCoreCount = computed(() => coreRooms.value.filter(room => room.act
 </script>
 
 <style scoped>
+/* ═══════════════════════════════════════════
+   布局骨架
+═══════════════════════════════════════════ */
 .map-panel,
 .map-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
+/* ═══════════════════════════════════════════
+   顶部操作栏：标题 + 庇护范围按钮同行
+═══════════════════════════════════════════ */
+.map-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.section-title {
+  font-family: var(--demo-font-mono);
+  color: var(--demo-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.scope-btn {
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--demo-border-accent-active);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--demo-text-accent);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.scope-btn:hover {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   摘要状态条 — 4 格等宽横排，竖向超紧凑
+═══════════════════════════════════════════ */
 .map-summary-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 7px;
 }
 
 .map-summary-chip {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 54px;
-  padding: 10px 12px;
+  gap: 3px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 24%, transparent);
+  border-radius: 4px;
 }
 
 .map-summary-chip small,
@@ -234,229 +280,280 @@ const occupiedCoreCount = computed(() => coreRooms.value.filter(room => room.act
 }
 
 .map-summary-chip small {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--demo-text-subtle);
+  line-height: 1;
 }
 
 .map-summary-chip strong {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--demo-text-accent);
+  line-height: 1.2;
 }
 
+/* ═══════════════════════════════════════════
+   区域卡片网格
+═══════════════════════════════════════════ */
 .map-zone-grid {
   display: grid;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
+
 .zone-card,
 .floor-card {
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 24%, transparent);
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 8px;
+  border-radius: 6px;
 }
-.section-title,
-.floor-title,
-.zone-title,
-.zone-tag,
-.room-card strong,
-.room-card span {
-  font-family: var(--demo-font-mono);
-}
-.section-title,
-.floor-title,
-.zone-title {
-  color: var(--demo-text-primary);
-  font-size: 14px;
-  font-weight: 700;
-}
+
+/* 区域卡标题行 */
 .zone-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
-.section-title {
-  font-size: 16px;
-}
-.scope-btn {
-  width: fit-content;
-  min-height: 46px;
-  padding: 0 20px;
-  border: 1px solid var(--demo-border-accent-active);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
-  color: var(--demo-text-accent);
+
+.floor-title,
+.zone-title {
   font-family: var(--demo-font-mono);
-  font-size: 18px;
+  color: var(--demo-text-primary);
+  font-size: 12px;
   font-weight: 700;
 }
-.map-zone-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.zone-card,
-.floor-card {
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  gap: 14px;
-}
+
 .zone-tag {
-  min-height: 34px;
-  padding: 0 12px;
+  flex-shrink: 0;
+  min-height: 20px;
+  padding: 0 8px;
   border-radius: 999px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 30%, transparent);
   color: var(--demo-text-secondary);
-  font-size: 12px;
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
+
+/* ═══════════════════════════════════════════
+   房间卡片网格
+═══════════════════════════════════════════ */
 .room-grid {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
+
 .compact-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+
 .floor-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
+
 .room-card {
-  min-height: 88px;
-  padding: 12px;
+  min-height: 58px;
+  padding: 8px;
   border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
   background: color-mix(in srgb, var(--surface) 18%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   justify-content: flex-start;
-  border-radius: 14px;
+  border-radius: 8px;
+  transition: background 0.12s;
 }
+
 .room-card.active {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
+
 .room-card.sheltered {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--demo-color-neon) 32%, transparent) inset;
 }
+
 .room-dot {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--foreground) 26%, transparent);
+  flex-shrink: 0;
 }
+
 .room-card.active .room-dot {
   background: var(--demo-color-neon);
+  box-shadow: 0 0 4px var(--demo-color-neon);
 }
-.room-card strong {
-  font-size: 16px;
-  color: var(--demo-text-primary);
-}
+
+.room-card strong,
 .room-card span {
-  font-size: 12px;
-  color: var(--demo-text-secondary);
-  line-height: 1.45;
+  font-family: var(--demo-font-mono);
 }
+
+.room-card strong {
+  font-size: 12px;
+  color: var(--demo-text-primary);
+  line-height: 1.1;
+}
+
+.room-card span {
+  font-size: 10px;
+  color: var(--demo-text-secondary);
+  line-height: 1.35;
+}
+
+/* ═══════════════════════════════════════════
+   楼层房间：比区域房间更紧凑（只显示编号+入住者）
+═══════════════════════════════════════════ */
+.floor-grid .room-card {
+  min-height: 42px;
+  padding: 6px 7px;
+  gap: 3px;
+  border-radius: 6px;
+}
+
+.floor-grid .room-card strong {
+  font-size: 11px;
+}
+
+.floor-grid .room-card span {
+  font-size: 9px;
+}
+
+/* ═══════════════════════════════════════════
+   楼层卡片
+═══════════════════════════════════════════ */
 .floor-warn {
-  padding: 10px 14px;
+  padding: 5px 10px;
   border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
   background: color-mix(in srgb, var(--primary) 14%, transparent);
   color: var(--demo-text-warning);
   font-family: var(--demo-font-mono);
-  font-size: 14px;
-  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 6px;
 }
+
+/* ═══════════════════════════════════════════
+   响应式：中等宽度（弹窗宽度约 < 700px）
+═══════════════════════════════════════════ */
 @media (max-width: 980px) {
   .map-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .map-zone-grid {
     grid-template-columns: 1fr;
   }
-  .compact-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .floor-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (max-width: 760px) {
-  .map-panel,
-  .map-section {
-    gap: 10px;
-  }
-
-  .map-summary-strip {
-    gap: 6px;
-  }
-
-  .map-summary-chip {
-    min-height: 46px;
-    padding: 8px 9px;
-  }
-
-  .map-summary-chip small {
-    font-size: 9px;
-  }
-
-  .map-summary-chip strong {
-    font-size: 12px;
-  }
-
-  .section-title {
-    font-size: 14px;
-  }
-
-  .scope-btn {
-    min-height: 34px;
-    padding: 0 12px;
-    font-size: 12px;
-  }
 
   .compact-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
   .floor-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .zone-card,
-  .floor-card {
-    padding: 9px;
+}
+
+/* ═══════════════════════════════════════════
+   响应式：移动端
+═══════════════════════════════════════════ */
+@media (max-width: 760px) {
+  .map-panel,
+  .map-section {
     gap: 8px;
   }
-  .zone-head {
-    gap: 6px;
-    align-items: flex-start;
-  }
-  .zone-tag {
-    min-height: 22px;
-    padding: 0 6px;
-    font-size: 10px;
-  }
-  .floor-warn {
-    padding: 6px 8px;
-    font-size: 10px;
-    line-height: 1.3;
-    border-radius: 8px;
-  }
-  .room-grid {
+
+  .map-summary-strip {
     gap: 5px;
   }
+
+  .map-summary-chip {
+    min-height: 32px;
+    padding: 5px 8px;
+  }
+
+  .map-summary-chip small {
+    font-size: 8px;
+  }
+
+  .map-summary-chip strong {
+    font-size: 11px;
+  }
+
+  .section-title {
+    font-size: 12px;
+  }
+
+  .scope-btn {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .compact-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .floor-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .zone-card,
+  .floor-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .zone-head {
+    gap: 5px;
+    align-items: center;
+  }
+
+  .zone-tag {
+    min-height: 18px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .floor-warn {
+    padding: 4px 8px;
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .room-grid {
+    gap: 4px;
+  }
+
   .room-card {
-    min-height: 50px;
+    min-height: 44px;
     padding: 6px;
     gap: 3px;
-    border-radius: 8px;
+    border-radius: 6px;
   }
+
   .room-dot {
     width: 6px;
     height: 6px;
   }
+
   .room-card strong {
     font-size: 11px;
-    line-height: 1.1;
   }
+
   .room-card span {
     font-size: 9px;
-    line-height: 1.2;
+    line-height: 1.25;
   }
 }
 
@@ -464,16 +561,20 @@ const occupiedCoreCount = computed(() => coreRooms.value.filter(room => room.act
   .compact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .floor-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
   .room-card {
-    min-height: 46px;
+    min-height: 40px;
     padding: 5px;
   }
+
   .room-card strong {
     font-size: 10px;
   }
+
   .room-card span {
     font-size: 8px;
   }

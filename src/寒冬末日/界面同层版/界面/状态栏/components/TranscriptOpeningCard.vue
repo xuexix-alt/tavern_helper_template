@@ -18,7 +18,6 @@
       </div>
 
       <div class="transcript-actions">
-        <span class="transcript-preview">{{ item.preview || '(空消息)' }}</span>
         <button
           v-if="item.canReroll"
           type="button"

@@ -28,9 +28,11 @@ import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema'
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
 import {
+  buildAssistantRenderSource,
   buildDebugMessageSignature,
-  buildDemoAssistantFinalBodySource,
   createGenerationListenerEpochController,
+  resolveAssistantDisplayRenderSource,
+  resolveTranscriptRole,
   shouldCreateAssistantPlaceholderOnFirstToken,
   shouldEnsureAssistantPlaceholderBeforeFinalize,
   shouldIgnoreHostRefreshDuringBusy,
@@ -39,9 +41,12 @@ import {
   summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
+import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
 import {
+  callHostGetChatMessages,
+  collectChatu8PromptTokens,
   collectReachableHostDocuments,
   normalizeImageDataToSrc,
   normalizeImageSrcForCompare,
@@ -50,6 +55,8 @@ import {
 } from './hostBridge';
 import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
+import { resolveHostMessageRole } from './hostMessageRole';
+import { isOpeningWorkbenchScopeActive, resolveActiveContainerMessageId } from './containerScope';
 import { getFallbackImageClasses } from './imageFallbackClasses';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
@@ -61,6 +68,7 @@ import {
   isCurrentOpeningSeedMessageByPayload,
   sanitizeInheritedMessageData,
 } from './openingMessageFlags';
+import { sendToNativeChat } from './nativeSendProxy';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
   readNativeFirstImageArtifacts,
@@ -700,10 +708,6 @@ function resolveIframeAssistantRoots(messageId: number): HTMLElement[] {
   return roots;
 }
 
-function collectChatu8PromptTokens(input: string): string[] {
-  return collectChatu8PromptTokensShared(input);
-}
-
 function extractPromptTokensFromRoots(roots: HTMLElement[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -1099,18 +1103,24 @@ function buildTranscriptItem(input: {
       : input.raw.trim();
   const strippedRenderSource = isDemoAssistant ? stripStreamDemoRuntimeTags(input.raw) : input.raw.trim();
   const options = isDemoAssistant ? extractStreamDemoOptions(input.raw) : structuredOptions;
-  const renderSource = isDemoAssistant
-    ? buildDemoAssistantFinalBodySource({
-        content,
-        strippedRenderSource,
-      })
-    : strippedRenderSource;
-  const streamRenderSource = isDemoAssistant ? content : renderSource;
-  const regexText = applyRegexForDisplay(renderSource, input.role);
+  const renderSource = buildAssistantRenderSource({
+    isDemoAssistant,
+    hasStructuredContent,
+    content,
+    strippedRenderSource,
+  });
+  const displayRenderSource = resolveAssistantDisplayRenderSource({
+    isDemoAssistant,
+    hasStructuredContent,
+    renderSource,
+    strippedRenderSource,
+  });
+  const streamRenderSource = isDemoAssistant ? content : displayRenderSource;
+  const regexText = applyRegexForDisplay(displayRenderSource, input.role);
   const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
-  const finalHtml = buildFinalHtml(renderSource, input.id, strippedRenderSource);
+  const finalHtml = buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);
   const generatedImages: GeneratedImageRef[] = [];
-  const preview = stripTagsForPreview(content || regexText).slice(0, 80);
+  const preview = '';
 
   return {
     message_id: input.id,
@@ -1118,7 +1128,7 @@ function buildTranscriptItem(input: {
     roleLabel: normalizeRoleLabel(input.role),
     isOpening: input.isOpening === true,
     raw: input.raw,
-    renderSource,
+    renderSource: displayRenderSource,
     content,
     preview,
     regexText,
@@ -1182,7 +1192,7 @@ function buildOpeningTranscriptItem(
     raw: renderSource,
     renderSource,
     content: renderSource,
-    preview: stripTagsForPreview(renderSource || preset.first_line || preset.world_intro).slice(0, 80),
+    preview: '',
     regexText,
     streamHtml: buildStreamStageHtml(renderSource, 'assistant', 0),
     finalHtml,
@@ -1224,7 +1234,23 @@ export function useStreamingDemo() {
   const openingPayload = ref<OpeningPayload>(getDefaultOpeningPayload(openingPreset.value));
   const openingWorldModes = getOpeningWorldModes();
   const openingRoutes = getOpeningRoutes();
-  const isOpeningWorkbenchHost = initialContainerMessageId === 0;
+  function isOpeningWorkbenchHostActive(): boolean {
+    return isOpeningWorkbenchScopeActive({
+      initialContainerMessageId,
+      currentContainerMessageId: readCurrentContainerMessageId(),
+    });
+  }
+
+  function isActiveOpeningWorkbenchScope(): boolean {
+    return isOpeningWorkbenchHostActive();
+  }
+
+  function getActiveContainerMessageId(): number | null {
+    return resolveActiveContainerMessageId({
+      initialContainerMessageId,
+      currentContainerMessageId: readCurrentContainerMessageId(),
+    });
+  }
 
   const followLatest = computed(() => readingMode.value === 'following_latest');
 
@@ -1243,6 +1269,7 @@ export function useStreamingDemo() {
   let patchSequence = 0;
   let assistantPlaceholderCreating = false;
   let hostMesTextPrimedForCurrentGeneration = false;
+  let nativeSendProxyActive = false;
   const generationListenerEpochController = createGenerationListenerEpochController();
   let generationStops: StopHandle[] = [];
   let openingGenerationStops: StopHandle[] = [];
@@ -1251,6 +1278,7 @@ export function useStreamingDemo() {
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
   let hidePolicyRerun = false;
+  let hideStatePersistTimer = 0;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
@@ -1353,10 +1381,39 @@ export function useStreamingDemo() {
 
   const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
 
-  const shouldShowOpeningSetup = computed(
-    () =>
-      isOpeningWorkbenchHost && shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value),
+  /**
+   * 检查是否已有开局用户消息（开局种子或后续对话）。
+   * 用于兜底检测：当 getVariables API 不可用、openingPayload 无法恢复时，
+   * 如果已经有用户消息，说明开局流程已启动，不应再显示开局配置弹窗。
+   */
+  const hasOpeningSeedUserMessage = computed(() =>
+    transcript.value.some(item => item.role === 'user' && item.message_id > 0),
   );
+
+  const shouldShowOpeningSetup = computed(() => {
+    if (!isOpeningWorkbenchHostActive()) return false;
+    // 兜底：当 getVariables API 不可用时，openingPayload 默认为初始状态（无 result）。
+    // 如果已经有开局用户消息，说明开局已启动，隐藏弹窗让用户进入主界面。
+    if (
+      hasOpeningSeedUserMessage.value &&
+      openingPayload.value.state === 'configuring' &&
+      !openingPayload.value.result &&
+      !Number.isFinite(Number(openingPayload.value.opening_result_message_id))
+    ) {
+      return false;
+    }
+    const result = shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value);
+    console.log('[Debug] shouldShowOpeningSetup', {
+      isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
+      state: openingPayload.value.state,
+      opening_result_message_id: openingPayload.value.opening_result_message_id,
+      hasResult: Boolean(openingPayload.value.result),
+      hasStoryMessagesBeyondOpening: hasStoryMessagesBeyondOpening.value,
+      hasOpeningSeedUserMessage: hasOpeningSeedUserMessage.value,
+      result,
+    });
+    return result;
+  });
 
   const latestUserItem = computed(() => {
     for (let i = transcript.value.length - 1; i >= 0; i -= 1) {
@@ -1431,7 +1488,7 @@ export function useStreamingDemo() {
   }
 
   function restoreReaderChatState() {
-    const containerId = readCurrentContainerMessageId();
+    const containerId = getActiveContainerMessageId();
     if (containerId !== 0) {
       return;
     }
@@ -1451,6 +1508,13 @@ export function useStreamingDemo() {
     }
 
     const restoredOpeningPayload = readOpeningPayloadFromChat();
+    console.log('[Debug] restoreReaderChatState openingPayload', {
+      containerId,
+      restoredFound: Boolean(restoredOpeningPayload),
+      restoredState: restoredOpeningPayload?.state,
+      restoredResultMessageId: restoredOpeningPayload?.opening_result_message_id,
+      restoredHasResult: Boolean(restoredOpeningPayload?.result),
+    });
     if (restoredOpeningPayload) {
       openingPayload.value = restoredOpeningPayload;
       hydrateOpeningPayloadDefaults();
@@ -1492,13 +1556,10 @@ export function useStreamingDemo() {
 
   const readerSummary = computed<ReaderSummary>(() => {
     const turnCount = transcript.value.filter(item => item.role === 'assistant' && !item.isOpening).length;
-    const latestUserPreview = latestUserItem.value?.preview ?? '';
-    const latestAssistantPreview = latestAssistantItem.value?.preview ?? '';
+    const latestUserPreview = '';
+    const latestAssistantPreview = '';
     const assistantAnchorLabel = assistantMessageId.value != null ? `#${assistantMessageId.value}` : '-';
-    const storySummary = (() => {
-      const source = latestAssistantItem.value?.preview || transcript.value.find(item => item.isOpening)?.preview || '';
-      return source.slice(0, 120);
-    })();
+    const storySummary = '';
 
     return {
       turnCount,
@@ -1653,7 +1714,7 @@ export function useStreamingDemo() {
    * 同层 UI 通过 getChatMessages({ hide_state: 'all' }) 自行读取并渲染。
    */
   async function applyHidePolicy(reason: string) {
-    if (!isOpeningWorkbenchHost || readCurrentContainerMessageId() !== 0) return;
+    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
       return;
@@ -1676,10 +1737,11 @@ export function useStreamingDemo() {
     } finally {
       hidePolicyRunning = false;
     }
+    queuePersistHideState('apply_hide_policy');
   }
 
   async function syncOpeningAssistantMessage(refresh: HideRefreshMode = 'none', createIfMissing = true) {
-    if (readCurrentContainerMessageId() !== 0) return;
+    if (!isActiveOpeningWorkbenchScope()) return;
     if (openingPayload.value.state !== 'ready') return;
 
     const nextMessage = buildOpeningAssistantText(openingPayload.value);
@@ -1859,23 +1921,56 @@ export function useStreamingDemo() {
    */
   function readAllChatMessagesRaw(): any[] {
     try {
+      // 优先使用 getChatMessages API，因为它能正确返回 is_hidden 字段
+      // ctx.chat 中的消息对象可能缺少 is_hidden 字段
+      try {
+        const lastId = getTrueChatLength();
+        const list = callHostGetChatMessages(`0-${lastId}`, { hide_state: 'all' });
+        if (Array.isArray(list) && list.length > 0) {
+          return list.map((message: any) => ({
+            ...message,
+            role: resolveHostMessageRole(message),
+            message: String(message?.message ?? message?.mes ?? ''),
+            is_hidden: message?.is_hidden === true,
+          }));
+        }
+      } catch (e) {
+        console.warn('[Debug] readAllChatMessagesRaw getChatMessages error', { error: String(e) });
+      }
+
+      // 回退：从 ctx.chat 读取（但 is_hidden 字段可能不准确）
       const ctx = readHostContext();
       const chat = ctx?.chat;
-      if (!Array.isArray(chat)) return [];
-      return chat.map((message: any, index: number) => ({
-        ...message,
-        message_id: index,
-        role: message?.is_user ? 'user' : message?.is_system ? 'system' : 'assistant',
-        message: String(message?.mes ?? ''),
-        is_hidden: message?.is_hidden === true,
-      }));
-    } catch {
+      const chatLen =
+        chat != null && typeof chat === 'object' && typeof (chat as any).length === 'number'
+          ? (chat as any).length
+          : -1;
+      const hasIndexedAccess = chat != null && typeof chat === 'object';
+
+      if (hasIndexedAccess && chatLen > 0) {
+        const messages = Array.from({ length: chatLen }, function (_: any, index: number) {
+          const message = (chat as any)[index];
+          if (!message || typeof message !== 'object') return null;
+          return {
+            ...message,
+            message_id: message?.message_id ?? index,
+            role: resolveHostMessageRole(message),
+            message: String(message?.mes ?? message?.message ?? ''),
+            is_hidden: message?.is_hidden === true,
+          };
+        }).filter(Boolean);
+        if (messages.length > 0) return messages;
+      }
+
+      return [];
+    } catch (e) {
+      console.warn('[Debug] readAllChatMessagesRaw error', { error: String(e) });
       return [];
     }
   }
 
   function readMessagesAfterContainer(): BaseChatMessage[] {
-    const containerId = readCurrentContainerMessageId();
+    const containerId = getActiveContainerMessageId();
     // 直接从宿主 chat 数组读取，绕过 getChatMessages 对 is_hidden 的潜在过滤
     const all = readAllChatMessagesRaw();
     return all.filter(
@@ -1889,6 +1984,67 @@ export function useStreamingDemo() {
       hidePolicyTimer = 0;
       void applyHidePolicy(reason);
     }, 0);
+  }
+
+  function persistHideStateNow(reason: string) {
+    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+    const containerId = getActiveContainerMessageId();
+    if (containerId == null) return;
+
+    const hiddenIds = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => item.message_id);
+
+    const record = buildHideStateRecord(containerId, hiddenIds);
+    writeHideState(record);
+    console.log('[stream-demo] hide state persisted', { reason, containerId, hiddenCount: hiddenIds.length });
+  }
+
+  function queuePersistHideState(reason: string) {
+    if (hideStatePersistTimer) window.clearTimeout(hideStatePersistTimer);
+    hideStatePersistTimer = window.setTimeout(() => {
+      hideStatePersistTimer = 0;
+      persistHideStateNow(reason);
+    }, 80);
+  }
+
+  async function restoreHideState(): Promise<void> {
+    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+
+    const savedState = readHideState();
+    if (!savedState || savedState.hiddenMessageIds.length === 0) return;
+
+    const containerId = getActiveContainerMessageId();
+    if (containerId == null || savedState.containerMessageId !== containerId) {
+      console.log('[stream-demo] hide state restore skipped', {
+        savedContainer: savedState.containerMessageId,
+        currentContainer: containerId,
+      });
+      return;
+    }
+
+    const allMessages = readMessagesAfterContainer();
+    const validHiddenIds = savedState.hiddenMessageIds.filter(savedId =>
+      allMessages.some(msg => msg.message_id === savedId),
+    );
+
+    if (validHiddenIds.length === 0) return;
+
+    try {
+      await setChatMessages(
+        validHiddenIds.map(id => ({ message_id: id, is_hidden: true })),
+        { refresh: 'none' },
+      );
+      console.log('[stream-demo] hide state restored', {
+        containerId,
+        restoredCount: validHiddenIds.length,
+        totalCount: allMessages.length,
+      });
+    } catch (error) {
+      console.warn('[stream-demo] hide state restore failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   function queueExternalSync(reason: string) {
@@ -1997,15 +2153,8 @@ export function useStreamingDemo() {
         currentDocument: document,
         collectHostDocuments,
         readChatMessageDetail: (id: number) => {
-          try {
-            const ctx = readHostContext();
-            const chat = ctx?.chat;
-            if (!Array.isArray(chat)) return null;
-            // chat 数组没有 message_id 字段，index 即 mesid
-            return chat[id] ?? null;
-          } catch {
-            return null;
-          }
+          // 使用统一的 readChatMessageDetail 函数
+          return readChatMessageDetail(id);
         },
         setChatMessages,
       },
@@ -2095,9 +2244,10 @@ export function useStreamingDemo() {
   function listAllChatMessages() {
     const raw = readAllChatMessagesRaw();
     if (raw.length > 0) return raw;
+    // 备用路径：通过宿主窗口调用 getChatMessages
     try {
       const lastId = getTrueChatLength();
-      const list = getChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[];
+      const list = callHostGetChatMessages(`0-${lastId}`, { hide_state: 'all' });
       return Array.isArray(list) ? list : [];
     } catch {
       return [];
@@ -2168,20 +2318,27 @@ export function useStreamingDemo() {
 
     if (existing) {
       const message_id = Math.trunc(Number(existing?.message_id));
-      await setChatMessages([{ message_id, role: 'user', message: prompt, is_hidden: false, data: nextData }], {
+      await setChatMessages([{ message_id, role: 'user', message: prompt, is_hidden: true, data: nextData }], {
         refresh,
       });
       return message_id;
     }
 
-    const firstAfterZero = findFirstChatIdAfterZero(messages);
-    await createChatMessages([{ role: 'user', is_hidden: false, message: prompt, data: nextData }], {
-      insert_before: firstAfterZero ?? 'end',
+    // 找到第一条非 seed 消息（通常是 user 的 story request），插入在其之后
+    const firstStoryId = findFirstStoryChatIdAfterOpening(messages);
+    await createChatMessages([{ role: 'user', is_hidden: true, message: prompt, data: nextData }], {
+      insert_before: firstStoryId != null && firstStoryId > 0 ? firstStoryId : 'end',
       refresh,
     });
-    const created = listAllChatMessages().find(
-      message => isOpeningSeedMessage(message) && String(message?.message ?? '') === prompt,
-    );
+    // 宽松查找：找最后一条带有 opening_seed flag 的消息
+    const msgs = listAllChatMessages();
+    const created = msgs
+      .reverse()
+      .find(
+        message =>
+          hasOpeningSeedFlag(message) ||
+          (message.role === 'user' && String(message?.message ?? '').trim() === prompt.trim()),
+      );
     return readMessageId(created);
   }
 
@@ -2197,6 +2354,11 @@ export function useStreamingDemo() {
 
     if (existing) {
       const message_id = Math.trunc(Number(existing?.message_id));
+      console.log('[Debug] upsertOpeningResultMessage update path', {
+        message_id,
+        messageLength: message.length,
+        isNew: false,
+      });
       await setChatMessages([{ message_id, role: 'assistant', message, is_hidden: false, data: nextData }], {
         refresh,
       });
@@ -2210,31 +2372,121 @@ export function useStreamingDemo() {
       insert_before: firstStoryMessageId ?? 'end',
       refresh,
     });
+    // 优先通过 flag 查找（flag 比内容更可靠），content 只做二次确认
     const created = listAllChatMessages().find(
-      item => isOpeningAssistantMessage(item) && String(item?.message ?? '') === message,
+      item => isOpeningAssistantMessage(item) && String(item?.message ?? '').trim() === message.trim(),
     );
-    return readMessageId(created);
+    const resultId = readMessageId(created);
+    // 如果 flag 查找失败（可能时序问题），尝试宽松匹配：找最后一条没有 flag 的 assistant 消息
+    const fallbackId =
+      resultId ??
+      (() => {
+        const msgs = listAllChatMessages();
+        const flagGuards = new Set([
+          ...msgs.filter(m => hasOpeningAssistantFlag(m)).map(m => m.message_id),
+          ...msgs.filter(m => hasOpeningSeedFlag(m)).map(m => m.message_id),
+        ]);
+        const candidates = msgs.filter(
+          m =>
+            m.role === 'assistant' &&
+            !flagGuards.has(m.message_id) &&
+            String(m.message ?? '').trim() === message.trim(),
+        );
+        return candidates.length > 0 ? candidates[candidates.length - 1].message_id : null;
+      })();
+    console.log('[Debug] upsertOpeningResultMessage create path', {
+      messageLength: message.length,
+      createdMessageId: resultId,
+      fallbackId,
+      finalId: fallbackId,
+      insertBefore: firstStoryMessageId,
+      isNew: true,
+    });
+    return fallbackId;
   }
 
   async function normalizeOpeningMessageOrder(refresh: HideRefreshMode = 'none') {
     const currentMessages = listAllChatMessages();
     const currentSeedId = readMessageId(findOpeningSeedChatMessage(currentMessages));
     const currentResultId = readMessageId(findOpeningResultChatMessage(currentMessages));
+    // 找到 user story message（通常是第一条 role=user 且 message_id > 0 的消息）
+    const currentUserId = (() => {
+      for (const m of currentMessages) {
+        const id = readMessageId(m);
+        if (id != null && id > 0 && m.role === 'user') return id;
+      }
+      return null;
+    })();
+    const flaggedMsgs = currentMessages
+      .filter(m => hasOpeningAssistantFlag(m) || hasOpeningSeedFlag(m))
+      .map(m => ({
+        id: m.message_id,
+        role: m.role,
+        hasSeed: hasOpeningSeedFlag(m),
+        hasAssistant: hasOpeningAssistantFlag(m),
+        preview: String(m.message ?? '').slice(0, 30),
+      }));
+    console.log('[Debug] normalizeOpeningMessageOrder pre-rotate', {
+      currentSeedId,
+      currentResultId,
+      currentUserId,
+      preferredResultId: openingPayload.value.opening_result_message_id,
+      flaggedMsgs,
+    });
 
+    // 第一步：如果 seed 在 user 之前（即 userId > seedId），旋转把 user 移到 seed 之后
+    // 目标顺序：[setup, user, seed, result] — seed 隐藏，user 可见
+    // 使用 openingPayload 中的 seed ID（来自 upsertOpeningSeedMessage 返回值）定位，
+    // 避免依赖 flag 检测（data 字段可能不可靠）
+    const seedPreferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
+    const seedPositionBasedId =
+      Number.isFinite(seedPreferredId) && seedPreferredId > 0 ? seedPreferredId : currentSeedId;
     if (
-      currentSeedId != null &&
-      currentResultId != null &&
-      currentSeedId > 0 &&
-      currentResultId > 0 &&
-      currentSeedId > currentResultId
+      currentUserId != null &&
+      currentUserId > 0 &&
+      seedPositionBasedId != null &&
+      seedPositionBasedId > 0 &&
+      currentUserId > seedPositionBasedId
     ) {
-      await rotateChatMessages(currentResultId, currentSeedId, currentSeedId + 1, { refresh });
+      console.log(
+        '[Debug] normalizeOpeningMessageOrder rotating: move user',
+        currentUserId,
+        'after seed',
+        seedPositionBasedId,
+      );
+      await rotateChatMessages(currentUserId, seedPositionBasedId, seedPositionBasedId + 1, { refresh });
+    }
+
+    // 第二步：如果 seed 在 result 之后，旋转把 result 移到 seed 之前
+    const afterUserRotateMessages = listAllChatMessages();
+    const afterUserSeedId = readMessageId(findOpeningSeedChatMessage(afterUserRotateMessages));
+    const afterUserResultId = readMessageId(findOpeningResultChatMessage(afterUserRotateMessages));
+    if (
+      afterUserSeedId != null &&
+      afterUserSeedId > 0 &&
+      afterUserResultId != null &&
+      afterUserResultId > 0 &&
+      afterUserSeedId > afterUserResultId
+    ) {
+      console.log(
+        '[Debug] normalizeOpeningMessageOrder rotating: move result',
+        afterUserResultId,
+        'before seed',
+        afterUserSeedId,
+      );
+      await rotateChatMessages(afterUserResultId, afterUserSeedId, afterUserSeedId + 1, { refresh });
     }
 
     const nextMessages = listAllChatMessages();
+    const finalSeedId = readMessageId(findOpeningSeedChatMessage(nextMessages));
+    const finalResultId = readMessageId(findOpeningResultChatMessage(nextMessages));
+    console.log('[Debug] normalizeOpeningMessageOrder result', {
+      seedMessageId: finalSeedId,
+      resultMessageId: finalResultId,
+    });
     return {
-      seedMessageId: readMessageId(findOpeningSeedChatMessage(nextMessages)),
-      resultMessageId: readMessageId(findOpeningResultChatMessage(nextMessages)),
+      seedMessageId: finalSeedId,
+      resultMessageId: finalResultId,
     };
   }
 
@@ -2307,7 +2559,7 @@ export function useStreamingDemo() {
       suppressedEventNames: lifecycleEchoSuppressedHostEvents,
     });
     const shouldIgnore = shouldIgnoreHostRefreshDuringBusy({
-      busy: busy.value,
+      busy: busy.value && nativeSendProxyActive !== true,
       eventName: name,
       generationStartedEventName: String(tavern_events.GENERATION_STARTED),
       generationEndedEventName: String(tavern_events.GENERATION_ENDED),
@@ -2345,11 +2597,17 @@ export function useStreamingDemo() {
       refreshType,
       domains,
     });
+    console.log('[Debug] handleHostRefreshEvent', {
+      name,
+      refreshType,
+      domains,
+      isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
+    });
     scheduleUiRefresh(domains, `event:${name}`);
   }
 
   async function bindMvuRefreshEvents() {
-    if (!isOpeningWorkbenchHost) return;
+    if (!isOpeningWorkbenchHostActive()) return;
     if (typeof eventOn !== 'function') return;
     try {
       await waitGlobalInitialized('Mvu');
@@ -2389,13 +2647,28 @@ export function useStreamingDemo() {
       },
       traceId,
     );
+    let rawMessages: any[] = [];
+    let all: any[] = [];
     try {
       // 直接从宿主 chat 数组读取，确保能拿到 is_hidden 的楼层
-      const rawMessages = readAllChatMessagesRaw();
+      rawMessages = readAllChatMessagesRaw();
       const lastId = rawMessages.length > 0 ? rawMessages[rawMessages.length - 1].message_id : getTrueChatLength();
       const list =
-        rawMessages.length > 0 ? rawMessages : (getChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[]);
-      const all = Array.isArray(list) ? list : [];
+        rawMessages.length > 0 ? rawMessages : (callHostGetChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[]);
+      all = Array.isArray(list) ? list : [];
+      console.log('[Debug] rebuildTranscript data', {
+        reason,
+        rawMessagesLength: rawMessages.length,
+        listSource: rawMessages.length > 0 ? 'raw' : 'getChatMessages',
+        lastId,
+        allLength: all.length,
+        allSample: all.map((m: any) => ({
+          id: m.message_id,
+          is_hidden: m.is_hidden,
+          role: m.role,
+          mes: String(m.message || m.mes || '').slice(0, 40),
+        })),
+      });
 
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
@@ -2410,7 +2683,7 @@ export function useStreamingDemo() {
         } else {
           const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
           if (opening) {
-            const openingRole = ((opening?.role as string) || 'assistant') as TranscriptItem['role'];
+            const openingRole = resolveHostMessageRole(opening);
             if (openingRole === 'assistant') nextLatestAssistantId = containerId;
             normalized.push(
               buildTranscriptItem({
@@ -2433,8 +2706,13 @@ export function useStreamingDemo() {
         const id = Math.trunc(message_id);
         if (containerId != null && id <= containerId) continue;
         if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
-        const role = ((message?.role as string) || 'assistant') as TranscriptItem['role'];
         const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
+        const rawRole = resolveHostMessageRole(message);
+        const role = resolveTranscriptRole({
+          rawRole,
+          rawMessage: String(message?.message ?? ''),
+          isOpeningResult,
+        });
         if (role === 'assistant') nextLatestAssistantId = id;
 
         normalized.push(
@@ -2453,6 +2731,24 @@ export function useStreamingDemo() {
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
+      console.log('[Debug] rebuildTranscript result', {
+        reason,
+        containerId,
+        normalizedLength: normalized.length,
+        transcriptLength: transcript.value.length,
+        transcriptSample: transcript.value.map((t: any) => ({
+          id: t.message_id,
+          role: t.role,
+          hidden: t.hidden,
+          isOpening: t.isOpening,
+          preview: stripTagsForPreview(String(t.content ?? t.raw ?? '')).slice(0, 60),
+        })),
+        openingPayload: {
+          state: openingPayload.value.state,
+          opening_result_message_id: openingPayload.value.opening_result_message_id,
+          hasResult: Boolean(openingPayload.value.result),
+        },
+      });
       recordLifecycleTrace(
         'rebuildTranscript',
         'done',
@@ -2469,14 +2765,33 @@ export function useStreamingDemo() {
       if (selectedItem.value) {
         selectedItem.value = transcript.value.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
       }
-    } catch {
+    } catch (err) {
       transcript.value = [];
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const errorStack = err instanceof Error ? err.stack : '';
+      console.error('[Debug] rebuildTranscript ERROR', {
+        reason,
+        sequence,
+        error: errorMessage,
+        stack: errorStack,
+        containerId,
+        rawMessagesLength: rawMessages?.length,
+        allLength: all?.length,
+        chatSample: Array.isArray(all)
+          ? all.slice(0, 3).map((m: any) => ({
+              id: m.message_id,
+              role: m.role,
+              mes: String(m?.message || m?.mes || '').slice(0, 40),
+            }))
+          : null,
+      });
       recordLifecycleTrace(
         'rebuildTranscript',
         'error',
         {
           reason,
           sequence,
+          error: errorMessage,
         },
         traceId,
       );
@@ -2715,7 +3030,9 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
-        const lastAssistantMessage = getChatMessages(-2)?.[0];
+        // 通过宿主窗口获取倒数第二条消息（通常是最后一个 assistant）
+        const lastMessages = callHostGetChatMessages(-2, { hide_state: 'all' });
+        const lastAssistantMessage = Array.isArray(lastMessages) ? lastMessages[0] : null;
         const userData = sanitizeInheritedMessageData(lastAssistantMessage?.data);
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], {
           refresh: 'none',
@@ -3058,20 +3375,37 @@ export function useStreamingDemo() {
         state: 'ready',
         result: nextResult,
       };
-      await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      const updatedResultId = await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      console.log('[Debug] generateOpening upsertOpeningResultMessage', {
+        updatedResultId,
+        existingResultId: openingPayload.value.opening_result_message_id,
+      });
       const { seedMessageId: normalizedSeedMessageId, resultMessageId: openingResultMessageId } =
         await normalizeOpeningMessageOrder('none');
+      console.log('[Debug] generateOpening normalizeOpeningMessageOrder', {
+        normalizedSeedMessageId,
+        openingResultMessageId,
+        updatedResultId,
+        fallbackResultId: updatedResultId ?? openingResultMessageId ?? openingPayload.value.opening_result_message_id,
+      });
+      // Fallback: 如果 normalize 失败，用 upsert 或已知 ID 兜底
+      const finalResultId = openingResultMessageId ?? updatedResultId ?? openingPayload.value.opening_result_message_id;
       openingPayload.value = {
         ...openingPayload.value,
         state: 'ready',
-        opening_seed_user_message_id: normalizedSeedMessageId,
-        opening_result_message_id: openingResultMessageId,
+        opening_seed_user_message_id: normalizedSeedMessageId ?? openingPayload.value.opening_seed_user_message_id,
+        opening_result_message_id: finalResultId,
         result: nextResult,
       };
+      console.log('[Debug] generateOpening persist', {
+        opening_result_message_id: finalResultId,
+        state: 'ready',
+        hasResult: Boolean(nextResult),
+      });
       persistOpeningPayloadNow();
-      await syncOpeningConfigToResultMvu(openingResultMessageId);
-      if (openingResultMessageId != null) {
-        await reprocessMessageVariablesById(openingResultMessageId, { force: true, refreshMessage: true });
+      await syncOpeningConfigToResultMvu(finalResultId);
+      if (finalResultId != null) {
+        await reprocessMessageVariablesById(finalResultId, { force: true, refreshMessage: true });
       }
       rebuildTranscript();
       status.value = 'done';
@@ -3105,7 +3439,14 @@ export function useStreamingDemo() {
   }
 
   function bindHistoryRefreshEvents() {
-    if (!isOpeningWorkbenchHost) return;
+    console.log('[Debug] bindHistoryRefreshEvents called', {
+      isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
+      eventOnType: typeof eventOn,
+      tavern_eventsDefined: typeof tavern_events !== 'undefined',
+      tavern_eventsKeys: typeof tavern_events !== 'undefined' ? Object.keys(tavern_events).slice(0, 20) : null,
+      windowName: window.name,
+    });
+    if (!isOpeningWorkbenchHostActive()) return;
     if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') return;
     const names = [
       tavern_events.CHAT_CHANGED,
@@ -3283,20 +3624,51 @@ export function useStreamingDemo() {
       return;
     }
     const prompt = String(nextPrompt ?? input.value ?? '').trim();
-    await runGenerationFlow({ prompt, createUser: true });
-    if (nextPrompt == null || prompt === String(input.value ?? '').trim()) {
+    const submitted = await runNativeSendProxy(prompt);
+    if (submitted && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
       input.value = '';
     }
   }
 
-  onMounted(() => {
+  async function runNativeSendProxy(prompt: string): Promise<boolean> {
+    const text = String(prompt ?? '').trim();
+    if (!text || busy.value) return false;
+
+    busy.value = true;
+    nativeSendProxyActive = true;
+    status.value = 'preparing';
+    errorText.value = '';
+
+    try {
+      await withHostTranscriptVisible(async () => {
+        await sendToNativeChat(text, true);
+      });
+      appendLog('action', '发送用户输入', stripTagsForPreview(text).slice(0, 80) || '(空输入)');
+      status.value = 'done';
+      return true;
+    } catch (error) {
+      status.value = 'error';
+      errorText.value = error instanceof Error ? error.message : String(error);
+      toastr?.error?.(`发送失败：${errorText.value}`);
+      appendLog('error', '发送失败', errorText.value || '未知错误');
+      return false;
+    } finally {
+      nativeSendProxyActive = false;
+      busy.value = false;
+      queueHidePolicy('native_send_proxy');
+    }
+  }
+
+  onMounted(async () => {
     restoreReaderChatState();
     void syncOpeningAssistantMessage('none', false);
-    rebuildTranscript();
-    if (isOpeningWorkbenchHost) {
+
+    if (isOpeningWorkbenchHostActive()) {
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
-      queueHidePolicy('mounted');
+
+      await restoreHideState();
+
       if (document.body && typeof MutationObserver !== 'undefined') {
         generatedImageDomObserver = new MutationObserver(records => {
           if (!records.some(hasRelevantChatu8Mutation)) return;
@@ -3316,6 +3688,9 @@ export function useStreamingDemo() {
         scheduleUiRefresh(['transcript'], 'host.plugin_native_dom_mutation');
       });
     }
+
+    rebuildTranscript();
+    queueHidePolicy('mounted');
   });
 
   watch(
@@ -3360,8 +3735,8 @@ export function useStreamingDemo() {
   }
 
   onBeforeUnmount(() => {
-    if (isOpeningWorkbenchHost) {
-      // 卸载时恢复所有楼层可见，让酒馆原生渲染接管
+    if (isOpeningWorkbenchHostActive()) {
+      persistHideStateNow('unmount');
       try {
         const hiddenMessages = readMessagesAfterContainer()
           .filter(item => item.is_hidden === true)
@@ -3383,6 +3758,7 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
+    hideStatePersistTimer = clearTimer(hideStatePersistTimer);
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());

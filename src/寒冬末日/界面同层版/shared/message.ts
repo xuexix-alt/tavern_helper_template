@@ -3,6 +3,7 @@ export const STREAM_DEMO_MARKER = '[stream-demo:minimal]';
 export type StreamDemoPhase = 'stream' | 'done';
 
 const CONTENT_BLOCK_RE = /<content(?:\s[^>]*)?>([\s\S]*?)<\/content>/i;
+const CONTENT_OPEN_RE = /<content(?:\s[^>]*)?>/i;
 const PHASE_BLOCK_RE = /<demo_phase>(stream|done)<\/demo_phase>/i;
 const OPTION_BLOCK_RE = /<option(?:\s[^>]*)?>([\s\S]*?)(?:<\/option>|$)/gi;
 const OPTION_LINE_MARKER_RE = /^(?:[-*•]+|\d+[.)、]|[（(]?\d+[)）、])\s*/;
@@ -29,6 +30,20 @@ export function extractStreamDemoPhase(raw: string): StreamDemoPhase {
 
 export function extractStreamDemoContent(raw: string): string {
   const source = String(raw ?? '');
+  const phaseMatch = source.match(PHASE_BLOCK_RE);
+  const searchFrom = phaseMatch ? phaseMatch.index + phaseMatch[0].length : 0;
+  const sliced = source.slice(Math.max(0, searchFrom));
+  const contentOpenMatch = sliced.match(CONTENT_OPEN_RE);
+  const wrapperCloseIndex = source.toLowerCase().lastIndexOf('</content>');
+
+  if (contentOpenMatch && wrapperCloseIndex >= 0) {
+    const wrapperOpenIndex = Math.max(0, searchFrom) + contentOpenMatch.index;
+    const wrapperContentStart = wrapperOpenIndex + contentOpenMatch[0].length;
+    if (wrapperContentStart <= wrapperCloseIndex) {
+      return source.slice(wrapperContentStart, wrapperCloseIndex).trim();
+    }
+  }
+
   const contentMatch = source.match(CONTENT_BLOCK_RE);
   if (contentMatch?.[1]) return contentMatch[1].trim();
   return source.replace(STREAM_DEMO_MARKER, '').replace(PHASE_BLOCK_RE, '').trim();

@@ -2,9 +2,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  buildAssistantRenderSource,
   buildDemoAssistantFinalBodySource,
   buildDebugMessageSignature,
   createGenerationListenerEpochController,
+  resolveAssistantDisplayRenderSource,
+  resolveTranscriptRole,
   shouldCreateAssistantPlaceholderOnFirstToken,
   shouldEnsureAssistantPlaceholderBeforeFinalize,
   shouldPrewarmHostMesTextAfterPatch,
@@ -137,6 +140,62 @@ test('buildDemoAssistantFinalBodySource prefers extracted content over stripped 
       strippedRenderSource: '兜底正文',
     }),
     '兜底正文',
+  );
+});
+
+test('buildAssistantRenderSource prefers extracted opening content for structured non-stream assistants', () => {
+  assert.equal(
+    buildAssistantRenderSource({
+      isDemoAssistant: false,
+      hasStructuredContent: true,
+      content: '窗外的天空呈现出一种病态的铅灰色。',
+      strippedRenderSource: '[metacognition]\\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\\n<option>A</option>',
+    }),
+    '窗外的天空呈现出一种病态的铅灰色。',
+  );
+});
+
+test('resolveAssistantDisplayRenderSource keeps full structured assistant source for tavern beautification', () => {
+  assert.equal(
+    resolveAssistantDisplayRenderSource({
+      isDemoAssistant: false,
+      hasStructuredContent: true,
+      renderSource: '窗外的天空呈现出一种病态的铅灰色。',
+      strippedRenderSource:
+        '[metacognition]\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\n<option>【A】观察</option>\n<UpdateVariable><Analysis>...</Analysis></UpdateVariable>',
+    }),
+    '[metacognition]\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\n<option>【A】观察</option>\n<UpdateVariable><Analysis>...</Analysis></UpdateVariable>',
+  );
+});
+
+test('resolveTranscriptRole forces opening result floors to render as assistant even if host role drifts', () => {
+  assert.equal(
+    resolveTranscriptRole({
+      rawRole: 'system',
+      rawMessage: '',
+      isOpeningResult: true,
+    }),
+    'assistant',
+  );
+
+  assert.equal(
+    resolveTranscriptRole({
+      rawRole: 'system',
+      rawMessage: '',
+      isOpeningResult: false,
+    }),
+    'system',
+  );
+});
+
+test('resolveTranscriptRole forces stream-demo wrapped floors to render as assistant even if host role drifts', () => {
+  assert.equal(
+    resolveTranscriptRole({
+      rawRole: 'system',
+      rawMessage: '[stream-demo:minimal]\n<demo_phase>done</demo_phase>\n<content>正文</content>',
+      isOpeningResult: false,
+    }),
+    'assistant',
   );
 });
 

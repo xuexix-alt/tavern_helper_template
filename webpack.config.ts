@@ -56,19 +56,19 @@ function glob_script_files() {
       file => process.env.CI !== 'true' || !fs.readFileSync(path.join(import.meta.dirname, file)).includes('@no-ci'),
     )
     .forEach(file => {
-    const file_dirname = path.dirname(file);
-    for (const [index, result] of results.entries()) {
-      const result_dirname = path.dirname(result);
-      const common = common_path(result_dirname, file_dirname);
-      if (common === result_dirname) {
-        return;
+      const file_dirname = path.dirname(file);
+      for (const [index, result] of results.entries()) {
+        const result_dirname = path.dirname(result);
+        const common = common_path(result_dirname, file_dirname);
+        if (common === result_dirname) {
+          return;
+        }
+        if (common === file_dirname) {
+          results.splice(index, 1, file);
+          return;
+        }
       }
-      if (common === file_dirname) {
-        results.splice(index, 1, file);
-        return;
-      }
-    }
-    results.push(file);
+      results.push(file);
     });
 
   return results;
@@ -187,16 +187,12 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     .readFileSync(path.join(import.meta.dirname, entry.script), 'utf-8')
     .includes('@obfuscate');
   const script_filepath = path.parse(entry.script);
-  const is_ui_entry = entry.html !== undefined;
 
   return (_env, argv) => ({
     experiments: {
-      outputModule: !is_ui_entry,
+      outputModule: true,
     },
-    // UI outputs are frequently copy-pasted/embedded into SillyTavern regex scripts.
-    // `eval-source-map` wraps modules in `eval("...")`, which can break when the output
-    // is re-serialized/embedded as a JS string (e.g. invalid escape/control chars).
-    devtool: argv.mode === 'production' ? 'source-map' : is_ui_entry ? 'source-map' : 'eval-source-map',
+    devtool: argv.mode === 'production' ? 'source-map' : 'eval-source-map',
     watchOptions: {
       ignored: ['**/dist', '**/node_modules'],
     },
@@ -224,8 +220,9 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
       asyncChunks: true,
       clean: true,
       publicPath: '',
-      module: !is_ui_entry,
-      ...(is_ui_entry ? {} : { library: { type: 'module' } }),
+      library: {
+        type: 'module',
+      },
     },
     module: {
       rules: [
@@ -427,9 +424,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
           new HtmlWebpackPlugin({
             template: path.join(import.meta.dirname, entry.html),
             filename: path.parse(entry.html).base,
-            // Keep UI outputs compatible with jQuery `.load()` by inlining scripts
-            // and avoiding ESM module scripts.
-            scriptLoading: 'blocking',
+            scriptLoading: 'module',
             cache: false,
           }),
           new HtmlInlineScriptWebpackPlugin(),
@@ -557,16 +552,10 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
         vue: 'Vue',
         'vue-router': 'VueRouter',
         yaml: 'YAML',
-        'pixi.js': 'PIXI',
         zod: 'z',
       };
       if (request in global) {
-        return callback(null, 'var ' + global[request as keyof typeof global]); 
-      }
-      if (is_ui_entry) {
-        // UI entries are inlined into a single HTML file; avoid ESM externals
-        // (module-import) and bundle the dependency instead.
-        return callback();
+        return callback(null, 'var ' + global[request as keyof typeof global]);
       }
       const cdn = {
         sass: 'https://jspm.dev/sass',

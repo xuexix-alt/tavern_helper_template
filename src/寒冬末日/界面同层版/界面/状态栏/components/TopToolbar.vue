@@ -85,9 +85,6 @@
     <div class="toolbar-row meta-row">
       <div class="toolbar-meta">
         <span>总楼层 {{ totalCount }}</span>
-        <span class="meta-divider">·</span>
-        <span>最近正文</span>
-        <span class="meta-preview">{{ latestUserPreview || '暂无' }}</span>
       </div>
       <div class="toolbar-actions">
         <span v-if="isBrowsingHistory" class="history-indicator" title="当前正在浏览历史" aria-label="当前正在浏览历史">
@@ -107,7 +104,6 @@ defineProps<{
   density: TranscriptDensity;
   fontMode: ReaderFontMode;
   totalCount: number;
-  latestUserPreview: string;
   atLatest: boolean;
   isBrowsingHistory: boolean;
 }>();

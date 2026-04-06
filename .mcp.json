@@ -1,1 +1,9 @@
-.cursor/mcp.json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "chrome-devtools-mcp@latest"],
+      "alwaysAllow": ["list_pages", "evaluate_script"]
+    }
+  }
+}

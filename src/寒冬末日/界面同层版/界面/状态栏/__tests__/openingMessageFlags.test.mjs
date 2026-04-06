@@ -94,3 +94,48 @@ test('isCurrentOpeningAssistantMessageByPayload matches only the payload-selecte
   assert.equal(isCurrentOpeningAssistantMessageByPayload(current, { opening_result_message_id: 2 }), true);
   assert.equal(isCurrentOpeningAssistantMessageByPayload(leaked, { opening_result_message_id: 2 }), false);
 });
+
+test('isCurrentOpeningSeedMessageByPayload treats the preferred user id as authoritative even before the runtime flag is readable', () => {
+  const seedWithoutFlag = {
+    message_id: 1,
+    role: 'user',
+    data: {},
+  };
+  const unrelatedUser = {
+    message_id: 3,
+    role: 'user',
+    data: {},
+  };
+
+  assert.equal(isCurrentOpeningSeedMessageByPayload(seedWithoutFlag, { opening_seed_user_message_id: 1 }), true);
+  assert.equal(isCurrentOpeningSeedMessageByPayload(unrelatedUser, { opening_seed_user_message_id: 1 }), false);
+});
+
+test('isCurrentOpeningAssistantMessageByPayload treats the preferred assistant id as authoritative even before the runtime flag is readable', () => {
+  const resultWithoutFlag = {
+    message_id: 2,
+    role: 'assistant',
+    data: {},
+  };
+  const unrelatedAssistant = {
+    message_id: 4,
+    role: 'assistant',
+    data: {},
+  };
+
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(resultWithoutFlag, { opening_result_message_id: 2 }), true);
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(unrelatedAssistant, { opening_result_message_id: 2 }), false);
+});
+
+test('isCurrentOpeningAssistantMessageByPayload still treats the payload-selected result floor as the opening assistant even if host role drifts', () => {
+  const resultWithDriftedRole = {
+    message_id: 2,
+    role: 'system',
+    data: {},
+  };
+
+  assert.equal(
+    isCurrentOpeningAssistantMessageByPayload(resultWithDriftedRole, { opening_result_message_id: 2 }),
+    true,
+  );
+});

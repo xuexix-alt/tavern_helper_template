@@ -288,7 +288,6 @@
         v-model:density="density"
         v-model:font-mode="fontMode"
         :total-count="transcriptStats.total"
-        :latest-user-preview="readerSummary.latestUserPreview"
         :at-latest="followLatest"
         :is-browsing-history="readingMode === 'browsing_history'"
         @jump-latest="jumpLatest"
@@ -1508,17 +1507,17 @@ useEventListener(window, 'keydown', event => {
     padding-right: 14px;
   }
 
-  /* 桌面端抽屉尺寸微调（定位已在默认样式中统一为 fixed 居中） */
+  /* 桌面端抽屉尺寸 — 内容已紧凑化，地图模式约 620px 可显示完整内容 */
   .ui-bottom-drawer {
     width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
-    height: 480px;
-    max-height: 480px;
+    height: min(76vh, 520px);
+    max-height: min(76vh, 520px);
   }
 
   .ui-bottom-drawer.is-map {
     width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
-    height: 500px;
-    max-height: 500px;
+    height: min(82vh, 640px);
+    max-height: min(82vh, 640px);
   }
 }
 
@@ -1954,6 +1953,60 @@ useEventListener(window, 'keydown', event => {
   color: var(--demo-text-accent);
 }
 
+/* ─── MAP 模式：header 压缩为单行工具栏 ─── */
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head {
+  padding: 7px 10px 7px 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head-copy {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head-copy .demo-kicker {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head strong {
+  margin-top: 0;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* 地图模式 head 中隐藏副标题，pills 承担全部摘要信息 */
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head p {
+  display: none;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pills {
+  gap: 5px;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill {
+  min-height: 20px;
+  padding: 2px 7px;
+  gap: 5px;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill small {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill strong {
+  font-size: 10px;
+}
+
 .ui-bottom-drawer-body {
   flex: 1 1 0;
   min-height: 0;
@@ -1963,14 +2016,15 @@ useEventListener(window, 'keydown', event => {
 }
 
 .ui-bottom-drawer-body.is-map {
+  padding: 10px 12px 12px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), transparent),
-    linear-gradient(to right, color-mix(in srgb, var(--border) 14%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--border) 14%, transparent) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in srgb, var(--border) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 10%, transparent) 1px, transparent 1px);
   background-size:
     auto,
-    48px 48px,
-    48px 48px;
+    40px 40px,
+    40px 40px;
 }
 
 .ui-bottom-drawer-body.is-map :deep(#shelter-section) {
@@ -2204,21 +2258,27 @@ useEventListener(window, 'keydown', event => {
     height: 8px;
   }
 
-  /* 移动端抽屉：固定在视口底部偏上，覆盖大部分屏幕 */
+  /* 移动端抽屉：固定在视口底部偏上，覆盖大部分屏幕
+     必须同时写 height + max-height：
+     仅有 max-height 时 height 为 auto，flex-body(flex:1 1 0)
+     在 auto 高度父容器内无法伸展，导致内容区坍缩为 0px */
   .ui-bottom-drawer {
     top: auto;
     left: 3vw;
     right: 3vw;
     bottom: 80px;
     width: 94vw;
-    max-height: calc(100% - 30px);
+    height: calc(100vh - 96px);
+    max-height: calc(100vh - 96px);
     transform: none;
     border-radius: 18px 18px 12px 12px;
     z-index: 2600;
   }
 
   .ui-bottom-drawer.is-map {
-    max-height: calc(100% - 16px);
+    bottom: 68px;
+    height: calc(100vh - 80px);
+    max-height: calc(100vh - 80px);
   }
 
   .ui-bottom-drawer-head {

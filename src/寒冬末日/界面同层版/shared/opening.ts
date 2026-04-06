@@ -430,12 +430,22 @@ export function replaceOpeningPayloadInChat(payload: OpeningPayload) {
   try {
     updateVariablesWith(
       (vars: Record<string, unknown>) => {
-        _.set(vars, OPENING_CHAT_STATE_PATH, buildCompactOpeningPayloadForChat(payload));
+        const compact = buildCompactOpeningPayloadForChat(payload);
+        _.set(vars, OPENING_CHAT_STATE_PATH, compact);
+        console.log('[Debug] replaceOpeningPayloadInChat', {
+          state: compact.state,
+          opening_result_message_id: compact.opening_result_message_id,
+          opening_seed_user_message_id: compact.opening_seed_user_message_id,
+          hasResult: Boolean((payload as any).result),
+        });
         return vars;
       },
       { type: 'chat' },
     );
-  } catch {
+  } catch (err) {
+    console.warn('[Debug] replaceOpeningPayloadInChat ERROR', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     // ignore
   }
 }
@@ -651,16 +661,6 @@ export function extractTaggedBlockLoose(raw: string, tagName: string): string {
   return String(sliced ?? '').trim();
 }
 
-function stripOpeningMetaBlocks(raw: string): string {
-  return String(raw ?? '')
-    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
-    .replace(/<criteria>[\s\S]*?<\/criteria>/gi, '')
-    .replace(/<time>[\s\S]*?<\/time>/gi, '')
-    .replace(/<recap>[\s\S]*?<\/recap>/gi, '')
-    .replace(/<statusplaceholderimpl\s*\/?>/gi, '')
-    .trim();
-}
-
 function removeTaggedBlock(raw: string, tagName: string): string {
   return String(raw ?? '')
     .replace(new RegExp(`<${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/${tagName}>`, 'gi'), '')
@@ -668,18 +668,15 @@ function removeTaggedBlock(raw: string, tagName: string): string {
 }
 
 export function extractOpeningContent(raw: string): string {
-  const cleaned = stripOpeningMetaBlocks(raw);
-  return extractTaggedBlock(cleaned, 'content') || removeTaggedBlock(cleaned, 'option');
+  return extractTaggedBlock(raw, 'content') || removeTaggedBlock(raw, 'option');
 }
 
 export function extractOpeningContentLoose(raw: string): string {
-  const cleaned = stripOpeningMetaBlocks(raw);
-  return extractTaggedBlockLoose(cleaned, 'content') || removeTaggedBlock(cleaned, 'option');
+  return extractTaggedBlockLoose(raw, 'content') || removeTaggedBlock(raw, 'option');
 }
 
 export function extractOpeningOptions(raw: string): string[] {
-  const cleaned = stripOpeningMetaBlocks(raw);
-  const optionBlock = extractTaggedBlock(cleaned, 'option') || extractTaggedBlockLoose(cleaned, 'option');
+  const optionBlock = extractTaggedBlock(raw, 'option') || extractTaggedBlockLoose(raw, 'option');
   const taggedOptions = optionBlock
     .split('\n')
     .map(line => line.replace(/^(?:[-*•]+|\d+[.)、]|[（(]?\d+[)）、])\s*/, '').trim())
@@ -687,7 +684,7 @@ export function extractOpeningOptions(raw: string): string[] {
 
   if (taggedOptions.length > 0) return taggedOptions;
 
-  return cleaned
+  return String(raw ?? '')
     .split('\n')
     .map(line => line.trim())
     .filter(line => /^(?:【|\[)?[A-Da-d](?:】|\]|\.|、|\))\s*/.test(line))

@@ -21,17 +21,19 @@ export function hasOpeningSeedFlag(message: any): boolean {
 }
 
 export function isTrackedOpeningSeedMessage(message: any, preferredId?: unknown): boolean {
-  if (!hasOpeningSeedFlag(message)) return false;
   const normalizedPreferredId = normalizePreferredId(preferredId);
-  if (normalizedPreferredId == null) return true;
-  return readMessageId(message) === normalizedPreferredId;
+  if (normalizedPreferredId != null) {
+    return String(message?.role ?? '').toLowerCase() === 'user' && readMessageId(message) === normalizedPreferredId;
+  }
+  return hasOpeningSeedFlag(message);
 }
 
 export function isTrackedOpeningAssistantMessage(message: any, preferredId?: unknown): boolean {
-  if (!hasOpeningAssistantFlag(message)) return false;
   const normalizedPreferredId = normalizePreferredId(preferredId);
-  if (normalizedPreferredId == null) return true;
-  return readMessageId(message) === normalizedPreferredId;
+  if (normalizedPreferredId != null) {
+    return readMessageId(message) === normalizedPreferredId;
+  }
+  return hasOpeningAssistantFlag(message);
 }
 
 export function isCurrentOpeningSeedMessageByPayload(
