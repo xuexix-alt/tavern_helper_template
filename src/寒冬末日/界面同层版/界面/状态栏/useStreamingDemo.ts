@@ -1124,9 +1124,10 @@ function readCurrentContainerMessageId(): number | null {
   }
 }
 
-async function waitUntilMessageStatDataReady(
-  { intervalMs = 50, timeoutMs = 5000 }: { intervalMs?: number; timeoutMs?: number } = {},
-): Promise<void> {
+async function waitUntilMessageStatDataReady({
+  intervalMs = 50,
+  timeoutMs = 5000,
+}: { intervalMs?: number; timeoutMs?: number } = {}): Promise<void> {
   const start = Date.now();
   while (true) {
     try {

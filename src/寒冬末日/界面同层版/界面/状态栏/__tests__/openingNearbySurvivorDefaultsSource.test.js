@@ -15,8 +15,5 @@ test('opening nearby survivor defaults stay empty and avoid raw role-profile imp
   assert.doesNotMatch(source, /角色详情_-_慕小小\.txt\?raw/);
   assert.doesNotMatch(source, /角色详情_-_桃乐丝・泽巴哈\.txt\?raw/);
   assert.doesNotMatch(source, /export const OPENING_MESSAGE_ID = 0;/);
-  assert.match(
-    source,
-    /function getDefaultNearbySurvivorTypes\(\): string \{\s*return '';/,
-  );
+  assert.match(source, /function getDefaultNearbySurvivorTypes\(\): string \{\s*return '';/);
 });

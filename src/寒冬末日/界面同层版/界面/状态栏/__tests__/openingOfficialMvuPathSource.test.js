@@ -27,6 +27,9 @@ test('opening seed user floor carries initialized MVU data from layer 0 so assis
   assert.match(source, /async function buildOpeningSeedMvuData\(/);
   assert.match(source, /const openingSeedMvuData = await buildOpeningSeedMvuData\(\);/);
   assert.match(source, /await upsertOpeningSeedMessage\(compiledPrompt, 'none', openingSeedMvuData\)/);
-  assert.match(source, /async function upsertOpeningSeedMessage\(\s*prompt: string,\s*refresh: HideRefreshMode = 'none',\s*messageData\?: Record<string, unknown> \| null,/);
+  assert.match(
+    source,
+    /async function upsertOpeningSeedMessage\(\s*prompt: string,\s*refresh: HideRefreshMode = 'none',\s*messageData\?: Record<string, unknown> \| null,/,
+  );
   assert.match(source, /_.merge\(nextData, _.cloneDeep\(messageData\)\);/);
 });
