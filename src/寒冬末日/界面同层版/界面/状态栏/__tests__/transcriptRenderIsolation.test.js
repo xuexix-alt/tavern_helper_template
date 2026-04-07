@@ -38,7 +38,7 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     'native image DOM mutations should refresh only affected transcript items',
   );
   assert.equal(
-    source.includes('rebuildTranscript(\'host.plugin_native_dom_mutation\')'),
+    source.includes("rebuildTranscript('host.plugin_native_dom_mutation')"),
     false,
     'native image DOM mutations should not trigger a full transcript rebuild',
   );
@@ -100,7 +100,9 @@ test('iframe transcript render mode is decided from iframe roots, not host displ
     'render mode should only treat iframe plugin-native DOM as already rendered',
   );
   assert.equal(
-    source.includes('const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];'),
+    source.includes(
+      'const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];',
+    ),
     false,
     'host displayed message roots should not suppress iframe-side image injection',
   );

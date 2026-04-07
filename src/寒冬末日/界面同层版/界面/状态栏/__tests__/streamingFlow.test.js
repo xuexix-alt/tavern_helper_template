@@ -37,7 +37,7 @@ test('runDemo routes normal sends through controlled generation flow instead of 
   const body = extractFunctionBody(source, 'runDemo');
 
   assert.equal(
-    body.includes("await runGenerationFlow({ prompt, createUser: true });"),
+    body.includes('await runGenerationFlow({ prompt, createUser: true });'),
     true,
     'runDemo should use the controlled generation flow so stream tokens can patch the visible card',
   );
@@ -114,7 +114,9 @@ test('buildOpeningTranscriptItem uses raw opening output while delegating both s
     'opening transcript item should read the full raw output first',
   );
   assert.equal(
-    source.includes("const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');"),
+    source.includes(
+      "const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');",
+    ),
     true,
     'opening transcript item should render the raw output as the primary visible source',
   );

@@ -1065,8 +1065,7 @@ function readMutationMessageIdFromElement(element: Element | null): number | nul
 }
 
 function readMutationMessageIdFromNode(node: Node | null | undefined): number | null {
-  const element =
-    node instanceof Element ? node : node?.parentElement instanceof Element ? node.parentElement : null;
+  const element = node instanceof Element ? node : node?.parentElement instanceof Element ? node.parentElement : null;
   return readMutationMessageIdFromElement(element);
 }
 
@@ -1479,15 +1478,22 @@ export function useStreamingDemo() {
           String(entry?.promptToken ?? entry?.tag ?? entry?.prompt ?? '')
             .trim()
             .slice(0, 120),
-          String(entry?.regex ?? '').trim().slice(0, 80),
+          String(entry?.regex ?? '')
+            .trim()
+            .slice(0, 80),
           src ? `${src.slice(0, 64)}:${src.length}` : '',
         ].join('|');
       })
       .join('||');
 
-    return [rawMessage.length, promptTokenCount, swipeId, extraImageShape, selectedEntries.length, extraImageSignature].join(
-      '::',
-    );
+    return [
+      rawMessage.length,
+      promptTokenCount,
+      swipeId,
+      extraImageShape,
+      selectedEntries.length,
+      extraImageSignature,
+    ].join('::');
   }
 
   function listHostImageDataCandidates(messageIds: number[] = []): any[] {
@@ -2920,7 +2926,8 @@ export function useStreamingDemo() {
         const hasPersistedOpeningResult =
           Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
           Number(openingPayload.value.opening_result_message_id) > 0;
-        const shouldRenderOpeningFromPayload = openingPayload.value.state === 'generating' ||
+        const shouldRenderOpeningFromPayload =
+          openingPayload.value.state === 'generating' ||
           openingPayload.value.state === 'ready' ||
           (openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult);
 
@@ -3660,8 +3667,10 @@ export function useStreamingDemo() {
       appendLog(
         'action',
         '生成开局',
-        stripTagsForPreview(openingPayload.value.result?.raw ?? openingPayload.value.result?.content ?? '').slice(0, 80) ||
-          '(空开局)',
+        stripTagsForPreview(openingPayload.value.result?.raw ?? openingPayload.value.result?.content ?? '').slice(
+          0,
+          80,
+        ) || '(空开局)',
       );
     } catch (error) {
       status.value = 'error';
