@@ -1124,6 +1124,25 @@ function readCurrentContainerMessageId(): number | null {
   }
 }
 
+async function waitUntilMessageStatDataReady(
+  { intervalMs = 50, timeoutMs = 5000 }: { intervalMs?: number; timeoutMs?: number } = {},
+): Promise<void> {
+  const start = Date.now();
+  while (true) {
+    try {
+      if (_.has(getVariables({ type: 'message' }), 'stat_data')) return;
+    } catch {
+      // ignore and retry
+    }
+
+    if (Date.now() - start > timeoutMs) {
+      throw new Error('[stream-demo] waitUntilMessageStatDataReady timeout');
+    }
+
+    await new Promise<void>(resolve => window.setTimeout(resolve, intervalMs));
+  }
+}
+
 function normalizeRoleLabel(role: TranscriptItem['role']): string {
   if (role === 'user') return '用户';
   if (role === 'system') return '系统';
@@ -2559,10 +2578,17 @@ export function useStreamingDemo() {
     });
   }
 
-  async function upsertOpeningSeedMessage(prompt: string, refresh: HideRefreshMode = 'none') {
+  async function upsertOpeningSeedMessage(
+    prompt: string,
+    refresh: HideRefreshMode = 'none',
+    messageData?: Record<string, unknown> | null,
+  ) {
     const messages = listAllChatMessages();
     const existing = findOpeningSeedChatMessage(messages);
     const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
+    if (messageData && typeof messageData === 'object' && !Array.isArray(messageData)) {
+      _.merge(nextData, _.cloneDeep(messageData));
+    }
     _.set(nextData, 'stream_demo.opening_seed', true);
 
     if (existing) {
@@ -2595,10 +2621,14 @@ export function useStreamingDemo() {
     message: string,
     refresh: HideRefreshMode = 'none',
     createIfMissing = true,
+    messageData?: Record<string, unknown> | null,
   ) {
     const messages = listAllChatMessages();
     const existing = findOpeningResultChatMessage(messages);
     const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
+    if (messageData && typeof messageData === 'object' && !Array.isArray(messageData)) {
+      _.merge(nextData, _.cloneDeep(messageData));
+    }
     _.set(nextData, 'stream_demo.opening_assistant', true);
 
     if (existing) {
@@ -2652,6 +2682,57 @@ export function useStreamingDemo() {
       isNew: true,
     });
     return fallbackId;
+  }
+
+  async function buildOpeningSeedMvuData(): Promise<Record<string, unknown> | null> {
+    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return null;
+
+    try {
+      await waitGlobalInitialized('Mvu');
+      await waitUntilMessageStatDataReady();
+
+      const currentMessageId = readCurrentContainerMessageId();
+      const baseMessageId =
+        Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) >= 0
+          ? Math.trunc(Number(currentMessageId))
+          : ('latest' as const);
+      const baseMvuData = Mvu.getMvuData({ type: 'message', message_id: baseMessageId });
+      return baseMvuData && typeof baseMvuData === 'object' && !Array.isArray(baseMvuData)
+        ? (_.cloneDeep(baseMvuData) as Record<string, unknown>)
+        : null;
+    } catch (error) {
+      console.warn('[stream-demo] opening seed mvu clone failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  async function buildOpeningAssistantMvuData(message: string): Promise<Record<string, unknown> | null> {
+    const trimmedMessage = String(message ?? '').trim();
+    if (!trimmedMessage) return null;
+    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return null;
+
+    try {
+      await waitGlobalInitialized('Mvu');
+      await waitUntilMessageStatDataReady();
+
+      const currentMessageId = readCurrentContainerMessageId();
+      const baseMessageId =
+        Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) >= 0
+          ? Math.trunc(Number(currentMessageId))
+          : ('latest' as const);
+      const baseMvuData = Mvu.getMvuData({ type: 'message', message_id: baseMessageId });
+      const parsed = await Mvu.parseMessage(trimmedMessage, _.cloneDeep(baseMvuData));
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (_.cloneDeep(parsed) as Record<string, unknown>)
+        : null;
+    } catch (error) {
+      console.warn('[stream-demo] opening assistant mvu parse failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
   }
 
   async function normalizeOpeningMessageOrder(refresh: HideRefreshMode = 'none') {
@@ -2737,67 +2818,6 @@ export function useStreamingDemo() {
       seedMessageId: finalSeedId,
       resultMessageId: finalResultId,
     };
-  }
-
-  async function syncOpeningConfigToResultMvu(messageId: number | null | undefined) {
-    const normalizedId = Math.trunc(Number(messageId));
-    if (!Number.isFinite(normalizedId) || normalizedId <= 0) return;
-    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return;
-
-    try {
-      await waitGlobalInitialized('Mvu');
-      const current = Mvu.getMvuData({ type: 'message', message_id: normalizedId });
-      const hasValidMvuData = current && typeof current === 'object' && current !== null;
-      const next: Mvu.MvuData = hasValidMvuData
-        ? (_.cloneDeep(current) as Mvu.MvuData)
-        : { initialized_lorebooks: {}, stat_data: {} };
-      if (!next.initialized_lorebooks || typeof next.initialized_lorebooks !== 'object') {
-        next.initialized_lorebooks = {};
-      }
-      const stat_data =
-        next.stat_data && typeof next.stat_data === 'object' ? (next.stat_data as Record<string, unknown>) : {};
-
-      const openingShelterSummary = String(openingPayload.value.form_values?.shelter_ability_summary ?? '').trim();
-
-      if (!_.get(stat_data, '庇护所') || typeof _.get(stat_data, '庇护所') !== 'object') {
-        _.set(stat_data, '庇护所', {});
-      }
-      if (!Number.isFinite(Number(_.get(stat_data, '庇护所.庇护所等级', null)))) {
-        _.set(stat_data, '庇护所.庇护所等级', 1);
-      }
-      if (openingShelterSummary) {
-        _.set(stat_data, '庇护所.庇护所能力总述', openingShelterSummary);
-      }
-
-      _.set(stat_data, '世界.开局配置', {
-        sealed: true,
-        world_mode_id: String(openingPayload.value.world_mode_id ?? '').trim(),
-        route_id: String(openingPayload.value.route_id ?? '').trim(),
-        pre_disaster_identity: String(openingPayload.value.form_values?.pre_disaster_identity ?? '').trim(),
-        early_story_tone: String(openingPayload.value.form_values?.early_story_tone ?? '').trim(),
-        opening_seed_user_message_id:
-          Number.isFinite(Number(openingPayload.value.opening_seed_user_message_id)) &&
-          Number(openingPayload.value.opening_seed_user_message_id) > 0
-            ? Math.trunc(Number(openingPayload.value.opening_seed_user_message_id))
-            : 0,
-        opening_result_message_id: normalizedId,
-        form_values: {
-          supplemental_setting: String(openingPayload.value.form_values?.supplemental_setting ?? '').trim(),
-        },
-        meta: {
-          source: 'opening_ui',
-          version: 1,
-        },
-      });
-
-      _.set(next, 'stat_data', stat_data);
-      await Mvu.replaceMvuData(next as any, { type: 'message', message_id: normalizedId });
-    } catch (error) {
-      console.warn('[stream-demo] opening config -> mvu sync failed', {
-        messageId: normalizedId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
   }
 
   function handleHostRefreshEvent(name: string) {
@@ -3571,7 +3591,8 @@ export function useStreamingDemo() {
       return;
     }
 
-    const seedMessageId = await upsertOpeningSeedMessage(compiledPrompt, 'none');
+    const openingSeedMvuData = await buildOpeningSeedMvuData();
+    const seedMessageId = await upsertOpeningSeedMessage(compiledPrompt, 'none', openingSeedMvuData);
     const { seedMessageId: normalizedSeedMessageId, resultMessageId: normalizedResultMessageId } =
       await normalizeOpeningMessageOrder('none');
 
@@ -3630,7 +3651,14 @@ export function useStreamingDemo() {
         state: 'ready',
         result: nextResult,
       };
-      const updatedResultId = await upsertOpeningResultMessage(buildOpeningAssistantText(openingPayload.value), 'none');
+      const openingAssistantMessage = buildOpeningAssistantText(openingPayload.value);
+      const openingAssistantMvuData = await buildOpeningAssistantMvuData(openingAssistantMessage);
+      const updatedResultId = await upsertOpeningResultMessage(
+        openingAssistantMessage,
+        'none',
+        true,
+        openingAssistantMvuData,
+      );
       console.log('[Debug] generateOpening upsertOpeningResultMessage', {
         updatedResultId,
         existingResultId: openingPayload.value.opening_result_message_id,
@@ -3658,10 +3686,6 @@ export function useStreamingDemo() {
         hasResult: Boolean(nextResult),
       });
       persistOpeningPayloadNow();
-      await syncOpeningConfigToResultMvu(finalResultId);
-      if (finalResultId != null) {
-        await reprocessMessageVariablesById(finalResultId, { force: true, refreshMessage: true });
-      }
       rebuildTranscript();
       status.value = 'done';
       appendLog(

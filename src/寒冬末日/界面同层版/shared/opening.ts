@@ -1,22 +1,14 @@
 import YAML from 'yaml';
 
 import openingPromptTemplateRaw from '../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
-import initVarRaw from '../../世界书/寒冬末日/[initvar].yaml?raw';
 import worldModeProfilesRaw from '../../世界书/寒冬末日/世界观配置集.yaml?raw';
 import routeProfilesRaw from '../../世界书/寒冬末日/主流派起始偏置表.yaml?raw';
 import externalFactionRaw from '../../世界书/寒冬末日/外部幸存者势力.txt?raw';
 import shelterAbilityRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
-import wangJingRaw from '../../世界书/寒冬末日/角色档案_-__王静.txt?raw';
-import linYuehuaRaw from '../../世界书/寒冬末日/角色档案_-_林月华.txt?raw';
-import zhaoWeiguoRaw from '../../世界书/寒冬末日/角色档案_-_赵卫国.txt?raw';
-import chenXueRaw from '../../世界书/寒冬末日/角色档案_-_陈雪.txt?raw';
-import muXiaoxiaoRaw from '../../世界书/寒冬末日/角色详情_-_慕小小.txt?raw';
-import dorothyRaw from '../../世界书/寒冬末日/角色详情_-_桃乐丝・泽巴哈.txt?raw';
 import openingPresetRaw from './opening-preset.default.json';
 import { OpeningPayloadSchema, OpeningPresetSchema, type OpeningPayload, type OpeningPreset } from './opening.schema';
 
 export const OPENING_CHAT_STATE_PATH = 'stream_demo.opening';
-export const OPENING_MESSAGE_ID = 0;
 
 export type OpeningWorldModeOption = {
   id: string;
@@ -58,7 +50,6 @@ function parseYamlDocument(raw: string): Record<string, unknown> {
 const __worldModeDoc = parseYamlDocument(worldModeProfilesRaw);
 const __routeDoc = parseYamlDocument(routeProfilesRaw);
 const __shelterAbilityDoc = parseYamlDocument(shelterAbilityRaw);
-const __initVarDoc = parseYamlDocument(initVarRaw);
 
 function normalizeStringList(input: unknown): string[] {
   return Array.isArray(input) ? input.map(item => String(item ?? '').trim()).filter(Boolean) : [];
@@ -145,39 +136,7 @@ function getDefaultNearbyFactions(): string {
 }
 
 function getDefaultNearbySurvivorTypes(): string {
-  const sources = [muXiaoxiaoRaw, dorothyRaw, zhaoWeiguoRaw, linYuehuaRaw, chenXueRaw, wangJingRaw].map(item =>
-    String(item ?? ''),
-  );
-  const identities = new Set<string>();
-
-  sources.forEach(source => {
-    const matches = [
-      ...Array.from(source.matchAll(/identity:\s*([^\r\n]+)/g)).map(match => trimText(match[1])),
-      ...Array.from(source.matchAll(/public:\s*([^\r\n]+)/g)).map(match => trimText(match[1])),
-    ];
-
-    matches.forEach(value => {
-      value
-        .split('/')
-        .map(item => trimText(item))
-        .filter(Boolean)
-        .filter(
-          item =>
-            !item.includes('{{user}}') &&
-            !item.includes('邻居') &&
-            !item.includes('表妹') &&
-            !item.includes('姐姐') &&
-            !item.includes('妹妹'),
-        )
-        .forEach(item => identities.add(item));
-    });
-  });
-
-  const floorResidentsSpeech = trimText(_.get(__initVarDoc, ['楼层其他住户', '言语'], ''));
-  const floorResidentsBehavior = trimText(_.get(__initVarDoc, ['楼层其他住户', '行为'], ''));
-
-  const identityText = Array.from(identities).slice(0, 8).join('；');
-  return [identityText, floorResidentsSpeech, floorResidentsBehavior].filter(Boolean).join('；') || '未设定';
+  return '';
 }
 
 function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
