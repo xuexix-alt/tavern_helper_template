@@ -143,7 +143,7 @@ test('buildDemoAssistantFinalBodySource prefers extracted content over stripped 
   );
 });
 
-test('buildAssistantRenderSource prefers extracted opening content for structured non-stream assistants', () => {
+test('buildAssistantRenderSource keeps full structured source for non-stream assistants so final rendering can follow Tavern display rules', () => {
   assert.equal(
     buildAssistantRenderSource({
       isDemoAssistant: false,
@@ -152,20 +152,22 @@ test('buildAssistantRenderSource prefers extracted opening content for structure
       strippedRenderSource:
         '[metacognition]\\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\\n<option>A</option>',
     }),
-    '窗外的天空呈现出一种病态的铅灰色。',
+    '[metacognition]\\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\\n<option>A</option>',
   );
 });
 
-test('resolveAssistantDisplayRenderSource keeps full structured assistant source for tavern beautification', () => {
+test('resolveAssistantDisplayRenderSource keeps full structured assistant source for Tavern display formatting', () => {
+  const structuredSource =
+    '[metacognition]\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\n<option>【A】观察</option>\n<UpdateVariable><Analysis>...</Analysis></UpdateVariable>';
+
   assert.equal(
     resolveAssistantDisplayRenderSource({
       isDemoAssistant: false,
       hasStructuredContent: true,
-      renderSource: '窗外的天空呈现出一种病态的铅灰色。',
-      strippedRenderSource:
-        '[metacognition]\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\n<option>【A】观察</option>\n<UpdateVariable><Analysis>...</Analysis></UpdateVariable>',
+      renderSource: structuredSource,
+      strippedRenderSource: structuredSource,
     }),
-    '[metacognition]\n<content>窗外的天空呈现出一种病态的铅灰色。</content>\n<option>【A】观察</option>\n<UpdateVariable><Analysis>...</Analysis></UpdateVariable>',
+    structuredSource,
   );
 });
 

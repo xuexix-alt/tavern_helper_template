@@ -93,7 +93,7 @@ export function buildAssistantRenderSource(input: {
   content: string;
   strippedRenderSource: string;
 }): string {
-  if (input.isDemoAssistant || input.hasStructuredContent) {
+  if (input.isDemoAssistant) {
     return buildDemoAssistantFinalBodySource({
       content: input.content,
       strippedRenderSource: input.strippedRenderSource,
@@ -108,7 +108,7 @@ export function resolveAssistantDisplayRenderSource(input: {
   renderSource: string;
   strippedRenderSource: string;
 }): string {
-  if (input.isDemoAssistant || input.hasStructuredContent) {
+  if (input.isDemoAssistant) {
     return normalizeText(input.strippedRenderSource);
   }
   return normalizeText(input.renderSource);

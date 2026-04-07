@@ -112,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
@@ -150,6 +151,20 @@ const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 
+function recordComponentTrace(event: string, payload: Record<string, unknown> = {}) {
+  recordComponentDebugTrace({
+    scope: 'TranscriptMessageCard',
+    event,
+    payload: {
+      messageId: props.item.message_id,
+      variant: props.item.role,
+      phase: props.item.phase,
+      isStreaming: props.item.isStreaming,
+      ...payload,
+    },
+  });
+}
+
 function onEditInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   if (!target) return;
@@ -173,6 +188,9 @@ async function hydrateAssistantBodyImages() {
   const images = Array.from(
     root.querySelectorAll('img[src^="idb://"], img[data-persisted-image-src]'),
   ) as HTMLImageElement[];
+  recordComponentTrace('hydrate_images', {
+    imageCount: images.length,
+  });
   if (images.length === 0) return;
   await hydratePersistedImageElements({
     elements: images,
@@ -215,6 +233,10 @@ function bindAssistantBodyInteractions() {
   const carriers = Array.from(
     root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
   ) as HTMLElement[];
+  recordComponentTrace('bind_interactions', {
+    promptButtonCount: promptButtons.length,
+    carrierCount: carriers.length,
+  });
 
   assistantBodyCleanup.value = carriers.map(carrier => {
     let suppressNextClick = false;
@@ -319,6 +341,7 @@ function bindAssistantBodyInteractions() {
 }
 
 onMounted(() => {
+  recordComponentTrace('mount');
   void hydrateAssistantBodyImages();
   nextTick(() => {
     bindAssistantBodyInteractions();
@@ -326,6 +349,7 @@ onMounted(() => {
 });
 
 onUpdated(() => {
+  recordComponentTrace('update');
   void hydrateAssistantBodyImages();
   nextTick(() => {
     bindAssistantBodyInteractions();
@@ -333,6 +357,7 @@ onUpdated(() => {
 });
 
 onBeforeUnmount(() => {
+  recordComponentTrace('unmount');
   clearAssistantBodyInteractionBindings();
 });
 </script>
@@ -453,6 +478,13 @@ onBeforeUnmount(() => {
   color: var(--demo-text-panel-strong);
 }
 
+.assistant-body.is-stream-stage {
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+  border-radius: 12px;
+}
+
 .message-shell.density-minimal .assistant-body {
   font-size: 14px;
   line-height: 1.7;
@@ -471,6 +503,15 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.dialog-inline) {
   color: inherit;
   font: inherit;
+}
+
+.assistant-body-wrap :deep(.stream-stage-pre) {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--demo-text-panel-strong);
+  font: inherit;
+  line-height: 1.9;
 }
 
 .assistant-body-wrap :deep(.ai-image-container) {

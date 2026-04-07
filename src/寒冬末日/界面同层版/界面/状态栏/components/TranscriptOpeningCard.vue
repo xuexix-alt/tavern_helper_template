@@ -241,6 +241,10 @@ const showBody = computed(() => {
 
 .html-body.is-stream-stage {
   white-space: normal;
+  padding: 12px 14px;
+  border: 1px solid var(--demo-border-warning-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 30%, transparent);
 }
 
 .html-body :deep(p),
@@ -255,6 +259,7 @@ const showBody = computed(() => {
   word-break: break-word;
   color: var(--demo-text-opening-strong);
   font: inherit;
+  line-height: 1.8;
 }
 
 .html-body :deep(h1),

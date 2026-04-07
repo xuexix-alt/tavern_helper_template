@@ -15,7 +15,7 @@
 
       <div
         v-for="item in visibleItems"
-        :key="buildTranscriptEntryKey(item.message_id, renderRevision)"
+        :key="item.message_id"
         class="transcript-entry"
         :data-message-id="item.message_id"
         style="position: relative"
@@ -95,7 +95,6 @@
 <script setup lang="ts">
 import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import { buildTranscriptEntryKey } from '../transcriptDomRefresh';
 import {
   resolveTailPageStart,
   resolveTranscriptStartIndexOnItemsChange,

@@ -1,1038 +1,797 @@
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Saving metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Chat Completions: saving token cache
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Saving metadata...
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Debounced metadata save cancelled
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: stream_token_received
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] handleHostRefreshEvent [object Object]
- Event emitted: generation_ended
- Event emitted: message_received
- [Prompt Template] clone previous message variables:  Object
- [Reasoning] Auto-parsing reasoning block for message 6
- Event emitted: mag_variable_update_started
- Event emitted: mag_command_parsed
- Event emitted: mag_command_parsed_for_zod
- Event emitted: mag_command_parsed_ended_for_zod
- Set '世界.时间' to '"清晨 - 08:35"' (json_patch)
- Event emitted: mag_variable_updated
- ADDED number '纪宁.秩序刻印' from '16' to '22' by delta '6' (json_patch)
- Event emitted: mag_variable_updated
- Set '纪宁.秩序刻印更新原因' to '"+6, base +4 (逃离正向) * (1+40%) = +6"' (json_patch)
- Event emitted: mag_variable_updated
- ADDED number '纪宁.健康' from '15' to '17' by delta '2' (json_patch)
- Event emitted: mag_variable_updated
- Set '纪宁.健康更新原因' to '"+2, 持续处于温暖环境，失温缓解"' (json_patch)
- Event emitted: mag_variable_updated
- Set '纪宁.内心想法' to '"水……我需要水。这种暖气，这种灯光，他竟然真的拥有这一切。他刚才看我的眼神太冷淡了，这种人比那些色鬼更难对付。"' (json_patch)
- Event emitted: mag_variable_updated
- Set '纪宁.动作姿势' to '"瘫坐在墙根，低头埋入膝间，身体剧烈起伏"' (json_patch)
- Event emitted: mag_variable_updated
- Set '纪宁.神态样貌' to '"面色由于燥热泛起不正常的潮红，眼神因虚弱而涣散"' (json_patch)
- Event emitted: mag_variable_updated
- Event emitted: mag_variable_update_ended
- Reconciling schema with current data state...
- Schema reconciliation complete.
- Event emitted: mag_variable_update_ended_for_zod
- Event emitted: mag_before_message_update
- Debounced metadata save cancelled
- Event emitted: character_message_rendered
- [Debug] handleHostRefreshEvent [object Object]
- Event emitted: character_message_rendered
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Chat Completions: saving token cache
- Auto-continue is disabled by user.
- Debounced metadata save cancelled
- Event emitted: regex-st-chatu8-test-message
- Event emitted: regex-st-chatu8-test-message
- Event emitted: regex-st-chatu8-test-message
- [Debug] handleHostRefreshEvent [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: generation_started
- [Debug] handleHostRefreshEvent [object Object]
- Event emitted: GENERATION_AFTER_COMMANDS
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
- Skipping extension interceptors for dry run
- 
-    setFloatingPrompt entered
-    ------
-    lastMessageNumber = 3
-    metadata_keys.interval = 1
-    metadata_keys.position = 1
-    metadata_keys.depth = 4
-    metadata_keys.role = 0
-    ------
-    
- [WI] --- START WI SCAN (on 1 messages, trigger = normal) (DRY RUN) ---
- [WI] Context size: 1934465; WI budget: 1934465 (max% = 100%, cap = 0)
- [WI] Character 末世寒冬 - 星穹秩序's lore has 35 world info entries Array(1)
- Event emitted: worldinfo_entries_loaded
- [Prompt Template] message #6.0 variables:  Object
- [Prompt Template] all variables:  Object
- Event emitted: prompt_template_prepare
- [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/894557 from context when SpecialEntry
- [WI] Found 34 world lore entries. Sorted by strategy Array(2)
- [WI] --- SEARCHING ENTRIES (on 34 entries) ---
- [WI] --- LOOP #1 START ---
- [WI] Scan state Array(2)
- [WI] Entry 286149 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 286149 activated because of constant
- [WI] Entry 92424 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 92424 activated because of constant
- [WI] Entry 568344 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 568344 activated because of constant
- [WI] Entry 492915 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 492915 activated because of constant
- [WI] Entry 60720 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 60720 disabled
- [WI] Entry 322746 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 322746 disabled
- [WI] Entry 999373 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 999373 activated because of constant
- [WI] Entry 722979 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 722979 activated because of constant
- [WI] Entry 498414 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 498414 activated because of constant
- [WI] Entry 162143 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 162143 activated because of constant
- [WI] Entry 11419 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 11419 activated because of constant
- [WI] Entry 28348 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 28348 activated because of constant
- [WI] Entry 668600 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 668600 activated because of constant
- [WI] Entry 879822 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 879822 activated because of constant
- [WI] Search done. Found 12 possible entries.
- [WI] --- INCLUSION GROUP CHECKS ---
- [WI] No inclusion groups found
- [WI] --- PROBABILITY CHECKS ---
- WI entry 286149 does not use probability
- [WI] Entry 286149 activation successful, adding to prompt Object
- WI entry 92424 does not use probability
- [WI] Entry 92424 activation successful, adding to prompt Object
- WI entry 568344 does not use probability
- [WI] Entry 568344 activation successful, adding to prompt Object
- WI entry 492915 does not use probability
- [WI] Entry 492915 activation successful, adding to prompt Object
- WI entry 999373 does not use probability
- [WI] Entry 999373 activation successful, adding to prompt Object
- WI entry 722979 does not use probability
- [WI] Entry 722979 activation successful, adding to prompt Object
- WI entry 498414 does not use probability
- [WI] Entry 498414 activation successful, adding to prompt Object
- WI entry 162143 does not use probability
- [WI] Entry 162143 activation successful, adding to prompt Object
- WI entry 11419 does not use probability
- [WI] Entry 11419 activation successful, adding to prompt Object
- WI entry 28348 does not use probability
- [WI] Entry 28348 activation successful, adding to prompt Object
- WI entry 668600 does not use probability
- [WI] Entry 668600 activation successful, adding to prompt Object
- WI entry 879822 does not use probability
- [WI] Entry 879822 activation successful, adding to prompt Object
- [WI] --- LOOP #1 RESULT ---
- [WI] Successfully activated 12 new entries to prompt. 12 total entries activated. Array(12)
- [WI] Found 2 new entries for recursion
- [WI] Setting scan state Array(2)
- Event emitted: worldinfo_scan_done
- [WI] --- LOOP #2 START ---
- [WI] Scan state Array(2)
- [WI] Entry 60720 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 60720 disabled
- [WI] Entry 322746 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 322746 disabled
- [WI] Entry 877157 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 877157 suppressed by exclude recursion
- [WI] Entry 34766 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 34766 suppressed by exclude recursion
- [WI] Entry 707649 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 707649 suppressed by exclude recursion
- [WI] Entry 105893 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 105893 suppressed by exclude recursion
- [WI] Entry 132206 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 132206 suppressed by exclude recursion
- [WI] Entry 722222 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 722222 suppressed by exclude recursion
- [WI] Entry 658355 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 658355 suppressed by exclude recursion
- [WI] Entry 705815 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 705815 suppressed by exclude recursion
- [WI] Entry 466412 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 466412 suppressed by exclude recursion
- [WI] Entry 800704 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 800704 suppressed by exclude recursion
- [WI] Entry 877727 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 877727 suppressed by exclude recursion
- [WI] Entry 432142 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 432142 suppressed by exclude recursion
- [WI] Entry 468247 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 468247 suppressed by exclude recursion
- [WI] Entry 75697 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 75697 suppressed by exclude recursion
- [WI] Entry 737791 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 737791 suppressed by exclude recursion
- [WI] Entry 76193 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 76193 suppressed by exclude recursion
- [WI] Entry 923956 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 923956 suppressed by exclude recursion
- [WI] Entry 86258 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 86258 suppressed by exclude recursion
- [WI] Entry 748060 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 748060 suppressed by exclude recursion
- [WI] Entry 358850 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 358850 suppressed by exclude recursion
- [WI] Search done. Found 0 possible entries.
- [WI] --- INCLUSION GROUP CHECKS ---
- [WI] No inclusion groups found
- [WI] --- PROBABILITY CHECKS ---
- [WI] No probability checks to do
- [WI] --- LOOP #2 RESULT ---
- [WI] No new entries activated.
- [WI] Scan done. No new entries to prompt. Stopping.
- [WI] Setting scan state Array(2)
- Event emitted: worldinfo_scan_done
- [WI] --- BUILDING PROMPT ---
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
- [WI] --- DONE (DRY RUN) ---
- calling runGenerate
- generating prompt
- ---calling setPromptString 0
- Event emitted: generate_after_combine_prompts
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Event emitted: chat_completion_prompt_ready
- Event emitted: generate_after_data
- Debounced metadata save cancelled
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: regex-st-chatu8-result-message
- Event emitted: regex-st-chatu8-result-message
- Event emitted: regex-st-chatu8-result-message
- Event emitted: ch-llm-image-gen-request
- Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Event emitted: settings_updated
- Saving metadata...
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Event emitted: ch-llm-image-gen-response
- [imageInserter] saveImageGroup - el 详细信息
- Chat Completions: saving token cache
- Event emitted: character_message_rendered
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Event emitted: st_chatu8_auto_click_complete
- Debounced metadata save cancelled
- Event emitted: generate-image-request
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Saving metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- Debounced metadata save cancelled
- Saving metadata...
- Chat Completions: saving token cache
- Saved metadata...
- Event emitted: generate-image-response
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Saving metadata...
- Event emitted: settings_updated
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- [image] transcript-dblclick [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Chat Completions: saving token cache
- Saved metadata...
- Chat Completions: saving token cache
- [image] transcript-dblclick [object Object]
- [stream-demo:image-bridge] start-task [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Chat Completions: saving token cache
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: message_iframe_render_started
- Event emitted: message_iframe_render_ended
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] restoreReaderChatState openingPayload [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] bindHistoryRefreshEvents called [object Object]
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Saving metadata...
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: message_iframe_render_started
- Event emitted: message_iframe_render_ended
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] restoreReaderChatState openingPayload [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] bindHistoryRefreshEvents called [object Object]
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Saving metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: message_iframe_render_started
- Event emitted: message_iframe_render_ended
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] restoreReaderChatState openingPayload [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] bindHistoryRefreshEvents called [object Object]
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- Saving metadata...
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Event emitted: message_iframe_render_started
- Event emitted: message_iframe_render_ended
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] restoreReaderChatState openingPayload [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] bindHistoryRefreshEvents called [object Object]
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Saving metadata...
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- Debounced metadata save cancelled
- Saving metadata...
- Chat Completions: saving token cache
- Saved metadata...
- Debounced metadata save cancelled
- Debounced metadata save cancelled
- Saving metadata...
- Chat Completions: saving token cache
- Saved metadata...
- Debounced metadata save cancelled
- [Debug] readAllChatMessagesRaw [object Object]
- saw no avatars
- Event emitted: character_editor_opened
- Event emitted: chat_id_changed
- [WI] Character 末世寒冬 - 星穹秩序's lore has 35 world info entries Array(1)
- Event emitted: worldinfo_entries_loaded
- [Prompt Template] message #6.0 variables:  Object
- [Prompt Template] all variables:  Object
- Event emitted: prompt_template_prepare
- [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/894557 from context when SpecialEntry
- [WI] Found 34 world lore entries. Sorted by strategy Array(2)
- getting sprites list
- Summary has no content
- 
-    setFloatingPrompt entered
-    ------
-    lastMessageNumber = 3
-    metadata_keys.interval = 1
-    metadata_keys.position = 1
-    metadata_keys.depth = 4
-    metadata_keys.role = 0
-    ------
-    
- Event emitted: chatLoaded
- saw no avatars
- Event emitted: character_editor_opened
- Event emitted: chat_id_changed
- [WI] Character 末世寒冬 - 星穹秩序's lore has 35 world info entries Array(1)
- Event emitted: worldinfo_entries_loaded
- [Prompt Template] message #6.0 variables:  Object
- [Prompt Template] all variables:  Object
- Event emitted: prompt_template_prepare
- [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/894557 from context when SpecialEntry
- [WI] Found 34 world lore entries. Sorted by strategy Array(2)
- getting sprites list
- Summary has no content
- 
-    setFloatingPrompt entered
-    ------
-    lastMessageNumber = 3
-    metadata_keys.interval = 1
-    metadata_keys.position = 1
-    metadata_keys.depth = 4
-    metadata_keys.role = 0
-    ------
-    
- Event emitted: chatLoaded
- Event emitted: message_iframe_render_started
- Event emitted: message_iframe_render_ended
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] restoreReaderChatState openingPayload [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] bindHistoryRefreshEvents called [object Object]
- [Debug] shouldShowOpeningSetup [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- Saving metadata...
- Event emitted: settings_updated
- Chat Completions: saving token cache
- Chat Completions: saving token cache
- Saved metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- Event emitted: generation_started
- [Debug] handleHostRefreshEvent [object Object]
- Event emitted: GENERATION_AFTER_COMMANDS
- getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
- getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
- getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
- getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
- getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
- Skipping extension interceptors for dry run
- 
-    setFloatingPrompt entered
-    ------
-    lastMessageNumber = 3
-    metadata_keys.interval = 1
-    metadata_keys.position = 1
-    metadata_keys.depth = 4
-    metadata_keys.role = 0
-    ------
-    
- [WI] --- START WI SCAN (on 1 messages, trigger = normal) (DRY RUN) ---
- [WI] Context size: 1934465; WI budget: 1934465 (max% = 100%, cap = 0)
- [WI] Character 末世寒冬 - 星穹秩序's lore has 35 world info entries Array(1)
- Event emitted: worldinfo_entries_loaded
- [Prompt Template] message #6.0 variables:  Object
- [Prompt Template] all variables:  Object
- Event emitted: prompt_template_prepare
- [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序2.0/@INJECT target=user,index=-1,at=before,role=system,order=10/894557 from context when SpecialEntry
- [WI] Found 34 world lore entries. Sorted by strategy Array(2)
- [WI] --- SEARCHING ENTRIES (on 34 entries) ---
- [WI] --- LOOP #1 START ---
- [WI] Scan state Array(2)
- [WI] Entry 286149 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 286149 activated because of constant
- [WI] Entry 92424 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 92424 activated because of constant
- [WI] Entry 568344 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 568344 activated because of constant
- [WI] Entry 492915 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 492915 activated because of constant
- [WI] Entry 60720 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 60720 disabled
- [WI] Entry 322746 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 322746 disabled
- [WI] Entry 999373 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 999373 activated because of constant
- [WI] Entry 722979 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 722979 activated because of constant
- [WI] Entry 498414 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 498414 activated because of constant
- [WI] Entry 162143 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 162143 activated because of constant
- [WI] Entry 11419 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 11419 activated because of constant
- [WI] Entry 28348 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 28348 activated because of constant
- [WI] Entry 668600 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 668600 activated because of constant
- [WI] Entry 879822 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 879822 activated because of constant
- [WI] Search done. Found 12 possible entries.
- [WI] --- INCLUSION GROUP CHECKS ---
- [WI] No inclusion groups found
- [WI] --- PROBABILITY CHECKS ---
- WI entry 286149 does not use probability
- [WI] Entry 286149 activation successful, adding to prompt Object
- WI entry 92424 does not use probability
- [WI] Entry 92424 activation successful, adding to prompt Object
- WI entry 568344 does not use probability
- [WI] Entry 568344 activation successful, adding to prompt Object
- WI entry 492915 does not use probability
- [WI] Entry 492915 activation successful, adding to prompt Object
- WI entry 999373 does not use probability
- [WI] Entry 999373 activation successful, adding to prompt Object
- WI entry 722979 does not use probability
- [WI] Entry 722979 activation successful, adding to prompt Object
- WI entry 498414 does not use probability
- [WI] Entry 498414 activation successful, adding to prompt Object
- WI entry 162143 does not use probability
- [WI] Entry 162143 activation successful, adding to prompt Object
- WI entry 11419 does not use probability
- [WI] Entry 11419 activation successful, adding to prompt Object
- WI entry 28348 does not use probability
- [WI] Entry 28348 activation successful, adding to prompt Object
- WI entry 668600 does not use probability
- [WI] Entry 668600 activation successful, adding to prompt Object
- WI entry 879822 does not use probability
- [WI] Entry 879822 activation successful, adding to prompt Object
- [WI] --- LOOP #1 RESULT ---
- [WI] Successfully activated 12 new entries to prompt. 12 total entries activated. Array(12)
- [WI] Found 2 new entries for recursion
- [WI] Setting scan state Array(2)
- Event emitted: worldinfo_scan_done
- [WI] --- LOOP #2 START ---
- [WI] Scan state Array(2)
- [WI] Entry 60720 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 60720 disabled
- [WI] Entry 322746 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 322746 disabled
- [WI] Entry 877157 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 877157 suppressed by exclude recursion
- [WI] Entry 34766 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 34766 suppressed by exclude recursion
- [WI] Entry 707649 from '末世寒冬-星穹秩序2.0' processing Object
- [WI] Entry 707649 suppressed by exclude recursion
- [WI] Entry 105893 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 105893 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 132206 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 132206 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 722222 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 722222 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 658355 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 658355 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 705815 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 705815 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 466412 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 466412 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 800704 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 800704 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 877727 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 877727 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 432142 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 432142 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 468247 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 468247 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 75697 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 75697 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 737791 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 737791 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 76193 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 76193 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 923956 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 923956 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 86258 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 86258 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 748060 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 748060 suppressed by exclude recursion
-world-info.js:4550 [WI] Entry 358850 from '末世寒冬-星穹秩序2.0' processing Object
-world-info.js:4553 [WI] Entry 358850 suppressed by exclude recursion
-world-info.js:4751 [WI] Search done. Found 0 possible entries.
-world-info.js:5142 [WI] --- INCLUSION GROUP CHECKS ---
-world-info.js:5155 [WI] No inclusion groups found
-world-info.js:4767 [WI] --- PROBABILITY CHECKS ---
-world-info.js:4768 [WI] No probability checks to do
-world-info.js:4835 [WI] --- LOOP #2 RESULT ---
-world-info.js:4837 [WI] No new entries activated.
-world-info.js:4845 [WI] Scan done. No new entries to prompt. Stopping.
-world-info.js:4846 [WI] Setting scan state Array(2)
-eventemitter.js:135 Event emitted: worldinfo_scan_done
-world-info.js:4942 [WI] --- BUILDING PROMPT ---
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 0 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 0 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 0 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 0 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 0 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
-engine.js:364 getRegexedString: Skipping script 去除5楼前的全部楼层防止token爆炸 because depth 1 is less than minDepth 10
-engine.js:364 getRegexedString: Skipping script 03b-小总结纯文本(11轮后-AI可见) because depth 1 is less than minDepth 11
-engine.js:364 getRegexedString: Skipping script 06-隐藏选项回复(2楼起) because depth 1 is less than minDepth 2
-engine.js:364 getRegexedString: Skipping script 只发3楼正文给AI because depth 1 is less than minDepth 6
-engine.js:364 getRegexedString: Skipping script 2层以上只发送小总结 because depth 1 is less than minDepth 4
-world-info.js:5032 [WI] --- DONE (DRY RUN) ---
-script.js:4744 calling runGenerate
-script.js:4762 generating prompt
-script.js:4897 ---calling setPromptString 0
-eventemitter.js:135 Event emitted: generate_after_combine_prompts
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:71 Debounced metadata save cancelled
-eventemitter.js:135 Event emitted: chat_completion_prompt_ready
-eventemitter.js:135 Event emitted: generate_after_data
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:97 Saving metadata...
-eventemitter.js:135 Event emitted: settings_updated
-tokenizers.js:180 Chat Completions: saving token cache
-tokenizers.js:180 Chat Completions: saving token cache
-extensions.js:99 Saved metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
-extensions.js:71 Debounced metadata save cancelled
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
- [Debug] rebuildTranscript data [object Object]
- [Debug] rebuildTranscript result [object Object]
- [Debug] readAllChatMessagesRaw [object Object]
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:97 Saving metadata...
-tokenizers.js:180 Chat Completions: saving token cache
-tokenizers.js:180 Chat Completions: saving token cache
-extensions.js:99 Saved metadata...
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
- [stream-demo:image-bridge] request-hints-synced [object Object]
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:97 Saving metadata...
-tokenizers.js:180 Chat Completions: saving token cache
-extensions.js:99 Saved metadata...
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:97 Saving metadata...
-tokenizers.js:180 Chat Completions: saving token cache
-extensions.js:99 Saved metadata...
- [Debug] readAllChatMessagesRaw [object Object]
-eventemitter.js:135 Event emitted: message_iframe_render_started
-eventemitter.js:135 Event emitted: message_iframe_render_ended
-VM3564:2 [Debug] shouldShowOpeningSetup Object
-VM3564:2 [Debug] restoreReaderChatState openingPayload Object
-VM3564:2 [Debug] readAllChatMessagesRaw Object
-VM3564:2 [Debug] rebuildTranscript data Object
-VM3564:2 [Debug] rebuildTranscript result ObjectcontainerId: 0normalizedLength: 6openingPayload: hasResult: falseopening_result_message_id: 2state: "ready"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()reason: "manual"transcriptLength: 6transcriptSample: Array(6)0: {id: 0, role: 'assistant', hidden: false, isOpening: true, preview: 'EDEN-STAR'}1: {id: 2, role: 'assistant', hidden: false, isOpening: true, preview: '外面的酸雨敲打着2001室加固过的合金窗框，发出细密而沉闷的响声。屋子里很安静，只有万象合成终端发出的微弱嗡鸣声，地板上'}2: {id: 3, role: 'user', hidden: false, isOpening: false, preview: '【A】人际&打开房门。直接将门打开，把快要失去意识的纪宁拉进玄关的净化/隔离区，暂时保住她的命。'}3: {id: 4, role: 'assistant', hidden: false, isOpening: false, preview: '[metacognition] 明月靠在沙发垫上，手里的剧本微微晃动。秋青子贴着他的后背，尾巴尖在他脚踝上绕了一个圈，细'}4: {id: 5, role: 'user', hidden: false, isOpening: false, preview: '【A】人际&冷静试探。不接她的话茬，只是从旁边取出一瓶万象合成出的纯净水递过去，观察她的第一反应。'}5: {id: 6, role: 'system', hidden: false, isOpening: false, preview: '[metacognition] 明月靠在软垫上，微微侧过头，目光落在秋青子那双金色的瞳孔里。秋青子顺从地伏在他膝头，指尖'}hidden: falseid: 6isOpening: falsepreview: "[metacognition] 明月靠在软垫上，微微侧过头，目光落在秋青子那双金色的瞳孔里。秋青子顺从地伏在他膝头，指尖"role: "system"[[Prototype]]: Objectlength: 6[[Prototype]]: Array(0)[[Prototype]]: Object
-VM3564:2 [Debug] bindHistoryRefreshEvents called Object
-VM3564:2 [Debug] shouldShowOpeningSetup Object
-VM3564:2 [Debug] readAllChatMessagesRaw Object
-extensions.js:71 Debounced metadata save cancelled
-extensions.js:97 Saving metadata...
-tokenizers.js:180 Chat Completions: saving token cache
-tokenizers.js:180 Chat Completions: saving token cache
-extensions.js:99 Saved metadata...
-VM3564:2 [stream-demo:image-bridge] request-hints-synced Objectregistered: 3tasks: [][[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
-VM3564:2 [stream-demo:image-bridge] request-hints-synced Object
-VM3564:2 [stream-demo:image-bridge] request-hints-synced Object
-power-user.js:3347 aborting MUI reset 0
-power-user.js:3286 Window resize: 2005x1305 -> 2005x1305
-power-user.js:3287 Zoom: 1, X:2005, Y:1305, original: 2005x1305 
-eventemitter.js:135 Event emitted: settings_updated
+16:26:36.222 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:36.224 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:36.234 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:36.235 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:36.323 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:36.331 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:36.333 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:36.348 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:36.349 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:36.451 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:36.508 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:36.510 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:36.528 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:36.529 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:36.625 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:36.700 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:36.702 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:36.718 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:36.720 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:36.813 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:36.995 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:36.998 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:37.018 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:37.019 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:37.126 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:37.361 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:37.363 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:37.379 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:37.381 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:37.478 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:37.948 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:37.951 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:37.972 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:37.974 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:38.069 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:38.378 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:38.380 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:38.399 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:38.400 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:38.493 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:39.249 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:39.251 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:39.266 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:39.268 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:39.365 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:39.788 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:39.790 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:39.807 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:39.809 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:39.904 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:40.192 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:40.195 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:40.217 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:40.219 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:40.316 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:40.602 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:40.604 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:40.620 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:40.621 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:40.727 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:42.646 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:42.648 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:42.659 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:42.660 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:42.750 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:42.755 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:42.756 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:42.763 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:42.764 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:42.861 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:42.964 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:42.966 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:42.975 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:42.976 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:43.067 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:43.198 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:43.199 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:43.206 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:43.207 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:43.297 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:43.721 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:43.722 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:43.728 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:43.729 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:43.827 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:44.197 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:44.198 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:44.205 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:44.206 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:44.297 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:44.782 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:44.784 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:44.794 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:44.795 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:44.885 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:45.153 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:45.154 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:45.161 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:45.162 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:45.249 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:45.642 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:45.644 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:45.653 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:45.654 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:45.747 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:46.118 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:46.119 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:46.126 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:46.126 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:46.213 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:46.516 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:46.517 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:46.524 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:46.524 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:46.614 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:46.968 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:46.969 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:46.977 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:46.978 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:47.067 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:47.447 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:47.448 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:47.455 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:47.456 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:47.545 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:47.947 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:47.950 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:47.962 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:47.963 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:48.055 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:48.450 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:48.451 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:48.463 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:48.465 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:48.557 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:48.965 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:48.966 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:48.973 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:48.974 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:49.067 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:49.472 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:49.474 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:49.485 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:49.486 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:49.584 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:49.919 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:49.920 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:49.930 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:49.931 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:50.036 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:50.364 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:50.366 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:50.379 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:50.380 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:50.475 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:50.809 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:50.810 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:50.818 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:50.818 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:50.904 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:51.440 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:51.441 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:51.449 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:51.449 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:51.540 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:52.265 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:52.266 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:52.273 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:52.274 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:52.371 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:52.656 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:52.657 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:52.666 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:52.666 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:52.760 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:53.055 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:53.056 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:53.064 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:53.065 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:53.168 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:53.473 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:53.474 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:53.482 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:53.482 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:53.605 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:53.941 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:53.942 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:53.950 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:53.951 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:54.040 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:54.264 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:54.266 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:54.275 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:54.276 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:54.367 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:54.649 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:54.650 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:54.659 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:54.659 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:54.756 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:55.015 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:55.016 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:55.025 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:55.025 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:55.112 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:55.430 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:55.431 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:55.440 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:55.441 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:55.531 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:55.800 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:55.801 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:55.809 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:55.810 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:55.903 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:56.210 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:56.211 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:56.221 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:56.222 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:56.322 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:56.550 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:56.552 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:56.561 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:56.561 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:56.649 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:56.893 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:56.894 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:56.902 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:56.903 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:56.994 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:57.950 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:57.951 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:57.960 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:57.961 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:58.053 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:58.104 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:58.106 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:58.115 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:58.116 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:58.207 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:58.346 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:58.348 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:58.356 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:58.356 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:58.443 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:58.775 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:58.776 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:58.784 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:58.785 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:58.882 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:59.196 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:59.197 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:59.205 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:59.206 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:59.295 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:26:59.443 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:26:59.444 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:26:59.452 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:26:59.452 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:26:59.536 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:27:00.552 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:27:00.553 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:27:00.566 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:27:00.567 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:27:00.656 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}
+16:27:00.707 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+（匿名） @ responseGenerator.ts:108
+tick @ utils.js:1432
+generate @ responseGenerator.ts:108
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:27:00.710 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:27:00.725 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:27:00.727 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:27:00.789 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:62
+generate @ responseGenerator.ts:112
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:27:00.791 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:27:00.807 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:27:00.807 script.js:6345 cleanUpMessage called with positional arguments. Please use an object instead.
+cleanUpMessage @ script.js:6345
+onProgressStreaming @ responseGenerator.ts:77
+generate @ responseGenerator.ts:112
+await in generate
+Cj @ responseGenerator.ts:387
+await in Cj
+Lj @ index.ts:268
+16:27:00.809 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'generating', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:27:00.845 autoLLMClick.js:1 [st-chatu8] GENERATION_ENDED data: 3
+16:27:00.845 autoLLMClick.js:1 [st-chatu8] Start chat length: 1 Start swipes length: 3
+16:27:00.845 autoLLMClick.js:1 [st-chatu8] Current chat length: 3 Current swipes length: 0
+16:27:00.845 autoLLMClick.js:1 [st-chatu8] Chat increased: true Swipes increased: false
+16:27:00.846 autoLLMClick.js:1 [st-chatu8] Message ID: 2
+16:27:00.846 autoLLMClick.js:1 [st-chatu8] Message content:
+16:27:00.846 autoLLMClick.js:1 [st-chatu8] Message content too short (<=200), skipping. Length: 0
+16:27:00.881 useStreamingDemo.ts:2197 [Debug] upsertOpeningResultMessage update path {message_id: 2, messageLength: 5352, isNew: false}
+16:27:00.882 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'ready', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:27:00.882 useStreamingDemo.ts:3039 [Debug] generateOpening upsertOpeningResultMessage {updatedResultId: 2, existingResultId: 2}
+16:27:00.882 useStreamingDemo.ts:2262 [Debug] normalizeOpeningMessageOrder pre-rotate {currentSeedId: 1, currentResultId: 2, currentUserId: 1, preferredResultId: 2, flaggedMsgs: Array(2)}
+16:27:00.883 useStreamingDemo.ts:2298 [Debug] normalizeOpeningMessageOrder result {seedMessageId: 1, resultMessageId: 2}
+16:27:00.883 useStreamingDemo.ts:3044 [Debug] generateOpening normalizeOpeningMessageOrder {normalizedSeedMessageId: 1, openingResultMessageId: 2, updatedResultId: 2, fallbackResultId: 2}
+16:27:00.883 useStreamingDemo.ts:3059 [Debug] generateOpening persist {opening_result_message_id: 2, state: 'ready', hasResult: true}
+16:27:00.883 opening.ts:435 [Debug] replaceOpeningPayloadInChat {state: 'ready', opening_result_message_id: 2, opening_seed_user_message_id: 1, hasResult: true}
+16:27:00.884 useStreamingDemo.ts:1284 [Debug] shouldShowOpeningSetup {isOpeningWorkbenchHost: true, state: 'ready', opening_result_message_id: 2, hasResult: true, hasStoryMessagesBeyondOpening: false, …}
+16:27:00.896  [时间逻辑] 无法计算世界时间差(diffWorldHours=null) {"oldWorld":{},"newWorld":{"地址":"","日期":"末日纪元，9527年12月14日","时间":"上午 - 08:00","末日天数":0,"开局配置":{"sealed":false,"world_mode_id":"","route_id":"","pre_disaster_identity":"","early_story_tone":"","opening_seed_user_message_id":0,"opening_result_message_id":0,"form_values":{"supplemental_setting":""},"meta":{"source":"opening_ui","version":1}}}}
+16:27:00.899  Reconciling schema with current data state...
+16:27:00.900  Schema reconciliation complete.
+16:27:00.912 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+16:27:00.918 useStreamingDemo.ts:2459 [Debug] rebuildTranscript data {reason: 'manual', rawMessagesLength: 3, listSource: 'raw', lastId: 2, allLength: 3, …}
+16:27:00.932 useStreamingDemo.ts:2535 [Debug] rebuildTranscript result {reason: 'manual', containerId: 0, normalizedLength: 1, transcriptLength: 1, transcriptSample: Array(1), …}
+16:27:01.058 useStreamingDemo.ts:1873 [stream-demo] hide state persisted {reason: 'apply_hide_policy', containerId: 0, hiddenCount: 2}

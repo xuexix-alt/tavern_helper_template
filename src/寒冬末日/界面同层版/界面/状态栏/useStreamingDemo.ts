@@ -26,7 +26,13 @@ import {
 } from '../../shared/opening';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
-import { createDebugTraceStore, createTraceId, installDebugTraceRuntime, recordDebugTrace } from './debugTrace';
+import {
+  createDebugTraceStore,
+  createTraceId,
+  installDebugTraceRuntime,
+  recordComponentDebugTrace,
+  recordDebugTrace,
+} from './debugTrace';
 import {
   buildAssistantRenderSource,
   buildDebugMessageSignature,
@@ -179,17 +185,18 @@ function encodeDataAttr(input: string): string {
 function buildStreamStageHtml(renderSource: string, role: TranscriptItem['role'], message_id: number): string {
   const source = String(renderSource ?? '').trim();
   if (!source) return '<pre class="stream-stage-pre">等待 token…</pre>';
-
-  try {
-    return buildFinalHtml(source, message_id);
-  } catch {
-    // ignore
-  }
-
   const regexText = applyRegexForDisplay(source, role);
-  const maybeHtml = /<\/?[a-z][^>]*>/i.test(regexText);
-  if (maybeHtml) return normalizeDisplayedHtml(regexText);
-  return `<pre class="stream-stage-pre">${escapeHtml(regexText || source)}</pre>`;
+  const readableText = String(regexText || source)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .trim();
+  return `<pre class="stream-stage-pre">${escapeHtml(readableText || source)}</pre>`;
+}
+
+function buildRawTranscriptPreHtml(renderSource: string): string {
+  const source = String(renderSource ?? '').trim();
+  const text = source || '(空回复)';
+  return `<pre class="stream-stage-pre">${escapeHtml(text)}</pre>`;
 }
 
 function normalizeDisplayedHtml(html: string): string {
@@ -558,7 +565,7 @@ function injectGeneratedImagesIntoHtml(
 function appendChatu8ArtifactsToHtml(html: string, renderSource: string, messageId: number): string {
   const promptTokens = collectChatu8PromptTokens(renderSource);
   const promptTokenSet = new Set(promptTokens);
-  const existingRoots = [...resolveIframeAssistantRoots(messageId), ...resolveDisplayedMessageRoots(messageId)];
+  const iframeRoots = resolveIframeAssistantRoots(messageId);
   const nativeFirstImages = readNativeFirstRenderableImagesForMessage({
     messageId,
     rawMessage: renderSource,
@@ -568,7 +575,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
     image => image.source === 'host_dom' || image.source === 'extra' || image.source === 'mes_tag',
   );
   const compatibilityImages = nativeFirstImages.filter(image => image.source === 'cache');
-  const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(existingRoots) > 0;
+  const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(iframeRoots) > 0;
 
   const renderMode = chooseImageRenderMode({
     hasPluginNativeDom: hasPluginNativeArtifacts,
@@ -1030,6 +1037,59 @@ function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
   return false;
 }
 
+function normalizeMutationMessageId(value: unknown): number | null {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized < 0) return null;
+  return Math.trunc(normalized);
+}
+
+function readMutationMessageIdFromElement(element: Element | null): number | null {
+  if (!element) return null;
+
+  const directMessageId =
+    element.getAttribute('data-message-id') ??
+    (element as HTMLElement).dataset?.messageId ??
+    element.getAttribute('mesid') ??
+    '';
+  const normalizedDirectMessageId = normalizeMutationMessageId(directMessageId);
+  if (normalizedDirectMessageId != null) return normalizedDirectMessageId;
+
+  const dataMessageCarrier = element.closest?.('[data-message-id]') as HTMLElement | null;
+  const normalizedDataMessageId = normalizeMutationMessageId(
+    dataMessageCarrier?.dataset?.messageId ?? dataMessageCarrier?.getAttribute('data-message-id') ?? '',
+  );
+  if (normalizedDataMessageId != null) return normalizedDataMessageId;
+
+  const mesCarrier = element.closest?.('.mes[mesid]') as HTMLElement | null;
+  return normalizeMutationMessageId(mesCarrier?.getAttribute('mesid') ?? '');
+}
+
+function readMutationMessageIdFromNode(node: Node | null | undefined): number | null {
+  const element =
+    node instanceof Element ? node : node?.parentElement instanceof Element ? node.parentElement : null;
+  return readMutationMessageIdFromElement(element);
+}
+
+function collectMutationMessageIds(records: MutationRecord[]): number[] {
+  const out = new Set<number>();
+  const remember = (node: Node | null | undefined) => {
+    const messageId = readMutationMessageIdFromNode(node);
+    if (messageId != null) out.add(messageId);
+  };
+
+  for (const record of Array.isArray(records) ? records : []) {
+    remember(record.target);
+    for (const node of Array.from(record.addedNodes)) {
+      remember(node);
+    }
+    for (const node of Array.from(record.removedNodes)) {
+      remember(node);
+    }
+  }
+
+  return [...out];
+}
+
 function bindHostPluginMutationObservers(onRelevantMutation: (records: MutationRecord[]) => void): MutationObserver[] {
   if (typeof MutationObserver === 'undefined') return [];
 
@@ -1178,11 +1238,11 @@ function buildOpeningTranscriptItem(
   preset: OpeningPreset,
   status: DemoStatus,
 ): TranscriptItem {
-  const streamedContent = String(payload.result?.content ?? '').trim();
+  const openingRaw = String(payload.result?.raw ?? '').trim();
   const isOpeningStreaming = payload.state === 'generating' || status === 'streaming';
-  const renderSource = streamedContent || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');
+  const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');
   const regexText = applyRegexForDisplay(renderSource, 'assistant');
-  const finalHtml = buildFinalHtml(renderSource, 0);
+  const displayedHtml = buildFinalHtml(renderSource, 0, renderSource);
 
   return {
     message_id: 0,
@@ -1194,8 +1254,8 @@ function buildOpeningTranscriptItem(
     content: renderSource,
     preview: '',
     regexText,
-    streamHtml: buildStreamStageHtml(renderSource, 'assistant', 0),
-    finalHtml,
+    streamHtml: displayedHtml,
+    finalHtml: displayedHtml,
     generatedImages: [],
     options: payload.result?.options ?? [],
     hidden: false,
@@ -1225,6 +1285,7 @@ export function useStreamingDemo() {
   const readingMode = ref<ReadingMode>('following_latest');
   const selectedItem = ref<TranscriptItem | null>(null);
   const transcriptDomRevision = ref(0);
+  const galleryRevision = ref(0);
   const openingExpanded = ref(true);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
@@ -1278,6 +1339,7 @@ export function useStreamingDemo() {
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
   let hidePolicyRerun = false;
+  const hostImageDataSyncSignatures = new Map<number, string>();
   let hideStatePersistTimer = 0;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
@@ -1359,12 +1421,122 @@ export function useStreamingDemo() {
       }
     }
 
+    syncTranscriptItemsFromHostData('host.plugin_native_data_sync');
+
     if (registered > 0) {
       logImageBridge('request-hints-synced', {
         registered,
         tasks: imagePendingTaskManager.getDebugState(),
       });
     }
+  }
+
+  function collectSelectedExtraImageEntries(message: any): Record<string, any>[] {
+    const extraImages = _.get(message, 'extra.images', null);
+    const rawSwipeId = Number(_.get(message, 'swipe_id', null));
+    const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : null;
+
+    let selectedEntries: any[] = [];
+    if (Array.isArray(extraImages)) {
+      if (swipeId != null && swipeId >= 0 && Array.isArray(extraImages[swipeId]) && extraImages[swipeId].length > 0) {
+        selectedEntries = extraImages[swipeId] as any[];
+      } else if (extraImages.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+        selectedEntries = extraImages as any[];
+      } else {
+        selectedEntries = extraImages.flatMap(item => (Array.isArray(item) ? item : []));
+      }
+    } else if (extraImages && typeof extraImages === 'object') {
+      selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item =>
+        Array.isArray(item) ? item : [item],
+      );
+    }
+
+    return selectedEntries.filter((entry): entry is Record<string, any> => Boolean(entry) && typeof entry === 'object');
+  }
+
+  function buildHostImageDataSignature(message: any): string {
+    const rawMessage = String(message?.message ?? message?.mes ?? '').trim();
+    const extraImages = _.get(message, 'extra.images', null);
+    const rawSwipeId = Number(_.get(message, 'swipe_id', null));
+    const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : -1;
+    const selectedEntries = collectSelectedExtraImageEntries(message);
+    const promptTokenCount = collectChatu8PromptTokens(rawMessage).length;
+    const extraImageShape = Array.isArray(extraImages)
+      ? `arr:${extraImages.length}`
+      : extraImages && typeof extraImages === 'object'
+        ? `obj:${Object.keys(extraImages as Record<string, unknown>).length}`
+        : 'none';
+    const extraImageSignature = selectedEntries
+      .map((entry, index) => {
+        const src = normalizeImageDataToSrc(
+          entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '',
+        );
+        return [
+          index,
+          String(entry?.requestId ?? entry?.request_id ?? '').trim(),
+          String(entry?.markerId ?? '').trim(),
+          String(entry?.imageId ?? entry?.image_id ?? '').trim(),
+          String(entry?.promptToken ?? entry?.tag ?? entry?.prompt ?? '')
+            .trim()
+            .slice(0, 120),
+          String(entry?.regex ?? '').trim().slice(0, 80),
+          src ? `${src.slice(0, 64)}:${src.length}` : '',
+        ].join('|');
+      })
+      .join('||');
+
+    return [rawMessage.length, promptTokenCount, swipeId, extraImageShape, selectedEntries.length, extraImageSignature].join(
+      '::',
+    );
+  }
+
+  function listHostImageDataCandidates(messageIds: number[] = []): any[] {
+    const containerId = getActiveContainerMessageId();
+    const normalizedIds = new Set(
+      messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id > 0),
+    );
+
+    return listAllChatMessages().filter(message => {
+      const messageId = Math.trunc(Number(message?.message_id));
+      if (!Number.isFinite(messageId) || messageId < 0) return false;
+      if (containerId != null && messageId <= containerId) return false;
+      if (normalizedIds.size > 0 && !normalizedIds.has(messageId)) return false;
+      return resolveHostMessageRole(message) === 'assistant';
+    });
+  }
+
+  function snapshotHostImageDataSignatures(messageIds: number[] = []) {
+    for (const message of listHostImageDataCandidates(messageIds)) {
+      const messageId = Math.trunc(Number(message?.message_id));
+      if (!Number.isFinite(messageId) || messageId < 0) continue;
+      hostImageDataSyncSignatures.set(messageId, buildHostImageDataSignature(message));
+    }
+  }
+
+  function syncTranscriptItemsFromHostData(reason: string, messageIds: number[] = []) {
+    const changedMessageIds: number[] = [];
+
+    for (const message of listHostImageDataCandidates(messageIds)) {
+      const messageId = Math.trunc(Number(message?.message_id));
+      if (!Number.isFinite(messageId) || messageId < 0) continue;
+
+      const nextSignature = buildHostImageDataSignature(message);
+      const previousSignature = hostImageDataSyncSignatures.get(messageId);
+      hostImageDataSyncSignatures.set(messageId, nextSignature);
+
+      if (previousSignature == null || previousSignature === nextSignature) continue;
+      changedMessageIds.push(messageId);
+    }
+
+    if (changedMessageIds.length === 0) return;
+
+    queueGeneratedImageEntityRefresh(changedMessageIds);
+    refreshTranscriptItemsByIds(changedMessageIds, reason);
+    scheduleUiRefresh(['gallery'], reason);
+    logImageBridge('host-data-synced', {
+      reason,
+      changedMessageIds,
+    });
   }
 
   const visibleTranscript = computed(() => {
@@ -1631,8 +1803,8 @@ export function useStreamingDemo() {
 
   function bindOpeningGenerationListeners() {
     clearOpeningGenerationListeners();
-    if (typeof eventOn !== 'function' || typeof tavern_events === 'undefined') {
-      console.warn('[opening] tavern_events not available, stream listeners skipped');
+    if (typeof eventOn !== 'function') {
+      console.warn('[opening] eventOn not available, stream listeners skipped');
       return;
     }
     let streamedRaw = '';
@@ -1652,6 +1824,20 @@ export function useStreamingDemo() {
       };
       rebuildTranscript();
     };
+
+    if (typeof iframe_events !== 'undefined') {
+      try {
+        openingGenerationStops.push(eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, handleToken));
+      } catch {
+        // ignore
+      }
+      return;
+    }
+
+    if (typeof tavern_events === 'undefined') {
+      console.warn('[opening] no incremental stream event bus available, stream listeners skipped');
+      return;
+    }
 
     try {
       openingGenerationStops.push(eventOn(tavern_events.STREAM_TOKEN_RECEIVED as any, handleToken));
@@ -1901,6 +2087,53 @@ export function useStreamingDemo() {
     }
   }
 
+  function refreshTranscriptItemsByIds(messageIds: number[], reason = 'manual') {
+    const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id > 0))];
+    if (normalizedMessageIds.length === 0) return;
+
+    const containerId = getActiveContainerMessageId();
+    const allMessages = listAllChatMessages();
+    let refreshedCount = 0;
+
+    for (const messageId of normalizedMessageIds) {
+      if (containerId != null && messageId <= containerId) continue;
+
+      const hostMessage = allMessages.find(message => Math.trunc(Number(message?.message_id)) === messageId);
+      if (!hostMessage) continue;
+
+      const existingItem = transcript.value.find(item => item.message_id === messageId);
+      const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
+      const rawRole = resolveHostMessageRole(hostMessage);
+      const role = resolveTranscriptRole({
+        rawRole,
+        rawMessage: String(hostMessage?.message ?? ''),
+        isOpeningResult,
+      });
+
+      upsertTranscriptItem(
+        buildTranscriptItem({
+          id: messageId,
+          role,
+          raw: String(hostMessage?.message ?? ''),
+          hidden: hostMessage?.is_hidden === true,
+          isOpening: existingItem?.isOpening ?? isOpeningResult,
+          canReroll: existingItem?.canReroll ?? false,
+          latestAssistantId: null,
+          status: status.value,
+        }),
+      );
+      refreshedCount += 1;
+    }
+
+    snapshotHostImageDataSignatures(normalizedMessageIds);
+
+    recordLifecycleTrace('refreshTranscriptItemsByIds', 'done', {
+      reason,
+      messageIds: normalizedMessageIds,
+      refreshedCount,
+    });
+  }
+
   /**
    * 获取 chat 数组的真实最后一个索引，不受 is_hidden 影响。
    */
@@ -2090,11 +2323,18 @@ export function useStreamingDemo() {
     }
   }
 
-  function queueGeneratedImageEntityRefresh() {
+  function queueGeneratedImageEntityRefresh(messageIds: number[] = []) {
     if (generatedImageDomMutationTimer) window.clearTimeout(generatedImageDomMutationTimer);
+    const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id >= 0))];
     generatedImageDomMutationTimer = window.setTimeout(() => {
       generatedImageDomMutationTimer = 0;
-      bumpGeneratedImageEntityRevision();
+      if (normalizedMessageIds.length === 0) {
+        bumpGeneratedImageEntityRevision();
+        return;
+      }
+      normalizedMessageIds.forEach(messageId => {
+        bumpGeneratedImageEntityRevision(messageId);
+      });
     }, 40);
   }
 
@@ -2105,6 +2345,9 @@ export function useStreamingDemo() {
     });
     if (domains.includes('mvuSources')) {
       mvuSourceRevision.value += 1;
+    }
+    if (domains.includes('gallery')) {
+      galleryRevision.value += 1;
     }
 
     if (domains.includes('transcript')) {
@@ -2677,8 +2920,11 @@ export function useStreamingDemo() {
         const hasPersistedOpeningResult =
           Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
           Number(openingPayload.value.opening_result_message_id) > 0;
+        const shouldRenderOpeningFromPayload = openingPayload.value.state === 'generating' ||
+          openingPayload.value.state === 'ready' ||
+          (openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult);
 
-        if (openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult) {
+        if (shouldRenderOpeningFromPayload) {
           normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
         } else {
           const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
@@ -2707,6 +2953,7 @@ export function useStreamingDemo() {
         if (containerId != null && id <= containerId) continue;
         if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
         const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
+        if (containerId === 0 && isOpeningResult) continue;
         const rawRole = resolveHostMessageRole(message);
         const role = resolveTranscriptRole({
           rawRole,
@@ -2731,6 +2978,7 @@ export function useStreamingDemo() {
 
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(normalized);
+      snapshotHostImageDataSignatures(transcript.value.map(item => item.message_id));
       console.log('[Debug] rebuildTranscript result', {
         reason,
         containerId,
@@ -3412,7 +3660,8 @@ export function useStreamingDemo() {
       appendLog(
         'action',
         '生成开局',
-        stripTagsForPreview(openingPayload.value.result?.content ?? '').slice(0, 80) || '(空开局)',
+        stripTagsForPreview(openingPayload.value.result?.raw ?? openingPayload.value.result?.content ?? '').slice(0, 80) ||
+          '(空开局)',
       );
     } catch (error) {
       status.value = 'error';
@@ -3624,8 +3873,9 @@ export function useStreamingDemo() {
       return;
     }
     const prompt = String(nextPrompt ?? input.value ?? '').trim();
-    const submitted = await runNativeSendProxy(prompt);
-    if (submitted && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
+    if (!prompt || busy.value) return;
+    await runGenerationFlow({ prompt, createUser: true });
+    if (status.value === 'done' && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
       input.value = '';
     }
   }
@@ -3673,7 +3923,7 @@ export function useStreamingDemo() {
         generatedImageDomObserver = new MutationObserver(records => {
           if (!records.some(hasRelevantChatu8Mutation)) return;
           syncPendingRequestHintsFromDom();
-          queueGeneratedImageEntityRefresh();
+          queueGeneratedImageEntityRefresh(collectMutationMessageIds(records));
         });
         generatedImageDomObserver.observe(document.body, {
           childList: true,
@@ -3682,10 +3932,12 @@ export function useStreamingDemo() {
           attributeFilter: ['src'],
         });
       }
-      hostPluginMutationObservers = bindHostPluginMutationObservers(() => {
+      hostPluginMutationObservers = bindHostPluginMutationObservers(records => {
+        const affectedMessageIds = collectMutationMessageIds(records);
         syncPendingRequestHintsFromDom();
-        queueGeneratedImageEntityRefresh();
-        scheduleUiRefresh(['transcript'], 'host.plugin_native_dom_mutation');
+        queueGeneratedImageEntityRefresh(affectedMessageIds);
+        refreshTranscriptItemsByIds(affectedMessageIds, 'host.plugin_native_dom_mutation');
+        scheduleUiRefresh(['gallery'], 'host.plugin_native_dom_mutation');
       });
     }
 
@@ -3768,7 +4020,7 @@ export function useStreamingDemo() {
 
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
   const galleryGroups = computed<GalleryGroup[]>(() => {
-    void transcriptDomRevision.value;
+    void galleryRevision.value;
 
     const groups: GalleryGroup[] = [];
     for (const item of transcript.value) {
@@ -3780,6 +4032,19 @@ export function useStreamingDemo() {
       if (images.length === 0) continue;
       groups.push({ messageId: item.message_id, images });
     }
+
+    recordComponentDebugTrace({
+      scope: 'galleryGroups',
+      event: 'recompute',
+      payload: {
+        messageId: null,
+        variant: 'computed',
+        groupCount: groups.length,
+        imageCount: groups.reduce((total, group) => total + group.images.length, 0),
+        transcriptCount: transcript.value.length,
+        galleryRevision: galleryRevision.value,
+      },
+    });
 
     return groups;
   });

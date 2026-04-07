@@ -103,3 +103,56 @@ test('createDebugTraceStore reads enabled flag from target runtime hint', () => 
   assert.equal(runtime.enabled, true);
   assert.equal(runtime.events.length, 1);
 });
+
+test('debugTrace summarizes component activity by scope and message id', () => {
+  const runtime = installDebugTraceRuntime({
+    enabled: true,
+    maxEvents: 10,
+    target: {},
+  });
+
+  recordDebugTrace(runtime, {
+    traceId: 'trace-component',
+    scope: 'TranscriptMessageCard',
+    event: 'mount',
+    payload: {
+      debugKind: 'component_activity',
+      messageId: 7,
+      variant: 'assistant',
+    },
+  });
+  recordDebugTrace(runtime, {
+    traceId: 'trace-component',
+    scope: 'TranscriptMessageCard',
+    event: 'update',
+    payload: {
+      debugKind: 'component_activity',
+      messageId: 7,
+      variant: 'assistant',
+    },
+  });
+  recordDebugTrace(runtime, {
+    traceId: 'trace-component',
+    scope: 'GeneratedImageAsset',
+    event: 'resolve_source',
+    payload: {
+      debugKind: 'component_activity',
+      messageId: 7,
+      variant: 'gallery',
+    },
+  });
+
+  const summary = runtime.summarizeComponentActivity();
+  assert.equal(Array.isArray(summary), true);
+
+  const transcriptRow = summary.find(entry => entry.scope === 'TranscriptMessageCard' && entry.messageId === 7);
+  assert.ok(transcriptRow);
+  assert.equal(transcriptRow.mounts, 1);
+  assert.equal(transcriptRow.updates, 1);
+  assert.equal(transcriptRow.totalEvents, 2);
+
+  const imageRow = summary.find(entry => entry.scope === 'GeneratedImageAsset' && entry.messageId === 7);
+  assert.ok(imageRow);
+  assert.equal(imageRow.effects, 1);
+  assert.equal(imageRow.totalEvents, 1);
+});

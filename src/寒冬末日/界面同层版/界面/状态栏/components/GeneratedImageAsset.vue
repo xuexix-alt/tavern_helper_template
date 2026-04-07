@@ -58,8 +58,9 @@
 </template>
 
 <script setup lang="ts">
+import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
-import { useGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
+import { readGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
   readGeneratedImageSource,
@@ -80,8 +81,22 @@ const emit = defineEmits<{
 }>();
 
 const resolvedSource = ref<ResolvedGeneratedImageSource | null>(null);
-const generatedImageEntityRevision = useGeneratedImageEntityRevision();
 const rootRef = ref<HTMLElement | null>(null);
+const generatedImageEntityRevision = computed(() => readGeneratedImageEntityRevision(props.entry.messageId));
+
+function recordComponentTrace(event: string, payload: Record<string, unknown> = {}) {
+  recordComponentDebugTrace({
+    scope: 'GeneratedImageAsset',
+    event,
+    payload: {
+      messageId: props.entry.messageId,
+      variant: props.variant ?? 'inline',
+      markerId: props.entry.markerId ?? '',
+      requestId: props.entry.requestId ?? '',
+      ...payload,
+    },
+  });
+}
 
 const rootClass = computed(() =>
   props.variant === 'gallery'
@@ -160,6 +175,7 @@ function handlePointerCancel(event: PointerEvent) {
 }
 
 async function resolveSource() {
+  let resolveMode = 'missing';
   // 优先使用 entry 中已有的 src（从 hostDomArtifacts 传递过来）
   if (props.entry.src) {
     resolvedSource.value = {
@@ -170,6 +186,11 @@ async function resolveSource() {
       source: 'extra',
       messageId: props.entry.messageId,
     };
+    resolveMode = 'entry_src';
+    recordComponentTrace('resolve_source', {
+      mode: resolveMode,
+      source: resolvedSource.value.source,
+    });
     return;
   }
 
@@ -191,6 +212,11 @@ async function resolveSource() {
         source: 'extra',
         messageId: props.entry.messageId,
       };
+      resolveMode = 'dom';
+      recordComponentTrace('resolve_source', {
+        mode: resolveMode,
+        source: resolvedSource.value.source,
+      });
       return;
     }
   }
@@ -206,6 +232,11 @@ async function resolveSource() {
 
   if (syncResult) {
     resolvedSource.value = syncResult;
+    resolveMode = 'sync';
+    recordComponentTrace('resolve_source', {
+      mode: resolveMode,
+      source: resolvedSource.value.source,
+    });
     return;
   }
 
@@ -218,9 +249,15 @@ async function resolveSource() {
     promptToken: props.entry.promptToken,
   });
   resolvedSource.value = asyncResult;
+  resolveMode = asyncResult ? 'async' : 'missing';
+  recordComponentTrace('resolve_source', {
+    mode: resolveMode,
+    source: asyncResult?.source ?? 'missing',
+  });
 }
 
 onMounted(() => {
+  recordComponentTrace('mount');
   // 阻止 dblclick 冒泡到宿主 ClickTrigger，避免双击已有图片时触发新生图菜单
   const handleRootDblclickBubbling = (e: Event) => {
     e.stopPropagation();
@@ -228,6 +265,12 @@ onMounted(() => {
   rootRef.value?.addEventListener('dblclick', handleRootDblclickBubbling, true);
   onBeforeUnmount(() => {
     rootRef.value?.removeEventListener('dblclick', handleRootDblclickBubbling, true);
+  });
+});
+
+onUpdated(() => {
+  recordComponentTrace('update', {
+    hasResolvedSource: resolvedSource.value != null,
   });
 });
 
@@ -248,6 +291,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  recordComponentTrace('unmount');
   gestureController.dispose();
 });
 </script>
