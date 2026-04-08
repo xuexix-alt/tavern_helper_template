@@ -7,7 +7,15 @@ import { resolveMvuSnapshotState } from './mvuSnapshotPolicy';
 type SchemaType = z.output<typeof Schema>;
 type RoleLike = SchemaType[string & keyof SchemaType] | Record<string, any>;
 
-const RESERVED_TOP_LEVEL_KEYS = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC', '伊甸一次性指令']);
+const RESERVED_TOP_LEVEL_KEYS = new Set([
+  '世界',
+  '庇护所',
+  '房间',
+  '主线任务',
+  '楼层其他住户',
+  '临时NPC',
+  '伊甸一次性指令',
+]);
 const initialData: SchemaType = Schema.parse({});
 const MVU_REFRESH_DEBOUNCE_MS = 80;
 const MVU_TRANSIENT_RETRY_MS = 180;

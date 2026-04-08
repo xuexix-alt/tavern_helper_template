@@ -278,11 +278,7 @@ const {
   mainRoleEntries,
   tempNpcEntries,
 } = useMvuRoleStore(selectedTargetMessageId);
-const {
-  data: systemMvuData,
-  ready: systemReady,
-  isRetrying: isSystemRetrying,
-} = useMvuSystemStore();
+const { data: systemMvuData, ready: systemReady, isRetrying: isSystemRetrying } = useMvuSystemStore();
 const agentTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
   { id: 'temp' as const, label: `临时NPC ${tempNpcEntries.value.length}` },

@@ -35,5 +35,8 @@ test('same-layer system panel renders eden one-shot command stats card from top-
   assert.match(panelSource, /v-for="entry in edenCommandStatEntries"/);
   assert.match(panelSource, /entry\.key/);
   assert.match(panelSource, /entry\.value/);
-  assert.match(storeSource, /const RESERVED_TOP_LEVEL_KEYS = new Set\(\['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC', '伊甸一次性指令'\]\);/);
+  assert.match(
+    storeSource,
+    /const RESERVED_TOP_LEVEL_KEYS = new Set\(\['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC', '伊甸一次性指令'\]\);/,
+  );
 });

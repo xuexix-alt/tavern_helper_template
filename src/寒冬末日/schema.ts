@@ -259,9 +259,7 @@ export const Schema = z
         },
       }),
 
-    伊甸一次性指令: z
-      .record(z.string().describe('指令编号'), z.coerce.number().int().prefault(0))
-      .prefault({}),
+    伊甸一次性指令: z.record(z.string().describe('指令编号'), z.coerce.number().int().prefault(0)).prefault({}),
 
     房间: z
       .object({

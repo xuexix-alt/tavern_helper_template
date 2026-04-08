@@ -27,6 +27,9 @@ test('useStreamingDemo calibrates roll against latest message stat_data instead 
   assert.match(source, /const latestMessage = listAllChatMessages\(\)\.at\(-1\)/);
   assert.match(source, /const targetMessageId = Math\.trunc\(Number\(latestMessage\?\.message_id\)\)/);
   assert.match(source, /const latestMvuData = Mvu\.getMvuData\(\{ type: 'message', message_id: targetMessageId \}\)/);
-  assert.match(source, /await Mvu\.replaceMvuData\(latestMvuData, \{ type: 'message', message_id: targetMessageId \}\)/);
+  assert.match(
+    source,
+    /await Mvu\.replaceMvuData\(latestMvuData, \{ type: 'message', message_id: targetMessageId \}\)/,
+  );
   assert.match(source, /CHAT_VAR_KEYS\.EDEN_SHELTER_UPGRADE|eden\.shelter_upgrade/);
 });

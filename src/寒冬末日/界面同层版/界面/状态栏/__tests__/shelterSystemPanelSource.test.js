@@ -20,7 +20,13 @@ test('same-layer system panel reads shelter fields from latest system snapshot i
   assert.match(source, /useMvuSystemStore/);
   assert.match(source, /const \{\s*data: systemMvuData,/);
   assert.match(source, /\} = useMvuSystemStore\(\);/);
-  assert.match(source, /const shelterLevel = computed\(\(\) => `\$\{String\(_\.get\(systemMvuData\.value, '庇护所\.庇护所等级', '--'\)\)\}`\);/);
-  assert.match(source, /const dailyRollText = computed\(\(\) => String\(_\.get\(systemMvuData\.value, '庇护所\.今日投掷点数', '--'\)\) \|\| '--'\);/);
+  assert.match(
+    source,
+    /const shelterLevel = computed\(\(\) => `\$\{String\(_\.get\(systemMvuData\.value, '庇护所\.庇护所等级', '--'\)\)\}`\);/,
+  );
+  assert.match(
+    source,
+    /const dailyRollText = computed\(\(\) => String\(_\.get\(systemMvuData\.value, '庇护所\.今日投掷点数', '--'\)\) \|\| '--'\);/,
+  );
   assert.doesNotMatch(source, /const pityText = computed\(/);
 });
