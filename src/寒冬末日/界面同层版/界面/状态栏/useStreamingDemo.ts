@@ -1196,7 +1196,9 @@ function buildTranscriptItem(input: {
   });
   const streamRenderSource = isDemoAssistant ? content : displayRenderSource;
   const regexText = applyRegexForDisplay(displayRenderSource, input.role);
-  const streamHtml = buildStreamStageHtml(streamRenderSource, input.role, input.id);
+  const streamHtml = isDemoAssistant
+    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)
+    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);
   const finalHtml = buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
@@ -1244,6 +1246,18 @@ function buildOpeningAssistantText(payload: OpeningPayload): string {
     .trim();
 }
 
+function hasRenderableOpeningPayloadResultBody(payload: OpeningPayload): boolean {
+  const raw = String(payload.result?.raw ?? '').trim();
+  if (raw) return true;
+
+  const content = String(payload.result?.content ?? '').trim();
+  if (content) return true;
+
+  return Array.isArray(payload.result?.options)
+    ? payload.result.options.some(option => String(option ?? '').trim())
+    : false;
+}
+
 function isOpeningAssistantMessage(message: any): boolean {
   return hasOpeningAssistantFlag(message);
 }
@@ -1259,7 +1273,7 @@ function buildOpeningTranscriptItem(
 ): TranscriptItem {
   const openingRaw = String(payload.result?.raw ?? '').trim();
   const isOpeningStreaming = payload.state === 'generating' || status === 'streaming';
-  const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');
+  const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '');
   const regexText = applyRegexForDisplay(renderSource, 'assistant');
   const displayedHtml = buildFinalHtml(renderSource, 0, renderSource);
 
@@ -2947,21 +2961,23 @@ export function useStreamingDemo() {
         const hasPersistedOpeningResult =
           Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
           Number(openingPayload.value.opening_result_message_id) > 0;
+        const hasRenderableOpeningPayloadResult = hasRenderableOpeningPayloadResultBody(openingPayload.value);
         const shouldRenderOpeningFromPayload =
           openingPayload.value.state === 'generating' ||
-          openingPayload.value.state === 'ready' ||
-          (openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult);
+          (openingPayload.value.state === 'ready' && hasRenderableOpeningPayloadResult);
 
         if (shouldRenderOpeningFromPayload) {
           normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
         } else {
-          const opening = all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
+          const opening =
+            findOpeningResultChatMessage(all) ?? all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
           if (opening) {
             const openingRole = resolveHostMessageRole(opening);
-            if (openingRole === 'assistant') nextLatestAssistantId = containerId;
+            const openingId = Math.trunc(Number(opening?.message_id));
+            if (openingRole === 'assistant' && Number.isFinite(openingId)) nextLatestAssistantId = openingId;
             normalized.push(
               buildTranscriptItem({
-                id: containerId,
+                id: Number.isFinite(openingId) ? openingId : containerId,
                 role: openingRole,
                 raw: String(opening?.message ?? ''),
                 hidden: opening?.is_hidden === true,

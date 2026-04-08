@@ -52,14 +52,38 @@ test('rebuildTranscript keeps opening on payload-backed rendering while opening 
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes("const shouldRenderOpeningFromPayload = openingPayload.value.state === 'generating' ||"),
+    source.includes("const shouldRenderOpeningFromPayload =\n          openingPayload.value.state === 'generating' ||"),
     true,
     'opening rebuild logic should prioritize payload-backed rendering during generating state',
+  );
+  assert.equal(
+    source.includes(
+      "const shouldRenderOpeningFromPayload =\n          openingPayload.value.state === 'generating' ||\n          openingPayload.value.state === 'ready';",
+    ),
+    false,
+    'opening rebuild logic should not blindly force payload-backed rendering for every ready state',
+  );
+  assert.equal(
+    source.includes('openingPayload.value.state === \'ready\' && hasRenderableOpeningPayloadResult'),
+    true,
+    'opening rebuild logic should only keep payload-backed rendering in ready state when the payload still carries a renderable result',
   );
   assert.equal(
     source.includes('if (shouldRenderOpeningFromPayload) {'),
     true,
     'opening rebuild logic should branch on the payload-backed rendering flag',
+  );
+  assert.equal(
+    source.includes("(openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult)"),
+    false,
+    'opening rebuild logic should not keep rendering a synthetic opening card during configuring reload states with no result',
+  );
+  assert.equal(
+    source.includes(
+      'const opening =\n            findOpeningResultChatMessage(all) ?? all.find(message => Math.trunc(Number(message?.message_id)) === containerId);',
+    ),
+    true,
+    'opening rebuild fallback should prefer the real persisted opening result message when payload-backed rendering is unavailable',
   );
 });
 
@@ -105,7 +129,7 @@ test('rebuildTranscript skips persisted opening result message in normal transcr
   );
 });
 
-test('buildOpeningTranscriptItem uses raw opening output while delegating both stream and final rendering to the normal displayed-message html path', () => {
+test('buildOpeningTranscriptItem does not fall back to a synthetic empty opening sentence when no opening result exists', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
@@ -114,16 +138,14 @@ test('buildOpeningTranscriptItem uses raw opening output while delegating both s
     'opening transcript item should read the full raw output first',
   );
   assert.equal(
-    source.includes(
-      "const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '开局尚未生成，请先完成开局配置。');",
-    ),
+    source.includes("const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '');"),
     true,
-    'opening transcript item should render the raw output as the primary visible source',
+    'opening transcript item should not invent a non-stream placeholder sentence during reload or configuring states',
   );
   assert.equal(
-    source.includes("const streamedContent = String(payload.result?.content ?? '').trim();"),
+    source.includes('开局尚未生成，请先完成开局配置。'),
     false,
-    'opening transcript item should not prioritize content-only extraction for visible rendering',
+    'opening transcript item should no longer hardcode the synthetic empty opening sentence',
   );
   assert.equal(
     source.includes("const regexText = applyRegexForDisplay(renderSource, 'assistant');"),
@@ -144,5 +166,29 @@ test('buildOpeningTranscriptItem uses raw opening output while delegating both s
     source.includes('finalHtml: displayedHtml,'),
     true,
     'opening transcript item should reuse the normal displayed-message html after generation completes',
+  );
+});
+
+test('normal assistant streaming uses displayed-message html instead of escaping regex output as raw code', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes(
+      'const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);',
+    ),
+    true,
+    'normal assistant streaming should render through the standard displayed-message html path so regex replacements show their effect',
+  );
+});
+
+test('stream-demo wrapped assistant streaming also uses displayed-message html for extracted content instead of raw preformatted code', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes(
+      "const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);",
+    ),
+    true,
+    'stream-demo assistant streaming should render extracted content through displayed-message html so regenerate/send flows do not expose regex code',
   );
 });
