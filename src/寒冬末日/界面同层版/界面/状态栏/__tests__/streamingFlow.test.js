@@ -64,7 +64,7 @@ test('rebuildTranscript keeps opening on payload-backed rendering while opening 
     'opening rebuild logic should not blindly force payload-backed rendering for every ready state',
   );
   assert.equal(
-    source.includes('openingPayload.value.state === \'ready\' && hasRenderableOpeningPayloadResult'),
+    source.includes("openingPayload.value.state === 'ready' && hasRenderableOpeningPayloadResult"),
     true,
     'opening rebuild logic should only keep payload-backed rendering in ready state when the payload still carries a renderable result',
   );
@@ -186,7 +186,7 @@ test('stream-demo wrapped assistant streaming also uses displayed-message html f
 
   assert.equal(
     source.includes(
-      "const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);",
+      'const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);',
     ),
     true,
     'stream-demo assistant streaming should render extracted content through displayed-message html so regenerate/send flows do not expose regex code',

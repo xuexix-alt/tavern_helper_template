@@ -2970,7 +2970,8 @@ export function useStreamingDemo() {
           normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
         } else {
           const opening =
-            findOpeningResultChatMessage(all) ?? all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
+            findOpeningResultChatMessage(all) ??
+            all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
           if (opening) {
             const openingRole = resolveHostMessageRole(opening);
             const openingId = Math.trunc(Number(opening?.message_id));
