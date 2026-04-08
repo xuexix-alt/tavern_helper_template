@@ -33,3 +33,10 @@ test('opening seed user floor carries initialized MVU data from layer 0 so assis
   );
   assert.match(source, /_.merge\(nextData, _.cloneDeep\(messageData\)\);/);
 });
+
+test('opening result message also emits official generation lifecycle so host extra-model MVU parsing can run', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+
+  assert.match(source, /const finalResultId = openingResultMessageId \?\? updatedResultId \?\? openingPayload\.value\.opening_result_message_id;/);
+  assert.match(source, /await emitOfficialGenerationLifecycle\(finalResultId, 'normal'\);/);
+});

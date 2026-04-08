@@ -41,6 +41,10 @@ format: |-
      - If main task stage completed -> use `replace` to force level to reward target.
      - Otherwise: DO NOT modify level numbers manually.
      - Sync capability descriptions when level changes.
+    - 新的一天需要roll一次性指令：遵从<伊甸一次性指令>
+       - 新增编号：
+       - 或已有编号次数 +1
+       - 或已使用编号次数 -1
 
   4. All Roles Variables (逐个检查每个角色)
      - Source: top-level roles + `/临时NPC` objects.
@@ -74,6 +78,7 @@ format: |-
      - List all paths + operations (replace/delta/insert/remove/move).
      - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
 
+
   </Analysis>
   <JSONPatch>
   [
@@ -83,7 +88,9 @@ format: |-
     { "op": "replace", "path": "/纪宁/登场状态", "value": "登场" },
     { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
     { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
-    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } }
+    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } },
+    { "op": "insert", "path": "/伊甸一次性指令/rz001", "value": 1 },
+    { "op": "delta", "path": "/伊甸一次性指令/sk001", "value": 1 }
   ]
   </JSONPatch>
   </UpdateVariable>
@@ -96,4 +103,3 @@ requirements:
   - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
   - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
   - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
-

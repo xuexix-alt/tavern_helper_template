@@ -23,7 +23,7 @@ type MvuCommandLike = {
   args?: any[];
 };
 
-const EDEN_HELPER_VERSION = '1.5';
+const EDEN_HELPER_VERSION = '1.6';
 const EDEN_HELPER_ACTIVE_INSTANCE_KEY = '__eden_helper_active_instance__';
 const EDEN_HELPER_INSTANCE_ID = (() => {
   try {
@@ -891,12 +891,10 @@ function parseDaysSinceUpgrade(distanceText: any): number {
 
 function formatDistanceText(daysSinceUpgrade: number): string {
   const days = Math.max(0, Math.floor(daysSinceUpgrade));
-  const remaining = Math.max(0, 7 - days);
-  return `${days}天 | 剩余保底升级天数：${remaining}天`;
+  return `${days}天`;
 }
 
-function formatRollText(roll: number | null, upgraded: boolean, reason?: 'guarantee'): string {
-  if (reason === 'guarantee') return '今日已投掷: 保底升级！';
+function formatRollText(roll: number | null, upgraded: boolean): string {
   const r = typeof roll === 'number' && Number.isFinite(roll) ? Math.floor(roll) : 0;
   return `今日已投掷: ${r}点 (${upgraded ? '触发幸运升级！' : '未升级'})`;
 }
@@ -1266,14 +1264,12 @@ function applyShelterUpgradeRewards(
   return { addedAbilities, patchedMedicalWing, patchedVehicleHangar };
 }
 
-type ParsedRollText =
-  | { kind: 'guarantee'; roll: null; upgraded: true }
-  | { kind: 'number'; roll: number; upgraded: boolean };
+type ParsedRollText = { kind: 'number'; roll: number; upgraded: boolean };
 
 function parseRollText(text: any): ParsedRollText | null {
   const s = String(text ?? '').trim();
   if (!s) return null;
-  if (s.includes('保底')) return { kind: 'guarantee', roll: null, upgraded: true };
+  if (s.includes('保底')) return { kind: 'number', roll: 0, upgraded: true };
 
   const m = s.match(/今日已投掷[:：]?\s*(\d+)\s*点/);
   if (!m) return null;
@@ -1331,7 +1327,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
         ? {
             last_roll_value: seededRoll.roll,
             last_roll_upgraded: seededRoll.upgraded,
-            last_roll_reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
+            last_roll_reason: seededRoll.upgraded ? 'lucky' : 'normal',
             last_roll_source: 'seed',
             roll_history: {
               ...(typeof (prev as any)?.roll_history === 'object' && (prev as any).roll_history
@@ -1348,7 +1344,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
                     [seedDate]: {
                       roll: seededRoll.roll,
                       upgraded: seededRoll.upgraded,
-                      reason: seededRoll.kind === 'guarantee' ? 'guarantee' : seededRoll.upgraded ? 'lucky' : 'normal',
+                      reason: seededRoll.upgraded ? 'lucky' : 'normal',
                       source: 'seed',
                       ts: new Date().toISOString(),
                       message_id: seededMessageId,
@@ -1390,8 +1386,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   if (nextAlreadyHasHistoryToday) {
     const roll = (historyEntryToday as any)?.roll ?? null;
     const upgraded = (historyEntryToday as any)?.upgraded === true;
-    const reason = String((historyEntryToday as any)?.reason ?? '').trim();
-    const text = formatRollText(roll, upgraded, reason === 'guarantee' ? 'guarantee' : undefined);
+    const text = formatRollText(roll, upgraded);
     if (String(_.get(stat_data, ['庇护所', '今日投掷点数'], '') ?? '') !== text) {
       _.set(stat_data, ['庇护所', '今日投掷点数'], text);
     }
@@ -1437,8 +1432,6 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
     ? Math.max(0, Math.floor(nextState.days_since_upgrade))
     : parseDaysSinceUpgrade(_.get(stat_data, ['庇护所', '距离上次升级'], ''));
 
-  const isGuarantee = baseDays >= 7;
-
   const rollTextNew = _.get(stat_data, ['庇护所', '今日投掷点数'], '');
   const rollTextOld = _.get(old_stat_data, ['庇护所', '今日投掷点数'], '');
   const aiTouchedRollTextRaw = !_.isEqual(rollTextNew, rollTextOld) && String(rollTextNew ?? '').trim().length > 0;
@@ -1460,14 +1453,10 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
 
   let roll: number | null = null;
   let upgraded = false;
-  let reason: 'guarantee' | 'lucky' | 'normal' | 'ai_invalid' = 'normal';
+  let reason: 'lucky' | 'normal' | 'ai_invalid' = 'normal';
   let source: 'script' | 'manual' | 'ai' = settleSource;
 
-  if (isGuarantee) {
-    roll = null;
-    upgraded = true;
-    reason = 'guarantee';
-  } else if (aiParsed && aiParsed.kind === 'number') {
+  if (aiParsed) {
     roll = aiParsed.roll;
     upgraded = aiParsed.upgraded;
     reason = upgraded ? 'lucky' : 'normal';
@@ -1504,7 +1493,7 @@ function applyShelterDailyRollIfNeeded(new_variables: any, old_variables: any, d
   const nextLevel = upgraded && canLevelUp && !alreadyLevelUpByAI ? clampLevel(baselineLevel + 1) : baselineLevel;
   const nextDays = upgraded ? 0 : baseDays + 1;
 
-  _.set(stat_data, ['庇护所', '今日投掷点数'], formatRollText(roll, upgraded, isGuarantee ? 'guarantee' : undefined));
+  _.set(stat_data, ['庇护所', '今日投掷点数'], formatRollText(roll, upgraded));
   _.set(stat_data, ['庇护所', '距离上次升级'], formatDistanceText(nextDays));
   _.set(stat_data, ['庇护所', '庇护所等级'], nextLevel);
 

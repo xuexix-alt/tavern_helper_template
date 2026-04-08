@@ -57,11 +57,14 @@
 
         <div class="ui-sidebar-body">
           <MvuRolePanel
+            :target-message-id="openingPayload.opening_seed_user_message_id ?? null"
             :transcript-items="transcript"
             :refresh-revision="mvuSourceRevision"
             :active-character-key="activeRoleKey"
+            :calibrating-daily-roll="isCalibratingDailyRoll"
             @select-character="handleRoleSelect"
             @roster-change="handleRosterChange"
+            @calibrate-daily-roll="calibrateDailyRollDate"
             @collapse="closeRoleDrawer"
           />
         </div>
@@ -427,6 +430,8 @@ const {
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
   triggerImageGenerationForMessage,
+  calibrateDailyRollDate,
+  isCalibratingDailyRoll,
 } = useStreamingDemo();
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);

@@ -16,21 +16,10 @@ rules:
   can_rebuild_after_sealed: false
   interpretation_priority:
     - 世界观配置硬参数 高于 主流派偏置
-    - 主流派偏置 高于 AI 的 flavor 发挥
-    - starting_liabilities 必须真实进入 opening
-    - 开局 build 必须保留至少 2 个短板
-    - 封板后禁止大洗牌，只允许线性演化
 
 build_flow:
   - 选择世界观档位
   - 选择主流派
-  - 选择副偏向
-  - 生成候选能力池
-  - 计算起始点数
-  - 购买能力与模块
-  - 可选启用 DIY 槽
-  - 编译 build 摘要
-  - 确认并封板
 
 point_system:
   total_point_formula: 世界档位基值 + 主流派修正 + 副偏向修正 + 难度修正 + 开局补正

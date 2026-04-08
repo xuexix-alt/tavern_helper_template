@@ -154,15 +154,28 @@
           <div class="system-line"></div>
           <div class="system-head-row">
             <div class="system-title">今日投掷点数</div>
-            <button type="button" class="mini-pill">校准</button>
+            <button
+              type="button"
+              class="mini-pill"
+              :disabled="calibratingDailyRoll"
+              @click="$emit('calibrate-daily-roll')"
+            >
+              校准
+            </button>
           </div>
           <div class="system-copy">{{ dailyRollText }}</div>
         </div>
 
         <div class="system-card clip-corner-sm">
           <div class="system-line"></div>
-          <div class="system-title">距离上次保底升级</div>
-          <div class="system-copy">{{ pityText }}</div>
+          <div class="system-title">伊甸一次性指令</div>
+          <div v-if="edenCommandStatEntries.length === 0" class="system-copy system-copy-muted">暂无</div>
+          <div v-else class="system-stat-list">
+            <div v-for="entry in edenCommandStatEntries" :key="entry.key" class="system-stat-row">
+              <span>{{ entry.key }}</span>
+              <strong>×{{ entry.value }}</strong>
+            </div>
+          </div>
         </div>
 
         <section class="system-block">
@@ -205,19 +218,21 @@
 <script setup lang="ts">
 import type { TranscriptItem } from '../types';
 import { buildMvuSourceOptions } from '../mvuSourceOptions';
-import { readMvuStatData, useMvuRoleStore } from '../mvuRoleStore';
+import { readMvuStatData, useMvuRoleStore, useMvuSystemStore } from '../mvuRoleStore';
 
 const props = defineProps<{
   targetMessageId?: number | null;
   transcriptItems?: TranscriptItem[];
   activeCharacterKey?: string | null;
   refreshRevision?: number;
+  calibratingDailyRoll?: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'select-character', key: string): void;
   (event: 'roster-change', roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>): void;
   (event: 'collapse'): void;
+  (event: 'calibrate-daily-roll'): void;
 }>();
 
 type RoleTab = 'main' | 'temp';
@@ -263,6 +278,11 @@ const {
   mainRoleEntries,
   tempNpcEntries,
 } = useMvuRoleStore(selectedTargetMessageId);
+const {
+  data: systemMvuData,
+  ready: systemReady,
+  isRetrying: isSystemRetrying,
+} = useMvuSystemStore();
 const agentTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
   { id: 'temp' as const, label: `临时NPC ${tempNpcEntries.value.length}` },
@@ -287,6 +307,11 @@ const currentSourcePosition = computed(() => {
   return `${currentSourceIndex.value + 1}/${sourceOptions.value.length}`;
 });
 const sourceLabel = computed(() => {
+  if (pageTab.value === 'system') {
+    if (isSystemRetrying.value) return '系统面板等待最新楼层变量稳定';
+    if (!systemReady.value) return '最新楼层暂无可用系统变量';
+    return '系统面板当前数据来自最新变量楼层';
+  }
   const selected = selectedSourceOption.value;
   if (!selected) return '当前暂无可用变量楼层';
   if (isRetrying.value) return `目标楼层 ${selected.pillLabel} 等待变量稳定`;
@@ -295,13 +320,21 @@ const sourceLabel = computed(() => {
     ? `当前数据来自最新变量楼层 ${selected.pillLabel}`
     : `当前数据来自变量楼层 ${selected.pillLabel}`;
 });
-const shelterLevel = computed(() => `${String(_.get(mvuData.value, '庇护所.庇护所等级', '--'))}`);
-const dailyRollText = computed(() => String(_.get(mvuData.value, '庇护所.今日投掷点数', '--')) || '--');
-const pityText = computed(() => String(_.get(mvuData.value, '庇护所.距离上次升级', '--')) || '--');
+const shelterLevel = computed(() => `${String(_.get(systemMvuData.value, '庇护所.庇护所等级', '--'))}`);
+const dailyRollText = computed(() => String(_.get(systemMvuData.value, '庇护所.今日投掷点数', '--')) || '--');
+const edenCommandStatEntries = computed(() =>
+  Object.entries(_.get(systemMvuData.value, '伊甸一次性指令', {}))
+    .map(([key, value]) => ({
+      key: String(key ?? '').trim(),
+      value: Math.max(0, Math.trunc(Number(value) || 0)),
+    }))
+    .filter(entry => entry.key.length > 0)
+    .sort((a, b) => a.key.localeCompare(b.key, 'zh-Hans-CN')),
+);
 const expansionState = computed(() => ({
-  medical: String(_.get(mvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
-  workshop: String(_.get(mvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
-  hangar: String(_.get(mvuData.value, '庇护所.可扩展区域.载具格纳库', '未解锁')),
+  medical: String(_.get(systemMvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
+  workshop: String(_.get(systemMvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
+  hangar: String(_.get(systemMvuData.value, '庇护所.可扩展区域.载具格纳库', '未解锁')),
 }));
 
 // 当变量更新时（sourceOptions变化），自动切换到最新楼层
@@ -871,6 +904,26 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 }
 .system-copy {
   font-size: 18px;
+  color: var(--demo-text-accent);
+}
+.system-copy-muted {
+  color: var(--demo-text-secondary);
+}
+.system-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.system-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--demo-font-mono);
+  font-size: 14px;
+  color: var(--demo-text-primary);
+}
+.system-stat-row strong {
   color: var(--demo-text-accent);
 }
 .system-block {

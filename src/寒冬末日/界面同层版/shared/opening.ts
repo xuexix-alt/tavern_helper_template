@@ -86,6 +86,45 @@ function formatUnknownValue(input: unknown): string {
   return '';
 }
 
+function readCurrentMessageStatDataForPrompt(): Record<string, unknown> | null {
+  try {
+    const vars = getVariables?.({ type: 'message' }) ?? null;
+    const statData = _.get(vars, 'stat_data', null);
+    return statData && typeof statData === 'object' && !Array.isArray(statData)
+      ? (_.cloneDeep(statData) as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatCurrentMessageStatDataForPrompt(): string {
+  const statData = readCurrentMessageStatDataForPrompt();
+  if (!statData) return '';
+
+  let serialized = '';
+  try {
+    serialized = trimText(YAML.stringify({ stat_data: statData }));
+  } catch {
+    try {
+      serialized = trimText(JSON.stringify({ stat_data: statData }, null, 2));
+    } catch {
+      serialized = '';
+    }
+  }
+  if (!serialized) return '';
+
+  return [
+    '<status_current_variable>',
+    '[不得在正文中输出]当前变量真相如下，请严格按这些已有路径与层级生成 UpdateVariable / JSONPatch：',
+    '```yaml',
+    serialized,
+    '```',
+    '[上一轮的变量中，如有任何角色Imp < 0或健康值=0，则角色已经死亡，本轮演绎其死亡剧情，并今后正文不会违反这个事实。]',
+    '</status_current_variable>',
+  ].join('\n');
+}
+
 function buildDefaultOpeningFormValues(preset: OpeningPreset): Record<string, string> {
   return Object.fromEntries(
     preset.form_schema.map(field => {
@@ -542,6 +581,7 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
   const supplementalSetting = trimText(formValues.supplemental_setting) || '未设定';
   const wordCount = trimText(formValues.word_count) || '1500';
   const worldVariable = [worldModeAxisDictionary, `边界约束：${forbiddenDrift}`].filter(Boolean).join('\n');
+  const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
 
   return {
     user: trimText(payload.meta.character) || '{{user}}',
@@ -586,6 +626,8 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     社会组织: nearbyFactions,
     nearby_survivor_types: nearbySurvivorTypes,
     其他幸存者类别: nearbySurvivorTypes,
+    status_current_variable: currentVariablePrompt || '未设定',
+    当前变量列表: currentVariablePrompt || '未设定',
   };
 }
 
@@ -593,9 +635,11 @@ export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: Openi
   const context = buildOpeningPromptContext(preset, payload);
   const compiledTemplate = compileOpeningPromptTemplate(String(openingPromptTemplateRaw ?? '').trim(), context);
   const finalTemplate = typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
+  const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
 
   return [
     finalTemplate,
+    currentVariablePrompt,
     '输出格式：<content>正文</content> <option>后续剧情推进选项，格式为 A.${10字以内的选项文本} 每个选项单独一行，确保4个选项放在同一个标签内</option> ',
   ]
     .filter(Boolean)

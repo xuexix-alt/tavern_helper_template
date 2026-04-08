@@ -24,6 +24,7 @@ import {
   replaceOpeningPayloadInChat,
   shouldLoadOpeningGenerator,
 } from '../../shared/opening';
+import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
 import {
@@ -1328,6 +1329,7 @@ export function useStreamingDemo() {
   const openingPayload = ref<OpeningPayload>(getDefaultOpeningPayload(openingPreset.value));
   const openingWorldModes = getOpeningWorldModes();
   const openingRoutes = getOpeningRoutes();
+  const isCalibratingDailyRoll = ref(false);
   function isOpeningWorkbenchHostActive(): boolean {
     return isOpeningWorkbenchScopeActive({
       initialContainerMessageId,
@@ -1928,6 +1930,57 @@ export function useStreamingDemo() {
     queueHidePolicy('manual_refresh');
     appendLog('info', '手动刷新', '已刷新 transcript，并重新收口 hidden 状态');
     toastr?.info?.('已刷新工作台');
+  }
+
+  async function calibrateDailyRollDate() {
+    if (isCalibratingDailyRoll.value) return;
+    isCalibratingDailyRoll.value = true;
+    try {
+      await waitGlobalInitialized('Mvu');
+
+      const latestMessage = listAllChatMessages().at(-1);
+      const targetMessageId = Math.trunc(Number(latestMessage?.message_id));
+      if (!Number.isFinite(targetMessageId) || targetMessageId < 0) {
+        toastr?.warning?.('无法校准：未能获取最新楼层号', '每日Roll');
+        return;
+      }
+
+      const latestMvuData = Mvu.getMvuData({ type: 'message', message_id: targetMessageId }) as any;
+      const today = String(_.get(latestMvuData, 'stat_data.世界.日期', '') ?? '').trim();
+      if (!today) {
+        toastr?.warning?.('无法校准：最新楼层没有世界日期', '每日Roll');
+        return;
+      }
+
+      if (typeof updateVariablesWith === 'function') {
+        const request = {
+          id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          message_id: targetMessageId,
+          today,
+          ts: new Date().toISOString(),
+        };
+        updateVariablesWith(
+          (vars: any) => {
+            const raw = _.get(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, {});
+            const next = raw && typeof raw === 'object' && !Array.isArray(raw) ? { ...(raw as any) } : {};
+            next.manual_request = request;
+            _.set(vars, CHAT_VAR_KEYS.EDEN_SHELTER_UPGRADE, next);
+            return vars;
+          },
+          { type: 'chat' },
+        );
+      }
+
+      await Mvu.replaceMvuData(latestMvuData, { type: 'message', message_id: targetMessageId });
+      scheduleUiRefresh(['mvuSources'], 'daily_roll_calibrate_requested');
+      rebuildTranscript('daily_roll_calibrate_requested');
+      toastr?.info?.(`已请求校准/roll，目标最新楼层 #${targetMessageId}`, '每日Roll');
+    } catch (error) {
+      console.error('[stream-demo/daily_roll_calibrate] failed', error);
+      toastr?.error?.('校准失败，请重试', '每日Roll');
+    } finally {
+      isCalibratingDailyRoll.value = false;
+    }
   }
 
   function collectHostDocuments(): Document[] {
@@ -3698,6 +3751,7 @@ export function useStreamingDemo() {
         opening_result_message_id: finalResultId,
         result: nextResult,
       };
+      await emitOfficialGenerationLifecycle(finalResultId, 'normal');
       console.log('[Debug] generateOpening persist', {
         opening_result_message_id: finalResultId,
         state: 'ready',
@@ -4133,6 +4187,7 @@ export function useStreamingDemo() {
     openingWorldModes,
     openingRoutes,
     shouldShowOpeningSetup,
+    isCalibratingDailyRoll,
     readerSummary,
     logs,
     transcriptDomRevision,
@@ -4166,5 +4221,6 @@ export function useStreamingDemo() {
     withHostTranscriptVisible,
     ensureHostMesTextRendered,
     triggerImageGenerationForMessage,
+    calibrateDailyRollDate,
   };
 }
