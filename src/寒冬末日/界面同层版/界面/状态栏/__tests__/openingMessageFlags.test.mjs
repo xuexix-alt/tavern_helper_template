@@ -79,7 +79,7 @@ test('isCurrentOpeningSeedMessageByPayload falls back to flagged message when pa
   assert.equal(isCurrentOpeningSeedMessageByPayload(seed, { opening_seed_user_message_id: null }), true);
 });
 
-test('isCurrentOpeningAssistantMessageByPayload matches only the payload-selected opening result id', () => {
+test('isCurrentOpeningAssistantMessageByPayload matches only the payload-selected opening assistant id', () => {
   const current = {
     message_id: 2,
     role: 'assistant',
@@ -91,8 +91,8 @@ test('isCurrentOpeningAssistantMessageByPayload matches only the payload-selecte
     data: { stream_demo: { opening_assistant: true } },
   };
 
-  assert.equal(isCurrentOpeningAssistantMessageByPayload(current, { opening_result_message_id: 2 }), true);
-  assert.equal(isCurrentOpeningAssistantMessageByPayload(leaked, { opening_result_message_id: 2 }), false);
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(current, { opening_assistant_message_id: 2 }), true);
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(leaked, { opening_assistant_message_id: 2 }), false);
 });
 
 test('isCurrentOpeningSeedMessageByPayload treats the preferred user id as authoritative even before the runtime flag is readable', () => {
@@ -123,8 +123,8 @@ test('isCurrentOpeningAssistantMessageByPayload treats the preferred assistant i
     data: {},
   };
 
-  assert.equal(isCurrentOpeningAssistantMessageByPayload(resultWithoutFlag, { opening_result_message_id: 2 }), true);
-  assert.equal(isCurrentOpeningAssistantMessageByPayload(unrelatedAssistant, { opening_result_message_id: 2 }), false);
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(resultWithoutFlag, { opening_assistant_message_id: 2 }), true);
+  assert.equal(isCurrentOpeningAssistantMessageByPayload(unrelatedAssistant, { opening_assistant_message_id: 2 }), false);
 });
 
 test('isCurrentOpeningAssistantMessageByPayload still treats the payload-selected result floor as the opening assistant even if host role drifts', () => {
@@ -135,7 +135,7 @@ test('isCurrentOpeningAssistantMessageByPayload still treats the payload-selecte
   };
 
   assert.equal(
-    isCurrentOpeningAssistantMessageByPayload(resultWithDriftedRole, { opening_result_message_id: 2 }),
+    isCurrentOpeningAssistantMessageByPayload(resultWithDriftedRole, { opening_assistant_message_id: 2 }),
     true,
   );
 });

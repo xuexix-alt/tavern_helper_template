@@ -82,6 +82,7 @@ const showBody = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   padding: 14px;
   border-radius: 16px;
   border: 1px solid var(--demo-border-warning-stronger);
@@ -198,6 +199,7 @@ const showBody = computed(() => {
 .transcript-body {
   font-size: 13px;
   line-height: 1.6;
+  min-width: 0;
   border: 1px solid rgba(191, 158, 96, 0.18);
   background: color-mix(in srgb, var(--surface) 34%, transparent);
   padding: 12px;
@@ -237,6 +239,11 @@ const showBody = computed(() => {
 
 .html-body {
   padding: 2px 0 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .html-body.is-stream-stage {
@@ -280,6 +287,22 @@ const showBody = computed(() => {
 .html-body :deep(.dialog-inline) {
   color: inherit;
   font: inherit;
+}
+
+.html-body :deep(pre),
+.html-body :deep(table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.html-body :deep(code),
+.html-body :deep(li),
+.html-body :deep(ol),
+.html-body :deep(ul),
+.html-body :deep(blockquote) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (min-width: 761px) {

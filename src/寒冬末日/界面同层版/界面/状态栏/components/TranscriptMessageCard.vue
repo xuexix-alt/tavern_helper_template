@@ -423,6 +423,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 14px;
   max-width: 60rem;
+  min-width: 0;
   padding: 24px 28px 18px;
 }
 
@@ -468,14 +469,20 @@ onBeforeUnmount(() => {
 .assistant-body-wrap {
   position: relative;
   padding-top: 2px;
+  min-width: 0;
 }
 .assistant-body {
   position: relative;
   z-index: 1;
   pointer-events: auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   font-size: 15px;
   line-height: 1.9;
   color: var(--demo-text-panel-strong);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .assistant-body.is-stream-stage {
@@ -646,6 +653,22 @@ onBeforeUnmount(() => {
   box-shadow:
     0 8px 18px color-mix(in srgb, black 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
+}
+
+.assistant-body-wrap :deep(pre),
+.assistant-body-wrap :deep(table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.assistant-body-wrap :deep(code),
+.assistant-body-wrap :deep(li),
+.assistant-body-wrap :deep(ol),
+.assistant-body-wrap :deep(ul),
+.assistant-body-wrap :deep(blockquote) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .assistant-body-wrap :deep(.generated-image-hitarea) {

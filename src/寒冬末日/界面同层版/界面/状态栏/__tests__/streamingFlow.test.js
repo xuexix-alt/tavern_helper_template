@@ -48,53 +48,28 @@ test('runDemo routes normal sends through controlled generation flow instead of 
   );
 });
 
-test('rebuildTranscript keeps opening on payload-backed rendering while opening generation is active', () => {
+test('rebuildTranscript no longer synthesizes a payload-backed opening card after the detached opening refactor', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes("const shouldRenderOpeningFromPayload =\n          openingPayload.value.state === 'generating' ||"),
-    true,
-    'opening rebuild logic should prioritize payload-backed rendering during generating state',
-  );
-  assert.equal(
-    source.includes(
-      "const shouldRenderOpeningFromPayload =\n          openingPayload.value.state === 'generating' ||\n          openingPayload.value.state === 'ready';",
-    ),
+    source.includes('const shouldRenderOpeningFromPayload ='),
     false,
-    'opening rebuild logic should not blindly force payload-backed rendering for every ready state',
+    'opening rebuild logic should not keep the old payload-result synthetic branch anymore',
   );
   assert.equal(
-    source.includes("openingPayload.value.state === 'ready' && hasRenderableOpeningPayloadResult"),
-    true,
-    'opening rebuild logic should only keep payload-backed rendering in ready state when the payload still carries a renderable result',
-  );
-  assert.equal(
-    source.includes('if (shouldRenderOpeningFromPayload) {'),
-    true,
-    'opening rebuild logic should branch on the payload-backed rendering flag',
-  );
-  assert.equal(
-    source.includes("(openingPayload.value.state !== 'placeholder' && !hasPersistedOpeningResult)"),
+    source.includes('buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value)'),
     false,
-    'opening rebuild logic should not keep rendering a synthetic opening card during configuring reload states with no result',
+    'opening rebuild logic should not build a synthetic opening transcript card anymore',
   );
   assert.equal(
-    source.includes(
-      'const opening =\n            findOpeningResultChatMessage(all) ?? all.find(message => Math.trunc(Number(message?.message_id)) === containerId);',
-    ),
-    true,
-    'opening rebuild fallback should prefer the real persisted opening result message when payload-backed rendering is unavailable',
+    source.includes('findOpeningResultChatMessage('),
+    false,
+    'opening rebuild logic should no longer search for a dedicated opening result floor',
   );
-});
-
-test('bindOpeningGenerationListeners listens to incremental iframe token events used by controlled generation', () => {
-  const source = readSource('useStreamingDemo.ts');
-  const body = extractFunctionBody(source, 'bindOpeningGenerationListeners');
-
   assert.equal(
-    body.includes('iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY'),
-    true,
-    'opening generation listeners should subscribe to incremental iframe token events',
+    source.includes('if (containerId === 0 && all.length === 0) {'),
+    false,
+    'opening rebuild logic should leave the transcript empty until a real first assistant floor exists',
   );
 });
 
@@ -119,53 +94,38 @@ test('buildStreamStageHtml keeps streaming output in a readable preformatted blo
   );
 });
 
-test('rebuildTranscript skips persisted opening result message in normal transcript loop for opening workbench', () => {
+test('rebuildTranscript allows the persisted opening result to enter the normal transcript loop as the first assistant floor', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
     source.includes('if (containerId === 0 && isOpeningResult) continue;'),
-    true,
-    'opening workbench should keep the visible opening card anchored at #0 instead of showing the persisted result as a normal later floor',
+    false,
+    'opening workbench should no longer drop the persisted opening result from the normal transcript loop',
   );
 });
 
-test('buildOpeningTranscriptItem does not fall back to a synthetic empty opening sentence when no opening result exists', () => {
+test('generateOpening no longer creates a dedicated opening result placeholder before detached generation', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes("const openingRaw = String(payload.result?.raw ?? '').trim();"),
-    true,
-    'opening transcript item should read the full raw output first',
-  );
-  assert.equal(
-    source.includes("const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '');"),
-    true,
-    'opening transcript item should not invent a non-stream placeholder sentence during reload or configuring states',
-  );
-  assert.equal(
-    source.includes('开局尚未生成，请先完成开局配置。'),
+    source.includes('const placeholderResultId = await upsertOpeningResultMessage(\'\', \'none\');'),
     false,
-    'opening transcript item should no longer hardcode the synthetic empty opening sentence',
+    'simplified opening generation should no longer maintain a dedicated opening result placeholder',
+  );
+});
+
+test('opening setup visibility stays tied to successful opening completion instead of generic story-floor existence', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('const result = hasStoryMessagesBeyondOpening.value === false;'),
+    false,
+    'opening modal visibility should not be turned off simply because a failed assistant floor exists',
   );
   assert.equal(
-    source.includes("const regexText = applyRegexForDisplay(renderSource, 'assistant');"),
+    source.includes('if (hasSuccessfulOpeningAssistant.value) return false;'),
     true,
-    'opening transcript item should still pass full raw opening text through display regex handling',
-  );
-  assert.equal(
-    source.includes('const displayedHtml = buildFinalHtml(renderSource, 0, renderSource);'),
-    true,
-    'opening transcript item should prepare standard displayed-message html for the raw opening source',
-  );
-  assert.equal(
-    source.includes('streamHtml: displayedHtml,'),
-    true,
-    'opening transcript item should reuse the normal displayed-message html during streaming',
-  );
-  assert.equal(
-    source.includes('finalHtml: displayedHtml,'),
-    true,
-    'opening transcript item should reuse the normal displayed-message html after generation completes',
+    'opening modal visibility should continue to hinge on whether a successful assistant truly exists',
   );
 });
 

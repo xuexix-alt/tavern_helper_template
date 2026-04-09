@@ -26,10 +26,9 @@ function toFiniteMessageId(input: unknown): number | null {
   return Math.trunc(numeric);
 }
 
-function isReadableAssistantLike(item: TranscriptLike, hasStatData: (messageId: number) => boolean): boolean {
+function isReadableTranscriptLike(item: TranscriptLike, hasStatData: (messageId: number) => boolean): boolean {
   const messageId = toFiniteMessageId(item?.message_id);
   if (messageId == null) return false;
-  if (!(item?.isOpening === true || item?.role === 'assistant')) return false;
   return hasStatData(messageId);
 }
 
@@ -51,7 +50,7 @@ export function buildMvuSourceOptions(input: BuildMvuSourceOptionsInput): MvuSou
   const readableMessageIds = new Set<number>();
 
   for (const item of transcriptItems) {
-    if (!isReadableAssistantLike(item, input.hasStatData)) continue;
+    if (!isReadableTranscriptLike(item, input.hasStatData)) continue;
     const messageId = toFiniteMessageId(item.message_id);
     if (messageId == null) continue;
     readableMessageIds.add(messageId);

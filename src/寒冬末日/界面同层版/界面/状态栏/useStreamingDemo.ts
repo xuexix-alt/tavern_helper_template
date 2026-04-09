@@ -11,7 +11,6 @@ import {
 } from '../../shared/message';
 import {
   buildOpeningGeneratePrompt,
-  extractOpeningContent,
   extractOpeningContentLoose,
   extractOpeningOptions,
   getDefaultOpeningPayload,
@@ -22,7 +21,6 @@ import {
   getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
-  shouldLoadOpeningGenerator,
 } from '../../shared/opening';
 import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
@@ -69,8 +67,6 @@ import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
 import {
-  hasOpeningAssistantFlag,
-  hasOpeningSeedFlag,
   isCurrentOpeningAssistantMessageByPayload,
   isCurrentOpeningSeedMessageByPayload,
   sanitizeInheritedMessageData,
@@ -98,6 +94,7 @@ import {
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
+import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
 import type {
   DemoStatus,
   DemoTheme,
@@ -127,6 +124,18 @@ type RenderableGeneratedImage = {
 type NativeFirstRenderableGeneratedImage = RenderableGeneratedImage & {
   source: NativeFirstArtifactSource;
 };
+type TranscriptWindowMode = 'latest' | 'history';
+type GenerationFlowOptions = {
+  prompt: string;
+  createUser: boolean;
+  detachedUserInput?: boolean;
+  maxChatHistory?: 'all' | number;
+  emitLifecycleKind?: 'normal' | 'regenerate';
+  onAssistantPlaceholderCreated?: (assistantMessageId: number | null) => Promise<void> | void;
+};
+type GenerationFlowResult =
+  | { success: true; assistantMessageId: number | null; result: string }
+  | { success: false; assistantMessageId: number | null; errorText: string; hadVisibleAssistantContent: boolean };
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -136,6 +145,7 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-ipod',
   'theme-amber',
 ] as const;
+const TRANSCRIPT_UI_WINDOW_SIZE = 4;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -168,6 +178,15 @@ function applyRegexForDisplay(text: string, role: TranscriptItem['role']): strin
     // ignore
   }
   return text;
+}
+
+function hasRenderableAssistantMessageText(rawMessage: unknown): boolean {
+  const raw = String(rawMessage ?? '').trim();
+  if (!raw) return false;
+  const strippedStreamDemo = stripTagsForPreview(stripStreamDemoRuntimeTags(raw)).trim();
+  if (strippedStreamDemo && !strippedStreamDemo.startsWith('生成失败：')) return true;
+  const stripped = stripTagsForPreview(raw).trim();
+  return Boolean(stripped) && !stripped.startsWith('生成失败：');
 }
 
 function escapeHtml(input: string): string {
@@ -1155,13 +1174,6 @@ function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPa
   return buildOpeningGeneratePrompt(preset, payload);
 }
 
-function buildOpeningGenerateConfig(_preset: OpeningPreset, payload: OpeningPayload) {
-  return {
-    should_stream: payload.use_stream,
-    max_chat_history: 1,
-  } as GenerateConfig;
-}
-
 function buildTranscriptItem(input: {
   id: number;
   role: TranscriptItem['role'];
@@ -1232,74 +1244,8 @@ function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
   return items.slice().sort((a, b) => a.message_id - b.message_id);
 }
 
-function buildOpeningAssistantText(payload: OpeningPayload): string {
-  const raw = String(payload.result?.raw ?? '').trim();
-  if (raw) return raw;
-
-  const body = String(payload.result?.content ?? '').trim();
-  const options = Array.isArray(payload.result?.options)
-    ? payload.result.options.map(option => String(option ?? '').trim()).filter(Boolean)
-    : [];
-
-  return [body, options.length > 0 ? ['', ...options.map((option, index) => `${index + 1}. ${option}`)].join('\n') : '']
-    .filter(Boolean)
-    .join('\n\n')
-    .trim();
-}
-
-function hasRenderableOpeningPayloadResultBody(payload: OpeningPayload): boolean {
-  const raw = String(payload.result?.raw ?? '').trim();
-  if (raw) return true;
-
-  const content = String(payload.result?.content ?? '').trim();
-  if (content) return true;
-
-  return Array.isArray(payload.result?.options)
-    ? payload.result.options.some(option => String(option ?? '').trim())
-    : false;
-}
-
-function isOpeningAssistantMessage(message: any): boolean {
-  return hasOpeningAssistantFlag(message);
-}
-
-function isOpeningSeedMessage(message: any): boolean {
-  return hasOpeningSeedFlag(message);
-}
-
-function buildOpeningTranscriptItem(
-  payload: OpeningPayload,
-  preset: OpeningPreset,
-  status: DemoStatus,
-): TranscriptItem {
-  const openingRaw = String(payload.result?.raw ?? '').trim();
-  const isOpeningStreaming = payload.state === 'generating' || status === 'streaming';
-  const renderSource = openingRaw || (isOpeningStreaming ? '（流式）等待中' : '');
-  const regexText = applyRegexForDisplay(renderSource, 'assistant');
-  const displayedHtml = buildFinalHtml(renderSource, 0, renderSource);
-
-  return {
-    message_id: 0,
-    role: 'assistant',
-    roleLabel: '开局',
-    isOpening: true,
-    raw: renderSource,
-    renderSource,
-    content: renderSource,
-    preview: '',
-    regexText,
-    streamHtml: displayedHtml,
-    finalHtml: displayedHtml,
-    generatedImages: [],
-    options: payload.result?.options ?? [],
-    hidden: false,
-    phase: isOpeningStreaming ? 'stream' : 'done',
-    isLatest: false,
-    isStreaming: isOpeningStreaming,
-    canOpenDetail: true,
-    canDeleteFrom: false,
-    canReroll: Boolean(payload.opening_seed_user_message_id) && payload.state === 'ready',
-  };
+function clipTranscriptItemsForUi(items: TranscriptItem[]): TranscriptItem[] {
+  return sortTranscriptItems(items).slice(-TRANSCRIPT_UI_WINDOW_SIZE);
 }
 
 export function useStreamingDemo() {
@@ -1317,6 +1263,9 @@ export function useStreamingDemo() {
   const theme = ref<DemoTheme>('tech');
   const fontMode = ref<ReaderFontMode>('hud');
   const readingMode = ref<ReadingMode>('following_latest');
+  const transcriptWindowMode = ref<TranscriptWindowMode>('latest');
+  const transcriptHistoryAnchorLastId = ref<number | null>(null);
+  const transcriptHistoryPageIndex = ref(0);
   const selectedItem = ref<TranscriptItem | null>(null);
   const transcriptDomRevision = ref(0);
   const galleryRevision = ref(0);
@@ -1348,9 +1297,9 @@ export function useStreamingDemo() {
     });
   }
 
-  const followLatest = computed(() => readingMode.value === 'following_latest');
+  const followLatest = computed(() => transcriptWindowMode.value === 'latest');
 
-  const readingModeLabel = computed(() => (readingMode.value === 'following_latest' ? '跟随最新' : '浏览历史'));
+  const readingModeLabel = computed(() => (followLatest.value ? '跟随最新' : '浏览历史'));
 
   const debugTraceRuntime =
     typeof window !== 'undefined'
@@ -1368,7 +1317,6 @@ export function useStreamingDemo() {
   let nativeSendProxyActive = false;
   const generationListenerEpochController = createGenerationListenerEpochController();
   let generationStops: StopHandle[] = [];
-  let openingGenerationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
   let mvuStops: StopHandle[] = [];
   let hidePolicyTimer = 0;
@@ -1581,6 +1529,71 @@ export function useStreamingDemo() {
     });
   }
 
+  function resetTranscriptWindowToLatestState() {
+    transcriptWindowMode.value = 'latest';
+    transcriptHistoryAnchorLastId.value = null;
+    transcriptHistoryPageIndex.value = 0;
+  }
+
+  const transcriptWindowRange = computed(() => {
+    void transcript.value.length;
+    const anchorLastId =
+      transcriptWindowMode.value === 'history' && transcriptHistoryAnchorLastId.value != null
+        ? transcriptHistoryAnchorLastId.value
+        : getTrueChatLength();
+    return resolveTranscriptWindowRange({
+      anchorLastId,
+      containerMessageId: getActiveContainerMessageId(),
+      pageIndex: transcriptWindowMode.value === 'history' ? transcriptHistoryPageIndex.value : 0,
+      pageSize: TRANSCRIPT_UI_WINDOW_SIZE,
+    });
+  });
+
+  const transcriptWindowPages = computed(() => {
+    void transcript.value.length;
+    const anchorLastId =
+      transcriptWindowMode.value === 'history' && transcriptHistoryAnchorLastId.value != null
+        ? transcriptHistoryAnchorLastId.value
+        : getTrueChatLength();
+    return buildTranscriptWindowPageOptions({
+      anchorLastId,
+      containerMessageId: getActiveContainerMessageId(),
+      pageSize: TRANSCRIPT_UI_WINDOW_SIZE,
+    });
+  });
+
+  const transcriptWindowLabel = computed(() => {
+    const currentPageIndex = transcriptWindowRange.value?.pageIndex ?? 0;
+    return transcriptWindowPages.value.find(page => page.pageIndex === currentPageIndex)?.label ?? '';
+  });
+  const isTranscriptHistoryMode = computed(() => transcriptWindowMode.value === 'history');
+
+  function selectTranscriptWindowPage(pageIndex: number) {
+    const normalizedPageIndex = Math.max(0, Math.trunc(Number(pageIndex) || 0));
+    if (normalizedPageIndex === 0) {
+      resetTranscriptWindowToLatestState();
+      readingMode.value = 'following_latest';
+      queuePersistReaderChatState();
+      rebuildTranscript('transcript_window_latest');
+      return;
+    }
+
+    if (transcriptWindowMode.value !== 'history' || transcriptHistoryAnchorLastId.value == null) {
+      transcriptHistoryAnchorLastId.value = getTrueChatLength();
+    }
+    const resolvedRange = resolveTranscriptWindowRange({
+      anchorLastId: transcriptHistoryAnchorLastId.value,
+      containerMessageId: getActiveContainerMessageId(),
+      pageIndex: normalizedPageIndex,
+      pageSize: TRANSCRIPT_UI_WINDOW_SIZE,
+    });
+    transcriptWindowMode.value = 'history';
+    transcriptHistoryPageIndex.value = resolvedRange?.pageIndex ?? normalizedPageIndex;
+    readingMode.value = 'browsing_history';
+    queuePersistReaderChatState();
+    rebuildTranscript('transcript_window_history');
+  }
+
   const visibleTranscript = computed(() => {
     if (filterMode.value === 'all') return transcript.value;
     return transcript.value.filter(
@@ -1589,11 +1602,14 @@ export function useStreamingDemo() {
   });
 
   const transcriptStats = computed(() => ({
-    total: transcript.value.length,
+    total: transcriptWindowRange.value?.storyCount ?? transcript.value.length,
     assistant: transcript.value.filter(item => item.role === 'assistant').length,
   }));
 
-  const hasStoryMessagesBeyondOpening = computed(() => transcript.value.some(item => item.message_id > 0));
+  const hasSuccessfulOpeningAssistant = computed(() =>
+    transcript.value.some(item => item.role === 'assistant' && hasRenderableAssistantMessageText(item.raw)),
+  );
+  const canDismissOpeningSetup = computed(() => hasSuccessfulOpeningAssistant.value);
 
   /**
    * 检查是否已有开局用户消息（开局种子或后续对话）。
@@ -1606,24 +1622,17 @@ export function useStreamingDemo() {
 
   const shouldShowOpeningSetup = computed(() => {
     if (!isOpeningWorkbenchHostActive()) return false;
-    // 兜底：当 getVariables API 不可用时，openingPayload 默认为初始状态（无 result）。
-    // 如果已经有开局用户消息，说明开局已启动，隐藏弹窗让用户进入主界面。
-    if (
-      hasOpeningSeedUserMessage.value &&
-      openingPayload.value.state === 'configuring' &&
-      !openingPayload.value.result &&
-      !Number.isFinite(Number(openingPayload.value.opening_result_message_id))
-    ) {
-      return false;
-    }
-    const result = shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value);
+    if (hasSuccessfulOpeningAssistant.value) return false;
+    if (busy.value) return false;
+    const result = true;
     console.log('[Debug] shouldShowOpeningSetup', {
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
       state: openingPayload.value.state,
-      opening_result_message_id: openingPayload.value.opening_result_message_id,
-      hasResult: Boolean(openingPayload.value.result),
-      hasStoryMessagesBeyondOpening: hasStoryMessagesBeyondOpening.value,
+      openingAssistantMessageId: openingPayload.value.opening_assistant_message_id,
+      hasCompiledPromptSnapshot: Boolean(String(openingPayload.value.compiled_prompt_snapshot ?? '').trim()),
+      hasSuccessfulOpeningAssistant: hasSuccessfulOpeningAssistant.value,
       hasOpeningSeedUserMessage: hasOpeningSeedUserMessage.value,
+      busy: busy.value,
       result,
     });
     return result;
@@ -1635,6 +1644,12 @@ export function useStreamingDemo() {
       if (item.role === 'user') return item;
     }
     return null;
+  });
+  const currentMvuAnchorMessageId = computed(() => {
+    if (latestUserItem.value?.message_id != null) return latestUserItem.value.message_id;
+    const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));
+    if (Number.isFinite(openingAssistantMessageId) && openingAssistantMessageId > 0) return openingAssistantMessageId;
+    return latestAssistantItem.value?.message_id ?? null;
   });
 
   const inputHasText = computed(() => String(input.value ?? '').trim().length > 0);
@@ -1726,8 +1741,8 @@ export function useStreamingDemo() {
       containerId,
       restoredFound: Boolean(restoredOpeningPayload),
       restoredState: restoredOpeningPayload?.state,
-      restoredResultMessageId: restoredOpeningPayload?.opening_result_message_id,
-      restoredHasResult: Boolean(restoredOpeningPayload?.result),
+      restoredOpeningAssistantMessageId: restoredOpeningPayload?.opening_assistant_message_id,
+      restoredHasCompiledPromptSnapshot: Boolean(restoredOpeningPayload?.compiled_prompt_snapshot),
     });
     if (restoredOpeningPayload) {
       openingPayload.value = restoredOpeningPayload;
@@ -1799,7 +1814,6 @@ export function useStreamingDemo() {
         ...openingPayload.value.meta,
         [key]: String(value ?? ''),
       },
-      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -1813,7 +1827,6 @@ export function useStreamingDemo() {
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       world_mode_id: worldMode?.id || value,
       route_id: nextRouteId,
-      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -1825,7 +1838,6 @@ export function useStreamingDemo() {
       ...openingPayload.value,
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
       route_id: route?.name || value,
-      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -1836,62 +1848,6 @@ export function useStreamingDemo() {
       use_stream: value === true,
     };
     queuePersistOpeningPayload();
-  }
-
-  function clearOpeningGenerationListeners() {
-    openingGenerationStops.forEach(stop => stop?.stop?.());
-    openingGenerationStops = [];
-  }
-
-  function bindOpeningGenerationListeners() {
-    clearOpeningGenerationListeners();
-    if (typeof eventOn !== 'function') {
-      console.warn('[opening] eventOn not available, stream listeners skipped');
-      return;
-    }
-    let streamedRaw = '';
-
-    const handleToken = (token: string) => {
-      streamedRaw += String(token ?? '');
-      status.value = 'streaming';
-      openingPayload.value = {
-        ...openingPayload.value,
-        state: 'generating',
-        result: {
-          raw: streamedRaw,
-          content: extractOpeningContentLoose(streamedRaw),
-          options: extractOpeningOptions(streamedRaw),
-          generated_at: String(openingPayload.value.result?.generated_at ?? ''),
-        },
-      };
-      rebuildTranscript();
-    };
-
-    if (typeof iframe_events !== 'undefined') {
-      try {
-        openingGenerationStops.push(eventOn(iframe_events.STREAM_TOKEN_RECEIVED_INCREMENTALLY as any, handleToken));
-      } catch {
-        // ignore
-      }
-      return;
-    }
-
-    if (typeof tavern_events === 'undefined') {
-      console.warn('[opening] no incremental stream event bus available, stream listeners skipped');
-      return;
-    }
-
-    try {
-      openingGenerationStops.push(eventOn(tavern_events.STREAM_TOKEN_RECEIVED as any, handleToken));
-    } catch {
-      // ignore
-    }
-
-    try {
-      openingGenerationStops.push(eventOn(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED as any, handleToken));
-    } catch {
-      // ignore
-    }
   }
 
   function updateOpeningField(key: string, value: string) {
@@ -1905,7 +1861,6 @@ export function useStreamingDemo() {
         ...openingPayload.value.form_values,
         [key]: normalizedValue,
       },
-      ...(shouldResetResult ? { result: null } : {}),
     };
     queuePersistOpeningPayload();
   }
@@ -2017,23 +1972,6 @@ export function useStreamingDemo() {
       hidePolicyRunning = false;
     }
     queuePersistHideState('apply_hide_policy');
-  }
-
-  async function syncOpeningAssistantMessage(refresh: HideRefreshMode = 'none', createIfMissing = true) {
-    if (!isActiveOpeningWorkbenchScope()) return;
-    if (openingPayload.value.state !== 'ready') return;
-
-    const nextMessage = buildOpeningAssistantText(openingPayload.value);
-    if (!nextMessage) return;
-    const resultId = await upsertOpeningResultMessage(nextMessage, refresh, createIfMissing);
-    if (!createIfMissing && resultId == null) return;
-    if (resultId != null) {
-      openingPayload.value = {
-        ...openingPayload.value,
-        opening_result_message_id: resultId,
-      };
-      persistOpeningPayloadNow();
-    }
   }
 
   function setEditingUserDraft(value: string) {
@@ -2174,10 +2112,19 @@ export function useStreamingDemo() {
 
   function upsertTranscriptItem(nextItem: TranscriptItem) {
     const current = transcript.value.filter(item => item.message_id !== nextItem.message_id);
-    transcript.value = syncTranscriptFlags(sortTranscriptItems([...current, nextItem]));
-    if (selectedItem.value?.message_id === nextItem.message_id) {
-      selectedItem.value = transcript.value.find(item => item.message_id === nextItem.message_id) ?? null;
+    transcript.value = syncTranscriptFlags(clipTranscriptItemsForUi([...current, nextItem]));
+    if (selectedItem.value) {
+      selectedItem.value = transcript.value.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
     }
+  }
+
+  function normalizeHostChatMessages(list: any[]): any[] {
+    return list.map((message: any) => ({
+      ...message,
+      role: resolveHostMessageRole(message),
+      message: String(message?.message ?? message?.mes ?? ''),
+      is_hidden: message?.is_hidden === true,
+    }));
   }
 
   function refreshTranscriptItemsByIds(messageIds: number[], reason = 'manual') {
@@ -2186,6 +2133,11 @@ export function useStreamingDemo() {
 
     const containerId = getActiveContainerMessageId();
     const allMessages = listAllChatMessages();
+    const recentUiMessageIds = new Set(
+      readRecentChatMessagesForUi()
+        .map(message => Math.trunc(Number(message?.message_id)))
+        .filter(id => Number.isFinite(id) && id > 0),
+    );
     let refreshedCount = 0;
 
     for (const messageId of normalizedMessageIds) {
@@ -2195,6 +2147,7 @@ export function useStreamingDemo() {
       if (!hostMessage) continue;
 
       const existingItem = transcript.value.find(item => item.message_id === messageId);
+      if (!existingItem && !recentUiMessageIds.has(messageId)) continue;
       const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
       const rawRole = resolveHostMessageRole(hostMessage);
       const role = resolveTranscriptRole({
@@ -2241,6 +2194,29 @@ export function useStreamingDemo() {
     return getLastMessageId?.() ?? 0;
   }
 
+  function readRecentChatMessagesForUi() {
+    const range = transcriptWindowRange.value;
+    if (!range) return [];
+    const { startId, endId } = range;
+
+    try {
+      const list = callHostGetChatMessages(`${startId}-${endId}`, { hide_state: 'all' });
+      if (Array.isArray(list)) {
+        return normalizeHostChatMessages(list);
+      }
+    } catch (e) {
+      console.warn('[Debug] readRecentChatMessagesForUi getChatMessages error', {
+        error: String(e),
+        startId,
+        lastId: endId,
+      });
+    }
+
+    return readAllChatMessagesRaw()
+      .filter(item => Number.isFinite(item?.message_id) && item.message_id >= startId && item.message_id <= endId)
+      .slice(-TRANSCRIPT_UI_WINDOW_SIZE);
+  }
+
   /**
    * 直接从宿主 context.chat 数组读取所有消息，绕过 getChatMessages 的 hide_state 过滤问题。
    * 返回的对象同时包含宿主原始字段和酒馆助手 API 格式字段，确保下游代码兼容。
@@ -2253,12 +2229,7 @@ export function useStreamingDemo() {
         const lastId = getTrueChatLength();
         const list = callHostGetChatMessages(`0-${lastId}`, { hide_state: 'all' });
         if (Array.isArray(list) && list.length > 0) {
-          return list.map((message: any) => ({
-            ...message,
-            role: resolveHostMessageRole(message),
-            message: String(message?.message ?? message?.mes ?? ''),
-            is_hidden: message?.is_hidden === true,
-          }));
+          return normalizeHostChatMessages(list);
         }
       } catch (e) {
         console.warn('[Debug] readAllChatMessagesRaw getChatMessages error', { error: String(e) });
@@ -2431,16 +2402,25 @@ export function useStreamingDemo() {
     }, 40);
   }
 
-  function scheduleUiRefresh(domains: RefreshDomain[], reason: string) {
+  function scheduleUiRefresh(domains: RefreshDomain[], reason: string, targetedMessageIds: number[] = []) {
     recordLifecycleTrace('scheduleUiRefresh', 'received', {
       reason,
       domains,
+      targetedMessageIds,
     });
     if (domains.includes('mvuSources')) {
       mvuSourceRevision.value += 1;
     }
     if (domains.includes('gallery')) {
       galleryRevision.value += 1;
+    }
+
+    if (domains.includes('transcriptItems')) {
+      if (targetedMessageIds.length > 0) {
+        refreshTranscriptItemsByIds(targetedMessageIds, reason);
+      } else {
+        queueExternalSync(reason);
+      }
     }
 
     if (domains.includes('transcript')) {
@@ -2479,6 +2459,22 @@ export function useStreamingDemo() {
         return 'host.chat_changed';
       default:
         return `host.${String(name ?? '').toLowerCase()}`;
+    }
+  }
+
+  function resolveHostRefreshMessageId(name: string, payload: unknown[] = []): number | null {
+    switch (name) {
+      case String(tavern_events.MESSAGE_SENT):
+      case String(tavern_events.MESSAGE_EDITED):
+      case String(tavern_events.MESSAGE_RECEIVED):
+      case String(tavern_events.MESSAGE_UPDATED):
+      case String(tavern_events.MESSAGE_SWIPED):
+      case String(tavern_events.MESSAGE_DELETED): {
+        const messageId = Math.trunc(Number(payload[0]));
+        return Number.isFinite(messageId) && messageId >= 0 ? messageId : null;
+      }
+      default:
+        return null;
     }
   }
 
@@ -2590,50 +2586,15 @@ export function useStreamingDemo() {
     }
   }
 
-  function findFirstChatIdAfterZero(messages: any[]) {
-    return messages.map(message => Math.trunc(Number(message?.message_id))).find(id => Number.isFinite(id) && id > 0);
-  }
-
   function readMessageId(message: any): number | null {
     const id = Math.trunc(Number(message?.message_id));
     return Number.isFinite(id) ? id : null;
   }
 
-  function findFirstStoryChatIdAfterOpening(messages: any[]) {
-    for (const message of messages) {
-      const id = readMessageId(message);
-      if (id == null || id <= 0) continue;
-      if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
-      return id;
-    }
-    return null;
-  }
-
-  function findOpeningSeedChatMessage(messages: any[]) {
-    const preferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
-    if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message =>
-        isCurrentOpeningSeedMessageByPayload(message, { opening_seed_user_message_id: preferredId }),
-      );
-      if (matched) return matched;
-    }
-    return messages.find(message => hasOpeningSeedFlag(message));
-  }
-
-  function findOpeningResultChatMessage(messages: any[]) {
-    const preferredId = Math.trunc(Number(openingPayload.value.opening_result_message_id));
-    if (Number.isFinite(preferredId) && preferredId > 0) {
-      const matched = messages.find(message =>
-        isCurrentOpeningAssistantMessageByPayload(message, { opening_result_message_id: preferredId }),
-      );
-      if (matched) return matched;
-    }
-    return messages.find(message => hasOpeningAssistantFlag(message));
-  }
-
   function canRerollOpeningFromMessages(messages: any[]) {
-    const resultId = readMessageId(findOpeningResultChatMessage(messages));
-    if (resultId == null || resultId <= 0) return false;
+    const resultId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));
+    if (!Number.isFinite(resultId) || resultId <= 0) return false;
+    if (!messages.some(message => readMessageId(message) === resultId)) return false;
     return !messages.some(message => {
       const id = readMessageId(message);
       if (id == null || !Number.isFinite(id) || id <= resultId) return false;
@@ -2646,249 +2607,7 @@ export function useStreamingDemo() {
     });
   }
 
-  async function upsertOpeningSeedMessage(
-    prompt: string,
-    refresh: HideRefreshMode = 'none',
-    messageData?: Record<string, unknown> | null,
-  ) {
-    const messages = listAllChatMessages();
-    const existing = findOpeningSeedChatMessage(messages);
-    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
-    if (messageData && typeof messageData === 'object' && !Array.isArray(messageData)) {
-      _.merge(nextData, _.cloneDeep(messageData));
-    }
-    _.set(nextData, 'stream_demo.opening_seed', true);
-
-    if (existing) {
-      const message_id = Math.trunc(Number(existing?.message_id));
-      await setChatMessages([{ message_id, role: 'user', message: prompt, is_hidden: true, data: nextData }], {
-        refresh,
-      });
-      return message_id;
-    }
-
-    // 找到第一条非 seed 消息（通常是 user 的 story request），插入在其之后
-    const firstStoryId = findFirstStoryChatIdAfterOpening(messages);
-    await createChatMessages([{ role: 'user', is_hidden: true, message: prompt, data: nextData }], {
-      insert_before: firstStoryId != null && firstStoryId > 0 ? firstStoryId : 'end',
-      refresh,
-    });
-    // 宽松查找：找最后一条带有 opening_seed flag 的消息
-    const msgs = listAllChatMessages();
-    const created = msgs
-      .reverse()
-      .find(
-        message =>
-          hasOpeningSeedFlag(message) ||
-          (message.role === 'user' && String(message?.message ?? '').trim() === prompt.trim()),
-      );
-    return readMessageId(created);
-  }
-
-  async function upsertOpeningResultMessage(
-    message: string,
-    refresh: HideRefreshMode = 'none',
-    createIfMissing = true,
-    messageData?: Record<string, unknown> | null,
-  ) {
-    const messages = listAllChatMessages();
-    const existing = findOpeningResultChatMessage(messages);
-    const nextData = existing?.data ? _.cloneDeep(existing.data) : {};
-    if (messageData && typeof messageData === 'object' && !Array.isArray(messageData)) {
-      _.merge(nextData, _.cloneDeep(messageData));
-    }
-    _.set(nextData, 'stream_demo.opening_assistant', true);
-
-    if (existing) {
-      const message_id = Math.trunc(Number(existing?.message_id));
-      console.log('[Debug] upsertOpeningResultMessage update path', {
-        message_id,
-        messageLength: message.length,
-        isNew: false,
-      });
-      await setChatMessages([{ message_id, role: 'assistant', message, is_hidden: false, data: nextData }], {
-        refresh,
-      });
-      return message_id;
-    }
-
-    if (!createIfMissing) return null;
-
-    const firstStoryMessageId = findFirstStoryChatIdAfterOpening(messages);
-    await createChatMessages([{ role: 'assistant', is_hidden: false, message, data: nextData }], {
-      insert_before: firstStoryMessageId ?? 'end',
-      refresh,
-    });
-    // 优先通过 flag 查找（flag 比内容更可靠），content 只做二次确认
-    const created = listAllChatMessages().find(
-      item => isOpeningAssistantMessage(item) && String(item?.message ?? '').trim() === message.trim(),
-    );
-    const resultId = readMessageId(created);
-    // 如果 flag 查找失败（可能时序问题），尝试宽松匹配：找最后一条没有 flag 的 assistant 消息
-    const fallbackId =
-      resultId ??
-      (() => {
-        const msgs = listAllChatMessages();
-        const flagGuards = new Set([
-          ...msgs.filter(m => hasOpeningAssistantFlag(m)).map(m => m.message_id),
-          ...msgs.filter(m => hasOpeningSeedFlag(m)).map(m => m.message_id),
-        ]);
-        const candidates = msgs.filter(
-          m =>
-            m.role === 'assistant' &&
-            !flagGuards.has(m.message_id) &&
-            String(m.message ?? '').trim() === message.trim(),
-        );
-        return candidates.length > 0 ? candidates[candidates.length - 1].message_id : null;
-      })();
-    console.log('[Debug] upsertOpeningResultMessage create path', {
-      messageLength: message.length,
-      createdMessageId: resultId,
-      fallbackId,
-      finalId: fallbackId,
-      insertBefore: firstStoryMessageId,
-      isNew: true,
-    });
-    return fallbackId;
-  }
-
-  async function buildOpeningSeedMvuData(): Promise<Record<string, unknown> | null> {
-    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return null;
-
-    try {
-      await waitGlobalInitialized('Mvu');
-      await waitUntilMessageStatDataReady();
-
-      const currentMessageId = readCurrentContainerMessageId();
-      const baseMessageId =
-        Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) >= 0
-          ? Math.trunc(Number(currentMessageId))
-          : ('latest' as const);
-      const baseMvuData = Mvu.getMvuData({ type: 'message', message_id: baseMessageId });
-      return baseMvuData && typeof baseMvuData === 'object' && !Array.isArray(baseMvuData)
-        ? (_.cloneDeep(baseMvuData) as Record<string, unknown>)
-        : null;
-    } catch (error) {
-      console.warn('[stream-demo] opening seed mvu clone failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  }
-
-  async function buildOpeningAssistantMvuData(message: string): Promise<Record<string, unknown> | null> {
-    const trimmedMessage = String(message ?? '').trim();
-    if (!trimmedMessage) return null;
-    if (typeof waitGlobalInitialized !== 'function' || typeof Mvu === 'undefined') return null;
-
-    try {
-      await waitGlobalInitialized('Mvu');
-      await waitUntilMessageStatDataReady();
-
-      const currentMessageId = readCurrentContainerMessageId();
-      const baseMessageId =
-        Number.isFinite(Number(currentMessageId)) && Number(currentMessageId) >= 0
-          ? Math.trunc(Number(currentMessageId))
-          : ('latest' as const);
-      const baseMvuData = Mvu.getMvuData({ type: 'message', message_id: baseMessageId });
-      const parsed = await Mvu.parseMessage(trimmedMessage, _.cloneDeep(baseMvuData));
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-        ? (_.cloneDeep(parsed) as Record<string, unknown>)
-        : null;
-    } catch (error) {
-      console.warn('[stream-demo] opening assistant mvu parse failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    }
-  }
-
-  async function normalizeOpeningMessageOrder(refresh: HideRefreshMode = 'none') {
-    const currentMessages = listAllChatMessages();
-    const currentSeedId = readMessageId(findOpeningSeedChatMessage(currentMessages));
-    const currentResultId = readMessageId(findOpeningResultChatMessage(currentMessages));
-    // 找到 user story message（通常是第一条 role=user 且 message_id > 0 的消息）
-    const currentUserId = (() => {
-      for (const m of currentMessages) {
-        const id = readMessageId(m);
-        if (id != null && id > 0 && m.role === 'user') return id;
-      }
-      return null;
-    })();
-    const flaggedMsgs = currentMessages
-      .filter(m => hasOpeningAssistantFlag(m) || hasOpeningSeedFlag(m))
-      .map(m => ({
-        id: m.message_id,
-        role: m.role,
-        hasSeed: hasOpeningSeedFlag(m),
-        hasAssistant: hasOpeningAssistantFlag(m),
-        preview: String(m.message ?? '').slice(0, 30),
-      }));
-    console.log('[Debug] normalizeOpeningMessageOrder pre-rotate', {
-      currentSeedId,
-      currentResultId,
-      currentUserId,
-      preferredResultId: openingPayload.value.opening_result_message_id,
-      flaggedMsgs,
-    });
-
-    // 第一步：如果 seed 在 user 之前（即 userId > seedId），旋转把 user 移到 seed 之后
-    // 目标顺序：[setup, user, seed, result] — seed 隐藏，user 可见
-    // 使用 openingPayload 中的 seed ID（来自 upsertOpeningSeedMessage 返回值）定位，
-    // 避免依赖 flag 检测（data 字段可能不可靠）
-    const seedPreferredId = Math.trunc(Number(openingPayload.value.opening_seed_user_message_id));
-    const seedPositionBasedId =
-      Number.isFinite(seedPreferredId) && seedPreferredId > 0 ? seedPreferredId : currentSeedId;
-    if (
-      currentUserId != null &&
-      currentUserId > 0 &&
-      seedPositionBasedId != null &&
-      seedPositionBasedId > 0 &&
-      currentUserId > seedPositionBasedId
-    ) {
-      console.log(
-        '[Debug] normalizeOpeningMessageOrder rotating: move user',
-        currentUserId,
-        'after seed',
-        seedPositionBasedId,
-      );
-      await rotateChatMessages(currentUserId, seedPositionBasedId, seedPositionBasedId + 1, { refresh });
-    }
-
-    // 第二步：如果 seed 在 result 之后，旋转把 result 移到 seed 之前
-    const afterUserRotateMessages = listAllChatMessages();
-    const afterUserSeedId = readMessageId(findOpeningSeedChatMessage(afterUserRotateMessages));
-    const afterUserResultId = readMessageId(findOpeningResultChatMessage(afterUserRotateMessages));
-    if (
-      afterUserSeedId != null &&
-      afterUserSeedId > 0 &&
-      afterUserResultId != null &&
-      afterUserResultId > 0 &&
-      afterUserSeedId > afterUserResultId
-    ) {
-      console.log(
-        '[Debug] normalizeOpeningMessageOrder rotating: move result',
-        afterUserResultId,
-        'before seed',
-        afterUserSeedId,
-      );
-      await rotateChatMessages(afterUserResultId, afterUserSeedId, afterUserSeedId + 1, { refresh });
-    }
-
-    const nextMessages = listAllChatMessages();
-    const finalSeedId = readMessageId(findOpeningSeedChatMessage(nextMessages));
-    const finalResultId = readMessageId(findOpeningResultChatMessage(nextMessages));
-    console.log('[Debug] normalizeOpeningMessageOrder result', {
-      seedMessageId: finalSeedId,
-      resultMessageId: finalResultId,
-    });
-    return {
-      seedMessageId: finalSeedId,
-      resultMessageId: finalResultId,
-    };
-  }
-
-  function handleHostRefreshEvent(name: string) {
+  function handleHostRefreshEvent(name: string, payload: unknown[] = []) {
     const shouldSuppressLifecycleEcho = shouldSuppressLifecycleEchoHostRefresh({
       eventName: name,
       nowMs: Date.now(),
@@ -2926,21 +2645,25 @@ export function useStreamingDemo() {
     }
 
     const refreshType = mapHostRefreshType(name);
+    const messageId = resolveHostRefreshMessageId(name, payload);
     const domains = resolveRefreshDomainsForEvent({
       type: refreshType,
+      messageId: resolveHostRefreshMessageId(name, payload),
     });
     recordLifecycleTrace('handleHostRefreshEvent', 'scheduled', {
       name,
       refreshType,
+      messageId,
       domains,
     });
     console.log('[Debug] handleHostRefreshEvent', {
       name,
       refreshType,
+      messageId,
       domains,
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
     });
-    scheduleUiRefresh(domains, `event:${name}`);
+    scheduleUiRefresh(domains, `event:${name}`, messageId != null ? [messageId] : []);
   }
 
   async function bindMvuRefreshEvents() {
@@ -2984,19 +2707,15 @@ export function useStreamingDemo() {
       },
       traceId,
     );
-    let rawMessages: any[] = [];
     let all: any[] = [];
     try {
-      // 直接从宿主 chat 数组读取，确保能拿到 is_hidden 的楼层
-      rawMessages = readAllChatMessagesRaw();
-      const lastId = rawMessages.length > 0 ? rawMessages[rawMessages.length - 1].message_id : getTrueChatLength();
-      const list =
-        rawMessages.length > 0 ? rawMessages : (callHostGetChatMessages(`0-${lastId}`, { hide_state: 'all' }) as any[]);
+      const lastId = getTrueChatLength();
+      const list = readRecentChatMessagesForUi();
       all = Array.isArray(list) ? list : [];
       console.log('[Debug] rebuildTranscript data', {
         reason,
-        rawMessagesLength: rawMessages.length,
-        listSource: rawMessages.length > 0 ? 'raw' : 'getChatMessages',
+        rawMessagesLength: 0,
+        listSource: 'recent_window',
         lastId,
         allLength: all.length,
         allSample: all.map((m: any) => ({
@@ -3010,40 +2729,6 @@ export function useStreamingDemo() {
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
 
-      if (containerId === 0) {
-        const hasPersistedOpeningResult =
-          Number.isFinite(Number(openingPayload.value.opening_result_message_id)) &&
-          Number(openingPayload.value.opening_result_message_id) > 0;
-        const hasRenderableOpeningPayloadResult = hasRenderableOpeningPayloadResultBody(openingPayload.value);
-        const shouldRenderOpeningFromPayload =
-          openingPayload.value.state === 'generating' ||
-          (openingPayload.value.state === 'ready' && hasRenderableOpeningPayloadResult);
-
-        if (shouldRenderOpeningFromPayload) {
-          normalized.push(buildOpeningTranscriptItem(openingPayload.value, openingPreset.value, status.value));
-        } else {
-          const opening =
-            findOpeningResultChatMessage(all) ??
-            all.find(message => Math.trunc(Number(message?.message_id)) === containerId);
-          if (opening) {
-            const openingRole = resolveHostMessageRole(opening);
-            const openingId = Math.trunc(Number(opening?.message_id));
-            if (openingRole === 'assistant' && Number.isFinite(openingId)) nextLatestAssistantId = openingId;
-            normalized.push(
-              buildTranscriptItem({
-                id: Number.isFinite(openingId) ? openingId : containerId,
-                role: openingRole,
-                raw: String(opening?.message ?? ''),
-                hidden: opening?.is_hidden === true,
-                isOpening: true,
-                latestAssistantId: null,
-                status: status.value,
-              }),
-            );
-          }
-        }
-      }
-
       for (const message of all) {
         const message_id = Number(message?.message_id);
         if (!Number.isFinite(message_id)) continue;
@@ -3051,7 +2736,6 @@ export function useStreamingDemo() {
         if (containerId != null && id <= containerId) continue;
         if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
         const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
-        if (containerId === 0 && isOpeningResult) continue;
         const rawRole = resolveHostMessageRole(message);
         const role = resolveTranscriptRole({
           rawRole,
@@ -3075,7 +2759,7 @@ export function useStreamingDemo() {
       }
 
       assistantMessageId.value = nextLatestAssistantId;
-      transcript.value = syncTranscriptFlags(normalized);
+      transcript.value = syncTranscriptFlags(clipTranscriptItemsForUi(normalized));
       snapshotHostImageDataSignatures(transcript.value.map(item => item.message_id));
       console.log('[Debug] rebuildTranscript result', {
         reason,
@@ -3091,8 +2775,8 @@ export function useStreamingDemo() {
         })),
         openingPayload: {
           state: openingPayload.value.state,
-          opening_result_message_id: openingPayload.value.opening_result_message_id,
-          hasResult: Boolean(openingPayload.value.result),
+          opening_assistant_message_id: openingPayload.value.opening_assistant_message_id,
+          hasCompiledPromptSnapshot: Boolean(openingPayload.value.compiled_prompt_snapshot),
         },
       });
       recordLifecycleTrace(
@@ -3121,7 +2805,7 @@ export function useStreamingDemo() {
         error: errorMessage,
         stack: errorStack,
         containerId,
-        rawMessagesLength: rawMessages?.length,
+        rawMessagesLength: 0,
         allLength: all?.length,
         chatSample: Array.isArray(all)
           ? all.slice(0, 3).map((m: any) => ({
@@ -3335,9 +3019,9 @@ export function useStreamingDemo() {
     appendLog('action', '回退删除', `已删除楼层 #${ids[0]} 到 #${ids[ids.length - 1]}`);
   }
 
-  async function runGenerationFlow(options: { prompt: string; createUser: boolean }) {
+  async function runGenerationFlow(options: GenerationFlowOptions): Promise<GenerationFlowResult> {
     const prompt = String(options.prompt ?? '').trim();
-    const traceId = createTraceId(options.createUser ? 'send' : 'regenerate');
+    const traceId = createTraceId(options.createUser ? 'send' : options.detachedUserInput === true ? 'opening' : 'regenerate');
     if (!prompt || busy.value) {
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -3349,8 +3033,17 @@ export function useStreamingDemo() {
         },
         traceId,
       );
-      return;
+      return {
+        success: false,
+        assistantMessageId: assistantMessageId.value,
+        errorText: !prompt ? 'empty_prompt' : 'busy',
+        hadVisibleAssistantContent: false,
+      };
     }
+
+    resetTranscriptWindowToLatestState();
+    readingMode.value = 'following_latest';
+    queuePersistReaderChatState();
 
     activeGenerationTraceId = traceId;
     latestLifecycleTraceId = traceId;
@@ -3408,11 +3101,14 @@ export function useStreamingDemo() {
 
       // 在 generate() 前主动创建 assistant 占位符，防止 ST 流式回调覆盖已有 assistant 消息
       await ensureAssistantPlaceholderReady('first_token');
+      await options.onAssistantPlaceholderCreated?.(assistantMessageId.value);
 
-      // 临时取消隐藏，让 generate() 能读到完整聊天历史
-      const hiddenIds = readMessagesAfterContainer()
-        .filter(item => item.is_hidden === true)
-        .map(item => item.message_id);
+      const hiddenIds =
+        options.detachedUserInput === true
+          ? []
+          : readMessagesAfterContainer()
+              .filter(item => item.is_hidden === true)
+              .map(item => item.message_id);
       if (hiddenIds.length > 0) {
         await setChatMessages(
           hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
@@ -3420,15 +3116,25 @@ export function useStreamingDemo() {
         );
       }
 
-      const generatePromise = generate({
-        should_stream: true,
-        max_chat_history: 'all',
-      });
+      const generatePromise = generate(
+        options.detachedUserInput === true
+          ? {
+              user_input: prompt,
+              should_stream: true,
+              max_chat_history: options.maxChatHistory ?? 0,
+            }
+          : {
+              should_stream: true,
+              max_chat_history: options.maxChatHistory ?? 'all',
+            },
+      );
       recordLifecycleTrace(
         'runGenerationFlow',
         'generate_requested',
         {
           createUser: options.createUser,
+          detachedUserInput: options.detachedUserInput === true,
+          maxChatHistory: options.detachedUserInput === true ? options.maxChatHistory ?? 0 : options.maxChatHistory ?? 'all',
         },
         traceId,
       );
@@ -3481,7 +3187,10 @@ export function useStreamingDemo() {
           traceId,
         );
       }
-      await emitOfficialGenerationLifecycle(assistantMessageId.value, options.createUser ? 'normal' : 'regenerate');
+      await emitOfficialGenerationLifecycle(
+        assistantMessageId.value,
+        options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate'),
+      );
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
@@ -3496,15 +3205,22 @@ export function useStreamingDemo() {
         traceId,
       );
       appendLog('action', '生成完成', stripTagsForPreview(result).slice(0, 80) || '(空回复)');
+      return {
+        success: true,
+        assistantMessageId: assistantMessageId.value,
+        result,
+      };
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
+      const hadVisibleAssistantContent = Boolean(String(streamText.value ?? '').trim()) || hasRenderableAssistantMessageText(latestPatchedMessage);
       recordLifecycleTrace(
         'runGenerationFlow',
         'error',
         {
           assistantMessageId: assistantMessageId.value,
           message: errorText.value,
+          hadVisibleAssistantContent,
         },
         traceId,
       );
@@ -3519,6 +3235,12 @@ export function useStreamingDemo() {
       transcript.value = syncTranscriptFlags(transcript.value);
       toastr?.error?.(`流式 demo 失败：${errorText.value}`);
       appendLog('error', '生成失败', errorText.value || '未知错误');
+      return {
+        success: false,
+        assistantMessageId: assistantMessageId.value,
+        errorText: errorText.value,
+        hadVisibleAssistantContent,
+      };
     } finally {
       clearGenerationListeners();
       busy.value = false;
@@ -3536,18 +3258,44 @@ export function useStreamingDemo() {
     }
   }
 
-  async function triggerNativeRegenerate(anchorMessageId: number) {
+  async function triggerNativeRegenerate(anchorMessageId: number, promptOverride?: string) {
     const latestUser = latestUserItem.value;
     if (busy.value) return;
     if (!latestUser || latestUser.role !== 'user' || latestUser.message_id !== anchorMessageId) {
       toastr?.warning?.('未定位到最后一条 user，无法重生');
       return;
     }
+    const nextPrompt = String(promptOverride ?? latestUser.raw ?? '').trim();
+    if (!nextPrompt) {
+      toastr?.warning?.('当前没有可用于重生的输入');
+      return;
+    }
 
     readingMode.value = 'following_latest';
     queuePersistReaderChatState();
-    appendLog('action', '重新生成', `已按楼层 #${anchorMessageId} 走受控 hidden 链重生`);
-    await runGenerationFlow({ prompt: latestUser.raw, createUser: false });
+    if (nextPrompt !== String(latestUser.raw ?? '').trim()) {
+      await setChatMessages([{ message_id: anchorMessageId, message: nextPrompt, is_hidden: latestUser.hidden }], {
+        refresh: 'none',
+      });
+    }
+    const trailingAssistantIds = readMessagesAfterContainer()
+      .filter(item => item.message_id > anchorMessageId && item.role === 'assistant')
+      .map(item => item.message_id)
+      .sort((a, b) => a - b);
+    let shouldRefreshTranscript = nextPrompt !== String(latestUser.raw ?? '').trim();
+    if (trailingAssistantIds.length > 0) {
+      await deleteChatMessages(trailingAssistantIds, { refresh: 'none' });
+      if (assistantMessageId.value != null && trailingAssistantIds.includes(assistantMessageId.value)) {
+        assistantMessageId.value = null;
+      }
+      latestPatchedMessage = '';
+      shouldRefreshTranscript = true;
+    }
+    if (shouldRefreshTranscript) {
+      rebuildTranscript();
+    }
+    appendLog('action', '重新生成', `已删除旧 assistant 楼层并基于 #${anchorMessageId} 重新回复一条 assistant`);
+    await runGenerationFlow({ prompt: nextPrompt, createUser: false });
   }
 
   async function rollLatestTurn() {
@@ -3556,7 +3304,11 @@ export function useStreamingDemo() {
       toastr?.info?.('当前还没有可重新生成的 user 楼层');
       return;
     }
-    await triggerNativeRegenerate(latestUser.message_id);
+    const nextPrompt = String(input.value ?? '').trim();
+    await triggerNativeRegenerate(latestUser.message_id, nextPrompt || undefined);
+    if (status.value === 'done' && nextPrompt) {
+      input.value = '';
+    }
   }
 
   async function confirmInlineEditRegenerate(item: TranscriptItem) {
@@ -3602,7 +3354,7 @@ export function useStreamingDemo() {
       busy.value = false;
     }
 
-    await triggerNativeRegenerate(targetId);
+    await triggerNativeRegenerate(targetId, nextText);
   }
 
   async function confirmRollbackDelete(item: TranscriptItem) {
@@ -3611,6 +3363,85 @@ export function useStreamingDemo() {
       return;
     }
     await deleteFromMessageId(item.message_id);
+  }
+
+  async function deleteOpeningAssistantMessageById(messageId: number | null, reason: string) {
+    const normalizedMessageId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedMessageId) || normalizedMessageId < 0) return;
+    await deleteChatMessages([normalizedMessageId], { refresh: 'none' });
+    if (assistantMessageId.value === normalizedMessageId) {
+      assistantMessageId.value = null;
+    }
+    latestPatchedMessage = '';
+    rebuildTranscript(reason);
+  }
+
+  function hasOpeningFollowUpTurns(openingAssistantMessageId: number | null): boolean {
+    const normalizedOpeningAssistantMessageId = Math.trunc(Number(openingAssistantMessageId));
+    if (!Number.isFinite(normalizedOpeningAssistantMessageId) || normalizedOpeningAssistantMessageId < 0) {
+      return false;
+    }
+    return readMessagesAfterContainer().some(item => item.message_id > normalizedOpeningAssistantMessageId);
+  }
+
+  async function runOpeningDetachedGeneration(compiledPromptSnapshot: string): Promise<boolean> {
+    const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));
+    if (
+      Number.isFinite(openingAssistantMessageId) &&
+      openingAssistantMessageId > 0 &&
+      hasSuccessfulOpeningAssistant.value !== true
+    ) {
+      await deleteOpeningAssistantMessageById(openingAssistantMessageId, 'opening_retry_cleanup');
+    }
+
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'generating',
+      compiled_prompt_snapshot: compiledPromptSnapshot,
+      opening_assistant_message_id: null,
+    };
+    persistOpeningPayloadNow();
+
+    const flowResult = await runGenerationFlow({
+      prompt: compiledPromptSnapshot,
+      createUser: false,
+      detachedUserInput: true,
+      maxChatHistory: 0,
+      emitLifecycleKind: 'normal',
+      onAssistantPlaceholderCreated: assistantId => {
+        openingPayload.value = {
+          ...openingPayload.value,
+          state: 'generating',
+          compiled_prompt_snapshot: compiledPromptSnapshot,
+          opening_assistant_message_id: assistantId,
+        };
+        persistOpeningPayloadNow();
+      },
+    });
+
+    if (flowResult.success) {
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'ready',
+        compiled_prompt_snapshot: compiledPromptSnapshot,
+        opening_assistant_message_id: flowResult.assistantMessageId,
+      };
+      persistOpeningPayloadNow();
+      return true;
+    }
+
+    if (!flowResult.hadVisibleAssistantContent && flowResult.assistantMessageId != null) {
+      await deleteOpeningAssistantMessageById(flowResult.assistantMessageId, 'opening_failure_cleanup');
+    }
+
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'configuring',
+      compiled_prompt_snapshot: compiledPromptSnapshot,
+      opening_assistant_message_id: flowResult.hadVisibleAssistantContent ? flowResult.assistantMessageId : null,
+    };
+    persistOpeningPayloadNow();
+    return false;
   }
 
   async function generateOpening() {
@@ -3634,162 +3465,25 @@ export function useStreamingDemo() {
       toastr?.warning?.(`请先填写：${missing.label}`);
       return;
     }
-
-    busy.value = true;
-    status.value = 'preparing';
-    errorText.value = '';
-    const compiledPrompt = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);
-    const messages = listAllChatMessages();
-    const resultId = readMessageId(findOpeningResultChatMessage(messages));
-    const hasFollowUpTurns =
-      resultId != null &&
-      resultId > 0 &&
-      messages.some(message => {
-        const id = readMessageId(message);
-        if (id == null || !Number.isFinite(id) || id <= resultId) return false;
-        if (
-          isCurrentOpeningSeedMessageByPayload(message, openingPayload.value) ||
-          isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value)
-        )
-          return false;
-        return true;
-      });
-
-    if (hasFollowUpTurns) {
-      busy.value = false;
-      status.value = 'idle';
-      toastr?.warning?.('已有正式剧情楼层，暂不支持在此阶段重ROLL开局');
-      return;
-    }
-
-    const openingSeedMvuData = await buildOpeningSeedMvuData();
-    const seedMessageId = await upsertOpeningSeedMessage(compiledPrompt, 'none', openingSeedMvuData);
-    const { seedMessageId: normalizedSeedMessageId, resultMessageId: normalizedResultMessageId } =
-      await normalizeOpeningMessageOrder('none');
-
-    openingPayload.value = {
-      ...openingPayload.value,
-      state: 'generating',
-      opening_seed_user_message_id: normalizedSeedMessageId ?? seedMessageId,
-      opening_result_message_id: normalizedResultMessageId,
-      result: null,
-    };
-    persistOpeningPayloadNow();
-    rebuildTranscript();
-
-    try {
-      // 在 generate() 前创建 result 占位符，避免 ST 流式回调复用 id=0 的 container 消息
-      const placeholderResultId = await upsertOpeningResultMessage('', 'none');
-      if (placeholderResultId != null) {
-        openingPayload.value = {
-          ...openingPayload.value,
-          opening_result_message_id: placeholderResultId,
-        };
-      }
-      if (openingPayload.value.use_stream) {
-        bindOpeningGenerationListeners();
-      }
-
-      // 临时取消隐藏，让 generate() 能读到完整聊天历史
-      const openingHiddenIds = readMessagesAfterContainer()
-        .filter(item => item.is_hidden === true)
-        .map(item => item.message_id);
-      if (openingHiddenIds.length > 0) {
-        await setChatMessages(
-          openingHiddenIds.map(id => ({ message_id: id, is_hidden: false })),
-          { refresh: 'none' },
-        );
-      }
-
-      const result = await generate(buildOpeningGenerateConfig(openingPreset.value, openingPayload.value));
-
-      // 生成完成后重新隐藏
-      if (openingHiddenIds.length > 0) {
-        await setChatMessages(
-          openingHiddenIds.map(id => ({ message_id: id, is_hidden: true })),
-          { refresh: 'none' },
-        );
-      }
-
-      const nextResult = {
-        raw: String(result ?? '').trim(),
-        content: extractOpeningContent(result),
-        options: extractOpeningOptions(result),
-        generated_at: new Date().toISOString(),
-      };
-      openingPayload.value = {
-        ...openingPayload.value,
-        state: 'ready',
-        result: nextResult,
-      };
-      const openingAssistantMessage = buildOpeningAssistantText(openingPayload.value);
-      const openingAssistantMvuData = await buildOpeningAssistantMvuData(openingAssistantMessage);
-      const updatedResultId = await upsertOpeningResultMessage(
-        openingAssistantMessage,
-        'none',
-        true,
-        openingAssistantMvuData,
-      );
-      console.log('[Debug] generateOpening upsertOpeningResultMessage', {
-        updatedResultId,
-        existingResultId: openingPayload.value.opening_result_message_id,
-      });
-      const { seedMessageId: normalizedSeedMessageId, resultMessageId: openingResultMessageId } =
-        await normalizeOpeningMessageOrder('none');
-      console.log('[Debug] generateOpening normalizeOpeningMessageOrder', {
-        normalizedSeedMessageId,
-        openingResultMessageId,
-        updatedResultId,
-        fallbackResultId: updatedResultId ?? openingResultMessageId ?? openingPayload.value.opening_result_message_id,
-      });
-      // Fallback: 如果 normalize 失败，用 upsert 或已知 ID 兜底
-      const finalResultId = openingResultMessageId ?? updatedResultId ?? openingPayload.value.opening_result_message_id;
-      openingPayload.value = {
-        ...openingPayload.value,
-        state: 'ready',
-        opening_seed_user_message_id: normalizedSeedMessageId ?? openingPayload.value.opening_seed_user_message_id,
-        opening_result_message_id: finalResultId,
-        result: nextResult,
-      };
-      await emitOfficialGenerationLifecycle(finalResultId, 'normal');
-      console.log('[Debug] generateOpening persist', {
-        opening_result_message_id: finalResultId,
-        state: 'ready',
-        hasResult: Boolean(nextResult),
-      });
-      persistOpeningPayloadNow();
-      rebuildTranscript();
-      status.value = 'done';
-      appendLog(
-        'action',
-        '生成开局',
-        stripTagsForPreview(openingPayload.value.result?.raw ?? openingPayload.value.result?.content ?? '').slice(
-          0,
-          80,
-        ) || '(空开局)',
-      );
-    } catch (error) {
-      status.value = 'error';
-      errorText.value = error instanceof Error ? error.message : String(error);
-      openingPayload.value = {
-        ...openingPayload.value,
-        state: 'configuring',
-      };
-      persistOpeningPayloadNow();
-      toastr?.error?.(`开局生成失败：${errorText.value}`);
-    } finally {
-      clearOpeningGenerationListeners();
-      busy.value = false;
+    const compiledPromptSnapshot = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);
+    const generated = await runOpeningDetachedGeneration(compiledPromptSnapshot);
+    if (generated) {
+      appendLog('action', '生成开局', stripTagsForPreview(compiledPromptSnapshot).slice(0, 80) || '(空开局)');
     }
   }
 
   async function rerollOpening() {
     if (busy.value) return;
-    if (!openingPayload.value.opening_seed_user_message_id) {
-      toastr?.info?.('当前还没有可重ROLL的开局 seed');
+    const compiledPromptSnapshot = String(openingPayload.value.compiled_prompt_snapshot ?? '').trim();
+    if (!compiledPromptSnapshot) {
+      toastr?.info?.('当前还没有可重ROLL的开局提示词');
       return;
     }
-    await generateOpening();
+    if (hasOpeningFollowUpTurns(openingPayload.value.opening_assistant_message_id ?? null)) {
+      toastr?.warning?.('已有正式剧情楼层，暂不支持在此阶段重ROLL开局');
+      return;
+    }
+    await runOpeningDetachedGeneration(compiledPromptSnapshot);
   }
 
   function bindHistoryRefreshEvents() {
@@ -3818,7 +3512,7 @@ export function useStreamingDemo() {
     ];
     historyStops = names.map(name => {
       try {
-        return eventOn(name as any, () => handleHostRefreshEvent(String(name)));
+        return eventOn(name as any, (...payload: unknown[]) => handleHostRefreshEvent(String(name), payload));
       } catch {
         return null;
       }
@@ -3973,7 +3667,7 @@ export function useStreamingDemo() {
   }
 
   async function runDemo(nextPrompt?: string) {
-    if (shouldLoadOpeningGenerator(openingPayload.value, hasStoryMessagesBeyondOpening.value)) {
+    if (!hasSuccessfulOpeningAssistant.value) {
       toastr?.info?.('请先完成开局配置并生成 opening');
       return;
     }
@@ -4016,7 +3710,6 @@ export function useStreamingDemo() {
 
   onMounted(async () => {
     restoreReaderChatState();
-    void syncOpeningAssistantMessage('none', false);
 
     if (isOpeningWorkbenchHostActive()) {
       bindHistoryRefreshEvents();
@@ -4120,7 +3813,6 @@ export function useStreamingDemo() {
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());
     hostPluginMutationObservers = [];
-    clearOpeningGenerationListeners();
   });
 
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
@@ -4170,12 +3862,16 @@ export function useStreamingDemo() {
     readingMode,
     readingModeLabel,
     followLatest,
+    isTranscriptHistoryMode,
+    transcriptWindowLabel,
+    transcriptWindowPages,
     openingExpanded,
     selectedItem,
     transcript,
     visibleTranscript,
     transcriptStats,
     mvuSourceRevision,
+    currentMvuAnchorMessageId,
     latestUserItem,
     latestAssistantItem,
     inputHasText,
@@ -4187,6 +3883,7 @@ export function useStreamingDemo() {
     openingWorldModes,
     openingRoutes,
     shouldShowOpeningSetup,
+    canDismissOpeningSetup,
     isCalibratingDailyRoll,
     readerSummary,
     logs,
@@ -4214,6 +3911,8 @@ export function useStreamingDemo() {
     cancelRollbackDelete,
     confirmRollbackDelete,
     setReadingMode,
+    selectTranscriptWindowPage,
+    resetTranscriptWindowToLatestState,
     toggleOpeningExpanded,
     rebuildTranscript,
     openDetail,

@@ -1,4 +1,4 @@
-export type RefreshDomain = 'transcript' | 'mvuSources' | 'roleSidebar' | 'gallery';
+export type RefreshDomain = 'transcript' | 'transcriptItems' | 'mvuSources' | 'roleSidebar' | 'gallery';
 
 export type RefreshEventInput = {
   type: string;
@@ -22,9 +22,15 @@ export function resolveRefreshDomainsForEvent(input: RefreshEventInput): Refresh
       pushDomain(out, 'transcript');
       return out;
 
-    case 'host.message_received':
     case 'host.message_updated':
+    case 'host.message_edited':
     case 'host.message_swiped':
+      pushDomain(out, 'transcriptItems');
+      pushDomain(out, 'mvuSources');
+      pushDomain(out, 'gallery');
+      return out;
+
+    case 'host.message_received':
     case 'host.message_deleted':
     case 'host.more_messages_loaded':
     case 'host.chat_changed':
@@ -34,7 +40,6 @@ export function resolveRefreshDomainsForEvent(input: RefreshEventInput): Refresh
       return out;
 
     case 'host.message_sent':
-    case 'host.message_edited':
     case 'host.generation_ended':
       pushDomain(out, 'transcript');
       pushDomain(out, 'gallery');

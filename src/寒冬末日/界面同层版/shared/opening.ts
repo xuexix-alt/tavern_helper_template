@@ -184,27 +184,6 @@ function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
   return 'placeholder';
 }
 
-export function hasOpeningResult(payload: Partial<OpeningPayload> | null | undefined): boolean {
-  if (!payload) return false;
-  if (normalizePositiveInteger(payload.opening_result_message_id) != null) return true;
-
-  const result = payload.result;
-  if (!result) return false;
-
-  const hasOptions = Array.isArray(result.options) && result.options.some(option => Boolean(trimText(option)));
-
-  return Boolean(trimText(result.raw) || trimText(result.content) || trimText(result.generated_at) || hasOptions);
-}
-
-export function shouldLoadOpeningGenerator(
-  payload: Partial<OpeningPayload> | null | undefined,
-  hasStoryMessagesBeyondOpening = false,
-): boolean {
-  if (hasStoryMessagesBeyondOpening) return false;
-  if (normalizeOpeningState(payload?.state) === 'generating') return false;
-  return !hasOpeningResult(payload);
-}
-
 function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayload {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const worldModeId = trimText(_.get(source, 'world_mode_id', getDefaultWorldModeId())) || getDefaultWorldModeId();
@@ -225,59 +204,35 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
     nextFormValues[key] = trimText(value);
   });
 
-  const legacyContent = trimText(_.get(source, 'opening_content', ''));
-  const legacyOptions = Array.isArray(_.get(source, 'options', []))
-    ? (_.get(source, 'options', []) as unknown[]).map(item => trimText(item)).filter(Boolean)
-    : [];
-  const rawResult = (_.get(source, 'result', null) ?? null) as Record<string, unknown> | null;
-  const nextResult =
-    rawResult || legacyContent || legacyOptions.length > 0
-      ? {
-          raw: trimText(rawResult?.raw ?? legacyContent),
-          content: trimText(rawResult?.content ?? legacyContent),
-          options: Array.isArray(rawResult?.options)
-            ? (rawResult.options as unknown[]).map(item => trimText(item)).filter(Boolean)
-            : legacyOptions,
-          generated_at: trimText(rawResult?.generated_at),
-        }
-      : null;
-
   const nextStateSource = normalizeOpeningState(_.get(source, 'state', 'placeholder'));
-  const nextSeedUserMessageId = normalizePositiveInteger(_.get(source, 'opening_seed_user_message_id', null));
-  const nextResultMessageId = normalizePositiveInteger(_.get(source, 'opening_result_message_id', null));
-  const hasPersistedOpeningResult = nextResultMessageId != null;
-  const nextState = nextResult
-    ? ['ready', 'generating'].includes(nextStateSource)
-      ? nextStateSource
-      : 'ready'
-    : hasPersistedOpeningResult
+  const nextOpeningAssistantMessageId =
+    normalizePositiveInteger(_.get(source, 'opening_assistant_message_id', null)) ??
+    normalizePositiveInteger(_.get(source, 'opening_result_message_id', null));
+  const nextCompiledPromptSnapshot = trimText(_.get(source, 'compiled_prompt_snapshot', ''));
+  const hasConfiguredFormValues = Object.values(nextFormValues).some(Boolean);
+  const nextState =
+    nextOpeningAssistantMessageId != null
       ? 'ready'
-      : nextStateSource === 'placeholder'
-        ? 'placeholder'
-        : nextStateSource === 'generating'
-          ? 'generating'
-          : nextFormValues && Object.values(nextFormValues).some(Boolean)
-            ? 'configuring'
-            : 'placeholder';
+      : nextStateSource === 'generating'
+        ? 'generating'
+        : nextCompiledPromptSnapshot || hasConfiguredFormValues
+          ? 'configuring'
+          : 'placeholder';
 
   return OpeningPayloadSchema.parse({
-    version: 3,
+    version: 5,
     state: nextState,
     world_mode_id: worldModeId,
     route_id: trimText(_.get(source, 'route_id', getDefaultRouteId(worldModeId))) || getDefaultRouteId(worldModeId),
     use_stream: _.get(source, 'use_stream', false),
-    opening_seed_user_message_id: nextSeedUserMessageId,
-    opening_result_message_id: nextResultMessageId,
+    compiled_prompt_snapshot: nextCompiledPromptSnapshot,
+    opening_assistant_message_id: nextOpeningAssistantMessageId,
     meta: {
       time: compactText(_.get(source, 'meta.time', preset.default_meta.time)),
       location: compactText(_.get(source, 'meta.location', preset.default_meta.location)),
       character: compactText(_.get(source, 'meta.character', preset.default_meta.character)),
     },
     form_values: nextFormValues,
-    result:
-      nextResult && (nextResult.raw || nextResult.content || nextResult.options.length > 0 || nextResult.generated_at)
-        ? nextResult
-        : null,
   });
 }
 
@@ -360,16 +315,15 @@ export function getDefaultOpeningPayload(preset = getDefaultOpeningPreset()): Op
   const route_id = getDefaultRouteId(world_mode_id);
 
   return OpeningPayloadSchema.parse({
-    version: 3,
+    version: 5,
     state: 'placeholder',
     world_mode_id,
     route_id,
     use_stream: false,
-    opening_seed_user_message_id: null,
-    opening_result_message_id: null,
+    compiled_prompt_snapshot: '',
+    opening_assistant_message_id: null,
     meta: preset.default_meta,
     form_values: buildDefaultOpeningFormValues(preset),
-    result: null,
   });
 }
 
@@ -403,19 +357,16 @@ function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
   );
 
   return {
-    version: 3,
+    version: 5,
     state: payload.state,
     world_mode_id: trimText(payload.world_mode_id) || getDefaultWorldModeId(),
     route_id:
       trimText(payload.route_id) || getDefaultRouteId(trimText(payload.world_mode_id) || getDefaultWorldModeId()),
     use_stream: payload.use_stream === true,
-    opening_seed_user_message_id:
-      Number.isFinite(Number(payload.opening_seed_user_message_id)) && Number(payload.opening_seed_user_message_id) > 0
-        ? Math.trunc(Number(payload.opening_seed_user_message_id))
-        : null,
-    opening_result_message_id:
-      Number.isFinite(Number(payload.opening_result_message_id)) && Number(payload.opening_result_message_id) > 0
-        ? Math.trunc(Number(payload.opening_result_message_id))
+    compiled_prompt_snapshot: trimText(payload.compiled_prompt_snapshot),
+    opening_assistant_message_id:
+      Number.isFinite(Number(payload.opening_assistant_message_id)) && Number(payload.opening_assistant_message_id) > 0
+        ? Math.trunc(Number(payload.opening_assistant_message_id))
         : null,
     meta: {
       character: compactText(payload.meta.character) || '{{user}}',
@@ -432,9 +383,8 @@ export function replaceOpeningPayloadInChat(payload: OpeningPayload) {
         _.set(vars, OPENING_CHAT_STATE_PATH, compact);
         console.log('[Debug] replaceOpeningPayloadInChat', {
           state: compact.state,
-          opening_result_message_id: compact.opening_result_message_id,
-          opening_seed_user_message_id: compact.opening_seed_user_message_id,
-          hasResult: Boolean((payload as any).result),
+          opening_assistant_message_id: compact.opening_assistant_message_id,
+          hasCompiledPromptSnapshot: Boolean(compact.compiled_prompt_snapshot),
         });
         return vars;
       },

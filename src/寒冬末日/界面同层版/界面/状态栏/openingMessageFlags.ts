@@ -45,9 +45,12 @@ export function isCurrentOpeningSeedMessageByPayload(
 
 export function isCurrentOpeningAssistantMessageByPayload(
   message: any,
-  payload?: { opening_result_message_id?: unknown } | null,
+  payload?: { opening_assistant_message_id?: unknown; opening_result_message_id?: unknown } | null,
 ): boolean {
-  return isTrackedOpeningAssistantMessage(message, payload?.opening_result_message_id);
+  return isTrackedOpeningAssistantMessage(
+    message,
+    payload?.opening_assistant_message_id ?? payload?.opening_result_message_id,
+  );
 }
 
 export function sanitizeInheritedMessageData(input: unknown): Record<string, unknown> {

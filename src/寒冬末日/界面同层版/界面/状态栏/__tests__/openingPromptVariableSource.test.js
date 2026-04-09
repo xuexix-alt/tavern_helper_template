@@ -13,9 +13,9 @@ test('opening prompt builder injects current message stat_data for MVU output gr
   assert.match(source, /formatCurrentMessageStatDataForPrompt\(/);
 });
 
-test('story page wires opening seed message id into MvuRolePanel target source', () => {
+test('story page wires current MVU anchor floor into MvuRolePanel target source', () => {
   const sourcePath = path.resolve(__dirname, '../pages/StoryPage.vue');
   const source = fs.readFileSync(sourcePath, 'utf8');
 
-  assert.match(source, /:target-message-id="openingPayload\.opening_seed_user_message_id \?\? null"/);
+  assert.match(source, /:target-message-id="currentMvuAnchorMessageId"/);
 });

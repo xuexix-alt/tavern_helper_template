@@ -17,6 +17,33 @@
 
         <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
+        <div ref="transcriptWindowMenuRef" class="ui-page-menu">
+          <button
+            type="button"
+            class="ui-icon-btn ui-page-menu-trigger"
+            :class="{ active: transcriptWindowMenuOpen || isTranscriptHistoryMode }"
+            @click.stop="toggleTranscriptWindowMenu"
+          >
+            <span>楼层</span>
+            <span class="ui-page-menu-value">{{ transcriptWindowLabel || '最新' }}</span>
+          </button>
+
+          <transition name="toolbar-menu-fade">
+            <div v-if="transcriptWindowMenuOpen" class="ui-page-menu-list clip-corner-sm">
+              <button
+                v-for="page in transcriptWindowPages"
+                :key="page.key"
+                type="button"
+                class="ui-page-menu-item"
+                :class="{ active: transcriptWindowLabel === page.label }"
+                @click="selectTranscriptWindowPage(page.pageIndex)"
+              >
+                {{ page.label }}
+              </button>
+            </div>
+          </transition>
+        </div>
+
         <button
           type="button"
           class="ui-icon-btn ui-fullscreen-btn"
@@ -57,7 +84,7 @@
 
         <div class="ui-sidebar-body">
           <MvuRolePanel
-            :target-message-id="openingPayload.opening_seed_user_message_id ?? null"
+            :target-message-id="currentMvuAnchorMessageId"
             :transcript-items="transcript"
             :refresh-revision="mvuSourceRevision"
             :active-character-key="activeRoleKey"
@@ -94,6 +121,10 @@
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
           <div class="ui-transcript-stage">
+            <div v-if="isTranscriptHistoryMode" class="ui-history-badge clip-corner-sm">
+              历史
+              <strong>{{ transcriptWindowLabel.replace(/^历史\s*/, '') }}</strong>
+            </div>
             <TranscriptList
               ref="transcriptListRef"
               :items="visibleTranscript"
@@ -292,7 +323,7 @@
         v-model:font-mode="fontMode"
         :total-count="transcriptStats.total"
         :at-latest="followLatest"
-        :is-browsing-history="readingMode === 'browsing_history'"
+        :is-browsing-history="isTranscriptHistoryMode"
         @jump-latest="jumpLatest"
       />
     </HudModal>
@@ -336,7 +367,7 @@ import {
 } from '../generatedImageActivation';
 import type { TranscriptItem } from '../types';
 
-import openingModalIcon from '../assets/opening-modal-icon.png?url';
+import openingModalIcon from '../assets/opening-modal-icon.webp?url';
 import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
 import HudModal from '../components/HudModal.vue';
@@ -386,12 +417,16 @@ const {
   fontMode,
   readingMode,
   followLatest,
+  isTranscriptHistoryMode,
+  transcriptWindowLabel,
+  transcriptWindowPages,
   openingExpanded,
   selectedItem,
   transcript,
   visibleTranscript,
   transcriptStats,
   mvuSourceRevision,
+  currentMvuAnchorMessageId,
   latestUserItem,
   latestAssistantItem,
   transcriptDomRevision,
@@ -407,6 +442,7 @@ const {
   openingWorldModes,
   openingRoutes,
   shouldShowOpeningSetup,
+  canDismissOpeningSetup,
   runDemo,
   rollLatestTurn,
   updateOpeningMeta,
@@ -424,6 +460,7 @@ const {
   cancelRollbackDelete,
   confirmRollbackDelete,
   setReadingMode,
+  selectTranscriptWindowPage: selectTranscriptWindowPageState,
   toggleOpeningExpanded,
   openDetail,
   closeDetail,
@@ -436,6 +473,8 @@ const {
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 const composerRef = ref<InstanceType<typeof BottomComposer> | null>(null);
+const transcriptWindowMenuRef = ref<HTMLElement | null>(null);
+const transcriptWindowMenuOpen = ref(false);
 const readerShellHeight = ref('720px');
 const isFullscreen = ref(false);
 provide('isFullscreen', isFullscreen);
@@ -555,7 +594,11 @@ function updateReaderShellHeight() {
 }
 
 function jumpLatest() {
-  transcriptListRef.value?.scrollToLatest?.();
+  transcriptWindowMenuOpen.value = false;
+  selectTranscriptWindowPageState(0);
+  nextTick(() => {
+    transcriptListRef.value?.scrollToLatest?.();
+  });
 }
 
 function anchorTranscriptToLatest(behavior: ScrollBehavior = 'auto') {
@@ -569,11 +612,13 @@ function closeRoleDrawer() {
 }
 
 function openRoleDrawer() {
+  transcriptWindowMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
 }
 
 function openSettingsModal() {
+  transcriptWindowMenuOpen.value = false;
   settingsModalOpen.value = true;
 }
 
@@ -590,6 +635,7 @@ function closeGalleryDrawer() {
 }
 
 function openGalleryDrawer() {
+  transcriptWindowMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = false;
   galleryDrawerOpen.value = true;
@@ -609,6 +655,7 @@ function closeSideDrawers() {
 }
 
 function toggleUtilityDrawer(type: 'system' | 'map') {
+  transcriptWindowMenuOpen.value = false;
   closeSideDrawers();
   activeUtilityDrawer.value = activeUtilityDrawer.value === type ? null : type;
 }
@@ -618,6 +665,7 @@ function closeUtilityDrawer() {
 }
 
 function toggleFullscreen() {
+  transcriptWindowMenuOpen.value = false;
   if (document.fullscreenElement) {
     document.exitFullscreen?.();
   } else {
@@ -655,6 +703,7 @@ function openRoleFromComposer(key: string) {
 function jumpToTranscriptMessage(messageId: number) {
   const targetId = Math.trunc(Number(messageId));
   if (!Number.isFinite(targetId) || targetId < 0) return;
+  transcriptWindowMenuOpen.value = false;
   transcriptListRef.value?.scrollToMessage?.(targetId, 'smooth');
   readingMode.value = 'browsing_history';
   if (window.innerWidth <= 960) {
@@ -662,13 +711,39 @@ function jumpToTranscriptMessage(messageId: number) {
   }
 }
 
+function toggleTranscriptWindowMenu() {
+  transcriptWindowMenuOpen.value = !transcriptWindowMenuOpen.value;
+}
+
+function selectTranscriptWindowPage(pageIndex: number) {
+  transcriptWindowMenuOpen.value = false;
+  selectTranscriptWindowPageState(pageIndex);
+  if (pageIndex === 0) {
+    nextTick(() => {
+      transcriptListRef.value?.scrollToLatest?.();
+    });
+  } else {
+    nextTick(() => {
+      transcriptListRef.value?.scrollToTop?.();
+    });
+  }
+}
+
+useEventListener(document, 'pointerdown', event => {
+  if (!transcriptWindowMenuOpen.value) return;
+  const target = event.target as Node | null;
+  if (!target) return;
+  if (transcriptWindowMenuRef.value?.contains(target)) return;
+  transcriptWindowMenuOpen.value = false;
+});
+
 async function handleOpeningSubmit() {
   openingModalOpen.value = false;
   await generateOpening();
 }
 
 function closeOpeningModal() {
-  if (shouldShowOpeningSetup.value) return;
+  if (!canDismissOpeningSetup.value) return;
   openingModalOpen.value = false;
 }
 
@@ -1418,6 +1493,7 @@ useEventListener(window, 'keydown', event => {
 .ui-topbar-actions {
   margin-left: auto;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .ui-dot {
@@ -1471,6 +1547,80 @@ useEventListener(window, 'keydown', event => {
   color: var(--demo-text-accent);
   border-color: var(--demo-border-accent-active);
   background: var(--demo-gradient-chip-active);
+}
+
+.ui-page-menu {
+  position: relative;
+}
+
+.ui-page-menu-trigger {
+  justify-content: space-between;
+  min-width: 144px;
+}
+
+.ui-page-menu-value {
+  max-width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--demo-text-accent);
+}
+
+.ui-page-menu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  display: grid;
+  gap: 6px;
+  min-width: 176px;
+  max-width: min(72vw, 240px);
+  padding: 8px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--background) 92%, transparent),
+      color-mix(in srgb, var(--surface) 90%, transparent)
+    );
+  box-shadow:
+    0 18px 32px color-mix(in srgb, var(--shadow-color) 42%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ui-page-menu-item {
+  min-height: 34px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 10px;
+  background: color-mix(in srgb, var(--surface) 20%, transparent);
+  color: var(--demo-text-primary);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.ui-page-menu-item.active {
+  border-color: var(--demo-border-accent-active);
+  background: var(--demo-gradient-chip-active);
+  color: var(--demo-text-accent);
+}
+
+.toolbar-menu-fade-enter-active,
+.toolbar-menu-fade-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.toolbar-menu-fade-enter-from,
+.toolbar-menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .ui-bars {
@@ -1728,6 +1878,33 @@ useEventListener(window, 'keydown', event => {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+.ui-history-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+  background: color-mix(in srgb, var(--background) 80%, transparent);
+  color: var(--demo-text-warning);
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.ui-history-badge strong {
+  color: var(--demo-text-accent);
+  font-size: 11px;
 }
 
 .ui-transcript-stage :deep(.transcript-card) {
@@ -2230,6 +2407,25 @@ useEventListener(window, 'keydown', event => {
     padding: 0 8px;
     font-size: 10px;
     letter-spacing: 0.08em;
+  }
+
+  .ui-page-menu {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+
+  .ui-page-menu-trigger {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .ui-page-menu-value {
+    max-width: 7.25rem;
+  }
+
+  .ui-fullscreen-btn {
+    flex: 0 0 auto;
+    padding-inline: 10px;
   }
 
   .ui-bottom-tool-row {
