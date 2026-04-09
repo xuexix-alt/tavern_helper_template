@@ -1577,12 +1577,11 @@ useEventListener(window, 'keydown', event => {
   max-width: min(72vw, 240px);
   padding: 8px;
   border: 1px solid var(--demo-border-accent-soft);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--background) 92%, transparent),
-      color-mix(in srgb, var(--surface) 90%, transparent)
-    );
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 92%, transparent),
+    color-mix(in srgb, var(--surface) 90%, transparent)
+  );
   box-shadow:
     0 18px 32px color-mix(in srgb, var(--shadow-color) 42%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 5%, transparent);

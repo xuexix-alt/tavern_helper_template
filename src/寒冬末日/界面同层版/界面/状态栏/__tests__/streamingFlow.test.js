@@ -108,7 +108,7 @@ test('generateOpening no longer creates a dedicated opening result placeholder b
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes('const placeholderResultId = await upsertOpeningResultMessage(\'\', \'none\');'),
+    source.includes("const placeholderResultId = await upsertOpeningResultMessage('', 'none');"),
     false,
     'simplified opening generation should no longer maintain a dedicated opening result placeholder',
   );

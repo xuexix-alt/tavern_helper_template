@@ -3021,7 +3021,9 @@ export function useStreamingDemo() {
 
   async function runGenerationFlow(options: GenerationFlowOptions): Promise<GenerationFlowResult> {
     const prompt = String(options.prompt ?? '').trim();
-    const traceId = createTraceId(options.createUser ? 'send' : options.detachedUserInput === true ? 'opening' : 'regenerate');
+    const traceId = createTraceId(
+      options.createUser ? 'send' : options.detachedUserInput === true ? 'opening' : 'regenerate',
+    );
     if (!prompt || busy.value) {
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -3134,7 +3136,8 @@ export function useStreamingDemo() {
         {
           createUser: options.createUser,
           detachedUserInput: options.detachedUserInput === true,
-          maxChatHistory: options.detachedUserInput === true ? options.maxChatHistory ?? 0 : options.maxChatHistory ?? 'all',
+          maxChatHistory:
+            options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
         },
         traceId,
       );
@@ -3213,7 +3216,8 @@ export function useStreamingDemo() {
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
-      const hadVisibleAssistantContent = Boolean(String(streamText.value ?? '').trim()) || hasRenderableAssistantMessageText(latestPatchedMessage);
+      const hadVisibleAssistantContent =
+        Boolean(String(streamText.value ?? '').trim()) || hasRenderableAssistantMessageText(latestPatchedMessage);
       recordLifecycleTrace(
         'runGenerationFlow',
         'error',

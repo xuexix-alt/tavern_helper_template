@@ -52,7 +52,9 @@ export function resolveTranscriptWindowRange(input: ResolveTranscriptWindowRange
   };
 }
 
-export function buildTranscriptWindowPageOptions(input: ResolveTranscriptWindowRangeInput): TranscriptWindowPageOption[] {
+export function buildTranscriptWindowPageOptions(
+  input: ResolveTranscriptWindowRangeInput,
+): TranscriptWindowPageOption[] {
   const baseRange = resolveTranscriptWindowRange(input);
   if (!baseRange) return [];
 

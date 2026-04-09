@@ -37,17 +37,19 @@ test('triggerNativeRegenerate clears trailing assistant floors before replaying 
   const body = extractFunctionBody(source, 'triggerNativeRegenerate');
 
   assert.equal(
-    body.includes('await deleteChatMessages(trailingAssistantIds, { refresh: \'none\' });'),
+    body.includes("await deleteChatMessages(trailingAssistantIds, { refresh: 'none' });"),
     true,
     'triggerNativeRegenerate should remove trailing assistant floors before fallback generation',
   );
   assert.equal(
-    body.includes("await runGenerationFlow({ prompt: nextPrompt, createUser: false });"),
+    body.includes('await runGenerationFlow({ prompt: nextPrompt, createUser: false });'),
     true,
     'triggerNativeRegenerate should still regenerate exactly one assistant reply from the resolved prompt',
   );
   assert.equal(
-    body.includes("await setChatMessages([{ message_id: anchorMessageId, message: nextPrompt, is_hidden: latestUser.hidden }], {"),
+    body.includes(
+      'await setChatMessages([{ message_id: anchorMessageId, message: nextPrompt, is_hidden: latestUser.hidden }], {',
+    ),
     true,
     'triggerNativeRegenerate should update the latest user floor when composer input overrides the previous text',
   );

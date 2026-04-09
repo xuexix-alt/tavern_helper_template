@@ -73,7 +73,9 @@ test('handleHostRefreshEvent forwards message ids into refresh domain resolution
     'handleHostRefreshEvent should resolve message ids before computing refresh domains',
   );
   assert.equal(
-    source.includes('return eventOn(name as any, (...payload: unknown[]) => handleHostRefreshEvent(String(name), payload));'),
+    source.includes(
+      'return eventOn(name as any, (...payload: unknown[]) => handleHostRefreshEvent(String(name), payload));',
+    ),
     true,
     'history event binding should pass event payloads through to handleHostRefreshEvent',
   );

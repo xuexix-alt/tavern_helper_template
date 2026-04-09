@@ -47,7 +47,10 @@ test('same-layer transcript rebuild reads only the newest four host floors for U
 test('mvu source options align with the recent transcript window instead of assistant-only floors', () => {
   const source = read('../mvuSourceOptions.ts');
 
-  assert.match(source, /function isReadableTranscriptLike\(item: TranscriptLike, hasStatData: \(messageId: number\) => boolean\): boolean/);
+  assert.match(
+    source,
+    /function isReadableTranscriptLike\(item: TranscriptLike, hasStatData: \(messageId: number\) => boolean\): boolean/,
+  );
   assert.match(source, /return hasStatData\(messageId\);/);
   assert.doesNotMatch(source, /item\?\.role === 'assistant'/);
 });

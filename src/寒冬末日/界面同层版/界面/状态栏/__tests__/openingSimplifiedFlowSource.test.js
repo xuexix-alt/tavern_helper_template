@@ -37,7 +37,9 @@ test('generateOpening uses a detached ordinary assistant flow instead of opening
   const body = extractFunctionBody(source, 'generateOpening');
 
   assert.equal(
-    body.includes('const compiledPromptSnapshot = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);'),
+    body.includes(
+      'const compiledPromptSnapshot = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);',
+    ),
     true,
     'generateOpening should freeze a compiled prompt snapshot before starting generation',
   );
@@ -73,7 +75,7 @@ test('runGenerationFlow supports detached user_input generation for opening and 
     'runGenerationFlow options should support detached user_input generation',
   );
   assert.equal(
-    source.includes('maxChatHistory?: \'all\' | number'),
+    source.includes("maxChatHistory?: 'all' | number"),
     true,
     'runGenerationFlow should accept explicit chat history limits for detached generation',
   );
@@ -94,7 +96,9 @@ test('opening failure recovery reuses the frozen compiled prompt snapshot instea
   const rerollBody = extractFunctionBody(source, 'rerollOpening');
 
   assert.equal(
-    rerollBody.includes('const compiledPromptSnapshot = String(openingPayload.value.compiled_prompt_snapshot ?? \'\').trim();'),
+    rerollBody.includes(
+      "const compiledPromptSnapshot = String(openingPayload.value.compiled_prompt_snapshot ?? '').trim();",
+    ),
     true,
     'rerollOpening should read the frozen compiled prompt snapshot from opening payload state',
   );
@@ -119,7 +123,9 @@ test('opening mvu anchor prefers latest user, then opening assistant, then lates
     'MVU anchor should prefer the latest user floor during normal story turns',
   );
   assert.equal(
-    source.includes('const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));'),
+    source.includes(
+      'const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));',
+    ),
     true,
     'MVU anchor should fall back to the opening assistant floor after detached opening generation',
   );
