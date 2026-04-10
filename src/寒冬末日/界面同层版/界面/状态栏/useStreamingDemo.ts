@@ -95,6 +95,15 @@ import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDoma
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
+import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
+import {
+  clearSameLayerRuntimeLease,
+  createSameLayerRuntimeLease,
+  isSameLayerRuntimeLeaseFresh,
+  readSameLayerRuntimeLease,
+  type SameLayerRuntimeLeaseStatus,
+  writeSameLayerRuntimeLease,
+} from './runtimeLeasePersistence';
 import type {
   DemoStatus,
   DemoTheme,
@@ -1324,6 +1333,7 @@ export function useStreamingDemo() {
   let hidePolicyRerun = false;
   const hostImageDataSyncSignatures = new Map<number, string>();
   let hideStatePersistTimer = 0;
+  let runtimeLeaseHeartbeatTimer = 0;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
@@ -1332,6 +1342,7 @@ export function useStreamingDemo() {
   let hostPluginMutationObservers: MutationObserver[] = [];
   let lifecycleEchoSuppressUntilMs = 0;
   let lifecycleEchoSuppressedHostEvents: string[] = [];
+  const runtimeLeaseSessionId = createTraceId('runtime-lease');
 
   const mvuSourceRevision = ref(0);
   const imagePendingTaskManager = createImagePendingTaskManager();
@@ -2305,8 +2316,56 @@ export function useStreamingDemo() {
     }, 80);
   }
 
+  function writeRuntimeLeaseStatus(status: SameLayerRuntimeLeaseStatus) {
+    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+    const containerId = getActiveContainerMessageId();
+    if (containerId == null) return;
+    writeSameLayerRuntimeLease(
+      createSameLayerRuntimeLease({
+        sessionId: runtimeLeaseSessionId,
+        containerMessageId: containerId,
+        status,
+      }),
+    );
+  }
+
+  function startRuntimeLeaseHeartbeat() {
+    if (runtimeLeaseHeartbeatTimer) window.clearInterval(runtimeLeaseHeartbeatTimer);
+    runtimeLeaseHeartbeatTimer = window.setInterval(() => {
+      writeRuntimeLeaseStatus('active');
+    }, SAME_LAYER_LEASE_HEARTBEAT_MS);
+  }
+
+  function stopRuntimeLeaseHeartbeat() {
+    if (runtimeLeaseHeartbeatTimer) {
+      window.clearInterval(runtimeLeaseHeartbeatTimer);
+      runtimeLeaseHeartbeatTimer = 0;
+    }
+  }
+
+  async function restoreHostVisibilityAfterLeaseReset(reason: string) {
+    const hiddenMessages = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => ({ message_id: item.message_id, is_hidden: false }));
+    if (hiddenMessages.length > 0) {
+      await setChatMessages(hiddenMessages, { refresh: 'none' });
+    }
+    clearHideState();
+    clearSameLayerRuntimeLease();
+    console.log('[stream-demo] lease reset restored host visibility', {
+      reason,
+      restoredCount: hiddenMessages.length,
+    });
+  }
+
   async function restoreHideState(): Promise<void> {
     if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+
+    const runtimeLease = readSameLayerRuntimeLease();
+    if (runtimeLease && isSameLayerRuntimeLeaseFresh(runtimeLease) !== true) {
+      await restoreHostVisibilityAfterLeaseReset('stale_runtime_lease');
+      return;
+    }
 
     const savedState = readHideState();
     if (!savedState || savedState.hiddenMessageIds.length === 0) return;
@@ -3712,10 +3771,15 @@ export function useStreamingDemo() {
     restoreReaderChatState();
 
     if (isOpeningWorkbenchHostActive()) {
+      writeRuntimeLeaseStatus('booting');
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
 
       await restoreHideState();
+      writeRuntimeLeaseStatus('active');
+      startRuntimeLeaseHeartbeat();
+
+      window.addEventListener('pagehide', handleSameLayerPageHide);
 
       if (document.body && typeof MutationObserver !== 'undefined') {
         generatedImageDomObserver = new MutationObserver(records => {
@@ -3784,19 +3848,15 @@ export function useStreamingDemo() {
     return 0;
   }
 
+  function handleSameLayerPageHide() {
+    writeRuntimeLeaseStatus('suspended');
+  }
+
   onBeforeUnmount(() => {
     if (isOpeningWorkbenchHostActive()) {
       persistHideStateNow('unmount');
-      try {
-        const hiddenMessages = readMessagesAfterContainer()
-          .filter(item => item.is_hidden === true)
-          .map(item => ({ message_id: item.message_id, is_hidden: false }));
-        if (hiddenMessages.length > 0) {
-          void setChatMessages(hiddenMessages, { refresh: 'all' });
-        }
-      } catch {
-        // best-effort cleanup
-      }
+      writeRuntimeLeaseStatus('suspended');
+      window.removeEventListener('pagehide', handleSameLayerPageHide);
     }
     clearGenerationListeners();
     historyStops.forEach(stop => stop?.stop?.());
@@ -3813,6 +3873,7 @@ export function useStreamingDemo() {
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());
     hostPluginMutationObservers = [];
+    stopRuntimeLeaseHeartbeat();
   });
 
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };

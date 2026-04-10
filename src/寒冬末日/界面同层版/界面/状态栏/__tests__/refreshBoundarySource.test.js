@@ -88,3 +88,18 @@ test('onBeforeUnmount should stop restoring hidden host messages during teardown
     'teardown should not unhide host messages as a cleanup side effect',
   );
 });
+
+test('restoreHideState should gate hide replay on runtime lease freshness first', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const runtimeLease = readSameLayerRuntimeLease\(\);/,
+    'restoreHideState should read the same-layer runtime lease before replaying hidden ids',
+  );
+  assert.match(
+    source,
+    /isSameLayerRuntimeLeaseFresh\(runtimeLease\)/,
+    'restoreHideState should reject stale lease state before reapplying hidden ids',
+  );
+});
