@@ -78,3 +78,13 @@ test('handleHostRefreshEvent forwards message ids into refresh domain resolution
     'history event binding should pass event payloads through to handleHostRefreshEvent',
   );
 });
+
+test('onBeforeUnmount should stop restoring hidden host messages during teardown', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.doesNotMatch(
+    source,
+    /setChatMessages\(hiddenMessages, \{ refresh: 'all' \}\)/,
+    'teardown should not unhide host messages as a cleanup side effect',
+  );
+});
