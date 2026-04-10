@@ -95,6 +95,7 @@ import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDoma
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
+import { createHostVisualHideController } from './hostVisualHide';
 import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
 import {
   clearSameLayerRuntimeLease,
@@ -1343,6 +1344,7 @@ export function useStreamingDemo() {
   let lifecycleEchoSuppressUntilMs = 0;
   let lifecycleEchoSuppressedHostEvents: string[] = [];
   const runtimeLeaseSessionId = createTraceId('runtime-lease');
+  const hostVisualHideController = createHostVisualHideController();
 
   const mvuSourceRevision = ref(0);
   const imagePendingTaskManager = createImagePendingTaskManager();
@@ -1982,6 +1984,7 @@ export function useStreamingDemo() {
     } finally {
       hidePolicyRunning = false;
     }
+    syncHostVisualHideFromCurrentState();
     queuePersistHideState('apply_hide_policy');
   }
 
@@ -2344,18 +2347,27 @@ export function useStreamingDemo() {
   }
 
   async function restoreHostVisibilityAfterLeaseReset(reason: string) {
-    const hiddenMessages = readMessagesAfterContainer()
-      .filter(item => item.is_hidden === true)
-      .map(item => ({ message_id: item.message_id, is_hidden: false }));
+    const hiddenMessages = readMessagesAfterContainer().filter(item => item.is_hidden === true);
     if (hiddenMessages.length > 0) {
-      await setChatMessages(hiddenMessages, { refresh: 'none' });
+      await setChatMessages(
+        hiddenMessages.map(item => ({ message_id: item.message_id, is_hidden: false })),
+        { refresh: 'none' },
+      );
     }
+    hostVisualHideController.clearFromMessageIds(hiddenMessages.map(item => item.message_id));
     clearHideState();
     clearSameLayerRuntimeLease();
     console.log('[stream-demo] lease reset restored host visibility', {
       reason,
       restoredCount: hiddenMessages.length,
     });
+  }
+
+  function syncHostVisualHideFromCurrentState() {
+    const hiddenIds = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => item.message_id);
+    hostVisualHideController.applyToMessageIds(hiddenIds);
   }
 
   async function restoreHideState(): Promise<void> {
@@ -3778,6 +3790,7 @@ export function useStreamingDemo() {
       await restoreHideState();
       writeRuntimeLeaseStatus('active');
       startRuntimeLeaseHeartbeat();
+      syncHostVisualHideFromCurrentState();
 
       window.addEventListener('pagehide', handleSameLayerPageHide);
 
@@ -3873,6 +3886,7 @@ export function useStreamingDemo() {
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());
     hostPluginMutationObservers = [];
+    hostVisualHideController.destroy();
     stopRuntimeLeaseHeartbeat();
   });
 
