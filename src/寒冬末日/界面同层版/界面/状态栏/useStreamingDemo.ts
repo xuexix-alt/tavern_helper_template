@@ -2758,6 +2758,7 @@ export function useStreamingDemo() {
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
     });
     scheduleUiRefresh(domains, `event:${name}`, messageId != null ? [messageId] : []);
+    queueHidePolicy(`event:${name}`);
   }
 
   async function bindMvuRefreshEvents() {

@@ -135,3 +135,23 @@ test('explicit same-layer disable should own the only host restore path', () => 
   assert.match(source, /clearSameLayerRuntimeLease\(\);/);
   assert.match(source, /setChatMessages\(hiddenMessages, \{ refresh: 'all' \}\)/);
 });
+
+test('host refresh events should requeue hide policy so native host turns do not remain visible', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /queueHidePolicy\(`event:\$\{name\}`\);/,
+    'host-side message growth and regenerate flows should trigger hide policy again',
+  );
+});
+
+test('host DOM mutation callbacks should reapply visual hide after external re-render', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /syncHostVisualHideFromCurrentState\(\);/,
+    'host DOM mutation handling should reapply visual hide after external host re-render',
+  );
+});
