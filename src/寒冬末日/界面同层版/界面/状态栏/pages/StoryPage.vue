@@ -52,6 +52,8 @@
         >
           {{ isFullscreen ? '✕ 退出全屏' : '全屏' }}
         </button>
+
+        <button type="button" class="ui-icon-btn" @click="handleDisableSameLayer">关闭同层</button>
       </div>
     </header>
 
@@ -282,7 +284,7 @@
             :active-role-key="activeRoleKey"
             :show-option-trigger="false"
             :show-toolbar="false"
-            @submit="runDemo"
+            @submit="handleComposerSubmit"
             @roll="rollLatestTurn"
             @open-role="openRoleFromComposer"
           />
@@ -444,6 +446,8 @@ const {
   shouldShowOpeningSetup,
   canDismissOpeningSetup,
   runDemo,
+  submitPromptViaSameLayer,
+  disableSameLayerUi,
   rollLatestTurn,
   updateOpeningMeta,
   updateOpeningField,
@@ -599,6 +603,19 @@ function jumpLatest() {
   nextTick(() => {
     transcriptListRef.value?.scrollToLatest?.();
   });
+}
+
+async function handleComposerSubmit(value?: string) {
+  const prompt = String(value ?? input.value ?? '').trim();
+  if (!prompt) return;
+  const submitted = await submitPromptViaSameLayer(prompt, 'ui');
+  if (submitted && prompt === String(input.value ?? '').trim()) {
+    input.value = '';
+  }
+}
+
+async function handleDisableSameLayer() {
+  await disableSameLayerUi({ restoreHost: true });
 }
 
 function anchorTranscriptToLatest(behavior: ScrollBehavior = 'auto') {
