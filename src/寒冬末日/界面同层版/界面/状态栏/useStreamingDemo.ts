@@ -95,6 +95,7 @@ import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDoma
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
+import { installHostChatInputBridge } from './hostChatInputBridge';
 import { createHostVisualHideController } from './hostVisualHide';
 import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
 import {
@@ -1345,6 +1346,8 @@ export function useStreamingDemo() {
   let lifecycleEchoSuppressedHostEvents: string[] = [];
   const runtimeLeaseSessionId = createTraceId('runtime-lease');
   const hostVisualHideController = createHostVisualHideController();
+  let destroyHostChatInputBridge = () => {};
+  let sameLayerDisableRequested = false;
 
   const mvuSourceRevision = ref(0);
   const imagePendingTaskManager = createImagePendingTaskManager();
@@ -2368,6 +2371,26 @@ export function useStreamingDemo() {
       .filter(item => item.is_hidden === true)
       .map(item => item.message_id);
     hostVisualHideController.applyToMessageIds(hiddenIds);
+  }
+
+  async function disableSameLayerUi(options: { restoreHost?: boolean } = {}) {
+    const { restoreHost = true } = options;
+    sameLayerDisableRequested = true;
+    destroyHostChatInputBridge();
+    destroyHostChatInputBridge = () => {};
+    hostVisualHideController.destroy();
+    stopRuntimeLeaseHeartbeat();
+    writeRuntimeLeaseStatus('closing');
+
+    const hiddenMessages = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => ({ message_id: item.message_id, is_hidden: false }));
+    if (restoreHost && hiddenMessages.length > 0) {
+      await setChatMessages(hiddenMessages, { refresh: 'all' });
+    }
+
+    clearHideState();
+    clearSameLayerRuntimeLease();
   }
 
   async function restoreHideState(): Promise<void> {
@@ -3744,10 +3767,17 @@ export function useStreamingDemo() {
     }
     const prompt = String(nextPrompt ?? input.value ?? '').trim();
     if (!prompt || busy.value) return;
-    await runGenerationFlow({ prompt, createUser: true });
-    if (status.value === 'done' && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
+    const submitted = await submitPromptViaSameLayer(prompt, 'ui');
+    if (submitted && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
       input.value = '';
     }
+  }
+
+  async function submitPromptViaSameLayer(prompt: string, _source: 'ui' | 'native-chat'): Promise<boolean> {
+    const text = String(prompt ?? '').trim();
+    if (!text || busy.value) return false;
+    await runGenerationFlow({ prompt: text, createUser: true });
+    return status.value === 'done';
   }
 
   async function runNativeSendProxy(prompt: string): Promise<boolean> {
@@ -3760,9 +3790,7 @@ export function useStreamingDemo() {
     errorText.value = '';
 
     try {
-      await withHostTranscriptVisible(async () => {
-        await sendToNativeChat(text, true);
-      });
+      await sendToNativeChat(text, true);
       appendLog('action', '发送用户输入', stripTagsForPreview(text).slice(0, 80) || '(空输入)');
       status.value = 'done';
       return true;
@@ -3791,6 +3819,10 @@ export function useStreamingDemo() {
       writeRuntimeLeaseStatus('active');
       startRuntimeLeaseHeartbeat();
       syncHostVisualHideFromCurrentState();
+      destroyHostChatInputBridge = installHostChatInputBridge({
+        onSubmit: submitPromptViaSameLayer,
+        isBusy: () => busy.value,
+      }).destroy;
 
       window.addEventListener('pagehide', handleSameLayerPageHide);
 
@@ -3866,9 +3898,12 @@ export function useStreamingDemo() {
   }
 
   onBeforeUnmount(() => {
-    if (isOpeningWorkbenchHostActive()) {
+    if (isOpeningWorkbenchHostActive() && sameLayerDisableRequested !== true) {
       persistHideStateNow('unmount');
       writeRuntimeLeaseStatus('suspended');
+      window.removeEventListener('pagehide', handleSameLayerPageHide);
+    }
+    if (sameLayerDisableRequested === true) {
       window.removeEventListener('pagehide', handleSameLayerPageHide);
     }
     clearGenerationListeners();
@@ -3886,6 +3921,8 @@ export function useStreamingDemo() {
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());
     hostPluginMutationObservers = [];
+    destroyHostChatInputBridge();
+    destroyHostChatInputBridge = () => {};
     hostVisualHideController.destroy();
     stopRuntimeLeaseHeartbeat();
   });
@@ -3965,7 +4002,9 @@ export function useStreamingDemo() {
     transcriptDomRevision,
     galleryGroups,
     galleryEntries,
-    beginPendingImageTask,
+        submitPromptViaSameLayer,
+        disableSameLayerUi,
+        beginPendingImageTask,
     markRecentImageIntent,
     runDemo,
     rollLatestTurn,

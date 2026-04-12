@@ -32,14 +32,14 @@ function extractFunctionBody(source, functionName) {
   assert.fail(`should find closing brace for ${functionName}`);
 }
 
-test('runDemo routes normal sends through controlled generation flow instead of native send proxy', () => {
+test('runDemo routes normal sends through the same-layer submit owner instead of native send proxy', () => {
   const source = readSource('useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'runDemo');
 
   assert.equal(
-    body.includes('await runGenerationFlow({ prompt, createUser: true });'),
+    body.includes("await submitPromptViaSameLayer(prompt, 'ui');"),
     true,
-    'runDemo should use the controlled generation flow so stream tokens can patch the visible card',
+    'runDemo should delegate to the shared same-layer submit owner so stream tokens can patch the visible card',
   );
   assert.equal(
     body.includes('runNativeSendProxy(prompt)'),

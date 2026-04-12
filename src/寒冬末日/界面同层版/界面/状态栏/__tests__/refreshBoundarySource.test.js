@@ -9,6 +9,29 @@ function readSource(relativePath) {
   return fs.readFileSync(path.join(statusBarDir, relativePath), 'utf8');
 }
 
+function extractFunctionBody(source, functionName) {
+  const startToken = `function ${functionName}(`;
+  const startIndex = source.indexOf(startToken);
+  assert.notEqual(startIndex, -1, `should find ${functionName}`);
+
+  const braceStart = source.indexOf('{', startIndex);
+  assert.notEqual(braceStart, -1, `should find opening brace for ${functionName}`);
+
+  let depth = 0;
+  for (let index = braceStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(braceStart + 1, index);
+      }
+    }
+  }
+
+  assert.fail(`should find closing brace for ${functionName}`);
+}
+
 test('message-level host updates map to transcriptItems instead of full transcript rebuild domains', () => {
   const source = readSource('refreshDomains.ts');
 
@@ -81,9 +104,10 @@ test('handleHostRefreshEvent forwards message ids into refresh domain resolution
 
 test('onBeforeUnmount should stop restoring hidden host messages during teardown', () => {
   const source = readSource('useStreamingDemo.ts');
+  const unmountSegment = source.slice(source.indexOf('onBeforeUnmount(() => {'));
 
   assert.doesNotMatch(
-    source,
+    unmountSegment,
     /setChatMessages\(hiddenMessages, \{ refresh: 'all' \}\)/,
     'teardown should not unhide host messages as a cleanup side effect',
   );
@@ -102,4 +126,12 @@ test('restoreHideState should gate hide replay on runtime lease freshness first'
     /isSameLayerRuntimeLeaseFresh\(runtimeLease\)/,
     'restoreHideState should reject stale lease state before reapplying hidden ids',
   );
+});
+
+test('explicit same-layer disable should own the only host restore path', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(source, /async function disableSameLayerUi\(/);
+  assert.match(source, /clearSameLayerRuntimeLease\(\);/);
+  assert.match(source, /setChatMessages\(hiddenMessages, \{ refresh: 'all' \}\)/);
 });
