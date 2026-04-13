@@ -15,6 +15,7 @@
   ],
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/cli": "^0.1.7",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/jquery": "^3.5.34",
     "@types/jqueryui": "^1.12.24",

@@ -96,6 +96,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.4
         version: 9.39.4
+      '@playwright/cli':
+        specifier: ^0.1.7
+        version: 0.1.7
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -543,6 +546,11 @@ packages:
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@playwright/cli@0.1.7':
+    resolution: {integrity: sha512-87qfAtP0WyACdNoDLx9ymIXsCiDT+mgG4hlMm28AJ4TD8uO83nORMS9lEoDItpzL8b12LhPUVz2Uc34bDUIW9g==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@sinclair/typebox@0.27.10':
     resolution: {integrity: sha512-MTBk/3jGLNB2tVxv6uLlFh1iu64iYOQ2PbdOSK3NW8JZsmlaOh2q6sdtKowBhfw8QFLmYNzTW4/oK4uATIi6ZA==}
@@ -2095,6 +2103,11 @@ packages:
     resolution: {integrity: sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA==}
     engines: {node: '>=14.14'}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -3107,6 +3120,16 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  playwright-core@1.60.0-alpha-1775951570000:
+    resolution: {integrity: sha512-qMa6CHSMXcoehZUOSMMLNXjHh6+tgprIciOtwZFXkxzR2TIYjsWjlnk9goEdyA+P9+VDQL85rsDWtpwJsc7kog==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0-alpha-1775951570000:
+    resolution: {integrity: sha512-/+LszKoqmo/t61E9VheV2u+UGemg4Pu9GSTrTryOX4YUT/5BKxMNiRvZJdqDdk8F7oM0p8aox6swxD6MaD2ygQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -4366,6 +4389,11 @@ snapshots:
       - '@types/react'
 
   '@pkgr/core@0.2.9': {}
+
+  '@playwright/cli@0.1.7':
+    dependencies:
+      minimist: 1.2.8
+      playwright: 1.60.0-alpha-1775951570000
 
   '@sinclair/typebox@0.27.10': {}
 
@@ -6024,6 +6052,9 @@ snapshots:
       jsonfile: 6.2.0
       universalify: 2.0.1
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -7175,6 +7206,14 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  playwright-core@1.60.0-alpha-1775951570000: {}
+
+  playwright@1.60.0-alpha-1775951570000:
+    dependencies:
+      playwright-core: 1.60.0-alpha-1775951570000
+    optionalDependencies:
+      fsevents: 2.3.2
 
   possible-typed-array-names@1.1.0: {}
 
