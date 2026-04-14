@@ -1,5 +1,5 @@
 <template>
-  <section class="transcript-card">
+  <section class="transcript-card" :class="`layout-${(layoutMode ?? 'wide').replace('_', '-')}`">
     <div
       ref="listRef"
       class="transcript-scroller"
@@ -117,6 +117,7 @@ const props = defineProps<{
   rollbackConfirmMessageId?: number | null;
   renderRevision?: number;
   galleryEntries?: ReaderGalleryEntry[];
+  layoutMode?: 'compact' | 'reader_desktop' | 'wide';
 }>();
 
 const emit = defineEmits<{
@@ -480,10 +481,23 @@ defineExpose({
   opacity: 0.3;
 }
 
+.transcript-card.layout-compact,
+.transcript-card.layout-reader-desktop {
+  --transcript-fab-size: 44px;
+}
+
+.transcript-card.layout-compact .transcript-fab,
+.transcript-card.layout-reader-desktop .transcript-fab,
+.transcript-card.layout-compact .transcript-image-fab,
+.transcript-card.layout-reader-desktop .transcript-image-fab {
+  width: 44px;
+  height: 44px;
+}
+
 @media (max-width: 760px) {
   .transcript-card {
     max-width: 100%;
-    --transcript-fab-size: 30px;
+    --transcript-fab-size: 44px;
   }
   .transcript-scroller {
     padding-right: 42px;
@@ -508,8 +522,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.45);

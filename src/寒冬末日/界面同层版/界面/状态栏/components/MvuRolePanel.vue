@@ -66,6 +66,7 @@
               <div class="source-nav-main">
                 <strong>{{ currentSourcePill }}</strong>
                 <span>{{ currentSourcePosition }}</span>
+                <span class="source-status">{{ statusText(entry) }}</span>
               </div>
               <button
                 type="button"
@@ -75,13 +76,6 @@
               >
                 ›
               </button>
-            </div>
-
-            <div class="meta-row meta-row-top">
-              <span class="meta-box">关系 {{ displayText(entry.role.关系, '无') }}</span>
-              <span class="meta-box">倾向 {{ displayText(entry.role.关系倾向, '中立') }}</span>
-              <span class="meta-box">状态 {{ statusText(entry) }}</span>
-              <span class="meta-box meta-box-code">#{{ characterCode(entry) }}</span>
             </div>
 
             <div class="metric-grid">
@@ -102,6 +96,10 @@
               </section>
 
               <section class="metric-card clip-corner-sm">
+                <div class="metric-meta-inline">
+                  <span class="metric-meta-chip">关系 {{ displayText(entry.role.关系, '无') }}</span>
+                  <span class="metric-meta-chip">倾向 {{ displayText(entry.role.关系倾向, '中立') }}</span>
+                </div>
                 <div class="metric-head">
                   <span class="metric-title">秩序刻印</span>
                   <strong class="metric-value">{{ safeNumber(entry.role.秩序刻印) }}</strong>
@@ -443,10 +441,6 @@ function hasMeaningfulText(input: unknown) {
   return String(input ?? '').trim() !== '';
 }
 
-function characterCode(entry: { key: string }) {
-  const m = String(entry.key).match(/(\d+)/);
-  return m?.[1] ?? '01';
-}
 function safeNumber(input: unknown) {
   const n = Number(input);
   return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.trunc(n))) : '--';
@@ -551,6 +545,16 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   font-size: 10px;
   letter-spacing: 0.08em;
 }
+.source-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+  color: var(--demo-text-secondary);
+}
 .source-nav-btn {
   width: 28px;
   height: 28px;
@@ -576,7 +580,7 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 .action-btn,
 .meta-box {
   font-family: var(--demo-font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -727,6 +731,27 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+.metric-meta-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: -2px;
+}
+.metric-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+  color: var(--demo-text-secondary);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .metric-title,
 .detail-label {
@@ -1037,6 +1062,11 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   .source-nav-main span {
     font-size: 8px;
   }
+  .source-status {
+    min-height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
 
   .metric-grid,
   .detail-grid {
@@ -1054,14 +1084,14 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   .tab-btn {
     min-height: 28px;
     padding: 0 6px;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.06em;
   }
 
   .collapse-btn,
   .action-btn {
     min-height: 28px;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.06em;
   }
 
@@ -1100,11 +1130,11 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   .meta-box {
     min-height: 22px;
     padding: 0 7px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .meta-code {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .metric-card,
@@ -1118,6 +1148,16 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 
   .metric-head {
     gap: 6px;
+  }
+  .metric-meta-inline {
+    gap: 4px;
+    margin-bottom: -1px;
+  }
+  .metric-meta-chip {
+    min-height: 18px;
+    padding: 0 6px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
   }
 
   .metric-title,

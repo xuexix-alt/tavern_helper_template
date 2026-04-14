@@ -1,5 +1,10 @@
 <template>
-  <section class="ui-host-shell" :class="{ 'is-fullscreen': isFullscreen }" :style="shellStyleVars">
+  <section
+    ref="shellRef"
+    class="ui-host-shell"
+    :class="[`layout-${shellLayoutMode.replace('_', '-')}`, { 'is-fullscreen': isFullscreen }]"
+    :style="shellStyleVars"
+  >
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
         <span class="ui-dot"></span>
@@ -7,15 +12,7 @@
       </div>
 
       <div class="ui-topbar-actions">
-        <span class="ui-online">● 在线</span>
-
-        <button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色</button>
-
-        <button type="button" class="ui-icon-btn" :class="{ active: galleryDrawerOpen }" @click="toggleGalleryDrawer">
-          画廊
-        </button>
-
-        <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
+        <span v-if="shellLayoutMode === 'wide'" class="ui-online">● 在线</span>
 
         <div ref="transcriptWindowMenuRef" class="ui-page-menu">
           <button
@@ -44,16 +41,47 @@
           </transition>
         </div>
 
-        <button
-          type="button"
-          class="ui-icon-btn ui-fullscreen-btn"
-          :class="{ 'is-active-fullscreen': isFullscreen }"
-          @click="toggleFullscreen"
-        >
-          {{ isFullscreen ? '✕ 退出全屏' : '全屏' }}
-        </button>
+        <template v-if="shellLayoutMode === 'wide'">
+          <button type="button" class="ui-icon-btn" :class="{ active: galleryDrawerOpen }" @click="toggleGalleryDrawer">
+            画廊
+          </button>
 
-        <button type="button" class="ui-icon-btn" @click="handleDisableSameLayer">关闭同层</button>
+          <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
+
+          <button
+            type="button"
+            class="ui-icon-btn ui-fullscreen-btn"
+            :class="{ 'is-active-fullscreen': isFullscreen }"
+            @click="toggleFullscreen"
+          >
+            {{ isFullscreen ? '✕ 退出全屏' : '全屏' }}
+          </button>
+
+          <button type="button" class="ui-icon-btn" @click="handleDisableSameLayer">关闭同层</button>
+        </template>
+
+        <div v-else ref="topbarMoreMenuRef" class="ui-page-menu ui-more-menu">
+          <button
+            type="button"
+            class="ui-icon-btn ui-more-trigger"
+            :class="{ active: topbarMoreMenuOpen }"
+            @click.stop="toggleTopbarMoreMenu"
+          >
+            更多
+          </button>
+
+          <transition name="toolbar-menu-fade">
+            <div v-if="topbarMoreMenuOpen" class="ui-more-menu-list clip-corner-sm">
+              <button type="button" class="ui-page-menu-item" @click="openRoleDrawerFromMoreMenu">角色</button>
+              <button type="button" class="ui-page-menu-item" @click="openGalleryDrawerFromMoreMenu">画廊</button>
+              <button type="button" class="ui-page-menu-item" @click="openSettingsFromMoreMenu">排版</button>
+              <button type="button" class="ui-page-menu-item" @click="toggleFullscreenFromMoreMenu">
+                {{ isFullscreen ? '退出全屏' : '全屏' }}
+              </button>
+              <button type="button" class="ui-page-menu-item" @click="disableSameLayerFromMoreMenu">关闭同层</button>
+            </div>
+          </transition>
+        </div>
       </div>
     </header>
 
@@ -63,7 +91,7 @@
       </transition>
 
       <button type="button" class="ui-sidebar-toggle" :class="{ open: roleDrawerOpen }" @click="toggleRoleDrawer">
-        <span class="ui-sidebar-toggle-label">[ 角色&系统 ]</span>
+        <span class="ui-sidebar-toggle-label">{{ shellLayoutMode === 'wide' ? '[ 角色&系统 ]' : '角色' }}</span>
       </button>
 
       <button
@@ -72,7 +100,7 @@
         :class="{ open: galleryDrawerOpen }"
         @click="toggleGalleryDrawer"
       >
-        <span class="ui-sidebar-toggle-label">[ 画廊&图片 ]</span>
+        <span class="ui-sidebar-toggle-label">{{ shellLayoutMode === 'wide' ? '[ 画廊&图片 ]' : '画廊' }}</span>
       </button>
 
       <aside class="ui-sidebar" :class="{ open: roleDrawerOpen }">
@@ -141,6 +169,7 @@
               :rollback-confirm-message-id="rollbackConfirmMessageId"
               :render-revision="transcriptDomRevision"
               :gallery-entries="galleryEntries"
+              :layout-mode="shellLayoutMode"
               @generate-image="handleTranscriptGenerateImage"
               @open-gallery="handleOpenGallery"
               @open-detail="openDetail"
@@ -282,6 +311,7 @@
             :choice-options="latestAssistantItem?.options ?? []"
             :role-tabs="visibleRoleTabs"
             :active-role-key="activeRoleKey"
+            :layout-mode="shellLayoutMode"
             :show-option-trigger="false"
             :show-toolbar="false"
             @submit="handleComposerSubmit"
@@ -361,7 +391,7 @@
 </template>
 
 <script setup lang="ts">
-import { useEventListener } from '@vueuse/core';
+import { useElementSize, useEventListener } from '@vueuse/core';
 import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import {
   parseGeneratedImageActivationPayload,
@@ -477,8 +507,11 @@ const {
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 const composerRef = ref<InstanceType<typeof BottomComposer> | null>(null);
+const shellRef = ref<HTMLElement | null>(null);
 const transcriptWindowMenuRef = ref<HTMLElement | null>(null);
 const transcriptWindowMenuOpen = ref(false);
+const topbarMoreMenuRef = ref<HTMLElement | null>(null);
+const topbarMoreMenuOpen = ref(false);
 const readerShellHeight = ref('720px');
 const isFullscreen = ref(false);
 provide('isFullscreen', isFullscreen);
@@ -497,9 +530,16 @@ type RoleTabItem = { key: string; label: string; statusClass?: string; statusTex
 
 const roleTabs = ref<RoleTabItem[]>([]);
 const activeRoleKey = ref<string | null>(null);
+const { width: shellWidth } = useElementSize(shellRef);
 const visibleRoleTabs = computed(() =>
   roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active'),
 );
+const shellLayoutMode = computed(() => {
+  if (shellWidth.value <= 0) return 'wide';
+  if (shellWidth.value <= 560) return 'compact';
+  if (shellWidth.value <= 839) return 'reader_desktop';
+  return 'wide';
+});
 
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
@@ -630,12 +670,14 @@ function closeRoleDrawer() {
 
 function openRoleDrawer() {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
 }
 
 function openSettingsModal() {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   settingsModalOpen.value = true;
 }
 
@@ -653,6 +695,7 @@ function closeGalleryDrawer() {
 
 function openGalleryDrawer() {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = false;
   galleryDrawerOpen.value = true;
@@ -673,6 +716,7 @@ function closeSideDrawers() {
 
 function toggleUtilityDrawer(type: 'system' | 'map') {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   closeSideDrawers();
   activeUtilityDrawer.value = activeUtilityDrawer.value === type ? null : type;
 }
@@ -683,6 +727,7 @@ function closeUtilityDrawer() {
 
 function toggleFullscreen() {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   if (document.fullscreenElement) {
     document.exitFullscreen?.();
   } else {
@@ -696,6 +741,36 @@ function exitFullscreen() {
   if (document.fullscreenElement) {
     document.exitFullscreen?.();
   }
+}
+
+function toggleTopbarMoreMenu() {
+  transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = !topbarMoreMenuOpen.value;
+}
+
+function openRoleDrawerFromMoreMenu() {
+  topbarMoreMenuOpen.value = false;
+  openRoleDrawer();
+}
+
+function openGalleryDrawerFromMoreMenu() {
+  topbarMoreMenuOpen.value = false;
+  openGalleryDrawer();
+}
+
+function openSettingsFromMoreMenu() {
+  topbarMoreMenuOpen.value = false;
+  openSettingsModal();
+}
+
+function toggleFullscreenFromMoreMenu() {
+  topbarMoreMenuOpen.value = false;
+  toggleFullscreen();
+}
+
+async function disableSameLayerFromMoreMenu() {
+  topbarMoreMenuOpen.value = false;
+  await handleDisableSameLayer();
 }
 
 function handleRosterChange(roles: RoleTabItem[]) {
@@ -721,19 +796,22 @@ function jumpToTranscriptMessage(messageId: number) {
   const targetId = Math.trunc(Number(messageId));
   if (!Number.isFinite(targetId) || targetId < 0) return;
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   transcriptListRef.value?.scrollToMessage?.(targetId, 'smooth');
   readingMode.value = 'browsing_history';
-  if (window.innerWidth <= 960) {
+  if (shellLayoutMode.value !== 'wide') {
     closeSideDrawers();
   }
 }
 
 function toggleTranscriptWindowMenu() {
+  topbarMoreMenuOpen.value = false;
   transcriptWindowMenuOpen.value = !transcriptWindowMenuOpen.value;
 }
 
 function selectTranscriptWindowPage(pageIndex: number) {
   transcriptWindowMenuOpen.value = false;
+  topbarMoreMenuOpen.value = false;
   selectTranscriptWindowPageState(pageIndex);
   if (pageIndex === 0) {
     nextTick(() => {
@@ -747,11 +825,14 @@ function selectTranscriptWindowPage(pageIndex: number) {
 }
 
 useEventListener(document, 'pointerdown', event => {
-  if (!transcriptWindowMenuOpen.value) return;
   const target = event.target as Node | null;
   if (!target) return;
-  if (transcriptWindowMenuRef.value?.contains(target)) return;
-  transcriptWindowMenuOpen.value = false;
+  if (transcriptWindowMenuOpen.value && !transcriptWindowMenuRef.value?.contains(target)) {
+    transcriptWindowMenuOpen.value = false;
+  }
+  if (topbarMoreMenuOpen.value && !topbarMoreMenuRef.value?.contains(target)) {
+    topbarMoreMenuOpen.value = false;
+  }
 });
 
 async function handleOpeningSubmit() {
@@ -1529,7 +1610,7 @@ useEventListener(window, 'keydown', event => {
 .ui-meta-pill,
 .ui-floating-trigger {
   font-family: var(--demo-font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1556,8 +1637,8 @@ useEventListener(window, 'keydown', event => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: 12px;
 }
 .ui-signal-btn.active {
@@ -1606,15 +1687,38 @@ useEventListener(window, 'keydown', event => {
   -webkit-backdrop-filter: blur(18px);
 }
 
+.ui-more-menu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 45;
+  display: grid;
+  gap: 6px;
+  min-width: 176px;
+  max-width: min(72vw, 240px);
+  padding: 8px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background) 92%, transparent),
+    color-mix(in srgb, var(--surface) 90%, transparent)
+  );
+  box-shadow:
+    0 18px 32px color-mix(in srgb, var(--shadow-color) 42%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
 .ui-page-menu-item {
-  min-height: 34px;
+  min-height: 40px;
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 0 10px;
+  padding: 0 12px;
   background: color-mix(in srgb, var(--surface) 20%, transparent);
   color: var(--demo-text-primary);
   font-family: var(--demo-font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-align: left;
@@ -1670,6 +1774,52 @@ useEventListener(window, 'keydown', event => {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+.ui-host-shell.layout-compact .ui-topbar,
+.ui-host-shell.layout-reader-desktop .ui-topbar {
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.ui-host-shell.layout-compact .ui-topbar-actions,
+.ui-host-shell.layout-reader-desktop .ui-topbar-actions {
+  width: 100%;
+  margin-left: 0;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ui-host-shell.layout-compact .ui-icon-btn,
+.ui-host-shell.layout-reader-desktop .ui-icon-btn {
+  min-height: 44px;
+  font-size: 12px;
+}
+
+.ui-host-shell.layout-compact .ui-page-menu,
+.ui-host-shell.layout-reader-desktop .ui-page-menu {
+  min-width: 0;
+}
+
+.ui-host-shell.layout-compact .ui-page-menu-trigger,
+.ui-host-shell.layout-reader-desktop .ui-page-menu-trigger {
+  min-width: 132px;
+}
+
+.ui-host-shell.layout-compact .ui-page-menu-value,
+.ui-host-shell.layout-reader-desktop .ui-page-menu-value {
+  max-width: 6.5rem;
+}
+
+.ui-host-shell.layout-compact .ui-signal-btn,
+.ui-host-shell.layout-reader-desktop .ui-signal-btn {
+  min-height: 40px;
+  font-size: 12px;
+}
+
+.ui-host-shell.layout-compact .ui-bottom-tool-row,
+.ui-host-shell.layout-reader-desktop .ui-bottom-tool-row {
+  gap: 8px;
 }
 
 @media (min-width: 761px) {
@@ -1796,23 +1946,19 @@ useEventListener(window, 'keydown', event => {
   pointer-events: none;
 }
 
-.ui-sidebar-toggle-right .ui-sidebar-toggle-label {
-  transform: none;
-}
-
 .ui-sidebar-toggle-label {
   position: static;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--demo-font-mono);
   font-size: 8px;
   line-height: 1;
   letter-spacing: 0.08em;
   color: color-mix(in srgb, var(--demo-text-accent) 56%, transparent);
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  writing-mode: horizontal-tb;
+  transform: rotate(-90deg);
+  transform-origin: center;
   text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 18%, transparent);
   white-space: nowrap;
 }
@@ -2357,7 +2503,7 @@ useEventListener(window, 'keydown', event => {
   }
 
   .ui-sidebar {
-    width: 85vw;
+    width: min(85vw, 28rem);
   }
 
   .ui-topbar,
@@ -2399,15 +2545,17 @@ useEventListener(window, 'keydown', event => {
   .ui-topbar {
     gap: 8px;
     padding: 8px 10px;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .ui-topbar-actions {
     display: flex;
-    width: 100%;
-    margin-left: 0;
+    width: auto;
+    margin-left: auto;
     justify-content: flex-end;
-    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
     gap: 6px;
   }
 
@@ -2417,16 +2565,16 @@ useEventListener(window, 'keydown', event => {
 
   .ui-icon-btn {
     min-height: 30px;
-    flex: 1 1 calc(33.333% - 4px);
+    flex: 0 0 auto;
     justify-content: center;
     min-width: 0;
     padding: 0 8px;
-    font-size: 10px;
+    font-size: 12px;
     letter-spacing: 0.08em;
   }
 
   .ui-page-menu {
-    flex: 1 1 calc(50% - 4px);
+    flex: 1 1 auto;
     min-width: 0;
   }
 
@@ -2458,11 +2606,11 @@ useEventListener(window, 'keydown', event => {
   .ui-bottom-tool-row .ui-signal-btn {
     flex: 1 1 auto;
     justify-content: center;
-    min-height: 24px;
+    min-height: 40px;
     min-width: 0;
-    padding: 0 6px;
+    padding: 0 10px;
     gap: 3px;
-    font-size: 9px;
+    font-size: 12px;
     white-space: nowrap;
   }
 
@@ -2530,23 +2678,25 @@ useEventListener(window, 'keydown', event => {
     top: auto;
     height: auto;
     max-height: min(94%, 46rem);
-    width: calc(100% - 12px);
     left: 6px;
-    right: 6px;
+    right: auto;
     bottom: 6px;
     border-radius: 22px;
-    transform: translateY(100%);
+    border-left: 0;
+    border-right: 1px solid var(--demo-border-accent-soft);
+    box-shadow: 14px 0 34px color-mix(in srgb, var(--shadow-color) 82%, transparent);
+    transform: translateX(-100%);
   }
 
   .ui-sidebar.open {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 
   .ui-sidebar-right {
-    left: 6px;
+    left: auto;
     right: 6px;
-    width: calc(100% - 12px);
-    transform: translateY(100%);
+    width: min(85vw, 28rem);
+    transform: translateX(100%);
   }
 
   .ui-sidebar-head {
@@ -2567,32 +2717,41 @@ useEventListener(window, 'keydown', event => {
     padding: 0 8px 8px;
   }
 
-  .ui-sidebar-toggle {
+  .ui-sidebar-toggle,
+  .ui-sidebar-toggle-right {
     position: fixed;
-    top: 50%;
-    left: 0;
-    width: 20px;
-    height: 112px;
-    min-height: 112px;
+    width: 18px;
+    height: 88px;
+    min-height: 88px;
     padding: 0;
-    border-radius: 0 14px 14px 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-top: 0;
     z-index: 32;
-    transform: translateY(-50%);
+    transform: none;
+  }
+
+  .ui-sidebar-toggle {
+    top: calc(50% - 96px);
+    left: 0;
+    right: auto;
+    border-radius: 0 14px 14px 0;
   }
 
   .ui-sidebar-toggle.open {
-    transform: translateY(-50%);
+    transform: none;
   }
 
   .ui-sidebar-toggle-right {
-    left: auto;
+    top: calc(50% + 8px);
     right: 0;
+    left: auto;
     border-radius: 14px 0 0 14px;
   }
 
   .ui-sidebar-toggle-right.open {
-    transform: translateY(-50%);
+    transform: none;
   }
 
   .ui-sidebar-toggle-label {
@@ -2601,6 +2760,33 @@ useEventListener(window, 'keydown', event => {
     letter-spacing: 0.06em;
     text-align: center;
   }
+}
+
+.ui-host-shell.layout-compact .ui-topbar,
+.ui-host-shell.layout-reader-desktop .ui-topbar {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.ui-host-shell.layout-compact .ui-topbar-actions,
+.ui-host-shell.layout-reader-desktop .ui-topbar-actions {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+
+.ui-host-shell.layout-compact .ui-icon-btn,
+.ui-host-shell.layout-reader-desktop .ui-icon-btn {
+  flex: 0 0 auto;
+}
+
+.ui-host-shell.layout-compact .ui-page-menu,
+.ui-host-shell.layout-reader-desktop .ui-page-menu {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ═══════════════════════════════════════════════

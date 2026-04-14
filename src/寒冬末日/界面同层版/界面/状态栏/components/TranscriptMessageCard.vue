@@ -723,7 +723,7 @@ onBeforeUnmount(() => {
   padding: 0 12px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 18%, transparent);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--demo-text-secondary);
@@ -733,7 +733,7 @@ onBeforeUnmount(() => {
 .message-shell.density-minimal .action-btn {
   min-height: 32px;
   padding: 0 10px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .action-btn {
   color: var(--demo-text-accent);
@@ -809,7 +809,7 @@ onBeforeUnmount(() => {
   .action-btn {
     min-height: 28px;
     padding: 0 8px;
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.08em;
   }
 

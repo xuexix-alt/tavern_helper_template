@@ -1,5 +1,8 @@
 <template>
-  <section class="composer-shell" :class="{ 'desktop-tool-row-mode': desktopToolRowMode }">
+  <section
+    class="composer-shell"
+    :class="[`layout-${(layoutMode ?? 'wide').replace('_', '-')}`, { 'desktop-tool-row-mode': desktopToolRowMode }]"
+  >
     <div v-if="showToolbar !== false" class="composer-toolbar">
       <div class="composer-role-tabs" role="tablist" aria-label="快速角色切换">
         <button
@@ -121,6 +124,7 @@ const props = defineProps<{
   choiceOptions?: string[];
   showOptionTrigger?: boolean;
   showToolbar?: boolean;
+  layoutMode?: 'compact' | 'reader_desktop' | 'wide';
 }>();
 
 const emit = defineEmits<{
@@ -345,6 +349,27 @@ defineExpose({
   font-size: 12px;
   font-weight: 700;
 }
+
+.composer-shell.layout-compact .composer-input-icon,
+.composer-shell.layout-reader-desktop .composer-input-icon {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 12px;
+}
+
+.composer-shell.layout-compact .send-btn,
+.composer-shell.layout-reader-desktop .send-btn {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 6px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.composer-shell.layout-compact .composer-textarea,
+.composer-shell.layout-reader-desktop .composer-textarea {
+  font-size: 14px;
+}
 .choice-modal-mask {
   position: fixed;
   inset: 0;
@@ -510,10 +535,10 @@ defineExpose({
 
   .send-btn {
     min-width: 44px;
-    min-height: 26px;
+    min-height: 44px;
     margin: 3px;
     padding: 0 8px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .choice-modal-mask {
     padding: 8px;
