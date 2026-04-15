@@ -92,15 +92,31 @@ function resolveBaseMvuData(targetMessageId: number, currentMvuData: Mvu.MvuData
   if (targetMessageId <= 0) {
     return ensureValidMvuData(currentMvuData);
   }
-  try {
-    const prevData = Mvu.getMvuData({ type: 'message', message_id: targetMessageId - 1 });
-    if (prevData && typeof prevData === 'object' && prevData !== null) {
-      return ensureValidMvuData(prevData as Mvu.MvuData);
+  const normalizedCurrent = ensureValidMvuData(currentMvuData);
+  const hasState = (data: Mvu.MvuData): boolean => {
+    const statData = data.stat_data && typeof data.stat_data === 'object' ? data.stat_data : {};
+    const initializedLorebooks =
+      data.initialized_lorebooks && typeof data.initialized_lorebooks === 'object' ? data.initialized_lorebooks : {};
+    return Object.keys(statData).length > 0 || Object.keys(initializedLorebooks).length > 0;
+  };
+  const lookupStartId = Math.max(0, targetMessageId - 1);
+  const LOOKBACK_LIMIT = 120;
+  for (let offset = 0; offset < LOOKBACK_LIMIT; offset += 1) {
+    const lookupId = lookupStartId - offset;
+    if (lookupId < 0) break;
+    try {
+      const prevData = Mvu.getMvuData({ type: 'message', message_id: lookupId });
+      if (prevData && typeof prevData === 'object' && prevData !== null) {
+        const normalizedPrev = ensureValidMvuData(prevData as Mvu.MvuData);
+        if (hasState(normalizedPrev)) {
+          return normalizedPrev;
+        }
+      }
+    } catch {
+      // ignore and keep looking backward
     }
-  } catch {
-    // ignore and fallback
   }
-  return ensureValidMvuData(currentMvuData);
+  return normalizedCurrent;
 }
 
 function ensureValidMvuData(data: Mvu.MvuData | null | undefined): Mvu.MvuData {
