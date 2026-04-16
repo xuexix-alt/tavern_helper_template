@@ -779,7 +779,7 @@ function handleRosterChange(roles: RoleTabItem[]) {
   roleTabs.value = roles;
   const visibleRoles = roles.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
   if (!activeRoleKey.value && visibleRoles[0]) activeRoleKey.value = visibleRoles[0].key;
-  if (activeRoleKey.value && !visibleRoles.some(role => role.key === activeRoleKey.value)) {
+  if (activeRoleKey.value && !roles.some(role => role.key === activeRoleKey.value)) {
     activeRoleKey.value = visibleRoles[0]?.key ?? null;
   }
 }

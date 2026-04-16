@@ -85,3 +85,17 @@ test('MvuRolePanel compresses role metadata into the source nav and order metric
   assert.doesNotMatch(source, /meta-box meta-box-code/);
   assert.doesNotMatch(source, /#\{\{ characterCode\(entry\) \}\}/);
 });
+
+test('StoryPage keeps a manually selected departed role active while it remains in the full roster', () => {
+  const source = read('../pages/StoryPage.vue');
+
+  assert.match(
+    source,
+    /if \(activeRoleKey\.value && !roles\.some\(role => role\.key === activeRoleKey\.value\)\) \{/,
+    'selected side-panel role should only reset when it leaves the full roster, not when it is merely filtered out of visible/active quick tabs',
+  );
+  assert.doesNotMatch(
+    source,
+    /if \(activeRoleKey\.value && !visibleRoles\.some\(role => role\.key === activeRoleKey\.value\)\) \{/,
+  );
+});
