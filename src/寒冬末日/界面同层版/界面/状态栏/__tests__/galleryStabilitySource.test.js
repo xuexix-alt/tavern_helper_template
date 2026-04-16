@@ -36,5 +36,8 @@ test('mobile transcript double-tap keeps the proxy chain and forwards the second
   const dispatchPlanSource = readSource('hostCoordinateTarget.ts');
 
   assert.match(dispatchPlanSource, /preferPointFallback\?: boolean;/);
-  assert.match(storyPageSource, /void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);/);
+  assert.match(
+    storyPageSource,
+    /void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);/,
+  );
 });

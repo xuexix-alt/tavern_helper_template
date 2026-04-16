@@ -859,10 +859,7 @@ function resolveHostPointFromEvent(event?: HostTriggerEvent | null): { clientX: 
     };
   }
 
-  const touch =
-    event.touches?.[0] ??
-    event.changedTouches?.[0] ??
-    null;
+  const touch = event.touches?.[0] ?? event.changedTouches?.[0] ?? null;
   if (!touch) return null;
 
   return {
@@ -887,10 +884,7 @@ function resolveHostMessageTriggerTargetFromEvent(
         if (!eventPoint) {
           return directTarget;
         }
-        const hostPoint = convertIframePointToHostPoint(
-          eventPoint,
-          { left: frameRect.left, top: frameRect.top },
-        );
+        const hostPoint = convertIframePointToHostPoint(eventPoint, { left: frameRect.left, top: frameRect.top });
 
         for (const hostWindow of collectReachableHostWindows()) {
           const hostDocument = hostWindow.document;

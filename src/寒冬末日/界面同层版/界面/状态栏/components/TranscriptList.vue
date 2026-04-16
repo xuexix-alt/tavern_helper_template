@@ -394,7 +394,8 @@ watch(itemsSignature, async (nextSignature, previousSignature) => {
     previousIds: previousSignature?.map(item => item.id) ?? [],
     nextIds: nextSignature.map(item => item.id),
   });
-  const shouldSuspendAutoFollow = props.isStreaming === true && (streamFollowSuppressed || userScrollIntentDuringStream);
+  const shouldSuspendAutoFollow =
+    props.isStreaming === true && (streamFollowSuppressed || userScrollIntentDuringStream);
   const nextStartIndex = resolveTranscriptStartIndexOnItemsChange({
     currentStartIndex: startIndex.value,
     totalItems: props.items.length,

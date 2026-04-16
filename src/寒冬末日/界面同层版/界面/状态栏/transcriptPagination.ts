@@ -20,16 +20,9 @@ export function resolveTranscriptStartIndexOnItemsChange(input: {
   return Math.min(currentStartIndex, tailStart);
 }
 
-export function didTranscriptAppendNewFloor(input: {
-  previousIds: number[];
-  nextIds: number[];
-}): boolean {
-  const previousIds = input.previousIds
-    .map(id => Math.trunc(Number(id)))
-    .filter(id => Number.isFinite(id) && id >= 0);
-  const nextIds = input.nextIds
-    .map(id => Math.trunc(Number(id)))
-    .filter(id => Number.isFinite(id) && id >= 0);
+export function didTranscriptAppendNewFloor(input: { previousIds: number[]; nextIds: number[] }): boolean {
+  const previousIds = input.previousIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0);
+  const nextIds = input.nextIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0);
 
   if (nextIds.length === 0) return false;
   if (previousIds.length === 0) return nextIds.length > 0;
