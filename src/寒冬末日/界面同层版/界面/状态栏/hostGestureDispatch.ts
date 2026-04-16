@@ -71,33 +71,43 @@ function decorateTouchEvent(event: Event, target: HTMLElement, point: HostGestur
   return event;
 }
 
-function dispatchMobileTripleTouch(target: HTMLElement, view: WindowLike, point: HostGesturePoint): boolean {
-  for (let index = 0; index < 3; index += 1) {
-    const touchStart = decorateTouchEvent(
-      new view.Event('touchstart', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      }),
-      target,
-      point,
-      'start',
-    );
-    target.dispatchEvent(touchStart);
+function dispatchMobileSingleTap(target: HTMLElement, view: WindowLike, point: HostGesturePoint): boolean {
+  const touchStart = decorateTouchEvent(
+    new view.Event('touchstart', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }),
+    target,
+    point,
+    'start',
+  );
+  target.dispatchEvent(touchStart);
 
-    const touchEnd = decorateTouchEvent(
-      new view.Event('touchend', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      }),
-      target,
-      point,
-      'end',
-    );
-    target.dispatchEvent(touchEnd);
-  }
+  const touchEnd = decorateTouchEvent(
+    new view.Event('touchend', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }),
+    target,
+    point,
+    'end',
+  );
+  target.dispatchEvent(touchEnd);
 
+  const clickEvent = new view.MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    view,
+    clientX: point.clientX,
+    clientY: point.clientY,
+    button: 0,
+    buttons: 1,
+    detail: 1,
+  });
+  target.dispatchEvent(clickEvent);
   return true;
 }
 
@@ -114,7 +124,7 @@ export function dispatchHostPrimaryTrigger(
 
     const point = resolveDispatchPoint(target, options.hostPoint ?? null);
     if (isLikelyMobileHostView(view)) {
-      return dispatchMobileTripleTouch(target, view, point);
+      return dispatchMobileSingleTap(target, view, point);
     }
 
     const dblClickEvent = new view.MouseEvent('dblclick', {

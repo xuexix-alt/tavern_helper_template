@@ -43,11 +43,11 @@ test('dispatchHostPrimaryTrigger dispatches desktop dblclick for non-mobile host
   assert.equal(dispatched[0].type, 'dblclick');
 });
 
-test('dispatchHostPrimaryTrigger dispatches mobile triple touch sequence for mobile host', () => {
+test('dispatchHostPrimaryTrigger dispatches a single tap sequence for mobile host', () => {
   const { target, dispatched } = createFakeTarget({ mobile: true });
   assert.equal(dispatchHostPrimaryTrigger(target), true);
   assert.equal(
     dispatched.map(event => event.type).join(','),
-    'touchstart,touchend,touchstart,touchend,touchstart,touchend',
+    'touchstart,touchend,click',
   );
 });
