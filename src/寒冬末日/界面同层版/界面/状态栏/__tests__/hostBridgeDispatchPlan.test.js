@@ -60,3 +60,34 @@ test('resolveHostDispatchPlanWithRetry falls back to point target only after dir
   assert.equal(directAttempts, 3);
   assert.equal(pointFallbackCalls, 1);
 });
+
+test('resolveHostDispatchPlanWithRetry prefers point fallback first when explicitly requested', async () => {
+  const directTarget = { id: 'direct-target' };
+  const pointFallbackTarget = { id: 'point-fallback' };
+  const hostPoint = { clientX: 18, clientY: 36 };
+  let directAttempts = 0;
+  let pointFallbackCalls = 0;
+
+  const plan = await resolveHostDispatchPlanWithRetry({
+    resolveDirectTarget() {
+      directAttempts += 1;
+      return directTarget;
+    },
+    resolvePointFallbackTarget() {
+      pointFallbackCalls += 1;
+      return pointFallbackTarget;
+    },
+    hostPoint,
+    preferPointFallback: true,
+    directRetry: { attempts: 3, delayMs: 0 },
+    pointRetry: { attempts: 2, delayMs: 0 },
+  });
+
+  assert.deepEqual(plan, {
+    target: pointFallbackTarget,
+    hostPoint,
+    source: 'point_fallback',
+  });
+  assert.equal(pointFallbackCalls, 1);
+  assert.equal(directAttempts, 0);
+});

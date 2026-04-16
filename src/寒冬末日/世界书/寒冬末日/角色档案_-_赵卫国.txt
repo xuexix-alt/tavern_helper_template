@@ -5,6 +5,7 @@ character:
     english: Zhao Weiguo
 
   basic_settings:
+    room: 2003
     gender: 男性
     age: 42
     height: 178cm

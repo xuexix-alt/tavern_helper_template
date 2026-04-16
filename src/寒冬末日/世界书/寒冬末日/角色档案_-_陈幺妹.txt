@@ -5,6 +5,7 @@ character:
     english: Chen Yaomei
 
   basic_settings:
+    room: 2006
     gender: 女性
     age: 21
     height: 160cm

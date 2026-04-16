@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  didTranscriptAppendNewFloor,
+  resolveReadingModeOnTranscriptScroll,
   resolveTailPageStart,
   resolveTranscriptStartIndexOnItemsChange,
+  shouldAnchorTranscriptToBottomOnItemsChange,
   shouldRevealOlderPageOnUpwardIntent,
 } from '../transcriptPagination.ts';
 
@@ -95,6 +98,92 @@ test('shouldRevealOlderPageOnUpwardIntent only fires for explicit upward overscr
       hasMoreAbove: false,
       scrollTop: 0,
       deltaY: -24,
+    }),
+    false,
+  );
+});
+
+test('resolveReadingModeOnTranscriptScroll latches browsing history during streaming as soon as the reader scrolls upward', () => {
+  assert.deepEqual(
+    resolveReadingModeOnTranscriptScroll({
+      isStreaming: true,
+      hasPendingStreamUserIntent: true,
+      streamFollowSuppressed: false,
+      isNearBottom: false,
+      currentScrollTop: 640,
+      previousScrollTop: 720,
+    }),
+    {
+      readingMode: 'browsing_history',
+      streamFollowSuppressed: true,
+      clearPendingStreamUserIntent: true,
+    },
+  );
+});
+
+test('didTranscriptAppendNewFloor only returns true when the transcript tail advances to a newer floor id', () => {
+  assert.equal(
+    didTranscriptAppendNewFloor({
+      previousIds: [5, 6, 7, 8],
+      nextIds: [6, 7, 8, 9],
+    }),
+    true,
+  );
+
+  assert.equal(
+    didTranscriptAppendNewFloor({
+      previousIds: [5, 6, 7, 8],
+      nextIds: [5, 6, 7, 8],
+    }),
+    false,
+  );
+
+  assert.equal(
+    didTranscriptAppendNewFloor({
+      previousIds: [6, 7, 8, 9],
+      nextIds: [1, 2, 3, 4],
+    }),
+    false,
+  );
+});
+
+test('resolveReadingModeOnTranscriptScroll resumes follow mode when the reader deliberately returns to the bottom during streaming', () => {
+  assert.deepEqual(
+    resolveReadingModeOnTranscriptScroll({
+      isStreaming: true,
+      hasPendingStreamUserIntent: false,
+      streamFollowSuppressed: true,
+      isNearBottom: true,
+      currentScrollTop: 900,
+      previousScrollTop: 860,
+    }),
+    {
+      readingMode: 'following_latest',
+      streamFollowSuppressed: false,
+      clearPendingStreamUserIntent: true,
+    },
+  );
+});
+
+test('shouldAnchorTranscriptToBottomOnItemsChange blocks auto-lock while a streaming scroll override is active even if the scroller is still near bottom', () => {
+  assert.equal(
+    shouldAnchorTranscriptToBottomOnItemsChange({
+      shouldFollowLatest: true,
+      isNearBottom: true,
+      isStreaming: true,
+      hasPendingStreamUserIntent: true,
+      streamFollowSuppressed: false,
+    }),
+    false,
+  );
+
+  assert.equal(
+    shouldAnchorTranscriptToBottomOnItemsChange({
+      shouldFollowLatest: false,
+      isNearBottom: true,
+      isStreaming: true,
+      hasPendingStreamUserIntent: false,
+      streamFollowSuppressed: true,
     }),
     false,
   );

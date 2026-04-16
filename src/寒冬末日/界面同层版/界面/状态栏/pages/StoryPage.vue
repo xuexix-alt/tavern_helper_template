@@ -502,6 +502,7 @@ const {
   closeDetail,
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
+  triggerImageGenerationForMessage,
   calibrateDailyRollDate,
   isCalibratingDailyRoll,
 } = useStreamingDemo();
@@ -846,17 +847,48 @@ function closeOpeningModal() {
   openingModalOpen.value = false;
 }
 
-function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: MouseEvent | null): HTMLElement | null {
+type HostTriggerEvent = MouseEvent | TouchEvent;
+
+function resolveHostPointFromEvent(event?: HostTriggerEvent | null): { clientX: number; clientY: number } | null {
+  if (!event) return null;
+
+  if (event instanceof MouseEvent) {
+    return {
+      clientX: Number(event.clientX),
+      clientY: Number(event.clientY),
+    };
+  }
+
+  const touch =
+    event.touches?.[0] ??
+    event.changedTouches?.[0] ??
+    null;
+  if (!touch) return null;
+
+  return {
+    clientX: Number(touch.clientX),
+    clientY: Number(touch.clientY),
+  };
+}
+
+function resolveHostMessageTriggerTargetFromEvent(
+  messageId: number,
+  event?: HostTriggerEvent | null,
+  options: { preferPointTarget?: boolean } = {},
+): HTMLElement | null {
   const directTarget = resolveHostMessageTriggerTarget(messageId);
-  if (directTarget) return directTarget;
 
   if (event) {
     try {
       const frameElement = window.frameElement as HTMLElement | null;
       const frameRect = frameElement?.getBoundingClientRect?.();
       if (frameRect) {
+        const eventPoint = resolveHostPointFromEvent(event);
+        if (!eventPoint) {
+          return directTarget;
+        }
         const hostPoint = convertIframePointToHostPoint(
-          { clientX: event.clientX, clientY: event.clientY },
+          eventPoint,
           { left: frameRect.left, top: frameRect.top },
         );
 
@@ -871,6 +903,7 @@ function resolveHostMessageTriggerTargetFromEvent(messageId: number, event?: Mou
     }
   }
 
+  if (options.preferPointTarget === true) return directTarget;
   return resolveHostMessageTriggerTarget(messageId);
 }
 
@@ -1167,19 +1200,25 @@ function dispatchHostDoubleClick(
 }
 
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
+  return proxyImageMenuToHostWithOptions(item, event, { preferPointTarget: event != null });
+}
+
+async function proxyImageMenuToHostWithOptions(
+  item: TranscriptItem,
+  event?: HostTriggerEvent | null,
+  options: { preferPointTarget?: boolean } = {},
+) {
   const messageId = Math.trunc(Number(item?.message_id));
   if (!Number.isFinite(messageId) || messageId < 0) return;
   await withHostTranscriptVisible(async () => {
     const hostPoint = (() => {
-      if (!event) return null;
+      const eventPoint = resolveHostPointFromEvent(event);
+      if (!eventPoint) return null;
       try {
         const frameElement = window.frameElement as HTMLElement | null;
         const frameRect = frameElement?.getBoundingClientRect?.();
         if (!frameRect) return null;
-        return convertIframePointToHostPoint(
-          { clientX: event.clientX, clientY: event.clientY },
-          { left: frameRect.left, top: frameRect.top },
-        );
+        return convertIframePointToHostPoint(eventPoint, { left: frameRect.left, top: frameRect.top });
       } catch {
         return null;
       }
@@ -1187,8 +1226,10 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
 
     const dispatchPlan = await resolveHostDispatchPlanWithRetry({
       resolveDirectTarget: () => resolveHostMessageTriggerTarget(messageId),
-      resolvePointFallbackTarget: () => resolveHostMessageTriggerTargetFromEvent(messageId, event),
+      resolvePointFallbackTarget: () =>
+        resolveHostMessageTriggerTargetFromEvent(messageId, event, { preferPointTarget: options.preferPointTarget }),
       hostPoint,
+      preferPointFallback: options.preferPointTarget === true && hostPoint != null,
       directRetry: {
         attempts: 8,
         delayMs: 80,
@@ -1213,7 +1254,11 @@ async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | n
 
 let imageGenerationLock = false;
 
-async function startTranscriptHostImageProxy(messageId: number, event?: MouseEvent | null) {
+async function startTranscriptHostImageProxy(
+  messageId: number,
+  event?: HostTriggerEvent | null,
+  options: { preferPointTarget?: boolean } = {},
+) {
   if (imageGenerationLock) return;
   imageGenerationLock = true;
   try {
@@ -1222,7 +1267,7 @@ async function startTranscriptHostImageProxy(messageId: number, event?: MouseEve
       console.warn('[image] mes_text 注入失败，mesid:', messageId);
     }
     beginPendingImageTask(messageId);
-    void proxyImageMenuToHost({ message_id: messageId } as TranscriptItem, event ?? null);
+    void proxyImageMenuToHostWithOptions({ message_id: messageId } as TranscriptItem, event ?? null, options);
   } finally {
     setTimeout(() => {
       imageGenerationLock = false;
@@ -1292,13 +1337,11 @@ function hoistPluginMenuIntoFullscreen(): void {
   setTimeout(() => observer.disconnect(), 300);
 }
 
-async function handleTranscriptGenerateImage(input: number | { messageId: number; triggerEvent?: MouseEvent }) {
-  const messageId = typeof input === 'number' ? input : input.messageId;
-  const triggerEvent = typeof input === 'number' ? null : (input.triggerEvent ?? null);
+async function handleTranscriptGenerateImage(messageId: number) {
   if (document.fullscreenElement) {
     hoistPluginMenuIntoFullscreen();
   }
-  await startTranscriptHostImageProxy(messageId, triggerEvent ?? null);
+  await triggerImageGenerationForMessage(messageId);
 }
 
 function handleOpenGallery(_messageId: number) {
@@ -1459,7 +1502,7 @@ useEventListener(
       mobileBridgeSuppressUntilMs = now + 1200;
       mobileBridgeSuppressMessageId = messageId;
       // 与桌面端对齐：预热 mes_text + 挂起任务 + 改道宿主 mes_text
-      void startTranscriptHostImageProxy(messageId);
+      void startTranscriptHostImageProxy(messageId, event, { preferPointTarget: true });
     }
 
     touchStartTime = now;

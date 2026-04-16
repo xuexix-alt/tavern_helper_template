@@ -1,4 +1,4 @@
-import { resolveWithRetry } from './hostBridge';
+import { resolveWithRetry } from './hostBridge.ts';
 
 type PointLike = {
   clientX: number;
@@ -33,6 +33,7 @@ type HostDispatchPlanRetryInput = {
   resolveDirectTarget: () => ElementLike | null | undefined;
   resolvePointFallbackTarget?: (() => ElementLike | null | undefined) | null;
   hostPoint?: PointLike | null;
+  preferPointFallback?: boolean;
   directRetry?: RetryLike;
   pointRetry?: RetryLike;
 };
@@ -122,6 +123,17 @@ export function resolveHostDispatchPlan(input: HostDispatchPlanInput): HostDispa
 }
 
 export async function resolveHostDispatchPlanWithRetry(input: HostDispatchPlanRetryInput): Promise<HostDispatchPlan> {
+  if (input.preferPointFallback === true && input.resolvePointFallbackTarget) {
+    const pointFallbackTarget = await resolveWithRetry(input.resolvePointFallbackTarget, input.pointRetry);
+    if (pointFallbackTarget) {
+      return resolveHostDispatchPlan({
+        directTarget: null,
+        pointFallbackTarget,
+        hostPoint: input.hostPoint ?? null,
+      });
+    }
+  }
+
   const directTarget = await resolveWithRetry(input.resolveDirectTarget, input.directRetry);
   if (directTarget) {
     return resolveHostDispatchPlan({

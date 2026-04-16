@@ -20,20 +20,21 @@ test('gallery refs are built from native-first membership instead of raw prompt 
   assert.doesNotMatch(source, /for \(let i = 0; i < promptTokens\.length; i\+\+\)/);
 });
 
-test('mobile transcript image FAB forwards the click event to the host-point proxy path', () => {
+test('transcript image FAB restores the historical direct trigger path instead of reusing the proxy chain', () => {
   const transcriptListSource = readSource('components/TranscriptList.vue');
   const storyPageSource = readSource('pages/StoryPage.vue');
 
   assert.match(transcriptListSource, /@click="handleImageButtonClick\(item\.message_id, \$event\)"/);
-  assert.match(
-    transcriptListSource,
-    /\(event: 'generate-image', payload: \{ messageId: number; triggerEvent\?: MouseEvent \}\): void;/,
-  );
-  assert.match(transcriptListSource, /emit\('generate-image', \{ messageId, triggerEvent: event \}\);/);
-  assert.match(
-    storyPageSource,
-    /async function handleTranscriptGenerateImage\(input: number \| \{ messageId: number; triggerEvent\?: MouseEvent \}\)/,
-  );
-  assert.match(storyPageSource, /await startTranscriptHostImageProxy\(messageId, triggerEvent \?\? null\);/);
-  assert.doesNotMatch(storyPageSource, /await triggerImageGenerationForMessage\(messageId\);/);
+  assert.match(transcriptListSource, /\(event: 'generate-image', messageId: number\): void;/);
+  assert.match(transcriptListSource, /emit\('generate-image', messageId\);/);
+  assert.match(storyPageSource, /async function handleTranscriptGenerateImage\(messageId: number\)/);
+  assert.match(storyPageSource, /await triggerImageGenerationForMessage\(messageId\);/);
+});
+
+test('mobile transcript double-tap keeps the proxy chain and forwards the second touch event through the mobile path', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+  const dispatchPlanSource = readSource('hostCoordinateTarget.ts');
+
+  assert.match(dispatchPlanSource, /preferPointFallback\?: boolean;/);
+  assert.match(storyPageSource, /void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);/);
 });

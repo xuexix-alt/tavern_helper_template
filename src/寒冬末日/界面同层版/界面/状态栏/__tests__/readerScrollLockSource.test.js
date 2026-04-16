@@ -31,3 +31,27 @@ test('useStreamingDemo derives the reading-mode label from readingMode so the UI
     /const readingModeLabel = computed\(\(\) => \(followLatest\.value \? '跟随最新' : '浏览历史'\)\);/,
   );
 });
+
+test('TranscriptList keeps a local stream follow suppression latch so token updates cannot re-lock to bottom before parent reading mode sync lands', () => {
+  const source = read('../components/TranscriptList.vue');
+
+  assert.match(source, /let streamFollowSuppressed = false;/);
+  assert.match(source, /const appendedNewFloor = didTranscriptAppendNewFloor\(/);
+  assert.match(
+    source,
+    /const shouldSuspendAutoFollow = props\.isStreaming === true && \(streamFollowSuppressed \|\| userScrollIntentDuringStream\);/,
+  );
+  assert.match(
+    source,
+    /shouldFollowLatest: props\.shouldFollowLatest === true && appendedNewFloor && !shouldSuspendAutoFollow,/,
+  );
+  assert.match(
+    source,
+    /const shouldAnchorBottom =[\s\S]*appendedNewFloor[\s\S]*shouldAnchorTranscriptToBottomOnItemsChange\(/,
+  );
+  assert.match(
+    source,
+    /isNearBottom: false,/,
+    'token updates to the current floor should no longer treat near-bottom as permission to auto-lock; only a newly appended floor may drag the reader once',
+  );
+});

@@ -4,6 +4,7 @@ character:
     chinese: 慕小小
 
   basic_settings:
+    room: 2008
     gender: 女性
     age: 32
     height: 172cm

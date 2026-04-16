@@ -97,8 +97,11 @@
 import { useThrottleFn } from '@vueuse/core';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import {
+  didTranscriptAppendNewFloor,
+  resolveReadingModeOnTranscriptScroll,
   resolveTailPageStart,
   resolveTranscriptStartIndexOnItemsChange,
+  shouldAnchorTranscriptToBottomOnItemsChange,
   shouldRevealOlderPageOnUpwardIntent,
 } from '../transcriptPagination';
 import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
@@ -127,7 +130,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
-  (event: 'generate-image', payload: { messageId: number; triggerEvent?: MouseEvent }): void;
+  (event: 'generate-image', messageId: number): void;
   (event: 'open-gallery', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
@@ -151,6 +154,8 @@ let touchStartY: number | null = null;
 let revealedDuringTouchGesture = false;
 let loadingMoreAbove = false;
 let userScrollIntentDuringStream = false;
+let streamFollowSuppressed = false;
+let lastObservedScrollTop = 0;
 
 const visibleItems = computed(() => props.items.slice(startIndex.value));
 const hasMoreAbove = computed(() => startIndex.value > 0);
@@ -193,12 +198,20 @@ const handleScroll = useThrottleFn(() => {
   const el = listRef.value;
   if (!el) return;
   emitScrollState(el);
-  if (props.isStreaming === true && userScrollIntentDuringStream) {
+  const nextReadingState = resolveReadingModeOnTranscriptScroll({
+    isStreaming: props.isStreaming === true,
+    hasPendingStreamUserIntent: userScrollIntentDuringStream,
+    streamFollowSuppressed,
+    isNearBottom: isNearBottom(el),
+    currentScrollTop: el.scrollTop,
+    previousScrollTop: lastObservedScrollTop,
+  });
+  lastObservedScrollTop = el.scrollTop;
+  streamFollowSuppressed = nextReadingState.streamFollowSuppressed;
+  if (nextReadingState.clearPendingStreamUserIntent) {
     userScrollIntentDuringStream = false;
-    emit('reading-mode-change', 'browsing_history');
-    return;
   }
-  emit('reading-mode-change', isNearBottom(el) ? 'following_latest' : 'browsing_history');
+  emit('reading-mode-change', nextReadingState.readingMode);
 }, 80);
 
 function handleWheel(event: WheelEvent) {
@@ -218,8 +231,8 @@ function handleWheel(event: WheelEvent) {
   }
 }
 
-function handleMouseDown() {
-  if (props.isStreaming === true) {
+function handleMouseDown(event: MouseEvent) {
+  if (props.isStreaming === true && event.target === event.currentTarget) {
     userScrollIntentDuringStream = true;
   }
 }
@@ -259,15 +272,15 @@ function openDetail(item: TranscriptItem) {
 }
 
 function handleNestedGenerateImage(messageId: number) {
-  emit('generate-image', { messageId });
+  emit('generate-image', messageId);
 }
 
-function handleImageButtonClick(messageId: number, event: MouseEvent) {
+function handleImageButtonClick(messageId: number, _event: MouseEvent) {
   const count = messageImageCount(messageId);
   if (count > 0) {
     emit('open-gallery', messageId);
   } else {
-    emit('generate-image', { messageId, triggerEvent: event });
+    emit('generate-image', messageId);
   }
 }
 
@@ -278,24 +291,33 @@ function messageImageCount(messageId: number): number {
 function scrollToLatest(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
+  userScrollIntentDuringStream = false;
+  streamFollowSuppressed = false;
   el.scrollTo({ top: el.scrollHeight, behavior });
   emitScrollState(el);
+  lastObservedScrollTop = el.scrollTop;
   emit('reading-mode-change', 'following_latest');
 }
 
 function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
+  userScrollIntentDuringStream = false;
+  streamFollowSuppressed = false;
   el.scrollTo({ top: el.scrollHeight, behavior });
   emitScrollState(el);
+  lastObservedScrollTop = el.scrollTop;
   emit('reading-mode-change', 'following_latest');
 }
 
 function scrollToTop(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
+  userScrollIntentDuringStream = false;
+  streamFollowSuppressed = props.isStreaming === true;
   el.scrollTo({ top: 0, behavior });
   emitScrollState(el);
+  lastObservedScrollTop = el.scrollTop;
   emit('reading-mode-change', 'browsing_history');
 }
 
@@ -351,7 +373,10 @@ async function scrollToMessage(messageId: number, behavior: ScrollBehavior = 'sm
     top: Math.max(0, entry.offsetTop - 12),
     behavior,
   });
+  userScrollIntentDuringStream = false;
+  streamFollowSuppressed = props.isStreaming === true;
   emitScrollState(el);
+  lastObservedScrollTop = el.scrollTop;
   return true;
 }
 
@@ -363,20 +388,36 @@ const itemsSignature = computed(() =>
   })),
 );
 
-watch(itemsSignature, async () => {
+watch(itemsSignature, async (nextSignature, previousSignature) => {
   const el = listRef.value;
+  const appendedNewFloor = didTranscriptAppendNewFloor({
+    previousIds: previousSignature?.map(item => item.id) ?? [],
+    nextIds: nextSignature.map(item => item.id),
+  });
+  const shouldSuspendAutoFollow = props.isStreaming === true && (streamFollowSuppressed || userScrollIntentDuringStream);
   const nextStartIndex = resolveTranscriptStartIndexOnItemsChange({
     currentStartIndex: startIndex.value,
     totalItems: props.items.length,
     pageSize: PAGE_SIZE,
-    shouldFollowLatest: props.shouldFollowLatest === true,
-    isNearBottom: el ? isNearBottom(el) : false,
+    shouldFollowLatest: props.shouldFollowLatest === true && appendedNewFloor && !shouldSuspendAutoFollow,
+    isNearBottom: false,
   });
-  const shouldAnchorBottom = props.shouldFollowLatest === true || (el ? isNearBottom(el) : false);
+  const shouldAnchorBottom =
+    appendedNewFloor &&
+    shouldAnchorTranscriptToBottomOnItemsChange({
+      shouldFollowLatest: props.shouldFollowLatest === true,
+      isNearBottom: false,
+      isStreaming: props.isStreaming === true,
+      hasPendingStreamUserIntent: userScrollIntentDuringStream,
+      streamFollowSuppressed,
+    });
   startIndex.value = nextStartIndex;
   await nextTick();
   if (el && shouldAnchorBottom) {
+    userScrollIntentDuringStream = false;
+    streamFollowSuppressed = false;
     el.scrollTop = el.scrollHeight;
+    lastObservedScrollTop = el.scrollTop;
     emit('reading-mode-change', 'following_latest');
   }
   if (el) {
@@ -384,12 +425,23 @@ watch(itemsSignature, async () => {
   }
 });
 
+watch(
+  () => props.shouldFollowLatest,
+  value => {
+    if (value === true) {
+      userScrollIntentDuringStream = false;
+      streamFollowSuppressed = false;
+    }
+  },
+);
+
 onMounted(async () => {
   startIndex.value = resolveTailPageStart(props.items.length, PAGE_SIZE);
   await nextTick();
   const el = listRef.value;
   if (!el) return;
   el.scrollTop = el.scrollHeight;
+  lastObservedScrollTop = el.scrollTop;
   emitScrollState(el);
 });
 

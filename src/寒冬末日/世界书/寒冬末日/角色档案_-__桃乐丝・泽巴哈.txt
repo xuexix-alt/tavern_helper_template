@@ -3,6 +3,7 @@ character:
   name:
     japanese: 桃乐丝・泽巴哈 (Dolores Zabah)
   basic_settings:
+    room: 1902
     gender: 女性
     age: 不明（外表看起来像高中生）
     height: 163cm

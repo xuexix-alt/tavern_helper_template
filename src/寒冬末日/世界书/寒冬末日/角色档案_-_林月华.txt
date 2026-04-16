@@ -5,6 +5,7 @@ character:
     english: Lin Yuehua
 
   basic_settings:
+    room: 2003
     gender: 女性
     age: 40
     height: 162cm
