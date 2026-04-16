@@ -1358,7 +1358,9 @@ export function useStreamingDemo() {
     });
   }
 
-  const followLatest = computed(() => transcriptWindowMode.value === 'latest');
+  const followLatest = computed(
+    () => transcriptWindowMode.value === 'latest' && readingMode.value === 'following_latest',
+  );
 
   const readingModeLabel = computed(() => (followLatest.value ? '跟随最新' : '浏览历史'));
 
