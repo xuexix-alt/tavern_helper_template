@@ -15,7 +15,10 @@ test('same-layer user creation inherits latest mvu snapshot instead of fragile -
   const source = read('../useStreamingDemo.ts');
   assert.match(source, /function resolveInheritedUserMessageData\(\)/);
   assert.match(source, /Mvu\.getMvuData\(\{ type: 'message', message_id: Math\.trunc\(latestMessageId\) \}\)/);
-  assert.match(source, /await createChatMessages\(\[\{ role: 'user', message: prompt, is_hidden: false, data: userData \}\]/);
+  assert.match(
+    source,
+    /await createChatMessages\(\[\{ role: 'user', message: prompt, is_hidden: false, data: userData \}\]/,
+  );
   assert.doesNotMatch(source, /callHostGetChatMessages\(-2,\s*\{ hide_state: 'all' \}\)/);
 });
 
