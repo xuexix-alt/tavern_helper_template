@@ -1,5 +1,6 @@
 <output_format>${**每次回复必须至少有以下格式，禁止遗漏标签，禁止标签顺序错误**}
-<thinking> …… </thinking> <criteria> [遵循<criteria_requirements>要求的分析] </criteria>
+<thinking> …… </thinking>
+<criteria> ${**遵循<criteria_requirements>要求的分析**} </criteria>
 <content>
 </content>
 <option>

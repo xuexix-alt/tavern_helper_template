@@ -1,7 +1,8 @@
 <criteria_requirements>
-正文开始前需要对齐以下世界约束和剧情规则。
+剧情正文开始前，需要对齐以下世界约束和剧情规则并按<criteria>进行输出。
 “变量”定义：<status_current_variable>的值作为真相来源驱动正文剧情，变量的变化需反应到正文中
-rule：在生成任何正文剧情之前，你必须先完成<criteria>思考
+rule：在生成任何正文剧情之前，你必须先输出并完成<criteria>思考：
+<criteria>
 
 <criteria>
 ---

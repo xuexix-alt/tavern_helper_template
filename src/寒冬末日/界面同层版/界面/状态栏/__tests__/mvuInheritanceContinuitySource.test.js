@@ -22,6 +22,26 @@ test('same-layer user creation inherits latest mvu snapshot instead of fragile -
   assert.doesNotMatch(source, /callHostGetChatMessages\(-2,\s*\{ hide_state: 'all' \}\)/);
 });
 
+test('opening detached assistant placeholder inherits initialized container mvu data before generation', () => {
+  const source = read('../useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const inheritanceSourceMessage = latestMessage \?\? readActiveContainerMessage\(\);/,
+    'opening has no post-container user floor yet, so inheritance must fall back to the initialized 0-floor container',
+  );
+  assert.match(
+    source,
+    /async function createAssistantPlaceholder\(\)[\s\S]*const assistantData = resolveInheritedUserMessageData\(\);/,
+    'opening assistant placeholder should read inherited MVU data before detached generation writes the final text',
+  );
+  assert.match(
+    source,
+    /\{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage\('', 'stream'\), data: assistantData \}/,
+    'opening assistant placeholder should carry inherited MVU data before detached generation writes the final text',
+  );
+});
+
 test('mvu reprocess base lookup scans backward for non-empty state to avoid accidental re-init', () => {
   const source = read('../../../../mvu_reprocess.ts');
   assert.match(source, /const LOOKBACK_LIMIT = 120/);

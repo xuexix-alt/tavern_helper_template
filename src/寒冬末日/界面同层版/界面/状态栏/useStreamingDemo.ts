@@ -176,6 +176,7 @@ type BaseChatMessage = {
   role: 'assistant' | 'user' | 'system';
   message: string;
   is_hidden: boolean;
+  data?: unknown;
 };
 
 function applyRegexForDisplay(text: string, role: TranscriptItem['role']): string {
@@ -2328,6 +2329,7 @@ export function useStreamingDemo() {
             role: resolveHostMessageRole(message),
             message: String(message?.mes ?? message?.message ?? ''),
             is_hidden: message?.is_hidden === true,
+            data: message?.data,
           };
         }).filter(Boolean);
         if (messages.length > 0) return messages;
@@ -2349,13 +2351,20 @@ export function useStreamingDemo() {
     );
   }
 
+  function readActiveContainerMessage(): BaseChatMessage | null {
+    const containerId = getActiveContainerMessageId();
+    if (containerId == null) return null;
+    return readAllChatMessagesRaw().find(item => item.message_id === containerId) ?? null;
+  }
+
   function resolveInheritedUserMessageData(): Record<string, unknown> {
     const messages = readMessagesAfterContainer()
       .filter(item => Number.isFinite(item.message_id))
       .sort((a, b) => a.message_id - b.message_id);
     const latestMessage = messages[messages.length - 1];
-    const inherited = sanitizeInheritedMessageData(latestMessage?.data);
-    const latestMessageId = Number(latestMessage?.message_id);
+    const inheritanceSourceMessage = latestMessage ?? readActiveContainerMessage();
+    const inherited = sanitizeInheritedMessageData(inheritanceSourceMessage?.data);
+    const latestMessageId = Number(inheritanceSourceMessage?.message_id);
     if (!Number.isFinite(latestMessageId) || latestMessageId < 0) {
       return inherited;
     }
@@ -3864,9 +3873,13 @@ export function useStreamingDemo() {
 
   async function createAssistantPlaceholder() {
     const traceId = resolveTraceId('placeholder');
-    await createChatMessages([{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage('', 'stream') }], {
-      refresh: 'none',
-    });
+    const assistantData = resolveInheritedUserMessageData();
+    await createChatMessages(
+      [{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage('', 'stream'), data: assistantData }],
+      {
+        refresh: 'none',
+      },
+    );
     const id = Number(getLastMessageId?.());
     assistantMessageId.value = Number.isFinite(id) ? Math.trunc(id) : null;
     latestPatchedMessage = '';
