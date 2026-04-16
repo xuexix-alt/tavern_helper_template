@@ -157,6 +157,7 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-amber',
 ] as const;
 const TRANSCRIPT_UI_WINDOW_SIZE = 4;
+const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -1392,6 +1393,9 @@ export function useStreamingDemo() {
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
+  let streamTranscriptPatchTimer = 0;
+  let streamTranscriptPatchDirty = false;
+  let streamTranscriptPatchRunning = false;
   let generatedImageDomObserver: MutationObserver | null = null;
   let hostPluginMutationObservers: MutationObserver[] = [];
   let lifecycleEchoSuppressUntilMs = 0;
@@ -2070,6 +2074,7 @@ export function useStreamingDemo() {
   }
 
   function clearGenerationListeners() {
+    cancelScheduledStreamTranscriptPatch();
     generationStops.forEach(stop => stop?.stop?.());
     generationStops = [];
     generationListenerEpochController.invalidate();
@@ -3004,6 +3009,50 @@ export function useStreamingDemo() {
     queuePersistReaderChatState();
   }
 
+  function queueNextStreamTranscriptPatch() {
+    if (streamTranscriptPatchTimer || streamTranscriptPatchRunning) return;
+    streamTranscriptPatchTimer = window.setTimeout(() => {
+      streamTranscriptPatchTimer = 0;
+      void flushScheduledStreamTranscriptPatch();
+    }, STREAM_TRANSCRIPT_PATCH_INTERVAL_MS);
+  }
+
+  function scheduleStreamTranscriptPatch() {
+    streamTranscriptPatchDirty = true;
+    queueNextStreamTranscriptPatch();
+  }
+
+  function cancelScheduledStreamTranscriptPatch() {
+    if (streamTranscriptPatchTimer) {
+      window.clearTimeout(streamTranscriptPatchTimer);
+      streamTranscriptPatchTimer = 0;
+    }
+    streamTranscriptPatchDirty = false;
+  }
+
+  async function flushScheduledStreamTranscriptPatch() {
+    if (streamTranscriptPatchTimer) {
+      window.clearTimeout(streamTranscriptPatchTimer);
+      streamTranscriptPatchTimer = 0;
+    }
+    if (streamTranscriptPatchRunning) {
+      streamTranscriptPatchDirty = true;
+      return;
+    }
+    if (!streamTranscriptPatchDirty) return;
+
+    streamTranscriptPatchDirty = false;
+    streamTranscriptPatchRunning = true;
+    try {
+      await patchAssistantMessage('stream');
+    } finally {
+      streamTranscriptPatchRunning = false;
+      if (streamTranscriptPatchDirty && busy.value && status.value === 'streaming') {
+        queueNextStreamTranscriptPatch();
+      }
+    }
+  }
+
   async function patchAssistantMessage(phase: 'stream' | 'done') {
     const messageId = assistantMessageId.value;
     const traceId = resolveTraceId('patch');
@@ -3231,6 +3280,7 @@ export function useStreamingDemo() {
     assistantMessageId.value = null;
     latestPatchedMessage = '';
     hostMesTextPrimedForCurrentGeneration = false;
+    cancelScheduledStreamTranscriptPatch();
     bindGenerationEvents();
     recordLifecycleTrace(
       'runGenerationFlow',
@@ -3325,6 +3375,7 @@ export function useStreamingDemo() {
 
       finalText.value = result;
       status.value = 'persisting';
+      cancelScheduledStreamTranscriptPatch();
       if (
         shouldEnsureAssistantPlaceholderBeforeFinalize({
           assistantMessageId: assistantMessageId.value,
@@ -3402,6 +3453,7 @@ export function useStreamingDemo() {
       if (assistantMessageId.value != null) {
         finalText.value = `生成失败：${errorText.value}`;
         try {
+          cancelScheduledStreamTranscriptPatch();
           await patchAssistantMessage('done');
         } catch {
           // ignore
@@ -3770,9 +3822,8 @@ export function useStreamingDemo() {
               })
             ) {
               await ensureAssistantPlaceholderReady('first_token');
-              return;
             }
-            await patchAssistantMessage('stream');
+            scheduleStreamTranscriptPatch();
           })();
         }),
       );

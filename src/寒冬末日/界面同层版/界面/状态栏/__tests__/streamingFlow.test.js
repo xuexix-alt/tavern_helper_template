@@ -152,3 +152,40 @@ test('stream-demo wrapped assistant streaming also uses displayed-message html f
     'stream-demo assistant streaming should render extracted content through displayed-message html so regenerate/send flows do not expose regex code',
   );
 });
+
+test('incremental stream tokens are coalesced before patching host chat and transcript html', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'bindGenerationEvents');
+
+  assert.match(
+    source,
+    /const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;/,
+    'streaming should have an explicit low-latency coalescing interval instead of patching every token',
+  );
+  assert.match(
+    source,
+    /function scheduleStreamTranscriptPatch\(/,
+    'streaming should schedule a coalesced transcript patch for token bursts',
+  );
+  assert.match(
+    body,
+    /scheduleStreamTranscriptPatch\(\);/,
+    'incremental token listener should schedule a coalesced patch',
+  );
+  assert.doesNotMatch(
+    body,
+    /await patchAssistantMessage\('stream'\);/,
+    'incremental token listener should not write host chat and rebuild html once per token',
+  );
+});
+
+test('finalization cancels any pending coalesced stream patch before writing the done message', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(
+    body,
+    /cancelScheduledStreamTranscriptPatch\(\);[\s\S]*await patchAssistantMessage\('done'\);/,
+    'done patch should not race with a delayed stream patch after generation has completed',
+  );
+});

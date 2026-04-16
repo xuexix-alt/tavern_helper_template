@@ -5,6 +5,7 @@ const { dispatchHostPrimaryTrigger } = require('../hostGestureDispatch.ts');
 
 function createFakeTarget({ mobile = false } = {}) {
   const dispatched = [];
+  const timers = [];
   class FakeEvent {
     constructor(type, init = {}) {
       this.type = type;
@@ -20,6 +21,10 @@ function createFakeTarget({ mobile = false } = {}) {
     navigator: { maxTouchPoints: mobile ? 5 : 0 },
     innerWidth: mobile ? 390 : 1280,
     ontouchstart: mobile ? () => {} : undefined,
+    setTimeout(callback, delayMs) {
+      timers.push({ callback, delayMs });
+      return timers.length;
+    },
   };
 
   const target = {
@@ -33,7 +38,7 @@ function createFakeTarget({ mobile = false } = {}) {
     },
   };
 
-  return { target, dispatched };
+  return { target, dispatched, timers };
 }
 
 test('dispatchHostPrimaryTrigger dispatches desktop dblclick for non-mobile host', () => {
@@ -43,8 +48,17 @@ test('dispatchHostPrimaryTrigger dispatches desktop dblclick for non-mobile host
   assert.equal(dispatched[0].type, 'dblclick');
 });
 
-test('dispatchHostPrimaryTrigger dispatches a single tap sequence for mobile host', () => {
-  const { target, dispatched } = createFakeTarget({ mobile: true });
+test('dispatchHostPrimaryTrigger dispatches the plugin click-trigger triple tap sequence for mobile message text', () => {
+  const { target, dispatched, timers } = createFakeTarget({ mobile: true });
   assert.equal(dispatchHostPrimaryTrigger(target), true);
-  assert.equal(dispatched.map(event => event.type).join(','), 'touchstart,touchend,click');
+  assert.equal(dispatched.map(event => event.type).join(','), 'touchstart,touchend');
+  assert.deepEqual(
+    timers.map(timer => timer.delayMs),
+    [80, 160],
+  );
+  timers.forEach(timer => timer.callback());
+  assert.equal(
+    dispatched.map(event => event.type).join(','),
+    'touchstart,touchend,touchstart,touchend,touchstart,touchend',
+  );
 });
