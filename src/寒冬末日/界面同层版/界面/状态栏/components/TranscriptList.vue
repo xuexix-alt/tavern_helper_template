@@ -5,6 +5,7 @@
       class="transcript-scroller"
       @scroll="handleScroll"
       @wheel.passive="handleWheel"
+      @mousedown="handleMouseDown"
       @touchstart.passive="handleTouchStart"
       @touchmove.passive="handleTouchMove"
       @touchend.passive="resetTouchGestureState"
@@ -110,6 +111,7 @@ const props = defineProps<{
   fontMode: ReaderFontMode;
   busy: boolean;
   shouldFollowLatest?: boolean;
+  isStreaming?: boolean;
   openingExpanded?: boolean;
   latestUserMessageId?: number | null;
   editingUserMessageId?: number | null;
@@ -148,6 +150,7 @@ const startIndex = ref(0);
 let touchStartY: number | null = null;
 let revealedDuringTouchGesture = false;
 let loadingMoreAbove = false;
+let userScrollIntentDuringStream = false;
 
 const visibleItems = computed(() => props.items.slice(startIndex.value));
 const hasMoreAbove = computed(() => startIndex.value > 0);
@@ -190,12 +193,20 @@ const handleScroll = useThrottleFn(() => {
   const el = listRef.value;
   if (!el) return;
   emitScrollState(el);
+  if (props.isStreaming === true && userScrollIntentDuringStream) {
+    userScrollIntentDuringStream = false;
+    emit('reading-mode-change', 'browsing_history');
+    return;
+  }
   emit('reading-mode-change', isNearBottom(el) ? 'following_latest' : 'browsing_history');
 }, 80);
 
 function handleWheel(event: WheelEvent) {
   const el = listRef.value;
   if (!el) return;
+  if (props.isStreaming === true && Math.abs(event.deltaY) > 0.1) {
+    userScrollIntentDuringStream = true;
+  }
   if (
     shouldRevealOlderPageOnUpwardIntent({
       hasMoreAbove: hasMoreAbove.value,
@@ -204,6 +215,12 @@ function handleWheel(event: WheelEvent) {
     })
   ) {
     void loadMoreAbove();
+  }
+}
+
+function handleMouseDown() {
+  if (props.isStreaming === true) {
+    userScrollIntentDuringStream = true;
   }
 }
 
@@ -217,6 +234,9 @@ function handleTouchMove(event: TouchEvent) {
   const el = listRef.value;
   const currentY = event.touches[0]?.clientY ?? null;
   if (!el || touchStartY == null || currentY == null) return;
+  if (props.isStreaming === true && Math.abs(currentY - touchStartY) > 0.5) {
+    userScrollIntentDuringStream = true;
+  }
   if (
     shouldRevealOlderPageOnUpwardIntent({
       hasMoreAbove: hasMoreAbove.value,

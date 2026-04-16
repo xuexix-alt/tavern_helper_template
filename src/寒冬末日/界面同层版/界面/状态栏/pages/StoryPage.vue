@@ -162,6 +162,7 @@
               :font-mode="fontMode"
               :busy="busy"
               :should-follow-latest="followLatest"
+              :is-streaming="status === 'streaming'"
               :opening-expanded="openingExpanded"
               :latest-user-message-id="latestUserItem?.message_id ?? null"
               :editing-user-message-id="editingUserMessageId"
@@ -443,6 +444,7 @@ import { useStreamingDemo } from '../useStreamingDemo';
 const {
   input,
   busy,
+  status,
   filterMode,
   density,
   theme,

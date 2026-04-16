@@ -2292,6 +2292,33 @@ export function useStreamingDemo() {
     );
   }
 
+  function resolveInheritedUserMessageData(): Record<string, unknown> {
+    const messages = readMessagesAfterContainer()
+      .filter(item => Number.isFinite(item.message_id))
+      .sort((a, b) => a.message_id - b.message_id);
+    const latestMessage = messages[messages.length - 1];
+    const inherited = sanitizeInheritedMessageData(latestMessage?.data);
+    const latestMessageId = Number(latestMessage?.message_id);
+    if (!Number.isFinite(latestMessageId) || latestMessageId < 0) {
+      return inherited;
+    }
+    try {
+      const latestMvuData = Mvu.getMvuData({ type: 'message', message_id: Math.trunc(latestMessageId) });
+      if (!latestMvuData || typeof latestMvuData !== 'object') return inherited;
+      const statData = _.get(latestMvuData, 'stat_data', null);
+      const initializedLorebooks = _.get(latestMvuData, 'initialized_lorebooks', null);
+      if (statData && typeof statData === 'object') {
+        _.set(inherited, 'stat_data', _.cloneDeep(statData));
+      }
+      if (initializedLorebooks && typeof initializedLorebooks === 'object') {
+        _.set(inherited, 'initialized_lorebooks', _.cloneDeep(initializedLorebooks));
+      }
+      return inherited;
+    } catch {
+      return inherited;
+    }
+  }
+
   function queueHidePolicy(reason: string) {
     if (hidePolicyTimer) window.clearTimeout(hidePolicyTimer);
     hidePolicyTimer = window.setTimeout(() => {
@@ -3166,10 +3193,7 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
-        // 通过宿主窗口获取倒数第二条消息（通常是最后一个 assistant）
-        const lastMessages = callHostGetChatMessages(-2, { hide_state: 'all' });
-        const lastAssistantMessage = Array.isArray(lastMessages) ? lastMessages[0] : null;
-        const userData = sanitizeInheritedMessageData(lastAssistantMessage?.data);
+        const userData = resolveInheritedUserMessageData();
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], {
           refresh: 'none',
         });
