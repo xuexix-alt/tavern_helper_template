@@ -26,5 +26,8 @@ test('useStreamingDemo derives the reading-mode label from readingMode so the UI
   const source = read('../useStreamingDemo.ts');
 
   assert.doesNotMatch(source, /const readingModeLabel = computed\(\(\) => \(transcriptWindowMode\.value === 'latest'/);
-  assert.match(source, /const readingModeLabel = computed\(\(\) => \(followLatest\.value \? '跟随最新' : '浏览历史'\)\);/);
+  assert.match(
+    source,
+    /const readingModeLabel = computed\(\(\) => \(followLatest\.value \? '跟随最新' : '浏览历史'\)\);/,
+  );
 });
