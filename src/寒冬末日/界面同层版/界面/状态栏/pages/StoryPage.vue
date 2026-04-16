@@ -502,7 +502,6 @@ const {
   closeDetail,
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
-  triggerImageGenerationForMessage,
   calibrateDailyRollDate,
   isCalibratingDailyRoll,
 } = useStreamingDemo();
@@ -1293,11 +1292,13 @@ function hoistPluginMenuIntoFullscreen(): void {
   setTimeout(() => observer.disconnect(), 300);
 }
 
-async function handleTranscriptGenerateImage(messageId: number) {
+async function handleTranscriptGenerateImage(input: number | { messageId: number; triggerEvent?: MouseEvent }) {
+  const messageId = typeof input === 'number' ? input : input.messageId;
+  const triggerEvent = typeof input === 'number' ? null : (input.triggerEvent ?? null);
   if (document.fullscreenElement) {
     hoistPluginMenuIntoFullscreen();
   }
-  await triggerImageGenerationForMessage(messageId);
+  await startTranscriptHostImageProxy(messageId, triggerEvent ?? null);
 }
 
 function handleOpenGallery(_messageId: number) {

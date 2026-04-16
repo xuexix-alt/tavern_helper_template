@@ -37,7 +37,7 @@
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
           @image-regenerate="emit('image-regenerate', $event)"
-          @generate-image="emit('generate-image', $event)"
+          @generate-image="handleNestedGenerateImage"
           @start-edit="emit('start-edit-user', item)"
           @update-edit-draft="emit('update-edit-draft', $event)"
           @confirm-edit="emit('confirm-edit-user', item)"
@@ -57,7 +57,7 @@
             :title="
               messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'
             "
-            @click="handleImageButtonClick(item.message_id)"
+            @click="handleImageButtonClick(item.message_id, $event)"
           >
             <span>{{ messageImageCount(item.message_id) > 0 ? '📷' : '🎨' }}</span>
             <span v-if="messageImageCount(item.message_id) > 0" class="transcript-image-fab-badge">
@@ -127,7 +127,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
-  (event: 'generate-image', messageId: number): void;
+  (event: 'generate-image', payload: { messageId: number; triggerEvent?: MouseEvent }): void;
   (event: 'open-gallery', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
@@ -258,12 +258,16 @@ function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
 }
 
-function handleImageButtonClick(messageId: number) {
+function handleNestedGenerateImage(messageId: number) {
+  emit('generate-image', { messageId });
+}
+
+function handleImageButtonClick(messageId: number, event: MouseEvent) {
   const count = messageImageCount(messageId);
   if (count > 0) {
     emit('open-gallery', messageId);
   } else {
-    emit('generate-image', messageId);
+    emit('generate-image', { messageId, triggerEvent: event });
   }
 }
 

@@ -48,7 +48,7 @@ import {
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
-import { buildGeneratedImageMarkerId } from './generatedImageMarker';
+import { buildGeneratedImageMembership } from './generatedImageMembership';
 import {
   callHostGetChatMessages,
   collectChatu8PromptTokens,
@@ -1009,39 +1009,89 @@ function buildGeneratedImageRefsForMessage(input: {
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
   const hostDomArtifacts = input.hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId);
-
-  // 按 promptTokens 数量创建 refs，src 按顺序从 hostDomArtifacts 映射
-  const domSrcs = hostDomArtifacts.map(a => a.src);
+  const nativeRenderableImages = readNativeFirstRenderableImagesForMessage({
+    messageId,
+    rawMessage: input.rawMessage,
+    hostDomArtifacts,
+  });
+  const persistedMembershipEntries = readNativeFirstMembershipForMessage({
+    messageId,
+    rawMessage: input.rawMessage,
+    hostDomArtifacts,
+  });
+  const memberships = buildGeneratedImageMembership({
+    messageId,
+    promptTokens,
+    persistedEntries: persistedMembershipEntries,
+    createdOrderBase,
+  });
   const result: GeneratedImageRef[] = [];
+  const usedNativeImageIndexes = new Set<number>();
 
-  for (let i = 0; i < promptTokens.length; i++) {
-    const promptToken = promptTokens[i];
-    const src = i < domSrcs.length ? domSrcs[i] : undefined;
-
-    const markerId = buildGeneratedImageMarkerId({
-      messageId,
-      promptToken,
-      order: i,
+  const normalizeLookupKey = (value: unknown) => String(value ?? '').trim();
+  const findMatchingNativeImage = (
+    membership: (typeof memberships)[number],
+    fallbackIndex: number,
+  ): NativeFirstRenderableGeneratedImage | undefined => {
+    const markerId = normalizeLookupKey(membership.markerId);
+    const imageId = normalizeLookupKey(membership.imageId);
+    const requestId = normalizeLookupKey(membership.requestId);
+    const promptToken = normalizeLookupKey(membership.promptToken);
+    const anchorText = normalizeLookupKey(membership.anchorText);
+    const exactIndex = nativeRenderableImages.findIndex((image, index) => {
+      if (usedNativeImageIndexes.has(index)) return false;
+      return (
+        (markerId && normalizeLookupKey(image.markerId) === markerId) ||
+        (imageId && normalizeLookupKey(image.imageId) === imageId) ||
+        (requestId && normalizeLookupKey(image.requestId) === requestId) ||
+        (promptToken && normalizeLookupKey(image.promptToken) === promptToken) ||
+        (anchorText && normalizeLookupKey(image.anchorText) === anchorText)
+      );
     });
+    const fallbackExactIndex =
+      exactIndex >= 0
+        ? exactIndex
+        : nativeRenderableImages.findIndex((_, index) => !usedNativeImageIndexes.has(index) && index === fallbackIndex);
+    const fallbackAnyIndex =
+      fallbackExactIndex >= 0
+        ? fallbackExactIndex
+        : nativeRenderableImages.findIndex((_, index) => !usedNativeImageIndexes.has(index));
+    if (fallbackAnyIndex < 0) return undefined;
+    usedNativeImageIndexes.add(fallbackAnyIndex);
+    return nativeRenderableImages[fallbackAnyIndex];
+  };
+
+  let membershipIndex = 0;
+  for (const membership of memberships) {
+    const index = membershipIndex;
+    membershipIndex += 1;
+    const promptToken = membership.promptToken;
+    const matchedImage = findMatchingNativeImage(membership, index);
+    const anchorText = pickFirstNonEmpty(membership.anchorText, matchedImage?.anchorText);
+
     const title =
       pickFirstNonEmpty(
         extractImageTitleFromPrompt(promptToken),
+        matchedImage?.title,
+        extractTitleFromAnchor(anchorText),
+        extractTitleFromSrc(matchedImage?.src ?? ''),
         extractCharacterNameFromPrompt(promptToken),
-        `楼层 #${messageId} · 图 ${i + 1}`,
-      ) || `楼层 #${messageId} · 图 ${i + 1}`;
+        `楼层 #${messageId} · 图 ${index + 1}`,
+      ) || `楼层 #${messageId} · 图 ${index + 1}`;
 
     result.push({
-      id: markerId,
+      id: membership.markerId,
       messageId,
-      markerId,
-      imageId: undefined,
+      markerId: membership.markerId,
+      imageId: membership.imageId ?? matchedImage?.imageId,
       promptToken,
-      requestId: undefined,
-      anchorText: undefined,
+      requestId: membership.requestId ?? matchedImage?.requestId,
+      anchorText: anchorText || undefined,
       title,
-      characterName: extractCharacterNameFromPrompt(promptToken) || undefined,
-      createdOrder: createdOrderBase * 100 + i,
-      src,
+      characterName: extractCharacterNameFromPrompt(promptToken) || matchedImage?.characterName || undefined,
+      createdOrder: membership.createdOrder,
+      src: matchedImage?.src,
+      alt: matchedImage?.alt,
     });
   }
 
