@@ -169,10 +169,20 @@
           <div class="system-title">伊甸一次性指令</div>
           <div v-if="edenCommandStatEntries.length === 0" class="system-copy system-copy-muted">暂无</div>
           <div v-else class="system-stat-list">
-            <div v-for="entry in edenCommandStatEntries" :key="entry.key" class="system-stat-row">
-              <span>{{ entry.key }}</span>
-              <strong>×{{ entry.value }}</strong>
-            </div>
+            <article v-for="entry in edenCommandStatEntries" :key="entry.key" class="system-command-card clip-corner-sm">
+              <div class="system-stat-row">
+                <div class="system-command-copy">
+                  <span class="system-command-id">{{ entry.key }}</span>
+                  <strong>{{ entry.name }}</strong>
+                </div>
+                <strong>×{{ entry.quantity }}</strong>
+              </div>
+              <p class="system-command-description">{{ entry.description || '暂无说明' }}</p>
+              <div class="system-command-meta">
+                <span>范围 {{ entry.scope || '--' }}</span>
+                <span>时效 {{ entry.duration || '--' }}</span>
+              </div>
+            </article>
           </div>
         </div>
 
@@ -215,6 +225,7 @@
 
 <script setup lang="ts">
 import type { TranscriptItem } from '../types';
+import { buildEdenCommandDisplayEntries } from '../edenOneShotCommands';
 import { buildMvuSourceOptions } from '../mvuSourceOptions';
 import { readMvuStatData, useMvuRoleStore, useMvuSystemStore } from '../mvuRoleStore';
 
@@ -317,13 +328,7 @@ const sourceLabel = computed(() => {
 const shelterLevel = computed(() => `${String(_.get(systemMvuData.value, '庇护所.庇护所等级', '--'))}`);
 const dailyRollText = computed(() => String(_.get(systemMvuData.value, '庇护所.今日投掷点数', '--')) || '--');
 const edenCommandStatEntries = computed(() =>
-  Object.entries(_.get(systemMvuData.value, '伊甸一次性指令', {}))
-    .map(([key, value]) => ({
-      key: String(key ?? '').trim(),
-      value: Math.max(0, Math.trunc(Number(value) || 0)),
-    }))
-    .filter(entry => entry.key.length > 0)
-    .sort((a, b) => a.key.localeCompare(b.key, 'zh-Hans-CN')),
+  buildEdenCommandDisplayEntries(_.get(systemMvuData.value, '伊甸一次性指令', {})),
 );
 const expansionState = computed(() => ({
   medical: String(_.get(systemMvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
@@ -935,6 +940,14 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   flex-direction: column;
   gap: 8px;
 }
+.system-command-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+}
 .system-stat-row {
   display: flex;
   align-items: center;
@@ -946,6 +959,32 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 }
 .system-stat-row strong {
   color: var(--demo-text-accent);
+}
+.system-command-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.system-command-id {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--demo-text-subtle);
+}
+.system-command-description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--demo-text-secondary);
+}
+.system-command-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--demo-text-subtle);
 }
 .system-block {
   display: flex;

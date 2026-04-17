@@ -1,7 +1,7 @@
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
 
-const MVU_SCHEMA_VERSION = '1.4';
+const MVU_SCHEMA_VERSION = '1.5';
 
 $(() => {
   registerMvuSchema(Schema);

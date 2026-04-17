@@ -89,8 +89,18 @@ format: |-
     { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
     { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } },
-    { "op": "insert", "path": "/伊甸一次性指令/rz001", "value": 1 },
-    { "op": "delta", "path": "/伊甸一次性指令/sk001", "value": 1 }
+    {
+      "op": "insert",
+      "path": "/伊甸一次性指令/rz001",
+      "value": {
+        "名称": "朋友妻不客气",
+        "数量": 1,
+        "说明": "移除伴侣性道德感",
+        "范围": "指定一位男性角色",
+        "时效": "12小时"
+      }
+    },
+    { "op": "delta", "path": "/伊甸一次性指令/sk001/数量", "value": 1 }
   ]
   </JSONPatch>
   </UpdateVariable>

@@ -82,6 +82,16 @@ const 所在房间格式Schema = z.union([
 const createExtensibleMapSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
   z.looseObject({}).catchall(itemSchema).prefault({});
 
+const 伊甸一次性指令条目Schema = z
+  .object({
+    名称: z.string().prefault(''),
+    数量: z.number().int().nonnegative().prefault(0),
+    说明: z.string().prefault(''),
+    范围: z.string().prefault(''),
+    时效: z.string().prefault(''),
+  })
+  .prefault({ 名称: '', 数量: 0, 说明: '', 范围: '', 时效: '' });
+
 const 角色控制Schema = z
   .object({
     version: z.coerce
@@ -259,7 +269,7 @@ export const Schema = z
         },
       }),
 
-    伊甸一次性指令: z.record(z.string().describe('指令编号'), z.coerce.number().int().prefault(0)).prefault({}),
+    伊甸一次性指令: z.record(z.string().describe('指令编号'), 伊甸一次性指令条目Schema).prefault({}),
 
     房间: z
       .object({
