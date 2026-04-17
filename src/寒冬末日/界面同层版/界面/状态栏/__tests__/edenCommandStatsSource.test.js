@@ -91,7 +91,10 @@ test('same-layer system panel and workbench modal render eden commands from top-
   assert.match(commandsSource, /const record = value as Record<string, unknown>;/);
   assert.match(commandsSource, /name:\s*String\(record\.名称 \?\? ''\)\.trim\(\) \|\| meta\?\.name \|\| normalizedKey/);
   assert.match(commandsSource, /quantity:\s*normalizeQuantity\(record\.数量\)/);
-  assert.match(commandsSource, /description:\s*String\(record\.说明 \?\? ''\)\.trim\(\) \|\| meta\?\.description \|\| ''/);
+  assert.match(
+    commandsSource,
+    /description:\s*String\(record\.说明 \?\? ''\)\.trim\(\) \|\| meta\?\.description \|\| ''/,
+  );
   assert.match(commandsSource, /scope:\s*String\(record\.范围 \?\? ''\)\.trim\(\) \|\| meta\?\.scope \|\| ''/);
   assert.match(commandsSource, /duration:\s*String\(record\.时效 \?\? ''\)\.trim\(\) \|\| meta\?\.duration \|\| ''/);
   assert.match(storeSource, /const RESERVED_TOP_LEVEL_KEYS = new Set\(\[/);

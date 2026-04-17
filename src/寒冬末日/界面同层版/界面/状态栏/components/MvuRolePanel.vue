@@ -169,7 +169,11 @@
           <div class="system-title">伊甸一次性指令</div>
           <div v-if="edenCommandStatEntries.length === 0" class="system-copy system-copy-muted">暂无</div>
           <div v-else class="system-stat-list">
-            <article v-for="entry in edenCommandStatEntries" :key="entry.key" class="system-command-card clip-corner-sm">
+            <article
+              v-for="entry in edenCommandStatEntries"
+              :key="entry.key"
+              class="system-command-card clip-corner-sm"
+            >
               <div class="system-stat-row">
                 <div class="system-command-copy">
                   <span class="system-command-id">{{ entry.key }}</span>

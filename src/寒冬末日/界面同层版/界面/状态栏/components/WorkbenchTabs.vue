@@ -163,7 +163,9 @@ const compactLogs = computed(() =>
 );
 const shelterLevel = computed(() => `${String(_.get(systemMvuData.value, '庇护所.庇护所等级', '--'))}`);
 const dailyRollText = computed(() => String(_.get(systemMvuData.value, '庇护所.今日投掷点数', '--')) || '--');
-const edenCommandEntries = computed(() => buildEdenCommandDisplayEntries(_.get(systemMvuData.value, '伊甸一次性指令', {})));
+const edenCommandEntries = computed(() =>
+  buildEdenCommandDisplayEntries(_.get(systemMvuData.value, '伊甸一次性指令', {})),
+);
 const expansionState = computed(() => ({
   medical: String(_.get(systemMvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
   workshop: String(_.get(systemMvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
