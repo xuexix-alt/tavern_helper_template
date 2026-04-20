@@ -152,7 +152,9 @@ test('gallery catalog persistence is refreshed on chat changes and live gallery 
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes("if (name === String(tavern_events.CHAT_CHANGED)) {\n      galleryCatalogRecord.value = readGalleryCatalogRecord();\n    }"),
+    source.includes(
+      'if (name === String(tavern_events.CHAT_CHANGED)) {\n      galleryCatalogRecord.value = readGalleryCatalogRecord();\n    }',
+    ),
     true,
     'chat changes should rehydrate the persisted gallery catalog',
   );

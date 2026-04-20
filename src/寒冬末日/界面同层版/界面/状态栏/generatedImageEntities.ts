@@ -95,7 +95,9 @@ function createEntityFromMembership(
 ): InternalGeneratedImageEntity {
   const promptToken = normalizeText(membership.promptToken);
   const anchorText = normalizeText(membership.anchorText) || undefined;
-  const createdOrder = Number.isFinite(Number(membership.createdOrder)) ? Math.trunc(Number(membership.createdOrder)) : index;
+  const createdOrder = Number.isFinite(Number(membership.createdOrder))
+    ? Math.trunc(Number(membership.createdOrder))
+    : index;
   const markerId =
     normalizeText(membership.markerId) ||
     buildGeneratedImageMarkerId({
@@ -219,9 +221,7 @@ export function buildGeneratedImageEntities(input: GeneratedImageEntityBuildInpu
     entities.push(source);
   });
 
-  return entities
-    .sort((a, b) => a.createdOrder - b.createdOrder)
-    .map(({ aliasKeys: _aliasKeys, ...entity }) => entity);
+  return entities.sort((a, b) => a.createdOrder - b.createdOrder).map(({ aliasKeys: _aliasKeys, ...entity }) => entity);
 }
 
 export function filterReadyGeneratedImageEntities(entities: GeneratedImageEntity[]): GeneratedImageEntity[] {

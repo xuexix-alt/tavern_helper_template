@@ -1,10 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  buildGeneratedImageEntities,
-  filterReadyGeneratedImageEntities,
-} = require('../generatedImageEntities.ts');
+const { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } = require('../generatedImageEntities.ts');
 
 test('prompt placeholder and later ready native image collapse into one ready entity', () => {
   const entities = buildGeneratedImageEntities({

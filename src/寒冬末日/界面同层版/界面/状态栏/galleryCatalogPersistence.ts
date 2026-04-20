@@ -194,14 +194,13 @@ function mergeGalleryCatalogEntry(
     anchorText: normalizeText(incoming.anchorText) || existing.anchorText,
     title: normalizeText(incoming.title) || existing.title,
     characterName: normalizeText(incoming.characterName) || existing.characterName,
-    createdOrder: Math.min(
-      normalizeCreatedOrder(existing.createdOrder),
-      normalizeCreatedOrder(incoming.createdOrder),
-    ),
+    createdOrder: Math.min(normalizeCreatedOrder(existing.createdOrder), normalizeCreatedOrder(incoming.createdOrder)),
     src: normalizeText(incoming.src) || existing.src,
     alt: normalizeText(incoming.alt) || existing.alt,
     firstSeenAt:
-      Date.parse(existing.firstSeenAt) <= Date.parse(incoming.firstSeenAt) ? existing.firstSeenAt : incoming.firstSeenAt,
+      Date.parse(existing.firstSeenAt) <= Date.parse(incoming.firstSeenAt)
+        ? existing.firstSeenAt
+        : incoming.firstSeenAt,
     readyAt: Date.parse(existing.readyAt) <= Date.parse(incoming.readyAt) ? existing.readyAt : incoming.readyAt,
     lastSeenAt: normalizeTimestamp(incoming.lastSeenAt, now),
   };
