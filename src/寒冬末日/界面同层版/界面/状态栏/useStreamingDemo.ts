@@ -46,8 +46,16 @@ import {
   summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
+import {
+  buildGalleryCatalogRecord,
+  mergeGalleryCatalogEntries,
+  readGalleryCatalogRecord,
+  resolveGalleryCatalogChatId,
+  writeGalleryCatalogRecord,
+} from './galleryCatalogPersistence';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
+import { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } from './generatedImageEntities';
 import { buildGeneratedImageMembership } from './generatedImageMembership';
 import {
   callHostGetChatMessages,
@@ -80,7 +88,11 @@ import {
   type NativeFirstArtifactSource,
   type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
-import { countPluginNativeImageArtifacts, isPluginNativeMutationNode } from './pluginNativeImageDom';
+import {
+  countPluginNativeImageArtifacts,
+  isPluginNativeMutationNode,
+  isReadyPluginNativeMutationNode,
+} from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
   normalizeDensity,
@@ -1027,77 +1039,41 @@ function buildGeneratedImageRefsForMessage(input: {
     persistedEntries: persistedMembershipEntries,
     createdOrderBase,
   });
-  const result: GeneratedImageRef[] = [];
-  const usedNativeImageIndexes = new Set<number>();
+  const entities = buildGeneratedImageEntities({
+    messageId,
+    memberships,
+    nativeImages: nativeRenderableImages,
+  });
+  const readyEntities = filterReadyGeneratedImageEntities(entities);
 
-  const normalizeLookupKey = (value: unknown) => String(value ?? '').trim();
-  const findMatchingNativeImage = (
-    membership: (typeof memberships)[number],
-    fallbackIndex: number,
-  ): NativeFirstRenderableGeneratedImage | undefined => {
-    const markerId = normalizeLookupKey(membership.markerId);
-    const imageId = normalizeLookupKey(membership.imageId);
-    const requestId = normalizeLookupKey(membership.requestId);
-    const promptToken = normalizeLookupKey(membership.promptToken);
-    const anchorText = normalizeLookupKey(membership.anchorText);
-    const exactIndex = nativeRenderableImages.findIndex((image, index) => {
-      if (usedNativeImageIndexes.has(index)) return false;
-      return (
-        (markerId && normalizeLookupKey(image.markerId) === markerId) ||
-        (imageId && normalizeLookupKey(image.imageId) === imageId) ||
-        (requestId && normalizeLookupKey(image.requestId) === requestId) ||
-        (promptToken && normalizeLookupKey(image.promptToken) === promptToken) ||
-        (anchorText && normalizeLookupKey(image.anchorText) === anchorText)
-      );
-    });
-    const fallbackExactIndex =
-      exactIndex >= 0
-        ? exactIndex
-        : nativeRenderableImages.findIndex((_, index) => !usedNativeImageIndexes.has(index) && index === fallbackIndex);
-    const fallbackAnyIndex =
-      fallbackExactIndex >= 0
-        ? fallbackExactIndex
-        : nativeRenderableImages.findIndex((_, index) => !usedNativeImageIndexes.has(index));
-    if (fallbackAnyIndex < 0) return undefined;
-    usedNativeImageIndexes.add(fallbackAnyIndex);
-    return nativeRenderableImages[fallbackAnyIndex];
-  };
-
-  let membershipIndex = 0;
-  for (const membership of memberships) {
-    const index = membershipIndex;
-    membershipIndex += 1;
-    const promptToken = membership.promptToken;
-    const matchedImage = findMatchingNativeImage(membership, index);
-    const anchorText = pickFirstNonEmpty(membership.anchorText, matchedImage?.anchorText);
-
+  return readyEntities.map((entity, index) => {
+    const promptToken = entity.promptToken;
+    const anchorText = entity.anchorText;
     const title =
       pickFirstNonEmpty(
         extractImageTitleFromPrompt(promptToken),
-        matchedImage?.title,
-        extractTitleFromAnchor(anchorText),
-        extractTitleFromSrc(matchedImage?.src ?? ''),
+        entity.title,
+        extractTitleFromAnchor(anchorText ?? ''),
+        extractTitleFromSrc(entity.src ?? ''),
         extractCharacterNameFromPrompt(promptToken),
         `楼层 #${messageId} · 图 ${index + 1}`,
       ) || `楼层 #${messageId} · 图 ${index + 1}`;
 
-    result.push({
-      id: membership.markerId,
+    return {
+      id: entity.id,
       messageId,
-      markerId: membership.markerId,
-      imageId: membership.imageId ?? matchedImage?.imageId,
+      markerId: entity.markerId,
+      imageId: entity.imageId,
       promptToken,
-      requestId: membership.requestId ?? matchedImage?.requestId,
+      requestId: entity.requestId,
       anchorText: anchorText || undefined,
       title,
-      characterName: extractCharacterNameFromPrompt(promptToken) || matchedImage?.characterName || undefined,
-      createdOrder: membership.createdOrder,
-      src: matchedImage?.src,
-      alt: matchedImage?.alt,
-    });
-  }
-
-  return result;
+      characterName: entity.characterName || extractCharacterNameFromPrompt(promptToken) || undefined,
+      createdOrder: entity.createdOrder,
+      src: entity.src,
+      alt: entity.alt,
+    };
+  });
 }
 
 function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
@@ -1116,6 +1092,26 @@ function hasRelevantChatu8Mutation(record: MutationRecord): boolean {
   }
   for (const node of Array.from(record.removedNodes)) {
     if (matchesRelevantNode(node)) return true;
+  }
+  return false;
+}
+
+function hasReadyChatu8Mutation(record: MutationRecord): boolean {
+  if (record.type === 'attributes' && record.attributeName === 'src') {
+    const target = record.target as HTMLElement;
+    if (target.tagName === 'IMG' && target.closest('.st-chatu8-image-span, .st-chatu8-image-container, .mes')) {
+      return true;
+    }
+  }
+
+  const matchesReadyNode = (node: Node | null | undefined) => isReadyPluginNativeMutationNode(node);
+
+  if (matchesReadyNode(record.target)) return true;
+  for (const node of Array.from(record.addedNodes)) {
+    if (matchesReadyNode(node)) return true;
+  }
+  for (const node of Array.from(record.removedNodes)) {
+    if (matchesReadyNode(node)) return true;
   }
   return false;
 }
@@ -1332,6 +1328,7 @@ export function useStreamingDemo() {
   const selectedItem = ref<TranscriptItem | null>(null);
   const transcriptDomRevision = ref(0);
   const galleryRevision = ref(0);
+  const galleryCatalogRecord = ref(readGalleryCatalogRecord());
   const openingExpanded = ref(true);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
@@ -1389,6 +1386,7 @@ export function useStreamingDemo() {
   let hidePolicyRerun = false;
   const hostImageDataSyncSignatures = new Map<number, string>();
   let hideStatePersistTimer = 0;
+  let galleryCatalogPersistTimer = 0;
   let runtimeLeaseHeartbeatTimer = 0;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
@@ -2589,6 +2587,23 @@ export function useStreamingDemo() {
     }, 40);
   }
 
+  function queuePersistGalleryCatalog(liveEntries: GeneratedImageRef[] = []) {
+    if (galleryCatalogPersistTimer) window.clearTimeout(galleryCatalogPersistTimer);
+    const liveEntrySnapshot = (Array.isArray(liveEntries) ? liveEntries : []).map(entry => ({ ...entry }));
+    galleryCatalogPersistTimer = window.setTimeout(() => {
+      galleryCatalogPersistTimer = 0;
+      const chatId = resolveGalleryCatalogChatId();
+      if (!chatId) return;
+      const nextRecord = buildGalleryCatalogRecord({
+        chatId,
+        existingRecord: galleryCatalogRecord.value,
+        liveEntries: liveEntrySnapshot,
+      });
+      galleryCatalogRecord.value = nextRecord;
+      void writeGalleryCatalogRecord(nextRecord);
+    }, 120);
+  }
+
   function scheduleUiRefresh(domains: RefreshDomain[], reason: string, targetedMessageIds: number[] = []) {
     recordLifecycleTrace('scheduleUiRefresh', 'received', {
       reason,
@@ -2829,6 +2844,10 @@ export function useStreamingDemo() {
         name,
       });
       return; // 流式进行中，宿主 token 事件不触发 transcript 重建（由 bindGenerationEvents 的 iframe_events 链路独立维护）
+    }
+
+    if (name === String(tavern_events.CHAT_CHANGED)) {
+      galleryCatalogRecord.value = readGalleryCatalogRecord();
     }
 
     const refreshType = mapHostRefreshType(name);
@@ -3975,6 +3994,8 @@ export function useStreamingDemo() {
         generatedImageDomObserver = new MutationObserver(records => {
           if (!records.some(hasRelevantChatu8Mutation)) return;
           syncPendingRequestHintsFromDom();
+          const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
+          if (!hasReadyNativeImageMutation) return;
           queueGeneratedImageEntityRefresh(collectMutationMessageIds(records));
         });
         generatedImageDomObserver.observe(document.body, {
@@ -3985,8 +4006,10 @@ export function useStreamingDemo() {
         });
       }
       hostPluginMutationObservers = bindHostPluginMutationObservers(records => {
-        const affectedMessageIds = collectMutationMessageIds(records);
         syncPendingRequestHintsFromDom();
+        const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
+        if (!hasReadyNativeImageMutation) return;
+        const affectedMessageIds = collectMutationMessageIds(records);
         queueGeneratedImageEntityRefresh(affectedMessageIds);
         refreshTranscriptItemsByIds(affectedMessageIds, 'host.plugin_native_dom_mutation');
         scheduleUiRefresh(['gallery'], 'host.plugin_native_dom_mutation');
@@ -4061,6 +4084,7 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
+    galleryCatalogPersistTimer = clearTimer(galleryCatalogPersistTimer);
     hideStatePersistTimer = clearTimer(hideStatePersistTimer);
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
@@ -4072,20 +4096,36 @@ export function useStreamingDemo() {
     stopRuntimeLeaseHeartbeat();
   });
 
+  const liveGalleryEntries = computed<GeneratedImageRef[]>(() => {
+    void galleryRevision.value;
+    return transcript.value
+      .filter(item => item.role === 'assistant' && !item.isOpening)
+      .flatMap(item =>
+        buildGeneratedImageRefsForMessage({
+          messageId: item.message_id,
+          rawMessage: item.raw,
+        }),
+      );
+  });
+
+  const galleryEntries = computed<GeneratedImageRef[]>(() =>
+    mergeGalleryCatalogEntries({
+      persistedEntries: galleryCatalogRecord.value?.entries ?? [],
+      liveEntries: liveGalleryEntries.value,
+    }).map(({ firstSeenAt: _firstSeenAt, lastSeenAt: _lastSeenAt, readyAt: _readyAt, ...entry }) => entry),
+  );
+
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
   const galleryGroups = computed<GalleryGroup[]>(() => {
-    void galleryRevision.value;
-
-    const groups: GalleryGroup[] = [];
-    for (const item of transcript.value) {
-      if (item.role !== 'assistant' || item.isOpening) continue;
-      const images = buildGeneratedImageRefsForMessage({
-        messageId: item.message_id,
-        rawMessage: item.raw,
-      });
-      if (images.length === 0) continue;
-      groups.push({ messageId: item.message_id, images });
+    const groupsMap = new Map<number, GeneratedImageRef[]>();
+    for (const entry of galleryEntries.value) {
+      const bucket = groupsMap.get(entry.messageId) ?? [];
+      bucket.push(entry);
+      groupsMap.set(entry.messageId, bucket);
     }
+    const groups = Array.from(groupsMap.entries())
+      .map(([messageId, images]) => ({ messageId, images }))
+      .sort((left, right) => right.messageId - left.messageId);
 
     recordComponentDebugTrace({
       scope: 'galleryGroups',
@@ -4102,7 +4142,17 @@ export function useStreamingDemo() {
 
     return groups;
   });
-  const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));
+
+  watch(
+    () =>
+      liveGalleryEntries.value
+        .map(entry => [entry.id, entry.messageId, entry.createdOrder, entry.src ?? '', entry.title].join('::'))
+        .join('||'),
+    () => {
+      queuePersistGalleryCatalog(liveGalleryEntries.value);
+    },
+    { immediate: true },
+  );
 
   return {
     input,

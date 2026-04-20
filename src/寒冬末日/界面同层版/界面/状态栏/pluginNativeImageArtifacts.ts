@@ -3,7 +3,7 @@ import {
   parseNativeMesImageTags,
   type NativeMesTagEntry,
   type NativeMesTagEntryWithHints,
-} from './pluginNativeMesTag';
+} from './pluginNativeMesTag.ts';
 
 export type NativeFirstArtifactSource = 'host_dom' | 'extra' | 'mes_tag' | 'cache';
 

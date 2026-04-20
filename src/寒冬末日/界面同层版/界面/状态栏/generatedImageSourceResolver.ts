@@ -1,11 +1,11 @@
-import { buildGeneratedImageMarkerId } from './generatedImageMarker';
-import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts';
-import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag';
+import { buildGeneratedImageMarkerId } from './generatedImageMarker.ts';
+import { collectPluginNativeCacheArtifacts, type PluginNativeCacheArtifact } from './pluginNativeCacheArtifacts.ts';
+import { mergeNativeMesTagsWithExtraEntries, parseNativeMesImageTags } from './pluginNativeMesTag.ts';
 import {
   normalizeImageDataToSrc as sharedNormalizeImageDataToSrc,
   readHostContext as sharedReadHostContext,
   readChatMessageDetail as sharedReadChatMessageDetail,
-} from './hostBridge';
+} from './hostBridge.ts';
 
 export type GeneratedImageSourceRef = {
   messageId: number | null;

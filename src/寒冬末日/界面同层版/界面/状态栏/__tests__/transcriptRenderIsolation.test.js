@@ -42,6 +42,11 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     false,
     'native image DOM mutations should not trigger a full transcript rebuild',
   );
+  assert.equal(
+    source.includes('const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);'),
+    true,
+    'native image DOM mutation refreshes should be gated behind ready-image mutations instead of button placeholders',
+  );
 });
 
 test('gallery recomputation is isolated behind a gallery revision instead of transcript dom revision', () => {
@@ -105,6 +110,56 @@ test('iframe transcript render mode is decided from iframe roots, not host displ
     ),
     false,
     'host displayed message roots should not suppress iframe-side image injection',
+  );
+});
+
+test('gallery image refs are built from canonical image entities instead of sequential native fallback matching', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('const entities = buildGeneratedImageEntities({'),
+    true,
+    'gallery refs should be built from canonical image entities',
+  );
+  assert.equal(
+    source.includes('const matchedImage = findMatchingNativeImage(membership, index);'),
+    false,
+    'gallery refs should stop assigning native images by per-membership fallback matching',
+  );
+});
+
+test('gallery output hydrates from persisted catalog and merges it with live ready entities', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes("from './galleryCatalogPersistence'"),
+    true,
+    'useStreamingDemo should import the gallery catalog persistence helper',
+  );
+  assert.equal(
+    source.includes('const galleryCatalogRecord = ref(readGalleryCatalogRecord());'),
+    true,
+    'useStreamingDemo should hydrate the persisted gallery catalog on startup',
+  );
+  assert.equal(
+    source.includes('mergeGalleryCatalogEntries({'),
+    true,
+    'gallery output should merge persisted catalog entries with live ready entities',
+  );
+});
+
+test('gallery catalog persistence is refreshed on chat changes and live gallery updates', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes("if (name === String(tavern_events.CHAT_CHANGED)) {\n      galleryCatalogRecord.value = readGalleryCatalogRecord();\n    }"),
+    true,
+    'chat changes should rehydrate the persisted gallery catalog',
+  );
+  assert.equal(
+    source.includes('writeGalleryCatalogRecord(nextRecord);'),
+    true,
+    'live gallery updates should be persisted back into the catalog',
   );
 });
 
