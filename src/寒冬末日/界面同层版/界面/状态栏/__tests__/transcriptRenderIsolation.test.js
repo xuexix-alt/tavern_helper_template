@@ -128,40 +128,79 @@ test('gallery image refs are built from canonical image entities instead of sequ
   );
 });
 
-test('gallery output hydrates from persisted catalog and merges it with live ready entities', () => {
+test('gallery output is rebuilt directly from transcript groups without same-layer manifest persistence', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
     source.includes("from './galleryCatalogPersistence'"),
-    true,
-    'useStreamingDemo should import the gallery catalog persistence helper',
+    false,
+    'plugin-native gallery should not import a same-layer manifest persistence helper',
   );
   assert.equal(
-    source.includes('const galleryCatalogRecord = ref(readGalleryCatalogRecord());'),
+    source.includes('const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));'),
     true,
-    'useStreamingDemo should hydrate the persisted gallery catalog on startup',
+    'gallery entries should flatten directly from transcript-derived groups',
   );
   assert.equal(
-    source.includes('mergeGalleryCatalogEntries({'),
+    source.includes('buildGeneratedImageRefsForMessage({'),
     true,
-    'gallery output should merge persisted catalog entries with live ready entities',
+    'gallery groups should continue to be derived from per-message plugin-native refs',
+  );
+  assert.equal(
+    source.includes("if (item.role !== 'assistant' || item.isOpening) continue;"),
+    false,
+    'gallery groups should not permanently exclude opening assistant messages with ready images',
   );
 });
 
-test('gallery catalog persistence is refreshed on chat changes and live gallery updates', () => {
+test('same-layer no longer persists its own gallery manifest or binary cache', () => {
   const source = readSource('useStreamingDemo.ts');
+  const typesSource = readSource('types.ts');
 
   assert.equal(
-    source.includes(
-      'if (name === String(tavern_events.CHAT_CHANGED)) {\n      galleryCatalogRecord.value = readGalleryCatalogRecord();\n    }',
-    ),
-    true,
-    'chat changes should rehydrate the persisted gallery catalog',
+    source.includes('readGalleryManifestRecord'),
+    false,
+    'plugin-native path should not rehydrate a same-layer gallery manifest',
   );
   assert.equal(
-    source.includes('writeGalleryCatalogRecord(nextRecord);'),
+    source.includes('writeGalleryManifestRecord'),
+    false,
+    'plugin-native path should not persist a same-layer gallery manifest',
+  );
+  assert.equal(
+    source.includes('storeGalleryBinary'),
+    false,
+    'plugin-native path should not write a same-layer binary image store',
+  );
+  assert.equal(
+    typesSource.includes('storageKey?: string;'),
+    false,
+    'GeneratedImageRef should not carry same-layer storageKey metadata',
+  );
+  assert.equal(
+    typesSource.includes("cacheState?: 'ready' | 'missing' | 'not_cached';"),
+    false,
+    'GeneratedImageRef should not carry same-layer cacheState metadata',
+  );
+});
+
+test('GeneratedImageAsset resolves sources from plugin-native runtime only', () => {
+  const assetSource = readSource('components/GeneratedImageAsset.vue');
+
+  assert.equal(
+    assetSource.includes("from '../galleryBinaryStore'"),
+    false,
+    'GeneratedImageAsset should not import a same-layer gallery binary store',
+  );
+  assert.equal(
+    assetSource.includes('readGeneratedImageSourceAsync'),
     true,
-    'live gallery updates should be persisted back into the catalog',
+    'GeneratedImageAsset should still use async plugin-native resolution when sync lookup misses',
+  );
+  assert.equal(
+    assetSource.includes('loadGalleryBinaryAsObjectUrl'),
+    false,
+    'GeneratedImageAsset should not fall back to same-layer IndexedDB object URLs',
   );
 });
 

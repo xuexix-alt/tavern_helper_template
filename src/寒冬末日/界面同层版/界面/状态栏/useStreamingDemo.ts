@@ -46,13 +46,6 @@ import {
   summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
-import {
-  buildGalleryCatalogRecord,
-  mergeGalleryCatalogEntries,
-  readGalleryCatalogRecord,
-  resolveGalleryCatalogChatId,
-  writeGalleryCatalogRecord,
-} from './galleryCatalogPersistence';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } from './generatedImageEntities';
@@ -1328,7 +1321,6 @@ export function useStreamingDemo() {
   const selectedItem = ref<TranscriptItem | null>(null);
   const transcriptDomRevision = ref(0);
   const galleryRevision = ref(0);
-  const galleryCatalogRecord = ref(readGalleryCatalogRecord());
   const openingExpanded = ref(true);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
@@ -1386,7 +1378,6 @@ export function useStreamingDemo() {
   let hidePolicyRerun = false;
   const hostImageDataSyncSignatures = new Map<number, string>();
   let hideStatePersistTimer = 0;
-  let galleryCatalogPersistTimer = 0;
   let runtimeLeaseHeartbeatTimer = 0;
   let externalSyncTimer = 0;
   let readerStatePersistTimer = 0;
@@ -2587,23 +2578,6 @@ export function useStreamingDemo() {
     }, 40);
   }
 
-  function queuePersistGalleryCatalog(liveEntries: GeneratedImageRef[] = []) {
-    if (galleryCatalogPersistTimer) window.clearTimeout(galleryCatalogPersistTimer);
-    const liveEntrySnapshot = (Array.isArray(liveEntries) ? liveEntries : []).map(entry => ({ ...entry }));
-    galleryCatalogPersistTimer = window.setTimeout(() => {
-      galleryCatalogPersistTimer = 0;
-      const chatId = resolveGalleryCatalogChatId();
-      if (!chatId) return;
-      const nextRecord = buildGalleryCatalogRecord({
-        chatId,
-        existingRecord: galleryCatalogRecord.value,
-        liveEntries: liveEntrySnapshot,
-      });
-      galleryCatalogRecord.value = nextRecord;
-      void writeGalleryCatalogRecord(nextRecord);
-    }, 120);
-  }
-
   function scheduleUiRefresh(domains: RefreshDomain[], reason: string, targetedMessageIds: number[] = []) {
     recordLifecycleTrace('scheduleUiRefresh', 'received', {
       reason,
@@ -2844,10 +2818,6 @@ export function useStreamingDemo() {
         name,
       });
       return; // 流式进行中，宿主 token 事件不触发 transcript 重建（由 bindGenerationEvents 的 iframe_events 链路独立维护）
-    }
-
-    if (name === String(tavern_events.CHAT_CHANGED)) {
-      galleryCatalogRecord.value = readGalleryCatalogRecord();
     }
 
     const refreshType = mapHostRefreshType(name);
@@ -4084,7 +4054,6 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
-    galleryCatalogPersistTimer = clearTimer(galleryCatalogPersistTimer);
     hideStatePersistTimer = clearTimer(hideStatePersistTimer);
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
@@ -4096,36 +4065,20 @@ export function useStreamingDemo() {
     stopRuntimeLeaseHeartbeat();
   });
 
-  const liveGalleryEntries = computed<GeneratedImageRef[]>(() => {
-    void galleryRevision.value;
-    return transcript.value
-      .filter(item => item.role === 'assistant' && !item.isOpening)
-      .flatMap(item =>
-        buildGeneratedImageRefsForMessage({
-          messageId: item.message_id,
-          rawMessage: item.raw,
-        }),
-      );
-  });
-
-  const galleryEntries = computed<GeneratedImageRef[]>(() =>
-    mergeGalleryCatalogEntries({
-      persistedEntries: galleryCatalogRecord.value?.entries ?? [],
-      liveEntries: liveGalleryEntries.value,
-    }).map(({ firstSeenAt: _firstSeenAt, lastSeenAt: _lastSeenAt, readyAt: _readyAt, ...entry }) => entry),
-  );
-
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
   const galleryGroups = computed<GalleryGroup[]>(() => {
-    const groupsMap = new Map<number, GeneratedImageRef[]>();
-    for (const entry of galleryEntries.value) {
-      const bucket = groupsMap.get(entry.messageId) ?? [];
-      bucket.push(entry);
-      groupsMap.set(entry.messageId, bucket);
+    void galleryRevision.value;
+
+    const groups: GalleryGroup[] = [];
+    for (const item of transcript.value) {
+      if (item.role !== 'assistant') continue;
+      const images = buildGeneratedImageRefsForMessage({
+        messageId: item.message_id,
+        rawMessage: item.raw,
+      });
+      if (images.length === 0) continue;
+      groups.push({ messageId: item.message_id, images });
     }
-    const groups = Array.from(groupsMap.entries())
-      .map(([messageId, images]) => ({ messageId, images }))
-      .sort((left, right) => right.messageId - left.messageId);
 
     recordComponentDebugTrace({
       scope: 'galleryGroups',
@@ -4142,17 +4095,7 @@ export function useStreamingDemo() {
 
     return groups;
   });
-
-  watch(
-    () =>
-      liveGalleryEntries.value
-        .map(entry => [entry.id, entry.messageId, entry.createdOrder, entry.src ?? '', entry.title].join('::'))
-        .join('||'),
-    () => {
-      queuePersistGalleryCatalog(liveGalleryEntries.value);
-    },
-    { immediate: true },
-  );
+  const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));
 
   return {
     input,
