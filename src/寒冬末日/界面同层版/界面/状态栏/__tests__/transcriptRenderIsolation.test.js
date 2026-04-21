@@ -137,7 +137,9 @@ test('gallery output is rebuilt directly from transcript groups without same-lay
     'plugin-native gallery should not import a same-layer manifest persistence helper',
   );
   assert.equal(
-    source.includes('const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));'),
+    source.includes(
+      'const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));',
+    ),
     true,
     'gallery entries should flatten directly from transcript-derived groups',
   );
