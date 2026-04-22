@@ -37,10 +37,7 @@ function compileEjsLikeToFunctionBody(template) {
 }
 
 test('opening worldbook EJS can be compiled together with 世界设定 without duplicate lexical declarations', () => {
-  const worldViewSource = fs.readFileSync(
-    path.resolve(repoRoot, 'src/寒冬末日/世界书/寒冬末日/世界观.txt'),
-    'utf8',
-  );
+  const worldViewSource = fs.readFileSync(path.resolve(repoRoot, 'src/寒冬末日/世界书/寒冬末日/世界观.txt'), 'utf8');
   const worldSettingSource = fs.readFileSync(
     path.resolve(repoRoot, 'src/寒冬末日/世界书/寒冬末日/世界设定.txt'),
     'utf8',
