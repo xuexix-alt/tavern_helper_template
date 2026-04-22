@@ -68,12 +68,6 @@ appearance:
 
     buttocks: 浑圆，丰满。
 
-  clothing:
-    overview: 保守，朴素，自我压抑。
-    common_wear:
-      - 白衬衫（扣子扣到最上面）、过膝长裙、针织开衫。
-      - 内衣是保守的全包式。
-
   personality_core:
     dominant_traits:
       赎罪情结: 丈夫死了，她觉得是自己的错。婆婆骂她，她就听着，觉得这是应该的。

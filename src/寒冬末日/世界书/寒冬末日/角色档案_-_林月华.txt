@@ -24,57 +24,68 @@ character:
 appearance:
   overview: 林月华是传统的贤惠人妻形象。黑色长发在脑后盘成整洁的发髻，用简单发簪固定。几缕碎发落在耳边，被她下意识地掖到耳后。
 
-  physical_details:
-    height: 162cm
-    weight: 58kg
-    build: 丰腴匀称，体态保持得好。
-    measurements: B85(C)-W68-H90
+ physical_details:
+  height: 162cm
+  weight: 56-58kg
+  build: 丰腴匀称，曲线自然，体态优雅，保养良好，整体给人健康、柔美、成熟的美感。
+  measurements: B85(C)-W66~68-H90
 
-    eyes:
-      color: 黑色。
-      shape: 杏眼，眼神温柔。
-      special_features: 与人交谈时目光柔和，但涉及丈夫安全时会变得坚决。
+  eyes:
+    color: 黑色
+    shape: 杏眼，眼型柔和明亮
+    special_features: 眼神温柔细腻，目光含蓄，有亲和力；认真时会显得坚定而有力量
 
-    hair:
-      color: 黑色。
-      length: 长发。
-      style: 在脑后盘成整洁的发髻，用简单发簪固定。
+  hair:
+    color: 黑色
+    length: 长发
+    style: 在脑后盘成整洁柔美的发髻，用简约发簪固定，额前与鬓边保留少量自然碎发修饰脸型
 
-    facial_features:
-      structure: 脸型圆润，五官温柔。
-      complexion: 皮肤白净，因操持家务显得比实际年龄成熟。
+  facial_features:
+    structure: 脸型圆润柔和，轮廓流畅，五官端正耐看，整体气质温婉成熟
+    complexion: 皮肤白净细腻，肤色自然通透，有真实肤理与柔和光泽
+    makeup: 淡雅自然妆容，眉眼清秀，唇色柔和，整体妆感干净高级
+    age_appearance: 看起来比实际年龄略年轻，带有温柔知性的轻熟感
 
-  NSFW_body_details:
-    breasts:
-      size: C罩杯。
-      shape: 浑圆，丰满但不下垂。
-      nipples: 淡粉色。
-      areolas: 小巧。
+  beauty_enhancement:
+    overall_impression: 靓丽、温婉、耐看，兼具贤惠气质与成熟女人味
+    skin_quality: 真实细腻，不过度磨皮，肤质通透自然
+    expression: 自然浅笑，神态放松，不僵硬，不做作
+    posture: 肩颈舒展，站姿端正，动作轻柔得体
+    lighting_preference: 柔和自然光，电影级光影，面部明暗过渡自然，整体有高级人像质感
 
-    genital_features:
-      outer_labia: 紧致。
-      inner_labia: 粉嫩。
-      clitoris: 敏感。
-      pubic_hair: 打理整齐。
+body_details:
+  bust: 丰满自然，比例协调
+  waist: 腰线清晰，曲线柔和
+  hips: 圆润匀称，身材比例自然好看
+  legs: 线条流畅，体态轻盈，站姿优雅
 
-    vaginal_characteristics:
-      sensitivity: 需要充分的情感铺垫才能放松。
-      lubrication: 心理防线放下后容易湿润。
+clothing:
+  overview: 穿着以浅色系与柔和中性色为主，干净整洁，温柔得体，兼具生活气息与美感
 
-    buttocks: 圆润丰满，手感好。
+  casual:
+    - 浅色修身针织衫
+    - 米白或浅卡其棉质长裤
+    - 深蓝色棉布围裙
+    - 柔软平底鞋或低跟鞋
 
-  clothing:
-    overview: 穿着以浅色系为主，干净整洁。
-    casual:
-      - 浅色针织衫
-      - 棉质长裤
-      - 深蓝色棉布围裙
-    outdoor:
-      - 深色运动服套装
-      - 便于行动的服装
-    underwear:
-      - 简约舒适型内衣
-      - 颜色以浅色为主
+  refined_homewear:
+    - 奶油白针织上衣
+    - 高腰长裙或垂感阔腿裤
+    - 简洁围裙或无围裙家居穿搭
+    - 整体线条利落，显身材但不过分暴露
+
+  outdoor:
+    - 深色运动服套装
+    - 便于行动的轻便服装
+    - 修身但得体，突出成熟健康的体态
+
+  style_keywords:
+    - 温柔贤惠
+    - 成熟优雅
+    - 干净整洁
+    - 轻熟靓丽
+    - 写实高级
+    - 生活化美感
 
   personality_core:
     dominant_traits:

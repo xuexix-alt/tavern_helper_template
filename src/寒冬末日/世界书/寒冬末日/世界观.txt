@@ -1,4 +1,101 @@
+<%_ {
+const opening = getvar('stream_demo.opening', { defaults: {} }) || {};
+const worldModeId = String(opening.world_mode_id || '').trim();
+const routeId = String(opening.route_id || '').trim();
+const meta = opening.meta || {};
+const formValues = opening.form_values || {};
+const worldProfiles = {
+  A: {
+    key: 'siege_fortress',
+    name: '围猎堡垒型',
+    slogan: '自然压力下降，外部敌意上升',
+    core: '战斗 / 防御 / 征服 / 清场',
+    environment: '常态气温约 -5℃ ~ -15℃；低温和暴雪仍危险，但行动能力保留，真正压迫来自外部敌意。',
+    threat: '外部威胁以武装掠夺者、楼层暴徒、流窜劫匪等人祸冲突为主，可按需要混入雪晶畸变体或野化猎群，但不得把环境改写成出门即死。',
+    society: '幸存者据点化，小型武装团体、楼层据点和掠夺集团活跃；文明残余快速流失，强者秩序与恐惧威慑并存。',
+    constraints: [
+      '行动窗口较长，外出、巡逻、侦察、清剿与接触外部势力可以发生，但必须有防寒、防袭击和资源回收成本。',
+      '冲突密度高，剧情应优先体现围堵、试探、清场、防御战和据点吞并压力。',
+      '生产残余度低，不能恢复完整工业或稳定公共服务，只能依靠拆解、库存和小规模修补。',
+    ],
+  },
+  B: {
+    key: 'polar_holding',
+    name: '极寒守成型',
+    slogan: '环境即天敌，活下去本身就是胜利',
+    core: '生存 / 维持 / 种田 / 人口保全',
+    environment: '常态气温约 -35℃ ~ -45℃；暴雪频率高，腐蚀雪晶活性高，寒冷、腐蚀与失温随时都在消耗生命。',
+    threat: '外部威胁以环境失温、冻伤病亡和后勤崩盘为主；敌人可以存在，但不能压过“环境本身就是天敌”的核心设定。',
+    society: '幸存者蜷缩于残余据点，社会联系脆弱；并非人人作恶，但绝望会迅速放大脆弱、自私和医疗/供暖缺口。',
+    constraints: [
+      '行动窗口极短，无准备外出几乎等同送命，离开掩体必须有伊甸或等效防护、明确目的和回收风险。',
+      '剧情应优先体现保暖、配给、医疗、供能、人口保全和庇护所生命支持系统的价值。',
+      '生产残余度极低，不能轻易出现稳定生产、可靠交通或大规模外勤活动。',
+    ],
+  },
+  C: {
+    key: 'order_window',
+    name: '窗口秩序型',
+    slogan: '灾变重创社会，但规则仍有重建空间',
+    core: '治理 / 联盟 / 交易 / 制度建设',
+    environment: '常态气温约 -8℃ ~ -18℃；暴雪阶段性来临，腐蚀雪晶活性中低，环境危险仍在但不足以抹平全部社会结构。',
+    threat: '外部威胁以利益冲突、联盟争夺、治理真空、组织渗透和商路争夺为主。',
+    society: '仍有交易网络、社区据点、组织残余与制度竞争；善恶并存，关键在谁来制定规则、谁来执行规则。',
+    constraints: [
+      '行动窗口稳定，侦察、交易、谈判、接管、联盟和外部势力接触应长期存在。',
+      '剧情应优先体现规则重建、资源分配、组织博弈、秩序竞争和庇护所治理核心化。',
+      '生产残余度中等，只允许少量组织化生产、维修制造和局部交通，不得恢复灾前社会完整秩序。',
+    ],
+  },
+};
+const profile =
+  worldProfiles[worldModeId] ||
+  Object.values(worldProfiles).find(item => item.key === worldModeId) ||
+  null;
+_%>
 <世界观>
-遵从opening开局设定
+# opening 动态世界观
+- 本局世界观以 chat 变量 `stream_demo.opening` 中的 opening 长期配置为真相源；不要再读取、假设或恢复旧的楼层 MVU 开局配置占位字段。
+- 以下内容是给 AI 的世界约束，变量名只用于定位来源，不得在正文中对角色泄露。
+
+<%_ if (profile) { _%>
+## opening选定世界观档位：<%= worldModeId %> · <%= profile.name %>
+- 标语: <%= profile.slogan %>
+- 核心体验: <%= profile.core %>
+- 环境体感: <%= profile.environment %>
+- 主要威胁: <%= profile.threat %>
+- 社会状态: <%= profile.society %>
+- 硬约束:
+<%_ profile.constraints.forEach(function(rule) { _%>
+  - <%= rule %>
+<%_ }); _%>
+<%_ } else { _%>
+## opening选定世界观档位：<%= worldModeId || '未设定' %>
+- 当前未能从 `stream_demo.opening.world_mode_id` 解析到 A/B/C 世界观档位；在 opening 完成前，不得自行发明新的气候、社会残存度或威胁规则。
+- 临时按寒冬末日基础口径处理：极寒灾变、星穹国际公寓、伊甸庇护所、资源短缺和社会秩序崩塌并存。
+<%_ } _%>
+
+## opening路线与补充设定
+- opening路线: <%= routeId || '未设定' %>；路线只改变叙事重心，不得推翻已选世界观档位的气候、行动窗口、社会残存度、生产残余度和主要威胁。
+- 开局时间: <%= meta.time || '未设定' %>
+- 开局地点: <%= meta.location || '未设定' %>
+- 主角名: <%= meta.character || '{{user}}' %>
+<%_ if (formValues.nearby_factions) { _%>
+- opening指定附近社会组织: <%= formValues.nearby_factions %>
+<%_ } _%>
+<%_ if (formValues.nearby_survivor_types) { _%>
+- opening指定其他NPC/幸存者类型: <%= formValues.nearby_survivor_types %>
+<%_ } _%>
+<%_ if (formValues.supplemental_setting) { _%>
+- opening补充设定: <%= formValues.supplemental_setting %>
+<%_ } _%>
+<%_ if (formValues.early_story_tone) { _%>
+- opening剧情基调: <%= formValues.early_story_tone %>
+<%_ } _%>
+
+## 持续性规则
+- 后续剧情必须持续继承 opening 选定世界观；除非玩家明确通过剧情事件改变世界状态，否则不得擅自切换档位。
+- 若通用寒冬末日设定与 opening 动态世界观冲突，优先遵从 opening 动态世界观。
 公寓内住户房间分布和角色档案中的设定必须被遵守
 </世界观>
+<%_ } _%>
