@@ -463,6 +463,7 @@ defineExpose({
   max-width: none;
   margin: 0 auto;
   --transcript-content-max: var(--reader-content-max, 72rem);
+  --transcript-prose-max: min(100%, var(--reader-content-max, 72rem));
   --transcript-fab-size: 34px;
   --transcript-fab-gap: 8px;
   display: flex;
@@ -483,9 +484,13 @@ defineExpose({
 .transcript-entry {
   display: flex;
   flex-direction: column;
+  width: min(100%, var(--transcript-prose-max));
+  margin-inline: auto;
 }
 .transcript-empty {
+  width: min(100%, var(--transcript-prose-max));
   max-width: 100%;
+  margin-inline: auto;
   padding: 42px 16px;
   text-align: center;
   font-size: 13px;
@@ -496,6 +501,8 @@ defineExpose({
 }
 
 .transcript-load-more {
+  width: min(100%, var(--transcript-prose-max));
+  margin-inline: auto;
   text-align: center;
   padding: 10px 0;
   font-family: var(--demo-font-mono);

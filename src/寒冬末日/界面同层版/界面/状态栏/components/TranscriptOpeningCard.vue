@@ -1,7 +1,7 @@
 <template>
   <article
     class="transcript-item opening clip-corner"
-    :class="[`is-${density}`, `font-${fontMode}`, { collapsed: !expanded }]"
+    :class="[`is-${density}`, `font-${fontMode}`, { collapsed: !expanded, 'is-streaming': item.isStreaming }]"
   >
     <header class="transcript-head">
       <div class="opening-banner clip-corner-sm">
@@ -82,6 +82,9 @@ const showBody = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  max-width: var(--transcript-prose-max, 100%);
+  margin-inline: auto;
   min-width: 0;
   padding: 14px;
   border-radius: 16px;
@@ -94,6 +97,13 @@ const showBody = computed(() => {
       color-mix(in srgb, var(--surface) 98%, black 2%)
     );
   box-shadow: 0 18px 34px var(--demo-surface-shadow-soft);
+}
+
+.transcript-item.is-streaming {
+  border-color: color-mix(in srgb, var(--primary) 18%, var(--demo-border-warning-stronger));
+  box-shadow:
+    0 18px 34px var(--demo-surface-shadow-soft),
+    inset 3px 0 0 color-mix(in srgb, var(--primary) 34%, transparent);
 }
 
 .transcript-item.is-minimal {
@@ -247,11 +257,12 @@ const showBody = computed(() => {
 }
 
 .html-body.is-stream-stage {
+  padding: 2px 0 0;
   white-space: normal;
-  padding: 12px 14px;
-  border: 1px solid var(--demo-border-warning-soft);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface) 30%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .html-body :deep(p),
@@ -266,7 +277,7 @@ const showBody = computed(() => {
   word-break: break-word;
   color: var(--demo-text-opening-strong);
   font: inherit;
-  line-height: 1.8;
+  line-height: inherit;
 }
 
 .html-body :deep(h1),

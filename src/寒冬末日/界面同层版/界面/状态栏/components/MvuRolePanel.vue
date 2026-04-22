@@ -731,6 +731,7 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 20%, transparent);
@@ -786,9 +787,14 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   color: var(--demo-text-secondary);
 }
 .metric-caption.inline-summary {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 .metric-caption.muted {
   color: color-mix(in srgb, var(--demo-text-secondary) 72%, transparent);

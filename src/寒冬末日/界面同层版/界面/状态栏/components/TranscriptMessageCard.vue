@@ -79,6 +79,7 @@
     <template v-else>
       <section
         class="assistant-card hud-panel clip-corner"
+        :class="{ 'is-streaming': item.isStreaming }"
         :data-message-id="item.message_id"
         @pointerdown.capture="emit('image-intent', item)"
         @click.capture="emit('image-intent', item)"
@@ -368,6 +369,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 10px;
   width: 100%;
+  max-width: var(--transcript-prose-max, 100%);
+  margin-inline: auto;
 }
 .system-message {
   display: inline-flex;
@@ -425,6 +428,13 @@ onBeforeUnmount(() => {
   max-width: 60rem;
   min-width: 0;
   padding: 24px 28px 18px;
+}
+
+.assistant-card.is-streaming {
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow:
+    0 14px 30px color-mix(in srgb, var(--shadow-color) 42%, transparent),
+    inset 3px 0 0 color-mix(in srgb, var(--primary) 42%, transparent);
 }
 
 .message-shell.density-minimal .assistant-card {
@@ -486,10 +496,11 @@ onBeforeUnmount(() => {
 }
 
 .assistant-body.is-stream-stage {
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-  background: color-mix(in srgb, var(--surface) 22%, transparent);
-  border-radius: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .message-shell.density-minimal .assistant-body {
@@ -518,7 +529,7 @@ onBeforeUnmount(() => {
   word-break: break-word;
   color: var(--demo-text-panel-strong);
   font: inherit;
-  line-height: 1.9;
+  line-height: inherit;
 }
 
 .assistant-body-wrap :deep(.ai-image-container) {
