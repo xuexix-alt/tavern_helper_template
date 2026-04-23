@@ -21,6 +21,7 @@ export function createGeneratedImageGestureController(input: {
   let longPressTimer: ReturnType<typeof setTimeout> | 0 = 0;
   let longPressTriggered = false;
   let suppressClickUntil = 0;
+  let touchDoubleTapPending = false;
 
   const clearClickTimer = () => {
     if (!clickTimer) return;
@@ -55,6 +56,7 @@ export function createGeneratedImageGestureController(input: {
     handleDoubleClick() {
       console.log('[Gesture] handleDoubleClick called');
       clearClickTimer();
+      touchDoubleTapPending = false;
       suppressClickUntil = Date.now() + 700;
       console.log('[Gesture] handleDoubleClick -> onRegenerate(), suppressClickUntil set to', Date.now() + 700);
       input.onRegenerate();
@@ -62,9 +64,16 @@ export function createGeneratedImageGestureController(input: {
     handleTouchStart() {
       clearLongPressTimer();
       longPressTriggered = false;
+      if (clickTimer) {
+        clearClickTimer();
+        touchDoubleTapPending = true;
+        return;
+      }
+      touchDoubleTapPending = false;
       longPressTimer = scheduleTimeout(() => {
         longPressTimer = 0;
         longPressTriggered = true;
+        touchDoubleTapPending = false;
         markTouchHandled();
         input.onView();
       }, longPressMs);
@@ -73,18 +82,31 @@ export function createGeneratedImageGestureController(input: {
       clearLongPressTimer();
       if (longPressTriggered) {
         longPressTriggered = false;
+        touchDoubleTapPending = false;
         return;
       }
       markTouchHandled();
-      input.onView();
+      if (touchDoubleTapPending) {
+        touchDoubleTapPending = false;
+        suppressClickUntil = Date.now() + 700;
+        input.onRegenerate();
+        return;
+      }
+      clearClickTimer();
+      clickTimer = scheduleTimeout(() => {
+        clickTimer = 0;
+        input.onView();
+      }, clickDelayMs);
     },
     handleTouchCancel() {
       clearLongPressTimer();
       longPressTriggered = false;
+      touchDoubleTapPending = false;
     },
     dispose() {
       clearClickTimer();
       clearLongPressTimer();
+      touchDoubleTapPending = false;
     },
   };
 }
