@@ -33,5 +33,8 @@ test('eden command display entries sort by usable quantity before category and k
 
   assert.match(source, /const CATEGORY_ORDER = \['认知修改类', '时空修改类', '战斗修改类', '属性修改类', '未分类'\]/);
   assert.match(source, /if \(a\.quantity !== b\.quantity\) return b\.quantity - a\.quantity;/);
-  assert.match(source, /if \(a\.category !== b\.category\) return categoryRank\(a\.category\) - categoryRank\(b\.category\);/);
+  assert.match(
+    source,
+    /if \(a\.category !== b\.category\) return categoryRank\(a\.category\) - categoryRank\(b\.category\);/,
+  );
 });

@@ -13,7 +13,7 @@ test('assistant streaming state should be surfaced on the outer card instead of 
   const source = readSource('components/TranscriptMessageCard.vue');
 
   assert.equal(
-    source.includes(":class=\"{ 'is-streaming': item.isStreaming }\""),
+    source.includes(':class="{ \'is-streaming\': item.isStreaming }"'),
     true,
     'assistant card should expose a streaming state class on the outer shell for layout-neutral status styling',
   );
@@ -28,7 +28,9 @@ test('assistant streaming state should be surfaced on the outer card instead of 
     'assistant stream state should keep the same inner body width contract as the final rendered body',
   );
   assert.equal(
-    source.includes('.assistant-body-wrap :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-panel-strong);\n  font: inherit;\n  line-height: inherit;'),
+    source.includes(
+      '.assistant-body-wrap :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-panel-strong);\n  font: inherit;\n  line-height: inherit;',
+    ),
     true,
     'assistant stream-stage pre blocks should inherit the same line-height contract as the live body wrapper',
   );
@@ -53,7 +55,9 @@ test('opening streaming state should reuse the final body width instead of wrapp
     'opening stream state should preserve the same body padding contract as the final rendered opening body',
   );
   assert.equal(
-    source.includes('.html-body :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-opening-strong);\n  font: inherit;\n  line-height: inherit;'),
+    source.includes(
+      '.html-body :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-opening-strong);\n  font: inherit;\n  line-height: inherit;',
+    ),
     true,
     'opening stream-stage pre blocks should inherit the same line-height contract as the opening prose wrapper',
   );

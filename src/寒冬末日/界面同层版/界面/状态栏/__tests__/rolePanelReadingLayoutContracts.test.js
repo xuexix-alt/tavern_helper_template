@@ -33,7 +33,9 @@ test('role panel metric summary reasons should wrap inside their cards instead o
     'metric inline summaries should keep pathological text from overflowing the metric card',
   );
   assert.equal(
-    source.includes('.metric-card,\n.detail-card {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  min-width: 0;'),
+    source.includes(
+      '.metric-card,\n.detail-card {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  min-width: 0;',
+    ),
     true,
     'metric/detail cards should explicitly allow inner text to shrink and wrap within the grid cell',
   );
