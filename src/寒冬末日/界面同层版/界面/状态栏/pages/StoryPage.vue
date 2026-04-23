@@ -568,10 +568,7 @@ const activeUtilityPills = computed(() => {
     ];
   }
 
-  return [
-    { label: '日志', value: `${logs.value.length}` },
-    { label: '楼层', value: `${transcriptStats.value.total}` },
-  ];
+  return [];
 });
 
 const shellStyleVars = computed(() => ({

@@ -80,14 +80,24 @@ test('same-layer system panel and workbench modal render eden commands from top-
   assert.match(panelSource, /entry\.description/);
   assert.match(panelSource, /entry\.scope/);
   assert.match(panelSource, /entry\.duration/);
+  assert.match(panelSource, /commandCategoryLabel\(entry\.category\)/);
+  assert.match(panelSource, /systemCommandCardClass\(entry\)/);
+  assert.match(panelSource, /class="system-command-topline"/);
+  assert.match(panelSource, /class="system-command-titleline"/);
+  assert.match(panelSource, /class="system-command-description"/);
+  assert.match(panelSource, /class="system-command-meta-chip"/);
+  assert.doesNotMatch(panelSource, /class="system-command-copy"/);
   assert.match(workbenchSource, /useMvuSystemStore/);
   assert.match(workbenchSource, /_\.get\(systemMvuData\.value, '伊甸一次性指令', \{\}\)/);
-  assert.match(workbenchSource, /名称/);
-  assert.match(workbenchSource, /数量/);
-  assert.match(workbenchSource, /说明/);
-  assert.match(workbenchSource, /范围/);
-  assert.match(workbenchSource, /时效/);
   assert.match(workbenchSource, /v-for="entry in edenCommandEntries"/);
+  assert.match(workbenchSource, /commandCardClass\(entry\)/);
+  assert.match(workbenchSource, /commandCategoryLabel\(entry\.category\)/);
+  assert.match(workbenchSource, /class="command-card-topline"/);
+  assert.match(workbenchSource, /class="command-card-titleline"/);
+  assert.match(workbenchSource, /class="command-card-description"/);
+  assert.match(workbenchSource, /class="command-extra-chip"/);
+  assert.doesNotMatch(workbenchSource, /<small>名称<\/small>/);
+  assert.doesNotMatch(workbenchSource, /<span>说明<\/span>/);
   assert.match(commandsSource, /const record = value as Record<string, unknown>;/);
   assert.match(commandsSource, /name:\s*String\(record\.名称 \?\? ''\)\.trim\(\) \|\| meta\?\.name \|\| normalizedKey/);
   assert.match(commandsSource, /quantity:\s*normalizeQuantity\(record\.数量\)/);
@@ -97,6 +107,28 @@ test('same-layer system panel and workbench modal render eden commands from top-
   );
   assert.match(commandsSource, /scope:\s*String\(record\.范围 \?\? ''\)\.trim\(\) \|\| meta\?\.scope \|\| ''/);
   assert.match(commandsSource, /duration:\s*String\(record\.时效 \?\? ''\)\.trim\(\) \|\| meta\?\.duration \|\| ''/);
+  assert.match(commandsSource, /category:\s*meta\?\.category \|\| '未分类'/);
   assert.match(storeSource, /const RESERVED_TOP_LEVEL_KEYS = new Set\(\[/);
   assert.match(storeSource, /'伊甸一次性指令'/);
+});
+
+test('workbench logs tab owns system summary and command tab keeps themed category cards', () => {
+  const workbenchSource = read('../components/WorkbenchTabs.vue');
+  const storyPageSource = read('../pages/StoryPage.vue');
+
+  assert.doesNotMatch(workbenchSource, /<section class="workbench-summary-strip">[\s\S]*?<div class="system-tabs"/);
+  assert.match(
+    workbenchSource,
+    /<section v-else class="workbench-panel logs-panel">[\s\S]*<section class="workbench-summary-strip">/,
+  );
+  assert.doesNotMatch(storyPageSource, /const activeUtilityPills = computed\(\(\) => \{[\s\S]*?日志[\s\S]*?楼层/);
+  assert.match(workbenchSource, /class="command-category-badge"/);
+  assert.match(workbenchSource, /class="command-quantity-pill"/);
+  assert.match(workbenchSource, /\.command-card-topline/);
+  assert.match(workbenchSource, /\.command-card-titleline/);
+  assert.match(workbenchSource, /\.command-card-description/);
+  assert.match(workbenchSource, /\.command-extra-chip/);
+  assert.match(workbenchSource, /\.command-card\.is-zero/);
+  assert.match(workbenchSource, /--cmd-category-color/);
+  assert.match(workbenchSource, /color-mix\(in srgb, var\(--cmd-category-color\)/);
 });

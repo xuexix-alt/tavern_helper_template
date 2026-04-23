@@ -1,24 +1,5 @@
 <template>
   <section class="workbench-card">
-    <section class="workbench-summary-strip">
-      <article class="summary-chip clip-corner-sm">
-        <small>日志</small>
-        <strong>{{ logs.length }}</strong>
-      </article>
-      <article class="summary-chip clip-corner-sm">
-        <small>楼层</small>
-        <strong>{{ transcriptTotal ?? 0 }}</strong>
-      </article>
-      <article class="summary-chip clip-corner-sm">
-        <small>庇护等级</small>
-        <strong>{{ shelterLevel }}</strong>
-      </article>
-      <article class="summary-chip clip-corner-sm">
-        <small>指令</small>
-        <strong>{{ edenCommandEntries.length }}</strong>
-      </article>
-    </section>
-
     <div class="system-tabs" role="tablist" aria-label="系统面板页签">
       <button
         v-for="tab in tabs"
@@ -36,25 +17,32 @@
       <span class="block-label">Eden Commands</span>
       <div v-if="edenCommandEntries.length === 0" class="empty-log">当前暂无一次性指令</div>
       <div v-else class="command-list">
-        <article v-for="entry in edenCommandEntries" :key="entry.key" class="command-card clip-corner-sm">
-          <div class="command-card-head">
-            <div class="command-card-copy">
-              <small>名称</small>
+        <article
+          v-for="entry in edenCommandEntries"
+          :key="entry.key"
+          class="command-card clip-corner-sm"
+          :class="commandCardClass(entry)"
+        >
+          <div class="command-card-topline">
+            <div class="command-card-tags">
+              <span class="command-category-badge">{{ commandCategoryLabel(entry.category) }}</span>
               <span class="command-id">{{ entry.key }}</span>
-              <strong>{{ entry.name }}</strong>
             </div>
-            <div class="command-quantity">
-              <small>数量</small>
-              <strong>{{ entry.quantity }}</strong>
-            </div>
+            <div class="command-quantity-pill" aria-label="数量">×{{ entry.quantity }}</div>
           </div>
-          <div class="command-meta">
-            <span>说明</span>
-            <p>{{ entry.description || '暂无说明' }}</p>
+          <div class="command-card-titleline">
+            <strong>{{ entry.name }}</strong>
+            <span class="command-card-description">{{ entry.description || '暂无说明' }}</span>
           </div>
           <div class="command-extra">
-            <span>范围 {{ entry.scope || '--' }}</span>
-            <span>时效 {{ entry.duration || '--' }}</span>
+            <span class="command-extra-chip">
+              <b>范围</b>
+              <span>{{ entry.scope || '--' }}</span>
+            </span>
+            <span class="command-extra-chip">
+              <b>时效</b>
+              <span>{{ entry.duration || '--' }}</span>
+            </span>
           </div>
         </article>
       </div>
@@ -114,7 +102,30 @@
       </div>
     </section>
 
-    <section v-else class="workbench-panel">
+    <section v-else class="workbench-panel logs-panel">
+      <section class="workbench-summary-strip">
+        <article class="summary-chip clip-corner-sm">
+          <small>日志</small>
+          <strong>{{ logs.length }}</strong>
+          <span>最近操作</span>
+        </article>
+        <article class="summary-chip clip-corner-sm">
+          <small>楼层</small>
+          <strong>{{ transcriptTotal ?? 0 }}</strong>
+          <span>当前聊天</span>
+        </article>
+        <article class="summary-chip clip-corner-sm">
+          <small>庇护等级</small>
+          <strong>{{ shelterLevel }}</strong>
+          <span>Shelter Lv.</span>
+        </article>
+        <article class="summary-chip clip-corner-sm">
+          <small>指令</small>
+          <strong>{{ edenCommandEntries.length }}</strong>
+          <span>Eden Commands</span>
+        </article>
+      </section>
+
       <span class="block-label">最近操作</span>
       <div v-if="logs.length === 0" class="empty-log">暂无日志</div>
       <ul v-else class="log-list">
@@ -132,7 +143,7 @@
 
 <script setup lang="ts">
 import type { ReaderLogItem } from '../types';
-import { buildEdenCommandDisplayEntries } from '../edenOneShotCommands';
+import { buildEdenCommandDisplayEntries, type EdenOneShotCommandDisplayEntry } from '../edenOneShotCommands';
 import { useMvuSystemStore } from '../mvuRoleStore';
 
 const props = defineProps<{
@@ -174,6 +185,29 @@ const expansionState = computed(() => ({
 const unlockedExpansionCount = computed(
   () => Object.values(expansionState.value).filter(value => String(value).trim() !== '未解锁').length,
 );
+
+function commandCategoryClass(category: string): string {
+  switch (String(category ?? '').trim()) {
+    case '认知修改类':
+      return 'category-cognition';
+    case '时空修改类':
+      return 'category-spacetime';
+    case '战斗修改类':
+      return 'category-combat';
+    case '属性修改类':
+      return 'category-attribute';
+    default:
+      return 'category-unknown';
+  }
+}
+
+function commandCategoryLabel(category: string): string {
+  return String(category ?? '').replace(/修改类$/, '') || '未分类';
+}
+
+function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
+  return [commandCategoryClass(entry.category), { 'is-zero': entry.quantity <= 0 }];
+}
 </script>
 
 <style scoped>
@@ -188,12 +222,36 @@ const unlockedExpansionCount = computed(
 .status-detail-card,
 .expansion-card,
 .command-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 10px 12px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+.summary-chip {
+  min-height: 74px;
+  justify-content: space-between;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 60%),
+    color-mix(in srgb, var(--surface) 46%, transparent);
+}
+
+.summary-chip::before,
+.command-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cmd-category-color, var(--primary)) 92%, white 8%),
+    color-mix(in srgb, var(--cmd-category-color, var(--primary)) 36%, transparent)
+  );
+  opacity: 0.9;
 }
 
 .summary-chip small,
@@ -204,11 +262,12 @@ const unlockedExpansionCount = computed(
 .status-detail-card strong,
 .expansion-card small,
 .expansion-card strong,
-.command-card-copy small,
-.command-quantity small,
+.command-category-badge,
+.command-extra-chip,
+.command-extra-chip b,
+.command-quantity-pill,
 .command-card strong,
-.command-id,
-.command-meta span {
+.command-id {
   font-family: var(--demo-font-mono);
 }
 
@@ -216,10 +275,8 @@ const unlockedExpansionCount = computed(
 .status-chip small,
 .status-detail-card small,
 .expansion-card small,
-.command-card-copy small,
-.command-quantity small,
 .command-id,
-.command-meta span {
+.summary-chip span {
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -243,8 +300,7 @@ const unlockedExpansionCount = computed(
 .workbench-panel,
 .status-detail-grid,
 .expansion-grid,
-.command-list,
-.command-meta {
+.command-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -253,9 +309,11 @@ const unlockedExpansionCount = computed(
 .system-tabs,
 .log-head,
 .progress-copy,
-.command-card-head,
-.command-card-copy,
-.command-quantity {
+.command-card-topline,
+.command-card-tags,
+.command-card-titleline,
+.command-extra,
+.command-extra-chip {
   display: flex;
 }
 
@@ -338,35 +396,187 @@ const unlockedExpansionCount = computed(
 .command-list {
   display: grid;
   grid-template-columns: 1fr;
+  gap: 7px;
 }
 
-.command-card-head {
-  align-items: flex-start;
+.command-card-topline {
+  min-width: 0;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
-.command-card-copy,
-.command-quantity {
-  flex-direction: column;
-  gap: 4px;
+.command-card-tags {
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
 }
 
-.command-meta p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
+.command-card-titleline {
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.command-card {
+  --cmd-category-color: var(--primary);
+  gap: 6px;
+  padding: 8px 10px 8px 12px;
+  border-color: color-mix(in srgb, var(--cmd-category-color) 34%, var(--border) 66%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cmd-category-color) 10%, transparent), transparent 58%),
+    color-mix(in srgb, var(--surface) 40%, transparent);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
+}
+
+.command-card.category-cognition {
+  --cmd-category-color: #8b5cf6;
+}
+
+.command-card.category-spacetime {
+  --cmd-category-color: #38bdf8;
+}
+
+.command-card.category-combat {
+  --cmd-category-color: #fb7185;
+}
+
+.command-card.category-attribute {
+  --cmd-category-color: #34d399;
+}
+
+.command-card.category-unknown {
+  --cmd-category-color: var(--primary);
+}
+
+.command-card.is-zero {
+  --cmd-category-color: color-mix(in srgb, var(--foreground) 34%, var(--surface) 66%);
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--surface) 50%, var(--foreground) 4%);
+}
+
+.command-card.is-zero .command-card-description,
+.command-card.is-zero .command-extra {
+  color: var(--demo-text-muted);
+}
+
+.command-card-titleline strong {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--demo-text-primary);
+}
+
+.command-card-description {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.35;
   color: var(--demo-text-secondary);
 }
 
-.command-extra {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-family: var(--demo-font-mono);
+.command-card-description::before {
+  content: '—';
+  margin-right: 7px;
+  color: color-mix(in srgb, var(--cmd-category-color) 58%, var(--demo-text-subtle));
+}
+
+.command-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-category-badge,
+.command-quantity-pill {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--cmd-category-color) 36%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cmd-category-color) 12%, var(--surface) 88%);
+  color: color-mix(in srgb, var(--cmd-category-color) 76%, var(--foreground) 24%);
+}
+
+.command-category-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
   font-size: 10px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+}
+
+.command-id {
+  flex: 0 1 auto;
+  max-width: 82px;
   color: var(--demo-text-subtle);
+}
+
+.command-quantity-pill {
+  flex: 0 0 auto;
+  min-width: 38px;
+  padding: 4px 9px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--demo-text-primary);
+}
+
+.command-card.is-zero .command-category-badge,
+.command-card.is-zero .command-quantity-pill {
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--surface) 56%, transparent);
+  color: var(--demo-text-muted);
+}
+
+.command-extra {
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.command-extra-chip {
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--cmd-category-color) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 55%, var(--cmd-category-color) 5%);
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--demo-text-subtle);
+}
+
+.command-extra-chip:first-child {
+  flex: 1 1 auto;
+}
+
+.command-extra-chip:last-child {
+  flex: 0 0 auto;
+}
+
+.command-extra-chip b {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--cmd-category-color) 72%, var(--foreground) 28%);
+}
+
+.command-extra-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .log-list {
@@ -418,6 +628,30 @@ const unlockedExpansionCount = computed(
   .status-chip-row,
   .status-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .command-card-titleline {
+    flex-wrap: wrap;
+    gap: 3px 8px;
+  }
+
+  .command-card-titleline strong,
+  .command-card-description {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .command-card-description::before {
+    content: '';
+    margin: 0;
+  }
+
+  .command-extra {
+    flex-wrap: wrap;
+  }
+
+  .command-extra-chip {
+    flex: 1 1 100%;
   }
 }
 </style>

@@ -173,18 +173,28 @@
               v-for="entry in edenCommandStatEntries"
               :key="entry.key"
               class="system-command-card clip-corner-sm"
+              :class="systemCommandCardClass(entry)"
             >
-              <div class="system-stat-row">
-                <div class="system-command-copy">
+              <div class="system-command-topline">
+                <div class="system-command-tags">
+                  <span class="system-command-category-badge">{{ commandCategoryLabel(entry.category) }}</span>
                   <span class="system-command-id">{{ entry.key }}</span>
-                  <strong>{{ entry.name }}</strong>
                 </div>
-                <strong>×{{ entry.quantity }}</strong>
+                <div class="system-command-quantity" aria-label="数量">×{{ entry.quantity }}</div>
               </div>
-              <p class="system-command-description">{{ entry.description || '暂无说明' }}</p>
+              <div class="system-command-titleline">
+                <strong>{{ entry.name }}</strong>
+                <span class="system-command-description">{{ entry.description || '暂无说明' }}</span>
+              </div>
               <div class="system-command-meta">
-                <span>范围 {{ entry.scope || '--' }}</span>
-                <span>时效 {{ entry.duration || '--' }}</span>
+                <span class="system-command-meta-chip">
+                  <b>范围</b>
+                  <span>{{ entry.scope || '--' }}</span>
+                </span>
+                <span class="system-command-meta-chip">
+                  <b>时效</b>
+                  <span>{{ entry.duration || '--' }}</span>
+                </span>
               </div>
             </article>
           </div>
@@ -229,7 +239,7 @@
 
 <script setup lang="ts">
 import type { TranscriptItem } from '../types';
-import { buildEdenCommandDisplayEntries } from '../edenOneShotCommands';
+import { buildEdenCommandDisplayEntries, type EdenOneShotCommandDisplayEntry } from '../edenOneShotCommands';
 import { buildMvuSourceOptions } from '../mvuSourceOptions';
 import { readMvuStatData, useMvuRoleStore, useMvuSystemStore } from '../mvuRoleStore';
 
@@ -339,6 +349,29 @@ const expansionState = computed(() => ({
   workshop: String(_.get(systemMvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
   hangar: String(_.get(systemMvuData.value, '庇护所.可扩展区域.载具格纳库', '未解锁')),
 }));
+
+function systemCommandCategoryClass(category: string): string {
+  switch (String(category ?? '').trim()) {
+    case '认知修改类':
+      return 'category-cognition';
+    case '时空修改类':
+      return 'category-spacetime';
+    case '战斗修改类':
+      return 'category-combat';
+    case '属性修改类':
+      return 'category-attribute';
+    default:
+      return 'category-unknown';
+  }
+}
+
+function commandCategoryLabel(category: string): string {
+  return String(category ?? '').replace(/修改类$/, '') || '未分类';
+}
+
+function systemCommandCardClass(entry: EdenOneShotCommandDisplayEntry) {
+  return [systemCommandCategoryClass(entry.category), { 'is-zero': entry.quantity <= 0 }];
+}
 
 // 当变量更新时（sourceOptions变化），自动切换到最新楼层
 watch(
@@ -476,6 +509,11 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 .meta-row,
 .stat-row,
 .system-head-row,
+.system-command-topline,
+.system-command-tags,
+.system-command-titleline,
+.system-command-meta,
+.system-command-meta-chip,
 .sidebar-footer {
   display: flex;
 }
@@ -948,53 +986,188 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
 .system-stat-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 .system-command-card {
+  --system-command-color: var(--primary);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--demo-border-accent-soft);
-  background: color-mix(in srgb, var(--surface) 22%, transparent);
+  padding: 8px 10px 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--system-command-color) 34%, var(--border) 66%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--system-command-color) 11%, transparent), transparent 62%),
+    color-mix(in srgb, var(--surface) 44%, transparent);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    opacity 180ms ease;
 }
-.system-stat-row {
-  display: flex;
+.system-command-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--system-command-color) 92%, white 8%),
+    color-mix(in srgb, var(--system-command-color) 34%, transparent)
+  );
+  opacity: 0.88;
+}
+.system-command-card.category-cognition {
+  --system-command-color: #8b5cf6;
+}
+.system-command-card.category-spacetime {
+  --system-command-color: #38bdf8;
+}
+.system-command-card.category-combat {
+  --system-command-color: #fb7185;
+}
+.system-command-card.category-attribute {
+  --system-command-color: #34d399;
+}
+.system-command-card.category-unknown {
+  --system-command-color: var(--primary);
+}
+.system-command-card.is-zero {
+  --system-command-color: color-mix(in srgb, var(--foreground) 34%, var(--surface) 66%);
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--surface) 52%, var(--foreground) 4%);
+}
+.system-command-topline {
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-family: var(--demo-font-mono);
-  font-size: 14px;
-  color: var(--demo-text-primary);
+  gap: 8px;
 }
-.system-stat-row strong {
-  color: var(--demo-text-accent);
-}
-.system-command-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.system-command-tags {
   min-width: 0;
+  align-items: center;
+  gap: 6px;
 }
-.system-command-id {
+.system-command-titleline {
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+.system-command-category-badge,
+.system-command-quantity,
+.system-command-meta-chip,
+.system-command-meta-chip b,
+.system-command-id,
+.system-command-titleline strong {
+  font-family: var(--demo-font-mono);
+}
+.system-command-category-badge,
+.system-command-quantity {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--system-command-color) 36%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--system-command-color) 12%, var(--surface) 88%);
+  color: color-mix(in srgb, var(--system-command-color) 76%, var(--foreground) 24%);
+}
+.system-command-category-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
   font-size: 10px;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.system-command-id {
+  flex: 0 1 auto;
+  max-width: 78px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--demo-text-subtle);
+}
+.system-command-quantity {
+  flex: 0 0 auto;
+  min-width: 36px;
+  padding: 4px 9px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--demo-text-primary);
+}
+.system-command-titleline strong {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--demo-text-primary);
 }
 .system-command-description {
-  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.35;
   color: var(--demo-text-secondary);
 }
+.system-command-description::before {
+  content: '—';
+  margin-right: 7px;
+  color: color-mix(in srgb, var(--system-command-color) 58%, var(--demo-text-subtle));
+}
 .system-command-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-family: var(--demo-font-mono);
+  min-width: 0;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.system-command-meta-chip {
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--system-command-color) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 58%, var(--system-command-color) 5%);
   font-size: 10px;
-  letter-spacing: 0.06em;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
   color: var(--demo-text-subtle);
+}
+.system-command-meta-chip:first-child {
+  flex: 1 1 auto;
+}
+.system-command-meta-chip:last-child {
+  flex: 0 0 auto;
+}
+.system-command-meta-chip b {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--system-command-color) 72%, var(--foreground) 28%);
+}
+.system-command-meta-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.system-command-card.is-zero .system-command-category-badge,
+.system-command-card.is-zero .system-command-quantity {
+  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
+  background: color-mix(in srgb, var(--surface) 56%, transparent);
+  color: var(--demo-text-muted);
+}
+.system-command-card.is-zero .system-command-description,
+.system-command-card.is-zero .system-command-meta,
+.system-command-card.is-zero .system-command-meta-chip {
+  color: var(--demo-text-muted);
 }
 .system-block {
   display: flex;
@@ -1263,6 +1436,30 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   .system-copy,
   .expand-card span {
     font-size: 11px;
+  }
+
+  .system-command-titleline {
+    flex-wrap: wrap;
+    gap: 3px 8px;
+  }
+
+  .system-command-titleline strong,
+  .system-command-description {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .system-command-description::before {
+    content: '';
+    margin: 0;
+  }
+
+  .system-command-meta {
+    flex-wrap: wrap;
+  }
+
+  .system-command-meta-chip {
+    flex: 1 1 100%;
   }
 
   .system-value strong {

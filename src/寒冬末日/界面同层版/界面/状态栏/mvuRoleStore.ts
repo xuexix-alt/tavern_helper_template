@@ -103,6 +103,16 @@ export function readMvuStatData(
   return { ok: false };
 }
 
+function readLatestMvuStatData(
+  options?: ReadMvuStatDataOptions,
+): { ok: true; data: SchemaType; messageId: number | 'latest' } | { ok: false } {
+  // JS-Slash-Runner / Tavern Helper 的 message_id:'latest' 会解析为 latest non-system message。
+  // same-layer 的系统更新结果可能落在真正最新的 system 楼层，因此系统面板先读物理最新楼层 -1。
+  const physicalLatest = readMvuStatData(-1, options);
+  if (physicalLatest.ok) return physicalLatest;
+  return readMvuStatData('latest', options);
+}
+
 function resolveTargetMessageId(rawTarget: number | 'latest' | null | undefined): number | 'latest' | null {
   if (rawTarget == null) return null;
   if (rawTarget === 'latest') return 'latest';
@@ -342,7 +352,7 @@ export function useMvuSystemStore() {
     refreshTicket.value = ticket;
 
     const extraAnalysis = readExtraAnalysisFlag();
-    const current = readMvuStatData('latest', { allowSystemOnly: true });
+    const current = readLatestMvuStatData({ allowSystemOnly: true });
     if (refreshTicket.value !== ticket) return;
 
     isDuringExtraAnalysis.value = extraAnalysis;

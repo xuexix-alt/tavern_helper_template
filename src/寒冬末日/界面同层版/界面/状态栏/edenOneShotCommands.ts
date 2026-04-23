@@ -16,9 +16,16 @@ export type EdenOneShotCommandDisplayEntry = {
   description: string;
   scope: string;
   duration: string;
+  category: string;
 };
 
 const CATEGORY_TITLES = ['认知修改类', '时空修改类', '战斗修改类', '属性修改类'];
+const CATEGORY_ORDER = ['认知修改类', '时空修改类', '战斗修改类', '属性修改类', '未分类'];
+
+function categoryRank(category: string): number {
+  const index = CATEGORY_ORDER.indexOf(String(category ?? '').trim());
+  return index >= 0 ? index : CATEGORY_ORDER.length;
+}
 
 function parseCommandLine(line: string, category: string): EdenOneShotCommandMeta | null {
   const trimmed = line.trim();
@@ -93,6 +100,7 @@ export function buildEdenCommandDisplayEntries(raw: unknown): EdenOneShotCommand
           description: String(record.说明 ?? '').trim() || meta?.description || '',
           scope: String(record.范围 ?? '').trim() || meta?.scope || '',
           duration: String(record.时效 ?? '').trim() || meta?.duration || '',
+          category: meta?.category || '未分类',
         };
       }
 
@@ -103,8 +111,15 @@ export function buildEdenCommandDisplayEntries(raw: unknown): EdenOneShotCommand
         description: meta?.description || '',
         scope: meta?.scope || '',
         duration: meta?.duration || '',
+        category: meta?.category || '未分类',
       };
     })
     .filter((entry): entry is EdenOneShotCommandDisplayEntry => Boolean(entry))
-    .sort((a, b) => a.key.localeCompare(b.key, 'zh-Hans-CN'));
+    .sort((a, b) => {
+      const availableDiff = Number(b.quantity > 0) - Number(a.quantity > 0);
+      if (availableDiff !== 0) return availableDiff;
+      if (a.quantity !== b.quantity) return b.quantity - a.quantity;
+      if (a.category !== b.category) return categoryRank(a.category) - categoryRank(b.category);
+      return (a.name || a.key).localeCompare(b.name || b.key, 'zh-Hans-CN');
+    });
 }
