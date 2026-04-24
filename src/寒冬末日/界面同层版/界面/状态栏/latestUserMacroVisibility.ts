@@ -35,7 +35,12 @@ export async function withLatestUserUnhidden<T>({
     .filter(item => item && Number.isFinite(Number(item.message_id)))
     .sort((a, b) => Math.trunc(Number(a.message_id)) - Math.trunc(Number(b.message_id)))
     .reverse()
-    .find(item => String(item.role ?? '').trim().toLowerCase() === 'user');
+    .find(
+      item =>
+        String(item.role ?? '')
+          .trim()
+          .toLowerCase() === 'user',
+    );
 
   if (!latestUser) {
     return await action();
@@ -68,9 +73,7 @@ export function collectGenerationRevealMessageIds({
 
   const combined = [
     ...(Number.isFinite(Number(latestHiddenUserMessageId)) ? [Math.trunc(Number(latestHiddenUserMessageId))] : []),
-    ...hiddenMessageIds
-      .map(id => Math.trunc(Number(id)))
-      .filter(id => Number.isFinite(id) && id >= 0),
+    ...hiddenMessageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0),
   ];
 
   return [...new Set(combined)].sort((a, b) => a - b);
