@@ -10,7 +10,8 @@ import {
   stripTagsForPreview,
 } from '../../shared/message';
 import {
-  buildOpeningGeneratePrompt,
+  buildOpeningPromptContext,
+  compileOpeningPromptTemplate,
   extractOpeningContentLoose,
   extractOpeningOptions,
   getDefaultOpeningPayload,
@@ -22,6 +23,7 @@ import {
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
 } from '../../shared/opening';
+import openingPromptTemplateRaw from '../../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
 import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
@@ -111,6 +113,7 @@ import {
   type SameLayerRuntimeLeaseStatus,
   writeSameLayerRuntimeLease,
 } from './runtimeLeasePersistence';
+import { collectGenerationRevealMessageIds, withLatestUserUnhidden } from './latestUserMacroVisibility';
 import type {
   DemoStatus,
   DemoTheme,
@@ -1222,8 +1225,33 @@ function normalizeRoleLabel(role: TranscriptItem['role']): string {
   return '助手';
 }
 
-function buildOpeningCompiledUserInput(preset: OpeningPreset, payload: OpeningPayload) {
-  return buildOpeningGeneratePrompt(preset, payload);
+async function buildOpeningCompiledUserInput(
+  preset: OpeningPreset,
+  payload: OpeningPayload,
+  options?: {
+    messages?:
+      | { message_id: number; role?: string | null; is_hidden?: boolean }[]
+      | (() => { message_id: number; role?: string | null; is_hidden?: boolean }[]);
+    setChatMessages?: (
+      chat_messages: Array<{ message_id: number; is_hidden: boolean }>,
+      options?: { refresh?: 'none' | 'affected' | 'all' },
+    ) => Promise<void>;
+  },
+) {
+  const context = buildOpeningPromptContext(preset, payload);
+  const compiledTemplate = compileOpeningPromptTemplate(String(openingPromptTemplateRaw ?? '').trim(), context);
+  const resolveExplicitMacros = () =>
+    typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
+
+  if (!options?.messages || typeof options.setChatMessages !== 'function') {
+    return resolveExplicitMacros();
+  }
+
+  return await withLatestUserUnhidden({
+    messages: options.messages,
+    setChatMessages: options.setChatMessages,
+    action: async () => resolveExplicitMacros(),
+  });
 }
 
 function buildTranscriptItem(input: {
@@ -3324,12 +3352,40 @@ export function useStreamingDemo() {
       await ensureAssistantPlaceholderReady('first_token');
       await options.onAssistantPlaceholderCreated?.(assistantMessageId.value);
 
-      const hiddenIds =
-        options.detachedUserInput === true
-          ? []
-          : readMessagesAfterContainer()
-              .filter(item => item.is_hidden === true)
-              .map(item => item.message_id);
+      const hiddenMessageIds = readMessagesAfterContainer()
+        .filter(item => item.is_hidden === true)
+        .map(item => item.message_id);
+      const latestHiddenUserMessageId =
+        options.createUser === false && latestUserItem.value?.hidden === true ? latestUserItem.value.message_id : null;
+      const hiddenIds = collectGenerationRevealMessageIds({
+        detachedUserInput: options.detachedUserInput === true,
+        hiddenMessageIds,
+        latestHiddenUserMessageId,
+      });
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'reveal_window_prepared',
+        {
+          createUser: options.createUser,
+          detachedUserInput: options.detachedUserInput === true,
+          hiddenMessageIds,
+          latestHiddenUserMessageId,
+          revealMessageIds: hiddenIds,
+          hiddenMessageIdsJson: JSON.stringify(hiddenMessageIds),
+          revealMessageIdsJson: JSON.stringify(hiddenIds),
+        },
+        traceId,
+      );
+      console.log(
+        '[stream-demo] generation reveal window',
+        JSON.stringify({
+          createUser: options.createUser,
+          detachedUserInput: options.detachedUserInput === true,
+          hiddenMessageIds,
+          latestHiddenUserMessageId,
+          revealMessageIds: hiddenIds,
+        }),
+      );
       if (hiddenIds.length > 0) {
         await setChatMessages(
           hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
@@ -3690,7 +3746,10 @@ export function useStreamingDemo() {
       toastr?.warning?.(`请先填写：${missing.label}`);
       return;
     }
-    const compiledPromptSnapshot = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);
+    const compiledPromptSnapshot = await buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value, {
+      messages: () => readMessagesAfterContainer(),
+      setChatMessages,
+    });
     const generated = await runOpeningDetachedGeneration(compiledPromptSnapshot);
     if (generated) {
       appendLog('action', '生成开局', stripTagsForPreview(compiledPromptSnapshot).slice(0, 80) || '(空开局)');
