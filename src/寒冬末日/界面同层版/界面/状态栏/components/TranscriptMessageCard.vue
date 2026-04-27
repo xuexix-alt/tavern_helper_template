@@ -348,14 +348,18 @@ onMounted(() => {
   recordComponentTrace('mount');
 });
 
-watch(assistantBodySignature, async () => {
-  if (props.item.role !== 'assistant') return;
-  recordComponentTrace('update');
-  await nextTick();
-  await hydrateAssistantBodyImages();
-  await nextTick();
-  bindAssistantBodyInteractions();
-}, { immediate: true, flush: 'post' });
+watch(
+  assistantBodySignature,
+  async () => {
+    if (props.item.role !== 'assistant') return;
+    recordComponentTrace('update');
+    await nextTick();
+    await hydrateAssistantBodyImages();
+    await nextTick();
+    bindAssistantBodyInteractions();
+  },
+  { immediate: true, flush: 'post' },
+);
 
 onBeforeUnmount(() => {
   recordComponentTrace('unmount');
