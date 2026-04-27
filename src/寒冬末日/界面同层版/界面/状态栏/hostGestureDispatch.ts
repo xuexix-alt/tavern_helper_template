@@ -3,6 +3,8 @@ export type HostGesturePoint = {
   clientY: number;
 };
 
+export type HostGestureDispatchStrategy = 'auto' | 'dblclick' | 'mobile-touch-sequence';
+
 type WindowLike = Window & typeof globalThis;
 
 function resolveDispatchPoint(target: HTMLElement, hostPoint?: HostGesturePoint | null): HostGesturePoint {
@@ -109,6 +111,7 @@ export function dispatchHostPrimaryTrigger(
   target: HTMLElement,
   options: {
     hostPoint?: HostGesturePoint | null;
+    strategy?: HostGestureDispatchStrategy;
   } = {},
 ): boolean {
   try {
@@ -117,7 +120,10 @@ export function dispatchHostPrimaryTrigger(
     if (!view) return false;
 
     const point = resolveDispatchPoint(target, options.hostPoint ?? null);
-    if (isLikelyMobileHostView(view)) {
+    const strategy = options.strategy ?? 'auto';
+    const shouldDispatchTouchSequence =
+      strategy === 'mobile-touch-sequence' || (strategy === 'auto' && isLikelyMobileHostView(view));
+    if (shouldDispatchTouchSequence) {
       return dispatchMobileTripleTouch(target, view, point);
     }
 

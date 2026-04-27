@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { createGeneratedImageGestureController } = require('../generatedImageGestureController');
+const { createGeneratedImageGestureController } = require('../generatedImageGestureController.ts');
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -114,7 +114,7 @@ test('double click within extended delay window still triggers regenerate', asyn
   controller.dispose();
 });
 
-test('suppressClickUntil blocks subsequent click after touch', async () => {
+test('suppressClickUntil blocks duplicate ghost click after touch view', async () => {
   const events = [];
   const controller = createGeneratedImageGestureController({
     clickDelayMs: 100,
@@ -133,6 +133,6 @@ test('suppressClickUntil blocks subsequent click after touch', async () => {
   controller.handleClick();
   await wait(120);
 
-  assert.deepEqual(events, []);
+  assert.deepEqual(events, ['view']);
   controller.dispose();
 });

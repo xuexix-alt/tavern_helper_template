@@ -159,6 +159,16 @@ let lastObservedScrollTop = 0;
 
 const visibleItems = computed(() => props.items.slice(startIndex.value));
 const hasMoreAbove = computed(() => startIndex.value > 0);
+const imageCountsByMessageId = computed(() => {
+  const counts = new Map<number, number>();
+  for (const entry of props.galleryEntries ?? []) {
+    const messageId = Number(entry.messageId);
+    if (!Number.isFinite(messageId)) continue;
+    const normalizedId = Math.trunc(messageId);
+    counts.set(normalizedId, (counts.get(normalizedId) ?? 0) + 1);
+  }
+  return counts;
+});
 
 async function loadMoreAbove() {
   if (loadingMoreAbove) return;
@@ -285,7 +295,7 @@ function handleImageButtonClick(messageId: number, _event: MouseEvent) {
 }
 
 function messageImageCount(messageId: number): number {
-  return (props.galleryEntries ?? []).filter(e => e.messageId === messageId).length;
+  return imageCountsByMessageId.value.get(Math.trunc(Number(messageId))) ?? 0;
 }
 
 function scrollToLatest(behavior: ScrollBehavior = 'smooth') {

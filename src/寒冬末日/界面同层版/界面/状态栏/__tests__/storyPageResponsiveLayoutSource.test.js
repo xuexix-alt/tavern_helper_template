@@ -91,7 +91,7 @@ test('StoryPage keeps a manually selected departed role active while it remains 
 
   assert.match(
     source,
-    /if \(activeRoleKey\.value && !roles\.some\(role => role\.key === activeRoleKey\.value\)\) \{/,
+    /if \(activeRoleKey\.value && !roleKeys\.has\(activeRoleKey\.value\)\) \{/,
     'selected side-panel role should only reset when it leaves the full roster, not when it is merely filtered out of visible/active quick tabs',
   );
   assert.doesNotMatch(

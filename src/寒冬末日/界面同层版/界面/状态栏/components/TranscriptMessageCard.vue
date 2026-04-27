@@ -151,6 +151,17 @@ const emit = defineEmits<{
 const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
+const assistantBodySignature = computed(() => {
+  if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
+  const html = props.item.isStreaming ? props.item.streamHtml : props.item.finalHtml;
+  return [
+    props.item.message_id,
+    props.item.isStreaming ? 'stream' : 'final',
+    props.item.phase,
+    String(html ?? '').length,
+    String(html ?? ''),
+  ].join('::');
+});
 
 function recordComponentTrace(event: string, payload: Record<string, unknown> = {}) {
   recordComponentDebugTrace({
@@ -278,24 +289,16 @@ function bindAssistantBodyInteractions() {
     });
 
     const handleClick = (event: Event) => {
-      console.log('[TranscriptCard] handleClick called, suppressNextClick:', suppressNextClick);
       if (suppressNextClick) {
         suppressNextClick = false;
-        console.log('[TranscriptCard] handleClick suppressed');
         return;
       }
       stopEvent(event);
-      console.log('[TranscriptCard] handleClick -> controller.handleClick(), messageId:', props.item.message_id);
       controller.handleClick();
     };
     const handleDoubleClick = (event: Event) => {
-      console.log('[TranscriptCard] handleDoubleClick called');
       stopEvent(event);
       suppressNextClick = true;
-      console.log(
-        '[TranscriptCard] handleDoubleClick -> controller.handleDoubleClick(), messageId:',
-        props.item.message_id,
-      );
       controller.handleDoubleClick();
     };
     const handlePointerDown = (event: Event) => {
@@ -343,19 +346,16 @@ function bindAssistantBodyInteractions() {
 
 onMounted(() => {
   recordComponentTrace('mount');
-  void hydrateAssistantBodyImages();
-  nextTick(() => {
-    bindAssistantBodyInteractions();
-  });
 });
 
-onUpdated(() => {
+watch(assistantBodySignature, async () => {
+  if (props.item.role !== 'assistant') return;
   recordComponentTrace('update');
-  void hydrateAssistantBodyImages();
-  nextTick(() => {
-    bindAssistantBodyInteractions();
-  });
-});
+  await nextTick();
+  await hydrateAssistantBodyImages();
+  await nextTick();
+  bindAssistantBodyInteractions();
+}, { immediate: true, flush: 'post' });
 
 onBeforeUnmount(() => {
   recordComponentTrace('unmount');

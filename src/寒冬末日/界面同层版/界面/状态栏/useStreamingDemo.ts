@@ -1388,6 +1388,11 @@ export function useStreamingDemo() {
       ? installDebugTraceRuntime({ target: window as any, maxEvents: 500 })
       : createDebugTraceStore({ enabled: false });
 
+  function debugConsoleLog(message: string, detail: Record<string, unknown> = {}) {
+    if (!debugTraceRuntime.enabled) return;
+    console.debug(message, detail);
+  }
+
   let patchQueue = Promise.resolve();
   let latestPatchedMessage = '';
   let activeGenerationTraceId = '';
@@ -1455,7 +1460,7 @@ export function useStreamingDemo() {
   }
 
   function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
-    console.info(`[stream-demo:image-bridge] ${step}`, detail);
+    debugConsoleLog(`[stream-demo:image-bridge] ${step}`, detail);
   }
 
   function syncPendingRequestHintsFromDom() {
@@ -1715,7 +1720,7 @@ export function useStreamingDemo() {
     if (hasSuccessfulOpeningAssistant.value) return false;
     if (busy.value) return false;
     const result = true;
-    console.log('[Debug] shouldShowOpeningSetup', {
+    debugConsoleLog('[Debug] shouldShowOpeningSetup', {
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
       state: openingPayload.value.state,
       openingAssistantMessageId: openingPayload.value.opening_assistant_message_id,
@@ -1827,7 +1832,7 @@ export function useStreamingDemo() {
     }
 
     const restoredOpeningPayload = readOpeningPayloadFromChat();
-    console.log('[Debug] restoreReaderChatState openingPayload', {
+    debugConsoleLog('[Debug] restoreReaderChatState openingPayload', {
       containerId,
       restoredFound: Boolean(restoredOpeningPayload),
       restoredState: restoredOpeningPayload?.state,
@@ -2421,7 +2426,7 @@ export function useStreamingDemo() {
 
     const record = buildHideStateRecord(containerId, hiddenIds);
     writeHideState(record);
-    console.log('[stream-demo] hide state persisted', { reason, containerId, hiddenCount: hiddenIds.length });
+    debugConsoleLog('[stream-demo] hide state persisted', { reason, containerId, hiddenCount: hiddenIds.length });
   }
 
   function queuePersistHideState(reason: string) {
@@ -2470,7 +2475,7 @@ export function useStreamingDemo() {
     hostVisualHideController.clearFromMessageIds(hiddenMessages.map(item => item.message_id));
     clearHideState();
     clearSameLayerRuntimeLease();
-    console.log('[stream-demo] lease reset restored host visibility', {
+    debugConsoleLog('[stream-demo] lease reset restored host visibility', {
       reason,
       restoredCount: hiddenMessages.length,
     });
@@ -2517,7 +2522,7 @@ export function useStreamingDemo() {
 
     const containerId = getActiveContainerMessageId();
     if (containerId == null || savedState.containerMessageId !== containerId) {
-      console.log('[stream-demo] hide state restore skipped', {
+      debugConsoleLog('[stream-demo] hide state restore skipped', {
         savedContainer: savedState.containerMessageId,
         currentContainer: containerId,
       });
@@ -2536,7 +2541,7 @@ export function useStreamingDemo() {
         validHiddenIds.map(id => ({ message_id: id, is_hidden: true })),
         { refresh: 'none' },
       );
-      console.log('[stream-demo] hide state restored', {
+      debugConsoleLog('[stream-demo] hide state restored', {
         containerId,
         restoredCount: validHiddenIds.length,
         totalCount: allMessages.length,
@@ -2747,7 +2752,7 @@ export function useStreamingDemo() {
       return;
     }
 
-    if (!dispatchHostPrimaryTrigger(mesText)) {
+    if (!dispatchHostPrimaryTrigger(mesText, { strategy: 'dblclick' })) {
       console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
     }
   }
@@ -2860,7 +2865,7 @@ export function useStreamingDemo() {
       messageId,
       domains,
     });
-    console.log('[Debug] handleHostRefreshEvent', {
+    debugConsoleLog('[Debug] handleHostRefreshEvent', {
       name,
       refreshType,
       messageId,
@@ -2917,7 +2922,7 @@ export function useStreamingDemo() {
       const lastId = getTrueChatLength();
       const list = readRecentChatMessagesForUi();
       all = Array.isArray(list) ? list : [];
-      console.log('[Debug] rebuildTranscript data', {
+      debugConsoleLog('[Debug] rebuildTranscript data', {
         reason,
         rawMessagesLength: 0,
         listSource: 'recent_window',
@@ -2966,7 +2971,7 @@ export function useStreamingDemo() {
       assistantMessageId.value = nextLatestAssistantId;
       transcript.value = syncTranscriptFlags(clipTranscriptItemsForUi(normalized));
       snapshotHostImageDataSignatures(transcript.value.map(item => item.message_id));
-      console.log('[Debug] rebuildTranscript result', {
+      debugConsoleLog('[Debug] rebuildTranscript result', {
         reason,
         containerId,
         normalizedLength: normalized.length,
@@ -3376,16 +3381,13 @@ export function useStreamingDemo() {
         },
         traceId,
       );
-      console.log(
-        '[stream-demo] generation reveal window',
-        JSON.stringify({
-          createUser: options.createUser,
-          detachedUserInput: options.detachedUserInput === true,
-          hiddenMessageIds,
-          latestHiddenUserMessageId,
-          revealMessageIds: hiddenIds,
-        }),
-      );
+      debugConsoleLog('[stream-demo] generation reveal window', {
+        createUser: options.createUser,
+        detachedUserInput: options.detachedUserInput === true,
+        hiddenMessageIds,
+        latestHiddenUserMessageId,
+        revealMessageIds: hiddenIds,
+      });
       if (hiddenIds.length > 0) {
         await setChatMessages(
           hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
@@ -3771,7 +3773,7 @@ export function useStreamingDemo() {
   }
 
   function bindHistoryRefreshEvents() {
-    console.log('[Debug] bindHistoryRefreshEvents called', {
+    debugConsoleLog('[Debug] bindHistoryRefreshEvents called', {
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
       eventOnType: typeof eventOn,
       tavern_eventsDefined: typeof tavern_events !== 'undefined',

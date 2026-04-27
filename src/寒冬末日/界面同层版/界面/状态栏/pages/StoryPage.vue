@@ -114,13 +114,13 @@
 
         <div class="ui-sidebar-body">
           <MvuRolePanel
+            v-if="roleDrawerOpen"
             :target-message-id="currentMvuAnchorMessageId"
             :transcript-items="transcript"
             :refresh-revision="mvuSourceRevision"
             :active-character-key="activeRoleKey"
             :calibrating-daily-roll="isCalibratingDailyRoll"
             @select-character="handleRoleSelect"
-            @roster-change="handleRosterChange"
             @calibrate-daily-roll="calibrateDailyRollDate"
             @collapse="closeRoleDrawer"
           />
@@ -138,6 +138,7 @@
         </div>
         <div class="ui-sidebar-body">
           <ImageGalleryPanel
+            v-if="galleryDrawerOpen"
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
             @image-view="activateGeneratedImageView"
@@ -435,7 +436,8 @@ import {
   resolveHostDispatchPlanWithRetry,
   resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
-import { dispatchHostPrimaryTrigger } from '../hostGestureDispatch';
+import { dispatchHostPrimaryTrigger, type HostGestureDispatchStrategy } from '../hostGestureDispatch';
+import { useMvuRoleStore } from '../mvuRoleStore';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { shouldSkipTranscriptImageTrigger } from '../transcriptImageTriggerDeduper';
@@ -530,8 +532,17 @@ const componentLibraryOpen = ref(false);
 const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 type RoleTabItem = { key: string; label: string; statusClass?: string; statusText?: string };
 
-const roleTabs = ref<RoleTabItem[]>([]);
 const activeRoleKey = ref<string | null>(null);
+const roleProviderStore = useMvuRoleStore(currentMvuAnchorMessageId);
+function buildRoleTabItemsFromProvider(): RoleTabItem[] {
+  return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value].map(entry => ({
+    key: entry.key,
+    label: roleProviderName(entry),
+    statusClass: roleProviderStatusClass(entry),
+    statusText: roleProviderStatusText(entry),
+  }));
+}
+const roleTabs = computed(() => buildRoleTabItemsFromProvider());
 const { width: shellWidth } = useElementSize(shellRef);
 const visibleRoleTabs = computed(() =>
   roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active'),
@@ -772,15 +783,6 @@ async function disableSameLayerFromMoreMenu() {
   await handleDisableSameLayer();
 }
 
-function handleRosterChange(roles: RoleTabItem[]) {
-  roleTabs.value = roles;
-  const visibleRoles = roles.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
-  if (!activeRoleKey.value && visibleRoles[0]) activeRoleKey.value = visibleRoles[0].key;
-  if (activeRoleKey.value && !roles.some(role => role.key === activeRoleKey.value)) {
-    activeRoleKey.value = visibleRoles[0]?.key ?? null;
-  }
-}
-
 function handleRoleSelect(key: string) {
   activeRoleKey.value = key;
 }
@@ -790,6 +792,31 @@ function openRoleFromComposer(key: string) {
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
 }
+
+function roleProviderName(entry: { key: string; role: Record<string, any> }) {
+  return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
+}
+
+function roleProviderStatusText(entry: { role: Record<string, any> }) {
+  return String(entry.role.登场状态 ?? '未知');
+}
+
+function roleProviderStatusClass(entry: { role: Record<string, any> }) {
+  return String(entry.role.登场状态 ?? '').trim() === '登场' ? 'status-active' : 'status-idle';
+}
+
+watch(
+  roleTabs,
+  roles => {
+    const visibleRoles = roles.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
+    const roleKeys = new Set(roles.map(role => role.key));
+    if (!activeRoleKey.value && visibleRoles[0]) activeRoleKey.value = visibleRoles[0].key;
+    if (activeRoleKey.value && !roleKeys.has(activeRoleKey.value)) {
+      activeRoleKey.value = visibleRoles[0]?.key ?? null;
+    }
+  },
+  { immediate: true },
+);
 
 function jumpToTranscriptMessage(messageId: number) {
   const targetId = Math.trunc(Number(messageId));
@@ -1186,8 +1213,9 @@ async function withFullscreenSuspended(action: () => void): Promise<void> {
 function dispatchHostDoubleClick(
   target: HTMLElement,
   hostPoint?: { clientX: number; clientY: number } | null,
+  strategy: HostGestureDispatchStrategy = 'dblclick',
 ): boolean {
-  return dispatchHostPrimaryTrigger(target, { hostPoint });
+  return dispatchHostPrimaryTrigger(target, { hostPoint, strategy });
 }
 
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
@@ -1266,6 +1294,22 @@ async function startTranscriptHostImageProxy(
   }
 }
 
+async function prepareTranscriptHostImageProxy(messageId: number) {
+  if (imageGenerationLock) return;
+  imageGenerationLock = true;
+  try {
+    const rendered = await ensureHostMesTextRendered(messageId);
+    if (!rendered) {
+      console.warn('[image] mes_text 注入失败，mesid:', messageId);
+    }
+    beginPendingImageTask(messageId);
+  } finally {
+    setTimeout(() => {
+      imageGenerationLock = false;
+    }, 2000);
+  }
+}
+
 async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
@@ -1276,22 +1320,7 @@ async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   event.stopPropagation();
   const nativeEvent = event as MouseEvent & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
-  const clickTraceId = `${messageId}:${Math.trunc(Number(event.timeStamp) || Date.now())}:${event.detail ?? 0}`;
-  console.log('[image] transcript-dblclick', {
-    traceId: clickTraceId,
-    messageId,
-    timestamp: new Date().toISOString(),
-    eventTimeStamp: event.timeStamp,
-    detail: event.detail,
-    target: (event.target as HTMLElement | null)?.tagName ?? null,
-    targetClassName: (event.target as HTMLElement | null)?.className?.slice(0, 100) ?? null,
-    targetParentClassName: (event.target as HTMLElement | null)?.parentElement?.className?.slice(0, 100) ?? null,
-  });
   if (shouldSkipTranscriptImageTrigger(messageId, transcriptImageTriggerGuard, Date.now(), 300)) {
-    console.log('[image] transcript-dblclick-skipped', {
-      traceId: clickTraceId,
-      messageId,
-    });
     return;
   }
   void startTranscriptHostImageProxy(messageId, event);
@@ -1485,15 +1514,11 @@ useEventListener(
 
     // 检测双击：两次 touchstart 间隔 < 400ms 且属于同一楼层（移动端用户点击速度较慢）
     if (now - touchStartTime < 400 && lastTouchMessageId === messageId) {
-      // 阻止 iframe 继续消费此次 touch，防止 ClickTrigger 抢走 html-body
-      event.preventDefault();
-      event.stopPropagation();
-      const nativeTouchEvent = event as TouchEvent & { stopImmediatePropagation?: () => void };
-      nativeTouchEvent.stopImmediatePropagation?.();
-      mobileBridgeSuppressUntilMs = now + 1200;
-      mobileBridgeSuppressMessageId = messageId;
-      // 与桌面端对齐：预热 mes_text + 挂起任务 + 改道宿主 mes_text
-      void startTranscriptHostImageProxy(messageId, event, { preferPointTarget: true });
+      // 移动端 ClickTrigger 依赖原始 touchend/click；这里只预热 mes_text 并挂 pending task。
+      void prepareTranscriptHostImageProxy(messageId);
+      touchStartTime = 0;
+      lastTouchMessageId = null;
+      return;
     }
 
     touchStartTime = now;

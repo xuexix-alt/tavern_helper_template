@@ -62,3 +62,12 @@ test('dispatchHostPrimaryTrigger dispatches the plugin click-trigger triple tap 
     'touchstart,touchend,touchstart,touchend,touchstart,touchend',
   );
 });
+
+test('dispatchHostPrimaryTrigger can force a host dblclick on mobile for image-button bridges', () => {
+  const { target, dispatched, timers } = createFakeTarget({ mobile: true });
+  assert.equal(dispatchHostPrimaryTrigger(target, { strategy: 'dblclick' }), true);
+  assert.equal(dispatched.length, 1);
+  assert.equal(dispatched[0].type, 'dblclick');
+  assert.equal(dispatched[0].detail, 2);
+  assert.equal(timers.length, 0);
+});
