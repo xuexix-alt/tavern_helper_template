@@ -31,10 +31,16 @@ test('transcript image FAB restores the historical direct trigger path instead o
   assert.match(transcriptListSource, /\(event: 'generate-image', payload: TranscriptImageGenerateRequest\): void;/);
   assert.match(transcriptListSource, /emit\('generate-image', \{ messageId, triggerEvent: event \}\);/);
   assert.doesNotMatch(transcriptListSource, /emit\('open-gallery', messageId\);/);
-  assert.match(storyPageSource, /async function handleTranscriptGenerateImage\(request: TranscriptImageGenerateRequest \| number\)/);
+  assert.match(
+    storyPageSource,
+    /async function handleTranscriptGenerateImage\(request: TranscriptImageGenerateRequest \| number\)/,
+  );
   assert.match(storyPageSource, /await triggerImageGenerationForMessage\(messageId, \{ hostPoint \}\);/);
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
-  assert.match(streamingSource, /dispatchHostPrimaryTrigger\(mesText, \{ strategy: 'dblclick', hostPoint: options\.hostPoint \?\? null \}\)/);
+  assert.match(
+    streamingSource,
+    /dispatchHostPrimaryTrigger\(mesText, \{ strategy: 'dblclick', hostPoint: options\.hostPoint \?\? null \}\)/,
+  );
 });
 
 test('transcript image FAB keeps existing-image clicks on the LLM image popup and guards plugin menu position', () => {
@@ -63,7 +69,10 @@ test('gallery lazily discovers older assistant images without a same-layer manif
   assert.match(streamingSource, /const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;/);
   assert.match(streamingSource, /async function loadOlderGalleryImages\(\)/);
   assert.match(streamingSource, /hostDomArtifacts: \[\],/);
-  assert.match(streamingSource, /const galleryEntries = computed<GeneratedImageRef\[\]>\(\(\) => flattenGalleryGroupsForEntries\(mergedGalleryGroups\.value\)\);/);
+  assert.match(
+    streamingSource,
+    /const galleryEntries = computed<GeneratedImageRef\[\]>\(\(\) => flattenGalleryGroupsForEntries\(mergedGalleryGroups\.value\)\);/,
+  );
 });
 
 test('mobile transcript double-tap keeps the proxy chain and forwards the second touch event through the mobile path', () => {

@@ -443,7 +443,11 @@ import {
   resolveHostDispatchPlanWithRetry,
   resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
-import { dispatchHostPrimaryTrigger, type HostGestureDispatchStrategy, type HostGesturePoint } from '../hostGestureDispatch';
+import {
+  dispatchHostPrimaryTrigger,
+  type HostGestureDispatchStrategy,
+  type HostGesturePoint,
+} from '../hostGestureDispatch';
 import { useMvuRoleStore } from '../mvuRoleStore';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -570,9 +574,7 @@ const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
 const canReprocessVariables = computed(() => {
   const latestAssistant = latestAssistantItem.value;
   return (
-    Boolean(latestAssistant && latestAssistant.role === 'assistant') &&
-    !busy.value &&
-    !reprocessVariablesPending.value
+    Boolean(latestAssistant && latestAssistant.role === 'assistant') && !busy.value && !reprocessVariablesPending.value
   );
 });
 const reprocessVariablesHint = computed(() => {

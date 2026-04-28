@@ -3623,7 +3623,11 @@ export function useStreamingDemo() {
       mvuSourceRevision.value += 1;
 
       if (reprocessResult.status === 'applied') {
-        appendLog('action', '重试额外模型解析', `已触发 MVU 原生重试额外模型解析：assistant #${latestAssistant.message_id}`);
+        appendLog(
+          'action',
+          '重试额外模型解析',
+          `已触发 MVU 原生重试额外模型解析：assistant #${latestAssistant.message_id}`,
+        );
         toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
         return;
       }

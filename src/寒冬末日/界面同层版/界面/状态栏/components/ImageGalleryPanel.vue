@@ -37,7 +37,13 @@
 
     <div v-if="groupedEntries.length === 0" class="gallery-empty">
       <span>当前还没有可展示的楼层图片。</span>
-      <button v-if="hasMoreOlder" type="button" class="gallery-history-btn" :disabled="loadingOlder" @click="emit('load-older')">
+      <button
+        v-if="hasMoreOlder"
+        type="button"
+        class="gallery-history-btn"
+        :disabled="loadingOlder"
+        @click="emit('load-older')"
+      >
         {{ loadingOlder ? '加载中' : '继续查找历史图片' }}
       </button>
     </div>

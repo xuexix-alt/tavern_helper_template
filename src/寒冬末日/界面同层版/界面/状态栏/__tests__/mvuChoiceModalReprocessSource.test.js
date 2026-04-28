@@ -227,5 +227,9 @@ test('mvu_reprocess native retry helper clicks MVU own retry button instead of g
   assert.equal(body.includes('await generate('), false, 'native retry helper must not call Tavern Helper generate');
   assert.equal(body.includes('generateRaw('), false, 'native retry helper must not call generateRaw');
   assert.equal(body.includes('Mvu.parseMessage('), false, 'native retry helper must not manually parse model output');
-  assert.equal(body.includes('Mvu.replaceMvuData('), false, 'native retry helper must not manually rewrite message variables');
+  assert.equal(
+    body.includes('Mvu.replaceMvuData('),
+    false,
+    'native retry helper must not manually rewrite message variables',
+  );
 });
