@@ -55,7 +55,9 @@
             type="button"
             class="transcript-image-fab"
             :title="
-              messageImageCount(item.message_id) > 0 ? `查看 ${messageImageCount(item.message_id)} 张图片` : '生成图片'
+              messageImageCount(item.message_id) > 0
+                ? `已有 ${messageImageCount(item.message_id)} 张，点击再次生成图片`
+                : '生成图片'
             "
             @click="handleImageButtonClick(item.message_id, $event)"
           >
@@ -108,6 +110,11 @@ import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
 
+type TranscriptImageGenerateRequest = {
+  messageId: number;
+  triggerEvent?: MouseEvent | null;
+};
+
 const props = defineProps<{
   items: TranscriptItem[];
   density: TranscriptDensity;
@@ -130,7 +137,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
-  (event: 'generate-image', messageId: number): void;
+  (event: 'generate-image', payload: TranscriptImageGenerateRequest): void;
   (event: 'open-gallery', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
@@ -282,16 +289,11 @@ function openDetail(item: TranscriptItem) {
 }
 
 function handleNestedGenerateImage(messageId: number) {
-  emit('generate-image', messageId);
+  emit('generate-image', { messageId, triggerEvent: null });
 }
 
-function handleImageButtonClick(messageId: number, _event: MouseEvent) {
-  const count = messageImageCount(messageId);
-  if (count > 0) {
-    emit('open-gallery', messageId);
-  } else {
-    emit('generate-image', messageId);
-  }
+function handleImageButtonClick(messageId: number, event: MouseEvent) {
+  emit('generate-image', { messageId, triggerEvent: event });
 }
 
 function messageImageCount(messageId: number): number {

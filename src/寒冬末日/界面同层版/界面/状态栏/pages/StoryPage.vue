@@ -141,9 +141,12 @@
             v-if="galleryDrawerOpen"
             :entries="galleryEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
+            :loading-older="loadingOlderGalleryImages"
+            :has-more-older="hasMoreOlderGalleryImages"
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
             @jump-message="jumpToTranscriptMessage"
+            @load-older="loadOlderGalleryImages"
             @close="closeGalleryDrawer"
           />
         </div>
@@ -277,7 +280,7 @@
                 <button
                   type="button"
                   class="ui-signal-btn"
-                  :disabled="(latestAssistantItem?.options ?? []).length === 0"
+                  :disabled="!latestAssistantItem"
                   @click="openChoiceModalFromToolbar"
                 >
                   <span>选项</span>
@@ -311,6 +314,9 @@
             :can-roll="Boolean(latestUserItem)"
             :desktop-tool-row-mode="true"
             :choice-options="latestAssistantItem?.options ?? []"
+            :can-reprocess-variables="canReprocessVariables"
+            :reprocess-variables-hint="reprocessVariablesHint"
+            :reprocess-variables-pending="reprocessVariablesPending"
             :role-tabs="visibleRoleTabs"
             :active-role-key="activeRoleKey"
             :layout-mode="shellLayoutMode"
@@ -319,6 +325,7 @@
             @submit="handleComposerSubmit"
             @roll="rollLatestTurn"
             @open-role="openRoleFromComposer"
+            @reprocess-variables="handleReprocessVariablesFromChoiceModal"
           />
         </section>
       </main>
@@ -436,7 +443,7 @@ import {
   resolveHostDispatchPlanWithRetry,
   resolveHostMessageTargetFromPoint,
 } from '../hostCoordinateTarget';
-import { dispatchHostPrimaryTrigger, type HostGestureDispatchStrategy } from '../hostGestureDispatch';
+import { dispatchHostPrimaryTrigger, type HostGestureDispatchStrategy, type HostGesturePoint } from '../hostGestureDispatch';
 import { useMvuRoleStore } from '../mvuRoleStore';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
@@ -465,8 +472,11 @@ const {
   currentMvuAnchorMessageId,
   latestUserItem,
   latestAssistantItem,
+  reprocessVariablesPending,
   transcriptDomRevision,
   galleryEntries,
+  loadingOlderGalleryImages,
+  hasMoreOlderGalleryImages,
   readerSummary,
   logs,
   beginPendingImageTask,
@@ -483,6 +493,7 @@ const {
   submitPromptViaSameLayer,
   disableSameLayerUi,
   rollLatestTurn,
+  reprocessLatestAssistantVariables,
   updateOpeningMeta,
   updateOpeningField,
   updateOpeningWorldMode,
@@ -505,6 +516,7 @@ const {
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
   triggerImageGenerationForMessage,
+  loadOlderGalleryImages,
   calibrateDailyRollDate,
   isCalibratingDailyRoll,
 } = useStreamingDemo();
@@ -553,6 +565,97 @@ const shellLayoutMode = computed(() => {
   if (shellWidth.value <= 839) return 'reader_desktop';
   return 'wide';
 });
+type MvuVariableUpdateMode = 'extra_analysis' | 'inline' | 'unknown';
+const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
+const canReprocessVariables = computed(() => {
+  const latestAssistant = latestAssistantItem.value;
+  return (
+    Boolean(latestAssistant && latestAssistant.role === 'assistant') &&
+    !busy.value &&
+    !reprocessVariablesPending.value
+  );
+});
+const reprocessVariablesHint = computed(() => {
+  const latestAssistant = latestAssistantItem.value;
+  if (!latestAssistant || latestAssistant.role !== 'assistant') return '当前没有可重新生成变量的 assistant 楼层';
+  if (busy.value) return '正文生成中，等待生成结束后再重试额外模型解析';
+  if (reprocessVariablesPending.value) return '额外模型解析正在进行';
+  if (mvuVariableUpdateMode.value === 'inline') {
+    return '当前 MVU 变量更新方式为“随AI输出”；点击后只提示，不会发起额外模型解析';
+  }
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '无法确认 MVU 变量更新方式是否为“额外模型解析”';
+  return '调用 MVU 插件原生“重试额外模型解析”，不走正文生成链';
+});
+
+function readMvuVariableUpdateMode(): MvuVariableUpdateMode {
+  const updateModeLabel = '变量更新方式';
+  const inlineLabel = '随AI输出';
+  const extraAnalysisLabel = '额外模型解析';
+  const documents: Document[] = [];
+  const pushDocument = (doc: Document | null | undefined) => {
+    if (doc && !documents.includes(doc)) documents.push(doc);
+  };
+  const nodeText = (node: Element | null | undefined) =>
+    [
+      node?.textContent ?? '',
+      node?.getAttribute?.('value') ?? '',
+      node?.getAttribute?.('aria-label') ?? '',
+      node?.getAttribute?.('title') ?? '',
+    ].join('\n');
+  const closestControlText = (node: Element) =>
+    node.closest('label, .flex-container, .inline-drawer-content, .mvu-section, .settings_block, .form-group, div')
+      ?.textContent ?? '';
+  const isMvuUpdateModeCandidate = (valueText: string, nearbyText: string) =>
+    nearbyText.includes(updateModeLabel) ||
+    valueText.includes(updateModeLabel) ||
+    valueText.includes(inlineLabel) ||
+    valueText.includes(extraAnalysisLabel);
+
+  pushDocument(document);
+  for (const hostWindow of collectReachableHostWindows()) {
+    try {
+      pushDocument(hostWindow.document);
+    } catch {
+      // ignore unreachable frame
+    }
+  }
+
+  for (const doc of documents) {
+    for (const select of Array.from(doc.querySelectorAll('select'))) {
+      const htmlSelect = select as HTMLSelectElement;
+      const selectedTexts = Array.from(htmlSelect.selectedOptions ?? [])
+        .map(option => `${option.textContent ?? ''}\n${(option as HTMLOptionElement).value ?? ''}`)
+        .join('\n');
+      const valueText = `${htmlSelect.value ?? ''}\n${selectedTexts}`;
+      const nearbyText = closestControlText(select);
+      if (!isMvuUpdateModeCandidate(valueText, nearbyText)) continue;
+      if (valueText.includes(inlineLabel)) return 'inline';
+      if (valueText.includes(extraAnalysisLabel)) return 'extra_analysis';
+    }
+
+    for (const node of Array.from(doc.querySelectorAll('input:checked, [aria-checked="true"], .selected, .active'))) {
+      const valueText = nodeText(node);
+      const nearbyText = closestControlText(node);
+      if (!isMvuUpdateModeCandidate(valueText, nearbyText)) continue;
+      if (valueText.includes(inlineLabel)) return 'inline';
+      if (valueText.includes(extraAnalysisLabel)) return 'extra_analysis';
+    }
+  }
+
+  try {
+    const extraAnalysisEnabled = _.get(getVariables({ type: 'global' }) ?? {}, 'extra_analysis');
+    if (extraAnalysisEnabled === true) return 'extra_analysis';
+    if (extraAnalysisEnabled === false) return 'inline';
+  } catch {
+    // ignore missing Tavern Helper globals
+  }
+
+  return 'unknown';
+}
+
+function refreshMvuVariableUpdateMode() {
+  mvuVariableUpdateMode.value = readMvuVariableUpdateMode();
+}
 
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
@@ -890,6 +993,24 @@ function resolveHostPointFromEvent(event?: HostTriggerEvent | null): { clientX: 
     clientX: Number(touch.clientX),
     clientY: Number(touch.clientY),
   };
+}
+
+type TranscriptImageGenerateRequest = {
+  messageId: number;
+  triggerEvent?: MouseEvent | null;
+};
+
+function resolveHostPointFromIframeEvent(event?: HostTriggerEvent | null): HostGesturePoint | null {
+  const eventPoint = resolveHostPointFromEvent(event);
+  if (!eventPoint) return null;
+  try {
+    const frameElement = window.frameElement as HTMLElement | null;
+    const frameRect = frameElement?.getBoundingClientRect?.();
+    if (!frameRect) return eventPoint;
+    return convertIframePointToHostPoint(eventPoint, { left: frameRect.left, top: frameRect.top });
+  } catch {
+    return eventPoint;
+  }
 }
 
 function resolveHostMessageTriggerTargetFromEvent(
@@ -1294,22 +1415,6 @@ async function startTranscriptHostImageProxy(
   }
 }
 
-async function prepareTranscriptHostImageProxy(messageId: number) {
-  if (imageGenerationLock) return;
-  imageGenerationLock = true;
-  try {
-    const rendered = await ensureHostMesTextRendered(messageId);
-    if (!rendered) {
-      console.warn('[image] mes_text 注入失败，mesid:', messageId);
-    }
-    beginPendingImageTask(messageId);
-  } finally {
-    setTimeout(() => {
-      imageGenerationLock = false;
-    }, 2000);
-  }
-}
-
 async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
@@ -1357,11 +1462,80 @@ function hoistPluginMenuIntoFullscreen(): void {
   setTimeout(() => observer.disconnect(), 300);
 }
 
-async function handleTranscriptGenerateImage(messageId: number) {
+function clampPluginMenuIntoViewport(node: Element): void {
+  const hostWindow = node.ownerDocument?.defaultView ?? window.top ?? window;
+  const menu =
+    (node.matches?.('.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]')
+      ? node
+      : node.querySelector?.('.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]')) ?? node;
+  const element = menu as HTMLElement;
+  if (!element?.getBoundingClientRect) return;
+
+  const rect = element.getBoundingClientRect();
+  const viewportWidth = Math.max(0, Number(hostWindow.innerWidth ?? 0));
+  const viewportHeight = Math.max(0, Number(hostWindow.innerHeight ?? 0));
+  if (viewportWidth <= 0 || viewportHeight <= 0) return;
+
+  const margin = 12;
+  const maxLeft = Math.max(margin, viewportWidth - rect.width - margin);
+  const maxTop = Math.max(margin, viewportHeight - rect.height - margin);
+  const nextLeft = Math.min(maxLeft, Math.max(margin, rect.left));
+  const nextTop = Math.min(maxTop, Math.max(margin, rect.top));
+  const dx = Math.round(nextLeft - rect.left);
+  const dy = Math.round(nextTop - rect.top);
+  if (dx === 0 && dy === 0 && rect.right <= viewportWidth - margin && rect.bottom <= viewportHeight - margin) return;
+
+  const computed = hostWindow.getComputedStyle?.(element);
+  const currentLeft = Number.parseFloat(element.style.left || computed?.left || `${rect.left}`);
+  const currentTop = Number.parseFloat(element.style.top || computed?.top || `${rect.top}`);
+  element.style.left = `${Math.round((Number.isFinite(currentLeft) ? currentLeft : rect.left) + dx)}px`;
+  element.style.top = `${Math.round((Number.isFinite(currentTop) ? currentTop : rect.top) + dy)}px`;
+  element.style.right = 'auto';
+  element.style.bottom = 'auto';
+  element.style.maxWidth = `calc(100vw - ${margin * 2}px)`;
+  element.style.maxHeight = `calc(100vh - ${margin * 2}px)`;
+}
+
+function guardPluginMenuViewport(): void {
+  const hostBody = window.top?.document?.body;
+  if (!hostBody) return;
+  const clampSoon = (node: Element) => {
+    const view = node.ownerDocument?.defaultView ?? window;
+    clampPluginMenuIntoViewport(node);
+    view.requestAnimationFrame?.(() => clampPluginMenuIntoViewport(node));
+    setTimeout(() => clampPluginMenuIntoViewport(node), 80);
+  };
+
+  hostBody
+    .querySelectorAll('.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]')
+    .forEach(node => clampSoon(node));
+
+  const observer = new MutationObserver(mutations => {
+    for (const mut of mutations) {
+      for (const rawNode of Array.from(mut.addedNodes)) {
+        if (rawNode.nodeType !== Node.ELEMENT_NODE) continue;
+        const node = rawNode as Element;
+        if (
+          node.matches?.('.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]')
+        ) {
+          clampSoon(node);
+        }
+      }
+    }
+  });
+
+  observer.observe(hostBody, { childList: true, subtree: true });
+  setTimeout(() => observer.disconnect(), 900);
+}
+
+async function handleTranscriptGenerateImage(request: TranscriptImageGenerateRequest | number) {
+  const messageId = typeof request === 'number' ? request : request.messageId;
+  const hostPoint = typeof request === 'number' ? null : resolveHostPointFromIframeEvent(request.triggerEvent ?? null);
+  guardPluginMenuViewport();
   if (document.fullscreenElement) {
     hoistPluginMenuIntoFullscreen();
   }
-  await triggerImageGenerationForMessage(messageId);
+  await triggerImageGenerationForMessage(messageId, { hostPoint });
 }
 
 function handleOpenGallery(_messageId: number) {
@@ -1514,8 +1688,9 @@ useEventListener(
 
     // 检测双击：两次 touchstart 间隔 < 400ms 且属于同一楼层（移动端用户点击速度较慢）
     if (now - touchStartTime < 400 && lastTouchMessageId === messageId) {
-      // 移动端 ClickTrigger 依赖原始 touchend/click；这里只预热 mes_text 并挂 pending task。
-      void prepareTranscriptHostImageProxy(messageId);
+      mobileBridgeSuppressUntilMs = now + 650;
+      mobileBridgeSuppressMessageId = messageId;
+      void startTranscriptHostImageProxy(messageId, event, { preferPointTarget: true });
       touchStartTime = 0;
       lastTouchMessageId = null;
       return;
@@ -1546,10 +1721,29 @@ useEventListener(
 );
 
 function openChoiceModalFromToolbar() {
+  refreshMvuVariableUpdateMode();
   composerRef.value?.openChoiceModal?.();
 }
 
+async function handleReprocessVariablesFromChoiceModal() {
+  refreshMvuVariableUpdateMode();
+  if (!canReprocessVariables.value) {
+    toastr?.warning?.(reprocessVariablesHint.value);
+    return;
+  }
+  if (mvuVariableUpdateMode.value === 'inline') {
+    toastr?.info?.('当前 MVU 变量更新方式为“随AI输出”，没有可重试的额外模型解析；请改为“额外模型解析”后再使用。');
+    return;
+  }
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') {
+    toastr?.warning?.(reprocessVariablesHint.value);
+    return;
+  }
+  await reprocessLatestAssistantVariables();
+}
+
 onMounted(() => {
+  refreshMvuVariableUpdateMode();
   updateReaderShellHeight();
   nextTick(() => {
     if (anchorTranscriptToLatest('auto')) {

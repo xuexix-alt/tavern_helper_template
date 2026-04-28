@@ -35,9 +35,14 @@
       </template>
     </header>
 
-    <div v-if="groupedEntries.length === 0" class="gallery-empty">当前还没有可展示的楼层图片。</div>
+    <div v-if="groupedEntries.length === 0" class="gallery-empty">
+      <span>当前还没有可展示的楼层图片。</span>
+      <button v-if="hasMoreOlder" type="button" class="gallery-history-btn" :disabled="loadingOlder" @click="emit('load-older')">
+        {{ loadingOlder ? '加载中' : '继续查找历史图片' }}
+      </button>
+    </div>
 
-    <div v-else class="gallery-groups">
+    <div v-else class="gallery-groups" @scroll.passive="handleGalleryScroll">
       <section
         v-for="group in groupedEntries"
         :key="group.messageId"
@@ -65,6 +70,18 @@
           />
         </div>
       </section>
+      <footer class="gallery-history-status">
+        <button
+          v-if="hasMoreOlder"
+          type="button"
+          class="gallery-history-btn"
+          :disabled="loadingOlder"
+          @click="emit('load-older')"
+        >
+          {{ loadingOlder ? '加载中' : '继续加载历史图片' }}
+        </button>
+        <span v-else>已加载当前可用图片</span>
+      </footer>
     </div>
   </section>
 </template>
@@ -77,18 +94,31 @@ import GeneratedImageAsset from './GeneratedImageAsset.vue';
 const props = defineProps<{
   entries: ReaderGalleryEntry[];
   activeMessageId?: number | null;
+  loadingOlder?: boolean;
+  hasMoreOlder?: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'jump-message', messageId: number): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'load-older'): void;
   (event: 'close'): void;
 }>();
 
 const searchText = ref('');
-const activeFilter = ref<'all' | 'named' | 'recent'>('recent');
+const activeFilter = ref<'all' | 'named' | 'recent'>('all');
 const toolsCollapsed = ref(true);
+
+function handleGalleryScroll(event: Event) {
+  if (props.loadingOlder || !props.hasMoreOlder) return;
+  const target = event.currentTarget as HTMLElement | null;
+  if (!target) return;
+  const remaining = target.scrollHeight - target.scrollTop - target.clientHeight;
+  if (remaining <= 180) {
+    emit('load-older');
+  }
+}
 
 const filteredEntries = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
@@ -352,6 +382,9 @@ const groupedEntries = computed(() => {
 }
 
 .gallery-empty {
+  display: grid;
+  place-items: center;
+  gap: 12px;
   min-height: 0;
   padding: 28px 18px;
   border: 1px dashed var(--demo-border-accent-soft);
@@ -359,6 +392,29 @@ const groupedEntries = computed(() => {
   text-align: center;
   color: var(--demo-text-muted);
   overflow: auto;
+}
+
+.gallery-history-status {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 10px;
+  color: var(--demo-text-muted);
+  font-size: 12px;
+}
+
+.gallery-history-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  color: var(--demo-text-primary);
+  cursor: pointer;
+}
+
+.gallery-history-btn:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 @media (max-width: 720px) {

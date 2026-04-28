@@ -138,10 +138,10 @@ test('gallery output is rebuilt directly from transcript groups without same-lay
   );
   assert.equal(
     source.includes(
-      'const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));',
+      'const galleryEntries = computed<GeneratedImageRef[]>(() => flattenGalleryGroupsForEntries(mergedGalleryGroups.value));',
     ),
     true,
-    'gallery entries should flatten directly from transcript-derived groups',
+    'gallery entries should flatten directly from transcript-derived groups and lazy history groups',
   );
   assert.equal(
     source.includes('buildGeneratedImageRefsForMessage({'),

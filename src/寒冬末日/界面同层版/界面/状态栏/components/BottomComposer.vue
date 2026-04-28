@@ -30,8 +30,7 @@
         v-if="showOptionTrigger !== false"
         type="button"
         class="composer-input-icon composer-option-trigger"
-        :disabled="choiceOptions.length === 0"
-        :title="choiceOptions.length > 0 ? `查看选项（${choiceOptions.length}）` : '当前无选项'"
+        :title="choiceOptions.length > 0 ? `查看选项（${choiceOptions.length}）` : '打开选项弹窗，可重试额外模型解析'"
         @click="openChoiceModal"
       >
         选项
@@ -89,6 +88,15 @@
           <div class="choice-modal-footer">
             <button
               type="button"
+              class="choice-btn choice-btn--ghost choice-btn--reprocess clip-corner-sm"
+              :disabled="busy || choiceSending || reprocessVariablesPending || !canReprocessVariables"
+              :title="reprocessVariablesHint"
+              @click="handleReprocessVariablesClick"
+            >
+              {{ reprocessVariablesPending ? '模型解析中…' : '重试额外模型解析' }}
+            </button>
+            <button
+              type="button"
               class="choice-btn choice-btn--ghost clip-corner-sm"
               :disabled="choiceSending"
               @click="closeChoiceModal"
@@ -112,7 +120,7 @@
 
 <script setup lang="ts">
 import { useBreakpoints, useTextareaAutosize } from '@vueuse/core';
-import { nextTick, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps<{
   modelValue: string;
@@ -122,6 +130,9 @@ const props = defineProps<{
   roleTabs?: Array<{ key: string; label: string; statusClass?: string; statusText?: string }>;
   activeRoleKey?: string | null;
   choiceOptions?: string[];
+  canReprocessVariables?: boolean;
+  reprocessVariablesHint?: string;
+  reprocessVariablesPending?: boolean;
   showOptionTrigger?: boolean;
   showToolbar?: boolean;
   layoutMode?: 'compact' | 'reader_desktop' | 'wide';
@@ -133,6 +144,7 @@ const emit = defineEmits<{
   (event: 'roll'): void;
   (event: 'refresh'): void;
   (event: 'open-role', key: string): void;
+  (event: 'reprocess-variables'): void;
 }>();
 
 function onInput(event: Event) {
@@ -183,6 +195,11 @@ function closeChoiceModal() {
 function pickChoice(option: string) {
   choiceDraft.value = String(option ?? '');
   nextTick(() => choiceTextareaRef.value?.focus?.());
+}
+
+function handleReprocessVariablesClick() {
+  emit('reprocess-variables');
+  closeChoiceModal();
 }
 
 async function confirmChoice() {
@@ -476,6 +493,10 @@ defineExpose({
   background: var(--demo-gradient-chip-active);
   color: var(--demo-text-accent);
 }
+.choice-btn--reprocess {
+  margin-right: auto;
+  color: var(--demo-text-accent);
+}
 @media (max-width: 760px) {
   .composer-textarea {
     max-height: 80px;
@@ -561,6 +582,9 @@ defineExpose({
   .choice-modal-footer {
     flex-direction: column;
     padding: 10px 12px 12px;
+  }
+  .choice-btn--reprocess {
+    margin-right: 0;
   }
 }
 

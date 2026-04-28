@@ -8,11 +8,13 @@ const ROLE_CONTROL_META_PATH = 'stat_data.主线任务.$meta.角色控制';
 type ReprocessStatus = 'applied' | 'skipped' | 'blocked' | 'error';
 type ReprocessReason =
   | 'reprocessed'
+  | 'native_extra_analysis_retry_triggered'
   | 'history_mode'
   | 'invalid_message_id'
   | 'empty_message'
   | 'same_digest'
   | 'missing_mvu_data'
+  | 'native_extra_analysis_retry_unavailable'
   | 'parse_failed'
   | 'replace_failed'
   | 'error'
@@ -140,6 +142,132 @@ function finalizeParsedMvuData(parsed: any, fallback: Mvu.MvuData): Mvu.MvuData 
     next.initialized_lorebooks = {};
   }
   return next;
+}
+
+function collectReachableDocuments(): Document[] {
+  const documents: Document[] = [];
+  const visitedWindows = new Set<Window>();
+
+  const pushDocument = (win: Window | null | undefined) => {
+    if (!win || visitedWindows.has(win)) return;
+    visitedWindows.add(win);
+    try {
+      if (win.document && !documents.includes(win.document)) {
+        documents.push(win.document);
+      }
+    } catch {
+      // Cross-origin or detached frames are ignored.
+    }
+  };
+
+  pushDocument(window);
+  try {
+    pushDocument(window.parent);
+  } catch {
+    // ignore
+  }
+  try {
+    pushDocument(window.top);
+  } catch {
+    // ignore
+  }
+
+  return documents;
+}
+
+function isClickableNativeButton(element: Element | null | undefined): element is HTMLElement {
+  const ownerWindow = element?.ownerDocument?.defaultView ?? window;
+  if (!element || !(element instanceof ownerWindow.HTMLElement)) return false;
+  if (element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true') return false;
+
+  const style = ownerWindow.getComputedStyle?.(element);
+  if (style && (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0)) return false;
+
+  const rect = element.getBoundingClientRect?.();
+  return Boolean(rect && rect.width > 0 && rect.height > 0);
+}
+
+function findNativeMvuExtraAnalysisRetryButton(): HTMLElement | null {
+  const retryText = '重试额外模型解析';
+  const selectors = [
+    '#qr--bar .qr--button',
+    '#qr--popout .qr--button',
+    '.qr--button',
+    '.mvu-button-wrap .menu_button',
+    '[role="button"]',
+    'button',
+  ];
+
+  for (const doc of collectReachableDocuments()) {
+    for (const selector of selectors) {
+      const buttons = Array.from(doc.querySelectorAll(selector));
+      const matched = buttons.find(button => (button.textContent ?? '').trim() === retryText);
+      if (isClickableNativeButton(matched)) {
+        return matched;
+      }
+    }
+  }
+
+  return null;
+}
+
+export async function retryMessageExtraAnalysisByNativeMvu(
+  messageId: number,
+  _options: ReprocessOptions = {},
+): Promise<ReprocessResult> {
+  const normalizedMessageId = Number(messageId);
+  if (!Number.isFinite(normalizedMessageId) || normalizedMessageId < 0) {
+    return { status: 'blocked', reason: 'invalid_message_id', message_id: null };
+  }
+
+  const targetMessageId = Math.trunc(normalizedMessageId);
+  const inFlight = inFlightByMessageId.get(targetMessageId);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const runner = (async (): Promise<ReprocessResult> => {
+    try {
+      await waitGlobalInitialized('Mvu');
+
+      const chatMessage = getChatMessages(targetMessageId, { hide_state: 'all' })?.[0];
+      if (!chatMessage || chatMessage.role !== 'assistant') {
+        return { status: 'blocked', reason: 'empty_message', message_id: targetMessageId };
+      }
+      const messageText = typeof chatMessage.message === 'string' ? chatMessage.message : '';
+      if (!messageText.trim()) {
+        return { status: 'blocked', reason: 'empty_message', message_id: targetMessageId };
+      }
+      const latestMessage = getChatMessages(-1, { hide_state: 'all' })?.[0];
+      if (Math.trunc(Number(latestMessage?.message_id)) !== targetMessageId) {
+        return { status: 'skipped', reason: 'not_latest_message_mutation', message_id: targetMessageId };
+      }
+
+      const nativeRetryButton = findNativeMvuExtraAnalysisRetryButton();
+      if (!nativeRetryButton) {
+        return { status: 'error', reason: 'native_extra_analysis_retry_unavailable', message_id: targetMessageId };
+      }
+
+      nativeRetryButton.click();
+      return { status: 'applied', reason: 'native_extra_analysis_retry_triggered', message_id: targetMessageId };
+    } catch (err: any) {
+      return {
+        status: 'error',
+        reason: 'error',
+        message_id: targetMessageId,
+        error: err?.message ?? String(err),
+      };
+    }
+  })();
+
+  inFlightByMessageId.set(targetMessageId, runner);
+  try {
+    return await runner;
+  } finally {
+    if (inFlightByMessageId.get(targetMessageId) === runner) {
+      inFlightByMessageId.delete(targetMessageId);
+    }
+  }
 }
 
 export async function reprocessMessageVariablesById(

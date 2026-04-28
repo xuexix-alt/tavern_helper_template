@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { reprocessMessageVariablesById } from '../../../mvu_reprocess';
+import { reprocessMessageVariablesById, retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
 import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
@@ -61,7 +61,7 @@ import {
   readChatMessageDetail,
   readHostContext,
 } from './hostBridge';
-import { dispatchHostPrimaryTrigger } from './hostGestureDispatch';
+import { dispatchHostPrimaryTrigger, type HostGesturePoint } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import { resolveHostMessageRole } from './hostMessageRole';
 import { isOpeningWorkbenchScopeActive, resolveActiveContainerMessageId } from './containerScope';
@@ -155,6 +155,9 @@ type GenerationFlowOptions = {
 type GenerationFlowResult =
   | { success: true; assistantMessageId: number | null; result: string }
   | { success: false; assistantMessageId: number | null; errorText: string; hadVisibleAssistantContent: boolean };
+type ImageGenerationTriggerOptions = {
+  hostPoint?: HostGesturePoint | null;
+};
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -166,6 +169,8 @@ const DEMO_THEME_CLASS_NAMES = [
 ] as const;
 const TRANSCRIPT_UI_WINDOW_SIZE = 4;
 const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
+const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
+const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -1429,6 +1434,7 @@ export function useStreamingDemo() {
   let sameLayerDisableRequested = false;
 
   const mvuSourceRevision = ref(0);
+  const reprocessVariablesPending = ref(false);
   const imagePendingTaskManager = createImagePendingTaskManager();
   const imageRecentIntentStore = createImageRecentIntentStore();
 
@@ -2728,7 +2734,10 @@ export function useStreamingDemo() {
     });
   }
 
-  async function triggerImageGenerationForMessage(messageId: number): Promise<void> {
+  async function triggerImageGenerationForMessage(
+    messageId: number,
+    options: ImageGenerationTriggerOptions = {},
+  ): Promise<void> {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
 
@@ -2752,7 +2761,7 @@ export function useStreamingDemo() {
       return;
     }
 
-    if (!dispatchHostPrimaryTrigger(mesText, { strategy: 'dblclick' })) {
+    if (!dispatchHostPrimaryTrigger(mesText, { strategy: 'dblclick', hostPoint: options.hostPoint ?? null })) {
       console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
     }
   }
@@ -3594,6 +3603,43 @@ export function useStreamingDemo() {
     }
   }
 
+  async function reprocessLatestAssistantVariables() {
+    const latestAssistant = latestAssistantItem.value;
+    if (!latestAssistant || latestAssistant.role !== 'assistant') {
+      toastr?.info?.('当前还没有可重新解析变量的 assistant 楼层');
+      return;
+    }
+    if (busy.value) {
+      toastr?.warning?.('正文生成中，等待生成结束后再重试变量解析');
+      return;
+    }
+    if (reprocessVariablesPending.value) return;
+
+    reprocessVariablesPending.value = true;
+    try {
+      const reprocessResult = await retryMessageExtraAnalysisByNativeMvu(latestAssistant.message_id, {
+        refreshMessage: true,
+      });
+      mvuSourceRevision.value += 1;
+
+      if (reprocessResult.status === 'applied') {
+        appendLog('action', '重试额外模型解析', `已触发 MVU 原生重试额外模型解析：assistant #${latestAssistant.message_id}`);
+        toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
+        return;
+      }
+
+      const reason = String(reprocessResult.reason ?? reprocessResult.status ?? 'unknown');
+      appendLog('info', '重试额外模型解析未触发', `#${latestAssistant.message_id}: ${reason}`);
+      toastr?.warning?.(`重试额外模型解析未触发：${reason}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendLog('error', '重试额外模型解析失败', message);
+      toastr?.error?.(`重试额外模型解析失败：${message}`);
+    } finally {
+      reprocessVariablesPending.value = false;
+    }
+  }
+
   async function confirmInlineEditRegenerate(item: TranscriptItem) {
     const latestUser = latestUserItem.value;
     const targetId = Math.trunc(Number(item.message_id));
@@ -4127,6 +4173,28 @@ export function useStreamingDemo() {
   });
 
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
+  const historicalGalleryGroups = ref<GalleryGroup[]>([]);
+  const galleryHistoryCursor = ref<number | null>(null);
+  const galleryHistoryExhausted = ref(false);
+  const loadingOlderGalleryImages = ref(false);
+
+  function flattenGalleryGroupsForEntries(groups: GalleryGroup[]): GeneratedImageRef[] {
+    return groups.flatMap(g => g.images);
+  }
+
+  function mergeGalleryGroupsForEntries(currentGroups: GalleryGroup[], historyGroups: GalleryGroup[]): GalleryGroup[] {
+    const groupsById = new Map<number, GalleryGroup>();
+    for (const group of currentGroups) {
+      groupsById.set(group.messageId, group);
+    }
+    for (const group of historyGroups) {
+      if (!groupsById.has(group.messageId)) {
+        groupsById.set(group.messageId, group);
+      }
+    }
+    return Array.from(groupsById.values()).sort((a, b) => b.messageId - a.messageId);
+  }
+
   const galleryGroups = computed<GalleryGroup[]>(() => {
     void galleryRevision.value;
 
@@ -4156,7 +4224,94 @@ export function useStreamingDemo() {
 
     return groups;
   });
-  const galleryEntries = computed<GeneratedImageRef[]>(() => galleryGroups.value.flatMap(g => g.images));
+  const mergedGalleryGroups = computed<GalleryGroup[]>(() =>
+    mergeGalleryGroupsForEntries(galleryGroups.value, historicalGalleryGroups.value),
+  );
+  const galleryEntries = computed<GeneratedImageRef[]>(() => flattenGalleryGroupsForEntries(mergedGalleryGroups.value));
+  const hasMoreOlderGalleryImages = computed(() => !galleryHistoryExhausted.value);
+
+  watch(
+    () => transcript.value.map(item => item.message_id).join(','),
+    () => {
+      const visibleIds = new Set(galleryGroups.value.map(group => group.messageId));
+      historicalGalleryGroups.value = historicalGalleryGroups.value.filter(group => !visibleIds.has(group.messageId));
+      galleryHistoryCursor.value = null;
+      galleryHistoryExhausted.value = false;
+    },
+  );
+
+  function resolveInitialGalleryHistoryCursor(messages: any[]): number {
+    const visibleIds = transcript.value
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0);
+    if (visibleIds.length > 0) return Math.min(...visibleIds) - 1;
+    const messageIds = messages
+      .map(message => Math.trunc(Number(message?.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0);
+    return messageIds.length > 0 ? Math.max(...messageIds) : -1;
+  }
+
+  function isAssistantGalleryHistoryCandidate(message: any, rawMessage: string): boolean {
+    const role = resolveTranscriptRole({
+      rawRole: resolveHostMessageRole(message),
+      rawMessage,
+      isOpeningResult: false,
+    });
+    return role === 'assistant';
+  }
+
+  async function loadOlderGalleryImages() {
+    if (loadingOlderGalleryImages.value || galleryHistoryExhausted.value) return;
+    loadingOlderGalleryImages.value = true;
+    try {
+      const messages = readAllChatMessagesRaw();
+      const messageById = new Map<number, any>();
+      for (const message of messages) {
+        const id = Math.trunc(Number(message?.message_id));
+        if (!Number.isFinite(id) || id < 0) continue;
+        messageById.set(id, message);
+      }
+
+      let cursor = galleryHistoryCursor.value ?? resolveInitialGalleryHistoryCursor(messages);
+      const knownMessageIds = new Set(mergedGalleryGroups.value.map(group => group.messageId));
+      const nextGroups: GalleryGroup[] = [];
+      let scanned = 0;
+
+      while (cursor >= 0 && scanned < GALLERY_HISTORY_SCAN_BATCH_SIZE) {
+        const messageId = cursor;
+        cursor -= 1;
+        scanned += 1;
+        if (knownMessageIds.has(messageId)) continue;
+
+        const message = messageById.get(messageId);
+        if (!message) continue;
+        const rawMessage = String(message?.message ?? message?.mes ?? '');
+        if (!isAssistantGalleryHistoryCandidate(message, rawMessage)) continue;
+
+        const images = buildGeneratedImageRefsForMessage({
+          messageId,
+          rawMessage,
+          createdOrderBase: messageId * 100,
+          hostDomArtifacts: [],
+        });
+        if (images.length === 0) continue;
+
+        knownMessageIds.add(messageId);
+        nextGroups.push({ messageId, images });
+        if (nextGroups.length >= GALLERY_HISTORY_MAX_GROUPS_PER_LOAD) break;
+      }
+
+      galleryHistoryCursor.value = cursor;
+      if (cursor < 0 || messages.length === 0) {
+        galleryHistoryExhausted.value = true;
+      }
+      if (nextGroups.length > 0) {
+        historicalGalleryGroups.value = mergeGalleryGroupsForEntries(historicalGalleryGroups.value, nextGroups);
+      }
+    } finally {
+      loadingOlderGalleryImages.value = false;
+    }
+  }
 
   return {
     input,
@@ -4185,6 +4340,7 @@ export function useStreamingDemo() {
     currentMvuAnchorMessageId,
     latestUserItem,
     latestAssistantItem,
+    reprocessVariablesPending,
     inputHasText,
     editingUserMessageId,
     editingUserDraft,
@@ -4201,12 +4357,16 @@ export function useStreamingDemo() {
     transcriptDomRevision,
     galleryGroups,
     galleryEntries,
+    loadingOlderGalleryImages,
+    hasMoreOlderGalleryImages,
+    loadOlderGalleryImages,
     submitPromptViaSameLayer,
     disableSameLayerUi,
     beginPendingImageTask,
     markRecentImageIntent,
     runDemo,
     rollLatestTurn,
+    reprocessLatestAssistantVariables,
     refreshWorkbench,
     updateOpeningMeta,
     updateOpeningField,

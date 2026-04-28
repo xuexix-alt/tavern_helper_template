@@ -23,6 +23,12 @@ test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entr
   assert.match(commandSchemaBlock, /说明:\s*z\.string\(\)\.prefault\(''\)/);
   assert.match(commandSchemaBlock, /范围:\s*z\.string\(\)\.prefault\(''\)/);
   assert.match(commandSchemaBlock, /时效:\s*z\.string\(\)\.prefault\(''\)/);
+  assert.match(commandSchemaBlock, /生效实例:\s*z\.array\(/);
+  assert.match(commandSchemaBlock, /对象范围:\s*z\.string\(\)\.prefault\(''\)/);
+  assert.match(commandSchemaBlock, /剩余时效:\s*z\.string\(\)\.prefault\(''\)/);
+  assert.doesNotMatch(commandSchemaBlock, /状态:\s*z\.enum/);
+  assert.doesNotMatch(commandSchemaBlock, /内容:\s*z\.string/);
+  assert.doesNotMatch(commandSchemaBlock, /预计失效|失效条件|最近判定|开始:/);
   assert.doesNotMatch(commandSchemaBlock, /\.preprocess\(/);
   assert.doesNotMatch(commandSchemaBlock, /z\.coerce\.number\(\)/);
   assert.doesNotMatch(commandSchemaBlock, /\.transform\(/);
@@ -36,12 +42,17 @@ test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entr
   assert.match(initvarSource, /说明:\s*移除伴侣性道德感/);
   assert.match(initvarSource, /范围:\s*指定一位男性角色/);
   assert.match(initvarSource, /时效:\s*12小时/);
+  assert.match(initvarSource, /rz001:\s*[\s\S]*?生效实例:\s*\[\]/);
+  assert.match(initvarSource, /sk001:\s*[\s\S]*?生效实例:\s*\[\]/);
+  assert.match(initvarSource, /zd004:\s*[\s\S]*?生效实例:\s*\[\]/);
+  assert.match(initvarSource, /sx002:\s*[\s\S]*?生效实例:\s*\[\]/);
 });
 
 test('mvu update rules and output format document 名称+数量 writes for 顶层 伊甸一次性指令', () => {
   const rulesSource = read('../../../../世界书/变量/[mvu_update]变量更新规则.yaml');
   const outputSource = read('../../../../世界书/变量/[mvu_update]变量输出格式.yaml');
-  const taskSource = read('../../../../世界书/寒冬末日/主线任务-星穹秩序.txt');
+  const taskSource = read('../../../../世界书/寒冬末日/伊甸一次性指令和主线任务.txt');
+  const worldbookIndexSource = read('../../../../世界书/index.yaml');
 
   assert.match(rulesSource, /^  伊甸一次性指令:\s*$/m);
   assert.match(rulesSource, /\[编号:\s*string\]/);
@@ -50,8 +61,16 @@ test('mvu update rules and output format document 名称+数量 writes for 顶�
   assert.match(rulesSource, /说明:\s*string/);
   assert.match(rulesSource, /范围:\s*string/);
   assert.match(rulesSource, /时效:\s*string/);
+  assert.match(rulesSource, /生效实例:\s*\{\s*对象范围:\s*string;\s*剩余时效:\s*string;\s*\}\[\]/);
   assert.match(rulesSource, /编号 为动态 key/);
   assert.match(rulesSource, /已有编号只更新 `\/伊甸一次性指令\/\$\{编号\}\/数量`/);
+  assert.match(rulesSource, /只维护 `数量` 和 `生效实例`/);
+  assert.match(rulesSource, /禁止.*实例 key/);
+  assert.match(rulesSource, /禁止.*名称 \/ 说明 \/ 范围 \/ 时效/);
+  assert.match(rulesSource, /replace.*\/伊甸一次性指令\/\$\{编号\}\/生效实例/);
+  assert.match(rulesSource, /replace.*\/伊甸一次性指令\/\$\{编号\}\/生效实例\/\$\{实例序号\}\/剩余时效/);
+  assert.match(rulesSource, /尚在起作用/);
+  assert.doesNotMatch(rulesSource, /指令还在作用时：只更新 `剩余时效`；同样 replace 整个 `生效实例` 数组/);
   assert.match(rulesSource, /\| 名称 \| 类别 \| 编号 \| 说明 \| 范围 \| 时效 \|/);
   assert.match(rulesSource, /\| 朋友妻不客气 \| 认知修改类 \| rz001 \|/);
   assert.match(outputSource, /"path":\s*"\/伊甸一次性指令\/rz001",\s*"value":\s*\{\s*"名称":/);
@@ -59,10 +78,19 @@ test('mvu update rules and output format document 名称+数量 writes for 顶�
   assert.match(outputSource, /"范围":\s*"[^"]+"/);
   assert.match(outputSource, /"时效":\s*"[^"]+"/);
   assert.match(outputSource, /"path":\s*"\/伊甸一次性指令\/sk001\/数量"/);
+  assert.match(outputSource, /"path":\s*"\/伊甸一次性指令\/sk001\/生效实例"/);
+  assert.match(outputSource, /"对象范围":\s*"核心区\/客厅"/);
+  assert.match(outputSource, /"剩余时效":\s*"约6小时"/);
+  assert.doesNotMatch(outputSource, /\/生效实例\/sk001_/);
   assert.match(taskSource, /编号rz001-名称：/);
   assert.match(taskSource, /编号sk001-名称：/);
   assert.match(taskSource, /编号zd001-名称：/);
   assert.match(taskSource, /编号sx001-名称：/);
+  assert.match(
+    worldbookIndexSource,
+    /名称: 伊甸一次性指令和主线任务[\s\S]*?激活策略:\s*[\r\n]+\s*类型: 蓝灯[\s\S]*?顺序: 8[\s\S]*?文件: 寒冬末日\\伊甸一次性指令和主线任务/,
+  );
+  assert.doesNotMatch(worldbookIndexSource, /名称: 主线任务-星穹秩序|文件: 寒冬末日\\主线任务-星穹秩序/);
 });
 
 test('same-layer system panel and workbench modal render eden commands from top-level systemMvuData field', () => {
@@ -88,6 +116,7 @@ test('same-layer system panel and workbench modal render eden commands from top-
   assert.match(panelSource, /class="system-command-meta-chip"/);
   assert.doesNotMatch(panelSource, /class="system-command-copy"/);
   assert.match(workbenchSource, /useMvuSystemStore/);
+  assert.match(workbenchSource, /buildEdenActiveDirectiveEntries/);
   assert.match(workbenchSource, /_\.get\(systemMvuData\.value, '伊甸一次性指令', \{\}\)/);
   assert.match(workbenchSource, /v-for="entry in edenCommandEntries"/);
   assert.match(workbenchSource, /commandCardClass\(entry\)/);
@@ -110,6 +139,38 @@ test('same-layer system panel and workbench modal render eden commands from top-
   assert.match(commandsSource, /category:\s*meta\?\.category \|\| '未分类'/);
   assert.match(storeSource, /const RESERVED_TOP_LEVEL_KEYS = new Set\(\[/);
   assert.match(storeSource, /'伊甸一次性指令'/);
+});
+
+test('workbench renders a tab-independent active directive strip from lightweight active instances', () => {
+  const commandsSource = read('../edenOneShotCommands.ts');
+  const workbenchSource = read('../components/WorkbenchTabs.vue');
+
+  assert.match(commandsSource, /export type EdenActiveDirectiveEntry/);
+  assert.match(commandsSource, /targetScope:\s*string/);
+  assert.match(commandsSource, /remaining:\s*string/);
+  assert.match(commandsSource, /quantity:\s*number/);
+  assert.match(commandsSource, /fixedDuration:\s*string/);
+  assert.match(commandsSource, /description:\s*string/);
+  assert.match(commandsSource, /export function buildEdenActiveDirectiveEntries\(raw: unknown\)/);
+  assert.match(commandsSource, /Array\.isArray\(record\.生效实例\)/);
+  assert.match(commandsSource, /对象范围/);
+  assert.match(commandsSource, /剩余时效/);
+  assert.doesNotMatch(commandsSource, /instanceKey/);
+  assert.doesNotMatch(commandsSource, /状态|内容|预计失效|失效条件|最近判定/);
+
+  assert.match(
+    workbenchSource,
+    /<section class="active-directive-strip[\s\S]*?<div class="system-tabs"/,
+    'active directive strip should render before tab buttons and stay independent of activeTab',
+  );
+  assert.match(workbenchSource, /activeDirectiveEntries/);
+  assert.match(workbenchSource, /primaryActiveDirective/);
+  assert.match(workbenchSource, /primaryActiveDirective\.targetScope/);
+  assert.match(workbenchSource, /primaryActiveDirective\.remaining/);
+  assert.match(workbenchSource, /primaryActiveDirective\.description/);
+  assert.match(workbenchSource, /primaryActiveDirective\.fixedDuration/);
+  assert.match(workbenchSource, /当前无生效中的一次性指令/);
+  assert.doesNotMatch(workbenchSource, /primaryActiveDirective\.content|primaryActiveDirective\.status/);
 });
 
 test('workbench logs tab owns system summary and command tab keeps themed category cards', () => {

@@ -10,7 +10,7 @@ function read(rel) {
 test('eden command metadata parser exposes 名称 and 说明 for UI display', () => {
   const source = read('../edenOneShotCommands.ts');
 
-  assert.match(source, /主线任务-星穹秩序\.txt\?raw/);
+  assert.match(source, /伊甸一次性指令和主线任务\.txt\?raw/);
   assert.match(source, /type EdenOneShotCommandMeta =/);
   assert.match(source, /name:\s*string/);
   assert.match(source, /description:\s*string/);

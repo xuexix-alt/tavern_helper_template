@@ -1,5 +1,41 @@
 <template>
   <section class="workbench-card">
+    <section class="active-directive-strip clip-corner-sm">
+      <div class="active-directive-head">
+        <span class="block-label">Active Eden Directive</span>
+        <strong>生效项 {{ activeDirectiveEntries.length }}</strong>
+      </div>
+
+      <article
+        v-if="primaryActiveDirective"
+        class="active-directive-card clip-corner-sm"
+        :class="commandCategoryClass(primaryActiveDirective.category)"
+      >
+        <div class="active-directive-titleline">
+          <strong>{{ primaryActiveDirective.name }}</strong>
+          <span>{{ primaryActiveDirective.commandKey }}</span>
+          <em>×{{ primaryActiveDirective.quantity }}</em>
+        </div>
+        <div class="active-directive-meta">
+          <span>
+            <b>对象/范围</b>
+            {{ primaryActiveDirective.targetScope || '--' }}
+          </span>
+          <span>
+            <b>剩余</b>
+            {{ primaryActiveDirective.remaining || '--' }}
+          </span>
+          <span>
+            <b>时效</b>
+            {{ primaryActiveDirective.fixedDuration || '--' }}
+          </span>
+        </div>
+        <p>{{ primaryActiveDirective.description || '暂无说明' }}</p>
+      </article>
+
+      <div v-else class="empty-log">当前无生效中的一次性指令</div>
+    </section>
+
     <div class="system-tabs" role="tablist" aria-label="系统面板页签">
       <button
         v-for="tab in tabs"
@@ -143,7 +179,11 @@
 
 <script setup lang="ts">
 import type { ReaderLogItem } from '../types';
-import { buildEdenCommandDisplayEntries, type EdenOneShotCommandDisplayEntry } from '../edenOneShotCommands';
+import {
+  buildEdenActiveDirectiveEntries,
+  buildEdenCommandDisplayEntries,
+  type EdenOneShotCommandDisplayEntry,
+} from '../edenOneShotCommands';
 import { useMvuSystemStore } from '../mvuRoleStore';
 
 const props = defineProps<{
@@ -177,6 +217,10 @@ const dailyRollText = computed(() => String(_.get(systemMvuData.value, '庇护�
 const edenCommandEntries = computed(() =>
   buildEdenCommandDisplayEntries(_.get(systemMvuData.value, '伊甸一次性指令', {})),
 );
+const activeDirectiveEntries = computed(() =>
+  buildEdenActiveDirectiveEntries(_.get(systemMvuData.value, '伊甸一次性指令', {})),
+);
+const primaryActiveDirective = computed(() => activeDirectiveEntries.value[0] ?? null);
 const expansionState = computed(() => ({
   medical: String(_.get(systemMvuData.value, '庇护所.可扩展区域.医疗翼', '未解锁')),
   workshop: String(_.get(systemMvuData.value, '庇护所.可扩展区域.制造工坊', '未解锁')),
@@ -221,7 +265,8 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 .status-chip,
 .status-detail-card,
 .expansion-card,
-.command-card {
+.command-card,
+.active-directive-card {
   position: relative;
   overflow: hidden;
   display: flex;
@@ -241,7 +286,8 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 }
 
 .summary-chip::before,
-.command-card::before {
+.command-card::before,
+.active-directive-card::before {
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
@@ -262,6 +308,11 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 .status-detail-card strong,
 .expansion-card small,
 .expansion-card strong,
+.active-directive-head strong,
+.active-directive-titleline span,
+.active-directive-titleline em,
+.active-directive-meta,
+.active-directive-meta b,
 .command-category-badge,
 .command-extra-chip,
 .command-extra-chip b,
@@ -300,7 +351,8 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 .workbench-panel,
 .status-detail-grid,
 .expansion-grid,
-.command-list {
+.command-list,
+.active-directive-strip {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -309,12 +361,110 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 .system-tabs,
 .log-head,
 .progress-copy,
+.active-directive-head,
+.active-directive-titleline,
+.active-directive-meta,
 .command-card-topline,
 .command-card-tags,
 .command-card-titleline,
 .command-extra,
 .command-extra-chip {
   display: flex;
+}
+
+.active-directive-strip {
+  padding: 10px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent 64%),
+    color-mix(in srgb, var(--surface) 32%, transparent);
+}
+
+.active-directive-head {
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.active-directive-head strong {
+  color: var(--demo-text-accent);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.active-directive-card {
+  --cmd-category-color: var(--primary);
+  gap: 7px;
+  padding: 9px 10px 9px 13px;
+  border-color: color-mix(in srgb, var(--cmd-category-color) 34%, var(--border) 66%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--cmd-category-color) 11%, transparent), transparent 58%),
+    color-mix(in srgb, var(--surface) 42%, transparent);
+}
+
+.active-directive-titleline {
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.active-directive-titleline strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--demo-text-primary);
+}
+
+.active-directive-titleline span {
+  flex: 0 0 auto;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--demo-text-subtle);
+}
+
+.active-directive-titleline em {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-style: normal;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--cmd-category-color) 78%, var(--foreground) 22%);
+}
+
+.active-directive-meta {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.active-directive-meta > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--cmd-category-color) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 55%, var(--cmd-category-color) 5%);
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--demo-text-subtle);
+}
+
+.active-directive-meta b {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--cmd-category-color) 72%, var(--foreground) 28%);
+}
+
+.active-directive-card p {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--demo-text-secondary);
 }
 
 .system-tabs {
@@ -432,23 +582,28 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
     opacity 180ms ease;
 }
 
-.command-card.category-cognition {
+.command-card.category-cognition,
+.active-directive-card.category-cognition {
   --cmd-category-color: #8b5cf6;
 }
 
-.command-card.category-spacetime {
+.command-card.category-spacetime,
+.active-directive-card.category-spacetime {
   --cmd-category-color: #38bdf8;
 }
 
-.command-card.category-combat {
+.command-card.category-combat,
+.active-directive-card.category-combat {
   --cmd-category-color: #fb7185;
 }
 
-.command-card.category-attribute {
+.command-card.category-attribute,
+.active-directive-card.category-attribute {
   --cmd-category-color: #34d399;
 }
 
-.command-card.category-unknown {
+.command-card.category-unknown,
+.active-directive-card.category-unknown {
   --cmd-category-color: var(--primary);
 }
 

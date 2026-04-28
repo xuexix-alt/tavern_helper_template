@@ -3,18 +3,21 @@
 rule:
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:"
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must
+    be a valid JSON array containing operation objects, but supports the
+    following operations instead:"
   - "  - `replace`: replace the value of existing paths"
-  - "  - `delta`: update the value of existing number paths by a delta value (positive or negative)"
+  - "  - `delta`: update the value of existing number paths by a delta value
+    (positive or negative)"
   - "  - `insert`: insert new items into an object or array"
   - "  - `remove`: delete path"
-  - '  - `move`: move an existing value from one path to another (requires `"from"`). '
+  - '  - `move`: move an existing value from one path to another (requires
+    `"from"`). '
   - Path MUST start with `/`.
-  - DO NOT update field names starts with `_` as they are readonly, such as `_变量`.
-  - The main character list is dynamic: any role object at top-level (excluding reserved keys and `临时NPC`) is a main character.
-  - Temporary NPCs live under `/临时NPC` and MAY be promoted to top-level roles when they become long-term/important (prefer `insert` + `remove`; `move` is optional).
-  - If the same name exists in both top-level and `临时NPC`, they must be merged and the `临时NPC` entry removed.
-  - analyze every variable based on its corresponding `check`, according only to current reply instead of previous plots
+  - DO NOT update field names starts with `_` as they are readonly, such as
+    `_变量`.
+  - analyze every variable based on its corresponding `check`, according only to
+    current reply instead of previous plots
 
 format: |-
   <UpdateVariable>
@@ -41,10 +44,14 @@ format: |-
      - If main task stage completed -> use `replace` to force level to reward target.
      - Otherwise: DO NOT modify level numbers manually.
      - Sync capability descriptions when level changes.
-    - 新的一天需要roll一次性指令：遵从<伊甸一次性指令>
-       - 新增编号：
-       - 或已有编号次数 +1
-       - 或已使用编号次数 -1
+     - 伊甸一次性指令：只维护 `数量` 和 `生效实例`
+       - 获得新指令：选定编号，对 `/伊甸一次性指令/${编号}/数量` 使用 `delta +1`
+       - 使用指令：对 `/伊甸一次性指令/${编号}/数量` 使用 `delta -1`，并对应维护`/伊甸一次性指令/${编号}/生效实例`
+       - 如果该指令正在发挥作用，同时维护 `/伊甸一次性指令/${编号}/生效实例`
+       - `生效实例` 格式固定为：`[{ "对象范围": "...", "剩余时效": "..." }]`
+       - 指令刚开始作用时，用 `replace /伊甸一次性指令/${编号}/生效实例` 写入完整数组
+       - 指令持续期间，只用 `replace /伊甸一次性指令/${编号}/生效实例/${实例序号}/剩余时效` 更新对应项；单次作用未完成时写“尚在起作用”
+       - 指令失效或单次指令内容完成时，删除对应 `生效实例`
 
   4. All Roles Variables (逐个检查每个角色)
      - Source: top-level roles + `/临时NPC` objects.
@@ -97,10 +104,24 @@ format: |-
         "数量": 1,
         "说明": "移除伴侣性道德感",
         "范围": "指定一位男性角色",
-        "时效": "12小时"
+        "时效": "12小时",
+        "生效实例": []
       }
     },
-    { "op": "delta", "path": "/伊甸一次性指令/sk001/数量", "value": 1 }
+    { "op": "delta", "path": "/伊甸一次性指令/sk001/数量", "value": -1 },
+    {
+      "op": "replace",
+      "path": "/伊甸一次性指令/sk001/生效实例",
+      "value": [
+        { "对象范围": "核心区/客厅", "剩余时效": "约6小时" }
+      ]
+    },
+    { "op": "replace", "path": "/伊甸一次性指令/sk001/生效实例/0/剩余时效", "value": "约4小时" },
+    { "op": "replace", "path": "/伊甸一次性指令/rz003/生效实例/0/剩余时效", "value": "尚在起作用" },
+    {
+      "op": "remove",
+      "path": "/伊甸一次性指令/rz003/生效实例/0"
+    }
   ]
   </JSONPatch>
   </UpdateVariable>
@@ -109,7 +130,7 @@ requirements:
   - "Allowed operations: replace, delta, insert, remove, move."
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
-  - "If inserting into `/临时NPC/<姓名>` and `/临时NPC` is missing, `insert` `/临时NPC` as `{}` first."
-  - "Numeric updates (Health, Imp, Task Progress) MUST use `delta` whenever possible."
-  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of truth)."
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use
+    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of
+    truth)."
