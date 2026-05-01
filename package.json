@@ -58,6 +58,7 @@
     "mini-css-extract-plugin": "^2.10.2",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> f759a3e3f10c9abb6086ecf76222f35268e80cf1
     "postcss": "^8.5.8",
 =======
@@ -66,6 +67,9 @@
 =======
     "postcss": "^8.5.12",
 >>>>>>> dc79e70c2b507a4984bc1620b1a875e1a4ff083d
+=======
+    "postcss": "^8.5.13",
+>>>>>>> 1135d5998344ca329c4a49283460954de5cb18ce
     "postcss-cli": "^11.0.1",
     "postcss-load-config": "^6.0.1",
     "postcss-loader": "^8.2.1",
@@ -99,7 +103,7 @@
   },
   "dependencies": {
     "@pixi/react": "8.0.0-beta.25",
-    "@vueuse/components": "^14.2.1",
+    "@vueuse/components": "^14.3.0",
     "@vueuse/core": "^13.9.0",
     "@vueuse/integrations": "^13.9.0",
     "@vueuse/shared": "^13.9.0",
@@ -125,7 +129,7 @@
     "vue-word-highlighter": "^1.2.6",
     "vue3-pixi": "1.0.0-beta.3",
     "yaml": "^2.8.3",
-    "zod": "^4.3.6"
+    "zod": "^4.4.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
