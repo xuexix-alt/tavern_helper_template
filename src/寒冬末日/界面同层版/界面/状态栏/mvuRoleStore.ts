@@ -76,6 +76,18 @@ function hasDisplayableRoles(data: SchemaType): boolean {
   return isObjectRecord(tempNpc) && Object.values(tempNpc).some(value => isObjectRecord(value));
 }
 
+function mergeSystemStatDataFallback(statData: Record<string, any>): SchemaType {
+  const fallback = _.cloneDeep(initialData) as Record<string, any>;
+
+  for (const key of RESERVED_TOP_LEVEL_KEYS) {
+    if (_.has(statData, key)) {
+      fallback[key] = _.cloneDeep(statData[key]);
+    }
+  }
+
+  return fallback as SchemaType;
+}
+
 type ReadMvuStatDataOptions = {
   allowSystemOnly?: boolean;
 };
@@ -96,6 +108,9 @@ export function readMvuStatData(
     const result = Schema.safeParse(statData);
     if (result.success && (allowSystemOnly || hasDisplayableRoles(result.data))) {
       return { ok: true, data: result.data, messageId };
+    }
+    if (allowSystemOnly) {
+      return { ok: true, data: mergeSystemStatDataFallback(statData), messageId };
     }
   } catch {
     // ignore

@@ -97,6 +97,15 @@
             </button>
             <button
               type="button"
+              class="choice-btn choice-btn--ghost choice-btn--image clip-corner-sm"
+              :disabled="busy || choiceSending || !canGenerateLatestImage"
+              title="以最新正文楼层触发插件 LLM 生图"
+              @click="handleGenerateLatestImageClick"
+            >
+              生图
+            </button>
+            <button
+              type="button"
               class="choice-btn choice-btn--ghost clip-corner-sm"
               :disabled="choiceSending"
               @click="closeChoiceModal"
@@ -133,6 +142,7 @@ const props = defineProps<{
   canReprocessVariables?: boolean;
   reprocessVariablesHint?: string;
   reprocessVariablesPending?: boolean;
+  canGenerateLatestImage?: boolean;
   showOptionTrigger?: boolean;
   showToolbar?: boolean;
   layoutMode?: 'compact' | 'reader_desktop' | 'wide';
@@ -145,6 +155,7 @@ const emit = defineEmits<{
   (event: 'refresh'): void;
   (event: 'open-role', key: string): void;
   (event: 'reprocess-variables'): void;
+  (event: 'generate-latest-image'): void;
 }>();
 
 function onInput(event: Event) {
@@ -199,6 +210,12 @@ function pickChoice(option: string) {
 
 function handleReprocessVariablesClick() {
   emit('reprocess-variables');
+  closeChoiceModal();
+}
+
+function handleGenerateLatestImageClick() {
+  if (props.busy || choiceSending.value || !props.canGenerateLatestImage) return;
+  emit('generate-latest-image');
   closeChoiceModal();
 }
 
@@ -495,6 +512,9 @@ defineExpose({
 }
 .choice-btn--reprocess {
   margin-right: auto;
+  color: var(--demo-text-accent);
+}
+.choice-btn--image {
   color: var(--demo-text-accent);
 }
 @media (max-width: 760px) {

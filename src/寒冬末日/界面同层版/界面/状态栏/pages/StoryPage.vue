@@ -317,6 +317,7 @@
             :can-reprocess-variables="canReprocessVariables"
             :reprocess-variables-hint="reprocessVariablesHint"
             :reprocess-variables-pending="reprocessVariablesPending"
+            :can-generate-latest-image="Boolean(latestAssistantItem)"
             :role-tabs="visibleRoleTabs"
             :active-role-key="activeRoleKey"
             :layout-mode="shellLayoutMode"
@@ -326,6 +327,7 @@
             @roll="rollLatestTurn"
             @open-role="openRoleFromComposer"
             @reprocess-variables="handleReprocessVariablesFromChoiceModal"
+            @generate-latest-image="handleChoiceModalGenerateLatestImage"
           />
         </section>
       </main>
@@ -1336,7 +1338,7 @@ async function withFullscreenSuspended(action: () => void): Promise<void> {
 function dispatchHostDoubleClick(
   target: HTMLElement,
   hostPoint?: { clientX: number; clientY: number } | null,
-  strategy: HostGestureDispatchStrategy = 'dblclick',
+  strategy: HostGestureDispatchStrategy = 'auto',
 ): boolean {
   return dispatchHostPrimaryTrigger(target, { hostPoint, strategy });
 }
@@ -1530,6 +1532,38 @@ function guardPluginMenuViewport(): void {
   setTimeout(() => observer.disconnect(), 900);
 }
 
+function waitForTimeout(ms: number): Promise<void> {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function findPluginImageGenerationMenuItem(): HTMLElement | null {
+  const selectors = [
+    '.st-chatu8-click-trigger-bubble .st-chatu8-click-trigger-button',
+    '.st-chatu8-click-trigger-bubble button',
+    '[class*="click-trigger"][class*="bubble"] button',
+  ].join(', ');
+
+  for (const hostWindow of collectReachableHostWindows()) {
+    const candidates = Array.from(hostWindow.document.querySelectorAll(selectors)) as HTMLElement[];
+    const target = candidates.find(button => String(button.textContent ?? '').trim().includes('图片生成'));
+    if (target) return target;
+  }
+  return null;
+}
+
+async function clickPluginImageGenerationMenuItem(): Promise<boolean> {
+  const deadline = Date.now() + 1800;
+  while (Date.now() < deadline) {
+    const item = findPluginImageGenerationMenuItem();
+    if (item) {
+      item.click();
+      return true;
+    }
+    await waitForTimeout(50);
+  }
+  return false;
+}
+
 async function handleTranscriptGenerateImage(request: TranscriptImageGenerateRequest | number) {
   const messageId = typeof request === 'number' ? request : request.messageId;
   const hostPoint = typeof request === 'number' ? null : resolveHostPointFromIframeEvent(request.triggerEvent ?? null);
@@ -1538,6 +1572,24 @@ async function handleTranscriptGenerateImage(request: TranscriptImageGenerateReq
     hoistPluginMenuIntoFullscreen();
   }
   await triggerImageGenerationForMessage(messageId, { hostPoint });
+}
+
+async function handleChoiceModalGenerateLatestImage() {
+  const messageId = Math.trunc(Number(latestAssistantItem.value?.message_id));
+  if (!Number.isFinite(messageId) || messageId < 0) {
+    toastr?.warning?.('当前没有可生图的最新正文楼层');
+    return;
+  }
+
+  guardPluginMenuViewport();
+  if (document.fullscreenElement) {
+    hoistPluginMenuIntoFullscreen();
+  }
+
+  await triggerImageGenerationForMessage(messageId, { hostPoint: null });
+  if (!(await clickPluginImageGenerationMenuItem())) {
+    toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
+  }
 }
 
 function handleOpenGallery(_messageId: number) {

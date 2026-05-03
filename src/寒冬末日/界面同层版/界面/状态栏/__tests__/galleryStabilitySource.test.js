@@ -39,6 +39,10 @@ test('transcript image FAB restores the historical direct trigger path instead o
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
   assert.match(
     streamingSource,
+    /dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
+  );
+  assert.doesNotMatch(
+    streamingSource,
     /dispatchHostPrimaryTrigger\(mesText, \{ strategy: 'dblclick', hostPoint: options\.hostPoint \?\? null \}\)/,
   );
 });
@@ -53,6 +57,24 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
   assert.match(storyPageSource, /function guardPluginMenuViewport\(\): void/);
   assert.match(storyPageSource, /clampPluginMenuIntoViewport\(node\);/);
   assert.match(storyPageSource, /guardPluginMenuViewport\(\);[\s\S]*await triggerImageGenerationForMessage/);
+});
+
+test('transcript image generation temporarily suspends host visual hide before dispatching plugin gestures', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    streamingSource,
+    /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/,
+  );
+  assert.match(streamingSource, /releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/);
+  assert.match(
+    streamingSource,
+    /async function triggerImageGenerationForMessage[\s\S]*await withHostTranscriptVisible\(async \(\) => \{/,
+  );
+  assert.match(
+    streamingSource,
+    /withHostTranscriptVisible[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
+  );
 });
 
 test('gallery lazily discovers older assistant images without a same-layer manifest or full history render', () => {
@@ -80,6 +102,10 @@ test('mobile transcript double-tap keeps the proxy chain and forwards the second
   const dispatchPlanSource = readSource('hostCoordinateTarget.ts');
 
   assert.match(dispatchPlanSource, /preferPointFallback\?: boolean;/);
+  assert.match(
+    storyPageSource,
+    /function dispatchHostDoubleClick\([\s\S]*strategy: HostGestureDispatchStrategy = 'auto'/,
+  );
   assert.match(
     storyPageSource,
     /void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);/,

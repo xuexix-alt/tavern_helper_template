@@ -2584,6 +2584,7 @@ export function useStreamingDemo() {
       window.clearTimeout(hidePolicyTimer);
       hidePolicyTimer = 0;
     }
+    const releaseVisualHide = hostVisualHideController.suspend('bridge_visible');
     // 临时取消隐藏
     const messagesToReveal = readMessagesAfterContainer()
       .filter(item => item.is_hidden === true)
@@ -2597,6 +2598,7 @@ export function useStreamingDemo() {
     try {
       return await action();
     } finally {
+      releaseVisualHide();
       // 恢复隐藏
       queueHidePolicy('bridge_resume');
     }
@@ -2741,29 +2743,31 @@ export function useStreamingDemo() {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
 
-    // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
-    const rendered = await ensureHostMesTextRendered(normalizedId);
-    if (!rendered) {
-      console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
-    }
+    await withHostTranscriptVisible(async () => {
+      // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
+      const rendered = await ensureHostMesTextRendered(normalizedId);
+      if (!rendered) {
+        console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
+      }
 
-    // Step 2: 注册持久化任务（imagePendingTaskManager 用）
-    beginPendingImageTask(normalizedId);
-    markRecentImageIntent(normalizedId, 'transcript');
+      // Step 2: 注册持久化任务（imagePendingTaskManager 用）
+      beginPendingImageTask(normalizedId);
+      markRecentImageIntent(normalizedId, 'transcript');
 
-    // Step 3: 向宿主 mes_text 派发合成 dblclick，让插件走完整 ClickTrigger 链路
-    const mesText =
-      collectHostDocuments()
-        .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
-        .find(Boolean) ?? null;
-    if (!mesText) {
-      console.warn('[image] 注入节点未找到，mesid:', normalizedId);
-      return;
-    }
+      // Step 3: 向宿主 mes_text 派发主触发手势，让插件走完整 ClickTrigger 链路
+      const mesText =
+        collectHostDocuments()
+          .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
+          .find(Boolean) ?? null;
+      if (!mesText) {
+        console.warn('[image] 注入节点未找到，mesid:', normalizedId);
+        return;
+      }
 
-    if (!dispatchHostPrimaryTrigger(mesText, { strategy: 'dblclick', hostPoint: options.hostPoint ?? null })) {
-      console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
-    }
+      if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
+        console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
+      }
+    });
   }
 
   function listAssistantMessagesForPromptPersistence(): BaseChatMessage[] {

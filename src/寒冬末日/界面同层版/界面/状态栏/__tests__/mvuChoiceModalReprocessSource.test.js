@@ -124,6 +124,42 @@ test('choice modal closes immediately after clicking the MVU reroll action', () 
   );
 });
 
+test('choice modal exposes a direct latest-assistant image generation action', () => {
+  const source = read('../components/BottomComposer.vue');
+
+  assert.match(
+    source,
+    /canGenerateLatestImage\?: boolean;/,
+    'BottomComposer should accept latest-assistant image generation availability',
+  );
+  assert.match(
+    source,
+    /\(event: 'generate-latest-image'\): void;/,
+    'BottomComposer should emit a dedicated latest-assistant image generation event',
+  );
+  assert.match(
+    source,
+    /choice-modal-footer[\s\S]*handleGenerateLatestImageClick[\s\S]*生图/,
+    'choice modal footer should render a direct image generation button',
+  );
+  assert.match(
+    source,
+    /:disabled="busy \|\| choiceSending \|\| !canGenerateLatestImage"/,
+    'direct image generation should be disabled while busy/sending or without a latest assistant floor',
+  );
+});
+
+test('choice modal direct image action closes the modal and delegates upward', () => {
+  const source = read('../components/BottomComposer.vue');
+  const handlerBody = extractFunctionBody(source, 'handleGenerateLatestImageClick');
+
+  assert.match(
+    handlerBody,
+    /emit\('generate-latest-image'\)[\s\S]*closeChoiceModal\(\)/,
+    'direct image action should emit upward and close the choice modal immediately',
+  );
+});
+
 test('StoryPage wires the choice modal reroll button to same-layer MVU state and host mode detection', () => {
   const source = read('../pages/StoryPage.vue');
 
@@ -137,6 +173,51 @@ test('StoryPage wires the choice modal reroll button to same-layer MVU state and
     /function readMvuVariableUpdateMode\(\)[\s\S]*变量更新方式[\s\S]*额外模型解析/,
     'StoryPage should read the host MVU update-mode selector and detect the extra-analysis option',
   );
+});
+
+test('StoryPage wires choice-modal direct image generation to latest assistant plugin LLM image flow', () => {
+  const source = read('../pages/StoryPage.vue');
+  const handlerBody = extractFunctionBody(source, 'handleChoiceModalGenerateLatestImage');
+
+  assert.match(
+    source,
+    /:can-generate-latest-image="Boolean\(latestAssistantItem\)"/,
+    'StoryPage should enable choice-modal direct image generation only when a latest assistant floor exists',
+  );
+  assert.match(
+    source,
+    /@generate-latest-image="handleChoiceModalGenerateLatestImage"/,
+    'StoryPage should wire the choice modal image button to a local handler',
+  );
+  assert.match(
+    handlerBody,
+    /latestAssistantItem\.value\?\.message_id/,
+    'handler should target the latest assistant floor instead of composer text',
+  );
+  assert.match(
+    handlerBody,
+    /await triggerImageGenerationForMessage\(messageId, \{ hostPoint: null \}\)/,
+    'handler should still open the validated native plugin image menu chain',
+  );
+  assert.match(
+    handlerBody,
+    /await clickPluginImageGenerationMenuItem\(\)/,
+    'handler should auto-select the plugin 图片生成 menu item to trigger LLM image generation directly',
+  );
+});
+
+test('StoryPage selects the plugin 图片生成 menu item by stable text after opening the native menu', () => {
+  const source = read('../pages/StoryPage.vue');
+  const findBody = extractFunctionBody(source, 'findPluginImageGenerationMenuItem');
+  const clickBody = extractFunctionBody(source, 'clickPluginImageGenerationMenuItem');
+
+  assert.match(
+    findBody,
+    /\.st-chatu8-click-trigger-bubble[\s\S]*\.st-chatu8-click-trigger-button/,
+    'menu selection should search inside the plugin click-trigger bubble/buttons',
+  );
+  assert.match(findBody, /textContent[\s\S]*includes\('图片生成'\)/, 'selection should target the 图片生成 item text');
+  assert.match(clickBody, /\.click\(\)/, 'selection should invoke the plugin button click path');
 });
 
 test('StoryPage detects MVU update mode from selected control value, not from both labels appearing nearby', () => {
