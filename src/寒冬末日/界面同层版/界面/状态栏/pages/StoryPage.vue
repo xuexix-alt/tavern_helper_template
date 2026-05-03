@@ -1545,7 +1545,11 @@ function findPluginImageGenerationMenuItem(): HTMLElement | null {
 
   for (const hostWindow of collectReachableHostWindows()) {
     const candidates = Array.from(hostWindow.document.querySelectorAll(selectors)) as HTMLElement[];
-    const target = candidates.find(button => String(button.textContent ?? '').trim().includes('图片生成'));
+    const target = candidates.find(button =>
+      String(button.textContent ?? '')
+        .trim()
+        .includes('图片生成'),
+    );
     if (target) return target;
   }
   return null;

@@ -37,10 +37,7 @@ test('transcript image FAB restores the historical direct trigger path instead o
   );
   assert.match(storyPageSource, /await triggerImageGenerationForMessage\(messageId, \{ hostPoint \}\);/);
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
-  assert.match(
-    streamingSource,
-    /dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
-  );
+  assert.match(streamingSource, /dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/);
   assert.doesNotMatch(
     streamingSource,
     /dispatchHostPrimaryTrigger\(mesText, \{ strategy: 'dblclick', hostPoint: options\.hostPoint \?\? null \}\)/,
@@ -62,10 +59,7 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
 test('transcript image generation temporarily suspends host visual hide before dispatching plugin gestures', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
-  assert.match(
-    streamingSource,
-    /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/,
-  );
+  assert.match(streamingSource, /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/);
   assert.match(streamingSource, /releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/);
   assert.match(
     streamingSource,
