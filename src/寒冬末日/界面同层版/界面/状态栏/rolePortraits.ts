@@ -49,7 +49,9 @@ function normalizeText(value: unknown) {
 }
 
 function normalizeNameWithoutParenthetical(value: unknown) {
-  return normalizeText(value).replace(/\s*[\(（][^)）]+[\)）]\s*$/g, '').trim();
+  return normalizeText(value)
+    .replace(/\s*[\(（][^)）]+[\)）]\s*$/g, '')
+    .trim();
 }
 
 function buildNameCandidates(...values: unknown[]) {
@@ -117,7 +119,13 @@ function entryMatchesImageRef(entry: ReaderGalleryEntry, ref: RolePortraitImageR
   const hasOrderRef = Number.isFinite(Number(ref.createdOrder));
   if (hasOrderRef && entry.createdOrder !== ref.createdOrder) return false;
   if (ref.promptToken && entry.promptToken === ref.promptToken) return true;
-  return !ref.markerId && !ref.imageId && !ref.requestId && !ref.promptToken && (!hasOrderRef || entry.createdOrder === ref.createdOrder);
+  return (
+    !ref.markerId &&
+    !ref.imageId &&
+    !ref.requestId &&
+    !ref.promptToken &&
+    (!hasOrderRef || entry.createdOrder === ref.createdOrder)
+  );
 }
 
 function listOverrideRefs(override?: RolePortraitOverride | null): RolePortraitImageRef[] {
@@ -255,7 +263,8 @@ export function resolveRolePortrait(
   options: { defaultSrc: string },
 ): ResolvedRolePortrait {
   const override = overrides[role.key];
-  const overrideEntry = findEntryForRef(entries, override?.imageRef) ?? findEntriesForRefs(entries, listOverrideRefs(override))[0];
+  const overrideEntry =
+    findEntryForRef(entries, override?.imageRef) ?? findEntriesForRefs(entries, listOverrideRefs(override))[0];
   const entry = overrideEntry ?? findGalleryEntryForRole(role, entries);
 
   if (entry?.src) {

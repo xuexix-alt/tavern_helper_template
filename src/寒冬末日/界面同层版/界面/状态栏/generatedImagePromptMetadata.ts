@@ -14,7 +14,9 @@ export function normalizeImageLabel(input: string, fallback = '未命名图像')
 }
 
 export function formatImageDisplayName(input: string, fallback = '未命名图像'): string {
-  const value = normalizeImageLabel(input, '').replace(/\s*[\(（]\s*origin(?:al)?\s*[\)）]\s*$/i, '').trim();
+  const value = normalizeImageLabel(input, '')
+    .replace(/\s*[\(（]\s*origin(?:al)?\s*[\)）]\s*$/i, '')
+    .trim();
   return value || fallback;
 }
 
@@ -49,7 +51,13 @@ function decodeUtf8(bytes: Uint8Array): string {
 }
 
 function readUInt32Be(bytes: Uint8Array, offset: number): number {
-  return ((bytes[offset] ?? 0) * 0x1000000 + ((bytes[offset + 1] ?? 0) << 16) + ((bytes[offset + 2] ?? 0) << 8) + (bytes[offset + 3] ?? 0)) >>> 0;
+  return (
+    ((bytes[offset] ?? 0) * 0x1000000 +
+      ((bytes[offset + 1] ?? 0) << 16) +
+      ((bytes[offset + 2] ?? 0) << 8) +
+      (bytes[offset + 3] ?? 0)) >>>
+    0
+  );
 }
 
 function readAscii(bytes: Uint8Array, start: number, end: number): string {

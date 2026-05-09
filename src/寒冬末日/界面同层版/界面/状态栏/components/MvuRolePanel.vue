@@ -93,7 +93,9 @@
                         buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')
                       "
                     >
-                      {{ buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因') }}
+                      {{
+                        buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')
+                      }}
                     </p>
                   </section>
 
@@ -113,7 +115,9 @@
                         buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')
                       "
                     >
-                      {{ buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
+                      {{
+                        buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')
+                      }}
                     </p>
                   </section>
                 </div>
@@ -163,7 +167,11 @@
                     <img :src="setEntry.src" :alt="rolePortraitSetEntryLabel(entry, setEntry)" loading="lazy" />
                   </button>
                 </div>
-                <button type="button" class="role-detail-picker clip-corner-sm" @click.stop="openRolePortraitPicker(entry.key)">
+                <button
+                  type="button"
+                  class="role-detail-picker clip-corner-sm"
+                  @click.stop="openRolePortraitPicker(entry.key)"
+                >
                   换图
                 </button>
               </div>
@@ -529,7 +537,11 @@ function rolePortraitForEntry(entry: { key: string; role: Record<string, any> })
 }
 
 function rolePortraitSetForEntry(entry: { key: string; role: Record<string, any> }) {
-  return resolveRolePortraitSet({ key: entry.key, label: roleName(entry) }, galleryEntries.value, rolePortraitOverrides.value);
+  return resolveRolePortraitSet(
+    { key: entry.key, label: roleName(entry) },
+    galleryEntries.value,
+    rolePortraitOverrides.value,
+  );
 }
 
 function rolePortraitSetEntryLabel(entry: { key: string; role: Record<string, any> }, setEntry: ReaderGalleryEntry) {

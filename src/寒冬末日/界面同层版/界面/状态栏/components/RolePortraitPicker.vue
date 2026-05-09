@@ -15,11 +15,7 @@
         </div>
 
         <div v-else class="portrait-grid">
-          <article
-            v-for="entry in roleEntries"
-            :key="entry.id"
-            class="portrait-option clip-corner-sm"
-          >
+          <article v-for="entry in roleEntries" :key="entry.id" class="portrait-option clip-corner-sm">
             <button type="button" class="portrait-option-main" @click="emit('select', entry)">
               <img :src="entry.src" :alt="entry.alt || entry.title || `${roleLabel} 图廊图片`" loading="lazy" />
               <span class="portrait-option-copy">

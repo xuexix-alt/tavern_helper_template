@@ -571,7 +571,9 @@ function buildRoleTabItemsFromProvider(): RoleTabItem[] {
 const roleTabs = computed(() => buildRoleTabItemsFromProvider());
 const { width: shellWidth } = useElementSize(shellRef);
 const visibleRoleTabs = computed(() => {
-  const activeRoleTabs = roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
+  const activeRoleTabs = roleTabs.value.filter(
+    role => role.statusText === '登场' || role.statusClass === 'status-active',
+  );
   return activeRoleTabs.length > 0 ? activeRoleTabs : roleTabs.value;
 });
 const shellLayoutMode = computed(() => {

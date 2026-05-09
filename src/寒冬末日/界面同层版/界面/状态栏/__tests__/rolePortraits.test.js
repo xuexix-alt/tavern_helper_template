@@ -208,10 +208,7 @@ test('adding same-prompt images from one message keeps distinct set refs by gall
     src: `https://example.com/lin-${index}.png`,
   }));
 
-  const override = entries.reduce(
-    (current, entry) => addRolePortraitSetImage('林月华', current, entry),
-    undefined,
-  );
+  const override = entries.reduce((current, entry) => addRolePortraitSetImage('林月华', current, entry), undefined);
   const set = resolveRolePortraitSet({ key: '林月华', label: '林月华' }, entries, { 林月华: override });
 
   assert.deepEqual(
