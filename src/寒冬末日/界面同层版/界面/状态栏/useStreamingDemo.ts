@@ -48,6 +48,12 @@ import {
   summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
+import {
+  extractCharacterNameFromPrompt,
+  extractImageTitleFromPrompt,
+  extractPromptFromPngDataUri,
+  normalizeImageLabel,
+} from './generatedImagePromptMetadata';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import { shouldInjectTranscriptImages } from './generatedImageInteraction';
 import { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } from './generatedImageEntities';
@@ -932,21 +938,6 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
   return out;
 }
 
-function parsePromptBodyFromToken(promptToken: string): string {
-  const token = String(promptToken ?? '').trim();
-  if (!token) return '';
-  const match = token.match(/^[^#]+###([\s\S]*?)###$/);
-  return String(match?.[1] ?? token).trim();
-}
-
-function normalizeImageLabel(input: string, fallback = '未命名图像'): string {
-  const value = String(input ?? '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return value || fallback;
-}
-
 function pickFirstNonEmpty(...values: unknown[]): string {
   for (const value of values) {
     const text = String(value ?? '').trim();
@@ -974,42 +965,6 @@ export function extractTitleFromSrc(src: string): string {
     const stem = filename.replace(/\.[a-z0-9]+$/i, '');
     return normalizeImageLabel(stem, '');
   }
-}
-
-function extractCharacterNameFromPrompt(promptToken: string): string {
-  const prompt = parsePromptBodyFromToken(promptToken);
-  if (!prompt) return '';
-
-  const loraMatch = prompt.match(/<lora:([^:>]+)(?::[\d.]+)?>/i);
-  if (loraMatch?.[1]) return normalizeImageLabel(loraMatch[1]);
-
-  const namedMatch = prompt.match(/(?:角色|人物|character|name)\s*[:：]\s*([^,，|\n<>]{1,32})/i);
-  if (namedMatch?.[1]) return normalizeImageLabel(namedMatch[1]);
-
-  const quoteMatch = prompt.match(/[“"'「『]([^“”"'」』]{1,24})[”"'」』]/);
-  if (quoteMatch?.[1]) return normalizeImageLabel(quoteMatch[1]);
-
-  const firstSegment = prompt
-    .split(/[,，|\n]/)
-    .map(segment => normalizeImageLabel(segment, ''))
-    .find(
-      segment =>
-        segment.length >= 2 && segment.length <= 24 && !/\b(masterpiece|best quality|1girl|solo)\b/i.test(segment),
-    );
-  return firstSegment ?? '';
-}
-
-function extractImageTitleFromPrompt(promptToken: string): string {
-  const prompt = parsePromptBodyFromToken(promptToken);
-  if (!prompt) return '';
-
-  const cleaned = prompt.replace(/<lora:[^>]+>/gi, '').trim();
-  const firstSegment = cleaned
-    .split(/[,，|\n]/)
-    .map(segment => normalizeImageLabel(segment, ''))
-    .find(Boolean);
-  if (!firstSegment) return '';
-  return firstSegment.length > 32 ? `${firstSegment.slice(0, 32)}…` : firstSegment;
 }
 
 function buildGeneratedImageRefsForMessage(input: {
@@ -1050,15 +1005,18 @@ function buildGeneratedImageRefsForMessage(input: {
   return readyEntities.map((entity, index) => {
     const promptToken = entity.promptToken;
     const anchorText = entity.anchorText;
+    const metadataPrompt = promptToken ? '' : extractPromptFromPngDataUri(entity.src ?? '');
+    const promptForLabel = promptToken || metadataPrompt;
     const title =
       pickFirstNonEmpty(
-        extractImageTitleFromPrompt(promptToken),
+        extractImageTitleFromPrompt(promptForLabel),
         entity.title,
         extractTitleFromAnchor(anchorText ?? ''),
         extractTitleFromSrc(entity.src ?? ''),
-        extractCharacterNameFromPrompt(promptToken),
+        extractCharacterNameFromPrompt(promptForLabel),
         `楼层 #${messageId} · 图 ${index + 1}`,
       ) || `楼层 #${messageId} · 图 ${index + 1}`;
+    const characterName = pickFirstNonEmpty(entity.characterName, extractCharacterNameFromPrompt(promptForLabel));
 
     return {
       id: entity.id,
@@ -1069,7 +1027,7 @@ function buildGeneratedImageRefsForMessage(input: {
       requestId: entity.requestId,
       anchorText: anchorText || undefined,
       title,
-      characterName: entity.characterName || extractCharacterNameFromPrompt(promptToken) || undefined,
+      characterName: characterName || undefined,
       createdOrder: entity.createdOrder,
       src: entity.src,
       alt: entity.alt,

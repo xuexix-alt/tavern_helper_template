@@ -120,7 +120,12 @@
             :refresh-revision="mvuSourceRevision"
             :active-character-key="activeRoleKey"
             :calibrating-daily-roll="isCalibratingDailyRoll"
+            :gallery-entries="galleryEntries"
+            :role-portrait-overrides="rolePortraitOverrides"
             @select-character="handleRoleSelect"
+            @select-role-portrait="selectRolePortraitForRole"
+            @add-role-portrait-set-image="addRolePortraitSetImageForRole"
+            @portrait-error="handleRolePortraitError"
             @calibrate-daily-roll="calibrateDailyRollDate"
             @collapse="closeRoleDrawer"
           />
@@ -247,7 +252,7 @@
                 @click="openRoleFromComposer(role.key)"
               >
                 <span class="ui-role-led" :class="role.statusClass"></span>
-                <span class="ui-role-name">{{ role.label }}</span>
+                <span>{{ role.label }}</span>
               </button>
             </div>
 
@@ -333,10 +338,6 @@
       </main>
     </div>
 
-    <Teleport to="body">
-      <RadialQuickMenu :items="visibleRoleTabs" :active-key="activeRoleKey" @select="openRoleFromComposer" />
-    </Teleport>
-
     <HudModal
       :open="componentLibraryOpen"
       title="UI 组件库 V2.0"
@@ -408,7 +409,7 @@ import {
   parseGeneratedImageActivationPayload,
   type GeneratedImageActivationPayload,
 } from '../generatedImageActivation';
-import type { TranscriptItem } from '../types';
+import type { ReaderGalleryEntry, TranscriptItem } from '../types';
 
 import openingModalIcon from '../assets/opening-modal-icon.webp?url';
 import BottomComposer from '../components/BottomComposer.vue';
@@ -419,7 +420,6 @@ import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../components/OpeningSetupPanel.vue';
-import RadialQuickMenu from '../components/RadialQuickMenu.vue';
 import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
@@ -452,6 +452,13 @@ import {
 } from '../hostGestureDispatch';
 import { useMvuRoleStore } from '../mvuRoleStore';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
+import {
+  addRolePortraitSetImage,
+  readRolePortraitOverrides,
+  setPrimaryRolePortraitOverride,
+  writeRolePortraitOverrides,
+  type RolePortraitOverrideMap,
+} from '../rolePortraits';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { shouldSkipTranscriptImageTrigger } from '../transcriptImageTriggerDeduper';
 import { useStreamingDemo } from '../useStreamingDemo';
@@ -551,6 +558,7 @@ const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 type RoleTabItem = { key: string; label: string; statusClass?: string; statusText?: string };
 
 const activeRoleKey = ref<string | null>(null);
+const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
 const roleProviderStore = useMvuRoleStore(currentMvuAnchorMessageId);
 function buildRoleTabItemsFromProvider(): RoleTabItem[] {
   return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value].map(entry => ({
@@ -562,9 +570,10 @@ function buildRoleTabItemsFromProvider(): RoleTabItem[] {
 }
 const roleTabs = computed(() => buildRoleTabItemsFromProvider());
 const { width: shellWidth } = useElementSize(shellRef);
-const visibleRoleTabs = computed(() =>
-  roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active'),
-);
+const visibleRoleTabs = computed(() => {
+  const activeRoleTabs = roleTabs.value.filter(role => role.statusText === '登场' || role.statusClass === 'status-active');
+  return activeRoleTabs.length > 0 ? activeRoleTabs : roleTabs.value;
+});
 const shellLayoutMode = computed(() => {
   if (shellWidth.value <= 0) return 'wide';
   if (shellWidth.value <= 560) return 'compact';
@@ -898,6 +907,29 @@ function openRoleFromComposer(key: string) {
   activeRoleKey.value = key;
   closeUtilityDrawer();
   roleDrawerOpen.value = true;
+}
+
+function selectRolePortraitForRole(roleKey: string, entry: ReaderGalleryEntry) {
+  rolePortraitOverrides.value = {
+    ...rolePortraitOverrides.value,
+    [roleKey]: setPrimaryRolePortraitOverride(roleKey, rolePortraitOverrides.value[roleKey], entry),
+  };
+  writeRolePortraitOverrides(rolePortraitOverrides.value);
+}
+
+function addRolePortraitSetImageForRole(roleKey: string, entry: ReaderGalleryEntry) {
+  rolePortraitOverrides.value = {
+    ...rolePortraitOverrides.value,
+    [roleKey]: addRolePortraitSetImage(roleKey, rolePortraitOverrides.value[roleKey], entry),
+  };
+  writeRolePortraitOverrides(rolePortraitOverrides.value);
+}
+
+function handleRolePortraitError(key: string) {
+  if (!rolePortraitOverrides.value[key]) return;
+  const { [key]: _failed, ...rest } = rolePortraitOverrides.value;
+  rolePortraitOverrides.value = rest;
+  writeRolePortraitOverrides(rolePortraitOverrides.value);
 }
 
 function roleProviderName(entry: { key: string; role: Record<string, any> }) {

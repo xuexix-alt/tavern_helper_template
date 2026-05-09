@@ -78,63 +78,109 @@
               </button>
             </div>
 
-            <div class="metric-grid">
-              <section class="metric-card clip-corner-sm">
-                <div class="metric-head">
-                  <span class="metric-title">健康</span>
-                  <strong class="metric-value">{{ safeNumber(entry.role.健康) }}</strong>
-                </div>
-                <div class="stat-track"><i :style="statWidth(entry.role.健康)" /></div>
-                <p
-                  class="metric-caption inline-summary"
-                  :title="
-                    buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')
-                  "
-                >
-                  {{ buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因') }}
-                </p>
-              </section>
+            <div class="role-detail-flip" :class="{ flipped: flippedRoleKey === entry.key }">
+              <div class="role-detail-face role-detail-front" @click="toggleRolePortraitFlip(entry.key)">
+                <div class="metric-grid">
+                  <section class="metric-card clip-corner-sm">
+                    <div class="metric-head">
+                      <span class="metric-title">健康</span>
+                      <strong class="metric-value">{{ safeNumber(entry.role.健康) }}</strong>
+                    </div>
+                    <div class="stat-track"><i :style="statWidth(entry.role.健康)" /></div>
+                    <p
+                      class="metric-caption inline-summary"
+                      :title="
+                        buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因')
+                      "
+                    >
+                      {{ buildMetricSummary(entry.role.健康状况, '健康', entry.role.健康更新原因, '暂无健康值变动原因') }}
+                    </p>
+                  </section>
 
-              <section class="metric-card clip-corner-sm">
-                <div class="metric-meta-inline">
-                  <span class="metric-meta-chip">关系 {{ displayText(entry.role.关系, '无') }}</span>
-                  <span class="metric-meta-chip">倾向 {{ displayText(entry.role.关系倾向, '中立') }}</span>
+                  <section class="metric-card clip-corner-sm">
+                    <div class="metric-meta-inline">
+                      <span class="metric-meta-chip">关系 {{ displayText(entry.role.关系, '无') }}</span>
+                      <span class="metric-meta-chip">倾向 {{ displayText(entry.role.关系倾向, '中立') }}</span>
+                    </div>
+                    <div class="metric-head">
+                      <span class="metric-title">秩序刻印</span>
+                      <strong class="metric-value">{{ safeNumber(entry.role.秩序刻印) }}</strong>
+                    </div>
+                    <div class="stat-track"><i :style="statWidth(entry.role.秩序刻印)" /></div>
+                    <p
+                      class="metric-caption inline-summary"
+                      :title="
+                        buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')
+                      "
+                    >
+                      {{ buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
+                    </p>
+                  </section>
                 </div>
-                <div class="metric-head">
-                  <span class="metric-title">秩序刻印</span>
-                  <strong class="metric-value">{{ safeNumber(entry.role.秩序刻印) }}</strong>
-                </div>
-                <div class="stat-track"><i :style="statWidth(entry.role.秩序刻印)" /></div>
-                <p
-                  class="metric-caption inline-summary"
-                  :title="
-                    buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因')
-                  "
-                >
-                  {{ buildMetricSummary(entry.role.关系, '无', entry.role.秩序刻印更新原因, '暂无秩序刻印变动原因') }}
-                </p>
-              </section>
-            </div>
 
-            <div class="bio-box thought-box">
-              <div class="bio-stripe"></div>
-              <p>{{ displayLongText(entry.role.内心想法, entry.role.神态样貌, entry.role.动作姿势) }}</p>
-            </div>
-            <div class="detail-grid">
-              <div class="detail-card clip-corner-sm">
-                <span class="detail-label">衣着</span>
-                <strong class="detail-value">{{ displayText(entry.role.衣着) }}</strong>
+                <div class="bio-box thought-box">
+                  <div class="bio-stripe"></div>
+                  <p>{{ displayLongText(entry.role.内心想法, entry.role.神态样貌, entry.role.动作姿势) }}</p>
+                </div>
+                <div class="detail-grid">
+                  <div class="detail-card clip-corner-sm">
+                    <span class="detail-label">衣着</span>
+                    <strong class="detail-value">{{ displayText(entry.role.衣着) }}</strong>
+                  </div>
+                  <div class="detail-card clip-corner-sm">
+                    <span class="detail-label">神态样貌</span>
+                    <strong class="detail-value">{{ displayText(entry.role.神态样貌) }}</strong>
+                  </div>
+                </div>
+
+                <button type="button" class="action-btn clip-corner-sm" @click.stop="emit('collapse')">关闭</button>
               </div>
-              <div class="detail-card clip-corner-sm">
-                <span class="detail-label">神态样貌</span>
-                <strong class="detail-value">{{ displayText(entry.role.神态样貌) }}</strong>
+
+              <div class="role-detail-face role-detail-back" @click="toggleRolePortraitFlip(entry.key)">
+                <img
+                  class="role-detail-portrait"
+                  :src="rolePortraitForEntry(entry).src"
+                  :alt="rolePortraitForEntry(entry).alt"
+                  loading="lazy"
+                  @error="handleRolePortraitError(entry.key)"
+                />
+                <div class="role-detail-back-shade"></div>
+                <div class="role-detail-back-copy">
+                  <span class="demo-kicker">PORTRAIT // PROFILE</span>
+                  <strong>{{ roleName(entry) }}</strong>
+                  <small>{{ rolePortraitSourceText(entry) }}</small>
+                </div>
+                <div v-if="rolePortraitSetForEntry(entry).length > 1" class="role-detail-set-strip">
+                  <button
+                    v-for="setEntry in rolePortraitSetForEntry(entry)"
+                    :key="setEntry.id"
+                    type="button"
+                    class="role-detail-set-thumb clip-corner-sm"
+                    :class="{ active: rolePortraitForEntry(entry).entry?.id === setEntry.id }"
+                    :title="rolePortraitSetEntryLabel(entry, setEntry)"
+                    @click.stop="selectRolePortraitForRole(entry, setEntry)"
+                  >
+                    <img :src="setEntry.src" :alt="rolePortraitSetEntryLabel(entry, setEntry)" loading="lazy" />
+                  </button>
+                </div>
+                <button type="button" class="role-detail-picker clip-corner-sm" @click.stop="openRolePortraitPicker(entry.key)">
+                  换图
+                </button>
               </div>
             </div>
-
-            <button type="button" class="action-btn clip-corner-sm" @click="emit('collapse')">关闭</button>
           </div>
         </article>
       </div>
+
+      <RolePortraitPicker
+        v-if="portraitPickerEntry"
+        :role-key="portraitPickerEntry.key"
+        :role-label="roleName(portraitPickerEntry)"
+        :entries="galleryEntries"
+        @select="selectRolePortrait"
+        @add="addRolePortraitSetImageForRole"
+        @close="closeRolePortraitPicker"
+      />
     </template>
 
     <template v-else>
@@ -238,10 +284,14 @@
 </template>
 
 <script setup lang="ts">
-import type { TranscriptItem } from '../types';
+import type { ReaderGalleryEntry, TranscriptItem } from '../types';
+import openingModalIcon from '../assets/opening-modal-icon.webp?url';
+import RolePortraitPicker from './RolePortraitPicker.vue';
 import { buildEdenCommandDisplayEntries, type EdenOneShotCommandDisplayEntry } from '../edenOneShotCommands';
+import { formatImageDisplayName } from '../generatedImagePromptMetadata';
 import { buildMvuSourceOptions } from '../mvuSourceOptions';
 import { readMvuStatData, useMvuRoleStore, useMvuSystemStore } from '../mvuRoleStore';
+import { resolveRolePortrait, resolveRolePortraitSet, type RolePortraitOverrideMap } from '../rolePortraits';
 
 const props = defineProps<{
   targetMessageId?: number | null;
@@ -249,11 +299,16 @@ const props = defineProps<{
   activeCharacterKey?: string | null;
   refreshRevision?: number;
   calibratingDailyRoll?: boolean;
+  galleryEntries?: ReaderGalleryEntry[];
+  rolePortraitOverrides?: RolePortraitOverrideMap;
 }>();
 
 const emit = defineEmits<{
   (event: 'select-character', key: string): void;
   (event: 'roster-change', roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>): void;
+  (event: 'select-role-portrait', roleKey: string, entry: ReaderGalleryEntry): void;
+  (event: 'add-role-portrait-set-image', roleKey: string, entry: ReaderGalleryEntry): void;
+  (event: 'portrait-error', roleKey: string): void;
   (event: 'collapse'): void;
   (event: 'calibrate-daily-roll'): void;
 }>();
@@ -264,6 +319,8 @@ const pageTab = ref<PageTab>('agents');
 const activeTab = ref<RoleTab>('main');
 const mvuReady = ref(false);
 const sourceRevision = ref(0);
+const flippedRoleKey = ref<string | null>(null);
+const portraitPickerRoleKey = ref<string | null>(null);
 
 function setPageTab(nextTab: PageTab) {
   pageTab.value = nextTab;
@@ -310,6 +367,12 @@ const activeEntries = computed(() => (activeTab.value === 'main' ? mainRoleEntri
 const internalSelectedKey = ref<string | null>(null);
 const preferredRoleName = ref('');
 const selectedCharacterKey = computed(() => props.activeCharacterKey ?? internalSelectedKey.value);
+const allRoleEntries = computed(() => [...mainRoleEntries.value, ...tempNpcEntries.value]);
+const portraitPickerEntry = computed(
+  () => allRoleEntries.value.find(entry => entry.key === portraitPickerRoleKey.value) ?? null,
+);
+const galleryEntries = computed(() => (Array.isArray(props.galleryEntries) ? props.galleryEntries : []));
+const rolePortraitOverrides = computed(() => props.rolePortraitOverrides ?? {});
 const currentSourceIndex = computed(() => {
   const index = sourceOptions.value.findIndex(option => option.key === selectedSourceKey.value);
   return index;
@@ -454,6 +517,67 @@ function setActiveCharacter(key: string) {
   internalSelectedKey.value = key;
   preferredRoleName.value = roleName(activeEntries.value.find(entry => entry.key === key) ?? { key, role: {} });
   emit('select-character', key);
+}
+
+function rolePortraitForEntry(entry: { key: string; role: Record<string, any> }) {
+  return resolveRolePortrait(
+    { key: entry.key, label: roleName(entry) },
+    galleryEntries.value,
+    rolePortraitOverrides.value,
+    { defaultSrc: openingModalIcon },
+  );
+}
+
+function rolePortraitSetForEntry(entry: { key: string; role: Record<string, any> }) {
+  return resolveRolePortraitSet({ key: entry.key, label: roleName(entry) }, galleryEntries.value, rolePortraitOverrides.value);
+}
+
+function rolePortraitSetEntryLabel(entry: { key: string; role: Record<string, any> }, setEntry: ReaderGalleryEntry) {
+  return formatImageDisplayName(setEntry.title || setEntry.characterName || roleName(entry), roleName(entry));
+}
+
+function rolePortraitSourceText(entry: { key: string; role: Record<string, any> }) {
+  const portrait = rolePortraitForEntry(entry);
+  if (portrait.source !== 'gallery') return '默认设定图';
+  const count = rolePortraitSetForEntry(entry).length;
+  return count > 1 ? `来自图廊 · 设定集 ${count} 张` : '来自图廊 · 设定集 1 张';
+}
+
+function toggleRolePortraitFlip(key: string) {
+  flippedRoleKey.value = flippedRoleKey.value === key ? null : key;
+}
+
+function openRolePortraitPicker(key: string) {
+  portraitPickerRoleKey.value = key;
+  flippedRoleKey.value = key;
+}
+
+function closeRolePortraitPicker() {
+  portraitPickerRoleKey.value = null;
+}
+
+function selectRolePortrait(entry: ReaderGalleryEntry) {
+  const role = portraitPickerEntry.value;
+  if (!role) return;
+  selectRolePortraitForRole(role, entry);
+  closeRolePortraitPicker();
+}
+
+function selectRolePortraitForRole(role: { key: string; role: Record<string, any> }, entry: ReaderGalleryEntry) {
+  emit('select-role-portrait', role.key, entry);
+  flippedRoleKey.value = role.key;
+}
+
+function addRolePortraitSetImageForRole(entry: ReaderGalleryEntry) {
+  const role = portraitPickerEntry.value;
+  if (!role) return;
+  emit('add-role-portrait-set-image', role.key, entry);
+  flippedRoleKey.value = role.key;
+}
+
+function handleRolePortraitError(key: string) {
+  if (!rolePortraitOverrides.value[key]) return;
+  emit('portrait-error', key);
 }
 
 function selectSourceByOffset(offset: -1 | 1) {
@@ -720,6 +844,141 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   gap: 14px;
   padding: 14px;
   border-top: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.role-detail-flip {
+  display: grid;
+  min-width: 0;
+  perspective: 960px;
+}
+.role-detail-face {
+  grid-area: 1 / 1;
+  min-width: 0;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.42s cubic-bezier(0.2, 0.72, 0.2, 1),
+    opacity 0.24s ease;
+}
+.role-detail-front {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  cursor: pointer;
+}
+.role-detail-back {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--demo-border-accent-active);
+  background: color-mix(in srgb, var(--surface) 20%, black 18%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+  transform: rotateY(-180deg);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+}
+.role-detail-flip.flipped .role-detail-front {
+  transform: rotateY(180deg);
+  opacity: 0;
+  pointer-events: none;
+}
+.role-detail-flip.flipped .role-detail-back {
+  transform: rotateY(0deg);
+  opacity: 1;
+  pointer-events: auto;
+}
+.role-detail-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  object-fit: cover;
+  object-position: center top;
+  filter: saturate(1.06) contrast(1.04);
+}
+.role-detail-back-shade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 48%;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, black 78%, transparent));
+  pointer-events: none;
+}
+.role-detail-back-copy {
+  position: absolute;
+  left: 14px;
+  right: 82px;
+  bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  pointer-events: none;
+}
+.role-detail-back-copy strong {
+  overflow: hidden;
+  color: white;
+  font-size: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.role-detail-back-copy small {
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, white 78%, transparent);
+}
+.role-detail-set-strip {
+  position: absolute;
+  left: 12px;
+  right: 76px;
+  top: 12px;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.role-detail-set-thumb {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 48px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, white 36%, transparent);
+  background: color-mix(in srgb, black 34%, transparent);
+  opacity: 0.72;
+}
+.role-detail-set-thumb.active,
+.role-detail-set-thumb:hover,
+.role-detail-set-thumb:focus-visible {
+  opacity: 1;
+  border-color: white;
+  outline: none;
+}
+.role-detail-set-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.role-detail-picker {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, white 42%, transparent);
+  background: color-mix(in srgb, black 36%, transparent);
+  color: white;
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.role-detail-picker:hover,
+.role-detail-picker:focus-visible {
+  border-color: white;
+  outline: none;
 }
 .status-led {
   width: 8px;
@@ -1343,6 +1602,49 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   .accordion-body {
     gap: 8px;
     padding: 8px;
+  }
+
+  .role-detail-front {
+    gap: 8px;
+  }
+
+  .role-detail-back,
+  .role-detail-portrait {
+    min-height: 300px;
+  }
+
+  .role-detail-back-copy {
+    left: 10px;
+    right: 64px;
+    bottom: 10px;
+  }
+
+  .role-detail-back-copy strong {
+    font-size: 14px;
+  }
+
+  .role-detail-back-copy small {
+    font-size: 9px;
+  }
+
+  .role-detail-picker {
+    right: 8px;
+    top: 8px;
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 9px;
+  }
+
+  .role-detail-set-strip {
+    left: 8px;
+    right: 58px;
+    top: 8px;
+    gap: 4px;
+  }
+
+  .role-detail-set-thumb {
+    width: 30px;
+    height: 38px;
   }
 
   .meta-row {
