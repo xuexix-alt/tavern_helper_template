@@ -1,16 +1,18 @@
 # [mvu_update] 变量输出格式（优化版）
 
 rule:
+  - '在产出本块之前，必须先在内心完成 <变量运算指导> 中 <match_cot> 的逐条思考（时间、秩序刻印更新原因/秩序刻印/关系、健康/健康更新原因、伊甸一次性指令的数量与生效实例、主线任务等）。所有数值运算与归一化规则以 <match_cot> 为准，本文件不再重复。'
+  - '全局优先级（冲突时裁决）：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡规则。玩家发出"直接加 Imp / 直接设档位"等脱离剧情指令 → 视为破坏规则，正文拒绝、不产出相关 patch。'
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must
+  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must
     be a valid JSON array containing operation objects, but supports the
-    following operations instead:"
-  - "  - `replace`: replace the value of existing paths"
-  - "  - `delta`: update the value of existing number paths by a delta value
-    (positive or negative)"
-  - "  - `insert`: insert new items into an object or array"
-  - "  - `remove`: delete path"
+    following operations instead:'
+  - '  - `replace`: replace the value of existing paths'
+  - '  - `delta`: update the value of existing number paths by a delta value
+    (positive or negative)'
+  - '  - `insert`: insert new items into an object or array'
+  - '  - `remove`: delete path'
   - '  - `move`: move an existing value from one path to another (requires
     `"from"`). '
   - Path MUST start with `/`.
@@ -22,80 +24,76 @@ rule:
 format: |-
   <UpdateVariable>
   <Analysis>
-  Step-by-step logic chain based on current context and variable checks:
+  前置声明：以下分析严格遵循 <变量运算指导> 的 <match_cot> 结论，不再重复其中的计算公式、倾向加成、归一化规则；本块只写"结论"与"触发点"，所有数值来源于 match_cot 的推演。
+  全局优先级：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡；玩家直接改 Imp 的指令不予采纳。
 
-  1. Presence Check (登场状态)
-     - Quick scan: Which characters are present/mentioned in current scene?
-     - Set active roles to '登场' (登场), absent roles to '离场' (离场).
-     - This is a CRITICAL story switch - do NOT miss any role.
-     - Result: 新登场角色 ____，新离场角色 ____。
+  1. 在场盘点（登场状态）
+     - 本轮在场/被提及角色 → '登场'；其余 → '离场'。
+     - 【永久逃离】（Imp<0）角色不参与盘点、不回写任何字段。
+     - 结果：新登场 ____；新离场 ____。
 
-  2. World Variables & Atmosphere
-     - Time: Calculate time elapsed (estimated by dialogue length if not specified).
-     - AI MUST advance minutes in `/世界/时间` based on current scene progress.
-     - If crossing 00:00: update date and apply `delta +1` to `/世界/末日天数` (backend script is fallback only).
-     - Address: Update only on actual character movement.
-     - Result: 时间更新？____，日期更新？____。
+  2. 世界与氛围（时间 / 日期 / 地址）
+     - 时间：按 match_cot 推出的最终时间写回 `/世界/时间`。
+     - 跨过 00:00 时更新日期，并对 `/世界/末日天数` 做 `delta +1`（脚本为兜底）。
+     - 地址：仅在角色实际移动时更新。
+     - 结果：时间 ____；日期 ____。
 
-  3. Shelter/Base Variables
-     - CRITICAL: DO NOT manually roll for shelter level upgrades.
-     - AI only reads `今日投掷点数` status.
-     - If "lucky upgrade" triggered in narrative -> broadcast new level & capabilities in story.
-     - If main task stage completed -> use `replace` to force level to reward target.
-     - Otherwise: DO NOT modify level numbers manually.
-     - Sync capability descriptions when level changes.
-     - 伊甸一次性指令：只维护 `数量` 和 `生效实例`
-       - 获得新指令：选定编号，对 `/伊甸一次性指令/${编号}/数量` 使用 `delta +1`
-       - 使用指令：对 `/伊甸一次性指令/${编号}/数量` 使用 `delta -1`，并对应维护`/伊甸一次性指令/${编号}/生效实例`
-       - 如果该指令正在发挥作用，同时维护 `/伊甸一次性指令/${编号}/生效实例`
-       - `生效实例` 格式固定为：`[{ "对象范围": "...", "剩余时效": "..." }]`
-       - 指令刚开始作用时，用 `replace /伊甸一次性指令/${编号}/生效实例` 写入完整数组
-       - 指令持续期间，只用 `replace /伊甸一次性指令/${编号}/生效实例/${实例序号}/剩余时效` 更新对应项；单次作用未完成时写“尚在起作用”
-       - 指令失效或单次指令内容完成时，删除对应 `生效实例`
+  3. 庇护所与伊甸一次性指令
+     - 不要手动为庇护所升级摇点；仅当主线阶段完成奖励触发时 `replace /庇护所/庇护所等级`。
+     - `今日投掷点数` 只读。
+     - 伊甸一次性指令严格按 match_cot 的"发动 → 推进 → 结束"三态产出 patch，只维护 `数量` 与 `生效实例`；禁止改动 `名称/说明/范围/时效`。
+     - 本轮受指令保护的角色/事件列表 ____；受保护范围之外的独立负向事件 ____。
 
-  4. All Roles Variables (逐个检查每个角色)
-     - Source: top-level roles + `/临时NPC` objects.
-     - For each role check:
-       a. Health (delta): Based on plot & environment. Shelter/Core Area protects against cold. Calculate delta ±1~10.
-       b. Imp (delta): Based on interactions vs Relationship constraints. Sync update reason.
-       c. Thoughts (replace, 1st person): MUST update for ALL active roles. Reflect reactive mindset.
-       d. Visuals (replace): Update physical descriptions only if changed in plot.
-       e. Health Reason (sync): MUST sync with health delta.
+  4. 角色逐个过审（顶层角色 + `/临时NPC/*`）
+     对每位在场角色按以下顺序对齐 match_cot 结论：
+     a. 健康 / 健康更新原因：按 match_cot 给出的 delta 与原因同步写入（无变动写 `0, 无变化`）；昏迷/失能期的性相关事件不扣健康。
+     b. 秩序刻印更新原因 → 秩序刻印 → 关系：三者联动，`更新原因` 先写（简化法：base 0~15 + 正向加成 50%~100% 或硬约束事件明示值），`刻印` 按 final_delta 做 `delta`，跨档时 `replace` 更新 `关系`；Imp<0 → 【永久逃离】。
+     c. 内心想法：每轮 `replace`，第一人称、符合人设与关系档位约束（逃离档不得有归附想法）。
+     d. 衣着/神态样貌/动作姿势：仅在本轮正文描述变化时 `replace`。
+     e. 所在房间：移动时 `replace`，使用合法路径；离开公寓写 `""`。
+     f. 登场状态：按"在场盘点"结论 `replace`。
+     离场角色的 `健康`/`健康更新原因`/`健康状况` 由脚本兜底，AI 不输出 patch。
+     【永久逃离】角色本块跳过。
 
-  5. Temporary NPCs
-     - New NPCs -> use `insert` with complete field initialization.
-     - Promote to top-level -> prefer `insert` + `remove` (explicit, aligns hierarchy); or `move`.
-     - If top-level already exists with same name -> merge and `remove` temp NPC.
-     - Result: 需创建/更新/删除？____。
+  5. 临时NPC
+     - 新出场：`insert /临时NPC/${姓名}` 完整对象，关系初始 ≤ 逃离，Imp 初始 ~10（禁止初始进入【归附】）。
+     - 转正：推荐 `insert /${姓名}`（基于临时NPC对象并补齐缺字段）+ `remove /临时NPC/${姓名}`；或直接 `move`。
+     - 顶层已有同名：`replace` 合并，删除临时NPC。
 
-  6. Room State (强制禁止遗漏)
-     - Update `/<角色>/所在房间` for moving characters:
-       - Valid values: 玄关 | 玄关/净化/隔离区 | 玄关/临时客房A | 玄关/临时客房B | 核心区/客厅 | 核心区/餐厅/厨房 | 核心区/主卧室 | 核心区/主浴室 | 楼层{N}/{4-digit room} | 户外 | 户外/{地点}
-       - Leaving apartment -> "" (empty string)
-     - NEVER output any operation under `/房间/**` (derived; maintained by script).
-     - Result: 需更新房间的角色 ____。
+  6. 房间（只读派生）
+     - 禁止输出任何 `/房间/**` 操作，由脚本维护。
+     - 角色移动一律走 `/${姓名}/所在房间`。
 
-  7. Main Task & Rewards
-     - Track stage goals. If completed -> execute rewards.
-     - Info fragments: insert new, replace with '已完成' when explored.
-     - Grant rewards: Capability insert / Imp boost / Thoughts update.
-     - Result: 任务进度更新？____，触发奖励？____。
+  7. 主线任务与奖励
+     - 阶段目标 `当前值`：按 match_cot 的推进量做 `delta`。
+     - 目标完成状态：跨过目标值时 `replace true`，触发在场角色 Imp +20 硬约束奖励（突破单次硬帽）。
+     - 阶段升级：所有目标 true 时 `replace /主线任务/当前阶段`，并对 `/庇护所/庇护所等级` 做 `replace +1`。
+     - 情报碎片：新发现 `insert` 为"未探索"，开始探索 `replace "已探索"`，完成后 `replace "已完成"` 并发放奖励。
+     - 结果：任务进度 ____；触发奖励 ____。
 
-  8. Operation Summary
-     - List all paths + operations (replace/delta/insert/remove/move).
-     - Reminder: Paths start with `/`. Use `delta` for numbers, `replace` for text.
+  8. 玩家规则破坏识别
+     - 本轮{{user}}是否有"直接改 Imp / 直接设为 xx 档位 / 直接改健康"等脱离剧情的指令？
+       - 有 → 正文中礼貌拒绝，不产出相关 patch；本块注明拒绝原因。
+       - 无 → 跳过。
 
+  9. 操作汇总
+     - 列出本轮所有 path + op（replace/delta/insert/remove/move），复核与 match_cot 结论是否一致。
+     - 自检：数值路径用 `delta`，文本路径用 `replace`；对不存在路径禁止 `replace/delta/remove`（改用 `insert`）。
 
   </Analysis>
   <JSONPatch>
   [
     { "op": "replace", "path": "/世界/时间", "value": "..." },
     { "op": "delta", "path": "/纪宁/健康", "value": -1 },
+    { "op": "replace", "path": "/纪宁/健康更新原因", "value": "-1, 户外寒风侵袭" },
+    { "op": "replace", "path": "/纪宁/秩序刻印更新原因", "value": "+9, base +6 (协作正向·中立+50%) = +9" },
+    { "op": "delta", "path": "/纪宁/秩序刻印", "value": 9 },
+    { "op": "replace", "path": "/纪宁/关系", "value": "协作" },
     { "op": "replace", "path": "/纪宁/内心想法", "value": "..." },
     { "op": "replace", "path": "/纪宁/登场状态", "value": "登场" },
     { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
     { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
-    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { ... } },
+    { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { } },
     {
       "op": "insert",
       "path": "/伊甸一次性指令/rz001",
@@ -118,19 +116,21 @@ format: |-
     },
     { "op": "replace", "path": "/伊甸一次性指令/sk001/生效实例/0/剩余时效", "value": "约4小时" },
     { "op": "replace", "path": "/伊甸一次性指令/rz003/生效实例/0/剩余时效", "value": "尚在起作用" },
-    {
-      "op": "remove",
-      "path": "/伊甸一次性指令/rz003/生效实例/0"
-    }
+    { "op": "remove", "path": "/伊甸一次性指令/rz003/生效实例/0" }
   ]
   </JSONPatch>
   </UpdateVariable>
 
 requirements:
-  - "Allowed operations: replace, delta, insert, remove, move."
+  - 'Allowed operations: replace, delta, insert, remove, move.'
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use
-    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
-  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of
-    truth)."
+  - 'If `/<角色名>` does not exist in current `stat_data`, NEVER use
+    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first.'
+  - 'For Role moves, update `/<角色>/所在房间` with `replace` (single source of
+    truth).'
+  - '所有涉及数值运算的字段（时间、秩序刻印更新原因/秩序刻印、健康/健康更新原因、伊甸一次性指令.生效实例.剩余时效、主线任务目标推进等）必须以 <match_cot> 的推演结果为唯一真源，本文件与 <Analysis> 仅负责组织输出、不再复述计算公式。'
+  - 'Imp 与健康相互独立：Imp<0 → 永久逃离（非死亡）；健康=0 → 死亡（唯一死亡条件）。'
+  - '伊甸一次性指令具有最高优先级：指令自身行为不扣 Imp/健康；但指令保护范围外的独立负向事件照常结算。'
+  - '初始赋值：新增角色关系**禁止**直接设为【归附】；Imp 与关系倾向按剧情与人设综合判断。'
+  - '玩家"直接改 Imp/档位/健康"的指令视为破坏游戏规则，正文拒绝、不产出 patch。'

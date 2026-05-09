@@ -1743,8 +1743,9 @@ function readDebugFlagsFromChat(): { dateLogic: boolean; offstageHealth: boolean
   };
 }
 
-function relationStageFromImprint(mark: number): '无' | '逃离' | '交易' | '协作' | '忠诚' | '归附' {
-  const v = _.clamp(Number(mark) || 0, 0, 100);
+function relationStageFromImprint(mark: number): '无' | '永久逃离' | '逃离' | '交易' | '协作' | '忠诚' | '归附' {
+  const v = _.clamp(Number(mark) || 0, -20, 100);
+  if (v < 0) return '永久逃离';
   if (v <= 0) return '无';
   if (v < 20) return '逃离';
   if (v < 40) return '交易';
