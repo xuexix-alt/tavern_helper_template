@@ -1,5 +1,11 @@
 <template>
-  <section class="transcript-card" :class="`layout-${(layoutMode ?? 'wide').replace('_', '-')}`">
+  <section
+    :class="[
+      'transcript-card',
+      `layout-${(layoutMode ?? 'wide').replace('_', '-')}`,
+      { 'is-streaming': isStreaming },
+    ]"
+  >
     <div
       ref="listRef"
       class="transcript-scroller"
@@ -33,6 +39,7 @@
           :show-edit-regenerate="item.role === 'user' && item.message_id === latestUserMessageId"
           :show-rollback-confirm="rollbackConfirmMessageId === item.message_id"
           :show-swipe-controls="false"
+          :gallery-entries="messageGalleryEntries(item.message_id)"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
@@ -300,6 +307,11 @@ function messageImageCount(messageId: number): number {
   return imageCountsByMessageId.value.get(Math.trunc(Number(messageId))) ?? 0;
 }
 
+function messageGalleryEntries(messageId: number): ReaderGalleryEntry[] {
+  const normalizedId = Math.trunc(Number(messageId));
+  return (props.galleryEntries ?? []).filter(entry => Math.trunc(Number(entry.messageId)) === normalizedId);
+}
+
 function scrollToLatest(behavior: ScrollBehavior = 'smooth') {
   const el = listRef.value;
   if (!el) return;
@@ -396,7 +408,9 @@ const itemsSignature = computed(() =>
   props.items.map(item => ({
     id: item.message_id,
     phase: item.phase,
-    len: item.content.length,
+    role: item.role,
+    hidden: item.hidden,
+    isStreaming: item.isStreaming,
   })),
 );
 
@@ -607,6 +621,12 @@ defineExpose({
 
   .transcript-fab {
     font-size: 13px;
+  }
+
+  .transcript-card.is-streaming .transcript-fab,
+  .transcript-card.is-streaming .transcript-image-fab {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

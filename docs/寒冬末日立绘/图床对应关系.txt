@@ -1,0 +1,19 @@
+林月华-动漫-（https://files.catbox.moe/q23grw.jpg）
+林月华-真人-（https://files.catbox.moe/pmwb24.jpg）
+凌音-动漫-（https://files.catbox.moe/clstrs.jpg）
+凌音-真人-（https://files.catbox.moe/g5wbi3.jpg）
+慕小小-动漫-（https://files.catbox.moe/np88e0.jpg）
+慕小小-真人-（https://files.catbox.moe/qwfs4j.jpg）
+慕小小-真人变色-（https://files.catbox.moe/7jgkda.jpg）
+雪乃-动漫-（https://files.catbox.moe/nwnufb.jpg）
+雪乃-真人-（https://files.catbox.moe/vxtqkp.jpg）
+佐伯惠理-动漫-（https://files.catbox.moe/gav71r.jpg）
+佐伯惠理-真人-（https://files.catbox.moe/411fkg.jpg）
+佐伯诗织-动漫-（https://files.catbox.moe/dm5b4e.jpg）
+佐伯诗织-真人-（https://files.catbox.moe/n4656v.jpg）
+纪宁-动漫-https://files.catbox.moe/evqhhf.jpg
+纪宁-真人-https://files.catbox.moe/mj3j1y.jpg
+
+
+
+运行时默认立绘清单位于 src/寒冬末日/界面同层版/界面/状态栏/defaultRolePortraits.ts

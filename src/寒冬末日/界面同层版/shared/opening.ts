@@ -1,6 +1,8 @@
+import _ from 'lodash';
 import YAML from 'yaml';
 
 import openingPromptTemplateRaw from '../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
+import openingPromptTemplatePreDisasterRaw from '../../../../docs/OpeningSetupPanel.generate提示词.灾变前3个月.txt?raw';
 import worldModeProfilesRaw from '../../世界书/寒冬末日/世界观配置集.yaml?raw';
 import routeProfilesRaw from '../../世界书/寒冬末日/主流派起始偏置表.yaml?raw';
 import externalFactionRaw from '../../世界书/寒冬末日/外部幸存者势力.txt?raw';
@@ -125,9 +127,10 @@ function formatCurrentMessageStatDataForPrompt(): string {
   ].join('\n');
 }
 
-function buildDefaultOpeningFormValues(preset: OpeningPreset): Record<string, string> {
+function buildDefaultOpeningFormValues(preset: OpeningPreset, worldModeId?: string): Record<string, string> {
+  const schema = getEffectiveFormSchema(preset, worldModeId);
   return Object.fromEntries(
-    preset.form_schema.map(field => {
+    schema.map(field => {
       if (field.key === 'shelter_ability_summary') {
         return [field.key, getDefaultShelterAbilitySummary()];
       }
@@ -140,6 +143,23 @@ function buildDefaultOpeningFormValues(preset: OpeningPreset): Record<string, st
       return [field.key, trimText(field.default_value)];
     }),
   );
+}
+
+export function getEffectiveFormSchema(preset: OpeningPreset, worldModeId?: string) {
+  const normalizedId = trimText(worldModeId);
+  const override = normalizedId ? preset.form_schema_overrides?.[normalizedId] : undefined;
+  const fields = override?.fields?.length ? override.fields : preset.form_schema;
+  return fields ?? [];
+}
+
+export function getEffectiveDefaultMeta(preset: OpeningPreset, worldModeId?: string) {
+  const normalizedId = trimText(worldModeId);
+  const override = normalizedId ? preset.form_schema_overrides?.[normalizedId]?.default_meta : undefined;
+  return {
+    time: trimText(override?.time ?? preset.default_meta.time),
+    location: trimText(override?.location ?? preset.default_meta.location),
+    character: trimText(override?.character ?? preset.default_meta.character),
+  };
 }
 
 function getDefaultShelterAbilitySummary(): string {
@@ -187,12 +207,14 @@ function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
 function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayload {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const worldModeId = trimText(_.get(source, 'world_mode_id', getDefaultWorldModeId())) || getDefaultWorldModeId();
-  const nextFormValues = buildDefaultOpeningFormValues(preset);
+  const effectiveSchema = getEffectiveFormSchema(preset, worldModeId);
+  const effectiveDefaultMeta = getEffectiveDefaultMeta(preset, worldModeId);
+  const nextFormValues = buildDefaultOpeningFormValues(preset, worldModeId);
   const rawFormValues = (_.get(source, 'form_values', null) ?? null) as Record<string, unknown> | null;
   const rawUserInput = (_.get(source, 'user_input', {}) ?? {}) as Record<string, unknown>;
   const rawUserDraft = (_.get(source, 'user_draft', {}) ?? {}) as Record<string, unknown>;
 
-  preset.form_schema.forEach(field => {
+  effectiveSchema.forEach(field => {
     const key = field.key;
     const value =
       rawFormValues?.[key] ??
@@ -219,18 +241,21 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
           ? 'configuring'
           : 'placeholder';
 
+  const rawRouteId = trimText(_.get(source, 'route_id', ''));
+  const resolvedRouteId = rawRouteId && getOpeningRoute(rawRouteId) ? rawRouteId : getDefaultRouteId(worldModeId);
+
   return OpeningPayloadSchema.parse({
     version: 5,
     state: nextState,
     world_mode_id: worldModeId,
-    route_id: trimText(_.get(source, 'route_id', getDefaultRouteId(worldModeId))) || getDefaultRouteId(worldModeId),
+    route_id: resolvedRouteId,
     use_stream: _.get(source, 'use_stream', false),
     compiled_prompt_snapshot: nextCompiledPromptSnapshot,
     opening_assistant_message_id: nextOpeningAssistantMessageId,
     meta: {
-      time: compactText(_.get(source, 'meta.time', preset.default_meta.time)),
-      location: compactText(_.get(source, 'meta.location', preset.default_meta.location)),
-      character: compactText(_.get(source, 'meta.character', preset.default_meta.character)),
+      time: compactText(_.get(source, 'meta.time', effectiveDefaultMeta.time)),
+      location: compactText(_.get(source, 'meta.location', effectiveDefaultMeta.location)),
+      character: compactText(_.get(source, 'meta.character', effectiveDefaultMeta.character)),
     },
     form_values: nextFormValues,
   });
@@ -303,7 +328,7 @@ function getDefaultRouteId(worldModeId = getDefaultWorldModeId()): string {
   if (mode?.recommended_main_route && getOpeningRoute(mode.recommended_main_route)) {
     return mode.recommended_main_route;
   }
-  return getOpeningRoutes()[0]?.name || '养';
+  return getOpeningRoutes()[0]?.name || '后宫+养成';
 }
 
 export function getDefaultOpeningPreset(): OpeningPreset {
@@ -322,8 +347,8 @@ export function getDefaultOpeningPayload(preset = getDefaultOpeningPreset()): Op
     use_stream: false,
     compiled_prompt_snapshot: '',
     opening_assistant_message_id: null,
-    meta: preset.default_meta,
-    form_values: buildDefaultOpeningFormValues(preset),
+    meta: getEffectiveDefaultMeta(preset, world_mode_id),
+    form_values: buildDefaultOpeningFormValues(preset, world_mode_id),
   });
 }
 
@@ -347,6 +372,9 @@ const OPENING_PERSISTED_FORM_KEYS = [
   'nearby_survivor_types',
   'supplemental_setting',
   'word_count',
+  'financial_level',
+  'pre_disaster_contacts',
+  'stockpile_focus',
 ] as const;
 
 function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
@@ -451,7 +479,13 @@ function formatWorldModeAxisLine(axisName: string, axisValue: unknown): string {
   const axisRecord = axisValue && typeof axisValue === 'object' ? (axisValue as Record<string, unknown>) : {};
   const label = trimText(axisRecord.label);
   const subtype = trimText(axisRecord.subtype);
+  const overrideDescription = trimText(axisRecord.description);
   const view = OPENING_AXIS_VIEW.find(item => item.axisKey === axisName);
+
+  if (overrideDescription) {
+    return `${view?.label || axisName}：${overrideDescription}`;
+  }
+
   const sourceKey = view?.sourceKey || axisName;
   const dictionaryRecord = (_.get(__worldModeDoc, ['world_mode_axis_dictionary', sourceKey, 'labels', label], {}) ??
     {}) as Record<string, unknown>;
@@ -530,6 +564,9 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
   const nearbySurvivorTypes = trimText(formValues.nearby_survivor_types) || getDefaultNearbySurvivorTypes();
   const supplementalSetting = trimText(formValues.supplemental_setting) || '未设定';
   const wordCount = trimText(formValues.word_count) || '1500';
+  const financialLevel = trimText(formValues.financial_level) || '未设定';
+  const preDisasterContacts = trimText(formValues.pre_disaster_contacts) || '未设定';
+  const stockpileFocus = trimText(formValues.stockpile_focus) || '未设定';
   const worldVariable = [worldModeAxisDictionary, `边界约束：${forbiddenDrift}`].filter(Boolean).join('\n');
   const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
 
@@ -576,14 +613,27 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     社会组织: nearbyFactions,
     nearby_survivor_types: nearbySurvivorTypes,
     其他幸存者类别: nearbySurvivorTypes,
+    financial_level: financialLevel,
+    资金水平: financialLevel,
+    pre_disaster_contacts: preDisasterContacts,
+    灾前人脉: preDisasterContacts,
+    stockpile_focus: stockpileFocus,
+    囤积方向: stockpileFocus,
     status_current_variable: currentVariablePrompt || '未设定',
     当前变量列表: currentVariablePrompt || '未设定',
   };
 }
 
+export function resolveOpeningPromptTemplateRaw(worldModeId: string): string {
+  const normalizedId = trimText(worldModeId);
+  if (normalizedId === 'A') return String(openingPromptTemplatePreDisasterRaw ?? '');
+  return String(openingPromptTemplateRaw ?? '');
+}
+
 export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: OpeningPayload): string {
   const context = buildOpeningPromptContext(preset, payload);
-  const compiledTemplate = compileOpeningPromptTemplate(String(openingPromptTemplateRaw ?? '').trim(), context);
+  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id);
+  const compiledTemplate = compileOpeningPromptTemplate(String(templateRaw ?? '').trim(), context);
   const finalTemplate = typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
   const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
 

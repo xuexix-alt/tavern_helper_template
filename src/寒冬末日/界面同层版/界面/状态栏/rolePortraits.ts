@@ -19,9 +19,11 @@ export type RolePortraitImageRef = {
 export type RolePortraitOverride = {
   roleKey: string;
   /** Legacy/current primary portrait ref. Kept so older saved settings continue to resolve. */
-  imageRef: RolePortraitImageRef;
+  imageRef?: RolePortraitImageRef;
   imageRefs?: RolePortraitImageRef[];
   updatedAt: number;
+  /** User explicitly cancelled a custom portrait; keep this tombstone so auto gallery matching does not reselect it. */
+  clearedAt?: number;
 };
 
 export type RolePortraitOverrideMap = Record<string, RolePortraitOverride>;
@@ -40,6 +42,7 @@ const PROJECT_ROLE_NAME_ALIASES = [
   ['赵卫国', 'Zhao Weiguo'],
   ['陈幺妹', 'Chen Yaomei'],
   ['何铃', 'He Ling'],
+  ['雪乃', 'Yukino', 'Yukinoshita', 'Fujii Yukino', '藤井雪乃'],
 ];
 
 function normalizeText(value: unknown) {
@@ -54,6 +57,36 @@ function normalizeNameWithoutParenthetical(value: unknown) {
     .trim();
 }
 
+/**
+ * 预编译的别名索引：normalized alias → 同组内所有别名（含去括号副本）。
+ *
+ * `buildNameCandidates` 每次调用都要重建 Set + 遍历所有别名组；
+ * 这张索引把"给定一个候选名，它属于哪些别名组"这层映射提前算好，
+ * 查表即 O(aliases)。所有 `resolveRolePortrait` / `findGalleryEntriesForRole`
+ * 都会复用它，合起来一次 rebuild 能省大量字符串处理。
+ */
+const ALIAS_GROUP_INDEX: Map<string, Set<string>> = (() => {
+  const index = new Map<string, Set<string>>();
+  for (const aliasGroup of PROJECT_ROLE_NAME_ALIASES) {
+    const expanded = new Set<string>();
+    for (const alias of aliasGroup) {
+      const normalized = normalizeText(alias);
+      const withoutParenthetical = normalizeNameWithoutParenthetical(alias);
+      if (normalized) expanded.add(normalized);
+      if (withoutParenthetical) expanded.add(withoutParenthetical);
+    }
+    for (const key of expanded) {
+      const existing = index.get(key);
+      if (existing) {
+        for (const alias of expanded) existing.add(alias);
+      } else {
+        index.set(key, new Set(expanded));
+      }
+    }
+  }
+  return index;
+})();
+
 function buildNameCandidates(...values: unknown[]) {
   const candidates = new Set<string>();
   for (const value of values) {
@@ -63,15 +96,12 @@ function buildNameCandidates(...values: unknown[]) {
     if (withoutParenthetical) candidates.add(withoutParenthetical);
   }
 
-  for (const aliasGroup of PROJECT_ROLE_NAME_ALIASES) {
-    const normalizedGroup = aliasGroup.flatMap(alias => [
-      normalizeText(alias),
-      normalizeNameWithoutParenthetical(alias),
-    ]);
-    if (!normalizedGroup.some(alias => candidates.has(alias))) continue;
-    normalizedGroup.forEach(alias => {
-      if (alias) candidates.add(alias);
-    });
+  // 通过预编译索引一次性拉入同组所有别名，避免每次全量遍历 PROJECT_ROLE_NAME_ALIASES。
+  const pending = Array.from(candidates);
+  for (const candidate of pending) {
+    const group = ALIAS_GROUP_INDEX.get(candidate);
+    if (!group) continue;
+    for (const alias of group) candidates.add(alias);
   }
 
   return Array.from(candidates);
@@ -129,7 +159,7 @@ function entryMatchesImageRef(entry: ReaderGalleryEntry, ref: RolePortraitImageR
 }
 
 function listOverrideRefs(override?: RolePortraitOverride | null): RolePortraitImageRef[] {
-  if (!override) return [];
+  if (!override || isRolePortraitOverrideCleared(override)) return [];
   const out: RolePortraitImageRef[] = [];
   const seen = new Set<string>();
   for (const ref of [...(override.imageRefs ?? []), override.imageRef].filter(Boolean)) {
@@ -139,6 +169,10 @@ function listOverrideRefs(override?: RolePortraitOverride | null): RolePortraitI
     out.push(ref);
   }
   return out;
+}
+
+function isRolePortraitOverrideCleared(override?: RolePortraitOverride | null) {
+  return Number.isFinite(Number(override?.clearedAt));
 }
 
 function findEntriesForRefs(entries: ReaderGalleryEntry[], refs: RolePortraitImageRef[]) {
@@ -165,13 +199,39 @@ function sortNewestFirst(entries: ReaderGalleryEntry[]) {
   });
 }
 
-export function findGalleryEntryForRole(role: RolePortraitRole, entries: ReaderGalleryEntry[]) {
-  return findGalleryEntriesForRole(role, entries)[0];
+/**
+ * 预处理画廊条目：过滤掉没有图源的，再按 "楼层更新、同楼层按创建顺序" 降序排一次。
+ *
+ * 后续 `findGalleryEntriesForRole`、`resolveRolePortrait`、`resolveRolePortraitSet`
+ * 都可复用同一份 `readyEntries`，避免每角色独立 `entries.filter().sort()`。
+ */
+export type RolePortraitLookup = {
+  readyEntries: ReaderGalleryEntry[];
+};
+
+export function prepareRolePortraitLookup(entries: ReaderGalleryEntry[]): RolePortraitLookup {
+  return { readyEntries: sortNewestFirst(entries.filter(hasImageSource)) };
 }
 
-export function findGalleryEntriesForRole(role: RolePortraitRole, entries: ReaderGalleryEntry[]) {
+function resolveLookup(lookup: RolePortraitLookup | undefined, entries: ReaderGalleryEntry[]): RolePortraitLookup {
+  return lookup ?? prepareRolePortraitLookup(entries);
+}
+
+export function findGalleryEntryForRole(
+  role: RolePortraitRole,
+  entries: ReaderGalleryEntry[],
+  lookup?: RolePortraitLookup,
+) {
+  return findGalleryEntriesForRole(role, entries, lookup)[0];
+}
+
+export function findGalleryEntriesForRole(
+  role: RolePortraitRole,
+  entries: ReaderGalleryEntry[],
+  lookup?: RolePortraitLookup,
+) {
   const roleNames = buildNameCandidates(role.label, role.key);
-  const readyEntries = sortNewestFirst(entries.filter(hasImageSource));
+  const readyEntries = resolveLookup(lookup, entries).readyEntries;
 
   const matched: ReaderGalleryEntry[] = [];
   const seen = new Set<string>();
@@ -243,15 +303,31 @@ export function resolveRolePortraitSet(
   role: RolePortraitRole,
   entries: ReaderGalleryEntry[],
   overrides: RolePortraitOverrideMap,
+  options: { defaultEntries?: ReaderGalleryEntry[]; lookup?: RolePortraitLookup } = {},
 ): ReaderGalleryEntry[] {
-  const overrideEntries = findEntriesForRefs(entries, listOverrideRefs(overrides[role.key]));
-  const matchedEntries = findGalleryEntriesForRole(role, entries);
+  const defaultEntries = options.defaultEntries ?? [];
+  const lookup = resolveLookup(options.lookup, entries);
+  const override = overrides[role.key];
+  const isCleared = isRolePortraitOverrideCleared(override);
+  // 默认图也参与覆盖查找，这样"选过一张默认真人设定图"会被持久化并复用。
+  const overrideLookupPool = [...entries, ...defaultEntries];
+  const overrideEntries = isCleared ? [] : findEntriesForRefs(overrideLookupPool, listOverrideRefs(override));
+  const matchedEntries = isCleared ? [] : findGalleryEntriesForRole(role, entries, lookup);
   const out: ReaderGalleryEntry[] = [];
   const seen = new Set<string>();
   for (const entry of [...overrideEntries, ...matchedEntries]) {
     if (!entry?.src || seen.has(entry.id)) continue;
     seen.add(entry.id);
     out.push(entry);
+  }
+  const defaultIds = new Set(defaultEntries.map(entry => entry.id));
+  const hasNonDefaultEntry = out.some(entry => !defaultIds.has(entry.id));
+  if (!hasNonDefaultEntry && defaultEntries.length > 0) {
+    for (const entry of defaultEntries) {
+      if (!entry?.src || seen.has(entry.id)) continue;
+      seen.add(entry.id);
+      out.push(entry);
+    }
   }
   return out;
 }
@@ -260,19 +336,37 @@ export function resolveRolePortrait(
   role: RolePortraitRole,
   entries: ReaderGalleryEntry[],
   overrides: RolePortraitOverrideMap,
-  options: { defaultSrc: string },
+  options: { defaultSrc: string; defaultEntries?: ReaderGalleryEntry[]; lookup?: RolePortraitLookup },
 ): ResolvedRolePortrait {
   const override = overrides[role.key];
-  const overrideEntry =
-    findEntryForRef(entries, override?.imageRef) ?? findEntriesForRefs(entries, listOverrideRefs(override))[0];
-  const entry = overrideEntry ?? findGalleryEntryForRole(role, entries);
+  const defaultEntries = options.defaultEntries ?? [];
+  const lookup = resolveLookup(options.lookup, entries);
+  const isCleared = isRolePortraitOverrideCleared(override);
+  const overrideLookupPool = [...entries, ...defaultEntries];
+  const overrideEntry = isCleared
+    ? undefined
+    : findEntryForRef(overrideLookupPool, override?.imageRef) ??
+      findEntriesForRefs(overrideLookupPool, listOverrideRefs(override))[0];
+  const entry = overrideEntry ?? (isCleared ? undefined : findGalleryEntryForRole(role, entries, lookup));
 
   if (entry?.src) {
+    // 若命中的是默认图，source 保持 default，避免 UI 误判为"画廊设定"。
+    const isDefaultEntry = defaultEntries.some(candidate => candidate.id === entry.id);
     return {
       src: entry.src,
-      alt: entry.alt || `${role.label} 人物设定图`,
-      source: 'gallery',
+      alt: entry.alt || `${role.label} ${isDefaultEntry ? '默认人物设定图' : '人物设定图'}`,
+      source: isDefaultEntry ? 'default' : 'gallery',
       entry,
+    };
+  }
+
+  const defaultEntry = defaultEntries.find(candidate => Boolean(candidate?.src));
+  if (defaultEntry) {
+    return {
+      src: defaultEntry.src!,
+      alt: defaultEntry.alt || `${role.label} 默认人物设定图`,
+      source: 'default',
+      entry: defaultEntry,
     };
   }
 
@@ -280,6 +374,16 @@ export function resolveRolePortrait(
     src: options.defaultSrc,
     alt: `${role.label} 默认人物设定图`,
     source: 'default',
+  };
+}
+
+export function clearRolePortraitOverride(roleKey: string): RolePortraitOverride {
+  const now = Date.now();
+  return {
+    roleKey: normalizeRoleKey(roleKey),
+    imageRefs: [],
+    updatedAt: now,
+    clearedAt: now,
   };
 }
 

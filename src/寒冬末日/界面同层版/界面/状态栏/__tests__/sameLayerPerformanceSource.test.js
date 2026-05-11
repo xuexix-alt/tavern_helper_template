@@ -61,7 +61,7 @@ test('TranscriptMessageCard only hydrates and rebinds assistant body when body h
     'assistant body work should be keyed by a stable html signature',
   );
   assert.equal(
-    source.includes('watch(assistantBodySignature'),
+    /watch\(\s*assistantBodySignature/.test(source),
     true,
     'assistant body work should be driven by signature changes',
   );
@@ -69,6 +69,108 @@ test('TranscriptMessageCard only hydrates and rebinds assistant body when body h
     source.includes('onUpdated(() =>'),
     false,
     'unrelated prop updates should not rescan and rebind assistant body DOM',
+  );
+});
+
+test('streaming transcript items avoid eager final html and image artifact rebuilds', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const isCurrentStreamingItem =[\s\S]{0,240}input\.status === 'streaming'/,
+    'buildTranscriptItem should explicitly distinguish the current streaming item',
+  );
+  assert.match(
+    source,
+    /const streamHtml = '';/,
+    'streaming html should be skipped entirely so no formatAsDisplayedMessage runs per tick',
+  );
+  // finalHtml 不再因 isCurrentStreamingItem 被置空（见 syncTranscriptFlags 失衡 bug 的修复）：
+  // 当前流式项走轻量路径（appendArtifacts: false），非流式项走完整路径。
+  assert.match(
+    source,
+    /const finalHtml = isCurrentStreamingItem[\s\S]{0,260}appendArtifacts: false[\s\S]{0,120}buildFinalHtml\(displayRenderSource, input\.id, strippedRenderSource\)/,
+    'current streaming item should still build a lightweight finalHtml so older floors falling out of latest keep their html',
+  );
+});
+
+test('transcript sync keeps unchanged item references stable during stream patches', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /if \(item\.isLatest === isLatest && item\.isStreaming === isStreaming\) return item;/,
+    'syncTranscriptFlags should preserve object identity when flags do not change',
+  );
+});
+
+test('TranscriptList item signature ignores streaming content length', () => {
+  const source = readSource('components/TranscriptList.vue');
+  const signatureBlock = source.match(/const itemsSignature = computed\(\(\) =>[\s\S]*?\n\);\n/)?.[0] ?? '';
+
+  assert.notEqual(signatureBlock, '', 'itemsSignature block should be present');
+  assert.equal(
+    signatureBlock.includes('content.length'),
+    false,
+    'scroll anchoring signature should not change for every streamed token',
+  );
+});
+
+test('TranscriptMessageCard assistant body signature avoids full html string comparison while streaming', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+  const signatureBlock = source.match(/const assistantBodySignature = computed\(\(\) => \{[\s\S]*?\n\}\);/)?.[0] ?? '';
+
+  assert.notEqual(signatureBlock, '', 'assistantBodySignature block should be present');
+  assert.equal(
+    signatureBlock.includes("String(html ?? '')"),
+    false,
+    'assistant body watcher should not build and compare the full html string on every stream tick',
+  );
+});
+
+test('lifecycle trace supports lazy payloads for expensive stream summaries', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /payload: Record<string, unknown> \| \(\(\) => Record<string, unknown>\) = \{\}/,
+    'recordLifecycleTrace should accept a lazy payload function',
+  );
+  assert.match(
+    source,
+    /if \(!debugTraceRuntime\.enabled\) return null;/,
+    'recordLifecycleTrace should return before resolving payload while tracing is disabled',
+  );
+  assert.match(
+    source,
+    /transcriptAssistantSummary: summarizeTranscriptForDebug\(transcript\.value\)/,
+    'debug summaries should remain available when tracing is enabled',
+  );
+  assert.match(
+    source,
+    /recordLifecycleTrace\([\s\S]{0,140}'commit_done'[\s\S]{0,180}\(\) => \(/,
+    'hot stream commit trace should construct transcript summary lazily',
+  );
+});
+
+test('mobile streaming disables costly transcript blur layers', () => {
+  const listSource = readSource('components/TranscriptList.vue');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    listSource,
+    /:class="\[\s*'transcript-card'/,
+    'TranscriptList root should expose streaming state as a class',
+  );
+  assert.match(
+    listSource,
+    /\.transcript-card\.is-streaming[\s\S]{0,220}backdrop-filter: none;/,
+    'TranscriptList should disable FAB backdrop blur while streaming on mobile',
+  );
+  assert.match(
+    cardSource,
+    /\.assistant-card\.is-streaming[\s\S]{0,220}backdrop-filter: none;/,
+    'TranscriptMessageCard should disable image button backdrop blur while streaming on mobile',
   );
 });
 
@@ -86,21 +188,21 @@ test('StoryPage lets mobile mes-path touch events reach the native plugin after 
   const source = readSource('pages/StoryPage.vue');
 
   assert.equal(
-    source.includes('async function prepareTranscriptHostImageProxy'),
+    source.includes('async function startTranscriptHostImageProxy'),
     true,
     'mobile transcript double tap should prewarm host mes_text without synthetic dispatch',
   );
   assert.equal(
-    source.includes('void prepareTranscriptHostImageProxy(messageId);'),
+    source.includes('void ensureHostMesTextRendered(messageId);'),
     true,
-    'mobile transcript double tap should register the pending image task before native plugin handling',
+    'first mobile tap should prewarm host mes_text before the second tap triggers native plugin handling',
   );
   assert.equal(
-    /void prepareTranscriptHostImageProxy\(messageId\);[\s\S]{0,220}touchStartTime = 0;[\s\S]{0,80}return;/.test(
+    /void ensureHostMesTextRendered\(messageId\);[\s\S]{0,260}void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);[\s\S]{0,120}return;/.test(
       source,
     ),
     true,
-    'mobile transcript double tap should return before calling preventDefault or stopPropagation',
+    'mobile transcript double tap should prewarm on first tap and let the proxy handle the second tap',
   );
 });
 
@@ -121,5 +223,165 @@ test('StoryPage keeps a lightweight role data provider and lazy mounts the full 
     source.includes('function buildRoleTabItemsFromProvider'),
     true,
     'bottom role shortcuts should be derived from the lightweight provider',
+  );
+});
+
+test('rebuildTranscript resolves latestAssistantId before building items so streaming html matches the later sync flag', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  // 两遍归一化：先确定 nextLatestAssistantId，再用它 build item，避免 syncTranscriptFlags 翻出
+  // `isStreaming: true` 时对应的 `streamHtml` 仍是空串。
+  assert.match(
+    source,
+    /for \(const entry of normalizedEntries\)[\s\S]{0,400}latestAssistantId: nextLatestAssistantId/,
+    'rebuildTranscript should pass the resolved latestAssistantId to buildTranscriptItem',
+  );
+  assert.doesNotMatch(
+    source,
+    /normalized\.push\(\s*buildTranscriptItem\(\{[\s\S]{0,260}latestAssistantId: null/,
+    'rebuildTranscript must not pass null latestAssistantId, otherwise stale phase=stream floors render empty stream html',
+  );
+});
+
+test('refreshTranscriptItemsByIds preserves latestAssistantId so patched streaming items keep their stream html', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  const refreshBlock = source.match(/function refreshTranscriptItemsByIds[\s\S]*?\n  \}\n/)?.[0] ?? '';
+  assert.notEqual(refreshBlock, '', 'refreshTranscriptItemsByIds block should be present');
+  assert.match(
+    refreshBlock,
+    /latestAssistantId: assistantMessageId\.value/,
+    'refreshTranscriptItemsByIds should pass the live latestAssistantId so rebuilt items keep their streaming html',
+  );
+  assert.doesNotMatch(
+    refreshBlock,
+    /latestAssistantId: null/,
+    'refreshTranscriptItemsByIds must not drop latestAssistantId to null while rebuilding individual items',
+  );
+});
+
+test('MvuRolePanel memoizes role portrait resolution once per dependency change instead of per template read', () => {
+  const source = readSource('components/MvuRolePanel.vue');
+
+  assert.match(
+    source,
+    /const rolePortraitSummaries = computed\(\(\) => \{[\s\S]{0,800}prepareRolePortraitLookup\(entries\)/,
+    'MvuRolePanel should build a reactive map of role summaries keyed by role, reusing a single prepared lookup',
+  );
+  assert.match(
+    source,
+    /function rolePortraitForEntry\([\s\S]{0,200}rolePortraitSummaryForEntry\(entry\)\.portrait/,
+    'rolePortraitForEntry should read from the memoized summary map',
+  );
+  assert.match(
+    source,
+    /function rolePortraitSetForEntry\([\s\S]{0,200}rolePortraitSummaryForEntry\(entry\)\.set/,
+    'rolePortraitSetForEntry should read from the memoized summary map',
+  );
+  // 确认旧的"每次模板读取都 resolveRolePortrait"写法已移除。
+  assert.doesNotMatch(
+    source,
+    /function rolePortraitForEntry\([\s\S]{0,80}\{\s*return resolveRolePortrait\(/,
+    'per-call resolveRolePortrait in rolePortraitForEntry should be replaced by the memo lookup',
+  );
+});
+
+test('rolePortraits exposes a shared readyEntries lookup so per-role resolves do not re-sort the gallery', () => {
+  const source = readSource('rolePortraits.ts');
+
+  assert.match(
+    source,
+    /export type RolePortraitLookup = \{\s*readyEntries: ReaderGalleryEntry\[\];\s*\};/,
+    'rolePortraits should expose a RolePortraitLookup type describing the shared prepared entries',
+  );
+  assert.match(
+    source,
+    /export function prepareRolePortraitLookup\(entries: ReaderGalleryEntry\[\]\): RolePortraitLookup/,
+    'prepareRolePortraitLookup should be exported so callers can filter+sort once for a whole panel render',
+  );
+  assert.match(
+    source,
+    /function resolveLookup\([\s\S]{0,160}prepareRolePortraitLookup\(entries\)/,
+    'internal resolvers should accept an optional lookup and fall back to preparing it when absent',
+  );
+});
+
+test('rolePortraits precomputes an alias group index instead of scanning the alias list per lookup', () => {
+  const source = readSource('rolePortraits.ts');
+
+  assert.match(
+    source,
+    /const ALIAS_GROUP_INDEX: Map<string, Set<string>> =/,
+    'PROJECT_ROLE_NAME_ALIASES should be expanded into a fast lookup index at module load',
+  );
+  assert.match(
+    source,
+    /function buildNameCandidates\([\s\S]{0,600}ALIAS_GROUP_INDEX\.get\(/,
+    'buildNameCandidates should consult the precomputed alias index instead of iterating all alias groups',
+  );
+  assert.doesNotMatch(
+    source,
+    /for \(const aliasGroup of PROJECT_ROLE_NAME_ALIASES\) \{\s*const normalizedGroup = aliasGroup\.flatMap/,
+    'the old per-candidate full alias scan should be replaced by the precomputed index',
+  );
+});
+
+test('mobile and reduced-motion users do not pay for backdrop-filter layers on the same-layer UI', () => {
+  const themeSource = readSource('theme-tokens.css');
+
+  // 手机端（<=760px）应当整体关闭已知 blur 容器的 backdrop-filter。
+  const mobileBlock = themeSource.match(/@media \(max-width: 760px\) \{[\s\S]*?\}\s*\}/g) ?? [];
+  assert.ok(
+    mobileBlock.some(
+      block =>
+        /\.hud-panel/.test(block) &&
+        /\.ui-topbar/.test(block) &&
+        /\.ui-side-drawer/.test(block) &&
+        /\.ui-bottom-drawer/.test(block) &&
+        /\.hud-modal-backdrop/.test(block) &&
+        /backdrop-filter: none !important/.test(block),
+    ),
+    'mobile media query should opt major blur containers out of backdrop-filter',
+  );
+
+  // prefers-reduced-motion 的用户也应该一起降级（施工说明里要求的兜底）。
+  const reducedMotionBlock = themeSource.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\}\s*\}/g) ?? [];
+  assert.ok(
+    reducedMotionBlock.some(block => /backdrop-filter: none !important/.test(block)),
+    'prefers-reduced-motion should also disable backdrop-filter to avoid accessibility regressions',
+  );
+});
+
+test('buildTranscriptItem always produces a finalHtml so older floors do not blank out when a new placeholder becomes the latest assistant', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  // 旧 bug：流式项被置 finalHtml = ''；新一轮 gen 创建占位后 `assistantMessageId` 变成
+  // 新 id，`syncTranscriptFlags` 只翻 `isLatest/isStreaming`，老楼层保留空 finalHtml，
+  // 在 UI 上落回 "(空回复)"。这个断言钉住新的两路 finalHtml 构造，保证它不再回退。
+  assert.doesNotMatch(
+    source,
+    /const finalHtml = isCurrentStreamingItem\s*\?\s*''\s*:/,
+    'finalHtml must not be placeholder-empty during streaming; previously-latest floors need their html to survive isStreaming flag flips',
+  );
+  assert.match(
+    source,
+    /const finalHtml = isCurrentStreamingItem[\s\S]{0,260}appendArtifacts: false[\s\S]{0,120}buildFinalHtml\(displayRenderSource,/,
+    'streaming items should still produce a lightweight finalHtml (appendArtifacts: false) as fallback once the item stops being the latest assistant',
+  );
+});
+
+test('stream display text prefers item.content so stream-demo `<content>` wrapper tags never leak into the `<pre v-text>` body', () => {
+  const messageCardSource = readSource('components/TranscriptMessageCard.vue');
+  const openingCardSource = readSource('components/TranscriptOpeningCard.vue');
+
+  assert.match(
+    messageCardSource,
+    /const streamDisplayText = computed\([\s\S]{0,800}props\.item\.content\s*\?\?\s*props\.item\.regexText/,
+    'TranscriptMessageCard should read streaming text from item.content first to avoid the <content> wrapper leaking as literal text',
+  );
+  assert.match(
+    openingCardSource,
+    /const streamDisplayText = computed\([\s\S]{0,800}props\.item\.content\s*\?\?\s*props\.item\.regexText/,
+    'TranscriptOpeningCard should read streaming text from item.content first to avoid the <content> wrapper leaking as literal text',
   );
 });

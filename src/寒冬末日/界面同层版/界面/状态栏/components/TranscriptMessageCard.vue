@@ -90,21 +90,24 @@
         <div class="assistant-corners br"></div>
 
         <div class="assistant-body-wrap">
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div
+          <!--
+            流式阶段改走 `<pre v-text>`：文本节点就地更新即可，不再让浏览器每 tick 做 v-html 子树解析 + DOM 重建；
+            P0-2 要求的"流式 = 纯文本"就靠这条分支落地。完成态仍然要走 v-html 保留 Markdown/图片锚点等结构。
+          -->
+          <pre
             v-if="item.isStreaming"
             ref="assistantBodyRef"
-            class="assistant-body html-body is-stream-stage"
+            class="assistant-body html-body is-stream-stage stream-stage-pre"
             :data-message-id="item.message_id"
-            v-html="item.streamHtml"
-          ></div>
+            v-text="streamDisplayText"
+          ></pre>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-else
             ref="assistantBodyRef"
             class="assistant-body html-body"
             :data-message-id="item.message_id"
-            v-html="item.finalHtml || '<p>(空回复)</p>'"
+            v-html="displayedAssistantHtml"
           ></div>
         </div>
       </section>
@@ -117,10 +120,12 @@ import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import { getFallbackImageClasses } from '../imageFallbackClasses';
 import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
 import { loadImage } from '../imageStore';
+import { stripVisibleChatu8PromptTokensHtml, stripVisibleChatu8PromptTokensText } from '../chatu8PromptTokenDisplay';
 import { hydratePersistedImageElements } from '../transcriptImagePersistence';
-import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
+import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -131,6 +136,7 @@ const props = defineProps<{
   editDraft?: string;
   showEditRegenerate?: boolean;
   showRollbackConfirm?: boolean;
+  galleryEntries?: ReaderGalleryEntry[];
 }>();
 
 const emit = defineEmits<{
@@ -150,18 +156,43 @@ const emit = defineEmits<{
 
 const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
+const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
+const displayedAssistantHtml = computed(() => {
+  if (props.item.role !== 'assistant') return '';
+  // 完成态才走 v-html；流式态改走 `<pre v-text>`，这里仍保留一次清理以兼容未来复用路径。
+  const html = props.item.finalHtml || '<p>(空回复)</p>';
+  return stripVisibleChatu8PromptTokensHtml(html);
+});
+const streamDisplayText = computed(() => {
+  if (props.item.role !== 'assistant' || !props.item.isStreaming) return '';
+  // 流式阶段优先用 `item.content`——它已经是 `<content>...</content>` 等包装外的"真正正文"。
+  // `item.regexText` 走的是 `displayRenderSource`，对于 stream-demo 包装它保留了 `<content>` 标签，
+  // 放在 `<pre v-text>` 里就会把标签字面露出来。再做一次 token 清理，防止 `image###...###` 裸露。
+  // 空时给一个占位符，行为和原来"等待 token…"一致。
+  const source = String(props.item.content ?? props.item.regexText ?? '').trim();
+  const text = stripVisibleChatu8PromptTokensText(source);
+  return text || '等待 token…';
+});
 const assistantBodySignature = computed(() => {
   if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
-  const html = props.item.isStreaming ? props.item.streamHtml : props.item.finalHtml;
-  return [
-    props.item.message_id,
-    props.item.isStreaming ? 'stream' : 'final',
-    props.item.phase,
-    String(html ?? '').length,
-    String(html ?? ''),
-  ].join('::');
+  return [props.item.message_id, props.item.isStreaming ? 'stream' : 'final', props.item.phase].join('::');
 });
+const galleryEntrySignature = computed(() =>
+  (props.galleryEntries ?? [])
+    .map(entry =>
+      [
+        entry.id,
+        entry.messageId,
+        entry.requestId ?? '',
+        entry.markerId ?? '',
+        entry.promptToken ?? '',
+        String(entry.src ?? '').slice(0, 96),
+        String(entry.src ?? '').length,
+      ].join(':'),
+    )
+    .join('|'),
+);
 
 function recordComponentTrace(event: string, payload: Record<string, unknown> = {}) {
   recordComponentDebugTrace({
@@ -210,6 +241,70 @@ async function hydrateAssistantBodyImages() {
       const persistedSrc = String(element.getAttribute('data-persisted-image-src') ?? src).trim();
       return resolvePersistedImageSrc(persistedSrc);
     },
+  });
+}
+
+function encodeDatasetValue(value: string): string {
+  return encodeURIComponent(String(value ?? ''));
+}
+
+function createGalleryEntryFigure(entry: ReaderGalleryEntry): HTMLElement | null {
+  const src = String(entry.src ?? '').trim();
+  if (!src) return null;
+
+  const figure = document.createElement('figure');
+  figure.className = fallbackImageClasses.inline;
+  figure.dataset.messageId = String(entry.messageId);
+  figure.dataset.imageId = entry.imageId ?? '';
+  figure.dataset.markerId = entry.markerId ?? '';
+  figure.dataset.promptToken = entry.promptToken ?? '';
+  figure.dataset.requestId = entry.requestId ?? '';
+  figure.dataset.imageSrc = encodeDatasetValue(src);
+
+  const image = document.createElement('img');
+  image.src = src;
+  image.alt = entry.alt || entry.title || 'generated image';
+  image.loading = 'lazy';
+  image.dataset.messageId = String(entry.messageId);
+  image.dataset.imageId = entry.imageId ?? '';
+  image.dataset.markerId = entry.markerId ?? '';
+  image.dataset.promptToken = entry.promptToken ?? '';
+  image.dataset.requestId = entry.requestId ?? '';
+  image.dataset.imageSrc = encodeDatasetValue(src);
+
+  figure.append(image);
+  return figure;
+}
+
+function hydratePendingImagesFromGalleryEntries() {
+  const root = assistantBodyRef.value;
+  if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
+  const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
+  if (entries.length === 0) return;
+  if (root.querySelector(`.${fallbackImageClasses.inline} img, .${fallbackImageClasses.item} img`)) return;
+
+  const pendingNodes = Array.from(root.querySelectorAll('[data-raw-image-tag="true"]')) as HTMLElement[];
+  const targets = pendingNodes.map(node => {
+    const parent = node.parentElement;
+    const parentOnlyContainsPlaceholder =
+      parent?.tagName === 'P' && String(parent.textContent ?? '').trim() === String(node.textContent ?? '').trim();
+    return parentOnlyContainsPlaceholder ? parent : node;
+  });
+  if (targets.length === 0) return;
+
+  let injected = 0;
+  for (const entry of entries) {
+    const target = targets.shift();
+    if (!target) break;
+    const figure = createGalleryEntryFigure(entry);
+    if (!figure) continue;
+    target.replaceWith(figure);
+    injected += 1;
+  }
+
+  recordComponentTrace('hydrate_pending_gallery_images', {
+    galleryEntryCount: entries.length,
+    injected,
   });
 }
 
@@ -352,13 +447,31 @@ watch(
   assistantBodySignature,
   async () => {
     if (props.item.role !== 'assistant') return;
+    // 流式阶段用 `<pre v-text>` 就地更新，不需要 hydrate/rebind；等 phase 切到 done 这个 signature 才会变。
+    if (props.item.isStreaming) return;
     recordComponentTrace('update');
+    await nextTick();
+    hydratePendingImagesFromGalleryEntries();
     await nextTick();
     await hydrateAssistantBodyImages();
     await nextTick();
     bindAssistantBodyInteractions();
   },
   { immediate: true, flush: 'post' },
+);
+
+watch(
+  galleryEntrySignature,
+  async () => {
+    if (props.item.role !== 'assistant' || props.item.isStreaming) return;
+    await nextTick();
+    hydratePendingImagesFromGalleryEntries();
+    await nextTick();
+    await hydrateAssistantBodyImages();
+    await nextTick();
+    bindAssistantBodyInteractions();
+  },
+  { flush: 'post' },
 );
 
 onBeforeUnmount(() => {
@@ -580,6 +693,13 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.image-tag-button:active) {
   background: color-mix(in srgb, var(--primary) 12%, var(--background) 88%);
   border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+@media (max-width: 760px) {
+  .assistant-card.is-streaming .assistant-body-wrap :deep(.image-tag-button) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 .assistant-body-wrap :deep(.image-tag-placeholder),

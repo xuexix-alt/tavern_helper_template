@@ -42,12 +42,12 @@
     </header>
 
     <div v-if="showBody" class="transcript-body opening-body" :class="{ collapsed: !expanded }">
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div
-        v-if="item.isStreaming"
-        class="html-body is-stream-stage"
-        v-html="item.streamHtml || '<pre class=&quot;stream-stage-pre&quot;>等待 token…</pre>'"
-      ></div>
+      <!--
+        流式阶段改走 `<pre v-text>`：和 TranscriptMessageCard 一样，
+        避免每 tick 重建 v-html 子树，同时修复"opening 流式时一直显示等待 token…"的退化
+        （streamHtml 被 P0-2 置空后，原来的 v-html="item.streamHtml" 拿不到任何内容）。
+      -->
+      <pre v-if="item.isStreaming" class="html-body is-stream-stage stream-stage-pre" v-text="streamDisplayText"></pre>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-else class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>
@@ -55,6 +55,7 @@
 </template>
 
 <script setup lang="ts">
+import { stripVisibleChatu8PromptTokensText } from '../chatu8PromptTokenDisplay';
 import type { ReaderFontMode, TranscriptDensity, TranscriptItem } from '../types';
 
 defineEmits<{
@@ -74,6 +75,16 @@ const props = defineProps<{
 const showBody = computed(() => {
   if (props.density === 'minimal') return props.expanded;
   return true;
+});
+
+const streamDisplayText = computed(() => {
+  // 开局卡只在 opening 模式被渲染；streaming 时优先用 `item.content`——它已经是 `<content>...</content>`
+  // 外的真正正文（stream-demo 包装不会被当成字面文本显示出来）。再清一次 `image###...###` 提示词，
+  // 空时给"等待 token…"占位，和原 v-html 行为保持一致。
+  if (!props.item.isStreaming) return '';
+  const source = String(props.item.content ?? props.item.regexText ?? '').trim();
+  const text = stripVisibleChatu8PromptTokensText(source);
+  return text || '等待 token…';
 });
 </script>
 

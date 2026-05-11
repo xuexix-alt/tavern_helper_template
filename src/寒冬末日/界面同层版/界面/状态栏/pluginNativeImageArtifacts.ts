@@ -58,6 +58,40 @@ function normalizeMessageId(input: unknown): number {
   return Math.trunc(numeric);
 }
 
+function collectPromptTokens(input: string): string[] {
+  const out: string[] = [];
+  const regex = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(String(input ?? '')))) {
+    out.push(String(match[0] ?? '').trim());
+  }
+  return out;
+}
+
+function buildPromptToken(rawPrompt: unknown): string {
+  const prompt = normalizeKey(rawPrompt);
+  if (!prompt) return '';
+  const existing = collectPromptTokens(prompt)[0];
+  if (existing) return existing;
+  return `image###${prompt}###`;
+}
+
+function normalizePromptToken(rawPromptToken: unknown): string {
+  const promptToken = normalizeKey(rawPromptToken);
+  if (!promptToken) return '';
+  return collectPromptTokens(promptToken)[0] || buildPromptToken(promptToken);
+}
+
+export function normalizePromptTokenForCompare(rawPromptToken: unknown): string {
+  const promptToken = normalizePromptToken(rawPromptToken);
+  if (!promptToken) return '';
+  const match = promptToken.match(/^([^#]+)###([\s\S]*?)###$/);
+  if (!match) return promptToken.replace(/\s+/g, '');
+  const prefix = normalizeKey(match[1]).toLowerCase();
+  const body = normalizeKey(match[2]).replace(/\s+/g, '');
+  return prefix && body ? `${prefix}###${body}###` : promptToken.replace(/\s+/g, '');
+}
+
 function flattenEntries(input: unknown): Record<string, any>[] {
   if (!Array.isArray(input)) return [];
   return input.flatMap(item => {
@@ -78,7 +112,11 @@ function buildArtifactFromRecord(input: {
   record: Record<string, any>;
 }): NativeFirstImageArtifact | null {
   const { record } = input;
-  const promptToken = normalizeKey(record?.promptToken) || normalizeKey(record?.tag) || normalizeKey(record?.rawTag);
+  const promptToken =
+    normalizePromptToken(record?.promptToken) ||
+    normalizePromptToken(record?.tag) ||
+    normalizePromptToken(record?.rawTag) ||
+    buildPromptToken(record?.prompt);
   const requestId = normalizeKey(record?.requestId ?? record?.request_id);
   const markerId = normalizeKey(record?.markerId);
   const imageId =
@@ -138,6 +176,45 @@ function mergeWithPriority(
   }
 
   return out;
+}
+
+function artifactsMatch(left: NativeFirstImageArtifact, right: NativeFirstImageArtifact): boolean {
+  const keys: Array<keyof NativeFirstImageArtifact> = [
+    'markerId',
+    'imageId',
+    'requestId',
+    'promptToken',
+    'rawTag',
+    'src',
+  ];
+  return keys.some(key => {
+    const leftValue = normalizeKey(left[key]);
+    const rightValue = normalizeKey(right[key]);
+    return Boolean(leftValue && rightValue && leftValue === rightValue);
+  });
+}
+
+function enrichArtifactsFromCache(
+  artifacts: NativeFirstImageArtifact[],
+  cacheArtifacts: NativeFirstImageArtifact[],
+): NativeFirstImageArtifact[] {
+  if (artifacts.length === 0 || cacheArtifacts.length === 0) return artifacts;
+
+  return artifacts.map(artifact => {
+    const matched = cacheArtifacts.find(cacheArtifact => artifactsMatch(artifact, cacheArtifact));
+    if (!matched) return artifact;
+    return {
+      ...artifact,
+      markerId: artifact.markerId || matched.markerId,
+      imageId: artifact.imageId || matched.imageId,
+      requestId: artifact.requestId || matched.requestId,
+      promptToken: artifact.promptToken || matched.promptToken,
+      rawTag: artifact.rawTag || matched.rawTag,
+      anchorText: artifact.anchorText || matched.anchorText,
+      src: artifact.src || matched.src,
+      alt: artifact.alt || matched.alt,
+    };
+  });
 }
 
 function collectHostArtifacts(input: ReadNativeFirstImageArtifactsInput): NativeFirstImageArtifact[] {
@@ -216,15 +293,16 @@ export function readNativeFirstImageArtifacts(input: ReadNativeFirstImageArtifac
   const hostArtifacts = collectHostArtifacts(input);
   const extraArtifacts = collectExtraArtifacts(input);
   const mesTagArtifacts = collectMesTagArtifacts(input);
+  const cacheArtifacts = collectCacheArtifacts(input);
 
   let nativeFirst = mergeWithPriority(hostArtifacts, extraArtifacts);
   nativeFirst = mergeWithPriority(nativeFirst, mesTagArtifacts);
+  nativeFirst = enrichArtifactsFromCache(nativeFirst, cacheArtifacts);
 
   if (nativeFirst.length > 0) {
     return nativeFirst;
   }
 
-  const cacheArtifacts = collectCacheArtifacts(input);
   if (cacheArtifacts.length > 0) {
     return cacheArtifacts;
   }

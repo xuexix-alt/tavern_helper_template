@@ -185,6 +185,25 @@ function findMatchingEntity(
   return entities.find(entity => Array.from(aliasKeys).some(alias => entity.aliasKeys.has(alias)));
 }
 
+function findOrderFallbackEntity(
+  entities: InternalGeneratedImageEntity[],
+  nativeImage: GeneratedImageEntityNativeSeed,
+  index: number,
+): InternalGeneratedImageEntity | undefined {
+  const imageId = normalizeText(nativeImage.imageId);
+  const src = normalizeSrc(nativeImage.src);
+  const hasStableIdentity = Boolean(
+    normalizeText(nativeImage.markerId) ||
+      normalizeText(nativeImage.requestId) ||
+      normalizeText(nativeImage.promptToken) ||
+      (imageId && imageId !== src),
+  );
+  if (hasStableIdentity) return undefined;
+  const candidate = entities[index];
+  if (!candidate || candidate.ready || !candidate.promptToken) return undefined;
+  return candidate;
+}
+
 function mergeEntity(target: InternalGeneratedImageEntity, source: InternalGeneratedImageEntity) {
   target.markerId = target.markerId ?? source.markerId;
   target.imageId = target.imageId ?? source.imageId;
@@ -213,7 +232,7 @@ export function buildGeneratedImageEntities(input: GeneratedImageEntityBuildInpu
 
   nativeImages.forEach((nativeImage, index) => {
     const source = createEntityFromNative(messageId, nativeImage, index, orderBase);
-    const target = findMatchingEntity(entities, nativeImage);
+    const target = findMatchingEntity(entities, nativeImage) ?? findOrderFallbackEntity(entities, nativeImage, index);
     if (target) {
       mergeEntity(target, source);
       return;

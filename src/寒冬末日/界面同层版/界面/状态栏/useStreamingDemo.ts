@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { reprocessMessageVariablesById, retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
+import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import {
   buildStreamDemoMessage,
   extractStreamDemoContent,
@@ -16,17 +17,20 @@ import {
   extractOpeningOptions,
   getDefaultOpeningPayload,
   getDefaultOpeningPreset,
+  getEffectiveDefaultMeta,
+  getEffectiveFormSchema,
   getOpeningRoute,
   getOpeningRoutes,
   getOpeningWorldMode,
   getOpeningWorldModes,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
+  resolveOpeningPromptTemplateRaw,
 } from '../../shared/opening';
-import openingPromptTemplateRaw from '../../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
-import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import type { OpeningPayload, OpeningPreset } from '../../shared/opening.schema';
 import { resolveAssistantMessageRefreshMode } from './assistantMessageRefreshMode';
+import { stripVisibleChatu8PromptTokensHtml } from './chatu8PromptTokenDisplay';
+import { isOpeningWorkbenchScopeActive, resolveActiveContainerMessageId } from './containerScope';
 import {
   createDebugTraceStore,
   createTraceId,
@@ -47,17 +51,18 @@ import {
   shouldSuppressLifecycleEchoHostRefresh,
   summarizeTranscriptForDebug,
 } from './debugTraceLifecycle';
+import { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } from './generatedImageEntities';
 import { bumpGeneratedImageEntityRevision } from './generatedImageEntityRevision';
+import { shouldInjectTranscriptImages } from './generatedImageInteraction';
+import { buildGeneratedImageMembership } from './generatedImageMembership';
 import {
   extractCharacterNameFromPrompt,
   extractImageTitleFromPrompt,
   extractPromptFromPngDataUri,
   normalizeImageLabel,
+  parsePromptBodyFromToken,
 } from './generatedImagePromptMetadata';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
-import { shouldInjectTranscriptImages } from './generatedImageInteraction';
-import { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } from './generatedImageEntities';
-import { buildGeneratedImageMembership } from './generatedImageMembership';
 import {
   callHostGetChatMessages,
   collectChatu8PromptTokens,
@@ -67,25 +72,29 @@ import {
   readChatMessageDetail,
   readHostContext,
 } from './hostBridge';
+import { installHostChatInputBridge } from './hostChatInputBridge';
 import { dispatchHostPrimaryTrigger, type HostGesturePoint } from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import { resolveHostMessageRole } from './hostMessageRole';
-import { isOpeningWorkbenchScopeActive, resolveActiveContainerMessageId } from './containerScope';
+import { createHostVisualHideController } from './hostVisualHide';
 import { getFallbackImageClasses } from './imageFallbackClasses';
+import { createImageGenerationEventBridge, ImageGenerationBridgeHandle } from './imageGenerationEventBridge';
 import { createImagePendingTaskManager } from './imagePendingTaskManager';
 import { createImageRecentIntentStore } from './imageRecentIntent';
 import { chooseImageRenderMode } from './imageRenderPriority';
+import { collectGenerationRevealMessageIds, withLatestUserUnhidden } from './latestUserMacroVisibility';
+import { sendToNativeChat } from './nativeSendProxy';
 import {
   isCurrentOpeningAssistantMessageByPayload,
   isCurrentOpeningSeedMessageByPayload,
   sanitizeInheritedMessageData,
 } from './openingMessageFlags';
-import { sendToNativeChat } from './nativeSendProxy';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
   readNativeFirstImageArtifacts,
   readNativeFirstMembershipEntries,
   readNativeFirstPromptTokens,
+  normalizePromptTokenForCompare,
   type NativeFirstArtifactSource,
   type NativeFirstImageArtifact,
 } from './pluginNativeImageArtifacts';
@@ -110,12 +119,6 @@ import {
   readReaderChatState,
 } from './readerState';
 import { resolveRefreshDomainsForEvent, type RefreshDomain } from './refreshDomains';
-import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
-import { applyTranscriptArtifacts } from './transcriptImagePersistence';
-import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
-import { installHostChatInputBridge } from './hostChatInputBridge';
-import { createHostVisualHideController } from './hostVisualHide';
-import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
 import {
   clearSameLayerRuntimeHeartbeat,
   readSameLayerRuntimeHeartbeat,
@@ -126,11 +129,15 @@ import {
   createSameLayerRuntimeLease,
   isSameLayerRuntimeLeaseRecoverable,
   readSameLayerRuntimeLease,
+  writeSameLayerRuntimeLease,
   type SameLayerRuntimeLease,
   type SameLayerRuntimeLeaseStatus,
-  writeSameLayerRuntimeLease,
 } from './runtimeLeasePersistence';
-import { collectGenerationRevealMessageIds, withLatestUserUnhidden } from './latestUserMacroVisibility';
+import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
+import { installSameLayerSaveGuardian, SaveGuardianHandle, SaveGuardianHealth } from './samelayerSaveGuardian';
+import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
+import { applyTranscriptArtifacts } from './transcriptImagePersistence';
+import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
 import type {
   DemoStatus,
   DemoTheme,
@@ -270,24 +277,133 @@ function normalizeDisplayedHtml(html: string): string {
   );
 }
 
-function buildFinalHtml(renderSource: string, message_id: number, artifactSource?: string): string {
+const RAW_IMAGE_TAG_PATTERN = /<image\b([^>]*)>([\s\S]*?)<\/image>|<image\b([^/>]*)\/\s*>/gi;
+
+/**
+ * 把 raw `<image>` 标签转成安全占位。
+ *
+ * st-chatu8 插件把生成的图片以 `<image>…</image>` 标签写进 `mes` 正文；插件自己在宿主
+ * `.mes_text` 上跑一条 display regex 把这个标签替换成 `<span class="st-chatu8-image-span">…</span>`。
+ * 但我们在同层 iframe 里走的是自己的 `formatAsDisplayedMessage` 管线，插件那条 regex 不会
+ * 命中，结果就是 UI 打开时先短暂地把 `<image></image>` 当字面文本渲染出来，过几百毫秒后
+ * 才被 MutationObserver + `appendChatu8ArtifactsToHtml` 灌进真实的 `<img>`。
+ *
+ * 这里先做一次保底：
+ * - `<image src="...">...</image>` / `<image src="..." />`：提取 src，直接转成 `<img>`。
+ * - 其他 `<image>` 形态（含空标签、无 src）：替换成一个 `st-chatu8-image-pending` 占位
+ *   `<span>`，保证 UI 不会出现 `<image>` 字面字符串，等 MutationObserver 再把真实 img 注入进来。
+ */
+function sanitizeRawImageTagsInHtml(html: string): string {
+  const source = String(html ?? '');
+  if (!source || !source.includes('<image')) return source;
+  return source.replace(
+    RAW_IMAGE_TAG_PATTERN,
+    (match, pairedAttrs: string | undefined, innerHtml: string | undefined, selfClosingAttrs: string | undefined) => {
+      const attrs = String(pairedAttrs ?? selfClosingAttrs ?? '');
+      const srcMatch = attrs.match(/\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/i);
+      const src = String(srcMatch?.[1] ?? srcMatch?.[2] ?? srcMatch?.[3] ?? '').trim();
+      const altMatch = attrs.match(/\balt\s*=\s*(?:"([^"]*)"|'([^']*)'|(\S+))/i);
+      const alt = String(altMatch?.[1] ?? altMatch?.[2] ?? altMatch?.[3] ?? '').trim();
+      if (src) {
+        return `<img class="st-chatu8-image-pending" src="${escapeHtml(src)}" alt="${escapeHtml(alt || 'generated image')}" loading="lazy" />`;
+      }
+      const innerText = String(innerHtml ?? '')
+        .replace(/<[^>]+>/g, '')
+        .trim();
+      const shouldExposeInnerText = innerText && !/^image###/i.test(innerText) && innerText.length <= 64;
+      const placeholderLabel = shouldExposeInnerText ? `正在加载图片：${innerText.slice(0, 32)}` : '正在加载图片…';
+      return `<span class="st-chatu8-image-pending" aria-hidden="true" data-raw-image-tag="true">${escapeHtml(placeholderLabel)}</span>`;
+    },
+  );
+}
+
+function buildFallbackDisplayedHtml(renderSource: string): string {
+  const source = String(renderSource || '(空回复)');
+  const placeholders: Array<{ marker: string; html: string }> = [];
+  const markedSource = source.replace(RAW_IMAGE_TAG_PATTERN, match => {
+    const marker = `__ST_CHATU8_IMAGE_PLACEHOLDER_${placeholders.length}__`;
+    placeholders.push({ marker, html: sanitizeRawImageTagsInHtml(match) });
+    return marker;
+  });
+  let escaped = escapeHtml(markedSource);
+  placeholders.forEach(({ marker, html }) => {
+    escaped = escaped.replaceAll(marker, html);
+  });
+  return `<p>${escaped}</p>`;
+}
+
+/**
+ * 把 LLM 输出里的"剧本运行时标签"整理成用户可读的 HTML，在 `formatAsDisplayedMessage` 之前跑。
+ *
+ * 规则（来自用户明确指示）：
+ * - `<criteria>` / `<option>`：由酒馆 display 正则清理（已经在工作），这里不碰；
+ * - `<thinking>…</thinking>`：折叠成 `<details class="assistant-runtime-thinking">`；
+ * - `<UpdateVariable>…</UpdateVariable>`：折叠成 `<details class="assistant-runtime-variable">`；
+ * - `<content>…</content>`：去壳，只保留内部正文——框架标签留着会阻断浏览器段落解析，
+ *   正文会被挤成一坨，这是"流式完成后正文挤在一堆"的真因；
+ * - `<StatusPlaceHolderImpl/>`：删除（mvu 占位，纯 UI 用）；
+ * - 其他（`<time>`、`<recap>`、`<metacognition>` 等）原样透传，由酒馆正则或浏览器兜底。
+ */
+function sanitizeAssistantRuntimeTagsForDisplay(source: string): string {
+  let out = String(source ?? '');
+  if (!out) return out;
+
+  out = out.replace(
+    /<thinking\b[^>]*>([\s\S]*?)<\/thinking>/gi,
+    (_match, body: string) =>
+      `<details class="assistant-runtime-details assistant-runtime-thinking"><summary>思考过程</summary>${body}</details>`,
+  );
+
+  out = out.replace(
+    /<UpdateVariable\b[^>]*>([\s\S]*?)<\/UpdateVariable>/gi,
+    (_match, body: string) =>
+      `<details class="assistant-runtime-details assistant-runtime-variable"><summary>变量更新</summary>${body}</details>`,
+  );
+
+  // `<content>…</content>` 去壳；保留内部原文 + 换行，不作改动。
+  out = out.replace(/<content\b[^>]*>([\s\S]*?)<\/content>/gi, (_match, body: string) => body);
+
+  // mvu 的 `<StatusPlaceHolderImpl/>` / `<StatusPlaceHolderImpl></StatusPlaceHolderImpl>`：无视觉含义。
+  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
+  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '');
+
+  return out;
+}
+
+function buildFinalHtml(
+  renderSource: string,
+  message_id: number,
+  artifactSource?: string,
+  options: { appendArtifacts?: boolean } = {},
+): string {
   let html = '';
+  // 先做运行时标签净化（<content> 去壳、<thinking>/<UpdateVariable> 折叠、<StatusPlaceHolderImpl/> 删），
+  // 否则未知框架标签会让后续 `<p>` 段落结构错位，正文完成态会被挤成一坨。
+  const sanitizedForRuntime = sanitizeAssistantRuntimeTagsForDisplay(renderSource || '(空回复)');
+  const renderSourceForDisplay = sanitizeRawImageTagsInHtml(sanitizedForRuntime);
   try {
     if (typeof formatAsDisplayedMessage === 'function') {
-      html = normalizeDisplayedHtml(formatAsDisplayedMessage(renderSource || '(空回复)', { message_id }));
+      // 先清洗 raw `<image>`，否则 Tavern formatter 会把它解析成无 src 的空 <img>，后续就无法识别了。
+      html = normalizeDisplayedHtml(formatAsDisplayedMessage(renderSourceForDisplay, { message_id }));
     }
   } catch {
     // ignore
   }
   if (!html) {
-    html = normalizeDisplayedHtml(`<p>${escapeHtml(renderSource || '(空回复)')}</p>`);
+    html = normalizeDisplayedHtml(buildFallbackDisplayedHtml(sanitizedForRuntime));
   }
-  return applyTranscriptArtifacts({
+  // 保底把裸露的 `<image></image>` 转成占位或 <img>；不然它会被 v-html 当字面文本渲染。
+  html = sanitizeRawImageTagsInHtml(html);
+  if (options.appendArtifacts === false) {
+    return stripVisibleChatu8PromptTokensHtml(html);
+  }
+  const htmlWithArtifacts = applyTranscriptArtifacts({
     html,
     renderSource: artifactSource ?? renderSource,
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
+  return stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts);
 }
 
 function readChatu8CacheEntries(messageId?: number | null): unknown[] {
@@ -385,26 +501,40 @@ function createGeneratedImageFigureHtml(
   return `<figure class="${className}"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}><img${imgSrcAttr} alt="${escapeHtml(image.alt || 'generated image')}" loading="lazy"${messageIdAttr}${markerIdAttr}${promptTokenAttr}${requestIdAttr}${imageSrcAttr}></figure>`;
 }
 
-function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
-  const message = readChatMessageDetail(messageId);
-  const extraImages = _.get(message, 'extra.images', null);
+function isChatu8ImageRecord(input: unknown): input is Record<string, any> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  return ['src', 'image', 'imageData', 'path', 'url', 'prompt', 'tag', 'promptToken', 'requestId', 'request_id'].some(
+    key => Object.prototype.hasOwnProperty.call(input, key),
+  );
+}
+
+function flattenChatu8ImageRecords(input: unknown): Record<string, any>[] {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.flatMap(item => flattenChatu8ImageRecords(item));
+  if (isChatu8ImageRecord(input)) return [input];
+  if (typeof input === 'object') return Object.values(input as Record<string, unknown>).flatMap(flattenChatu8ImageRecords);
+  return [];
+}
+
+function collectSelectedChatu8ImageEntries(message: any): Record<string, any>[] {
   const rawSwipeId = Number(_.get(message, 'swipe_id', null));
   const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : null;
+  const sources = [
+    _.get(message, 'extra.images', null),
+    swipeId != null && swipeId >= 0 ? _.get(message, ['swipe_info', swipeId, 'images'], null) : null,
+  ];
 
-  let selectedEntries: any[] = [];
-  if (Array.isArray(extraImages)) {
-    if (swipeId != null && swipeId >= 0 && Array.isArray(extraImages[swipeId]) && extraImages[swipeId].length > 0) {
-      selectedEntries = extraImages[swipeId] as any[];
-    } else if (extraImages.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
-      selectedEntries = extraImages as any[];
-    } else {
-      selectedEntries = extraImages.flatMap(item => (Array.isArray(item) ? item : []));
-    }
-  } else if (extraImages && typeof extraImages === 'object') {
-    selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item =>
-      Array.isArray(item) ? item : [item],
-    );
+  for (const source of sources) {
+    const entries = flattenChatu8ImageRecords(source);
+    if (entries.length > 0) return entries;
   }
+
+  return [];
+}
+
+function readChatu8ExtraImages(messageId: number): RenderableGeneratedImage[] {
+  const message = readChatMessageDetail(messageId);
+  const selectedEntries = collectSelectedChatu8ImageEntries(message);
 
   const out: RenderableGeneratedImage[] = [];
   const seen = new Set<string>();
@@ -605,9 +735,22 @@ function injectGeneratedImagesIntoHtml(
   const insertionRefs = new Map<HTMLElement, HTMLElement>();
   const fallbackFigures: HTMLElement[] = [];
   const appendUnanchoredToEnd = options.appendUnanchoredToEnd !== false;
+  const rawImagePlaceholders = Array.from(doc.body.querySelectorAll('[data-raw-image-tag="true"]')).map(node => {
+    const element = node as HTMLElement;
+    const parent = element.parentElement;
+    const parentOnlyContainsPlaceholder =
+      parent?.tagName === 'P' &&
+      normalizeAnchorText(parent.textContent ?? '') === normalizeAnchorText(element.textContent ?? '');
+    return parentOnlyContainsPlaceholder ? parent : element;
+  });
 
   for (const image of images) {
     const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
+    const placeholderTarget = rawImagePlaceholders.shift();
+    if (placeholderTarget) {
+      placeholderTarget.replaceWith(figure);
+      continue;
+    }
     const anchor = image.anchorText ? resolveInlineAnchorTarget(doc.body, image.anchorText) : null;
     if (!anchor) {
       if (appendUnanchoredToEnd) fallbackFigures.push(figure);
@@ -628,6 +771,7 @@ function injectGeneratedImagesIntoHtml(
 function appendChatu8ArtifactsToHtml(html: string, renderSource: string, messageId: number): string {
   const promptTokens = collectChatu8PromptTokens(renderSource);
   const promptTokenSet = new Set(promptTokens);
+  const promptTokenCompareSet = new Set(promptTokens.map(normalizePromptTokenForCompare).filter(Boolean));
   const iframeRoots = resolveIframeAssistantRoots(messageId);
   const nativeFirstImages = readNativeFirstRenderableImagesForMessage({
     messageId,
@@ -654,27 +798,34 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
         : [];
 
   const existingSources = collectImageSourceIdentitiesFromHtml(html);
-  const extraSources = new Set<string>();
-  for (const img of nativeFirstImages) {
+  const pluginNativeSources = new Set<string>();
+  for (const img of pluginNativeImages) {
     const s = normalizeImageSrcForCompare(img.src);
-    if (s) extraSources.add(s);
+    if (s) pluginNativeSources.add(s);
   }
   const dedupedImages: RenderableGeneratedImage[] = [];
   const seenSources = new Set<string>();
   for (const image of images) {
     const normalizedSrc = normalizeImageSrcForCompare(image.src);
     if (!normalizedSrc || existingSources.has(image.src) || seenSources.has(normalizedSrc)) continue;
-    if (image.promptToken && promptTokenSet.size > 0 && !promptTokenSet.has(image.promptToken)) continue;
+    if (
+      image.promptToken &&
+      promptTokenSet.size > 0 &&
+      !promptTokenSet.has(image.promptToken) &&
+      !promptTokenCompareSet.has(normalizePromptTokenForCompare(image.promptToken))
+    ) {
+      continue;
+    }
     // Also skip if this src is already covered by extraImages (plugin-native path).
     // This prevents duplicate injection when extra images are managed by the
     // image strip but were temporarily missing from existingSources (DOM not yet updated).
-    if (extraSources.has(normalizedSrc)) continue;
+    if (image.source === 'cache' && pluginNativeSources.has(normalizedSrc)) continue;
     seenSources.add(normalizedSrc);
     dedupedImages.push(image);
   }
 
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
-    appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
+    appendUnanchoredToEnd: renderMode !== 'plugin-native-data' || hasPluginNativeArtifacts !== true,
   });
   return htmlWithImages;
 }
@@ -875,6 +1026,27 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
     });
   };
 
+  function resolvePluginGeneratedImageForButton(button: HTMLElement): HTMLImageElement | null {
+    let sibling = button.nextElementSibling;
+    while (sibling) {
+      if (sibling.matches?.(CHATU8_IMAGE_BUTTON_SELECTOR)) return null;
+      if (sibling.tagName === 'IMG') return sibling as HTMLImageElement;
+      const nestedImage = sibling.querySelector?.('img') as HTMLImageElement | null;
+      if (nestedImage) return nestedImage;
+      sibling = sibling.nextElementSibling;
+    }
+
+    const parent = button.parentElement;
+    if (!parent) return null;
+    const images = Array.from(parent.querySelectorAll('img')) as HTMLImageElement[];
+    return (
+      images.find(image => {
+        const source = image.getAttribute('src') ?? image.currentSrc;
+        return Boolean(source && (source.startsWith('data:image') || source.startsWith('blob:')));
+      }) ?? null
+    );
+  }
+
   const allRoots = new Set<HTMLElement>();
   for (const root of resolveIframeAssistantRoots(messageId)) {
     allRoots.add(root);
@@ -926,6 +1098,24 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
             extractAnchorTextForImageNode(image, container),
           );
         }
+      }
+    }
+  }
+
+  for (const root of allRoots) {
+    const buttons = Array.from(root.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
+    for (const button of buttons) {
+      const image = resolvePluginGeneratedImageForButton(button);
+      if (!image) continue;
+      const src = image.getAttribute('src') ?? image.currentSrc;
+      if (src && (src.startsWith('data:image') || src.startsWith('blob:'))) {
+        pushImage(
+          src,
+          image.getAttribute('alt') ?? image.getAttribute('title'),
+          button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '',
+          button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '',
+          extractAnchorTextForImageNode(image, root),
+        );
       }
     }
   }
@@ -1012,6 +1202,42 @@ function buildGeneratedImageRefsForMessage(input: {
     nativeImages: nativeRenderableImages,
   });
   const readyEntities = filterReadyGeneratedImageEntities(entities);
+
+  if (readyEntities.length === 0 && hostDomArtifacts.length > 0) {
+    return hostDomArtifacts
+      .map((image, index): GeneratedImageRef | null => {
+        const src = normalizeImageSrcForCompare(image.src);
+        if (!src) return null;
+        const promptToken = String(image.promptToken ?? '').trim();
+        const anchorText = String(image.anchorText ?? '').trim();
+        const metadataPrompt = promptToken ? '' : extractPromptFromPngDataUri(src);
+        const promptForLabel = promptToken || metadataPrompt;
+        const title =
+          pickFirstNonEmpty(
+            extractImageTitleFromPrompt(promptForLabel),
+            extractTitleFromAnchor(anchorText),
+            extractTitleFromSrc(src),
+            extractCharacterNameFromPrompt(promptForLabel),
+            `楼层 #${messageId} · 图 ${index + 1}`,
+          ) || `楼层 #${messageId} · 图 ${index + 1}`;
+        const characterName = extractCharacterNameFromPrompt(promptForLabel);
+        return {
+          id: `host-dom-${messageId}-${image.requestId ?? index}-${index}`,
+          messageId,
+          markerId: image.markerId,
+          imageId: image.imageId ?? image.requestId ?? src,
+          promptToken,
+          requestId: image.requestId,
+          anchorText: anchorText || undefined,
+          title,
+          characterName: characterName || undefined,
+          createdOrder: createdOrderBase * 100 + index,
+          src,
+          alt: image.alt,
+        };
+      })
+      .filter((image): image is GeneratedImageRef => image !== null);
+  }
 
   return readyEntities.map((entity, index) => {
     const promptToken = entity.promptToken;
@@ -1156,7 +1382,8 @@ function bindHostPluginMutationObservers(onRelevantMutation: (records: MutationR
       childList: true,
       subtree: true,
       characterData: true,
-      attributes: false,
+      attributes: true,
+      attributeFilter: ['src'],
     });
     observers.push(observer);
   }
@@ -1213,7 +1440,8 @@ async function buildOpeningCompiledUserInput(
   },
 ) {
   const context = buildOpeningPromptContext(preset, payload);
-  const compiledTemplate = compileOpeningPromptTemplate(String(openingPromptTemplateRaw ?? '').trim(), context);
+  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id);
+  const compiledTemplate = compileOpeningPromptTemplate(String(templateRaw ?? '').trim(), context);
   const resolveExplicitMacros = () =>
     typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
 
@@ -1237,10 +1465,11 @@ function buildTranscriptItem(input: {
   canReroll?: boolean;
   latestAssistantId: number | null;
   status: DemoStatus;
+  busy: boolean;
 }): TranscriptItem {
-  const isDemoAssistant = input.role === 'assistant' && isStreamDemoMessage(input.raw);
-  const structuredOptions = input.role === 'assistant' ? extractOpeningOptions(input.raw) : [];
-  const hasStructuredContent = input.role === 'assistant' && /<content(?:\s[^>]*)?>/i.test(input.raw);
+  const isDemoAssistant = isStreamDemoMessage(input.raw);
+  const structuredOptions = extractOpeningOptions(input.raw);
+  const hasStructuredContent = /<content(?:\s[^>]*)?>/i.test(input.raw);
   const phase = isDemoAssistant ? extractStreamDemoPhase(input.raw) : 'plain';
   const content = isDemoAssistant
     ? extractStreamDemoContent(input.raw)
@@ -1261,12 +1490,20 @@ function buildTranscriptItem(input: {
     renderSource,
     strippedRenderSource,
   });
-  const streamRenderSource = isDemoAssistant ? content : displayRenderSource;
   const regexText = applyRegexForDisplay(displayRenderSource, input.role);
-  const streamHtml = isDemoAssistant
-    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)
-    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);
-  const finalHtml = buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);
+  const isCurrentStreamingItem =
+    input.latestAssistantId === input.id &&
+    (input.status === 'streaming' || (input.busy === true && phase === 'stream'));
+  // 流式态组件用 `<pre v-text>` 渲染，纯文本来自 regexText；streamHtml 不再参与渲染。
+  const streamHtml = '';
+  // finalHtml 无条件都构造：即使当前项处于流式，我们也要留一份能用的 finalHtml，
+  // 否则 `syncTranscriptFlags` 将一个"曾经是最新"的条目翻成 `isStreaming: false` 时，
+  // 该条目会落回 `<div v-html="finalHtml || '(空回复)'">`，显示空回复。
+  // 流式中走 `<pre v-text>`，v-html 这份 finalHtml 不会被实时渲染，成本主要是 formatAsDisplayedMessage；
+  // 用 `appendArtifacts: false` 跳过跨 iframe 扫描和 HTMLDocument parse 这一重头。
+  const finalHtml = isCurrentStreamingItem
+    ? buildFinalHtml(displayRenderSource, input.id, input.raw, { appendArtifacts: false })
+    : buildFinalHtml(displayRenderSource, input.id, input.raw);
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -1287,7 +1524,7 @@ function buildTranscriptItem(input: {
     hidden: input.hidden,
     phase,
     isLatest: input.latestAssistantId === input.id,
-    isStreaming: input.latestAssistantId === input.id && (input.status === 'streaming' || phase === 'stream'),
+    isStreaming: isCurrentStreamingItem,
     canOpenDetail: true,
     canDeleteFrom: input.isOpening !== true,
     canReroll: input.canReroll === true,
@@ -1296,6 +1533,16 @@ function buildTranscriptItem(input: {
 
 function sortTranscriptItems(items: TranscriptItem[]): TranscriptItem[] {
   return items.slice().sort((a, b) => a.message_id - b.message_id);
+}
+
+function shouldTreatLatestAssistantAsStreaming(input: {
+  isLatest: boolean;
+  status: DemoStatus;
+  phase: TranscriptItem['phase'];
+  busy: boolean;
+}): boolean {
+  if (input.isLatest !== true) return false;
+  return input.status === 'streaming' || (input.busy === true && input.phase === 'stream');
 }
 
 function clipTranscriptItemsForUi(items: TranscriptItem[]): TranscriptItem[] {
@@ -1362,9 +1609,9 @@ export function useStreamingDemo() {
       ? installDebugTraceRuntime({ target: window as any, maxEvents: 500 })
       : createDebugTraceStore({ enabled: false });
 
-  function debugConsoleLog(message: string, detail: Record<string, unknown> = {}) {
+  function debugConsoleLog(message: string, detail: Record<string, unknown> | (() => Record<string, unknown>) = {}) {
     if (!debugTraceRuntime.enabled) return;
-    console.debug(message, detail);
+    console.debug(message, typeof detail === 'function' ? detail() : detail);
   }
 
   let patchQueue = Promise.resolve();
@@ -1401,6 +1648,21 @@ export function useStreamingDemo() {
   const hostVisualHideController = createHostVisualHideController();
   let destroyHostChatInputBridge = () => {};
   let sameLayerDisableRequested = false;
+  // 保存守护器句柄：onMounted 时安装，unmount 时拆掉。
+  let saveGuardian: SaveGuardianHandle | null = null;
+  // 图片生成事件桥：监听插件 `generate-image-request/response`，失败时弹 toast。
+  let imageGenerationBridge: ImageGenerationBridgeHandle | null = null;
+  // 最近一次生图失败的 toast 节流，避免插件连发多条失败时刷屏。
+  let lastImageGenFailureToastAt = 0;
+  const IMAGE_GEN_FAILURE_TOAST_MIN_INTERVAL_MS = 5_000;
+  // 节流过的 toast：一次连续失败只弹一次，避免刷屏。
+  let lastSaveFailureToastAt = 0;
+  const SAVE_FAILURE_TOAST_MIN_INTERVAL_MS = 30_000;
+  // reactive，给模板用来点亮 FAB 红点（`saveHealthIsFailing.value`）。
+  const saveHealthIsFailing = ref(false);
+  const saveHealthLastFailedAt = ref<number | null>(null);
+  const saveHealthLastSucceededAt = ref<number | null>(null);
+  const saveHealthConsecutiveFailures = ref(0);
 
   const mvuSourceRevision = ref(0);
   const reprocessVariablesPending = ref(false);
@@ -1415,18 +1677,21 @@ export function useStreamingDemo() {
   function recordLifecycleTrace(
     scope: string,
     event: string,
-    payload: Record<string, unknown> = {},
-    traceId = resolveTraceId(scope),
+    payload: Record<string, unknown> | (() => Record<string, unknown>) = {},
+    traceId?: string,
   ) {
+    if (!debugTraceRuntime.enabled) return null;
+    const resolvedPayload = typeof payload === 'function' ? payload() : payload;
+    const resolvedTraceId = traceId ?? resolveTraceId(scope);
     const entry = recordDebugTrace(debugTraceRuntime, {
-      traceId,
+      traceId: resolvedTraceId,
       scope,
       event,
       payload: {
         busy: busy.value,
         status: status.value,
         assistantMessageId: assistantMessageId.value,
-        ...payload,
+        ...resolvedPayload,
       },
     });
     if (entry) {
@@ -1486,26 +1751,7 @@ export function useStreamingDemo() {
   }
 
   function collectSelectedExtraImageEntries(message: any): Record<string, any>[] {
-    const extraImages = _.get(message, 'extra.images', null);
-    const rawSwipeId = Number(_.get(message, 'swipe_id', null));
-    const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : null;
-
-    let selectedEntries: any[] = [];
-    if (Array.isArray(extraImages)) {
-      if (swipeId != null && swipeId >= 0 && Array.isArray(extraImages[swipeId]) && extraImages[swipeId].length > 0) {
-        selectedEntries = extraImages[swipeId] as any[];
-      } else if (extraImages.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
-        selectedEntries = extraImages as any[];
-      } else {
-        selectedEntries = extraImages.flatMap(item => (Array.isArray(item) ? item : []));
-      }
-    } else if (extraImages && typeof extraImages === 'object') {
-      selectedEntries = Object.values(extraImages as Record<string, unknown>).flatMap(item =>
-        Array.isArray(item) ? item : [item],
-      );
-    }
-
-    return selectedEntries.filter((entry): entry is Record<string, any> => Boolean(entry) && typeof entry === 'object');
+    return collectSelectedChatu8ImageEntries(message);
   }
 
   function buildHostImageDataSignature(message: any): string {
@@ -1756,22 +2002,48 @@ export function useStreamingDemo() {
       ...(openingPayload.value.form_values ?? {}),
     } as Record<string, string>;
 
-    for (const field of openingPreset.value.form_schema) {
+    const currentWorldModeId =
+      String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
+    const effectiveSchema = getEffectiveFormSchema(openingPreset.value, currentWorldModeId);
+    const effectiveDefaultMeta = getEffectiveDefaultMeta(openingPreset.value, currentWorldModeId);
+
+    for (const field of effectiveSchema) {
       const key = field.key;
       const currentValue = String(nextFormValues[key] ?? '').trim();
-      const fallbackValue = String(fallback.form_values?.[key] ?? '').trim();
+      const fallbackValue =
+        String(field.default_value ?? '').trim() || String(fallback.form_values?.[key] ?? '').trim();
       if (!currentValue && fallbackValue) {
         nextFormValues[key] = fallbackValue;
         changed = true;
       }
     }
 
-    const nextWorldModeId =
-      String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
+    const nextWorldModeId = currentWorldModeId;
     const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || String(fallback.route_id ?? '').trim();
+
+    const currentMeta = openingPayload.value.meta ?? { time: '', location: '', character: '' };
+    let metaChanged = false;
+    const nextMeta = {
+      character: String(currentMeta.character ?? '').trim(),
+      time: String(currentMeta.time ?? '').trim(),
+      location: String(currentMeta.location ?? '').trim(),
+    };
+    if (!nextMeta.character && effectiveDefaultMeta.character) {
+      nextMeta.character = effectiveDefaultMeta.character;
+      metaChanged = true;
+    }
+    if (!nextMeta.time && effectiveDefaultMeta.time) {
+      nextMeta.time = effectiveDefaultMeta.time;
+      metaChanged = true;
+    }
+    if (!nextMeta.location && effectiveDefaultMeta.location) {
+      nextMeta.location = effectiveDefaultMeta.location;
+      metaChanged = true;
+    }
 
     if (
       changed ||
+      metaChanged ||
       nextWorldModeId !== String(openingPayload.value.world_mode_id ?? '').trim() ||
       nextRouteId !== String(openingPayload.value.route_id ?? '').trim()
     ) {
@@ -1779,6 +2051,7 @@ export function useStreamingDemo() {
         ...openingPayload.value,
         world_mode_id: nextWorldModeId,
         route_id: nextRouteId,
+        meta: nextMeta,
         form_values: nextFormValues,
       };
       persistOpeningPayloadNow();
@@ -1889,13 +2162,38 @@ export function useStreamingDemo() {
 
   function updateOpeningWorldMode(value: string) {
     const worldMode = getOpeningWorldMode(value) ?? openingWorldModes[0] ?? null;
+    const nextWorldModeId = worldMode?.id || value;
     const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '';
     const shouldResetResult = openingPayload.value.state === 'ready';
+
+    const effectiveSchema = getEffectiveFormSchema(openingPreset.value, nextWorldModeId);
+    const effectiveDefaults = getEffectiveDefaultMeta(openingPreset.value, nextWorldModeId);
+    const currentFormValues = openingPayload.value.form_values ?? {};
+    const nextFormValues: Record<string, string> = {};
+    effectiveSchema.forEach(field => {
+      const key = field.key;
+      const existing = String(currentFormValues[key] ?? '').trim();
+      nextFormValues[key] = existing || String(field.default_value ?? '').trim();
+    });
+
+    const currentMeta = openingPayload.value.meta ?? {
+      time: '',
+      location: '',
+      character: '',
+    };
+    const nextMeta = {
+      character: String(currentMeta.character ?? '').trim() || effectiveDefaults.character,
+      time: String(currentMeta.time ?? '').trim() || effectiveDefaults.time,
+      location: String(currentMeta.location ?? '').trim() || effectiveDefaults.location,
+    };
+
     openingPayload.value = {
       ...openingPayload.value,
       state: shouldResetResult ? 'configuring' : openingPayload.value.state,
-      world_mode_id: worldMode?.id || value,
+      world_mode_id: nextWorldModeId,
       route_id: nextRouteId,
+      meta: nextMeta,
+      form_values: nextFormValues,
     };
     queuePersistOpeningPayload();
   }
@@ -2155,12 +2453,21 @@ export function useStreamingDemo() {
   }
 
   function syncTranscriptFlags(items: TranscriptItem[]): TranscriptItem[] {
-    return items.map(item => ({
-      ...item,
-      isLatest: assistantMessageId.value === item.message_id,
-      isStreaming:
-        assistantMessageId.value === item.message_id && (status.value === 'streaming' || item.phase === 'stream'),
-    }));
+    return items.map(item => {
+      const isLatest = assistantMessageId.value === item.message_id;
+      const isStreaming = shouldTreatLatestAssistantAsStreaming({
+        isLatest,
+        status: status.value,
+        phase: item.phase,
+        busy: busy.value,
+      });
+      if (item.isLatest === isLatest && item.isStreaming === isStreaming) return item;
+      return {
+        ...item,
+        isLatest,
+        isStreaming,
+      };
+    });
   }
 
   function createLocalTranscriptItem(input: {
@@ -2178,6 +2485,7 @@ export function useStreamingDemo() {
       isOpening: input.isOpening,
       latestAssistantId: assistantMessageId.value,
       status: status.value,
+      busy: busy.value,
     });
   }
 
@@ -2235,8 +2543,9 @@ export function useStreamingDemo() {
           hidden: hostMessage?.is_hidden === true,
           isOpening: existingItem?.isOpening ?? isOpeningResult,
           canReroll: existingItem?.canReroll ?? false,
-          latestAssistantId: null,
+          latestAssistantId: assistantMessageId.value,
           status: status.value,
+          busy: busy.value,
         }),
       );
       refreshedCount += 1;
@@ -2480,6 +2789,10 @@ export function useStreamingDemo() {
     sameLayerDisableRequested = true;
     destroyHostChatInputBridge();
     destroyHostChatInputBridge = () => {};
+    saveGuardian?.uninstall();
+    saveGuardian = null;
+    imageGenerationBridge?.uninstall();
+    imageGenerationBridge = null;
     hostVisualHideController.destroy();
     stopRuntimeLeaseHeartbeat();
     writeRuntimeLeaseStatus('closing');
@@ -2959,6 +3272,15 @@ export function useStreamingDemo() {
       const normalized: TranscriptItem[] = [];
       let nextLatestAssistantId: number | null = null;
 
+      // 先扫一遍确定最新的 assistant 楼层 id，避免 buildTranscriptItem 里
+      // `latestAssistantId === id` 判定在流式/重建路径上早于 assistantMessageId 被写回而错失 streamHtml。
+      type NormalizedEntry = {
+        id: number;
+        message: any;
+        role: TranscriptItem['role'];
+        isOpeningResult: boolean;
+      };
+      const normalizedEntries: NormalizedEntry[] = [];
       for (const message of all) {
         const message_id = Number(message?.message_id);
         if (!Number.isFinite(message_id)) continue;
@@ -2973,17 +3295,21 @@ export function useStreamingDemo() {
           isOpeningResult,
         });
         if (role === 'assistant') nextLatestAssistantId = id;
+        normalizedEntries.push({ id, message, role, isOpeningResult });
+      }
 
+      for (const entry of normalizedEntries) {
         normalized.push(
           buildTranscriptItem({
-            id,
-            role,
-            raw: String(message?.message ?? ''),
-            hidden: message?.is_hidden === true,
-            isOpening: isOpeningResult,
-            canReroll: isOpeningResult && canRerollOpeningFromMessages(all),
-            latestAssistantId: null,
+            id: entry.id,
+            role: entry.role,
+            raw: String(entry.message?.message ?? ''),
+            hidden: entry.message?.is_hidden === true,
+            isOpening: entry.isOpeningResult,
+            canReroll: entry.isOpeningResult && canRerollOpeningFromMessages(all),
+            latestAssistantId: nextLatestAssistantId,
             status: status.value,
+            busy: busy.value,
           }),
         );
       }
@@ -3188,13 +3514,13 @@ export function useStreamingDemo() {
         recordLifecycleTrace(
           'patchAssistantMessage',
           'commit_done',
-          {
+          () => ({
             phase,
             sequence,
             messageId,
             nextSignature,
             transcriptAssistantSummary: summarizeTranscriptForDebug(transcript.value),
-          },
+          }),
           traceId,
         );
       } catch (error) {
@@ -3492,6 +3818,11 @@ export function useStreamingDemo() {
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
+      // 把"done patch + MVU reprocess + 官方生命周期事件"合成一次显式 save。
+      // 默认情况下这些步骤各自都会调用 saveChatConditionalDebounced，debounce 1s 才落盘；
+      // 如果用户在那一秒内刷新页面，保存就丢了。显式 await saveChat 可以保证 jsonl 已经写入，
+      // 并让守护器通过 fetch hook 判断本次保存真正成功还是撞 EPERM。
+      await flushExplicitChatSave('generation_done');
       recordLifecycleTrace(
         'runGenerationFlow',
         'done',
@@ -3528,6 +3859,7 @@ export function useStreamingDemo() {
         try {
           cancelScheduledStreamTranscriptPatch();
           await patchAssistantMessage('done');
+          await flushExplicitChatSave('generation_error');
         } catch {
           // ignore
         }
@@ -3799,7 +4131,7 @@ export function useStreamingDemo() {
       return;
     }
 
-    const missing = openingPreset.value.form_schema.find(
+    const missing = getEffectiveFormSchema(openingPreset.value, openingPayload.value.world_mode_id).find(
       field => field.required && !String(openingPayload.value.form_values[field.key] ?? '').trim(),
     );
     if (missing) {
@@ -4067,6 +4399,40 @@ export function useStreamingDemo() {
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
 
+      // 装保存守护器：一次 fetch 劫持，所有 ST 的 /api/chats/save 失败都会被记录 + toast。
+      saveGuardian = installSameLayerSaveGuardian({
+        onStateChange: handleSaveGuardianHealth,
+      });
+
+      // 装图片生成事件桥：插件 `generate-image-response` 失败时把错误 surface 给用户。
+      // 插件内部的 zip 解析失败（"Can't read the data of 'the loaded zip file'"）此前只会 console.error，
+      // 桥装上后能稳定显示一条 toast 并清理 pending，不再让用户对着占位图空等。
+      if (typeof eventOn === 'function' && typeof eventRemoveListener === 'function') {
+        imageGenerationBridge = createImageGenerationEventBridge({
+          eventOn: (name, handler) => eventOn(name as any, handler as any),
+          eventRemoveListener: (name, handler) => eventRemoveListener(name as any, handler as any),
+          onResponseFailure: ({ requestId, prompt }) => {
+            recordLifecycleTrace('imageGenerationEventBridge', 'on_response_failure', () => ({
+              requestId,
+              promptHead: prompt.slice(0, 60),
+            }));
+          },
+          notifyError: message => {
+            const now = Date.now();
+            if (now - lastImageGenFailureToastAt < IMAGE_GEN_FAILURE_TOAST_MIN_INTERVAL_MS) return;
+            lastImageGenFailureToastAt = now;
+            try {
+              toastr?.warning?.(message, '生图失败', { timeOut: 7000 });
+            } catch {
+              // toastr not ready yet
+            }
+          },
+          recordTrace: (scope, event, payload) => {
+            recordLifecycleTrace(scope, event, () => payload);
+          },
+        });
+      }
+
       await restoreHideState();
       writeRuntimeLeaseStatus('booting');
       writeRuntimeLeaseStatus('active');
@@ -4152,6 +4518,50 @@ export function useStreamingDemo() {
     writeRuntimeLeaseStatus('suspended');
   }
 
+  function handleSaveGuardianHealth(health: SaveGuardianHealth) {
+    saveHealthIsFailing.value = health.status !== 'healthy';
+    saveHealthLastFailedAt.value = health.lastFailedAt;
+    saveHealthLastSucceededAt.value = health.lastSucceededAt;
+    saveHealthConsecutiveFailures.value = health.consecutiveFailures;
+
+    if (health.status === 'healthy') {
+      lastSaveFailureToastAt = 0;
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastSaveFailureToastAt < SAVE_FAILURE_TOAST_MIN_INTERVAL_MS) return;
+    lastSaveFailureToastAt = now;
+    try {
+      const latest = health.recentFailures[health.recentFailures.length - 1];
+      const statusText =
+        latest?.status === 'network' ? `网络错误：${latest.statusText ?? ''}` : `HTTP ${latest?.status ?? 'unknown'}`;
+      toastr?.warning?.(
+        `聊天保存失败（${statusText}）。最近生成 / 图片可能在刷新后丢失，建议检查杀软 / OneDrive 占用并重试。`,
+        '同层聊天保存异常',
+        { timeOut: 8000 },
+      );
+    } catch {
+      // toastr not ready yet
+    }
+    recordLifecycleTrace('saveGuardian', 'failure_observed', () => ({
+      consecutiveFailures: health.consecutiveFailures,
+      lastFailure: health.recentFailures[health.recentFailures.length - 1],
+    }));
+  }
+
+  async function flushExplicitChatSave(reason: string): Promise<boolean> {
+    if (!saveGuardian) return false;
+    const succeeded = await saveGuardian.requestExplicitSave(reason);
+    recordLifecycleTrace('saveGuardian', 'explicit_save_attempted', () => ({
+      reason,
+      succeeded,
+      lastFailedAt: saveGuardian?.health.lastFailedAt ?? null,
+      lastSucceededAt: saveGuardian?.health.lastSucceededAt ?? null,
+    }));
+    return succeeded;
+  }
+
   onBeforeUnmount(() => {
     if (isOpeningWorkbenchHostActive() && sameLayerDisableRequested !== true) {
       persistHideStateNow('unmount');
@@ -4180,6 +4590,12 @@ export function useStreamingDemo() {
     destroyHostChatInputBridge = () => {};
     hostVisualHideController.destroy();
     stopRuntimeLeaseHeartbeat();
+    const unmountContainerId = getActiveContainerMessageId();
+    if (unmountContainerId != null) clearSameLayerRuntimeHeartbeat(unmountContainerId);
+    saveGuardian?.uninstall();
+    saveGuardian = null;
+    imageGenerationBridge?.uninstall();
+    imageGenerationBridge = null;
   });
 
   type GalleryGroup = { messageId: number; images: GeneratedImageRef[] };
@@ -4210,7 +4626,6 @@ export function useStreamingDemo() {
 
     const groups: GalleryGroup[] = [];
     for (const item of transcript.value) {
-      if (item.role !== 'assistant') continue;
       const images = buildGeneratedImageRefsForMessage({
         messageId: item.message_id,
         rawMessage: item.raw,
@@ -4323,6 +4738,10 @@ export function useStreamingDemo() {
     }
   }
 
+  function refreshGalleryImages(reason = 'gallery.manual_refresh') {
+    scheduleUiRefresh(['gallery'], reason);
+  }
+
   return {
     input,
     busy,
@@ -4370,6 +4789,7 @@ export function useStreamingDemo() {
     loadingOlderGalleryImages,
     hasMoreOlderGalleryImages,
     loadOlderGalleryImages,
+    refreshGalleryImages,
     submitPromptViaSameLayer,
     disableSameLayerUi,
     beginPendingImageTask,
@@ -4404,5 +4824,11 @@ export function useStreamingDemo() {
     ensureHostMesTextRendered,
     triggerImageGenerationForMessage,
     calibrateDailyRollDate,
+    // 保存守护器状态 + 手动重试入口（给 FAB 红点 / 菜单上的"重试保存"按钮用）
+    saveHealthIsFailing,
+    saveHealthLastFailedAt,
+    saveHealthLastSucceededAt,
+    saveHealthConsecutiveFailures,
+    requestExplicitSave: async (reason = 'manual') => flushExplicitChatSave(reason),
   };
 }

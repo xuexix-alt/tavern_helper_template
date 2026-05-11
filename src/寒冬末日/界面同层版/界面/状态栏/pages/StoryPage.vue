@@ -7,8 +7,18 @@
   >
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
-        <span class="ui-dot"></span>
+        <span class="ui-dot" :class="{ 'save-failing': saveHealthIsFailing }"></span>
         <span class="ui-brand-copy">EDEN-STAR</span>
+        <button
+          v-if="saveHealthIsFailing"
+          type="button"
+          class="ui-save-retry-chip clip-corner-sm"
+          :disabled="saveRetryBusy"
+          title="最近一次聊天保存失败；点此再存一次"
+          @click="retrySameLayerSave"
+        >
+          {{ saveRetryBusy ? '正在重存…' : '保存失败' }}
+        </button>
       </div>
 
       <div class="ui-topbar-actions">
@@ -125,6 +135,7 @@
             @select-character="handleRoleSelect"
             @select-role-portrait="selectRolePortraitForRole"
             @add-role-portrait-set-image="addRolePortraitSetImageForRole"
+            @clear-role-portrait="clearRolePortraitForRole"
             @portrait-error="handleRolePortraitError"
             @calibrate-daily-roll="calibrateDailyRollDate"
             @collapse="closeRoleDrawer"
@@ -150,12 +161,21 @@
             :has-more-older="hasMoreOlderGalleryImages"
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
+            @assign-role="openGalleryRoleAssignPicker"
             @jump-message="jumpToTranscriptMessage"
             @load-older="loadOlderGalleryImages"
             @close="closeGalleryDrawer"
           />
         </div>
       </aside>
+
+      <GalleryImageRoleAssignPicker
+        v-if="galleryRoleAssignEntry"
+        :entry="galleryRoleAssignEntry"
+        :roles="galleryRoleAssignRoleOptions"
+        @assign="assignGalleryImageToRole"
+        @close="closeGalleryRoleAssignPicker"
+      />
 
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
@@ -416,6 +436,8 @@ import BottomComposer from '../components/BottomComposer.vue';
 import ComponentLibraryPanel from '../components/ComponentLibraryPanel.vue';
 import HudModal from '../components/HudModal.vue';
 import ImageGalleryPanel from '../components/ImageGalleryPanel.vue';
+import GalleryImageRoleAssignPicker from '../components/GalleryImageRoleAssignPicker.vue';
+import type { GalleryImageRoleAssignRoleOption } from '../components/GalleryImageRoleAssignPicker.vue';
 import MapBusinessPanel from '../components/MapBusinessPanel.vue';
 import MessageDetailModal from '../components/MessageDetailModal.vue';
 import MvuRolePanel from '../components/MvuRolePanel.vue';
@@ -454,6 +476,7 @@ import { useMvuRoleStore } from '../mvuRoleStore';
 import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
 import {
   addRolePortraitSetImage,
+  clearRolePortraitOverride,
   readRolePortraitOverrides,
   setPrimaryRolePortraitOverride,
   writeRolePortraitOverrides,
@@ -490,6 +513,7 @@ const {
   galleryEntries,
   loadingOlderGalleryImages,
   hasMoreOlderGalleryImages,
+  refreshGalleryImages,
   readerSummary,
   logs,
   beginPendingImageTask,
@@ -532,7 +556,27 @@ const {
   loadOlderGalleryImages,
   calibrateDailyRollDate,
   isCalibratingDailyRoll,
+  saveHealthIsFailing,
+  requestExplicitSave,
 } = useStreamingDemo();
+
+const saveRetryBusy = ref(false);
+async function retrySameLayerSave() {
+  if (saveRetryBusy.value) return;
+  saveRetryBusy.value = true;
+  try {
+    const ok = await requestExplicitSave('user_manual_retry');
+    if (ok) {
+      toastr?.success?.('聊天保存已重试成功。', '同层聊天保存', { timeOut: 4000 });
+    } else {
+      toastr?.warning?.('聊天保存仍然失败。请确认杀软 / OneDrive 没有占用 chats 目录，再试一次。', '同层聊天保存', {
+        timeOut: 6000,
+      });
+    }
+  } finally {
+    saveRetryBusy.value = false;
+  }
+}
 
 const transcriptListRef = ref<InstanceType<typeof TranscriptList> | null>(null);
 const composerRef = ref<InstanceType<typeof BottomComposer> | null>(null);
@@ -569,6 +613,7 @@ function buildRoleTabItemsFromProvider(): RoleTabItem[] {
   }));
 }
 const roleTabs = computed(() => buildRoleTabItemsFromProvider());
+const portraitAssignableRoleTabs = computed(() => roleTabs.value);
 const { width: shellWidth } = useElementSize(shellRef);
 const visibleRoleTabs = computed(() => {
   const activeRoleTabs = roleTabs.value.filter(
@@ -826,6 +871,7 @@ function openGalleryDrawer() {
   topbarMoreMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = false;
+  refreshGalleryImages('gallery.drawer_open');
   galleryDrawerOpen.value = true;
 }
 
@@ -925,6 +971,62 @@ function addRolePortraitSetImageForRole(roleKey: string, entry: ReaderGalleryEnt
     [roleKey]: addRolePortraitSetImage(roleKey, rolePortraitOverrides.value[roleKey], entry),
   };
   writeRolePortraitOverrides(rolePortraitOverrides.value);
+}
+
+function clearRolePortraitForRole(roleKey: string) {
+  rolePortraitOverrides.value = {
+    ...rolePortraitOverrides.value,
+    [roleKey]: clearRolePortraitOverride(roleKey),
+  };
+  writeRolePortraitOverrides(rolePortraitOverrides.value);
+}
+
+// 图廊侧"加入设定集"选角弹窗：让未命名或跨角色的图片也能手动加入任意角色的设定集。
+const galleryRoleAssignEntry = ref<ReaderGalleryEntry | null>(null);
+
+function roleAlreadyOwnsEntry(roleKey: string, entry: ReaderGalleryEntry): boolean {
+  const override = rolePortraitOverrides.value[roleKey];
+  if (!override) return false;
+  const refs = [...(override.imageRefs ?? []), override.imageRef].filter(Boolean);
+  return refs.some(ref => {
+    if (ref.messageId !== entry.messageId) return false;
+    if (ref.markerId && entry.markerId && ref.markerId === entry.markerId) return true;
+    if (ref.imageId && entry.imageId && ref.imageId === entry.imageId) return true;
+    if (ref.requestId && entry.requestId && ref.requestId === entry.requestId) return true;
+    if (ref.promptToken && entry.promptToken && ref.promptToken === entry.promptToken) return true;
+    return !ref.markerId && !ref.imageId && !ref.requestId && !ref.promptToken;
+  });
+}
+
+const galleryRoleAssignRoleOptions = computed<GalleryImageRoleAssignRoleOption[]>(() => {
+  const entry = galleryRoleAssignEntry.value;
+  return portraitAssignableRoleTabs.value.map(role => ({
+    key: role.key,
+    label: role.label,
+    alreadyOwns: entry ? roleAlreadyOwnsEntry(role.key, entry) : false,
+  }));
+});
+
+function openGalleryRoleAssignPicker(entry: ReaderGalleryEntry) {
+  galleryRoleAssignEntry.value = entry;
+}
+
+function closeGalleryRoleAssignPicker() {
+  galleryRoleAssignEntry.value = null;
+}
+
+function assignGalleryImageToRole(roleKey: string) {
+  const entry = galleryRoleAssignEntry.value;
+  if (!entry) return;
+  const alreadyOwns = roleAlreadyOwnsEntry(roleKey, entry);
+  rolePortraitOverrides.value = {
+    ...rolePortraitOverrides.value,
+    [roleKey]: alreadyOwns
+      ? setPrimaryRolePortraitOverride(roleKey, rolePortraitOverrides.value[roleKey], entry)
+      : addRolePortraitSetImage(roleKey, rolePortraitOverrides.value[roleKey], entry),
+  };
+  writeRolePortraitOverrides(rolePortraitOverrides.value);
+  galleryRoleAssignEntry.value = null;
 }
 
 function handleRolePortraitError(key: string) {
@@ -1948,6 +2050,51 @@ useEventListener(window, 'keydown', event => {
   border-radius: 999px;
   background: var(--primary);
   box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 70%, transparent);
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.ui-dot.save-failing {
+  background: var(--demo-color-danger, #ff5a63);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--demo-color-danger, #ff5a63) 75%, transparent);
+  animation: save-failing-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes save-failing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.ui-save-retry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
+  margin-left: 6px;
+  border: 1px solid color-mix(in srgb, var(--demo-color-danger, #ff5a63) 56%, transparent);
+  background: color-mix(in srgb, var(--demo-color-danger, #ff5a63) 16%, transparent);
+  color: var(--demo-color-danger, #ff5a63);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ui-save-retry-chip:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--demo-color-danger, #ff5a63) 26%, transparent);
+}
+
+.ui-save-retry-chip:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .ui-brand-copy,

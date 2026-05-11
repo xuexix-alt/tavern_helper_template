@@ -129,27 +129,56 @@ test('opening setup visibility stays tied to successful opening completion inste
   );
 });
 
-test('normal assistant streaming uses displayed-message html instead of escaping regex output as raw code', () => {
-  const source = readSource('useStreamingDemo.ts');
+test('normal assistant streaming renders plain text through the `<pre v-text>` branch so regex output never escapes as raw html', () => {
+  const useStreamingSource = readSource('useStreamingDemo.ts');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
 
-  assert.equal(
-    source.includes(
-      'const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);',
-    ),
-    true,
-    'normal assistant streaming should render through the standard displayed-message html path so regex replacements show their effect',
+  // P0-2：buildTranscriptItem 不再为流式楼层构造 streamHtml；纯文本由组件从 regexText 读取。
+  assert.match(
+    useStreamingSource,
+    /const streamHtml = '';/,
+    'streaming items should stop producing a streamHtml payload once the component moved to the `<pre v-text>` branch',
+  );
+  assert.match(
+    cardSource,
+    /<pre[\s\S]{0,320}v-if="item\.isStreaming"[\s\S]{0,220}v-text="streamDisplayText"/,
+    'TranscriptMessageCard should use `<pre v-text>` for the streaming branch instead of v-html',
   );
 });
 
-test('stream-demo wrapped assistant streaming also uses displayed-message html for extracted content instead of raw preformatted code', () => {
+test('stream-demo wrapped assistant streaming reuses the same plain-text branch so regenerate/send flows do not expose regex code', () => {
+  const useStreamingSource = readSource('useStreamingDemo.ts');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.doesNotMatch(
+    useStreamingSource,
+    /const streamHtml = isCurrentStreamingItem[\s\S]{0,200}appendArtifacts: false/,
+    'streaming items should no longer pay for a formatAsDisplayedMessage pass now that `<pre v-text>` handles stream rendering',
+  );
+  assert.match(
+    cardSource,
+    /const streamDisplayText = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensText/,
+    'the streaming plain-text source should be stripped of `image###...###` tokens before reaching the DOM',
+  );
+});
+
+test('opening stream-demo system floors still build stream html instead of waiting forever', () => {
   const source = readSource('useStreamingDemo.ts');
 
-  assert.equal(
-    source.includes(
-      'const streamHtml = isDemoAssistant\n    ? buildFinalHtml(renderSource, input.id, strippedRenderSource)\n    : buildFinalHtml(displayRenderSource, input.id, strippedRenderSource);',
-    ),
-    true,
-    'stream-demo assistant streaming should render extracted content through displayed-message html so regenerate/send flows do not expose regex code',
+  assert.match(
+    source,
+    /const isDemoAssistant = isStreamDemoMessage\(input\.raw\);/,
+    'stream-demo parsing should be driven by message content, not only assistant role',
+  );
+  assert.doesNotMatch(
+    source,
+    /const isDemoAssistant = input\.role === 'assistant' && isStreamDemoMessage\(input\.raw\);/,
+    'system opening stream-demo floors must not be excluded from stream html construction',
+  );
+  assert.doesNotMatch(
+    source,
+    /const isCurrentStreamingItem =\s*input\.role === 'assistant' &&/,
+    'current streaming item detection should include opening/system stream floors',
   );
 });
 
@@ -187,5 +216,60 @@ test('finalization cancels any pending coalesced stream patch before writing the
     body,
     /cancelScheduledStreamTranscriptPatch\(\);[\s\S]*await patchAssistantMessage\('done'\);/,
     'done patch should not race with a delayed stream patch after generation has completed',
+  );
+});
+
+test('runGenerationFlow triggers one explicit chat save after the lifecycle emit so done + MVU + images land atomically', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  // done 分支：runQueuedPostDoneAssistantSideEffects 之后紧接着一次显式 save，
+  // 避免 saveChatConditionalDebounced 的 1s 窗口丢失。
+  assert.match(
+    source,
+    /await runQueuedPostDoneAssistantSideEffects[\s\S]{0,800}await flushExplicitChatSave\('generation_done'\)/,
+    'runGenerationFlow should flush an explicit save after the lifecycle emit so done + MVU + image writes land together',
+  );
+
+  // error 分支：失败 done patch 也要 flush，保证 "生成失败：xxx" 不会停留在 <demo_phase>stream>。
+  assert.match(
+    source,
+    /await patchAssistantMessage\('done'\);\s*await flushExplicitChatSave\('generation_error'\)/,
+    'error recovery should also flush an explicit save so the "生成失败" message is persisted',
+  );
+});
+
+test('useStreamingDemo installs a save guardian at mount and uninstalls at unmount or same-layer disable', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /saveGuardian = installSameLayerSaveGuardian\(\{\s*onStateChange: handleSaveGuardianHealth,?\s*\}\);/,
+    'save guardian should be installed inside onMounted with an onStateChange callback',
+  );
+  assert.match(source, /saveGuardian\?\.uninstall\(\);/, 'save guardian should be uninstalled on same-layer teardown');
+  assert.match(
+    source,
+    /import \{[\s\S]{0,160}installSameLayerSaveGuardian[\s\S]{0,160}\} from '\.\/samelayerSaveGuardian'/,
+    'useStreamingDemo should import the guardian helpers from the guardian module',
+  );
+});
+
+test('useStreamingDemo installs the image generation event bridge so plugin failures surface as toasts instead of silent console errors', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /imageGenerationBridge = createImageGenerationEventBridge\(\{/,
+    'image generation bridge should be installed in onMounted',
+  );
+  assert.match(
+    source,
+    /toastr\?\.warning\?\.\(message, '生图失败'/,
+    'failure toast should be dispatched through the bridge notifyError callback',
+  );
+  assert.match(
+    source,
+    /imageGenerationBridge\?\.uninstall\(\);/,
+    'bridge should be uninstalled on teardown to avoid leaking event listeners',
   );
 });

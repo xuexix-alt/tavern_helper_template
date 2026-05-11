@@ -70,7 +70,7 @@
 
     <section class="opening-form-grid">
       <div
-        v-for="field in preset.form_schema"
+        v-for="field in effectiveFormSchema"
         :key="field.key"
         class="opening-form-item"
         :class="{ full: field.kind === 'textarea' }"
@@ -110,6 +110,7 @@ import { computed } from 'vue';
 
 import {
   buildWorldModeAxisDictionary,
+  getEffectiveFormSchema,
   type OpeningRouteOption,
   type OpeningWorldModeOption,
 } from '../../../shared/opening';
@@ -136,6 +137,8 @@ const selectedWorldMode = computed(
   () => props.worldModes.find(mode => mode.id === props.payload.world_mode_id) ?? null,
 );
 const selectedRoute = computed(() => props.routes.find(route => route.name === props.payload.route_id) ?? null);
+
+const effectiveFormSchema = computed(() => getEffectiveFormSchema(props.preset, props.payload.world_mode_id));
 
 const worldModeAxisDictionaryText = computed(() => {
   const worldMode = selectedWorldMode.value;

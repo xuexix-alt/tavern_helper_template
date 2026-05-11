@@ -1,4 +1,5 @@
 import { buildGeneratedImageMarkerId } from './generatedImageMarker';
+import { normalizePromptTokenForCompare } from './pluginNativeImageArtifacts';
 
 export type GeneratedImageMembershipPersistedEntry = {
   markerId?: string;
@@ -73,7 +74,12 @@ export function buildGeneratedImageMembership(
     });
     const matched =
       consumePersisted(entry => normalizeText(entry.markerId) === markerId) ??
-      consumePersisted(entry => normalizeText(entry.promptToken) === promptToken);
+      consumePersisted(entry => normalizeText(entry.promptToken) === promptToken) ??
+      consumePersisted(
+        entry =>
+          Boolean(normalizeText(entry.promptToken)) &&
+          normalizePromptTokenForCompare(entry.promptToken) === normalizePromptTokenForCompare(promptToken),
+      );
 
     out.push({
       markerId: normalizeText(matched?.markerId) || markerId,

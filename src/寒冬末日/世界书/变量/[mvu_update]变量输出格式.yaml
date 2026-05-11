@@ -91,7 +91,7 @@ format: |-
     { "op": "replace", "path": "/纪宁/关系", "value": "协作" },
     { "op": "replace", "path": "/纪宁/内心想法", "value": "..." },
     { "op": "replace", "path": "/纪宁/登场状态", "value": "登场" },
-    { "op": "replace", "path": "/王静/登场状态", "value": "离场" },
+    { "op": "replace", "path": "/佐伯惠理/登场状态", "value": "离场" },
     { "op": "replace", "path": "/纪宁/所在房间", "value": "楼层20/2001" },
     { "op": "insert", "path": "/临时NPC/陌生拾荒者", "value": { } },
     {

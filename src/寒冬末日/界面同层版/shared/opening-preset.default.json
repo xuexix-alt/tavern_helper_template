@@ -72,6 +72,102 @@
       "placeholder": "默认 1500"
     }
   ],
+  "form_schema_overrides": {
+    "A": {
+      "default_meta": {
+        "time": "9526年9月14日·14:00",
+        "location": "中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室"
+      },
+      "fields": [
+        {
+          "key": "pre_disaster_identity",
+          "label": "当前职业",
+          "kind": "text",
+          "required": false,
+          "placeholder": "例如：职业经理 / 退伍老兵 / 工程师 / 医生 / 教授 / 自由职业 / 其他"
+        },
+        {
+          "key": "shelter_ability_summary",
+          "label": "庇护所能力",
+          "kind": "textarea",
+          "required": true,
+          "placeholder": "例如：安全、生活、社交、医疗、侦察等；需注意灾变前使用要避免暴露"
+        },
+        {
+          "key": "financial_level",
+          "label": "资金水平",
+          "kind": "select",
+          "required": true,
+          "options": [
+            "普通工薪（月入1-3万，存款有限）",
+            "中产（月入3-10万，有车有房贷）",
+            "富裕（年入百万级，流动资金充裕）",
+            "高净值（千万级资产，能快速调动资金）",
+            "顶级（亿级资产，基本不受资金约束）"
+          ],
+          "default_value": "中产（月入3-10万，有车有房贷）",
+          "placeholder": "决定囤积与人际经营的预算上限"
+        },
+        {
+          "key": "pre_disaster_contacts",
+          "label": "灾前人脉",
+          "kind": "textarea",
+          "required": false,
+          "placeholder": "例如：警察、医生、物业、军方、金融、物流、黑市、媒体、政府等；可列方向或具体人物"
+        },
+        {
+          "key": "stockpile_focus",
+          "label": "囤积方向",
+          "kind": "textarea",
+          "required": false,
+          "placeholder": "例如：燃料 / 药品 / 枪械 / 黄金与外币 / 罐头主食 / 高价值电子设备 / 种子与菌种"
+        },
+        {
+          "key": "early_story_tone",
+          "label": "剧情基调",
+          "kind": "textarea",
+          "required": false,
+          "placeholder": "例如：都市悬疑、日常慢节奏、先知权谋、后宫攻略、商战布局"
+        },
+        {
+          "key": "opening_style",
+          "label": "文风",
+          "kind": "select",
+          "required": true,
+          "options": ["现代科幻", "轻小说", "毛姆文学作品", "《三体》风格"],
+          "default_value": "轻小说"
+        },
+        {
+          "key": "nearby_factions",
+          "label": "社会关系网",
+          "kind": "textarea",
+          "required": false,
+          "placeholder": "灾变前的邻居、同事、商圈、物业、社区氛围"
+        },
+        {
+          "key": "nearby_survivor_types",
+          "label": "关键NPC类型",
+          "kind": "textarea",
+          "required": false,
+          "placeholder": "此刻仍是普通人，但未来会成为关键角色的类型（可填名称或同人作品设定）"
+        },
+        {
+          "key": "supplemental_setting",
+          "label": "补充设定",
+          "kind": "textarea",
+          "placeholder": "例如：XXX同人、XXX人物关系、隐藏前情、偏好的开局事件"
+        },
+        {
+          "key": "word_count",
+          "label": "字数",
+          "kind": "text",
+          "required": true,
+          "default_value": "1500",
+          "placeholder": "默认 1500"
+        }
+      ]
+    }
+  },
   "prompt_rules": {
     "should_echo_setup": true,
     "output_tags": ["content", "option"]

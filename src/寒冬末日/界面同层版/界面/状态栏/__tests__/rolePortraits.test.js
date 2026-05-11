@@ -7,6 +7,7 @@ const {
   buildRolePortraitOverride,
   findGalleryEntryForRole,
   addRolePortraitSetImage,
+  clearRolePortraitOverride,
   setPrimaryRolePortraitOverride,
   resolveRolePortraitSet,
 } = require('../rolePortraits.ts');
@@ -147,6 +148,20 @@ test('findGalleryEntryForRole matches project Chinese role names to English prom
   };
 
   assert.equal(findGalleryEntryForRole({ key: '林月华', label: '林月华' }, [entry])?.id, 'lin-yuehua-english');
+});
+
+test('findGalleryEntryForRole matches Snow/Yukino aliases used by image prompts', () => {
+  const entry = {
+    id: 'yukino',
+    messageId: 14,
+    promptToken: 'image###sfw, 1girl, ${"name":"fujii yukino"}$###',
+    title: 'fujii yukino',
+    characterName: 'fujii yukino',
+    createdOrder: 0,
+    src: 'https://example.com/yukino.png',
+  };
+
+  assert.equal(findGalleryEntryForRole({ key: '雪乃', label: '雪乃' }, [entry])?.id, 'yukino');
 });
 
 test('role portrait set keeps all matching character images instead of only the primary portrait', () => {
@@ -292,4 +307,234 @@ test('resolving a portrait uses the selected primary ref even when it already ex
   );
 
   assert.equal(portrait.entry?.id, 'lin-first');
+});
+
+test('resolveRolePortrait returns first default entry when gallery and overrides are empty', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+      alt: '林月华 动漫设定图',
+    },
+    {
+      id: 'default::林月华::realistic',
+      messageId: -1,
+      promptToken: 'default:realistic',
+      title: '林月华 真人设定图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-realistic.jpg',
+      alt: '林月华 真人设定图',
+    },
+  ];
+
+  const portrait = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    [],
+    {},
+    { defaultSrc: 'builtin-default.webp', defaultEntries: defaults },
+  );
+
+  assert.equal(portrait.src, 'https://example.com/lin-anime.jpg');
+  assert.equal(portrait.source, 'default');
+  assert.equal(portrait.entry?.id, 'default::林月华::anime');
+});
+
+test('resolveRolePortraitSet returns default entries as the strip when gallery and overrides are empty', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+    },
+    {
+      id: 'default::林月华::realistic',
+      messageId: -1,
+      promptToken: 'default:realistic',
+      title: '林月华 真人设定图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-realistic.jpg',
+    },
+  ];
+
+  const set = resolveRolePortraitSet({ key: '林月华', label: '林月华' }, [], {}, { defaultEntries: defaults });
+
+  assert.deepEqual(
+    set.map(entry => entry.id),
+    ['default::林月华::anime', 'default::林月华::realistic'],
+  );
+});
+
+test('real gallery images take precedence over defaults so the default strip disappears once images exist', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+    },
+  ];
+  const gallery = [
+    {
+      id: 'gallery-lin',
+      messageId: 9,
+      promptToken: 'image###林月华###',
+      title: '新图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-new.png',
+    },
+  ];
+
+  const portrait = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    gallery,
+    {},
+    { defaultSrc: 'builtin-default.webp', defaultEntries: defaults },
+  );
+  const set = resolveRolePortraitSet({ key: '林月华', label: '林月华' }, gallery, {}, { defaultEntries: defaults });
+
+  assert.equal(portrait.source, 'gallery');
+  assert.equal(portrait.entry?.id, 'gallery-lin');
+  assert.deepEqual(
+    set.map(entry => entry.id),
+    ['gallery-lin'],
+  );
+});
+
+test('selecting a default strip thumbnail as primary override persists and resolves back to the default entry', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+    },
+    {
+      id: 'default::林月华::realistic',
+      messageId: -1,
+      promptToken: 'default:realistic',
+      title: '林月华 真人设定图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-realistic.jpg',
+    },
+  ];
+
+  const override = setPrimaryRolePortraitOverride('林月华', undefined, defaults[1]);
+  const portrait = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    [],
+    { 林月华: override },
+    { defaultSrc: 'builtin-default.webp', defaultEntries: defaults },
+  );
+
+  assert.equal(portrait.source, 'default');
+  assert.equal(portrait.entry?.id, 'default::林月华::realistic');
+});
+
+test('selecting one default portrait keeps the other default portraits available for switching back', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+    },
+    {
+      id: 'default::林月华::realistic',
+      messageId: -1,
+      promptToken: 'default:realistic',
+      title: '林月华 真人设定图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-realistic.jpg',
+    },
+  ];
+
+  const selectedRealistic = setPrimaryRolePortraitOverride('林月华', undefined, defaults[1]);
+  const setAfterRealistic = resolveRolePortraitSet(
+    { key: '林月华', label: '林月华' },
+    [],
+    { 林月华: selectedRealistic },
+    { defaultEntries: defaults },
+  );
+  const selectedAnime = setPrimaryRolePortraitOverride('林月华', selectedRealistic, defaults[0]);
+  const portraitAfterAnime = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    [],
+    { 林月华: selectedAnime },
+    { defaultSrc: 'builtin-default.webp', defaultEntries: defaults },
+  );
+
+  assert.deepEqual(
+    setAfterRealistic.map(entry => entry.id),
+    ['default::林月华::realistic', 'default::林月华::anime'],
+  );
+  assert.equal(portraitAfterAnime.entry?.id, 'default::林月华::anime');
+});
+
+test('clearing a player portrait override falls back to defaults instead of automatic gallery matches', () => {
+  const defaults = [
+    {
+      id: 'default::林月华::anime',
+      messageId: -1,
+      promptToken: 'default:anime',
+      title: '林月华 动漫设定图',
+      characterName: '林月华',
+      createdOrder: 0,
+      src: 'https://example.com/lin-anime.jpg',
+    },
+  ];
+  const gallery = [
+    {
+      id: 'gallery-lin',
+      messageId: 9,
+      promptToken: 'image###林月华###',
+      title: '新图',
+      characterName: '林月华',
+      createdOrder: 1,
+      src: 'https://example.com/lin-new.png',
+    },
+  ];
+
+  const cleared = clearRolePortraitOverride('林月华');
+  const portrait = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    gallery,
+    { 林月华: cleared },
+    { defaultSrc: 'builtin-default.webp', defaultEntries: defaults },
+  );
+  const set = resolveRolePortraitSet(
+    { key: '林月华', label: '林月华' },
+    gallery,
+    { 林月华: cleared },
+    { defaultEntries: defaults },
+  );
+
+  assert.equal(portrait.source, 'default');
+  assert.equal(portrait.entry?.id, 'default::林月华::anime');
+  assert.deepEqual(
+    set.map(entry => entry.id),
+    ['default::林月华::anime'],
+  );
 });

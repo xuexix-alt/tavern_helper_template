@@ -28,14 +28,19 @@ test('host plugin native image mutations refresh gallery and targeted transcript
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes("scheduleUiRefresh(['gallery'], 'host.plugin_native_dom_mutation');"),
+    source.includes("queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');"),
     true,
-    'native image DOM mutations should only refresh gallery scope',
+    'native image DOM mutations should enter the per-message image refresh queue',
   );
   assert.equal(
-    source.includes("refreshTranscriptItemsByIds(affectedMessageIds, 'host.plugin_native_dom_mutation');"),
+    source.includes("refreshTranscriptItemsByIds([messageId], reason);"),
     true,
-    'native image DOM mutations should refresh only affected transcript items',
+    'queued image refreshes should refresh only the affected transcript item',
+  );
+  assert.equal(
+    source.includes("scheduleUiRefresh(['gallery'], reason);"),
+    true,
+    'queued image refreshes should only refresh gallery scope after the targeted item refresh',
   );
   assert.equal(
     source.includes("rebuildTranscript('host.plugin_native_dom_mutation')"),
@@ -46,6 +51,11 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     source.includes('const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);'),
     true,
     'native image DOM mutation refreshes should be gated behind ready-image mutations instead of button placeholders',
+  );
+  assert.equal(
+    source.includes("attributeFilter: ['src'],"),
+    true,
+    'host native image observer should watch img src attribute changes when the plugin fills images after inserting containers',
   );
 });
 
@@ -126,6 +136,11 @@ test('gallery image refs are built from canonical image entities instead of sequ
     false,
     'gallery refs should stop assigning native images by per-membership fallback matching',
   );
+  assert.equal(
+    source.includes("id: `host-dom-${messageId}-${image.requestId ?? index}-${index}`,"),
+    true,
+    'gallery refs should fall back to message-scoped host DOM images when entity matching produces no ready entries',
+  );
 });
 
 test('gallery output is rebuilt directly from transcript groups without same-layer manifest persistence', () => {
@@ -152,6 +167,11 @@ test('gallery output is rebuilt directly from transcript groups without same-lay
     source.includes("if (item.role !== 'assistant' || item.isOpening) continue;"),
     false,
     'gallery groups should not permanently exclude opening assistant messages with ready images',
+  );
+  assert.equal(
+    source.includes("if (item.role !== 'assistant') continue;"),
+    false,
+    'visible gallery groups should try every visible floor and let image discovery decide whether the floor contributes',
   );
 });
 

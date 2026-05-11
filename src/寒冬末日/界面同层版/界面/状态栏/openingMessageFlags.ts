@@ -38,14 +38,19 @@ export function isTrackedOpeningAssistantMessage(message: any, preferredId?: unk
 
 export function isCurrentOpeningSeedMessageByPayload(
   message: any,
-  payload?: { opening_seed_user_message_id?: unknown } | null,
+  payload?: (Record<string, unknown> & { opening_seed_user_message_id?: unknown }) | null,
 ): boolean {
   return isTrackedOpeningSeedMessage(message, payload?.opening_seed_user_message_id);
 }
 
 export function isCurrentOpeningAssistantMessageByPayload(
   message: any,
-  payload?: { opening_assistant_message_id?: unknown; opening_result_message_id?: unknown } | null,
+  payload?:
+    | (Record<string, unknown> & {
+        opening_assistant_message_id?: unknown;
+        opening_result_message_id?: unknown;
+      })
+    | null,
 ): boolean {
   return isTrackedOpeningAssistantMessage(
     message,

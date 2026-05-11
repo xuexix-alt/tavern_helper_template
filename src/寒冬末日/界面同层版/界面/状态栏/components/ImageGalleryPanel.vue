@@ -73,6 +73,7 @@
             :show-caption="true"
             @view="emit('image-view', $event)"
             @regenerate="emit('image-regenerate', $event)"
+            @assign-role="emit('assign-role', $event)"
           />
         </div>
       </section>
@@ -108,6 +109,7 @@ const emit = defineEmits<{
   (event: 'jump-message', messageId: number): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'assign-role', entry: ReaderGalleryEntry): void;
   (event: 'load-older'): void;
   (event: 'close'): void;
 }>();

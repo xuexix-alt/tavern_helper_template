@@ -192,49 +192,57 @@ world_mode_axis_dictionary:
 profiles:
   A:
     id: A
-    key: siege_fortress
-    name: 围猎堡垒型
-    slogan: 自然压力下降，外部敌意上升
-    core_pleasure: 战斗 / 防御 / 征服 / 清场
-    recommended_main_route: 守
-    secondary_routes: [扩, 行]
+    key: pre_disaster_phase
+    name: 灾变前3个月
+    slogan: 预知灾变来临，依托伊甸做好准备，为灾变后积累优势（扮演"先知型"救世主）
+    core_pleasure: 日常 / 后宫 / 收集 / 情报优势
+    recommended_main_route: 日常+后宫+收集+情报优势
+    secondary_routes: [后宫+养成, 种田+探索+势力培育]
 
     environment:
-      常态气温区间: '-5℃ ~ -15℃'
-      暴雪频率: 中
-      腐蚀雪晶活性: 低到中
-      外出能力: 保留
-      visibility_note: 低温仍危险，但不再等于出门即死
+      常态气温区间: '常态气候，无异常'
+      暴雪频率: 无
+      腐蚀雪晶活性: 无
+      外出能力: 完全自由
+      visibility_note: 灾变尚未发生，城市与社会运转正常，一切气候与出行风险都处于灾前常态
 
     axes:
       气候压力:
-        label: 中
-        score: 52
+        label: 极低
+        score: 5
+        description: 气候属于正常四季变化，无需任何防寒措施，户外活动、交通、物流全部照常。只有主角通过伊甸才知道3个月后会发生超自然极寒灾变。
       行动窗口:
-        label: 长
-        hours_per_7_days: 48
+        label: 稳定
+        hours_per_7_days: 168
+        description: 全天候可自由出行，航空、铁路、高速、公交、快递、外卖正常运转，没有任何气候性行动限制。
       社会残存度:
-        label: 低
-        score: 32
+        label: 高
+        score: 95
+        description: 社会结构完整，政府、法律、金融、媒体、教育、医疗、就业市场全部正常运行，绝大多数人对未来三个月毫无预警。
       外部威胁主因:
-        label: 暴徒
-        subtype: 武装团伙
+        label: 无
+        subtype: 仅常态社会风险
+        description: 不存在灾后级别的威胁，普通人面对的只是正常社会中的治安、工作压力、人际关系等风险；真正的威胁只存在于主角的"未来知识"中。
       生产残余度:
-        label: 低
-        capacity_percent: 12
+        label: 高
+        capacity_percent: 100
+        description: 现代工业与供应链 100% 正常，物资可合法购买，金融、物流、互联网、电力、燃气、通信一切如常，是囤积与布置的黄金窗口。
       冲突密度:
-        label: 高
-        incidents_per_10_days_per_region: 6
+        label: 低
+        incidents_per_10_days_per_region: 0
+        description: 社会秩序正常，警察、司法、合同、商业规则都有效，冲突只限于正常人际摩擦和法律框架内的纠纷，没有武装暴力或大规模失序。
       外出死亡风险:
-        label: 中
-        probability_per_unprepared_trip: 0.22
+        label: 低
+        probability_per_unprepared_trip: 0.001
+        description: 外出风险等同于灾前真实社会，危险主要来自交通事故、犯罪、疾病等常态风险，与灾后不可同日而语。
       据点化程度:
-        label: 高
-        structured_control_ratio: 0.62
+        label: 无
+        structured_control_ratio: 0.0
+        description: 还没有任何"庇护所 / 据点 / 控制区"的概念，社会仍以城市、住宅区、公司、商圈为基本单元，主角此刻的"伊甸庇护所"只是一套未公开的黑科技实体。
 
     society:
-      organization_trend: 小型武装团体、楼层据点、掠夺集团活跃
-      moral_state: 文明残余迅速流失，强者秩序与恐惧威慑并存
+      organization_trend: 正常现代社会结构，公寓邻居、职场同事、商圈、物业、社群仍按灾前节奏运转
+      moral_state: 普通人追求日常生活、工作、感情、消费，对末日毫无察觉；主角一旦公开预警会立刻被视为异类
 
     threat:
       threat_pack_mode: single_primary
@@ -265,36 +273,30 @@ profiles:
       logistics_pressure_modifier: 0.9
 
     playstyle_bias:
-      守:
+      日常+后宫+收集+情报优势:
         score: 1.4
-        note: 庇护所更像堡垒与清剿中心
-      扩:
+        note: 灾变前3个月最重要的就是信息、人脉与提前布局
+      后宫+养成:
         score: 1.15
-        note: 通过扫清威胁扩大控制面
-      行:
-        score: 1.1
-        note: 适合巡逻、侦察、追猎
-      养:
-        score: 0.9
-      管:
-        score: 0.95
-      慰:
-        score: 0.85
+        note: 在秩序尚存时提前完成 IMP 经营与角色攻略
+      种田+探索+势力培育:
+        score: 1.0
+        note: 利用末日前的物流与生产体系预先囤积和选点
 
     ai_brief_seed:
       环境体感: 低温危险但尚可行动，真正压迫感来自外部敌对存在
       主要威胁: 武装掠夺、袭击、围堵、清场冲突
       社会状态: 幸存者据点化，小团体互相试探、掠夺、吞并
-      路线提示: 守流在此档最容易把庇护所塑造成绝对秩序核心
+      路线提示: 在灾变前3个月，靠信息先手和人际经营积累越多越多，末日到来时越占先发优势
 
   B:
     id: B
     key: polar_holding
-    name: 极寒守成型
-    slogan: 环境即天敌，活下去本身就是胜利
+    name: 末日后1年-生存压力
+    slogan: 环境即天敌，活下去本身就是胜利（出不了门，基本在公寓范围活动）
     core_pleasure: 生存 / 维持 / 种田 / 人口保全
-    recommended_main_route: 养
-    secondary_routes: [管, 慰]
+    recommended_main_route: 后宫+养成
+    secondary_routes: [种田+探索+势力培育, 日常+后宫+收集+情报优势]
 
     environment:
       常态气温区间: '-35℃ ~ -45℃'
@@ -349,36 +351,30 @@ profiles:
       logistics_pressure_modifier: 1.5
 
     playstyle_bias:
-      养:
+      后宫+养成:
         score: 1.45
-        note: 维持、循环、医疗、保温与配给是核心快感
-      管:
-        score: 1.1
-        note: 良好秩序直接提升生存率
-      慰:
-        score: 1.05
-        note: 士气与恢复关系到庇护所持续运转
-      守:
+        note: 出不了门的公寓幽闭环境，是维持、医疗、IMP 经营、角色攻略的舞台
+      种田+探索+势力培育:
+        score: 1.0
+        note: 可做小范围资源循环和少量冒险外出，扩张受限
+      日常+后宫+收集+情报优势:
         score: 0.9
-      扩:
-        score: 0.8
-      行:
-        score: 0.7
+        note: 情报与秩序重建在此档受环境限制较大
 
     ai_brief_seed:
       环境体感: 寒冷、腐蚀与失温随时都在消耗生命
       主要威胁: 不是敌人有多强，而是系统一旦失衡就会死人
       社会状态: 活着的人仍多，但真正稳定维持的据点极少
-      路线提示: 养流在此档最能把庇护所变成真正的生命支持系统
+      路线提示: 在这种极端封闭的环境中，"后宫+养成"最能把庇护所变成生命支持与情感经营的核心
 
   C:
     id: C
     key: order_window
-    name: 窗口秩序型
-    slogan: 灾变重创社会，但规则仍有重建空间
+    name: 末日后1年-秩序重建
+    slogan: 灾变重创社会，急需重建社会秩序（user有望成为其中的领军人物）
     core_pleasure: 治理 / 联盟 / 交易 / 制度建设
-    recommended_main_route: 管
-    secondary_routes: [扩, 行, 慰]
+    recommended_main_route: 种田+探索+势力培育
+    secondary_routes: [日常+后宫+收集+情报优势, 后宫+养成]
 
     environment:
       常态气温区间: '-8℃ ~ -18℃'
@@ -434,28 +430,21 @@ profiles:
       logistics_pressure_modifier: 1.0
 
     playstyle_bias:
-      管:
+      种田+探索+势力培育:
         score: 1.45
-        note: 谁能组织、分配、谈判、接管，谁就能赢
-      扩:
-        score: 1.1
-        note: 接口延展与楼层纳管空间更大
-      行:
-        score: 1.05
-        note: 侦察、交易、接触外部势力收益更高
-      慰:
-        score: 1.05
-        note: 稳定人心与提高协作度价值更大
-      养:
+        note: 气候窗口存在，能恢复生产、扩张据点和探索外部
+      日常+后宫+收集+情报优势:
+        score: 1.15
+        note: 残余秩序与交易网络让情报先手和规则接管更有收益
+      后宫+养成:
         score: 0.95
-      守:
-        score: 0.95
+        note: 环境不再是压倒性威胁，纯粹的蜷居养成收益下降
 
     ai_brief_seed:
       环境体感: 灾难并未结束，但人类社会残余仍可被重新组织
       主要威胁: 利益冲突、制度真空、势力试探与渗透
       社会状态: 交易、联盟、背叛、接管会长期并存
-      路线提示: 管流在此档最容易把庇护所升级为治理核心
+      路线提示: 在这种窗口秩序下，"种田+探索+势力培育"最容易把庇护所升级为区域核心
 
 civilization_stage_matrix:
   A:

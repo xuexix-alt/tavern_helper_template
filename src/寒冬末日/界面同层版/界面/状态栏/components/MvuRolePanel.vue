@@ -174,6 +174,14 @@
                 >
                   换图
                 </button>
+                <button
+                  v-if="hasRolePortraitOverride(entry)"
+                  type="button"
+                  class="role-detail-clear clip-corner-sm"
+                  @click.stop="clearRolePortraitForEntry(entry)"
+                >
+                  取消指定
+                </button>
               </div>
             </div>
           </div>
@@ -295,11 +303,18 @@
 import type { ReaderGalleryEntry, TranscriptItem } from '../types';
 import openingModalIcon from '../assets/opening-modal-icon.webp?url';
 import RolePortraitPicker from './RolePortraitPicker.vue';
+import { findDefaultRolePortraitEntries } from '../defaultRolePortraits';
 import { buildEdenCommandDisplayEntries, type EdenOneShotCommandDisplayEntry } from '../edenOneShotCommands';
 import { formatImageDisplayName } from '../generatedImagePromptMetadata';
 import { buildMvuSourceOptions } from '../mvuSourceOptions';
 import { readMvuStatData, useMvuRoleStore, useMvuSystemStore } from '../mvuRoleStore';
-import { resolveRolePortrait, resolveRolePortraitSet, type RolePortraitOverrideMap } from '../rolePortraits';
+import {
+  prepareRolePortraitLookup,
+  resolveRolePortrait,
+  resolveRolePortraitSet,
+  type ResolvedRolePortrait,
+  type RolePortraitOverrideMap,
+} from '../rolePortraits';
 
 const props = defineProps<{
   targetMessageId?: number | null;
@@ -316,6 +331,7 @@ const emit = defineEmits<{
   (event: 'roster-change', roles: Array<{ key: string; label: string; statusClass: string; statusText: string }>): void;
   (event: 'select-role-portrait', roleKey: string, entry: ReaderGalleryEntry): void;
   (event: 'add-role-portrait-set-image', roleKey: string, entry: ReaderGalleryEntry): void;
+  (event: 'clear-role-portrait', roleKey: string): void;
   (event: 'portrait-error', roleKey: string): void;
   (event: 'collapse'): void;
   (event: 'calibrate-daily-roll'): void;
@@ -527,21 +543,69 @@ function setActiveCharacter(key: string) {
   emit('select-character', key);
 }
 
-function rolePortraitForEntry(entry: { key: string; role: Record<string, any> }) {
-  return resolveRolePortrait(
-    { key: entry.key, label: roleName(entry) },
-    galleryEntries.value,
-    rolePortraitOverrides.value,
-    { defaultSrc: openingModalIcon },
-  );
+function defaultPortraitsForEntry(entry: { key: string; role: Record<string, any> }): ReaderGalleryEntry[] {
+  return findDefaultRolePortraitEntries(roleName(entry), entry.key);
 }
 
-function rolePortraitSetForEntry(entry: { key: string; role: Record<string, any> }) {
-  return resolveRolePortraitSet(
-    { key: entry.key, label: roleName(entry) },
-    galleryEntries.value,
-    rolePortraitOverrides.value,
-  );
+/**
+ * 面板级立绘预解析：每当画廊、覆盖、角色列表任一变化，就一次性算出 M 个角色的
+ * 主图 + 设定集。模板里 `rolePortraitForEntry` / `rolePortraitSetForEntry`
+ * 查这张 map 即 O(1)，不再在每次渲染里重扫全画廊。
+ */
+type RolePortraitSummary = {
+  portrait: ResolvedRolePortrait;
+  set: ReaderGalleryEntry[];
+  defaults: ReaderGalleryEntry[];
+};
+
+const rolePortraitSummaries = computed(() => {
+  const entries = galleryEntries.value;
+  const overrides = rolePortraitOverrides.value;
+  const lookup = prepareRolePortraitLookup(entries);
+  const map = new Map<string, RolePortraitSummary>();
+  for (const roleEntry of activeEntries.value) {
+    const role = { key: roleEntry.key, label: roleName(roleEntry) };
+    const defaults = findDefaultRolePortraitEntries(role.label, role.key);
+    const portrait = resolveRolePortrait(role, entries, overrides, {
+      defaultSrc: openingModalIcon,
+      defaultEntries: defaults,
+      lookup,
+    });
+    const set = resolveRolePortraitSet(role, entries, overrides, {
+      defaultEntries: defaults,
+      lookup,
+    });
+    map.set(roleEntry.key, { portrait, set, defaults });
+  }
+  return map;
+});
+
+function rolePortraitSummaryForEntry(entry: { key: string; role: Record<string, any> }): RolePortraitSummary {
+  const memo = rolePortraitSummaries.value.get(entry.key);
+  if (memo) return memo;
+  // Fallback: memo 尚未 reactive 覆盖到该角色（罕见，例如刚展开 tab 但 computed 还没跑），按旧逻辑兜一下。
+  const entries = galleryEntries.value;
+  const overrides = rolePortraitOverrides.value;
+  const lookup = prepareRolePortraitLookup(entries);
+  const role = { key: entry.key, label: roleName(entry) };
+  const defaults = defaultPortraitsForEntry(entry);
+  return {
+    portrait: resolveRolePortrait(role, entries, overrides, {
+      defaultSrc: openingModalIcon,
+      defaultEntries: defaults,
+      lookup,
+    }),
+    set: resolveRolePortraitSet(role, entries, overrides, { defaultEntries: defaults, lookup }),
+    defaults,
+  };
+}
+
+function rolePortraitForEntry(entry: { key: string; role: Record<string, any> }): ResolvedRolePortrait {
+  return rolePortraitSummaryForEntry(entry).portrait;
+}
+
+function rolePortraitSetForEntry(entry: { key: string; role: Record<string, any> }): ReaderGalleryEntry[] {
+  return rolePortraitSummaryForEntry(entry).set;
 }
 
 function rolePortraitSetEntryLabel(entry: { key: string; role: Record<string, any> }, setEntry: ReaderGalleryEntry) {
@@ -550,7 +614,10 @@ function rolePortraitSetEntryLabel(entry: { key: string; role: Record<string, an
 
 function rolePortraitSourceText(entry: { key: string; role: Record<string, any> }) {
   const portrait = rolePortraitForEntry(entry);
-  if (portrait.source !== 'gallery') return '默认设定图';
+  if (portrait.source !== 'gallery') {
+    const count = rolePortraitSetForEntry(entry).length;
+    return count > 1 ? `默认设定图 · ${count} 张` : '默认设定图';
+  }
   const count = rolePortraitSetForEntry(entry).length;
   return count > 1 ? `来自图廊 · 设定集 ${count} 张` : '来自图廊 · 设定集 1 张';
 }
@@ -585,6 +652,17 @@ function addRolePortraitSetImageForRole(entry: ReaderGalleryEntry) {
   if (!role) return;
   emit('add-role-portrait-set-image', role.key, entry);
   flippedRoleKey.value = role.key;
+}
+
+function hasRolePortraitOverride(entry: { key: string; role: Record<string, any> }): boolean {
+  const override = rolePortraitOverrides.value[entry.key];
+  if (!override) return false;
+  return Boolean(override.imageRef || (override.imageRefs ?? []).length > 0);
+}
+
+function clearRolePortraitForEntry(entry: { key: string; role: Record<string, any> }) {
+  emit('clear-role-portrait', entry.key);
+  flippedRoleKey.value = entry.key;
 }
 
 function handleRolePortraitError(key: string) {
@@ -987,8 +1065,23 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
   font-size: 11px;
   letter-spacing: 0.08em;
 }
+.role-detail-clear {
+  position: absolute;
+  right: 12px;
+  top: 50px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, white 28%, transparent);
+  background: color-mix(in srgb, black 30%, transparent);
+  color: color-mix(in srgb, white 84%, transparent);
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
 .role-detail-picker:hover,
-.role-detail-picker:focus-visible {
+.role-detail-picker:focus-visible,
+.role-detail-clear:hover,
+.role-detail-clear:focus-visible {
   border-color: white;
   outline: none;
 }
@@ -1645,6 +1738,13 @@ function buildMetricSummary(primary: unknown, primaryFallback = '--', reason: un
     min-height: 28px;
     padding: 0 9px;
     font-size: 9px;
+  }
+  .role-detail-clear {
+    right: 8px;
+    top: 42px;
+    min-height: 26px;
+    padding: 0 8px;
+    font-size: 8px;
   }
 
   .role-detail-set-strip {

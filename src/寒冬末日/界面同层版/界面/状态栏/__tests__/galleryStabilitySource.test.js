@@ -18,7 +18,54 @@ test('gallery refs are built from native-first membership instead of raw prompt 
   assert.match(source, /const memberships = buildGeneratedImageMembership\(\{/);
   assert.match(source, /const entities = buildGeneratedImageEntities\(\{[\s\S]*memberships,/);
   assert.match(source, /const readyEntities = filterReadyGeneratedImageEntities\(entities\);/);
+  assert.match(source, /const promptTokenCompareSet = new Set\(promptTokens\.map\(normalizePromptTokenForCompare\)/);
+  assert.match(source, /!promptTokenCompareSet\.has\(normalizePromptTokenForCompare\(image\.promptToken\)\)/);
+  assert.match(
+    source,
+    /appendUnanchoredToEnd: renderMode !== 'plugin-native-data' \|\| hasPluginNativeArtifacts !== true/,
+  );
+  assert.match(source, /buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)/);
   assert.doesNotMatch(source, /for \(let i = 0; i < promptTokens\.length; i\+\+\)/);
+});
+
+test('gallery membership tolerates plugin prompt-token whitespace normalization', () => {
+  const membershipSource = readSource('generatedImageMembership.ts');
+
+  assert.match(membershipSource, /import \{ normalizePromptTokenForCompare \} from '\.\/pluginNativeImageArtifacts';/);
+  assert.match(
+    membershipSource,
+    /normalizePromptTokenForCompare\(entry\.promptToken\) === normalizePromptTokenForCompare\(promptToken\)/,
+  );
+});
+
+test('transcript card hydrates pending placeholders from ready gallery entries', () => {
+  const listSource = readSource('components/TranscriptList.vue');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(listSource, /:gallery-entries="messageGalleryEntries\(item\.message_id\)"/);
+  assert.match(cardSource, /function hydratePendingImagesFromGalleryEntries\(\)/);
+  assert.match(cardSource, /root\.querySelectorAll\('\[data-raw-image-tag="true"\]'\)/);
+  assert.match(cardSource, /target\.replaceWith\(figure\)/);
+  assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
+});
+
+test('native image reader falls back to swipe_info images when extra images are transient placeholders', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(source, /function flattenChatu8ImageRecords\(input: unknown\): Record<string, any>\[\]/);
+  assert.match(source, /_\.get\(message, 'extra\.images', null\)/);
+  assert.match(source, /_\.get\(message, \['swipe_info', swipeId, 'images'\], null\)/);
+  assert.match(source, /return collectSelectedChatu8ImageEntries\(message\);/);
+});
+
+test('host DOM image reader pairs st-chatu8 buttons with adjacent generated imgs', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(source, /function resolvePluginGeneratedImageForButton\(/);
+  assert.match(source, /button\.nextElementSibling/);
+  assert.match(source, /button\.getAttribute\('data-image-tag'\) \?\? button\.getAttribute\('data-link'\)/);
+  assert.match(source, /button\.dataset\.requestId \?\? button\.getAttribute\('data-request-id'\)/);
+  assert.match(source, /extractAnchorTextForImageNode\(image, root\)/);
 });
 
 test('transcript image FAB restores the historical direct trigger path instead of reusing the proxy chain', () => {

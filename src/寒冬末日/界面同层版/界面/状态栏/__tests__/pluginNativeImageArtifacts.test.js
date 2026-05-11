@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const {
+  normalizePromptTokenForCompare,
   readNativeFirstImageArtifacts,
   readNativeFirstPromptTokens,
   readNativeFirstMembershipEntries,
@@ -33,6 +34,77 @@ test('extra images beat cache fallback for the same artifact key', () => {
   assert.equal(result[0].source, 'extra');
   assert.equal(result[0].requestId, 'req-1');
   assert.equal(result[0].src, 'https://example.com/extra-foo.png');
+});
+
+test('extra image prompt text is normalized into promptToken when tag fields are absent', () => {
+  const prompt = 'sfw, 1girl, ${"name":"fujii yukino","angle":"from above"}$, hallway';
+  const result = readNativeFirstImageArtifacts({
+    messageId: 43,
+    extraImages: [
+      {
+        requestId: 'req-prompt-only',
+        prompt,
+        image: 'https://example.com/prompt-only.png',
+      },
+    ],
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'extra');
+  assert.equal(result[0].promptToken, `image###${prompt}###`);
+});
+
+test('preprocessed extra image promptToken text is normalized back into a chatu8 prompt token', () => {
+  const prompt = 'sfw, 1girl, ${"name":"fujii yukino"}$, snowy window';
+  const result = readNativeFirstImageArtifacts({
+    messageId: 45,
+    extraImages: [
+      {
+        requestId: 'req-preprocessed-prompt',
+        promptToken: prompt,
+        src: 'https://example.com/preprocessed-prompt.png',
+      },
+    ],
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'extra');
+  assert.equal(result[0].promptToken, `image###${prompt}###`);
+});
+
+test('prompt token comparison ignores plugin whitespace normalization differences', () => {
+  const rawToken = [
+    'image###Scene Composition:sfw, 1girl, solo;',
+    'Character 1 Prompt:girl, Mu Xiaoxiao (original), long hair;',
+    'Character 1 UC:background characters###',
+  ].join('\n');
+  const pluginTag =
+    'Scene Composition:sfw, 1girl, solo;Character 1 Prompt:girl, Mu Xiaoxiao (original), long hair;Character 1 UC:background characters';
+
+  assert.equal(normalizePromptTokenForCompare(rawToken), normalizePromptTokenForCompare(pluginTag));
+});
+
+test('cache metadata enriches native image artifacts when native source lacks promptToken', () => {
+  const prompt = 'sfw, 1girl, ${"name":"fujii yukino"}$, moon light';
+  const result = readNativeFirstImageArtifacts({
+    messageId: 44,
+    hostDomArtifacts: [
+      {
+        src: 'https://example.com/rendered.png',
+        alt: 'Generated Image',
+      },
+    ],
+    cacheArtifacts: [
+      {
+        prompt,
+        src: 'https://example.com/rendered.png',
+      },
+    ],
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'host_dom');
+  assert.equal(result[0].promptToken, `image###${prompt}###`);
 });
 
 test('mes tag parser results beat cache fallback when extra images are absent', () => {

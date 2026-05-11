@@ -376,3 +376,190 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* --------------------------------------------------------------
+ * P1-5｜移动端关闭 backdrop-filter
+ * ---------------------------------------------------------------
+ * 窄屏 GPU 对 blur 非常敏感；流式期间下方 transcript 不断 invalidate，
+ * 顶栏/侧栏/底栏/抽屉/弹窗这些 blur 层每帧都会重新合成一次。
+ * 这里把项目内所有已知的 blur 容器一次性降级为无 blur，
+ * 并额外为前者补一层背景色，避免去掉毛玻璃后后景穿透。
+ * 要再加新的 blur 容器，记得把选择器名字补到下方名单里。
+ */
+@media (max-width: 760px) {
+  .demo-surface,
+  .hud-panel,
+  .ui-topbar,
+  .ui-page-menu-list,
+  .ui-more-menu-list,
+  .ui-side-drawer,
+  .ui-bottom-drawer,
+  .ui-history-badge,
+  .ui-bottom-drawer-body.is-map .room-cell,
+  .transcript-fab,
+  .transcript-image-fab,
+  .image-tag-button,
+  .hud-modal-backdrop,
+  .hud-modal,
+  .hud-modal-body.is-map .room-cell,
+  .choice-modal-mask,
+  .role-assign-mask,
+  .portrait-picker-mask,
+  .generated-image-assign-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* blur 去掉后补背景，避免底下内容穿透 */
+  .ui-topbar {
+    background: color-mix(in srgb, var(--background) 96%, var(--surface) 4%) !important;
+  }
+  .ui-side-drawer,
+  .ui-bottom-drawer {
+    background: color-mix(in srgb, var(--background) 94%, var(--surface) 6%) !important;
+  }
+  .hud-modal {
+    background: color-mix(in srgb, var(--surface) 96%, black 4%) !important;
+  }
+  .hud-modal-backdrop,
+  .role-assign-mask,
+  .portrait-picker-mask,
+  .choice-modal-mask {
+    background: color-mix(in srgb, black 72%, transparent) !important;
+  }
+}
+
+/* prefers-reduced-motion 下也同步降级，避免辅助功能用户还在承担 blur 成本 */
+@media (prefers-reduced-motion: reduce) {
+  .demo-surface,
+  .hud-panel,
+  .ui-topbar,
+  .ui-page-menu-list,
+  .ui-more-menu-list,
+  .ui-side-drawer,
+  .ui-bottom-drawer,
+  .ui-history-badge,
+  .ui-bottom-drawer-body.is-map .room-cell,
+  .transcript-fab,
+  .transcript-image-fab,
+  .image-tag-button,
+  .hud-modal-backdrop,
+  .hud-modal,
+  .hud-modal-body.is-map .room-cell,
+  .choice-modal-mask,
+  .role-assign-mask,
+  .portrait-picker-mask,
+  .generated-image-assign-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* --------------------------------------------------------------
+ * st-chatu8 `<image>` 裸标签保底样式
+ * ---------------------------------------------------------------
+ * 插件写入 mes 的 `<image>` 标签会被 `sanitizeRawImageTagsInHtml`
+ * 转成 `.st-chatu8-image-pending`（在同层看到图片前的几百毫秒过渡）。
+ * MutationObserver 一旦拿到真实 `<img>`，就会触发 rebuild 刷掉占位。
+ */
+.st-chatu8-image-pending[data-raw-image-tag='true'],
+.custom-st-chatu8-image-pending[data-raw-image-tag='true'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin: 4px 0;
+  border: 1px dashed color-mix(in srgb, var(--primary) 28%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 22%, transparent);
+  color: var(--demo-text-secondary);
+  font-family: var(--demo-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  animation: st-chatu8-image-pending-breath 1.6s ease-in-out infinite;
+}
+
+img.st-chatu8-image-pending,
+img.custom-st-chatu8-image-pending {
+  display: block;
+  max-width: 100%;
+  border-radius: 12px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 24%, transparent);
+}
+
+@keyframes st-chatu8-image-pending-breath {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/*
+ * ---------------------------------------------------------------
+ * 运行时框架标签折叠样式（<thinking> / <UpdateVariable>）
+ * ---------------------------------------------------------------
+ * `buildFinalHtml` 里 `sanitizeAssistantRuntimeTagsForDisplay` 会把
+ * `<thinking>` 折成 `.assistant-runtime-thinking`，把 `<UpdateVariable>`
+ * 折成 `.assistant-runtime-variable`，两者共用 `.assistant-runtime-details`。
+ * 目标：默认收起、不喧宾夺主；用户点开才看到原始内容。
+ */
+.assistant-body .assistant-runtime-details {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary, #9aa4b6) 20%, transparent);
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--surface-1, #1b1e25) 65%, transparent);
+  color: color-mix(in srgb, var(--text-primary, #e6ebf3) 75%, transparent);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.assistant-body .assistant-runtime-details[open] {
+  background-color: color-mix(in srgb, var(--surface-1, #1b1e25) 80%, transparent);
+}
+
+.assistant-body .assistant-runtime-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--primary, #9aa4b6) 85%, var(--text-primary, #e6ebf3));
+  list-style: none;
+  user-select: none;
+}
+
+.assistant-body .assistant-runtime-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.assistant-body .assistant-runtime-details > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 6px;
+  transition: transform 0.15s ease-out;
+}
+
+.assistant-body .assistant-runtime-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.assistant-body .assistant-runtime-details > :not(summary) {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono, ui-monospace, 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace);
+  font-size: 11.5px;
+}
+
+.assistant-body .assistant-runtime-variable {
+  border-color: color-mix(in srgb, var(--accent, #6fa4ff) 28%, transparent);
+}
+
+.assistant-body .assistant-runtime-variable > summary {
+  color: color-mix(in srgb, var(--accent, #6fa4ff) 90%, var(--text-primary, #e6ebf3));
+}

@@ -51,8 +51,22 @@
     ></button>
 
     <figcaption v-if="showCaption" class="generated-image-caption">
-      <strong>{{ entry.characterName || entry.title }}</strong>
-      <small>{{ entry.title }}</small>
+      <div class="generated-image-caption-main">
+        <strong>{{ captionPrimaryText }}</strong>
+        <button
+          v-if="variant === 'gallery'"
+          type="button"
+          class="generated-image-assign-icon-btn clip-corner-sm"
+          title="设为立绘"
+          aria-label="设为立绘"
+          @click.stop.capture="handleAssignClick"
+          @dblclick.stop.capture
+          @pointerdown.stop.capture
+        >
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
+      <small v-if="captionSecondaryText">{{ captionSecondaryText }}</small>
     </figcaption>
   </figure>
 </template>
@@ -78,6 +92,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'view', payload: GeneratedImageActivationPayload): void;
   (event: 'regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'assign-role', entry: GeneratedImageRef): void;
 }>();
 
 const resolvedSource = ref<ResolvedGeneratedImageSource | null>(null);
@@ -106,6 +121,13 @@ const rootClass = computed(() =>
 
 const kickerText = computed(() => (resolvedSource.value ? '单击查看' : '等待图片'));
 const secondaryText = computed(() => (props.entry.requestId ? '双击重生' : '双击调用原图链'));
+const captionPrimaryText = computed(() => String(props.entry.characterName || props.entry.title || '未标注图片').trim());
+const captionSecondaryText = computed(() => {
+  const title = String(props.entry.title ?? '').trim();
+  const primary = captionPrimaryText.value;
+  if (!title || title.toLowerCase() === primary.toLowerCase()) return '';
+  return title;
+});
 
 const activationPayload = computed<GeneratedImageActivationPayload>(() => ({
   messageId: Number.isFinite(Number(props.entry.messageId)) ? Math.trunc(Number(props.entry.messageId)) : null,
@@ -167,6 +189,11 @@ function handlePointerCancel(event: PointerEvent) {
   if (event.pointerType !== 'touch') return;
   stopEvent(event);
   gestureController.handleTouchCancel();
+}
+
+function handleAssignClick(event: Event) {
+  stopEvent(event);
+  emit('assign-role', props.entry);
 }
 
 async function resolveSource() {
@@ -326,6 +353,44 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.generated-image-assign-icon-btn {
+  position: relative;
+  z-index: 4;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 34%, transparent);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--demo-text-accent);
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', var(--demo-font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.generated-image-assign-icon-btn:hover,
+.generated-image-assign-icon-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--primary) 58%, transparent);
+  background: color-mix(in srgb, var(--primary) 22%, var(--surface) 78%);
+}
+
+@media (max-width: 640px) {
+  .generated-image-assign-icon-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+}
+
 .generated-image-placeholder {
   display: grid;
   align-content: end;
@@ -368,6 +433,19 @@ onBeforeUnmount(() => {
 .generated-image-caption {
   display: grid;
   gap: 2px;
+}
+
+.generated-image-caption-main {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.generated-image-caption-main strong {
+  min-width: 0;
 }
 
 .generated-image-caption small {

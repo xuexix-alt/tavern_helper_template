@@ -26,6 +26,22 @@ export const OpeningPresetSchema = z.object({
     character: z.string().default(''),
   }),
   form_schema: z.array(OpeningFormFieldSchema).default([]),
+  form_schema_overrides: z
+    .record(
+      z.string(),
+      z.object({
+        default_meta: z
+          .object({
+            time: z.string().optional(),
+            location: z.string().optional(),
+            character: z.string().optional(),
+          })
+          .partial()
+          .optional(),
+        fields: z.array(OpeningFormFieldSchema).default([]),
+      }),
+    )
+    .default({}),
   prompt_rules: z.object({
     should_echo_setup: z.boolean().default(true),
     output_tags: z.array(z.string()).default(['content', 'option']),
@@ -37,7 +53,7 @@ export const OpeningPayloadSchema = z
     version: z.literal(5),
     state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
     world_mode_id: z.string().default('B'),
-    route_id: z.string().default('养'),
+    route_id: z.string().default('后宫+养成'),
     use_stream: z.boolean().default(false),
     compiled_prompt_snapshot: z.string().default(''),
     opening_assistant_message_id: z.number().int().positive().nullable().default(null),

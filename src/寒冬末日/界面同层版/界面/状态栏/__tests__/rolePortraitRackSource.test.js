@@ -20,8 +20,10 @@ test('StoryPage keeps the bottom role rack as plain quick buttons and passes por
   assert.match(source, /:role-portrait-overrides="rolePortraitOverrides"/);
   assert.match(source, /@select-role-portrait="selectRolePortraitForRole"/);
   assert.match(source, /@add-role-portrait-set-image="addRolePortraitSetImageForRole"/);
+  assert.match(source, /@clear-role-portrait="clearRolePortraitForRole"/);
   assert.match(source, /setPrimaryRolePortraitOverride/);
   assert.match(source, /addRolePortraitSetImage/);
+  assert.match(source, /clearRolePortraitOverride/);
 });
 
 test('StoryPage does not mount the old radial role wheel', () => {
@@ -43,6 +45,16 @@ test('MvuRolePanel owns the role detail flip portrait surface', () => {
   assert.match(source, /@click="toggleRolePortraitFlip\(entry\.key\)"/);
   assert.match(source, /@click\.stop="openRolePortraitPicker\(entry\.key\)"/);
   assert.match(source, /@click\.stop="selectRolePortraitForRole\(entry, setEntry\)"/);
+  assert.match(source, /@click\.stop="clearRolePortraitForEntry\(entry\)"/);
+  assert.match(source, /function hasRolePortraitOverride/);
+});
+
+test('gallery role assignment uses the full role tab roster so offstage roles stay searchable', () => {
+  const source = read('../pages/StoryPage.vue');
+
+  assert.match(source, /const portraitAssignableRoleTabs = computed/);
+  assert.match(source, /return portraitAssignableRoleTabs\.value\.map/);
+  assert.doesNotMatch(source, /return visibleRoleTabs\.value\.map\(role => \(\{/);
 });
 
 test('MvuRolePanel sanitizes generated image labels in the portrait set strip', () => {
@@ -66,4 +78,14 @@ test('RolePortraitPicker filters gallery candidates by selected role without mut
   assert.match(source, /class="portrait-add-btn/);
   assert.match(source, /displayImageName\(entry\.title \|\| entry\.characterName \|\| roleLabel\)/);
   assert.doesNotMatch(source, /writeGalleryManifestRecord|storeGalleryBinary|galleryCatalogPersistence/);
+});
+
+test('gallery image portrait assignment is a compact icon beside the image name', () => {
+  const source = read('../components/GeneratedImageAsset.vue');
+
+  assert.match(source, /class="generated-image-caption-main"/);
+  assert.match(source, /class="generated-image-assign-icon-btn clip-corner-sm"/);
+  assert.match(source, /aria-hidden="true"/);
+  assert.doesNotMatch(source, />\s*设为立绘\s*</);
+  assert.doesNotMatch(source, /<strong>\{\{ entry\.characterName \|\| entry\.title \}\}<\/strong>\s*<small>\{\{ entry\.title \}\}<\/small>/);
 });
