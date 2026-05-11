@@ -62,12 +62,7 @@ export type RunQueuedPostDoneAssistantSideEffectsInput = {
     messageId: number | null | undefined,
     kind: PostDoneAssistantLifecycleKind,
   ) => Promise<void>;
-  recordLifecycleTrace: (
-    scope: string,
-    event: string,
-    payload: Record<string, unknown>,
-    traceId: string,
-  ) => unknown;
+  recordLifecycleTrace: (scope: string, event: string, payload: Record<string, unknown>, traceId: string) => unknown;
   warn?: (message: string, detail: unknown) => void;
 };
 
@@ -78,7 +73,9 @@ export type RunQueuedHostMessageUpdateInput<T> = {
   task: PostDoneSideEffectTask<T>;
 };
 
-export function createPostDoneSideEffectsQueue(options: PostDoneSideEffectsQueueOptions = {}): PostDoneSideEffectsQueue {
+export function createPostDoneSideEffectsQueue(
+  options: PostDoneSideEffectsQueueOptions = {},
+): PostDoneSideEffectsQueue {
   const tailsByMessageId = new Map<number, Promise<unknown>>();
   const stageTimeoutMs = {
     ...DEFAULT_POST_DONE_STAGE_TIMEOUT_MS,
@@ -93,11 +90,7 @@ export function createPostDoneSideEffectsQueue(options: PostDoneSideEffectsQueue
     return normalized;
   }
 
-  function enqueue<T>(
-    messageId: number,
-    stage: PostDoneSideEffectStage,
-    task: PostDoneSideEffectTask<T>,
-  ): Promise<T> {
+  function enqueue<T>(messageId: number, stage: PostDoneSideEffectStage, task: PostDoneSideEffectTask<T>): Promise<T> {
     const normalizedId = normalizeMessageId(messageId);
     const previousTail = tailsByMessageId.get(normalizedId) ?? Promise.resolve();
 

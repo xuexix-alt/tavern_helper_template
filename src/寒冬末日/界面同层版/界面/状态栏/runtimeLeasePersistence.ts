@@ -138,9 +138,7 @@ export function isSameLayerRuntimeLeaseStale(
 
 function isSameRuntimeLeaseScope(lhs: SameLayerRuntimeLease, rhs: SameLayerRuntimeLease | null | undefined): boolean {
   return Boolean(
-    rhs &&
-      rhs.sessionId === lhs.sessionId &&
-      Number(rhs.containerMessageId) === Number(lhs.containerMessageId),
+    rhs && rhs.sessionId === lhs.sessionId && Number(rhs.containerMessageId) === Number(lhs.containerMessageId),
   );
 }
 
