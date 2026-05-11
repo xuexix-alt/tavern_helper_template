@@ -345,8 +345,8 @@ export function resolveRolePortrait(
   const overrideLookupPool = [...entries, ...defaultEntries];
   const overrideEntry = isCleared
     ? undefined
-    : findEntryForRef(overrideLookupPool, override?.imageRef) ??
-      findEntriesForRefs(overrideLookupPool, listOverrideRefs(override))[0];
+    : (findEntryForRef(overrideLookupPool, override?.imageRef) ??
+      findEntriesForRefs(overrideLookupPool, listOverrideRefs(override))[0]);
   const entry = overrideEntry ?? (isCleared ? undefined : findGalleryEntryForRole(role, entries, lookup));
 
   if (entry?.src) {

@@ -121,7 +121,9 @@ const rootClass = computed(() =>
 
 const kickerText = computed(() => (resolvedSource.value ? '单击查看' : '等待图片'));
 const secondaryText = computed(() => (props.entry.requestId ? '双击重生' : '双击调用原图链'));
-const captionPrimaryText = computed(() => String(props.entry.characterName || props.entry.title || '未标注图片').trim());
+const captionPrimaryText = computed(() =>
+  String(props.entry.characterName || props.entry.title || '未标注图片').trim(),
+);
 const captionSecondaryText = computed(() => {
   const title = String(props.entry.title ?? '').trim();
   const primary = captionPrimaryText.value;

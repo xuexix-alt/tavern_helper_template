@@ -194,9 +194,9 @@ function findOrderFallbackEntity(
   const src = normalizeSrc(nativeImage.src);
   const hasStableIdentity = Boolean(
     normalizeText(nativeImage.markerId) ||
-      normalizeText(nativeImage.requestId) ||
-      normalizeText(nativeImage.promptToken) ||
-      (imageId && imageId !== src),
+    normalizeText(nativeImage.requestId) ||
+    normalizeText(nativeImage.promptToken) ||
+    (imageId && imageId !== src),
   );
   if (hasStableIdentity) return undefined;
   const candidate = entities[index];

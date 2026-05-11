@@ -512,7 +512,8 @@ function flattenChatu8ImageRecords(input: unknown): Record<string, any>[] {
   if (!input) return [];
   if (Array.isArray(input)) return input.flatMap(item => flattenChatu8ImageRecords(item));
   if (isChatu8ImageRecord(input)) return [input];
-  if (typeof input === 'object') return Object.values(input as Record<string, unknown>).flatMap(flattenChatu8ImageRecords);
+  if (typeof input === 'object')
+    return Object.values(input as Record<string, unknown>).flatMap(flattenChatu8ImageRecords);
   return [];
 }
 

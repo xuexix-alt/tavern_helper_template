@@ -87,5 +87,8 @@ test('gallery image portrait assignment is a compact icon beside the image name'
   assert.match(source, /class="generated-image-assign-icon-btn clip-corner-sm"/);
   assert.match(source, /aria-hidden="true"/);
   assert.doesNotMatch(source, />\s*设为立绘\s*</);
-  assert.doesNotMatch(source, /<strong>\{\{ entry\.characterName \|\| entry\.title \}\}<\/strong>\s*<small>\{\{ entry\.title \}\}<\/small>/);
+  assert.doesNotMatch(
+    source,
+    /<strong>\{\{ entry\.characterName \|\| entry\.title \}\}<\/strong>\s*<small>\{\{ entry\.title \}\}<\/small>/,
+  );
 });

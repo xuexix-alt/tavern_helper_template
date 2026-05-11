@@ -33,7 +33,7 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     'native image DOM mutations should enter the per-message image refresh queue',
   );
   assert.equal(
-    source.includes("refreshTranscriptItemsByIds([messageId], reason);"),
+    source.includes('refreshTranscriptItemsByIds([messageId], reason);'),
     true,
     'queued image refreshes should refresh only the affected transcript item',
   );
@@ -137,7 +137,7 @@ test('gallery image refs are built from canonical image entities instead of sequ
     'gallery refs should stop assigning native images by per-membership fallback matching',
   );
   assert.equal(
-    source.includes("id: `host-dom-${messageId}-${image.requestId ?? index}-${index}`,"),
+    source.includes('id: `host-dom-${messageId}-${image.requestId ?? index}-${index}`,'),
     true,
     'gallery refs should fall back to message-scoped host DOM images when entity matching produces no ready entries',
   );

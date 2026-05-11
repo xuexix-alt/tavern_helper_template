@@ -1,10 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  buildGeneratedImageEntities,
-  filterReadyGeneratedImageEntities,
-} = require('../generatedImageEntities.ts');
+const { buildGeneratedImageEntities, filterReadyGeneratedImageEntities } = require('../generatedImageEntities.ts');
 
 test('DOM-only historical images pair with raw prompt memberships by order', () => {
   const promptToken = 'image###sfw, 1girl, ${"name":"fujii yukino"}$, hallway###';

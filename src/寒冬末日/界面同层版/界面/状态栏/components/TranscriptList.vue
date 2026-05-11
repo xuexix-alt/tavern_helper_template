@@ -1,10 +1,6 @@
 <template>
   <section
-    :class="[
-      'transcript-card',
-      `layout-${(layoutMode ?? 'wide').replace('_', '-')}`,
-      { 'is-streaming': isStreaming },
-    ]"
+    :class="['transcript-card', `layout-${(layoutMode ?? 'wide').replace('_', '-')}`, { 'is-streaming': isStreaming }]"
   >
     <div
       ref="listRef"
