@@ -96,6 +96,11 @@ import {
 } from './pluginNativeImageDom';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
 import {
+  createPostDoneSideEffectsQueue,
+  runQueuedHostMessageUpdate,
+  runQueuedPostDoneAssistantSideEffects,
+} from './postDoneSideEffectsQueue';
+import {
   normalizeDensity,
   normalizeFontMode,
   normalizeReadingMode,
@@ -112,10 +117,16 @@ import { installHostChatInputBridge } from './hostChatInputBridge';
 import { createHostVisualHideController } from './hostVisualHide';
 import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
 import {
+  clearSameLayerRuntimeHeartbeat,
+  readSameLayerRuntimeHeartbeat,
+  writeSameLayerRuntimeHeartbeat,
+} from './runtimeLeaseHeartbeat';
+import {
   clearSameLayerRuntimeLease,
   createSameLayerRuntimeLease,
-  isSameLayerRuntimeLeaseFresh,
+  isSameLayerRuntimeLeaseRecoverable,
   readSameLayerRuntimeLease,
+  type SameLayerRuntimeLease,
   type SameLayerRuntimeLeaseStatus,
   writeSameLayerRuntimeLease,
 } from './runtimeLeasePersistence';
@@ -1395,6 +1406,7 @@ export function useStreamingDemo() {
   const reprocessVariablesPending = ref(false);
   const imagePendingTaskManager = createImagePendingTaskManager();
   const imageRecentIntentStore = createImageRecentIntentStore();
+  const postDoneSideEffectsQueue = createPostDoneSideEffectsQueue();
 
   function resolveTraceId(fallbackPrefix = 'trace') {
     return activeGenerationTraceId || latestLifecycleTraceId || createTraceId(fallbackPrefix);
@@ -1579,9 +1591,7 @@ export function useStreamingDemo() {
 
     if (changedMessageIds.length === 0) return;
 
-    queueGeneratedImageEntityRefresh(changedMessageIds);
-    refreshTranscriptItemsByIds(changedMessageIds, reason);
-    scheduleUiRefresh(['gallery'], reason);
+    queueGeneratedImageEntityRefresh(changedMessageIds, reason);
     logImageBridge('host-data-synced', {
       reason,
       changedMessageIds,
@@ -2401,23 +2411,34 @@ export function useStreamingDemo() {
     }, 80);
   }
 
-  function writeRuntimeLeaseStatus(status: SameLayerRuntimeLeaseStatus) {
-    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+  function createCurrentRuntimeLease(status: SameLayerRuntimeLeaseStatus): SameLayerRuntimeLease | null {
+    if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return null;
     const containerId = getActiveContainerMessageId();
-    if (containerId == null) return;
-    writeSameLayerRuntimeLease(
-      createSameLayerRuntimeLease({
-        sessionId: runtimeLeaseSessionId,
-        containerMessageId: containerId,
-        status,
-      }),
-    );
+    if (containerId == null) return null;
+    return createSameLayerRuntimeLease({
+      sessionId: runtimeLeaseSessionId,
+      containerMessageId: containerId,
+      status,
+    });
+  }
+
+  function writeRuntimeLeaseStatus(status: SameLayerRuntimeLeaseStatus) {
+    const lease = createCurrentRuntimeLease(status);
+    if (!lease) return;
+    writeSameLayerRuntimeLease(lease);
+    writeSameLayerRuntimeHeartbeat(lease);
+  }
+
+  function writeRuntimeLeaseHeartbeat() {
+    const lease = createCurrentRuntimeLease('active');
+    if (!lease) return;
+    writeSameLayerRuntimeHeartbeat(lease);
   }
 
   function startRuntimeLeaseHeartbeat() {
     if (runtimeLeaseHeartbeatTimer) window.clearInterval(runtimeLeaseHeartbeatTimer);
     runtimeLeaseHeartbeatTimer = window.setInterval(() => {
-      writeRuntimeLeaseStatus('active');
+      writeRuntimeLeaseHeartbeat();
     }, SAME_LAYER_LEASE_HEARTBEAT_MS);
   }
 
@@ -2428,7 +2449,7 @@ export function useStreamingDemo() {
     }
   }
 
-  async function restoreHostVisibilityAfterLeaseReset(reason: string) {
+  async function restoreHostVisibilityAfterLeaseReset(reason: string, containerMessageId?: number | null) {
     const hiddenMessages = readMessagesAfterContainer().filter(item => item.is_hidden === true);
     if (hiddenMessages.length > 0) {
       await setChatMessages(
@@ -2439,6 +2460,8 @@ export function useStreamingDemo() {
     hostVisualHideController.clearFromMessageIds(hiddenMessages.map(item => item.message_id));
     clearHideState();
     clearSameLayerRuntimeLease();
+    const heartbeatContainerId = containerMessageId ?? getActiveContainerMessageId();
+    if (heartbeatContainerId != null) clearSameLayerRuntimeHeartbeat(heartbeatContainerId);
     debugConsoleLog('[stream-demo] lease reset restored host visibility', {
       reason,
       restoredCount: hiddenMessages.length,
@@ -2470,14 +2493,18 @@ export function useStreamingDemo() {
 
     clearHideState();
     clearSameLayerRuntimeLease();
+    const containerId = getActiveContainerMessageId();
+    if (containerId != null) clearSameLayerRuntimeHeartbeat(containerId);
   }
 
   async function restoreHideState(): Promise<void> {
     if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
 
     const runtimeLease = readSameLayerRuntimeLease();
-    if (runtimeLease && isSameLayerRuntimeLeaseFresh(runtimeLease) !== true) {
-      await restoreHostVisibilityAfterLeaseReset('stale_runtime_lease');
+    const runtimeHeartbeat =
+      runtimeLease == null ? null : readSameLayerRuntimeHeartbeat(runtimeLease.containerMessageId);
+    if (runtimeLease && isSameLayerRuntimeLeaseRecoverable(runtimeLease, runtimeHeartbeat) !== true) {
+      await restoreHostVisibilityAfterLeaseReset('stale_runtime_lease', runtimeLease.containerMessageId);
       return;
     }
 
@@ -2562,7 +2589,7 @@ export function useStreamingDemo() {
     }
   }
 
-  function queueGeneratedImageEntityRefresh(messageIds: number[] = []) {
+  function queueGeneratedImageEntityRefresh(messageIds: number[] = [], reason = 'generated_image_entity_refresh') {
     if (generatedImageDomMutationTimer) window.clearTimeout(generatedImageDomMutationTimer);
     const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id >= 0))];
     generatedImageDomMutationTimer = window.setTimeout(() => {
@@ -2572,7 +2599,22 @@ export function useStreamingDemo() {
         return;
       }
       normalizedMessageIds.forEach(messageId => {
-        bumpGeneratedImageEntityRevision(messageId);
+        void runQueuedHostMessageUpdate({
+          queue: postDoneSideEffectsQueue,
+          messageId,
+          stage: 'image-refresh',
+          task: () => {
+            bumpGeneratedImageEntityRevision(messageId);
+            refreshTranscriptItemsByIds([messageId], reason);
+            scheduleUiRefresh(['gallery'], reason);
+          },
+        }).catch(error => {
+          console.warn('[stream-demo] queued image refresh failed', {
+            messageId,
+            reason,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       });
     }, 40);
   }
@@ -2701,30 +2743,37 @@ export function useStreamingDemo() {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
 
-    await withHostTranscriptVisible(async () => {
-      // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
-      const rendered = await ensureHostMesTextRendered(normalizedId);
-      if (!rendered) {
-        console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
-      }
+    await runQueuedHostMessageUpdate({
+      queue: postDoneSideEffectsQueue,
+      messageId: normalizedId,
+      stage: 'auto-image',
+      task: async () => {
+        await withHostTranscriptVisible(async () => {
+          // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
+          const rendered = await ensureHostMesTextRendered(normalizedId);
+          if (!rendered) {
+            console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
+          }
 
-      // Step 2: 注册持久化任务（imagePendingTaskManager 用）
-      beginPendingImageTask(normalizedId);
-      markRecentImageIntent(normalizedId, 'transcript');
+          // Step 2: 注册持久化任务（imagePendingTaskManager 用）
+          beginPendingImageTask(normalizedId);
+          markRecentImageIntent(normalizedId, 'transcript');
 
-      // Step 3: 向宿主 mes_text 派发主触发手势，让插件走完整 ClickTrigger 链路
-      const mesText =
-        collectHostDocuments()
-          .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
-          .find(Boolean) ?? null;
-      if (!mesText) {
-        console.warn('[image] 注入节点未找到，mesid:', normalizedId);
-        return;
-      }
+          // Step 3: 向宿主 mes_text 派发主触发手势，让插件走完整 ClickTrigger 链路
+          const mesText =
+            collectHostDocuments()
+              .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
+              .find(Boolean) ?? null;
+          if (!mesText) {
+            console.warn('[image] 注入节点未找到，mesid:', normalizedId);
+            return;
+          }
 
-      if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
-        console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
-      }
+          if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
+            console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
+          }
+        });
+      },
     });
   }
 
@@ -3118,8 +3167,15 @@ export function useStreamingDemo() {
           },
           traceId,
         );
-        await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
-          refresh: resolveAssistantMessageRefreshMode(phase),
+        await runQueuedHostMessageUpdate({
+          queue: postDoneSideEffectsQueue,
+          messageId,
+          stage: 'host-message-update',
+          task: async () => {
+            await setChatMessages([{ message_id: messageId, message: nextMessage, is_hidden: false }], {
+              refresh: resolveAssistantMessageRefreshMode(phase),
+            });
+          },
         });
         upsertTranscriptItem(
           createLocalTranscriptItem({
@@ -3421,28 +3477,18 @@ export function useStreamingDemo() {
         traceId,
       );
       await patchAssistantMessage('done');
-      if (assistantMessageId.value != null) {
-        const reprocessResult = await reprocessMessageVariablesById(assistantMessageId.value, {
-          force: true,
-          refreshMessage: true,
-        });
-        if (reprocessResult.status === 'error') {
-          console.warn('[stream-demo] direct MVU reprocess failed', reprocessResult);
-        }
-        recordLifecycleTrace(
-          'runGenerationFlow',
-          'mvu_reprocess_completed',
-          {
-            assistantMessageId: assistantMessageId.value,
-            reprocessStatus: reprocessResult.status,
-          },
-          traceId,
-        );
-      }
-      await emitOfficialGenerationLifecycle(
-        assistantMessageId.value,
-        options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate'),
-      );
+      const finalizedAssistantMessageId = assistantMessageId.value;
+      const lifecycleKind = options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate');
+      await runQueuedPostDoneAssistantSideEffects({
+        queue: postDoneSideEffectsQueue,
+        messageId: finalizedAssistantMessageId,
+        lifecycleKind,
+        traceId,
+        reprocessMessageVariablesById,
+        emitOfficialGenerationLifecycle,
+        recordLifecycleTrace,
+        warn: console.warn,
+      });
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
@@ -4018,11 +4064,11 @@ export function useStreamingDemo() {
     restoreReaderChatState();
 
     if (isOpeningWorkbenchHostActive()) {
-      writeRuntimeLeaseStatus('booting');
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
 
       await restoreHideState();
+      writeRuntimeLeaseStatus('booting');
       writeRuntimeLeaseStatus('active');
       startRuntimeLeaseHeartbeat();
       syncHostVisualHideFromCurrentState();
@@ -4053,9 +4099,7 @@ export function useStreamingDemo() {
         const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
         if (!hasReadyNativeImageMutation) return;
         const affectedMessageIds = collectMutationMessageIds(records);
-        queueGeneratedImageEntityRefresh(affectedMessageIds);
-        refreshTranscriptItemsByIds(affectedMessageIds, 'host.plugin_native_dom_mutation');
-        scheduleUiRefresh(['gallery'], 'host.plugin_native_dom_mutation');
+        queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');
       });
     }
 

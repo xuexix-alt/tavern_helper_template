@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import {
+  SAME_LAYER_LEASE_SUSPEND_GRACE_MS,
   SAME_LAYER_LEASE_STALE_MS,
   SAME_LAYER_RUNTIME_LEASE_PATH,
   SAME_LAYER_RUNTIME_LEASE_VERSION,
@@ -133,4 +134,26 @@ export function isSameLayerRuntimeLeaseStale(
   staleMs = SAME_LAYER_LEASE_STALE_MS,
 ): boolean {
   return !isSameLayerRuntimeLeaseFresh(lease, now, staleMs);
+}
+
+function isSameRuntimeLeaseScope(lhs: SameLayerRuntimeLease, rhs: SameLayerRuntimeLease | null | undefined): boolean {
+  return Boolean(
+    rhs &&
+      rhs.sessionId === lhs.sessionId &&
+      Number(rhs.containerMessageId) === Number(lhs.containerMessageId),
+  );
+}
+
+export function isSameLayerRuntimeLeaseRecoverable(
+  lease: SameLayerRuntimeLease | null | undefined,
+  heartbeat?: SameLayerRuntimeLease | null,
+  now = Date.now(),
+): boolean {
+  if (!lease || lease.status === 'closing') return false;
+  if (lease.status === 'suspended') {
+    return isSameLayerRuntimeLeaseFresh(lease, now, SAME_LAYER_LEASE_SUSPEND_GRACE_MS);
+  }
+
+  const freshnessSource = isSameRuntimeLeaseScope(lease, heartbeat) ? heartbeat : lease;
+  return isSameLayerRuntimeLeaseFresh(freshnessSource, now, SAME_LAYER_LEASE_STALE_MS);
 }
