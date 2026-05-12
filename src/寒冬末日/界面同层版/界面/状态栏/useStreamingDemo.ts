@@ -337,7 +337,8 @@ function shouldRefreshStreamingPreview(
 
 function buildStreamingPreviewHtml(renderSource: string, role: TranscriptItem['role'], message_id: number): string {
   const source = String(renderSource ?? '').trim();
-  if (!source) return '<div class="stream-stage-preview"><span class="assistant-runtime-pending">等待 token...</span></div>';
+  if (!source)
+    return '<div class="stream-stage-preview"><span class="assistant-runtime-pending">等待 token...</span></div>';
 
   const cacheKey = Math.trunc(Number(message_id));
   const now = Date.now();
@@ -3526,7 +3527,10 @@ export function useStreamingDemo() {
     return normalized;
   }
 
-  function queueGenerationFinalizeFromSignal(reason: 'iframe.generation_ended' | 'host.generation_ended', text?: unknown) {
+  function queueGenerationFinalizeFromSignal(
+    reason: 'iframe.generation_ended' | 'host.generation_ended',
+    text?: unknown,
+  ) {
     const candidateFinalText = normalizeSignalFinalText(text);
     if (candidateFinalText) {
       finalText.value = candidateFinalText;
@@ -4045,7 +4049,11 @@ export function useStreamingDemo() {
           },
           traceId,
         );
-        appendLog('action', '生成完成', stripTagsForPreview(finalText.value || streamText.value).slice(0, 80) || '(空回复)');
+        appendLog(
+          'action',
+          '生成完成',
+          stripTagsForPreview(finalText.value || streamText.value).slice(0, 80) || '(空回复)',
+        );
         return {
           success: true,
           assistantMessageId: assistantMessageId.value,

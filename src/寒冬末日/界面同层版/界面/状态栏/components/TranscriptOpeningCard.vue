@@ -43,7 +43,11 @@
 
     <div v-if="showBody" class="transcript-body opening-body" :class="{ collapsed: !expanded }">
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-if="item.isStreaming" class="html-body is-stream-stage stream-stage-pre" v-html="streamingOpeningHtml"></div>
+      <div
+        v-if="item.isStreaming"
+        class="html-body is-stream-stage stream-stage-pre"
+        v-html="streamingOpeningHtml"
+      ></div>
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-else class="html-body" v-html="item.finalHtml || '<p>(空回复)</p>'"></div>
     </div>

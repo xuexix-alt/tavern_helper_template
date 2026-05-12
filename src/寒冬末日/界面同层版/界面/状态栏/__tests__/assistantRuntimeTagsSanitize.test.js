@@ -46,11 +46,15 @@ function runSanitize(source) {
   out = out.replace(/<content\b[^>]*>([\s\S]*?)<\/content>/gi, (_m, body) => body);
   out = out.replace(/<content\b[^>]*>/gi, '');
   out = out.replace(/<\/content>/gi, '');
-  out = out.replace(/<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i, (_m, body) =>
-    `<details class="assistant-runtime-details assistant-runtime-thinking assistant-runtime-pending" open><summary>思考过程生成中</summary>${body}</details>`,
+  out = out.replace(
+    /<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i,
+    (_m, body) =>
+      `<details class="assistant-runtime-details assistant-runtime-thinking assistant-runtime-pending" open><summary>思考过程生成中</summary>${body}</details>`,
   );
-  out = out.replace(/<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i, (_m, body) =>
-    `<details class="assistant-runtime-details assistant-runtime-variable assistant-runtime-pending" open><summary>变量更新生成中</summary>${body}</details>`,
+  out = out.replace(
+    /<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i,
+    (_m, body) =>
+      `<details class="assistant-runtime-details assistant-runtime-variable assistant-runtime-pending" open><summary>变量更新生成中</summary>${body}</details>`,
   );
   out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
   out = out.replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '');
