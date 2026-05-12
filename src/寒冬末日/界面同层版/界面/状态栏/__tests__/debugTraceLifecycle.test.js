@@ -63,7 +63,7 @@ test('summarizeTranscriptForDebug keeps compact assistant snapshots', () => {
   ]);
 });
 
-test('shouldIgnoreHostRefreshDuringBusy only suppresses busy token-like events', () => {
+test('shouldIgnoreHostRefreshDuringBusy suppresses busy start/token chatter but lets ended reach finalization', () => {
   assert.equal(
     shouldIgnoreHostRefreshDuringBusy({
       busy: true,
@@ -109,7 +109,7 @@ test('shouldIgnoreHostRefreshDuringBusy only suppresses busy token-like events',
       streamTokenEventName: 'STREAM_TOKEN_RECEIVED',
       smoothStreamTokenEventName: 'SMOOTH_STREAM_TOKEN_RECEIVED',
     }),
-    true,
+    false,
   );
 });
 

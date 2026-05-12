@@ -193,11 +193,20 @@ const DEMO_THEME_CLASS_NAMES = [
 ] as const;
 const TRANSCRIPT_UI_WINDOW_SIZE = 4;
 const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
+const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
+
+type StreamingPreviewCacheEntry = {
+  source: string;
+  html: string;
+  renderedAt: number;
+};
+
+const streamingPreviewCache = new Map<number, StreamingPreviewCacheEntry>();
 
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
@@ -267,6 +276,86 @@ function buildRawTranscriptPreHtml(renderSource: string): string {
   const source = String(renderSource ?? '').trim();
   const text = source || '(空回复)';
   return `<pre class="stream-stage-pre">${escapeHtml(text)}</pre>`;
+}
+
+function buildStreamingPendingDetails(kind: 'thinking' | 'variable' | 'generic', body: string): string {
+  const label = kind === 'thinking' ? '思考过程生成中' : kind === 'variable' ? '变量更新生成中' : '生成中';
+  const className =
+    kind === 'thinking'
+      ? 'assistant-runtime-thinking'
+      : kind === 'variable'
+        ? 'assistant-runtime-variable'
+        : 'assistant-runtime-pending';
+  const text = String(body ?? '').trim();
+  return `<details class="assistant-runtime-details ${className} assistant-runtime-pending" open><summary>${label}</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(text || '生成中...')}</pre></details>`;
+}
+
+function sanitizeAssistantRuntimeTagsForStreamingPreview(source: string): string {
+  let out = String(source ?? '');
+  if (!out) return out;
+
+  out = out.replace(
+    /<thinking\b[^>]*>([\s\S]*?)<\/thinking>/gi,
+    (_match, body: string) =>
+      `<details class="assistant-runtime-details assistant-runtime-thinking"><summary>思考过程</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(body)}</pre></details>`,
+  );
+  out = out.replace(
+    /<UpdateVariable\b[^>]*>([\s\S]*?)<\/UpdateVariable>/gi,
+    (_match, body: string) =>
+      `<details class="assistant-runtime-details assistant-runtime-variable"><summary>变量更新</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(body)}</pre></details>`,
+  );
+
+  out = out.replace(/<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i, (_match, body: string) =>
+    buildStreamingPendingDetails('thinking', body),
+  );
+  out = out.replace(/<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i, (_match, body: string) =>
+    buildStreamingPendingDetails('variable', body),
+  );
+  out = out.replace(/<(criteria|option)\b[^>]*>(?![\s\S]*<\/\1>)([\s\S]*)$/i, (_match, _tag: string, body: string) =>
+    buildStreamingPendingDetails('generic', body),
+  );
+
+  out = out.replace(/<content\b[^>]*>/gi, '');
+  out = out.replace(/<\/content>/gi, '');
+  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
+  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '');
+
+  return out;
+}
+
+function shouldRefreshStreamingPreview(
+  cached: StreamingPreviewCacheEntry | undefined,
+  source: string,
+  now: number,
+): boolean {
+  if (!cached) return true;
+  if (source === cached.source) return false;
+  if (source.length < cached.source.length) return true;
+  if (now - cached.renderedAt >= STREAMING_PREVIEW_RENDER_INTERVAL_MS) return true;
+  return /(?:\n\n|[。！？!?]\s*)$/.test(source);
+}
+
+function buildStreamingPreviewHtml(renderSource: string, role: TranscriptItem['role'], message_id: number): string {
+  const source = String(renderSource ?? '').trim();
+  if (!source) return '<div class="stream-stage-preview"><span class="assistant-runtime-pending">等待 token...</span></div>';
+
+  const cacheKey = Math.trunc(Number(message_id));
+  const now = Date.now();
+  const cached = streamingPreviewCache.get(cacheKey);
+  if (Number.isFinite(cacheKey) && !shouldRefreshStreamingPreview(cached, source, now)) {
+    return cached?.html ?? '';
+  }
+
+  const sanitized = sanitizeAssistantRuntimeTagsForStreamingPreview(source);
+  const regexText = applyRegexForDisplay(sanitized, role);
+  const rendered = sanitizeRawImageTagsInHtml(String(regexText || sanitized));
+  const html = stripVisibleChatu8PromptTokensHtml(
+    `<div class="stream-stage-preview">${rendered.trim() || '<span class="assistant-runtime-pending">生成中...</span>'}</div>`,
+  );
+  if (Number.isFinite(cacheKey)) {
+    streamingPreviewCache.set(cacheKey, { source, html, renderedAt: now });
+  }
+  return html;
 }
 
 function normalizeDisplayedHtml(html: string): string {
@@ -360,8 +449,17 @@ function sanitizeAssistantRuntimeTagsForDisplay(source: string): string {
       `<details class="assistant-runtime-details assistant-runtime-variable"><summary>变量更新</summary>${body}</details>`,
   );
 
-  // `<content>…</content>` 去壳；保留内部原文 + 换行，不作改动。
+  // `<content>…</content>` 去壳；再删除模型截断/重复闭合时留下的孤立 content 标签。
   out = out.replace(/<content\b[^>]*>([\s\S]*?)<\/content>/gi, (_match, body: string) => body);
+  out = out.replace(/<content\b[^>]*>/gi, '');
+  out = out.replace(/<\/content>/gi, '');
+
+  out = out.replace(/<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i, (_match, body: string) =>
+    buildStreamingPendingDetails('thinking', body),
+  );
+  out = out.replace(/<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i, (_match, body: string) =>
+    buildStreamingPendingDetails('variable', body),
+  );
 
   // mvu 的 `<StatusPlaceHolderImpl/>` / `<StatusPlaceHolderImpl></StatusPlaceHolderImpl>`：无视觉含义。
   out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
@@ -1491,20 +1589,17 @@ function buildTranscriptItem(input: {
     renderSource,
     strippedRenderSource,
   });
-  const regexText = applyRegexForDisplay(displayRenderSource, input.role);
   const isCurrentStreamingItem =
     input.latestAssistantId === input.id &&
     (input.status === 'streaming' || (input.busy === true && phase === 'stream'));
-  // 流式态组件用 `<pre v-text>` 渲染，纯文本来自 regexText；streamHtml 不再参与渲染。
-  const streamHtml = '';
+  const streamHtml = isCurrentStreamingItem ? buildStreamingPreviewHtml(displayRenderSource, input.role, input.id) : '';
+  const regexText = isCurrentStreamingItem ? '' : applyRegexForDisplay(displayRenderSource, input.role);
   // finalHtml 无条件都构造：即使当前项处于流式，我们也要留一份能用的 finalHtml，
   // 否则 `syncTranscriptFlags` 将一个"曾经是最新"的条目翻成 `isStreaming: false` 时，
   // 该条目会落回 `<div v-html="finalHtml || '(空回复)'">`，显示空回复。
-  // 流式中走 `<pre v-text>`，v-html 这份 finalHtml 不会被实时渲染，成本主要是 formatAsDisplayedMessage；
-  // 用 `appendArtifacts: false` 跳过跨 iframe 扫描和 HTMLDocument parse 这一重头。
-  const finalHtml = isCurrentStreamingItem
-    ? buildFinalHtml(displayRenderSource, input.id, input.raw, { appendArtifacts: false })
-    : buildFinalHtml(displayRenderSource, input.id, input.raw);
+  // 当前流式项只保留已节流的预览 HTML，避免每 80ms 进入 formatAsDisplayedMessage；
+  // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
+  const finalHtml = isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw);
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -1641,6 +1736,10 @@ export function useStreamingDemo() {
   let streamTranscriptPatchTimer = 0;
   let streamTranscriptPatchDirty = false;
   let streamTranscriptPatchRunning = false;
+  let generationSignalFinalizeTimer = 0;
+  let generationSignalFinalizeReason = '';
+  let generationSignalFinalizing = false;
+  let generationSignalFinalized = false;
   let generatedImageDomObserver: MutationObserver | null = null;
   let hostPluginMutationObservers: MutationObserver[] = [];
   let lifecycleEchoSuppressUntilMs = 0;
@@ -3187,6 +3286,10 @@ export function useStreamingDemo() {
       return; // 流式进行中，宿主 token 事件不触发 transcript 重建（由 bindGenerationEvents 的 iframe_events 链路独立维护）
     }
 
+    if (name === String(tavern_events.GENERATION_ENDED) && busy.value) {
+      queueGenerationFinalizeFromSignal('host.generation_ended', payload[0]);
+    }
+
     const refreshType = mapHostRefreshType(name);
     const messageId = resolveHostRefreshMessageId(name, payload);
     const domains = resolveRefreshDomainsForEvent({
@@ -3408,6 +3511,77 @@ export function useStreamingDemo() {
     streamTranscriptPatchDirty = false;
   }
 
+  function cancelGenerationSignalFinalize() {
+    if (generationSignalFinalizeTimer) {
+      window.clearTimeout(generationSignalFinalizeTimer);
+      generationSignalFinalizeTimer = 0;
+    }
+    generationSignalFinalizeReason = '';
+  }
+
+  function normalizeSignalFinalText(text: unknown): string {
+    if (typeof text !== 'string') return '';
+    const normalized = text.trim();
+    if (/^\d{1,8}$/.test(normalized)) return '';
+    return normalized;
+  }
+
+  function queueGenerationFinalizeFromSignal(reason: 'iframe.generation_ended' | 'host.generation_ended', text?: unknown) {
+    const candidateFinalText = normalizeSignalFinalText(text);
+    if (candidateFinalText) {
+      finalText.value = candidateFinalText;
+    }
+    if (!busy.value && status.value !== 'streaming') return;
+    cancelGenerationSignalFinalize();
+    generationSignalFinalizeReason = reason;
+    generationSignalFinalizeTimer = window.setTimeout(() => {
+      const queuedReason = generationSignalFinalizeReason || reason;
+      generationSignalFinalizeTimer = 0;
+      generationSignalFinalizeReason = '';
+      void finalizeAssistantMessageFromSignal(queuedReason);
+    }, 120);
+  }
+
+  async function finalizeAssistantMessageFromSignal(reason: string) {
+    if (generationSignalFinalizing || generationSignalFinalized) return;
+    const fallbackText = String(finalText.value || streamText.value || '').trim();
+    if (!fallbackText) return;
+
+    generationSignalFinalizing = true;
+    try {
+      finalText.value = fallbackText;
+      status.value = 'persisting';
+      cancelScheduledStreamTranscriptPatch();
+      if (
+        shouldEnsureAssistantPlaceholderBeforeFinalize({
+          assistantMessageId: assistantMessageId.value,
+          placeholderCreating: assistantPlaceholderCreating,
+          finalText: fallbackText,
+        })
+      ) {
+        await ensureAssistantPlaceholderReady(`signal_${reason}`);
+      }
+      await patchAssistantMessage('done');
+      generationSignalFinalized = true;
+      status.value = 'done';
+      transcript.value = syncTranscriptFlags(transcript.value);
+      queueHidePolicy(reason);
+      await flushExplicitChatSave(`generation_signal:${reason}`);
+      recordLifecycleTrace('finalizeAssistantMessageFromSignal', 'done', {
+        reason,
+        assistantMessageId: assistantMessageId.value,
+        finalSignature: buildDebugMessageSignature(fallbackText),
+      });
+    } catch (error) {
+      recordLifecycleTrace('finalizeAssistantMessageFromSignal', 'error', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      generationSignalFinalizing = false;
+    }
+  }
+
   async function flushScheduledStreamTranscriptPatch() {
     if (streamTranscriptPatchTimer) {
       window.clearTimeout(streamTranscriptPatchTimer);
@@ -3450,6 +3624,9 @@ export function useStreamingDemo() {
       phase === 'done' ? finalText.value || streamText.value : streamText.value,
       phase,
     );
+    if (phase === 'done') {
+      streamingPreviewCache.delete(Math.trunc(Number(messageId)));
+    }
     const nextSignature = buildDebugMessageSignature(nextMessage);
     const previousSignature = buildDebugMessageSignature(latestPatchedMessage);
     const sequence = ++patchSequence;
@@ -3666,6 +3843,9 @@ export function useStreamingDemo() {
     latestPatchedMessage = '';
     hostMesTextPrimedForCurrentGeneration = false;
     cancelScheduledStreamTranscriptPatch();
+    cancelGenerationSignalFinalize();
+    generationSignalFinalized = false;
+    generationSignalFinalizing = false;
     bindGenerationEvents();
     recordLifecycleTrace(
       'runGenerationFlow',
@@ -3785,6 +3965,7 @@ export function useStreamingDemo() {
 
       finalText.value = result;
       status.value = 'persisting';
+      cancelGenerationSignalFinalize();
       cancelScheduledStreamTranscriptPatch();
       if (
         shouldEnsureAssistantPlaceholderBeforeFinalize({
@@ -3841,8 +4022,38 @@ export function useStreamingDemo() {
         result,
       };
     } catch (error) {
+      const caughtMessage = error instanceof Error ? error.message : String(error);
+      if (generationSignalFinalizeTimer) {
+        const queuedReason = generationSignalFinalizeReason || 'queued_generation_signal';
+        cancelGenerationSignalFinalize();
+        await finalizeAssistantMessageFromSignal(queuedReason);
+      }
+      const signalFinalizedVisibleContent =
+        generationSignalFinalized === true &&
+        (Boolean(String(finalText.value || streamText.value || '').trim()) ||
+          hasRenderableAssistantMessageText(latestPatchedMessage));
+      if (signalFinalizedVisibleContent) {
+        status.value = 'done';
+        errorText.value = '';
+        transcript.value = syncTranscriptFlags(transcript.value);
+        recordLifecycleTrace(
+          'runGenerationFlow',
+          'error_after_signal_finalize_ignored',
+          {
+            assistantMessageId: assistantMessageId.value,
+            message: caughtMessage,
+          },
+          traceId,
+        );
+        appendLog('action', '生成完成', stripTagsForPreview(finalText.value || streamText.value).slice(0, 80) || '(空回复)');
+        return {
+          success: true,
+          assistantMessageId: assistantMessageId.value,
+          result: String(finalText.value || streamText.value || '').trim(),
+        };
+      }
       status.value = 'error';
-      errorText.value = error instanceof Error ? error.message : String(error);
+      errorText.value = caughtMessage;
       const hadVisibleAssistantContent =
         Boolean(String(streamText.value ?? '').trim()) || hasRenderableAssistantMessageText(latestPatchedMessage);
       recordLifecycleTrace(
@@ -4305,6 +4516,7 @@ export function useStreamingDemo() {
             },
             traceId,
           );
+          queueGenerationFinalizeFromSignal('iframe.generation_ended', text);
         }),
       );
     } catch {
@@ -4583,6 +4795,7 @@ export function useStreamingDemo() {
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
     hideStatePersistTimer = clearTimer(hideStatePersistTimer);
+    generationSignalFinalizeTimer = clearTimer(generationSignalFinalizeTimer);
     generatedImageDomObserver?.disconnect();
     generatedImageDomObserver = null;
     hostPluginMutationObservers.forEach(observer => observer.disconnect());

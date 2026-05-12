@@ -90,17 +90,14 @@
         <div class="assistant-corners br"></div>
 
         <div class="assistant-body-wrap">
-          <!--
-            流式阶段改走 `<pre v-text>`：文本节点就地更新即可，不再让浏览器每 tick 做 v-html 子树解析 + DOM 重建；
-            P0-2 要求的"流式 = 纯文本"就靠这条分支落地。完成态仍然要走 v-html 保留 Markdown/图片锚点等结构。
-          -->
-          <pre
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div
             v-if="item.isStreaming"
             ref="assistantBodyRef"
             class="assistant-body html-body is-stream-stage stream-stage-pre"
             :data-message-id="item.message_id"
-            v-text="streamDisplayText"
-          ></pre>
+            v-html="streamingAssistantHtml"
+          ></div>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-else
@@ -123,7 +120,7 @@ import { createGeneratedImageGestureController } from '../generatedImageGestureC
 import { getFallbackImageClasses } from '../imageFallbackClasses';
 import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
 import { loadImage } from '../imageStore';
-import { stripVisibleChatu8PromptTokensHtml, stripVisibleChatu8PromptTokensText } from '../chatu8PromptTokenDisplay';
+import { stripVisibleChatu8PromptTokensHtml } from '../chatu8PromptTokenDisplay';
 import { hydratePersistedImageElements } from '../transcriptImagePersistence';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 
@@ -164,15 +161,10 @@ const displayedAssistantHtml = computed(() => {
   const html = props.item.finalHtml || '<p>(空回复)</p>';
   return stripVisibleChatu8PromptTokensHtml(html);
 });
-const streamDisplayText = computed(() => {
+const streamingAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant' || !props.item.isStreaming) return '';
-  // 流式阶段优先用 `item.content`——它已经是 `<content>...</content>` 等包装外的"真正正文"。
-  // `item.regexText` 走的是 `displayRenderSource`，对于 stream-demo 包装它保留了 `<content>` 标签，
-  // 放在 `<pre v-text>` 里就会把标签字面露出来。再做一次 token 清理，防止 `image###...###` 裸露。
-  // 空时给一个占位符，行为和原来"等待 token…"一致。
-  const source = String(props.item.content ?? props.item.regexText ?? '').trim();
-  const text = stripVisibleChatu8PromptTokensText(source);
-  return text || '等待 token…';
+  const html = props.item.streamHtml || '<div class="stream-stage-preview"><span>等待 token...</span></div>';
+  return stripVisibleChatu8PromptTokensHtml(html);
 });
 const assistantBodySignature = computed(() => {
   if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
@@ -447,7 +439,7 @@ watch(
   assistantBodySignature,
   async () => {
     if (props.item.role !== 'assistant') return;
-    // 流式阶段用 `<pre v-text>` 就地更新，不需要 hydrate/rebind；等 phase 切到 done 这个 signature 才会变。
+    // 流式阶段只渲染轻量 regex 预览，不 hydrate/rebind 图片或插件按钮；等 phase 切到 done 再接管交互。
     if (props.item.isStreaming) return;
     recordComponentTrace('update');
     await nextTick();

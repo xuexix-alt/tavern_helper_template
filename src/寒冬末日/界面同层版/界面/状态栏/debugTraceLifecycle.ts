@@ -55,7 +55,6 @@ export function shouldIgnoreHostRefreshDuringBusy(input: {
   if (input.busy !== true) return false;
   return (
     input.eventName === input.generationStartedEventName ||
-    input.eventName === input.generationEndedEventName ||
     input.eventName === input.streamTokenEventName ||
     input.eventName === input.smoothStreamTokenEventName
   );

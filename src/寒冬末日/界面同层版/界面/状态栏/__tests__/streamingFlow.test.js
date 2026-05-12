@@ -129,36 +129,50 @@ test('opening setup visibility stays tied to successful opening completion inste
   );
 });
 
-test('normal assistant streaming renders plain text through the `<pre v-text>` branch so regex output never escapes as raw html', () => {
+test('normal assistant streaming renders a throttled regex preview without final display formatting', () => {
   const useStreamingSource = readSource('useStreamingDemo.ts');
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
-  // P0-2：buildTranscriptItem 不再为流式楼层构造 streamHtml；纯文本由组件从 regexText 读取。
   assert.match(
     useStreamingSource,
-    /const streamHtml = '';/,
-    'streaming items should stop producing a streamHtml payload once the component moved to the `<pre v-text>` branch',
+    /const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;/,
+    'streaming regex preview should have a slower render cadence than host chat patching',
+  );
+  assert.match(
+    useStreamingSource,
+    /const streamHtml = isCurrentStreamingItem[\s\S]{0,220}buildStreamingPreviewHtml/,
+    'current streaming items should build a lightweight regex preview html payload',
+  );
+  assert.doesNotMatch(
+    extractFunctionBody(useStreamingSource, 'buildStreamingPreviewHtml'),
+    /formatAsDisplayedMessage|buildFinalHtml|appendChatu8ArtifactsToHtml|applyTranscriptArtifacts/,
+    'streaming preview must not use final display formatting or image artifact attachment',
   );
   assert.match(
     cardSource,
-    /<pre[\s\S]{0,320}v-if="item\.isStreaming"[\s\S]{0,220}v-text="streamDisplayText"/,
-    'TranscriptMessageCard should use `<pre v-text>` for the streaming branch instead of v-html',
+    /v-if="item\.isStreaming"[\s\S]{0,260}v-html="streamingAssistantHtml"/,
+    'TranscriptMessageCard should render the streaming preview as sanitized html',
   );
 });
 
-test('stream-demo wrapped assistant streaming reuses the same plain-text branch so regenerate/send flows do not expose regex code', () => {
+test('stream-demo wrapped assistant streaming sanitizes runtime blocks before regex preview', () => {
   const useStreamingSource = readSource('useStreamingDemo.ts');
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
-  assert.doesNotMatch(
+  assert.match(
     useStreamingSource,
-    /const streamHtml = isCurrentStreamingItem[\s\S]{0,200}appendArtifacts: false/,
-    'streaming items should no longer pay for a formatAsDisplayedMessage pass now that `<pre v-text>` handles stream rendering',
+    /function sanitizeAssistantRuntimeTagsForStreamingPreview/,
+    'streaming preview should have a dedicated runtime-tag sanitizer',
+  );
+  assert.match(
+    extractFunctionBody(useStreamingSource, 'sanitizeAssistantRuntimeTagsForStreamingPreview'),
+    /buildStreamingPendingDetails\('thinking'[\s\S]{0,260}buildStreamingPendingDetails\('variable'[\s\S]{0,260}buildStreamingPendingDetails\('generic'/,
+    'unfinished XML/runtime blocks should become a pending placeholder instead of leaking raw tags',
   );
   assert.match(
     cardSource,
-    /const streamDisplayText = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensText/,
-    'the streaming plain-text source should be stripped of `image###...###` tokens before reaching the DOM',
+    /const streamingAssistantHtml = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensHtml/,
+    'the streaming html preview should strip visible chatu8 prompt tokens before reaching the DOM',
   );
 });
 
@@ -216,6 +230,38 @@ test('finalization cancels any pending coalesced stream patch before writing the
     body,
     /cancelScheduledStreamTranscriptPatch\(\);[\s\S]*await patchAssistantMessage\('done'\);/,
     'done patch should not race with a delayed stream patch after generation has completed',
+  );
+});
+
+test('host generation-ended signals can finalize the active streaming message before generate promise settles', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const bindBody = extractFunctionBody(source, 'bindGenerationEvents');
+  const hostBody = extractFunctionBody(source, 'handleHostRefreshEvent');
+
+  assert.match(
+    source,
+    /async function finalizeAssistantMessageFromSignal/,
+    'same-layer runtime should expose an idempotent signal finalizer for truncated or delayed generate() flows',
+  );
+  assert.match(
+    source,
+    /function normalizeSignalFinalText[\s\S]{0,220}\^\\d\{1,8\}\$/,
+    'host generation-ended numeric payloads should not be mistaken for final assistant text',
+  );
+  assert.match(
+    bindBody,
+    /queueGenerationFinalizeFromSignal\('iframe\.generation_ended'/,
+    'iframe generation-ended should queue a done patch instead of only recording finalText',
+  );
+  assert.match(
+    hostBody,
+    /queueGenerationFinalizeFromSignal\('host\.generation_ended'/,
+    'host generation-ended should also queue a done patch when busy refresh events arrive',
+  );
+  assert.match(
+    source,
+    /if \(generationSignalFinalizeTimer\) \{[\s\S]{0,320}await finalizeAssistantMessageFromSignal\(queuedReason\);/,
+    'runGenerationFlow should flush a queued ended signal before treating a late generate() rejection as a real error',
   );
 });
 

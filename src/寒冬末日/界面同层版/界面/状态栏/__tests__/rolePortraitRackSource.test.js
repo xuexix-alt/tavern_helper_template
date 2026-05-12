@@ -53,8 +53,16 @@ test('gallery role assignment uses the full role tab roster so offstage roles st
   const source = read('../pages/StoryPage.vue');
 
   assert.match(source, /const portraitAssignableRoleTabs = computed/);
+  assert.match(source, /buildPortraitAssignableRoleTabsFromProvider/);
+  assert.match(source, /roleProviderHasName/);
+  assert.match(source, /roleProviderStore\.mainRoleEntries\.value,[\s\S]*roleProviderStore\.tempNpcEntries\.value/);
   assert.match(source, /return portraitAssignableRoleTabs\.value\.map/);
   assert.doesNotMatch(source, /return visibleRoleTabs\.value\.map\(role => \(\{/);
+  assert.doesNotMatch(
+    source,
+    /galleryRoleAssignRoleOptions[\s\S]{0,800}galleryRoleAssignEntry\.value[\s\S]{0,800}characterName/,
+    'gallery assignment target roster should come from MVU role cards, not the selected image recognized character name',
+  );
 });
 
 test('MvuRolePanel sanitizes generated image labels in the portrait set strip', () => {

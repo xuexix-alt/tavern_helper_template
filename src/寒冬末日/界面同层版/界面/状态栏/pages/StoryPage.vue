@@ -600,6 +600,7 @@ const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
 const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 type RoleTabItem = { key: string; label: string; statusClass?: string; statusText?: string };
+type RoleProviderEntry = { key: string; role: Record<string, any> };
 
 const activeRoleKey = ref<string | null>(null);
 const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
@@ -612,8 +613,21 @@ function buildRoleTabItemsFromProvider(): RoleTabItem[] {
     statusText: roleProviderStatusText(entry),
   }));
 }
+function roleProviderHasName(entry: RoleProviderEntry): boolean {
+  return String(entry.role?.姓名 ?? '').trim().length > 0;
+}
+function buildPortraitAssignableRoleTabsFromProvider(): RoleTabItem[] {
+  return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value]
+    .filter(roleProviderHasName)
+    .map(entry => ({
+      key: entry.key,
+      label: roleProviderName(entry),
+      statusClass: roleProviderStatusClass(entry),
+      statusText: roleProviderStatusText(entry),
+    }));
+}
 const roleTabs = computed(() => buildRoleTabItemsFromProvider());
-const portraitAssignableRoleTabs = computed(() => roleTabs.value);
+const portraitAssignableRoleTabs = computed(() => buildPortraitAssignableRoleTabsFromProvider());
 const { width: shellWidth } = useElementSize(shellRef);
 const visibleRoleTabs = computed(() => {
   const activeRoleTabs = roleTabs.value.filter(

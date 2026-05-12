@@ -72,7 +72,7 @@ test('TranscriptMessageCard only hydrates and rebinds assistant body when body h
   );
 });
 
-test('streaming transcript items avoid eager final html and image artifact rebuilds', () => {
+test('streaming transcript items use lightweight regex preview and avoid eager final image artifact rebuilds', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.match(
@@ -82,15 +82,22 @@ test('streaming transcript items avoid eager final html and image artifact rebui
   );
   assert.match(
     source,
-    /const streamHtml = '';/,
-    'streaming html should be skipped entirely so no formatAsDisplayedMessage runs per tick',
+    /const streamHtml = isCurrentStreamingItem[\s\S]{0,220}buildStreamingPreviewHtml/,
+    'streaming html should be a lightweight preview instead of empty plain text',
+  );
+  const previewBlock = source.match(/function buildStreamingPreviewHtml[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.notEqual(previewBlock, '', 'buildStreamingPreviewHtml should exist');
+  assert.doesNotMatch(
+    previewBlock,
+    /formatAsDisplayedMessage|appendChatu8ArtifactsToHtml|applyTranscriptArtifacts/,
+    'streaming preview should not run final display formatting or attach plugin image artifacts',
   );
   // finalHtml 不再因 isCurrentStreamingItem 被置空（见 syncTranscriptFlags 失衡 bug 的修复）：
-  // 当前流式项走轻量路径（appendArtifacts: false），非流式项走完整路径。
+  // 当前流式项复用已节流的 streamHtml 预览，非流式项才走完整路径。
   assert.match(
     source,
-    /const finalHtml = isCurrentStreamingItem[\s\S]{0,260}appendArtifacts: false[\s\S]{0,120}buildFinalHtml\(displayRenderSource, input\.id, strippedRenderSource\)/,
-    'current streaming item should still build a lightweight finalHtml so older floors falling out of latest keep their html',
+    /const finalHtml = isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)/,
+    'current streaming item should reuse preview html as finalHtml fallback without running full display formatting',
   );
 });
 
@@ -365,23 +372,23 @@ test('buildTranscriptItem always produces a finalHtml so older floors do not bla
   );
   assert.match(
     source,
-    /const finalHtml = isCurrentStreamingItem[\s\S]{0,260}appendArtifacts: false[\s\S]{0,120}buildFinalHtml\(displayRenderSource,/,
-    'streaming items should still produce a lightweight finalHtml (appendArtifacts: false) as fallback once the item stops being the latest assistant',
+    /const finalHtml = isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource,/,
+    'streaming items should still produce a lightweight finalHtml fallback once the item stops being the latest assistant',
   );
 });
 
-test('stream display text prefers item.content so stream-demo `<content>` wrapper tags never leak into the `<pre v-text>` body', () => {
+test('stream display html prefers item.streamHtml so stream-demo wrapper tags are sanitized before preview rendering', () => {
   const messageCardSource = readSource('components/TranscriptMessageCard.vue');
   const openingCardSource = readSource('components/TranscriptOpeningCard.vue');
 
   assert.match(
     messageCardSource,
-    /const streamDisplayText = computed\([\s\S]{0,800}props\.item\.content\s*\?\?\s*props\.item\.regexText/,
-    'TranscriptMessageCard should read streaming text from item.content first to avoid the <content> wrapper leaking as literal text',
+    /const streamingAssistantHtml = computed\([\s\S]{0,800}props\.item\.streamHtml/,
+    'TranscriptMessageCard should render the sanitized streaming html preview from item.streamHtml',
   );
   assert.match(
     openingCardSource,
-    /const streamDisplayText = computed\([\s\S]{0,800}props\.item\.content\s*\?\?\s*props\.item\.regexText/,
-    'TranscriptOpeningCard should read streaming text from item.content first to avoid the <content> wrapper leaking as literal text',
+    /const streamingOpeningHtml = computed\([\s\S]{0,800}props\.item\.streamHtml/,
+    'TranscriptOpeningCard should render the sanitized streaming html preview from item.streamHtml',
   );
 });

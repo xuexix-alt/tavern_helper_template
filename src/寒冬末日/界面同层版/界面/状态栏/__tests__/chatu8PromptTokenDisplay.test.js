@@ -58,15 +58,15 @@ test('TranscriptMessageCard sanitizes assistant html at the v-html boundary', ()
     /v-else[\s\S]{0,260}v-html="displayedAssistantHtml"/,
     'completed assistant body should render sanitized html instead of raw item.finalHtml',
   );
-  // 流式态改走 `<pre v-text>`，用 streamDisplayText 的纯文本，避免每 tick 重建 DOM。
+  // 流式态用轻量 HTML 预览，但仍在 v-html 边界清理可见 image### 提示词。
   assert.match(
     source,
-    /<pre[\s\S]{0,320}v-if="item\.isStreaming"[\s\S]{0,220}v-text="streamDisplayText"/,
-    'streaming assistant body should render through `<pre v-text>` so tokens update a text node in place',
+    /v-if="item\.isStreaming"[\s\S]{0,260}v-html="streamingAssistantHtml"/,
+    'streaming assistant body should render the sanitized lightweight preview html',
   );
   assert.match(
     source,
-    /stripVisibleChatu8PromptTokensText/,
-    'streamDisplayText should run the plain-text sanitizer over regexText before rendering',
+    /const streamingAssistantHtml = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensHtml/,
+    'streamingAssistantHtml should run the html sanitizer before rendering',
   );
 });
