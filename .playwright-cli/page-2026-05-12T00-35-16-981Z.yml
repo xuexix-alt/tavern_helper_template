@@ -1,0 +1,210 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - button "" [ref=e49] [cursor=pointer]
+      - text:                                        + No items                         ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☐ ☰ ☐ ☰ ☐ ☰                                  + No items      ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰                  +     No items   X        *    *    *     *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *                        *    *    *    *           *        *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    
+    - generic [ref=e9]:
+      - button "" [ref=e50] [cursor=pointer]
+      - text:                                                                       
+    - generic [ref=e12]:
+      - button "" [ref=e51] [cursor=pointer]
+      - text:                                               
+    - generic [ref=e15]:
+      - button "" [ref=e52] [cursor=pointer]
+      - text:                +     
+    - generic [ref=e18]:
+      - button "" [ref=e53] [cursor=pointer]
+      - text:                                   
+    - generic [ref=e21]:
+      - generic "更改背景图片" [ref=e54]:
+        - button "" [ref=e55] [cursor=pointer]
+      - text:       +                            
+    - generic [ref=e24]:
+      - button "" [ref=e56] [cursor=pointer]
+      - text:         +                                                                       +                                                                                                                                                                                             +   + +  +     +        +        +        +                                      没有找到脚本                                                                                                                                                                                                                                                                                                                                         
+    - generic [ref=e57]:
+      - button "" [ref=e59] [cursor=pointer]
+      - text:            +                          +      
+    - generic [ref=e27]:
+      - button "" [ref=e60] [cursor=pointer]
+      - text:                    
+    - generic [ref=e30]:
+      - button "" [ref=e61] [cursor=pointer]
+      - text:                                                     群聊暂无成员。          无可用角色                         
+  - generic:                      +                                                                                +    + +                  
+  - generic:                  
+  - generic [ref=e33]:
+    - text: 
+    - generic [ref=e199]:
+      - img [ref=e202] [cursor=pointer]
+      - button "" [ref=e203] [cursor=pointer]
+      - generic [ref=e204]:
+        - generic [ref=e205]:
+          - generic [ref=e207]:
+            - generic [ref=e208]: 末世寒冬 - 星穹秩序
+            - text: 
+          - generic [ref=e209]:
+            - button "" [ref=e210] [cursor=pointer]
+            - text:              
+            - button "" [ref=e211] [cursor=pointer]
+          - text:       
+        - text:       
+        - generic [ref=e213]:
+          - text: 
+          - iframe [ref=e214]:
+            - main [ref=f19e3]:
+              - generic [ref=f19e4]:
+                - generic [ref=f19e5]:
+                  - generic [ref=f19e8]: EDEN-STAR
+                  - generic [ref=f19e9]:
+                    - button "楼层 最新" [ref=f19e11] [cursor=pointer]:
+                      - generic [ref=f19e12]: 楼层
+                      - generic [ref=f19e13]: 最新
+                    - button "更多" [ref=f19e15] [cursor=pointer]
+                - generic [ref=f19e16]:
+                  - button "角色" [ref=f19e17] [cursor=pointer]:
+                    - generic [ref=f19e18]: 角色
+                  - button "画廊" [ref=f19e19] [cursor=pointer]:
+                    - generic [ref=f19e20]: 画廊
+                  - complementary [ref=f19e21]:
+                    - generic [ref=f19e22]:
+                      - generic [ref=f19e23]:
+                        - text: CHARACTER // SIDEBAR
+                        - strong [ref=f19e24]: 角色&伊甸
+                      - button "✕" [ref=f19e25] [cursor=pointer]
+                  - complementary [ref=f19e27]:
+                    - generic [ref=f19e28]:
+                      - generic [ref=f19e29]:
+                        - text: GALLERY // IMAGES
+                        - strong [ref=f19e30]: 图片画廊
+                      - button "✕" [ref=f19e31] [cursor=pointer]
+                  - main [ref=f19e33]:
+                    - generic [ref=f19e36]:
+                      - generic [ref=f19e38]: 暂无消息。发送后将在这里重建真实楼层阅读视图。
+                      - generic "阅读滚动控制":
+                        - button "回到顶部" [disabled] [ref=f19e39] [cursor=pointer]: ↑
+                        - button "回到底部" [disabled] [ref=f19e40] [cursor=pointer]: ↓
+                    - generic [ref=f19e41]:
+                      - generic [ref=f19e44]:
+                        - button "系统" [ref=f19e45] [cursor=pointer]:
+                          - generic [ref=f19e46]: 系统
+                        - button "地图" [ref=f19e56] [cursor=pointer]:
+                          - generic [ref=f19e57]: 地图
+                        - button "选项" [disabled] [ref=f19e67] [cursor=pointer]:
+                          - generic [ref=f19e68]: 选项
+                      - generic [ref=f19e75]:
+                        - textbox "AWAITING_COMMAND..." [ref=f19e77]
+                        - button "发送" [ref=f19e78] [cursor=pointer]
+                - generic [ref=f19e81]:
+                  - generic [ref=f19e82]:
+                    - generic [ref=f19e83]:
+                      - img "故事开始" [ref=f19e85]
+                      - generic [ref=f19e86]:
+                        - text: 故事开始
+                        - strong [ref=f19e87]: 世界观自定义 / Opening Start
+                        - paragraph [ref=f19e88]: 这选择你喜欢的开局，包含外界环境和主流玩法，也可以在<补充设定>那里补充一些世界观细节。
+                    - button "✕" [ref=f19e89] [cursor=pointer]
+                  - generic [ref=f19e91]:
+                    - generic [ref=f19e92]:
+                      - generic [ref=f19e93]:
+                        - text: OPENING SETUP
+                        - heading "开局配置" [level=3] [ref=f19e94]
+                        - paragraph [ref=f19e95]: 表单内容会影响整个故事，请你按照你的喜好进行填写。
+                      - generic [ref=f19e96]:
+                        - generic [ref=f19e99]: 流式生成
+                        - button "生成开局" [ref=f19e100] [cursor=pointer]
+                    - generic [ref=f19e101]:
+                      - generic [ref=f19e102]:
+                        - generic [ref=f19e103]: 世界观档位
+                        - combobox [ref=f19e104]:
+                          - option "A · 灾变前3个月"
+                          - option "B · 末日后1年-生存压力" [selected]
+                          - option "C · 末日后1年-秩序重建"
+                      - generic [ref=f19e105]:
+                        - generic [ref=f19e106]: 游玩流派
+                        - combobox [ref=f19e107]:
+                          - option "后宫+养成" [selected]
+                          - option "种田+探索+势力培育"
+                          - option "日常+后宫+收集+情报优势"
+                    - generic [ref=f19e108]:
+                      - generic [ref=f19e109]:
+                        - generic [ref=f19e110]: 世界观档位
+                        - textbox [ref=f19e111]: 超自然极端天气：除经过伊甸等特殊改造的护具和装备防护外，基本无法在室外存活，无天气窗口 行动窗口：几乎没有外出机会，需伊甸特制护具 社会组织度：少量据点存在，但社会联系脆弱，无电力、无交通 生产残余度：近乎只剩库存消耗，无法稳定生产，无可靠交通工具 冲突密度：各残余幸存者组成小规模社区，但彼此冲突成为常态，且时常为争夺资源展开殊死争斗，一部分比较有武力的暴徒四处劫掠，弱肉强食下只有少部分社群能建立脆弱的基础秩序，社会治安更是无从谈起 外部威胁主因：人出到室外，要面临失温等环境威胁，灾难初期大部分人因此丧命。 外出死亡风险：无准备外出几乎等同送命，离开掩体本身就是极高风险行为。 据点化程度：存在少量中小型据点和局部控制区，但整体仍分散脆弱，随时可能被吞并、瓦解或改旗易帜。
+                      - generic [ref=f19e112]:
+                        - generic [ref=f19e113]: 禁止事项
+                        - textbox [ref=f19e114]: "- 禁止把\"后宫+养成\"路线写成轻松种田日常 - 禁止开局就写成“所有敌人都被吓住” - 禁止把庇护所写成自动清场、自动支配、全图无死角 - 禁止把情报与社交短板提前消解 - 禁止把 NPC 大量写成主动依附"
+                    - generic [ref=f19e115]:
+                      - generic [ref=f19e116]:
+                        - generic [ref=f19e117]: 主角（取个名字）
+                        - textbox [ref=f19e118]: "{{user}}"
+                      - generic [ref=f19e119]:
+                        - generic [ref=f19e120]: 时间
+                        - textbox [ref=f19e121]: 9527年12月14日·14:00
+                      - generic [ref=f19e122]:
+                        - generic [ref=f19e123]: 地点
+                        - textbox [ref=f19e124]: 中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室
+                    - generic [ref=f19e125]:
+                      - generic [ref=f19e126]:
+                        - generic [ref=f19e127]: 末日前职业
+                        - textbox "例如：经常 / 职业经理 / 退伍老兵 / 工程师 / 医生 / 教授 / loser / 其他" [ref=f19e128]
+                      - generic [ref=f19e129]:
+                        - generic [ref=f19e130]: 庇护所能力
+                        - textbox "例如：安全、生活、社交、医疗、侦察等" [ref=f19e131]: 可维持2001核心区的基础供暖与生活供电接口，范围仅2001室，不得外接。 一道用于强化2001核心入口的门体，用于防止强闯，仅入口有效，不能覆盖整层。 万象合成终端：元素重构级合成干粮、罐头、面粉、大米等基础食材和纯水的终端设备，T1款功率有限无法大规模生产。 热水器接口提供2001全屋热水淋浴、盥洗条件，T1款功率较小受时限限制，每次10分钟，冷却6小时。 提供2001门口与短距走廊的被动音频监听，供伊甸识别和分析，T1款只能依据声音判断年龄、性别、情绪状态
+                      - generic [ref=f19e132]:
+                        - generic [ref=f19e133]: 剧情基调
+                        - textbox "例如：种马文、种田文、生活日常、战斗探索、科幻世界、宏大叙事；" [ref=f19e134]
+                      - generic [ref=f19e135]:
+                        - generic [ref=f19e136]: 文风
+                        - combobox [ref=f19e137]:
+                          - option "请选择"
+                          - option "现代科幻"
+                          - option "轻小说" [selected]
+                          - option "毛姆文学作品"
+                          - option "《三体》风格"
+                      - generic [ref=f19e138]:
+                        - generic [ref=f19e139]: 社会生态
+                        - textbox "尽量从现成设定源自动带入，必要时再补充" [ref=f19e140]: 雪狼帮；“方舟”教会；拾荒者联盟
+                      - generic [ref=f19e141]:
+                        - generic [ref=f19e142]: 其他NPC类型
+                        - textbox "增加你喜欢的NPC类型或具体名称（也可同人作品设定）" [ref=f19e143]
+                      - generic [ref=f19e144]:
+                        - generic [ref=f19e145]: 补充设定
+                        - textbox "例如：XXX同人、XXX人物关系、隐藏前情、偏好的开局事件" [ref=f19e146]
+                      - generic [ref=f19e147]:
+                        - generic [ref=f19e148]: 字数
+                        - textbox "默认 1500" [ref=f19e149]: "1500"
+      - generic:
+        - button "" [ref=e215] [cursor=pointer]
+        - button "2/3" [ref=e216] [cursor=pointer]
+    - generic [ref=e36]:
+      - generic [ref=e218]:
+        - button "重新处理变量" [ref=e219] [cursor=pointer]
+        - button "重试额外模型解析" [ref=e220] [cursor=pointer]
+      - text:  
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39] [cursor=pointer]: 
+          - generic "扩展程序" [ref=e181] [cursor=pointer]: 
+        - textbox "输入想发送的消息，或输入 /? 获取帮助" [active] [ref=e182]
+        - generic [ref=e41]:
+          - text:      
+          - generic "发送消息" [ref=e183] [cursor=pointer]: 
+  - text:                        1      
+  - generic [ref=e184]: 
+  - generic:                 +                             +                      +         +                      • • • •        • • • • • • •                  +        +       +                                                                             +          +       +     +                  +  +                       +           +         +               +      +                                                                                              
+  - option "(请先获取并选择模型)" [selected]
+  - option "智绘姬 (默认)" [selected]
+  - option "自定义 (LLM预设)"
+  - generic [ref=e186]: 
+  - status [ref=e187]
+  - status [ref=e188]
+  - status [ref=e189]
+  - status [ref=e190]
+  - status [ref=e191]
+  - status [ref=e192]
+  - status [ref=e193]
+  - status [ref=e194]
+  - status [ref=e195]
+  - status [ref=e196]
+  - status [ref=e197]
+  - status [ref=e198]

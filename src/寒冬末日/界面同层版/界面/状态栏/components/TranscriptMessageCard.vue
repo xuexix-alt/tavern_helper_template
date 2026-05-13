@@ -268,12 +268,74 @@ function createGalleryEntryFigure(entry: ReaderGalleryEntry): HTMLElement | null
   return figure;
 }
 
+function normalizeImageIdentity(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function collectImageIdentityKeysFromElement(element: HTMLElement | HTMLImageElement): string[] {
+  const dataset = element.dataset ?? {};
+  const keys = [
+    dataset.imageId ? `image:${dataset.imageId}` : '',
+    dataset.markerId ? `marker:${dataset.markerId}` : '',
+    dataset.requestId ? `request:${dataset.requestId}` : '',
+    dataset.imageSrc ? `src:${dataset.imageSrc}` : '',
+  ];
+  if (element instanceof HTMLImageElement) {
+    const src = normalizeImageIdentity(element.getAttribute('src') || element.currentSrc || element.src);
+    if (src) keys.push(`src:${encodeDatasetValue(src)}`);
+  }
+  return keys.filter(Boolean);
+}
+
+function collectExistingGalleryImageKeys(root: HTMLElement): Set<string> {
+  const keys = new Set<string>();
+  const carriers = Array.from(
+    root.querySelectorAll(`.${fallbackImageClasses.inline}, .${fallbackImageClasses.item}`),
+  ) as HTMLElement[];
+  for (const carrier of carriers) {
+    for (const key of collectImageIdentityKeysFromElement(carrier)) keys.add(key);
+    const image = carrier.querySelector('img') as HTMLImageElement | null;
+    if (image) {
+      for (const key of collectImageIdentityKeysFromElement(image)) keys.add(key);
+    }
+  }
+  return keys;
+}
+
+function collectGalleryEntryKeys(entry: ReaderGalleryEntry): string[] {
+  const src = normalizeImageIdentity(entry.src);
+  return [
+    entry.imageId ? `image:${entry.imageId}` : '',
+    entry.markerId ? `marker:${entry.markerId}` : '',
+    entry.requestId ? `request:${entry.requestId}` : '',
+    src ? `src:${encodeDatasetValue(src)}` : '',
+  ].filter(Boolean);
+}
+
+function appendMissingGalleryFigure(root: HTMLElement, entry: ReaderGalleryEntry): boolean {
+  const figure = createGalleryEntryFigure(entry);
+  if (!figure) return false;
+  let gallery = root.querySelector(`.${fallbackImageClasses.gallery}`) as HTMLElement | null;
+  if (!gallery) {
+    gallery = document.createElement('div');
+    gallery.className = fallbackImageClasses.gallery;
+    root.append(gallery);
+  }
+  gallery.append(figure);
+  return true;
+}
+
 function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
   const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
   if (entries.length === 0) return;
-  if (root.querySelector(`.${fallbackImageClasses.inline} img, .${fallbackImageClasses.item} img`)) return;
+  const existingKeys = collectExistingGalleryImageKeys(root);
+  const missingEntries = entries.filter(entry => {
+    const keys = collectGalleryEntryKeys(entry);
+    return keys.length > 0 && !keys.some(key => existingKeys.has(key));
+  });
+  if (missingEntries.length === 0) return;
 
   const pendingNodes = Array.from(root.querySelectorAll('[data-raw-image-tag="true"]')) as HTMLElement[];
   const targets = pendingNodes.map(node => {
@@ -282,12 +344,15 @@ function hydratePendingImagesFromGalleryEntries() {
       parent?.tagName === 'P' && String(parent.textContent ?? '').trim() === String(node.textContent ?? '').trim();
     return parentOnlyContainsPlaceholder ? parent : node;
   });
-  if (targets.length === 0) return;
 
   let injected = 0;
-  for (const entry of entries) {
+  let appended = 0;
+  for (const entry of missingEntries) {
     const target = targets.shift();
-    if (!target) break;
+    if (!target) {
+      if (appendMissingGalleryFigure(root, entry)) appended += 1;
+      continue;
+    }
     const figure = createGalleryEntryFigure(entry);
     if (!figure) continue;
     target.replaceWith(figure);
@@ -296,7 +361,9 @@ function hydratePendingImagesFromGalleryEntries() {
 
   recordComponentTrace('hydrate_pending_gallery_images', {
     galleryEntryCount: entries.length,
+    missingEntryCount: missingEntries.length,
     injected,
+    appended,
   });
 }
 

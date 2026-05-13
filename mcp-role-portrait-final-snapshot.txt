@@ -1,0 +1,2 @@
+uid=29_0 RootWebArea "SillyTavern" url="http://127.0.0.1:8000/"
+  uid=29_1 dialog focusable focused modal

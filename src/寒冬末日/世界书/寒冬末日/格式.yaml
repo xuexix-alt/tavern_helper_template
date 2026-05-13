@@ -9,10 +9,7 @@ ${遵循"快速剧情"选项生成协议的三个剧情选项，只能有一组<
 <Analysis>
 ……
 </Analysis>
-<Command>
-……
-</Command>
+<JSONPatch>
+</JSONPatch>
 </UpdateVariable>
-[后续其他要求的标签]
-<StatusPlaceHolderImpl/>${另起一行放最后}
 </output_format>

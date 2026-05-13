@@ -49,6 +49,20 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
   assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
 });
 
+test('transcript card hydrates newly ready gallery entries even when the message already has images', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(cardSource, /function collectExistingGalleryImageKeys\(root: HTMLElement\): Set<string>/);
+  assert.match(cardSource, /function collectGalleryEntryKeys\(entry: ReaderGalleryEntry\): string\[\]/);
+  assert.match(cardSource, /const missingEntries = entries\.filter\(entry => \{/);
+  assert.doesNotMatch(
+    cardSource,
+    /root\.querySelector\(`\.\$\{fallbackImageClasses\.inline\} img, \.\$\{fallbackImageClasses\.item\} img`\)\) return;/,
+  );
+  assert.match(cardSource, /appendMissingGalleryFigure\(root, entry\)/);
+  assert.match(cardSource, /missingEntryCount: missingEntries\.length/);
+});
+
 test('native image reader falls back to swipe_info images when extra images are transient placeholders', () => {
   const source = readSource('useStreamingDemo.ts');
 

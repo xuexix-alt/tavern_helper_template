@@ -2,6 +2,7 @@ import _ from 'lodash';
 import { reprocessMessageVariablesById, retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
 import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import {
+  STREAM_DEMO_MARKER,
   buildStreamDemoMessage,
   extractStreamDemoContent,
   extractStreamDemoOptions,
@@ -367,6 +368,20 @@ function normalizeDisplayedHtml(html: string): string {
   );
 }
 
+function readHostRenderedMessageHtml(message_id: number): string {
+  const normalizedId = Math.trunc(Number(message_id));
+  if (!Number.isFinite(normalizedId) || normalizedId < 0) return '';
+  try {
+    if (typeof retrieveDisplayedMessage !== 'function') return '';
+    const html = String(retrieveDisplayedMessage(normalizedId)?.html?.() ?? '').trim();
+    if (!html) return '';
+    if (html.includes(STREAM_DEMO_MARKER) || /<demo_phase\b/i.test(html)) return '';
+    return stripVisibleChatu8PromptTokensHtml(normalizeDisplayedHtml(html));
+  } catch {
+    return '';
+  }
+}
+
 const RAW_IMAGE_TAG_PATTERN = /<image\b([^>]*)>([\s\S]*?)<\/image>|<image\b([^/>]*)\/\s*>/gi;
 
 /**
@@ -496,6 +511,24 @@ function buildFinalHtml(
   if (options.appendArtifacts === false) {
     return stripVisibleChatu8PromptTokensHtml(html);
   }
+  const htmlWithArtifacts = applyTranscriptArtifacts({
+    html,
+    renderSource: artifactSource ?? renderSource,
+    messageId: message_id,
+    appendArtifacts: appendChatu8ArtifactsToHtml,
+  });
+  return stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts);
+}
+
+function buildHostRenderedHtml(
+  hostRenderedHtml: string,
+  renderSource: string,
+  message_id: number,
+  artifactSource?: string,
+): string {
+  let html = String(hostRenderedHtml ?? '').trim();
+  if (!html) return '';
+  html = sanitizeRawImageTagsInHtml(normalizeDisplayedHtml(html));
   const htmlWithArtifacts = applyTranscriptArtifacts({
     html,
     renderSource: artifactSource ?? renderSource,
@@ -1593,14 +1626,18 @@ function buildTranscriptItem(input: {
   const isCurrentStreamingItem =
     input.latestAssistantId === input.id &&
     (input.status === 'streaming' || (input.busy === true && phase === 'stream'));
-  const streamHtml = isCurrentStreamingItem ? buildStreamingPreviewHtml(displayRenderSource, input.role, input.id) : '';
+  const hostRenderedHtml = buildHostRenderedHtml(readHostRenderedMessageHtml(input.id), displayRenderSource, input.id, input.raw);
+  const streamHtml = isCurrentStreamingItem
+    ? hostRenderedHtml || buildStreamingPreviewHtml(displayRenderSource, input.role, input.id)
+    : '';
   const regexText = isCurrentStreamingItem ? '' : applyRegexForDisplay(displayRenderSource, input.role);
   // finalHtml 无条件都构造：即使当前项处于流式，我们也要留一份能用的 finalHtml，
   // 否则 `syncTranscriptFlags` 将一个"曾经是最新"的条目翻成 `isStreaming: false` 时，
   // 该条目会落回 `<div v-html="finalHtml || '(空回复)'">`，显示空回复。
   // 当前流式项只保留已节流的预览 HTML，避免每 80ms 进入 formatAsDisplayedMessage；
   // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
-  const finalHtml = isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw);
+  const finalHtml =
+    hostRenderedHtml || (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -1734,6 +1771,7 @@ export function useStreamingDemo() {
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
+  const pendingGeneratedImageRefreshMessageIds = new Set<number>();
   let streamTranscriptPatchTimer = 0;
   let streamTranscriptPatchDirty = false;
   let streamTranscriptPatchRunning = false;
@@ -3006,13 +3044,19 @@ export function useStreamingDemo() {
   function queueGeneratedImageEntityRefresh(messageIds: number[] = [], reason = 'generated_image_entity_refresh') {
     if (generatedImageDomMutationTimer) window.clearTimeout(generatedImageDomMutationTimer);
     const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id >= 0))];
+    normalizedMessageIds.forEach(id => pendingGeneratedImageRefreshMessageIds.add(id));
     generatedImageDomMutationTimer = window.setTimeout(() => {
       generatedImageDomMutationTimer = 0;
-      if (normalizedMessageIds.length === 0) {
+      const recentIntent = imageRecentIntentStore.read();
+      const fallbackMessageId = recentIntent?.source === 'transcript' ? recentIntent.messageId : null;
+      if (fallbackMessageId != null) pendingGeneratedImageRefreshMessageIds.add(fallbackMessageId);
+      const pendingMessageIds = [...pendingGeneratedImageRefreshMessageIds];
+      pendingGeneratedImageRefreshMessageIds.clear();
+      if (pendingMessageIds.length === 0) {
         bumpGeneratedImageEntityRevision();
         return;
       }
-      normalizedMessageIds.forEach(messageId => {
+      pendingMessageIds.forEach(messageId => {
         void runQueuedHostMessageUpdate({
           queue: postDoneSideEffectsQueue,
           messageId,
@@ -4573,7 +4617,7 @@ export function useStreamingDemo() {
     }
     const prompt = String(nextPrompt ?? input.value ?? '').trim();
     if (!prompt || busy.value) return;
-    const submitted = await submitPromptViaSameLayer(prompt, 'ui');
+    const submitted = await runNativeSendProxy(prompt);
     if (submitted && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
       input.value = '';
     }
@@ -4582,8 +4626,7 @@ export function useStreamingDemo() {
   async function submitPromptViaSameLayer(prompt: string, _source: 'ui' | 'native-chat'): Promise<boolean> {
     const text = String(prompt ?? '').trim();
     if (!text || busy.value) return false;
-    await runGenerationFlow({ prompt: text, createUser: true });
-    return status.value === 'done';
+    return runNativeSendProxy(text);
   }
 
   async function runNativeSendProxy(prompt: string): Promise<boolean> {

@@ -120,3 +120,30 @@ test('transcript image injection fills raw image placeholders before anchor fall
     'matched generated images should replace the pending placeholder instead of being dropped as unanchored',
   );
 });
+
+test('host-rendered transcript html still passes through image artifact injection without reformatting', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /function buildHostRenderedHtml\(\s*hostRenderedHtml: string,\s*renderSource: string,\s*message_id: number,\s*artifactSource\?: string,/,
+    'host-rendered HTML should have a dedicated image-artifact hydration path',
+  );
+  const helperBody = source.match(/function buildHostRenderedHtml[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.notEqual(helperBody, '', 'buildHostRenderedHtml body should be parsable');
+  assert.match(
+    helperBody,
+    /applyTranscriptArtifacts\(\{[\s\S]*appendArtifacts: appendChatu8ArtifactsToHtml,/,
+    'host-rendered HTML should still hydrate prompt placeholders and ready generated images in the transcript body',
+  );
+  assert.doesNotMatch(
+    helperBody,
+    /formatAsDisplayedMessage\(/,
+    'host-rendered HTML must not be sent through Tavern formatting a second time',
+  );
+  assert.match(
+    source,
+    /const hostRenderedHtml = buildHostRenderedHtml\(readHostRenderedMessageHtml\(input\.id\), displayRenderSource, input\.id, input\.raw\);/,
+    'buildTranscriptItem should hydrate host-rendered HTML before using it as streamHtml/finalHtml',
+  );
+});

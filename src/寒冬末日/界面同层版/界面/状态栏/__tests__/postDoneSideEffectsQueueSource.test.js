@@ -93,3 +93,28 @@ test('host message writes and image refreshes enter the post-done queue by messa
     'plugin-native image ready refreshes should run through the same message queue',
   );
 });
+
+test('image mutation debounce accumulates message ids instead of keeping only the last mutation batch', () => {
+  const imageRefreshBody = extractFunctionBody(source, 'queueGeneratedImageEntityRefresh');
+
+  assert.match(
+    source,
+    /const pendingGeneratedImageRefreshMessageIds = new Set<number>\(\);/,
+    'image refresh debounce should keep a shared pending id set across rapid plugin DOM mutations',
+  );
+  assert.match(
+    imageRefreshBody,
+    /normalizedMessageIds\.forEach\(id => pendingGeneratedImageRefreshMessageIds\.add\(id\)\);/,
+    'each mutation batch should merge its ids into the pending set before resetting the debounce timer',
+  );
+  assert.match(
+    imageRefreshBody,
+    /const pendingMessageIds = \[\.\.\.pendingGeneratedImageRefreshMessageIds\];[\s\S]*pendingGeneratedImageRefreshMessageIds\.clear\(\);/,
+    'the queued refresh should consume the accumulated ids once the debounce fires',
+  );
+  assert.doesNotMatch(
+    imageRefreshBody,
+    /if \(normalizedMessageIds\.length === 0\) \{[\s\S]*bumpGeneratedImageEntityRevision\(\);[\s\S]*return;/,
+    'a trailing empty mutation batch must not discard earlier message ids and skip transcript refresh',
+  );
+});

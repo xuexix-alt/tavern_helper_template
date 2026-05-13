@@ -1,0 +1,470 @@
+- generic [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - button "" [ref=e64] [cursor=pointer]
+      - text:                                        + No items                         ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☐ ☰ ☐ ☰ ☐ ☰                                  + No items      ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰                  +     No items   X        *    *    *     *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *                        *    *    *    *           *        *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    
+    - generic [ref=e9]:
+      - button "" [ref=e65] [cursor=pointer]
+      - text:                                                                       
+    - generic [ref=e12]:
+      - button "" [ref=e66] [cursor=pointer]
+      - text:                                               
+    - generic [ref=e15]:
+      - button "" [ref=e67] [cursor=pointer]
+      - text:                +     
+    - generic [ref=e18]:
+      - button "" [ref=e68] [cursor=pointer]
+      - text:                                   
+    - generic [ref=e21]:
+      - generic "更改背景图片" [ref=e53]:
+        - button "" [ref=e69] [cursor=pointer]
+      - text:       +                            
+    - generic [ref=e24]:
+      - button "" [ref=e70] [cursor=pointer]
+      - text:         +                                                                       +                                                                                                                                                                                             +   + +  +     +        +        +        +                                      没有找到脚本                                                                                                                                                                                                                                                                                                                                                  
+    - generic [ref=e71]:
+      - button "" [ref=e73] [cursor=pointer]
+      - text:            +                          +      
+    - generic [ref=e27]:
+      - button "" [ref=e74] [cursor=pointer]
+      - text:                    
+    - generic [ref=e30]:
+      - button "" [active] [ref=e75] [cursor=pointer]
+      - navigation [ref=e492]:
+        - text: 
+        - generic [ref=e493]:
+          - generic [ref=e494]:
+            - generic "锁定 = 角色管理面板将保持打开状态" [ref=e495]:
+              - generic [ref=e496]:
+                - button "" [ref=e497] [cursor=pointer]
+                - text: 
+            - button "" [ref=e498] [cursor=pointer]
+          - generic [ref=e502]:
+            - generic [ref=e503]: 
+            - text: 收藏角色以将它们添加到快速热切换区
+        - generic [ref=e505]:
+          - heading "末世寒冬 - 星穹秩序" [level=2] [ref=e507] [cursor=pointer]
+          - generic [ref=e508]:
+            - generic "Token 计数可能不准确，仅供参考。" [ref=e509]:
+              - generic [ref=e510]:
+                - strong [ref=e511]: "4001"
+                - text: Token 数
+              - generic "永久 Token" [ref=e513]: (9 永久的)
+            - text: 
+            - button "" [ref=e514] [cursor=pointer]
+            - button "" [ref=e515] [cursor=pointer]
+        - generic [ref=e516]:
+          - generic [ref=e518]:
+            - generic [ref=e520]:
+              - generic [ref=e521]:
+                - generic "单击以为此角色选择新的头像" [ref=e522] [cursor=pointer]:
+                  - img "avatar" [ref=e523]
+                - generic [ref=e524]:
+                  - generic [ref=e525]:
+                    - text: 
+                    - button "" [ref=e526] [cursor=pointer]
+                    - button "" [ref=e527] [cursor=pointer]
+                    - button "" [ref=e528] [cursor=pointer]
+                    - button "" [ref=e529] [cursor=pointer]
+                    - button "" [ref=e530] [cursor=pointer]
+                    - button "" [ref=e531] [cursor=pointer]
+                    - button "" [ref=e532] [cursor=pointer]
+                    - text: 
+                    - button "" [ref=e533] [cursor=pointer]
+                  - combobox [ref=e535]:
+                    - option "更多..." [disabled] [selected]
+                    - option "链接到世界书"
+                    - option "导入角色卡的世界书"
+                    - option "角色设置覆盖"
+                    - option "转换为用户设定"
+                    - option "重命名"
+                    - option "来源链接" [disabled]
+                    - option "替换 / 更新"
+                    - option "导入标签"
+                    - option "设为 / 取消设为欢迎页面助理"
+                    - option "展示图库"
+              - generic [ref=e537]:
+                - textbox "搜索/创建标签" [ref=e538]
+                - button "" [ref=e539] [cursor=pointer]
+            - generic [ref=e541] [cursor=pointer]:
+              - generic [ref=e542]:
+                - generic [ref=e543]: 创作者的注释
+                - button "" [ref=e544]
+                - button "" [ref=e545]
+              - button "" [ref=e547]
+            - generic [ref=e548]:
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - generic [ref=e551]: 角色描述
+                  - button "" [ref=e552] [cursor=pointer]
+                  - link "" [ref=e553] [cursor=pointer]:
+                    - /url: https://docs.sillytavern.app/usage/core-concepts/characterdesign/#character-description
+                    - generic [ref=e554]: 
+                - button " 外部媒体" [ref=e555] [cursor=pointer]:
+                  - generic [ref=e556]: 
+                  - text: 
+                  - generic [ref=e557]: 外部媒体
+              - textbox "在这里描述您角色的身体和精神特征。" [ref=e558]
+              - generic [ref=e559]: Token： 0
+            - generic [ref=e560]:
+              - generic [ref=e561]:
+                - generic [ref=e562]:
+                  - generic [ref=e563]: 开场白
+                  - button "" [ref=e564] [cursor=pointer]
+                  - link "" [ref=e565] [cursor=pointer]:
+                    - /url: https://docs.sillytavern.app/usage/core-concepts/characterdesign/#first-message
+                    - generic [ref=e566]: 
+                - button "其他开场" [ref=e567] [cursor=pointer]:
+                  - generic [ref=e568]: 其他开场
+              - textbox "这将是角色在每次聊天开始时发送的第一条消息。" [ref=e569]: "看不到网页说明你缺乏前置插件【酒馆助手】，复制地址在酒馆按照扩展：https://gitlab.com/novi028/JS-Slash-Runner.git 自行检查另一个必备插件【提示词模版】：https://codeberg.org/zonde306/ST-Prompt-Template.git 有bug删除浏览器缓存重新加载（作者通过远程更新修bug，需要清除缓存才生效） ```text <!DOCTYPE html> <!-- saved from url=(0226)file:///D:/STOBJECT/%E5%AE%9E%E6%97%B6%E7%BC%96%E5%86%99%E8%A7%92%E8%89%B2%E5%8D%A1%E5%92%8C%E4%B8%96%E7%95%8C%E4%B9%A6/tavern_helper_template/dist/%E5%AF%92%E5%86%AC%E6%9C%AB%E6%97%A5/%E7%8E%A9%E6%B3%95%E8%AF%B4%E6%98%8E.html --> <html lang=\"zh-CN\"><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> <title>寒冬末日 - 玩法说明</title> <style> * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: 'Segoe', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; color: #e8e8e8; line-height: 1.8; } .container { max-width: 800px; margin: 0 auto; padding: 60px 30px; } /* 标题样式 */ .header { text-align: center; margin-bottom: 50px; position: relative; } .header h1 { font-size: 3em; font-weight: 300; letter-spacing: 8px; color: #fff; text-shadow: 0 0 30px rgba(100, 200, 255, 0.5); margin-bottom: 10px; animation: fadeInDown 1s ease-out; } .header .subtitle { font-size: 1.1em; color: #7ec8e3; letter-spacing: 4px; opacity: 0.8; animation: fadeInUp 1s ease-out 0.3s both; } .header::after { content: ''; display: block; width: 100px; height: 2px; background: linear-gradient(90deg, transparent, #7ec8e3, transparent); margin: 30px auto 0; } /* 介绍区域 */ .intro { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 30px; margin-bottom: 40px; backdrop-filter: blur(10px); border: 1px solid rgba(126, 200, 227, 0.2); animation: fadeIn 1s ease-out 0.5s both; } .intro p { font-size: 1.1em; text-align: center; color: #b8d4e3; } /* 特性网格 */ .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 50px; } .feature-card { background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 25px; border: 1px solid rgba(126, 200, 227, 0.15); transition: all 0.3s ease; animation: fadeInUp 0.8s ease-out backwards; } .feature-card:nth-child(1) { animation-delay: 0.6s; } .feature-card:nth-child(2) { animation-delay: 0.7s; } .feature-card:nth-child(3) { animation-delay: 0.8s; } .feature-card:nth-child(4) { animation-delay: 0.9s; } .feature-card:nth-child(5) { animation-delay: 1.0s; } .feature-card:nth-child(6) { animation-delay: 1.1s; } .feature-card:nth-child(7) { animation-delay: 1.2s; } .feature-card:nth-child(8) { animation-delay: 1.3s; } .feature-card:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.08); border-color: rgba(126, 200, 227, 0.4); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); } .feature-card h3 { color: #7ec8e3; font-size: 1.15em; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; } .feature-card h3::before { content: '◆'; font-size: 0.7em; color: #e94560; } .feature-card p { font-size: 0.95em; color: #a8c5d4; line-height: 1.7; } /* 攻略区域 */ .guide { background: rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 40px; backdrop-filter: blur(10px); border: 1px solid rgba(126, 200, 227, 0.2); animation: fadeIn 1s ease-out 1.4s both; } .guide h2 { color: #7ec8e3; font-size: 1.8em; font-weight: 400; margin-bottom: 30px; text-align: center; letter-spacing: 4px; } .guide h2::before, .guide h2::after { content: '—'; margin: 0 15px; color: rgba(126, 200, 227, 0.5); } .guide-content { counter-reset: guide; } .guide-item { position: relative; padding-left: 50px; margin-bottom: 25px; padding: 20px 20px 20px 60px; background: rgba(0, 0, 0, 0.2); border-radius: 10px; border-left: 3px solid rgba(233, 69, 96, 0.5); transition: all 0.3s ease; } .guide-item:hover { background: rgba(0, 0, 0, 0.3); border-left-color: #e94560; } .guide-item::before { counter-increment: guide; content: counter(guide); position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; background: linear-gradient(135deg, #e94560, #c73e54); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85em; font-weight: bold; color: #fff; } .guide-item p { color: #c8dce8; font-size: 0.98em; line-height: 1.8; } .guide-item strong { color: #e94560; font-weight: 600; } .guide-item em { color: #7ec8e3; font-style: normal; } /* 警告框 */ .warning { background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(233, 69, 96, 0.05)); border: 1px solid rgba(233, 69, 96, 0.3); border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center; } .warning p { color: #e8a0a8; font-size: 0.95em; } /* 页脚 */ .footer { text-align: center; margin-top: 60px; padding-top: 30px; border-top: 1px solid rgba(126, 200, 227, 0.2); animation: fadeIn 1s ease-out 1.5s both; } .footer p { color: rgba(126, 200, 227, 0.6); font-size: 0.9em; letter-spacing: 2px; } /* 动画 */ @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } } @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } /* 响应式 */ @media (max-width: 600px) { .header h1 { font-size: 2em; letter-spacing: 4px; } .container { padding: 40px 20px; } .guide { padding: 25px; } .guide h2 { font-size: 1.4em; } } </style> </head> <body> <div class=\"container\"> <header class=\"header\"> <h1>寒冬末日</h1> <p class=\"subtitle\">SURVIVAL GUIDE</p> </header> <section class=\"intro\"> <p>为了完整的游戏体验，请你务必阅读以下玩法介绍</p> </section> <section class=\"features\"> <article class=\"feature-card\"> <h3>真实世界</h3> <p>本作模拟真实末日环境【一切角色（含user）均可死亡】、真实日期流动、真实健康值后台结算、真实女孩性同意设定</p> </article> <article class=\"feature-card\"> <h3>扩展伊甸</h3> <p>对伊甸庇护所进行了功能扩充和升级，现在庇护所等级是雪中送炭而不是锦上添花</p> </article> <article class=\"feature-card\"> <h3>丰富变量</h3> <p>使用zodmvu构建了一整套涵盖关系、健康值、状态栏描述的丰富设定</p> </article> <article class=\"feature-card\"> <h3>交互式UI</h3> <p>UI可以设置庇护范围、查看角色移动房间地图、对齐日期、发送选项、文生图支持</p> </article> <article class=\"feature-card\"> <h3>开放角色</h3> <p>内置丰富妹子+阶段性人设，拓展3名角色，20组NPC模板，状态栏同步支持</p> </article> <article class=\"feature-card\"> <h3>递进任务</h3> <p>设置【星穹秩序】主线任务，引导玩家种田/收人/探索/建立王国</p> </article> </section> <section class=\"guide\"> <h2>开局攻略</h2> <div class=\"guide-content\"> <div class=\"guide-item\"> <p><strong>重要</strong>【<em>第一个开局庇护所等级2</em>】是推荐开局，【<em>第二个开局庇护所等级1</em>】适合慢节奏，但边缘角色容易冻死</p> </div> <div class=\"guide-item\"> <p>主要角色经过精心设定，是核心资产，注意保护。</p> </div> <div class=\"guide-item\"> <p>所有角色挨冻受饿会随着时间变化掉健康值（日结），直至死亡。<strong>因此</strong>保护核心角色是玩家游玩的出发点。</p> </div> <div class=\"guide-item\"> <p>快速完成任务=升级庇护所=+庇护名额。庇护所拓展范围随等级可以向其他房间供暖，防止冻死，可以通过UI设置或剧情变量回填，地图可查看庇护房间分布。</p> </div> <div class=\"guide-item\"> <p>临时NPC有丰富拓展，请注意UI中有删除按钮，不要了记得删除。</p> </div> <div class=\"guide-item\"> <p>游戏立足于玩家种田/后宫/探索/建立秩序，配以丰富的任务系统和情报碎片玩法，不要只顾着把自己关在家里玩妹子。</p> </div> <div class=\"guide-item\"> <p>推妹子前，看一眼关系值和关系倾向，<strong>强推灰飞烟灭</strong>。</p> </div> <div class=\"guide-item\"> <p>任何人（含主角）都会死，理论上这卡有GAME OVER设定。</p> </div> </div> <div class=\"warning\"> <p>警告⚠️ 游戏包含成人内容，请确保你已年满18岁</p> </div> </section> <footer class=\"footer\"> <p>© 寒冬末日 · 末日生存模拟</p> <p style=\"margin-top: 15px; color: rgba(126, 200, 227, 0.8);\">→ 右滑开始游戏</p> </footer> </div> </body></html> ```"
+              - generic [ref=e570]: Token： 3992
+          - text:                         群聊暂无成员。          无可用角色                         
+  - generic:                      +                                                                                +    + +                  
+  - generic:                  
+  - generic [ref=e33]:
+    - text: 
+    - generic [ref=e34]:
+      - generic [ref=e187]:
+        - img [ref=e190] [cursor=pointer]
+        - generic [ref=e191]:
+          - generic [ref=e192]:
+            - generic [ref=e194]:
+              - generic [ref=e195]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e196]: 
+            - generic [ref=e197]:
+              - button "" [ref=e198] [cursor=pointer]
+              - text:              
+              - button "" [ref=e199] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e201]:
+            - text: 
+            - iframe [ref=e202]:
+              
+      - generic [ref=e203]:
+        - img [ref=e206] [cursor=pointer]
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e212]: 
+            - generic [ref=e213]:
+              - button "" [ref=e214] [cursor=pointer]
+              - text:              
+              - button "" [ref=e215] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e216]:
+            - paragraph [ref=e217]:
+              - text: "[stream-demo:minimal]"
+              - text: done
+            - paragraph [ref=e218]:
+              - code [ref=e219]: 星穹国际公寓20层·9527年12月14日·星期三·08:30
+            - paragraph [ref=e220]: 从玄关方向传来的声音很轻，但近域监听台还是捕捉到了。
+            - paragraph [ref=e221]: 走廊里有人在说话。一个女声，语速不快，带着点犹豫。
+            - paragraph [ref=e222]: “卫国，这样会不会太早了？他可能还没起。”
+            - paragraph [ref=e223]: 然后是男声，低沉简短。
+            - paragraph [ref=e224]: “早晚都得谈。物资撑不了几天了。”
+            - paragraph [ref=e225]: 脚步声停在2001门口。停顿了大概十秒钟，才有敲门声响起——三下，不重，但节奏很稳。
+            - paragraph [ref=e226]: 伊甸的监听台自动标注了音源：女性，约40岁，情绪状态紧张但克制；男性，约42岁，情绪状态冷静，无明显敌意。根据音轨和楼层位置，匹配到2003室的住户档案——林月华和赵卫国。
+            - paragraph [ref=e227]: 敲门声又响了一次，还是三下。
+            - paragraph [ref=e228]: 林月华的声音从门外传来，压得比刚才更低：“您好……请问有人在吗？我是2003的林月华。”
+            - paragraph [ref=e229]: 赵卫国没有补充什么。能听到他稍微挪了半步，站在妻子侧后方，呼吸很稳。
+            - group [ref=e231]:
+              - generic "📜 星图已绘 - 航路已明" [ref=e232] [cursor=pointer]:
+                - generic [ref=e233]: 📜
+                - generic [ref=e234]: 星图已绘 - 航路已明
+            - paragraph [ref=e235]:
+              - option "【A】直接开门，平静地询问他们需要什么。保持距离，展示无害和理性。 【B】通过门上的通话设备先问清来意，不急着开门。赵卫国警惕，贸然开门可能让他更戒备。 【C】打开一条门缝，先递给林月华一杯热水。她的手指冻得发白，需要温暖。 【D】隔着门说，然后去拿一份万象终端合成的干粮。带着诚意谈判。" [ref=e236]
+            - group [ref=e238]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e239] [cursor=pointer]:
+                - generic [ref=e240]: 🌕
+                - generic [ref=e242]: 月圆思成，思路清晰
+                - generic [ref=e243]: ✨
+                - generic [ref=e245]: 展开思绪 ▶
+            - paragraph
+            - paragraph
+            - paragraph
+      - generic [ref=e246]:
+        - img [ref=e249] [cursor=pointer]
+        - generic [ref=e250]:
+          - generic [ref=e251]:
+            - generic [ref=e253]:
+              - generic [ref=e254]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e255]: 
+            - generic [ref=e256]:
+              - button "" [ref=e257] [cursor=pointer]
+              - text:              
+              - button "" [ref=e258] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e260]: 【A】直接开门，平静地询问他们需要什么。保持距离，展示无害和理性。
+      - generic [ref=e261]:
+        - img [ref=e264] [cursor=pointer]
+        - generic [ref=e265]:
+          - generic [ref=e266]:
+            - generic [ref=e268]:
+              - generic [ref=e269]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e270]: 
+            - generic [ref=e271]:
+              - button "" [ref=e272] [cursor=pointer]
+              - text:              
+              - button "" [ref=e273] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e274]:
+            - paragraph [ref=e275]:
+              - text: "[stream-demo:minimal]"
+              - text: done
+            - paragraph [ref=e276]:
+              - code [ref=e277]: 星穹国际公寓20层2001室门口·9527年12月14日·星期三·08:32
+            - paragraph [ref=e278]: 门锁转开的声音在走廊里很轻，但足够清晰。
+            - paragraph [ref=e279]: 林月华交握在身前的手指僵了一下。她抬起头，看到开门的是个年轻人，穿着整洁，面色平静，站在门内没有往前迈。
+            - paragraph [ref=e280]:
+              - img
+              - text: "image###sfw 人物与构图： 1位32岁的东亚成熟女性林月华，身处幽暗的星穹公寓走廊，镜头拉近至上半身。 角色细节： ${\"name\":\"林月华\", \"angle\":\"from front\", \"upperBody\":\"sfw\", \"lowerBody\":\"hidden\"}$。她有着黑色的微卷长发，被随意扎在脑后。虽面带疲惫，但五官极其妩媚。 服装与姿势： 她身着${\"name\":\"Innocent Killer Backless Sweater\", \"upperBody\":\"visible\", \"lowerBody\":\"hidden\"}$，灰色粗针织纹理的高领毛衣极其紧身，将她高耸、硕大且挺拔的巨乳完全束缚在布料内，胸部下沿被交握的双臂微微托起，呈现出沉甸甸的质感。 场景与环境： 背后是不稳定的、带着蓝紫调的应急灯火，走廊墙壁上结着薄薄的白霜。空气中弥漫着压抑的冷色调气息。 光影与画质： 顶光投射下浓重的阴影，勾勒出她胸部侧面的曼妙弧度。细腻的皮肤纹理与毛衣纤维清晰可见，胶片电影质感。###"
+            - paragraph [ref=e281]: 她张了张嘴，第一句话没说出来。背后丈夫的呼吸声很稳，赵卫国站在她右后方半步，没有越过她开口。
+            - paragraph [ref=e282]: 空气冷得让走廊里的应急灯管都蒙了一层薄霜。林月华深吸了一口气，呼出的白雾散在两人之间。
+            - paragraph [ref=e283]:
+              - img
+              - text: "image###nsfw 人物与构图： 1位成熟女性林月华的侧身特写，电影感中景，焦点位于她呼出的白雾。 角色细节： ${\"name\":\"林月华\", \"angle\":\"from side\", \"upperBody\":\"nsfw\", \"lowerBody\":\"hidden\"}$。她正仰起脖颈，喉咙处皮肤细腻光滑。 服装与姿势： 她穿着一件被湿气浸透的灰色超薄毛线衣，由于湿透的纤维变得半透明，紧贴在她高耸的山峦上，可以清晰地观察到毛衣下两颗深色的乳晕以及因寒冷而挺拔硬朗的乳头形状。她双手交叠按在胸部边缘，使得乳沟显得极深。 场景与环境： 寒冷的冷气弥漫，鼻腔中呼出的浓白雾气在画面正中心扩散。背后是一个高大男性的轮廓遮挡，增加了画面的压抑感。 光影与画质： 侧逆光照射，照亮了毛衣表层的细微绒毛和雾气的质感，由于环境昏暗，重点光完全打在她的胸部侧面弧线上。###"
+            - paragraph [ref=e284]: “那个……您好。”
+            - paragraph [ref=e285]: 她顿了顿，手指松开又重新交握。
+            - paragraph [ref=e286]: “我们是2003的住户。我叫林月华，这是我丈夫赵卫国。”
+            - paragraph [ref=e287]: 赵卫国在她说话时微微点了下头，还是没开口。他的目光扫过门框边缘的密封胶条，又扫过门内玄关的整洁程度，最后落在小哥哥身上，不动了。
+            - paragraph [ref=e288]: 林月华咬了咬下唇。这种沉默对她说来不算陌生——卫国从来都是这样，不摸底不开口。但接下去的话得她自己说。
+            - paragraph [ref=e289]: “我们来……”
+            - paragraph [ref=e290]: 她停了一下，像是在组织措辞。走廊尽头有风声从破损的消防门缝隙挤进来，呜呜地响。
+            - paragraph [ref=e291]: “您这儿……还有多余的食物吗？”
+            - paragraph [ref=e292]: 话音刚落她又赶紧补了一句：“不是白要的。我们可以拿东西换。家里还有一些——”
+            - paragraph [ref=e293]: 赵卫国在这时开了口。
+            - paragraph [ref=e294]: “直说吧。”
+            - paragraph [ref=e295]: 他声音不高，但咬字很稳。胳膊从背后放下来，身体微微往妻子身前偏了偏，挡去她半边身子。
+            - paragraph [ref=e296]: “我们存的粮食不够了。我老婆会做饭，能帮您处理食材，打扫也行。我有工具，修东西加固都没问题。”
+            - paragraph [ref=e297]: 他停顿了一下。
+            - paragraph [ref=e298]: “您要用什么换。”
+            - paragraph [ref=e299]: 不是问句的语气。更像是在说——您开口吧，我来谈。林月华嘴唇动了动，像是想补充什么，最后还是没说。她只是把手缩回袖子里，等着对面的人回答。
+            - paragraph [ref=e300]: 走廊里的风又大了。应急灯闪了一下，重新亮起来。
+            - group [ref=e302]:
+              - generic "📜 星图已绘 - 航路已明" [ref=e303] [cursor=pointer]:
+                - generic [ref=e304]: 📜
+                - generic [ref=e305]: 星图已绘 - 航路已明
+            - paragraph [ref=e306]:
+              - option "【A】答应收下食材，让他们把土豆和萝卜拿来，先换一顿饭的量。展示公平交易原则，用万象合成终端产出三份基础干粮作为交换。 【B】先问清楚他们的食材还能撑多久，再决定要不要交易。保持慎重，不急着表态。 【C】让他们进玄关说话，展示一下庇护所内部的供暖条件，用温差让他们感受到资源的价值，然后提出长期协作方案。 【D】只答应换一小部分，说——让林月华做一顿饭试试手艺，赵卫国检查2001门窗有没有需要加固的地方，验证价值后再谈长期交易。" [ref=e307]
+            - paragraph [ref=e308]: “呃……话说回来，直接开门让两个陌生人站在走廊上吹风真的没问题吗？反正你们也没有食物可以给他们，不如请他们进来喝杯茶？”
+            - paragraph
+            - group [ref=e310]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e311] [cursor=pointer]:
+                - generic [ref=e312]: 🌕
+                - generic [ref=e314]: 月圆思成，思路清晰
+                - generic [ref=e315]: ✨
+                - generic [ref=e317]: 展开思绪 ▶
+      - generic [ref=e318]:
+        - img [ref=e321] [cursor=pointer]
+        - generic [ref=e322]:
+          - generic [ref=e323]:
+            - generic [ref=e325]:
+              - generic [ref=e326]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e327]: 
+            - generic [ref=e328]:
+              - button "" [ref=e329] [cursor=pointer]
+              - text:              
+              - button "" [ref=e330] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e332]: 【A】答应收下食材，让他们把土豆和萝卜拿来，先换一顿饭的量。展示公平交易原则，用万象合成终端产出三份基础干粮作为交换。
+      - generic [ref=e333]:
+        - img [ref=e336] [cursor=pointer]
+        - generic [ref=e337]:
+          - generic [ref=e338]:
+            - generic [ref=e340]:
+              - generic [ref=e341]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e342]: 
+            - generic [ref=e343]:
+              - button "" [ref=e344] [cursor=pointer]
+              - text:              
+              - button "" [ref=e345] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e346]:
+            - paragraph [ref=e347]:
+              - text: "[stream-demo:minimal]"
+              - text: done
+            - paragraph
+            - group [ref=e349]:
+              - generic "🌙 月满如镜，思绪澄明 ✦ ˚ ✦" [ref=e350] [cursor=pointer]:
+                - generic [ref=e351]: 🌙
+                - generic [ref=e352]: 月满如镜，思绪澄明
+                - generic [ref=e353]: ✦ ˚ ✦
+            - paragraph [ref=e354]:
+              - code [ref=e355]: 星穹国际公寓20层2001室门口·9527年12月14日·星期三·08:35
+            - paragraph [ref=e356]: 林月华听到那句“可以”的时候，交握在身前的手指一下子松开了。
+            - paragraph [ref=e357]: 她没说什么太激动的话，只是肩膀往下放了放，原本缩着的脖子也舒展开一点。走廊里的风还是从消防门缝隙往里灌，但她顾不上冷了，赶紧把手伸进大衣口袋，掏出两样东西。
+            - paragraph [ref=e358]:
+              - img
+              - text: "image###sfw, 1girl, solo focus, ${\"name\":\"Lin Yuehua (original)\", \"angle\":\"from side front\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$, long black hair, loose bun, brown eyes, pale skin, mature female, ((curvy)), ((very large breasts:1.4)), tall, ${\"name\":\"tan wool coat\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$, white turtleneck sweater under coat, thick scarf, dark hallway, apartment corridor, dim lighting, cold atmosphere, visible breath, winter, late at night, (emergency light:0.8), (metal door in background:0.7), cinematic lighting, depth of field, upper body, mid shot, leaning forward, hands in pockets, looking at viewer, shy, pleading, blushing, nose blush, parted lips, heavy coat texture, cloth wrinkles, ((breast bulge under coat:1.3)), highly detailed, masterpiece, highres, 8k, realistic, detailed fabric, side view, dramatic shadows###"
+            - paragraph [ref=e359]: 一个土豆，表皮带着干涸的泥土。一根白萝卜，有点蔫了，根部还沾着冰碴子。她攥了一会儿，才往前递过来。
+            - paragraph [ref=e360]: “不好意思……东西不多。”
+            - paragraph [ref=e361]: 赵卫国从她手里接过土豆和萝卜，往前迈了半步。他没有直接塞到小哥哥手里，而是先把食材上的泥土在掌心磕了磕，萝卜的冰碴子被他用手指抹掉。动作不算慢，但很稳，像是在工地上递工具给同事——不卑不亢，只是办事。
+            - paragraph [ref=e362]: 然后他把这两样东西同时递了过来。
+            - paragraph [ref=e363]: “够了。”
+            - paragraph [ref=e364]: 他只说了这一个词。既像是在回答妻子刚才那句“东西不多”，又像是在确认这笔交易成立。
+            - paragraph [ref=e365]: 林月华咬了咬下唇。她本来想说“谢谢您”或者“真的很感谢”，但卫国已经替她把东西递过去了，她再说就显得啰嗦。于是她只是微微鞠了一躬，幅度很小，几乎只是脖子上多了一道弧度。然后退后半步，回到丈夫身侧。
+            - paragraph [ref=e366]:
+              - img
+              - text: "image###sfw, 1girl, 1boy, ${\"name\":\"Lin Yuehua (original)\", \"angle\":\"from above\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$, ${\"name\":\"tan wool coat\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$, white turtleneck sweater, thick grey leggings, cowboy shot, from above, high-angle shot, dutch angle, (bowing:1.3), neck curve, looking down, eyes closed, humble, grateful, hands clasped, clasped hands, ((very large breasts:1.35)), ((heavy breasts:1.3)), (hanging breasts:1.2), sagging breasts under coat, 1boy, faceless male, behind girl, husband, height difference, dark corridor, emergency lighting, purple and blue light, cinematic lighting, dramatic shadows, depth of field, detailed clothing, realistic, masterpiece, highres, 8k, 12th century apartment decor, messy hair, stray hair, soft skin, high-neck sweater visibility###"
+            - paragraph [ref=e367]: 小哥哥转身进了2001室。门没有关严，从门缝里能看到玄关的光——不是走廊这种带着蓝紫调的应急灯，而是暖白色的，稳得像末日前。赵卫国的目光在那道门缝上停了大概三秒，但什么都没说。
+            - paragraph [ref=e368]: 不到一分钟，小哥哥就回来了。手里拿着三份干粮——那种真空包装的压缩饼干，外包装干净，分量扎实。
+            - paragraph [ref=e369]: 林月华双手接过去。干粮被塞进她怀里的时候，她指尖碰上包装袋，隔着塑料袋都能感觉到手的温度。她的手指已经冻得发白，碰到这点热量的时候，她下意识收紧了手指。
+            - paragraph [ref=e370]:
+              - img
+              - text: "image###sfw, 1girl, 1boy, male pov, pov hands, ${\"name\":\"Lin Yuehua (original)\", \"angle\":\"from front\", \"upperBody\":\"sfw\", \"lowerBody\":\"hidden\"}$, ${\"name\":\"tan wool coat\", \"upperBody\":\"visible\", \"lowerBody\":\"hidden\"}$, white turtleneck sweater, close-up, mid shot, (holding food:1.3), clutching to chest, (breast squeeze:1.35), breasts squeezed together, ((gargantuan breasts:1.3)), high-neck sweater, detailed knit, vacuum-sealed bags, plastic texture, bread, long black hair, looking down, emotional, shimmering eyes, (tears:0.7), blushing, pale fingers, red knuckles, trembling hands, warm light from doorway, rim lighting, soft lighting on face, masterpiece, highres, 8k, photorealistic, 1boy, pov hands only, giving food, interaction, intimate distance, (visible breath:0.8)###"
+            - paragraph [ref=e371]: 她抬起头，想说点什么。嘴唇动了动，最后只是弯了弯嘴角。
+            - paragraph [ref=e372]: “谢……”
+            - paragraph [ref=e373]: 她顿住了。这个谢字好像说得太轻、太徒劳，但她又找不到更合适的词。于是她只是把干粮抱在怀里，往后退了一步，让出路来。
+            - paragraph [ref=e374]: 赵卫国看了一眼干粮的分量，又看了一眼小哥哥。他点了下头。
+            - paragraph [ref=e375]: “成交。”
+            - paragraph [ref=e376]: 语气和之前敲门时一样低，但咬字更轻了。他转过身，用空着的那只手揽住妻子的肩膀，给她挡去走廊里的冷风。
+            - paragraph [ref=e377]: 两个人往2003室的方向走去。走了几步，林月华回头看了一眼2001室的门，然后加快脚步跟上丈夫。
+            - paragraph [ref=e378]:
+              - img
+              - text: "image###sfw, 1girl, 1boy, ${\"name\":\"Lin Yuehua (original)\", \"angle\":\"from behind\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$, looking back, looking over shoulder, side view, side profile, whole body, walking away, (curvy:1.3), wide hips, thick thighs, (mature female:1.2), ((very large breasts:1.35)), (chest silhouette:1.25), ${\"name\":\"tan wool coat\", \"upperBody\":\"visible\", \"lowerBody\":\"visible\"}$, tight waist, grey leggings, boots, winter clothes, 1boy, back view, faceless male, husband, hand on shoulder, height difference, dark hallway, long corridor, perspective, leading lines, receding door, emergency lighting, shadows, bokeh, cinematic angle, realistic, masterpiece, highres, 8k, detailed hair, loose bun, messy hair, photorealistic, depth of field###"
+            - paragraph [ref=e379]: 走廊里的应急灯又闪了一次，重新亮起来。
+            - paragraph
+            - paragraph
+            - group [ref=e381]:
+              - generic "📜 星图已绘 - 航路已明" [ref=e382] [cursor=pointer]:
+                - generic [ref=e383]: 📜
+                - generic [ref=e384]: 星图已绘 - 航路已明
+            - paragraph [ref=e385]:
+              - option "【A】关上门，回想这次交易的细节——林月华冻白的手指和赵卫国沉稳的态度。然后用近域监听台再听一会儿走廊的动静。 【B】追上林月华和赵卫国，告诉他们如果有需要还可以继续交易，并暗示自己这里有稳定的物资来源。展示长期合作意愿。 【C】返回核心区，整理一下目前20层的邻居关系，用伊甸系统记录林家夫妇的交易信条和资源状况，为后续制定楼层交流策略。 【D】去万象合成终端检查一下刚才消耗的干粮产能，然后补充储备。顺便给自己冲杯热水，整理思路。" [ref=e386]
+            - paragraph
+            - group [ref=e388]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e389] [cursor=pointer]:
+                - generic [ref=e390]: 🌕
+                - generic [ref=e392]: 月圆思成，思路清晰
+                - generic [ref=e393]: ✨
+                - generic [ref=e395]: 展开思绪 ▶
+      - generic [ref=e396]:
+        - img [ref=e399] [cursor=pointer]
+        - generic [ref=e400]:
+          - generic [ref=e401]:
+            - generic [ref=e403]:
+              - generic [ref=e404]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e405]: 
+            - generic [ref=e406]:
+              - button "" [ref=e407] [cursor=pointer]
+              - text:              
+              - button "" [ref=e408] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e410]: 【A】关上门，回想这次交易的细节——林月华冻白的手指和赵卫国沉稳的态度。然后用近域监听台再听一会儿走廊的动静。
+      - generic [ref=e411]:
+        - img [ref=e414] [cursor=pointer]
+        - generic [ref=e415]:
+          - generic [ref=e416]:
+            - generic [ref=e418]:
+              - generic [ref=e419]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e420]: 
+            - generic [ref=e421]:
+              - button "" [ref=e422] [cursor=pointer]
+              - text:              
+              - button "" [ref=e423] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e424]:
+            - paragraph [ref=e425]:
+              - text: "[stream-demo:minimal]"
+              - text: done
+            - group [ref=e427]:
+              - generic "🌙 月满如镜，思绪澄明 ✦ ˚ ✦" [ref=e428] [cursor=pointer]:
+                - generic [ref=e429]: 🌙
+                - generic [ref=e430]: 月满如镜，思绪澄明
+                - generic [ref=e431]: ✦ ˚ ✦
+            - paragraph [ref=e432]:
+              - time [ref=e433]:
+                - code [ref=e434]: 星穹国际公寓20层2001室·9527年12月14日·星期三·08:37
+            - paragraph [ref=e435]: 门锁咔哒一声合拢，将走廊里带着蓝紫调的冰冷空气彻底隔绝在外。
+            - paragraph [ref=e436]: 玄关里的暖白灯光照在地上。2001室内，温度恒定在二十六度。没有风声。
+            - paragraph [ref=e437]: 他手里拿着刚才换来的一个土豆和一根白萝卜。土豆表皮干干的，带着泥。萝卜根部原本的冰碴子在室内的高温下开始融化，变成几滴水珠，顺着萝卜皮往下淌，滴在玄关的复合地板上。
+            - paragraph [ref=e438]: 他走到开放式厨房，把这两样东西放在流线型的料理台上。旁边就是万象合成终端的操作界面。
+            - paragraph [ref=e439]: 手指上还残留着塑料包装袋递出去时的触感。林月华接过干粮时，她的手指冻得发白，指节处透着僵硬的青色。那双手碰到干粮袋子的瞬间，手指下意识地收紧。而赵卫国接过食材、磕掉泥土的动作很稳，那双手掌宽大，指腹和虎口处结着厚实的老茧。
+            - paragraph [ref=e440]:
+              - img
+              - img "Generated Image" [ref=e485]
+            - paragraph [ref=e441]: 他没有在厨房多停留，转身走回玄关旁边的墙壁。那里嵌着一块面板。
+            - paragraph [ref=e442]: 手指在屏幕上划过，启动了近域监听台。
+            - paragraph [ref=e443]: 屏幕亮起微光，显示出一条平缓波动的绿色音频线。走廊里的风声被系统过滤成了低频的背景音。
+            - paragraph [ref=e444]: 音频线突然跳动了一下。
+            - paragraph [ref=e445]: 系统自动在屏幕边缘弹出一行极小的白色字符：【捕捉到短距声源】。
+            - paragraph [ref=e446]: 接着，音频线分成了两条不同频率的波纹。
+            - paragraph [ref=e447]:
+              - text: 系统给出了标注：
+              - text: 【音源1：女性，约40岁。情绪状态：放松、微弱的欣喜。】
+              - text: 【音源2：男性，约42岁。情绪状态：平静、警惕。】
+            - paragraph [ref=e448]: 监听扬声器里传出细碎的摩擦声，那是厚重的冬衣布料摩擦走廊墙壁的声音。脚步声一前一后，频率不快。
+            - paragraph [ref=e449]:
+              - img
+              - img "Generated Image" [ref=e488]
+            - paragraph [ref=e450]: 大约过了七八秒，脚步声停了。位置大致在2003室门口。
+            - paragraph [ref=e451]: 金属钥匙插进锁孔，转动了两圈。有些生涩的金属摩擦声。
+            - paragraph [ref=e452]: “太好了……”女人的声音从扬声器里传出来，压得很低，但能听出紧绷的声带放松了一些，“卫国……至少今天……”
+            - paragraph [ref=e453]: “进去再说。”男人的声音打断了她，低沉，简短，没有起伏。
+            - paragraph [ref=e454]:
+              - img
+              - img "Generated Image" [ref=e491]
+            - paragraph [ref=e455]: 门轴发出沉闷的转动声。然后是防盗门关上的碰撞声。
+            - paragraph [ref=e456]: “咔哒”一声，反锁的动静。
+            - paragraph [ref=e457]: 绿色的音频线重新变得平缓。系统屏幕上的字符暗了下去。
+            - paragraph [ref=e458]: 扬声器里只剩下风从走廊尽头破损的消防门缝隙挤进来的呜呜声，单调地重复着。
+            - paragraph [ref=e459]: 他站在面板前听了三分钟。走廊里没有再出现新的脚步声。2002室和2004室方向也没有任何响动。整个二十层恢复了死寂。
+            - paragraph [ref=e460]: 他伸手在面板上点了一下，关闭了扬声器的外放，让监听台保持后台记录状态。
+            - paragraph [ref=e461]: 玄关地板上的水滴已经干了，留下一小块极淡的泥水印。
+            - group [ref=e463]:
+              - generic "📜 星图已绘 - 航路已明" [ref=e464] [cursor=pointer]:
+                - generic [ref=e465]: 📜
+                - generic [ref=e466]: 星图已绘 - 航路已明
+            - paragraph
+            - paragraph
+            - paragraph [ref=e467]:
+              - option "【A】检查万象合成终端的产能，把土豆和萝卜放进去解析，看能合成什么新东西。 【B】去主浴室洗个热水澡。刚才接触外面的冷空气，身上沾了些寒意，需要放松一下。 【C】调出近域监听台的历史记录，看看在自己获得庇护所的前几天，走廊里有没有其他动静。 【D】穿好防寒服，打开门，走到2004室门口听听里面的动静。佐伯姐妹和她们的父亲住在那里。" [ref=e468]
+            - group [ref=e470]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e471] [cursor=pointer]:
+                - generic [ref=e472]: 🌕
+                - generic [ref=e474]: 月圆思成，思路清晰
+                - generic [ref=e475]: ✨
+                - generic [ref=e477]: 展开思绪 ▶
+            - paragraph
+        - generic [ref=e478]: 1/1
+    - generic [ref=e36]:
+      - generic [ref=e480]:
+        - button "重新处理变量" [ref=e481] [cursor=pointer]
+        - button "重试额外模型解析" [ref=e482] [cursor=pointer]
+      - text:  
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39] [cursor=pointer]: 
+          - generic "扩展程序" [ref=e57] [cursor=pointer]: 
+        - textbox "输入想发送的消息，或输入 /? 获取帮助" [ref=e173]
+        - generic [ref=e41]:
+          - text:      
+          - generic "发送消息" [ref=e174] [cursor=pointer]: 
+  - text:                        1      
+  - generic [ref=e61]: 
+  - generic:                 +                             +                      +         +                      • • • •        • • • • • • •                  +        +       +                                                                             +          +       +     +                  +  +                       +           +         +               +      +                                                                                             ✓                                      
+  - option "(请先获取并选择模型)" [selected]
+  - option "智绘姬 (默认)" [selected]
+  - option "自定义 (LLM预设)"
+  - generic [ref=e63]: 
+  - status [ref=e175]
+  - status [ref=e176]
+  - status [ref=e177]
+  - status [ref=e178]
+  - status [ref=e179]
+  - status [ref=e180]
+  - status [ref=e181]
+  - status [ref=e182]
+  - status [ref=e183]
+  - status [ref=e184]
+  - status [ref=e185]
+  - status [ref=e186]

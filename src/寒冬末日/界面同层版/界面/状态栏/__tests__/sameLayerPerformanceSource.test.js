@@ -93,11 +93,11 @@ test('streaming transcript items use lightweight regex preview and avoid eager f
     'streaming preview should not run final display formatting or attach plugin image artifacts',
   );
   // finalHtml 不再因 isCurrentStreamingItem 被置空（见 syncTranscriptFlags 失衡 bug 的修复）：
-  // 当前流式项复用已节流的 streamHtml 预览，非流式项才走完整路径。
+  // 当前流式项优先复用酒馆宿主已渲染 HTML，其次复用已节流的 streamHtml 预览，非流式项才走完整路径。
   assert.match(
     source,
-    /const finalHtml = isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)/,
-    'current streaming item should reuse preview html as finalHtml fallback without running full display formatting',
+    /const finalHtml =\s*hostRenderedHtml \|\| \(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)\)/,
+    'current streaming item should prefer host-rendered html or reuse preview html without running full display formatting',
   );
 });
 
@@ -372,8 +372,8 @@ test('buildTranscriptItem always produces a finalHtml so older floors do not bla
   );
   assert.match(
     source,
-    /const finalHtml = isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource,/,
-    'streaming items should still produce a lightweight finalHtml fallback once the item stops being the latest assistant',
+    /const finalHtml =\s*hostRenderedHtml \|\| \(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource,/,
+    'streaming items should still produce host-rendered or lightweight finalHtml fallback once the item stops being the latest assistant',
   );
 });
 

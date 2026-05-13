@@ -125,8 +125,39 @@ test('restoreHideState should gate hide replay on runtime lease freshness first'
   );
   assert.match(
     source,
-    /isSameLayerRuntimeLeaseFresh\(runtimeLease\)/,
+    /isSameLayerRuntimeLeaseRecoverable\(runtimeLease/,
     'restoreHideState should reject stale lease state before reapplying hidden ids',
+  );
+});
+
+test('runtime lease heartbeat loop should update volatile host memory instead of durable chat variables', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const heartbeatBody = extractFunctionBody(source, 'startRuntimeLeaseHeartbeat');
+
+  assert.match(
+    heartbeatBody,
+    /writeRuntimeLeaseHeartbeat\(\)/,
+    '2 second heartbeat loop should refresh volatile runtime heartbeat only',
+  );
+  assert.doesNotMatch(
+    heartbeatBody,
+    /writeRuntimeLeaseStatus\('active'\)/,
+    '2 second heartbeat loop must not write the durable chat-variable runtime lease',
+  );
+});
+
+test('mounted same-layer startup should inspect old lease before claiming a new durable lease', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const mountedSegment = source.slice(source.indexOf('onMounted(async () => {'));
+
+  const restoreIndex = mountedSegment.indexOf('await restoreHideState();');
+  const bootingIndex = mountedSegment.indexOf("writeRuntimeLeaseStatus('booting');");
+
+  assert.notEqual(restoreIndex, -1, 'mounted startup should restore previous hide state');
+  assert.notEqual(bootingIndex, -1, 'mounted startup should still claim a booting lease after restore');
+  assert.ok(
+    restoreIndex < bootingIndex,
+    'restoreHideState must read the old durable lease before mounted startup overwrites it with this iframe session',
   );
 });
 
