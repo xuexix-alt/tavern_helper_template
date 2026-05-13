@@ -1626,7 +1626,12 @@ function buildTranscriptItem(input: {
   const isCurrentStreamingItem =
     input.latestAssistantId === input.id &&
     (input.status === 'streaming' || (input.busy === true && phase === 'stream'));
-  const hostRenderedHtml = buildHostRenderedHtml(readHostRenderedMessageHtml(input.id), displayRenderSource, input.id, input.raw);
+  const hostRenderedHtml = buildHostRenderedHtml(
+    readHostRenderedMessageHtml(input.id),
+    displayRenderSource,
+    input.id,
+    input.raw,
+  );
   const streamHtml = isCurrentStreamingItem
     ? hostRenderedHtml || buildStreamingPreviewHtml(displayRenderSource, input.role, input.id)
     : '';
@@ -1637,7 +1642,8 @@ function buildTranscriptItem(input: {
   // 当前流式项只保留已节流的预览 HTML，避免每 80ms 进入 formatAsDisplayedMessage；
   // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
   const finalHtml =
-    hostRenderedHtml || (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
+    hostRenderedHtml ||
+    (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
