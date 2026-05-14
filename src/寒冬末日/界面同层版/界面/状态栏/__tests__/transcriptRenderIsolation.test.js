@@ -255,7 +255,9 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should not rely only on DOM mutation observers',
   );
   assert.equal(
-    source.includes('syncPendingRequestHintsFromDom();\n            const requestBinding = imagePendingTaskManager.registerRequest'),
+    source.includes(
+      'syncPendingRequestHintsFromDom();\n            const requestBinding = imagePendingTaskManager.registerRequest',
+    ),
     true,
     'plugin-native image requests should bind request ids from DOM hints before success responses arrive',
   );

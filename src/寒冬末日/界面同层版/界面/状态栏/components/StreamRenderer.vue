@@ -1,11 +1,8 @@
 <template>
   <div class="stream-renderer" :class="{ 'is-active': active }" :data-message-id="messageId">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <span class="stream-renderer__body" v-html="displayHtml"></span><span
-      v-if="active"
-      class="stream-renderer__cursor"
-      aria-hidden="true"
-    ></span>
+    <span class="stream-renderer__body" v-html="displayHtml"></span
+    ><span v-if="active" class="stream-renderer__cursor" aria-hidden="true"></span>
   </div>
 </template>
 
