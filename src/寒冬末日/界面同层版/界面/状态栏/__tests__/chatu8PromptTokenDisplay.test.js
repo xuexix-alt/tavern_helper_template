@@ -58,15 +58,20 @@ test('TranscriptMessageCard sanitizes assistant html at the v-html boundary', ()
     /v-else[\s\S]{0,260}v-html="displayedAssistantHtml"/,
     'completed assistant body should render sanitized html instead of raw item.finalHtml',
   );
-  // 流式态用轻量 HTML 预览，但仍在 v-html 边界清理可见 image### 提示词。
+  // 流式态由 StreamRenderer 接管：v-html 边界下沉到 streamRendererDisplay.ts，
+  // 仍在该边界清理可见 image### 提示词。
   assert.match(
     source,
-    /v-if="item\.isStreaming"[\s\S]{0,260}v-html="streamingAssistantHtml"/,
-    'streaming assistant body should render the sanitized lightweight preview html',
+    /v-if="item\.isStreaming"[\s\S]{0,260}<StreamRenderer/,
+    'streaming assistant body should delegate rendering to StreamRenderer',
+  );
+  const streamDisplaySource = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '../streamRendererDisplay.ts'),
+    'utf8',
   );
   assert.match(
-    source,
-    /const streamingAssistantHtml = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensHtml/,
-    'streamingAssistantHtml should run the html sanitizer before rendering',
+    streamDisplaySource,
+    /stripVisibleChatu8PromptTokensHtml/,
+    'streamRendererDisplay should run the html sanitizer before rendering',
   );
 });

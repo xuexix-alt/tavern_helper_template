@@ -150,8 +150,13 @@ test('normal assistant streaming renders a throttled regex preview without final
   );
   assert.match(
     cardSource,
-    /v-if="item\.isStreaming"[\s\S]{0,260}v-html="streamingAssistantHtml"/,
-    'TranscriptMessageCard should render the streaming preview as sanitized html',
+    /v-if="item\.isStreaming"[\s\S]{0,300}<StreamRenderer/,
+    'TranscriptMessageCard streaming branch should delegate the preview to the StreamRenderer component',
+  );
+  assert.match(
+    cardSource,
+    /import StreamRenderer from '\.\/StreamRenderer\.vue';/,
+    'TranscriptMessageCard should import the dedicated StreamRenderer preview component',
   );
 });
 
@@ -180,24 +185,45 @@ test('transcript item html prefers host-rendered mes_text when available', () =>
   );
 });
 
-test('stream-demo wrapped assistant streaming sanitizes runtime blocks before regex preview', () => {
+test('stream-demo wrapped assistant streaming keeps the runtime-tag sanitizer for the streamHtml fallback path', () => {
   const useStreamingSource = readSource('useStreamingDemo.ts');
-  const cardSource = readSource('components/TranscriptMessageCard.vue');
 
   assert.match(
     useStreamingSource,
     /function sanitizeAssistantRuntimeTagsForStreamingPreview/,
-    'streaming preview should have a dedicated runtime-tag sanitizer',
+    'the streamHtml fallback path should still have a dedicated runtime-tag sanitizer',
   );
   assert.match(
     extractFunctionBody(useStreamingSource, 'sanitizeAssistantRuntimeTagsForStreamingPreview'),
     /buildStreamingPendingDetails\('thinking'[\s\S]{0,260}buildStreamingPendingDetails\('variable'[\s\S]{0,260}buildStreamingPendingDetails\('generic'/,
     'unfinished XML/runtime blocks should become a pending placeholder instead of leaking raw tags',
   );
+});
+
+test('StreamRenderer streaming preview faithfully reflects output and strips chatu8 prompt tokens', () => {
+  const streamRendererSource = readSource('streamRendererDisplay.ts');
+  const componentSource = readSource('components/StreamRenderer.vue');
+
+  // 模式 B：流式预览只跑酒馆 display 正则 + 防御性剥离 image### token，不自维护业务标签解析。
   assert.match(
-    cardSource,
-    /const streamingAssistantHtml = computed\([\s\S]{0,800}stripVisibleChatu8PromptTokensHtml/,
-    'the streaming html preview should strip visible chatu8 prompt tokens before reaching the DOM',
+    streamRendererSource,
+    /applyRegexForDisplay\(source, role\)/,
+    'the streaming preview helper should apply the Tavern display regex so regex-driven HTML wins',
+  );
+  assert.match(
+    streamRendererSource,
+    /stripVisibleChatu8PromptTokensHtml\(/,
+    'the streaming preview helper should strip visible chatu8 prompt tokens before reaching the DOM',
+  );
+  assert.doesNotMatch(
+    streamRendererSource,
+    /sanitizeAssistantRuntimeTagsForStreamingPreview|buildStreamingPendingDetails/,
+    'StreamRenderer must not maintain its own business-tag rendering set',
+  );
+  assert.match(
+    componentSource,
+    /buildStreamRendererHtml\(props\.message, props\.role\)/,
+    'StreamRenderer.vue should consume the snapshot message via the pure render helper',
   );
 });
 

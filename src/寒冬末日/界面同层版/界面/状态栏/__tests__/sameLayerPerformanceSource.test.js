@@ -381,10 +381,12 @@ test('stream display html prefers item.streamHtml so stream-demo wrapper tags ar
   const messageCardSource = readSource('components/TranscriptMessageCard.vue');
   const openingCardSource = readSource('components/TranscriptOpeningCard.vue');
 
+  // TranscriptMessageCard 流式分支已下沉到 StreamRenderer：消费 item.content 快照，
+  // 由 streamRendererDisplay.ts 跑 display 正则 + 防御性剥离 image### token。
   assert.match(
     messageCardSource,
-    /const streamingAssistantHtml = computed\([\s\S]{0,800}props\.item\.streamHtml/,
-    'TranscriptMessageCard should render the sanitized streaming html preview from item.streamHtml',
+    /<StreamRenderer[\s\S]{0,200}:message="item\.content"/,
+    'TranscriptMessageCard should delegate the streaming preview to StreamRenderer with item.content',
   );
   assert.match(
     openingCardSource,

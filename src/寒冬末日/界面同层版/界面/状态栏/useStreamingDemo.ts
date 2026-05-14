@@ -197,6 +197,7 @@ const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
 const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
+const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -895,6 +896,7 @@ function injectGeneratedImagesIntoHtml(
   }
 
   for (const figure of fallbackFigures) {
+    figure.setAttribute('data-tail-gallery-image', 'true');
     doc.body.append(figure);
   }
 
@@ -1777,6 +1779,7 @@ export function useStreamingDemo() {
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
+  const hostImageDataReconcileTimers = new Set<number>();
   const pendingGeneratedImageRefreshMessageIds = new Set<number>();
   let streamTranscriptPatchTimer = 0;
   let streamTranscriptPatchDirty = false;
@@ -1980,13 +1983,36 @@ export function useStreamingDemo() {
       changedMessageIds.push(messageId);
     }
 
-    if (changedMessageIds.length === 0) return;
+    if (changedMessageIds.length === 0) return changedMessageIds;
 
     queueGeneratedImageEntityRefresh(changedMessageIds, reason);
     logImageBridge('host-data-synced', {
       reason,
       changedMessageIds,
     });
+    return changedMessageIds;
+  }
+
+  function scheduleHostImageDataReconcile(reason: string, messageIds: number[] = []) {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+
+    for (const delayMs of HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS) {
+      const timer = window.setTimeout(() => {
+        hostImageDataReconcileTimers.delete(timer);
+        const changedMessageIds = syncTranscriptItemsFromHostData(`${reason}:delay_${delayMs}`, normalizedMessageIds);
+        if (changedMessageIds.length > 0) {
+          logImageBridge('host-data-reconcile-hit', {
+            reason,
+            delayMs,
+            changedMessageIds,
+          });
+        }
+      }, delayMs);
+      hostImageDataReconcileTimers.add(timer);
+    }
   }
 
   function resetTranscriptWindowToLatestState() {
@@ -4681,6 +4707,33 @@ export function useStreamingDemo() {
         imageGenerationBridge = createImageGenerationEventBridge({
           eventOn: (name, handler) => eventOn(name as any, handler as any),
           eventRemoveListener: (name, handler) => eventRemoveListener(name as any, handler as any),
+          onRequest: ({ requestId, prompt }) => {
+            syncPendingRequestHintsFromDom();
+            const requestBinding = imagePendingTaskManager.registerRequest({ id: requestId, prompt });
+            if (requestBinding?.bufferedResponse) {
+              const messageId = requestBinding.messageId;
+              syncTranscriptItemsFromHostData('host.plugin_native_response_buffered', [messageId]);
+              queueGeneratedImageEntityRefresh([messageId], 'host.plugin_native_response_buffered');
+              scheduleHostImageDataReconcile('host.plugin_native_response_buffered', [messageId]);
+            }
+          },
+          onResponseSuccess: ({ requestId, prompt, imageData }) => {
+            const matchedResponse = imagePendingTaskManager.consumeResponse({ id: requestId, prompt, imageData });
+            const recentIntent = imageRecentIntentStore.read();
+            const targetMessageIds = [
+              ...new Set(
+                [matchedResponse?.messageId, recentIntent?.source === 'transcript' ? recentIntent.messageId : null]
+                  .map(id => Math.trunc(Number(id)))
+                  .filter((id): id is number => Number.isFinite(id) && id >= 0),
+              ),
+            ];
+
+            syncTranscriptItemsFromHostData('host.plugin_native_response_success', targetMessageIds);
+            if (targetMessageIds.length > 0) {
+              queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');
+              scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);
+            }
+          },
           onResponseFailure: ({ requestId, prompt }) => {
             recordLifecycleTrace('imageGenerationEventBridge', 'on_response_failure', () => ({
               requestId,
@@ -4851,6 +4904,8 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
+    hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));
+    hostImageDataReconcileTimers.clear();
     hideStatePersistTimer = clearTimer(hideStatePersistTimer);
     generationSignalFinalizeTimer = clearTimer(generationSignalFinalizeTimer);
     generatedImageDomObserver?.disconnect();

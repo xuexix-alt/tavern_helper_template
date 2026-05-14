@@ -36,6 +36,7 @@
           :show-rollback-confirm="rollbackConfirmMessageId === item.message_id"
           :show-swipe-controls="false"
           :gallery-entries="messageGalleryEntries(item.message_id)"
+          :show-tail-gallery-images="showTailGalleryImages"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
@@ -132,6 +133,7 @@ const props = defineProps<{
   rollbackConfirmMessageId?: number | null;
   renderRevision?: number;
   galleryEntries?: ReaderGalleryEntry[];
+  showTailGalleryImages?: boolean;
   layoutMode?: 'compact' | 'reader_desktop' | 'wide';
 }>();
 

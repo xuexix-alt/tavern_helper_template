@@ -143,7 +143,7 @@ test('host-rendered transcript html still passes through image artifact injectio
   );
   assert.match(
     source,
-    /const hostRenderedHtml = buildHostRenderedHtml\(readHostRenderedMessageHtml\(input\.id\), displayRenderSource, input\.id, input\.raw\);/,
+    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*displayRenderSource,\s*input\.id,\s*input\.raw,\s*\);/,
     'buildTranscriptItem should hydrate host-rendered HTML before using it as streamHtml/finalHtml',
   );
 });

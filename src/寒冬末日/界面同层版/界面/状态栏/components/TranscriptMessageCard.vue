@@ -90,14 +90,19 @@
         <div class="assistant-corners br"></div>
 
         <div class="assistant-body-wrap">
-          <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="item.isStreaming"
             ref="assistantBodyRef"
-            class="assistant-body html-body is-stream-stage stream-stage-pre"
+            class="assistant-body html-body is-stream-stage"
             :data-message-id="item.message_id"
-            v-html="streamingAssistantHtml"
-          ></div>
+          >
+            <StreamRenderer
+              :message="item.content"
+              :role="item.role"
+              :active="item.isStreaming"
+              :message-id="item.message_id"
+            />
+          </div>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-else
@@ -123,6 +128,7 @@ import { loadImage } from '../imageStore';
 import { stripVisibleChatu8PromptTokensHtml } from '../chatu8PromptTokenDisplay';
 import { hydratePersistedImageElements } from '../transcriptImagePersistence';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
+import StreamRenderer from './StreamRenderer.vue';
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -134,6 +140,7 @@ const props = defineProps<{
   showEditRegenerate?: boolean;
   showRollbackConfirm?: boolean;
   galleryEntries?: ReaderGalleryEntry[];
+  showTailGalleryImages?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -157,13 +164,8 @@ const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
-  // 完成态才走 v-html；流式态改走 `<pre v-text>`，这里仍保留一次清理以兼容未来复用路径。
+  // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
   const html = props.item.finalHtml || '<p>(空回复)</p>';
-  return stripVisibleChatu8PromptTokensHtml(html);
-});
-const streamingAssistantHtml = computed(() => {
-  if (props.item.role !== 'assistant' || !props.item.isStreaming) return '';
-  const html = props.item.streamHtml || '<div class="stream-stage-preview"><span>等待 token...</span></div>';
   return stripVisibleChatu8PromptTokensHtml(html);
 });
 const assistantBodySignature = computed(() => {
@@ -220,6 +222,7 @@ async function resolvePersistedImageSrc(src: string) {
 async function hydrateAssistantBodyImages() {
   const root = assistantBodyRef.value;
   if (!root) return;
+  root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);
   const images = Array.from(
     root.querySelectorAll('img[src^="idb://"], img[data-persisted-image-src]'),
   ) as HTMLImageElement[];
@@ -383,6 +386,7 @@ function bindAssistantBodyInteractions() {
   clearAssistantBodyInteractionBindings();
   const root = assistantBodyRef.value;
   if (!root) return;
+  const itemMessageId = String(props.item.message_id);
 
   const promptButtons = Array.from(root.querySelectorAll('button.image-tag-button')) as HTMLButtonElement[];
   for (const button of promptButtons) {
@@ -397,7 +401,7 @@ function bindAssistantBodyInteractions() {
   }
 
   const carriers = Array.from(
-    root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
+    root.querySelectorAll('.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image'),
   ) as HTMLElement[];
   recordComponentTrace('bind_interactions', {
     promptButtonCount: promptButtons.length,
@@ -415,9 +419,12 @@ function bindAssistantBodyInteractions() {
       carrier.appendChild(hitArea);
     }
     const image = carrier.querySelector('img') as HTMLImageElement | null;
+    const pluginNativeCarrier = carrier.closest('.st-chatu8-image-span') as HTMLElement | null;
+    const carrierDataset = pluginNativeCarrier?.dataset ?? carrier.dataset;
+    if (!carrierDataset.messageId) carrier.dataset.messageId = itemMessageId;
     const payload = () =>
       parseGeneratedImageActivationPayload({
-        carrierDataset: carrier.dataset,
+        carrierDataset,
         targetDataset: hitArea?.dataset ?? image?.dataset ?? {},
         targetAttrSrc: image?.getAttribute('src') ?? null,
         targetCurrentSrc: image?.currentSrc ?? null,
@@ -426,7 +433,7 @@ function bindAssistantBodyInteractions() {
 
     if (image) {
       image.style.pointerEvents = 'none';
-      hitArea.dataset.messageId = image.dataset.messageId ?? carrier.dataset.messageId ?? '';
+      hitArea.dataset.messageId = image.dataset.messageId ?? carrier.dataset.messageId ?? itemMessageId;
       hitArea.dataset.imageId = image.dataset.imageId ?? carrier.dataset.imageId ?? '';
       hitArea.dataset.promptToken = image.dataset.promptToken ?? carrier.dataset.promptToken ?? '';
       hitArea.dataset.requestId = image.dataset.requestId ?? carrier.dataset.requestId ?? '';
@@ -531,6 +538,16 @@ watch(
     bindAssistantBodyInteractions();
   },
   { flush: 'post' },
+);
+
+watch(
+  () => props.showTailGalleryImages,
+  () => {
+    const root = assistantBodyRef.value;
+    if (!root) return;
+    root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);
+  },
+  { immediate: true },
 );
 
 onBeforeUnmount(() => {
@@ -790,6 +807,11 @@ onBeforeUnmount(() => {
     0 10px 24px color-mix(in srgb, var(--shadow-color) 24%, transparent);
 }
 
+.assistant-body.hide-tail-gallery-images :deep(.assistant-fallback-generated-gallery),
+.assistant-body.hide-tail-gallery-images :deep([data-tail-gallery-image='true']) {
+  display: none;
+}
+
 .assistant-body-wrap :deep(.assistant-fallback-generated-image) {
   position: relative;
   z-index: 2;
@@ -887,6 +909,10 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.st-chatu8-image-span) {
   position: relative;
   z-index: 3;
+  pointer-events: auto;
+}
+
+.assistant-body-wrap :deep(.st-chatu8-image-span .generated-image-hitarea) {
   pointer-events: auto;
 }
 

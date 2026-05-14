@@ -24,7 +24,17 @@ export function parseGeneratedImageActivationPayload(input: {
   const targetDataset = input.targetDataset ?? {};
   const rawMessageId = Number(carrierDataset.messageId ?? targetDataset.messageId ?? '');
   const messageId = Number.isFinite(rawMessageId) ? Math.trunc(rawMessageId) : null;
-  const promptToken = decodeValue(String(carrierDataset.promptToken ?? targetDataset.promptToken ?? ''));
+  const promptToken = decodeValue(
+    String(
+      carrierDataset.promptToken ??
+        targetDataset.promptToken ??
+        carrierDataset.imageTag ??
+        targetDataset.imageTag ??
+        carrierDataset.link ??
+        targetDataset.link ??
+        '',
+    ),
+  );
   const requestId = String(carrierDataset.requestId ?? targetDataset.requestId ?? '').trim();
   const imageSrc = decodeValue(
     String(

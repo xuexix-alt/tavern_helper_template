@@ -245,3 +245,133 @@ test('pending request hint heartbeat also syncs host image data changes from mes
     'host image data signature should include extra.images payloads',
   );
 });
+
+test('successful image generation responses actively reconcile host image data', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('onResponseSuccess: ({ requestId,'),
+    true,
+    'successful plugin-native image responses should not rely only on DOM mutation observers',
+  );
+  assert.equal(
+    source.includes('syncPendingRequestHintsFromDom();\n            const requestBinding = imagePendingTaskManager.registerRequest'),
+    true,
+    'plugin-native image requests should bind request ids from DOM hints before success responses arrive',
+  );
+  assert.equal(
+    source.includes("syncTranscriptItemsFromHostData('host.plugin_native_response_success',"),
+    true,
+    'successful plugin-native image responses should force a host image data sync for affected messages',
+  );
+  assert.equal(
+    source.includes("queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');"),
+    true,
+    'successful plugin-native image responses should force transcript/gallery refresh even when signatures were not snapshotted yet',
+  );
+  assert.equal(
+    source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;'),
+    true,
+    'successful plugin-native image responses should keep polling briefly for the native extra.images save that can land after the response event',
+  );
+  assert.equal(
+    source.includes("scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);"),
+    true,
+    'successful plugin-native image responses should reconcile delayed native image data without requiring UI reload',
+  );
+  assert.equal(
+    source.includes('hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));'),
+    true,
+    'delayed host image data reconcile timers should be cleaned up on unmount',
+  );
+});
+
+test('StoryPage can hide duplicate tail gallery images while keeping the gallery drawer data source', () => {
+  const source = readSource('pages/StoryPage.vue');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('const showTailGalleryImages = ref(true);'),
+    true,
+    'tail gallery image strip should default to visible',
+  );
+  assert.equal(
+    source.includes(':show-tail-gallery-images="showTailGalleryImages"'),
+    true,
+    'StoryPage should pass the tail-image visibility switch to transcript cards',
+  );
+  assert.equal(
+    source.includes(':gallery-entries="galleryEntries"'),
+    true,
+    'TranscriptList should keep the full gallery entries so image counts and gallery refs stay intact',
+  );
+  assert.equal(
+    source.includes('transcriptGalleryEntries'),
+    false,
+    'tail image visibility should not be implemented by starving TranscriptList of gallery entries',
+  );
+  assert.equal(
+    cardSource.includes('showTailGalleryImages?: boolean;'),
+    true,
+    'TranscriptMessageCard should accept the tail image visibility switch',
+  );
+  assert.equal(
+    cardSource.includes("root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);"),
+    true,
+    'tail image visibility should hide the fallback gallery already present in finalHtml',
+  );
+  assert.equal(
+    streamingSource.includes("figure.setAttribute('data-tail-gallery-image', 'true');"),
+    true,
+    'unanchored images appended by finalHtml injection should be marked as tail duplicates',
+  );
+  assert.equal(
+    cardSource.includes(":deep([data-tail-gallery-image='true'])"),
+    true,
+    'tail image visibility should hide the real appended finalHtml images, not only gallery containers',
+  );
+  assert.equal(
+    source.includes(':entries="galleryEntries"'),
+    true,
+    'the right-side gallery drawer should keep the full gallery entries regardless of the tail image switch',
+  );
+  assert.equal(
+    source.includes('末尾图'),
+    true,
+    'the top toolbar should expose a visible tail-image switch near the layout controls',
+  );
+});
+
+test('TranscriptMessageCard binds plugin-native inline image spans to the generated-image gesture bridge', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+  const activationSource = readSource('generatedImageActivation.ts');
+
+  assert.equal(
+    source.includes(
+      "root.querySelectorAll('.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image')",
+    ),
+    true,
+    'plugin-native inline image spans should receive the same hitarea gesture bridge as fallback images',
+  );
+  assert.equal(
+    source.includes("carrier.closest('.st-chatu8-image-span')"),
+    true,
+    'plugin-native payload extraction should read the st-chatu8 carrier dataset when the hitarea wraps the inner img',
+  );
+  assert.equal(
+    source.includes('const carrierDataset = pluginNativeCarrier?.dataset ?? carrier.dataset;'),
+    true,
+    'plugin-native hitareas should forward the native carrier dataset to the host activation bridge',
+  );
+  assert.equal(
+    source.includes('String(props.item.message_id)'),
+    true,
+    'inline HTML image hitareas should fall back to the transcript item message id when injected nodes lack one',
+  );
+  assert.equal(
+    activationSource.includes('carrierDataset.imageTag') && activationSource.includes('carrierDataset.link'),
+    true,
+    'plugin-native data-image-tag/data-link values should be parsed as prompt tokens for host button lookup',
+  );
+});
