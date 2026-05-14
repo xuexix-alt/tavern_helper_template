@@ -148,6 +148,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'image-tag', payload: GeneratedImageActivationPayload): void;
   (event: 'generate-image', messageId: number): void;
   (event: 'start-edit', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
@@ -401,9 +402,7 @@ function bindAssistantBodyInteractions() {
   }
 
   const carriers = Array.from(
-    root.querySelectorAll(
-      '.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image',
-    ),
+    root.querySelectorAll('.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image'),
   ) as HTMLElement[];
   recordComponentTrace('bind_interactions', {
     promptButtonCount: promptButtons.length,
@@ -448,6 +447,9 @@ function bindAssistantBodyInteractions() {
       },
       onRegenerate() {
         emit('image-regenerate', payload());
+      },
+      onTag() {
+        emit('image-tag', payload());
       },
     });
 

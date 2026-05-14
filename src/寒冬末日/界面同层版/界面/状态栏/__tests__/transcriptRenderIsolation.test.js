@@ -33,14 +33,9 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     'native image DOM mutations should enter the per-message image refresh queue',
   );
   assert.equal(
-    source.includes('refreshTranscriptItemsByIds([messageId], reason);'),
+    source.includes("scheduleUiRefresh(['transcriptItems', 'gallery'], reason, [messageId]);"),
     true,
-    'queued image refreshes should refresh only the affected transcript item',
-  );
-  assert.equal(
-    source.includes("scheduleUiRefresh(['gallery'], reason);"),
-    true,
-    'queued image refreshes should only refresh gallery scope after the targeted item refresh',
+    'queued image refreshes should refresh only the affected transcript item and gallery with a targeted message id',
   );
   assert.equal(
     source.includes("rebuildTranscript('host.plugin_native_dom_mutation')"),

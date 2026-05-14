@@ -70,7 +70,7 @@ test('touch tap triggers view once on pointer up', async () => {
   controller.dispose();
 });
 
-test('touch long press triggers view once and suppresses tap fallback', async () => {
+test('touch long press triggers tag once and suppresses tap fallback', async () => {
   const events = [];
   const controller = createGeneratedImageGestureController({
     clickDelayMs: 10,
@@ -81,6 +81,9 @@ test('touch long press triggers view once and suppresses tap fallback', async ()
     onRegenerate() {
       events.push('regenerate');
     },
+    onTag() {
+      events.push('tag');
+    },
   });
 
   controller.handleTouchStart();
@@ -88,7 +91,7 @@ test('touch long press triggers view once and suppresses tap fallback', async ()
   controller.handleTouchEnd();
   await wait(10);
 
-  assert.deepEqual(events, ['view']);
+  assert.deepEqual(events, ['tag']);
   controller.dispose();
 });
 

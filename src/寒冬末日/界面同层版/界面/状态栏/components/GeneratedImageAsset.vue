@@ -92,6 +92,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'view', payload: GeneratedImageActivationPayload): void;
   (event: 'regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'tag', payload: GeneratedImageActivationPayload): void;
   (event: 'assign-role', entry: GeneratedImageRef): void;
 }>();
 
@@ -146,6 +147,9 @@ const gestureController = createGeneratedImageGestureController({
   },
   onRegenerate() {
     emit('regenerate', activationPayload.value);
+  },
+  onTag() {
+    emit('tag', activationPayload.value);
   },
 });
 

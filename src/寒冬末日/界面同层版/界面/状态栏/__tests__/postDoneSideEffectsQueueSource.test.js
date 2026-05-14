@@ -67,10 +67,9 @@ test('runGenerationFlow queues post-done MVU and lifecycle side effects per assi
   );
 });
 
-test('host message writes and image refreshes enter the post-done queue by message id', () => {
+test('host message writes and image trigger preparation enter the post-done queue by message id', () => {
   const patchBody = extractFunctionBody(source, 'patchAssistantMessage');
   const imageTriggerBody = extractFunctionBody(source, 'triggerImageGenerationForMessage');
-  const imageRefreshBody = extractFunctionBody(source, 'queueGeneratedImageEntityRefresh');
 
   assert.match(
     source,
@@ -86,11 +85,6 @@ test('host message writes and image refreshes enter the post-done queue by messa
     imageTriggerBody,
     /await runQueuedHostMessageUpdate\(\{[\s\S]*queue: postDoneSideEffectsQueue,[\s\S]*messageId: normalizedId,[\s\S]*stage: 'auto-image',[\s\S]*withHostTranscriptVisible/,
     'image trigger host visibility and mes_text preparation should run through the same message queue',
-  );
-  assert.match(
-    imageRefreshBody,
-    /runQueuedHostMessageUpdate\(\{[\s\S]*queue: postDoneSideEffectsQueue,[\s\S]*messageId,[\s\S]*stage: 'image-refresh',[\s\S]*bumpGeneratedImageEntityRevision\(messageId\)/,
-    'plugin-native image ready refreshes should run through the same message queue',
   );
 });
 

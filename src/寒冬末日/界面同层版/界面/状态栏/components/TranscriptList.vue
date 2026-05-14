@@ -41,6 +41,7 @@
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
           @image-regenerate="emit('image-regenerate', $event)"
+          @image-tag="emit('image-tag', $event)"
           @generate-image="handleNestedGenerateImage"
           @start-edit="emit('start-edit-user', item)"
           @update-edit-draft="emit('update-edit-draft', $event)"
@@ -142,6 +143,7 @@ const emit = defineEmits<{
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
+  (event: 'image-tag', payload: GeneratedImageActivationPayload): void;
   (event: 'generate-image', payload: TranscriptImageGenerateRequest): void;
   (event: 'open-gallery', messageId: number): void;
   (event: 'reading-mode-change', value: ReadingMode): void;
@@ -418,8 +420,7 @@ watch(itemsSignature, async (nextSignature, previousSignature) => {
     previousIds: previousSignature?.map(item => item.id) ?? [],
     nextIds: nextSignature.map(item => item.id),
   });
-  const shouldSuspendAutoFollow =
-    props.isStreaming === true && (streamFollowSuppressed || userScrollIntentDuringStream);
+  const shouldSuspendAutoFollow = props.isStreaming === true && (streamFollowSuppressed || userScrollIntentDuringStream);
   const nextStartIndex = resolveTranscriptStartIndexOnItemsChange({
     currentStartIndex: startIndex.value,
     totalItems: props.items.length,

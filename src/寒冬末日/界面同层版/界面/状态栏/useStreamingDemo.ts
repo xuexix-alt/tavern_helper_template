@@ -1625,15 +1625,15 @@ function buildTranscriptItem(input: {
     renderSource,
     strippedRenderSource,
   });
+  const hostRenderedHtml = buildHostRenderedHtml(readHostRenderedMessageHtml(input.id), displayRenderSource, input.id, input.raw);
+  const hostRenderedHasReadyImage = /\bst-chatu8-image-span\b|\bassistant-fallback-(?:inline-image|generated-image)\b/.test(
+    hostRenderedHtml,
+  );
   const isCurrentStreamingItem =
     input.latestAssistantId === input.id &&
-    (input.status === 'streaming' || (input.busy === true && phase === 'stream'));
-  const hostRenderedHtml = buildHostRenderedHtml(
-    readHostRenderedMessageHtml(input.id),
-    displayRenderSource,
-    input.id,
-    input.raw,
-  );
+    !hostRenderedHasReadyImage &&
+    phase === 'stream' &&
+    (input.status === 'streaming' || input.busy === true);
   const streamHtml = isCurrentStreamingItem
     ? hostRenderedHtml || buildStreamingPreviewHtml(displayRenderSource, input.role, input.id)
     : '';
@@ -1643,9 +1643,7 @@ function buildTranscriptItem(input: {
   // 该条目会落回 `<div v-html="finalHtml || '(空回复)'">`，显示空回复。
   // 当前流式项只保留已节流的预览 HTML，避免每 80ms 进入 formatAsDisplayedMessage；
   // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
-  const finalHtml =
-    hostRenderedHtml ||
-    (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
+  const finalHtml = hostRenderedHtml || (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -1684,7 +1682,8 @@ function shouldTreatLatestAssistantAsStreaming(input: {
   busy: boolean;
 }): boolean {
   if (input.isLatest !== true) return false;
-  return input.status === 'streaming' || (input.busy === true && input.phase === 'stream');
+  if (input.phase !== 'stream') return false;
+  return input.status === 'streaming' || input.busy === true;
 }
 
 function clipTranscriptItemsForUi(items: TranscriptItem[]): TranscriptItem[] {
@@ -1868,14 +1867,16 @@ export function useStreamingDemo() {
             '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
           ) as HTMLElement | null) ?? (button.closest('.mes[mesid]') as HTMLElement | null);
 
-        const messageId =
-          Number(
-            carrier?.dataset?.messageId ??
-              carrier?.getAttribute?.('data-message-id') ??
-              carrier?.getAttribute?.('mesid') ??
-              '',
-          ) || 0;
-        const normalizedMessageId = Number.isFinite(messageId) && messageId >= 0 ? Math.trunc(messageId) : null;
+        const rawMessageId = Number(
+          carrier?.dataset?.messageId ?? carrier?.getAttribute?.('data-message-id') ?? carrier?.getAttribute?.('mesid'),
+        );
+        const recentIntent = imageRecentIntentStore.read();
+        const normalizedMessageId =
+          Number.isFinite(rawMessageId) && rawMessageId >= 0
+            ? Math.trunc(rawMessageId)
+            : recentIntent?.source === 'transcript'
+              ? recentIntent.messageId
+              : null;
         if (normalizedMessageId == null) continue;
 
         seen.add(requestId);
@@ -2700,9 +2701,10 @@ export function useStreamingDemo() {
       if (!existingItem && !recentUiMessageIds.has(messageId)) continue;
       const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
       const rawRole = resolveHostMessageRole(hostMessage);
+      const rawMessage = String(hostMessage?.message ?? hostMessage?.mes ?? '');
       const role = resolveTranscriptRole({
         rawRole,
-        rawMessage: String(hostMessage?.message ?? ''),
+        rawMessage,
         isOpeningResult,
       });
 
@@ -2710,11 +2712,11 @@ export function useStreamingDemo() {
         buildTranscriptItem({
           id: messageId,
           role,
-          raw: String(hostMessage?.message ?? ''),
+          raw: rawMessage,
           hidden: hostMessage?.is_hidden === true,
           isOpening: existingItem?.isOpening ?? isOpeningResult,
           canReroll: existingItem?.canReroll ?? false,
-          latestAssistantId: assistantMessageId.value,
+          latestAssistantId: latestAssistantItem.value?.message_id ?? assistantMessageId.value,
           status: status.value,
           busy: busy.value,
         }),
@@ -3089,24 +3091,18 @@ export function useStreamingDemo() {
         return;
       }
       pendingMessageIds.forEach(messageId => {
-        void runQueuedHostMessageUpdate({
-          queue: postDoneSideEffectsQueue,
-          messageId,
-          stage: 'image-refresh',
-          task: () => {
-            bumpGeneratedImageEntityRevision(messageId);
-            refreshTranscriptItemsByIds([messageId], reason);
-            scheduleUiRefresh(['gallery'], reason);
-          },
-        }).catch(error => {
-          console.warn('[stream-demo] queued image refresh failed', {
-            messageId,
-            reason,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
+        bumpGeneratedImageEntityRevision(messageId);
+        scheduleUiRefresh(['transcriptItems', 'gallery'], reason, [messageId]);
       });
     }, 40);
+  }
+
+  function queueVisibleGeneratedImageEntityRefresh(reason = 'visible_generated_image_entity_refresh') {
+    const visibleAssistantMessageIds = transcript.value
+      .filter(item => item.role === 'assistant')
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0);
+    queueGeneratedImageEntityRefresh(visibleAssistantMessageIds, reason);
   }
 
   function scheduleUiRefresh(domains: RefreshDomain[], reason: string, targetedMessageIds: number[] = []) {
@@ -3327,6 +3323,9 @@ export function useStreamingDemo() {
   }
 
   function handleHostRefreshEvent(name: string, payload: unknown[] = []) {
+    const isHostGenerationStarted = name === String(tavern_events.GENERATION_STARTED);
+    const isHostStreamTokenEcho =
+      name === String(tavern_events.STREAM_TOKEN_RECEIVED) || name === String(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED);
     const shouldSuppressLifecycleEcho = shouldSuppressLifecycleEchoHostRefresh({
       eventName: name,
       nowMs: Date.now(),
@@ -3355,6 +3354,12 @@ export function useStreamingDemo() {
     }
 
     if (shouldIgnore) {
+      if (isHostStreamTokenEcho && status.value === 'done') {
+        recordLifecycleTrace('handleHostRefreshEvent', 'ignored_post_done_token_echo', {
+          name,
+        });
+        return;
+      }
       status.value = 'streaming';
       queuePersistReaderChatState();
       recordLifecycleTrace('handleHostRefreshEvent', 'ignored_busy_token', {
@@ -3365,6 +3370,12 @@ export function useStreamingDemo() {
 
     if (name === String(tavern_events.GENERATION_ENDED) && busy.value) {
       queueGenerationFinalizeFromSignal('host.generation_ended', payload[0]);
+    }
+
+    if (isHostGenerationStarted) {
+      status.value = 'streaming';
+      transcript.value = syncTranscriptFlags(transcript.value);
+      queuePersistReaderChatState();
     }
 
     const refreshType = mapHostRefreshType(name);
@@ -4793,6 +4804,7 @@ export function useStreamingDemo() {
     }
 
     rebuildTranscript();
+    window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
     queueHidePolicy('mounted');
   });
 

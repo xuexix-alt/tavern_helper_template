@@ -18,8 +18,9 @@ export function resolveRefreshDomainsForEvent(input: RefreshEventInput): Refresh
   switch (type) {
     case 'host.stream_token_received':
     case 'host.smooth_stream_token_received':
+      return out;
+
     case 'host.generation_started':
-      pushDomain(out, 'transcript');
       return out;
 
     case 'host.message_updated':

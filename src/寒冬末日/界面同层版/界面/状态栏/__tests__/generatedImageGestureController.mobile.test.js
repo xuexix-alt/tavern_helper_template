@@ -55,7 +55,7 @@ test('touch single tap keeps gallery and transcript images on the same view acti
   controller.dispose();
 });
 
-test('touch long press keeps gallery and transcript images on the same view action', async () => {
+test('touch long press opens the prompt tag action instead of the viewer', async () => {
   const events = [];
   const controller = createGeneratedImageGestureController({
     clickDelayMs: 60,
@@ -66,6 +66,9 @@ test('touch long press keeps gallery and transcript images on the same view acti
     onRegenerate() {
       events.push('regenerate');
     },
+    onTag() {
+      events.push('tag');
+    },
   });
 
   controller.handleTouchStart();
@@ -73,6 +76,6 @@ test('touch long press keeps gallery and transcript images on the same view acti
   controller.handleTouchEnd();
   await wait(80);
 
-  assert.deepEqual(events, ['view']);
+  assert.deepEqual(events, ['tag']);
   controller.dispose();
 });

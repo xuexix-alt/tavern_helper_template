@@ -179,6 +179,138 @@ test('host refresh events should requeue hide policy so native host turns do not
   );
 });
 
+test('host stream token echoes do not trigger external transcript rebuilds after UI is already done', () => {
+  const refreshSource = readSource('refreshDomains.ts');
+  const demoSource = readSource('useStreamingDemo.ts');
+  const hostRefreshBody = extractFunctionBody(demoSource, 'handleHostRefreshEvent');
+
+  assert.match(
+    refreshSource,
+    /case 'host\.stream_token_received':\s*case 'host\.smooth_stream_token_received':\s*return out;/,
+    'host token echoes should not map to the full transcript domain; iframe incremental tokens own StreamRenderer updates',
+  );
+  assert.match(
+    hostRefreshBody,
+    /if \(isHostGenerationStarted\) \{[\s\S]*?status\.value = 'streaming';[\s\S]*?transcript\.value = syncTranscriptFlags\(transcript\.value\);/,
+    'host generation_started should enter streaming status so an already-present latest item mounts StreamRenderer',
+  );
+  assert.match(
+    hostRefreshBody,
+    /const isHostStreamTokenEcho =[\s\S]*tavern_events\.STREAM_TOKEN_RECEIVED[\s\S]*tavern_events\.SMOOTH_STREAM_TOKEN_RECEIVED/,
+    'host token echo detection should be explicit so it can be gated by UI status',
+  );
+  assert.match(
+    hostRefreshBody,
+    /if \(isHostStreamTokenEcho && status\.value === 'done'\) \{[\s\S]*?ignored_post_done_token_echo[\s\S]*?return;/,
+    'post-done host token echoes must not flip the same-layer UI back to streaming',
+  );
+  assert.match(
+    refreshSource,
+    /case 'host\.generation_started':\s*return out;/,
+    'host generation_started should flip streaming flags without forcing an external transcript rebuild',
+  );
+});
+
+test('generated image refresh targets both the current transcript item and gallery', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'queueGeneratedImageEntityRefresh');
+
+  assert.match(
+    body,
+    /scheduleUiRefresh\(\['transcriptItems', 'gallery'\], reason, \[messageId\]\);/,
+    'ready native image mutations should refresh the affected same-layer body item and gallery with the same target id',
+  );
+  assert.doesNotMatch(
+    body,
+    /runQueuedHostMessageUpdate\(\{[\s\S]*stage: 'image-refresh'/,
+    'ready native image mutations must not wait behind the auto-image host queue once the host DOM already has the image',
+  );
+});
+
+test('host image request hints fall back to the recent transcript intent instead of message 0', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'syncPendingRequestHintsFromDom');
+
+  assert.match(
+    body,
+    /const recentIntent = imageRecentIntentStore\.read\(\);/,
+    'request hint sync should consult the latest same-layer transcript image intent',
+  );
+  assert.match(
+    body,
+    /recentIntent\?\.source === 'transcript'\s*\?\s*recentIntent\.messageId\s*:\s*null/,
+    'buttons without a resolvable host carrier should bind to the recent transcript target rather than message 0',
+  );
+  assert.doesNotMatch(
+    body,
+    /Number\([^)]+messageId[\s\S]{0,120}\)\s*\|\|\s*0/,
+    'missing carrier ids must not be coerced to message 0',
+  );
+});
+
+test('mounted same-layer probes visible assistant messages for existing host-native images', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'queueVisibleGeneratedImageEntityRefresh');
+  const mountedSegment = source.slice(source.indexOf('onMounted(async () => {'));
+
+  assert.match(
+    body,
+    /transcript\.value[\s\S]*filter\(item => item\.role === 'assistant'\)[\s\S]*queueGeneratedImageEntityRefresh\(visibleAssistantMessageIds, reason\);/,
+    'visible assistant message ids should be rechecked for host-native image artifacts after startup',
+  );
+  assert.match(
+    mountedSegment,
+    /window\.setTimeout\(\(\) => queueVisibleGeneratedImageEntityRefresh\('mounted\.host_plugin_native_probe'\), 250\);/,
+    'mounted startup should refresh existing host-native images even when no fresh mutation fires',
+  );
+});
+
+test('targeted transcript item refresh preserves host mes fallback and latest assistant identity', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'refreshTranscriptItemsByIds');
+
+  assert.match(
+    body,
+    /const rawMessage = String\(hostMessage\?\.message \?\? hostMessage\?\.mes \?\? ''\);/,
+    'targeted refresh should use mes fallback because host chat entries may not expose message',
+  );
+  assert.match(
+    body,
+    /latestAssistantId: latestAssistantItem\.value\?\.message_id \?\? assistantMessageId\.value,/,
+    'targeted refresh should not depend only on the active generation placeholder id after startup',
+  );
+});
+
+test('ready host-native images take precedence over stale streaming preview phase', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const hostRenderedHasReadyImage = [\s\S]*st-chatu8-image-span[\s\S]*assistant-fallback/,
+    'buildTranscriptItem should detect ready host-native image HTML before choosing the stream renderer',
+  );
+  assert.match(
+    source,
+    /input\.latestAssistantId === input\.id &&\s*!hostRenderedHasReadyImage &&\s*phase === 'stream' &&\s*\(input\.status === 'streaming'/,
+    'stale image-generation streaming phase must not hide ready host-rendered image markup',
+  );
+});
+
+test('latest plain done assistant is never reclassified as streaming by stale global status', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /function shouldTreatLatestAssistantAsStreaming[\s\S]*?if \(input\.isLatest !== true\) return false;\s*if \(input\.phase !== 'stream'\) return false;/,
+    'latest assistant streaming flags should require the message runtime phase itself to still be stream',
+  );
+  assert.match(
+    source,
+    /return input\.status === 'streaming' \|\| input\.busy === true;/,
+    'global streaming or busy state may only apply after the message phase guard',
+  );
+});
+
 test('host DOM mutation callbacks should reapply visual hide after external re-render', () => {
   const source = readSource('useStreamingDemo.ts');
 

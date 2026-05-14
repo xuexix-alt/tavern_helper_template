@@ -176,6 +176,7 @@
             :has-more-older="hasMoreOlderGalleryImages"
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
+            @image-tag="activateGeneratedImageTag"
             @assign-role="openGalleryRoleAssignPicker"
             @jump-message="jumpToTranscriptMessage"
             @load-older="loadOlderGalleryImages"
@@ -221,6 +222,7 @@
               @open-detail="openDetail"
               @image-view="activateGeneratedImageView"
               @image-regenerate="activateGeneratedImageRegenerate"
+              @image-tag="activateGeneratedImageTag"
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
               @reroll-opening="rerollOpening"
@@ -462,6 +464,7 @@ import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
+import { parsePromptBodyFromToken } from '../generatedImagePromptMetadata';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
   listReachableHostWindows as collectReachableHostWindows,
@@ -1818,6 +1821,17 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   if (!triggerHostElementClick(targetNode)) {
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
   }
+}
+
+function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
+  const promptToken = String(payload?.promptToken ?? '').trim();
+  const promptBody = parsePromptBodyFromToken(promptToken).trim();
+  const tagText = promptBody || promptToken;
+  if (!tagText) {
+    toastr?.warning?.('这张图片没有可显示的 prompt tag');
+    return;
+  }
+  toastr?.info?.(tagText, '图片 prompt tag', { timeOut: 9000, extendedTimeOut: 4000 });
 }
 
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {

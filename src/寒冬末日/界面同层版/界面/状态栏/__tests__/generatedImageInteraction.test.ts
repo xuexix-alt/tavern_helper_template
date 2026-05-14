@@ -38,7 +38,7 @@ test('pickGeneratedImageActivationTarget prefers image nodes for viewer actions'
   );
 });
 
-test('pickGeneratedImageActivationTarget prefers buttons for regenerate actions', () => {
+test('pickGeneratedImageActivationTarget prefers image nodes for regenerate actions', () => {
   const hostImage = { id: 'host-image' };
   const hostButton = { id: 'host-button' };
 
@@ -49,7 +49,7 @@ test('pickGeneratedImageActivationTarget prefers buttons for regenerate actions'
       iframeImage: null,
       iframeButton: null,
     }),
-    hostButton,
+    hostImage,
   );
 });
 

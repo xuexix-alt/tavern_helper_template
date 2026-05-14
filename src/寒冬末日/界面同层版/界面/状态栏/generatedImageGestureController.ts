@@ -12,6 +12,7 @@ export function createGeneratedImageGestureController(input: {
   longPressMs?: number;
   onView: () => void;
   onRegenerate: () => void;
+  onTag?: () => void;
 }): GeneratedImageGestureController {
   const clickDelayMs = Math.max(0, Number(input.clickDelayMs ?? 350));
   const longPressMs = Math.max(0, Number(input.longPressMs ?? 420));
@@ -70,7 +71,7 @@ export function createGeneratedImageGestureController(input: {
         longPressTriggered = true;
         touchDoubleTapPending = false;
         markTouchHandled();
-        input.onView();
+        (input.onTag ?? input.onView)();
       }, longPressMs);
     },
     handleTouchEnd() {
