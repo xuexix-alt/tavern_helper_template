@@ -402,7 +402,9 @@ function bindAssistantBodyInteractions() {
   }
 
   const carriers = Array.from(
-    root.querySelectorAll('.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image'),
+    root.querySelectorAll(
+      '.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image',
+    ),
   ) as HTMLElement[];
   recordComponentTrace('bind_interactions', {
     promptButtonCount: promptButtons.length,

@@ -1625,10 +1625,14 @@ function buildTranscriptItem(input: {
     renderSource,
     strippedRenderSource,
   });
-  const hostRenderedHtml = buildHostRenderedHtml(readHostRenderedMessageHtml(input.id), displayRenderSource, input.id, input.raw);
-  const hostRenderedHasReadyImage = /\bst-chatu8-image-span\b|\bassistant-fallback-(?:inline-image|generated-image)\b/.test(
-    hostRenderedHtml,
+  const hostRenderedHtml = buildHostRenderedHtml(
+    readHostRenderedMessageHtml(input.id),
+    displayRenderSource,
+    input.id,
+    input.raw,
   );
+  const hostRenderedHasReadyImage =
+    /\bst-chatu8-image-span\b|\bassistant-fallback-(?:inline-image|generated-image)\b/.test(hostRenderedHtml);
   const isCurrentStreamingItem =
     input.latestAssistantId === input.id &&
     !hostRenderedHasReadyImage &&
@@ -1643,7 +1647,9 @@ function buildTranscriptItem(input: {
   // 该条目会落回 `<div v-html="finalHtml || '(空回复)'">`，显示空回复。
   // 当前流式项只保留已节流的预览 HTML，避免每 80ms 进入 formatAsDisplayedMessage；
   // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
-  const finalHtml = hostRenderedHtml || (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
+  const finalHtml =
+    hostRenderedHtml ||
+    (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -3325,7 +3331,8 @@ export function useStreamingDemo() {
   function handleHostRefreshEvent(name: string, payload: unknown[] = []) {
     const isHostGenerationStarted = name === String(tavern_events.GENERATION_STARTED);
     const isHostStreamTokenEcho =
-      name === String(tavern_events.STREAM_TOKEN_RECEIVED) || name === String(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED);
+      name === String(tavern_events.STREAM_TOKEN_RECEIVED) ||
+      name === String(tavern_events.SMOOTH_STREAM_TOKEN_RECEIVED);
     const shouldSuppressLifecycleEcho = shouldSuppressLifecycleEchoHostRefresh({
       eventName: name,
       nowMs: Date.now(),
