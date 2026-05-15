@@ -8,10 +8,7 @@ test('normalizeNativeSendText flattens newlines and guards slash pipeline separa
 });
 
 test('buildNativeSendSlashCommand only inserts the user floor; generation is triggered separately', () => {
-  assert.equal(
-    buildNativeSendSlashCommand('第一行\n第二行 | 第三段', false),
-    '/send 第一行 第二行 ｜ 第三段',
-  );
+  assert.equal(buildNativeSendSlashCommand('第一行\n第二行 | 第三段', false), '/send 第一行 第二行 ｜ 第三段');
 });
 
 test('buildNativeSendSlashCommand ignores legacy trigger options so slash pipelines cannot swallow generation', () => {
