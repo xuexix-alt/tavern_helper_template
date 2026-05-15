@@ -9,9 +9,12 @@ export function normalizeNativeSendText(input: string): string {
   return noNewlines.replaceAll('|', '｜');
 }
 
-export function buildNativeSendSlashCommand(text: string, awaitTrigger = true): string {
+export function buildNativeSendSlashCommand(
+  text: string,
+  _options: boolean | { awaitTrigger?: boolean } = { awaitTrigger: false },
+): string {
   const normalized = normalizeNativeSendText(text);
-  return awaitTrigger ? `/send ${normalized} | /trigger await=true` : `/send ${normalized}`;
+  return `/send ${normalized}`;
 }
 
 function resolveNativeSlashExecutor(): ((cmd: string) => Promise<unknown>) | null {
@@ -71,7 +74,38 @@ function resolveNativeSlashExecutor(): ((cmd: string) => Promise<unknown>) | nul
   return null;
 }
 
-export async function sendToNativeChat(text: string, awaitTrigger = true): Promise<void> {
+function resolveNativeGenerator(): (() => void) | null {
+  const resolveFromSillyTavernContext = (targetWindow: Window | null): (() => void) | null => {
+    if (!targetWindow) return null;
+    try {
+      const ctx = (targetWindow as any)?.SillyTavern?.getContext?.();
+      if (typeof ctx?.generate === 'function') {
+        return () => {
+          const generation = ctx.generate.call(ctx, 'normal', { automatic_trigger: false });
+          Promise.resolve(generation).catch(error => {
+            console.error('[eden-ui] native generation failed after /send', error);
+          });
+        };
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const directTargets = [window, window.parent ?? null, window.top ?? null];
+  for (const target of directTargets) {
+    const resolved = resolveFromSillyTavernContext(target ?? null);
+    if (resolved) return resolved;
+  }
+
+  return null;
+}
+
+export async function sendToNativeChat(
+  text: string,
+  options: boolean | { awaitTrigger?: boolean } = { awaitTrigger: false },
+): Promise<void> {
   const normalized = normalizeOptionalString(normalizeNativeSendText(text));
   if (!normalized) {
     throw new Error('空文本');
@@ -82,5 +116,14 @@ export async function sendToNativeChat(text: string, awaitTrigger = true): Promi
     throw new Error('triggerSlash 不可用');
   }
 
-  await executor(buildNativeSendSlashCommand(normalized, awaitTrigger));
+  await executor(buildNativeSendSlashCommand(normalized, options));
+
+  const generator = resolveNativeGenerator();
+  if (generator) {
+    generator();
+    return;
+  }
+
+  const awaitTrigger = typeof options === 'boolean' ? options : options.awaitTrigger === true;
+  await executor(awaitTrigger ? '/trigger await=true' : '/trigger');
 }

@@ -5,7 +5,7 @@ type ParsedWorldTime = {
 };
 
 function parseDateToEpochDay(dateStr: string): number | null {
-  // 格式：末日纪元，XXXX年XX月XX日
+  // 格式：公元YYYY年M月D日
   const m = (dateStr ?? '').match(/(\d{1,4})年(\d{1,2})月(\d{1,2})日/);
   if (!m) return null;
   const year = Number(m[1]);

@@ -1,57 +1,23 @@
 <%_ {
 const opening = getvar('stream_demo.opening', { defaults: {} }) || {};
+const worldModeProfilesVar = getvar('world_mode_profiles', { defaults: {} }) || {};
 const worldModeId = String(opening.world_mode_id || '').trim();
 const routeId = String(opening.route_id || '').trim();
 const meta = opening.meta || {};
 const formValues = opening.form_values || {};
-const worldProfiles = {
-  A: {
-    key: 'siege_fortress',
-    name: '围猎堡垒型',
-    slogan: '自然压力下降，外部敌意上升',
-    core: '战斗 / 防御 / 征服 / 清场',
-    environment: '常态气温约 -5℃ ~ -15℃；低温和暴雪仍危险，但行动能力保留，真正压迫来自外部敌意。',
-    threat: '外部威胁以武装掠夺者、楼层暴徒、流窜劫匪等人祸冲突为主，可按需要混入雪晶畸变体或野化猎群，但不得把环境改写成出门即死。',
-    society: '幸存者据点化，小型武装团体、楼层据点和掠夺集团活跃；文明残余快速流失，强者秩序与恐惧威慑并存。',
-    constraints: [
-      '行动窗口较长，外出、巡逻、侦察、清剿与接触外部势力可以发生，但必须有防寒、防袭击和资源回收成本。',
-      '冲突密度高，剧情应优先体现围堵、试探、清场、防御战和据点吞并压力。',
-      '生产残余度低，不能恢复完整工业或稳定公共服务，只能依靠拆解、库存和小规模修补。',
-    ],
-  },
-  B: {
-    key: 'polar_holding',
-    name: '极寒守成型',
-    slogan: '环境即天敌，活下去本身就是胜利',
-    core: '生存 / 维持 / 种田 / 人口保全',
-    environment: '常态气温约 -35℃ ~ -45℃；暴雪频率高，腐蚀雪晶活性高，寒冷、腐蚀与失温随时都在消耗生命。',
-    threat: '外部威胁以环境失温、冻伤病亡和后勤崩盘为主；敌人可以存在，但不能压过“环境本身就是天敌”的核心设定。',
-    society: '幸存者蜷缩于残余据点，社会联系脆弱；并非人人作恶，但绝望会迅速放大脆弱、自私和医疗/供暖缺口。',
-    constraints: [
-      '行动窗口极短，无准备外出几乎等同送命，离开掩体必须有伊甸或等效防护、明确目的和回收风险。',
-      '剧情应优先体现保暖、配给、医疗、供能、人口保全和庇护所生命支持系统的价值。',
-      '生产残余度极低，不能轻易出现稳定生产、可靠交通或大规模外勤活动。',
-    ],
-  },
-  C: {
-    key: 'order_window',
-    name: '窗口秩序型',
-    slogan: '灾变重创社会，但规则仍有重建空间',
-    core: '治理 / 联盟 / 交易 / 制度建设',
-    environment: '常态气温约 -8℃ ~ -18℃；暴雪阶段性来临，腐蚀雪晶活性中低，环境危险仍在但不足以抹平全部社会结构。',
-    threat: '外部威胁以利益冲突、联盟争夺、治理真空、组织渗透和商路争夺为主。',
-    society: '仍有交易网络、社区据点、组织残余与制度竞争；善恶并存，关键在谁来制定规则、谁来执行规则。',
-    constraints: [
-      '行动窗口稳定，侦察、交易、谈判、接管、联盟和外部势力接触应长期存在。',
-      '剧情应优先体现规则重建、资源分配、组织博弈、秩序竞争和庇护所治理核心化。',
-      '生产残余度中等，只允许少量组织化生产、维修制造和局部交通，不得恢复灾前社会完整秩序。',
-    ],
-  },
+const fallbackWorldProfiles = {
+  A: { id: 'A', key: 'pre_disaster_phase', name: '灾变前3个月' },
+  B: { id: 'B', key: 'polar_holding', name: '末日后1年-生存压力' },
+  C: { id: 'C', key: 'order_window', name: '末日后1年-秩序重建' },
 };
+const worldProfiles = worldModeProfilesVar.profiles || worldModeProfilesVar || fallbackWorldProfiles;
 const profile =
   worldProfiles[worldModeId] ||
   Object.values(worldProfiles).find(item => item.key === worldModeId) ||
   null;
+const brief = (profile && profile.ai_brief_seed) || {};
+const environment = profile && profile.environment ? profile.environment : {};
+const axes = profile && profile.axes ? profile.axes : {};
 _%>
 <世界观>
 # opening 动态世界观
@@ -61,13 +27,19 @@ _%>
 <%_ if (profile) { _%>
 ## opening选定世界观档位：<%= worldModeId %> · <%= profile.name %>
 - 标语: <%= profile.slogan %>
-- 核心体验: <%= profile.core %>
-- 环境体感: <%= profile.environment %>
-- 主要威胁: <%= profile.threat %>
-- 社会状态: <%= profile.society %>
-- 硬约束:
-<%_ profile.constraints.forEach(function(rule) { _%>
-  - <%= rule %>
+- 核心体验: <%= profile.core_pleasure || profile.core || '未设定' %>
+- 推荐主流派: <%= profile.recommended_main_route || '未设定' %>
+- 环境体感: <%= brief.环境体感 || environment.visibility_note || '未设定' %>
+- 常态气温区间: <%= environment.常态气温区间 || '未设定' %>
+- 暴雪频率: <%= environment.暴雪频率 || '未设定' %>
+- 腐蚀雪晶活性: <%= environment.腐蚀雪晶活性 || '未设定' %>
+- 外出能力: <%= environment.外出能力 || '未设定' %>
+- 主要威胁: <%= brief.主要威胁 || profile.threat || '未设定' %>
+- 社会状态: <%= brief.社会状态 || (profile.society && profile.society.organization_trend) || '未设定' %>
+- 路线提示: <%= brief.路线提示 || '未设定' %>
+- 关键轴:
+<%_ Object.keys(axes).forEach(function(axisName) { const axis = axes[axisName] || {}; _%>
+  - <%= axisName %>: <%= axis.label || '未设定' %><%_ if (axis.description) { _%>；<%= axis.description %><%_ } _%>
 <%_ }); _%>
 <%_ } else { _%>
 ## opening选定世界观档位：<%= worldModeId || '未设定' %>

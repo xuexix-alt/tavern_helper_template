@@ -1770,6 +1770,9 @@ export function useStreamingDemo() {
   let assistantPlaceholderCreating = false;
   let hostMesTextPrimedForCurrentGeneration = false;
   let nativeSendProxyActive = false;
+  let openingNativeGenerationActive = false;
+  let nativeGenerationRevealActive = false;
+  let releaseNativeGenerationVisualHide: (() => void) | null = null;
   const generationListenerEpochController = createGenerationListenerEpochController();
   let generationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
@@ -2494,6 +2497,7 @@ export function useStreamingDemo() {
    */
   async function applyHidePolicy(reason: string) {
     if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
+    if (nativeGenerationRevealActive) return;
     if (hidePolicyRunning) {
       hidePolicyRerun = true;
       return;
@@ -2502,6 +2506,7 @@ export function useStreamingDemo() {
     try {
       do {
         hidePolicyRerun = false;
+        if (nativeGenerationRevealActive) return;
         const patch = readMessagesAfterContainer()
           .filter(item => item.is_hidden !== true)
           .map(item => ({ message_id: item.message_id, is_hidden: true }));
@@ -2870,6 +2875,7 @@ export function useStreamingDemo() {
   }
 
   function queueHidePolicy(reason: string) {
+    if (nativeGenerationRevealActive) return;
     if (hidePolicyTimer) window.clearTimeout(hidePolicyTimer);
     hidePolicyTimer = window.setTimeout(() => {
       hidePolicyTimer = 0;
@@ -2961,6 +2967,28 @@ export function useStreamingDemo() {
       .filter(item => item.is_hidden === true)
       .map(item => item.message_id);
     hostVisualHideController.applyToMessageIds(hiddenIds);
+  }
+
+  async function revealHiddenStoryMessagesForNativeGeneration(reason: string): Promise<void> {
+    if (hidePolicyTimer) {
+      window.clearTimeout(hidePolicyTimer);
+      hidePolicyTimer = 0;
+    }
+    nativeGenerationRevealActive = true;
+    const messagesToReveal = readMessagesAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => item.message_id);
+    if (messagesToReveal.length > 0) {
+      await setChatMessages(
+        messagesToReveal.map(id => ({ message_id: id, is_hidden: false })),
+        { refresh: 'none' },
+      );
+    }
+  }
+
+  function releaseHiddenStoryMessagesForNativeGeneration() {
+    releaseNativeGenerationVisualHide?.();
+    releaseNativeGenerationVisualHide = null;
   }
 
   async function disableSameLayerUi(options: { restoreHost?: boolean } = {}) {
@@ -3187,6 +3215,47 @@ export function useStreamingDemo() {
     }
   }
 
+  function markOpeningNativeAssistantReady(messageId: number | null, reason: string) {
+    if (!openingNativeGenerationActive) return;
+    const normalizedMessageId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedMessageId) || normalizedMessageId < 0) return;
+
+    const message = listAllChatMessages().find(item => readMessageId(item) === normalizedMessageId);
+    const role = message ? resolveHostMessageRole(message) : 'assistant';
+    if (role !== 'assistant') return;
+
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'ready',
+      opening_assistant_message_id: normalizedMessageId,
+    };
+    persistOpeningPayloadNow();
+    openingNativeGenerationActive = false;
+    nativeSendProxyActive = false;
+    nativeGenerationRevealActive = false;
+    releaseHiddenStoryMessagesForNativeGeneration();
+    busy.value = false;
+    status.value = 'done';
+    queueHidePolicy(reason);
+    queuePersistReaderChatState();
+    recordLifecycleTrace('runOpeningNativeGeneration', 'ready', {
+      reason,
+      openingAssistantMessageId: normalizedMessageId,
+    });
+  }
+
+  function finishNativeSendProxy(reason: string) {
+    if (!nativeSendProxyActive) return;
+    if (openingNativeGenerationActive) return;
+    nativeSendProxyActive = false;
+    nativeGenerationRevealActive = false;
+    releaseHiddenStoryMessagesForNativeGeneration();
+    busy.value = false;
+    status.value = 'done';
+    queueHidePolicy(reason);
+    recordLifecycleTrace('runNativeSendProxy', 'done', { reason });
+  }
+
   async function ensureHostMesTextRendered(messageId: number): Promise<boolean> {
     return ensureHostMesTextRenderedWithRefresh(
       messageId,
@@ -3387,6 +3456,28 @@ export function useStreamingDemo() {
 
     const refreshType = mapHostRefreshType(name);
     const messageId = resolveHostRefreshMessageId(name, payload);
+    if (refreshType === 'host.message_received') {
+      markOpeningNativeAssistantReady(messageId, 'host.message_received');
+    }
+    if (refreshType === 'host.generation_ended' && openingNativeGenerationActive) {
+      const latestAssistantId = readMessagesAfterContainer()
+        .filter(item => item.role === 'assistant')
+        .map(item => item.message_id)
+        .sort((a, b) => b - a)[0];
+      markOpeningNativeAssistantReady(latestAssistantId ?? null, 'host.generation_ended');
+      if (openingNativeGenerationActive) {
+        openingNativeGenerationActive = false;
+        nativeSendProxyActive = false;
+        nativeGenerationRevealActive = false;
+        releaseHiddenStoryMessagesForNativeGeneration();
+        busy.value = false;
+        status.value = 'done';
+        queueHidePolicy('host.generation_ended');
+      }
+    }
+    if (refreshType === 'host.generation_ended') {
+      finishNativeSendProxy('host.generation_ended');
+    }
     const domains = resolveRefreshDomainsForEvent({
       type: refreshType,
       messageId: resolveHostRefreshMessageId(name, payload),
@@ -4431,6 +4522,62 @@ export function useStreamingDemo() {
     return false;
   }
 
+  async function runOpeningNativeGeneration(compiledPromptSnapshot: string): Promise<boolean> {
+    const prompt = String(compiledPromptSnapshot ?? '').trim();
+    if (!prompt || busy.value) return false;
+
+    const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));
+    if (
+      Number.isFinite(openingAssistantMessageId) &&
+      openingAssistantMessageId > 0 &&
+      hasSuccessfulOpeningAssistant.value !== true
+    ) {
+      await deleteOpeningAssistantMessageById(openingAssistantMessageId, 'opening_retry_cleanup');
+    }
+
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'generating',
+      compiled_prompt_snapshot: prompt,
+      opening_assistant_message_id: null,
+    };
+    persistOpeningPayloadNow();
+
+    busy.value = true;
+    nativeSendProxyActive = true;
+    openingNativeGenerationActive = true;
+    status.value = 'preparing';
+    errorText.value = '';
+    readingMode.value = 'following_latest';
+    queuePersistReaderChatState();
+
+    try {
+      await revealHiddenStoryMessagesForNativeGeneration('opening_native_generation');
+      await sendToNativeChat(compiledPromptSnapshot, false);
+      appendLog('action', '生成开局', stripTagsForPreview(prompt).slice(0, 80) || '(空开局)');
+      return true;
+    } catch (error) {
+      status.value = 'error';
+      errorText.value = error instanceof Error ? error.message : String(error);
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'configuring',
+        compiled_prompt_snapshot: prompt,
+        opening_assistant_message_id: null,
+      };
+      persistOpeningPayloadNow();
+      toastr?.error?.(`开局发送失败：${errorText.value}`);
+      appendLog('error', '开局发送失败', errorText.value || '未知错误');
+      nativeSendProxyActive = false;
+      openingNativeGenerationActive = false;
+      nativeGenerationRevealActive = false;
+      releaseHiddenStoryMessagesForNativeGeneration();
+      busy.value = false;
+      queueHidePolicy('opening_native_generation_failed');
+      return false;
+    }
+  }
+
   async function generateOpening() {
     if (busy.value) return;
 
@@ -4456,10 +4603,7 @@ export function useStreamingDemo() {
       messages: () => readMessagesAfterContainer(),
       setChatMessages,
     });
-    const generated = await runOpeningDetachedGeneration(compiledPromptSnapshot);
-    if (generated) {
-      appendLog('action', '生成开局', stripTagsForPreview(compiledPromptSnapshot).slice(0, 80) || '(空开局)');
-    }
+    await runOpeningNativeGeneration(compiledPromptSnapshot);
   }
 
   async function rerollOpening() {
@@ -4473,7 +4617,7 @@ export function useStreamingDemo() {
       toastr?.warning?.('已有正式剧情楼层，暂不支持在此阶段重ROLL开局');
       return;
     }
-    await runOpeningDetachedGeneration(compiledPromptSnapshot);
+    await runOpeningNativeGeneration(compiledPromptSnapshot);
   }
 
   function bindHistoryRefreshEvents() {
@@ -4689,20 +4833,22 @@ export function useStreamingDemo() {
     errorText.value = '';
 
     try {
-      await sendToNativeChat(text, true);
+      await revealHiddenStoryMessagesForNativeGeneration('native_send_proxy');
+      await sendToNativeChat(text, false);
       appendLog('action', '发送用户输入', stripTagsForPreview(text).slice(0, 80) || '(空输入)');
-      status.value = 'done';
+      status.value = 'streaming';
       return true;
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
       toastr?.error?.(`发送失败：${errorText.value}`);
       appendLog('error', '发送失败', errorText.value || '未知错误');
-      return false;
-    } finally {
       nativeSendProxyActive = false;
+      nativeGenerationRevealActive = false;
+      releaseHiddenStoryMessagesForNativeGeneration();
       busy.value = false;
-      queueHidePolicy('native_send_proxy');
+      queueHidePolicy('native_send_proxy_failed');
+      return false;
     }
   }
 
@@ -4918,6 +5064,8 @@ export function useStreamingDemo() {
     historyStops = [];
     mvuStops.forEach(stop => stop?.stop?.());
     mvuStops = [];
+    nativeGenerationRevealActive = false;
+    releaseHiddenStoryMessagesForNativeGeneration();
     hidePolicyTimer = clearTimer(hidePolicyTimer);
     externalSyncTimer = clearTimer(externalSyncTimer);
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);

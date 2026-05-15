@@ -51,3 +51,22 @@ test('opening worldbook EJS can be compiled together with 世界设定 without d
     'combined EJS worldbook entries should not redeclare const opening/worldModeId/routeId/meta/formValues in the same scope',
   );
 });
+
+test('opening worldbook reads world mode profiles from the synced config instead of stale inline presets', () => {
+  const worldViewSource = fs.readFileSync(path.resolve(repoRoot, 'src/寒冬末日/世界书/寒冬末日/世界观.txt'), 'utf8');
+
+  assert.match(
+    worldViewSource,
+    /getvar\('stream_demo\.opening'/,
+    'worldbook should continue to read the current opening chat variable',
+  );
+  assert.match(
+    worldViewSource,
+    /getvar\('world_mode_profiles'/,
+    'worldbook should use the bundled world mode profile config instead of hard-coded old档位',
+  );
+  assert.doesNotMatch(worldViewSource, /围猎堡垒型|极寒守成型|窗口秩序型/);
+  assert.match(worldViewSource, /灾变前3个月/);
+  assert.match(worldViewSource, /末日后1年-生存压力/);
+  assert.match(worldViewSource, /末日后1年-秩序重建/);
+});

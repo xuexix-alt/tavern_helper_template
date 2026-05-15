@@ -9,7 +9,7 @@
     "character_label": "主角（取个名字）"
   },
   "default_meta": {
-    "time": "9527年12月14日·14:00",
+    "time": "公元2026年9月14日·14:00",
     "location": "中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室",
     "character": "{{user}}"
   },
@@ -75,7 +75,7 @@
   "form_schema_overrides": {
     "A": {
       "default_meta": {
-        "time": "9526年9月14日·14:00",
+        "time": "公元2026年6月14日·14:00",
         "location": "中国（在剧情中称为东和国）瑞峰市星穹国际公寓2001室"
       },
       "fields": [

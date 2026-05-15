@@ -32,21 +32,35 @@ function extractFunctionBody(source, functionName) {
   assert.fail(`should find closing brace for ${functionName}`);
 }
 
-test('generateOpening uses a detached ordinary assistant flow instead of opening seed/result message orchestration', () => {
+test('generateOpening uses the same native send chain as ordinary正文 instead of local generate orchestration', () => {
   const source = readSource();
   const body = extractFunctionBody(source, 'generateOpening');
+  const helperBody = extractFunctionBody(source, 'runOpeningNativeGeneration');
 
   assert.equal(
-    body.includes(
-      'const compiledPromptSnapshot = buildOpeningCompiledUserInput(openingPreset.value, openingPayload.value);',
-    ),
+    body.includes('const compiledPromptSnapshot = await buildOpeningCompiledUserInput('),
     true,
     'generateOpening should freeze a compiled prompt snapshot before starting generation',
   );
   assert.equal(
-    body.includes('await runOpeningDetachedGeneration(compiledPromptSnapshot);'),
+    body.includes('await runOpeningNativeGeneration(compiledPromptSnapshot);'),
     true,
-    'generateOpening should route through the detached ordinary assistant flow helper',
+    'generateOpening should route through the ordinary native send flow helper',
+  );
+  assert.equal(
+    helperBody.includes('await sendToNativeChat(compiledPromptSnapshot, false);'),
+    true,
+    'opening should send through the ordinary native send helper so host streaming owns token-time rendering',
+  );
+  assert.match(
+    helperBody,
+    /await revealHiddenStoryMessagesForNativeGeneration\('opening_native_generation'\);[\s\S]*await sendToNativeChat\(compiledPromptSnapshot, false\);/,
+    'opening native generation should reveal hidden story floors before host prompt assembly',
+  );
+  assert.equal(
+    helperBody.includes('await runGenerationFlow('),
+    false,
+    'opening native flow must not enter the local Tavern Helper generate()/placeholder pipeline',
   );
   assert.equal(
     body.includes('await upsertOpeningSeedMessage('),
@@ -65,9 +79,10 @@ test('generateOpening uses a detached ordinary assistant flow instead of opening
   );
 });
 
-test('runGenerationFlow supports detached user_input generation for opening and retries', () => {
+test('runGenerationFlow keeps detached user_input support out of opening native send flow', () => {
   const source = readSource();
   const body = extractFunctionBody(source, 'runGenerationFlow');
+  const openingBody = extractFunctionBody(source, 'runOpeningNativeGeneration');
 
   assert.equal(
     source.includes('detachedUserInput?: boolean'),
@@ -89,6 +104,11 @@ test('runGenerationFlow supports detached user_input generation for opening and 
     true,
     'detached generation should default to zero chat history',
   );
+  assert.equal(
+    openingBody.includes('detachedUserInput'),
+    false,
+    'opening should not opt into detached generate() user_input mode anymore',
+  );
 });
 
 test('opening failure recovery reuses the frozen compiled prompt snapshot instead of reopening the old payload stream chain', () => {
@@ -106,6 +126,11 @@ test('opening failure recovery reuses the frozen compiled prompt snapshot instea
     rerollBody.includes('await generateOpening();'),
     false,
     'rerollOpening should not recurse into the legacy opening generator flow anymore',
+  );
+  assert.equal(
+    rerollBody.includes('await runOpeningNativeGeneration(compiledPromptSnapshot);'),
+    true,
+    'rerollOpening should reuse the native opening send helper with the frozen prompt snapshot',
   );
 });
 
