@@ -369,6 +369,29 @@ function normalizeDisplayedHtml(html: string): string {
   );
 }
 
+function isHostRenderedStreamDemoWrapperOnlyHtml(html: string): boolean {
+  const source = String(html ?? '').trim();
+  if (!source) return false;
+  const visibleText = source
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  const compactText = visibleText.replace(/[\s:：_\-[\]()（）【】]+/g, '');
+  return (
+    compactText === 'streamingdone' ||
+    compactText === 'steamingdone' ||
+    compactText === 'streamdone' ||
+    compactText === 'demophasedone' ||
+    compactText === 'streamdemodone' ||
+    compactText === 'streamdemominimaldone'
+  );
+}
+
 function readHostRenderedMessageHtml(message_id: number): string {
   const normalizedId = Math.trunc(Number(message_id));
   if (!Number.isFinite(normalizedId) || normalizedId < 0) return '';
@@ -377,6 +400,7 @@ function readHostRenderedMessageHtml(message_id: number): string {
     const html = String(retrieveDisplayedMessage(normalizedId)?.html?.() ?? '').trim();
     if (!html) return '';
     if (html.includes(STREAM_DEMO_MARKER) || /<demo_phase\b/i.test(html)) return '';
+    if (isHostRenderedStreamDemoWrapperOnlyHtml(html)) return '';
     return stripVisibleChatu8PromptTokensHtml(normalizeDisplayedHtml(html));
   } catch {
     return '';
@@ -4603,7 +4627,7 @@ export function useStreamingDemo() {
       messages: () => readMessagesAfterContainer(),
       setChatMessages,
     });
-    await runOpeningNativeGeneration(compiledPromptSnapshot);
+    await runOpeningDetachedGeneration(compiledPromptSnapshot);
   }
 
   async function rerollOpening() {
@@ -4617,7 +4641,7 @@ export function useStreamingDemo() {
       toastr?.warning?.('已有正式剧情楼层，暂不支持在此阶段重ROLL开局');
       return;
     }
-    await runOpeningNativeGeneration(compiledPromptSnapshot);
+    await runOpeningDetachedGeneration(compiledPromptSnapshot);
   }
 
   function bindHistoryRefreshEvents() {
@@ -4811,7 +4835,7 @@ export function useStreamingDemo() {
     }
     const prompt = String(nextPrompt ?? input.value ?? '').trim();
     if (!prompt || busy.value) return;
-    const submitted = await runNativeSendProxy(prompt);
+    const submitted = await submitPromptViaSameLayer(prompt, 'ui');
     if (submitted && (nextPrompt == null || prompt === String(input.value ?? '').trim())) {
       input.value = '';
     }
@@ -4820,7 +4844,8 @@ export function useStreamingDemo() {
   async function submitPromptViaSameLayer(prompt: string, _source: 'ui' | 'native-chat'): Promise<boolean> {
     const text = String(prompt ?? '').trim();
     if (!text || busy.value) return false;
-    return runNativeSendProxy(text);
+    const result = await runGenerationFlow({ prompt: text, createUser: true });
+    return result.success;
   }
 
   async function runNativeSendProxy(prompt: string): Promise<boolean> {

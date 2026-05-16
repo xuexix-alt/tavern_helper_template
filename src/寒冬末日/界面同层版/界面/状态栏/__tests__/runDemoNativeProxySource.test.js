@@ -28,10 +28,22 @@ function extractFunctionBody(source, functionName) {
   assert.fail(`should find closing brace for ${functionName}`);
 }
 
-test('runNativeSendProxy should stop widening the host transcript during normal sends', () => {
+test('runNativeSendProxy is no longer the same-layer ordinary send path', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
+  const runDemoBody = extractFunctionBody(source, 'runDemo');
+  const submitBody = extractFunctionBody(source, 'submitPromptViaSameLayer');
   const body = extractFunctionBody(source, 'runNativeSendProxy');
 
+  assert.doesNotMatch(
+    runDemoBody,
+    /runNativeSendProxy\(/,
+    'ordinary composer sends should not route through native /send + /trigger',
+  );
+  assert.doesNotMatch(
+    submitBody,
+    /runNativeSendProxy\(/,
+    'host chat bridge submits should not route through native /send + /trigger',
+  );
   assert.doesNotMatch(
     body,
     /withHostTranscriptVisible\(async \(\) => \{/,
@@ -39,46 +51,39 @@ test('runNativeSendProxy should stop widening the host transcript during normal 
   );
 });
 
-test('native send keeps hidden story floors visible until host generation ends', () => {
+test('same-layer generate keeps hidden story floors visible only inside runGenerationFlow reveal window', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
-  const sendBody = extractFunctionBody(source, 'runNativeSendProxy');
-  const finishBody = extractFunctionBody(source, 'finishNativeSendProxy');
-  const hideBody = extractFunctionBody(source, 'queueHidePolicy');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
 
   assert.match(
     source,
-    /let nativeGenerationRevealActive = false;/,
-    'same-layer native sends need a generation-wide reveal guard for ST prompt assembly and MVU parsing',
+    /collectGenerationRevealMessageIds/,
+    'same-layer generate needs an explicit reveal list for hidden story floors',
   );
   assert.match(
-    sendBody,
-    /await revealHiddenStoryMessagesForNativeGeneration\('native_send_proxy'\);[\s\S]*await sendToNativeChat\(text, false\);/,
-    'normal sends should reveal hidden context before /send + /trigger enters the host native pipeline',
+    flowBody,
+    /if \(hiddenIds\.length > 0\) \{[\s\S]*is_hidden: false[\s\S]*const generatePromise = generate/,
+    'hidden story floors should be revealed before Tavern Helper generate() assembles context',
   );
   assert.match(
-    finishBody,
-    /nativeGenerationRevealActive = false;[\s\S]*queueHidePolicy\(reason\);/,
-    'hidden context should stay visible until host generation_end and only then resume same-layer hiding',
-  );
-  assert.match(
-    hideBody,
-    /if \(nativeGenerationRevealActive\) return;/,
-    'queued hide policy must not hide the just-sent user floor before /trigger builds context',
+    flowBody,
+    /const result = String\(await generatePromise\)\.trim\(\);[\s\S]*is_hidden: true/,
+    'hidden story floors should be restored after generate() resolves',
   );
 });
 
-test('native send reveals data for host prompt assembly without visually flashing hidden floors', () => {
+test('same-layer generate reveal window avoids visually flashing hidden floors', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
-  const revealBody = extractFunctionBody(source, 'revealHiddenStoryMessagesForNativeGeneration');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
 
   assert.match(
-    revealBody,
+    flowBody,
     /await setChatMessages\(/,
-    'hidden message data should still be revealed so native generation can assemble full context',
+    'hidden message data should still be revealed so generate can assemble full context',
   );
   assert.doesNotMatch(
-    revealBody,
+    flowBody,
     /hostVisualHideController\.suspend/,
-    'native generation should not suspend visual hiding; same-layer transcript owns visible rendering',
+    'generate reveal should not suspend visual hiding; same-layer transcript owns visible rendering',
   );
 });

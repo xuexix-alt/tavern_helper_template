@@ -19,7 +19,7 @@ test('persisted stream-demo messages only stay in the streaming branch while the
   );
   assert.match(
     source,
-    /return input\.status === 'streaming' \|\| \(input\.busy === true && input\.phase === 'stream'\);/,
+    /if \(input\.isLatest !== true\) return false;[\s\S]{0,120}if \(input\.phase !== 'stream'\) return false;[\s\S]{0,120}return input\.status === 'streaming' \|\| input\.busy === true;/,
     'persisted `<demo_phase>stream</demo_phase>` should only keep the latest card in stream mode while the current session is still busy',
   );
   assert.doesNotMatch(

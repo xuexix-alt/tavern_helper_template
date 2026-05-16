@@ -32,19 +32,30 @@ function extractFunctionBody(source, functionName) {
   assert.fail(`should find closing brace for ${functionName}`);
 }
 
-test('runDemo routes normal sends through the host native send proxy', () => {
+test('runDemo routes normal sends through the same-layer generate flow', () => {
   const source = readSource('useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'runDemo');
+  const submitBody = extractFunctionBody(source, 'submitPromptViaSameLayer');
 
   assert.equal(
-    body.includes('await runNativeSendProxy(prompt);'),
+    body.includes("await submitPromptViaSameLayer(prompt, 'ui');"),
     true,
-    'runDemo should delegate normal sends to the host native pipeline so Tavern streaming/display regex owns token-time rendering',
+    'runDemo should delegate normal sends to the same-layer submit helper',
   );
   assert.equal(
-    body.includes("await submitPromptViaSameLayer(prompt, 'ui');"),
+    body.includes('runNativeSendProxy(prompt)'),
     false,
-    'runDemo should no longer route normal sends through the local generate()+setChatMessages stream patcher',
+    'runDemo should not use the native /send + /trigger proxy as the ordinary send path',
+  );
+  assert.equal(
+    submitBody.includes('await runGenerationFlow({ prompt: text, createUser: true });'),
+    true,
+    'submitPromptViaSameLayer should create the user floor and generate through runGenerationFlow',
+  );
+  assert.equal(
+    submitBody.includes('runNativeSendProxy(text)'),
+    false,
+    'same-layer submit should not enter the native send proxy',
   );
 });
 
@@ -170,18 +181,23 @@ test('transcript item html prefers host-rendered mes_text when available', () =>
   );
   assert.match(
     source,
-    /const hostRenderedHtml = buildHostRenderedHtml\(readHostRenderedMessageHtml\(input\.id\), displayRenderSource, input\.id, input\.raw\);/,
+    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*displayRenderSource,\s*input\.id,\s*input\.raw,\s*\);/,
     'buildTranscriptItem should read and hydrate the host-rendered mes_text HTML for the target floor',
   );
   assert.match(
     source,
-    /hostRenderedHtml \|\| \(isCurrentStreamingItem \? streamHtml : buildFinalHtml/,
+    /hostRenderedHtml\s*\|\|\s*\(isCurrentStreamingItem \? streamHtml : buildFinalHtml/,
     'final display HTML should prefer Tavern-rendered HTML before falling back to local formatting',
   );
   assert.match(
     source,
     /html\.includes\(STREAM_DEMO_MARKER\)/,
     'host-rendered stream-demo wrapper HTML should be ignored so local fallback can sanitize wrapper tags',
+  );
+  assert.match(
+    source,
+    /isHostRenderedStreamDemoWrapperOnlyHtml\(html\)/,
+    'host-rendered stream-demo phase-only wrapper residue should be ignored so regenerate/MVU refresh cannot replace正文 with streaming done',
   );
 });
 
