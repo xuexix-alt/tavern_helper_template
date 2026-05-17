@@ -147,7 +147,9 @@ test('transcript html bodies isolate unbreakable content so it cannot widen pare
     'streaming renderer should isolate unbreakable live regex output before done rendering takes over',
   );
   assert.equal(
-    messageSource.includes('.assistant-body-wrap :deep(pre),\n.assistant-body-wrap :deep(table) {\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;'),
+    messageSource.includes(
+      '.assistant-body-wrap :deep(pre),\n.assistant-body-wrap :deep(table) {\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;',
+    ),
     true,
     'only preformatted blocks and tables should keep local horizontal scrolling',
   );
