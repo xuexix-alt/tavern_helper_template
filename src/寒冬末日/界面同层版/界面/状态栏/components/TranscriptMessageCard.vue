@@ -569,6 +569,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   width: 100%;
   max-width: var(--transcript-prose-max, 100%);
+  min-width: 0;
   margin-inline: auto;
 }
 .system-message {
@@ -624,6 +625,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
   max-width: 60rem;
   min-width: 0;
   padding: 24px 28px 18px;
@@ -683,6 +685,7 @@ onBeforeUnmount(() => {
 .assistant-body {
   position: relative;
   z-index: 1;
+  contain: inline-size;
   pointer-events: auto;
   width: 100%;
   max-width: 100%;
@@ -690,6 +693,7 @@ onBeforeUnmount(() => {
   font-size: 15px;
   line-height: 1.9;
   color: var(--demo-text-panel-strong);
+  overflow-x: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -712,6 +716,10 @@ onBeforeUnmount(() => {
 }
 .assistant-body-wrap :deep(p) {
   margin: 0 0 1em;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .assistant-body-wrap :deep(p:last-child) {
   margin-bottom: 0;
@@ -720,11 +728,16 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.dialog-inline) {
   color: inherit;
   font: inherit;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .assistant-body-wrap :deep(.stream-stage-pre) {
   margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
   color: var(--demo-text-panel-strong);
   font: inherit;
@@ -879,8 +892,35 @@ onBeforeUnmount(() => {
 
 .assistant-body-wrap :deep(pre),
 .assistant-body-wrap :deep(table) {
+  display: block;
   max-width: 100%;
   overflow-x: auto;
+}
+
+.assistant-body-wrap :deep(pre) {
+  white-space: pre;
+}
+
+.assistant-body-wrap :deep(img),
+.assistant-body-wrap :deep(video),
+.assistant-body-wrap :deep(canvas),
+.assistant-body-wrap :deep(svg),
+.assistant-body-wrap :deep(iframe) {
+  max-width: 100%;
+  height: auto;
+}
+
+.assistant-body-wrap :deep(div),
+.assistant-body-wrap :deep(section),
+.assistant-body-wrap :deep(article),
+.assistant-body-wrap :deep(details),
+.assistant-body-wrap :deep(summary),
+.assistant-body-wrap :deep(figure) {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .assistant-body-wrap :deep(code),

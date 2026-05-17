@@ -67,8 +67,18 @@ test('same-layer generate keeps hidden story floors visible only inside runGener
   );
   assert.match(
     flowBody,
-    /const result = String\(await generatePromise\)\.trim\(\);[\s\S]*is_hidden: true/,
-    'hidden story floors should be restored after generate() resolves',
+    /await runQueuedPostDoneAssistantSideEffects\(\{[\s\S]*await restoreGenerationRevealWindow\('post_done_side_effects'\)/,
+    'hidden story floors should stay revealed through post-done lifecycle so MVU extra analysis can assemble macro context',
+  );
+  assert.match(
+    flowBody,
+    /finally \{[\s\S]*await restoreGenerationRevealWindow\('finally'\)/,
+    'hidden story floors should still be restored if post-done lifecycle or saving fails',
+  );
+  assert.doesNotMatch(
+    flowBody,
+    /const result = String\(await generatePromise\)\.trim\(\);[\s\S]{0,360}hiddenIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\)/,
+    'hidden story floors should not be restored immediately after the main generate resolves',
   );
 });
 

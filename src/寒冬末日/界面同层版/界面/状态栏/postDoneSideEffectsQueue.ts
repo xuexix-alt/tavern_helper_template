@@ -54,14 +54,11 @@ export type RunQueuedPostDoneAssistantSideEffectsInput = {
   messageId: number | null | undefined;
   lifecycleKind: PostDoneAssistantLifecycleKind;
   traceId: string;
-  reprocessMessageVariablesById: (
-    messageId: number,
-    options: { force: true; refreshMessage: true },
-  ) => Promise<PostDoneMvuReprocessResult>;
   emitOfficialGenerationLifecycle: (
     messageId: number | null | undefined,
     kind: PostDoneAssistantLifecycleKind,
   ) => Promise<void>;
+  waitForNativeMvuMessageWriteback?: (messageId: number) => Promise<PostDoneMvuReprocessResult>;
   recordLifecycleTrace: (scope: string, event: string, payload: Record<string, unknown>, traceId: string) => unknown;
   warn?: (message: string, detail: unknown) => void;
 };
@@ -160,46 +157,7 @@ export async function runQueuedPostDoneAssistantSideEffects(input: RunQueuedPost
   }
 
   const messageId = Math.trunc(normalizedId);
-
-  try {
-    await input.queue.enqueue(messageId, 'mvu', async () => {
-      const reprocessResult = await input.reprocessMessageVariablesById(messageId, {
-        force: true,
-        refreshMessage: true,
-      });
-      if (reprocessResult.status === 'error') {
-        input.warn?.('[stream-demo] direct MVU reprocess failed', reprocessResult);
-      }
-      input.recordLifecycleTrace(
-        'runGenerationFlow',
-        'mvu_reprocess_completed',
-        {
-          assistantMessageId: messageId,
-          reprocessStatus: reprocessResult.status,
-        },
-        input.traceId,
-      );
-    });
-  } catch (error) {
-    if (!(error instanceof PostDoneSideEffectTimeoutError)) {
-      throw error;
-    }
-
-    input.warn?.('[stream-demo] direct MVU reprocess timed out', {
-      messageId,
-      stage: error.stage,
-      timeoutMs: error.timeoutMs,
-    });
-    input.recordLifecycleTrace(
-      'runGenerationFlow',
-      'mvu_reprocess_timeout',
-      {
-        assistantMessageId: messageId,
-        stage: error.stage,
-      },
-      input.traceId,
-    );
-  }
+  const writebackPromise = input.waitForNativeMvuMessageWriteback?.(messageId);
 
   try {
     await input.queue.enqueue(messageId, 'lifecycle', async () => {
@@ -218,6 +176,45 @@ export async function runQueuedPostDoneAssistantSideEffects(input: RunQueuedPost
     input.recordLifecycleTrace(
       'runGenerationFlow',
       'lifecycle_timeout',
+      {
+        assistantMessageId: messageId,
+        stage: error.stage,
+      },
+      input.traceId,
+    );
+  }
+
+  if (!writebackPromise) return;
+
+  try {
+    await input.queue.enqueue(messageId, 'mvu', async () => {
+      const writebackResult = await writebackPromise;
+      if (writebackResult.status === 'error') {
+        input.warn?.('[stream-demo] native MVU message writeback failed', writebackResult);
+      }
+      input.recordLifecycleTrace(
+        'runGenerationFlow',
+        'mvu_message_writeback_completed',
+        {
+          assistantMessageId: messageId,
+          writebackStatus: writebackResult.status,
+        },
+        input.traceId,
+      );
+    });
+  } catch (error) {
+    if (!(error instanceof PostDoneSideEffectTimeoutError)) {
+      throw error;
+    }
+
+    input.warn?.('[stream-demo] native MVU message writeback timed out', {
+      messageId,
+      stage: error.stage,
+      timeoutMs: error.timeoutMs,
+    });
+    input.recordLifecycleTrace(
+      'runGenerationFlow',
+      'mvu_message_writeback_timeout',
       {
         assistantMessageId: messageId,
         stage: error.stage,

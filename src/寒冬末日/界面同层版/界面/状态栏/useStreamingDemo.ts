@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { reprocessMessageVariablesById, retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
+import { retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
 import { CHAT_VAR_KEYS } from '../../../界面/outbound';
 import {
   STREAM_DEMO_MARKER,
@@ -250,6 +250,54 @@ function hasRenderableAssistantMessageText(rawMessage: unknown): boolean {
   return Boolean(stripped) && !stripped.startsWith('生成失败：');
 }
 
+function isVariableUpdateOnlyGenerationText(text: string): boolean {
+  const source = String(text ?? '').trim();
+  if (!/<UpdateVariable\b/i.test(source)) return false;
+  const withoutRuntimeShell = stripStreamDemoRuntimeTags(source)
+    .replace(/<content\b[^>]*>/gi, '')
+    .replace(/<\/content>/gi, '');
+  const withoutVariableBlocks = withoutRuntimeShell
+    .replace(/<UpdateVariable\b[^>]*>[\s\S]*?<\/UpdateVariable>/gi, '')
+    .replace(/<UpdateVariable\b[^>]*>[\s\S]*$/gi, '');
+  const remainingVisibleText = withoutVariableBlocks
+    .replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '')
+    .replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return remainingVisibleText.length === 0;
+}
+
+function extractMvuUpdateVariableBlocks(text: string): string[] {
+  const source = String(text ?? '').trim();
+  if (!source) return [];
+
+  const blocks: string[] = [];
+  const pattern = /<UpdateVariable\b[^>]*>[\s\S]*?(?:<\/UpdateVariable>|$)/gi;
+  for (const match of source.matchAll(pattern)) {
+    const block = String(match[0] ?? '').trim();
+    if (block && !blocks.includes(block)) {
+      blocks.push(block);
+    }
+  }
+  return blocks;
+}
+
+function mergeMvuWritebackBlocksIntoAssistantText(existingText: string, writebackText: string): string {
+  const existing = String(existingText ?? '').trim();
+  const blocks = extractMvuUpdateVariableBlocks(writebackText).filter(block => !existing.includes(block));
+  if (blocks.length === 0) return existing;
+  if (isStreamDemoMessage(existing)) {
+    const closingContentIndex = existing.lastIndexOf('</content>');
+    if (closingContentIndex >= 0) {
+      const prefix = existing.slice(0, closingContentIndex).trimEnd();
+      const suffix = existing.slice(closingContentIndex);
+      return [prefix, blocks.join('\n\n'), suffix].filter(Boolean).join('\n\n');
+    }
+  }
+  return [existing, blocks.join('\n\n')].filter(Boolean).join('\n\n');
+}
+
 function escapeHtml(input: string): string {
   return String(input ?? '')
     .replaceAll('&', '&amp;')
@@ -280,49 +328,8 @@ function buildRawTranscriptPreHtml(renderSource: string): string {
   return `<pre class="stream-stage-pre">${escapeHtml(text)}</pre>`;
 }
 
-function buildStreamingPendingDetails(kind: 'thinking' | 'variable' | 'generic', body: string): string {
-  const label = kind === 'thinking' ? '思考过程生成中' : kind === 'variable' ? '变量更新生成中' : '生成中';
-  const className =
-    kind === 'thinking'
-      ? 'assistant-runtime-thinking'
-      : kind === 'variable'
-        ? 'assistant-runtime-variable'
-        : 'assistant-runtime-pending';
-  const text = String(body ?? '').trim();
-  return `<details class="assistant-runtime-details ${className} assistant-runtime-pending" open><summary>${label}</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(text || '生成中...')}</pre></details>`;
-}
-
 function sanitizeAssistantRuntimeTagsForStreamingPreview(source: string): string {
-  let out = String(source ?? '');
-  if (!out) return out;
-
-  out = out.replace(
-    /<thinking\b[^>]*>([\s\S]*?)<\/thinking>/gi,
-    (_match, body: string) =>
-      `<details class="assistant-runtime-details assistant-runtime-thinking"><summary>思考过程</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(body)}</pre></details>`,
-  );
-  out = out.replace(
-    /<UpdateVariable\b[^>]*>([\s\S]*?)<\/UpdateVariable>/gi,
-    (_match, body: string) =>
-      `<details class="assistant-runtime-details assistant-runtime-variable"><summary>变量更新</summary><pre class="assistant-runtime-preview-pre">${escapeHtml(body)}</pre></details>`,
-  );
-
-  out = out.replace(/<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i, (_match, body: string) =>
-    buildStreamingPendingDetails('thinking', body),
-  );
-  out = out.replace(/<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i, (_match, body: string) =>
-    buildStreamingPendingDetails('variable', body),
-  );
-  out = out.replace(/<(criteria|option)\b[^>]*>(?![\s\S]*<\/\1>)([\s\S]*)$/i, (_match, _tag: string, body: string) =>
-    buildStreamingPendingDetails('generic', body),
-  );
-
-  out = out.replace(/<content\b[^>]*>/gi, '');
-  out = out.replace(/<\/content>/gi, '');
-  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
-  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '');
-
-  return out;
+  return String(source ?? '');
 }
 
 function shouldRefreshStreamingPreview(
@@ -462,53 +469,6 @@ function buildFallbackDisplayedHtml(renderSource: string): string {
   return `<p>${escaped}</p>`;
 }
 
-/**
- * 把 LLM 输出里的"剧本运行时标签"整理成用户可读的 HTML，在 `formatAsDisplayedMessage` 之前跑。
- *
- * 规则（来自用户明确指示）：
- * - `<criteria>` / `<option>`：由酒馆 display 正则清理（已经在工作），这里不碰；
- * - `<thinking>…</thinking>`：折叠成 `<details class="assistant-runtime-thinking">`；
- * - `<UpdateVariable>…</UpdateVariable>`：折叠成 `<details class="assistant-runtime-variable">`；
- * - `<content>…</content>`：去壳，只保留内部正文——框架标签留着会阻断浏览器段落解析，
- *   正文会被挤成一坨，这是"流式完成后正文挤在一堆"的真因；
- * - `<StatusPlaceHolderImpl/>`：删除（mvu 占位，纯 UI 用）；
- * - 其他（`<time>`、`<recap>`、`<metacognition>` 等）原样透传，由酒馆正则或浏览器兜底。
- */
-function sanitizeAssistantRuntimeTagsForDisplay(source: string): string {
-  let out = String(source ?? '');
-  if (!out) return out;
-
-  out = out.replace(
-    /<thinking\b[^>]*>([\s\S]*?)<\/thinking>/gi,
-    (_match, body: string) =>
-      `<details class="assistant-runtime-details assistant-runtime-thinking"><summary>思考过程</summary>${body}</details>`,
-  );
-
-  out = out.replace(
-    /<UpdateVariable\b[^>]*>([\s\S]*?)<\/UpdateVariable>/gi,
-    (_match, body: string) =>
-      `<details class="assistant-runtime-details assistant-runtime-variable"><summary>变量更新</summary>${body}</details>`,
-  );
-
-  // `<content>…</content>` 去壳；再删除模型截断/重复闭合时留下的孤立 content 标签。
-  out = out.replace(/<content\b[^>]*>([\s\S]*?)<\/content>/gi, (_match, body: string) => body);
-  out = out.replace(/<content\b[^>]*>/gi, '');
-  out = out.replace(/<\/content>/gi, '');
-
-  out = out.replace(/<thinking\b[^>]*>(?![\s\S]*<\/thinking>)([\s\S]*)$/i, (_match, body: string) =>
-    buildStreamingPendingDetails('thinking', body),
-  );
-  out = out.replace(/<UpdateVariable\b[^>]*>(?![\s\S]*<\/UpdateVariable>)([\s\S]*)$/i, (_match, body: string) =>
-    buildStreamingPendingDetails('variable', body),
-  );
-
-  // mvu 的 `<StatusPlaceHolderImpl/>` / `<StatusPlaceHolderImpl></StatusPlaceHolderImpl>`：无视觉含义。
-  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '');
-  out = out.replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '');
-
-  return out;
-}
-
 function buildFinalHtml(
   renderSource: string,
   message_id: number,
@@ -516,10 +476,7 @@ function buildFinalHtml(
   options: { appendArtifacts?: boolean } = {},
 ): string {
   let html = '';
-  // 先做运行时标签净化（<content> 去壳、<thinking>/<UpdateVariable> 折叠、<StatusPlaceHolderImpl/> 删），
-  // 否则未知框架标签会让后续 `<p>` 段落结构错位，正文完成态会被挤成一坨。
-  const sanitizedForRuntime = sanitizeAssistantRuntimeTagsForDisplay(renderSource || '(空回复)');
-  const renderSourceForDisplay = sanitizeRawImageTagsInHtml(sanitizedForRuntime);
+  const renderSourceForDisplay = sanitizeRawImageTagsInHtml(renderSource || '(空回复)');
   try {
     if (typeof formatAsDisplayedMessage === 'function') {
       // 先清洗 raw `<image>`，否则 Tavern formatter 会把它解析成无 src 的空 <img>，后续就无法识别了。
@@ -529,7 +486,7 @@ function buildFinalHtml(
     // ignore
   }
   if (!html) {
-    html = normalizeDisplayedHtml(buildFallbackDisplayedHtml(sanitizedForRuntime));
+    html = normalizeDisplayedHtml(buildFallbackDisplayedHtml(renderSourceForDisplay));
   }
   // 保底把裸露的 `<image></image>` 转成占位或 <img>；不然它会被 v-html 当字面文本渲染。
   html = sanitizeRawImageTagsInHtml(html);
@@ -1732,7 +1689,7 @@ export function useStreamingDemo() {
   const transcript = ref<TranscriptItem[]>([]);
   const filterMode = ref<TranscriptFilterMode>('all');
   const density = ref<TranscriptDensity>('comfortable');
-  const theme = ref<DemoTheme>('tech');
+  const theme = ref<DemoTheme>('amber');
   const fontMode = ref<ReaderFontMode>('hud');
   const readingMode = ref<ReadingMode>('following_latest');
   const transcriptWindowMode = ref<TranscriptWindowMode>('latest');
@@ -2603,21 +2560,6 @@ export function useStreamingDemo() {
       traceId,
     );
 
-    try {
-      await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
-      recordLifecycleTrace(
-        'emitOfficialGenerationLifecycle',
-        'message_received_emitted',
-        {
-          messageId: Math.trunc(normalizedId),
-          type,
-        },
-        traceId,
-      );
-    } catch {
-      // ignore
-    }
-
     // 在 emit 生命周期事件前注入宿主 DOM 节点
     // autoLLMClick 的 findElement 在 GENERATION_ENDED 后立即查 DOM
     const hostRendered = await ensureHostMesTextRendered(Math.trunc(normalizedId));
@@ -2645,6 +2587,21 @@ export function useStreamingDemo() {
     }
 
     try {
+      await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'message_received_emitted',
+        {
+          messageId: Math.trunc(normalizedId),
+          type,
+        },
+        traceId,
+      );
+    } catch {
+      // ignore
+    }
+
+    try {
       await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
       recordLifecycleTrace(
         'emitOfficialGenerationLifecycle',
@@ -2657,6 +2614,78 @@ export function useStreamingDemo() {
     } catch {
       // ignore
     }
+  }
+
+  async function waitForNativeMvuMessageWriteback(messageId: number) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) {
+      return Promise.resolve({ status: 'blocked', reason: 'invalid_message_id', message_id: null });
+    }
+    if (typeof eventOn !== 'function') {
+      return Promise.resolve({ status: 'skipped', reason: 'event_unavailable', message_id: normalizedId });
+    }
+    if (typeof Mvu === 'undefined' || !Mvu?.events?.BEFORE_MESSAGE_UPDATE) {
+      return Promise.resolve({ status: 'skipped', reason: 'mvu_event_unavailable', message_id: normalizedId });
+    }
+
+    return new Promise<{ status: string; reason: string; message_id: number }>(resolve => {
+      let settled = false;
+      let stop: StopHandle = null;
+      function finish(result: { status: string; reason: string; message_id: number }) {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        stop?.stop?.();
+        resolve(result);
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        finish({ status: 'skipped', reason: 'timeout', message_id: normalizedId });
+      }, 2500);
+
+      try {
+        stop = eventOn(Mvu.events.BEFORE_MESSAGE_UPDATE as any, async (context: any) => {
+          const messageContent = String(context?.message_content ?? '').trim();
+          const updateBlocks = extractMvuUpdateVariableBlocks(messageContent);
+          if (updateBlocks.length === 0) return;
+
+          try {
+            const chatMessage = getChatMessages(normalizedId, { hide_state: 'all' })?.[0];
+            const existingMessage = String(chatMessage?.message ?? chatMessage?.mes ?? '');
+            const mergedMessage = mergeMvuWritebackBlocksIntoAssistantText(existingMessage, messageContent);
+            if (!mergedMessage || mergedMessage === existingMessage.trim()) {
+              finish({ status: 'skipped', reason: 'already_present', message_id: normalizedId });
+              return;
+            }
+            await setChatMessages([{ message_id: normalizedId, message: mergedMessage, is_hidden: false }], {
+              refresh: 'affected',
+            });
+            upsertTranscriptItem(
+              createLocalTranscriptItem({
+                id: normalizedId,
+                role: 'assistant',
+                raw: mergedMessage,
+                hidden: false,
+              }),
+            );
+            mvuSourceRevision.value += 1;
+            finish({ status: 'applied', reason: 'native_message_writeback_merged', message_id: normalizedId });
+          } catch (error) {
+            finish({
+              status: 'error',
+              reason: error instanceof Error ? error.message : String(error),
+              message_id: normalizedId,
+            });
+          }
+        }) as StopHandle;
+      } catch (error) {
+        finish({
+          status: 'error',
+          reason: error instanceof Error ? error.message : String(error),
+          message_id: normalizedId,
+        });
+      }
+    });
   }
 
   function syncTranscriptFlags(items: TranscriptItem[]): TranscriptItem[] {
@@ -3733,6 +3762,7 @@ export function useStreamingDemo() {
     if (typeof text !== 'string') return '';
     const normalized = text.trim();
     if (/^\d{1,8}$/.test(normalized)) return '';
+    if (isVariableUpdateOnlyGenerationText(normalized)) return '';
     return normalized;
   }
 
@@ -4060,6 +4090,26 @@ export function useStreamingDemo() {
     generationSignalFinalized = false;
     generationSignalFinalizing = false;
     bindGenerationEvents();
+    let revealedHiddenIds: number[] = [];
+    let hiddenRevealRestored = false;
+    const restoreGenerationRevealWindow = async (reason: string) => {
+      if (hiddenRevealRestored || revealedHiddenIds.length === 0) return;
+      hiddenRevealRestored = true;
+      await setChatMessages(
+        revealedHiddenIds.map(id => ({ message_id: id, is_hidden: true })),
+        { refresh: 'none' },
+      );
+      recordLifecycleTrace(
+        'runGenerationFlow',
+        'reveal_window_restored',
+        {
+          reason,
+          revealMessageIds: revealedHiddenIds,
+          revealMessageIdsJson: JSON.stringify(revealedHiddenIds),
+        },
+        traceId,
+      );
+    };
     recordLifecycleTrace(
       'runGenerationFlow',
       'start',
@@ -4136,6 +4186,7 @@ export function useStreamingDemo() {
         revealMessageIds: hiddenIds,
       });
       if (hiddenIds.length > 0) {
+        revealedHiddenIds = hiddenIds;
         await setChatMessages(
           hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
           { refresh: 'none' },
@@ -4146,10 +4197,12 @@ export function useStreamingDemo() {
         options.detachedUserInput === true
           ? {
               user_input: prompt,
+              should_silence: true,
               should_stream: true,
               max_chat_history: options.maxChatHistory ?? 0,
             }
           : {
+              should_silence: true,
               should_stream: true,
               max_chat_history: options.maxChatHistory ?? 'all',
             },
@@ -4167,14 +4220,6 @@ export function useStreamingDemo() {
       );
 
       const result = String(await generatePromise).trim();
-
-      // 生成完成后重新隐藏
-      if (hiddenIds.length > 0) {
-        await setChatMessages(
-          hiddenIds.map(id => ({ message_id: id, is_hidden: true })),
-          { refresh: 'none' },
-        );
-      }
 
       finalText.value = result;
       status.value = 'persisting';
@@ -4205,15 +4250,17 @@ export function useStreamingDemo() {
         messageId: finalizedAssistantMessageId,
         lifecycleKind,
         traceId,
-        reprocessMessageVariablesById,
         emitOfficialGenerationLifecycle,
+        waitForNativeMvuMessageWriteback,
         recordLifecycleTrace,
         warn: console.warn,
       });
+      // MVU 额外模型解析也会在官方生命周期后组装提示词；此时仍要保持楼层可见，避免宏为空。
+      await restoreGenerationRevealWindow('post_done_side_effects');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
-      // 把"done patch + MVU reprocess + 官方生命周期事件"合成一次显式 save。
+      // 把"done patch + 官方生命周期事件"合成一次显式 save。
       // 默认情况下这些步骤各自都会调用 saveChatConditionalDebounced，debounce 1s 才落盘；
       // 如果用户在那一秒内刷新页面，保存就丢了。显式 await saveChat 可以保证 jsonl 已经写入，
       // 并让守护器通过 fetch hook 判断本次保存真正成功还是撞 EPERM。
@@ -4303,6 +4350,11 @@ export function useStreamingDemo() {
         hadVisibleAssistantContent,
       };
     } finally {
+      try {
+        await restoreGenerationRevealWindow('finally');
+      } catch {
+        // ignore
+      }
       clearGenerationListeners();
       busy.value = false;
       hostMesTextPrimedForCurrentGeneration = false;
@@ -4776,13 +4828,17 @@ export function useStreamingDemo() {
             );
             return;
           }
-          finalText.value = String(text ?? '').trim();
+          const signalFinalText = normalizeSignalFinalText(text);
+          if (signalFinalText) {
+            finalText.value = signalFinalText;
+          }
           recordLifecycleTrace(
             'bindGenerationEvents',
             'generation_ended',
             {
               listenerEpoch,
-              finalSignature: buildDebugMessageSignature(finalText.value),
+              finalSignature: buildDebugMessageSignature(signalFinalText || finalText.value),
+              signalIgnored: !signalFinalText,
             },
             traceId,
           );

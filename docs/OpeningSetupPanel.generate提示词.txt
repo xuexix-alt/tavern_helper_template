@@ -50,5 +50,4 @@
 输出格式说明：
   - `<content>` 正文内容 `</content>`
   - `<option>` 后续剧情推进选项，每个选项单独一行，确保4个选项放在同一个标签内 `</option>`
-  - `<UpdateVariable>` MVU变量指令 `</UpdateVariable>`
 </开局第一幕剧情创作需求>

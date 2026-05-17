@@ -33,7 +33,7 @@ export function migrateReaderChatState(raw: Partial<ReaderChatState>): Partial<R
     version: READER_CHAT_STATE_VERSION,
     reading_mode: normalizeReadingMode(raw?.reading_mode) ?? 'following_latest',
     density: normalizeDensity(raw?.density) ?? 'comfortable',
-    theme: normalizeTheme(raw?.theme) ?? 'tech',
+    theme: normalizeTheme(raw?.theme) ?? 'amber',
     font_mode: normalizeFontMode(raw?.font_mode) ?? 'hud',
     opening_expanded: typeof raw?.opening_expanded === 'boolean' ? raw.opening_expanded : true,
   };
@@ -63,7 +63,7 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
             normalizeReadingMode(current.reading_mode) ??
             'following_latest',
           density: normalizeDensity(patch.density) ?? normalizeDensity(current.density) ?? 'comfortable',
-          theme: normalizeTheme(patch.theme) ?? normalizeTheme(current.theme) ?? 'tech',
+          theme: normalizeTheme(patch.theme) ?? normalizeTheme(current.theme) ?? 'amber',
           font_mode: normalizeFontMode(patch.font_mode) ?? normalizeFontMode(current.font_mode) ?? 'hud',
           opening_expanded:
             typeof patch.opening_expanded === 'boolean'

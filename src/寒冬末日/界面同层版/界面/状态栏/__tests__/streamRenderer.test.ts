@@ -41,6 +41,20 @@ test('buildStreamRendererHtml prefers tavern display regex HTML output (role -> 
   assert.equal(calls[0].source, 'ai_output');
 });
 
+test('buildStreamRendererHtml preserves block-level Tavern regex HTML for streaming beautifiers', () => {
+  withTavernRegex(
+    text =>
+      `<div class="moon-regex"><details class="moon-thinking"><summary>月满如镜</summary>${text}</details></div><style>.moon-thinking{display:block}</style>`,
+    () => {
+      const html = buildStreamRendererHtml('[metacognition]\n她开始整理思绪。', 'assistant');
+      assert.match(html, /^<div class="moon-regex">/);
+      assert.match(html, /<details class="moon-thinking">/);
+      assert.match(html, /<style>\.moon-thinking\{display:block\}<\/style>$/);
+      assert.doesNotMatch(html, /&lt;details/);
+    },
+  );
+});
+
 test('buildStreamRendererHtml maps user / system roles to their regex sources', () => {
   const sources = [];
   withTavernRegex(

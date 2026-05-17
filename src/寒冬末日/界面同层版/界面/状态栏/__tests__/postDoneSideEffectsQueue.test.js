@@ -93,60 +93,63 @@ test('post-done side effects for different message ids may run concurrently', as
   await Promise.all([first, second]);
 });
 
-test('runQueuedPostDoneAssistantSideEffects runs MVU reprocess before lifecycle for one assistant message', async () => {
+test('runQueuedPostDoneAssistantSideEffects emits only the official lifecycle for one assistant message', async () => {
   const queue = createPostDoneSideEffectsQueue();
-  const mvuGate = deferred();
+  const lifecycleGate = deferred();
   const order = [];
-  const traceEntries = [];
-  const reprocessCalls = [];
 
   const run = runQueuedPostDoneAssistantSideEffects({
     queue,
     messageId: 12,
     lifecycleKind: 'normal',
     traceId: 'trace-1',
-    reprocessMessageVariablesById: async (messageId, options) => {
-      reprocessCalls.push({ messageId, options });
-      order.push('mvu:start');
-      await mvuGate.promise;
-      order.push('mvu:end');
-      return { status: 'applied' };
-    },
     emitOfficialGenerationLifecycle: async (messageId, kind) => {
-      order.push(`lifecycle:${messageId}:${kind}`);
+      order.push(`lifecycle:start:${messageId}:${kind}`);
+      await lifecycleGate.promise;
+      order.push(`lifecycle:end:${messageId}:${kind}`);
     },
-    recordLifecycleTrace: (scope, event, payload, traceId) => {
-      traceEntries.push({ scope, event, payload, traceId });
-    },
-    warn: () => {
-      throw new Error('warn should not be called for an applied reprocess');
-    },
+    recordLifecycleTrace: () => {},
   });
 
   await settleMicrotasks();
-  assert.deepEqual(order, ['mvu:start']);
+  assert.deepEqual(order, ['lifecycle:start:12:normal']);
+  assert.equal(queue.isBusy(12), true);
 
-  mvuGate.resolve();
+  lifecycleGate.resolve();
   await run;
 
-  assert.deepEqual(order, ['mvu:start', 'mvu:end', 'lifecycle:12:normal']);
-  assert.deepEqual(reprocessCalls, [
-    {
-      messageId: 12,
-      options: { force: true, refreshMessage: true },
+  assert.deepEqual(order, ['lifecycle:start:12:normal', 'lifecycle:end:12:normal']);
+  assert.equal(queue.isBusy(12), false);
+});
+
+test('runQueuedPostDoneAssistantSideEffects waits for native MVU message writeback after lifecycle', async () => {
+  const queue = createPostDoneSideEffectsQueue();
+  const order = [];
+  const writebackCalls = [];
+  const writebackGate = deferred();
+
+  await runQueuedPostDoneAssistantSideEffects({
+    queue,
+    messageId: 12,
+    lifecycleKind: 'normal',
+    traceId: 'trace-writeback',
+    emitOfficialGenerationLifecycle: async (messageId, kind) => {
+      order.push(`lifecycle:${messageId}:${kind}`);
+      writebackGate.resolve();
     },
-  ]);
-  assert.deepEqual(traceEntries, [
-    {
-      scope: 'runGenerationFlow',
-      event: 'mvu_reprocess_completed',
-      payload: {
-        assistantMessageId: 12,
-        reprocessStatus: 'applied',
-      },
-      traceId: 'trace-1',
+    waitForNativeMvuMessageWriteback: async messageId => {
+      writebackCalls.push(messageId);
+      order.push(`mvu-writeback-armed:${messageId}`);
+      await writebackGate.promise;
+      order.push(`mvu-writeback:${messageId}`);
+      return { status: 'applied' };
     },
-  ]);
+    recordLifecycleTrace: () => {},
+  });
+
+  assert.deepEqual(order, ['mvu-writeback-armed:12', 'lifecycle:12:normal', 'mvu-writeback:12']);
+  assert.deepEqual(writebackCalls, [12]);
+  assert.equal(queue.isBusy(12), false);
 });
 
 test('runQueuedHostMessageUpdate waits for earlier post-done stages for the same message', async () => {
@@ -212,7 +215,7 @@ test('timed out stages release the same message queue for later stages', async (
   assert.equal(queue.isBusy(12), false);
 });
 
-test('post-done assistant timeout records a warning and continues to lifecycle', async () => {
+test('post-done assistant side effects do not run direct MVU parsing before lifecycle', async () => {
   const queue = createPostDoneSideEffectsQueue({
     stageTimeoutMs: {
       mvu: 5,
@@ -228,11 +231,6 @@ test('post-done assistant timeout records a warning and continues to lifecycle',
     messageId: 12,
     lifecycleKind: 'normal',
     traceId: 'trace-timeout',
-    reprocessMessageVariablesById: async () => {
-      order.push('mvu:start');
-      await new Promise(() => {});
-      return { status: 'applied' };
-    },
     emitOfficialGenerationLifecycle: async (messageId, kind) => {
       order.push(`lifecycle:${messageId}:${kind}`);
     },
@@ -244,20 +242,9 @@ test('post-done assistant timeout records a warning and continues to lifecycle',
     },
   });
 
-  assert.deepEqual(order, ['mvu:start', 'lifecycle:12:normal']);
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0].message, /timed out/);
-  assert.deepEqual(traceEntries, [
-    {
-      scope: 'runGenerationFlow',
-      event: 'mvu_reprocess_timeout',
-      payload: {
-        assistantMessageId: 12,
-        stage: 'mvu',
-      },
-      traceId: 'trace-timeout',
-    },
-  ]);
+  assert.deepEqual(order, ['lifecycle:12:normal']);
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(traceEntries, []);
 });
 
 test('post-done assistant lifecycle timeout is recorded without failing finalization', async () => {
@@ -274,7 +261,6 @@ test('post-done assistant lifecycle timeout is recorded without failing finaliza
     messageId: 12,
     lifecycleKind: 'normal',
     traceId: 'trace-lifecycle-timeout',
-    reprocessMessageVariablesById: async () => ({ status: 'applied' }),
     emitOfficialGenerationLifecycle: async () => {
       await new Promise(() => {});
     },

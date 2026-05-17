@@ -29,10 +29,10 @@ test('assistant streaming state should be surfaced on the outer card instead of 
   );
   assert.equal(
     source.includes(
-      '.assistant-body-wrap :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-panel-strong);\n  font: inherit;\n  line-height: inherit;',
+      '.assistant-body-wrap :deep(.stream-stage-pre) {\n  margin: 0;\n  max-width: 100%;\n  overflow-x: auto;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  color: var(--demo-text-panel-strong);\n  font: inherit;\n  line-height: inherit;',
     ),
     true,
-    'assistant stream-stage pre blocks should inherit the same line-height contract as the live body wrapper',
+    'assistant stream-stage pre blocks should inherit the same line-height contract while isolating overflow locally',
   );
 });
 
@@ -56,10 +56,10 @@ test('opening streaming state should reuse the final body width instead of wrapp
   );
   assert.equal(
     source.includes(
-      '.html-body :deep(.stream-stage-pre) {\n  margin: 0;\n  white-space: pre-wrap;\n  word-break: break-word;\n  color: var(--demo-text-opening-strong);\n  font: inherit;\n  line-height: inherit;',
+      '.html-body :deep(.stream-stage-pre) {\n  margin: 0;\n  max-width: 100%;\n  overflow-x: auto;\n  white-space: pre-wrap;\n  overflow-wrap: anywhere;\n  word-break: break-word;\n  color: var(--demo-text-opening-strong);\n  font: inherit;\n  line-height: inherit;',
     ),
     true,
-    'opening stream-stage pre blocks should inherit the same line-height contract as the opening prose wrapper',
+    'opening stream-stage pre blocks should inherit the same line-height contract while isolating overflow locally',
   );
 });
 
@@ -92,5 +92,68 @@ test('transcript cards should share one centered prose width contract for both r
     openingSource.includes('margin-inline: auto;'),
     true,
     'opening cards should be centered within the same reading rail as the rest of the transcript',
+  );
+});
+
+test('reader theme defaults to amber when no saved layout choice exists', () => {
+  const readerStateSource = readSource('readerState.ts');
+  const demoSource = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    readerStateSource.includes("theme: normalizeTheme(raw?.theme) ?? 'amber'"),
+    true,
+    'migrated reader chat state should default missing theme values to amber',
+  );
+  assert.equal(
+    readerStateSource.includes("theme: normalizeTheme(patch.theme) ?? normalizeTheme(current.theme) ?? 'amber'"),
+    true,
+    'reader chat state patching should preserve amber as the fallback theme',
+  );
+  assert.equal(
+    demoSource.includes("const theme = ref<DemoTheme>('amber');"),
+    true,
+    'fresh same-layer reader sessions should start on the amber theme before restored state is applied',
+  );
+});
+
+test('transcript html bodies isolate unbreakable content so it cannot widen parent cards', () => {
+  const messageSource = readSource('components/TranscriptMessageCard.vue');
+  const openingSource = readSource('components/TranscriptOpeningCard.vue');
+  const streamRendererSource = readSource('components/StreamRenderer.vue');
+
+  assert.equal(
+    messageSource.includes('.assistant-body {\n  position: relative;\n  z-index: 1;\n  contain: inline-size;'),
+    true,
+    'assistant html body should contain inline sizing so unbreakable regex HTML cannot widen ancestor cards',
+  );
+  assert.equal(
+    messageSource.includes('overflow-x: hidden;\n  overflow-wrap: anywhere;'),
+    true,
+    'assistant html body should force ordinary oversized inline content to wrap instead of widening or scrolling the whole prose body',
+  );
+  assert.equal(
+    messageSource.includes('.assistant-body-wrap :deep(div),\n.assistant-body-wrap :deep(section),'),
+    true,
+    'assistant html descendants should be clamped to the body width even when regex output uses block wrappers',
+  );
+  assert.equal(
+    openingSource.includes('.html-body {\n  contain: inline-size;'),
+    true,
+    'opening html body should use the same inline-size containment contract as normal assistant bodies',
+  );
+  assert.equal(
+    streamRendererSource.includes('.stream-renderer {\n  display: block;\n  contain: inline-size;'),
+    true,
+    'streaming renderer should isolate unbreakable live regex output before done rendering takes over',
+  );
+  assert.equal(
+    messageSource.includes('.assistant-body-wrap :deep(pre),\n.assistant-body-wrap :deep(table) {\n  display: block;\n  max-width: 100%;\n  overflow-x: auto;'),
+    true,
+    'only preformatted blocks and tables should keep local horizontal scrolling',
+  );
+  assert.equal(
+    messageSource.includes('.assistant-body-wrap :deep(pre) {\n  white-space: pre;\n}'),
+    true,
+    'preformatted code blocks should preserve long lines instead of forced wrapping',
   );
 });

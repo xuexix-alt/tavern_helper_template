@@ -7,7 +7,7 @@
         "地址": "",
         "日期": "",
         "时间": "上午 - 08:00",
-        "末日天数": 0
+        "末日天数": -90
       },
       "type": "object",
       "properties": {
@@ -23,6 +23,7 @@
           "pattern": "^(凌晨|清晨|上午|中午|下午|傍晚|夜间|深夜) - \\d{2}:\\d{2}$"
         },
         "末日天数": {
+          "default": -90,
           "type": "number"
         }
       }
@@ -180,6 +181,63 @@
             },
             "note": {
               "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "伊甸一次性指令": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "指令编号"
+      },
+      "additionalProperties": {
+        "default": {
+          "名称": "",
+          "数量": 0,
+          "说明": "",
+          "范围": "",
+          "时效": "",
+          "生效实例": []
+        },
+        "type": "object",
+        "properties": {
+          "名称": {
+            "type": "string"
+          },
+          "数量": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "说明": {
+            "type": "string"
+          },
+          "范围": {
+            "type": "string"
+          },
+          "时效": {
+            "type": "string"
+          },
+          "生效实例": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "default": {
+                "对象范围": "",
+                "剩余时效": ""
+              },
+              "type": "object",
+              "properties": {
+                "对象范围": {
+                  "type": "string"
+                },
+                "剩余时效": {
+                  "type": "string"
+                }
+              }
             }
           }
         }
@@ -692,6 +750,7 @@
             "type": "string",
             "enum": [
               "无",
+              "永久逃离",
               "逃离",
               "交易",
               "协作",
@@ -797,6 +856,7 @@
         "type": "string",
         "enum": [
           "无",
+          "永久逃离",
           "逃离",
           "交易",
           "协作",

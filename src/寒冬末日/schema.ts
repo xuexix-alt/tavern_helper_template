@@ -218,13 +218,13 @@ export const Schema = z
         地址: z.string().prefault(''),
         日期: z.string().prefault(''),
         时间: z.preprocess(normalizeTimeText, 时间格式Schema).prefault('上午 - 08:00').catch('上午 - 08:00'),
-        末日天数: z.coerce.number().prefault(0),
+        末日天数: z.coerce.number().prefault(-90),
       })
       .prefault({
         地址: '',
         日期: '',
         时间: '上午 - 08:00',
-        末日天数: 0,
+        末日天数: -90,
       }),
 
     庇护所: z

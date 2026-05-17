@@ -1,8 +1,8 @@
 <template>
   <div class="stream-renderer" :class="{ 'is-active': active }" :data-message-id="messageId">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <span class="stream-renderer__body" v-html="displayHtml"></span
-    ><span v-if="active" class="stream-renderer__cursor" aria-hidden="true"></span>
+    <div class="stream-renderer__body" v-html="displayHtml"></div>
+    <span v-if="active" class="stream-renderer__cursor" aria-hidden="true"></span>
   </div>
 </template>
 
@@ -37,10 +37,14 @@ const displayHtml = computed(() => buildStreamRendererHtml(props.message, props.
 <style scoped>
 .stream-renderer {
   display: block;
+  contain: inline-size;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .stream-renderer__body {
+  display: contents;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;

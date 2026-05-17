@@ -255,10 +255,12 @@ const streamingOpeningHtml = computed(() => {
 }
 
 .html-body {
+  contain: inline-size;
   padding: 2px 0 0;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  overflow-x: hidden;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -280,7 +282,10 @@ const streamingOpeningHtml = computed(() => {
 
 .html-body :deep(.stream-stage-pre) {
   margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
   color: var(--demo-text-opening-strong);
   font: inherit;
@@ -309,8 +314,35 @@ const streamingOpeningHtml = computed(() => {
 
 .html-body :deep(pre),
 .html-body :deep(table) {
+  display: block;
   max-width: 100%;
   overflow-x: auto;
+}
+
+.html-body :deep(pre) {
+  white-space: pre;
+}
+
+.html-body :deep(img),
+.html-body :deep(video),
+.html-body :deep(canvas),
+.html-body :deep(svg),
+.html-body :deep(iframe) {
+  max-width: 100%;
+  height: auto;
+}
+
+.html-body :deep(div),
+.html-body :deep(section),
+.html-body :deep(article),
+.html-body :deep(details),
+.html-body :deep(summary),
+.html-body :deep(figure) {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .html-body :deep(code),

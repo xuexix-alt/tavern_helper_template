@@ -37,7 +37,7 @@ function extractFunctionBody(text, functionName) {
   throw new Error(`failed to extract ${functionName}`);
 }
 
-test('runGenerationFlow queues post-done MVU and lifecycle side effects per assistant message id', () => {
+test('runGenerationFlow queues post-done official lifecycle side effects per assistant message id', () => {
   const body = extractFunctionBody(source, 'runGenerationFlow');
 
   assert.match(
@@ -57,13 +57,43 @@ test('runGenerationFlow queues post-done MVU and lifecycle side effects per assi
   );
   assert.match(
     body,
-    /queue: postDoneSideEffectsQueue,[\s\S]*messageId: finalizedAssistantMessageId,[\s\S]*reprocessMessageVariablesById,[\s\S]*emitOfficialGenerationLifecycle,/,
-    'runGenerationFlow should pass the real MVU and lifecycle dependencies into the helper',
+    /queue: postDoneSideEffectsQueue,[\s\S]*messageId: finalizedAssistantMessageId,[\s\S]*emitOfficialGenerationLifecycle,[\s\S]*waitForNativeMvuMessageWriteback,/,
+    'runGenerationFlow should pass the official lifecycle and native MVU writeback dependencies into the helper',
+  );
+  assert.doesNotMatch(
+    body,
+    /runQueuedPostDoneAssistantSideEffects\(\{[\s\S]*reprocessMessageVariablesById/,
+    'normal post-done flow should not manually call Mvu.parseMessage before the official lifecycle',
+  );
+  assert.match(
+    source,
+    /async function waitForNativeMvuMessageWriteback\(/,
+    'same-layer should wait for native MVU extra-analysis text writeback after the official lifecycle',
+  );
+  assert.match(
+    source,
+    /Mvu\.events\.BEFORE_MESSAGE_UPDATE/,
+    'native MVU message writeback should be captured from the before-message-update event',
   );
   assert.match(
     body,
     /const finalizedAssistantMessageId = assistantMessageId\.value;/,
     'done side effects should use one stable assistant message id snapshot',
+  );
+});
+
+test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event order', () => {
+  const body = extractFunctionBody(source, 'emitOfficialGenerationLifecycle');
+  const generationEndedIndex = body.indexOf('eventEmit(tavern_events.GENERATION_ENDED');
+  const messageReceivedIndex = body.indexOf('eventEmit(tavern_events.MESSAGE_RECEIVED');
+  const messageUpdatedIndex = body.indexOf('eventEmit(tavern_events.MESSAGE_UPDATED');
+
+  assert.notEqual(generationEndedIndex, -1, 'same-layer should emit GENERATION_ENDED for native plugin consumers');
+  assert.notEqual(messageReceivedIndex, -1, 'same-layer should emit MESSAGE_RECEIVED after generation end');
+  assert.notEqual(messageUpdatedIndex, -1, 'same-layer should emit MESSAGE_UPDATED after message receipt');
+  assert.ok(
+    generationEndedIndex < messageReceivedIndex && messageReceivedIndex < messageUpdatedIndex,
+    'same-layer lifecycle should follow native Tavern order: GENERATION_ENDED -> MESSAGE_RECEIVED -> MESSAGE_UPDATED',
   );
 });
 

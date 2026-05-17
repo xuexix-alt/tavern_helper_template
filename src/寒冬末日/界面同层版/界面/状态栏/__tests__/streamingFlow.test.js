@@ -201,18 +201,19 @@ test('transcript item html prefers host-rendered mes_text when available', () =>
   );
 });
 
-test('stream-demo wrapped assistant streaming keeps the runtime-tag sanitizer for the streamHtml fallback path', () => {
+test('stream-demo wrapped assistant streaming leaves runtime XML to Tavern display regex', () => {
   const useStreamingSource = readSource('useStreamingDemo.ts');
+  const previewBody = extractFunctionBody(useStreamingSource, 'sanitizeAssistantRuntimeTagsForStreamingPreview');
 
   assert.match(
     useStreamingSource,
     /function sanitizeAssistantRuntimeTagsForStreamingPreview/,
-    'the streamHtml fallback path should still have a dedicated runtime-tag sanitizer',
+    'the streamHtml fallback path should keep a narrow hook for preview normalization',
   );
-  assert.match(
-    extractFunctionBody(useStreamingSource, 'sanitizeAssistantRuntimeTagsForStreamingPreview'),
-    /buildStreamingPendingDetails\('thinking'[\s\S]{0,260}buildStreamingPendingDetails\('variable'[\s\S]{0,260}buildStreamingPendingDetails\('generic'/,
-    'unfinished XML/runtime blocks should become a pending placeholder instead of leaking raw tags',
+  assert.doesNotMatch(
+    previewBody,
+    /buildStreamingPendingDetails|assistant-runtime-variable|assistant-runtime-thinking|<UpdateVariable|<thinking|<content/,
+    'same-layer preview should not maintain business XML rendering rules',
   );
 });
 
@@ -240,6 +241,16 @@ test('StreamRenderer streaming preview faithfully reflects output and strips cha
     componentSource,
     /buildStreamRendererHtml\(props\.message, props\.role\)/,
     'StreamRenderer.vue should consume the snapshot message via the pure render helper',
+  );
+  assert.match(
+    componentSource,
+    /<div class="stream-renderer__body" v-html="displayHtml"><\/div>/,
+    'StreamRenderer v-html boundary should be a block-capable container for Tavern regex HTML',
+  );
+  assert.doesNotMatch(
+    componentSource,
+    /<span class="stream-renderer__body" v-html="displayHtml">/,
+    'StreamRenderer must not mount block-level Tavern regex HTML inside an inline span',
   );
 });
 
@@ -316,6 +327,16 @@ test('host generation-ended signals can finalize the active streaming message be
     'host generation-ended numeric payloads should not be mistaken for final assistant text',
   );
   assert.match(
+    source,
+    /function isVariableUpdateOnlyGenerationText/,
+    'same-layer generation-ended handling should detect MVU extra-analysis payloads that contain only UpdateVariable XML',
+  );
+  assert.match(
+    extractFunctionBody(source, 'normalizeSignalFinalText'),
+    /isVariableUpdateOnlyGenerationText\(normalized\)/,
+    'MVU extra-analysis UpdateVariable output must not overwrite the already streamed assistant正文',
+  );
+  assert.match(
     bindBody,
     /queueGenerationFinalizeFromSignal\('iframe\.generation_ended'/,
     'iframe generation-ended should queue a done patch instead of only recording finalText',
@@ -329,6 +350,49 @@ test('host generation-ended signals can finalize the active streaming message be
     source,
     /if \(generationSignalFinalizeTimer\) \{[\s\S]{0,320}await finalizeAssistantMessageFromSignal\(queuedReason\);/,
     'runGenerationFlow should flush a queued ended signal before treating a late generate() rejection as a real error',
+  );
+});
+
+test('native MVU writeback is merged inside the stream-demo content wrapper so image anchors keep the same raw message shape', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const mergeBody = extractFunctionBody(source, 'mergeMvuWritebackBlocksIntoAssistantText');
+
+  assert.match(
+    mergeBody,
+    /isStreamDemoMessage\(existing\)/,
+    'MVU writeback merging should detect same-layer stream-demo wrapped assistant floors',
+  );
+  assert.match(
+    mergeBody,
+    /lastIndexOf\(['"]<\/content>['"]\)/,
+    'MVU writeback should be inserted before the stream-demo closing content tag',
+  );
+  assert.match(
+    mergeBody,
+    /if \(closingContentIndex >= 0\) \{[\s\S]*return \[prefix, blocks\.join\('\\n\\n'\), suffix\]\.filter\(Boolean\)\.join\('\\n\\n'\);[\s\S]*\}/,
+    'wrapped assistant floors should insert MVU writeback before </content> instead of falling through to the fallback append',
+  );
+});
+
+test('same-layer final rendering no longer handles business XML blocks before Tavern display regex', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const finalBody = extractFunctionBody(source, 'buildFinalHtml');
+  const previewBody = extractFunctionBody(source, 'sanitizeAssistantRuntimeTagsForStreamingPreview');
+
+  assert.equal(
+    source.includes('function sanitizeAssistantRuntimeTagsForDisplay'),
+    false,
+    'same-layer done rendering should not maintain its own business XML sanitizer',
+  );
+  assert.doesNotMatch(
+    finalBody,
+    /<UpdateVariable|<thinking|<content|assistant-runtime-variable|assistant-runtime-thinking/,
+    'done rendering should leave XML block structure to Tavern regex instead of folding or stripping it locally',
+  );
+  assert.doesNotMatch(
+    previewBody,
+    /<UpdateVariable|<thinking|<content|assistant-runtime-variable|assistant-runtime-thinking/,
+    'streaming preview should also avoid same-layer business XML parsing',
   );
 });
 
@@ -348,6 +412,22 @@ test('runGenerationFlow triggers one explicit chat save after the lifecycle emit
     source,
     /await patchAssistantMessage\('done'\);\s*await flushExplicitChatSave\('generation_error'\)/,
     'error recovery should also flush an explicit save so the "生成失败" message is persisted',
+  );
+});
+
+test('same-layer internal generate calls are silent until the done patch emits the official lifecycle', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(
+    body,
+    /generate\(\s*[\s\S]{0,360}should_silence:\s*true,[\s\S]{0,360}should_stream:\s*true/,
+    'internal same-layer generate() calls should be silent so native generation_ended cannot race ahead of the final done patch',
+  );
+  assert.match(
+    body,
+    /await patchAssistantMessage\('done'\);[\s\S]{0,420}await runQueuedPostDoneAssistantSideEffects/,
+    'the official lifecycle should still be emitted only after the final done message is written',
   );
 });
 
