@@ -41,7 +41,7 @@ function normalizeReasoningConfig(config?: TavernReasoningConfig): Required<Tave
     autoExpand: config?.autoExpand === true,
     showHidden: config?.showHidden === true,
     parseReasoningFromString:
-      typeof config?.parseReasoningFromString === 'function' ? config.parseReasoningFromString : (() => null),
+      typeof config?.parseReasoningFromString === 'function' ? config.parseReasoningFromString : () => null,
   };
 }
 

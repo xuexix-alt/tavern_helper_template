@@ -3883,7 +3883,9 @@ export function useStreamingDemo() {
     const hasNativeReasoning = nativeReasoningText.value.trim().length > 0;
     const nextMessageBody =
       reasoningVisibleText ||
-      (phase === 'stream' && (hasNativeReasoning || reasoningStreamState.reasoningState === 'thinking') ? '思考中' : '');
+      (phase === 'stream' && (hasNativeReasoning || reasoningStreamState.reasoningState === 'thinking')
+        ? '思考中'
+        : '');
     const nextMessage = buildStreamDemoMessage(nextMessageBody, phase);
     if (phase === 'done') {
       streamingPreviewCache.delete(Math.trunc(Number(messageId)));
