@@ -300,6 +300,79 @@ test('incremental stream tokens are coalesced before patching host chat and tran
   );
 });
 
+test('same-layer stream patches use Tavern reasoning visible text instead of raw think blocks', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const patchBody = extractFunctionBody(source, 'patchAssistantMessage');
+  const runBody = extractFunctionBody(source, 'runGenerationFlow');
+  const bindBody = extractFunctionBody(source, 'bindGenerationEvents');
+
+  assert.match(
+    source,
+    /import \{[\s\S]{0,260}createReasoningStreamState[\s\S]{0,260}extractNativeReasoningText[\s\S]{0,260}readTavernReasoningConfig[\s\S]{0,260}resolveReasoningVisibleText[\s\S]{0,260}\} from '\.\/reasoningStreamBridge';/,
+    'same-layer streaming should import the reasoning bridge instead of parsing think blocks in the renderer',
+  );
+  assert.match(
+    runBody,
+    /reasoningStreamState\.reset\(readTavernReasoningConfig\(\)\);/,
+    'each generation should refresh the Tavern reasoning prefix/suffix settings',
+  );
+  assert.match(
+    bindBody,
+    /reasoningStreamState\.appendRawToken\(tokenText\);/,
+    'incremental raw tokens should update the reasoning bridge before the coalesced patch',
+  );
+  assert.match(
+    bindBody,
+    /iframe_events\.STREAM_TOKEN_RECEIVED_FULLY/,
+    'full streaming text should be observed because Tavern may temporarily move reasoning out of message.mes',
+  );
+  assert.match(
+    bindBody,
+    /reasoningStreamState\.setRawText\(fullText\);/,
+    'full streaming text should replace the reasoning bridge raw buffer instead of relying only on token increments',
+  );
+  assert.match(
+    patchBody,
+    /resolveReasoningVisibleText\(\s*reasoningStreamState,\s*phase === 'done' \? finalText\.value : '',\s*phase,\s*\)/,
+    'stream-demo patches should write the reasoning-visible body into the assistant message wrapper',
+  );
+  assert.match(
+    bindBody,
+    /tavern_events\.STREAM_REASONING_DONE/,
+    'same-layer should listen to Tavern native reasoning completion because reasoning may not arrive as visible tokens',
+  );
+  assert.match(
+    patchBody,
+    /nativeReasoningText\.value\.trim\(\)/,
+    'patchAssistantMessage should use Tavern parsed reasoning state when no visible body is available',
+  );
+  assert.match(
+    patchBody,
+    /phase === 'stream' && \(hasNativeReasoning \|\| reasoningStreamState\.reasoningState === 'thinking'\) \? '思考中' : ''/,
+    'reasoning-only streaming should display thinking only after reasoning tokens or native reasoning arrive',
+  );
+  assert.doesNotMatch(
+    patchBody,
+    /phase === 'stream' \? '思考中' : ''/,
+    'initial stream placeholder should not say thinking before any reasoning evidence arrives',
+  );
+  assert.match(
+    source,
+    /buildStreamDemoMessage\('流式请求中', 'stream'\)/,
+    'fresh assistant placeholders should say the stream request is pending before any token arrives',
+  );
+  assert.doesNotMatch(
+    patchBody,
+    /思考完成，等待正文/,
+    'done patches should not persist a synthetic waiting-for-content sentence into the assistant story body',
+  );
+  assert.doesNotMatch(
+    patchBody,
+    /phase === 'done' \? finalText\.value \|\| streamText\.value : streamText\.value/,
+    'patchAssistantMessage must not write raw think stream text directly into the visible assistant body',
+  );
+});
+
 test('finalization cancels any pending coalesced stream patch before writing the done message', () => {
   const source = readSource('useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'runGenerationFlow');

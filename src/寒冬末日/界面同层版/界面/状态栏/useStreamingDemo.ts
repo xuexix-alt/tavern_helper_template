@@ -136,6 +136,12 @@ import {
 } from './runtimeLeasePersistence';
 import { SAME_LAYER_LEASE_HEARTBEAT_MS } from './runtimeLeasePolicy';
 import { installSameLayerSaveGuardian, SaveGuardianHandle, SaveGuardianHealth } from './samelayerSaveGuardian';
+import {
+  createReasoningStreamState,
+  extractNativeReasoningText,
+  readTavernReasoningConfig,
+  resolveReasoningVisibleText,
+} from './reasoningStreamBridge';
 import { shouldForceTranscriptDomRefresh } from './transcriptDomRefresh';
 import { applyTranscriptArtifacts } from './transcriptImagePersistence';
 import { buildTranscriptWindowPageOptions, resolveTranscriptWindowRange } from './transcriptWindow';
@@ -1684,6 +1690,8 @@ export function useStreamingDemo() {
   const status = ref<DemoStatus>('idle');
   const streamText = ref('');
   const finalText = ref('');
+  const reasoningStreamState = createReasoningStreamState(readTavernReasoningConfig());
+  const nativeReasoningText = ref('');
   const errorText = ref('');
   const assistantMessageId = ref<number | null>(null);
   const transcript = ref<TranscriptItem[]>([]);
@@ -3863,10 +3871,20 @@ export function useStreamingDemo() {
       return;
     }
 
-    const nextMessage = buildStreamDemoMessage(
-      phase === 'done' ? finalText.value || streamText.value : streamText.value,
+    const reasoningVisibleText = resolveReasoningVisibleText(
+      reasoningStreamState,
+      phase === 'done' ? finalText.value : '',
       phase,
     );
+    const latestNativeReasoningText = extractNativeReasoningText(readChatMessageDetail(messageId));
+    if (latestNativeReasoningText) {
+      nativeReasoningText.value = latestNativeReasoningText;
+    }
+    const hasNativeReasoning = nativeReasoningText.value.trim().length > 0;
+    const nextMessageBody =
+      reasoningVisibleText ||
+      (phase === 'stream' && (hasNativeReasoning || reasoningStreamState.reasoningState === 'thinking') ? '思考中' : '');
+    const nextMessage = buildStreamDemoMessage(nextMessageBody, phase);
     if (phase === 'done') {
       streamingPreviewCache.delete(Math.trunc(Number(messageId)));
     }
@@ -3882,6 +3900,8 @@ export function useStreamingDemo() {
         messageId,
         nextSignature,
         previousSignature,
+        nativeReasoningSignature: buildDebugMessageSignature(nativeReasoningText.value),
+        hasNativeReasoning,
       },
       traceId,
     );
@@ -4081,6 +4101,8 @@ export function useStreamingDemo() {
     status.value = 'preparing';
     streamText.value = '';
     finalText.value = '';
+    reasoningStreamState.reset(readTavernReasoningConfig());
+    nativeReasoningText.value = '';
     errorText.value = '';
     assistantMessageId.value = null;
     latestPatchedMessage = '';
@@ -4222,6 +4244,9 @@ export function useStreamingDemo() {
       const result = String(await generatePromise).trim();
 
       finalText.value = result;
+      if (result) {
+        reasoningStreamState.setRawText(result);
+      }
       status.value = 'persisting';
       cancelGenerationSignalFinalize();
       cancelScheduledStreamTranscriptPatch();
@@ -4786,6 +4811,7 @@ export function useStreamingDemo() {
           void (async () => {
             const tokenText = String(token ?? '');
             streamText.value += tokenText;
+            reasoningStreamState.appendRawToken(tokenText);
             status.value = 'streaming';
             recordLifecycleTrace(
               'bindGenerationEvents',
@@ -4816,6 +4842,117 @@ export function useStreamingDemo() {
 
     try {
       generationStops.push(
+        eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY as any, (text: string) => {
+          if (isStaleListener()) {
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'token_full_ignored_stale',
+              {
+                listenerEpoch,
+                textLength: String(text ?? '').length,
+              },
+              traceId,
+            );
+            return;
+          }
+          void (async () => {
+            const fullText = String(text ?? '');
+            streamText.value = fullText;
+            reasoningStreamState.setRawText(fullText);
+            status.value = 'streaming';
+            recordLifecycleTrace(
+              'bindGenerationEvents',
+              'token_full',
+              {
+                listenerEpoch,
+                textLength: fullText.length,
+                streamSignature: buildDebugMessageSignature(streamText.value),
+              },
+              traceId,
+            );
+            if (
+              shouldCreateAssistantPlaceholderOnFirstToken({
+                assistantMessageId: assistantMessageId.value,
+                placeholderCreating: assistantPlaceholderCreating,
+                token: fullText,
+              })
+            ) {
+              await ensureAssistantPlaceholderReady('first_token');
+            }
+            scheduleStreamTranscriptPatch();
+          })();
+        }),
+      );
+    } catch {
+      // ignore
+    }
+
+    try {
+      generationStops.push(
+        eventOn(
+          tavern_events.STREAM_REASONING_DONE as any,
+          (reasoning: string, _duration: number, messageId: number, state?: string) => {
+            if (isStaleListener()) {
+              recordLifecycleTrace(
+                'bindGenerationEvents',
+                'stream_reasoning_done_ignored_stale',
+                {
+                  listenerEpoch,
+                },
+                traceId,
+              );
+              return;
+            }
+            void (async () => {
+              const eventMessageId = Math.trunc(Number(messageId));
+              const currentAssistantId = assistantMessageId.value;
+              if (
+                Number.isFinite(eventMessageId) &&
+                eventMessageId >= 0 &&
+                currentAssistantId != null &&
+                eventMessageId !== currentAssistantId
+              ) {
+                recordLifecycleTrace(
+                  'bindGenerationEvents',
+                  'stream_reasoning_done_ignored_message_id',
+                  {
+                    listenerEpoch,
+                    eventMessageId,
+                    assistantMessageId: currentAssistantId,
+                  },
+                  traceId,
+                );
+                return;
+              }
+
+              nativeReasoningText.value = String(reasoning ?? '').trim();
+              if (!nativeReasoningText.value) return;
+              status.value = 'streaming';
+              if (assistantMessageId.value == null) {
+                await ensureAssistantPlaceholderReady('native_reasoning');
+              }
+              recordLifecycleTrace(
+                'bindGenerationEvents',
+                'stream_reasoning_done',
+                {
+                  listenerEpoch,
+                  eventMessageId: Number.isFinite(eventMessageId) ? eventMessageId : null,
+                  state: String(state ?? ''),
+                  reasoningSignature: buildDebugMessageSignature(nativeReasoningText.value),
+                },
+                traceId,
+              );
+              scheduleStreamTranscriptPatch();
+            })();
+          },
+        ),
+      );
+    } catch {
+      // ignore
+    }
+
+    try {
+      generationStops.push(
         eventOn(iframe_events.GENERATION_ENDED as any, (text: string) => {
           if (isStaleListener()) {
             recordLifecycleTrace(
@@ -4831,6 +4968,7 @@ export function useStreamingDemo() {
           const signalFinalText = normalizeSignalFinalText(text);
           if (signalFinalText) {
             finalText.value = signalFinalText;
+            reasoningStreamState.setRawText(signalFinalText);
           }
           recordLifecycleTrace(
             'bindGenerationEvents',
@@ -4854,7 +4992,14 @@ export function useStreamingDemo() {
     const traceId = resolveTraceId('placeholder');
     const assistantData = resolveInheritedUserMessageData();
     await createChatMessages(
-      [{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage('', 'stream'), data: assistantData }],
+      [
+        {
+          role: 'assistant',
+          is_hidden: false,
+          message: buildStreamDemoMessage('流式请求中', 'stream'),
+          data: assistantData,
+        },
+      ],
       {
         refresh: 'none',
       },
@@ -4867,7 +5012,7 @@ export function useStreamingDemo() {
         createLocalTranscriptItem({
           id: assistantMessageId.value,
           role: 'assistant',
-          raw: buildStreamDemoMessage('', 'stream'),
+          raw: buildStreamDemoMessage('流式请求中', 'stream'),
           hidden: false,
         }),
       );
@@ -4877,7 +5022,7 @@ export function useStreamingDemo() {
       'created',
       {
         assistantMessageId: assistantMessageId.value,
-        placeholderSignature: buildDebugMessageSignature(buildStreamDemoMessage('', 'stream')),
+        placeholderSignature: buildDebugMessageSignature(buildStreamDemoMessage('流式请求中', 'stream')),
       },
       traceId,
     );

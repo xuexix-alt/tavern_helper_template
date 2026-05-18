@@ -70,3 +70,18 @@ test('opening worldbook reads world mode profiles from the synced config instead
   assert.match(worldViewSource, /末日后1年-生存压力/);
   assert.match(worldViewSource, /末日后1年-秩序重建/);
 });
+
+test('Eden one-shot task worldbook EJS compiles without an unclosed outer scope', () => {
+  const edenTaskSource = fs.readFileSync(
+    path.resolve(repoRoot, 'src/寒冬末日/世界书/寒冬末日/伊甸一次性指令和主线任务.txt'),
+    'utf8',
+  );
+  const functionBody = compileEjsLikeToFunctionBody(edenTaskSource);
+
+  assert.doesNotThrow(
+    () => new Function('getvar', functionBody),
+    'Eden one-shot task EJS should not leave a raw block open before the template wrapper catch',
+  );
+  assert.doesNotMatch(edenTaskSource, /<%_\s*\{\s*[\r\n]+(?:const|var)\s+.*stream_demo\.opening/);
+  assert.match(edenTaskSource, /edenTaskWorldModeId === 'A'/);
+});
