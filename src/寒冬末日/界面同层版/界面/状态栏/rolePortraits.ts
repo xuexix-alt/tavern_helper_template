@@ -546,10 +546,7 @@ function withChatRolePortraitOverrides(
 function writeChatRolePortraitOverrides(overrides: RolePortraitOverrideMap): boolean {
   try {
     if (typeof updateVariablesWith === 'function') {
-      updateVariablesWith(
-        variables => withChatRolePortraitOverrides(variables, overrides),
-        { type: 'chat' },
-      );
+      updateVariablesWith(variables => withChatRolePortraitOverrides(variables, overrides), { type: 'chat' });
       return true;
     }
     if (typeof getVariables === 'function' && typeof replaceVariables === 'function') {

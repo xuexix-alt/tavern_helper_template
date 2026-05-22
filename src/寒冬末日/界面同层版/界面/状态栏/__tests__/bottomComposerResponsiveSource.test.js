@@ -29,9 +29,5 @@ test('BottomComposer turns the busy send button into a cancel action', () => {
     /\(event: 'cancel-generation'\): void;/,
     'BottomComposer should emit a dedicated cancel event instead of overloading submit',
   );
-  assert.match(
-    source,
-    /\{\{ busy \? '取消' : '发送' \}\}/,
-    'busy state should present a clear cancel label',
-  );
+  assert.match(source, /\{\{ busy \? '取消' : '发送' \}\}/, 'busy state should present a clear cancel label');
 });

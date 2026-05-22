@@ -4154,7 +4154,11 @@ export function useStreamingDemo() {
     }
     activeGenerationCancelReject?.(new Error(SAME_LAYER_CANCELLED_ERROR));
     activeGenerationCancelReject = null;
-    appendLog(stopped ? 'info' : 'error', stopped ? '取消生成' : '取消生成（本地）', generationId || 'no_generation_id');
+    appendLog(
+      stopped ? 'info' : 'error',
+      stopped ? '取消生成' : '取消生成（本地）',
+      generationId || 'no_generation_id',
+    );
     recordLifecycleTrace('cancelActiveGeneration', stopped ? 'requested' : 'requested_local_only', {
       generationId,
     });
@@ -4329,18 +4333,18 @@ export function useStreamingDemo() {
               should_silence: true,
               should_stream: true,
               max_chat_history: options.maxChatHistory ?? 'all',
-          },
+            },
       );
       recordLifecycleTrace(
         'runGenerationFlow',
         'generate_requested',
         {
-              createUser: options.createUser,
-              detachedUserInput: options.detachedUserInput === true,
-              generationId,
-              maxChatHistory:
-                options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
-            },
+          createUser: options.createUser,
+          detachedUserInput: options.detachedUserInput === true,
+          generationId,
+          maxChatHistory:
+            options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
+        },
         traceId,
       );
 
