@@ -16,11 +16,21 @@ export type RolePortraitImageRef = {
   createdOrder?: number;
 };
 
+export type RolePortraitImageSnapshot = RolePortraitImageRef & {
+  id: string;
+  title?: string;
+  characterName?: string;
+  src?: string;
+  alt?: string;
+};
+
 export type RolePortraitOverride = {
   roleKey: string;
   /** Legacy/current primary portrait ref. Kept so older saved settings continue to resolve. */
   imageRef?: RolePortraitImageRef;
   imageRefs?: RolePortraitImageRef[];
+  imageSnapshot?: RolePortraitImageSnapshot;
+  imageSnapshots?: RolePortraitImageSnapshot[];
   updatedAt: number;
   /** User explicitly cancelled a custom portrait; keep this tombstone so auto gallery matching does not reselect it. */
   clearedAt?: number;
@@ -36,6 +46,8 @@ export type ResolvedRolePortrait = {
 };
 
 const SETTINGS_KEY = 'same_layer_role_portraits';
+const CHAT_SETTINGS_ROOT = 'stream_demo';
+const CHAT_SETTINGS_KEY = 'role_portraits';
 const PROJECT_ROLE_NAME_ALIASES = [
   ['林月华', 'Lin Yuehua'],
   ['陈雪', 'Chen Xue'],
@@ -130,6 +142,18 @@ function buildRolePortraitImageRef(entry: ReaderGalleryEntry): RolePortraitImage
   return ref;
 }
 
+function buildRolePortraitImageSnapshot(entry: ReaderGalleryEntry): RolePortraitImageSnapshot {
+  const snapshot: RolePortraitImageSnapshot = {
+    ...buildRolePortraitImageRef(entry),
+    id: String(entry.id ?? ''),
+  };
+  if (entry.title) snapshot.title = entry.title;
+  if (entry.characterName) snapshot.characterName = entry.characterName;
+  if (entry.src) snapshot.src = entry.src;
+  if (entry.alt) snapshot.alt = entry.alt;
+  return snapshot;
+}
+
 function imageRefKey(ref: RolePortraitImageRef) {
   return [
     ref.messageId,
@@ -139,6 +163,23 @@ function imageRefKey(ref: RolePortraitImageRef) {
     ref.promptToken ?? '',
     ref.createdOrder ?? '',
   ].join('::');
+}
+
+function snapshotToGalleryEntry(snapshot: RolePortraitImageSnapshot): ReaderGalleryEntry | undefined {
+  if (!hasImageSource(snapshot as ReaderGalleryEntry)) return undefined;
+  return {
+    id: snapshot.id || imageRefKey(snapshot),
+    messageId: snapshot.messageId,
+    markerId: snapshot.markerId,
+    imageId: snapshot.imageId,
+    requestId: snapshot.requestId,
+    promptToken: snapshot.promptToken,
+    title: snapshot.title || snapshot.characterName || `楼层 #${snapshot.messageId} · 立绘`,
+    characterName: snapshot.characterName,
+    createdOrder: Number.isFinite(Number(snapshot.createdOrder)) ? Math.trunc(Number(snapshot.createdOrder)) : 0,
+    src: snapshot.src,
+    alt: snapshot.alt,
+  } as ReaderGalleryEntry;
 }
 
 function entryMatchesImageRef(entry: ReaderGalleryEntry, ref: RolePortraitImageRef) {
@@ -171,6 +212,19 @@ function listOverrideRefs(override?: RolePortraitOverride | null): RolePortraitI
   return out;
 }
 
+function listOverrideSnapshots(override?: RolePortraitOverride | null): RolePortraitImageSnapshot[] {
+  if (!override || isRolePortraitOverrideCleared(override)) return [];
+  const out: RolePortraitImageSnapshot[] = [];
+  const seen = new Set<string>();
+  for (const snapshot of [...(override.imageSnapshots ?? []), override.imageSnapshot].filter(Boolean)) {
+    const key = imageRefKey(snapshot);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(snapshot);
+  }
+  return out;
+}
+
 function isRolePortraitOverrideCleared(override?: RolePortraitOverride | null) {
   return Number.isFinite(Number(override?.clearedAt));
 }
@@ -190,6 +244,29 @@ function findEntriesForRefs(entries: ReaderGalleryEntry[], refs: RolePortraitIma
 function findEntryForRef(entries: ReaderGalleryEntry[], ref?: RolePortraitImageRef) {
   if (!ref) return undefined;
   return entries.find(candidate => hasImageSource(candidate) && entryMatchesImageRef(candidate, ref));
+}
+
+function findEntriesForSnapshots(
+  entries: ReaderGalleryEntry[],
+  snapshots: RolePortraitImageSnapshot[],
+): ReaderGalleryEntry[] {
+  const out: ReaderGalleryEntry[] = [];
+  const seen = new Set<string>();
+  for (const snapshot of snapshots) {
+    const entry = findEntryForRef(entries, snapshot) ?? snapshotToGalleryEntry(snapshot);
+    if (!entry || !hasImageSource(entry) || seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    out.push(entry);
+  }
+  return out;
+}
+
+function findEntryForSnapshot(
+  entries: ReaderGalleryEntry[],
+  snapshot?: RolePortraitImageSnapshot,
+): ReaderGalleryEntry | undefined {
+  if (!snapshot) return undefined;
+  return findEntryForRef(entries, snapshot) ?? snapshotToGalleryEntry(snapshot);
 }
 
 function sortNewestFirst(entries: ReaderGalleryEntry[]) {
@@ -256,10 +333,13 @@ export function findGalleryEntriesForRole(
 
 export function buildRolePortraitOverride(roleKey: string, entry: ReaderGalleryEntry): RolePortraitOverride {
   const imageRef = buildRolePortraitImageRef(entry);
+  const imageSnapshot = buildRolePortraitImageSnapshot(entry);
   return {
     roleKey: normalizeRoleKey(roleKey),
     imageRef,
     imageRefs: [imageRef],
+    imageSnapshot,
+    imageSnapshots: [imageSnapshot],
     updatedAt: Date.now(),
   };
 }
@@ -270,6 +350,7 @@ export function addRolePortraitSetImage(
   entry: ReaderGalleryEntry,
 ): RolePortraitOverride {
   const imageRef = buildRolePortraitImageRef(entry);
+  const imageSnapshot = buildRolePortraitImageSnapshot(entry);
   const refs = [...listOverrideRefs(current), imageRef];
   const seen = new Set<string>();
   const imageRefs = refs.filter(ref => {
@@ -278,11 +359,21 @@ export function addRolePortraitSetImage(
     seen.add(key);
     return true;
   });
+  const snapshots = [...listOverrideSnapshots(current), imageSnapshot];
+  const seenSnapshots = new Set<string>();
+  const imageSnapshots = snapshots.filter(snapshot => {
+    const key = imageRefKey(snapshot);
+    if (seenSnapshots.has(key)) return false;
+    seenSnapshots.add(key);
+    return true;
+  });
 
   return {
     roleKey: normalizeRoleKey(roleKey),
     imageRef: current?.imageRef ?? imageRef,
     imageRefs,
+    imageSnapshot: current?.imageSnapshot ?? imageSnapshot,
+    imageSnapshots,
     updatedAt: Date.now(),
   };
 }
@@ -296,6 +387,7 @@ export function setPrimaryRolePortraitOverride(
   return {
     ...override,
     imageRef: buildRolePortraitImageRef(entry),
+    imageSnapshot: buildRolePortraitImageSnapshot(entry),
   };
 }
 
@@ -312,10 +404,13 @@ export function resolveRolePortraitSet(
   // 默认图也参与覆盖查找，这样"选过一张默认真人设定图"会被持久化并复用。
   const overrideLookupPool = [...entries, ...defaultEntries];
   const overrideEntries = isCleared ? [] : findEntriesForRefs(overrideLookupPool, listOverrideRefs(override));
+  const overrideSnapshotEntries = isCleared
+    ? []
+    : findEntriesForSnapshots(overrideLookupPool, listOverrideSnapshots(override));
   const matchedEntries = isCleared ? [] : findGalleryEntriesForRole(role, entries, lookup);
   const out: ReaderGalleryEntry[] = [];
   const seen = new Set<string>();
-  for (const entry of [...overrideEntries, ...matchedEntries]) {
+  for (const entry of [...overrideEntries, ...overrideSnapshotEntries, ...matchedEntries]) {
     if (!entry?.src || seen.has(entry.id)) continue;
     seen.add(entry.id);
     out.push(entry);
@@ -346,7 +441,9 @@ export function resolveRolePortrait(
   const overrideEntry = isCleared
     ? undefined
     : (findEntryForRef(overrideLookupPool, override?.imageRef) ??
-      findEntriesForRefs(overrideLookupPool, listOverrideRefs(override))[0]);
+      findEntryForSnapshot(overrideLookupPool, override?.imageSnapshot) ??
+      findEntriesForRefs(overrideLookupPool, listOverrideRefs(override))[0] ??
+      findEntriesForSnapshots(overrideLookupPool, listOverrideSnapshots(override))[0]);
   const entry = overrideEntry ?? (isCleared ? undefined : findGalleryEntryForRole(role, entries, lookup));
 
   if (entry?.src) {
@@ -388,20 +485,93 @@ export function clearRolePortraitOverride(roleKey: string): RolePortraitOverride
 }
 
 export function readRolePortraitOverrides(): RolePortraitOverrideMap {
-  try {
-    const raw = getVariables({ type: 'script', script_id: getScriptId() }) as Record<string, any>;
-    const value = raw?.[SETTINGS_KEY];
-    if (!value || typeof value !== 'object') return {};
-    return value as RolePortraitOverrideMap;
-  } catch {
-    return {};
+  const chatValue = readChatRolePortraitOverrides();
+  if (chatValue) return chatValue;
+
+  const legacyValue = readLegacyScriptRolePortraitOverrides();
+  if (legacyValue) {
+    writeRolePortraitOverrides(legacyValue);
+    return legacyValue;
   }
+
+  return {};
 }
 
 export function writeRolePortraitOverrides(overrides: RolePortraitOverrideMap) {
+  if (writeChatRolePortraitOverrides(overrides)) return;
+  writeLegacyScriptRolePortraitOverrides(overrides);
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readChatRolePortraitOverrides(): RolePortraitOverrideMap | null {
   try {
-    const current = (getVariables({ type: 'script', script_id: getScriptId() }) ?? {}) as Record<string, any>;
-    replaceVariables({ ...current, [SETTINGS_KEY]: overrides }, { type: 'script', script_id: getScriptId() });
+    if (typeof getVariables !== 'function') return null;
+    const raw = getVariables({ type: 'chat' }) as Record<string, any>;
+    const value = raw?.[CHAT_SETTINGS_ROOT]?.[CHAT_SETTINGS_KEY];
+    return isRecord(value) ? (value as RolePortraitOverrideMap) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readLegacyScriptRolePortraitOverrides(): RolePortraitOverrideMap | null {
+  try {
+    if (typeof getVariables !== 'function') return null;
+    const option =
+      typeof getScriptId === 'function'
+        ? ({ type: 'script', script_id: getScriptId() } as const)
+        : ({ type: 'script' } as const);
+    const raw = getVariables(option) as Record<string, any>;
+    const value = raw?.[SETTINGS_KEY];
+    return isRecord(value) ? (value as RolePortraitOverrideMap) : null;
+  } catch {
+    return null;
+  }
+}
+
+function withChatRolePortraitOverrides(
+  raw: Record<string, any> | null | undefined,
+  overrides: RolePortraitOverrideMap,
+): Record<string, any> {
+  const next = { ...(raw ?? {}) };
+  const root = isRecord(next[CHAT_SETTINGS_ROOT]) ? { ...next[CHAT_SETTINGS_ROOT] } : {};
+  root[CHAT_SETTINGS_KEY] = overrides;
+  next[CHAT_SETTINGS_ROOT] = root;
+  return next;
+}
+
+function writeChatRolePortraitOverrides(overrides: RolePortraitOverrideMap): boolean {
+  try {
+    if (typeof updateVariablesWith === 'function') {
+      updateVariablesWith(
+        variables => withChatRolePortraitOverrides(variables, overrides),
+        { type: 'chat' },
+      );
+      return true;
+    }
+    if (typeof getVariables === 'function' && typeof replaceVariables === 'function') {
+      const current = (getVariables({ type: 'chat' }) ?? {}) as Record<string, any>;
+      replaceVariables(withChatRolePortraitOverrides(current, overrides), { type: 'chat' });
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function writeLegacyScriptRolePortraitOverrides(overrides: RolePortraitOverrideMap) {
+  try {
+    if (typeof getVariables !== 'function' || typeof replaceVariables !== 'function') return;
+    const option =
+      typeof getScriptId === 'function'
+        ? ({ type: 'script', script_id: getScriptId() } as const)
+        : ({ type: 'script' } as const);
+    const current = (getVariables(option) ?? {}) as Record<string, any>;
+    replaceVariables({ ...current, [SETTINGS_KEY]: overrides }, option);
   } catch {
     // Tavern Helper globals are absent in unit tests and some local tooling paths.
   }

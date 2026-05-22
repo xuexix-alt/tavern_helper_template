@@ -204,6 +204,7 @@ const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
+const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -1683,6 +1684,11 @@ function clipTranscriptItemsForUi(items: TranscriptItem[]): TranscriptItem[] {
   return sortTranscriptItems(items).slice(-TRANSCRIPT_UI_WINDOW_SIZE);
 }
 
+function createSameLayerGenerationId(traceId: string): string {
+  const safeTraceId = String(traceId || 'generation').replace(/[^a-zA-Z0-9_-]/g, '_');
+  return `same-layer-${safeTraceId}`;
+}
+
 export function useStreamingDemo() {
   const initialContainerMessageId = readCurrentContainerMessageId();
   const input = ref('');
@@ -1694,6 +1700,8 @@ export function useStreamingDemo() {
   const nativeReasoningText = ref('');
   const errorText = ref('');
   const assistantMessageId = ref<number | null>(null);
+  const activeGenerationId = ref<string | null>(null);
+  const generationCancelRequested = ref(false);
   const transcript = ref<TranscriptItem[]>([]);
   const filterMode = ref<TranscriptFilterMode>('all');
   const density = ref<TranscriptDensity>('comfortable');
@@ -1716,6 +1724,7 @@ export function useStreamingDemo() {
   const openingWorldModes = getOpeningWorldModes();
   const openingRoutes = getOpeningRoutes();
   const isCalibratingDailyRoll = ref(false);
+  let activeGenerationCancelReject: ((error: Error) => void) | null = null;
   function isOpeningWorkbenchHostActive(): boolean {
     return isOpeningWorkbenchScopeActive({
       initialContainerMessageId,
@@ -4069,11 +4078,95 @@ export function useStreamingDemo() {
     appendLog('action', '回退删除', `已删除楼层 #${ids[0]} 到 #${ids[ids.length - 1]}`);
   }
 
+  async function settleCancelledGeneration(traceId: string, caughtMessage: string): Promise<GenerationFlowResult> {
+    cancelGenerationSignalFinalize();
+    cancelScheduledStreamTranscriptPatch();
+    const assistantId = assistantMessageId.value;
+    const partialText = String(finalText.value || streamText.value || '').trim();
+    const hasPartialText = partialText.length > 0;
+
+    recordLifecycleTrace(
+      'cancelActiveGeneration',
+      'settle',
+      {
+        assistantMessageId: assistantId,
+        generationId: activeGenerationId.value,
+        hasPartialText,
+        message: caughtMessage,
+      },
+      traceId,
+    );
+
+    if (assistantId != null && hasPartialText) {
+      finalText.value = partialText;
+      status.value = 'done';
+      errorText.value = '';
+      await patchAssistantMessage('done');
+      await flushExplicitChatSave('generation_cancelled_partial');
+      transcript.value = syncTranscriptFlags(transcript.value);
+      appendLog('info', '已取消生成', '已保留取消前收到的部分正文，未触发额外模型解析。');
+      return {
+        success: false,
+        assistantMessageId: assistantId,
+        errorText: 'cancelled',
+        hadVisibleAssistantContent: true,
+      };
+    }
+
+    if (assistantId != null) {
+      try {
+        await deleteChatMessages([assistantId], { refresh: 'none' });
+      } catch {
+        // ignore cleanup failure; the explicit save below will still preserve any other completed changes.
+      }
+      transcript.value = transcript.value.filter(item => item.message_id !== assistantId);
+    }
+    assistantMessageId.value = null;
+    latestPatchedMessage = '';
+    status.value = 'idle';
+    errorText.value = '';
+    await flushExplicitChatSave('generation_cancelled_empty');
+    appendLog('info', '已取消生成', '模型尚未返回正文，已清理占位楼层。');
+    return {
+      success: false,
+      assistantMessageId: assistantId,
+      errorText: 'cancelled',
+      hadVisibleAssistantContent: false,
+    };
+  }
+
+  function cancelActiveGeneration(): boolean {
+    if (!busy.value) return false;
+    const generationId = activeGenerationId.value;
+    generationCancelRequested.value = true;
+    let stopped = false;
+    try {
+      if (generationId && typeof stopGenerationById === 'function') {
+        stopped = stopGenerationById(generationId) === true;
+      } else if (!generationId && typeof stopAllGeneration === 'function') {
+        stopped = stopAllGeneration() === true;
+      }
+    } catch (error) {
+      console.warn('[stream-demo] cancelActiveGeneration stop request failed', {
+        generationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    activeGenerationCancelReject?.(new Error(SAME_LAYER_CANCELLED_ERROR));
+    activeGenerationCancelReject = null;
+    appendLog(stopped ? 'info' : 'error', stopped ? '取消生成' : '取消生成（本地）', generationId || 'no_generation_id');
+    recordLifecycleTrace('cancelActiveGeneration', stopped ? 'requested' : 'requested_local_only', {
+      generationId,
+    });
+    return stopped;
+  }
+
   async function runGenerationFlow(options: GenerationFlowOptions): Promise<GenerationFlowResult> {
     const prompt = String(options.prompt ?? '').trim();
     const traceId = createTraceId(
       options.createUser ? 'send' : options.detachedUserInput === true ? 'opening' : 'regenerate',
     );
+    const generationId = createSameLayerGenerationId(traceId);
     if (!prompt || busy.value) {
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -4099,6 +4192,8 @@ export function useStreamingDemo() {
 
     activeGenerationTraceId = traceId;
     latestLifecycleTraceId = traceId;
+    activeGenerationId.value = generationId;
+    generationCancelRequested.value = false;
     busy.value = true;
     status.value = 'preparing';
     streamText.value = '';
@@ -4217,33 +4312,40 @@ export function useStreamingDemo() {
         );
       }
 
+      const cancelPromise = new Promise<string>((_resolve, reject) => {
+        activeGenerationCancelReject = reject;
+      });
       const generatePromise = generate(
         options.detachedUserInput === true
           ? {
               user_input: prompt,
+              generation_id: generationId,
               should_silence: true,
               should_stream: true,
               max_chat_history: options.maxChatHistory ?? 0,
             }
           : {
+              generation_id: generationId,
               should_silence: true,
               should_stream: true,
               max_chat_history: options.maxChatHistory ?? 'all',
-            },
+          },
       );
       recordLifecycleTrace(
         'runGenerationFlow',
         'generate_requested',
         {
-          createUser: options.createUser,
-          detachedUserInput: options.detachedUserInput === true,
-          maxChatHistory:
-            options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
-        },
+              createUser: options.createUser,
+              detachedUserInput: options.detachedUserInput === true,
+              generationId,
+              maxChatHistory:
+                options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
+            },
         traceId,
       );
 
-      const result = String(await generatePromise).trim();
+      const result = String(await Promise.race([generatePromise, cancelPromise])).trim();
+      activeGenerationCancelReject = null;
 
       finalText.value = result;
       if (result) {
@@ -4310,6 +4412,9 @@ export function useStreamingDemo() {
       };
     } catch (error) {
       const caughtMessage = error instanceof Error ? error.message : String(error);
+      if (generationCancelRequested.value === true || caughtMessage === SAME_LAYER_CANCELLED_ERROR) {
+        return await settleCancelledGeneration(traceId, caughtMessage);
+      }
       if (generationSignalFinalizeTimer) {
         const queuedReason = generationSignalFinalizeReason || 'queued_generation_signal';
         cancelGenerationSignalFinalize();
@@ -4384,6 +4489,9 @@ export function useStreamingDemo() {
       }
       clearGenerationListeners();
       busy.value = false;
+      activeGenerationId.value = null;
+      activeGenerationCancelReject = null;
+      generationCancelRequested.value = false;
       hostMesTextPrimedForCurrentGeneration = false;
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -4465,12 +4573,14 @@ export function useStreamingDemo() {
 
     reprocessVariablesPending.value = true;
     try {
+      await revealHiddenStoryMessagesForNativeGeneration('mvu_extra_analysis_retry');
       const reprocessResult = await retryMessageExtraAnalysisByNativeMvu(latestAssistant.message_id, {
         refreshMessage: true,
       });
       mvuSourceRevision.value += 1;
 
       if (reprocessResult.status === 'applied') {
+        await waitForNativeMvuMessageWriteback(latestAssistant.message_id);
         appendLog(
           'action',
           '重试额外模型解析',
@@ -4488,6 +4598,9 @@ export function useStreamingDemo() {
       appendLog('error', '重试额外模型解析失败', message);
       toastr?.error?.(`重试额外模型解析失败：${message}`);
     } finally {
+      nativeGenerationRevealActive = false;
+      releaseHiddenStoryMessagesForNativeGeneration();
+      queueHidePolicy('mvu_extra_analysis_retry_done');
       reprocessVariablesPending.value = false;
     }
   }
@@ -5512,6 +5625,7 @@ export function useStreamingDemo() {
     loadOlderGalleryImages,
     refreshGalleryImages,
     submitPromptViaSameLayer,
+    cancelActiveGeneration,
     disableSameLayerUi,
     beginPendingImageTask,
     markRecentImageIntent,

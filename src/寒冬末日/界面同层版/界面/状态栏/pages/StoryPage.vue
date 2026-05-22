@@ -367,6 +367,7 @@
             :show-option-trigger="false"
             :show-toolbar="false"
             @submit="handleComposerSubmit"
+            @cancel-generation="cancelActiveGeneration"
             @roll="rollLatestTurn"
             @open-role="openRoleFromComposer"
             @reprocess-variables="handleReprocessVariablesFromChoiceModal"
@@ -547,6 +548,7 @@ const {
   canDismissOpeningSetup,
   runDemo,
   submitPromptViaSameLayer,
+  cancelActiveGeneration,
   disableSameLayerUi,
   rollLatestTurn,
   reprocessLatestAssistantVariables,

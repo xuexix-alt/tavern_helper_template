@@ -10,6 +10,8 @@ const {
   clearRolePortraitOverride,
   setPrimaryRolePortraitOverride,
   resolveRolePortraitSet,
+  readRolePortraitOverrides,
+  writeRolePortraitOverrides,
 } = require('../rolePortraits.ts');
 
 test('manual portrait override resolves the matching gallery image before defaults', () => {
@@ -98,6 +100,99 @@ test('portrait picker can persist a thin gallery reference without storing image
     promptToken: 'image###林月华###',
   });
   assert.equal('src' in override.imageRef, false);
+});
+
+test('manual portrait override falls back to saved image snapshot when gallery entry is not rehydrated yet', () => {
+  const override = buildRolePortraitOverride('林月华', {
+    id: 'gallery-new',
+    messageId: 9,
+    markerId: 'marker-9',
+    imageId: 'img-9',
+    requestId: 'req-9',
+    promptToken: 'image###林月华###',
+    title: '新图',
+    characterName: '林月华',
+    createdOrder: 1,
+    src: 'https://example.com/new.png',
+    alt: '林月华 新图',
+  });
+
+  const portrait = resolveRolePortrait(
+    { key: '林月华', label: '林月华' },
+    [],
+    { 林月华: override },
+    { defaultSrc: 'builtin-default.webp' },
+  );
+
+  assert.equal(portrait.src, 'https://example.com/new.png');
+  assert.equal(portrait.source, 'gallery');
+  assert.equal(portrait.entry?.id, 'gallery-new');
+  assert.equal(portrait.entry?.title, '新图');
+});
+
+test('role portrait overrides persist in chat variables and migrate legacy script variables', () => {
+  const saved = {
+    林月华: buildRolePortraitOverride('林月华', {
+      id: 'gallery-new',
+      messageId: 9,
+      markerId: 'marker-9',
+      imageId: 'img-9',
+      title: '新图',
+      createdOrder: 1,
+      src: 'https://example.com/new.png',
+    }),
+  };
+  const stores = {
+    chat: {},
+    script: { same_layer_role_portraits: saved },
+  };
+  const previous = {
+    getVariables: global.getVariables,
+    replaceVariables: global.replaceVariables,
+    updateVariablesWith: global.updateVariablesWith,
+    getScriptId: global.getScriptId,
+  };
+
+  try {
+    global.getScriptId = () => 'same-layer-script';
+    global.getVariables = option => {
+      if (option.type === 'chat') return stores.chat;
+      if (option.type === 'script') return stores.script;
+      return {};
+    };
+    global.replaceVariables = (variables, option) => {
+      if (option.type === 'chat') stores.chat = variables;
+      if (option.type === 'script') stores.script = variables;
+    };
+    global.updateVariablesWith = (updater, option) => {
+      const next = updater(option.type === 'chat' ? stores.chat : stores.script);
+      if (option.type === 'chat') stores.chat = next;
+      if (option.type === 'script') stores.script = next;
+      return next;
+    };
+
+    assert.deepEqual(readRolePortraitOverrides(), saved);
+    assert.deepEqual(stores.chat.stream_demo.role_portraits, saved);
+
+    const next = {
+      陈雪: buildRolePortraitOverride('陈雪', {
+        id: 'gallery-chen',
+        messageId: 12,
+        imageId: 'img-12',
+        title: '陈雪图',
+        createdOrder: 0,
+        src: 'https://example.com/chen.png',
+      }),
+    };
+    writeRolePortraitOverrides(next);
+
+    assert.deepEqual(stores.chat.stream_demo.role_portraits, next);
+  } finally {
+    global.getVariables = previous.getVariables;
+    global.replaceVariables = previous.replaceVariables;
+    global.updateVariablesWith = previous.updateVariablesWith;
+    global.getScriptId = previous.getScriptId;
+  }
 });
 
 test('findGalleryEntryForRole prefers exact character names over prompt text matches', () => {

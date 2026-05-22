@@ -284,6 +284,22 @@ test('useStreamingDemo exposes a latest-assistant MVU reroll action that trigger
   assert.equal(source.includes('reprocessLatestAssistantVariables,'), true);
 });
 
+test('latest-assistant MVU reroll reveals hidden same-layer story floors before native retry builds prompt context', () => {
+  const source = read('../useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'reprocessLatestAssistantVariables');
+
+  assert.match(
+    body,
+    /await revealHiddenStoryMessagesForNativeGeneration\('mvu_extra_analysis_retry'\)[\s\S]*await retryMessageExtraAnalysisByNativeMvu/,
+    'native MVU retry must run after same-layer story floors are temporarily visible to Tavern prompt assembly',
+  );
+  assert.match(
+    body,
+    /nativeGenerationRevealActive = false;[\s\S]*releaseHiddenStoryMessagesForNativeGeneration\(\);[\s\S]*queueHidePolicy\('mvu_extra_analysis_retry_done'\)/,
+    'manual MVU retry should release the reveal window and restore the same-layer hide policy afterward',
+  );
+});
+
 test('mvu_reprocess native retry helper clicks MVU own retry button instead of generating or parsing manually', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../../../../mvu_reprocess.ts'), 'utf8');
   const start = source.indexOf('export async function retryMessageExtraAnalysisByNativeMvu');

@@ -348,7 +348,7 @@ test('same-layer stream patches use Tavern reasoning visible text instead of raw
   );
   assert.match(
     patchBody,
-    /phase === 'stream' && \(hasNativeReasoning \|\| reasoningStreamState\.reasoningState === 'thinking'\) \? '思考中' : ''/,
+    /phase === 'stream' && \(hasNativeReasoning \|\| reasoningStreamState\.reasoningState === 'thinking'\)\s*\?\s*'思考中'\s*:\s*''/,
     'reasoning-only streaming should display thinking only after reasoning tokens or native reasoning arrive',
   );
   assert.doesNotMatch(
@@ -501,6 +501,38 @@ test('same-layer internal generate calls are silent until the done patch emits t
     body,
     /await patchAssistantMessage\('done'\);[\s\S]{0,420}await runQueuedPostDoneAssistantSideEffects/,
     'the official lifecycle should still be emitted only after the final done message is written',
+  );
+});
+
+test('same-layer silent generation still exposes a precise cancellation handle', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'runGenerationFlow');
+  const cancelBody = extractFunctionBody(source, 'cancelActiveGeneration');
+
+  assert.match(
+    body,
+    /const generationId = createSameLayerGenerationId\(traceId\);/,
+    'each same-layer generate() call should use a stable generation id derived from the active trace',
+  );
+  assert.match(
+    body,
+    /activeGenerationId\.value = generationId;/,
+    'the active generation id should be exposed while the request is running',
+  );
+  assert.match(
+    body,
+    /generation_id:\s*generationId,[\s\S]{0,120}should_silence:\s*true/,
+    'silent generate() calls must pass the generation id so they can be cancelled without rejoining the native stop-button lifecycle',
+  );
+  assert.match(
+    cancelBody,
+    /stopGenerationById\(generationId\)/,
+    'cancel should stop the exact same-layer request by generation id',
+  );
+  assert.doesNotMatch(
+    cancelBody,
+    /runQueuedPostDoneAssistantSideEffects/,
+    'manual cancellation must not emit the normal post-done lifecycle that would trigger MVU parsing of partial text',
   );
 });
 

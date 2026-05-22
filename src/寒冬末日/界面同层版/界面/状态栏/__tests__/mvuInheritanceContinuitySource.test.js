@@ -37,7 +37,7 @@ test('opening detached assistant placeholder inherits initialized container mvu 
   );
   assert.match(
     source,
-    /\{ role: 'assistant', is_hidden: false, message: buildStreamDemoMessage\('', 'stream'\), data: assistantData \}/,
+    /\{[\s\S]*role: 'assistant',[\s\S]*is_hidden: false,[\s\S]*message: buildStreamDemoMessage\([\s\S]*'stream'\),[\s\S]*data: assistantData,[\s\S]*\}/,
     'opening assistant placeholder should carry inherited MVU data before detached generation writes the final text',
   );
 });

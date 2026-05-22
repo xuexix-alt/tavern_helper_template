@@ -44,8 +44,14 @@
           @input="onInput"
         />
       </div>
-      <button type="button" class="send-btn clip-corner-sm" :disabled="busy" @click="submitFromComposer">
-        {{ busy ? '生成中…' : '发送' }}
+      <button
+        type="button"
+        class="send-btn clip-corner-sm"
+        :class="{ 'is-cancel': busy }"
+        :disabled="!busy && !modelValue.trim()"
+        @click="busy ? cancelGeneration() : submitFromComposer()"
+      >
+        {{ busy ? '取消' : '发送' }}
       </button>
     </div>
 
@@ -156,6 +162,7 @@ const emit = defineEmits<{
   (event: 'open-role', key: string): void;
   (event: 'reprocess-variables'): void;
   (event: 'generate-latest-image'): void;
+  (event: 'cancel-generation'): void;
 }>();
 
 function onInput(event: Event) {
@@ -173,6 +180,10 @@ function requestSubmit(rawValue: string) {
 
 function submitFromComposer() {
   requestSubmit(props.modelValue);
+}
+
+function cancelGeneration() {
+  emit('cancel-generation');
 }
 
 const choiceModalOpen = ref(false);
@@ -382,6 +393,11 @@ defineExpose({
   color: var(--demo-text-inverse);
   font-size: 12px;
   font-weight: 700;
+}
+.send-btn.is-cancel {
+  border-color: color-mix(in srgb, var(--demo-color-danger, #ff5c7a) 58%, transparent);
+  background: color-mix(in srgb, var(--demo-color-danger, #ff5c7a) 18%, var(--surface) 82%);
+  color: var(--demo-text-primary);
 }
 
 .composer-shell.layout-compact .composer-input-icon,
