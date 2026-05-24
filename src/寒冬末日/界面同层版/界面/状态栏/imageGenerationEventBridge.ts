@@ -54,7 +54,9 @@ function normalizeString(value: unknown): string {
   return String(value ?? '').trim();
 }
 
-function normalizePromptPayload(payload: ImageGenerationEventPayload | ImageGenerationResponsePayload | null | undefined): string {
+function normalizePromptPayload(
+  payload: ImageGenerationEventPayload | ImageGenerationResponsePayload | null | undefined,
+): string {
   return normalizeString(payload?.prompt) || normalizeString(payload?.change);
 }
 

@@ -294,7 +294,9 @@ test('gallery image regeneration keeps a gallery recent intent through the nativ
     'generated image activation payloads should preserve whether the gesture came from the transcript or gallery',
   );
   assert.equal(
-    source.includes("function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript')"),
+    source.includes(
+      "function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript')",
+    ),
     true,
     'pending image tasks should accept gallery as a first-class intent source',
   );

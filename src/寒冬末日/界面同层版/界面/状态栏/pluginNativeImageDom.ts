@@ -1,4 +1,5 @@
-const PLUGIN_NATIVE_IMAGE_SELECTOR = '.st-chatu8-image-span img, .st-chatu8-image-container img, .ai-image-container img';
+const PLUGIN_NATIVE_IMAGE_SELECTOR =
+  '.st-chatu8-image-span img, .st-chatu8-image-container img, .ai-image-container img';
 const PLUGIN_NATIVE_MUTATION_SELECTOR =
   '.mes_text, .st-chatu8-image-span, .st-chatu8-image-button, span.image-tag-placeholder, button.image-tag-button, .ai-image-container';
 const PLUGIN_NATIVE_READY_MUTATION_SELECTOR =

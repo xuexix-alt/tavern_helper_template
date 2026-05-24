@@ -1879,7 +1879,9 @@ export function useStreamingDemo() {
         );
         const recentIntent = imageRecentIntentStore.read();
         const normalizedMessageId =
-          Number.isFinite(rawMessageId) && rawMessageId >= 0 ? Math.trunc(rawMessageId) : recentIntent?.messageId ?? null;
+          Number.isFinite(rawMessageId) && rawMessageId >= 0
+            ? Math.trunc(rawMessageId)
+            : (recentIntent?.messageId ?? null);
         if (normalizedMessageId == null) continue;
 
         seen.add(requestId);

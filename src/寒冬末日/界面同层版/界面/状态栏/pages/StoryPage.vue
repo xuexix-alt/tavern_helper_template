@@ -1235,7 +1235,9 @@ function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: s
   if (!root) return null;
   const needle = normalizePromptTokenForCompare(promptToken);
   if (!needle) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button')) as HTMLElement[];
+  const buttons = Array.from(
+    root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button'),
+  ) as HTMLElement[];
   for (const button of buttons) {
     const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
     if (!payload) continue;
@@ -1247,7 +1249,9 @@ function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: s
 function resolveIframeImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
   const root = resolveIframeMessageRoot(messageId);
   if (!root || !requestId) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button')) as HTMLElement[];
+  const buttons = Array.from(
+    root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button'),
+  ) as HTMLElement[];
   return (
     buttons.find(button => {
       const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
