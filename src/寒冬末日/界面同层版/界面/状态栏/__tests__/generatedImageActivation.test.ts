@@ -30,3 +30,16 @@ test('parseGeneratedImageActivationPayload reads plugin-native data-image-tag as
   assert.equal(payload.messageId, 7);
   assert.equal(payload.promptToken, 'image###portrait###');
 });
+
+test('parseGeneratedImageActivationPayload preserves transcript or gallery source markers', () => {
+  const payload = parseGeneratedImageActivationPayload({
+    carrierDataset: {
+      messageId: '9',
+      source: 'gallery',
+      promptToken: 'image###reroll###',
+    },
+    targetDataset: {},
+  });
+
+  assert.equal(payload.source, 'gallery');
+});

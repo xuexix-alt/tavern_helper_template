@@ -3,6 +3,7 @@ export type GeneratedImageActivationPayload = {
   promptToken: string;
   requestId: string;
   imageSrc: string;
+  source?: 'transcript' | 'gallery';
 };
 
 function decodeValue(value: string): string {
@@ -36,6 +37,8 @@ export function parseGeneratedImageActivationPayload(input: {
     ),
   );
   const requestId = String(carrierDataset.requestId ?? targetDataset.requestId ?? '').trim();
+  const rawSource = String(carrierDataset.source ?? targetDataset.source ?? '').trim();
+  const source = rawSource === 'gallery' || rawSource === 'transcript' ? rawSource : undefined;
   const imageSrc = decodeValue(
     String(
       carrierDataset.imageSrc ??
@@ -52,5 +55,6 @@ export function parseGeneratedImageActivationPayload(input: {
     promptToken,
     requestId,
     imageSrc,
+    source,
   };
 }

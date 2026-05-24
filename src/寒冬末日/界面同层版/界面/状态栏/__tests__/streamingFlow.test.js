@@ -536,6 +536,28 @@ test('same-layer silent generation still exposes a precise cancellation handle',
   );
 });
 
+test('same-layer cancellation clears the composer draft like a completed send', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'settleCancelledGeneration');
+  const clearBody = extractFunctionBody(source, 'clearSubmittedComposerDraft');
+
+  assert.match(
+    body,
+    /clearSubmittedComposerDraft\(submittedPrompt\);[\s\S]*if \(assistantId != null && hasPartialText\)/,
+    'cancel settlement should clear the submitted composer draft before returning the partial-text cancellation result',
+  );
+  assert.match(
+    body,
+    /clearSubmittedComposerDraft\(submittedPrompt\);[\s\S]*await flushExplicitChatSave\('generation_cancelled_empty'\)/,
+    'cancel settlement should also clear the submitted composer draft when only an empty placeholder is removed',
+  );
+  assert.match(
+    clearBody,
+    /submitted === String\(input\.value \?\? ''\)\.trim\(\)[\s\S]*input\.value = '';/,
+    'cancel cleanup should only clear the composer if it still contains the submitted prompt',
+  );
+});
+
 test('useStreamingDemo installs a save guardian at mount and uninstalls at unmount or same-layer disable', () => {
   const source = readSource('useStreamingDemo.ts');
 

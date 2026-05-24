@@ -47,5 +47,5 @@ export function pickGeneratedImageActivationTarget<T>(
     return input.hostImage ?? input.iframeImage ?? input.hostButton ?? input.iframeButton ?? null;
   }
 
-  return input.hostImage ?? input.iframeImage ?? input.hostButton ?? input.iframeButton ?? null;
+  return input.hostButton ?? input.hostImage ?? input.iframeButton ?? input.iframeImage ?? null;
 }

@@ -205,8 +205,14 @@ export function resolveHostMessageTriggerTarget(messageId: number): HTMLElement 
 
 // ─── 宿主图片节点查找 ──────────────────────────────────────────
 
-const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
-const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
+const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
+const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
+const CHATU8_READY_IMAGE_SELECTOR =
+  '.st-chatu8-image-span img, .st-chatu8-image-container img, .ai-image-container img';
+
+function buildChatu8ImageSpanRequestSelector(requestId: string): string {
+  return `.st-chatu8-image-span[data-request-id='${requestId}'], span.image-tag-placeholder[data-request-id='${requestId}']`;
+}
 
 export function resolveHostImageButtonByPromptToken(messageId: number, promptToken: string): HTMLElement | null {
   const root = resolveHostMessageRoot(messageId);
@@ -250,7 +256,7 @@ export function resolveHostImageNodeBySrc(messageId: number, imageSrc: string): 
   if (!root || !imageSrc) return null;
   const needle = normalizeImageSrcForCompare(imageSrc);
   if (!needle) return null;
-  for (const image of Array.from(root.querySelectorAll(`${CHATU8_IMAGE_SPAN_SELECTOR} img`)) as HTMLImageElement[]) {
+  for (const image of Array.from(root.querySelectorAll(CHATU8_READY_IMAGE_SELECTOR)) as HTMLImageElement[]) {
     if (normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '') === needle) return image;
   }
   return null;
@@ -277,9 +283,7 @@ export function resolveHostImageNodeByPromptToken(messageId: number, promptToken
   const ownerRoot = (button.closest('.mes') as HTMLElement | null) ?? resolveHostMessageRoot(messageId);
   const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
   if (requestId && ownerRoot) {
-    const span = ownerRoot.querySelector(
-      `${CHATU8_IMAGE_SPAN_SELECTOR}[data-request-id='${requestId}']`,
-    ) as HTMLElement | null;
+    const span = ownerRoot.querySelector(buildChatu8ImageSpanRequestSelector(requestId)) as HTMLElement | null;
     const image = span?.querySelector('img') as HTMLImageElement | null;
     if (image) return image;
   }

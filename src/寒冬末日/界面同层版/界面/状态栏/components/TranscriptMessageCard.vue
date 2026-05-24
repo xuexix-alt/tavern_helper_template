@@ -256,6 +256,7 @@ function createGalleryEntryFigure(entry: ReaderGalleryEntry): HTMLElement | null
   figure.dataset.promptToken = entry.promptToken ?? '';
   figure.dataset.requestId = entry.requestId ?? '';
   figure.dataset.imageSrc = encodeDatasetValue(src);
+  figure.dataset.source = 'transcript';
 
   const image = document.createElement('img');
   image.src = src;
@@ -267,6 +268,7 @@ function createGalleryEntryFigure(entry: ReaderGalleryEntry): HTMLElement | null
   image.dataset.promptToken = entry.promptToken ?? '';
   image.dataset.requestId = entry.requestId ?? '';
   image.dataset.imageSrc = encodeDatasetValue(src);
+  image.dataset.source = 'transcript';
 
   figure.append(image);
   return figure;
@@ -441,6 +443,7 @@ function bindAssistantBodyInteractions() {
       hitArea.dataset.promptToken = image.dataset.promptToken ?? carrier.dataset.promptToken ?? '';
       hitArea.dataset.requestId = image.dataset.requestId ?? carrier.dataset.requestId ?? '';
       hitArea.dataset.imageSrc = encodeURIComponent(image.getAttribute('src') ?? image.currentSrc ?? '');
+      hitArea.dataset.source = 'transcript';
     }
 
     const controller = createGeneratedImageGestureController({

@@ -56,6 +56,23 @@ test('request handler records the pending prompt and increments inflight count',
   assert.deepEqual(requests, [{ requestId: 'req-1', prompt: 'a cat' }]);
 });
 
+test('request and response handlers accept plugin change text as the prompt fallback', () => {
+  const { bridge, events, requests, successes } = createBridge();
+
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'req-change', change: 'reroll same image prompt' });
+  events.emit(GENERATE_IMAGE_RESPONSE_EVENT, {
+    id: 'req-change',
+    success: true,
+    change: 'reroll same image prompt',
+    imageData: 'data:image/png;base64,BBB',
+  });
+
+  assert.equal(bridge.getInFlightCount(), 0);
+  assert.deepEqual(requests, [{ requestId: 'req-change', prompt: 'reroll same image prompt' }]);
+  assert.equal(successes.length, 1);
+  assert.equal(successes[0].prompt, 'reroll same image prompt');
+});
+
 test('successful response clears inflight and dispatches onResponseSuccess without toast', () => {
   const { bridge, events, successes, failures, notified } = createBridge();
 

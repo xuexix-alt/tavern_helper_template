@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { selectGeneratedImageTriggerTarget } = require('../generatedImageTriggerTarget.ts');
 
-test('regenerate prefers the real image node over the prompt button so plugin preview click does not steal dblclick', () => {
+test('regenerate prefers the plugin image button so native stableId metadata receives the click trigger', () => {
   const hostButton = { id: 'host-button' };
   const hostImage = { id: 'host-image' };
 
@@ -18,6 +18,6 @@ test('regenerate prefers the real image node over the prompt button so plugin pr
       },
       'regenerate',
     ),
-    hostImage,
+    hostButton,
   );
 });

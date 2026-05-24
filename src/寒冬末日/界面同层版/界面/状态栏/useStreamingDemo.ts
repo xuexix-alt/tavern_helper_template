@@ -205,8 +205,8 @@ const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
-const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button';
-const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span';
+const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
+const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 type StreamingPreviewCacheEntry = {
@@ -1879,11 +1879,7 @@ export function useStreamingDemo() {
         );
         const recentIntent = imageRecentIntentStore.read();
         const normalizedMessageId =
-          Number.isFinite(rawMessageId) && rawMessageId >= 0
-            ? Math.trunc(rawMessageId)
-            : recentIntent?.source === 'transcript'
-              ? recentIntent.messageId
-              : null;
+          Number.isFinite(rawMessageId) && rawMessageId >= 0 ? Math.trunc(rawMessageId) : recentIntent?.messageId ?? null;
         if (normalizedMessageId == null) continue;
 
         seen.add(requestId);
@@ -3186,7 +3182,7 @@ export function useStreamingDemo() {
     generatedImageDomMutationTimer = window.setTimeout(() => {
       generatedImageDomMutationTimer = 0;
       const recentIntent = imageRecentIntentStore.read();
-      const fallbackMessageId = recentIntent?.source === 'transcript' ? recentIntent.messageId : null;
+      const fallbackMessageId = recentIntent?.messageId ?? null;
       if (fallbackMessageId != null) pendingGeneratedImageRefreshMessageIds.add(fallbackMessageId);
       const pendingMessageIds = [...pendingGeneratedImageRefreshMessageIds];
       pendingGeneratedImageRefreshMessageIds.clear();
@@ -3345,18 +3341,19 @@ export function useStreamingDemo() {
     );
   }
 
-  function beginPendingImageTask(messageId: number) {
+  function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
     imagePendingTaskManager.startTask(normalizedId);
-    imageRecentIntentStore.mark(normalizedId, 'transcript');
+    imageRecentIntentStore.mark(normalizedId, source);
     logImageBridge('start-task', {
       messageId: normalizedId,
+      source,
       tasks: imagePendingTaskManager.getDebugState(),
     });
   }
 
-  function markRecentImageIntent(messageId: number, source: 'transcript' = 'transcript') {
+  function markRecentImageIntent(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
     imageRecentIntentStore.mark(normalizedId, source);
@@ -4078,7 +4075,18 @@ export function useStreamingDemo() {
     appendLog('action', '回退删除', `已删除楼层 #${ids[0]} 到 #${ids[ids.length - 1]}`);
   }
 
-  async function settleCancelledGeneration(traceId: string, caughtMessage: string): Promise<GenerationFlowResult> {
+  function clearSubmittedComposerDraft(submittedPrompt: string) {
+    const submitted = String(submittedPrompt ?? '').trim();
+    if (submitted && submitted === String(input.value ?? '').trim()) {
+      input.value = '';
+    }
+  }
+
+  async function settleCancelledGeneration(
+    traceId: string,
+    caughtMessage: string,
+    submittedPrompt: string,
+  ): Promise<GenerationFlowResult> {
     cancelGenerationSignalFinalize();
     cancelScheduledStreamTranscriptPatch();
     const assistantId = assistantMessageId.value;
@@ -4096,6 +4104,7 @@ export function useStreamingDemo() {
       },
       traceId,
     );
+    clearSubmittedComposerDraft(submittedPrompt);
 
     if (assistantId != null && hasPartialText) {
       finalText.value = partialText;
@@ -4417,7 +4426,7 @@ export function useStreamingDemo() {
     } catch (error) {
       const caughtMessage = error instanceof Error ? error.message : String(error);
       if (generationCancelRequested.value === true || caughtMessage === SAME_LAYER_CANCELLED_ERROR) {
-        return await settleCancelledGeneration(traceId, caughtMessage);
+        return await settleCancelledGeneration(traceId, caughtMessage, prompt);
       }
       if (generationSignalFinalizeTimer) {
         const queuedReason = generationSignalFinalizeReason || 'queued_generation_signal';
@@ -5231,7 +5240,7 @@ export function useStreamingDemo() {
             const recentIntent = imageRecentIntentStore.read();
             const targetMessageIds = [
               ...new Set(
-                [matchedResponse?.messageId, recentIntent?.source === 'transcript' ? recentIntent.messageId : null]
+                [matchedResponse?.messageId, recentIntent?.messageId ?? null]
                   .map(id => Math.trunc(Number(id)))
                   .filter((id): id is number => Number.isFinite(id) && id >= 0),
               ),

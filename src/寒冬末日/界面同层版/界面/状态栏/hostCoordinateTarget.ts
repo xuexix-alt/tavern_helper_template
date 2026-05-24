@@ -82,8 +82,8 @@ function resolveClosestHostMessageTarget(hit: ElementLike): ElementLike | null {
 function resolveClosestHostTriggerTarget(hit: ElementLike): ElementLike | null {
   return (
     resolveClosestHostMessageTarget(hit) ??
-    hit.closest?.('.st-chatu8-image-button') ??
-    hit.closest?.('.st-chatu8-image-span') ??
+    hit.closest?.('.st-chatu8-image-button, button.image-tag-button') ??
+    hit.closest?.('.st-chatu8-image-span, span.image-tag-placeholder, .ai-image-container') ??
     hit
   );
 }

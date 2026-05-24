@@ -100,3 +100,15 @@ test('gallery image portrait assignment is a compact icon beside the image name'
     /<strong>\{\{ entry\.characterName \|\| entry\.title \}\}<\/strong>\s*<small>\{\{ entry\.title \}\}<\/small>/,
   );
 });
+
+test('gallery images expose a compact refresh icon that uses the same regenerate payload path as double click', () => {
+  const source = read('../components/GeneratedImageAsset.vue');
+
+  assert.match(source, /class="generated-image-caption-actions"/);
+  assert.match(source, /class="generated-image-regenerate-icon-btn clip-corner-sm"/);
+  assert.match(source, /title="重新生成图片"/);
+  assert.match(source, /aria-label="重新生成图片"/);
+  assert.match(source, /@click\.stop\.capture="handleRegenerateClick"/);
+  assert.match(source, /emit\('regenerate', activationPayload\.value\)/);
+  assert.match(source, /source: props\.variant === 'gallery' \? 'gallery' : 'transcript'/);
+});

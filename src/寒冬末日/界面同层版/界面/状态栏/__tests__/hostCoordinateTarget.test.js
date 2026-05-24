@@ -14,8 +14,8 @@ test('resolveHostMessageTargetFromPoint prefers mes_text-like carriers and never
   const hit = {
     closest(selector) {
       if (selector === '.mes_text, .mes_block, .message_text') return hostMesText;
-      if (selector === '.st-chatu8-image-button') return imageButton;
-      if (selector === '.st-chatu8-image-span') return null;
+      if (selector === '.st-chatu8-image-button, button.image-tag-button') return imageButton;
+      if (selector === '.st-chatu8-image-span, span.image-tag-placeholder, .ai-image-container') return null;
       return null;
     },
   };
@@ -35,8 +35,8 @@ test('resolveHostTriggerTargetFromPoint still falls back to plugin image control
   const hit = {
     closest(selector) {
       if (selector === '.mes_text, .mes_block, .message_text') return null;
-      if (selector === '.st-chatu8-image-button') return imageButton;
-      if (selector === '.st-chatu8-image-span') return null;
+      if (selector === '.st-chatu8-image-button, button.image-tag-button') return imageButton;
+      if (selector === '.st-chatu8-image-span, span.image-tag-placeholder, .ai-image-container') return null;
       return null;
     },
   };

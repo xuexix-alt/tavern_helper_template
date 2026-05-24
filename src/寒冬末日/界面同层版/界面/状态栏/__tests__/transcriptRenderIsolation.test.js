@@ -283,6 +283,33 @@ test('successful image generation responses actively reconcile host image data',
   );
 });
 
+test('gallery image regeneration keeps a gallery recent intent through the native response refresh path', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const storySource = readSource('pages/StoryPage.vue');
+  const activationSource = readSource('generatedImageActivation.ts');
+
+  assert.equal(
+    activationSource.includes("source?: 'transcript' | 'gallery';"),
+    true,
+    'generated image activation payloads should preserve whether the gesture came from the transcript or gallery',
+  );
+  assert.equal(
+    source.includes("function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript')"),
+    true,
+    'pending image tasks should accept gallery as a first-class intent source',
+  );
+  assert.equal(
+    storySource.includes("const intentSource = payload?.source === 'gallery' ? 'gallery' : 'transcript';"),
+    true,
+    'StoryPage should pass gallery regenerate gestures into the pending task manager as gallery intents',
+  );
+  assert.equal(
+    source.includes('[matchedResponse?.messageId, recentIntent?.messageId ?? null]'),
+    true,
+    'successful native responses should refresh the recent gallery message as well as transcript-triggered messages',
+  );
+});
+
 test('StoryPage can hide duplicate tail gallery images while keeping the gallery drawer data source', () => {
   const source = readSource('pages/StoryPage.vue');
   const cardSource = readSource('components/TranscriptMessageCard.vue');
@@ -345,8 +372,8 @@ test('TranscriptMessageCard binds plugin-native inline image spans to the genera
   const activationSource = readSource('generatedImageActivation.ts');
 
   assert.equal(
-    source.includes(
-      "root.querySelectorAll('.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image')",
+    /root\.querySelectorAll\(\s*['"]\.st-chatu8-image-span,\s*\.assistant-fallback-inline-image,\s*\.assistant-fallback-generated-image['"]/.test(
+      source,
     ),
     true,
     'plugin-native inline image spans should receive the same hitarea gesture bridge as fallback images',

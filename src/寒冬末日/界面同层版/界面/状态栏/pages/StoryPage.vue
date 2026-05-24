@@ -1235,7 +1235,7 @@ function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: s
   if (!root) return null;
   const needle = normalizePromptTokenForCompare(promptToken);
   if (!needle) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button')) as HTMLElement[];
   for (const button of buttons) {
     const payload = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
     if (!payload) continue;
@@ -1247,7 +1247,7 @@ function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: s
 function resolveIframeImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
   const root = resolveIframeMessageRoot(messageId);
   if (!root || !requestId) return null;
-  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button')) as HTMLElement[];
+  const buttons = Array.from(root.querySelectorAll('.st-chatu8-image-button, button.image-tag-button')) as HTMLElement[];
   return (
     buttons.find(button => {
       const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
@@ -1259,7 +1259,7 @@ function resolveIframeImageButtonByRequestId(messageId: number, requestId: strin
 function resolveIframeImageNodeByRequestId(messageId: number, requestId: string): HTMLImageElement | null {
   const root = resolveIframeMessageRoot(messageId);
   if (!root || !requestId) return null;
-  const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
+  const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder')) as HTMLElement[];
   for (const span of spans) {
     const spanRequestId = String(span.dataset.requestId ?? span.getAttribute('data-request-id') ?? '').trim();
     if (spanRequestId !== requestId) continue;
@@ -1274,7 +1274,9 @@ function resolveIframeImageNodeBySrc(messageId: number, imageSrc: string): HTMLI
   if (!root || !imageSrc) return null;
   const needle = normalizeImageSrcForCompare(imageSrc);
   if (!needle) return null;
-  const images = Array.from(root.querySelectorAll('.st-chatu8-image-span img')) as HTMLImageElement[];
+  const images = Array.from(
+    root.querySelectorAll('.st-chatu8-image-span img, .st-chatu8-image-container img, .ai-image-container img'),
+  ) as HTMLImageElement[];
   for (const image of images) {
     const candidate = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
     if (candidate === needle) return image;
@@ -1513,6 +1515,16 @@ function dispatchHostDoubleClick(
   strategy: HostGestureDispatchStrategy = 'auto',
 ): boolean {
   return dispatchHostPrimaryTrigger(target, { hostPoint, strategy });
+}
+
+function dispatchHostImageRegenerateTrigger(target: HTMLElement): boolean {
+  if (target.matches?.('.st-chatu8-image-button, button.image-tag-button')) {
+    return triggerHostElementClick(target);
+  }
+
+  const firstClick = triggerHostElementClick(target);
+  const secondClick = triggerHostElementClick(target);
+  return firstClick || secondClick;
 }
 
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
@@ -1842,6 +1854,7 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
+  const intentSource = payload?.source === 'gallery' ? 'gallery' : 'transcript';
 
   const targetNode = await resolveWithRetry(
     () => {
@@ -1868,9 +1881,9 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
     toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
     return;
   }
-  beginPendingImageTask(Math.trunc(messageId));
+  beginPendingImageTask(Math.trunc(messageId), intentSource);
   await withFullscreenSuspended(() => {
-    if (!dispatchHostDoubleClick(targetNode)) {
+    if (!dispatchHostImageRegenerateTrigger(targetNode)) {
       toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
     }
   });

@@ -10,7 +10,7 @@ const {
 test('countPluginNativeImageArtifacts only counts ready img nodes and ignores button placeholders', () => {
   const root = {
     querySelectorAll(selector) {
-      if (selector === '.st-chatu8-image-span img') {
+      if (selector.includes('.st-chatu8-image-span img') && selector.includes('.ai-image-container img')) {
         return [{ tagName: 'IMG' }, { tagName: 'IMG' }];
       }
       return [];
@@ -23,7 +23,7 @@ test('countPluginNativeImageArtifacts only counts ready img nodes and ignores bu
 test('isPluginNativeMutationNode matches native mes_text and st-chatu8 artifacts', () => {
   const mesTextNode = {
     matches(selector) {
-      return selector === '.mes_text, .st-chatu8-image-span, .st-chatu8-image-button';
+      return selector.includes('.mes_text') && selector.includes('button.image-tag-button');
     },
   };
 
@@ -36,7 +36,7 @@ test('isPluginNativeMutationNode matches native mes_text and st-chatu8 artifacts
     },
     parentElement: {
       matches(selector) {
-        return selector === '.mes_text, .st-chatu8-image-span, .st-chatu8-image-button';
+        return selector.includes('.st-chatu8-image-span') && selector.includes('span.image-tag-placeholder');
       },
     },
   };
@@ -59,7 +59,7 @@ test('isPluginNativeMutationNode matches native mes_text and st-chatu8 artifacts
 test('isReadyPluginNativeMutationNode ignores button placeholders but matches ready image nodes', () => {
   const readyImageNode = {
     matches(selector) {
-      return selector === '.st-chatu8-image-span img, .st-chatu8-image-container img';
+      return selector.includes('.st-chatu8-image-span img') && selector.includes('.ai-image-container img');
     },
   };
 

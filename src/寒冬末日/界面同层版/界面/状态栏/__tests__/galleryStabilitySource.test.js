@@ -166,3 +166,16 @@ test('mobile transcript double-tap keeps the proxy chain and forwards the second
     /void startTranscriptHostImageProxy\(messageId, event, \{ preferPointTarget: true \}\);/,
   );
 });
+
+test('generated image regenerate uses the plugin image click bridge instead of mes_text dblclick', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+
+  assert.match(storyPageSource, /function dispatchHostImageRegenerateTrigger\(target: HTMLElement\): boolean/);
+  assert.match(storyPageSource, /target\.matches\?\.\('\.st-chatu8-image-button, button\.image-tag-button'\)/);
+  assert.match(
+    storyPageSource,
+    /dispatchHostImageRegenerateTrigger\(targetNode\)/,
+    'existing image regeneration should use the plugin generation.js click chain, not the mes_text trigger',
+  );
+  assert.doesNotMatch(storyPageSource, /dispatchHostDoubleClick\(targetNode, null, 'dblclick'\)/);
+});

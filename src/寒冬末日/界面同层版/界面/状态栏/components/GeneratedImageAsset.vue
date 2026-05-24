@@ -7,6 +7,7 @@
     :data-image-id="entry.imageId || ''"
     :data-prompt-token="encodePromptToken(entry.promptToken)"
     :data-request-id="entry.requestId ?? ''"
+    :data-source="activationPayload.source ?? ''"
   >
     <img
       v-if="resolvedSource"
@@ -19,6 +20,7 @@
       :data-image-id="resolvedSource.imageId"
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
+      :data-source="activationPayload.source ?? ''"
     />
     <div
       v-else
@@ -28,6 +30,7 @@
       :data-image-id="entry.imageId || ''"
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
+      :data-source="activationPayload.source ?? ''"
     >
       <span class="generated-image-kicker">{{ kickerText }}</span>
       <strong>{{ entry.characterName || entry.title }}</strong>
@@ -42,6 +45,7 @@
       :data-prompt-token="encodePromptToken(entry.promptToken)"
       :data-request-id="entry.requestId ?? ''"
       :data-image-src="encodePromptToken(activationPayload.imageSrc)"
+      :data-source="activationPayload.source ?? ''"
       :aria-label="secondaryText"
       @click.capture="handleClick"
       @dblclick.capture="handleDoubleClick"
@@ -53,18 +57,30 @@
     <figcaption v-if="showCaption" class="generated-image-caption">
       <div class="generated-image-caption-main">
         <strong>{{ captionPrimaryText }}</strong>
-        <button
-          v-if="variant === 'gallery'"
-          type="button"
-          class="generated-image-assign-icon-btn clip-corner-sm"
-          title="设为立绘"
-          aria-label="设为立绘"
-          @click.stop.capture="handleAssignClick"
-          @dblclick.stop.capture
-          @pointerdown.stop.capture
-        >
-          <span aria-hidden="true"></span>
-        </button>
+        <div v-if="variant === 'gallery'" class="generated-image-caption-actions">
+          <button
+            type="button"
+            class="generated-image-regenerate-icon-btn clip-corner-sm"
+            title="重新生成图片"
+            aria-label="重新生成图片"
+            @click.stop.capture="handleRegenerateClick"
+            @dblclick.stop.capture
+            @pointerdown.stop.capture
+          >
+            <span aria-hidden="true"></span>
+          </button>
+          <button
+            type="button"
+            class="generated-image-assign-icon-btn clip-corner-sm"
+            title="设为立绘"
+            aria-label="设为立绘"
+            @click.stop.capture="handleAssignClick"
+            @dblclick.stop.capture
+            @pointerdown.stop.capture
+          >
+            <span aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
       <small v-if="captionSecondaryText">{{ captionSecondaryText }}</small>
     </figcaption>
@@ -137,6 +153,7 @@ const activationPayload = computed<GeneratedImageActivationPayload>(() => ({
   promptToken: String(props.entry.promptToken ?? ''),
   requestId: String(props.entry.requestId ?? '').trim(),
   imageSrc: String(resolvedSource.value?.src ?? '').trim(),
+  source: props.variant === 'gallery' ? 'gallery' : 'transcript',
 }));
 
 let suppressNextClick = false;
@@ -200,6 +217,11 @@ function handlePointerCancel(event: PointerEvent) {
 function handleAssignClick(event: Event) {
   stopEvent(event);
   emit('assign-role', props.entry);
+}
+
+function handleRegenerateClick(event: Event) {
+  stopEvent(event);
+  emit('regenerate', activationPayload.value);
 }
 
 async function resolveSource() {
@@ -359,7 +381,14 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.generated-image-assign-icon-btn {
+.generated-image-caption-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.generated-image-assign-icon-btn,
+.generated-image-regenerate-icon-btn {
   position: relative;
   z-index: 4;
   display: inline-grid;
@@ -383,14 +412,17 @@ onBeforeUnmount(() => {
 }
 
 .generated-image-assign-icon-btn:hover,
-.generated-image-assign-icon-btn:focus-visible {
+.generated-image-assign-icon-btn:focus-visible,
+.generated-image-regenerate-icon-btn:hover,
+.generated-image-regenerate-icon-btn:focus-visible {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--primary) 58%, transparent);
   background: color-mix(in srgb, var(--primary) 22%, var(--surface) 78%);
 }
 
 @media (max-width: 640px) {
-  .generated-image-assign-icon-btn {
+  .generated-image-assign-icon-btn,
+  .generated-image-regenerate-icon-btn {
     width: 22px;
     height: 22px;
     font-size: 10px;

@@ -54,6 +54,10 @@ function normalizeString(value: unknown): string {
   return String(value ?? '').trim();
 }
 
+function normalizePromptPayload(payload: ImageGenerationEventPayload | ImageGenerationResponsePayload | null | undefined): string {
+  return normalizeString(payload?.prompt) || normalizeString(payload?.change);
+}
+
 function describeRequestId(requestId: string): string {
   return requestId ? ` (ID: ${requestId.slice(0, 16)}${requestId.length > 16 ? '…' : ''})` : '';
 }
@@ -96,7 +100,7 @@ export function createImageGenerationEventBridge(deps: ImageGenerationBridgeDeps
 
   const onRequest = (payload: ImageGenerationEventPayload) => {
     const requestId = normalizeString(payload?.id);
-    const prompt = normalizeString(payload?.prompt);
+    const prompt = normalizePromptPayload(payload);
     if (!requestId) return;
     inflight.set(requestId, { prompt, startedAt: Date.now() });
     deps.recordTrace?.('imageGenerationEventBridge', 'request', { requestId, promptHead: prompt.slice(0, 60) });
@@ -105,7 +109,7 @@ export function createImageGenerationEventBridge(deps: ImageGenerationBridgeDeps
 
   const onResponse = (payload: ImageGenerationResponsePayload) => {
     const requestId = normalizeString(payload?.id);
-    const prompt = normalizeString(payload?.prompt) || inflight.get(requestId)?.prompt || '';
+    const prompt = normalizePromptPayload(payload) || inflight.get(requestId)?.prompt || '';
     const imageData = normalizeString(payload?.imageData);
     const rawSuccess = payload?.success;
     const rawError = normalizeString(payload?.error);
