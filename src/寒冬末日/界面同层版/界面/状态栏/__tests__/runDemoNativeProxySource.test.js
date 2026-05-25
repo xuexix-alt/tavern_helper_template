@@ -197,12 +197,21 @@ test('same-layer generate records stage timings around user creation, reveal, an
   assert.match(flowBody, /await createChatMessages[\s\S]*markStageTiming\('create_user_message_done'/);
   assert.match(flowBody, /markStageTiming\('hidden_reveal_start'[\s\S]*await setChatMessages/);
   assert.match(flowBody, /await setChatMessages[\s\S]*markStageTiming\('hidden_reveal_done'/);
-  assert.match(flowBody, /markStageTiming\('generate_call_start'\)[\s\S]*const generateCallStartedAt = readTraceNowMs\(\)[\s\S]*const generatePromise = generate/);
+  assert.match(
+    flowBody,
+    /markStageTiming\('generate_call_start'\)[\s\S]*const generateCallStartedAt = readTraceNowMs\(\)[\s\S]*const generatePromise = generate/,
+  );
   assert.match(
     flowBody,
     /const generatePromise = generate[\s\S]*markStageTiming\('generate_call_returned',\s*\{[\s\S]*syncDurationMs:/,
     'trace should catch synchronous blocking inside Tavern Helper generate() before it returns its promise',
   );
-  assert.match(flowBody, /markStageTiming\('generate_await_start'\)[\s\S]*Promise\.race\(\[generatePromise, cancelPromise\]\)/);
-  assert.match(flowBody, /Promise\.race\(\[generatePromise, cancelPromise\]\)[\s\S]*markStageTiming\('generate_await_resolved'/);
+  assert.match(
+    flowBody,
+    /markStageTiming\('generate_await_start'\)[\s\S]*Promise\.race\(\[generatePromise, cancelPromise\]\)/,
+  );
+  assert.match(
+    flowBody,
+    /Promise\.race\(\[generatePromise, cancelPromise\]\)[\s\S]*markStageTiming\('generate_await_resolved'/,
+  );
 });

@@ -99,7 +99,9 @@ export function collectGenerationRevealMessageIds({
     Number.isFinite(maxMessages) && maxMessages > 0
       ? [...normalizedHiddenMessages]
           .sort((a, b) => b.message_id - a.message_id)
-          .filter((item, index, list) => list.findIndex(candidate => candidate.message_id === item.message_id) === index)
+          .filter(
+            (item, index, list) => list.findIndex(candidate => candidate.message_id === item.message_id) === index,
+          )
           .reduce<Array<{ message_id: number; messageLength: number }>>((selected, item) => {
             if (selected.length >= maxMessages) return selected;
             const selectedCharacters = selected.reduce((sum, current) => sum + current.messageLength, 0);
