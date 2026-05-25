@@ -97,3 +97,63 @@ test('same-layer generate reveal window avoids visually flashing hidden floors',
     'generate reveal should not suspend visual hiding; same-layer transcript owns visible rendering',
   );
 });
+
+test('same-layer pre-generate hidden-floor scan uses lightweight host metadata instead of full transcript text', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(
+    source,
+    /function readAllChatMessageMetasRaw\(\)[\s\S]*data: message\?\.data,/,
+    'same-layer should have a metadata-only reader for pre-request scans',
+  );
+  assert.match(
+    flowBody,
+    /const hiddenMessageIds = readMessageMetasAfterContainer\(\)/,
+    'runGenerationFlow should not call full getChatMessages("0-last") just to collect hidden ids before generate()',
+  );
+  assert.doesNotMatch(
+    flowBody,
+    /const hiddenMessageIds = readMessagesAfterContainer\(\)/,
+    'pre-generate hidden id collection must avoid reading every floor body on large imported chats',
+  );
+});
+
+test('hide policy always reapplies post-container host hiding even when persisted hide state says ids are already hidden', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const hideBody = extractFunctionBody(source, 'applyHidePolicy');
+  const persistBody = extractFunctionBody(source, 'persistHideStateNow');
+
+  assert.match(
+    hideBody,
+    /const patch = readMessageMetasAfterContainer\(\)\.map\(item => \(\{ message_id: item\.message_id, is_hidden: true \}\)\)/,
+    'hide policy should reapply actual host is_hidden=true instead of trusting persisted desired hidden state',
+  );
+  assert.doesNotMatch(
+    hideBody,
+    /filter\(item => item\.is_hidden !== true\)/,
+    'persisted hide_state is a desired state cache and must not suppress host re-hide patches',
+  );
+  assert.match(
+    persistBody,
+    /const hiddenIds = readMessageMetasAfterContainer\(\)\.map\(item => item\.message_id\)/,
+    'same-layer hide_state should persist the desired post-container hidden set without reading full story bodies',
+  );
+});
+
+test('ordinary same-layer send delays assistant placeholder creation until the first stream token', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+  const beforeGenerate = flowBody.slice(0, flowBody.indexOf('const generatePromise = generate'));
+
+  assert.match(
+    beforeGenerate,
+    /if \(options\.detachedUserInput === true\) \{[\s\S]*await ensureAssistantPlaceholderReady\('first_token'\);[\s\S]*await options\.onAssistantPlaceholderCreated\?\.\(assistantMessageId\.value\);[\s\S]*\}/,
+    'opening detached generation may still pre-create an assistant placeholder because the opening payload needs its id',
+  );
+  assert.doesNotMatch(
+    beforeGenerate.replace(/if \(options\.detachedUserInput === true\) \{[\s\S]*?await options\.onAssistantPlaceholderCreated\?\.\(assistantMessageId\.value\);[\s\S]*?\}/, ''),
+    /await ensureAssistantPlaceholderReady\('first_token'\);/,
+    'ordinary sends should not add a second host message write before Tavern Helper generate() starts',
+  );
+});

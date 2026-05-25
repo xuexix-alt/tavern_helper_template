@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildLeanInheritedMessageData,
   hasOpeningAssistantFlag,
   hasOpeningSeedFlag,
   isCurrentOpeningAssistantMessageByPayload,
@@ -66,6 +67,32 @@ test('sanitizeInheritedMessageData strips opening-only stream_demo flags but kee
     display_data: {
       some: 'value',
     },
+  });
+});
+
+test('buildLeanInheritedMessageData keeps MVU state without cloning bulky message payload branches', () => {
+  const inherited = buildLeanInheritedMessageData({
+    stream_demo: {
+      opening_seed: true,
+      opening_assistant: true,
+      reader_state: { density: 'comfortable' },
+    },
+    stat_data: { 世界: { 日期: '2026-05-25' } },
+    initialized_lorebooks: { main: true },
+    display_data: {
+      huge_html: '<img>'.repeat(1000),
+    },
+    extra: {
+      images: ['native image cache should not be copied into every new floor'],
+    },
+  });
+
+  assert.deepEqual(inherited, {
+    stream_demo: {
+      reader_state: { density: 'comfortable' },
+    },
+    stat_data: { 世界: { 日期: '2026-05-25' } },
+    initialized_lorebooks: { main: true },
   });
 });
 

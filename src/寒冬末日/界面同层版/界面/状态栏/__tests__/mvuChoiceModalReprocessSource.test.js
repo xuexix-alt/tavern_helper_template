@@ -287,6 +287,7 @@ test('useStreamingDemo exposes a latest-assistant MVU reroll action that trigger
 test('latest-assistant MVU reroll reveals hidden same-layer story floors before native retry builds prompt context', () => {
   const source = read('../useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'reprocessLatestAssistantVariables');
+  const revealBody = extractFunctionBody(source, 'revealHiddenStoryMessagesForNativeGeneration');
 
   assert.match(
     body,
@@ -297,6 +298,11 @@ test('latest-assistant MVU reroll reveals hidden same-layer story floors before 
     body,
     /nativeGenerationRevealActive = false;[\s\S]*releaseHiddenStoryMessagesForNativeGeneration\(\);[\s\S]*queueHidePolicy\('mvu_extra_analysis_retry_done'\)/,
     'manual MVU retry should release the reveal window and restore the same-layer hide policy afterward',
+  );
+  assert.match(
+    revealBody,
+    /const messagesToReveal = readMessageMetasAfterContainer\(\)/,
+    'native extra-analysis retry should collect hidden ids without reading every hidden story body first',
   );
 });
 

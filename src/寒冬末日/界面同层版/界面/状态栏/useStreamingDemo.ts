@@ -86,9 +86,9 @@ import { chooseImageRenderMode } from './imageRenderPriority';
 import { collectGenerationRevealMessageIds, withLatestUserUnhidden } from './latestUserMacroVisibility';
 import { sendToNativeChat } from './nativeSendProxy';
 import {
+  buildLeanInheritedMessageData,
   isCurrentOpeningAssistantMessageByPayload,
   isCurrentOpeningSeedMessageByPayload,
-  sanitizeInheritedMessageData,
 } from './openingMessageFlags';
 import { collectPluginNativeCacheArtifacts } from './pluginNativeCacheArtifacts';
 import {
@@ -230,6 +230,13 @@ type BaseChatMessage = {
   message_id: number;
   role: 'assistant' | 'user' | 'system';
   message: string;
+  is_hidden: boolean;
+  data?: unknown;
+};
+
+type ChatMessageMeta = {
+  message_id: number;
+  role: 'assistant' | 'user' | 'system';
   is_hidden: boolean;
   data?: unknown;
 };
@@ -1770,7 +1777,6 @@ export function useStreamingDemo() {
   let nativeSendProxyActive = false;
   let openingNativeGenerationActive = false;
   let nativeGenerationRevealActive = false;
-  let releaseNativeGenerationVisualHide: (() => void) | null = null;
   const generationListenerEpochController = createGenerationListenerEpochController();
   let generationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
@@ -2503,9 +2509,7 @@ export function useStreamingDemo() {
       do {
         hidePolicyRerun = false;
         if (nativeGenerationRevealActive) return;
-        const patch = readMessagesAfterContainer()
-          .filter(item => item.is_hidden !== true)
-          .map(item => ({ message_id: item.message_id, is_hidden: true }));
+        const patch = readMessageMetasAfterContainer().map(item => ({ message_id: item.message_id, is_hidden: true }));
         if (patch.length === 0) continue;
         await setChatMessages(patch, { refresh: 'none' });
       } while (hidePolicyRerun);
@@ -2899,11 +2903,61 @@ export function useStreamingDemo() {
     }
   }
 
+  function readPersistedHiddenIdSetForActiveContainer(): Set<number> {
+    const containerId = getActiveContainerMessageId();
+    const savedState = readHideState();
+    if (!savedState || containerId == null || savedState.containerMessageId !== containerId) return new Set();
+    return new Set(savedState.hiddenMessageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id)));
+  }
+
+  function readAllChatMessageMetasRaw(): ChatMessageMeta[] {
+    const persistedHiddenIds = readPersistedHiddenIdSetForActiveContainer();
+    try {
+      const ctx = readHostContext();
+      const chat = ctx?.chat;
+      const chatLen =
+        chat != null && typeof chat === 'object' && typeof (chat as any).length === 'number'
+          ? (chat as any).length
+          : -1;
+      if (chat != null && typeof chat === 'object' && chatLen > 0) {
+        const metas = Array.from({ length: chatLen }, function (_: any, index: number) {
+          const message = (chat as any)[index];
+          if (!message || typeof message !== 'object') return null;
+          const messageId = Math.trunc(Number(message?.message_id ?? index));
+          if (!Number.isFinite(messageId) || messageId < 0) return null;
+          return {
+            message_id: messageId,
+            role: resolveHostMessageRole(message),
+            is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
+            data: message?.data,
+          };
+        }).filter(Boolean) as ChatMessageMeta[];
+        if (metas.length > 0) return metas;
+      }
+    } catch (e) {
+      console.warn('[Debug] readAllChatMessageMetasRaw context error', { error: String(e) });
+    }
+
+    return readAllChatMessagesRaw().map(item => ({
+      message_id: item.message_id,
+      role: item.role,
+      is_hidden: item.is_hidden === true || persistedHiddenIds.has(item.message_id),
+      data: item.data,
+    }));
+  }
+
   function readMessagesAfterContainer(): BaseChatMessage[] {
     const containerId = getActiveContainerMessageId();
     // 直接从宿主 chat 数组读取，绕过 getChatMessages 对 is_hidden 的潜在过滤
     const all = readAllChatMessagesRaw();
     return all.filter(
+      item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
+    );
+  }
+
+  function readMessageMetasAfterContainer(): ChatMessageMeta[] {
+    const containerId = getActiveContainerMessageId();
+    return readAllChatMessageMetasRaw().filter(
       item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
     );
   }
@@ -2914,13 +2968,19 @@ export function useStreamingDemo() {
     return readAllChatMessagesRaw().find(item => item.message_id === containerId) ?? null;
   }
 
+  function readActiveContainerMessageMeta(): ChatMessageMeta | null {
+    const containerId = getActiveContainerMessageId();
+    if (containerId == null) return null;
+    return readAllChatMessageMetasRaw().find(item => item.message_id === containerId) ?? null;
+  }
+
   function resolveInheritedUserMessageData(): Record<string, unknown> {
-    const messages = readMessagesAfterContainer()
+    const messages = readMessageMetasAfterContainer()
       .filter(item => Number.isFinite(item.message_id))
       .sort((a, b) => a.message_id - b.message_id);
     const latestMessage = messages[messages.length - 1];
-    const inheritanceSourceMessage = latestMessage ?? readActiveContainerMessage();
-    const inherited = sanitizeInheritedMessageData(inheritanceSourceMessage?.data);
+    const inheritanceSourceMessage = latestMessage ?? readActiveContainerMessageMeta();
+    const inherited = buildLeanInheritedMessageData(inheritanceSourceMessage?.data);
     const latestMessageId = Number(inheritanceSourceMessage?.message_id);
     if (!Number.isFinite(latestMessageId) || latestMessageId < 0) {
       return inherited;
@@ -2956,9 +3016,7 @@ export function useStreamingDemo() {
     const containerId = getActiveContainerMessageId();
     if (containerId == null) return;
 
-    const hiddenIds = readMessagesAfterContainer()
-      .filter(item => item.is_hidden === true)
-      .map(item => item.message_id);
+    const hiddenIds = readMessageMetasAfterContainer().map(item => item.message_id);
 
     const record = buildHideStateRecord(containerId, hiddenIds);
     writeHideState(record);
@@ -3012,7 +3070,7 @@ export function useStreamingDemo() {
   }
 
   async function restoreHostVisibilityAfterLeaseReset(reason: string, containerMessageId?: number | null) {
-    const hiddenMessages = readMessagesAfterContainer().filter(item => item.is_hidden === true);
+    const hiddenMessages = readMessageMetasAfterContainer().filter(item => item.is_hidden === true);
     if (hiddenMessages.length > 0) {
       await setChatMessages(
         hiddenMessages.map(item => ({ message_id: item.message_id, is_hidden: false })),
@@ -3031,9 +3089,7 @@ export function useStreamingDemo() {
   }
 
   function syncHostVisualHideFromCurrentState() {
-    const hiddenIds = readMessagesAfterContainer()
-      .filter(item => item.is_hidden === true)
-      .map(item => item.message_id);
+    const hiddenIds = readMessageMetasAfterContainer().map(item => item.message_id);
     hostVisualHideController.applyToMessageIds(hiddenIds);
   }
 
@@ -3043,7 +3099,7 @@ export function useStreamingDemo() {
       hidePolicyTimer = 0;
     }
     nativeGenerationRevealActive = true;
-    const messagesToReveal = readMessagesAfterContainer()
+    const messagesToReveal = readMessageMetasAfterContainer()
       .filter(item => item.is_hidden === true)
       .map(item => item.message_id);
     if (messagesToReveal.length > 0) {
@@ -3055,8 +3111,7 @@ export function useStreamingDemo() {
   }
 
   function releaseHiddenStoryMessagesForNativeGeneration() {
-    releaseNativeGenerationVisualHide?.();
-    releaseNativeGenerationVisualHide = null;
+    // Reserved for native-generation reveal cleanup that must run before the hide policy is queued again.
   }
 
   async function disableSameLayerUi(options: { restoreHost?: boolean } = {}) {
@@ -3072,7 +3127,7 @@ export function useStreamingDemo() {
     stopRuntimeLeaseHeartbeat();
     writeRuntimeLeaseStatus('closing');
 
-    const hiddenMessages = readMessagesAfterContainer()
+    const hiddenMessages = readMessageMetasAfterContainer()
       .filter(item => item.is_hidden === true)
       .map(item => ({ message_id: item.message_id, is_hidden: false }));
     if (restoreHost && hiddenMessages.length > 0) {
@@ -3108,7 +3163,7 @@ export function useStreamingDemo() {
       return;
     }
 
-    const allMessages = readMessagesAfterContainer();
+    const allMessages = readMessageMetasAfterContainer();
     const validHiddenIds = savedState.hiddenMessageIds.filter(savedId =>
       allMessages.some(msg => msg.message_id === savedId),
     );
@@ -3159,7 +3214,7 @@ export function useStreamingDemo() {
     }
     const releaseVisualHide = hostVisualHideController.suspend('bridge_visible');
     // 临时取消隐藏
-    const messagesToReveal = readMessagesAfterContainer()
+    const messagesToReveal = readMessageMetasAfterContainer()
       .filter(item => item.is_hidden === true)
       .map(item => item.message_id);
     if (messagesToReveal.length > 0) {
@@ -4284,11 +4339,15 @@ export function useStreamingDemo() {
         appendLog('action', '发送用户输入', stripTagsForPreview(prompt).slice(0, 80) || '(空输入)');
       }
 
-      // 在 generate() 前主动创建 assistant 占位符，防止 ST 流式回调覆盖已有 assistant 消息
-      await ensureAssistantPlaceholderReady('first_token');
-      await options.onAssistantPlaceholderCreated?.(assistantMessageId.value);
+      // Opening detached flows need a stable assistant id before generate() so the opening payload can track it.
+      // Ordinary sends create the placeholder on the first stream token instead, keeping the host UI responsive
+      // while the request is being prepared.
+      if (options.detachedUserInput === true) {
+        await ensureAssistantPlaceholderReady('first_token');
+        await options.onAssistantPlaceholderCreated?.(assistantMessageId.value);
+      }
 
-      const hiddenMessageIds = readMessagesAfterContainer()
+      const hiddenMessageIds = readMessageMetasAfterContainer()
         .filter(item => item.is_hidden === true)
         .map(item => item.message_id);
       const latestHiddenUserMessageId =

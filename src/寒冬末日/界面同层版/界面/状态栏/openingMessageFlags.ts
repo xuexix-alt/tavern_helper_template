@@ -78,3 +78,32 @@ export function sanitizeInheritedMessageData(input: unknown): Record<string, unk
 
   return next;
 }
+
+export function buildLeanInheritedMessageData(input: unknown): Record<string, unknown> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+
+  const source = input as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+
+  if (source.stream_demo && typeof source.stream_demo === 'object' && !Array.isArray(source.stream_demo)) {
+    const streamDemo = { ...(source.stream_demo as Record<string, unknown>) };
+    delete streamDemo.opening_seed;
+    delete streamDemo.opening_assistant;
+    if (Object.keys(streamDemo).length > 0) {
+      next.stream_demo = _.cloneDeep(streamDemo);
+    }
+  }
+
+  if (source.stat_data && typeof source.stat_data === 'object' && !Array.isArray(source.stat_data)) {
+    next.stat_data = _.cloneDeep(source.stat_data);
+  }
+  if (
+    source.initialized_lorebooks &&
+    typeof source.initialized_lorebooks === 'object' &&
+    !Array.isArray(source.initialized_lorebooks)
+  ) {
+    next.initialized_lorebooks = _.cloneDeep(source.initialized_lorebooks);
+  }
+
+  return next;
+}

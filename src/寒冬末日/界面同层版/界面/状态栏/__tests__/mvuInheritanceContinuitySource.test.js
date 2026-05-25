@@ -14,12 +14,25 @@ const read = relativePath =>
 test('same-layer user creation inherits latest mvu snapshot instead of fragile -2 host fetch', () => {
   const source = read('../useStreamingDemo.ts');
   assert.match(source, /function resolveInheritedUserMessageData\(\)/);
+  assert.match(source, /function readAllChatMessageMetasRaw\(\)/);
+  assert.match(source, /buildLeanInheritedMessageData\(inheritanceSourceMessage\?\.data\)/);
+  assert.match(source, /const messages = readMessageMetasAfterContainer\(\)/);
   assert.match(source, /Mvu\.getMvuData\(\{ type: 'message', message_id: Math\.trunc\(latestMessageId\) \}\)/);
   assert.match(
     source,
     /await createChatMessages\(\[\{ role: 'user', message: prompt, is_hidden: false, data: userData \}\]/,
   );
   assert.doesNotMatch(source, /callHostGetChatMessages\(-2,\s*\{ hide_state: 'all' \}\)/);
+  assert.doesNotMatch(
+    source,
+    /const inherited = sanitizeInheritedMessageData\(inheritanceSourceMessage\?\.data\)/,
+    'generation preparation must not deep-clone the previous full message.data before generate()',
+  );
+  assert.doesNotMatch(
+    source,
+    /function resolveInheritedUserMessageData\(\)[\s\S]*const messages = readMessagesAfterContainer\(\)/,
+    'generation preparation must not read full message text while resolving inherited MVU data',
+  );
 });
 
 test('opening detached assistant placeholder inherits initialized container mvu data before generation', () => {
@@ -27,7 +40,7 @@ test('opening detached assistant placeholder inherits initialized container mvu 
 
   assert.match(
     source,
-    /const inheritanceSourceMessage = latestMessage \?\? readActiveContainerMessage\(\);/,
+    /const inheritanceSourceMessage = latestMessage \?\? readActiveContainerMessageMeta\(\);/,
     'opening has no post-container user floor yet, so inheritance must fall back to the initialized 0-floor container',
   );
   assert.match(
