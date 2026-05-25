@@ -152,7 +152,10 @@ test('ordinary same-layer send delays assistant placeholder creation until the f
     'opening detached generation may still pre-create an assistant placeholder because the opening payload needs its id',
   );
   assert.doesNotMatch(
-    beforeGenerate.replace(/if \(options\.detachedUserInput === true\) \{[\s\S]*?await options\.onAssistantPlaceholderCreated\?\.\(assistantMessageId\.value\);[\s\S]*?\}/, ''),
+    beforeGenerate.replace(
+      /if \(options\.detachedUserInput === true\) \{[\s\S]*?await options\.onAssistantPlaceholderCreated\?\.\(assistantMessageId\.value\);[\s\S]*?\}/,
+      '',
+    ),
     /await ensureAssistantPlaceholderReady\('first_token'\);/,
     'ordinary sends should not add a second host message write before Tavern Helper generate() starts',
   );
