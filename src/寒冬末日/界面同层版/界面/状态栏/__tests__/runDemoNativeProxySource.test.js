@@ -109,13 +109,36 @@ test('same-layer pre-generate hidden-floor scan uses lightweight host metadata i
   );
   assert.match(
     flowBody,
-    /const hiddenMessageIds = readMessageMetasAfterContainer\(\)/,
-    'runGenerationFlow should not call full getChatMessages("0-last") just to collect hidden ids before generate()',
+    /const hiddenMessages = readMessageMetasAfterContainer\(\)/,
+    'runGenerationFlow should not call full getChatMessages("0-last") just to collect hidden metadata before generate()',
   );
   assert.doesNotMatch(
     flowBody,
     /const hiddenMessageIds = readMessagesAfterContainer\(\)/,
     'pre-generate hidden id collection must avoid reading every floor body on large imported chats',
+  );
+});
+
+test('same-layer generate reveal window is bounded so large imported chats do not all enter prompt assembly', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES = 8;/);
+  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_CHARS = 120_000;/);
+  assert.match(
+    flowBody,
+    /const hiddenMessages = readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0/,
+    'reveal selection should use lightweight host metadata including message lengths',
+  );
+  assert.match(
+    flowBody,
+    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,[\s\S]*maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,/,
+    'generation prompt reveal should be capped before Tavern Helper scans the host transcript',
+  );
+  assert.match(
+    flowBody,
+    /hiddenCharacters:[\s\S]*revealCharacters:/,
+    'trace should report whether the bounded reveal actually reduced prompt-visible story text',
   );
 });
 
@@ -159,4 +182,27 @@ test('ordinary same-layer send delays assistant placeholder creation until the f
     /await ensureAssistantPlaceholderReady\('first_token'\);/,
     'ordinary sends should not add a second host message write before Tavern Helper generate() starts',
   );
+});
+
+test('same-layer generate records stage timings around user creation, reveal, and Tavern Helper generate', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(
+    source,
+    /function createStageTimingTrace\([\s\S]*debugKind: 'stage_timing'[\s\S]*elapsedMs[\s\S]*sinceStartMs/,
+    'stage timing trace helper should record both per-stage and since-entry timing',
+  );
+  assert.match(flowBody, /markStageTiming\('create_user_message_start'\)[\s\S]*await createChatMessages/);
+  assert.match(flowBody, /await createChatMessages[\s\S]*markStageTiming\('create_user_message_done'/);
+  assert.match(flowBody, /markStageTiming\('hidden_reveal_start'[\s\S]*await setChatMessages/);
+  assert.match(flowBody, /await setChatMessages[\s\S]*markStageTiming\('hidden_reveal_done'/);
+  assert.match(flowBody, /markStageTiming\('generate_call_start'\)[\s\S]*const generateCallStartedAt = readTraceNowMs\(\)[\s\S]*const generatePromise = generate/);
+  assert.match(
+    flowBody,
+    /const generatePromise = generate[\s\S]*markStageTiming\('generate_call_returned',\s*\{[\s\S]*syncDurationMs:/,
+    'trace should catch synchronous blocking inside Tavern Helper generate() before it returns its promise',
+  );
+  assert.match(flowBody, /markStageTiming\('generate_await_start'\)[\s\S]*Promise\.race\(\[generatePromise, cancelPromise\]\)/);
+  assert.match(flowBody, /Promise\.race\(\[generatePromise, cancelPromise\]\)[\s\S]*markStageTiming\('generate_await_resolved'/);
 });

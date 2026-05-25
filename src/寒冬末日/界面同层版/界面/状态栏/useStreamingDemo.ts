@@ -204,6 +204,8 @@ const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
+const SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES = 8;
+const SAME_LAYER_GENERATION_REVEAL_MAX_CHARS = 120_000;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
@@ -238,6 +240,7 @@ type ChatMessageMeta = {
   message_id: number;
   role: 'assistant' | 'user' | 'system';
   is_hidden: boolean;
+  messageLength?: number;
   data?: unknown;
 };
 
@@ -1860,6 +1863,41 @@ export function useStreamingDemo() {
     return entry;
   }
 
+  function readTraceNowMs(): number {
+    try {
+      const now = window?.performance?.now?.();
+      if (Number.isFinite(now)) return now;
+    } catch {
+      // ignore
+    }
+    return Date.now();
+  }
+
+  function createStageTimingTrace(scope: string, traceId: string, basePayload: Record<string, unknown> = {}) {
+    const startedAt = readTraceNowMs();
+    let previousAt = startedAt;
+
+    return function markStageTiming(stage: string, extraPayload: Record<string, unknown> = {}) {
+      const now = readTraceNowMs();
+      const sinceStartMs = Math.max(0, now - startedAt);
+      const sincePreviousMs = Math.max(0, now - previousAt);
+      previousAt = now;
+      return recordLifecycleTrace(
+        scope,
+        'stage_timing',
+        {
+          debugKind: 'stage_timing',
+          stage,
+          elapsedMs: Math.round(sincePreviousMs * 10) / 10,
+          sinceStartMs: Math.round(sinceStartMs * 10) / 10,
+          ...basePayload,
+          ...extraPayload,
+        },
+        traceId,
+      );
+    };
+  }
+
   function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
     debugConsoleLog(`[stream-demo:image-bridge] ${step}`, detail);
   }
@@ -2929,6 +2967,7 @@ export function useStreamingDemo() {
             message_id: messageId,
             role: resolveHostMessageRole(message),
             is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
+            messageLength: typeof message?.mes === 'string' ? message.mes.length : 0,
             data: message?.data,
           };
         }).filter(Boolean) as ChatMessageMeta[];
@@ -2942,6 +2981,7 @@ export function useStreamingDemo() {
       message_id: item.message_id,
       role: item.role,
       is_hidden: item.is_hidden === true || persistedHiddenIds.has(item.message_id),
+      messageLength: typeof item.message === 'string' ? item.message.length : 0,
       data: item.data,
     }));
   }
@@ -2960,6 +3000,31 @@ export function useStreamingDemo() {
     return readAllChatMessageMetasRaw().filter(
       item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
     );
+  }
+
+  function collectBoundedNativeGenerationRevealIds(reason: string): number[] {
+    const hiddenMessages = readMessageMetasAfterContainer()
+      .filter(item => item.is_hidden === true)
+      .map(item => ({ message_id: item.message_id, messageLength: item.messageLength ?? 0 }));
+    const revealIds = collectGenerationRevealMessageIds({
+      hiddenMessages,
+      maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
+      maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+    });
+    recordLifecycleTrace('nativeGenerationReveal', 'bounded_reveal_prepared', {
+      reason,
+      hiddenCount: hiddenMessages.length,
+      revealCount: revealIds.length,
+      hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+      revealCharacters: hiddenMessages
+        .filter(item => revealIds.includes(item.message_id))
+        .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+      maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
+      maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+      revealMessageIds: revealIds,
+      revealMessageIdsJson: JSON.stringify(revealIds),
+    });
+    return revealIds;
   }
 
   function readActiveContainerMessage(): BaseChatMessage | null {
@@ -3099,9 +3164,7 @@ export function useStreamingDemo() {
       hidePolicyTimer = 0;
     }
     nativeGenerationRevealActive = true;
-    const messagesToReveal = readMessageMetasAfterContainer()
-      .filter(item => item.is_hidden === true)
-      .map(item => item.message_id);
+    const messagesToReveal = collectBoundedNativeGenerationRevealIds(reason);
     if (messagesToReveal.length > 0) {
       await setChatMessages(
         messagesToReveal.map(id => ({ message_id: id, is_hidden: false })),
@@ -4237,7 +4300,20 @@ export function useStreamingDemo() {
       options.createUser ? 'send' : options.detachedUserInput === true ? 'opening' : 'regenerate',
     );
     const generationId = createSameLayerGenerationId(traceId);
+    const markStageTiming = createStageTimingTrace('runGenerationFlow', traceId, {
+      createUser: options.createUser,
+      detachedUserInput: options.detachedUserInput === true,
+      generationId,
+    });
+    markStageTiming('entry', {
+      promptSignature: buildDebugMessageSignature(prompt),
+      promptLength: prompt.length,
+      busyAtEntry: busy.value,
+    });
     if (!prompt || busy.value) {
+      markStageTiming('skip_before_prepare', {
+        reason: !prompt ? 'empty_prompt' : 'busy',
+      });
       recordLifecycleTrace(
         'runGenerationFlow',
         'skip',
@@ -4259,6 +4335,7 @@ export function useStreamingDemo() {
     resetTranscriptWindowToLatestState();
     readingMode.value = 'following_latest';
     queuePersistReaderChatState();
+    markStageTiming('reader_state_prepared');
 
     activeGenerationTraceId = traceId;
     latestLifecycleTraceId = traceId;
@@ -4279,6 +4356,7 @@ export function useStreamingDemo() {
     generationSignalFinalized = false;
     generationSignalFinalizing = false;
     bindGenerationEvents();
+    markStageTiming('generation_state_prepared');
     let revealedHiddenIds: number[] = [];
     let hiddenRevealRestored = false;
     const restoreGenerationRevealWindow = async (reason: string) => {
@@ -4312,9 +4390,17 @@ export function useStreamingDemo() {
 
     try {
       if (options.createUser) {
+        markStageTiming('resolve_user_data_start');
         const userData = resolveInheritedUserMessageData();
+        markStageTiming('resolve_user_data_done', {
+          userDataKeys: Object.keys(userData ?? {}),
+        });
+        markStageTiming('create_user_message_start');
         await createChatMessages([{ role: 'user', message: prompt, is_hidden: false, data: userData }], {
           refresh: 'none',
+        });
+        markStageTiming('create_user_message_done', {
+          lastMessageId: Number(getLastMessageId?.()),
         });
         const userId = Number(getLastMessageId?.());
         recordLifecycleTrace(
@@ -4343,19 +4429,27 @@ export function useStreamingDemo() {
       // Ordinary sends create the placeholder on the first stream token instead, keeping the host UI responsive
       // while the request is being prepared.
       if (options.detachedUserInput === true) {
+        markStageTiming('detached_assistant_placeholder_start');
         await ensureAssistantPlaceholderReady('first_token');
         await options.onAssistantPlaceholderCreated?.(assistantMessageId.value);
+        markStageTiming('detached_assistant_placeholder_done', {
+          assistantMessageId: assistantMessageId.value,
+        });
       }
 
-      const hiddenMessageIds = readMessageMetasAfterContainer()
+      markStageTiming('hidden_meta_scan_start');
+      const hiddenMessages = readMessageMetasAfterContainer()
         .filter(item => item.is_hidden === true)
-        .map(item => item.message_id);
+        .map(item => ({ message_id: item.message_id, messageLength: item.messageLength ?? 0 }));
+      const hiddenMessageIds = hiddenMessages.map(item => item.message_id);
       const latestHiddenUserMessageId =
         options.createUser === false && latestUserItem.value?.hidden === true ? latestUserItem.value.message_id : null;
       const hiddenIds = collectGenerationRevealMessageIds({
         detachedUserInput: options.detachedUserInput === true,
-        hiddenMessageIds,
+        hiddenMessages,
         latestHiddenUserMessageId,
+        maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
+        maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
       });
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -4366,11 +4460,26 @@ export function useStreamingDemo() {
           hiddenMessageIds,
           latestHiddenUserMessageId,
           revealMessageIds: hiddenIds,
+          hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+          revealCharacters: hiddenMessages
+            .filter(item => hiddenIds.includes(item.message_id))
+            .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+          maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
+          maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
           hiddenMessageIdsJson: JSON.stringify(hiddenMessageIds),
           revealMessageIdsJson: JSON.stringify(hiddenIds),
         },
         traceId,
       );
+      markStageTiming('hidden_meta_scan_done', {
+        hiddenCount: hiddenMessageIds.length,
+        revealCount: hiddenIds.length,
+        latestHiddenUserMessageId,
+        hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+        revealCharacters: hiddenMessages
+          .filter(item => hiddenIds.includes(item.message_id))
+          .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+      });
       debugConsoleLog('[stream-demo] generation reveal window', {
         createUser: options.createUser,
         detachedUserInput: options.detachedUserInput === true,
@@ -4380,15 +4489,26 @@ export function useStreamingDemo() {
       });
       if (hiddenIds.length > 0) {
         revealedHiddenIds = hiddenIds;
+        markStageTiming('hidden_reveal_start', {
+          revealCount: hiddenIds.length,
+          revealMessageIds: hiddenIds,
+        });
         await setChatMessages(
           hiddenIds.map(id => ({ message_id: id, is_hidden: false })),
           { refresh: 'none' },
         );
+        markStageTiming('hidden_reveal_done', {
+          revealCount: hiddenIds.length,
+        });
+      } else {
+        markStageTiming('hidden_reveal_skipped');
       }
 
       const cancelPromise = new Promise<string>((_resolve, reject) => {
         activeGenerationCancelReject = reject;
       });
+      markStageTiming('generate_call_start');
+      const generateCallStartedAt = readTraceNowMs();
       const generatePromise = generate(
         options.detachedUserInput === true
           ? {
@@ -4405,6 +4525,9 @@ export function useStreamingDemo() {
               max_chat_history: options.maxChatHistory ?? 'all',
             },
       );
+      markStageTiming('generate_call_returned', {
+        syncDurationMs: Math.round(Math.max(0, readTraceNowMs() - generateCallStartedAt) * 10) / 10,
+      });
       recordLifecycleTrace(
         'runGenerationFlow',
         'generate_requested',
@@ -4418,7 +4541,12 @@ export function useStreamingDemo() {
         traceId,
       );
 
+      markStageTiming('generate_await_start');
       const result = String(await Promise.race([generatePromise, cancelPromise])).trim();
+      markStageTiming('generate_await_resolved', {
+        resultSignature: buildDebugMessageSignature(result),
+        resultLength: result.length,
+      });
       activeGenerationCancelReject = null;
 
       finalText.value = result;
@@ -4435,7 +4563,11 @@ export function useStreamingDemo() {
           finalText: result,
         })
       ) {
+        markStageTiming('finalize_placeholder_start');
         await ensureAssistantPlaceholderReady('finalize_fallback');
+        markStageTiming('finalize_placeholder_done', {
+          assistantMessageId: assistantMessageId.value,
+        });
       }
       recordLifecycleTrace(
         'runGenerationFlow',
@@ -4445,9 +4577,19 @@ export function useStreamingDemo() {
         },
         traceId,
       );
+      markStageTiming('patch_assistant_done_start', {
+        assistantMessageId: assistantMessageId.value,
+      });
       await patchAssistantMessage('done');
+      markStageTiming('patch_assistant_done_done', {
+        assistantMessageId: assistantMessageId.value,
+      });
       const finalizedAssistantMessageId = assistantMessageId.value;
       const lifecycleKind = options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate');
+      markStageTiming('post_done_side_effects_start', {
+        assistantMessageId: finalizedAssistantMessageId,
+        lifecycleKind,
+      });
       await runQueuedPostDoneAssistantSideEffects({
         queue: postDoneSideEffectsQueue,
         messageId: finalizedAssistantMessageId,
@@ -4458,8 +4600,14 @@ export function useStreamingDemo() {
         recordLifecycleTrace,
         warn: console.warn,
       });
+      markStageTiming('post_done_side_effects_done', {
+        assistantMessageId: finalizedAssistantMessageId,
+        lifecycleKind,
+      });
       // MVU 额外模型解析也会在官方生命周期后组装提示词；此时仍要保持楼层可见，避免宏为空。
+      markStageTiming('restore_reveal_after_side_effects_start');
       await restoreGenerationRevealWindow('post_done_side_effects');
+      markStageTiming('restore_reveal_after_side_effects_done');
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
@@ -4467,7 +4615,9 @@ export function useStreamingDemo() {
       // 默认情况下这些步骤各自都会调用 saveChatConditionalDebounced，debounce 1s 才落盘；
       // 如果用户在那一秒内刷新页面，保存就丢了。显式 await saveChat 可以保证 jsonl 已经写入，
       // 并让守护器通过 fetch hook 判断本次保存真正成功还是撞 EPERM。
+      markStageTiming('explicit_save_start');
       await flushExplicitChatSave('generation_done');
+      markStageTiming('explicit_save_done');
       recordLifecycleTrace(
         'runGenerationFlow',
         'done',
@@ -4487,6 +4637,9 @@ export function useStreamingDemo() {
     } catch (error) {
       const caughtMessage = error instanceof Error ? error.message : String(error);
       if (generationCancelRequested.value === true || caughtMessage === SAME_LAYER_CANCELLED_ERROR) {
+        markStageTiming('cancel_settle_start', {
+          message: caughtMessage,
+        });
         return await settleCancelledGeneration(traceId, caughtMessage, prompt);
       }
       if (generationSignalFinalizeTimer) {
@@ -4536,12 +4689,20 @@ export function useStreamingDemo() {
         },
         traceId,
       );
+      markStageTiming('error_caught', {
+        message: caughtMessage,
+        hadVisibleAssistantContent,
+      });
       if (assistantMessageId.value != null) {
         finalText.value = `生成失败：${errorText.value}`;
         try {
           cancelScheduledStreamTranscriptPatch();
+          markStageTiming('error_patch_assistant_start');
           await patchAssistantMessage('done');
+          markStageTiming('error_patch_assistant_done');
+          markStageTiming('error_explicit_save_start');
           await flushExplicitChatSave('generation_error');
+          markStageTiming('error_explicit_save_done');
         } catch {
           // ignore
         }
@@ -4557,7 +4718,9 @@ export function useStreamingDemo() {
       };
     } finally {
       try {
+        markStageTiming('finally_restore_reveal_start');
         await restoreGenerationRevealWindow('finally');
+        markStageTiming('finally_restore_reveal_done');
       } catch {
         // ignore
       }
@@ -4576,6 +4739,9 @@ export function useStreamingDemo() {
         },
         traceId,
       );
+      markStageTiming('finally_done', {
+        finalStatus: status.value,
+      });
       activeGenerationTraceId = '';
     }
   }
@@ -4634,48 +4800,125 @@ export function useStreamingDemo() {
   }
 
   async function reprocessLatestAssistantVariables() {
+    const traceId = createTraceId('mvu-extra-analysis');
+    const markStageTiming = createStageTimingTrace('reprocessLatestAssistantVariables', traceId);
+    markStageTiming('entry', {
+      busyAtEntry: busy.value,
+      pendingAtEntry: reprocessVariablesPending.value,
+      latestAssistantMessageId: latestAssistantItem.value?.message_id ?? null,
+    });
     const latestAssistant = latestAssistantItem.value;
     if (!latestAssistant || latestAssistant.role !== 'assistant') {
+      markStageTiming('skip_no_assistant');
       toastr?.info?.('当前还没有可重新解析变量的 assistant 楼层');
       return;
     }
     if (busy.value) {
+      markStageTiming('skip_busy', {
+        assistantMessageId: latestAssistant.message_id,
+      });
       toastr?.warning?.('正文生成中，等待生成结束后再重试变量解析');
       return;
     }
-    if (reprocessVariablesPending.value) return;
+    if (reprocessVariablesPending.value) {
+      markStageTiming('skip_pending', {
+        assistantMessageId: latestAssistant.message_id,
+      });
+      return;
+    }
 
     reprocessVariablesPending.value = true;
+    recordLifecycleTrace(
+      'reprocessLatestAssistantVariables',
+      'start',
+      {
+        assistantMessageId: latestAssistant.message_id,
+        assistantSignature: buildDebugMessageSignature(latestAssistant.raw),
+      },
+      traceId,
+    );
     try {
+      markStageTiming('hidden_reveal_start', {
+        assistantMessageId: latestAssistant.message_id,
+      });
       await revealHiddenStoryMessagesForNativeGeneration('mvu_extra_analysis_retry');
+      markStageTiming('hidden_reveal_done', {
+        assistantMessageId: latestAssistant.message_id,
+      });
+      markStageTiming('native_retry_click_start', {
+        assistantMessageId: latestAssistant.message_id,
+      });
       const reprocessResult = await retryMessageExtraAnalysisByNativeMvu(latestAssistant.message_id, {
         refreshMessage: true,
+      });
+      markStageTiming('native_retry_click_done', {
+        assistantMessageId: latestAssistant.message_id,
+        retryStatus: reprocessResult.status,
+        retryReason: reprocessResult.reason,
       });
       mvuSourceRevision.value += 1;
 
       if (reprocessResult.status === 'applied') {
+        markStageTiming('mvu_writeback_wait_start', {
+          assistantMessageId: latestAssistant.message_id,
+        });
         await waitForNativeMvuMessageWriteback(latestAssistant.message_id);
+        markStageTiming('mvu_writeback_wait_done', {
+          assistantMessageId: latestAssistant.message_id,
+        });
         appendLog(
           'action',
           '重试额外模型解析',
           `已触发 MVU 原生重试额外模型解析：assistant #${latestAssistant.message_id}`,
         );
         toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
+        recordLifecycleTrace(
+          'reprocessLatestAssistantVariables',
+          'done',
+          {
+            assistantMessageId: latestAssistant.message_id,
+            retryStatus: reprocessResult.status,
+          },
+          traceId,
+        );
         return;
       }
 
       const reason = String(reprocessResult.reason ?? reprocessResult.status ?? 'unknown');
+      markStageTiming('native_retry_not_applied', {
+        assistantMessageId: latestAssistant.message_id,
+        reason,
+      });
       appendLog('info', '重试额外模型解析未触发', `#${latestAssistant.message_id}: ${reason}`);
       toastr?.warning?.(`重试额外模型解析未触发：${reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      markStageTiming('error_caught', {
+        assistantMessageId: latestAssistant.message_id,
+        message,
+      });
+      recordLifecycleTrace(
+        'reprocessLatestAssistantVariables',
+        'error',
+        {
+          assistantMessageId: latestAssistant.message_id,
+          message,
+        },
+        traceId,
+      );
       appendLog('error', '重试额外模型解析失败', message);
       toastr?.error?.(`重试额外模型解析失败：${message}`);
     } finally {
+      markStageTiming('finally_start', {
+        assistantMessageId: latestAssistant.message_id,
+      });
       nativeGenerationRevealActive = false;
       releaseHiddenStoryMessagesForNativeGeneration();
       queueHidePolicy('mvu_extra_analysis_retry_done');
       reprocessVariablesPending.value = false;
+      markStageTiming('finally_done', {
+        assistantMessageId: latestAssistant.message_id,
+      });
     }
   }
 

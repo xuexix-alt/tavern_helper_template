@@ -301,8 +301,55 @@ test('latest-assistant MVU reroll reveals hidden same-layer story floors before 
   );
   assert.match(
     revealBody,
-    /const messagesToReveal = readMessageMetasAfterContainer\(\)/,
-    'native extra-analysis retry should collect hidden ids without reading every hidden story body first',
+    /const messagesToReveal = collectBoundedNativeGenerationRevealIds\(reason\)/,
+    'native extra-analysis retry should use the same bounded reveal window as same-layer generation',
+  );
+});
+
+test('latest-assistant MVU reroll records stage timings around reveal, native retry, and writeback wait', () => {
+  const source = read('../useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'reprocessLatestAssistantVariables');
+
+  assert.match(
+    body,
+    /const traceId = createTraceId\('mvu-extra-analysis'\)[\s\S]*createStageTimingTrace\('reprocessLatestAssistantVariables', traceId\)/,
+    'manual extra-analysis retry should have its own trace id and stage timing scope',
+  );
+  assert.match(
+    body,
+    /markStageTiming\('hidden_reveal_start'[\s\S]*await revealHiddenStoryMessagesForNativeGeneration\('mvu_extra_analysis_retry'\)[\s\S]*markStageTiming\('hidden_reveal_done'/,
+    'trace should bracket the hidden-floor reveal that can block before native retry',
+  );
+  assert.match(
+    body,
+    /markStageTiming\('native_retry_click_start'[\s\S]*await retryMessageExtraAnalysisByNativeMvu\(latestAssistant\.message_id,[\s\S]*markStageTiming\('native_retry_click_done'/,
+    'trace should bracket the native MVU retry click path where prompt assembly starts',
+  );
+  assert.match(
+    body,
+    /markStageTiming\('mvu_writeback_wait_start'[\s\S]*await waitForNativeMvuMessageWriteback\(latestAssistant\.message_id\)[\s\S]*markStageTiming\('mvu_writeback_wait_done'/,
+    'trace should separate native retry dispatch from MVU writeback waiting',
+  );
+});
+
+test('latest-assistant MVU reroll reveal is bounded before native prompt assembly', () => {
+  const source = read('../useStreamingDemo.ts');
+  const helperBody = extractFunctionBody(source, 'collectBoundedNativeGenerationRevealIds');
+
+  assert.match(
+    helperBody,
+    /readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0/,
+    'bounded native reveal should rely on lightweight metadata rather than full message body reads',
+  );
+  assert.match(
+    helperBody,
+    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,[\s\S]*maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,/,
+    'manual extra-analysis retry should not reveal the whole imported chat before clicking native retry',
+  );
+  assert.match(
+    helperBody,
+    /recordLifecycleTrace\('nativeGenerationReveal', 'bounded_reveal_prepared'/,
+    'bounded native reveal should leave trace evidence for the selected prompt-visible window',
   );
 });
 
