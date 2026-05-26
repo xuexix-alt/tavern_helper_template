@@ -204,8 +204,9 @@ const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
-const SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES = 8;
-const SAME_LAYER_GENERATION_REVEAL_MAX_CHARS = 120_000;
+const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
+const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
+const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
@@ -241,8 +242,44 @@ type ChatMessageMeta = {
   role: 'assistant' | 'user' | 'system';
   is_hidden: boolean;
   messageLength?: number;
+  hasDepthSummary?: boolean;
+  depthSummaryLength?: number;
   data?: unknown;
 };
+
+function estimateDepthRegexSummaryInfo(rawMessage: unknown): { hasDepthSummary: boolean; depthSummaryLength: number } {
+  if (typeof rawMessage !== 'string' || rawMessage.length <= 0) {
+    return { hasDepthSummary: false, depthSummaryLength: 0 };
+  }
+
+  const sceneStart = rawMessage.indexOf('<scene>');
+  if (sceneStart < 0) {
+    return { hasDepthSummary: false, depthSummaryLength: 0 };
+  }
+
+  const detailsStart = rawMessage.indexOf('<details>', sceneStart);
+  const detailsEnd = detailsStart >= 0 ? rawMessage.indexOf('</details>', detailsStart + '<details>'.length) : -1;
+  if (detailsStart >= 0 && detailsEnd >= 0) {
+    return {
+      hasDepthSummary: true,
+      depthSummaryLength: Math.max(0, detailsEnd - (detailsStart + '<details>'.length)),
+    };
+  }
+
+  const sceneEnd = rawMessage.indexOf('</scene>', sceneStart + '<scene>'.length);
+  if (sceneEnd < 0) {
+    return { hasDepthSummary: false, depthSummaryLength: 0 };
+  }
+
+  const sceneBody = rawMessage.slice(sceneStart + '<scene>'.length, sceneEnd);
+  return {
+    hasDepthSummary: true,
+    depthSummaryLength: sceneBody
+      .replace(/<summary>摘要<\/summary>/g, '')
+      .replace(/<\/?details>/g, '')
+      .trim().length,
+  };
+}
 
 function applyRegexForDisplay(text: string, role: TranscriptItem['role']): string {
   if (!text) return '';
@@ -2963,11 +3000,14 @@ export function useStreamingDemo() {
           if (!message || typeof message !== 'object') return null;
           const messageId = Math.trunc(Number(message?.message_id ?? index));
           if (!Number.isFinite(messageId) || messageId < 0) return null;
+          const depthSummaryInfo = estimateDepthRegexSummaryInfo(message?.mes);
           return {
             message_id: messageId,
             role: resolveHostMessageRole(message),
             is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
             messageLength: typeof message?.mes === 'string' ? message.mes.length : 0,
+            hasDepthSummary: depthSummaryInfo.hasDepthSummary,
+            depthSummaryLength: depthSummaryInfo.depthSummaryLength,
             data: message?.data,
           };
         }).filter(Boolean) as ChatMessageMeta[];
@@ -2982,6 +3022,7 @@ export function useStreamingDemo() {
       role: item.role,
       is_hidden: item.is_hidden === true || persistedHiddenIds.has(item.message_id),
       messageLength: typeof item.message === 'string' ? item.message.length : 0,
+      ...estimateDepthRegexSummaryInfo(item.message),
       data: item.data,
     }));
   }
@@ -3005,22 +3046,50 @@ export function useStreamingDemo() {
   function collectBoundedNativeGenerationRevealIds(reason: string): number[] {
     const hiddenMessages = readMessageMetasAfterContainer()
       .filter(item => item.is_hidden === true)
-      .map(item => ({ message_id: item.message_id, messageLength: item.messageLength ?? 0 }));
+      .map(item => ({
+        message_id: item.message_id,
+        messageLength: item.messageLength ?? 0,
+        hasDepthSummary: item.hasDepthSummary === true,
+        depthSummaryLength: item.depthSummaryLength ?? 0,
+      }));
     const revealIds = collectGenerationRevealMessageIds({
       hiddenMessages,
-      maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
-      maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+      nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,
+      maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,
+      maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,
     });
+    const nearRawRevealIds = [...hiddenMessages]
+      .sort((a, b) => b.message_id - a.message_id)
+      .slice(0, SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES)
+      .map(item => item.message_id)
+      .filter(id => revealIds.includes(id));
+    const farSummaryRevealIds = hiddenMessages
+      .filter(item => revealIds.includes(item.message_id) && !nearRawRevealIds.includes(item.message_id))
+      .filter(item => item.hasDepthSummary === true)
+      .map(item => item.message_id);
     recordLifecycleTrace('nativeGenerationReveal', 'bounded_reveal_prepared', {
       reason,
+      revealStrategy: 'regex_depth_summary',
       hiddenCount: hiddenMessages.length,
       revealCount: revealIds.length,
+      nearRawRevealCount: nearRawRevealIds.length,
+      farSummaryRevealCount: farSummaryRevealIds.length,
+      summaryStructuredHiddenCount: hiddenMessages.filter(item => item.hasDepthSummary === true).length,
       hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
       revealCharacters: hiddenMessages
         .filter(item => revealIds.includes(item.message_id))
         .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
-      maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
-      maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+      estimatedPromptCharacters: hiddenMessages
+        .filter(item => nearRawRevealIds.includes(item.message_id))
+        .reduce((sum, item) => sum + (item.messageLength ?? 0), 0)
+        + hiddenMessages
+          .filter(item => farSummaryRevealIds.includes(item.message_id))
+          .reduce((sum, item) => sum + (item.depthSummaryLength ?? 0), 0),
+      nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,
+      maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,
+      maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,
+      nearRawRevealMessageIds: nearRawRevealIds,
+      farSummaryRevealMessageIds: farSummaryRevealIds,
       revealMessageIds: revealIds,
       revealMessageIdsJson: JSON.stringify(revealIds),
     });
@@ -4440,7 +4509,12 @@ export function useStreamingDemo() {
       markStageTiming('hidden_meta_scan_start');
       const hiddenMessages = readMessageMetasAfterContainer()
         .filter(item => item.is_hidden === true)
-        .map(item => ({ message_id: item.message_id, messageLength: item.messageLength ?? 0 }));
+        .map(item => ({
+          message_id: item.message_id,
+          messageLength: item.messageLength ?? 0,
+          hasDepthSummary: item.hasDepthSummary === true,
+          depthSummaryLength: item.depthSummaryLength ?? 0,
+        }));
       const hiddenMessageIds = hiddenMessages.map(item => item.message_id);
       const latestHiddenUserMessageId =
         options.createUser === false && latestUserItem.value?.hidden === true ? latestUserItem.value.message_id : null;
@@ -4448,24 +4522,49 @@ export function useStreamingDemo() {
         detachedUserInput: options.detachedUserInput === true,
         hiddenMessages,
         latestHiddenUserMessageId,
-        maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
-        maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+        nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,
+        maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,
+        maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,
       });
+      const nearRawRevealIds = [...hiddenMessages]
+        .sort((a, b) => b.message_id - a.message_id)
+        .slice(0, SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES)
+        .map(item => item.message_id)
+        .filter(id => hiddenIds.includes(id));
+      const farSummaryRevealIds = hiddenMessages
+        .filter(item => hiddenIds.includes(item.message_id) && !nearRawRevealIds.includes(item.message_id))
+        .filter(item => item.hasDepthSummary === true)
+        .map(item => item.message_id);
+      const estimatedPromptCharacters =
+        hiddenMessages
+          .filter(item => nearRawRevealIds.includes(item.message_id))
+          .reduce((sum, item) => sum + (item.messageLength ?? 0), 0)
+        + hiddenMessages
+          .filter(item => farSummaryRevealIds.includes(item.message_id))
+          .reduce((sum, item) => sum + (item.depthSummaryLength ?? 0), 0);
       recordLifecycleTrace(
         'runGenerationFlow',
         'reveal_window_prepared',
         {
+          revealStrategy: 'regex_depth_summary',
           createUser: options.createUser,
           detachedUserInput: options.detachedUserInput === true,
           hiddenMessageIds,
           latestHiddenUserMessageId,
           revealMessageIds: hiddenIds,
+          nearRawRevealCount: nearRawRevealIds.length,
+          farSummaryRevealCount: farSummaryRevealIds.length,
+          summaryStructuredHiddenCount: hiddenMessages.filter(item => item.hasDepthSummary === true).length,
           hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
           revealCharacters: hiddenMessages
             .filter(item => hiddenIds.includes(item.message_id))
             .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
-          maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,
-          maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,
+          estimatedPromptCharacters,
+          nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,
+          maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,
+          maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,
+          nearRawRevealMessageIds: nearRawRevealIds,
+          farSummaryRevealMessageIds: farSummaryRevealIds,
           hiddenMessageIdsJson: JSON.stringify(hiddenMessageIds),
           revealMessageIdsJson: JSON.stringify(hiddenIds),
         },
@@ -4475,10 +4574,13 @@ export function useStreamingDemo() {
         hiddenCount: hiddenMessageIds.length,
         revealCount: hiddenIds.length,
         latestHiddenUserMessageId,
+        nearRawRevealCount: nearRawRevealIds.length,
+        farSummaryRevealCount: farSummaryRevealIds.length,
         hiddenCharacters: hiddenMessages.reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
         revealCharacters: hiddenMessages
           .filter(item => hiddenIds.includes(item.message_id))
           .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
+        estimatedPromptCharacters,
       });
       debugConsoleLog('[stream-demo] generation reveal window', {
         createUser: options.createUser,

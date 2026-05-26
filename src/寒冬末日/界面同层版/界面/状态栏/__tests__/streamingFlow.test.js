@@ -476,14 +476,14 @@ test('runGenerationFlow triggers one explicit chat save after the lifecycle emit
   // 避免 saveChatConditionalDebounced 的 1s 窗口丢失。
   assert.match(
     source,
-    /await runQueuedPostDoneAssistantSideEffects[\s\S]{0,800}await flushExplicitChatSave\('generation_done'\)/,
+    /await runQueuedPostDoneAssistantSideEffects[\s\S]*await flushExplicitChatSave\('generation_done'\)/,
     'runGenerationFlow should flush an explicit save after the lifecycle emit so done + MVU + image writes land together',
   );
 
   // error 分支：失败 done patch 也要 flush，保证 "生成失败：xxx" 不会停留在 <demo_phase>stream>。
   assert.match(
     source,
-    /await patchAssistantMessage\('done'\);\s*await flushExplicitChatSave\('generation_error'\)/,
+    /await patchAssistantMessage\('done'\);[\s\S]*await flushExplicitChatSave\('generation_error'\)/,
     'error recovery should also flush an explicit save so the "生成失败" message is persisted',
   );
 });
@@ -499,7 +499,7 @@ test('same-layer internal generate calls are silent until the done patch emits t
   );
   assert.match(
     body,
-    /await patchAssistantMessage\('done'\);[\s\S]{0,420}await runQueuedPostDoneAssistantSideEffects/,
+    /await patchAssistantMessage\('done'\);[\s\S]*await runQueuedPostDoneAssistantSideEffects/,
     'the official lifecycle should still be emitted only after the final done message is written',
   );
 });

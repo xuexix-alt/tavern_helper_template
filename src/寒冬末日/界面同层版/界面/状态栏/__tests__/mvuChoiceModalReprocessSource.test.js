@@ -338,18 +338,18 @@ test('latest-assistant MVU reroll reveal is bounded before native prompt assembl
 
   assert.match(
     helperBody,
-    /readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0/,
-    'bounded native reveal should rely on lightweight metadata rather than full message body reads',
+    /readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0[\s\S]*hasDepthSummary: item\.hasDepthSummary === true[\s\S]*depthSummaryLength: item\.depthSummaryLength \?\? 0/,
+    'bounded native reveal should rely on lightweight metadata and depth-summary estimates rather than full helper reads',
   );
   assert.match(
     helperBody,
-    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,[\s\S]*maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,/,
-    'manual extra-analysis retry should not reveal the whole imported chat before clicking native retry',
+    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,[\s\S]*maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,[\s\S]*maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,/,
+    'manual extra-analysis retry should reveal near raw floors plus older summary floors before clicking native retry',
   );
   assert.match(
     helperBody,
-    /recordLifecycleTrace\('nativeGenerationReveal', 'bounded_reveal_prepared'/,
-    'bounded native reveal should leave trace evidence for the selected prompt-visible window',
+    /recordLifecycleTrace\('nativeGenerationReveal', 'bounded_reveal_prepared'[\s\S]*revealStrategy: 'regex_depth_summary'[\s\S]*nearRawRevealCount:[\s\S]*farSummaryRevealCount:/,
+    'bounded native reveal should leave trace evidence for the selected regex-aware window',
   );
 });
 

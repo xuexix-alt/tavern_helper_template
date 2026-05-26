@@ -119,26 +119,27 @@ test('same-layer pre-generate hidden-floor scan uses lightweight host metadata i
   );
 });
 
-test('same-layer generate reveal window is bounded so large imported chats do not all enter prompt assembly', () => {
+test('same-layer generate reveal window follows Tavern depth regex summary layers', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
   const flowBody = extractFunctionBody(source, 'runGenerationFlow');
 
-  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES = 8;/);
-  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_CHARS = 120_000;/);
+  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;/);
+  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;/);
+  assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;/);
   assert.match(
     flowBody,
-    /const hiddenMessages = readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0/,
-    'reveal selection should use lightweight host metadata including message lengths',
+    /const hiddenMessages = readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0[\s\S]*hasDepthSummary: item\.hasDepthSummary === true[\s\S]*depthSummaryLength: item\.depthSummaryLength \?\? 0/,
+    'reveal selection should use lightweight host metadata including depth-summary estimates',
   );
   assert.match(
     flowBody,
-    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*maxRevealMessages: SAME_LAYER_GENERATION_REVEAL_MAX_MESSAGES,[\s\S]*maxRevealCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_CHARS,/,
-    'generation prompt reveal should be capped before Tavern Helper scans the host transcript',
+    /collectGenerationRevealMessageIds\(\{[\s\S]*hiddenMessages,[\s\S]*nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,[\s\S]*maxFarSummaryMessages: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES,[\s\S]*maxFarSummaryCharacters: SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS,/,
+    'generation prompt reveal should keep near raw floors and older summary floors for Tavern regex depth rules',
   );
   assert.match(
     flowBody,
-    /hiddenCharacters:[\s\S]*revealCharacters:/,
-    'trace should report whether the bounded reveal actually reduced prompt-visible story text',
+    /revealStrategy: 'regex_depth_summary'[\s\S]*nearRawRevealCount:[\s\S]*farSummaryRevealCount:[\s\S]*summaryStructuredHiddenCount:[\s\S]*estimatedPromptCharacters/,
+    'trace should report how much of the regex-aware reveal came from near raw floors versus far summaries',
   );
 });
 
