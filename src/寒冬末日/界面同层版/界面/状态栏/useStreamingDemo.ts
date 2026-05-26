@@ -3079,10 +3079,11 @@ export function useStreamingDemo() {
       revealCharacters: hiddenMessages
         .filter(item => revealIds.includes(item.message_id))
         .reduce((sum, item) => sum + (item.messageLength ?? 0), 0),
-      estimatedPromptCharacters: hiddenMessages
-        .filter(item => nearRawRevealIds.includes(item.message_id))
-        .reduce((sum, item) => sum + (item.messageLength ?? 0), 0)
-        + hiddenMessages
+      estimatedPromptCharacters:
+        hiddenMessages
+          .filter(item => nearRawRevealIds.includes(item.message_id))
+          .reduce((sum, item) => sum + (item.messageLength ?? 0), 0) +
+        hiddenMessages
           .filter(item => farSummaryRevealIds.includes(item.message_id))
           .reduce((sum, item) => sum + (item.depthSummaryLength ?? 0), 0),
       nearRawRevealMessages: SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES,
@@ -4538,8 +4539,8 @@ export function useStreamingDemo() {
       const estimatedPromptCharacters =
         hiddenMessages
           .filter(item => nearRawRevealIds.includes(item.message_id))
-          .reduce((sum, item) => sum + (item.messageLength ?? 0), 0)
-        + hiddenMessages
+          .reduce((sum, item) => sum + (item.messageLength ?? 0), 0) +
+        hiddenMessages
           .filter(item => farSummaryRevealIds.includes(item.message_id))
           .reduce((sum, item) => sum + (item.depthSummaryLength ?? 0), 0);
       recordLifecycleTrace(

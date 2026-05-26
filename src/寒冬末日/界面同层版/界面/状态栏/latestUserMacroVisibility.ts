@@ -160,19 +160,19 @@ export function collectGenerationRevealMessageIds({
   const boundedHiddenMessages =
     Number.isFinite(maxMessages) && maxMessages > 0
       ? dedupedNewestFirst.reduce<Array<{ message_id: number; messageLength: number }>>((selected, item) => {
-            if (selected.length >= maxMessages) return selected;
-            const selectedCharacters = selected.reduce((sum, current) => sum + current.messageLength, 0);
-            if (
-              Number.isFinite(maxCharacters) &&
-              maxCharacters > 0 &&
-              selected.length > 0 &&
-              selectedCharacters + item.messageLength > maxCharacters
-            ) {
-              return selected;
-            }
-            selected.push(item);
+          if (selected.length >= maxMessages) return selected;
+          const selectedCharacters = selected.reduce((sum, current) => sum + current.messageLength, 0);
+          if (
+            Number.isFinite(maxCharacters) &&
+            maxCharacters > 0 &&
+            selected.length > 0 &&
+            selectedCharacters + item.messageLength > maxCharacters
+          ) {
             return selected;
-          }, [])
+          }
+          selected.push(item);
+          return selected;
+        }, [])
       : normalizedHiddenMessages;
 
   const combined = [
