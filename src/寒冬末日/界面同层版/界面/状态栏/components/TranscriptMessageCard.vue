@@ -390,31 +390,121 @@ function bindAssistantBodyInteractions() {
   const root = assistantBodyRef.value;
   if (!root) return;
   const itemMessageId = String(props.item.message_id);
+  const disposers: Array<() => void> = [];
+
+  const buildPayload = (carrier: HTMLElement, rawTarget: EventTarget | null = null) => {
+    if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
+    const targetElement = rawTarget instanceof HTMLElement ? rawTarget : null;
+    const targetImage =
+      targetElement instanceof HTMLImageElement
+        ? targetElement
+        : ((targetElement?.querySelector?.('img') ?? carrier.querySelector('img')) as HTMLImageElement | null);
+    return parseGeneratedImageActivationPayload({
+      carrierDataset: carrier.dataset,
+      targetDataset: targetElement?.dataset ?? targetImage?.dataset ?? {},
+      targetAttrSrc: targetImage?.getAttribute('src') ?? null,
+      targetCurrentSrc: targetImage?.currentSrc ?? null,
+      targetSrc: targetImage?.getAttribute('src') ?? null,
+    });
+  };
+
+  const bindGestureTarget = (gestureTarget: HTMLElement, carrier: HTMLElement) => {
+    let suppressNextClick = false;
+    let lastGestureTarget: EventTarget | null = null;
+    const controller = createGeneratedImageGestureController({
+      onView() {
+        emit('image-view', buildPayload(carrier, lastGestureTarget));
+      },
+      onRegenerate() {
+        emit('image-regenerate', buildPayload(carrier, lastGestureTarget));
+      },
+      onTag() {
+        emit('image-tag', buildPayload(carrier, lastGestureTarget));
+      },
+    });
+
+    const handleClick = (event: Event) => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+      lastGestureTarget = event.target;
+      stopEvent(event);
+      controller.handleClick();
+    };
+    const handleDoubleClick = (event: Event) => {
+      lastGestureTarget = event.target;
+      stopEvent(event);
+      suppressNextClick = true;
+      controller.handleDoubleClick();
+    };
+    const handlePointerDown = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      lastGestureTarget = event.target;
+      stopEvent(event);
+      controller.handleTouchStart();
+    };
+    const handlePointerUp = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      lastGestureTarget = event.target;
+      stopEvent(event);
+      controller.handleTouchEnd();
+    };
+    const handlePointerCancel = (event: Event) => {
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      lastGestureTarget = event.target;
+      stopEvent(event);
+      controller.handleTouchCancel();
+    };
+
+    gestureTarget.addEventListener('click', handleClick, true);
+    gestureTarget.addEventListener('dblclick', handleDoubleClick, true);
+    gestureTarget.addEventListener('pointerdown', handlePointerDown, true);
+    gestureTarget.addEventListener('pointerup', handlePointerUp, true);
+    gestureTarget.addEventListener('pointercancel', handlePointerCancel, true);
+
+    disposers.push(() => {
+      gestureTarget.removeEventListener('click', handleClick, true);
+      gestureTarget.removeEventListener('dblclick', handleDoubleClick, true);
+      gestureTarget.removeEventListener('pointerdown', handlePointerDown, true);
+      gestureTarget.removeEventListener('pointerup', handlePointerUp, true);
+      gestureTarget.removeEventListener('pointercancel', handlePointerCancel, true);
+      controller.dispose();
+    });
+  };
 
   const promptButtons = Array.from(root.querySelectorAll('button.image-tag-button')) as HTMLButtonElement[];
   for (const button of promptButtons) {
+    if (!button.dataset.messageId) button.dataset.messageId = itemMessageId;
     const handleClick = (event: Event) => {
       stopEvent(event);
-      emit('generate-image', props.item.message_id);
+      emit('image-regenerate', buildPayload(button, event.target));
     };
     button.addEventListener('click', handleClick, true);
-    assistantBodyCleanup.value.push(() => {
+    disposers.push(() => {
       button.removeEventListener('click', handleClick, true);
     });
   }
 
-  const carriers = Array.from(
-    root.querySelectorAll(
-      '.st-chatu8-image-span, .assistant-fallback-inline-image, .assistant-fallback-generated-image',
-    ),
+  const pluginNativeCarriers = Array.from(root.querySelectorAll('.st-chatu8-image-span')) as HTMLElement[];
+  for (const carrier of pluginNativeCarriers) {
+    bindGestureTarget(carrier, carrier);
+  }
+
+  const fallbackCarriers = Array.from(
+    root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
   ) as HTMLElement[];
   recordComponentTrace('bind_interactions', {
     promptButtonCount: promptButtons.length,
-    carrierCount: carriers.length,
+    carrierCount: pluginNativeCarriers.length + fallbackCarriers.length,
+    pluginNativeCarrierCount: pluginNativeCarriers.length,
+    fallbackCarrierCount: fallbackCarriers.length,
   });
 
-  assistantBodyCleanup.value = carriers.map(carrier => {
-    let suppressNextClick = false;
+  for (const carrier of fallbackCarriers) {
     let hitArea = carrier.querySelector('.generated-image-hitarea') as HTMLButtonElement | null;
     if (!hitArea) {
       hitArea = document.createElement('button');
@@ -424,20 +514,9 @@ function bindAssistantBodyInteractions() {
       carrier.appendChild(hitArea);
     }
     const image = carrier.querySelector('img') as HTMLImageElement | null;
-    const pluginNativeCarrier = carrier.closest('.st-chatu8-image-span') as HTMLElement | null;
-    const carrierDataset = pluginNativeCarrier?.dataset ?? carrier.dataset;
-    if (!carrierDataset.messageId) carrier.dataset.messageId = itemMessageId;
-    const payload = () =>
-      parseGeneratedImageActivationPayload({
-        carrierDataset,
-        targetDataset: hitArea?.dataset ?? image?.dataset ?? {},
-        targetAttrSrc: image?.getAttribute('src') ?? null,
-        targetCurrentSrc: image?.currentSrc ?? null,
-        targetSrc: image?.getAttribute('src') ?? null,
-      });
+    if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
 
     if (image) {
-      image.style.pointerEvents = 'none';
       hitArea.dataset.messageId = image.dataset.messageId ?? carrier.dataset.messageId ?? itemMessageId;
       hitArea.dataset.imageId = image.dataset.imageId ?? carrier.dataset.imageId ?? '';
       hitArea.dataset.promptToken = image.dataset.promptToken ?? carrier.dataset.promptToken ?? '';
@@ -446,72 +525,10 @@ function bindAssistantBodyInteractions() {
       hitArea.dataset.source = 'transcript';
     }
 
-    const controller = createGeneratedImageGestureController({
-      onView() {
-        emit('image-view', payload());
-      },
-      onRegenerate() {
-        emit('image-regenerate', payload());
-      },
-      onTag() {
-        emit('image-tag', payload());
-      },
-    });
+    bindGestureTarget(hitArea, carrier);
+  }
 
-    const handleClick = (event: Event) => {
-      if (suppressNextClick) {
-        suppressNextClick = false;
-        return;
-      }
-      stopEvent(event);
-      controller.handleClick();
-    };
-    const handleDoubleClick = (event: Event) => {
-      stopEvent(event);
-      suppressNextClick = true;
-      controller.handleDoubleClick();
-    };
-    const handlePointerDown = (event: Event) => {
-      const pointerEvent = event as PointerEvent;
-      if (pointerEvent.pointerType !== 'touch') return;
-      stopEvent(event);
-      controller.handleTouchStart();
-    };
-    const handlePointerUp = (event: Event) => {
-      const pointerEvent = event as PointerEvent;
-      if (pointerEvent.pointerType !== 'touch') return;
-      stopEvent(event);
-      controller.handleTouchEnd();
-    };
-    const handlePointerCancel = (event: Event) => {
-      const pointerEvent = event as PointerEvent;
-      if (pointerEvent.pointerType !== 'touch') return;
-      stopEvent(event);
-      controller.handleTouchCancel();
-    };
-
-    hitArea.addEventListener('click', handleClick, true);
-    hitArea.addEventListener('dblclick', handleDoubleClick, true);
-    hitArea.addEventListener('pointerdown', handlePointerDown, true);
-    hitArea.addEventListener('pointerup', handlePointerUp, true);
-    hitArea.addEventListener('pointercancel', handlePointerCancel, true);
-
-    // 阻止 dblclick 冒泡到宿主 ClickTrigger，避免双击已有图片时触发新生图菜单
-    const handleCarrierDblclickBubbling = (e: Event) => {
-      e.stopPropagation();
-    };
-    carrier.addEventListener('dblclick', handleCarrierDblclickBubbling, true);
-
-    return () => {
-      hitArea?.removeEventListener('click', handleClick, true);
-      hitArea?.removeEventListener('dblclick', handleDoubleClick, true);
-      hitArea?.removeEventListener('pointerdown', handlePointerDown, true);
-      hitArea?.removeEventListener('pointerup', handlePointerUp, true);
-      hitArea?.removeEventListener('pointercancel', handlePointerCancel, true);
-      carrier?.removeEventListener('dblclick', handleCarrierDblclickBubbling, true);
-      controller.dispose();
-    };
-  });
+  assistantBodyCleanup.value = disposers;
 }
 
 onMounted(() => {
@@ -958,10 +975,6 @@ onBeforeUnmount(() => {
 .assistant-body-wrap :deep(.st-chatu8-image-span) {
   position: relative;
   z-index: 3;
-  pointer-events: auto;
-}
-
-.assistant-body-wrap :deep(.st-chatu8-image-span .generated-image-hitarea) {
   pointer-events: auto;
 }
 

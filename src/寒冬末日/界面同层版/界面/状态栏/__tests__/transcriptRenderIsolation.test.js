@@ -369,31 +369,44 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
   );
 });
 
-test('TranscriptMessageCard binds plugin-native inline image spans to the generated-image gesture bridge', () => {
+test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridging direct native gestures', () => {
   const source = readSource('components/TranscriptMessageCard.vue');
   const activationSource = readSource('generatedImageActivation.ts');
 
-  assert.equal(
-    /root\.querySelectorAll\(\s*['"]\.st-chatu8-image-span,\s*\.assistant-fallback-inline-image,\s*\.assistant-fallback-generated-image['"]/.test(
-      source,
-    ),
-    true,
-    'plugin-native inline image spans should receive the same hitarea gesture bridge as fallback images',
+  assert.doesNotMatch(
+    source,
+    /root\.querySelectorAll\(\s*['"]\.st-chatu8-image-span,\s*\.assistant-fallback-inline-image,\s*\.assistant-fallback-generated-image['"]/,
+    'plugin-native inline image spans should not be covered by the fallback hitarea query',
   );
-  assert.equal(
-    source.includes("carrier.closest('.st-chatu8-image-span')"),
-    true,
-    'plugin-native payload extraction should read the st-chatu8 carrier dataset when the hitarea wraps the inner img',
+  assert.match(
+    source,
+    /const pluginNativeCarriers = Array\.from\(\s*root\.querySelectorAll\('\.st-chatu8-image-span'\)\s*\)/,
+    'plugin-native inline image spans should be bound as their own native carrier targets',
   );
-  assert.equal(
-    source.includes('const carrierDataset = pluginNativeCarrier?.dataset ?? carrier.dataset;'),
-    true,
-    'plugin-native hitareas should forward the native carrier dataset to the host activation bridge',
+  assert.match(
+    source,
+    /const fallbackCarriers = Array\.from\(\s*root\.querySelectorAll\('\.assistant-fallback-inline-image, \.assistant-fallback-generated-image'\),?\s*\)\s*as HTMLElement\[\];/,
+    'same-layer hitareas should remain limited to fallback images that are not plugin-native DOM',
+  );
+  assert.doesNotMatch(
+    source,
+    /\.st-chatu8-image-span \.generated-image-hitarea/,
+    'plugin-native image spans should not retain hitarea-specific styling hooks',
+  );
+  assert.doesNotMatch(
+    source,
+    /image\.style\.pointerEvents = 'none';/,
+    'plugin-native image nodes must keep their own pointer event surface for native preview/regenerate/tag handling',
+  );
+  assert.doesNotMatch(
+    source,
+    /emit\('generate-image', props\.item\.message_id\);/,
+    'inline plugin image buttons should not be rerouted to the same-layer message-level generation menu',
   );
   assert.equal(
     source.includes('String(props.item.message_id)'),
     true,
-    'inline HTML image hitareas should fall back to the transcript item message id when injected nodes lack one',
+    'inline HTML image payloads should fall back to the transcript item message id when injected nodes lack one',
   );
   assert.equal(
     activationSource.includes('carrierDataset.imageTag') && activationSource.includes('carrierDataset.link'),

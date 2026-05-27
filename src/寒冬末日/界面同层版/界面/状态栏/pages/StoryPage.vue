@@ -465,7 +465,6 @@ import TopToolbar from '../components/TopToolbar.vue';
 import TranscriptList from '../components/TranscriptList.vue';
 import WorkbenchTabs from '../components/WorkbenchTabs.vue';
 import { buildIframeMessageRootSelectors } from '../generatedImageDom';
-import { parsePromptBodyFromToken } from '../generatedImagePromptMetadata';
 import { selectGeneratedImageTriggerTarget } from '../generatedImageTriggerTarget';
 import {
   listReachableHostWindows as collectReachableHostWindows,
@@ -1422,97 +1421,6 @@ function resolveGeneratedImageTriggerTarget(
   );
 }
 
-/**
- * 全屏挂起辅助：若当前 iframe 处于全屏，先退出全屏，执行 action，
- * 再用 MutationObserver 监测宿主 body 直接子节点的增删来感知菜单关闭，
- * 菜单消失后自动恢复全屏。若 30s 内未触发则超时恢复。
- */
-async function withFullscreenSuspended(action: () => void): Promise<void> {
-  if (!document.fullscreenElement) {
-    action();
-    return;
-  }
-
-  // 获取宿主 document.body 用于监测菜单
-  let hostBody: HTMLElement | null = null;
-  try {
-    hostBody = window.top?.document?.body ?? null;
-  } catch {
-    // 跨域时无法访问宿主，直接执行不恢复
-    action();
-    return;
-  }
-
-  // 退出全屏
-  await document.exitFullscreen?.().catch(() => {});
-  // 等待 fullscreenchange 确认退出
-  await new Promise<void>(resolve => {
-    if (!document.fullscreenElement) {
-      resolve();
-      return;
-    }
-    const handler = () => {
-      document.removeEventListener('fullscreenchange', handler);
-      resolve();
-    };
-    document.addEventListener('fullscreenchange', handler);
-    setTimeout(resolve, 500);
-  });
-
-  // 执行生图触发
-  action();
-
-  if (!hostBody) return;
-
-  // 监测宿主 body 直接子节点：等新浮层节点出现后消失，再恢复全屏
-  await new Promise<void>(resolve => {
-    const TIMEOUT_MS = 30_000;
-    let addedNode: Node | null = null;
-    const timeoutId = setTimeout(() => {
-      observer.disconnect();
-      resolve();
-    }, TIMEOUT_MS);
-
-    const observer = new MutationObserver(mutations => {
-      for (const mut of mutations) {
-        if (addedNode === null) {
-          // 等待新节点被加入
-          for (const node of Array.from(mut.addedNodes)) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              addedNode = node;
-              break;
-            }
-          }
-        } else {
-          // 等待已追踪节点被移除
-          for (const node of Array.from(mut.removedNodes)) {
-            if (node === addedNode) {
-              clearTimeout(timeoutId);
-              observer.disconnect();
-              resolve();
-              return;
-            }
-          }
-        }
-      }
-    });
-
-    observer.observe(hostBody!, { childList: true });
-
-    // 若 300ms 内没有新节点加入，说明菜单可能没有走 body appendChild 流程，直接 resolve
-    setTimeout(() => {
-      if (addedNode === null) {
-        clearTimeout(timeoutId);
-        observer.disconnect();
-        resolve();
-      }
-    }, 300);
-  });
-
-  // 恢复全屏
-  document.documentElement.requestFullscreen().catch(() => {});
-}
-
 function dispatchHostDoubleClick(
   target: HTMLElement,
   hostPoint?: { clientX: number; clientY: number } | null,
@@ -1529,6 +1437,98 @@ function dispatchHostImageRegenerateTrigger(target: HTMLElement): boolean {
   const firstClick = triggerHostElementClick(target);
   const secondClick = triggerHostElementClick(target);
   return firstClick || secondClick;
+}
+
+function dispatchHostImageTagTrigger(target: HTMLElement): boolean {
+  try {
+    const doc = target.ownerDocument;
+    const view = doc.defaultView;
+    if (!view) return false;
+
+    const rect = target.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    let dispatched = false;
+
+    const dispatchMouse = (type: 'contextmenu' | 'mousedown' | 'mouseup') => {
+      const event = markBridgedEvent(
+        new view.MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          button: type === 'contextmenu' ? 2 : 0,
+          buttons: type === 'mousedown' ? 1 : 0,
+          clientX,
+          clientY,
+        }),
+      );
+      target.dispatchEvent(event);
+      dispatched = true;
+    };
+
+    const dispatchPointer = (type: 'pointerdown' | 'pointerup') => {
+      const PointerEventCtor = (view as Window & typeof globalThis).PointerEvent;
+      if (typeof PointerEventCtor !== 'function') return;
+      const event = markBridgedEvent(
+        new PointerEventCtor(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          button: 0,
+          buttons: type === 'pointerdown' ? 1 : 0,
+          clientX,
+          clientY,
+          isPrimary: true,
+          pointerType: 'touch',
+        }),
+      );
+      target.dispatchEvent(event);
+      dispatched = true;
+    };
+
+    const dispatchTouch = (type: 'touchstart' | 'touchend') => {
+      const TouchCtor = (view as Window & typeof globalThis).Touch;
+      const TouchEventCtor = (view as Window & typeof globalThis).TouchEvent;
+      if (typeof TouchCtor !== 'function' || typeof TouchEventCtor !== 'function') return;
+      const touch = new TouchCtor({
+        identifier: Date.now(),
+        target,
+        clientX,
+        clientY,
+        screenX: clientX,
+        screenY: clientY,
+        pageX: clientX,
+        pageY: clientY,
+      });
+      const activeTouches = type === 'touchend' ? [] : [touch];
+      const event = markBridgedEvent(
+        new TouchEventCtor(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          touches: activeTouches,
+          targetTouches: activeTouches,
+          changedTouches: [touch],
+        }),
+      );
+      target.dispatchEvent(event);
+      dispatched = true;
+    };
+
+    dispatchMouse('contextmenu');
+    dispatchTouch('touchstart');
+    dispatchPointer('pointerdown');
+    dispatchMouse('mousedown');
+    view.setTimeout(() => {
+      dispatchTouch('touchend');
+      dispatchPointer('pointerup');
+      dispatchMouse('mouseup');
+    }, 620);
+
+    return dispatched;
+  } catch {
+    return false;
+  }
 }
 
 async function proxyImageMenuToHost(item: TranscriptItem, event?: MouseEvent | null) {
@@ -1576,11 +1576,10 @@ async function proxyImageMenuToHostWithOptions(
       toastr?.warning?.(`未找到楼层 #${messageId} 的原生正文节点`);
       return;
     }
-    await withFullscreenSuspended(() => {
-      if (!dispatchHostDoubleClick(dispatchPlan.target as HTMLElement, dispatchPlan.hostPoint)) {
-        toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
-      }
-    });
+    preparePluginMenuForFullscreen();
+    if (!dispatchHostDoubleClick(dispatchPlan.target as HTMLElement, dispatchPlan.hostPoint)) {
+      toastr?.warning?.(`楼层 #${messageId} 的原生生图菜单触发失败`);
+    }
   });
 }
 
@@ -1630,19 +1629,52 @@ function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchE
   void ensureHostMesTextRendered(Math.trunc(rawMessageId as number));
 }
 
-function hoistPluginMenuIntoFullscreen(): void {
+const PLUGIN_CLICK_TRIGGER_SELECTOR =
+  '.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]';
+const PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR = '.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]';
+
+function isPluginClickTriggerElement(node: Element): boolean {
+  return Boolean(node.matches?.(PLUGIN_CLICK_TRIGGER_SELECTOR) || node.querySelector?.(PLUGIN_CLICK_TRIGGER_SELECTOR));
+}
+
+function movePluginMenuIntoFullscreen(node: HTMLElement, fullscreenEl: HTMLElement): void {
+  if (!node.isConnected) return;
+  try {
+    fullscreenEl.appendChild(node);
+    clampPluginMenuIntoViewport(node);
+    window.requestAnimationFrame?.(() => clampPluginMenuIntoViewport(node));
+    setTimeout(() => clampPluginMenuIntoViewport(node), 80);
+  } catch (error) {
+    console.warn('[same-layer] plugin menu fullscreen hoist failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function preparePluginMenuForFullscreen(): void {
   const fullscreenEl = document.fullscreenElement as HTMLElement | null;
   if (!fullscreenEl) return;
 
-  const hostBody = window.top?.document?.body;
+  let hostBody: HTMLElement | null = null;
+  try {
+    hostBody = window.top?.document?.body ?? null;
+  } catch {
+    hostBody = null;
+  }
   if (!hostBody) return;
+
+  hostBody.querySelectorAll(PLUGIN_CLICK_TRIGGER_SELECTOR).forEach(node => {
+    if (node instanceof HTMLElement && !node.parentElement?.closest(PLUGIN_CLICK_TRIGGER_SELECTOR)) {
+      movePluginMenuIntoFullscreen(node, fullscreenEl);
+    }
+  });
 
   const observer = new MutationObserver(mutations => {
     for (const mut of mutations) {
       for (const node of Array.from(mut.addedNodes)) {
         if (!(node instanceof HTMLElement)) continue;
-        if (node.classList.contains('st-chatu8-click-trigger-overlay')) {
-          fullscreenEl.appendChild(node);
+        if (isPluginClickTriggerElement(node)) {
+          movePluginMenuIntoFullscreen(node, fullscreenEl);
           observer.disconnect();
           return;
         }
@@ -1650,16 +1682,16 @@ function hoistPluginMenuIntoFullscreen(): void {
     }
   });
 
-  observer.observe(hostBody, { childList: true });
-  setTimeout(() => observer.disconnect(), 300);
+  observer.observe(hostBody, { childList: true, subtree: true });
+  setTimeout(() => observer.disconnect(), 2400);
 }
 
 function clampPluginMenuIntoViewport(node: Element): void {
   const hostWindow = node.ownerDocument?.defaultView ?? window.top ?? window;
   const menu =
-    (node.matches?.('.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]')
+    (node.matches?.(PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR)
       ? node
-      : node.querySelector?.('.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]')) ?? node;
+      : node.querySelector?.(PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR)) ?? node;
   const element = menu as HTMLElement;
   if (!element?.getBoundingClientRect) return;
 
@@ -1689,7 +1721,14 @@ function clampPluginMenuIntoViewport(node: Element): void {
 }
 
 function guardPluginMenuViewport(): void {
-  const hostBody = window.top?.document?.body;
+  preparePluginMenuForFullscreen();
+
+  let hostBody: HTMLElement | null = null;
+  try {
+    hostBody = window.top?.document?.body ?? null;
+  } catch {
+    hostBody = null;
+  }
   if (!hostBody) return;
   const clampSoon = (node: Element) => {
     const view = node.ownerDocument?.defaultView ?? window;
@@ -1699,7 +1738,7 @@ function guardPluginMenuViewport(): void {
   };
 
   hostBody
-    .querySelectorAll('.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]')
+    .querySelectorAll(PLUGIN_CLICK_TRIGGER_SELECTOR)
     .forEach(node => clampSoon(node));
 
   const observer = new MutationObserver(mutations => {
@@ -1707,9 +1746,7 @@ function guardPluginMenuViewport(): void {
       for (const rawNode of Array.from(mut.addedNodes)) {
         if (rawNode.nodeType !== Node.ELEMENT_NODE) continue;
         const node = rawNode as Element;
-        if (
-          node.matches?.('.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]')
-        ) {
+        if (isPluginClickTriggerElement(node)) {
           clampSoon(node);
         }
       }
@@ -1760,10 +1797,14 @@ async function handleTranscriptGenerateImage(request: TranscriptImageGenerateReq
   const messageId = typeof request === 'number' ? request : request.messageId;
   const hostPoint = typeof request === 'number' ? null : resolveHostPointFromIframeEvent(request.triggerEvent ?? null);
   guardPluginMenuViewport();
-  if (document.fullscreenElement) {
-    hoistPluginMenuIntoFullscreen();
-  }
-  await triggerImageGenerationForMessage(messageId, { hostPoint });
+  await triggerImageGenerationForMessage(messageId, {
+    hostPoint,
+    afterPrimaryTrigger: async () => {
+      if (await clickPluginImageGenerationMenuItem()) return true;
+      toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
+      return false;
+    },
+  });
 }
 
 async function handleChoiceModalGenerateLatestImage() {
@@ -1774,14 +1815,15 @@ async function handleChoiceModalGenerateLatestImage() {
   }
 
   guardPluginMenuViewport();
-  if (document.fullscreenElement) {
-    hoistPluginMenuIntoFullscreen();
-  }
 
-  await triggerImageGenerationForMessage(messageId, { hostPoint: null });
-  if (!(await clickPluginImageGenerationMenuItem())) {
-    toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
-  }
+  await triggerImageGenerationForMessage(messageId, {
+    hostPoint: null,
+    afterPrimaryTrigger: async () => {
+      if (await clickPluginImageGenerationMenuItem()) return true;
+      toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
+      return false;
+    },
+  });
 }
 
 function handleOpenGallery(_messageId: number) {
@@ -1841,15 +1883,42 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   }
 }
 
-function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
-  const promptToken = String(payload?.promptToken ?? '').trim();
-  const promptBody = parsePromptBodyFromToken(promptToken).trim();
-  const tagText = promptBody || promptToken;
-  if (!tagText) {
-    toastr?.warning?.('这张图片没有可显示的 prompt tag');
+async function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
+  const messageId = Number(payload?.messageId);
+  if (!Number.isFinite(messageId)) return;
+  const promptToken = String(payload?.promptToken ?? '');
+  const requestId = String(payload?.requestId ?? '').trim();
+  const imageSrc = String(payload?.imageSrc ?? '').trim();
+
+  const targetNode = await resolveWithRetry(
+    () => {
+      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      );
+      return resolveGeneratedImageTriggerTarget(
+        {
+          hostMessageRoot,
+          hostButton,
+          hostImage,
+          iframeButton,
+          iframeImage,
+        },
+        'open',
+      );
+    },
+    { attempts: 5, delayMs: 90 },
+  );
+  if (!targetNode) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
     return;
   }
-  toastr?.info?.(tagText, '图片 prompt tag', { timeOut: 9000, extendedTimeOut: 4000 });
+  preparePluginMenuForFullscreen();
+  if (!dispatchHostImageTagTrigger(targetNode)) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改触发失败`);
+  }
 }
 
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
@@ -1886,11 +1955,10 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
     return;
   }
   beginPendingImageTask(Math.trunc(messageId), intentSource);
-  await withFullscreenSuspended(() => {
-    if (!dispatchHostImageRegenerateTrigger(targetNode)) {
-      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
-    }
-  });
+  preparePluginMenuForFullscreen();
+  if (!dispatchHostImageRegenerateTrigger(targetNode)) {
+    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
+  }
 }
 
 function handleGeneratedImageWindowDoubleClickCapture(event: MouseEvent) {

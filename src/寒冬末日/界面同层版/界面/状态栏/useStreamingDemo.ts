@@ -188,6 +188,10 @@ type GenerationFlowResult =
   | { success: false; assistantMessageId: number | null; errorText: string; hadVisibleAssistantContent: boolean };
 type ImageGenerationTriggerOptions = {
   hostPoint?: HostGesturePoint | null;
+  afterPrimaryTrigger?: () => Promise<boolean | void> | boolean | void;
+};
+type HostTranscriptVisibleOptions = {
+  beforeRelease?: () => Promise<void> | void;
 };
 
 const DEMO_THEME_CLASS_NAMES = [
@@ -208,6 +212,8 @@ const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
+const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;
+const IMAGE_GENERATION_HANDOFF_POLL_MS = 80;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
@@ -3336,11 +3342,57 @@ export function useStreamingDemo() {
     }, 80);
   }
 
+  function hasPluginImageGenerationHandoff(messageId: number): boolean {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
+
+    const hasBoundRequest = imagePendingTaskManager
+      .getDebugState()
+      .some(task => task.messageId === normalizedId && task.requests.length > 0);
+    if (hasBoundRequest) return true;
+
+    const handoffSelector = `${CHATU8_IMAGE_BUTTON_SELECTOR}, ${CHATU8_IMAGE_SPAN_SELECTOR}`;
+    return collectHostDocuments().some(doc => {
+      const mesText = doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null;
+      return Boolean(mesText?.querySelector(handoffSelector));
+    });
+  }
+
+  async function waitForPluginImageGenerationHandoff(messageId: number): Promise<boolean> {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
+
+    const startedAt = Date.now();
+    const deadline = startedAt + IMAGE_GENERATION_HANDOFF_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      syncPendingRequestHintsFromDom();
+      if (hasPluginImageGenerationHandoff(normalizedId)) {
+        recordLifecycleTrace('imageGenerationHandoff', 'observed', {
+          messageId: normalizedId,
+          elapsedMs: Date.now() - startedAt,
+          tasks: imagePendingTaskManager.getDebugState(),
+        });
+        return true;
+      }
+      await new Promise<void>(resolve => window.setTimeout(resolve, IMAGE_GENERATION_HANDOFF_POLL_MS));
+    }
+
+    recordLifecycleTrace('imageGenerationHandoff', 'timeout', {
+      messageId: normalizedId,
+      timeoutMs: IMAGE_GENERATION_HANDOFF_TIMEOUT_MS,
+      tasks: imagePendingTaskManager.getDebugState(),
+    });
+    return false;
+  }
+
   /**
    * 临时将容器之后的楼层设为 is_hidden: false，执行 action，再恢复 is_hidden: true。
    * 用于图片桥接等需要宿主 DOM 可见的场景。
    */
-  async function withHostTranscriptVisible<T>(action: () => Promise<T> | T): Promise<T> {
+  async function withHostTranscriptVisible<T>(
+    action: () => Promise<T> | T,
+    options: HostTranscriptVisibleOptions = {},
+  ): Promise<T> {
     if (hidePolicyTimer) {
       window.clearTimeout(hidePolicyTimer);
       hidePolicyTimer = 0;
@@ -3359,6 +3411,13 @@ export function useStreamingDemo() {
     try {
       return await action();
     } finally {
+      try {
+        await options.beforeRelease?.();
+      } catch (error) {
+        console.warn('[stream-demo] host transcript visible beforeRelease failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       releaseVisualHide();
       // 恢复隐藏
       queueHidePolicy('bridge_resume');
@@ -3566,31 +3625,46 @@ export function useStreamingDemo() {
       messageId: normalizedId,
       stage: 'auto-image',
       task: async () => {
-        await withHostTranscriptVisible(async () => {
-          // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
-          const rendered = await ensureHostMesTextRendered(normalizedId);
-          if (!rendered) {
-            console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
-          }
+        let shouldWaitForPluginHandoff = true;
+        await withHostTranscriptVisible(
+          async () => {
+            // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
+            const rendered = await ensureHostMesTextRendered(normalizedId);
+            if (!rendered) {
+              console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
+            }
 
-          // Step 2: 注册持久化任务（imagePendingTaskManager 用）
-          beginPendingImageTask(normalizedId);
-          markRecentImageIntent(normalizedId, 'transcript');
+            // Step 2: 注册持久化任务（imagePendingTaskManager 用）
+            beginPendingImageTask(normalizedId);
+            markRecentImageIntent(normalizedId, 'transcript');
 
-          // Step 3: 向宿主 mes_text 派发主触发手势，让插件走完整 ClickTrigger 链路
-          const mesText =
-            collectHostDocuments()
-              .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
-              .find(Boolean) ?? null;
-          if (!mesText) {
-            console.warn('[image] 注入节点未找到，mesid:', normalizedId);
-            return;
-          }
+            // Step 3: 向宿主 mes_text 派发主触发手势，让插件走完整 ClickTrigger 链路
+            const mesText =
+              collectHostDocuments()
+                .map(doc => doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null)
+                .find(Boolean) ?? null;
+            if (!mesText) {
+              console.warn('[image] 注入节点未找到，mesid:', normalizedId);
+              shouldWaitForPluginHandoff = false;
+              return;
+            }
 
-          if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
-            console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
-          }
-        });
+            if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
+              console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
+            }
+
+            const afterPrimaryTriggerResult = await options.afterPrimaryTrigger?.();
+            if (afterPrimaryTriggerResult === false) {
+              shouldWaitForPluginHandoff = false;
+            }
+          },
+          {
+            beforeRelease: async () => {
+              if (!shouldWaitForPluginHandoff) return;
+              await waitForPluginImageGenerationHandoff(normalizedId);
+            },
+          },
+        );
       },
     });
   }

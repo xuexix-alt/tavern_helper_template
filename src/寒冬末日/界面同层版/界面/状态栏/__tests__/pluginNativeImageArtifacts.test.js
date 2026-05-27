@@ -36,6 +36,51 @@ test('extra images beat cache fallback for the same artifact key', () => {
   assert.equal(result[0].src, 'https://example.com/extra-foo.png');
 });
 
+test('native-first artifacts preserve plugin persisted idb image refs from extra.images', () => {
+  const result = readNativeFirstImageArtifacts({
+    messageId: 77,
+    extraImages: [
+      {
+        requestId: 'req-idb-native',
+        promptToken: 'image###native persisted###',
+        src: 'idb://77/req-idb-native',
+      },
+    ],
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'extra');
+  assert.equal(result[0].requestId, 'req-idb-native');
+  assert.equal(result[0].src, 'idb://77/req-idb-native');
+});
+
+test('generated image source resolver keeps idb srcs for transcript hydration', () => {
+  const result = resolveGeneratedImageSource(
+    {
+      messageId: 78,
+      requestId: 'req-idb-source',
+    },
+    {
+      swipe_id: 0,
+      extra: {
+        images: [
+          [
+            {
+              requestId: 'req-idb-source',
+              promptToken: 'image###idb source###',
+              image: 'idb://78/req-idb-source',
+            },
+          ],
+        ],
+      },
+    },
+  );
+
+  assert.ok(result);
+  assert.equal(result?.source, 'extra');
+  assert.equal(result?.src, 'idb://78/req-idb-source');
+});
+
 test('extra image prompt text is normalized into promptToken when tag fields are absent', () => {
   const prompt = 'sfw, 1girl, ${"name":"fujii yukino","angle":"from above"}$, hallway';
   const result = readNativeFirstImageArtifacts({

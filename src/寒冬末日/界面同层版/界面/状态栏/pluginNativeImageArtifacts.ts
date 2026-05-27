@@ -46,6 +46,7 @@ function normalizeKey(input: unknown): string {
 function normalizeSrc(input: unknown): string {
   const raw = normalizeKey(input);
   if (!raw) return '';
+  if (raw.startsWith('idb://')) return raw;
   if (raw.startsWith('data:')) return raw;
   if (raw.startsWith('/')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;

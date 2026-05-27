@@ -196,7 +196,7 @@ test('StoryPage wires choice-modal direct image generation to latest assistant p
   );
   assert.match(
     handlerBody,
-    /await triggerImageGenerationForMessage\(messageId, \{ hostPoint: null \}\)/,
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint: null,[\s\S]*afterPrimaryTrigger: async \(\) => \{/,
     'handler should still open the validated native plugin image menu chain',
   );
   assert.match(

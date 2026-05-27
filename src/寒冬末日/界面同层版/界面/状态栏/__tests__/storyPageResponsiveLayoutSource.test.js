@@ -7,6 +7,37 @@ function read(relativePath) {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
 }
 
+function extractFunctionBody(text, functionName) {
+  const start = text.indexOf(`function ${functionName}`);
+  assert.notEqual(start, -1, `${functionName} should exist`);
+  const parenStart = text.indexOf('(', start);
+  assert.notEqual(parenStart, -1, `${functionName} should have a parameter list`);
+  let parenDepth = 0;
+  let searchStart = parenStart;
+  for (let index = parenStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '(') parenDepth += 1;
+    if (char === ')') {
+      parenDepth -= 1;
+      if (parenDepth === 0) {
+        searchStart = index + 1;
+        break;
+      }
+    }
+  }
+  const braceStart = text.indexOf('{', searchStart);
+  let depth = 0;
+  for (let index = braceStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(braceStart + 1, index);
+    }
+  }
+  throw new Error(`${functionName} body not found`);
+}
+
 test('StoryPage derives layout mode from iframe shell width instead of browser window width', () => {
   const source = read('../pages/StoryPage.vue');
 
@@ -98,4 +129,26 @@ test('StoryPage keeps a manually selected departed role active while it remains 
     source,
     /if \(activeRoleKey\.value && !visibleRoles\.some\(role => role\.key === activeRoleKey\.value\)\) \{/,
   );
+});
+
+test('StoryPage keeps fullscreen active while plugin image menus are triggered', () => {
+  const source = read('../pages/StoryPage.vue');
+  const proxyBody = extractFunctionBody(source, 'proxyImageMenuToHostWithOptions');
+  const regenerateBody = extractFunctionBody(source, 'activateGeneratedImageRegenerate');
+
+  assert.doesNotMatch(source, /function withFullscreenSuspended\(/);
+  assert.doesNotMatch(source, /withFullscreenSuspended\(/);
+  assert.match(source, /function preparePluginMenuForFullscreen\(\): void/);
+  assert.match(
+    source,
+    /function movePluginMenuIntoFullscreen\(node: HTMLElement, fullscreenEl: HTMLElement\): void[\s\S]*fullscreenEl\.appendChild\(node\)/,
+  );
+  assert.match(
+    source,
+    /function preparePluginMenuForFullscreen\(\): void[\s\S]*document\.fullscreenElement[\s\S]*movePluginMenuIntoFullscreen\(node, fullscreenEl\)/,
+  );
+  assert.match(source, /function guardPluginMenuViewport\(\): void[\s\S]*preparePluginMenuForFullscreen\(\);/);
+  assert.match(proxyBody, /preparePluginMenuForFullscreen\(\);[\s\S]*dispatchHostDoubleClick/);
+  assert.match(regenerateBody, /preparePluginMenuForFullscreen\(\);[\s\S]*dispatchHostImageRegenerateTrigger/);
+  assert.match(source, /function toggleFullscreen\(\)[\s\S]*document\.exitFullscreen\?\.\(\);/);
 });

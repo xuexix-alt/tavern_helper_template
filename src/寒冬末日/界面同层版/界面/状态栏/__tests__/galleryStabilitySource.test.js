@@ -9,6 +9,37 @@ function readSource(relativePath) {
   return fs.readFileSync(path.join(statusBarDir, relativePath), 'utf8');
 }
 
+function extractFunctionBody(text, functionName) {
+  const start = text.indexOf(`function ${functionName}`);
+  assert.notEqual(start, -1, `${functionName} should exist`);
+  const parenStart = text.indexOf('(', start);
+  assert.notEqual(parenStart, -1, `${functionName} should have a parameter list`);
+  let parenDepth = 0;
+  let searchStart = parenStart;
+  for (let index = parenStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '(') parenDepth += 1;
+    if (char === ')') {
+      parenDepth -= 1;
+      if (parenDepth === 0) {
+        searchStart = index + 1;
+        break;
+      }
+    }
+  }
+  const braceStart = text.indexOf('{', searchStart);
+  let depth = 0;
+  for (let index = braceStart; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(braceStart + 1, index);
+    }
+  }
+  throw new Error(`${functionName} body not found`);
+}
+
 test('gallery refs are built from native-first membership instead of raw prompt tokens only', () => {
   const source = readSource('useStreamingDemo.ts');
 
@@ -86,6 +117,7 @@ test('transcript image FAB restores the historical direct trigger path instead o
   const transcriptListSource = readSource('components/TranscriptList.vue');
   const storyPageSource = readSource('pages/StoryPage.vue');
   const streamingSource = readSource('useStreamingDemo.ts');
+  const transcriptImageBody = extractFunctionBody(storyPageSource, 'handleTranscriptGenerateImage');
 
   assert.match(transcriptListSource, /@click="handleImageButtonClick\(item\.message_id, \$event\)"/);
   assert.match(transcriptListSource, /type TranscriptImageGenerateRequest = \{/);
@@ -96,8 +128,12 @@ test('transcript image FAB restores the historical direct trigger path instead o
     storyPageSource,
     /async function handleTranscriptGenerateImage\(request: TranscriptImageGenerateRequest \| number\)/,
   );
-  assert.match(storyPageSource, /await triggerImageGenerationForMessage\(messageId, \{ hostPoint \}\);/);
+  assert.match(
+    transcriptImageBody,
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint,[\s\S]*afterPrimaryTrigger: async \(\) => \{[\s\S]*await clickPluginImageGenerationMenuItem\(\)/,
+  );
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
+  assert.match(streamingSource, /afterPrimaryTrigger\?: \(\) => Promise<boolean \| void> \| boolean \| void;/);
   assert.match(streamingSource, /dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/);
   assert.doesNotMatch(
     streamingSource,
@@ -120,11 +156,19 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
 test('transcript image generation temporarily suspends host visual hide before dispatching plugin gestures', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
-  assert.match(streamingSource, /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/);
-  assert.match(streamingSource, /releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/);
+  assert.match(streamingSource, /const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;/);
+  assert.match(streamingSource, /async function waitForPluginImageGenerationHandoff\(messageId: number\): Promise<boolean>/);
   assert.match(
     streamingSource,
-    /async function triggerImageGenerationForMessage[\s\S]*await withHostTranscriptVisible\(async \(\) => \{/,
+    /waitForPluginImageGenerationHandoff[\s\S]*syncPendingRequestHintsFromDom\(\)[\s\S]*imagePendingTaskManager\.getDebugState\(\)/,
+  );
+  assert.match(streamingSource, /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}`;/);
+  assert.match(streamingSource, /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/);
+  assert.match(streamingSource, /await options\.beforeRelease\?\.\(\);[\s\S]*releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/);
+  assert.match(streamingSource, /beforeRelease: async \(\) => \{[\s\S]*await waitForPluginImageGenerationHandoff\(normalizedId\);/);
+  assert.match(
+    streamingSource,
+    /async function triggerImageGenerationForMessage[\s\S]*await withHostTranscriptVisible\(\s*async \(\) => \{/,
   );
   assert.match(
     streamingSource,
@@ -169,6 +213,7 @@ test('mobile transcript double-tap keeps the proxy chain and forwards the second
 
 test('generated image regenerate uses the plugin image click bridge instead of mes_text dblclick', () => {
   const storyPageSource = readSource('pages/StoryPage.vue');
+  const targetSource = readSource('generatedImageTriggerTarget.ts');
 
   assert.match(storyPageSource, /function dispatchHostImageRegenerateTrigger\(target: HTMLElement\): boolean/);
   assert.match(storyPageSource, /target\.matches\?\.\('\.st-chatu8-image-button, button\.image-tag-button'\)/);
@@ -178,4 +223,41 @@ test('generated image regenerate uses the plugin image click bridge instead of m
     'existing image regeneration should use the plugin generation.js click chain, not the mes_text trigger',
   );
   assert.doesNotMatch(storyPageSource, /dispatchHostDoubleClick\(targetNode, null, 'dblclick'\)/);
+  assert.match(
+    targetSource,
+    /return input\.hostButton \?\? input\.hostImage \?\? input\.iframeButton \?\? input\.iframeImage \?\? null;/,
+    'regenerate should only target plugin image/button nodes and must not fall back to the whole mes_text root',
+  );
+  assert.match(
+    targetSource,
+    /return input\.hostImage \?\? input\.iframeImage \?\? input\.hostButton \?\? input\.iframeButton \?\? null;/,
+    'preview should only target plugin image/button nodes and must not fall back to the whole mes_text root',
+  );
+  assert.doesNotMatch(
+    targetSource,
+    /hostMessageRoot \?\? input\.iframe/,
+    'generated image actions should not prefer the host message root before iframe image targets',
+  );
+});
+
+test('generated image tag gestures use the native image long-press bridge instead of a same-layer toast', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+  const tagBody = extractFunctionBody(storyPageSource, 'activateGeneratedImageTag');
+
+  assert.match(storyPageSource, /function dispatchHostImageTagTrigger\(target: HTMLElement\): boolean/);
+  assert.match(
+    tagBody,
+    /resolveGeneratedImageTriggerTarget\([\s\S]*'open'[\s\S]*\)/,
+    'tag gestures should resolve the same exact plugin image/button target used by preview',
+  );
+  assert.match(
+    tagBody,
+    /dispatchHostImageTagTrigger\(targetNode\)/,
+    'tag gestures should dispatch a native long-press/context-menu style gesture to the host image target',
+  );
+  assert.doesNotMatch(
+    tagBody,
+    /toastr\?\.info\?\.\(tagText, '图片 prompt tag'/,
+    'long-press should not be consumed by a same-layer prompt toast',
+  );
 });

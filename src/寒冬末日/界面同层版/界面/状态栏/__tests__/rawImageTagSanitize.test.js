@@ -20,13 +20,8 @@ test('buildFinalHtml routes raw `<image>` tags through sanitizeRawImageTagsInHtm
   );
   assert.match(
     source,
-    /const sanitizedForRuntime = sanitizeAssistantRuntimeTagsForDisplay\(renderSource \|\| '\(空回复\)'\);/,
-    'runtime tag cleanup should produce the source that is then prepared for display',
-  );
-  assert.match(
-    source,
-    /const renderSourceForDisplay = sanitizeRawImageTagsInHtml\(sanitizedForRuntime\);/,
-    'raw `<image>` tags should be sanitized after runtime tag cleanup and before Tavern display formatting',
+    /const renderSourceForDisplay = sanitizeRawImageTagsInHtml\(renderSource \|\| '\(空回复\)'\);/,
+    'raw `<image>` tags should be sanitized before Tavern display formatting while runtime tags stay regex-owned',
   );
   assert.match(
     source,
