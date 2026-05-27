@@ -213,6 +213,21 @@ test('StoryPage lets mobile mes-path touch events reach the native plugin after 
   );
 });
 
+test('TranscriptMessageCard exposes same-layer assistant bodies as mes_text for st-chatu8 mobile placeholder scanning', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    source,
+    /class="assistant-body html-body mes_text"/,
+    'done assistant body should be a mes_text so st-chatu8 processIframes can insert native placeholders in the UI',
+  );
+  assert.match(
+    source,
+    /:data-message-index="item\.message_id"/,
+    'same-layer mes_text should carry message index for st-chatu8 extra.images lookup and migration',
+  );
+});
+
 test('StoryPage keeps a lightweight role data provider and lazy mounts the full role panel', () => {
   const source = readSource('pages/StoryPage.vue');
 

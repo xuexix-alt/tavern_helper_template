@@ -90,6 +90,25 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
     }
   }
 
+  function consumeBufferedResponseForHint(hint: PendingHint) {
+    const bufferedIndex = bufferedResponses.findIndex(item => {
+      return (
+        item.requestId === hint.requestId ||
+        (hint.promptToken && item.promptToken === hint.promptToken) ||
+        (hint.prompt && item.prompt === hint.prompt)
+      );
+    });
+    const bufferedResponse = bufferedIndex >= 0 ? (bufferedResponses.splice(bufferedIndex, 1)[0] ?? null) : null;
+    if (!bufferedResponse) return null;
+    return {
+      messageId: hint.messageId,
+      requestId: bufferedResponse.requestId || hint.requestId,
+      prompt: bufferedResponse.prompt || hint.prompt,
+      promptToken: bufferedResponse.promptToken || hint.promptToken,
+      imageData: bufferedResponse.imageData,
+    };
+  }
+
   function registerHint(payload: ImageHintPayload) {
     const messageId = Math.trunc(Number(payload?.messageId));
     const requestId = String(payload?.id ?? payload?.requestId ?? '').trim();
@@ -108,17 +127,24 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
       existing.prompt = prompt || existing.prompt;
       existing.promptToken = promptToken || existing.promptToken;
       existing.createdAt = createdAt;
-      return { messageId: existing.messageId };
+      return {
+        messageId: existing.messageId,
+        bufferedResponse: consumeBufferedResponseForHint(existing),
+      };
     }
 
-    hints.push({
+    const hint = {
       messageId,
       requestId,
       prompt,
       promptToken,
       createdAt,
-    });
-    return { messageId };
+    };
+    hints.push(hint);
+    return {
+      messageId,
+      bufferedResponse: consumeBufferedResponseForHint(hint),
+    };
   }
 
   function startTask(messageId: number) {

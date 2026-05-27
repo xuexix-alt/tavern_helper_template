@@ -458,10 +458,22 @@
 /* --------------------------------------------------------------
  * st-chatu8 `<image>` 裸标签保底样式
  * ---------------------------------------------------------------
- * 插件写入 mes 的 `<image>` 标签会被 `sanitizeRawImageTagsInHtml`
- * 转成 `.st-chatu8-image-pending`（在同层看到图片前的几百毫秒过渡）。
- * MutationObserver 一旦拿到真实 `<img>`，就会触发 rebuild 刷掉占位。
+ * 非 st-chatu8 token 的 `<image>` 标签会被 `sanitizeRawImageTagsInHtml`
+ * 转成 `.st-chatu8-image-pending` 兜底。含 image### 的 token 会保留为
+ * `.chatu8-native-prompt-token`，让插件 processIframes 在同层正文里补原生按钮。
  */
+.chatu8-native-prompt-token,
+.custom-chatu8-native-prompt-token {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .st-chatu8-image-pending[data-raw-image-tag='true'],
 .custom-st-chatu8-image-pending[data-raw-image-tag='true'] {
   display: inline-flex;

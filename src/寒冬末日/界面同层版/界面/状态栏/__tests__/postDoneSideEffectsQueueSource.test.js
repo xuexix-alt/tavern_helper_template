@@ -95,6 +95,29 @@ test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event orde
     generationEndedIndex < messageReceivedIndex && messageReceivedIndex < messageUpdatedIndex,
     'same-layer lifecycle should follow native Tavern order: GENERATION_ENDED -> MESSAGE_RECEIVED -> MESSAGE_UPDATED',
   );
+  assert.match(
+    body,
+    /collectChatu8PromptTokens\(messageText\)\.length > 0[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
+    'when the assistant text already contains image### prompts, same-layer should wait for st-chatu8 native placeholders instead of replacing them with UI-owned placeholders',
+  );
+});
+
+test('runGenerationFlow primes native autoLLMClick before same-layer generate call', () => {
+  const body = extractFunctionBody(source, 'runGenerationFlow');
+  const startLifecycleIndex = body.indexOf('await emitOfficialGenerationStartLifecycle');
+  const generateCallIndex = body.indexOf('const generatePromise = generate(');
+
+  assert.notEqual(
+    source.indexOf('async function emitOfficialGenerationStartLifecycle'),
+    -1,
+    'same-layer should have a dedicated GENERATION_STARTED lifecycle shim for native plugin consumers',
+  );
+  assert.notEqual(startLifecycleIndex, -1, 'same-layer should emit host GENERATION_STARTED during runGenerationFlow');
+  assert.notEqual(generateCallIndex, -1, 'same-layer should call generate() after preparation');
+  assert.ok(
+    startLifecycleIndex < generateCallIndex,
+    'st-chatu8 autoLLMClick must see GENERATION_STARTED before the assistant message/swipe is produced',
+  );
 });
 
 test('host message writes and image trigger preparation enter the post-done queue by message id', () => {

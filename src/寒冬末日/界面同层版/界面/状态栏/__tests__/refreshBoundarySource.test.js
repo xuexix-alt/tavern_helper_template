@@ -238,6 +238,11 @@ test('host image request hints fall back to the recent transcript intent instead
   );
   assert.match(
     body,
+    /button\.dataset\.stableId[\s\S]*button\.getAttribute\('data-stable-id'\)/,
+    'st-chatu8 native buttons identify generate-image requests with data-stable-id, not data-request-id',
+  );
+  assert.match(
+    body,
     /recentIntent\?\.source === 'transcript'\s*\?\s*recentIntent\.messageId\s*:\s*null/,
     'buttons without a resolvable host carrier should bind to the recent transcript target rather than message 0',
   );
@@ -286,7 +291,7 @@ test('ready host-native images take precedence over stale streaming preview phas
 
   assert.match(
     source,
-    /const hostRenderedHasReadyImage = [\s\S]*st-chatu8-image-span[\s\S]*assistant-fallback/,
+    /const hostRenderedHasReadyImage\s*=[\s\S]*st-chatu8-image-span[\s\S]*assistant-fallback/,
     'buildTranscriptItem should detect ready host-native image HTML before choosing the stream renderer',
   );
   assert.match(

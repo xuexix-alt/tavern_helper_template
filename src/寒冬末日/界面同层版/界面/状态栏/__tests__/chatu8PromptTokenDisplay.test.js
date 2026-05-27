@@ -20,6 +20,19 @@ test('stripVisibleChatu8PromptTokensHtml hides visible prompt tokens during stre
   assert.match(cleaned, /data-link="image###sfw, 1girl###"/);
 });
 
+test('stripVisibleChatu8PromptTokensHtml preserves hidden native prompt tokens for st-chatu8 iframe scanning', () => {
+  const html = [
+    '<p>正文前 image###visible token###</p>',
+    '<span data-chatu8-native-prompt-token="true">image###native token###</span>',
+  ].join('');
+
+  const cleaned = stripVisibleChatu8PromptTokensHtml(html);
+
+  assert.equal(cleaned.includes('visible token'), false);
+  assert.equal(cleaned.includes('image###native token###'), true);
+  assert.match(cleaned, /data-chatu8-native-prompt-token="true"/);
+});
+
 test('stripVisibleChatu8PromptTokensText removes visible prompt tokens from plain text while leaving other content intact', () => {
   const input = '正文前 image###sfw, 1girl, ${"name":"fujii yukino"}$### 正文后 image###coat, winter### 正文末';
 

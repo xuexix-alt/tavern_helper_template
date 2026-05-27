@@ -206,7 +206,7 @@ test('ensureHostMesTextRendered injects an offscreen mes node when host mes_text
   assert.equal(injectedText.textContent, 'z'.repeat(320));
 });
 
-test('ensureHostMesTextRendered cleans up older injected nodes before injecting the current message', async () => {
+test('ensureHostMesTextRendered preserves older injected nodes while injecting the current message', async () => {
   const currentDocument = new FakeDocument();
   const hostDocument = new FakeDocument();
 
@@ -238,8 +238,9 @@ test('ensureHostMesTextRendered cleans up older injected nodes before injecting 
   );
 
   assert.equal(rendered, true);
-  assert.equal(hostDocument.querySelector('.mes[mesid="2"][data-ui-injected-mes]'), null);
+  assert.ok(hostDocument.querySelector('.mes[mesid="2"][data-ui-injected-mes]'));
   assert.ok(hostDocument.querySelector('.mes[mesid="4"][data-ui-injected-mes]'));
+  assert.equal(hostDocument.querySelectorAll('.mes[data-ui-injected-mes]').length, 2);
 });
 
 test('ensureHostMesTextRendered still injects shorter real messages when host mes_text is absent', async () => {

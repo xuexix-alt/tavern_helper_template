@@ -507,6 +507,15 @@ function sanitizeRawImageTagsInHtml(html: string): string {
       const innerText = String(innerHtml ?? '')
         .replace(/<[^>]+>/g, '')
         .trim();
+      const nativePromptTokens = collectChatu8PromptTokens(innerText);
+      if (nativePromptTokens.length > 0) {
+        return nativePromptTokens
+          .map(
+            token =>
+              `<span class="chatu8-native-prompt-token" data-chatu8-native-prompt-token="true">${escapeHtml(token)}</span>`,
+          )
+          .join('');
+      }
       const shouldExposeInnerText = innerText && !/^image###/i.test(innerText) && innerText.length <= 64;
       const placeholderLabel = shouldExposeInnerText ? `正在加载图片：${innerText.slice(0, 32)}` : '正在加载图片…';
       return `<span class="st-chatu8-image-pending" aria-hidden="true" data-raw-image-tag="true">${escapeHtml(placeholderLabel)}</span>`;
@@ -1952,7 +1961,13 @@ export function useStreamingDemo() {
     for (const doc of collectReachableHostDocuments()) {
       const buttons = Array.from(doc.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
       for (const button of buttons) {
-        const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+        const requestId = String(
+          button.dataset.requestId ??
+            button.getAttribute('data-request-id') ??
+            button.dataset.stableId ??
+            button.getAttribute('data-stable-id') ??
+            '',
+        ).trim();
         if (!requestId || seen.has(requestId)) continue;
 
         const prompt = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
@@ -1968,16 +1983,23 @@ export function useStreamingDemo() {
         const normalizedMessageId =
           Number.isFinite(rawMessageId) && rawMessageId >= 0
             ? Math.trunc(rawMessageId)
-            : (recentIntent?.messageId ?? null);
+            : recentIntent?.source === 'transcript'
+              ? recentIntent.messageId
+              : null;
         if (normalizedMessageId == null) continue;
 
         seen.add(requestId);
-        imagePendingTaskManager.registerHint({
+        const hintBinding = imagePendingTaskManager.registerHint({
           messageId: normalizedMessageId,
           requestId,
           prompt,
         });
         registered += 1;
+        if (hintBinding?.bufferedResponse) {
+          syncTranscriptItemsFromHostData('host.plugin_native_response_after_dom_hint', [normalizedMessageId]);
+          queueGeneratedImageEntityRefresh([normalizedMessageId], 'host.plugin_native_response_after_dom_hint');
+          scheduleHostImageDataReconcile('host.plugin_native_response_after_dom_hint', [normalizedMessageId]);
+        }
       }
     }
 
@@ -2639,16 +2661,40 @@ export function useStreamingDemo() {
     generationListenerEpochController.invalidate();
   }
 
+  function suppressLifecycleEchoEvents(eventNames: string[], durationMs = 1200) {
+    lifecycleEchoSuppressUntilMs = Math.max(lifecycleEchoSuppressUntilMs, Date.now() + durationMs);
+    lifecycleEchoSuppressedHostEvents = [
+      ...new Set([...lifecycleEchoSuppressedHostEvents, ...eventNames.map(name => String(name))]),
+    ];
+  }
+
+  async function emitOfficialGenerationStartLifecycle(type: 'normal' | 'regenerate') {
+    const traceId = resolveTraceId('lifecycle');
+    suppressLifecycleEchoEvents([String(tavern_events.GENERATION_STARTED)]);
+    try {
+      await eventEmit(tavern_events.GENERATION_STARTED as any, type);
+      recordLifecycleTrace(
+        'emitOfficialGenerationStartLifecycle',
+        'generation_started_emitted',
+        {
+          type,
+        },
+        traceId,
+      );
+    } catch {
+      // ignore
+    }
+  }
+
   async function emitOfficialGenerationLifecycle(messageId: number | null | undefined, type: 'normal' | 'regenerate') {
     const normalizedId = Number(messageId);
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
     const traceId = resolveTraceId('lifecycle');
-    lifecycleEchoSuppressUntilMs = Date.now() + 1200;
-    lifecycleEchoSuppressedHostEvents = [
+    suppressLifecycleEchoEvents([
       String(tavern_events.MESSAGE_RECEIVED),
       String(tavern_events.GENERATION_ENDED),
       String(tavern_events.MESSAGE_UPDATED),
-    ];
+    ]);
 
     recordLifecycleTrace(
       'emitOfficialGenerationLifecycle',
@@ -2713,6 +2759,20 @@ export function useStreamingDemo() {
       );
     } catch {
       // ignore
+    }
+
+    const messageDetail = readChatMessageDetail(Math.trunc(normalizedId));
+    const messageText = String(messageDetail?.mes ?? messageDetail?.message ?? '');
+    if (collectChatu8PromptTokens(messageText).length > 0) {
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'plugin_native_handoff_wait_start',
+        {
+          messageId: Math.trunc(normalizedId),
+        },
+        traceId,
+      );
+      await waitForPluginImageGenerationHandoff(Math.trunc(normalizedId));
     }
   }
 
@@ -4680,6 +4740,12 @@ export function useStreamingDemo() {
       } else {
         markStageTiming('hidden_reveal_skipped');
       }
+
+      const lifecycleKindForGenerationStart =
+        options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate');
+      markStageTiming('official_generation_start_lifecycle_start');
+      await emitOfficialGenerationStartLifecycle(lifecycleKindForGenerationStart);
+      markStageTiming('official_generation_start_lifecycle_done');
 
       const cancelPromise = new Promise<string>((_resolve, reject) => {
         activeGenerationCancelReject = reject;

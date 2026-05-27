@@ -37,3 +37,37 @@ test('imagePendingTaskManager can match response from DOM hint before request re
 
   assert.equal(requestBinding?.messageId, 4);
 });
+
+test('imagePendingTaskManager flushes buffered response when plugin DOM hint arrives after response', () => {
+  let currentTime = 2_000;
+  const manager = createImagePendingTaskManager({
+    now: () => currentTime,
+  });
+
+  assert.equal(
+    manager.consumeResponse({
+      id: 'req-late-hint',
+      prompt: 'Scene Composition:sfw,1girl',
+      imageData: 'data:image/png;base64,late',
+    }),
+    null,
+  );
+
+  currentTime += 10;
+  const hintBinding = manager.registerHint({
+    messageId: 8,
+    requestId: 'req-late-hint',
+    prompt: 'Scene Composition:sfw,1girl',
+  });
+
+  assert.deepEqual(hintBinding, {
+    messageId: 8,
+    bufferedResponse: {
+      messageId: 8,
+      requestId: 'req-late-hint',
+      prompt: 'Scene Composition:sfw,1girl',
+      promptToken: 'image###Scene Composition:sfw,1girl###',
+      imageData: 'data:image/png;base64,late',
+    },
+  });
+});

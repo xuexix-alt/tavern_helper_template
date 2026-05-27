@@ -25,11 +25,24 @@ export function stripVisibleChatu8PromptTokensHtml(html: string): string {
   if (!source.trim() || !source.includes('###')) return source;
 
   if (typeof document === 'undefined' || !document?.implementation?.createHTMLDocument) {
-    return source
+    const protectedSegments: string[] = [];
+    const protectedSource = source.replace(
+      /<([a-z][\w:-]*)\b(?=[^>]*\bdata-chatu8-native-prompt-token=(?:"true"|'true'))[^>]*>[\s\S]*?<\/\1>/gi,
+      match => {
+        const marker = `__CHATU8_NATIVE_PROMPT_TOKEN_${protectedSegments.length}__`;
+        protectedSegments.push(match);
+        return marker;
+      },
+    );
+    let cleaned = protectedSource
       .split(/(<[^>]*>)/g)
       .map(part => (part.startsWith('<') ? part : stripPromptTokensFromText(part)))
       .join('')
       .trim();
+    protectedSegments.forEach((segment, index) => {
+      cleaned = cleaned.replaceAll(`__CHATU8_NATIVE_PROMPT_TOKEN_${index}__`, segment);
+    });
+    return cleaned;
   }
 
   const doc = document.implementation.createHTMLDocument('');
@@ -44,6 +57,7 @@ export function stripVisibleChatu8PromptTokensHtml(html: string): string {
 
   for (const node of textNodes) {
     if (!String(node.nodeValue ?? '').includes('###')) continue;
+    if ((node.parentElement as Element | null)?.closest?.('[data-chatu8-native-prompt-token="true"]')) continue;
     node.nodeValue = stripPromptTokensFromText(node.nodeValue ?? '');
   }
 

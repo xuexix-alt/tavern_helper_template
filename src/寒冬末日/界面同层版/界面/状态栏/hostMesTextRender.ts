@@ -12,7 +12,7 @@
  *
  * 方案：
  *   在生图触发前，直接向宿主 #chat 注入一个离屏的 .mes 节点，
- *   写入真实正文，生图完成后由调用方清理（或保留供后续复用）。
+ *   写入真实正文，并保留供插件异步链路继续引用。
  *   完全绕开 SillyTavern 的 refresh 渲染机制，不影响其他楼层。
  */
 
@@ -166,19 +166,18 @@ export async function ensureHostMesTextRendered(
   const rawText = extractRawText(message);
   if (!rawText || rawText.length < 10) return false;
 
-  // Step 3：先清理旧 injected 节点，确保宿主里最多只保留当前目标楼层的一个代理节点
-  cleanupInjectedMesNodes(deps.currentDocument, deps.collectHostDocuments);
-
-  // Step 4：注入离屏节点
+  // Step 3：注入或复用离屏节点。
+  // st-chatu8 autoLLMClick 会持有 mes_text，等待 LLM_IMAGE_GEN 返回后再写回占位。
+  // 这里不能清理其他 injected 节点，否则会断开插件手里的异步 DOM 目标。
   const injected = injectMesNode(hostDoc, messageId, rawText);
   if (!injected) return false;
 
-  // Step 5：给插件一个 tick 感知到 DOM 变化（MutationObserver 异步）
+  // Step 4：给插件一个 tick 感知到 DOM 变化（MutationObserver 异步）
   if (delayMs > 0) {
     await new Promise<void>(resolve => setTimeout(resolve, delayMs));
   }
 
-  // Step 6：验证节点已可查
+  // Step 5：验证节点已可查
   const verified = hostDoc.querySelector(`.mes[mesid="${messageId}"] .mes_text`) as HTMLElement | null;
   return !!(verified && (verified.textContent ?? '').trim().length > 0);
 }

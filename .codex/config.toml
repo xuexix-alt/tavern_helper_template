@@ -1,0 +1,8 @@
+[mcp_servers.chrome-devtools]
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "chrome-devtools-mcp@latest",
+]
+command = "cmd"

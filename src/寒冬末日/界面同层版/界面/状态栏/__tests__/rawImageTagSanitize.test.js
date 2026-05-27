@@ -39,16 +39,36 @@ test('buildFinalHtml routes raw `<image>` tags through sanitizeRawImageTagsInHtm
     'artifact injection should still see the original raw source for prompt-token matching',
   );
 
-  // helper 的两个分支：有 src 的 <image> 转 <img>；其他情况用 st-chatu8-image-pending span 占位。
+  // helper 的三个分支：有 src 的 <image> 转 <img>；image### token 保留给插件原生处理；
+  // 其他情况才用 st-chatu8-image-pending span 兜底。
   const helperBody = source.match(/function sanitizeRawImageTagsInHtml[\s\S]*?\n\}/)?.[0] ?? '';
   assert.notEqual(helperBody, '', 'helper body should be parsable');
   assert.match(helperBody, /<img class="st-chatu8-image-pending"/);
+  assert.match(helperBody, /data-chatu8-native-prompt-token="true"/);
+  assert.match(helperBody, /collectChatu8PromptTokens\(innerText\)/);
   assert.match(helperBody, /<span class="st-chatu8-image-pending"/);
+});
+
+test('buildFinalHtml leaves image prompt tokens for the st-chatu8 native placeholder pipeline', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.doesNotMatch(source, /function sanitizeRawPromptTokensInHtml\(html: string\): string/);
+  assert.doesNotMatch(source, /createRawPromptTokenPlaceholderHtml\(\)/);
+  assert.doesNotMatch(
+    source,
+    /html = sanitizeRawImageTagsInHtml\(html\);\s*html = sanitizeRawPromptTokensInHtml\(html\);/,
+    'same-layer must not turn image### prompt tokens into its own st-chatu8-image-pending placeholder',
+  );
 });
 
 test('st-chatu8 raw image tag styling is registered in theme-tokens', () => {
   const css = readSource('theme-tokens.css');
 
+  assert.match(
+    css,
+    /\.chatu8-native-prompt-token/,
+    'image### prompt tokens inside raw <image> tags should remain hidden but present for st-chatu8 processIframes',
+  );
   assert.match(
     css,
     /\.st-chatu8-image-pending\[data-raw-image-tag='true'\]/,
@@ -126,6 +146,7 @@ test('host-rendered transcript html still passes through image artifact injectio
   );
   const helperBody = source.match(/function buildHostRenderedHtml[\s\S]*?\n\}/)?.[0] ?? '';
   assert.notEqual(helperBody, '', 'buildHostRenderedHtml body should be parsable');
+  assert.doesNotMatch(helperBody, /sanitizeRawPromptTokensInHtml/);
   assert.match(
     helperBody,
     /applyTranscriptArtifacts\(\{[\s\S]*appendArtifacts: appendChatu8ArtifactsToHtml,/,

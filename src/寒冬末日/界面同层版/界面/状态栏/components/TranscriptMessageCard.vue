@@ -93,8 +93,9 @@
           <div
             v-if="item.isStreaming"
             ref="assistantBodyRef"
-            class="assistant-body html-body is-stream-stage"
+            class="assistant-body html-body mes_text is-stream-stage"
             :data-message-id="item.message_id"
+            :data-message-index="item.message_id"
           >
             <StreamRenderer
               :message="item.content"
@@ -107,8 +108,9 @@
           <div
             v-else
             ref="assistantBodyRef"
-            class="assistant-body html-body"
+            class="assistant-body html-body mes_text"
             :data-message-id="item.message_id"
+            :data-message-index="item.message_id"
             v-html="displayedAssistantHtml"
           ></div>
         </div>
