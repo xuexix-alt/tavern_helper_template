@@ -157,15 +157,27 @@ test('transcript image generation temporarily suspends host visual hide before d
   const streamingSource = readSource('useStreamingDemo.ts');
 
   assert.match(streamingSource, /const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;/);
-  assert.match(streamingSource, /async function waitForPluginImageGenerationHandoff\(messageId: number\): Promise<boolean>/);
+  assert.match(
+    streamingSource,
+    /async function waitForPluginImageGenerationHandoff\(messageId: number\): Promise<boolean>/,
+  );
   assert.match(
     streamingSource,
     /waitForPluginImageGenerationHandoff[\s\S]*syncPendingRequestHintsFromDom\(\)[\s\S]*imagePendingTaskManager\.getDebugState\(\)/,
   );
-  assert.match(streamingSource, /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}`;/);
+  assert.match(
+    streamingSource,
+    /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}`;/,
+  );
   assert.match(streamingSource, /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/);
-  assert.match(streamingSource, /await options\.beforeRelease\?\.\(\);[\s\S]*releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/);
-  assert.match(streamingSource, /beforeRelease: async \(\) => \{[\s\S]*await waitForPluginImageGenerationHandoff\(normalizedId\);/);
+  assert.match(
+    streamingSource,
+    /await options\.beforeRelease\?\.\(\);[\s\S]*releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/,
+  );
+  assert.match(
+    streamingSource,
+    /beforeRelease: async \(\) => \{[\s\S]*await waitForPluginImageGenerationHandoff\(normalizedId\);/,
+  );
   assert.match(
     streamingSource,
     /async function triggerImageGenerationForMessage[\s\S]*await withHostTranscriptVisible\(\s*async \(\) => \{/,

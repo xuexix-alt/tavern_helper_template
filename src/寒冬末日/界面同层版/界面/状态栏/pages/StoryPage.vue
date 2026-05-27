@@ -1631,7 +1631,8 @@ function handleTranscriptIntentCapture(event: MouseEvent | PointerEvent | TouchE
 
 const PLUGIN_CLICK_TRIGGER_SELECTOR =
   '.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]';
-const PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR = '.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]';
+const PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR =
+  '.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]';
 
 function isPluginClickTriggerElement(node: Element): boolean {
   return Boolean(node.matches?.(PLUGIN_CLICK_TRIGGER_SELECTOR) || node.querySelector?.(PLUGIN_CLICK_TRIGGER_SELECTOR));
@@ -1737,9 +1738,7 @@ function guardPluginMenuViewport(): void {
     setTimeout(() => clampPluginMenuIntoViewport(node), 80);
   };
 
-  hostBody
-    .querySelectorAll(PLUGIN_CLICK_TRIGGER_SELECTOR)
-    .forEach(node => clampSoon(node));
+  hostBody.querySelectorAll(PLUGIN_CLICK_TRIGGER_SELECTOR).forEach(node => clampSoon(node));
 
   const observer = new MutationObserver(mutations => {
     for (const mut of mutations) {
