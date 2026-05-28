@@ -272,7 +272,7 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should keep polling long enough for delayed native extra.images saves',
   );
   assert.equal(
-    source.includes("queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);"),
+    source.includes('queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);'),
     true,
     'delayed response reconcile should force a targeted transcript/gallery probe even when host data signatures do not change',
   );
