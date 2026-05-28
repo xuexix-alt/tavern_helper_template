@@ -193,6 +193,11 @@ type ImageGenerationTriggerOptions = {
 type HostTranscriptVisibleOptions = {
   beforeRelease?: () => Promise<void> | void;
 };
+type AssistantPlaceholderEnsureReason =
+  | 'first_token'
+  | 'finalize_fallback'
+  | 'native_reasoning'
+  | `signal_${string}`;
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -1763,7 +1768,7 @@ export function useStreamingDemo() {
   const errorText = ref('');
   const assistantMessageId = ref<number | null>(null);
   const activeGenerationId = ref<string | null>(null);
-  const generationCancelRequested = ref(false);
+  const generationCancelRequested = ref<boolean>(false);
   const transcript = ref<TranscriptItem[]>([]);
   const filterMode = ref<TranscriptFilterMode>('all');
   const density = ref<TranscriptDensity>('comfortable');
@@ -2810,7 +2815,9 @@ export function useStreamingDemo() {
           if (updateBlocks.length === 0) return;
 
           try {
-            const chatMessage = getChatMessages(normalizedId, { hide_state: 'all' })?.[0];
+            const chatMessage = getChatMessages(normalizedId, { hide_state: 'all' })?.[0] as
+              | { message?: unknown; mes?: unknown }
+              | undefined;
             const existingMessage = String(chatMessage?.message ?? chatMessage?.mes ?? '');
             const mergedMessage = mergeMvuWritebackBlocksIntoAssistantText(existingMessage, messageContent);
             if (!mergedMessage || mergedMessage === existingMessage.trim()) {
@@ -3484,6 +3491,49 @@ export function useStreamingDemo() {
     }
   }
 
+  async function withPluginNativeMessageLease<T>(
+    messageId: number,
+    action: () => Promise<T> | T,
+    options: HostTranscriptVisibleOptions = {},
+  ): Promise<T> {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) {
+      return await action();
+    }
+    if (hidePolicyTimer) {
+      window.clearTimeout(hidePolicyTimer);
+      hidePolicyTimer = 0;
+    }
+
+    const wasHidden = readMessageMetasAfterContainer().some(
+      item => item.message_id === normalizedId && item.is_hidden === true,
+    );
+    const releasePluginNativeLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+      [normalizedId],
+      'plugin_native_handoff',
+    );
+    if (wasHidden) {
+      await setChatMessages([{ message_id: normalizedId, is_hidden: false }], { refresh: 'none' });
+    }
+
+    try {
+      return await action();
+    } finally {
+      try {
+        await options.beforeRelease?.();
+      } catch (error) {
+        console.warn('[stream-demo] plugin native message lease beforeRelease failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+      releasePluginNativeLease();
+      if (wasHidden) {
+        await setChatMessages([{ message_id: normalizedId, is_hidden: true }], { refresh: 'none' });
+      }
+      queueHidePolicy('plugin_native_bridge_resume');
+    }
+  }
+
   function queueGeneratedImageEntityRefresh(messageIds: number[] = [], reason = 'generated_image_entity_refresh') {
     if (generatedImageDomMutationTimer) window.clearTimeout(generatedImageDomMutationTimer);
     const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id >= 0))];
@@ -3686,7 +3736,8 @@ export function useStreamingDemo() {
       stage: 'auto-image',
       task: async () => {
         let shouldWaitForPluginHandoff = true;
-        await withHostTranscriptVisible(
+        await withPluginNativeMessageLease(
+          normalizedId,
           async () => {
             // Step 1: 确保宿主 DOM 有该楼层的 mes_text 节点（供插件读正文）
             const rendered = await ensureHostMesTextRendered(normalizedId);
@@ -4096,6 +4147,14 @@ export function useStreamingDemo() {
     generationSignalFinalizeReason = '';
   }
 
+  function hasGenerationSignalFinalizedVisibleContent(): boolean {
+    return (
+      generationSignalFinalized === true &&
+      (Boolean(String(finalText.value || streamText.value || '').trim()) ||
+        hasRenderableAssistantMessageText(latestPatchedMessage))
+    );
+  }
+
   function normalizeSignalFinalText(text: unknown): string {
     if (typeof text !== 'string') return '';
     const normalized = text.trim();
@@ -4342,7 +4401,7 @@ export function useStreamingDemo() {
     );
   }
 
-  async function ensureAssistantPlaceholderReady(reason: 'first_token' | 'finalize_fallback') {
+  async function ensureAssistantPlaceholderReady(reason: AssistantPlaceholderEnsureReason) {
     if (assistantMessageId.value != null || assistantPlaceholderCreating) {
       recordLifecycleTrace('createAssistantPlaceholder', 'ensure_skipped', {
         reason,
@@ -4879,7 +4938,7 @@ export function useStreamingDemo() {
       };
     } catch (error) {
       const caughtMessage = error instanceof Error ? error.message : String(error);
-      if (generationCancelRequested.value === true || caughtMessage === SAME_LAYER_CANCELLED_ERROR) {
+      if (Boolean(generationCancelRequested.value) || caughtMessage === SAME_LAYER_CANCELLED_ERROR) {
         markStageTiming('cancel_settle_start', {
           message: caughtMessage,
         });
@@ -4890,10 +4949,7 @@ export function useStreamingDemo() {
         cancelGenerationSignalFinalize();
         await finalizeAssistantMessageFromSignal(queuedReason);
       }
-      const signalFinalizedVisibleContent =
-        generationSignalFinalized === true &&
-        (Boolean(String(finalText.value || streamText.value || '').trim()) ||
-          hasRenderableAssistantMessageText(latestPatchedMessage));
+      const signalFinalizedVisibleContent = hasGenerationSignalFinalizedVisibleContent();
       if (signalFinalizedVisibleContent) {
         status.value = 'done';
         errorText.value = '';

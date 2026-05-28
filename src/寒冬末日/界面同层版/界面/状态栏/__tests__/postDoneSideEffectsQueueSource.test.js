@@ -136,8 +136,8 @@ test('host message writes and image trigger preparation enter the post-done queu
   );
   assert.match(
     imageTriggerBody,
-    /await runQueuedHostMessageUpdate\(\{[\s\S]*queue: postDoneSideEffectsQueue,[\s\S]*messageId: normalizedId,[\s\S]*stage: 'auto-image',[\s\S]*withHostTranscriptVisible/,
-    'image trigger host visibility and mes_text preparation should run through the same message queue',
+    /await runQueuedHostMessageUpdate\(\{[\s\S]*queue: postDoneSideEffectsQueue,[\s\S]*messageId: normalizedId,[\s\S]*stage: 'auto-image',[\s\S]*withPluginNativeMessageLease/,
+    'image trigger host message lease and mes_text preparation should run through the same message queue',
   );
 });
 

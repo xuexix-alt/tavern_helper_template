@@ -13,7 +13,7 @@ export function selectGeneratedImageTriggerTarget<T>(
   action: GeneratedImageTriggerAction,
 ): T | null {
   if (action === 'regenerate') {
-    return input.hostButton ?? input.hostImage ?? input.iframeButton ?? input.iframeImage ?? null;
+    return input.hostButton ?? input.hostImage ?? null;
   }
 
   return input.hostImage ?? input.iframeImage ?? input.hostButton ?? input.iframeButton ?? null;

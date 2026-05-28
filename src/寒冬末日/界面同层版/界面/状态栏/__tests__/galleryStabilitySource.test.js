@@ -153,7 +153,7 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
   assert.match(storyPageSource, /guardPluginMenuViewport\(\);[\s\S]*await triggerImageGenerationForMessage/);
 });
 
-test('transcript image generation temporarily suspends host visual hide before dispatching plugin gestures', () => {
+test('transcript image generation leases only the target host message before dispatching plugin gestures', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
   assert.match(streamingSource, /const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;/);
@@ -169,10 +169,18 @@ test('transcript image generation temporarily suspends host visual hide before d
     streamingSource,
     /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}`;/,
   );
-  assert.match(streamingSource, /const releaseVisualHide = hostVisualHideController\.suspend\('bridge_visible'\);/);
   assert.match(
     streamingSource,
-    /await options\.beforeRelease\?\.\(\);[\s\S]*releaseVisualHide\(\);[\s\S]*queueHidePolicy\('bridge_resume'\);/,
+    /async function withPluginNativeMessageLease<T>\(\s*messageId: number,[\s\S]*hostVisualHideController\.leaseMessageIdsForPluginNativeHandoff\(\s*\[\s*normalizedId\s*\]/,
+  );
+  assert.match(
+    streamingSource,
+    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\[\{ message_id: normalizedId, is_hidden: false \}\], \{ refresh: 'none' \}\);/,
+    'plugin handoff should reveal only the target message data, not the whole hidden transcript',
+  );
+  assert.match(
+    streamingSource,
+    /await options\.beforeRelease\?\.\(\);[\s\S]*releasePluginNativeLease\(\);[\s\S]*queueHidePolicy\('plugin_native_bridge_resume'\);/,
   );
   assert.match(
     streamingSource,
@@ -180,11 +188,11 @@ test('transcript image generation temporarily suspends host visual hide before d
   );
   assert.match(
     streamingSource,
-    /async function triggerImageGenerationForMessage[\s\S]*await withHostTranscriptVisible\(\s*async \(\) => \{/,
+    /async function triggerImageGenerationForMessage[\s\S]*await withPluginNativeMessageLease\(\s*normalizedId,\s*async \(\) => \{/,
   );
   assert.match(
     streamingSource,
-    /withHostTranscriptVisible[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
+    /withPluginNativeMessageLease[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
   );
 });
 
@@ -237,8 +245,8 @@ test('generated image regenerate uses the plugin image click bridge instead of m
   assert.doesNotMatch(storyPageSource, /dispatchHostDoubleClick\(targetNode, null, 'dblclick'\)/);
   assert.match(
     targetSource,
-    /return input\.hostButton \?\? input\.hostImage \?\? input\.iframeButton \?\? input\.iframeImage \?\? null;/,
-    'regenerate should only target plugin image/button nodes and must not fall back to the whole mes_text root',
+    /return input\.hostButton \?\? input\.hostImage \?\? null;/,
+    'regenerate should only target host plugin image/button nodes and must not re-enter same-layer iframe nodes',
   );
   assert.match(
     targetSource,

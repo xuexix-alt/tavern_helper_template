@@ -2,6 +2,7 @@ import { collectReachableHostDocuments, resolveHostMessageRoot } from './hostBri
 
 const HOST_VISUAL_HIDE_STYLE_ID = 'eden-same-layer-host-visual-hide-style';
 const HOST_VISUAL_HIDE_ATTR = 'data-eden-host-hidden';
+const HOST_PLUGIN_NATIVE_LEASE_ATTR = 'data-eden-plugin-native-lease';
 
 // The visual-hide layer must preserve mes nodes in DOM for bridge transactions.
 export const preserveMesNodesInDom = true;
@@ -22,6 +23,18 @@ function ensureHostVisualHideStyle(doc: Document) {
   padding: 0 !important;
   border: 0 !important;
   overflow: hidden !important;
+}
+[${HOST_PLUGIN_NATIVE_LEASE_ATTR}="true"] {
+  visibility: visible !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: visible !important;
 }
 `;
   doc.head?.appendChild(style);
@@ -51,6 +64,7 @@ function resolveHostMessageRoots(messageId: number): HTMLElement[] {
 export function createHostVisualHideController() {
   let suspendDepth = 0;
   const hiddenMessageIds = new Set<number>();
+  const pluginNativeLeaseMessageIds = new Set<number>();
 
   function applyStyleToReachableDocs() {
     for (const doc of collectReachableHostDocuments()) {
@@ -75,6 +89,22 @@ export function createHostVisualHideController() {
     }
   }
 
+  function writePluginNativeLeaseState(messageId: number, leased: boolean) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+
+    if (leased) pluginNativeLeaseMessageIds.add(normalizedId);
+    else pluginNativeLeaseMessageIds.delete(normalizedId);
+
+    for (const root of resolveHostMessageRoots(normalizedId)) {
+      if (leased) {
+        root.setAttribute(HOST_PLUGIN_NATIVE_LEASE_ATTR, 'true');
+      } else {
+        root.removeAttribute(HOST_PLUGIN_NATIVE_LEASE_ATTR);
+      }
+    }
+  }
+
   return {
     applyToMessageIds(messageIds: number[]) {
       applyStyleToReachableDocs();
@@ -86,6 +116,28 @@ export function createHostVisualHideController() {
       for (const messageId of messageIds) {
         writeNodeState(messageId, false);
       }
+    },
+    leaseMessageIdsForPluginNativeHandoff(messageIds: number[], _reason: string) {
+      applyStyleToReachableDocs();
+      const normalizedIds = [
+        ...new Set(
+          messageIds
+            .map(messageId => Math.trunc(Number(messageId)))
+            .filter(messageId => Number.isFinite(messageId) && messageId >= 0),
+        ),
+      ];
+      normalizedIds.forEach(messageId => writePluginNativeLeaseState(messageId, true));
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        normalizedIds.forEach(messageId => {
+          writePluginNativeLeaseState(messageId, false);
+          if (hiddenMessageIds.has(messageId) && suspendDepth === 0) {
+            writeNodeState(messageId, true);
+          }
+        });
+      };
     },
     suspend(_reason: string) {
       suspendDepth += 1;
@@ -106,7 +158,11 @@ export function createHostVisualHideController() {
       for (const messageId of hiddenMessageIds) {
         writeNodeState(messageId, false);
       }
+      for (const messageId of pluginNativeLeaseMessageIds) {
+        writePluginNativeLeaseState(messageId, false);
+      }
       hiddenMessageIds.clear();
+      pluginNativeLeaseMessageIds.clear();
     },
   };
 }
