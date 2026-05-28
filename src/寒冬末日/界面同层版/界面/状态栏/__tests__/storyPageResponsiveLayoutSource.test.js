@@ -152,3 +152,34 @@ test('StoryPage keeps fullscreen active while plugin image menus are triggered',
   assert.match(regenerateBody, /preparePluginMenuForFullscreen\(\);[\s\S]*dispatchHostImageRegenerateTrigger/);
   assert.match(source, /function toggleFullscreen\(\)[\s\S]*document\.exitFullscreen\?\.\(\);/);
 });
+
+test('StoryPage resolves existing image actions inside a target-message plugin-native lease', () => {
+  const source = read('../pages/StoryPage.vue');
+  const viewBody = extractFunctionBody(source, 'activateGeneratedImageView');
+  const tagBody = extractFunctionBody(source, 'activateGeneratedImageTag');
+  const regenerateBody = extractFunctionBody(source, 'activateGeneratedImageRegenerate');
+
+  assert.match(source, /withPluginNativeMessageLease,/);
+  assert.match(source, /ensureHostMesTextRendered,/);
+  assert.match(source, /triggerImageGenerationForMessage,/);
+  assert.match(
+    source,
+    /\} = useStreamingDemo\(\);/,
+    'StoryPage should receive the targeted plugin-native lease from useStreamingDemo with the host render helpers',
+  );
+  assert.match(
+    viewBody,
+    /await withPluginNativeMessageLease\(\s*Math\.trunc\(messageId\),[\s\S]*await ensureHostMesTextRendered\(Math\.trunc\(messageId\)\);[\s\S]*triggerHostElementClick\(targetNode\)/,
+    'single-click view should lease the host message before resolving and clicking the native image target',
+  );
+  assert.match(
+    tagBody,
+    /await withPluginNativeMessageLease\(\s*Math\.trunc\(messageId\),[\s\S]*await ensureHostMesTextRendered\(Math\.trunc\(messageId\)\);[\s\S]*dispatchHostImageTagTrigger\(targetNode\)/,
+    'image tag gestures should lease the host message before dispatching native long-press/contextmenu events',
+  );
+  assert.match(
+    regenerateBody,
+    /await withPluginNativeMessageLease\(\s*Math\.trunc\(messageId\),[\s\S]*await ensureHostMesTextRendered\(Math\.trunc\(messageId\)\);[\s\S]*dispatchHostImageRegenerateTrigger\(targetNode\)/,
+    'double-click regenerate should lease the host message before resolving the host-only regenerate target',
+  );
+});

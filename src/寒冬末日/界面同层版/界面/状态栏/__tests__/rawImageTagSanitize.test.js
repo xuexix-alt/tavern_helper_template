@@ -136,6 +136,31 @@ test('transcript image injection fills raw image placeholders before anchor fall
   );
 });
 
+test('transcript image injection uses native image prompt markers as inline placement anchors', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /function collectNativePromptTokenPlacementTargets\(/,
+    'image### markers preserved from raw <image> tags should be collected as real placement targets',
+  );
+  assert.match(
+    source,
+    /const nativePromptTokenTargets = collectNativePromptTokenPlacementTargets\(doc\.body\);/,
+    'injection should collect prompt-token placement targets from the rendered HTML body',
+  );
+  assert.match(
+    source,
+    /const nativePromptTarget = takeNativePromptTokenPlacementTarget\(nativePromptTokenTargets, image\.promptToken\);/,
+    'each plugin-native image should first try the matching image### marker before anchor or tail fallback',
+  );
+  assert.match(
+    source,
+    /nativePromptTarget\.replaceWith\(figure\);/,
+    'matched plugin-native images should replace the source marker in place instead of being appended to the end',
+  );
+});
+
 test('host-rendered transcript html still passes through image artifact injection without reformatting', () => {
   const source = readSource('useStreamingDemo.ts');
 

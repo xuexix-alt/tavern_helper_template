@@ -570,6 +570,7 @@ const {
   toggleOpeningExpanded,
   openDetail,
   closeDetail,
+  withPluginNativeMessageLease,
   withHostTranscriptVisible,
   ensureHostMesTextRendered,
   triggerImageGenerationForMessage,
@@ -1851,35 +1852,37 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
-
-  const targetNode = await resolveWithRetry(
-    () => {
-      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-        Math.trunc(messageId),
-        promptToken,
-        requestId,
-        imageSrc,
-      );
-      return resolveGeneratedImageTriggerTarget(
-        {
-          hostMessageRoot,
-          hostButton,
-          hostImage,
-          iframeButton,
-          iframeImage,
-        },
-        'open',
-      );
-    },
-    { attempts: 5, delayMs: 90 },
-  );
-  if (!targetNode) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
-    return;
-  }
-  if (!triggerHostElementClick(targetNode)) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
-  }
+  await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
+    await ensureHostMesTextRendered(Math.trunc(messageId));
+    const targetNode = await resolveWithRetry(
+      () => {
+        const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+          Math.trunc(messageId),
+          promptToken,
+          requestId,
+          imageSrc,
+        );
+        return resolveGeneratedImageTriggerTarget(
+          {
+            hostMessageRoot,
+            hostButton,
+            hostImage,
+            iframeButton,
+            iframeImage,
+          },
+          'open',
+        );
+      },
+      { attempts: 5, delayMs: 90 },
+    );
+    if (!targetNode) {
+      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
+      return;
+    }
+    if (!triggerHostElementClick(targetNode)) {
+      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
+    }
+  });
 }
 
 async function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
@@ -1888,36 +1891,42 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
-
-  const targetNode = await resolveWithRetry(
-    () => {
-      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-        Math.trunc(messageId),
-        promptToken,
-        requestId,
-        imageSrc,
-      );
-      return resolveGeneratedImageTriggerTarget(
-        {
-          hostMessageRoot,
-          hostButton,
-          hostImage,
-          iframeButton,
-          iframeImage,
+  await withPluginNativeMessageLease(
+    Math.trunc(messageId),
+    async () => {
+      await ensureHostMesTextRendered(Math.trunc(messageId));
+      const targetNode = await resolveWithRetry(
+        () => {
+          const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+            Math.trunc(messageId),
+            promptToken,
+            requestId,
+            imageSrc,
+          );
+          return resolveGeneratedImageTriggerTarget(
+            {
+              hostMessageRoot,
+              hostButton,
+              hostImage,
+              iframeButton,
+              iframeImage,
+            },
+            'open',
+          );
         },
-        'open',
+        { attempts: 5, delayMs: 90 },
       );
+      if (!targetNode) {
+        toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
+        return;
+      }
+      preparePluginMenuForFullscreen();
+      if (!dispatchHostImageTagTrigger(targetNode)) {
+        toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改触发失败`);
+      }
     },
-    { attempts: 5, delayMs: 90 },
+    { beforeRelease: () => waitForTimeout(720) },
   );
-  if (!targetNode) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
-    return;
-  }
-  preparePluginMenuForFullscreen();
-  if (!dispatchHostImageTagTrigger(targetNode)) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改触发失败`);
-  }
 }
 
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
@@ -1927,37 +1936,39 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
   const intentSource = payload?.source === 'gallery' ? 'gallery' : 'transcript';
-
-  const targetNode = await resolveWithRetry(
-    () => {
-      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-        Math.trunc(messageId),
-        promptToken,
-        requestId,
-        imageSrc,
-      );
-      return resolveGeneratedImageTriggerTarget(
-        {
-          hostMessageRoot,
-          hostButton,
-          hostImage,
-          iframeButton,
-          iframeImage,
-        },
-        'regenerate',
-      );
-    },
-    { attempts: 5, delayMs: 90 },
-  );
-  if (!targetNode) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
-    return;
-  }
-  beginPendingImageTask(Math.trunc(messageId), intentSource);
-  preparePluginMenuForFullscreen();
-  if (!dispatchHostImageRegenerateTrigger(targetNode)) {
-    toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
-  }
+  await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
+    await ensureHostMesTextRendered(Math.trunc(messageId));
+    const targetNode = await resolveWithRetry(
+      () => {
+        const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+          Math.trunc(messageId),
+          promptToken,
+          requestId,
+          imageSrc,
+        );
+        return resolveGeneratedImageTriggerTarget(
+          {
+            hostMessageRoot,
+            hostButton,
+            hostImage,
+            iframeButton,
+            iframeImage,
+          },
+          'regenerate',
+        );
+      },
+      { attempts: 5, delayMs: 90 },
+    );
+    if (!targetNode) {
+      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
+      return;
+    }
+    beginPendingImageTask(Math.trunc(messageId), intentSource);
+    preparePluginMenuForFullscreen();
+    if (!dispatchHostImageRegenerateTrigger(targetNode)) {
+      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
+    }
+  });
 }
 
 function handleGeneratedImageWindowDoubleClickCapture(event: MouseEvent) {

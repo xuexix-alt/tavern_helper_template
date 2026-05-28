@@ -907,6 +907,43 @@ function resolveInlineAnchorTarget(root: HTMLElement, anchorText: string): HTMLE
   return fallback;
 }
 
+type NativePromptTokenPlacementTarget = {
+  tokenCompare: string;
+  target: HTMLElement;
+};
+
+function resolveInlinePlacementTarget(element: HTMLElement): HTMLElement {
+  const parent = element.parentElement;
+  const parentOnlyContainsMarker =
+    parent?.tagName === 'P' &&
+    normalizeAnchorText(parent.textContent ?? '') === normalizeAnchorText(element.textContent ?? '');
+  return parentOnlyContainsMarker ? parent : element;
+}
+
+function collectNativePromptTokenPlacementTargets(root: HTMLElement): NativePromptTokenPlacementTarget[] {
+  return Array.from(root.querySelectorAll('[data-chatu8-native-prompt-token="true"]')).flatMap(node => {
+    const element = node as HTMLElement;
+    return collectChatu8PromptTokens(element.textContent ?? '')
+      .map(token => normalizePromptTokenForCompare(token))
+      .filter(Boolean)
+      .map(tokenCompare => ({
+        tokenCompare,
+        target: resolveInlinePlacementTarget(element),
+      }));
+  });
+}
+
+function takeNativePromptTokenPlacementTarget(
+  targets: NativePromptTokenPlacementTarget[],
+  promptToken?: string,
+): HTMLElement | null {
+  const needle = normalizePromptTokenForCompare(promptToken ?? '');
+  const index = needle ? targets.findIndex(item => item.tokenCompare === needle) : targets.length === 1 ? 0 : -1;
+  if (index < 0) return null;
+  const [matched] = targets.splice(index, 1);
+  return matched?.target ?? null;
+}
+
 function injectGeneratedImagesIntoHtml(
   html: string,
   images: RenderableGeneratedImage[],
@@ -920,17 +957,19 @@ function injectGeneratedImagesIntoHtml(
   const insertionRefs = new Map<HTMLElement, HTMLElement>();
   const fallbackFigures: HTMLElement[] = [];
   const appendUnanchoredToEnd = options.appendUnanchoredToEnd !== false;
+  const nativePromptTokenTargets = collectNativePromptTokenPlacementTargets(doc.body);
   const rawImagePlaceholders = Array.from(doc.body.querySelectorAll('[data-raw-image-tag="true"]')).map(node => {
     const element = node as HTMLElement;
-    const parent = element.parentElement;
-    const parentOnlyContainsPlaceholder =
-      parent?.tagName === 'P' &&
-      normalizeAnchorText(parent.textContent ?? '') === normalizeAnchorText(element.textContent ?? '');
-    return parentOnlyContainsPlaceholder ? parent : element;
+    return resolveInlinePlacementTarget(element);
   });
 
   for (const image of images) {
     const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
+    const nativePromptTarget = takeNativePromptTokenPlacementTarget(nativePromptTokenTargets, image.promptToken);
+    if (nativePromptTarget) {
+      nativePromptTarget.replaceWith(figure);
+      continue;
+    }
     const placeholderTarget = rawImagePlaceholders.shift();
     if (placeholderTarget) {
       placeholderTarget.replaceWith(figure);
@@ -6267,6 +6306,7 @@ export function useStreamingDemo() {
     rebuildTranscript,
     openDetail,
     closeDetail,
+    withPluginNativeMessageLease,
     withHostTranscriptVisible,
     ensureHostMesTextRendered,
     triggerImageGenerationForMessage,
