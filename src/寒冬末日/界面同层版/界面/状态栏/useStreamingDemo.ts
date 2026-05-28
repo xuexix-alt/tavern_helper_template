@@ -208,7 +208,7 @@ const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
 const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
-const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;
+const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
@@ -2158,6 +2158,7 @@ export function useStreamingDemo() {
       const timer = window.setTimeout(() => {
         hostImageDataReconcileTimers.delete(timer);
         const changedMessageIds = syncTranscriptItemsFromHostData(`${reason}:delay_${delayMs}`, normalizedMessageIds);
+        queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);
         if (changedMessageIds.length > 0) {
           logImageBridge('host-data-reconcile-hit', {
             reason,

@@ -267,9 +267,14 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should force transcript/gallery refresh even when signatures were not snapshotted yet',
   );
   assert.equal(
-    source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800] as const;'),
+    source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;'),
     true,
-    'successful plugin-native image responses should keep polling briefly for the native extra.images save that can land after the response event',
+    'successful plugin-native image responses should keep polling long enough for delayed native extra.images saves',
+  );
+  assert.equal(
+    source.includes("queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);"),
+    true,
+    'delayed response reconcile should force a targeted transcript/gallery probe even when host data signatures do not change',
   );
   assert.equal(
     source.includes("scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);"),
