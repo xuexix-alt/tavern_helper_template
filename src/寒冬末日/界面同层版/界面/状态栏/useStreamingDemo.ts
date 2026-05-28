@@ -193,11 +193,7 @@ type ImageGenerationTriggerOptions = {
 type HostTranscriptVisibleOptions = {
   beforeRelease?: () => Promise<void> | void;
 };
-type AssistantPlaceholderEnsureReason =
-  | 'first_token'
-  | 'finalize_fallback'
-  | 'native_reasoning'
-  | `signal_${string}`;
+type AssistantPlaceholderEnsureReason = 'first_token' | 'finalize_fallback' | 'native_reasoning' | `signal_${string}`;
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
