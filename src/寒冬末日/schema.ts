@@ -89,19 +89,17 @@ const 伊甸一次性指令条目Schema = z
     说明: z.string().prefault(''),
     范围: z.string().prefault(''),
     时效: z.string().prefault(''),
-    生效实例: z
-      .array(
-        z
-          .object({
-            对象范围: z.string().prefault(''),
-            剩余时效: z.string().prefault(''),
-          })
-          .prefault({
-            对象范围: '',
-            剩余时效: '',
-          }),
-      )
-      .prefault([]),
+    生效实例: z.array(
+      z
+        .object({
+          对象范围: z.string().prefault(''),
+          剩余时效: z.string().prefault(''),
+        })
+        .prefault({
+          对象范围: '',
+          剩余时效: '',
+        }),
+    ).prefault([]),
   })
   .prefault({ 名称: '', 数量: 0, 说明: '', 范围: '', 时效: '', 生效实例: [] });
 
