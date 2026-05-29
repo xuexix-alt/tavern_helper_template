@@ -541,7 +541,12 @@ function buildFallbackDisplayedHtml(renderSource: string): string {
 }
 
 function coerceBooleanRuntimeSetting(value: unknown): boolean {
-  return value === true || String(value ?? '').trim().toLowerCase() === 'true';
+  return (
+    value === true ||
+    String(value ?? '')
+      .trim()
+      .toLowerCase() === 'true'
+  );
 }
 
 function isChatu8AutoLlmImageGenerationEnabled(): boolean {
