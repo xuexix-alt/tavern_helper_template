@@ -196,7 +196,7 @@ test('plugin-native handoff wait records probe diagnostics before timing out', (
 
   assert.match(
     body,
-    /const probeDelaysMs = \[0, 400, 1200, 2400, 3600\] as const;/,
+    /const probeDelaysMs = \[0, 400, 1200, 2400, 3600, 7500, 15000, 30000, 60000\] as const;/,
     'handoff wait should probe a bounded set of timings instead of logging every poll',
   );
   assert.match(
@@ -208,6 +208,47 @@ test('plugin-native handoff wait records probe diagnostics before timing out', (
     body,
     /recordLifecycleTrace\('imageGenerationHandoff', 'timeout'[\s\S]*diagnostics: collectPluginNativeHandoffDiagnostics\(normalizedId\)/,
     'handoff timeout should carry a final diagnostic snapshot',
+  );
+});
+
+test('plugin-native handoff wait follows st-chatu8 LLM image-generation stage before releasing host DOM', () => {
+  const waitBody = extractFunctionBody(source, 'waitForPluginImageGenerationHandoff');
+  const bindBody = extractFunctionBody(source, 'bindPluginNativeLlmImageGenerationEvents');
+
+  assert.match(
+    source,
+    /const CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT = 'ch-llm-image-gen-request';/,
+    'same-layer should know the st-chatu8 LLM-image request event that precedes image### placeholder insertion',
+  );
+  assert.match(
+    source,
+    /const activePluginNativeLlmImageGenerationRequests = new Set<string>\(\);/,
+    'same-layer should track active st-chatu8 LLM-image requests while waiting for handoff',
+  );
+  assert.match(
+    bindBody,
+    /eventOn\(CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT as any,[\s\S]*markPluginNativeLlmImageGenerationStarted/,
+    'same-layer should mark the plugin LLM-image stage as active when st-chatu8 starts rewriting the story into image tags',
+  );
+  assert.match(
+    bindBody,
+    /eventOn\(CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT as any,[\s\S]*markPluginNativeLlmImageGenerationFinished/,
+    'same-layer should clear the active LLM-image stage after st-chatu8 receives the rewritten image tags',
+  );
+  assert.match(
+    waitBody,
+    /shouldContinuePluginNativeHandoffWait\(shortDeadline, extendedDeadline\)/,
+    'handoff wait should use the stage-aware wait contract instead of a fixed short DOM placeholder timeout',
+  );
+  assert.match(
+    source,
+    /const IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS = 8000;/,
+    'same-layer should keep the host DOM leased briefly after the st-chatu8 LLM response while image tags are inserted',
+  );
+  assert.match(
+    source,
+    /Date\.now\(\) - lastPluginNativeLlmImageGenerationSettledAt < IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS/,
+    'handoff wait should not release immediately when the LLM-image response fires before plugin DOM/message insertion finishes',
   );
 });
 

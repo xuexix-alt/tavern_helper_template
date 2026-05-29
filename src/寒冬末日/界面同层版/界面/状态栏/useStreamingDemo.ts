@@ -214,7 +214,11 @@ const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
 const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;
+const IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS = 120_000;
+const IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS = 8000;
 const IMAGE_GENERATION_HANDOFF_POLL_MS = 80;
+const CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT = 'ch-llm-image-gen-request';
+const CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT = 'ch-llm-image-gen-response';
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
@@ -1895,6 +1899,7 @@ export function useStreamingDemo() {
   let generationStops: StopHandle[] = [];
   let historyStops: StopHandle[] = [];
   let mvuStops: StopHandle[] = [];
+  let pluginNativeLlmImageGenerationStops: StopHandle[] = [];
   let hidePolicyTimer = 0;
   let hidePolicyRunning = false;
   let hidePolicyRerun = false;
@@ -1942,6 +1947,8 @@ export function useStreamingDemo() {
   const reprocessVariablesPending = ref(false);
   const imagePendingTaskManager = createImagePendingTaskManager();
   const imageRecentIntentStore = createImageRecentIntentStore();
+  const activePluginNativeLlmImageGenerationRequests = new Set<string>();
+  let lastPluginNativeLlmImageGenerationSettledAt = 0;
   const postDoneSideEffectsQueue = createPostDoneSideEffectsQueue();
 
   function resolveTraceId(fallbackPrefix = 'trace') {
@@ -2011,6 +2018,70 @@ export function useStreamingDemo() {
 
   function logImageBridge(step: string, detail: Record<string, unknown> = {}) {
     debugConsoleLog(`[stream-demo:image-bridge] ${step}`, detail);
+  }
+
+  function normalizePluginNativeLlmImageGenerationRequestId(payload: unknown): string {
+    if (payload && typeof payload === 'object') {
+      const rawId = (payload as { id?: unknown; requestId?: unknown }).id ?? (payload as { requestId?: unknown }).requestId;
+      const id = String(rawId ?? '').trim();
+      if (id) return id;
+    }
+    return `anonymous-${Date.now()}`;
+  }
+
+  function markPluginNativeLlmImageGenerationStarted(payload: unknown) {
+    const requestId = normalizePluginNativeLlmImageGenerationRequestId(payload);
+    activePluginNativeLlmImageGenerationRequests.add(requestId);
+    lastPluginNativeLlmImageGenerationSettledAt = 0;
+    recordLifecycleTrace('pluginNativeLlmImageGeneration', 'request', {
+      requestId,
+      activeCount: activePluginNativeLlmImageGenerationRequests.size,
+    });
+  }
+
+  function markPluginNativeLlmImageGenerationFinished(payload: unknown) {
+    const requestId = normalizePluginNativeLlmImageGenerationRequestId(payload);
+    activePluginNativeLlmImageGenerationRequests.delete(requestId);
+    lastPluginNativeLlmImageGenerationSettledAt = Date.now();
+    recordLifecycleTrace('pluginNativeLlmImageGeneration', 'response', {
+      requestId,
+      activeCount: activePluginNativeLlmImageGenerationRequests.size,
+    });
+    const recentIntent = imageRecentIntentStore.read();
+    if (recentIntent?.messageId != null) {
+      syncPendingRequestHintsFromDom();
+      queueGeneratedImageEntityRefresh([recentIntent.messageId], 'plugin_native_llm_image_generation_response');
+      scheduleHostImageDataReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);
+    }
+  }
+
+  function hasActivePluginNativeLlmImageGenerationRequest(): boolean {
+    return activePluginNativeLlmImageGenerationRequests.size > 0;
+  }
+
+  function isWithinPluginNativeLlmImageGenerationResponseGrace(): boolean {
+    return (
+      lastPluginNativeLlmImageGenerationSettledAt > 0 &&
+      Date.now() - lastPluginNativeLlmImageGenerationSettledAt < IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS
+    );
+  }
+
+  function shouldContinuePluginNativeHandoffWait(shortDeadline: number, extendedDeadline: number): boolean {
+    if (Date.now() < shortDeadline) return true;
+    if (Date.now() >= extendedDeadline) return false;
+    return hasActivePluginNativeLlmImageGenerationRequest() || isWithinPluginNativeLlmImageGenerationResponseGrace();
+  }
+
+  function bindPluginNativeLlmImageGenerationEvents(): StopHandle[] {
+    if (typeof eventOn !== 'function') return [];
+    return [
+      eventOn(CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT as any, payload => {
+        markPluginNativeLlmImageGenerationStarted(payload);
+      }),
+      eventOn(CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT as any, payload => {
+        markPluginNativeLlmImageGenerationFinished(payload);
+      }),
+    ].filter(Boolean) as StopHandle[];
   }
 
   function syncPendingRequestHintsFromDom() {
@@ -3543,10 +3614,11 @@ export function useStreamingDemo() {
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
 
     const startedAt = Date.now();
-    const deadline = startedAt + IMAGE_GENERATION_HANDOFF_TIMEOUT_MS;
-    const probeDelaysMs = [0, 400, 1200, 2400, 3600] as const;
+    const shortDeadline = startedAt + IMAGE_GENERATION_HANDOFF_TIMEOUT_MS;
+    const extendedDeadline = startedAt + IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS;
+    const probeDelaysMs = [0, 400, 1200, 2400, 3600, 7500, 15000, 30000, 60000] as const;
     let nextProbeIndex = 0;
-    while (Date.now() < deadline) {
+    while (shouldContinuePluginNativeHandoffWait(shortDeadline, extendedDeadline)) {
       syncPendingRequestHintsFromDom();
       const elapsedMs = Date.now() - startedAt;
       if (nextProbeIndex < probeDelaysMs.length && elapsedMs >= probeDelaysMs[nextProbeIndex]) {
@@ -3554,6 +3626,8 @@ export function useStreamingDemo() {
           messageId: normalizedId,
           elapsedMs,
           probeDelayMs: probeDelaysMs[nextProbeIndex],
+          activePluginNativeLlmImageGenerationRequests: activePluginNativeLlmImageGenerationRequests.size,
+          withinPluginNativeLlmImageGenerationResponseGrace: isWithinPluginNativeLlmImageGenerationResponseGrace(),
           diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
         });
         nextProbeIndex += 1;
@@ -3573,6 +3647,9 @@ export function useStreamingDemo() {
     recordLifecycleTrace('imageGenerationHandoff', 'timeout', {
       messageId: normalizedId,
       timeoutMs: IMAGE_GENERATION_HANDOFF_TIMEOUT_MS,
+      extendedTimeoutMs: IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS,
+      activePluginNativeLlmImageGenerationRequests: activePluginNativeLlmImageGenerationRequests.size,
+      withinPluginNativeLlmImageGenerationResponseGrace: isWithinPluginNativeLlmImageGenerationResponseGrace(),
       tasks: imagePendingTaskManager.getDebugState(),
       diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
     });
@@ -6027,6 +6104,7 @@ export function useStreamingDemo() {
           },
         });
       }
+      pluginNativeLlmImageGenerationStops = bindPluginNativeLlmImageGenerationEvents();
 
       await restoreHideState();
       writeRuntimeLeaseStatus('booting');
@@ -6172,6 +6250,10 @@ export function useStreamingDemo() {
     historyStops = [];
     mvuStops.forEach(stop => stop?.stop?.());
     mvuStops = [];
+    pluginNativeLlmImageGenerationStops.forEach(stop => stop?.stop?.());
+    pluginNativeLlmImageGenerationStops = [];
+    activePluginNativeLlmImageGenerationRequests.clear();
+    lastPluginNativeLlmImageGenerationSettledAt = 0;
     nativeGenerationRevealActive = false;
     releaseHiddenStoryMessagesForNativeGeneration();
     hidePolicyTimer = clearTimer(hidePolicyTimer);
