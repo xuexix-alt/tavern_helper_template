@@ -470,9 +470,7 @@ function isHostRenderedStreamDemoWrapperOnlyHtml(html: string): boolean {
 function readHostMesTextRenderedHtmlFromRoots(message_id: number): string {
   for (const root of resolveDisplayedMessageRoots(message_id)) {
     const mesText =
-      (root.matches?.('.mes_text') ? root : null) ??
-      (root.querySelector?.('.mes_text') as HTMLElement | null) ??
-      root;
+      (root.matches?.('.mes_text') ? root : null) ?? (root.querySelector?.('.mes_text') as HTMLElement | null) ?? root;
     const html = String(mesText?.innerHTML ?? '').trim();
     if (!html) continue;
     if (!/\b(?:st-chatu8-image-button|image-tag-button|st-chatu8-image-span|image-tag-placeholder)\b/.test(html)) {
