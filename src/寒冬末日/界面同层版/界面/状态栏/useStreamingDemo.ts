@@ -2054,7 +2054,9 @@ export function useStreamingDemo() {
       syncPendingRequestHintsFromDom();
       queueGeneratedImageEntityRefresh([recentIntent.messageId], 'plugin_native_llm_image_generation_response');
       scheduleHostImageDataReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);
-      schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);
+      schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [
+        recentIntent.messageId,
+      ]);
     }
   }
 

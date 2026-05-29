@@ -292,12 +292,16 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes('function schedulePluginNativePromptPlaceholderReconcile(reason: string, messageIds: number[] = [])'),
+    source.includes(
+      'function schedulePluginNativePromptPlaceholderReconcile(reason: string, messageIds: number[] = [])',
+    ),
     true,
     'same-layer should have a dedicated reconcile path for the image### prompt placeholder stage',
   );
   assert.equal(
-    source.includes('const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200] as const;'),
+    source.includes(
+      'const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200] as const;',
+    ),
     true,
     'prompt placeholder reconcile should cover the gap between ch-llm-image-gen-response and generate-image-request',
   );
@@ -307,12 +311,16 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     'prompt placeholder reconcile should emit probe diagnostics so mobile/PC failures show which stage stalled',
   );
   assert.equal(
-    source.includes("schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);"),
+    source.includes(
+      "schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);",
+    ),
     true,
     'the st-chatu8 LLM image response event should start prompt placeholder reconciliation for the recent same-layer target',
   );
   assert.equal(
-    source.includes("schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);"),
+    source.includes(
+      "schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);",
+    ),
     true,
     'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
   );
