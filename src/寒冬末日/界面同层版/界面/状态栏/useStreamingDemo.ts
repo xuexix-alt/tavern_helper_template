@@ -43,6 +43,7 @@ import {
   buildAssistantRenderSource,
   buildDebugMessageSignature,
   createGenerationListenerEpochController,
+  resolveAssistantArtifactRenderSource,
   resolveAssistantDisplayRenderSource,
   resolveTranscriptRole,
   shouldCreateAssistantPlaceholderOnFirstToken,
@@ -466,10 +467,30 @@ function isHostRenderedStreamDemoWrapperOnlyHtml(html: string): boolean {
   );
 }
 
+function readHostMesTextRenderedHtmlFromRoots(message_id: number): string {
+  for (const root of resolveDisplayedMessageRoots(message_id)) {
+    const mesText =
+      (root.matches?.('.mes_text') ? root : null) ??
+      (root.querySelector?.('.mes_text') as HTMLElement | null) ??
+      root;
+    const html = String(mesText?.innerHTML ?? '').trim();
+    if (!html) continue;
+    if (!/\b(?:st-chatu8-image-button|image-tag-button|st-chatu8-image-span|image-tag-placeholder)\b/.test(html)) {
+      continue;
+    }
+    if (html.includes(STREAM_DEMO_MARKER) || /<demo_phase\b/i.test(html)) continue;
+    if (isHostRenderedStreamDemoWrapperOnlyHtml(html)) continue;
+    return stripVisibleChatu8PromptTokensHtml(normalizeDisplayedHtml(html));
+  }
+  return '';
+}
+
 function readHostRenderedMessageHtml(message_id: number): string {
   const normalizedId = Math.trunc(Number(message_id));
   if (!Number.isFinite(normalizedId) || normalizedId < 0) return '';
   try {
+    const rootHtml = readHostMesTextRenderedHtmlFromRoots(normalizedId);
+    if (rootHtml) return rootHtml;
     if (typeof retrieveDisplayedMessage !== 'function') return '';
     const html = String(retrieveDisplayedMessage(normalizedId)?.html?.() ?? '').trim();
     if (!html) return '';
@@ -633,6 +654,45 @@ function collectImageSourceIdentitiesFromHtml(html: string): Set<string> {
     identities.add(src);
   }
   return identities;
+}
+
+function hydratePluginNativePromptPlaceholdersHtml(html: string, roots: HTMLElement[]): string {
+  const source = String(html ?? '');
+  const validRoots = Array.isArray(roots) ? roots.filter(Boolean) : [];
+  if (!source.trim() || validRoots.length === 0) return source;
+  if (/\b(?:st-chatu8-image-button|image-tag-button|st-chatu8-image-span|image-tag-placeholder)\b/.test(source)) {
+    return source;
+  }
+
+  const placeholders: string[] = [];
+  const seen = new Set<string>();
+  for (const root of validRoots) {
+    const nodes = Array.from(root.querySelectorAll(`${CHATU8_IMAGE_SPAN_SELECTOR}, ${CHATU8_IMAGE_BUTTON_SELECTOR}`));
+    for (const node of nodes) {
+      const element = node as HTMLElement;
+      const key = [
+        element.tagName,
+        element.getAttribute('data-request-id') ?? '',
+        element.getAttribute('data-image-id') ?? '',
+        element.getAttribute('data-image-tag') ?? '',
+        element.getAttribute('data-link') ?? '',
+        element.outerHTML,
+      ].join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      placeholders.push(element.outerHTML);
+    }
+  }
+  if (placeholders.length === 0) return source;
+
+  const doc = document.implementation.createHTMLDocument('');
+  doc.body.innerHTML = source;
+  const container = doc.createElement('section');
+  container.className = 'st-chatu8-native-placeholder-strip';
+  container.setAttribute('data-st-chatu8-native-placeholders', 'true');
+  container.innerHTML = placeholders.join('');
+  doc.body.append(container);
+  return doc.body.innerHTML;
 }
 
 function normalizeAnchorText(input: string): string {
@@ -1076,7 +1136,10 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
     appendUnanchoredToEnd: renderMode !== 'plugin-native-data' || hasPluginNativeArtifacts !== true,
   });
-  return htmlWithImages;
+  return hydratePluginNativePromptPlaceholdersHtml(
+    htmlWithImages,
+    iframeRoots.length > 0 ? iframeRoots : resolveDisplayedMessageRoots(messageId),
+  );
 }
 
 function resolveDisplayedMessageRoots(messageId: number): HTMLElement[] {
@@ -1739,11 +1802,19 @@ function buildTranscriptItem(input: {
     renderSource,
     strippedRenderSource,
   });
+  const hostMessageDetail = readChatMessageDetail(input.id);
+  const hostRawMessage = String(hostMessageDetail?.mes ?? hostMessageDetail?.message ?? '');
+  const artifactRenderSource = resolveAssistantArtifactRenderSource({
+    displayRenderSource,
+    hostRawMessage,
+    hasDisplayPromptTokens: collectChatu8PromptTokens(displayRenderSource).length > 0,
+    hasHostPromptTokens: collectChatu8PromptTokens(hostRawMessage).length > 0,
+  });
   const hostRenderedHtml = buildHostRenderedHtml(
     readHostRenderedMessageHtml(input.id),
-    displayRenderSource,
+    artifactRenderSource,
     input.id,
-    input.raw,
+    artifactRenderSource,
   );
   const hostRenderedHasReadyImage =
     /\bst-chatu8-image-span\b|\bassistant-fallback-(?:inline-image|generated-image)\b/.test(hostRenderedHtml);
@@ -1763,7 +1834,7 @@ function buildTranscriptItem(input: {
   // 完成态或非 latest 楼层才构造完整 HTML 和图片 artifact。
   const finalHtml =
     hostRenderedHtml ||
-    (isCurrentStreamingItem ? streamHtml : buildFinalHtml(displayRenderSource, input.id, input.raw));
+    (isCurrentStreamingItem ? streamHtml : buildFinalHtml(artifactRenderSource, input.id, artifactRenderSource));
   const generatedImages: GeneratedImageRef[] = [];
   const preview = '';
 
@@ -4495,6 +4566,9 @@ export function useStreamingDemo() {
   }
 
   async function patchAssistantMessage(phase: 'stream' | 'done') {
+    if (assistantMessageId.value == null && phase === 'stream' && assistantPlaceholderCreating !== true) {
+      await ensureAssistantPlaceholderReady('patch_stream_missing_message_id');
+    }
     const messageId = assistantMessageId.value;
     const traceId = resolveTraceId('patch');
     if (messageId == null) {

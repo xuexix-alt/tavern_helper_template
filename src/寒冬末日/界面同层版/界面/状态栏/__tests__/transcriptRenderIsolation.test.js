@@ -311,8 +311,8 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     'prompt placeholder reconcile should emit probe diagnostics so mobile/PC failures show which stage stalled',
   );
   assert.equal(
-    source.includes(
-      "schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);",
+    /schedulePluginNativePromptPlaceholderReconcile\(\s*'plugin_native_llm_image_generation_response',\s*\[\s*recentIntent\.messageId\s*,?\s*\]\s*\);/.test(
+      source,
     ),
     true,
     'the st-chatu8 LLM image response event should start prompt placeholder reconciliation for the recent same-layer target',
@@ -323,6 +323,51 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     ),
     true,
     'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
+  );
+});
+
+test('same-layer transcript preserves plugin-native prompt placeholders before ready image responses', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const appendStart = source.indexOf('function appendChatu8ArtifactsToHtml(');
+  assert.notEqual(appendStart, -1, 'should find appendChatu8ArtifactsToHtml');
+  const appendEnd = source.indexOf('function resolveDisplayedMessageRoots', appendStart);
+  assert.notEqual(appendEnd, -1, 'should find next helper after appendChatu8ArtifactsToHtml');
+  const appendBody = source.slice(appendStart, appendEnd);
+
+  assert.equal(
+    source.includes('function hydratePluginNativePromptPlaceholdersHtml('),
+    true,
+    'same-layer should have a helper that can copy plugin-native button/placeholder HTML into transcript html',
+  );
+  assert.match(
+    appendBody,
+    /hydratePluginNativePromptPlaceholdersHtml\(\s*htmlWithImages,\s*iframeRoots\.length > 0 \? iframeRoots : resolveDisplayedMessageRoots\(messageId\),\s*\)/,
+    'appendChatu8ArtifactsToHtml should hydrate native prompt placeholders before returning transcript html',
+  );
+  assert.doesNotMatch(
+    appendBody,
+    /return htmlWithImages;\s*}/,
+    'appendChatu8ArtifactsToHtml should not return only ready-image html and drop prompt placeholder/button artifacts',
+  );
+});
+
+test('same-layer host rendered html falls back to host mes_text when plugin-native placeholders are already inserted', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const start = source.indexOf('function readHostRenderedMessageHtml(');
+  assert.notEqual(start, -1, 'should find readHostRenderedMessageHtml');
+  const end = source.indexOf('const RAW_IMAGE_TAG_PATTERN', start);
+  assert.notEqual(end, -1, 'should find next section after readHostRenderedMessageHtml');
+  const body = source.slice(start, end);
+
+  assert.match(
+    source,
+    /function readHostMesTextRenderedHtmlFromRoots\(message_id: number\)/,
+    'same-layer should read host .mes_text innerHTML directly when retrieveDisplayedMessage is stale or wrapper-only',
+  );
+  assert.match(
+    body,
+    /const rootHtml = readHostMesTextRenderedHtmlFromRoots\(normalizedId\);[\s\S]*if \(rootHtml\) return rootHtml;/,
+    'host mes_text placeholder/button html should be preferred before giving up on host rendered html',
   );
 });
 

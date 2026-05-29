@@ -96,7 +96,7 @@ test('streaming transcript items use lightweight regex preview and avoid eager f
   // 当前流式项优先复用酒馆宿主已渲染 HTML，其次复用已节流的 streamHtml 预览，非流式项才走完整路径。
   assert.match(
     source,
-    /const finalHtml =\s*hostRenderedHtml\s*\|\|\s*\(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)\)/,
+    /const finalHtml =\s*hostRenderedHtml\s*\|\|\s*\(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(artifactRenderSource, input\.id, artifactRenderSource\)\)/,
     'current streaming item should prefer host-rendered html or reuse preview html without running full display formatting',
   );
 });
@@ -387,7 +387,7 @@ test('buildTranscriptItem always produces a finalHtml so older floors do not bla
   );
   assert.match(
     source,
-    /const finalHtml =\s*hostRenderedHtml\s*\|\|\s*\(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(displayRenderSource,/,
+    /const finalHtml =\s*hostRenderedHtml\s*\|\|\s*\(isCurrentStreamingItem \? streamHtml : buildFinalHtml\(artifactRenderSource,/,
     'streaming items should still produce host-rendered or lightweight finalHtml fallback once the item stops being the latest assistant',
   );
 });

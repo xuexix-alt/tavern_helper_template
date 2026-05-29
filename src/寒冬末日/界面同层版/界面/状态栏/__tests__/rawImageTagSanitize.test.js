@@ -184,7 +184,22 @@ test('host-rendered transcript html still passes through image artifact injectio
   );
   assert.match(
     source,
-    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*displayRenderSource,\s*input\.id,\s*input\.raw,\s*\);/,
-    'buildTranscriptItem should hydrate host-rendered HTML before using it as streamHtml/finalHtml',
+    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*artifactRenderSource,\s*input\.id,\s*artifactRenderSource,\s*\);/,
+    'buildTranscriptItem should hydrate host-rendered HTML with the current artifact render source before using it as streamHtml/finalHtml',
+  );
+});
+
+test('buildTranscriptItem uses host raw image prompts as the final display source after native insertion', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const artifactRenderSource = resolveAssistantArtifactRenderSource\(\{[\s\S]*displayRenderSource,[\s\S]*hostRawMessage,[\s\S]*hasDisplayPromptTokens: collectChatu8PromptTokens\(displayRenderSource\)\.length > 0,[\s\S]*hasHostPromptTokens: collectChatu8PromptTokens\(hostRawMessage\)\.length > 0,[\s\S]*\}\);/,
+    'buildTranscriptItem should switch to the host raw message when st-chatu8 has inserted image prompt tokens after the same-layer item was built',
+  );
+  assert.match(
+    source,
+    /buildFinalHtml\(artifactRenderSource, input\.id, artifactRenderSource\)/,
+    'final transcript HTML should be built from the host raw image prompt source so prompt markers stay anchored in the body',
   );
 });

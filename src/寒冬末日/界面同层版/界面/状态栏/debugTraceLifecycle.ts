@@ -113,6 +113,20 @@ export function resolveAssistantDisplayRenderSource(input: {
   return normalizeText(input.renderSource);
 }
 
+export function resolveAssistantArtifactRenderSource(input: {
+  displayRenderSource: string;
+  hostRawMessage: string;
+  hasDisplayPromptTokens: boolean;
+  hasHostPromptTokens: boolean;
+}): string {
+  const displayRenderSource = normalizeText(input.displayRenderSource);
+  const hostRawMessage = normalizeText(input.hostRawMessage);
+  if (!input.hasDisplayPromptTokens && input.hasHostPromptTokens && hostRawMessage) {
+    return hostRawMessage;
+  }
+  return displayRenderSource;
+}
+
 export function resolveTranscriptRole(input: {
   rawRole: 'assistant' | 'user' | 'system';
   rawMessage: string;

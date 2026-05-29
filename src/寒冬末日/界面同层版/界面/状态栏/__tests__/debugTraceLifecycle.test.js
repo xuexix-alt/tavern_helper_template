@@ -1,11 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   buildAssistantRenderSource,
   buildDemoAssistantFinalBodySource,
   buildDebugMessageSignature,
   createGenerationListenerEpochController,
+  resolveAssistantArtifactRenderSource,
   resolveAssistantDisplayRenderSource,
   resolveTranscriptRole,
   shouldCreateAssistantPlaceholderOnFirstToken,
@@ -171,6 +174,29 @@ test('resolveAssistantDisplayRenderSource keeps full structured assistant source
   );
 });
 
+test('resolveAssistantArtifactRenderSource switches to host raw after plugin-native prompt insertion', () => {
+  assert.equal(
+    resolveAssistantArtifactRenderSource({
+      displayRenderSource: '正文第一段。\n正文第二段。',
+      hostRawMessage: '正文第一段。\n<image>image###sfw, 1girl, convenience store###</image>\n正文第二段。',
+      hasDisplayPromptTokens: false,
+      hasHostPromptTokens: true,
+    }),
+    '正文第一段。\n<image>image###sfw, 1girl, convenience store###</image>\n正文第二段。',
+  );
+
+  assert.equal(
+    resolveAssistantArtifactRenderSource({
+      displayRenderSource: '正文第一段。\nimage###existing###',
+      hostRawMessage: '正文第一段。\nimage###newer###',
+      hasDisplayPromptTokens: true,
+      hasHostPromptTokens: true,
+    }),
+    '正文第一段。\nimage###existing###',
+    'an existing display source marker should remain authoritative instead of being replaced by a different host token',
+  );
+});
+
 test('resolveTranscriptRole forces opening result floors to render as assistant even if host role drifts', () => {
   assert.equal(
     resolveTranscriptRole({
@@ -260,6 +286,28 @@ test('shouldCreateAssistantPlaceholderOnFirstToken only allows deferred creation
       token: 'A',
     }),
     false,
+  );
+});
+
+test('patchAssistantMessage stream path creates a placeholder before dropping early mobile tokens', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'useStreamingDemo.ts'), 'utf8');
+  const startToken = "async function patchAssistantMessage(phase: 'stream' | 'done')";
+  const startIndex = source.indexOf(startToken);
+  assert.notEqual(startIndex, -1, 'should find patchAssistantMessage');
+
+  const endIndex = source.indexOf('async function ensureAssistantPlaceholderReady', startIndex);
+  assert.notEqual(endIndex, -1, 'should find ensureAssistantPlaceholderReady after patchAssistantMessage');
+  const body = source.slice(startIndex, endIndex);
+
+  assert.match(
+    body,
+    /if \(assistantMessageId\.value == null && phase === 'stream' && assistantPlaceholderCreating !== true\) \{[\s\S]*await ensureAssistantPlaceholderReady\('patch_stream_missing_message_id'\);[\s\S]*\}\s*const messageId = assistantMessageId\.value;/,
+    'stream patching should create the assistant floor when mobile/token timing reaches patchAssistantMessage before assistantMessageId exists',
+  );
+  assert.ok(
+    body.indexOf("await ensureAssistantPlaceholderReady('patch_stream_missing_message_id');") <
+      body.indexOf('if (messageId == null) {'),
+    'patchAssistantMessage should try the placeholder fallback before the remaining missing-id guard can skip',
   );
 });
 

@@ -181,8 +181,8 @@ test('transcript item html prefers host-rendered mes_text when available', () =>
   );
   assert.match(
     source,
-    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*displayRenderSource,\s*input\.id,\s*input\.raw,\s*\);/,
-    'buildTranscriptItem should read and hydrate the host-rendered mes_text HTML for the target floor',
+    /const hostRenderedHtml = buildHostRenderedHtml\(\s*readHostRenderedMessageHtml\(input\.id\),\s*artifactRenderSource,\s*input\.id,\s*artifactRenderSource,\s*\);/,
+    'buildTranscriptItem should read and hydrate the host-rendered mes_text HTML with the current artifact source for the target floor',
   );
   assert.match(
     source,
