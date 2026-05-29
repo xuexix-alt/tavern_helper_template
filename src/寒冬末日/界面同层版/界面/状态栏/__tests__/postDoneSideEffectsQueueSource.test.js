@@ -105,6 +105,16 @@ test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event orde
     /if \(shouldWaitForPluginNativeHandoff\) \{[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
     'the official lifecycle should keep the host message available until plugin-native handoff is observed or times out',
   );
+  assert.match(
+    source,
+    /function collectPluginNativeHandoffDiagnostics\(messageId: number\)/,
+    'same-layer should expose a compact diagnostic snapshot for plugin-native handoff failures',
+  );
+  assert.match(
+    body,
+    /collectPluginNativeHandoffDiagnostics\(Math\.trunc\(normalizedId\)\)/,
+    'official lifecycle traces should include the host/plugin diagnostic snapshot around the handoff boundary',
+  );
 });
 
 test('runGenerationFlow primes native autoLLMClick before same-layer generate call', () => {
@@ -178,5 +188,38 @@ test('image mutation debounce accumulates message ids instead of keeping only th
     imageRefreshBody,
     /if \(normalizedMessageIds\.length === 0\) \{[\s\S]*bumpGeneratedImageEntityRevision\(\);[\s\S]*return;/,
     'a trailing empty mutation batch must not discard earlier message ids and skip transcript refresh',
+  );
+});
+
+test('plugin-native handoff wait records probe diagnostics before timing out', () => {
+  const body = extractFunctionBody(source, 'waitForPluginImageGenerationHandoff');
+
+  assert.match(
+    body,
+    /const probeDelaysMs = \[0, 400, 1200, 2400, 3600\] as const;/,
+    'handoff wait should probe a bounded set of timings instead of logging every poll',
+  );
+  assert.match(
+    body,
+    /recordLifecycleTrace\('imageGenerationHandoff', 'probe'[\s\S]*collectPluginNativeHandoffDiagnostics\(normalizedId\)/,
+    'handoff wait probes should include DOM/chat/plugin diagnostics',
+  );
+  assert.match(
+    body,
+    /recordLifecycleTrace\('imageGenerationHandoff', 'timeout'[\s\S]*diagnostics: collectPluginNativeHandoffDiagnostics\(normalizedId\)/,
+    'handoff timeout should carry a final diagnostic snapshot',
+  );
+});
+
+test('plugin-native request bridge records request and response binding diagnostics', () => {
+  assert.match(
+    source,
+    /recordLifecycleTrace\('imageGenerationEventBridge', 'on_request'[\s\S]*requestBinding[\s\S]*collectPluginNativeHandoffDiagnostics/,
+    'generate-image-request should log whether the request was bound to a target message',
+  );
+  assert.match(
+    source,
+    /recordLifecycleTrace\('imageGenerationEventBridge', 'on_response_success'[\s\S]*matchedResponse[\s\S]*targetMessageIds[\s\S]*collectPluginNativeHandoffDiagnostics/,
+    'generate-image-response should log matched response and target message diagnostics',
   );
 });

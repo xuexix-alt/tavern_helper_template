@@ -2655,6 +2655,58 @@ export function useStreamingDemo() {
     return collectReachableHostDocuments();
   }
 
+  function collectPluginNativeHandoffDiagnostics(messageId: number): Record<string, unknown> {
+    const normalizedId = Math.trunc(Number(messageId));
+    const ctx = readHostContext();
+    const chat = ctx?.chat;
+    const chatLength = Number(chat?.length);
+    const messageDetail = readChatMessageDetail(normalizedId);
+    const messageText = String(messageDetail?.mes ?? messageDetail?.message ?? '');
+    const chatu8Settings = ctx?.extensionSettings?.['st-chatu8'] ?? {};
+    const hostDocuments = collectHostDocuments();
+    const handoffSelector = `${CHATU8_IMAGE_BUTTON_SELECTOR}, ${CHATU8_IMAGE_SPAN_SELECTOR}, ${CHATU8_IMAGE_CONTAINER_SELECTOR}`;
+    const hostMesTextSnapshots = hostDocuments.map((doc, index) => {
+      const mes = doc.querySelector(`.mes[mesid="${normalizedId}"]`) as HTMLElement | null;
+      const mesText = mes?.querySelector('.mes_text') as HTMLElement | null;
+      const style = mes ? doc.defaultView?.getComputedStyle?.(mes) : null;
+      return {
+        index,
+        isCurrentDocument: doc === document,
+        hasMes: Boolean(mes),
+        hasMesText: Boolean(mesText),
+        injected: Boolean(mes?.hasAttribute('data-ui-injected-mes')),
+        mesDisplay: style?.display ?? '',
+        mesVisibility: style?.visibility ?? '',
+        mesOpacity: style?.opacity ?? '',
+        mesTextLength: String(mesText?.textContent ?? '').length,
+        promptTokenCount: collectChatu8PromptTokens(String(mesText?.textContent ?? '')).length,
+        imageButtonCount: mesText?.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR).length ?? 0,
+        imageSpanCount: mesText?.querySelectorAll(CHATU8_IMAGE_SPAN_SELECTOR).length ?? 0,
+        imageContainerCount: mesText?.querySelectorAll(CHATU8_IMAGE_CONTAINER_SELECTOR).length ?? 0,
+        handoffNodeCount: mesText?.querySelectorAll(handoffSelector).length ?? 0,
+      };
+    });
+
+    return {
+      messageId: normalizedId,
+      chatLength: Number.isFinite(chatLength) ? chatLength : null,
+      lastMessageIndex: Number.isFinite(chatLength) ? chatLength - 1 : null,
+      messageExists: Boolean(messageDetail),
+      messageTextLength: messageText.length,
+      messagePromptTokenCount: collectChatu8PromptTokens(messageText).length,
+      autoLlmImageGen: isChatu8AutoLlmImageGenerationEnabled(),
+      chatu8ScriptEnabled: chatu8Settings?.scriptEnabled ?? null,
+      chatu8AutoClickGenerate: chatu8Settings?.zidongdianji ?? null,
+      chatu8AutoClickGenerate2: chatu8Settings?.zidongdianji2 ?? null,
+      chatu8StartTag: chatu8Settings?.startTag ?? null,
+      chatu8EndTag: chatu8Settings?.endTag ?? null,
+      pendingTasks: imagePendingTaskManager.getDebugState(),
+      recentIntent: imageRecentIntentStore.read(),
+      hostDocumentCount: hostDocuments.length,
+      hostMesTextSnapshots,
+    };
+  }
+
   /**
    * 将容器楼层之后的所有宿主楼层设为 is_hidden，
    * 让酒馆不渲染它们的 DOM（包括其中的 iframe 前端界面），
@@ -2775,6 +2827,7 @@ export function useStreamingDemo() {
       {
         messageId: Math.trunc(normalizedId),
         hostRendered,
+        diagnostics: collectPluginNativeHandoffDiagnostics(Math.trunc(normalizedId)),
       },
       traceId,
     );
@@ -2833,6 +2886,7 @@ export function useStreamingDemo() {
           messageId: Math.trunc(normalizedId),
           hasPromptTokens: collectChatu8PromptTokens(messageText).length > 0,
           autoLlmImageGen: isChatu8AutoLlmImageGenerationEnabled(),
+          diagnostics: collectPluginNativeHandoffDiagnostics(Math.trunc(normalizedId)),
         },
         traceId,
       );
@@ -3490,13 +3544,26 @@ export function useStreamingDemo() {
 
     const startedAt = Date.now();
     const deadline = startedAt + IMAGE_GENERATION_HANDOFF_TIMEOUT_MS;
+    const probeDelaysMs = [0, 400, 1200, 2400, 3600] as const;
+    let nextProbeIndex = 0;
     while (Date.now() < deadline) {
       syncPendingRequestHintsFromDom();
+      const elapsedMs = Date.now() - startedAt;
+      if (nextProbeIndex < probeDelaysMs.length && elapsedMs >= probeDelaysMs[nextProbeIndex]) {
+        recordLifecycleTrace('imageGenerationHandoff', 'probe', {
+          messageId: normalizedId,
+          elapsedMs,
+          probeDelayMs: probeDelaysMs[nextProbeIndex],
+          diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
+        });
+        nextProbeIndex += 1;
+      }
       if (hasPluginImageGenerationHandoff(normalizedId)) {
         recordLifecycleTrace('imageGenerationHandoff', 'observed', {
           messageId: normalizedId,
           elapsedMs: Date.now() - startedAt,
           tasks: imagePendingTaskManager.getDebugState(),
+          diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
         });
         return true;
       }
@@ -3507,6 +3574,7 @@ export function useStreamingDemo() {
       messageId: normalizedId,
       timeoutMs: IMAGE_GENERATION_HANDOFF_TIMEOUT_MS,
       tasks: imagePendingTaskManager.getDebugState(),
+      diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
     });
     return false;
   }
@@ -5890,6 +5958,16 @@ export function useStreamingDemo() {
           onRequest: ({ requestId, prompt }) => {
             syncPendingRequestHintsFromDom();
             const requestBinding = imagePendingTaskManager.registerRequest({ id: requestId, prompt });
+            recordLifecycleTrace('imageGenerationEventBridge', 'on_request', () => ({
+              requestId,
+              promptHead: prompt.slice(0, 80),
+              requestBinding,
+              pendingTasks: imagePendingTaskManager.getDebugState(),
+              diagnostics:
+                requestBinding?.messageId != null
+                  ? collectPluginNativeHandoffDiagnostics(requestBinding.messageId)
+                  : collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1),
+            }));
             if (requestBinding?.bufferedResponse) {
               const messageId = requestBinding.messageId;
               syncTranscriptItemsFromHostData('host.plugin_native_response_buffered', [messageId]);
@@ -5907,6 +5985,20 @@ export function useStreamingDemo() {
                   .filter((id): id is number => Number.isFinite(id) && id >= 0),
               ),
             ];
+
+            recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
+              requestId,
+              promptHead: prompt.slice(0, 80),
+              imageDataLength: String(imageData ?? '').length,
+              matchedResponse,
+              recentIntent,
+              targetMessageIds,
+              pendingTasks: imagePendingTaskManager.getDebugState(),
+              diagnostics:
+                targetMessageIds.length > 0
+                  ? targetMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
+                  : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
+            }));
 
             syncTranscriptItemsFromHostData('host.plugin_native_response_success', targetMessageIds);
             if (targetMessageIds.length > 0) {
