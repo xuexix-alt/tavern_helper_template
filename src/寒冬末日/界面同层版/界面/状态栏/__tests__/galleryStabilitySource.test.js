@@ -167,7 +167,12 @@ test('transcript image generation leases only the target host message before dis
   );
   assert.match(
     streamingSource,
-    /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}`;/,
+    /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}, \$\{CHATU8_IMAGE_CONTAINER_SELECTOR\}`;/,
+  );
+  assert.match(
+    streamingSource,
+    /const CHATU8_IMAGE_CONTAINER_SELECTOR = '\.ai-image-container';/,
+    'same-layer should treat st-chatu8 ai-image-container as a native handoff marker too',
   );
   assert.match(
     streamingSource,

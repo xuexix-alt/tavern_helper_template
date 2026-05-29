@@ -106,6 +106,7 @@ test('runGenerationFlow primes native autoLLMClick before same-layer generate ca
   const body = extractFunctionBody(source, 'runGenerationFlow');
   const startLifecycleIndex = body.indexOf('await emitOfficialGenerationStartLifecycle');
   const generateCallIndex = body.indexOf('const generatePromise = generate(');
+  const detachedPlaceholderIndex = body.indexOf("await ensureAssistantPlaceholderReady('first_token')");
 
   assert.notEqual(
     source.indexOf('async function emitOfficialGenerationStartLifecycle'),
@@ -117,6 +118,15 @@ test('runGenerationFlow primes native autoLLMClick before same-layer generate ca
   assert.ok(
     startLifecycleIndex < generateCallIndex,
     'st-chatu8 autoLLMClick must see GENERATION_STARTED before the assistant message/swipe is produced',
+  );
+  assert.notEqual(
+    detachedPlaceholderIndex,
+    -1,
+    'detached opening generation should still create a stable assistant placeholder',
+  );
+  assert.ok(
+    startLifecycleIndex < detachedPlaceholderIndex,
+    'st-chatu8 autoLLMClick snapshots chat length on GENERATION_STARTED, so detached assistant placeholders must be created after that event',
   );
 });
 

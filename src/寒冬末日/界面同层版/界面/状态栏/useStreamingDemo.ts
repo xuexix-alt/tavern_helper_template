@@ -217,6 +217,7 @@ const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;
 const IMAGE_GENERATION_HANDOFF_POLL_MS = 80;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
+const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 type StreamingPreviewCacheEntry = {
@@ -3454,7 +3455,7 @@ export function useStreamingDemo() {
       .some(task => task.messageId === normalizedId && task.requests.length > 0);
     if (hasBoundRequest) return true;
 
-    const handoffSelector = `${CHATU8_IMAGE_BUTTON_SELECTOR}, ${CHATU8_IMAGE_SPAN_SELECTOR}`;
+    const handoffSelector = `${CHATU8_IMAGE_BUTTON_SELECTOR}, ${CHATU8_IMAGE_SPAN_SELECTOR}, ${CHATU8_IMAGE_CONTAINER_SELECTOR}`;
     return collectHostDocuments().some(doc => {
       const mesText = doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null;
       return Boolean(mesText?.querySelector(handoffSelector));
@@ -4688,6 +4689,12 @@ export function useStreamingDemo() {
     );
 
     try {
+      const lifecycleKindForGenerationStart =
+        options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate');
+      markStageTiming('official_generation_start_lifecycle_start');
+      await emitOfficialGenerationStartLifecycle(lifecycleKindForGenerationStart);
+      markStageTiming('official_generation_start_lifecycle_done');
+
       if (options.createUser) {
         markStageTiming('resolve_user_data_start');
         const userData = resolveInheritedUserMessageData();
@@ -4835,12 +4842,6 @@ export function useStreamingDemo() {
       } else {
         markStageTiming('hidden_reveal_skipped');
       }
-
-      const lifecycleKindForGenerationStart =
-        options.emitLifecycleKind ?? (options.createUser ? 'normal' : 'regenerate');
-      markStageTiming('official_generation_start_lifecycle_start');
-      await emitOfficialGenerationStartLifecycle(lifecycleKindForGenerationStart);
-      markStageTiming('official_generation_start_lifecycle_done');
 
       const cancelPromise = new Promise<string>((_resolve, reject) => {
         activeGenerationCancelReject = reject;
