@@ -43,7 +43,11 @@ export function computeOffstageHealthDelta(
     return { delta, reason: `+${delta}, 离场受庇护休整` };
   }
 
-  if (String(context.worldModeId ?? '').trim().toUpperCase() === 'A') {
+  if (
+    String(context.worldModeId ?? '')
+      .trim()
+      .toUpperCase() === 'A'
+  ) {
     return { delta: 0, reason: '0, 无变化' };
   }
 

@@ -2299,7 +2299,18 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
     applyAutoStageFromThoughtUpdateIfNeeded(key, oldRole, val as any, debug);
     applyDeathFromNegativeImprintIfNeeded(key, key, val as any, stat_data, debug);
-    applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, worldModeId, debug);
+    applyOffstageRoleHealthIfNeeded(
+      key,
+      key,
+      oldRole,
+      val as any,
+      stat_data,
+      deltaHours,
+      scope,
+      rules,
+      worldModeId,
+      debug,
+    );
     applyDeathFromZeroHealthIfNeeded(key, key, val as any, stat_data, debug);
     applyDerivedHealthStatus(key, val as any, stat_data);
     applyDerivedRelationStage(key, oldRole, val as any, stat_data);
