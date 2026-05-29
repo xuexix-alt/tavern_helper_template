@@ -540,6 +540,19 @@ function buildFallbackDisplayedHtml(renderSource: string): string {
   return `<p>${escaped}</p>`;
 }
 
+function coerceBooleanRuntimeSetting(value: unknown): boolean {
+  return value === true || String(value ?? '').trim().toLowerCase() === 'true';
+}
+
+function isChatu8AutoLlmImageGenerationEnabled(): boolean {
+  try {
+    const settings = readHostContext()?.extensionSettings?.['st-chatu8'];
+    return coerceBooleanRuntimeSetting(settings?.autoLLMImageGen);
+  } catch {
+    return false;
+  }
+}
+
 function buildFinalHtml(
   renderSource: string,
   message_id: number,
@@ -2805,12 +2818,16 @@ export function useStreamingDemo() {
 
     const messageDetail = readChatMessageDetail(Math.trunc(normalizedId));
     const messageText = String(messageDetail?.mes ?? messageDetail?.message ?? '');
-    if (collectChatu8PromptTokens(messageText).length > 0) {
+    const shouldWaitForPluginNativeHandoff =
+      collectChatu8PromptTokens(messageText).length > 0 || isChatu8AutoLlmImageGenerationEnabled();
+    if (shouldWaitForPluginNativeHandoff) {
       recordLifecycleTrace(
         'emitOfficialGenerationLifecycle',
         'plugin_native_handoff_wait_start',
         {
           messageId: Math.trunc(normalizedId),
+          hasPromptTokens: collectChatu8PromptTokens(messageText).length > 0,
+          autoLlmImageGen: isChatu8AutoLlmImageGenerationEnabled(),
         },
         traceId,
       );

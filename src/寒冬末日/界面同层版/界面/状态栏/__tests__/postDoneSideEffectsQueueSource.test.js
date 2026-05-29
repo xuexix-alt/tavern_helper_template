@@ -97,8 +97,13 @@ test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event orde
   );
   assert.match(
     body,
-    /collectChatu8PromptTokens\(messageText\)\.length > 0[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
-    'when the assistant text already contains image### prompts, same-layer should wait for st-chatu8 native placeholders instead of replacing them with UI-owned placeholders',
+    /const shouldWaitForPluginNativeHandoff =[\s\S]*collectChatu8PromptTokens\(messageText\)\.length > 0[\s\S]*isChatu8AutoLlmImageGenerationEnabled\(\);/,
+    'same-layer should wait for st-chatu8 handoff both for existing image### prompts and for autoLLMImageGen plugin handoff',
+  );
+  assert.match(
+    body,
+    /if \(shouldWaitForPluginNativeHandoff\) \{[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
+    'the official lifecycle should keep the host message available until plugin-native handoff is observed or times out',
   );
 });
 
