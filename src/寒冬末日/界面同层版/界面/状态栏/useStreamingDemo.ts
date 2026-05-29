@@ -209,6 +209,7 @@ const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 6;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;
+const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200] as const;
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
@@ -2053,6 +2054,7 @@ export function useStreamingDemo() {
       syncPendingRequestHintsFromDom();
       queueGeneratedImageEntityRefresh([recentIntent.messageId], 'plugin_native_llm_image_generation_response');
       scheduleHostImageDataReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);
+      schedulePluginNativePromptPlaceholderReconcile('plugin_native_llm_image_generation_response', [recentIntent.messageId]);
     }
   }
 
@@ -3759,6 +3761,46 @@ export function useStreamingDemo() {
         scheduleUiRefresh(['transcriptItems', 'gallery'], reason, [messageId]);
       });
     }, 40);
+  }
+
+  function schedulePluginNativePromptPlaceholderReconcile(reason: string, messageIds: number[] = []) {
+    const recentIntent = imageRecentIntentStore.read();
+    const normalizedMessageIds = [
+      ...new Set(
+        [
+          ...messageIds.map(id => Math.trunc(Number(id))),
+          recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : null,
+        ].filter((id): id is number => Number.isFinite(id) && id >= 0),
+      ),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+
+    for (const delayMs of PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS) {
+      const runProbe = () => {
+        syncPendingRequestHintsFromDom();
+        for (const messageId of normalizedMessageIds) {
+          recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe', {
+            reason,
+            delayMs,
+            messageId,
+            diagnostics: collectPluginNativeHandoffDiagnostics(messageId),
+          });
+        }
+        syncTranscriptItemsFromHostData(`${reason}:prompt_placeholder_delay_${delayMs}`, normalizedMessageIds);
+        queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:prompt_placeholder_delay_${delayMs}`);
+      };
+
+      if (delayMs <= 0) {
+        runProbe();
+        continue;
+      }
+
+      const timer = window.setTimeout(() => {
+        hostImageDataReconcileTimers.delete(timer);
+        runProbe();
+      }, delayMs);
+      hostImageDataReconcileTimers.add(timer);
+    }
   }
 
   function queueVisibleGeneratedImageEntityRefresh(reason = 'visible_generated_image_entity_refresh') {
@@ -6082,6 +6124,7 @@ export function useStreamingDemo() {
             if (targetMessageIds.length > 0) {
               queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');
               scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);
+              schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);
             }
           },
           onResponseFailure: ({ requestId, prompt }) => {
