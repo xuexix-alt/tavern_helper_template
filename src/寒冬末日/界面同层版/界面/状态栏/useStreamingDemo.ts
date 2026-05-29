@@ -2022,7 +2022,8 @@ export function useStreamingDemo() {
 
   function normalizePluginNativeLlmImageGenerationRequestId(payload: unknown): string {
     if (payload && typeof payload === 'object') {
-      const rawId = (payload as { id?: unknown; requestId?: unknown }).id ?? (payload as { requestId?: unknown }).requestId;
+      const rawId =
+        (payload as { id?: unknown; requestId?: unknown }).id ?? (payload as { requestId?: unknown }).requestId;
       const id = String(rawId ?? '').trim();
       if (id) return id;
     }
