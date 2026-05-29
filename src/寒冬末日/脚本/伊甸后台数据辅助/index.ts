@@ -54,6 +54,15 @@ function isRoleEnabledBySelector(roleSelectorState: any, roleName: string): bool
   return isRoleEnabledBySelectorState(roleSelectorState, roleName);
 }
 
+function readOpeningWorldModeIdFromChat(): string {
+  try {
+    const vars = typeof getVariables === 'function' ? (getVariables({ type: 'chat' }) ?? {}) : {};
+    return String(getDeep(vars, 'stream_demo.opening.world_mode_id') ?? '').trim();
+  } catch {
+    return '';
+  }
+}
+
 function getDeep(obj: any, path: string): any {
   const keys = String(path ?? '')
     .split('.')
@@ -2120,6 +2129,7 @@ function applyOffstageRoleHealthIfNeeded(
   deltaHours: number | null,
   scope: ShelterScopeByFloor,
   rules: HealthRules,
+  worldModeId: string,
   debug: { offstageHealth: boolean },
 ) {
   if (deltaHours === null) return;
@@ -2141,7 +2151,7 @@ function applyOffstageRoleHealthIfNeeded(
   if (currentHealth <= 0) return;
 
   const sheltered = isShelteredForRole(stat_data, rolePath, scope);
-  const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules);
+  const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules, { worldModeId });
   if (!computed.delta) return;
 
   const nextHealth = clampHealth(currentHealth + computed.delta);
@@ -2158,6 +2168,7 @@ function applyOffstageRoleHealthIfNeeded(
       `[离场结算] 「${roleName}」健康 ${currentHealth} -> ${nextHealth}（${reasonText}）${safeStringify({
         deltaHours,
         sheltered,
+        worldModeId,
         rules,
       })}`,
     );
@@ -2276,6 +2287,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
   const old_stat_data = _.get(old_variables, 'stat_data', {});
   const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const rules = readHealthRulesFromChat();
+  const worldModeId = readOpeningWorldModeIdFromChat();
 
   const reserved = new Set(['世界', '庇护所', '房间', '主线任务', '楼层其他住户', '临时NPC']);
   for (const [key, val] of Object.entries(stat_data ?? {})) {
@@ -2287,7 +2299,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
     const oldRole = _.get(old_stat_data, key, null) as any as RoleLike | null;
     applyAutoStageFromThoughtUpdateIfNeeded(key, oldRole, val as any, debug);
     applyDeathFromNegativeImprintIfNeeded(key, key, val as any, stat_data, debug);
-    applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, debug);
+    applyOffstageRoleHealthIfNeeded(key, key, oldRole, val as any, stat_data, deltaHours, scope, rules, worldModeId, debug);
     applyDeathFromZeroHealthIfNeeded(key, key, val as any, stat_data, debug);
     applyDerivedHealthStatus(key, val as any, stat_data);
     applyDerivedRelationStage(key, oldRole, val as any, stat_data);
@@ -2312,6 +2324,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
         deltaHours,
         scope,
         rules,
+        worldModeId,
         debug,
       );
       applyDeathFromZeroHealthIfNeeded(`临时NPC.${name}`, name, val as any, stat_data, debug);
@@ -2324,6 +2337,7 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
         deltaHours,
         scope,
         rules,
+        worldModeId,
         debug,
       );
       applyDerivedHealthStatus(`临时NPC.${name}`, val as any, stat_data);

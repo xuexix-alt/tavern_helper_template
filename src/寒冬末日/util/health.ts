@@ -5,6 +5,10 @@ export type HealthRules = {
   recoverMultiplier: number;
 };
 
+export type OffstageHealthContext = {
+  worldModeId?: string;
+};
+
 export function clampHealth(v: number): number {
   return _.clamp(Number(v) || 0, 0, 100);
 }
@@ -22,6 +26,7 @@ export function computeOffstageHealthDelta(
   deltaHours: number,
   sheltered: boolean,
   rules: HealthRules,
+  context: OffstageHealthContext = {},
 ): { delta: number; reason: string } {
   const dh = Number(deltaHours);
   if (!Number.isFinite(dh) || dh <= 0) return { delta: 0, reason: '0, 无变化' };
@@ -36,6 +41,10 @@ export function computeOffstageHealthDelta(
     const delta = Math.floor(steps * recoverPer12h * recoverMultiplier);
     if (!delta) return { delta: 0, reason: '0, 无变化' };
     return { delta, reason: `+${delta}, 离场受庇护休整` };
+  }
+
+  if (String(context.worldModeId ?? '').trim().toUpperCase() === 'A') {
+    return { delta: 0, reason: '0, 无变化' };
   }
 
   const steps = Math.floor(dh / 6);
