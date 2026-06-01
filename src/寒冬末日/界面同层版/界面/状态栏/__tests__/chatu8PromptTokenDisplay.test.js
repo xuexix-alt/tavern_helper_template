@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  preserveChatu8PromptTokenPlacementMarkersHtml,
   stripVisibleChatu8PromptTokensHtml,
   stripVisibleChatu8PromptTokensText,
 } = require('../chatu8PromptTokenDisplay.ts');
@@ -31,6 +32,18 @@ test('stripVisibleChatu8PromptTokensHtml preserves hidden native prompt tokens f
   assert.equal(cleaned.includes('visible token'), false);
   assert.equal(cleaned.includes('image###native token###'), true);
   assert.match(cleaned, /data-chatu8-native-prompt-token="true"/);
+});
+
+test('preserveChatu8PromptTokenPlacementMarkersHtml converts visible tokens into hidden placement markers', () => {
+  const html = '<p>正文前 image###sfw, 1girl### 正文后</p>';
+
+  const marked = preserveChatu8PromptTokenPlacementMarkersHtml(html);
+  const cleaned = stripVisibleChatu8PromptTokensHtml(marked);
+
+  assert.match(marked, /data-chatu8-native-prompt-token="true"/);
+  assert.equal(cleaned.includes('image###sfw, 1girl###'), true);
+  assert.equal(cleaned.includes('正文前'), true);
+  assert.equal(cleaned.includes('正文后'), true);
 });
 
 test('stripVisibleChatu8PromptTokensText removes visible prompt tokens from plain text while leaving other content intact', () => {

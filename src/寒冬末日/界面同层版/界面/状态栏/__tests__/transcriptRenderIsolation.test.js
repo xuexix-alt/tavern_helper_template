@@ -96,18 +96,23 @@ test('generated image revision tracking is scoped per message instead of one glo
   );
 });
 
-test('iframe transcript render mode is decided from iframe roots, not host displayed message roots', () => {
+test('plugin-native render mode is decided from original host message roots, not same-layer transcript roots', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
     source.includes('const iframeRoots = resolveIframeAssistantRoots(messageId);'),
     true,
-    'appendChatu8ArtifactsToHtml should inspect iframe roots separately',
+    'appendChatu8ArtifactsToHtml should still keep same-layer roots as a fallback source',
   );
   assert.equal(
-    source.includes('const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(iframeRoots) > 0;'),
+    source.includes('const originalHostRoots = collectOriginalHostMessageRoots(messageId);'),
     true,
-    'render mode should only treat iframe plugin-native DOM as already rendered',
+    'appendChatu8ArtifactsToHtml should resolve the real Tavern-rendered message roots separately',
+  );
+  assert.equal(
+    source.includes('const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(originalHostRoots) > 0;'),
+    true,
+    'render mode should only treat original host plugin-native DOM as already rendered',
   );
   assert.equal(
     source.includes(
@@ -311,11 +316,9 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     'prompt placeholder reconcile should emit probe diagnostics so mobile/PC failures show which stage stalled',
   );
   assert.equal(
-    /schedulePluginNativePromptPlaceholderReconcile\(\s*'plugin_native_llm_image_generation_response',\s*\[\s*recentIntent\.messageId\s*,?\s*\]\s*\);/.test(
-      source,
-    ),
+    source.includes("schedulePluginNativeHostRenderHandoff('plugin_native_llm_image_generation_response', payload);"),
     true,
-    'the st-chatu8 LLM image response event should start prompt placeholder reconciliation for the recent same-layer target',
+    'the st-chatu8 LLM image response event should enter the host render handoff path for the recent same-layer target',
   );
   assert.equal(
     source.includes(
@@ -323,6 +326,56 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     ),
     true,
     'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
+  );
+});
+
+test('same-layer listens to current st-chatu8 regex and rendered-message handoff events', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes("const CHATU8_REGEX_TEST_MESSAGE_EVENT = 'regex-st-chatu8-test-message';"),
+    true,
+    'current st-chatu8 emits a regex test event before same-layer prompt placeholder insertion',
+  );
+  assert.equal(
+    source.includes("const CHATU8_REGEX_RESULT_MESSAGE_EVENT = 'regex-st-chatu8-result-message';"),
+    true,
+    'current st-chatu8 emits a regex result event before same-layer prompt placeholder insertion',
+  );
+  assert.equal(
+    source.includes("const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';"),
+    true,
+    'current st-chatu8 emits auto-click completion after its body insertion pass',
+  );
+  assert.match(
+    source,
+    /eventOn\(CHATU8_REGEX_RESULT_MESSAGE_EVENT as any,[\s\S]*schedulePluginNativeHostRenderHandoff\('plugin_native_regex_result_message'/,
+    'same-layer should reconcile after the plugin regex result pass, before image generation responses arrive',
+  );
+  assert.match(
+    source,
+    /eventOn\(tavern_events\.CHARACTER_MESSAGE_RENDERED,[\s\S]*schedulePluginNativeHostRenderHandoff\('plugin_native_character_message_rendered'/,
+    'same-layer should reconcile after Tavern has rendered the plugin-mutated character message DOM',
+  );
+  assert.equal(
+    source.includes('function collectPluginNativeHandoffMessageIds(payload: unknown = null): number[]'),
+    true,
+    'event payloads should be normalized into targeted message ids instead of relying only on the latest assistant id',
+  );
+});
+
+test('plugin-native placeholder-only DOM mutations trigger prompt reconciliation before src is ready', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\('same_layer\.plugin_native_placeholder_dom_mutation', affectedMessageIds\);[\s\S]*return;[\s\S]*\}/,
+    'same-layer document observer should reconcile prompt placeholders even when plugin buttons exist before img src',
+  );
+  assert.match(
+    source,
+    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\('host\.plugin_native_placeholder_dom_mutation', affectedMessageIds\);[\s\S]*return;[\s\S]*\}/,
+    'host document observer should reconcile prompt placeholders even when plugin buttons exist before img src',
   );
 });
 
@@ -381,13 +434,38 @@ test('same-layer transcript preserves plugin-native prompt placeholders before r
   );
   assert.match(
     appendBody,
-    /hydratePluginNativePromptPlaceholdersHtml\(\s*htmlWithImages,\s*iframeRoots\.length > 0 \? iframeRoots : resolveDisplayedMessageRoots\(messageId\),\s*\)/,
-    'appendChatu8ArtifactsToHtml should hydrate native prompt placeholders before returning transcript html',
+    /hydratePluginNativePromptPlaceholdersHtml\(\s*htmlWithImages,\s*originalHostRoots\.length > 0\s*\?\s*originalHostRoots\s*:\s*iframeRoots\.length > 0\s*\?\s*iframeRoots\s*:\s*resolveDisplayedMessageRoots\(messageId\),\s*nativeFirstArtifacts,\s*\)/,
+    'appendChatu8ArtifactsToHtml should hydrate native prompt placeholders from real host-rendered DOM before same-layer fallbacks',
   );
   assert.doesNotMatch(
     appendBody,
     /return htmlWithImages;\s*}/,
     'appendChatu8ArtifactsToHtml should not return only ready-image html and drop prompt placeholder/button artifacts',
+  );
+  assert.match(
+    source,
+    /const nativePromptTokenTargets = collectNativePromptTokenPlacementTargets\(doc\.body\);[\s\S]*takeNativePromptTokenPlacementTarget\(nativePromptTokenTargets, placeholder\.tokenCompare\);[\s\S]*nativePromptTarget\.replaceWith\(replacement\);/,
+    'plugin-native prompt placeholders should replace matching image### placement markers instead of collecting at the message tail',
+  );
+  assert.match(
+    source,
+    /const key = tokenCompare \|\| fallbackKey \|\| element\.outerHTML;/,
+    'duplicated plugin-native placeholders should dedupe by prompt token before falling back to request-specific keys',
+  );
+  assert.match(
+    source,
+    /if \(placedCount > 0 \|\| nativePromptTokenTargets\.length > 0\) \{[\s\S]*return doc\.body\.innerHTML;[\s\S]*\}/,
+    'when prompt markers exist, unmatched plugin placeholder leftovers should not be appended as a duplicate tail strip',
+  );
+  assert.match(
+    source,
+    /hintByTokenCompare\.delete\(placeholder\.tokenCompare\);[\s\S]*resolveInlineAnchorTarget\(doc\.body, placeholder\.anchorText\);[\s\S]*reference\.after\(replacement\);/,
+    'plugin-native prompt placeholders should fall back to regex anchor placement without duplicating token-marker replacements',
+  );
+  assert.match(
+    source,
+    /extraImages: readChatu8ExtraImageRecords\(messageId\),/,
+    'native placement hints should read raw st-chatu8 extra image records so regex anchors survive before src is available',
   );
 });
 
@@ -523,8 +601,13 @@ test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridg
   );
   assert.match(
     source,
-    /const pluginNativeCarriers = Array\.from\(\s*root\.querySelectorAll\('\.st-chatu8-image-span'\)\s*\)/,
-    'plugin-native inline image spans should be bound as their own native carrier targets',
+    /const pluginNativeCarriers = Array\.from\(\s*root\.querySelectorAll\('\.st-chatu8-image-span,\s*span\.image-tag-placeholder'\)\s*\)/,
+    'plugin-native inline image spans and placeholders should be bound as their own native carrier targets',
+  );
+  assert.match(
+    source,
+    /root\.querySelectorAll\('button\.image-tag-button,\s*button\.st-chatu8-image-button,\s*\.st-chatu8-image-button\[role="button"\]'\)/,
+    'plugin-native generate placeholders should bind both image-tag-button and st-chatu8-image-button variants',
   );
   assert.match(
     source,

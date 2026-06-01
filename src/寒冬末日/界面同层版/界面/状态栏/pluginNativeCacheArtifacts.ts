@@ -17,7 +17,8 @@ type RawEntryCandidate = {
 function normalizeImageDataToSrc(input: unknown): string {
   const raw = String(input ?? '').trim();
   if (!raw) return '';
-  if (raw.startsWith('idb://')) return '';
+  if (raw.startsWith('idb://')) return raw;
+  if (raw.startsWith('idb:')) return '';
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith('/')) return raw;
@@ -64,8 +65,9 @@ function collectRawEntryCandidates(input: unknown, ancestors: string[] = []): Ra
 }
 
 function inferMessageIdFromAncestors(ancestors: string[]): number | null {
-  for (let index = ancestors.length - 1; index >= 0; index -= 1) {
-    const numeric = Number(ancestors[index]);
+  const scope = ancestors.length > 1 ? ancestors.slice(0, -1) : ancestors;
+  for (let index = scope.length - 1; index >= 0; index -= 1) {
+    const numeric = Number(scope[index]);
     if (Number.isFinite(numeric)) return Math.trunc(numeric);
   }
   return null;

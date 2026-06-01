@@ -9,6 +9,7 @@ const {
   readNativeFirstPromptTokens,
   readNativeFirstMembershipEntries,
 } = require('../pluginNativeImageArtifacts.ts');
+const { collectPluginNativeCacheArtifacts } = require('../pluginNativeCacheArtifacts.ts');
 const { resolveGeneratedImageSource } = require('../generatedImageSourceResolver.ts');
 
 test('extra images beat cache fallback for the same artifact key', () => {
@@ -52,6 +53,28 @@ test('native-first artifacts preserve plugin persisted idb image refs from extra
   assert.equal(result[0].source, 'extra');
   assert.equal(result[0].requestId, 'req-idb-native');
   assert.equal(result[0].src, 'idb://77/req-idb-native');
+});
+
+test('plugin native cache artifacts preserve idb image refs for reload hydration', () => {
+  const result = collectPluginNativeCacheArtifacts(
+    {
+      imageCache: {
+        77: [
+          {
+            requestId: 'req-idb-cache',
+            prompt: 'cached prompt',
+            src: 'idb://77/req-idb-cache',
+          },
+        ],
+      },
+    },
+    77,
+  );
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].requestId, 'req-idb-cache');
+  assert.equal(result[0].promptToken, 'image###cached prompt###');
+  assert.equal(result[0].src, 'idb://77/req-idb-cache');
 });
 
 test('generated image source resolver keeps idb srcs for transcript hydration', () => {
@@ -115,6 +138,25 @@ test('preprocessed extra image promptToken text is normalized back into a chatu8
   assert.equal(result.length, 1);
   assert.equal(result[0].source, 'extra');
   assert.equal(result[0].promptToken, `image###${prompt}###`);
+});
+
+test('raw extra image regex is preserved as an anchor before the image src exists', () => {
+  const result = readNativeFirstImageArtifacts({
+    messageId: 46,
+    extraImages: [
+      {
+        requestId: 'req-pending-anchor',
+        promptToken: 'image###sfw,1girl,freezer aisle###',
+        regex: '冷柜的玻璃门被她一把拉开，冷气呼地一下涌出来。',
+      },
+    ],
+  });
+
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, 'extra');
+  assert.equal(result[0].promptToken, 'image###sfw,1girl,freezer aisle###');
+  assert.equal(result[0].src, undefined);
+  assert.equal(result[0].anchorText, '冷柜的玻璃门被她一把拉开，冷气呼地一下涌出来。');
 });
 
 test('prompt token comparison ignores plugin whitespace normalization differences', () => {

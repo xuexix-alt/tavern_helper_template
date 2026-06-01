@@ -140,7 +140,7 @@ function buildArtifactFromRecord(input: {
     requestId: requestId || undefined,
     promptToken: promptToken || undefined,
     rawTag: normalizeKey(record?.rawTag) || undefined,
-    anchorText: normalizeKey(record?.anchorText) || undefined,
+    anchorText: normalizeKey(record?.anchorText ?? record?.regex) || undefined,
     src,
     alt: normalizeKey(record?.alt) || undefined,
   };

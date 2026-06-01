@@ -22,12 +22,12 @@ test('TranscriptList compact mobile removes the scroll-fab gutter and hides the 
   );
 });
 
-test('TranscriptList compact mobile hides the per-message image FAB to keep the prose edge clean', () => {
+test('TranscriptList compact mobile keeps the per-message image FAB visible for chatu8 actions', () => {
   const source = read('../components/TranscriptList.vue');
 
-  assert.match(
+  assert.doesNotMatch(
     source,
     /@media \(max-width: 760px\)\s*\{[\s\S]*?\.transcript-card\.layout-compact \.transcript-image-fab\s*\{[\s\S]*?display:\s*none;/,
-    'compact mobile should not pin a floating image trigger over each assistant card edge',
+    'compact mobile should not hide the 🎨/📷 trigger because it is the same-layer chatu8 entry point',
   );
 });

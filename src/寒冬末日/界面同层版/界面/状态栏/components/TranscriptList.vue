@@ -628,10 +628,6 @@ defineExpose({
   .transcript-fab {
     font-size: 13px;
   }
-  .transcript-card.layout-compact .transcript-image-fab {
-    display: none;
-  }
-
   .transcript-card.is-streaming .transcript-fab,
   .transcript-card.is-streaming .transcript-image-fab {
     backdrop-filter: none;
