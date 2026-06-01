@@ -478,7 +478,7 @@ function isSameLayerTranscriptElement(element: Element | null | undefined): bool
   if (!element) return false;
   return Boolean(
     element.closest?.('.transcript-entry, .assistant-card, .assistant-body-wrap') ||
-      element.matches?.('.assistant-body, .transcript-entry'),
+    element.matches?.('.assistant-body, .transcript-entry'),
   );
 }
 
@@ -6589,7 +6589,10 @@ export function useStreamingDemo() {
           const affectedMessageIds = collectMutationMessageIds(records);
           const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
           if (!hasReadyNativeImageMutation) {
-            schedulePluginNativePromptPlaceholderReconcile('same_layer.plugin_native_placeholder_dom_mutation', affectedMessageIds);
+            schedulePluginNativePromptPlaceholderReconcile(
+              'same_layer.plugin_native_placeholder_dom_mutation',
+              affectedMessageIds,
+            );
             return;
           }
           queueGeneratedImageEntityRefresh(affectedMessageIds);
@@ -6606,7 +6609,10 @@ export function useStreamingDemo() {
         const affectedMessageIds = collectMutationMessageIds(records);
         const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
         if (!hasReadyNativeImageMutation) {
-          schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_placeholder_dom_mutation', affectedMessageIds);
+          schedulePluginNativePromptPlaceholderReconcile(
+            'host.plugin_native_placeholder_dom_mutation',
+            affectedMessageIds,
+          );
           return;
         }
         queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');

@@ -479,7 +479,9 @@ function bindAssistantBodyInteractions() {
   };
 
   const promptButtons = Array.from(
-    root.querySelectorAll('button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]'),
+    root.querySelectorAll(
+      'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]',
+    ),
   ) as HTMLElement[];
   for (const button of promptButtons) {
     if (!button.dataset.messageId) button.dataset.messageId = itemMessageId;
@@ -493,7 +495,9 @@ function bindAssistantBodyInteractions() {
     });
   }
 
-  const pluginNativeCarriers = Array.from(root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder')) as HTMLElement[];
+  const pluginNativeCarriers = Array.from(
+    root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder'),
+  ) as HTMLElement[];
   for (const carrier of pluginNativeCarriers) {
     bindGestureTarget(carrier, carrier);
   }
