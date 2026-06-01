@@ -102,8 +102,8 @@ test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event orde
   );
   assert.match(
     body,
-    /if \(shouldWaitForPluginNativeHandoff\) \{[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
-    'the official lifecycle should keep the host message available until plugin-native handoff is observed or times out',
+    /if \(shouldWaitForPluginNativeHandoff\) \{[\s\S]*await withPluginNativeMessageLease\(\s*Math\.trunc\(normalizedId\),\s*emitLifecycleEvents,[\s\S]*beforeRelease: async \(\) => \{[\s\S]*await waitForPluginImageGenerationHandoff\(Math\.trunc\(normalizedId\)\);/,
+    'the official lifecycle should materialize the bounded host window before native plugin consumers handle generation end',
   );
   assert.match(
     source,

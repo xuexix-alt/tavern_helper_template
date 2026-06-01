@@ -372,14 +372,19 @@ const streamingOpeningHtml = computed(() => {
 @media (max-width: 760px) {
   .transcript-item {
     padding: 10px 8px;
+    box-shadow: none;
   }
 
   .opening-banner {
     padding: 10px 10px;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
   }
 
   .transcript-body {
-    padding: 10px 8px;
+    padding: 10px 0 0;
+    border: 0;
+    background: transparent;
   }
 }
 </style>

@@ -1,0 +1,410 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - button "" [ref=e49] [cursor=pointer]
+      - text:                                        + No items                         ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☑ ☰ ☐ ☰ ☐ ☰ ☐ ☰                                  + No items      ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰  ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰ ☰                  +     No items   X     *              *    *    *    *     *     *     *         *                     *               *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *     *         *     *     *     *     *     *    
+    - generic [ref=e9]:
+      - button "" [ref=e50] [cursor=pointer]
+      - text:                                                                       
+    - generic [ref=e12]:
+      - button "" [ref=e51] [cursor=pointer]
+      - text:                                               
+    - generic [ref=e15]:
+      - button "" [ref=e52] [cursor=pointer]
+      - text:                +     
+    - generic [ref=e18]:
+      - button "" [ref=e53] [cursor=pointer]
+      - text:                                   
+    - generic [ref=e21]:
+      - generic "更改背景图片" [ref=e54]:
+        - button "" [ref=e55] [cursor=pointer]
+      - text:       +                            
+    - generic [ref=e24]:
+      - button "" [ref=e56] [cursor=pointer]
+      - text:         +                                                                       +                                                                                                                                                                     +   + +  +     +        +        +        +                                      没有找到脚本                                                                                                                                                                                                                                                   
+    - generic [ref=e57]:
+      - button "" [ref=e59] [cursor=pointer]
+      - text:            +                          +      
+    - generic [ref=e27]:
+      - button "" [ref=e60] [cursor=pointer]
+      - text:                    
+    - generic [ref=e30]:
+      - button "" [ref=e61] [cursor=pointer]
+      - text:                                                     群聊暂无成员。          无可用角色                         
+  - generic:                      +                                                                                +    + +                  
+  - generic:                  
+  - generic [ref=e33]:
+    - text: 
+    - generic [ref=e34]:
+      - generic [ref=e201]:
+        - img [ref=e204] [cursor=pointer]
+        - generic [ref=e205]:
+          - generic [ref=e206]:
+            - generic [ref=e208]:
+              - generic [ref=e209]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e210]: 
+            - generic [ref=e211]:
+              - button "" [ref=e212] [cursor=pointer]
+              - text:              
+              - button "" [ref=e213] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e215]:
+            - text: 
+            - iframe [ref=e216]:
+              
+      - generic [ref=e217]:
+        - img [ref=e220] [cursor=pointer]
+        - generic [ref=e221]:
+          - generic [ref=e222]:
+            - generic [ref=e224]:
+              - generic [ref=e225]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e226]: 
+            - generic [ref=e227]:
+              - button "" [ref=e228] [cursor=pointer]
+              - text:              
+              - button "" [ref=e229] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e230]:
+            - paragraph [ref=e231]: 2026年9月14日，星期天。九月的天空蓝得像是被人用滤镜调过，几朵懒洋洋的云趴在公寓楼顶不肯动。小哥哥站在2001室的落地窗前，手里捏着一只深灰色陶瓷杯，里面飘出黑咖啡的焦香。楼下街道上，一辆搬家公司的卡车正缓缓倒进车位，几个工人叼着烟开始卸货。再远一点，星穹商场的电子屏滚动着秋装上新广告。
+            - paragraph [ref=e232]: 世界正常得令人发指。
+            - paragraph [ref=e233]: 他把杯子举到嘴边抿了一口，苦味顺着舌根滑下去。七天前，这杯咖啡还是用那只买了三年没洗过几次的咖啡机煮的，现在则出自一个叫“万象合成终端”的玩意儿。味道一模一样，不，应该说更稳定。每次水量、温度、萃取时间都像被尺子量过。精准，但总觉得缺了点人味儿。
+            - paragraph [ref=e234]: 准确地说，是缺少“末日前的人味儿”。
+            - paragraph [ref=e235]: 小哥哥转身靠在窗框上，目光落在客厅中央那扇本不该存在的金属舱门上。七天前，也就是9月7号晚上，他半夜被一阵轻微的震动吵醒，以为是地震，结果发现整间2001室正在以一种违反物理常识的方式扩展重组。第二天醒来，家里多了个只会说“我是伊甸”的超级AI，然后这个AI花了整整四十分钟告诉他：三个月后，全球气候会像被拔了插头的冰柜，温度断崖式下跌，然后连锁反应把整个现代文明冻成一坨坚硬的屎。
+            - paragraph [ref=e236]: 当时他觉得这比朋友圈里转发的“XX星座本周运势”还扯。
+            - paragraph [ref=e237]: 但现在他看着冰箱里凭空多出来的一大包似乎永不枯竭的面粉袋，以及在完全没有接通市政供暖的情况下、室内仍能维持26度的空调面板，不得不承认，这事儿好像是真的。
+            - paragraph [ref=e238]: 最初的震惊过去之后，剩下的是漫长而黏稠的沉默。上班没心情，游戏打不进去，连外卖都吃不出咸淡。他试着跟一个关系不错的同事侧面提起“如果三个月后有超级寒潮怎么办”，对方笑他是不是看多了科幻片，然后给他发了个“末日求生攻略”的表情包。从那一刻起，小哥哥明白了：这件事只能烂在自己肚子里。
+            - paragraph [ref=e239]: 说服别人？怎么说服？指着天气预报说“你看今天21度很舒适吧？三个月后零下五十度”吗？会被当成需要心理干预的对象。
+            - paragraph [ref=e240]: 于是他花了整整三天整理思路。恐慌没用，逃避更没用。唯一的路是把这次先知优势转化成实实在在的生存资本。他在手机备忘录里开了一个加密笔记，标题是《冰箱计划》——因为他觉得这个世界三个月后就会变成一个大冰箱。
+            - paragraph [ref=e241]: 第一条：囤物资。食物、水、药品、能源、防寒装备、工具，六类缺一不可。第二条：攒人。在这个公寓里，有几个邻居是他需要优先拉拢的。是靠提供无可替代的价值。第三条：藏底牌。伊甸的存在绝对不能暴露，至少在建立绝对信任之前不能。
+            - paragraph [ref=e242]: 他把备忘录合上，走到万象合成终端的操作面板前。屏幕亮起，显示今日可合成：面粉、大米、纯水、罐头（猪肉/牛肉/蔬菜随机）。这玩意儿每天能合成一定量的基础食材，但功率有限，养三四个人还行，要是想喂饱一栋楼那就是做梦。大规模的物资储备还是得靠正经渠道购买。他算了算银行卡余额，中产的家底，三个月压缩开支，能囤出相当可观的量。
+            - paragraph [ref=e243]: 问题是，怎么囤才不显得像个神经病？
+            - paragraph [ref=e244]: “咚咚咚。”门被敲响了。
+            - paragraph [ref=e245]: 近域监听台在脑海里自动标记：女性，约四十岁，情绪平稳，脚步声偏轻，判断为穿着室内拖鞋。小哥哥把终端界面关掉，走到金属安防门前。
+            - paragraph [ref=e246]: 这扇门也是伊甸的产物。看起来跟公寓其他房门没什么区别，但门芯嵌了一层他看不懂的材料，门闩结构精密得像是从航天器上拆下来的。他拉开门，门外站着林月华，围着那条标志性的深蓝色棉布围裙，双手捧着一个白色的保温盒。
+            - paragraph [ref=e247]: “小哥哥，刚出锅的饺子。白菜猪肉馅儿的，趁热吃。”她把保温盒递过来，带着点儿不容拒绝的笑意，往他身后瞄了一眼，“一个人在家？今天没加班啊？”
+            - paragraph [ref=e248]:
+              - img
+              - text: "image###sfw, 1girl, solo, solo focus, ${\"name\":\"Lin Yuehua\", \"angle\":\"from front\", \"upperBody\":\"sfw\", \"lowerBody\":\"hidden\"}$, ((male pov)), upper body, looking at viewer, front view, (gentle smile:1.2), friendly expression, soft eyes, mature woman, (curvy figure:1.1), indoor, apartment, open door, doorway, holding, (holding insulated box:1.2), offering food, hands forward, white insulated box, (steam:0.8), warm atmosphere, detailed background, wall, carpet, soft lighting, sidelighting, depth of field, domestic, neighbor, dark blue cotton apron, apron, tied waist, masterpiece, best quality, ultra-detailed, photorealistic###"
+            - paragraph [ref=e249]: “月华姐，每次都麻烦你。”小哥哥接过盒子，掌心隔着塑料层感受到滚烫的温度。这大概是他在这个公寓里接收到的最高频的善意。
+            - paragraph [ref=e250]: “说什么麻烦，你上次不是还帮我修好了那台加湿器嘛。”林月华摆摆手，顺带纠正道，“卫国说那东西内部线路全乱了，你一个人给理顺了，手艺不错。”
+            - paragraph [ref=e251]: “哪里，运气好而已。”
+            - paragraph [ref=e252]: “行啦，别谦虚。饺子趁热吃，凉了馅儿就硬了。我先回去，卫国在修阳台那扇推拉门，得去搭把手。”林月华转身朝2003室走去，裹着棉袜的脚步踩在地毯上，只发出细细的沙沙声。
+            - paragraph [ref=e253]: 小哥哥关上门，把保温盒搁在餐桌上，揭开盖子。饺子皮透亮，能隐约看见里面的肉馅，酱油醋的蘸料单独装在小塑料盒里，还冒着热气。他夹起一个塞进嘴里，猪肉的油脂在口腔里化开，白菜的清脆恰好中和了油腻。林月华的厨艺在整层楼都是有名的，末日之后如果还能吃到这口饺子，大概率能活更久一点。他一边嚼一边想，得想个办法把赵卫国也拉上船。那个沉默的前建筑工人手艺扎实，而且对妻子言听计从，搞定林月华就搞定了赵卫国。但反过来，触碰林月华的底线则等于同时得罪两个。是个需要小心翼翼操作的局面。
+            - paragraph [ref=e254]: 吃过饺子，他把保温盒洗干净，准备等会儿还回去。顺便刷个脸熟。
+            - paragraph [ref=e255]: 下午两点，小哥哥决定出门。他需要实地考察一下周边的商超分布，顺便采购第一批物资，先从耐储存的罐头和水开始，量不能太大，免得引人注意。穿上一件干净的卫衣，锁门时，走廊传来一阵轻快的脚步声。
+            - paragraph [ref=e256]: 佐伯惠理踩着白色运动鞋从2004室的方向跑过来，手里抱着一个纸箱，高马尾在脑后甩出弹性的弧线。她看到小哥哥，杏眼一亮，脚步拐了个弯直奔过来。
+            - paragraph [ref=e257]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, ((Saeki Eri (original):1.2)), japanese, high school student, beautiful detailed eyes, (long ponytail:1.1), black hair, (almond-shaped eyes:1.1), brown eyes, ((mole under left eye:1.3)), pale skin, (bright smile:1.1), open mouth, excited expression, (sporty body:1.1), healthy, slender waist, medium breasts, full body, three-quarter view, dynamic angle, masterpiece, best quality, ((running towards viewer:1.2)), mid-stride, dynamic pose, (holding cardboard box:1.1), arms holding box, indoors, apartment hallway, corridor, carpet, window, natural lighting, sunlight, cheerful atmosphere, (motion blur:0.8), (speed lines:0.7), depth of field, casual clothes, t-shirt, skirt, white sneakers###
+            - paragraph [ref=e258]: “小哥哥！你要出门？”她停在面前，纸箱晃了一下，里面发出轻微的碰撞声，大概是瓶瓶罐罐。左眼角那颗小痣随着她眯眼笑的动作微微上翘，和平时一模一样。
+            - paragraph [ref=e259]: “嗯，去趟超市。”小哥哥按下电梯按钮。
+            - paragraph [ref=e260]: “我也是！不对，我是去寄快递，就在小区的菜鸟驿站。”惠理把箱子往怀里拢了拢，然后偏头朝身后喊，“诗织，快点——”
+            - paragraph [ref=e261]: 2004室的门口，佐伯诗织正不紧不慢地走出来。她和妹妹长得一模一样，却如同镜子的另一面，过肩长发安静地垂在肩头，浅蓝色衬衫扣子系到第二颗，动作收敛得像被剪辑过了。她走到惠理身边，朝小哥哥微微点头，嘴唇动了动，最后只说了一个“下午好”。
+            - paragraph [ref=e262]: 声音很轻，但刚好够听清。
+            - paragraph [ref=e263]: “别那么冷淡嘛姐姐。”惠理用手肘顶了顶诗织的腰侧，然后转回来笑嘻嘻地看着小哥哥，“对了，下周五学校社团招新！我和姐姐都要去帮忙，你要不要来？有很厉害的舞蹈表演哦——”
+            - paragraph [ref=e264]: 说完她自己先红了耳朵，大概是意识到那句“要不要来”的语气过于亲昵。但话已经出口，惠理从来不会往回缩，于是硬撑着把纸箱抬高一点遮住半张脸，只露出一双亮晶晶的眼睛。
+            - paragraph [ref=e265]: “看情况吧。”小哥哥用了一个极为标准的敷衍承诺。
+            - paragraph [ref=e266]: “又是‘看情况’——你每次都这么说！”惠理的嘴鼓起来，但也只是象征性地抱怨了一句。电梯门叮一声打开，她率先抱着箱子走进去，顺便踩了个节奏点，仿佛在跳舞。
+            - paragraph [ref=e267]: 诗织在进电梯前停了一秒，侧过脸，用几乎只有两个人能听到的音量说了一句：“今天楼道里风有点凉，别感冒了。”然后也不等他回答，快步走进电梯，站到了妹妹身边。
+            - paragraph [ref=e268]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, ((Saeki Shiori (original):1.2)), japanese, high school student, beautiful detailed eyes, (long straight hair:1.1), hair over shoulder, black hair, (almond-shaped eyes:1.1), brown eyes, pale skin, (calm expression:1.1), parted lips, (slender body:1.1), elegant posture, upper body, masterpiece, best quality, ((looking back)), (profile:1.1), from side, indoors, in front of elevator, elevator door, (rim lighting:1.2), backlighting, dramatic shadows, dark hallway, light from inside elevator, quiet atmosphere, bokeh, depth of field, (blurry figure in background:0.6), light blue shirt, collared shirt, buttoned shirt###
+            - paragraph [ref=e269]: 电梯门缓缓合上，数字开始往下跳。惠理在跟诗织叽叽喳喳说着社团的事，诗织偶尔回答一个“嗯”或“好”。小哥哥站在她们前面，透过电梯门反光看两姐妹，一个热闹得像开了外放的音乐，一个安静得像被静音了的同一首歌。
+            - paragraph [ref=e270]: 双子。他想。攻略这对双胞胎需要策略。惠理好感度高，是突破口，但一旦触及她的底线，比如让她意识到姐姐也被牵扯进来，炸毛速度会快得惊人。而诗织什么都不说，却在心里把一切都算得清楚。这条线得互相照应着走，只拉一边会崩。
+            - paragraph [ref=e271]: 电梯在一楼停住，门打开，三个人前后走出大堂。九月中旬的风带着适当的凉意拂过脸颊，既不冷也不热，是末日前最平常的好天气。惠理朝小哥哥挥挥手，拉着姐姐去了菜鸟驿站的方向。诗织回头看了他一眼，嘴唇微微动了一下，什么也没说，又转过头去。
+            - paragraph [ref=e272]: 小哥哥站在原地，看着她们走远，然后掏出手机，在备忘录里打了几个字。
+            - paragraph [ref=e273]: “20F-2004：双胞胎。惠理直攻，诗织侧围。父亲龙一是隐藏金矿，需赵卫国牵线。”
+            - paragraph [ref=e274]: 他把手机揣回口袋，深深吸了口气。城市的声音从四面八方灌进耳朵，汽车鸣笛、商场的促销广播、远处工地打桩的闷响。一切都在正常运转，正常得让人几乎可以骗自己这三个月只是个荒诞的噩梦。
+            - paragraph [ref=e275]: 但万象合成终端里不断增长的面粉袋，和玄关那扇不合常理的金属门，都在提醒他一件事。
+            - paragraph [ref=e276]: 该动的棋子，一颗也不能等。
+            - paragraph [ref=e277]: 他把卫衣帽子拉上，朝超市的方向迈开步子。手机屏幕上，《冰箱计划》备忘录最上方，今天新添了一行字——
+            - paragraph [ref=e278]: 第一步：在两个月内，让至少三个人相信，跟自己站在一起比单干更能活下去。不靠预言，不靠吓唬，靠逻辑和数据。
+            - paragraph [ref=e279]: 第一步的第一步：先去超市，搞清楚这周打折的矿泉水和压缩饼干到底有多少库存。
+            - paragraph [ref=e280]: 九月的阳光打在星穹国际公寓的玻璃幕墙上，反射出大片金黄。小哥哥的身影在人群中逐渐变小，融进周末下午慢悠悠的人流里。没有人知道这个穿着卫衣的年轻人脑子里装着一场全球性的灾难预言。也没有人知道，三个月后，这栋公寓将成为整座城市里最不该死的地方。
+            - paragraph [ref=e281]: 但是现在，它还只是一栋普通的高档住宅楼，住着各种普通得不能更普通的人。
+            - paragraph [ref=e282]:
+              - option "【A】直奔超市，开始大规模采购耐储存食品和饮用水，顺便记录周围所有可能成为资源点的店铺位置。 【B】返回公寓后主动去找陈宇，以为由搭话，试探他对极端情况的看法和技术能力。 【C】启用伊甸近域监听台，今晚集中监听20层各房间的晚间对话，收集邻居的性格弱点与现实需求。 【D】第二天一早带着万象合成终端产出的大米去拜访雪乃老师，以为名套近乎，逐步建立信任。" [ref=e283]
+            - paragraph
+            - paragraph [ref=e284]
+            - group [ref=e286]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e287] [cursor=pointer]:
+                - generic [ref=e288]: 🌕
+                - generic [ref=e290]: 月圆思成，思路清晰
+                - generic [ref=e291]: ✨
+                - generic [ref=e293]: 展开思绪 ▶
+            - paragraph
+      - generic [ref=e294]:
+        - img [ref=e297] [cursor=pointer]
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - generic [ref=e301]:
+              - generic [ref=e302]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e303]: 
+            - generic [ref=e304]:
+              - button "" [ref=e305] [cursor=pointer]
+              - text:              
+              - button "" [ref=e306] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e308]: 【C】启用伊甸近域监听台，今晚集中监听20层各房间的晚间对话，收集邻居的性格弱点与现实需求。
+      - generic [ref=e309]:
+        - img [ref=e312] [cursor=pointer]
+        - generic [ref=e313]:
+          - generic [ref=e314]:
+            - generic [ref=e316]:
+              - generic [ref=e317]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e318]: 
+            - generic [ref=e319]:
+              - button "" [ref=e320] [cursor=pointer]
+              - text:              
+              - button "" [ref=e321] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e322]:
+            - paragraph [ref=e323]:
+              - generic [ref=e324]: 晚上八点半，小哥哥从沙发上坐起来，揉了揉微酸的脖子。下午跑了趟超市，推着购物车在货架间转了两小时，最终只买了三箱矿泉水、两袋大米和几包压缩饼干。收银台的小妹看他那眼神，仿佛在看一个囤货过冬的松鼠。不过比起被当成神经病，被当成松鼠至少可爱一点。
+            - paragraph [ref=e325]: 他起身走到万象合成终端的操作面板前，今天已经合成了基础口粮，剩余次数为零。液晶屏上显示着明日预计产出：面粉、纯水、罐头。他伸手在屏幕上划了一下，切换到庇护所功能列表。六项已解锁能力中，“近域监听台T1”的图标是个简单的耳机，旁边标注着“待启用”。
+            - paragraph [ref=e326]: “伊甸，这玩意儿能听多远。”用的是陈述语气，客厅里响起那个没有感情但又不算冷漠的合成女声：“近域监听台T1覆盖范围为本公寓二十层走廊及2001室门口短距区域。依据声波特征可分析音源的年龄、性别及情绪状态，无法识别具体个人身份。”
+            - paragraph [ref=e327]: “也就是说，只能听见谁在走廊上说话，而且还得人家刚好站在咱家门口附近。”小哥哥用食指关节敲了敲下巴，脑子里一盘算，二十层的邻居就那么几家，晚上总有人出来倒个垃圾、串个门、或者站在门口打电话。至少比什么都没有强一点。
+            - paragraph [ref=e328]: “开启监听台，从现在起持续记录，明早整理报告。”他对着空气下达指令，顺便又补了一句，“音量调低点，就当白噪音。”
+            - paragraph [ref=e329]: 耳机图标亮起一圈幽蓝色的光。客厅里响起一阵极轻微的沙沙声，像是收音机没调对频率时的那种底噪，然后第一个声音片段被递了进来。
+            - paragraph [ref=e330]: 走廊东侧，大概2003室的方向，传来门锁弹开的动静。接着是林月华那把温温柔柔的嗓子：“卫国，阳台那扇推拉门的轨道里全是灰，你明天拿刷子清理一下。我扫了三遍都没弄干净。”赵卫国的回应隔了两三秒，声音低沉。你少弯腰，腰疼又该犯了。”两人的脚步声在门口停了一会儿，然后是塑料袋被系紧的窸窣响动，大概是在收拾垃圾。林月华又说了句“你把外套穿上，走廊里凉”，随后门锁重新扣上。
+            - paragraph [ref=e331]:
+              - img
+              - text: "image###sfw, 1girl, solo, ${\"name\":\"Lin Yuehua\", \"angle\":\"from side\", \"upperBody\":\"sfw\", \"lowerBody\":\"sfw\"}$, (mature woman, 40s), (gentle smile:1.2), ((curvy figure)), solo focus, indoors, apartment, hallway, in front of open door, holding black trash bag, turning back, looking back, speaking, parted lips, (loose light blue cotton home dress), long dress, mid shot, three-quarter view, cinematic angle, depth of field, dim light, sidelighting, (rim lighting:1.1), warm light from inside, dramatic shadows, quiet atmosphere, detailed background, realistic, masterpiece, best quality, film grain###"
+            - paragraph [ref=e332]: 小哥哥靠在沙发扶手上，手指在膝盖上轻轻敲着。月华姐有腰疼的毛病，卫国虽然话少但挺顾家。这对夫妻的关键词躲不开“互相拖累”，拆开打难度翻倍，但一旦同时拿下就是两个固定劳动力。倒是林月华那句“少弯腰”值得记下来，赵卫国在意的事不多，腰疼算一个。
+            - paragraph [ref=e333]: 沙沙声又持续了几分钟，一阵轻快的脚步从走廊深处跳了出来。根本用不着伊甸分析性别年龄情绪，那踩在旋律上的节奏点就差把“我是惠理”四个字写在地毯上了。
+            - paragraph [ref=e334]: “姐姐你走快一点嘛，我肚子快饿扁了。”佐伯惠理的声音从门外大约三四米的位置传过来，语速快得像在说饶舌。随后是佐伯诗织那永远慢半拍的回应：“慢一点，走廊灯光暗，别跑。”脚步声近了，惠理似乎在门口转了个圈，运动鞋底磨出一点吱嘎响。“你说爸爸今晚会不会回来。上次说这个星期能休假。”诗织的停顿非常短，但小哥哥已经熟悉她说话的习惯，每次涉及父亲，她都会先停一拍再开口：“应该快了吧。安全就好。”
+            - paragraph [ref=e335]: 双胞胎站在门口按密码锁的声音滴滴答答响了五下，门开，门关，走廊重新安静。小哥哥在手机备忘录“佐伯姐妹”一栏下按了几个字：惠理需要父亲认可，诗织用等待代替表达。突破口，龙一的行程。
+            - paragraph [ref=e336]:
+              - img
+              - text: image###sfw, 2girls, (twins), masterpiece, best quality, realistic, ultra-detailed, cinematic angle, film grain, full body, from front, indoors, apartment hallway, dim light, top lighting, dramatic shadows, in front of door, digital keypad, Saeki Eri (original), japanese, teenage girl, (high ponytail), brown hair, brown eyes, C-cup, cheerful, ((pout)), looking back, holding school bag, standing, Saeki Shiori (original), japanese, teenage girl, long straight hair, brown hair, brown eyes, C-###
+            - paragraph [ref=e337]: 监听台的底噪像潮水一样起伏着，大约到了九点二十分，一阵高跟鞋敲击地砖的声音由远及近，节奏均匀、干脆利落。同时还有一个略低沉的男声，步子比高跟鞋慢了半拍。
+            - paragraph [ref=e338]: “早跟你说了那份合同的风险点，你不去跟对方谈，现在好了亏两个点吧。”是纪宁的声音，偏低的女中音，咬字清晰得像训练过。她说完这句话，似乎停在了电梯口附近。接着传来陈宇的声音：“我处理。下周能补回来。”
+            - paragraph [ref=e339]: “补回来？你连财务表都没看完就敢签字。下次把报告先发我邮箱。”纪宁的语气没有升高，但每一个字都像是在戳某颗倒霉的图钉。陈宇那边沉默了三秒，最后丢出两个字：“行吧。”
+            - paragraph [ref=e340]: 电梯到了，纪宁的脚步声进去了。陈宇没动，隔了一会才传来一声几乎听不到的低骂声，然后他也走进了电梯。走廊又空了。
+            - paragraph [ref=e341]: 小哥哥把备忘录切换到纪宁和陈宇那页，打了几个字：纪宁强调流程和数据，陈宇死扛，两人沟通回避，分开击破可能比一起说服更有效。另外纪宁对细节的偏执或许可以用来切入，只要拿出足够扎实的数据报告，她大概率会认真对待。
+            - paragraph [ref=e342]: 大约又过了半个小时，走廊里传来两串纠结在一起的脚步声，一个轻快一个拖沓。随后是凌音那略带鼻音的年轻嗓音：“我自己能洗，不用你一件件检查。”雪乃的声音接在后面，不大，但带着班主任式的温和却不容反驳：“领口要搓干净，你现在工作了，衬衫不整洁会被笑话。”
+            - paragraph [ref=e343]: “工作个鬼，世界都快末日了还工作。”凌音似乎把洗衣篮放在地上，发出沉闷的咚声。雪乃沉默了一小会儿，然后轻声说：“不管怎样，衣服要干净。姐姐帮你熨。”
+            - paragraph [ref=e344]: 凌音没有说话，脚步声重新响起，然后是门打开又关上的动静。雪乃还在走廊上停了几秒，才慢慢踱回2005室。
+            - paragraph [ref=e345]: 小哥哥把这条也记下：凌音渴望独立但依赖姐姐，雪乃用照顾妹妹来维持对生活的控制感。他想了想，又补了一句，两人的共同点是对“体面”的坚持，也许可以从保持生活品质的角度切入。
+            - paragraph [ref=e346]: 最意外的收获来自十点刚过。一串很具压迫感的高跟鞋声从走廊西头杀出来，伴随着一句压低的、咬牙切齿的抱怨：“那个制片人脑子进水了吧，让我去拍什么末日生存综艺，他以为我是贝尔格里尔斯？”声音很清脆却带着傲慢，是慕小小。她大约在走廊靠窗的位置停下，手机大概贴着耳朵，因为接下来又是一串连珠炮：“推了，全推掉。跟经纪人说这个月我不接通告，让他自己看着办。还有上次那批护肤品为什么还没送到，我脸上都快起干纹了。”
+            - paragraph [ref=e347]: 电话那边似乎说了什么让她不满意，她啧了一声：“别跟我提预算，我一年交那么多物业费，连只像样的快递柜都没有。”
+            - paragraph [ref=e348]: 高跟鞋声又哐哐哐地返回2008室的方向，门砰地关上，一切归于安静。
+            - paragraph [ref=e349]: 小哥哥在备忘录“慕小小”一栏下打了一行字：生活自理能力为零，对维持外貌有极度焦虑。突破口可以选护肤品或帮她解决生活琐事。如果能让她意识到末日临近后容貌更保不住，大概会是最有效的说服捷径。
+            - paragraph [ref=e350]: 他把手机往茶几上一搁，伸了个懒腰。这一晚上没白熬，几个邻居的大致弱点和需求方向，摸了个七七八八。虽然只是走廊上的只言片语，但拼图已经开始有了轮廓。
+            - paragraph [ref=e351]: 客厅的灯光调得偏暖，落地窗外是瑞峰市平淡无奇的夜景，车流还像没事人一样在街上淌着。小哥哥站起来，走到窗前，看着远处商场巨屏上正播放着秋冬新品广告，穿着一身驼色大衣的女模特走出来，又被切换成一组洗衣液的宣传画。
+            - paragraph [ref=e352]: 他低下头，在《冰箱计划》备忘录的最上方新添了一行字：
+            - paragraph [ref=e353]: 监听档案第一夜，二十层总印象：每个人都有想要的，也都有害怕的。想要的和害怕的之间那条缝，就是可以打进楔子的地方。
+            - paragraph [ref=e354]: 接着又打了个哈欠，转身准备去睡觉。
+            - paragraph [ref=e355]:
+              - option "【A】根据监听情报，明早去敲佐伯姐妹的门，以为由套近乎，侧面打听佐伯龙一的归期 【B】针对纪宁对数据的偏执，明天整理一份物业费用分析报告，以为名去2002室建立专业信赖 【C】趁慕小小还未出门，明天带一些万象终端合成的护肤品样品送到2008室，试探她对话题的反应 【D】今晚不做决策，让伊甸继续监听至明早，积累更多情报碎片后再综合判断最先攻略目标" [ref=e356]
+            - paragraph
+            - paragraph [ref=e357]
+            - group [ref=e359]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e360] [cursor=pointer]:
+                - generic [ref=e361]: 🌕
+                - generic [ref=e363]: 月圆思成，思路清晰
+                - generic [ref=e364]: ✨
+                - generic [ref=e366]: 展开思绪 ▶
+            - paragraph
+      - generic [ref=e367]:
+        - img [ref=e370] [cursor=pointer]
+        - generic [ref=e371]:
+          - generic [ref=e372]:
+            - generic [ref=e374]:
+              - generic [ref=e375]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e376]: 
+            - generic [ref=e377]:
+              - button "" [ref=e378] [cursor=pointer]
+              - text:              
+              - button "" [ref=e379] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e381]: 【A】根据监听情报，明早去敲佐伯姐妹的门，以“约好一起上学”为由套近乎，侧面打听佐伯龙一的归期
+      - generic [ref=e382]:
+        - img [ref=e385] [cursor=pointer]
+        - generic [ref=e386]:
+          - generic [ref=e387]:
+            - generic [ref=e389]:
+              - generic [ref=e390]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e391]: 
+            - generic [ref=e392]:
+              - button "" [ref=e393] [cursor=pointer]
+              - text:              
+              - button "" [ref=e394] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e395]:
+            - paragraph [ref=e396]: 第二天的晨光穿透薄雾，在星穹国际公寓二十层的走廊地毯上印出几道狭长的金色光斑。
+            - paragraph [ref=e397]: 小哥哥站在2001室流线型的料理台前，看着万象合成终端在低频嗡鸣声中结束了运转。几瓶包装简约的纯水和一袋洁白的大米被机械托盘推入了储物格。与此同时，视网膜边缘闪过几道微弱的系统荧光，提示着伊甸内部由于新日程的刷新，已经悄无声息地新增了若干条能够扭曲现实的强制性权限指令。那是应对绝对危机的底牌，不过用来应付这个充满都市喧嚣的普通早晨，显然毫无必要。
+            - paragraph [ref=e398]: 他套上一件深灰色的夹克外套，推开那扇经过特殊涂层加固的金属安防门，踏着平稳的步子朝走廊另一侧的2004室走去。
+            - paragraph [ref=e399]: 停在门口后，小哥哥抬起手，有节奏地叩响了房门。门板后传来一阵慌乱的拖鞋声，还伴随着几声清脆的金属碰撞动静。
+            - paragraph [ref=e400]: 大约过了十来秒，防盗门被从里面拉开了一条缝。门缝后探出一颗扎着高挺马尾的脑袋，佐伯惠理大概刚洗漱完不久，身上穿着那件标志性的亮橙色卫衣，脸颊边还带着未干的水汽。看到站在门外的并非物业或是推销员，惠理整个人像是被按下了某种迟缓开关，肉眼可见地僵硬了瞬息，左眼角那颗极淡的小痣随着眼睛的猛然睁大而飞快上扬。
+            - paragraph [ref=e401]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, male pov, Eri Saeki (original), high school student (original), genki, energetic, long hair, black hair, high ponytail, ((mole on left eye corner)), (wide eyes), sparkling eyes, constricted pupils, brown eyes, pale skin, slightly open mouth, :o, (surprised), ((blush)), full face blush, flustered, shy, sweatdrop, female focus, face focus, close-up, from front, cinematic angle, indoors, apartment, doorway, door frame, peeking, behind door, (bright orange hoodie), hoodie, long sleeves, hands on door, gripping, white knuckles, upper body, head out of frame slightly, dewy skin, damp hair, water drop on face, morning, soft light, sidelighting, dramatic shadows, depth of field, bokeh, motion lines###
+            - paragraph [ref=e402]: “小……小哥哥？”惠理的声音比平时直接高了八度，她手足无措地抓着门把手，嘴里的语调结结巴巴，“你今天怎么这个时候在外面？”
+            - paragraph [ref=e403]: “刚好收拾完准备去学校。”小哥哥看着她那副受到惊吓的模样，抛出了早在备忘录里演算过数次的合理借口，“想着时间差不多，要不顺路叫上你们一起走。”
+            - paragraph [ref=e404]: “一、一起上学？！”听到这四个字，惠理的脸颊瞬间从颧骨红到了耳根，颜色几乎快要和她的卫衣融为一体。她欲盖弥彰地捂了捂嘴巴，发出一声极其不自然的咳嗽，接着猛地转过头朝着屋内大喊出声。
+            - paragraph [ref=e405]: “姐姐！快拿包！我们要马上出门了！”
+            - paragraph [ref=e406]: 伴随着屋里传来一阵略显迟缓但也均匀的脚步声，佐伯诗织从小跑着去换鞋的惠理身后缓缓走了出来。与妹妹那一身跳跃热烈的色彩形成强烈的反差，诗织今天套着一件款式极简的白色针织开衫，浅蓝色衬衫的第二颗扣子规规矩矩地呆在领口处，锁骨的线条若隐若现。她的头发整齐地披散在肩头，左眼角那颗和妹妹一模一样的小痣此刻安静地悬在眼下，没有随着任何情绪的起伏而飞舞。
+            - paragraph [ref=e407]: 诗织抬起下颌看了小哥哥一眼，眼眸如同一泓不起波澜的深色湖水。她没有像惠理那样手忙脚乱，仅仅是微微偏过头，将目光错开些许。
+            - paragraph [ref=e408]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, ((Shiori Saeki (original))), high school student (original), calm, elegant, long hair, black hair, hime cut, ((mole on left eye corner)), dark eyes, pale skin, ((large breasts)), heavy breasts, slender waist, curvy, looking at viewer, calm expression, serene, (subtle smile), closed mouth, female focus, upper body, cowboy shot, from front, cinematic angle, indoors, apartment, living room, bookshelf in background, (plant:0.8), soft lighting, window, natural light, serene atmosphere, depth of field, (white knit cardigan), open cardigan, (pale blue shirt), buttoned-up shirt, collar, ((collarbone)), long sleeves, neat clothes, graceful posture, standing###
+            - paragraph [ref=e409]: “早上好。”诗织的声音不大，尾音带着一种天生让人觉得安定的平缓。她把手里那个挂着编织玩偶挂件的书包递给妹妹，顺手拍了拍惠理卫衣后背有些皱起的翻领，“走吧，别占着走廊让别人等。”
+            - paragraph [ref=e410]: 公寓的走廊上铺着厚实的绒面地毯。并排走向电梯的路上，惠理的鞋底踩出轻快的节奏，连珠炮似的向小哥哥描绘昨天在舞蹈社团里发生的一些琐事，仿佛要把先前那尴尬全都用语言填补起来。诗织则极其自然地退了半步，安静地走在靠后的位置。她似乎早习惯了将聚光灯让给妹妹，只在惠理说到某个缺乏逻辑的夸张地方时，才会轻声补充一两句事实作为修正。
+            - paragraph [ref=e411]: “对了。”小哥哥看着跳跃的电梯指示灯，状作漫不经心地把话题引向了此行的目标，“最近在楼道里碰到你们，怎么都没看到龙一叔叔？他这次的项目还没忙完休假吗？”
+            - paragraph [ref=e412]: 听到这句问询，电梯厢里的空气似乎微微一滞。惠理扎在脑后的高马尾都跟着耷拉了下来。她鼓起双颊，有些抱怨地踢了踢脚下的轿厢缝隙。
+            - paragraph [ref=e413]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, Eri Saeki (original), high school student (original), genki, energetic, long hair, black hair, (high ponytail), messy ponytail, ((mole on left eye corner)), brown eyes, pale skin, medium breasts, fit body, sulking, ((pout)), puffed cheeks, furrowed brow, looking down, disappointed, full body, from front, cinematic angle, indoors, (elevator), brushed steel walls, reflection, floor indicator, overhead lighting, fluorescent lighting, top lighting, harsh lighting, confined space, tense atmosphere, standing, (leaning against wall), (slumped posture), hands in pocket, kicking floor, (bright orange hoodie), hoodie, black pants, sneakers###
+            - paragraph [ref=e414]: “爸爸他呀，总说工程那边离不开人。”惠理嘟囔起来，毫不掩饰语气里的嫌弃与失落，“本来前阵子打电话说明天肯定能回来的，结果昨天又反悔了，说是外地的什么系统验收出了点状况。”
+            - paragraph [ref=e415]: “是下个星期的第一天。”诗织停顿了极其短暂的片刻，才用缓慢且清晰的音节接过了话茬。她垂下视线，盯着电梯门上倒映出的人影，睫毛在灯光下投下一小片阴影，“他发来消息确认过，如果一切顺利，那天傍晚就可以回到公寓。”
+            - paragraph [ref=e416]: 小哥哥在心里默默掏出一支红笔，给这个行程时间打上了一个醒目的交叉。下周初，那就意味着距离这位工程师父亲的回归还有大概一周的空窗期。这正好证实了他之前的推断：赵卫国是唯一能牵线搭桥的人，想要在佐伯龙一带着他满身的末日高价值技能入场前占据主导权，就必须提前通过底层的邻里网络埋下伏笔。
+            - paragraph [ref=e417]: 金属面板滑开，一楼大堂带有几分初秋寒意的风迅速钻进了电梯。诗织在迈开步子前，余光扫过小哥哥夹克没有完全拉合的领口。她的嘴唇动了动，起着波澜的漆黑眼眸里掠过一瞬的犹豫，但最终只是伸出柔软的手指，一把抓住了已经准备冲向旁边全家便利店买热饮的惠理的手腕。
+            - paragraph [ref=e418]:
+              - img
+              - text: image###sfw, 1girl, solo, solo focus, male pov, pov, ((Shiori Saeki (original))), high school student (original), calm, elegant, long hair, black hair, hime cut, mole on left eye corner, dark eyes, pale skin, ((large breasts)), slender waist, curvy, beautiful, (looking back), (over the shoulder), side profile, parted lips, concerned expression, female focus, upper body, medium shot, from behind, cinematic angle, dynamic angle, exiting elevator, lobby in background, (bright light), ((backlighting)), ((rim lighting)), lens flare, dramatic lighting, high contrast, depth of field, bokeh, standing, mid-stride, turning, white knit cardigan, pale blue shirt, (silhouette), hand reaching, motion###
+            - paragraph [ref=e419]: “慢一点走，外面的风有点冷。”诗织的声音依旧。
+            - paragraph [ref=e420]: 被拽住的惠理立刻回过头，顺水推舟地挺起胸膛，得意洋洋地对小哥哥扬起了下颌，左边那颗小虎牙若隐若现。
+            - paragraph [ref=e421]: “听到那边的忠告没有，我姐姐可是让你把衣服的拉链拉好呢！”
+            - paragraph [ref=e422]: 小哥哥低头看了一眼有些松散的领口，手指勾住拉链的金属扣向上拉紧，跟着前方那抹如同跳跃火焰般的橙色背影，迈出了大楼的感应玻璃门。
+            - paragraph
+            - paragraph
+            - paragraph [ref=e423]:
+              - option "【A】顺势陪双胞胎在便利店购买早餐，趁机主动为她们付款，试图进一步拉升姐妹好感并观察彼此反应。 【B】在校园门口与双胞胎告别后，折返去附近的五金建材市场，为之后的设备采购和安全改装了解现货行情。 【C】既然得知佐伯龙一还有一周回来，立刻转身回公寓敲2003的门，用修理家具的借口试图搭上赵卫国。 【D】进入学校后给纪宁发去几条专业的理财市场分析建议，开始编织专业人士的伪装，切入2002室的关系网。" [ref=e424]
+            - group [ref=e426]:
+              - generic "🌕 月圆思成，思路清晰 ✨ 展开思绪 ▶" [ref=e427] [cursor=pointer]:
+                - generic [ref=e428]: 🌕
+                - generic [ref=e430]: 月圆思成，思路清晰
+                - generic [ref=e431]: ✨
+                - generic [ref=e433]: 展开思绪 ▶
+            - paragraph
+      - generic [ref=e434]:
+        - img [ref=e437] [cursor=pointer]
+        - generic [ref=e438]:
+          - generic [ref=e439]:
+            - generic [ref=e441]:
+              - generic [ref=e442]: 小哥哥
+              - generic "此消息对 AI 不可见" [ref=e443]: 
+            - generic [ref=e444]:
+              - button "" [ref=e445] [cursor=pointer]
+              - text:              
+              - button "" [ref=e446] [cursor=pointer]
+            - text:       
+          - text:       
+          - paragraph [ref=e448]: 【A】顺势陪双胞胎在便利店购买早餐，趁机主动为她们付款，试图进一步拉升姐妹好感并观察彼此反应。
+      - generic [ref=e449]:
+        - img [ref=e452] [cursor=pointer]
+        - generic [ref=e453]:
+          - generic [ref=e454]:
+            - generic [ref=e456]:
+              - generic [ref=e457]: 末世寒冬 - 星穹秩序
+              - generic "此消息对 AI 不可见" [ref=e458]: 
+            - generic [ref=e459]:
+              - button "" [ref=e460] [cursor=pointer]
+              - text:              
+              - button "" [ref=e461] [cursor=pointer]
+            - text:       
+          - text:       
+          - generic [ref=e462]:
+            - paragraph [ref=e463]:
+              - text: "[stream-demo:minimal]"
+              - text: done
+            - paragraph [ref=e464]: 深灰色的感应门在面前自动向两侧滑开，机械的电子合成音随即播报起单调的欢迎光临。
+            - paragraph [ref=e465]: 便利店里冷气开得很足，白炽灯的光将货架上排列得密密麻麻的商品照得没有丝毫阴影。玻璃橱窗外是正在逐渐苏醒的瑞峰市早晨，而此时的便利店内只有零星几个赶着去上班和上学的顾客。
+            - paragraph [ref=e466]: 惠理一跨进门，就像是一团不受拘束的橙色火焰，迅速向冷柜区飘了过去。她的脚步踩在洁白的地砖上，白色运动鞋底摩擦出细微的声响，马尾在脑后随着动作左摇右晃，显得活力十足。
+            - paragraph [ref=e467]: “我决定了，今天早上要喝这个草莓牛奶，还有……金枪鱼蛋黄酱饭团！”
+            - paragraph [ref=e468]: 惠理将手里的帆布包随手夹在臂弯里，站在冷柜前指点江山，另一只手在玻璃门上犹豫地滑动。她偏过脸，眼底藏着笑意，假装不经意地朝着小哥哥的方向瞥了一眼。
+            - paragraph [ref=e469]:
+              - img
+              - button "生成图片" [ref=e470] [cursor=pointer]
+            - paragraph [ref=e471]: “你要吃什么？这里的肉包子刚出笼，虽然不如月华嫂子包的饺子好吃，但也勉强算是能填饱肚子啦。”
+            - paragraph [ref=e472]: 她显然是想让话题自然地延续下去，寻找任何能和小哥哥产生互动的支点。
+            - paragraph [ref=e473]: 诗织则安静地站在靠近货架末端的位置，并没有加入关于饭团或者包子的热烈讨论。她微微低着头，步幅很小地走到加热柜前，动作极其轻柔也极其精准，取出了两罐温热的无糖豆奶。她今天穿着那件一尘不染的浅蓝色衬衫，上面套着白色针织开衫，整个人在冷色调的灯光下显得有些苍白却又异常得体。
+            - paragraph [ref=e474]:
+              - img
+              - button "生成图片" [ref=e475] [cursor=pointer]
+            - paragraph [ref=e476]: 诗织的目光在豆奶的成分标签上停留了差不多两秒钟，随后便转过身，一言不发地走向了收银台。
+            - paragraph [ref=e477]: 这是这对双胞胎姐妹一贯的相处模式。一个负责用声音和动作去填满所有的空间，而另一个负责在极度的节制中梳理这些杂乱的秩序。小哥哥顺手在货架上拿了一块培根三明治，又从加热柜里拿出一瓶黑咖啡，不紧不慢地跟在她们身后。
+            - paragraph [ref=e478]: 收银台前，惠理正将腋下夹着的包提到胸前，准备去翻找里面的手机。她嘴里还念叨着饭团和草莓牛奶的价钱，手指在包里摸索着。
+            - paragraph [ref=e479]: 小哥哥脚步未停，直接越过了惠理的肩膀，将自己手里的三明治和咖啡放在了收银台上。紧接着，他手腕一翻，屏幕上亮起的付款码直接对准了收银员手中的扫描仪。
+            - paragraph [ref=e480]: “滴——”
+            - paragraph [ref=e481]: 轻脆的一声扫码提示音，瞬间切断了惠理嘴里的碎碎念。收银员麻利地将饭团、热豆奶、三明治还有咖啡装进同一个印着便利店Logo的塑料袋里，向前推了推。
+            - paragraph [ref=e482]: 惠理伸在包里摸手机的动作彻底僵在了原地。
+            - paragraph [ref=e483]: 她的那双杏眼猛地睁大，视线下意识地从小哥哥的手机屏幕移动到那个装满早餐的袋子上，又不可置信地顺着小哥哥的夹克衣袖一点点上移，最后定格在他的侧脸轮廓上。
+            - paragraph [ref=e484]: “欸？等、等等！你干嘛一起付钱啊！”
+            - paragraph [ref=e485]: 她的声音不自觉地拔高了八度，随后似乎意识到了这里是公共场合，又有些慌张地压了下去。几根没有扎进马尾的碎发在因为急促的呼吸而微微颤动，那颗位于左眼角正下方的小痣，此刻正随着她因为过度情绪起伏而扬起的眼角，像是一颗随时会掉落的欢快泪珠般跃动。
+            - paragraph [ref=e486]: 几乎只是在两三秒的时间里，肉眼可见的红晕直接从惠理的颧骨处蔓延开来，一路烧到了耳根。那种鲜艳的红色，甚至比她身上的橙色卫衣还要抢眼。
+            - paragraph [ref=e487]:
+              - img
+              - button "生成图片" [ref=e488] [cursor=pointer]
+            - paragraph [ref=e489]: “说好的一起去学校，怎么能让你买单……搞得像是什么奇怪的约会一样，笨蛋……”
+            - paragraph [ref=e490]: 这最后的半句话被她心虚地咽在了嗓子里，只有声带在极为细微地震动。她用力攥紧了手里的背包带子，试图用一层极力伪装的不满来掩盖内心剧烈失衡的节拍。
+            - paragraph [ref=e491]: 而站在惠理身侧半步距离的诗织，在听到付款提示音的那一瞬，手里的动作也停顿了大约两秒。
+            - paragraph [ref=e492]: 她的表情依然像封冻的湖水，没有产生哪怕惠理那般夸张的起伏。但如果靠得足够近去观察，就会发现她微微偏过了那张犹如工艺品般精致的脸庞，将视线从闪烁的收银系统上平移开来，极其自然地垂向了地面。
+            - paragraph [ref=e493]: 在那件妥帖的浅蓝色衬衫领口处，由于呼吸频率的停滞，精致的锁骨下隐约起伏了一瞬。
+            - paragraph [ref=e494]: “谢谢。”
+            - paragraph [ref=e495]: 她用一种仅限他们三人能够听清的音量轻声说道。诗织的黑眼眸里流转过一种极度压缩的情感波动。她并不擅长也不习惯用言语去夸赞什么，但她一定会在心底的某本并不存在的账薄里，用最清晰的笔触将这份微小的人情和照顾记录下来。
+            - paragraph [ref=e496]: 诗织伸出那柔软白皙的手指，安静而又自然地接过了塑料袋的提手，不仅是在分担重量，也是为了避免惠理因为过度的慌乱而将早餐碰掉在地上。
+            - paragraph [ref=e497]: “下次如果有需要跑腿或者搬东西的事，可以叫惠理去。”
+            - paragraph [ref=e498]: 诗织抬起下颌，用一种类似于宣布天气预报般平缓的语气，在转过身准备走向大门时补充了这一句。
+            - paragraph [ref=e499]: 这句话犹如一颗扔进火药桶的火星，迅速将被小动作拿捏得死死的惠理重新点燃。她立刻像只遭到背刺的猫一样跳了起来。
+            - paragraph [ref=e500]: “为什么是我去跑腿啊！姐姐你现在是在拿我抵债吗？”
+            - paragraph [ref=e501]: “因为你刚才一直吵着要买草莓牛奶。”
+            - paragraph [ref=e502]: 诗织甚至没有回头看气鼓鼓的妹妹，径直推开了便利店那扇沉重的玻璃门。她的背影看起来如此平坦稳重，走路的步幅不大，每一步却异常扎实。而在那层静谧之下，只有她自己清楚，那句“可以叫惠理去”的真正潜台词，其实是用行动默许了三个人的生活轨道可以进一步交汇。
+            - paragraph [ref=e503]: 小哥哥看着前方这一动一静的背影。
+            - paragraph [ref=e504]: 这对双胞胎无疑是两块质地完全不同的拼图。惠理所有的能量都会如同太阳辐射般直接向外挥发，任何好感与慌张都无所遁形；而诗织则是将所有的温度向内聚拢，压缩成一堵秩序分明的沉默高墙，然后独自在这堵墙壁后仔细消化一切。
+            - paragraph [ref=e505]: 用一顿简单的早餐去打破那层薄弱的邻里隔阂，这笔交易实在太划算了。她们不知道，在这微不足道的社交互动背后，正是为将来拉拢那个拥有极高价值的技术工种父亲，佐伯龙一，所布下的最坚固的锚点。在三个月后温度跌破极限的世界里，没有哪一种忠诚，会比女儿身陷其中的羁绊来得更加稳固。
+            - paragraph [ref=e506]: 两人在前面的街口停下了脚步，那是通往大学校园与商业街的分岔路。
+            - paragraph [ref=e507]: 风中卷着属于这座城市初秋特有的干爽气息，红绿灯发出规律的跳动声。一切都显得繁荣、忙碌且富有生机。
+            - paragraph [ref=e508]: “我今天上午有点其他方面的琐事要办，就不去学校了。”小哥哥用最平淡的语调切断了继续同行的可能，他需要把今天的精力放在更迫切的物资考察上。
+            - paragraph [ref=e509]: 惠理的肩膀垂了一点点，手里那袋草莓牛奶也被她捏得有些变形。但她瞬间又扬起一个试图驱散一切阴霾的笑容。
+            - paragraph [ref=e510]: “那……那你自己注意安全嘛，记得吃早餐！”她咬着右边的小虎牙，朝他挥了挥手。
+            - paragraph [ref=e511]: 诗织则是退后了半步，站在惠理身后。她没有再开口说任何一句叮嘱的话，仅仅是在小哥哥转身的那一霎那，目光定格在他的背影上，大约过了三秒钟，然后才悄无声息地收回视线。
+            - paragraph [ref=e512]:
+              - img
+              - button "生成图片" [ref=e513] [cursor=pointer]
+            - paragraph [ref=e514]: 小哥哥没有回头。属于《冰箱计划》的筹备倒计时，在他脑内滴答作响。每一个看似安逸的早晨，都是为深渊所积攒的筹码。
+            - paragraph
+            - paragraph
+            - paragraph [ref=e515]:
+              - option "【A】与双胞胎分别后，立刻前往周边五金建材市场，以预演防寒改建的名义考察保温管材。 【B】趁着时间充裕，找个无人的街心公园，打开手机再次梳理目前所有邻居的情报交集。 【C】折返回到星穹国际公寓，利用工作日大家都外出的空档，对20楼走廊进行暗中勘测。 【D】立刻联络控制台伊甸，查询是否存在关于佐伯龙一近期回程的电子通讯留痕记录。" [ref=e516]
+            - paragraph
+        - generic [ref=e517]: 1/1
+    - generic [ref=e36]:
+      - generic [ref=e519]:
+        - button "重新处理变量" [ref=e520] [cursor=pointer]
+        - button "重试额外模型解析" [ref=e521] [cursor=pointer]
+      - text:  
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39] [cursor=pointer]: 
+          - generic "扩展程序" [ref=e183] [cursor=pointer]: 
+        - textbox "输入想发送的消息，或输入 /? 获取帮助" [ref=e184]
+        - generic [ref=e41]:
+          - text:      
+          - generic "发送消息" [ref=e185] [cursor=pointer]: 
+  - text:                        1      
+  - generic [ref=e186]: 
+  - generic:                 +                             +                      +         +                      • • • •        • • • • • • •                  +        +       +                                                                             +          +       +     +                  +  +                       +           +         +               +      +                                                                                              
+  - option "(请先获取并选择模型)" [selected]
+  - option "智绘姬 (默认)" [selected]
+  - option "自定义 (LLM预设)"
+  - generic [ref=e188]: 
+  - status [ref=e189]
+  - status [ref=e190]
+  - status [ref=e191]
+  - status [ref=e192]
+  - status [ref=e193]
+  - status [ref=e194]
+  - status [ref=e195]
+  - status [ref=e196]
+  - status [ref=e197]
+  - status [ref=e198]
+  - status [ref=e199]
+  - status [ref=e200]

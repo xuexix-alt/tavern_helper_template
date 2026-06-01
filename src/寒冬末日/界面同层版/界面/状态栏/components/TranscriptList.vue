@@ -612,15 +612,24 @@ defineExpose({
   .transcript-scroller {
     padding-right: 42px;
   }
+  .transcript-card.layout-compact .transcript-scroller {
+    padding-right: 0;
+  }
 
   .transcript-fab-stack {
     top: 10px;
     right: 6px;
     bottom: 10px;
   }
+  .transcript-card.layout-compact .transcript-fab-stack {
+    display: none;
+  }
 
   .transcript-fab {
     font-size: 13px;
+  }
+  .transcript-card.layout-compact .transcript-image-fab {
+    display: none;
   }
 
   .transcript-card.is-streaming .transcript-fab,

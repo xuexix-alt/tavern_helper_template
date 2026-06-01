@@ -10,7 +10,8 @@ test('mvu role store supports latest system snapshot reads without requiring dis
   assert.match(source, /allowSystemOnly\?: boolean/);
   assert.match(source, /const allowSystemOnly = options\?\.allowSystemOnly === true/);
   assert.match(source, /if \(result\.success && \(allowSystemOnly \|\| hasDisplayableRoles\(result\.data\)\)\)/);
-  assert.match(source, /readMvuStatData\('latest', \{ allowSystemOnly: true \}\)/);
+  assert.match(source, /function readLatestMvuStatData\(/);
+  assert.match(source, /const current = readLatestMvuStatData\(\{ allowSystemOnly: true \}\);/);
 });
 
 test('same-layer system panel reads shelter fields from latest system snapshot instead of role-only snapshot', () => {

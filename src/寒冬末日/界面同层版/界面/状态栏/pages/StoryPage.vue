@@ -568,6 +568,7 @@ const {
   setReadingMode,
   selectTranscriptWindowPage: selectTranscriptWindowPageState,
   toggleOpeningExpanded,
+  syncOpeningExpandedForLayout,
   openDetail,
   closeDetail,
   withPluginNativeMessageLease,
@@ -663,6 +664,13 @@ const shellLayoutMode = computed(() => {
   if (shellWidth.value <= 839) return 'reader_desktop';
   return 'wide';
 });
+watch(
+  shellLayoutMode,
+  mode => {
+    syncOpeningExpandedForLayout(mode);
+  },
+  { immediate: true },
+);
 type MvuVariableUpdateMode = 'extra_analysis' | 'inline' | 'unknown';
 const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
 const canReprocessVariables = computed(() => {

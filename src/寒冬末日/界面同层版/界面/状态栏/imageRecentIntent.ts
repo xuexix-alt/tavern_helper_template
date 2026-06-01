@@ -11,9 +11,11 @@ type CreateImageRecentIntentStoreOptions = {
   ttlMs?: number;
 };
 
+const DEFAULT_RECENT_INTENT_TTL_MS = 10 * 60_000;
+
 export function createImageRecentIntentStore(options: CreateImageRecentIntentStoreOptions = {}) {
   const now = options.now ?? (() => Date.now());
-  const ttlMs = Math.max(200, Math.trunc(Number(options.ttlMs ?? 2_500)));
+  const ttlMs = Math.max(200, Math.trunc(Number(options.ttlMs ?? DEFAULT_RECENT_INTENT_TTL_MS)));
   let intent: RecentIntent | null = null;
 
   function mark(messageId: number, source: ImageIntentSource) {

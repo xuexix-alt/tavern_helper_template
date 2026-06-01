@@ -7,7 +7,7 @@ function read(rel) {
   return fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
 }
 
-test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entries with zeroed counts', () => {
+test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entries with seeded counts', () => {
   const schemaSource = read('../../../../schema.ts');
   const initvarSource = read('../../../../世界书/寒冬末日/[initvar].yaml');
   const schemaScriptSource = read('../../../../脚本/变量结构/index.ts');
@@ -23,7 +23,7 @@ test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entr
   assert.match(commandSchemaBlock, /说明:\s*z\.string\(\)\.prefault\(''\)/);
   assert.match(commandSchemaBlock, /范围:\s*z\.string\(\)\.prefault\(''\)/);
   assert.match(commandSchemaBlock, /时效:\s*z\.string\(\)\.prefault\(''\)/);
-  assert.match(commandSchemaBlock, /生效实例:\s*z\.array\(/);
+  assert.match(commandSchemaBlock, /生效实例:\s*z\s*\.array\(/);
   assert.match(commandSchemaBlock, /对象范围:\s*z\.string\(\)\.prefault\(''\)/);
   assert.match(commandSchemaBlock, /剩余时效:\s*z\.string\(\)\.prefault\(''\)/);
   assert.doesNotMatch(commandSchemaBlock, /状态:\s*z\.enum/);
@@ -38,7 +38,7 @@ test('schema and initvar keep 顶层 伊甸一次性指令 as full metadata entr
   assert.match(initvarSource, /sk001:\s*[\r\n]+\s*名称:\s*一二三木头人/);
   assert.match(initvarSource, /zd001:\s*[\r\n]+\s*名称:\s*一夫当关/);
   assert.match(initvarSource, /sx001:\s*[\r\n]+\s*名称:\s*满血复活/);
-  assert.match(initvarSource, /数量:\s*0/);
+  assert.match(initvarSource, /数量:\s*1/);
   assert.match(initvarSource, /说明:\s*移除伴侣性道德感/);
   assert.match(initvarSource, /范围:\s*指定一位男性角色/);
   assert.match(initvarSource, /时效:\s*12小时/);
@@ -63,7 +63,7 @@ test('mvu update rules and output format document 名称+数量 writes for 顶�
   assert.match(rulesSource, /时效:\s*string/);
   assert.match(rulesSource, /生效实例:\s*\{\s*对象范围:\s*string;\s*剩余时效:\s*string;\s*\}\[\]/);
   assert.match(rulesSource, /编号 为动态 key/);
-  assert.match(rulesSource, /已有编号只更新 `\/伊甸一次性指令\/\$\{编号\}\/数量`/);
+  assert.match(rulesSource, /更新 `\/伊甸一次性指令\/\$\{编号\}\/数量`/);
   assert.match(rulesSource, /只维护 `数量` 和 `生效实例`/);
   assert.match(rulesSource, /禁止.*实例 key/);
   assert.match(rulesSource, /禁止.*名称 \/ 说明 \/ 范围 \/ 时效/);

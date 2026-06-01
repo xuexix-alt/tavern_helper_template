@@ -326,6 +326,46 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   );
 });
 
+test('same-layer boot hydrates a bounded native host window before relying on persisted image entities', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('async function hydrateRecentPluginNativeHostWindow(reason: string): Promise<void>'),
+    true,
+    'same-layer reload should have a bounded native host hydration path for plugin-native images',
+  );
+  assert.match(
+    source,
+    /function collectRecentPluginNativeHydrationMessageIds\(\): number\[\][\s\S]*PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT/,
+    'boot hydration should stay bounded to the recent plugin-native window',
+  );
+  assert.match(
+    source,
+    /hydrateRecentPluginNativeHostWindow[\s\S]*hostVisualHideController\.leaseMessageIdsForPluginNativeHandoff\([\s\S]*native_host_hydration/,
+    'hydration should keep materialized host messages user-invisible while plugin DOM is rebuilt',
+  );
+  assert.match(
+    source,
+    /hydrateRecentPluginNativeHostWindow[\s\S]*await setChatMessages\([\s\S]*is_hidden: false[\s\S]*\{ refresh: 'affected' \}/,
+    'hydration must force affected host messages to render instead of only toggling hidden data',
+  );
+  assert.match(
+    source,
+    /hydrateRecentPluginNativeHostWindow[\s\S]*await setChatMessages\([\s\S]*is_hidden: true[\s\S]*\{ refresh: 'none' \}/,
+    'hydration should re-hide the materialized host messages without tearing down the plugin-mutated DOM',
+  );
+  assert.match(
+    source,
+    /hydrateRecentPluginNativeHostWindow[\s\S]*queueGeneratedImageEntityRefresh\(messageIds, `\$\{reason\}:native_host_hydration`\)/,
+    'hydration should immediately refresh same-layer image entities after native DOM has had a chance to rebuild',
+  );
+  assert.match(
+    source,
+    /window\.setTimeout\(\(\) => void hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\), 250\);/,
+    'mounted same-layer UI should run the native host hydration probe, not just recompute existing iframe DOM',
+  );
+});
+
 test('same-layer transcript preserves plugin-native prompt placeholders before ready image responses', () => {
   const source = readSource('useStreamingDemo.ts');
   const appendStart = source.indexOf('function appendChatu8ArtifactsToHtml(');
@@ -348,6 +388,21 @@ test('same-layer transcript preserves plugin-native prompt placeholders before r
     appendBody,
     /return htmlWithImages;\s*}/,
     'appendChatu8ArtifactsToHtml should not return only ready-image html and drop prompt placeholder/button artifacts',
+  );
+});
+
+test('plugin-native host handoff scans host documents only, never the same-layer iframe document', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const start = source.indexOf('function collectHostDocuments(): Document[]');
+  assert.notEqual(start, -1, 'should find collectHostDocuments');
+  const end = source.indexOf('function collectPluginNativeHandoffDiagnostics', start);
+  assert.notEqual(end, -1, 'should find next helper after collectHostDocuments');
+  const body = source.slice(start, end);
+
+  assert.match(
+    body,
+    /collectReachableHostDocuments\(\)\.filter\(doc => doc !== document\)/,
+    'plugin-native trigger and handoff probes must not mistake same-layer transcript DOM for the original chat DOM',
   );
 });
 

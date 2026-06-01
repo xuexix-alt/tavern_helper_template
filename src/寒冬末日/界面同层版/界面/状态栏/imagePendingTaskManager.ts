@@ -52,6 +52,9 @@ type ImageHintPayload = {
   promptToken?: unknown;
 };
 
+const DEFAULT_COLLECTING_WINDOW_MS = 10 * 60_000;
+const MIN_CLEANUP_RETENTION_MS = 5 * 60_000;
+
 function collectPromptTokens(input: string): string[] {
   const out: string[] = [];
   const regex = /([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/g;
@@ -72,13 +75,17 @@ function buildPromptTokenFromPrompt(rawPrompt: string): string {
 
 export function createImagePendingTaskManager(options: CreateImagePendingTaskManagerOptions = {}) {
   const now = options.now ?? (() => Date.now());
-  const collectingWindowMs = Math.max(100, Math.trunc(Number(options.collectingWindowMs ?? 2_000)));
+  const collectingWindowMs = Math.max(
+    100,
+    Math.trunc(Number(options.collectingWindowMs ?? DEFAULT_COLLECTING_WINDOW_MS)),
+  );
+  const cleanupRetentionMs = Math.max(MIN_CLEANUP_RETENTION_MS, collectingWindowMs + 60_000);
   const tasks: PendingTask[] = [];
   const bufferedResponses: BufferedResponse[] = [];
   const hints: PendingHint[] = [];
 
   function cleanup(referenceTime = now()) {
-    const cutoff = referenceTime - 5 * 60_000;
+    const cutoff = referenceTime - cleanupRetentionMs;
     for (let index = tasks.length - 1; index >= 0; index -= 1) {
       if (tasks[index].createdAt < cutoff) tasks.splice(index, 1);
     }

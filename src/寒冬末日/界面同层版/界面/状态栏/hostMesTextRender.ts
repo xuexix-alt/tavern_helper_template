@@ -73,6 +73,7 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
     mesEl = hostDoc.createElement('div');
     mesEl.className = 'mes';
     mesEl.setAttribute('mesid', String(messageId));
+    mesEl.setAttribute('data-message-index', String(messageId));
     mesEl.setAttribute(INJECTED_ATTR, 'true');
     // 离屏隐藏：不用 display:none（textContent 仍可读），不用 visibility:hidden（同上）
     // 用绝对定位推出视口，和宿主隐藏策略保持一致的方式
@@ -93,6 +94,7 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
 
     const mesText = hostDoc.createElement('div');
     mesText.className = 'mes_text';
+    mesText.setAttribute('data-message-index', String(messageId));
 
     mesBlock.appendChild(mesText);
     mesEl.appendChild(mesBlock);
@@ -102,6 +104,8 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
   // 写入正文（textContent 赋值，不做 HTML 解析，安全且够用）
   const mesText = mesEl.querySelector('.mes_text') as HTMLElement | null;
   if (!mesText) return null;
+  mesEl.setAttribute('data-message-index', String(messageId));
+  mesText.setAttribute('data-message-index', String(messageId));
   mesText.textContent = rawText;
 
   return mesEl;

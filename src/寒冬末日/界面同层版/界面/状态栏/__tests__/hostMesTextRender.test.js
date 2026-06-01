@@ -203,6 +203,8 @@ test('ensureHostMesTextRendered injects an offscreen mes node when host mes_text
   const injectedText = hostDocument.querySelector('.mes[mesid="6"] .mes_text');
   assert.ok(injectedMes);
   assert.ok(injectedText);
+  assert.equal(injectedMes.getAttribute('data-message-index'), '6');
+  assert.equal(injectedText.getAttribute('data-message-index'), '6');
   assert.equal(injectedText.textContent, 'z'.repeat(320));
 });
 

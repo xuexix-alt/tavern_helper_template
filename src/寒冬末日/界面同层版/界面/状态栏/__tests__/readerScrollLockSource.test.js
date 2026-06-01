@@ -39,7 +39,7 @@ test('TranscriptList keeps a local stream follow suppression latch so token upda
   assert.match(source, /const appendedNewFloor = didTranscriptAppendNewFloor\(/);
   assert.match(
     source,
-    /const shouldSuspendAutoFollow = props\.isStreaming === true && \(streamFollowSuppressed \|\| userScrollIntentDuringStream\);/,
+    /const shouldSuspendAutoFollow =\s*props\.isStreaming === true && \(streamFollowSuppressed \|\| userScrollIntentDuringStream\);/,
   );
   assert.match(
     source,

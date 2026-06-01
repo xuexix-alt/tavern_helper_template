@@ -55,7 +55,11 @@ const rebound = reverseManager.registerRequest({
   prompt: 'image###角色C###',
 });
 assertEqual(rebound?.messageId, 8, 'late request should still bind to original message id');
-assertEqual(rebound?.bufferedResponse?.requestId, 'req-late', 'buffered response should be replayed once request arrives');
+assertEqual(
+  rebound?.bufferedResponse?.requestId,
+  'req-late',
+  'buffered response should be replayed once request arrives',
+);
 
 reverseNow += 5_000;
 const secondEarlyResponse = reverseManager.consumeResponse({
@@ -79,5 +83,18 @@ assertEqual(
   'req-late-2',
   'later buffered response should also be replayed once request arrives',
 );
+
+let slowNow = 5_000;
+const slowLlmManager = createImagePendingTaskManager({
+  now: () => slowNow,
+});
+
+slowLlmManager.startTask(9);
+slowNow += 65_000;
+const slowRequest = slowLlmManager.registerRequest({
+  id: 'req-slow-llm',
+  prompt: 'image###慢速LLM规划后的真实生图###',
+});
+assertEqual(slowRequest?.messageId, 9, 'request should still bind after slow plugin LLM image prompt generation');
 
 console.log('image pending task manager test passed');

@@ -205,6 +205,7 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-amber',
 ] as const;
 const TRANSCRIPT_UI_WINDOW_SIZE = 4;
+const PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT = 3;
 const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
 const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
@@ -1132,7 +1133,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   }
 
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
-    appendUnanchoredToEnd: renderMode !== 'plugin-native-data' || hasPluginNativeArtifacts !== true,
+    appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
   });
   return hydratePluginNativePromptPlaceholdersHtml(
     htmlWithImages,
@@ -1910,6 +1911,7 @@ export function useStreamingDemo() {
   const transcriptDomRevision = ref(0);
   const galleryRevision = ref(0);
   const openingExpanded = ref(true);
+  const hasExplicitOpeningExpandedPreference = ref(false);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
   const editingUserDraft = ref('');
@@ -2564,7 +2566,10 @@ export function useStreamingDemo() {
     if (restoredDensity) density.value = restoredDensity;
     if (restoredTheme) theme.value = restoredTheme;
     if (restoredFontMode) fontMode.value = restoredFontMode;
-    if (typeof state.opening_expanded === 'boolean') openingExpanded.value = state.opening_expanded;
+    if (typeof state.opening_expanded === 'boolean') {
+      openingExpanded.value = state.opening_expanded;
+      hasExplicitOpeningExpandedPreference.value = true;
+    }
     if (state.version !== READER_CHAT_STATE_VERSION) {
       queuePersistReaderChatState();
     }
@@ -2729,8 +2734,14 @@ export function useStreamingDemo() {
     queuePersistReaderChatState();
   }
 
+  function syncOpeningExpandedForLayout(layoutMode: 'compact' | 'reader_desktop' | 'wide') {
+    if (hasExplicitOpeningExpandedPreference.value) return;
+    openingExpanded.value = layoutMode !== 'compact';
+  }
+
   function toggleOpeningExpanded() {
     openingExpanded.value = !openingExpanded.value;
+    hasExplicitOpeningExpandedPreference.value = true;
     queuePersistReaderChatState();
   }
 
@@ -2797,7 +2808,7 @@ export function useStreamingDemo() {
   }
 
   function collectHostDocuments(): Document[] {
-    return collectReachableHostDocuments();
+    return collectReachableHostDocuments().filter(doc => doc !== document);
   }
 
   function collectPluginNativeHandoffDiagnostics(messageId: number): Record<string, unknown> {
@@ -2976,53 +2987,61 @@ export function useStreamingDemo() {
       },
       traceId,
     );
-    try {
-      await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
-      recordLifecycleTrace(
-        'emitOfficialGenerationLifecycle',
-        'generation_ended_emitted',
-        {
-          messageId: Math.trunc(normalizedId),
-        },
-        traceId,
-      );
-    } catch {
-      // ignore
-    }
-
-    try {
-      await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
-      recordLifecycleTrace(
-        'emitOfficialGenerationLifecycle',
-        'message_received_emitted',
-        {
-          messageId: Math.trunc(normalizedId),
-          type,
-        },
-        traceId,
-      );
-    } catch {
-      // ignore
-    }
-
-    try {
-      await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
-      recordLifecycleTrace(
-        'emitOfficialGenerationLifecycle',
-        'message_updated_emitted',
-        {
-          messageId: Math.trunc(normalizedId),
-        },
-        traceId,
-      );
-    } catch {
-      // ignore
-    }
-
     const messageDetail = readChatMessageDetail(Math.trunc(normalizedId));
     const messageText = String(messageDetail?.mes ?? messageDetail?.message ?? '');
     const shouldWaitForPluginNativeHandoff =
       collectChatu8PromptTokens(messageText).length > 0 || isChatu8AutoLlmImageGenerationEnabled();
+
+    const emitLifecycleEvents = async () => {
+      try {
+        await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
+        recordLifecycleTrace(
+          'emitOfficialGenerationLifecycle',
+          'generation_ended_emitted',
+          {
+            messageId: Math.trunc(normalizedId),
+          },
+          traceId,
+        );
+      } catch {
+        // ignore
+      }
+
+      try {
+        await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
+        recordLifecycleTrace(
+          'emitOfficialGenerationLifecycle',
+          'message_received_emitted',
+          {
+            messageId: Math.trunc(normalizedId),
+            type,
+          },
+          traceId,
+        );
+      } catch {
+        // ignore
+      }
+
+      try {
+        await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
+        recordLifecycleTrace(
+          'emitOfficialGenerationLifecycle',
+          'message_updated_emitted',
+          {
+            messageId: Math.trunc(normalizedId),
+          },
+          traceId,
+        );
+      } catch {
+        // ignore
+      }
+    };
+
+    if (!shouldWaitForPluginNativeHandoff) {
+      await emitLifecycleEvents();
+      return;
+    }
+
     if (shouldWaitForPluginNativeHandoff) {
       recordLifecycleTrace(
         'emitOfficialGenerationLifecycle',
@@ -3035,7 +3054,11 @@ export function useStreamingDemo() {
         },
         traceId,
       );
-      await waitForPluginImageGenerationHandoff(Math.trunc(normalizedId));
+      await withPluginNativeMessageLease(Math.trunc(normalizedId), emitLifecycleEvents, {
+        beforeRelease: async () => {
+          await waitForPluginImageGenerationHandoff(Math.trunc(normalizedId));
+        },
+      });
     }
   }
 
@@ -3372,6 +3395,35 @@ export function useStreamingDemo() {
     return readAllChatMessageMetasRaw().filter(
       item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
     );
+  }
+
+  function collectPluginNativeHostWindowMessageIds(messageId: number): number[] {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return [];
+
+    const metas = readMessageMetasAfterContainer()
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0 && id <= normalizedId)
+      .sort((a, b) => b - a);
+    const windowIds = metas.slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT);
+    if (!windowIds.includes(normalizedId)) windowIds.unshift(normalizedId);
+    return [...new Set(windowIds)].sort((a, b) => a - b);
+  }
+
+  function normalizePluginNativeMessageMetadata(messageIds: number[]): void {
+    const ctx = readHostContext();
+    const chat = ctx?.chat;
+    if (!chat || typeof chat !== 'object') return;
+
+    for (const rawId of messageIds) {
+      const messageId = Math.trunc(Number(rawId));
+      if (!Number.isFinite(messageId) || messageId < 0) continue;
+      const message = (chat as any)[messageId];
+      if (!message || typeof message !== 'object') continue;
+      const swipeId = Number.isFinite(Number(message.swipe_id)) ? Math.trunc(Number(message.swipe_id)) : 0;
+      if (!message.extra || typeof message.extra !== 'object') message.extra = {};
+      if (message.extra.swipe_id !== swipeId) message.extra.swipe_id = swipeId;
+    }
   }
 
   function collectBoundedNativeGenerationRevealIds(reason: string): number[] {
@@ -3783,32 +3835,49 @@ export function useStreamingDemo() {
       hidePolicyTimer = 0;
     }
 
-    const wasHidden = readMessageMetasAfterContainer().some(
-      item => item.message_id === normalizedId && item.is_hidden === true,
-    );
+    const leaseMessageIds = collectPluginNativeHostWindowMessageIds(normalizedId);
+    const hiddenLeaseIds = readMessageMetasAfterContainer()
+      .filter(item => leaseMessageIds.includes(item.message_id) && item.is_hidden === true)
+      .map(item => item.message_id);
     const releasePluginNativeLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
-      [normalizedId],
+      leaseMessageIds,
       'plugin_native_handoff',
     );
-    if (wasHidden) {
-      await setChatMessages([{ message_id: normalizedId, is_hidden: false }], { refresh: 'none' });
+    let releaseMaterializedHostLease = () => {};
+    normalizePluginNativeMessageMetadata(leaseMessageIds);
+    if (hiddenLeaseIds.length > 0) {
+      await setChatMessages(
+        hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: false })),
+        { refresh: 'affected' },
+      );
+      releaseMaterializedHostLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+        leaseMessageIds,
+        'plugin_native_handoff_materialized',
+      );
     }
 
     try {
       return await action();
     } finally {
       try {
-        await options.beforeRelease?.();
-      } catch (error) {
-        console.warn('[stream-demo] plugin native message lease beforeRelease failed', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        try {
+          await options.beforeRelease?.();
+        } catch (error) {
+          console.warn('[stream-demo] plugin native message lease beforeRelease failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+        if (hiddenLeaseIds.length > 0) {
+          await setChatMessages(
+            hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: true })),
+            { refresh: 'none' },
+          );
+        }
+      } finally {
+        releaseMaterializedHostLease();
+        releasePluginNativeLease();
+        queueHidePolicy('plugin_native_bridge_resume');
       }
-      releasePluginNativeLease();
-      if (wasHidden) {
-        await setChatMessages([{ message_id: normalizedId, is_hidden: true }], { refresh: 'none' });
-      }
-      queueHidePolicy('plugin_native_bridge_resume');
     }
   }
 
@@ -3871,6 +3940,77 @@ export function useStreamingDemo() {
         runProbe();
       }, delayMs);
       hostImageDataReconcileTimers.add(timer);
+    }
+  }
+
+  function collectRecentPluginNativeHydrationMessageIds(): number[] {
+    const transcriptAssistantIds = transcript.value
+      .filter(item => item.role === 'assistant')
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter(id => Number.isFinite(id) && id >= 0)
+      .sort((a, b) => b - a)
+      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT);
+    const latestAssistantId = transcriptAssistantIds[0] ?? assistantMessageId.value;
+    if (latestAssistantId == null || !Number.isFinite(Number(latestAssistantId))) {
+      return [...new Set(transcriptAssistantIds)].sort((a, b) => a - b);
+    }
+    return [
+      ...new Set([
+        ...collectPluginNativeHostWindowMessageIds(Math.trunc(Number(latestAssistantId))),
+        ...transcriptAssistantIds,
+      ]),
+    ].sort((a, b) => a - b);
+  }
+
+  async function hydrateRecentPluginNativeHostWindow(reason: string): Promise<void> {
+    const messageIds = collectRecentPluginNativeHydrationMessageIds();
+    if (messageIds.length === 0) return;
+    if (hidePolicyTimer) {
+      window.clearTimeout(hidePolicyTimer);
+      hidePolicyTimer = 0;
+    }
+
+    const releasePreRenderLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+      messageIds,
+      `${reason}:native_host_hydration`,
+    );
+    let releaseMaterializedLease = () => {};
+    try {
+      normalizePluginNativeMessageMetadata(messageIds);
+      await setChatMessages(
+        messageIds.map(id => ({ message_id: id, is_hidden: false })),
+        { refresh: 'affected' },
+      );
+      releaseMaterializedLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+        messageIds,
+        `${reason}:native_host_hydration_materialized`,
+      );
+      syncPendingRequestHintsFromDom();
+      await new Promise<void>(resolve => window.setTimeout(resolve, 180));
+      syncPendingRequestHintsFromDom();
+      queueGeneratedImageEntityRefresh(messageIds, `${reason}:native_host_hydration`);
+      schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, messageIds);
+    } catch (error) {
+      console.warn('[stream-demo] plugin-native host hydration failed', {
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      try {
+        await setChatMessages(
+          messageIds.map(id => ({ message_id: id, is_hidden: true })),
+          { refresh: 'none' },
+        );
+      } catch (error) {
+        console.warn('[stream-demo] plugin-native host hydration restore failed', {
+          reason,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } finally {
+        releaseMaterializedLease();
+        releasePreRenderLease();
+        queueHidePolicy(`${reason}:native_host_hydration_done`);
+      }
     }
   }
 
@@ -6261,6 +6401,7 @@ export function useStreamingDemo() {
     }
 
     rebuildTranscript();
+    window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
     window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
     queueHidePolicy('mounted');
   });
@@ -6619,6 +6760,7 @@ export function useStreamingDemo() {
     selectTranscriptWindowPage,
     resetTranscriptWindowToLatestState,
     toggleOpeningExpanded,
+    syncOpeningExpandedForLayout,
     rebuildTranscript,
     openDetail,
     closeDetail,

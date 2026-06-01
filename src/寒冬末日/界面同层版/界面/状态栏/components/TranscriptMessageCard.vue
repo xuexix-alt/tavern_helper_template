@@ -78,7 +78,7 @@
 
     <template v-else>
       <section
-        class="assistant-card hud-panel clip-corner"
+        class="assistant-card clip-corner"
         :class="{ 'is-streaming': item.isStreaming }"
         :data-message-id="item.message_id"
         @pointerdown.capture="emit('image-intent', item)"
@@ -651,6 +651,10 @@ onBeforeUnmount(() => {
   max-width: 60rem;
   min-width: 0;
   padding: 24px 28px 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  background: var(--demo-assistant-card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .assistant-card.is-streaming {
@@ -1099,7 +1103,11 @@ onBeforeUnmount(() => {
 
   .assistant-card {
     max-width: 100%;
-    padding: 12px 10px 10px;
+    padding: 10px 8px 8px;
+    box-shadow: none;
+  }
+  .assistant-corners {
+    display: none;
   }
   .assistant-toolbar {
     gap: 6px;

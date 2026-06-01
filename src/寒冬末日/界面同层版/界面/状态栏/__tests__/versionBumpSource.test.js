@@ -8,5 +8,5 @@ test('eden helper and mvu schema script expose bumped versions', () => {
   const schemaSource = fs.readFileSync(path.resolve(__dirname, '../../../../脚本/变量结构/index.ts'), 'utf8');
 
   assert.match(helperSource, /const EDEN_HELPER_VERSION = '1\.6';/);
-  assert.match(schemaSource, /const MVU_SCHEMA_VERSION = '1\.4';/);
+  assert.match(schemaSource, /const MVU_SCHEMA_VERSION = '1\.5';/);
 });

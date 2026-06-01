@@ -53,9 +53,9 @@ test('gallery refs are built from native-first membership instead of raw prompt 
   assert.match(source, /!promptTokenCompareSet\.has\(normalizePromptTokenForCompare\(image\.promptToken\)\)/);
   assert.match(
     source,
-    /appendUnanchoredToEnd: renderMode !== 'plugin-native-data' \|\| hasPluginNativeArtifacts !== true/,
+    /appendUnanchoredToEnd: renderMode !== 'plugin-native-data'/,
   );
-  assert.match(source, /buildFinalHtml\(displayRenderSource, input\.id, input\.raw\)/);
+  assert.match(source, /buildFinalHtml\(artifactRenderSource, input\.id, artifactRenderSource\)/);
   assert.doesNotMatch(source, /for \(let i = 0; i < promptTokens\.length; i\+\+\)/);
 });
 
@@ -153,10 +153,12 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
   assert.match(storyPageSource, /guardPluginMenuViewport\(\);[\s\S]*await triggerImageGenerationForMessage/);
 });
 
-test('transcript image generation leases only the target host message before dispatching plugin gestures', () => {
+test('transcript image generation leases a recent host window before dispatching plugin gestures', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
   assert.match(streamingSource, /const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;/);
+  assert.match(streamingSource, /const PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT = 3;/);
+  assert.match(streamingSource, /function collectPluginNativeHostWindowMessageIds\(messageId: number\): number\[\]/);
   assert.match(
     streamingSource,
     /async function waitForPluginImageGenerationHandoff\(messageId: number\): Promise<boolean>/,
@@ -176,12 +178,17 @@ test('transcript image generation leases only the target host message before dis
   );
   assert.match(
     streamingSource,
-    /async function withPluginNativeMessageLease<T>\(\s*messageId: number,[\s\S]*hostVisualHideController\.leaseMessageIdsForPluginNativeHandoff\(\s*\[\s*normalizedId\s*\]/,
+    /async function withPluginNativeMessageLease<T>\(\s*messageId: number,[\s\S]*const leaseMessageIds = collectPluginNativeHostWindowMessageIds\(normalizedId\);[\s\S]*hostVisualHideController\.leaseMessageIdsForPluginNativeHandoff\(\s*leaseMessageIds/,
   );
   assert.match(
     streamingSource,
-    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\[\{ message_id: normalizedId, is_hidden: false \}\], \{ refresh: 'none' \}\);/,
-    'plugin handoff should reveal only the target message data, not the whole hidden transcript',
+    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\s*hiddenLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\),\s*\{ refresh: 'affected' \},\s*\);/,
+    'plugin handoff should materialize a bounded real host chat window instead of only toggling target data',
+  );
+  assert.match(
+    streamingSource,
+    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\s*hiddenLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\),\s*\{ refresh: 'none' \},\s*\);/,
+    'plugin handoff should keep the materialized host DOM in place when re-hiding it so st-chatu8 async tasks can continue',
   );
   assert.match(
     streamingSource,
