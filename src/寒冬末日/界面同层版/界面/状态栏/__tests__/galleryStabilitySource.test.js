@@ -51,10 +51,7 @@ test('gallery refs are built from native-first membership instead of raw prompt 
   assert.match(source, /const readyEntities = filterReadyGeneratedImageEntities\(entities\);/);
   assert.match(source, /const promptTokenCompareSet = new Set\(promptTokens\.map\(normalizePromptTokenForCompare\)/);
   assert.match(source, /!promptTokenCompareSet\.has\(normalizePromptTokenForCompare\(image\.promptToken\)\)/);
-  assert.match(
-    source,
-    /appendUnanchoredToEnd: renderMode !== 'plugin-native-data'/,
-  );
+  assert.match(source, /appendUnanchoredToEnd: renderMode !== 'plugin-native-data'/);
   assert.match(source, /buildFinalHtml\(artifactRenderSource, input\.id, artifactRenderSource\)/);
   assert.doesNotMatch(source, /for \(let i = 0; i < promptTokens\.length; i\+\+\)/);
 });

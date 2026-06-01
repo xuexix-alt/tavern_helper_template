@@ -48,7 +48,10 @@ function stripNativeRuntimeHtmlWithoutDom(html: string): string {
         return image ? `<figure class="assistant-fallback-inline-image">${image}</figure>` : '';
       },
     )
-    .replace(/<button\b[^>]*class="[^"]*\b(?:st-chatu8-image-button|image-tag-button)\b[^"]*"[^>]*>[\s\S]*?<\/button>/gi, '')
+    .replace(
+      /<button\b[^>]*class="[^"]*\b(?:st-chatu8-image-button|image-tag-button)\b[^"]*"[^>]*>[\s\S]*?<\/button>/gi,
+      '',
+    )
     .replace(
       /<(span|div)\b[^>]*class="[^"]*\b(?:st-chatu8-image-span|image-tag-placeholder|st-chatu8-image-container|ai-image-container)\b[^"]*"[^>]*>[\s\S]*?<\/\1>/gi,
       '',
