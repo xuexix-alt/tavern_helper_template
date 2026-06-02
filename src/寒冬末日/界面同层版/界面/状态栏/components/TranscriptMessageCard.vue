@@ -343,14 +343,18 @@ function normalizePromptTokenForInlineCompare(value: unknown): string {
   if (!source) return '';
   const match = source.match(/([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/);
   const token = String(match?.[0] ?? source).trim();
-  return token.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  return token
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 function resolveInlinePlacementTarget(element: HTMLElement): HTMLElement {
   const parent = element.parentElement;
   const parentOnlyContainsMarker =
-    parent?.tagName === 'P' &&
-    String(parent.textContent ?? '').trim() === String(element.textContent ?? '').trim();
+    parent?.tagName === 'P' && String(parent.textContent ?? '').trim() === String(element.textContent ?? '').trim();
   return parentOnlyContainsMarker ? parent : element;
 }
 
@@ -430,15 +434,16 @@ function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMa
   const hasPromptPayload = (candidate: HTMLElement | null): candidate is HTMLElement =>
     Boolean(
       candidate &&
-        (candidate.dataset.imageTag ||
-          candidate.dataset.link ||
-          candidate.getAttribute('data-image-tag') ||
-          candidate.getAttribute('data-link')),
+      (candidate.dataset.imageTag ||
+        candidate.dataset.link ||
+        candidate.getAttribute('data-image-tag') ||
+        candidate.getAttribute('data-link')),
     );
 
   let sibling = carrier.previousElementSibling;
   while (sibling) {
-    if (sibling.matches?.(selector) && hasPromptPayload(sibling as HTMLElement)) return (sibling as HTMLElement).dataset;
+    if (sibling.matches?.(selector) && hasPromptPayload(sibling as HTMLElement))
+      return (sibling as HTMLElement).dataset;
     sibling = sibling.previousElementSibling;
   }
 
@@ -447,7 +452,9 @@ function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMa
   const candidates = Array.from(root?.querySelectorAll(selector) ?? []) as HTMLElement[];
   if (requestId) {
     const matched = candidates.find(candidate => {
-      const candidateRequestId = String(candidate.dataset.requestId ?? candidate.getAttribute('data-request-id') ?? '').trim();
+      const candidateRequestId = String(
+        candidate.dataset.requestId ?? candidate.getAttribute('data-request-id') ?? '',
+      ).trim();
       return candidateRequestId === requestId && hasPromptPayload(candidate);
     });
     if (matched) return matched.dataset;

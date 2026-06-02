@@ -115,7 +115,10 @@ test('gallery images expose the compact refresh icon only when the entry can tar
   assert.match(source, /aria-label="重新生成图片"/);
   assert.match(source, /@click\.stop\.capture="handleRegenerateClick"/);
   assert.match(source, /const canRegenerate = computed\(\(\) => props\.entry\.canRegenerate === true\);/);
-  assert.match(source, /const showRegenerateAction = computed\(\(\) => props\.variant === 'gallery' && canRegenerate\.value\);/);
+  assert.match(
+    source,
+    /const showRegenerateAction = computed\(\(\) => props\.variant === 'gallery' && canRegenerate\.value\);/,
+  );
   assert.match(source, /if \(!canRegenerate\.value\) return;/);
   assert.match(source, /emit\('regenerate', activationPayload\.value\)/);
   assert.match(source, /source: props\.variant === 'gallery' \? 'gallery' : 'transcript'/);

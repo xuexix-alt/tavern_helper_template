@@ -1958,27 +1958,24 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
   const intentSource = payload?.source === 'gallery' ? 'gallery' : 'transcript';
   await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
     await ensureHostMesTextRendered(Math.trunc(messageId));
-    const targetNode = await resolveWithRetry(
-      () => {
-        const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-          Math.trunc(messageId),
-          promptToken,
-          requestId,
-          imageSrc,
-        );
-        return resolveGeneratedImageTriggerTarget(
-          {
-            hostMessageRoot,
-            hostButton,
-            hostImage,
-            iframeButton,
-            iframeImage,
-          },
-          'regenerate',
-        );
-      },
-      PLUGIN_NATIVE_TARGET_RESOLVE_RETRY,
-    );
+    const targetNode = await resolveWithRetry(() => {
+      const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
+        Math.trunc(messageId),
+        promptToken,
+        requestId,
+        imageSrc,
+      );
+      return resolveGeneratedImageTriggerTarget(
+        {
+          hostMessageRoot,
+          hostButton,
+          hostImage,
+          iframeButton,
+          iframeImage,
+        },
+        'regenerate',
+      );
+    }, PLUGIN_NATIVE_TARGET_RESOLVE_RETRY);
     if (!targetNode) {
       toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
       return;

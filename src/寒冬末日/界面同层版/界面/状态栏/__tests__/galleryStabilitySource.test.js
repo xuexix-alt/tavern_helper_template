@@ -93,7 +93,10 @@ test('transcript card replaces native prompt token markers before appending tail
 test('transcript native image regenerate payload falls back to adjacent plugin prompt buttons', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
-  assert.match(cardSource, /function resolvePluginPromptDatasetForCarrier\(carrier: HTMLElement\): DOMStringMap \| null/);
+  assert.match(
+    cardSource,
+    /function resolvePluginPromptDatasetForCarrier\(carrier: HTMLElement\): DOMStringMap \| null/,
+  );
   assert.match(cardSource, /button\.image-tag-button, button\.st-chatu8-image-button/);
   assert.match(cardSource, /sibling\.matches\?\.\(selector\)/);
   assert.match(cardSource, /candidate\.dataset\.imageTag/);
@@ -347,19 +350,16 @@ test('gallery drawer starts an initial cache session before showing an empty sta
     streamingSource,
     /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open', mode: GalleryInitialCacheMode = 'drawer'\)/,
   );
-  assert.match(
-    streamingSource,
-    /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000\] as const;/,
-  );
-  assert.match(
-    streamingSource,
-    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000\] as const;/,
-  );
+  assert.match(streamingSource, /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000\] as const;/);
+  assert.match(streamingSource, /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000\] as const;/);
   assert.match(streamingSource, /let galleryInitialCacheSessionId = 0;/);
   assert.match(streamingSource, /scheduleGalleryInitialCacheProbe\(\(\) => \{/);
   assert.match(streamingSource, /if \(sessionId !== galleryInitialCacheSessionId\) return;/);
   assert.match(streamingSource, /scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/);
-  assert.match(streamingSource, /if \(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) \{/);
+  assert.match(
+    streamingSource,
+    /if \(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) \{/,
+  );
   assert.match(streamingSource, /clearGalleryInitialCacheTimers\(\);/);
   assert.match(storyPageSource, /startGalleryImageCacheSession\('gallery\.drawer_open'\);/);
   assert.match(storyPageSource, /:loading-initial="loadingInitialGalleryImages"/);

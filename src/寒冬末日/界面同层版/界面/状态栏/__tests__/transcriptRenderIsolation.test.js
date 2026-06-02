@@ -368,7 +368,10 @@ test('plugin-native placeholder-only DOM mutations trigger prompt reconciliation
   const source = readSource('useStreamingDemo.ts');
   const sameLayerObserverStart = source.indexOf('generatedImageDomObserver = new MutationObserver');
   assert.notEqual(sameLayerObserverStart, -1, 'should find same-layer generated image mutation observer');
-  const sameLayerObserverEnd = source.indexOf('hostPluginMutationObservers = bindHostPluginMutationObservers', sameLayerObserverStart);
+  const sameLayerObserverEnd = source.indexOf(
+    'hostPluginMutationObservers = bindHostPluginMutationObservers',
+    sameLayerObserverStart,
+  );
   assert.notEqual(sameLayerObserverEnd, -1, 'should find host observer after same-layer observer');
   const sameLayerObserverBody = source.slice(sameLayerObserverStart, sameLayerObserverEnd);
   const hostObserverStart = sameLayerObserverEnd;
@@ -652,7 +655,7 @@ test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridg
   assert.equal(
     source.includes('const promptButtons = Array.from(') &&
       source.includes(
-        "root.querySelectorAll(\n      'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role=\"button\"]'",
+        'root.querySelectorAll(\n      \'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]\'',
       ),
     true,
     'plugin-native generate placeholders should bind both image-tag-button and st-chatu8-image-button variants',
