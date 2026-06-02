@@ -1653,6 +1653,7 @@ const PLUGIN_CLICK_TRIGGER_SELECTOR =
   '.st-chatu8-click-trigger-overlay, .st-chatu8-click-trigger-bubble, [class*="click-trigger"]';
 const PLUGIN_CLICK_TRIGGER_BUBBLE_SELECTOR =
   '.st-chatu8-click-trigger-bubble, [class*="click-trigger"][class*="bubble"]';
+const PLUGIN_NATIVE_TARGET_RESOLVE_RETRY = { attempts: 32, delayMs: 150 } as const;
 
 function isPluginClickTriggerElement(node: Element): boolean {
   return Boolean(node.matches?.(PLUGIN_CLICK_TRIGGER_SELECTOR) || node.querySelector?.(PLUGIN_CLICK_TRIGGER_SELECTOR));
@@ -1976,7 +1977,7 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
           'regenerate',
         );
       },
-      { attempts: 5, delayMs: 90 },
+      PLUGIN_NATIVE_TARGET_RESOLVE_RETRY,
     );
     if (!targetNode) {
       toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);

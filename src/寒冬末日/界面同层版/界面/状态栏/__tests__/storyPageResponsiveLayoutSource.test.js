@@ -183,3 +183,15 @@ test('StoryPage resolves existing image actions inside a target-message plugin-n
     'double-click regenerate should lease the host message before resolving the host-only regenerate target',
   );
 });
+
+test('StoryPage waits for st-chatu8 to inject host-native image targets before transcript image regenerate', () => {
+  const source = read('../pages/StoryPage.vue');
+  const regenerateBody = extractFunctionBody(source, 'activateGeneratedImageRegenerate');
+
+  assert.match(source, /const PLUGIN_NATIVE_TARGET_RESOLVE_RETRY = \{ attempts: 32, delayMs: 150 \} as const;/);
+  assert.match(
+    regenerateBody,
+    /await ensureHostMesTextRendered\(Math\.trunc\(messageId\)\);[\s\S]*resolveWithRetry\([\s\S]*PLUGIN_NATIVE_TARGET_RESOLVE_RETRY/,
+    'regenerate should give st-chatu8 processMesTextElements time to materialize host buttons/spans before declaring the target missing',
+  );
+});

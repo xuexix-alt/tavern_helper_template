@@ -333,6 +333,50 @@ function appendMissingGalleryFigure(root: HTMLElement, entry: ReaderGalleryEntry
   return true;
 }
 
+type PendingGalleryImageTarget = {
+  element: HTMLElement;
+  tokenCompare: string;
+};
+
+function normalizePromptTokenForInlineCompare(value: unknown): string {
+  const source = String(value ?? '').trim();
+  if (!source) return '';
+  const match = source.match(/([A-Za-z0-9_\u4e00-\u9fa5-]{1,32})###([\s\S]*?)###/);
+  const token = String(match?.[0] ?? source).trim();
+  return token.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function resolveInlinePlacementTarget(element: HTMLElement): HTMLElement {
+  const parent = element.parentElement;
+  const parentOnlyContainsMarker =
+    parent?.tagName === 'P' &&
+    String(parent.textContent ?? '').trim() === String(element.textContent ?? '').trim();
+  return parentOnlyContainsMarker ? parent : element;
+}
+
+function collectPendingGalleryImageTargets(root: HTMLElement): PendingGalleryImageTarget[] {
+  const rawTargets = Array.from(root.querySelectorAll('[data-raw-image-tag="true"]')) as HTMLElement[];
+  const nativePromptTargets = Array.from(
+    root.querySelectorAll('[data-chatu8-native-prompt-token="true"]'),
+  ) as HTMLElement[];
+
+  return [...rawTargets, ...nativePromptTargets].map(element => ({
+    element: resolveInlinePlacementTarget(element),
+    tokenCompare: normalizePromptTokenForInlineCompare(element.textContent ?? element.dataset.promptToken ?? ''),
+  }));
+}
+
+function takePendingGalleryImageTarget(
+  targets: PendingGalleryImageTarget[],
+  entry: ReaderGalleryEntry,
+): HTMLElement | null {
+  const tokenCompare = normalizePromptTokenForInlineCompare(entry.promptToken);
+  const index = tokenCompare ? targets.findIndex(target => target.tokenCompare === tokenCompare) : 0;
+  if (index < 0) return null;
+  const [target] = targets.splice(index, 1);
+  return target?.element ?? null;
+}
+
 function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
@@ -345,18 +389,12 @@ function hydratePendingImagesFromGalleryEntries() {
   });
   if (missingEntries.length === 0) return;
 
-  const pendingNodes = Array.from(root.querySelectorAll('[data-raw-image-tag="true"]')) as HTMLElement[];
-  const targets = pendingNodes.map(node => {
-    const parent = node.parentElement;
-    const parentOnlyContainsPlaceholder =
-      parent?.tagName === 'P' && String(parent.textContent ?? '').trim() === String(node.textContent ?? '').trim();
-    return parentOnlyContainsPlaceholder ? parent : node;
-  });
+  const targets = collectPendingGalleryImageTargets(root);
 
   let injected = 0;
   let appended = 0;
   for (const entry of missingEntries) {
-    const target = targets.shift();
+    const target = takePendingGalleryImageTarget(targets, entry);
     if (!target) {
       if (appendMissingGalleryFigure(root, entry)) appended += 1;
       continue;
@@ -387,6 +425,41 @@ function stopEvent(event: Event) {
   nativeEvent.stopImmediatePropagation?.();
 }
 
+function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMap | null {
+  const selector = 'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]';
+  const hasPromptPayload = (candidate: HTMLElement | null): candidate is HTMLElement =>
+    Boolean(
+      candidate &&
+        (candidate.dataset.imageTag ||
+          candidate.dataset.link ||
+          candidate.getAttribute('data-image-tag') ||
+          candidate.getAttribute('data-link')),
+    );
+
+  let sibling = carrier.previousElementSibling;
+  while (sibling) {
+    if (sibling.matches?.(selector) && hasPromptPayload(sibling as HTMLElement)) return (sibling as HTMLElement).dataset;
+    sibling = sibling.previousElementSibling;
+  }
+
+  const requestId = String(carrier.dataset.requestId ?? carrier.getAttribute('data-request-id') ?? '').trim();
+  const root = assistantBodyRef.value;
+  const candidates = Array.from(root?.querySelectorAll(selector) ?? []) as HTMLElement[];
+  if (requestId) {
+    const matched = candidates.find(candidate => {
+      const candidateRequestId = String(candidate.dataset.requestId ?? candidate.getAttribute('data-request-id') ?? '').trim();
+      return candidateRequestId === requestId && hasPromptPayload(candidate);
+    });
+    if (matched) return matched.dataset;
+  }
+
+  const container = carrier.closest('.ai-image-container, .st-chatu8-image-container');
+  const containerButton = container?.querySelector(selector) as HTMLElement | null;
+  if (hasPromptPayload(containerButton)) return containerButton.dataset;
+
+  return candidates.find(hasPromptPayload)?.dataset ?? null;
+}
+
 function bindAssistantBodyInteractions() {
   clearAssistantBodyInteractionBindings();
   const root = assistantBodyRef.value;
@@ -401,8 +474,9 @@ function bindAssistantBodyInteractions() {
       targetElement instanceof HTMLImageElement
         ? targetElement
         : ((targetElement?.querySelector?.('img') ?? carrier.querySelector('img')) as HTMLImageElement | null);
+    const promptDataset = resolvePluginPromptDatasetForCarrier(carrier);
     return parseGeneratedImageActivationPayload({
-      carrierDataset: carrier.dataset,
+      carrierDataset: { ...promptDataset, ...carrier.dataset },
       targetDataset: targetElement?.dataset ?? targetImage?.dataset ?? {},
       targetAttrSrc: targetImage?.getAttribute('src') ?? null,
       targetCurrentSrc: targetImage?.currentSrc ?? null,

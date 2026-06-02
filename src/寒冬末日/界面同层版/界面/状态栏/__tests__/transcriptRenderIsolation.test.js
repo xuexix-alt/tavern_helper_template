@@ -366,15 +366,24 @@ test('same-layer listens to current st-chatu8 regex and rendered-message handoff
 
 test('plugin-native placeholder-only DOM mutations trigger prompt reconciliation before src is ready', () => {
   const source = readSource('useStreamingDemo.ts');
+  const sameLayerObserverStart = source.indexOf('generatedImageDomObserver = new MutationObserver');
+  assert.notEqual(sameLayerObserverStart, -1, 'should find same-layer generated image mutation observer');
+  const sameLayerObserverEnd = source.indexOf('hostPluginMutationObservers = bindHostPluginMutationObservers', sameLayerObserverStart);
+  assert.notEqual(sameLayerObserverEnd, -1, 'should find host observer after same-layer observer');
+  const sameLayerObserverBody = source.slice(sameLayerObserverStart, sameLayerObserverEnd);
+  const hostObserverStart = sameLayerObserverEnd;
+  const hostObserverEnd = source.indexOf('rebuildTranscript();', hostObserverStart);
+  assert.notEqual(hostObserverEnd, -1, 'should find host observer end before mounted transcript rebuild');
+  const hostObserverBody = source.slice(hostObserverStart, hostObserverEnd);
 
   assert.match(
-    source,
-    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\('same_layer\.plugin_native_placeholder_dom_mutation', affectedMessageIds\);[\s\S]*return;[\s\S]*\}/,
+    sameLayerObserverBody,
+    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\([\s\S]*'same_layer\.plugin_native_placeholder_dom_mutation'[\s\S]*affectedMessageIds[\s\S]*\);[\s\S]*return;[\s\S]*\}/,
     'same-layer document observer should reconcile prompt placeholders even when plugin buttons exist before img src',
   );
   assert.match(
-    source,
-    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\('host\.plugin_native_placeholder_dom_mutation', affectedMessageIds\);[\s\S]*return;[\s\S]*\}/,
+    hostObserverBody,
+    /if \(!hasReadyNativeImageMutation\) \{[\s\S]*schedulePluginNativePromptPlaceholderReconcile\([\s\S]*'host\.plugin_native_placeholder_dom_mutation'[\s\S]*affectedMessageIds[\s\S]*\);[\s\S]*return;[\s\S]*\}/,
     'host document observer should reconcile prompt placeholders even when plugin buttons exist before img src',
   );
 });
@@ -416,6 +425,21 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
     source,
     /window\.setTimeout\(\(\) => void hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\), 250\);/,
     'mounted same-layer UI should run the native host hydration probe, not just recompute existing iframe DOM',
+  );
+});
+
+test('same-layer boot starts a lightweight gallery image cache session without waiting for the drawer click', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /window\.setTimeout\(\(\) => startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\), 900\);/,
+    'initial same-layer image hydration should run lightweight gallery cache probes before the user opens the drawer',
+  );
+  assert.match(
+    source,
+    /startGalleryImageCacheSession[\s\S]*const delays = mode === 'boot' \? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;[\s\S]*if \(mode !== 'boot'\) scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);[\s\S]*scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
+    'boot cache probes should keep image recovery without repainting the gallery panel on every retry',
   );
 });
 
@@ -466,6 +490,26 @@ test('same-layer transcript preserves plugin-native prompt placeholders before r
     source,
     /extraImages: readChatu8ExtraImageRecords\(messageId\),/,
     'native placement hints should read raw st-chatu8 extra image records so regex anchors survive before src is available',
+  );
+});
+
+test('same-layer prompt placeholder hydration imports the prompt token extractor it calls', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const importStart = source.indexOf("} from './hostBridge';");
+  assert.notEqual(importStart, -1, 'should import hostBridge helpers');
+  const importBlockStart = source.lastIndexOf('import {', importStart);
+  assert.notEqual(importBlockStart, -1, 'should find hostBridge import block');
+  const importBlock = source.slice(importBlockStart, importStart);
+
+  assert.match(
+    source,
+    /function hydratePluginNativePromptPlaceholdersHtml\([\s\S]*extractPromptToken\(/,
+    'placeholder hydration should extract tokens from native button/span payloads',
+  );
+  assert.match(
+    importBlock,
+    /\bextractPromptToken\b/,
+    'extractPromptToken must be imported before placeholder hydration calls it',
   );
 });
 
@@ -579,9 +623,9 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
     'tail image visibility should hide the real appended finalHtml images, not only gallery containers',
   );
   assert.equal(
-    source.includes(':entries="galleryEntries"'),
+    source.includes(':entries="galleryVisibleEntries"'),
     true,
-    'the right-side gallery drawer should keep the full gallery entries regardless of the tail image switch',
+    'the right-side gallery drawer should keep the selected-window gallery entries regardless of the tail image switch',
   );
   assert.equal(
     source.includes('末尾图'),
@@ -599,14 +643,18 @@ test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridg
     /root\.querySelectorAll\(\s*['"]\.st-chatu8-image-span,\s*\.assistant-fallback-inline-image,\s*\.assistant-fallback-generated-image['"]/,
     'plugin-native inline image spans should not be covered by the fallback hitarea query',
   );
-  assert.match(
-    source,
-    /const pluginNativeCarriers = Array\.from\(\s*root\.querySelectorAll\('\.st-chatu8-image-span,\s*span\.image-tag-placeholder'\)\s*\)/,
+  assert.equal(
+    source.includes('const pluginNativeCarriers = Array.from(') &&
+      source.includes("root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder')"),
+    true,
     'plugin-native inline image spans and placeholders should be bound as their own native carrier targets',
   );
-  assert.match(
-    source,
-    /root\.querySelectorAll\('button\.image-tag-button,\s*button\.st-chatu8-image-button,\s*\.st-chatu8-image-button\[role="button"\]'\)/,
+  assert.equal(
+    source.includes('const promptButtons = Array.from(') &&
+      source.includes(
+        "root.querySelectorAll(\n      'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role=\"button\"]'",
+      ),
+    true,
     'plugin-native generate placeholders should bind both image-tag-button and st-chatu8-image-button variants',
   );
   assert.match(

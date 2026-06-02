@@ -101,14 +101,27 @@ test('gallery image portrait assignment is a compact icon beside the image name'
   );
 });
 
-test('gallery images expose a compact refresh icon that uses the same regenerate payload path as double click', () => {
+test('gallery images expose the compact refresh icon only when the entry can target native regenerate', () => {
   const source = read('../components/GeneratedImageAsset.vue');
+  const typesSource = read('../types.ts');
+  const streamingSource = read('../useStreamingDemo.ts');
 
   assert.match(source, /class="generated-image-caption-actions"/);
-  assert.match(source, /class="generated-image-regenerate-icon-btn clip-corner-sm"/);
+  assert.match(
+    source,
+    /v-if="showRegenerateAction"[\s\S]{0,180}class="generated-image-regenerate-icon-btn clip-corner-sm"/,
+  );
   assert.match(source, /title="重新生成图片"/);
   assert.match(source, /aria-label="重新生成图片"/);
   assert.match(source, /@click\.stop\.capture="handleRegenerateClick"/);
+  assert.match(source, /const canRegenerate = computed\(\(\) => props\.entry\.canRegenerate === true\);/);
+  assert.match(source, /const showRegenerateAction = computed\(\(\) => props\.variant === 'gallery' && canRegenerate\.value\);/);
+  assert.match(source, /if \(!canRegenerate\.value\) return;/);
   assert.match(source, /emit\('regenerate', activationPayload\.value\)/);
   assert.match(source, /source: props\.variant === 'gallery' \? 'gallery' : 'transcript'/);
+  assert.match(typesSource, /canRegenerate\?: boolean;/);
+  assert.match(streamingSource, /canRegenerate: canRegenerateFromHostDomArtifacts\(/);
+  assert.match(streamingSource, /const hasNativeRegenerateIdentity = Boolean\(requestId \|\| promptTokenCompare\);/);
+  assert.match(streamingSource, /if \(!hasNativeRegenerateIdentity\) return false;/);
+  assert.match(streamingSource, /canRegenerate: true,/);
 });

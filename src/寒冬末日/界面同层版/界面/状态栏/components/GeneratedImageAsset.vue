@@ -59,6 +59,7 @@
         <strong>{{ captionPrimaryText }}</strong>
         <div v-if="variant === 'gallery'" class="generated-image-caption-actions">
           <button
+            v-if="showRegenerateAction"
             type="button"
             class="generated-image-regenerate-icon-btn clip-corner-sm"
             title="重新生成图片"
@@ -149,7 +150,9 @@ function buildCaptionPrimaryText() {
 }
 
 const kickerText = computed(() => (resolvedSource.value ? '单击查看' : '等待图片'));
-const secondaryText = computed(() => (props.entry.requestId ? '双击重生' : '双击调用原图链'));
+const canRegenerate = computed(() => props.entry.canRegenerate === true);
+const showRegenerateAction = computed(() => props.variant === 'gallery' && canRegenerate.value);
+const secondaryText = computed(() => (canRegenerate.value ? '双击重生' : '单击查看原图'));
 const captionPrimaryText = computed(() => buildCaptionPrimaryText());
 const captionSecondaryText = computed(() => {
   const title = String(props.entry.title ?? '').trim();
@@ -204,6 +207,7 @@ function handleClick(event: MouseEvent) {
 function handleDoubleClick(event: MouseEvent) {
   stopEvent(event);
   suppressNextClick = true;
+  if (!canRegenerate.value) return;
   gestureController.handleDoubleClick();
 }
 
@@ -232,6 +236,7 @@ function handleAssignClick(event: Event) {
 
 function handleRegenerateClick(event: Event) {
   stopEvent(event);
+  if (!canRegenerate.value) return;
   emit('regenerate', activationPayload.value);
 }
 

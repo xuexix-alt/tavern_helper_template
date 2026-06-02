@@ -72,6 +72,7 @@ import {
   callHostGetChatMessages,
   collectChatu8PromptTokens,
   collectReachableHostDocuments,
+  extractPromptToken,
   normalizeImageDataToSrc,
   normalizeImageSrcForCompare,
   readChatMessageDetail,
@@ -203,6 +204,7 @@ type HostTranscriptVisibleOptions = {
   beforeRelease?: () => Promise<void> | void;
 };
 type AssistantPlaceholderEnsureReason = 'first_token' | 'finalize_fallback' | 'native_reasoning' | `signal_${string}`;
+type GalleryInitialCacheMode = 'drawer' | 'boot';
 
 const DEMO_THEME_CLASS_NAMES = [
   'theme-tech',
@@ -220,7 +222,8 @@ const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;
 const GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE = 48;
 const GALLERY_WINDOW_NATIVE_HYDRATION_CHUNK_SIZE = 4;
-const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = [0, 300, 1200, 3000, 6000, 9000] as const;
+const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = [0, 900, 3000, 6000] as const;
+const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;
@@ -1775,6 +1778,41 @@ function pickFirstNonEmpty(...values: unknown[]): string {
   return '';
 }
 
+function canRegenerateFromHostDomArtifacts(
+  image: {
+    markerId?: string;
+    imageId?: string;
+    requestId?: string;
+    promptToken?: string;
+    src?: string;
+  },
+  hostDomArtifacts: RenderableGeneratedImage[],
+): boolean {
+  if (!Array.isArray(hostDomArtifacts) || hostDomArtifacts.length === 0) return false;
+  const markerId = String(image.markerId ?? '').trim();
+  const imageId = String(image.imageId ?? '').trim();
+  const requestId = String(image.requestId ?? '').trim();
+  const promptTokenCompare = normalizePromptTokenForCompare(image.promptToken);
+  const src = normalizeImageSrcForCompare(image.src);
+  const hasNativeRegenerateIdentity = Boolean(requestId || promptTokenCompare);
+  if (!hasNativeRegenerateIdentity) return false;
+
+  return hostDomArtifacts.some(hostImage => {
+    const hostMarkerId = String(hostImage.markerId ?? '').trim();
+    const hostImageId = String(hostImage.imageId ?? '').trim();
+    const hostRequestId = String(hostImage.requestId ?? '').trim();
+    const hostPromptTokenCompare = normalizePromptTokenForCompare(hostImage.promptToken);
+    const hostSrc = normalizeImageSrcForCompare(hostImage.src);
+    return (
+      Boolean(requestId && hostRequestId && requestId === hostRequestId) ||
+      Boolean(promptTokenCompare && hostPromptTokenCompare && promptTokenCompare === hostPromptTokenCompare) ||
+      Boolean(markerId && hostMarkerId && markerId === hostMarkerId) ||
+      Boolean(imageId && hostImageId && imageId === hostImageId) ||
+      Boolean(src && hostSrc && src === hostSrc)
+    );
+  });
+}
+
 export function extractTitleFromAnchor(anchorText: string): string {
   const anchor = normalizeImageLabel(anchorText, '');
   if (!anchor) return '';
@@ -1905,6 +1943,7 @@ function buildGeneratedImageRefsForMessage(input: {
           title,
           characterName: characterName || undefined,
           createdOrder: createdOrderBase * 100 + index,
+          canRegenerate: true,
           src,
           alt: image.alt,
         };
@@ -1968,6 +2007,7 @@ function buildGeneratedImageRefsForMessage(input: {
       title,
       characterName: characterName || undefined,
       createdOrder: entity.createdOrder,
+      canRegenerate: canRegenerateFromHostDomArtifacts(entity, hostDomArtifacts),
       src: entity.src,
       alt: entity.alt,
     };
@@ -7005,6 +7045,7 @@ export function useStreamingDemo() {
     window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
     window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
     window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 700);
+    window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 900);
     queueHidePolicy('mounted');
   });
 
@@ -7153,6 +7194,7 @@ export function useStreamingDemo() {
   const galleryOlderLastScanHadNoImages = ref(false);
   const selectedGalleryWindowKey = ref<string>('');
   let galleryWindowHydrationSessionId = 0;
+  let galleryInitialCacheSessionId = 0;
   let lastGalleryWindowHydrationSignature = '';
 
   function flattenGalleryGroupsForEntries(groups: GalleryGroup[]): GeneratedImageRef[] {
@@ -7358,16 +7400,18 @@ export function useStreamingDemo() {
       visibleEntryCount: galleryVisibleEntries.value.length,
       knownEntryCount: galleryEntries.value.length,
     });
-    try {
-      console.debug?.('[same-layer] galleryWindowSelection / scan', {
-        reason,
-        selectedWindowKey: selectedGalleryWindowKey.value,
-        selectedMessageIds: selectedGalleryWindowMessageIds.value,
-        visibleEntryCount: galleryVisibleEntries.value.length,
-        knownEntryCount: galleryEntries.value.length,
-      });
-    } catch {
-      // console may be patched by the host
+    if (debugTraceRuntime.enabled) {
+      try {
+        console.debug?.('[same-layer] galleryWindowSelection / scan', {
+          reason,
+          selectedWindowKey: selectedGalleryWindowKey.value,
+          selectedMessageIds: selectedGalleryWindowMessageIds.value,
+          visibleEntryCount: galleryVisibleEntries.value.length,
+          knownEntryCount: galleryEntries.value.length,
+        });
+      } catch {
+        // console may be patched by the host
+      }
     }
   }
 
@@ -7486,31 +7530,61 @@ export function useStreamingDemo() {
     galleryInitialCacheTimers.clear();
   }
 
-  function startGalleryImageCacheSession(reason = 'gallery.drawer_open') {
+  function scheduleGalleryInitialCacheProbe(callback: () => void, delayMs: number): number {
+    return window.setTimeout(() => {
+      const requestIdle = (window as any).requestIdleCallback;
+      if (typeof requestIdle === 'function') {
+        requestIdle(() => callback(), { timeout: 700 });
+        return;
+      }
+      window.setTimeout(callback, 80);
+    }, delayMs);
+  }
+
+  function startGalleryImageCacheSession(reason = 'gallery.drawer_open', mode: GalleryInitialCacheMode = 'drawer') {
     clearGalleryInitialCacheTimers();
-    const sessionId = Date.now();
+    const sessionId = ++galleryInitialCacheSessionId;
     loadingInitialGalleryImages.value = true;
     galleryOlderLastScanHadNoImages.value = false;
     ensureDefaultGalleryWindowSelection(`${reason}:initial_default`);
+    const delays = mode === 'boot' ? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;
 
-    for (const delayMs of GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS) {
-      const timer = window.setTimeout(() => {
+    for (const delayMs of delays) {
+      const timer = scheduleGalleryInitialCacheProbe(() => {
         galleryInitialCacheTimers.delete(timer);
-        scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
+        if (sessionId !== galleryInitialCacheSessionId) return;
+        if (mode !== 'boot') scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
         scanSelectedGalleryWindow(`${reason}:initial_cache_${delayMs}`);
         recordLifecycleTrace('galleryInitialCache', 'probe', {
           reason,
+          mode,
           delayMs,
           sessionId,
           entryCount: galleryVisibleEntries.value.length,
           knownEntryCount: galleryEntries.value.length,
           groupCount: mergedGalleryGroups.value.length,
         });
-        if (delayMs === GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS[GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS.length - 1]) {
+        if (galleryVisibleEntries.value.length > 0 || galleryEntries.value.length > 0) {
+          clearGalleryInitialCacheTimers();
           loadingInitialGalleryImages.value = false;
           recordLifecycleTrace('galleryInitialCache', 'settled', {
             reason,
+            mode,
             sessionId,
+            settledReason: 'images_found',
+            entryCount: galleryVisibleEntries.value.length,
+            knownEntryCount: galleryEntries.value.length,
+            groupCount: mergedGalleryGroups.value.length,
+          });
+          return;
+        }
+        if (delayMs === delays[delays.length - 1]) {
+          loadingInitialGalleryImages.value = false;
+          recordLifecycleTrace('galleryInitialCache', 'settled', {
+            reason,
+            mode,
+            sessionId,
+            settledReason: 'last_probe',
             entryCount: galleryVisibleEntries.value.length,
             knownEntryCount: galleryEntries.value.length,
             groupCount: mergedGalleryGroups.value.length,

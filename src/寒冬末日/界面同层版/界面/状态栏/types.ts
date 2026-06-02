@@ -62,6 +62,7 @@ export type GeneratedImageRef = {
   title: string;
   characterName?: string;
   createdOrder: number;
+  canRegenerate?: boolean;
   /** 直接从 DOM img 读取的图片地址，优先于 resolver 链路 */
   src?: string;
   alt?: string;

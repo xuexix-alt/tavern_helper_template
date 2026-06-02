@@ -77,6 +77,35 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
   assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
 });
 
+test('transcript card replaces native prompt token markers before appending tail gallery figures', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(cardSource, /function collectPendingGalleryImageTargets\(root: HTMLElement\)/);
+  assert.match(cardSource, /\[data-chatu8-native-prompt-token="true"\]/);
+  assert.match(cardSource, /takePendingGalleryImageTarget\(targets, entry\)/);
+  assert.match(cardSource, /normalizePromptTokenForInlineCompare\(entry\.promptToken\)/);
+  assert.match(
+    cardSource,
+    /const target = takePendingGalleryImageTarget\(targets, entry\);[\s\S]*target\.replaceWith\(figure\);/,
+  );
+});
+
+test('transcript native image regenerate payload falls back to adjacent plugin prompt buttons', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(cardSource, /function resolvePluginPromptDatasetForCarrier\(carrier: HTMLElement\): DOMStringMap \| null/);
+  assert.match(cardSource, /button\.image-tag-button, button\.st-chatu8-image-button/);
+  assert.match(cardSource, /sibling\.matches\?\.\(selector\)/);
+  assert.match(cardSource, /candidate\.dataset\.imageTag/);
+  assert.match(cardSource, /candidate\.dataset\.link/);
+  assert.match(cardSource, /candidate\.getAttribute\('data-image-tag'\)/);
+  assert.match(
+    cardSource,
+    /const promptDataset = resolvePluginPromptDatasetForCarrier\(carrier\);[\s\S]*carrierDataset: \{ \.\.\.promptDataset, \.\.\.carrier\.dataset \}/,
+    'payload parsing should inherit prompt tokens from native plugin buttons when the clicked image span lacks them',
+  );
+});
+
 test('transcript card hydrates newly ready gallery entries even when the message already has images', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
@@ -314,16 +343,64 @@ test('gallery drawer starts an initial cache session before showing an empty sta
   const panelSource = readSource('components/ImageGalleryPanel.vue');
 
   assert.match(streamingSource, /const loadingInitialGalleryImages = ref\(false\);/);
-  assert.match(streamingSource, /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open'\)/);
   assert.match(
     streamingSource,
-    /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/,
+    /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open', mode: GalleryInitialCacheMode = 'drawer'\)/,
   );
+  assert.match(
+    streamingSource,
+    /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000\] as const;/,
+  );
+  assert.match(
+    streamingSource,
+    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000\] as const;/,
+  );
+  assert.match(streamingSource, /let galleryInitialCacheSessionId = 0;/);
+  assert.match(streamingSource, /scheduleGalleryInitialCacheProbe\(\(\) => \{/);
+  assert.match(streamingSource, /if \(sessionId !== galleryInitialCacheSessionId\) return;/);
   assert.match(streamingSource, /scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/);
+  assert.match(streamingSource, /if \(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) \{/);
+  assert.match(streamingSource, /clearGalleryInitialCacheTimers\(\);/);
   assert.match(storyPageSource, /startGalleryImageCacheSession\('gallery\.drawer_open'\);/);
   assert.match(storyPageSource, /:loading-initial="loadingInitialGalleryImages"/);
   assert.match(panelSource, /loadingInitial\?: boolean;/);
   assert.match(panelSource, /正在缓存当前图片/);
+});
+
+test('gallery boot cache session stays lightweight to avoid blocking initial UI render', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    streamingSource,
+    /type GalleryInitialCacheMode = 'drawer' \| 'boot';/,
+    'cache sessions should distinguish boot probes from user-opened drawer probes',
+  );
+  assert.match(
+    streamingSource,
+    /const delays = mode === 'boot' \? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;/,
+  );
+  assert.match(
+    streamingSource,
+    /if \(mode !== 'boot'\) scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
+    'boot probes should not repaint the gallery panel on every retry',
+  );
+  assert.match(
+    streamingSource,
+    /startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\)/,
+    'mounted recovery should use the lightweight boot probe mode',
+  );
+  assert.doesNotMatch(
+    streamingSource,
+    /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/,
+    'the old six-probe cache loop was too heavy during UI startup',
+  );
+});
+
+test('gallery window scans avoid production console spam unless same-layer debug tracing is enabled', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(streamingSource, /if \(debugTraceRuntime\.enabled\) \{/);
+  assert.match(streamingSource, /console\.debug\?\.\('\[same-layer\] galleryWindowSelection \/ scan'/);
 });
 
 test('gallery uses a transcript-style single-select floor window instead of multi-select rescans', () => {
