@@ -478,7 +478,11 @@ function bindAssistantBodyInteractions() {
     });
   };
 
-  const promptButtons = Array.from(root.querySelectorAll('button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]')) as HTMLElement[];
+  const promptButtons = Array.from(
+    root.querySelectorAll(
+      'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]',
+    ),
+  ) as HTMLElement[];
   for (const button of promptButtons) {
     if (!button.dataset.messageId) button.dataset.messageId = itemMessageId;
     const handleClick = (event: Event) => {
@@ -491,12 +495,16 @@ function bindAssistantBodyInteractions() {
     });
   }
 
-  const pluginNativeCarriers = Array.from(root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder')) as HTMLElement[];
+  const pluginNativeCarriers = Array.from(
+    root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder'),
+  ) as HTMLElement[];
   for (const carrier of pluginNativeCarriers) {
     bindGestureTarget(carrier, carrier);
   }
 
-  const fallbackCarriers = Array.from(root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image')) as HTMLElement[];
+  const fallbackCarriers = Array.from(
+    root.querySelectorAll('.assistant-fallback-inline-image, .assistant-fallback-generated-image'),
+  ) as HTMLElement[];
   recordComponentTrace('bind_interactions', {
     promptButtonCount: promptButtons.length,
     carrierCount: pluginNativeCarriers.length + fallbackCarriers.length,

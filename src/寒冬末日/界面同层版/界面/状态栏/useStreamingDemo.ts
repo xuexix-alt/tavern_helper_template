@@ -1025,7 +1025,9 @@ function readNativeFirstRenderableImagesForMessage(input: {
   return out;
 }
 
-function countNativeFirstArtifactSources(artifacts: NativeFirstImageArtifact[]): Record<NativeFirstArtifactSource, number> {
+function countNativeFirstArtifactSources(
+  artifacts: NativeFirstImageArtifact[],
+): Record<NativeFirstArtifactSource, number> {
   const counts: Record<NativeFirstArtifactSource, number> = {
     host_dom: 0,
     extra: 0,
@@ -1082,10 +1084,7 @@ function summarizeGalleryRefCacheObject(input: unknown): string {
 
 function summarizeGalleryRefCacheArray(entries: unknown[]): string {
   const values = Array.isArray(entries) ? entries : [];
-  return `${values.length}:${values
-    .slice(0, 16)
-    .map(summarizeGalleryRefCacheObject)
-    .join('|')}`;
+  return `${values.length}:${values.slice(0, 16).map(summarizeGalleryRefCacheObject).join('|')}`;
 }
 
 function buildGalleryGeneratedImageRefCacheSignature(input: {
@@ -2943,21 +2942,22 @@ export function useStreamingDemo() {
    * 用于兜底检测：当 getVariables API 不可用、openingPayload 无法恢复时，
    * 如果已经有用户消息，说明开局流程已启动，不应再显示开局配置弹窗。
    */
-  const hasOpeningSeedUserMessage = computed(() =>
-    transcript.value.some(item => item.role === 'user' && item.message_id > 0) ||
-    (() => {
-      const containerId = getActiveContainerMessageId();
-      const hostMessages = readAllChatMessagesRaw();
-      return hostMessages.some(message => {
-        const messageId = Math.trunc(Number(message?.message_id));
-        if (!Number.isFinite(messageId) || messageId <= 0) return false;
-        if (containerId != null && messageId <= containerId) return false;
-        return (
-          resolveHostMessageRole(message) === 'user' ||
-          isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)
-        );
-      });
-    })(),
+  const hasOpeningSeedUserMessage = computed(
+    () =>
+      transcript.value.some(item => item.role === 'user' && item.message_id > 0) ||
+      (() => {
+        const containerId = getActiveContainerMessageId();
+        const hostMessages = readAllChatMessagesRaw();
+        return hostMessages.some(message => {
+          const messageId = Math.trunc(Number(message?.message_id));
+          if (!Number.isFinite(messageId) || messageId <= 0) return false;
+          if (containerId != null && messageId <= containerId) return false;
+          return (
+            resolveHostMessageRole(message) === 'user' ||
+            isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)
+          );
+        });
+      })(),
   );
 
   const shouldShowOpeningSetup = computed(() => {
@@ -4291,7 +4291,9 @@ export function useStreamingDemo() {
       if (!mesText) continue;
       promptButtonCount += mesText.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR).length;
       promptPlaceholderCount += mesText.querySelectorAll(CHATU8_IMAGE_SPAN_SELECTOR).length;
-      readyImageCount += mesText.querySelectorAll(`${CHATU8_IMAGE_SPAN_SELECTOR} img, ${CHATU8_IMAGE_CONTAINER_SELECTOR} img`).length;
+      readyImageCount += mesText.querySelectorAll(
+        `${CHATU8_IMAGE_SPAN_SELECTOR} img, ${CHATU8_IMAGE_CONTAINER_SELECTOR} img`,
+      ).length;
       hasDomHandoff = hasDomHandoff || Boolean(mesText.querySelector(handoffSelector));
     }
 
@@ -6969,7 +6971,10 @@ export function useStreamingDemo() {
           const affectedMessageIds = collectMutationMessageIds(records);
           const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
           if (!hasReadyNativeImageMutation) {
-            schedulePluginNativePromptPlaceholderReconcile('same_layer.plugin_native_placeholder_dom_mutation', affectedMessageIds);
+            schedulePluginNativePromptPlaceholderReconcile(
+              'same_layer.plugin_native_placeholder_dom_mutation',
+              affectedMessageIds,
+            );
             return;
           }
           queueGeneratedImageEntityRefresh(affectedMessageIds);
@@ -6983,12 +6988,15 @@ export function useStreamingDemo() {
       }
       hostPluginMutationObservers = bindHostPluginMutationObservers(records => {
         syncPendingRequestHintsFromDom();
-          const affectedMessageIds = collectMutationMessageIds(records);
-          const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
-          if (!hasReadyNativeImageMutation) {
-            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_placeholder_dom_mutation', affectedMessageIds);
-            return;
-          }
+        const affectedMessageIds = collectMutationMessageIds(records);
+        const hasReadyNativeImageMutation = records.some(hasReadyChatu8Mutation);
+        if (!hasReadyNativeImageMutation) {
+          schedulePluginNativePromptPlaceholderReconcile(
+            'host.plugin_native_placeholder_dom_mutation',
+            affectedMessageIds,
+          );
+          return;
+        }
         queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');
       });
     }

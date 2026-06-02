@@ -271,7 +271,10 @@ test('gallery and transcript image readers share native-first diagnostic probes'
 test('gallery records zero-hit cross-floor scans and explicit message-id scans', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
-  assert.match(streamingSource, /const scanMode = explicitIds\.size > 0 \? 'explicit-message-ids' : 'recent-cross-floor';/);
+  assert.match(
+    streamingSource,
+    /const scanMode = explicitIds\.size > 0 \? 'explicit-message-ids' : 'recent-cross-floor';/,
+  );
   assert.match(streamingSource, /recordLifecycleTrace\('galleryNativeRecentScan', 'probe'/);
   assert.match(streamingSource, /skippedReason: 'empty-chat'/);
   assert.match(streamingSource, /candidateCount: candidates\.length/);
@@ -294,7 +297,10 @@ test('gallery history paging returns at most three image-bearing floors and repo
 
   assert.match(streamingSource, /const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;/);
   assert.match(streamingSource, /const galleryOlderLastScanHadNoImages = ref\(false\);/);
-  assert.match(streamingSource, /galleryOlderLastScanHadNoImages\.value = nextGroups\.length === 0 && scanned > 0 && !galleryHistoryExhausted\.value;/);
+  assert.match(
+    streamingSource,
+    /galleryOlderLastScanHadNoImages\.value = nextGroups\.length === 0 && scanned > 0 && !galleryHistoryExhausted\.value;/,
+  );
   assert.match(streamingSource, /olderZeroHit: galleryOlderLastScanHadNoImages\.value,/);
   assert.match(storyPageSource, /:older-zero-hit="galleryOlderLastScanHadNoImages"/);
   assert.match(panelSource, /olderZeroHit\?: boolean;/);
@@ -309,7 +315,10 @@ test('gallery drawer starts an initial cache session before showing an empty sta
 
   assert.match(streamingSource, /const loadingInitialGalleryImages = ref\(false\);/);
   assert.match(streamingSource, /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open'\)/);
-  assert.match(streamingSource, /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/);
+  assert.match(
+    streamingSource,
+    /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/,
+  );
   assert.match(streamingSource, /scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/);
   assert.match(storyPageSource, /startGalleryImageCacheSession\('gallery\.drawer_open'\);/);
   assert.match(storyPageSource, /:loading-initial="loadingInitialGalleryImages"/);
@@ -355,8 +364,14 @@ test('gallery selected floor window hydrates host-native plugin images once per 
     streamingSource,
     /async function hydrateSelectedGalleryWindowMessages\(reason: string, messageIds: number\[\]\): Promise<void>/,
   );
-  assert.match(streamingSource, /function maybeHydrateSelectedGalleryWindowMessages\(reason: string, messageIds: number\[\]\)/);
-  assert.match(streamingSource, /const hydrationSignature = `\$\{selectedGalleryWindowKey\.value\}:\$\{hydrationIds\.join\(','\)\}`;/);
+  assert.match(
+    streamingSource,
+    /function maybeHydrateSelectedGalleryWindowMessages\(reason: string, messageIds: number\[\]\)/,
+  );
+  assert.match(
+    streamingSource,
+    /const hydrationSignature = `\$\{selectedGalleryWindowKey\.value\}:\$\{hydrationIds\.join\(','\)\}`;/,
+  );
   assert.match(streamingSource, /if \(hydrationSignature === lastGalleryWindowHydrationSignature\) return;/);
   assert.match(
     streamingSource,
@@ -366,14 +381,8 @@ test('gallery selected floor window hydrates host-native plugin images once per 
     streamingSource,
     /await setChatMessages\(\s*hiddenChunkIds\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\),\s*\{ refresh: 'affected' \},\s*\);/,
   );
-  assert.match(
-    streamingSource,
-    /discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration`, chunkIds\);/,
-  );
-  assert.match(
-    streamingSource,
-    /queueGeneratedImageEntityRefresh\(chunkIds, `\$\{reason\}:native_host_hydration`\);/,
-  );
+  assert.match(streamingSource, /discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration`, chunkIds\);/);
+  assert.match(streamingSource, /queueGeneratedImageEntityRefresh\(chunkIds, `\$\{reason\}:native_host_hydration`\);/);
   assert.match(
     streamingSource,
     /await setChatMessages\(\s*hiddenChunkIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\),\s*\{ refresh: 'none' \},\s*\);/,
@@ -392,7 +401,10 @@ test('gallery selected floor window hydrates host-native plugin images once per 
 test('gallery retains current-window images after transient plugin rerenders clear computed groups', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
 
-  assert.match(streamingSource, /const currentGroupsById = new Map\(galleryGroups\.value\.map\(group => \[group\.messageId, group\]\)\);/);
+  assert.match(
+    streamingSource,
+    /const currentGroupsById = new Map\(galleryGroups\.value\.map\(group => \[group\.messageId, group\]\)\);/,
+  );
   assert.match(streamingSource, /let retainedCurrent = 0;/);
   assert.match(
     streamingSource,
@@ -417,7 +429,10 @@ test('gallery window picker stays compact and hides raw dataset labels from prim
   assert.match(panelSource, /grid-template-rows: auto auto minmax\(0, 1fr\);/);
   assert.match(panelSource, /function isRawGalleryLabel\(value: unknown\): boolean/);
   assert.match(panelSource, /function buildGalleryGroupTitle\(entry: ReaderGalleryEntry\)/);
-  assert.match(panelSource, /function buildGalleryGroupSubtitle\(entry: ReaderGalleryEntry \| undefined, imageCount: number\)/);
+  assert.match(
+    panelSource,
+    /function buildGalleryGroupSubtitle\(entry: ReaderGalleryEntry \| undefined, imageCount: number\)/,
+  );
   assert.match(panelSource, /title: buildGalleryGroupTitle\(entry\),/);
   assert.match(panelSource, /subtitle: buildGalleryGroupSubtitle\(group\.entries\[0\], group\.entries\.length\),/);
   assert.match(panelSource, /\.gallery-window-picker\s*\{[\s\S]*border-radius: 14px;/);
@@ -425,7 +440,10 @@ test('gallery window picker stays compact and hides raw dataset labels from prim
   assert.match(panelSource, /selectedWindowLabel/);
   assert.match(assetSource, /function isRawGalleryLabel\(value: unknown\): boolean/);
   assert.match(assetSource, /function buildCaptionPrimaryText\(\)/);
-  assert.match(assetSource, /if \(props\.variant === 'gallery' && isRawGalleryLabel\(primary\)\) return `楼层 #\$\{props\.entry\.messageId\}`;/);
+  assert.match(
+    assetSource,
+    /if \(props\.variant === 'gallery' && isRawGalleryLabel\(primary\)\) return `楼层 #\$\{props\.entry\.messageId\}`;/,
+  );
 });
 
 test('image gallery and inline image handoff contract is documented', () => {

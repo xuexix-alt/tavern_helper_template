@@ -182,7 +182,7 @@ test('opening setup visibility stays closed for restored chats that already have
   const body = extractFunctionBody(source, 'useStreamingDemo');
 
   assert.equal(
-    body.includes("const hasOpeningSeedUserMessage = computed(() =>"),
+    body.includes('const hasOpeningSeedUserMessage = computed(() =>'),
     true,
     'opening setup should keep a restored-chat fallback that detects existing opening/user turns',
   );
