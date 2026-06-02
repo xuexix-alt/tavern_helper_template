@@ -35,16 +35,39 @@
       </template>
     </header>
 
+    <section class="gallery-window-picker" aria-label="画廊楼层范围">
+      <div class="gallery-window-picker-head">
+        <span>楼层范围</span>
+        <strong>{{ selectedWindowLabel }}</strong>
+      </div>
+      <label class="gallery-window-select">
+        <span class="sr-only">选择楼层范围</span>
+        <select :value="selectedWindowKey" @change="handleWindowSelect">
+          <option v-for="windowOption in windowOptions" :key="windowOption.key" :value="windowOption.key">
+            {{ windowOption.label }}
+          </option>
+        </select>
+      </label>
+    </section>
+
     <div v-if="groupedEntries.length === 0" class="gallery-empty">
-      <span>当前还没有可展示的楼层图片。</span>
+      <span>
+        {{
+          loadingInitial
+            ? '正在缓存当前图片...'
+            : olderZeroHit
+              ? '这批历史楼层没有找到图片，可以继续往前查找。'
+              : '当前还没有可展示的楼层图片。'
+        }}
+      </span>
       <button
-        v-if="hasMoreOlder"
+        v-if="hasMoreOlder && !loadingInitial"
         type="button"
         class="gallery-history-btn"
         :disabled="loadingOlder"
         @click="emit('load-older')"
       >
-        {{ loadingOlder ? '加载中' : '继续查找历史图片' }}
+        {{ loadingOlder ? '加载中' : props.olderZeroHit ? '继续往前查找' : '继续查找历史图片' }}
       </button>
     </div>
 
@@ -79,6 +102,9 @@
         </div>
       </section>
       <footer class="gallery-history-status">
+        <span v-if="olderZeroHit && hasMoreOlder" class="gallery-history-note">
+          这批历史楼层没有找到图片，可以继续往前查找。
+        </span>
         <button
           v-if="hasMoreOlder"
           type="button"
@@ -86,7 +112,7 @@
           :disabled="loadingOlder"
           @click="emit('load-older')"
         >
-          {{ loadingOlder ? '加载中' : '继续加载历史图片' }}
+          {{ loadingOlder ? '加载中' : props.olderZeroHit ? '继续往前查找' : '继续加载历史图片' }}
         </button>
         <span v-else>已加载当前可用图片</span>
       </footer>
@@ -96,14 +122,19 @@
 
 <script setup lang="ts">
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
+import type { TranscriptWindowPageOption } from '../transcriptWindow';
 import type { ReaderGalleryEntry } from '../types';
 import GeneratedImageAsset from './GeneratedImageAsset.vue';
 
 const props = defineProps<{
   entries: ReaderGalleryEntry[];
   activeMessageId?: number | null;
+  windowOptions: TranscriptWindowPageOption[];
+  selectedWindowKey: string;
+  loadingInitial?: boolean;
   loadingOlder?: boolean;
   hasMoreOlder?: boolean;
+  olderZeroHit?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -112,6 +143,7 @@ const emit = defineEmits<{
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
   (event: 'image-tag', payload: GeneratedImageActivationPayload): void;
   (event: 'assign-role', entry: ReaderGalleryEntry): void;
+  (event: 'select-window', key: string): void;
   (event: 'load-older'): void;
   (event: 'close'): void;
 }>();
@@ -119,6 +151,14 @@ const emit = defineEmits<{
 const searchText = ref('');
 const activeFilter = ref<'all' | 'named' | 'recent'>('all');
 const toolsCollapsed = ref(true);
+const selectedWindowLabel = computed(
+  () => props.windowOptions.find(option => option.key === props.selectedWindowKey)?.label ?? '未选择',
+);
+
+function handleWindowSelect(event: Event) {
+  const target = event.target as HTMLSelectElement | null;
+  emit('select-window', target?.value ?? '');
+}
 
 function handleGalleryScroll(event: Event) {
   if (props.loadingOlder || !props.hasMoreOlder) return;
@@ -146,6 +186,24 @@ const filteredEntries = computed(() => {
     return haystack.includes(keyword);
   });
 });
+
+function isRawGalleryLabel(value: unknown): boolean {
+  const text = String(value ?? '').trim();
+  if (!text) return false;
+  return /\b(?:dataset|prompt|token|tag|image|gallery|native|extra|cache)\b/i.test(text);
+}
+
+function buildGalleryGroupTitle(entry: ReaderGalleryEntry) {
+  const name = String(entry.characterName ?? '').trim();
+  if (name && !isRawGalleryLabel(name)) return name;
+  return `楼层 #${entry.messageId}`;
+}
+
+function buildGalleryGroupSubtitle(entry: ReaderGalleryEntry | undefined, imageCount: number) {
+  const title = String(entry.title ?? '').trim();
+  if (title && !isRawGalleryLabel(title)) return `${title} · ${imageCount} 张`;
+  return `${imageCount} 张图像`;
+}
 
 const filters = computed(() => {
   const allCount = props.entries.length;
@@ -175,8 +233,8 @@ const groupedEntries = computed(() => {
     if (!groups.has(entry.messageId)) {
       groups.set(entry.messageId, {
         messageId: entry.messageId,
-        title: entry.characterName || `楼层 #${entry.messageId} 图像集`,
-        subtitle: entry.characterName ? `${entry.title} · 楼层 #${entry.messageId}` : `楼层 #${entry.messageId}`,
+        title: buildGalleryGroupTitle(entry),
+        subtitle: buildGalleryGroupSubtitle(entry, 1),
         entries: [],
       });
     }
@@ -186,9 +244,7 @@ const groupedEntries = computed(() => {
   return Array.from(groups.values())
     .map(group => ({
       ...group,
-      subtitle: group.entries[0]?.characterName
-        ? `${group.entries[0].title} · 楼层 #${group.messageId}`
-        : `${group.entries.length} 张图像 · 楼层 #${group.messageId}`,
+      subtitle: buildGalleryGroupSubtitle(group.entries[0], group.entries.length),
     }))
     .sort((a, b) => b.messageId - a.messageId);
 });
@@ -197,8 +253,8 @@ const groupedEntries = computed(() => {
 <style scoped>
 .gallery-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 16px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
   height: 100%;
   flex: 1 1 auto;
   min-height: 0;
@@ -220,6 +276,66 @@ const groupedEntries = computed(() => {
 
 .gallery-tools {
   padding: 16px;
+}
+
+.gallery-window-picker {
+  display: grid;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 12%, transparent);
+}
+
+.gallery-window-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--demo-text-muted);
+  font-size: 12px;
+}
+
+.gallery-window-picker-head span {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.gallery-window-picker-head strong {
+  color: var(--demo-text-primary);
+}
+
+.gallery-window-select {
+  display: block;
+}
+
+.gallery-window-select select {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 34px 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 16%, transparent);
+  color: var(--demo-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.gallery-window-select select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .gallery-search {
@@ -364,6 +480,7 @@ const groupedEntries = computed(() => {
 .gallery-group-copy {
   display: grid;
   gap: 4px;
+  min-width: 0;
   text-align: left;
 }
 
@@ -377,12 +494,18 @@ const groupedEntries = computed(() => {
 
 .gallery-group-copy strong {
   font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gallery-group-copy p {
   margin: 0;
   color: var(--demo-text-secondary);
   font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .gallery-grid {
@@ -406,10 +529,19 @@ const groupedEntries = computed(() => {
 
 .gallery-history-status {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 4px 0 10px;
   color: var(--demo-text-muted);
   font-size: 12px;
+}
+
+.gallery-history-note {
+  max-width: 28em;
+  text-align: center;
+  line-height: 1.5;
 }
 
 .gallery-history-btn {

@@ -43,3 +43,18 @@ test('parseGeneratedImageActivationPayload preserves transcript or gallery sourc
 
   assert.equal(payload.source, 'gallery');
 });
+
+test('parseGeneratedImageActivationPayload accepts plugin-native data-message-index carriers', () => {
+  const payload = parseGeneratedImageActivationPayload({
+    carrierDataset: {
+      messageId: '',
+      messageIndex: '11',
+      requestId: 'chatu8-id-ezh7uj',
+      imageTag: 'image###scene###',
+    },
+    targetDataset: {},
+  });
+
+  assert.equal(payload.messageId, 11);
+  assert.equal(payload.requestId, 'chatu8-id-ezh7uj');
+});

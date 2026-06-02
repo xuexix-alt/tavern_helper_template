@@ -34,7 +34,10 @@ function normalizePromptToken(input: string): string {
 }
 
 function toFiniteMessageId(input: unknown): number | null {
-  const numeric = Number(input);
+  if (input == null) return null;
+  const text = String(input).trim();
+  if (!text) return null;
+  const numeric = Number(text);
   if (!Number.isFinite(numeric) || numeric < 0) return null;
   return Math.trunc(numeric);
 }
@@ -58,11 +61,13 @@ function readPromptPayload(node: NodeLike): string {
 
 function resolveCarrierMessageId(node: NodeLike): number | null {
   const carrier = node.closest?.(
-    '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
+    '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id], .mes[data-message-index], .mes_text[data-message-index], [data-message-index]',
   );
   const directMessageId =
     toFiniteMessageId(carrier?.dataset?.messageId) ??
     toFiniteMessageId(carrier?.getAttribute?.('data-message-id')) ??
+    toFiniteMessageId(carrier?.dataset?.messageIndex) ??
+    toFiniteMessageId(carrier?.getAttribute?.('data-message-index')) ??
     toFiniteMessageId(node.closest?.('.assistant-body[data-message-id]')?.dataset?.messageId);
   if (directMessageId != null) return directMessageId;
 

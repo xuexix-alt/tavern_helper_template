@@ -166,6 +166,16 @@ test('transcript image generation leases a recent host window before dispatching
   );
   assert.match(
     streamingSource,
+    /function collectPluginImageGenerationHandoffProgress\(messageId: number\)[\s\S]*requestCount[\s\S]*promptButtonCount[\s\S]*promptPlaceholderCount[\s\S]*complete/,
+    'plugin handoff wait should track all prompt buttons/placeholders instead of releasing after the first request',
+  );
+  assert.match(
+    streamingSource,
+    /const expectedRequestCount = Math\.max\(promptButtonCount, promptPlaceholderCount\);[\s\S]*requestCount >= expectedRequestCount/,
+    'plugin handoff should wait until request binding catches up with the inserted prompt placeholders',
+  );
+  assert.match(
+    streamingSource,
     /const handoffSelector = `\$\{CHATU8_IMAGE_BUTTON_SELECTOR\}, \$\{CHATU8_IMAGE_SPAN_SELECTOR\}, \$\{CHATU8_IMAGE_CONTAINER_SELECTOR\}`;/,
   );
   assert.match(
@@ -217,12 +227,217 @@ test('gallery lazily discovers older assistant images without a same-layer manif
   assert.match(galleryPanelSource, /@scroll\.passive="handleGalleryScroll"/);
   assert.match(streamingSource, /const historicalGalleryGroups = ref<GalleryGroup\[\]>\(\[\]\);/);
   assert.match(streamingSource, /const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;/);
+  assert.match(streamingSource, /const GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE = 48;/);
   assert.match(streamingSource, /async function loadOlderGalleryImages\(\)/);
+  assert.match(
+    streamingSource,
+    /function discoverRecentNativeGalleryImages\(reason = 'gallery\.native_recent_scan', messageIds: number\[\] = \[\]\)/,
+    'gallery should actively harvest native/plugin images from recent non-visible assistant messages',
+  );
+  assert.match(
+    streamingSource,
+    /window\.setTimeout\(\(\) => discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan'\), 700\);/,
+    'same-layer boot should recover images generated while the UI was closed',
+  );
+  assert.match(
+    streamingSource,
+    /scheduleHostImageDataReconcile[\s\S]*discoverRecentNativeGalleryImages\(`\$\{reason\}:delay_\$\{delayMs\}`, normalizedMessageIds\);/,
+    'successful plugin responses should harvest non-latest native gallery images during delayed host-data reconcile',
+  );
   assert.match(streamingSource, /hostDomArtifacts: \[\],/);
   assert.match(
     streamingSource,
     /const galleryEntries = computed<GeneratedImageRef\[\]>\(\(\) => flattenGalleryGroupsForEntries\(mergedGalleryGroups\.value\)\);/,
   );
+});
+
+test('gallery and transcript image readers share native-first diagnostic probes', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(streamingSource, /scope: 'imageSourceResolver'[\s\S]*event: 'build_refs'/);
+  assert.match(streamingSource, /variant: 'native-first'/);
+  assert.match(streamingSource, /variant: 'host-dom-fallback'/);
+  assert.match(streamingSource, /promptTokenCount: promptTokens\.length/);
+  assert.match(streamingSource, /extraRecordCount: extraRecords\.length/);
+  assert.match(streamingSource, /mesTagEntryCount: mesTagEntries\.length/);
+  assert.match(streamingSource, /cacheEntryCount: cacheEntries\.length/);
+  assert.match(streamingSource, /readyEntityCount: readyEntities\.length/);
+  assert.match(streamingSource, /refCount: refs\.length/);
+  assert.match(streamingSource, /scope: 'inlineImageHydration'[\s\S]*event: 'append_artifacts'/);
+  assert.match(streamingSource, /dedupedInjectCount: dedupedImages\.length/);
+  assert.match(streamingSource, /renderMode,/);
+});
+
+test('gallery records zero-hit cross-floor scans and explicit message-id scans', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(streamingSource, /const scanMode = explicitIds\.size > 0 \? 'explicit-message-ids' : 'recent-cross-floor';/);
+  assert.match(streamingSource, /recordLifecycleTrace\('galleryNativeRecentScan', 'probe'/);
+  assert.match(streamingSource, /skippedReason: 'empty-chat'/);
+  assert.match(streamingSource, /candidateCount: candidates\.length/);
+  assert.match(streamingSource, /sampled: sampled\.slice\(0, 12\)/);
+  assert.match(streamingSource, /knownCurrent: true/);
+  assert.match(streamingSource, /imageCount: images\.length/);
+  assert.match(
+    streamingSource,
+    /discoverRecentNativeGalleryImages\('host\.plugin_native_response_success:immediate', targetMessageIds\);/,
+    'successful plugin responses should immediately probe explicit target message ids before delayed reconcile',
+  );
+  assert.match(streamingSource, /logImageBridge\('host-data-reconcile-probe'/);
+  assert.match(streamingSource, /recordLifecycleTrace\('galleryHistoryScan', 'load_older_probe'/);
+});
+
+test('gallery history paging returns at most three image-bearing floors and reports zero-hit batches', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+  const storyPageSource = readSource('pages/StoryPage.vue');
+  const panelSource = readSource('components/ImageGalleryPanel.vue');
+
+  assert.match(streamingSource, /const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;/);
+  assert.match(streamingSource, /const galleryOlderLastScanHadNoImages = ref\(false\);/);
+  assert.match(streamingSource, /galleryOlderLastScanHadNoImages\.value = nextGroups\.length === 0 && scanned > 0 && !galleryHistoryExhausted\.value;/);
+  assert.match(streamingSource, /olderZeroHit: galleryOlderLastScanHadNoImages\.value,/);
+  assert.match(storyPageSource, /:older-zero-hit="galleryOlderLastScanHadNoImages"/);
+  assert.match(panelSource, /olderZeroHit\?: boolean;/);
+  assert.match(panelSource, /这批历史楼层没有找到图片，可以继续往前查找。/);
+  assert.match(panelSource, /props\.olderZeroHit \? '继续往前查找' : '继续加载历史图片'/);
+});
+
+test('gallery drawer starts an initial cache session before showing an empty state', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+  const storyPageSource = readSource('pages/StoryPage.vue');
+  const panelSource = readSource('components/ImageGalleryPanel.vue');
+
+  assert.match(streamingSource, /const loadingInitialGalleryImages = ref\(false\);/);
+  assert.match(streamingSource, /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open'\)/);
+  assert.match(streamingSource, /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/);
+  assert.match(streamingSource, /scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/);
+  assert.match(storyPageSource, /startGalleryImageCacheSession\('gallery\.drawer_open'\);/);
+  assert.match(storyPageSource, /:loading-initial="loadingInitialGalleryImages"/);
+  assert.match(panelSource, /loadingInitial\?: boolean;/);
+  assert.match(panelSource, /正在缓存当前图片/);
+});
+
+test('gallery uses a transcript-style single-select floor window instead of multi-select rescans', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+  const storyPageSource = readSource('pages/StoryPage.vue');
+  const panelSource = readSource('components/ImageGalleryPanel.vue');
+  const doc = fs.readFileSync(
+    path.resolve(statusBarDir, '../../../../..', 'docs/同层UI图片读取与画廊正文统一规范-v1.0.0.md'),
+    'utf8',
+  );
+
+  assert.match(streamingSource, /const selectedGalleryWindowKey = ref<string>\(''\);/);
+  assert.match(streamingSource, /const galleryWindowOptions = computed\(\(\) => transcriptWindowPages\.value\);/);
+  assert.match(streamingSource, /function resolveDefaultGalleryWindowKey\(\): string/);
+  assert.match(streamingSource, /function scanSelectedGalleryWindow\(reason = 'gallery\.window_selection'\)/);
+  assert.match(streamingSource, /discoverRecentNativeGalleryImages\(reason, selectedGalleryWindowMessageIds\.value\);/);
+  assert.match(streamingSource, /const galleryVisibleEntries = computed<GeneratedImageRef\[\]>/);
+  assert.match(streamingSource, /recordLifecycleTrace\('galleryWindowSelection', 'scan'/);
+  assert.match(storyPageSource, /:window-options="galleryWindowOptions"/);
+  assert.match(storyPageSource, /:selected-window-key="selectedGalleryWindowKey"/);
+  assert.match(storyPageSource, /@select-window="selectGalleryWindow"/);
+  assert.match(panelSource, /windowOptions: TranscriptWindowPageOption\[\];/);
+  assert.match(panelSource, /selectedWindowKey: string;/);
+  assert.match(panelSource, /<select/);
+  assert.doesNotMatch(panelSource, /type="checkbox"/);
+  assert.match(panelSource, /楼层范围/);
+  assert.match(doc, /画廊楼层选择采用正文同款窗口/);
+  assert.match(doc, /单选/);
+});
+
+test('gallery selected floor window hydrates host-native plugin images once per selected window', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(streamingSource, /const GALLERY_WINDOW_NATIVE_HYDRATION_CHUNK_SIZE = 4;/);
+  assert.match(streamingSource, /let galleryWindowHydrationSessionId = 0;/);
+  assert.match(streamingSource, /let lastGalleryWindowHydrationSignature = '';/);
+  assert.match(
+    streamingSource,
+    /async function hydrateSelectedGalleryWindowMessages\(reason: string, messageIds: number\[\]\): Promise<void>/,
+  );
+  assert.match(streamingSource, /function maybeHydrateSelectedGalleryWindowMessages\(reason: string, messageIds: number\[\]\)/);
+  assert.match(streamingSource, /const hydrationSignature = `\$\{selectedGalleryWindowKey\.value\}:\$\{hydrationIds\.join\(','\)\}`;/);
+  assert.match(streamingSource, /if \(hydrationSignature === lastGalleryWindowHydrationSignature\) return;/);
+  assert.match(
+    streamingSource,
+    /hostVisualHideController\.leaseMessageIdsForPluginNativeHandoff\(\s*chunkIds,[\s\S]*gallery_window_native_hydration/,
+  );
+  assert.match(
+    streamingSource,
+    /await setChatMessages\(\s*hiddenChunkIds\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\),\s*\{ refresh: 'affected' \},\s*\);/,
+  );
+  assert.match(
+    streamingSource,
+    /discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration`, chunkIds\);/,
+  );
+  assert.match(
+    streamingSource,
+    /queueGeneratedImageEntityRefresh\(chunkIds, `\$\{reason\}:native_host_hydration`\);/,
+  );
+  assert.match(
+    streamingSource,
+    /await setChatMessages\(\s*hiddenChunkIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\),\s*\{ refresh: 'none' \},\s*\);/,
+  );
+  assert.match(
+    streamingSource,
+    /maybeHydrateSelectedGalleryWindowMessages\(reason, selectedGalleryWindowMessageIds\.value\);/,
+  );
+  assert.doesNotMatch(
+    streamingSource,
+    /hydrateSelectedGalleryWindowMessages[\s\S]*selectTranscriptWindowPage\(/,
+    'gallery hydration should not mutate the current transcript window selection',
+  );
+});
+
+test('gallery retains current-window images after transient plugin rerenders clear computed groups', () => {
+  const streamingSource = readSource('useStreamingDemo.ts');
+
+  assert.match(streamingSource, /const currentGroupsById = new Map\(galleryGroups\.value\.map\(group => \[group\.messageId, group\]\)\);/);
+  assert.match(streamingSource, /let retainedCurrent = 0;/);
+  assert.match(
+    streamingSource,
+    /const currentGroup = currentGroupsById\.get\(messageId\);[\s\S]*historicalById\.set\(messageId, currentGroup\);[\s\S]*retainedCurrent \+= 1;/,
+    'current window image groups should be retained before plugin rerenders can make galleryGroups temporarily empty',
+  );
+  assert.match(streamingSource, /imageCount: currentGroup\?\.images\.length \?\? 0,/);
+  assert.match(streamingSource, /retainedCurrent,/);
+  assert.match(streamingSource, /if \(discovered <= 0 && retainedCurrent <= 0\) return;/);
+  assert.match(
+    streamingSource,
+    /const discoveryReason = retainedCurrent > 0 && discovered <= 0 \? `\$\{reason\}:retained_current` : reason;/,
+    'retained current-page images should be traceable separately from newly discovered historical groups',
+  );
+  assert.match(streamingSource, /reason: discoveryReason,/);
+});
+
+test('gallery window picker stays compact and hides raw dataset labels from primary titles', () => {
+  const panelSource = readSource('components/ImageGalleryPanel.vue');
+  const assetSource = readSource('components/GeneratedImageAsset.vue');
+
+  assert.match(panelSource, /grid-template-rows: auto auto minmax\(0, 1fr\);/);
+  assert.match(panelSource, /function isRawGalleryLabel\(value: unknown\): boolean/);
+  assert.match(panelSource, /function buildGalleryGroupTitle\(entry: ReaderGalleryEntry\)/);
+  assert.match(panelSource, /function buildGalleryGroupSubtitle\(entry: ReaderGalleryEntry \| undefined, imageCount: number\)/);
+  assert.match(panelSource, /title: buildGalleryGroupTitle\(entry\),/);
+  assert.match(panelSource, /subtitle: buildGalleryGroupSubtitle\(group\.entries\[0\], group\.entries\.length\),/);
+  assert.match(panelSource, /\.gallery-window-picker\s*\{[\s\S]*border-radius: 14px;/);
+  assert.match(panelSource, /\.gallery-window-select select\s*\{[\s\S]*width: 100%;/);
+  assert.match(panelSource, /selectedWindowLabel/);
+  assert.match(assetSource, /function isRawGalleryLabel\(value: unknown\): boolean/);
+  assert.match(assetSource, /function buildCaptionPrimaryText\(\)/);
+  assert.match(assetSource, /if \(props\.variant === 'gallery' && isRawGalleryLabel\(primary\)\) return `楼层 #\$\{props\.entry\.messageId\}`;/);
+});
+
+test('image gallery and inline image handoff contract is documented', () => {
+  const docPath = path.resolve(statusBarDir, '../../../../..', 'docs/同层UI图片读取与画廊正文统一规范-v1.0.0.md');
+  const doc = fs.readFileSync(docPath, 'utf8');
+
+  assert.match(doc, /统一入口是 `buildGeneratedImageRefsForMessage\(\)`/);
+  assert.match(doc, /画廊必须支持跨当前楼层取图/);
+  assert.match(doc, /`explicit-message-ids`/);
+  assert.match(doc, /`recent-cross-floor`/);
+  assert.match(doc, /`galleryNativeRecentScan \/ probe`/);
+  assert.match(doc, /`inlineImageHydration \/ append_artifacts`/);
 });
 
 test('mobile transcript double-tap keeps the proxy chain and forwards the second touch event through the mobile path', () => {

@@ -178,6 +178,11 @@ const MES_SELECTORS = (mesid: number) => [
   `#chat > .mes[mesid='${mesid}']`,
   `#chat .mes[mesid='${mesid}']`,
   `.mes[mesid='${mesid}']`,
+  `#chat > .mes[data-message-index='${mesid}']`,
+  `#chat .mes[data-message-index='${mesid}']`,
+  `.mes[data-message-index='${mesid}']`,
+  `#chat .mes_text[data-message-index='${mesid}']`,
+  `.mes_text[data-message-index='${mesid}']`,
 ];
 
 /** 在宿主文档中查找消息根节点 .mes[mesid] */
@@ -186,7 +191,7 @@ export function resolveHostMessageRoot(messageId: number): HTMLElement | null {
   for (const doc of collectHostOnlyDocuments()) {
     for (const selector of MES_SELECTORS(mesid)) {
       const el = doc.querySelector(selector) as HTMLElement | null;
-      if (el) return el;
+      if (el) return (el.closest?.('.mes') as HTMLElement | null) ?? el;
     }
   }
   return null;

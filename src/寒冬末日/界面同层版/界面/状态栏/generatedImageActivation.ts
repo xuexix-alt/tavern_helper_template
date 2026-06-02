@@ -14,6 +14,18 @@ function decodeValue(value: string): string {
   }
 }
 
+function normalizeMessageIdValue(...values: unknown[]): number | null {
+  for (const value of values) {
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (!text) continue;
+    const numeric = Number(text);
+    if (!Number.isFinite(numeric) || numeric < 0) continue;
+    return Math.trunc(numeric);
+  }
+  return null;
+}
+
 export function parseGeneratedImageActivationPayload(input: {
   carrierDataset?: Record<string, unknown> | null;
   targetDataset?: Record<string, unknown> | null;
@@ -23,8 +35,12 @@ export function parseGeneratedImageActivationPayload(input: {
 }): GeneratedImageActivationPayload {
   const carrierDataset = input.carrierDataset ?? {};
   const targetDataset = input.targetDataset ?? {};
-  const rawMessageId = Number(carrierDataset.messageId ?? targetDataset.messageId ?? '');
-  const messageId = Number.isFinite(rawMessageId) ? Math.trunc(rawMessageId) : null;
+  const messageId = normalizeMessageIdValue(
+    carrierDataset.messageId,
+    carrierDataset.messageIndex,
+    targetDataset.messageId,
+    targetDataset.messageIndex,
+  );
   const promptToken = decodeValue(
     String(
       carrierDataset.promptToken ??

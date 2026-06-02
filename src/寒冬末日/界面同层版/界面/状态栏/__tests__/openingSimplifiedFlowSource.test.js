@@ -177,6 +177,27 @@ test('opening setup visibility no longer hides the modal just because a failed d
   );
 });
 
+test('opening setup visibility stays closed for restored chats that already have opening user turns', () => {
+  const source = readSource();
+  const body = extractFunctionBody(source, 'useStreamingDemo');
+
+  assert.equal(
+    body.includes("const hasOpeningSeedUserMessage = computed(() =>"),
+    true,
+    'opening setup should keep a restored-chat fallback that detects existing opening/user turns',
+  );
+  assert.match(
+    body,
+    /if \(hasOpeningSeedUserMessage\.value\) return false;/,
+    'opening setup should not auto-open when an imported/restored chat already has an opening user turn',
+  );
+  assert.match(
+    body,
+    /const hostMessages = readAllChatMessagesRaw\(\);[\s\S]*resolveHostMessageRole\(message\) === 'user'/,
+    'opening setup should detect restored user turns from host chat before the same-layer transcript has rebuilt',
+  );
+});
+
 test('opening runtime no longer keeps the payload-result synthetic transcript helpers from the legacy seed/result chain', () => {
   const source = readSource();
 

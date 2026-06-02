@@ -170,15 +170,20 @@
         <div class="ui-sidebar-body">
           <ImageGalleryPanel
             v-if="galleryDrawerOpen"
-            :entries="galleryEntries"
+            :entries="galleryVisibleEntries"
             :active-message-id="latestAssistantItem?.message_id ?? null"
+            :window-options="galleryWindowOptions"
+            :selected-window-key="selectedGalleryWindowKey"
+            :loading-initial="loadingInitialGalleryImages"
             :loading-older="loadingOlderGalleryImages"
             :has-more-older="hasMoreOlderGalleryImages"
+            :older-zero-hit="galleryOlderLastScanHadNoImages"
             @image-view="activateGeneratedImageView"
             @image-regenerate="activateGeneratedImageRegenerate"
             @image-tag="activateGeneratedImageTag"
             @assign-role="openGalleryRoleAssignPicker"
             @jump-message="jumpToTranscriptMessage"
+            @select-window="selectGalleryWindow"
             @load-older="loadOlderGalleryImages"
             @close="closeGalleryDrawer"
           />
@@ -530,9 +535,15 @@ const {
   reprocessVariablesPending,
   transcriptDomRevision,
   galleryEntries,
+  galleryVisibleEntries,
+  galleryWindowOptions,
+  selectedGalleryWindowKey,
+  loadingInitialGalleryImages,
   loadingOlderGalleryImages,
   hasMoreOlderGalleryImages,
-  refreshGalleryImages,
+  galleryOlderLastScanHadNoImages,
+  startGalleryImageCacheSession,
+  selectGalleryWindow,
   readerSummary,
   logs,
   beginPendingImageTask,
@@ -915,7 +926,7 @@ function openGalleryDrawer() {
   topbarMoreMenuOpen.value = false;
   closeUtilityDrawer();
   roleDrawerOpen.value = false;
-  refreshGalleryImages('gallery.drawer_open');
+  startGalleryImageCacheSession('gallery.drawer_open');
   galleryDrawerOpen.value = true;
 }
 

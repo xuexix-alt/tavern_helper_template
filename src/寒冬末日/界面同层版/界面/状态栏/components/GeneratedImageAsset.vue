@@ -136,14 +136,25 @@ const rootClass = computed(() =>
     : 'assistant-fallback-inline-image generated-image-asset-root',
 );
 
+function isRawGalleryLabel(value: unknown): boolean {
+  const text = String(value ?? '').trim();
+  if (!text) return false;
+  return /\b(?:dataset|prompt|token|tag|image|gallery|native|extra|cache)\b/i.test(text);
+}
+
+function buildCaptionPrimaryText() {
+  const primary = String(props.entry.characterName || props.entry.title || '').trim();
+  if (props.variant === 'gallery' && isRawGalleryLabel(primary)) return `楼层 #${props.entry.messageId}`;
+  return primary || '未标注图片';
+}
+
 const kickerText = computed(() => (resolvedSource.value ? '单击查看' : '等待图片'));
 const secondaryText = computed(() => (props.entry.requestId ? '双击重生' : '双击调用原图链'));
-const captionPrimaryText = computed(() =>
-  String(props.entry.characterName || props.entry.title || '未标注图片').trim(),
-);
+const captionPrimaryText = computed(() => buildCaptionPrimaryText());
 const captionSecondaryText = computed(() => {
   const title = String(props.entry.title ?? '').trim();
   const primary = captionPrimaryText.value;
+  if (props.variant === 'gallery' && isRawGalleryLabel(title)) return '';
   if (!title || title.toLowerCase() === primary.toLowerCase()) return '';
   return title;
 });

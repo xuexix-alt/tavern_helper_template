@@ -191,6 +191,73 @@ test('StoryPage lazy mounts the image gallery drawer content while closed', () =
   );
 });
 
+test('gallery image refs cache ready message results and short-lived empty results by message signature', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;/,
+    'empty gallery ref results should have a short TTL so async plugin writes can appear soon after',
+  );
+  assert.match(
+    source,
+    /const GALLERY_REF_CACHE_MAX_ENTRIES = 160;/,
+    'gallery ref cache should be bounded by message count',
+  );
+  assert.match(
+    source,
+    /const galleryGeneratedImageRefCache = new Map<number, GalleryGeneratedImageRefCacheEntry>\(\);/,
+    'gallery refs should cache by messageId',
+  );
+  assert.match(
+    source,
+    /function buildGalleryGeneratedImageRefCacheSignature\(/,
+    'cache hits should be guarded by a source signature, not only messageId',
+  );
+  assert.match(
+    source,
+    /function readCachedGeneratedImageRefsForMessage\(/,
+    'buildGeneratedImageRefsForMessage should consult a cache before running entity construction',
+  );
+  assert.match(
+    source,
+    /if \(cachedRefs\) \{[\s\S]{0,600}variant: 'cache-hit'[\s\S]{0,600}return cachedRefs;/,
+    'cache hits should be traced and return before NativeFirst entity work',
+  );
+  assert.match(
+    source,
+    /writeCachedGeneratedImageRefsForMessage\(\{[\s\S]{0,260}refs: fallbackRefs,/,
+    'host DOM fallback refs should be cached once built',
+  );
+  assert.match(
+    source,
+    /writeCachedGeneratedImageRefsForMessage\(\{[\s\S]{0,260}refs,/,
+    'native-first ready refs should be cached once built',
+  );
+});
+
+test('gallery image ref cache invalidates on targeted image refreshes and full refreshes', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const refreshBody = source.match(/function queueGeneratedImageEntityRefresh[\s\S]*?\n  \}\n/)?.[0] ?? '';
+
+  assert.notEqual(refreshBody, '', 'queueGeneratedImageEntityRefresh body should be present');
+  assert.match(
+    refreshBody,
+    /clearGeneratedImageRefCacheForMessageIds\(normalizedMessageIds\);/,
+    'targeted image refreshes should invalidate cached refs for the same message ids before scheduling recompute',
+  );
+  assert.match(
+    refreshBody,
+    /clearGeneratedImageRefCacheForMessageIds\(\[fallbackMessageId\]\);/,
+    'recent-intent fallback refresh should also invalidate the message cache',
+  );
+  assert.match(
+    refreshBody,
+    /clearGeneratedImageRefCache\(\);[\s\S]{0,120}bumpGeneratedImageEntityRevision\(\);/,
+    'full image refreshes should clear the whole gallery ref cache',
+  );
+});
+
 test('StoryPage lets mobile mes-path touch events reach the native plugin after prewarming data', () => {
   const source = readSource('pages/StoryPage.vue');
 
