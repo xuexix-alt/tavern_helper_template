@@ -1,5 +1,3 @@
-
-
 主要简单通过 前端助手的事件来沟通
 eventEmit 发送事件
 eventOn  监听事件
@@ -31,8 +29,7 @@ await eventEmit(EventType.GENERATE_IMAGE_REQUEST, requestData);//发送请求
 
 
 
-
-代码：
+示例:（放入酒馆的消息。需要安装前端助手）Change是覆盖Prompt 的，Change参数在这里没用啊。
 ```
 <!DOCTYPE html>
 <html lang="zh-CN">

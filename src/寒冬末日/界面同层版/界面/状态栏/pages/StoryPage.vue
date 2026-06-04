@@ -1873,7 +1873,12 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
   await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
+    // 预热宿主 mes_text，确保 DOM 存在
     await ensureHostMesTextRendered(Math.trunc(messageId));
+
+    // 短暂延迟，等待插件处理 DOM
+    await new Promise(resolve => window.setTimeout(resolve, 150));
+
     const targetNode = await resolveWithRetry(
       () => {
         const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
@@ -1893,7 +1898,9 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
           'open',
         );
       },
-      { attempts: 5, delayMs: 90 },
+      // 延长重试时间窗口：10 次重试，120ms 间隔 = 1200ms 总时长
+      // 覆盖插件慢速渲染场景和移动端性能较差场景
+      { attempts: 10, delayMs: 120 },
     );
     if (!targetNode) {
       toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
@@ -1914,8 +1921,13 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
   await withPluginNativeMessageLease(
     Math.trunc(messageId),
     async () => {
+      // 预热宿主 mes_text，确保 DOM 存在
       await ensureHostMesTextRendered(Math.trunc(messageId));
-      const targetNode = await resolveWithRetry(
+
+      // 短暂延迟，等待插件处理 DOM
+      await new Promise(resolve => window.setTimeout(resolve, 150));
+
+      let targetNode = await resolveWithRetry(
         () => {
           const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
             Math.trunc(messageId),
@@ -1934,12 +1946,26 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
             'open',
           );
         },
-        { attempts: 5, delayMs: 90 },
+        // 延长重试时间窗口：10 次重试，120ms 间隔 = 1200ms 总时长
+        { attempts: 10, delayMs: 120 },
       );
+
+      // 降级方案：如果找不到精确目标，尝试使用 mes_text 根节点
       if (!targetNode) {
-        toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
-        return;
+        console.warn(`[image-tag] 未找到精确目标，降级到 mes_text 根节点`, {
+          messageId,
+          promptToken,
+          requestId,
+          imageSrc,
+        });
+        const mesTextRoot = resolveHostMessageTriggerTarget(Math.trunc(messageId));
+        if (!mesTextRoot) {
+          toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
+          return;
+        }
+        targetNode = mesTextRoot;
       }
+
       preparePluginMenuForFullscreen();
       if (!dispatchHostImageTagTrigger(targetNode)) {
         toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改触发失败`);

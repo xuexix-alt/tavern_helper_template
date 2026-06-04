@@ -1,114 +1,772 @@
-22:52:14.099 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:14.099 eventemitter.js:135 Event emitted: user_message_rendered
-22:52:14.122 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:15.947 tokenizers.js:183 Chat Completions: saving token cache
-22:52:15.975 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:15.976 eventemitter.js:135 Event emitted: user_message_rendered
-22:52:16.004 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:16.051 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:52:17.885 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:17.886 eventemitter.js:135 Event emitted: user_message_rendered
-22:52:17.913 eventemitter.js:135 Event emitted: character_message_rendered
-22:52:17.947 tokenizers.js:183 Chat Completions: saving token cache
-22:52:18.185 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:52:18.190 ClickTrigger.js:1 [点击触发] 📱 移动端三连击事件
-22:52:18.190 ClickTrigger.js:1 [点击触发] 📋 目标元素 (mes_text) [mesId=9, 角色=末世寒冬-星穹秩序重置版]
-22:52:18.190 ClickTrigger.js:1 [点击触发] 📋 实际触摸元素 (e.target) [mesId=9, 角色=末世寒冬-星穹秩序重置版]
-22:52:18.191 ClickTrigger.js:1 [点击触发] ✅ 双击触发成功
-22:52:18.191 ClickTrigger.js:1 [点击触发] 📋 将展示弹窗的目标元素 [mesId=9, 角色=末世寒冬-星穹秩序重置版]
-22:52:18.247 ClickTrigger.js:1 [点击触发] 🎯 用户选择操作: 图片生成
-22:52:18.247 ClickTrigger.js:1 [点击触发][操作] 📋 操作目标元素 (图片生成) [mesId=9, 角色=末世寒冬-星穹秩序重置版]
-22:52:18.262 eventemitter.js:135 Event emitted: regex-st-chatu8-test-message
-22:52:18.275 eventemitter.js:135 Event emitted: regex-st-chatu8-test-message
-22:52:18.276 eventemitter.js:135 Event emitted: regex-st-chatu8-test-message
-22:52:18.456 eventemitter.js:135 Event emitted: regex-st-chatu8-result-message
-22:52:18.456 eventemitter.js:135 Event emitted: regex-st-chatu8-result-message
-22:52:18.457 eventemitter.js:135 Event emitted: regex-st-chatu8-result-message
-22:52:18.517 eventemitter.js:135 Event emitted: ch-llm-image-gen-request
-22:52:19.729 tokenizers.js:183 Chat Completions: saving token cache
-22:52:19.738 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:52:21.066 extensions.js:83 Debounced metadata save cancelled
-22:52:22.079 extensions.js:109 Saving metadata...
-22:52:22.887 tokenizers.js:183 Chat Completions: saving token cache
-22:52:22.912 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:52:23.703 tokenizers.js:183 Chat Completions: saving token cache
-22:52:23.703 extensions.js:111 Saved metadata...
-22:52:23.717 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:11.658 extensions.js:83 Debounced metadata save cancelled
-22:53:12.222 extensions.js:83 Debounced metadata save cancelled
-22:53:13.227 extensions.js:109 Saving metadata...
-22:53:13.431 extensions.js:83 Debounced metadata save cancelled
-22:53:14.342 extensions.js:83 Debounced metadata save cancelled
-22:53:14.453 tokenizers.js:183 Chat Completions: saving token cache
-22:53:14.453 extensions.js:111 Saved metadata...
-22:53:14.477 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:15.342 extensions.js:109 Saving metadata...
-22:53:16.175 tokenizers.js:183 Chat Completions: saving token cache
-22:53:16.175 extensions.js:111 Saved metadata...
-22:53:16.194 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:18.151 eventemitter.js:135 Event emitted: ch-llm-image-gen-response
-22:53:18.170 imageInserter.js:1 [parseImagesFromPrompt] 解析结果详情
-22:53:18.170 imageInserter.js:1 图片 1
-22:53:18.170 imageInserter.js:1 图片 2
-22:53:18.171 imageInserter.js:1 图片 3
-22:53:18.171 imageInserter.js:1 图片 4
-22:53:18.172 imageInserter.js:1 [imageInserter] saveImageGroup - el 详细信息
-22:53:19.294 tokenizers.js:183 Chat Completions: saving token cache
-22:53:19.302 eventemitter.js:135 Event emitted: character_message_rendered
-22:53:19.352 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:19.465 eventemitter.js:135 Event emitted: st_chatu8_auto_click_complete
-22:53:19.477 eventemitter.js:135 Event emitted: generate-image-request
-22:53:19.502 eventemitter.js:135 Event emitted: generate-image-request
-22:53:19.529 eventemitter.js:135 Event emitted: generate-image-request
-22:53:19.552 eventemitter.js:135 Event emitted: generate-image-request
-22:53:25.669 extensions.js:83 Debounced metadata save cancelled
-22:53:26.673 extensions.js:109 Saving metadata...
-22:53:27.556 tokenizers.js:183 Chat Completions: saving token cache
-22:53:27.556 extensions.js:111 Saved metadata...
-22:53:27.572 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:28.103 extensions.js:83 Debounced metadata save cancelled
-22:53:29.107 extensions.js:109 Saving metadata...
-22:53:29.966 tokenizers.js:183 Chat Completions: saving token cache
-22:53:29.966 extensions.js:111 Saved metadata...
-22:53:30.054 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:30.839 extensions.js:83 Debounced metadata save cancelled
-22:53:31.316 eventemitter.js:135 Event emitted: generate-image-response
-22:53:31.840 extensions.js:109 Saving metadata...
-22:53:32.234 extensions.js:83 Debounced metadata save cancelled
-22:53:32.702 tokenizers.js:183 Chat Completions: saving token cache
-22:53:32.702 extensions.js:111 Saved metadata...
-22:53:32.711 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:32.918 eventemitter.js:135 Event emitted: settings_updated
-22:53:33.236 extensions.js:109 Saving metadata...
-22:53:34.113 tokenizers.js:183 Chat Completions: saving token cache
-22:53:34.113 extensions.js:111 Saved metadata...
-22:53:34.132 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:53:37.011 eventemitter.js:135 Event emitted: generate-image-response
-22:53:38.467 eventemitter.js:135 Event emitted: settings_updated
-22:53:54.679 eventemitter.js:135 Event emitted: settings_updated
-22:53:59.424 eventemitter.js:135 Event emitted: generate-image-response
-22:54:00.656 eventemitter.js:135 Event emitted: settings_updated
-22:54:04.206 extensions.js:83 Debounced metadata save cancelled
-22:54:04.881 extensions.js:83 Debounced metadata save cancelled
-22:54:05.881 extensions.js:109 Saving metadata...
-22:54:07.039 tokenizers.js:183 Chat Completions: saving token cache
-22:54:07.040 extensions.js:111 Saved metadata...
-22:54:07.063 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:54:24.353 extensions.js:83 Debounced metadata save cancelled
-22:54:25.355 extensions.js:109 Saving metadata...
-22:54:26.514 tokenizers.js:183 Chat Completions: saving token cache
-22:54:26.515 extensions.js:111 Saved metadata...
-22:54:26.540 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:54:27.752 eventemitter.js:135 Event emitted: generate-image-response
-22:54:28.532 extensions.js:83 Debounced metadata save cancelled
-22:54:29.229 eventemitter.js:135 Event emitted: settings_updated
-22:54:29.532 extensions.js:109 Saving metadata...
-22:54:30.116 extensions.js:83 Debounced metadata save cancelled
-22:54:30.446 extensions.js:83 Debounced metadata save cancelled
-22:54:30.609 tokenizers.js:183 Chat Completions: saving token cache
-22:54:30.609 extensions.js:111 Saved metadata...
-22:54:30.617 eventemitter.js:135 Event emitted: itemized_prompts_saved
-22:54:31.637 extensions.js:109 Saving metadata...
-22:54:32.511 tokenizers.js:183 Chat Completions: saving token cache
-22:54:32.511 extensions.js:111 Saved metadata...
-22:54:32.540 eventemitter.js:135 Event emitted: itemized_prompts_saved
+13:57:04.379 jquery-3.5.1.min.js:2 [Violation] 'click' handler took 158ms
+13:57:11.401 extensions.js:70 Debounced metadata save cancelled
+13:57:11.402 extensions.js:70 Debounced metadata save cancelled
+13:57:11.494 [Violation] Forced reflow while executing JavaScript took 60ms
+13:57:12.411 extensions.js:96 Saving metadata...
+13:57:14.539 eventemitter.js:135 Event emitted: message_edited
+13:57:14.546 newline_fix.js:1 ChatU8: Extracting character and outfit tags for message ID: 0
+13:57:14.549 codeProxy.js:41 变量 isExtensionAble 未找到, 已从默认设置中获取
+13:57:14.549 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:14.660 eventemitter.js:135 Event emitted: message_updated
+13:57:14.932 tokenizers.js:183 Chat Completions: saving token cache
+13:57:14.933 extensions.js:98 Saved metadata...
+13:57:15.770 script.js:4208 Generate entered
+13:57:15.770 eventemitter.js:135 Event emitted: generation_started
+13:57:15.771 autoLLMClick.js:1 [st-chatu8] GENERATION_STARTED data: normal
+13:57:15.773 autoLLMClick.js:1 [st-chatu8] Chat array length: 14
+13:57:15.773 autoLLMClick.js:1 [st-chatu8] Last message swipes length: 1
+13:57:15.774 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序重置版
+13:57:15.774 chatDataUtils.js:1 charworldName 末世寒冬-星穹秩序重置版
+13:57:15.775 chatDataUtils.js:1 char_world_name 末世寒冬-星穹秩序重置版
+13:57:15.775 send_data.js:1 [send_data] 当前角色世界书: 末世寒冬-星穹秩序重置版
+13:57:15.775 send_data.js:1 [send_data] 插件配置: {worldBookSelections: {…}, worldEntrySelections: {…}}
+13:57:15.777 send_data.js:1 [send_data] 当前角色世界书有条目记录，默认开启
+13:57:15.785 chatDataUtils.js:1 char_WorldInfo {entries: {…}}
+13:57:15.842 eventemitter.js:135 Event emitted: GENERATION_AFTER_COMMANDS
+13:57:15.842 index.js:19 [QR2] calling {args: Array(3), functionToCall: ƒ}
+13:57:15.842 index.js:19 [QR2] Before-generation hook skipped due to dryRun.
+13:57:15.848 script.js:4483 Skipping extension interceptors for dry run
+13:57:15.849 script.js:4517 Core/all messages: 0/14
+13:57:15.849 authors-note.js:335
+    setFloatingPrompt entered
+    ------
+    lastMessageNumber = 6
+    metadata_keys.interval = 1
+    metadata_keys.position = 1
+    metadata_keys.depth = 4
+    metadata_keys.role = 0
+    ------
+
+13:57:15.852 world-info.js:4583 [WI] --- START WI SCAN (on 0 messages, trigger = normal) (DRY RUN) ---
+13:57:15.852 world-info.js:4613 [WI] Context size: 1968000; WI budget: 1968000 (max% = 100%, cap = 0)
+13:57:15.855 world-info.js:4393 [WI] Character 末世寒冬 - 星穹秩序's lore has 31 world info entries ['末世寒冬-星穹秩序重置版']
+13:57:15.855 eventemitter.js:135 Event emitted: worldinfo_entries_loaded
+13:57:15.856 variables.ts:62 [Prompt Template] message #13.0 variables:  {stat_data: {…}}
+13:57:15.856 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 4562, LAST_RECEIVE_CHARS: 8931, extra_analysis: false, …}
+13:57:15.856 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:15.856 handler.ts:104 [Prompt Template] Remove characterLore of 末世寒冬-星穹秩序重置版/@INJECT target=user,index=-1,at=before,role=system,order=10/62552 from context when SpecialEntry
+13:57:15.859 worldbook.js:1 [WorldBook] Character list text: 中文名称：浅见 亚美
+英文名称：Asami Ami
+五官外貌（正面）：shoulder length brown hair （及肩棕发）, soft brown eyes （温柔棕眼）, gentle smile （温柔微笑）, nurse cap （护士帽）,24 years old （24岁）
+五官外貌（背面）：messy brown hair bun （凌乱的棕色发髻）, exposed nape （露出的后颈）, hair accessories （发饰）, nurse cap back （护士帽背面）
+上半身SFW（正面）：pale pink nurse uniform （淡粉色护士制服）, tight chest area （胸部紧绷）, white collar （白领口）, name tag （名牌）, buttoned up （扣好纽扣）, short sleeves （短袖）
+上半身SFW（背面）：nurse uniform back （护士服背面）, fitted waist （收腰剪裁）, smooth fabric （光滑面料）, fabric creases （布料褶皱）
+下半身SFW（正面）：knee length pencil skirt （及膝铅笔裙）, white pantyhose （白色连裤袜）, white nurse shoes （白色护士鞋）, curvy hips （曲线臀部）, modest length （端庄的长度）
+下半身SFW（背面）：skirt tight on butt （裙子紧贴臀部）, pantyhose legs （连裤袜双腿）, skirt slit （裙摆开叉）
+上半身NSFW（正面）：soft D cup breasts （柔软D罩杯）, sakura pink nipples （樱花粉乳头）, soft areola （柔和乳晕）, pale smooth skin （苍白光滑皮肤）, moles on chest （胸口的美人痣）
+上半身NSFW（背面）：bare soft back （赤裸柔软背部）, slender spine （纤细脊柱）, bra strap marks （内衣肩带痕迹）, smooth shoulders （光滑肩膀）
+下半身NSFW（正面）：clean shaven pussy （剃净的私处）, pink labia （粉色阴唇）, plump vulva （丰满外阴）, cameltoe （骆驼趾）, soft belly （柔软小腹）
+下半身NSFW（背面）：round buttocks （圆润臀部）, anus focus （肛门特写）, soft thighs （柔软大腿）, pink anus （粉色肛门）, dimples of Venus （腰窝）
+服装列表：
+
+  中文名称：瑞峰医院标准粉色护士制服
+  英文名称：Ruifeng Hospital Standard Pink Nurse Uniform
+  上半身（正面）：pale pink nurse uniform dress （淡粉色护士制服裙）, nurse cap （护士帽）, white collar （白领口）, buttoned up （扣子扣好）, tight chest area （胸部紧绷）, nurse watch （护士表）, name tag （名牌）, short sleeves （短袖）, pockets （口袋）
+  上半身（背面）：fitted back （合身背部剪裁）, uniform seams （制服缝线）, clean fabric （干净的面料）
+  下半身（正面）：knee length skirt （及膝裙）, pencil skirt style （包臀裙款式）, white pantyhose （白色连裤袜）, white nurse shoes （白色护士鞋）, modest length （端庄的长度）
+  下半身（背面）：skirt covering hips （裙子遮住臀部）, smooth leg line （流畅腿部线条）, pantyhose feet （连裤袜脚部）
+
+  中文名称：苏樱的丝袜与情趣拘束（调教版）
+  英文名称：Su Ying's Stockings & Lingerie Bondage （Training Ver）
+  上半身（正面）：red rope bondage （红色绳索拘束）, shibari （日式绳艺）, bare chest （裸胸）, gag ball （口球/可选）, drooling （流口水）, necklace with name（项圈带着名字）
+  上半身（背面）：rope patterns on back （背部绳结图案）, arms tied behind （双手反绑）, skin indentation （绳索勒痕）, red marks （红痕）
+  下半身（正面）：Su Ying's used stockings （苏樱穿过的丝袜）, sheer black stockings （黑色薄丝袜）, stockings over genitals （丝袜套在性器官上/特殊玩法）, crotchless panties （开档内裤）, high heels （高跟鞋）, kneeling pose （跪姿）
+  下半身（背面）：rope around hips （臀部绳索）, spread eagle legs （张开双腿）, exposed anus （露出肛门）, soles of feet （脚底）, submission （臣服）
+
+中文名称：浅见亚美
+英文名称：Asami Ami
+五官外貌（正面）：long silky brown hair（丝滑的长棕发）, clear light brown eyes（清澈的浅棕色眼睛）, slender face（纤细的面庞）, sharp jawline（锋利的下颌线）, 22 years old（22岁）, beautiful college girl（漂亮的女大学生）
+五官外貌（背面）：long hair back view（长发背影）, pale slender neck（苍白纤细的脖子）, smooth nape（光滑的颈背）, elegant posture（优雅的姿态）, young woman（年轻女性）
+上半身SFW（正面）：large perks breasts（巨大的挺拔乳房）, deep cleavage（深邃的乳沟）, pale white skin（苍白的皮肤）, extremely narrow waist（极细的腰部）, skinny arms（纤细的手臂）
+上半身SFW（背面）：pronounced shoulder blades（明显的肩胛骨）, thin waist（细腰）, pale smooth back（苍白光滑的背部）, elegant spine（优雅的脊柱）
+下半身SFW（正面）：long slender legs（纤细修长的双腿）, wide hips（宽臀）, hourglass figure（沙漏型身材）, gap between thighs（大腿缝隙）, thin ankles（纤细的脚踝）
+下半身SFW（背面）：wide pelvic bone（宽阔的盆骨）, prominent hip curve（明显的臀部曲线）, slim long legs（苗条的长腿）, smooth back view（光滑的背影）
+上半身NSFW（正面）：large pale breasts（巨大的苍白乳房）, pink small nipples（粉嫩的小乳头）, soft areola（柔软的乳晕）, extreme hourglass shape（极致的沙漏身材）, pale skin（苍白皮肤）
+上半身NSFW（背面）：deep spine line（深邃的脊柱线）, prominent dimples of venus（明显的腰窝）, thin waist curve（纤细的腰部曲线）, pale flawless skin（苍白无暇的皮肤）
+下半身NSFW（正面）：shaved pubis（剃光的私处）, succulent pink labia（丰盈粉嫩的阴唇）, tight pussy（紧致的私处）, wet inner thighs（湿润的大腿内侧）, pale skin（苍白皮肤）
+下半身NSFW（背面）：round perky ass（圆润挺拔的臀部）, pale smooth buttocks（苍白光滑的臀部）, pink anus（粉嫩的肛门）, tight thigh gap（窄大腿间隙）, smooth skin（光滑的皮肤）
+服装列表：
+
+  中文名称：瑞峰医院标准粉色护士制服
+  英文名称：Ruifeng Hospital Standard Pink Nurse Uniform
+  上半身（正面）：pale pink nurse uniform dress （淡粉色护士制服裙）, nurse cap （护士帽）, white collar （白领口）, buttoned up （扣子扣好）, tight chest area （胸部紧绷）, nurse watch （护士表）, name tag （名牌）, short sleeves （短袖）, pockets （口袋）
+  上半身（背面）：fitted back （合身背部剪裁）, uniform seams （制服缝线）, clean fabric （干净的面料）
+  下半身（正面）：knee length skirt （及膝裙）, pencil skirt style （包臀裙款式）, white pantyhose （白色连裤袜）, white nurse shoes （白色护士鞋）, modest length （端庄的长度）
+  下半身（背面）：skirt covering hips （裙子遮住臀部）, smooth leg line （流畅腿部线条）, pantyhose feet （连裤袜脚部）
+
+中文名称：桃乐丝・泽巴哈
+英文名称：Dolores Zabah
+五官外貌（正面）：messy red long hair （凌乱红色长发）, deep black eyes （深邃黑瞳）, pale skin （苍白皮肤）, sharp gaze （敏锐目光）, delicate features （精致五官）, eyebags （眼袋/疲惫感）, 17 years old （17岁）, cynical smile （玩世不恭的微笑）
+五官外貌（背面）：messy red long hair （凌乱红色长发）, exposed nape （露出的后颈）, thin neck （纤细脖颈）, hair over shoulder （披肩发）, 17 years old （17岁）
+上半身SFW（正面）：slender frame （纤细骨架）, bony shoulders （骨感肩膀）, D cup breasts （D罩杯胸部）, soft curves （柔软曲线）, pale arms （苍白手臂）, collarbone （锁骨）, bandage on arm （手臂绷带）
+上半身SFW（背面）：slender back （纤细背部）, shoulder blades （肩胛骨）, fragile look （脆弱感）, smooth skin （光滑皮肤）
+下半身SFW（正面）：slender legs （修长美腿）, thigh gap （大腿缝）, pale knees （苍白膝盖）, skinny ankles （瘦削脚
+13:57:15.860 worldbook.js:1 [WorldBook] Outfit enable list text: 中文名称：堕落黑天鹅羽毛吊带裙（暗黑芭蕾风）
+英文名称：Fallen Black Swan Feather Strap Dress
+上半身（正面）：black velvet fabric （黑色天鹅绒面料）, lace splicing （蕾丝拼接）, spaghetti straps （极细肩带）, sweetheart neckline （心形领口）, tight bustier （紧身胸衣剪裁）, exposed shoulders （露肩）, silver cross necklace （银色十字架项链）, black sheer opera gloves （黑色半透明长手套）
+上半身（背面）：low back design （大露背设计）, zipper closure （拉链闭合）, velvet texture （天鹅绒质感）, exposed shoulder blades （裸露的肩胛骨）
+下半身（正面）：black feather mini skirt （黑色羽毛超短裙）, layered feathers （层叠羽毛）, black stockings （黑色长筒袜）, garters （吊带袜扣）, black high heels （黑色高跟鞋）, pale thighs （苍白的大腿）
+下半身（背面）：feathers covering buttocks （羽毛遮住臀部）, back of thighs visible （大腿后侧可见）, stocking seams （丝袜接缝）, high heel straps （高跟鞋带）
+
+中文名称：圣洁亵渎丝绸露背短裙（纯欲睡衣风）
+英文名称：Holy Blasphemy Silk Backless Mini Dress
+上半身（正面）：white silk fabric （白色丝绸面料）, cowl neck （荡领设计）, sleeveless （无袖）, haltneck （挂脖）, semi-transparent （半透明）, soft draping （柔软自然的褶皱）, pearl necklace （珍珠项链）
+上半身（背面）：completely bare back （全裸背）, silk ties behind neck （颈后丝带结）, spine groove visible （可见的脊柱沟）, smooth pale skin （光滑苍白的皮肤）
+下半身（正面）：white silk mini skirt （白色丝绸短裙）, high slit on side （侧边高开叉）, white intricate lace leg garter （白色精致蕾丝腿环）, bare feet （赤脚）, pale legs （苍白的双腿）
+下半身（背面）：short hemline （极短的下摆）, skirt just covering hips （裙摆勉强遮住臀部）, smooth legs （光滑的双腿）
+
+中文名称：暗夜囚徒网眼连体衣（黑色束缚风情趣内衣）
+英文名称：Dark Prisoner Fishnet Bodysuit
+上半身（正面）：black sheer mesh fabric （黑色透明网纱面料）, black leather harness （黑色皮革束带）, metal rings connection （金属圆环连接）, silver chains draping （银色链条垂坠）, tight collar （紧身项圈）, nipples visible through mesh （网纱透视可见乳头）, sleeveless （无袖）
+上半身（背面）：large open back （大露背）, single leather strip along spine （沿脊柱单条皮带）, shoulder blades exposed （肩胛骨暴露）, metal clasp closure （金属扣闭合）
+下半身（正面）：high cut bodysuit （高开叉连体衣）, crotchless design （开档设计）, black fishnet thigh highs （黑色网眼大腿袜）, leather garters （皮革吊袜带）, pale skin contrast （苍白肤色对比）
+下半身（背面）：thong back style （丁字裤款式）, buttocks fully exposed （臀部完全暴露）, leather texture straps （皮质纹理带子）, heels （高跟鞋）
+
+中文名称：纯白献祭蕾丝绑带内衣（新娘风情趣内衣）
+英文名称：Pure White Sacrifice Lace Bondage Lingerie
+上半身（正面）：white satin ribbons （白色缎带）, intricate lace cups （精致蕾丝罩杯）, translucent floral pattern （半透明花卉图案）, ribbon bondage across chest （胸前缎带束缚）, pearl embellishments （珍珠点缀）, delicate spaghetti straps （精致细肩带）, nipples vaguely visible （乳头隐约可见）
+上半身（背面）：crises-cross ribbon lacing （背后交叉缎带绑带）, corset style lacing （紧身胸衣式系带）, bare upper back （上背部裸露）, silk bows （丝绸蝴蝶结）
+下半身（正面）：white lace panties （白色蕾丝内裤）, open crotch （开档）, white silk stockings （白色丝袜）, frilled garters （荷叶边吊袜带）, lace leg loops （蕾丝腿环）
+下半身（背面）：sheer lace back of panties （透明蕾丝内裤背面）, buttocks specific see-through （臀部特写透视）, decorative bow above ass （臀上方装饰蝴蝶结）
+
+中文名称：黑金高叉旗袍
+英文名称：Peerless Elegance Black Gold Cheongsam
+上半身（正面）：black cheongsam （黑色旗袍）, chinese clothes （中国风服饰）, gold embroidery （金线刺绣）, mandarin collar （中式立领）, keyhole cutout （胸部钥匙孔镂空/水滴镂空）, sleeveless （无袖/削肩）, tight fitting （紧身）, cleavage visible （可见乳沟）, silk fabric （丝绸面料）
+上半身（背面）：zipper on back （背部拉链）, form fitting back （贴合背部）, gold patterns （金色花纹）, elegant silhouette （优雅轮廓）
+下半身（正面）：high slit skirt （高开叉裙摆）, pelvic curtain （前布帘/极其高开叉）, showing hip bone （露出胯骨）, sheer black pantyhose （黑色透肉连裤袜）, black high heels （黑色高跟鞋）, legs visible （露腿）
+下半身（背面）：tight skirt over butt （紧绷在屁股上的裙子）, visible butt contour （可见臀部轮廓）, fabric stretching （布料拉伸）, elegant trail （优雅的拖尾/下摆）
+
+中文名称：纯洁杀手露背毛衣
+英文名称：Innocent Killer Backless Sweater
+上半身（正面）：grey knitted sweater （灰色针织毛衣）, turtleneck （高领）, sleeveless （无袖）, ribbed knit （罗纹针织）, sideboob visible （可见侧乳）, large armholes （大袖口）, cozy texture （舒适质感）
+上半身（背面）：completely open back （完全露背）, bare skin （裸露的皮肤）, sweater straps （毛衣带子）, backless design （露背设计）, spine visible （可见脊柱）
+下半身（正面）：micro skirt length （超短裙长度）, sweater dress （毛衣裙）, no panties （没穿内裤）, bare legs （光腿）, thigh high exposure （大腿根部暴露）
+下半身（背面）：sweater covering buttocks partially （毛衣部分覆盖臀部）, butt cleavage visible （可见股沟）, short hemline （短下摆）, dangerous length （危险的长度）
+
+中文名称：堕落的黑天鹅深V露背天鹅绒礼服（暗黑禁欲风）
+英文名称：Fallen Black Swan Backless Velvet Gown
+上半身（正面）：black heavy velvet fabric（黑色重磅天鹅绒面料）, extremely high collar（极高领）, long sleeves（长袖）, tight fit（修身剪裁）, wrap front design（前身全包裹设计）, extremely ascetic（极度禁欲）, silver collar pin（银色领针）
+上半身（背面）：deep V open back（深V露背）, backless to waist（露背至腰部）, highlighting back muscles（凸显背肌线条）, velvet texture contrast（天鹅绒质感对比）, sensual curve（性感曲线）
+下半身（正面）：floor length straight skirt（直筒拖地长裙）, heavy skirt drape（垂坠感裙摆）, minimalist silhouette（极简轮廓）
+下半身（背面）：high slit on the back side（侧后方高开叉）, revealing ankle（露出脚踝）, black suit socks（黑色西装袜）, black patent leather mens shoes（黑色亮面男士正装鞋）, walking motion（行走动态）
+13:57:15.860 worldbook.js:1 [WorldBook] Common character list text: 暂未配置通用角色
+13:57:15.861 worldbook.js:1 [WorldBook] Processed globalLore and charLore entries {"globalLore":[],"characterLore":[{"uid":12844,"world":"末世寒冬-星穹秩序重置版","displayIndex":23,"comment":"[mvu_update]变量输出格式","disable":false,"constant":true,"selective":false,"key":[],"selectiveLogic":0,"keysecondary":[],"scanDepth":null,"vectorized":false,"position":4,"role":0,"depth":0,"order":9998,"content":"# [mvu_update] 变量输出格式（优化版）\n\nrule:\n  - '在产出本块之前，必须先在内心完成 <变量运算指导> 中 <match_cot> 的逐条思考（时间、秩序刻印更新原因/秩序刻印/关系、健康/健康更新原因、伊甸一次性指令的数量与生效实例、主线任务等）。所有数值运算与归一化规则以 <match_cot> 为准，本文件不再重复。'\n  - '全局优先级（冲突时裁决）：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡规则。玩家发出\"直接加 Imp / 直接设档位\"等脱离剧情指令 → 视为破坏规则，正文拒绝、不产出相关 patch。'\n  - You MUST output the `<UpdateVariable>` block at the end of your reply.\n  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.\n  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must\n    be a valid JSON array containing operation objects, but supports the\n    following operations instead:'\n  - '  - `replace`: replace the value of existing paths'\n  - '  - `delta`: update the value of existing number paths by a delta value\n    (positive or negative)'\n  - '  - `insert`: insert new items into an object or array'\n  - '  - `remove`: delete path'\n  - '  - `move`: move an existing value from one path to another (requires\n    `\"from\"`). '\n  - Path MUST start with `/`.\n  - DO NOT update field names starts with `_` as they are readonly, such as\n    `_变量`.\n  - analyze every variable based on its corresponding `check`, according only to\n    current reply instead of previous plots\n\nformat: |-\n  <UpdateVariable>\n  <Analysis>\n  前置声明：以下分析严格遵循 <变量运算指导> 的 <match_cot> 结论，不再重复其中的计算公式、倾向加成、归一化规则；本块只写\"结论\"与\"触发点\"，所有数值来源于 match_cot 的推演。\n  全局优先级：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡；玩家直接改 Imp 的指令不予采纳。\n\n  1. 在场盘点（登场状态）\n     - 本轮在场/被提及角色 → '登场'；其余 → '离场'。\n     - 【永久逃离】（Imp<0）角色不参与盘点、不回写任何字段。\n     - 结果：新登场 ____；新离场 ____。\n\n  2. 世界与氛围（时间 / 日期 / 地址）\n     - 时间：按 match_cot 推出的最终时间写回 `/世界/时间`。\n     - 跨过 00:00 时更新日期，并对 `/世界/末日天数` 做 `delta +1`（脚本为兜底）。\n     - 地址：仅在角色实际移动时更新。\n     - 结果：时间 ____；日期 ____。每新的一天要随机增加3个伊甸一次性指令。\n\n  3. 庇护所与伊甸一次性指令\n     - 不要手动为庇护所升级摇点；仅当主线阶段完成奖励触发时 `replace /庇护所/庇护所等级`。\n     - `今日投掷点数` 只读。\n     - 伊甸一次性指令：\n          - 根据`check`进行新增或减少指令，绑定日期更新\n          - 严格按 match_cot 的\"发动 → 推进 → 结束\"三态产出 patch，只维护 `数量` 与 `生效实例`；禁止改动 `名称/说明/范围/时效`。\n     - 本轮受指令保护的角色/事件列表 ____；受保护范围之外的独立负向事件 ____。\n\n  4. 角色逐个过审（顶层角色 + `/临时NPC/*`）\n     对每位在场角色按以下顺序对齐 match_cot 结论：\n     a. 健康 / 健康更新原因：按 match_cot 给出的 delta 与原因同步写入（无变动写 `0, 无变化`）；昏迷/失能期的性相关事件不扣健康。\n     b. 秩序刻印更新原因 → 秩序刻印 → 关系：三者联动，`更新原因` 先写（简化法：base 0~15 + 正向加成 50%~100% 或硬约束事件明示值），`刻印` 按 final_delta 做 `delta`，跨档时 `replace` 更新 `关系`；Imp<0 → 【永久逃离】。\n     c. 内心想法：每轮 `replace`，第一人称、符合人设与关系档位约束（逃离档不得有归附想法）。\n     d. 衣着/神态样貌/动作姿势：每位登场角色均需归纳正文中的内容，并以 `replace`更新。\n     e. 所在房间：移动时 `replace`，使用合法路径；离开公寓写 `\"\"`。\n     f. 登场状态：按\"在场盘点\"结论 `replace`。\n     离场角色的 `健康`/`健康更新原因`/`健康状况` 由脚本兜底，AI 不输出 patch。\n     【永久逃离】角色本块跳过。\n\n  5. 临时NPC\n     - 新出场：`insert /临时NPC/${姓名}` 完整对象，关系初始 ≤ 逃离，Imp 初始 ~10（禁止初始进入【归附】）。\n     - 转正：推荐 `insert /${姓名}`（基于临时NPC对象并补齐缺字段）+ `remove /临时NPC/${姓名}`；或直接 `move`。\n     - 顶层已有同名：`replace` 合并，删除临时NPC。\n\n  6. 房间（只读派生）\n     - 禁止输出任何 `/房间/**` 操作，由脚本维护。\n     - 角色移动一律走 `/${姓名}/所在房间`。\n\n  7. 主线任务与奖励\n     - 阶段目标 `当前值`：按 match_cot 的推进量做 `delta`。\n     - 目标完成状态：跨过目标值时 `replace true`，触发在场角色 Imp +20 硬约束奖励（突破单次硬帽）。\n     - 阶段升级：所有目标 true 时 `replace /主线任务/当前阶段`，并对 `/庇护所/庇护所等级` 做 `replace +1`。\n     - 情报碎片：新发现 `insert` 为\"未探索\"，开始探索 `replace \"已探索\"`，完成后 `replace \"已完成\"` 并发放奖励。\n     - 结果：任务进度 ____；触发奖励 ____。\n\n  8. 玩家规则破坏识别\n     - 本轮{{user}}是否有\"直接改 Imp / 直接设为 xx 档位 / 直接改健康\"等脱离剧情的指令？\n       - 有 → 正文中礼貌拒绝，不产出相关 patch；本块注明拒绝原因。\n       - 无 → 跳过。\n\n  9. 操作汇总\n     - 列出本轮所有 path + op（replace/delta/insert/remove/move），复核与 match_cot 结论是否一致。\n     - 自检：数值路径用 `delta`，文本路径用 `replace`；对不存在路径禁止 `replace/delta/remove`（改用 `insert`）。\n\n  </Analysis>\n  <JSONPatch>\n  [\n    { \"op\": \"replace\", \"path\": \"/世界/时间\", \"value\": \"...\" },\n    { \"op\": \"delta\", \"path\": \"/纪宁/健康\", \"value\": -1 },\n    { \"op\": \"replace\", \"path\": \"/纪宁/健康更新原因\", \"value\": \"-1, 户外寒风侵袭\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/秩序刻印更新原因\", \"value\": \"+9, base +6 (协作正向·中立+50%) = +9\" },\n    { \"op\": \"delta\", \"path\": \"/纪宁/秩序刻印\", \"value\": 9 },\n    { \"op\": \"replace\", \"path\": \"/纪宁/关系\", \"value\": \"协作\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/内心想法\", \"value\": \"...\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/登场状态\", \"value\": \"登场\" },\n    { \"op\": \"replace\", \"path\": \"/佐伯惠理/登场状态\", \"value\": \"离场\" },\n    { \"op\": \"replace\", \"path\": \"/纪宁/所在房间\", \"value\": \"楼层20/2001\" },\n    { \"op\": \"insert\", \"path\": \"/临时NPC/陌生拾荒者\", \"value\": { } },\n    {\n      \"op\": \"insert\",\n      \"path\": \"/伊甸一次性指令/rz001\",\n      \"value\": {\n        \"名称\": \"朋友妻不客气\",\n        \"数量\": 1,\n        \"说明\": \"移除伴侣性道德感\",\n        \"范围\": \"指定一位男性角色\",\n        \"时效\": \"12小时\",\n        \
+13:57:15.869 world-info.js:4506 [WI] Found 27 world lore entries. Sorted by strategy (2) ['character_first', 1]
+13:57:15.870 world-info.js:4634 [WI] --- SEARCHING ENTRIES (on 27 entries) ---
+13:57:15.870 world-info.js:4646 [WI] --- LOOP #1 START ---
+13:57:15.870 world-info.js:4647 [WI] Scan state (2) ['INITIAL', 1]
+13:57:15.870 world-info.js:4660 [WI] Entry 401536 from '末世寒冬-星穹秩序重置版' processing {uid: 401536, world: '末世寒冬-星穹秩序重置版', displayIndex: 0, comment: 'COT', disable: false, …}
+13:57:15.871 world-info.js:4663 [WI] Entry 401536 activated because of constant
+13:57:15.871 world-info.js:4660 [WI] Entry 65005 from '末世寒冬-星穹秩序重置版' processing {uid: 65005, world: '末世寒冬-星穹秩序重置版', displayIndex: 25, comment: '变量列表', disable: false, …}
+13:57:15.871 world-info.js:4663 [WI] Entry 65005 activated because of constant
+13:57:15.871 world-info.js:4660 [WI] Entry 81300 from '末世寒冬-星穹秩序重置版' processing {uid: 81300, world: '末世寒冬-星穹秩序重置版', displayIndex: 6, comment: '[initvar]变量初始化勿开', disable: true, …}
+13:57:15.871 world-info.js:4663 [WI] Entry 81300 disabled
+13:57:15.871 world-info.js:4660 [WI] Entry 419351 from '末世寒冬-星穹秩序重置版' processing {uid: 419351, world: '末世寒冬-星穹秩序重置版', displayIndex: 30, comment: '外部幸存者势力', disable: true, …}
+13:57:15.871 world-info.js:4663 [WI] Entry 419351 disabled
+13:57:15.875 world-info.js:4660 [WI] Entry 268862 from '末世寒冬-星穹秩序重置版' processing {uid: 268862, world: '末世寒冬-星穹秩序重置版', displayIndex: 7, comment: '角色变量结构示意', disable: false, …}
+13:57:15.876 world-info.js:4663 [WI] Entry 268862 activated because of constant
+13:57:15.876 world-info.js:4660 [WI] Entry 481934 from '末世寒冬-星穹秩序重置版' processing {uid: 481934, world: '末世寒冬-星穹秩序重置版', displayIndex: 19, comment: '星穹国际公寓邻里关系档案', disable: false, …}
+13:57:15.876 world-info.js:4663 [WI] Entry 481934 activated because of constant
+13:57:15.911 world-info.js:4660 [WI] Entry 324389 from '末世寒冬-星穹秩序重置版' processing {uid: 324389, world: '末世寒冬-星穹秩序重置版', displayIndex: 28, comment: '角色关系引导指令', disable: false, …}
+13:57:15.911 world-info.js:4663 [WI] Entry 324389 activated because of constant
+13:57:15.911 world-info.js:4660 [WI] Entry 460850 from '末世寒冬-星穹秩序重置版' processing {uid: 460850, world: '末世寒冬-星穹秩序重置版', displayIndex: 27, comment: '角色身份与关系', disable: false, …}
+13:57:15.911 world-info.js:4663 [WI] Entry 460850 activated because of constant
+13:57:15.915 world-info.js:4660 [WI] Entry 763309 from '末世寒冬-星穹秩序重置版' processing {uid: 763309, world: '末世寒冬-星穹秩序重置版', displayIndex: 2, comment: '世界设定', disable: false, …}
+13:57:15.915 world-info.js:4663 [WI] Entry 763309 activated because of constant
+13:57:15.930  [WI] Entry 353078 from '末世寒冬-星穹秩序重置版' processing {uid: 353078, world: '末世寒冬-星穹秩序重置版', displayIndex: 20, comment: '[mvu_plot]世界观', disable: false, …}
+13:57:15.931  [WI] Entry 353078 activated because of constant
+13:57:15.931  [WI] Entry 219489 from '末世寒冬-星穹秩序重置版' processing {uid: 219489, world: '末世寒冬-星穹秩序重置版', displayIndex: 22, comment: '[mvu_plot]AI核心行为指令', disable: false, …}
+13:57:15.931  [WI] Entry 219489 activated because of constant
+13:57:15.931  [WI] Entry 771680 from '末世寒冬-星穹秩序重置版' processing {uid: 771680, world: '末世寒冬-星穹秩序重置版', displayIndex: 26, comment: '伊甸一次性指令和主线任务', disable: false, …}
+13:57:15.931  [WI] Entry 771680 activated because of constant
+13:57:15.931  [WI] Entry 614823 from '末世寒冬-星穹秩序重置版' processing {uid: 614823, world: '末世寒冬-星穹秩序重置版', displayIndex: 5, comment: '[mvu_plot]格式', disable: false, …}
+13:57:15.931  [WI] Entry 614823 activated because of constant
+13:57:15.931  [WI] Search done. Found 11 possible entries.
+13:57:15.932  [WI] --- INCLUSION GROUP CHECKS ---
+13:57:15.932  [WI] No inclusion groups found
+13:57:15.932  [WI] --- PROBABILITY CHECKS ---
+13:57:15.932  WI entry 401536 does not use probability
+13:57:15.933  [WI] Entry 401536 activation successful, adding to prompt {uid: 401536, world: '末世寒冬-星穹秩序重置版', displayIndex: 0, comment: 'COT', disable: false, …}
+13:57:15.933  WI entry 65005 does not use probability
+13:57:15.934  [WI] Entry 65005 activation successful, adding to prompt {uid: 65005, world: '末世寒冬-星穹秩序重置版', displayIndex: 25, comment: '变量列表', disable: false, …}
+13:57:15.934  WI entry 268862 does not use probability
+13:57:15.935  [WI] Entry 268862 activation successful, adding to prompt {uid: 268862, world: '末世寒冬-星穹秩序重置版', displayIndex: 7, comment: '角色变量结构示意', disable: false, …}
+13:57:15.935  WI entry 481934 does not use probability
+13:57:15.936  [WI] Entry 481934 activation successful, adding to prompt {uid: 481934, world: '末世寒冬-星穹秩序重置版', displayIndex: 19, comment: '星穹国际公寓邻里关系档案', disable: false, …}
+13:57:15.936  WI entry 324389 does not use probability
+13:57:15.937  [WI] Entry 324389 activation successful, adding to prompt {uid: 324389, world: '末世寒冬-星穹秩序重置版', displayIndex: 28, comment: '角色关系引导指令', disable: false, …}
+13:57:15.937  WI entry 460850 does not use probability
+13:57:15.938  [WI] Entry 460850 activation successful, adding to prompt {uid: 460850, world: '末世寒冬-星穹秩序重置版', displayIndex: 27, comment: '角色身份与关系', disable: false, …}
+13:57:15.938  WI entry 763309 does not use probability
+13:57:15.939  [WI] Entry 763309 activation successful, adding to prompt {uid: 763309, world: '末世寒冬-星穹秩序重置版', displayIndex: 2, comment: '世界设定', disable: false, …}
+13:57:15.939  WI entry 353078 does not use probability
+13:57:15.940  [WI] Entry 353078 activation successful, adding to prompt {uid: 353078, world: '末世寒冬-星穹秩序重置版', displayIndex: 20, comment: '[mvu_plot]世界观', disable: false, …}
+13:57:15.940  WI entry 219489 does not use probability
+13:57:15.941  [WI] Entry 219489 activation successful, adding to prompt {uid: 219489, world: '末世寒冬-星穹秩序重置版', displayIndex: 22, comment: '[mvu_plot]AI核心行为指令', disable: false, …}
+13:57:15.941  WI entry 771680 does not use probability
+13:57:15.942  [WI] Entry 771680 activation successful, adding to prompt {uid: 771680, world: '末世寒冬-星穹秩序重置版', displayIndex: 26, comment: '伊甸一次性指令和主线任务', disable: false, …}
+13:57:15.942  WI entry 614823 does not use probability
+13:57:15.943  [WI] Entry 614823 activation successful, adding to prompt {uid: 614823, world: '末世寒冬-星穹秩序重置版', displayIndex: 5, comment: '[mvu_plot]格式', disable: false, …}
+13:57:15.943  [WI] --- LOOP #1 RESULT ---
+13:57:15.943  [WI] Successfully activated 11 new entries to prompt. 11 total entries activated. (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+13:57:15.943  [WI] Found 7 new entries for recursion
+13:57:15.943  [WI] Setting scan state (2) ['INITIAL', 1]
+13:57:15.943  Event emitted: worldinfo_scan_done
+13:57:15.943  [WI] --- LOOP #2 START ---
+13:57:15.943  [WI] Scan state (2) ['RECURSION', 2]
+13:57:15.943  [WI] Entry 81300 from '末世寒冬-星穹秩序重置版' processing {uid: 81300, world: '末世寒冬-星穹秩序重置版', displayIndex: 6, comment: '[initvar]变量初始化勿开', disable: true, …}
+13:57:15.943  [WI] Entry 81300 disabled
+13:57:15.943  [WI] Entry 419351 from '末世寒冬-星穹秩序重置版' processing {uid: 419351, world: '末世寒冬-星穹秩序重置版', displayIndex: 30, comment: '外部幸存者势力', disable: true, …}
+13:57:15.944  [WI] Entry 419351 disabled
+13:57:15.944  [WI] Entry 65447 from '末世寒冬-星穹秩序重置版' processing {uid: 65447, world: '末世寒冬-星穹秩序重置版', displayIndex: 29, comment: '普通幸存者家庭', disable: false, …}
+13:57:15.944  [WI] Entry 65447 activated by primary key match 普通幸存者
+13:57:15.945  [WI] Entry 50310 from '末世寒冬-星穹秩序重置版' processing {uid: 50310, world: '末世寒冬-星穹秩序重置版', displayIndex: 18, comment: '角色档案 - 慕小小', disable: false, …}
+13:57:15.945  [WI] Entry 50310 activated by primary key match 慕小小
+13:57:15.946  [WI] Entry 32243 from '末世寒冬-星穹秩序重置版' processing {uid: 32243, world: '末世寒冬-星穹秩序重置版', displayIndex: 14, comment: '角色档案 - 赵卫国', disable: false, …}
+13:57:15.946  [WI] Entry 32243 activated by primary key match 赵卫国
+13:57:15.946  [WI] Entry 818363 from '末世寒冬-星穹秩序重置版' processing {uid: 818363, world: '末世寒冬-星穹秩序重置版', displayIndex: 13, comment: '角色档案 - 林月华', disable: false, …}
+13:57:15.947  [WI] Entry 818363 activated by primary key match 林月华
+13:57:15.947  [WI] Entry 98251 from '末世寒冬-星穹秩序重置版' processing {uid: 98251, world: '末世寒冬-星穹秩序重置版', displayIndex: 17, comment: '角色档案 - 陈宇', disable: false, …}
+13:57:15.947  [WI] Entry 98251 activated by primary key match 陈宇
+13:57:15.948  [WI] Entry 745729 from '末世寒冬-星穹秩序重置版' processing {uid: 745729, world: '末世寒冬-星穹秩序重置版', displayIndex: 16, comment: '角色档案 - 凌音', disable: false, …}
+13:57:15.948  [WI] Entry 745729 activated by primary key match 凌音
+13:57:15.951  [WI] Entry 389372 from '末世寒冬-星穹秩序重置版' processing {uid: 389372, world: '末世寒冬-星穹秩序重置版', displayIndex: 15, comment: '角色档案 - 雪乃', disable: false, …}
+13:57:15.951  [WI] Entry 389372 activated by primary key match 雪乃
+13:57:15.954  [WI] Entry 252863 from '末世寒冬-星穹秩序重置版' processing {uid: 252863, world: '末世寒冬-星穹秩序重置版', displayIndex: 11, comment: '角色档案 - 佐伯惠理', disable: false, …}
+13:57:15.954  [WI] Entry 252863 activated by primary key match 佐伯惠理
+13:57:15.957  [WI] Entry 654749 from '末世寒冬-星穹秩序重置版' processing {uid: 654749, world: '末世寒冬-星穹秩序重置版', displayIndex: 21, comment: '文明阶段规则', disable: false, …}
+13:57:15.957  [WI] Entry 654749 activated by primary key match 行为模式
+13:57:15.957  [WI] Entry 599300 from '末世寒冬-星穹秩序重置版' processing {uid: 599300, world: '末世寒冬-星穹秩序重置版', displayIndex: 10, comment: '角色档案 - 佐伯诗织', disable: false, …}
+13:57:15.957  [WI] Entry 599300 activated by primary key match 佐伯诗织
+13:57:15.958  [WI] Entry 833446 from '末世寒冬-星穹秩序重置版' processing {uid: 833446, world: '末世寒冬-星穹秩序重置版', displayIndex: 1, comment: '庇护所布局', disable: false, …}
+13:57:15.959  [WI] Entry 833446 activated by primary key match 伊甸
+13:57:15.960  [WI] Entry 131191 from '末世寒冬-星穹秩序重置版' processing {uid: 131191, world: '末世寒冬-星穹秩序重置版', displayIndex: 9, comment: '角色档案 - 纪宁', disable: false, …}
+13:57:15.960  [WI] Entry 131191 activated by primary key match 纪宁
+13:57:15.960  [WI] Search done. Found 12 possible entries.
+13:57:15.961  [WI] --- INCLUSION GROUP CHECKS ---
+13:57:15.961  [WI] No inclusion groups found
+13:57:15.961  [WI] --- PROBABILITY CHECKS ---
+13:57:15.961  WI entry 65447 does not use probability
+13:57:15.961  [WI] Entry 65447 activation successful, adding to prompt {uid: 65447, world: '末世寒冬-星穹秩序重置版', displayIndex: 29, comment: '普通幸存者家庭', disable: false, …}
+13:57:15.962  WI entry 50310 does not use probability
+13:57:15.962  [WI] Entry 50310 activation successful, adding to prompt {uid: 50310, world: '末世寒冬-星穹秩序重置版', displayIndex: 18, comment: '角色档案 - 慕小小', disable: false, …}
+13:57:15.962  WI entry 32243 does not use probability
+13:57:15.964  [WI] Entry 32243 activation successful, adding to prompt {uid: 32243, world: '末世寒冬-星穹秩序重置版', displayIndex: 14, comment: '角色档案 - 赵卫国', disable: false, …}
+13:57:15.964  WI entry 818363 does not use probability
+13:57:15.965  [WI] Entry 818363 activation successful, adding to prompt {uid: 818363, world: '末世寒冬-星穹秩序重置版', displayIndex: 13, comment: '角色档案 - 林月华', disable: false, …}
+13:57:15.965  WI entry 98251 does not use probability
+13:57:15.966  [WI] Entry 98251 activation successful, adding to prompt {uid: 98251, world: '末世寒冬-星穹秩序重置版', displayIndex: 17, comment: '角色档案 - 陈宇', disable: false, …}
+13:57:15.966  WI entry 745729 does not use probability
+13:57:15.967  [WI] Entry 745729 activation successful, adding to prompt {uid: 745729, world: '末世寒冬-星穹秩序重置版', displayIndex: 16, comment: '角色档案 - 凌音', disable: false, …}
+13:57:15.967  WI entry 389372 does not use probability
+13:57:15.968  [WI] Entry 389372 activation successful, adding to prompt {uid: 389372, world: '末世寒冬-星穹秩序重置版', displayIndex: 15, comment: '角色档案 - 雪乃', disable: false, …}
+13:57:15.968  WI entry 252863 does not use probability
+13:57:15.969  [WI] Entry 252863 activation successful, adding to prompt {uid: 252863, world: '末世寒冬-星穹秩序重置版', displayIndex: 11, comment: '角色档案 - 佐伯惠理', disable: false, …}
+13:57:15.969  WI entry 654749 does not use probability
+13:57:15.970  [WI] Entry 654749 activation successful, adding to prompt {uid: 654749, world: '末世寒冬-星穹秩序重置版', displayIndex: 21, comment: '文明阶段规则', disable: false, …}
+13:57:15.970  WI entry 599300 does not use probability
+13:57:15.971  [WI] Entry 599300 activation successful, adding to prompt {uid: 599300, world: '末世寒冬-星穹秩序重置版', displayIndex: 10, comment: '角色档案 - 佐伯诗织', disable: false, …}
+13:57:15.971  WI entry 833446 does not use probability
+13:57:15.974  [WI] Entry 833446 activation successful, adding to prompt {uid: 833446, world: '末世寒冬-星穹秩序重置版', displayIndex: 1, comment: '庇护所布局', disable: false, …}
+13:57:15.975  WI entry 131191 does not use probability
+13:57:15.976  [WI] Entry 131191 activation successful, adding to prompt {uid: 131191, world: '末世寒冬-星穹秩序重置版', displayIndex: 9, comment: '角色档案 - 纪宁', disable: false, …}
+13:57:15.976  [WI] --- LOOP #2 RESULT ---
+13:57:15.976  [WI] Successfully activated 12 new entries to prompt. 23 total entries activated. (12) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+13:57:15.976  [WI] Found 12 new entries for recursion
+13:57:15.976  [WI] Setting scan state (2) ['RECURSION', 2]
+13:57:15.976  Event emitted: worldinfo_scan_done
+13:57:15.976  [WI] --- LOOP #3 START ---
+13:57:15.976  [WI] Scan state (2) ['RECURSION', 2]
+13:57:15.976  [WI] Entry 81300 from '末世寒冬-星穹秩序重置版' processing {uid: 81300, world: '末世寒冬-星穹秩序重置版', displayIndex: 6, comment: '[initvar]变量初始化勿开', disable: true, …}
+13:57:15.976  [WI] Entry 81300 disabled
+13:57:15.977  [WI] Entry 419351 from '末世寒冬-星穹秩序重置版' processing {uid: 419351, world: '末世寒冬-星穹秩序重置版', displayIndex: 30, comment: '外部幸存者势力', disable: true, …}
+13:57:15.977  [WI] Entry 419351 disabled
+13:57:15.977  [WI] Entry 600703 from '末世寒冬-星穹秩序重置版' processing {uid: 600703, world: '末世寒冬-星穹秩序重置版', displayIndex: 12, comment: '角色档案 - 佐伯龙一', disable: false, …}
+13:57:15.978  [WI] Entry 600703 activated by primary key match 佐伯龙一
+13:57:15.978  [WI] Entry 884929 from '末世寒冬-星穹秩序重置版' processing {uid: 884929, world: '末世寒冬-星穹秩序重置版', displayIndex: 3, comment: '庇护所升级能力', disable: false, …}
+13:57:15.978  [WI] Entry 884929 activated by primary key match 庇护所升级
+13:57:15.978  [WI] Search done. Found 2 possible entries.
+13:57:15.980  [WI] --- INCLUSION GROUP CHECKS ---
+13:57:15.980  [WI] No inclusion groups found
+13:57:15.980  [WI] --- PROBABILITY CHECKS ---
+13:57:15.980  WI entry 600703 does not use probability
+13:57:15.980  [WI] Entry 600703 activation successful, adding to prompt {uid: 600703, world: '末世寒冬-星穹秩序重置版', displayIndex: 12, comment: '角色档案 - 佐伯龙一', disable: false, …}
+13:57:15.980  WI entry 884929 does not use probability
+13:57:15.981  [WI] Entry 884929 activation successful, adding to prompt {uid: 884929, world: '末世寒冬-星穹秩序重置版', displayIndex: 3, comment: '庇护所升级能力', disable: false, …}
+13:57:15.982  [WI] --- LOOP #3 RESULT ---
+13:57:15.982  [WI] Successfully activated 2 new entries to prompt. 25 total entries activated. (2) [{…}, {…}]
+13:57:15.982  [WI] Found 2 new entries for recursion
+13:57:15.982  [WI] Setting scan state (2) ['RECURSION', 2]
+13:57:15.982  Event emitted: worldinfo_scan_done
+13:57:15.982  [WI] --- LOOP #4 START ---
+13:57:15.982  [WI] Scan state (2) ['RECURSION', 2]
+13:57:15.982  [WI] Entry 81300 from '末世寒冬-星穹秩序重置版' processing {uid: 81300, world: '末世寒冬-星穹秩序重置版', displayIndex: 6, comment: '[initvar]变量初始化勿开', disable: true, …}
+13:57:15.982  [WI] Entry 81300 disabled
+13:57:15.982  [WI] Entry 419351 from '末世寒冬-星穹秩序重置版' processing {uid: 419351, world: '末世寒冬-星穹秩序重置版', displayIndex: 30, comment: '外部幸存者势力', disable: true, …}
+13:57:15.982  [WI] Entry 419351 disabled
+13:57:15.982  [WI] Search done. Found 0 possible entries.
+13:57:15.984  [WI] --- INCLUSION GROUP CHECKS ---
+13:57:15.984  [WI] No inclusion groups found
+13:57:15.984  [WI] --- PROBABILITY CHECKS ---
+13:57:15.984  [WI] No probability checks to do
+13:57:15.984  [WI] --- LOOP #4 RESULT ---
+13:57:15.984  [WI] No new entries activated.
+13:57:15.984  [WI] Scan done. No new entries to prompt. Stopping.
+13:57:15.984  [WI] Setting scan state (2) ['NONE', 0]
+13:57:15.984  Event emitted: worldinfo_scan_done
+13:57:15.984  [WI] --- BUILDING PROMPT ---
+13:57:15.985  getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.985  getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.985  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.985  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.985  getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 0 is less than minDepth 10
+13:57:15.985  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 0 is less than minDepth 6
+13:57:15.985  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 0 is less than minDepth 10
+13:57:15.985  getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.986  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.986  getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.986  getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986  getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986  getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.986 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.987 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.987 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.987 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.988 world-info.js:5071 [WI] Entry 654749 skipped adding to prompt due to empty content {uid: 654749, world: '末世寒冬-星穹秩序重置版', displayIndex: 21, comment: '文明阶段规则', disable: false, …}
+13:57:15.988 engine.js:369 getRegexedString: Skipping script 【云瑾】包裹最新指示 because depth 2 is greater than maxDepth 1
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 2 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 2 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 2 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 【云瑾】切除10楼以上正文&仅保留小总结 because depth 1 is less than minDepth 10
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新3楼的变量更新 because depth 1 is less than minDepth 6
+13:57:15.988 engine.js:364 getRegexedString: Skipping script 只发送最新5楼正文给AI because depth 1 is less than minDepth 10
+13:57:15.989 world-info.js:5141 [WI] Hypothetically adding 25 entries to prompt (25) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+13:57:15.989 world-info.js:5142 [WI] --- DONE (DRY RUN) ---
+13:57:15.989 script.js:4576 skipWIAN not active, adding WIAN
+13:57:15.997 script.js:4884 calling runGenerate
+13:57:15.997 script.js:4902 generating prompt
+13:57:15.997 script.js:5036 ---calling setPromptString 0
+13:57:15.997 eventemitter.js:135 Event emitted: generate_after_combine_prompts
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.000 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.001 extensions.js:70 Debounced metadata save cancelled
+13:57:16.002 extensions.js:70 Debounced metadata save cancelled
+13:57:16.003 extensions.js:70 Debounced metadata save cancelled
+13:57:16.004 extensions.js:70 Debounced metadata save cancelled
+13:57:16.549 eventemitter.js:135 Event emitted: chat_completion_prompt_ready
+13:57:16.556 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:16.558 eventemitter.js:135 Event emitted: generate_after_data
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:28.908 [Violation] Added non-passive event listener to a scroll-blocking <某些> 事件. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+13:57:17.685 extensions.js:96 Saving metadata...
+13:57:17.889 tokenizers.js:183 Chat Completions: saving token cache
+13:57:17.893 variables.ts:62 [Prompt Template] message #0.1 variables:  {initialized_lorebooks: {…}, stat_data: {…}, schema: '没有用别管这个'}
+13:57:17.895 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 4562, LAST_RECEIVE_CHARS: 8931, extra_analysis: false, …}
+13:57:17.895 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:17.902 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:17.914 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:17.915 handler.ts:613 [Prompt Template] processing #0 messages in 25ms
+13:57:17.915 reasoning.js:1451 [Reasoning] Auto-parsing reasoning block for message 0
+13:57:17.952 eventemitter.js:135 Event emitted: message_iframe_render_started
+13:57:19.173 prompts.ts:72 [Prompt Template] processing receive result: 53 tokens and 108 chars
+13:57:19.212 script.js:9307 Timeout waiting for chat to save
+saveChatConditional @ script.js:9307
+await in saveChatConditional
+messageEditDone @ script.js:8324
+13:57:19.491 eventemitter.js:135 Event emitted: message_iframe_render_ended
+13:57:19.794 ClickTrigger.js:1 [点击触发] ✓ 已绑定: BODY
+13:57:20.863 extensions.js:70 Debounced metadata save cancelled
+13:57:20.865 extensions.js:70 Debounced metadata save cancelled
+13:57:20.866 extensions.js:70 Debounced metadata save cancelled
+13:57:20.867 extensions.js:70 Debounced metadata save cancelled
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:29.089 [Violation] 'setTimeout' handler 用时 <N> 毫秒
+13:57:23.477 [Violation] Forced reflow while executing JavaScript took 77ms
+13:57:23.636 index.js:1 [Violation] 'setInterval' handler took 79ms
+13:57:23.639 [Violation] Forced reflow while executing JavaScript took 32ms
+13:57:23.643 extensions.js:96 Saving metadata...
+13:57:23.710 eventemitter.js:135 Event emitted: character_message_rendered
+13:57:23.712 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:23.716 eventemitter.js:135 Event emitted: user_message_rendered
+13:57:23.716 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:23.848 eventemitter.js:135 Event emitted: character_message_rendered
+13:57:23.853 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:23.869 variables.ts:62 [Prompt Template] message #11.0 variables:  {stat_data: {…}}
+13:57:23.869 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 53, LAST_RECEIVE_CHARS: 108, extra_analysis: false, …}
+13:57:23.870 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:23.871 variables.ts:62 [Prompt Template] message #13.0 variables:  {stat_data: {…}}
+13:57:23.872 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 53, LAST_RECEIVE_CHARS: 108, extra_analysis: false, …}
+13:57:23.872 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:23.872 variables.ts:62 [Prompt Template] message #12.0 variables:  {stat_data: {…}}
+13:57:23.872 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 53, LAST_RECEIVE_CHARS: 108, extra_analysis: false, …}
+13:57:23.872 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:23.879 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:23.879 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:23.881 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:23.920 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:23.926 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:23.926 handler.ts:613 [Prompt Template] processing #11 messages in 58ms
+13:57:23.926 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:23.926 handler.ts:613 [Prompt Template] processing #13 messages in 55ms
+13:57:23.926 handler.ts:613 [Prompt Template] processing #12 messages in 54ms
+13:57:23.930 codeProxy.js:41 变量 isExtensionAble 未找到, 已从默认设置中获取
+13:57:23.930 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:23.930 codeProxy.js:41 变量 isExtensionAble 未找到, 已从默认设置中获取
+13:57:23.930 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:24.155 ClickTrigger.js:1 [点击触发] ✓ 已绑定: assistant-body html-body mes_text
+13:57:24.156 ClickTrigger.js:1 [点击触发] ✓ 已绑定: assistant-body html-body mes_text
+13:57:24.187 extensions.js:70 Debounced metadata save cancelled
+13:57:24.188 tokenizers.js:183 Chat Completions: saving token cache
+13:57:24.189 extensions.js:98 Saved metadata...
+13:57:24.254 extensions.js:70 Debounced metadata save cancelled
+13:57:24.264 prompts.ts:72 [Prompt Template] processing receive result: 2919 tokens and 6304 chars
+13:57:24.264 prompts.ts:72 [Prompt Template] processing receive result: 4562 tokens and 8931 chars
+13:57:24.264 prompts.ts:72 [Prompt Template] processing receive result: 2 tokens and 2 chars
+13:57:26.781 [Violation] Forced reflow while executing JavaScript took 52ms
+13:57:27.128 extensions.js:96 Saving metadata...
+13:57:27.207 index.js:1 [Violation] 'setInterval' handler took 65ms
+13:57:27.358 extensions.js:70 Debounced metadata save cancelled
+13:57:27.408 extensions.js:70 Debounced metadata save cancelled
+13:57:27.469 eventemitter.js:135 Event emitted: user_message_rendered
+13:57:27.470 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:27.496 eventemitter.js:135 Event emitted: character_message_rendered
+13:57:27.497 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:27.500 eventemitter.js:135 Event emitted: user_message_rendered
+13:57:27.500 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:27.653 eventemitter.js:135 Event emitted: character_message_rendered
+13:57:27.664 index.js:19 [QR2] calling {args: Array(1), functionToCall: ƒ}
+13:57:27.708 variables.ts:62 [Prompt Template] message #11.0 variables:  {stat_data: {…}}
+13:57:27.709 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 2, LAST_RECEIVE_CHARS: 2, extra_analysis: false, …}
+13:57:27.709 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:27.711 variables.ts:62 [Prompt Template] message #13.0 variables:  {stat_data: {…}}
+13:57:27.711 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 2, LAST_RECEIVE_CHARS: 2, extra_analysis: false, …}
+13:57:27.712 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:27.713 variables.ts:62 [Prompt Template] message #10.0 variables:  {stat_data: {…}}
+13:57:27.714 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 2, LAST_RECEIVE_CHARS: 2, extra_analysis: false, …}
+13:57:27.714 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:27.715 variables.ts:62 [Prompt Template] message #12.0 variables:  {stat_data: {…}}
+13:57:27.716 variables.ts:63 [Prompt Template] all variables:  {LAST_SEND_TOKENS: 62346, LAST_SEND_CHARS: 116687, LAST_RECEIVE_TOKENS: 2, LAST_RECEIVE_CHARS: 2, extra_analysis: false, …}
+13:57:27.716 eventemitter.js:135 Event emitted: prompt_template_prepare
+13:57:27.726 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:27.726 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:27.726 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:27.727 evaluate.ts:168 [Prompt Template] [RENDER:BEFORE]/@@render_before worldinfo templates applied.
+ []
+13:57:27.782 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:27.788 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:27.788 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:27.788 handler.ts:613 [Prompt Template] processing #11 messages in 84ms
+13:57:27.788 evaluate.ts:168 [Prompt Template] [RENDER:AFTER]/@@render_after worldinfo templates applied.
+ []
+13:57:27.788 handler.ts:613 [Prompt Template] processing #13 messages in 79ms
+13:57:27.788 handler.ts:613 [Prompt Template] processing #10 messages in 76ms
+13:57:27.788 handler.ts:613 [Prompt Template] processing #12 messages in 74ms
+13:57:27.794 codeProxy.js:41 变量 isExtensionAble 未找到, 已从默认设置中获取
+13:57:27.794 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:27.794 codeProxy.js:41 变量 isExtensionAble 未找到, 已从默认设置中获取
+13:57:27.794 codeProxy.js:41 变量 step_by_step 未找到, 已从默认设置中获取
+13:57:27.981 prompts.ts:72 [Prompt Template] processing receive result: 2919 tokens and 6304 chars
+13:57:27.981 prompts.ts:72 [Prompt Template] processing receive result: 4562 tokens and 8931 chars
+13:57:27.981 prompts.ts:72 [Prompt Template] processing receive result: 34 tokens and 47 chars
+13:57:27.981 prompts.ts:72 [Prompt Template] processing receive result: 2 tokens and 2 chars
+13:57:28.219 script.js:9307 Timeout waiting for chat to save
+saveChatConditional @ script.js:9307
+await in saveChatConditional
+saveMetadata @ script.js:9300
+（匿名） @ extensions.js:97
+setTimeout
+saveMetadataDebounced @ extensions.js:83
+replaceVariables @ variables.ts:153
+updateVariablesWith @ variables.ts:225
+_updateVariablesWith @ variables.ts:238
+（匿名） @ VM1925:1
+kn @ VM1925:1
+（匿名） @ VM1925:1
+setTimeout
+（匿名） @ VM1925:1
+Jt @ VM1925:1
+await in Jt
+（匿名） @ VM1925:1
+setTimeout
+bn @ VM1925:1
+（匿名） @ VM1925:1
+await in （匿名）
+（匿名） @ vue.runtime.global.prod.min.js:13
+tR @ vue.runtime.global.prod.min.js:11
+tO @ vue.runtime.global.prod.min.js:11
+t.__weh.t.__weh @ vue.runtime.global.prod.min.js:13
+tW @ vue.runtime.global.prod.min.js:11
+eu @ vue.runtime.global.prod.min.js:13
+mount @ vue.runtime.global.prod.min.js:13
+t.mount @ vue.runtime.global.prod.min.js:13
+（匿名） @ VM1925:1
+await in （匿名）
+（匿名） @ VM1925:1
+l @ jquery.min.js:2
+c @ jquery.min.js:2
+setTimeout
+（匿名） @ jquery.min.js:2
+c @ jquery.min.js:2
+add @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+Deferred @ jquery.min.js:2
+then @ jquery.min.js:2
+T.fn.ready @ jquery.min.js:2
+T.fn.init @ jquery.min.js:2
+T @ jquery.min.js:2
+（匿名） @ VM1925:1
+PendingScript
+x @ jquery.min.js:2
+tm @ jquery.min.js:2
+append @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+V @ jquery.min.js:2
+html @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+c @ jquery.min.js:2
+fireWith @ jquery.min.js:2
+E @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+XMLHttpRequest.send
+send @ jquery.min.js:2
+ajax @ jquery.min.js:2
+T.fn.load @ jquery.min.js:2
+（匿名） @ 26c41a40-967c-4477-ab69-54fa7853adcc:30
+13:57:28.225 extensions.js:98 Saved metadata...
+13:57:28.341 extensions.js:70 Debounced metadata save cancelled
+13:57:28.989 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, close-up, face focus, male pov, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, (light khaki tight knit sweater), (blue cotton apron), mature female, milf, housewife, (((flustered expression))), ((panicked look)), ((full-face blush)), surprised, looking down, avoiding eye contact, wide eyes, parted lips, sweat, flying sweatdrops, recoiling, pulling hands back, wiping hands on apron, awkward, cinematic angle, depth of field, indoors, doorway, pov hands, holding box, glass container, (touching hands)... 0
+13:57:28.992 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, ${"name":"Lin Yuehua", "angle":"from behind", "upperBody":"sfw", "lowerBody":"sfw"}$, (light khaki knit sweater), ((blue cotton apron)), ((apron strings tied tight)), tiny waist, (((wide hips))), ((curvy)), large buttocks, perfect hourglass figure, walking away, mid-stride, (swaying hips), motion lines, from behind, ass focus, back focus, cowboy shot, indoors, apartment, walking into living room, doorway, backlighting, rim lighting, cinematic angle, depth of field, slightly messy hair bun, (nape)... 0
+13:57:29.118 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, cinematic angle, close-up, breast focus, from slightly above, male pov, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, ((leaning forward)), (light khaki tight knit sweater), (blue cotton apron), ((tight clothes)), (((large breasts))), (((heavy breasts))), (((bouncing breasts))), ((deep cleavage)), cleavage cutout, sagging breasts, sweat, glistening skin, motion lines, speed lines, parted lips, blush, indoors, doorway, top-lighting, dramatic shadows, pov hands, male hand, holding can, offering object... 0
+13:57:29.119 database.js:1 [DB] 获取图片 sfw, 1girl, solo, pov, male pov, masterpiece, best quality, ultra-detailed, photorealistic, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, (light khaki tight knit sweater), ((blue cotton apron)), apron over clothes, (tight clothes), ((large breasts)), mature female, milf, housewife, slightly messy hair, strands of hair on neck, pale skin, sweat on forehead, (looking at viewer with suspicion), ((wary expression)), cautious, lips pressed together, standing, in doorway, peeking, partially hidden behind door, hand on door, gripping doorframe, indoors, apartment corridor, dim lighting, sidelighting, dramatic shadows, quiet atmosphere, upper body, cinematic angle, depth of field... 0
+13:57:29.119 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from side", "upperBody":"sfw", "lowerBody":"sfw"}$, (((ass focus))), lower body, mid shot, from side, from behind, low-angle shot, pov, (light khaki knit shirt), (deep blue cotton apron), apron tied in back, (bow), (((tight clothes))), ((fabric stretching)), skin indentation, ((visible butt contour)), (((wide hips))), round ass, thick thighs, mature woman, housewife, curvy body, soft body, turning, side step, motion lines, indoors, apartment entrance, 玄关, wooden floor, rim lighting, dramatic shadows, voyeuristic, sensual atmosphere, depth of field... 0
+13:57:29.120 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, ((breast focus)), upper body, cowboy shot, from front, pov, (light khaki knit shirt), long sleeves, (deep blue cotton apron), apron straps, (((straining clothes))), ((cloth bulge)), clothes writing, fabric tension, (((huge breasts))), (heavy breasts), (sagging breasts), cleavage, cleavage cutout through clothes, mature woman, housewife, curvy body, soft body, waistline, visible navel through clothes, breathing, motion lines, skin indentation from apron, sweat on neck, glistening skin, indoors, apartment, warm lighting, side-lighting, dramatic shadows, depth of field, sensual atmosphere... 0
+13:57:29.120 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"sfw"}$, (light khaki knit shirt), long sleeves, (deep blue cotton apron), apron straps, (((tight clothes))), clothes writing, straining clothes, indoors, apartment, doorway, standing in doorway, holding door, full body, from front, cinematic angle, pov, looking at viewer, mature woman, housewife, (((huge breasts))), (((wide hips))), curvy body, thick thighs, soft body, slightly messy hair, hair bun, stray hairs, sweat on neck, no makeup, pale skin, surprised, gentle smile, parted lips, blush, welcoming, homely atmosphere, soft lighting, depth of field... 0
+13:57:29.358 extensions.js:96 Saving metadata...
+13:57:29.891 tokenizers.js:183 Chat Completions: saving token cache
+13:57:29.891 extensions.js:98 Saved metadata...
+13:57:30.498 script.js:9307 Timeout waiting for chat to save
+saveChatConditional @ script.js:9307
+await in saveChatConditional
+h @ lib.js:2
+E @ lib.js:2
+g @ lib.js:2
+setTimeout
+Mi @ lib.js:2
+g @ lib.js:2
+setTimeout
+Mi @ lib.js:2
+g @ lib.js:2
+setTimeout
+Mi @ lib.js:2
+g @ lib.js:2
+setTimeout
+Mi @ lib.js:2
+g @ lib.js:2
+setTimeout
+Mi @ lib.js:2
+（匿名） @ lib.js:2
+S @ lib.js:2
+refreshMessages @ chat_message.ts:176
+setChatMessages @ chat_message.ts:294
+await in setChatMessages
+（匿名） @ VM1925:1
+Tn @ VM1925:1
+（匿名） @ VM1925:1
+（匿名） @ vue.runtime.global.prod.min.js:13
+tR @ vue.runtime.global.prod.min.js:11
+tO @ vue.runtime.global.prod.min.js:11
+t.__weh.t.__weh @ vue.runtime.global.prod.min.js:13
+tW @ vue.runtime.global.prod.min.js:11
+eu @ vue.runtime.global.prod.min.js:13
+mount @ vue.runtime.global.prod.min.js:13
+t.mount @ vue.runtime.global.prod.min.js:13
+（匿名） @ VM1925:1
+await in （匿名）
+（匿名） @ VM1925:1
+l @ jquery.min.js:2
+c @ jquery.min.js:2
+setTimeout
+（匿名） @ jquery.min.js:2
+c @ jquery.min.js:2
+add @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+Deferred @ jquery.min.js:2
+then @ jquery.min.js:2
+T.fn.ready @ jquery.min.js:2
+T.fn.init @ jquery.min.js:2
+T @ jquery.min.js:2
+（匿名） @ VM1925:1
+PendingScript
+x @ jquery.min.js:2
+tm @ jquery.min.js:2
+append @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+V @ jquery.min.js:2
+html @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+c @ jquery.min.js:2
+fireWith @ jquery.min.js:2
+E @ jquery.min.js:2
+（匿名） @ jquery.min.js:2
+XMLHttpRequest.send
+send @ jquery.min.js:2
+ajax @ jquery.min.js:2
+T.fn.load @ jquery.min.js:2
+（匿名） @ 26c41a40-967c-4477-ab69-54fa7853adcc:30
+13:57:31.613 extensions.js:70 Debounced metadata save cancelled
+13:57:32.713 extensions.js:96 Saving metadata...
+13:57:33.730 script.js:9307 Timeout waiting for chat to save
+saveChatConditional @ script.js:9307
+await in saveChatConditional
+saveMetadata @ script.js:9300
+（匿名） @ extensions.js:97
+setTimeout
+saveMetadataDebounced @ extensions.js:83
+replaceVariables @ variables.ts:153
+updateVariablesWith @ variables.ts:225
+_updateVariablesWith @ variables.ts:238
+（匿名） @ VM1925:1
+（匿名） @ VM1925:1
+setTimeout
+Pt @ VM1925:1
+setReadingMode @ VM1925:1
+tR @ vue.runtime.global.prod.min.js:11
+tO @ vue.runtime.global.prod.min.js:11
+lg @ vue.runtime.global.prod.min.js:13
+（匿名） @ VM1925:1
+Promise.resolve.e.fn @ VM1925:1
+p @ VM1925:1
+（匿名） @ VM1925:1
+（匿名） @ VM1925:1
+（匿名） @ VM1925:1
+onScroll.n.<computed>.n.<computed> @ VM1925:1
+tR @ vue.runtime.global.prod.min.js:11
+tO @ vue.runtime.global.prod.min.js:11
+i @ vue.runtime.global.prod.min.js:13
+13:57:33.731 extensions.js:98 Saved metadata...
+13:57:36.949 tokenizers.js:183 Chat Completions: saving token cache
+13:57:36.952 extensions.js:98 Saved metadata...
+13:57:39.484 placeholder.js:1 [iframe] Content length changed, re-processing: {stored: 10832, current: 10850}
+13:57:41.714 placeholder.js:1 [iframe] Content length changed, re-processing: {stored: 4294, current: 6304}
+13:57:41.739 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua
+13:57:41.743 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua
+13:57:41.745 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua
+13:57:41.747 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, masterpiece, best quality, ultra
+13:57:41.748 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, masterpiece, best quality, ultra
+13:57:41.749 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, masterpiece, best quality, ultra
+13:57:41.751 placeholder.js:1 [iframe] Tag marker exists but button missing, re-inserting: sfw, 1girl, solo, pov, male pov, masterpiece, best
+13:57:41.978 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from side", "upperBody":"sfw", "lowerBody":"sfw"}$, (((ass focus))), lower body, mid shot, from side, from behind, low-angle shot, pov, (light khaki knit shirt), (deep blue cotton apron), apron tied in back, (bow), (((tight clothes))), ((fabric stretching)), skin indentation, ((visible butt contour)), (((wide hips))), round ass, thick thighs, mature woman, housewife, curvy body, soft body, turning, side step, motion lines, indoors, apartment entrance, 玄关, wooden floor, rim lighting, dramatic shadows, voyeuristic, sensual atmosphere, depth of field... 0
+13:57:41.981 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, ((breast focus)), upper body, cowboy shot, from front, pov, (light khaki knit shirt), long sleeves, (deep blue cotton apron), apron straps, (((straining clothes))), ((cloth bulge)), clothes writing, fabric tension, (((huge breasts))), (heavy breasts), (sagging breasts), cleavage, cleavage cutout through clothes, mature woman, housewife, curvy body, soft body, waistline, visible navel through clothes, breathing, motion lines, skin indentation from apron, sweat on neck, glistening skin, indoors, apartment, warm lighting, side-lighting, dramatic shadows, depth of field, sensual atmosphere... 0
+13:57:41.982 database.js:1 [DB] 获取图片 sfw, 1girl, solo, solo focus, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"sfw"}$, (light khaki knit shirt), long sleeves, (deep blue cotton apron), apron straps, (((tight clothes))), clothes writing, straining clothes, indoors, apartment, doorway, standing in doorway, holding door, full body, from front, cinematic angle, pov, looking at viewer, mature woman, housewife, (((huge breasts))), (((wide hips))), curvy body, thick thighs, soft body, slightly messy hair, hair bun, stray hairs, sweat on neck, no makeup, pale skin, surprised, gentle smile, parted lips, blush, welcoming, homely atmosphere, soft lighting, depth of field... 0
+13:57:41.982 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, close-up, face focus, male pov, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, (light khaki tight knit sweater), (blue cotton apron), mature female, milf, housewife, (((flustered expression))), ((panicked look)), ((full-face blush)), surprised, looking down, avoiding eye contact, wide eyes, parted lips, sweat, flying sweatdrops, recoiling, pulling hands back, wiping hands on apron, awkward, cinematic angle, depth of field, indoors, doorway, pov hands, holding box, glass container, (touching hands)... 0
+13:57:41.982 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, ${"name":"Lin Yuehua", "angle":"from behind", "upperBody":"sfw", "lowerBody":"sfw"}$, (light khaki knit sweater), ((blue cotton apron)), ((apron strings tied tight)), tiny waist, (((wide hips))), ((curvy)), large buttocks, perfect hourglass figure, walking away, mid-stride, (swaying hips), motion lines, from behind, ass focus, back focus, cowboy shot, indoors, apartment, walking into living room, doorway, backlighting, rim lighting, cinematic angle, depth of field, slightly messy hair bun, (nape)... 0
+13:57:41.983 database.js:1 [DB] 获取图片 sfw, 1girl, solo, masterpiece, best quality, ultra-detailed, photorealistic, cinematic angle, close-up, breast focus, from slightly above, male pov, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, ((leaning forward)), (light khaki tight knit sweater), (blue cotton apron), ((tight clothes)), (((large breasts))), (((heavy breasts))), (((bouncing breasts))), ((deep cleavage)), cleavage cutout, sagging breasts, sweat, glistening skin, motion lines, speed lines, parted lips, blush, indoors, doorway, top-lighting, dramatic shadows, pov hands, male hand, holding can, offering object... 0
+13:57:41.983 database.js:1 [DB] 获取图片 sfw, 1girl, solo, pov, male pov, masterpiece, best quality, ultra-detailed, photorealistic, ${"name":"Lin Yuehua", "angle":"from front", "upperBody":"sfw", "lowerBody":"hidden"}$, (light khaki tight knit sweater), ((blue cotton apron)), apron over clothes, (tight clothes), ((large breasts)), mature female, milf, housewife, slightly messy hair, strands of hair on neck, pale skin, sweat on forehead, (looking at viewer with suspicion), ((wary expression)), cautious, lips pressed together, standing, in doorway, peeking, partially hidden behind door, hand on door, gripping doorframe, indoors, apartment corridor, dim lighting, sidelighting, dramatic shadows, quiet atmosphere, upper body, cinematic angle, depth of field... 0

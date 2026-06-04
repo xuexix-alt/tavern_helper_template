@@ -223,7 +223,7 @@ const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;
 const GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE = 48;
 const GALLERY_WINDOW_NATIVE_HYDRATION_CHUNK_SIZE = 4;
 const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = [0, 900, 3000, 6000] as const;
-const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000] as const;
+const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [800, 1800, 4000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;
@@ -6900,6 +6900,93 @@ export function useStreamingDemo() {
   onMounted(async () => {
     restoreReaderChatState();
 
+    // 装图片生成事件桥：插件 `generate-image-response` 失败时把错误 surface 给用户。
+    // 插件内部的 zip 解析失败（"Can't read the data of 'the loaded zip file'"）此前只会 console.error，
+    // 桥装上后能稳定显示一条 toast 并清理 pending，不再让用户对着占位图空等。
+    // 注意：此桥接必须在所有 messageId 上生效，不限于 opening workbench。
+    if (typeof eventOn === 'function' && typeof eventRemoveListener === 'function') {
+      imageGenerationBridge = createImageGenerationEventBridge({
+        eventOn: (name, handler) => eventOn(name as any, handler as any),
+        eventRemoveListener: (name, handler) => eventRemoveListener(name as any, handler as any),
+        onRequest: ({ requestId, prompt }) => {
+          syncPendingRequestHintsFromDom();
+          const requestBinding = imagePendingTaskManager.registerRequest({ id: requestId, prompt });
+          recordLifecycleTrace('imageGenerationEventBridge', 'on_request', () => ({
+            requestId,
+            promptHead: prompt.slice(0, 80),
+            requestBinding,
+            pendingTasks: imagePendingTaskManager.getDebugState(),
+            diagnostics:
+              requestBinding?.messageId != null
+                ? collectPluginNativeHandoffDiagnostics(requestBinding.messageId)
+                : collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1),
+          }));
+          if (requestBinding?.bufferedResponse) {
+            const messageId = requestBinding.messageId;
+            syncTranscriptItemsFromHostData('host.plugin_native_response_buffered', [messageId]);
+            queueGeneratedImageEntityRefresh([messageId], 'host.plugin_native_response_buffered');
+            scheduleHostImageDataReconcile('host.plugin_native_response_buffered', [messageId]);
+          }
+        },
+        onResponseSuccess: ({ requestId, prompt, imageData }) => {
+          const matchedResponse = imagePendingTaskManager.consumeResponse({ id: requestId, prompt, imageData });
+          const recentIntent = imageRecentIntentStore.read();
+          const targetMessageIds = [
+            ...new Set(
+              [matchedResponse?.messageId, recentIntent?.messageId ?? null]
+                .map(id => Math.trunc(Number(id)))
+                .filter((id): id is number => Number.isFinite(id) && id >= 0),
+            ),
+          ];
+
+          recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
+            requestId,
+            promptHead: prompt.slice(0, 80),
+            imageDataLength: String(imageData ?? '').length,
+            matchedResponse,
+            recentIntent,
+            targetMessageIds,
+            pendingTasks: imagePendingTaskManager.getDebugState(),
+            diagnostics:
+              targetMessageIds.length > 0
+                ? targetMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
+                : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
+          }));
+
+          syncTranscriptItemsFromHostData('host.plugin_native_response_success', targetMessageIds);
+          if (targetMessageIds.length > 0) {
+            queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');
+            discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', targetMessageIds);
+            // 增强：延迟二次扫描，确保图片DOM完全更新后再次发现
+            window.setTimeout(() => {
+              discoverRecentNativeGalleryImages('host.plugin_native_response_success:delayed', targetMessageIds);
+            }, 400);
+            scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);
+            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);
+          }
+        },
+        onResponseFailure: ({ requestId, prompt }) => {
+          recordLifecycleTrace('imageGenerationEventBridge', 'on_response_failure', () => ({
+            requestId,
+            promptHead: prompt.slice(0, 60),
+          }));
+        },
+        notifyError: message => {
+          const now = Date.now();
+          if (now - lastImageGenFailureToastAt < IMAGE_GEN_FAILURE_TOAST_MIN_INTERVAL_MS) return;
+          lastImageGenFailureToastAt = now;
+          try {
+            toastr?.warning?.(message, '生图失败', { timeOut: 7000 });
+          } catch {
+            // toastr not ready yet
+          }
+        },
+        recordTrace: (scope, event, payload) => {
+          recordLifecycleTrace(scope, event, () => payload);
+        },
+      });
+    }
+
     if (isOpeningWorkbenchHostActive()) {
       bindHistoryRefreshEvents();
       void bindMvuRefreshEvents();
@@ -6909,87 +6996,6 @@ export function useStreamingDemo() {
         onStateChange: handleSaveGuardianHealth,
       });
 
-      // 装图片生成事件桥：插件 `generate-image-response` 失败时把错误 surface 给用户。
-      // 插件内部的 zip 解析失败（"Can't read the data of 'the loaded zip file'"）此前只会 console.error，
-      // 桥装上后能稳定显示一条 toast 并清理 pending，不再让用户对着占位图空等。
-      if (typeof eventOn === 'function' && typeof eventRemoveListener === 'function') {
-        imageGenerationBridge = createImageGenerationEventBridge({
-          eventOn: (name, handler) => eventOn(name as any, handler as any),
-          eventRemoveListener: (name, handler) => eventRemoveListener(name as any, handler as any),
-          onRequest: ({ requestId, prompt }) => {
-            syncPendingRequestHintsFromDom();
-            const requestBinding = imagePendingTaskManager.registerRequest({ id: requestId, prompt });
-            recordLifecycleTrace('imageGenerationEventBridge', 'on_request', () => ({
-              requestId,
-              promptHead: prompt.slice(0, 80),
-              requestBinding,
-              pendingTasks: imagePendingTaskManager.getDebugState(),
-              diagnostics:
-                requestBinding?.messageId != null
-                  ? collectPluginNativeHandoffDiagnostics(requestBinding.messageId)
-                  : collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1),
-            }));
-            if (requestBinding?.bufferedResponse) {
-              const messageId = requestBinding.messageId;
-              syncTranscriptItemsFromHostData('host.plugin_native_response_buffered', [messageId]);
-              queueGeneratedImageEntityRefresh([messageId], 'host.plugin_native_response_buffered');
-              scheduleHostImageDataReconcile('host.plugin_native_response_buffered', [messageId]);
-            }
-          },
-          onResponseSuccess: ({ requestId, prompt, imageData }) => {
-            const matchedResponse = imagePendingTaskManager.consumeResponse({ id: requestId, prompt, imageData });
-            const recentIntent = imageRecentIntentStore.read();
-            const targetMessageIds = [
-              ...new Set(
-                [matchedResponse?.messageId, recentIntent?.messageId ?? null]
-                  .map(id => Math.trunc(Number(id)))
-                  .filter((id): id is number => Number.isFinite(id) && id >= 0),
-              ),
-            ];
-
-            recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
-              requestId,
-              promptHead: prompt.slice(0, 80),
-              imageDataLength: String(imageData ?? '').length,
-              matchedResponse,
-              recentIntent,
-              targetMessageIds,
-              pendingTasks: imagePendingTaskManager.getDebugState(),
-              diagnostics:
-                targetMessageIds.length > 0
-                  ? targetMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
-                  : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
-            }));
-
-            syncTranscriptItemsFromHostData('host.plugin_native_response_success', targetMessageIds);
-            if (targetMessageIds.length > 0) {
-              queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');
-              discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', targetMessageIds);
-              scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);
-              schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);
-            }
-          },
-          onResponseFailure: ({ requestId, prompt }) => {
-            recordLifecycleTrace('imageGenerationEventBridge', 'on_response_failure', () => ({
-              requestId,
-              promptHead: prompt.slice(0, 60),
-            }));
-          },
-          notifyError: message => {
-            const now = Date.now();
-            if (now - lastImageGenFailureToastAt < IMAGE_GEN_FAILURE_TOAST_MIN_INTERVAL_MS) return;
-            lastImageGenFailureToastAt = now;
-            try {
-              toastr?.warning?.(message, '生图失败', { timeOut: 7000 });
-            } catch {
-              // toastr not ready yet
-            }
-          },
-          recordTrace: (scope, event, payload) => {
-            recordLifecycleTrace(scope, event, () => payload);
-          },
-        });
-      }
       pluginNativeLlmImageGenerationStops = bindPluginNativeLlmImageGenerationEvents();
 
       await restoreHideState();
@@ -7015,6 +7021,10 @@ export function useStreamingDemo() {
               'same_layer.plugin_native_placeholder_dom_mutation',
               affectedMessageIds,
             );
+            // 增强：延迟扫描画廊，等待占位符转换为实际图片
+            window.setTimeout(() => {
+              discoverRecentNativeGalleryImages('same_layer.dom_mutation_follow_up', affectedMessageIds);
+            }, 600);
             return;
           }
           queueGeneratedImageEntityRefresh(affectedMessageIds);
@@ -7035,6 +7045,10 @@ export function useStreamingDemo() {
             'host.plugin_native_placeholder_dom_mutation',
             affectedMessageIds,
           );
+          // 增强：延迟扫描画廊，等待宿主DOM中占位符转换为实际图片
+          window.setTimeout(() => {
+            discoverRecentNativeGalleryImages('host.dom_mutation_follow_up', affectedMessageIds);
+          }, 600);
           return;
         }
         queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');
@@ -7044,10 +7058,162 @@ export function useStreamingDemo() {
     rebuildTranscript();
     window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
     window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
-    window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 700);
-    window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 900);
+    // 提前启动画廊缓存会话，确保在图片加载高峰期前就绪
+    window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 300);
+    // 提前首次画廊扫描，缩短从挂载到发现图片的延迟
+    window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 500);
+    // 补充扫描，覆盖图片加载高峰期（1.5s-2.1s）
+    window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan_retry'), 1500);
     queueHidePolicy('mounted');
+
+    // 增强图片同步：确保正文图片在非全屏时也能显示
+    // 只扫描可见窗口（10-15条消息），性能可控
+    const syncVisibleImageData = () => {
+      const visibleMessageIds = transcript.value
+        .filter(item => item.role === 'assistant')
+        .map(item => Math.trunc(Number(item.message_id)))
+        .filter(id => Number.isFinite(id) && id >= 0);
+
+      if (visibleMessageIds.length > 0) {
+        syncTranscriptItemsFromHostData('mounted.image_sync', visibleMessageIds);
+        scheduleHostImageDataReconcile('mounted.image_sync', visibleMessageIds);
+
+        recordLifecycleTrace('imageDomSync', 'mounted_sync', {
+          messageCount: visibleMessageIds.length,
+          messageIds: visibleMessageIds.slice(0, 5),
+        });
+      }
+    };
+
+    // 多轮延迟同步（覆盖插件不同渲染时机）
+    window.setTimeout(syncVisibleImageData, 500); // 快速响应
+    window.setTimeout(syncVisibleImageData, 1500); // 覆盖慢速渲染
+    window.setTimeout(syncVisibleImageData, 3000); // 兜底
+
+    // 检查并修复缺失的图片DOM（只针对可见窗口）
+    window.setTimeout(() => {
+      const visibleMessageIds = transcript.value
+        .filter(item => item.role === 'assistant')
+        .map(item => Math.trunc(Number(item.message_id)))
+        .filter(id => Number.isFinite(id) && id >= 0);
+
+      let fixCount = 0;
+
+      visibleMessageIds.forEach(messageId => {
+        const msg = document.querySelector(`.mes[mesid="${messageId}"]`);
+        if (!msg) return;
+
+        const mesText = msg.querySelector('.mes_text');
+        const rawHTML = mesText?.innerHTML || '';
+        const hasImageMarker = rawHTML.includes('image###');
+        const imageContainers = msg.querySelectorAll('.st-chatu8-image-container');
+
+        if (hasImageMarker && imageContainers.length === 0) {
+          console.log(`[image-dom-fix] 消息 ${messageId} 触发重新渲染`);
+
+          const mutationEvent = new Event('DOMSubtreeModified', { bubbles: true });
+          mesText?.dispatchEvent(mutationEvent);
+
+          fixCount++;
+        }
+      });
+
+      if (fixCount > 0) {
+        recordLifecycleTrace('imageDomFix', 'triggered', {
+          fixCount,
+          visibleMessageCount: visibleMessageIds.length,
+        });
+
+        // 触发后再次同步
+        window.setTimeout(syncVisibleImageData, 800);
+      }
+    }, 2000);
   });
+
+  // 增强可见性监听：处理移动端从后台恢复、全屏切换、屏幕旋转等场景
+  if (typeof document !== 'undefined' && 'addEventListener' in document) {
+    let lastRefreshAt = 0;
+    const MIN_REFRESH_INTERVAL_MS = 1000; // 防抖：最少间隔 1 秒
+
+    const triggerGalleryRefresh = (reason: string) => {
+      const now = Date.now();
+      if (now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
+        recordLifecycleTrace('visibilityRefresh', 'throttled', {
+          reason,
+          intervalMs: now - lastRefreshAt,
+          minInterval: MIN_REFRESH_INTERVAL_MS,
+        });
+        return;
+      }
+      lastRefreshAt = now;
+
+      recordLifecycleTrace('visibilityRefresh', 'triggered', { reason, timestamp: now });
+      window.setTimeout(() => {
+        discoverRecentNativeGalleryImages(`visibility_restored.${reason}`);
+        queueVisibleGeneratedImageEntityRefresh(`visibility_restored.${reason}`);
+
+        // 强制同步宿主 DOM 状态
+        const visibleMessageIds = transcript.value
+          .filter(item => item.role === 'assistant')
+          .map(item => Math.trunc(Number(item.message_id)))
+          .filter(id => Number.isFinite(id) && id >= 0);
+
+        if (visibleMessageIds.length > 0) {
+          syncTranscriptItemsFromHostData(`visibility_restored.${reason}`, visibleMessageIds);
+          scheduleHostImageDataReconcile(`visibility_restored.${reason}`, visibleMessageIds);
+        }
+      }, 300);
+    };
+
+    // 1. 页面可见性变化
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        triggerGalleryRefresh('visibility_change');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 2. 全屏切换监听
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      recordLifecycleTrace('visibilityRefresh', 'fullscreen_change', { isFullscreen });
+      triggerGalleryRefresh(`fullscreen_${isFullscreen ? 'enter' : 'exit'}`);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    // 3. 窗口尺寸变化监听（移动端旋转、桌面端缩放）
+    let resizeTimer: ReturnType<typeof setTimeout> | 0 = 0;
+    const handleResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        resizeTimer = 0;
+        triggerGalleryRefresh('window_resize');
+      }, 500); // 防抖：500ms
+    };
+    window.addEventListener('resize', handleResize);
+
+    // 4. 屏幕方向变化监听（移动端旋转）
+    if ('orientation' in window) {
+      const handleOrientationChange = () => {
+        triggerGalleryRefresh('orientation_change');
+      };
+      window.addEventListener('orientationchange', handleOrientationChange);
+    }
+
+    // 5. iframe focus 监听（防止 iframe 失焦后 DOM 过期）
+    const handleFocus = () => {
+      triggerGalleryRefresh('iframe_focus');
+    };
+    window.addEventListener('focus', handleFocus);
+  }
 
   watch(
     theme,
