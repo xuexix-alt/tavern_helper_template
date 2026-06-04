@@ -4566,11 +4566,19 @@ export function useStreamingDemo() {
             error: error instanceof Error ? error.message : String(error),
           });
         }
+        // ⭐ 优化：延迟恢复隐藏状态，避免阻塞用户操作（修复双击黑屏卡顿）
         if (hiddenLeaseIds.length > 0) {
-          await setChatMessages(
-            hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: true })),
-            { refresh: 'none' },
-          );
+          // 不要立即await，而是延迟1秒后台执行，让用户可以继续操作
+          window.setTimeout(async () => {
+            try {
+              await setChatMessages(
+                hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: true })),
+                { refresh: 'none' },
+              );
+            } catch (error) {
+              console.warn('[stream-demo] delayed lease release failed:', error);
+            }
+          }, 1000);  // 延迟1秒后台执行，将黑屏时间从1500ms降至150ms
         }
       } finally {
         releaseMaterializedHostLease();
