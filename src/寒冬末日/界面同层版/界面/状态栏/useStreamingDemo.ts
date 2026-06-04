@@ -237,7 +237,9 @@ const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
-const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
+const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [
+  0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000,
+] as const;
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
@@ -1165,7 +1167,10 @@ function readCachedGeneratedImageRefsForMessage(input: {
   return cached.refs;
 }
 
-function shouldCacheGeneratedImageRefsForMessage(input: { promptTokenCount: number; refs: GeneratedImageRef[] }): boolean {
+function shouldCacheGeneratedImageRefsForMessage(input: {
+  promptTokenCount: number;
+  refs: GeneratedImageRef[];
+}): boolean {
   const promptTokenCount = Math.trunc(Number(input.promptTokenCount));
   const refs = Array.isArray(input.refs) ? input.refs : [];
   if (promptTokenCount > 1 && refs.length > 0 && refs.length < promptTokenCount) return false;
@@ -2015,7 +2020,8 @@ function buildGeneratedImageRefsForMessage(input: {
         refCount: fallbackRefs.length,
       },
     });
-    if (!shouldCacheGeneratedImageRefsForMessage({ promptTokenCount: promptTokens.length, refs: fallbackRefs })) return fallbackRefs;
+    if (!shouldCacheGeneratedImageRefsForMessage({ promptTokenCount: promptTokens.length, refs: fallbackRefs }))
+      return fallbackRefs;
     writeCachedGeneratedImageRefsForMessage({
       messageId,
       signature: cacheSignature,
@@ -4878,7 +4884,9 @@ export function useStreamingDemo() {
     let mutationCount = 0;
     for (const doc of collectHostDocuments()) {
       const roots = Array.from(
-        doc.querySelectorAll(`.mes[mesid="${normalizedId}"] .mes_text, .mes[data-message-id="${normalizedId}"] .mes_text`),
+        doc.querySelectorAll(
+          `.mes[mesid="${normalizedId}"] .mes_text, .mes[data-message-id="${normalizedId}"] .mes_text`,
+        ),
       ) as HTMLElement[];
       for (const root of roots) {
         const view = root.ownerDocument.defaultView ?? window;
@@ -7868,7 +7876,9 @@ export function useStreamingDemo() {
   function hasPartialVisibleMultiPromptGalleryBatch(): boolean {
     const selectedIds = new Set(selectedGalleryWindowMessageIds.value);
     const scopedGroups =
-      selectedIds.size > 0 ? mergedGalleryGroups.value.filter(group => selectedIds.has(group.messageId)) : mergedGalleryGroups.value;
+      selectedIds.size > 0
+        ? mergedGalleryGroups.value.filter(group => selectedIds.has(group.messageId))
+        : mergedGalleryGroups.value;
 
     for (const group of scopedGroups) {
       if (group.images.length === 0) continue;

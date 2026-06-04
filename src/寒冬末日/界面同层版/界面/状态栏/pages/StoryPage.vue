@@ -1319,7 +1319,11 @@ function resolveIframeImageNodeByPromptToken(messageId: number, promptToken: str
   return findNextImageElement(button);
 }
 
-function resolvePluginButtonForImageElement(image: HTMLImageElement | null, messageId: number, promptToken: string): HTMLElement | null {
+function resolvePluginButtonForImageElement(
+  image: HTMLImageElement | null,
+  messageId: number,
+  promptToken: string,
+): HTMLElement | null {
   if (!image) return null;
   const buttonSelector = 'button.image-tag-button, .st-chatu8-image-button';
   const promptNeedle = normalizePromptTokenForCompare(promptToken);

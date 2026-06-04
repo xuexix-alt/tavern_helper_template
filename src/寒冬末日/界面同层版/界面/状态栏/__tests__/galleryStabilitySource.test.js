@@ -366,10 +366,7 @@ test('gallery drawer starts an initial cache session before showing an empty sta
     streamingSource,
     /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000, 12000\] as const;/,
   );
-  assert.match(
-    streamingSource,
-    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/,
-  );
+  assert.match(streamingSource, /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/);
   assert.match(streamingSource, /let galleryInitialCacheSessionId = 0;/);
   assert.match(streamingSource, /scheduleGalleryInitialCacheProbe\(\(\) => \{/);
   assert.match(streamingSource, /if \(sessionId !== galleryInitialCacheSessionId\) return;/);

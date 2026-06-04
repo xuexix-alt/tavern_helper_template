@@ -255,7 +255,9 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should not rely only on DOM mutation observers',
   );
   assert.equal(
-    /syncPendingRequestHintsFromDom\(\);\s*const requestBinding = imagePendingTaskManager\.registerRequest/.test(source),
+    /syncPendingRequestHintsFromDom\(\);\s*const requestBinding = imagePendingTaskManager\.registerRequest/.test(
+      source,
+    ),
     true,
     'plugin-native image requests should bind request ids from DOM hints before success responses arrive',
   );
@@ -598,7 +600,7 @@ test('same-layer mirrored plugin-native placeholders do not keep response-target
     'same-layer should also sanitize plugin-native request ids that are inserted after v-html mount',
   );
   assert.equal(
-    domSource.includes("element.setAttribute(SAME_LAYER_REQUEST_ID_ATTR, requestId);") &&
+    domSource.includes('element.setAttribute(SAME_LAYER_REQUEST_ID_ATTR, requestId);') &&
       domSource.includes("element.removeAttribute('data-request-id');"),
     true,
     'sanitizer should move native response-target data-request-id to a same-layer private attribute',
@@ -609,9 +611,7 @@ test('same-layer mirrored plugin-native placeholders do not keep response-target
     'same-layer final HTML should sanitize mirrored plugin-native request ids before v-html renders it',
   );
   assert.equal(
-    cardSource.includes(
-      'return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));',
-    ),
+    cardSource.includes('return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));'),
     true,
     'transcript card final v-html should sanitize any plugin-native ids added after transcript assembly',
   );
@@ -895,7 +895,7 @@ test('TranscriptMessageCard body recovery images stay visible when tail duplicat
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
   assert.equal(
-    cardSource.includes("function ensureGalleryRecoveryStrip(root: HTMLElement): HTMLElement"),
+    cardSource.includes('function ensureGalleryRecoveryStrip(root: HTMLElement): HTMLElement'),
     true,
     'missing gallery entries should be appended to a dedicated recovery strip instead of the hideable tail gallery',
   );
@@ -910,8 +910,9 @@ test('TranscriptMessageCard body recovery images stay visible when tail duplicat
     'body recovery figures should not be placed inside assistant-fallback-generated-gallery',
   );
   const tailHideRule =
-    cardSource.match(/\.assistant-body\.hide-tail-gallery-images :deep\(\.assistant-fallback-generated-gallery\)[\s\S]*?\}/)?.[0] ??
-    '';
+    cardSource.match(
+      /\.assistant-body\.hide-tail-gallery-images :deep\(\.assistant-fallback-generated-gallery\)[\s\S]*?\}/,
+    )?.[0] ?? '';
   assert.doesNotMatch(
     tailHideRule,
     /data-gallery-recovery-strip/,

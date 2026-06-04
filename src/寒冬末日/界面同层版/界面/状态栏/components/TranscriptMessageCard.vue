@@ -219,9 +219,13 @@ function recordComponentTrace(event: string, payload: Record<string, unknown> = 
 }
 
 function collectNativePromptTokenScanState(root: HTMLElement) {
-  const promptTokenMarkers = Array.from(root.querySelectorAll('[data-chatu8-native-prompt-token="true"]')) as HTMLElement[];
+  const promptTokenMarkers = Array.from(
+    root.querySelectorAll('[data-chatu8-native-prompt-token="true"]'),
+  ) as HTMLElement[];
   const promptButtons = Array.from(
-    root.querySelectorAll('button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]'),
+    root.querySelectorAll(
+      'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]',
+    ),
   ) as HTMLElement[];
   const promptPlaceholders = Array.from(
     root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder'),
@@ -396,7 +400,11 @@ function collectDirectHostExtraImageEntries(): ReaderGalleryEntry[] {
   if (!Number.isFinite(messageId) || messageId < 0) return [];
   const message = readChatMessageDetail(props.item.message_id);
   const swipeId = Number.isFinite(Number(message?.swipe_id)) ? Math.trunc(Number(message.swipe_id)) : 0;
-  const rawSources = [message?.extra?.images?.[swipeId], message?.extra?.images, message?.swipe_info?.[swipeId]?.images];
+  const rawSources = [
+    message?.extra?.images?.[swipeId],
+    message?.extra?.images,
+    message?.swipe_info?.[swipeId]?.images,
+  ];
   const records = rawSources.flatMap(flattenChatu8ImageRecords);
   const out: ReaderGalleryEntry[] = [];
   const seen = new Set<string>();
@@ -452,9 +460,7 @@ function resolvePluginPromptCarrierForImageContainer(carrier: HTMLElement | null
   }
 
   const parent = carrier.parentElement;
-  const candidates = Array.from(
-    parent?.querySelectorAll('button.image-tag-button, .st-chatu8-image-button') ?? [],
-  );
+  const candidates = Array.from(parent?.querySelectorAll('button.image-tag-button, .st-chatu8-image-button') ?? []);
   return candidates.find(hasPromptPayload) ?? null;
 }
 
