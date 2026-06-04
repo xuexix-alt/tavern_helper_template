@@ -78,5 +78,7 @@ export function buildMvuSourceOptions(input: BuildMvuSourceOptionsInput): MvuSou
   if (sortedMessageIds.length === 0) return [];
 
   const latestMessageId = sortedMessageIds[0];
-  return sortedMessageIds.map(messageId => createOption(messageId, latestMessageId, messageId === pendingTargetMessageId));
+  return sortedMessageIds.map(messageId =>
+    createOption(messageId, latestMessageId, messageId === pendingTargetMessageId),
+  );
 }
