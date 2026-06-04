@@ -3027,10 +3027,11 @@ export function useStreamingDemo() {
     return null;
   });
   const currentMvuAnchorMessageId = computed(() => {
+    if (latestAssistantItem.value?.message_id != null) return latestAssistantItem.value.message_id;
     if (latestUserItem.value?.message_id != null) return latestUserItem.value.message_id;
     const openingAssistantMessageId = Math.trunc(Number(openingPayload.value.opening_assistant_message_id));
     if (Number.isFinite(openingAssistantMessageId) && openingAssistantMessageId > 0) return openingAssistantMessageId;
-    return latestAssistantItem.value?.message_id ?? null;
+    return null;
   });
 
   const inputHasText = computed(() => String(input.value ?? '').trim().length > 0);
@@ -6897,6 +6898,92 @@ export function useStreamingDemo() {
     }
   }
 
+  function collectVisibleAssistantMessageIds(): number[] {
+    return [
+      ...new Set(
+        transcript.value
+          .filter(item => item.role === 'assistant')
+          .map(item => Math.trunc(Number(item.message_id)))
+          .filter(id => Number.isFinite(id) && id >= 0),
+      ),
+    ];
+  }
+
+  function hostMessageNeedsImageDomRepair(messageId: number): boolean {
+    const rawDetail = readChatMessageDetail(messageId);
+    const rawMessage = String(rawDetail?.mes ?? rawDetail?.message ?? '');
+    const hasImageMarker = rawMessage.includes('image###') || rawMessage.includes('<image');
+    if (!hasImageMarker) return false;
+
+    for (const doc of collectHostDocuments()) {
+      const root = doc.querySelector(`.mes[mesid="${messageId}"]`) as HTMLElement | null;
+      if (!root) continue;
+      if (
+        root.querySelector(
+          '.st-chatu8-image-container, .st-chatu8-image-span, .image-tag-placeholder, .ai-image-container img',
+        )
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function hydrateVisibleImageMessages(reason: string): Promise<void> {
+    const visibleMessageIds = collectVisibleAssistantMessageIds();
+    if (visibleMessageIds.length === 0) {
+      recordLifecycleTrace('imageDomSync', 'visible_hydration_empty', { reason });
+      return;
+    }
+
+    syncTranscriptItemsFromHostData(reason, visibleMessageIds);
+    scheduleHostImageDataReconcile(reason, visibleMessageIds);
+    discoverRecentNativeGalleryImages(`${reason}:native_gallery`, visibleMessageIds);
+    queueGeneratedImageEntityRefresh(visibleMessageIds, reason);
+    schedulePluginNativePromptPlaceholderReconcile(reason, visibleMessageIds);
+
+    let fixCount = 0;
+    const repairedMessageIds: number[] = [];
+
+    for (const messageId of visibleMessageIds) {
+      await ensureHostMesTextRendered(messageId);
+      if (!hostMessageNeedsImageDomRepair(messageId)) continue;
+
+      fixCount += 1;
+      repairedMessageIds.push(messageId);
+      if (typeof eventEmit === 'function') {
+        try {
+          const messageUpdatedEvent = (globalThis as any).tavern_events?.MESSAGE_UPDATED ?? 'MESSAGE_UPDATED';
+          await eventEmit(messageUpdatedEvent as any, messageId);
+        } catch (error) {
+          console.warn('[image-dom-fix] eventEmit failed:', error);
+        }
+      }
+
+      for (const doc of collectHostDocuments()) {
+        const mesText = doc.querySelector(`.mes[mesid="${messageId}"] .mes_text`) as HTMLElement | null;
+        mesText?.dispatchEvent(new Event('DOMSubtreeModified', { bubbles: true }));
+      }
+    }
+
+    recordLifecycleTrace('imageDomSync', 'visible_hydration', {
+      reason,
+      messageCount: visibleMessageIds.length,
+      messageIds: visibleMessageIds.slice(0, 12),
+      fixCount,
+      repairedMessageIds,
+    });
+
+    if (fixCount > 0) {
+      window.setTimeout(() => {
+        syncTranscriptItemsFromHostData(`${reason}:after_repair`, repairedMessageIds);
+        scheduleHostImageDataReconcile(`${reason}:after_repair`, repairedMessageIds);
+        discoverRecentNativeGalleryImages(`${reason}:after_repair`, repairedMessageIds);
+        queueGeneratedImageEntityRefresh(repairedMessageIds, `${reason}:after_repair`);
+      }, 800);
+    }
+  }
+
   onMounted(async () => {
     restoreReaderChatState();
 
@@ -7066,68 +7153,10 @@ export function useStreamingDemo() {
     window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan_retry'), 1500);
     queueHidePolicy('mounted');
 
-    // 增强图片同步：确保正文图片在非全屏时也能显示
-    // 只扫描可见窗口（10-15条消息），性能可控
-    const syncVisibleImageData = () => {
-      const visibleMessageIds = transcript.value
-        .filter(item => item.role === 'assistant')
-        .map(item => Math.trunc(Number(item.message_id)))
-        .filter(id => Number.isFinite(id) && id >= 0);
-
-      if (visibleMessageIds.length > 0) {
-        syncTranscriptItemsFromHostData('mounted.image_sync', visibleMessageIds);
-        scheduleHostImageDataReconcile('mounted.image_sync', visibleMessageIds);
-
-        recordLifecycleTrace('imageDomSync', 'mounted_sync', {
-          messageCount: visibleMessageIds.length,
-          messageIds: visibleMessageIds.slice(0, 5),
-        });
-      }
-    };
-
-    // 多轮延迟同步（覆盖插件不同渲染时机）
-    window.setTimeout(syncVisibleImageData, 500); // 快速响应
-    window.setTimeout(syncVisibleImageData, 1500); // 覆盖慢速渲染
-    window.setTimeout(syncVisibleImageData, 3000); // 兜底
-
-    // 检查并修复缺失的图片DOM（只针对可见窗口）
-    window.setTimeout(() => {
-      const visibleMessageIds = transcript.value
-        .filter(item => item.role === 'assistant')
-        .map(item => Math.trunc(Number(item.message_id)))
-        .filter(id => Number.isFinite(id) && id >= 0);
-
-      let fixCount = 0;
-
-      visibleMessageIds.forEach(messageId => {
-        const msg = document.querySelector(`.mes[mesid="${messageId}"]`);
-        if (!msg) return;
-
-        const mesText = msg.querySelector('.mes_text');
-        const rawHTML = mesText?.innerHTML || '';
-        const hasImageMarker = rawHTML.includes('image###');
-        const imageContainers = msg.querySelectorAll('.st-chatu8-image-container');
-
-        if (hasImageMarker && imageContainers.length === 0) {
-          console.log(`[image-dom-fix] 消息 ${messageId} 触发重新渲染`);
-
-          const mutationEvent = new Event('DOMSubtreeModified', { bubbles: true });
-          mesText?.dispatchEvent(mutationEvent);
-
-          fixCount++;
-        }
-      });
-
-      if (fixCount > 0) {
-        recordLifecycleTrace('imageDomFix', 'triggered', {
-          fixCount,
-          visibleMessageCount: visibleMessageIds.length,
-        });
-
-        // 触发后再次同步
-        window.setTimeout(syncVisibleImageData, 800);
-      }
-    }, 2000);
+    // 多轮可见正文图片水合：移动端普通模式也执行，不能只依赖全屏/画廊抽屉触发。
+    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_500'), 500);
+    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_1500'), 1500);
+    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_3000'), 3000);
   });
 
   // 增强可见性监听：处理移动端从后台恢复、全屏切换、屏幕旋转等场景
@@ -7151,17 +7180,7 @@ export function useStreamingDemo() {
       window.setTimeout(() => {
         discoverRecentNativeGalleryImages(`visibility_restored.${reason}`);
         queueVisibleGeneratedImageEntityRefresh(`visibility_restored.${reason}`);
-
-        // 强制同步宿主 DOM 状态
-        const visibleMessageIds = transcript.value
-          .filter(item => item.role === 'assistant')
-          .map(item => Math.trunc(Number(item.message_id)))
-          .filter(id => Number.isFinite(id) && id >= 0);
-
-        if (visibleMessageIds.length > 0) {
-          syncTranscriptItemsFromHostData(`visibility_restored.${reason}`, visibleMessageIds);
-          scheduleHostImageDataReconcile(`visibility_restored.${reason}`, visibleMessageIds);
-        }
+        void hydrateVisibleImageMessages(`visibility_restored.${reason}:visible_image_hydration`);
       }, 300);
     };
 

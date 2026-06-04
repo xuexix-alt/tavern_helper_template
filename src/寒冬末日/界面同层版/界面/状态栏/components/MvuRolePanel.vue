@@ -363,6 +363,7 @@ const sourceOptions = computed(() => {
     transcriptItems: Array.isArray(props.transcriptItems) ? props.transcriptItems : [],
     targetMessageId: normalizedTargetMessageId.value,
     refreshRevision,
+    includePendingTarget: true,
     hasStatData(messageId) {
       return readMvuStatData(messageId).ok;
     },
@@ -420,6 +421,7 @@ const sourceLabel = computed(() => {
   }
   const selected = selectedSourceOption.value;
   if (!selected) return '当前暂无可用变量楼层';
+  if (selected.isPending) return `目标最新楼层 ${selected.pillLabel} 等待 stat_data 稳定`;
   if (isRetrying.value) return `目标楼层 ${selected.pillLabel} 等待变量稳定`;
   if (source.value === 'default') return `目标楼层 ${selected.pillLabel} 暂无 stat_data`;
   return selected.isLatest

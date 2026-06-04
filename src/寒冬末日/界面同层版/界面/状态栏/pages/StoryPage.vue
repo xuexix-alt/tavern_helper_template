@@ -1675,7 +1675,12 @@ function movePluginMenuIntoFullscreen(node: HTMLElement, fullscreenEl: HTMLEleme
 
 function preparePluginMenuForFullscreen(): void {
   const fullscreenEl = document.fullscreenElement as HTMLElement | null;
-  if (!fullscreenEl) return;
+
+  // ⭐ 新增：退出全屏时恢复菜单到原位
+  if (!fullscreenEl) {
+    restorePluginMenuFromFullscreen();
+    return;
+  }
 
   let hostBody: HTMLElement | null = null;
   try {
@@ -1706,6 +1711,51 @@ function preparePluginMenuForFullscreen(): void {
 
   observer.observe(hostBody, { childList: true, subtree: true });
   setTimeout(() => observer.disconnect(), 2400);
+}
+
+function restorePluginMenuFromFullscreen(): void {
+  let hostBody: HTMLElement | null = null;
+  try {
+    hostBody = window.top?.document?.body ?? null;
+  } catch {
+    return;
+  }
+  if (!hostBody) return;
+
+  // 查找所有插件菜单节点
+  hostBody.querySelectorAll(PLUGIN_CLICK_TRIGGER_SELECTOR).forEach(node => {
+    if (!(node instanceof HTMLElement)) return;
+
+    // 检查是否在正常位置（mes_text内或其附近）
+    const mesText = node.closest('.mes_text');
+    if (!mesText) {
+      // 不在mes_text内，可能需要恢复
+      console.log('[fullscreen-restore] 发现脱离的插件菜单');
+
+      // 尝试找到对应的消息元素（从data属性或内容推断）
+      // 查找最近的生图按钮的parent message
+      const stChatu8Container = node.closest('.st-chatu8-image-container');
+      const parentMes = stChatu8Container?.closest('.mes');
+
+      if (parentMes) {
+        const messageId = parentMes.getAttribute('mesid');
+        const targetMesText = parentMes.querySelector('.mes_text');
+
+        if (targetMesText && !targetMesText.contains(node)) {
+          try {
+            // 尝试恢复到原位
+            const imageContainer = parentMes.querySelector('.st-chatu8-image-container');
+            if (imageContainer && !imageContainer.contains(node)) {
+              imageContainer.appendChild(node);
+              console.log(`[fullscreen-restore] 恢复菜单到消息 ${messageId}`);
+            }
+          } catch (e) {
+            console.warn('[fullscreen-restore] 恢复失败:', e);
+          }
+        }
+      }
+    }
+  });
 }
 
 function clampPluginMenuIntoViewport(node: Element): void {

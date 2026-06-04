@@ -134,7 +134,7 @@ test('opening failure recovery reuses the frozen compiled prompt snapshot instea
   );
 });
 
-test('opening mvu anchor prefers latest user, then opening assistant, then latest assistant', () => {
+test('opening mvu anchor prefers latest assistant, then latest user, then opening assistant', () => {
   const source = readSource();
 
   assert.equal(
@@ -143,9 +143,14 @@ test('opening mvu anchor prefers latest user, then opening assistant, then lates
     'useStreamingDemo should expose an explicit current MVU anchor for opening and post-opening states',
   );
   assert.equal(
+    source.includes('if (latestAssistantItem.value?.message_id != null) return latestAssistantItem.value.message_id;'),
+    true,
+    'MVU anchor should prefer the latest assistant floor once it exists',
+  );
+  assert.equal(
     source.includes('if (latestUserItem.value?.message_id != null) return latestUserItem.value.message_id;'),
     true,
-    'MVU anchor should prefer the latest user floor during normal story turns',
+    'MVU anchor should use the latest user floor while an assistant reply has not appeared yet',
   );
   assert.equal(
     source.includes(
@@ -155,9 +160,9 @@ test('opening mvu anchor prefers latest user, then opening assistant, then lates
     'MVU anchor should fall back to the opening assistant floor after detached opening generation',
   );
   assert.equal(
-    source.includes('return latestAssistantItem.value?.message_id ?? null;'),
+    source.includes('return null;'),
     true,
-    'MVU anchor should finally fall back to the latest assistant floor when no user or opening assistant anchor exists',
+    'MVU anchor should not silently fall back to an older floor after all preferred sources are absent',
   );
 });
 
@@ -181,9 +186,9 @@ test('opening setup visibility stays closed for restored chats that already have
   const source = readSource();
   const body = extractFunctionBody(source, 'useStreamingDemo');
 
-  assert.equal(
-    body.includes('const hasOpeningSeedUserMessage = computed(() =>'),
-    true,
+  assert.match(
+    body,
+    /const hasOpeningSeedUserMessage = computed\([\s\S]*=>/,
     'opening setup should keep a restored-chat fallback that detects existing opening/user turns',
   );
   assert.match(

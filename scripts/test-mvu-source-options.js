@@ -42,4 +42,28 @@ assertDeepEqual(
   'mvu source options should only include readable assistant/opening message ids',
 );
 
+const pendingTargetOptions = buildMvuSourceOptions({
+  transcriptItems: transcript,
+  targetMessageId: 10,
+  includePendingTarget: true,
+  hasStatData(messageId) {
+    return readable.has(messageId);
+  },
+});
+
+assertDeepEqual(
+  pendingTargetOptions.map(item => ({
+    targetMessageId: item.targetMessageId,
+    isLatest: item.isLatest,
+    isPending: item.isPending,
+    label: item.label,
+  })),
+  [
+    { targetMessageId: 10, isLatest: true, isPending: true, label: '10#' },
+    { targetMessageId: 3, isLatest: false, isPending: false, label: '3#' },
+    { targetMessageId: 0, isLatest: false, isPending: false, label: '0#' },
+  ],
+  'pending target source should keep the latest mvu floor selected instead of falling back to older readable floors',
+);
+
 console.log('mvu source options test passed');

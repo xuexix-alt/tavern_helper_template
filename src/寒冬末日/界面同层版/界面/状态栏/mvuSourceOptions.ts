@@ -5,6 +5,7 @@ export type MvuSourceOption = {
   targetMessageId: number;
   sortId: number;
   isLatest: boolean;
+  isPending?: boolean;
 };
 
 type TranscriptLike = {
@@ -17,6 +18,7 @@ type BuildMvuSourceOptionsInput = {
   transcriptItems: TranscriptLike[];
   targetMessageId?: number | null;
   refreshRevision?: number;
+  includePendingTarget?: boolean;
   hasStatData: (messageId: number) => boolean;
 };
 
@@ -32,7 +34,7 @@ function isReadableTranscriptLike(item: TranscriptLike, hasStatData: (messageId:
   return hasStatData(messageId);
 }
 
-function createOption(messageId: number, latestMessageId: number): MvuSourceOption {
+function createOption(messageId: number, latestMessageId: number, isPending = false): MvuSourceOption {
   const label = `${messageId}#`;
   return {
     key: `message:${messageId}`,
@@ -41,6 +43,7 @@ function createOption(messageId: number, latestMessageId: number): MvuSourceOpti
     targetMessageId: messageId,
     sortId: messageId,
     isLatest: messageId === latestMessageId,
+    isPending,
   };
 }
 
@@ -57,13 +60,23 @@ export function buildMvuSourceOptions(input: BuildMvuSourceOptionsInput): MvuSou
   }
 
   const targetMessageId = toFiniteMessageId(input.targetMessageId);
-  if (targetMessageId != null && input.hasStatData(targetMessageId)) {
-    readableMessageIds.add(targetMessageId);
+  let pendingTargetMessageId: number | null = null;
+  if (targetMessageId != null) {
+    if (input.hasStatData(targetMessageId)) {
+      readableMessageIds.add(targetMessageId);
+    } else if (input.includePendingTarget === true) {
+      pendingTargetMessageId = targetMessageId;
+    }
   }
 
-  const sortedMessageIds = Array.from(readableMessageIds).sort((a, b) => b - a || refreshRevision * 0);
+  const sortedMessageIds = Array.from(readableMessageIds)
+    .filter(messageId => messageId !== pendingTargetMessageId)
+    .sort((a, b) => b - a || refreshRevision * 0);
+  if (pendingTargetMessageId != null) {
+    sortedMessageIds.unshift(pendingTargetMessageId);
+  }
   if (sortedMessageIds.length === 0) return [];
 
   const latestMessageId = sortedMessageIds[0];
-  return sortedMessageIds.map(messageId => createOption(messageId, latestMessageId));
+  return sortedMessageIds.map(messageId => createOption(messageId, latestMessageId, messageId === pendingTargetMessageId));
 }
