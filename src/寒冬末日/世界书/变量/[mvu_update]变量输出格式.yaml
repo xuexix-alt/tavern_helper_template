@@ -1,18 +1,18 @@
 # [mvu_update] 变量输出格式（优化版）
 
 rule:
-  - '在产出本块之前，必须先在内心完成 <变量运算指导> 中 <match_cot> 的逐条思考（时间、秩序刻印更新原因/秩序刻印/关系、健康/健康更新原因、伊甸一次性指令的数量与生效实例、主线任务等）。所有数值运算与归一化规则以 <match_cot> 为准，本文件不再重复。'
+  - "在产出本块之前，必须先在内心完成 <变量运算指导> 中 <match_cot> 的逐条思考（时间、秩序刻印更新原因/秩序刻印/关系、健康/健康更新原因、伊甸一次性指令的数量与生效实例、主线任务等）。所有数值运算与归一化规则以 <match_cot> 为准，本文件不再重复。"
   - '全局优先级（冲突时裁决）：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡规则。玩家发出"直接加 Imp / 直接设档位"等脱离剧情指令 → 视为破坏规则，正文拒绝、不产出相关 patch。'
   - You MUST output the `<UpdateVariable>` block at the end of your reply.
   - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
-  - 'The update commands works like the **JSON Patch (RFC 6902)** standard, must
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must
     be a valid JSON array containing operation objects, but supports the
-    following operations instead:'
-  - '  - `replace`: replace the value of existing paths'
-  - '  - `delta`: update the value of existing number paths by a delta value
-    (positive or negative)'
-  - '  - `insert`: insert new items into an object or array'
-  - '  - `remove`: delete path'
+    following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value
+    (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
   - '  - `move`: move an existing value from one path to another (requires
     `"from"`). '
   - Path MUST start with `/`.
@@ -36,13 +36,13 @@ format: |-
      - 时间：按 match_cot 推出的最终时间写回 `/世界/时间`。
      - 跨过 00:00 时更新日期，并对 `/世界/末日天数` 做 `delta +1`（脚本为兜底）。
      - 地址：仅在角色实际移动时更新。
-     - 结果：时间 ____；日期 ____。每新的一天要随机增加3个伊甸一次性指令。
+     - 结果：时间 ____；日期 ____。
 
   3. 庇护所与伊甸一次性指令
      - 不要手动为庇护所升级摇点；仅当主线阶段完成奖励触发时 `replace /庇护所/庇护所等级`。
      - `今日投掷点数` 只读。
      - 伊甸一次性指令：
-          - 根据`check`进行新增或减少指令，绑定日期更新
+          - 根据`check`进行新增或减少指令，日期更新需随机新增3条一次性指令
           - 严格按 match_cot 的"发动 → 推进 → 结束"三态产出 patch，只维护 `数量` 与 `生效实例`；禁止改动 `名称/说明/范围/时效`。
      - 本轮受指令保护的角色/事件列表 ____；受保护范围之外的独立负向事件 ____。
 
@@ -124,15 +124,15 @@ format: |-
   </UpdateVariable>
 
 requirements:
-  - 'Allowed operations: replace, delta, insert, remove, move.'
+  - "Allowed operations: replace, delta, insert, remove, move."
   - Path MUST be a valid JSON Pointer absolute path.
   - DO NOT `replace` on non-existent paths (use `insert`).
-  - 'If `/<角色名>` does not exist in current `stat_data`, NEVER use
-    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first.'
-  - 'For Role moves, update `/<角色>/所在房间` with `replace` (single source of
-    truth).'
-  - '所有涉及数值运算的字段（时间、秩序刻印更新原因/秩序刻印、健康/健康更新原因、伊甸一次性指令.生效实例.剩余时效、主线任务目标推进等）必须以 <match_cot> 的推演结果为唯一真源，本文件与 <Analysis> 仅负责组织输出、不再复述计算公式。'
-  - 'Imp 与健康相互独立：Imp<0 → 永久逃离（非死亡）；健康=0 → 死亡（唯一死亡条件）。'
-  - '伊甸一次性指令具有最高优先级：指令自身行为不扣 Imp/健康；但指令保护范围外的独立负向事件照常结算。'
-  - '初始赋值：新增角色关系**禁止**直接设为【归附】；Imp 与关系倾向按剧情与人设综合判断。'
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use
+    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "For Role moves, update `/<角色>/所在房间` with `replace` (single source of
+    truth)."
+  - "所有涉及数值运算的字段（时间、秩序刻印更新原因/秩序刻印、健康/健康更新原因、伊甸一次性指令.生效实例.剩余时效、主线任务目标推进等）必须以 <match_cot> 的推演结果为唯一真源，本文件与 <Analysis> 仅负责组织输出、不再复述计算公式。"
+  - "Imp 与健康相互独立：Imp<0 → 永久逃离（非死亡）；健康=0 → 死亡（唯一死亡条件）。"
+  - "伊甸一次性指令具有最高优先级：指令自身行为不扣 Imp/健康；但指令保护范围外的独立负向事件照常结算。"
+  - "初始赋值：新增角色关系**禁止**直接设为【归附】；Imp 与关系倾向按剧情与人设综合判断。"
   - '玩家"直接改 Imp/档位/健康"的指令视为破坏游戏规则，正文拒绝、不产出 patch。'

@@ -9,6 +9,7 @@
       <div class="ui-topbar-brand">
         <span class="ui-dot" :class="{ 'save-failing': saveHealthIsFailing }"></span>
         <span class="ui-brand-copy">EDEN-STAR</span>
+        <span class="ui-brand-version">v1.0</span>
         <button
           v-if="saveHealthIsFailing"
           type="button"
@@ -1318,6 +1319,45 @@ function resolveIframeImageNodeByPromptToken(messageId: number, promptToken: str
   return findNextImageElement(button);
 }
 
+function resolvePluginButtonForImageElement(image: HTMLImageElement | null, messageId: number, promptToken: string): HTMLElement | null {
+  if (!image) return null;
+  const buttonSelector = 'button.image-tag-button, .st-chatu8-image-button';
+  const promptNeedle = normalizePromptTokenForCompare(promptToken);
+  const hasPromptPayload = (element: Element | null): element is HTMLElement => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (!element.matches?.(buttonSelector)) return false;
+    const payload = String(
+      element.dataset.imageTag ??
+        element.dataset.link ??
+        element.getAttribute('data-image-tag') ??
+        element.getAttribute('data-link') ??
+        '',
+    ).trim();
+    if (!payload) return false;
+    return !promptNeedle || normalizePromptTokenForCompare(payload) === promptNeedle;
+  };
+
+  const container = image.closest(
+    '.ai-image-container, .st-chatu8-image-container, .st-chatu8-image-span, span.image-tag-placeholder',
+  ) as HTMLElement | null;
+  if (container) {
+    let sibling = container.previousElementSibling;
+    while (sibling) {
+      if (sibling.matches?.('button.image-tag-button, .st-chatu8-image-button') && hasPromptPayload(sibling)) {
+        return sibling as HTMLElement;
+      }
+      sibling = sibling.previousElementSibling;
+    }
+
+    const root = container.closest('.mes') as HTMLElement | null;
+    const candidates = Array.from(root?.querySelectorAll(buttonSelector) ?? []) as HTMLElement[];
+    const matched = candidates.find(hasPromptPayload);
+    if (matched) return matched;
+  }
+
+  return promptToken ? resolveHostImageButtonByPromptToken(messageId, promptToken) : null;
+}
+
 function resolveHostImageTarget(
   messageId: number,
   promptToken: string,
@@ -1364,6 +1404,7 @@ function resolveHostImageTarget(
       hostMessageRoot,
       hostImage: imageBySrc,
       hostButton:
+        resolvePluginButtonForImageElement(imageBySrc, messageId, promptToken) ??
         resolveHostImageButtonByRequestId(messageId, spanRequestId) ??
         resolveHostImageButtonByPromptToken(messageId, promptToken),
       iframeImage: iframeImageBySrc ?? resolveIframeImageNodeByPromptToken(messageId, promptToken),
@@ -1851,8 +1892,9 @@ function findPluginImageGenerationMenuItem(): HTMLElement | null {
 }
 
 async function clickPluginImageGenerationMenuItem(): Promise<boolean> {
-  const deadline = Date.now() + 1800;
+  const deadline = Date.now() + 6000;
   while (Date.now() < deadline) {
+    guardPluginMenuViewport();
     const item = findPluginImageGenerationMenuItem();
     if (item) {
       item.click();
@@ -1869,6 +1911,9 @@ async function handleTranscriptGenerateImage(request: TranscriptImageGenerateReq
   guardPluginMenuViewport();
   await triggerImageGenerationForMessage(messageId, {
     hostPoint,
+    primaryTriggerStrategy: 'mobile-touch-sequence',
+    fallbackTriggerStrategy: 'mobile-touch-sequence',
+    fallbackTriggerAfterMs: 900,
     afterPrimaryTrigger: async () => {
       if (await clickPluginImageGenerationMenuItem()) return true;
       toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
@@ -1888,6 +1933,9 @@ async function handleChoiceModalGenerateLatestImage() {
 
   await triggerImageGenerationForMessage(messageId, {
     hostPoint: null,
+    primaryTriggerStrategy: 'mobile-touch-sequence',
+    fallbackTriggerStrategy: 'mobile-touch-sequence',
+    fallbackTriggerAfterMs: 900,
     afterPrimaryTrigger: async () => {
       if (await clickPluginImageGenerationMenuItem()) return true;
       toastr?.warning?.('插件生图菜单未出现，无法自动选择“图片生成”');
@@ -2347,6 +2395,14 @@ useEventListener(window, 'keydown', event => {
 
 .ui-brand-copy {
   color: var(--demo-text-accent);
+}
+
+.ui-brand-version {
+  font-family: var(--demo-font-mono);
+  font-size: 0.68rem;
+  line-height: 1;
+  color: var(--demo-text-secondary);
+  opacity: 0.72;
 }
 
 .ui-online {

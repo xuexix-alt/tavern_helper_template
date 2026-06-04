@@ -46,6 +46,28 @@ test('preserveChatu8PromptTokenPlacementMarkersHtml converts visible tokens into
   assert.equal(cleaned.includes('正文后'), true);
 });
 
+test('native prompt token marker unhides plugin-inserted controls after st-chatu8 scans it', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const css = fs.readFileSync(path.join(__dirname, '../theme-tokens.css'), 'utf8');
+
+  assert.match(
+    css,
+    /\.chatu8-native-prompt-token:has\(\.image-tag-button\)/,
+    'marker should stop hiding itself once st-chatu8 inserts its native image button inside it',
+  );
+  assert.match(
+    css,
+    /\.chatu8-native-prompt-token:has\(\.image-tag-placeholder\)/,
+    'marker should expose the native placeholder span inserted by st-chatu8',
+  );
+  assert.match(
+    css,
+    /:has\(\.st-chatu8-image-span\)[\s\S]*position: static;[\s\S]*width: auto;[\s\S]*opacity: 1;[\s\S]*pointer-events: auto;/,
+    'marker should restore normal layout for plugin-native replacement content',
+  );
+});
+
 test('stripVisibleChatu8PromptTokensText removes visible prompt tokens from plain text while leaving other content intact', () => {
   const input = '正文前 image###sfw, 1girl, ${"name":"fujii yukino"}$### 正文后 image###coat, winter### 正文末';
 

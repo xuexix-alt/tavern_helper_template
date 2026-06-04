@@ -52,7 +52,13 @@ export function parseGeneratedImageActivationPayload(input: {
         '',
     ),
   );
-  const requestId = String(carrierDataset.requestId ?? targetDataset.requestId ?? '').trim();
+  const requestId = String(
+    carrierDataset.requestId ??
+      targetDataset.requestId ??
+      carrierDataset.samelayerRequestId ??
+      targetDataset.samelayerRequestId ??
+      '',
+  ).trim();
   const rawSource = String(carrierDataset.source ?? targetDataset.source ?? '').trim();
   const source = rawSource === 'gallery' || rawSource === 'transcript' ? rawSource : undefined;
   const imageSrc = decodeValue(

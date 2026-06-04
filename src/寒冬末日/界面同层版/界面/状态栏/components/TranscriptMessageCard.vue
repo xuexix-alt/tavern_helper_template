@@ -124,13 +124,25 @@ import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import {
+  collectReachableHostDocuments,
+  normalizeImageDataToSrc,
+  normalizeImageSrcForCompare,
+  readChatMessageDetail,
+} from '../hostBridge';
 import { getFallbackImageClasses } from '../imageFallbackClasses';
 import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
 import { loadImage } from '../imageStore';
+import {
+  sanitizeSameLayerPluginNativeRequestIdElements,
+  sanitizeSameLayerPluginNativeRequestIds,
+} from '../pluginNativeImageDom';
 import { stripVisibleChatu8PromptTokensHtml } from '../chatu8PromptTokenDisplay';
 import { hydratePersistedImageElements } from '../transcriptImagePersistence';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 import StreamRenderer from './StreamRenderer.vue';
+
+const DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS = [0, 300, 900, 1800, 3600, 7200, 15000] as const;
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -163,13 +175,14 @@ const emit = defineEmits<{
 
 const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
+const directHostBackfillTimers = ref<number[]>([]);
 const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
   // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
   const html = props.item.finalHtml || '<p>(空回复)</p>';
-  return stripVisibleChatu8PromptTokensHtml(html);
+  return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));
 });
 const assistantBodySignature = computed(() => {
   if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
@@ -205,6 +218,40 @@ function recordComponentTrace(event: string, payload: Record<string, unknown> = 
   });
 }
 
+function collectNativePromptTokenScanState(root: HTMLElement) {
+  const promptTokenMarkers = Array.from(root.querySelectorAll('[data-chatu8-native-prompt-token="true"]')) as HTMLElement[];
+  const promptButtons = Array.from(
+    root.querySelectorAll('button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]'),
+  ) as HTMLElement[];
+  const promptPlaceholders = Array.from(
+    root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder'),
+  ) as HTMLElement[];
+  const readyImages = Array.from(
+    root.querySelectorAll('.st-chatu8-image-span img, span.image-tag-placeholder img, .ai-image-container img'),
+  ) as HTMLImageElement[];
+
+  return {
+    promptTokenMarkerCount: promptTokenMarkers.length,
+    promptButtonCount: promptButtons.length,
+    promptPlaceholderCount: promptPlaceholders.length,
+    readyImageCount: readyImages.length,
+    promptTokenSamples: promptTokenMarkers.slice(0, 4).map(marker =>
+      String(marker.textContent ?? '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 96),
+    ),
+  };
+}
+
+function recordNativePromptTokenScanState(reason: string) {
+  const root = assistantBodyRef.value;
+  if (!root || props.item.role !== 'assistant') return;
+  recordComponentTrace('native_prompt_token_scan', {
+    reason,
+    ...collectNativePromptTokenScanState(root),
+  });
+}
+
 function onEditInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   if (!target) return;
@@ -225,6 +272,7 @@ async function resolvePersistedImageSrc(src: string) {
 async function hydrateAssistantBodyImages() {
   const root = assistantBodyRef.value;
   if (!root) return;
+  sanitizeSameLayerPluginNativeRequestIdElements(root);
   root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);
   const images = Array.from(
     root.querySelectorAll('img[src^="idb://"], img[data-persisted-image-src]'),
@@ -320,17 +368,235 @@ function collectGalleryEntryKeys(entry: ReaderGalleryEntry): string[] {
   ].filter(Boolean);
 }
 
+function isChatu8ImageRecord(input: unknown): input is Record<string, any> {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  return ['src', 'image', 'imageData', 'path', 'url', 'prompt', 'tag', 'promptToken', 'requestId', 'request_id'].some(
+    key => Object.prototype.hasOwnProperty.call(input, key),
+  );
+}
+
+function flattenChatu8ImageRecords(input: unknown): Record<string, any>[] {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.flatMap(item => flattenChatu8ImageRecords(item));
+  if (isChatu8ImageRecord(input)) return [input];
+  if (typeof input === 'object')
+    return Object.values(input as Record<string, unknown>).flatMap(item => flattenChatu8ImageRecords(item));
+  return [];
+}
+
+function normalizeDirectHostPromptToken(entry: Record<string, any>): string {
+  const token = String(entry.promptToken ?? entry.tag ?? '').trim();
+  if (token) return token;
+  const prompt = String(entry.prompt ?? '').trim();
+  return prompt ? `image###${prompt}###` : '';
+}
+
+function collectDirectHostExtraImageEntries(): ReaderGalleryEntry[] {
+  const messageId = Math.trunc(Number(props.item.message_id));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+  const message = readChatMessageDetail(props.item.message_id);
+  const swipeId = Number.isFinite(Number(message?.swipe_id)) ? Math.trunc(Number(message.swipe_id)) : 0;
+  const rawSources = [message?.extra?.images?.[swipeId], message?.extra?.images, message?.swipe_info?.[swipeId]?.images];
+  const records = rawSources.flatMap(flattenChatu8ImageRecords);
+  const out: ReaderGalleryEntry[] = [];
+  const seen = new Set<string>();
+
+  records.forEach((entry, index) => {
+    const src = normalizeImageDataToSrc(entry.src ?? entry.image ?? entry.imageData ?? entry.path ?? entry.url);
+    const normalizedSrc = normalizeImageSrcForCompare(src);
+    if (!normalizedSrc || seen.has(normalizedSrc)) return;
+    seen.add(normalizedSrc);
+    const requestId = String(entry.requestId ?? entry.request_id ?? '').trim();
+    const promptToken = normalizeDirectHostPromptToken(entry);
+    const imageId = String(entry.imageId ?? entry.image_id ?? '').trim() || requestId || promptToken || normalizedSrc;
+    out.push({
+      id: `direct-extra-${messageId}-${requestId || index}`,
+      messageId,
+      imageId,
+      requestId: requestId || undefined,
+      promptToken,
+      anchorText: String(entry.regex ?? entry.anchorText ?? '').trim() || undefined,
+      title: `楼层 #${messageId} · 图 ${index + 1}`,
+      createdOrder: messageId * 100 + index,
+      canRegenerate: Boolean(requestId || promptToken),
+      src,
+      alt: String(entry.alt ?? 'generated image').trim() || 'generated image',
+    });
+  });
+
+  return out;
+}
+
+function resolvePluginPromptCarrierForImageContainer(carrier: HTMLElement | null): HTMLElement | null {
+  if (!carrier) return null;
+  const hasPromptPayload = (element: Element | null): element is HTMLElement => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (!element.matches?.('button.image-tag-button, .st-chatu8-image-button')) return false;
+    return Boolean(
+      String(
+        element.dataset.imageTag ??
+          element.dataset.link ??
+          element.getAttribute('data-image-tag') ??
+          element.getAttribute('data-link') ??
+          '',
+      ).trim(),
+    );
+  };
+
+  let sibling = carrier.previousElementSibling;
+  while (sibling) {
+    if (sibling.matches?.('button.image-tag-button, .st-chatu8-image-button') && hasPromptPayload(sibling)) {
+      return sibling as HTMLElement;
+    }
+    sibling = sibling.previousElementSibling;
+  }
+
+  const parent = carrier.parentElement;
+  const candidates = Array.from(
+    parent?.querySelectorAll('button.image-tag-button, .st-chatu8-image-button') ?? [],
+  );
+  return candidates.find(hasPromptPayload) ?? null;
+}
+
+function collectDirectHostDomImageEntries(): ReaderGalleryEntry[] {
+  const messageId = Math.trunc(Number(props.item.message_id));
+  if (!Number.isFinite(messageId) || messageId < 0) return [];
+  const out: ReaderGalleryEntry[] = [];
+  const seen = new Set<string>();
+
+  const pushImage = (image: HTMLImageElement, carrier: HTMLElement | null, indexHint: number) => {
+    const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
+    if (!src || seen.has(src)) return;
+    if (!src.startsWith('data:image') && !src.startsWith('blob:') && !src.startsWith('http') && !src.startsWith('/')) {
+      return;
+    }
+    seen.add(src);
+    const promptCarrier = resolvePluginPromptCarrierForImageContainer(carrier);
+    const requestId = String(
+      image.dataset.requestId ??
+        carrier?.dataset.requestId ??
+        promptCarrier?.dataset.requestId ??
+        image.getAttribute('data-request-id') ??
+        carrier?.getAttribute('data-request-id') ??
+        promptCarrier?.getAttribute('data-request-id') ??
+        '',
+    ).trim();
+    const promptToken = String(
+      promptCarrier?.dataset.imageTag ??
+        promptCarrier?.dataset.link ??
+        promptCarrier?.getAttribute('data-image-tag') ??
+        promptCarrier?.getAttribute('data-link') ??
+        carrier?.dataset.imageTag ??
+        carrier?.dataset.link ??
+        carrier?.getAttribute('data-image-tag') ??
+        carrier?.getAttribute('data-link') ??
+        '',
+    ).trim();
+    out.push({
+      id: `direct-dom-${messageId}-${requestId || indexHint}`,
+      messageId,
+      imageId: requestId || promptToken || src,
+      requestId: requestId || undefined,
+      promptToken,
+      title: `楼层 #${messageId} · 图 ${out.length + 1}`,
+      createdOrder: messageId * 100 + out.length,
+      canRegenerate: Boolean(requestId || promptToken),
+      src,
+      alt: image.getAttribute('alt') ?? image.getAttribute('title') ?? 'generated image',
+    });
+  };
+
+  for (const doc of collectReachableHostDocuments().filter(doc => doc !== document)) {
+    const roots = Array.from(
+      doc.querySelectorAll(`.mes[data-message-id='${messageId}'], .mes[mesid='${messageId}']`),
+    ) as HTMLElement[];
+    for (const root of roots) {
+      const images = Array.from(
+        root.querySelectorAll('.ai-image-container img, .st-chatu8-image-container img, .image-tag-placeholder img'),
+      ) as HTMLImageElement[];
+      images.forEach((image, index) => {
+        const carrier = image.closest(
+          '.ai-image-container, .st-chatu8-image-container, .image-tag-placeholder, .st-chatu8-image-span',
+        ) as HTMLElement | null;
+        pushImage(image, carrier, index);
+      });
+    }
+  }
+
+  return out;
+}
+
+function collectDirectHostBackfillEntries(): ReaderGalleryEntry[] {
+  const out: ReaderGalleryEntry[] = [];
+  const seen = new Set<string>();
+  const push = (entry: ReaderGalleryEntry) => {
+    const src = normalizeImageSrcForCompare(entry.src);
+    if (!src || seen.has(src)) return;
+    seen.add(src);
+    out.push(entry);
+  };
+
+  collectDirectHostExtraImageEntries().forEach(push);
+  collectDirectHostDomImageEntries().forEach(push);
+  return out;
+}
+
+function ensureGalleryRecoveryStrip(root: HTMLElement): HTMLElement {
+  let strip = root.querySelector('[data-gallery-recovery-strip="true"]') as HTMLElement | null;
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.className = 'assistant-inline-image-strip';
+    strip.setAttribute('data-gallery-recovery-strip', 'true');
+    root.append(strip);
+  }
+  return strip;
+}
+
 function appendMissingGalleryFigure(root: HTMLElement, entry: ReaderGalleryEntry): boolean {
   const figure = createGalleryEntryFigure(entry);
   if (!figure) return false;
-  let gallery = root.querySelector(`.${fallbackImageClasses.gallery}`) as HTMLElement | null;
-  if (!gallery) {
-    gallery = document.createElement('div');
-    gallery.className = fallbackImageClasses.gallery;
-    root.append(gallery);
-  }
-  gallery.append(figure);
+  ensureGalleryRecoveryStrip(root).append(figure);
   return true;
+}
+
+function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill') {
+  const root = assistantBodyRef.value;
+  if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
+  const existingKeys = collectExistingGalleryImageKeys(root);
+  const entries = collectDirectHostBackfillEntries().filter(entry => {
+    const keys = collectGalleryEntryKeys(entry);
+    return keys.length > 0 && !keys.some(key => existingKeys.has(key));
+  });
+  if (entries.length === 0) return;
+
+  let appended = 0;
+  for (const entry of entries) {
+    if (appendMissingGalleryFigure(root, entry)) appended += 1;
+  }
+  if (appended > 0) {
+    recordComponentTrace('direct_host_backfill_images', { reason, candidateCount: entries.length, appended });
+    void nextTick().then(() => {
+      void hydrateAssistantBodyImages().then(() => bindAssistantBodyInteractions());
+    });
+  }
+}
+
+function clearDirectHostBackfillTimers() {
+  for (const timer of directHostBackfillTimers.value) window.clearTimeout(timer);
+  directHostBackfillTimers.value = [];
+}
+
+function scheduleDirectHostBackfillImages(reason = 'direct_host_backfill') {
+  clearDirectHostBackfillTimers();
+  for (const delayMs of DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS) {
+    const run = () => hydrateDirectHostBackfillImages(`${reason}:${delayMs}`);
+    if (delayMs <= 0) {
+      run();
+      continue;
+    }
+    const timer = window.setTimeout(run, delayMs);
+    directHostBackfillTimers.value.push(timer);
+  }
 }
 
 type PendingGalleryImageTarget = {
@@ -384,6 +650,7 @@ function takePendingGalleryImageTarget(
 function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
+  sanitizeSameLayerPluginNativeRequestIdElements(root);
   const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
   if (entries.length === 0) return;
   const existingKeys = collectExistingGalleryImageKeys(root);
@@ -429,6 +696,42 @@ function stopEvent(event: Event) {
   nativeEvent.stopImmediatePropagation?.();
 }
 
+function sanitizeAssistantBodyPluginNativeRequestIds(root: HTMLElement): number {
+  const count = sanitizeSameLayerPluginNativeRequestIdElements(root);
+  if (count > 0) {
+    recordComponentTrace('sanitize_plugin_native_request_ids', { count });
+  }
+  return count;
+}
+
+function observeAssistantBodyPluginNativeRequestIds(root: HTMLElement, disposers: Array<() => void>) {
+  sanitizeAssistantBodyPluginNativeRequestIds(root);
+  if (typeof MutationObserver !== 'function') return;
+
+  const observer = new MutationObserver(records => {
+    let shouldSanitize = false;
+    for (const record of records) {
+      if (record.type === 'attributes' && record.attributeName === 'data-request-id') {
+        shouldSanitize = true;
+        break;
+      }
+      if (record.type === 'childList' && record.addedNodes.length > 0) {
+        shouldSanitize = true;
+        break;
+      }
+    }
+    if (shouldSanitize) sanitizeAssistantBodyPluginNativeRequestIds(root);
+  });
+
+  observer.observe(root, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['data-request-id'],
+  });
+  disposers.push(() => observer.disconnect());
+}
+
 function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMap | null {
   const selector = 'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]';
   const hasPromptPayload = (candidate: HTMLElement | null): candidate is HTMLElement =>
@@ -447,13 +750,23 @@ function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMa
     sibling = sibling.previousElementSibling;
   }
 
-  const requestId = String(carrier.dataset.requestId ?? carrier.getAttribute('data-request-id') ?? '').trim();
+  const requestId = String(
+    carrier.dataset.requestId ??
+      carrier.dataset.samelayerRequestId ??
+      carrier.getAttribute('data-request-id') ??
+      carrier.getAttribute('data-samelayer-request-id') ??
+      '',
+  ).trim();
   const root = assistantBodyRef.value;
   const candidates = Array.from(root?.querySelectorAll(selector) ?? []) as HTMLElement[];
   if (requestId) {
     const matched = candidates.find(candidate => {
       const candidateRequestId = String(
-        candidate.dataset.requestId ?? candidate.getAttribute('data-request-id') ?? '',
+        candidate.dataset.requestId ??
+          candidate.dataset.samelayerRequestId ??
+          candidate.getAttribute('data-request-id') ??
+          candidate.getAttribute('data-samelayer-request-id') ??
+          '',
       ).trim();
       return candidateRequestId === requestId && hasPromptPayload(candidate);
     });
@@ -473,6 +786,7 @@ function bindAssistantBodyInteractions() {
   if (!root) return;
   const itemMessageId = String(props.item.message_id);
   const disposers: Array<() => void> = [];
+  observeAssistantBodyPluginNativeRequestIds(root, disposers);
 
   const buildPayload = (carrier: HTMLElement, rawTarget: EventTarget | null = null) => {
     if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
@@ -609,7 +923,12 @@ function bindAssistantBodyInteractions() {
       hitArea.dataset.messageId = image.dataset.messageId ?? carrier.dataset.messageId ?? itemMessageId;
       hitArea.dataset.imageId = image.dataset.imageId ?? carrier.dataset.imageId ?? '';
       hitArea.dataset.promptToken = image.dataset.promptToken ?? carrier.dataset.promptToken ?? '';
-      hitArea.dataset.requestId = image.dataset.requestId ?? carrier.dataset.requestId ?? '';
+      hitArea.dataset.requestId =
+        image.dataset.requestId ??
+        image.dataset.samelayerRequestId ??
+        carrier.dataset.requestId ??
+        carrier.dataset.samelayerRequestId ??
+        '';
       hitArea.dataset.imageSrc = encodeURIComponent(image.getAttribute('src') ?? image.currentSrc ?? '');
       hitArea.dataset.source = 'transcript';
     }
@@ -632,11 +951,14 @@ watch(
     if (props.item.isStreaming) return;
     recordComponentTrace('update');
     await nextTick();
+    recordNativePromptTokenScanState('assistant_body_signature:before_hydration');
     hydratePendingImagesFromGalleryEntries();
+    scheduleDirectHostBackfillImages('assistant_body_signature');
     await nextTick();
     await hydrateAssistantBodyImages();
     await nextTick();
     bindAssistantBodyInteractions();
+    recordNativePromptTokenScanState('assistant_body_signature:after_bind');
   },
   { immediate: true, flush: 'post' },
 );
@@ -646,11 +968,13 @@ watch(
   async () => {
     if (props.item.role !== 'assistant' || props.item.isStreaming) return;
     await nextTick();
+    recordNativePromptTokenScanState('gallery_entries:before_hydration');
     hydratePendingImagesFromGalleryEntries();
     await nextTick();
     await hydrateAssistantBodyImages();
     await nextTick();
     bindAssistantBodyInteractions();
+    recordNativePromptTokenScanState('gallery_entries:after_bind');
   },
   { flush: 'post' },
 );
@@ -667,6 +991,7 @@ watch(
 
 onBeforeUnmount(() => {
   recordComponentTrace('unmount');
+  clearDirectHostBackfillTimers();
   clearAssistantBodyInteractionBindings();
 });
 </script>

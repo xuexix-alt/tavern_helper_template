@@ -255,9 +255,7 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should not rely only on DOM mutation observers',
   );
   assert.equal(
-    source.includes(
-      'syncPendingRequestHintsFromDom();\n            const requestBinding = imagePendingTaskManager.registerRequest',
-    ),
+    /syncPendingRequestHintsFromDom\(\);\s*const requestBinding = imagePendingTaskManager\.registerRequest/.test(source),
     true,
     'plugin-native image requests should bind request ids from DOM hints before success responses arrive',
   );
@@ -272,9 +270,11 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should force transcript/gallery refresh even when signatures were not snapshotted yet',
   );
   assert.equal(
-    source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;'),
+    source.includes(
+      'const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;',
+    ),
     true,
-    'successful plugin-native image responses should keep polling long enough for delayed native extra.images saves',
+    'successful plugin-native image responses should keep polling long enough for delayed mobile native extra.images saves',
   );
   assert.equal(
     source.includes('queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);'),
@@ -305,10 +305,10 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   );
   assert.equal(
     source.includes(
-      'const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200] as const;',
+      'const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;',
     ),
     true,
-    'prompt placeholder reconcile should cover the gap between ch-llm-image-gen-response and generate-image-request',
+    'prompt placeholder reconcile should cover the mobile gap between ch-llm-image-gen-response and generate-image-request',
   );
   assert.equal(
     source.includes("recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe'"),
@@ -326,6 +326,31 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     ),
     true,
     'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
+  );
+  assert.equal(
+    source.includes('function triggerPendingPluginNativePromptButtons(reason: string, messageIds: number[])'),
+    false,
+    'same-layer should not run a second auto-click state machine over plugin prompt buttons',
+  );
+  assert.doesNotMatch(
+    source,
+    /triggerPendingPluginNativePromptButtons\(/,
+    'prompt placeholder reconcile should stay passive and let st-chatu8 own prompt-button auto triggering',
+  );
+  assert.doesNotMatch(
+    source,
+    /pluginNativePromptButtonTriggerAt|60_000|hasReadyImageNearPluginNativeButton\(button\)/,
+    'same-layer should remove its duplicate prompt-button debounce and ready-image filtering',
+  );
+  assert.equal(
+    source.includes('syncPendingRequestHintsFromDom();'),
+    true,
+    'same-layer should still observe plugin prompt placeholders and request hints',
+  );
+  assert.match(
+    source,
+    /syncTranscriptItemsFromHostData\(`\$\{reason\}:prompt_placeholder_delay_\$\{delayMs\}`, normalizedMessageIds\);[\s\S]*queueGeneratedImageEntityRefresh\(normalizedMessageIds, `\$\{reason\}:prompt_placeholder_delay_\$\{delayMs\}`\);/,
+    'prompt placeholder reconcile should refresh same-layer state without clicking plugin buttons',
   );
 });
 
@@ -361,6 +386,11 @@ test('same-layer listens to current st-chatu8 regex and rendered-message handoff
     source.includes('function collectPluginNativeHandoffMessageIds(payload: unknown = null): number[]'),
     true,
     'event payloads should be normalized into targeted message ids instead of relying only on the latest assistant id',
+  );
+  assert.match(
+    source,
+    /collectRecentAssistantMessageIdsForPluginNativeHandoff\(\)\.forEach\(remember\);/,
+    'LLM image response events without message ids should still refresh recent assistant floors on mobile',
   );
 });
 
@@ -426,6 +456,11 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
   );
   assert.match(
     source,
+    /hydrateRecentPluginNativeHostWindow[\s\S]*for \(const delayMs of \[180, 800, 1800\]\)[\s\S]*discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration_delay_\$\{delayMs\}`, messageIds\);/,
+    'hydration should scan repeatedly before restoring hidden host messages because mobile plugin DOM can arrive late',
+  );
+  assert.match(
+    source,
     /window\.setTimeout\(\(\) => void hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\), 250\);/,
     'mounted same-layer UI should run the native host hydration probe, not just recompute existing iframe DOM',
   );
@@ -436,13 +471,63 @@ test('same-layer boot starts a lightweight gallery image cache session without w
 
   assert.match(
     source,
-    /window\.setTimeout\(\(\) => startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\), 900\);/,
+    /window\.setTimeout\(\(\) => startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\), 300\);/,
     'initial same-layer image hydration should run lightweight gallery cache probes before the user opens the drawer',
   );
   assert.match(
     source,
-    /startGalleryImageCacheSession[\s\S]*const delays = mode === 'boot' \? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;[\s\S]*if \(mode !== 'boot'\) scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);[\s\S]*scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
-    'boot cache probes should keep image recovery without repainting the gallery panel on every retry',
+    /startGalleryImageCacheSession[\s\S]*const delays = mode === 'boot' \? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;[\s\S]*scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);[\s\S]*scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
+    'boot cache probes should also refresh gallery state so delayed mobile native images are not missed',
+  );
+  assert.match(
+    source,
+    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/,
+    'boot cache probes should keep scanning after slower mobile DOM and metadata hydration',
+  );
+});
+
+test('same-layer gallery ref cache must not freeze partial multi-prompt image batches', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.match(
+    source,
+    /function shouldCacheGeneratedImageRefsForMessage\([\s\S]*promptTokenCount[\s\S]*refs[\s\S]*if \(promptTokenCount > 1 && refs\.length > 0 && refs\.length < promptTokenCount\) return false;/,
+    'multi-prompt messages should keep rebuilding refs until every prompt has had a chance to surface',
+  );
+  assert.match(
+    source,
+    /const cachedRefs = readCachedGeneratedImageRefsForMessage\(\{[\s\S]*promptTokenCount: promptTokens\.length,[\s\S]*\}\);/,
+    'cache reads should know the expected prompt count so old partial entries can be discarded',
+  );
+  assert.match(
+    source,
+    /if \(!shouldCacheGeneratedImageRefsForMessage\(\{ promptTokenCount: promptTokens\.length, refs \}\)\) return refs;[\s\S]*writeCachedGeneratedImageRefsForMessage\(\{/,
+    'native-first refs should return partial batches without writing them into the gallery ref cache',
+  );
+  assert.match(
+    source,
+    /if \(!shouldCacheGeneratedImageRefsForMessage\(\{ promptTokenCount: promptTokens\.length, refs: fallbackRefs \}\)\) return fallbackRefs;[\s\S]*writeCachedGeneratedImageRefsForMessage\(\{/,
+    'host DOM fallback refs should also avoid caching partial multi-prompt batches',
+  );
+});
+
+test('same-layer gallery initial probes continue after the first image in a multi-image mobile batch', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const start = source.indexOf('function startGalleryImageCacheSession(');
+  assert.notEqual(start, -1, 'should find startGalleryImageCacheSession');
+  const end = source.indexOf('watch(', start);
+  assert.notEqual(end, -1, 'should find watch block after initial cache session');
+  const body = source.slice(start, end);
+
+  assert.match(
+    body,
+    /const shouldKeepProbing = hasPartialVisibleMultiPromptGalleryBatch\(\);/,
+    'initial gallery probes should detect whether the visible batch is still partial',
+  );
+  assert.match(
+    body,
+    /if \(\(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) && !shouldKeepProbing\) \{/,
+    'finding one image should not cancel later probes while a multi-prompt batch is still incomplete',
   );
 });
 
@@ -496,6 +581,65 @@ test('same-layer transcript preserves plugin-native prompt placeholders before r
   );
 });
 
+test('same-layer mirrored plugin-native placeholders do not keep response-target request ids', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const domSource = readSource('pluginNativeImageDom.ts');
+  const activationSource = readSource('generatedImageActivation.ts');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.equal(
+    domSource.includes('function sanitizeSameLayerPluginNativeRequestIds(html: string): string'),
+    true,
+    'same-layer should have a sanitizer for plugin-native mirrored request ids',
+  );
+  assert.equal(
+    domSource.includes('function sanitizeSameLayerPluginNativeRequestIdElements('),
+    true,
+    'same-layer should also sanitize plugin-native request ids that are inserted after v-html mount',
+  );
+  assert.equal(
+    domSource.includes("element.setAttribute(SAME_LAYER_REQUEST_ID_ATTR, requestId);") &&
+      domSource.includes("element.removeAttribute('data-request-id');"),
+    true,
+    'sanitizer should move native response-target data-request-id to a same-layer private attribute',
+  );
+  assert.equal(
+    source.includes('sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts))'),
+    true,
+    'same-layer final HTML should sanitize mirrored plugin-native request ids before v-html renders it',
+  );
+  assert.equal(
+    cardSource.includes(
+      'return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));',
+    ),
+    true,
+    'transcript card final v-html should sanitize any plugin-native ids added after transcript assembly',
+  );
+  assert.equal(
+    (cardSource.match(/sanitizeSameLayerPluginNativeRequestIdElements\(root\);/g) ?? []).length >= 3,
+    true,
+    'transcript card should sanitize mounted plugin-native DOM before hydration and interaction binding',
+  );
+  assert.equal(
+    cardSource.includes("attributeFilter: ['data-request-id'],") &&
+      cardSource.includes('observeAssistantBodyPluginNativeRequestIds(root, disposers);'),
+    true,
+    'transcript card should keep sanitizing plugin-native request ids that are inserted asynchronously',
+  );
+  assert.equal(
+    activationSource.includes('carrierDataset.samelayerRequestId') &&
+      activationSource.includes('targetDataset.samelayerRequestId'),
+    true,
+    'same-layer interactions should still parse the private request id for host bridge actions',
+  );
+  assert.equal(
+    cardSource.includes('carrier.dataset.samelayerRequestId') &&
+      cardSource.includes('candidate.dataset.samelayerRequestId'),
+    true,
+    'transcript card prompt lookup should match same-layer private request ids',
+  );
+});
+
 test('same-layer prompt placeholder hydration imports the prompt token extractor it calls', () => {
   const source = readSource('useStreamingDemo.ts');
   const importStart = source.indexOf("} from './hostBridge';");
@@ -513,6 +657,31 @@ test('same-layer prompt placeholder hydration imports the prompt token extractor
     importBlock,
     /\bextractPromptToken\b/,
     'extractPromptToken must be imported before placeholder hydration calls it',
+  );
+});
+
+test('transcript card traces native prompt token scan state before and after hydration', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    cardSource,
+    /function collectNativePromptTokenScanState\(root: HTMLElement\)/,
+    'transcript card should collect whether image### markers, plugin buttons, and placeholders coexist in the rendered DOM',
+  );
+  assert.match(
+    cardSource,
+    /recordNativePromptTokenScanState\('assistant_body_signature:before_hydration'\)/,
+    'card should trace marker state before same-layer gallery hydration can replace markers',
+  );
+  assert.match(
+    cardSource,
+    /recordNativePromptTokenScanState\('assistant_body_signature:after_bind'\)/,
+    'card should trace marker state after plugin/native carriers are bound',
+  );
+  assert.match(
+    cardSource,
+    /recordComponentTrace\('native_prompt_token_scan'/,
+    'trace should be visible in the same-layer debug trace stream during mobile plugin failures',
   );
 });
 
@@ -689,5 +858,83 @@ test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridg
     activationSource.includes('carrierDataset.imageTag') && activationSource.includes('carrierDataset.link'),
     true,
     'plugin-native data-image-tag/data-link values should be parsed as prompt tokens for host button lookup',
+  );
+});
+
+test('TranscriptMessageCard hard-backfills body images directly from host chat and DOM', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.equal(
+    cardSource.includes("from '../hostBridge'"),
+    true,
+    'body-level image fallback should read host data directly instead of waiting for parent gallery entries',
+  );
+  assert.equal(
+    cardSource.includes('function collectDirectHostBackfillEntries()'),
+    true,
+    'TranscriptMessageCard should have a direct host backfill collector for stubborn mobile timing failures',
+  );
+  assert.equal(
+    cardSource.includes('readChatMessageDetail(props.item.message_id)'),
+    true,
+    'direct body fallback should read the current message extra.images by message id',
+  );
+  assert.equal(
+    cardSource.includes('collectReachableHostDocuments().filter(doc => doc !== document)'),
+    true,
+    'direct body fallback should also scan already-rendered host DOM images',
+  );
+  assert.match(
+    cardSource,
+    /const DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS = \[0, 300, 900, 1800, 3600, 7200, 15000\] as const;/,
+    'direct backfill should poll long enough to survive mobile delayed extra.images writes',
+  );
+});
+
+test('TranscriptMessageCard body recovery images stay visible when tail duplicates are hidden', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.equal(
+    cardSource.includes("function ensureGalleryRecoveryStrip(root: HTMLElement): HTMLElement"),
+    true,
+    'missing gallery entries should be appended to a dedicated recovery strip instead of the hideable tail gallery',
+  );
+  assert.match(
+    cardSource,
+    /strip\.className = 'assistant-inline-image-strip';[\s\S]*strip\.setAttribute\('data-gallery-recovery-strip', 'true'\);/,
+    'the recovery strip should use the non-hidden inline-image strip surface',
+  );
+  assert.match(
+    cardSource,
+    /ensureGalleryRecoveryStrip\(root\)\.append\(figure\);/,
+    'body recovery figures should not be placed inside assistant-fallback-generated-gallery',
+  );
+  const tailHideRule =
+    cardSource.match(/\.assistant-body\.hide-tail-gallery-images :deep\(\.assistant-fallback-generated-gallery\)[\s\S]*?\}/)?.[0] ??
+    '';
+  assert.doesNotMatch(
+    tailHideRule,
+    /data-gallery-recovery-strip/,
+    'the tail image toggle must not hide the recovery strip that makes gallery entries visible in the正文',
+  );
+});
+
+test('TranscriptMessageCard direct DOM backfill inherits prompt data from adjacent plugin buttons', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    cardSource,
+    /function resolvePluginPromptCarrierForImageContainer\(carrier: HTMLElement \| null\): HTMLElement \| null/,
+    'direct DOM image recovery should inspect plugin-native siblings for prompt identity',
+  );
+  assert.match(
+    cardSource,
+    /let sibling = carrier\.previousElementSibling;[\s\S]*sibling\.matches\?\.\('button\.image-tag-button, \.st-chatu8-image-button'\)/,
+    'ai-image-container images should inherit data-link/data-image-tag from the preceding plugin button',
+  );
+  assert.match(
+    cardSource,
+    /const promptCarrier = resolvePluginPromptCarrierForImageContainer\(carrier\);[\s\S]*promptCarrier\?\.dataset\.imageTag[\s\S]*promptCarrier\?\.dataset\.link/,
+    'direct DOM fallback entries should carry prompt tokens so single/double/long gestures can resolve native targets',
   );
 });

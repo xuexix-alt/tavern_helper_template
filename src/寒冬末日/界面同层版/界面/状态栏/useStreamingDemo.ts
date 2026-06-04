@@ -79,7 +79,11 @@ import {
   readHostContext,
 } from './hostBridge';
 import { installHostChatInputBridge } from './hostChatInputBridge';
-import { dispatchHostPrimaryTrigger, type HostGesturePoint } from './hostGestureDispatch';
+import {
+  dispatchHostPrimaryTrigger,
+  type HostGestureDispatchStrategy,
+  type HostGesturePoint,
+} from './hostGestureDispatch';
 import { ensureHostMesTextRendered as ensureHostMesTextRenderedWithRefresh } from './hostMesTextRender';
 import { resolveHostMessageRole } from './hostMessageRole';
 import { createHostVisualHideController } from './hostVisualHide';
@@ -108,6 +112,7 @@ import {
   countPluginNativeImageArtifacts,
   isPluginNativeMutationNode,
   isReadyPluginNativeMutationNode,
+  sanitizeSameLayerPluginNativeRequestIds,
 } from './pluginNativeImageDom';
 import { parseNativeMesImageTags } from './pluginNativeMesTag';
 import { stripPluginNativePlaceholderHtml } from './pluginNativePlaceholderCleanup';
@@ -198,7 +203,11 @@ type GenerationFlowResult =
   | { success: false; assistantMessageId: number | null; errorText: string; hadVisibleAssistantContent: boolean };
 type ImageGenerationTriggerOptions = {
   hostPoint?: HostGesturePoint | null;
+  primaryTriggerStrategy?: HostGestureDispatchStrategy;
+  fallbackTriggerStrategy?: HostGestureDispatchStrategy;
+  fallbackTriggerAfterMs?: number;
   afterPrimaryTrigger?: () => Promise<boolean | void> | boolean | void;
+  fallbackDblClickAfterMs?: number;
 };
 type HostTranscriptVisibleOptions = {
   beforeRelease?: () => Promise<void> | void;
@@ -222,12 +231,13 @@ const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
 const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;
 const GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE = 48;
 const GALLERY_WINDOW_NATIVE_HYDRATION_CHUNK_SIZE = 4;
-const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = [0, 900, 3000, 6000] as const;
-const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [800, 1800, 4000] as const;
+const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = [0, 900, 3000, 6000, 12000] as const;
+const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000, 12000, 24000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
-const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200] as const;
-const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200] as const;
+const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
+const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
+const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
@@ -686,7 +696,7 @@ function buildFinalHtml(
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
-  return stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts);
+  return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts));
 }
 
 function buildHostRenderedHtml(
@@ -705,10 +715,30 @@ function buildHostRenderedHtml(
     messageId: message_id,
     appendArtifacts: appendChatu8ArtifactsToHtml,
   });
-  return stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts);
+  return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(htmlWithArtifacts));
+}
+
+function collectHostChatMessageIdsForCacheBypass(): number[] {
+  const chat = readHostContext()?.chat;
+  if (!chat || typeof chat !== 'object') return [];
+
+  const rawMessages = Array.isArray(chat) ? chat : Object.values(chat as Record<string, unknown>);
+  return rawMessages
+    .map(message => Math.trunc(Number((message as any)?.message_id)))
+    .filter(id => Number.isFinite(id) && id >= 0)
+    .sort((a, b) => b - a);
+}
+
+function shouldBypassChatu8CacheForMessage(messageId?: number | null): boolean {
+  const normalizedId = Math.trunc(Number(messageId));
+  if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
+
+  const recentIds = collectHostChatMessageIdsForCacheBypass().slice(0, RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT);
+  return recentIds.includes(normalizedId);
 }
 
 function readChatu8CacheEntries(messageId?: number | null): unknown[] {
+  if (shouldBypassChatu8CacheForMessage(messageId)) return [];
   const ctx = readHostContext();
   return collectPluginNativeCacheArtifacts(ctx?.chatMetadata?.['st-chatu8'], messageId);
 }
@@ -1116,10 +1146,15 @@ function buildGalleryGeneratedImageRefCacheSignature(input: {
 function readCachedGeneratedImageRefsForMessage(input: {
   messageId: number;
   signature: string;
+  promptTokenCount: number;
 }): GeneratedImageRef[] | null {
   const cached = galleryGeneratedImageRefCache.get(input.messageId);
   if (!cached) return null;
   if (cached.signature !== input.signature) {
+    galleryGeneratedImageRefCache.delete(input.messageId);
+    return null;
+  }
+  if (input.promptTokenCount > 1 && cached.refs.length > 0 && cached.refs.length < input.promptTokenCount) {
     galleryGeneratedImageRefCache.delete(input.messageId);
     return null;
   }
@@ -1128,6 +1163,13 @@ function readCachedGeneratedImageRefsForMessage(input: {
     return null;
   }
   return cached.refs;
+}
+
+function shouldCacheGeneratedImageRefsForMessage(input: { promptTokenCount: number; refs: GeneratedImageRef[] }): boolean {
+  const promptTokenCount = Math.trunc(Number(input.promptTokenCount));
+  const refs = Array.isArray(input.refs) ? input.refs : [];
+  if (promptTokenCount > 1 && refs.length > 0 && refs.length < promptTokenCount) return false;
+  return true;
 }
 
 function writeCachedGeneratedImageRefsForMessage(input: {
@@ -1865,6 +1907,7 @@ function buildGeneratedImageRefsForMessage(input: {
   const cachedRefs = readCachedGeneratedImageRefsForMessage({
     messageId,
     signature: cacheSignature,
+    promptTokenCount: promptTokens.length,
   });
   if (cachedRefs) {
     recordComponentDebugTrace({
@@ -1972,6 +2015,7 @@ function buildGeneratedImageRefsForMessage(input: {
         refCount: fallbackRefs.length,
       },
     });
+    if (!shouldCacheGeneratedImageRefsForMessage({ promptTokenCount: promptTokens.length, refs: fallbackRefs })) return fallbackRefs;
     writeCachedGeneratedImageRefsForMessage({
       messageId,
       signature: cacheSignature,
@@ -2035,6 +2079,7 @@ function buildGeneratedImageRefsForMessage(input: {
       refCount: refs.length,
     },
   });
+  if (!shouldCacheGeneratedImageRefsForMessage({ promptTokenCount: promptTokens.length, refs })) return refs;
   writeCachedGeneratedImageRefsForMessage({
     messageId,
     signature: cacheSignature,
@@ -2588,6 +2633,30 @@ export function useStreamingDemo() {
     return normalized;
   }
 
+  function collectRecentAssistantMessageIdsForPluginNativeHandoff(): number[] {
+    const out = new Set<number>();
+    const remember = (value: unknown) => {
+      const normalized = normalizePluginNativeHandoffMessageId(value);
+      if (normalized != null) out.add(normalized);
+    };
+
+    transcript.value
+      .filter(item => item.role === 'assistant')
+      .map(item => item.message_id)
+      .sort((a, b) => Number(b) - Number(a))
+      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT)
+      .forEach(remember);
+
+    readMessageMetasAfterContainer()
+      .filter(item => item.role === 'assistant')
+      .map(item => item.message_id)
+      .sort((a, b) => Number(b) - Number(a))
+      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT)
+      .forEach(remember);
+
+    return [...out].sort((a, b) => a - b);
+  }
+
   function collectPluginNativeHandoffMessageIds(payload: unknown = null): number[] {
     const out = new Set<number>();
     const remember = (value: unknown) => {
@@ -2621,6 +2690,7 @@ export function useStreamingDemo() {
     const recentIntent = imageRecentIntentStore.read();
     if (recentIntent?.messageId != null) remember(recentIntent.messageId);
     if (assistantMessageId.value != null) remember(assistantMessageId.value);
+    collectRecentAssistantMessageIdsForPluginNativeHandoff().forEach(remember);
 
     return [...out];
   }
@@ -4614,8 +4684,11 @@ export function useStreamingDemo() {
         `${reason}:native_host_hydration_materialized`,
       );
       syncPendingRequestHintsFromDom();
-      await new Promise<void>(resolve => window.setTimeout(resolve, 180));
-      syncPendingRequestHintsFromDom();
+      for (const delayMs of [180, 800, 1800]) {
+        await new Promise<void>(resolve => window.setTimeout(resolve, delayMs));
+        syncPendingRequestHintsFromDom();
+        discoverRecentNativeGalleryImages(`${reason}:native_host_hydration_delay_${delayMs}`, messageIds);
+      }
       queueGeneratedImageEntityRefresh(messageIds, `${reason}:native_host_hydration`);
       schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, messageIds);
     } catch (error) {
@@ -4786,6 +4859,42 @@ export function useStreamingDemo() {
     );
   }
 
+  async function refreshHostMessageForPluginNativeImageTrigger(messageId: number): Promise<void> {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+
+    try {
+      if (typeof eventEmit === 'function') {
+        const messageUpdatedEvent = (globalThis as any).tavern_events?.MESSAGE_UPDATED ?? tavern_events.MESSAGE_UPDATED;
+        await eventEmit(messageUpdatedEvent as any, normalizedId);
+      }
+    } catch (error) {
+      recordLifecycleTrace('pluginNativeImageTriggerRefresh', 'message_updated_failed', {
+        messageId: normalizedId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    let mutationCount = 0;
+    for (const doc of collectHostDocuments()) {
+      const roots = Array.from(
+        doc.querySelectorAll(`.mes[mesid="${normalizedId}"] .mes_text, .mes[data-message-id="${normalizedId}"] .mes_text`),
+      ) as HTMLElement[];
+      for (const root of roots) {
+        const view = root.ownerDocument.defaultView ?? window;
+        root.dispatchEvent(new view.Event('DOMSubtreeModified', { bubbles: true }));
+        mutationCount += 1;
+      }
+    }
+
+    recordLifecycleTrace('pluginNativeImageTriggerRefresh', 'wake_host_dom', {
+      messageId: normalizedId,
+      mutationCount,
+    });
+
+    await new Promise<void>(resolve => window.setTimeout(resolve, 120));
+  }
+
   function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
@@ -4830,6 +4939,7 @@ export function useStreamingDemo() {
             if (!rendered) {
               console.warn('[image] mes_text 注入失败，mesid:', normalizedId);
             }
+            await refreshHostMessageForPluginNativeImageTrigger(normalizedId);
 
             // Step 2: 注册持久化任务（imagePendingTaskManager 用）
             beginPendingImageTask(normalizedId);
@@ -4846,11 +4956,38 @@ export function useStreamingDemo() {
               return;
             }
 
-            if (!dispatchHostPrimaryTrigger(mesText, { hostPoint: options.hostPoint ?? null })) {
+            const primaryTriggerStrategy = options.primaryTriggerStrategy ?? 'auto';
+            if (
+              !dispatchHostPrimaryTrigger(mesText, {
+                strategy: primaryTriggerStrategy,
+                hostPoint: options.hostPoint ?? null,
+              })
+            ) {
               console.warn('[image] 宿主触发手势派发失败，mesid:', normalizedId);
             }
 
+            const fallbackTriggerDelay = Math.trunc(
+              Number(options.fallbackTriggerAfterMs ?? options.fallbackDblClickAfterMs),
+            );
+            const fallbackTriggerStrategy =
+              options.fallbackTriggerStrategy ??
+              (options.fallbackTriggerAfterMs == null && options.fallbackDblClickAfterMs != null
+                ? 'dblclick'
+                : primaryTriggerStrategy);
+            let fallbackTriggerTimer: number | null = null;
+            if (Number.isFinite(fallbackTriggerDelay) && fallbackTriggerDelay >= 0) {
+              fallbackTriggerTimer = window.setTimeout(() => {
+                dispatchHostPrimaryTrigger(mesText, {
+                  strategy: fallbackTriggerStrategy,
+                  hostPoint: options.hostPoint ?? null,
+                });
+              }, fallbackTriggerDelay);
+            }
+
             const afterPrimaryTriggerResult = await options.afterPrimaryTrigger?.();
+            if (fallbackTriggerTimer != null && afterPrimaryTriggerResult !== false) {
+              window.clearTimeout(fallbackTriggerTimer);
+            }
             if (afterPrimaryTriggerResult === false) {
               shouldWaitForPluginHandoff = false;
             }
@@ -7524,9 +7661,11 @@ export function useStreamingDemo() {
         }
         syncPendingRequestHintsFromDom();
         discoverRecentNativeGalleryImages(`${reason}:native_host_hydration`, chunkIds);
-        await new Promise<void>(resolve => window.setTimeout(resolve, 240));
-        syncPendingRequestHintsFromDom();
-        discoverRecentNativeGalleryImages(`${reason}:native_host_hydration`, chunkIds);
+        for (const delayMs of [240, 900, 1800]) {
+          await new Promise<void>(resolve => window.setTimeout(resolve, delayMs));
+          syncPendingRequestHintsFromDom();
+          discoverRecentNativeGalleryImages(`${reason}:native_host_hydration_delay_${delayMs}`, chunkIds);
+        }
         queueGeneratedImageEntityRefresh(chunkIds, `${reason}:native_host_hydration`);
         schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, chunkIds);
         recordLifecycleTrace('galleryWindowNativeHydration', 'chunk', {
@@ -7726,6 +7865,23 @@ export function useStreamingDemo() {
     }, delayMs);
   }
 
+  function hasPartialVisibleMultiPromptGalleryBatch(): boolean {
+    const selectedIds = new Set(selectedGalleryWindowMessageIds.value);
+    const scopedGroups =
+      selectedIds.size > 0 ? mergedGalleryGroups.value.filter(group => selectedIds.has(group.messageId)) : mergedGalleryGroups.value;
+
+    for (const group of scopedGroups) {
+      if (group.images.length === 0) continue;
+      const transcriptItem = transcript.value.find(item => item.message_id === group.messageId);
+      const messageDetail = transcriptItem ? null : readChatMessageDetail(group.messageId);
+      const rawMessage = String(transcriptItem?.raw ?? messageDetail?.mes ?? messageDetail?.message ?? '');
+      const promptTokenCount = collectChatu8PromptTokens(rawMessage).length;
+      if (promptTokenCount > 1 && group.images.length < promptTokenCount) return true;
+    }
+
+    return false;
+  }
+
   function startGalleryImageCacheSession(reason = 'gallery.drawer_open', mode: GalleryInitialCacheMode = 'drawer') {
     clearGalleryInitialCacheTimers();
     const sessionId = ++galleryInitialCacheSessionId;
@@ -7738,7 +7894,7 @@ export function useStreamingDemo() {
       const timer = scheduleGalleryInitialCacheProbe(() => {
         galleryInitialCacheTimers.delete(timer);
         if (sessionId !== galleryInitialCacheSessionId) return;
-        if (mode !== 'boot') scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
+        scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
         scanSelectedGalleryWindow(`${reason}:initial_cache_${delayMs}`);
         recordLifecycleTrace('galleryInitialCache', 'probe', {
           reason,
@@ -7749,7 +7905,8 @@ export function useStreamingDemo() {
           knownEntryCount: galleryEntries.value.length,
           groupCount: mergedGalleryGroups.value.length,
         });
-        if (galleryVisibleEntries.value.length > 0 || galleryEntries.value.length > 0) {
+        const shouldKeepProbing = hasPartialVisibleMultiPromptGalleryBatch();
+        if ((galleryVisibleEntries.value.length > 0 || galleryEntries.value.length > 0) && !shouldKeepProbing) {
           clearGalleryInitialCacheTimers();
           loadingInitialGalleryImages.value = false;
           recordLifecycleTrace('galleryInitialCache', 'settled', {
@@ -7757,6 +7914,7 @@ export function useStreamingDemo() {
             mode,
             sessionId,
             settledReason: 'images_found',
+            partialMultiPromptBatch: shouldKeepProbing,
             entryCount: galleryVisibleEntries.value.length,
             knownEntryCount: galleryEntries.value.length,
             groupCount: mergedGalleryGroups.value.length,

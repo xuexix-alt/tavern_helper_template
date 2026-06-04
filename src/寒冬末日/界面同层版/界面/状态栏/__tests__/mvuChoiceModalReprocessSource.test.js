@@ -196,7 +196,7 @@ test('StoryPage wires choice-modal direct image generation to latest assistant p
   );
   assert.match(
     handlerBody,
-    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint: null,[\s\S]*afterPrimaryTrigger: async \(\) => \{/,
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint: null,[\s\S]*primaryTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{/,
     'handler should still open the validated native plugin image menu chain',
   );
   assert.match(
@@ -217,6 +217,16 @@ test('StoryPage selects the plugin 图片生成 menu item by stable text after o
     'menu selection should search inside the plugin click-trigger bubble/buttons',
   );
   assert.match(findBody, /textContent[\s\S]*includes\('图片生成'\)/, 'selection should target the 图片生成 item text');
+  assert.match(
+    clickBody,
+    /const deadline = Date\.now\(\) \+ 6000;/,
+    'mobile non-fullscreen plugin menu can appear late after the touch sequence',
+  );
+  assert.match(
+    clickBody,
+    /while \(Date\.now\(\) < deadline\)[\s\S]*guardPluginMenuViewport\(\);/,
+    'menu wait should keep the plugin bubble inside the visible mobile viewport while polling',
+  );
   assert.match(clickBody, /\.click\(\)/, 'selection should invoke the plugin button click path');
 });
 

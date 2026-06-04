@@ -159,14 +159,26 @@ test('transcript image FAB restores the historical direct trigger path instead o
   );
   assert.match(
     transcriptImageBody,
-    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint,[\s\S]*afterPrimaryTrigger: async \(\) => \{[\s\S]*await clickPluginImageGenerationMenuItem\(\)/,
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint,[\s\S]*primaryTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{[\s\S]*await clickPluginImageGenerationMenuItem\(\)/,
   );
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
+  assert.match(streamingSource, /primaryTriggerStrategy\?: HostGestureDispatchStrategy;/);
+  assert.match(streamingSource, /fallbackTriggerStrategy\?: HostGestureDispatchStrategy;/);
+  assert.match(streamingSource, /fallbackTriggerAfterMs\?: number;/);
   assert.match(streamingSource, /afterPrimaryTrigger\?: \(\) => Promise<boolean \| void> \| boolean \| void;/);
-  assert.match(streamingSource, /dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/);
-  assert.doesNotMatch(
+  assert.match(
     streamingSource,
-    /dispatchHostPrimaryTrigger\(mesText, \{ strategy: 'dblclick', hostPoint: options\.hostPoint \?\? null \}\)/,
+    /dispatchHostPrimaryTrigger\(mesText, \{\s*strategy: primaryTriggerStrategy,\s*hostPoint: options\.hostPoint \?\? null,\s*\}\)/,
+  );
+  assert.match(
+    streamingSource,
+    /await refreshHostMessageForPluginNativeImageTrigger\(normalizedId\);[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{\s*strategy: primaryTriggerStrategy,\s*hostPoint: options\.hostPoint \?\? null,\s*\}\)/,
+    'mobile non-fullscreen generation should wake host/plugin DOM before the first native trigger',
+  );
+  assert.match(
+    streamingSource,
+    /options\.fallbackTriggerAfterMs[\s\S]*fallbackTriggerStrategy[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{\s*strategy: fallbackTriggerStrategy,\s*hostPoint: options\.hostPoint \?\? null,\s*\}\)/,
+    'mobile transcript FAB and 生图 button should retry with the plugin mobile three-tap path when the plugin menu is slow to appear',
   );
 });
 
@@ -243,7 +255,7 @@ test('transcript image generation leases a recent host window before dispatching
   );
   assert.match(
     streamingSource,
-    /withPluginNativeMessageLease[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{ hostPoint: options\.hostPoint \?\? null \}\)/,
+    /withPluginNativeMessageLease[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{\s*strategy: primaryTriggerStrategy,\s*hostPoint: options\.hostPoint \?\? null,\s*\}\)/,
   );
 });
 
@@ -268,7 +280,7 @@ test('gallery lazily discovers older assistant images without a same-layer manif
   );
   assert.match(
     streamingSource,
-    /window\.setTimeout\(\(\) => discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan'\), 700\);/,
+    /window\.setTimeout\(\(\) => discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan'\), 500\);/,
     'same-layer boot should recover images generated while the UI was closed',
   );
   assert.match(
@@ -350,15 +362,22 @@ test('gallery drawer starts an initial cache session before showing an empty sta
     streamingSource,
     /function startGalleryImageCacheSession\(reason = 'gallery\.drawer_open', mode: GalleryInitialCacheMode = 'drawer'\)/,
   );
-  assert.match(streamingSource, /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000\] as const;/);
-  assert.match(streamingSource, /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000\] as const;/);
+  assert.match(
+    streamingSource,
+    /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000, 12000\] as const;/,
+  );
+  assert.match(
+    streamingSource,
+    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/,
+  );
   assert.match(streamingSource, /let galleryInitialCacheSessionId = 0;/);
   assert.match(streamingSource, /scheduleGalleryInitialCacheProbe\(\(\) => \{/);
   assert.match(streamingSource, /if \(sessionId !== galleryInitialCacheSessionId\) return;/);
   assert.match(streamingSource, /scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/);
+  assert.match(streamingSource, /const shouldKeepProbing = hasPartialVisibleMultiPromptGalleryBatch\(\);/);
   assert.match(
     streamingSource,
-    /if \(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) \{/,
+    /if \(\(galleryVisibleEntries\.value\.length > 0 \|\| galleryEntries\.value\.length > 0\) && !shouldKeepProbing\) \{/,
   );
   assert.match(streamingSource, /clearGalleryInitialCacheTimers\(\);/);
   assert.match(storyPageSource, /startGalleryImageCacheSession\('gallery\.drawer_open'\);/);
@@ -381,8 +400,13 @@ test('gallery boot cache session stays lightweight to avoid blocking initial UI 
   );
   assert.match(
     streamingSource,
-    /if \(mode !== 'boot'\) scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
-    'boot probes should not repaint the gallery panel on every retry',
+    /scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
+    'boot probes should wake gallery state too because mobile native images can arrive after the first scan',
+  );
+  assert.match(
+    streamingSource,
+    /for \(const delayMs of \[240, 900, 1800\]\)[\s\S]*discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration_delay_\$\{delayMs\}`, chunkIds\);/,
+    'selected gallery window hydration should scan repeatedly before re-hiding host messages on mobile',
   );
   assert.match(
     streamingSource,
@@ -576,6 +600,26 @@ test('generated image regenerate uses the plugin image click bridge instead of m
     targetSource,
     /hostMessageRoot \?\? input\.iframe/,
     'generated image actions should not prefer the host message root before iframe image targets',
+  );
+});
+
+test('generated image regenerate can resolve the plugin button adjacent to an ai-image-container image', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+
+  assert.match(
+    storyPageSource,
+    /function resolvePluginButtonForImageElement\(image: HTMLImageElement \| null, messageId: number, promptToken: string\): HTMLElement \| null/,
+    'regenerate should recover the native plugin button even when the image lives inside ai-image-container',
+  );
+  assert.match(
+    storyPageSource,
+    /let sibling = container\.previousElementSibling;[\s\S]*sibling\.matches\?\.\('button\.image-tag-button, \.st-chatu8-image-button'\)/,
+    'the resolver should walk backward from ai-image-container to the original plugin prompt button',
+  );
+  assert.match(
+    storyPageSource,
+    /hostButton:\s*resolvePluginButtonForImageElement\(imageBySrc, messageId, promptToken\) \?\?/,
+    'src-matched host images should use their adjacent plugin button as the regenerate target before failing',
   );
 });
 

@@ -64,6 +64,14 @@ test('StoryPage keeps only primary actions in the top bar and moves secondary ac
   assert.doesNotMatch(source, /<button type="button" class="ui-icon-btn" @click="openRoleDrawer">角色<\/button>/);
 });
 
+test('StoryPage shows the EDEN-STAR version beside the brand at a smaller scale', () => {
+  const source = read('../pages/StoryPage.vue');
+
+  assert.match(source, /<span class="ui-brand-copy">EDEN-STAR<\/span>\s*<span class="ui-brand-version">v1\.0<\/span>/);
+  assert.match(source, /\.ui-brand-version\s*\{[\s\S]*font-size:\s*0\.68rem;/);
+  assert.match(source, /\.ui-brand-version\s*\{[\s\S]*opacity:\s*0\.72;/);
+});
+
 test('StoryPage compact and reader desktop top bar keep actions on one row and keep mobile drawer toggles on opposite edges', () => {
   const source = read('../pages/StoryPage.vue');
 

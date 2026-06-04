@@ -474,6 +474,22 @@
   pointer-events: none;
 }
 
+.chatu8-native-prompt-token:has(.image-tag-button),
+.chatu8-native-prompt-token:has(.image-tag-placeholder),
+.chatu8-native-prompt-token:has(.st-chatu8-image-span),
+.custom-chatu8-native-prompt-token:has(.image-tag-button),
+.custom-chatu8-native-prompt-token:has(.image-tag-placeholder),
+.custom-chatu8-native-prompt-token:has(.st-chatu8-image-span) {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .st-chatu8-image-pending[data-raw-image-tag='true'],
 .custom-st-chatu8-image-pending[data-raw-image-tag='true'] {
   display: inline-flex;

@@ -278,6 +278,27 @@ test('cache fallback is ignored when any native data exists and no legacy source
   );
 });
 
+test('same-layer bypasses persisted st-chatu8 cache for recent tail messages', () => {
+  const statusBarDir = path.resolve(__dirname, '..');
+  const useStreamingDemoSource = fs.readFileSync(path.join(statusBarDir, 'useStreamingDemo.ts'), 'utf8');
+
+  assert.match(
+    useStreamingDemoSource,
+    /const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;/,
+    'recent cache bypass should cover at least three user/assistant tail floors',
+  );
+  assert.match(
+    useStreamingDemoSource,
+    /function shouldBypassChatu8CacheForMessage\(/,
+    'same-layer should detect recent tail messages before trusting persisted st-chatu8 cache',
+  );
+  assert.match(
+    useStreamingDemoSource,
+    /if \(shouldBypassChatu8CacheForMessage\(messageId\)\) return \[\];/,
+    'recent tail messages should not resolve images from stale st-chatu8 cache artifacts',
+  );
+});
+
 test('native-first helper prompt-token fallback does not start from cache when native exists', () => {
   const promptTokens = readNativeFirstPromptTokens({
     messageId: 19,
