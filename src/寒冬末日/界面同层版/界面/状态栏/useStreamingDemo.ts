@@ -4587,7 +4587,7 @@ export function useStreamingDemo() {
             } catch (error) {
               console.warn('[stream-demo] delayed lease release failed:', error);
             }
-          }, 1000);  // 延迟1秒后台执行，将黑屏时间从1500ms降至150ms
+          }, 1000); // 延迟1秒后台执行，将黑屏时间从1500ms降至150ms
         }
       } finally {
         releaseMaterializedHostLease();
