@@ -166,6 +166,27 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
     });
   }
 
+  function createTaskForMessage(messageId: number, referenceTime: number): PendingTask {
+    const task = {
+      id: `task:${messageId}:${referenceTime}`,
+      messageId,
+      createdAt: referenceTime,
+      collectingUntil: referenceTime + collectingWindowMs,
+      requests: [],
+    };
+    tasks.push(task);
+    return task;
+  }
+
+  function findCollectingTaskByMessageId(messageId: number, referenceTime: number): PendingTask | null {
+    return (
+      tasks
+        .slice()
+        .reverse()
+        .find(item => item.messageId === messageId && item.collectingUntil >= referenceTime) ?? null
+    );
+  }
+
   function registerRequest(payload: ImageRequestEventPayload) {
     const requestId = String(payload?.id ?? '').trim();
     const prompt = String(payload?.prompt ?? '').trim();
@@ -182,26 +203,14 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
     );
     const bufferedResponse = bufferedIndex >= 0 ? (bufferedResponses.splice(bufferedIndex, 1)[0] ?? null) : null;
 
-    const task =
-      tasks
-        .slice()
-        .reverse()
-        .find(item => item.collectingUntil >= referenceTime) ??
-      (hint
-        ? (() => {
-            const createdAt = referenceTime;
-            const hintedTask: PendingTask = {
-              id: `task:${hint.messageId}:${createdAt}`,
-              messageId: hint.messageId,
-              createdAt,
-              collectingUntil: createdAt + collectingWindowMs,
-              requests: [],
-            };
-            tasks.push(hintedTask);
-            return hintedTask;
-          })()
-        : null) ??
-      (bufferedResponse ? (tasks[tasks.length - 1] ?? null) : null);
+    const task = hint
+      ? (findCollectingTaskByMessageId(hint.messageId, referenceTime) ??
+        createTaskForMessage(hint.messageId, referenceTime))
+      : (tasks
+          .slice()
+          .reverse()
+          .find(item => item.collectingUntil >= referenceTime) ??
+        (bufferedResponse ? (tasks[tasks.length - 1] ?? null) : null));
 
     if (!task) {
       if (bufferedResponse != null) bufferedResponses.push(bufferedResponse);

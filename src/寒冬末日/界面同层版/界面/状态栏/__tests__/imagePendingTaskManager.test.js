@@ -71,3 +71,35 @@ test('imagePendingTaskManager flushes buffered response when plugin DOM hint arr
     },
   });
 });
+
+test('imagePendingTaskManager prioritizes DOM hint messageId over an older collecting task', () => {
+  let currentTime = 3_000;
+  const manager = createImagePendingTaskManager({
+    now: () => currentTime,
+    collectingWindowMs: 10 * 60_000,
+  });
+
+  manager.startTask(3);
+
+  currentTime += 100;
+  manager.registerHint({
+    messageId: 9,
+    requestId: 'req-new-floor',
+    prompt: 'Scene Composition:new floor',
+  });
+
+  const requestBinding = manager.registerRequest({
+    id: 'req-new-floor',
+    prompt: 'Scene Composition:new floor',
+  });
+
+  assert.equal(requestBinding?.messageId, 9);
+
+  const matched = manager.consumeResponse({
+    id: 'req-new-floor',
+    prompt: 'Scene Composition:new floor',
+    imageData: 'data:image/png;base64,new-floor',
+  });
+
+  assert.equal(matched?.messageId, 9);
+});

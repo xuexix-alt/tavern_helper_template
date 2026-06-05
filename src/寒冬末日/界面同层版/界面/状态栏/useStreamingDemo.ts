@@ -256,6 +256,15 @@ const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
+const CHATU8_MUTATION_ATTRIBUTE_FILTER = [
+  'src',
+  'data-request-id',
+  'data-stable-id',
+  'data-prompt-token',
+  'data-image-id',
+  'data-image-tag',
+  'data-link',
+] as const;
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 type StreamingPreviewCacheEntry = {
@@ -2214,7 +2223,7 @@ function bindHostPluginMutationObservers(onRelevantMutation: (records: MutationR
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ['src'],
+      attributeFilter: CHATU8_MUTATION_ATTRIBUTE_FILTER,
     });
     observers.push(observer);
   }
@@ -7273,7 +7282,7 @@ export function useStreamingDemo() {
           childList: true,
           subtree: true,
           attributes: true,
-          attributeFilter: ['src'],
+          attributeFilter: CHATU8_MUTATION_ATTRIBUTE_FILTER,
         });
       }
       hostPluginMutationObservers = bindHostPluginMutationObservers(records => {

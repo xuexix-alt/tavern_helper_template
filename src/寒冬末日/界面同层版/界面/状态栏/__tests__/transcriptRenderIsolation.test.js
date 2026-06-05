@@ -47,10 +47,15 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     true,
     'native image DOM mutation refreshes should be gated behind ready-image mutations instead of button placeholders',
   );
+  assert.match(
+    source,
+    /const CHATU8_MUTATION_ATTRIBUTE_FILTER = \[[\s\S]*'src'[\s\S]*'data-request-id'[\s\S]*'data-stable-id'[\s\S]*'data-prompt-token'[\s\S]*'data-image-id'[\s\S]*'data-image-tag'[\s\S]*'data-link'[\s\S]*\] as const;/,
+    'plugin native observers should also watch late dataset updates that bind DOM hints to requests',
+  );
   assert.equal(
-    source.includes("attributeFilter: ['src'],"),
+    source.includes('attributeFilter: CHATU8_MUTATION_ATTRIBUTE_FILTER,'),
     true,
-    'host native image observer should watch img src attribute changes when the plugin fills images after inserting containers',
+    'host and same-layer native image observers should share the plugin mutation attribute filter',
   );
 });
 
@@ -224,6 +229,36 @@ test('GeneratedImageAsset resolves sources from plugin-native runtime only', () 
     false,
     'GeneratedImageAsset should not fall back to same-layer IndexedDB object URLs',
   );
+  assert.equal(
+    assetSource.includes('IndexedDB'),
+    false,
+    'GeneratedImageAsset active UI comments should not promise IndexedDB restore fallbacks',
+  );
+});
+
+test('TranscriptMessageCard does not restore idb image refs through active UI runtime', () => {
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.equal(
+    cardSource.includes("from '../imageStore'"),
+    false,
+    'TranscriptMessageCard should not import the deprecated same-layer imageStore',
+  );
+  assert.equal(
+    cardSource.includes('loadImage('),
+    false,
+    'TranscriptMessageCard should not call imageStore.loadImage() to restore idb:// refs',
+  );
+  assert.equal(
+    cardSource.includes('hydratePersistedImageElements'),
+    false,
+    'TranscriptMessageCard should not run active idb:// hydration over rendered transcript HTML',
+  );
+  assert.equal(
+    cardSource.includes('img[src^="idb://"]'),
+    false,
+    'TranscriptMessageCard should not scan rendered transcript HTML for idb:// restore candidates',
+  );
 });
 
 test('pending request hint heartbeat also syncs host image data changes from message text and extra images', () => {
@@ -254,11 +289,9 @@ test('successful image generation responses actively reconcile host image data',
     true,
     'successful plugin-native image responses should not rely only on DOM mutation observers',
   );
-  assert.equal(
-    /syncPendingRequestHintsFromDom\(\);\s*const requestBinding = imagePendingTaskManager\.registerRequest/.test(
-      source,
-    ),
-    true,
+  assert.match(
+    source,
+    /onRequest:\s*\(\{\s*requestId,\s*prompt\s*\}\)\s*=>\s*\{[\s\S]*?syncPendingRequestHintsFromDom\(\);\s*const requestBinding = imagePendingTaskManager\.registerRequest/,
     'plugin-native image requests should bind request ids from DOM hints before success responses arrive',
   );
   assert.equal(

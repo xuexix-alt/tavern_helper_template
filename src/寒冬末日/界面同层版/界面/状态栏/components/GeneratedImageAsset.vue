@@ -306,7 +306,7 @@ async function resolveSource() {
     return;
   }
 
-  // 备用3：异步从 IndexedDB 加载
+  // 备用3：保留异步插件原生解析接口，避免未来宿主读数改为异步时改动组件协议。
   const asyncResult = await readGeneratedImageSourceAsync({
     messageId: props.entry.messageId,
     markerId: props.entry.markerId,

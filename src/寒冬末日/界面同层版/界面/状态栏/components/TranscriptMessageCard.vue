@@ -131,14 +131,11 @@ import {
   readChatMessageDetail,
 } from '../hostBridge';
 import { getFallbackImageClasses } from '../imageFallbackClasses';
-import { isIdbSrc, parseIdbSrc } from '../imagePersistencePatch';
-import { loadImage } from '../imageStore';
 import {
   sanitizeSameLayerPluginNativeRequestIdElements,
   sanitizeSameLayerPluginNativeRequestIds,
 } from '../pluginNativeImageDom';
 import { stripVisibleChatu8PromptTokensHtml } from '../chatu8PromptTokenDisplay';
-import { hydratePersistedImageElements } from '../transcriptImagePersistence';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 import StreamRenderer from './StreamRenderer.vue';
 
@@ -262,36 +259,12 @@ function onEditInput(event: Event) {
   emit('update-edit-draft', target.value);
 }
 
-async function resolvePersistedImageSrc(src: string) {
-  if (!isIdbSrc(src)) return src;
-  const parsed = parseIdbSrc(src);
-  if (!parsed) return null;
-  try {
-    return await loadImage(parsed.messageId, parsed.requestId);
-  } catch {
-    return null;
-  }
-}
-
-async function hydrateAssistantBodyImages() {
+function refreshAssistantBodyImagePresentation() {
   const root = assistantBodyRef.value;
   if (!root) return;
   sanitizeSameLayerPluginNativeRequestIdElements(root);
   root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);
-  const images = Array.from(
-    root.querySelectorAll('img[src^="idb://"], img[data-persisted-image-src]'),
-  ) as HTMLImageElement[];
-  recordComponentTrace('hydrate_images', {
-    imageCount: images.length,
-  });
-  if (images.length === 0) return;
-  await hydratePersistedImageElements({
-    elements: images,
-    resolveSrc: async (src, element) => {
-      const persistedSrc = String(element.getAttribute('data-persisted-image-src') ?? src).trim();
-      return resolvePersistedImageSrc(persistedSrc);
-    },
-  });
+  recordComponentTrace('refresh_image_presentation');
 }
 
 function encodeDatasetValue(value: string): string {
@@ -582,7 +555,8 @@ function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill') {
   if (appended > 0) {
     recordComponentTrace('direct_host_backfill_images', { reason, candidateCount: entries.length, appended });
     void nextTick().then(() => {
-      void hydrateAssistantBodyImages().then(() => bindAssistantBodyInteractions());
+      refreshAssistantBodyImagePresentation();
+      bindAssistantBodyInteractions();
     });
   }
 }
@@ -961,7 +935,7 @@ watch(
     hydratePendingImagesFromGalleryEntries();
     scheduleDirectHostBackfillImages('assistant_body_signature');
     await nextTick();
-    await hydrateAssistantBodyImages();
+    refreshAssistantBodyImagePresentation();
     await nextTick();
     bindAssistantBodyInteractions();
     recordNativePromptTokenScanState('assistant_body_signature:after_bind');
@@ -977,7 +951,7 @@ watch(
     recordNativePromptTokenScanState('gallery_entries:before_hydration');
     hydratePendingImagesFromGalleryEntries();
     await nextTick();
-    await hydrateAssistantBodyImages();
+    refreshAssistantBodyImagePresentation();
     await nextTick();
     bindAssistantBodyInteractions();
     recordNativePromptTokenScanState('gallery_entries:after_bind');
