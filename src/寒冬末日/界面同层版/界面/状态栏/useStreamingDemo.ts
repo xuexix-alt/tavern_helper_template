@@ -67,6 +67,10 @@ import {
   normalizeImageLabel,
   parsePromptBodyFromToken,
 } from './generatedImagePromptMetadata';
+import {
+  mergeRenderableGeneratedImageArtifact,
+  type RenderableGeneratedImageArtifact,
+} from './generatedImageRenderableArtifacts';
 import { buildHideStateRecord, clearHideState, readHideState, writeHideState } from './hideStatePersistence';
 import {
   callHostGetChatMessages,
@@ -175,17 +179,7 @@ import type {
 
 type StopHandle = { stop?: () => void } | null;
 type HideRefreshMode = 'none' | 'affected';
-type RenderableGeneratedImage = {
-  markerId?: string;
-  imageId?: string;
-  src: string;
-  alt: string;
-  promptToken?: string;
-  requestId?: string;
-  anchorText?: string;
-  title?: string;
-  characterName?: string;
-};
+type RenderableGeneratedImage = RenderableGeneratedImageArtifact;
 type NativeFirstRenderableGeneratedImage = RenderableGeneratedImage & {
   source: NativeFirstArtifactSource;
 };
@@ -212,6 +206,10 @@ type ImageGenerationTriggerOptions = {
 type HostTranscriptVisibleOptions = {
   beforeRelease?: () => Promise<void> | void;
 };
+type ReprocessLatestAssistantOptions = {
+  source?: 'manual' | 'auto_reload';
+  silent?: boolean;
+};
 type AssistantPlaceholderEnsureReason = 'first_token' | 'finalize_fallback' | 'native_reasoning' | `signal_${string}`;
 type GalleryInitialCacheMode = 'drawer' | 'boot';
 
@@ -223,8 +221,10 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-ipod',
   'theme-amber',
 ] as const;
-const TRANSCRIPT_UI_WINDOW_SIZE = 4;
-const PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT = 3;
+const TRANSCRIPT_UI_WINDOW_SIZE = 6;
+const PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT = 3;
+const PLUGIN_NATIVE_HOST_SHADOW_WINDOW_MESSAGE_COUNT = 6;
+const OFFICIAL_LIFECYCLE_EVENT_AWAIT_TIMEOUT_MS = 1200;
 const STREAM_TRANSCRIPT_PATCH_INTERVAL_MS = 80;
 const STREAMING_PREVIEW_RENDER_INTERVAL_MS = 320;
 const GALLERY_HISTORY_SCAN_BATCH_SIZE = 24;
@@ -240,6 +240,7 @@ const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200
 const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [
   0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000,
 ] as const;
+const MVU_UPDATE_VARIABLE_TAG_PATTERN = 'UpdateVariable(?:variable)?';
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
@@ -248,14 +249,34 @@ const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;
 const IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS = 120_000;
 const IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS = 8000;
 const IMAGE_GENERATION_HANDOFF_POLL_MS = 80;
+const PLUGIN_NATIVE_RESPONSE_HYDRATION_DEDUPE_MS = 1200;
+const PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_TRIGGER_GRACE_MS = 1500;
+const PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_DEDUPE_MS = 60_000;
+const PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_MAX_PER_RUN = 8;
+const PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_DEDUPE_MS = 600;
+const PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_MAX_ROOTS = 8;
 const CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT = 'ch-llm-image-gen-request';
 const CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT = 'ch-llm-image-gen-response';
 const CHATU8_REGEX_TEST_MESSAGE_EVENT = 'regex-st-chatu8-test-message';
 const CHATU8_REGEX_RESULT_MESSAGE_EVENT = 'regex-st-chatu8-result-message';
 const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';
+const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [
+  CHATU8_AUTO_CLICK_COMPLETE_EVENT,
+  'st-chatu8:auto_click_complete',
+] as const;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
+const PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL =
+  '/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js';
+const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
+const SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR = [
+  `${CHATU8_IMAGE_SPAN_SELECTOR} img`,
+  `${CHATU8_IMAGE_CONTAINER_SELECTOR} img`,
+  '.st-chatu8-image-container img',
+  `.${FALLBACK_IMAGE_CLASSES.inline} img`,
+  `.${FALLBACK_IMAGE_CLASSES.item} img`,
+].join(', ');
 const CHATU8_MUTATION_ATTRIBUTE_FILTER = [
   'src',
   'data-request-id',
@@ -265,12 +286,21 @@ const CHATU8_MUTATION_ATTRIBUTE_FILTER = [
   'data-image-tag',
   'data-link',
 ] as const;
-const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 
 type StreamingPreviewCacheEntry = {
   source: string;
   html: string;
   renderedAt: number;
+};
+
+type PluginImageGenerationHandoffProgress = {
+  requestCount: number;
+  promptButtonCount: number;
+  promptPlaceholderCount: number;
+  readyImageCount: number;
+  expectedRequestCount: number;
+  hasDomHandoff: boolean;
+  complete: boolean;
 };
 
 const streamingPreviewCache = new Map<number, StreamingPreviewCacheEntry>();
@@ -361,13 +391,13 @@ function hasRenderableAssistantMessageText(rawMessage: unknown): boolean {
 
 function isVariableUpdateOnlyGenerationText(text: string): boolean {
   const source = String(text ?? '').trim();
-  if (!/<UpdateVariable\b/i.test(source)) return false;
+  if (!new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b`, 'i').test(source)) return false;
   const withoutRuntimeShell = stripStreamDemoRuntimeTags(source)
     .replace(/<content\b[^>]*>/gi, '')
     .replace(/<\/content>/gi, '');
   const withoutVariableBlocks = withoutRuntimeShell
-    .replace(/<UpdateVariable\b[^>]*>[\s\S]*?<\/UpdateVariable>/gi, '')
-    .replace(/<UpdateVariable\b[^>]*>[\s\S]*$/gi, '');
+    .replace(new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*?<\\/${MVU_UPDATE_VARIABLE_TAG_PATTERN}>`, 'gi'), '')
+    .replace(new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*$`, 'gi'), '');
   const remainingVisibleText = withoutVariableBlocks
     .replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '')
     .replace(/<StatusPlaceHolderImpl\b[^>]*>[\s\S]*?<\/StatusPlaceHolderImpl>/gi, '')
@@ -382,7 +412,10 @@ function extractMvuUpdateVariableBlocks(text: string): string[] {
   if (!source) return [];
 
   const blocks: string[] = [];
-  const pattern = /<UpdateVariable\b[^>]*>[\s\S]*?(?:<\/UpdateVariable>|$)/gi;
+  const pattern = new RegExp(
+    `<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*?(?:<\\/${MVU_UPDATE_VARIABLE_TAG_PATTERN}>|$)`,
+    'gi',
+  );
   for (const match of source.matchAll(pattern)) {
     const block = String(match[0] ?? '').trim();
     if (block && !blocks.includes(block)) {
@@ -405,6 +438,34 @@ function mergeMvuWritebackBlocksIntoAssistantText(existingText: string, writebac
     }
   }
   return [existing, blocks.join('\n\n')].filter(Boolean).join('\n\n');
+}
+
+function countMvuJsonInstructionMarkers(text: string): number {
+  const source = String(text ?? '');
+  if (!source) return 0;
+  let count = 0;
+  if (/<JSONPatch\b/i.test(source)) count += 1;
+  if (new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b`, 'i').test(source) && extractMvuUpdateVariableBlocks(source).length === 0) {
+    count += 1;
+  }
+  return count;
+}
+
+function resolveHostMessageText(message: any): string {
+  const messageText = String(message?.message ?? '');
+  const mesText = String(message?.mes ?? '');
+  if (!messageText) return mesText;
+  if (!mesText) return messageText;
+
+  const mesInstructionCount =
+    extractMvuUpdateVariableBlocks(mesText).length + countMvuJsonInstructionMarkers(mesText);
+  const messageInstructionCount =
+    extractMvuUpdateVariableBlocks(messageText).length + countMvuJsonInstructionMarkers(messageText);
+  if (mesInstructionCount > messageInstructionCount) return mesText;
+  if (mesInstructionCount > 0 && mesInstructionCount === messageInstructionCount && mesText.length > messageText.length) {
+    return mesText;
+  }
+  return messageText;
 }
 
 function escapeHtml(input: string): string {
@@ -1269,6 +1330,11 @@ function createGeneratedImageFigureElement(
   return (wrapper.firstElementChild as HTMLElement | null) ?? doc.createElement('figure');
 }
 
+function isPluginNativeRenderableImage(image: RenderableGeneratedImage): boolean {
+  const source = String((image as Partial<NativeFirstRenderableGeneratedImage>)?.source ?? '');
+  return source === 'host_dom' || source === 'extra' || source === 'mes_tag';
+}
+
 function collectInlineAnchorCandidates(root: HTMLElement): HTMLElement[] {
   const preferred = Array.from(root.querySelectorAll('p, pre, blockquote, li, div')) as HTMLElement[];
   return preferred.filter(node => {
@@ -1382,7 +1448,11 @@ function injectGeneratedImagesIntoHtml(
     const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
     const nativePromptTarget = takeNativePromptTokenPlacementTarget(nativePromptTokenTargets, image.promptToken);
     if (nativePromptTarget) {
-      nativePromptTarget.replaceWith(figure);
+      if (isPluginNativeRenderableImage(image)) {
+        nativePromptTarget.replaceWith(figure);
+        continue;
+      }
+      nativePromptTarget.after(figure);
       continue;
     }
     const placeholderTarget = rawImagePlaceholders.shift();
@@ -1689,9 +1759,264 @@ function resolvePromptButtonForImageSpan(span: HTMLElement, root: HTMLElement): 
   return buttons[0] ?? null;
 }
 
+function collectSameLayerRenderedMessageRoots(messageId: number): HTMLElement[] {
+  const mesid = Math.trunc(Number(messageId));
+  if (!Number.isFinite(mesid) || mesid < 0) return [];
+
+  const selectors = [
+    `.transcript-entry[data-message-id='${mesid}'] .assistant-body`,
+    `.assistant-card[data-message-id='${mesid}'] .assistant-body`,
+    `.assistant-body[data-message-id='${mesid}']`,
+  ];
+  const roots: HTMLElement[] = [];
+  for (const selector of selectors) {
+    for (const root of Array.from(document.querySelectorAll(selector)) as HTMLElement[]) {
+      if (!isSameLayerTranscriptElement(root)) continue;
+      if (root.closest('.gallery-panel, .assistant-gallery-image')) continue;
+      if (roots.includes(root)) continue;
+      roots.push(root);
+    }
+  }
+  return roots;
+}
+
+type PluginNativeIframeProcessorModule = {
+  processImagePlaceholdersForElement?: (element: Element) => void | Promise<void>;
+  processAllImagePlaceholders?: () => void | Promise<void>;
+};
+
+let pluginNativeIframeProcessorModulePromise: Promise<PluginNativeIframeProcessorModule | null> | null = null;
+
+function isPluginNativeIframeProcessorModule(value: unknown): value is PluginNativeIframeProcessorModule {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as PluginNativeIframeProcessorModule;
+  return (
+    typeof record.processImagePlaceholdersForElement === 'function' ||
+    typeof record.processAllImagePlaceholders === 'function'
+  );
+}
+
+async function loadPluginNativeIframeProcessorModule(): Promise<PluginNativeIframeProcessorModule | null> {
+  if (!pluginNativeIframeProcessorModulePromise) {
+    pluginNativeIframeProcessorModulePromise = import(
+      /* @vite-ignore */ PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL
+    )
+      .then(module => (isPluginNativeIframeProcessorModule(module) ? module : null))
+      .catch(error => {
+        console.warn('[stream-demo] failed to load st-chatu8 iframe processor module', {
+          url: PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      });
+  }
+  return pluginNativeIframeProcessorModulePromise;
+}
+
+function hasNativePluginPromptControls(root: HTMLElement): boolean {
+  return Boolean(root.querySelector(`${CHATU8_IMAGE_BUTTON_SELECTOR}[data-stable-id], ${CHATU8_IMAGE_SPAN_SELECTOR}[data-stable-id]`));
+}
+
+function resolvePluginNativeSameLayerPromptScanRoot(root: HTMLElement): HTMLElement {
+  return (
+    (root.closest('.assistant-card, .assistant-message, .transcript-entry, .mes_text, .mes') as HTMLElement | null) ??
+    root
+  );
+}
+
+function collectUnclaimedSameLayerChatu8PromptRoots(messageIds: number[] = []): HTMLElement[] {
+  const roots: HTMLElement[] = [];
+  const seen = new Set<HTMLElement>();
+  const normalizedMessageIds = new Set(
+    messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0),
+  );
+  const selectors =
+    normalizedMessageIds.size > 0
+      ? [...normalizedMessageIds]
+          .flatMap(id => [
+            `.assistant-body.mes_text[data-message-id='${id}']`,
+            `.transcript-entry[data-message-id='${id}'] .assistant-body.mes_text`,
+          ])
+          .join(', ')
+      : '.assistant-body.mes_text[data-message-id]';
+
+  if (!selectors) return roots;
+
+  for (const root of Array.from(document.querySelectorAll(selectors)) as HTMLElement[]) {
+    const scanRoot = resolvePluginNativeSameLayerPromptScanRoot(root);
+    if (seen.has(scanRoot)) continue;
+    if (!isSameLayerTranscriptElement(root)) continue;
+    if (root.closest('.gallery-panel, .assistant-gallery-image')) continue;
+    if (!/image###/i.test(root.textContent ?? '')) continue;
+    if (hasNativePluginPromptControls(root)) continue;
+
+    seen.add(scanRoot);
+    roots.push(scanRoot);
+    if (roots.length >= PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_MAX_ROOTS) break;
+  }
+
+  return roots;
+}
+
+function resolveSameLayerRenderedImageCarrier(image: HTMLImageElement): HTMLElement | null {
+  const placeholderCarrier = image.closest(CHATU8_IMAGE_SPAN_SELECTOR) as HTMLElement | null;
+  if (placeholderCarrier) return placeholderCarrier;
+
+  return image.closest(
+    `${CHATU8_IMAGE_CONTAINER_SELECTOR}, .st-chatu8-image-container, .assistant-fallback-inline-image, .assistant-fallback-generated-image`,
+  ) as HTMLElement | null;
+}
+
+function resolveSameLayerPromptCarrierForImage(image: HTMLImageElement, root: HTMLElement): HTMLElement | null {
+  const carrier = resolveSameLayerRenderedImageCarrier(image);
+  const requestId = String(
+    image.dataset.requestId ??
+      carrier?.dataset.requestId ??
+      carrier?.dataset.samelayerRequestId ??
+      image.getAttribute('data-request-id') ??
+      carrier?.getAttribute('data-request-id') ??
+      carrier?.getAttribute('data-samelayer-request-id') ??
+      '',
+  ).trim();
+  const hasPromptPayload = (element: Element | null): element is HTMLElement => {
+    if (!(element instanceof HTMLElement)) return false;
+    if (!element.matches?.(CHATU8_IMAGE_BUTTON_SELECTOR)) return false;
+    return Boolean(
+      String(
+        element.dataset.imageTag ??
+          element.dataset.link ??
+          element.getAttribute('data-image-tag') ??
+          element.getAttribute('data-link') ??
+          '',
+      ).trim(),
+    );
+  };
+
+  let sibling = carrier?.previousElementSibling ?? image.previousElementSibling;
+  while (sibling) {
+    if (hasPromptPayload(sibling)) return sibling;
+    if (sibling.matches?.(CHATU8_IMAGE_SPAN_SELECTOR)) break;
+    sibling = sibling.previousElementSibling;
+  }
+
+  const candidates = Array.from(root.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[];
+  if (requestId) {
+    const matched = candidates.find(candidate => {
+      const candidateRequestId = String(
+        candidate.dataset.requestId ??
+          candidate.dataset.samelayerRequestId ??
+          candidate.getAttribute('data-request-id') ??
+          candidate.getAttribute('data-samelayer-request-id') ??
+          '',
+      ).trim();
+      return candidateRequestId === requestId && hasPromptPayload(candidate);
+    });
+    if (matched) return matched;
+  }
+
+  return candidates.find(hasPromptPayload) ?? null;
+}
+
+function mergeRenderableGeneratedImages(images: RenderableGeneratedImage[]): RenderableGeneratedImage[] {
+  const out: RenderableGeneratedImage[] = [];
+  const indexByKey = new Map<string, number>();
+
+  for (const image of images) {
+    const src = normalizeImageSrcForCompare(image.src);
+    if (!src) continue;
+    const key = src;
+    const normalizedImage: RenderableGeneratedImage = {
+      ...image,
+      src,
+      alt: String(image.alt ?? 'generated image').trim() || 'generated image',
+    };
+    const existingIndex = indexByKey.get(key);
+    if (existingIndex !== undefined) {
+      out[existingIndex] = mergeRenderableGeneratedImageArtifact(out[existingIndex], normalizedImage);
+      continue;
+    }
+    indexByKey.set(key, out.length);
+    out.push(normalizedImage);
+  }
+
+  return out;
+}
+
+function extractSameLayerRenderedImagesFromTranscript(messageId: number): RenderableGeneratedImage[] {
+  const out: RenderableGeneratedImage[] = [];
+  let order = 0;
+  for (const root of collectSameLayerRenderedMessageRoots(messageId)) {
+    const images = Array.from(root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR)) as HTMLImageElement[];
+    for (const image of images) {
+      if (image.closest('.gallery-panel, .assistant-gallery-image')) continue;
+      const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? image.src ?? '');
+      if (!src || (!src.startsWith('data:image') && !src.startsWith('blob:'))) continue;
+      const carrier = resolveSameLayerRenderedImageCarrier(image);
+      const promptButton = resolveSameLayerPromptCarrierForImage(image, root);
+      const requestId = String(
+        image.dataset.requestId ??
+          carrier?.dataset.requestId ??
+          carrier?.dataset.samelayerRequestId ??
+          promptButton?.dataset.requestId ??
+          promptButton?.dataset.samelayerRequestId ??
+          image.getAttribute('data-request-id') ??
+          carrier?.getAttribute('data-request-id') ??
+          carrier?.getAttribute('data-samelayer-request-id') ??
+          promptButton?.getAttribute('data-request-id') ??
+          promptButton?.getAttribute('data-samelayer-request-id') ??
+          '',
+      ).trim();
+      const promptToken = String(
+        image.dataset.promptToken ??
+          carrier?.dataset.promptToken ??
+          carrier?.dataset.imageTag ??
+          carrier?.dataset.link ??
+          promptButton?.dataset.promptToken ??
+          promptButton?.dataset.imageTag ??
+          promptButton?.dataset.link ??
+          image.getAttribute('data-prompt-token') ??
+          carrier?.getAttribute('data-prompt-token') ??
+          carrier?.getAttribute('data-image-tag') ??
+          carrier?.getAttribute('data-link') ??
+          promptButton?.getAttribute('data-prompt-token') ??
+          promptButton?.getAttribute('data-image-tag') ??
+          promptButton?.getAttribute('data-link') ??
+          '',
+      ).trim();
+      out.push({
+        markerId: String(image.dataset.markerId ?? carrier?.dataset.markerId ?? '').trim() || undefined,
+        imageId:
+          String(image.dataset.imageId ?? carrier?.dataset.imageId ?? '').trim() ||
+          requestId ||
+          promptToken ||
+          src,
+        requestId: requestId || undefined,
+        promptToken: promptToken || undefined,
+        anchorText: extractAnchorTextForImageNode(carrier ?? image, root),
+        src,
+        alt: image.getAttribute('alt') ?? image.getAttribute('title') ?? 'generated image',
+        title: `楼层 #${messageId} · 图 ${order + 1}`,
+      });
+      order += 1;
+    }
+  }
+
+  return mergeRenderableGeneratedImages(out);
+}
+
+function collectRenderableImagesForGalleryMessage(
+  messageId: number,
+  hostDomArtifacts?: RenderableGeneratedImage[],
+): RenderableGeneratedImage[] {
+  return mergeRenderableGeneratedImages([
+    ...(hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId)),
+    ...extractSameLayerRenderedImagesFromTranscript(messageId),
+  ]);
+}
+
 function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedImage[] {
   const out: RenderableGeneratedImage[] = [];
-  const seen = new Set<string>();
+  const imageIndexBySrc = new Map<string, number>();
   const mesid = Math.trunc(messageId);
 
   const pushImage = (
@@ -1702,16 +2027,22 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
     anchorTextLike?: unknown,
   ) => {
     const src = normalizeImageSrcForCompare(srcLike);
-    if (!src || seen.has(src)) return;
-    seen.add(src);
-    out.push({
+    if (!src) return;
+    const image: RenderableGeneratedImage = {
       markerId: undefined,
       src,
-      alt: String(altLike ?? 'generated image').trim(),
-      promptToken: String(promptLike ?? '').trim(),
+      alt: String(altLike ?? 'generated image').trim() || 'generated image',
+      promptToken: String(promptLike ?? '').trim() || undefined,
       requestId: String(requestIdLike ?? '').trim() || undefined,
       anchorText: buildAnchorSnippet(String(anchorTextLike ?? '')) || undefined,
-    });
+    };
+    const existingIndex = imageIndexBySrc.get(src);
+    if (existingIndex !== undefined) {
+      out[existingIndex] = mergeRenderableGeneratedImageArtifact(out[existingIndex], image);
+      return;
+    }
+    imageIndexBySrc.set(src, out.length);
+    out.push(image);
   };
 
   function resolvePluginGeneratedImageForButton(button: HTMLElement): HTMLImageElement | null {
@@ -1844,7 +2175,6 @@ function canRegenerateFromHostDomArtifacts(
   },
   hostDomArtifacts: RenderableGeneratedImage[],
 ): boolean {
-  if (!Array.isArray(hostDomArtifacts) || hostDomArtifacts.length === 0) return false;
   const markerId = String(image.markerId ?? '').trim();
   const imageId = String(image.imageId ?? '').trim();
   const requestId = String(image.requestId ?? '').trim();
@@ -1852,6 +2182,7 @@ function canRegenerateFromHostDomArtifacts(
   const src = normalizeImageSrcForCompare(image.src);
   const hasNativeRegenerateIdentity = Boolean(requestId || promptTokenCompare);
   if (!hasNativeRegenerateIdentity) return false;
+  if (!Array.isArray(hostDomArtifacts) || hostDomArtifacts.length === 0) return false;
 
   return hostDomArtifacts.some(hostImage => {
     const hostMarkerId = String(hostImage.markerId ?? '').trim();
@@ -1901,7 +2232,8 @@ function buildGeneratedImageRefsForMessage(input: {
 
   const promptTokens = collectChatu8PromptTokens(input.rawMessage);
   const createdOrderBase = Math.trunc(Number(input.createdOrderBase ?? 0));
-  const hostDomArtifacts = input.hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId);
+  const nativeHostDomArtifacts = input.hostDomArtifacts ?? extractRenderedImagesFromRoots(messageId);
+  const hostDomArtifacts = collectRenderableImagesForGalleryMessage(messageId, nativeHostDomArtifacts);
   const extraRecords = readChatu8ExtraImageRecords(messageId);
   const cacheEntries = readChatu8CacheEntries(messageId);
   const mesTagEntries = parseNativeMesImageTags({
@@ -1978,6 +2310,7 @@ function buildGeneratedImageRefsForMessage(input: {
         if (!src) return null;
         const promptToken = String(image.promptToken ?? '').trim();
         const anchorText = String(image.anchorText ?? '').trim();
+        const canRegenerate = nativeHostDomArtifacts.length > 0 && canRegenerateFromHostDomArtifacts(image, nativeHostDomArtifacts);
         const metadataPrompt = promptToken ? '' : extractPromptFromPngDataUri(src);
         const promptForLabel = promptToken || metadataPrompt;
         const title =
@@ -2000,7 +2333,7 @@ function buildGeneratedImageRefsForMessage(input: {
           title,
           characterName: characterName || undefined,
           createdOrder: createdOrderBase * 100 + index,
-          canRegenerate: true,
+          canRegenerate,
           src,
           alt: image.alt,
         };
@@ -2066,7 +2399,7 @@ function buildGeneratedImageRefsForMessage(input: {
       title,
       characterName: characterName || undefined,
       createdOrder: entity.createdOrder,
-      canRegenerate: canRegenerateFromHostDomArtifacts(entity, hostDomArtifacts),
+      canRegenerate: canRegenerateFromHostDomArtifacts(entity, nativeHostDomArtifacts),
       src: entity.src,
       alt: entity.alt,
     };
@@ -2511,9 +2844,14 @@ export function useStreamingDemo() {
   let readerStatePersistTimer = 0;
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
+  let autoMvuReloadReprocessTimer = 0;
   const hostImageDataReconcileTimers = new Set<number>();
   const galleryInitialCacheTimers = new Set<number>();
   const pendingGeneratedImageRefreshMessageIds = new Set<number>();
+  const autoMvuReloadReprocessMessageIds = new Set<number>();
+  const pluginNativeResponseHydrationSessions = new Set<string>();
+  const pluginNativeResponseHydrationStartedAt = new Map<string, number>();
+  const pluginNativeSameLayerPromptScanStartedAt = new Map<string, number>();
   let streamTranscriptPatchTimer = 0;
   let streamTranscriptPatchDirty = false;
   let streamTranscriptPatchRunning = false;
@@ -2551,6 +2889,7 @@ export function useStreamingDemo() {
   const imageRecentIntentStore = createImageRecentIntentStore();
   const activePluginNativeLlmImageGenerationRequests = new Set<string>();
   let lastPluginNativeLlmImageGenerationSettledAt = 0;
+  const pluginNativePromptButtonTriggerAt = new Map<string, number>();
   const postDoneSideEffectsQueue = createPostDoneSideEffectsQueue();
 
   function resolveTraceId(fallbackPrefix = 'trace') {
@@ -2643,6 +2982,7 @@ export function useStreamingDemo() {
   }
 
   function normalizePluginNativeHandoffMessageId(value: unknown): number | null {
+    if (value == null || value === '') return null;
     const normalized = Math.trunc(Number(value));
     if (!Number.isFinite(normalized) || normalized < 0) return null;
     return normalized;
@@ -2659,14 +2999,14 @@ export function useStreamingDemo() {
       .filter(item => item.role === 'assistant')
       .map(item => item.message_id)
       .sort((a, b) => Number(b) - Number(a))
-      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT)
+      .slice(0, PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT)
       .forEach(remember);
 
     readMessageMetasAfterContainer()
       .filter(item => item.role === 'assistant')
       .map(item => item.message_id)
       .sort((a, b) => Number(b) - Number(a))
-      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT)
+      .slice(0, PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT)
       .forEach(remember);
 
     return [...out].sort((a, b) => a - b);
@@ -2779,9 +3119,11 @@ export function useStreamingDemo() {
       eventOn(CHATU8_REGEX_RESULT_MESSAGE_EVENT as any, (...payload: unknown[]) => {
         schedulePluginNativeHostRenderHandoff('plugin_native_regex_result_message', payload);
       }),
-      eventOn(CHATU8_AUTO_CLICK_COMPLETE_EVENT as any, (...payload: unknown[]) => {
-        schedulePluginNativeHostRenderHandoff('plugin_native_auto_click_complete', payload);
-      }),
+      ...CHATU8_AUTO_CLICK_COMPLETE_EVENTS.map(eventName =>
+        eventOn(eventName as any, (...payload: unknown[]) => {
+          schedulePluginNativeHostRenderHandoff('plugin_native_auto_click_complete', payload);
+        }),
+      ),
     ];
     if (typeof tavern_events !== 'undefined' && tavern_events?.CHARACTER_MESSAGE_RENDERED) {
       stops.push(
@@ -2860,7 +3202,7 @@ export function useStreamingDemo() {
   }
 
   function buildHostImageDataSignature(message: any): string {
-    const rawMessage = String(message?.message ?? message?.mes ?? '').trim();
+    const rawMessage = resolveHostMessageText(message).trim();
     const extraImages = _.get(message, 'extra.images', null);
     const rawSwipeId = Number(_.get(message, 'swipe_id', null));
     const swipeId = Number.isFinite(rawSwipeId) ? Math.trunc(rawSwipeId) : -1;
@@ -3470,6 +3812,14 @@ export function useStreamingDemo() {
     return collectReachableHostDocuments().filter(doc => doc !== document);
   }
 
+  function hasHostMessageDom(messageId: number): boolean {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
+    return collectHostDocuments().some(doc =>
+      Boolean(doc.querySelector(`.mes[mesid="${normalizedId}"], .mes[data-message-id="${normalizedId}"]`)),
+    );
+  }
+
   function collectPluginNativeHandoffDiagnostics(messageId: number): Record<string, unknown> {
     const normalizedId = Math.trunc(Number(messageId));
     const ctx = readHostContext();
@@ -3523,9 +3873,8 @@ export function useStreamingDemo() {
   }
 
   /**
-   * 将容器楼层之后的所有宿主楼层设为 is_hidden，
-   * 让酒馆不渲染它们的 DOM（包括其中的 iframe 前端界面），
-   * 同层 UI 通过 getChatMessages({ hide_state: 'all' }) 自行读取并渲染。
+   * 将最近 6 楼保留为原生离屏 shadow window，供 st-chatu8 继续走酒馆原生 DOM 链；
+   * 更早的宿主楼层仍设为 is_hidden，控制 DOM/插件扫描成本。
    */
   async function applyHidePolicy(reason: string) {
     if (!isOpeningWorkbenchHostActive() || !isActiveOpeningWorkbenchScope()) return;
@@ -3539,9 +3888,22 @@ export function useStreamingDemo() {
       do {
         hidePolicyRerun = false;
         if (nativeGenerationRevealActive) return;
-        const patch = readMessageMetasAfterContainer().map(item => ({ message_id: item.message_id, is_hidden: true }));
-        if (patch.length === 0) continue;
-        await setChatMessages(patch, { refresh: 'none' });
+        const nativeShadowWindowIds = collectNativeShadowWindowMessageIds();
+        const metas = readMessageMetasAfterContainer();
+        const showPatch = nativeShadowWindowIds
+          .filter(id => metas.some(item => item.message_id === id && (item.is_hidden === true || !hasHostMessageDom(id))))
+          .map(id => ({ message_id: id, is_hidden: false }));
+        if (showPatch.length > 0) {
+          normalizePluginNativeMessageMetadata(nativeShadowWindowIds);
+          await setChatMessages(showPatch, { refresh: 'affected' });
+        }
+        const hidePatch = metas
+          .filter(item => !nativeShadowWindowIds.includes(item.message_id))
+          .filter(item => item.is_hidden !== true)
+          .map(item => ({ message_id: item.message_id, is_hidden: true }));
+        if (hidePatch.length > 0) {
+          await setChatMessages(hidePatch, { refresh: 'none' });
+        }
       } while (hidePolicyRerun);
     } catch (error) {
       console.warn('[stream-demo] hide policy failed', {
@@ -3613,6 +3975,55 @@ export function useStreamingDemo() {
     }
   }
 
+  async function emitTavernLifecycleEventWithTimeout(
+    eventType: unknown,
+    args: unknown[],
+    options: { eventName: string; messageId: number; traceId: string; timeoutMs?: number },
+  ): Promise<boolean> {
+    if (typeof eventEmit !== 'function') return false;
+    const timeoutMs = options.timeoutMs ?? OFFICIAL_LIFECYCLE_EVENT_AWAIT_TIMEOUT_MS;
+    let settled = false;
+    let timeoutId: number | null = null;
+    const emitPromise = Promise.resolve()
+      .then(() => eventEmit(eventType as any, ...(args as any[])))
+      .then(() => {
+        settled = true;
+        return true;
+      })
+      .catch(error => {
+        settled = true;
+        recordLifecycleTrace(
+          'emitOfficialGenerationLifecycle',
+          `${options.eventName}_failed`,
+          {
+            messageId: options.messageId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          options.traceId,
+        );
+        return false;
+      });
+    const timeoutPromise = new Promise<false>(resolve => {
+      timeoutId = window.setTimeout(() => {
+        if (!settled) {
+          recordLifecycleTrace(
+            'emitOfficialGenerationLifecycle',
+            `${options.eventName}_await_timeout`,
+            {
+              messageId: options.messageId,
+              timeoutMs,
+            },
+            options.traceId,
+          );
+        }
+        resolve(false);
+      }, timeoutMs);
+    });
+    const result = await Promise.race([emitPromise, timeoutPromise]);
+    if (timeoutId != null) window.clearTimeout(timeoutId);
+    return result;
+  }
+
   async function emitOfficialGenerationLifecycle(messageId: number | null | undefined, type: 'normal' | 'regenerate') {
     const normalizedId = Number(messageId);
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
@@ -3653,12 +4064,21 @@ export function useStreamingDemo() {
 
     const emitLifecycleEvents = async () => {
       try {
-        await eventEmit(tavern_events.GENERATION_ENDED as any, Math.trunc(normalizedId));
+        const completed = await emitTavernLifecycleEventWithTimeout(
+          tavern_events.GENERATION_ENDED,
+          [Math.trunc(normalizedId)],
+          {
+            eventName: 'generation_ended',
+            messageId: Math.trunc(normalizedId),
+            traceId,
+          },
+        );
         recordLifecycleTrace(
           'emitOfficialGenerationLifecycle',
           'generation_ended_emitted',
           {
             messageId: Math.trunc(normalizedId),
+            completed,
           },
           traceId,
         );
@@ -3667,13 +4087,22 @@ export function useStreamingDemo() {
       }
 
       try {
-        await eventEmit(tavern_events.MESSAGE_RECEIVED as any, Math.trunc(normalizedId), type);
+        const completed = await emitTavernLifecycleEventWithTimeout(
+          tavern_events.MESSAGE_RECEIVED,
+          [Math.trunc(normalizedId), type],
+          {
+            eventName: 'message_received',
+            messageId: Math.trunc(normalizedId),
+            traceId,
+          },
+        );
         recordLifecycleTrace(
           'emitOfficialGenerationLifecycle',
           'message_received_emitted',
           {
             messageId: Math.trunc(normalizedId),
             type,
+            completed,
           },
           traceId,
         );
@@ -3682,12 +4111,21 @@ export function useStreamingDemo() {
       }
 
       try {
-        await eventEmit(tavern_events.MESSAGE_UPDATED as any, Math.trunc(normalizedId));
+        const completed = await emitTavernLifecycleEventWithTimeout(
+          tavern_events.MESSAGE_UPDATED,
+          [Math.trunc(normalizedId)],
+          {
+            eventName: 'message_updated',
+            messageId: Math.trunc(normalizedId),
+            traceId,
+          },
+        );
         recordLifecycleTrace(
           'emitOfficialGenerationLifecycle',
           'message_updated_emitted',
           {
             messageId: Math.trunc(normalizedId),
+            completed,
           },
           traceId,
         );
@@ -3758,7 +4196,7 @@ export function useStreamingDemo() {
             const chatMessage = getChatMessages(normalizedId, { hide_state: 'all' })?.[0] as
               | { message?: unknown; mes?: unknown }
               | undefined;
-            const existingMessage = String(chatMessage?.message ?? chatMessage?.mes ?? '');
+            const existingMessage = resolveHostMessageText(chatMessage);
             const mergedMessage = mergeMvuWritebackBlocksIntoAssistantText(existingMessage, messageContent);
             if (!mergedMessage || mergedMessage === existingMessage.trim()) {
               finish({ status: 'skipped', reason: 'already_present', message_id: normalizedId });
@@ -3844,7 +4282,7 @@ export function useStreamingDemo() {
     return list.map((message: any) => ({
       ...message,
       role: resolveHostMessageRole(message),
-      message: String(message?.message ?? message?.mes ?? ''),
+      message: resolveHostMessageText(message),
       is_hidden: message?.is_hidden === true,
     }));
   }
@@ -3872,7 +4310,7 @@ export function useStreamingDemo() {
       if (!existingItem && !recentUiMessageIds.has(messageId)) continue;
       const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
       const rawRole = resolveHostMessageRole(hostMessage);
-      const rawMessage = String(hostMessage?.message ?? hostMessage?.mes ?? '');
+      const rawMessage = resolveHostMessageText(hostMessage);
       const role = resolveTranscriptRole({
         rawRole,
         rawMessage,
@@ -3976,7 +4414,7 @@ export function useStreamingDemo() {
             ...message,
             message_id: message?.message_id ?? index,
             role: resolveHostMessageRole(message),
-            message: String(message?.mes ?? message?.message ?? ''),
+            message: resolveHostMessageText(message),
             is_hidden: message?.is_hidden === true,
             data: message?.data,
           };
@@ -4013,12 +4451,13 @@ export function useStreamingDemo() {
           if (!message || typeof message !== 'object') return null;
           const messageId = Math.trunc(Number(message?.message_id ?? index));
           if (!Number.isFinite(messageId) || messageId < 0) return null;
-          const depthSummaryInfo = estimateDepthRegexSummaryInfo(message?.mes);
+          const messageText = resolveHostMessageText(message);
+          const depthSummaryInfo = estimateDepthRegexSummaryInfo(messageText);
           return {
             message_id: messageId,
             role: resolveHostMessageRole(message),
             is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
-            messageLength: typeof message?.mes === 'string' ? message.mes.length : 0,
+            messageLength: messageText.length,
             hasDepthSummary: depthSummaryInfo.hasDepthSummary,
             depthSummaryLength: depthSummaryInfo.depthSummaryLength,
             data: message?.data,
@@ -4056,17 +4495,30 @@ export function useStreamingDemo() {
     );
   }
 
-  function collectPluginNativeHostWindowMessageIds(messageId: number): number[] {
-    const normalizedId = Math.trunc(Number(messageId));
-    if (!Number.isFinite(normalizedId) || normalizedId < 0) return [];
-
+  function collectNativeShadowWindowMessageIds(anchorMessageId?: number | null): number[] {
+    const normalizedAnchor = anchorMessageId == null ? null : Math.trunc(Number(anchorMessageId));
     const metas = readMessageMetasAfterContainer()
       .map(item => Math.trunc(Number(item.message_id)))
-      .filter(id => Number.isFinite(id) && id >= 0 && id <= normalizedId)
+      .filter(id => Number.isFinite(id) && id >= 0)
       .sort((a, b) => b - a);
-    const windowIds = metas.slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT);
-    if (!windowIds.includes(normalizedId)) windowIds.unshift(normalizedId);
+    const boundedMetas =
+      normalizedAnchor != null && Number.isFinite(normalizedAnchor) && normalizedAnchor >= 0
+        ? metas.filter(id => id <= normalizedAnchor)
+        : metas;
+    const windowIds = boundedMetas.slice(0, PLUGIN_NATIVE_HOST_SHADOW_WINDOW_MESSAGE_COUNT);
+    if (
+      normalizedAnchor != null &&
+      Number.isFinite(normalizedAnchor) &&
+      normalizedAnchor >= 0 &&
+      !windowIds.includes(normalizedAnchor)
+    ) {
+      windowIds.unshift(normalizedAnchor);
+    }
     return [...new Set(windowIds)].sort((a, b) => a - b);
+  }
+
+  function collectPluginNativeHostWindowMessageIds(messageId: number): number[] {
+    return collectNativeShadowWindowMessageIds(messageId);
   }
 
   function normalizePluginNativeMessageMetadata(messageIds: number[]): void {
@@ -4193,7 +4645,10 @@ export function useStreamingDemo() {
     const containerId = getActiveContainerMessageId();
     if (containerId == null) return;
 
-    const hiddenIds = readMessageMetasAfterContainer().map(item => item.message_id);
+    const nativeShadowWindowIds = collectNativeShadowWindowMessageIds();
+    const hiddenIds = readMessageMetasAfterContainer()
+      .filter(item => !nativeShadowWindowIds.includes(item.message_id))
+      .map(item => item.message_id);
 
     const record = buildHideStateRecord(containerId, hiddenIds);
     writeHideState(record);
@@ -4266,8 +4721,12 @@ export function useStreamingDemo() {
   }
 
   function syncHostVisualHideFromCurrentState() {
-    const hiddenIds = readMessageMetasAfterContainer().map(item => item.message_id);
+    const nativeShadowWindowIds = collectNativeShadowWindowMessageIds();
+    const hiddenIds = readMessageMetasAfterContainer()
+      .filter(item => !nativeShadowWindowIds.includes(item.message_id))
+      .map(item => item.message_id);
     hostVisualHideController.applyToMessageIds(hiddenIds);
+    hostVisualHideController.applyNativeShadowWindow(nativeShadowWindowIds);
   }
 
   async function revealHiddenStoryMessagesForNativeGeneration(reason: string): Promise<void> {
@@ -4378,14 +4837,143 @@ export function useStreamingDemo() {
     }, 80);
   }
 
-  function collectPluginImageGenerationHandoffProgress(messageId: number): {
-    requestCount: number;
-    promptButtonCount: number;
-    promptPlaceholderCount: number;
-    readyImageCount: number;
-    hasDomHandoff: boolean;
-    complete: boolean;
-  } {
+  function getPluginNativePromptButtonMessageRoots(messageId: number): HTMLElement[] {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return [];
+
+    const roots: HTMLElement[] = [];
+    const seen = new Set<HTMLElement>();
+    const push = (root: HTMLElement | null) => {
+      if (!root || seen.has(root)) return;
+      seen.add(root);
+      roots.push(root);
+    };
+
+    for (const doc of collectHostDocuments()) {
+      push(doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null);
+      push(doc.querySelector(`.mes[data-message-index="${normalizedId}"] .mes_text`) as HTMLElement | null);
+      push(doc.querySelector(`.mes_text[data-message-index="${normalizedId}"]`) as HTMLElement | null);
+    }
+
+    return roots;
+  }
+
+  function isReadyGeneratedImageElement(image: HTMLImageElement | null): boolean {
+    const src = normalizeImageSrcForCompare(image?.getAttribute('src') ?? image?.currentSrc ?? '');
+    return Boolean(src && (src.startsWith('data:image') || src.startsWith('blob:')));
+  }
+
+  function hasReadyImageNearPluginNativeButton(button: HTMLElement): boolean {
+    let sibling = button.nextElementSibling;
+    while (sibling) {
+      if (sibling.matches?.(CHATU8_IMAGE_BUTTON_SELECTOR)) return false;
+      if (sibling.tagName === 'IMG' && isReadyGeneratedImageElement(sibling as HTMLImageElement)) return true;
+      const nestedImage = sibling.querySelector?.('img') as HTMLImageElement | null;
+      if (isReadyGeneratedImageElement(nestedImage)) return true;
+      sibling = sibling.nextElementSibling;
+    }
+    return false;
+  }
+
+  function buildPluginNativePromptButtonTriggerKey(button: HTMLElement, messageId: number, index: number): string {
+    const requestId = String(
+      button.dataset.requestId ??
+        button.getAttribute('data-request-id') ??
+        button.dataset.stableId ??
+        button.getAttribute('data-stable-id') ??
+        '',
+    ).trim();
+    if (requestId) return `${messageId}:request:${requestId}`;
+
+    const prompt = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+    if (prompt) return `${messageId}:prompt:${prompt.slice(0, 180)}`;
+
+    return `${messageId}:index:${index}`;
+  }
+
+  function prunePluginNativePromptButtonTriggerKeys(now = Date.now()) {
+    for (const [key, triggeredAt] of pluginNativePromptButtonTriggerAt.entries()) {
+      if (now - triggeredAt > PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_DEDUPE_MS) {
+        pluginNativePromptButtonTriggerAt.delete(key);
+      }
+    }
+  }
+
+  function collectPendingPluginNativePromptButtonsForMessage(messageId: number): HTMLElement[] {
+    const buttons: HTMLElement[] = [];
+    const seen = new Set<HTMLElement>();
+    for (const root of getPluginNativePromptButtonMessageRoots(messageId)) {
+      for (const button of Array.from(root.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR)) as HTMLElement[]) {
+        if (seen.has(button)) continue;
+        seen.add(button);
+        if (button.hasAttribute('disabled') || button.getAttribute('aria-disabled') === 'true') continue;
+        if (hasReadyImageNearPluginNativeButton(button)) continue;
+        buttons.push(button);
+      }
+    }
+    return buttons;
+  }
+
+  function triggerPendingPluginNativePromptButtons(
+    reason: string,
+    messageId: number,
+    handoffProgress: PluginImageGenerationHandoffProgress,
+  ): number {
+    const recentIntent = imageRecentIntentStore.read();
+    const recentIntentMessageId =
+      recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : Number.NaN;
+    if (recentIntent?.source !== 'transcript' || recentIntentMessageId !== messageId) return 0;
+    if (handoffProgress.complete || handoffProgress.promptButtonCount <= 0) return 0;
+    if (
+      handoffProgress.requestCount > 0 &&
+      handoffProgress.requestCount >= Math.max(1, handoffProgress.expectedRequestCount)
+    ) {
+      return 0;
+    }
+
+    const now = Date.now();
+    prunePluginNativePromptButtonTriggerKeys(now);
+    const buttons = collectPendingPluginNativePromptButtonsForMessage(messageId);
+    if (buttons.length === 0) return 0;
+
+    let triggeredCount = 0;
+    for (const [index, button] of buttons.entries()) {
+      if (triggeredCount >= PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_MAX_PER_RUN) break;
+      const key = buildPluginNativePromptButtonTriggerKey(button, messageId, index);
+      const lastTriggeredAt = pluginNativePromptButtonTriggerAt.get(key) ?? 0;
+      if (now - lastTriggeredAt <= PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_DEDUPE_MS) continue;
+
+      pluginNativePromptButtonTriggerAt.set(key, now);
+      const delayMs = triggeredCount * 120;
+      window.setTimeout(() => {
+        try {
+          button.click();
+          syncPendingRequestHintsFromDom();
+        } catch (error) {
+          console.warn('[stream-demo] plugin prompt button fallback click failed', {
+            reason,
+            messageId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }, delayMs);
+      triggeredCount += 1;
+    }
+
+    if (triggeredCount > 0) {
+      recordLifecycleTrace('imageGenerationHandoff', 'prompt_button_fallback_triggered', {
+        reason,
+        messageId,
+        triggeredCount,
+        candidateCount: buttons.length,
+        handoffProgress,
+      });
+    }
+
+    return triggeredCount;
+  }
+
+  function collectPluginImageGenerationHandoffProgress(messageId: number): PluginImageGenerationHandoffProgress {
     const normalizedId = Math.trunc(Number(messageId));
     if (!Number.isFinite(normalizedId) || normalizedId < 0) {
       return {
@@ -4393,6 +4981,7 @@ export function useStreamingDemo() {
         promptButtonCount: 0,
         promptPlaceholderCount: 0,
         readyImageCount: 0,
+        expectedRequestCount: 0,
         hasDomHandoff: false,
         complete: false,
       };
@@ -4409,12 +4998,7 @@ export function useStreamingDemo() {
     let readyImageCount = 0;
     let hasDomHandoff = false;
 
-    for (const doc of collectHostDocuments()) {
-      const mesText =
-        (doc.querySelector(`.mes[mesid="${normalizedId}"] .mes_text`) as HTMLElement | null) ??
-        (doc.querySelector(`.mes[data-message-index="${normalizedId}"] .mes_text`) as HTMLElement | null) ??
-        (doc.querySelector(`.mes_text[data-message-index="${normalizedId}"]`) as HTMLElement | null);
-      if (!mesText) continue;
+    for (const mesText of getPluginNativePromptButtonMessageRoots(normalizedId)) {
       promptButtonCount += mesText.querySelectorAll(CHATU8_IMAGE_BUTTON_SELECTOR).length;
       promptPlaceholderCount += mesText.querySelectorAll(CHATU8_IMAGE_SPAN_SELECTOR).length;
       readyImageCount += mesText.querySelectorAll(
@@ -4432,6 +5016,7 @@ export function useStreamingDemo() {
       promptButtonCount,
       promptPlaceholderCount,
       readyImageCount,
+      expectedRequestCount,
       hasDomHandoff,
       complete,
     };
@@ -4474,6 +5059,9 @@ export function useStreamingDemo() {
           diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
         });
         return true;
+      }
+      if (elapsedMs >= PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_TRIGGER_GRACE_MS) {
+        triggerPendingPluginNativePromptButtons('imageGenerationHandoff', normalizedId, handoffProgress);
       }
       await new Promise<void>(resolve => window.setTimeout(resolve, IMAGE_GENERATION_HANDOFF_POLL_MS));
     }
@@ -4544,8 +5132,9 @@ export function useStreamingDemo() {
     }
 
     const leaseMessageIds = collectPluginNativeHostWindowMessageIds(normalizedId);
-    const hiddenLeaseIds = readMessageMetasAfterContainer()
-      .filter(item => leaseMessageIds.includes(item.message_id) && item.is_hidden === true)
+    const materializeLeaseIds = readMessageMetasAfterContainer()
+      .filter(item => leaseMessageIds.includes(item.message_id))
+      .filter(item => item.is_hidden === true || !hasHostMessageDom(item.message_id))
       .map(item => item.message_id);
     const releasePluginNativeLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
       leaseMessageIds,
@@ -4553,9 +5142,9 @@ export function useStreamingDemo() {
     );
     let releaseMaterializedHostLease = () => {};
     normalizePluginNativeMessageMetadata(leaseMessageIds);
-    if (hiddenLeaseIds.length > 0) {
+    if (materializeLeaseIds.length > 0) {
       await setChatMessages(
-        hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: false })),
+        materializeLeaseIds.map(id => ({ message_id: id, is_hidden: false })),
         { refresh: 'affected' },
       );
       releaseMaterializedHostLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
@@ -4575,20 +5164,8 @@ export function useStreamingDemo() {
             error: error instanceof Error ? error.message : String(error),
           });
         }
-        // ⭐ 优化：延迟恢复隐藏状态，避免阻塞用户操作（修复双击黑屏卡顿）
-        if (hiddenLeaseIds.length > 0) {
-          // 不要立即await，而是延迟1秒后台执行，让用户可以继续操作
-          window.setTimeout(async () => {
-            try {
-              await setChatMessages(
-                hiddenLeaseIds.map(id => ({ message_id: id, is_hidden: true })),
-                { refresh: 'none' },
-              );
-            } catch (error) {
-              console.warn('[stream-demo] delayed lease release failed:', error);
-            }
-          }, 1000); // 延迟1秒后台执行，将黑屏时间从1500ms降至150ms
-        }
+        // The durable native shadow window keeps recent plugin-native floors rendered;
+        // hide policy will re-hide only floors outside that window after this bridge turn.
       } finally {
         releaseMaterializedHostLease();
         releasePluginNativeLease();
@@ -4638,6 +5215,7 @@ export function useStreamingDemo() {
 
     for (const delayMs of PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS) {
       const runProbe = () => {
+        void runPluginNativeSameLayerPromptScan(reason, normalizedMessageIds);
         syncPendingRequestHintsFromDom();
         for (const messageId of normalizedMessageIds) {
           recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe', {
@@ -4664,13 +5242,88 @@ export function useStreamingDemo() {
     }
   }
 
+  async function runPluginNativeSameLayerPromptScan(reason: string, messageIds: number[] = []): Promise<void> {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+
+    const roots = collectUnclaimedSameLayerChatu8PromptRoots(messageIds);
+    if (roots.length === 0) return;
+
+    const scanKey = normalizedMessageIds.join(',');
+    const now = Date.now();
+    const previousStartedAt = pluginNativeSameLayerPromptScanStartedAt.get(scanKey) ?? 0;
+    if (now - previousStartedAt < PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_DEDUPE_MS) {
+      recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'deduped', {
+        reason,
+        messageIds: normalizedMessageIds,
+        rootCount: roots.length,
+      });
+      return;
+    }
+    pluginNativeSameLayerPromptScanStartedAt.set(scanKey, now);
+    if (pluginNativeSameLayerPromptScanStartedAt.size > 32) {
+      const staleCutoff = now - PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_DEDUPE_MS * 8;
+      for (const [key, startedAt] of pluginNativeSameLayerPromptScanStartedAt) {
+        if (startedAt < staleCutoff) pluginNativeSameLayerPromptScanStartedAt.delete(key);
+      }
+    }
+
+    const processor = await loadPluginNativeIframeProcessorModule();
+    if (!processor) {
+      recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing', {
+        reason,
+        messageIds: normalizedMessageIds,
+        rootCount: roots.length,
+      });
+      return;
+    }
+
+    let processedCount = 0;
+    try {
+      if (typeof processor.processImagePlaceholdersForElement === 'function') {
+        for (const scanRoot of roots) {
+          await processor.processImagePlaceholdersForElement(scanRoot);
+          processedCount += 1;
+        }
+      } else if (typeof processor.processAllImagePlaceholders === 'function') {
+        await processor.processAllImagePlaceholders();
+        processedCount = roots.length;
+      }
+
+      syncPendingRequestHintsFromDom();
+      queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:same_layer_prompt_scan`);
+      scheduleUiRefresh(['transcriptItems', 'gallery'], `${reason}:same_layer_prompt_scan`, normalizedMessageIds);
+      recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'processed', {
+        reason,
+        messageIds: normalizedMessageIds,
+        rootCount: roots.length,
+        processedCount,
+      });
+    } catch (error) {
+      recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'failed', {
+        reason,
+        messageIds: normalizedMessageIds,
+        rootCount: roots.length,
+        processedCount,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      console.warn('[stream-demo] st-chatu8 same-layer prompt scan failed', {
+        reason,
+        messageIds: normalizedMessageIds,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   function collectRecentPluginNativeHydrationMessageIds(): number[] {
     const transcriptAssistantIds = transcript.value
       .filter(item => item.role === 'assistant')
       .map(item => Math.trunc(Number(item.message_id)))
       .filter(id => Number.isFinite(id) && id >= 0)
       .sort((a, b) => b - a)
-      .slice(0, PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT);
+      .slice(0, PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT);
     const latestAssistantId = transcriptAssistantIds[0] ?? assistantMessageId.value;
     if (latestAssistantId == null || !Number.isFinite(Number(latestAssistantId))) {
       return [...new Set(transcriptAssistantIds)].sort((a, b) => a - b);
@@ -4720,21 +5373,113 @@ export function useStreamingDemo() {
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      try {
-        await setChatMessages(
-          messageIds.map(id => ({ message_id: id, is_hidden: true })),
-          { refresh: 'none' },
-        );
-      } catch (error) {
-        console.warn('[stream-demo] plugin-native host hydration restore failed', {
-          reason,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      } finally {
-        releaseMaterializedLease();
-        releasePreRenderLease();
-        queueHidePolicy(`${reason}:native_host_hydration_done`);
+      releaseMaterializedLease();
+      releasePreRenderLease();
+      queueHidePolicy(`${reason}:native_host_hydration_done`);
+    }
+  }
+
+  async function hydratePluginNativeResponseMessages(reason: string, messageIds: number[]): Promise<void> {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+
+    const hydrationIds = [
+      ...new Set(normalizedMessageIds.flatMap(messageId => collectPluginNativeHostWindowMessageIds(messageId))),
+    ].sort((a, b) => a - b);
+    if (hydrationIds.length === 0) return;
+
+    const sessionKey = hydrationIds.join(',');
+    const now = Date.now();
+    const previousStartedAt = pluginNativeResponseHydrationStartedAt.get(sessionKey) ?? 0;
+    if (
+      pluginNativeResponseHydrationSessions.has(sessionKey) ||
+      now - previousStartedAt < PLUGIN_NATIVE_RESPONSE_HYDRATION_DEDUPE_MS
+    ) {
+      recordLifecycleTrace('pluginNativeResponseHydration', 'deduped', {
+        reason,
+        messageIds: normalizedMessageIds,
+        hydrationIds,
+        sessionKey,
+      });
+      return;
+    }
+
+    pluginNativeResponseHydrationSessions.add(sessionKey);
+    pluginNativeResponseHydrationStartedAt.set(sessionKey, now);
+    if (pluginNativeResponseHydrationStartedAt.size > 24) {
+      const staleCutoff = now - PLUGIN_NATIVE_RESPONSE_HYDRATION_DEDUPE_MS * 4;
+      for (const [key, startedAt] of pluginNativeResponseHydrationStartedAt) {
+        if (startedAt < staleCutoff) pluginNativeResponseHydrationStartedAt.delete(key);
       }
+    }
+
+    if (hidePolicyTimer) {
+      window.clearTimeout(hidePolicyTimer);
+      hidePolicyTimer = 0;
+    }
+
+    const materializeHydrationIds = readMessageMetasAfterContainer()
+      .filter(item => hydrationIds.includes(item.message_id))
+      .filter(item => item.is_hidden === true || !hasHostMessageDom(item.message_id))
+      .map(item => item.message_id);
+    const releaseHydrationLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+      hydrationIds,
+      `${reason}:response_hydration`,
+    );
+    let releaseMaterializedLease = () => {};
+
+    recordLifecycleTrace('pluginNativeResponseHydration', 'start', {
+      reason,
+      messageIds: normalizedMessageIds,
+      hydrationIds,
+      materializeHydrationIds,
+      sessionKey,
+    });
+
+    try {
+      normalizePluginNativeMessageMetadata(hydrationIds);
+      if (materializeHydrationIds.length > 0) {
+        await setChatMessages(
+          materializeHydrationIds.map(id => ({ message_id: id, is_hidden: false })),
+          { refresh: 'affected' },
+        );
+        releaseMaterializedLease = hostVisualHideController.leaseMessageIdsForPluginNativeHandoff(
+          hydrationIds,
+          `${reason}:response_hydration_materialized`,
+        );
+      }
+
+      for (const messageId of normalizedMessageIds) {
+        await ensureHostMesTextRendered(messageId);
+      }
+
+      for (const delayMs of [120, 360, 900, 1800, 3600] as const) {
+        await new Promise<void>(resolve => window.setTimeout(resolve, delayMs));
+        syncPendingRequestHintsFromDom();
+        syncTranscriptItemsFromHostData(`${reason}:response_hydration_delay_${delayMs}`, normalizedMessageIds);
+        discoverRecentNativeGalleryImages(`${reason}:response_hydration_delay_${delayMs}`, normalizedMessageIds);
+        queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:response_hydration_delay_${delayMs}`);
+      }
+
+      recordLifecycleTrace('pluginNativeResponseHydration', 'done', {
+        reason,
+        messageIds: normalizedMessageIds,
+        hydrationIds,
+        sessionKey,
+      });
+    } catch (error) {
+      console.warn('[stream-demo] plugin-native response hydration failed', {
+        reason,
+        messageIds: normalizedMessageIds,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      releaseMaterializedLease();
+      releaseHydrationLease();
+      pluginNativeResponseHydrationSessions.delete(sessionKey);
+      queueHidePolicy(`${reason}:response_hydration_done`);
     }
   }
 
@@ -4918,6 +5663,38 @@ export function useStreamingDemo() {
     });
 
     await new Promise<void>(resolve => window.setTimeout(resolve, 120));
+  }
+
+  async function refreshHostMessagesForPluginNativeImageCompletion(reason: string, messageIds: number[]): Promise<void> {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+
+    recordLifecycleTrace('pluginNativeImageCompletionRefresh', 'start', {
+      reason,
+      messageIds: normalizedMessageIds,
+    });
+
+    try {
+      for (const messageId of normalizedMessageIds) {
+        await ensureHostMesTextRendered(messageId);
+        await refreshHostMessageForPluginNativeImageTrigger(messageId);
+      }
+      syncTranscriptItemsFromHostData(`${reason}:host_dom_refresh`, normalizedMessageIds);
+      scheduleUiRefresh(['transcriptItems', 'gallery'], `${reason}:host_dom_refresh`, normalizedMessageIds);
+      queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:host_dom_refresh`);
+      recordLifecycleTrace('pluginNativeImageCompletionRefresh', 'done', {
+        reason,
+        messageIds: normalizedMessageIds,
+      });
+    } catch (error) {
+      recordLifecycleTrace('pluginNativeImageCompletionRefresh', 'error', {
+        reason,
+        messageIds: normalizedMessageIds,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   function beginPendingImageTask(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
@@ -5269,9 +6046,10 @@ export function useStreamingDemo() {
         if (isCurrentOpeningSeedMessageByPayload(message, openingPayload.value)) continue;
         const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(message, openingPayload.value);
         const rawRole = resolveHostMessageRole(message);
+        const rawMessage = resolveHostMessageText(message);
         const role = resolveTranscriptRole({
           rawRole,
-          rawMessage: String(message?.message ?? ''),
+          rawMessage,
           isOpeningResult,
         });
         if (role === 'assistant') nextLatestAssistantId = id;
@@ -5283,7 +6061,7 @@ export function useStreamingDemo() {
           buildTranscriptItem({
             id: entry.id,
             role: entry.role,
-            raw: String(entry.message?.message ?? ''),
+            raw: resolveHostMessageText(entry.message),
             hidden: entry.message?.is_hidden === true,
             isOpening: entry.isOpeningResult,
             canReroll: entry.isOpeningResult && canRerollOpeningFromMessages(all),
@@ -6349,25 +7127,142 @@ export function useStreamingDemo() {
     }
   }
 
-  async function reprocessLatestAssistantVariables() {
+  function countMvuObjectKeys(value: unknown): number {
+    return value && typeof value === 'object' ? Object.keys(value as Record<string, unknown>).length : 0;
+  }
+
+  function readMessageMvuDataCompleteness(messageId: number) {
+    const normalizedId = Math.trunc(Number(messageId));
+    const empty = {
+      messageId: Number.isFinite(normalizedId) ? normalizedId : null,
+      hasCurrentData: false,
+      hasPreviousData: false,
+      currentStatKeyCount: 0,
+      currentInitializedLorebookCount: 0,
+      previousStatKeyCount: 0,
+      previousInitializedLorebookCount: 0,
+      updateBlockCount: 0,
+      instructionMarkerCount: 0,
+      missingCurrentData: false,
+      reason: 'invalid_message_id',
+    };
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return empty;
+
+    try {
+      if (typeof Mvu === 'undefined' || typeof Mvu?.getMvuData !== 'function') {
+        return { ...empty, messageId: normalizedId, reason: 'mvu_unavailable' };
+      }
+
+      const currentData = Mvu.getMvuData({ type: 'message', message_id: normalizedId });
+      const currentStatKeyCount = countMvuObjectKeys(_.get(currentData, 'stat_data', null));
+      const currentInitializedLorebookCount = countMvuObjectKeys(_.get(currentData, 'initialized_lorebooks', null));
+      const hasCurrentData = currentStatKeyCount > 0 || currentInitializedLorebookCount > 0;
+
+      let previousStatKeyCount = 0;
+      let previousInitializedLorebookCount = 0;
+      for (let offset = 1; offset <= 24; offset += 1) {
+        const previousId = normalizedId - offset;
+        if (previousId < 0) break;
+        const previousData = Mvu.getMvuData({ type: 'message', message_id: previousId });
+        previousStatKeyCount = countMvuObjectKeys(_.get(previousData, 'stat_data', null));
+        previousInitializedLorebookCount = countMvuObjectKeys(_.get(previousData, 'initialized_lorebooks', null));
+        if (previousStatKeyCount > 0 || previousInitializedLorebookCount > 0) break;
+      }
+
+      const messageDetail = readChatMessageDetail(normalizedId);
+      const rawMessage = resolveHostMessageText(messageDetail);
+      const updateBlockCount = extractMvuUpdateVariableBlocks(rawMessage).length;
+      const instructionMarkerCount = updateBlockCount + countMvuJsonInstructionMarkers(rawMessage);
+      const hasPreviousData = previousStatKeyCount > 0 || previousInitializedLorebookCount > 0;
+      const missingStatData =
+        currentStatKeyCount === 0 &&
+        (previousStatKeyCount > 0 || instructionMarkerCount > 0 || rawMessage.trim().length > 0);
+      const missingInitializedLorebooks =
+        currentInitializedLorebookCount === 0 && previousInitializedLorebookCount > 0;
+      const missingCurrentData = !hasCurrentData && (hasPreviousData || instructionMarkerCount > 0 || missingStatData)
+        ? true
+        : missingStatData || missingInitializedLorebooks;
+
+      return {
+        messageId: normalizedId,
+        hasCurrentData,
+        hasPreviousData,
+        currentStatKeyCount,
+        currentInitializedLorebookCount,
+        previousStatKeyCount,
+        previousInitializedLorebookCount,
+        updateBlockCount,
+        instructionMarkerCount,
+        missingCurrentData,
+        reason: missingCurrentData ? 'missing_current_data' : 'ready',
+      };
+    } catch (error) {
+      return {
+        ...empty,
+        messageId: normalizedId,
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  async function autoReprocessLatestAssistantVariablesIfMissing(reason = 'mounted.mvu_reload_probe') {
+    const latestAssistant = latestAssistantItem.value;
+    if (!latestAssistant || latestAssistant.role !== 'assistant') return;
+    if (busy.value || reprocessVariablesPending.value) return;
+    if (autoMvuReloadReprocessMessageIds.has(latestAssistant.message_id)) return;
+
+    const completeness = readMessageMvuDataCompleteness(latestAssistant.message_id);
+    recordLifecycleTrace('mvuReloadReprocess', 'probe', {
+      reason,
+      assistantMessageId: latestAssistant.message_id,
+      completeness,
+    });
+    if (!completeness.missingCurrentData) return;
+
+    autoMvuReloadReprocessMessageIds.add(latestAssistant.message_id);
+    appendLog(
+      'info',
+      '自动重试额外模型解析',
+      `UI 重载后检测到 assistant #${latestAssistant.message_id} 的 MVU 数据缺口，已排队走原生重试。`,
+    );
+    await reprocessLatestAssistantVariables({
+      source: 'auto_reload',
+      silent: true,
+    });
+  }
+
+  function scheduleMvuReloadReprocessIfMissing(reason = 'mounted.mvu_reload_probe') {
+    if (autoMvuReloadReprocessTimer) {
+      window.clearTimeout(autoMvuReloadReprocessTimer);
+    }
+    autoMvuReloadReprocessTimer = window.setTimeout(() => {
+      autoMvuReloadReprocessTimer = 0;
+      void autoReprocessLatestAssistantVariablesIfMissing(reason);
+    }, 900);
+  }
+
+  async function reprocessLatestAssistantVariables(options?: ReprocessLatestAssistantOptions) {
+    const normalizedOptions = options ?? {};
+    const silent = normalizedOptions.silent === true;
     const traceId = createTraceId('mvu-extra-analysis');
     const markStageTiming = createStageTimingTrace('reprocessLatestAssistantVariables', traceId);
     markStageTiming('entry', {
       busyAtEntry: busy.value,
       pendingAtEntry: reprocessVariablesPending.value,
       latestAssistantMessageId: latestAssistantItem.value?.message_id ?? null,
+      source: normalizedOptions.source ?? 'manual',
     });
     const latestAssistant = latestAssistantItem.value;
     if (!latestAssistant || latestAssistant.role !== 'assistant') {
       markStageTiming('skip_no_assistant');
-      toastr?.info?.('当前还没有可重新解析变量的 assistant 楼层');
+      if (!silent) toastr?.info?.('当前还没有可重新解析变量的 assistant 楼层');
       return;
     }
     if (busy.value) {
       markStageTiming('skip_busy', {
         assistantMessageId: latestAssistant.message_id,
       });
-      toastr?.warning?.('正文生成中，等待生成结束后再重试变量解析');
+      if (!silent) toastr?.warning?.('正文生成中，等待生成结束后再重试变量解析');
       return;
     }
     if (reprocessVariablesPending.value) {
@@ -6384,6 +7279,7 @@ export function useStreamingDemo() {
       {
         assistantMessageId: latestAssistant.message_id,
         assistantSignature: buildDebugMessageSignature(latestAssistant.raw),
+        source: normalizedOptions.source ?? 'manual',
       },
       traceId,
     );
@@ -6418,16 +7314,17 @@ export function useStreamingDemo() {
         });
         appendLog(
           'action',
-          '重试额外模型解析',
+          normalizedOptions.source === 'auto_reload' ? '自动重试额外模型解析' : '重试额外模型解析',
           `已触发 MVU 原生重试额外模型解析：assistant #${latestAssistant.message_id}`,
         );
-        toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
+        if (!silent) toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
         recordLifecycleTrace(
           'reprocessLatestAssistantVariables',
           'done',
           {
             assistantMessageId: latestAssistant.message_id,
             retryStatus: reprocessResult.status,
+            source: normalizedOptions.source ?? 'manual',
           },
           traceId,
         );
@@ -6440,7 +7337,7 @@ export function useStreamingDemo() {
         reason,
       });
       appendLog('info', '重试额外模型解析未触发', `#${latestAssistant.message_id}: ${reason}`);
-      toastr?.warning?.(`重试额外模型解析未触发：${reason}`);
+      if (!silent) toastr?.warning?.(`重试额外模型解析未触发：${reason}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       markStageTiming('error_caught', {
@@ -6457,7 +7354,7 @@ export function useStreamingDemo() {
         traceId,
       );
       appendLog('error', '重试额外模型解析失败', message);
-      toastr?.error?.(`重试额外模型解析失败：${message}`);
+      if (!silent) toastr?.error?.(`重试额外模型解析失败：${message}`);
     } finally {
       markStageTiming('finally_start', {
         assistantMessageId: latestAssistant.message_id,
@@ -7182,11 +8079,14 @@ export function useStreamingDemo() {
           const recentIntent = imageRecentIntentStore.read();
           const targetMessageIds = [
             ...new Set(
-              [matchedResponse?.messageId, recentIntent?.messageId ?? null]
-                .map(id => Math.trunc(Number(id)))
-                .filter((id): id is number => Number.isFinite(id) && id >= 0),
+              [matchedResponse?.messageId, recentIntent?.messageId]
+                .map(normalizePluginNativeHandoffMessageId)
+                .filter((id): id is number => id != null),
             ),
           ];
+          const responseMessageIds =
+            targetMessageIds.length > 0 ? targetMessageIds : collectPluginNativeHandoffMessageIds({ requestId, prompt });
+          const isUntargetedResponse = targetMessageIds.length === 0;
 
           recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
             requestId,
@@ -7195,23 +8095,35 @@ export function useStreamingDemo() {
             matchedResponse,
             recentIntent,
             targetMessageIds,
+            responseMessageIds,
+            isUntargetedResponse,
             pendingTasks: imagePendingTaskManager.getDebugState(),
             diagnostics:
-              targetMessageIds.length > 0
-                ? targetMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
+              responseMessageIds.length > 0
+                ? responseMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
                 : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
           }));
 
-          syncTranscriptItemsFromHostData('host.plugin_native_response_success', targetMessageIds);
-          if (targetMessageIds.length > 0) {
-            queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');
-            discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', targetMessageIds);
+          syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
+          if (responseMessageIds.length > 0) {
+            queueGeneratedImageEntityRefresh(responseMessageIds, 'host.plugin_native_response_success');
+            void refreshHostMessagesForPluginNativeImageCompletion('host.plugin_native_response_success', responseMessageIds);
+            discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', responseMessageIds);
             // 增强：延迟二次扫描，确保图片DOM完全更新后再次发现
             window.setTimeout(() => {
-              discoverRecentNativeGalleryImages('host.plugin_native_response_success:delayed', targetMessageIds);
+              discoverRecentNativeGalleryImages('host.plugin_native_response_success:delayed', responseMessageIds);
             }, 400);
-            scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);
-            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);
+            scheduleHostImageDataReconcile('host.plugin_native_response_success', responseMessageIds);
+            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', responseMessageIds);
+            void hydratePluginNativeResponseMessages('host.plugin_native_response_success', responseMessageIds);
+          }
+          if (isUntargetedResponse) {
+            queueGeneratedImageEntityRefresh([], 'host.plugin_native_response_success:untargeted');
+            discoverRecentNativeGalleryImages('host.plugin_native_response_success:untargeted_recent');
+            window.setTimeout(() => {
+              discoverRecentNativeGalleryImages('host.plugin_native_response_success:untargeted_delayed');
+            }, 900);
+            void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');
           }
         },
         onResponseFailure: ({ requestId, prompt }) => {
@@ -7503,6 +8415,7 @@ export function useStreamingDemo() {
     pluginNativeLlmImageGenerationStops = [];
     activePluginNativeLlmImageGenerationRequests.clear();
     lastPluginNativeLlmImageGenerationSettledAt = 0;
+    pluginNativePromptButtonTriggerAt.clear();
     nativeGenerationRevealActive = false;
     releaseHiddenStoryMessagesForNativeGeneration();
     hidePolicyTimer = clearTimer(hidePolicyTimer);
@@ -7510,8 +8423,11 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
+    autoMvuReloadReprocessTimer = clearTimer(autoMvuReloadReprocessTimer);
     hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));
     hostImageDataReconcileTimers.clear();
+    pluginNativeResponseHydrationSessions.clear();
+    pluginNativeResponseHydrationStartedAt.clear();
     galleryInitialCacheTimers.forEach(timer => window.clearTimeout(timer));
     galleryInitialCacheTimers.clear();
     hideStatePersistTimer = clearTimer(hideStatePersistTimer);
@@ -7798,7 +8714,7 @@ export function useStreamingDemo() {
     const candidates = messages
       .map(message => {
         const messageId = Math.trunc(Number(message?.message_id));
-        const rawMessage = String(message?.message ?? message?.mes ?? '');
+        const rawMessage = resolveHostMessageText(message);
         return { message, messageId, rawMessage };
       })
       .filter(item => Number.isFinite(item.messageId) && item.messageId >= 0)
@@ -8031,7 +8947,7 @@ export function useStreamingDemo() {
 
         const message = messageById.get(messageId);
         if (!message) continue;
-        const rawMessage = String(message?.message ?? message?.mes ?? '');
+        const rawMessage = resolveHostMessageText(message);
         if (!isAssistantGalleryHistoryCandidate(message, rawMessage)) continue;
 
         const images = buildGeneratedImageRefsForMessage({
@@ -8138,6 +9054,7 @@ export function useStreamingDemo() {
     runDemo,
     rollLatestTurn,
     reprocessLatestAssistantVariables,
+    scheduleMvuReloadReprocessIfMissing,
     refreshWorkbench,
     updateOpeningMeta,
     updateOpeningField,

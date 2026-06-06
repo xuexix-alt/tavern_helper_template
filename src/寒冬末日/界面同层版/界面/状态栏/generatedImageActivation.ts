@@ -4,6 +4,7 @@ export type GeneratedImageActivationPayload = {
   requestId: string;
   imageSrc: string;
   source?: 'transcript' | 'gallery';
+  sameLayerOnly?: boolean;
 };
 
 function decodeValue(value: string): string {
@@ -52,13 +53,9 @@ export function parseGeneratedImageActivationPayload(input: {
         '',
     ),
   );
-  const requestId = String(
-    carrierDataset.requestId ??
-      targetDataset.requestId ??
-      carrierDataset.samelayerRequestId ??
-      targetDataset.samelayerRequestId ??
-      '',
-  ).trim();
+  const nativeRequestId = String(carrierDataset.requestId ?? targetDataset.requestId ?? '').trim();
+  const sameLayerRequestId = String(carrierDataset.samelayerRequestId ?? targetDataset.samelayerRequestId ?? '').trim();
+  const requestId = nativeRequestId || sameLayerRequestId;
   const rawSource = String(carrierDataset.source ?? targetDataset.source ?? '').trim();
   const source = rawSource === 'gallery' || rawSource === 'transcript' ? rawSource : undefined;
   const imageSrc = decodeValue(
@@ -78,5 +75,6 @@ export function parseGeneratedImageActivationPayload(input: {
     requestId,
     imageSrc,
     source,
+    sameLayerOnly: Boolean(!nativeRequestId && sameLayerRequestId),
   };
 }

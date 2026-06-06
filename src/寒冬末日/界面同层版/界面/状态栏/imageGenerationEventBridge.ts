@@ -6,8 +6,8 @@
  *
  * 1. 监听 `generate-image-request`：记录一次 pending（用来和响应匹配 + 兜底超时）。
  * 2. 监听 `generate-image-response`：
- *    - `success: true` → 图片会通过 MutationObserver 灌进同层，UI 不用再做什么。
- *      这里只做清理和一次 debug trace。
+ *    - `success: true` → 桥只清理 pending 并发 trace；上层仍需要主动 reconcile / hydrate，
+ *      因为手机端同层 UI 常驻 0 层，插件目标楼层可能处于隐藏状态而不会及时触发可见 DOM mutation。
  *    - `success: false` 或缺少 `imageData` → 弹 toast 把错误告诉用户，并清理 pending。
  *
  * 这条桥的意义是：**插件内部失败（比如 NovelAI 返回不可解析的 zip，"Can't read the data

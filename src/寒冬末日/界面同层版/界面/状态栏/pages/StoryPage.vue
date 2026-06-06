@@ -563,6 +563,7 @@ const {
   disableSameLayerUi,
   rollLatestTurn,
   reprocessLatestAssistantVariables,
+  scheduleMvuReloadReprocessIfMissing,
   updateOpeningMeta,
   updateOpeningField,
   updateOpeningWorldMode,
@@ -1266,6 +1267,16 @@ function resolveIframeImageButtonByPromptToken(messageId: number, promptToken: s
   return null;
 }
 
+function getPluginNativeRequestId(element: HTMLElement | null): string {
+  return String(
+    element?.dataset.requestId ??
+      element?.dataset.samelayerRequestId ??
+      element?.getAttribute('data-request-id') ??
+      element?.getAttribute('data-samelayer-request-id') ??
+      '',
+  ).trim();
+}
+
 function resolveIframeImageButtonByRequestId(messageId: number, requestId: string): HTMLElement | null {
   const root = resolveIframeMessageRoot(messageId);
   if (!root || !requestId) return null;
@@ -1274,7 +1285,7 @@ function resolveIframeImageButtonByRequestId(messageId: number, requestId: strin
   ) as HTMLElement[];
   return (
     buttons.find(button => {
-      const buttonRequestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+      const buttonRequestId = getPluginNativeRequestId(button);
       return buttonRequestId === requestId;
     }) ?? null
   );
@@ -1285,7 +1296,7 @@ function resolveIframeImageNodeByRequestId(messageId: number, requestId: string)
   if (!root || !requestId) return null;
   const spans = Array.from(root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder')) as HTMLElement[];
   for (const span of spans) {
-    const spanRequestId = String(span.dataset.requestId ?? span.getAttribute('data-request-id') ?? '').trim();
+    const spanRequestId = getPluginNativeRequestId(span);
     if (spanRequestId !== requestId) continue;
     const image = span.querySelector('img') as HTMLImageElement | null;
     if (image) return image;
@@ -1311,7 +1322,7 @@ function resolveIframeImageNodeBySrc(messageId: number, imageSrc: string): HTMLI
 function resolveIframeImageNodeByPromptToken(messageId: number, promptToken: string): HTMLImageElement | null {
   const button = resolveIframeImageButtonByPromptToken(messageId, promptToken);
   if (!button) return null;
-  const requestId = String(button.dataset.requestId ?? button.getAttribute('data-request-id') ?? '').trim();
+  const requestId = getPluginNativeRequestId(button);
   if (requestId) {
     const image = resolveIframeImageNodeByRequestId(messageId, requestId);
     if (image) return image;
@@ -1403,7 +1414,7 @@ function resolveHostImageTarget(
   const iframeImageBySrc = imageSrc ? resolveIframeImageNodeBySrc(messageId, imageSrc) : null;
   if (imageBySrc) {
     const span = imageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
-    const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
+    const spanRequestId = getPluginNativeRequestId(span);
     return {
       hostMessageRoot,
       hostImage: imageBySrc,
@@ -1420,7 +1431,7 @@ function resolveHostImageTarget(
 
   if (iframeImageBySrc) {
     const span = iframeImageBySrc.closest('.st-chatu8-image-span') as HTMLElement | null;
-    const spanRequestId = String(span?.dataset.requestId ?? span?.getAttribute('data-request-id') ?? '').trim();
+    const spanRequestId = getPluginNativeRequestId(span);
     return {
       hostMessageRoot,
       hostImage: resolveHostImageNodeByPromptToken(messageId, promptToken),
@@ -1673,6 +1684,7 @@ async function startTranscriptHostImageProxy(
 
 async function handleTranscriptDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
+  if (isSameLayerPluginNativeImageGestureTarget(event.target)) return;
   const rawMessageId = resolveTranscriptDoubleClickMessageId(event.target);
   if (!Number.isFinite(rawMessageId) || rawMessageId == null || rawMessageId < 0) return;
   const messageId = Math.trunc(rawMessageId);
@@ -1952,6 +1964,21 @@ function handleOpenGallery(_messageId: number) {
   openGalleryDrawer();
 }
 
+function resolveGeneratedImageMessageIdFromDomTarget(element: HTMLElement, carrier: HTMLElement): string {
+  const transcriptRoot = carrier.closest(
+    '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id]',
+  ) as HTMLElement | null;
+  const rootMessageId = String(transcriptRoot?.dataset.messageId ?? '').trim();
+  if (rootMessageId) return rootMessageId;
+
+  const carrierMessageId = String(carrier.dataset.messageId ?? '').trim();
+  if (carrierMessageId) return carrierMessageId;
+
+  const targetImage =
+    element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
+  return String(element.dataset.messageId ?? targetImage?.dataset.messageId ?? '').trim();
+}
+
 function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {
   const element = target as HTMLElement | null;
   const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
@@ -1959,24 +1986,95 @@ function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): 
 
   const targetImage =
     element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
+  const messageId = resolveGeneratedImageMessageIdFromDomTarget(element, carrier);
+  const promptDataset = resolvePluginNativePromptDatasetFromCarrier(carrier);
+  const carrierDataset = { ...promptDataset, ...carrier.dataset, messageId };
+  const targetDataset = { ...(targetImage?.dataset ?? {}), messageId };
   return parseGeneratedImageActivationPayload({
-    carrierDataset: carrier.dataset,
-    targetDataset: targetImage?.dataset ?? {},
+    carrierDataset,
+    targetDataset,
     targetAttrSrc: targetImage?.getAttribute('src') ?? null,
     targetCurrentSrc: targetImage?.currentSrc ?? null,
     targetSrc: targetImage?.getAttribute('src') ?? null,
   });
 }
 
+function resolvePluginNativePromptDatasetFromCarrier(carrier: HTMLElement): DOMStringMap | null {
+  const selector = 'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]';
+  const hasPromptPayload = (candidate: HTMLElement | null): candidate is HTMLElement =>
+    Boolean(
+      candidate &&
+        (candidate.dataset.imageTag ||
+          candidate.dataset.link ||
+          candidate.getAttribute('data-image-tag') ||
+          candidate.getAttribute('data-link')),
+    );
+
+  let sibling = carrier.previousElementSibling;
+  while (sibling) {
+    if (sibling.matches?.(selector) && hasPromptPayload(sibling as HTMLElement)) {
+      return (sibling as HTMLElement).dataset;
+    }
+    sibling = sibling.previousElementSibling;
+  }
+
+  const requestId = String(
+    carrier.dataset.requestId ??
+      carrier.dataset.samelayerRequestId ??
+      carrier.getAttribute('data-request-id') ??
+      carrier.getAttribute('data-samelayer-request-id') ??
+      '',
+  ).trim();
+  const root = carrier.closest('[data-message-id], [mesid], .assistant-body, .mes_text') ?? carrier.parentElement;
+  const candidates = Array.from(root?.querySelectorAll(selector) ?? []) as HTMLElement[];
+  if (requestId) {
+    const matched = candidates.find(candidate => {
+      const candidateRequestId = String(
+        candidate.dataset.requestId ??
+          candidate.dataset.samelayerRequestId ??
+          candidate.getAttribute('data-request-id') ??
+          candidate.getAttribute('data-samelayer-request-id') ??
+          '',
+      ).trim();
+      return candidateRequestId === requestId && hasPromptPayload(candidate);
+    });
+    if (matched) return matched.dataset;
+  }
+
+  const container = carrier.closest('.ai-image-container, .st-chatu8-image-container');
+  const containerButton = container?.querySelector(selector) as HTMLElement | null;
+  if (hasPromptPayload(containerButton)) return containerButton.dataset;
+
+  return candidates.find(hasPromptPayload)?.dataset ?? null;
+}
+
+function isSameLayerPluginNativeImageGestureTarget(target: EventTarget | null): boolean {
+  const element = target instanceof HTMLElement ? target : null;
+  const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  return Boolean(carrier && isPluginNativeImageElement(carrier));
+}
+
+function isSameLayerGeneratedImageAssetTarget(target: EventTarget | null): boolean {
+  const element = target instanceof HTMLElement ? target : null;
+  return Boolean(element?.closest?.('.generated-image-asset-root'));
+}
+
+function normalizeGeneratedImagePayloadMessageId(payload: GeneratedImageActivationPayload): number | null {
+  if (payload?.messageId == null) return null;
+  const messageId = Math.trunc(Number(payload.messageId));
+  if (!Number.isFinite(messageId) || messageId < 0) return null;
+  return messageId;
+}
+
 async function activateGeneratedImageView(payload: GeneratedImageActivationPayload) {
-  const messageId = Number(payload?.messageId);
-  if (!Number.isFinite(messageId)) return;
+  const messageId = normalizeGeneratedImagePayloadMessageId(payload);
+  if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
-  await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
+  await withPluginNativeMessageLease(messageId, async () => {
     // 预热宿主 mes_text，确保 DOM 存在
-    await ensureHostMesTextRendered(Math.trunc(messageId));
+    await ensureHostMesTextRendered(messageId);
 
     // 短暂延迟，等待插件处理 DOM
     await new Promise(resolve => window.setTimeout(resolve, 150));
@@ -1984,7 +2082,7 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
     const targetNode = await resolveWithRetry(
       () => {
         const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-          Math.trunc(messageId),
+          messageId,
           promptToken,
           requestId,
           imageSrc,
@@ -2005,26 +2103,26 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
       { attempts: 10, delayMs: 120 },
     );
     if (!targetNode) {
-      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看目标未找到`);
+      toastr?.warning?.(`楼层 #${messageId} 的图片查看目标未找到`);
       return;
     }
     if (!triggerHostElementClick(targetNode)) {
-      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片查看触发失败`);
+      toastr?.warning?.(`楼层 #${messageId} 的图片查看触发失败`);
     }
   });
 }
 
 async function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
-  const messageId = Number(payload?.messageId);
-  if (!Number.isFinite(messageId)) return;
+  const messageId = normalizeGeneratedImagePayloadMessageId(payload);
+  if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
   await withPluginNativeMessageLease(
-    Math.trunc(messageId),
+    messageId,
     async () => {
       // 预热宿主 mes_text，确保 DOM 存在
-      await ensureHostMesTextRendered(Math.trunc(messageId));
+      await ensureHostMesTextRendered(messageId);
 
       // 短暂延迟，等待插件处理 DOM
       await new Promise(resolve => window.setTimeout(resolve, 150));
@@ -2032,7 +2130,7 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
       let targetNode = await resolveWithRetry(
         () => {
           const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-            Math.trunc(messageId),
+            messageId,
             promptToken,
             requestId,
             imageSrc,
@@ -2060,9 +2158,9 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
           requestId,
           imageSrc,
         });
-        const mesTextRoot = resolveHostMessageTriggerTarget(Math.trunc(messageId));
+        const mesTextRoot = resolveHostMessageTriggerTarget(messageId);
         if (!mesTextRoot) {
-          toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改目标未找到`);
+          toastr?.warning?.(`楼层 #${messageId} 的图片 tag 修改目标未找到`);
           return;
         }
         targetNode = mesTextRoot;
@@ -2070,7 +2168,7 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
 
       preparePluginMenuForFullscreen();
       if (!dispatchHostImageTagTrigger(targetNode)) {
-        toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片 tag 修改触发失败`);
+        toastr?.warning?.(`楼层 #${messageId} 的图片 tag 修改触发失败`);
       }
     },
     { beforeRelease: () => waitForTimeout(720) },
@@ -2078,17 +2176,17 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
 }
 
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
-  const messageId = Number(payload?.messageId);
-  if (!Number.isFinite(messageId)) return;
+  const messageId = normalizeGeneratedImagePayloadMessageId(payload);
+  if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');
   const requestId = String(payload?.requestId ?? '').trim();
   const imageSrc = String(payload?.imageSrc ?? '').trim();
   const intentSource = payload?.source === 'gallery' ? 'gallery' : 'transcript';
-  await withPluginNativeMessageLease(Math.trunc(messageId), async () => {
-    await ensureHostMesTextRendered(Math.trunc(messageId));
+  await withPluginNativeMessageLease(messageId, async () => {
+    await ensureHostMesTextRendered(messageId);
     const targetNode = await resolveWithRetry(() => {
       const { hostMessageRoot, hostImage, hostButton, iframeImage, iframeButton } = resolveHostImageTarget(
-        Math.trunc(messageId),
+        messageId,
         promptToken,
         requestId,
         imageSrc,
@@ -2105,19 +2203,28 @@ async function activateGeneratedImageRegenerate(payload: GeneratedImageActivatio
       );
     }, PLUGIN_NATIVE_TARGET_RESOLVE_RETRY);
     if (!targetNode) {
-      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生目标未找到`);
+      if (payload.sameLayerOnly === true) {
+        console.warn('[image-regenerate] same-layer-only image has no plugin-native regenerate target', {
+          messageId,
+          promptToken,
+          requestId,
+        });
+        return;
+      }
+      toastr?.warning?.(`楼层 #${messageId} 的图片重生目标未找到`);
       return;
     }
-    beginPendingImageTask(Math.trunc(messageId), intentSource);
+    beginPendingImageTask(messageId, intentSource);
     preparePluginMenuForFullscreen();
     if (!dispatchHostImageRegenerateTrigger(targetNode)) {
-      toastr?.warning?.(`楼层 #${Math.trunc(messageId)} 的图片重生触发失败`);
+      toastr?.warning?.(`楼层 #${messageId} 的图片重生触发失败`);
     }
   });
 }
 
 function handleGeneratedImageWindowDoubleClickCapture(event: MouseEvent) {
   if (isBridgedEvent(event)) return;
+  if (isSameLayerGeneratedImageAssetTarget(event.target)) return;
   const payload = resolveGeneratedImagePayloadFromDomTarget(event.target);
   if (!payload) return;
   event.preventDefault();
@@ -2225,6 +2332,12 @@ async function handleReprocessVariablesFromChoiceModal() {
 
 onMounted(() => {
   refreshMvuVariableUpdateMode();
+  window.setTimeout(() => {
+    refreshMvuVariableUpdateMode();
+    if (mvuVariableUpdateMode.value === 'extra_analysis') {
+      scheduleMvuReloadReprocessIfMissing('story_page_mounted_mvu_gap');
+    }
+  }, 600);
   updateReaderShellHeight();
   nextTick(() => {
     if (anchorTranscriptToLatest('auto')) {

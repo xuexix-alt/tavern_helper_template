@@ -84,9 +84,9 @@ test('runGenerationFlow queues post-done official lifecycle side effects per ass
 
 test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event order', () => {
   const body = extractFunctionBody(source, 'emitOfficialGenerationLifecycle');
-  const generationEndedIndex = body.indexOf('eventEmit(tavern_events.GENERATION_ENDED');
-  const messageReceivedIndex = body.indexOf('eventEmit(tavern_events.MESSAGE_RECEIVED');
-  const messageUpdatedIndex = body.indexOf('eventEmit(tavern_events.MESSAGE_UPDATED');
+  const generationEndedIndex = body.search(/emitTavernLifecycleEventWithTimeout\(\s*tavern_events\.GENERATION_ENDED/);
+  const messageReceivedIndex = body.search(/emitTavernLifecycleEventWithTimeout\(\s*tavern_events\.MESSAGE_RECEIVED/);
+  const messageUpdatedIndex = body.search(/emitTavernLifecycleEventWithTimeout\(\s*tavern_events\.MESSAGE_UPDATED/);
 
   assert.notEqual(generationEndedIndex, -1, 'same-layer should emit GENERATION_ENDED for native plugin consumers');
   assert.notEqual(messageReceivedIndex, -1, 'same-layer should emit MESSAGE_RECEIVED after generation end');
@@ -94,6 +94,26 @@ test('emitOfficialGenerationLifecycle mirrors native Tavern assistant event orde
   assert.ok(
     generationEndedIndex < messageReceivedIndex && messageReceivedIndex < messageUpdatedIndex,
     'same-layer lifecycle should follow native Tavern order: GENERATION_ENDED -> MESSAGE_RECEIVED -> MESSAGE_UPDATED',
+  );
+  assert.match(
+    source,
+    /const OFFICIAL_LIFECYCLE_EVENT_AWAIT_TIMEOUT_MS = 1200;/,
+    'same-layer should bound official lifecycle awaits so plugin-native handoff is not delayed by long listeners',
+  );
+  assert.match(
+    source,
+    /async function emitTavernLifecycleEventWithTimeout\(/,
+    'same-layer should use a bounded event emit helper for official lifecycle events',
+  );
+  assert.doesNotMatch(
+    body,
+    /await eventEmit\(tavern_events\.MESSAGE_UPDATED/,
+    'MESSAGE_UPDATED listeners such as MVU extra parsing must not block the st-chatu8 image handoff',
+  );
+  assert.match(
+    body,
+    /await emitTavernLifecycleEventWithTimeout\(\s*tavern_events\.MESSAGE_UPDATED,[\s\S]*eventName: 'message_updated'/,
+    'same-layer should still emit MESSAGE_UPDATED, but only wait for it within the bounded handoff budget',
   );
   assert.match(
     body,

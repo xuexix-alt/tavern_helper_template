@@ -342,6 +342,119 @@ test('latest-assistant MVU reroll records stage timings around reveal, native re
   );
 });
 
+test('same-layer mount can auto retry native MVU extra analysis when the latest assistant data is missing after UI reload', () => {
+  const source = read('../useStreamingDemo.ts');
+  const storySource = read('../pages/StoryPage.vue');
+  const autoBody = extractFunctionBody(source, 'autoReprocessLatestAssistantVariablesIfMissing');
+  const scheduleBody = extractFunctionBody(source, 'scheduleMvuReloadReprocessIfMissing');
+
+  assert.match(
+    source,
+    /const autoMvuReloadReprocessMessageIds = new Set<number>\(\);/,
+    'auto reload MVU repair should remember message ids already retried in this UI session',
+  );
+  assert.match(
+    source,
+    /function readMessageMvuDataCompleteness\(messageId: number\)/,
+    'auto reload MVU repair should inspect the actual message-scoped MVU data before retrying',
+  );
+  assert.match(
+    autoBody,
+    /const completeness = readMessageMvuDataCompleteness\(latestAssistant\.message_id\)[\s\S]*if \(!completeness\.missingCurrentData\) return;/,
+    'auto reload MVU repair should only run when the latest assistant has an MVU data gap',
+  );
+  assert.match(
+    autoBody,
+    /autoMvuReloadReprocessMessageIds\.add\(latestAssistant\.message_id\)[\s\S]*await reprocessLatestAssistantVariables\(\{[\s\S]*source:\s*'auto_reload'[\s\S]*silent:\s*true/,
+    'auto reload MVU repair should call the same native retry path once and suppress manual-button toasts',
+  );
+  assert.match(
+    scheduleBody,
+    /window\.setTimeout\(\(\) => \{[\s\S]*void autoReprocessLatestAssistantVariablesIfMissing\(reason\)/,
+    'auto reload MVU repair should be delayed until the mounted transcript and MVU globals are ready',
+  );
+  assert.match(
+    storySource,
+    /if \(mvuVariableUpdateMode\.value === 'extra_analysis'\) \{[\s\S]*scheduleMvuReloadReprocessIfMissing\('story_page_mounted_mvu_gap'\)/,
+    'StoryPage should only enable the auto reload repair when MVU is configured for extra-analysis mode',
+  );
+});
+
+test('same-layer reload preserves latest assistant MVU JSON instructions from host mes when helper message text is stale', () => {
+  const source = read('../useStreamingDemo.ts');
+  const resolverBody = extractFunctionBody(source, 'resolveHostMessageText');
+  const normalizeBody = extractFunctionBody(source, 'normalizeHostChatMessages');
+  const refreshBody = extractFunctionBody(source, 'refreshTranscriptItemsByIds');
+  const writebackBody = extractFunctionBody(source, 'waitForNativeMvuMessageWriteback');
+  const completenessBody = extractFunctionBody(source, 'readMessageMvuDataCompleteness');
+
+  assert.match(
+    resolverBody,
+    /extractMvuUpdateVariableBlocks\(mesText\)[\s\S]*extractMvuUpdateVariableBlocks\(messageText\)/,
+    'host text resolver should compare MVU UpdateVariable blocks across mes and message fields',
+  );
+  assert.match(
+    source,
+    /const MVU_UPDATE_VARIABLE_TAG_PATTERN = 'UpdateVariable\(\?:variable\)\?';/,
+    'MVU instruction detection should share the Tavern display-regex tag variant instead of only matching bare UpdateVariable',
+  );
+  const variableOnlyBody = extractFunctionBody(source, 'isVariableUpdateOnlyGenerationText');
+  const updateBlocksBody = extractFunctionBody(source, 'extractMvuUpdateVariableBlocks');
+  const markerBody = extractFunctionBody(source, 'countMvuJsonInstructionMarkers');
+  assert.match(
+    variableOnlyBody,
+    /MVU_UPDATE_VARIABLE_TAG_PATTERN/,
+    'variable-update-only detection should recognize every supported UpdateVariable tag variant',
+  );
+  assert.ok(
+    updateBlocksBody.includes('new RegExp(') &&
+      updateBlocksBody.includes('`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\\\b') &&
+      updateBlocksBody.includes('<\\\\/${MVU_UPDATE_VARIABLE_TAG_PATTERN}>') &&
+      updateBlocksBody.includes("'gi'"),
+    'MVU update block extraction should recognize UpdateVariablevariable blocks from the native extra-analysis writeback',
+  );
+  assert.match(
+    markerBody,
+    /MVU_UPDATE_VARIABLE_TAG_PATTERN[\s\S]*extractMvuUpdateVariableBlocks/,
+    'MVU marker counting should use the same UpdateVariable tag variant when deciding whether native retry is needed',
+  );
+  assert.match(
+    resolverBody,
+    /countMvuJsonInstructionMarkers\(mesText\)[\s\S]*countMvuJsonInstructionMarkers\(messageText\)/,
+    'host text resolver should also recognize JSONPatch-style MVU instruction markers',
+  );
+  assert.match(
+    resolverBody,
+    /if \(mesInstructionCount > messageInstructionCount\) return mesText;/,
+    'host text resolver should prefer host mes when it carries newer MVU JSON instructions',
+  );
+  assert.match(
+    normalizeBody,
+    /message: resolveHostMessageText\(message\)/,
+    'UI reload should normalize chat messages from the MVU-preserving host text resolver',
+  );
+  assert.match(
+    refreshBody,
+    /const rawMessage = resolveHostMessageText\(hostMessage\);/,
+    'targeted transcript refresh should not re-read stale helper message text over host mes',
+  );
+  assert.match(
+    writebackBody,
+    /const existingMessage = resolveHostMessageText\(chatMessage\);/,
+    'native MVU writeback merge should append to the newest host assistant text, not a stale helper snapshot',
+  );
+  assert.match(
+    completenessBody,
+    /const rawMessage = resolveHostMessageText\(messageDetail\);/,
+    'auto reload MVU gap detection should inspect the newest host assistant text for MVU instructions',
+  );
+  assert.match(
+    completenessBody,
+    /const instructionMarkerCount = updateBlockCount \+ countMvuJsonInstructionMarkers\(rawMessage\);[\s\S]*instructionMarkerCount > 0/,
+    'auto reload MVU gap detection should treat JSONPatch-style MVU instructions as a real missing-data signal',
+  );
+});
+
 test('latest-assistant MVU reroll reveal is bounded before native prompt assembly', () => {
   const source = read('../useStreamingDemo.ts');
   const helperBody = extractFunctionBody(source, 'collectBoundedNativeGenerationRevealIds');

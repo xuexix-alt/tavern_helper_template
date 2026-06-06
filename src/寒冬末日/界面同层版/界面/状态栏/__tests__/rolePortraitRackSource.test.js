@@ -126,5 +126,5 @@ test('gallery images expose the compact refresh icon only when the entry can tar
   assert.match(streamingSource, /canRegenerate: canRegenerateFromHostDomArtifacts\(/);
   assert.match(streamingSource, /const hasNativeRegenerateIdentity = Boolean\(requestId \|\| promptTokenCompare\);/);
   assert.match(streamingSource, /if \(!hasNativeRegenerateIdentity\) return false;/);
-  assert.match(streamingSource, /canRegenerate: true,/);
+  assert.match(streamingSource, /if \(!Array\.isArray\(hostDomArtifacts\) \|\| hostDomArtifacts\.length === 0\) return false;/);
 });

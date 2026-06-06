@@ -9,6 +9,23 @@ function readSource(relativePath) {
   return fs.readFileSync(path.join(statusBarDir, relativePath), 'utf8');
 }
 
+function extractFunctionBody(source, functionName) {
+  const start = source.indexOf(`function ${functionName}`);
+  assert.notEqual(start, -1, `${functionName} should exist`);
+  const braceStart = source.indexOf('{', start);
+  assert.notEqual(braceStart, -1, `${functionName} should have a body`);
+  let depth = 0;
+  for (let index = braceStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(braceStart + 1, index);
+    }
+  }
+  throw new Error(`${functionName} body was not closed`);
+}
+
 test('transcript list keeps stable entry keys instead of remounting on render revision bumps', () => {
   const source = readSource('components/TranscriptList.vue');
 
@@ -56,6 +73,55 @@ test('host plugin native image mutations refresh gallery and targeted transcript
     source.includes('attributeFilter: CHATU8_MUTATION_ATTRIBUTE_FILTER,'),
     true,
     'host and same-layer native image observers should share the plugin mutation attribute filter',
+  );
+});
+
+test('same-layer asks the st-chatu8 iframe processor to claim visible image prompts before probing refs', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const loadBody = extractFunctionBody(source, 'loadPluginNativeIframeProcessorModule');
+  const collectBody = extractFunctionBody(source, 'collectUnclaimedSameLayerChatu8PromptRoots');
+  const scanBody = extractFunctionBody(source, 'runPluginNativeSameLayerPromptScan');
+  const reconcileBody = extractFunctionBody(source, 'schedulePluginNativePromptPlaceholderReconcile');
+
+  assert.equal(
+    source.includes("'/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js'"),
+    true,
+    'same-layer should import the live st-chatu8 iframe processor module that exports the direct element scanner',
+  );
+  assert.match(
+    source,
+    /type PluginNativeIframeProcessorModule = \{[\s\S]*processImagePlaceholdersForElement\?: \(element: Element\)[\s\S]*processAllImagePlaceholders\?:/,
+    'same-layer should accept the plugin direct element scanner export when it exists',
+  );
+  assert.match(
+    scanBody,
+    /collectUnclaimedSameLayerChatu8PromptRoots\(messageIds\)/,
+    'same-layer scanner should only wake the plugin for unresolved visible prompt roots',
+  );
+  assert.match(
+    source,
+    /function resolvePluginNativeSameLayerPromptScanRoot\(root: HTMLElement\): HTMLElement/,
+    'same-layer should resolve a plugin-visible ancestor before invoking the st-chatu8 direct scanner',
+  );
+  assert.match(
+    collectBody,
+    /const scanRoot = resolvePluginNativeSameLayerPromptScanRoot\(root\);[\s\S]*seen\.add\(scanRoot\);[\s\S]*roots\.push\(scanRoot\);/,
+    'unresolved assistant bodies should be claimed through the visible scan root the plugin will accept',
+  );
+  assert.match(
+    scanBody,
+    /await processor\.processImagePlaceholdersForElement\(scanRoot\)/,
+    'same-layer should pass each plugin-visible scan root into the plugin native scanner',
+  );
+  assert.match(
+    scanBody,
+    /await processor\.processAllImagePlaceholders\(\)/,
+    'same-layer should fall back to the plugin full scan when the direct element export is unavailable',
+  );
+  assert.match(
+    reconcileBody,
+    /void runPluginNativeSameLayerPromptScan\(reason, normalizedMessageIds\);[\s\S]*syncPendingRequestHintsFromDom\(\);/,
+    'placeholder reconcile should wake the plugin scanner before reading DOM hints',
   );
 });
 
@@ -270,9 +336,9 @@ test('pending request hint heartbeat also syncs host image data changes from mes
     'pending request hint syncing should also reconcile host-side image data changes',
   );
   assert.equal(
-    source.includes("const rawMessage = String(message?.message ?? message?.mes ?? '').trim();"),
+    source.includes('const rawMessage = resolveHostMessageText(message).trim();'),
     true,
-    'host image data signature should include the host raw message text',
+    'host image data signature should include the MVU-preserving host raw message text',
   );
   assert.equal(
     source.includes("const extraImages = _.get(message, 'extra.images', null);"),
@@ -300,9 +366,36 @@ test('successful image generation responses actively reconcile host image data',
     'successful plugin-native image responses should force a host image data sync for affected messages',
   );
   assert.equal(
-    source.includes("queueGeneratedImageEntityRefresh(targetMessageIds, 'host.plugin_native_response_success');"),
+    source.includes(
+      'const responseMessageIds =\n            targetMessageIds.length > 0 ? targetMessageIds : collectPluginNativeHandoffMessageIds({ requestId, prompt });',
+    ),
+    true,
+    'successful plugin-native image responses without exact task bindings should still target recent handoff floors',
+  );
+  assert.match(
+    source,
+    /function normalizePluginNativeHandoffMessageId\(value: unknown\): number \| null \{[\s\S]*if \(value == null \|\| value === ''\) return null;/,
+    'plugin-native handoff id normalization should not coerce missing response bindings into floor 0',
+  );
+  assert.match(
+    source,
+    /\[matchedResponse\?\.messageId, recentIntent\?\.messageId\][\s\S]*\.map\(normalizePluginNativeHandoffMessageId\)[\s\S]*\.filter\(\(id\): id is number => id != null\)/,
+    'successful response targeting should ignore absent matched/recent ids before falling back to recent assistant floors',
+  );
+  assert.equal(
+    source.includes("queueGeneratedImageEntityRefresh(responseMessageIds, 'host.plugin_native_response_success');"),
     true,
     'successful plugin-native image responses should force transcript/gallery refresh even when signatures were not snapshotted yet',
+  );
+  assert.equal(
+    source.includes("queueGeneratedImageEntityRefresh([], 'host.plugin_native_response_success:untargeted');"),
+    true,
+    'untargeted successful plugin-native image responses should still force a broad generated-image refresh',
+  );
+  assert.equal(
+    source.includes("void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');"),
+    true,
+    'untargeted successful plugin-native image responses should hydrate visible host messages instead of waiting for the next MVU event',
   );
   assert.equal(
     source.includes(
@@ -317,9 +410,39 @@ test('successful image generation responses actively reconcile host image data',
     'delayed response reconcile should force a targeted transcript/gallery probe even when host data signatures do not change',
   );
   assert.equal(
-    source.includes("scheduleHostImageDataReconcile('host.plugin_native_response_success', targetMessageIds);"),
+    source.includes("scheduleHostImageDataReconcile('host.plugin_native_response_success', responseMessageIds);"),
     true,
     'successful plugin-native image responses should reconcile delayed native image data without requiring UI reload',
+  );
+  assert.match(
+    source,
+    /void hydratePluginNativeResponseMessages\('host\.plugin_native_response_success', responseMessageIds\);/,
+    'targeted successful plugin-native image responses should materialize host message DOM instead of waiting for MVU MESSAGE_UPDATED',
+  );
+  assert.match(
+    source,
+    /void refreshHostMessagesForPluginNativeImageCompletion\('host\.plugin_native_response_success', responseMessageIds\);/,
+    'targeted successful plugin-native image responses should explicitly wake the host message DOM after the plugin writes image data',
+  );
+  assert.match(
+    source,
+    /async function refreshHostMessagesForPluginNativeImageCompletion\(reason: string, messageIds: number\[\]\): Promise<void>/,
+    'image completion should use a dedicated host-DOM refresh helper instead of overloading trigger-time preparation',
+  );
+  assert.match(
+    source,
+    /pluginNativeImageCompletionRefresh[\s\S]*await ensureHostMesTextRendered\(messageId\)[\s\S]*await refreshHostMessageForPluginNativeImageTrigger\(messageId\)[\s\S]*syncTranscriptItemsFromHostData\(`\$\{reason\}:host_dom_refresh`, normalizedMessageIds\)/,
+    'image completion refresh should materialize mes_text, emit host wake events, then resync the targeted same-layer item',
+  );
+  assert.match(
+    source,
+    /async function hydratePluginNativeResponseMessages\(reason: string, messageIds: number\[\]\): Promise<void>/,
+    'plugin-native response hydration should have a dedicated targeted helper',
+  );
+  assert.match(
+    source,
+    /for \(const delayMs of \[120, 360, 900, 1800, 3600\] as const\)/,
+    'targeted response hydration should keep probing across the mobile delay window where plugin images land after success',
   );
   assert.equal(
     source.includes('hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));'),
@@ -339,8 +462,8 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     'same-layer should have a dedicated reconcile path for the image### prompt placeholder stage',
   );
   assert.equal(
-    source.includes(
-      'const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;',
+    /const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = \[\s*0,\s*120,\s*360,\s*900,\s*1800,\s*3600,\s*7200,\s*15000,\s*30000,\s*\] as const;/.test(
+      source,
     ),
     true,
     'prompt placeholder reconcile should cover the mobile gap between ch-llm-image-gen-response and generate-image-request',
@@ -357,25 +480,32 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   );
   assert.equal(
     source.includes(
-      "schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', targetMessageIds);",
+      "schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', responseMessageIds);",
     ),
     true,
     'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
   );
   assert.equal(
-    source.includes('function triggerPendingPluginNativePromptButtons(reason: string, messageIds: number[])'),
-    false,
-    'same-layer should not run a second auto-click state machine over plugin prompt buttons',
+    /function triggerPendingPluginNativePromptButtons\(\s*reason: string,\s*messageId: number,\s*handoffProgress: PluginImageGenerationHandoffProgress,\s*\): number/.test(
+      source,
+    ),
+    true,
+    'same-layer should have a scoped fallback for materialized plugin prompt buttons that do not enter generate-image-request on mobile',
   );
-  assert.doesNotMatch(
+  assert.match(
     source,
-    /triggerPendingPluginNativePromptButtons\(/,
-    'prompt placeholder reconcile should stay passive and let st-chatu8 own prompt-button auto triggering',
+    /const recentIntent = imageRecentIntentStore\.read\(\);[\s\S]*recentIntent\?\.source !== 'transcript'[\s\S]*recentIntentMessageId !== messageId/,
+    'prompt-button fallback should only run for the active same-layer transcript generation intent',
   );
-  assert.doesNotMatch(
+  assert.match(
     source,
-    /pluginNativePromptButtonTriggerAt|60_000|hasReadyImageNearPluginNativeButton\(button\)/,
-    'same-layer should remove its duplicate prompt-button debounce and ready-image filtering',
+    /pluginNativePromptButtonTriggerAt|PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_DEDUPE_MS|hasReadyImageNearPluginNativeButton\(button\)/,
+    'prompt-button fallback should dedupe clicks and skip buttons that already own a ready generated image',
+  );
+  assert.match(
+    source,
+    /waitForPluginImageGenerationHandoff[\s\S]*elapsedMs >= PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_TRIGGER_GRACE_MS[\s\S]*triggerPendingPluginNativePromptButtons\('imageGenerationHandoff', normalizedId, handoffProgress\)/,
+    'prompt-button fallback should live inside the bounded handoff wait instead of becoming a global DOM auto-click loop',
   );
   assert.equal(
     source.includes('syncPendingRequestHintsFromDom();'),
@@ -406,6 +536,16 @@ test('same-layer listens to current st-chatu8 regex and rendered-message handoff
     source.includes("const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';"),
     true,
     'current st-chatu8 emits auto-click completion after its body insertion pass',
+  );
+  assert.match(
+    source,
+    /const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = \[\s*CHATU8_AUTO_CLICK_COMPLETE_EVENT,\s*'st-chatu8:auto_click_complete',\s*\] as const;/,
+    'same-layer should listen to both st-chatu8 auto-click completion spellings seen in the plugin modules',
+  );
+  assert.match(
+    source,
+    /\.\.\.CHATU8_AUTO_CLICK_COMPLETE_EVENTS\.map\(eventName =>\s*eventOn\(eventName as any,[\s\S]*schedulePluginNativeHostRenderHandoff\('plugin_native_auto_click_complete'/,
+    'same-layer should route every st-chatu8 auto-click completion spelling through the same host render handoff',
   );
   assert.match(
     source,
@@ -458,6 +598,7 @@ test('plugin-native placeholder-only DOM mutations trigger prompt reconciliation
 
 test('same-layer boot hydrates a bounded native host window before relying on persisted image entities', () => {
   const source = readSource('useStreamingDemo.ts');
+  const hydrateRecentBody = extractFunctionBody(source, 'hydrateRecentPluginNativeHostWindow');
 
   assert.equal(
     source.includes('async function hydrateRecentPluginNativeHostWindow(reason: string): Promise<void>'),
@@ -466,8 +607,8 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
   );
   assert.match(
     source,
-    /function collectRecentPluginNativeHydrationMessageIds\(\): number\[\][\s\S]*PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT/,
-    'boot hydration should stay bounded to the recent plugin-native window',
+    /function collectRecentPluginNativeHydrationMessageIds\(\): number\[\][\s\S]*PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT[\s\S]*collectPluginNativeHostWindowMessageIds/,
+    'boot hydration should stay bounded to three assistant anchors and the six-floor native shadow window',
   );
   assert.match(
     source,
@@ -479,10 +620,10 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
     /hydrateRecentPluginNativeHostWindow[\s\S]*await setChatMessages\([\s\S]*is_hidden: false[\s\S]*\{ refresh: 'affected' \}/,
     'hydration must force affected host messages to render instead of only toggling hidden data',
   );
-  assert.match(
-    source,
-    /hydrateRecentPluginNativeHostWindow[\s\S]*await setChatMessages\([\s\S]*is_hidden: true[\s\S]*\{ refresh: 'none' \}/,
-    'hydration should re-hide the materialized host messages without tearing down the plugin-mutated DOM',
+  assert.doesNotMatch(
+    hydrateRecentBody,
+    /await setChatMessages\([\s\S]*is_hidden: true[\s\S]*\{ refresh: 'none' \}/,
+    'hydration should keep the bounded host shadow window physically rendered so late mobile plugin image DOM can land',
   );
   assert.match(
     source,
@@ -498,6 +639,64 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
     source,
     /window\.setTimeout\(\(\) => void hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\), 250\);/,
     'mounted same-layer UI should run the native host hydration probe, not just recompute existing iframe DOM',
+  );
+});
+
+test('same-layer keeps three assistant anchors as a six-floor native shadow window instead of hiding every host floor', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const visualHideSource = readSource('hostVisualHide.ts');
+  const applyHidePolicyBody = extractFunctionBody(source, 'applyHidePolicy');
+  const syncHostVisualHideBody = extractFunctionBody(source, 'syncHostVisualHideFromCurrentState');
+
+  assert.equal(
+    source.includes('const TRANSCRIPT_UI_WINDOW_SIZE = 6;'),
+    true,
+    'same-layer reader window should show three assistant turns plus their adjacent user floors',
+  );
+  assert.equal(
+    source.includes('const PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT = 3;'),
+    true,
+    'plugin-native host window should be anchored by three recent assistant floors',
+  );
+  assert.equal(
+    source.includes('const PLUGIN_NATIVE_HOST_SHADOW_WINDOW_MESSAGE_COUNT = 6;'),
+    true,
+    'plugin-native host shadow window should keep six recent host floors materialized',
+  );
+  assert.match(
+    source,
+    /function collectNativeShadowWindowMessageIds\([\s\S]*PLUGIN_NATIVE_HOST_SHADOW_WINDOW_MESSAGE_COUNT/,
+    'hide policy should compute a bounded host shadow window from chat metas',
+  );
+  assert.match(
+    applyHidePolicyBody,
+    /const nativeShadowWindowIds = collectNativeShadowWindowMessageIds\(\);[\s\S]*\.filter\(item => !nativeShadowWindowIds\.includes\(item\.message_id\)\)[\s\S]*is_hidden: true/,
+    'hide policy should hide only floors outside the native shadow window',
+  );
+  assert.match(
+    applyHidePolicyBody,
+    /const showPatch = nativeShadowWindowIds[\s\S]*\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\);[\s\S]*await setChatMessages\(showPatch, \{ refresh: 'affected' \}\)/,
+    'hide policy should keep the native shadow window rendered instead of depending on later hydration',
+  );
+  assert.match(
+    source,
+    /function hasHostMessageDom\(messageId: number\): boolean/,
+    'hide policy should be able to detect shadow-window messages that are visible in data but missing from host DOM',
+  );
+  assert.match(
+    applyHidePolicyBody,
+    /item\.is_hidden === true \|\| !hasHostMessageDom\(id\)/,
+    'shadow-window floors created with refresh:none should be materialized even when their is_hidden flag is already false',
+  );
+  assert.match(
+    syncHostVisualHideBody,
+    /hostVisualHideController\.applyNativeShadowWindow\(nativeShadowWindowIds/,
+    'visual hide sync should apply an explicit plugin-native shadow state to the materialized host window',
+  );
+  assert.match(
+    visualHideSource,
+    /applyNativeShadowWindow\(messageIds: number\[\]/,
+    'host visual hide helper should expose a durable native shadow-window API',
   );
 });
 
@@ -541,7 +740,7 @@ test('same-layer gallery ref cache must not freeze partial multi-prompt image ba
   );
   assert.match(
     source,
-    /if \(!shouldCacheGeneratedImageRefsForMessage\(\{ promptTokenCount: promptTokens\.length, refs: fallbackRefs \}\)\) return fallbackRefs;[\s\S]*writeCachedGeneratedImageRefsForMessage\(\{/,
+    /if \(!shouldCacheGeneratedImageRefsForMessage\(\{ promptTokenCount: promptTokens\.length, refs: fallbackRefs \}\)\)\s*return fallbackRefs;[\s\S]*writeCachedGeneratedImageRefsForMessage\(\{/,
     'host DOM fallback refs should also avoid caching partial multi-prompt batches',
   );
 });
@@ -775,9 +974,9 @@ test('gallery image regeneration keeps a gallery recent intent through the nativ
     true,
     'StoryPage should pass gallery regenerate gestures into the pending task manager as gallery intents',
   );
-  assert.equal(
-    source.includes('[matchedResponse?.messageId, recentIntent?.messageId ?? null]'),
-    true,
+  assert.match(
+    source,
+    /\[matchedResponse\?\.messageId, recentIntent\?\.messageId\][\s\S]*\.map\(normalizePluginNativeHandoffMessageId\)/,
     'successful native responses should refresh the recent gallery message as well as transcript-triggered messages',
   );
 });
@@ -891,6 +1090,121 @@ test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridg
     activationSource.includes('carrierDataset.imageTag') && activationSource.includes('carrierDataset.link'),
     true,
     'plugin-native data-image-tag/data-link values should be parsed as prompt tokens for host button lookup',
+  );
+});
+
+test('TranscriptMessageCard rebinds plugin-native gestures when image DOM is inserted after hydration', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    source,
+    /function isPluginNativeInteractionMutationTarget\(node: Node\): boolean/,
+    'late plugin-native image/button nodes should be recognized by the assistant body mutation observer',
+  );
+  assert.match(
+    source,
+    /let rebindTimer: number \| null = null;[\s\S]*bindAssistantBodyInteractions\(\);/,
+    'late plugin-native image/button nodes should schedule a fresh interaction bind pass',
+  );
+  assert.match(
+    source,
+    /record\.type === 'childList'[\s\S]*isPluginNativeInteractionMutationTarget\(node\)[\s\S]*shouldRebind = true;/,
+    'childList mutations that add plugin-native image/button DOM should trigger the rebind path',
+  );
+});
+
+test('TranscriptMessageCard delegates plugin-native image gestures through the template capture layer only', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+
+  assert.equal(
+    source.includes('isBridgedEvent,'),
+    true,
+    'delegated same-layer image gestures should ignore events that were already bridged back to plugin DOM',
+  );
+  assert.match(
+    source,
+    /function resolveAssistantBodyNativeImageCarrierFromEventTarget\(target: EventTarget \| null\): HTMLElement \| null/,
+    'template capture handlers should resolve current plugin-native carriers at event time',
+  );
+  assert.match(
+    source,
+    /function getAssistantBodyDelegatedGestureState\(carrier: HTMLElement\): AssistantBodyDelegatedGestureState/,
+    'template capture handlers should share one gesture controller per plugin-native carrier',
+  );
+  assert.match(
+    source,
+    /@click\.capture="handleAssistantBodyNativeImageClick"[\s\S]*@dblclick\.capture="handleAssistantBodyNativeImageDoubleClick"[\s\S]*@pointerdown\.capture="handleAssistantBodyNativeImagePointerDown"/,
+    'Vue template-level assistant body handlers should keep the delegation attached when the body element is replaced',
+  );
+  assert.match(
+    source,
+    /class="assistant-body-wrap"[\s\S]*@click\.capture="handleAssistantBodyNativeImageClick"[\s\S]*@pointerdown\.capture="handleAssistantBodyNativeImagePointerDown"/,
+    'assistant body wrap should catch plugin-native gestures before inner transcript markup can stop propagation',
+  );
+  assert.doesNotMatch(
+    source,
+    /root\.addEventListener\('click', handlePluginNativeCarrierClick, true\);/,
+    'plugin-native images should not also install a second root-level click listener',
+  );
+  assert.doesNotMatch(
+    source,
+    /bindGestureTarget\(carrier, carrier\);/,
+    'plugin-native image carriers should not also receive per-node gesture controllers',
+  );
+  assert.match(
+    source,
+    /const handlePointerDown = \(event: Event\) => \{[\s\S]*if \(isBridgedEvent\(event\)\) return;[\s\S]*controller\.handleTouchStart\(\);/,
+    'fallback-image per-node handlers should still ignore bridged touch events',
+  );
+});
+
+test('StoryPage resolves plugin-native image double clicks with adjacent prompt payloads', () => {
+  const source = readSource('pages/StoryPage.vue');
+
+  assert.match(
+    source,
+    /function isSameLayerPluginNativeImageGestureTarget\(target: EventTarget \| null\): boolean/,
+    'StoryPage should recognize same-layer plugin-native image targets before global double-click proxies run',
+  );
+  assert.match(
+    source,
+    /async function handleTranscriptDoubleClickCapture\(event: MouseEvent\) \{[\s\S]*if \(isSameLayerPluginNativeImageGestureTarget\(event\.target\)\) return;[\s\S]*void startTranscriptHostImageProxy/,
+    'generic transcript double-click generation should not steal plugin-native image double clicks from TranscriptMessageCard',
+  );
+  assert.match(
+    source,
+    /function resolvePluginNativePromptDatasetFromCarrier\(carrier: HTMLElement\): DOMStringMap \| null/,
+    'window-level generated-image double clicks should be able to recover the adjacent native prompt button payload',
+  );
+  assert.match(
+    source,
+    /function getPluginNativeRequestId\(element: HTMLElement \| null\): string[\s\S]*element\?\.dataset\.samelayerRequestId[\s\S]*data-samelayer-request-id/,
+    'plugin-native target resolution should recognize same-layer request ids as well as native data-request-id values',
+  );
+  assert.match(
+    source,
+    /const promptDataset = resolvePluginNativePromptDatasetFromCarrier\(carrier\);[\s\S]*const carrierDataset = \{ \.\.\.promptDataset, \.\.\.carrier\.dataset, messageId \};/,
+    'fallback payload parsing should merge data-image-tag/data-link before resolving regeneration targets',
+  );
+  assert.match(
+    source,
+    /function handleGeneratedImageWindowDoubleClickCapture\(event: MouseEvent\) \{[\s\S]*const payload = resolveGeneratedImagePayloadFromDomTarget\(event\.target\);[\s\S]*void activateGeneratedImageRegenerate\(payload\);/,
+    'window-level generated-image double clicks should continue to route through the payload-aware regenerate action',
+  );
+  assert.match(
+    source,
+    /function isSameLayerGeneratedImageAssetTarget\(target: EventTarget \| null\): boolean/,
+    'GeneratedImageAsset-owned images should be detectable before the window fallback handler runs',
+  );
+  assert.match(
+    source,
+    /function handleGeneratedImageWindowDoubleClickCapture\(event: MouseEvent\) \{[\s\S]*if \(isSameLayerGeneratedImageAssetTarget\(event\.target\)\) return;[\s\S]*const payload = resolveGeneratedImagePayloadFromDomTarget\(event\.target\);/,
+    'window-level fallback should not steal double-clicks from GeneratedImageAsset component guards',
+  );
+  assert.match(
+    source,
+    /async function activateGeneratedImageRegenerate\(payload: GeneratedImageActivationPayload\) \{[\s\S]*if \(!targetNode\) \{[\s\S]*if \(payload\.sameLayerOnly === true\) \{[\s\S]*console\.warn\('\[image-regenerate\] same-layer-only image has no plugin-native regenerate target'/,
+    'same-layer-only rendered image copies should not show a missing-target regenerate toast when the host native plugin node never existed',
   );
 });
 

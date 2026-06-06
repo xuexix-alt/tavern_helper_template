@@ -136,6 +136,31 @@ test('transcript image injection fills raw image placeholders before anchor fall
   );
 });
 
+test('cache transcript image injection keeps native prompt token markers available for st-chatu8 scanning', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const helperStart = source.indexOf('function injectGeneratedImagesIntoHtml(');
+  assert.notEqual(helperStart, -1, 'should find injectGeneratedImagesIntoHtml');
+  const helperEnd = source.indexOf('function appendChatu8ArtifactsToHtml(', helperStart);
+  assert.notEqual(helperEnd, -1, 'should find appendChatu8ArtifactsToHtml after inject helper');
+  const helperBody = source.slice(helperStart, helperEnd);
+
+  assert.match(
+    source,
+    /function isPluginNativeRenderableImage\(/,
+    'injection should distinguish plugin-native images from cache compatibility images',
+  );
+  assert.match(
+    helperBody,
+    /if \(isPluginNativeRenderableImage\(image\)\) \{[\s\S]*nativePromptTarget\.replaceWith\(figure\);[\s\S]*continue;[\s\S]*\}/,
+    'only plugin-native image data should replace the prompt token marker',
+  );
+  assert.match(
+    helperBody,
+    /nativePromptTarget\.after\(figure\);/,
+    'cache fallback images should be inserted next to the marker so st-chatu8 can still scan it',
+  );
+});
+
 test('transcript image injection uses native image prompt markers as inline placement anchors', () => {
   const source = readSource('useStreamingDemo.ts');
 

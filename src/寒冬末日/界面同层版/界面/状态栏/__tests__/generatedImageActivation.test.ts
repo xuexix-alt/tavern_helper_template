@@ -58,3 +58,32 @@ test('parseGeneratedImageActivationPayload accepts plugin-native data-message-in
   assert.equal(payload.messageId, 11);
   assert.equal(payload.requestId, 'chatu8-id-ezh7uj');
 });
+
+test('parseGeneratedImageActivationPayload marks same-layer-only request ids', () => {
+  const payload = parseGeneratedImageActivationPayload({
+    carrierDataset: {
+      messageId: '13',
+      samelayerRequestId: 'chatu8-id-y804aw',
+      imageTag: 'image###same layer copy###',
+    },
+    targetDataset: {},
+  });
+
+  assert.equal(payload.requestId, 'chatu8-id-y804aw');
+  assert.equal(payload.sameLayerOnly, true);
+});
+
+test('parseGeneratedImageActivationPayload keeps native request ids as plugin-backed', () => {
+  const payload = parseGeneratedImageActivationPayload({
+    carrierDataset: {
+      messageId: '13',
+      requestId: 'chatu8-id-native',
+      samelayerRequestId: 'chatu8-id-native',
+      imageTag: 'image###native copy###',
+    },
+    targetDataset: {},
+  });
+
+  assert.equal(payload.requestId, 'chatu8-id-native');
+  assert.equal(payload.sameLayerOnly, false);
+});

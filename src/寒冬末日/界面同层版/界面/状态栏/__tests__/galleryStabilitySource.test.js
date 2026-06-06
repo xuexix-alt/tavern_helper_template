@@ -73,20 +73,21 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
   assert.match(listSource, /:gallery-entries="messageGalleryEntries\(item\.message_id\)"/);
   assert.match(cardSource, /function hydratePendingImagesFromGalleryEntries\(\)/);
   assert.match(cardSource, /root\.querySelectorAll\('\[data-raw-image-tag="true"\]'\)/);
-  assert.match(cardSource, /target\.replaceWith\(figure\)/);
+  assert.match(cardSource, /target\.element\.replaceWith\(figure\)/);
   assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
 });
 
-test('transcript card replaces native prompt token markers before appending tail gallery figures', () => {
+test('transcript card keeps native prompt token markers while hydrating gallery figures', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
   assert.match(cardSource, /function collectPendingGalleryImageTargets\(root: HTMLElement\)/);
   assert.match(cardSource, /\[data-chatu8-native-prompt-token="true"\]/);
+  assert.match(cardSource, /kind: 'native-prompt-token'/);
   assert.match(cardSource, /takePendingGalleryImageTarget\(targets, entry\)/);
   assert.match(cardSource, /normalizePromptTokenForInlineCompare\(entry\.promptToken\)/);
   assert.match(
     cardSource,
-    /const target = takePendingGalleryImageTarget\(targets, entry\);[\s\S]*target\.replaceWith\(figure\);/,
+    /if \(target\.kind === 'native-prompt-token'\) \{[\s\S]*target\.element\.after\(figure\);[\s\S]*\} else \{[\s\S]*target\.element\.replaceWith\(figure\);/,
   );
 });
 
@@ -104,9 +105,49 @@ test('transcript native image regenerate payload falls back to adjacent plugin p
   assert.match(cardSource, /candidate\.getAttribute\('data-image-tag'\)/);
   assert.match(
     cardSource,
-    /const promptDataset = resolvePluginPromptDatasetForCarrier\(carrier\);[\s\S]*carrierDataset: \{ \.\.\.promptDataset, \.\.\.carrier\.dataset \}/,
+    /const promptDataset = resolvePluginPromptDatasetForCarrier\(carrier\);[\s\S]*const payloadCarrierDataset = \{ \.\.\.promptDataset, \.\.\.carrier\.dataset, messageId: itemMessageId \};/,
     'payload parsing should inherit prompt tokens from native plugin buttons when the clicked image span lacks them',
   );
+  assert.match(
+    cardSource,
+    /const payloadTargetDataset = \{ \.\.\.targetDataset, messageId: itemMessageId \};/,
+    'payload parsing should keep stale plugin target message ids from overriding the current transcript floor',
+  );
+  assert.match(cardSource, /carrierDataset: payloadCarrierDataset/);
+  assert.match(cardSource, /targetDataset: payloadTargetDataset/);
+});
+
+test('generated image actions reject missing message ids before floor lookup', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+
+  assert.match(
+    storyPageSource,
+    /function normalizeGeneratedImagePayloadMessageId\(payload: GeneratedImageActivationPayload\): number \| null/,
+  );
+  assert.match(storyPageSource, /if \(payload\?\.messageId == null\) return null;/);
+  assert.match(storyPageSource, /const messageId = normalizeGeneratedImagePayloadMessageId\(payload\);/);
+  assert.match(storyPageSource, /if \(messageId == null\) return;/);
+  assert.doesNotMatch(
+    storyPageSource,
+    /Number\(payload\?\.messageId\)/,
+    'Number(null) turns a missing generated-image floor id into #0',
+  );
+});
+
+test('window-level native image double-click inherits the transcript floor id', () => {
+  const storyPageSource = readSource('pages/StoryPage.vue');
+
+  assert.match(
+    storyPageSource,
+    /function resolveGeneratedImageMessageIdFromDomTarget\(\s*element: HTMLElement,\s*carrier: HTMLElement\s*\): string/,
+  );
+  assert.match(
+    storyPageSource,
+    /carrier\.closest\(\s*'\.assistant-body\[data-message-id\], \.assistant-card\[data-message-id\], \.transcript-entry\[data-message-id\]',\s*\)/,
+  );
+  assert.match(storyPageSource, /const carrierDataset = \{ \.\.\.promptDataset, \.\.\.carrier\.dataset, messageId \};/);
+  assert.match(storyPageSource, /const targetDataset = \{ \.\.\.\(targetImage\?\.dataset \?\? \{\}\), messageId \};/);
+  assert.match(storyPageSource, /carrierDataset,/);
 });
 
 test('transcript card hydrates newly ready gallery entries even when the message already has images', () => {
@@ -196,9 +237,11 @@ test('transcript image FAB keeps existing-image clicks on the LLM image popup an
 
 test('transcript image generation leases a recent host window before dispatching plugin gestures', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
+  const pluginNativeLeaseBody = extractFunctionBody(streamingSource, 'withPluginNativeMessageLease');
 
   assert.match(streamingSource, /const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;/);
-  assert.match(streamingSource, /const PLUGIN_NATIVE_HOST_WINDOW_MESSAGE_COUNT = 3;/);
+  assert.match(streamingSource, /const PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT = 3;/);
+  assert.match(streamingSource, /const PLUGIN_NATIVE_HOST_SHADOW_WINDOW_MESSAGE_COUNT = 6;/);
   assert.match(streamingSource, /function collectPluginNativeHostWindowMessageIds\(messageId: number\): number\[\]/);
   assert.match(
     streamingSource,
@@ -233,13 +276,13 @@ test('transcript image generation leases a recent host window before dispatching
   );
   assert.match(
     streamingSource,
-    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\s*hiddenLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\),\s*\{ refresh: 'affected' \},\s*\);/,
-    'plugin handoff should materialize a bounded real host chat window instead of only toggling target data',
+    /withPluginNativeMessageLease[\s\S]*const materializeLeaseIds = readMessageMetasAfterContainer\(\)[\s\S]*item\.is_hidden === true \|\| !hasHostMessageDom\(item\.message_id\)[\s\S]*await setChatMessages\(\s*materializeLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: false \}\)\),\s*\{ refresh: 'affected' \},\s*\);/,
+    'plugin handoff should materialize hidden and missing-DOM floors in the bounded real host chat window',
   );
-  assert.match(
-    streamingSource,
-    /withPluginNativeMessageLease[\s\S]*await setChatMessages\(\s*hiddenLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\),\s*\{ refresh: 'none' \},\s*\);/,
-    'plugin handoff should keep the materialized host DOM in place when re-hiding it so st-chatu8 async tasks can continue',
+  assert.doesNotMatch(
+    pluginNativeLeaseBody,
+    /await setChatMessages\(\s*materializeLeaseIds\.map\(id => \(\{ message_id: id, is_hidden: true \}\)\),\s*\{ refresh: 'none' \},\s*\);/,
+    'plugin handoff should leave the durable native shadow window rendered so st-chatu8 async tasks can continue',
   );
   assert.match(
     streamingSource,
@@ -327,8 +370,13 @@ test('gallery records zero-hit cross-floor scans and explicit message-id scans',
   assert.match(streamingSource, /imageCount: images\.length/);
   assert.match(
     streamingSource,
-    /discoverRecentNativeGalleryImages\('host\.plugin_native_response_success:immediate', targetMessageIds\);/,
+    /discoverRecentNativeGalleryImages\('host\.plugin_native_response_success:immediate', responseMessageIds\);/,
     'successful plugin responses should immediately probe explicit target message ids before delayed reconcile',
+  );
+  assert.match(
+    streamingSource,
+    /discoverRecentNativeGalleryImages\('host\.plugin_native_response_success:untargeted_recent'\);/,
+    'untargeted successful plugin responses should still probe the recent native gallery window',
   );
   assert.match(streamingSource, /logImageBridge\('host-data-reconcile-probe'/);
   assert.match(streamingSource, /recordLifecycleTrace\('galleryHistoryScan', 'load_older_probe'/);
@@ -605,7 +653,7 @@ test('generated image regenerate can resolve the plugin button adjacent to an ai
 
   assert.match(
     storyPageSource,
-    /function resolvePluginButtonForImageElement\(image: HTMLImageElement \| null, messageId: number, promptToken: string\): HTMLElement \| null/,
+    /function resolvePluginButtonForImageElement\(\s*image: HTMLImageElement \| null,\s*messageId: number,\s*promptToken: string,\s*\): HTMLElement \| null/,
     'regenerate should recover the native plugin button even when the image lives inside ai-image-container',
   );
   assert.match(

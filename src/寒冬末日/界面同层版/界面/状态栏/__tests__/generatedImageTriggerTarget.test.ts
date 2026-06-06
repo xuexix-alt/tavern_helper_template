@@ -21,3 +21,35 @@ test('regenerate prefers the plugin image button so native stableId metadata rec
     hostButton,
   );
 });
+
+test('regenerate uses host image clicks before refusing same-layer iframe fallbacks', () => {
+  const hostImage = { id: 'host-image' };
+
+  assert.equal(
+    selectGeneratedImageTriggerTarget(
+      {
+        hostButton: null,
+        hostImage,
+        hostMessageRoot: { id: 'host-message-root' },
+        iframeButton: { id: 'iframe-button' },
+        iframeImage: { id: 'iframe-image' },
+      },
+      'regenerate',
+    ),
+    hostImage,
+  );
+
+  assert.equal(
+    selectGeneratedImageTriggerTarget(
+      {
+        hostButton: null,
+        hostImage: null,
+        hostMessageRoot: { id: 'host-message-root' },
+        iframeButton: { id: 'iframe-button' },
+        iframeImage: { id: 'iframe-image' },
+      },
+      'regenerate',
+    ),
+    null,
+  );
+});

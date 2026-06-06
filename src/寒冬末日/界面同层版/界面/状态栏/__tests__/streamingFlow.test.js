@@ -161,7 +161,7 @@ test('normal assistant streaming renders a throttled regex preview without final
   );
   assert.match(
     cardSource,
-    /v-if="item\.isStreaming"[\s\S]{0,300}<StreamRenderer/,
+    /v-if="item\.isStreaming"[\s\S]*?<StreamRenderer[\s\S]*?:message="item\.content"[\s\S]*?:active="item\.isStreaming"/,
     'TranscriptMessageCard streaming branch should delegate the preview to the StreamRenderer component',
   );
   assert.match(

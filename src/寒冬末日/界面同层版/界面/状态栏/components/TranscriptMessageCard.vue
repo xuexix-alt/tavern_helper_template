@@ -89,18 +89,30 @@
         <div class="assistant-corners bl"></div>
         <div class="assistant-corners br"></div>
 
-        <div class="assistant-body-wrap">
           <div
-            v-if="item.isStreaming"
-            ref="assistantBodyRef"
-            class="assistant-body html-body mes_text is-stream-stage"
-            :data-message-id="item.message_id"
-            :data-message-index="item.message_id"
+            class="assistant-body-wrap"
+            @click.capture="handleAssistantBodyNativeImageClick"
+            @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
+            @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+            @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+            @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
           >
-            <StreamRenderer
-              :message="item.content"
-              :role="item.role"
-              :active="item.isStreaming"
+              <div
+                v-if="item.isStreaming"
+                ref="assistantBodyRef"
+                class="assistant-body html-body mes_text is-stream-stage"
+                :data-message-id="item.message_id"
+                :data-message-index="item.message_id"
+                @click.capture="handleAssistantBodyNativeImageClick"
+                @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
+                @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+                @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+                @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
+              >
+                <StreamRenderer
+                  :message="item.content"
+                  :role="item.role"
+                  :active="item.isStreaming"
               :message-id="item.message_id"
             />
           </div>
@@ -108,13 +120,18 @@
           <div
             v-else
             ref="assistantBodyRef"
-            class="assistant-body html-body mes_text"
-            :data-message-id="item.message_id"
-            :data-message-index="item.message_id"
-            v-html="displayedAssistantHtml"
-          ></div>
-        </div>
-      </section>
+                class="assistant-body html-body mes_text"
+                :data-message-id="item.message_id"
+                :data-message-index="item.message_id"
+                @click.capture="handleAssistantBodyNativeImageClick"
+                @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
+                @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+                @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+                @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
+                v-html="displayedAssistantHtml"
+              ></div>
+            </div>
+          </section>
     </template>
   </article>
 </template>
@@ -126,6 +143,7 @@ import { parseGeneratedImageActivationPayload } from '../generatedImageActivatio
 import { createGeneratedImageGestureController } from '../generatedImageGestureController';
 import {
   collectReachableHostDocuments,
+  isBridgedEvent,
   normalizeImageDataToSrc,
   normalizeImageSrcForCompare,
   readChatMessageDetail,
@@ -140,6 +158,9 @@ import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptI
 import StreamRenderer from './StreamRenderer.vue';
 
 const DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS = [0, 300, 900, 1800, 3600, 7200, 15000] as const;
+const PLUGIN_NATIVE_CARRIER_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
+const PLUGIN_NATIVE_BUTTON_SELECTOR =
+  'button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]';
 
 const props = defineProps<{
   item: TranscriptItem;
@@ -172,6 +193,7 @@ const emit = defineEmits<{
 
 const assistantBodyRef = ref<HTMLElement | null>(null);
 const assistantBodyCleanup = ref<Array<() => void>>([]);
+const assistantBodyDelegatedGestureDisposers = ref<Array<() => void>>([]);
 const directHostBackfillTimers = ref<number[]>([]);
 const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
@@ -582,6 +604,7 @@ function scheduleDirectHostBackfillImages(reason = 'direct_host_backfill') {
 type PendingGalleryImageTarget = {
   element: HTMLElement;
   tokenCompare: string;
+  kind: 'raw-image' | 'native-prompt-token';
 };
 
 function normalizePromptTokenForInlineCompare(value: unknown): string {
@@ -610,21 +633,25 @@ function collectPendingGalleryImageTargets(root: HTMLElement): PendingGalleryIma
     root.querySelectorAll('[data-chatu8-native-prompt-token="true"]'),
   ) as HTMLElement[];
 
-  return [...rawTargets, ...nativePromptTargets].map(element => ({
+  return [
+    ...rawTargets.map(element => ({ element, kind: 'raw-image' as const })),
+    ...nativePromptTargets.map(element => ({ element, kind: 'native-prompt-token' as const })),
+  ].map(({ element, kind }) => ({
     element: resolveInlinePlacementTarget(element),
     tokenCompare: normalizePromptTokenForInlineCompare(element.textContent ?? element.dataset.promptToken ?? ''),
+    kind,
   }));
 }
 
 function takePendingGalleryImageTarget(
   targets: PendingGalleryImageTarget[],
   entry: ReaderGalleryEntry,
-): HTMLElement | null {
+): PendingGalleryImageTarget | null {
   const tokenCompare = normalizePromptTokenForInlineCompare(entry.promptToken);
   const index = tokenCompare ? targets.findIndex(target => target.tokenCompare === tokenCompare) : 0;
   if (index < 0) return null;
   const [target] = targets.splice(index, 1);
-  return target?.element ?? null;
+  return target ?? null;
 }
 
 function hydratePendingImagesFromGalleryEntries() {
@@ -652,7 +679,11 @@ function hydratePendingImagesFromGalleryEntries() {
     }
     const figure = createGalleryEntryFigure(entry);
     if (!figure) continue;
-    target.replaceWith(figure);
+    if (target.kind === 'native-prompt-token') {
+      target.element.after(figure);
+    } else {
+      target.element.replaceWith(figure);
+    }
     injected += 1;
   }
 
@@ -667,6 +698,9 @@ function hydratePendingImagesFromGalleryEntries() {
 function clearAssistantBodyInteractionBindings() {
   assistantBodyCleanup.value.forEach(dispose => dispose());
   assistantBodyCleanup.value = [];
+  assistantBodyDelegatedGestureDisposers.value.forEach(dispose => dispose());
+  assistantBodyDelegatedGestureDisposers.value = [];
+  assistantBodyDelegatedGestureStates = new WeakMap();
 }
 
 function stopEvent(event: Event) {
@@ -684,23 +718,46 @@ function sanitizeAssistantBodyPluginNativeRequestIds(root: HTMLElement): number 
   return count;
 }
 
+function isPluginNativeInteractionMutationTarget(node: Node): boolean {
+  if (!(node instanceof HTMLElement)) return false;
+  const selector =
+    '.st-chatu8-image-span, span.image-tag-placeholder, button.image-tag-button, button.st-chatu8-image-button, .st-chatu8-image-button[role="button"]';
+  return node.matches?.(selector) || Boolean(node.querySelector?.(selector));
+}
+
 function observeAssistantBodyPluginNativeRequestIds(root: HTMLElement, disposers: Array<() => void>) {
   sanitizeAssistantBodyPluginNativeRequestIds(root);
   if (typeof MutationObserver !== 'function') return;
 
+  let rebindTimer: number | null = null;
+  const scheduleInteractionRebind = () => {
+    if (rebindTimer != null) return;
+    rebindTimer = window.setTimeout(() => {
+      rebindTimer = null;
+      bindAssistantBodyInteractions();
+    }, 0);
+  };
+
   const observer = new MutationObserver(records => {
     let shouldSanitize = false;
+    let shouldRebind = false;
     for (const record of records) {
       if (record.type === 'attributes' && record.attributeName === 'data-request-id') {
         shouldSanitize = true;
-        break;
+        continue;
       }
       if (record.type === 'childList' && record.addedNodes.length > 0) {
         shouldSanitize = true;
-        break;
+        for (const node of record.addedNodes) {
+          if (isPluginNativeInteractionMutationTarget(node)) {
+            shouldRebind = true;
+            break;
+          }
+        }
       }
     }
     if (shouldSanitize) sanitizeAssistantBodyPluginNativeRequestIds(root);
+    if (shouldRebind) scheduleInteractionRebind();
   });
 
   observer.observe(root, {
@@ -709,7 +766,10 @@ function observeAssistantBodyPluginNativeRequestIds(root: HTMLElement, disposers
     attributes: true,
     attributeFilter: ['data-request-id'],
   });
-  disposers.push(() => observer.disconnect());
+  disposers.push(() => {
+    observer.disconnect();
+    if (rebindTimer != null) window.clearTimeout(rebindTimer);
+  });
 }
 
 function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMap | null {
@@ -760,6 +820,145 @@ function resolvePluginPromptDatasetForCarrier(carrier: HTMLElement): DOMStringMa
   return candidates.find(hasPromptPayload)?.dataset ?? null;
 }
 
+function buildGeneratedImagePayload(carrier: HTMLElement, rawTarget: EventTarget | null = null) {
+  const itemMessageId = String(props.item.message_id);
+  if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
+  const targetElement = rawTarget instanceof HTMLElement ? rawTarget : null;
+  const targetImage =
+    targetElement instanceof HTMLImageElement
+      ? targetElement
+      : ((targetElement?.querySelector?.('img') ?? carrier.querySelector('img')) as HTMLImageElement | null);
+  const promptDataset = resolvePluginPromptDatasetForCarrier(carrier);
+  const targetDataset = targetElement?.dataset ?? targetImage?.dataset ?? {};
+  const payloadCarrierDataset = { ...promptDataset, ...carrier.dataset, messageId: itemMessageId };
+  const payloadTargetDataset = { ...targetDataset, messageId: itemMessageId };
+  return parseGeneratedImageActivationPayload({
+    carrierDataset: payloadCarrierDataset,
+    targetDataset: payloadTargetDataset,
+    targetAttrSrc: targetImage?.getAttribute('src') ?? null,
+    targetCurrentSrc: targetImage?.currentSrc ?? null,
+    targetSrc: targetImage?.getAttribute('src') ?? null,
+  });
+}
+
+type AssistantBodyDelegatedGestureState = {
+  controller: ReturnType<typeof createGeneratedImageGestureController>;
+  lastGestureTarget: EventTarget | null;
+  suppressNextClick: boolean;
+};
+
+let assistantBodyDelegatedGestureStates = new WeakMap<HTMLElement, AssistantBodyDelegatedGestureState>();
+
+function resolveAssistantBodyNativeImageCarrierFromEventTarget(target: EventTarget | null): HTMLElement | null {
+  const root = assistantBodyRef.value;
+  const element = target instanceof HTMLElement ? target : null;
+  const carrier = element?.closest?.(PLUGIN_NATIVE_CARRIER_SELECTOR) as HTMLElement | null;
+  if (!root || !carrier || !root.contains(carrier)) return null;
+  return carrier;
+}
+
+function resolveAssistantBodyNativeImageButtonFromEventTarget(target: EventTarget | null): HTMLElement | null {
+  const root = assistantBodyRef.value;
+  const element = target instanceof HTMLElement ? target : null;
+  const button = element?.closest?.(PLUGIN_NATIVE_BUTTON_SELECTOR) as HTMLElement | null;
+  if (!root || !button || !root.contains(button)) return null;
+  return button;
+}
+
+function getAssistantBodyDelegatedGestureState(carrier: HTMLElement): AssistantBodyDelegatedGestureState {
+  let state = assistantBodyDelegatedGestureStates.get(carrier);
+  if (state) return state;
+
+  state = {
+    lastGestureTarget: null,
+    suppressNextClick: false,
+    controller: createGeneratedImageGestureController({
+      onView() {
+        emit('image-view', buildGeneratedImagePayload(carrier, state?.lastGestureTarget ?? null));
+      },
+      onRegenerate() {
+        emit('image-regenerate', buildGeneratedImagePayload(carrier, state?.lastGestureTarget ?? null));
+      },
+      onTag() {
+        emit('image-tag', buildGeneratedImagePayload(carrier, state?.lastGestureTarget ?? null));
+      },
+    }),
+  };
+  assistantBodyDelegatedGestureStates.set(carrier, state);
+  assistantBodyDelegatedGestureDisposers.value.push(() => state?.controller.dispose());
+  return state;
+}
+
+function handleAssistantBodyNativeImageClick(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const button = resolveAssistantBodyNativeImageButtonFromEventTarget(event.target);
+  if (button) {
+    if (!button.dataset.messageId) button.dataset.messageId = String(props.item.message_id);
+    stopEvent(event);
+    emit('image-regenerate', buildGeneratedImagePayload(button, event.target));
+    return;
+  }
+
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  if (state.suppressNextClick) {
+    state.suppressNextClick = false;
+    stopEvent(event);
+    return;
+  }
+  state.lastGestureTarget = event.target;
+  stopEvent(event);
+  state.controller.handleClick();
+}
+
+function handleAssistantBodyNativeImageDoubleClick(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  state.lastGestureTarget = event.target;
+  state.suppressNextClick = true;
+  stopEvent(event);
+  state.controller.handleDoubleClick();
+}
+
+function handleAssistantBodyNativeImagePointerDown(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const pointerEvent = event as PointerEvent;
+  if (pointerEvent.pointerType !== 'touch') return;
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  state.lastGestureTarget = event.target;
+  stopEvent(event);
+  state.controller.handleTouchStart();
+}
+
+function handleAssistantBodyNativeImagePointerUp(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const pointerEvent = event as PointerEvent;
+  if (pointerEvent.pointerType !== 'touch') return;
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  state.lastGestureTarget = event.target;
+  stopEvent(event);
+  state.controller.handleTouchEnd();
+}
+
+function handleAssistantBodyNativeImagePointerCancel(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const pointerEvent = event as PointerEvent;
+  if (pointerEvent.pointerType !== 'touch') return;
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  state.lastGestureTarget = event.target;
+  stopEvent(event);
+  state.controller.handleTouchCancel();
+}
+
 function bindAssistantBodyInteractions() {
   clearAssistantBodyInteractionBindings();
   const root = assistantBodyRef.value;
@@ -768,22 +967,7 @@ function bindAssistantBodyInteractions() {
   const disposers: Array<() => void> = [];
   observeAssistantBodyPluginNativeRequestIds(root, disposers);
 
-  const buildPayload = (carrier: HTMLElement, rawTarget: EventTarget | null = null) => {
-    if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
-    const targetElement = rawTarget instanceof HTMLElement ? rawTarget : null;
-    const targetImage =
-      targetElement instanceof HTMLImageElement
-        ? targetElement
-        : ((targetElement?.querySelector?.('img') ?? carrier.querySelector('img')) as HTMLImageElement | null);
-    const promptDataset = resolvePluginPromptDatasetForCarrier(carrier);
-    return parseGeneratedImageActivationPayload({
-      carrierDataset: { ...promptDataset, ...carrier.dataset },
-      targetDataset: targetElement?.dataset ?? targetImage?.dataset ?? {},
-      targetAttrSrc: targetImage?.getAttribute('src') ?? null,
-      targetCurrentSrc: targetImage?.currentSrc ?? null,
-      targetSrc: targetImage?.getAttribute('src') ?? null,
-    });
-  };
+  const buildPayload = buildGeneratedImagePayload;
 
   const bindGestureTarget = (gestureTarget: HTMLElement, carrier: HTMLElement) => {
     let suppressNextClick = false;
@@ -801,6 +985,7 @@ function bindAssistantBodyInteractions() {
     });
 
     const handleClick = (event: Event) => {
+      if (isBridgedEvent(event)) return;
       if (suppressNextClick) {
         suppressNextClick = false;
         return;
@@ -810,12 +995,14 @@ function bindAssistantBodyInteractions() {
       controller.handleClick();
     };
     const handleDoubleClick = (event: Event) => {
+      if (isBridgedEvent(event)) return;
       lastGestureTarget = event.target;
       stopEvent(event);
       suppressNextClick = true;
       controller.handleDoubleClick();
     };
     const handlePointerDown = (event: Event) => {
+      if (isBridgedEvent(event)) return;
       const pointerEvent = event as PointerEvent;
       if (pointerEvent.pointerType !== 'touch') return;
       lastGestureTarget = event.target;
@@ -823,6 +1010,7 @@ function bindAssistantBodyInteractions() {
       controller.handleTouchStart();
     };
     const handlePointerUp = (event: Event) => {
+      if (isBridgedEvent(event)) return;
       const pointerEvent = event as PointerEvent;
       if (pointerEvent.pointerType !== 'touch') return;
       lastGestureTarget = event.target;
@@ -830,6 +1018,7 @@ function bindAssistantBodyInteractions() {
       controller.handleTouchEnd();
     };
     const handlePointerCancel = (event: Event) => {
+      if (isBridgedEvent(event)) return;
       const pointerEvent = event as PointerEvent;
       if (pointerEvent.pointerType !== 'touch') return;
       lastGestureTarget = event.target;
@@ -860,21 +1049,13 @@ function bindAssistantBodyInteractions() {
   ) as HTMLElement[];
   for (const button of promptButtons) {
     if (!button.dataset.messageId) button.dataset.messageId = itemMessageId;
-    const handleClick = (event: Event) => {
-      stopEvent(event);
-      emit('image-regenerate', buildPayload(button, event.target));
-    };
-    button.addEventListener('click', handleClick, true);
-    disposers.push(() => {
-      button.removeEventListener('click', handleClick, true);
-    });
   }
 
   const pluginNativeCarriers = Array.from(
     root.querySelectorAll('.st-chatu8-image-span, span.image-tag-placeholder'),
   ) as HTMLElement[];
   for (const carrier of pluginNativeCarriers) {
-    bindGestureTarget(carrier, carrier);
+    if (!carrier.dataset.messageId) carrier.dataset.messageId = itemMessageId;
   }
 
   const fallbackCarriers = Array.from(
