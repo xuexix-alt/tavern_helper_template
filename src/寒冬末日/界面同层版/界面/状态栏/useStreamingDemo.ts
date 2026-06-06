@@ -260,10 +260,7 @@ const CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT = 'ch-llm-image-gen-response';
 const CHATU8_REGEX_TEST_MESSAGE_EVENT = 'regex-st-chatu8-test-message';
 const CHATU8_REGEX_RESULT_MESSAGE_EVENT = 'regex-st-chatu8-result-message';
 const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';
-const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [
-  CHATU8_AUTO_CLICK_COMPLETE_EVENT,
-  'st-chatu8:auto_click_complete',
-] as const;
+const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [CHATU8_AUTO_CLICK_COMPLETE_EVENT, 'st-chatu8:auto_click_complete'] as const;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
@@ -1828,10 +1825,7 @@ function hasNativePluginPromptControls(root: HTMLElement): boolean {
 }
 
 function resolvePluginNativeSameLayerPromptScanRoot(root: HTMLElement): HTMLElement {
-  return (
-    (root.closest('.assistant-card, .assistant-message, .transcript-entry, .mes') as HTMLElement | null) ??
-    root
-  );
+  return (root.closest('.assistant-card, .assistant-message, .transcript-entry, .mes') as HTMLElement | null) ?? root;
 }
 
 function collectUnclaimedSameLayerChatu8PromptRoots(messageIds: number[] = []): HTMLElement[] {
@@ -2319,7 +2313,8 @@ function buildGeneratedImageRefsForMessage(input: {
         if (!src) return null;
         const promptToken = String(image.promptToken ?? '').trim();
         const anchorText = String(image.anchorText ?? '').trim();
-        const canRegenerate = nativeHostDomArtifacts.length > 0 && canRegenerateFromHostDomArtifacts(image, nativeHostDomArtifacts);
+        const canRegenerate =
+          nativeHostDomArtifacts.length > 0 && canRegenerateFromHostDomArtifacts(image, nativeHostDomArtifacts);
         const metadataPrompt = promptToken ? '' : extractPromptFromPngDataUri(src);
         const promptForLabel = promptToken || metadataPrompt;
         const title =
@@ -5677,7 +5672,10 @@ export function useStreamingDemo() {
     await new Promise<void>(resolve => window.setTimeout(resolve, 120));
   }
 
-  async function refreshHostMessagesForPluginNativeImageCompletion(reason: string, messageIds: number[]): Promise<void> {
+  async function refreshHostMessagesForPluginNativeImageCompletion(
+    reason: string,
+    messageIds: number[],
+  ): Promise<void> {
     const normalizedMessageIds = [
       ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
     ];
@@ -8097,7 +8095,9 @@ export function useStreamingDemo() {
             ),
           ];
           const responseMessageIds =
-            targetMessageIds.length > 0 ? targetMessageIds : collectPluginNativeHandoffMessageIds({ requestId, prompt });
+            targetMessageIds.length > 0
+              ? targetMessageIds
+              : collectPluginNativeHandoffMessageIds({ requestId, prompt });
           const isUntargetedResponse = targetMessageIds.length === 0;
 
           recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
@@ -8119,7 +8119,10 @@ export function useStreamingDemo() {
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {
             queueGeneratedImageEntityRefresh(responseMessageIds, 'host.plugin_native_response_success');
-            void refreshHostMessagesForPluginNativeImageCompletion('host.plugin_native_response_success', responseMessageIds);
+            void refreshHostMessagesForPluginNativeImageCompletion(
+              'host.plugin_native_response_success',
+              responseMessageIds,
+            );
             discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', responseMessageIds);
             // 增强：延迟二次扫描，确保图片DOM完全更新后再次发现
             window.setTimeout(() => {

@@ -34,8 +34,7 @@ test('host visual hide helper has a plugin-native handoff lease that does not co
 
 test('host plugin-native shadow window stays viewport-visible for mobile st-chatu8 scans', () => {
   const source = fs.readFileSync(helperPath, 'utf8');
-  const shadowRule =
-    source.match(/\[\$\{HOST_PLUGIN_NATIVE_SHADOW_ATTR\}="true"\] \{[\s\S]*?\n\}/)?.[0] ?? '';
+  const shadowRule = source.match(/\[\$\{HOST_PLUGIN_NATIVE_SHADOW_ATTR\}="true"\] \{[\s\S]*?\n\}/)?.[0] ?? '';
 
   assert.notEqual(shadowRule, '', 'shadow window style rule should be present');
   assert.match(shadowRule, /visibility: visible !important;/);
