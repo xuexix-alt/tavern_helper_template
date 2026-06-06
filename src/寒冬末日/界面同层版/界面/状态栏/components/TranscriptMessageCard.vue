@@ -96,19 +96,19 @@
           @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
           @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
           @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
-        >
-          <div
-            v-if="item.isStreaming"
-            ref="assistantBodyRef"
-            class="assistant-body html-body mes_text is-stream-stage"
-            :data-message-id="item.message_id"
-            :data-message-index="item.message_id"
+          >
+            <div
+              ref="assistantBodyRef"
+              class="assistant-body html-body mes_text is-stream-stage"
+              :data-message-id="item.message_id"
+              :data-message-index="item.message_id"
             @click.capture="handleAssistantBodyNativeImageClick"
             @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
-            @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
-            @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
-            @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
-          >
+              @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+              @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+              @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
+              v-if="item.isStreaming"
+            >
             <StreamRenderer
               :message="item.content"
               :role="item.role"
@@ -119,6 +119,7 @@
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-else
+            v-html="displayedAssistantHtml"
             ref="assistantBodyRef"
             class="assistant-body html-body mes_text"
             :data-message-id="item.message_id"
@@ -128,7 +129,6 @@
             @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
             @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
             @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
-            v-html="displayedAssistantHtml"
           ></div>
         </div>
       </section>

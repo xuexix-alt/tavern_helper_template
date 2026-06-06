@@ -79,6 +79,7 @@ test('host plugin native image mutations refresh gallery and targeted transcript
 test('same-layer asks the st-chatu8 iframe processor to claim visible image prompts before probing refs', () => {
   const source = readSource('useStreamingDemo.ts');
   const loadBody = extractFunctionBody(source, 'loadPluginNativeIframeProcessorModule');
+  const resolveBody = extractFunctionBody(source, 'resolvePluginNativeSameLayerPromptScanRoot');
   const collectBody = extractFunctionBody(source, 'collectUnclaimedSameLayerChatu8PromptRoots');
   const scanBody = extractFunctionBody(source, 'runPluginNativeSameLayerPromptScan');
   const reconcileBody = extractFunctionBody(source, 'schedulePluginNativePromptPlaceholderReconcile');
@@ -102,6 +103,16 @@ test('same-layer asks the st-chatu8 iframe processor to claim visible image prom
     source,
     /function resolvePluginNativeSameLayerPromptScanRoot\(root: HTMLElement\): HTMLElement/,
     'same-layer should resolve a plugin-visible ancestor before invoking the st-chatu8 direct scanner',
+  );
+  assert.match(
+    resolveBody,
+    /root\.closest\('\.assistant-card, \.assistant-message, \.transcript-entry, \.mes'\)/,
+    'same-layer prompt scans should lift .mes_text bodies to a stable message/root container before plugin visibility checks',
+  );
+  assert.doesNotMatch(
+    resolveBody,
+    /\.mes_text/,
+    'same-layer prompt scan root resolution must not return the fragile body node as the closest match',
   );
   assert.match(
     collectBody,

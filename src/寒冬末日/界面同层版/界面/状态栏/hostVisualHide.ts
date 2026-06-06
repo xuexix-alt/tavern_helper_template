@@ -39,16 +39,16 @@ function ensureHostVisualHideStyle(doc: Document) {
 }
 [${HOST_PLUGIN_NATIVE_SHADOW_ATTR}="true"] {
   visibility: visible !important;
-  opacity: 0 !important;
+  opacity: 0.001 !important;
   pointer-events: none !important;
   min-height: 1px !important;
-  max-height: none !important;
+  max-height: 1px !important;
   height: auto !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
   overflow: visible !important;
-  transform: translateX(-200vw) !important;
+  transform: none !important;
 }
 [${HOST_PLUGIN_NATIVE_LEASE_ATTR}="true"][${HOST_PLUGIN_NATIVE_SHADOW_ATTR}="true"] {
   transform: none !important;

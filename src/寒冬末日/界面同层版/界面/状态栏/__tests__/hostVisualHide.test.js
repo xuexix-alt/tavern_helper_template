@@ -31,3 +31,23 @@ test('host visual hide helper has a plugin-native handoff lease that does not co
   assert.match(source, /root\.setAttribute\(HOST_PLUGIN_NATIVE_LEASE_ATTR, 'true'\);/);
   assert.match(source, /root\.removeAttribute\(HOST_PLUGIN_NATIVE_LEASE_ATTR\);/);
 });
+
+test('host plugin-native shadow window stays viewport-visible for mobile st-chatu8 scans', () => {
+  const source = fs.readFileSync(helperPath, 'utf8');
+  const shadowRule =
+    source.match(/\[\$\{HOST_PLUGIN_NATIVE_SHADOW_ATTR\}="true"\] \{[\s\S]*?\n\}/)?.[0] ?? '';
+
+  assert.notEqual(shadowRule, '', 'shadow window style rule should be present');
+  assert.match(shadowRule, /visibility: visible !important;/);
+  assert.match(shadowRule, /opacity: 0\.001 !important;/);
+  assert.match(shadowRule, /min-height: 1px !important;/);
+  assert.match(shadowRule, /max-height: 1px !important;/);
+  assert.match(shadowRule, /height: auto !important;/);
+  assert.match(shadowRule, /overflow: visible !important;/);
+  assert.match(shadowRule, /transform: none !important;/);
+  assert.doesNotMatch(
+    shadowRule,
+    /translateX\(-200vw\)|opacity: 0 !important|max-height: none !important/,
+    'durable native shadow roots must stay in the viewport because st-chatu8 gates scans with getBoundingClientRect',
+  );
+});
