@@ -89,30 +89,30 @@
         <div class="assistant-corners bl"></div>
         <div class="assistant-corners br"></div>
 
+        <div
+          class="assistant-body-wrap"
+          @click.capture="handleAssistantBodyNativeImageClick"
+          @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
+          @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+          @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+          @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
+        >
           <div
-            class="assistant-body-wrap"
+            v-if="item.isStreaming"
+            ref="assistantBodyRef"
+            class="assistant-body html-body mes_text is-stream-stage"
+            :data-message-id="item.message_id"
+            :data-message-index="item.message_id"
             @click.capture="handleAssistantBodyNativeImageClick"
             @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
             @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
             @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
             @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
           >
-              <div
-                v-if="item.isStreaming"
-                ref="assistantBodyRef"
-                class="assistant-body html-body mes_text is-stream-stage"
-                :data-message-id="item.message_id"
-                :data-message-index="item.message_id"
-                @click.capture="handleAssistantBodyNativeImageClick"
-                @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
-                @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
-                @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
-                @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
-              >
-                <StreamRenderer
-                  :message="item.content"
-                  :role="item.role"
-                  :active="item.isStreaming"
+            <StreamRenderer
+              :message="item.content"
+              :role="item.role"
+              :active="item.isStreaming"
               :message-id="item.message_id"
             />
           </div>
@@ -120,18 +120,18 @@
           <div
             v-else
             ref="assistantBodyRef"
-                class="assistant-body html-body mes_text"
-                :data-message-id="item.message_id"
-                :data-message-index="item.message_id"
-                @click.capture="handleAssistantBodyNativeImageClick"
-                @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
-                @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
-                @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
-                @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
-                v-html="displayedAssistantHtml"
-              ></div>
-            </div>
-          </section>
+            class="assistant-body html-body mes_text"
+            :data-message-id="item.message_id"
+            :data-message-index="item.message_id"
+            @click.capture="handleAssistantBodyNativeImageClick"
+            @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
+            @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+            @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
+            @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
+            v-html="displayedAssistantHtml"
+          ></div>
+        </div>
+      </section>
     </template>
   </article>
 </template>

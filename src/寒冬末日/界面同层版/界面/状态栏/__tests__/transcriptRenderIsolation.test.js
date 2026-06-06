@@ -393,7 +393,9 @@ test('successful image generation responses actively reconcile host image data',
     'untargeted successful plugin-native image responses should still force a broad generated-image refresh',
   );
   assert.equal(
-    source.includes("void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');"),
+    source.includes(
+      "void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');",
+    ),
     true,
     'untargeted successful plugin-native image responses should hydrate visible host messages instead of waiting for the next MVU event',
   );

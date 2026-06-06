@@ -260,15 +260,11 @@ const CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT = 'ch-llm-image-gen-response';
 const CHATU8_REGEX_TEST_MESSAGE_EVENT = 'regex-st-chatu8-test-message';
 const CHATU8_REGEX_RESULT_MESSAGE_EVENT = 'regex-st-chatu8-result-message';
 const CHATU8_AUTO_CLICK_COMPLETE_EVENT = 'st_chatu8_auto_click_complete';
-const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [
-  CHATU8_AUTO_CLICK_COMPLETE_EVENT,
-  'st-chatu8:auto_click_complete',
-] as const;
+const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [CHATU8_AUTO_CLICK_COMPLETE_EVENT, 'st-chatu8:auto_click_complete'] as const;
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
-const PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL =
-  '/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js';
+const PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL = '/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js';
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 const SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR = [
   `${CHATU8_IMAGE_SPAN_SELECTOR} img`,
@@ -396,7 +392,10 @@ function isVariableUpdateOnlyGenerationText(text: string): boolean {
     .replace(/<content\b[^>]*>/gi, '')
     .replace(/<\/content>/gi, '');
   const withoutVariableBlocks = withoutRuntimeShell
-    .replace(new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*?<\\/${MVU_UPDATE_VARIABLE_TAG_PATTERN}>`, 'gi'), '')
+    .replace(
+      new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*?<\\/${MVU_UPDATE_VARIABLE_TAG_PATTERN}>`, 'gi'),
+      '',
+    )
     .replace(new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b[^>]*>[\\s\\S]*$`, 'gi'), '');
   const remainingVisibleText = withoutVariableBlocks
     .replace(/<StatusPlaceHolderImpl\b[^>]*\/\s*>/gi, '')
@@ -445,7 +444,10 @@ function countMvuJsonInstructionMarkers(text: string): number {
   if (!source) return 0;
   let count = 0;
   if (/<JSONPatch\b/i.test(source)) count += 1;
-  if (new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b`, 'i').test(source) && extractMvuUpdateVariableBlocks(source).length === 0) {
+  if (
+    new RegExp(`<${MVU_UPDATE_VARIABLE_TAG_PATTERN}\\b`, 'i').test(source) &&
+    extractMvuUpdateVariableBlocks(source).length === 0
+  ) {
     count += 1;
   }
   return count;
@@ -457,12 +459,15 @@ function resolveHostMessageText(message: any): string {
   if (!messageText) return mesText;
   if (!mesText) return messageText;
 
-  const mesInstructionCount =
-    extractMvuUpdateVariableBlocks(mesText).length + countMvuJsonInstructionMarkers(mesText);
+  const mesInstructionCount = extractMvuUpdateVariableBlocks(mesText).length + countMvuJsonInstructionMarkers(mesText);
   const messageInstructionCount =
     extractMvuUpdateVariableBlocks(messageText).length + countMvuJsonInstructionMarkers(messageText);
   if (mesInstructionCount > messageInstructionCount) return mesText;
-  if (mesInstructionCount > 0 && mesInstructionCount === messageInstructionCount && mesText.length > messageText.length) {
+  if (
+    mesInstructionCount > 0 &&
+    mesInstructionCount === messageInstructionCount &&
+    mesText.length > messageText.length
+  ) {
     return mesText;
   }
   return messageText;
@@ -1798,9 +1803,7 @@ function isPluginNativeIframeProcessorModule(value: unknown): value is PluginNat
 
 async function loadPluginNativeIframeProcessorModule(): Promise<PluginNativeIframeProcessorModule | null> {
   if (!pluginNativeIframeProcessorModulePromise) {
-    pluginNativeIframeProcessorModulePromise = import(
-      /* @vite-ignore */ PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL
-    )
+    pluginNativeIframeProcessorModulePromise = import(/* @vite-ignore */ PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL)
       .then(module => (isPluginNativeIframeProcessorModule(module) ? module : null))
       .catch(error => {
         console.warn('[stream-demo] failed to load st-chatu8 iframe processor module', {
@@ -1814,7 +1817,11 @@ async function loadPluginNativeIframeProcessorModule(): Promise<PluginNativeIfra
 }
 
 function hasNativePluginPromptControls(root: HTMLElement): boolean {
-  return Boolean(root.querySelector(`${CHATU8_IMAGE_BUTTON_SELECTOR}[data-stable-id], ${CHATU8_IMAGE_SPAN_SELECTOR}[data-stable-id]`));
+  return Boolean(
+    root.querySelector(
+      `${CHATU8_IMAGE_BUTTON_SELECTOR}[data-stable-id], ${CHATU8_IMAGE_SPAN_SELECTOR}[data-stable-id]`,
+    ),
+  );
 }
 
 function resolvePluginNativeSameLayerPromptScanRoot(root: HTMLElement): HTMLElement {
@@ -1946,7 +1953,9 @@ function extractSameLayerRenderedImagesFromTranscript(messageId: number): Render
   const out: RenderableGeneratedImage[] = [];
   let order = 0;
   for (const root of collectSameLayerRenderedMessageRoots(messageId)) {
-    const images = Array.from(root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR)) as HTMLImageElement[];
+    const images = Array.from(
+      root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR),
+    ) as HTMLImageElement[];
     for (const image of images) {
       if (image.closest('.gallery-panel, .assistant-gallery-image')) continue;
       const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? image.src ?? '');
@@ -1986,10 +1995,7 @@ function extractSameLayerRenderedImagesFromTranscript(messageId: number): Render
       out.push({
         markerId: String(image.dataset.markerId ?? carrier?.dataset.markerId ?? '').trim() || undefined,
         imageId:
-          String(image.dataset.imageId ?? carrier?.dataset.imageId ?? '').trim() ||
-          requestId ||
-          promptToken ||
-          src,
+          String(image.dataset.imageId ?? carrier?.dataset.imageId ?? '').trim() || requestId || promptToken || src,
         requestId: requestId || undefined,
         promptToken: promptToken || undefined,
         anchorText: extractAnchorTextForImageNode(carrier ?? image, root),
@@ -2310,7 +2316,8 @@ function buildGeneratedImageRefsForMessage(input: {
         if (!src) return null;
         const promptToken = String(image.promptToken ?? '').trim();
         const anchorText = String(image.anchorText ?? '').trim();
-        const canRegenerate = nativeHostDomArtifacts.length > 0 && canRegenerateFromHostDomArtifacts(image, nativeHostDomArtifacts);
+        const canRegenerate =
+          nativeHostDomArtifacts.length > 0 && canRegenerateFromHostDomArtifacts(image, nativeHostDomArtifacts);
         const metadataPrompt = promptToken ? '' : extractPromptFromPngDataUri(src);
         const promptForLabel = promptToken || metadataPrompt;
         const title =
@@ -3891,7 +3898,9 @@ export function useStreamingDemo() {
         const nativeShadowWindowIds = collectNativeShadowWindowMessageIds();
         const metas = readMessageMetasAfterContainer();
         const showPatch = nativeShadowWindowIds
-          .filter(id => metas.some(item => item.message_id === id && (item.is_hidden === true || !hasHostMessageDom(id))))
+          .filter(id =>
+            metas.some(item => item.message_id === id && (item.is_hidden === true || !hasHostMessageDom(id))),
+          )
           .map(id => ({ message_id: id, is_hidden: false }));
         if (showPatch.length > 0) {
           normalizePluginNativeMessageMetadata(nativeShadowWindowIds);
@@ -5665,7 +5674,10 @@ export function useStreamingDemo() {
     await new Promise<void>(resolve => window.setTimeout(resolve, 120));
   }
 
-  async function refreshHostMessagesForPluginNativeImageCompletion(reason: string, messageIds: number[]): Promise<void> {
+  async function refreshHostMessagesForPluginNativeImageCompletion(
+    reason: string,
+    messageIds: number[],
+  ): Promise<void> {
     const normalizedMessageIds = [
       ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
     ];
@@ -7177,11 +7189,11 @@ export function useStreamingDemo() {
       const missingStatData =
         currentStatKeyCount === 0 &&
         (previousStatKeyCount > 0 || instructionMarkerCount > 0 || rawMessage.trim().length > 0);
-      const missingInitializedLorebooks =
-        currentInitializedLorebookCount === 0 && previousInitializedLorebookCount > 0;
-      const missingCurrentData = !hasCurrentData && (hasPreviousData || instructionMarkerCount > 0 || missingStatData)
-        ? true
-        : missingStatData || missingInitializedLorebooks;
+      const missingInitializedLorebooks = currentInitializedLorebookCount === 0 && previousInitializedLorebookCount > 0;
+      const missingCurrentData =
+        !hasCurrentData && (hasPreviousData || instructionMarkerCount > 0 || missingStatData)
+          ? true
+          : missingStatData || missingInitializedLorebooks;
 
       return {
         messageId: normalizedId,
@@ -8085,7 +8097,9 @@ export function useStreamingDemo() {
             ),
           ];
           const responseMessageIds =
-            targetMessageIds.length > 0 ? targetMessageIds : collectPluginNativeHandoffMessageIds({ requestId, prompt });
+            targetMessageIds.length > 0
+              ? targetMessageIds
+              : collectPluginNativeHandoffMessageIds({ requestId, prompt });
           const isUntargetedResponse = targetMessageIds.length === 0;
 
           recordLifecycleTrace('imageGenerationEventBridge', 'on_response_success', () => ({
@@ -8107,7 +8121,10 @@ export function useStreamingDemo() {
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {
             queueGeneratedImageEntityRefresh(responseMessageIds, 'host.plugin_native_response_success');
-            void refreshHostMessagesForPluginNativeImageCompletion('host.plugin_native_response_success', responseMessageIds);
+            void refreshHostMessagesForPluginNativeImageCompletion(
+              'host.plugin_native_response_success',
+              responseMessageIds,
+            );
             discoverRecentNativeGalleryImages('host.plugin_native_response_success:immediate', responseMessageIds);
             // 增强：延迟二次扫描，确保图片DOM完全更新后再次发现
             window.setTimeout(() => {

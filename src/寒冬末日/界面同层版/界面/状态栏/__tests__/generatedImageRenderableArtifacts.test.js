@@ -1,9 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const {
-  mergeRenderableGeneratedImageArtifact,
-} = require('../generatedImageRenderableArtifacts.ts');
+const { mergeRenderableGeneratedImageArtifact } = require('../generatedImageRenderableArtifacts.ts');
 
 test('same-src rendered image artifacts keep the existing image while filling plugin identity fields', () => {
   const merged = mergeRenderableGeneratedImageArtifact(

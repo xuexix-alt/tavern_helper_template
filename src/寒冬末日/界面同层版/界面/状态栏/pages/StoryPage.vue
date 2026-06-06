@@ -2004,10 +2004,10 @@ function resolvePluginNativePromptDatasetFromCarrier(carrier: HTMLElement): DOMS
   const hasPromptPayload = (candidate: HTMLElement | null): candidate is HTMLElement =>
     Boolean(
       candidate &&
-        (candidate.dataset.imageTag ||
-          candidate.dataset.link ||
-          candidate.getAttribute('data-image-tag') ||
-          candidate.getAttribute('data-link')),
+      (candidate.dataset.imageTag ||
+        candidate.dataset.link ||
+        candidate.getAttribute('data-image-tag') ||
+        candidate.getAttribute('data-link')),
     );
 
   let sibling = carrier.previousElementSibling;
