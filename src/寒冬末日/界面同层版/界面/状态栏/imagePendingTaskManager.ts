@@ -231,9 +231,7 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
 
     if (
       !task.requests.some(item =>
-        requestId
-          ? item.requestId === requestId
-          : item.promptToken === promptToken || item.prompt === prompt,
+        requestId ? item.requestId === requestId : item.promptToken === promptToken || item.prompt === prompt,
       )
     ) {
       task.requests.push({
