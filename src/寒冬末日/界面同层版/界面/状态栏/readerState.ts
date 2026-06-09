@@ -1,7 +1,7 @@
 ﻿import type { DemoTheme, ReaderChatState, ReaderFontMode, ReadingMode, TranscriptDensity } from './types';
 
 export const READER_CHAT_STATE_PATH = 'stream_demo.reader_state';
-export const READER_CHAT_STATE_VERSION = 3;
+export const READER_CHAT_STATE_VERSION = 4;
 
 export function normalizeReadingMode(input: unknown): ReadingMode | null {
   return input === 'following_latest' || input === 'browsing_history' ? input : null;
@@ -28,6 +28,20 @@ export function normalizeFontMode(input: unknown): ReaderFontMode | null {
   return input === 'hud' || input === 'reading' ? input : null;
 }
 
+export function normalizeCollapsedAssistantMessageIds(input: unknown): number[] {
+  if (!Array.isArray(input)) return [];
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const value of input) {
+    const id = Math.trunc(Number(value));
+    if (!Number.isFinite(id) || id < 0 || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= 120) break;
+  }
+  return out;
+}
+
 export function migrateReaderChatState(raw: Partial<ReaderChatState>): Partial<ReaderChatState> {
   return {
     version: READER_CHAT_STATE_VERSION,
@@ -36,6 +50,7 @@ export function migrateReaderChatState(raw: Partial<ReaderChatState>): Partial<R
     theme: normalizeTheme(raw?.theme) ?? 'amber',
     font_mode: normalizeFontMode(raw?.font_mode) ?? 'hud',
     opening_expanded: typeof raw?.opening_expanded === 'boolean' ? raw.opening_expanded : true,
+    collapsed_assistant_message_ids: normalizeCollapsedAssistantMessageIds(raw?.collapsed_assistant_message_ids),
   };
 }
 
@@ -71,6 +86,9 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
               : typeof current.opening_expanded === 'boolean'
                 ? current.opening_expanded
                 : true,
+          collapsed_assistant_message_ids: Array.isArray(patch.collapsed_assistant_message_ids)
+            ? normalizeCollapsedAssistantMessageIds(patch.collapsed_assistant_message_ids)
+            : normalizeCollapsedAssistantMessageIds(current.collapsed_assistant_message_ids),
         });
         return vars;
       },

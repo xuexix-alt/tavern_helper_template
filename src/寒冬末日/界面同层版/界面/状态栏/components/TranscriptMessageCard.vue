@@ -79,21 +79,42 @@
     <template v-else>
       <section
         class="assistant-card clip-corner"
-        :class="{ 'is-streaming': item.isStreaming }"
+        :class="{ 'is-streaming': item.isStreaming, 'is-collapsed': !expanded }"
         :data-message-id="item.message_id"
-        @pointerdown.capture="emit('image-intent', item)"
-        @click.capture="emit('image-intent', item)"
+        @pointerdown.capture="handleAssistantCardImageIntent"
+        @click.capture="handleAssistantCardImageIntent"
       >
         <div class="assistant-corners tl"></div>
         <div class="assistant-corners tr"></div>
         <div class="assistant-corners bl"></div>
         <div class="assistant-corners br"></div>
 
+        <div class="assistant-card-controls is-top">
+          <button
+            type="button"
+            class="assistant-control-btn clip-corner-sm"
+            :aria-expanded="expanded"
+            @click="emit('toggle-expanded', item)"
+          >
+            {{ expanded ? '折叠' : '展开' }}
+          </button>
+          <button
+            v-if="item.canOpenDetail"
+            type="button"
+            class="assistant-control-btn is-detail clip-corner-sm"
+            @click="emit('open-detail', item)"
+          >
+            详情
+          </button>
+        </div>
+
         <div
           class="assistant-body-wrap"
+          :class="{ 'is-collapsed': !expanded }"
           @click.capture="handleAssistantBodyNativeImageClick"
           @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
           @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+          @pointermove.capture="handleAssistantBodyNativeImagePointerMove"
           @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
           @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
         >
@@ -105,6 +126,7 @@
             @click.capture="handleAssistantBodyNativeImageClick"
             @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
             @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+            @pointermove.capture="handleAssistantBodyNativeImagePointerMove"
             @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
             @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
             v-if="item.isStreaming"
@@ -127,9 +149,29 @@
             @click.capture="handleAssistantBodyNativeImageClick"
             @dblclick.capture="handleAssistantBodyNativeImageDoubleClick"
             @pointerdown.capture="handleAssistantBodyNativeImagePointerDown"
+            @pointermove.capture="handleAssistantBodyNativeImagePointerMove"
             @pointerup.capture="handleAssistantBodyNativeImagePointerUp"
             @pointercancel.capture="handleAssistantBodyNativeImagePointerCancel"
           ></div>
+        </div>
+
+        <div class="assistant-card-controls is-bottom">
+          <button
+            type="button"
+            class="assistant-control-btn clip-corner-sm"
+            :aria-expanded="expanded"
+            @click="emit('toggle-expanded', item)"
+          >
+            {{ expanded ? '折叠' : '展开' }}
+          </button>
+          <button
+            v-if="item.canOpenDetail"
+            type="button"
+            class="assistant-control-btn is-detail clip-corner-sm"
+            @click="emit('open-detail', item)"
+          >
+            详情
+          </button>
         </div>
       </section>
     </template>
@@ -140,7 +182,10 @@
 import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import { parseGeneratedImageActivationPayload } from '../generatedImageActivation';
-import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import {
+  createGeneratedImageGestureController,
+  type GeneratedImageGesturePoint,
+} from '../generatedImageGestureController';
 import {
   collectReachableHostDocuments,
   isBridgedEvent,
@@ -173,10 +218,12 @@ const props = defineProps<{
   showRollbackConfirm?: boolean;
   galleryEntries?: ReaderGalleryEntry[];
   showTailGalleryImages?: boolean;
+  expanded?: boolean;
 }>();
 
 const emit = defineEmits<{
   (event: 'open-detail', item: TranscriptItem): void;
+  (event: 'toggle-expanded', item: TranscriptItem): void;
   (event: 'image-intent', item: TranscriptItem): void;
   (event: 'image-view', payload: GeneratedImageActivationPayload): void;
   (event: 'image-regenerate', payload: GeneratedImageActivationPayload): void;
@@ -197,6 +244,7 @@ const assistantBodyDelegatedGestureDisposers = ref<Array<() => void>>([]);
 const directHostBackfillTimers = ref<number[]>([]);
 const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
+const expanded = computed(() => props.expanded !== false);
 const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
   // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
@@ -279,6 +327,16 @@ function onEditInput(event: Event) {
   const target = event.target as HTMLTextAreaElement | null;
   if (!target) return;
   emit('update-edit-draft', target.value);
+}
+
+function isAssistantControlEventTarget(target: EventTarget | null): boolean {
+  const element = target instanceof HTMLElement ? target : null;
+  return Boolean(element?.closest?.('.assistant-card-controls, .assistant-control-btn'));
+}
+
+function handleAssistantCardImageIntent(event: Event) {
+  if (isAssistantControlEventTarget(event.target)) return;
+  emit('image-intent', props.item);
 }
 
 function refreshAssistantBodyImagePresentation() {
@@ -560,15 +618,28 @@ function appendMissingGalleryFigure(root: HTMLElement, entry: ReaderGalleryEntry
   return true;
 }
 
-function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill') {
+function hasReadyGalleryEntries(): boolean {
+  return (props.galleryEntries ?? []).some(entry => String(entry.src ?? '').trim());
+}
+
+function shouldRunDirectHostBackfill(): boolean {
+  return (
+    props.showTailGalleryImages !== false &&
+    props.item.role === 'assistant' &&
+    !props.item.isStreaming &&
+    !hasReadyGalleryEntries()
+  );
+}
+
+function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill'): boolean {
   const root = assistantBodyRef.value;
-  if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
+  if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return false;
   const existingKeys = collectExistingGalleryImageKeys(root);
   const entries = collectDirectHostBackfillEntries().filter(entry => {
     const keys = collectGalleryEntryKeys(entry);
     return keys.length > 0 && !keys.some(key => existingKeys.has(key));
   });
-  if (entries.length === 0) return;
+  if (entries.length === 0) return false;
 
   let appended = 0;
   for (const entry of entries) {
@@ -581,6 +652,7 @@ function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill') {
       bindAssistantBodyInteractions();
     });
   }
+  return appended > 0;
 }
 
 function clearDirectHostBackfillTimers() {
@@ -590,10 +662,16 @@ function clearDirectHostBackfillTimers() {
 
 function scheduleDirectHostBackfillImages(reason = 'direct_host_backfill') {
   clearDirectHostBackfillTimers();
+  if (!shouldRunDirectHostBackfill()) return;
   for (const delayMs of DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS) {
-    const run = () => hydrateDirectHostBackfillImages(`${reason}:${delayMs}`);
+    const run = () => {
+      if (!shouldRunDirectHostBackfill()) return false;
+      const appended = hydrateDirectHostBackfillImages(`${reason}:${delayMs}`);
+      if (appended) clearDirectHostBackfillTimers();
+      return appended;
+    };
     if (delayMs <= 0) {
-      run();
+      if (run()) break;
       continue;
     }
     const timer = window.setTimeout(run, delayMs);
@@ -658,6 +736,7 @@ function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
   sanitizeSameLayerPluginNativeRequestIdElements(root);
+  if (props.showTailGalleryImages === false) return;
   const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
   if (entries.length === 0) return;
   const existingKeys = collectExistingGalleryImageKeys(root);
@@ -708,6 +787,10 @@ function stopEvent(event: Event) {
   event.stopPropagation();
   const nativeEvent = event as Event & { stopImmediatePropagation?: () => void };
   nativeEvent.stopImmediatePropagation?.();
+}
+
+function toGesturePoint(event: PointerEvent): GeneratedImageGesturePoint {
+  return { clientX: event.clientX, clientY: event.clientY };
 }
 
 function sanitizeAssistantBodyPluginNativeRequestIds(root: HTMLElement): number {
@@ -932,7 +1015,18 @@ function handleAssistantBodyNativeImagePointerDown(event: Event) {
   const state = getAssistantBodyDelegatedGestureState(carrier);
   state.lastGestureTarget = event.target;
   stopEvent(event);
-  state.controller.handleTouchStart();
+  state.controller.handleTouchStart(toGesturePoint(pointerEvent));
+}
+
+function handleAssistantBodyNativeImagePointerMove(event: Event) {
+  if (isBridgedEvent(event)) return;
+  const pointerEvent = event as PointerEvent;
+  if (pointerEvent.pointerType !== 'touch') return;
+  const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget(event.target);
+  if (!carrier) return;
+  const state = getAssistantBodyDelegatedGestureState(carrier);
+  state.lastGestureTarget = event.target;
+  state.controller.handleTouchMove(toGesturePoint(pointerEvent));
 }
 
 function handleAssistantBodyNativeImagePointerUp(event: Event) {
@@ -944,7 +1038,7 @@ function handleAssistantBodyNativeImagePointerUp(event: Event) {
   const state = getAssistantBodyDelegatedGestureState(carrier);
   state.lastGestureTarget = event.target;
   stopEvent(event);
-  state.controller.handleTouchEnd();
+  state.controller.handleTouchEnd(toGesturePoint(pointerEvent));
 }
 
 function handleAssistantBodyNativeImagePointerCancel(event: Event) {
@@ -963,6 +1057,7 @@ function bindAssistantBodyInteractions() {
   clearAssistantBodyInteractionBindings();
   const root = assistantBodyRef.value;
   if (!root) return;
+  if (props.showTailGalleryImages === false) return;
   const itemMessageId = String(props.item.message_id);
   const disposers: Array<() => void> = [];
   observeAssistantBodyPluginNativeRequestIds(root, disposers);
@@ -988,6 +1083,7 @@ function bindAssistantBodyInteractions() {
       if (isBridgedEvent(event)) return;
       if (suppressNextClick) {
         suppressNextClick = false;
+        stopEvent(event);
         return;
       }
       lastGestureTarget = event.target;
@@ -1007,7 +1103,14 @@ function bindAssistantBodyInteractions() {
       if (pointerEvent.pointerType !== 'touch') return;
       lastGestureTarget = event.target;
       stopEvent(event);
-      controller.handleTouchStart();
+      controller.handleTouchStart(toGesturePoint(pointerEvent));
+    };
+    const handlePointerMove = (event: Event) => {
+      if (isBridgedEvent(event)) return;
+      const pointerEvent = event as PointerEvent;
+      if (pointerEvent.pointerType !== 'touch') return;
+      lastGestureTarget = event.target;
+      controller.handleTouchMove(toGesturePoint(pointerEvent));
     };
     const handlePointerUp = (event: Event) => {
       if (isBridgedEvent(event)) return;
@@ -1015,7 +1118,7 @@ function bindAssistantBodyInteractions() {
       if (pointerEvent.pointerType !== 'touch') return;
       lastGestureTarget = event.target;
       stopEvent(event);
-      controller.handleTouchEnd();
+      controller.handleTouchEnd(toGesturePoint(pointerEvent));
     };
     const handlePointerCancel = (event: Event) => {
       if (isBridgedEvent(event)) return;
@@ -1029,6 +1132,7 @@ function bindAssistantBodyInteractions() {
     gestureTarget.addEventListener('click', handleClick, true);
     gestureTarget.addEventListener('dblclick', handleDoubleClick, true);
     gestureTarget.addEventListener('pointerdown', handlePointerDown, true);
+    gestureTarget.addEventListener('pointermove', handlePointerMove, true);
     gestureTarget.addEventListener('pointerup', handlePointerUp, true);
     gestureTarget.addEventListener('pointercancel', handlePointerCancel, true);
 
@@ -1036,6 +1140,7 @@ function bindAssistantBodyInteractions() {
       gestureTarget.removeEventListener('click', handleClick, true);
       gestureTarget.removeEventListener('dblclick', handleDoubleClick, true);
       gestureTarget.removeEventListener('pointerdown', handlePointerDown, true);
+      gestureTarget.removeEventListener('pointermove', handlePointerMove, true);
       gestureTarget.removeEventListener('pointerup', handlePointerUp, true);
       gestureTarget.removeEventListener('pointercancel', handlePointerCancel, true);
       controller.dispose();
@@ -1128,6 +1233,7 @@ watch(
   galleryEntrySignature,
   async () => {
     if (props.item.role !== 'assistant' || props.item.isStreaming) return;
+    if (hasReadyGalleryEntries()) clearDirectHostBackfillTimers();
     await nextTick();
     recordNativePromptTokenScanState('gallery_entries:before_hydration');
     hydratePendingImagesFromGalleryEntries();
@@ -1273,6 +1379,7 @@ onBeforeUnmount(() => {
   border-right: 2px solid;
 }
 .meta-chip,
+.assistant-control-btn,
 .action-btn {
   font-family: var(--demo-font-mono);
 }
@@ -1280,6 +1387,21 @@ onBeforeUnmount(() => {
   position: relative;
   padding-top: 2px;
   min-width: 0;
+}
+.assistant-body-wrap.is-collapsed {
+  max-height: 240px;
+  overflow: hidden;
+}
+.assistant-body-wrap.is-collapsed::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  height: 56px;
+  background: linear-gradient(180deg, transparent, var(--demo-assistant-card-bg));
+  pointer-events: none;
 }
 .assistant-body {
   position: relative;
@@ -1349,6 +1471,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin: 12px 0 4px;
+  touch-action: pan-y;
 }
 
 .assistant-body-wrap :deep(.image-tag-button) {
@@ -1487,6 +1610,7 @@ onBeforeUnmount(() => {
   box-shadow:
     0 8px 18px color-mix(in srgb, black 18%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 3%, transparent);
+  touch-action: pan-y;
 }
 
 .assistant-body-wrap :deep(pre),
@@ -1542,6 +1666,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: transparent;
   cursor: pointer;
+  touch-action: pan-y;
 }
 
 .assistant-inline-image-strip {
@@ -1555,15 +1680,27 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 3;
   pointer-events: auto;
+  touch-action: pan-y;
 }
 
 .assistant-toolbar,
 .assistant-footer,
-.assistant-footer-left {
+.assistant-footer-left,
+.assistant-card-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+}
+.assistant-card-controls {
+  position: relative;
+  z-index: 6;
+  justify-content: flex-end;
+  min-height: 28px;
+  margin: -4px 0 0;
+}
+.assistant-card-controls.is-bottom {
+  margin: 0 0 -2px;
 }
 .assistant-toolbar {
   justify-content: flex-start;
@@ -1579,6 +1716,7 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
 }
 .meta-chip,
+.assistant-control-btn,
 .action-btn {
   min-height: 36px;
   padding: 0 12px;
@@ -1589,8 +1727,24 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   color: var(--demo-text-secondary);
 }
+.assistant-control-btn {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--demo-text-accent);
+  cursor: pointer;
+}
+.assistant-control-btn.is-detail {
+  color: var(--demo-text-primary);
+}
+.assistant-control-btn:hover {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface) 90%);
+  border-color: color-mix(in srgb, var(--primary) 32%, transparent);
+}
 
 .message-shell.density-minimal .meta-chip,
+.message-shell.density-minimal .assistant-control-btn,
 .message-shell.density-minimal .action-btn {
   min-height: 32px;
   padding: 0 10px;
@@ -1667,6 +1821,7 @@ onBeforeUnmount(() => {
 
   .meta-chip,
   .detail-toggle,
+  .assistant-control-btn,
   .action-btn {
     min-height: 28px;
     padding: 0 8px;

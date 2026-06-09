@@ -72,6 +72,40 @@ test('imagePendingTaskManager flushes buffered response when plugin DOM hint arr
   });
 });
 
+test('imagePendingTaskManager matches anonymous plugin ids by prompt hint', () => {
+  let currentTime = 2_500;
+  const manager = createImagePendingTaskManager({
+    now: () => currentTime,
+  });
+
+  manager.registerHint({
+    messageId: 12,
+    requestId: 'undefined',
+    prompt: 'Scene Composition:restaurant close-up',
+  });
+
+  currentTime += 10;
+  const requestBinding = manager.registerRequest({
+    id: 'undefined',
+    prompt: 'Scene Composition:restaurant close-up',
+  });
+  assert.equal(requestBinding?.messageId, 12);
+
+  const matched = manager.consumeResponse({
+    id: 'undefined',
+    prompt: 'Scene Composition:restaurant close-up',
+    imageData: 'data:image/png;base64,anon',
+  });
+
+  assert.deepEqual(matched, {
+    messageId: 12,
+    requestId: '',
+    prompt: 'Scene Composition:restaurant close-up',
+    promptToken: 'image###Scene Composition:restaurant close-up###',
+    imageData: 'data:image/png;base64,anon',
+  });
+});
+
 test('imagePendingTaskManager prioritizes DOM hint messageId over an older collecting task', () => {
   let currentTime = 3_000;
   const manager = createImagePendingTaskManager({

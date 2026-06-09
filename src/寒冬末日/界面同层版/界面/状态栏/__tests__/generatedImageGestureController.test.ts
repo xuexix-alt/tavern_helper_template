@@ -139,3 +139,53 @@ test('suppressClickUntil blocks duplicate ghost click after touch view', async (
   assert.deepEqual(events, ['view']);
   controller.dispose();
 });
+
+test('touch movement beyond tap threshold does not trigger view or ghost click', async () => {
+  const events = [];
+  const controller = createGeneratedImageGestureController({
+    clickDelayMs: 10,
+    longPressMs: 50,
+    maxTapMovePx: 8,
+    onView() {
+      events.push('view');
+    },
+    onRegenerate() {
+      events.push('regenerate');
+    },
+    onTag() {
+      events.push('tag');
+    },
+  });
+
+  controller.handleTouchStart({ clientX: 10, clientY: 10 });
+  controller.handleTouchMove({ clientX: 11, clientY: 28 });
+  controller.handleTouchEnd({ clientX: 11, clientY: 28 });
+  controller.handleClick();
+  await wait(30);
+
+  assert.deepEqual(events, []);
+  controller.dispose();
+});
+
+test('small touch movement still counts as a tap', async () => {
+  const events = [];
+  const controller = createGeneratedImageGestureController({
+    clickDelayMs: 10,
+    longPressMs: 50,
+    maxTapMovePx: 8,
+    onView() {
+      events.push('view');
+    },
+    onRegenerate() {
+      events.push('regenerate');
+    },
+  });
+
+  controller.handleTouchStart({ clientX: 10, clientY: 10 });
+  controller.handleTouchMove({ clientX: 13, clientY: 14 });
+  controller.handleTouchEnd({ clientX: 13, clientY: 14 });
+  await wait(20);
+
+  assert.deepEqual(events, ['view']);
+  controller.dispose();
+});

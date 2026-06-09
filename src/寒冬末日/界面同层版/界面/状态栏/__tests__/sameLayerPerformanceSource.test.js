@@ -39,6 +39,42 @@ test('gallery and transcript images share the generated image gesture controller
   }
 });
 
+test('generated image swipe guards consume suppressed clicks and track touch movement', () => {
+  const assetSource = readSource('components/GeneratedImageAsset.vue');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    assetSource,
+    /function handleClick\(event: MouseEvent\) \{[\s\S]*if \(suppressNextClick\) \{[\s\S]*stopEvent\(event\);[\s\S]*return;/,
+    'GeneratedImageAsset should still stop suppressed post-double-click clicks before returning',
+  );
+  assert.match(
+    cardSource,
+    /const handleClick = \(event: Event\) => \{[\s\S]*if \(suppressNextClick\) \{[\s\S]*stopEvent\(event\);[\s\S]*return;/,
+    'fallback generated images should still stop suppressed post-double-click clicks before returning',
+  );
+  assert.equal(
+    assetSource.includes('@pointermove.capture="handlePointerMove"'),
+    true,
+    'GeneratedImageAsset should feed touch movement into the shared gesture controller',
+  );
+  assert.equal(
+    cardSource.includes('@pointermove.capture="handleAssistantBodyNativeImagePointerMove"'),
+    true,
+    'native transcript images should feed touch movement into the shared gesture controller',
+  );
+  assert.equal(
+    assetSource.includes('gestureController.handleTouchMove'),
+    true,
+    'GeneratedImageAsset should call handleTouchMove on touch movement',
+  );
+  assert.equal(
+    cardSource.includes('controller.handleTouchMove'),
+    true,
+    'TranscriptMessageCard should call handleTouchMove for delegated and fallback image gestures',
+  );
+});
+
 test('TranscriptList pre-aggregates gallery image counts by message id', () => {
   const source = readSource('components/TranscriptList.vue');
 
@@ -69,6 +105,31 @@ test('TranscriptMessageCard only hydrates and rebinds assistant body when body h
     source.includes('onUpdated(() =>'),
     false,
     'unrelated prop updates should not rescan and rebind assistant body DOM',
+  );
+});
+
+test('TranscriptMessageCard stops direct host image backfill probes once ready gallery entries exist', () => {
+  const source = readSource('components/TranscriptMessageCard.vue');
+
+  assert.match(
+    source,
+    /function hasReadyGalleryEntries\(\): boolean/,
+    'ready gallery entries should be detectable before scheduling host DOM backfill timers',
+  );
+  assert.match(
+    source,
+    /function shouldRunDirectHostBackfill\(\): boolean/,
+    'direct host backfill should have a central guard instead of always scheduling every probe',
+  );
+  assert.match(
+    source,
+    /function scheduleDirectHostBackfillImages[\s\S]*if \(!shouldRunDirectHostBackfill\(\)\) return;/,
+    'direct host backfill should not schedule delayed probes when gallery entries already own ready images',
+  );
+  assert.match(
+    source,
+    /watch\(\s*galleryEntrySignature[\s\S]*if \(hasReadyGalleryEntries\(\)\) clearDirectHostBackfillTimers\(\);/,
+    'late-arriving gallery entries should cancel remaining direct host backfill timers',
   );
 });
 

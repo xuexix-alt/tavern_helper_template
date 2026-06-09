@@ -126,6 +126,7 @@ import {
   runQueuedPostDoneAssistantSideEffects,
 } from './postDoneSideEffectsQueue';
 import {
+  normalizeCollapsedAssistantMessageIds,
   normalizeDensity,
   normalizeFontMode,
   normalizeReadingMode,
@@ -291,6 +292,7 @@ type StreamingPreviewCacheEntry = {
 
 type PluginImageGenerationHandoffProgress = {
   requestCount: number;
+  hintCount: number;
   promptButtonCount: number;
   promptPlaceholderCount: number;
   readyImageCount: number;
@@ -2777,6 +2779,7 @@ export function useStreamingDemo() {
   const transcriptDomRevision = ref(0);
   const galleryRevision = ref(0);
   const openingExpanded = ref(true);
+  const collapsedAssistantMessageIds = ref<number[]>([]);
   const hasExplicitOpeningExpandedPreference = ref(false);
   const logs = ref<ReaderLogItem[]>([]);
   const editingUserMessageId = ref<number | null>(null);
@@ -2970,9 +2973,15 @@ export function useStreamingDemo() {
       const rawId =
         (payload as { id?: unknown; requestId?: unknown }).id ?? (payload as { requestId?: unknown }).requestId;
       const id = String(rawId ?? '').trim();
-      if (id) return id;
+      if (id && !/^(?:undefined|null)$/i.test(id)) return id;
+      const rawPrompt =
+        (payload as { prompt?: unknown; change?: unknown; link?: unknown }).prompt ??
+        (payload as { change?: unknown; link?: unknown }).change ??
+        (payload as { link?: unknown }).link;
+      const prompt = String(rawPrompt ?? '').trim();
+      if (prompt) return `anonymous:${prompt.slice(0, 160)}`;
     }
-    return `anonymous-${Date.now()}`;
+    return 'anonymous';
   }
 
   function markPluginNativeLlmImageGenerationStarted(payload: unknown) {
@@ -3152,10 +3161,13 @@ export function useStreamingDemo() {
             button.dataset.stableId ??
             button.getAttribute('data-stable-id') ??
             '',
-        ).trim();
-        if (!requestId || seen.has(requestId)) continue;
+        )
+          .trim()
+          .replace(/^(?:undefined|null)$/i, '');
 
         const prompt = String(button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '').trim();
+        const hintKey = requestId || (prompt ? `prompt:${prompt}` : '');
+        if (!hintKey || seen.has(hintKey)) continue;
         const carrier =
           (button.closest(
             '.assistant-body[data-message-id], .assistant-card[data-message-id], .transcript-entry[data-message-id], .mes[data-message-index], .mes_text[data-message-index], [data-message-index]',
@@ -3176,7 +3188,7 @@ export function useStreamingDemo() {
               : null;
         if (normalizedMessageId == null) continue;
 
-        seen.add(requestId);
+        seen.add(hintKey);
         const hintBinding = imagePendingTaskManager.registerHint({
           messageId: normalizedMessageId,
           requestId,
@@ -3475,6 +3487,7 @@ export function useStreamingDemo() {
         reading_mode: readingMode.value,
         density: density.value,
         opening_expanded: openingExpanded.value,
+        collapsed_assistant_message_ids: collapsedAssistantMessageIds.value,
         theme: theme.value,
         font_mode: fontMode.value,
       });
@@ -3575,6 +3588,7 @@ export function useStreamingDemo() {
       openingExpanded.value = state.opening_expanded;
       hasExplicitOpeningExpandedPreference.value = true;
     }
+    collapsedAssistantMessageIds.value = normalizeCollapsedAssistantMessageIds(state.collapsed_assistant_message_ids);
     if (state.version !== READER_CHAT_STATE_VERSION) {
       queuePersistReaderChatState();
     }
@@ -3747,6 +3761,19 @@ export function useStreamingDemo() {
   function toggleOpeningExpanded() {
     openingExpanded.value = !openingExpanded.value;
     hasExplicitOpeningExpandedPreference.value = true;
+    queuePersistReaderChatState();
+  }
+
+  function toggleAssistantMessageExpanded(messageId: number) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    const nextIds = new Set(normalizeCollapsedAssistantMessageIds(collapsedAssistantMessageIds.value));
+    if (nextIds.has(normalizedId)) {
+      nextIds.delete(normalizedId);
+    } else {
+      nextIds.add(normalizedId);
+    }
+    collapsedAssistantMessageIds.value = Array.from(nextIds).sort((a, b) => a - b);
     queuePersistReaderChatState();
   }
 
@@ -4316,11 +4343,10 @@ export function useStreamingDemo() {
       if (!existingItem && !recentUiMessageIds.has(messageId)) continue;
       const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
       const rawRole = resolveHostMessageRole(hostMessage);
-      const rawMessage = String(hostMessage?.message ?? hostMessage?.mes ?? '');
-      const resolvedRawMessage = resolveHostMessageText({ ...hostMessage, message: rawMessage });
+      const rawMessage = resolveHostMessageText(hostMessage);
       const role = resolveTranscriptRole({
         rawRole,
-        rawMessage: resolvedRawMessage,
+        rawMessage,
         isOpeningResult,
       });
 
@@ -4328,7 +4354,7 @@ export function useStreamingDemo() {
         buildTranscriptItem({
           id: messageId,
           role,
-          raw: resolvedRawMessage,
+          raw: rawMessage,
           hidden: hostMessage?.is_hidden === true,
           isOpening: existingItem?.isOpening ?? isOpeningResult,
           canReroll: existingItem?.canReroll ?? false,
@@ -4921,22 +4947,28 @@ export function useStreamingDemo() {
     return buttons;
   }
 
+  function shouldTriggerPendingPluginNativePromptButtons(
+    messageId: number,
+    handoffProgress: PluginImageGenerationHandoffProgress,
+  ): boolean {
+    const recentIntent = imageRecentIntentStore.read();
+    const recentIntentMessageId =
+      recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : Number.NaN;
+    if (recentIntent?.source !== 'transcript' || recentIntentMessageId !== messageId) return false;
+    if (handoffProgress.complete || handoffProgress.promptButtonCount <= 0) return false;
+    if (handoffProgress.requestCount > 0) return false;
+    if (handoffProgress.hintCount > 0) return false;
+    if (hasActivePluginNativeLlmImageGenerationRequest()) return false;
+    if (isWithinPluginNativeLlmImageGenerationResponseGrace()) return false;
+    return true;
+  }
+
   function triggerPendingPluginNativePromptButtons(
     reason: string,
     messageId: number,
     handoffProgress: PluginImageGenerationHandoffProgress,
   ): number {
-    const recentIntent = imageRecentIntentStore.read();
-    const recentIntentMessageId =
-      recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : Number.NaN;
-    if (recentIntent?.source !== 'transcript' || recentIntentMessageId !== messageId) return 0;
-    if (handoffProgress.complete || handoffProgress.promptButtonCount <= 0) return 0;
-    if (
-      handoffProgress.requestCount > 0 &&
-      handoffProgress.requestCount >= Math.max(1, handoffProgress.expectedRequestCount)
-    ) {
-      return 0;
-    }
+    if (!shouldTriggerPendingPluginNativePromptButtons(messageId, handoffProgress)) return 0;
 
     const now = Date.now();
     prunePluginNativePromptButtonTriggerKeys(now);
@@ -4985,6 +5017,7 @@ export function useStreamingDemo() {
     if (!Number.isFinite(normalizedId) || normalizedId < 0) {
       return {
         requestCount: 0,
+        hintCount: 0,
         promptButtonCount: 0,
         promptPlaceholderCount: 0,
         readyImageCount: 0,
@@ -4994,10 +5027,13 @@ export function useStreamingDemo() {
       };
     }
 
-    const requestCount = imagePendingTaskManager
-      .getDebugState()
+    const pendingTasks = imagePendingTaskManager.getDebugState();
+    const requestCount = pendingTasks
       .filter(task => task.messageId === normalizedId)
       .reduce((total, task) => total + task.requests.length, 0);
+    const hintCount = imagePendingTaskManager
+      .getHintDebugState()
+      .filter(hint => hint.messageId === normalizedId).length;
 
     const handoffSelector = `${CHATU8_IMAGE_BUTTON_SELECTOR}, ${CHATU8_IMAGE_SPAN_SELECTOR}, ${CHATU8_IMAGE_CONTAINER_SELECTOR}`;
     let promptButtonCount = 0;
@@ -5020,6 +5056,7 @@ export function useStreamingDemo() {
       (expectedRequestCount === 0 || requestCount >= expectedRequestCount || readyImageCount >= expectedRequestCount);
     return {
       requestCount,
+      hintCount,
       promptButtonCount,
       promptPlaceholderCount,
       readyImageCount,
@@ -9025,6 +9062,7 @@ export function useStreamingDemo() {
     transcriptWindowLabel,
     transcriptWindowPages,
     openingExpanded,
+    collapsedAssistantMessageIds,
     selectedItem,
     transcript,
     visibleTranscript,
@@ -9090,6 +9128,7 @@ export function useStreamingDemo() {
     selectTranscriptWindowPage,
     resetTranscriptWindowToLatestState,
     toggleOpeningExpanded,
+    toggleAssistantMessageExpanded,
     syncOpeningExpandedForLayout,
     rebuildTranscript,
     openDetail,

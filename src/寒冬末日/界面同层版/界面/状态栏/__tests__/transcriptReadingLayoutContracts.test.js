@@ -13,7 +13,7 @@ test('assistant streaming state should be surfaced on the outer card instead of 
   const source = readSource('components/TranscriptMessageCard.vue');
 
   assert.equal(
-    source.includes(':class="{ \'is-streaming\': item.isStreaming }"'),
+    /:class="\{[\s\S]*'is-streaming': item\.isStreaming[\s\S]*\}"/.test(source),
     true,
     'assistant card should expose a streaming state class on the outer shell for layout-neutral status styling',
   );

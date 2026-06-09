@@ -86,6 +86,59 @@ test('successful response clears inflight and dispatches onResponseSuccess witho
   assert.equal(successes[0].prompt, 'a cat');
 });
 
+test('undefined plugin request ids are treated as anonymous while preserving prompt handoff', () => {
+  const { bridge, events, requests, successes, failures, notified } = createBridge();
+
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'undefined', prompt: 'Scene Composition:car interior' });
+  assert.equal(bridge.getInFlightCount(), 0);
+  assert.deepEqual(requests, [{ requestId: '', prompt: 'Scene Composition:car interior' }]);
+
+  events.emit(GENERATE_IMAGE_RESPONSE_EVENT, {
+    id: 'undefined',
+    success: true,
+    prompt: 'Scene Composition:car interior',
+    imageData: 'data:image/png;base64,ANON',
+  });
+
+  assert.equal(successes.length, 1);
+  assert.equal(successes[0].requestId, '');
+  assert.equal(successes[0].prompt, 'Scene Composition:car interior');
+  assert.equal(successes[0].imageData, 'data:image/png;base64,ANON');
+  assert.equal(failures.length, 0);
+  assert.equal(notified.length, 0);
+});
+
+test('single anonymous response without prompt can reuse the only anonymous request prompt', () => {
+  const { events, successes } = createBridge();
+
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'undefined', prompt: 'Scene Composition:single anon' });
+  events.emit(GENERATE_IMAGE_RESPONSE_EVENT, {
+    id: 'undefined',
+    success: true,
+    imageData: 'data:image/png;base64,SINGLE',
+  });
+
+  assert.equal(successes.length, 1);
+  assert.equal(successes[0].requestId, '');
+  assert.equal(successes[0].prompt, 'Scene Composition:single anon');
+});
+
+test('concurrent anonymous responses without prompt are not guessed by FIFO', () => {
+  const { events, successes } = createBridge();
+
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'undefined', prompt: 'Scene Composition:first anon' });
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'undefined', prompt: 'Scene Composition:second anon' });
+  events.emit(GENERATE_IMAGE_RESPONSE_EVENT, {
+    id: 'undefined',
+    success: true,
+    imageData: 'data:image/png;base64,AMBIGUOUS',
+  });
+
+  assert.equal(successes.length, 1);
+  assert.equal(successes[0].requestId, '');
+  assert.equal(successes[0].prompt, '');
+});
+
 test('failure response triggers notifyError and onResponseFailure with summarized message', () => {
   const { bridge, events, successes, failures, notified } = createBridge();
 
@@ -161,10 +214,10 @@ test('summarizeImageGenerationFailure recognises zip, 429, auth, timeout and unk
   assert.match(empty.short, /未返回错误详情/);
 });
 
-test('unrelated event payloads without id are silently ignored', () => {
+test('unrelated event payloads without id or prompt are silently ignored', () => {
   const { bridge, events, requests } = createBridge();
 
-  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { prompt: 'missing id' });
+  events.emit(GENERATE_IMAGE_REQUEST_EVENT, { id: 'undefined' });
   events.emit(GENERATE_IMAGE_REQUEST_EVENT, null);
 
   assert.equal(bridge.getInFlightCount(), 0);

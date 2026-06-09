@@ -376,11 +376,9 @@ test('successful image generation responses actively reconcile host image data',
     true,
     'successful plugin-native image responses should force a host image data sync for affected messages',
   );
-  assert.equal(
-    source.includes(
-      'const responseMessageIds =\n            targetMessageIds.length > 0 ? targetMessageIds : collectPluginNativeHandoffMessageIds({ requestId, prompt });',
-    ),
-    true,
+  assert.match(
+    source,
+    /const responseMessageIds =\s*targetMessageIds\.length > 0\s*\?\s*targetMessageIds\s*:\s*collectPluginNativeHandoffMessageIds\(\{ requestId, prompt \}\);/,
     'successful plugin-native image responses without exact task bindings should still target recent handoff floors',
   );
   assert.match(
@@ -434,12 +432,12 @@ test('successful image generation responses actively reconcile host image data',
   );
   assert.match(
     source,
-    /void refreshHostMessagesForPluginNativeImageCompletion\('host\.plugin_native_response_success', responseMessageIds\);/,
+    /void refreshHostMessagesForPluginNativeImageCompletion\(\s*'host\.plugin_native_response_success',\s*responseMessageIds,?\s*\);/,
     'targeted successful plugin-native image responses should explicitly wake the host message DOM after the plugin writes image data',
   );
   assert.match(
     source,
-    /async function refreshHostMessagesForPluginNativeImageCompletion\(reason: string, messageIds: number\[\]\): Promise<void>/,
+    /async function refreshHostMessagesForPluginNativeImageCompletion\(\s*reason: string,\s*messageIds: number\[\],?\s*\): Promise<void>/,
     'image completion should use a dedicated host-DOM refresh helper instead of overloading trigger-time preparation',
   );
   assert.match(
@@ -532,6 +530,37 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   );
 });
 
+test('prompt-button fallback does not retrigger once the same-layer handoff already has plugin activity', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const guardBody = extractFunctionBody(source, 'shouldTriggerPendingPluginNativePromptButtons');
+
+  assert.match(
+    source,
+    /if \(!shouldTriggerPendingPluginNativePromptButtons\(messageId, handoffProgress\)\) return 0;/,
+    'prompt-button fallback should run through one central guard before collecting/clicking buttons',
+  );
+  assert.match(
+    guardBody,
+    /handoffProgress\.requestCount > 0[\s\S]{0,160}return false;/,
+    'fallback should not click prompt buttons after any generate-image-request has been observed for the floor',
+  );
+  assert.match(
+    guardBody,
+    /handoffProgress\.hintCount > 0[\s\S]{0,160}return false;/,
+    'fallback should not click prompt buttons after stableId or prompt hints have already bound the floor',
+  );
+  assert.match(
+    guardBody,
+    /hasActivePluginNativeLlmImageGenerationRequest\(\)[\s\S]{0,160}return false;/,
+    'fallback should not click while st-chatu8 is still in the LLM-image request stage',
+  );
+  assert.match(
+    guardBody,
+    /isWithinPluginNativeLlmImageGenerationResponseGrace\(\)[\s\S]{0,160}return false;/,
+    'fallback should not click during the post-response grace window where plugin DOM may still be catching up',
+  );
+});
+
 test('same-layer listens to current st-chatu8 regex and rendered-message handoff events', () => {
   const source = readSource('useStreamingDemo.ts');
 
@@ -552,7 +581,7 @@ test('same-layer listens to current st-chatu8 regex and rendered-message handoff
   );
   assert.match(
     source,
-    /const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = \[\s*CHATU8_AUTO_CLICK_COMPLETE_EVENT,\s*'st-chatu8:auto_click_complete',\s*\] as const;/,
+    /const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = \[\s*CHATU8_AUTO_CLICK_COMPLETE_EVENT,\s*'st-chatu8:auto_click_complete'\s*,?\s*\] as const;/,
     'same-layer should listen to both st-chatu8 auto-click completion spellings seen in the plugin modules',
   );
   assert.match(
@@ -1000,9 +1029,9 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
   const streamingSource = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes('const showTailGalleryImages = ref(true);'),
+    source.includes('const showTailGalleryImages = ref(false);'),
     true,
-    'tail gallery image strip should default to visible',
+    'tail gallery image strip should default to hidden so正文 image interaction remains gallery-only',
   );
   assert.equal(
     source.includes(':show-tail-gallery-images="showTailGalleryImages"'),
@@ -1029,6 +1058,21 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
     true,
     'tail image visibility should hide the fallback gallery already present in finalHtml',
   );
+  assert.match(
+    cardSource,
+    /function shouldRunDirectHostBackfill\(\): boolean \{[\s\S]*props\.showTailGalleryImages !== false/,
+    'direct host backfill should not spend resources when tail images are hidden',
+  );
+  assert.match(
+    cardSource,
+    /function hydratePendingImagesFromGalleryEntries\(\) \{[\s\S]*props\.showTailGalleryImages === false[\s\S]*return;/,
+    'gallery entries should stay in the drawer instead of hydrating正文 inline images while tail images are hidden',
+  );
+  assert.match(
+    cardSource,
+    /function bindAssistantBodyInteractions\(\) \{[\s\S]*props\.showTailGalleryImages === false[\s\S]*return;/,
+    '正文 inline image gestures should stay disabled while gallery-only interaction is selected',
+  );
   assert.equal(
     streamingSource.includes("figure.setAttribute('data-tail-gallery-image', 'true');"),
     true,
@@ -1049,6 +1093,30 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
     true,
     'the top toolbar should expose a visible tail-image switch near the layout controls',
   );
+});
+
+test('StoryPage keeps generated image host actions gallery-only by default', () => {
+  const source = readSource('pages/StoryPage.vue');
+  const viewBody = extractFunctionBody(source, 'activateGeneratedImageView');
+  const tagBody = extractFunctionBody(source, 'activateGeneratedImageTag');
+  const regenerateBody = extractFunctionBody(source, 'activateGeneratedImageRegenerate');
+
+  assert.match(
+    source,
+    /function shouldAllowGeneratedImageHostAction\(payload: GeneratedImageActivationPayload\): boolean/,
+    'StoryPage should centralize the gallery-only activation boundary',
+  );
+  for (const [name, body] of [
+    ['view', viewBody],
+    ['tag', tagBody],
+    ['regenerate', regenerateBody],
+  ]) {
+    assert.match(
+      body,
+      /if \(!shouldAllowGeneratedImageHostAction\(payload\)\) return;/,
+      `${name} should ignore transcript-origin generated image actions before leasing host DOM`,
+    );
+  }
 });
 
 test('TranscriptMessageCard leaves plugin-native image DOM uncovered while bridging direct native gestures', () => {
@@ -1166,7 +1234,7 @@ test('TranscriptMessageCard delegates plugin-native image gestures through the t
   );
   assert.match(
     source,
-    /const handlePointerDown = \(event: Event\) => \{[\s\S]*if \(isBridgedEvent\(event\)\) return;[\s\S]*controller\.handleTouchStart\(\);/,
+    /const handlePointerDown = \(event: Event\) => \{[\s\S]*?if \(isBridgedEvent\(event\)\) return;[\s\S]*?controller\.handleTouchStart\([\s\S]*?\);/,
     'fallback-image per-node handlers should still ignore bridged touch events',
   );
 });

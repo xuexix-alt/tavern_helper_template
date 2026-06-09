@@ -196,8 +196,13 @@ test('StoryPage wires choice-modal direct image generation to latest assistant p
   );
   assert.match(
     handlerBody,
-    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint: null,[\s\S]*primaryTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{/,
-    'handler should still open the validated native plugin image menu chain',
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint: null,[\s\S]*primaryTriggerStrategy: 'auto',[\s\S]*fallbackTriggerStrategy: 'auto',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{/,
+    'handler should let hostGestureDispatch choose desktop dblclick or mobile triple-touch when opening the validated native plugin image menu',
+  );
+  assert.match(
+    handlerBody,
+    /primaryTriggerStrategy: 'auto'[\s\S]*fallbackTriggerStrategy: 'auto'/,
+    'choice-modal image generation should keep the mobile touch sequence scoped to new generation triggers',
   );
   assert.match(
     handlerBody,

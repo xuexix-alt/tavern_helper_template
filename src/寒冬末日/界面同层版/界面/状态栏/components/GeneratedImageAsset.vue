@@ -50,6 +50,7 @@
       @click.capture="handleClick"
       @dblclick.capture="handleDoubleClick"
       @pointerdown.capture="handlePointerDown"
+      @pointermove.capture="handlePointerMove"
       @pointerup.capture="handlePointerUp"
       @pointercancel.capture="handlePointerCancel"
     ></button>
@@ -92,7 +93,10 @@
 import { recordComponentDebugTrace } from '../debugTrace';
 import type { GeneratedImageActivationPayload } from '../generatedImageActivation';
 import { readGeneratedImageEntityRevision } from '../generatedImageEntityRevision';
-import { createGeneratedImageGestureController } from '../generatedImageGestureController';
+import {
+  createGeneratedImageGestureController,
+  type GeneratedImageGesturePoint,
+} from '../generatedImageGestureController';
 import {
   readGeneratedImageSource,
   readGeneratedImageSourceAsync,
@@ -198,6 +202,7 @@ function stopEvent(event: Event) {
 function handleClick(event: MouseEvent) {
   if (suppressNextClick) {
     suppressNextClick = false;
+    stopEvent(event);
     return;
   }
   stopEvent(event);
@@ -211,16 +216,25 @@ function handleDoubleClick(event: MouseEvent) {
   gestureController.handleDoubleClick();
 }
 
+function toGesturePoint(event: PointerEvent): GeneratedImageGesturePoint {
+  return { clientX: event.clientX, clientY: event.clientY };
+}
+
 function handlePointerDown(event: PointerEvent) {
   if (event.pointerType !== 'touch') return;
   stopEvent(event);
-  gestureController.handleTouchStart();
+  gestureController.handleTouchStart(toGesturePoint(event));
+}
+
+function handlePointerMove(event: PointerEvent) {
+  if (event.pointerType !== 'touch') return;
+  gestureController.handleTouchMove(toGesturePoint(event));
 }
 
 function handlePointerUp(event: PointerEvent) {
   if (event.pointerType !== 'touch') return;
   stopEvent(event);
-  gestureController.handleTouchEnd();
+  gestureController.handleTouchEnd(toGesturePoint(event));
 }
 
 function handlePointerCancel(event: PointerEvent) {
@@ -395,6 +409,7 @@ onBeforeUnmount(() => {
   background: transparent;
   color: transparent;
   cursor: pointer;
+  touch-action: pan-y;
 }
 
 .generated-image-caption-actions {

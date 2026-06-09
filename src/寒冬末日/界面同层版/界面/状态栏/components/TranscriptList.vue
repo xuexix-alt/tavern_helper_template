@@ -29,7 +29,7 @@
           :density="density"
           :font-mode="fontMode"
           :busy="busy"
-          :expanded="openingExpanded"
+          :expanded="isMessageExpanded(item)"
           :is-editing-user="editingUserMessageId === item.message_id"
           :edit-draft="editingUserDraft"
           :show-edit-regenerate="item.role === 'user' && item.message_id === latestUserMessageId"
@@ -51,6 +51,7 @@
           @confirm-rollback="emit('confirm-rollback', item)"
           @cancel-rollback="emit('cancel-rollback')"
           @toggle-opening="emit('toggle-opening')"
+          @toggle-expanded="toggleMessageExpanded"
           @reroll-opening="emit('reroll-opening')"
         />
 
@@ -128,6 +129,7 @@ const props = defineProps<{
   shouldFollowLatest?: boolean;
   isStreaming?: boolean;
   openingExpanded?: boolean;
+  collapsedAssistantMessageIds?: number[];
   latestUserMessageId?: number | null;
   editingUserMessageId?: number | null;
   editingUserDraft?: string;
@@ -149,6 +151,7 @@ const emit = defineEmits<{
   (event: 'reading-mode-change', value: ReadingMode): void;
   (event: 'scroll-state-change', value: { atTop: boolean; atBottom: boolean }): void;
   (event: 'toggle-opening'): void;
+  (event: 'toggle-message-expanded', messageId: number): void;
   (event: 'reroll-opening'): void;
   (event: 'start-edit-user', item: TranscriptItem): void;
   (event: 'update-edit-draft', value: string): void;
@@ -182,6 +185,14 @@ const imageCountsByMessageId = computed(() => {
     counts.set(normalizedId, (counts.get(normalizedId) ?? 0) + 1);
   }
   return counts;
+});
+const collapsedAssistantMessageIdSet = computed(() => {
+  const ids = new Set<number>();
+  for (const value of props.collapsedAssistantMessageIds ?? []) {
+    const id = Math.trunc(Number(value));
+    if (Number.isFinite(id) && id >= 0) ids.add(id);
+  }
+  return ids;
 });
 
 async function loadMoreAbove() {
@@ -293,6 +304,21 @@ function resetTouchGestureState() {
 
 function openDetail(item: TranscriptItem) {
   emit('open-detail', item);
+}
+
+function isMessageExpanded(item: TranscriptItem): boolean {
+  if (item.isOpening) return props.openingExpanded !== false;
+  if (item.role !== 'assistant') return true;
+  const id = Math.trunc(Number(item.message_id));
+  if (!Number.isFinite(id) || id < 0) return true;
+  return !collapsedAssistantMessageIdSet.value.has(id);
+}
+
+function toggleMessageExpanded(item: TranscriptItem) {
+  if (item.role !== 'assistant' || item.isOpening) return;
+  const id = Math.trunc(Number(item.message_id));
+  if (!Number.isFinite(id) || id < 0) return;
+  emit('toggle-message-expanded', id);
 }
 
 function handleNestedGenerateImage(messageId: number) {
@@ -636,15 +662,18 @@ defineExpose({
 }
 
 .transcript-image-fab {
-  position: absolute;
-  bottom: 8px;
-  right: calc(var(--transcript-fab-size) + 16px);
+  position: relative;
+  bottom: auto;
+  right: auto;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
+  align-self: flex-end;
+  flex: 0 0 auto;
   width: 36px;
   height: 36px;
+  margin: 6px 8px 0 0;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.45);

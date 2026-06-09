@@ -77,4 +77,5 @@ export type ReaderChatState = {
   theme: DemoTheme;
   font_mode: ReaderFontMode;
   opening_expanded: boolean;
+  collapsed_assistant_message_ids: number[];
 };

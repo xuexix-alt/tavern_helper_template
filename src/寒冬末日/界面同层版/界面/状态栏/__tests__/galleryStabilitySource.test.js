@@ -200,7 +200,12 @@ test('transcript image FAB restores the historical direct trigger path instead o
   );
   assert.match(
     transcriptImageBody,
-    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint,[\s\S]*primaryTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerStrategy: 'mobile-touch-sequence',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{[\s\S]*await clickPluginImageGenerationMenuItem\(\)/,
+    /await triggerImageGenerationForMessage\(messageId, \{[\s\S]*hostPoint,[\s\S]*primaryTriggerStrategy: 'auto',[\s\S]*fallbackTriggerStrategy: 'auto',[\s\S]*fallbackTriggerAfterMs: 900,[\s\S]*afterPrimaryTrigger: async \(\) => \{[\s\S]*await clickPluginImageGenerationMenuItem\(\)/,
+  );
+  assert.match(
+    transcriptImageBody,
+    /primaryTriggerStrategy: 'auto'[\s\S]*fallbackTriggerStrategy: 'auto'/,
+    'transcript image generation should let hostGestureDispatch choose desktop dblclick or mobile triple-touch for new generation triggers',
   );
   assert.match(streamingSource, /type ImageGenerationTriggerOptions = \{/);
   assert.match(streamingSource, /primaryTriggerStrategy\?: HostGestureDispatchStrategy;/);
@@ -219,7 +224,7 @@ test('transcript image FAB restores the historical direct trigger path instead o
   assert.match(
     streamingSource,
     /options\.fallbackTriggerAfterMs[\s\S]*fallbackTriggerStrategy[\s\S]*dispatchHostPrimaryTrigger\(mesText, \{\s*strategy: fallbackTriggerStrategy,\s*hostPoint: options\.hostPoint \?\? null,\s*\}\)/,
-    'mobile transcript FAB and 生图 button should retry with the plugin mobile three-tap path when the plugin menu is slow to appear',
+    'transcript FAB and 生图 button should retry the configured host trigger when the plugin menu is slow to appear',
   );
 });
 

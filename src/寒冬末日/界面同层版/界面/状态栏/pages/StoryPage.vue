@@ -215,6 +215,7 @@
               :should-follow-latest="followLatest"
               :is-streaming="status === 'streaming'"
               :opening-expanded="openingExpanded"
+              :collapsed-assistant-message-ids="collapsedAssistantMessageIds"
               :latest-user-message-id="latestUserItem?.message_id ?? null"
               :editing-user-message-id="editingUserMessageId"
               :editing-user-draft="editingUserDraft"
@@ -231,6 +232,7 @@
               @image-tag="activateGeneratedImageTag"
               @reading-mode-change="setReadingMode"
               @toggle-opening="toggleOpeningExpanded"
+              @toggle-message-expanded="toggleAssistantMessageExpanded"
               @reroll-opening="rerollOpening"
               @start-edit-user="startInlineEdit"
               @update-edit-draft="setEditingUserDraft"
@@ -525,6 +527,7 @@ const {
   transcriptWindowLabel,
   transcriptWindowPages,
   openingExpanded,
+  collapsedAssistantMessageIds,
   selectedItem,
   transcript,
   visibleTranscript,
@@ -581,6 +584,7 @@ const {
   setReadingMode,
   selectTranscriptWindowPage: selectTranscriptWindowPageState,
   toggleOpeningExpanded,
+  toggleAssistantMessageExpanded,
   syncOpeningExpandedForLayout,
   openDetail,
   closeDetail,
@@ -626,7 +630,7 @@ provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
-const showTailGalleryImages = ref(true);
+const showTailGalleryImages = ref(false);
 const transcriptImageTriggerGuard = {
   messageId: null as number | null,
   timestampMs: 0,
@@ -1927,8 +1931,8 @@ async function handleTranscriptGenerateImage(request: TranscriptImageGenerateReq
   guardPluginMenuViewport();
   await triggerImageGenerationForMessage(messageId, {
     hostPoint,
-    primaryTriggerStrategy: 'mobile-touch-sequence',
-    fallbackTriggerStrategy: 'mobile-touch-sequence',
+    primaryTriggerStrategy: 'auto',
+    fallbackTriggerStrategy: 'auto',
     fallbackTriggerAfterMs: 900,
     afterPrimaryTrigger: async () => {
       if (await clickPluginImageGenerationMenuItem()) return true;
@@ -1949,8 +1953,8 @@ async function handleChoiceModalGenerateLatestImage() {
 
   await triggerImageGenerationForMessage(messageId, {
     hostPoint: null,
-    primaryTriggerStrategy: 'mobile-touch-sequence',
-    fallbackTriggerStrategy: 'mobile-touch-sequence',
+    primaryTriggerStrategy: 'auto',
+    fallbackTriggerStrategy: 'auto',
     fallbackTriggerAfterMs: 900,
     afterPrimaryTrigger: async () => {
       if (await clickPluginImageGenerationMenuItem()) return true;
@@ -2066,7 +2070,12 @@ function normalizeGeneratedImagePayloadMessageId(payload: GeneratedImageActivati
   return messageId;
 }
 
+function shouldAllowGeneratedImageHostAction(payload: GeneratedImageActivationPayload): boolean {
+  return payload?.source === 'gallery';
+}
+
 async function activateGeneratedImageView(payload: GeneratedImageActivationPayload) {
+  if (!shouldAllowGeneratedImageHostAction(payload)) return;
   const messageId = normalizeGeneratedImagePayloadMessageId(payload);
   if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');
@@ -2113,6 +2122,7 @@ async function activateGeneratedImageView(payload: GeneratedImageActivationPaylo
 }
 
 async function activateGeneratedImageTag(payload: GeneratedImageActivationPayload) {
+  if (!shouldAllowGeneratedImageHostAction(payload)) return;
   const messageId = normalizeGeneratedImagePayloadMessageId(payload);
   if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');
@@ -2176,6 +2186,7 @@ async function activateGeneratedImageTag(payload: GeneratedImageActivationPayloa
 }
 
 async function activateGeneratedImageRegenerate(payload: GeneratedImageActivationPayload) {
+  if (!shouldAllowGeneratedImageHostAction(payload)) return;
   const messageId = normalizeGeneratedImagePayloadMessageId(payload);
   if (messageId == null) return;
   const promptToken = String(payload?.promptToken ?? '');

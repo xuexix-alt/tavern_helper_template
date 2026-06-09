@@ -31,3 +31,18 @@ test('TranscriptList compact mobile keeps the per-message image FAB visible for 
     'compact mobile should not hide the 🎨/📷 trigger because it is the same-layer chatu8 entry point',
   );
 });
+
+test('TranscriptList keeps the per-message image FAB out of the assistant footer controls at every width', () => {
+  const source = read('../components/TranscriptList.vue');
+  const imageFabRule = source.match(/^\.transcript-image-fab\s*\{([^}]*)\}/m)?.[1] ?? '';
+
+  assert.match(imageFabRule, /position:\s*relative;/);
+  assert.match(imageFabRule, /bottom:\s*auto;/);
+  assert.match(imageFabRule, /right:\s*auto;/);
+  assert.match(imageFabRule, /align-self:\s*flex-end;/);
+  assert.doesNotMatch(
+    imageFabRule,
+    /position:\s*absolute;/,
+    'the image FAB should stay in normal flow below the card instead of overlaying collapse/detail controls',
+  );
+});

@@ -50,8 +50,12 @@ export type ImageGenerationBridgeDeps = {
 export const GENERATE_IMAGE_REQUEST_EVENT = 'generate-image-request';
 export const GENERATE_IMAGE_RESPONSE_EVENT = 'generate-image-response';
 
+const ANONYMOUS_REQUEST_TTL_MS = 30 * 60 * 1000;
+const MAX_ANONYMOUS_REQUESTS = 12;
+
 function normalizeString(value: unknown): string {
-  return String(value ?? '').trim();
+  const text = String(value ?? '').trim();
+  return /^(?:undefined|null)$/i.test(text) ? '' : text;
 }
 
 function normalizePromptPayload(
@@ -99,19 +103,59 @@ export type ImageGenerationBridgeHandle = {
 
 export function createImageGenerationEventBridge(deps: ImageGenerationBridgeDeps): ImageGenerationBridgeHandle {
   const inflight = new Map<string, { prompt: string; startedAt: number }>();
+  const anonymousRequests: { prompt: string; startedAt: number }[] = [];
+
+  const pruneAnonymousRequests = (now = Date.now()) => {
+    for (let index = anonymousRequests.length - 1; index >= 0; index -= 1) {
+      if (now - anonymousRequests[index].startedAt > ANONYMOUS_REQUEST_TTL_MS) {
+        anonymousRequests.splice(index, 1);
+      }
+    }
+    while (anonymousRequests.length > MAX_ANONYMOUS_REQUESTS) {
+      anonymousRequests.shift();
+    }
+  };
+
+  const rememberAnonymousRequest = (prompt: string, startedAt = Date.now()) => {
+    if (!prompt) return;
+    pruneAnonymousRequests(startedAt);
+    anonymousRequests.push({ prompt, startedAt });
+    while (anonymousRequests.length > MAX_ANONYMOUS_REQUESTS) {
+      anonymousRequests.shift();
+    }
+  };
+
+  const resolveAnonymousResponsePrompt = (responsePrompt: string): string => {
+    pruneAnonymousRequests();
+    if (responsePrompt) {
+      const matchedIndex = anonymousRequests.findIndex(request => request.prompt === responsePrompt);
+      if (matchedIndex >= 0) anonymousRequests.splice(matchedIndex, 1);
+      return responsePrompt;
+    }
+    if (anonymousRequests.length !== 1) return '';
+    const [request] = anonymousRequests.splice(0, 1);
+    return request?.prompt ?? '';
+  };
 
   const onRequest = (payload: ImageGenerationEventPayload) => {
     const requestId = normalizeString(payload?.id);
     const prompt = normalizePromptPayload(payload);
-    if (!requestId) return;
-    inflight.set(requestId, { prompt, startedAt: Date.now() });
+    if (!requestId && !prompt) return;
+    const startedAt = Date.now();
+    if (requestId) {
+      inflight.set(requestId, { prompt, startedAt });
+    } else {
+      rememberAnonymousRequest(prompt, startedAt);
+    }
     deps.recordTrace?.('imageGenerationEventBridge', 'request', { requestId, promptHead: prompt.slice(0, 60) });
     deps.onRequest?.({ requestId, prompt });
   };
 
   const onResponse = (payload: ImageGenerationResponsePayload) => {
     const requestId = normalizeString(payload?.id);
-    const prompt = normalizePromptPayload(payload) || inflight.get(requestId)?.prompt || '';
+    const responsePrompt = normalizePromptPayload(payload);
+    const prompt =
+      responsePrompt || (requestId ? inflight.get(requestId)?.prompt || '' : resolveAnonymousResponsePrompt(''));
     const imageData = normalizeString(payload?.imageData);
     const rawSuccess = payload?.success;
     const rawError = normalizeString(payload?.error);
@@ -123,6 +167,7 @@ export function createImageGenerationEventBridge(deps: ImageGenerationBridgeDeps
       (rawSuccess == null && imageData.length > 0 && !rawError);
 
     if (requestId) inflight.delete(requestId);
+    if (!requestId && responsePrompt) resolveAnonymousResponsePrompt(responsePrompt);
 
     if (isSuccess && imageData) {
       deps.recordTrace?.('imageGenerationEventBridge', 'response_success', {
@@ -162,6 +207,7 @@ export function createImageGenerationEventBridge(deps: ImageGenerationBridgeDeps
         /* ignore */
       }
       inflight.clear();
+      anonymousRequests.splice(0, anonymousRequests.length);
     },
   };
 }

@@ -73,6 +73,15 @@ function buildPromptTokenFromPrompt(rawPrompt: string): string {
   return `image###${prompt}###`;
 }
 
+function normalizeText(value: unknown): string {
+  return String(value ?? '').trim();
+}
+
+function normalizeRequestId(value: unknown): string {
+  const text = normalizeText(value);
+  return /^(?:undefined|null)$/i.test(text) ? '' : text;
+}
+
 export function createImagePendingTaskManager(options: CreateImagePendingTaskManagerOptions = {}) {
   const now = options.now ?? (() => Date.now());
   const collectingWindowMs = Math.max(
@@ -100,7 +109,7 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
   function consumeBufferedResponseForHint(hint: PendingHint) {
     const bufferedIndex = bufferedResponses.findIndex(item => {
       return (
-        item.requestId === hint.requestId ||
+        Boolean(hint.requestId && item.requestId === hint.requestId) ||
         (hint.promptToken && item.promptToken === hint.promptToken) ||
         (hint.prompt && item.prompt === hint.prompt)
       );
@@ -118,15 +127,15 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
 
   function registerHint(payload: ImageHintPayload) {
     const messageId = Math.trunc(Number(payload?.messageId));
-    const requestId = String(payload?.id ?? payload?.requestId ?? '').trim();
-    const prompt = String(payload?.prompt ?? '').trim();
-    const promptToken = String(payload?.promptToken ?? '').trim() || buildPromptTokenFromPrompt(prompt);
-    if (!Number.isFinite(messageId) || messageId < 0 || !requestId) return null;
+    const requestId = normalizeRequestId(payload?.id ?? payload?.requestId);
+    const prompt = normalizeText(payload?.prompt);
+    const promptToken = normalizeText(payload?.promptToken) || buildPromptTokenFromPrompt(prompt);
+    if (!Number.isFinite(messageId) || messageId < 0 || (!requestId && !promptToken && !prompt)) return null;
 
     const createdAt = now();
     cleanup(createdAt);
     const existing =
-      hints.find(item => item.requestId === requestId) ??
+      (requestId ? hints.find(item => item.requestId === requestId) : null) ??
       (promptToken ? hints.find(item => item.promptToken === promptToken && item.messageId === messageId) : null);
 
     if (existing) {
@@ -188,18 +197,21 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
   }
 
   function registerRequest(payload: ImageRequestEventPayload) {
-    const requestId = String(payload?.id ?? '').trim();
-    const prompt = String(payload?.prompt ?? '').trim();
-    if (!requestId || !prompt) return null;
+    const requestId = normalizeRequestId(payload?.id);
+    const prompt = normalizeText(payload?.prompt);
+    if (!prompt) return null;
 
     const referenceTime = now();
     cleanup(referenceTime);
     const promptToken = buildPromptTokenFromPrompt(prompt);
     const hint =
-      hints.find(item => item.requestId === requestId) ??
+      (requestId ? hints.find(item => item.requestId === requestId) : null) ??
       hints.find(item => item.promptToken === promptToken || item.prompt === prompt);
     const bufferedIndex = bufferedResponses.findIndex(
-      item => item.requestId === requestId || item.promptToken === promptToken || item.prompt === prompt,
+      item =>
+        Boolean(requestId && item.requestId === requestId) ||
+        item.promptToken === promptToken ||
+        item.prompt === prompt,
     );
     const bufferedResponse = bufferedIndex >= 0 ? (bufferedResponses.splice(bufferedIndex, 1)[0] ?? null) : null;
 
@@ -217,7 +229,13 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
       return null;
     }
 
-    if (!task.requests.some(item => item.requestId === requestId)) {
+    if (
+      !task.requests.some(item =>
+        requestId
+          ? item.requestId === requestId
+          : item.promptToken === promptToken || item.prompt === prompt,
+      )
+    ) {
       task.requests.push({
         requestId,
         prompt,
@@ -242,9 +260,9 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
   }
 
   function consumeResponse(payload: ImageResponseEventPayload) {
-    const requestId = String(payload?.id ?? '').trim();
-    const prompt = String(payload?.prompt ?? '').trim();
-    const imageData = String(payload?.imageData ?? '').trim();
+    const requestId = normalizeRequestId(payload?.id);
+    const prompt = normalizeText(payload?.prompt);
+    const imageData = normalizeText(payload?.imageData);
     if (!imageData) return null;
 
     cleanup(now());
@@ -278,7 +296,7 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
     if (!taskMatch || !requestMatch) {
       const promptToken = buildPromptTokenFromPrompt(prompt);
       const hint =
-        hints.find(item => item.requestId === requestId) ??
+        (requestId ? hints.find(item => item.requestId === requestId) : null) ??
         hints.find(item => item.promptToken === promptToken || item.prompt === prompt);
       if (hint) {
         return {
@@ -327,6 +345,15 @@ export function createImagePendingTaskManager(options: CreateImagePendingTaskMan
           promptToken: item.promptToken,
           promptPreview: item.prompt.slice(0, 80),
         })),
+      }));
+    },
+    getHintDebugState() {
+      return hints.map(hint => ({
+        messageId: hint.messageId,
+        requestId: hint.requestId,
+        promptToken: hint.promptToken,
+        promptPreview: hint.prompt.slice(0, 80),
+        createdAt: hint.createdAt,
       }));
     },
   };
