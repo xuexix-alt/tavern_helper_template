@@ -256,6 +256,8 @@ const PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_DEDUPE_MS = 60_000;
 const PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_MAX_PER_RUN = 8;
 const PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_DEDUPE_MS = 600;
 const PLUGIN_NATIVE_SAME_LAYER_PROMPT_SCAN_MAX_ROOTS = 8;
+const PLUGIN_NATIVE_PROMPT_HANDOFF_TTL_MS =
+  IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS + IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS + 30_000;
 const CHATU8_LLM_IMAGE_GEN_REQUEST_EVENT = 'ch-llm-image-gen-request';
 const CHATU8_LLM_IMAGE_GEN_RESPONSE_EVENT = 'ch-llm-image-gen-response';
 const CHATU8_REGEX_TEST_MESSAGE_EVENT = 'regex-st-chatu8-test-message';
@@ -265,7 +267,11 @@ const CHATU8_AUTO_CLICK_COMPLETE_EVENTS = [CHATU8_AUTO_CLICK_COMPLETE_EVENT, 'st
 const CHATU8_IMAGE_BUTTON_SELECTOR = '.st-chatu8-image-button, button.image-tag-button';
 const CHATU8_IMAGE_SPAN_SELECTOR = '.st-chatu8-image-span, span.image-tag-placeholder';
 const CHATU8_IMAGE_CONTAINER_SELECTOR = '.ai-image-container';
-const PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL = '/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js';
+const PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URLS = [
+  '/scripts/extensions/third-party/st-chatu8/utils/iframe/index.js',
+  '/scripts/extensions/third-party/st-chatu8/utils/iframe.js',
+] as const;
+const PLUGIN_NATIVE_IFRAME_PROCESSOR_RETRY_MS = 3000;
 const FALLBACK_IMAGE_CLASSES = getFallbackImageClasses();
 const SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR = [
   `${CHATU8_IMAGE_SPAN_SELECTOR} img`,
@@ -299,6 +305,12 @@ type PluginImageGenerationHandoffProgress = {
   expectedRequestCount: number;
   hasDomHandoff: boolean;
   complete: boolean;
+};
+type PluginNativePromptHandoff = {
+  messageId: number;
+  source: 'transcript' | 'gallery';
+  startedAt: number;
+  token: string;
 };
 
 const streamingPreviewCache = new Map<number, StreamingPreviewCacheEntry>();
@@ -1505,9 +1517,11 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   );
   const compatibilityImages = nativeFirstImages.filter(image => image.source === 'cache');
   const hasPluginNativeArtifacts = countPluginNativeImageArtifacts(originalHostRoots) > 0;
+  const hostPluginNativeArtifactCount = countPluginNativeImageArtifacts(originalHostRoots);
 
   const renderMode = chooseImageRenderMode({
     hasPluginNativeDom: hasPluginNativeArtifacts,
+    hostPluginNativeDomArtifactCount: hostPluginNativeArtifactCount,
     pluginNativeCount: pluginNativeImages.length,
     compatibilityCount: compatibilityImages.length,
   });
@@ -1549,6 +1563,12 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
   const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
     appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
   });
+  const dataBackfillCandidateCount = sourceCounts.extra + sourceCounts.mes_tag + sourceCounts.cache;
+  const renderableDataBackfillCandidateCount = pluginNativeImages.length + compatibilityImages.length;
+  const suppressedDataBackfill =
+    renderMode === 'plugin-native' && renderableDataBackfillCandidateCount > hostPluginNativeArtifactCount;
+  const partialNativeDomSuspected =
+    hasPluginNativeArtifacts && pluginNativeImages.length > hostPluginNativeArtifactCount;
   const hydratedHtml = hydratePluginNativePromptPlaceholdersHtml(
     htmlWithImages,
     originalHostRoots.length > 0
@@ -1570,15 +1590,21 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
       promptTokenCount: promptTokens.length,
       iframeRootCount: iframeRoots.length,
       originalHostRootCount: originalHostRoots.length,
+      existingSourceCount: existingSources.size,
+      hostPluginNativeArtifactCount,
       hostDomCount: sourceCounts.host_dom,
       extraCount: sourceCounts.extra,
       mesTagCount: sourceCounts.mes_tag,
       cacheCount: sourceCounts.cache,
+      dataBackfillCandidateCount,
+      renderableDataBackfillCandidateCount,
       nativeFirstCount: nativeFirstArtifacts.length,
       nativeRenderableCount: nativeFirstImages.length,
       pluginNativeCount: pluginNativeImages.length,
       compatibilityCount: compatibilityImages.length,
       dedupedInjectCount: dedupedImages.length,
+      suppressedDataBackfill,
+      partialNativeDomSuspected,
       renderMode,
     },
   });
@@ -1793,6 +1819,8 @@ type PluginNativeIframeProcessorModule = {
 };
 
 let pluginNativeIframeProcessorModulePromise: Promise<PluginNativeIframeProcessorModule | null> | null = null;
+let pluginNativeIframeProcessorModuleValue: PluginNativeIframeProcessorModule | null = null;
+let pluginNativeIframeProcessorModuleFailedAt = 0;
 
 function isPluginNativeIframeProcessorModule(value: unknown): value is PluginNativeIframeProcessorModule {
   if (!value || typeof value !== 'object') return false;
@@ -1804,12 +1832,48 @@ function isPluginNativeIframeProcessorModule(value: unknown): value is PluginNat
 }
 
 async function loadPluginNativeIframeProcessorModule(): Promise<PluginNativeIframeProcessorModule | null> {
+  if (pluginNativeIframeProcessorModuleValue) return pluginNativeIframeProcessorModuleValue;
+  if (
+    pluginNativeIframeProcessorModuleFailedAt > 0 &&
+    Date.now() - pluginNativeIframeProcessorModuleFailedAt < PLUGIN_NATIVE_IFRAME_PROCESSOR_RETRY_MS
+  ) {
+    return null;
+  }
   if (!pluginNativeIframeProcessorModulePromise) {
-    pluginNativeIframeProcessorModulePromise = import(/* @vite-ignore */ PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL)
-      .then(module => (isPluginNativeIframeProcessorModule(module) ? module : null))
+    pluginNativeIframeProcessorModulePromise = (async () => {
+      const failures: { url: string; error: string }[] = [];
+      for (const url of PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URLS) {
+        try {
+          const module = await import(/* @vite-ignore */ url);
+          if (isPluginNativeIframeProcessorModule(module)) {
+            pluginNativeIframeProcessorModuleValue = module;
+            pluginNativeIframeProcessorModuleFailedAt = 0;
+            return module;
+          }
+          failures.push({ url, error: 'module did not expose a st-chatu8 iframe processor export' });
+        } catch (error) {
+          failures.push({
+            url,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      pluginNativeIframeProcessorModuleFailedAt = Date.now();
+      console.warn('[stream-demo] failed to load st-chatu8 iframe processor module', {
+        urls: [...PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URLS],
+        failures,
+      });
+      return null;
+    })()
+      .finally(() => {
+        pluginNativeIframeProcessorModulePromise = null;
+      })
       .catch(error => {
+        pluginNativeIframeProcessorModuleFailedAt = Date.now();
+        pluginNativeIframeProcessorModulePromise = null;
         console.warn('[stream-demo] failed to load st-chatu8 iframe processor module', {
-          url: PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URL,
+          urls: [...PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URLS],
           error: error instanceof Error ? error.message : String(error),
         });
         return null;
@@ -2895,6 +2959,7 @@ export function useStreamingDemo() {
   const imagePendingTaskManager = createImagePendingTaskManager();
   const imageRecentIntentStore = createImageRecentIntentStore();
   const activePluginNativeLlmImageGenerationRequests = new Set<string>();
+  let activePluginNativePromptHandoff: PluginNativePromptHandoff | null = null;
   let lastPluginNativeLlmImageGenerationSettledAt = 0;
   const pluginNativePromptButtonTriggerAt = new Map<string, number>();
   const postDoneSideEffectsQueue = createPostDoneSideEffectsQueue();
@@ -3115,6 +3180,60 @@ export function useStreamingDemo() {
     if (Date.now() < shortDeadline) return true;
     if (Date.now() >= extendedDeadline) return false;
     return hasActivePluginNativeLlmImageGenerationRequest() || isWithinPluginNativeLlmImageGenerationResponseGrace();
+  }
+
+  function beginPluginNativePromptHandoff(messageId: number, source: 'transcript' | 'gallery' = 'transcript') {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    activePluginNativePromptHandoff = {
+      messageId: normalizedId,
+      source,
+      startedAt: Date.now(),
+      token: createTraceId('plugin-prompt-handoff'),
+    };
+    recordLifecycleTrace('pluginNativePromptHandoff', 'begin', {
+      messageId: normalizedId,
+      source,
+      token: activePluginNativePromptHandoff.token,
+    });
+  }
+
+  function readActivePluginNativePromptHandoff(): PluginNativePromptHandoff | null {
+    const handoff = activePluginNativePromptHandoff;
+    if (!handoff) return null;
+    const ageMs = Date.now() - handoff.startedAt;
+    if (ageMs <= PLUGIN_NATIVE_PROMPT_HANDOFF_TTL_MS) return handoff;
+    activePluginNativePromptHandoff = null;
+    recordLifecycleTrace('pluginNativePromptHandoff', 'expired', {
+      messageId: handoff.messageId,
+      source: handoff.source,
+      ageMs,
+      ttlMs: PLUGIN_NATIVE_PROMPT_HANDOFF_TTL_MS,
+      token: handoff.token,
+    });
+    return null;
+  }
+
+  function hasActivePluginNativePromptHandoff(messageId: number): boolean {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return false;
+    const handoff = readActivePluginNativePromptHandoff();
+    return handoff?.source === 'transcript' && handoff.messageId === normalizedId;
+  }
+
+  function finishPluginNativePromptHandoff(messageId: number, reason: string) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+    const handoff = readActivePluginNativePromptHandoff();
+    if (!handoff || handoff.messageId !== normalizedId) return;
+    activePluginNativePromptHandoff = null;
+    recordLifecycleTrace('pluginNativePromptHandoff', 'finish', {
+      reason,
+      messageId: normalizedId,
+      source: handoff.source,
+      ageMs: Date.now() - handoff.startedAt,
+      token: handoff.token,
+    });
   }
 
   function bindPluginNativeLlmImageGenerationEvents(): StopHandle[] {
@@ -4951,10 +5070,7 @@ export function useStreamingDemo() {
     messageId: number,
     handoffProgress: PluginImageGenerationHandoffProgress,
   ): boolean {
-    const recentIntent = imageRecentIntentStore.read();
-    const recentIntentMessageId =
-      recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : Number.NaN;
-    if (recentIntent?.source !== 'transcript' || recentIntentMessageId !== messageId) return false;
+    if (!hasActivePluginNativePromptHandoff(messageId)) return false;
     if (handoffProgress.complete || handoffProgress.promptButtonCount <= 0) return false;
     if (handoffProgress.requestCount > 0) return false;
     if (handoffProgress.hintCount > 0) return false;
@@ -5102,6 +5218,7 @@ export function useStreamingDemo() {
           tasks: imagePendingTaskManager.getDebugState(),
           diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
         });
+        finishPluginNativePromptHandoff(normalizedId, 'observed');
         return true;
       }
       if (elapsedMs >= PLUGIN_NATIVE_PROMPT_BUTTON_FALLBACK_TRIGGER_GRACE_MS) {
@@ -5119,6 +5236,7 @@ export function useStreamingDemo() {
       tasks: imagePendingTaskManager.getDebugState(),
       diagnostics: collectPluginNativeHandoffDiagnostics(normalizedId),
     });
+    finishPluginNativePromptHandoff(normalizedId, 'timeout');
     return false;
   }
 
@@ -5245,13 +5363,34 @@ export function useStreamingDemo() {
     }, 40);
   }
 
+  function shouldRunPluginNativePromptScan(reason: string, messageIds: number[]): boolean {
+    const activeHandoff = readActivePluginNativePromptHandoff();
+    if (activeHandoff?.source === 'transcript' && messageIds.includes(activeHandoff.messageId)) {
+      return true;
+    }
+
+    recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'prompt_scan_skipped', {
+      reason,
+      messageIds,
+      activeHandoff,
+    });
+    return false;
+  }
+
+  function resolveActivePluginNativePromptScanMessageIds(messageIds: number[]): number[] {
+    const activeHandoff = readActivePluginNativePromptHandoff();
+    if (activeHandoff?.source !== 'transcript') return [];
+    if (messageIds.length > 0 && !messageIds.includes(activeHandoff.messageId)) return [];
+    return [activeHandoff.messageId];
+  }
+
   function schedulePluginNativePromptPlaceholderReconcile(reason: string, messageIds: number[] = []) {
-    const recentIntent = imageRecentIntentStore.read();
+    const activeHandoff = readActivePluginNativePromptHandoff();
     const normalizedMessageIds = [
       ...new Set(
         [
           ...messageIds.map(id => Math.trunc(Number(id))),
-          recentIntent?.messageId != null ? Math.trunc(Number(recentIntent.messageId)) : null,
+          messageIds.length === 0 && activeHandoff?.source === 'transcript' ? activeHandoff.messageId : null,
         ].filter((id): id is number => Number.isFinite(id) && id >= 0),
       ),
     ];
@@ -5259,7 +5398,10 @@ export function useStreamingDemo() {
 
     for (const delayMs of PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS) {
       const runProbe = () => {
-        void runPluginNativeSameLayerPromptScan(reason, normalizedMessageIds);
+        const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds(normalizedMessageIds);
+        if (shouldRunPluginNativePromptScan(reason, promptScanMessageIds)) {
+          void runPluginNativeSameLayerPromptScan(reason, promptScanMessageIds);
+        }
         syncPendingRequestHintsFromDom();
         for (const messageId of normalizedMessageIds) {
           recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe', {
@@ -5281,6 +5423,91 @@ export function useStreamingDemo() {
       const timer = window.setTimeout(() => {
         hostImageDataReconcileTimers.delete(timer);
         runProbe();
+      }, delayMs);
+      hostImageDataReconcileTimers.add(timer);
+    }
+  }
+
+  async function nudgePluginNativePromptProcessingForActiveIntent(
+    reason: string,
+    messageIds: number[],
+    roots: HTMLElement[] = [],
+  ): Promise<void> {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (normalizedMessageIds.length === 0) return;
+    if (!shouldRunPluginNativePromptScan(reason, normalizedMessageIds)) return;
+
+    recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_start', {
+      reason,
+      messageIds: normalizedMessageIds,
+      rootCount: roots.length,
+    });
+
+    for (const messageId of normalizedMessageIds) {
+      let hostRendered = false;
+      try {
+        hostRendered = await ensureHostMesTextRendered(messageId);
+      } catch (error) {
+        recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_render_failed', {
+          reason,
+          messageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      try {
+        await refreshHostMessageForPluginNativeImageTrigger(messageId);
+      } catch (error) {
+        recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_mutation_failed', {
+          reason,
+          messageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      try {
+        if (typeof eventEmit === 'function') {
+          const renderedEvent = tavern_events.CHARACTER_MESSAGE_RENDERED;
+          await eventEmit(renderedEvent as any, messageId);
+        }
+      } catch (error) {
+        recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_event_failed', {
+          reason,
+          messageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_message', {
+        reason,
+        messageId,
+        hostRendered,
+      });
+    }
+
+    syncPendingRequestHintsFromDom();
+    syncTranscriptItemsFromHostData(`${reason}:module_missing_nudge`, normalizedMessageIds);
+    queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:module_missing_nudge`);
+
+    for (const delayMs of [160, 480, 1200, 2400, 4200, 8400] as const) {
+      const timer = window.setTimeout(() => {
+        hostImageDataReconcileTimers.delete(timer);
+        syncPendingRequestHintsFromDom();
+        syncTranscriptItemsFromHostData(`${reason}:module_missing_nudge_delay_${delayMs}`, normalizedMessageIds);
+        queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:module_missing_nudge_delay_${delayMs}`);
+        for (const messageId of normalizedMessageIds) {
+          const handoffProgress = collectPluginImageGenerationHandoffProgress(messageId);
+          triggerPendingPluginNativePromptButtons('prompt_scan_module_missing_nudge', messageId, handoffProgress);
+          recordLifecycleTrace('pluginNativeSameLayerPromptScan', 'module_missing_nudge_probe', {
+            reason,
+            delayMs,
+            messageId,
+            handoffProgress,
+            diagnostics: collectPluginNativeHandoffDiagnostics(messageId),
+          });
+        }
       }, delayMs);
       hostImageDataReconcileTimers.add(timer);
     }
@@ -5321,6 +5548,7 @@ export function useStreamingDemo() {
         messageIds: normalizedMessageIds,
         rootCount: roots.length,
       });
+      await nudgePluginNativePromptProcessingForActiveIntent(reason, normalizedMessageIds, roots);
       return;
     }
 
@@ -5410,7 +5638,6 @@ export function useStreamingDemo() {
         discoverRecentNativeGalleryImages(`${reason}:native_host_hydration_delay_${delayMs}`, messageIds);
       }
       queueGeneratedImageEntityRefresh(messageIds, `${reason}:native_host_hydration`);
-      schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, messageIds);
     } catch (error) {
       console.warn('[stream-demo] plugin-native host hydration failed', {
         reason,
@@ -5749,6 +5976,9 @@ export function useStreamingDemo() {
     if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
     imagePendingTaskManager.startTask(normalizedId);
     imageRecentIntentStore.mark(normalizedId, source);
+    if (source === 'transcript') {
+      beginPluginNativePromptHandoff(normalizedId, source);
+    }
     logImageBridge('start-task', {
       messageId: normalizedId,
       source,
@@ -5843,7 +6073,10 @@ export function useStreamingDemo() {
           },
           {
             beforeRelease: async () => {
-              if (!shouldWaitForPluginHandoff) return;
+              if (!shouldWaitForPluginHandoff) {
+                finishPluginNativePromptHandoff(normalizedId, 'cancelled');
+                return;
+              }
               await waitForPluginImageGenerationHandoff(normalizedId);
             },
           },
@@ -8046,30 +8279,15 @@ export function useStreamingDemo() {
     scheduleHostImageDataReconcile(reason, visibleMessageIds);
     discoverRecentNativeGalleryImages(`${reason}:native_gallery`, visibleMessageIds);
     queueGeneratedImageEntityRefresh(visibleMessageIds, reason);
-    schedulePluginNativePromptPlaceholderReconcile(reason, visibleMessageIds);
 
     let fixCount = 0;
     const repairedMessageIds: number[] = [];
 
     for (const messageId of visibleMessageIds) {
-      await ensureHostMesTextRendered(messageId);
       if (!hostMessageNeedsImageDomRepair(messageId)) continue;
 
       fixCount += 1;
       repairedMessageIds.push(messageId);
-      if (typeof eventEmit === 'function') {
-        try {
-          const messageUpdatedEvent = (globalThis as any).tavern_events?.MESSAGE_UPDATED ?? 'MESSAGE_UPDATED';
-          await eventEmit(messageUpdatedEvent as any, messageId);
-        } catch (error) {
-          console.warn('[image-dom-fix] eventEmit failed:', error);
-        }
-      }
-
-      for (const doc of collectHostDocuments()) {
-        const mesText = doc.querySelector(`.mes[mesid="${messageId}"] .mes_text`) as HTMLElement | null;
-        mesText?.dispatchEvent(new Event('DOMSubtreeModified', { bubbles: true }));
-      }
     }
 
     recordLifecycleTrace('imageDomSync', 'visible_hydration', {
@@ -8120,6 +8338,9 @@ export function useStreamingDemo() {
             queueGeneratedImageEntityRefresh([messageId], 'host.plugin_native_response_buffered');
             scheduleHostImageDataReconcile('host.plugin_native_response_buffered', [messageId]);
           }
+          if (requestBinding?.messageId != null) {
+            finishPluginNativePromptHandoff(requestBinding.messageId, 'request_observed');
+          }
         },
         onResponseSuccess: ({ requestId, prompt, imageData }) => {
           const matchedResponse = imagePendingTaskManager.consumeResponse({ id: requestId, prompt, imageData });
@@ -8155,6 +8376,7 @@ export function useStreamingDemo() {
 
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {
+            responseMessageIds.forEach(messageId => finishPluginNativePromptHandoff(messageId, 'response_success'));
             queueGeneratedImageEntityRefresh(responseMessageIds, 'host.plugin_native_response_success');
             void refreshHostMessagesForPluginNativeImageCompletion(
               'host.plugin_native_response_success',
@@ -8269,20 +8491,17 @@ export function useStreamingDemo() {
     }
 
     rebuildTranscript();
-    window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
-    window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
-    // 提前启动画廊缓存会话，确保在图片加载高峰期前就绪
-    window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 300);
-    // 提前首次画廊扫描，缩短从挂载到发现图片的延迟
-    window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 500);
-    // 补充扫描，覆盖图片加载高峰期（1.5s-2.1s）
-    window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan_retry'), 1500);
+    // 历史载入保持轻量：不在 mounted 阶段预热画廊、拉起宿主同层水合或扫描近期图片。
+    // window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
+    // window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
+    // window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 300);
+    // window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 500);
+    // window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan_retry'), 1500);
     queueHidePolicy('mounted');
 
-    // 多轮可见正文图片水合：移动端普通模式也执行，不能只依赖全屏/画廊抽屉触发。
-    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_500'), 500);
-    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_1500'), 1500);
-    window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_3000'), 3000);
+    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_500'), 500);
+    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_1500'), 1500);
+    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_3000'), 3000);
   });
 
   // 增强可见性监听：处理移动端从后台恢复、全屏切换、屏幕旋转等场景
@@ -8466,6 +8685,7 @@ export function useStreamingDemo() {
     pluginNativeLlmImageGenerationStops.forEach(stop => stop?.stop?.());
     pluginNativeLlmImageGenerationStops = [];
     activePluginNativeLlmImageGenerationRequests.clear();
+    activePluginNativePromptHandoff = null;
     lastPluginNativeLlmImageGenerationSettledAt = 0;
     pluginNativePromptButtonTriggerAt.clear();
     nativeGenerationRevealActive = false;
@@ -8660,7 +8880,6 @@ export function useStreamingDemo() {
           discoverRecentNativeGalleryImages(`${reason}:native_host_hydration_delay_${delayMs}`, chunkIds);
         }
         queueGeneratedImageEntityRefresh(chunkIds, `${reason}:native_host_hydration`);
-        schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, chunkIds);
         recordLifecycleTrace('galleryWindowNativeHydration', 'chunk', {
           reason,
           sessionId,

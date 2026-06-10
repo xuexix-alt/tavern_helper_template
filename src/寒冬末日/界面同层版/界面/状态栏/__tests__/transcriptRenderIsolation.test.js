@@ -89,6 +89,21 @@ test('same-layer asks the st-chatu8 iframe processor to claim visible image prom
     true,
     'same-layer should import the live st-chatu8 iframe processor module that exports the direct element scanner',
   );
+  assert.equal(
+    source.includes("'/scripts/extensions/third-party/st-chatu8/utils/iframe.js'"),
+    true,
+    'same-layer should also try the st-chatu8 iframe re-export when folder index imports are not served',
+  );
+  assert.match(
+    loadBody,
+    /for \(const url of PLUGIN_NATIVE_IFRAME_PROCESSOR_MODULE_URLS\)[\s\S]*import\(\/\* @vite-ignore \*\/ url\)/,
+    'same-layer should try every known st-chatu8 iframe processor URL before falling back',
+  );
+  assert.match(
+    loadBody,
+    /pluginNativeIframeProcessorModulePromise = null;/,
+    'a failed st-chatu8 processor import should not be cached forever because the extension may become reachable later',
+  );
   assert.match(
     source,
     /type PluginNativeIframeProcessorModule = \{[\s\S]*processImagePlaceholdersForElement\?: \(element: Element\)[\s\S]*processAllImagePlaceholders\?:/,
@@ -130,9 +145,45 @@ test('same-layer asks the st-chatu8 iframe processor to claim visible image prom
     'same-layer should fall back to the plugin full scan when the direct element export is unavailable',
   );
   assert.match(
+    scanBody,
+    /await nudgePluginNativePromptProcessingForActiveIntent\(reason, normalizedMessageIds, roots\);/,
+    'when the plugin scanner cannot be imported, same-layer should still wake the active floor so raw image prompts can become buttons',
+  );
+  assert.match(
     reconcileBody,
-    /void runPluginNativeSameLayerPromptScan\(reason, normalizedMessageIds\);[\s\S]*syncPendingRequestHintsFromDom\(\);/,
-    'placeholder reconcile should wake the plugin scanner before reading DOM hints',
+    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*void runPluginNativeSameLayerPromptScan\(reason, promptScanMessageIds\);[\s\S]*syncPendingRequestHintsFromDom\(\);/,
+    'placeholder reconcile should wake the plugin scanner only for the active handoff target before reading DOM hints',
+  );
+});
+
+test('missing st-chatu8 prompt scanner falls back to an active-intent native render nudge only for target floors', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const nudgeBody = extractFunctionBody(source, 'nudgePluginNativePromptProcessingForActiveIntent');
+
+  assert.match(
+    nudgeBody,
+    /if \(!shouldRunPluginNativePromptScan\(reason, normalizedMessageIds\)\) return;/,
+    'scanner-missing fallback must keep the same current-generation gate as the normal prompt scan',
+  );
+  assert.match(
+    nudgeBody,
+    /await ensureHostMesTextRendered\(messageId\)/,
+    'scanner-missing fallback should materialize only the targeted host mes_text before asking the plugin to process it',
+  );
+  assert.match(
+    nudgeBody,
+    /tavern_events\.CHARACTER_MESSAGE_RENDERED[\s\S]*eventEmit\(/,
+    'scanner-missing fallback should emit the same rendered-message signal that wakes st-chatu8 after MVU reprocessing',
+  );
+  assert.match(
+    nudgeBody,
+    /collectPluginImageGenerationHandoffProgress\(messageId\)[\s\S]*triggerPendingPluginNativePromptButtons\('prompt_scan_module_missing_nudge', messageId, handoffProgress\)/,
+    'after the native nudge has materialized prompt buttons, the existing scoped button fallback should take over',
+  );
+  assert.doesNotMatch(
+    nudgeBody,
+    /collectVisibleAssistantMessageIds|hydrateVisibleImageMessages|hydrateRecentPluginNativeHostWindow|hydrateSelectedGalleryWindowMessages/,
+    'scanner-missing fallback must not reuse history hydration paths or broaden to every visible historical floor',
   );
 });
 
@@ -505,8 +556,8 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
   );
   assert.match(
     source,
-    /const recentIntent = imageRecentIntentStore\.read\(\);[\s\S]*recentIntent\?\.source !== 'transcript'[\s\S]*recentIntentMessageId !== messageId/,
-    'prompt-button fallback should only run for the active same-layer transcript generation intent',
+    /hasActivePluginNativePromptHandoff\(messageId\)/,
+    'prompt-button fallback should only run for the active same-layer transcript generation handoff',
   );
   assert.match(
     source,
@@ -527,6 +578,76 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     source,
     /syncTranscriptItemsFromHostData\(`\$\{reason\}:prompt_placeholder_delay_\$\{delayMs\}`, normalizedMessageIds\);[\s\S]*queueGeneratedImageEntityRefresh\(normalizedMessageIds, `\$\{reason\}:prompt_placeholder_delay_\$\{delayMs\}`\);/,
     'prompt placeholder reconcile should refresh same-layer state without clicking plugin buttons',
+  );
+});
+
+test('plugin prompt scans and fallback clicks are authorized by active handoff instead of recent intent', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const scheduleBody = extractFunctionBody(source, 'schedulePluginNativePromptPlaceholderReconcile');
+  const scanGateBody = extractFunctionBody(source, 'shouldRunPluginNativePromptScan');
+  const fallbackGuardBody = extractFunctionBody(source, 'shouldTriggerPendingPluginNativePromptButtons');
+  const beginPendingTaskBody = extractFunctionBody(source, 'beginPendingImageTask');
+  const waitBody = extractFunctionBody(source, 'waitForPluginImageGenerationHandoff');
+
+  assert.match(
+    source,
+    /let activePluginNativePromptHandoff: PluginNativePromptHandoff \| null = null;/,
+    'same-layer should track an explicit active prompt handoff separate from 10-minute recent intent',
+  );
+  assert.match(
+    source,
+    /function beginPluginNativePromptHandoff\(messageId: number, source: 'transcript' \| 'gallery' = 'transcript'\)/,
+    'starting a generation should open a short-lived prompt handoff session',
+  );
+  assert.match(
+    beginPendingTaskBody,
+    /if \(source === 'transcript'\) \{[\s\S]*beginPluginNativePromptHandoff\(normalizedId, source\);[\s\S]*\}/,
+    'manual transcript image-generation proxy paths should also open the active prompt handoff',
+  );
+  assert.match(
+    source,
+    /function finishPluginNativePromptHandoff\(messageId: number, reason: string\)/,
+    'the active prompt handoff should be closed after observe/timeout/cancel paths',
+  );
+  assert.doesNotMatch(
+    scanGateBody,
+    /imageRecentIntentStore\.read\(\)|recentIntent/,
+    'prompt scanning must not use recent intent as authorization because history loads can still have a fresh recent intent',
+  );
+  assert.match(
+    scanGateBody,
+    /readActivePluginNativePromptHandoff\(\)/,
+    'prompt scanning should be authorized by the explicit active handoff session',
+  );
+  assert.doesNotMatch(
+    scheduleBody,
+    /imageRecentIntentStore\.read\(\)|recentIntent\?\.messageId/,
+    'placeholder reconcile must not append recentIntent to the scan set and make the gate self-fulfilling',
+  );
+  assert.match(
+    scheduleBody,
+    /readActivePluginNativePromptHandoff\(\)[\s\S]*activeHandoff\.messageId/,
+    'placeholder reconcile may only add the active handoff target when no concrete target was supplied',
+  );
+  assert.doesNotMatch(
+    fallbackGuardBody,
+    /imageRecentIntentStore\.read\(\)|recentIntent/,
+    'button fallback must not click plugin buttons merely because a stale recent intent matches the message id',
+  );
+  assert.match(
+    fallbackGuardBody,
+    /hasActivePluginNativePromptHandoff\(messageId\)/,
+    'button fallback should require the explicit active prompt handoff for that message',
+  );
+  assert.match(
+    waitBody,
+    /finishPluginNativePromptHandoff\(normalizedId, 'observed'\)/,
+    'observed handoff completion should close the active prompt handoff',
+  );
+  assert.match(
+    waitBody,
+    /finishPluginNativePromptHandoff\(normalizedId, 'timeout'\)/,
+    'handoff timeout should close the active prompt handoff so later UI loads cannot wake old prompts',
   );
 });
 

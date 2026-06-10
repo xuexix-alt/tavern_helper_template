@@ -14,6 +14,30 @@ function assertNoConsoleLog(relativePath) {
   assert.equal(source.includes('console.log('), false, `${relativePath} should not log in UI hot paths`);
 }
 
+function removeLineComments(source) {
+  return source
+    .split('\n')
+    .filter(line => !line.trimStart().startsWith('//'))
+    .join('\n');
+}
+
+function extractFunctionBody(source, functionName) {
+  const start = source.indexOf(`function ${functionName}`);
+  assert.notEqual(start, -1, `${functionName} should exist`);
+  const braceStart = source.indexOf('{', start);
+  assert.notEqual(braceStart, -1, `${functionName} should have a body`);
+  let depth = 0;
+  for (let index = braceStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(braceStart + 1, index);
+    }
+  }
+  throw new Error(`${functionName} body was not closed`);
+}
+
 test('image gesture hot paths do not emit console.log noise', () => {
   assertNoConsoleLog('generatedImageGestureController.ts');
   assertNoConsoleLog('components/GeneratedImageAsset.vue');
@@ -130,6 +154,36 @@ test('TranscriptMessageCard stops direct host image backfill probes once ready g
     source,
     /watch\(\s*galleryEntrySignature[\s\S]*if \(hasReadyGalleryEntries\(\)\) clearDirectHostBackfillTimers\(\);/,
     'late-arriving gallery entries should cancel remaining direct host backfill timers',
+  );
+});
+
+test('mounted history load does not run legacy image recovery warmups', () => {
+  const source = removeLineComments(readSource('useStreamingDemo.ts'));
+
+  assert.equal(
+    source.includes("hydrateRecentPluginNativeHostWindow('mounted."),
+    false,
+    'mounted should not materialize host plugin-native windows during passive history load',
+  );
+  assert.equal(
+    source.includes("startGalleryImageCacheSession('mounted."),
+    false,
+    'mounted should not start gallery cache prewarm before the gallery is opened',
+  );
+  assert.equal(
+    source.includes("discoverRecentNativeGalleryImages('mounted."),
+    false,
+    'mounted should not run unscoped native gallery scans',
+  );
+  assert.equal(
+    source.includes("hydrateVisibleImageMessages('mounted."),
+    false,
+    'mounted should not schedule repeated visible image hydration probes',
+  );
+  assert.equal(
+    source.includes("queueVisibleGeneratedImageEntityRefresh('mounted."),
+    false,
+    'mounted should not refresh generated image entities as a legacy native probe',
   );
 });
 
@@ -535,5 +589,71 @@ test('stream display html prefers item.streamHtml so stream-demo wrapper tags ar
     openingCardSource,
     /const streamingOpeningHtml = computed\([\s\S]{0,800}props\.item\.streamHtml/,
     'TranscriptOpeningCard should render the sanitized streaming html preview from item.streamHtml',
+  );
+});
+
+test('same-layer runtime does not run eager plugin-native image surface snapshots', () => {
+  const source = readSource('useStreamingDemo.ts');
+
+  assert.equal(
+    source.includes('plugin_native_image_surface_snapshot'),
+    false,
+    'plugin-native image diagnostics must not synchronously scan DOM/layout in the default runtime',
+  );
+  assert.equal(
+    source.includes('recordPluginNativeImageSurfaceSnapshot'),
+    false,
+    'hot image/MVU paths should rely on gated lifecycle traces, not eager DOM snapshot calls',
+  );
+  assert.equal(
+    source.includes('[stream-demo:image-surface]'),
+    false,
+    'same-layer runtime should not stringify image-surface snapshots to console during normal UI loading',
+  );
+});
+
+test('history image hydration is read-only and never wakes plugin prompt generation', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const visibleHydrationBody = extractFunctionBody(source, 'hydrateVisibleImageMessages');
+  const recentHostHydrationBody = extractFunctionBody(source, 'hydrateRecentPluginNativeHostWindow');
+  const galleryWindowHydrationBody = extractFunctionBody(source, 'hydrateSelectedGalleryWindowMessages');
+  const schedulePromptReconcileBody = extractFunctionBody(source, 'schedulePluginNativePromptPlaceholderReconcile');
+
+  for (const [name, body] of [
+    ['hydrateVisibleImageMessages', visibleHydrationBody],
+    ['hydrateRecentPluginNativeHostWindow', recentHostHydrationBody],
+    ['hydrateSelectedGalleryWindowMessages', galleryWindowHydrationBody],
+  ]) {
+    assert.equal(
+      body.includes('schedulePluginNativePromptPlaceholderReconcile'),
+      false,
+      `${name} should not ask st-chatu8 to process old prompt buttons while loading historical image floors`,
+    );
+  }
+
+  assert.equal(
+    visibleHydrationBody.includes('MESSAGE_UPDATED'),
+    false,
+    'mounted/visibility image hydration should not emit MESSAGE_UPDATED for historical prompt floors',
+  );
+  assert.equal(
+    visibleHydrationBody.includes('ensureHostMesTextRendered'),
+    false,
+    'mounted/visibility image hydration should not inject historical mes_text nodes that plugin observers can process as new prompts',
+  );
+  assert.equal(
+    visibleHydrationBody.includes('DOMSubtreeModified'),
+    false,
+    'mounted/visibility image hydration should not dispatch DOMSubtreeModified for historical prompt floors',
+  );
+  assert.match(
+    schedulePromptReconcileBody,
+    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*if \(shouldRunPluginNativePromptScan\(reason, promptScanMessageIds\)\) \{\s*void runPluginNativeSameLayerPromptScan\(reason, promptScanMessageIds\);/,
+    'same-layer prompt scans should be explicitly gated and narrowed to the current generation handoff',
+  );
+  assert.doesNotMatch(
+    schedulePromptReconcileBody,
+    /(^|\n)\s*void runPluginNativeSameLayerPromptScan\(reason, normalizedMessageIds\);\s*\n(?!\s*\})/,
+    'same-layer prompt scans must not run unconditionally during boot/history refresh',
   );
 });
