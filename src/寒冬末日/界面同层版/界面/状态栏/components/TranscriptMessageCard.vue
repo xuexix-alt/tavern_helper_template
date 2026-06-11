@@ -425,6 +425,34 @@ function collectGalleryEntryKeys(entry: ReaderGalleryEntry): string[] {
   ].filter(Boolean);
 }
 
+function summarizeGalleryEntryForHydrationDebug(entry: ReaderGalleryEntry, index: number): Record<string, unknown> {
+  const src = String(entry.src ?? '').trim();
+  return {
+    index,
+    id: String(entry.id ?? '').slice(0, 80),
+    messageId: entry.messageId,
+    requestId: String(entry.requestId ?? '').slice(0, 80),
+    markerId: String(entry.markerId ?? '').slice(0, 80),
+    imageId: String(entry.imageId ?? '').slice(0, 80),
+    promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+    hasSrc: Boolean(src),
+    srcLength: src.length,
+  };
+}
+
+function summarizePendingGalleryTargetForHydrationDebug(
+  target: PendingGalleryImageTarget,
+  index: number,
+): Record<string, unknown> {
+  return {
+    index,
+    kind: target.kind,
+    tokenHead: target.tokenCompare.slice(0, 120),
+    tagName: target.element.tagName,
+    className: String(target.element.className ?? '').slice(0, 120),
+  };
+}
+
 function isChatu8ImageRecord(input: unknown): input is Record<string, any> {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
   return ['src', 'image', 'imageData', 'path', 'url', 'prompt', 'tag', 'promptToken', 'requestId', 'request_id'].some(
@@ -726,9 +754,14 @@ function takePendingGalleryImageTarget(
   entry: ReaderGalleryEntry,
 ): PendingGalleryImageTarget | null {
   const tokenCompare = normalizePromptTokenForInlineCompare(entry.promptToken);
-  const index = tokenCompare ? targets.findIndex(target => target.tokenCompare === tokenCompare) : 0;
-  if (index < 0) return null;
-  const [target] = targets.splice(index, 1);
+  if (tokenCompare) {
+    const index = targets.findIndex(target => target.tokenCompare === tokenCompare);
+    if (index >= 0) {
+      const [target] = targets.splice(index, 1);
+      return target ?? null;
+    }
+  }
+  const [target] = targets.splice(0, 1);
   return target ?? null;
 }
 
@@ -736,28 +769,65 @@ function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
   sanitizeSameLayerPluginNativeRequestIdElements(root);
-  if (props.showTailGalleryImages === false) return;
+  const tailGalleryHidden = props.showTailGalleryImages === false;
+  const rawGalleryEntryCount = props.galleryEntries?.length ?? 0;
   const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
-  if (entries.length === 0) return;
+  if (entries.length === 0) {
+    recordComponentTrace('hydrate_pending_gallery_images_probe', {
+      stage: 'no_ready_gallery_entries',
+      tailGalleryHidden,
+      rawGalleryEntryCount,
+      readyGalleryEntryCount: 0,
+    });
+    return;
+  }
   const existingKeys = collectExistingGalleryImageKeys(root);
   const missingEntries = entries.filter(entry => {
     const keys = collectGalleryEntryKeys(entry);
     return keys.length > 0 && !keys.some(key => existingKeys.has(key));
   });
-  if (missingEntries.length === 0) return;
+  if (missingEntries.length === 0) {
+    recordComponentTrace('hydrate_pending_gallery_images_probe', {
+      stage: 'no_missing_gallery_entries',
+      tailGalleryHidden,
+      rawGalleryEntryCount,
+      readyGalleryEntryCount: entries.length,
+      existingKeyCount: existingKeys.size,
+      readyEntrySamples: entries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
+    });
+    return;
+  }
 
   const targets = collectPendingGalleryImageTargets(root);
+  recordComponentTrace('hydrate_pending_gallery_images_probe', {
+    stage: 'before_placeholder_replacement',
+    tailGalleryHidden,
+    rawGalleryEntryCount,
+    readyGalleryEntryCount: entries.length,
+    missingEntryCount: missingEntries.length,
+    existingKeyCount: existingKeys.size,
+    targetCount: targets.length,
+    targetSamples: targets.slice(0, 6).map(summarizePendingGalleryTargetForHydrationDebug),
+    missingEntrySamples: missingEntries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
+  });
 
   let injected = 0;
   let appended = 0;
+  let noTargetCount = 0;
+  let skippedCount = 0;
   for (const entry of missingEntries) {
     const target = takePendingGalleryImageTarget(targets, entry);
     if (!target) {
+      noTargetCount += 1;
       if (appendMissingGalleryFigure(root, entry)) appended += 1;
+      else skippedCount += 1;
       continue;
     }
     const figure = createGalleryEntryFigure(entry);
-    if (!figure) continue;
+    if (!figure) {
+      skippedCount += 1;
+      continue;
+    }
     if (target.kind === 'native-prompt-token') {
       target.element.after(figure);
     } else {
@@ -767,10 +837,17 @@ function hydratePendingImagesFromGalleryEntries() {
   }
 
   recordComponentTrace('hydrate_pending_gallery_images', {
+    tailGalleryHidden,
+    rawGalleryEntryCount,
     galleryEntryCount: entries.length,
     missingEntryCount: missingEntries.length,
+    targetCount: targets.length + injected,
     injected,
     appended,
+    noTargetCount,
+    skippedCount,
+    remainingTargetCount: targets.length,
+    missingEntrySamples: missingEntries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
   });
 }
 

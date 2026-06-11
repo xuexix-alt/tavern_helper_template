@@ -237,7 +237,7 @@ const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000, 12000, 24000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
-const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
+const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;
 const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [
   0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000,
 ] as const;
@@ -1463,9 +1463,12 @@ function injectGeneratedImagesIntoHtml(
     return resolveInlinePlacementTarget(element);
   });
 
+  let rawImagePlaceholderIndex = 0;
+
   for (const image of images) {
     const figure = createGeneratedImageFigureElement(doc, image, FALLBACK_IMAGE_CLASSES.inline, messageId);
     const nativePromptTarget = takeNativePromptTokenPlacementTarget(nativePromptTokenTargets, image.promptToken);
+
     if (nativePromptTarget) {
       if (isPluginNativeRenderableImage(image)) {
         nativePromptTarget.replaceWith(figure);
@@ -1474,7 +1477,10 @@ function injectGeneratedImagesIntoHtml(
       nativePromptTarget.after(figure);
       continue;
     }
-    const placeholderTarget = rawImagePlaceholders.shift();
+    const placeholderTarget =
+      rawImagePlaceholderIndex < rawImagePlaceholders.length
+        ? rawImagePlaceholders[rawImagePlaceholderIndex++]
+        : null;
     if (placeholderTarget) {
       placeholderTarget.replaceWith(figure);
       continue;
@@ -3379,6 +3385,108 @@ export function useStreamingDemo() {
     ].join('::');
   }
 
+  function summarizeImageHandoffRecord(entry: Record<string, any>, index: number): Record<string, unknown> {
+    const src = normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '');
+    return {
+      index,
+      requestId: String(entry?.requestId ?? entry?.request_id ?? '').trim().slice(0, 80),
+      markerId: String(entry?.markerId ?? '').trim().slice(0, 80),
+      imageId: String(entry?.imageId ?? entry?.image_id ?? '').trim().slice(0, 80),
+      promptTokenHead: String(entry?.promptToken ?? entry?.tag ?? entry?.prompt ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120),
+      regexHead: String(entry?.regex ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
+      hasSrc: Boolean(src),
+      srcLength: src.length,
+    };
+  }
+
+  function countReadyHostDomImagesForMessage(messageId: number): number {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return 0;
+    const seen = new Set<string>();
+    for (const doc of collectHostDocuments()) {
+      const roots = Array.from(
+        doc.querySelectorAll(`.mes[mesid="${normalizedId}"], .mes[data-message-id="${normalizedId}"]`),
+      ) as HTMLElement[];
+      for (const root of roots) {
+        const images = Array.from(root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR)) as HTMLImageElement[];
+        for (const image of images) {
+          const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
+          if (src) seen.add(src);
+        }
+      }
+    }
+    return seen.size;
+  }
+
+  function summarizeImageHandoffReadiness(messageId: number): Record<string, unknown> {
+    const normalizedId = Math.trunc(Number(messageId));
+    const message = readChatMessageDetail(normalizedId);
+    const rawMessage = resolveHostMessageText(message);
+    const promptTokens = collectChatu8PromptTokens(rawMessage);
+    const extraRecords = message ? collectSelectedExtraImageEntries(message) : [];
+    const extraReadyCount = extraRecords.filter(entry =>
+      Boolean(normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '')),
+    ).length;
+    const generatedRefs = Number.isFinite(normalizedId)
+      ? buildGeneratedImageRefsForMessage({ messageId: normalizedId, rawMessage })
+      : [];
+    const generatedReadyCount = generatedRefs.filter(entry => String(entry.src ?? '').trim()).length;
+    let galleryImageCount = 0;
+    let galleryReadyImageCount = 0;
+    try {
+      const galleryGroup = galleryGroups.value.find(group => group.messageId === normalizedId);
+      galleryImageCount = galleryGroup?.images.length ?? 0;
+      galleryReadyImageCount = galleryGroup?.images.filter(entry => String(entry.src ?? '').trim()).length ?? 0;
+    } catch {
+      // galleryGroups is initialized later in setup; early request traces can still use host/extra snapshots.
+    }
+
+    return {
+      messageId: Number.isFinite(normalizedId) ? normalizedId : null,
+      messageExists: Boolean(message),
+      rawMessageLength: rawMessage.length,
+      promptTokenCount: promptTokens.length,
+      extraImageRecordCount: extraRecords.length,
+      extraReadyImageCount: extraReadyCount,
+      generatedRefCount: generatedRefs.length,
+      generatedReadyRefCount: generatedReadyCount,
+      galleryImageCount,
+      galleryReadyImageCount,
+      hostDomReadyImageCount: countReadyHostDomImagesForMessage(normalizedId),
+      extraRecordSamples: extraRecords.slice(0, 6).map(summarizeImageHandoffRecord),
+      generatedRefSamples: generatedRefs.slice(0, 6).map((entry, index) => ({
+        index,
+        id: String(entry.id ?? '').slice(0, 80),
+        requestId: String(entry.requestId ?? '').slice(0, 80),
+        imageId: String(entry.imageId ?? '').slice(0, 80),
+        markerId: String(entry.markerId ?? '').slice(0, 80),
+        promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+        hasSrc: Boolean(String(entry.src ?? '').trim()),
+        srcLength: String(entry.src ?? '').trim().length,
+      })),
+    };
+  }
+
+  function recordImageHandoffReadinessTrace(
+    stage: string,
+    reason: string,
+    messageIds: number[] = [],
+    extra: Record<string, unknown> = {},
+  ) {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    recordLifecycleTrace('imageHandoffReadiness', stage, {
+      reason,
+      messageIds: normalizedMessageIds,
+      snapshots: normalizedMessageIds.slice(0, 8).map(summarizeImageHandoffReadiness),
+      ...extra,
+    });
+  }
+
   function listHostImageDataCandidates(messageIds: number[] = []): any[] {
     const containerId = getActiveContainerMessageId();
     const normalizedIds = new Set(
@@ -3441,6 +3549,10 @@ export function useStreamingDemo() {
           reason,
           delayMs,
           messageIds: normalizedMessageIds,
+          changedMessageIds,
+        });
+        recordImageHandoffReadinessTrace('host_data_reconcile_probe', reason, normalizedMessageIds, {
+          delayMs,
           changedMessageIds,
         });
         queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);
@@ -8340,6 +8452,10 @@ export function useStreamingDemo() {
           }
           if (requestBinding?.messageId != null) {
             finishPluginNativePromptHandoff(requestBinding.messageId, 'request_observed');
+            recordImageHandoffReadinessTrace('request_observed', 'host.plugin_native_request', [requestBinding.messageId], {
+              requestId,
+              promptHead: prompt.slice(0, 80),
+            });
           }
         },
         onResponseSuccess: ({ requestId, prompt, imageData }) => {
@@ -8373,6 +8489,7 @@ export function useStreamingDemo() {
                 ? responseMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
                 : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
           }));
+          recordImageHandoffReadinessTrace('response_observed', 'host.plugin_native_response_success', responseMessageIds);
 
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {
@@ -8387,8 +8504,6 @@ export function useStreamingDemo() {
             window.setTimeout(() => {
               discoverRecentNativeGalleryImages('host.plugin_native_response_success:delayed', responseMessageIds);
             }, 400);
-            scheduleHostImageDataReconcile('host.plugin_native_response_success', responseMessageIds);
-            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', responseMessageIds);
             void hydratePluginNativeResponseMessages('host.plugin_native_response_success', responseMessageIds);
           }
           if (isUntargetedResponse) {
@@ -8456,15 +8571,14 @@ export function useStreamingDemo() {
               'same_layer.plugin_native_placeholder_dom_mutation',
               affectedMessageIds,
             );
-            // 增强：延迟扫描画廊，等待占位符转换为实际图片
-            window.setTimeout(() => {
-              discoverRecentNativeGalleryImages('same_layer.dom_mutation_follow_up', affectedMessageIds);
-            }, 600);
+            scheduleGalleryRescan('same_layer.dom_mutation_follow_up', affectedMessageIds);
             return;
           }
           queueGeneratedImageEntityRefresh(affectedMessageIds);
         });
-        generatedImageDomObserver.observe(document.body, {
+        const transcriptContainer =
+          document.querySelector('.transcript-scroller') ?? document.querySelector('.transcript-card') ?? document.body;
+        generatedImageDomObserver.observe(transcriptContainer, {
           childList: true,
           subtree: true,
           attributes: true,
@@ -8480,10 +8594,7 @@ export function useStreamingDemo() {
             'host.plugin_native_placeholder_dom_mutation',
             affectedMessageIds,
           );
-          // 增强：延迟扫描画廊，等待宿主DOM中占位符转换为实际图片
-          window.setTimeout(() => {
-            discoverRecentNativeGalleryImages('host.dom_mutation_follow_up', affectedMessageIds);
-          }, 600);
+          scheduleGalleryRescan('host.dom_mutation_follow_up', affectedMessageIds);
           return;
         }
         queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');
@@ -8958,6 +9069,22 @@ export function useStreamingDemo() {
     if (!nextKey || nextKey === selectedGalleryWindowKey.value) return;
     selectedGalleryWindowKey.value = nextKey;
     scanSelectedGalleryWindow('gallery.window_select');
+  }
+
+  let galleryRescanTimer: number | null = null;
+  const pendingRescanMessageIds = new Set<number>();
+
+  function scheduleGalleryRescan(reason: string, messageIds: number[]) {
+    messageIds.forEach(id => pendingRescanMessageIds.add(id));
+
+    if (galleryRescanTimer != null) return;
+
+    galleryRescanTimer = window.setTimeout(() => {
+      const idsToScan = Array.from(pendingRescanMessageIds);
+      pendingRescanMessageIds.clear();
+      galleryRescanTimer = null;
+      discoverRecentNativeGalleryImages(reason, idsToScan);
+    }, 300);
   }
 
   function discoverRecentNativeGalleryImages(reason = 'gallery.native_recent_scan', messageIds: number[] = []) {
