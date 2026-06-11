@@ -460,9 +460,7 @@ test('successful image generation responses hydrate without scheduling long-tail
     'untargeted successful plugin-native image responses should hydrate visible host messages instead of waiting for the next MVU event',
   );
   assert.equal(
-    source.includes(
-      'const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;',
-    ),
+    source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;'),
     true,
     'host image data reconcile should stay bounded to the short saveImageGroup/extra.images race window',
   );

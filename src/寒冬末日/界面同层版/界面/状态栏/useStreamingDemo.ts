@@ -1478,9 +1478,7 @@ function injectGeneratedImagesIntoHtml(
       continue;
     }
     const placeholderTarget =
-      rawImagePlaceholderIndex < rawImagePlaceholders.length
-        ? rawImagePlaceholders[rawImagePlaceholderIndex++]
-        : null;
+      rawImagePlaceholderIndex < rawImagePlaceholders.length ? rawImagePlaceholders[rawImagePlaceholderIndex++] : null;
     if (placeholderTarget) {
       placeholderTarget.replaceWith(figure);
       continue;
@@ -3386,17 +3384,28 @@ export function useStreamingDemo() {
   }
 
   function summarizeImageHandoffRecord(entry: Record<string, any>, index: number): Record<string, unknown> {
-    const src = normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '');
+    const src = normalizeImageDataToSrc(
+      entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '',
+    );
     return {
       index,
-      requestId: String(entry?.requestId ?? entry?.request_id ?? '').trim().slice(0, 80),
-      markerId: String(entry?.markerId ?? '').trim().slice(0, 80),
-      imageId: String(entry?.imageId ?? entry?.image_id ?? '').trim().slice(0, 80),
+      requestId: String(entry?.requestId ?? entry?.request_id ?? '')
+        .trim()
+        .slice(0, 80),
+      markerId: String(entry?.markerId ?? '')
+        .trim()
+        .slice(0, 80),
+      imageId: String(entry?.imageId ?? entry?.image_id ?? '')
+        .trim()
+        .slice(0, 80),
       promptTokenHead: String(entry?.promptToken ?? entry?.tag ?? entry?.prompt ?? '')
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, 120),
-      regexHead: String(entry?.regex ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
+      regexHead: String(entry?.regex ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 80),
       hasSrc: Boolean(src),
       srcLength: src.length,
     };
@@ -3411,7 +3420,9 @@ export function useStreamingDemo() {
         doc.querySelectorAll(`.mes[mesid="${normalizedId}"], .mes[data-message-id="${normalizedId}"]`),
       ) as HTMLElement[];
       for (const root of roots) {
-        const images = Array.from(root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR)) as HTMLImageElement[];
+        const images = Array.from(
+          root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR),
+        ) as HTMLImageElement[];
         for (const image of images) {
           const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
           if (src) seen.add(src);
@@ -3428,7 +3439,9 @@ export function useStreamingDemo() {
     const promptTokens = collectChatu8PromptTokens(rawMessage);
     const extraRecords = message ? collectSelectedExtraImageEntries(message) : [];
     const extraReadyCount = extraRecords.filter(entry =>
-      Boolean(normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '')),
+      Boolean(
+        normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? ''),
+      ),
     ).length;
     const generatedRefs = Number.isFinite(normalizedId)
       ? buildGeneratedImageRefsForMessage({ messageId: normalizedId, rawMessage })
@@ -3463,7 +3476,9 @@ export function useStreamingDemo() {
         requestId: String(entry.requestId ?? '').slice(0, 80),
         imageId: String(entry.imageId ?? '').slice(0, 80),
         markerId: String(entry.markerId ?? '').slice(0, 80),
-        promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+        promptTokenHead: String(entry.promptToken ?? '')
+          .replace(/\s+/g, ' ')
+          .slice(0, 120),
         hasSrc: Boolean(String(entry.src ?? '').trim()),
         srcLength: String(entry.src ?? '').trim().length,
       })),
@@ -8452,10 +8467,15 @@ export function useStreamingDemo() {
           }
           if (requestBinding?.messageId != null) {
             finishPluginNativePromptHandoff(requestBinding.messageId, 'request_observed');
-            recordImageHandoffReadinessTrace('request_observed', 'host.plugin_native_request', [requestBinding.messageId], {
-              requestId,
-              promptHead: prompt.slice(0, 80),
-            });
+            recordImageHandoffReadinessTrace(
+              'request_observed',
+              'host.plugin_native_request',
+              [requestBinding.messageId],
+              {
+                requestId,
+                promptHead: prompt.slice(0, 80),
+              },
+            );
           }
         },
         onResponseSuccess: ({ requestId, prompt, imageData }) => {
@@ -8489,7 +8509,11 @@ export function useStreamingDemo() {
                 ? responseMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
                 : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
           }));
-          recordImageHandoffReadinessTrace('response_observed', 'host.plugin_native_response_success', responseMessageIds);
+          recordImageHandoffReadinessTrace(
+            'response_observed',
+            'host.plugin_native_response_success',
+            responseMessageIds,
+          );
 
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {

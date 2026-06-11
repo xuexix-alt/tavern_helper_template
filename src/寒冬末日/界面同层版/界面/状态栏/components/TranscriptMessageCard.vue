@@ -434,7 +434,9 @@ function summarizeGalleryEntryForHydrationDebug(entry: ReaderGalleryEntry, index
     requestId: String(entry.requestId ?? '').slice(0, 80),
     markerId: String(entry.markerId ?? '').slice(0, 80),
     imageId: String(entry.imageId ?? '').slice(0, 80),
-    promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+    promptTokenHead: String(entry.promptToken ?? '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 120),
     hasSrc: Boolean(src),
     srcLength: src.length,
   };
