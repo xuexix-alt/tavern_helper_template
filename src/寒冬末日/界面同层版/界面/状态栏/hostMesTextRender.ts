@@ -75,18 +75,19 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
     mesEl.setAttribute('mesid', String(messageId));
     mesEl.setAttribute('data-message-index', String(messageId));
     mesEl.setAttribute(INJECTED_ATTR, 'true');
-    // 离屏隐藏：不用 display:none（textContent 仍可读），不用 visibility:hidden（同上）
-    // 用绝对定位推出视口，和宿主隐藏策略保持一致的方式
+    // 离屏隐藏策略：节点保留在视口内，避免插件跳过后续 DOM 插入。
     mesEl.style.cssText =
       [
-        'position: absolute',
-        'left: -9999px',
+        'position: fixed',
+        'left: 0',
         'top: 0',
         'width: 1px',
         'height: 1px',
         'overflow: hidden',
         'pointer-events: none',
         'opacity: 0',
+        'z-index: -9999',
+        'clip: rect(0,0,0,0)',
       ].join(' !important; ') + ' !important;';
 
     const mesBlock = hostDoc.createElement('div');
@@ -101,12 +102,12 @@ function injectMesNode(hostDoc: Document, messageId: number, rawText: string): H
     chat.appendChild(mesEl);
   }
 
-  // 写入正文（textContent 赋值，不做 HTML 解析，安全且够用）
+  // 保留宿主消息 HTML 结构，让插件可以识别 <image> 等占位标签。
   const mesText = mesEl.querySelector('.mes_text') as HTMLElement | null;
   if (!mesText) return null;
   mesEl.setAttribute('data-message-index', String(messageId));
   mesText.setAttribute('data-message-index', String(messageId));
-  mesText.textContent = rawText;
+  mesText.innerHTML = rawText;
 
   return mesEl;
 }
