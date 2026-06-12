@@ -409,7 +409,7 @@ test('pending request hint heartbeat also syncs host image data changes from mes
   );
 });
 
-test('successful image generation responses actively reconcile host image data', () => {
+test('successful image generation responses hydrate without scheduling long-tail host reconcile', () => {
   const source = readSource('useStreamingDemo.ts');
 
   assert.equal(
@@ -461,10 +461,15 @@ test('successful image generation responses actively reconcile host image data',
   );
   assert.equal(
     source.includes(
-      'const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;',
+      'const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;',
     ),
     true,
-    'successful plugin-native image responses should keep polling long enough for delayed mobile native extra.images saves',
+    'host image data reconcile should stay bounded to the short saveImageGroup/extra.images race window',
+  );
+  assert.equal(
+    source.includes('1800, 3600, 7200, 15000, 30000] as const'),
+    false,
+    'host image data reconcile should not keep long-tail 1.8s-30s probes alive',
   );
   assert.equal(
     source.includes('queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);'),
@@ -473,8 +478,8 @@ test('successful image generation responses actively reconcile host image data',
   );
   assert.equal(
     source.includes("scheduleHostImageDataReconcile('host.plugin_native_response_success', responseMessageIds);"),
-    true,
-    'successful plugin-native image responses should reconcile delayed native image data without requiring UI reload',
+    false,
+    'targeted successful plugin-native image responses should use immediate sync/refresh/hydration instead of scheduling long-tail host-data reconcile',
   );
   assert.match(
     source,
@@ -485,6 +490,21 @@ test('successful image generation responses actively reconcile host image data',
     source,
     /void refreshHostMessagesForPluginNativeImageCompletion\(\s*'host\.plugin_native_response_success',\s*responseMessageIds,?\s*\);/,
     'targeted successful plugin-native image responses should explicitly wake the host message DOM after the plugin writes image data',
+  );
+  assert.match(
+    source,
+    /function summarizeImageHandoffReadiness\(messageId: number\): Record<string, unknown>/,
+    'same-layer should be able to snapshot per-message image readiness across host mes, extra.images, gallery refs, and host DOM',
+  );
+  assert.match(
+    source,
+    /recordImageHandoffReadinessTrace\('response_observed', 'host\.plugin_native_response_success', responseMessageIds\)/,
+    'successful plugin-native image responses should trace whether each image is readable before waiting for MVU MESSAGE_UPDATED',
+  );
+  assert.match(
+    source,
+    /recordImageHandoffReadinessTrace\('host_data_reconcile_probe', reason, normalizedMessageIds,/,
+    'delayed host-data reconcile should trace the saveImageGroup extra.images readability window per message',
   );
   assert.match(
     source,
@@ -544,8 +564,8 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     source.includes(
       "schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', responseMessageIds);",
     ),
-    true,
-    'real image responses should also leave a post-response breadcrumb for late placeholder/extra.images updates',
+    false,
+    'real image responses should not restart the long-tail prompt placeholder reconcile after generate-image-response has already succeeded',
   );
   assert.equal(
     /function triggerPendingPluginNativePromptButtons\(\s*reason: string,\s*messageId: number,\s*handoffProgress: PluginImageGenerationHandoffProgress,\s*\): number/.test(
@@ -1184,10 +1204,15 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
     /function shouldRunDirectHostBackfill\(\): boolean \{[\s\S]*props\.showTailGalleryImages !== false/,
     'direct host backfill should not spend resources when tail images are hidden',
   );
+  assert.doesNotMatch(
+    extractFunctionBody(cardSource, 'hydratePendingImagesFromGalleryEntries'),
+    /if\s*\(\s*props\.showTailGalleryImages\s*===\s*false\s*\)\s*return;/,
+    'hiding duplicate tail images must not block ready gallery entries from replacing正文 plugin placeholders',
+  );
   assert.match(
     cardSource,
-    /function hydratePendingImagesFromGalleryEntries\(\) \{[\s\S]*props\.showTailGalleryImages === false[\s\S]*return;/,
-    'gallery entries should stay in the drawer instead of hydrating正文 inline images while tail images are hidden',
+    /recordComponentTrace\('hydrate_pending_gallery_images_probe'/,
+    '正文 placeholder hydration should trace gallery-entry and target counts so mobile can identify the unreadable stage before MVU updates',
   );
   assert.match(
     cardSource,

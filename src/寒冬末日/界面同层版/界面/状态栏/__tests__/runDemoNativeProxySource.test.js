@@ -101,21 +101,54 @@ test('same-layer generate reveal window avoids visually flashing hidden floors',
 test('same-layer pre-generate hidden-floor scan uses lightweight host metadata instead of full transcript text', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
   const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+  const metaBuilderBody = extractFunctionBody(source, 'buildChatMessageMetaFromHostMessage');
 
   assert.match(
     source,
-    /function readAllChatMessageMetasRaw\(\)[\s\S]*data: message\?\.data,/,
+    /function readAllChatMessageMetasRaw\(\)/,
     'same-layer should have a metadata-only reader for pre-request scans',
   );
   assert.match(
+    metaBuilderBody,
+    /data: message\?\.data,/,
+    'same-layer metadata reader should preserve message data for MVU inheritance without reading full chat objects downstream',
+  );
+  assert.match(
     flowBody,
-    /const hiddenMessages = readMessageMetasAfterContainer\(\)/,
+    /const hiddenMessages = preGenerationMessageMetas/,
     'runGenerationFlow should not call full getChatMessages("0-last") just to collect hidden metadata before generate()',
   );
   assert.doesNotMatch(
     flowBody,
     /const hiddenMessageIds = readMessagesAfterContainer\(\)/,
     'pre-generate hidden id collection must avoid reading every floor body on large imported chats',
+  );
+});
+
+test('ordinary same-layer send reuses one pre-generate host metadata snapshot before generate starts', () => {
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const flowBody = extractFunctionBody(source, 'runGenerationFlow');
+  const beforeGenerate = flowBody.slice(0, flowBody.indexOf('const generatePromise = generate'));
+
+  assert.match(
+    beforeGenerate,
+    /const preGenerationMessageMetas = readMessageMetasAfterContainer\(\);/,
+    'ordinary sends should capture one host metadata snapshot before user creation and hidden reveal selection',
+  );
+  assert.match(
+    beforeGenerate,
+    /const userData = resolveInheritedUserMessageData\(preGenerationMessageMetas\);/,
+    'user data inheritance should reuse the pre-generate metadata snapshot instead of rescanning all floors',
+  );
+  assert.match(
+    beforeGenerate,
+    /const hiddenMessages = preGenerationMessageMetas\s*\.filter\(item => item\.is_hidden === true\)/,
+    'hidden reveal selection should reuse the same pre-generate metadata snapshot',
+  );
+  assert.equal(
+    (beforeGenerate.match(/readMessageMetasAfterContainer\(\)/g) ?? []).length,
+    1,
+    'ordinary sends should not repeatedly traverse every host floor before Tavern Helper generate() is requested',
   );
 });
 
@@ -128,7 +161,7 @@ test('same-layer generate reveal window follows Tavern depth regex summary layer
   assert.match(source, /const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;/);
   assert.match(
     flowBody,
-    /const hiddenMessages = readMessageMetasAfterContainer\(\)[\s\S]*messageLength: item\.messageLength \?\? 0[\s\S]*hasDepthSummary: item\.hasDepthSummary === true[\s\S]*depthSummaryLength: item\.depthSummaryLength \?\? 0/,
+    /const hiddenMessages = preGenerationMessageMetas[\s\S]*messageLength: item\.messageLength \?\? 0[\s\S]*hasDepthSummary: item\.hasDepthSummary === true[\s\S]*depthSummaryLength: item\.depthSummaryLength \?\? 0/,
     'reveal selection should use lightweight host metadata including depth-summary estimates',
   );
   assert.match(
@@ -150,17 +183,17 @@ test('hide policy always reapplies post-container host hiding even when persiste
 
   assert.match(
     hideBody,
-    /const patch = readMessageMetasAfterContainer\(\)\.map\(item => \(\{ message_id: item\.message_id, is_hidden: true \}\)\)/,
-    'hide policy should reapply actual host is_hidden=true instead of trusting persisted desired hidden state',
+    /const metas = readMessageMetasAfterContainer\(\);[\s\S]*const hidePatch = metas[\s\S]*\.map\(item => \(\{ message_id: item\.message_id, is_hidden: true \}\)\)/,
+    'hide policy should derive actual host hide patches from current post-container metadata',
   );
   assert.doesNotMatch(
     hideBody,
-    /filter\(item => item\.is_hidden !== true\)/,
+    /readPersistedHiddenIdSetForActiveContainer\(\)/,
     'persisted hide_state is a desired state cache and must not suppress host re-hide patches',
   );
   assert.match(
     persistBody,
-    /const hiddenIds = readMessageMetasAfterContainer\(\)\.map\(item => item\.message_id\)/,
+    /const hiddenIds = readMessageMetasAfterContainer\(\)[\s\S]*\.map\(item => item\.message_id\)/,
     'same-layer hide_state should persist the desired post-container hidden set without reading full story bodies',
   );
 });

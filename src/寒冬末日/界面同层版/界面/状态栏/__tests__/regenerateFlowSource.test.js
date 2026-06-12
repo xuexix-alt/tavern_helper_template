@@ -75,3 +75,52 @@ test('rollLatestTurn reuses current composer input as the regenerate prompt when
     'rollLatestTurn should pass the current composer input into regenerate when available',
   );
 });
+
+test('inline edit regenerate prepares once and enters generation flow directly', () => {
+  const source = readSource();
+  const body = extractFunctionBody(source, 'confirmInlineEditRegenerate');
+
+  assert.equal(
+    body.includes('await triggerNativeRegenerate(targetId, nextText);'),
+    false,
+    'confirmInlineEditRegenerate should not re-enter the full regenerate wrapper after it already patched and deleted floors',
+  );
+  assert.equal(
+    body.includes('await runGenerationFlow({ prompt: nextText, createUser: false });'),
+    true,
+    'confirmInlineEditRegenerate should call runGenerationFlow directly after one local preparation pass',
+  );
+  assert.equal(
+    body.includes('rebuildTranscript();'),
+    false,
+    'confirmInlineEditRegenerate should not run a full transcript rebuild before generation starts',
+  );
+  assert.match(
+    body,
+    /applyInlineRegenerateTranscriptPatch\(\{[\s\S]*targetId,[\s\S]*nextText,[\s\S]*trailingIds,/,
+    'confirmInlineEditRegenerate should update the same-layer transcript locally instead of rebuilding the full window',
+  );
+});
+
+test('inline edit regenerate records preparation timings before generate', () => {
+  const source = readSource();
+  const body = extractFunctionBody(source, 'confirmInlineEditRegenerate');
+
+  assert.match(
+    body,
+    /const markStageTiming = createStageTimingTrace\('confirmInlineEditRegenerate'/,
+    'confirmInlineEditRegenerate should expose stage timings for the pre-generate stall',
+  );
+  for (const stage of [
+    'patch_user_message_start',
+    'patch_user_message_done',
+    'scan_trailing_start',
+    'scan_trailing_done',
+    'delete_trailing_start',
+    'delete_trailing_done',
+    'local_transcript_patch_done',
+    'run_generation_start',
+  ]) {
+    assert.match(body, new RegExp(`markStageTiming\\('${stage}'`), `missing timing stage ${stage}`);
+  }
+});

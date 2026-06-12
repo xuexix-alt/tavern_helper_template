@@ -612,6 +612,56 @@ test('same-layer runtime does not run eager plugin-native image surface snapshot
   );
 });
 
+test('inline edit regenerate scans only floors after the edited user id', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'confirmInlineEditRegenerate');
+  const narrowReaderBody = extractFunctionBody(source, 'readMessageMetasAfterMessageId');
+
+  assert.match(
+    body,
+    /readMessageMetasAfterMessageId\(targetId\)/,
+    'confirmInlineEditRegenerate should use a post-anchor metadata reader instead of scanning the whole post-container story',
+  );
+  assert.doesNotMatch(
+    body,
+    /readMessagesAfterContainer\(\)/,
+    'confirmInlineEditRegenerate should not call the all post-container message reader for trailing deletion',
+  );
+  assert.doesNotMatch(
+    narrowReaderBody,
+    /callHostGetChatMessages\(`0-\$\{lastId\}`|readAllChatMessagesRaw\(/,
+    'post-anchor metadata reads should not materialize 0-last chat history',
+  );
+});
+
+test('generation reveal metadata uses a cache invalidated by targeted message mutations', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const rawMetaBody = extractFunctionBody(source, 'readAllChatMessageMetasRaw');
+  const metaBuilderBody = extractFunctionBody(source, 'buildChatMessageMetaFromHostMessage');
+  const invalidateBody = extractFunctionBody(source, 'invalidateChatMessageMetaCacheForIds');
+  const confirmBody = extractFunctionBody(source, 'confirmInlineEditRegenerate');
+  const triggerBody = extractFunctionBody(source, 'triggerNativeRegenerate');
+
+  assert.match(source, /const chatMessageMetaCache = new Map<number, ChatMessageMetaCacheEntry>\(\);/);
+  assert.match(
+    rawMetaBody,
+    /buildChatMessageMetaFromHostMessage/,
+    'raw metadata scans should delegate per-message analysis through the cache-aware meta builder',
+  );
+  assert.match(
+    metaBuilderBody,
+    /readCachedChatMessageMeta\(messageId,[\s\S]*messageText\)/,
+    'metadata scans should reuse cached message length and depth-summary analysis for unchanged floors',
+  );
+  assert.match(
+    invalidateBody,
+    /chatMessageMetaCache\.delete\(normalizedId\)/,
+    'targeted mutations should invalidate stale metadata entries',
+  );
+  assert.match(confirmBody, /invalidateChatMessageMetaCacheForIds\(\[targetId,[\s\S]*\.\.\.trailingIds/);
+  assert.match(triggerBody, /invalidateChatMessageMetaCacheForIds\(\[anchorMessageId,[\s\S]*\.\.\.trailingAssistantIds/);
+});
+
 test('history image hydration is read-only and never wakes plugin prompt generation', () => {
   const source = readSource('useStreamingDemo.ts');
   const visibleHydrationBody = extractFunctionBody(source, 'hydrateVisibleImageMessages');

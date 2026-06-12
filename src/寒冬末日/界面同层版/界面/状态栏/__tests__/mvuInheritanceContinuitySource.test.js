@@ -13,10 +13,15 @@ const read = relativePath =>
 
 test('same-layer user creation inherits latest mvu snapshot instead of fragile -2 host fetch', () => {
   const source = read('../useStreamingDemo.ts');
-  assert.match(source, /function resolveInheritedUserMessageData\(\)/);
+  assert.match(source, /function resolveInheritedUserMessageData\(messageMetas: ChatMessageMeta\[\] = readMessageMetasAfterContainer\(\)\)/);
   assert.match(source, /function readAllChatMessageMetasRaw\(\)/);
   assert.match(source, /buildLeanInheritedMessageData\(inheritanceSourceMessage\?\.data\)/);
-  assert.match(source, /const messages = readMessageMetasAfterContainer\(\)/);
+  assert.match(source, /const messages = messageMetas/);
+  assert.match(
+    source,
+    /const userData = resolveInheritedUserMessageData\(preGenerationMessageMetas\);/,
+    'ordinary generation should reuse the pre-generate metadata snapshot instead of rescanning for MVU inheritance',
+  );
   assert.match(source, /Mvu\.getMvuData\(\{ type: 'message', message_id: Math\.trunc\(latestMessageId\) \}\)/);
   assert.match(
     source,
@@ -30,7 +35,7 @@ test('same-layer user creation inherits latest mvu snapshot instead of fragile -
   );
   assert.doesNotMatch(
     source,
-    /function resolveInheritedUserMessageData\(\)[\s\S]*const messages = readMessagesAfterContainer\(\)/,
+    /function resolveInheritedUserMessageData\(messageMetas[\s\S]*const messages = readMessagesAfterContainer\(\)/,
     'generation preparation must not read full message text while resolving inherited MVU data',
   );
 });
