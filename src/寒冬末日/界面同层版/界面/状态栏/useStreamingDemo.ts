@@ -237,7 +237,7 @@ const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000, 12000, 24000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
-const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900, 1800, 3600, 7200, 15000, 30000] as const;
+const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;
 const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [
   0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000,
 ] as const;
@@ -246,6 +246,9 @@ const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_CHARS = 120_000;
 const SAME_LAYER_CANCELLED_ERROR = '__same_layer_generation_cancelled__';
+const MAX_CHAT_HISTORY_DEFAULT = 80;
+const MAX_CHAT_HISTORY_THRESHOLD = 100;
+const MAX_CHAT_HISTORY_WITH_SUMMARY = 150;
 const IMAGE_GENERATION_HANDOFF_TIMEOUT_MS = 4500;
 const IMAGE_GENERATION_LLM_HANDOFF_TIMEOUT_MS = 120_000;
 const IMAGE_GENERATION_LLM_RESPONSE_HANDOFF_GRACE_MS = 8000;
@@ -340,6 +343,13 @@ type ChatMessageMeta = {
   hasDepthSummary?: boolean;
   depthSummaryLength?: number;
   data?: unknown;
+};
+
+type ChatMessageMetaCacheEntry = {
+  rawSignature: string;
+  messageLength: number;
+  hasDepthSummary: boolean;
+  depthSummaryLength: number;
 };
 
 function estimateDepthRegexSummaryInfo(rawMessage: unknown): { hasDepthSummary: boolean; depthSummaryLength: number } {
@@ -2854,6 +2864,8 @@ export function useStreamingDemo() {
   const openingWorldModes = getOpeningWorldModes();
   const openingRoutes = getOpeningRoutes();
   const isCalibratingDailyRoll = ref(false);
+  const maxChatHistoryLimit = ref<number>(MAX_CHAT_HISTORY_DEFAULT);
+  const chatMessageMetaCache = new Map<number, ChatMessageMetaCacheEntry>();
   let activeGenerationCancelReject: ((error: Error) => void) | null = null;
   function isOpeningWorkbenchHostActive(): boolean {
     return isOpeningWorkbenchScopeActive({
@@ -3379,6 +3391,108 @@ export function useStreamingDemo() {
     ].join('::');
   }
 
+  function summarizeImageHandoffRecord(entry: Record<string, any>, index: number): Record<string, unknown> {
+    const src = normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '');
+    return {
+      index,
+      requestId: String(entry?.requestId ?? entry?.request_id ?? '').trim().slice(0, 80),
+      markerId: String(entry?.markerId ?? '').trim().slice(0, 80),
+      imageId: String(entry?.imageId ?? entry?.image_id ?? '').trim().slice(0, 80),
+      promptTokenHead: String(entry?.promptToken ?? entry?.tag ?? entry?.prompt ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120),
+      regexHead: String(entry?.regex ?? '').replace(/\s+/g, ' ').trim().slice(0, 80),
+      hasSrc: Boolean(src),
+      srcLength: src.length,
+    };
+  }
+
+  function countReadyHostDomImagesForMessage(messageId: number): number {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return 0;
+    const seen = new Set<string>();
+    for (const doc of collectHostDocuments()) {
+      const roots = Array.from(
+        doc.querySelectorAll(`.mes[mesid="${normalizedId}"], .mes[data-message-id="${normalizedId}"]`),
+      ) as HTMLElement[];
+      for (const root of roots) {
+        const images = Array.from(root.querySelectorAll(SAME_LAYER_RENDERED_IMAGE_CONTAINER_SELECTOR)) as HTMLImageElement[];
+        for (const image of images) {
+          const src = normalizeImageSrcForCompare(image.getAttribute('src') ?? image.currentSrc ?? '');
+          if (src) seen.add(src);
+        }
+      }
+    }
+    return seen.size;
+  }
+
+  function summarizeImageHandoffReadiness(messageId: number): Record<string, unknown> {
+    const normalizedId = Math.trunc(Number(messageId));
+    const message = readChatMessageDetail(normalizedId);
+    const rawMessage = resolveHostMessageText(message);
+    const promptTokens = collectChatu8PromptTokens(rawMessage);
+    const extraRecords = message ? collectSelectedExtraImageEntries(message) : [];
+    const extraReadyCount = extraRecords.filter(entry =>
+      Boolean(normalizeImageDataToSrc(entry?.src ?? entry?.image ?? entry?.imageData ?? entry?.path ?? entry?.url ?? '')),
+    ).length;
+    const generatedRefs = Number.isFinite(normalizedId)
+      ? buildGeneratedImageRefsForMessage({ messageId: normalizedId, rawMessage })
+      : [];
+    const generatedReadyCount = generatedRefs.filter(entry => String(entry.src ?? '').trim()).length;
+    let galleryImageCount = 0;
+    let galleryReadyImageCount = 0;
+    try {
+      const galleryGroup = galleryGroups.value.find(group => group.messageId === normalizedId);
+      galleryImageCount = galleryGroup?.images.length ?? 0;
+      galleryReadyImageCount = galleryGroup?.images.filter(entry => String(entry.src ?? '').trim()).length ?? 0;
+    } catch {
+      // galleryGroups is initialized later in setup; early request traces can still use host/extra snapshots.
+    }
+
+    return {
+      messageId: Number.isFinite(normalizedId) ? normalizedId : null,
+      messageExists: Boolean(message),
+      rawMessageLength: rawMessage.length,
+      promptTokenCount: promptTokens.length,
+      extraImageRecordCount: extraRecords.length,
+      extraReadyImageCount: extraReadyCount,
+      generatedRefCount: generatedRefs.length,
+      generatedReadyRefCount: generatedReadyCount,
+      galleryImageCount,
+      galleryReadyImageCount,
+      hostDomReadyImageCount: countReadyHostDomImagesForMessage(normalizedId),
+      extraRecordSamples: extraRecords.slice(0, 6).map(summarizeImageHandoffRecord),
+      generatedRefSamples: generatedRefs.slice(0, 6).map((entry, index) => ({
+        index,
+        id: String(entry.id ?? '').slice(0, 80),
+        requestId: String(entry.requestId ?? '').slice(0, 80),
+        imageId: String(entry.imageId ?? '').slice(0, 80),
+        markerId: String(entry.markerId ?? '').slice(0, 80),
+        promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+        hasSrc: Boolean(String(entry.src ?? '').trim()),
+        srcLength: String(entry.src ?? '').trim().length,
+      })),
+    };
+  }
+
+  function recordImageHandoffReadinessTrace(
+    stage: string,
+    reason: string,
+    messageIds: number[] = [],
+    extra: Record<string, unknown> = {},
+  ) {
+    const normalizedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    recordLifecycleTrace('imageHandoffReadiness', stage, {
+      reason,
+      messageIds: normalizedMessageIds,
+      snapshots: normalizedMessageIds.slice(0, 8).map(summarizeImageHandoffReadiness),
+      ...extra,
+    });
+  }
+
   function listHostImageDataCandidates(messageIds: number[] = []): any[] {
     const containerId = getActiveContainerMessageId();
     const normalizedIds = new Set(
@@ -3441,6 +3555,10 @@ export function useStreamingDemo() {
           reason,
           delayMs,
           messageIds: normalizedMessageIds,
+          changedMessageIds,
+        });
+        recordImageHandoffReadinessTrace('host_data_reconcile_probe', reason, normalizedMessageIds, {
+          delayMs,
           changedMessageIds,
         });
         queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:delay_${delayMs}`);
@@ -4214,6 +4332,22 @@ export function useStreamingDemo() {
     const shouldWaitForPluginNativeHandoff =
       collectChatu8PromptTokens(messageText).length > 0 || isChatu8AutoLlmImageGenerationEnabled();
 
+    // P0修复：等待DOM稳定，避免手机端插件autoLLMClick竞态
+    // 插件的findElement需要时间扫描DOM，150ms确保浏览器完成渲染
+    if (hostRendered && shouldWaitForPluginNativeHandoff) {
+      await new Promise(resolve => window.setTimeout(resolve, 150));
+      recordLifecycleTrace(
+        'emitOfficialGenerationLifecycle',
+        'plugin_dom_grace_delay',
+        {
+          messageId: Math.trunc(normalizedId),
+          delayMs: 150,
+          reason: 'ensure_plugin_auto_click_dom_ready',
+        },
+        traceId,
+      );
+    }
+
     const emitLifecycleEvents = async () => {
       try {
         const completed = await emitTavernLifecycleEventWithTimeout(
@@ -4430,6 +4564,34 @@ export function useStreamingDemo() {
     }
   }
 
+  function applyInlineRegenerateTranscriptPatch({
+    targetId,
+    nextText,
+    trailingIds,
+    hidden,
+  }: {
+    targetId: number;
+    nextText: string;
+    trailingIds: number[];
+    hidden: boolean;
+  }) {
+    const deletedIds = new Set(trailingIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id)));
+    const retained = transcript.value.filter(item => item.message_id !== targetId && !deletedIds.has(item.message_id));
+    const nextUserItem = createLocalTranscriptItem({
+      id: targetId,
+      role: 'user',
+      raw: nextText,
+      hidden,
+    });
+    transcript.value = syncTranscriptFlags(clipTranscriptItemsForUi([...retained, nextUserItem]));
+    if (assistantMessageId.value != null && deletedIds.has(assistantMessageId.value)) {
+      assistantMessageId.value = null;
+    }
+    if (selectedItem.value) {
+      selectedItem.value = transcript.value.find(item => item.message_id === selectedItem.value?.message_id) ?? null;
+    }
+  }
+
   function normalizeHostChatMessages(list: any[]): any[] {
     return list.map((message: any) => ({
       ...message,
@@ -4588,6 +4750,54 @@ export function useStreamingDemo() {
     return new Set(savedState.hiddenMessageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id)));
   }
 
+  function buildChatMessageMetaRawSignature(messageText: string): string {
+    return `${messageText.length}:${messageText.slice(0, 64)}:${messageText.slice(-64)}`;
+  }
+
+  function readCachedChatMessageMeta(messageId: number, messageText: string): ChatMessageMetaCacheEntry {
+    const rawSignature = buildChatMessageMetaRawSignature(messageText);
+    const cached = chatMessageMetaCache.get(messageId);
+    if (cached?.rawSignature === rawSignature) return cached;
+    const depthSummaryInfo = estimateDepthRegexSummaryInfo(messageText);
+    const nextEntry: ChatMessageMetaCacheEntry = {
+      rawSignature,
+      messageLength: messageText.length,
+      hasDepthSummary: depthSummaryInfo.hasDepthSummary,
+      depthSummaryLength: depthSummaryInfo.depthSummaryLength,
+    };
+    chatMessageMetaCache.set(messageId, nextEntry);
+    return nextEntry;
+  }
+
+  function invalidateChatMessageMetaCacheForIds(messageIds: number[]) {
+    for (const rawId of messageIds) {
+      const normalizedId = Math.trunc(Number(rawId));
+      if (!Number.isFinite(normalizedId) || normalizedId < 0) continue;
+      chatMessageMetaCache.delete(normalizedId);
+    }
+  }
+
+  function buildChatMessageMetaFromHostMessage(
+    message: any,
+    fallbackIndex: number,
+    persistedHiddenIds: Set<number>,
+  ): ChatMessageMeta | null {
+    if (!message || typeof message !== 'object') return null;
+    const messageId = Math.trunc(Number(message?.message_id ?? fallbackIndex));
+    if (!Number.isFinite(messageId) || messageId < 0) return null;
+    const messageText = resolveHostMessageText(message);
+    const cachedMeta = readCachedChatMessageMeta(messageId, messageText);
+    return {
+      message_id: messageId,
+      role: resolveHostMessageRole(message),
+      is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
+      messageLength: cachedMeta.messageLength,
+      hasDepthSummary: cachedMeta.hasDepthSummary,
+      depthSummaryLength: cachedMeta.depthSummaryLength,
+      data: message?.data,
+    };
+  }
+
   function readAllChatMessageMetasRaw(): ChatMessageMeta[] {
     const persistedHiddenIds = readPersistedHiddenIdSetForActiveContainer();
     try {
@@ -4599,21 +4809,7 @@ export function useStreamingDemo() {
           : -1;
       if (chat != null && typeof chat === 'object' && chatLen > 0) {
         const metas = Array.from({ length: chatLen }, function (_: any, index: number) {
-          const message = (chat as any)[index];
-          if (!message || typeof message !== 'object') return null;
-          const messageId = Math.trunc(Number(message?.message_id ?? index));
-          if (!Number.isFinite(messageId) || messageId < 0) return null;
-          const messageText = resolveHostMessageText(message);
-          const depthSummaryInfo = estimateDepthRegexSummaryInfo(messageText);
-          return {
-            message_id: messageId,
-            role: resolveHostMessageRole(message),
-            is_hidden: message?.is_hidden === true || persistedHiddenIds.has(messageId),
-            messageLength: messageText.length,
-            hasDepthSummary: depthSummaryInfo.hasDepthSummary,
-            depthSummaryLength: depthSummaryInfo.depthSummaryLength,
-            data: message?.data,
-          };
+          return buildChatMessageMetaFromHostMessage((chat as any)[index], index, persistedHiddenIds);
         }).filter(Boolean) as ChatMessageMeta[];
         if (metas.length > 0) return metas;
       }
@@ -4621,14 +4817,9 @@ export function useStreamingDemo() {
       console.warn('[Debug] readAllChatMessageMetasRaw context error', { error: String(e) });
     }
 
-    return readAllChatMessagesRaw().map(item => ({
-      message_id: item.message_id,
-      role: item.role,
-      is_hidden: item.is_hidden === true || persistedHiddenIds.has(item.message_id),
-      messageLength: typeof item.message === 'string' ? item.message.length : 0,
-      ...estimateDepthRegexSummaryInfo(item.message),
-      data: item.data,
-    }));
+    return readAllChatMessagesRaw()
+      .map(item => buildChatMessageMetaFromHostMessage(item, item?.message_id, persistedHiddenIds))
+      .filter(Boolean) as ChatMessageMeta[];
   }
 
   function readMessagesAfterContainer(): BaseChatMessage[] {
@@ -4645,6 +4836,32 @@ export function useStreamingDemo() {
     return readAllChatMessageMetasRaw().filter(
       item => Number.isFinite(item.message_id) && (containerId == null || item.message_id > containerId),
     );
+  }
+
+  function readMessageMetasAfterMessageId(anchorMessageId: number): ChatMessageMeta[] {
+    const normalizedAnchor = Math.trunc(Number(anchorMessageId));
+    if (!Number.isFinite(normalizedAnchor) || normalizedAnchor < 0) return [];
+    const persistedHiddenIds = readPersistedHiddenIdSetForActiveContainer();
+    try {
+      const ctx = readHostContext();
+      const chat = ctx?.chat;
+      const chatLen =
+        chat != null && typeof chat === 'object' && typeof (chat as any).length === 'number'
+          ? (chat as any).length
+          : -1;
+      if (chat != null && typeof chat === 'object' && chatLen > normalizedAnchor + 1) {
+        const metas: ChatMessageMeta[] = [];
+        for (let index = normalizedAnchor + 1; index < chatLen; index += 1) {
+          const meta = buildChatMessageMetaFromHostMessage((chat as any)[index], index, persistedHiddenIds);
+          if (meta) metas.push(meta);
+        }
+        return metas;
+      }
+    } catch (e) {
+      console.warn('[Debug] readMessageMetasAfterMessageId context error', { error: String(e), anchorMessageId });
+    }
+
+    return readAllChatMessageMetasRaw().filter(item => item.message_id > normalizedAnchor);
   }
 
   function collectNativeShadowWindowMessageIds(anchorMessageId?: number | null): number[] {
@@ -4755,8 +4972,8 @@ export function useStreamingDemo() {
     return readAllChatMessageMetasRaw().find(item => item.message_id === containerId) ?? null;
   }
 
-  function resolveInheritedUserMessageData(): Record<string, unknown> {
-    const messages = readMessageMetasAfterContainer()
+  function resolveInheritedUserMessageData(messageMetas: ChatMessageMeta[] = readMessageMetasAfterContainer()): Record<string, unknown> {
+    const messages = messageMetas
       .filter(item => Number.isFinite(item.message_id))
       .sort((a, b) => a.message_id - b.message_id);
     const latestMessage = messages[messages.length - 1];
@@ -6866,6 +7083,28 @@ export function useStreamingDemo() {
     return stopped;
   }
 
+  function calculateSmartMaxHistory(
+    totalMessages: number,
+    messages: Array<{ hasDepthSummary?: boolean }>,
+  ): number | 'all' {
+    // 策略1：楼层少时使用完整历史
+    if (totalMessages <= MAX_CHAT_HISTORY_THRESHOLD) {
+      return 'all';
+    }
+
+    // 策略2：根据depth摘要情况决定
+    const messagesWithDepthSummary = messages.filter(m => m.hasDepthSummary === true);
+    const summaryRatio = messagesWithDepthSummary.length / totalMessages;
+
+    if (summaryRatio > 0.5) {
+      // 超过50%的消息有depth摘要，可以包含更多历史
+      return Math.min(MAX_CHAT_HISTORY_WITH_SUMMARY, totalMessages);
+    }
+
+    // 策略3：使用配置的默认值或用户设置值
+    return Math.min(maxChatHistoryLimit.value, totalMessages);
+  }
+
   async function runGenerationFlow(options: GenerationFlowOptions): Promise<GenerationFlowResult> {
     const prompt = String(options.prompt ?? '').trim();
     const traceId = createTraceId(
@@ -6967,9 +7206,16 @@ export function useStreamingDemo() {
       await emitOfficialGenerationStartLifecycle(lifecycleKindForGenerationStart);
       markStageTiming('official_generation_start_lifecycle_done');
 
+      markStageTiming('pre_generation_meta_scan_start');
+      const preGenerationMessageMetas = readMessageMetasAfterContainer();
+      markStageTiming('pre_generation_meta_scan_done', {
+        metaCount: preGenerationMessageMetas.length,
+        hiddenCount: preGenerationMessageMetas.filter(item => item.is_hidden === true).length,
+      });
+
       if (options.createUser) {
         markStageTiming('resolve_user_data_start');
-        const userData = resolveInheritedUserMessageData();
+        const userData = resolveInheritedUserMessageData(preGenerationMessageMetas);
         markStageTiming('resolve_user_data_done', {
           userDataKeys: Object.keys(userData ?? {}),
         });
@@ -7016,7 +7262,7 @@ export function useStreamingDemo() {
       }
 
       markStageTiming('hidden_meta_scan_start');
-      const hiddenMessages = readMessageMetasAfterContainer()
+      const hiddenMessages = preGenerationMessageMetas
         .filter(item => item.is_hidden === true)
         .map(item => ({
           message_id: item.message_id,
@@ -7118,6 +7364,11 @@ export function useStreamingDemo() {
       const cancelPromise = new Promise<string>((_resolve, reject) => {
         activeGenerationCancelReject = reject;
       });
+
+      // 计算智能上下文限制
+      const totalMessages = preGenerationMessageMetas.length;
+      const smartMaxHistory = calculateSmartMaxHistory(totalMessages, preGenerationMessageMetas);
+
       markStageTiming('generate_call_start');
       const generateCallStartedAt = readTraceNowMs();
       const generatePromise = generate(
@@ -7133,7 +7384,7 @@ export function useStreamingDemo() {
               generation_id: generationId,
               should_silence: true,
               should_stream: true,
-              max_chat_history: options.maxChatHistory ?? 'all',
+              max_chat_history: options.maxChatHistory ?? smartMaxHistory,
             },
       );
       markStageTiming('generate_call_returned', {
@@ -7147,7 +7398,10 @@ export function useStreamingDemo() {
           detachedUserInput: options.detachedUserInput === true,
           generationId,
           maxChatHistory:
-            options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? 'all'),
+            options.detachedUserInput === true ? (options.maxChatHistory ?? 0) : (options.maxChatHistory ?? smartMaxHistory),
+          smartMaxHistoryApplied: options.maxChatHistory == null && !options.detachedUserInput,
+          totalMessages,
+          smartMaxHistory,
         },
         traceId,
       );
@@ -7374,13 +7628,14 @@ export function useStreamingDemo() {
         refresh: 'none',
       });
     }
-    const trailingAssistantIds = readMessagesAfterContainer()
-      .filter(item => item.message_id > anchorMessageId && item.role === 'assistant')
+    const trailingAssistantIds = readMessageMetasAfterMessageId(anchorMessageId)
+      .filter(item => item.role === 'assistant')
       .map(item => item.message_id)
       .sort((a, b) => a - b);
     let shouldRefreshTranscript = nextPrompt !== String(latestUser.raw ?? '').trim();
     if (trailingAssistantIds.length > 0) {
       await deleteChatMessages(trailingAssistantIds, { refresh: 'none' });
+      invalidateChatMessageMetaCacheForIds([anchorMessageId, ...trailingAssistantIds]);
       if (assistantMessageId.value != null && trailingAssistantIds.includes(assistantMessageId.value)) {
         assistantMessageId.value = null;
       }
@@ -7650,6 +7905,8 @@ export function useStreamingDemo() {
   }
 
   async function confirmInlineEditRegenerate(item: TranscriptItem) {
+    const traceId = createTraceId('inline-regenerate');
+    const markStageTiming = createStageTimingTrace('confirmInlineEditRegenerate', traceId);
     const latestUser = latestUserItem.value;
     const targetId = Math.trunc(Number(item.message_id));
     const nextText = String(editingUserDraft.value ?? '').trim();
@@ -7668,20 +7925,36 @@ export function useStreamingDemo() {
     status.value = 'preparing';
     errorText.value = '';
 
+    let trailingIds: number[] = [];
     try {
+      markStageTiming('patch_user_message_start', { targetId });
       await setChatMessages([{ message_id: targetId, message: nextText, is_hidden: latestUser.hidden }], {
         refresh: 'none',
       });
-      const trailingIds = readMessagesAfterContainer()
+      markStageTiming('patch_user_message_done', { targetId });
+      markStageTiming('scan_trailing_start', { targetId });
+      trailingIds = readMessageMetasAfterMessageId(targetId)
         .map(message => message.message_id)
-        .filter(id => id > targetId)
         .sort((a, b) => a - b);
+      markStageTiming('scan_trailing_done', { targetId, trailingCount: trailingIds.length });
       if (trailingIds.length > 0) {
+        markStageTiming('delete_trailing_start', { targetId, trailingCount: trailingIds.length });
         await deleteChatMessages(trailingIds, { refresh: 'none' });
+        markStageTiming('delete_trailing_done', { targetId, trailingCount: trailingIds.length });
+      } else {
+        markStageTiming('delete_trailing_skipped', { targetId });
       }
+      invalidateChatMessageMetaCacheForIds([targetId, ...trailingIds]);
       appendLog('action', '改词重生', stripTagsForPreview(nextText).slice(0, 80) || '(空输入)');
       cancelInlineEdit();
-      rebuildTranscript();
+      applyInlineRegenerateTranscriptPatch({
+        targetId,
+        nextText,
+        trailingIds,
+        hidden: latestUser.hidden,
+      });
+      latestPatchedMessage = '';
+      markStageTiming('local_transcript_patch_done', { targetId, trailingCount: trailingIds.length });
     } catch (error) {
       status.value = 'error';
       errorText.value = error instanceof Error ? error.message : String(error);
@@ -7692,7 +7965,8 @@ export function useStreamingDemo() {
       busy.value = false;
     }
 
-    await triggerNativeRegenerate(targetId, nextText);
+    markStageTiming('run_generation_start', { targetId, trailingCount: trailingIds.length });
+    await runGenerationFlow({ prompt: nextText, createUser: false });
   }
 
   async function confirmRollbackDelete(item: TranscriptItem) {
@@ -8340,6 +8614,10 @@ export function useStreamingDemo() {
           }
           if (requestBinding?.messageId != null) {
             finishPluginNativePromptHandoff(requestBinding.messageId, 'request_observed');
+            recordImageHandoffReadinessTrace('request_observed', 'host.plugin_native_request', [requestBinding.messageId], {
+              requestId,
+              promptHead: prompt.slice(0, 80),
+            });
           }
         },
         onResponseSuccess: ({ requestId, prompt, imageData }) => {
@@ -8373,6 +8651,7 @@ export function useStreamingDemo() {
                 ? responseMessageIds.map(messageId => collectPluginNativeHandoffDiagnostics(messageId))
                 : [collectPluginNativeHandoffDiagnostics(assistantMessageId.value ?? -1)],
           }));
+          recordImageHandoffReadinessTrace('response_observed', 'host.plugin_native_response_success', responseMessageIds);
 
           syncTranscriptItemsFromHostData('host.plugin_native_response_success', responseMessageIds);
           if (responseMessageIds.length > 0) {
@@ -8387,8 +8666,6 @@ export function useStreamingDemo() {
             window.setTimeout(() => {
               discoverRecentNativeGalleryImages('host.plugin_native_response_success:delayed', responseMessageIds);
             }, 400);
-            scheduleHostImageDataReconcile('host.plugin_native_response_success', responseMessageIds);
-            schedulePluginNativePromptPlaceholderReconcile('host.plugin_native_response_success', responseMessageIds);
             void hydratePluginNativeResponseMessages('host.plugin_native_response_success', responseMessageIds);
           }
           if (isUntargetedResponse) {
@@ -9262,6 +9539,16 @@ export function useStreamingDemo() {
     scheduleUiRefresh(['gallery'], reason);
   }
 
+  function setMaxChatHistoryLimit(limit: number) {
+    const normalized = Math.max(10, Math.min(500, Math.trunc(limit)));
+    maxChatHistoryLimit.value = normalized;
+    appendLog('info', '上下文限制已更新', `最大聊天历史：${normalized}条`);
+  }
+
+  function getMaxChatHistoryLimit(): number {
+    return maxChatHistoryLimit.value;
+  }
+
   return {
     input,
     busy,
@@ -9318,6 +9605,8 @@ export function useStreamingDemo() {
     startGalleryImageCacheSession,
     selectGalleryWindow,
     refreshGalleryImages,
+    setMaxChatHistoryLimit,
+    getMaxChatHistoryLimit,
     submitPromptViaSameLayer,
     cancelActiveGeneration,
     disableSameLayerUi,

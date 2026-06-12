@@ -101,6 +101,7 @@
                 末尾图 {{ showTailGalleryImages ? '开' : '关' }}
               </button>
               <button type="button" class="ui-page-menu-item" @click="openSettingsFromMoreMenu">排版</button>
+              <button type="button" class="ui-page-menu-item" @click="openContextLimitSettings">上下文限制</button>
               <button type="button" class="ui-page-menu-item" @click="toggleFullscreenFromMoreMenu">
                 {{ isFullscreen ? '退出全屏' : '全屏' }}
               </button>
@@ -445,6 +446,45 @@
       />
     </HudModal>
 
+    <HudModal
+      :open="contextLimitModalOpen"
+      title="上下文限制设置"
+      subtitle="限制生成时使用的聊天历史数量，可提升楼层过多时的响应速度。设置过小可能导致AI遗忘早期剧情。"
+      @close="closeContextLimitSettings"
+    >
+      <div class="context-limit-settings">
+        <div class="setting-row">
+          <label class="setting-label">最大聊天历史条数</label>
+          <div class="setting-control">
+            <input
+              v-model="contextLimitInput"
+              type="number"
+              min="10"
+              max="500"
+              step="10"
+              class="context-limit-input"
+              placeholder="80"
+            />
+            <span class="setting-hint">条消息（范围：10-500）</span>
+          </div>
+        </div>
+        <div class="setting-info">
+          <p><strong>说明：</strong></p>
+          <ul>
+            <li>少于100层：自动使用完整历史</li>
+            <li>100层以上：使用此限制值</li>
+            <li>推荐值：80-150 条</li>
+            <li>值越大：上下文越完整，但响应越慢</li>
+            <li>值越小：响应越快，但可能遗忘早期剧情</li>
+          </ul>
+        </div>
+        <div class="setting-actions">
+          <button type="button" class="ui-btn ui-btn-primary" @click="saveContextLimitSettings">保存</button>
+          <button type="button" class="ui-btn ui-btn-secondary" @click="closeContextLimitSettings">取消</button>
+        </div>
+      </div>
+    </HudModal>
+
     <MessageDetailModal :item="selectedItem" @close="closeDetail" />
   </section>
 </template>
@@ -597,6 +637,8 @@ const {
   isCalibratingDailyRoll,
   saveHealthIsFailing,
   requestExplicitSave,
+  setMaxChatHistoryLimit,
+  getMaxChatHistoryLimit,
 } = useStreamingDemo();
 
 const saveRetryBusy = ref(false);
@@ -638,6 +680,8 @@ const transcriptImageTriggerGuard = {
 const settingsModalOpen = ref(false);
 const openingModalOpen = ref(false);
 const componentLibraryOpen = ref(false);
+const contextLimitModalOpen = ref(false);
+const contextLimitInput = ref('80');
 const activeUtilityDrawer = ref<'system' | 'map' | null>(null);
 type RoleTabItem = { key: string; label: string; statusClass?: string; statusText?: string };
 type RoleProviderEntry = { key: string; role: Record<string, any> };
@@ -979,8 +1023,28 @@ function exitFullscreen() {
 }
 
 function toggleTopbarMoreMenu() {
-  transcriptWindowMenuOpen.value = false;
   topbarMoreMenuOpen.value = !topbarMoreMenuOpen.value;
+}
+
+function openContextLimitSettings() {
+  contextLimitInput.value = String(getMaxChatHistoryLimit());
+  contextLimitModalOpen.value = true;
+  topbarMoreMenuOpen.value = false;
+}
+
+function closeContextLimitSettings() {
+  contextLimitModalOpen.value = false;
+}
+
+function saveContextLimitSettings() {
+  const value = Number(contextLimitInput.value);
+  if (Number.isFinite(value) && value >= 10 && value <= 500) {
+    setMaxChatHistoryLimit(value);
+    contextLimitModalOpen.value = false;
+    toastr?.success?.(`上下文限制已设置为 ${value} 条消息`, '性能设置', { timeOut: 3000 });
+  } else {
+    toastr?.error?.('请输入 10-500 之间的数字', '输入错误', { timeOut: 3000 });
+  }
 }
 
 function openRoleDrawerFromMoreMenu() {
@@ -3887,5 +3951,110 @@ useEventListener(window, 'keydown', event => {
     padding-right: 8px;
     padding-bottom: 8px;
   }
+}
+
+/* 上下文限制设置样式 */
+.context-limit-settings {
+  padding: 20px;
+}
+
+.setting-row {
+  margin-bottom: 24px;
+}
+
+.setting-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.context-limit-input {
+  width: 120px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 6px;
+  font-size: 16px;
+  font-family: var(--font-mono, 'Courier New', monospace);
+  background: var(--color-input-bg, #ffffff);
+  color: var(--color-text-primary, #1a1a1a);
+  transition: border-color 0.2s;
+}
+
+.context-limit-input:focus {
+  outline: none;
+  border-color: var(--color-accent, #d4a574);
+  box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+}
+
+.setting-hint {
+  font-size: 14px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.setting-info {
+  padding: 16px;
+  background: var(--color-info-bg, #f3f4f6);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.setting-info p {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.setting-info ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.setting-info li {
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--color-text-secondary, #4b5563);
+  line-height: 1.6;
+}
+
+.setting-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.ui-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ui-btn-primary {
+  background: var(--color-accent, #d4a574);
+  color: #ffffff;
+}
+
+.ui-btn-primary:hover {
+  background: var(--color-accent-hover, #c89563);
+}
+
+.ui-btn-secondary {
+  background: var(--color-bg-secondary, #e5e7eb);
+  color: var(--color-text-primary, #1a1a1a);
+}
+
+.ui-btn-secondary:hover {
+  background: var(--color-bg-tertiary, #d1d5db);
 }
 </style>

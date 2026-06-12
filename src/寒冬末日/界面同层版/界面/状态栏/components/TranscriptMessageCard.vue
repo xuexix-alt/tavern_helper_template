@@ -198,7 +198,10 @@ import {
   sanitizeSameLayerPluginNativeRequestIdElements,
   sanitizeSameLayerPluginNativeRequestIds,
 } from '../pluginNativeImageDom';
-import { stripVisibleChatu8PromptTokensHtml } from '../chatu8PromptTokenDisplay';
+import {
+  stripVisibleChatu8PromptTokensHtml,
+  preserveChatu8PromptTokenPlacementMarkersHtml,
+} from '../chatu8PromptTokenDisplay';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 import StreamRenderer from './StreamRenderer.vue';
 
@@ -249,7 +252,11 @@ const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
   // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
   const html = props.item.finalHtml || '<p>(空回复)</p>';
-  return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));
+  // 修复：保留提示词标记供图片占位符匹配使用
+  const processed = preserveChatu8PromptTokenPlacementMarkersHtml(html);
+  // 降级：如果处理后为空，使用原始HTML
+  const result = processed.trim() ? processed : html;
+  return sanitizeSameLayerPluginNativeRequestIds(result);
 });
 const assistantBodySignature = computed(() => {
   if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
@@ -423,6 +430,34 @@ function collectGalleryEntryKeys(entry: ReaderGalleryEntry): string[] {
     entry.requestId ? `request:${entry.requestId}` : '',
     src ? `src:${encodeDatasetValue(src)}` : '',
   ].filter(Boolean);
+}
+
+function summarizeGalleryEntryForHydrationDebug(entry: ReaderGalleryEntry, index: number): Record<string, unknown> {
+  const src = String(entry.src ?? '').trim();
+  return {
+    index,
+    id: String(entry.id ?? '').slice(0, 80),
+    messageId: entry.messageId,
+    requestId: String(entry.requestId ?? '').slice(0, 80),
+    markerId: String(entry.markerId ?? '').slice(0, 80),
+    imageId: String(entry.imageId ?? '').slice(0, 80),
+    promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+    hasSrc: Boolean(src),
+    srcLength: src.length,
+  };
+}
+
+function summarizePendingGalleryTargetForHydrationDebug(
+  target: PendingGalleryImageTarget,
+  index: number,
+): Record<string, unknown> {
+  return {
+    index,
+    kind: target.kind,
+    tokenHead: target.tokenCompare.slice(0, 120),
+    tagName: target.element.tagName,
+    className: String(target.element.className ?? '').slice(0, 120),
+  };
 }
 
 function isChatu8ImageRecord(input: unknown): input is Record<string, any> {
@@ -711,14 +746,32 @@ function collectPendingGalleryImageTargets(root: HTMLElement): PendingGalleryIma
     root.querySelectorAll('[data-chatu8-native-prompt-token="true"]'),
   ) as HTMLElement[];
 
+  // 过滤：排除已经有相邻图片的提示词标记（避免重复插入）
+  const filteredNativePromptTargets = nativePromptTargets.filter(element => {
+    // 检查提示词标记的下一个兄弟节点是否已经是图片容器
+    const nextSibling = element.nextElementSibling;
+    if (nextSibling) {
+      // 如果下一个元素是图片容器（插件已处理），跳过这个标记
+      if (nextSibling.matches('.st-chatu8-image-span, .image-tag-placeholder, figure.assistant-inline-image')) {
+        return false;
+      }
+      // 如果下一个元素包含图片，也跳过
+      if (nextSibling.querySelector('img')) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return [
     ...rawTargets.map(element => ({ element, kind: 'raw-image' as const })),
-    ...nativePromptTargets.map(element => ({ element, kind: 'native-prompt-token' as const })),
+    ...filteredNativePromptTargets.map(element => ({ element, kind: 'native-prompt-token' as const })),
   ].map(({ element, kind }) => ({
     element: resolveInlinePlacementTarget(element),
     tokenCompare: normalizePromptTokenForInlineCompare(element.textContent ?? element.dataset.promptToken ?? ''),
     kind,
   }));
+}
 }
 
 function takePendingGalleryImageTarget(
@@ -736,28 +789,65 @@ function hydratePendingImagesFromGalleryEntries() {
   const root = assistantBodyRef.value;
   if (!root || props.item.role !== 'assistant' || props.item.isStreaming) return;
   sanitizeSameLayerPluginNativeRequestIdElements(root);
-  if (props.showTailGalleryImages === false) return;
+  const tailGalleryHidden = props.showTailGalleryImages === false;
+  const rawGalleryEntryCount = props.galleryEntries?.length ?? 0;
   const entries = (props.galleryEntries ?? []).filter(entry => String(entry.src ?? '').trim());
-  if (entries.length === 0) return;
+  if (entries.length === 0) {
+    recordComponentTrace('hydrate_pending_gallery_images_probe', {
+      stage: 'no_ready_gallery_entries',
+      tailGalleryHidden,
+      rawGalleryEntryCount,
+      readyGalleryEntryCount: 0,
+    });
+    return;
+  }
   const existingKeys = collectExistingGalleryImageKeys(root);
   const missingEntries = entries.filter(entry => {
     const keys = collectGalleryEntryKeys(entry);
     return keys.length > 0 && !keys.some(key => existingKeys.has(key));
   });
-  if (missingEntries.length === 0) return;
+  if (missingEntries.length === 0) {
+    recordComponentTrace('hydrate_pending_gallery_images_probe', {
+      stage: 'no_missing_gallery_entries',
+      tailGalleryHidden,
+      rawGalleryEntryCount,
+      readyGalleryEntryCount: entries.length,
+      existingKeyCount: existingKeys.size,
+      readyEntrySamples: entries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
+    });
+    return;
+  }
 
   const targets = collectPendingGalleryImageTargets(root);
+  recordComponentTrace('hydrate_pending_gallery_images_probe', {
+    stage: 'before_placeholder_replacement',
+    tailGalleryHidden,
+    rawGalleryEntryCount,
+    readyGalleryEntryCount: entries.length,
+    missingEntryCount: missingEntries.length,
+    existingKeyCount: existingKeys.size,
+    targetCount: targets.length,
+    targetSamples: targets.slice(0, 6).map(summarizePendingGalleryTargetForHydrationDebug),
+    missingEntrySamples: missingEntries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
+  });
 
   let injected = 0;
   let appended = 0;
+  let noTargetCount = 0;
+  let skippedCount = 0;
   for (const entry of missingEntries) {
     const target = takePendingGalleryImageTarget(targets, entry);
     if (!target) {
+      noTargetCount += 1;
       if (appendMissingGalleryFigure(root, entry)) appended += 1;
+      else skippedCount += 1;
       continue;
     }
     const figure = createGalleryEntryFigure(entry);
-    if (!figure) continue;
+    if (!figure) {
+      skippedCount += 1;
+      continue;
+    }
     if (target.kind === 'native-prompt-token') {
       target.element.after(figure);
     } else {
@@ -767,10 +857,17 @@ function hydratePendingImagesFromGalleryEntries() {
   }
 
   recordComponentTrace('hydrate_pending_gallery_images', {
+    tailGalleryHidden,
+    rawGalleryEntryCount,
     galleryEntryCount: entries.length,
     missingEntryCount: missingEntries.length,
+    targetCount: targets.length + injected,
     injected,
     appended,
+    noTargetCount,
+    skippedCount,
+    remainingTargetCount: targets.length,
+    missingEntrySamples: missingEntries.slice(0, 6).map(summarizeGalleryEntryForHydrationDebug),
   });
 }
 
