@@ -756,14 +756,9 @@ function takePendingGalleryImageTarget(
   entry: ReaderGalleryEntry,
 ): PendingGalleryImageTarget | null {
   const tokenCompare = normalizePromptTokenForInlineCompare(entry.promptToken);
-  if (tokenCompare) {
-    const index = targets.findIndex(target => target.tokenCompare === tokenCompare);
-    if (index >= 0) {
-      const [target] = targets.splice(index, 1);
-      return target ?? null;
-    }
-  }
-  const [target] = targets.splice(0, 1);
+  const index = tokenCompare ? targets.findIndex(target => target.tokenCompare === tokenCompare) : 0;
+  if (index < 0) return null;
+  const [target] = targets.splice(index, 1);
   return target ?? null;
 }
 

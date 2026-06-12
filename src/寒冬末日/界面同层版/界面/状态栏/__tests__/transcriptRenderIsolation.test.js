@@ -496,7 +496,7 @@ test('successful image generation responses hydrate without scheduling long-tail
   );
   assert.match(
     source,
-    /recordImageHandoffReadinessTrace\('response_observed', 'host\.plugin_native_response_success', responseMessageIds\)/,
+    /recordImageHandoffReadinessTrace\(\s*'response_observed',\s*'host\.plugin_native_response_success',\s*responseMessageIds,?\s*\)/,
     'successful plugin-native image responses should trace whether each image is readable before waiting for MVU MESSAGE_UPDATED',
   );
   assert.match(

@@ -79,12 +79,28 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
 
 test('transcript card keeps native prompt token markers while hydrating gallery figures', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
+  const takeTargetBody = extractFunctionBody(cardSource, 'takePendingGalleryImageTarget');
 
   assert.match(cardSource, /function collectPendingGalleryImageTargets\(root: HTMLElement\)/);
   assert.match(cardSource, /\[data-chatu8-native-prompt-token="true"\]/);
   assert.match(cardSource, /kind: 'native-prompt-token'/);
   assert.match(cardSource, /takePendingGalleryImageTarget\(targets, entry\)/);
   assert.match(cardSource, /normalizePromptTokenForInlineCompare\(entry\.promptToken\)/);
+  assert.match(
+    takeTargetBody,
+    /const index = tokenCompare \? targets\.findIndex\(target => target\.tokenCompare === tokenCompare\) : 0;/,
+    'gallery entries with prompt tokens should only consume matching正文 placeholders',
+  );
+  assert.match(
+    takeTargetBody,
+    /if \(index < 0\) return null;/,
+    'unmatched prompt-token entries should append/recover separately instead of stealing the first placeholder',
+  );
+  assert.doesNotMatch(
+    takeTargetBody,
+    /\n\s*const \[target\] = targets\.splice\(0, 1\);/,
+    'prompt-token mismatch must not fall back to the first pending placeholder, which can cross-wire multi-image hydration',
+  );
   assert.match(
     cardSource,
     /if \(target\.kind === 'native-prompt-token'\) \{[\s\S]*target\.element\.after\(figure\);[\s\S]*\} else \{[\s\S]*target\.element\.replaceWith\(figure\);/,
