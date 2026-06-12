@@ -303,8 +303,8 @@ test('gallery output is rebuilt directly from transcript groups without same-lay
   );
   assert.equal(
     source.includes("if (item.role !== 'assistant') continue;"),
-    false,
-    'visible gallery groups should try every visible floor and let image discovery decide whether the floor contributes',
+    true,
+    'visible gallery groups should skip non-assistant floors before expensive image discovery',
   );
 });
 
@@ -521,8 +521,13 @@ test('successful image generation responses hydrate without scheduling long-tail
   );
   assert.match(
     source,
-    /for \(const delayMs of \[120, 360, 900, 1800, 3600\] as const\)/,
-    'targeted response hydration should keep probing across the mobile delay window where plugin images land after success',
+    /for \(const delayMs of \[120, 360, 900\] as const\)/,
+    'targeted response hydration should stay inside the short saveImageGroup/extra.images race window',
+  );
+  assert.doesNotMatch(
+    extractFunctionBody(source, 'hydratePluginNativeResponseMessages'),
+    /1800|3600/,
+    'targeted response hydration should not keep long-tail probes alive after successful image responses',
   );
   assert.equal(
     source.includes('hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));'),
@@ -533,6 +538,10 @@ test('successful image generation responses hydrate without scheduling long-tail
 
 test('plugin LLM image responses actively trace prompt placeholder handoff before image requests arrive', () => {
   const source = readSource('useStreamingDemo.ts');
+  const promptReconcileBody = extractFunctionBody(
+    source,
+    'schedulePluginNativePromptPlaceholderReconcile',
+  );
 
   assert.equal(
     source.includes(
@@ -542,11 +551,16 @@ test('plugin LLM image responses actively trace prompt placeholder handoff befor
     'same-layer should have a dedicated reconcile path for the image### prompt placeholder stage',
   );
   assert.equal(
-    /const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = \[\s*0,\s*120,\s*360,\s*900,\s*1800,\s*3600,\s*7200,\s*15000,\s*30000,\s*\] as const;/.test(
+    /const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = \[\s*0,\s*120,\s*360,\s*900\s*\] as const;/.test(
       source,
     ),
     true,
-    'prompt placeholder reconcile should cover the mobile gap between ch-llm-image-gen-response and generate-image-request',
+    'prompt placeholder reconcile should stay bounded to the short handoff window',
+  );
+  assert.doesNotMatch(
+    promptReconcileBody,
+    /7200|15000|30000/,
+    'prompt placeholder reconcile should not keep mobile long-tail probes alive',
   );
   assert.equal(
     source.includes("recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe'"),
@@ -1162,70 +1176,55 @@ test('gallery image regeneration keeps a gallery recent intent through the nativ
   );
 });
 
-test('StoryPage can hide duplicate tail gallery images while keeping the gallery drawer data source', () => {
+test('StoryPage removes duplicate tail gallery images from正文 while keeping the gallery drawer data source', () => {
   const source = readSource('pages/StoryPage.vue');
   const cardSource = readSource('components/TranscriptMessageCard.vue');
   const streamingSource = readSource('useStreamingDemo.ts');
 
   assert.equal(
-    source.includes('const showTailGalleryImages = ref(false);'),
-    true,
-    'tail gallery image strip should default to hidden so正文 image interaction remains gallery-only',
-  );
-  assert.equal(
-    source.includes(':show-tail-gallery-images="showTailGalleryImages"'),
-    true,
-    'StoryPage should pass the tail-image visibility switch to transcript cards',
+    source.includes('showTailGalleryImages'),
+    false,
+    'tail image copy is removed, so StoryPage should not keep a tail-image toggle',
   );
   assert.equal(
     source.includes(':gallery-entries="galleryEntries"'),
     true,
-    'TranscriptList should keep the full gallery entries so image counts and gallery refs stay intact',
+    'TranscriptList should keep the full gallery entries for counts, drawer data, and placeholder replacement',
   );
   assert.equal(
-    source.includes('transcriptGalleryEntries'),
+    cardSource.includes('showTailGalleryImages'),
     false,
-    'tail image visibility should not be implemented by starving TranscriptList of gallery entries',
+    'TranscriptMessageCard should not keep the removed tail-image visibility switch',
   );
   assert.equal(
-    cardSource.includes('showTailGalleryImages?: boolean;'),
-    true,
-    'TranscriptMessageCard should accept the tail image visibility switch',
+    cardSource.includes('function shouldRunDirectHostBackfill'),
+    false,
+    'direct body backfill exists only to copy images to正文 tail and should be removed',
   );
   assert.equal(
-    cardSource.includes("root.classList.toggle('hide-tail-gallery-images', props.showTailGalleryImages === false);"),
-    true,
-    'tail image visibility should hide the fallback gallery already present in finalHtml',
-  );
-  assert.match(
-    cardSource,
-    /function shouldRunDirectHostBackfill\(\): boolean \{[\s\S]*props\.showTailGalleryImages !== false/,
-    'direct host backfill should not spend resources when tail images are hidden',
-  );
-  assert.doesNotMatch(
-    extractFunctionBody(cardSource, 'hydratePendingImagesFromGalleryEntries'),
-    /if\s*\(\s*props\.showTailGalleryImages\s*===\s*false\s*\)\s*return;/,
-    'hiding duplicate tail images must not block ready gallery entries from replacing正文 plugin placeholders',
+    cardSource.includes('appendMissingGalleryFigure'),
+    false,
+    '正文 hydration should not append unanchored gallery images to the message tail',
   );
   assert.match(
     cardSource,
     /recordComponentTrace\('hydrate_pending_gallery_images_probe'/,
     '正文 placeholder hydration should trace gallery-entry and target counts so mobile can identify the unreadable stage before MVU updates',
   );
-  assert.match(
-    cardSource,
-    /function bindAssistantBodyInteractions\(\) \{[\s\S]*props\.showTailGalleryImages === false[\s\S]*return;/,
-    '正文 inline image gestures should stay disabled while gallery-only interaction is selected',
-  );
   assert.equal(
     streamingSource.includes("figure.setAttribute('data-tail-gallery-image', 'true');"),
-    true,
-    'unanchored images appended by finalHtml injection should be marked as tail duplicates',
+    false,
+    'finalHtml injection should not mark or append unanchored duplicate tail images',
   );
   assert.equal(
     cardSource.includes(":deep([data-tail-gallery-image='true'])"),
+    false,
+    'removed tail image copy should not leave hide CSS behind',
+  );
+  assert.equal(
+    extractFunctionBody(cardSource, 'hydratePendingImagesFromGalleryEntries').includes('skippedCount += 1;'),
     true,
-    'tail image visibility should hide the real appended finalHtml images, not only gallery containers',
+    'ready gallery entries without正文 placeholder targets should be skipped instead of appended to the tail',
   );
   assert.equal(
     source.includes(':entries="galleryVisibleEntries"'),
@@ -1234,8 +1233,8 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
   );
   assert.equal(
     source.includes('末尾图'),
-    true,
-    'the top toolbar should expose a visible tail-image switch near the layout controls',
+    false,
+    'the removed正文 tail image copy business should not leave a toolbar switch behind',
   );
 });
 
@@ -1433,81 +1432,47 @@ test('StoryPage resolves plugin-native image double clicks with adjacent prompt 
   );
 });
 
-test('TranscriptMessageCard hard-backfills body images directly from host chat and DOM', () => {
+test('TranscriptMessageCard does not hard-backfill body images directly from host chat and DOM', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
   assert.equal(
-    cardSource.includes("from '../hostBridge'"),
-    true,
-    'body-level image fallback should read host data directly instead of waiting for parent gallery entries',
-  );
-  assert.equal(
     cardSource.includes('function collectDirectHostBackfillEntries()'),
-    true,
-    'TranscriptMessageCard should have a direct host backfill collector for stubborn mobile timing failures',
+    false,
+    '正文 tail image copy should not keep a direct host backfill collector',
   );
   assert.equal(
     cardSource.includes('readChatMessageDetail(props.item.message_id)'),
-    true,
-    'direct body fallback should read the current message extra.images by message id',
+    false,
+    'TranscriptMessageCard should not read extra.images directly for正文 tail copies',
   );
   assert.equal(
     cardSource.includes('collectReachableHostDocuments().filter(doc => doc !== document)'),
-    true,
-    'direct body fallback should also scan already-rendered host DOM images',
+    false,
+    'TranscriptMessageCard should not scan host DOM directly for正文 tail copies',
   );
-  assert.match(
+  assert.doesNotMatch(
     cardSource,
     /const DIRECT_HOST_IMAGE_BACKFILL_DELAYS_MS = \[0, 300, 900, 1800, 3600, 7200, 15000\] as const;/,
-    'direct backfill should poll long enough to survive mobile delayed extra.images writes',
+    '正文 tail image copy should not keep long direct backfill probes',
   );
 });
 
-test('TranscriptMessageCard body recovery images stay visible when tail duplicates are hidden', () => {
+test('TranscriptMessageCard direct DOM backfill prompt inheritance is removed with正文 tail copies', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
-  assert.equal(
-    cardSource.includes('function ensureGalleryRecoveryStrip(root: HTMLElement): HTMLElement'),
-    true,
-    'missing gallery entries should be appended to a dedicated recovery strip instead of the hideable tail gallery',
-  );
-  assert.match(
-    cardSource,
-    /strip\.className = 'assistant-inline-image-strip';[\s\S]*strip\.setAttribute\('data-gallery-recovery-strip', 'true'\);/,
-    'the recovery strip should use the non-hidden inline-image strip surface',
-  );
-  assert.match(
-    cardSource,
-    /ensureGalleryRecoveryStrip\(root\)\.append\(figure\);/,
-    'body recovery figures should not be placed inside assistant-fallback-generated-gallery',
-  );
-  const tailHideRule =
-    cardSource.match(
-      /\.assistant-body\.hide-tail-gallery-images :deep\(\.assistant-fallback-generated-gallery\)[\s\S]*?\}/,
-    )?.[0] ?? '';
   assert.doesNotMatch(
-    tailHideRule,
-    /data-gallery-recovery-strip/,
-    'the tail image toggle must not hide the recovery strip that makes gallery entries visible in the正文',
-  );
-});
-
-test('TranscriptMessageCard direct DOM backfill inherits prompt data from adjacent plugin buttons', () => {
-  const cardSource = readSource('components/TranscriptMessageCard.vue');
-
-  assert.match(
     cardSource,
     /function resolvePluginPromptCarrierForImageContainer\(carrier: HTMLElement \| null\): HTMLElement \| null/,
-    'direct DOM image recovery should inspect plugin-native siblings for prompt identity',
+    'removed direct DOM recovery should not inspect plugin-native siblings for tail-copy prompt identity',
   );
-  assert.match(
+  assert.doesNotMatch(
     cardSource,
     /let sibling = carrier\.previousElementSibling;[\s\S]*sibling\.matches\?\.\('button\.image-tag-button, \.st-chatu8-image-button'\)/,
-    'ai-image-container images should inherit data-link/data-image-tag from the preceding plugin button',
+    'removed direct DOM recovery should not keep sibling prompt lookup',
   );
-  assert.match(
+  assert.doesNotMatch(
     cardSource,
     /const promptCarrier = resolvePluginPromptCarrierForImageContainer\(carrier\);[\s\S]*promptCarrier\?\.dataset\.imageTag[\s\S]*promptCarrier\?\.dataset\.link/,
-    'direct DOM fallback entries should carry prompt tokens so single/double/long gestures can resolve native targets',
+    'removed direct DOM recovery should not keep prompt-token tail-copy wiring',
   );
 });

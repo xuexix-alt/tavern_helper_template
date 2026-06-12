@@ -57,18 +57,6 @@
             画廊
           </button>
 
-          <button
-            type="button"
-            class="ui-icon-btn ui-toggle-btn"
-            :class="{ active: showTailGalleryImages }"
-            :aria-pressed="showTailGalleryImages"
-            title="控制正文末尾重复图片展示"
-            @click="showTailGalleryImages = !showTailGalleryImages"
-          >
-            末尾图
-            <span class="ui-toggle-state">{{ showTailGalleryImages ? '开' : '关' }}</span>
-          </button>
-
           <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
           <button
@@ -97,9 +85,6 @@
             <div v-if="topbarMoreMenuOpen" class="ui-more-menu-list clip-corner-sm">
               <button type="button" class="ui-page-menu-item" @click="openRoleDrawerFromMoreMenu">角色</button>
               <button type="button" class="ui-page-menu-item" @click="openGalleryDrawerFromMoreMenu">画廊</button>
-              <button type="button" class="ui-page-menu-item" @click="showTailGalleryImages = !showTailGalleryImages">
-                末尾图 {{ showTailGalleryImages ? '开' : '关' }}
-              </button>
               <button type="button" class="ui-page-menu-item" @click="openSettingsFromMoreMenu">排版</button>
               <button type="button" class="ui-page-menu-item" @click="toggleFullscreenFromMoreMenu">
                 {{ isFullscreen ? '退出全屏' : '全屏' }}
@@ -222,7 +207,6 @@
               :rollback-confirm-message-id="rollbackConfirmMessageId"
               :render-revision="transcriptDomRevision"
               :gallery-entries="galleryEntries"
-              :show-tail-gallery-images="showTailGalleryImages"
               :layout-mode="shellLayoutMode"
               @generate-image="handleTranscriptGenerateImage"
               @open-gallery="handleOpenGallery"
@@ -630,7 +614,6 @@ provide('isFullscreen', isFullscreen);
 const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
-const showTailGalleryImages = ref(false);
 const transcriptImageTriggerGuard = {
   messageId: null as number | null,
   timestampMs: 0,

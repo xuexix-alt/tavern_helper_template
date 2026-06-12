@@ -36,7 +36,6 @@
           :show-rollback-confirm="rollbackConfirmMessageId === item.message_id"
           :show-swipe-controls="false"
           :gallery-entries="messageGalleryEntries(item.message_id)"
-          :show-tail-gallery-images="showTailGalleryImages"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
@@ -136,7 +135,6 @@ const props = defineProps<{
   rollbackConfirmMessageId?: number | null;
   renderRevision?: number;
   galleryEntries?: ReaderGalleryEntry[];
-  showTailGalleryImages?: boolean;
   layoutMode?: 'compact' | 'reader_desktop' | 'wide';
 }>();
 
@@ -176,15 +174,17 @@ let lastObservedScrollTop = 0;
 
 const visibleItems = computed(() => props.items.slice(startIndex.value));
 const hasMoreAbove = computed(() => startIndex.value > 0);
-const imageCountsByMessageId = computed(() => {
-  const counts = new Map<number, number>();
+const galleryEntriesByMessageId = computed(() => {
+  const entriesByMessageId = new Map<number, ReaderGalleryEntry[]>();
   for (const entry of props.galleryEntries ?? []) {
     const messageId = Number(entry.messageId);
     if (!Number.isFinite(messageId)) continue;
     const normalizedId = Math.trunc(messageId);
-    counts.set(normalizedId, (counts.get(normalizedId) ?? 0) + 1);
+    const entries = entriesByMessageId.get(normalizedId);
+    if (entries) entries.push(entry);
+    else entriesByMessageId.set(normalizedId, [entry]);
   }
-  return counts;
+  return entriesByMessageId;
 });
 const collapsedAssistantMessageIdSet = computed(() => {
   const ids = new Set<number>();
@@ -330,12 +330,11 @@ function handleImageButtonClick(messageId: number, event: MouseEvent) {
 }
 
 function messageImageCount(messageId: number): number {
-  return imageCountsByMessageId.value.get(Math.trunc(Number(messageId))) ?? 0;
+  return galleryEntriesByMessageId.value.get(Math.trunc(Number(messageId)))?.length ?? 0;
 }
 
 function messageGalleryEntries(messageId: number): ReaderGalleryEntry[] {
-  const normalizedId = Math.trunc(Number(messageId));
-  return (props.galleryEntries ?? []).filter(entry => Math.trunc(Number(entry.messageId)) === normalizedId);
+  return galleryEntriesByMessageId.value.get(Math.trunc(Number(messageId))) ?? [];
 }
 
 function scrollToLatest(behavior: ScrollBehavior = 'smooth') {

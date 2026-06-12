@@ -238,9 +238,7 @@ const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
 const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;
-const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [
-  0, 120, 360, 900, 1800, 3600, 7200, 15000, 30000,
-] as const;
+const PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS = [0, 120, 360, 900] as const;
 const MVU_UPDATE_VARIABLE_TAG_PATTERN = 'UpdateVariable(?:variable)?';
 const SAME_LAYER_GENERATION_REVEAL_NEAR_RAW_MESSAGES = 10;
 const SAME_LAYER_GENERATION_REVEAL_MAX_FAR_SUMMARY_MESSAGES = 96;
@@ -1448,15 +1446,12 @@ function injectGeneratedImagesIntoHtml(
   html: string,
   images: RenderableGeneratedImage[],
   messageId: number,
-  options: { appendUnanchoredToEnd?: boolean } = {},
 ): string {
   if (images.length === 0) return html;
 
   const doc = document.implementation.createHTMLDocument('');
   doc.body.innerHTML = html;
   const insertionRefs = new Map<HTMLElement, HTMLElement>();
-  const fallbackFigures: HTMLElement[] = [];
-  const appendUnanchoredToEnd = options.appendUnanchoredToEnd !== false;
   const nativePromptTokenTargets = collectNativePromptTokenPlacementTargets(doc.body);
   const rawImagePlaceholders = Array.from(doc.body.querySelectorAll('[data-raw-image-tag="true"]')).map(node => {
     const element = node as HTMLElement;
@@ -1484,18 +1479,10 @@ function injectGeneratedImagesIntoHtml(
       continue;
     }
     const anchor = image.anchorText ? resolveInlineAnchorTarget(doc.body, image.anchorText) : null;
-    if (!anchor) {
-      if (appendUnanchoredToEnd) fallbackFigures.push(figure);
-      continue;
-    }
+    if (!anchor) continue;
     const reference = insertionRefs.get(anchor) ?? anchor;
     reference.after(figure);
     insertionRefs.set(anchor, figure);
-  }
-
-  for (const figure of fallbackFigures) {
-    figure.setAttribute('data-tail-gallery-image', 'true');
-    doc.body.append(figure);
   }
 
   return doc.body.innerHTML;
@@ -1564,9 +1551,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
     dedupedImages.push(image);
   }
 
-  const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId, {
-    appendUnanchoredToEnd: renderMode !== 'plugin-native-data',
-  });
+  const htmlWithImages = injectGeneratedImagesIntoHtml(html, dedupedImages, messageId);
   const dataBackfillCandidateCount = sourceCounts.extra + sourceCounts.mes_tag + sourceCounts.cache;
   const renderableDataBackfillCandidateCount = pluginNativeImages.length + compatibilityImages.length;
   const suppressedDataBackfill =
@@ -5531,12 +5516,12 @@ export function useStreamingDemo() {
         }
         syncPendingRequestHintsFromDom();
         for (const messageId of normalizedMessageIds) {
-          recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe', {
+          recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'probe', () => ({
             reason,
             delayMs,
             messageId,
             diagnostics: collectPluginNativeHandoffDiagnostics(messageId),
-          });
+          }));
         }
         syncTranscriptItemsFromHostData(`${reason}:prompt_placeholder_delay_${delayMs}`, normalizedMessageIds);
         queueGeneratedImageEntityRefresh(normalizedMessageIds, `${reason}:prompt_placeholder_delay_${delayMs}`);
@@ -5853,7 +5838,7 @@ export function useStreamingDemo() {
         await ensureHostMesTextRendered(messageId);
       }
 
-      for (const delayMs of [120, 360, 900, 1800, 3600] as const) {
+      for (const delayMs of [120, 360, 900] as const) {
         await new Promise<void>(resolve => window.setTimeout(resolve, delayMs));
         syncPendingRequestHintsFromDom();
         syncTranscriptItemsFromHostData(`${reason}:response_hydration_delay_${delayMs}`, normalizedMessageIds);
@@ -8364,15 +8349,20 @@ export function useStreamingDemo() {
     }
   }
 
-  function collectVisibleAssistantMessageIds(): number[] {
-    return [
-      ...new Set(
-        transcript.value
-          .filter(item => item.role === 'assistant')
-          .map(item => Math.trunc(Number(item.message_id)))
-          .filter(id => Number.isFinite(id) && id >= 0),
-      ),
-    ];
+  function collectHydratableAssistantMessageIds(): number[] {
+    const ids = new Set<number>();
+    for (const value of selectedGalleryWindowMessageIds.value) {
+      const id = Math.trunc(Number(value));
+      if (Number.isFinite(id) && id >= 0) ids.add(id);
+    }
+    for (const item of transcript.value.slice(-TRANSCRIPT_UI_WINDOW_SIZE * 2)) {
+      if (item.role !== 'assistant') continue;
+      const id = Math.trunc(Number(item.message_id));
+      if (Number.isFinite(id) && id >= 0) ids.add(id);
+    }
+    const latestId = Math.trunc(Number(assistantMessageId.value));
+    if (Number.isFinite(latestId) && latestId >= 0) ids.add(latestId);
+    return [...ids];
   }
 
   function hostMessageNeedsImageDomRepair(messageId: number): boolean {
@@ -8396,7 +8386,7 @@ export function useStreamingDemo() {
   }
 
   async function hydrateVisibleImageMessages(reason: string): Promise<void> {
-    const visibleMessageIds = collectVisibleAssistantMessageIds();
+    const visibleMessageIds = collectHydratableAssistantMessageIds();
     if (visibleMessageIds.length === 0) {
       recordLifecycleTrace('imageDomSync', 'visible_hydration_empty', { reason });
       return;
@@ -9111,12 +9101,22 @@ export function useStreamingDemo() {
     }, 300);
   }
 
+  function normalizeMessageIdList(messageIds: number[]): number[] {
+    return [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+  }
+
   function discoverRecentNativeGalleryImages(reason = 'gallery.native_recent_scan', messageIds: number[] = []) {
-    const messages = readAllChatMessagesRaw();
-    const explicitIds = new Set(
-      messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0),
-    );
-    const scanMode = explicitIds.size > 0 ? 'explicit-message-ids' : 'recent-cross-floor';
+    const explicitIds = normalizeMessageIdList(messageIds);
+    const scanMode = explicitIds.length > 0 ? 'explicit-message-ids' : 'recent-cross-floor';
+    const explicitIdSet = new Set(explicitIds);
+    const messages =
+      explicitIds.length > 0
+        ? explicitIds
+            .map(messageId => readChatMessageDetail(messageId))
+            .filter((message): message is Record<string, any> => Boolean(message))
+        : readAllChatMessagesRaw();
     if (messages.length === 0) {
       recordLifecycleTrace('galleryNativeRecentScan', 'probe', {
         reason,
@@ -9141,10 +9141,10 @@ export function useStreamingDemo() {
       })
       .filter(item => Number.isFinite(item.messageId) && item.messageId >= 0)
       .filter(item => containerId == null || item.messageId > containerId)
-      .filter(item => explicitIds.size === 0 || explicitIds.has(item.messageId))
+      .filter(item => explicitIdSet.size === 0 || explicitIdSet.has(item.messageId))
       .filter(item => isAssistantGalleryHistoryCandidate(item.message, item.rawMessage))
       .sort((a, b) => b.messageId - a.messageId)
-      .slice(0, explicitIds.size > 0 ? messages.length : GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE);
+      .slice(0, explicitIdSet.size > 0 ? messages.length : GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE);
 
     let discovered = 0;
     let retainedCurrent = 0;

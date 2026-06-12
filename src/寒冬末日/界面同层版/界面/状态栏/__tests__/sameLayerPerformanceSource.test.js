@@ -99,17 +99,17 @@ test('generated image swipe guards consume suppressed clicks and track touch mov
   );
 });
 
-test('TranscriptList pre-aggregates gallery image counts by message id', () => {
+test('TranscriptList pre-aggregates gallery entries by message id', () => {
   const source = readSource('components/TranscriptList.vue');
 
   assert.equal(
-    source.includes('const imageCountsByMessageId = computed'),
+    source.includes('const galleryEntriesByMessageId = computed'),
     true,
-    'gallery image counts should be aggregated once per galleryEntries change',
+    'gallery entries should be aggregated once per galleryEntries change',
   );
 
   const filterCount = (source.match(/\.filter\(e => e\.messageId === messageId\)/g) ?? []).length;
-  assert.equal(filterCount, 0, 'messageImageCount should not scan galleryEntries for every template read');
+  assert.equal(filterCount, 0, 'template helpers should not scan galleryEntries for every message card');
 });
 
 test('TranscriptMessageCard only hydrates and rebinds assistant body when body html changes', () => {
@@ -132,28 +132,28 @@ test('TranscriptMessageCard only hydrates and rebinds assistant body when body h
   );
 });
 
-test('TranscriptMessageCard stops direct host image backfill probes once ready gallery entries exist', () => {
+test('TranscriptMessageCard removes direct host image backfill probes from正文 hydration', () => {
   const source = readSource('components/TranscriptMessageCard.vue');
 
-  assert.match(
+  assert.doesNotMatch(
     source,
     /function hasReadyGalleryEntries\(\): boolean/,
-    'ready gallery entries should be detectable before scheduling host DOM backfill timers',
+    'ready gallery entries no longer need to gate direct正文 backfill timers',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
     /function shouldRunDirectHostBackfill\(\): boolean/,
-    'direct host backfill should have a central guard instead of always scheduling every probe',
+    'direct正文 host backfill has been removed instead of guarded',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /function scheduleDirectHostBackfillImages[\s\S]*if \(!shouldRunDirectHostBackfill\(\)\) return;/,
-    'direct host backfill should not schedule delayed probes when gallery entries already own ready images',
+    /function scheduleDirectHostBackfillImages/,
+    '正文 should not schedule delayed host backfill probes',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /watch\(\s*galleryEntrySignature[\s\S]*if \(hasReadyGalleryEntries\(\)\) clearDirectHostBackfillTimers\(\);/,
-    'late-arriving gallery entries should cancel remaining direct host backfill timers',
+    /clearDirectHostBackfillTimers/,
+    '正文 hydration should not leave direct host backfill timer cleanup behind',
   );
 });
 
@@ -646,6 +646,16 @@ test('history image hydration is read-only and never wakes plugin prompt generat
     false,
     'mounted/visibility image hydration should not dispatch DOMSubtreeModified for historical prompt floors',
   );
+  assert.equal(
+    source.includes('function collectHydratableAssistantMessageIds(): number[]'),
+    true,
+    'history hydration should collect bounded visible/window assistant ids instead of every assistant in transcript state',
+  );
+  assert.doesNotMatch(
+    extractFunctionBody(source, 'collectHydratableAssistantMessageIds'),
+    /transcript\.value\s*\.filter\(item => item\.role === 'assistant'\)/,
+    'history hydration should not scan every assistant floor as visible',
+  );
   assert.match(
     schedulePromptReconcileBody,
     /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*if \(shouldRunPluginNativePromptScan\(reason, promptScanMessageIds\)\) \{\s*void runPluginNativeSameLayerPromptScan\(reason, promptScanMessageIds\);/,
@@ -655,5 +665,10 @@ test('history image hydration is read-only and never wakes plugin prompt generat
     schedulePromptReconcileBody,
     /(^|\n)\s*void runPluginNativeSameLayerPromptScan\(reason, normalizedMessageIds\);\s*\n(?!\s*\})/,
     'same-layer prompt scans must not run unconditionally during boot/history refresh',
+  );
+  assert.match(
+    schedulePromptReconcileBody,
+    /recordLifecycleTrace\('pluginNativePromptPlaceholderReconcile', 'probe', \(\) =>/,
+    'prompt placeholder diagnostics should be lazy so disabled debug tracing does not scan DOM',
   );
 });

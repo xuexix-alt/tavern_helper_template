@@ -51,7 +51,8 @@ test('gallery refs are built from native-first membership instead of raw prompt 
   assert.match(source, /const readyEntities = filterReadyGeneratedImageEntities\(entities\);/);
   assert.match(source, /const promptTokenCompareSet = new Set\(promptTokens\.map\(normalizePromptTokenForCompare\)/);
   assert.match(source, /!promptTokenCompareSet\.has\(normalizePromptTokenForCompare\(image\.promptToken\)\)/);
-  assert.match(source, /appendUnanchoredToEnd: renderMode !== 'plugin-native-data'/);
+  assert.doesNotMatch(source, /appendUnanchoredToEnd/);
+  assert.match(source, /if \(!anchor\) continue;/);
   assert.match(source, /buildFinalHtml\(artifactRenderSource, input\.id, artifactRenderSource\)/);
   assert.doesNotMatch(source, /for \(let i = 0; i < promptTokens\.length; i\+\+\)/);
 });
@@ -74,6 +75,7 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
   assert.match(cardSource, /function hydratePendingImagesFromGalleryEntries\(\)/);
   assert.match(cardSource, /root\.querySelectorAll\('\[data-raw-image-tag="true"\]'\)/);
   assert.match(cardSource, /target\.element\.replaceWith\(figure\)/);
+  assert.doesNotMatch(cardSource, /appendMissingGalleryFigure/);
   assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
 });
 
@@ -166,7 +168,7 @@ test('window-level native image double-click inherits the transcript floor id', 
   assert.match(storyPageSource, /carrierDataset,/);
 });
 
-test('transcript card hydrates newly ready gallery entries even when the message already has images', () => {
+test('transcript card hydrates newly ready gallery entries only into existing正文 placeholders', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
 
   assert.match(cardSource, /function collectExistingGalleryImageKeys\(root: HTMLElement\): Set<string>/);
@@ -176,7 +178,8 @@ test('transcript card hydrates newly ready gallery entries even when the message
     cardSource,
     /root\.querySelector\(`\.\$\{fallbackImageClasses\.inline\} img, \.\$\{fallbackImageClasses\.item\} img`\)\) return;/,
   );
-  assert.match(cardSource, /appendMissingGalleryFigure\(root, entry\)/);
+  assert.doesNotMatch(cardSource, /appendMissingGalleryFigure\(root, entry\)/);
+  assert.match(cardSource, /if \(!target\) \{[\s\S]*noTargetCount \+= 1;[\s\S]*skippedCount \+= 1;[\s\S]*continue;/);
   assert.match(cardSource, /missingEntryCount: missingEntries\.length/);
 });
 
@@ -344,8 +347,13 @@ test('gallery lazily discovers older assistant images without a same-layer manif
   );
   assert.match(
     streamingSource,
-    /window\.setTimeout\(\(\) => discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan'\), 500\);/,
-    'same-layer boot should recover images generated while the UI was closed',
+    /const explicitIds = normalizeMessageIdList\(messageIds\);/,
+    'targeted native gallery scans should normalize explicit message ids before reading chat data',
+  );
+  assert.doesNotMatch(
+    extractFunctionBody(streamingSource, 'discoverRecentNativeGalleryImages'),
+    /const messages = readAllChatMessagesRaw\(\);[\s\S]*const explicitIds/,
+    'targeted native gallery scans should not always read the full chat before checking explicit ids',
   );
   assert.match(
     streamingSource,
@@ -381,7 +389,7 @@ test('gallery records zero-hit cross-floor scans and explicit message-id scans',
 
   assert.match(
     streamingSource,
-    /const scanMode = explicitIds\.size > 0 \? 'explicit-message-ids' : 'recent-cross-floor';/,
+    /const scanMode = explicitIds\.length > 0 \? 'explicit-message-ids' : 'recent-cross-floor';/,
   );
   assert.match(streamingSource, /recordLifecycleTrace\('galleryNativeRecentScan', 'probe'/);
   assert.match(streamingSource, /skippedReason: 'empty-chat'/);
