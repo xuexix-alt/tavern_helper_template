@@ -202,6 +202,7 @@ import {
   stripVisibleChatu8PromptTokensHtml,
   preserveChatu8PromptTokenPlacementMarkersHtml,
 } from '../chatu8PromptTokenDisplay';
+import type { TranscriptImageHydrationMode } from '../transcriptImageHydrationMode';
 import type { ReaderFontMode, ReaderGalleryEntry, TranscriptDensity, TranscriptItem } from '../types';
 import StreamRenderer from './StreamRenderer.vue';
 
@@ -221,6 +222,7 @@ const props = defineProps<{
   showRollbackConfirm?: boolean;
   galleryEntries?: ReaderGalleryEntry[];
   showTailGalleryImages?: boolean;
+  imageHydrationMode?: TranscriptImageHydrationMode;
   expanded?: boolean;
 }>();
 
@@ -248,15 +250,16 @@ const directHostBackfillTimers = ref<number[]>([]);
 const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 const expanded = computed(() => props.expanded !== false);
+const imageHydrationMode = computed<TranscriptImageHydrationMode>(() => props.imageHydrationMode ?? 'host-rendered-only');
 const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
   // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
-  const html = props.item.finalHtml || '<p>(空回复)</p>';
+  let html = props.item.finalHtml || '<p>(空回复)</p>';
   // 修复：保留提示词标记供图片占位符匹配使用
   const processed = preserveChatu8PromptTokenPlacementMarkersHtml(html);
   // 降级：如果处理后为空，使用原始HTML
-  const result = processed.trim() ? processed : html;
-  return sanitizeSameLayerPluginNativeRequestIds(result);
+  html = processed.trim() ? processed : html;
+  return sanitizeSameLayerPluginNativeRequestIds(stripVisibleChatu8PromptTokensHtml(html));
 });
 const assistantBodySignature = computed(() => {
   if (props.item.role !== 'assistant') return `role:${props.item.role}:${props.item.message_id}`;
@@ -659,11 +662,16 @@ function hasReadyGalleryEntries(): boolean {
 
 function shouldRunDirectHostBackfill(): boolean {
   return (
+    shouldRunTranscriptImageFallbacks() &&
     props.showTailGalleryImages !== false &&
     props.item.role === 'assistant' &&
     !props.item.isStreaming &&
     !hasReadyGalleryEntries()
   );
+}
+
+function shouldRunTranscriptImageFallbacks(): boolean {
+  return imageHydrationMode.value === 'compat';
 }
 
 function hydrateDirectHostBackfillImages(reason = 'direct_host_backfill'): boolean {
@@ -771,7 +779,6 @@ function collectPendingGalleryImageTargets(root: HTMLElement): PendingGalleryIma
     tokenCompare: normalizePromptTokenForInlineCompare(element.textContent ?? element.dataset.promptToken ?? ''),
     kind,
   }));
-}
 }
 
 function takePendingGalleryImageTarget(
@@ -1315,8 +1322,10 @@ watch(
     recordComponentTrace('update');
     await nextTick();
     recordNativePromptTokenScanState('assistant_body_signature:before_hydration');
-    hydratePendingImagesFromGalleryEntries();
-    scheduleDirectHostBackfillImages('assistant_body_signature');
+    if (shouldRunTranscriptImageFallbacks()) {
+      hydratePendingImagesFromGalleryEntries();
+      scheduleDirectHostBackfillImages('assistant_body_signature');
+    }
     await nextTick();
     refreshAssistantBodyImagePresentation();
     await nextTick();
@@ -1330,6 +1339,7 @@ watch(
   galleryEntrySignature,
   async () => {
     if (props.item.role !== 'assistant' || props.item.isStreaming) return;
+    if (!shouldRunTranscriptImageFallbacks()) return;
     if (hasReadyGalleryEntries()) clearDirectHostBackfillTimers();
     await nextTick();
     recordNativePromptTokenScanState('gallery_entries:before_hydration');

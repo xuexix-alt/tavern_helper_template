@@ -37,6 +37,7 @@
           :show-swipe-controls="false"
           :gallery-entries="messageGalleryEntries(item.message_id)"
           :show-tail-gallery-images="showTailGalleryImages"
+          :image-hydration-mode="imageHydrationMode"
           @open-detail="openDetail"
           @image-intent="emit('image-intent', item)"
           @image-view="emit('image-view', $event)"
@@ -112,6 +113,7 @@ import {
   shouldAnchorTranscriptToBottomOnItemsChange,
   shouldRevealOlderPageOnUpwardIntent,
 } from '../transcriptPagination';
+import type { TranscriptImageHydrationMode } from '../transcriptImageHydrationMode';
 import type { ReaderFontMode, ReaderGalleryEntry, ReadingMode, TranscriptDensity, TranscriptItem } from '../types';
 import TranscriptMessageCard from './TranscriptMessageCard.vue';
 import TranscriptOpeningCard from './TranscriptOpeningCard.vue';
@@ -137,6 +139,7 @@ const props = defineProps<{
   renderRevision?: number;
   galleryEntries?: ReaderGalleryEntry[];
   showTailGalleryImages?: boolean;
+  imageHydrationMode?: TranscriptImageHydrationMode;
   layoutMode?: 'compact' | 'reader_desktop' | 'wide';
 }>();
 

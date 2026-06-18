@@ -77,6 +77,34 @@ test('transcript card hydrates pending placeholders from ready gallery entries',
   assert.match(cardSource, /watch\(\s*galleryEntrySignature,/);
 });
 
+test('transcript body image fallback is guarded by hydration mode switch', () => {
+  const listSource = readSource('components/TranscriptList.vue');
+  const cardSource = readSource('components/TranscriptMessageCard.vue');
+  const modeSource = readSource('transcriptImageHydrationMode.ts');
+  const bodySignatureWatcher = cardSource.slice(
+    cardSource.indexOf('watch(\n  assistantBodySignature,'),
+    cardSource.indexOf('watch(\n  galleryEntrySignature,'),
+  );
+  const galleryWatcher = cardSource.slice(
+    cardSource.indexOf('watch(\n  galleryEntrySignature,'),
+    cardSource.indexOf('watch(\n  () => props.showTailGalleryImages,'),
+  );
+
+  assert.match(modeSource, /export type TranscriptImageHydrationMode = 'compat' \| 'host-rendered-only';/);
+  assert.match(modeSource, /export function resolveTranscriptImageHydrationMode\(\): TranscriptImageHydrationMode/);
+  assert.match(modeSource, /localStorage\.getItem\('eden\.transcriptImageHydrationMode'\)/);
+  assert.match(listSource, /:image-hydration-mode="imageHydrationMode"/);
+  assert.match(cardSource, /imageHydrationMode\?: TranscriptImageHydrationMode;/);
+  assert.match(cardSource, /const imageHydrationMode = computed<TranscriptImageHydrationMode>/);
+  assert.match(cardSource, /function shouldRunTranscriptImageFallbacks\(\): boolean/);
+  assert.match(bodySignatureWatcher, /if \(shouldRunTranscriptImageFallbacks\(\)\) \{/);
+  assert.match(
+    bodySignatureWatcher,
+    /shouldRunTranscriptImageFallbacks\(\)[\s\S]*hydratePendingImagesFromGalleryEntries\(\);[\s\S]*scheduleDirectHostBackfillImages\('assistant_body_signature'\);/,
+  );
+  assert.match(galleryWatcher, /if \(!shouldRunTranscriptImageFallbacks\(\)\) return;/);
+});
+
 test('transcript card keeps native prompt token markers while hydrating gallery figures', () => {
   const cardSource = readSource('components/TranscriptMessageCard.vue');
   const takeTargetBody = extractFunctionBody(cardSource, 'takePendingGalleryImageTarget');

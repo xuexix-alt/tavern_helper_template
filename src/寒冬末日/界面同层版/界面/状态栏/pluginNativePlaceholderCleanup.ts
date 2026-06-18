@@ -76,6 +76,13 @@ export function stripPluginNativePlaceholderHtml(html: string): string {
 
   for (const node of Array.from(doc.body.querySelectorAll(NATIVE_READY_SELECTOR))) {
     if (node.closest(NATIVE_RUNTIME_SELECTOR) !== node && node.closest(NATIVE_READY_SELECTOR)) continue;
+    // 如果节点包含实际的图片（插件已渲染），保持原样，不转换为fallback
+    const hasRenderedImage = node.querySelector('img[src^="data:image"], img[src^="blob:"]');
+    if (hasRenderedImage) {
+      // 插件已经渲染了实际图片，保持原样，不创建fallback
+      continue;
+    }
+    // 只有当没有实际图片时，才创建fallback或移除
     const figure = createFallbackFigure(doc, node);
     if (figure) {
       node.replaceWith(figure);

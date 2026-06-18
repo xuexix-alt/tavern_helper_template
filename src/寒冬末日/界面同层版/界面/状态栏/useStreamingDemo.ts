@@ -1146,13 +1146,12 @@ function readNativeFirstRenderableImagesForMessage(input: {
   hostDomArtifacts?: RenderableGeneratedImage[];
 }): NativeFirstRenderableGeneratedImage[] {
   const out: NativeFirstRenderableGeneratedImage[] = [];
-  const seen = new Set<string>();
+  // 移除基于 src 的去重逻辑，避免多张图片因相同 src（如插件缓存 blob URL）而被跳过
+  // 保留所有图片，让上层逻辑决定如何处理
 
   for (const artifact of readNativeFirstArtifactsForMessage(input)) {
     const rendered = toRenderableImageFromNativeArtifact(artifact);
     if (!rendered) continue;
-    if (seen.has(rendered.src)) continue;
-    seen.add(rendered.src);
     out.push(rendered);
   }
 
@@ -1538,7 +1537,7 @@ function appendChatu8ArtifactsToHtml(html: string, renderSource: string, message
 
   const images =
     renderMode === 'plugin-native-data'
-      ? pluginNativeImages
+      ? [] // 插件原生模式：插件已经渲染，不需要注入fallback
       : shouldInjectTranscriptImages(renderMode)
         ? compatibilityImages
         : [];
@@ -1825,6 +1824,7 @@ function collectSameLayerRenderedMessageRoots(messageId: number): HTMLElement[] 
 
 type PluginNativeIframeProcessorModule = {
   processImagePlaceholdersForElement?: (element: Element) => void | Promise<void>;
+  initializeImageProcessing?: (element: Element) => void | Promise<void>;
   processAllImagePlaceholders?: () => void | Promise<void>;
 };
 
@@ -1837,6 +1837,7 @@ function isPluginNativeIframeProcessorModule(value: unknown): value is PluginNat
   const record = value as PluginNativeIframeProcessorModule;
   return (
     typeof record.processImagePlaceholdersForElement === 'function' ||
+    typeof record.initializeImageProcessing === 'function' ||
     typeof record.processAllImagePlaceholders === 'function'
   );
 }
@@ -2095,18 +2096,28 @@ function collectRenderableImagesForGalleryMessage(
 
 function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedImage[] {
   const out: RenderableGeneratedImage[] = [];
-  const imageIndexBySrc = new Map<string, number>();
+  // 使用 WeakSet 追踪已处理的 img 元素，避免同一个 DOM 元素被重复收集
+  // 但不基于 src 去重，允许不同的 img 元素即使 src 相同也都收集
+  const processedImgElements = new WeakSet<HTMLImageElement>();
   const mesid = Math.trunc(messageId);
 
   const pushImage = (
+    imgElement: HTMLImageElement | null,
     srcLike: unknown,
     altLike: unknown,
     promptLike?: unknown,
     requestIdLike?: unknown,
     anchorTextLike?: unknown,
   ) => {
+    // 如果提供了 img 元素，检查是否已经处理过
+    if (imgElement && processedImgElements.has(imgElement)) return;
+
     const src = normalizeImageSrcForCompare(srcLike);
     if (!src) return;
+
+    // 标记此元素已处理
+    if (imgElement) processedImgElements.add(imgElement);
+
     const image: RenderableGeneratedImage = {
       markerId: undefined,
       src,
@@ -2115,12 +2126,6 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
       requestId: String(requestIdLike ?? '').trim() || undefined,
       anchorText: buildAnchorSnippet(String(anchorTextLike ?? '')) || undefined,
     };
-    const existingIndex = imageIndexBySrc.get(src);
-    if (existingIndex !== undefined) {
-      out[existingIndex] = mergeRenderableGeneratedImageArtifact(out[existingIndex], image);
-      return;
-    }
-    imageIndexBySrc.set(src, out.length);
     out.push(image);
   };
 
@@ -2188,6 +2193,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
         // 只收集 data:image 的图片（base64 或 blob）
         if (src && (src.startsWith('data:image') || src.startsWith('blob:'))) {
           pushImage(
+            image, // 传入 img 元素用于去重
             src,
             image.getAttribute('alt') ?? image.getAttribute('title'),
             undefined,
@@ -2207,6 +2213,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
       const src = image.getAttribute('src') ?? image.currentSrc;
       if (src && (src.startsWith('data:image') || src.startsWith('blob:'))) {
         pushImage(
+          image, // 传入 img 元素用于去重
           src,
           image.getAttribute('alt') ?? image.getAttribute('title'),
           button.getAttribute('data-image-tag') ?? button.getAttribute('data-link') ?? '',
@@ -2224,6 +2231,7 @@ function extractRenderedImagesFromRoots(messageId: number): RenderableGeneratedI
       if (!image) continue;
       const button = resolvePromptButtonForImageSpan(span, root);
       pushImage(
+        image, // 传入 img 元素用于去重
         image.getAttribute('src') ?? image.currentSrc,
         image.getAttribute('alt') ?? image.getAttribute('title'),
         button?.getAttribute('data-image-tag') ?? button?.getAttribute('data-link') ?? '',
@@ -5776,6 +5784,11 @@ export function useStreamingDemo() {
           await processor.processImagePlaceholdersForElement(scanRoot);
           processedCount += 1;
         }
+      } else if (typeof processor.initializeImageProcessing === 'function') {
+        for (const scanRoot of roots) {
+          await processor.initializeImageProcessing(scanRoot);
+          processedCount += 1;
+        }
       } else if (typeof processor.processAllImagePlaceholders === 'function') {
         await processor.processAllImagePlaceholders();
         processedCount = roots.length;
@@ -9299,7 +9312,6 @@ export function useStreamingDemo() {
         messageId,
         rawMessage,
         createdOrderBase: messageId * 100,
-        hostDomArtifacts: [],
       });
       sampled.push({
         messageId,

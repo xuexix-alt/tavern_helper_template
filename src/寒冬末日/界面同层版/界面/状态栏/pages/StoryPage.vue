@@ -69,6 +69,18 @@
             <span class="ui-toggle-state">{{ showTailGalleryImages ? '开' : '关' }}</span>
           </button>
 
+          <button
+            type="button"
+            class="ui-icon-btn ui-toggle-btn"
+            :class="{ active: imageHydrationMode === 'compat' }"
+            :aria-pressed="imageHydrationMode === 'compat'"
+            title="控制正文图片是否启用旧版画廊/宿主兜底"
+            @click="toggleImageHydrationMode"
+          >
+            正文图
+            <span class="ui-toggle-state">{{ imageHydrationMode === 'compat' ? '兼容' : '原生' }}</span>
+          </button>
+
           <button type="button" class="ui-icon-btn" @click="openSettingsModal">排版</button>
 
           <button
@@ -99,6 +111,9 @@
               <button type="button" class="ui-page-menu-item" @click="openGalleryDrawerFromMoreMenu">画廊</button>
               <button type="button" class="ui-page-menu-item" @click="showTailGalleryImages = !showTailGalleryImages">
                 末尾图 {{ showTailGalleryImages ? '开' : '关' }}
+              </button>
+              <button type="button" class="ui-page-menu-item" @click="toggleImageHydrationMode">
+                正文图 {{ imageHydrationMode === 'compat' ? '兼容' : '原生' }}
               </button>
               <button type="button" class="ui-page-menu-item" @click="openSettingsFromMoreMenu">排版</button>
               <button type="button" class="ui-page-menu-item" @click="openContextLimitSettings">上下文限制</button>
@@ -224,6 +239,7 @@
               :render-revision="transcriptDomRevision"
               :gallery-entries="galleryEntries"
               :show-tail-gallery-images="showTailGalleryImages"
+              :image-hydration-mode="imageHydrationMode"
               :layout-mode="shellLayoutMode"
               @generate-image="handleTranscriptGenerateImage"
               @open-gallery="handleOpenGallery"
@@ -551,6 +567,11 @@ import {
 } from '../rolePortraits';
 import { resolveTranscriptDoubleClickMessageId } from '../transcriptDoubleClick';
 import { shouldSkipTranscriptImageTrigger } from '../transcriptImageTriggerDeduper';
+import {
+  persistTranscriptImageHydrationMode,
+  resolveTranscriptImageHydrationMode,
+  type TranscriptImageHydrationMode,
+} from '../transcriptImageHydrationMode';
 import { useStreamingDemo } from '../useStreamingDemo';
 
 const {
@@ -673,6 +694,7 @@ const initialTranscriptAnchored = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
 const showTailGalleryImages = ref(false);
+const imageHydrationMode = ref<TranscriptImageHydrationMode>(resolveTranscriptImageHydrationMode());
 const transcriptImageTriggerGuard = {
   messageId: null as number | null,
   timestampMs: 0,
@@ -1065,6 +1087,12 @@ function openSettingsFromMoreMenu() {
 function toggleFullscreenFromMoreMenu() {
   topbarMoreMenuOpen.value = false;
   toggleFullscreen();
+}
+
+function toggleImageHydrationMode() {
+  imageHydrationMode.value = imageHydrationMode.value === 'compat' ? 'host-rendered-only' : 'compat';
+  persistTranscriptImageHydrationMode(imageHydrationMode.value);
+  topbarMoreMenuOpen.value = false;
 }
 
 async function disableSameLayerFromMoreMenu() {
