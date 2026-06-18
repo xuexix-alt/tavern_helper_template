@@ -13,7 +13,10 @@ const read = relativePath =>
 
 test('same-layer user creation inherits latest mvu snapshot instead of fragile -2 host fetch', () => {
   const source = read('../useStreamingDemo.ts');
-  assert.match(source, /function resolveInheritedUserMessageData\(messageMetas: ChatMessageMeta\[\] = readMessageMetasAfterContainer\(\)\)/);
+  assert.match(
+    source,
+    /function resolveInheritedUserMessageData\(messageMetas: ChatMessageMeta\[\] = readMessageMetasAfterContainer\(\)\)/,
+  );
   assert.match(source, /function readAllChatMessageMetasRaw\(\)/);
   assert.match(source, /buildLeanInheritedMessageData\(inheritanceSourceMessage\?\.data\)/);
   assert.match(source, /const messages = messageMetas/);

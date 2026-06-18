@@ -659,7 +659,10 @@ test('generation reveal metadata uses a cache invalidated by targeted message mu
     'targeted mutations should invalidate stale metadata entries',
   );
   assert.match(confirmBody, /invalidateChatMessageMetaCacheForIds\(\[targetId,[\s\S]*\.\.\.trailingIds/);
-  assert.match(triggerBody, /invalidateChatMessageMetaCacheForIds\(\[anchorMessageId,[\s\S]*\.\.\.trailingAssistantIds/);
+  assert.match(
+    triggerBody,
+    /invalidateChatMessageMetaCacheForIds\(\[anchorMessageId,[\s\S]*\.\.\.trailingAssistantIds/,
+  );
 });
 
 test('history image hydration is read-only and never wakes plugin prompt generation', () => {

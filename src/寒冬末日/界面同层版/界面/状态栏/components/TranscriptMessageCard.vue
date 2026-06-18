@@ -250,7 +250,9 @@ const directHostBackfillTimers = ref<number[]>([]);
 const fallbackImageClasses = getFallbackImageClasses();
 const trimmedEditDraft = computed(() => String(props.editDraft ?? '').trim());
 const expanded = computed(() => props.expanded !== false);
-const imageHydrationMode = computed<TranscriptImageHydrationMode>(() => props.imageHydrationMode ?? 'host-rendered-only');
+const imageHydrationMode = computed<TranscriptImageHydrationMode>(
+  () => props.imageHydrationMode ?? 'host-rendered-only',
+);
 const displayedAssistantHtml = computed(() => {
   if (props.item.role !== 'assistant') return '';
   // 完成态才走 v-html；流式态由 StreamRenderer 接管，这里仍保留一次清理以兼容未来复用路径。
@@ -444,7 +446,9 @@ function summarizeGalleryEntryForHydrationDebug(entry: ReaderGalleryEntry, index
     requestId: String(entry.requestId ?? '').slice(0, 80),
     markerId: String(entry.markerId ?? '').slice(0, 80),
     imageId: String(entry.imageId ?? '').slice(0, 80),
-    promptTokenHead: String(entry.promptToken ?? '').replace(/\s+/g, ' ').slice(0, 120),
+    promptTokenHead: String(entry.promptToken ?? '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 120),
     hasSrc: Boolean(src),
     srcLength: src.length,
   };
