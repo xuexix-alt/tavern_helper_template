@@ -187,6 +187,134 @@ test('mounted history load does not run legacy image recovery warmups', () => {
   );
 });
 
+test('mounted passive load does not bootstrap plugin prompt scans', () => {
+  const source = removeLineComments(readSource('useStreamingDemo.ts'));
+
+  assert.doesNotMatch(
+    source,
+    /schedulePluginNativePromptBootstrap\('boot\.plugin_native_prompt_bootstrap'\)/,
+    'mounted history load should not wake st-chatu8 prompt scans while the reader UI is settling',
+  );
+});
+
+test('targeted host message refresh avoids full chat history reads', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'refreshTranscriptItemsByIds');
+
+  assert.doesNotMatch(
+    body,
+    /listAllChatMessages\(|readAllChatMessagesRaw\(|readRecentChatMessagesForUi\(/,
+    'targeted MESSAGE_UPDATED refresh should not read the full chat or rebuild the recent window first',
+  );
+  assert.match(
+    body,
+    /readHostChatMessageById\(messageId\)/,
+    'targeted refresh should read only the changed host floor by id',
+  );
+  assert.match(
+    body,
+    /transcriptWindowRange\.value/,
+    'targeted refresh should use the current window bounds to decide whether a missing item belongs in the UI',
+  );
+});
+
+test('targeted host image data sync avoids full chat history reads', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'listHostImageDataCandidates');
+
+  assert.match(
+    body,
+    /if \(normalizedIds\.size > 0\)[\s\S]*readHostChatMessageById\(messageId\)/,
+    'host image data sync should read explicit target floors by id instead of walking the whole chat',
+  );
+  assert.doesNotMatch(
+    body,
+    /return listAllChatMessages\(\)\.filter\(message => \{[\s\S]*normalizedIds\.size > 0 && !normalizedIds\.has\(messageId\)/,
+    'targeted host image data sync must not filter a full chat read when message ids are already known',
+  );
+});
+
+test('passive image events do not fall back to unscoped recent gallery scans', () => {
+  const source = removeLineComments(readSource('useStreamingDemo.ts'));
+  const responseStart = source.indexOf('onResponseSuccess:');
+  assert.notEqual(responseStart, -1, 'should find plugin-native response success handler');
+  const responseEnd = source.indexOf('onResponseFailure:', responseStart);
+  assert.notEqual(responseEnd, -1, 'should find plugin-native response failure handler after success');
+  const responseBody = source.slice(responseStart, responseEnd);
+  const visibilityStart = source.indexOf('const triggerGalleryRefresh = (reason: string) => {');
+  assert.notEqual(visibilityStart, -1, 'should find passive visibility refresh handler');
+  const visibilityEnd = source.indexOf('const handleVisibilityChange = () => {', visibilityStart);
+  assert.notEqual(visibilityEnd, -1, 'should find visibility-change handler after refresh helper');
+  const visibilityBody = source.slice(visibilityStart, visibilityEnd);
+
+  assert.equal(
+    responseBody.includes("queueGeneratedImageEntityRefresh([], 'host.plugin_native_response_success:untargeted');"),
+    false,
+    'untargeted plugin responses should not force broad generated-image cache invalidation',
+  );
+  assert.equal(
+    responseBody.includes("discoverRecentNativeGalleryImages('host.plugin_native_response_success:untargeted_recent'"),
+    false,
+    'untargeted plugin responses should not scan the recent cross-floor gallery window',
+  );
+  assert.equal(
+    responseBody.includes('untargeted_visible_hydration'),
+    false,
+    'untargeted plugin responses should not start visible-message hydration timers',
+  );
+  assert.match(
+    responseBody,
+    /untargeted_response_no_global_scan/,
+    'untargeted plugin responses should leave an explicit diagnostic trace instead of scanning history',
+  );
+  assert.doesNotMatch(
+    visibilityBody,
+    /discoverRecentNativeGalleryImages\(`visibility_restored\.\$\{reason\}`\)/,
+    'visibility/focus/resize should not run an unscoped native gallery scan',
+  );
+  assert.match(
+    visibilityBody,
+    /const visibleMessageIds = collectVisibleAssistantMessageIds\(\);[\s\S]*if \(visibleMessageIds\.length === 0\) \{/,
+    'passive visibility refresh should first resolve the bounded visible assistant ids',
+  );
+  assert.match(
+    visibilityBody,
+    /queueGeneratedImageEntityRefresh\(visibleMessageIds, `visibility_restored\.\$\{reason\}`\)/,
+    'passive visibility refresh should only refresh targeted visible image entities',
+  );
+});
+
+test('plugin DOM mutation follow-ups require message ids before gallery scans', () => {
+  const source = removeLineComments(readSource('useStreamingDemo.ts'));
+  const followUpBody = extractFunctionBody(source, 'schedulePluginNativeDomMutationFollowUp');
+
+  assert.match(
+    followUpBody,
+    /if \(affectedMessageIds\.length === 0\) \{[\s\S]*follow_up_skipped_no_message_id/,
+    'plugin DOM mutation follow-up should skip gallery scans when the mutation cannot be tied to a floor',
+  );
+  assert.match(
+    followUpBody,
+    /window\.setTimeout\(\(\) => \{[\s\S]*discoverRecentNativeGalleryImages\(reason, affectedMessageIds\)/,
+    'plugin DOM mutation follow-up should pass explicit message ids into native gallery discovery',
+  );
+  assert.doesNotMatch(
+    source,
+    /discoverRecentNativeGalleryImages\('(?:same_layer|host)\.dom_mutation_follow_up', affectedMessageIds\);/,
+    'mutation observers should go through the guarded follow-up helper instead of calling discovery directly',
+  );
+  assert.match(
+    source,
+    /schedulePluginNativeDomMutationFollowUp\('same_layer\.dom_mutation_follow_up', affectedMessageIds\)/,
+    'same-layer document mutations should use the guarded follow-up helper',
+  );
+  assert.match(
+    source,
+    /schedulePluginNativeDomMutationFollowUp\('host\.dom_mutation_follow_up', affectedMessageIds\)/,
+    'host document mutations should use the guarded follow-up helper',
+  );
+});
+
 test('streaming transcript items use lightweight regex preview and avoid eager final image artifact rebuilds', () => {
   const source = readSource('useStreamingDemo.ts');
 
@@ -701,12 +829,33 @@ test('history image hydration is read-only and never wakes plugin prompt generat
   );
   assert.match(
     schedulePromptReconcileBody,
-    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*if \(shouldRunPluginNativePromptScan\(reason, promptScanMessageIds\)\) \{\s*void runPluginNativeSameLayerPromptScan\(reason, promptScanMessageIds\);/,
-    'same-layer prompt scans should be explicitly gated and narrowed to the current generation handoff',
+    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*const hostLifecycleScanMessageIds =[\s\S]*promptScanMessageIds\.length > 0 \? promptScanMessageIds : normalizedMessageIds;[\s\S]*if \(shouldRunPluginNativePromptScan\(reason, hostLifecycleScanMessageIds\)\) \{\s*void runPluginNativeSameLayerPromptScan\(reason, hostLifecycleScanMessageIds\);/,
+    'same-layer prompt scans should be explicitly gated to current handoff or scoped host lifecycle prompt floors',
   );
   assert.doesNotMatch(
     schedulePromptReconcileBody,
     /(^|\n)\s*void runPluginNativeSameLayerPromptScan\(reason, normalizedMessageIds\);\s*\n(?!\s*\})/,
     'same-layer prompt scans must not run unconditionally during boot/history refresh',
+  );
+});
+
+test('targeted native gallery scans do not read the full chat history first', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'discoverRecentNativeGalleryImages');
+
+  assert.match(
+    body,
+    /const explicitMessageIds = \[/,
+    'native gallery discovery should normalize explicit target ids before reading message data',
+  );
+  assert.match(
+    body,
+    /explicitMessageIds\.length > 0[\s\S]*readChatMessageDetail\(messageId\)[\s\S]*readAllChatMessagesRaw\(\)/,
+    'explicit native gallery discovery should use per-message reads and reserve full chat scans for unscoped mode',
+  );
+  assert.doesNotMatch(
+    body,
+    /^\s*const messages = readAllChatMessagesRaw\(\);/m,
+    'native gallery discovery should not always read the full chat before checking explicit ids',
   );
 });

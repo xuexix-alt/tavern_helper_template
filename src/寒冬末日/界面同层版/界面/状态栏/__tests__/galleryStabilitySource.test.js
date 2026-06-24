@@ -368,12 +368,12 @@ test('gallery lazily discovers older assistant images without a same-layer manif
   assert.match(
     streamingSource,
     /function discoverRecentNativeGalleryImages\(reason = 'gallery\.native_recent_scan', messageIds: number\[\] = \[\]\)/,
-    'gallery should actively harvest native/plugin images from recent non-visible assistant messages',
+    'gallery should harvest native/plugin images when the drawer or an explicit target requests it',
   );
-  assert.match(
+  assert.doesNotMatch(
     streamingSource,
     /window\.setTimeout\(\(\) => discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan'\), 500\);/,
-    'same-layer boot should recover images generated while the UI was closed',
+    'same-layer boot should not recover historical images by scanning during passive UI load',
   );
   assert.match(
     streamingSource,
@@ -424,8 +424,8 @@ test('gallery records zero-hit cross-floor scans and explicit message-id scans',
   );
   assert.match(
     streamingSource,
-    /discoverRecentNativeGalleryImages\('host\.plugin_native_response_success:untargeted_recent'\);/,
-    'untargeted successful plugin responses should still probe the recent native gallery window',
+    /recordImageHandoffReadinessTrace\(\s*'untargeted_response_no_global_scan',\s*'host\.plugin_native_response_success',\s*responseMessageIds/,
+    'untargeted successful plugin responses should leave diagnostics instead of probing the recent native gallery window',
   );
   assert.match(streamingSource, /logImageBridge\('host-data-reconcile-probe'/);
   assert.match(streamingSource, /recordLifecycleTrace\('galleryHistoryScan', 'load_older_probe'/);
@@ -463,7 +463,7 @@ test('gallery drawer starts an initial cache session before showing an empty sta
     streamingSource,
     /const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = \[0, 900, 3000, 6000, 12000\] as const;/,
   );
-  assert.match(streamingSource, /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/);
+  assert.match(streamingSource, /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000\] as const;/);
   assert.match(streamingSource, /let galleryInitialCacheSessionId = 0;/);
   assert.match(streamingSource, /scheduleGalleryInitialCacheProbe\(\(\) => \{/);
   assert.match(streamingSource, /if \(sessionId !== galleryInitialCacheSessionId\) return;/);
@@ -482,6 +482,10 @@ test('gallery drawer starts an initial cache session before showing an empty sta
 
 test('gallery boot cache session stays lightweight to avoid blocking initial UI render', () => {
   const streamingSource = readSource('useStreamingDemo.ts');
+  const uncommentedSource = streamingSource
+    .split('\n')
+    .filter(line => !line.trimStart().startsWith('//'))
+    .join('\n');
 
   assert.match(
     streamingSource,
@@ -494,23 +498,23 @@ test('gallery boot cache session stays lightweight to avoid blocking initial UI 
   );
   assert.match(
     streamingSource,
-    /scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
-    'boot probes should wake gallery state too because mobile native images can arrive after the first scan',
+    /if \(mode !== 'boot'\) \{\s*scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);\s*\}/,
+    'boot probes should not bump the gallery revision while the first screen is still settling',
+  );
+  assert.doesNotMatch(
+    streamingSource,
+    /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/,
+    'the old six-probe cache loop was too heavy during UI startup',
   );
   assert.match(
     streamingSource,
     /for \(const delayMs of \[240, 900, 1800\]\)[\s\S]*discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration_delay_\$\{delayMs\}`, chunkIds\);/,
     'selected gallery window hydration should scan repeatedly before re-hiding host messages on mobile',
   );
-  assert.match(
-    streamingSource,
-    /startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\)/,
-    'mounted recovery should use the lightweight boot probe mode',
-  );
   assert.doesNotMatch(
-    streamingSource,
-    /const GALLERY_INITIAL_CACHE_RESCAN_DELAYS_MS = \[0, 300, 1200, 3000, 6000, 9000\] as const;/,
-    'the old six-probe cache loop was too heavy during UI startup',
+    uncommentedSource,
+    /startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\)/,
+    'mounted recovery should not start gallery cache probes during passive UI startup',
   );
 });
 

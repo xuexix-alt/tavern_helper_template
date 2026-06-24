@@ -9,6 +9,13 @@ function readSource(relativePath) {
   return fs.readFileSync(path.join(statusBarDir, relativePath), 'utf8');
 }
 
+function removeLineComments(source) {
+  return source
+    .split('\n')
+    .filter(line => !line.trimStart().startsWith('//'))
+    .join('\n');
+}
+
 function extractFunctionBody(source, functionName) {
   const start = source.indexOf(`function ${functionName}`);
   assert.notEqual(start, -1, `${functionName} should exist`);
@@ -151,8 +158,8 @@ test('same-layer asks the st-chatu8 iframe processor to claim visible image prom
   );
   assert.match(
     reconcileBody,
-    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*void runPluginNativeSameLayerPromptScan\(reason, promptScanMessageIds\);[\s\S]*syncPendingRequestHintsFromDom\(\);/,
-    'placeholder reconcile should wake the plugin scanner only for the active handoff target before reading DOM hints',
+    /const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds\(normalizedMessageIds\);[\s\S]*const hostLifecycleScanMessageIds =[\s\S]*void runPluginNativeSameLayerPromptScan\(reason, hostLifecycleScanMessageIds\);[\s\S]*syncPendingRequestHintsFromDom\(\);/,
+    'placeholder reconcile should wake the plugin scanner for the active handoff or scoped host lifecycle target before reading DOM hints',
   );
 });
 
@@ -449,15 +456,20 @@ test('successful image generation responses hydrate without scheduling long-tail
   );
   assert.equal(
     source.includes("queueGeneratedImageEntityRefresh([], 'host.plugin_native_response_success:untargeted');"),
-    true,
-    'untargeted successful plugin-native image responses should still force a broad generated-image refresh',
+    false,
+    'untargeted successful plugin-native image responses should not force a broad generated-image refresh',
   );
   assert.equal(
     source.includes(
       "void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');",
     ),
-    true,
-    'untargeted successful plugin-native image responses should hydrate visible host messages instead of waiting for the next MVU event',
+    false,
+    'untargeted successful plugin-native image responses should not start passive visible hydration timers',
+  );
+  assert.match(
+    source,
+    /recordImageHandoffReadinessTrace\(\s*'untargeted_response_no_global_scan',\s*'host\.plugin_native_response_success',\s*responseMessageIds/,
+    'untargeted successful plugin-native image responses should be diagnosed without scanning historical floors',
   );
   assert.equal(
     source.includes('const HOST_IMAGE_RESPONSE_RECONCILE_DELAYS_MS = [120, 360, 900] as const;'),
@@ -496,7 +508,7 @@ test('successful image generation responses hydrate without scheduling long-tail
   );
   assert.match(
     source,
-    /recordImageHandoffReadinessTrace\('response_observed', 'host\.plugin_native_response_success', responseMessageIds\)/,
+    /recordImageHandoffReadinessTrace\(\s*'response_observed',\s*'host\.plugin_native_response_success',\s*responseMessageIds,\s*\)/,
     'successful plugin-native image responses should trace whether each image is readable before waiting for MVU MESSAGE_UPDATED',
   );
   assert.match(
@@ -603,6 +615,8 @@ test('plugin prompt scans and fallback clicks are authorized by active handoff i
   const source = readSource('useStreamingDemo.ts');
   const scheduleBody = extractFunctionBody(source, 'schedulePluginNativePromptPlaceholderReconcile');
   const scanGateBody = extractFunctionBody(source, 'shouldRunPluginNativePromptScan');
+  const hostLifecycleScanBody = extractFunctionBody(source, 'shouldRunPluginNativePromptScanForHostLifecycle');
+  const promptBootstrapBody = extractFunctionBody(source, 'collectPluginNativePromptBootstrapMessageIds');
   const fallbackGuardBody = extractFunctionBody(source, 'shouldTriggerPendingPluginNativePromptButtons');
   const beginPendingTaskBody = extractFunctionBody(source, 'beginPendingImageTask');
   const waitBody = extractFunctionBody(source, 'waitForPluginImageGenerationHandoff');
@@ -637,6 +651,21 @@ test('plugin prompt scans and fallback clicks are authorized by active handoff i
     /readActivePluginNativePromptHandoff\(\)/,
     'prompt scanning should be authorized by the explicit active handoff session',
   );
+  assert.match(
+    scanGateBody,
+    /shouldRunPluginNativePromptScanForHostLifecycle\(reason, messageIds\)/,
+    'host lifecycle prompt scanning should not require a prior click when the completed floor still has raw image tags',
+  );
+  assert.match(
+    hostLifecycleScanBody,
+    /generation_done[\s\S]*generation_ended[\s\S]*native_host_hydration[\s\S]*plugin_native_placeholder_dom_mutation/,
+    'completed generation and native hydration paths should be allowed to materialize plugin-native prompt controls',
+  );
+  assert.match(
+    hostLifecycleScanBody,
+    /collectChatu8PromptTokens\(text\)\.length > 0/,
+    'host lifecycle prompt scans must stay scoped to floors that actually contain chatu8 image prompt tokens',
+  );
   assert.doesNotMatch(
     scheduleBody,
     /imageRecentIntentStore\.read\(\)|recentIntent\?\.messageId/,
@@ -646,6 +675,21 @@ test('plugin prompt scans and fallback clicks are authorized by active handoff i
     scheduleBody,
     /readActivePluginNativePromptHandoff\(\)[\s\S]*activeHandoff\.messageId/,
     'placeholder reconcile may only add the active handoff target when no concrete target was supplied',
+  );
+  assert.match(
+    scheduleBody,
+    /hostLifecycleScanMessageIds[\s\S]*promptScanMessageIds\.length > 0 \? promptScanMessageIds : normalizedMessageIds[\s\S]*runPluginNativeSameLayerPromptScan\(reason, hostLifecycleScanMessageIds\)/,
+    'placeholder reconcile should pass concrete host lifecycle message ids through to prompt scanning without manufacturing a recent-intent handoff',
+  );
+  assert.match(
+    promptBootstrapBody,
+    /transcript\.value[\s\S]*item\.role === 'assistant'[\s\S]*collectChatu8PromptTokens\(text\)\.length === 0[\s\S]*collectUnclaimedSameLayerChatu8PromptRoots\(\[messageId\]\)\.length > 0/,
+    'boot prompt bootstrap should stay bounded to visible assistant floors that still expose raw chatu8 prompt tokens',
+  );
+  assert.doesNotMatch(
+    removeLineComments(source),
+    /schedulePluginNativePromptBootstrap\('boot\.plugin_native_prompt_bootstrap'\)/,
+    'same-layer boot should not wake plugin prompt scans during passive history load',
   );
   assert.doesNotMatch(
     fallbackGuardBody,
@@ -777,8 +821,9 @@ test('plugin-native placeholder-only DOM mutations trigger prompt reconciliation
   );
 });
 
-test('same-layer boot hydrates a bounded native host window before relying on persisted image entities', () => {
+test('same-layer native host hydration stays targeted instead of running on passive boot', () => {
   const source = readSource('useStreamingDemo.ts');
+  const uncommentedSource = removeLineComments(source);
   const hydrateRecentBody = extractFunctionBody(source, 'hydrateRecentPluginNativeHostWindow');
 
   assert.equal(
@@ -789,7 +834,7 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
   assert.match(
     source,
     /function collectRecentPluginNativeHydrationMessageIds\(\): number\[\][\s\S]*PLUGIN_NATIVE_HOST_ASSISTANT_ANCHOR_COUNT[\s\S]*collectPluginNativeHostWindowMessageIds/,
-    'boot hydration should stay bounded to three assistant anchors and the six-floor native shadow window',
+    'native host hydration should stay bounded to three assistant anchors and the six-floor native shadow window',
   );
   assert.match(
     source,
@@ -814,12 +859,12 @@ test('same-layer boot hydrates a bounded native host window before relying on pe
   assert.match(
     source,
     /hydrateRecentPluginNativeHostWindow[\s\S]*for \(const delayMs of \[180, 800, 1800\]\)[\s\S]*discoverRecentNativeGalleryImages\(`\$\{reason\}:native_host_hydration_delay_\$\{delayMs\}`, messageIds\);/,
-    'hydration should scan repeatedly before restoring hidden host messages because mobile plugin DOM can arrive late',
+    'targeted hydration should scan repeatedly before restoring hidden host messages because mobile plugin DOM can arrive late',
   );
-  assert.match(
-    source,
-    /window\.setTimeout\(\(\) => void hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\), 250\);/,
-    'mounted same-layer UI should run the native host hydration probe, not just recompute existing iframe DOM',
+  assert.doesNotMatch(
+    uncommentedSource,
+    /hydrateRecentPluginNativeHostWindow\('mounted\.host_plugin_native_hydration'\)/,
+    'mounted same-layer UI should not materialize a native host hydration window during passive history load',
   );
 });
 
@@ -881,23 +926,23 @@ test('same-layer keeps three assistant anchors as a six-floor native shadow wind
   );
 });
 
-test('same-layer boot starts a lightweight gallery image cache session without waiting for the drawer click', () => {
-  const source = readSource('useStreamingDemo.ts');
+test('same-layer boot does not start gallery image cache before the drawer click', () => {
+  const source = removeLineComments(readSource('useStreamingDemo.ts'));
 
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /window\.setTimeout\(\(\) => startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\), 300\);/,
-    'initial same-layer image hydration should run lightweight gallery cache probes before the user opens the drawer',
+    /startGalleryImageCacheSession\('mounted\.initial_gallery_cache', 'boot'\)/,
+    'mounted same-layer load should not start gallery cache probes before the drawer is opened',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /startGalleryImageCacheSession[\s\S]*const delays = mode === 'boot' \? GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS : GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS;[\s\S]*scheduleUiRefresh\(\['gallery'\], `\$\{reason\}:initial_cache_\$\{delayMs\}`\);[\s\S]*scanSelectedGalleryWindow\(`\$\{reason\}:initial_cache_\$\{delayMs\}`\);/,
-    'boot cache probes should also refresh gallery state so delayed mobile native images are not missed',
+    /discoverRecentNativeGalleryImages\('mounted\.native_recent_gallery_scan/,
+    'mounted same-layer load should not run recent native gallery scans',
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = \[1200, 5000, 12000, 24000\] as const;/,
-    'boot cache probes should keep scanning after slower mobile DOM and metadata hydration',
+    /hydrateVisibleImageMessages\('mounted\.image_hydration_/,
+    'mounted same-layer load should not start repeated visible image hydration timers',
   );
 });
 
@@ -1133,6 +1178,17 @@ test('same-layer host rendered html falls back to host mes_text when plugin-nati
   );
 });
 
+test('same-layer host rendered html preserves raw chatu8 prompt tokens as native scan markers', () => {
+  const source = readSource('useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'readHostRenderedMessageHtml');
+
+  assert.match(
+    body,
+    /const normalizedHtml = normalizeDisplayedHtml\(html\);[\s\S]*const markerHtml = preserveChatu8PromptTokenPlacementMarkersHtml\(normalizedHtml\);[\s\S]*return stripVisibleChatu8PromptTokensHtml\(markerHtml\);/,
+    'host rendered html with bare image### tokens should leave hidden native prompt markers for st-chatu8 iframe scanning',
+  );
+});
+
 test('gallery image regeneration keeps a gallery recent intent through the native response refresh path', () => {
   const source = readSource('useStreamingDemo.ts');
   const storySource = readSource('pages/StoryPage.vue');
@@ -1239,8 +1295,9 @@ test('StoryPage can hide duplicate tail gallery images while keeping the gallery
   );
 });
 
-test('StoryPage keeps generated image host actions gallery-only by default', () => {
+test('StoryPage keeps generated image host actions native-backed before leasing host DOM', () => {
   const source = readSource('pages/StoryPage.vue');
+  const selectorSource = readSource('pluginNativeImageSelectors.ts');
   const viewBody = extractFunctionBody(source, 'activateGeneratedImageView');
   const tagBody = extractFunctionBody(source, 'activateGeneratedImageTag');
   const regenerateBody = extractFunctionBody(source, 'activateGeneratedImageRegenerate');
@@ -1248,7 +1305,22 @@ test('StoryPage keeps generated image host actions gallery-only by default', () 
   assert.match(
     source,
     /function shouldAllowGeneratedImageHostAction\(payload: GeneratedImageActivationPayload\): boolean/,
-    'StoryPage should centralize the gallery-only activation boundary',
+    'StoryPage should centralize the plugin-native activation boundary',
+  );
+  assert.match(
+    source,
+    /if \(payload\?\.source === 'gallery'\) return true;[\s\S]*if \(payload\?\.sameLayerOnly === true\) return false;[\s\S]*return Boolean\(payload\?\.requestId \|\| payload\?\.promptToken\);/,
+    'transcript placeholders should be allowed only when they can resolve a native plugin request or prompt target',
+  );
+  assert.match(
+    selectorSource,
+    /span\.image-tag-placeholder/,
+    'plugin-native placeholder spans must be recognized before generic transcript double-click generation runs',
+  );
+  assert.match(
+    selectorSource,
+    /PLUGIN_NATIVE_IMAGE_INTERACTION_SELECTOR/,
+    'plugin-native prompt buttons must be recognized as image gesture targets too',
   );
   for (const [name, body] of [
     ['view', viewBody],
@@ -1258,7 +1330,7 @@ test('StoryPage keeps generated image host actions gallery-only by default', () 
     assert.match(
       body,
       /if \(!shouldAllowGeneratedImageHostAction\(payload\)\) return;/,
-      `${name} should ignore transcript-origin generated image actions before leasing host DOM`,
+      `${name} should ignore non-native generated image actions before leasing host DOM`,
     );
   }
 });
@@ -1366,6 +1438,16 @@ test('TranscriptMessageCard delegates plugin-native image gestures through the t
     /class="assistant-body-wrap"[\s\S]*@click\.capture="handleAssistantBodyNativeImageClick"[\s\S]*@pointerdown\.capture="handleAssistantBodyNativeImagePointerDown"/,
     'assistant body wrap should catch plugin-native gestures before inner transcript markup can stop propagation',
   );
+  assert.match(
+    source,
+    /function handleAssistantBodyNativeImageClick\(event: Event\) \{[\s\S]*const button = resolveAssistantBodyNativeImageButtonFromEventTarget\(event\.target\);[\s\S]*if \(button\) \{[\s\S]*return;[\s\S]*const carrier = resolveAssistantBodyNativeImageCarrierFromEventTarget\(event\.target\);/,
+    'prompt button single-clicks should be left to the st-chatu8 button handler instead of becoming same-layer regenerate gestures',
+  );
+  assert.doesNotMatch(
+    source,
+    /const button = resolveAssistantBodyNativeImageButtonFromEventTarget\(event\.target\);[\s\S]*emit\('image-regenerate', buildGeneratedImagePayload\(button, event\.target\)\);/,
+    'same-layer must not translate plugin prompt button single-clicks into regenerate actions',
+  );
   assert.doesNotMatch(
     source,
     /root\.addEventListener\('click', handlePluginNativeCarrierClick, true\);/,
@@ -1385,6 +1467,7 @@ test('TranscriptMessageCard delegates plugin-native image gestures through the t
 
 test('StoryPage resolves plugin-native image double clicks with adjacent prompt payloads', () => {
   const source = readSource('pages/StoryPage.vue');
+  const selectorSource = readSource('pluginNativeImageSelectors.ts');
 
   assert.match(
     source,
@@ -1395,6 +1478,26 @@ test('StoryPage resolves plugin-native image double clicks with adjacent prompt 
     source,
     /async function handleTranscriptDoubleClickCapture\(event: MouseEvent\) \{[\s\S]*if \(isSameLayerPluginNativeImageGestureTarget\(event\.target\)\) return;[\s\S]*void startTranscriptHostImageProxy/,
     'generic transcript double-click generation should not steal plugin-native image double clicks from TranscriptMessageCard',
+  );
+  assert.match(
+    selectorSource,
+    /PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR =[\s\S]*span\.image-tag-placeholder/,
+    'image-tag-placeholder nodes should be treated as plugin-native carriers, not plain mes_text content',
+  );
+  assert.match(
+    selectorSource,
+    /PLUGIN_NATIVE_IMAGE_BUTTON_SELECTOR =[\s\S]*button\.image-tag-button/,
+    'prompt buttons should not fall through to the generic mes_text double-click proxy',
+  );
+  assert.match(
+    source,
+    /const button = element\?\.closest\?\.\(PLUGIN_NATIVE_IMAGE_BUTTON_SELECTOR\)[\s\S]*const carrier = \(button \?\? element\?\.closest\?\.\(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR\)\)/,
+    'window-level image payload parsing should accept direct button targets as well as span carriers',
+  );
+  assert.match(
+    source,
+    /const promptDataset = button\?\.dataset \?\? resolvePluginNativePromptDatasetFromCarrier\(carrier\);/,
+    'button-origin image payloads should preserve requestId and prompt data for host target resolution',
   );
   assert.match(
     source,
@@ -1408,8 +1511,8 @@ test('StoryPage resolves plugin-native image double clicks with adjacent prompt 
   );
   assert.match(
     source,
-    /const promptDataset = resolvePluginNativePromptDatasetFromCarrier\(carrier\);[\s\S]*const carrierDataset = \{ \.\.\.promptDataset, \.\.\.carrier\.dataset, messageId \};/,
-    'fallback payload parsing should merge data-image-tag/data-link before resolving regeneration targets',
+    /const promptDataset = button\?\.dataset \?\? resolvePluginNativePromptDatasetFromCarrier\(carrier\);[\s\S]*const carrierDataset = \{ \.\.\.promptDataset, \.\.\.carrier\.dataset, messageId \};/,
+    'fallback payload parsing should merge direct button data and adjacent data-image-tag/data-link before resolving regeneration targets',
   );
   assert.match(
     source,

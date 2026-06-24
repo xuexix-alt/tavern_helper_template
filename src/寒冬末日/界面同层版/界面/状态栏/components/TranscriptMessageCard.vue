@@ -1085,8 +1085,7 @@ function handleAssistantBodyNativeImageClick(event: Event) {
   const button = resolveAssistantBodyNativeImageButtonFromEventTarget(event.target);
   if (button) {
     if (!button.dataset.messageId) button.dataset.messageId = String(props.item.message_id);
-    stopEvent(event);
-    emit('image-regenerate', buildGeneratedImagePayload(button, event.target));
+    // Prompt buttons are owned by st-chatu8: their single-click starts first-time image generation.
     return;
   }
 

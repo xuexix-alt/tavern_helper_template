@@ -57,6 +57,25 @@ test('message-level host updates map to transcriptItems instead of full transcri
   );
 });
 
+test('ordinary message updates do not wake the gallery domain used by image-specific refreshes', () => {
+  const source = readSource('refreshDomains.ts');
+  const messageUpdateSegment = source.slice(
+    source.indexOf("case 'host.message_updated':"),
+    source.indexOf("case 'host.message_received':"),
+  );
+
+  assert.match(
+    messageUpdateSegment,
+    /pushDomain\(out, 'transcriptItems'\);[\s\S]*pushDomain\(out, 'mvuSources'\);/,
+    'ordinary message updates should still patch the visible item and MVU source selector',
+  );
+  assert.doesNotMatch(
+    messageUpdateSegment,
+    /pushDomain\(out, 'gallery'\);/,
+    'MVU extra parsing MESSAGE_UPDATED events should not recompute gallery unless image code requested it explicitly',
+  );
+});
+
 test('scheduleUiRefresh uses transcriptItems for targeted message refresh and reserves queueExternalSync for full transcript rebuilds', () => {
   const source = readSource('useStreamingDemo.ts');
 
@@ -209,6 +228,11 @@ test('host stream token echoes do not trigger external transcript rebuilds after
     /case 'host\.generation_started':\s*return out;/,
     'host generation_started should flip streaming flags without forcing an external transcript rebuild',
   );
+  assert.match(
+    hostRefreshBody,
+    /if \(domains\.length === 0\) \{[\s\S]*?return;[\s\S]*?\}\s*scheduleUiRefresh\(domains/,
+    'events with no refresh domains, especially host token echoes, must return before hide-policy work is queued',
+  );
 });
 
 test('generated image refresh targets both the current transcript item and gallery', () => {
@@ -253,7 +277,7 @@ test('host image request hints fall back to the recent transcript intent instead
   );
 });
 
-test('mounted same-layer probes visible assistant messages for existing host-native images', () => {
+test('mounted same-layer stays lightweight and does not probe visible assistant images during boot', () => {
   const source = readSource('useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'queueVisibleGeneratedImageEntityRefresh');
   const mountedSegment = source.slice(source.indexOf('onMounted(async () => {'));
@@ -263,10 +287,10 @@ test('mounted same-layer probes visible assistant messages for existing host-nat
     /transcript\.value[\s\S]*filter\(item => item\.role === 'assistant'\)[\s\S]*queueGeneratedImageEntityRefresh\(visibleAssistantMessageIds, reason\);/,
     'visible assistant message ids should be rechecked for host-native image artifacts after startup',
   );
-  assert.match(
+  assert.doesNotMatch(
     mountedSegment,
-    /window\.setTimeout\(\(\) => queueVisibleGeneratedImageEntityRefresh\('mounted\.host_plugin_native_probe'\), 250\);/,
-    'mounted startup should refresh existing host-native images even when no fresh mutation fires',
+    /queueVisibleGeneratedImageEntityRefresh\('mounted\./,
+    'mounted startup should not refresh existing host-native images before the first screen settles',
   );
 });
 
@@ -276,8 +300,8 @@ test('targeted transcript item refresh preserves host mes fallback and latest as
 
   assert.match(
     body,
-    /const rawMessage = String\(hostMessage\?\.message \?\? hostMessage\?\.mes \?\? ''\);/,
-    'targeted refresh should use mes fallback because host chat entries may not expose message',
+    /const rawMessage = resolveHostMessageText\(hostMessage\);/,
+    'targeted refresh should use the shared message text resolver so mes fallback stays centralized',
   );
   assert.match(
     body,

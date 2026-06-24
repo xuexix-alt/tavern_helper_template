@@ -556,7 +556,12 @@ import {
   type HostGesturePoint,
 } from '../hostGestureDispatch';
 import { useMvuRoleStore } from '../mvuRoleStore';
-import { PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR, isPluginNativeImageElement } from '../pluginNativeImageSelectors';
+import {
+  PLUGIN_NATIVE_IMAGE_BUTTON_SELECTOR,
+  PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR,
+  PLUGIN_NATIVE_IMAGE_INTERACTION_SELECTOR,
+  isPluginNativeImageElement,
+} from '../pluginNativeImageSelectors';
 import {
   addRolePortraitSetImage,
   clearRolePortraitOverride,
@@ -2077,13 +2082,14 @@ function resolveGeneratedImageMessageIdFromDomTarget(element: HTMLElement, carri
 
 function resolveGeneratedImagePayloadFromDomTarget(target: EventTarget | null): GeneratedImageActivationPayload | null {
   const element = target as HTMLElement | null;
-  const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  const button = element?.closest?.(PLUGIN_NATIVE_IMAGE_BUTTON_SELECTOR) as HTMLElement | null;
+  const carrier = (button ?? element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR)) as HTMLElement | null;
   if (!carrier || !isPluginNativeImageElement(carrier)) return null;
 
   const targetImage =
     element instanceof HTMLImageElement ? element : (carrier.querySelector('img') as HTMLImageElement | null);
   const messageId = resolveGeneratedImageMessageIdFromDomTarget(element, carrier);
-  const promptDataset = resolvePluginNativePromptDatasetFromCarrier(carrier);
+  const promptDataset = button?.dataset ?? resolvePluginNativePromptDatasetFromCarrier(carrier);
   const carrierDataset = { ...promptDataset, ...carrier.dataset, messageId };
   const targetDataset = { ...(targetImage?.dataset ?? {}), messageId };
   return parseGeneratedImageActivationPayload({
@@ -2146,7 +2152,7 @@ function resolvePluginNativePromptDatasetFromCarrier(carrier: HTMLElement): DOMS
 
 function isSameLayerPluginNativeImageGestureTarget(target: EventTarget | null): boolean {
   const element = target instanceof HTMLElement ? target : null;
-  const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_CARRIER_SELECTOR) as HTMLElement | null;
+  const carrier = element?.closest?.(PLUGIN_NATIVE_IMAGE_INTERACTION_SELECTOR) as HTMLElement | null;
   return Boolean(carrier && isPluginNativeImageElement(carrier));
 }
 
@@ -2163,7 +2169,9 @@ function normalizeGeneratedImagePayloadMessageId(payload: GeneratedImageActivati
 }
 
 function shouldAllowGeneratedImageHostAction(payload: GeneratedImageActivationPayload): boolean {
-  return payload?.source === 'gallery';
+  if (payload?.source === 'gallery') return true;
+  if (payload?.sameLayerOnly === true) return false;
+  return Boolean(payload?.requestId || payload?.promptToken);
 }
 
 async function activateGeneratedImageView(payload: GeneratedImageActivationPayload) {

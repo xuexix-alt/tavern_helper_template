@@ -164,6 +164,7 @@ import {
   buildTranscriptWindowPageOptions,
   resolveTranscriptWindowRange,
   type TranscriptWindowPageOption,
+  type TranscriptWindowRange,
 } from './transcriptWindow';
 import type {
   DemoStatus,
@@ -233,7 +234,7 @@ const GALLERY_HISTORY_MAX_GROUPS_PER_LOAD = 3;
 const GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE = 48;
 const GALLERY_WINDOW_NATIVE_HYDRATION_CHUNK_SIZE = 4;
 const GALLERY_DRAWER_CACHE_RESCAN_DELAYS_MS = [0, 900, 3000, 6000, 12000] as const;
-const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000, 12000, 24000] as const;
+const GALLERY_BOOT_CACHE_RESCAN_DELAYS_MS = [1200, 5000] as const;
 const GALLERY_REF_EMPTY_CACHE_TTL_MS = 1500;
 const GALLERY_REF_CACHE_MAX_ENTRIES = 160;
 const RECENT_PLUGIN_NATIVE_CACHE_BYPASS_MESSAGE_COUNT = 8;
@@ -678,7 +679,9 @@ function readHostRenderedMessageHtml(message_id: number): string {
     if (!html) return '';
     if (html.includes(STREAM_DEMO_MARKER) || /<demo_phase\b/i.test(html)) return '';
     if (isHostRenderedStreamDemoWrapperOnlyHtml(html)) return '';
-    return stripVisibleChatu8PromptTokensHtml(normalizeDisplayedHtml(html));
+    const normalizedHtml = normalizeDisplayedHtml(html);
+    const markerHtml = preserveChatu8PromptTokenPlacementMarkersHtml(normalizedHtml);
+    return stripVisibleChatu8PromptTokensHtml(markerHtml);
   } catch {
     return '';
   }
@@ -2936,6 +2939,7 @@ export function useStreamingDemo() {
   let openingPayloadPersistTimer = 0;
   let generatedImageDomMutationTimer = 0;
   let autoMvuReloadReprocessTimer = 0;
+  let autoMvuReloadReprocessIdleHandle = 0;
   const hostImageDataReconcileTimers = new Set<number>();
   const galleryInitialCacheTimers = new Set<number>();
   const pendingGeneratedImageRefreshMessageIds = new Set<number>();
@@ -3524,13 +3528,18 @@ export function useStreamingDemo() {
       messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id > 0),
     );
 
-    return listAllChatMessages().filter(message => {
+    const isCandidateMessage = (message: any) => {
       const messageId = Math.trunc(Number(message?.message_id));
       if (!Number.isFinite(messageId) || messageId < 0) return false;
       if (containerId != null && messageId <= containerId) return false;
-      if (normalizedIds.size > 0 && !normalizedIds.has(messageId)) return false;
       return resolveHostMessageRole(message) === 'assistant';
-    });
+    };
+
+    if (normalizedIds.size > 0) {
+      return [...normalizedIds].map(messageId => readHostChatMessageById(messageId)).filter(isCandidateMessage);
+    }
+
+    return listAllChatMessages().filter(isCandidateMessage);
   }
 
   function snapshotHostImageDataSignatures(messageIds: number[] = []) {
@@ -4626,27 +4635,41 @@ export function useStreamingDemo() {
     }));
   }
 
+  function readHostChatMessageById(messageId: number): any | null {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return null;
+    const detail = readChatMessageDetail(normalizedId);
+    if (!detail || typeof detail !== 'object') return null;
+    return (
+      normalizeHostChatMessages([
+        {
+          ...detail,
+          message_id: normalizedId,
+        },
+      ])[0] ?? null
+    );
+  }
+
+  function isMessageIdInTranscriptWindow(messageId: number, range: TranscriptWindowRange | null): boolean {
+    return range != null && messageId >= range.startId && messageId <= range.endId;
+  }
+
   function refreshTranscriptItemsByIds(messageIds: number[], reason = 'manual') {
     const normalizedMessageIds = [...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => id > 0))];
     if (normalizedMessageIds.length === 0) return;
 
     const containerId = getActiveContainerMessageId();
-    const allMessages = listAllChatMessages();
-    const recentUiMessageIds = new Set(
-      readRecentChatMessagesForUi()
-        .map(message => Math.trunc(Number(message?.message_id)))
-        .filter(id => Number.isFinite(id) && id > 0),
-    );
+    const currentWindowRange = transcriptWindowRange.value;
     let refreshedCount = 0;
 
     for (const messageId of normalizedMessageIds) {
       if (containerId != null && messageId <= containerId) continue;
 
-      const hostMessage = allMessages.find(message => Math.trunc(Number(message?.message_id)) === messageId);
-      if (!hostMessage) continue;
-
       const existingItem = transcript.value.find(item => item.message_id === messageId);
-      if (!existingItem && !recentUiMessageIds.has(messageId)) continue;
+      if (!existingItem && !isMessageIdInTranscriptWindow(messageId, currentWindowRange)) continue;
+
+      const hostMessage = readHostChatMessageById(messageId);
+      if (!hostMessage) continue;
       const isOpeningResult = isCurrentOpeningAssistantMessageByPayload(hostMessage, openingPayload.value);
       const rawRole = resolveHostMessageRole(hostMessage);
       const rawMessage = resolveHostMessageText(hostMessage);
@@ -5141,7 +5164,7 @@ export function useStreamingDemo() {
   }
 
   function releaseHiddenStoryMessagesForNativeGeneration() {
-    // Reserved for native-generation reveal cleanup that must run before the hide policy is queued again.
+    nativeGenerationRevealActive = false;
   }
 
   async function disableSameLayerUi(options: { restoreHost?: boolean } = {}) {
@@ -5613,12 +5636,34 @@ export function useStreamingDemo() {
       return true;
     }
 
+    if (shouldRunPluginNativePromptScanForHostLifecycle(reason, messageIds)) {
+      return true;
+    }
+
     recordLifecycleTrace('pluginNativePromptPlaceholderReconcile', 'prompt_scan_skipped', {
       reason,
       messageIds,
       activeHandoff,
     });
     return false;
+  }
+
+  function shouldRunPluginNativePromptScanForHostLifecycle(reason: string, messageIds: number[]): boolean {
+    const normalizedReason = String(reason ?? '');
+    const isHostLifecycleReason =
+      normalizedReason.includes('generation_done') ||
+      normalizedReason.includes('generation_ended') ||
+      normalizedReason.includes('native_host_hydration') ||
+      normalizedReason.includes('plugin_native_placeholder_dom_mutation') ||
+      normalizedReason.includes('plugin_native_llm_image_generation_response');
+
+    if (!isHostLifecycleReason) return false;
+
+    return messageIds.some(messageId => {
+      const detail = readChatMessageDetail(messageId);
+      const text = String(detail?.mes ?? detail?.message ?? '');
+      return collectChatu8PromptTokens(text).length > 0;
+    });
   }
 
   function resolveActivePluginNativePromptScanMessageIds(messageIds: number[]): number[] {
@@ -5643,8 +5688,10 @@ export function useStreamingDemo() {
     for (const delayMs of PLUGIN_NATIVE_PROMPT_PLACEHOLDER_RECONCILE_DELAYS_MS) {
       const runProbe = () => {
         const promptScanMessageIds = resolveActivePluginNativePromptScanMessageIds(normalizedMessageIds);
-        if (shouldRunPluginNativePromptScan(reason, promptScanMessageIds)) {
-          void runPluginNativeSameLayerPromptScan(reason, promptScanMessageIds);
+        const hostLifecycleScanMessageIds =
+          promptScanMessageIds.length > 0 ? promptScanMessageIds : normalizedMessageIds;
+        if (shouldRunPluginNativePromptScan(reason, hostLifecycleScanMessageIds)) {
+          void runPluginNativeSameLayerPromptScan(reason, hostLifecycleScanMessageIds);
         }
         syncPendingRequestHintsFromDom();
         for (const messageId of normalizedMessageIds) {
@@ -5670,6 +5717,29 @@ export function useStreamingDemo() {
       }, delayMs);
       hostImageDataReconcileTimers.add(timer);
     }
+  }
+
+  function collectPluginNativePromptBootstrapMessageIds(): number[] {
+    return transcript.value
+      .filter(item => item.role === 'assistant')
+      .map(item => Math.trunc(Number(item.message_id)))
+      .filter((messageId, index, ids) => Number.isFinite(messageId) && messageId >= 0 && ids.indexOf(messageId) === index)
+      .filter(messageId => {
+        const detail = readChatMessageDetail(messageId);
+        const text = String(detail?.mes ?? detail?.message ?? '');
+        if (collectChatu8PromptTokens(text).length === 0) return false;
+        return collectUnclaimedSameLayerChatu8PromptRoots([messageId]).length > 0;
+      });
+  }
+
+  function schedulePluginNativePromptBootstrap(reason: string) {
+    const messageIds = collectPluginNativePromptBootstrapMessageIds();
+    if (messageIds.length === 0) return;
+    recordLifecycleTrace('pluginNativePromptBootstrap', 'scheduled', {
+      reason,
+      messageIds,
+    });
+    schedulePluginNativePromptPlaceholderReconcile(`${reason}:native_host_hydration`, messageIds);
   }
 
   async function nudgePluginNativePromptProcessingForActiveIntent(
@@ -6491,6 +6561,13 @@ export function useStreamingDemo() {
       domains,
       isOpeningWorkbenchHost: isOpeningWorkbenchHostActive(),
     });
+    if (domains.length === 0) {
+      recordLifecycleTrace('handleHostRefreshEvent', 'skipped_empty_domains', {
+        name,
+        refreshType,
+      });
+      return;
+    }
     scheduleUiRefresh(domains, `event:${name}`, messageId != null ? [messageId] : []);
     queueHidePolicy(`event:${name}`);
   }
@@ -7507,6 +7584,7 @@ export function useStreamingDemo() {
       markStageTiming('restore_reveal_after_side_effects_start');
       await restoreGenerationRevealWindow('post_done_side_effects');
       markStageTiming('restore_reveal_after_side_effects_done');
+      releaseHiddenStoryMessagesForNativeGeneration();
       status.value = 'done';
       transcript.value = syncTranscriptFlags(transcript.value);
       queueHidePolicy('generation_done');
@@ -7800,14 +7878,42 @@ export function useStreamingDemo() {
     });
   }
 
-  function scheduleMvuReloadReprocessIfMissing(reason = 'mounted.mvu_reload_probe') {
+  function clearAutoMvuReloadReprocessSchedule() {
     if (autoMvuReloadReprocessTimer) {
       window.clearTimeout(autoMvuReloadReprocessTimer);
+      autoMvuReloadReprocessTimer = 0;
     }
+    if (autoMvuReloadReprocessIdleHandle) {
+      const cancelIdle = (window as any).cancelIdleCallback;
+      if (typeof cancelIdle === 'function') {
+        cancelIdle(autoMvuReloadReprocessIdleHandle);
+      }
+      autoMvuReloadReprocessIdleHandle = 0;
+    }
+  }
+
+  function scheduleMvuReloadReprocessIfMissing(reason = 'mounted.mvu_reload_probe') {
+    clearAutoMvuReloadReprocessSchedule();
+    const runIdleProbe = () => {
+      const requestIdle = (window as any).requestIdleCallback;
+      if (typeof requestIdle === 'function') {
+        autoMvuReloadReprocessIdleHandle = requestIdle(
+          () => {
+            autoMvuReloadReprocessIdleHandle = 0;
+            void autoReprocessLatestAssistantVariablesIfMissing(reason);
+          },
+          { timeout: 2500 },
+        );
+        return;
+      }
+      window.setTimeout(() => {
+        void autoReprocessLatestAssistantVariablesIfMissing(reason);
+      }, 80);
+    };
     autoMvuReloadReprocessTimer = window.setTimeout(() => {
       autoMvuReloadReprocessTimer = 0;
-      void autoReprocessLatestAssistantVariablesIfMissing(reason);
-    }, 900);
+      runIdleProbe();
+    }, 1800);
   }
 
   async function reprocessLatestAssistantVariables(options?: ReprocessLatestAssistantOptions) {
@@ -8616,6 +8722,20 @@ export function useStreamingDemo() {
     }
   }
 
+  function schedulePluginNativeDomMutationFollowUp(reason: string, messageIds: number[]) {
+    const affectedMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    if (affectedMessageIds.length === 0) {
+      recordLifecycleTrace('pluginNativeDomMutation', 'follow_up_skipped_no_message_id', { reason });
+      return;
+    }
+
+    window.setTimeout(() => {
+      discoverRecentNativeGalleryImages(reason, affectedMessageIds);
+    }, 600);
+  }
+
   onMounted(async () => {
     restoreReaderChatState();
 
@@ -8712,12 +8832,21 @@ export function useStreamingDemo() {
             void hydratePluginNativeResponseMessages('host.plugin_native_response_success', responseMessageIds);
           }
           if (isUntargetedResponse) {
-            queueGeneratedImageEntityRefresh([], 'host.plugin_native_response_success:untargeted');
-            discoverRecentNativeGalleryImages('host.plugin_native_response_success:untargeted_recent');
-            window.setTimeout(() => {
-              discoverRecentNativeGalleryImages('host.plugin_native_response_success:untargeted_delayed');
-            }, 900);
-            void hydrateVisibleImageMessages('host.plugin_native_response_success:untargeted_visible_hydration');
+            recordLifecycleTrace('imageGenerationEventBridge', 'untargeted_response_no_global_scan', () => ({
+              requestId,
+              promptHead: prompt.slice(0, 80),
+              responseMessageIds,
+              pendingTasks: imagePendingTaskManager.getDebugState(),
+            }));
+            recordImageHandoffReadinessTrace(
+              'untargeted_response_no_global_scan',
+              'host.plugin_native_response_success',
+              responseMessageIds,
+              {
+                requestId,
+                promptHead: prompt.slice(0, 80),
+              },
+            );
           }
         },
         onResponseFailure: ({ requestId, prompt }) => {
@@ -8776,10 +8905,13 @@ export function useStreamingDemo() {
               'same_layer.plugin_native_placeholder_dom_mutation',
               affectedMessageIds,
             );
-            // 增强：延迟扫描画廊，等待占位符转换为实际图片
-            window.setTimeout(() => {
-              discoverRecentNativeGalleryImages('same_layer.dom_mutation_follow_up', affectedMessageIds);
-            }, 600);
+            schedulePluginNativeDomMutationFollowUp('same_layer.dom_mutation_follow_up', affectedMessageIds);
+            return;
+          }
+          if (affectedMessageIds.length === 0) {
+            recordLifecycleTrace('pluginNativeDomMutation', 'ready_image_skipped_no_message_id', {
+              reason: 'same_layer.plugin_native_dom_mutation',
+            });
             return;
           }
           queueGeneratedImageEntityRefresh(affectedMessageIds);
@@ -8800,10 +8932,13 @@ export function useStreamingDemo() {
             'host.plugin_native_placeholder_dom_mutation',
             affectedMessageIds,
           );
-          // 增强：延迟扫描画廊，等待宿主DOM中占位符转换为实际图片
-          window.setTimeout(() => {
-            discoverRecentNativeGalleryImages('host.dom_mutation_follow_up', affectedMessageIds);
-          }, 600);
+          schedulePluginNativeDomMutationFollowUp('host.dom_mutation_follow_up', affectedMessageIds);
+          return;
+        }
+        if (affectedMessageIds.length === 0) {
+          recordLifecycleTrace('pluginNativeDomMutation', 'ready_image_skipped_no_message_id', {
+            reason: 'host.plugin_native_dom_mutation',
+          });
           return;
         }
         queueGeneratedImageEntityRefresh(affectedMessageIds, 'host.plugin_native_dom_mutation');
@@ -8812,16 +8947,7 @@ export function useStreamingDemo() {
 
     rebuildTranscript();
     // 历史载入保持轻量：不在 mounted 阶段预热画廊、拉起宿主同层水合或扫描近期图片。
-    // window.setTimeout(() => void hydrateRecentPluginNativeHostWindow('mounted.host_plugin_native_hydration'), 250);
-    // window.setTimeout(() => queueVisibleGeneratedImageEntityRefresh('mounted.host_plugin_native_probe'), 250);
-    // window.setTimeout(() => startGalleryImageCacheSession('mounted.initial_gallery_cache', 'boot'), 300);
-    // window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan'), 500);
-    // window.setTimeout(() => discoverRecentNativeGalleryImages('mounted.native_recent_gallery_scan_retry'), 1500);
     queueHidePolicy('mounted');
-
-    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_500'), 500);
-    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_1500'), 1500);
-    // window.setTimeout(() => void hydrateVisibleImageMessages('mounted.image_hydration_3000'), 3000);
   });
 
   // 增强可见性监听：处理移动端从后台恢复、全屏切换、屏幕旋转等场景
@@ -8843,8 +8969,15 @@ export function useStreamingDemo() {
 
       recordLifecycleTrace('visibilityRefresh', 'triggered', { reason, timestamp: now });
       window.setTimeout(() => {
-        discoverRecentNativeGalleryImages(`visibility_restored.${reason}`);
-        queueVisibleGeneratedImageEntityRefresh(`visibility_restored.${reason}`);
+        const visibleMessageIds = collectVisibleAssistantMessageIds();
+        if (visibleMessageIds.length === 0) {
+          recordLifecycleTrace('visibilityRefresh', 'visibility_refresh_skipped', {
+            reason,
+            skippedReason: 'no_visible_assistant_message_ids',
+          });
+          return;
+        }
+        queueGeneratedImageEntityRefresh(visibleMessageIds, `visibility_restored.${reason}`);
         void hydrateVisibleImageMessages(`visibility_restored.${reason}:visible_image_hydration`);
       }, 300);
     };
@@ -9015,7 +9148,7 @@ export function useStreamingDemo() {
     readerStatePersistTimer = clearTimer(readerStatePersistTimer);
     openingPayloadPersistTimer = clearTimer(openingPayloadPersistTimer);
     generatedImageDomMutationTimer = clearTimer(generatedImageDomMutationTimer);
-    autoMvuReloadReprocessTimer = clearTimer(autoMvuReloadReprocessTimer);
+    clearAutoMvuReloadReprocessSchedule();
     hostImageDataReconcileTimers.forEach(timer => window.clearTimeout(timer));
     hostImageDataReconcileTimers.clear();
     pluginNativeResponseHydrationSessions.clear();
@@ -9281,10 +9414,19 @@ export function useStreamingDemo() {
   }
 
   function discoverRecentNativeGalleryImages(reason = 'gallery.native_recent_scan', messageIds: number[] = []) {
-    const messages = readAllChatMessagesRaw();
-    const explicitIds = new Set(
-      messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0),
-    );
+    const explicitMessageIds = [
+      ...new Set(messageIds.map(id => Math.trunc(Number(id))).filter(id => Number.isFinite(id) && id >= 0)),
+    ];
+    const explicitIds = new Set(explicitMessageIds);
+    const messages =
+      explicitMessageIds.length > 0
+        ? explicitMessageIds
+            .map(messageId => {
+              const detail = readChatMessageDetail(messageId);
+              return detail ? { ...detail, message_id: messageId } : null;
+            })
+            .filter((message): message is Record<string, unknown> => message != null)
+        : readAllChatMessagesRaw();
     const scanMode = explicitIds.size > 0 ? 'explicit-message-ids' : 'recent-cross-floor';
     if (messages.length === 0) {
       recordLifecycleTrace('galleryNativeRecentScan', 'probe', {
@@ -9313,7 +9455,7 @@ export function useStreamingDemo() {
       .filter(item => explicitIds.size === 0 || explicitIds.has(item.messageId))
       .filter(item => isAssistantGalleryHistoryCandidate(item.message, item.rawMessage))
       .sort((a, b) => b.messageId - a.messageId)
-      .slice(0, explicitIds.size > 0 ? messages.length : GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE);
+      .slice(0, explicitMessageIds.length > 0 ? messages.length : GALLERY_RECENT_NATIVE_SCAN_BATCH_SIZE);
 
     let discovered = 0;
     let retainedCurrent = 0;
@@ -9427,7 +9569,9 @@ export function useStreamingDemo() {
       const timer = scheduleGalleryInitialCacheProbe(() => {
         galleryInitialCacheTimers.delete(timer);
         if (sessionId !== galleryInitialCacheSessionId) return;
-        scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
+        if (mode !== 'boot') {
+          scheduleUiRefresh(['gallery'], `${reason}:initial_cache_${delayMs}`);
+        }
         scanSelectedGalleryWindow(`${reason}:initial_cache_${delayMs}`);
         recordLifecycleTrace('galleryInitialCache', 'probe', {
           reason,

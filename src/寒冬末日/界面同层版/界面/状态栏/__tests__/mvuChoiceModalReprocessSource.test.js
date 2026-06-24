@@ -321,6 +321,17 @@ test('latest-assistant MVU reroll reveals hidden same-layer story floors before 
   );
 });
 
+test('generation success releases the native reveal window before queueing the hide policy', () => {
+  const source = read('../useStreamingDemo.ts');
+  const body = extractFunctionBody(source, 'runGenerationFlow');
+
+  assert.match(
+    body,
+    /await restoreGenerationRevealWindow\('post_done_side_effects'\)[\s\S]*releaseHiddenStoryMessagesForNativeGeneration\(\)[\s\S]*queueHidePolicy\('generation_done'\)/,
+    'generation success should close the reveal window before the hide policy is queued back',
+  );
+});
+
 test('latest-assistant MVU reroll records stage timings around reveal, native retry, and writeback wait', () => {
   const source = read('../useStreamingDemo.ts');
   const body = extractFunctionBody(source, 'reprocessLatestAssistantVariables');
@@ -375,8 +386,13 @@ test('same-layer mount can auto retry native MVU extra analysis when the latest 
   );
   assert.match(
     scheduleBody,
-    /window\.setTimeout\(\(\) => \{[\s\S]*void autoReprocessLatestAssistantVariablesIfMissing\(reason\)/,
-    'auto reload MVU repair should be delayed until the mounted transcript and MVU globals are ready',
+    /const requestIdle = \(window as any\)\.requestIdleCallback;[\s\S]*requestIdle\(\s*\(\) => \{[\s\S]*void autoReprocessLatestAssistantVariablesIfMissing\(reason\)[\s\S]*timeout: 2500/,
+    'auto reload MVU repair should wait for an idle slice before invoking the native retry probe',
+  );
+  assert.match(
+    scheduleBody,
+    /window\.setTimeout\(\(\) => \{[\s\S]*runIdleProbe\(\);[\s\S]*\}, 1800\)/,
+    'auto reload MVU repair should avoid the initial render window before requesting idle work',
   );
   assert.match(
     storySource,

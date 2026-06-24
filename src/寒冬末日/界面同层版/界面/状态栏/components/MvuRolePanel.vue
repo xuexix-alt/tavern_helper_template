@@ -8,7 +8,7 @@
       <div v-if="isDuringExtraAnalysis" class="analysis-flag">解析中</div>
     </div>
 
-    <div class="page-tabs" role="tablist" aria-label="侧栏主分类">
+    <div v-if="!agentsOnly" class="page-tabs" role="tablist" aria-label="侧栏主分类">
       <button type="button" class="page-tab" :class="{ active: pageTab === 'agents' }" @click="setPageTab('agents')">
         AGENTS
       </button>
@@ -19,7 +19,7 @@
 
     <button type="button" class="collapse-btn clip-corner-sm" @click="emit('collapse')">关闭</button>
 
-    <template v-if="pageTab === 'agents'">
+    <template v-if="agentsOnly || pageTab === 'agents'">
       <div class="tab-row" role="tablist" aria-label="角色分类">
         <button
           v-for="tab in agentTabs"
@@ -280,7 +280,7 @@
     </template>
 
     <footer class="sidebar-footer">
-      <div class="page-tabs page-tabs-bottom" role="tablist" aria-label="侧栏主分类（底部）">
+      <div v-if="!agentsOnly" class="page-tabs page-tabs-bottom" role="tablist" aria-label="侧栏主分类（底部）">
         <button type="button" class="page-tab" :class="{ active: pageTab === 'agents' }" @click="setPageTab('agents')">
           AGENTS
         </button>
@@ -324,6 +324,7 @@ const props = defineProps<{
   calibratingDailyRoll?: boolean;
   galleryEntries?: ReaderGalleryEntry[];
   rolePortraitOverrides?: RolePortraitOverrideMap;
+  agentsOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -347,8 +348,14 @@ const flippedRoleKey = ref<string | null>(null);
 const portraitPickerRoleKey = ref<string | null>(null);
 
 function setPageTab(nextTab: PageTab) {
+  if (props.agentsOnly) {
+    pageTab.value = 'agents';
+    return;
+  }
   pageTab.value = nextTab;
 }
+
+const agentsOnly = computed(() => props.agentsOnly === true);
 
 const normalizedTargetMessageId = computed(() => {
   const numeric = Number(props.targetMessageId);
@@ -383,7 +390,10 @@ const {
   mainRoleEntries,
   tempNpcEntries,
 } = useMvuRoleStore(selectedTargetMessageId);
-const { data: systemMvuData, ready: systemReady, isRetrying: isSystemRetrying } = useMvuSystemStore();
+const systemStore = props.agentsOnly === true ? null : useMvuSystemStore();
+const systemMvuData = computed(() => systemStore?.data.value ?? {});
+const systemReady = computed(() => systemStore?.ready.value ?? false);
+const isSystemRetrying = computed(() => systemStore?.isRetrying.value ?? false);
 const agentTabs = computed(() => [
   { id: 'main' as const, label: `主要角色 ${mainRoleEntries.value.length}` },
   { id: 'temp' as const, label: `临时NPC ${tempNpcEntries.value.length}` },
@@ -472,6 +482,13 @@ watch(
         selectedSourceKey.value = latestOption?.key ?? '';
       }
     }
+  },
+  { immediate: true },
+);
+watch(
+  agentsOnly,
+  isAgentsOnly => {
+    if (isAgentsOnly) pageTab.value = 'agents';
   },
   { immediate: true },
 );

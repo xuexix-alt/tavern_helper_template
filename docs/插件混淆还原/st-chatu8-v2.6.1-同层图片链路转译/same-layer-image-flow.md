@@ -1,8 +1,8 @@
-# 当前 st-chatu8 v2.6.1 同层图片事件流
+# 当前 st-chatu8 v2.6.8 同层图片事件流
 
 ## 1. 现场日志归纳
 
-来自 2026-06-01 控制台与调试日志，触发楼层生图后可观察到以下顺序：
+根据 2.6.8 bundle 复核，触发楼层生图后仍可观察到以下顺序：
 
 ```text
 用户/同层 UI 触发某楼层图片生成
@@ -26,7 +26,7 @@ imageInserter.insertImagesIntoElement
 imageInserter.saveImageGroup
   - 将图片组/提示词组写入插件自己的数据结构或正文相关位置
   ↓
-character_message_rendered
+宿主重渲染事件（`CHARACTER_MESSAGE_RENDERED`）
   - 酒馆重新渲染该角色消息
   - 插件按钮/placeholder 在宿主 .mes_text 中变得可读
   ↓
@@ -44,7 +44,7 @@ generate-image-request / generate-image-response
 | `regex-st-chatu8-test-message` | 是，轻量 probe | 插件开始解析正文触发规则；可提前绑定最近楼层 intent |
 | `regex-st-chatu8-result-message` | 是 | 正则结果决定 image### / regex 锚点，适合刷新 prompt placeholder |
 | `ch-llm-image-gen-response` | 是，但不能作为最终 DOM 时点 | LLM 提示词已回，但 `saveImageGroup` 和宿主重渲染还未完成 |
-| `character_message_rendered` | 必须 | 宿主 `.mes_text` 刚渲染，插件按钮/placeholder 最可能在这里落地 |
+| 宿主重渲染事件（`CHARACTER_MESSAGE_RENDERED`） | 必须 | 宿主 `.mes_text` 刚渲染，插件按钮/placeholder 最可能在这里落地 |
 | `st_chatu8_auto_click_complete` | 是，补偿 | 自动点击/插入正文完成后的兜底刷新点 |
 | `generate-image-response` | 是 | 真实图片到达后刷新 gallery / 图片实体 |
 | DOM 有按钮但无 `img[src]` | 必须 | 正文位置依赖按钮/placeholder，不能等图片 ready |
@@ -79,14 +79,14 @@ data-image-id      插件图片 id
 ch-llm-image-gen-response → 可读 extra.images / DOM → 同层刷新
 ```
 
-v2.6.1 实测更接近：
+v2.6.8 复核更接近：
 
 ```text
-ch-llm-image-gen-response → parse/save → character_message_rendered → 可读 DOM
+ch-llm-image-gen-response → parse/save → 宿主重渲染事件 → 可读 DOM
 ```
 
 因此：
 
 - LLM response 只表示“提示词已经回来”，不表示“正文按钮已经进 DOM”。
 - `extra.images` 在真实图片回来前可能没有 `src`，但原始 `regex` / anchor 信息仍然重要。
-- 同层 UI 必须在 response 后追加短延迟 probe，并监听 `character_message_rendered`。
+- 同层 UI 必须在 response 后追加短延迟 probe，并监听宿主重渲染事件（`CHARACTER_MESSAGE_RENDERED`）。

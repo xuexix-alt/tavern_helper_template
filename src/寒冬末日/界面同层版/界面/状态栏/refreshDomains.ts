@@ -28,7 +28,6 @@ export function resolveRefreshDomainsForEvent(input: RefreshEventInput): Refresh
     case 'host.message_swiped':
       pushDomain(out, 'transcriptItems');
       pushDomain(out, 'mvuSources');
-      pushDomain(out, 'gallery');
       return out;
 
     case 'host.message_received':

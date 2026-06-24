@@ -1,9 +1,9 @@
-# st-chatu8 v2.6.1 同层图片链路转译
+# st-chatu8 v2.6.8 同层图片链路转译
 
-> 来源：`F:\ST\SillyTavern\public\scripts\extensions\third-party\st-chatu8`  
-> 插件提交：`5b27e94 chore: update`  
-> 插件版本：`manifest.json` 标记 `2.6.1`  
-> 转译日期：2026-06-01  
+> 来源：`F:\ST\SillyTavern\public\scripts\extensions\third-party\st-chatu8`<br>
+> 插件提交：`60cb146 更新 2.6.8`<br>
+> 插件版本：`manifest.json` 标记 `2.6.8`<br>
+> 复核日期：2026-06-18<br>
 > 目的：把混淆后的当前插件运行链路转成 same-layer 适配可读说明。
 
 ## 1. 为什么要重新转译
@@ -13,7 +13,7 @@
 1. `ch-llm-image-gen-request` / `ch-llm-image-gen-response`
 2. 插件最终把真实图片写进 DOM 后的 `img[src]` mutation
 
-2026-06-01 的现场日志显示，st-chatu8 更新后，同层正文插入链路中间新增/强化了正则与宿主渲染交接阶段：
+根据 2.6.8 bundle 复核，st-chatu8 仍然保留了同层正文插入链路里的正则与宿主渲染交接阶段：
 
 ```text
 regex-st-chatu8-test-message
@@ -22,12 +22,12 @@ ch-llm-image-gen-request
 ch-llm-image-gen-response
 imageInserter.parseImagesFromPrompt
 imageInserter.saveImageGroup
-character_message_rendered
+宿主重渲染事件（`CHARACTER_MESSAGE_RENDERED`）
 st_chatu8_auto_click_complete
 generate-image-request / generate-image-response
 ```
 
-也就是说：`ch-llm-image-gen-response` 并不是“正文 DOM 已经可读”的时点。插件会在 response 之后继续 `saveImageGroup`，然后触发酒馆重渲染 `character_message_rendered`。同层 UI 如果只在 response 或最终图片 `src` 上接管，就会早一拍，拿不到正文里的按钮/占位符，只能把图片条带追加到消息尾部。
+也就是说：`ch-llm-image-gen-response` 并不是“正文 DOM 已经可读”的时点。插件会在 response 之后继续 `saveImageGroup`，然后触发宿主重渲染事件（bundle 中对应 `CHARACTER_MESSAGE_RENDERED`）。同层 UI 如果只在 response 或最终图片 `src` 上接管，就会早一拍，拿不到正文里的按钮/占位符，只能把图片条带追加到消息尾部。
 
 ## 2. 转译结论
 
@@ -51,14 +51,14 @@ generate-image-request / generate-image-response
 
 同层 UI 要把插件返回的图片插入正文位置，必须承认三个事实：
 
-1. **宿主酒馆渲染后的 DOM 是权威来源**  
+1. **宿主酒馆渲染后的 DOM 是权威来源**<br>
    同层 iframe 自己的 transcript DOM 不能当成插件原生 DOM 来源，否则会把已经搬运过的尾部条带再次当成“正文”。
 
-2. **按钮/占位符阶段也要同步**  
+2. **按钮/占位符阶段也要同步**<br>
    在真实图片 `src` 到达前，插件已经在正文里插入按钮或 placeholder。这个阶段决定图片应该出现在正文哪里，不能等到 `generate-image-response` 后再找位置。
 
-3. **`character_message_rendered` 是新插件交接点**  
-   现场日志显示 `saveImageGroup` 后会出现 `character_message_rendered`，这时宿主 `.mes_text` 才更可能包含插件注入的按钮/占位符。
+3. **宿主重渲染事件是交接点**<br>
+   `saveImageGroup` 之后的宿主重渲染事件（bundle 中对应 `CHARACTER_MESSAGE_RENDERED`）才是正文按钮/占位符更可能落地的点。
 
 ## 4. 代码适配入口
 
