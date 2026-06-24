@@ -33,11 +33,7 @@ export function requestPluginImage(input: PluginImageRequest): Promise<PluginIma
   if (!prompt) {
     return Promise.reject(new Error('prompt is required'));
   }
-  if (
-    typeof eventOn !== 'function' ||
-    typeof eventEmit !== 'function' ||
-    typeof eventRemoveListener !== 'function'
-  ) {
+  if (typeof eventOn !== 'function' || typeof eventEmit !== 'function' || typeof eventRemoveListener !== 'function') {
     return Promise.reject(new Error('Tavern Helper event functions are unavailable'));
   }
 

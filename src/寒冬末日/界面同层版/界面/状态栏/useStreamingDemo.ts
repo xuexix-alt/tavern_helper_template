@@ -5723,7 +5723,9 @@ export function useStreamingDemo() {
     return transcript.value
       .filter(item => item.role === 'assistant')
       .map(item => Math.trunc(Number(item.message_id)))
-      .filter((messageId, index, ids) => Number.isFinite(messageId) && messageId >= 0 && ids.indexOf(messageId) === index)
+      .filter(
+        (messageId, index, ids) => Number.isFinite(messageId) && messageId >= 0 && ids.indexOf(messageId) === index,
+      )
       .filter(messageId => {
         const detail = readChatMessageDetail(messageId);
         const text = String(detail?.mes ?? detail?.message ?? '');

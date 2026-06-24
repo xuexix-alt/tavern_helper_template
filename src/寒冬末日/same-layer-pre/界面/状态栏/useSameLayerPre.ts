@@ -47,7 +47,9 @@ function escapeHtml(text: string) {
 }
 
 function plainPreview(text: string, maxLength = 96) {
-  const normalized = String(text ?? '').replace(/\s+/g, ' ').trim();
+  const normalized = String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized;
 }
 
@@ -87,14 +89,13 @@ function splitInlineMarkedOptions(source: string) {
 }
 
 function collectChoiceOptionsFromBlock(block: string) {
-  const normalizedBlock = String(block ?? '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/?li(?:\s[^>]*)?>/gi, '\n');
+  const normalizedBlock = String(block ?? '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?li(?:\s[^>]*)?>/gi, '\n');
   const inlineOptions = splitInlineMarkedOptions(normalizedBlock);
   if (inlineOptions.length > 0) return inlineOptions;
 
-  return normalizedBlock
-    .split('\n')
-    .map(normalizeChoiceOption)
-    .filter(Boolean);
+  return normalizedBlock.split('\n').map(normalizeChoiceOption).filter(Boolean);
 }
 
 function extractChoiceOptions(rawText: string, renderedHtml = '') {
@@ -106,7 +107,8 @@ function extractChoiceOptions(rawText: string, renderedHtml = '') {
     }
   }
 
-  const extracted = blocks.length > 0 ? blocks.flatMap(collectChoiceOptionsFromBlock) : splitInlineMarkedOptions(rawText);
+  const extracted =
+    blocks.length > 0 ? blocks.flatMap(collectChoiceOptionsFromBlock) : splitInlineMarkedOptions(rawText);
   const unique: string[] = [];
   for (const option of extracted) {
     const normalized = normalizeChoiceOption(option);
@@ -406,7 +408,11 @@ export function useSameLayerPre() {
       .sort((a, b) => a - b);
   }
 
-  function collectDeletableMessageIdsAfter(messages: ChatMessage[], messageId: number, carrierMessageId: number | null) {
+  function collectDeletableMessageIdsAfter(
+    messages: ChatMessage[],
+    messageId: number,
+    carrierMessageId: number | null,
+  ) {
     const target = Math.trunc(Number(messageId));
     if (!Number.isFinite(target) || target <= 0) return [];
 
@@ -488,7 +494,9 @@ export function useSameLayerPre() {
       const latestId = visibleMessages.at(-1)?.message_id ?? -1;
       const carrierMessageId = readPreCarrierMessageId();
       const visibleIds = visibleMessages.map(message => message.message_id);
-      transcriptItems.value = visibleMessages.map(message => buildCachedTranscriptItem(message, latestId, carrierMessageId));
+      transcriptItems.value = visibleMessages.map(message =>
+        buildCachedTranscriptItem(message, latestId, carrierMessageId),
+      );
       pruneTranscriptItemCache(visibleIds);
       const hostMessageIds = collectHostVisibleMessageIds();
       syncHostVisualHide(hostMessageIds.length > 0 ? hostMessageIds : visibleIds);
@@ -522,7 +530,11 @@ export function useSameLayerPre() {
     }
 
     const now = Date.now();
-    if (!streamedPreviewText || raw.length < streamedPreviewText.length || now - streamedPreviewUpdatedAt >= PRE_STREAMING_RENDER_INTERVAL_MS) {
+    if (
+      !streamedPreviewText ||
+      raw.length < streamedPreviewText.length ||
+      now - streamedPreviewUpdatedAt >= PRE_STREAMING_RENDER_INTERVAL_MS
+    ) {
       streamedPreviewText = raw;
       streamedPreviewUpdatedAt = now;
       streamingText.value = raw;
@@ -596,7 +608,9 @@ export function useSameLayerPre() {
     const target = latestRegeneratableMessage.value;
     if (!target || busy.value) return false;
     if (target.role === 'user') return Boolean(target.raw.trim());
-    return Boolean([...transcriptItems.value].reverse().find(item => item.role === 'user' && item.message_id < target.message_id));
+    return Boolean(
+      [...transcriptItems.value].reverse().find(item => item.role === 'user' && item.message_id < target.message_id),
+    );
   });
 
   async function submitPrompt(value?: string) {
@@ -766,9 +780,13 @@ export function useSameLayerPre() {
     pushLog('action', '已请求停止生成');
   }
 
-  watch(theme, value => {
-    applyDemoTheme(value);
-  }, { immediate: true });
+  watch(
+    theme,
+    value => {
+      applyDemoTheme(value);
+    },
+    { immediate: true },
+  );
 
   watch(
     () => transcriptItems.value.map(item => item.message_id),

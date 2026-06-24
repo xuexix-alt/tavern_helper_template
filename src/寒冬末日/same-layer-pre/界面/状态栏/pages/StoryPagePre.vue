@@ -123,7 +123,9 @@
             <span class="demo-kicker">ROLE // SNAPSHOT</span>
             <strong>角色变量</strong>
           </div>
-          <button type="button" class="ui-close-btn inline" aria-label="关闭角色侧栏" @click="closeRoleDrawer">×</button>
+          <button type="button" class="ui-close-btn inline" aria-label="关闭角色侧栏" @click="closeRoleDrawer">
+            ×
+          </button>
         </div>
         <div class="ui-sidebar-body">
           <MvuRolePanel
@@ -148,7 +150,9 @@
             <span class="demo-kicker">GALLERY // PRE</span>
             <strong>画廊预留</strong>
           </div>
-          <button type="button" class="ui-close-btn inline" aria-label="关闭画廊侧栏" @click="closeGalleryDrawer">×</button>
+          <button type="button" class="ui-close-btn inline" aria-label="关闭画廊侧栏" @click="closeGalleryDrawer">
+            ×
+          </button>
         </div>
         <div class="ui-sidebar-body">
           <PreGalleryPanel />
@@ -210,7 +214,12 @@
                       </span>
                     </div>
                   </div>
-                  <button type="button" class="ui-close-btn inline" aria-label="关闭系统面板" @click="closeUtilityDrawer">
+                  <button
+                    type="button"
+                    class="ui-close-btn inline"
+                    aria-label="关闭系统面板"
+                    @click="closeUtilityDrawer"
+                  >
                     ×
                   </button>
                 </header>
@@ -242,7 +251,11 @@
                 >
                   <span>重生</span>
                   <span class="ui-bars">
-                    <i v-for="i in 5" :key="`regen-${i}`" :class="{ active: i <= (canRegenerateLatestMessage ? 5 : 1) }"></i>
+                    <i
+                      v-for="i in 5"
+                      :key="`regen-${i}`"
+                      :class="{ active: i <= (canRegenerateLatestMessage ? 5 : 1) }"
+                    ></i>
                   </span>
                 </button>
 
@@ -257,7 +270,11 @@
                 >
                   <span>系统</span>
                   <span class="ui-bars">
-                    <i v-for="i in 8" :key="`system-${i}`" :class="{ active: i <= Math.min(8, logItems.length + 3) }"></i>
+                    <i
+                      v-for="i in 8"
+                      :key="`system-${i}`"
+                      :class="{ active: i <= Math.min(8, logItems.length + 3) }"
+                    ></i>
                   </span>
                 </button>
 
@@ -597,10 +614,8 @@ onBeforeUnmount(() => {
  * 2600    — ui-bottom-drawer
  */
 .ui-host-shell {
-  --pre-font-sans:
-    var(--font-sans, "Inter", "Fira Sans", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif);
-  --pre-font-mono:
-    var(--demo-font-mono, "Fira Code", "SFMono-Regular", "Cascadia Mono", Consolas, monospace);
+  --pre-font-sans: var(--font-sans, 'Inter', 'Fira Sans', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif);
+  --pre-font-mono: var(--demo-font-mono, 'Fira Code', 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace);
 
   position: relative;
   z-index: 1;

@@ -218,7 +218,10 @@ test('same-layer-pre adopts same-layer reader chrome and option menu without ima
   assert.match(storySource, /:choice-options="latestAssistantItem\?\.options \?\? \[\]"/);
   assert.match(storySource, /:can-generate-latest-image="false"/);
   assert.doesNotMatch(storySource, /@generate-latest-image/);
-  assert.doesNotMatch(storySource, /handleChoiceModalGenerateLatestImage|triggerImageGenerationForMessage|GENERATE_IMAGE_REQUEST/);
+  assert.doesNotMatch(
+    storySource,
+    /handleChoiceModalGenerateLatestImage|triggerImageGenerationForMessage|GENERATE_IMAGE_REQUEST/,
+  );
 
   assert.match(hookSource, /function extractChoiceOptions/);
   assert.match(toTranscriptItemSource, /options:\s*extractChoiceOptions\(raw,\s*finalHtml\)/);
@@ -291,7 +294,10 @@ test('same-layer-pre wires native-style regenerate and rollback actions through 
   assert.match(hookSource, /function resolveRegenerateTarget/);
   assert.match(hookSource, /findUserPromptBefore/);
   assert.match(hookSource, /await deleteChatMessages\(trailingIds,\s*\{\s*refresh:\s*'none'\s*\}\)/);
-  assert.match(hookSource, /await generate\(\{\s*user_input:\s*prompt,\s*should_stream:\s*true,\s*generation_id:\s*generationId\s*\}\)/);
+  assert.match(
+    hookSource,
+    /await generate\(\{\s*user_input:\s*prompt,\s*should_stream:\s*true,\s*generation_id:\s*generationId\s*\}\)/,
+  );
   assert.match(hookSource, /await createChatMessages\(\[\{\s*role:\s*'assistant'/);
   assert.match(hookSource, /canDeleteFrom,/);
   assert.match(hookSource, /canReroll:\s*canDeleteFrom && \(role === 'assistant' \|\| role === 'user'\)/);
@@ -412,7 +418,10 @@ test('same-layer-pre wires inherited AGENTS portrait switching without enabling 
   assert.match(storySource, /addRolePortraitSetImage/);
   assert.match(storySource, /clearRolePortraitOverride/);
   assert.match(storySource, /writeRolePortraitOverrides/);
-  assert.match(storySource, /const rolePortraitOverrides = ref<RolePortraitOverrideMap>\(readRolePortraitOverrides\(\)\)/);
+  assert.match(
+    storySource,
+    /const rolePortraitOverrides = ref<RolePortraitOverrideMap>\(readRolePortraitOverrides\(\)\)/,
+  );
   assert.match(storySource, /function selectRolePortraitForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function addRolePortraitSetImageForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function clearRolePortraitForRole\(roleKey: string\)/);
