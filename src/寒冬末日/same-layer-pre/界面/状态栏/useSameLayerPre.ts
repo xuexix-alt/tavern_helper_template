@@ -144,7 +144,8 @@ function renderMessageHtml(message: string, role: TranscriptItem['role'], messag
 }
 
 const LOOSE_PARAGRAPH_BREAK_RE = /(?:<br\s*\/?>\s*){2,}/gi;
-const STRUCTURED_DISPLAY_BLOCK_RE = /<(?:article|aside|blockquote|details|div|figure|h[1-6]|img|li|ol|p|pre|section|table|ul)\b/i;
+const STRUCTURED_DISPLAY_BLOCK_RE =
+  /<(?:article|aside|blockquote|details|div|figure|h[1-6]|img|li|ol|p|pre|section|table|ul)\b/i;
 
 function wrapLooseReadingParagraphs(html: string) {
   html = String(html ?? '').trim();
@@ -159,9 +160,11 @@ function wrapLooseReadingParagraphs(html: string) {
 }
 
 function normalizeDisplayedHtml(html: string) {
-  return wrapLooseReadingParagraphs(String(html ?? '')
-    .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
-    .replace(/<\/q>/gi, '</span>'));
+  return wrapLooseReadingParagraphs(
+    String(html ?? '')
+      .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
+      .replace(/<\/q>/gi, '</span>'),
+  );
 }
 
 function readPreCarrierMessageId(): number | null {
@@ -584,7 +587,9 @@ export function useSameLayerPre() {
       const latestId = visibleMessages.at(-1)?.message_id ?? -1;
       const carrierMessageId = readPreCarrierMessageId();
       const visibleIds = visibleMessages.map(message => message.message_id);
-      transcriptItems.value = visibleMessages.map(message => buildCachedTranscriptItem(message, latestId, carrierMessageId));
+      transcriptItems.value = visibleMessages.map(message =>
+        buildCachedTranscriptItem(message, latestId, carrierMessageId),
+      );
       pruneTranscriptItemCache(visibleIds);
       const hostMessageIds = collectHostVisibleMessageIds();
       replaceHostVisualHide(hostMessageIds.length > 0 ? hostMessageIds : visibleIds);
@@ -937,9 +942,13 @@ export function useSameLayerPre() {
     pushLog('action', '已请求停止生成');
   }
 
-  watch(theme, value => {
-    applyDemoTheme(value);
-  }, { immediate: true });
+  watch(
+    theme,
+    value => {
+      applyDemoTheme(value);
+    },
+    { immediate: true },
+  );
 
   watch(
     () => transcriptItems.value.map(item => item.message_id),

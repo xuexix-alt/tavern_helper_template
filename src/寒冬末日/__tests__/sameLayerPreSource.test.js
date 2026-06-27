@@ -484,7 +484,10 @@ test('same-layer-pre targeted message refresh preserves the existing host visual
   assert.doesNotMatch(applySource, /for \(const id of hiddenMessageIds\)[\s\S]*?clearOne\(id\)/);
   assert.match(replaceSource, /for \(const id of Array\.from\(hiddenMessageIds\)\)/);
   assert.match(replaceSource, /clearOne\(id\)/);
-  assert.match(refreshTranscriptSource, /replaceHostVisualHide\(hostMessageIds\.length > 0 \? hostMessageIds : visibleIds\)/);
+  assert.match(
+    refreshTranscriptSource,
+    /replaceHostVisualHide\(hostMessageIds\.length > 0 \? hostMessageIds : visibleIds\)/,
+  );
   assert.match(targetedRefreshSource, /syncHostVisualHide\(targetIds\)/);
   assert.doesNotMatch(targetedRefreshSource, /replaceHostVisualHide\(/);
 });
@@ -575,7 +578,10 @@ test('same-layer-pre prefers host rendered message HTML before re-running displa
   assert.match(hostRenderedSource, /normalizeDisplayedHtml/);
   assert.doesNotMatch(hostRenderedSource, /formatAsDisplayedMessage/);
   assert.match(toTranscriptItemSource, /const hostRenderedHtml = readHostRenderedMessageHtml\(message\.message_id\)/);
-  assert.match(toTranscriptItemSource, /const finalHtml = hostRenderedHtml \|\| renderMessageHtml\(raw,\s*role,\s*message\.message_id\)/);
+  assert.match(
+    toTranscriptItemSource,
+    /const finalHtml = hostRenderedHtml \|\| renderMessageHtml\(raw,\s*role,\s*message\.message_id\)/,
+  );
 });
 
 test('same-layer-pre normalizes loose prose into Chinese reading paragraphs', () => {
@@ -597,7 +603,10 @@ test('same-layer-pre normalizes loose prose into Chinese reading paragraphs', ()
     cardSource,
     /\.pre-message-card__body :deep\(:where\(p,\s*\.pre-reading-paragraph,\s*blockquote\) \+ :where\(p,\s*\.pre-reading-paragraph,\s*blockquote\)\)/,
   );
-  assert.match(cardSource, /\.pre-message-card__body :deep\(:where\(ul,\s*ol,\s*pre,\s*table,\s*figure\)\)\s*\{[\s\S]*?text-indent:\s*0;/);
+  assert.match(
+    cardSource,
+    /\.pre-message-card__body :deep\(:where\(ul,\s*ol,\s*pre,\s*table,\s*figure\)\)\s*\{[\s\S]*?text-indent:\s*0;/,
+  );
 });
 
 test('same-layer-pre streaming preview stays lightweight until the done transcript render', () => {

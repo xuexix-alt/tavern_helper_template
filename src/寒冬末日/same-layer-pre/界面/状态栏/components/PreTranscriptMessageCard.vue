@@ -151,7 +151,8 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   margin-block: 0;
 }
 
-.pre-message-card__body :deep(:where(p, .pre-reading-paragraph, blockquote) + :where(p, .pre-reading-paragraph, blockquote)) {
+.pre-message-card__body
+  :deep(:where(p, .pre-reading-paragraph, blockquote) + :where(p, .pre-reading-paragraph, blockquote)) {
   margin-block-start: 1em;
 }
 
