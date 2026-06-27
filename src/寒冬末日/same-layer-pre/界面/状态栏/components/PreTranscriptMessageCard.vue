@@ -146,6 +146,19 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   word-break: break-word;
 }
 
+.pre-message-card__body :deep(:where(p, .pre-reading-paragraph, blockquote)) {
+  text-indent: 2em;
+  margin-block: 0;
+}
+
+.pre-message-card__body :deep(:where(p, .pre-reading-paragraph, blockquote) + :where(p, .pre-reading-paragraph, blockquote)) {
+  margin-block-start: 1em;
+}
+
+.pre-message-card__body :deep(:where(ul, ol, pre, table, figure)) {
+  text-indent: 0;
+}
+
 .pre-message-card__body :deep(pre),
 .pre-message-card__body :deep(code) {
   white-space: pre-wrap !important;

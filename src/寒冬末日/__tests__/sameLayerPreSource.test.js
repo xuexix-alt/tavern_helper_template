@@ -112,6 +112,26 @@ test('same-layer-pre keeps a gallery shell without wiring functional gallery dat
   assert.doesNotMatch(gallerySource, /GeneratedImageAsset/);
 });
 
+test('same-layer-pre mounts the same-layer map panel beside the system utility drawer', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+
+  assert.match(storySource, /import MapBusinessPanel from ['"].*MapBusinessPanel\.vue['"]/);
+  assert.match(storySource, /const activeUtilityDrawer = ref<null \| 'system' \| 'map'>\(null\)/);
+  assert.match(storySource, /<MapBusinessPanel\s+v-else-if="activeUtilityDrawer === 'map'"\s*\/>/);
+  assert.match(storySource, /@click="toggleUtilityDrawer\('map'\)"/);
+  assert.match(storySource, /<span>地图<\/span>/);
+  assert.match(storySource, /title:\s*'战术地图'/);
+  assert.match(storySource, /eyebrow:\s*'MAP \/\/ TACTICAL'/);
+  assert.match(storySource, /\.ui-bottom-drawer\.is-map/);
+  assert.match(storySource, /\.ui-bottom-drawer-body\.is-map/);
+
+  const gallerySidebarStart = storySource.indexOf('<aside class="ui-sidebar ui-sidebar-right"');
+  const gallerySidebarEnd = storySource.indexOf('</aside>', gallerySidebarStart);
+  assert.ok(gallerySidebarStart > -1, 'gallery sidebar should exist');
+  assert.ok(gallerySidebarEnd > gallerySidebarStart, 'gallery sidebar should be bounded');
+  assert.doesNotMatch(storySource.slice(gallerySidebarStart, gallerySidebarEnd), /MapBusinessPanel/);
+});
+
 test('same-layer-pre visually hides host chat floors while preserving host DOM', () => {
   const controllerSource = readPre('preHostVisualHide.ts');
   const hookSource = readPre('useSameLayerPre.ts');
@@ -451,6 +471,24 @@ test('same-layer-pre host visual hide survives host DOM refresh without MVU reve
   assert.doesNotMatch(controllerSource, /\.suspend\(/);
 });
 
+test('same-layer-pre targeted message refresh preserves the existing host visual hide set', () => {
+  const controllerSource = readPre('preHostVisualHide.ts');
+  const hookSource = readPre('useSameLayerPre.ts');
+  const applySource = extractFunctionSource(controllerSource, 'applyToMessageIds');
+  const replaceSource = extractFunctionSource(controllerSource, 'replaceWithMessageIds');
+  const refreshTranscriptSource = extractFunctionSource(hookSource, 'refreshTranscript');
+  const targetedRefreshSource = extractFunctionSource(hookSource, 'refreshTranscriptItemsByIds');
+
+  assert.match(controllerSource, /function replaceWithMessageIds/);
+  assert.match(controllerSource, /replaceWithMessageIds,/);
+  assert.doesNotMatch(applySource, /for \(const id of hiddenMessageIds\)[\s\S]*?clearOne\(id\)/);
+  assert.match(replaceSource, /for \(const id of Array\.from\(hiddenMessageIds\)\)/);
+  assert.match(replaceSource, /clearOne\(id\)/);
+  assert.match(refreshTranscriptSource, /replaceHostVisualHide\(hostMessageIds\.length > 0 \? hostMessageIds : visibleIds\)/);
+  assert.match(targetedRefreshSource, /syncHostVisualHide\(targetIds\)/);
+  assert.doesNotMatch(targetedRefreshSource, /replaceHostVisualHide\(/);
+});
+
 test('same-layer-pre coalesces refresh events and avoids full transcript rerender on hot paths', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const refreshTranscriptSource = extractFunctionSource(hookSource, 'refreshTranscript');
@@ -468,6 +506,98 @@ test('same-layer-pre coalesces refresh events and avoids full transcript rerende
   assert.doesNotMatch(refreshTranscriptSource, /getChatMessages\('0-\{\{lastMessageId\}\}'/);
   assert.doesNotMatch(hookSource, /eventOn\(eventName as any,\s*\(\) => refreshTranscript/);
   assert.match(hookSource, /eventOn\(eventName as any,\s*\(\) => scheduleTranscriptRefresh/);
+});
+
+test('same-layer-pre refreshes updated message floors without rebuilding the transcript window', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const readMessageSource = extractFunctionSource(hookSource, 'readChatMessageById');
+  const targetedRefreshSource = extractFunctionSource(hookSource, 'refreshTranscriptItemsByIds');
+  const scheduleTargetedSource = extractFunctionSource(hookSource, 'scheduleTargetedTranscriptRefresh');
+  const flushSource = extractFunctionSource(hookSource, 'flushScheduledTranscriptRefresh');
+
+  assert.match(readMessageSource, /getChatMessages\(`\$\{messageId\}`,\s*\{\s*hide_state:\s*'all'\s*\}\)/);
+  assert.doesNotMatch(readMessageSource, /readRecentChatMessagesForUi\(\)/);
+  assert.doesNotMatch(readMessageSource, /0-\{\{lastMessageId\}\}/);
+
+  assert.match(targetedRefreshSource, /const currentItems = transcriptItems\.value/);
+  assert.match(targetedRefreshSource, /readChatMessageById\(messageId\)/);
+  assert.match(targetedRefreshSource, /buildCachedTranscriptItem\(message,\s*latestId,\s*carrierMessageId\)/);
+  assert.match(
+    targetedRefreshSource,
+    /transcriptItems\.value = currentItems\.map\(item => updatedItems\.get\(item\.message_id\) \?\? item\)/,
+  );
+  assert.doesNotMatch(targetedRefreshSource, /readRecentChatMessagesForUi\(\)/);
+  assert.doesNotMatch(targetedRefreshSource, /collectHostVisibleMessageIds\(\)/);
+
+  assert.match(scheduleTargetedSource, /pendingTargetedRefreshIds/);
+  assert.match(scheduleTargetedSource, /flushScheduledTranscriptRefresh\(reason\)/);
+  assert.doesNotMatch(scheduleTargetedSource, /refreshTranscript\(nextReason\)/);
+  assert.match(flushSource, /const nextTargetedIds = Array\.from\(pendingTargetedRefreshIds\)/);
+  assert.match(flushSource, /if \(nextMode === 'full'\)[\s\S]*?refreshTranscript\(nextReason\)/);
+  assert.match(flushSource, /refreshTranscriptItemsByIds\(nextTargetedIds,\s*nextReason\)/);
+
+  assert.match(hookSource, /const messageRefreshEvents = \[/);
+  assert.match(hookSource, /tavern_events\.MESSAGE_UPDATED/);
+  assert.match(hookSource, /tavern_events\.MESSAGE_EDITED/);
+  assert.match(hookSource, /const messageIds = normalizeEventMessageIds\(eventArgs\)/);
+  assert.match(hookSource, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
+});
+
+test('same-layer-pre keeps user body literal so existing quotes are not wrapped again', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const renderMessageSource = extractFunctionSource(hookSource, 'renderMessageHtml');
+  const userLiteralIndex = renderMessageSource.indexOf("if (role === 'user') return escapeHtml(raw);");
+  const displayedFormatterIndex = renderMessageSource.indexOf(
+    'formatAsDisplayedMessage(raw, { message_id: messageId })',
+  );
+
+  assert.ok(userLiteralIndex > -1, 'user floors should render escaped raw text like non-pre');
+  assert.ok(displayedFormatterIndex > -1, 'assistant floors should still use Tavern displayed formatting');
+  assert.ok(userLiteralIndex < displayedFormatterIndex, 'user literal render should bypass display formatting');
+});
+
+test('same-layer-pre does not run the extra Tavern regex fallback that double-wraps quoted body text', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const renderMessageSource = extractFunctionSource(hookSource, 'renderMessageHtml');
+
+  assert.doesNotMatch(hookSource, /function regexSourceForRole/);
+  assert.doesNotMatch(renderMessageSource, /formatAsTavernRegexedString/);
+  assert.match(renderMessageSource, /formatAsDisplayedMessage\(raw, \{ message_id: messageId \}\)/);
+  assert.match(renderMessageSource, /return escapeHtml\(raw\);/);
+});
+
+test('same-layer-pre prefers host rendered message HTML before re-running display formatting', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const hostRenderedSource = extractFunctionSource(hookSource, 'readHostRenderedMessageHtml');
+  const toTranscriptItemSource = extractFunctionSource(hookSource, 'toTranscriptItem');
+
+  assert.match(hostRenderedSource, /\.mes_text/);
+  assert.match(hostRenderedSource, /normalizeDisplayedHtml/);
+  assert.doesNotMatch(hostRenderedSource, /formatAsDisplayedMessage/);
+  assert.match(toTranscriptItemSource, /const hostRenderedHtml = readHostRenderedMessageHtml\(message\.message_id\)/);
+  assert.match(toTranscriptItemSource, /const finalHtml = hostRenderedHtml \|\| renderMessageHtml\(raw,\s*role,\s*message\.message_id\)/);
+});
+
+test('same-layer-pre normalizes loose prose into Chinese reading paragraphs', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const normalizeSource = extractFunctionSource(hookSource, 'normalizeDisplayedHtml');
+  const wrapSource = extractFunctionSource(hookSource, 'wrapLooseReadingParagraphs');
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+
+  assert.match(normalizeSource, /wrapLooseReadingParagraphs/);
+  assert.match(wrapSource, /LOOSE_PARAGRAPH_BREAK_RE/);
+  assert.match(wrapSource, /pre-reading-paragraph/);
+  assert.match(wrapSource, /STRUCTURED_DISPLAY_BLOCK_RE/);
+  assert.match(wrapSource, /return html;/);
+  assert.match(
+    cardSource,
+    /\.pre-message-card__body :deep\(:where\(p,\s*\.pre-reading-paragraph,\s*blockquote\)\)\s*\{[\s\S]*?text-indent:\s*2em;[\s\S]*?margin-block:/,
+  );
+  assert.match(
+    cardSource,
+    /\.pre-message-card__body :deep\(:where\(p,\s*\.pre-reading-paragraph,\s*blockquote\) \+ :where\(p,\s*\.pre-reading-paragraph,\s*blockquote\)\)/,
+  );
+  assert.match(cardSource, /\.pre-message-card__body :deep\(:where\(ul,\s*ol,\s*pre,\s*table,\s*figure\)\)\s*\{[\s\S]*?text-indent:\s*0;/);
 });
 
 test('same-layer-pre streaming preview stays lightweight until the done transcript render', () => {

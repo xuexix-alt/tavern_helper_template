@@ -200,7 +200,7 @@
                 :class="`is-${activeUtilityDrawer}`"
                 role="dialog"
                 aria-modal="true"
-                aria-label="系统面板"
+                :aria-label="activeUtilityMeta.title"
               >
                 <header class="ui-bottom-drawer-head">
                   <div class="ui-bottom-drawer-head-copy">
@@ -232,6 +232,7 @@
                     :transcript-total="readerSummary.turnCount"
                     :assistant-count="assistantItemCount"
                   />
+                  <MapBusinessPanel v-else-if="activeUtilityDrawer === 'map'" />
                 </div>
               </section>
             </transition>
@@ -275,6 +276,21 @@
                       :key="`system-${i}`"
                       :class="{ active: i <= Math.min(8, logItems.length + 3) }"
                     ></i>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  class="ui-signal-btn"
+                  :class="{ active: activeUtilityDrawer === 'map' }"
+                  aria-haspopup="dialog"
+                  :aria-expanded="activeUtilityDrawer === 'map'"
+                  aria-label="打开地图面板"
+                  @click="toggleUtilityDrawer('map')"
+                >
+                  <span>地图</span>
+                  <span class="ui-bars">
+                    <i v-for="i in 8" :key="`map-${i}`" :class="{ active: i <= 3 }"></i>
                   </span>
                 </button>
 
@@ -329,6 +345,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
+import MapBusinessPanel from '../../../../界面同层版/界面/状态栏/components/MapBusinessPanel.vue';
 import MvuRolePanel from '../../../../界面同层版/界面/状态栏/components/MvuRolePanel.vue';
 import WorkbenchTabs from '../../../../界面同层版/界面/状态栏/components/WorkbenchTabs.vue';
 import {
@@ -378,7 +395,7 @@ const galleryDrawerOpen = ref(false);
 const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
 const transcriptWindowMenuOpen = ref(false);
 const topbarMoreMenuOpen = ref(false);
-const activeUtilityDrawer = ref<null | 'system'>(null);
+const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
 const transcriptWindowLabel = ref('最新');
 const readerShellHeight = ref('min(92vh, 960px)');
 const shellStyleVars = computed(() => ({
@@ -400,17 +417,37 @@ const latestAssistantItem = computed(
 
 const assistantItemCount = computed(() => transcriptItems.value.filter(item => item.role === 'assistant').length);
 
-const activeUtilityMeta = computed(() => ({
-  title: '系统 TAB',
-  subtitle: '压缩展示日志、状态和关键工作台指标。',
-  eyebrow: 'TASKS // SYSTEM',
-}));
+const activeUtilityMeta = computed(() => {
+  if (activeUtilityDrawer.value === 'map') {
+    return {
+      title: '战术地图',
+      subtitle: '先看庇护所态势，再向下查看区域与房间。',
+      eyebrow: 'MAP // TACTICAL',
+    };
+  }
 
-const activeUtilityPills = computed(() => [
-  { label: '日志', value: `${logItems.value.length}` },
-  { label: '楼层', value: `${readerSummary.value.turnCount || 0}` },
-  { label: '助手', value: `${assistantItemCount.value}` },
-]);
+  return {
+    title: '系统 TAB',
+    subtitle: '压缩展示日志、状态和关键工作台指标。',
+    eyebrow: 'TASKS // SYSTEM',
+  };
+});
+
+const activeUtilityPills = computed(() => {
+  if (activeUtilityDrawer.value === 'map') {
+    return [
+      { label: '楼层', value: `${readerSummary.value.turnCount || 0}` },
+      { label: '助手', value: `${assistantItemCount.value}` },
+      { label: '选项', value: `${latestAssistantItem.value?.options.length ?? 0}` },
+    ];
+  }
+
+  return [
+    { label: '日志', value: `${logItems.value.length}` },
+    { label: '楼层', value: `${readerSummary.value.turnCount || 0}` },
+    { label: '助手', value: `${assistantItemCount.value}` },
+  ];
+});
 
 const transcriptWindowPages = computed(() => [
   { key: 'latest', label: '最新' },
@@ -478,7 +515,7 @@ function closeUtilityDrawer() {
   activeUtilityDrawer.value = null;
 }
 
-function toggleUtilityDrawer(drawer: 'system') {
+function toggleUtilityDrawer(drawer: 'system' | 'map') {
   activeUtilityDrawer.value = activeUtilityDrawer.value === drawer ? null : drawer;
   closeTopbarMenus();
   closeSideDrawers();
@@ -1252,6 +1289,17 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(18px);
 }
 
+@media (min-width: 761px) {
+  .ui-bottom-drawer {
+    width: min(94vw, calc(var(--reader-content-max, 72rem) + 180px));
+  }
+
+  .ui-bottom-drawer.is-map {
+    height: min(82vh, 640px);
+    max-height: min(82vh, 640px);
+  }
+}
+
 .ui-bottom-drawer-head {
   display: flex;
   align-items: flex-start;
@@ -1314,6 +1362,58 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 10px 7px 14px;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head-copy {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head-copy .demo-kicker {
+  flex-shrink: 0;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  opacity: 0.6;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head strong {
+  flex-shrink: 0;
+  margin-top: 0;
+  font-size: 13px;
+}
+
+.ui-bottom-drawer.is-map .ui-bottom-drawer-head p {
+  display: none;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pills {
+  gap: 5px;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill {
+  min-height: 20px;
+  gap: 5px;
+  padding: 2px 7px;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill small {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.ui-bottom-drawer.is-map .ui-drawer-pill strong {
+  font-size: 10px;
+}
+
 .ui-bottom-drawer-body {
   flex: 1 1 0;
   min-height: 0;
@@ -1321,6 +1421,32 @@ onBeforeUnmount(() => {
   padding: 12px 14px 14px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 18%, transparent), transparent);
   line-height: 1.6;
+}
+
+.ui-bottom-drawer-body.is-map {
+  padding: 10px 12px 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 22%, transparent), transparent),
+    linear-gradient(to right, color-mix(in srgb, var(--border) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 10%, transparent) 1px, transparent 1px);
+  background-size:
+    auto,
+    40px 40px,
+    40px 40px;
+}
+
+.ui-bottom-drawer-body.is-map :deep(.map-panel),
+.ui-bottom-drawer-body.is-map :deep(.map-section) {
+  min-height: 0;
+}
+
+.ui-bottom-drawer-body.is-map :deep(.zone-card),
+.ui-bottom-drawer-body.is-map :deep(.floor-card),
+.ui-bottom-drawer-body.is-map :deep(.room-card),
+.ui-bottom-drawer-body.is-map :deep(.map-summary-chip) {
+  background: color-mix(in srgb, var(--surface) 18%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .ui-bottom-drawer-body :deep(.workbench-card) {
@@ -1449,6 +1575,11 @@ onBeforeUnmount(() => {
     max-height: calc(100vh - 96px);
     border-radius: 18px 18px 12px 12px;
     transform: none;
+  }
+
+  .ui-bottom-drawer.is-map {
+    height: calc(100vh - 96px);
+    max-height: calc(100vh - 96px);
   }
 
   .utility-drawer-rise-enter-from,

@@ -23,6 +23,8 @@ type PreTranscriptItemCacheEntry = {
   item: TranscriptItem;
 };
 
+type ScheduledRefreshMode = 'none' | 'targeted' | 'full';
+
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
   const roots = [document.documentElement, document.body].filter(Boolean) as HTMLElement[];
@@ -124,13 +126,11 @@ function roleLabel(role: TranscriptItem['role']) {
   return 'ASSISTANT';
 }
 
-function regexSourceForRole(role: TranscriptItem['role']) {
-  return role === 'user' ? 'user_input' : 'ai_output';
-}
-
 function renderMessageHtml(message: string, role: TranscriptItem['role'], messageId: number) {
   const raw = String(message ?? '');
   if (!raw.trim()) return '';
+
+  if (role === 'user') return escapeHtml(raw);
 
   if (typeof formatAsDisplayedMessage === 'function') {
     try {
@@ -140,16 +140,28 @@ function renderMessageHtml(message: string, role: TranscriptItem['role'], messag
     }
   }
 
-  if (typeof formatAsTavernRegexedString === 'function') {
-    try {
-      const regexed = formatAsTavernRegexedString(raw, regexSourceForRole(role), 'display', { depth: 0 });
-      if (typeof regexed === 'string' && regexed.trim()) return regexed;
-    } catch (error) {
-      console.warn('[same-layer-pre] formatAsTavernRegexedString failed', { messageId, error });
-    }
-  }
-
   return escapeHtml(raw);
+}
+
+const LOOSE_PARAGRAPH_BREAK_RE = /(?:<br\s*\/?>\s*){2,}/gi;
+const STRUCTURED_DISPLAY_BLOCK_RE = /<(?:article|aside|blockquote|details|div|figure|h[1-6]|img|li|ol|p|pre|section|table|ul)\b/i;
+
+function wrapLooseReadingParagraphs(html: string) {
+  html = String(html ?? '').trim();
+  if (!html || STRUCTURED_DISPLAY_BLOCK_RE.test(html) || !LOOSE_PARAGRAPH_BREAK_RE.test(html)) return html;
+
+  return html
+    .split(LOOSE_PARAGRAPH_BREAK_RE)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => `<p class="pre-reading-paragraph">${part}</p>`)
+    .join('');
+}
+
+function normalizeDisplayedHtml(html: string) {
+  return wrapLooseReadingParagraphs(String(html ?? '')
+    .replace(/<q(\s[^>]*)?>/gi, '<span class="dialog-inline">')
+    .replace(/<\/q>/gi, '</span>'));
 }
 
 function readPreCarrierMessageId(): number | null {
@@ -228,6 +240,39 @@ function normalizeChatMessages(messages: any[], fallbackStartId: number) {
     .filter(message => Number.isFinite(Number(message.message_id)));
 }
 
+function normalizeReadableMessageId(value: unknown) {
+  const id = Math.trunc(Number(value));
+  return Number.isFinite(id) && id >= 0 ? id : null;
+}
+
+function normalizeEventMessageIds(values: unknown) {
+  const ids = new Set<number>();
+  const seen = new Set<object>();
+  const visit = (value: unknown) => {
+    const id = normalizeReadableMessageId(value);
+    if (id !== null) {
+      ids.add(id);
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (!value || typeof value !== 'object' || seen.has(value)) return;
+    seen.add(value);
+
+    const record = value as Record<string, unknown>;
+    ['message_id', 'messageId', 'mesid', 'id'].forEach(key => visit(record[key]));
+    visit(record.detail);
+    visit(record.data);
+  };
+
+  visit(values);
+  return Array.from(ids).sort((a, b) => a - b);
+}
+
 function readHostChatWindow(startId: number, endId: number) {
   try {
     const chat = readHostContext()?.chat;
@@ -292,10 +337,31 @@ function collectHostVisibleMessageIds() {
   return Array.from(ids).sort((a, b) => a - b);
 }
 
+function readHostRenderedMessageHtml(messageId: number) {
+  const normalizedId = Math.trunc(Number(messageId));
+  if (!Number.isFinite(normalizedId) || normalizedId < 0) return '';
+
+  for (const doc of collectHostOnlyDocuments()) {
+    const root = doc.querySelector(`.mes[mesid='${normalizedId}'], .mes[data-message-index='${normalizedId}']`);
+    const mesText = root?.querySelector?.('.mes_text') as HTMLElement | null;
+    const html = String(mesText?.innerHTML ?? '').trim();
+    if (html) return normalizeDisplayedHtml(html);
+  }
+
+  try {
+    if (typeof retrieveDisplayedMessage !== 'function') return '';
+    const html = String(retrieveDisplayedMessage(normalizedId)?.html?.() ?? '').trim();
+    return html ? normalizeDisplayedHtml(html) : '';
+  } catch {
+    return '';
+  }
+}
+
 function toTranscriptItem(message: ChatMessage, latestId: number, carrierMessageId: number | null): TranscriptItem {
   const role = message.role ?? 'assistant';
   const raw = String(message.message ?? '');
-  const finalHtml = renderMessageHtml(raw, role, message.message_id);
+  const hostRenderedHtml = readHostRenderedMessageHtml(message.message_id);
+  const finalHtml = hostRenderedHtml || renderMessageHtml(raw, role, message.message_id);
   const canDeleteFrom = message.message_id > 0 && message.message_id !== carrierMessageId;
   return {
     message_id: message.message_id,
@@ -337,6 +403,8 @@ export function useSameLayerPre() {
   const preTranscriptItemCache = new Map<number, PreTranscriptItemCacheEntry>();
   let refreshTimer = 0;
   let pendingRefreshReason = '';
+  let pendingRefreshMode: ScheduledRefreshMode = 'none';
+  const pendingTargetedRefreshIds = new Set<number>();
   let streamedPreviewText = '';
   let streamedPreviewUpdatedAt = 0;
 
@@ -360,6 +428,13 @@ export function useSameLayerPre() {
     });
   }
 
+  function replaceHostVisualHide(messageIds: number[]) {
+    const carrierMessageId = readPreCarrierMessageId();
+    void nextTick(() => {
+      hostVisualHideController.replaceWithMessageIds(messageIds, { excludeMessageIds: carrierMessageId });
+    });
+  }
+
   function readRecentChatMessagesForUi() {
     const lastId = getTrueChatLength();
     const startId = Math.max(0, lastId - PRE_TRANSCRIPT_WINDOW_SIZE + 1);
@@ -372,6 +447,21 @@ export function useSameLayerPre() {
     }
 
     return readHostChatWindow(startId, lastId).slice(-PRE_TRANSCRIPT_WINDOW_SIZE);
+  }
+
+  function readChatMessageById(messageId: number) {
+    const normalizedId = normalizeReadableMessageId(messageId);
+    if (normalizedId === null) return null;
+    messageId = normalizedId;
+
+    try {
+      const list = getChatMessages(`${messageId}`, { hide_state: 'all' });
+      if (Array.isArray(list) && list.length > 0) return normalizeChatMessage(list[0], messageId);
+    } catch (error) {
+      console.warn('[same-layer-pre] single getChatMessages failed', { messageId, error });
+    }
+
+    return readHostChatWindow(messageId, messageId)[0] ?? null;
   }
 
   function readAllChatMessages() {
@@ -494,12 +584,10 @@ export function useSameLayerPre() {
       const latestId = visibleMessages.at(-1)?.message_id ?? -1;
       const carrierMessageId = readPreCarrierMessageId();
       const visibleIds = visibleMessages.map(message => message.message_id);
-      transcriptItems.value = visibleMessages.map(message =>
-        buildCachedTranscriptItem(message, latestId, carrierMessageId),
-      );
+      transcriptItems.value = visibleMessages.map(message => buildCachedTranscriptItem(message, latestId, carrierMessageId));
       pruneTranscriptItemCache(visibleIds);
       const hostMessageIds = collectHostVisibleMessageIds();
-      syncHostVisualHide(hostMessageIds.length > 0 ? hostMessageIds : visibleIds);
+      replaceHostVisualHide(hostMessageIds.length > 0 ? hostMessageIds : visibleIds);
       lastRefreshedAt.value = nowLabel();
       errorMessage.value = '';
       if (reason === 'manual') pushLog('info', '已刷新聊天记录', `读取 ${visibleMessages.length} 条楼层`);
@@ -510,14 +598,83 @@ export function useSameLayerPre() {
   }
 
   function scheduleTranscriptRefresh(reason = 'event') {
+    pendingRefreshMode = 'full';
+    pendingTargetedRefreshIds.clear();
     pendingRefreshReason = pendingRefreshReason ? `${pendingRefreshReason},${reason}` : reason;
     if (refreshTimer) return;
     refreshTimer = window.setTimeout(() => {
       refreshTimer = 0;
-      const nextReason = pendingRefreshReason || reason;
-      pendingRefreshReason = '';
-      refreshTranscript(nextReason);
+      flushScheduledTranscriptRefresh(reason);
     }, PRE_EVENT_REFRESH_DELAY_MS);
+  }
+
+  function refreshTranscriptItemsByIds(messageIds: number[], reason = 'event') {
+    const normalizedIds = normalizeEventMessageIds(messageIds);
+    if (normalizedIds.length === 0) return;
+
+    try {
+      const currentItems = transcriptItems.value;
+      const currentItemIds = new Set(currentItems.map(item => item.message_id));
+      const targetIds = normalizedIds.filter(messageId => currentItemIds.has(messageId));
+      if (targetIds.length === 0) return;
+
+      const latestId = currentItems.at(-1)?.message_id ?? -1;
+      const carrierMessageId = readPreCarrierMessageId();
+      const updatedItems = new Map<number, TranscriptItem>();
+      for (const messageId of targetIds) {
+        const message = readChatMessageById(messageId);
+        if (!message) {
+          scheduleTranscriptRefresh(`${reason}:missing`);
+          return;
+        }
+        updatedItems.set(messageId, buildCachedTranscriptItem(message, latestId, carrierMessageId));
+      }
+
+      transcriptItems.value = currentItems.map(item => updatedItems.get(item.message_id) ?? item);
+      pruneTranscriptItemCache(transcriptItems.value.map(item => item.message_id));
+      syncHostVisualHide(targetIds);
+      lastRefreshedAt.value = nowLabel();
+      errorMessage.value = '';
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : String(error);
+      pushLog('error', '更新聊天楼层失败', errorMessage.value);
+    }
+  }
+
+  function scheduleTargetedTranscriptRefresh(messageIds: number[], reason = 'event') {
+    const normalizedIds = normalizeEventMessageIds(messageIds);
+    if (normalizedIds.length === 0) {
+      scheduleTranscriptRefresh(reason);
+      return;
+    }
+
+    pendingRefreshReason = pendingRefreshReason ? `${pendingRefreshReason},${reason}` : reason;
+    if (pendingRefreshMode === 'full') return;
+    pendingRefreshMode = 'targeted';
+    normalizedIds.forEach(messageId => pendingTargetedRefreshIds.add(messageId));
+    if (refreshTimer) return;
+    refreshTimer = window.setTimeout(() => {
+      refreshTimer = 0;
+      flushScheduledTranscriptRefresh(reason);
+    }, PRE_EVENT_REFRESH_DELAY_MS);
+  }
+
+  function flushScheduledTranscriptRefresh(reason = 'event') {
+    const nextReason = pendingRefreshReason || reason;
+    const nextMode = pendingRefreshMode;
+    const nextTargetedIds = Array.from(pendingTargetedRefreshIds);
+    pendingRefreshReason = '';
+    pendingTargetedRefreshIds.clear();
+    pendingRefreshMode = 'none';
+
+    if (nextMode === 'full') {
+      refreshTranscript(nextReason);
+      return;
+    }
+
+    if (nextTargetedIds.length > 0) {
+      refreshTranscriptItemsByIds(nextTargetedIds, nextReason);
+    }
   }
 
   function updateStreamingPreviewText(text: string) {
@@ -780,13 +937,9 @@ export function useSameLayerPre() {
     pushLog('action', '已请求停止生成');
   }
 
-  watch(
-    theme,
-    value => {
-      applyDemoTheme(value);
-    },
-    { immediate: true },
-  );
+  watch(theme, value => {
+    applyDemoTheme(value);
+  }, { immediate: true });
 
   watch(
     () => transcriptItems.value.map(item => item.message_id),
@@ -801,15 +954,29 @@ export function useSameLayerPre() {
     const refreshEvents = [
       tavern_events.MESSAGE_SENT,
       tavern_events.MESSAGE_RECEIVED,
-      tavern_events.MESSAGE_UPDATED,
-      tavern_events.MESSAGE_EDITED,
       tavern_events.MESSAGE_DELETED,
       tavern_events.CHAT_CHANGED,
-      tavern_events.USER_MESSAGE_RENDERED,
-      tavern_events.CHARACTER_MESSAGE_RENDERED,
     ];
     for (const eventName of refreshEvents) {
       stops.push(eventOn(eventName as any, () => scheduleTranscriptRefresh(String(eventName))));
+    }
+    const messageRefreshEvents = [
+      tavern_events.MESSAGE_UPDATED,
+      tavern_events.MESSAGE_EDITED,
+      tavern_events.USER_MESSAGE_RENDERED,
+      tavern_events.CHARACTER_MESSAGE_RENDERED,
+    ];
+    for (const eventName of messageRefreshEvents) {
+      stops.push(
+        eventOn(eventName as any, (...eventArgs: unknown[]) => {
+          const messageIds = normalizeEventMessageIds(eventArgs);
+          if (messageIds.length > 0) {
+            scheduleTargetedTranscriptRefresh(messageIds, String(eventName));
+          } else {
+            scheduleTranscriptRefresh(String(eventName));
+          }
+        }),
+      );
     }
     stops.push(
       eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY as any, (text: string, generationId: string) => {
@@ -824,6 +991,8 @@ export function useSameLayerPre() {
       window.clearTimeout(refreshTimer);
       refreshTimer = 0;
     }
+    pendingTargetedRefreshIds.clear();
+    pendingRefreshMode = 'none';
     stops.splice(0).forEach(stop => stop.stop());
     hostVisualHideController.destroy();
   });

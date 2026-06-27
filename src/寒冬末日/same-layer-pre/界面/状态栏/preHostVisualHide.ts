@@ -138,14 +138,27 @@ export function createPreHostVisualHideController() {
     }
   }
 
-  function applyToMessageIds(messageIds: MessageIdInput, options: ApplyToMessageIdsOptions = {}) {
+  function applyToMessageIds(messageIds: MessageIdInput, options?: ApplyToMessageIdsOptions) {
     ensureHostMutationObservers();
     const nextIds = normalizeMessageIds(messageIds);
-    for (const id of normalizeMessageIds(options.excludeMessageIds)) {
+    for (const id of normalizeMessageIds(options?.excludeMessageIds)) {
       nextIds.delete(id);
     }
 
-    for (const id of hiddenMessageIds) {
+    for (const id of nextIds) {
+      applyOne(id);
+      hiddenMessageIds.add(id);
+    }
+  }
+
+  function replaceWithMessageIds(messageIds: MessageIdInput, options?: ApplyToMessageIdsOptions) {
+    ensureHostMutationObservers();
+    const nextIds = normalizeMessageIds(messageIds);
+    for (const id of normalizeMessageIds(options?.excludeMessageIds)) {
+      nextIds.delete(id);
+    }
+
+    for (const id of Array.from(hiddenMessageIds)) {
       if (!nextIds.has(id)) {
         clearOne(id);
         hiddenMessageIds.delete(id);
@@ -176,6 +189,7 @@ export function createPreHostVisualHideController() {
 
   return {
     applyToMessageIds,
+    replaceWithMessageIds,
     clearFromMessageIds,
     destroy,
   };
