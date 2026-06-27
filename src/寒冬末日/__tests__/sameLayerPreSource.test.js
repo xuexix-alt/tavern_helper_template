@@ -376,7 +376,7 @@ test('same-layer-pre restores original theme choices and corrected stacking orde
   assert.match(storySource, /@click="selectTheme\(item\.value\)"/);
   assert.match(hookSource, /const theme = ref<DemoTheme>\('amber'\)/);
   assert.match(hookSource, /function applyDemoTheme\(theme: DemoTheme\)/);
-  assert.match(hookSource, /watch\(theme,\s*value =>/);
+  assert.match(hookSource, /watch\(\s*theme,\s*value =>/);
 
   assert.match(storySource, /Z-INDEX 层级表/);
   assert.match(storySource, /24\s+— ui-sidebar-mask/);
@@ -503,7 +503,7 @@ test('same-layer-pre coalesces refresh events and avoids full transcript rerende
   assert.match(hookSource, /function buildCachedTranscriptItem/);
   assert.match(hookSource, /function scheduleTranscriptRefresh/);
   assert.match(readRecentSource, /getChatMessages\(`\$\{startId\}-\$\{lastId\}`,\s*\{\s*hide_state:\s*'all'\s*\}\)/);
-  assert.match(refreshTranscriptSource, /visibleMessages\.map\(message => buildCachedTranscriptItem/);
+  assert.match(refreshTranscriptSource, /visibleMessages\.map\(message =>\s*buildCachedTranscriptItem/);
   assert.match(refreshTranscriptSource, /pruneTranscriptItemCache/);
   assert.doesNotMatch(refreshTranscriptSource, /readAllChatMessages\(\)/);
   assert.doesNotMatch(refreshTranscriptSource, /getChatMessages\('0-\{\{lastMessageId\}\}'/);
@@ -544,6 +544,20 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
   assert.match(hookSource, /tavern_events\.MESSAGE_EDITED/);
   assert.match(hookSource, /const messageIds = normalizeEventMessageIds\(eventArgs\)/);
   assert.match(hookSource, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
+});
+
+test('same-layer-pre ignores id-less MVU message update events instead of doing a full transcript reload', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const scheduleTargetedSource = extractFunctionSource(hookSource, 'scheduleTargetedTranscriptRefresh');
+  const mountedSource = hookSource.slice(hookSource.indexOf('onMounted(() => {'), hookSource.indexOf('onBeforeUnmount(() => {'));
+  const messageRefreshStart = mountedSource.indexOf('const messageRefreshEvents = [');
+  const streamEventStart = mountedSource.indexOf('eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY', messageRefreshStart);
+  const messageRefreshBinding = mountedSource.slice(messageRefreshStart, streamEventStart);
+
+  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*return;\s*\}/);
+  assert.doesNotMatch(scheduleTargetedSource, /scheduleTranscriptRefresh\(reason\)/);
+  assert.match(messageRefreshBinding, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
+  assert.doesNotMatch(messageRefreshBinding, /else\s*\{\s*scheduleTranscriptRefresh\(String\(eventName\)\)/);
 });
 
 test('same-layer-pre keeps user body literal so existing quotes are not wrapped again', () => {
@@ -601,11 +615,26 @@ test('same-layer-pre normalizes loose prose into Chinese reading paragraphs', ()
   );
   assert.match(
     cardSource,
-    /\.pre-message-card__body :deep\(:where\(p,\s*\.pre-reading-paragraph,\s*blockquote\) \+ :where\(p,\s*\.pre-reading-paragraph,\s*blockquote\)\)/,
+    /\.pre-message-card__body\s*:deep\(:where\(p,\s*\.pre-reading-paragraph,\s*blockquote\) \+ :where\(p,\s*\.pre-reading-paragraph,\s*blockquote\)\)/,
   );
   assert.match(
     cardSource,
     /\.pre-message-card__body :deep\(:where\(ul,\s*ol,\s*pre,\s*table,\s*figure\)\)\s*\{[\s\S]*?text-indent:\s*0;/,
+  );
+});
+
+test('same-layer-pre keeps body images out of prose indentation and centers them', () => {
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+
+  assert.match(
+    cardSource,
+    /\.pre-message-card__body :deep\(:where\([\s\S]*?figure,[\s\S]*?\.assistant-fallback-inline-image,[\s\S]*?\.assistant-fallback-generated-image,[\s\S]*?\.st-chatu8-image-span,[\s\S]*?span\.image-tag-placeholder,[\s\S]*?\.st-chatu8-image-container,[\s\S]*?\.ai-image-container[\s\S]*?\)\)\s*\{[\s\S]*?text-indent:\s*0;[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center;[\s\S]*?margin-inline:\s*auto;/,
+    'plugin/native image containers should be block media islands, not indented prose',
+  );
+  assert.match(
+    cardSource,
+    /\.pre-message-card__body :deep\(:where\(img,[\s\S]*?video,[\s\S]*?canvas,[\s\S]*?svg,[\s\S]*?iframe\)\)\s*\{[\s\S]*?display:\s*block;[\s\S]*?margin-inline:\s*auto;[\s\S]*?text-indent:\s*0;/,
+    'media elements should center themselves even when Tavern wraps them in a paragraph',
   );
 });
 

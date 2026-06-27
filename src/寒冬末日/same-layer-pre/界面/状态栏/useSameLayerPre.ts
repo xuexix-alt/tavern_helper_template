@@ -649,7 +649,6 @@ export function useSameLayerPre() {
   function scheduleTargetedTranscriptRefresh(messageIds: number[], reason = 'event') {
     const normalizedIds = normalizeEventMessageIds(messageIds);
     if (normalizedIds.length === 0) {
-      scheduleTranscriptRefresh(reason);
       return;
     }
 
@@ -979,11 +978,7 @@ export function useSameLayerPre() {
       stops.push(
         eventOn(eventName as any, (...eventArgs: unknown[]) => {
           const messageIds = normalizeEventMessageIds(eventArgs);
-          if (messageIds.length > 0) {
-            scheduleTargetedTranscriptRefresh(messageIds, String(eventName));
-          } else {
-            scheduleTranscriptRefresh(String(eventName));
-          }
+          scheduleTargetedTranscriptRefresh(messageIds, String(eventName));
         }),
       );
     }

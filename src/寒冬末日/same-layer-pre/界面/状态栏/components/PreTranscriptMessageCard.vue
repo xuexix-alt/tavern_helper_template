@@ -160,6 +160,25 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   text-indent: 0;
 }
 
+.pre-message-card__body :deep(:where(
+  figure,
+  .assistant-fallback-inline-image,
+  .assistant-fallback-generated-image,
+  .st-chatu8-image-span,
+  span.image-tag-placeholder,
+  .st-chatu8-image-container,
+  .ai-image-container
+)) {
+  text-indent: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  margin-block: 0.75em;
+}
+
 .pre-message-card__body :deep(pre),
 .pre-message-card__body :deep(code) {
   white-space: pre-wrap !important;
@@ -177,11 +196,10 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   word-break: break-word;
 }
 
-.pre-message-card__body :deep(img),
-.pre-message-card__body :deep(video),
-.pre-message-card__body :deep(canvas),
-.pre-message-card__body :deep(svg),
-.pre-message-card__body :deep(iframe) {
+.pre-message-card__body :deep(:where(img, video, canvas, svg, iframe)) {
+  display: block;
+  margin-inline: auto;
+  text-indent: 0;
   max-width: 100%;
   height: auto;
 }
