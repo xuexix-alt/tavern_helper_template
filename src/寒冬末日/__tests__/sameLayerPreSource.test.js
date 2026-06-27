@@ -549,9 +549,15 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
 test('same-layer-pre ignores id-less MVU message update events instead of doing a full transcript reload', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const scheduleTargetedSource = extractFunctionSource(hookSource, 'scheduleTargetedTranscriptRefresh');
-  const mountedSource = hookSource.slice(hookSource.indexOf('onMounted(() => {'), hookSource.indexOf('onBeforeUnmount(() => {'));
+  const mountedSource = hookSource.slice(
+    hookSource.indexOf('onMounted(() => {'),
+    hookSource.indexOf('onBeforeUnmount(() => {'),
+  );
   const messageRefreshStart = mountedSource.indexOf('const messageRefreshEvents = [');
-  const streamEventStart = mountedSource.indexOf('eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY', messageRefreshStart);
+  const streamEventStart = mountedSource.indexOf(
+    'eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY',
+    messageRefreshStart,
+  );
   const messageRefreshBinding = mountedSource.slice(messageRefreshStart, streamEventStart);
 
   assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*return;\s*\}/);
