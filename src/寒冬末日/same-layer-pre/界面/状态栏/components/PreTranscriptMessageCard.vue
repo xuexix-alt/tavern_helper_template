@@ -164,15 +164,18 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   text-indent: 0;
 }
 
-.pre-message-card__body :deep(:where(
-  figure,
-  .assistant-fallback-inline-image,
-  .assistant-fallback-generated-image,
-  .st-chatu8-image-span,
-  span.image-tag-placeholder,
-  .st-chatu8-image-container,
-  .ai-image-container
-)) {
+.pre-message-card__body
+  :deep(
+    :where(
+      figure,
+      .assistant-fallback-inline-image,
+      .assistant-fallback-generated-image,
+      .st-chatu8-image-span,
+      span.image-tag-placeholder,
+      .st-chatu8-image-container,
+      .ai-image-container
+    )
+  ) {
   text-indent: 0;
   display: flex;
   justify-content: center;
