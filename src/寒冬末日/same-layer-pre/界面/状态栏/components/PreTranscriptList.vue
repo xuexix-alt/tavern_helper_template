@@ -22,6 +22,7 @@ import { useEventListener } from '@vueuse/core';
 import { nextTick, ref, watch } from 'vue';
 import PreTranscriptMessageCard from './PreTranscriptMessageCard.vue';
 import type { TranscriptItem } from '../types';
+import { installPreHostImageGestureForwarder } from '../preHostImageGestureForwarder';
 
 const props = defineProps<{
   items: TranscriptItem[];
@@ -37,6 +38,7 @@ const emit = defineEmits<{
 }>();
 
 const listRef = ref<HTMLElement | null>(null);
+const hostImageGestureForwarder = installPreHostImageGestureForwarder();
 
 async function scrollToBottom() {
   await nextTick();
@@ -51,6 +53,8 @@ watch(
 );
 
 useEventListener(window, 'resize', () => void scrollToBottom());
+useEventListener(window, 'dblclick', hostImageGestureForwarder.handleDoubleClick, { capture: true });
+useEventListener(window, 'touchend', hostImageGestureForwarder.handleTouchEnd, { capture: true, passive: false });
 </script>
 
 <style scoped>

@@ -566,6 +566,20 @@ test('same-layer-pre ignores id-less MVU message update events instead of doing 
   assert.doesNotMatch(messageRefreshBinding, /else\s*\{\s*scheduleTranscriptRefresh\(String\(eventName\)\)/);
 });
 
+test('same-layer-pre materializes the submitted user message in host DOM for plugin-native image persistence', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const submitSource = extractFunctionSource(hookSource, 'submitPrompt');
+
+  assert.match(
+    submitSource,
+    /await createChatMessages\(\[\{\s*role:\s*'user'[\s\S]*?\}\],\s*\{\s*refresh:\s*'affected'\s*\}\)/,
+  );
+  assert.match(submitSource, /refreshTranscript\('user_submitted'\)/);
+  assert.doesNotMatch(submitSource, /appendLocalUserTranscriptItem\(text\)/);
+  assert.doesNotMatch(hookSource, /function appendLocalUserTranscriptItem/);
+  assert.doesNotMatch(submitSource, /scheduleTranscriptRefresh\('user_submitted'\)/);
+});
+
 test('same-layer-pre keeps user body literal so existing quotes are not wrapped again', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const renderMessageSource = extractFunctionSource(hookSource, 'renderMessageHtml');
@@ -642,6 +656,38 @@ test('same-layer-pre keeps body images out of prose indentation and centers them
     /\.pre-message-card__body :deep\(:where\(img,[\s\S]*?video,[\s\S]*?canvas,[\s\S]*?svg,[\s\S]*?iframe\)\)\s*\{[\s\S]*?display:\s*block;[\s\S]*?margin-inline:\s*auto;[\s\S]*?text-indent:\s*0;/,
     'media elements should center themselves even when Tavern wraps them in a paragraph',
   );
+});
+
+test('same-layer-pre does not masquerade as native Tavern message DOM for plugin image persistence', () => {
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+
+  assert.doesNotMatch(cardSource, /class="pre-message-card mes"/);
+  assert.doesNotMatch(cardSource, /:mesid="item\.message_id"/);
+  assert.doesNotMatch(cardSource, /class="pre-message-card__body mes_text"/);
+  assert.doesNotMatch(cardSource, /pre-message-card__plugin-block/);
+  assert.doesNotMatch(cardSource, /chatMetadata|extra\.images|saveImageGroup|setChatMessages/);
+});
+
+test('same-layer-pre enables the host image gesture forwarder without owning image persistence', () => {
+  const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+  const forwarderSource = readPre('preHostImageGestureForwarder.ts');
+
+  assert.doesNotMatch(cardSource, /class="pre-message-card mes"/);
+  assert.doesNotMatch(cardSource, /class="pre-message-card__body mes_text"/);
+
+  assert.match(listSource, /^\s*import\s*\{\s*installPreHostImageGestureForwarder\s*\}/m);
+  assert.match(listSource, /^\s*const\s+hostImageGestureForwarder\s*=/m);
+  assert.match(listSource, /^\s*useEventListener\(window,\s*'dblclick'/m);
+  assert.match(listSource, /^\s*useEventListener\(window,\s*'touchend'/m);
+
+  assert.match(forwarderSource, /from '..\/..\/..\/界面同层版\/界面\/状态栏\/hostGestureDispatch'/);
+  assert.match(forwarderSource, /PRE_MESSAGE_BODY_SELECTOR\s*=\s*'\.pre-message-card__body'/);
+  assert.match(forwarderSource, /dispatchHostPrimaryTrigger\(hostMesText/);
+  assert.match(forwarderSource, /resolveHostMessageText/);
+  assert.match(forwarderSource, /window\.frameElement/);
+  assert.match(forwarderSource, /stopImmediatePropagation/);
+  assert.doesNotMatch(forwarderSource, /chatMetadata|extra\.images|saveImageGroup|setChatMessages/);
 });
 
 test('same-layer-pre streaming preview stays lightweight until the done transcript render', () => {
