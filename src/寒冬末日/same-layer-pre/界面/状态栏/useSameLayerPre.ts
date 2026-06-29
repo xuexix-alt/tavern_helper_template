@@ -527,7 +527,8 @@ export function useSameLayerPre() {
   }
 
   function scheduleFullHostVisualHideSweep(reason = 'event', scrollSnapshot?: HostScrollSnapshot | null) {
-    pendingFullHostVisualHideScrollSnapshot = scrollSnapshot ?? pendingFullHostVisualHideScrollSnapshot ?? captureHostScrollPosition();
+    pendingFullHostVisualHideScrollSnapshot =
+      scrollSnapshot ?? pendingFullHostVisualHideScrollSnapshot ?? captureHostScrollPosition();
     if (fullHostVisualHideSweepTimer) return;
     fullHostVisualHideSweepTimer = window.setTimeout(() => {
       fullHostVisualHideSweepTimer = 0;

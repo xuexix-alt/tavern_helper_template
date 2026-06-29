@@ -423,7 +423,9 @@ const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
 const reprocessVariablesPending = ref(false);
 const canReprocessVariables = computed(() => {
   const latestAssistant = latestAssistantItem.value;
-  return Boolean(latestAssistant && latestAssistant.role === 'assistant') && !busy.value && !reprocessVariablesPending.value;
+  return (
+    Boolean(latestAssistant && latestAssistant.role === 'assistant') && !busy.value && !reprocessVariablesPending.value
+  );
 });
 const reprocessVariablesHint = computed(() => {
   const latestAssistant = latestAssistantItem.value;
@@ -503,7 +505,8 @@ function readMvuVariableUpdateMode(): MvuVariableUpdateMode {
   }
 
   try {
-    const extraAnalysisEnabled = (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)?.extra_analysis;
+    const extraAnalysisEnabled = (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)
+      ?.extra_analysis;
     if (extraAnalysisEnabled === true) return 'extra_analysis';
     if (extraAnalysisEnabled === false) return 'inline';
   } catch {

@@ -250,7 +250,10 @@ test('same-layer-pre adopts same-layer reader chrome and option menu without ima
 test('same-layer-pre wires the option modal reprocess button to native MVU extra analysis retry', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
 
-  assert.match(storySource, /import\s+\{\s*retryMessageExtraAnalysisByNativeMvu\s*\}\s+from ['"]\.\.\/\.\.\/\.\.\/\.\.\/mvu_reprocess['"]/);
+  assert.match(
+    storySource,
+    /import\s+\{\s*retryMessageExtraAnalysisByNativeMvu\s*\}\s+from ['"]\.\.\/\.\.\/\.\.\/\.\.\/mvu_reprocess['"]/,
+  );
   assert.match(storySource, /type MvuVariableUpdateMode = 'extra_analysis' \| 'inline' \| 'unknown'/);
   assert.match(storySource, /const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>\('unknown'\)/);
   assert.match(storySource, /const reprocessVariablesPending = ref\(false\)/);
@@ -624,7 +627,10 @@ test('same-layer-pre treats id-less host and MVU update events as full host visu
   assert.match(scheduleFullSweepSource, /fullHostVisualHideSweepTimer/);
   assert.match(scheduleFullSweepSource, /PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS/);
   assert.match(scheduleFullSweepSource, /runFullHostVisualHideSweep\(nextSnapshot\)/);
-  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\);\s*return;\s*\}/);
+  assert.match(
+    scheduleTargetedSource,
+    /if \(normalizedIds\.length === 0\) \{\s*scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\);\s*return;\s*\}/,
+  );
   assert.doesNotMatch(scheduleTargetedSource, /scheduleTranscriptRefresh\(reason\)/);
   assert.match(messageRefreshBinding, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
   assert.doesNotMatch(messageRefreshBinding, /else\s*\{\s*scheduleTranscriptRefresh\(String\(eventName\)\)/);
