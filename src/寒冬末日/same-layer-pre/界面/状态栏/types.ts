@@ -50,6 +50,8 @@ export type ReaderLogItem = {
   createdAt: string;
 };
 
+export type PreGalleryLogItem = Pick<ReaderLogItem, 'type' | 'title' | 'detail'>;
+
 export type ReaderChatState = {
   version: number;
   reading_mode: ReadingMode;

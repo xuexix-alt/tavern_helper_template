@@ -278,3 +278,87 @@ await eventEmit(EventType.GENERATE_IMAGE_REQUEST, requestData);//发送请求
 
 
 ```
+
+
+---
+
+## same-layer-pre 画廊 beta 实证补充：存图、引用复用、手势转接
+
+这一轮 same-layer-pre 画廊 beta 的目标不是重新实现一套图片库，而是验证前端界面如何尽量复用 st-chatu8 插件已经写入酒馆原生聊天的图片真相。结论是：生成请求只负责拿结果；持久化、图片身份和既有手势都应尽量跟随插件原生链路。
+
+### 1. 图片真相的推荐查找顺序
+
+如果前端界面想在另一个 UI 位置复刻已有图片，不建议把 `imageData`、base64 或图片 Blob 再存进同层 DB。优先按下面顺序解析轻引用：
+
+1. `chat[messageId].extra.images[swipeId]`
+2. 消息正文里的 `image###...###` 或 `<image>...</image>` 标签
+3. 插件的 `image_groups` / `chatMetadata['st-chatu8']` 后备缓存
+4. 宿主聊天楼层 `.mes_text` 里的插件 DOM，例如 `button.image-tag-button`、`.st-chatu8-image-span`、`.st-chatu8-image-container img`
+
+其中 `src` 只应作为当前渲染用的临时值，不应写入轻引用 key，也不应进入同层长期存储。轻引用可以只保存消息楼层、swipe、tag/link、requestId、imageId、prompt token hash 等身份字段。
+
+示例：
+
+```html
+<span
+  data-chatu8-image-ref
+  data-message-id="13"
+  data-swipe-id="0"
+  data-image-tag="image###...###"
+  data-link="image###...###">
+</span>
+```
+
+渲染时再用 `messageId + swipeId + tag/link` 去原生来源解析，拿到已有 `src` 后显示一份 `<img>`。这样 UI 只保存几十字节引用，不复制图片体积。
+
+### 2. 事件模型：定向刷新，不扫全聊天
+
+beta 验证下来，前端界面可以把图片引用刷新拆成两段：
+
+```ts
+eventOn(tavern_events.MESSAGE_UPDATED, id => refreshImageRef(id));
+eventOn(tavern_events.MESSAGE_EDITED, id => refreshImageRef(id));
+eventOn(tavern_events.USER_MESSAGE_RENDERED, id => hydrateImageDom(id));
+eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (id, type) => hydrateImageDom(id));
+```
+
+`MESSAGE_UPDATED` / `MESSAGE_EDITED` 适合刷新 `extra.images`、正文 tag、缓存身份；`USER_MESSAGE_RENDERED` / `CHARACTER_MESSAGE_RENDERED` 适合在宿主 DOM 落图后再补一次 DOM 水合。画廊关闭时只记脏事件，打开画廊时再懒扫描；画廊打开期间收到渲染事件，可以短延迟二扫一次，等待插件把 `<img src>` 写进宿主 DOM。
+
+### 3. 空占位和重复来源的处理
+
+现场验证时，插件同一张图附近可能同时存在 prompt button、ready image span/container、正文 tag。它们不代表三张图，而是同一张图的不同阶段或不同身份面。
+
+合并时建议：
+
+- 用 `messageId + swipeId + requestId/imageId/tag/link/promptTokenHash` 组成轻 key。
+- `lightKey` 不能包含 `data:image/...`、base64、blob 内容或 idb 图片体。
+- 当同楼层已有可显示的宿主图片或 `extra.images` 图片时，正文 tag-only 条目只作为身份补充，不应在画廊里再显示为空占位。
+- `host-dom` 里的空壳节点如果没有 tag/link/requestId/imageId/src 等身份信息，应忽略。
+
+### 4. 手势不是图片本身继承来的
+
+在 iframe 或同层 UI 里视觉复制一个 `<img>`，不会天然继承插件绑定在宿主 DOM 上的单击、双击、长按逻辑。插件的按钮和图片操作通常围绕以下身份运行：
+
+- `.mes_text`
+- `.mes[mesid]`
+- `data-link`
+- `data-image-tag`
+- `extra.images`
+- `image_groups`
+- `button.image-tag-button`
+- `.st-chatu8-image-span`
+- `.st-chatu8-image-container img`
+
+因此前端界面要么把事件代理回宿主原始元素，要么复刻足够的数据属性并让插件原生处理流程重新绑定。beta 里验证出的手势方向是：
+
+- 对 prompt-only 引用，单击优先交回插件原生 prompt button，让 `triggerGeneration(button)` 这类插件逻辑自己处理。
+- 对已经有 `src` 的图片，单击、双击、长按优先交回宿主原始图片节点或其最近的插件图片容器，而不是交给 prompt button。
+- 长按触发后，要吞掉释放时浏览器合成出来的下一次 click，否则会出现“长按后又触发单击/重生”的串线。
+- 移动端长按/双击通常依赖 `touchstart/touchend`、`pointerdown/pointerup`、`mousedown/mouseup` 的时序、坐标和目标元素。若 iframe 捕获层 `stopPropagation/preventDefault`，或事件只发生在 clone 图片上，宿主插件 handler 就收不到。
+
+### 5. 常见坑位
+
+- 不要在 console、日志面板或持久化字段里展开 `src: "data:image/png;base64,..."`，大图会让调试工具和 Codex 会话卡死。日志只记录 `kind/length/prefix` 这类摘要。
+- 不要让 `Number(null)`、`Number('')` 落成楼层 `0`。缺少 message id 时应返回 `null`，再从最近的 `.mes[mesid]`、正文容器或轻引用补身份。
+- 不要用全局聊天扫描作为常态路径。正常刷新应以本楼层事件为入口，只有打开画廊或人工刷新时才做窗口内扫描。
+- 不要把 st-chatu8 的 `generate-image-response.imageData` 当作同层长期图片库。它适合当前展示或交给插件原生流程，长期真相仍应回到 `extra.images`、正文 tag、插件 cache 和宿主 DOM。

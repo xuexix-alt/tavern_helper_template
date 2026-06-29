@@ -45,7 +45,7 @@ test('same-layer-pre is a standalone status-bar frontend entry', () => {
   assert.match(readPre('App.vue'), /StoryPagePre/);
 });
 
-test('same-layer-pre strips the old generated-image persistence and gallery scan business', () => {
+test('same-layer-pre strips old image persistence while allowing beta light image refs', () => {
   const forbiddenFiles = [
     'imageStore.ts',
     'imagePersistencePatch.ts',
@@ -83,12 +83,9 @@ test('same-layer-pre strips the old generated-image persistence and gallery scan
     /readGeneratedImageSource/,
     /GeneratedImageAsset/,
     /triggerImageGenerationForMessage/,
-    /GeneratedImageRef/,
     /generatedImages/,
-    /collectChatu8PromptTokens/,
     /stripVisibleChatu8PromptTokens/,
     /resolveHostImageNodeByPromptToken/,
-    /pluginNative/i,
   ];
 
   const searchableFiles = walkFiles(PRE_ROOT).filter(file => /\.(ts|vue|js|css|html)$/.test(file));
@@ -100,16 +97,43 @@ test('same-layer-pre strips the old generated-image persistence and gallery scan
   }
 });
 
-test('same-layer-pre keeps a gallery shell without wiring functional gallery data', () => {
+test('same-layer-pre beta gallery uses light refs without owning image persistence', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const gallerySource = readPre(path.join('components', 'PreGalleryPanel.vue'));
+  const refSource = readPre('preGalleryImageRefs.ts');
 
   assert.match(storySource, /PreGalleryPanel/);
+  assert.match(storySource, /<PreGalleryPanel\s+:active="galleryDrawerOpen"\s+@gallery-log="appendGalleryLog"\s*\/>/);
   assert.doesNotMatch(storySource, /:entries=/);
   assert.doesNotMatch(storySource, /@view-image=/);
   assert.doesNotMatch(storySource, /@load-older=/);
-  assert.match(gallerySource, /PRE_GALLERY_PLACEHOLDER/);
+  assert.match(storySource, /function appendGalleryLog/);
+  assert.match(gallerySource, /data-pre-gallery-beta="true"/);
+  assert.match(gallerySource, /scanLatestPreGalleryImageRefs/);
+  assert.match(gallerySource, /refreshImageRef/);
+  assert.match(gallerySource, /hydrateImageDom/);
+  assert.match(refSource, /extra\.images/);
+  assert.match(refSource, /collectChatu8PromptTokens/);
+  assert.match(refSource, /chatMetadata\?\.\['st-chatu8'\]/);
+  assert.match(refSource, /collectHostPreGalleryArtifacts\(messageId\)/);
+  assert.match(refSource, /图片 src 仅用于本次渲染，不进入 lightKey/);
+  assert.doesNotMatch(refSource, /indexedDB|stream_demo\.generated_images|persistGeneratedImageResponse/i);
   assert.doesNotMatch(gallerySource, /GeneratedImageAsset/);
+});
+
+test('same-layer-pre beta gallery documents the native image-ref model', () => {
+  const doc = fs.readFileSync(path.join(ROOT, 'docs', 'same-layer-pre画廊beta实证模型.md'), 'utf8');
+
+  assert.match(doc, /MESSAGE_UPDATED[\s\S]*refreshImageRef/);
+  assert.match(doc, /MESSAGE_EDITED[\s\S]*refreshImageRef/);
+  assert.match(doc, /USER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
+  assert.match(doc, /CHARACTER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
+  assert.match(doc, /chat\[messageId\]\.extra\.images\[swipeId\]/);
+  assert.match(doc, /chatMetadata\['st-chatu8'\]/);
+  assert.match(doc, /data-chatu8-image-ref/);
+  assert.match(doc, /data-image-tag/);
+  assert.match(doc, /lightKey[\s\S]*base64/);
+  assert.match(doc, /placeholder\.js[\s\S]*data-link[\s\S]*data-image-tag[\s\S]*triggerGeneration/);
 });
 
 test('same-layer-pre mounts the same-layer map panel beside the system utility drawer', () => {

@@ -155,7 +155,7 @@
           </button>
         </div>
         <div class="ui-sidebar-body">
-          <PreGalleryPanel />
+          <PreGalleryPanel :active="galleryDrawerOpen" @gallery-log="appendGalleryLog" />
         </div>
       </aside>
 
@@ -361,7 +361,7 @@ import {
 import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
 import PreGalleryPanel from '../components/PreGalleryPanel.vue';
 import PreTranscriptList from '../components/PreTranscriptList.vue';
-import type { DemoTheme } from '../types';
+import type { DemoTheme, PreGalleryLogItem } from '../types';
 import { useSameLayerPre } from '../useSameLayerPre';
 
 type ComposerExpose = {
@@ -719,6 +719,19 @@ function refreshFromMoreMenu() {
 function selectTheme(value: DemoTheme) {
   theme.value = value;
   closeTopbarMenus();
+}
+
+function appendGalleryLog(item: PreGalleryLogItem) {
+  logItems.value = [
+    {
+      id: `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type: item.type,
+      title: item.title,
+      detail: item.detail,
+      createdAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+    },
+    ...logItems.value,
+  ].slice(0, 12);
 }
 
 function openChoiceModalFromToolbar() {
