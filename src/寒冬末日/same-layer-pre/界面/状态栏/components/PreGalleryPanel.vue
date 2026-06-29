@@ -117,7 +117,7 @@ const probeStateClass = computed(() => ({
 
 const emptyTitle = computed(() => (props.active ? '没有命中可复刻图片' : '画廊休眠中'));
 const emptyDetail = computed(() =>
-  props.active ? result.value.diagnostics.at(-1) ?? '等待插件渲染事件' : '打开画廊后才扫描宿主 DOM 和插件存储',
+  props.active ? (result.value.diagnostics.at(-1) ?? '等待插件渲染事件') : '打开画廊后才扫描宿主 DOM 和插件存储',
 );
 
 function pushGalleryLog(type: PreGalleryLogItem['type'], title: string, detail: string) {
@@ -305,7 +305,11 @@ watch(
   () => props.active,
   active => {
     if (active) {
-      pushGalleryLog('info', '画廊打开', dirtyEvents.value.length > 0 ? `补验 ${dirtyEvents.value.at(-1)}` : '执行懒扫描');
+      pushGalleryLog(
+        'info',
+        '画廊打开',
+        dirtyEvents.value.length > 0 ? `补验 ${dirtyEvents.value.at(-1)}` : '执行懒扫描',
+      );
       scheduleScan('drawer_open', 0);
       return;
     }
@@ -318,8 +322,16 @@ watch(
 );
 
 onMounted(() => {
-  stops.push(eventOn(tavern_events.MESSAGE_UPDATED as any, (...args: unknown[]) => refreshImageRef(String(tavern_events.MESSAGE_UPDATED), ...args)));
-  stops.push(eventOn(tavern_events.MESSAGE_EDITED as any, (...args: unknown[]) => refreshImageRef(String(tavern_events.MESSAGE_EDITED), ...args)));
+  stops.push(
+    eventOn(tavern_events.MESSAGE_UPDATED as any, (...args: unknown[]) =>
+      refreshImageRef(String(tavern_events.MESSAGE_UPDATED), ...args),
+    ),
+  );
+  stops.push(
+    eventOn(tavern_events.MESSAGE_EDITED as any, (...args: unknown[]) =>
+      refreshImageRef(String(tavern_events.MESSAGE_EDITED), ...args),
+    ),
+  );
   stops.push(
     eventOn(tavern_events.USER_MESSAGE_RENDERED as any, (...args: unknown[]) =>
       hydrateImageDom(String(tavern_events.USER_MESSAGE_RENDERED), ...args),

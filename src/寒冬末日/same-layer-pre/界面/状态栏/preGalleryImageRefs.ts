@@ -239,10 +239,18 @@ function readSwipeEntries(message: Record<string, any>, swipeId: number): Record
   const extraImages = message?.extra?.images;
   if (!Array.isArray(extraImages)) return [];
   if (Array.isArray(extraImages[swipeId])) {
-    return extraImages[swipeId].filter(Boolean).map(entry => asRecord(entry)).filter(Boolean) as Record<string, any>[];
+    return extraImages[swipeId]
+      .filter(Boolean)
+      .map(entry => asRecord(entry))
+      .filter(Boolean) as Record<string, any>[];
   }
   return extraImages.flatMap(item =>
-    Array.isArray(item) ? (item.filter(Boolean).map(entry => asRecord(entry)).filter(Boolean) as Record<string, any>[]) : [],
+    Array.isArray(item)
+      ? (item
+          .filter(Boolean)
+          .map(entry => asRecord(entry))
+          .filter(Boolean) as Record<string, any>[])
+      : [],
   );
 }
 
@@ -347,7 +355,11 @@ function rememberHostImageElementForKey(key: string, element: HTMLElement) {
   const imageElement = resolvePluginImageInteractionElement(element);
   if (!imageElement) return;
   const current = HOST_IMAGE_ELEMENT_REF_CACHE.get(key);
-  if (!current?.isConnected || imageElement instanceof HTMLImageElement || current.matches('.st-chatu8-image-container')) {
+  if (
+    !current?.isConnected ||
+    imageElement instanceof HTMLImageElement ||
+    current.matches('.st-chatu8-image-container')
+  ) {
     HOST_IMAGE_ELEMENT_REF_CACHE.set(key, imageElement);
   }
 }
@@ -427,18 +439,21 @@ function normalizeHostArtifact(artifact: PreGalleryHostArtifact): Partial<PreGal
 function hasHostArtifactIdentity(artifact: PreGalleryHostArtifact): boolean {
   return Boolean(
     clean(artifact.src) ||
-      clean(artifact.tag) ||
-      clean(artifact.link) ||
-      clean(artifact.requestId) ||
-      clean(artifact.imageId) ||
-      clean(artifact.promptToken),
+    clean(artifact.tag) ||
+    clean(artifact.link) ||
+    clean(artifact.requestId) ||
+    clean(artifact.imageId) ||
+    clean(artifact.promptToken),
   );
 }
 
 function readDataset(element: Element | null | undefined, keys: string[]): string {
   if (!element) return '';
   for (const key of keys) {
-    const value = clean((element as HTMLElement).dataset?.[key] ?? element.getAttribute?.(`data-${key.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`)}`));
+    const value = clean(
+      (element as HTMLElement).dataset?.[key] ??
+        element.getAttribute?.(`data-${key.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`)}`),
+    );
     if (value) return value;
   }
   return '';
@@ -544,17 +559,13 @@ function hasNativeDisplayEvidence(refs: PreGalleryImageRef[]): boolean {
 }
 
 function isTagOnlyPlaceholder(ref: PreGalleryImageRef): boolean {
-  return (
-    ref.sources.length === 1 &&
-    ref.sources[0] === 'mes_tag' &&
-    !ref.src &&
-    !ref.requestId &&
-    !ref.imageId
-  );
+  return ref.sources.length === 1 && ref.sources[0] === 'mes_tag' && !ref.src && !ref.requestId && !ref.imageId;
 }
 
 function filterDisplayableRefs(refs: PreGalleryImageRef[]) {
-  const hasDisplayableNativeRef = refs.some(ref => Boolean(ref.src) && ref.sources.some(source => source !== 'mes_tag'));
+  const hasDisplayableNativeRef = refs.some(
+    ref => Boolean(ref.src) && ref.sources.some(source => source !== 'mes_tag'),
+  );
   if (!hasDisplayableNativeRef) return { refs, hiddenTagOnlyCount: 0 };
   const next = refs.filter(ref => !isTagOnlyPlaceholder(ref));
   return { refs: next, hiddenTagOnlyCount: refs.length - next.length };
@@ -609,7 +620,9 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
       continue;
     }
     diagnostics.push(...skippedPromptOnlyDiagnostics);
-    diagnostics.push(requestedIds.length > 0 ? `定向刷新楼层 #${scanned.messageId}` : `选中最新含图楼层 #${scanned.messageId}`);
+    diagnostics.push(
+      requestedIds.length > 0 ? `定向刷新楼层 #${scanned.messageId}` : `选中最新含图楼层 #${scanned.messageId}`,
+    );
     if (scanned.hiddenTagOnlyCount > 0) diagnostics.push(`隐藏正文 tag-only 空占位 ${scanned.hiddenTagOnlyCount} 条`);
     diagnostics.push(`轻引用 ${scanned.refs.length} 条；图片 src 仅用于本次渲染，不进入 lightKey`);
     return {
@@ -624,7 +637,8 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
 
   if (promptOnlyFallback) {
     diagnostics.push(`选中最新 tag-only 楼层 #${promptOnlyFallback.messageId}`);
-    if (promptOnlyFallback.hiddenTagOnlyCount > 0) diagnostics.push(`隐藏正文 tag-only 空占位 ${promptOnlyFallback.hiddenTagOnlyCount} 条`);
+    if (promptOnlyFallback.hiddenTagOnlyCount > 0)
+      diagnostics.push(`隐藏正文 tag-only 空占位 ${promptOnlyFallback.hiddenTagOnlyCount} 条`);
     diagnostics.push(`轻引用 ${promptOnlyFallback.refs.length} 条；图片 src 仅用于本次渲染，不进入 lightKey`);
     return {
       reason,

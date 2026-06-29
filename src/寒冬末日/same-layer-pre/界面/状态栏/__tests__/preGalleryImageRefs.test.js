@@ -84,14 +84,18 @@ test('pre gallery targeted scan only refreshes requested message ids', () => {
         message_id: 10,
         message: 'image###old target###',
         extra: {
-          images: [[{ promptToken: 'image###old target###', requestId: 'req-target', src: 'data:image/png;base64,target' }]],
+          images: [
+            [{ promptToken: 'image###old target###', requestId: 'req-target', src: 'data:image/png;base64,target' }],
+          ],
         },
       },
       {
         message_id: 11,
         message: 'image###newer image###',
         extra: {
-          images: [[{ promptToken: 'image###newer image###', requestId: 'req-newer', src: 'data:image/png;base64,newer' }]],
+          images: [
+            [{ promptToken: 'image###newer image###', requestId: 'req-newer', src: 'data:image/png;base64,newer' }],
+          ],
         },
       },
     ],
@@ -176,7 +180,10 @@ test('pre gallery scan ignores empty host dom shells without image identity', ()
     result.refs.map(ref => ref.requestId),
     ['chatu8-id-first', 'chatu8-id-second'],
   );
-  assert.equal(result.refs.some(ref => ref.lightKey === 'mes:5|swipe:0'), false);
+  assert.equal(
+    result.refs.some(ref => ref.lightKey === 'mes:5|swipe:0'),
+    false,
+  );
 });
 
 test('pre gallery scan hides tag-only placeholders once native host refs are displayable', () => {
@@ -229,8 +236,14 @@ test('pre gallery scan hides tag-only placeholders once native host refs are dis
 
   assert.equal(result.selectedMessageId, 1);
   assert.equal(result.refs.length, 2);
-  assert.equal(result.refs.every(ref => ref.src), true);
-  assert.equal(result.refs.some(ref => ref.sources.length === 1 && ref.sources[0] === 'mes_tag'), false);
+  assert.equal(
+    result.refs.every(ref => ref.src),
+    true,
+  );
+  assert.equal(
+    result.refs.some(ref => ref.sources.length === 1 && ref.sources[0] === 'mes_tag'),
+    false,
+  );
   assert.match(result.diagnostics.join('\n'), /隐藏正文 tag-only 空占位 4 条/);
 });
 
@@ -296,7 +309,10 @@ test('pre gallery routes beta diagnostics into system logs instead of inline pan
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
   const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
 
-  assert.match(panelSource, /const emit = defineEmits<\{\s*\(event: 'gallery-log', item: PreGalleryLogItem\): void;\s*\}>/);
+  assert.match(
+    panelSource,
+    /const emit = defineEmits<\{\s*\(event: 'gallery-log', item: PreGalleryLogItem\): void;\s*\}>/,
+  );
   assert.match(panelSource, /emit\('gallery-log'/);
   assert.match(pageSource, /function appendGalleryLog\(item: PreGalleryLogItem\)/);
   assert.match(pageSource, /logItems\.value = \[/);
@@ -317,7 +333,10 @@ test('pre gallery gesture keeps plugin prompt buttons ahead of image containers 
 
   assert.match(source, /function isPluginPromptButton\(element: Element \| null \| undefined\)/);
   assert.match(source, /if \(isPluginPromptButton\(current\) && !isPluginPromptButton\(element\)\) return;/);
-  assert.match(source, /if \(ref\.gestureTargetHint === 'prompt-button' && isPluginPromptButton\(element\)\) score \+= 12;/);
+  assert.match(
+    source,
+    /if \(ref\.gestureTargetHint === 'prompt-button' && isPluginPromptButton\(element\)\) score \+= 12;/,
+  );
 });
 
 test('pre gallery displayed images use native media targets instead of prompt buttons for gestures', () => {
@@ -325,7 +344,10 @@ test('pre gallery displayed images use native media targets instead of prompt bu
 
   assert.match(source, /const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>\(\)/);
   assert.match(source, /rememberHostImageElementRef\(existing, artifact\.element\)/);
-  assert.match(source, /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/);
+  assert.match(
+    source,
+    /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/,
+  );
   assert.match(source, /const hostTarget = ref\.src \? imageTarget : buttonTarget/);
   assert.doesNotMatch(source, /mode === 'click' && hostTarget\?\.matches\('button\.image-tag-button/);
 });
@@ -344,7 +366,10 @@ test('pre gallery suppresses the synthetic click that follows a long press', () 
 
   assert.match(panelSource, /@click="handleCardClick\(entry, \$event\)"/);
   assert.match(panelSource, /const suppressClickAfterLongPress = ref\(\{ key: '', until: 0 \}\)/);
-  assert.match(panelSource, /suppressClickAfterLongPress\.value = \{ key: entry\.id, until: Date\.now\(\) \+ LONG_PRESS_CLICK_SUPPRESS_MS \}/);
+  assert.match(
+    panelSource,
+    /suppressClickAfterLongPress\.value = \{ key: entry\.id, until: Date\.now\(\) \+ LONG_PRESS_CLICK_SUPPRESS_MS \}/,
+  );
   assert.match(panelSource, /function handleCardClick\(entry: PreGalleryImageRef, event: MouseEvent\)/);
   assert.match(panelSource, /event\.preventDefault\(\);[\s\S]*event\.stopPropagation\(\);[\s\S]*return;/);
 });
