@@ -324,9 +324,9 @@
             :can-roll="false"
             :desktop-tool-row-mode="true"
             :choice-options="latestAssistantItem?.options ?? []"
-            :can-reprocess-variables="false"
-            reprocess-variables-hint="same-layer-pre 暂不接入变量重试"
-            :reprocess-variables-pending="false"
+            :can-reprocess-variables="canReprocessVariables"
+            :reprocess-variables-hint="reprocessVariablesHint"
+            :reprocess-variables-pending="reprocessVariablesPending"
             :can-generate-latest-image="false"
             :role-tabs="[]"
             :active-role-key="null"
@@ -335,6 +335,7 @@
             :show-toolbar="false"
             @submit="submitPrompt"
             @cancel-generation="cancelGeneration"
+            @reprocess-variables="handleReprocessVariablesFromChoiceModal"
           />
         </section>
       </main>
@@ -344,6 +345,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
 import MapBusinessPanel from '../../../../界面同层版/界面/状态栏/components/MapBusinessPanel.vue';
 import MvuRolePanel from '../../../../界面同层版/界面/状态栏/components/MvuRolePanel.vue';
@@ -416,6 +418,104 @@ const latestAssistantItem = computed(
 );
 
 const assistantItemCount = computed(() => transcriptItems.value.filter(item => item.role === 'assistant').length);
+type MvuVariableUpdateMode = 'extra_analysis' | 'inline' | 'unknown';
+const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
+const reprocessVariablesPending = ref(false);
+const canReprocessVariables = computed(() => {
+  const latestAssistant = latestAssistantItem.value;
+  return Boolean(latestAssistant && latestAssistant.role === 'assistant') && !busy.value && !reprocessVariablesPending.value;
+});
+const reprocessVariablesHint = computed(() => {
+  const latestAssistant = latestAssistantItem.value;
+  if (!latestAssistant || latestAssistant.role !== 'assistant') return '当前没有可重新生成变量的 assistant 楼层';
+  if (busy.value) return '正文生成中，等待生成结束后再重试额外模型解析';
+  if (reprocessVariablesPending.value) return '额外模型解析正在进行';
+  if (mvuVariableUpdateMode.value === 'inline') {
+    return '当前 MVU 变量更新方式为“随AI输出”；点击后只提示，不会发起额外模型解析';
+  }
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '无法确认 MVU 变量更新方式是否为“额外模型解析”';
+  return '调用 MVU 插件原生“重试额外模型解析”，不走正文生成链';
+});
+
+function collectReachableDocumentsForMvuMode() {
+  const documents: Document[] = [];
+  const pushDocument = (doc: Document | null | undefined) => {
+    if (doc && !documents.includes(doc)) documents.push(doc);
+  };
+
+  pushDocument(document);
+
+  try {
+    pushDocument(window.parent?.document);
+  } catch {
+    // ignore cross-origin host access
+  }
+
+  try {
+    pushDocument(window.top?.document);
+  } catch {
+    // ignore cross-origin host access
+  }
+
+  return documents;
+}
+
+function readMvuVariableUpdateMode(): MvuVariableUpdateMode {
+  const updateModeLabel = '变量更新方式';
+  const inlineLabel = '随AI输出';
+  const extraAnalysisLabel = '额外模型解析';
+  const nodeText = (node: Element | null | undefined) =>
+    [
+      node?.textContent ?? '',
+      node?.getAttribute?.('value') ?? '',
+      node?.getAttribute?.('aria-label') ?? '',
+      node?.getAttribute?.('title') ?? '',
+    ].join('\n');
+  const closestControlText = (node: Element) =>
+    node.closest('label, .flex-container, .inline-drawer-content, .mvu-section, .settings_block, .form-group, div')
+      ?.textContent ?? '';
+  const isMvuUpdateModeCandidate = (valueText: string, nearbyText: string) =>
+    nearbyText.includes(updateModeLabel) ||
+    valueText.includes(updateModeLabel) ||
+    valueText.includes(inlineLabel) ||
+    valueText.includes(extraAnalysisLabel);
+
+  for (const doc of collectReachableDocumentsForMvuMode()) {
+    for (const select of Array.from(doc.querySelectorAll('select'))) {
+      const htmlSelect = select as HTMLSelectElement;
+      const selectedTexts = Array.from(htmlSelect.selectedOptions ?? [])
+        .map(option => `${option.textContent ?? ''}\n${(option as HTMLOptionElement).value ?? ''}`)
+        .join('\n');
+      const valueText = `${htmlSelect.value ?? ''}\n${selectedTexts}`;
+      const nearbyText = closestControlText(select);
+      if (!isMvuUpdateModeCandidate(valueText, nearbyText)) continue;
+      if (valueText.includes(inlineLabel)) return 'inline';
+      if (valueText.includes(extraAnalysisLabel)) return 'extra_analysis';
+    }
+
+    for (const node of Array.from(doc.querySelectorAll('input:checked, [aria-checked="true"], .selected, .active'))) {
+      const valueText = nodeText(node);
+      const nearbyText = closestControlText(node);
+      if (!isMvuUpdateModeCandidate(valueText, nearbyText)) continue;
+      if (valueText.includes(inlineLabel)) return 'inline';
+      if (valueText.includes(extraAnalysisLabel)) return 'extra_analysis';
+    }
+  }
+
+  try {
+    const extraAnalysisEnabled = (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)?.extra_analysis;
+    if (extraAnalysisEnabled === true) return 'extra_analysis';
+    if (extraAnalysisEnabled === false) return 'inline';
+  } catch {
+    // ignore missing Tavern Helper globals
+  }
+
+  return 'unknown';
+}
+
+function refreshMvuVariableUpdateMode() {
+  mvuVariableUpdateMode.value = readMvuVariableUpdateMode();
+}
 
 const activeUtilityMeta = computed(() => {
   if (activeUtilityDrawer.value === 'map') {
@@ -620,12 +720,55 @@ function selectTheme(value: DemoTheme) {
 
 function openChoiceModalFromToolbar() {
   if (!latestAssistantItem.value) return;
+  refreshMvuVariableUpdateMode();
   closeTopbarMenus();
   closeUtilityDrawer();
   void composerRef.value?.openChoiceModal();
 }
 
+async function handleReprocessVariablesFromChoiceModal() {
+  refreshMvuVariableUpdateMode();
+  const latestAssistant = latestAssistantItem.value;
+  if (!latestAssistant || latestAssistant.role !== 'assistant') {
+    toastr?.warning?.('当前没有可重新生成变量的 assistant 楼层');
+    return;
+  }
+  if (!canReprocessVariables.value) {
+    toastr?.warning?.(reprocessVariablesHint.value);
+    return;
+  }
+  if (mvuVariableUpdateMode.value === 'inline') {
+    toastr?.info?.('当前 MVU 变量更新方式为“随AI输出”，没有可重试的额外模型解析；请改为“额外模型解析”后再使用。');
+    return;
+  }
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') {
+    toastr?.warning?.(reprocessVariablesHint.value);
+    return;
+  }
+
+  reprocessVariablesPending.value = true;
+  try {
+    const reprocessResult = await retryMessageExtraAnalysisByNativeMvu(latestAssistant.message_id, {
+      refreshMessage: true,
+    });
+    if (reprocessResult.status === 'applied') {
+      toastr?.success?.('已触发 MVU 原生“重试额外模型解析”');
+      refreshTranscript('mvu_extra_analysis_retry');
+      return;
+    }
+
+    const reason = String(reprocessResult.reason ?? reprocessResult.status ?? 'unknown');
+    toastr?.warning?.(`重试额外模型解析未触发：${reason}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    toastr?.error?.(`重试额外模型解析失败：${message}`);
+  } finally {
+    reprocessVariablesPending.value = false;
+  }
+}
+
 onMounted(() => {
+  refreshMvuVariableUpdateMode();
   updateReaderShellHeight();
   window.addEventListener('resize', updateReaderShellHeight);
   window.visualViewport?.addEventListener('resize', updateReaderShellHeight);
@@ -1614,7 +1757,7 @@ onBeforeUnmount(() => {
     left: 6px;
     right: auto;
     width: min(85vw, 28rem);
-    height: auto;
+    height: min(94%, 46rem);
     max-height: min(94%, 46rem);
     border-radius: 22px;
     transform: translateX(-100%);

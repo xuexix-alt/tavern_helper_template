@@ -247,6 +247,59 @@ test('same-layer-pre adopts same-layer reader chrome and option menu without ima
   assert.match(toTranscriptItemSource, /options:\s*extractChoiceOptions\(raw,\s*finalHtml\)/);
 });
 
+test('same-layer-pre wires the option modal reprocess button to native MVU extra analysis retry', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+
+  assert.match(storySource, /import\s+\{\s*retryMessageExtraAnalysisByNativeMvu\s*\}\s+from ['"]\.\.\/\.\.\/\.\.\/\.\.\/mvu_reprocess['"]/);
+  assert.match(storySource, /type MvuVariableUpdateMode = 'extra_analysis' \| 'inline' \| 'unknown'/);
+  assert.match(storySource, /const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>\('unknown'\)/);
+  assert.match(storySource, /const reprocessVariablesPending = ref\(false\)/);
+  assert.match(storySource, /const canReprocessVariables = computed/);
+  assert.match(storySource, /const reprocessVariablesHint = computed/);
+  assert.match(storySource, /function readMvuVariableUpdateMode\(\): MvuVariableUpdateMode/);
+  assert.match(storySource, /function refreshMvuVariableUpdateMode\(\)/);
+  assert.match(storySource, /function openChoiceModalFromToolbar\(\)\s*\{[\s\S]*?refreshMvuVariableUpdateMode\(\)/);
+  assert.match(storySource, /async function handleReprocessVariablesFromChoiceModal\(\)/);
+  assert.match(
+    storySource,
+    /await\s+retryMessageExtraAnalysisByNativeMvu\(latestAssistant\.message_id,\s*\{\s*refreshMessage:\s*true\s*,?\s*\}\)/,
+  );
+  assert.match(storySource, /refreshTranscript\('mvu_extra_analysis_retry'\)/);
+
+  assert.match(storySource, /:can-reprocess-variables="canReprocessVariables"/);
+  assert.match(storySource, /:reprocess-variables-hint="reprocessVariablesHint"/);
+  assert.match(storySource, /:reprocess-variables-pending="reprocessVariablesPending"/);
+  assert.match(storySource, /@reprocess-variables="handleReprocessVariablesFromChoiceModal"/);
+  assert.doesNotMatch(storySource, /same-layer-pre 暂不接入变量重试/);
+  assert.doesNotMatch(storySource, /revealHiddenStoryMessagesForNativeGeneration|withHostTranscriptVisible/);
+});
+
+test('same-layer-pre keeps the right gallery drawer fixed height even when empty', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const gallerySource = readPre(path.join('components', 'PreGalleryPanel.vue'));
+
+  assert.match(
+    storySource,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.ui-sidebar\s*\{[\s\S]*?height:\s*min\(94%,\s*46rem\);[\s\S]*?max-height:\s*min\(94%,\s*46rem\);/,
+    'mobile sidebars should use the same fixed overlay height instead of shrinking to content',
+  );
+  assert.doesNotMatch(
+    storySource,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.ui-sidebar\s*\{[\s\S]*?height:\s*auto;/,
+    'mobile sidebars should not shrink when the gallery has no images',
+  );
+  assert.doesNotMatch(
+    storySource,
+    /\.ui-sidebar-right\s*\{[\s\S]*?height:\s*auto;/,
+    'the right drawer should not override the shared sidebar height',
+  );
+  assert.match(
+    gallerySource,
+    /\.pre-gallery-panel\s*\{[\s\S]*?height:\s*100%;[\s\S]*?min-height:\s*0;/,
+    'the empty gallery placeholder should fill the fixed drawer body',
+  );
+});
+
 test('same-layer-pre removes duplicated controls and inherits the input-adjacent system drawer', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const topbarSource = storySource.slice(
@@ -525,6 +578,8 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
   assert.match(targetedRefreshSource, /const currentItems = transcriptItems\.value/);
   assert.match(targetedRefreshSource, /readChatMessageById\(messageId\)/);
   assert.match(targetedRefreshSource, /buildCachedTranscriptItem\(message,\s*latestId,\s*carrierMessageId\)/);
+  assert.match(targetedRefreshSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\)/);
+  assert.match(targetedRefreshSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:target_missing`\)/);
   assert.match(
     targetedRefreshSource,
     /transcriptItems\.value = currentItems\.map\(item => updatedItems\.get\(item\.message_id\) \?\? item\)/,
@@ -534,6 +589,7 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
 
   assert.match(scheduleTargetedSource, /pendingTargetedRefreshIds/);
   assert.match(scheduleTargetedSource, /flushScheduledTranscriptRefresh\(reason\)/);
+  assert.match(scheduleTargetedSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\)/);
   assert.doesNotMatch(scheduleTargetedSource, /refreshTranscript\(nextReason\)/);
   assert.match(flushSource, /const nextTargetedIds = Array\.from\(pendingTargetedRefreshIds\)/);
   assert.match(flushSource, /if \(nextMode === 'full'\)[\s\S]*?refreshTranscript\(nextReason\)/);
@@ -546,8 +602,10 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
   assert.match(hookSource, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
 });
 
-test('same-layer-pre ignores id-less MVU message update events instead of doing a full transcript reload', () => {
+test('same-layer-pre treats id-less host and MVU update events as full host visual hide sweeps', () => {
   const hookSource = readPre('useSameLayerPre.ts');
+  const fullSweepSource = extractFunctionSource(hookSource, 'runFullHostVisualHideSweep');
+  const scheduleFullSweepSource = extractFunctionSource(hookSource, 'scheduleFullHostVisualHideSweep');
   const scheduleTargetedSource = extractFunctionSource(hookSource, 'scheduleTargetedTranscriptRefresh');
   const mountedSource = hookSource.slice(
     hookSource.indexOf('onMounted(() => {'),
@@ -560,10 +618,46 @@ test('same-layer-pre ignores id-less MVU message update events instead of doing 
   );
   const messageRefreshBinding = mountedSource.slice(messageRefreshStart, streamEventStart);
 
-  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*return;\s*\}/);
+  assert.match(fullSweepSource, /collectHostVisibleMessageIds\(\)/);
+  assert.match(fullSweepSource, /replaceHostVisualHide\(hostMessageIds\.length > 0 \? hostMessageIds : visibleIds\)/);
+  assert.match(fullSweepSource, /restoreHostScrollPosition/);
+  assert.match(scheduleFullSweepSource, /fullHostVisualHideSweepTimer/);
+  assert.match(scheduleFullSweepSource, /PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS/);
+  assert.match(scheduleFullSweepSource, /runFullHostVisualHideSweep\(nextSnapshot\)/);
+  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\);\s*return;\s*\}/);
   assert.doesNotMatch(scheduleTargetedSource, /scheduleTranscriptRefresh\(reason\)/);
   assert.match(messageRefreshBinding, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
   assert.doesNotMatch(messageRefreshBinding, /else\s*\{\s*scheduleTranscriptRefresh\(String\(eventName\)\)/);
+  assert.match(hookSource, /function bindMvuHostVisualHideSweepsWhenReady/);
+  assert.match(hookSource, /waitGlobalInitialized\('Mvu'\)/);
+  assert.match(hookSource, /const mvuRefreshEvents = \[/);
+  assert.match(hookSource, /Mvu\.events\.VARIABLE_INITIALIZED/);
+  assert.match(hookSource, /Mvu\.events\.VARIABLE_UPDATE_STARTED/);
+  assert.match(hookSource, /Mvu\.events\.VARIABLE_UPDATE_ENDED/);
+  assert.match(hookSource, /Mvu\.events\.BEFORE_MESSAGE_UPDATE/);
+  assert.match(hookSource, /scheduleFullHostVisualHideSweep\(`mvu:\$\{String\(eventName\)\}`\)/);
+});
+
+test('same-layer-pre keeps createChatMessages lean and coalesces only anomalous host hide sweeps', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const submitSource = extractFunctionSource(hookSource, 'submitPrompt');
+  const regenerateSource = extractFunctionSource(hookSource, 'regenerateMessage');
+  const scheduleFullSweepSource = extractFunctionSource(hookSource, 'scheduleFullHostVisualHideSweep');
+
+  assert.match(hookSource, /type HostScrollSnapshot/);
+  assert.match(hookSource, /function captureHostScrollPosition/);
+  assert.match(hookSource, /function restoreHostScrollPosition/);
+  assert.match(hookSource, /const PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS\s*=/);
+  assert.match(hookSource, /let fullHostVisualHideSweepTimer = 0/);
+  assert.match(hookSource, /let pendingFullHostVisualHideScrollSnapshot: HostScrollSnapshot \| null = null/);
+  assert.match(scheduleFullSweepSource, /if \(fullHostVisualHideSweepTimer\) return/);
+
+  assert.doesNotMatch(hookSource, /PRE_POST_CREATE_HOST_VISUAL_RECOVERY_DELAYS_MS/);
+  assert.doesNotMatch(hookSource, /schedulePostCreateHostVisualRecovery/);
+  assert.doesNotMatch(submitSource, /captureHostScrollPosition\(\)/);
+  assert.doesNotMatch(submitSource, /post_create|scheduleFullHostVisualHideSweep/);
+  assert.doesNotMatch(regenerateSource, /captureHostScrollPosition\(\)/);
+  assert.doesNotMatch(regenerateSource, /post_create|scheduleFullHostVisualHideSweep/);
 });
 
 test('same-layer-pre materializes the submitted user message in host DOM for plugin-native image persistence', () => {
@@ -646,11 +740,19 @@ test('same-layer-pre normalizes loose prose into Chinese reading paragraphs', ()
 test('same-layer-pre keeps body images out of prose indentation and centers them', () => {
   const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
 
-  assert.match(
-    cardSource,
-    /\.pre-message-card__body :deep\(:where\([\s\S]*?figure,[\s\S]*?\.assistant-fallback-inline-image,[\s\S]*?\.assistant-fallback-generated-image,[\s\S]*?\.st-chatu8-image-span,[\s\S]*?span\.image-tag-placeholder,[\s\S]*?\.st-chatu8-image-container,[\s\S]*?\.ai-image-container[\s\S]*?\)\)\s*\{[\s\S]*?text-indent:\s*0;[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center;[\s\S]*?margin-inline:\s*auto;/,
-    'plugin/native image containers should be block media islands, not indented prose',
-  );
+  for (const selector of [
+    'figure',
+    '.assistant-fallback-inline-image',
+    '.assistant-fallback-generated-image',
+    '.st-chatu8-image-span',
+    'span.image-tag-placeholder',
+    '.st-chatu8-image-container',
+    '.ai-image-container',
+  ]) {
+    assert.match(cardSource, new RegExp(selector.replaceAll('.', '\\.')), `${selector} should be treated as media`);
+  }
+  assert.match(cardSource, /text-indent:\s*0;[\s\S]*?display:\s*flex;[\s\S]*?justify-content:\s*center;/);
+  assert.match(cardSource, /margin-inline:\s*auto;[\s\S]*?margin-block:\s*0\.75em;/);
   assert.match(
     cardSource,
     /\.pre-message-card__body :deep\(:where\(img,[\s\S]*?video,[\s\S]*?canvas,[\s\S]*?svg,[\s\S]*?iframe\)\)\s*\{[\s\S]*?display:\s*block;[\s\S]*?margin-inline:\s*auto;[\s\S]*?text-indent:\s*0;/,

@@ -14,7 +14,8 @@ void PRE_GALLERY_PLACEHOLDER;
 .pre-gallery-panel {
   display: grid;
   gap: 12px;
-  min-height: 180px;
+  height: 100%;
+  min-height: 0;
   align-content: center;
   justify-items: center;
   padding: 18px;

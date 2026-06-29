@@ -4,6 +4,7 @@ import { createPreHostVisualHideController } from './preHostVisualHide';
 
 const PRE_TRANSCRIPT_WINDOW_SIZE = 8;
 const PRE_EVENT_REFRESH_DELAY_MS = 80;
+const PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS = 40;
 const PRE_STREAMING_RENDER_INTERVAL_MS = 120;
 const PRE_TRANSCRIPT_CACHE_LIMIT = 48;
 const OPTION_BLOCK_RE = /<option(?:\s[^>]*)?>([\s\S]*?)(?:<\/option>|$)/gi;
@@ -24,6 +25,19 @@ type PreTranscriptItemCacheEntry = {
 };
 
 type ScheduledRefreshMode = 'none' | 'targeted' | 'full';
+
+type HostScrollSnapshot = {
+  elements: Array<{
+    element: HTMLElement;
+    scrollTop: number;
+    scrollLeft: number;
+  }>;
+  windows: Array<{
+    win: Window;
+    scrollX: number;
+    scrollY: number;
+  }>;
+};
 
 function applyDemoTheme(theme: DemoTheme) {
   const className = `theme-${theme}`;
@@ -319,6 +333,68 @@ function collectHostOnlyDocuments(): Document[] {
   return docs;
 }
 
+function collectHostScrollElements(doc: Document) {
+  const elements: HTMLElement[] = [];
+  const push = (element: Element | null | undefined) => {
+    if (element instanceof HTMLElement && !elements.includes(element)) elements.push(element);
+  };
+
+  push(doc.querySelector('#chat'));
+  push(doc.scrollingElement);
+  push(doc.documentElement);
+  push(doc.body);
+  return elements;
+}
+
+function captureHostScrollPosition(): HostScrollSnapshot {
+  const snapshot: HostScrollSnapshot = {
+    elements: [],
+    windows: [],
+  };
+
+  for (const doc of collectHostOnlyDocuments()) {
+    for (const element of collectHostScrollElements(doc)) {
+      snapshot.elements.push({
+        element,
+        scrollTop: element.scrollTop,
+        scrollLeft: element.scrollLeft,
+      });
+    }
+
+    const win = doc.defaultView;
+    if (win) {
+      snapshot.windows.push({
+        win,
+        scrollX: Number(win.scrollX) || 0,
+        scrollY: Number(win.scrollY) || 0,
+      });
+    }
+  }
+
+  return snapshot;
+}
+
+function restoreHostScrollPosition(snapshot: HostScrollSnapshot | null | undefined) {
+  if (!snapshot) return;
+
+  for (const item of snapshot.elements) {
+    try {
+      item.element.scrollTop = item.scrollTop;
+      item.element.scrollLeft = item.scrollLeft;
+    } catch {
+      /* host element may have been replaced */
+    }
+  }
+
+  for (const item of snapshot.windows) {
+    try {
+      item.win.scrollTo(item.scrollX, item.scrollY);
+    } catch {
+      /* cross-origin or detached window */
+    }
+  }
+}
+
 function readMessageIdFromHostElement(element: Element) {
   const raw =
     element.getAttribute('mesid') ??
@@ -408,8 +484,11 @@ export function useSameLayerPre() {
   let pendingRefreshReason = '';
   let pendingRefreshMode: ScheduledRefreshMode = 'none';
   const pendingTargetedRefreshIds = new Set<number>();
+  let fullHostVisualHideSweepTimer = 0;
+  let pendingFullHostVisualHideScrollSnapshot: HostScrollSnapshot | null = null;
   let streamedPreviewText = '';
   let streamedPreviewUpdatedAt = 0;
+  let isUnmounted = false;
 
   function pushLog(type: ReaderLogItem['type'], title: string, detail = '') {
     logItems.value = [
@@ -436,6 +515,26 @@ export function useSameLayerPre() {
     void nextTick(() => {
       hostVisualHideController.replaceWithMessageIds(messageIds, { excludeMessageIds: carrierMessageId });
     });
+  }
+
+  function runFullHostVisualHideSweep(scrollSnapshot?: HostScrollSnapshot | null) {
+    void nextTick(() => {
+      const hostMessageIds = collectHostVisibleMessageIds();
+      const visibleIds = transcriptItems.value.map(item => item.message_id);
+      replaceHostVisualHide(hostMessageIds.length > 0 ? hostMessageIds : visibleIds);
+      restoreHostScrollPosition(scrollSnapshot);
+    });
+  }
+
+  function scheduleFullHostVisualHideSweep(reason = 'event', scrollSnapshot?: HostScrollSnapshot | null) {
+    pendingFullHostVisualHideScrollSnapshot = scrollSnapshot ?? pendingFullHostVisualHideScrollSnapshot ?? captureHostScrollPosition();
+    if (fullHostVisualHideSweepTimer) return;
+    fullHostVisualHideSweepTimer = window.setTimeout(() => {
+      fullHostVisualHideSweepTimer = 0;
+      const nextSnapshot = pendingFullHostVisualHideScrollSnapshot;
+      pendingFullHostVisualHideScrollSnapshot = null;
+      runFullHostVisualHideSweep(nextSnapshot);
+    }, PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS);
   }
 
   function readRecentChatMessagesForUi() {
@@ -615,13 +714,19 @@ export function useSameLayerPre() {
 
   function refreshTranscriptItemsByIds(messageIds: number[], reason = 'event') {
     const normalizedIds = normalizeEventMessageIds(messageIds);
-    if (normalizedIds.length === 0) return;
+    if (normalizedIds.length === 0) {
+      scheduleFullHostVisualHideSweep(`${reason}:idless`);
+      return;
+    }
 
     try {
       const currentItems = transcriptItems.value;
       const currentItemIds = new Set(currentItems.map(item => item.message_id));
       const targetIds = normalizedIds.filter(messageId => currentItemIds.has(messageId));
-      if (targetIds.length === 0) return;
+      if (targetIds.length === 0) {
+        scheduleFullHostVisualHideSweep(`${reason}:target_missing`);
+        return;
+      }
 
       const latestId = currentItems.at(-1)?.message_id ?? -1;
       const carrierMessageId = readPreCarrierMessageId();
@@ -629,6 +734,7 @@ export function useSameLayerPre() {
       for (const messageId of targetIds) {
         const message = readChatMessageById(messageId);
         if (!message) {
+          scheduleFullHostVisualHideSweep(`${reason}:missing`);
           scheduleTranscriptRefresh(`${reason}:missing`);
           return;
         }
@@ -649,6 +755,7 @@ export function useSameLayerPre() {
   function scheduleTargetedTranscriptRefresh(messageIds: number[], reason = 'event') {
     const normalizedIds = normalizeEventMessageIds(messageIds);
     if (normalizedIds.length === 0) {
+      scheduleFullHostVisualHideSweep(`${reason}:idless`);
       return;
     }
 
@@ -678,6 +785,37 @@ export function useSameLayerPre() {
 
     if (nextTargetedIds.length > 0) {
       refreshTranscriptItemsByIds(nextTargetedIds, nextReason);
+    }
+  }
+
+  async function bindMvuHostVisualHideSweepsWhenReady() {
+    if (typeof eventOn !== 'function') return;
+
+    try {
+      await waitGlobalInitialized('Mvu');
+    } catch {
+      return;
+    }
+
+    if (isUnmounted || typeof Mvu === 'undefined' || !Mvu?.events) return;
+
+    const mvuRefreshEvents = [
+      Mvu.events.VARIABLE_INITIALIZED,
+      Mvu.events.VARIABLE_UPDATE_STARTED,
+      Mvu.events.VARIABLE_UPDATE_ENDED,
+      Mvu.events.BEFORE_MESSAGE_UPDATE,
+    ].filter(Boolean);
+
+    for (const eventName of mvuRefreshEvents) {
+      try {
+        stops.push(
+          eventOn(eventName as any, () => {
+            scheduleFullHostVisualHideSweep(`mvu:${String(eventName)}`);
+          }),
+        );
+      } catch {
+        /* optional MVU event unavailable */
+      }
     }
   }
 
@@ -958,6 +1096,7 @@ export function useSameLayerPre() {
   );
 
   onMounted(() => {
+    isUnmounted = false;
     refreshTranscript('mounted');
     const refreshEvents = [
       tavern_events.MESSAGE_SENT,
@@ -988,13 +1127,20 @@ export function useSameLayerPre() {
         updateStreamingPreviewText(String(text ?? ''));
       }),
     );
+    void bindMvuHostVisualHideSweepsWhenReady();
   });
 
   onBeforeUnmount(() => {
+    isUnmounted = true;
     if (refreshTimer) {
       window.clearTimeout(refreshTimer);
       refreshTimer = 0;
     }
+    if (fullHostVisualHideSweepTimer) {
+      window.clearTimeout(fullHostVisualHideSweepTimer);
+      fullHostVisualHideSweepTimer = 0;
+    }
+    pendingFullHostVisualHideScrollSnapshot = null;
     pendingTargetedRefreshIds.clear();
     pendingRefreshMode = 'none';
     stops.splice(0).forEach(stop => stop.stop());
