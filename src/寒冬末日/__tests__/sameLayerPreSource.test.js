@@ -527,7 +527,10 @@ test('same-layer-pre wires inherited AGENTS portrait switching through light gal
   assert.match(storySource, /const preGalleryEntries = ref<ReaderGalleryEntry\[\]>\(\[\]\)/);
   assert.match(storySource, /<GalleryImageRoleAssignPicker/);
   assert.match(storySource, /:roles="preGalleryRoleAssignRoleOptions"/);
-  assert.match(storySource, /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/);
+  assert.match(
+    storySource,
+    /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/,
+  );
   assert.match(storySource, /function selectRolePortraitForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function addRolePortraitSetImageForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function assignPreGalleryImageToRole\(roleKey: string\)/);

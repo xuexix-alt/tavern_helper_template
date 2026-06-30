@@ -443,11 +443,10 @@ function roleProviderName(entry: RoleProviderEntry) {
 }
 
 function buildPrePortraitAssignableRoleTabs() {
-  return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value]
-    .map(entry => ({
-      key: entry.key,
-      label: roleProviderName(entry),
-    }));
+  return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value].map(entry => ({
+    key: entry.key,
+    label: roleProviderName(entry),
+  }));
 }
 
 function roleAlreadyOwnsEntry(roleKey: string, entry: ReaderGalleryEntry): boolean {

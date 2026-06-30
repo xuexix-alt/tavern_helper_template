@@ -618,7 +618,8 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     .map(asRecord)
     .filter(Boolean) as Record<string, any>[];
   const requestedSet = new Set(requestedIds);
-  const scanLimit = requestedSet.size > 0 ? requestedIds.length : normalizeScanLimit(options.scanLimit, messages.length);
+  const scanLimit =
+    requestedSet.size > 0 ? requestedIds.length : normalizeScanLimit(options.scanLimit, messages.length);
   const scanMessages =
     requestedSet.size > 0
       ? messages.filter((message, index) => {
@@ -674,7 +675,9 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     } else if (requestedIds.length > 0) {
       diagnostics.push(`定向刷新 ${collected.length} 个含图楼层`);
     } else if (scanLimit > 1) {
-      diagnostics.push(`图片墙范围：${describeScanLimit(scanLimit, messages.length, requestedIds)}，命中 ${collected.length} 层`);
+      diagnostics.push(
+        `图片墙范围：${describeScanLimit(scanLimit, messages.length, requestedIds)}，命中 ${collected.length} 层`,
+      );
     } else {
       diagnostics.push(`选中最新含图楼层 #${selectedMessageId}`);
     }

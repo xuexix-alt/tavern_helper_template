@@ -369,7 +369,10 @@ test('pre gallery beta event model targets refs first and hydrates DOM after ren
   assert.match(panelSource, /function refreshImageRef\(eventName: string, \.\.\.eventArgs: unknown\[\]\)/);
   assert.match(panelSource, /function hydrateImageDom\(eventName: string, \.\.\.eventArgs: unknown\[\]\)/);
   assert.match(panelSource, /const messageIds = normalizeEventMessageIds\(eventArgs\)/);
-  assert.match(panelSource, /scanLatestPreGalleryImageRefs\(\{\s*reason,\s*messageIds,\s*scanLimit: activeScanLimit\.value\s*\}\)/);
+  assert.match(
+    panelSource,
+    /scanLatestPreGalleryImageRefs\(\{\s*reason,\s*messageIds,\s*scanLimit: activeScanLimit\.value\s*\}\)/,
+  );
   assert.match(panelSource, /tavern_events\.MESSAGE_UPDATED[\s\S]*refreshImageRef/);
   assert.match(panelSource, /tavern_events\.MESSAGE_EDITED[\s\S]*refreshImageRef/);
   assert.match(panelSource, /tavern_events\.USER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
@@ -393,7 +396,10 @@ test('pre gallery desktop wall keeps large two to three column cards', () => {
   assert.match(pageSource, /\.ui-sidebar-right\s*\{[\s\S]*width:\s*min\(52vw, 640px\)/);
   assert.match(pageSource, /\.ui-sidebar-toggle-right\.open\s*\{[\s\S]*translateX\(calc\(-1 \* min\(52vw, 640px\)\)\)/);
   assert.match(panelSource, /grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%, 260px\), 1fr\)\)/);
-  assert.match(panelSource, /@media \(max-width: 520px\)[\s\S]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(104px, 1fr\)\)/);
+  assert.match(
+    panelSource,
+    /@media \(max-width: 520px\)[\s\S]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(104px, 1fr\)\)/,
+  );
 });
 
 test('pre gallery and MVU role panel share portrait assignment entries', () => {
@@ -406,7 +412,10 @@ test('pre gallery and MVU role panel share portrait assignment entries', () => {
   assert.match(pageSource, /:entry="galleryRoleAssignEntry"/);
   assert.match(pageSource, /:roles="preGalleryRoleAssignRoleOptions"/);
   assert.match(pageSource, /@assign="assignPreGalleryImageToRole"/);
-  assert.match(pageSource, /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/);
+  assert.match(
+    pageSource,
+    /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/,
+  );
   assert.match(pageSource, /addRolePortraitEntryForRole\(roleKey,\s*entry,\s*asPrimary \? 'primary' : 'set'\)/);
   assert.match(panelSource, /defineEmits<\{[\s\S]*\(event: 'assign-portrait', entry: ReaderGalleryEntry\): void/);
   assert.match(panelSource, /@click\.stop="emit\('assign-portrait', toReaderGalleryEntry\(entry\)\)"/);
