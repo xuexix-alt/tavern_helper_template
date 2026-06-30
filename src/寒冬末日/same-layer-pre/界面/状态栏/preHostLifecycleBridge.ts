@@ -151,22 +151,17 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
     ),
   );
 
-  bindEvent(
-    tavern_events.STREAM_TOKEN_RECEIVED,
-    ((message: string) => {
-      const messageId = readHostLastMessageId();
-      if (messageId === null || !isAssistantHostMessage(messageId)) return;
-      applyEarlyHostHide(messageId, String(tavern_events.STREAM_TOKEN_RECEIVED));
-      options.updateStreamingPreviewText(String(message ?? ''));
-    }) as ListenerType[typeof tavern_events.STREAM_TOKEN_RECEIVED],
-  );
+  bindEvent(tavern_events.STREAM_TOKEN_RECEIVED, ((message: string) => {
+    const messageId = readHostLastMessageId();
+    if (messageId === null || !isAssistantHostMessage(messageId)) return;
+    applyEarlyHostHide(messageId, String(tavern_events.STREAM_TOKEN_RECEIVED));
+    options.updateStreamingPreviewText(String(message ?? ''));
+  }) as ListenerType[typeof tavern_events.STREAM_TOKEN_RECEIVED]);
 
-  bindEvent(
-    tavern_events.MORE_MESSAGES_LOADED,
-    (() => scheduleHostStableRefresh(String(tavern_events.MORE_MESSAGES_LOADED))) as ListenerType[
-      typeof tavern_events.MORE_MESSAGES_LOADED
-    ],
-  );
+  bindEvent(tavern_events.MORE_MESSAGES_LOADED, (() =>
+    scheduleHostStableRefresh(
+      String(tavern_events.MORE_MESSAGES_LOADED),
+    )) as ListenerType[typeof tavern_events.MORE_MESSAGES_LOADED]);
 
   bindEvent(
     'chatLoaded' as EventType,
@@ -184,7 +179,9 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
       const textarea = doc.querySelector('#curEditTextarea');
       const root = textarea?.closest?.('.mes');
       const id = normalizeMessageId(
-        root?.getAttribute('mesid') ?? root?.getAttribute('data-message-index') ?? root?.getAttribute('data-message-id'),
+        root?.getAttribute('mesid') ??
+          root?.getAttribute('data-message-index') ??
+          root?.getAttribute('data-message-id'),
       );
       if (id !== null) {
         nextEditingMessageId = id;
