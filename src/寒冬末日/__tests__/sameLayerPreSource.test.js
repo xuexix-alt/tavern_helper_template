@@ -577,12 +577,20 @@ test('same-layer-pre coalesces refresh events and avoids full transcript rerende
   const refreshTranscriptSource = extractFunctionSource(hookSource, 'refreshTranscript');
   const readRecentSource = extractFunctionSource(hookSource, 'readRecentChatMessagesForUi');
 
-  assert.match(hookSource, /const PRE_TRANSCRIPT_WINDOW_SIZE\s*=\s*(?:6|8|10|12);/);
+  assert.match(hookSource, /const PRE_TRANSCRIPT_TAIL_PAIR_COUNT\s*=\s*3;/);
+  assert.match(hookSource, /const PRE_TRANSCRIPT_WINDOW_SIZE\s*=\s*PRE_TRANSCRIPT_TAIL_PAIR_COUNT \* 2;/);
   assert.match(hookSource, /const PRE_EVENT_REFRESH_DELAY_MS\s*=/);
   assert.match(hookSource, /const preTranscriptItemCache = new Map/);
   assert.match(hookSource, /function buildCachedTranscriptItem/);
   assert.match(hookSource, /function scheduleTranscriptRefresh/);
+  assert.match(readRecentSource, /const startId = Math\.max\(1,\s*lastId - PRE_TRANSCRIPT_WINDOW_SIZE \+ 1\)/);
   assert.match(readRecentSource, /getChatMessages\(`\$\{startId\}-\$\{lastId\}`,\s*\{\s*hide_state:\s*'all'\s*\}\)/);
+  assert.match(readRecentSource, /selectPreTranscriptWindow\(normalizeChatMessages\(list,\s*startId\)\)/);
+  assert.doesNotMatch(readRecentSource, /Math\.max\(0,\s*lastId - PRE_TRANSCRIPT_WINDOW_SIZE \+ 1\)/);
+  assert.match(hookSource, /function selectPreTranscriptWindow\(messages: ChatMessage\[\]\)/);
+  assert.match(hookSource, /message\.message_id > 0/);
+  assert.match(hookSource, /message\.role === 'user' \|\| message\.role === 'assistant'/);
+  assert.match(hookSource, /\.slice\(-PRE_TRANSCRIPT_WINDOW_SIZE\)/);
   assert.match(refreshTranscriptSource, /visibleMessages\.map\(message =>\s*buildCachedTranscriptItem/);
   assert.match(refreshTranscriptSource, /pruneTranscriptItemCache/);
   assert.doesNotMatch(refreshTranscriptSource, /readAllChatMessages\(\)/);
@@ -605,8 +613,7 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
   assert.match(targetedRefreshSource, /const currentItems = transcriptItems\.value/);
   assert.match(targetedRefreshSource, /readChatMessageById\(messageId\)/);
   assert.match(targetedRefreshSource, /buildCachedTranscriptItem\(message,\s*latestId,\s*carrierMessageId\)/);
-  assert.match(targetedRefreshSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\)/);
-  assert.match(targetedRefreshSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:target_missing`\)/);
+  assert.doesNotMatch(targetedRefreshSource, /scheduleFullHostVisualHideSweep/);
   assert.match(
     targetedRefreshSource,
     /transcriptItems\.value = currentItems\.map\(item => updatedItems\.get\(item\.message_id\) \?\? item\)/,
@@ -616,7 +623,8 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
 
   assert.match(scheduleTargetedSource, /pendingTargetedRefreshIds/);
   assert.match(scheduleTargetedSource, /flushScheduledTranscriptRefresh\(reason\)/);
-  assert.match(scheduleTargetedSource, /scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\)/);
+  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*return;\s*\}/);
+  assert.doesNotMatch(scheduleTargetedSource, /scheduleFullHostVisualHideSweep/);
   assert.doesNotMatch(scheduleTargetedSource, /refreshTranscript\(nextReason\)/);
   assert.match(flushSource, /const nextTargetedIds = Array\.from\(pendingTargetedRefreshIds\)/);
   assert.match(flushSource, /if \(nextMode === 'full'\)[\s\S]*?refreshTranscript\(nextReason\)/);
@@ -629,10 +637,8 @@ test('same-layer-pre refreshes updated message floors without rebuilding the tra
   assert.match(hookSource, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
 });
 
-test('same-layer-pre treats id-less host and MVU update events as full host visual hide sweeps', () => {
+test('same-layer-pre drops the MVU full-sweep visual recovery experiment', () => {
   const hookSource = readPre('useSameLayerPre.ts');
-  const fullSweepSource = extractFunctionSource(hookSource, 'runFullHostVisualHideSweep');
-  const scheduleFullSweepSource = extractFunctionSource(hookSource, 'scheduleFullHostVisualHideSweep');
   const scheduleTargetedSource = extractFunctionSource(hookSource, 'scheduleTargetedTranscriptRefresh');
   const mountedSource = hookSource.slice(
     hookSource.indexOf('onMounted(() => {'),
@@ -645,44 +651,30 @@ test('same-layer-pre treats id-less host and MVU update events as full host visu
   );
   const messageRefreshBinding = mountedSource.slice(messageRefreshStart, streamEventStart);
 
-  assert.match(fullSweepSource, /collectHostVisibleMessageIds\(\)/);
-  assert.match(fullSweepSource, /replaceHostVisualHide\(hostMessageIds\.length > 0 \? hostMessageIds : visibleIds\)/);
-  assert.match(fullSweepSource, /restoreHostScrollPosition/);
-  assert.match(scheduleFullSweepSource, /fullHostVisualHideSweepTimer/);
-  assert.match(scheduleFullSweepSource, /PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS/);
-  assert.match(scheduleFullSweepSource, /runFullHostVisualHideSweep\(nextSnapshot\)/);
-  assert.match(
-    scheduleTargetedSource,
-    /if \(normalizedIds\.length === 0\) \{\s*scheduleFullHostVisualHideSweep\(`\$\{reason\}:idless`\);\s*return;\s*\}/,
-  );
+  assert.doesNotMatch(hookSource, /type HostScrollSnapshot/);
+  assert.doesNotMatch(hookSource, /function captureHostScrollPosition/);
+  assert.doesNotMatch(hookSource, /function restoreHostScrollPosition/);
+  assert.doesNotMatch(hookSource, /function runFullHostVisualHideSweep/);
+  assert.doesNotMatch(hookSource, /function scheduleFullHostVisualHideSweep/);
+  assert.doesNotMatch(hookSource, /PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS/);
+  assert.match(scheduleTargetedSource, /if \(normalizedIds\.length === 0\) \{\s*return;\s*\}/);
   assert.doesNotMatch(scheduleTargetedSource, /scheduleTranscriptRefresh\(reason\)/);
   assert.match(messageRefreshBinding, /scheduleTargetedTranscriptRefresh\(messageIds,\s*String\(eventName\)\)/);
   assert.doesNotMatch(messageRefreshBinding, /else\s*\{\s*scheduleTranscriptRefresh\(String\(eventName\)\)/);
-  assert.match(hookSource, /function bindMvuHostVisualHideSweepsWhenReady/);
-  assert.match(hookSource, /waitGlobalInitialized\('Mvu'\)/);
-  assert.match(hookSource, /const mvuRefreshEvents = \[/);
-  assert.match(hookSource, /Mvu\.events\.VARIABLE_INITIALIZED/);
-  assert.match(hookSource, /Mvu\.events\.VARIABLE_UPDATE_STARTED/);
-  assert.match(hookSource, /Mvu\.events\.VARIABLE_UPDATE_ENDED/);
-  assert.match(hookSource, /Mvu\.events\.BEFORE_MESSAGE_UPDATE/);
-  assert.match(hookSource, /scheduleFullHostVisualHideSweep\(`mvu:\$\{String\(eventName\)\}`\)/);
+  assert.doesNotMatch(hookSource, /function bindMvuHostVisualHideSweepsWhenReady/);
+  assert.doesNotMatch(hookSource, /waitGlobalInitialized\('Mvu'\)/);
+  assert.doesNotMatch(hookSource, /Mvu\.events\.VARIABLE_INITIALIZED/);
+  assert.doesNotMatch(hookSource, /Mvu\.events\.VARIABLE_UPDATE_STARTED/);
+  assert.doesNotMatch(hookSource, /Mvu\.events\.VARIABLE_UPDATE_ENDED/);
+  assert.doesNotMatch(hookSource, /Mvu\.events\.BEFORE_MESSAGE_UPDATE/);
 });
 
-test('same-layer-pre keeps createChatMessages lean and coalesces only anomalous host hide sweeps', () => {
+test('same-layer-pre createChatMessages stays free of post-create visual recovery retries', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const submitSource = extractFunctionSource(hookSource, 'submitPrompt');
   const regenerateSource = extractFunctionSource(hookSource, 'regenerateMessage');
-  const scheduleFullSweepSource = extractFunctionSource(hookSource, 'scheduleFullHostVisualHideSweep');
 
-  assert.match(hookSource, /type HostScrollSnapshot/);
-  assert.match(hookSource, /function captureHostScrollPosition/);
-  assert.match(hookSource, /function restoreHostScrollPosition/);
-  assert.match(hookSource, /const PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS\s*=/);
-  assert.match(hookSource, /let fullHostVisualHideSweepTimer = 0/);
-  assert.match(hookSource, /let pendingFullHostVisualHideScrollSnapshot: HostScrollSnapshot \| null = null/);
-  assert.match(scheduleFullSweepSource, /if \(fullHostVisualHideSweepTimer\) return/);
-
-  assert.doesNotMatch(hookSource, /PRE_POST_CREATE_HOST_VISUAL_RECOVERY_DELAYS_MS/);
+  assert.doesNotMatch(hookSource, /PRE_POST_CREATE_HOST_VISUAL_RECOVERY_DELAYS_MS|PRE_HOST_VISUAL_HIDE_SWEEP_DELAY_MS/);
   assert.doesNotMatch(hookSource, /schedulePostCreateHostVisualRecovery/);
   assert.doesNotMatch(submitSource, /captureHostScrollPosition\(\)/);
   assert.doesNotMatch(submitSource, /post_create|scheduleFullHostVisualHideSweep/);
