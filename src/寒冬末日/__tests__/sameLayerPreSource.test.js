@@ -817,13 +817,18 @@ test('same-layer-pre enables the host image gesture forwarder without owning ima
 test('same-layer-pre streaming preview stays lightweight until the done transcript render', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const rendererSource = readPre('streamRendererDisplay.ts');
+  const streamComponentSource = readPre(path.join('components', 'StreamRenderer.vue'));
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
   const streamingItemSource = hookSource.slice(
     hookSource.indexOf('const streamingItem = computed'),
     hookSource.indexOf('const visibleTranscriptItems = computed'),
   );
 
   assert.doesNotMatch(rendererSource, /applyRegexForDisplay/);
-  assert.match(rendererSource, /escapeHtml\(source\)/);
+  assert.match(rendererSource, /formatAsDisplayedMessage\(source,\s*\{\s*message_id:\s*messageId\s*\}\)/);
+  assert.match(rendererSource, /catch \(error\)[\s\S]*?escapeHtml\(source\)/);
+  assert.match(cardSource, /:message-id="item\.message_id"/);
+  assert.match(streamComponentSource, /buildStreamRendererHtml\(props\.message,\s*props\.role,\s*props\.messageId\)/);
   assert.match(streamingItemSource, /options:\s*\[\]/);
   assert.doesNotMatch(streamingItemSource, /extractChoiceOptions\(raw\)/);
 });
@@ -913,4 +918,35 @@ test('same-layer-pre plugin image client follows the plugin author event protoco
   assert.doesNotMatch(source, /indexedDB|idb:\/\//i);
   assert.match(entrySource, /from '.\/pluginImageClient'/);
   assert.match(entrySource, /EdenSameLayerPre/);
+});
+
+test('same-layer-pre bridges host lifecycle events without MVU full-sweep retries', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const bridgeSource = readPre('preHostLifecycleBridge.ts');
+  const controllerSource = readPre('preHostVisualHide.ts');
+  const mountedSource = hookSource.slice(
+    hookSource.indexOf('onMounted(() => {'),
+    hookSource.indexOf('onBeforeUnmount(() => {'),
+  );
+
+  assert.match(hookSource, /from '.\/preHostLifecycleBridge'/);
+  assert.match(mountedSource, /bindPreHostLifecycleBridge\(/);
+  assert.match(mountedSource, /hostVisualHideController\.reapply/);
+  assert.match(mountedSource, /updateStreamingPreviewText/);
+
+  assert.match(bridgeSource, /export function bindPreHostLifecycleBridge/);
+  assert.match(bridgeSource, /eventMakeFirst\(\s*tavern_events\.CHARACTER_MESSAGE_RENDERED/);
+  assert.match(bridgeSource, /tavern_events\.STREAM_TOKEN_RECEIVED/);
+  assert.match(bridgeSource, /tavern_events\.MORE_MESSAGES_LOADED/);
+  assert.match(bridgeSource, /'chatLoaded'/);
+  assert.match(bridgeSource, /#curEditTextarea/);
+  assert.match(bridgeSource, /readHostLastMessageId/);
+  assert.match(bridgeSource, /applyHostVisualHide\(\[messageId\]/);
+  assert.match(bridgeSource, /scheduleTargetedTranscriptRefresh\(\[messageId\]/);
+  assert.match(bridgeSource, /requestAnimationFrame|setTimeout/);
+  assert.doesNotMatch(bridgeSource, /VARIABLE_UPDATE|BEFORE_MESSAGE_UPDATE|scheduleFullHostVisualHideSweep/);
+  assert.doesNotMatch(bridgeSource, /\[0,\s*80,\s*240,\s*600,\s*1200\]/);
+
+  assert.match(controllerSource, /function reapply\(\)/);
+  assert.match(controllerSource, /reapply,/);
 });

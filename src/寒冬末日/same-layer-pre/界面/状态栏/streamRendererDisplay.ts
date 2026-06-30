@@ -5,7 +5,7 @@ import type { TranscriptItem } from './types';
  * StreamRenderer 流式预览渲染纯函数
  *
  * 提取自接入需求：流式阶段只做「忠实反映 AI 输出」的轻量渲染。
- * - 不识别任何业务标签（<scene>/<option>/<UpdateVariable> 等），结构化呈现等楼层落盘后交给完整渲染管线。
+ * - 仅复用宿主 display formatter，让闭合后的美化正则能跟随流式快照实时生效。
  * - 不做 chunk 切断防护 / blocks 增量解析：同层框架给的是全量快照而非 SSE delta。
  * - 不处理图片 token / artifact：生图协议交给插件事件客户端与宿主插件。
  *
@@ -19,12 +19,21 @@ export const STREAM_RENDERER_PENDING_HTML = '<span class="stream-renderer__pendi
  * 把流式原文转换为可直接 v-html 的预览 HTML。
  *
  * @param message 流式原文（即 `item.content`，已是 extractStreamDemoContent 的结果）
- * @param role    消息角色；流式阶段不按角色执行 display 正则。
+ * @param role    消息角色；用户消息仍保持字面输出。
+ * @param messageId 楼层号，传给宿主 display formatter。
  */
-export function buildStreamRendererHtml(message: string, role: TranscriptItem['role']): string {
+export function buildStreamRendererHtml(message: string, role: TranscriptItem['role'], messageId: number): string {
   const source = String(message ?? '').trim();
   if (!source) return STREAM_RENDERER_PENDING_HTML;
 
-  void role;
+  if (role === 'assistant' && typeof formatAsDisplayedMessage === 'function') {
+    try {
+      return formatAsDisplayedMessage(source, { message_id: messageId });
+    } catch (error) {
+      console.warn('[same-layer-pre] stream formatAsDisplayedMessage failed', { messageId, error });
+      return escapeHtml(source);
+    }
+  }
+
   return escapeHtml(source);
 }

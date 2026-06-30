@@ -31,7 +31,7 @@ const props = defineProps<{
   messageId: number;
 }>();
 
-const displayHtml = computed(() => buildStreamRendererHtml(props.message, props.role));
+const displayHtml = computed(() => buildStreamRendererHtml(props.message, props.role, props.messageId));
 </script>
 
 <style scoped>

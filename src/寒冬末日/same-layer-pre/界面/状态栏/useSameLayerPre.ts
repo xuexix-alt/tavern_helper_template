@@ -1,6 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { DemoStatus, DemoTheme, ReaderLogItem, ReaderSummary, TranscriptItem } from './types';
 import { createPreHostVisualHideController } from './preHostVisualHide';
+import { bindPreHostLifecycleBridge } from './preHostLifecycleBridge';
 
 const PRE_TRANSCRIPT_TAIL_PAIR_COUNT = 3;
 const PRE_TRANSCRIPT_WINDOW_SIZE = PRE_TRANSCRIPT_TAIL_PAIR_COUNT * 2;
@@ -998,6 +999,18 @@ export function useSameLayerPre() {
       eventOn(iframe_events.STREAM_TOKEN_RECEIVED_FULLY as any, (text: string, generationId: string) => {
         if (!activeGenerationId.value || generationId !== activeGenerationId.value) return;
         updateStreamingPreviewText(String(text ?? ''));
+      }),
+    );
+    stops.push(
+      bindPreHostLifecycleBridge({
+        applyHostVisualHide: hostVisualHideController.applyToMessageIds,
+        clearHostVisualHide: hostVisualHideController.clearFromMessageIds,
+        reapplyHostVisualHide: hostVisualHideController.reapply,
+        readCarrierMessageId: readPreCarrierMessageId,
+        scheduleTranscriptRefresh,
+        scheduleTargetedTranscriptRefresh,
+        updateStreamingPreviewText,
+        clearStreamingPreviewText: () => updateStreamingPreviewText(''),
       }),
     );
   });

@@ -118,6 +118,11 @@ export function createPreHostVisualHideController() {
     }
   }
 
+  function reapply() {
+    ensureHostMutationObservers();
+    reapplyHostVisualHide();
+  }
+
   function scheduleReapplyHostVisualHide() {
     if (reapplyTimer) return;
     reapplyTimer = window.setTimeout(reapplyHostVisualHide, 50);
@@ -191,6 +196,7 @@ export function createPreHostVisualHideController() {
     applyToMessageIds,
     replaceWithMessageIds,
     clearFromMessageIds,
+    reapply,
     destroy,
   };
 }
