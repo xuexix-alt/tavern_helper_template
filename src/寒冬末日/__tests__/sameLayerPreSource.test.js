@@ -103,7 +103,9 @@ test('same-layer-pre beta gallery uses light refs without owning image persisten
   const refSource = readPre('preGalleryImageRefs.ts');
 
   assert.match(storySource, /PreGalleryPanel/);
-  assert.match(storySource, /<PreGalleryPanel\s+:active="galleryDrawerOpen"\s+@gallery-log="appendGalleryLog"\s*\/>/);
+  assert.match(storySource, /<PreGalleryPanel[\s\S]*:active="galleryDrawerOpen"[\s\S]*@gallery-log="appendGalleryLog"/);
+  assert.match(storySource, /@gallery-entries="updatePreGalleryEntries"/);
+  assert.match(storySource, /@assign-portrait="openPreGalleryRoleAssign"/);
   assert.doesNotMatch(storySource, /:entries=/);
   assert.doesNotMatch(storySource, /@view-image=/);
   assert.doesNotMatch(storySource, /@load-older=/);
@@ -503,10 +505,10 @@ test('same-layer-pre left sidebar inherits the full same-layer AGENTS page witho
   assert.match(inheritedPanelSource, /entry\.role\.神态样貌/);
 });
 
-test('same-layer-pre wires inherited AGENTS portrait switching without enabling gallery business', () => {
+test('same-layer-pre wires inherited AGENTS portrait switching through light gallery entries', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
 
-  assert.match(storySource, /:gallery-entries="\[\]"/);
+  assert.match(storySource, /:gallery-entries="preGalleryEntries"/);
   assert.match(storySource, /:role-portrait-overrides="rolePortraitOverrides"/);
   assert.match(storySource, /@select-role-portrait="selectRolePortraitForRole"/);
   assert.match(storySource, /@add-role-portrait-set-image="addRolePortraitSetImageForRole"/);
@@ -522,12 +524,17 @@ test('same-layer-pre wires inherited AGENTS portrait switching without enabling 
     storySource,
     /const rolePortraitOverrides = ref<RolePortraitOverrideMap>\(readRolePortraitOverrides\(\)\)/,
   );
+  assert.match(storySource, /const preGalleryEntries = ref<ReaderGalleryEntry\[\]>\(\[\]\)/);
+  assert.match(storySource, /<GalleryImageRoleAssignPicker/);
+  assert.match(storySource, /:roles="preGalleryRoleAssignRoleOptions"/);
+  assert.match(storySource, /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/);
   assert.match(storySource, /function selectRolePortraitForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function addRolePortraitSetImageForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
+  assert.match(storySource, /function assignPreGalleryImageToRole\(roleKey: string\)/);
   assert.match(storySource, /function clearRolePortraitForRole\(roleKey: string\)/);
   assert.match(storySource, /function handleRolePortraitError\(key: string\)/);
 
-  assert.doesNotMatch(storySource, /const galleryEntries/);
+  assert.doesNotMatch(storySource, /const galleryEntries =/);
   assert.doesNotMatch(storySource, /startGalleryImageCacheSession|discoverRecentNativeGalleryImages/);
 });
 

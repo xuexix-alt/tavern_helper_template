@@ -141,11 +141,14 @@ const filteredRoles = computed(() => {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  max-width: 100%;
   color: var(--demo-text-secondary);
   font-size: 12px;
 }
 
 .role-assign-preview-copy small {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

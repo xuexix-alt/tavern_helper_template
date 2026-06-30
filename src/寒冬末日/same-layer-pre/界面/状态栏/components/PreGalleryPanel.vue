@@ -13,6 +13,15 @@
       <span>{{ result.refs.length }} 张</span>
     </div>
 
+    <label class="pre-gallery-panel__scope">
+      <span>范围</span>
+      <select v-model="scanLimitValue" @change="scanNow('scope_change')">
+        <option v-for="option in scanLimitOptions" :key="option.value" :value="option.value">
+          {{ option.label }}
+        </option>
+      </select>
+    </label>
+
     <div v-if="result.refs.length === 0" class="pre-gallery-panel__empty">
       <strong>{{ emptyTitle }}</strong>
       <span>{{ emptyDetail }}</span>
@@ -48,7 +57,19 @@
         <div class="pre-gallery-card__meta">
           <div class="pre-gallery-card__line">
             <strong>#{{ entry.messageId }}</strong>
-            <span>{{ entry.gestureTargetHint }}</span>
+            <div class="pre-gallery-card__actions">
+              <span>{{ entry.gestureTargetHint }}</span>
+              <button
+                v-if="entry.src"
+                type="button"
+                class="pre-gallery-card__portrait"
+                title="设为立绘"
+                aria-label="设为立绘"
+                @click.stop="emit('assign-portrait', toReaderGalleryEntry(entry))"
+              >
+                
+              </button>
+            </div>
           </div>
         </div>
       </article>
@@ -60,13 +81,16 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   dispatchPreGalleryImageRefGesture,
+  preGalleryRefToReaderGalleryEntry,
   scanLatestPreGalleryImageRefs,
   type PreGalleryGestureMode,
   type PreGalleryImageRef,
   type PreGalleryImageSource,
+  type PreGalleryScanLimit,
   type PreGalleryScanResult,
 } from '../preGalleryImageRefs';
 import type { PreGalleryLogItem } from '../types';
+import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
 
 const props = defineProps<{
   active: boolean;
@@ -74,6 +98,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (event: 'gallery-log', item: PreGalleryLogItem): void;
+  (event: 'gallery-entries', entries: ReaderGalleryEntry[]): void;
+  (event: 'assign-portrait', entry: ReaderGalleryEntry): void;
 }>();
 
 const EMPTY_SOURCE_COUNTS: Record<PreGalleryImageSource, number> = {
@@ -86,6 +112,14 @@ const LAZY_RESCAN_DELAY_MS = 220;
 const RENDER_RESCAN_DELAY_MS = 720;
 const LONG_PRESS_MS = 540;
 const LONG_PRESS_CLICK_SUPPRESS_MS = 900;
+const SCAN_LIMIT_OPTIONS: Array<{ value: string; label: string; scanLimit: PreGalleryScanLimit }> = [
+  { value: '1', label: '最近 1 层', scanLimit: 1 },
+  { value: '3', label: '最近 3 层', scanLimit: 3 },
+  { value: '8', label: '最近 8 层', scanLimit: 8 },
+  { value: '20', label: '最近 20 层', scanLimit: 20 },
+  { value: '50', label: '最近 50 层', scanLimit: 50 },
+  { value: 'all', label: '全量', scanLimit: 'all' },
+];
 
 const result = ref<PreGalleryScanResult>({
   reason: 'init',
@@ -101,7 +135,13 @@ const scanTimer = ref(0);
 const renderRescanTimer = ref(0);
 const longPressTimer = ref(0);
 const suppressClickAfterLongPress = ref({ key: '', until: 0 });
+const scanLimitValue = ref('1');
 const stops: Array<{ stop: () => void }> = [];
+const scanLimitOptions = SCAN_LIMIT_OPTIONS;
+
+const activeScanLimit = computed<PreGalleryScanLimit>(() => {
+  return SCAN_LIMIT_OPTIONS.find(option => option.value === scanLimitValue.value)?.scanLimit ?? 1;
+});
 
 const probeStateLabel = computed(() => {
   if (!props.active) return '休眠：未打开不扫描';
@@ -149,6 +189,14 @@ function summarizeLogRef(entry: PreGalleryImageRef) {
     className: entry.className,
     evidence: entry.evidence.slice(0, 4),
   };
+}
+
+function toReaderGalleryEntry(entry: PreGalleryImageRef): ReaderGalleryEntry {
+  return preGalleryRefToReaderGalleryEntry(entry);
+}
+
+function emitGalleryEntries(refs: PreGalleryImageRef[]) {
+  emit('gallery-entries', refs.filter(ref => ref.src).map(toReaderGalleryEntry));
 }
 
 function logScan(next: PreGalleryScanResult) {
@@ -208,8 +256,9 @@ function normalizeEventMessageIds(values: unknown[]): number[] {
 function scanNow(reason = 'manual', messageIds: number[] = []) {
   if (!props.active) return;
   dirtyEvents.value = [];
-  const next = scanLatestPreGalleryImageRefs({ reason, messageIds });
+  const next = scanLatestPreGalleryImageRefs({ reason, messageIds, scanLimit: activeScanLimit.value });
   result.value = next;
+  emitGalleryEntries(next.refs);
   logScan(next);
 }
 
@@ -360,38 +409,53 @@ onBeforeUnmount(() => {
   min-height: 0;
   height: 100%;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
+  gap: 8px;
+  padding: 10px;
   color: var(--demo-text-secondary);
 }
 
 .pre-gallery-panel__head,
-.pre-gallery-panel__probe {
+.pre-gallery-panel__probe,
+.pre-gallery-panel__scope {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pre-gallery-panel__head strong {
   display: block;
   color: var(--demo-text-primary);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .pre-gallery-panel__refresh {
-  min-width: 58px;
+  min-width: 52px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--surface) 76%, transparent);
   color: var(--demo-text-primary);
   font-size: 12px;
-  line-height: 28px;
+  line-height: 26px;
 }
 
 .pre-gallery-panel__probe {
   border: 1px solid var(--demo-border-soft);
-  padding: 8px 10px;
+  padding: 6px 8px;
   font-size: 12px;
+}
+
+.pre-gallery-panel__scope {
+  color: var(--demo-text-tertiary);
+  font-size: 11px;
+}
+
+.pre-gallery-panel__scope select {
+  min-width: 106px;
+  border: 1px solid var(--demo-border-soft);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--demo-text-primary);
+  font-size: 12px;
+  line-height: 24px;
 }
 
 .pre-gallery-panel__probe.hit {
@@ -409,11 +473,11 @@ onBeforeUnmount(() => {
 
 .pre-gallery-panel__empty {
   display: grid;
-  min-height: 128px;
+  min-height: 112px;
   place-content: center;
-  gap: 6px;
+  gap: 5px;
   border: 1px dashed var(--demo-border-accent-soft);
-  padding: 18px;
+  padding: 14px;
   text-align: center;
 }
 
@@ -429,19 +493,19 @@ onBeforeUnmount(() => {
 
 .pre-gallery-panel__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 10px;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: 1px;
 }
 
 .pre-gallery-card {
   display: grid;
-  gap: 8px;
+  gap: 5px;
   border: 1px solid var(--demo-border-soft);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  padding: 8px;
+  background: color-mix(in srgb, var(--surface) 58%, transparent);
+  padding: 5px;
 }
 
 .pre-gallery-card__image {
@@ -450,10 +514,10 @@ onBeforeUnmount(() => {
   aspect-ratio: 1;
   place-items: center;
   overflow: hidden;
-  border: 1px solid var(--demo-border-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--demo-border-accent-soft) 62%, transparent);
   background: #10141a;
   color: var(--demo-text-tertiary);
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .pre-gallery-card__image img {
@@ -469,24 +533,69 @@ onBeforeUnmount(() => {
 
 .pre-gallery-card__meta {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .pre-gallery-card__line {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .pre-gallery-card__line {
   justify-content: space-between;
   color: var(--demo-text-primary);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .pre-gallery-card__line span {
   color: var(--demo-text-tertiary);
+  font-size: 10px;
+}
+
+.pre-gallery-card__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.pre-gallery-card__portrait {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  color: var(--demo-text-accent);
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', var(--demo-font-mono);
   font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.pre-gallery-card__portrait:hover,
+.pre-gallery-card__portrait:focus-visible {
+  outline: none;
+  border-color: var(--demo-border-accent-active);
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface) 70%);
+}
+
+@media (max-width: 520px) {
+  .pre-gallery-panel {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .pre-gallery-panel__grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 6px;
+  }
+
+  .pre-gallery-card {
+    padding: 4px;
+  }
 }
 </style>

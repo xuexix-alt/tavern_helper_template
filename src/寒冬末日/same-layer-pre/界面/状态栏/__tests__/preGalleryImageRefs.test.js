@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { scanLatestPreGalleryImageRefs } = require('../preGalleryImageRefs.ts');
+const { preGalleryRefToReaderGalleryEntry, scanLatestPreGalleryImageRefs } = require('../preGalleryImageRefs.ts');
 
 const statusBarDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(statusBarDir, '../../../../..');
@@ -108,6 +108,51 @@ test('pre gallery targeted scan only refreshes requested message ids', () => {
   assert.equal(result.refs.length, 1);
   assert.equal(result.refs[0].requestId, 'req-target');
   assert.match(result.diagnostics.join('\n'), /定向刷新楼层 #10/);
+});
+
+test('pre gallery scan limit collects multiple recent image floors for wall mode', () => {
+  const result = scanLatestPreGalleryImageRefs({
+    reason: 'drawer_open',
+    scanLimit: 2,
+    messages: [
+      {
+        message_id: 4,
+        message: 'image###old one###',
+        extra: {
+          images: [[{ promptToken: 'image###old one###', requestId: 'req-old', src: 'idb://4/req-old' }]],
+        },
+      },
+      {
+        message_id: 5,
+        message: 'image###middle one###',
+        extra: {
+          images: [[{ promptToken: 'image###middle one###', requestId: 'req-middle', src: 'idb://5/req-middle' }]],
+        },
+      },
+      {
+        message_id: 6,
+        message: 'image###latest prompt only###',
+      },
+      {
+        message_id: 7,
+        message: 'image###latest ready###',
+        extra: {
+          images: [[{ promptToken: 'image###latest ready###', requestId: 'req-latest', src: 'idb://7/req-latest' }]],
+        },
+      },
+    ],
+    hostArtifacts: [],
+    now: 234,
+  });
+
+  assert.equal(result.selectedMessageId, 7);
+  assert.equal(result.refs.length, 2);
+  assert.deepEqual(
+    result.refs.map(ref => ref.messageId),
+    [7, 5],
+  );
+  assert.equal(result.scannedMessageCount, 3);
+  assert.match(result.diagnostics.join('\n'), /图片墙范围：最近 2 个含图楼层/);
 });
 
 test('pre gallery scan prefers displayable native refs over newer prompt-only tags', () => {
@@ -268,6 +313,46 @@ test('pre gallery lightKey never stores image src data', () => {
   assert.doesNotMatch(result.refs[0].lightKey, /VERY_HEAVY_IMAGE_DATA|base64|data:image|srcHash/);
 });
 
+test('pre gallery refs convert to reader gallery entries for portrait assignment without changing light key', () => {
+  const longPrompt =
+    'image###sfw, 1girl, solo, Lin Yuehua, mature female, black hair, updo, hair clip, pale skin, navy silk shirt, pencil skirt###';
+  const result = scanLatestPreGalleryImageRefs({
+    reason: 'unit',
+    messages: [
+      {
+        message_id: 8,
+        message: longPrompt,
+        extra: {
+          images: [
+            [
+              {
+                promptToken: longPrompt,
+                requestId: 'req-lin',
+                imageId: 'img-lin',
+                src: 'idb://8/req-lin',
+              },
+            ],
+          ],
+        },
+      },
+    ],
+    hostArtifacts: [],
+  });
+
+  const entry = preGalleryRefToReaderGalleryEntry(result.refs[0]);
+  assert.equal(entry.id, result.refs[0].id);
+  assert.equal(entry.messageId, 8);
+  assert.equal(entry.requestId, 'req-lin');
+  assert.equal(entry.imageId, 'img-lin');
+  assert.equal(entry.promptToken, longPrompt);
+  assert.equal(entry.anchorText, longPrompt);
+  assert.equal(entry.src, 'idb://8/req-lin');
+  assert.equal(entry.title, '楼层 #8 · 图片 1');
+  assert.equal(entry.title.includes('sfw'), false);
+  assert.ok(entry.title.length <= 18);
+  assert.doesNotMatch(result.refs[0].lightKey, /idb:\/\/8\/req-lin/);
+});
+
 test('pre gallery beta stays lazy and scans only while drawer is active', () => {
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
   const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
@@ -275,7 +360,7 @@ test('pre gallery beta stays lazy and scans only while drawer is active', () => 
   assert.match(panelSource, /defineProps<\{\s*active:\s*boolean;\s*\}>/);
   assert.match(panelSource, /if \(!props\.active\) return;/);
   assert.match(panelSource, /scheduleScan\('drawer_open'/);
-  assert.match(pageSource, /<PreGalleryPanel\s+:active="galleryDrawerOpen"\s+@gallery-log="appendGalleryLog"\s*\/>/);
+  assert.match(pageSource, /<PreGalleryPanel[\s\S]*:active="galleryDrawerOpen"[\s\S]*@gallery-log="appendGalleryLog"/);
 });
 
 test('pre gallery beta event model targets refs first and hydrates DOM after render', () => {
@@ -284,13 +369,67 @@ test('pre gallery beta event model targets refs first and hydrates DOM after ren
   assert.match(panelSource, /function refreshImageRef\(eventName: string, \.\.\.eventArgs: unknown\[\]\)/);
   assert.match(panelSource, /function hydrateImageDom\(eventName: string, \.\.\.eventArgs: unknown\[\]\)/);
   assert.match(panelSource, /const messageIds = normalizeEventMessageIds\(eventArgs\)/);
-  assert.match(panelSource, /scanLatestPreGalleryImageRefs\(\{\s*reason,\s*messageIds\s*\}\)/);
+  assert.match(panelSource, /scanLatestPreGalleryImageRefs\(\{\s*reason,\s*messageIds,\s*scanLimit: activeScanLimit\.value\s*\}\)/);
   assert.match(panelSource, /tavern_events\.MESSAGE_UPDATED[\s\S]*refreshImageRef/);
   assert.match(panelSource, /tavern_events\.MESSAGE_EDITED[\s\S]*refreshImageRef/);
   assert.match(panelSource, /tavern_events\.USER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
   assert.match(panelSource, /tavern_events\.CHARACTER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
   assert.match(panelSource, /scheduleRenderRescan\(eventName,\s*messageIds\)/);
   assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED|CHAT_CHANGED/);
+});
+
+test('pre gallery panel exposes bounded wall scan selector', () => {
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+
+  assert.match(panelSource, /<select v-model="scanLimitValue" @change="scanNow\('scope_change'\)">/);
+  assert.match(panelSource, /value: '50'[\s\S]*scanLimit: 50/);
+  assert.match(panelSource, /value: 'all'[\s\S]*scanLimit: 'all'/);
+});
+
+test('pre gallery desktop wall keeps large two to three column cards', () => {
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+  const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
+
+  assert.match(pageSource, /\.ui-sidebar-right\s*\{[\s\S]*width:\s*min\(52vw, 640px\)/);
+  assert.match(pageSource, /\.ui-sidebar-toggle-right\.open\s*\{[\s\S]*translateX\(calc\(-1 \* min\(52vw, 640px\)\)\)/);
+  assert.match(panelSource, /grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%, 260px\), 1fr\)\)/);
+  assert.match(panelSource, /@media \(max-width: 520px\)[\s\S]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(104px, 1fr\)\)/);
+});
+
+test('pre gallery and MVU role panel share portrait assignment entries', () => {
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+  const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
+
+  assert.match(pageSource, /import GalleryImageRoleAssignPicker from/);
+  assert.match(pageSource, /:gallery-entries="preGalleryEntries"/);
+  assert.match(pageSource, /<GalleryImageRoleAssignPicker/);
+  assert.match(pageSource, /:entry="galleryRoleAssignEntry"/);
+  assert.match(pageSource, /:roles="preGalleryRoleAssignRoleOptions"/);
+  assert.match(pageSource, /@assign="assignPreGalleryImageToRole"/);
+  assert.match(pageSource, /function addRolePortraitEntryForRole\(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' \| 'set'/);
+  assert.match(pageSource, /addRolePortraitEntryForRole\(roleKey,\s*entry,\s*asPrimary \? 'primary' : 'set'\)/);
+  assert.match(panelSource, /defineEmits<\{[\s\S]*\(event: 'assign-portrait', entry: ReaderGalleryEntry\): void/);
+  assert.match(panelSource, /@click\.stop="emit\('assign-portrait', toReaderGalleryEntry\(entry\)\)"/);
+  assert.match(pageSource, /@gallery-entries="updatePreGalleryEntries"/);
+  assert.match(panelSource, /emit\('gallery-entries', refs\.filter\(ref => ref\.src\)\.map\(toReaderGalleryEntry\)\)/);
+});
+
+test('pre gallery portrait assignment keeps all role-list entries searchable by key fallback', () => {
+  const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
+
+  assert.match(pageSource, /function buildPrePortraitAssignableRoleTabs\(\)/);
+  assert.match(pageSource, /roleProviderStore\.mainRoleEntries\.value,[\s\S]*roleProviderStore\.tempNpcEntries\.value/);
+  assert.match(pageSource, /label: roleProviderName\(entry\)/);
+  assert.doesNotMatch(pageSource, /filter\(roleProviderHasName\)/);
+  assert.doesNotMatch(pageSource, /function roleProviderHasName/);
+});
+
+test('gallery image role assignment modal constrains long prompt labels inside the dialog', () => {
+  const pickerSource = readSource('src/寒冬末日/界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue');
+
+  assert.match(pickerSource, /\.role-assign-preview-copy\s*\{[\s\S]*min-width:\s*0/);
+  assert.match(pickerSource, /\.role-assign-preview-copy small\s*\{[\s\S]*display:\s*block/);
+  assert.match(pickerSource, /\.role-assign-preview-copy small\s*\{[\s\S]*max-width:\s*100%/);
 });
 
 test('pre gallery beta console logs never expose raw image src payloads', () => {
@@ -311,7 +450,7 @@ test('pre gallery routes beta diagnostics into system logs instead of inline pan
 
   assert.match(
     panelSource,
-    /const emit = defineEmits<\{\s*\(event: 'gallery-log', item: PreGalleryLogItem\): void;\s*\}>/,
+    /const emit = defineEmits<\{[\s\S]*\(event: 'gallery-log', item: PreGalleryLogItem\): void;[\s\S]*\}>/,
   );
   assert.match(panelSource, /emit\('gallery-log'/);
   assert.match(pageSource, /function appendGalleryLog\(item: PreGalleryLogItem\)/);

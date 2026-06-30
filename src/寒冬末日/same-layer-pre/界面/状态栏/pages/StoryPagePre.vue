@@ -132,7 +132,7 @@
             v-if="roleDrawerOpen"
             :target-message-id="latestAssistantMessageId"
             :transcript-items="baseTranscriptItems"
-            :gallery-entries="[]"
+            :gallery-entries="preGalleryEntries"
             :role-portrait-overrides="rolePortraitOverrides"
             agents-only
             @select-role-portrait="selectRolePortraitForRole"
@@ -155,9 +155,22 @@
           </button>
         </div>
         <div class="ui-sidebar-body">
-          <PreGalleryPanel :active="galleryDrawerOpen" @gallery-log="appendGalleryLog" />
+          <PreGalleryPanel
+            :active="galleryDrawerOpen"
+            @gallery-log="appendGalleryLog"
+            @gallery-entries="updatePreGalleryEntries"
+            @assign-portrait="openPreGalleryRoleAssign"
+          />
         </div>
       </aside>
+
+      <GalleryImageRoleAssignPicker
+        v-if="galleryRoleAssignEntry"
+        :entry="galleryRoleAssignEntry"
+        :roles="preGalleryRoleAssignRoleOptions"
+        @assign="assignPreGalleryImageToRole"
+        @close="closePreGalleryRoleAssign"
+      />
 
       <main class="ui-main-panel">
         <section class="ui-transcript-panel">
@@ -347,9 +360,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
+import GalleryImageRoleAssignPicker from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
+import type { GalleryImageRoleAssignRoleOption } from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
 import MapBusinessPanel from '../../../../界面同层版/界面/状态栏/components/MapBusinessPanel.vue';
 import MvuRolePanel from '../../../../界面同层版/界面/状态栏/components/MvuRolePanel.vue';
 import WorkbenchTabs from '../../../../界面同层版/界面/状态栏/components/WorkbenchTabs.vue';
+import { useMvuRoleStore } from '../../../../界面同层版/界面/状态栏/mvuRoleStore';
 import {
   addRolePortraitSetImage,
   clearRolePortraitOverride,
@@ -395,6 +411,9 @@ const composerRef = ref<ComposerExpose | null>(null);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
 const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
+const preGalleryEntries = ref<ReaderGalleryEntry[]>([]);
+const galleryRoleAssignEntry = ref<ReaderGalleryEntry | null>(null);
+const roleProviderStore = useMvuRoleStore(latestAssistantMessageId);
 const transcriptWindowMenuOpen = ref(false);
 const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
@@ -418,6 +437,41 @@ const latestAssistantItem = computed(
 );
 
 const assistantItemCount = computed(() => transcriptItems.value.filter(item => item.role === 'assistant').length);
+type RoleProviderEntry = { key: string; role: Record<string, any> };
+function roleProviderName(entry: RoleProviderEntry) {
+  return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
+}
+
+function buildPrePortraitAssignableRoleTabs() {
+  return [...roleProviderStore.mainRoleEntries.value, ...roleProviderStore.tempNpcEntries.value]
+    .map(entry => ({
+      key: entry.key,
+      label: roleProviderName(entry),
+    }));
+}
+
+function roleAlreadyOwnsEntry(roleKey: string, entry: ReaderGalleryEntry): boolean {
+  const override = rolePortraitOverrides.value[roleKey];
+  if (!override) return false;
+  const refs = [...(override.imageRefs ?? []), override.imageRef].filter(Boolean);
+  return refs.some(ref => {
+    if (ref.messageId !== entry.messageId) return false;
+    if (ref.markerId && entry.markerId && ref.markerId === entry.markerId) return true;
+    if (ref.imageId && entry.imageId && ref.imageId === entry.imageId) return true;
+    if (ref.requestId && entry.requestId && ref.requestId === entry.requestId) return true;
+    if (ref.promptToken && entry.promptToken && ref.promptToken === entry.promptToken) return true;
+    return !ref.markerId && !ref.imageId && !ref.requestId && !ref.promptToken;
+  });
+}
+
+const preGalleryRoleAssignRoleOptions = computed<GalleryImageRoleAssignRoleOption[]>(() => {
+  const entry = galleryRoleAssignEntry.value;
+  return buildPrePortraitAssignableRoleTabs().map(role => ({
+    key: role.key,
+    label: role.label,
+    alreadyOwns: entry ? roleAlreadyOwnsEntry(role.key, entry) : false,
+  }));
+});
 type MvuVariableUpdateMode = 'extra_analysis' | 'inline' | 'unknown';
 const mvuVariableUpdateMode = ref<MvuVariableUpdateMode>('unknown');
 const reprocessVariablesPending = ref(false);
@@ -680,20 +734,23 @@ function openGalleryDrawerFromMoreMenu() {
   closeUtilityDrawer();
 }
 
-function selectRolePortraitForRole(roleKey: string, entry: ReaderGalleryEntry) {
+function addRolePortraitEntryForRole(roleKey: string, entry: ReaderGalleryEntry, mode: 'primary' | 'set') {
   rolePortraitOverrides.value = {
     ...rolePortraitOverrides.value,
-    [roleKey]: setPrimaryRolePortraitOverride(roleKey, rolePortraitOverrides.value[roleKey], entry),
+    [roleKey]:
+      mode === 'primary'
+        ? setPrimaryRolePortraitOverride(roleKey, rolePortraitOverrides.value[roleKey], entry)
+        : addRolePortraitSetImage(roleKey, rolePortraitOverrides.value[roleKey], entry),
   };
   writeRolePortraitOverrides(rolePortraitOverrides.value);
 }
 
+function selectRolePortraitForRole(roleKey: string, entry: ReaderGalleryEntry) {
+  addRolePortraitEntryForRole(roleKey, entry, 'primary');
+}
+
 function addRolePortraitSetImageForRole(roleKey: string, entry: ReaderGalleryEntry) {
-  rolePortraitOverrides.value = {
-    ...rolePortraitOverrides.value,
-    [roleKey]: addRolePortraitSetImage(roleKey, rolePortraitOverrides.value[roleKey], entry),
-  };
-  writeRolePortraitOverrides(rolePortraitOverrides.value);
+  addRolePortraitEntryForRole(roleKey, entry, 'set');
 }
 
 function clearRolePortraitForRole(roleKey: string) {
@@ -709,6 +766,26 @@ function handleRolePortraitError(key: string) {
   const { [key]: _failed, ...rest } = rolePortraitOverrides.value;
   rolePortraitOverrides.value = rest;
   writeRolePortraitOverrides(rolePortraitOverrides.value);
+}
+
+function updatePreGalleryEntries(entries: ReaderGalleryEntry[]) {
+  preGalleryEntries.value = entries;
+}
+
+function openPreGalleryRoleAssign(entry: ReaderGalleryEntry) {
+  galleryRoleAssignEntry.value = entry;
+}
+
+function closePreGalleryRoleAssign() {
+  galleryRoleAssignEntry.value = null;
+}
+
+function assignPreGalleryImageToRole(roleKey: string) {
+  const entry = galleryRoleAssignEntry.value;
+  if (!entry) return;
+  const asPrimary = roleAlreadyOwnsEntry(roleKey, entry);
+  addRolePortraitEntryForRole(roleKey, entry, asPrimary ? 'primary' : 'set');
+  closePreGalleryRoleAssign();
 }
 
 function refreshFromMoreMenu() {
@@ -1117,6 +1194,7 @@ onBeforeUnmount(() => {
 .ui-sidebar-right {
   right: 0;
   left: auto;
+  width: min(52vw, 640px);
   border-right: 0;
   border-left: 1px solid var(--demo-border-accent-soft);
   box-shadow:
@@ -1188,7 +1266,7 @@ onBeforeUnmount(() => {
 .ui-sidebar-toggle-right.open {
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-320px) translateY(-50%);
+  transform: translateX(calc(-1 * min(52vw, 640px))) translateY(-50%);
 }
 
 .ui-sidebar-toggle-label {

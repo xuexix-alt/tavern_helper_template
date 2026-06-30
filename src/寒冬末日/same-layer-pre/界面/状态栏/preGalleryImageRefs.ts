@@ -13,10 +13,12 @@ import {
   dispatchHostPrimaryTrigger,
   type HostGestureDispatchStrategy,
 } from '../../../界面同层版/界面/状态栏/hostGestureDispatch.ts';
+import type { ReaderGalleryEntry } from '../../../界面同层版/界面/状态栏/types.ts';
 
 export type PreGalleryImageSource = 'host-dom' | 'extra.images' | 'mes_tag' | 'cache';
 export type PreGalleryGestureTargetHint = 'prompt-button' | 'ready-image' | 'message-text' | 'unknown';
 export type PreGalleryGestureMode = 'click' | 'dblclick' | 'longpress';
+export type PreGalleryScanLimit = number | 'all';
 
 export type PreGalleryHostArtifact = {
   messageId: number;
@@ -56,6 +58,8 @@ export type PreGalleryScanResult = {
   refs: PreGalleryImageRef[];
   sourceCounts: Record<PreGalleryImageSource, number>;
   diagnostics: string[];
+  scannedMessageCount?: number;
+  totalMessageCount?: number;
 };
 
 export type PreGalleryScanOptions = {
@@ -64,6 +68,7 @@ export type PreGalleryScanOptions = {
   context?: any;
   hostArtifacts?: PreGalleryHostArtifact[];
   messageIds?: number[];
+  scanLimit?: PreGalleryScanLimit;
   now?: number;
 };
 
@@ -108,6 +113,18 @@ function clean(input: unknown): string {
   return String(input ?? '').trim();
 }
 
+function normalizeScanLimit(input: PreGalleryScanLimit | undefined, total: number): number {
+  if (input === 'all') return Math.max(0, total);
+  const limit = Math.trunc(Number(input ?? 1));
+  return Number.isFinite(limit) && limit > 0 ? Math.min(limit, Math.max(0, total)) : 1;
+}
+
+function describeScanLimit(limit: number, total: number, requestedIds: number[]): string {
+  if (requestedIds.length > 0) return `定向 ${requestedIds.length} 楼`;
+  if (limit >= total) return `全量 ${total} 楼`;
+  return `最近 ${limit} 个含图楼层`;
+}
+
 function shortHash(input: string): string {
   let hash = 5381;
   for (let index = 0; index < input.length; index += 1) {
@@ -118,6 +135,24 @@ function shortHash(input: string): string {
 
 function normalizeSrc(input: unknown): string {
   return normalizeImageDataToSrc(input);
+}
+
+export function preGalleryRefToReaderGalleryEntry(ref: PreGalleryImageRef): ReaderGalleryEntry {
+  const promptText = clean(ref.promptToken || ref.tag || ref.link);
+  const imageIndex = Number.isFinite(Number(ref.swipeId)) ? Math.trunc(Number(ref.swipeId)) + 1 : 1;
+  const title = `楼层 #${ref.messageId} · 图片 ${imageIndex}`;
+  return {
+    id: ref.id,
+    messageId: ref.messageId,
+    imageId: ref.imageId || undefined,
+    requestId: ref.requestId || undefined,
+    promptToken: promptText,
+    anchorText: promptText || ref.evidence.join(' '),
+    title,
+    createdOrder: ref.swipeId,
+    src: ref.src,
+    alt: title,
+  };
 }
 
 function readPromptToken(entry: Record<string, any>): string {
@@ -473,6 +508,8 @@ function classifyHostElement(element: Element): PreGalleryGestureTargetHint {
 
 export function collectHostPreGalleryArtifacts(messageId: number): PreGalleryHostArtifact[] {
   const out: PreGalleryHostArtifact[] = [];
+  // Known beta gap: mobile in-session images can render in the pre transcript before
+  // the host .mes_text has a ready native image artifact, so the gallery may need a UI reload.
   const docs = collectHostOnlyDocuments();
   for (const doc of docs) {
     const root = doc.querySelector(
@@ -581,6 +618,7 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     .map(asRecord)
     .filter(Boolean) as Record<string, any>[];
   const requestedSet = new Set(requestedIds);
+  const scanLimit = requestedSet.size > 0 ? requestedIds.length : normalizeScanLimit(options.scanLimit, messages.length);
   const scanMessages =
     requestedSet.size > 0
       ? messages.filter((message, index) => {
@@ -609,9 +647,12 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
   };
 
   let promptOnlyFallback: { messageId: number; refs: PreGalleryImageRef[]; hiddenTagOnlyCount: number } | null = null;
+  const collected: Array<{ messageId: number; refs: PreGalleryImageRef[]; hiddenTagOnlyCount: number }> = [];
   const skippedPromptOnlyDiagnostics: string[] = [];
+  let visitedMessageCount = 0;
 
   for (let index = scanMessages.length - 1; index >= 0; index -= 1) {
+    visitedMessageCount += 1;
     const scanned = scanMessageAt(scanMessages[index], index);
     if (!scanned) continue;
     if (requestedIds.length === 0 && !hasNativeDisplayEvidence(scanned.refs)) {
@@ -619,19 +660,35 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
       skippedPromptOnlyDiagnostics.push(`跳过楼层 #${scanned.messageId}：仅有正文 tag，继续寻找已有图片来源`);
       continue;
     }
+    collected.push(scanned);
+    if (collected.length >= scanLimit) break;
+  }
+
+  if (collected.length > 0) {
+    const refs = collected.flatMap(item => item.refs);
+    const hiddenTagOnlyCount = collected.reduce((total, item) => total + item.hiddenTagOnlyCount, 0);
+    const selectedMessageId = collected[0].messageId;
     diagnostics.push(...skippedPromptOnlyDiagnostics);
-    diagnostics.push(
-      requestedIds.length > 0 ? `定向刷新楼层 #${scanned.messageId}` : `选中最新含图楼层 #${scanned.messageId}`,
-    );
-    if (scanned.hiddenTagOnlyCount > 0) diagnostics.push(`隐藏正文 tag-only 空占位 ${scanned.hiddenTagOnlyCount} 条`);
-    diagnostics.push(`轻引用 ${scanned.refs.length} 条；图片 src 仅用于本次渲染，不进入 lightKey`);
+    if (requestedIds.length > 0 && collected.length === 1) {
+      diagnostics.push(`定向刷新楼层 #${selectedMessageId}`);
+    } else if (requestedIds.length > 0) {
+      diagnostics.push(`定向刷新 ${collected.length} 个含图楼层`);
+    } else if (scanLimit > 1) {
+      diagnostics.push(`图片墙范围：${describeScanLimit(scanLimit, messages.length, requestedIds)}，命中 ${collected.length} 层`);
+    } else {
+      diagnostics.push(`选中最新含图楼层 #${selectedMessageId}`);
+    }
+    if (hiddenTagOnlyCount > 0) diagnostics.push(`隐藏正文 tag-only 空占位 ${hiddenTagOnlyCount} 条`);
+    diagnostics.push(`轻引用 ${refs.length} 条；图片 src 仅用于本次渲染，不进入 lightKey`);
     return {
       reason,
       scannedAt: options.now ?? Date.now(),
-      selectedMessageId: scanned.messageId,
-      refs: scanned.refs,
+      selectedMessageId,
+      refs,
       sourceCounts,
       diagnostics,
+      scannedMessageCount: visitedMessageCount,
+      totalMessageCount: messages.length,
     };
   }
 
@@ -647,6 +704,8 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
       refs: promptOnlyFallback.refs,
       sourceCounts,
       diagnostics,
+      scannedMessageCount: visitedMessageCount,
+      totalMessageCount: messages.length,
     };
   }
 
@@ -658,6 +717,8 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     refs: [],
     sourceCounts,
     diagnostics,
+    scannedMessageCount: visitedMessageCount,
+    totalMessageCount: messages.length,
   };
 }
 
