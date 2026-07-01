@@ -640,7 +640,10 @@ function rolePortraitSourceText(entry: { key: string; role: Record<string, any> 
   if (portrait.source !== 'gallery') {
     const set = rolePortraitSetForEntry(entry);
     const count = set.length;
-    if (isGenericDefaultPortraitEntry(portrait.entry) || set.some(setEntry => isGenericDefaultPortraitEntry(setEntry))) {
+    if (
+      isGenericDefaultPortraitEntry(portrait.entry) ||
+      set.some(setEntry => isGenericDefaultPortraitEntry(setEntry))
+    ) {
       return count > 1 ? `随机图 · ${count} 张` : '随机图';
     }
     return count > 1 ? `默认设定图 · ${count} 张` : '默认设定图';

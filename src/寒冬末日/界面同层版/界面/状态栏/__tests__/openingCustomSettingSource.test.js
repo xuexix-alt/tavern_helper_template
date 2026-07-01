@@ -136,9 +136,10 @@ test('generic story fanwork presets cover major media types and are grouped by g
 
 test('fanwork preset menu is filtered by selected genre before falling back to the general pool', () => {
   const source = read('src/寒冬末日/界面同层版/shared/opening.ts');
-  const getOptionsFunction = /export function getGenericStoryFanworkOptionsForGenre\(genre: string\): string\[\] \{[\s\S]*?\n\}/.exec(
-    source,
-  )?.[0];
+  const getOptionsFunction =
+    /export function getGenericStoryFanworkOptionsForGenre\(genre: string\): string\[\] \{[\s\S]*?\n\}/.exec(
+      source,
+    )?.[0];
 
   assert.ok(getOptionsFunction, 'getGenericStoryFanworkOptionsForGenre should exist');
   assert.match(getOptionsFunction, /genreOptions\.length\s*>\s*0/);

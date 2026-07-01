@@ -8,7 +8,10 @@ test('opening prompt builder does not auto-send current stat_data in the opening
   const source = fs.readFileSync(sourcePath, 'utf8');
   const buildPromptStart = source.indexOf('export function buildOpeningGeneratePrompt(');
   assert.notEqual(buildPromptStart, -1, 'should find buildOpeningGeneratePrompt');
-  const buildPromptBody = source.slice(buildPromptStart, source.indexOf('export function extractTaggedBlock', buildPromptStart));
+  const buildPromptBody = source.slice(
+    buildPromptStart,
+    source.indexOf('export function extractTaggedBlock', buildPromptStart),
+  );
 
   assert.match(source, /function readCurrentMessageStatDataForPrompt\(/);
   assert.match(source, /getVariables(?:\?\.)?\(\{ type: 'message' \}\)/);

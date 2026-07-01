@@ -82,10 +82,7 @@ test('MvuRolePanel labels generic fallback portraits as random images instead of
   assert.match(source, /function isGenericDefaultPortraitEntry/);
   assert.match(source, /default::generic::/);
   assert.match(source, /随机图/);
-  assert.match(
-    source,
-    /return count > 1 \? `随机图 · \$\{count\} 张` : '随机图';/,
-  );
+  assert.match(source, /return count > 1 \? `随机图 · \$\{count\} 张` : '随机图';/);
 });
 
 test('RolePortraitPicker filters gallery candidates by selected role without mutating gallery state', () => {
