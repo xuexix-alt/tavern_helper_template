@@ -303,6 +303,50 @@ test('same-layer-pre wires the option modal reprocess button to native MVU extra
   assert.doesNotMatch(storySource, /revealHiddenStoryMessagesForNativeGeneration|withHostTranscriptVisible/);
 });
 
+test('same-layer-pre reuses the original same-layer opening setup form through the pre host flow', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+
+  assert.match(storySource, /import HudModal from ['"].*HudModal\.vue['"]/);
+  assert.match(storySource, /import OpeningSetupPanel from ['"].*OpeningSetupPanel\.vue['"]/);
+  assert.match(storySource, /import openingModalIcon from ['"].*opening-modal-icon\.webp\?url['"]/);
+  assert.match(storySource, /getDefaultOpeningPreset/);
+  assert.match(storySource, /getDefaultOpeningPayload/);
+  assert.match(storySource, /buildOpeningGeneratePrompt/);
+  assert.match(storySource, /readOpeningPayloadFromChat/);
+  assert.match(storySource, /replaceOpeningPayloadInChat/);
+
+  assert.match(storySource, /<HudModal[\s\S]*:open="openingModalOpen \|\| shouldShowOpeningSetup"/);
+  assert.match(storySource, /title="世界观自定义 \/ Opening Start"/);
+  assert.match(storySource, /:icon-src="openingModalIcon"/);
+  assert.match(storySource, /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="openingPayload"/);
+  assert.match(storySource, /@update-meta="updateOpeningMeta"/);
+  assert.match(storySource, /@update-field="updateOpeningField"/);
+  assert.match(storySource, /@update-world-mode="updateOpeningWorldMode"/);
+  assert.match(storySource, /@update-route="updateOpeningRoute"/);
+  assert.match(storySource, /@update-stream="updateOpeningStream"/);
+  assert.match(storySource, /@submit="handleOpeningSubmit"/);
+
+  assert.match(storySource, /const openingPreset = ref\(getDefaultOpeningPreset\(\)\)/);
+  assert.match(storySource, /const openingPayload = ref\(readOpeningPayloadFromChat\(\) \?\? getDefaultOpeningPayload/);
+  assert.match(storySource, /const openingWorldModes = getOpeningWorldModes\(\)/);
+  assert.match(storySource, /const openingRoutes = getOpeningRoutes\(\)/);
+  assert.match(storySource, /const shouldShowOpeningSetup = computed/);
+  assert.match(storySource, /latestAssistantItem\.value\?\.raw/);
+  assert.match(storySource, /baseTranscriptItems\.value\.some\(item => item\.role === 'user'/);
+  assert.match(storySource, /function persistOpeningPayloadNow\(\)/);
+  assert.match(storySource, /function hydrateOpeningPayloadDefaults\(\)/);
+  assert.match(storySource, /function updateOpeningMeta/);
+  assert.match(storySource, /function updateOpeningWorldMode/);
+  assert.match(storySource, /function updateOpeningRoute/);
+  assert.match(storySource, /function updateOpeningStream/);
+  assert.match(storySource, /function updateOpeningField/);
+  assert.match(storySource, /async function handleOpeningSubmit\(\)/);
+  assert.match(storySource, /const compiledPromptSnapshot = buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(storySource, /await submitPrompt\(compiledPromptSnapshot\)/);
+  assert.match(storySource, /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*latestAssistantId/);
+  assert.doesNotMatch(storySource, /runOpeningDetachedGeneration|runOpeningNativeGeneration|sendToNativeChat/);
+});
+
 test('same-layer-pre keeps the right gallery drawer fixed height even when empty', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const gallerySource = readPre(path.join('components', 'PreGalleryPanel.vue'));

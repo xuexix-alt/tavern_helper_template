@@ -63,6 +63,9 @@
                 画廊
               </button>
               <button type="button" class="ui-page-menu-item" role="menuitem" @click="refreshFromMoreMenu">刷新</button>
+              <button type="button" class="ui-page-menu-item" role="menuitem" @click="openOpeningModalFromMoreMenu">
+                开局
+              </button>
               <div class="ui-menu-divider" aria-hidden="true"></div>
               <div class="ui-theme-menu-group" role="group" aria-label="主题">
                 <span class="ui-menu-group-label">主题</span>
@@ -84,6 +87,31 @@
         </div>
       </div>
     </header>
+
+    <HudModal
+      :open="openingModalOpen || shouldShowOpeningSetup"
+      title="世界观自定义 / Opening Start"
+      subtitle="这选择你喜欢的开局，包含外界环境和主流玩法，也可以在<补充设定>那里补充一些世界观细节。"
+      variant="workspace"
+      :icon-src="openingModalIcon"
+      icon-alt="故事开始"
+      wide
+      @close="closeOpeningModal"
+    >
+      <OpeningSetupPanel
+        :preset="openingPreset"
+        :payload="openingPayload"
+        :busy="busy"
+        :world-modes="openingWorldModes"
+        :routes="openingRoutes"
+        @update-meta="updateOpeningMeta"
+        @update-field="updateOpeningField"
+        @update-world-mode="updateOpeningWorldMode"
+        @update-route="updateOpeningRoute"
+        @update-stream="updateOpeningStream"
+        @submit="handleOpeningSubmit"
+      />
+    </HudModal>
 
     <div class="ui-host-body">
       <transition name="sidebar-mask-fade">
@@ -359,12 +387,29 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
+import {
+  buildOpeningGeneratePrompt,
+  getDefaultOpeningPayload,
+  getDefaultOpeningPreset,
+  getEffectiveDefaultMeta,
+  getEffectiveFormSchema,
+  getOpeningRoute,
+  getOpeningRoutes,
+  getOpeningWorldMode,
+  getOpeningWorldModes,
+  readOpeningPayloadFromChat,
+  replaceOpeningPayloadInChat,
+} from '../../../../界面同层版/shared/opening';
+import type { OpeningPayload } from '../../../../界面同层版/shared/opening.schema';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
 import GalleryImageRoleAssignPicker from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
 import type { GalleryImageRoleAssignRoleOption } from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
+import HudModal from '../../../../界面同层版/界面/状态栏/components/HudModal.vue';
 import MapBusinessPanel from '../../../../界面同层版/界面/状态栏/components/MapBusinessPanel.vue';
 import MvuRolePanel from '../../../../界面同层版/界面/状态栏/components/MvuRolePanel.vue';
+import OpeningSetupPanel from '../../../../界面同层版/界面/状态栏/components/OpeningSetupPanel.vue';
 import WorkbenchTabs from '../../../../界面同层版/界面/状态栏/components/WorkbenchTabs.vue';
+import openingModalIcon from '../../../../界面同层版/界面/状态栏/assets/opening-modal-icon.webp?url';
 import { useMvuRoleStore } from '../../../../界面同层版/界面/状态栏/mvuRoleStore';
 import {
   addRolePortraitSetImage,
@@ -419,6 +464,11 @@ const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
 const transcriptWindowLabel = ref('最新');
 const readerShellHeight = ref('min(92vh, 960px)');
+const openingPreset = ref(getDefaultOpeningPreset());
+const openingPayload = ref(readOpeningPayloadFromChat() ?? getDefaultOpeningPayload(openingPreset.value));
+const openingWorldModes = getOpeningWorldModes();
+const openingRoutes = getOpeningRoutes();
+const openingModalOpen = ref(false);
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
 }));
@@ -437,6 +487,11 @@ const latestAssistantItem = computed(
 );
 
 const assistantItemCount = computed(() => transcriptItems.value.filter(item => item.role === 'assistant').length);
+const hasSuccessfulOpeningAssistant = computed(() => Boolean(String(latestAssistantItem.value?.raw ?? '').trim()));
+const hasOpeningSeedUserMessage = computed(() => baseTranscriptItems.value.some(item => item.role === 'user'));
+const shouldShowOpeningSetup = computed(
+  () => !busy.value && !hasSuccessfulOpeningAssistant.value && !hasOpeningSeedUserMessage.value,
+);
 type RoleProviderEntry = { key: string; role: Record<string, any> };
 function roleProviderName(entry: RoleProviderEntry) {
   return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
@@ -790,6 +845,186 @@ function assignPreGalleryImageToRole(roleKey: string) {
 function refreshFromMoreMenu() {
   closeTopbarMenus();
   refreshTranscript('manual');
+}
+
+function openOpeningModalFromMoreMenu() {
+  closeTopbarMenus();
+  closeUtilityDrawer();
+  closeSideDrawers();
+  openingModalOpen.value = true;
+}
+
+function closeOpeningModal() {
+  if (shouldShowOpeningSetup.value) return;
+  openingModalOpen.value = false;
+}
+
+function persistOpeningPayloadNow() {
+  replaceOpeningPayloadInChat(openingPayload.value);
+}
+
+function hydrateOpeningPayloadDefaults() {
+  const fallback = getDefaultOpeningPayload(openingPreset.value);
+  const currentWorldModeId =
+    String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
+  const effectiveSchema = getEffectiveFormSchema(openingPreset.value, currentWorldModeId);
+  const effectiveDefaults = getEffectiveDefaultMeta(openingPreset.value, currentWorldModeId);
+  const currentFormValues = openingPayload.value.form_values ?? {};
+  const nextFormValues: Record<string, string> = {};
+
+  for (const field of effectiveSchema) {
+    const existing = String(currentFormValues[field.key] ?? '').trim();
+    nextFormValues[field.key] =
+      existing || String(field.default_value ?? '').trim() || String(fallback.form_values?.[field.key] ?? '').trim();
+  }
+
+  const currentMeta = openingPayload.value.meta ?? { character: '', time: '', location: '' };
+  const nextPayload: OpeningPayload = {
+    ...openingPayload.value,
+    world_mode_id: currentWorldModeId,
+    route_id: String(openingPayload.value.route_id ?? '').trim() || String(fallback.route_id ?? '').trim(),
+    meta: {
+      character: String(currentMeta.character ?? '').trim() || effectiveDefaults.character,
+      time: String(currentMeta.time ?? '').trim() || effectiveDefaults.time,
+      location: String(currentMeta.location ?? '').trim() || effectiveDefaults.location,
+    },
+    form_values: nextFormValues,
+  };
+
+  openingPayload.value = nextPayload;
+  persistOpeningPayloadNow();
+}
+
+function markOpeningPayloadConfigChanged(payload: OpeningPayload): OpeningPayload {
+  return {
+    ...payload,
+    state: payload.state === 'ready' ? 'configuring' : payload.state,
+  };
+}
+
+function updateOpeningMeta(key: 'character' | 'time' | 'location', value: string) {
+  openingPayload.value = markOpeningPayloadConfigChanged({
+    ...openingPayload.value,
+    meta: {
+      ...openingPayload.value.meta,
+      [key]: String(value ?? ''),
+    },
+  });
+  persistOpeningPayloadNow();
+}
+
+function updateOpeningWorldMode(value: string) {
+  const worldMode = getOpeningWorldMode(value) ?? openingWorldModes[0] ?? null;
+  const nextWorldModeId = worldMode?.id || value;
+  const effectiveSchema = getEffectiveFormSchema(openingPreset.value, nextWorldModeId);
+  const effectiveDefaults = getEffectiveDefaultMeta(openingPreset.value, nextWorldModeId);
+  const currentFormValues = openingPayload.value.form_values ?? {};
+  const nextFormValues: Record<string, string> = {};
+  const currentMeta = openingPayload.value.meta ?? { character: '', time: '', location: '' };
+
+  effectiveSchema.forEach(field => {
+    const existing = String(currentFormValues[field.key] ?? '').trim();
+    nextFormValues[field.key] = existing || String(field.default_value ?? '').trim();
+  });
+
+  openingPayload.value = markOpeningPayloadConfigChanged({
+    ...openingPayload.value,
+    world_mode_id: nextWorldModeId,
+    route_id: String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '',
+    meta: {
+      character: String(currentMeta.character ?? '').trim() || effectiveDefaults.character,
+      time: String(currentMeta.time ?? '').trim() || effectiveDefaults.time,
+      location: String(currentMeta.location ?? '').trim() || effectiveDefaults.location,
+    },
+    form_values: nextFormValues,
+  });
+  persistOpeningPayloadNow();
+}
+
+function updateOpeningRoute(value: string) {
+  const route = getOpeningRoute(value) ?? openingRoutes[0] ?? null;
+  openingPayload.value = markOpeningPayloadConfigChanged({
+    ...openingPayload.value,
+    route_id: route?.name || value,
+  });
+  persistOpeningPayloadNow();
+}
+
+function updateOpeningStream(value: boolean) {
+  openingPayload.value = {
+    ...openingPayload.value,
+    use_stream: value === true,
+  };
+  persistOpeningPayloadNow();
+}
+
+function updateOpeningField(key: string, value: string) {
+  openingPayload.value = markOpeningPayloadConfigChanged({
+    ...openingPayload.value,
+    form_values: {
+      ...openingPayload.value.form_values,
+      [key]: String(value ?? ''),
+    },
+  });
+  persistOpeningPayloadNow();
+}
+
+async function handleOpeningSubmit() {
+  if (busy.value) return;
+
+  hydrateOpeningPayloadDefaults();
+
+  if (!getOpeningWorldMode(openingPayload.value.world_mode_id)) {
+    toastr?.warning?.('请先选择有效的世界观档位');
+    openingModalOpen.value = true;
+    return;
+  }
+  if (!getOpeningRoute(openingPayload.value.route_id)) {
+    toastr?.warning?.('请先选择有效的开局主流派');
+    openingModalOpen.value = true;
+    return;
+  }
+
+  const missing = getEffectiveFormSchema(openingPreset.value, openingPayload.value.world_mode_id).find(
+    field => field.required && !String(openingPayload.value.form_values[field.key] ?? '').trim(),
+  );
+  if (missing) {
+    toastr?.warning?.(`请先填写：${missing.label}`);
+    openingModalOpen.value = true;
+    return;
+  }
+
+  const compiledPromptSnapshot = buildOpeningGeneratePrompt(openingPreset.value, openingPayload.value);
+  openingPayload.value = {
+    ...openingPayload.value,
+    state: 'generating',
+    compiled_prompt_snapshot: compiledPromptSnapshot,
+    opening_assistant_message_id: null,
+  };
+  persistOpeningPayloadNow();
+  openingModalOpen.value = false;
+
+  await submitPrompt(compiledPromptSnapshot);
+
+  const latestAssistantId = latestAssistantItem.value?.message_id ?? latestAssistantMessageId.value ?? null;
+  if (latestAssistantId != null) {
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'ready',
+      compiled_prompt_snapshot: compiledPromptSnapshot,
+      opening_assistant_message_id: latestAssistantId,
+    };
+    persistOpeningPayloadNow();
+  } else {
+    openingPayload.value = {
+      ...openingPayload.value,
+      state: 'configuring',
+      compiled_prompt_snapshot: compiledPromptSnapshot,
+      opening_assistant_message_id: null,
+    };
+    persistOpeningPayloadNow();
+    openingModalOpen.value = true;
+  }
 }
 
 function selectTheme(value: DemoTheme) {
