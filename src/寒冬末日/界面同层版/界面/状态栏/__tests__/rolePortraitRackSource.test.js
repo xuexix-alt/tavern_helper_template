@@ -76,6 +76,18 @@ test('MvuRolePanel sanitizes generated image labels in the portrait set strip', 
   assert.doesNotMatch(source, /:title="setEntry\.title \|\| setEntry\.characterName \|\| roleName\(entry\)"/);
 });
 
+test('MvuRolePanel labels generic fallback portraits as random images instead of default setting images', () => {
+  const source = read('../components/MvuRolePanel.vue');
+
+  assert.match(source, /function isGenericDefaultPortraitEntry/);
+  assert.match(source, /default::generic::/);
+  assert.match(source, /随机图/);
+  assert.match(
+    source,
+    /return count > 1 \? `随机图 · \$\{count\} 张` : '随机图';/,
+  );
+});
+
 test('RolePortraitPicker filters gallery candidates by selected role without mutating gallery state', () => {
   const source = read('../components/RolePortraitPicker.vue');
 

@@ -16,14 +16,17 @@ import {
   compileOpeningPromptTemplate,
   extractOpeningContentLoose,
   extractOpeningOptions,
+  getOpeningFormSchema,
+  getOpeningMissingRequiredField,
+  getOpeningStoryTemplateId,
   getDefaultOpeningPayload,
   getDefaultOpeningPreset,
   getEffectiveDefaultMeta,
-  getEffectiveFormSchema,
   getOpeningRoute,
   getOpeningRoutes,
   getOpeningWorldMode,
   getOpeningWorldModes,
+  isGenericStoryOpening,
   readOpeningPayloadFromChat,
   replaceOpeningPayloadInChat,
   resolveOpeningPromptTemplateRaw,
@@ -2704,7 +2707,7 @@ async function buildOpeningCompiledUserInput(
   },
 ) {
   const context = buildOpeningPromptContext(preset, payload);
-  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id);
+  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id, getOpeningStoryTemplateId(payload));
   const compiledTemplate = compileOpeningPromptTemplate(String(templateRaw ?? '').trim(), context);
   const resolveExplicitMacros = () =>
     typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
@@ -3777,19 +3780,27 @@ export function useStreamingDemo() {
     }, delay);
   }
 
+  function buildOpeningFormValuesForCurrentTemplate(payload: OpeningPayload): Record<string, string> {
+    const currentFormValues = payload.form_values ?? {};
+    const nextFormValues: Record<string, string> = {};
+    for (const field of getOpeningFormSchema(openingPreset.value, payload)) {
+      const existing = String(currentFormValues[field.key] ?? '').trim();
+      nextFormValues[field.key] = existing || String(field.default_value ?? '').trim();
+    }
+    return nextFormValues;
+  }
+
   function hydrateOpeningPayloadDefaults() {
     const fallback = getDefaultOpeningPayload(openingPreset.value);
     let changed = false;
-    const nextFormValues = {
-      ...(openingPayload.value.form_values ?? {}),
-    } as Record<string, string>;
+    const nextFormValues = buildOpeningFormValuesForCurrentTemplate(openingPayload.value);
 
     const currentWorldModeId =
       String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
-    const effectiveSchema = getEffectiveFormSchema(openingPreset.value, currentWorldModeId);
     const effectiveDefaultMeta = getEffectiveDefaultMeta(openingPreset.value, currentWorldModeId);
+    const shouldUseWinterMetaDefaults = !isGenericStoryOpening(openingPayload.value);
 
-    for (const field of effectiveSchema) {
+    for (const field of getOpeningFormSchema(openingPreset.value, openingPayload.value)) {
       const key = field.key;
       const currentValue = String(nextFormValues[key] ?? '').trim();
       const fallbackValue =
@@ -3814,11 +3825,11 @@ export function useStreamingDemo() {
       nextMeta.character = effectiveDefaultMeta.character;
       metaChanged = true;
     }
-    if (!nextMeta.time && effectiveDefaultMeta.time) {
+    if (shouldUseWinterMetaDefaults && !nextMeta.time && effectiveDefaultMeta.time) {
       nextMeta.time = effectiveDefaultMeta.time;
       metaChanged = true;
     }
-    if (!nextMeta.location && effectiveDefaultMeta.location) {
+    if (shouldUseWinterMetaDefaults && !nextMeta.location && effectiveDefaultMeta.location) {
       nextMeta.location = effectiveDefaultMeta.location;
       metaChanged = true;
     }
@@ -3946,21 +3957,43 @@ export function useStreamingDemo() {
     queuePersistOpeningPayload();
   }
 
+  function updateOpeningStoryTemplate(value: string) {
+    const fallback = getDefaultOpeningPayload(openingPreset.value);
+    const shouldResetResult = openingPayload.value.state === 'ready';
+    const nextPayload: OpeningPayload = {
+      ...openingPayload.value,
+      story_template: value,
+      state: shouldResetResult ? 'configuring' : openingPayload.value.state,
+    };
+    const currentMeta = openingPayload.value.meta ?? { character: '', time: '', location: '' };
+
+    if (isGenericStoryOpening(nextPayload)) {
+      nextPayload.meta = {
+        character: String(currentMeta.character ?? '').trim() || fallback.meta.character,
+        time: '',
+        location: '',
+      };
+    } else {
+      const defaults = getEffectiveDefaultMeta(openingPreset.value, openingPayload.value.world_mode_id);
+      nextPayload.meta = {
+        character: String(currentMeta.character ?? '').trim() || defaults.character,
+        time: defaults.time,
+        location: defaults.location,
+      };
+    }
+
+    nextPayload.form_values = buildOpeningFormValuesForCurrentTemplate(nextPayload);
+    openingPayload.value = nextPayload;
+    queuePersistOpeningPayload();
+  }
+
   function updateOpeningWorldMode(value: string) {
     const worldMode = getOpeningWorldMode(value) ?? openingWorldModes[0] ?? null;
     const nextWorldModeId = worldMode?.id || value;
     const nextRouteId = String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '';
     const shouldResetResult = openingPayload.value.state === 'ready';
 
-    const effectiveSchema = getEffectiveFormSchema(openingPreset.value, nextWorldModeId);
     const effectiveDefaults = getEffectiveDefaultMeta(openingPreset.value, nextWorldModeId);
-    const currentFormValues = openingPayload.value.form_values ?? {};
-    const nextFormValues: Record<string, string> = {};
-    effectiveSchema.forEach(field => {
-      const key = field.key;
-      const existing = String(currentFormValues[key] ?? '').trim();
-      nextFormValues[key] = existing || String(field.default_value ?? '').trim();
-    });
 
     const currentMeta = openingPayload.value.meta ?? {
       time: '',
@@ -3979,8 +4012,8 @@ export function useStreamingDemo() {
       world_mode_id: nextWorldModeId,
       route_id: nextRouteId,
       meta: nextMeta,
-      form_values: nextFormValues,
     };
+    openingPayload.value.form_values = buildOpeningFormValuesForCurrentTemplate(openingPayload.value);
     queuePersistOpeningPayload();
   }
 
@@ -8259,18 +8292,16 @@ export function useStreamingDemo() {
 
     hydrateOpeningPayloadDefaults();
 
-    if (!getOpeningWorldMode(openingPayload.value.world_mode_id)) {
+    if (!isGenericStoryOpening(openingPayload.value) && !getOpeningWorldMode(openingPayload.value.world_mode_id)) {
       toastr?.warning?.('请先选择有效的世界观档位');
       return;
     }
-    if (!getOpeningRoute(openingPayload.value.route_id)) {
+    if (!isGenericStoryOpening(openingPayload.value) && !getOpeningRoute(openingPayload.value.route_id)) {
       toastr?.warning?.('请先选择有效的开局主流派');
       return;
     }
 
-    const missing = getEffectiveFormSchema(openingPreset.value, openingPayload.value.world_mode_id).find(
-      field => field.required && !String(openingPayload.value.form_values[field.key] ?? '').trim(),
-    );
+    const missing = getOpeningMissingRequiredField(openingPreset.value, openingPayload.value);
     if (missing) {
       toastr?.warning?.(`请先填写：${missing.label}`);
       return;
@@ -9807,6 +9838,7 @@ export function useStreamingDemo() {
     refreshWorkbench,
     updateOpeningMeta,
     updateOpeningField,
+    updateOpeningStoryTemplate,
     updateOpeningWorldMode,
     updateOpeningRoute,
     updateOpeningStream,

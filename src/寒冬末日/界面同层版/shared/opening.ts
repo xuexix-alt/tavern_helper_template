@@ -3,14 +3,16 @@ import YAML from 'yaml';
 
 import openingPromptTemplateRaw from '../../../../docs/OpeningSetupPanel.generate提示词.txt?raw';
 import openingPromptTemplatePreDisasterRaw from '../../../../docs/OpeningSetupPanel.generate提示词.灾变前3个月.txt?raw';
+import openingPromptTemplateGenericStoryRaw from '../../../../docs/OpeningSetupPanel.generate通用故事提示词.txt?raw';
 import worldModeProfilesRaw from '../../世界书/寒冬末日/世界观配置集.yaml?raw';
 import routeProfilesRaw from '../../世界书/寒冬末日/主流派起始偏置表.yaml?raw';
-import externalFactionRaw from '../../世界书/寒冬末日/外部幸存者势力.txt?raw';
 import shelterAbilityRaw from '../../世界书/寒冬末日/庇护所升级能力.txt?raw';
 import openingPresetRaw from './opening-preset.default.json';
 import { OpeningPayloadSchema, OpeningPresetSchema, type OpeningPayload, type OpeningPreset } from './opening.schema';
 
 export const OPENING_CHAT_STATE_PATH = 'stream_demo.opening';
+export const OPENING_STORY_TEMPLATE_WINTER = 'winter-apocalypse-order';
+export const OPENING_STORY_TEMPLATE_GENERIC = 'generic-story';
 
 export type OpeningWorldModeOption = {
   id: string;
@@ -39,6 +41,300 @@ export type OpeningRouteOption = {
   opening_conflict_sources: string[];
   forbidden_drift: string[];
 };
+
+const GENERIC_STORY_GENRE_OPTIONS = [
+  '玄幻',
+  '奇幻',
+  '仙侠',
+  '都市',
+  '都市异能',
+  '历史',
+  '架空历史',
+  '科幻',
+  '末世',
+  '无限流',
+  '悬疑',
+  '灵异',
+  '克苏鲁',
+  '赛博朋克',
+  '星际',
+  '西幻',
+  '武侠',
+  '游戏异界',
+  '轻小说',
+  '恋爱日常',
+  '情色',
+  '娱乐圈',
+  '宫斗宅斗',
+  '权谋',
+  '群像',
+];
+
+const GENERIC_STORY_FANWORK_OPTIONS_BY_GENRE: Record<string, string[]> = {
+  玄幻: ['斗破苍穹', '斗罗大陆', '遮天', '完美世界', '牧神记', '大主宰', '武动乾坤', '圣墟', '元尊', '神墓'],
+  奇幻: ['魔戒', '冰与火之歌', '哈利·波特', '纳尼亚传奇', '巫师', '龙族', '诡秘之主', '奥术神座', '西游记'],
+  仙侠: ['凡人修仙传', '仙逆', '一念永恒', '修真聊天群', '诛仙', '星辰变', '莽荒纪', '大道争锋', '灭运图录'],
+  都市: [
+    '繁花',
+    '狂飙',
+    '欢乐颂',
+    '爱情公寓',
+    '小欢喜',
+    '都挺好',
+    '流金岁月',
+    '微微一笑很倾城',
+    '何以笙箫默',
+    '全职高手',
+  ],
+  都市异能: ['龙族', '一人之下', '灵笼', '镇魂街', '全职法师', '异常生物见闻录', '超能陆战队', '漫威电影宇宙'],
+  历史: [
+    '三国演义',
+    '水浒传',
+    '史记',
+    '资治通鉴',
+    '大明王朝1566',
+    '雍正王朝',
+    '长安十二时辰',
+    '琅琊榜',
+    '庆余年',
+    '赘婿',
+  ],
+  架空历史: ['庆余年', '赘婿', '琅琊榜', '雪中悍刀行', '将夜', '择天记', '凰权', '权力的游戏'],
+  科幻: ['三体', '流浪地球', '星际穿越', '银翼杀手', '攻壳机动队', '高达', '银河英雄传说', '黑客帝国', '异形', '沙丘'],
+  末世: [
+    '灵笼',
+    '学园默示录',
+    '进击的巨人',
+    '行尸走肉',
+    '末日乐园',
+    '全球进化',
+    '雪国列车',
+    '疯狂的麦克斯',
+    '生化危机',
+    '明日方舟',
+  ],
+  无限流: ['无限恐怖', '惊悚乐园', '轮回乐园', '从姑获鸟开始', '地球上线', '死亡万花筒', '全球高考'],
+  悬疑: ['诡秘之主', '盗墓笔记', '鬼吹灯', '隐秘的角落', '白夜追凶', '开端', '心理罪', '福尔摩斯', '东方快车谋杀案'],
+  灵异: ['盗墓笔记', '鬼吹灯', '镇魂', '地狱公寓', '怨气撞铃', '民调局异闻录', '聊斋志异', '山海经'],
+  克苏鲁: ['诡秘之主', '克苏鲁神话', '血源诅咒', '潜行吧！奈亚子', '深渊上的火', 'SCP基金会', '印斯茅斯的阴霾'],
+  赛博朋克: ['赛博朋克2077', '攻壳机动队', '银翼杀手', '心理测量者', '边缘行者', '阿丽塔：战斗天使'],
+  星际: ['崩坏：星穹铁道', '星际争霸', '星球大战', '银河英雄传说', '高达', 'EVE Online', '三体', '吞噬星空'],
+  西幻: ['魔戒', '冰与火之歌', '哈利·波特', '巫师', '魔兽世界', '上古卷轴', '龙与地下城', '纳尼亚传奇', '奥德赛'],
+  武侠: ['金庸群侠传', '天龙八部', '笑傲江湖', '神雕侠侣', '陆小凤传奇', '楚留香传奇', '雪中悍刀行', '水浒传'],
+  游戏异界: ['刀剑神域', 'Overlord', '记录的地平线', '全职高手', '游戏王', '宝可梦', '原神', '明日方舟'],
+  轻小说: [
+    '刀剑神域',
+    'Re:从零开始的异世界生活',
+    'Overlord',
+    '无职转生',
+    '魔法禁书目录',
+    '凉宫春日系列',
+    '为美好的世界献上祝福！',
+  ],
+  恋爱日常: [
+    '傲慢与偏见',
+    '罗密欧与朱丽叶',
+    '辉夜大小姐想让我告白',
+    '五等分的新娘',
+    '路人女主的养成方法',
+    '春物',
+    'CLANNAD',
+    '樱花庄的宠物女孩',
+  ],
+  情色: [
+    '金瓶梅',
+    '肉蒲团',
+    '素女经',
+    '飞燕外传',
+    '痴婆子传',
+    '查泰莱夫人的情人',
+    '北回归线',
+    '南回归线',
+    'O的故事',
+    '艾曼纽',
+    '维纳斯的三角洲',
+    '十日谈',
+    '危险关系',
+    '青楼十二房',
+    '感官世界',
+    '花与蛇',
+    '苦月亮',
+    '巴黎最后的探戈',
+    '大开眼戒',
+    '秘书',
+    '本能',
+    '爱你九周半',
+    '色，戒',
+    '西西里的美丽传说',
+    '五十度灰',
+    '不忠',
+    '原罪',
+    '欲望都市',
+    '加州靡情',
+    '都铎王朝',
+    '兰斯系列',
+    '凯瑟琳',
+    '情人',
+  ],
+  娱乐圈: ['全职高手', '偶像大师', 'Love Live!', 'BanG Dream!', '偶像梦幻祭', '华丽的挑战', '甄嬛传', '繁花'],
+  宫斗宅斗: ['甄嬛传', '如懿传', '延禧攻略', '知否知否应是绿肥红瘦', '步步惊心', '红楼梦', '源氏物语'],
+  权谋: ['琅琊榜', '庆余年', '权力的游戏', '三国演义', '雍正王朝', '大明王朝1566', '长安十二时辰', '资治通鉴'],
+  群像: [
+    '红楼梦',
+    '水浒传',
+    '明日方舟',
+    '原神',
+    '崩坏：星穹铁道',
+    '海贼王',
+    '火影忍者',
+    '进击的巨人',
+    '全职高手',
+    '龙族',
+  ],
+};
+
+const GENERIC_STORY_FANWORK_OPTIONS = [
+  '西游记',
+  '红楼梦',
+  '三国演义',
+  '水浒传',
+  '山海经',
+  '聊斋志异',
+  '封神演义',
+  '史记',
+  '资治通鉴',
+  '希腊神话',
+  '北欧神话',
+  '荷马史诗',
+  '奥德赛',
+  '伊利亚特',
+  '圣经',
+  '一千零一夜',
+  '源氏物语',
+  '莎士比亚戏剧',
+  '罗密欧与朱丽叶',
+  '哈姆雷特',
+  '傲慢与偏见',
+  '金瓶梅',
+  '肉蒲团',
+  '素女经',
+  '飞燕外传',
+  '痴婆子传',
+  '查泰莱夫人的情人',
+  '北回归线',
+  '南回归线',
+  'O的故事',
+  '艾曼纽',
+  '维纳斯的三角洲',
+  '十日谈',
+  '危险关系',
+  '福尔摩斯',
+  '东方快车谋杀案',
+  '魔戒',
+  '哈利·波特',
+  '冰与火之歌',
+  '沙丘',
+  '三体',
+  '流浪地球',
+  '星际穿越',
+  '黑客帝国',
+  '星球大战',
+  '漫威电影宇宙',
+  'DC宇宙',
+  '异形',
+  '生化危机',
+  '疯狂的麦克斯',
+  '银翼杀手',
+  '感官世界',
+  '花与蛇',
+  '苦月亮',
+  '巴黎最后的探戈',
+  '大开眼戒',
+  '秘书',
+  '本能',
+  '爱你九周半',
+  '色，戒',
+  '西西里的美丽传说',
+  '五十度灰',
+  '不忠',
+  '原罪',
+  '欲望都市',
+  '加州靡情',
+  '都铎王朝',
+  '甄嬛传',
+  '如懿传',
+  '延禧攻略',
+  '琅琊榜',
+  '庆余年',
+  '长安十二时辰',
+  '大明王朝1566',
+  '雍正王朝',
+  '狂飙',
+  '繁花',
+  '爱情公寓',
+  '小欢喜',
+  '都挺好',
+  '原神',
+  '崩坏：星穹铁道',
+  '明日方舟',
+  '碧蓝航线',
+  'Fate/Grand Order',
+  '东方Project',
+  '赛马娘',
+  '蔚蓝档案',
+  '少女前线',
+  '咒术回战',
+  '鬼灭之刃',
+  '海贼王',
+  '火影忍者',
+  '死神',
+  '进击的巨人',
+  '电锯人',
+  '新世纪福音战士',
+  '高达',
+  '攻壳机动队',
+  '赛博朋克2077',
+  '边缘行者',
+  '上古卷轴',
+  '魔兽世界',
+  '星际争霸',
+  '宝可梦',
+  '塞尔达传说',
+  '最终幻想',
+  '女神异闻录',
+  '血源诅咒',
+  '艾尔登法环',
+  '黑暗之魂',
+  '巫师',
+  '兰斯系列',
+  '凯瑟琳',
+  '诡秘之主',
+  '斗破苍穹',
+  '斗罗大陆',
+  '凡人修仙传',
+  '遮天',
+  '吞噬星空',
+  '全职高手',
+  '庆余年',
+  '雪中悍刀行',
+];
+
+function mergeUniqueOptions(...groups: string[][]): string[] {
+  return Array.from(
+    new Set(
+      groups
+        .flat()
+        .map(item => trimText(item))
+        .filter(Boolean),
+    ),
+  );
+}
+
+export function getGenericStoryFanworkOptionsForGenre(genre: string): string[] {
+  const normalizedGenre = trimText(genre);
+  const genreOptions = GENERIC_STORY_FANWORK_OPTIONS_BY_GENRE[normalizedGenre] ?? [];
+  return genreOptions.length > 0 ? genreOptions : GENERIC_STORY_FANWORK_OPTIONS;
+}
 
 function parseYamlDocument(raw: string): Record<string, unknown> {
   try {
@@ -127,18 +423,133 @@ function formatCurrentMessageStatDataForPrompt(): string {
   ].join('\n');
 }
 
-function buildDefaultOpeningFormValues(preset: OpeningPreset, worldModeId?: string): Record<string, string> {
-  const schema = getEffectiveFormSchema(preset, worldModeId);
+export function isGenericStoryOpening(payload: Pick<OpeningPayload, 'story_template'> | null | undefined): boolean {
+  return trimText(payload?.story_template) === OPENING_STORY_TEMPLATE_GENERIC;
+}
+
+export function getOpeningStoryTemplateId(payload: Pick<OpeningPayload, 'story_template'> | null | undefined): string {
+  return isGenericStoryOpening(payload) ? OPENING_STORY_TEMPLATE_GENERIC : OPENING_STORY_TEMPLATE_WINTER;
+}
+
+export function getGenericStoryFormSchema(): OpeningPreset['form_schema'] {
+  return [
+    {
+      key: 'generic_genre',
+      label: '题材',
+      kind: 'text',
+      required: true,
+      options: GENERIC_STORY_GENRE_OPTIONS,
+      default_value: '',
+      placeholder: '选择或输入题材，例如：玄幻 / 都市异能 / 无限流 / 克苏鲁',
+    },
+    {
+      key: 'is_fanwork',
+      label: '是否为同人作品',
+      kind: 'select',
+      required: true,
+      options: ['否', '是'],
+      default_value: '否',
+    },
+    {
+      key: 'fanwork_name',
+      label: '同人作品名称',
+      kind: 'text',
+      required: false,
+      options: GENERIC_STORY_FANWORK_OPTIONS,
+      default_value: '',
+      placeholder: '选择或输入作品名；非同人可留空',
+    },
+    {
+      key: 'protagonist_background',
+      label: '主人公背景',
+      kind: 'textarea',
+      required: false,
+      default_value: '',
+      placeholder: '可选：身份、能力、前史、初始资源、与主要人物的关系',
+    },
+    {
+      key: 'opening_scene',
+      label: '开头场景',
+      kind: 'textarea',
+      required: true,
+      default_value: '',
+      placeholder: '例如：深夜收到一封不该存在的邀请函；醒来时已经站在副本入口',
+    },
+    {
+      key: 'user_requirements',
+      label: '用户要求',
+      kind: 'textarea',
+      required: false,
+      default_value: '',
+      placeholder: '可选：想保留/改写的世界观、人设关系、爽点、禁忌、开局事件',
+    },
+    {
+      key: 'early_story_tone',
+      label: '剧情基调',
+      kind: 'textarea',
+      required: false,
+      default_value: '',
+      placeholder: '例如：暗流涌动、轻松日常、热血升级、悬疑压迫、群像权谋',
+    },
+    {
+      key: 'opening_style',
+      label: '文风',
+      kind: 'select',
+      required: true,
+      options: ['轻小说', '网文爽文', '电影感叙事', '现代文学', '克制冷峻', '诗性华丽'],
+      default_value: '轻小说',
+    },
+    {
+      key: 'word_count',
+      label: '字数',
+      kind: 'text',
+      required: true,
+      default_value: '1500',
+      placeholder: '默认 1500',
+    },
+  ];
+}
+
+export function getOpeningFormSchema(preset: OpeningPreset, payload: OpeningPayload): OpeningPreset['form_schema'] {
+  if (isGenericStoryOpening(payload)) return getGenericStoryFormSchema();
+  return getEffectiveFormSchema(preset, payload.world_mode_id);
+}
+
+export function getOpeningMissingRequiredField(preset: OpeningPreset, payload: OpeningPayload) {
+  const missing = getOpeningFormSchema(preset, payload).find(
+    field => field.required && !trimText(payload.form_values?.[field.key]),
+  );
+  if (missing) return missing;
+  if (isGenericStoryOpening(payload) && trimText(payload.form_values?.is_fanwork) === '是') {
+    const fanworkName = trimText(payload.form_values?.fanwork_name);
+    if (!fanworkName) {
+      return {
+        key: 'fanwork_name',
+        label: '同人作品名称',
+        kind: 'text' as const,
+        required: true,
+        options: GENERIC_STORY_FANWORK_OPTIONS,
+        placeholder: '选择或输入作品名',
+        default_value: '',
+      };
+    }
+  }
+  return null;
+}
+
+function buildDefaultOpeningFormValues(
+  preset: OpeningPreset,
+  worldModeId?: string,
+  storyTemplate = OPENING_STORY_TEMPLATE_WINTER,
+): Record<string, string> {
+  const schema =
+    storyTemplate === OPENING_STORY_TEMPLATE_GENERIC
+      ? getGenericStoryFormSchema()
+      : getEffectiveFormSchema(preset, worldModeId);
   return Object.fromEntries(
     schema.map(field => {
       if (field.key === 'shelter_ability_summary') {
         return [field.key, getDefaultShelterAbilitySummary()];
-      }
-      if (field.key === 'nearby_factions') {
-        return [field.key, getDefaultNearbyFactions()];
-      }
-      if (field.key === 'nearby_survivor_types') {
-        return [field.key, getDefaultNearbySurvivorTypes()];
       }
       return [field.key, trimText(field.default_value)];
     }),
@@ -180,24 +591,6 @@ function getDefaultShelterAbilitySummary(): string {
   return parts.join('\n') || '未设定';
 }
 
-function getDefaultNearbyFactions(): string {
-  const source = String(externalFactionRaw ?? '');
-  const matches = Array.from(source.matchAll(/势力[一二三四五六七八九十]：([^\r\n(]+)/g))
-    .map(match => trimText(match[1]))
-    .filter(Boolean);
-
-  if (matches.length > 0) {
-    return matches.join('；');
-  }
-
-  const early = ['地下停车场/地铁站难民', '超市/便利店废墟据点', '医院急诊楼幸存者'];
-  return early.join('；');
-}
-
-function getDefaultNearbySurvivorTypes(): string {
-  return '';
-}
-
 function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
   const value = trimText(input);
   if (value === 'ready' || value === 'generating' || value === 'configuring') return value;
@@ -206,10 +599,17 @@ function normalizeOpeningState(input: unknown): OpeningPayload['state'] {
 
 function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayload {
   const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const storyTemplate =
+    trimText(_.get(source, 'story_template', '')) === OPENING_STORY_TEMPLATE_GENERIC
+      ? OPENING_STORY_TEMPLATE_GENERIC
+      : OPENING_STORY_TEMPLATE_WINTER;
   const worldModeId = trimText(_.get(source, 'world_mode_id', getDefaultWorldModeId())) || getDefaultWorldModeId();
-  const effectiveSchema = getEffectiveFormSchema(preset, worldModeId);
+  const effectiveSchema =
+    storyTemplate === OPENING_STORY_TEMPLATE_GENERIC
+      ? getGenericStoryFormSchema()
+      : getEffectiveFormSchema(preset, worldModeId);
   const effectiveDefaultMeta = getEffectiveDefaultMeta(preset, worldModeId);
-  const nextFormValues = buildDefaultOpeningFormValues(preset, worldModeId);
+  const nextFormValues = buildDefaultOpeningFormValues(preset, worldModeId, storyTemplate);
   const rawFormValues = (_.get(source, 'form_values', null) ?? null) as Record<string, unknown> | null;
   const rawUserInput = (_.get(source, 'user_input', {}) ?? {}) as Record<string, unknown>;
   const rawUserDraft = (_.get(source, 'user_draft', {}) ?? {}) as Record<string, unknown>;
@@ -247,6 +647,7 @@ function migrateOpeningPayload(raw: unknown, preset: OpeningPreset): OpeningPayl
   return OpeningPayloadSchema.parse({
     version: 5,
     state: nextState,
+    story_template: storyTemplate,
     world_mode_id: worldModeId,
     route_id: resolvedRouteId,
     use_stream: _.get(source, 'use_stream', false),
@@ -342,6 +743,7 @@ export function getDefaultOpeningPayload(preset = getDefaultOpeningPreset()): Op
   return OpeningPayloadSchema.parse({
     version: 5,
     state: 'placeholder',
+    story_template: OPENING_STORY_TEMPLATE_WINTER,
     world_mode_id,
     route_id,
     use_stream: false,
@@ -368,13 +770,18 @@ const OPENING_PERSISTED_FORM_KEYS = [
   'shelter_ability_summary',
   'early_story_tone',
   'opening_style',
-  'nearby_factions',
-  'nearby_survivor_types',
   'supplemental_setting',
+  'custom_opening_setting',
   'word_count',
   'financial_level',
   'pre_disaster_contacts',
   'stockpile_focus',
+  'generic_genre',
+  'is_fanwork',
+  'fanwork_name',
+  'protagonist_background',
+  'opening_scene',
+  'user_requirements',
 ] as const;
 
 function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
@@ -387,6 +794,7 @@ function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
   return {
     version: 5,
     state: payload.state,
+    story_template: getOpeningStoryTemplateId(payload),
     world_mode_id: trimText(payload.world_mode_id) || getDefaultWorldModeId(),
     route_id:
       trimText(payload.route_id) || getDefaultRouteId(trimText(payload.world_mode_id) || getDefaultWorldModeId()),
@@ -398,6 +806,12 @@ function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
         : null,
     meta: {
       character: compactText(payload.meta.character) || '{{user}}',
+      ...(isGenericStoryOpening(payload)
+        ? {
+            time: compactText(payload.meta.time),
+            location: compactText(payload.meta.location),
+          }
+        : {}),
     },
     form_values: compactFormValues,
   };
@@ -558,17 +972,20 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
   const formValues = payload.form_values ?? {};
   const worldModeAxisDictionary = buildWorldModeAxisDictionary(worldMode);
   const worldModeAxisTextMap = buildWorldModeAxisTextMap(worldMode);
-  const forbiddenDrift = route?.forbidden_drift.join('；') || '未设定';
   const shelterAbilitySummary = trimText(formValues.shelter_ability_summary) || getDefaultShelterAbilitySummary();
-  const nearbyFactions = trimText(formValues.nearby_factions) || getDefaultNearbyFactions();
-  const nearbySurvivorTypes = trimText(formValues.nearby_survivor_types) || getDefaultNearbySurvivorTypes();
   const supplementalSetting = trimText(formValues.supplemental_setting) || '未设定';
+  const customOpeningSetting = trimText(formValues.custom_opening_setting) || '未设定';
   const wordCount = trimText(formValues.word_count) || '1500';
   const financialLevel = trimText(formValues.financial_level) || '未设定';
   const preDisasterContacts = trimText(formValues.pre_disaster_contacts) || '未设定';
   const stockpileFocus = trimText(formValues.stockpile_focus) || '未设定';
-  const worldVariable = [worldModeAxisDictionary, `边界约束：${forbiddenDrift}`].filter(Boolean).join('\n');
-  const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
+  const genericGenre = trimText(formValues.generic_genre) || '未设定';
+  const isFanwork = trimText(formValues.is_fanwork) === '是' ? '是' : '否';
+  const fanworkName = trimText(formValues.fanwork_name) || '未设定';
+  const protagonistBackground = trimText(formValues.protagonist_background) || '未设定';
+  const openingScene = trimText(formValues.opening_scene) || '未设定';
+  const userRequirements = trimText(formValues.user_requirements) || '未设定';
+  const worldVariable = worldModeAxisDictionary;
 
   return {
     user: trimText(payload.meta.character) || '{{user}}',
@@ -590,7 +1007,6 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     guaranteed_opening_elements: route?.guaranteed_opening_elements.join('；') || '未设定',
     starting_liabilities: route?.starting_liabilities.join('；') || '未设定',
     opening_conflict_sources: route?.opening_conflict_sources.join('；') || '未设定',
-    forbidden_drift: forbiddenDrift,
     世界观变量: worldVariable,
     world_variable: worldVariable,
     ...worldModeAxisTextMap,
@@ -600,6 +1016,9 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     opening_style: trimText(formValues.opening_style) || '未设定',
     supplemental_setting: supplementalSetting,
     补充设定: supplementalSetting,
+    custom_opening_setting: customOpeningSetting,
+    开场自定义: customOpeningSetting,
+    用户要求的自定义开场设定: customOpeningSetting,
     user_job: trimText(formValues.pre_disaster_identity) || '未设定',
     剧情基调: trimText(formValues.early_story_tone) || '未设定',
     story_tone: trimText(formValues.early_story_tone) || '未设定',
@@ -609,22 +1028,35 @@ export function buildOpeningPromptContext(preset: OpeningPreset, payload: Openin
     字数: wordCount,
     shelter_ability_summary: shelterAbilitySummary,
     庇护所能力变量: shelterAbilitySummary,
-    nearby_factions: nearbyFactions,
-    社会组织: nearbyFactions,
-    nearby_survivor_types: nearbySurvivorTypes,
-    其他幸存者类别: nearbySurvivorTypes,
     financial_level: financialLevel,
     资金水平: financialLevel,
     pre_disaster_contacts: preDisasterContacts,
     灾前人脉: preDisasterContacts,
     stockpile_focus: stockpileFocus,
     囤积方向: stockpileFocus,
-    status_current_variable: currentVariablePrompt || '未设定',
-    当前变量列表: currentVariablePrompt || '未设定',
+    story_template: getOpeningStoryTemplateId(payload),
+    是否为同人作品: isFanwork,
+    is_fanwork: isFanwork,
+    作品名: fanworkName,
+    fanwork_name: fanworkName,
+    题材: genericGenre,
+    generic_genre: genericGenre,
+    主人公背景: protagonistBackground,
+    protagonist_background: protagonistBackground,
+    用户开场场景: openingScene,
+    opening_scene: openingScene,
+    用户开场地点: trimText(payload.meta.location) || '未设定',
+    opening_location: trimText(payload.meta.location) || '未设定',
+    用户要求: userRequirements,
+    user_requirements: userRequirements,
   };
 }
 
-export function resolveOpeningPromptTemplateRaw(worldModeId: string): string {
+export function resolveOpeningPromptTemplateRaw(
+  worldModeId: string,
+  storyTemplate = OPENING_STORY_TEMPLATE_WINTER,
+): string {
+  if (storyTemplate === OPENING_STORY_TEMPLATE_GENERIC) return String(openingPromptTemplateGenericStoryRaw ?? '');
   const normalizedId = trimText(worldModeId);
   if (normalizedId === 'A') return String(openingPromptTemplatePreDisasterRaw ?? '');
   return String(openingPromptTemplateRaw ?? '');
@@ -632,14 +1064,12 @@ export function resolveOpeningPromptTemplateRaw(worldModeId: string): string {
 
 export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: OpeningPayload): string {
   const context = buildOpeningPromptContext(preset, payload);
-  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id);
+  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id, getOpeningStoryTemplateId(payload));
   const compiledTemplate = compileOpeningPromptTemplate(String(templateRaw ?? '').trim(), context);
   const finalTemplate = typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
-  const currentVariablePrompt = formatCurrentMessageStatDataForPrompt();
 
   return [
     finalTemplate,
-    currentVariablePrompt,
     '输出格式：<content>正文</content> <option>后续剧情推进选项，格式为 A.${10字以内的选项文本} 每个选项单独一行，确保4个选项放在同一个标签内</option> ',
   ]
     .filter(Boolean)

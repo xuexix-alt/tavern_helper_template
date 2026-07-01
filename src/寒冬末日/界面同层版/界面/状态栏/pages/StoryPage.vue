@@ -455,6 +455,7 @@
         :routes="openingRoutes"
         @update-meta="updateOpeningMeta"
         @update-field="updateOpeningField"
+        @update-story-template="updateOpeningStoryTemplate"
         @update-world-mode="updateOpeningWorldMode"
         @update-route="updateOpeningRoute"
         @update-stream="updateOpeningStream"

@@ -45,8 +45,18 @@ test('findDefaultRolePortraitEntries ignores case and whitespace variations', ()
   assert.equal(upper.length, 2);
 });
 
-test('unknown role names fall back to an empty list so callers keep the builtin placeholder', () => {
-  assert.deepEqual(findDefaultRolePortraitEntries('陈雪'), []);
+test('unknown role names fall back to the generic random portrait pool instead of the builtin placeholder', () => {
+  const entries = findDefaultRolePortraitEntries('陈雪');
+
+  assert.equal(entries.length, 2);
+  assert.deepEqual(
+    entries.map(entry => entry.src).sort(),
+    ['https://files.catbox.moe/mkdgkp.jpg', 'https://files.catbox.moe/w7txx9.jpg'].sort(),
+  );
+  assert.ok(entries.every(entry => entry.characterName === '陈雪'));
+});
+
+test('empty role names still return an empty default portrait list', () => {
   assert.deepEqual(findDefaultRolePortraitEntries(''), []);
   assert.deepEqual(findDefaultRolePortraitEntries(null), []);
   assert.deepEqual(findDefaultRolePortraitEntries(undefined), []);

@@ -79,6 +79,11 @@ const DEFAULT_ROLE_PORTRAIT_RECIPES: DefaultRolePortraitRecipe[] = [
   },
 ];
 
+const GENERIC_ROLE_PORTRAIT_SOURCES: DefaultRolePortraitSource[] = [
+  { variant: 'anime', url: 'https://files.catbox.moe/w7txx9.jpg', label: '通用立绘' },
+  { variant: 'realistic', url: 'https://files.catbox.moe/mkdgkp.jpg', label: '通用立绘' },
+];
+
 /**
  * 默认立绘条目在 `ReaderGalleryEntry` 形状里的稳定 messageId。
  *
@@ -106,6 +111,26 @@ function buildDefaultEntry(roleName: string, source: DefaultRolePortraitSource, 
   } as ReaderGalleryEntry;
 }
 
+function stableNameSeed(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function buildGenericDefaultEntries(roleName: string): ReaderGalleryEntry[] {
+  const seed = stableNameSeed(roleName);
+  return GENERIC_ROLE_PORTRAIT_SOURCES.map((source, index) => ({
+    ...buildDefaultEntry(roleName, source, index),
+    id: `default::generic::${roleName}::${source.variant}`,
+    promptToken: `default:generic:${source.variant}`,
+    title: `${roleName} ${source.label}`,
+    alt: `${roleName} ${source.label}`,
+    createdOrder: index,
+  })).sort((a, b) => ((a.createdOrder + seed) % 2) - ((b.createdOrder + seed) % 2));
+}
+
 const DEFAULT_ROLE_PORTRAIT_INDEX: Map<string, ReaderGalleryEntry[]> = (() => {
   const map = new Map<string, ReaderGalleryEntry[]>();
   for (const recipe of DEFAULT_ROLE_PORTRAIT_RECIPES) {
@@ -121,13 +146,16 @@ const DEFAULT_ROLE_PORTRAIT_INDEX: Map<string, ReaderGalleryEntry[]> = (() => {
 export function findDefaultRolePortraitEntries(
   ...roleNameCandidates: Array<string | null | undefined>
 ): ReaderGalleryEntry[] {
+  let fallbackRoleName = '';
   for (const candidate of roleNameCandidates) {
+    const rawName = String(candidate ?? '').trim();
+    if (!fallbackRoleName && rawName) fallbackRoleName = rawName;
     const normalized = normalizeName(candidate);
     if (!normalized) continue;
     const hit = DEFAULT_ROLE_PORTRAIT_INDEX.get(normalized);
     if (hit && hit.length > 0) return hit;
   }
-  return [];
+  return fallbackRoleName ? buildGenericDefaultEntries(fallbackRoleName) : [];
 }
 
 export function listDefaultRolePortraitRoleNames(): string[] {

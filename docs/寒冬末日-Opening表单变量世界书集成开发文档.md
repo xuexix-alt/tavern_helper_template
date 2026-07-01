@@ -81,6 +81,7 @@
 - `form_values.pre_disaster_identity`
 - `form_values.early_story_tone`
 - `form_values.supplemental_setting`
+- `form_values.custom_opening_setting`
 - `opening_seed_user_message_id`
 - `opening_result_message_id`
 

@@ -631,10 +631,18 @@ function rolePortraitSetEntryLabel(entry: { key: string; role: Record<string, an
   return formatImageDisplayName(setEntry.title || setEntry.characterName || roleName(entry), roleName(entry));
 }
 
+function isGenericDefaultPortraitEntry(entry: ReaderGalleryEntry | undefined | null): boolean {
+  return String(entry?.id ?? '').startsWith('default::generic::');
+}
+
 function rolePortraitSourceText(entry: { key: string; role: Record<string, any> }) {
   const portrait = rolePortraitForEntry(entry);
   if (portrait.source !== 'gallery') {
-    const count = rolePortraitSetForEntry(entry).length;
+    const set = rolePortraitSetForEntry(entry);
+    const count = set.length;
+    if (isGenericDefaultPortraitEntry(portrait.entry) || set.some(setEntry => isGenericDefaultPortraitEntry(setEntry))) {
+      return count > 1 ? `随机图 · ${count} 张` : '随机图';
+    }
     return count > 1 ? `默认设定图 · ${count} 张` : '默认设定图';
   }
   const count = rolePortraitSetForEntry(entry).length;

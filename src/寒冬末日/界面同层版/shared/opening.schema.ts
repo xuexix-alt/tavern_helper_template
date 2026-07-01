@@ -52,6 +52,7 @@ export const OpeningPayloadSchema = z
   .object({
     version: z.literal(5),
     state: z.enum(['placeholder', 'configuring', 'generating', 'ready']).default('placeholder'),
+    story_template: z.string().default('winter-apocalypse-order'),
     world_mode_id: z.string().default('B'),
     route_id: z.string().default('后宫+养成'),
     use_stream: z.boolean().default(false),

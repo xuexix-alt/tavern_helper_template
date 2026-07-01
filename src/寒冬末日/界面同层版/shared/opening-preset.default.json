@@ -44,24 +44,18 @@
       "default_value": "轻小说"
     },
     {
-      "key": "nearby_factions",
-      "label": "社会生态",
-      "kind": "textarea",
-      "required": false,
-      "placeholder": "尽量从现成设定源自动带入，必要时再补充"
-    },
-    {
-      "key": "nearby_survivor_types",
-      "label": "其他NPC类型",
-      "kind": "textarea",
-      "required": false,
-      "placeholder": "增加你喜欢的NPC类型或具体名称（也可同人作品设定）"
-    },
-    {
       "key": "supplemental_setting",
       "label": "补充设定",
       "kind": "textarea",
       "placeholder": "例如：XXX同人、XXX人物关系、隐藏前情、偏好的开局事件"
+    },
+    {
+      "key": "custom_opening_setting",
+      "label": "开场自定义",
+      "kind": "textarea",
+      "required": false,
+      "default_value": "",
+      "placeholder": "可选：输入用户要求的自定义开场设定"
     },
     {
       "key": "word_count",
@@ -138,24 +132,18 @@
           "default_value": "轻小说"
         },
         {
-          "key": "nearby_factions",
-          "label": "社会关系网",
-          "kind": "textarea",
-          "required": false,
-          "placeholder": "灾变前的邻居、同事、商圈、物业、社区氛围"
-        },
-        {
-          "key": "nearby_survivor_types",
-          "label": "关键NPC类型",
-          "kind": "textarea",
-          "required": false,
-          "placeholder": "此刻仍是普通人，但未来会成为关键角色的类型（可填名称或同人作品设定）"
-        },
-        {
           "key": "supplemental_setting",
           "label": "补充设定",
           "kind": "textarea",
           "placeholder": "例如：XXX同人、XXX人物关系、隐藏前情、偏好的开局事件"
+        },
+        {
+          "key": "custom_opening_setting",
+          "label": "开场自定义",
+          "kind": "textarea",
+          "required": false,
+          "default_value": "",
+          "placeholder": "可选：输入用户要求的自定义开场设定"
         },
         {
           "key": "word_count",

@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const sourcePath = path.resolve(__dirname, '../../../shared/opening.ts');
 
-test('opening nearby survivor defaults stay empty and avoid raw role-profile imports', () => {
+test('opening nearby social fields stay disabled and avoid raw role-profile imports', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
 
   assert.doesNotMatch(source, /角色档案_-__王静\.txt\?raw/);
@@ -15,5 +15,9 @@ test('opening nearby survivor defaults stay empty and avoid raw role-profile imp
   assert.doesNotMatch(source, /角色详情_-_慕小小\.txt\?raw/);
   assert.doesNotMatch(source, /角色详情_-_桃乐丝・泽巴哈\.txt\?raw/);
   assert.doesNotMatch(source, /export const OPENING_MESSAGE_ID = 0;/);
-  assert.match(source, /function getDefaultNearbySurvivorTypes\(\): string \{\s*return '';/);
+  assert.doesNotMatch(source, /externalFactionRaw/);
+  assert.doesNotMatch(source, /getDefaultNearbyFactions/);
+  assert.doesNotMatch(source, /getDefaultNearbySurvivorTypes/);
+  assert.doesNotMatch(source, /'nearby_factions'/);
+  assert.doesNotMatch(source, /'nearby_survivor_types'/);
 });
