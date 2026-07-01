@@ -341,9 +341,15 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /function updateOpeningStream/);
   assert.match(storySource, /function updateOpeningField/);
   assert.match(storySource, /async function handleOpeningSubmit\(\)/);
-  assert.match(storySource, /const compiledPromptSnapshot = buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(
+    storySource,
+    /const compiledPromptSnapshot = buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/,
+  );
   assert.match(storySource, /await submitPrompt\(compiledPromptSnapshot\)/);
-  assert.match(storySource, /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*latestAssistantId/);
+  assert.match(
+    storySource,
+    /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*latestAssistantId/,
+  );
   assert.doesNotMatch(storySource, /runOpeningDetachedGeneration|runOpeningNativeGeneration|sendToNativeChat/);
 });
 
