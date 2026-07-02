@@ -486,10 +486,10 @@ const themeItems: Array<{ label: string; value: DemoTheme }> = [
 ];
 
 const latestAssistantItem = computed(
-  () => [...transcriptItems.value].reverse().find(item => item.role === 'assistant') ?? null,
+  () => [...baseTranscriptItems.value].reverse().find(item => item.role === 'assistant') ?? null,
 );
 
-const assistantItemCount = computed(() => transcriptItems.value.filter(item => item.role === 'assistant').length);
+const assistantItemCount = computed(() => baseTranscriptItems.value.filter(item => item.role === 'assistant').length);
 const hasSuccessfulOpeningAssistant = computed(() => Boolean(String(latestAssistantItem.value?.raw ?? '').trim()));
 const hasOpeningSeedUserMessage = computed(() => baseTranscriptItems.value.some(item => item.role === 'user'));
 const shouldShowOpeningSetup = computed(

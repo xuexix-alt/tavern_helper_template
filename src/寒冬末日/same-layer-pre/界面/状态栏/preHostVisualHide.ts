@@ -1,6 +1,21 @@
 const HOST_VISUAL_HIDE_STYLE_ID = 'eden-same-layer-pre-host-visual-hide-style';
+const HOST_VISUAL_HIDE_DYNAMIC_STYLE_ID = 'eden-same-layer-pre-host-visual-hide-dynamic-style';
 const HOST_VISUAL_HIDE_ATTR = 'data-eden-host-hidden';
 const PRE_VISUAL_HIDE_OWNER_ATTR = 'data-eden-pre-host-hidden';
+const HOST_VISUAL_HIDE_DECLARATIONS = `
+  visibility: hidden !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+`;
 
 function collectHostOnlyDocuments(): Document[] {
   const docs: Document[] = [];
@@ -24,29 +39,25 @@ function collectHostOnlyDocuments(): Document[] {
 }
 
 function ensureHostVisualHideStyle(doc: Document) {
-  if (doc.getElementById(HOST_VISUAL_HIDE_STYLE_ID)) return;
-  const style = doc.createElement('style');
-  style.id = HOST_VISUAL_HIDE_STYLE_ID;
-  style.textContent = `
+  if (!doc.getElementById(HOST_VISUAL_HIDE_STYLE_ID)) {
+    const style = doc.createElement('style');
+    style.id = HOST_VISUAL_HIDE_STYLE_ID;
+    style.textContent = `
 [${HOST_VISUAL_HIDE_ATTR}="true"] {
-  visibility: hidden !important;
-  pointer-events: none !important;
-  overflow: hidden !important;
-  height: 0 !important;
-  min-height: 0 !important;
-  max-height: 0 !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  border-top-width: 0 !important;
-  border-bottom-width: 0 !important;
+${HOST_VISUAL_HIDE_DECLARATIONS}
 }
 [${HOST_VISUAL_HIDE_ATTR}="true"] * {
   visibility: hidden !important;
 }
 `;
-  doc.head?.appendChild(style);
+    doc.head?.appendChild(style);
+  }
+
+  if (!doc.getElementById(HOST_VISUAL_HIDE_DYNAMIC_STYLE_ID)) {
+    const style = doc.createElement('style');
+    style.id = HOST_VISUAL_HIDE_DYNAMIC_STYLE_ID;
+    doc.head?.appendChild(style);
+  }
 }
 
 type MessageIdInput = number | null | undefined | Array<number | null | undefined>;
@@ -61,6 +72,24 @@ const MES_SELECTORS = (messageId: number) => [
   `#chat .mes_text[data-message-index='${messageId}']`,
   `.mes_text[data-message-index='${messageId}']`,
 ];
+
+function buildDynamicHostVisualHideCss(messageIds: Iterable<number>) {
+  const selectors = Array.from(messageIds)
+    .sort((a, b) => a - b)
+    .flatMap(messageId => MES_SELECTORS(messageId))
+    .join(',\n');
+
+  if (!selectors) return '';
+
+  return `
+${selectors} {
+${HOST_VISUAL_HIDE_DECLARATIONS}
+}
+${selectors} * {
+  visibility: hidden !important;
+}
+`;
+}
 
 function resolveHostMessageRoot(messageId: number): HTMLElement | null {
   const mesid = Math.trunc(messageId);
@@ -113,8 +142,18 @@ export function createPreHostVisualHideController() {
 
   function reapplyHostVisualHide() {
     reapplyTimer = 0;
+    syncDynamicHostVisualHideStyles();
     for (const id of hiddenMessageIds) {
       applyOne(id);
+    }
+  }
+
+  function syncDynamicHostVisualHideStyles() {
+    const css = buildDynamicHostVisualHideCss(hiddenMessageIds);
+    for (const doc of collectHostOnlyDocuments()) {
+      ensureHostVisualHideStyle(doc);
+      const style = doc.getElementById(HOST_VISUAL_HIDE_DYNAMIC_STYLE_ID);
+      if (style) style.textContent = css;
     }
   }
 
@@ -151,8 +190,12 @@ export function createPreHostVisualHideController() {
     }
 
     for (const id of nextIds) {
-      applyOne(id);
       hiddenMessageIds.add(id);
+    }
+    syncDynamicHostVisualHideStyles();
+
+    for (const id of nextIds) {
+      applyOne(id);
     }
   }
 
@@ -171,8 +214,12 @@ export function createPreHostVisualHideController() {
     }
 
     for (const id of nextIds) {
-      applyOne(id);
       hiddenMessageIds.add(id);
+    }
+    syncDynamicHostVisualHideStyles();
+
+    for (const id of nextIds) {
+      applyOne(id);
     }
   }
 
@@ -181,6 +228,7 @@ export function createPreHostVisualHideController() {
       clearOne(id);
       hiddenMessageIds.delete(id);
     }
+    syncDynamicHostVisualHideStyles();
   }
 
   function destroy() {

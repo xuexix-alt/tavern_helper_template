@@ -893,6 +893,33 @@ test('same-layer-pre streaming preview stays lightweight until the done transcri
   assert.doesNotMatch(streamingItemSource, /extractChoiceOptions\(raw\)/);
 });
 
+test('same-layer-pre keeps the latest assistant visible in the pre transcript while host floors stay visually hidden', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+
+  assert.doesNotMatch(
+    hookSource,
+    /function shouldRenderPreTranscriptItem|latestDoneAssistantMessageId|filter\(shouldRenderPreTranscriptItem/,
+    'the pre UI must not hide the latest assistant body to solve a host-floor release bug',
+  );
+  assert.match(
+    hookSource,
+    /const visibleTranscriptItems = computed\(\(\) => \{[\s\S]*return item \? \[\.\.\.transcriptItems\.value,\s*item\] : transcriptItems\.value;/,
+    'the main transcript list should render the persisted latest assistant after generation completes',
+  );
+  assert.match(hookSource, /baseTranscriptItems:\s*transcriptItems/);
+  assert.match(
+    storySource,
+    /const latestAssistantItem = computed\([\s\S]*baseTranscriptItems\.value[\s\S]*item => item\.role === 'assistant'/,
+    'MVU, choices, and side panels should still resolve the real latest assistant from the full base transcript',
+  );
+  assert.doesNotMatch(
+    storySource,
+    /const latestAssistantItem = computed\([\s\S]*transcriptItems\.value[\s\S]*item => item\.role === 'assistant'/,
+    'the visible transcript copy must not become the source of truth for latest assistant state',
+  );
+});
+
 test('same-layer-pre transcript prose wraps unbroken body text without horizontal scrolling', () => {
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
   const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
@@ -980,7 +1007,7 @@ test('same-layer-pre plugin image client follows the plugin author event protoco
   assert.match(entrySource, /EdenSameLayerPre/);
 });
 
-test('same-layer-pre bridges host lifecycle events without MVU full-sweep retries', () => {
+test('same-layer-pre bridges host and targeted MVU writeback lifecycle without full-sweep retries', () => {
   const hookSource = readPre('useSameLayerPre.ts');
   const bridgeSource = readPre('preHostLifecycleBridge.ts');
   const controllerSource = readPre('preHostVisualHide.ts');
@@ -1003,10 +1030,17 @@ test('same-layer-pre bridges host lifecycle events without MVU full-sweep retrie
   assert.match(bridgeSource, /readHostLastMessageId/);
   assert.match(bridgeSource, /applyHostVisualHide\(\[messageId\]/);
   assert.match(bridgeSource, /scheduleTargetedTranscriptRefresh\(\[messageId\]/);
+  assert.match(bridgeSource, /waitGlobalInitialized\('Mvu'\)/);
+  assert.match(bridgeSource, /eventMakeFirst\(\s*Mvu\.events\.BEFORE_MESSAGE_UPDATE/);
+  assert.match(bridgeSource, /mvu_before_message_update/);
   assert.match(bridgeSource, /requestAnimationFrame|setTimeout/);
-  assert.doesNotMatch(bridgeSource, /VARIABLE_UPDATE|BEFORE_MESSAGE_UPDATE|scheduleFullHostVisualHideSweep/);
+  assert.doesNotMatch(bridgeSource, /VARIABLE_UPDATE_STARTED|VARIABLE_UPDATE_ENDED|scheduleFullHostVisualHideSweep/);
   assert.doesNotMatch(bridgeSource, /\[0,\s*80,\s*240,\s*600,\s*1200\]/);
 
+  assert.match(controllerSource, /HOST_VISUAL_HIDE_DYNAMIC_STYLE_ID/);
+  assert.match(controllerSource, /syncDynamicHostVisualHideStyles/);
+  assert.match(controllerSource, /buildDynamicHostVisualHideCss/);
+  assert.match(controllerSource, /mesid='\$\{messageId\}'/);
   assert.match(controllerSource, /function reapply\(\)/);
   assert.match(controllerSource, /reapply,/);
 });

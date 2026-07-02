@@ -115,6 +115,7 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
   const addStop = (handle: StopHandle) => stops.push(stopFrom(handle));
   let stableRefreshTimer = 0;
   let editingMessageId: number | null = null;
+  let stopped = false;
 
   const applyEarlyHostHide = (messageId: number, reason: string) => {
     options.applyHostVisualHide([messageId], {
@@ -135,6 +136,30 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
   const bindEvent = <T extends EventType>(eventName: T, listener: ListenerType[T]) => {
     addStop(eventOn(eventName, errorCatched(listener) as ListenerType[T]));
   };
+
+  void (async () => {
+    try {
+      if (typeof waitGlobalInitialized !== 'function') return;
+      await waitGlobalInitialized('Mvu');
+      if (stopped || typeof Mvu === 'undefined' || !Mvu.events?.BEFORE_MESSAGE_UPDATE) return;
+
+      addStop(
+        eventMakeFirst(
+          Mvu.events.BEFORE_MESSAGE_UPDATE,
+          errorCatched(((...eventArgs: unknown[]) => {
+            const messageId = normalizeEventMessageIds(eventArgs)[0] ?? readHostLastMessageId();
+            if (messageId === null) {
+              options.reapplyHostVisualHide();
+              return;
+            }
+            applyEarlyHostHide(messageId, 'mvu_before_message_update');
+          }) as ListenerType[typeof Mvu.events.BEFORE_MESSAGE_UPDATE]),
+        ),
+      );
+    } catch {
+      /* MVU is optional for same-layer-pre. */
+    }
+  })();
 
   addStop(
     eventMakeFirst(
@@ -214,6 +239,7 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
 
   return {
     stop() {
+      stopped = true;
       if (stableRefreshTimer) {
         window.clearTimeout(stableRefreshTimer);
         stableRefreshTimer = 0;
