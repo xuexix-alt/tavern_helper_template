@@ -161,18 +161,15 @@ export function bindPreHostLifecycleBridge(options: BindPreHostLifecycleBridgeOp
     }
   })();
 
-  bindEvent(
-    tavern_events.CHARACTER_MESSAGE_RENDERED,
-    ((...eventArgs: unknown[]) => {
-        const messageId = normalizeEventMessageIds(eventArgs)[0] ?? readHostLastMessageId();
-        if (messageId === null) {
-          options.reapplyHostVisualHide();
-          return;
-        }
-        applyEarlyHostHide(messageId, String(tavern_events.CHARACTER_MESSAGE_RENDERED));
-        options.clearStreamingPreviewText();
-    }) as ListenerType[typeof tavern_events.CHARACTER_MESSAGE_RENDERED],
-  );
+  bindEvent(tavern_events.CHARACTER_MESSAGE_RENDERED, ((...eventArgs: unknown[]) => {
+    const messageId = normalizeEventMessageIds(eventArgs)[0] ?? readHostLastMessageId();
+    if (messageId === null) {
+      options.reapplyHostVisualHide();
+      return;
+    }
+    applyEarlyHostHide(messageId, String(tavern_events.CHARACTER_MESSAGE_RENDERED));
+    options.clearStreamingPreviewText();
+  }) as ListenerType[typeof tavern_events.CHARACTER_MESSAGE_RENDERED]);
 
   bindEvent(tavern_events.STREAM_TOKEN_RECEIVED, ((message: string) => {
     const messageId = readHostLastMessageId();

@@ -599,7 +599,9 @@ function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string
     .map((element, index) => {
       const src = readElementSrc(element);
       if (!src) return null;
-      const carrier = element.closest('.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder');
+      const carrier = element.closest(
+        '.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder',
+      );
       const tag = readDataset(carrier, ['imageTag', 'tag']);
       const link = readDataset(carrier, ['link']);
       const promptToken = readDataset(carrier, ['promptToken']) || tag || link || promptTokens[index] || '';
@@ -712,9 +714,9 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
   const context = readScanContext(options);
   const diagnostics: string[] = [];
   const sourceCounts: Record<PreGalleryImageSource, number> = {
-      'host-dom': 0,
-      'pre-render': 0,
-      'extra.images': 0,
+    'host-dom': 0,
+    'pre-render': 0,
+    'extra.images': 0,
     mes_tag: 0,
     cache: 0,
   };

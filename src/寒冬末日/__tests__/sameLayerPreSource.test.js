@@ -798,10 +798,7 @@ test('same-layer-pre reserves the next host floor before creating user and assis
   const regenerateSource = extractFunctionSource(hookSource, 'regenerateMessage');
 
   assert.match(hookSource, /function reserveNextHostMessageVisualHide\(\)/);
-  assert.match(
-    submitSource,
-    /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'user'/,
-  );
+  assert.match(submitSource, /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'user'/);
   assert.match(
     submitSource,
     /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'assistant'/,
