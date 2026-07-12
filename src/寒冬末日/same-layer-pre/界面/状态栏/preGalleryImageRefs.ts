@@ -15,7 +15,7 @@ import {
 } from '../../../界面同层版/界面/状态栏/hostGestureDispatch.ts';
 import type { ReaderGalleryEntry } from '../../../界面同层版/界面/状态栏/types.ts';
 
-export type PreGalleryImageSource = 'host-dom' | 'extra.images' | 'mes_tag' | 'cache';
+export type PreGalleryImageSource = 'host-dom' | 'pre-render' | 'extra.images' | 'mes_tag' | 'cache';
 export type PreGalleryGestureTargetHint = 'prompt-button' | 'ready-image' | 'message-text' | 'unknown';
 export type PreGalleryGestureMode = 'click' | 'dblclick' | 'longpress';
 export type PreGalleryScanLimit = number | 'all';
@@ -32,6 +32,7 @@ export type PreGalleryHostArtifact = {
   promptToken?: string;
   src?: string;
   element?: HTMLElement;
+  source?: PreGalleryImageSource;
 };
 
 export type PreGalleryImageRef = {
@@ -79,7 +80,7 @@ export type PreGalleryDispatchResult = {
   reason: string;
 };
 
-const SOURCE_ORDER: PreGalleryImageSource[] = ['host-dom', 'extra.images', 'mes_tag', 'cache'];
+const SOURCE_ORDER: PreGalleryImageSource[] = ['host-dom', 'pre-render', 'extra.images', 'mes_tag', 'cache'];
 const HOST_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
 const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
 const PLUGIN_NATIVE_SELECTORS = [
@@ -500,6 +501,51 @@ function readElementSrc(element: Element): string {
   return clean(nested?.currentSrc || nested?.src);
 }
 
+function summarizeProbeSrc(src: string) {
+  if (!src) return 'empty';
+  if (src.startsWith('data:image/')) return 'data-url';
+  if (src.startsWith('blob:')) return 'blob-url';
+  return 'url';
+}
+
+function countProbeNodes(root: ParentNode | null | undefined) {
+  if (!root) return { carriers: 0, images: 0, ready: 0, srcKinds: 'empty' };
+  const carriers = root.querySelectorAll(
+    'button.image-tag-button,.st-chatu8-image-button,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder',
+  );
+  const images = Array.from(root.querySelectorAll('img,video'));
+  const srcKinds = Array.from(new Set(images.map(readElementSrc).map(summarizeProbeSrc))).join(',') || 'empty';
+  return {
+    carriers: carriers.length,
+    images: images.length,
+    ready: images.filter(element => Boolean(readElementSrc(element))).length,
+    srcKinds,
+  };
+}
+
+function collectPreGalleryRuntimeProbe(messageId: number) {
+  if (typeof document === 'undefined') return '宿主节点: unavailable；pre正文节点: unavailable';
+  const host = collectHostOnlyDocuments().reduce(
+    (total, doc) => {
+      const root = doc.querySelector(
+        `.mes[mesid="${messageId}"],.mes[data-message-index="${messageId}"],.mes[data-message-id="${messageId}"]`,
+      );
+      const next = countProbeNodes(root?.querySelector('.mes_text') ?? root);
+      return {
+        roots: total.roots + Number(Boolean(root)),
+        carriers: total.carriers + next.carriers,
+        images: total.images + next.images,
+        ready: total.ready + next.ready,
+        srcKinds: new Set([...total.srcKinds, ...next.srcKinds.split(',')]),
+      };
+    },
+    { roots: 0, carriers: 0, images: 0, ready: 0, srcKinds: new Set<string>() },
+  );
+  const preRoot = document.querySelector(`.pre-message-card[data-message-id="${messageId}"] .pre-message-card__body`);
+  const pre = countProbeNodes(preRoot);
+  return `宿主节点: roots=${host.roots} carriers=${host.carriers} images=${host.images} ready=${host.ready} src=${Array.from(host.srcKinds).join(',') || 'empty'}；pre正文节点: carriers=${pre.carriers} images=${pre.images} ready=${pre.ready} src=${pre.srcKinds}`;
+}
+
 function classifyHostElement(element: Element): PreGalleryGestureTargetHint {
   if (element.matches('button.image-tag-button,.st-chatu8-image-button')) return 'prompt-button';
   if (element.matches('img,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container')) return 'ready-image';
@@ -527,6 +573,7 @@ export function collectHostPreGalleryArtifacts(messageId: number): PreGalleryHos
       const src = readElementSrc(element);
       out.push({
         messageId,
+        source: 'host-dom',
         kind: classifyHostElement(element),
         className: clean((element as HTMLElement).className),
         tag,
@@ -542,6 +589,36 @@ export function collectHostPreGalleryArtifacts(messageId: number): PreGalleryHos
   return out;
 }
 
+function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string): PreGalleryHostArtifact[] {
+  if (typeof document === 'undefined') return [];
+  const body = document.querySelector(`.pre-message-card[data-message-id="${messageId}"] .pre-message-card__body`);
+  if (!body) return [];
+
+  const promptTokens = collectChatu8PromptTokens(rawMessage);
+  return Array.from(body.querySelectorAll('img,video'))
+    .map((element, index) => {
+      const src = readElementSrc(element);
+      if (!src) return null;
+      const carrier = element.closest('.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder');
+      const tag = readDataset(carrier, ['imageTag', 'tag']);
+      const link = readDataset(carrier, ['link']);
+      const promptToken = readDataset(carrier, ['promptToken']) || tag || link || promptTokens[index] || '';
+      return {
+        messageId,
+        source: 'pre-render' as const,
+        kind: 'ready-image' as const,
+        className: clean((carrier as HTMLElement | null)?.className || (element as HTMLElement).className),
+        tag: tag || promptToken,
+        link: link || promptToken,
+        requestId: readDataset(carrier, ['requestId']),
+        imageId: readDataset(carrier, ['imageId']),
+        promptToken,
+        src,
+      };
+    })
+    .filter((artifact): artifact is PreGalleryHostArtifact => Boolean(artifact && hasHostArtifactIdentity(artifact)));
+}
+
 function scanMessage(
   message: Record<string, any>,
   messageId: number,
@@ -549,26 +626,32 @@ function scanMessage(
   hostArtifacts: PreGalleryHostArtifact[],
 ) {
   const swipeId = normalizeSwipeId(message.swipe_id ?? message.swipeId);
+  const rawMessage = clean(message.message ?? message.mes);
   const refs = new Map<string, PreGalleryImageRef>();
   const sourceCounts: Record<PreGalleryImageSource, number> = {
     'host-dom': 0,
+    'pre-render': 0,
     'extra.images': 0,
     mes_tag: 0,
     cache: 0,
   };
 
-  for (const artifact of hostArtifacts.filter(item => item.messageId === messageId)) {
+  const renderArtifacts = [...hostArtifacts, ...collectPreVisibleGalleryArtifacts(messageId, rawMessage)];
+  for (const artifact of renderArtifacts.filter(item => item.messageId === messageId)) {
     if (!hasHostArtifactIdentity(artifact)) continue;
+    const source = artifact.source ?? 'host-dom';
     const existing = mergeSource(
       refs,
-      'host-dom',
+      source,
       messageId,
       normalizeSwipeId(artifact.swipeId ?? swipeId),
       normalizeHostArtifact(artifact),
     );
-    rememberHostElementRef(existing, artifact.element);
-    rememberHostImageElementRef(existing, artifact.element);
-    sourceCounts['host-dom'] += 1;
+    if (source === 'host-dom') {
+      rememberHostElementRef(existing, artifact.element);
+      rememberHostImageElementRef(existing, artifact.element);
+    }
+    sourceCounts[source] += 1;
   }
 
   for (const entry of readSwipeEntries(message, swipeId)) {
@@ -576,7 +659,6 @@ function scanMessage(
     sourceCounts['extra.images'] += 1;
   }
 
-  const rawMessage = clean(message.message ?? message.mes);
   for (const token of collectChatu8PromptTokens(rawMessage)) {
     mergeSource(refs, 'mes_tag', messageId, swipeId, artifactFromPromptToken(token));
     sourceCounts.mes_tag += 1;
@@ -630,8 +712,9 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
   const context = readScanContext(options);
   const diagnostics: string[] = [];
   const sourceCounts: Record<PreGalleryImageSource, number> = {
-    'host-dom': 0,
-    'extra.images': 0,
+      'host-dom': 0,
+      'pre-render': 0,
+      'extra.images': 0,
     mes_tag: 0,
     cache: 0,
   };
@@ -644,11 +727,26 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     const displayable = filterDisplayableRefs(scanned.refs);
     for (const source of SOURCE_ORDER) sourceCounts[source] += scanned.sourceCounts[source];
     if (displayable.refs.length === 0) return null;
-    return { messageId, refs: displayable.refs, hiddenTagOnlyCount: displayable.hiddenTagOnlyCount };
+    return {
+      messageId,
+      refs: displayable.refs,
+      hiddenTagOnlyCount: displayable.hiddenTagOnlyCount,
+      runtimeProbe: collectPreGalleryRuntimeProbe(messageId),
+    };
   };
 
-  let promptOnlyFallback: { messageId: number; refs: PreGalleryImageRef[]; hiddenTagOnlyCount: number } | null = null;
-  const collected: Array<{ messageId: number; refs: PreGalleryImageRef[]; hiddenTagOnlyCount: number }> = [];
+  let promptOnlyFallback: {
+    messageId: number;
+    refs: PreGalleryImageRef[];
+    hiddenTagOnlyCount: number;
+    runtimeProbe: string;
+  } | null = null;
+  const collected: Array<{
+    messageId: number;
+    refs: PreGalleryImageRef[];
+    hiddenTagOnlyCount: number;
+    runtimeProbe: string;
+  }> = [];
   const skippedPromptOnlyDiagnostics: string[] = [];
   let visitedMessageCount = 0;
 
@@ -670,6 +768,7 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
     const hiddenTagOnlyCount = collected.reduce((total, item) => total + item.hiddenTagOnlyCount, 0);
     const selectedMessageId = collected[0].messageId;
     diagnostics.push(...skippedPromptOnlyDiagnostics);
+    diagnostics.push(collected[0].runtimeProbe);
     if (requestedIds.length > 0 && collected.length === 1) {
       diagnostics.push(`定向刷新楼层 #${selectedMessageId}`);
     } else if (requestedIds.length > 0) {
@@ -696,6 +795,7 @@ export function scanLatestPreGalleryImageRefs(options: PreGalleryScanOptions = {
   }
 
   if (promptOnlyFallback) {
+    diagnostics.push(promptOnlyFallback.runtimeProbe);
     diagnostics.push(`选中最新 tag-only 楼层 #${promptOnlyFallback.messageId}`);
     if (promptOnlyFallback.hiddenTagOnlyCount > 0)
       diagnostics.push(`隐藏正文 tag-only 空占位 ${promptOnlyFallback.hiddenTagOnlyCount} 条`);

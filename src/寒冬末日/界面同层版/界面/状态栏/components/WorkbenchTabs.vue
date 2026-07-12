@@ -162,15 +162,20 @@
         </article>
       </section>
 
-      <span class="block-label">最近操作</span>
+      <div class="logs-titleline">
+        <span class="block-label">最近操作</span>
+        <button type="button" class="copy-logs-btn" @click="copyLogs">
+          {{ copyStatus || '复制全部' }}
+        </button>
+      </div>
       <div v-if="logs.length === 0" class="empty-log">暂无日志</div>
       <ul v-else class="log-list">
-        <li v-for="log in compactLogs" :key="log.id" class="log-item clip-corner-sm" :class="`is-${log.type}`">
+        <li v-for="log in visibleLogs" :key="log.id" class="log-item clip-corner-sm" :class="`is-${log.type}`">
           <div class="log-head">
             <strong>{{ log.title }}</strong>
             <span>{{ log.createdAt }}</span>
           </div>
-          <div class="log-detail">{{ log.shortDetail }}</div>
+          <div class="log-detail">{{ log.detail || '无详情' }}</div>
         </li>
       </ul>
     </section>
@@ -188,6 +193,7 @@ import { useMvuSystemStore } from '../mvuRoleStore';
 
 const props = defineProps<{
   logs: ReaderLogItem[];
+  logDisplayLimit?: number;
   busy?: boolean;
   transcriptTotal?: number;
   assistantCount?: number;
@@ -202,15 +208,12 @@ const tabs = [
 const activeTab = ref<(typeof tabs)[number]['id']>('commands');
 const { data: systemMvuData, ready: systemReady, isRetrying: isSystemRetrying } = useMvuSystemStore();
 
-const compactLogs = computed(() =>
-  props.logs.slice(0, 6).map(log => ({
-    ...log,
-    shortDetail:
-      String(log.detail ?? '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 72) || '无详情',
-  })),
+const copyStatus = ref('');
+const visibleLogs = computed(() => props.logs.slice(0, Math.max(1, props.logDisplayLimit ?? 6)));
+const copyText = computed(() =>
+  visibleLogs.value
+    .map(log => `[${log.createdAt}] [${String(log.type).toUpperCase()}] ${log.title}\n${log.detail || '无详情'}`)
+    .join('\n\n'),
 );
 const shelterLevel = computed(() => `${String(_.get(systemMvuData.value, '庇护所.庇护所等级', '--'))}`);
 const dailyRollText = computed(() => String(_.get(systemMvuData.value, '庇护所.今日投掷点数', '--')) || '--');
@@ -251,6 +254,24 @@ function commandCategoryLabel(category: string): string {
 
 function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
   return [commandCategoryClass(entry.category), { 'is-zero': entry.quantity <= 0 }];
+}
+
+async function copyLogs() {
+  if (!copyText.value) return;
+  try {
+    await navigator.clipboard.writeText(copyText.value);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = copyText.value;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+  copyStatus.value = '已复制';
+  window.setTimeout(() => (copyStatus.value = ''), 1400);
 }
 </script>
 
@@ -359,6 +380,7 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 }
 
 .system-tabs,
+.logs-titleline,
 .log-head,
 .progress-copy,
 .active-directive-head,
@@ -743,6 +765,25 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
   gap: 6px;
 }
 
+.logs-titleline {
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.copy-logs-btn {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--demo-border-accent-soft);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+  color: var(--demo-text-accent);
+  font-family: var(--demo-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
 .log-item {
   padding: 8px 10px;
   background: color-mix(in srgb, var(--surface) 42%, transparent);
@@ -767,9 +808,7 @@ function commandCardClass(entry: EdenOneShotCommandDisplayEntry) {
 .log-detail {
   font-size: 12px;
   line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: pre-wrap;
   word-break: break-word;
 }
 

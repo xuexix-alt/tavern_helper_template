@@ -104,6 +104,7 @@ const emit = defineEmits<{
 
 const EMPTY_SOURCE_COUNTS: Record<PreGalleryImageSource, number> = {
   'host-dom': 0,
+  'pre-render': 0,
   'extra.images': 0,
   mes_tag: 0,
   cache: 0,

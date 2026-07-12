@@ -91,17 +91,19 @@ ${selectors} * {
 `;
 }
 
-function resolveHostMessageRoot(messageId: number): HTMLElement | null {
+function resolveHostMessageRoots(messageId: number): HTMLElement[] {
   const mesid = Math.trunc(messageId);
-  if (!Number.isFinite(mesid) || mesid < 0) return null;
+  if (!Number.isFinite(mesid) || mesid < 0) return [];
 
+  const roots = new Set<HTMLElement>();
   for (const doc of collectHostOnlyDocuments()) {
     for (const selector of MES_SELECTORS(mesid)) {
-      const el = doc.querySelector(selector) as HTMLElement | null;
-      if (el) return (el.closest?.('.mes') as HTMLElement | null) ?? el;
+      for (const el of doc.querySelectorAll(selector)) {
+        roots.add((el.closest?.('.mes') as HTMLElement | null) ?? (el as HTMLElement));
+      }
     }
   }
-  return null;
+  return Array.from(roots);
 }
 
 function normalizeMessageIds(messageIds: MessageIdInput) {
@@ -126,18 +128,19 @@ export function createPreHostVisualHideController() {
   let reapplyTimer = 0;
 
   function applyOne(messageId: number) {
-    const root = resolveHostMessageRoot(messageId);
-    if (!root) return;
-    ensureHostVisualHideStyle(root.ownerDocument);
-    root.setAttribute(HOST_VISUAL_HIDE_ATTR, 'true');
-    root.setAttribute(PRE_VISUAL_HIDE_OWNER_ATTR, 'true');
+    for (const root of resolveHostMessageRoots(messageId)) {
+      ensureHostVisualHideStyle(root.ownerDocument);
+      root.setAttribute(HOST_VISUAL_HIDE_ATTR, 'true');
+      root.setAttribute(PRE_VISUAL_HIDE_OWNER_ATTR, 'true');
+    }
   }
 
   function clearOne(messageId: number) {
-    const root = resolveHostMessageRoot(messageId);
-    if (!root || root.getAttribute(PRE_VISUAL_HIDE_OWNER_ATTR) !== 'true') return;
-    root.removeAttribute(HOST_VISUAL_HIDE_ATTR);
-    root.removeAttribute(PRE_VISUAL_HIDE_OWNER_ATTR);
+    for (const root of resolveHostMessageRoots(messageId)) {
+      if (root.getAttribute(PRE_VISUAL_HIDE_OWNER_ATTR) !== 'true') continue;
+      root.removeAttribute(HOST_VISUAL_HIDE_ATTR);
+      root.removeAttribute(PRE_VISUAL_HIDE_OWNER_ATTR);
+    }
   }
 
   function reapplyHostVisualHide() {
@@ -171,7 +174,7 @@ export function createPreHostVisualHideController() {
     for (const doc of collectHostOnlyDocuments()) {
       if (!doc.body || observedBodies.has(doc.body)) continue;
       const observer = new MutationObserver(() => {
-        scheduleReapplyHostVisualHide();
+        reapplyHostVisualHide();
       });
       observer.observe(doc.body, {
         childList: true,

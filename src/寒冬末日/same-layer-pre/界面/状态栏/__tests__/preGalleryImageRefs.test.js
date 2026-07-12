@@ -292,6 +292,27 @@ test('pre gallery scan hides tag-only placeholders once native host refs are dis
   assert.match(result.diagnostics.join('\n'), /隐藏正文 tag-only 空占位 4 条/);
 });
 
+test('pre gallery scan records a safe host-versus-iframe probe for current image floors', () => {
+  const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
+
+  assert.match(source, /function collectPreGalleryRuntimeProbe\(messageId: number\)/);
+  assert.match(source, /宿主节点:/);
+  assert.match(source, /pre正文节点:/);
+  assert.match(source, /data-url|blob-url|url|empty/);
+  assert.doesNotMatch(source, /JSON\.stringify\(.*currentSrc|JSON\.stringify\(.*\.src/);
+});
+
+test('pre gallery can use visible pre-body images as temporary refs without treating them as host gesture targets', () => {
+  const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
+
+  assert.match(source, /'pre-render'/);
+  assert.match(source, /function collectPreVisibleGalleryArtifacts\(messageId: number, rawMessage: string\)/);
+  assert.match(source, /\.pre-message-card\[data-message-id=/);
+  assert.match(source, /source: 'pre-render'/);
+  assert.match(source, /if \(source === 'host-dom'\)/);
+  assert.match(source, /promptTokens\[index\]/);
+});
+
 test('pre gallery lightKey never stores image src data', () => {
   const result = scanLatestPreGalleryImageRefs({
     reason: 'unit',

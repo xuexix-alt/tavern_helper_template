@@ -270,6 +270,7 @@
                   <WorkbenchTabs
                     v-if="activeUtilityDrawer === 'system'"
                     :logs="logItems"
+                    :log-display-limit="40"
                     :busy="busy"
                     :transcript-total="readerSummary.turnCount"
                     :assistant-count="assistantItemCount"
@@ -1073,7 +1074,7 @@ function appendGalleryLog(item: PreGalleryLogItem) {
       createdAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
     },
     ...logItems.value,
-  ].slice(0, 12);
+  ].slice(0, 40);
 }
 
 function openChoiceModalFromToolbar() {

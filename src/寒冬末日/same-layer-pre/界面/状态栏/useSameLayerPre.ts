@@ -429,7 +429,7 @@ export function useSameLayerPre() {
         createdAt: nowLabel(),
       },
       ...logItems.value,
-    ].slice(0, 8);
+    ].slice(0, 40);
   }
 
   function syncHostVisualHide(messageIds: number[]) {
@@ -443,6 +443,12 @@ export function useSameLayerPre() {
     const carrierMessageId = readPreCarrierMessageId();
     void nextTick(() => {
       hostVisualHideController.replaceWithMessageIds(messageIds, { excludeMessageIds: carrierMessageId });
+    });
+  }
+
+  function reserveNextHostMessageVisualHide() {
+    hostVisualHideController.applyToMessageIds([getTrueChatLength() + 1], {
+      excludeMessageIds: readPreCarrierMessageId(),
     });
   }
 
@@ -801,6 +807,7 @@ export function useSameLayerPre() {
     pushLog('action', '发送玩家输入', plainPreview(text, 80));
 
     try {
+      reserveNextHostMessageVisualHide();
       await createChatMessages([{ role: 'user', message: text, is_hidden: false }], { refresh: 'affected' });
       refreshTranscript('user_submitted');
 
@@ -808,6 +815,7 @@ export function useSameLayerPre() {
       const response = await generate({ user_input: text, should_stream: true, generation_id: generationId });
 
       status.value = 'persisting';
+      reserveNextHostMessageVisualHide();
       await createChatMessages([{ role: 'assistant', message: response, is_hidden: false }], { refresh: 'affected' });
       updateStreamingPreviewText('');
       status.value = 'done';
@@ -921,6 +929,7 @@ export function useSameLayerPre() {
       const response = await generate({ user_input: prompt, should_stream: true, generation_id: generationId });
 
       status.value = 'persisting';
+      reserveNextHostMessageVisualHide();
       await createChatMessages([{ role: 'assistant', message: response, is_hidden: false }], { refresh: 'affected' });
       updateStreamingPreviewText('');
       status.value = 'done';

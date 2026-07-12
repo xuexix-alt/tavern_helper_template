@@ -123,6 +123,23 @@ test('same-layer-pre beta gallery uses light refs without owning image persisten
   assert.doesNotMatch(gallerySource, /GeneratedImageAsset/);
 });
 
+test('same-layer-pre system log retains a longer diagnostic history and can copy full details', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const pageSource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const workbenchSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'components', 'WorkbenchTabs.vue'),
+    'utf8',
+  );
+
+  assert.match(hookSource, /\]\.slice\(0,\s*40\)/);
+  assert.match(pageSource, /:log-display-limit="40"/);
+  assert.match(workbenchSource, /logDisplayLimit\?:\s*number/);
+  assert.match(workbenchSource, /复制全部/);
+  assert.match(workbenchSource, /navigator\.clipboard\.writeText/);
+  assert.match(workbenchSource, /white-space:\s*pre-wrap/);
+  assert.doesNotMatch(workbenchSource, /\.slice\(0,\s*6\)/);
+});
+
 test('same-layer-pre beta gallery documents the native image-ref model', () => {
   const doc = fs.readFileSync(path.join(ROOT, 'docs', 'same-layer-pre画廊beta实证模型.md'), 'utf8');
 
@@ -611,6 +628,25 @@ test('same-layer-pre host visual hide survives host DOM refresh without MVU reve
   assert.doesNotMatch(controllerSource, /\.suspend\(/);
 });
 
+test('same-layer-pre reapplies reserved hides synchronously when host nodes are inserted', () => {
+  const controllerSource = readPre('preHostVisualHide.ts');
+  const observerStart = controllerSource.indexOf('const observer = new MutationObserver');
+  const observeStart = controllerSource.indexOf('observer.observe', observerStart);
+  const observerCallback = controllerSource.slice(observerStart, observeStart);
+
+  assert.match(observerCallback, /reapplyHostVisualHide\(\)/);
+  assert.doesNotMatch(observerCallback, /scheduleReapplyHostVisualHide\(\)/);
+});
+
+test('same-layer-pre hides every duplicate host node for the same message id', () => {
+  const controllerSource = readPre('preHostVisualHide.ts');
+
+  assert.match(controllerSource, /function resolveHostMessageRoots/);
+  assert.match(controllerSource, /querySelectorAll\(selector\)/);
+  assert.match(controllerSource, /for \(const root of resolveHostMessageRoots\(messageId\)\)/);
+  assert.doesNotMatch(controllerSource, /function resolveHostMessageRoot\(/);
+});
+
 test('same-layer-pre targeted message refresh preserves the existing host visual hide set', () => {
   const controllerSource = readPre('preHostVisualHide.ts');
   const hookSource = readPre('useSameLayerPre.ts');
@@ -754,6 +790,26 @@ test('same-layer-pre materializes the submitted user message in host DOM for plu
   assert.doesNotMatch(submitSource, /appendLocalUserTranscriptItem\(text\)/);
   assert.doesNotMatch(hookSource, /function appendLocalUserTranscriptItem/);
   assert.doesNotMatch(submitSource, /scheduleTranscriptRefresh\('user_submitted'\)/);
+});
+
+test('same-layer-pre reserves the next host floor before creating user and assistant messages', () => {
+  const hookSource = readPre('useSameLayerPre.ts');
+  const submitSource = extractFunctionSource(hookSource, 'submitPrompt');
+  const regenerateSource = extractFunctionSource(hookSource, 'regenerateMessage');
+
+  assert.match(hookSource, /function reserveNextHostMessageVisualHide\(\)/);
+  assert.match(
+    submitSource,
+    /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'user'/,
+  );
+  assert.match(
+    submitSource,
+    /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'assistant'/,
+  );
+  assert.match(
+    regenerateSource,
+    /reserveNextHostMessageVisualHide\(\);\s*await createChatMessages\(\[\{\s*role:\s*'assistant'/,
+  );
 });
 
 test('same-layer-pre keeps user body literal so existing quotes are not wrapped again', () => {
@@ -1022,7 +1078,8 @@ test('same-layer-pre bridges host and targeted MVU writeback lifecycle without f
   assert.match(mountedSource, /updateStreamingPreviewText/);
 
   assert.match(bridgeSource, /export function bindPreHostLifecycleBridge/);
-  assert.match(bridgeSource, /eventMakeFirst\(\s*tavern_events\.CHARACTER_MESSAGE_RENDERED/);
+  assert.match(bridgeSource, /bindEvent\(\s*tavern_events\.CHARACTER_MESSAGE_RENDERED/);
+  assert.doesNotMatch(bridgeSource, /eventMakeFirst\(\s*tavern_events\.CHARACTER_MESSAGE_RENDERED/);
   assert.match(bridgeSource, /tavern_events\.STREAM_TOKEN_RECEIVED/);
   assert.match(bridgeSource, /tavern_events\.MORE_MESSAGES_LOADED/);
   assert.match(bridgeSource, /'chatLoaded'/);
