@@ -920,8 +920,14 @@ test('same-layer-pre enables the host image gesture forwarder without owning ima
 
   assert.match(forwarderSource, /from '..\/..\/..\/界面同层版\/界面\/状态栏\/hostGestureDispatch'/);
   assert.match(forwarderSource, /PRE_MESSAGE_BODY_SELECTOR\s*=\s*'\.pre-message-card__body'/);
-  assert.match(forwarderSource, /dispatchHostPrimaryTrigger\(hostMesText/);
-  assert.match(forwarderSource, /resolveHostMessageText/);
+  assert.match(forwarderSource, /resolvePreImageGestureSource/);
+  assert.match(forwarderSource, /resolveHostImageTarget/);
+  assert.match(forwarderSource, /dispatchHostPrimaryTrigger\(hostImageTarget/);
+  assert.doesNotMatch(forwarderSource, /resolveHostMessageText|hostMesText/);
+  assert.match(forwarderSource, /data-samelayer-request-id/);
+  assert.match(forwarderSource, /const sourceHasStableIdentity = Boolean\(source\.requestId \|\| source\.imageId\)/);
+  assert.match(forwarderSource, /if \(sourceHasStableIdentity && !stableIdentityMatches\) return 0;/);
+  assert.match(forwarderSource, /bestTargetCount === 1/);
   assert.match(forwarderSource, /window\.frameElement/);
   assert.match(forwarderSource, /stopImmediatePropagation/);
   assert.doesNotMatch(forwarderSource, /chatMetadata|extra\.images|saveImageGroup|setChatMessages/);

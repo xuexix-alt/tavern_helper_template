@@ -517,7 +517,8 @@ test('pre gallery displayed images use native media targets instead of prompt bu
     source,
     /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/,
   );
-  assert.match(source, /const hostTarget = ref\.src \? imageTarget : buttonTarget/);
+  assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
+  assert.match(source, /const target = ref\.src \? imageTarget : buttonTarget/);
   assert.doesNotMatch(source, /mode === 'click' && hostTarget\?\.matches\('button\.image-tag-button/);
 });
 
@@ -541,4 +542,35 @@ test('pre gallery suppresses the synthetic click that follows a long press', () 
   );
   assert.match(panelSource, /function handleCardClick\(entry: PreGalleryImageRef, event: MouseEvent\)/);
   assert.match(panelSource, /event\.preventDefault\(\);[\s\S]*event\.stopPropagation\(\);[\s\S]*return;/);
+});
+
+test('pre gallery only dispatches to an exact native target and lets the host choose desktop or mobile regenerate protocol', () => {
+  const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
+
+  assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
+  assert.match(source, /const target = ref\.src \? imageTarget : buttonTarget;/);
+  assert.doesNotMatch(source, /const target = hostTarget \?\? mesText;/);
+  assert.match(source, /const strategy: HostGestureDispatchStrategy = 'auto';/);
+  assert.match(source, /宿主未找到与该图片精确对应的原生节点/);
+});
+
+test('pre gallery separates desktop single and double clicks, and maps mobile regenerate to a triple tap', () => {
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+
+  assert.match(panelSource, /@dblclick\.prevent="handleCardDoubleClick\(entry, \$event\)"/);
+  assert.match(panelSource, /const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;/);
+  assert.match(panelSource, /const MOBILE_TRIPLE_TAP_COUNT = 3;/);
+  assert.match(panelSource, /function schedulePendingClick\(/);
+  assert.match(panelSource, /function handleCardDoubleClick\(/);
+  assert.match(panelSource, /function recordMobileTap\(/);
+  assert.match(panelSource, /if \(count < MOBILE_TRIPLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_TRIPLE_TAP_WINDOW_MS\)/);
+  assert.match(panelSource, /dispatchGesture\(entry, 'dblclick'\)/);
+});
+
+test('pre gallery performs one bounded active rescan when an image event carries no message id', () => {
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+
+  assert.match(panelSource, /scheduleScan\(`\$\{eventName\}:idless`, LAZY_RESCAN_DELAY_MS\)/);
+  assert.match(panelSource, /scheduleRenderRescan\(`\$\{eventName\}:idless`\)/);
+  assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED|CHAT_CHANGED/);
 });

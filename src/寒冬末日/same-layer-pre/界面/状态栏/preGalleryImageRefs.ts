@@ -80,6 +80,12 @@ export type PreGalleryDispatchResult = {
   reason: string;
 };
 
+export type PreGalleryHostInteraction = {
+  target: HTMLElement | null;
+  targetKind: 'ready-image' | 'prompt-button' | 'none';
+  reason: string;
+};
+
 const SOURCE_ORDER: PreGalleryImageSource[] = ['host-dom', 'pre-render', 'extra.images', 'mes_tag', 'cache'];
 const HOST_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
 const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
@@ -942,6 +948,24 @@ function findCachedHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement 
   return null;
 }
 
+export function resolvePreGalleryHostInteraction(ref: PreGalleryImageRef): PreGalleryHostInteraction {
+  const imageTarget = findCachedHostImageElementForRef(ref) ?? findHostImageElementForRef(ref);
+  const buttonTarget = findCachedHostElementForRef(ref) ?? findHostElementForRef(ref);
+  const target = ref.src ? imageTarget : buttonTarget;
+  if (!target) {
+    return {
+      target: null,
+      targetKind: 'none',
+      reason: '宿主未找到与该图片精确对应的原生节点；仅保留画廊展示',
+    };
+  }
+  return {
+    target,
+    targetKind: ref.src ? 'ready-image' : 'prompt-button',
+    reason: ref.src ? '已定位宿主原生图片节点' : '已定位宿主原始提示词按钮',
+  };
+}
+
 function dispatchHostClick(target: HTMLElement): boolean {
   try {
     const view = target.ownerDocument.defaultView;
@@ -1010,21 +1034,18 @@ export function dispatchPreGalleryImageRefGesture(
   ref: PreGalleryImageRef,
   mode: PreGalleryGestureMode,
 ): PreGalleryDispatchResult {
-  const imageTarget = findCachedHostImageElementForRef(ref) ?? findHostImageElementForRef(ref);
-  const buttonTarget = findCachedHostElementForRef(ref) ?? findHostElementForRef(ref);
-  const hostTarget = ref.src ? imageTarget : buttonTarget;
-  const mesText = findHostMesText(ref.messageId);
-  const target = hostTarget ?? mesText;
+  const interaction = resolvePreGalleryHostInteraction(ref);
+  const target = interaction.target;
   if (!target) {
-    return { ok: false, method: mode, target: 'none', reason: `宿主楼层 #${ref.messageId} 未找到` };
+    return { ok: false, method: mode, target: 'none', reason: interaction.reason };
   }
 
-  if (mode === 'click' && !ref.src && buttonTarget) {
-    const ok = dispatchHostClick(buttonTarget);
+  if (mode === 'click' && interaction.targetKind === 'prompt-button') {
+    const ok = dispatchHostClick(target);
     return {
       ok,
       method: 'native-button-click',
-      target: buttonTarget.className || buttonTarget.tagName.toLowerCase(),
+      target: target.className || target.tagName.toLowerCase(),
       reason: ok ? '已把单击交回插件原始按钮' : '宿主按钮 click 派发失败',
     };
   }
@@ -1049,16 +1070,12 @@ export function dispatchPreGalleryImageRefGesture(
     };
   }
 
-  const strategy: HostGestureDispatchStrategy = 'dblclick';
+  const strategy: HostGestureDispatchStrategy = 'auto';
   const ok = dispatchHostPrimaryTrigger(target, { strategy });
   return {
     ok,
     method: strategy,
     target: target.className || target.tagName.toLowerCase(),
-    reason: ok
-      ? mode === 'longpress'
-        ? '已派发移动端三触序列模拟长按入口'
-        : '已派发宿主 dblclick'
-      : '宿主主手势派发失败',
+    reason: ok ? '已按宿主运行端派发桌面双击或移动端三触重生入口' : '宿主重生手势派发失败',
   };
 }

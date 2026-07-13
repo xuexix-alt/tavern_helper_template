@@ -44,7 +44,7 @@
           class="pre-gallery-card__image"
           :class="{ pending: !entry.src }"
           @click="handleCardClick(entry, $event)"
-          @dblclick.prevent="dispatchGesture(entry, 'dblclick')"
+          @dblclick.prevent="handleCardDoubleClick(entry, $event)"
           @pointerdown="startLongPress(entry)"
           @pointerup="cancelLongPress"
           @pointercancel="cancelLongPress"
@@ -113,6 +113,9 @@ const LAZY_RESCAN_DELAY_MS = 220;
 const RENDER_RESCAN_DELAY_MS = 720;
 const LONG_PRESS_MS = 540;
 const LONG_PRESS_CLICK_SUPPRESS_MS = 900;
+const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;
+const MOBILE_TRIPLE_TAP_WINDOW_MS = 560;
+const MOBILE_TRIPLE_TAP_COUNT = 3;
 const SCAN_LIMIT_OPTIONS: Array<{ value: string; label: string; scanLimit: PreGalleryScanLimit }> = [
   { value: '1', label: '最近 1 层', scanLimit: 1 },
   { value: '3', label: '最近 3 层', scanLimit: 3 },
@@ -135,6 +138,9 @@ const lastEventName = ref('');
 const scanTimer = ref(0);
 const renderRescanTimer = ref(0);
 const longPressTimer = ref(0);
+const pendingClickTimer = ref(0);
+const pendingClickKey = ref('');
+const mobileTapState = ref({ key: '', count: 0, updatedAt: 0 });
 const suppressClickAfterLongPress = ref({ key: '', until: 0 });
 const scanLimitValue = ref('1');
 const stops: Array<{ stop: () => void }> = [];
@@ -301,7 +307,10 @@ function refreshImageRef(eventName: string, ...eventArgs: unknown[]) {
   const messageIds = normalizeEventMessageIds(eventArgs);
   rememberEvent(eventName, messageIds);
   if (!props.active) return;
-  if (messageIds.length === 0) return;
+  if (messageIds.length === 0) {
+    scheduleScan(`${eventName}:idless`, LAZY_RESCAN_DELAY_MS);
+    return;
+  }
   scheduleScan(eventName, LAZY_RESCAN_DELAY_MS, messageIds);
 }
 
@@ -309,7 +318,11 @@ function hydrateImageDom(eventName: string, ...eventArgs: unknown[]) {
   const messageIds = normalizeEventMessageIds(eventArgs);
   rememberEvent(eventName, messageIds);
   if (!props.active) return;
-  if (messageIds.length === 0) return;
+  if (messageIds.length === 0) {
+    scheduleScan(`${eventName}:idless`, LAZY_RESCAN_DELAY_MS);
+    scheduleRenderRescan(`${eventName}:idless`);
+    return;
+  }
   scheduleScan(eventName, LAZY_RESCAN_DELAY_MS, messageIds);
   scheduleRenderRescan(eventName, messageIds);
 }
@@ -325,6 +338,56 @@ function dispatchGesture(entry: PreGalleryImageRef, mode: PreGalleryGestureMode)
   console.debug?.('[same-layer-pre gallery beta] gesture', { ref: summarizeLogRef(entry), mode, dispatched });
 }
 
+function clearPendingClick() {
+  if (pendingClickTimer.value) window.clearTimeout(pendingClickTimer.value);
+  pendingClickTimer.value = 0;
+  pendingClickKey.value = '';
+}
+
+function resetMobileTapState() {
+  mobileTapState.value = { key: '', count: 0, updatedAt: 0 };
+}
+
+function isLikelyMobileGestureEnvironment() {
+  try {
+    return (
+      window.matchMedia?.('(pointer: coarse)').matches ||
+      (Number(navigator.maxTouchPoints ?? 0) > 0 && window.innerWidth <= 768)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function schedulePendingClick(entry: PreGalleryImageRef, delayMs: number) {
+  clearPendingClick();
+  pendingClickKey.value = entry.id;
+  pendingClickTimer.value = window.setTimeout(() => {
+    pendingClickTimer.value = 0;
+    if (pendingClickKey.value !== entry.id) return;
+    pendingClickKey.value = '';
+    if (mobileTapState.value.key === entry.id) resetMobileTapState();
+    dispatchGesture(entry, 'click');
+  }, delayMs);
+}
+
+function recordMobileTap(entry: PreGalleryImageRef) {
+  const now = Date.now();
+  const isSameSequence =
+    mobileTapState.value.key === entry.id && now - mobileTapState.value.updatedAt <= MOBILE_TRIPLE_TAP_WINDOW_MS;
+  const count = isSameSequence ? mobileTapState.value.count + 1 : 1;
+  mobileTapState.value = { key: entry.id, count, updatedAt: now };
+
+  if (count < MOBILE_TRIPLE_TAP_COUNT) {
+    schedulePendingClick(entry, MOBILE_TRIPLE_TAP_WINDOW_MS);
+    return;
+  }
+
+  clearPendingClick();
+  resetMobileTapState();
+  dispatchGesture(entry, 'dblclick');
+}
+
 function handleCardClick(entry: PreGalleryImageRef, event: MouseEvent) {
   const suppressed = suppressClickAfterLongPress.value;
   if (suppressed.key === entry.id && Date.now() <= suppressed.until) {
@@ -333,11 +396,24 @@ function handleCardClick(entry: PreGalleryImageRef, event: MouseEvent) {
     suppressClickAfterLongPress.value = { key: '', until: 0 };
     return;
   }
-  dispatchGesture(entry, 'click');
+  if (isLikelyMobileGestureEnvironment()) {
+    recordMobileTap(entry);
+    return;
+  }
+  schedulePendingClick(entry, DESKTOP_DOUBLE_CLICK_WINDOW_MS);
+}
+
+function handleCardDoubleClick(entry: PreGalleryImageRef, event: MouseEvent) {
+  event.preventDefault();
+  if (isLikelyMobileGestureEnvironment()) return;
+  clearPendingClick();
+  dispatchGesture(entry, 'dblclick');
 }
 
 function startLongPress(entry: PreGalleryImageRef) {
   cancelLongPress();
+  clearPendingClick();
+  resetMobileTapState();
   longPressTimer.value = window.setTimeout(() => {
     longPressTimer.value = 0;
     suppressClickAfterLongPress.value = { key: entry.id, until: Date.now() + LONG_PRESS_CLICK_SUPPRESS_MS };
@@ -365,6 +441,8 @@ watch(
     }
     if (scanTimer.value) window.clearTimeout(scanTimer.value);
     if (renderRescanTimer.value) window.clearTimeout(renderRescanTimer.value);
+    clearPendingClick();
+    resetMobileTapState();
     scanTimer.value = 0;
     renderRescanTimer.value = 0;
     pushGalleryLog('info', '画廊关闭', '停止扫描，仅保留事件脏标记');
@@ -398,6 +476,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cancelLongPress();
+  clearPendingClick();
   if (scanTimer.value) window.clearTimeout(scanTimer.value);
   if (renderRescanTimer.value) window.clearTimeout(renderRescanTimer.value);
   stops.splice(0).forEach(stop => stop.stop());
