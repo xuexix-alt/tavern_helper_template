@@ -563,7 +563,10 @@ test('pre gallery separates desktop single and double clicks, and maps mobile re
   assert.match(panelSource, /function schedulePendingClick\(/);
   assert.match(panelSource, /function handleCardDoubleClick\(/);
   assert.match(panelSource, /function recordMobileTap\(/);
-  assert.match(panelSource, /if \(count < MOBILE_TRIPLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_TRIPLE_TAP_WINDOW_MS\)/);
+  assert.match(
+    panelSource,
+    /if \(count < MOBILE_TRIPLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_TRIPLE_TAP_WINDOW_MS\)/,
+  );
   assert.match(panelSource, /dispatchGesture\(entry, 'dblclick'\)/);
 });
 

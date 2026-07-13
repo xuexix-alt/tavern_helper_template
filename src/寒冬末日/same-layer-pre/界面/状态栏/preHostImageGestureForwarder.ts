@@ -7,8 +7,10 @@ import {
 export const PRE_MESSAGE_BODY_SELECTOR = '.pre-message-card__body';
 
 const PRE_MESSAGE_CARD_SELECTOR = '.pre-message-card[data-message-id]';
-const PRE_IMAGE_SELECTOR = 'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
-const HOST_IMAGE_SELECTOR = 'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
+const PRE_IMAGE_SELECTOR =
+  'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
+const HOST_IMAGE_SELECTOR =
+  'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
 const TOUCH_TAP_WINDOW_MS = 560;
 const TOUCH_TAP_RADIUS_PX = 42;
 const TOUCH_TRIGGER_COUNT = 3;
@@ -76,22 +78,23 @@ function resolveImageInteractionElement(element: Element | null) {
 
 function readElementSrc(element: Element | null) {
   if (!element) return '';
-  if (element instanceof HTMLImageElement || element instanceof HTMLVideoElement) return clean(element.currentSrc || element.src);
+  if (element instanceof HTMLImageElement || element instanceof HTMLVideoElement)
+    return clean(element.currentSrc || element.src);
   const media = element.querySelector('img,video') as HTMLImageElement | HTMLVideoElement | null;
   return media ? clean(media.currentSrc || media.src) : '';
 }
 
 function readIdentity(element: Element | null) {
   if (!element) return { requestId: '', imageId: '', promptToken: '', src: '' };
-  const identityElement = (
-    element.closest?.(
-      '[data-samelayer-request-id],[data-request-id],[data-stable-id],[data-image-id],[data-prompt-token],[data-image-tag],[data-link]',
-    ) ?? element
-  ) as HTMLElement;
+  const identityElement = (element.closest?.(
+    '[data-samelayer-request-id],[data-request-id],[data-stable-id],[data-image-id],[data-prompt-token],[data-image-tag],[data-link]',
+  ) ?? element) as HTMLElement;
   return {
     requestId: clean(identityElement.dataset.samelayerRequestId || identityElement.dataset.requestId),
     imageId: clean(identityElement.dataset.stableId || identityElement.dataset.imageId),
-    promptToken: clean(identityElement.dataset.promptToken || identityElement.dataset.imageTag || identityElement.dataset.link),
+    promptToken: clean(
+      identityElement.dataset.promptToken || identityElement.dataset.imageTag || identityElement.dataset.link,
+    ),
     src: readElementSrc(element),
   };
 }
@@ -113,7 +116,8 @@ function scoreHostImageCandidate(candidate: Element, source: PreImageGestureSour
   const identity = readIdentity(candidate);
   const sourceHasStableIdentity = Boolean(source.requestId || source.imageId);
   const stableIdentityMatches =
-    (source.requestId && source.requestId === identity.requestId) || (source.imageId && source.imageId === identity.imageId);
+    (source.requestId && source.requestId === identity.requestId) ||
+    (source.imageId && source.imageId === identity.imageId);
   if (sourceHasStableIdentity && !stableIdentityMatches) return 0;
   let score = 0;
   if (source.requestId && source.requestId === identity.requestId) score += 12;
