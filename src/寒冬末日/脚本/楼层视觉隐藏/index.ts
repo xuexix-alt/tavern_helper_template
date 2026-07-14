@@ -15,6 +15,75 @@ const SettingsSchema = z
 
 type VisualHideSettings = z.output<typeof SettingsSchema>;
 
+type HostScrollAnchor = {
+  root: HTMLElement;
+  messageId: string;
+  offsetTop: number;
+};
+
+let pendingMvuScrollAnchor: HostScrollAnchor | null = null;
+
+function readHostScrollRoot(hostDoc: Document) {
+  return hostDoc.querySelector<HTMLElement>('#chat') ?? (hostDoc.scrollingElement as HTMLElement | null);
+}
+
+function captureMvuScrollAnchor() {
+  const hostDoc = getHostDocument();
+  const root = readHostScrollRoot(hostDoc);
+  if (!root) return;
+
+  const rootTop = root.getBoundingClientRect().top;
+  const message = Array.from(hostDoc.querySelectorAll<HTMLElement>('#chat .mes, .mes')).find(element => {
+    const rect = element.getBoundingClientRect();
+    return rect.bottom > rootTop + 1;
+  });
+  const messageId = message?.getAttribute('mesid');
+  if (!message || !messageId) return;
+
+  pendingMvuScrollAnchor = {
+    root,
+    messageId,
+    offsetTop: message.getBoundingClientRect().top - rootTop,
+  };
+}
+
+function restoreMvuScrollAnchor() {
+  const anchor = pendingMvuScrollAnchor;
+  pendingMvuScrollAnchor = null;
+  if (!anchor) return;
+
+  const restore = () => {
+    const hostDoc = getHostDocument();
+    const root = readHostScrollRoot(hostDoc);
+    const message = hostDoc.querySelector<HTMLElement>(
+      `#chat .mes[mesid="${CSS.escape(anchor.messageId)}"], .mes[mesid="${CSS.escape(anchor.messageId)}"]`,
+    );
+    if (!root || !message) return;
+
+    const currentOffset = message.getBoundingClientRect().top - root.getBoundingClientRect().top;
+    root.scrollTop += currentOffset - anchor.offsetTop;
+  };
+
+  requestAnimationFrame(() => {
+    restore();
+    requestAnimationFrame(restore);
+  });
+}
+
+function setupMvuScrollAnchor() {
+  void (async () => {
+    try {
+      await waitGlobalInitialized('Mvu');
+      if (typeof Mvu === 'undefined' || !Mvu.events?.BEFORE_MESSAGE_UPDATE) return;
+      eventOn(Mvu.events.BEFORE_MESSAGE_UPDATE, captureMvuScrollAnchor);
+      eventOn(tavern_events.MESSAGE_UPDATED, restoreMvuScrollAnchor);
+      eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, restoreMvuScrollAnchor);
+    } catch {
+      // MVU is optional for the visual-hide script.
+    }
+  })();
+}
+
 function scriptVarOption() {
   try {
     if (typeof getScriptId === 'function') {
@@ -231,6 +300,7 @@ $(() => {
 
   // 设置事件监听
   setupEventListeners();
+  setupMvuScrollAnchor();
 
   console.info('[楼层视觉隐藏] 事件监听已启动');
 });

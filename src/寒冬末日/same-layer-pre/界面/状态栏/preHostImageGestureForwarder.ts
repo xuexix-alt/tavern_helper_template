@@ -8,7 +8,8 @@ export const PRE_MESSAGE_BODY_SELECTOR = '.pre-message-card__body';
 
 const PRE_MESSAGE_CARD_SELECTOR = '.pre-message-card[data-message-id]';
 const PRE_IMAGE_SELECTOR =
-  'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
+  'button.image-tag-button,.st-chatu8-image-button,img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
+const HOST_PROMPT_SELECTOR = 'button.image-tag-button,.st-chatu8-image-button';
 const HOST_IMAGE_SELECTOR =
   'img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder';
 const TOUCH_TAP_WINDOW_MS = 560;
@@ -19,7 +20,10 @@ type ForwardableEvent = MouseEvent | TouchEvent;
 
 export type PreImageGestureSource = {
   messageId: number;
+  swipeId: number;
   element: HTMLElement;
+  tag: string;
+  link: string;
   requestId: string;
   imageId: string;
   promptToken: string;
@@ -38,6 +42,11 @@ type TouchGestureState = {
 function normalizeMessageId(value: unknown) {
   const id = Math.trunc(Number(value));
   return Number.isFinite(id) && id >= 0 ? id : null;
+}
+
+function normalizeSwipeId(value: unknown) {
+  const id = Math.trunc(Number(value));
+  return Number.isFinite(id) && id >= 0 ? id : 0;
 }
 
 function clean(value: unknown) {
@@ -70,6 +79,13 @@ function eventTargetElement(target: EventTarget | null) {
   return parentElement instanceof Element ? parentElement : null;
 }
 
+function resolvePreMessageId(target: EventTarget | null) {
+  const element = eventTargetElement(target);
+  const body = element?.closest?.(PRE_MESSAGE_BODY_SELECTOR);
+  const card = body?.closest(PRE_MESSAGE_CARD_SELECTOR);
+  return normalizeMessageId(card?.getAttribute('data-message-id'));
+}
+
 function resolveImageInteractionElement(element: Element | null) {
   if (!(element instanceof HTMLElement)) return null;
   if (element.matches('img,video')) return element;
@@ -84,17 +100,20 @@ function readElementSrc(element: Element | null) {
   return media ? clean(media.currentSrc || media.src) : '';
 }
 
-function readIdentity(element: Element | null) {
-  if (!element) return { requestId: '', imageId: '', promptToken: '', src: '' };
+function readIdentity(element: Element | null, card: Element | null) {
+  if (!element) return { swipeId: 0, tag: '', link: '', requestId: '', imageId: '', promptToken: '', src: '' };
   const identityElement = (element.closest?.(
-    '[data-samelayer-request-id],[data-request-id],[data-stable-id],[data-image-id],[data-prompt-token],[data-image-tag],[data-link]',
+    '[data-samelayer-request-id],[data-request-id],[data-stable-id],[data-image-id],[data-prompt-token],[data-image-tag],[data-link],[data-swipe-id]',
   ) ?? element) as HTMLElement;
+  const tag = clean(identityElement.dataset.imageTag || identityElement.dataset.tag);
+  const link = clean(identityElement.dataset.link);
   return {
+    swipeId: normalizeSwipeId(identityElement.dataset.swipeId || card?.getAttribute('data-swipe-id')),
+    tag,
+    link,
     requestId: clean(identityElement.dataset.samelayerRequestId || identityElement.dataset.requestId),
     imageId: clean(identityElement.dataset.stableId || identityElement.dataset.imageId),
-    promptToken: clean(
-      identityElement.dataset.promptToken || identityElement.dataset.imageTag || identityElement.dataset.link,
-    ),
+    promptToken: clean(identityElement.dataset.promptToken || tag || link),
     src: readElementSrc(element),
   };
 }
@@ -106,26 +125,63 @@ export function resolvePreImageGestureSource(target: EventTarget | null): PreIma
   const messageId = normalizeMessageId(card?.getAttribute('data-message-id'));
   const preImage = element?.closest?.(PRE_IMAGE_SELECTOR) ?? null;
   const interactionElement = resolveImageInteractionElement(preImage);
-  const identity = readIdentity(preImage);
-  const key = identity.requestId || identity.imageId || identity.promptToken || identity.src;
+  const identity = readIdentity(preImage, card);
+  const key = `${identity.swipeId}:${identity.requestId || identity.imageId || identity.tag || identity.link || identity.promptToken || identity.src}`;
   if (messageId === null || !interactionElement || !key) return null;
   return { messageId, element: interactionElement, ...identity, key };
 }
 
 function scoreHostImageCandidate(candidate: Element, source: PreImageGestureSource) {
-  const identity = readIdentity(candidate);
+  const identity = readIdentity(candidate, null);
   const sourceHasStableIdentity = Boolean(source.requestId || source.imageId);
   const stableIdentityMatches =
     (source.requestId && source.requestId === identity.requestId) ||
     (source.imageId && source.imageId === identity.imageId);
   if (sourceHasStableIdentity && !stableIdentityMatches) return 0;
   let score = 0;
+  if (source.tag && source.tag === identity.tag) score += 10;
+  if (source.link && source.link === identity.link) score += 10;
   if (source.requestId && source.requestId === identity.requestId) score += 12;
   if (source.imageId && source.imageId === identity.imageId) score += 12;
   if (!sourceHasStableIdentity && source.promptToken && source.promptToken === identity.promptToken) score += 10;
   if (!sourceHasStableIdentity && source.src && source.src === identity.src) score += 8;
   if (candidate.matches('img,video')) score += 2;
   return score;
+}
+
+function resolveHostMessageText(messageId: number): HTMLElement | null {
+  for (const doc of collectHostOnlyDocuments()) {
+    const root = doc.querySelector(
+      [
+        `.mes[mesid='${messageId}']`,
+        `.mes[data-message-index='${messageId}']`,
+        `.mes[data-message-id='${messageId}']`,
+      ].join(','),
+    );
+    const mesText = root?.querySelector?.('.mes_text') as HTMLElement | null;
+    if (mesText) return mesText;
+  }
+  return null;
+}
+
+function resolveHostPromptTarget(source: PreImageGestureSource): HTMLElement | null {
+  const hostMessageRoot = resolveHostMessageText(source.messageId);
+  if (!hostMessageRoot) return null;
+
+  let best: HTMLElement | null = null;
+  let bestScore = 0;
+  let bestTargetCount = 0;
+  for (const candidate of Array.from(hostMessageRoot.querySelectorAll(HOST_PROMPT_SELECTOR))) {
+    const score = scoreHostImageCandidate(candidate, source);
+    if (score > bestScore) {
+      best = candidate as HTMLElement;
+      bestScore = score;
+      bestTargetCount = 1;
+    } else if (score > 0 && score === bestScore) {
+      bestTargetCount += 1;
+    }
+  }
+  return bestScore > 0 && bestTargetCount === 1 ? best : null;
 }
 
 export function resolveHostImageTarget(source: PreImageGestureSource): HTMLElement | null {
@@ -195,16 +251,31 @@ function stopIframePluginCapture(event: Event) {
   event.stopImmediatePropagation?.();
 }
 
+function forwardPreMessageBodyGestureToHostMessage(
+  messageId: number,
+  event: ForwardableEvent,
+  strategy?: HostGestureDispatchStrategy,
+) {
+  const hostPoint = readHostPointFromIframeEvent(event);
+  const hostMesText = resolveHostMessageText(messageId);
+  stopIframePluginCapture(event);
+  if (!hostMesText) return false;
+  return dispatchHostPrimaryTrigger(hostMesText, { hostPoint, strategy });
+}
+
 export function forwardPreImageGestureToHostMessage(
   source: PreImageGestureSource,
   event: ForwardableEvent,
   strategy?: HostGestureDispatchStrategy,
 ) {
-  const hostImageTarget = resolveHostImageTarget(source);
-  if (!hostImageTarget) return false;
+  const hostPromptTarget = source.src ? null : resolveHostPromptTarget(source);
+  const hostImageTarget = source.src ? resolveHostImageTarget(source) : null;
+  const hostTarget = hostPromptTarget ?? hostImageTarget;
   const hostPoint = readHostPointFromIframeEvent(event);
   stopIframePluginCapture(event);
-  return dispatchHostPrimaryTrigger(hostImageTarget, { hostPoint, strategy });
+  if (!hostTarget) return false;
+  const dispatchTarget = hostPromptTarget ? (resolveHostMessageText(source.messageId) ?? hostTarget) : hostTarget;
+  return dispatchHostPrimaryTrigger(dispatchTarget, { hostPoint, strategy });
 }
 
 export function installPreHostImageGestureForwarder() {
@@ -219,8 +290,10 @@ export function installPreHostImageGestureForwarder() {
 
   const handleDoubleClick = (event: MouseEvent) => {
     const source = resolvePreImageGestureSource(event.target);
-    if (!source) return;
-    forwardPreImageGestureToHostMessage(source, event, 'dblclick');
+    const messageId = source?.messageId ?? resolvePreMessageId(event.target);
+    if (messageId === null) return;
+    if (source) return forwardPreImageGestureToHostMessage(source, event, 'dblclick');
+    return forwardPreMessageBodyGestureToHostMessage(messageId, event, 'dblclick');
   };
 
   const handleTouchEnd = (event: TouchEvent) => {
@@ -229,26 +302,30 @@ export function installPreHostImageGestureForwarder() {
       return;
     }
     const source = resolvePreImageGestureSource(event.target);
-    if (!source) {
+    const messageId = source?.messageId ?? resolvePreMessageId(event.target);
+    if (messageId === null) {
       resetTouchState();
       return;
     }
+    const imageKey = source?.key ?? `body:${messageId}`;
     const point = readEventPoint(event);
     const now = Date.now();
     const isSameGesture =
-      touchState.messageId === source.messageId &&
-      touchState.imageKey === source.key &&
+      touchState.messageId === messageId &&
+      touchState.imageKey === imageKey &&
       now - touchState.updatedAt <= TOUCH_TAP_WINDOW_MS &&
       distance(touchState.point, point) <= TOUCH_TAP_RADIUS_PX;
     touchState.count = isSameGesture ? touchState.count + 1 : 1;
-    touchState.messageId = source.messageId;
-    touchState.imageKey = source.key;
+    touchState.messageId = messageId;
+    touchState.imageKey = imageKey;
     touchState.point = point;
     touchState.updatedAt = now;
     if (touchState.count < TOUCH_TRIGGER_COUNT) return;
 
     resetTouchState();
-    forwardPreImageGestureToHostMessage(source, event, 'mobile-touch-sequence');
+    return source
+      ? forwardPreImageGestureToHostMessage(source, event, 'mobile-touch-sequence')
+      : forwardPreMessageBodyGestureToHostMessage(messageId, event, 'mobile-touch-sequence');
   };
 
   return { handleDoubleClick, handleTouchEnd };

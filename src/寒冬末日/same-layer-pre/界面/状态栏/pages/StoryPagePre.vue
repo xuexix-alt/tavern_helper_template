@@ -419,6 +419,7 @@ import {
   addRolePortraitSetImage,
   clearRolePortraitOverride,
   readRolePortraitOverrides,
+  rolePortraitOverrideOwnsEntry,
   setPrimaryRolePortraitOverride,
   writeRolePortraitOverrides,
   type RolePortraitOverrideMap,
@@ -509,17 +510,7 @@ function buildPrePortraitAssignableRoleTabs() {
 }
 
 function roleAlreadyOwnsEntry(roleKey: string, entry: ReaderGalleryEntry): boolean {
-  const override = rolePortraitOverrides.value[roleKey];
-  if (!override) return false;
-  const refs = [...(override.imageRefs ?? []), override.imageRef].filter(Boolean);
-  return refs.some(ref => {
-    if (ref.messageId !== entry.messageId) return false;
-    if (ref.markerId && entry.markerId && ref.markerId === entry.markerId) return true;
-    if (ref.imageId && entry.imageId && ref.imageId === entry.imageId) return true;
-    if (ref.requestId && entry.requestId && ref.requestId === entry.requestId) return true;
-    if (ref.promptToken && entry.promptToken && ref.promptToken === entry.promptToken) return true;
-    return !ref.markerId && !ref.imageId && !ref.requestId && !ref.promptToken;
-  });
+  return rolePortraitOverrideOwnsEntry(rolePortraitOverrides.value[roleKey], entry);
 }
 
 const preGalleryRoleAssignRoleOptions = computed<GalleryImageRoleAssignRoleOption[]>(() => {
@@ -545,9 +536,9 @@ const reprocessVariablesHint = computed(() => {
   if (busy.value) return '正文生成中，等待生成结束后再重试额外模型解析';
   if (reprocessVariablesPending.value) return '额外模型解析正在进行';
   if (mvuVariableUpdateMode.value === 'inline') {
-    return '当前 MVU 变量更新方式为“随AI输出”；点击后只提示，不会发起额外模型解析';
+    return '当前设置显示为“随AI输出”；点击时仍会由 MVU 插件原生入口决定是否可重试';
   }
-  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '无法确认 MVU 变量更新方式是否为“额外模型解析”';
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '将直接探测 MVU 插件原生“重试额外模型解析”入口';
   return '调用 MVU 插件原生“重试额外模型解析”，不走正文生成链';
 });
 
@@ -1096,15 +1087,6 @@ async function handleReprocessVariablesFromChoiceModal() {
     toastr?.warning?.(reprocessVariablesHint.value);
     return;
   }
-  if (mvuVariableUpdateMode.value === 'inline') {
-    toastr?.info?.('当前 MVU 变量更新方式为“随AI输出”，没有可重试的额外模型解析；请改为“额外模型解析”后再使用。');
-    return;
-  }
-  if (mvuVariableUpdateMode.value !== 'extra_analysis') {
-    toastr?.warning?.(reprocessVariablesHint.value);
-    return;
-  }
-
   reprocessVariablesPending.value = true;
   try {
     const reprocessResult = await retryMessageExtraAnalysisByNativeMvu(latestAssistant.message_id, {

@@ -374,6 +374,33 @@ test('pre gallery refs convert to reader gallery entries for portrait assignment
   assert.doesNotMatch(result.refs[0].lightKey, /idb:\/\/8\/req-lin/);
 });
 
+test('pre gallery assigns distinct stable orders to same-floor images without plugin identities', () => {
+  const result = scanLatestPreGalleryImageRefs({
+    reason: 'unit',
+    messages: [
+      {
+        message_id: 24,
+        message: '',
+        swipe_id: 0,
+        extra: {
+          images: [[{ src: 'data:image/png;base64,first' }, { src: 'data:image/png;base64,second' }]],
+        },
+      },
+    ],
+    hostArtifacts: [],
+  });
+
+  assert.equal(result.refs.length, 2);
+  assert.deepEqual(
+    result.refs.map(ref => ref.createdOrder),
+    [0, 1],
+  );
+  assert.deepEqual(
+    result.refs.map(preGalleryRefToReaderGalleryEntry).map(entry => entry.createdOrder),
+    [0, 1],
+  );
+});
+
 test('pre gallery beta stays lazy and scans only while drawer is active', () => {
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
   const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
@@ -508,26 +535,47 @@ test('pre gallery gesture keeps plugin prompt buttons ahead of image containers 
   );
 });
 
-test('pre gallery displayed images use native media targets instead of prompt buttons for gestures', () => {
+test('pre gallery displayed images prefer the exact plugin-bound iframe media target before host fallback', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
   assert.match(source, /const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>\(\)/);
   assert.match(source, /rememberHostImageElementRef\(existing, artifact\.element\)/);
+  assert.match(source, /function findPreNativeImageElementForRef\(ref: PreGalleryImageRef\)/);
+  assert.match(source, /const preImageTarget = findPreNativeImageElementForRef\(ref\);/);
   assert.match(
     source,
     /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/,
   );
   assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
-  assert.match(source, /const target = ref\.src \? imageTarget : buttonTarget/);
+  assert.match(source, /const target = ref\.src \? preImageTarget \?\? imageTarget : buttonTarget/);
+  assert.match(source, /targetKind: 'iframe-ready-image'/);
+  assert.doesNotMatch(source, /if \(element\.matches\('img,video'\)\) score \+= 4;/);
   assert.doesNotMatch(source, /mode === 'click' && hostTarget\?\.matches\('button\.image-tag-button/);
 });
 
-test('pre gallery longpress mirrors plugin image press timing rather than triple tap generation', () => {
+test('pre gallery resolves parent-window host media without iframe realm instanceof checks', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
-  assert.match(source, /function dispatchHostLongPress\(target: HTMLElement\): boolean/);
-  assert.match(source, /new view\.MouseEvent\('mousedown'/);
-  assert.match(source, /view\.setTimeout\(\(\) => \{[\s\S]*new view\.MouseEvent\('mouseup'/);
+  assert.match(source, /function isElementLike\(/);
+  assert.match(source, /if \(element\.matches\('img,video'\)\)/);
+  assert.match(source, /if \(isElementLike\(mesText\)\) return mesText;/);
+  assert.match(source, /\.filter\(isElementLike\)/);
+  assert.doesNotMatch(source, /mesText instanceof HTMLElement/);
+  assert.doesNotMatch(source, /element\): element is HTMLElement => element instanceof HTMLElement/);
+  assert.doesNotMatch(source, /instanceof HTMLImageElement/);
+});
+
+test('pre gallery longpress mirrors the real press duration on the exact plugin button before falling back to media', () => {
+  const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
+  const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
+
+  assert.match(source, /longPressTarget: HTMLElement \| null;/);
+  assert.match(source, /const longPressTarget = buttonTarget \?\? preImageTarget \?\? imageTarget;/);
+  assert.match(source, /export function beginPreGalleryImageRefLongPress\(ref: PreGalleryImageRef\)/);
+  assert.match(source, /export function finishPreGalleryImageRefLongPress\(session: PreGalleryLongPressSession\)/);
+  assert.match(panelSource, /@pointerdown="startLongPress\(entry, \$event\)"/);
+  assert.match(panelSource, /beginPreGalleryImageRefLongPress\(entry\)/);
+  assert.match(panelSource, /finishPreGalleryImageRefLongPress\(session\)/);
   assert.doesNotMatch(source, /mode === 'longpress' \? 'mobile-touch-sequence'/);
 });
 
@@ -544,29 +592,56 @@ test('pre gallery suppresses the synthetic click that follows a long press', () 
   assert.match(panelSource, /event\.preventDefault\(\);[\s\S]*event\.stopPropagation\(\);[\s\S]*return;/);
 });
 
-test('pre gallery only dispatches to an exact native target and lets the host choose desktop or mobile regenerate protocol', () => {
+test('pre gallery only dispatches to an exact native target and keeps host fallback strictly identity-bound', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
   assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
-  assert.match(source, /const target = ref\.src \? imageTarget : buttonTarget;/);
+  assert.match(source, /const target = ref\.src \? preImageTarget \?\? imageTarget : buttonTarget;/);
+  assert.match(source, /const hasExactIdentity = Boolean\(/);
+  assert.match(source, /if \(!hasExactIdentity\) return 0;/);
   assert.doesNotMatch(source, /const target = hostTarget \?\? mesText;/);
   assert.match(source, /const strategy: HostGestureDispatchStrategy = 'auto';/);
   assert.match(source, /宿主未找到与该图片精确对应的原生节点/);
 });
 
-test('pre gallery separates desktop single and double clicks, and maps mobile regenerate to a triple tap', () => {
+test('pre gallery maps regenerate to the current plugin delegated dblclick protocol', () => {
+  const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
+
+  assert.match(source, /function dispatchPluginReadyImageDoubleClick\(target: HTMLElement\): boolean/);
+  assert.match(
+    source,
+    /interaction\.targetKind === 'iframe-ready-image' \|\| interaction\.targetKind === 'ready-image'/,
+  );
+  assert.match(source, /method: iframeNative \? 'iframe-native-click' : 'host-click'/);
+  assert.match(source, /method: iframeNative \? 'iframe-native-longpress' : 'host-longpress'/);
+  assert.match(
+    source,
+    /method: interaction\.targetKind === 'iframe-ready-image' \? 'iframe-native-double-click' : 'host-native-double-click'/,
+  );
+  assert.match(source, /new view\.MouseEvent\('dblclick'/);
+  assert.match(source, /detail: 2/);
+  assert.match(source, /已按插件当前委托式 dblclick 派发图片重生/);
+});
+
+test('pre gallery separates single and double clicks on both desktop and mobile', () => {
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
 
   assert.match(panelSource, /@dblclick\.prevent="handleCardDoubleClick\(entry, \$event\)"/);
   assert.match(panelSource, /const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;/);
-  assert.match(panelSource, /const MOBILE_TRIPLE_TAP_COUNT = 3;/);
+  assert.match(panelSource, /const MOBILE_DOUBLE_TAP_COUNT = 2;/);
+  assert.match(panelSource, /elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS/);
+  assert.doesNotMatch(panelSource, /MOBILE_TRIPLE_TAP_WINDOW_MS/);
   assert.match(panelSource, /function schedulePendingClick\(/);
   assert.match(panelSource, /function handleCardDoubleClick\(/);
   assert.match(panelSource, /function recordMobileTap\(/);
   assert.match(
     panelSource,
-    /if \(count < MOBILE_TRIPLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_TRIPLE_TAP_WINDOW_MS\)/,
+    /if \(count < MOBILE_DOUBLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_DOUBLE_TAP_WINDOW_MS\)/,
   );
+  assert.match(panelSource, /画廊手势识别/);
+  assert.match(panelSource, /mobile tap #\$\{count\}\/\$\{MOBILE_DOUBLE_TAP_COUNT\}/);
+  assert.match(panelSource, /desktop click -> waiting native dblclick/);
+  assert.match(panelSource, /mobile tap #\$\{count\} -> dblclick/);
   assert.match(panelSource, /dispatchGesture\(entry, 'dblclick'\)/);
 });
 

@@ -583,6 +583,7 @@ test('same-layer-pre wires inherited AGENTS portrait switching through light gal
   assert.match(storySource, /@portrait-error="handleRolePortraitError"/);
 
   assert.match(storySource, /readRolePortraitOverrides/);
+  assert.match(storySource, /rolePortraitOverrideOwnsEntry/);
   assert.match(storySource, /setPrimaryRolePortraitOverride/);
   assert.match(storySource, /addRolePortraitSetImage/);
   assert.match(storySource, /clearRolePortraitOverride/);
@@ -600,6 +601,10 @@ test('same-layer-pre wires inherited AGENTS portrait switching through light gal
   );
   assert.match(storySource, /function selectRolePortraitForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
   assert.match(storySource, /function addRolePortraitSetImageForRole\(roleKey: string, entry: ReaderGalleryEntry\)/);
+  assert.match(
+    storySource,
+    /function roleAlreadyOwnsEntry\(roleKey: string, entry: ReaderGalleryEntry\): boolean \{\s*return rolePortraitOverrideOwnsEntry\(rolePortraitOverrides\.value\[roleKey\], entry\);\s*\}/,
+  );
   assert.match(storySource, /function assignPreGalleryImageToRole\(roleKey: string\)/);
   assert.match(storySource, /function clearRolePortraitForRole\(roleKey: string\)/);
   assert.match(storySource, /function handleRolePortraitError\(key: string\)/);
@@ -905,7 +910,7 @@ test('same-layer-pre does not masquerade as native Tavern message DOM for plugin
   assert.doesNotMatch(cardSource, /chatMetadata|extra\.images|saveImageGroup|setChatMessages/);
 });
 
-test('same-layer-pre enables the host image gesture forwarder without owning image persistence', () => {
+test('same-layer-pre keeps body-level image-generation gestures on native mes_text while ready images use their exact host node', () => {
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
   const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
   const forwarderSource = readPre('preHostImageGestureForwarder.ts');
@@ -920,11 +925,36 @@ test('same-layer-pre enables the host image gesture forwarder without owning ima
 
   assert.match(forwarderSource, /from '..\/..\/..\/界面同层版\/界面\/状态栏\/hostGestureDispatch'/);
   assert.match(forwarderSource, /PRE_MESSAGE_BODY_SELECTOR\s*=\s*'\.pre-message-card__body'/);
-  assert.match(forwarderSource, /resolvePreImageGestureSource/);
+  assert.match(forwarderSource, /swipeId/);
+  assert.match(forwarderSource, /data-image-tag/);
+  assert.match(forwarderSource, /data-link/);
+  assert.match(forwarderSource, /button\.image-tag-button/);
+  assert.match(forwarderSource, /function resolveHostPromptTarget\(/);
+  assert.match(forwarderSource, /function resolveHostMessageText\(/);
+  assert.match(forwarderSource, /function resolvePreMessageId\(/);
+  assert.match(forwarderSource, /function forwardPreMessageBodyGestureToHostMessage\(/);
   assert.match(forwarderSource, /resolveHostImageTarget/);
-  assert.match(forwarderSource, /dispatchHostPrimaryTrigger\(hostImageTarget/);
-  assert.doesNotMatch(forwarderSource, /resolveHostMessageText|hostMesText/);
+  assert.match(forwarderSource, /const hostPromptTarget = source\.src \? null : resolveHostPromptTarget\(source\)/);
+  assert.match(forwarderSource, /const hostImageTarget = source\.src \? resolveHostImageTarget\(source\) : null;/);
+  assert.match(forwarderSource, /const hostTarget = hostPromptTarget \?\? hostImageTarget;/);
+  assert.match(forwarderSource, /stopIframePluginCapture\(event\);\s*if \(!hostTarget\) return false;/);
+  assert.match(
+    forwarderSource,
+    /const dispatchTarget = hostPromptTarget \? \(?resolveHostMessageText\(source\.messageId\) \?\? hostTarget\)? : hostTarget;/,
+  );
+  assert.match(forwarderSource, /dispatchHostPrimaryTrigger\(dispatchTarget/);
+  assert.match(forwarderSource, /const messageId = source\?\.messageId \?\? resolvePreMessageId\(event\.target\);/);
+  assert.match(
+    forwarderSource,
+    /if \(source\) return forwardPreImageGestureToHostMessage\(source, event, 'dblclick'\);/,
+  );
+  assert.match(forwarderSource, /return forwardPreMessageBodyGestureToHostMessage\(messageId, event, 'dblclick'\);/);
+  assert.match(
+    forwarderSource,
+    /source\s*\?\s*forwardPreImageGestureToHostMessage\(source, event, 'mobile-touch-sequence'\)\s*:\s*forwardPreMessageBodyGestureToHostMessage\(messageId, event, 'mobile-touch-sequence'\)/,
+  );
   assert.match(forwarderSource, /data-samelayer-request-id/);
+  assert.match(forwarderSource, /data-swipe-id/);
   assert.match(forwarderSource, /const sourceHasStableIdentity = Boolean\(source\.requestId \|\| source\.imageId\)/);
   assert.match(forwarderSource, /if \(sourceHasStableIdentity && !stableIdentityMatches\) return 0;/);
   assert.match(forwarderSource, /bestTargetCount === 1/);
@@ -1103,4 +1133,16 @@ test('same-layer-pre bridges host and targeted MVU writeback lifecycle without f
   assert.match(controllerSource, /mesid='\$\{messageId\}'/);
   assert.match(controllerSource, /function reapply\(\)/);
   assert.match(controllerSource, /reapply,/);
+});
+
+test('same-layer-pre keeps MVU host-floor writeback scroll anchoring in the host script only', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'src', '寒冬末日', '脚本', '楼层视觉隐藏', 'index.ts'), 'utf8');
+
+  assert.match(source, /Mvu\.events\.BEFORE_MESSAGE_UPDATE/);
+  assert.match(source, /captureMvuScrollAnchor/);
+  assert.match(source, /restoreMvuScrollAnchor/);
+  assert.match(source, /#chat \.mes/);
+  assert.match(source, /requestAnimationFrame\(\(\) => \{/);
+  assert.doesNotMatch(readPre(path.join('components', 'PreTranscriptList.vue')), /transcriptItemsSignature/);
+  assert.doesNotMatch(readPre('preHostLifecycleBridge.ts'), /captureHostScrollSnapshot|restoreHostScrollSnapshot/);
 });

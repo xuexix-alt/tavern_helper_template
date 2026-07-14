@@ -199,6 +199,18 @@ function entryMatchesImageRef(entry: ReaderGalleryEntry, ref: RolePortraitImageR
   );
 }
 
+/**
+ * 立绘按钮状态与立绘解析共用同一份图片身份判定。
+ * 插件没有提供 marker/image/request id 时，createdOrder 是同楼层图片的最后一道区分；
+ * 不能把同一 mes 的所有图片都当成已添加。
+ */
+export function rolePortraitOverrideOwnsEntry(
+  override: RolePortraitOverride | undefined | null,
+  entry: ReaderGalleryEntry,
+): boolean {
+  return listOverrideRefs(override).some(ref => entryMatchesImageRef(entry, ref));
+}
+
 function listOverrideRefs(override?: RolePortraitOverride | null): RolePortraitImageRef[] {
   if (!override || isRolePortraitOverrideCleared(override)) return [];
   const out: RolePortraitImageRef[] = [];

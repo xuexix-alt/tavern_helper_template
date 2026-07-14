@@ -10,6 +10,7 @@ const {
   clearRolePortraitOverride,
   setPrimaryRolePortraitOverride,
   resolveRolePortraitSet,
+  rolePortraitOverrideOwnsEntry,
   readRolePortraitOverrides,
   writeRolePortraitOverrides,
 } = require('../rolePortraits.ts');
@@ -329,6 +330,25 @@ test('adding same-prompt images from one message keeps distinct set refs by gall
     set.map(entry => entry.id),
     ['lin-same-prompt-0', 'lin-same-prompt-1', 'lin-same-prompt-2', 'lin-same-prompt-3'],
   );
+});
+
+test('portrait ownership only matches the assigned same-floor image when plugin ids are absent', () => {
+  const entries = [0, 1].map(index => ({
+    id: `same-floor-${index}`,
+    messageId: 30,
+    markerId: '',
+    imageId: '',
+    requestId: '',
+    promptToken: '',
+    title: `图片 ${index + 1}`,
+    createdOrder: index,
+    src: `https://example.com/same-floor-${index}.png`,
+  }));
+
+  const override = addRolePortraitSetImage('林月华', undefined, entries[0]);
+
+  assert.equal(rolePortraitOverrideOwnsEntry(override, entries[0]), true);
+  assert.equal(rolePortraitOverrideOwnsEntry(override, entries[1]), false);
 });
 
 test('selecting a primary portrait keeps existing set images available', () => {

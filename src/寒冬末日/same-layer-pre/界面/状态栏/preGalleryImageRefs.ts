@@ -40,6 +40,8 @@ export type PreGalleryImageRef = {
   lightKey: string;
   messageId: number;
   swipeId: number;
+  /** 同一楼层内的稳定图片顺序，用于持久化立绘引用的精确回配。 */
+  createdOrder?: number;
   sources: PreGalleryImageSource[];
   gestureTargetHint: PreGalleryGestureTargetHint;
   src: string;
@@ -82,8 +84,15 @@ export type PreGalleryDispatchResult = {
 
 export type PreGalleryHostInteraction = {
   target: HTMLElement | null;
-  targetKind: 'ready-image' | 'prompt-button' | 'none';
+  targetKind: 'iframe-ready-image' | 'ready-image' | 'prompt-button' | 'none';
+  longPressTarget: HTMLElement | null;
+  longPressTargetKind: 'iframe-ready-image' | 'ready-image' | 'prompt-button' | 'none';
   reason: string;
+};
+
+export type PreGalleryLongPressSession = {
+  target: HTMLElement;
+  targetKind: Exclude<PreGalleryHostInteraction['longPressTargetKind'], 'none'>;
 };
 
 const SOURCE_ORDER: PreGalleryImageSource[] = ['host-dom', 'pre-render', 'extra.images', 'mes_tag', 'cache'];
@@ -120,6 +129,10 @@ function clean(input: unknown): string {
   return String(input ?? '').trim();
 }
 
+function isElementLike(element: Element | null | undefined): element is HTMLElement {
+  return Boolean(element && typeof (element as HTMLElement).matches === 'function');
+}
+
 function normalizeScanLimit(input: PreGalleryScanLimit | undefined, total: number): number {
   if (input === 'all') return Math.max(0, total);
   const limit = Math.trunc(Number(input ?? 1));
@@ -146,7 +159,10 @@ function normalizeSrc(input: unknown): string {
 
 export function preGalleryRefToReaderGalleryEntry(ref: PreGalleryImageRef): ReaderGalleryEntry {
   const promptText = clean(ref.promptToken || ref.tag || ref.link);
-  const imageIndex = Number.isFinite(Number(ref.swipeId)) ? Math.trunc(Number(ref.swipeId)) + 1 : 1;
+  const createdOrder = Number.isFinite(Number(ref.createdOrder))
+    ? Math.trunc(Number(ref.createdOrder))
+    : Math.trunc(Number(ref.swipeId));
+  const imageIndex = createdOrder + 1;
   const title = `楼层 #${ref.messageId} · 图片 ${imageIndex}`;
   return {
     id: ref.id,
@@ -156,7 +172,7 @@ export function preGalleryRefToReaderGalleryEntry(ref: PreGalleryImageRef): Read
     promptToken: promptText,
     anchorText: promptText || ref.evidence.join(' '),
     title,
-    createdOrder: ref.swipeId,
+    createdOrder,
     src: ref.src,
     alt: title,
   };
@@ -379,7 +395,7 @@ function isPluginImageElement(element: Element | null | undefined) {
 }
 
 function resolvePluginImageInteractionElement(element: HTMLElement): HTMLElement | null {
-  if (element instanceof HTMLImageElement || element.matches('video')) return element;
+  if (element.matches('img,video')) return element;
   const media = element.querySelector?.('img,video') as HTMLElement | null;
   if (media) return media;
   return isPluginImageElement(element) ? element : null;
@@ -397,11 +413,7 @@ function rememberHostImageElementForKey(key: string, element: HTMLElement) {
   const imageElement = resolvePluginImageInteractionElement(element);
   if (!imageElement) return;
   const current = HOST_IMAGE_ELEMENT_REF_CACHE.get(key);
-  if (
-    !current?.isConnected ||
-    imageElement instanceof HTMLImageElement ||
-    current.matches('.st-chatu8-image-container')
-  ) {
+  if (!current?.isConnected || imageElement.matches('img,video') || current.matches('.st-chatu8-image-container')) {
     HOST_IMAGE_ELEMENT_REF_CACHE.set(key, imageElement);
   }
 }
@@ -502,9 +514,12 @@ function readDataset(element: Element | null | undefined, keys: string[]): strin
 }
 
 function readElementSrc(element: Element): string {
-  if (element instanceof HTMLImageElement) return clean(element.currentSrc || element.src);
-  const nested = element.querySelector?.('img') as HTMLImageElement | null;
-  return clean(nested?.currentSrc || nested?.src);
+  if (element.matches('img,video')) {
+    const media = element as HTMLImageElement | HTMLVideoElement;
+    return clean(media.currentSrc || media.src || element.getAttribute('src'));
+  }
+  const nested = element.querySelector?.('img,video') as HTMLImageElement | HTMLVideoElement | null;
+  return clean(nested?.currentSrc || nested?.src || nested?.getAttribute('src'));
 }
 
 function summarizeProbeSrc(src: string) {
@@ -678,7 +693,10 @@ function scanMessage(
     sourceCounts.cache += 1;
   }
 
-  return { refs: Array.from(refs.values()), sourceCounts };
+  return {
+    refs: Array.from(refs.values()).map((ref, createdOrder) => ({ ...ref, createdOrder })),
+    sourceCounts,
+  };
 }
 
 function hasNativeDisplayEvidence(refs: PreGalleryImageRef[]): boolean {
@@ -856,11 +874,17 @@ function scoreImageElementForRef(element: Element, ref: PreGalleryImageRef): num
   const requestId = readDataset(element, ['requestId']);
   const imageId = readDataset(element, ['imageId']);
   const src = readElementSrc(element);
+  const hasExactIdentity = Boolean(
+    (ref.requestId && requestId && ref.requestId === requestId) ||
+      (ref.imageId && imageId && ref.imageId === imageId) ||
+      (ref.src && src && ref.src === src),
+  );
+  if (!hasExactIdentity) return 0;
+
   let score = 0;
   if (ref.requestId && requestId && ref.requestId === requestId) score += 8;
   if (ref.imageId && imageId && ref.imageId === imageId) score += 8;
   if (ref.src && src && ref.src === src) score += 6;
-  if (element instanceof HTMLImageElement || element.matches('img,video')) score += 4;
   if (element.matches('.st-chatu8-image-span,.ai-image-container')) score += 2;
   if (element.matches('.st-chatu8-image-container')) score += 1;
   if (isPluginPromptButton(element)) score -= 100;
@@ -873,7 +897,7 @@ function findHostMesText(messageId: number): HTMLElement | null {
       `.mes[mesid="${messageId}"],.mes[data-message-index="${messageId}"],.mes[data-message-id="${messageId}"]`,
     );
     const mesText = root?.querySelector('.mes_text') ?? root;
-    if (mesText instanceof HTMLElement) return mesText;
+    if (isElementLike(mesText)) return mesText;
   }
   return null;
 }
@@ -881,9 +905,7 @@ function findHostMesText(messageId: number): HTMLElement | null {
 function findHostElementForRef(ref: PreGalleryImageRef): HTMLElement | null {
   const mesText = findHostMesText(ref.messageId);
   if (!mesText) return null;
-  const candidates = Array.from(mesText.querySelectorAll(PLUGIN_NATIVE_SELECTORS)).filter(
-    (element): element is HTMLElement => element instanceof HTMLElement,
-  );
+  const candidates = Array.from(mesText.querySelectorAll(PLUGIN_NATIVE_SELECTORS)).filter(isElementLike);
   let best: HTMLElement | null = null;
   let bestScore = 0;
   for (const candidate of candidates) {
@@ -901,7 +923,7 @@ function findHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement | null
   if (!mesText) return null;
   const candidates = Array.from(
     mesText.querySelectorAll('img,video,.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container'),
-  ).filter((element): element is HTMLElement => element instanceof HTMLElement);
+  ).filter(isElementLike);
   let best: HTMLElement | null = null;
   let bestScore = 0;
   for (const candidate of candidates) {
@@ -912,6 +934,44 @@ function findHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement | null
     }
   }
   return bestScore > 0 ? best : null;
+}
+
+/**
+ * 已渲染图片的 click/longpress 监听器由插件绑定在 pre iframe 内的实际媒体节点上。
+ * 不能把 v-html 的克隆图片或宿主中任意 img 当成等价节点，否则日志会显示派发成功，
+ * 但插件的预览、重生和编辑处理器都不会收到事件。
+ */
+function findPreNativeImageElementForRef(ref: PreGalleryImageRef): HTMLElement | null {
+  if (typeof document === 'undefined' || !ref.src) return null;
+
+  const body = document.querySelector(
+    `.pre-message-card[data-message-id="${ref.messageId}"] .pre-message-card__body`,
+  );
+  if (!body) return null;
+
+  const candidates = Array.from(
+    body.querySelectorAll(
+      '.ai-image-container img,.ai-image-container video,.st-chatu8-image-container img,.st-chatu8-image-container video,.st-chatu8-image-span img,.st-chatu8-image-span video',
+    ),
+  ).filter(isElementLike);
+
+  let best: HTMLElement | null = null;
+  let bestScore = 0;
+  let bestCount = 0;
+  for (const candidate of candidates) {
+    const score = scoreImageElementForRef(candidate, ref);
+    if (score <= 0) continue;
+    if (score > bestScore) {
+      best = resolvePluginImageInteractionElement(candidate) ?? candidate;
+      bestScore = score;
+      bestCount = 1;
+    } else if (score === bestScore) {
+      bestCount += 1;
+    }
+  }
+
+  // 同一图片源若出现多个并列候选，宁可回退为未命中，也不能把手势交给错误的图片。
+  return bestScore > 0 && bestCount === 1 ? best : null;
 }
 
 function findCachedHostElementForRef(ref: PreGalleryImageRef): HTMLElement | null {
@@ -949,20 +1009,38 @@ function findCachedHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement 
 }
 
 export function resolvePreGalleryHostInteraction(ref: PreGalleryImageRef): PreGalleryHostInteraction {
+  const preImageTarget = findPreNativeImageElementForRef(ref);
   const imageTarget = findCachedHostImageElementForRef(ref) ?? findHostImageElementForRef(ref);
   const buttonTarget = findCachedHostElementForRef(ref) ?? findHostElementForRef(ref);
-  const target = ref.src ? imageTarget : buttonTarget;
+  const target = ref.src ? preImageTarget ?? imageTarget : buttonTarget;
+  // 生成完成后的按钮仍保有插件的原始长按编辑监听器；它比宿主的空 img 更可靠。
+  const longPressTarget = buttonTarget ?? preImageTarget ?? imageTarget;
+  const longPressTargetKind = buttonTarget
+    ? 'prompt-button'
+    : preImageTarget
+      ? 'iframe-ready-image'
+      : imageTarget
+        ? 'ready-image'
+        : 'none';
   if (!target) {
     return {
       target: null,
       targetKind: 'none',
+      longPressTarget,
+      longPressTargetKind,
       reason: '宿主未找到与该图片精确对应的原生节点；仅保留画廊展示',
     };
   }
   return {
     target,
-    targetKind: ref.src ? 'ready-image' : 'prompt-button',
-    reason: ref.src ? '已定位宿主原生图片节点' : '已定位宿主原始提示词按钮',
+    targetKind: preImageTarget ? 'iframe-ready-image' : ref.src ? 'ready-image' : 'prompt-button',
+    longPressTarget,
+    longPressTargetKind,
+    reason: preImageTarget
+      ? '已定位 iframe 内插件绑定的原生图片节点'
+      : ref.src
+        ? '已定位宿主原生图片节点'
+        : '已定位宿主原始提示词按钮',
   };
 }
 
@@ -989,40 +1067,82 @@ function dispatchHostClick(target: HTMLElement): boolean {
   }
 }
 
-function dispatchHostLongPress(target: HTMLElement): boolean {
+function dispatchHostMousePhase(target: HTMLElement, phase: 'down' | 'up'): boolean {
   try {
     const view = target.ownerDocument.defaultView;
     if (!view) return false;
     const rect = target.getBoundingClientRect();
-    const point = {
-      clientX: rect.left + Math.max(8, rect.width * 0.5),
-      clientY: rect.top + Math.max(8, rect.height * 0.5),
-    };
-    const mouseDown = new view.MouseEvent('mousedown', {
+    const event = new view.MouseEvent(phase === 'down' ? 'mousedown' : 'mouseup', {
       bubbles: true,
       cancelable: true,
       composed: true,
       view,
-      clientX: point.clientX,
-      clientY: point.clientY,
+      clientX: rect.left + Math.max(8, rect.width * 0.5),
+      clientY: rect.top + Math.max(8, rect.height * 0.5),
       button: 0,
-      buttons: 1,
+      buttons: phase === 'down' ? 1 : 0,
       detail: 1,
     });
-    target.dispatchEvent(mouseDown);
+    target.dispatchEvent(event);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 在画廊物理按下的同一时刻启动插件计时器，不能等到画廊长按阈值后再补发。
+ *
+ * 注意：浏览器不允许跨 iframe 合成 isTrusted 的 Pointer/Touch 序列。因此本函数
+ * 的 true 只表示 mousedown 已送入目标文档，不能证明插件的编辑弹窗一定打开；
+ * 若运行时没有弹窗，保留单击预览，不应继续用更多模拟事件堆叠补偿。
+ */
+export function beginPreGalleryImageRefLongPress(ref: PreGalleryImageRef): PreGalleryLongPressSession | null {
+  const interaction = resolvePreGalleryHostInteraction(ref);
+  const target = interaction.longPressTarget;
+  if (!target || interaction.longPressTargetKind === 'none' || !dispatchHostMousePhase(target, 'down')) return null;
+  return { target, targetKind: interaction.longPressTargetKind };
+}
+
+/** 与用户真实抬手同步结束已派发的插件计时序列；是否打开编辑弹窗仍须由运行时验证。 */
+export function finishPreGalleryImageRefLongPress(session: PreGalleryLongPressSession): boolean {
+  return dispatchHostMousePhase(session.target, 'up');
+}
+
+/**
+ * 当前 st-chatu8 的 ClickTrigger 会轮询 iframe，并把 dblclick 委托绑定在
+ * iframe document.body 上。这里必须派发同文档、可冒泡且带实际中心坐标的
+ * dblclick；仅补两次 click 只能触发单击预览，无法进入它的双击分支。
+ */
+function dispatchPluginReadyImageDoubleClick(target: HTMLElement): boolean {
+  try {
+    const view = target.ownerDocument.defaultView;
+    if (!view) return false;
+    const rect = target.getBoundingClientRect();
+    const event = new view.MouseEvent('dblclick', {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      view,
+      clientX: rect.left + Math.max(8, rect.width * 0.5),
+      clientY: rect.top + Math.max(8, rect.height * 0.5),
+      button: 0,
+      buttons: 0,
+      detail: 2,
+    });
+    target.dispatchEvent(event);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function dispatchHostLongPress(target: HTMLElement): boolean {
+  try {
+    const view = target.ownerDocument.defaultView;
+    if (!view || !dispatchHostMousePhase(target, 'down')) return false;
     view.setTimeout(() => {
-      const mouseUp = new view.MouseEvent('mouseup', {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        view,
-        clientX: point.clientX,
-        clientY: point.clientY,
-        button: 0,
-        buttons: 0,
-        detail: 1,
-      });
-      target.dispatchEvent(mouseUp);
+      dispatchHostMousePhase(target, 'up');
     }, 620);
     return true;
   } catch {
@@ -1052,21 +1172,52 @@ export function dispatchPreGalleryImageRefGesture(
 
   if (mode === 'click') {
     const ok = dispatchHostClick(target);
+    const iframeNative = interaction.targetKind === 'iframe-ready-image';
     return {
       ok,
-      method: 'host-click',
+      method: iframeNative ? 'iframe-native-click' : 'host-click',
       target: target.className || target.tagName.toLowerCase(),
-      reason: ok ? '已把单击交回宿主图片节点' : '宿主图片 click 派发失败',
+      reason: ok
+        ? iframeNative
+          ? '已把单击交给 iframe 内插件绑定的图片节点'
+          : '已把单击交回宿主图片节点'
+        : iframeNative
+          ? 'iframe 原生图片 click 派发失败'
+          : '宿主图片 click 派发失败',
+    };
+  }
+
+  if (
+    mode === 'dblclick' &&
+    (interaction.targetKind === 'iframe-ready-image' || interaction.targetKind === 'ready-image')
+  ) {
+    const ok = dispatchPluginReadyImageDoubleClick(target);
+    return {
+      ok,
+      method: interaction.targetKind === 'iframe-ready-image' ? 'iframe-native-double-click' : 'host-native-double-click',
+      target: target.className || target.tagName.toLowerCase(),
+      reason: ok
+        ? '已按插件当前委托式 dblclick 派发图片重生'
+        : interaction.targetKind === 'iframe-ready-image'
+          ? 'iframe 原生图片 dblclick 派发失败'
+          : '宿主原生图片 dblclick 派发失败',
     };
   }
 
   if (mode === 'longpress') {
     const ok = dispatchHostLongPress(target);
+    const iframeNative = interaction.targetKind === 'iframe-ready-image';
     return {
       ok,
-      method: 'host-longpress',
+      method: iframeNative ? 'iframe-native-longpress' : 'host-longpress',
       target: target.className || target.tagName.toLowerCase(),
-      reason: ok ? '已按插件图片长按时序派发 mousedown/mouseup' : '宿主图片长按派发失败',
+      reason: ok
+        ? iframeNative
+          ? '已按插件图片长按时序派发 iframe mousedown/mouseup'
+          : '已按插件图片长按时序派发 mousedown/mouseup'
+        : iframeNative
+          ? 'iframe 原生图片长按派发失败'
+          : '宿主图片长按派发失败',
     };
   }
 

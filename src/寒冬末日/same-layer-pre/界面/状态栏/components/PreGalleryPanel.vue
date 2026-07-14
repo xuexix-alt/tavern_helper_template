@@ -45,7 +45,7 @@
           :class="{ pending: !entry.src }"
           @click="handleCardClick(entry, $event)"
           @dblclick.prevent="handleCardDoubleClick(entry, $event)"
-          @pointerdown="startLongPress(entry)"
+          @pointerdown="startLongPress(entry, $event)"
           @pointerup="cancelLongPress"
           @pointercancel="cancelLongPress"
           @pointerleave="cancelLongPress"
@@ -80,12 +80,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
+  beginPreGalleryImageRefLongPress,
   dispatchPreGalleryImageRefGesture,
+  finishPreGalleryImageRefLongPress,
   preGalleryRefToReaderGalleryEntry,
   scanLatestPreGalleryImageRefs,
   type PreGalleryGestureMode,
   type PreGalleryImageRef,
   type PreGalleryImageSource,
+  type PreGalleryLongPressSession,
   type PreGalleryScanLimit,
   type PreGalleryScanResult,
 } from '../preGalleryImageRefs';
@@ -114,8 +117,8 @@ const RENDER_RESCAN_DELAY_MS = 720;
 const LONG_PRESS_MS = 540;
 const LONG_PRESS_CLICK_SUPPRESS_MS = 900;
 const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;
-const MOBILE_TRIPLE_TAP_WINDOW_MS = 560;
-const MOBILE_TRIPLE_TAP_COUNT = 3;
+const MOBILE_DOUBLE_TAP_WINDOW_MS = 560;
+const MOBILE_DOUBLE_TAP_COUNT = 2;
 const SCAN_LIMIT_OPTIONS: Array<{ value: string; label: string; scanLimit: PreGalleryScanLimit }> = [
   { value: '1', label: '最近 1 层', scanLimit: 1 },
   { value: '3', label: '最近 3 层', scanLimit: 3 },
@@ -138,6 +141,7 @@ const lastEventName = ref('');
 const scanTimer = ref(0);
 const renderRescanTimer = ref(0);
 const longPressTimer = ref(0);
+const longPressSession = ref<PreGalleryLongPressSession | null>(null);
 const pendingClickTimer = ref(0);
 const pendingClickKey = ref('');
 const mobileTapState = ref({ key: '', count: 0, updatedAt: 0 });
@@ -373,18 +377,25 @@ function schedulePendingClick(entry: PreGalleryImageRef, delayMs: number) {
 
 function recordMobileTap(entry: PreGalleryImageRef) {
   const now = Date.now();
+  const elapsedMs = now - mobileTapState.value.updatedAt;
   const isSameSequence =
-    mobileTapState.value.key === entry.id && now - mobileTapState.value.updatedAt <= MOBILE_TRIPLE_TAP_WINDOW_MS;
+    mobileTapState.value.key === entry.id && elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS;
   const count = isSameSequence ? mobileTapState.value.count + 1 : 1;
   mobileTapState.value = { key: entry.id, count, updatedAt: now };
+  pushGalleryLog(
+    'info',
+    '画廊手势识别',
+    `mobile tap #${count}/${MOBILE_DOUBLE_TAP_COUNT}; same=${isSameSequence}; elapsed=${elapsedMs}ms`,
+  );
 
-  if (count < MOBILE_TRIPLE_TAP_COUNT) {
-    schedulePendingClick(entry, MOBILE_TRIPLE_TAP_WINDOW_MS);
+  if (count < MOBILE_DOUBLE_TAP_COUNT) {
+    schedulePendingClick(entry, MOBILE_DOUBLE_TAP_WINDOW_MS);
     return;
   }
 
   clearPendingClick();
   resetMobileTapState();
+  pushGalleryLog('info', '画廊手势识别', `mobile tap #${count} -> dblclick`);
   dispatchGesture(entry, 'dblclick');
 }
 
@@ -400,6 +411,7 @@ function handleCardClick(entry: PreGalleryImageRef, event: MouseEvent) {
     recordMobileTap(entry);
     return;
   }
+  pushGalleryLog('info', '画廊手势识别', 'desktop click -> waiting native dblclick');
   schedulePendingClick(entry, DESKTOP_DOUBLE_CLICK_WINDOW_MS);
 }
 
@@ -407,24 +419,41 @@ function handleCardDoubleClick(entry: PreGalleryImageRef, event: MouseEvent) {
   event.preventDefault();
   if (isLikelyMobileGestureEnvironment()) return;
   clearPendingClick();
+  pushGalleryLog('info', '画廊手势识别', 'desktop dblclick -> dispatch');
   dispatchGesture(entry, 'dblclick');
 }
 
-function startLongPress(entry: PreGalleryImageRef) {
+function startLongPress(entry: PreGalleryImageRef, event: PointerEvent) {
+  if (event.button !== 0 || event.isPrimary === false) return;
   cancelLongPress();
   clearPendingClick();
   resetMobileTapState();
+  longPressSession.value = beginPreGalleryImageRefLongPress(entry);
   longPressTimer.value = window.setTimeout(() => {
     longPressTimer.value = 0;
     suppressClickAfterLongPress.value = { key: entry.id, until: Date.now() + LONG_PRESS_CLICK_SUPPRESS_MS };
-    dispatchGesture(entry, 'longpress');
+    const session = longPressSession.value;
+    if (!session) {
+      pushGalleryLog('error', '画廊手势 longpress', 'none -> none；未找到可接收原生按住时序的插件节点');
+      return;
+    }
+    const method = session.targetKind === 'prompt-button' ? 'native-button-longpress' : 'iframe-native-longpress';
+    pushGalleryLog(
+      'action',
+      '画廊手势 longpress',
+      `${method} -> ${session.target.className || session.target.tagName.toLowerCase()}；已派发按住时序（不等同于插件编辑弹窗已打开）`,
+    );
   }, LONG_PRESS_MS);
 }
 
 function cancelLongPress() {
-  if (!longPressTimer.value) return;
-  window.clearTimeout(longPressTimer.value);
-  longPressTimer.value = 0;
+  if (longPressTimer.value) {
+    window.clearTimeout(longPressTimer.value);
+    longPressTimer.value = 0;
+  }
+  const session = longPressSession.value;
+  longPressSession.value = null;
+  if (session) finishPreGalleryImageRefLongPress(session);
 }
 
 watch(
