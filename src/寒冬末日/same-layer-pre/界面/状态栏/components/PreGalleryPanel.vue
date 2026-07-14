@@ -378,8 +378,7 @@ function schedulePendingClick(entry: PreGalleryImageRef, delayMs: number) {
 function recordMobileTap(entry: PreGalleryImageRef) {
   const now = Date.now();
   const elapsedMs = now - mobileTapState.value.updatedAt;
-  const isSameSequence =
-    mobileTapState.value.key === entry.id && elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS;
+  const isSameSequence = mobileTapState.value.key === entry.id && elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS;
   const count = isSameSequence ? mobileTapState.value.count + 1 : 1;
   mobileTapState.value = { key: entry.id, count, updatedAt: now };
   pushGalleryLog(

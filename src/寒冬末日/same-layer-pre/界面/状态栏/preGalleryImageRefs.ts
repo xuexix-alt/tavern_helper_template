@@ -876,8 +876,8 @@ function scoreImageElementForRef(element: Element, ref: PreGalleryImageRef): num
   const src = readElementSrc(element);
   const hasExactIdentity = Boolean(
     (ref.requestId && requestId && ref.requestId === requestId) ||
-      (ref.imageId && imageId && ref.imageId === imageId) ||
-      (ref.src && src && ref.src === src),
+    (ref.imageId && imageId && ref.imageId === imageId) ||
+    (ref.src && src && ref.src === src),
   );
   if (!hasExactIdentity) return 0;
 
@@ -944,9 +944,7 @@ function findHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement | null
 function findPreNativeImageElementForRef(ref: PreGalleryImageRef): HTMLElement | null {
   if (typeof document === 'undefined' || !ref.src) return null;
 
-  const body = document.querySelector(
-    `.pre-message-card[data-message-id="${ref.messageId}"] .pre-message-card__body`,
-  );
+  const body = document.querySelector(`.pre-message-card[data-message-id="${ref.messageId}"] .pre-message-card__body`);
   if (!body) return null;
 
   const candidates = Array.from(
@@ -1012,7 +1010,7 @@ export function resolvePreGalleryHostInteraction(ref: PreGalleryImageRef): PreGa
   const preImageTarget = findPreNativeImageElementForRef(ref);
   const imageTarget = findCachedHostImageElementForRef(ref) ?? findHostImageElementForRef(ref);
   const buttonTarget = findCachedHostElementForRef(ref) ?? findHostElementForRef(ref);
-  const target = ref.src ? preImageTarget ?? imageTarget : buttonTarget;
+  const target = ref.src ? (preImageTarget ?? imageTarget) : buttonTarget;
   // 生成完成后的按钮仍保有插件的原始长按编辑监听器；它比宿主的空 img 更可靠。
   const longPressTarget = buttonTarget ?? preImageTarget ?? imageTarget;
   const longPressTargetKind = buttonTarget
@@ -1194,7 +1192,8 @@ export function dispatchPreGalleryImageRefGesture(
     const ok = dispatchPluginReadyImageDoubleClick(target);
     return {
       ok,
-      method: interaction.targetKind === 'iframe-ready-image' ? 'iframe-native-double-click' : 'host-native-double-click',
+      method:
+        interaction.targetKind === 'iframe-ready-image' ? 'iframe-native-double-click' : 'host-native-double-click',
       target: target.className || target.tagName.toLowerCase(),
       reason: ok
         ? '已按插件当前委托式 dblclick 派发图片重生'
