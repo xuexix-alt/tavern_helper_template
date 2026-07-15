@@ -439,8 +439,8 @@ export function useSameLayerPre() {
 
     let extraAnalysisEnabled = false;
     try {
-      extraAnalysisEnabled = (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)
-        ?.extra_analysis === true;
+      extraAnalysisEnabled =
+        (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)?.extra_analysis === true;
     } catch {
       return;
     }

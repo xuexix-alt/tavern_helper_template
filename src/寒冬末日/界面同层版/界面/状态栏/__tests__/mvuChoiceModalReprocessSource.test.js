@@ -515,9 +515,21 @@ test('mvu_reprocess emits MVU native retry button event instead of opening Quick
     /messageText[\s\S]*trim\(\)[\s\S]*return \{ status: 'blocked', reason: 'empty_message'/,
     'native retry helper should block empty assistant text instead of sending an empty story to extra analysis',
   );
-  assert.match(source, /getAllEnabledScriptButtons[\s\S]*重试额外模型解析/, 'helper should resolve the MVU script button id globally, not from the UI iframe context');
-  assert.match(source, /getScriptButtons[\s\S]*getButtonEvent[\s\S]*\.call\(/, 'helper should also resolve the event from the owning MVU script iframe context when the global map is unavailable');
-  assert.doesNotMatch(body, /getButtonEvent\(['"]重试额外模型解析['"]\)/, 'helper must not derive the button event directly from the UI iframe script context');
+  assert.match(
+    source,
+    /getAllEnabledScriptButtons[\s\S]*重试额外模型解析/,
+    'helper should resolve the MVU script button id globally, not from the UI iframe context',
+  );
+  assert.match(
+    source,
+    /getScriptButtons[\s\S]*getButtonEvent[\s\S]*\.call\(/,
+    'helper should also resolve the event from the owning MVU script iframe context when the global map is unavailable',
+  );
+  assert.doesNotMatch(
+    body,
+    /getButtonEvent\(['"]重试额外模型解析['"]\)/,
+    'helper must not derive the button event directly from the UI iframe script context',
+  );
   assert.match(body, /eventEmit\([\s\S]*nativeRetryEvent/, 'helper should emit the native retry event');
   assert.match(
     body,
@@ -529,7 +541,11 @@ test('mvu_reprocess emits MVU native retry button event instead of opening Quick
     /function waitForNativeExtraAnalysisResult[\s\S]*updatedChatMessage[\s\S]*NATIVE_UPDATE_VARIABLE_TAG_PATTERN/,
     'helper should verify MVU appended a fresh update block before reporting success',
   );
-  assert.doesNotMatch(body, /GENERATION_ENDED|#qr--bar|qr--popout|querySelectorAll|\.click\(\)/, 'helper must not replay unrelated lifecycle events or touch Quick Reply UI');
+  assert.doesNotMatch(
+    body,
+    /GENERATION_ENDED|#qr--bar|qr--popout|querySelectorAll|\.click\(\)/,
+    'helper must not replay unrelated lifecycle events or touch Quick Reply UI',
+  );
   assert.equal(body.includes('await generate('), false, 'native retry helper must not call Tavern Helper generate');
   assert.equal(body.includes('generateRaw('), false, 'native retry helper must not call generateRaw');
   assert.equal(body.includes('Mvu.parseMessage('), false, 'native retry helper must not manually parse model output');
