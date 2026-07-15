@@ -3,7 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { preGalleryRefToReaderGalleryEntry, scanLatestPreGalleryImageRefs } = require('../preGalleryImageRefs.ts');
+const {
+  classifyPreGalleryImageRef,
+  preGalleryRefToReaderGalleryEntry,
+  scanLatestPreGalleryImageRefs,
+} = require('../preGalleryImageRefs.ts');
 
 const statusBarDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(statusBarDir, '../../../../..');
@@ -401,6 +405,86 @@ test('pre gallery assigns distinct stable orders to same-floor images without pl
   );
 });
 
+test('pre gallery keeps the plugin regex fingerprint separate from the prompt token', () => {
+  const result = scanLatestPreGalleryImageRefs({
+    reason: 'beta_regex',
+    messages: [
+      {
+        message_id: 31,
+        message: 'image###city street###',
+        extra: {
+          images: [
+            [
+              {
+                regex: 'city\\s+street',
+                tag: 'image###city street###',
+                link: 'image###city street###',
+                requestId: 'req-regex',
+                src: 'idb://31/req-regex',
+              },
+            ],
+          ],
+        },
+      },
+    ],
+    hostArtifacts: [],
+  });
+
+  assert.equal(result.refs.length, 1);
+  assert.equal(result.refs[0].regex, 'city\\s+street');
+  assert.equal(result.refs[0].promptToken, 'image###city street###');
+  assert.equal(result.refs[0].requestId, 'req-regex');
+});
+
+test('pre gallery beta classifies media readiness and native interaction target separately', () => {
+  const ready = classifyPreGalleryImageRef(
+    {
+      src: 'idb://ready',
+      requestId: 'req-ready',
+      imageId: '',
+      tag: 'image###ready###',
+      link: 'image###ready###',
+      promptToken: 'image###ready###',
+      regex: 'ready',
+      sources: ['extra.images'],
+    },
+    { targetKind: 'ready-image', longPressTargetKind: 'ready-image' },
+  );
+  const placeholder = classifyPreGalleryImageRef(
+    {
+      src: '',
+      requestId: 'req-pending',
+      imageId: '',
+      tag: 'image###pending###',
+      link: 'image###pending###',
+      promptToken: 'image###pending###',
+      regex: 'pending',
+      sources: ['host-dom'],
+    },
+    { targetKind: 'prompt-button', longPressTargetKind: 'prompt-button' },
+  );
+  const tagOnly = classifyPreGalleryImageRef(
+    {
+      src: '',
+      requestId: '',
+      imageId: '',
+      tag: 'image###tag-only###',
+      link: 'image###tag-only###',
+      promptToken: 'image###tag-only###',
+      regex: 'tag-only',
+      sources: ['mes_tag'],
+    },
+    { targetKind: 'none', longPressTargetKind: 'none' },
+  );
+
+  assert.deepEqual([ready.stage, ready.mediaState, ready.hostTargetKind], ['ready', 'media-ready', 'ready-image']);
+  assert.deepEqual(
+    [placeholder.stage, placeholder.mediaState, placeholder.hostTargetKind],
+    ['placeholder', 'placeholder-only', 'prompt-button'],
+  );
+  assert.deepEqual([tagOnly.stage, tagOnly.mediaState, tagOnly.hostTargetKind], ['tag-only', 'token-only', 'none']);
+});
+
 test('pre gallery beta stays lazy and scans only while drawer is active', () => {
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
   const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
@@ -409,6 +493,24 @@ test('pre gallery beta stays lazy and scans only while drawer is active', () => 
   assert.match(panelSource, /if \(!props\.active\) return;/);
   assert.match(panelSource, /scheduleScan\('drawer_open'/);
   assert.match(pageSource, /<PreGalleryPanel[\s\S]*:active="galleryDrawerOpen"[\s\S]*@gallery-log="appendGalleryLog"/);
+});
+
+test('pre gallery Beta diagnostic modal is wired as a read-only right-side test surface', () => {
+  const modalSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryBetaModal.vue');
+  const pageSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue');
+
+  assert.match(pageSource, /aria-label="打开 Beta 画廊诊断"/);
+  assert.match(pageSource, /<PreGalleryBetaModal[\s\S]*:open="betaModalOpen"/);
+  assert.match(modalSource, /scanLatestPreGalleryImageRefs/);
+  assert.match(modalSource, /dispatchPreGalleryImageRefGesture/);
+  assert.match(modalSource, /beginPreGalleryImageRefLongPress/);
+  assert.match(modalSource, /finishPreGalleryImageRefLongPress/);
+  assert.match(modalSource, /classifyPreGalleryImageRef/);
+  assert.match(modalSource, /messageId|requestId|imageId|regex|tag|link/);
+  assert.match(modalSource, /PLACEHOLDER/);
+  assert.match(modalSource, /generate-image-request/);
+  assert.doesNotMatch(modalSource, /message\s*\.\s*extra\s*\.\s*images/);
+  assert.doesNotMatch(modalSource, /emitGenerate|triggerGeneration/);
 });
 
 test('pre gallery beta event model targets refs first and hydrates DOM after render', () => {
@@ -547,7 +649,7 @@ test('pre gallery displayed images prefer the exact plugin-bound iframe media ta
     /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/,
   );
   assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
-  assert.match(source, /const target = ref\.src \? preImageTarget \?\? imageTarget : buttonTarget/);
+  assert.match(source, /const target = ref\.src \? \(?preImageTarget \?\? imageTarget\)? : buttonTarget/);
   assert.match(source, /targetKind: 'iframe-ready-image'/);
   assert.doesNotMatch(source, /if \(element\.matches\('img,video'\)\) score \+= 4;/);
   assert.doesNotMatch(source, /mode === 'click' && hostTarget\?\.matches\('button\.image-tag-button/);
@@ -596,7 +698,7 @@ test('pre gallery only dispatches to an exact native target and keeps host fallb
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
   assert.match(source, /export function resolvePreGalleryHostInteraction\(ref: PreGalleryImageRef\)/);
-  assert.match(source, /const target = ref\.src \? preImageTarget \?\? imageTarget : buttonTarget;/);
+  assert.match(source, /const target = ref\.src \? \(?preImageTarget \?\? imageTarget\)? : buttonTarget;/);
   assert.match(source, /const hasExactIdentity = Boolean\(/);
   assert.match(source, /if \(!hasExactIdentity\) return 0;/);
   assert.doesNotMatch(source, /const target = hostTarget \?\? mesText;/);
@@ -607,7 +709,7 @@ test('pre gallery only dispatches to an exact native target and keeps host fallb
 test('pre gallery maps regenerate to the current plugin delegated dblclick protocol', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
-  assert.match(source, /function dispatchPluginReadyImageDoubleClick\(target: HTMLElement\): boolean/);
+  assert.match(source, /function dispatchPluginReadyImageClickSequence\(target: HTMLElement\): boolean/);
   assert.match(
     source,
     /interaction\.targetKind === 'iframe-ready-image' \|\| interaction\.targetKind === 'ready-image'/,
@@ -616,32 +718,49 @@ test('pre gallery maps regenerate to the current plugin delegated dblclick proto
   assert.match(source, /method: iframeNative \? 'iframe-native-longpress' : 'host-longpress'/);
   assert.match(
     source,
-    /method: interaction\.targetKind === 'iframe-ready-image' \? 'iframe-native-double-click' : 'host-native-double-click'/,
+    /method:\s*interaction\.targetKind === 'iframe-ready-image'\s*\?\s*'iframe-native-click-sequence'\s*:\s*'host-native-click-sequence'/,
   );
-  assert.match(source, /new view\.MouseEvent\('dblclick'/);
-  assert.match(source, /detail: 2/);
-  assert.match(source, /已按插件当前委托式 dblclick 派发图片重生/);
+  assert.match(source, /target\.dispatchEvent\(firstClick\)/);
+  assert.match(source, /target\.dispatchEvent\(secondClick\)/);
+  assert.match(source, /PRE_GALLERY_NATIVE_LONG_PRESS_MS = 1200/);
+  assert.doesNotMatch(source, /new view\.MouseEvent\('dblclick'/);
+  assert.match(source, /已按插件当前 click-click 委托协议派发图片重生/);
 });
 
-test('pre gallery separates single and double clicks on both desktop and mobile', () => {
+test('pre gallery uses pointer-up for mobile taps and the native plugin hold duration', () => {
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
 
   assert.match(panelSource, /@dblclick\.prevent="handleCardDoubleClick\(entry, \$event\)"/);
+  assert.match(panelSource, /@pointerup="handleCardPointerUp\(entry, \$event\)"/);
+  assert.doesNotMatch(panelSource, /@pointerup="cancelLongPress"/);
+  assert.match(panelSource, /const LONG_PRESS_MS = PRE_GALLERY_NATIVE_LONG_PRESS_MS;/);
+  assert.match(panelSource, /function handleCardPointerUp\(entry: PreGalleryImageRef, event: PointerEvent\)/);
+  assert.match(panelSource, /function recordMobilePointerTap\(entry: PreGalleryImageRef\)/);
+  assert.match(panelSource, /event\.pointerType === 'touch'/);
+  assert.match(
+    panelSource,
+    /function recordMobilePointerTap\([\s\S]*?clearPendingClick\(\);[\s\S]*?resetMobileTapState\(\);/,
+  );
+  assert.match(
+    panelSource,
+    /function startLongPress\([\s\S]*?if \(event\.pointerType !== 'touch'\) resetMobileTapState\(\);/,
+  );
+  assert.match(panelSource, /event\.preventDefault\(\)/);
+  assert.match(panelSource, /touch-action: manipulation;/);
   assert.match(panelSource, /const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;/);
   assert.match(panelSource, /const MOBILE_DOUBLE_TAP_COUNT = 2;/);
   assert.match(panelSource, /elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS/);
   assert.doesNotMatch(panelSource, /MOBILE_TRIPLE_TAP_WINDOW_MS/);
   assert.match(panelSource, /function schedulePendingClick\(/);
   assert.match(panelSource, /function handleCardDoubleClick\(/);
-  assert.match(panelSource, /function recordMobileTap\(/);
   assert.match(
     panelSource,
     /if \(count < MOBILE_DOUBLE_TAP_COUNT\) \{[\s\S]*schedulePendingClick\(entry, MOBILE_DOUBLE_TAP_WINDOW_MS\)/,
   );
   assert.match(panelSource, /画廊手势识别/);
-  assert.match(panelSource, /mobile tap #\$\{count\}\/\$\{MOBILE_DOUBLE_TAP_COUNT\}/);
+  assert.match(panelSource, /mobile pointer tap #\$\{count\}\/\$\{MOBILE_DOUBLE_TAP_COUNT\}/);
   assert.match(panelSource, /desktop click -> waiting native dblclick/);
-  assert.match(panelSource, /mobile tap #\$\{count\} -> dblclick/);
+  assert.match(panelSource, /mobile pointer tap #\$\{count\} -> click sequence/);
   assert.match(panelSource, /dispatchGesture\(entry, 'dblclick'\)/);
 });
 
@@ -651,4 +770,19 @@ test('pre gallery performs one bounded active rescan when an image event carries
   assert.match(panelSource, /scheduleScan\(`\$\{eventName\}:idless`, LAZY_RESCAN_DELAY_MS\)/);
   assert.match(panelSource, /scheduleRenderRescan\(`\$\{eventName\}:idless`\)/);
   assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED|CHAT_CHANGED/);
+});
+
+test('pre gallery beta audit records evidence boundaries and native delegation semantics', () => {
+  const audit = readSource('docs/same-layer-pre画廊beta全量审计说明.md');
+  const modalSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryBetaModal.vue');
+
+  assert.match(audit, /对自身状态只读/);
+  assert.match(audit, /可以委托宿主原生节点/);
+  assert.match(audit, /#1\/2; same=false/);
+  assert.match(audit, /无条件调用 `resetMobileTapState\(\)`/);
+  assert.match(audit, /1200ms/);
+  assert.match(audit, /旧版[^\n]*500ms/);
+  assert.match(audit, /派发到.*目标/);
+  assert.match(audit, /尚需设备现场复验/);
+  assert.doesNotMatch(modalSource, /eventEmit\(['"]generate-image-request/);
 });

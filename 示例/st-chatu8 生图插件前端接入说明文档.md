@@ -1,5 +1,16 @@
 前端接入
 
+> **v2.7.7 核对补充（2026-07-15）**
+>
+> 本文的事件名仍适用于当前插件，但示例只覆盖“直接发起一次生图请求”的最小协议，不等于插件正文占位符和图片交互的完整实现。当前 bundle 的组件、DOM 和存储依据见 [`docs/插件混淆还原/st-chatu8-v2.7.7-当前源码核对.md`](../docs/插件混淆还原/st-chatu8-v2.7.7-当前源码核对.md)。
+> same-layer-pre 画廊 Beta 的完整审计、手工证据和移动端修正见 [`docs/same-layer-pre画廊beta全量审计说明.md`](../docs/same-layer-pre画廊beta全量审计说明.md)。本示例不是画廊的第二套持久化或交互实现。
+>
+> 当前插件的原生正文入口由 `findAndReplaceInElement` / `createButtonAtPosition` 创建：`button.image-tag-button.st-chatu8-image-button[data-link][data-image-tag][data-request-id]` 与 `span.st-chatu8-image-span[data-request-id]`。当前 bundle 没有 `data-stable-id` 或 `image-tag-placeholder` 这两个旧属性。
+>
+> 当前 `generate-image-response` 除 `id`、`success`、`imageData`、`error`、`prompt`、`change` 外，还可能包含 `isVideo`、`format`、`originalUrl`。`imageData` 是渲染入口，但不应固定描述为永远的纯 base64；插件还处理 data URL、视频、原始 URL 和缓存结果。
+>
+> `requestData.id` 只负责本次请求的响应关联。插件自己的 `triggerGeneration` 会使用按钮的 `data-request-id`，并同时读取 `data-link`、宽高、`change`、修图和视频字段。若要接入原生图片互动，应代理到宿主按钮/图片节点，不要把事件只绑定到复制出来的 `<img>`。
+
 
 主要简单通过 前端助手的事件来沟通
 eventEmit 发送事件 
@@ -19,7 +30,7 @@ const imageResponseHandler = (responseData) => {
           if (responseData.id !== requestId) return;//id不一样 不对
 eventRemoveListener(EventType.GENERATE_IMAGE_RESPONSE, imageResponseHandler);//取消监听
 const { success, imageData, error, prompt, change } = responseData;
-//imageData就是base64的图片了
+// imageData 是当前渲染入口，常见为 data URL/base64；也可能伴随视频、原始 URL 或缓存信息。
 
 }
 

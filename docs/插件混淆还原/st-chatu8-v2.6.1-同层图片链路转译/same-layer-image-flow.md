@@ -1,5 +1,7 @@
 # 当前 st-chatu8 v2.6.8 同层图片事件流
 
+> **历史版本说明：** 本文记录 v2.6.8 的事件流。当前 v2.7.7 的 DOM/身份字段以 [`../st-chatu8-v2.7.7-当前源码核对.md`](../st-chatu8-v2.7.7-当前源码核对.md) 为准：使用 `.st-chatu8-image-span`、`data-request-id`、`data-link`、`data-image-tag`，不再使用 `span.image-tag-placeholder` 或 `data-stable-id`。本轮 Beta 的设备证据与移动端修正以 [`../../same-layer-pre画廊beta全量审计说明.md`](../../same-layer-pre画廊beta全量审计说明.md) 为准。
+
 ## 1. 现场日志归纳
 
 根据 2.6.8 bundle 复核，触发楼层生图后仍可观察到以下顺序：
@@ -57,7 +59,7 @@ generate-image-request / generate-image-response
 .st-chatu8-image-button
 button.image-tag-button
 .st-chatu8-image-span
-span.image-tag-placeholder
+  span.st-chatu8-image-span
 .ai-image-container
 ```
 
@@ -66,9 +68,9 @@ span.image-tag-placeholder
 ```text
 data-image-tag     图片提示词 / tag
 data-link          另一种 prompt/tag 字段
-data-prompt-token  image###...### token
 data-request-id    生图请求 id
-data-image-id      插件图片 id
+data-link          tag/link 身份
+data-image-tag     tag 身份
 ```
 
 ## 4. 与旧链路的差异

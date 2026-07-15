@@ -46,7 +46,7 @@
           @click="handleCardClick(entry, $event)"
           @dblclick.prevent="handleCardDoubleClick(entry, $event)"
           @pointerdown="startLongPress(entry, $event)"
-          @pointerup="cancelLongPress"
+          @pointerup="handleCardPointerUp(entry, $event)"
           @pointercancel="cancelLongPress"
           @pointerleave="cancelLongPress"
         >
@@ -83,6 +83,7 @@ import {
   beginPreGalleryImageRefLongPress,
   dispatchPreGalleryImageRefGesture,
   finishPreGalleryImageRefLongPress,
+  PRE_GALLERY_NATIVE_LONG_PRESS_MS,
   preGalleryRefToReaderGalleryEntry,
   scanLatestPreGalleryImageRefs,
   type PreGalleryGestureMode,
@@ -114,7 +115,7 @@ const EMPTY_SOURCE_COUNTS: Record<PreGalleryImageSource, number> = {
 };
 const LAZY_RESCAN_DELAY_MS = 220;
 const RENDER_RESCAN_DELAY_MS = 720;
-const LONG_PRESS_MS = 540;
+const LONG_PRESS_MS = PRE_GALLERY_NATIVE_LONG_PRESS_MS;
 const LONG_PRESS_CLICK_SUPPRESS_MS = 900;
 const DESKTOP_DOUBLE_CLICK_WINDOW_MS = 260;
 const MOBILE_DOUBLE_TAP_WINDOW_MS = 560;
@@ -142,6 +143,7 @@ const scanTimer = ref(0);
 const renderRescanTimer = ref(0);
 const longPressTimer = ref(0);
 const longPressSession = ref<PreGalleryLongPressSession | null>(null);
+const longPressCompleted = ref(false);
 const pendingClickTimer = ref(0);
 const pendingClickKey = ref('');
 const mobileTapState = ref({ key: '', count: 0, updatedAt: 0 });
@@ -375,7 +377,7 @@ function schedulePendingClick(entry: PreGalleryImageRef, delayMs: number) {
   }, delayMs);
 }
 
-function recordMobileTap(entry: PreGalleryImageRef) {
+function recordMobilePointerTap(entry: PreGalleryImageRef) {
   const now = Date.now();
   const elapsedMs = now - mobileTapState.value.updatedAt;
   const isSameSequence = mobileTapState.value.key === entry.id && elapsedMs <= MOBILE_DOUBLE_TAP_WINDOW_MS;
@@ -384,7 +386,7 @@ function recordMobileTap(entry: PreGalleryImageRef) {
   pushGalleryLog(
     'info',
     '画廊手势识别',
-    `mobile tap #${count}/${MOBILE_DOUBLE_TAP_COUNT}; same=${isSameSequence}; elapsed=${elapsedMs}ms`,
+    `mobile pointer tap #${count}/${MOBILE_DOUBLE_TAP_COUNT}; same=${isSameSequence}; elapsed=${elapsedMs}ms`,
   );
 
   if (count < MOBILE_DOUBLE_TAP_COUNT) {
@@ -394,7 +396,7 @@ function recordMobileTap(entry: PreGalleryImageRef) {
 
   clearPendingClick();
   resetMobileTapState();
-  pushGalleryLog('info', '画廊手势识别', `mobile tap #${count} -> dblclick`);
+  pushGalleryLog('info', '画廊手势识别', `mobile pointer tap #${count} -> click sequence`);
   dispatchGesture(entry, 'dblclick');
 }
 
@@ -407,7 +409,13 @@ function handleCardClick(entry: PreGalleryImageRef, event: MouseEvent) {
     return;
   }
   if (isLikelyMobileGestureEnvironment()) {
-    recordMobileTap(entry);
+    // 触摸设备由 pointerup 路径识别；pointerdown 已阻止兼容 click，避免同一次触摸重复计数。
+    if ((event as PointerEvent).pointerType === 'touch') {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    recordMobilePointerTap(entry);
     return;
   }
   pushGalleryLog('info', '画廊手势识别', 'desktop click -> waiting native dblclick');
@@ -424,12 +432,15 @@ function handleCardDoubleClick(entry: PreGalleryImageRef, event: MouseEvent) {
 
 function startLongPress(entry: PreGalleryImageRef, event: PointerEvent) {
   if (event.button !== 0 || event.isPrimary === false) return;
+  if (event.pointerType === 'touch') event.preventDefault();
   cancelLongPress();
   clearPendingClick();
-  resetMobileTapState();
+  if (event.pointerType !== 'touch') resetMobileTapState();
+  longPressCompleted.value = false;
   longPressSession.value = beginPreGalleryImageRefLongPress(entry);
   longPressTimer.value = window.setTimeout(() => {
     longPressTimer.value = 0;
+    longPressCompleted.value = true;
     suppressClickAfterLongPress.value = { key: entry.id, until: Date.now() + LONG_PRESS_CLICK_SUPPRESS_MS };
     const session = longPressSession.value;
     if (!session) {
@@ -445,6 +456,15 @@ function startLongPress(entry: PreGalleryImageRef, event: PointerEvent) {
   }, LONG_PRESS_MS);
 }
 
+function handleCardPointerUp(entry: PreGalleryImageRef, event: PointerEvent) {
+  const wasLongPress = longPressCompleted.value;
+  cancelLongPress();
+  if (event.pointerType !== 'touch') return;
+  event.preventDefault();
+  if (wasLongPress) return;
+  recordMobilePointerTap(entry);
+}
+
 function cancelLongPress() {
   if (longPressTimer.value) {
     window.clearTimeout(longPressTimer.value);
@@ -453,6 +473,7 @@ function cancelLongPress() {
   const session = longPressSession.value;
   longPressSession.value = null;
   if (session) finishPreGalleryImageRefLongPress(session);
+  longPressCompleted.value = false;
 }
 
 watch(
@@ -620,6 +641,7 @@ onBeforeUnmount(() => {
   display: grid;
   width: 100%;
   aspect-ratio: 1;
+  touch-action: manipulation;
   place-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--demo-border-accent-soft) 62%, transparent);

@@ -1,5 +1,9 @@
 # st-chatu8 v2.6.8 同层图片链路转译
 
+> **版本边界：** 本目录是 v2.6.8 历史快照，不是当前 v2.7.7 的精确 DOM 规范。当前 bundle 已将 `span.image-tag-placeholder` / `data-stable-id` 替换为 `.st-chatu8-image-span` / `data-request-id`；图片本体也不能再概括为 Stego-only。请以 [`../st-chatu8-v2.7.7-当前源码核对.md`](../st-chatu8-v2.7.7-当前源码核对.md) 为当前依据。
+>
+> 本轮 Beta 的手势与画廊审计见 [`../../same-layer-pre画廊beta全量审计说明.md`](../../same-layer-pre画廊beta全量审计说明.md)；本目录中的历史事件流不能单独证明当前移动端手势或长按数值。
+
 > 来源：`F:\ST\SillyTavern\public\scripts\extensions\third-party\st-chatu8`<br>
 > 插件提交：`60cb146 更新 2.6.8`<br>
 > 插件版本：`manifest.json` 标记 `2.6.8`<br>

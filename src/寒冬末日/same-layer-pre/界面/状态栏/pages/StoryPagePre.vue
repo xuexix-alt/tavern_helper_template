@@ -10,6 +10,17 @@
       <div class="ui-topbar-actions">
         <span class="ui-online">PRE</span>
 
+        <button
+          type="button"
+          class="ui-icon-btn ui-beta-trigger"
+          :class="{ active: betaModalOpen }"
+          aria-label="打开 Beta 画廊诊断"
+          :aria-expanded="betaModalOpen"
+          @click.stop="toggleBetaModal"
+        >
+          Beta
+        </button>
+
         <div class="ui-page-menu">
           <button
             type="button"
@@ -113,6 +124,8 @@
         @submit="handleOpeningSubmit"
       />
     </HudModal>
+
+    <PreGalleryBetaModal :open="betaModalOpen" @close="closeBetaModal" @gallery-log="appendGalleryLog" />
 
     <div class="ui-host-body">
       <transition name="sidebar-mask-fade">
@@ -426,6 +439,7 @@ import {
 } from '../../../../界面同层版/界面/状态栏/rolePortraits';
 import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
 import PreGalleryPanel from '../components/PreGalleryPanel.vue';
+import PreGalleryBetaModal from '../components/PreGalleryBetaModal.vue';
 import PreTranscriptList from '../components/PreTranscriptList.vue';
 import type { DemoTheme, PreGalleryLogItem } from '../types';
 import { useSameLayerPre } from '../useSameLayerPre';
@@ -460,6 +474,7 @@ const {
 const composerRef = ref<ComposerExpose | null>(null);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
+const betaModalOpen = ref(false);
 const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
 const preGalleryEntries = ref<ReaderGalleryEntry[]>([]);
 const galleryRoleAssignEntry = ref<ReaderGalleryEntry | null>(null);
@@ -751,6 +766,17 @@ function closeRoleDrawer() {
 
 function closeGalleryDrawer() {
   galleryDrawerOpen.value = false;
+}
+
+function closeBetaModal() {
+  betaModalOpen.value = false;
+}
+
+function toggleBetaModal() {
+  betaModalOpen.value = !betaModalOpen.value;
+  closeTopbarMenus();
+  closeUtilityDrawer();
+  closeSideDrawers();
 }
 
 function toggleRoleDrawer() {

@@ -1,10 +1,12 @@
 # st-chatu8 插件开发参考手册
 
 > 本文档由逆向还原结果整理，供二次开发者理解插件架构、扩展功能或做兼容适配使用。
-> 还原文件位于 `iframe/` 目录（相对于插件根目录）。
+> 本文早期章节来自旧版可读化还原；当前 v2.7.7 bundle 的函数、DOM 和数据证据见 [`st-chatu8-v2.7.7-当前源码核对.md`](st-chatu8-v2.7.7-当前源码核对.md)。
+> 本轮 same-layer-pre Beta 的完整测试证据、移动端误判和 1200ms 桥接契约边界见 [`../same-layer-pre画廊beta全量审计说明.md`](../same-layer-pre画廊beta全量审计说明.md)。
 >
 > **修订记录**
-> v1.1（2026-03-20）：根据无 UI 原生生图日志实测，修订图片存储机制描述（Stego PNG 而非 IndexedDB）、`saveImageGroup` 路径判定条件、`extra.images` 写入时机、`chatMetadata` fallback 触发条件，并新增第 9 节"与外部 UI 适配的注意事项"。
+> v1.1（2026-03-20）：旧版实测修订。
+> v1.2（2026-07-15）：按 v2.7.7 bundle 复核，纠正图片本体存储、占位符类名、请求身份属性及图片手势描述。旧版 `data-stable-id`、`image-tag-placeholder` 和 Stego-only 结论不再适用于当前 bundle。
 
 ---
 
@@ -42,7 +44,7 @@ SillyTavern 宿主
 │
 └── utils/
     ├── config.js      ← extensionName, EventType, defaultSettings
-    ├── database.js    ← 图片持久化层：Stego PNG 隐写存储（getItemImg, setItemImg, ...）
+    ├── database.js    ← 图片缓存/数据库/服务器媒体读取（getItemImg, getItemBlob, ...）
     ├── sd.js          ← SD WebUI API
     ├── novelai.js     ← NovelAI API
     ├── banana.js      ← Banana API
@@ -97,7 +99,7 @@ handlePromptRequest(element, gestureId)       ← promptReq.js
            │
            ▼
       generation.js :: createAndShowImage()
-      渲染图片到 DOM，写入持久化存储 (setItemImg → Stego PNG)
+      渲染图片/视频到宿主 DOM；媒体由插件缓存/数据库/服务器层读取
 ```
 
 ---
@@ -171,7 +173,7 @@ for (const el of document.getElementsByClassName('mes_text')) {
 
 ---
 
-### 4.3 `placeholder.js` — 按钮注入
+### 4.3 `placeholder.js` / 当前 bundle 的图片标签注入 — 按钮注入
 
 **`findAndReplaceInElement(element, displayMode?)`**
 主入口。扫描 element 内的文本节点，找到所有 `<tag>` 格式的图片标签位置，逐一调用 `createButtonAtPosition`。
@@ -179,10 +181,15 @@ for (const el of document.getElementsByClassName('mes_text')) {
 **`createButtonAtPosition(insertPosition, tagContent, nodeList, doc, element, settings, autoTrigger, displayMode)`**
 在精确字符偏移处注入按钮：
 ```html
-<span class="st-chatu8-image-container">
-    <button class="生成图片">生成图片</button>
-</span>
+<button class="image-tag-button st-chatu8-image-button"
+        data-link="<tag>"
+        data-image-tag="<tag>"
+        data-request-id="chatu8-id-...">生成图片</button>
+<span class="st-chatu8-image-span"
+      data-request-id="chatu8-id-..."></span>
 ```
+
+当前 bundle 的去重属性是 `data-tag-inserted-chatu8-id-*`。`data-stable-id` 和 `image-tag-placeholder` 属于旧还原版本，不应再写入新适配器。
 
 **`getSavedImageMatches(rawText, element, processedText, searchOffset?)`**
 返回已匹配的图片标签位置数组，用于恢复已有图片的按钮状态。
@@ -194,11 +201,11 @@ for (const el of document.getElementsByClassName('mes_text')) {
 **`triggerGeneration(buttonEl)`**
 ```
 1. 防重入检查 (isGenerating)
-2. 读取 button.dataset: { uuid, link, tag, index }
-3. 检查持久化缓存 (getItemImg) → 有缓存则直接渲染（从 Stego PNG 读取）
+2. 读取 button.dataset.link 与 button.dataset.requestId
+3. 检查 getItemImg / 插件媒体缓存 → 有缓存则直接渲染
 4. 无缓存 → emit EventType.GENERATE_IMAGE_REQUEST
-5. 监听 EventType.GENERATE_IMAGE_RESPONSE → createAndShowImage
-6. 超时 60s → 自动清理
+5. 监听 EventType.GENERATE_IMAGE_RESPONSE，按 response.id 过滤
+6. 将 imageData / 视频 / originalUrl 交给 createAndShowImage
 ```
 
 **`createAndShowImage(spanEl, dataUrl, displayMode, buttonEl, changeData, isVideo?, originalUrl?)`**
@@ -309,7 +316,7 @@ overlay (全屏)
     └── thumbnailRow (缩略图横排)
 ```
 
-**数据来源：** `dbs.getMergedAndSortedImages(md5(uuid))`
+**数据来源：** `dbs.getMergedAndSortedImages(md5(data-link))`，再按媒体条目读取 server/db 来源
 **Blob 加载：** 按 `source` 字段分流（`server` → fetch，`db` → `dbs.storeReadOnly`）
 
 **`downloadBlob(blob, filename)`**
@@ -434,14 +441,14 @@ messages = await myCustomProcessor(messages, { uuid, context, userDemand });
 
 ### 8.5 访问已生成图片
 
-插件的图片持久化**不使用浏览器 IndexedDB**，而是通过隐写术（Steganography）将图片 base64 编码藏在一张服务端 PNG 图里：
+当前 v2.7.7 bundle 不能再概括为“只使用 Stego PNG”。源码中存在 `getItemImg`、`getItemBlob`、`getMergedAndSortedImages`、`dbs` 以及 server/db 媒体分支，说明图片本体由插件的缓存/数据库/服务器层管理。标签位置和锁定元数据则由 `extra.images` / `image_groups` 管理。
 
 ```
 生图完成
-  → database.js :: setItemImg(uuid, index, imageData)
-  → 上传到 /user/images/chatu8List/图片缓存列表.png（Stego PNG）
-  → 引用写入 chat[mesId].mes（insertOriginalText 模式）
-       或写入 chatMetadata['st-chatu8']（非 mes_text 触发时的 fallback）
+  → 插件媒体缓存/数据库/服务器层保存或读取 imageData
+  → `saveImageGroup` 保存标签、regex、位置和锁定元数据
+  → 原生路径写入 `chat[mesId].extra.images[swipeId]`
+       非标准元素回退到 `chatMetadata['st-chatu8'].data.image_groups`
 ```
 
 读取已生成图片：
@@ -449,16 +456,16 @@ messages = await myCustomProcessor(messages, { uuid, context, userDemand });
 ```javascript
 import { getItemImg, getItemBlob } from './database.js';
 
-// 获取某条消息的第 N 张图片的 data URL（从 Stego PNG 解码）
-const [dataUrl, changeData, negPrompt, isVideo, origUrl] = await getItemImg(uuid, index);
+// 依据插件的 tag/link 读取当前媒体
+const [dataUrl, changeData, negPrompt, isVideo, origUrl] = await getItemImg(tagOrLink);
 
-// 获取 Blob（用于下载或处理）
-const blob = await getItemBlob(uuid, index);
+// 获取当前媒体 Blob（用于下载或处理）
+const blob = await getItemBlob(tagOrLink, index);
 ```
 
-`uuid` 来自按钮元素的 `dataset.uuid`，即消息标识（通常对应 `mesId`）。
+当前图片显示路径主要依据按钮的 `data-link` / tag 查找媒体；`messageId`、`swipeId` 用于查找对应的 `extra.images` 元数据。不要把旧版 `dataset.uuid` 规则当作当前唯一身份。
 
-> **外部 UI 注意：** `chatMetadata['st-chatu8']` 只是 fallback 路径（非 `mes_text` 触发时才会写入）。原生路径的图片引用在 `chat[mesId].mes` 的 image tag 标记中，图片实体在 Stego PNG 里，不在浏览器 IndexedDB。若外部 UI 有自己的 IndexedDB 方案，两套存储完全独立，需单独协调写入时机（详见第 9 节）。
+> **外部 UI 注意：** `chatMetadata['st-chatu8'].data.image_groups` 是非标准元素场景的后备元数据；当前原生路径优先读取 `chat[mesId].extra.images[swipeId]`。媒体本体应通过插件的 `getItemImg` / `getItemBlob` / `dbs` 路径解析，不要依据旧版 Stego-only 描述另造第二套持久化真相。
 
 ### 8.6 锁机制使用
 
@@ -490,106 +497,105 @@ await waitForLock();
 
 插件在保存图片引用时有两条路径，触发条件不同：
 
-| 条件                                                                                                 | 路径                      | 写入位置                                          |
-| ---------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------- |
-| 触发元素是宿主原生 `mes_text`（`ownerDocument = 主文档`）                                            | `insertOriginalText` 模式 | `chat[mesId].mes`（正文）+ Stego PNG（图片实体）  |
-| 触发元素是 iframe 内元素（`assistant-body` / `html-body` 等），且关联的 `chat[mesId].mes` 长度 < 100 | fallback 模式             | `chatMetadata['st-chatu8']`（仅引用，无图片实体） |
+| 条件 | 当前主要写入位置 |
+| --- | --- |
+| 找到宿主 `.mes_text` 与有效 `mesid` | `chat[mesId].extra.images[swipeId]`，并保留正文中的 image tag |
+| 无法按宿主楼层保存或属于非标准元素 | `chatMetadata['st-chatu8'].data.image_groups` |
 
-**判定代码（`imageInserter.js :: saveImageGroup`）：**
+**当前判定代码（逻辑还原自 `saveImageGroup`）：**
 ```javascript
-// 伪代码还原
-if (insertOriginalText && mesId有效 && chat[mesId].mes.length >= 100) {
-    // 写 chat[mesId].mes
+if (mesTextElement && mesId有效 && chat[mesId]) {
+    chat[mesId].extra.images[swipeId] = imageRecords;
+    saveChatConditional();
 } else {
-    // 写 chatMetadata['st-chatu8']  ← fallback
+    saveToMetadata(imageRecords, logicalText);
 }
 ```
 
-实测中 iframe 内元素触发时，`chatDataUtils` 向上查找宿主 `mes_text` 拿到的 mesId 有时对应一条极短的系统消息（长度 9），直接触发 fallback。
-
 ---
 
-### 9.2 图片实体存储：Stego PNG，不是 IndexedDB
+### 9.2 图片实体存储：插件缓存/数据库/服务器层
 
-插件的 `database.js` **不使用浏览器 IndexedDB**。图片实体通过隐写术编码后上传到服务端：
+当前 bundle 中的媒体读取代码同时出现 db/server 分支：
 
 ```
-setItemImg(uuid, index, base64)
-  → 编码追加到 Stego PNG
-  → PUT /user/images/chatu8List/图片缓存列表.png
+getItemImg(tagOrLink)
+  → getMergedAndSortedImages(MD5(tagOrLink))
+  → server path 或 db uuid
+  → 返回图片/视频媒体供 createAndShowImage 使用
 ```
 
-外部 UI 若实现了自己的 `IndexedDB` 存储方案（如 `chatu8-ui-image-store`），和插件存储**完全独立**，需要自行在 `generate-image-response` 事件里写入。
+外部 UI 不应根据旧版 Stego-only 结论创建并维护另一套图片本体。画廊只保存轻引用，媒体显示时向宿主原生节点或插件缓存解析。
 
 ---
 
 ### 9.3 `generate-image-request / response` 事件的时序陷阱
 
-插件的生图流程中，`generate-image-response` 经常**早于** `generate-image-request` 到达监听方：
+当前 `triggerGeneration` 会先注册 `generate-image-response` 监听，再发出 `generate-image-request`。外部 UI 仍需处理事件与宿主 DOM 渲染不同步，但不能把旧版“response 早于 request”的描述当作当前源码契约。
 
 ```
 generation.js emit GENERATE_IMAGE_REQUEST
-     ↓ (几乎同时)
-NovelAI / SD 后端返回图片
      ↓
-emit GENERATE_IMAGE_RESPONSE  ← 可能先到达外部监听方
-     ↓ (之后才)
-外部 UI 的 generate-image-request 监听注册完成
+后端返回图片
+     ↓
+emit GENERATE_IMAGE_RESPONSE
+     ↓
+查找宿主 `data-request-id` 对应的 span/button
 ```
 
-原因：插件在按钮点击后立即 emit request，但外部 UI（如 `useStreamingDemo.ts`）的 `imagePendingTaskManager` 需要先通过 `beginPendingImageTask` 注册 task，才能在收到 request 时绑定 messageId。如果 response 先到，必须走 `bufferedResponse` 重放路径，或 DOM fallback 兜底（依赖元素上存在 `data-message-id` 属性）。
+外部 UI 应先登记 pending task，并以 `response.id`、宿主 `data-request-id`、`data-link` 和楼层身份做兜底关联。不要依赖旧版 `data-stable-id`。
 
 **实测成功路径（DOM fallback）：**
 ```
-response-unmatched（response 先到，无匹配 task）
-  → 等待 request 事件到达
-  → request-fallback-dom（从 DOM 找 [data-message-id]）
-  → request-received（targetMessageId 绑定成功）
-  → request-replay-buffered-response
-  → persist-begin → idb-store-success → persist-success
+request-received
+  → 记录 id / prompt / messageId
+  → response-received
+  → 查找宿主 [data-request-id]
+  → 读取插件媒体并刷新 gallery 轻引用
+  → CHARACTER_MESSAGE_RENDERED / DOM mutation 后再次 reconcile
 ```
 
-**前提条件：** iframe 内的 `assistant-body` 元素必须带有正确的 `data-message-id` 属性，且值与宿主 `chat` 数组里的实际 mesId 一致。
+iframe 内元素仍应保留可回溯的楼层身份，但当前插件图片占位符的直接关联字段是 `data-request-id`、`data-link` 和宿主 `mesid`。
 
 ---
 
 ### 9.4 `extra.images` 的写入竞争
 
-`insertImagesIntoElement` 在 `insertOriginalText` 模式下会主动清空旧的 `extra.images`：
+当前 `saveImageGroup` 会保留已锁定记录，再用新的匹配结果覆盖当前 `extra.images[swipeId]`：
 
 ```javascript
-// imageInserter.js 内
-console.log('[imageInserter] insertOriginalText: clearing old extra.images[0] to avoid conflict');
+const locked = oldImages.filter(item => item.locked === true);
+extra.images[swipeId] = [...locked, ...newImages];
 ```
 
-外部 UI 若在 `persist-success` 之后将图片引用写入 `extra.images`，下次用户再次触发图片生成时，这些引用会被插件清空覆盖。
+外部 UI 若把自己的 gallery 记录写入 `extra.images`，下次 `saveImageGroup` 可能覆盖这些非插件记录。
 
-**规避方式：** 不要以 `extra.images` 作为外部 UI 图片引用的唯一来源；自建引用层（如写入 `data.stream_demo.generated_images`）并在每次 `saveImageGroup` 事件后重新 merge。
+**规避方式：** 外部 UI 自己的引用放在自己的状态层；`extra.images` 只读为插件原生元数据，不要把 gallery 记录写回去。
 
 ---
 
-### 9.5 `chatMetadata['st-chatu8']` 不是主存储层
+### 9.5 `chatMetadata['st-chatu8']` 是后备元数据层
 
 原始文档和部分分析中提到 `chatMetadata['st-chatu8']` 作为插件缓存来源，但实测结论是：
 
-- **原生路径**（宿主 `mes_text` 触发）：**不写** `chatMetadata`，写 `chat[mesId].mes`
-- **fallback 路径**（iframe 元素触发 + mes 过短）：才写 `chatMetadata['st-chatu8']`
+- **原生路径**（找到宿主 `mes_text`）：优先写 `chat[mesId].extra.images[swipeId]`
+- **fallback 路径**（无法使用宿主楼层）：写 `chatMetadata['st-chatu8'].data.image_groups`
 
 因此外部 UI 若用 `readChatu8CacheEntries(messageId)` 读 `chatMetadata['st-chatu8']` 来获取已生成图片，在原生触发场景下永远读不到数据。正确的消费方式是：
 
-1. 优先读 `chat[mesId].extra.images`（原生路径的结果）
+1. 优先读 `chat[mesId].extra.images[swipeId]`
 2. 次选解析 `chat[mesId].mes` 中的 image tag 标记
-3. 最后兜底 `chatMetadata['st-chatu8']`（仅 fallback 场景有数据）
+3. 最后兜底 `chatMetadata['st-chatu8'].data.image_groups`
 
 ---
 
-### 9.6 `placeholder.js` 的按钮恢复机制
+### 9.6 当前按钮恢复机制
 
-每 4s 轮询时，`placeholder.js` 会检查已处理元素是否还有按钮。若元素被标记处理过（`data-chatu8-processed`）但找不到按钮，会尝试从 `chat[mesId].extra.images[0]` 里恢复 tag 列表并重新注入按钮：
+当前 `findAndReplaceInElement` / `getSavedImageMatches` 会检查已处理元素、现有 `button.image-tag-button`、`data-link` / `data-image-tag` 和 `extra.images` / `image_groups`，缺少按钮时重新定位并注入：
 
 ```
-[iframe] Element marked processed but no buttons found, re-processing
-[iframe] Matched from chat[4].extra.images[0], tags: 4
+button.image-tag-button[data-link="..."]
+button.image-tag-button[data-image-tag="..."]
 ```
 
 这意味着 `extra.images` 除了作为图片引用存储，还是**按钮恢复的数据源**。外部 UI 不应随意清空或覆盖它，否则会导致刷新后按钮无法恢复。
@@ -605,6 +611,48 @@ console.log('[imageInserter] insertOriginalText: clearing old extra.images[0] to
 - `自动批量生图` 只触发部分按钮（实测 4 张图只触发了 2 张）
 
 **对外部 UI 的影响：** `beginPendingImageTask` / `markRecentImageIntent` 的调用时机应在 LLM 返回并确认有效图片数量之后，而不是在 LLM 请求发出时，否则预注册的 task 数量与实际触发的 request 数量不一致。
+
+---
+
+### 9.8 分阶段标志矩阵：regex、tag、requestId 和媒体节点
+
+当前 v2.7.7 bundle 的图片身份不是单层结构：
+
+| 阶段 | 标志 | 作用 | 是否证明图片已生成 |
+| --- | --- | --- | --- |
+| LLM 指令 | `<images>`、`<image>`、`regex`、`tag` | 描述插图位置和提示词 | 否 |
+| 正文标签 | `image###...###`、`<image>...</image>` | 保留图片意图或历史标签 | 否 |
+| DOM 占位 | `button.image-tag-button`、`.st-chatu8-image-span` | 建立插件交互节点 | 否 |
+| DOM 关联 | `data-link`、`data-image-tag`、`data-request-id` | 关联提示词、标签和响应 | 否 |
+| 请求中 | `data-loading="true"` | 防止重复触发 | 否 |
+| 响应后 | `generate-image-response.id` | 找到 span/button 并调用 `createAndShowImage` | 响应成功时是 |
+| 媒体节点 | `.st-chatu8-image-container` + `img/video` | 当前可见媒体 | 是 |
+| 持久化 | `extra.images[swipeId]`、`image_groups` | 保存标签、regex、位置和锁定状态 | 不一定 |
+
+`createButtonAtPosition` 当前把规范化 tag 传入 `generateStableId()`，并把结果写入 `data-request-id`。该稳定 ID 是 tag-hash，不包含 `mesid`、`messageId` 或 `swipeId`，所以外部适配器不能把 `requestId` 单独当作全局唯一图片身份。推荐结构：
+
+```ts
+type Chatu8ImageRef = {
+  messageId: number;
+  swipeId: number;
+  regex?: string;       // 正文匹配锚点
+  tag?: string;         // 图片标签
+  link?: string;        // 实际提示词
+  requestId?: string;   // DOM/response 关联
+  imageId?: string;     // 缓存兼容字段
+};
+```
+
+`regex` 不能被降级为 `promptToken`，`tag/link` 不能被 `src` 替代，`src/imageData` 只能作为当前显示证据。当前 bundle 没有 `data-stable-id` 和 `image-tag-placeholder`；相关选择器只允许作为旧版本兼容路径。
+
+对于只复制已生成图片的外部 UI，判定顺序应为：
+
+1. 按 `messageId + swipeId + requestId` 找到宿主 span/button。
+2. 在 span/container 下找到 `img/video`，找到后只复制显示。
+3. 没有媒体时，再用 `tag/link` 查询插件缓存。
+4. 只有正文 token 或 regex 时，只建立 pending 引用，不主动发出 `generate-image-request`。
+
+这里的“不主动发出”只表示外部画廊不实现第二套生图入口；如果用户操作被代理到插件原生按钮或媒体节点，插件仍可能按其自身协议执行生图。Beta 的动作日志只证明派发到达目标，不能单独证明插件业务回调已经完成。
 
 ---
 

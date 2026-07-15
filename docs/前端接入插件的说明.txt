@@ -1,4 +1,6 @@
 主要简单通过 前端助手的事件来沟通
+
+> 本轮 same-layer-pre 画廊 Beta 的完整审计、证据等级和移动端误判修正见 `docs/same-layer-pre画廊beta全量审计说明.md`。本文的通用事件示例不等于画廊可以自行持久化 `imageData`；画廊应优先读取正文/宿主插件已有结果并代理原生节点。
 eventEmit 发送事件
 eventOn  监听事件
 
@@ -353,8 +355,10 @@ eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (id, type) => hydrateImageDom(
 
 - 对 prompt-only 引用，单击优先交回插件原生 prompt button，让 `triggerGeneration(button)` 这类插件逻辑自己处理。
 - 对已经有 `src` 的图片，单击、双击、长按优先交回宿主原始图片节点或其最近的插件图片容器，而不是交给 prompt button。
+- 当前 v2.7.7 成品图的“双击”是同一媒体节点上的两次 `click`；第二次 click 才会在 `dbclike === 'true'` 时进入 `triggerGeneration(button)`。不能用单个原生 `dblclick` 代替，`dispatchEvent()` 返回 true 也不等于插件业务回调已执行。
+- 本轮 pre 桥接和 Beta 实测使用 1200ms 长按契约；只派发 620ms 左右的 `mousedown → mouseup` 会在桥接计时器到期前取消，因此不能触发编辑。当前混淆 bundle 文本不能直接证明这个数值，旧版可读化文件中的 500ms 仅作历史版本参考。
 - 长按触发后，要吞掉释放时浏览器合成出来的下一次 click，否则会出现“长按后又触发单击/重生”的串线。
-- 移动端长按/双击通常依赖 `touchstart/touchend`、`pointerdown/pointerup`、`mousedown/mouseup` 的时序、坐标和目标元素。若 iframe 捕获层 `stopPropagation/preventDefault`，或事件只发生在 clone 图片上，宿主插件 handler 就收不到。
+- 移动端长按/双击应优先依赖 `pointerdown/pointerup` 的触摸时序，再把已确认的第二次 `pointerup` 转成插件要求的 click-click 序列；不能假设手机合成的两次 `click` 或原生 `dblclick` 与 PC 鼠标一致。若 iframe 捕获层 `stopPropagation/preventDefault`，或事件只发生在 clone 图片上，宿主插件 handler 就收不到。
 
 ### 5. 常见坑位
 
@@ -362,3 +366,40 @@ eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (id, type) => hydrateImageDom(
 - 不要让 `Number(null)`、`Number('')` 落成楼层 `0`。缺少 message id 时应返回 `null`，再从最近的 `.mes[mesid]`、正文容器或轻引用补身份。
 - 不要用全局聊天扫描作为常态路径。正常刷新应以本楼层事件为入口，只有打开画廊或人工刷新时才做窗口内扫描。
 - 不要把 st-chatu8 的 `generate-image-response.imageData` 当作同层长期图片库。它适合当前展示或交给插件原生流程，长期真相仍应回到 `extra.images`、正文 tag、插件 cache 和宿主 DOM。
+
+### 6. 分阶段标志不能混为一个图片 ID
+
+当前 st-chatu8 v2.7.7 的生图链路至少有以下几层标志：
+
+```text
+LLM 指令：<images>/<image>、regex、tag
+正文标签：image###...###、<image>...</image>
+原生占位：button.image-tag-button、.st-chatu8-image-span
+DOM 关联：data-link、data-image-tag、data-request-id
+请求状态：data-loading="true"
+事件关联：generate-image-request / generate-image-response 的 id
+已生成媒体：.st-chatu8-image-container 下的 img/video
+持久化：chat[mesId].extra.images[swipeId] / image_groups
+缓存：getItemImg(tag)、getItemBlob、getMergedAndSortedImages
+```
+
+这些标志含义不同：`regex` 是正文定位锚点，`tag/link` 是逻辑图片身份或提示词，`requestId` 是 DOM/response 关联，`src` 只是当前媒体证据。
+
+当前 `data-request-id` 是由 tag 经过 `generateStableId()` 派生的 tag-hash 标志，不包含 `messageId`、`mesid` 或 `swipeId`，所以不能单独当作全局唯一图片 ID。外部 UI 应使用：
+
+```ts
+messageId + swipeId + requestId
+```
+
+并保留 `regex`、`tag`、`link` 作为不同层级的回退身份。不要把 `regex` 缺失时的文本直接伪装成 `image###...###`，否则会把正文锚点误当成图片提示词。
+
+v2.7.7 当前 bundle 没有 `data-stable-id` 和 `image-tag-placeholder`；如果接入代码仍兼容这两个名称，应明确标为旧版本兼容，不应优先使用。
+
+画廊只消费已有图片时，推荐判断：
+
+```text
+宿主 .st-chatu8-image-span 下存在 img/video → 已生成，复制显示
+宿主有 button/span 但没有媒体 → 占位，不主动请求
+只有 extra.images 的 tag/link → 尝试插件缓存
+只有 regex 或正文 image### token → 只记录图片意图
+```

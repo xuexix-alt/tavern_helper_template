@@ -1,5 +1,7 @@
 # same-layer 兼容要点
 
+> **当前版本校正：** 本文原始结论来自 v2.6.x。当前 v2.7.7 的占位节点是 `.st-chatu8-image-span`，请求身份是 `data-request-id`；`span.image-tag-placeholder`、`data-stable-id` 和 Stego-only 图片存储描述仅保留为历史兼容说明。详见 [`../st-chatu8-v2.7.7-当前源码核对.md`](../st-chatu8-v2.7.7-当前源码核对.md)。
+
 ## 1. 事件监听要求
 
 同层 UI 的插件原生生图监听不能只包含：
@@ -43,7 +45,7 @@ schedulePluginNativeHostRenderHandoff(reason, payload)
 
 ## 3. placeholder-only mutation 不能忽略
 
-原先的 DOM observer 只在 `hasReadyChatu8Mutation` 为真时刷新，也就是等真实图片 `src` 写入。v2.6.1 下这样会错过正文位置，因为位置在按钮/placeholder 阶段已经确定。
+原先的 DOM observer 只在 `hasReadyChatu8Mutation` 为真时刷新，也就是等真实图片 `src` 写入。v2.6.x 下这样会错过正文位置，因为位置在按钮/占位 span 阶段已经确定。
 
 正确策略：
 

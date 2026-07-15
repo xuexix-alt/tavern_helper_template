@@ -19,6 +19,8 @@ export type PreGalleryImageSource = 'host-dom' | 'pre-render' | 'extra.images' |
 export type PreGalleryGestureTargetHint = 'prompt-button' | 'ready-image' | 'message-text' | 'unknown';
 export type PreGalleryGestureMode = 'click' | 'dblclick' | 'longpress';
 export type PreGalleryScanLimit = number | 'all';
+/** st-chatu8 v2.7.7 createAndShowImage/createButtonAtPosition 的长按阈值。 */
+export const PRE_GALLERY_NATIVE_LONG_PRESS_MS = 1200;
 
 export type PreGalleryHostArtifact = {
   messageId: number;
@@ -29,6 +31,7 @@ export type PreGalleryHostArtifact = {
   link?: string;
   requestId?: string;
   imageId?: string;
+  regex?: string;
   promptToken?: string;
   src?: string;
   element?: HTMLElement;
@@ -49,6 +52,8 @@ export type PreGalleryImageRef = {
   link: string;
   requestId: string;
   imageId: string;
+  /** 插件用于识别正文锚点的原始 regex；不与可展示 promptToken 混用。 */
+  regex: string;
   promptToken: string;
   className: string;
   evidence: string[];
@@ -88,6 +93,14 @@ export type PreGalleryHostInteraction = {
   longPressTarget: HTMLElement | null;
   longPressTargetKind: 'iframe-ready-image' | 'ready-image' | 'prompt-button' | 'none';
   reason: string;
+};
+
+export type PreGalleryDiagnosticState = {
+  stage: 'ready' | 'placeholder' | 'tag-only';
+  mediaState: 'media-ready' | 'placeholder-only' | 'token-only';
+  identityState: 'request-bound' | 'anchor-only' | 'unresolved';
+  hostTargetKind: PreGalleryHostInteraction['targetKind'];
+  longPressTargetKind: PreGalleryHostInteraction['longPressTargetKind'];
 };
 
 export type PreGalleryLongPressSession = {
@@ -183,6 +196,22 @@ function readPromptToken(entry: Record<string, any>): string {
   if (token) return token;
   const prompt = clean(entry.prompt ?? entry.regex ?? entry.anchorText);
   return collectChatu8PromptTokens(prompt)[0] ?? (prompt ? `image###${prompt}###` : '');
+}
+
+export function classifyPreGalleryImageRef(
+  ref: Pick<PreGalleryImageRef, 'src' | 'requestId' | 'imageId' | 'tag' | 'link' | 'promptToken' | 'sources'>,
+  interaction?: Pick<PreGalleryHostInteraction, 'targetKind' | 'longPressTargetKind'>,
+): PreGalleryDiagnosticState {
+  const hasMedia = Boolean(clean(ref.src));
+  const hasRequestIdentity = Boolean(clean(ref.requestId) || clean(ref.imageId));
+  const hasAnchorIdentity = Boolean(clean(ref.tag) || clean(ref.link) || clean(ref.promptToken));
+  return {
+    stage: hasMedia ? 'ready' : hasRequestIdentity ? 'placeholder' : 'tag-only',
+    mediaState: hasMedia ? 'media-ready' : hasRequestIdentity ? 'placeholder-only' : 'token-only',
+    identityState: hasRequestIdentity ? 'request-bound' : hasAnchorIdentity ? 'anchor-only' : 'unresolved',
+    hostTargetKind: interaction?.targetKind ?? 'none',
+    longPressTargetKind: interaction?.longPressTargetKind ?? 'none',
+  };
 }
 
 function buildIdentity(parts: {
@@ -325,6 +354,7 @@ function createEmptyRef(messageId: number, swipeId: number, entry: Partial<PreGa
     link: '',
     requestId: '',
     imageId: '',
+    regex: '',
     promptToken: '',
     className: '',
     evidence: [],
@@ -374,6 +404,7 @@ function mergeSource(
   existing.link = existing.link || clean(entry.link);
   existing.requestId = existing.requestId || clean(entry.requestId);
   existing.imageId = existing.imageId || clean(entry.imageId);
+  existing.regex = existing.regex || clean(entry.regex);
   existing.promptToken = existing.promptToken || clean(entry.promptToken);
   existing.className = existing.className || clean(entry.className);
   if (existing.gestureTargetHint === 'unknown' || entry.gestureTargetHint === 'prompt-button') {
@@ -446,6 +477,7 @@ function artifactFromExtra(entry: Record<string, any>): Partial<PreGalleryImageR
     link: clean(entry.link) || promptToken,
     requestId: clean(entry.requestId ?? entry.request_id),
     imageId: clean(entry.imageId ?? entry.image_id),
+    regex: clean(entry.regex ?? entry.prompt_regex ?? entry.promptRegex),
     promptToken,
     gestureTargetHint: 'ready-image',
     evidence: ['extra.images 可读'],
@@ -459,6 +491,7 @@ function artifactFromCache(entry: PluginNativeCacheArtifact): Partial<PreGallery
     link: clean(entry.promptToken),
     requestId: clean(entry.requestId),
     imageId: clean(entry.imageId),
+    regex: clean((entry as any).regex),
     promptToken: clean(entry.promptToken),
     gestureTargetHint: 'ready-image',
     evidence: ['chatMetadata st-chatu8 cache 可读'],
@@ -469,6 +502,7 @@ function artifactFromPromptToken(token: string): Partial<PreGalleryImageRef> {
   return {
     tag: token,
     link: token,
+    regex: '',
     promptToken: token,
     gestureTargetHint: 'prompt-button',
     evidence: ['正文 image###...### token 可读'],
@@ -483,6 +517,7 @@ function normalizeHostArtifact(artifact: PreGalleryHostArtifact): Partial<PreGal
     link: clean(artifact.link) || promptToken,
     requestId: clean(artifact.requestId),
     imageId: clean(artifact.imageId),
+    regex: clean(artifact.regex),
     promptToken,
     className: clean(artifact.className),
     gestureTargetHint: artifact.kind ?? (artifact.src ? 'ready-image' : 'prompt-button'),
@@ -590,6 +625,7 @@ export function collectHostPreGalleryArtifacts(messageId: number): PreGalleryHos
       const link = readDataset(element, ['link']);
       const requestId = readDataset(element, ['requestId']);
       const imageId = readDataset(element, ['imageId']);
+      const regex = readDataset(element, ['regex', 'promptRegex', 'prompt_regex']);
       const promptToken = readDataset(element, ['promptToken']) || tag || link;
       const src = readElementSrc(element);
       out.push({
@@ -601,6 +637,7 @@ export function collectHostPreGalleryArtifacts(messageId: number): PreGalleryHos
         link,
         requestId,
         imageId,
+        regex,
         promptToken,
         src,
         element: element as HTMLElement,
@@ -625,6 +662,7 @@ function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string
       );
       const tag = readDataset(carrier, ['imageTag', 'tag']);
       const link = readDataset(carrier, ['link']);
+      const regex = readDataset(carrier, ['regex', 'promptRegex', 'prompt_regex']);
       const promptToken = readDataset(carrier, ['promptToken']) || tag || link || promptTokens[index] || '';
       return {
         messageId,
@@ -635,6 +673,7 @@ function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string
         link: link || promptToken,
         requestId: readDataset(carrier, ['requestId']),
         imageId: readDataset(carrier, ['imageId']),
+        regex,
         promptToken,
         src,
       };
@@ -1108,27 +1147,30 @@ export function finishPreGalleryImageRefLongPress(session: PreGalleryLongPressSe
 }
 
 /**
- * 当前 st-chatu8 的 ClickTrigger 会轮询 iframe，并把 dblclick 委托绑定在
- * iframe document.body 上。这里必须派发同文档、可冒泡且带实际中心坐标的
- * dblclick；仅补两次 click 只能触发单击预览，无法进入它的双击分支。
+ * 当前 st-chatu8 成品图的重生分支不是原生 dblclick，而是同一图片节点上的
+ * 两次 click：第二次 click 命中内部 click-click 计时器后才调用 triggerGeneration。
  */
-function dispatchPluginReadyImageDoubleClick(target: HTMLElement): boolean {
+function dispatchPluginReadyImageClickSequence(target: HTMLElement): boolean {
   try {
     const view = target.ownerDocument.defaultView;
     if (!view) return false;
     const rect = target.getBoundingClientRect();
-    const event = new view.MouseEvent('dblclick', {
-      bubbles: true,
-      cancelable: true,
-      composed: true,
-      view,
-      clientX: rect.left + Math.max(8, rect.width * 0.5),
-      clientY: rect.top + Math.max(8, rect.height * 0.5),
-      button: 0,
-      buttons: 0,
-      detail: 2,
-    });
-    target.dispatchEvent(event);
+    const createClick = (detail: number) =>
+      new view.MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        view,
+        clientX: rect.left + Math.max(8, rect.width * 0.5),
+        clientY: rect.top + Math.max(8, rect.height * 0.5),
+        button: 0,
+        buttons: 1,
+        detail,
+      });
+    const firstClick = createClick(1);
+    const secondClick = createClick(2);
+    target.dispatchEvent(firstClick);
+    target.dispatchEvent(secondClick);
     return true;
   } catch {
     return false;
@@ -1141,7 +1183,7 @@ function dispatchHostLongPress(target: HTMLElement): boolean {
     if (!view || !dispatchHostMousePhase(target, 'down')) return false;
     view.setTimeout(() => {
       dispatchHostMousePhase(target, 'up');
-    }, 620);
+    }, PRE_GALLERY_NATIVE_LONG_PRESS_MS);
     return true;
   } catch {
     return false;
@@ -1189,17 +1231,17 @@ export function dispatchPreGalleryImageRefGesture(
     mode === 'dblclick' &&
     (interaction.targetKind === 'iframe-ready-image' || interaction.targetKind === 'ready-image')
   ) {
-    const ok = dispatchPluginReadyImageDoubleClick(target);
+    const ok = dispatchPluginReadyImageClickSequence(target);
     return {
       ok,
       method:
-        interaction.targetKind === 'iframe-ready-image' ? 'iframe-native-double-click' : 'host-native-double-click',
+        interaction.targetKind === 'iframe-ready-image' ? 'iframe-native-click-sequence' : 'host-native-click-sequence',
       target: target.className || target.tagName.toLowerCase(),
       reason: ok
-        ? '已按插件当前委托式 dblclick 派发图片重生'
+        ? '已按插件当前 click-click 委托协议派发图片重生'
         : interaction.targetKind === 'iframe-ready-image'
-          ? 'iframe 原生图片 dblclick 派发失败'
-          : '宿主原生图片 dblclick 派发失败',
+          ? 'iframe 原生图片 click 序列派发失败'
+          : '宿主原生图片 click 序列派发失败',
     };
   }
 
