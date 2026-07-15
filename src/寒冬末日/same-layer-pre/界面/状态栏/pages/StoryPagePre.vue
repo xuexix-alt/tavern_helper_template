@@ -527,7 +527,10 @@ const reprocessVariablesPending = ref(false);
 const canReprocessVariables = computed(() => {
   const latestAssistant = latestAssistantItem.value;
   return (
-    Boolean(latestAssistant && latestAssistant.role === 'assistant') && !busy.value && !reprocessVariablesPending.value
+    Boolean(latestAssistant && latestAssistant.role === 'assistant') &&
+    mvuVariableUpdateMode.value === 'extra_analysis' &&
+    !busy.value &&
+    !reprocessVariablesPending.value
   );
 });
 const reprocessVariablesHint = computed(() => {
@@ -536,9 +539,9 @@ const reprocessVariablesHint = computed(() => {
   if (busy.value) return '正文生成中，等待生成结束后再重试额外模型解析';
   if (reprocessVariablesPending.value) return '额外模型解析正在进行';
   if (mvuVariableUpdateMode.value === 'inline') {
-    return '当前设置显示为“随AI输出”；点击时仍会由 MVU 插件原生入口决定是否可重试';
+    return '当前 MVU 变量更新方式为“随AI输出”，没有可重试的额外模型解析';
   }
-  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '将直接探测 MVU 插件原生“重试额外模型解析”入口';
+  if (mvuVariableUpdateMode.value !== 'extra_analysis') return '无法确认 MVU 变量更新方式是否为“额外模型解析”';
   return '调用 MVU 插件原生“重试额外模型解析”，不走正文生成链';
 });
 

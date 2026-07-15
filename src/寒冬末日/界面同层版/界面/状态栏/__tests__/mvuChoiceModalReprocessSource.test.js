@@ -497,7 +497,7 @@ test('latest-assistant MVU reroll reveal is bounded before native prompt assembl
   );
 });
 
-test('mvu_reprocess native retry helper clicks MVU own retry button instead of generating or parsing manually', () => {
+test('mvu_reprocess emits MVU native retry button event instead of opening Quick Reply UI', () => {
   const source = fs.readFileSync(path.resolve(__dirname, '../../../../mvu_reprocess.ts'), 'utf8');
   const start = source.indexOf('export async function retryMessageExtraAnalysisByNativeMvu');
   const end = source.indexOf('export async function reprocessMessageVariablesById', start);
@@ -505,8 +505,6 @@ test('mvu_reprocess native retry helper clicks MVU own retry button instead of g
   assert.notEqual(end, -1, 'should find following reprocessMessageVariablesById');
   const body = source.slice(start, end);
 
-  assert.match(source, /重试额外模型解析/, 'helper should target the native MVU retry label');
-  assert.match(source, /#qr--bar[\s\S]*\.qr--button/, 'helper should prefer the live Quick Reply bar button');
   assert.match(
     body,
     /getChatMessages\(targetMessageId,\s*\{\s*hide_state:\s*'all'\s*\}\)/,
@@ -517,7 +515,21 @@ test('mvu_reprocess native retry helper clicks MVU own retry button instead of g
     /messageText[\s\S]*trim\(\)[\s\S]*return \{ status: 'blocked', reason: 'empty_message'/,
     'native retry helper should block empty assistant text instead of sending an empty story to extra analysis',
   );
-  assert.match(body, /\.click\(\)/, 'helper should trigger the native UI click path');
+  assert.match(source, /getAllEnabledScriptButtons[\s\S]*重试额外模型解析/, 'helper should resolve the MVU script button id globally, not from the UI iframe context');
+  assert.match(source, /getScriptButtons[\s\S]*getButtonEvent[\s\S]*\.call\(/, 'helper should also resolve the event from the owning MVU script iframe context when the global map is unavailable');
+  assert.doesNotMatch(body, /getButtonEvent\(['"]重试额外模型解析['"]\)/, 'helper must not derive the button event directly from the UI iframe script context');
+  assert.match(body, /eventEmit\([\s\S]*nativeRetryEvent/, 'helper should emit the native retry event');
+  assert.match(
+    body,
+    /waitForNativeExtraAnalysisResult\([\s\S]*targetMessageId[\s\S]*messageText/,
+    'helper should wait for the asynchronous native MVU writeback before deciding that retry failed',
+  );
+  assert.match(
+    source,
+    /function waitForNativeExtraAnalysisResult[\s\S]*updatedChatMessage[\s\S]*NATIVE_UPDATE_VARIABLE_TAG_PATTERN/,
+    'helper should verify MVU appended a fresh update block before reporting success',
+  );
+  assert.doesNotMatch(body, /GENERATION_ENDED|#qr--bar|qr--popout|querySelectorAll|\.click\(\)/, 'helper must not replay unrelated lifecycle events or touch Quick Reply UI');
   assert.equal(body.includes('await generate('), false, 'native retry helper must not call Tavern Helper generate');
   assert.equal(body.includes('generateRaw('), false, 'native retry helper must not call generateRaw');
   assert.equal(body.includes('Mvu.parseMessage('), false, 'native retry helper must not manually parse model output');

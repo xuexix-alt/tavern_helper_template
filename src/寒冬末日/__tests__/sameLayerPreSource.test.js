@@ -320,6 +320,39 @@ test('same-layer-pre wires the option modal reprocess button to native MVU extra
   assert.doesNotMatch(storySource, /revealHiddenStoryMessagesForNativeGeneration|withHostTranscriptVisible/);
 });
 
+test('same-layer-pre only enables option-modal retry when MVU is configured for extra analysis', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  assert.match(
+    storySource,
+    /const canReprocessVariables = computed\(\(\) => \{[\s\S]*mvuVariableUpdateMode\.value === 'extra_analysis'/,
+    'pre retry should be gated by the detected extra-analysis MVU mode',
+  );
+  assert.match(
+    storySource,
+    /if \(mvuVariableUpdateMode\.value === 'inline'\) \{[\s\S]*没有可重试的额外模型解析/,
+    'inline MVU mode should explain why native extra analysis is not triggered',
+  );
+});
+
+test('same-layer-pre emits the native MVU retry event after persisting assistant output', () => {
+  const source = readPre('useSameLayerPre.ts');
+  assert.match(
+    source,
+    /extra_analysis[\s\S]*retryMessageExtraAnalysisByNativeMvu[\s\S]*getTrueChatLength\(\)/,
+    'pre should invoke the native MVU retry helper only when extra analysis is configured',
+  );
+  assert.match(
+    source,
+    /createChatMessages\(\[\{ role: 'assistant',[\s\S]*await emitNativeMvuRetryEvent\(/,
+    'the native retry event must happen after the assistant message is persisted',
+  );
+  assert.doesNotMatch(
+    source,
+    /eventEmit\(tavern_events\.(MESSAGE_RECEIVED|MESSAGE_UPDATED)/,
+    'the pre fallback must not replay unrelated lifecycle events directly',
+  );
+});
+
 test('same-layer-pre reuses the original same-layer opening setup form through the pre host flow', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
 
@@ -627,7 +660,7 @@ test('same-layer-pre host visual hide survives host DOM refresh without MVU reve
   assert.match(hookSource, /collectHostVisibleMessageIds/);
   assert.match(refreshTranscriptSource, /readRecentChatMessagesForUi\(\)/);
   assert.doesNotMatch(refreshTranscriptSource, /getChatMessages\('0-\{\{lastMessageId\}\}'/);
-  assert.doesNotMatch(hookSource, /retryMessageExtraAnalysisByNativeMvu/);
+  assert.match(hookSource, /retryMessageExtraAnalysisByNativeMvu/);
   assert.doesNotMatch(hookSource, /revealHiddenStoryMessagesForNativeGeneration/);
   assert.doesNotMatch(hookSource, /withHostTranscriptVisible/);
   assert.doesNotMatch(controllerSource, /\.suspend\(/);

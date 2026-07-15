@@ -2,6 +2,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { DemoStatus, DemoTheme, ReaderLogItem, ReaderSummary, TranscriptItem } from './types';
 import { createPreHostVisualHideController } from './preHostVisualHide';
 import { bindPreHostLifecycleBridge } from './preHostLifecycleBridge';
+import { retryMessageExtraAnalysisByNativeMvu } from '../../../mvu_reprocess';
 
 const PRE_TRANSCRIPT_TAIL_PAIR_COUNT = 3;
 const PRE_TRANSCRIPT_WINDOW_SIZE = PRE_TRANSCRIPT_TAIL_PAIR_COUNT * 2;
@@ -432,6 +433,31 @@ export function useSameLayerPre() {
     ].slice(0, 40);
   }
 
+  async function emitNativeMvuRetryEvent(messageId: number) {
+    const normalizedId = Math.trunc(Number(messageId));
+    if (!Number.isFinite(normalizedId) || normalizedId < 0) return;
+
+    let extraAnalysisEnabled = false;
+    try {
+      extraAnalysisEnabled = (getVariables({ type: 'global' }) as { extra_analysis?: unknown } | null)
+        ?.extra_analysis === true;
+    } catch {
+      return;
+    }
+    if (!extraAnalysisEnabled) return;
+
+    try {
+      const result = await retryMessageExtraAnalysisByNativeMvu(normalizedId, { refreshMessage: true });
+      if (result.status === 'applied') {
+        pushLog('info', '触发 MVU 额外模型解析', `assistant #${normalizedId}`);
+      } else {
+        pushLog('warn', 'MVU 额外模型解析未触发', `${result.status}:${result.reason}`);
+      }
+    } catch (error) {
+      pushLog('warn', 'MVU 额外模型解析触发失败', error instanceof Error ? error.message : String(error));
+    }
+  }
+
   function syncHostVisualHide(messageIds: number[]) {
     const carrierMessageId = readPreCarrierMessageId();
     void nextTick(() => {
@@ -817,6 +843,7 @@ export function useSameLayerPre() {
       status.value = 'persisting';
       reserveNextHostMessageVisualHide();
       await createChatMessages([{ role: 'assistant', message: response, is_hidden: false }], { refresh: 'affected' });
+      await emitNativeMvuRetryEvent(getTrueChatLength());
       updateStreamingPreviewText('');
       status.value = 'done';
       refreshTranscript('assistant_persisted');
@@ -931,6 +958,7 @@ export function useSameLayerPre() {
       status.value = 'persisting';
       reserveNextHostMessageVisualHide();
       await createChatMessages([{ role: 'assistant', message: response, is_hidden: false }], { refresh: 'affected' });
+      await emitNativeMvuRetryEvent(getTrueChatLength());
       updateStreamingPreviewText('');
       status.value = 'done';
       refreshTranscript('regenerate_persisted');

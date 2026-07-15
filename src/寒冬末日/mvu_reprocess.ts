@@ -4,11 +4,16 @@ import { getViewMessageState, resolveViewMessageId } from './界面/viewMessage'
 const REPROCESS_GUARD_PATH = 'eden.mvu_reprocess_guard.by_message';
 const REPROCESS_GUARD_MAX_ENTRIES = 80;
 const ROLE_CONTROL_META_PATH = 'stat_data.主线任务.$meta.角色控制';
+const NATIVE_EXTRA_ANALYSIS_RESULT_TIMEOUT_MS = 15000;
+const NATIVE_EXTRA_ANALYSIS_RESULT_POLL_MS = 120;
+const NATIVE_UPDATE_VARIABLE_TAG_PATTERN = /<updatevariable(?:variable)?\s*>[\s\S]*<\/updatevariable(?:variable)?\s*>/i;
+const NATIVE_MVU_RETRY_BUTTON_NAME = '重试额外模型解析';
 
 type ReprocessStatus = 'applied' | 'skipped' | 'blocked' | 'error';
 type ReprocessReason =
   | 'reprocessed'
   | 'native_extra_analysis_retry_triggered'
+  | 'native_extra_analysis_no_result'
   | 'history_mode'
   | 'invalid_message_id'
   | 'empty_message'
@@ -144,71 +149,102 @@ function finalizeParsedMvuData(parsed: any, fallback: Mvu.MvuData): Mvu.MvuData 
   return next;
 }
 
-function collectReachableDocuments(): Document[] {
-  const documents: Document[] = [];
-  const visitedWindows = new Set<Window>();
+async function waitForNativeExtraAnalysisResult(messageId: number, originalText: string): Promise<string> {
+  const deadline = Date.now() + NATIVE_EXTRA_ANALYSIS_RESULT_TIMEOUT_MS;
+  while (true) {
+    const updatedChatMessage = getChatMessages(messageId, { hide_state: 'all' })?.[0];
+    const messageText = typeof updatedChatMessage?.message === 'string' ? updatedChatMessage.message : '';
+    const mesText = typeof updatedChatMessage?.mes === 'string' ? updatedChatMessage.mes : '';
+    const updatedMessageText =
+      NATIVE_UPDATE_VARIABLE_TAG_PATTERN.test(mesText) &&
+      (!NATIVE_UPDATE_VARIABLE_TAG_PATTERN.test(messageText) || mesText.length > messageText.length)
+        ? mesText
+        : messageText || mesText;
+    if (updatedMessageText !== originalText && NATIVE_UPDATE_VARIABLE_TAG_PATTERN.test(updatedMessageText)) {
+      return updatedMessageText;
+    }
 
-  const pushDocument = (win: Window | null | undefined) => {
-    if (!win || visitedWindows.has(win)) return;
-    visitedWindows.add(win);
+    if (Date.now() >= deadline) return '';
+    await new Promise<void>(resolve => setTimeout(resolve, NATIVE_EXTRA_ANALYSIS_RESULT_POLL_MS));
+  }
+}
+
+function findNativeMvuRetryEvent(): string {
+  const getAllEnabledScriptButtons = (globalThis as any).getAllEnabledScriptButtons;
+  if (typeof getAllEnabledScriptButtons === 'function') {
     try {
-      if (win.document && !documents.includes(win.document)) {
-        documents.push(win.document);
+      const buttonMap = getAllEnabledScriptButtons();
+      if (buttonMap && typeof buttonMap === 'object') {
+        for (const buttons of Object.values(buttonMap as Record<string, unknown>)) {
+          if (!Array.isArray(buttons)) continue;
+          const match = buttons.find(button => {
+            if (!button || typeof button !== 'object') return false;
+            const candidate = button as { button_id?: unknown; button_name?: unknown; name?: unknown };
+            return (
+              String(candidate.button_name ?? candidate.name ?? '').trim() === NATIVE_MVU_RETRY_BUTTON_NAME &&
+              String(candidate.button_id ?? '').trim() !== ''
+            );
+          }) as { button_id?: unknown } | undefined;
+          const buttonId = String(match?.button_id ?? '').trim();
+          if (buttonId) return buttonId;
+        }
       }
     } catch {
-      // Cross-origin or detached frames are ignored.
+      // Fall through to the owning-script iframe lookup below.
     }
+  }
+
+  const scriptWindows: Window[] = [];
+  const visitedWindows = new Set<Window>();
+  const enqueueWindow = (candidate: Window | null | undefined) => {
+    if (!candidate || visitedWindows.has(candidate)) return;
+    visitedWindows.add(candidate);
+    scriptWindows.push(candidate);
   };
-
-  pushDocument(window);
   try {
-    pushDocument(window.parent);
+    enqueueWindow(window);
+    enqueueWindow(window.parent);
+    enqueueWindow(window.top);
   } catch {
-    // ignore
-  }
-  try {
-    pushDocument(window.top);
-  } catch {
-    // ignore
+    // Ignore detached or inaccessible host windows.
   }
 
-  return documents;
-}
-
-function isClickableNativeButton(element: Element | null | undefined): element is HTMLElement {
-  const ownerWindow = element?.ownerDocument?.defaultView ?? window;
-  if (!element || !(element instanceof ownerWindow.HTMLElement)) return false;
-  if (element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true') return false;
-
-  const style = ownerWindow.getComputedStyle?.(element);
-  if (style && (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0)) return false;
-
-  const rect = element.getBoundingClientRect?.();
-  return Boolean(rect && rect.width > 0 && rect.height > 0);
-}
-
-function findNativeMvuExtraAnalysisRetryButton(): HTMLElement | null {
-  const retryText = '重试额外模型解析';
-  const selectors = [
-    '#qr--bar .qr--button',
-    '#qr--popout .qr--button',
-    '.qr--button',
-    '.mvu-button-wrap .menu_button',
-    '[role="button"]',
-    'button',
-  ];
-
-  for (const doc of collectReachableDocuments()) {
-    for (const selector of selectors) {
-      const buttons = Array.from(doc.querySelectorAll(selector));
-      const matched = buttons.find(button => (button.textContent ?? '').trim() === retryText);
-      if (isClickableNativeButton(matched)) {
-        return matched;
+  for (let index = 0; index < scriptWindows.length; index += 1) {
+    const ownerWindow = scriptWindows[index];
+    try {
+      const frames = Array.from(ownerWindow.document?.querySelectorAll('iframe') ?? []);
+      for (const frame of frames) {
+        const frameWindow = (frame as HTMLIFrameElement).contentWindow;
+        const frameIdentity = String((frame as HTMLElement).id || frameWindow?.name || '');
+        if (frameWindow && frameIdentity.startsWith('TH-script--')) {
+          enqueueWindow(frameWindow);
+        }
       }
+    } catch {
+      // Ignore a frame that is being removed or is not same-origin.
     }
   }
 
-  return null;
+  for (const scriptWindow of scriptWindows) {
+    try {
+      const getScriptButtons = (scriptWindow as any).getScriptButtons;
+      const getButtonEvent = (scriptWindow as any).getButtonEvent;
+      if (typeof getScriptButtons !== 'function' || typeof getButtonEvent !== 'function') continue;
+      const buttons = getScriptButtons.call(scriptWindow);
+      if (
+        !Array.isArray(buttons) ||
+        !buttons.some(button => String((button as any)?.name ?? '').trim() === NATIVE_MVU_RETRY_BUTTON_NAME)
+      ) {
+        continue;
+      }
+      const buttonEvent = String(getButtonEvent.call(scriptWindow, NATIVE_MVU_RETRY_BUTTON_NAME) ?? '').trim();
+      if (buttonEvent) return buttonEvent;
+    } catch {
+      // Try the next enabled script iframe.
+    }
+  }
+
+  return '';
 }
 
 export async function retryMessageExtraAnalysisByNativeMvu(
@@ -234,7 +270,12 @@ export async function retryMessageExtraAnalysisByNativeMvu(
       if (!chatMessage || chatMessage.role !== 'assistant') {
         return { status: 'blocked', reason: 'empty_message', message_id: targetMessageId };
       }
-      const messageText = typeof chatMessage.message === 'string' ? chatMessage.message : '';
+      const messageText =
+        typeof chatMessage.message === 'string'
+          ? chatMessage.message
+          : typeof chatMessage.mes === 'string'
+            ? chatMessage.mes
+            : '';
       if (!messageText.trim()) {
         return { status: 'blocked', reason: 'empty_message', message_id: targetMessageId };
       }
@@ -243,12 +284,26 @@ export async function retryMessageExtraAnalysisByNativeMvu(
         return { status: 'skipped', reason: 'not_latest_message_mutation', message_id: targetMessageId };
       }
 
-      const nativeRetryButton = findNativeMvuExtraAnalysisRetryButton();
-      if (!nativeRetryButton) {
+      const nativeRetryEvent = findNativeMvuRetryEvent();
+      if (typeof eventEmit !== 'function' || !nativeRetryEvent) {
         return { status: 'error', reason: 'native_extra_analysis_retry_unavailable', message_id: targetMessageId };
       }
 
-      nativeRetryButton.click();
+      // MVU 源码把“重试额外模型解析”注册为脚本按钮事件。这里优先使用全局
+      // button_id 映射，缺失时再进入 MVU 所在脚本 iframe 的上下文获取事件，
+      // 直接进入它的 force=true 处理链，不需要快捷回复按钮 DOM 可见。
+      await eventEmit(nativeRetryEvent as any);
+
+      const updatedMessageText = await waitForNativeExtraAnalysisResult(targetMessageId, messageText);
+      if (!updatedMessageText) {
+        return {
+          status: 'error',
+          reason: 'native_extra_analysis_no_result',
+          message_id: targetMessageId,
+          error: 'MVU 原生重试事件已返回，但当前楼层没有追加新的 UpdateVariable 结果',
+        };
+      }
+
       return { status: 'applied', reason: 'native_extra_analysis_retry_triggered', message_id: targetMessageId };
     } catch (err: any) {
       return {
