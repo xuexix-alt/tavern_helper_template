@@ -1,14 +1,14 @@
 import { compare } from 'compare-versions';
 import { z } from 'zod';
 
-import { checkAndUpdateCharacter } from '@util/common';
-
 const SCRIPT_VERSION = '1.0.0';
 const ACTIVE_INSTANCE_KEY = '__winter_auto_update_active_instance__';
 const INSTANCE_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-const CHARACTER_NAME = '末世寒冬-星穹秩序';
-const BASE_URL = 'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日';
+const CHARACTER_NAME = '末世寒冬 - 星穹秩序';
+const BASE_URL = 'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211';
+const REMOTE_VERSION_PATH = 'src/寒冬末日/自动更新角色卡版本.yaml';
+const CHARACTER_CARD_PATH = 'src/末世寒冬 - 星穹秩序.png';
 
 const BTN_CHECK = '角色卡更新-检查';
 const BTN_APPLY = '角色卡更新-执行';
@@ -22,6 +22,7 @@ const SettingsSchema = z
     notify_latest: z.boolean().prefault(false),
 
     last_remote_version: z.string().prefault(''),
+    last_applied_remote_version: z.string().prefault(''),
     last_check_at: z.string().prefault(''),
     last_error: z.string().prefault(''),
   })
@@ -31,6 +32,7 @@ const SettingsSchema = z
     check_on_load: true,
     notify_latest: false,
     last_remote_version: '',
+    last_applied_remote_version: '',
     last_check_at: '',
     last_error: '',
   });
@@ -119,24 +121,37 @@ function toErrMsg(error: unknown): string {
 
 function resolveRemoteUrls() {
   return {
-    index_url: `${BASE_URL}/index.yaml`,
-    png_url: `${BASE_URL}/寒冬末日.png`,
+    version_url: `${BASE_URL}/${REMOTE_VERSION_PATH}`,
+    png_url: `${BASE_URL}/${CHARACTER_CARD_PATH}`,
   };
 }
 
-async function fetchRemoteVersion(indexUrl: string): Promise<string> {
-  const response = await fetch(indexUrl, { cache: 'no-store' });
+async function fetchRemoteVersion(versionUrl: string): Promise<string> {
+  const response = await fetch(versionUrl, { cache: 'no-store' });
   if (!response.ok) {
-    throw new Error(`拉取远程版本失败（${response.status}）: ${indexUrl}`);
+    throw new Error(`拉取远程版本失败（${response.status}）: ${versionUrl}`);
   }
 
   const text = await response.text();
   const data = YAML.parse(text);
   const version = String(_.get(data, '版本', '')).trim();
   if (!version) {
-    throw new Error(`远程 index.yaml 缺少"版本"字段: ${indexUrl}`);
+    throw new Error(`远程版本清单缺少"版本"字段: ${versionUrl}`);
   }
   return version;
+}
+
+async function importRemoteCharacterPng(pngUrl: string) {
+  const response = await fetch(pngUrl, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`拉取远程角色卡失败（${response.status}）: ${pngUrl}`);
+  }
+
+  const pngBlob = await response.blob();
+  if (pngBlob.size <= 0) {
+    throw new Error(`远程角色卡为空: ${pngUrl}`);
+  }
+  await importRawCharacter(`${CHARACTER_NAME}.png`, pngBlob);
 }
 
 async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: boolean }) {
@@ -152,9 +167,10 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
 
   try {
     const remote = resolveRemoteUrls();
-    const remoteVersion = await fetchRemoteVersion(remote.index_url);
+    const remoteVersion = await fetchRemoteVersion(remote.version_url);
     const current = await getCharacter(CHARACTER_NAME);
-    const currentVersion = String(current?.version ?? '0.0.0').trim() || '0.0.0';
+    const currentVersion =
+      String(current?.version ?? '').trim() || settings.last_applied_remote_version || '0.0.0';
     const needUpdate = safeCompareLt(currentVersion, remoteVersion);
 
     patchSettings(prev => ({
@@ -167,7 +183,8 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
     if (needUpdate) {
       const shouldApply = settings.auto_apply || forceApply;
       if (shouldApply) {
-        await checkAndUpdateCharacter(CHARACTER_NAME, remoteVersion, remote.png_url);
+        await importRemoteCharacterPng(remote.png_url);
+        patchSettings(prev => ({ ...prev, last_applied_remote_version: remoteVersion }));
         toastr.success(`[自动更新] 已更新 ${CHARACTER_NAME}: ${currentVersion} -> ${remoteVersion}`, '自动更新角色卡');
       } else {
         toastr.info(
