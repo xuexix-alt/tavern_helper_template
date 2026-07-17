@@ -2186,11 +2186,13 @@ onBeforeUnmount(() => {
 
 /* APPLE surface: restrained reader chrome with native-looking, low-noise motion. */
 :global(.theme-apple) {
-  --apple-surface: color-mix(in srgb, var(--surface) 88%, var(--background) 12%);
-  --apple-surface-strong: color-mix(in srgb, var(--surface) 94%, var(--background) 6%);
+  --apple-primary: #0a84ff;
+  --apple-danger: #ff453a;
+  --apple-surface: color-mix(in srgb, var(--surface) 86%, var(--background) 14%);
+  --apple-surface-strong: color-mix(in srgb, var(--surface) 96%, var(--background) 4%);
   --apple-divider: color-mix(in srgb, var(--foreground) 14%, transparent);
   --apple-muted: color-mix(in srgb, var(--foreground) 58%, transparent);
-  --apple-focus: color-mix(in srgb, var(--primary) 72%, white 18%);
+  --apple-focus: color-mix(in srgb, var(--apple-primary) 72%, white 18%);
   color-scheme: dark;
   overflow-x: hidden;
 }
@@ -2201,11 +2203,13 @@ onBeforeUnmount(() => {
 }
 
 :global(.theme-apple .same-layer-pre-host) {
-  --apple-surface: color-mix(in srgb, var(--surface) 88%, var(--background) 12%);
-  --apple-surface-strong: color-mix(in srgb, var(--surface) 94%, var(--background) 6%);
+  --apple-primary: #0a84ff;
+  --apple-danger: #ff453a;
+  --apple-surface: color-mix(in srgb, var(--surface) 86%, var(--background) 14%);
+  --apple-surface-strong: color-mix(in srgb, var(--surface) 96%, var(--background) 4%);
   --apple-divider: color-mix(in srgb, var(--foreground) 14%, transparent);
   --apple-muted: color-mix(in srgb, var(--foreground) 58%, transparent);
-  --apple-focus: color-mix(in srgb, var(--primary) 72%, white 18%);
+  --apple-focus: color-mix(in srgb, var(--apple-primary) 72%, white 18%);
   box-sizing: border-box;
   font-size: 16px;
   line-height: 1.9;
@@ -2272,7 +2276,7 @@ onBeforeUnmount(() => {
 }
 
 :global(.theme-apple .same-layer-pre-host .pre-message-card.role-user) {
-  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  border-color: color-mix(in srgb, var(--apple-primary) 28%, transparent);
 }
 
 :global(.theme-apple .same-layer-pre-host .pre-message-card__header) {
@@ -2291,6 +2295,67 @@ onBeforeUnmount(() => {
 :global(.theme-apple .same-layer-pre-host .pre-message-card__actions) {
   gap: 8px;
   padding-top: 4px;
+}
+
+/* Apple controls: neutral glass by default; color is reserved for semantic actions. */
+:global(.theme-apple .same-layer-pre-host .pre-message-card__action),
+:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
+:global(.theme-apple .same-layer-pre-host .ui-signal-btn),
+:global(.theme-apple .same-layer-pre-host .ui-page-menu-item),
+:global(.theme-apple .same-layer-pre-host .ui-close-btn),
+:global(.theme-apple .same-layer-pre-host .composer-input-icon),
+:global(.theme-apple .same-layer-pre-host .send-btn),
+:global(.theme-apple .same-layer-pre-host .choice-btn),
+:global(.theme-apple .same-layer-pre-host .choice-item),
+:global(.theme-apple .same-layer-pre-host .quick-btn) {
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  background: color-mix(in srgb, var(--apple-surface-strong) 86%, transparent);
+  color: var(--foreground);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
+:global(.theme-apple .same-layer-pre-host .ui-signal-btn),
+:global(.theme-apple .same-layer-pre-host .ui-close-btn),
+:global(.theme-apple .same-layer-pre-host .composer-input-icon) {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__action),
+:global(.theme-apple .same-layer-pre-host .send-btn),
+:global(.theme-apple .same-layer-pre-host .choice-btn),
+:global(.theme-apple .same-layer-pre-host .choice-item),
+:global(.theme-apple .same-layer-pre-host .quick-btn) {
+  border-radius: 999px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-page-menu-item) {
+  border-radius: 12px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-page-menu-item.active),
+:global(.theme-apple .same-layer-pre-host .ui-icon-btn.active),
+:global(.theme-apple .same-layer-pre-host .ui-signal-btn.active) {
+  border-color: color-mix(in srgb, var(--apple-primary) 52%, transparent);
+  background: color-mix(in srgb, var(--apple-primary) 14%, var(--apple-surface-strong));
+  color: var(--apple-primary);
+}
+
+:global(.theme-apple .same-layer-pre-host .choice-btn--primary:not(:disabled)),
+:global(.theme-apple .same-layer-pre-host .pre-message-card__action.primary:not(:disabled)),
+:global(.theme-apple .same-layer-pre-host .send-btn:not(.is-cancel):not(:disabled)) {
+  border-color: var(--apple-primary);
+  background: var(--apple-primary);
+  color: #ffffff;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--apple-primary) 24%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__action.danger:not(:disabled)),
+:global(.theme-apple .same-layer-pre-host .send-btn.is-cancel:not(:disabled)) {
+  border-color: var(--apple-danger);
+  background: color-mix(in srgb, var(--apple-danger) 18%, var(--apple-surface-strong));
+  color: var(--apple-danger);
 }
 
 :global(.theme-apple .same-layer-pre-host .pre-message-card__action),

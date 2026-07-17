@@ -261,6 +261,14 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /@media\s*\(prefers-contrast:\s*more\)/);
 
   assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?color-scheme:\s*dark/);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#0b0b0d/i);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--primary:\s*#0a84ff/i);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--demo-color-danger|--apple-danger/i);
+  assert.match(storySource, /--apple-primary:\s*#0a84ff/i);
+  assert.match(storySource, /--apple-danger:\s*#ff453a/i);
+  assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)/i);
+  assert.match(storySource, /border-radius:\s*999px/);
+  assert.match(storySource, /\.ui-page-menu-item\.is-primary|\.send-btn\.is-primary|\.choice-btn(?:--primary|\.primary)/i);
   assert.ok((themeTokenSource.match(/\.theme-apple/g) || []).length >= 2, 'derived APPLE demo tokens should be declared');
 });
 
