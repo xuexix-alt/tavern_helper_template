@@ -6,7 +6,7 @@ export type TranscriptDensity = 'comfortable' | 'minimal';
 
 export type ReaderFontMode = 'hud' | 'reading';
 
-export type DemoTheme = 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber';
+export type DemoTheme = 'tech' | 'dark' | 'gold' | 'ios' | 'ipod' | 'amber' | 'apple';
 
 export type ReadingMode = 'following_latest' | 'browsing_history';
 

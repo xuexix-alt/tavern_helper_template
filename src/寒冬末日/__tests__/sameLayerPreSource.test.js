@@ -223,6 +223,47 @@ test('same-layer-pre inherits same-layer theme tokens and restores symmetric edg
   assert.match(storySource, /grid-template-rows:\s*auto minmax\(0,\s*1fr\)/);
 });
 
+test('same-layer-pre APPLE theme exposes the source-level visual contracts', () => {
+  const typesSource = readPre('types.ts');
+  const hookSource = readPre('useSameLayerPre.ts');
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const themeTokenSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'theme-tokens.css'),
+    'utf8',
+  );
+
+  assert.match(typesSource, /DemoTheme\s*=\s*[^;]*\|\s*'apple'/);
+  assert.match(hookSource, /'theme-apple'/);
+  assert.match(hookSource, /const theme = ref<DemoTheme>\('amber'\)/);
+  assert.match(storySource, /\{\s*label:\s*'APPLE'\s*,\s*value:\s*'apple'\s*\}/);
+
+  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host/);
+  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-topbar\)/);
+  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.pre-message-card\)/);
+  assert.doesNotMatch(storySource, /:global\(\.theme-apple\)\s+(?!\{)\S/);
+  assert.match(storySource, /:global\(\.theme-apple\)\s*\{[\s\S]*?overflow-x:\s*hidden/);
+  assert.match(storySource, /:global\(\.theme-apple\)\s*\{[\s\S]*?color-scheme:\s*dark/);
+  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-sidebar-toggle(?:\s|,|\{|\))/);
+  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-sidebar-toggle-right(?:\s|,|\{|\))/);
+  const appleHandleBlocks = [
+    ...storySource.matchAll(
+      /:global\(\.theme-apple(?:\s+\.same-layer-pre-host)?[^{}]*\.ui-sidebar-toggle(?:-right)?[^{}]*\{([\s\S]*?)\}/g,
+    ),
+  ];
+  assert.ok(appleHandleBlocks.length >= 1, 'APPLE should scope both floating edge handles');
+  for (const [, block] of appleHandleBlocks) {
+    assert.match(block, /position:\s*fixed|position:\s*absolute/);
+    assert.doesNotMatch(block, /\bflex\s*:|\bgrid-(?:column|area|row)\s*:/, 'floating handles must stay out of flex/grid layout');
+  }
+
+  assert.match(storySource, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(storySource, /@media\s*\(prefers-reduced-transparency:\s*reduce\)/);
+  assert.match(storySource, /@media\s*\(prefers-contrast:\s*more\)/);
+
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?color-scheme:\s*dark/);
+  assert.ok((themeTokenSource.match(/\.theme-apple/g) || []).length >= 2, 'derived APPLE demo tokens should be declared');
+});
+
 test('same-layer-pre gives inherited AGENTS drawer a full-height shell', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
 

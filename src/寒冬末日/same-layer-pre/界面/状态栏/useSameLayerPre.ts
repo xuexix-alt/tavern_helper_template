@@ -18,6 +18,7 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-ios',
   'theme-ipod',
   'theme-amber',
+  'theme-apple',
 ] as const;
 
 type PreTranscriptItemCacheEntry = {

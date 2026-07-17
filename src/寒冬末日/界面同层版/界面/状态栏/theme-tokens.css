@@ -95,6 +95,24 @@
   --glass-bg: rgba(19, 36, 38, 0.7);
 }
 
+.theme-apple {
+  --background: #0f1115;
+  --bg-gradient: radial-gradient(circle at top center, #1a2230 0%, #0f1115 82%);
+  --foreground: #f4f6f8;
+  --surface: #171c24;
+  --surface-hover: #202938;
+  --border: #35465a;
+  --primary: #9fb7d0;
+  --primary-foreground: #0f1115;
+  --muted: rgba(159, 183, 208, 0.14);
+  --muted-foreground: #aeb6c2;
+  --shadow-color: rgba(0, 0, 0, 0.56);
+  --glass-bg: rgba(23, 28, 36, 0.72);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Noto Sans SC', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  color-scheme: dark;
+}
+
 :root,
 .theme-tech,
 .theme-ipod {
@@ -104,7 +122,8 @@
 .theme-dark,
 .theme-gold,
 .theme-ios,
-.theme-amber {
+.theme-amber,
+.theme-apple {
   color-scheme: dark;
 }
 
@@ -114,7 +133,8 @@
 .theme-gold,
 .theme-ios,
 .theme-ipod,
-.theme-amber {
+.theme-amber,
+.theme-apple {
   --demo-font-sans: var(--font-sans);
   --demo-font-mono: var(--font-mono);
 
