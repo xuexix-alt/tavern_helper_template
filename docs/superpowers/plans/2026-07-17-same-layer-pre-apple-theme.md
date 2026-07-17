@@ -155,3 +155,35 @@
 - [ ] **Step 3: Add APPLE-only parent and child-component visual overrides using global descendant selectors; keep events and layout flow unchanged**
 - [ ] **Step 4: Run focused tests, token checks, production build, generated CSS inspection, and `git diff --check`**
 - [ ] **Step 5: Commit only APPLE source/test and pre dist artifacts**
+
+### Task 8: Reframe APPLE as an editorial reading layout
+
+**Files:**
+- Modify: `src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue`
+- Generated: `dist/寒冬末日/same-layer-pre/界面/状态栏/index.html`, `index.js.map`, `main.css.map`
+
+- [ ] **Step 1: Add failing source contracts for Apple reading hierarchy**
+
+  Assert that APPLE removes the full-width console frame, constrains the transcript to a centered reading column, flattens message cards into matte editorial surfaces, removes metadata chips, hides cyber-style meter bars, and makes the composer a rounded primary floating surface.
+
+- [ ] **Step 2: Run the focused source test and verify the new contracts fail**
+
+  Run: `node --test src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+
+  Expected: FAIL on the new editorial layout assertions before any production CSS is changed.
+
+- [ ] **Step 3: Implement APPLE-only layout and typography overrides**
+
+  Keep all rules under `.theme-apple .same-layer-pre-host`; remove structural borders and full-width chrome, center the reading column, reduce card contrast, use system typography with block spacing instead of terminal-style indentation, replace meter bars with quiet labels, and style the bottom composer as the dominant floating capsule. Do not change component markup, event handlers, or six-theme selectors.
+
+- [ ] **Step 4: Run focused tests, token checks, build, generated-selector inspection, and diff checks**
+
+  Run the pre source/gallery tests, `pnpm check:component-tokens`, `pnpm build`, a static APPLE selector check, and `git diff --check`.
+
+- [ ] **Step 5: Commit only APPLE source/test and pre dist artifacts**
+
+  ```bash
+  git add src/寒冬末日/__tests__/sameLayerPreSource.test.js src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue dist/寒冬末日/same-layer-pre/界面/状态栏/index.html dist/寒冬末日/same-layer-pre/界面/状态栏/index.js.map dist/寒冬末日/same-layer-pre/界面/状态栏/main.css.map
+  git commit -m "style: refine apple editorial reading layout"
+  ```
