@@ -3055,32 +3055,32 @@ onBeforeUnmount(() => {
 
 :global(.theme-apple-sky) {
   --apple-primary: #007aff;
-  --apple-color-wash: rgba(84, 164, 255, 0.3);
-  --apple-color-wash-secondary: rgba(0, 122, 255, 0.16);
+  --apple-color-wash: rgba(84, 164, 255, 0.1);
+  --apple-color-wash-secondary: rgba(0, 122, 255, 0.05);
 }
 
 :global(.theme-apple-mint) {
-  --apple-primary: #00a88a;
-  --apple-color-wash: rgba(52, 199, 159, 0.28);
-  --apple-color-wash-secondary: rgba(0, 168, 138, 0.15);
+  --apple-primary: #00c7be;
+  --apple-color-wash: rgba(52, 199, 159, 0.1);
+  --apple-color-wash-secondary: rgba(0, 199, 190, 0.05);
 }
 
 :global(.theme-apple-lavender) {
   --apple-primary: #af52de;
-  --apple-color-wash: rgba(191, 110, 232, 0.26);
-  --apple-color-wash-secondary: rgba(175, 82, 222, 0.15);
+  --apple-color-wash: rgba(191, 110, 232, 0.09);
+  --apple-color-wash-secondary: rgba(175, 82, 222, 0.05);
 }
 
 :global(.theme-apple-sand) {
   --apple-primary: #ff9500;
-  --apple-color-wash: rgba(255, 159, 10, 0.26);
-  --apple-color-wash-secondary: rgba(255, 149, 0, 0.15);
+  --apple-color-wash: rgba(255, 159, 10, 0.09);
+  --apple-color-wash-secondary: rgba(255, 149, 0, 0.05);
 }
 
 :global(.theme-apple-rose) {
   --apple-primary: #ff2d55;
-  --apple-color-wash: rgba(255, 55, 95, 0.24);
-  --apple-color-wash-secondary: rgba(255, 45, 85, 0.14);
+  --apple-color-wash: rgba(255, 55, 95, 0.08);
+  --apple-color-wash-secondary: rgba(255, 45, 85, 0.045);
 }
 
 :global(.theme-apple-sky .same-layer-pre-host),
@@ -3129,9 +3129,9 @@ onBeforeUnmount(() => {
 :global(.theme-apple-rose .same-layer-pre-host .ui-bottom-drawer),
 :global(.theme-apple-rose .same-layer-pre-host .ui-sidebar),
 :global(.theme-apple-rose .same-layer-pre-host .composer-input-shell) {
-  background: color-mix(in srgb, var(--apple-surface) 74%, transparent);
+  background: color-mix(in srgb, var(--apple-surface) 82%, transparent);
   border-color: var(--apple-divider);
-  box-shadow: 0 14px 38px color-mix(in srgb, var(--shadow-color) 72%, transparent);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 62%, transparent);
 }
 
 :global(.theme-apple-sky .same-layer-pre-host .sidebar-empty),
@@ -3189,7 +3189,7 @@ onBeforeUnmount(() => {
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__probe),
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__empty),
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-card) {
-  background: color-mix(in srgb, var(--apple-surface) 72%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 66%, transparent), 0 10px 28px color-mix(in srgb, var(--shadow-color) 48%, transparent);
+  background: color-mix(in srgb, var(--apple-surface) 84%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 58%, transparent), 0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 </style>

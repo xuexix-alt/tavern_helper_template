@@ -203,3 +203,18 @@
 - [x] **Step 3: Add light system-background tokens and visible material washes for SKY, MINT, LAVENDER, SAND, and ROSE**
 - [x] **Step 4: Run source tests, component-token checks, build, generated CSS inspection, and `git diff --check`**
 - [ ] **Step 5: Commit only the Apple color archive sources/tests/tokens and pre dist artifacts**
+
+### Task 10: Rebalance Apple system surfaces
+
+**Files:**
+- Modify: `src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+- Modify: `src/寒冬末日/界面同层版/界面/状态栏/theme-tokens.css`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue`
+- Modify: `docs/superpowers/specs/2026-07-17-same-layer-pre-apple-theme-design.md`
+- Generated: the three same-layer-pre status-bar dist artifacts only
+
+- [x] **Step 1: Add failing contracts for neutral Apple gray layers and reduced color wash**
+- [x] **Step 2: Rebalance APPLE dark base/elevated surfaces and all five light variant backgrounds**
+- [x] **Step 3: Keep semantic accent colors on actions while reducing full-screen tint and preserving glass depth**
+- [x] **Step 4: Run source tests, component-token checks, production build, generated CSS inspection, and `git diff --check`**
+- [x] **Step 5: Commit the surface rebalance without staging unrelated dist or temporary files**

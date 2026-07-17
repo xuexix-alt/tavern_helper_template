@@ -239,11 +239,11 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /\{\s*label:\s*'APPLE'\s*,\s*value:\s*'apple'\s*\}/);
 
   const appleColorThemes = [
-    ['sky', '#eaf3ff'],
-    ['mint', '#eaf7f2'],
-    ['lavender', '#f1eefa'],
-    ['sand', '#f8f2ea'],
-    ['rose', '#faeff3'],
+    ['sky', '#f2f6fc'],
+    ['mint', '#f1f7f5'],
+    ['lavender', '#f5f2f8'],
+    ['sand', '#f7f4f0'],
+    ['rose', '#f8f2f4'],
   ];
   for (const [name, background] of appleColorThemes) {
     const theme = `apple-${name}`;
@@ -284,12 +284,20 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /@media\s*\(prefers-contrast:\s*more\)/);
 
   assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?color-scheme:\s*dark/);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#0b0b0d/i);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#111113/i);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--surface:\s*#1c1c1e/i);
   assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--primary:\s*#0a84ff/i);
   assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--demo-color-danger|--apple-danger/i);
   assert.match(storySource, /--apple-primary:\s*#0a84ff/i);
   assert.match(storySource, /--apple-danger:\s*#ff453a/i);
   assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)/i);
+  assert.match(storySource, /--apple-color-wash:\s*rgba\(84,\s*164,\s*255,\s*0\.1\)/i);
+  assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)\s*82%/i);
+  assert.match(themeTokenSource, /\.theme-apple-sky\s*\{[\s\S]*?--background:\s*#f2f6fc/i);
+  assert.match(themeTokenSource, /\.theme-apple-mint\s*\{[\s\S]*?--background:\s*#f1f7f5/i);
+  assert.match(themeTokenSource, /\.theme-apple-lavender\s*\{[\s\S]*?--background:\s*#f5f2f8/i);
+  assert.match(themeTokenSource, /\.theme-apple-sand\s*\{[\s\S]*?--background:\s*#f7f4f0/i);
+  assert.match(themeTokenSource, /\.theme-apple-rose\s*\{[\s\S]*?--background:\s*#f8f2f4/i);
   assert.match(storySource, /border-radius:\s*999px/);
   assert.match(
     storySource,

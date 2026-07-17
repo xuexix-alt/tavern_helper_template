@@ -96,18 +96,18 @@
 }
 
 .theme-apple {
-  --background: #0b0b0d;
-  --bg-gradient: radial-gradient(circle at top center, #17171b 0%, #0b0b0d 78%);
+  --background: #111113;
+  --bg-gradient: radial-gradient(circle at top center, #1b1b1f 0%, #111113 78%);
   --foreground: #f5f5f7;
-  --surface: #151518;
-  --surface-hover: #232326;
-  --border: rgba(255, 255, 255, 0.16);
+  --surface: #1c1c1e;
+  --surface-hover: #2c2c2e;
+  --border: rgba(255, 255, 255, 0.14);
   --primary: #0a84ff;
   --primary-foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.08);
+  --muted: rgba(255, 255, 255, 0.1);
   --muted-foreground: #98989d;
-  --shadow-color: rgba(0, 0, 0, 0.62);
-  --glass-bg: rgba(21, 21, 24, 0.78);
+  --shadow-color: rgba(0, 0, 0, 0.52);
+  --glass-bg: rgba(28, 28, 30, 0.78);
   --apple-danger: #ff453a;
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Noto Sans SC', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -116,86 +116,86 @@
 }
 
 .theme-apple-sky {
-  --background: #eaf3ff;
-  --bg-gradient: radial-gradient(circle at top left, #d8eaff 0%, #eaf3ff 68%, #f7fbff 100%);
+  --background: #f2f6fc;
+  --bg-gradient: radial-gradient(circle at top left, #eaf2fc 0%, #f2f6fc 72%, #f7f8fa 100%);
   --foreground: #1d1d1f;
-  --surface: #f7faff;
-  --surface-hover: #e1efff;
-  --border: rgba(31, 73, 125, 0.18);
+  --surface: #ffffff;
+  --surface-hover: #e8f0fa;
+  --border: rgba(60, 60, 67, 0.16);
   --primary: #007aff;
   --primary-foreground: #ffffff;
-  --muted: rgba(30, 60, 100, 0.1);
-  --muted-foreground: #5f6b7a;
-  --shadow-color: rgba(30, 60, 100, 0.18);
-  --glass-bg: rgba(255, 255, 255, 0.58);
+  --muted: rgba(60, 60, 67, 0.08);
+  --muted-foreground: #6e6e73;
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --apple-danger: #ff3b30;
   color-scheme: light;
 }
 
 .theme-apple-mint {
-  --background: #eaf7f2;
-  --bg-gradient: radial-gradient(circle at top left, #d5f2e6 0%, #eaf7f2 68%, #f8fcfa 100%);
-  --foreground: #17302a;
-  --surface: #f8fcfa;
-  --surface-hover: #def3eb;
-  --border: rgba(27, 112, 92, 0.18);
-  --primary: #00a88a;
+  --background: #f1f7f5;
+  --bg-gradient: radial-gradient(circle at top left, #e8f4f0 0%, #f1f7f5 72%, #f7f8f7 100%);
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-hover: #e4f2ee;
+  --border: rgba(60, 60, 67, 0.16);
+  --primary: #00c7be;
   --primary-foreground: #ffffff;
-  --muted: rgba(26, 96, 79, 0.1);
-  --muted-foreground: #58766e;
-  --shadow-color: rgba(27, 112, 92, 0.16);
-  --glass-bg: rgba(255, 255, 255, 0.58);
+  --muted: rgba(60, 60, 67, 0.08);
+  --muted-foreground: #6e6e73;
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --apple-danger: #ff3b30;
   color-scheme: light;
 }
 
 .theme-apple-lavender {
-  --background: #f1eefa;
-  --bg-gradient: radial-gradient(circle at top left, #e2dafa 0%, #f1eefa 68%, #fbfaff 100%);
-  --foreground: #2b2540;
-  --surface: #fbfaff;
-  --surface-hover: #eae4fb;
-  --border: rgba(92, 68, 137, 0.18);
+  --background: #f5f2f8;
+  --bg-gradient: radial-gradient(circle at top left, #eeeaf4 0%, #f5f2f8 72%, #f8f8fa 100%);
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-hover: #eee8f4;
+  --border: rgba(60, 60, 67, 0.16);
   --primary: #af52de;
   --primary-foreground: #ffffff;
-  --muted: rgba(91, 66, 134, 0.1);
-  --muted-foreground: #716986;
-  --shadow-color: rgba(92, 68, 137, 0.17);
-  --glass-bg: rgba(255, 255, 255, 0.6);
+  --muted: rgba(60, 60, 67, 0.08);
+  --muted-foreground: #6e6e73;
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --apple-danger: #ff375f;
   color-scheme: light;
 }
 
 .theme-apple-sand {
-  --background: #f8f2ea;
-  --bg-gradient: radial-gradient(circle at top left, #f3e4d2 0%, #f8f2ea 68%, #fffdf8 100%);
-  --foreground: #332a20;
-  --surface: #fffdf8;
-  --surface-hover: #f7eadb;
-  --border: rgba(133, 88, 43, 0.18);
+  --background: #f7f4f0;
+  --bg-gradient: radial-gradient(circle at top left, #f2eee8 0%, #f7f4f0 72%, #faf9f7 100%);
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-hover: #f2ece4;
+  --border: rgba(60, 60, 67, 0.16);
   --primary: #ff9500;
   --primary-foreground: #ffffff;
-  --muted: rgba(123, 80, 36, 0.1);
-  --muted-foreground: #806d58;
-  --shadow-color: rgba(133, 88, 43, 0.16);
-  --glass-bg: rgba(255, 255, 255, 0.62);
+  --muted: rgba(60, 60, 67, 0.08);
+  --muted-foreground: #6e6e73;
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --apple-danger: #ff3b30;
   color-scheme: light;
 }
 
 .theme-apple-rose {
-  --background: #faeff3;
-  --bg-gradient: radial-gradient(circle at top left, #f6dce6 0%, #faeff3 68%, #fff9fb 100%);
-  --foreground: #38222b;
-  --surface: #fff9fb;
-  --surface-hover: #f8e3eb;
-  --border: rgba(143, 60, 89, 0.18);
+  --background: #f8f2f4;
+  --bg-gradient: radial-gradient(circle at top left, #f3e9ed 0%, #f8f2f4 72%, #faf9fa 100%);
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-hover: #f4e8ed;
+  --border: rgba(60, 60, 67, 0.16);
   --primary: #ff2d55;
   --primary-foreground: #ffffff;
-  --muted: rgba(130, 51, 79, 0.1);
-  --muted-foreground: #866774;
-  --shadow-color: rgba(143, 60, 89, 0.17);
-  --glass-bg: rgba(255, 255, 255, 0.62);
+  --muted: rgba(60, 60, 67, 0.08);
+  --muted-foreground: #6e6e73;
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --apple-danger: #ff3b30;
   color-scheme: light;
 }
