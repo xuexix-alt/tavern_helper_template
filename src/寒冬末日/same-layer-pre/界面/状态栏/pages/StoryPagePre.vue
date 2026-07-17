@@ -2648,6 +2648,245 @@ onBeforeUnmount(() => {
   border-radius: 14px;
 }
 
+/* APPLE editorial reading layer: hierarchy comes from column, type, and rhythm. */
+:global(.theme-apple .same-layer-pre-host) {
+  background:
+    radial-gradient(circle at 50% -18%, color-mix(in srgb, white 5%, transparent), transparent 42%),
+    var(--background);
+  border: 0;
+  border-radius: 24px;
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--shadow-color) 58%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-host-body) {
+  padding-inline: clamp(16px, 4vw, 56px);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-topbar) {
+  padding: 14px clamp(18px, 3vw, 32px);
+  background: color-mix(in srgb, var(--background) 76%, transparent);
+  box-shadow: 0 18px 36px -30px color-mix(in srgb, white 28%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-brand-copy),
+:global(.theme-apple .same-layer-pre-host .ui-online),
+:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
+:global(.theme-apple .same-layer-pre-host .ui-signal-btn) {
+  font-family: var(--pre-font-sans);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-brand-copy) {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-brand-version) {
+  font-family: var(--pre-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-topbar-actions) {
+  gap: 4px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-icon-btn) {
+  min-height: 34px;
+  padding-inline: 11px;
+  background: color-mix(in srgb, white 4%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-transcript-panel) {
+  gap: 12px;
+  padding: 14px 0 24px;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-reader-meta) {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  gap: 0;
+  min-height: 22px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-reader-meta span) {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-reader-meta span + span)::before {
+  content: '·';
+  margin-inline: 9px;
+  color: color-mix(in srgb, var(--foreground) 24%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-transcript-stage) {
+  width: 100%;
+  max-width: min(100%, 72rem);
+  margin-inline: auto;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card) {
+  max-width: min(100%, 72rem);
+  margin: 10px auto;
+  gap: 14px;
+  padding: 18px 22px;
+  border: 0;
+  border-radius: 22px;
+  background: color-mix(in srgb, white 2.5%, transparent);
+  box-shadow: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card.role-user) {
+  max-width: min(100%, 64rem);
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+  background: color-mix(in srgb, var(--apple-primary) 7%, var(--background) 93%);
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card.role-system) {
+  background: color-mix(in srgb, white 4%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__header) {
+  font-family: var(--pre-font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__role) {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 6%, transparent);
+  color: var(--apple-muted);
+}
+
+:global(.theme-apple .same-layer-pre-host .role-user .pre-message-card__role) {
+  background: color-mix(in srgb, var(--apple-primary) 13%, transparent);
+  color: color-mix(in srgb, var(--apple-primary) 82%, white 18%);
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__body) {
+  font-family: var(--pre-font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.86;
+  letter-spacing: 0;
+  text-wrap: pretty;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__body :where(p, .pre-reading-paragraph, blockquote)) {
+  text-indent: 0;
+  margin-block: 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__body :where(p, .pre-reading-paragraph, blockquote) + :where(p, .pre-reading-paragraph, blockquote)) {
+  margin-block-start: 0.9em;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card__actions) {
+  opacity: 0.72;
+  padding-top: 2px;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-message-card:hover .pre-message-card__actions),
+:global(.theme-apple .same-layer-pre-host .pre-message-card:focus-within .pre-message-card__actions) {
+  opacity: 1;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-dock) {
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip) {
+  width: fit-content;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-console-balance) {
+  display: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row) {
+  gap: 4px;
+  padding: 3px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 4%, transparent);
+  box-shadow: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn) {
+  min-width: 0;
+  min-height: 32px;
+  padding-inline: 11px;
+  border: 0;
+  background: transparent;
+  color: var(--apple-muted);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn.active) {
+  background: color-mix(in srgb, white 10%, transparent);
+  color: var(--foreground);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-bars) {
+  display: none;
+}
+
+:global(.theme-apple .same-layer-pre-host .composer-input-shell) {
+  width: min(100%, 72rem);
+  min-height: 56px;
+  padding: 6px 6px 6px 16px;
+  border: 0;
+  border-radius: 22px;
+  background: color-mix(in srgb, white 7%, var(--background) 93%);
+  box-shadow:
+    0 16px 42px color-mix(in srgb, var(--shadow-color) 42%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 9%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .composer-input-main) {
+  padding-inline: 8px;
+}
+
+:global(.theme-apple .same-layer-pre-host .composer-textarea) {
+  padding-block: 12px;
+  font-family: var(--pre-font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .send-btn) {
+  min-height: 42px;
+  min-width: 68px;
+  margin: 0;
+  border: 0;
+  background: var(--apple-primary);
+  box-shadow: none;
+  font-family: var(--pre-font-sans);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 @media (max-width: 760px) {
   :global(.theme-apple .same-layer-pre-host .ui-sidebar),
   :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {

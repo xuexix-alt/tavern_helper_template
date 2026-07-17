@@ -277,6 +277,13 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(appleSource, /\.pre-gallery-panel__empty[^{}]*\{[\s\S]*?border:\s*0/);
   assert.match(appleSource, /\.source-nav[^{}]*\{[\s\S]*?border:\s*0/);
   assert.match(appleSource, /@media\s*\(prefers-contrast:\s*more\)[\s\S]*?border-color/);
+  assert.match(appleSource, /\.ui-transcript-stage[^{}]*\{[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
+  assert.match(appleSource, /\.ui-bottom-console-strip[^{}]*\{[\s\S]*?width:\s*fit-content[\s\S]*?background:\s*transparent/);
+  assert.match(appleSource, /\.pre-message-card[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
+  assert.match(appleSource, /\.pre-reader-meta span[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*transparent/);
+  assert.match(appleSource, /\.ui-bars[^{}]*\{[\s\S]*?display:\s*none/);
+  assert.match(appleSource, /\.composer-input-shell[^{}]*\{[\s\S]*?border-radius:\s*22px[\s\S]*?border:\s*0/);
+  assert.doesNotMatch(appleSource, /:deep\(/, 'APPLE global overrides must compile without literal :deep selectors');
   assert.ok((themeTokenSource.match(/\.theme-apple/g) || []).length >= 2, 'derived APPLE demo tokens should be declared');
 });
 
