@@ -2498,6 +2498,180 @@ onBeforeUnmount(() => {
   }
 }
 
+/* APPLE floating-island layer: depth and tonal grouping replace hard dividers. */
+:global(.theme-apple .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+  top: 8px;
+  bottom: 8px;
+  left: 8px;
+  width: min(86vw, 360px);
+  border: 0;
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--apple-surface-strong) 82%, transparent);
+  box-shadow:
+    0 20px 52px color-mix(in srgb, var(--shadow-color) 76%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+  right: 8px;
+  left: auto;
+  width: min(60vw, 640px);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-head) {
+  border-bottom: 0;
+  padding: 18px 18px 12px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-body) {
+  padding: 12px 14px 18px;
+  scrollbar-color: color-mix(in srgb, white 18%, transparent) transparent;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-topbar),
+:global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple .same-layer-pre-host .composer-input-shell),
+:global(.theme-apple .ui-bottom-drawer) {
+  border: 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-topbar) {
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--shadow-color) 38%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
+  position: absolute;
+  width: 22px;
+  height: 96px;
+  border: 0;
+  border-radius: 0 18px 18px 0;
+  background: color-mix(in srgb, var(--apple-surface-strong) 86%, transparent);
+  box-shadow:
+    0 12px 30px color-mix(in srgb, var(--shadow-color) 58%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
+  position: absolute;
+  border-radius: 18px 0 0 18px;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-close-btn) {
+  border: 0;
+  background: color-mix(in srgb, white 8%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .source-nav),
+:global(.theme-apple .same-layer-pre-host .page-tabs),
+:global(.theme-apple .same-layer-pre-host .tab-row) {
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, white 6%, transparent);
+  padding: 4px;
+  gap: 4px;
+}
+
+:global(.theme-apple .same-layer-pre-host .source-nav-btn),
+:global(.theme-apple .same-layer-pre-host .source-status) {
+  border: 0;
+  background: color-mix(in srgb, white 7%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .page-tab),
+:global(.theme-apple .same-layer-pre-host .tab-btn) {
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+}
+
+:global(.theme-apple .same-layer-pre-host .page-tab.active),
+:global(.theme-apple .same-layer-pre-host .tab-btn.active) {
+  border: 0;
+  background: color-mix(in srgb, white 14%, transparent);
+  color: var(--foreground);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .source-select),
+:global(.theme-apple .same-layer-pre-host .collapse-btn),
+:global(.theme-apple .same-layer-pre-host .action-btn),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__refresh),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__scope select),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-card__portrait) {
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, white 7%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .collapse-btn) {
+  border-radius: 14px;
+}
+
+:global(.theme-apple .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple .same-layer-pre-host .accordion-item),
+:global(.theme-apple .same-layer-pre-host .bio-box),
+:global(.theme-apple .same-layer-pre-host .thought-box),
+:global(.theme-apple .same-layer-pre-host .metric-card),
+:global(.theme-apple .same-layer-pre-host .meta-box),
+:global(.theme-apple .same-layer-pre-host .expand-card),
+:global(.theme-apple .same-layer-pre-host .system-command-card),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple .same-layer-pre-host .pre-gallery-card) {
+  border: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, white 4.5%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .accordion-item.active) {
+  border: 0;
+  background: color-mix(in srgb, white 7%, transparent);
+}
+
+:global(.theme-apple .same-layer-pre-host .accordion-body) {
+  border-top: 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__empty) {
+  min-height: 128px;
+  border: 0;
+  border-radius: 18px;
+}
+
+:global(.theme-apple .same-layer-pre-host .pre-gallery-card__image) {
+  border: 0;
+  border-radius: 14px;
+}
+
+@media (max-width: 760px) {
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+    top: 8px;
+    bottom: 8px;
+    width: calc(100vw - 16px);
+    max-height: none;
+    border-radius: 28px;
+  }
+
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
+    position: fixed;
+  }
+
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar) {
+    left: 8px;
+  }
+
+  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+    right: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :global(.theme-apple .same-layer-pre-host .ui-sidebar),
   :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {

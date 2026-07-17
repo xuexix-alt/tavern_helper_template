@@ -227,6 +227,7 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   const typesSource = readPre('types.ts');
   const hookSource = readPre('useSameLayerPre.ts');
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const appleSource = storySource.slice(storySource.indexOf('/* APPLE surface'));
   const themeTokenSource = fs.readFileSync(
     path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'theme-tokens.css'),
     'utf8',
@@ -269,6 +270,13 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)/i);
   assert.match(storySource, /border-radius:\s*999px/);
   assert.match(storySource, /\.ui-page-menu-item\.is-primary|\.send-btn\.is-primary|\.choice-btn(?:--primary|\.primary)/i);
+  assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?top:\s*8px[\s\S]*?bottom:\s*8px[\s\S]*?border:\s*0/);
+  assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?border-radius:\s*28px/);
+  assert.match(appleSource, /\.page-tabs|\.tab-row/);
+  assert.match(appleSource, /\.page-tab|\.tab-btn[^{}]*\{[\s\S]*?border:\s*0/);
+  assert.match(appleSource, /\.pre-gallery-panel__empty[^{}]*\{[\s\S]*?border:\s*0/);
+  assert.match(appleSource, /\.source-nav[^{}]*\{[\s\S]*?border:\s*0/);
+  assert.match(appleSource, /@media\s*\(prefers-contrast:\s*more\)[\s\S]*?border-color/);
   assert.ok((themeTokenSource.match(/\.theme-apple/g) || []).length >= 2, 'derived APPLE demo tokens should be declared');
 });
 
