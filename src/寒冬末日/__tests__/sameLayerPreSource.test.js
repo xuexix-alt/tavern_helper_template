@@ -334,17 +334,17 @@ test('same-layer-pre only enables option-modal retry when MVU is configured for 
   );
 });
 
-test('same-layer-pre emits the native MVU retry event after persisting assistant output', () => {
+test('same-layer-pre leaves automatic extra analysis to MVU MESSAGE_RECEIVED handling', () => {
   const source = readPre('useSameLayerPre.ts');
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /extra_analysis[\s\S]*retryMessageExtraAnalysisByNativeMvu[\s\S]*getTrueChatLength\(\)/,
-    'pre should invoke the native MVU retry helper only when extra analysis is configured',
+    /retryMessageExtraAnalysisByNativeMvu|emitNativeMvuRetryEvent/,
+    'pre automatic generation must not trigger a second native MVU retry after MESSAGE_RECEIVED',
   );
   assert.match(
     source,
-    /createChatMessages\(\[\{ role: 'assistant',[\s\S]*await emitNativeMvuRetryEvent\(/,
-    'the native retry event must happen after the assistant message is persisted',
+    /createChatMessages\(\[\{ role: 'assistant',[\s\S]*refreshTranscript\('assistant_persisted'\)/,
+    'pre should still persist the assistant output and refresh its transcript',
   );
   assert.doesNotMatch(
     source,
@@ -660,7 +660,7 @@ test('same-layer-pre host visual hide survives host DOM refresh without MVU reve
   assert.match(hookSource, /collectHostVisibleMessageIds/);
   assert.match(refreshTranscriptSource, /readRecentChatMessagesForUi\(\)/);
   assert.doesNotMatch(refreshTranscriptSource, /getChatMessages\('0-\{\{lastMessageId\}\}'/);
-  assert.match(hookSource, /retryMessageExtraAnalysisByNativeMvu/);
+  assert.doesNotMatch(hookSource, /retryMessageExtraAnalysisByNativeMvu|emitNativeMvuRetryEvent/);
   assert.doesNotMatch(hookSource, /revealHiddenStoryMessagesForNativeGeneration/);
   assert.doesNotMatch(hookSource, /withHostTranscriptVisible/);
   assert.doesNotMatch(controllerSource, /\.suspend\(/);
@@ -1178,4 +1178,12 @@ test('same-layer-pre keeps MVU host-floor writeback scroll anchoring in the host
   assert.match(source, /requestAnimationFrame\(\(\) => \{/);
   assert.doesNotMatch(readPre(path.join('components', 'PreTranscriptList.vue')), /transcriptItemsSignature/);
   assert.doesNotMatch(readPre('preHostLifecycleBridge.ts'), /captureHostScrollSnapshot|restoreHostScrollSnapshot/);
+});
+
+test('same-layer-pre only follows the bottom on resize when the reader was already near it', () => {
+  const source = readPre(path.join('components', 'PreTranscriptList.vue'));
+
+  assert.match(source, /function isNearBottom\(/);
+  assert.match(source, /onlyIfNearBottom/);
+  assert.match(source, /scrollToBottom\(\{ onlyIfNearBottom: true \}\)/);
 });

@@ -39,12 +39,21 @@ const emit = defineEmits<{
 
 const listRef = ref<HTMLElement | null>(null);
 const hostImageGestureForwarder = installPreHostImageGestureForwarder();
+const TRANSCRIPT_BOTTOM_THRESHOLD_PX = 32;
 
-async function scrollToBottom() {
-  await nextTick();
+function isNearBottom(element: HTMLElement, threshold = TRANSCRIPT_BOTTOM_THRESHOLD_PX) {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
+}
+
+async function scrollToBottom(options: { onlyIfNearBottom?: boolean } = {}) {
   const element = listRef.value;
   if (!element) return;
-  element.scrollTop = element.scrollHeight;
+
+  const shouldScroll = !options.onlyIfNearBottom || isNearBottom(element);
+  await nextTick();
+  const currentElement = listRef.value;
+  if (!currentElement || (options.onlyIfNearBottom && !shouldScroll)) return;
+  currentElement.scrollTop = currentElement.scrollHeight;
 }
 
 watch(
@@ -52,7 +61,7 @@ watch(
   () => void scrollToBottom(),
 );
 
-useEventListener(window, 'resize', () => void scrollToBottom());
+useEventListener(window, 'resize', () => void scrollToBottom({ onlyIfNearBottom: true }));
 useEventListener(window, 'dblclick', hostImageGestureForwarder.handleDoubleClick, { capture: true });
 useEventListener(window, 'touchend', hostImageGestureForwarder.handleTouchEnd, { capture: true, passive: false });
 </script>
