@@ -3095,8 +3095,7 @@ onBeforeUnmount(() => {
   --apple-focus: color-mix(in srgb, var(--apple-primary) 74%, #1d1d1f 8%);
   background:
     radial-gradient(circle at 8% 0%, var(--apple-color-wash), transparent 38%),
-    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%),
-    var(--background);
+    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%), var(--background);
 }
 
 :global(.theme-apple-sky .same-layer-pre-host .ui-topbar),
@@ -3190,6 +3189,8 @@ onBeforeUnmount(() => {
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__empty),
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-card) {
   background: color-mix(in srgb, var(--apple-surface) 84%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 58%, transparent), 0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 58%, transparent),
+    0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 </style>
