@@ -165,7 +165,7 @@
 
 - [ ] **Step 1: Add failing source contracts for Apple reading hierarchy**
 
-  Assert that APPLE removes the full-width console frame, constrains the transcript to a centered reading column, flattens message cards into matte editorial surfaces, removes metadata chips, hides cyber-style meter bars, and makes the composer a rounded primary floating surface.
+  In `sameLayerPreSource.test.js`, slice the APPLE CSS block and assert these concrete contracts: `.ui-transcript-stage` has `max-width: min(100%, 72rem)` and is centered with `margin-inline: auto`; `.ui-bottom-console-strip` is `width: fit-content` with `background: transparent`; `.pre-message-card` has `max-width: min(100%, 72rem)` and `border: 0`; `.pre-reader-meta span` has `border: 0` and `background: transparent`; `.ui-bars` is `display: none`; `.composer-input-shell` has `border-radius: 22px` and `border: 0`.
 
 - [ ] **Step 2: Run the focused source test and verify the new contracts fail**
 
@@ -175,11 +175,11 @@
 
 - [ ] **Step 3: Implement APPLE-only layout and typography overrides**
 
-  Keep all rules under `.theme-apple .same-layer-pre-host`; remove structural borders and full-width chrome, center the reading column, reduce card contrast, use system typography with block spacing instead of terminal-style indentation, replace meter bars with quiet labels, and style the bottom composer as the dominant floating capsule. Do not change component markup, event handlers, or six-theme selectors.
+  Keep all rules under `.theme-apple .same-layer-pre-host`; use a centered transcript stage no wider than `72rem`, 16px/1.86 system body type, 10–12px metadata-to-content spacing, 8–12px tool-to-composer spacing, borderless matte message surfaces, no chip backgrounds on `.pre-reader-meta span`, no `.ui-bars`, and a 22px-radius composer with at least 6px internal padding. Do not change component markup, event handlers, or six-theme selectors.
 
 - [ ] **Step 4: Run focused tests, token checks, build, generated-selector inspection, and diff checks**
 
-  Run the pre source/gallery tests, `pnpm check:component-tokens`, `pnpm build`, a static APPLE selector check, and `git diff --check`.
+  Run `node --test src/寒冬末日/__tests__/sameLayerPreSource.test.js src/寒冬末日/same-layer-pre/界面/状态栏/__tests__/preGalleryImageRefs.test.js`, then `pnpm check:component-tokens`, then `pnpm build`. Inspect generated APPLE CSS with `rg -n "theme-apple|ui-transcript-stage|ui-bottom-console-strip|composer-input-shell|ui-bars" dist/寒冬末日/same-layer-pre/界面/状态栏/index.html dist/寒冬末日/same-layer-pre/界面/状态栏/main.css.map`; finish with `git diff --check`.
 
 - [ ] **Step 5: Commit only APPLE source/test and pre dist artifacts**
 
