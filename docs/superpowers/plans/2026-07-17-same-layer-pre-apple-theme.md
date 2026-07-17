@@ -142,3 +142,16 @@
 - [ ] **Step 3: Restyle APPLE buttons as neutral glass/capsule controls, limiting accent fill to primary actions while preserving existing handlers and hit targets**
 - [ ] **Step 4: Run focused tests, token checks, production build, generated-selector inspection, and `git diff --check`**
 - [ ] **Step 5: Commit only APPLE source/test/token and pre dist artifacts**
+
+### Task 7: Convert APPLE panels to system-level floating islands
+
+**Files:**
+- Modify: `src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue`
+- Generated: `dist/寒冬末日/same-layer-pre/界面/状态栏/index.html`, `index.js.map`, `main.css.map`
+
+- [ ] **Step 1: Add failing assertions for inset rounded sidebars, borderless APPLE surfaces, neutral segmented role tabs, and child-panel overrides**
+- [ ] **Step 2: Run the focused test and verify it fails for the missing floating-island contracts**
+- [ ] **Step 3: Add APPLE-only parent and child-component visual overrides using global descendant selectors; keep events and layout flow unchanged**
+- [ ] **Step 4: Run focused tests, token checks, production build, generated CSS inspection, and `git diff --check`**
+- [ ] **Step 5: Commit only APPLE source/test and pre dist artifacts**
