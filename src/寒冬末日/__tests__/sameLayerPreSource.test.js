@@ -254,7 +254,11 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.ok(appleHandleBlocks.length >= 1, 'APPLE should scope both floating edge handles');
   for (const [, block] of appleHandleBlocks) {
     assert.match(block, /position:\s*fixed|position:\s*absolute/);
-    assert.doesNotMatch(block, /\bflex\s*:|\bgrid-(?:column|area|row)\s*:/, 'floating handles must stay out of flex/grid layout');
+    assert.doesNotMatch(
+      block,
+      /\bflex\s*:|\bgrid-(?:column|area|row)\s*:/,
+      'floating handles must stay out of flex/grid layout',
+    );
   }
 
   assert.match(storySource, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
@@ -269,7 +273,10 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /--apple-danger:\s*#ff453a/i);
   assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)/i);
   assert.match(storySource, /border-radius:\s*999px/);
-  assert.match(storySource, /\.ui-page-menu-item\.is-primary|\.send-btn\.is-primary|\.choice-btn(?:--primary|\.primary)/i);
+  assert.match(
+    storySource,
+    /\.ui-page-menu-item\.is-primary|\.send-btn\.is-primary|\.choice-btn(?:--primary|\.primary)/i,
+  );
   assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?top:\s*8px[\s\S]*?bottom:\s*8px[\s\S]*?border:\s*0/);
   assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?border-radius:\s*28px/);
   assert.match(appleSource, /\.page-tabs|\.tab-row/);
@@ -278,13 +285,19 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(appleSource, /\.source-nav[^{}]*\{[\s\S]*?border:\s*0/);
   assert.match(appleSource, /@media\s*\(prefers-contrast:\s*more\)[\s\S]*?border-color/);
   assert.match(appleSource, /\.ui-transcript-stage[^{}]*\{[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
-  assert.match(appleSource, /\.ui-bottom-console-strip[^{}]*\{[\s\S]*?width:\s*fit-content[\s\S]*?background:\s*transparent/);
+  assert.match(
+    appleSource,
+    /\.ui-bottom-console-strip[^{}]*\{[\s\S]*?width:\s*fit-content[\s\S]*?background:\s*transparent/,
+  );
   assert.match(appleSource, /\.pre-message-card[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
   assert.match(appleSource, /\.pre-reader-meta span[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*transparent/);
   assert.match(appleSource, /\.ui-bars[^{}]*\{[\s\S]*?display:\s*none/);
   assert.match(appleSource, /\.composer-input-shell[^{}]*\{[\s\S]*?border-radius:\s*22px[\s\S]*?border:\s*0/);
   assert.doesNotMatch(appleSource, /:deep\(/, 'APPLE global overrides must compile without literal :deep selectors');
-  assert.ok((themeTokenSource.match(/\.theme-apple/g) || []).length >= 2, 'derived APPLE demo tokens should be declared');
+  assert.ok(
+    (themeTokenSource.match(/\.theme-apple/g) || []).length >= 2,
+    'derived APPLE demo tokens should be declared',
+  );
 });
 
 test('same-layer-pre gives inherited AGENTS drawer a full-height shell', () => {

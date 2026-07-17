@@ -109,7 +109,8 @@
   --shadow-color: rgba(0, 0, 0, 0.62);
   --glass-bg: rgba(21, 21, 24, 0.78);
   --apple-danger: #ff453a;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Noto Sans SC', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Noto Sans SC', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   color-scheme: dark;
 }

@@ -2651,8 +2651,7 @@ onBeforeUnmount(() => {
 /* APPLE editorial reading layer: hierarchy comes from column, type, and rhythm. */
 :global(.theme-apple .same-layer-pre-host) {
   background:
-    radial-gradient(circle at 50% -18%, color-mix(in srgb, white 5%, transparent), transparent 42%),
-    var(--background);
+    radial-gradient(circle at 50% -18%, color-mix(in srgb, white 5%, transparent), transparent 42%), var(--background);
   border: 0;
   border-radius: 24px;
   box-shadow: 0 28px 80px color-mix(in srgb, var(--shadow-color) 58%, transparent);
@@ -2789,7 +2788,13 @@ onBeforeUnmount(() => {
   margin-block: 0;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card__body :where(p, .pre-reading-paragraph, blockquote) + :where(p, .pre-reading-paragraph, blockquote)) {
+:global(
+  .theme-apple
+    .same-layer-pre-host
+    .pre-message-card__body
+    :where(p, .pre-reading-paragraph, blockquote)
+    + :where(p, .pre-reading-paragraph, blockquote)
+) {
   margin-block-start: 0.9em;
 }
 
