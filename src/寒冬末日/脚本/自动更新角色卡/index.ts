@@ -169,8 +169,7 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
     const remote = resolveRemoteUrls();
     const remoteVersion = await fetchRemoteVersion(remote.version_url);
     const current = await getCharacter(CHARACTER_NAME);
-    const currentVersion =
-      String(current?.version ?? '').trim() || settings.last_applied_remote_version || '0.0.0';
+    const currentVersion = String(current?.version ?? '').trim() || settings.last_applied_remote_version || '0.0.0';
     const needUpdate = safeCompareLt(currentVersion, remoteVersion);
 
     patchSettings(prev => ({
