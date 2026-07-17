@@ -128,3 +128,17 @@
   git add src/寒冬末日/__tests__/sameLayerPreSource.test.js src/寒冬末日/same-layer-pre/界面/状态栏/types.ts src/寒冬末日/same-layer-pre/界面/状态栏/useSameLayerPre.ts src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue src/寒冬末日/界面同层版/界面/状态栏/theme-tokens.css dist/寒冬末日/same-layer-pre/界面/状态栏/index.html dist/寒冬末日/same-layer-pre/界面/状态栏/index.js.map dist/寒冬末日/same-layer-pre/界面/状态栏/main.css.map
   git commit -m "feat: add apple theme to same-layer-pre"
   ```
+
+### Task 6: Revise APPLE palette and button hierarchy
+
+**Files:**
+- Modify: `src/寒冬末日/界面同层版/界面/状态栏/theme-tokens.css`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue`
+- Modify: `src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+- Generated: `dist/寒冬末日/same-layer-pre/界面/状态栏/index.html`, `index.js.map`, `main.css.map`
+
+- [ ] **Step 1: Extend the source contract for neutral graphite surfaces and semantic button colors**
+- [ ] **Step 2: Replace the APPLE token palette with graphite background, neutral elevated surfaces, system blue primary, and system red destructive values**
+- [ ] **Step 3: Restyle APPLE buttons as neutral glass/capsule controls, limiting accent fill to primary actions while preserving existing handlers and hit targets**
+- [ ] **Step 4: Run focused tests, token checks, production build, generated-selector inspection, and `git diff --check`**
+- [ ] **Step 5: Commit only APPLE source/test/token and pre dist artifacts**
