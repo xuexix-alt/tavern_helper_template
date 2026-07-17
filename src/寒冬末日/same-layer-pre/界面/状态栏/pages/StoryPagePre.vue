@@ -501,6 +501,11 @@ const themeItems: Array<{ label: string; value: DemoTheme }> = [
   { label: 'iPod', value: 'ipod' },
   { label: '琥珀', value: 'amber' },
   { label: 'APPLE', value: 'apple' },
+  { label: 'APPLE-SKY', value: 'apple-sky' },
+  { label: 'APPLE-MINT', value: 'apple-mint' },
+  { label: 'APPLE-LAVENDER', value: 'apple-lavender' },
+  { label: 'APPLE-SAND', value: 'apple-sand' },
+  { label: 'APPLE-ROSE', value: 'apple-rose' },
 ];
 
 const latestAssistantItem = computed(
@@ -1430,6 +1435,30 @@ onBeforeUnmount(() => {
 
 .ui-theme-swatch.is-amber {
   background: #05f26c;
+}
+
+.ui-theme-swatch.is-apple {
+  background: #0a84ff;
+}
+
+.ui-theme-swatch.is-apple-sky {
+  background: #6aaeff;
+}
+
+.ui-theme-swatch.is-apple-mint {
+  background: #34c7a2;
+}
+
+.ui-theme-swatch.is-apple-lavender {
+  background: #bf6ee8;
+}
+
+.ui-theme-swatch.is-apple-sand {
+  background: #ff9f0a;
+}
+
+.ui-theme-swatch.is-apple-rose {
+  background: #ff375f;
 }
 
 .ui-host-body {
@@ -3009,5 +3038,158 @@ onBeforeUnmount(() => {
     outline-offset: 4px;
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--foreground) 30%, transparent);
   }
+}
+
+/* Archived Apple colorways: the same editorial chrome with brighter, material-aware washes. */
+:global(.theme-apple-sky),
+:global(.theme-apple-mint),
+:global(.theme-apple-lavender),
+:global(.theme-apple-sand),
+:global(.theme-apple-rose) {
+  --apple-surface: color-mix(in srgb, var(--surface) 82%, white 18%);
+  --apple-surface-strong: color-mix(in srgb, var(--surface) 94%, white 6%);
+  --apple-divider: color-mix(in srgb, var(--foreground) 16%, transparent);
+  --apple-muted: color-mix(in srgb, var(--foreground) 62%, transparent);
+  color-scheme: light;
+}
+
+:global(.theme-apple-sky) {
+  --apple-primary: #007aff;
+  --apple-color-wash: rgba(84, 164, 255, 0.3);
+  --apple-color-wash-secondary: rgba(0, 122, 255, 0.16);
+}
+
+:global(.theme-apple-mint) {
+  --apple-primary: #00a88a;
+  --apple-color-wash: rgba(52, 199, 159, 0.28);
+  --apple-color-wash-secondary: rgba(0, 168, 138, 0.15);
+}
+
+:global(.theme-apple-lavender) {
+  --apple-primary: #af52de;
+  --apple-color-wash: rgba(191, 110, 232, 0.26);
+  --apple-color-wash-secondary: rgba(175, 82, 222, 0.15);
+}
+
+:global(.theme-apple-sand) {
+  --apple-primary: #ff9500;
+  --apple-color-wash: rgba(255, 159, 10, 0.26);
+  --apple-color-wash-secondary: rgba(255, 149, 0, 0.15);
+}
+
+:global(.theme-apple-rose) {
+  --apple-primary: #ff2d55;
+  --apple-color-wash: rgba(255, 55, 95, 0.24);
+  --apple-color-wash-secondary: rgba(255, 45, 85, 0.14);
+}
+
+:global(.theme-apple-sky .same-layer-pre-host),
+:global(.theme-apple-mint .same-layer-pre-host),
+:global(.theme-apple-lavender .same-layer-pre-host),
+:global(.theme-apple-sand .same-layer-pre-host),
+:global(.theme-apple-rose .same-layer-pre-host) {
+  --apple-surface: color-mix(in srgb, white 66%, var(--background));
+  --apple-surface-strong: color-mix(in srgb, white 82%, var(--background));
+  --apple-divider: color-mix(in srgb, var(--foreground) 16%, transparent);
+  --apple-muted: color-mix(in srgb, var(--foreground) 64%, transparent);
+  --apple-focus: color-mix(in srgb, var(--apple-primary) 74%, #1d1d1f 8%);
+  background:
+    radial-gradient(circle at 8% 0%, var(--apple-color-wash), transparent 38%),
+    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%),
+    var(--background);
+}
+
+:global(.theme-apple-sky .same-layer-pre-host .ui-topbar),
+:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-drawer),
+:global(.theme-apple-sky .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple-sky .same-layer-pre-host .composer-input-shell),
+:global(.theme-apple-mint .same-layer-pre-host .ui-topbar),
+:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-drawer),
+:global(.theme-apple-mint .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple-mint .same-layer-pre-host .composer-input-shell),
+:global(.theme-apple-lavender .same-layer-pre-host .ui-topbar),
+:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-drawer),
+:global(.theme-apple-lavender .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple-lavender .same-layer-pre-host .composer-input-shell),
+:global(.theme-apple-sand .same-layer-pre-host .ui-topbar),
+:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-drawer),
+:global(.theme-apple-sand .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple-sand .same-layer-pre-host .composer-input-shell),
+:global(.theme-apple-rose .same-layer-pre-host .ui-topbar),
+:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-console-strip),
+:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-tool-row),
+:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-drawer),
+:global(.theme-apple-rose .same-layer-pre-host .ui-sidebar),
+:global(.theme-apple-rose .same-layer-pre-host .composer-input-shell) {
+  background: color-mix(in srgb, var(--apple-surface) 74%, transparent);
+  border-color: var(--apple-divider);
+  box-shadow: 0 14px 38px color-mix(in srgb, var(--shadow-color) 72%, transparent);
+}
+
+:global(.theme-apple-sky .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple-sky .same-layer-pre-host .accordion-item),
+:global(.theme-apple-sky .same-layer-pre-host .bio-box),
+:global(.theme-apple-sky .same-layer-pre-host .thought-box),
+:global(.theme-apple-sky .same-layer-pre-host .metric-card),
+:global(.theme-apple-sky .same-layer-pre-host .meta-box),
+:global(.theme-apple-sky .same-layer-pre-host .expand-card),
+:global(.theme-apple-sky .same-layer-pre-host .system-command-card),
+:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-card),
+:global(.theme-apple-mint .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple-mint .same-layer-pre-host .accordion-item),
+:global(.theme-apple-mint .same-layer-pre-host .bio-box),
+:global(.theme-apple-mint .same-layer-pre-host .thought-box),
+:global(.theme-apple-mint .same-layer-pre-host .metric-card),
+:global(.theme-apple-mint .same-layer-pre-host .meta-box),
+:global(.theme-apple-mint .same-layer-pre-host .expand-card),
+:global(.theme-apple-mint .same-layer-pre-host .system-command-card),
+:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-card),
+:global(.theme-apple-lavender .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple-lavender .same-layer-pre-host .accordion-item),
+:global(.theme-apple-lavender .same-layer-pre-host .bio-box),
+:global(.theme-apple-lavender .same-layer-pre-host .thought-box),
+:global(.theme-apple-lavender .same-layer-pre-host .metric-card),
+:global(.theme-apple-lavender .same-layer-pre-host .meta-box),
+:global(.theme-apple-lavender .same-layer-pre-host .expand-card),
+:global(.theme-apple-lavender .same-layer-pre-host .system-command-card),
+:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-card),
+:global(.theme-apple-sand .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple-sand .same-layer-pre-host .accordion-item),
+:global(.theme-apple-sand .same-layer-pre-host .bio-box),
+:global(.theme-apple-sand .same-layer-pre-host .thought-box),
+:global(.theme-apple-sand .same-layer-pre-host .metric-card),
+:global(.theme-apple-sand .same-layer-pre-host .meta-box),
+:global(.theme-apple-sand .same-layer-pre-host .expand-card),
+:global(.theme-apple-sand .same-layer-pre-host .system-command-card),
+:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-card),
+:global(.theme-apple-rose .same-layer-pre-host .sidebar-empty),
+:global(.theme-apple-rose .same-layer-pre-host .accordion-item),
+:global(.theme-apple-rose .same-layer-pre-host .bio-box),
+:global(.theme-apple-rose .same-layer-pre-host .thought-box),
+:global(.theme-apple-rose .same-layer-pre-host .metric-card),
+:global(.theme-apple-rose .same-layer-pre-host .meta-box),
+:global(.theme-apple-rose .same-layer-pre-host .expand-card),
+:global(.theme-apple-rose .same-layer-pre-host .system-command-card),
+:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__probe),
+:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__empty),
+:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-card) {
+  background: color-mix(in srgb, var(--apple-surface) 72%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 66%, transparent), 0 10px 28px color-mix(in srgb, var(--shadow-color) 48%, transparent);
 }
 </style>

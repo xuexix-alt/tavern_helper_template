@@ -19,7 +19,20 @@ const DEMO_THEME_CLASS_NAMES = [
   'theme-ipod',
   'theme-amber',
   'theme-apple',
+  'theme-apple-sky',
+  'theme-apple-mint',
+  'theme-apple-lavender',
+  'theme-apple-sand',
+  'theme-apple-rose',
 ] as const;
+
+const APPLE_VARIANT_THEME_VALUES = new Set<DemoTheme>([
+  'apple-sky',
+  'apple-mint',
+  'apple-lavender',
+  'apple-sand',
+  'apple-rose',
+]);
 
 type PreTranscriptItemCacheEntry = {
   signature: string;
@@ -34,6 +47,9 @@ function applyDemoTheme(theme: DemoTheme) {
   roots.forEach(root => {
     root.classList.remove(...DEMO_THEME_CLASS_NAMES);
     root.classList.add(className);
+    if (APPLE_VARIANT_THEME_VALUES.has(theme)) {
+      root.classList.add('theme-apple');
+    }
   });
 }
 

@@ -238,6 +238,24 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(hookSource, /const theme = ref<DemoTheme>\('amber'\)/);
   assert.match(storySource, /\{\s*label:\s*'APPLE'\s*,\s*value:\s*'apple'\s*\}/);
 
+  const appleColorThemes = [
+    ['sky', '#eaf3ff'],
+    ['mint', '#eaf7f2'],
+    ['lavender', '#f1eefa'],
+    ['sand', '#f8f2ea'],
+    ['rose', '#faeff3'],
+  ];
+  for (const [name, background] of appleColorThemes) {
+    const theme = `apple-${name}`;
+    assert.match(typesSource, new RegExp(`DemoTheme\\s*=\\s*[^;]*\\|\\s*'${theme}'`));
+    assert.match(hookSource, new RegExp(`'theme-${theme}'`));
+    assert.match(storySource, new RegExp(`label:\\s*'APPLE-${name.toUpperCase()}'\\s*,\\s*value:\\s*'${theme}'`));
+    assert.match(themeTokenSource, new RegExp(`\\.theme-${theme}\\s*\\{[\\s\\S]*?--background:\\s*${background}`, 'i'));
+  }
+  assert.match(hookSource, /APPLE_VARIANT_THEME_VALUES|theme\.startsWith\('apple-'\)/);
+  assert.match(storySource, /theme-apple-sky[\s\S]*?radial-gradient|radial-gradient[\s\S]*?theme-apple-sky/);
+  assert.match(storySource, /prefers-reduced-transparency/);
+
   assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host/);
   assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-topbar\)/);
   assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.pre-message-card\)/);

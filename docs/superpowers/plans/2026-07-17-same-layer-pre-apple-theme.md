@@ -187,3 +187,19 @@
   git add src/寒冬末日/__tests__/sameLayerPreSource.test.js src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue dist/寒冬末日/same-layer-pre/界面/状态栏/index.html dist/寒冬末日/same-layer-pre/界面/状态栏/index.js.map dist/寒冬末日/same-layer-pre/界面/状态栏/main.css.map
   git commit -m "style: refine apple editorial reading layout"
   ```
+
+### Task 9: Archive Apple color variants
+
+**Files:**
+- Modify: `src/寒冬末日/__tests__/sameLayerPreSource.test.js`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/types.ts`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/useSameLayerPre.ts`
+- Modify: `src/寒冬末日/same-layer-pre/界面/状态栏/pages/StoryPagePre.vue`
+- Modify: `src/寒冬末日/界面同层版/界面/状态栏/theme-tokens.css`
+- Generated: the three same-layer-pre status-bar dist artifacts only
+
+- [x] **Step 1: Add source contracts for five named Apple colorways**
+- [x] **Step 2: Extend the theme union/menu and apply the APPLE alias for shared interaction/layout rules**
+- [x] **Step 3: Add light system-background tokens and visible material washes for SKY, MINT, LAVENDER, SAND, and ROSE**
+- [x] **Step 4: Run source tests, component-token checks, build, generated CSS inspection, and `git diff --check`**
+- [ ] **Step 5: Commit only the Apple color archive sources/tests/tokens and pre dist artifacts**
