@@ -5,9 +5,18 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const PRE_ROOT = path.join(ROOT, 'src', '寒冬末日', 'same-layer-pre', '界面', '状态栏');
+const PRE_MESSAGE_HOST_TAG_PATTERN =
+  /<[^>]*class=["'][^"']*\bpre-message-card\b[^"']*["'][^>]*\bdata-message-id\b[^>]*>|<[^>]*\bdata-message-id\b[^>]*class=["'][^"']*\bpre-message-card\b[^"']*["'][^>]*>/;
 
 function readPre(relativePath) {
   return fs.readFileSync(path.join(PRE_ROOT, relativePath), 'utf8');
+}
+
+function extractCssRuleBlock(source, selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = source.match(new RegExp(`${escapedSelector}\\s*\\{[^}]*\\}`, 'i'));
+  assert.ok(match, `${selector} should define one CSS rule block`);
+  return match[0];
 }
 
 function extractFunctionSource(source, functionName) {
@@ -266,22 +275,18 @@ test('same-layer-pre APPLE theme keeps its choices, floating handles, and access
   assert.match(storySource, /@media\s*\(prefers-reduced-transparency:\s*reduce\)/);
   assert.match(storySource, /@media\s*\(prefers-contrast:\s*more\)/);
 
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?color-scheme:\s*dark/);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#161618/i);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--surface:\s*#222225/i);
+  const appleTokenBlock = extractCssRuleBlock(themeTokenSource, '.theme-apple');
+  assert.match(appleTokenBlock, /color-scheme:\s*dark/);
+  assert.match(appleTokenBlock, /--background:\s*#161618/i);
+  assert.match(appleTokenBlock, /--surface:\s*#222225/i);
+  assert.match(appleTokenBlock, /--apple-paper/);
+  assert.match(appleTokenBlock, /--apple-glass/);
+  assert.match(appleTokenBlock, /--apple-recessed/);
   for (const name of appleColorThemes) {
-    assert.match(
-      themeTokenSource,
-      new RegExp(`\\.theme-apple-${name}\\s*\\{[\\s\\S]*?--background:\\s*#edeef2`, 'i'),
-    );
-    assert.match(
-      themeTokenSource,
-      new RegExp(`\\.theme-apple-${name}\\s*\\{[\\s\\S]*?--surface:\\s*#f9f9fb`, 'i'),
-    );
+    const variantTokenBlock = extractCssRuleBlock(themeTokenSource, `.theme-apple-${name}`);
+    assert.match(variantTokenBlock, /--background:\s*#edeef2/i);
+    assert.match(variantTokenBlock, /--surface:\s*#f9f9fb/i);
   }
-  assert.match(themeTokenSource, /--apple-paper/);
-  assert.match(themeTokenSource, /--apple-glass/);
-  assert.match(themeTokenSource, /--apple-recessed/);
 });
 
 test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {
@@ -298,7 +303,10 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleReader.vue')), true);
   assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleHistoryOverlay.vue')), true);
   assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleMessageBody.vue')), true);
-  assert.match(storySource, /const isAppleTheme = computed/);
+  assert.match(
+    storySource,
+    /const\s+isAppleTheme\s*=\s*computed\(\s*\(\)\s*=>\s*(?:\(\s*)?theme\.value\s*===\s*["']apple["']\s*\|\|\s*theme\.value\.startsWith\(\s*["']apple-["']\s*\)(?:\s*\))?\s*\)/,
+  );
   assert.match(storySource, /<PreAppleReader\s+v-if="isAppleTheme"/);
   assert.match(storySource, /<PreTranscriptList\s+v-else/);
   assert.match(storySource, /<PreAppleHistoryOverlay/);
@@ -320,7 +328,7 @@ test('same-layer-pre APPLE reader focuses the current exchange and owns the imag
   assert.match(readerSource, /installPreHostImageGestureForwarder/);
   assert.match(readerSource, /useEventListener\(window,\s*'dblclick'/);
   assert.match(readerSource, /useEventListener\(window,\s*'touchend'/);
-  assert.match(readerSource, /pre-message-card[^\n]*data-message-id|data-message-id[^\n]*pre-message-card/);
+  assert.match(readerSource, PRE_MESSAGE_HOST_TAG_PATTERN);
 });
 
 test('same-layer-pre APPLE history is an accessible single-expansion dialog', () => {
@@ -335,7 +343,7 @@ test('same-layer-pre APPLE history is an accessible single-expansion dialog', ()
   assert.match(historySource, /expandedMessageId/);
   assert.match(historySource, /canReroll/);
   assert.match(historySource, /canDeleteFrom/);
-  assert.match(historySource, /pre-message-card[^\n]*data-message-id|data-message-id[^\n]*pre-message-card/);
+  assert.match(historySource, PRE_MESSAGE_HOST_TAG_PATTERN);
 });
 
 test('same-layer-pre APPLE message body reuses trusted streaming and final HTML rendering', () => {
