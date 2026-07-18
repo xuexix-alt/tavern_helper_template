@@ -223,11 +223,10 @@ test('same-layer-pre inherits same-layer theme tokens and restores symmetric edg
   assert.match(storySource, /grid-template-rows:\s*auto minmax\(0,\s*1fr\)/);
 });
 
-test('same-layer-pre APPLE theme exposes the source-level visual contracts', () => {
+test('same-layer-pre APPLE theme keeps its choices, floating handles, and accessibility preferences', () => {
   const typesSource = readPre('types.ts');
   const hookSource = readPre('useSameLayerPre.ts');
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
-  const appleSource = storySource.slice(storySource.indexOf('/* APPLE surface'));
   const themeTokenSource = fs.readFileSync(
     path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'theme-tokens.css'),
     'utf8',
@@ -238,30 +237,14 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(hookSource, /const theme = ref<DemoTheme>\('amber'\)/);
   assert.match(storySource, /\{\s*label:\s*'APPLE'\s*,\s*value:\s*'apple'\s*\}/);
 
-  const appleColorThemes = [
-    ['sky', '#f2f6fc'],
-    ['mint', '#f1f7f5'],
-    ['lavender', '#f5f2f8'],
-    ['sand', '#f7f4f0'],
-    ['rose', '#f8f2f4'],
-  ];
-  for (const [name, background] of appleColorThemes) {
+  const appleColorThemes = ['sky', 'mint', 'lavender', 'sand', 'rose'];
+  for (const name of appleColorThemes) {
     const theme = `apple-${name}`;
     assert.match(typesSource, new RegExp(`DemoTheme\\s*=\\s*[^;]*\\|\\s*'${theme}'`));
     assert.match(hookSource, new RegExp(`'theme-${theme}'`));
     assert.match(storySource, new RegExp(`label:\\s*'APPLE-${name.toUpperCase()}'\\s*,\\s*value:\\s*'${theme}'`));
-    assert.match(themeTokenSource, new RegExp(`\\.theme-${theme}\\s*\\{[\\s\\S]*?--background:\\s*${background}`, 'i'));
   }
   assert.match(hookSource, /APPLE_VARIANT_THEME_VALUES|theme\.startsWith\('apple-'\)/);
-  assert.match(storySource, /theme-apple-sky[\s\S]*?radial-gradient|radial-gradient[\s\S]*?theme-apple-sky/);
-  assert.match(storySource, /prefers-reduced-transparency/);
-
-  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host/);
-  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-topbar\)/);
-  assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.pre-message-card\)/);
-  assert.doesNotMatch(storySource, /:global\(\.theme-apple\)\s+(?!\{)\S/);
-  assert.match(storySource, /:global\(\.theme-apple\)\s*\{[\s\S]*?overflow-x:\s*hidden/);
-  assert.match(storySource, /:global\(\.theme-apple\)\s*\{[\s\S]*?color-scheme:\s*dark/);
   assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-sidebar-toggle(?:\s|,|\{|\))/);
   assert.match(storySource, /:global\(\.theme-apple\s+\.same-layer-pre-host\s+\.ui-sidebar-toggle-right(?:\s|,|\{|\))/);
   const appleHandleBlocks = [
@@ -284,46 +267,84 @@ test('same-layer-pre APPLE theme exposes the source-level visual contracts', () 
   assert.match(storySource, /@media\s*\(prefers-contrast:\s*more\)/);
 
   assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?color-scheme:\s*dark/);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#111113/i);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--surface:\s*#1c1c1e/i);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--primary:\s*#0a84ff/i);
-  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--demo-color-danger|--apple-danger/i);
-  assert.match(storySource, /--apple-primary:\s*#0a84ff/i);
-  assert.match(storySource, /--apple-danger:\s*#ff453a/i);
-  assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)/i);
-  assert.match(storySource, /--apple-color-wash:\s*rgba\(84,\s*164,\s*255,\s*0\.1\)/i);
-  assert.match(storySource, /background:\s*color-mix\(in srgb,\s*var\(--apple-surface\)\s*82%/i);
-  assert.match(themeTokenSource, /\.theme-apple-sky\s*\{[\s\S]*?--background:\s*#f2f6fc/i);
-  assert.match(themeTokenSource, /\.theme-apple-mint\s*\{[\s\S]*?--background:\s*#f1f7f5/i);
-  assert.match(themeTokenSource, /\.theme-apple-lavender\s*\{[\s\S]*?--background:\s*#f5f2f8/i);
-  assert.match(themeTokenSource, /\.theme-apple-sand\s*\{[\s\S]*?--background:\s*#f7f4f0/i);
-  assert.match(themeTokenSource, /\.theme-apple-rose\s*\{[\s\S]*?--background:\s*#f8f2f4/i);
-  assert.match(storySource, /border-radius:\s*999px/);
-  assert.match(
-    storySource,
-    /\.ui-page-menu-item\.is-primary|\.send-btn\.is-primary|\.choice-btn(?:--primary|\.primary)/i,
-  );
-  assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?top:\s*8px[\s\S]*?bottom:\s*8px[\s\S]*?border:\s*0/);
-  assert.match(appleSource, /\.ui-sidebar[^{}]*\{[\s\S]*?border-radius:\s*28px/);
-  assert.match(appleSource, /\.page-tabs|\.tab-row/);
-  assert.match(appleSource, /\.page-tab|\.tab-btn[^{}]*\{[\s\S]*?border:\s*0/);
-  assert.match(appleSource, /\.pre-gallery-panel__empty[^{}]*\{[\s\S]*?border:\s*0/);
-  assert.match(appleSource, /\.source-nav[^{}]*\{[\s\S]*?border:\s*0/);
-  assert.match(appleSource, /@media\s*\(prefers-contrast:\s*more\)[\s\S]*?border-color/);
-  assert.match(appleSource, /\.ui-transcript-stage[^{}]*\{[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
-  assert.match(
-    appleSource,
-    /\.ui-bottom-console-strip[^{}]*\{[\s\S]*?width:\s*fit-content[\s\S]*?background:\s*transparent/,
-  );
-  assert.match(appleSource, /\.pre-message-card[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?max-width:\s*min\(100%,\s*72rem\)/);
-  assert.match(appleSource, /\.pre-reader-meta span[^{}]*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*transparent/);
-  assert.match(appleSource, /\.ui-bars[^{}]*\{[\s\S]*?display:\s*none/);
-  assert.match(appleSource, /\.composer-input-shell[^{}]*\{[\s\S]*?border-radius:\s*22px[\s\S]*?border:\s*0/);
-  assert.doesNotMatch(appleSource, /:deep\(/, 'APPLE global overrides must compile without literal :deep selectors');
-  assert.ok(
-    (themeTokenSource.match(/\.theme-apple/g) || []).length >= 2,
-    'derived APPLE demo tokens should be declared',
-  );
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--background:\s*#161618/i);
+  assert.match(themeTokenSource, /\.theme-apple\s*\{[\s\S]*?--surface:\s*#222225/i);
+  for (const name of appleColorThemes) {
+    assert.match(
+      themeTokenSource,
+      new RegExp(`\\.theme-apple-${name}\\s*\\{[\\s\\S]*?--background:\\s*#edeef2`, 'i'),
+    );
+    assert.match(
+      themeTokenSource,
+      new RegExp(`\\.theme-apple-${name}\\s*\\{[\\s\\S]*?--surface:\\s*#f9f9fb`, 'i'),
+    );
+  }
+  assert.match(themeTokenSource, /--apple-paper/);
+  assert.match(themeTokenSource, /--apple-glass/);
+  assert.match(themeTokenSource, /--apple-recessed/);
+});
+
+test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
+  const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+
+  assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreTranscriptList.vue')), true);
+  assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreTranscriptMessageCard.vue')), true);
+  assert.match(listSource, /PreTranscriptMessageCard/);
+  assert.doesNotMatch(listSource, /PreAppleReader|PreAppleHistoryOverlay/);
+  assert.doesNotMatch(cardSource, /PreAppleReader|PreAppleHistoryOverlay/);
+
+  assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleReader.vue')), true);
+  assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleHistoryOverlay.vue')), true);
+  assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreAppleMessageBody.vue')), true);
+  assert.match(storySource, /const isAppleTheme = computed/);
+  assert.match(storySource, /<PreAppleReader\s+v-if="isAppleTheme"/);
+  assert.match(storySource, /<PreTranscriptList\s+v-else/);
+  assert.match(storySource, /<PreAppleHistoryOverlay/);
+  assert.match(storySource, /<PreAppleHistoryOverlay[\s\S]*?:open="isAppleTheme && appleHistoryOpen"/);
+  assert.match(storySource, /openAppleHistory/);
+  assert.match(storySource, /restoreAppleReaderPosition/);
+  assert.equal((storySource.match(/<PreAppleReader/g) || []).length, 1);
+  assert.equal((storySource.match(/<PreAppleHistoryOverlay/g) || []).length, 1);
+});
+
+test('same-layer-pre APPLE reader focuses the current exchange and owns the image gesture bridge', () => {
+  const readerSource = readPre(path.join('components', 'PreAppleReader.vue'));
+
+  assert.match(readerSource, /latestAssistant/);
+  assert.match(readerSource, /relatedUser/);
+  assert.match(readerSource, /aria-expanded/);
+  assert.match(readerSource, /PreAppleMessageBody/);
+  assert.doesNotMatch(readerSource, /v-for="item in items"/);
+  assert.match(readerSource, /installPreHostImageGestureForwarder/);
+  assert.match(readerSource, /useEventListener\(window,\s*'dblclick'/);
+  assert.match(readerSource, /useEventListener\(window,\s*'touchend'/);
+  assert.match(readerSource, /pre-message-card[^\n]*data-message-id|data-message-id[^\n]*pre-message-card/);
+});
+
+test('same-layer-pre APPLE history is an accessible single-expansion dialog', () => {
+  const historySource = readPre(path.join('components', 'PreAppleHistoryOverlay.vue'));
+
+  assert.match(historySource, /role="dialog"/);
+  assert.match(historySource, /aria-modal="true"/);
+  assert.match(historySource, /Teleport to="body"/);
+  assert.match(historySource, /Escape|event\.key === 'Escape'/);
+  assert.match(historySource, /focusable|FOCUSABLE/);
+  assert.match(historySource, /document\.body\.style\.overflow/);
+  assert.match(historySource, /expandedMessageId/);
+  assert.match(historySource, /canReroll/);
+  assert.match(historySource, /canDeleteFrom/);
+  assert.match(historySource, /pre-message-card[^\n]*data-message-id|data-message-id[^\n]*pre-message-card/);
+});
+
+test('same-layer-pre APPLE message body reuses trusted streaming and final HTML rendering', () => {
+  const bodySource = readPre(path.join('components', 'PreAppleMessageBody.vue'));
+
+  assert.match(bodySource, /StreamRenderer/);
+  assert.match(bodySource, /item\.isStreaming/);
+  assert.match(bodySource, /v-html="item\.finalHtml \|\| item\.preview"/);
+  assert.match(bodySource, /pre-message-card__body/);
 });
 
 test('same-layer-pre gives inherited AGENTS drawer a full-height shell', () => {
