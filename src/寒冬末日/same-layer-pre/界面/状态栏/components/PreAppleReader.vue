@@ -119,8 +119,15 @@ const userExpanded = ref(false);
 const latestAssistant = computed(() => [...props.items].reverse().find(item => item.role === 'assistant') ?? null);
 
 const relatedUser = computed(() => {
+  const latestUser = [...props.items].reverse().find(item => item.role === 'user') ?? null;
+  if (!latestUser) return null;
+
+  const latestUserIndex = props.items.lastIndexOf(latestUser);
   const assistant = latestAssistant.value;
-  const assistantIndex = assistant ? props.items.lastIndexOf(assistant) : props.items.length;
+  if (!assistant) return latestUser;
+
+  const assistantIndex = props.items.lastIndexOf(assistant);
+  if (latestUserIndex > assistantIndex) return latestUser;
 
   for (let index = assistantIndex - 1; index >= 0; index -= 1) {
     const item = props.items[index];
@@ -177,6 +184,8 @@ defineExpose({ getScrollTop, setScrollTop });
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
+  height: 100%;
+  max-height: 100%;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;

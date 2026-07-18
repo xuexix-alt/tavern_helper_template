@@ -322,6 +322,16 @@ test('same-layer-pre APPLE reader focuses the current exchange and owns the imag
 
   assert.match(readerSource, /latestAssistant/);
   assert.match(readerSource, /relatedUser/);
+  assert.match(
+    readerSource,
+    /const\s+latestUserIndex\s*=\s*props\.items\.lastIndexOf\(latestUser\)/,
+    'the reader should locate the latest user by array position instead of message id ordering',
+  );
+  assert.match(
+    readerSource,
+    /if\s*\(latestUserIndex\s*>\s*assistantIndex\)\s*return latestUser;/,
+    'an unanswered user after the latest assistant should replace the older related user summary',
+  );
   assert.match(readerSource, /aria-expanded/);
   assert.match(readerSource, /PreAppleMessageBody/);
   assert.doesNotMatch(readerSource, /v-for="item in items"/);
@@ -1179,6 +1189,13 @@ test('same-layer-pre transcript prose wraps unbroken body text without horizonta
   const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
   const streamSource = readPre(path.join('components', 'StreamRenderer.vue'));
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const readerSource = readPre(path.join('components', 'PreAppleReader.vue'));
+  const appleReaderBlock = extractCssRuleBlock(readerSource, '.pre-apple-reader');
+
+  assert.match(appleReaderBlock, /(?:height|block-size):\s*100%;/);
+  assert.match(appleReaderBlock, /(?:max-height|max-block-size):\s*100%;/);
+  assert.match(appleReaderBlock, /min-height:\s*0;/);
+  assert.match(appleReaderBlock, /overflow-y:\s*auto;/);
 
   assert.match(
     listSource,
