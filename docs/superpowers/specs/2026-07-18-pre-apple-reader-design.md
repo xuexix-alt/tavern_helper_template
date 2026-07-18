@@ -1,6 +1,6 @@
 # PRE APPLE 阅读器设计规范
 
-**状态：** 已完成交互设计确认，待书面规格审查  
+**状态：** 规格审查已通过，待用户书面确认  
 **适用范围：** `same-layer-pre` 的 `APPLE`、`APPLE-SKY`、`APPLE-MINT`、`APPLE-LAVENDER`、`APPLE-SAND`、`APPLE-ROSE` 主题档位  
 **不适用范围：** 默认 `amber`（琥珀）及其他非 APPLE 主题
 
