@@ -316,9 +316,11 @@ import {
   type RolePortraitOverrideMap,
 } from '../rolePortraits';
 
+type MvuRolePanelTranscriptItem = Pick<TranscriptItem, 'message_id' | 'role' | 'isOpening'>;
+
 const props = defineProps<{
   targetMessageId?: number | null;
-  transcriptItems?: TranscriptItem[];
+  transcriptItems?: MvuRolePanelTranscriptItem[];
   activeCharacterKey?: string | null;
   refreshRevision?: number;
   calibratingDailyRoll?: boolean;

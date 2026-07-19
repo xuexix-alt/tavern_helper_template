@@ -414,6 +414,11 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
   const cardSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+  const inheritedRolePanelSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'components', 'MvuRolePanel.vue'),
+    'utf8',
+  );
+  const restoreAppleReaderPositionSource = extractFunctionSource(storySource, 'restoreAppleReaderPosition');
 
   assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreTranscriptList.vue')), true);
   assert.equal(fs.existsSync(path.join(PRE_ROOT, 'components', 'PreTranscriptMessageCard.vue')), true);
@@ -438,17 +443,19 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   assert.match(storySource, /ref="appleReaderRef"/);
   assert.match(storySource, /appleReaderScrollTop\.value\s*=\s*appleReaderRef\.value\?\.getScrollTop\(\)\s*\?\?\s*0/);
   assert.match(
-    storySource,
+    restoreAppleReaderPositionSource,
     /await\s+nextTick\(\)[\s\S]*?appleReaderRef\.value\?\.setScrollTop\(appleReaderScrollTop\.value\)[\s\S]*?appleHistoryTriggerRef\.value\?\.focus\(\)/,
   );
   assert.match(storySource, /watch\(\s*isAppleTheme[\s\S]*?appleHistoryOpen\.value\s*=\s*false/);
   assert.match(storySource, /v-if="!isAppleTheme && transcriptWindowMenuOpen"/);
-  assert.match(storySource, /:transcript-items="rolePanelTranscriptItems"/);
+  assert.match(storySource, /:transcript-items="baseTranscriptItems"/);
+  assert.doesNotMatch(storySource, /as\s+unknown\s+as/);
   assert.match(
-    storySource,
-    /const\s+rolePanelTranscriptItems\s*=\s*computed\(\s*\(\)\s*=>\s*baseTranscriptItems\.value\s+as\s+unknown\s+as\s+RolePanelTranscriptItem\[\][\s,]*\)/,
-    'the inherited role panel should receive the shared transcript fields through a type-only compatibility boundary',
+    inheritedRolePanelSource,
+    /type\s+MvuRolePanelTranscriptItem\s*=\s*Pick<TranscriptItem,\s*['"]message_id['"]\s*\|\s*['"]role['"]\s*\|\s*['"]isOpening['"]>/,
+    'the inherited role panel should declare only the transcript fields it reads',
   );
+  assert.match(inheritedRolePanelSource, /transcriptItems\?:\s*MvuRolePanelTranscriptItem\[\]/);
   assert.equal((storySource.match(/<PreAppleReader/g) || []).length, 1);
   assert.equal((storySource.match(/<PreAppleHistoryOverlay/g) || []).length, 1);
 });
@@ -915,7 +922,7 @@ test('same-layer-pre left sidebar inherits the full same-layer AGENTS page witho
   assert.match(storySource, /<MvuRolePanel\s*\n\s*v-if="roleDrawerOpen"/);
   assert.match(storySource, /agents-only/);
   assert.match(storySource, /:target-message-id="latestAssistantMessageId"/);
-  assert.match(storySource, /:transcript-items="rolePanelTranscriptItems"/);
+  assert.match(storySource, /:transcript-items="baseTranscriptItems"/);
   assert.match(storySource, /@collapse="closeRoleDrawer"/);
   assert.doesNotMatch(storySource, /PreMvuPanel/);
   assert.doesNotMatch(storySource, /roleTabs/);
