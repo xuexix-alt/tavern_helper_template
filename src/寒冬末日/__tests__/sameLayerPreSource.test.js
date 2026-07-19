@@ -410,6 +410,16 @@ test('same-layer-pre APPLE materials avoid nested glass and harden reduced-motio
   assert.match(historyRoleBlock, /var\(--apple-label-(?:primary|secondary)/);
 });
 
+test('same-layer-pre APPLE composer stays centered on the reading axis', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const appleComposerRule = storySource.match(
+    /:global\(\s*:is\(\.theme-apple,\s*\[class\*=['"]theme-apple-['"]\]\)\s+\.same-layer-pre-host\s+\.composer-input-shell\s*\)\s*\{[^}]*\}/s,
+  );
+
+  assert.ok(appleComposerRule, 'APPLE should define a dedicated composer input-shell rule');
+  assert.match(appleComposerRule[0], /margin-inline:\s*auto;/);
+});
+
 test('same-layer-pre APPLE restores mobile topbar glass after the shared mobile fallback', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const appleStyleStart = storySource.indexOf('/* APPLE material hierarchy');

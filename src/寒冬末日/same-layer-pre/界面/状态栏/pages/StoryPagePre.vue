@@ -2779,6 +2779,7 @@ onBeforeUnmount(() => {
 
 :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .composer-input-shell) {
   width: min(100%, 780px);
+  margin-inline: auto;
   min-height: 56px;
   padding: 6px 6px 6px 16px;
   border-radius: 24px;
