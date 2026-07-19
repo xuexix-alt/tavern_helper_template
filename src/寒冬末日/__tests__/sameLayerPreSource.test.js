@@ -279,14 +279,44 @@ test('same-layer-pre APPLE theme keeps its choices, floating handles, and access
   assert.match(appleTokenBlock, /color-scheme:\s*dark/);
   assert.match(appleTokenBlock, /--background:\s*#161618/i);
   assert.match(appleTokenBlock, /--surface:\s*#222225/i);
+  assert.match(appleTokenBlock, /--surface-hover:\s*#2c2c2e/i);
+  assert.match(appleTokenBlock, /--apple-canvas:\s*#161618/i);
   assert.match(appleTokenBlock, /--apple-paper/);
+  assert.match(appleTokenBlock, /--apple-elevated:\s*#2c2c2e/i);
   assert.match(appleTokenBlock, /--apple-glass/);
   assert.match(appleTokenBlock, /--apple-recessed/);
+  let lightAppleBaseline = null;
   for (const name of appleColorThemes) {
     const variantTokenBlock = extractCssRuleBlock(themeTokenSource, `.theme-apple-${name}`);
     assert.match(variantTokenBlock, /--background:\s*#edeef2/i);
     assert.match(variantTokenBlock, /--surface:\s*#f9f9fb/i);
+    assert.match(variantTokenBlock, /--surface-hover:\s*#fff(?:fff)?/i);
+    assert.match(variantTokenBlock, /--apple-canvas:\s*#edeef2/i);
+    assert.match(variantTokenBlock, /--apple-paper:\s*#f9f9fb/i);
+    assert.match(variantTokenBlock, /--apple-elevated:\s*#fff(?:fff)?/i);
+    assert.match(variantTokenBlock, /--apple-wash:/);
+
+    const declarations = Object.fromEntries(
+      [...variantTokenBlock.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map(([, token, value]) => [token, value.trim()]),
+    );
+    lightAppleBaseline ??= declarations;
+    for (const [token, value] of Object.entries(lightAppleBaseline)) {
+      if (token === '--primary' || token === '--apple-wash') continue;
+      assert.equal(declarations[token], value, `${name} must not alter the shared APPLE light neutral ${token}`);
+    }
   }
+
+  const appleStyleStart = storySource.indexOf('/* APPLE material hierarchy');
+  assert.notEqual(appleStyleStart, -1, 'APPLE should expose one shared material hierarchy');
+  const appleStyleSource = storySource.slice(appleStyleStart);
+  assert.doesNotMatch(
+    appleStyleSource,
+    /same-layer-pre-host\s+\.pre-message-card(?:\s|,|\{)/,
+    'the focused APPLE reader must not restore the legacy transcript card wall',
+  );
+  assert.match(appleStyleSource, /var\(--apple-canvas\)/);
+  assert.match(appleStyleSource, /var\(--apple-glass\)/);
+  assert.match(appleStyleSource, /backdrop-filter:\s*blur\(/);
 });
 
 test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {

@@ -28,7 +28,10 @@ defineProps<{
   overflow-wrap: anywhere;
   word-break: break-word;
   font-size: 17px;
-  line-height: 1.8;
+  line-height: 1.82;
+  letter-spacing: 0.002em;
+  font-optical-sizing: auto;
+  text-wrap: pretty;
 }
 
 .pre-apple-message-body :deep(*) {
@@ -70,7 +73,7 @@ defineProps<{
   max-width: 100%;
   align-items: center;
   justify-content: center;
-  margin-block: 0.75em;
+  margin-block: 1em;
   margin-inline: auto;
   text-indent: 0;
 }

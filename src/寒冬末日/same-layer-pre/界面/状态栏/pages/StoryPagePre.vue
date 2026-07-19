@@ -2282,984 +2282,529 @@ onBeforeUnmount(() => {
   }
 }
 
-/* APPLE surface: restrained reader chrome with native-looking, low-noise motion. */
-:global(.theme-apple) {
-  --apple-primary: #0a84ff;
-  --apple-danger: #ff453a;
-  --apple-surface: color-mix(in srgb, var(--surface) 86%, var(--background) 14%);
-  --apple-surface-strong: color-mix(in srgb, var(--surface) 96%, var(--background) 4%);
-  --apple-divider: color-mix(in srgb, var(--foreground) 14%, transparent);
-  --apple-muted: color-mix(in srgb, var(--foreground) 58%, transparent);
-  --apple-focus: color-mix(in srgb, var(--apple-primary) 72%, white 18%);
-  color-scheme: dark;
+/* APPLE material hierarchy: continuous canvas, matte reading paper, one glass layer for chrome. */
+:global(:is(.theme-apple, [class*='theme-apple-'])) {
+  --apple-primary: var(--primary);
+  --apple-label-primary: var(--foreground);
+  --apple-label-secondary: var(--muted-foreground);
+  --apple-control-fill: color-mix(in srgb, var(--apple-elevated) 78%, var(--apple-paper) 22%);
+  --apple-control-hover: color-mix(in srgb, var(--foreground) 8%, var(--apple-elevated));
+  --apple-focus: color-mix(in srgb, var(--apple-primary) 84%, white 16%);
   overflow-x: hidden;
 }
 
-:global(.theme-apple body),
-:global(body.theme-apple) {
-  overflow-x: hidden;
-}
-
-:global(.theme-apple .same-layer-pre-host) {
-  --apple-primary: #0a84ff;
-  --apple-danger: #ff453a;
-  --apple-surface: color-mix(in srgb, var(--surface) 86%, var(--background) 14%);
-  --apple-surface-strong: color-mix(in srgb, var(--surface) 96%, var(--background) 4%);
-  --apple-divider: color-mix(in srgb, var(--foreground) 14%, transparent);
-  --apple-muted: color-mix(in srgb, var(--foreground) 58%, transparent);
-  --apple-focus: color-mix(in srgb, var(--apple-primary) 72%, white 18%);
-  box-sizing: border-box;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host) {
+  --pre-font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  --pre-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: radial-gradient(circle at 12% -16%, var(--apple-wash), transparent 42%), var(--apple-canvas);
+  color: var(--apple-label-primary);
   font-size: 16px;
-  line-height: 1.9;
-  letter-spacing: 0.005em;
+  line-height: 1.75;
+  letter-spacing: 0;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-topbar),
-:global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple .same-layer-pre-host .composer-input-shell) {
-  border-color: var(--apple-divider);
-  background: color-mix(in srgb, var(--apple-surface) 78%, transparent);
-  backdrop-filter: blur(20px) saturate(125%);
-  -webkit-backdrop-filter: blur(20px) saturate(125%);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.clip-corner, .clip-corner-sm)),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer.clip-corner) {
+  clip-path: none;
 }
 
-/* Teleported utility drawers live under body rather than the reader host. */
-:global(.theme-apple .ui-bottom-drawer) {
-  border-color: color-mix(in srgb, var(--foreground) 14%, transparent);
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: blur(20px) saturate(125%);
-  -webkit-backdrop-filter: blur(20px) saturate(125%);
+/* Regular Glass is reserved for structural chrome and floating work surfaces. */
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.ui-topbar, .ui-sidebar, .ui-page-menu-list, .ui-more-menu-list, .ui-bottom-tool-row, .composer-input-shell)
+),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+  border: 0;
+  background: var(--apple-glass);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow:
+    0 18px 52px color-mix(in srgb, var(--shadow-color) 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-topbar) {
-  padding-block: 12px;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-topbar) {
+  position: sticky;
+  min-height: 56px;
+  padding: 8px 16px;
+  border-radius: 0 0 20px 20px;
+  box-shadow:
+    0 10px 30px color-mix(in srgb, var(--shadow-color) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 16%, transparent);
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-transcript-panel) {
-  gap: 18px;
-  padding-block: 20px;
+/* A single scroll-edge fade replaces hard toolbar dividers. */
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-topbar::after) {
+  content: '';
+  position: absolute;
+  right: 18px;
+  bottom: -14px;
+  left: 18px;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--shadow-color) 12%, transparent), transparent);
+  opacity: 0.7;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-reader-meta) {
-  gap: 10px;
-  color: var(--apple-muted);
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.ui-brand-copy, .ui-brand-version, .ui-online, .pre-reader-meta)
+) {
   font-family: var(--pre-font-sans);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   text-transform: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-reader-meta span) {
-  min-height: 26px;
-  border-color: color-mix(in srgb, var(--foreground) 11%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-brand-copy) {
+  color: var(--apple-label-primary);
+  font-weight: 650;
 }
 
-/* Story cards deliberately stay matte: no glass or decorative shadows in the reading surface. */
-:global(.theme-apple .same-layer-pre-host .pre-message-card) {
-  gap: 16px;
-  margin-block: 14px;
-  padding: 20px 22px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--background) 88%, var(--surface) 12%);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-color) 12%, transparent);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-brand-version, .ui-online)) {
+  color: var(--apple-label-secondary);
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card.role-user) {
-  border-color: color-mix(in srgb, var(--apple-primary) 28%, transparent);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-dot) {
+  width: 7px;
+  height: 7px;
+  box-shadow: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card__header) {
-  color: var(--apple-muted);
-  font-family: var(--pre-font-sans);
-  font-size: 12px;
-  letter-spacing: 0.03em;
-  text-transform: none;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-host-body) {
+  padding-inline: 0;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card__body) {
-  font-size: 16px;
-  line-height: 1.9;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__actions) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-transcript-panel) {
   gap: 8px;
-  padding-top: 4px;
+  padding: 16px 0 0;
 }
 
-/* Apple controls: neutral glass by default; color is reserved for semantic actions. */
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action),
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn),
-:global(.theme-apple .same-layer-pre-host .ui-page-menu-item),
-:global(.theme-apple .same-layer-pre-host .ui-close-btn),
-:global(.theme-apple .same-layer-pre-host .composer-input-icon),
-:global(.theme-apple .same-layer-pre-host .send-btn),
-:global(.theme-apple .same-layer-pre-host .choice-btn),
-:global(.theme-apple .same-layer-pre-host .choice-item),
-:global(.theme-apple .same-layer-pre-host .quick-btn) {
-  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
-  background: color-mix(in srgb, var(--apple-surface-strong) 86%, transparent);
-  color: var(--foreground);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .pre-reader-meta) {
+  width: min(calc(100% - 32px), 760px);
+  margin-inline: auto;
+  gap: 8px;
+  color: var(--apple-label-secondary);
+  font-size: 12px;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn),
-:global(.theme-apple .same-layer-pre-host .ui-close-btn),
-:global(.theme-apple .same-layer-pre-host .composer-input-icon) {
-  min-width: 36px;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .pre-reader-meta span) {
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--apple-control-fill);
+}
+
+/* Controls are solid neutral fills; accent is reserved for selection, primary actions, and focus. */
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(
+      .ui-icon-btn,
+      .ui-signal-btn,
+      .ui-page-menu-item,
+      .ui-close-btn,
+      .composer-input-icon,
+      .choice-btn,
+      .choice-item,
+      .quick-btn
+    )
+) {
+  border: 0;
+  background: var(--apple-control-fill);
+  color: var(--apple-label-primary);
+  box-shadow: none;
+  font-family: var(--pre-font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.ui-icon-btn, .ui-signal-btn, .ui-close-btn, .composer-input-icon)
+) {
   min-height: 36px;
   border-radius: 999px;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action),
-:global(.theme-apple .same-layer-pre-host .send-btn),
-:global(.theme-apple .same-layer-pre-host .choice-btn),
-:global(.theme-apple .same-layer-pre-host .choice-item),
-:global(.theme-apple .same-layer-pre-host .quick-btn) {
-  border-radius: 999px;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-page-menu-item) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-page-menu-item) {
   border-radius: 12px;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-page-menu-item.active),
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn.active),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn.active) {
-  border-color: color-mix(in srgb, var(--apple-primary) 52%, transparent);
-  background: color-mix(in srgb, var(--apple-primary) 14%, var(--apple-surface-strong));
-  color: var(--apple-primary);
-}
-
-:global(.theme-apple .same-layer-pre-host .choice-btn--primary:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action.primary:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .send-btn:not(.is-cancel):not(:disabled)) {
-  border-color: var(--apple-primary);
-  background: var(--apple-primary);
-  color: #ffffff;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--apple-primary) 24%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action.danger:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .send-btn.is-cancel:not(:disabled)) {
-  border-color: var(--apple-danger);
-  background: color-mix(in srgb, var(--apple-danger) 18%, var(--apple-surface-strong));
-  color: var(--apple-danger);
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action),
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn),
-:global(.theme-apple .same-layer-pre-host .ui-page-menu-item),
-:global(.theme-apple .same-layer-pre-host .ui-close-btn),
-:global(.theme-apple .same-layer-pre-host .composer-input-icon),
-:global(.theme-apple .same-layer-pre-host .send-btn),
-:global(.theme-apple .same-layer-pre-host .choice-btn),
-:global(.theme-apple .same-layer-pre-host .choice-item),
-:global(.theme-apple .same-layer-pre-host .quick-btn) {
-  transition:
-    transform 100ms ease,
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .ui-page-menu-item:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .ui-close-btn:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .composer-input-icon:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .send-btn:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .choice-btn:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .choice-item:active:not(:disabled)),
-:global(.theme-apple .same-layer-pre-host .quick-btn:active:not(:disabled)) {
-  transform: scale(0.98);
-  transition-duration: 100ms;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__action:focus-visible),
-:global(.theme-apple .same-layer-pre-host button:focus-visible),
-:global(.theme-apple .same-layer-pre-host textarea:focus-visible),
-:global(.theme-apple .same-layer-pre-host input:focus-visible) {
-  outline: 2px solid var(--apple-focus);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--apple-focus) 22%, transparent);
-}
-
-:global(.theme-apple .ui-bottom-drawer button:focus-visible),
-:global(.theme-apple .ui-bottom-drawer textarea:focus-visible),
-:global(.theme-apple .ui-bottom-drawer input:focus-visible) {
-  outline: 2px solid var(--apple-focus);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--apple-focus) 22%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
-  transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar:not(.open)) {
-  transform: translateX(calc(-100% - 24px));
-  opacity: 0;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar.open) {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-right:not(.open)) {
-  transform: translateX(calc(100% + 24px));
-  opacity: 0;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-right.open) {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-@supports (transition-timing-function: linear(0, 1)) {
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
-    transition-timing-function: linear(0, 0.18 20%, 0.72 58%, 1);
-  }
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-  position: absolute;
-  z-index: 32;
-  pointer-events: auto;
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-}
-
-@supports (transition-timing-function: linear(0, 1)) {
-  :global(.theme-apple .same-layer-pre-host [class~='ui-sidebar-toggle']),
-  :global(.theme-apple .same-layer-pre-host [class~='ui-sidebar-toggle-right']) {
-    transition-timing-function: linear(0, 0.2 24%, 0.74 62%, 1);
-  }
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle:active:not(:disabled)) {
-  position: absolute;
-  transform: translateY(-50%) scale(0.98);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right:active:not(:disabled)) {
-  position: absolute;
-  transform: translateY(-50%) scale(0.98);
-}
-
-@media (max-width: 760px) {
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar:not(.open)),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right:not(.open)) {
-    visibility: visible;
-    pointer-events: none;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar.open),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right.open) {
-    visibility: visible;
-    pointer-events: auto;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-    position: fixed;
-    z-index: 32;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle:active:not(:disabled)),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right:active:not(:disabled)) {
-    position: fixed;
-    transform: scale(0.98);
-  }
-}
-
-/* APPLE floating-island layer: depth and tonal grouping replace hard dividers. */
-:global(.theme-apple .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
-  top: 8px;
-  bottom: 8px;
-  left: 8px;
-  width: min(86vw, 360px);
-  border: 0;
-  border-radius: 28px;
-  background: color-mix(in srgb, var(--apple-surface-strong) 82%, transparent);
-  box-shadow:
-    0 20px 52px color-mix(in srgb, var(--shadow-color) 76%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
-  right: 8px;
-  left: auto;
-  width: min(60vw, 640px);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-head) {
-  border-bottom: 0;
-  padding: 18px 18px 12px;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-body) {
-  padding: 12px 14px 18px;
-  scrollbar-color: color-mix(in srgb, white 18%, transparent) transparent;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-topbar),
-:global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple .same-layer-pre-host .composer-input-shell),
-:global(.theme-apple .ui-bottom-drawer) {
-  border: 0;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-topbar) {
-  box-shadow: 0 12px 34px color-mix(in srgb, var(--shadow-color) 38%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-  position: absolute;
-  width: 22px;
-  height: 96px;
-  border: 0;
-  border-radius: 0 18px 18px 0;
-  background: color-mix(in srgb, var(--apple-surface-strong) 86%, transparent);
-  box-shadow:
-    0 12px 30px color-mix(in srgb, var(--shadow-color) 58%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-  position: absolute;
-  border-radius: 18px 0 0 18px;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-close-btn) {
-  border: 0;
-  background: color-mix(in srgb, white 8%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .source-nav),
-:global(.theme-apple .same-layer-pre-host .page-tabs),
-:global(.theme-apple .same-layer-pre-host .tab-row) {
-  border: 0;
-  border-radius: 18px;
-  background: color-mix(in srgb, white 6%, transparent);
-  padding: 4px;
-  gap: 4px;
-}
-
-:global(.theme-apple .same-layer-pre-host .source-nav-btn),
-:global(.theme-apple .same-layer-pre-host .source-status) {
-  border: 0;
-  background: color-mix(in srgb, white 7%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .page-tab),
-:global(.theme-apple .same-layer-pre-host .tab-btn) {
-  border: 0;
-  border-radius: 14px;
-  background: transparent;
-}
-
-:global(.theme-apple .same-layer-pre-host .page-tab.active),
-:global(.theme-apple .same-layer-pre-host .tab-btn.active) {
-  border: 0;
-  background: color-mix(in srgb, white 14%, transparent);
-  color: var(--foreground);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .source-select),
-:global(.theme-apple .same-layer-pre-host .collapse-btn),
-:global(.theme-apple .same-layer-pre-host .action-btn),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__refresh),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__scope select),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-card__portrait) {
-  border: 0;
-  border-radius: 999px;
-  background: color-mix(in srgb, white 7%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .collapse-btn) {
-  border-radius: 14px;
-}
-
-:global(.theme-apple .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple .same-layer-pre-host .accordion-item),
-:global(.theme-apple .same-layer-pre-host .bio-box),
-:global(.theme-apple .same-layer-pre-host .thought-box),
-:global(.theme-apple .same-layer-pre-host .metric-card),
-:global(.theme-apple .same-layer-pre-host .meta-box),
-:global(.theme-apple .same-layer-pre-host .expand-card),
-:global(.theme-apple .same-layer-pre-host .system-command-card),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple .same-layer-pre-host .pre-gallery-card) {
-  border: 0;
-  border-radius: 18px;
-  background: color-mix(in srgb, white 4.5%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .accordion-item.active) {
-  border: 0;
-  background: color-mix(in srgb, white 7%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .accordion-body) {
-  border-top: 0;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-gallery-panel__empty) {
-  min-height: 128px;
-  border: 0;
-  border-radius: 18px;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-gallery-card__image) {
-  border: 0;
-  border-radius: 14px;
-}
-
-/* APPLE editorial reading layer: hierarchy comes from column, type, and rhythm. */
-:global(.theme-apple .same-layer-pre-host) {
-  background:
-    radial-gradient(circle at 50% -18%, color-mix(in srgb, white 5%, transparent), transparent 42%), var(--background);
-  border: 0;
-  border-radius: 24px;
-  box-shadow: 0 28px 80px color-mix(in srgb, var(--shadow-color) 58%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-host-body) {
-  padding-inline: clamp(16px, 4vw, 56px);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-topbar) {
-  padding: 14px clamp(18px, 3vw, 32px);
-  background: color-mix(in srgb, var(--background) 76%, transparent);
-  box-shadow: 0 18px 36px -30px color-mix(in srgb, white 28%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-brand-copy),
-:global(.theme-apple .same-layer-pre-host .ui-online),
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn),
-:global(.theme-apple .same-layer-pre-host .ui-signal-btn) {
-  font-family: var(--pre-font-sans);
-  letter-spacing: 0.01em;
-  text-transform: none;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-brand-copy) {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-brand-version) {
-  font-family: var(--pre-font-sans);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-topbar-actions) {
-  gap: 4px;
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-icon-btn) {
-  min-height: 34px;
-  padding-inline: 11px;
-  background: color-mix(in srgb, white 4%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-transcript-panel) {
-  gap: 12px;
-  padding: 14px 0 24px;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-reader-meta) {
-  width: 100%;
-  max-width: 72rem;
-  margin-inline: auto;
-  gap: 0;
-  min-height: 22px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-reader-meta span) {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-reader-meta span + span)::before {
-  content: '·';
-  margin-inline: 9px;
-  color: color-mix(in srgb, var(--foreground) 24%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .ui-transcript-stage) {
-  width: 100%;
-  max-width: min(100%, 72rem);
-  margin-inline: auto;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card) {
-  max-width: min(100%, 72rem);
-  margin: 10px auto;
-  gap: 14px;
-  padding: 18px 22px;
-  border: 0;
-  border-radius: 22px;
-  background: color-mix(in srgb, white 2.5%, transparent);
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.ui-icon-btn, .ui-signal-btn, .ui-page-menu-item, .ui-close-btn):hover:not(:disabled)
+) {
+  background: var(--apple-control-hover);
+  color: var(--apple-label-primary);
   box-shadow: none;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card.role-user) {
-  max-width: min(100%, 64rem);
-  margin-inline-start: auto;
-  margin-inline-end: 0;
-  background: color-mix(in srgb, var(--apple-primary) 7%, var(--background) 93%);
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card.role-system) {
-  background: color-mix(in srgb, white 4%, transparent);
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__header) {
-  font-family: var(--pre-font-sans);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__role) {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, white 6%, transparent);
-  color: var(--apple-muted);
-}
-
-:global(.theme-apple .same-layer-pre-host .role-user .pre-message-card__role) {
-  background: color-mix(in srgb, var(--apple-primary) 13%, transparent);
-  color: color-mix(in srgb, var(--apple-primary) 82%, white 18%);
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__body) {
-  font-family: var(--pre-font-sans);
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.86;
-  letter-spacing: 0;
-  text-wrap: pretty;
-}
-
-:global(.theme-apple .same-layer-pre-host .pre-message-card__body :where(p, .pre-reading-paragraph, blockquote)) {
-  text-indent: 0;
-  margin-block: 0;
 }
 
 :global(
-  .theme-apple
+  :is(.theme-apple, [class*='theme-apple-'])
     .same-layer-pre-host
-    .pre-message-card__body
-    :where(p, .pre-reading-paragraph, blockquote)
-    + :where(p, .pre-reading-paragraph, blockquote)
+    :is(.ui-icon-btn.active, .ui-signal-btn.active, .ui-page-menu-item.active)
 ) {
-  margin-block-start: 0.9em;
+  background: color-mix(in srgb, var(--apple-primary) 12%, var(--apple-elevated));
+  color: var(--apple-primary);
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card__actions) {
-  opacity: 0.72;
-  padding-top: 2px;
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.choice-btn--primary:not(:disabled), .send-btn:not(.is-cancel):not(:disabled))
+) {
+  border: 0;
+  background: var(--apple-primary);
+  color: #fff;
+  box-shadow: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .pre-message-card:hover .pre-message-card__actions),
-:global(.theme-apple .same-layer-pre-host .pre-message-card:focus-within .pre-message-card__actions) {
-  opacity: 1;
+/* Floating handles are viewport overlays and never participate in the reading rail. */
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right),
+:global([class*='theme-apple-'] .same-layer-pre-host .ui-sidebar-toggle),
+:global([class*='theme-apple-'] .same-layer-pre-host .ui-sidebar-toggle-right) {
+  position: fixed;
+  z-index: 30;
+  top: 50%;
+  width: 22px;
+  height: 96px;
+  min-height: 96px;
+  padding: 0;
+  border: 0;
+  background: var(--apple-glass);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  color: var(--apple-label-secondary);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--shadow-color) 30%, transparent);
+  transform: translateY(-50%);
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-dock) {
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
+:global([class*='theme-apple-'] .same-layer-pre-host .ui-sidebar-toggle) {
+  position: fixed;
+  right: auto;
+  left: 0;
+  border-radius: 0 14px 14px 0;
+}
+
+:global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right),
+:global([class*='theme-apple-'] .same-layer-pre-host .ui-sidebar-toggle-right) {
+  position: fixed;
+  right: 0;
+  left: auto;
+  border-radius: 14px 0 0 14px;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.ui-sidebar-toggle.open, .ui-sidebar-toggle-right.open)
+) {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-toggle-label) {
+  color: currentColor;
+  font-family: var(--pre-font-sans);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-shadow: none;
+}
+
+/* Drawers are floating spatial work surfaces, not hard-edged columns. */
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-sidebar, .ui-sidebar-right)) {
+  position: fixed;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  width: min(calc(100vw - 24px), 360px);
+  height: calc(100vh - 24px);
+  max-height: calc(100vh - 24px);
+  border-radius: 28px;
+  transform: translateX(calc(-100% - 28px));
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-right) {
+  right: 12px;
+  left: auto;
+  width: min(calc(100vw - 24px), 680px);
+  transform: translateX(calc(100% + 28px));
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-sidebar.open, .ui-sidebar-right.open)) {
+  transform: translateX(0);
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-head) {
+  padding: 18px 20px 12px;
+  border: 0;
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-body) {
+  padding: 8px 16px 20px;
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-mask) {
+  position: fixed;
+  background: color-mix(in srgb, #000 24%, transparent);
+}
+
+/* Content inside glass drawers returns to opaque Paper to avoid glass-on-glass. */
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(
+      .sidebar-empty,
+      .accordion-item,
+      .bio-box,
+      .thought-box,
+      .metric-card,
+      .meta-box,
+      .expand-card,
+      .system-command-card,
+      .pre-gallery-panel__probe,
+      .pre-gallery-panel__empty,
+      .pre-gallery-card
+    )
+) {
+  border-color: transparent;
+  background: var(--apple-paper);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Dock chrome floats around the input without enclosing it in a terminal frame. */
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-dock) {
   align-items: center;
   gap: 8px;
-  padding-bottom: 16px;
+  padding: 0 16px max(16px, env(safe-area-inset-bottom));
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-console-strip) {
+  display: flex;
   width: fit-content;
   max-width: 100%;
-  display: flex;
   justify-content: center;
   padding: 0;
+  border: 0;
   background: transparent;
   box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-console-balance) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-bottom-console-balance, .ui-bars)) {
   display: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-tool-row) {
   gap: 4px;
-  padding: 3px;
-  border: 0;
+  padding: 4px;
   border-radius: 999px;
-  background: color-mix(in srgb, white 4%, transparent);
-  box-shadow: none;
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn) {
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn) {
   min-width: 0;
-  min-height: 32px;
-  padding-inline: 11px;
-  border: 0;
+  min-height: 34px;
+  padding-inline: 12px;
   background: transparent;
-  color: var(--apple-muted);
+  color: var(--apple-label-secondary);
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn.active) {
-  background: color-mix(in srgb, white 10%, transparent);
-  color: var(--foreground);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn.active) {
+  background: var(--apple-elevated);
+  color: var(--apple-label-primary);
 }
 
-:global(.theme-apple .same-layer-pre-host .ui-bars) {
-  display: none;
-}
-
-:global(.theme-apple .same-layer-pre-host .composer-input-shell) {
-  width: min(100%, 72rem);
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .composer-input-shell) {
+  width: min(100%, 780px);
   min-height: 56px;
   padding: 6px 6px 6px 16px;
-  border: 0;
-  border-radius: 22px;
-  background: color-mix(in srgb, white 7%, var(--background) 93%);
-  box-shadow:
-    0 16px 42px color-mix(in srgb, var(--shadow-color) 42%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 9%, transparent);
+  border-radius: 24px;
 }
 
-:global(.theme-apple .same-layer-pre-host .composer-input-main) {
-  padding-inline: 8px;
-}
-
-:global(.theme-apple .same-layer-pre-host .composer-textarea) {
-  padding-block: 12px;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .composer-textarea) {
+  padding-block: 11px;
+  color: var(--apple-label-primary);
   font-family: var(--pre-font-sans);
   font-size: 15px;
   line-height: 1.5;
   letter-spacing: 0;
 }
 
-:global(.theme-apple .same-layer-pre-host .send-btn) {
-  min-height: 42px;
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .send-btn) {
   min-width: 68px;
+  min-height: 42px;
   margin: 0;
   border: 0;
-  background: var(--apple-primary);
-  box-shadow: none;
+  border-radius: 18px;
   font-family: var(--pre-font-sans);
   font-size: 13px;
   letter-spacing: 0;
   text-transform: none;
 }
 
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+  width: min(calc(100vw - 32px), 1040px);
+  max-height: min(88vh, 820px);
+  border-radius: 28px;
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer-head) {
+  border: 0;
+}
+
+:global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(button, summary)) {
+  transition:
+    transform 100ms ease-out,
+    background-color 140ms ease-out,
+    color 140ms ease-out,
+    opacity 140ms ease-out;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(button:active:not(:disabled), summary:active)
+) {
+  transform: scale(0.98);
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(button, summary, textarea, input):focus-visible
+) {
+  outline: 3px solid var(--apple-focus);
+  outline-offset: 3px;
+}
+
 @media (max-width: 760px) {
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-topbar) {
+    min-height: 52px;
+    padding: 6px 10px;
+    border-radius: 0 0 18px 18px;
+  }
+
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-sidebar, .ui-sidebar-right)) {
     top: 8px;
     bottom: 8px;
+    left: 8px;
     width: calc(100vw - 16px);
-    max-height: none;
+    height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 16px);
     border-radius: 28px;
   }
 
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-    position: fixed;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar) {
-    left: 8px;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-sidebar-right) {
     right: 8px;
+    left: auto;
+  }
+
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-dock) {
+    padding-inline: 12px;
+  }
+
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: min(96dvh, calc(100dvh - 8px));
+    max-height: 96dvh;
+    border-radius: 28px 28px 0 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right) {
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host *),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host *::before),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host *::after) {
+    scroll-behavior: auto !important;
+    transition-duration: 140ms !important;
+    animation-duration: 140ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(.ui-sidebar, .ui-sidebar-right)) {
     transform: none;
-    opacity: 1;
     transition: opacity 140ms ease;
   }
 
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar:not(.open)) {
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(.ui-sidebar:not(.open), .ui-sidebar-right:not(.open))
+  ) {
+    visibility: hidden;
     opacity: 0;
-  }
-
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar:not(.open)),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right:not(.open)) {
     pointer-events: none;
   }
 
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar.open),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-right.open) {
-    pointer-events: auto;
+  :global(
+    :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(button:active:not(:disabled), summary:active)
+  ) {
+    transform: none;
   }
 
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-    position: absolute;
-    transition-duration: 120ms;
-  }
-
-  :global(.theme-apple .same-layer-pre-host button) {
-    transition-duration: 120ms;
-  }
-}
-
-@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar-toggle-right) {
-    position: fixed;
+  :global(
+    :is(.theme-apple, [class*='theme-apple-']) :is(.utility-drawer-rise-enter-from, .utility-drawer-rise-leave-to)
+  ) {
+    opacity: 0;
+    transform: translate(-50%, -50%);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :global(.theme-apple .same-layer-pre-host .ui-topbar),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-drawer),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
-  :global(.theme-apple .same-layer-pre-host .composer-input-shell) {
-    background: color-mix(in srgb, var(--apple-surface-strong) 96%, var(--background) 4%);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  :global(.theme-apple .ui-bottom-drawer) {
-    background: color-mix(in srgb, var(--apple-surface-strong) 96%, var(--background) 4%);
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(
+        .ui-topbar,
+        .ui-sidebar,
+        .ui-page-menu-list,
+        .ui-more-menu-list,
+        .ui-bottom-tool-row,
+        .composer-input-shell,
+        .ui-sidebar-toggle,
+        .ui-sidebar-toggle-right
+      )
+  ),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    background: color-mix(in srgb, var(--apple-paper) 94%, var(--apple-elevated) 6%);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 }
 
 @media (prefers-contrast: more) {
-  :global(.theme-apple .same-layer-pre-host) {
-    --apple-muted: color-mix(in srgb, var(--foreground) 78%, transparent);
-    color: var(--foreground);
+  :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host) {
+    --apple-label-secondary: color-mix(in srgb, var(--foreground) 82%, transparent);
+    --apple-control-fill: var(--apple-elevated);
   }
 
-  :global(.theme-apple .same-layer-pre-host .ui-topbar),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-console-strip),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-tool-row),
-  :global(.theme-apple .same-layer-pre-host .ui-bottom-drawer),
-  :global(.theme-apple .same-layer-pre-host .ui-sidebar),
-  :global(.theme-apple .same-layer-pre-host .pre-message-card) {
-    border-color: color-mix(in srgb, var(--foreground) 42%, transparent);
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(.ui-sidebar, .ui-page-menu-list, .ui-more-menu-list, .ui-bottom-tool-row, .composer-input-shell)
+  ),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    border: 1px solid color-mix(in srgb, var(--foreground) 52%, transparent);
   }
 
-  :global(.theme-apple .ui-bottom-drawer) {
-    border-color: color-mix(in srgb, var(--foreground) 42%, transparent);
+  :global(
+    :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host :is(button, summary, textarea):focus-visible
+  ) {
+    outline-width: 4px;
+    outline-color: var(--foreground);
   }
-
-  :global(.theme-apple .same-layer-pre-host button:focus-visible),
-  :global(.theme-apple .same-layer-pre-host textarea:focus-visible),
-  :global(.theme-apple .same-layer-pre-host input:focus-visible) {
-    outline: 2px solid var(--foreground);
-    outline-offset: 4px;
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--foreground) 30%, transparent);
-  }
-
-  :global(.theme-apple .ui-bottom-drawer button:focus-visible),
-  :global(.theme-apple .ui-bottom-drawer textarea:focus-visible),
-  :global(.theme-apple .ui-bottom-drawer input:focus-visible) {
-    outline: 2px solid var(--foreground);
-    outline-offset: 4px;
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--foreground) 30%, transparent);
-  }
-}
-
-/* Archived Apple colorways: the same editorial chrome with brighter, material-aware washes. */
-:global(.theme-apple-sky),
-:global(.theme-apple-mint),
-:global(.theme-apple-lavender),
-:global(.theme-apple-sand),
-:global(.theme-apple-rose) {
-  --apple-surface: color-mix(in srgb, var(--surface) 82%, white 18%);
-  --apple-surface-strong: color-mix(in srgb, var(--surface) 94%, white 6%);
-  --apple-divider: color-mix(in srgb, var(--foreground) 16%, transparent);
-  --apple-muted: color-mix(in srgb, var(--foreground) 62%, transparent);
-  color-scheme: light;
-}
-
-:global(.theme-apple-sky) {
-  --apple-primary: #007aff;
-  --apple-color-wash: rgba(84, 164, 255, 0.1);
-  --apple-color-wash-secondary: rgba(0, 122, 255, 0.05);
-}
-
-:global(.theme-apple-mint) {
-  --apple-primary: #00c7be;
-  --apple-color-wash: rgba(52, 199, 159, 0.1);
-  --apple-color-wash-secondary: rgba(0, 199, 190, 0.05);
-}
-
-:global(.theme-apple-lavender) {
-  --apple-primary: #af52de;
-  --apple-color-wash: rgba(191, 110, 232, 0.09);
-  --apple-color-wash-secondary: rgba(175, 82, 222, 0.05);
-}
-
-:global(.theme-apple-sand) {
-  --apple-primary: #ff9500;
-  --apple-color-wash: rgba(255, 159, 10, 0.09);
-  --apple-color-wash-secondary: rgba(255, 149, 0, 0.05);
-}
-
-:global(.theme-apple-rose) {
-  --apple-primary: #ff2d55;
-  --apple-color-wash: rgba(255, 55, 95, 0.08);
-  --apple-color-wash-secondary: rgba(255, 45, 85, 0.045);
-}
-
-:global(.theme-apple-sky .same-layer-pre-host),
-:global(.theme-apple-mint .same-layer-pre-host),
-:global(.theme-apple-lavender .same-layer-pre-host),
-:global(.theme-apple-sand .same-layer-pre-host),
-:global(.theme-apple-rose .same-layer-pre-host) {
-  --apple-surface: color-mix(in srgb, white 66%, var(--background));
-  --apple-surface-strong: color-mix(in srgb, white 82%, var(--background));
-  --apple-divider: color-mix(in srgb, var(--foreground) 16%, transparent);
-  --apple-muted: color-mix(in srgb, var(--foreground) 64%, transparent);
-  --apple-focus: color-mix(in srgb, var(--apple-primary) 74%, #1d1d1f 8%);
-  background:
-    radial-gradient(circle at 8% 0%, var(--apple-color-wash), transparent 38%),
-    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%), var(--background);
-}
-
-:global(.theme-apple-sky .same-layer-pre-host .ui-topbar),
-:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple-sky .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple-sky .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple-sky .same-layer-pre-host .composer-input-shell),
-:global(.theme-apple-mint .same-layer-pre-host .ui-topbar),
-:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple-mint .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple-mint .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple-mint .same-layer-pre-host .composer-input-shell),
-:global(.theme-apple-lavender .same-layer-pre-host .ui-topbar),
-:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple-lavender .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple-lavender .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple-lavender .same-layer-pre-host .composer-input-shell),
-:global(.theme-apple-sand .same-layer-pre-host .ui-topbar),
-:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple-sand .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple-sand .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple-sand .same-layer-pre-host .composer-input-shell),
-:global(.theme-apple-rose .same-layer-pre-host .ui-topbar),
-:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-console-strip),
-:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-tool-row),
-:global(.theme-apple-rose .same-layer-pre-host .ui-bottom-drawer),
-:global(.theme-apple-rose .same-layer-pre-host .ui-sidebar),
-:global(.theme-apple-rose .same-layer-pre-host .composer-input-shell) {
-  background: color-mix(in srgb, var(--apple-surface) 82%, transparent);
-  border-color: var(--apple-divider);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color) 62%, transparent);
-}
-
-:global(.theme-apple-sky .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple-sky .same-layer-pre-host .accordion-item),
-:global(.theme-apple-sky .same-layer-pre-host .bio-box),
-:global(.theme-apple-sky .same-layer-pre-host .thought-box),
-:global(.theme-apple-sky .same-layer-pre-host .metric-card),
-:global(.theme-apple-sky .same-layer-pre-host .meta-box),
-:global(.theme-apple-sky .same-layer-pre-host .expand-card),
-:global(.theme-apple-sky .same-layer-pre-host .system-command-card),
-:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple-sky .same-layer-pre-host .pre-gallery-card),
-:global(.theme-apple-mint .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple-mint .same-layer-pre-host .accordion-item),
-:global(.theme-apple-mint .same-layer-pre-host .bio-box),
-:global(.theme-apple-mint .same-layer-pre-host .thought-box),
-:global(.theme-apple-mint .same-layer-pre-host .metric-card),
-:global(.theme-apple-mint .same-layer-pre-host .meta-box),
-:global(.theme-apple-mint .same-layer-pre-host .expand-card),
-:global(.theme-apple-mint .same-layer-pre-host .system-command-card),
-:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple-mint .same-layer-pre-host .pre-gallery-card),
-:global(.theme-apple-lavender .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple-lavender .same-layer-pre-host .accordion-item),
-:global(.theme-apple-lavender .same-layer-pre-host .bio-box),
-:global(.theme-apple-lavender .same-layer-pre-host .thought-box),
-:global(.theme-apple-lavender .same-layer-pre-host .metric-card),
-:global(.theme-apple-lavender .same-layer-pre-host .meta-box),
-:global(.theme-apple-lavender .same-layer-pre-host .expand-card),
-:global(.theme-apple-lavender .same-layer-pre-host .system-command-card),
-:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple-lavender .same-layer-pre-host .pre-gallery-card),
-:global(.theme-apple-sand .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple-sand .same-layer-pre-host .accordion-item),
-:global(.theme-apple-sand .same-layer-pre-host .bio-box),
-:global(.theme-apple-sand .same-layer-pre-host .thought-box),
-:global(.theme-apple-sand .same-layer-pre-host .metric-card),
-:global(.theme-apple-sand .same-layer-pre-host .meta-box),
-:global(.theme-apple-sand .same-layer-pre-host .expand-card),
-:global(.theme-apple-sand .same-layer-pre-host .system-command-card),
-:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple-sand .same-layer-pre-host .pre-gallery-card),
-:global(.theme-apple-rose .same-layer-pre-host .sidebar-empty),
-:global(.theme-apple-rose .same-layer-pre-host .accordion-item),
-:global(.theme-apple-rose .same-layer-pre-host .bio-box),
-:global(.theme-apple-rose .same-layer-pre-host .thought-box),
-:global(.theme-apple-rose .same-layer-pre-host .metric-card),
-:global(.theme-apple-rose .same-layer-pre-host .meta-box),
-:global(.theme-apple-rose .same-layer-pre-host .expand-card),
-:global(.theme-apple-rose .same-layer-pre-host .system-command-card),
-:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__probe),
-:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__empty),
-:global(.theme-apple-rose .same-layer-pre-host .pre-gallery-card) {
-  background: color-mix(in srgb, var(--apple-surface) 84%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 58%, transparent),
-    0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 </style>

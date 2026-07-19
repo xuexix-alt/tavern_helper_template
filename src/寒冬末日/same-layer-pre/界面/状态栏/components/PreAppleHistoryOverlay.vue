@@ -315,9 +315,10 @@ onUnmounted(restoreBodyScroll);
   grid-template-rows: auto minmax(0, 1fr);
   box-sizing: border-box;
   width: min(100%, 1040px);
+  height: min(88vh, 880px);
   max-height: 88vh;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--foreground, #1d1d1f) 14%, transparent);
+  border: 0;
   border-radius: 28px;
   background: var(--apple-glass, var(--glass-bg, rgba(248, 248, 250, 0.78)));
   box-shadow: 0 28px 80px color-mix(in srgb, var(--shadow-color, #000) 38%, transparent);
@@ -327,12 +328,23 @@ onUnmounted(restoreBodyScroll);
 }
 
 .pre-apple-history__header {
+  position: relative;
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 16px;
   padding: 18px 22px;
-  border-bottom: 1px solid color-mix(in srgb, var(--foreground, #1d1d1f) 9%, transparent);
+}
+
+.pre-apple-history__header::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: -12px;
+  left: 22px;
+  height: 12px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--shadow-color, #000) 10%, transparent), transparent);
 }
 
 .pre-apple-history__heading {
@@ -417,10 +429,10 @@ onUnmounted(restoreBodyScroll);
 
 .pre-apple-history__message {
   overflow: visible;
-  border: 1px solid color-mix(in srgb, var(--foreground, #1d1d1f) 10%, transparent);
+  border: 0;
   border-radius: 18px;
   background: var(--apple-paper, var(--surface, #f9f9fb));
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--shadow-color, #000) 8%, transparent);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--shadow-color, #000) 8%, transparent);
 }
 
 .pre-apple-history__message.is-hidden {
@@ -531,9 +543,9 @@ onUnmounted(restoreBodyScroll);
   min-width: 148px;
   gap: 4px;
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--foreground, #1d1d1f) 12%, transparent);
+  border: 0;
   border-radius: 14px;
-  background: var(--apple-surface-elevated, var(--surface-hover, #fff));
+  background: var(--apple-elevated, var(--surface-hover, #fff));
   box-shadow: 0 16px 36px color-mix(in srgb, var(--shadow-color, #000) 24%, transparent);
   transform-origin: right top;
 }
@@ -596,7 +608,10 @@ onUnmounted(restoreBodyScroll);
 
 .pre-apple-history button:hover:not(:disabled),
 .pre-apple-history summary:hover {
-  background-color: color-mix(in srgb, var(--primary, #0a84ff) 8%, transparent);
+  background-color: var(
+    --apple-control-hover,
+    color-mix(in srgb, var(--foreground, #1d1d1f) 8%, var(--apple-elevated, #fff))
+  );
 }
 
 .pre-apple-history button:active:not(:disabled),
@@ -650,6 +665,7 @@ onUnmounted(restoreBodyScroll);
 
   .pre-apple-history__dialog {
     width: 100%;
+    height: 96dvh;
     max-height: 96dvh;
     border-right: 0;
     border-bottom: 0;
@@ -710,7 +726,7 @@ onUnmounted(restoreBodyScroll);
   .pre-apple-history button,
   .pre-apple-history summary,
   .pre-apple-history__chevron {
-    transition-duration: 0.01ms !important;
+    transition-duration: 140ms !important;
   }
 
   .pre-apple-history-enter-from .pre-apple-history__dialog,
@@ -724,7 +740,7 @@ onUnmounted(restoreBodyScroll);
 
 @media (prefers-reduced-transparency: reduce) {
   .pre-apple-history__dialog {
-    background: var(--apple-surface-solid, var(--surface, #f9f9fb));
+    background: color-mix(in srgb, var(--apple-paper, #f9f9fb) 94%, var(--apple-elevated, #fff) 6%);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -736,9 +752,16 @@ onUnmounted(restoreBodyScroll);
   }
 
   .pre-apple-history__dialog,
-  .pre-apple-history__message,
   .pre-apple-history__menu {
     border-color: currentColor;
+    border-style: solid;
+    border-width: 1px;
+  }
+
+  .pre-apple-history__preview,
+  .pre-apple-history__id,
+  .pre-apple-history__flag {
+    color: color-mix(in srgb, var(--foreground, #1d1d1f) 82%, transparent);
   }
 
   .pre-apple-history button:focus-visible,

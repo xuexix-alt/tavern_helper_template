@@ -221,11 +221,8 @@ defineExpose({ getScrollTop, setScrollTop });
 .pre-apple-reader__user {
   overflow: clip;
   border-radius: 16px;
-  background: var(
-    --apple-surface-recessed,
-    color-mix(in srgb, var(--surface, #f9f9fb) 74%, var(--background, #edeef2))
-  );
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--shadow-color, #000) 12%, transparent);
+  background: var(--apple-recessed, #e4e5ea);
+  box-shadow: inset 0 1px 1px color-mix(in srgb, var(--shadow-color, #000) 8%, transparent);
 }
 
 .pre-apple-reader__user.is-hidden,
@@ -293,8 +290,8 @@ defineExpose({ getScrollTop, setScrollTop });
   gap: 16px;
   padding: 24px;
   border-radius: 24px;
-  background: var(--apple-surface-paper, var(--surface, #f9f9fb));
-  box-shadow: 0 18px 48px color-mix(in srgb, var(--shadow-color, #000) 16%, transparent);
+  background: var(--apple-paper, var(--surface, #f9f9fb));
+  box-shadow: 0 16px 44px color-mix(in srgb, var(--shadow-color, #000) 12%, transparent);
 }
 
 .pre-apple-reader__paper-meta {
@@ -374,9 +371,9 @@ defineExpose({ getScrollTop, setScrollTop });
   min-width: 144px;
   gap: 4px;
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--foreground, #1d1d1f) 10%, transparent);
+  border: 0;
   border-radius: 14px;
-  background: var(--apple-surface-elevated, var(--surface-hover, #fff));
+  background: var(--apple-elevated, var(--surface-hover, #fff));
   box-shadow: 0 12px 32px color-mix(in srgb, var(--shadow-color, #000) 22%, transparent);
   transform-origin: right bottom;
 }
@@ -400,7 +397,7 @@ defineExpose({ getScrollTop, setScrollTop });
 .pre-apple-reader__error {
   padding: 24px;
   border-radius: 20px;
-  background: var(--apple-surface-paper, var(--surface, #f9f9fb));
+  background: var(--apple-paper, var(--surface, #f9f9fb));
   color: var(--apple-label-secondary, var(--muted-foreground, #6e6e73));
   font-size: 14px;
   line-height: 1.6;
@@ -485,15 +482,13 @@ defineExpose({ getScrollTop, setScrollTop });
   .pre-apple-reader__more-menu,
   .pre-apple-reader__empty,
   .pre-apple-reader__error {
-    background: var(--apple-surface-solid, var(--surface, #f9f9fb));
+    background: var(--apple-paper, var(--surface, #f9f9fb));
   }
 }
 
 @media (prefers-contrast: more) {
   .pre-apple-reader__user,
-  .pre-apple-reader__paper,
   .pre-apple-reader__more-menu,
-  .pre-apple-reader__empty,
   .pre-apple-reader__error {
     outline: 1px solid currentColor;
     outline-offset: -1px;
