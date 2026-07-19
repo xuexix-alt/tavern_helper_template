@@ -49,10 +49,12 @@
                     :aria-controls="messageBodyId(item.message_id)"
                     @click="toggleMessage(item.message_id)"
                   >
-                    <span class="pre-apple-history__role">{{ item.roleLabel }}</span>
-                    <span class="pre-apple-history__id">#{{ item.message_id }}</span>
-                    <span v-if="item.hidden" class="pre-apple-history__flag">HIDDEN</span>
-                    <span v-if="item.isStreaming" class="pre-apple-history__flag">STREAM</span>
+                    <span class="pre-apple-history__meta">
+                      <span class="pre-apple-history__role">{{ item.roleLabel }}</span>
+                      <span class="pre-apple-history__id">#{{ item.message_id }}</span>
+                      <span v-if="item.hidden" class="pre-apple-history__flag">HIDDEN</span>
+                      <span v-if="item.isStreaming" class="pre-apple-history__flag">STREAM</span>
+                    </span>
                     <span class="pre-apple-history__preview">{{ plainTextSummary(item) }}</span>
                     <svg class="pre-apple-history__chevron" aria-hidden="true" viewBox="0 0 20 20">
                       <path d="m6.5 8 3.5 3.5L13.5 8" />
@@ -190,10 +192,11 @@ function messageBodyId(messageId: number) {
 }
 
 function plainTextSummary(item: TranscriptItem) {
-  return (item.raw || item.content || item.preview || '无正文')
+  const cleaned = (item.raw || item.content || item.preview || '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  return cleaned || '无正文';
 }
 
 function lockBodyScroll() {
@@ -434,7 +437,7 @@ onUnmounted(restoreBodyScroll);
 
 .pre-apple-history__summary {
   display: grid;
-  grid-template-columns: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 42px;
   flex: 1 1 auto;
@@ -444,6 +447,13 @@ onUnmounted(restoreBodyScroll);
   border-radius: 13px;
   background: transparent;
   text-align: left;
+}
+
+.pre-apple-history__meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
 }
 
 .pre-apple-history__role {
@@ -663,7 +673,7 @@ onUnmounted(restoreBodyScroll);
   }
 
   .pre-apple-history__summary {
-    grid-template-columns: auto auto auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     min-height: 44px;
     padding-inline: 8px;
   }

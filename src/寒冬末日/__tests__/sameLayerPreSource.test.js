@@ -373,6 +373,22 @@ test('same-layer-pre APPLE history is an accessible single-expansion dialog', ()
   );
 });
 
+test('same-layer-pre APPLE history keeps optional flags out of its flexible summary columns', () => {
+  const historySource = readPre(path.join('components', 'PreAppleHistoryOverlay.vue'));
+  const summaryBlock = extractCssRuleBlock(historySource, '.pre-apple-history__summary');
+
+  assert.match(historySource, /class="pre-apple-history__meta"/);
+  assert.match(summaryBlock, /grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto/);
+  assert.doesNotMatch(summaryBlock, /auto auto auto auto/);
+});
+
+test('same-layer-pre APPLE history falls back after stripping an empty markup summary', () => {
+  const historySource = readPre(path.join('components', 'PreAppleHistoryOverlay.vue'));
+  const summarySource = extractFunctionSource(historySource, 'plainTextSummary');
+
+  assert.match(summarySource, /return\s+cleaned\s*\|\|\s*['"]无正文['"]/);
+});
+
 test('same-layer-pre APPLE message body reuses trusted streaming and final HTML rendering', () => {
   const bodySource = readPre(path.join('components', 'PreAppleMessageBody.vue'));
 
