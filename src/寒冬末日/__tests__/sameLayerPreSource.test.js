@@ -443,6 +443,12 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   );
   assert.match(storySource, /watch\(\s*isAppleTheme[\s\S]*?appleHistoryOpen\.value\s*=\s*false/);
   assert.match(storySource, /v-if="!isAppleTheme && transcriptWindowMenuOpen"/);
+  assert.match(storySource, /:transcript-items="rolePanelTranscriptItems"/);
+  assert.match(
+    storySource,
+    /const\s+rolePanelTranscriptItems\s*=\s*computed\(\s*\(\)\s*=>\s*baseTranscriptItems\.value\s+as\s+unknown\s+as\s+RolePanelTranscriptItem\[\][\s,]*\)/,
+    'the inherited role panel should receive the shared transcript fields through a type-only compatibility boundary',
+  );
   assert.equal((storySource.match(/<PreAppleReader/g) || []).length, 1);
   assert.equal((storySource.match(/<PreAppleHistoryOverlay/g) || []).length, 1);
 });
@@ -462,12 +468,32 @@ test('same-layer-pre APPLE reader focuses the current exchange and owns the imag
     /if\s*\(latestUserIndex\s*>\s*assistantIndex\)\s*return latestUser;/,
     'an unanswered user after the latest assistant should replace the older related user summary',
   );
+  assert.match(readerSource, /if\s*\(!assistant\)\s*return latestUser;/);
+  assert.match(
+    readerSource,
+    /for\s*\(let index\s*=\s*assistantIndex\s*-\s*1;[\s\S]*?item\.role\s*===\s*['"]user['"]\)\s*return item/,
+    'a completed exchange should select the nearest user before the latest assistant',
+  );
+  assert.match(readerSource, /等待回复/);
+  assert.match(readerSource, /等待聊天记录/);
   assert.match(readerSource, /aria-expanded/);
   assert.match(readerSource, /PreAppleMessageBody/);
   assert.doesNotMatch(readerSource, /v-for="item in items"/);
   assert.match(readerSource, /installPreHostImageGestureForwarder/);
   assert.match(readerSource, /useEventListener\(window,\s*'dblclick'/);
   assert.match(readerSource, /useEventListener\(window,\s*'touchend'/);
+  assert.equal((readerSource.match(/installPreHostImageGestureForwarder\(\)/g) || []).length, 1);
+  assert.equal((readerSource.match(/useEventListener\(window,\s*'dblclick'/g) || []).length, 1);
+  assert.equal((readerSource.match(/useEventListener\(window,\s*'touchend'/g) || []).length, 1);
+  assert.equal((readerSource.match(/<PreAppleMessageBody/g) || []).length, 2);
+  assert.match(
+    readerSource,
+    /class="pre-message-card pre-apple-reader__user"[\s\S]*?:data-message-id="relatedUser\.message_id"[\s\S]*?<PreAppleMessageBody\s+:item="relatedUser"/,
+  );
+  assert.match(
+    readerSource,
+    /class="pre-message-card pre-apple-reader__paper"[\s\S]*?:data-message-id="latestAssistant\.message_id"[\s\S]*?<PreAppleMessageBody\s+:item="latestAssistant"/,
+  );
   assert.match(readerSource, PRE_MESSAGE_HOST_TAG_PATTERN);
 });
 
@@ -479,6 +505,8 @@ test('same-layer-pre APPLE history is an accessible single-expansion dialog', ()
   assert.match(historySource, /Teleport to="body"/);
   assert.match(historySource, /Escape|event\.key === 'Escape'/);
   assert.match(historySource, /focusable|FOCUSABLE/);
+  assert.match(historySource, /event\.key\s*!==\s*['"]Tab['"]/);
+  assert.match(historySource, /closeButtonRef\.value\?\.focus\(\)/);
   assert.match(historySource, /document\.body\.style\.overflow/);
   assert.match(historySource, /expandedMessageId/);
   assert.match(historySource, /const\s+expandedMessageId\s*=\s*ref<number\s*\|\s*null>\(null\)/);
@@ -486,6 +514,12 @@ test('same-layer-pre APPLE history is an accessible single-expansion dialog', ()
   assert.match(historySource, /canReroll/);
   assert.match(historySource, /canDeleteFrom/);
   assert.match(historySource, /PreAppleMessageBody/);
+  assert.match(historySource, /暂无历史消息/);
+  assert.equal((historySource.match(/<PreAppleMessageBody/g) || []).length, 1);
+  assert.match(
+    historySource,
+    /class="pre-message-card pre-apple-history__message"[\s\S]*?:data-message-id="item\.message_id"[\s\S]*?<PreAppleMessageBody\s+:item="item"/,
+  );
   assert.match(historySource, PRE_MESSAGE_HOST_TAG_PATTERN);
   assert.doesNotMatch(historySource, /getChatMessages|refreshTranscript|transcriptWindowLabel/);
   assert.doesNotMatch(
@@ -881,7 +915,7 @@ test('same-layer-pre left sidebar inherits the full same-layer AGENTS page witho
   assert.match(storySource, /<MvuRolePanel\s*\n\s*v-if="roleDrawerOpen"/);
   assert.match(storySource, /agents-only/);
   assert.match(storySource, /:target-message-id="latestAssistantMessageId"/);
-  assert.match(storySource, /:transcript-items="baseTranscriptItems"/);
+  assert.match(storySource, /:transcript-items="rolePanelTranscriptItems"/);
   assert.match(storySource, /@collapse="closeRoleDrawer"/);
   assert.doesNotMatch(storySource, /PreMvuPanel/);
   assert.doesNotMatch(storySource, /roleTabs/);

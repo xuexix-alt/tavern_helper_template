@@ -189,7 +189,7 @@
           <MvuRolePanel
             v-if="roleDrawerOpen"
             :target-message-id="latestAssistantMessageId"
-            :transcript-items="baseTranscriptItems"
+            :transcript-items="rolePanelTranscriptItems"
             :gallery-entries="preGalleryEntries"
             :role-portrait-overrides="rolePortraitOverrides"
             agents-only
@@ -477,7 +477,10 @@ import {
   writeRolePortraitOverrides,
   type RolePortraitOverrideMap,
 } from '../../../../界面同层版/界面/状态栏/rolePortraits';
-import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
+import type {
+  ReaderGalleryEntry,
+  TranscriptItem as RolePanelTranscriptItem,
+} from '../../../../界面同层版/界面/状态栏/types';
 import PreAppleHistoryOverlay from '../components/PreAppleHistoryOverlay.vue';
 import PreAppleReader from '../components/PreAppleReader.vue';
 import PreGalleryPanel from '../components/PreGalleryPanel.vue';
@@ -517,6 +520,8 @@ const {
   regenerateMessage,
   regenerateLatestMessage,
 } = useSameLayerPre();
+
+const rolePanelTranscriptItems = computed(() => baseTranscriptItems.value as unknown as RolePanelTranscriptItem[]);
 
 const composerRef = ref<ComposerExpose | null>(null);
 const appleReaderRef = ref<AppleReaderExpose | null>(null);
