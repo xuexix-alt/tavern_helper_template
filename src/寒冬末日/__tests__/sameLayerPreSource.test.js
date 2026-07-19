@@ -313,6 +313,15 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   assert.match(storySource, /<PreAppleHistoryOverlay[\s\S]*?:open="isAppleTheme && appleHistoryOpen"/);
   assert.match(storySource, /openAppleHistory/);
   assert.match(storySource, /restoreAppleReaderPosition/);
+  assert.match(storySource, /ref="appleHistoryTriggerRef"/);
+  assert.match(storySource, /ref="appleReaderRef"/);
+  assert.match(storySource, /appleReaderScrollTop\.value\s*=\s*appleReaderRef\.value\?\.getScrollTop\(\)\s*\?\?\s*0/);
+  assert.match(
+    storySource,
+    /await\s+nextTick\(\)[\s\S]*?appleReaderRef\.value\?\.setScrollTop\(appleReaderScrollTop\.value\)[\s\S]*?appleHistoryTriggerRef\.value\?\.focus\(\)/,
+  );
+  assert.match(storySource, /watch\(\s*isAppleTheme[\s\S]*?appleHistoryOpen\.value\s*=\s*false/);
+  assert.match(storySource, /v-if="!isAppleTheme && transcriptWindowMenuOpen"/);
   assert.equal((storySource.match(/<PreAppleReader/g) || []).length, 1);
   assert.equal((storySource.match(/<PreAppleHistoryOverlay/g) || []).length, 1);
 });
@@ -351,9 +360,17 @@ test('same-layer-pre APPLE history is an accessible single-expansion dialog', ()
   assert.match(historySource, /focusable|FOCUSABLE/);
   assert.match(historySource, /document\.body\.style\.overflow/);
   assert.match(historySource, /expandedMessageId/);
+  assert.match(historySource, /const\s+expandedMessageId\s*=\s*ref<number\s*\|\s*null>\(null\)/);
+  assert.match(historySource, /props\.items\.some\(item\s*=>\s*item\.message_id\s*===\s*expandedMessageId\.value\)/);
   assert.match(historySource, /canReroll/);
   assert.match(historySource, /canDeleteFrom/);
+  assert.match(historySource, /PreAppleMessageBody/);
   assert.match(historySource, PRE_MESSAGE_HOST_TAG_PATTERN);
+  assert.doesNotMatch(historySource, /getChatMessages|refreshTranscript|transcriptWindowLabel/);
+  assert.doesNotMatch(
+    historySource,
+    /installPreHostImageGestureForwarder|useEventListener\(window,\s*'(?:dblclick|touchend)'/,
+  );
 });
 
 test('same-layer-pre APPLE message body reuses trusted streaming and final HTML rendering', () => {
