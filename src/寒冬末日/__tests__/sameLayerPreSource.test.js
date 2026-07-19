@@ -410,6 +410,20 @@ test('same-layer-pre APPLE materials avoid nested glass and harden reduced-motio
   assert.match(historyRoleBlock, /var\(--apple-label-(?:primary|secondary)/);
 });
 
+test('same-layer-pre APPLE restores mobile topbar glass after the shared mobile fallback', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const appleStyleStart = storySource.indexOf('/* APPLE material hierarchy');
+  const appleStyleSource = storySource.slice(appleStyleStart);
+  const mobileStart = appleStyleSource.indexOf('@media (max-width: 760px)');
+  const mobileEnd = appleStyleSource.indexOf('@media (prefers-reduced-motion: reduce)', mobileStart);
+  const mobileSource = appleStyleSource.slice(mobileStart, mobileEnd);
+
+  assert.match(mobileSource, /\.same-layer-pre-host\s+\.ui-topbar/);
+  assert.match(mobileSource, /background:\s*var\(--apple-glass\)\s*!important/);
+  assert.match(mobileSource, /backdrop-filter:\s*blur\(22px\)\s+saturate\(150%\)\s*!important/);
+  assert.match(mobileSource, /-webkit-backdrop-filter:\s*blur\(22px\)\s+saturate\(150%\)\s*!important/);
+});
+
 test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));

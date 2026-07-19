@@ -2837,6 +2837,19 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 760px) {
+  /* The shared mobile stylesheet disables blur for legacy themes with !important.
+   * APPLE keeps one deliberate glass layer for structural chrome on capable browsers. */
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(.ui-topbar, .ui-page-menu-list, .ui-more-menu-list)
+  ),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    background: var(--apple-glass) !important;
+    backdrop-filter: blur(22px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+  }
+
   :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-topbar) {
     min-height: 52px;
     padding: 6px 10px;
