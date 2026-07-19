@@ -2975,6 +2975,26 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(
+        .ui-topbar,
+        .ui-sidebar,
+        .ui-page-menu-list,
+        .ui-more-menu-list,
+        .ui-bottom-tool-row,
+        .composer-input-shell,
+        .ui-sidebar-toggle,
+        .ui-sidebar-toggle-right
+      )
+  ),
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    background: color-mix(in srgb, var(--apple-paper) 94%, var(--apple-elevated) 6%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
     translate: none;
   }
@@ -2996,9 +3016,9 @@ onBeforeUnmount(() => {
       )
   ),
   :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
-    background: color-mix(in srgb, var(--apple-paper) 94%, var(--apple-elevated) 6%);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    background: color-mix(in srgb, var(--apple-paper) 94%, var(--apple-elevated) 6%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 

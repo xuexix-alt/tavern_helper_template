@@ -424,6 +424,37 @@ test('same-layer-pre APPLE restores mobile topbar glass after the shared mobile 
   assert.match(mobileSource, /-webkit-backdrop-filter:\s*blur\(22px\)\s+saturate\(150%\)\s*!important/);
 });
 
+test('same-layer-pre APPLE mobile glass yields to reduced transparency and motion', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const appleStyleStart = storySource.indexOf('/* APPLE material hierarchy');
+  const appleStyleSource = storySource.slice(appleStyleStart);
+  const reducedTransparencyStart = appleStyleSource.indexOf('@media (prefers-reduced-transparency: reduce)');
+  const increasedContrastStart = appleStyleSource.indexOf('@media (prefers-contrast: more)', reducedTransparencyStart);
+  const reducedTransparencySource = appleStyleSource.slice(reducedTransparencyStart, increasedContrastStart);
+  const mobileReducedMotionStart = appleStyleSource.indexOf(
+    '@media (max-width: 760px) and (prefers-reduced-motion: reduce)',
+  );
+  const mobileReducedMotionEnd = appleStyleSource.indexOf(
+    '@media (prefers-reduced-transparency: reduce)',
+    mobileReducedMotionStart,
+  );
+  const mobileReducedMotionSource = appleStyleSource.slice(mobileReducedMotionStart, mobileReducedMotionEnd);
+
+  assert.match(reducedTransparencySource, /\.same-layer-pre-host[\s\S]*?\.ui-topbar/);
+  assert.match(reducedTransparencySource, /\.ui-bottom-drawer/);
+  assert.match(
+    reducedTransparencySource,
+    /background:\s*color-mix\(in srgb,\s*var\(--apple-paper\) 94%,\s*var\(--apple-elevated\) 6%\)\s*!important/,
+  );
+  assert.match(reducedTransparencySource, /backdrop-filter:\s*none\s*!important/);
+  assert.match(reducedTransparencySource, /-webkit-backdrop-filter:\s*none\s*!important/);
+
+  assert.match(mobileReducedMotionSource, /\.same-layer-pre-host[\s\S]*?\.ui-topbar/);
+  assert.match(mobileReducedMotionSource, /\.ui-bottom-drawer/);
+  assert.match(mobileReducedMotionSource, /backdrop-filter:\s*none\s*!important/);
+  assert.match(mobileReducedMotionSource, /-webkit-backdrop-filter:\s*none\s*!important/);
+});
+
 test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
