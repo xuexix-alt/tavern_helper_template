@@ -362,6 +362,30 @@ test('same-layer-pre APPLE materials avoid nested glass and harden reduced-motio
   assert.match(nestedMaterialSource, /font-family:\s*var\(--pre-font-sans\)/);
   assert.match(nestedMaterialSource, /text-transform:\s*none/);
 
+  const inheritedControlStart = nestedMaterialSource.indexOf('/* APPLE inherited neutral controls */');
+  const inheritedControlEnd = nestedMaterialSource.indexOf(
+    '/* APPLE inherited control focus */',
+    inheritedControlStart,
+  );
+  assert.notEqual(inheritedControlStart, -1);
+  assert.notEqual(inheritedControlEnd, -1);
+  const inheritedControlSource = nestedMaterialSource.slice(inheritedControlStart, inheritedControlEnd);
+  for (const selector of ['collapse-btn', 'source-select', 'action-btn', 'pre-gallery-panel__scope select']) {
+    assert.match(inheritedControlSource, new RegExp(`\\.${selector.replace(' ', '\\s+')}`));
+  }
+  assert.match(inheritedControlSource, /font-family:\s*var\(--pre-font-sans\)/);
+  assert.match(inheritedControlSource, /text-transform:\s*none/);
+  assert.match(inheritedControlSource, /letter-spacing:\s*0/);
+  assert.match(inheritedControlSource, /border:\s*0/);
+  assert.match(inheritedControlSource, /border-radius:\s*1[02]px/);
+  assert.match(inheritedControlSource, /background:\s*var\(--apple-control-fill\)/);
+  assert.match(inheritedControlSource, /color:\s*var\(--apple-label-primary\)/);
+
+  const inheritedFocusSource = nestedMaterialSource.slice(inheritedControlEnd);
+  assert.match(inheritedFocusSource, /:focus-visible/);
+  assert.match(inheritedFocusSource, /outline:\s*3px solid var\(--apple-focus\)/);
+  assert.match(inheritedFocusSource, /outline-offset:\s*3px/);
+
   const reducedMotionStart = appleStyleSource.indexOf('@media (prefers-reduced-motion: reduce)');
   const reducedMotionEnd = appleStyleSource.indexOf(
     '@media (prefers-reduced-transparency: reduce)',

@@ -2651,6 +2651,43 @@ onBeforeUnmount(() => {
   color: var(--apple-label-primary);
 }
 
+/* APPLE inherited neutral controls */
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.collapse-btn, .source-select, .action-btn, .pre-gallery-panel__scope select)
+),
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .ui-bottom-drawer
+    :is(.collapse-btn, .source-select, .action-btn, .pre-gallery-panel__scope select)
+) {
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--apple-control-fill);
+  color: var(--apple-label-primary);
+  box-shadow: none;
+  font-family: var(--pre-font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* APPLE inherited control focus */
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.collapse-btn, .source-select, .action-btn, .pre-gallery-panel__scope select):focus-visible
+),
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .ui-bottom-drawer
+    :is(.collapse-btn, .source-select, .action-btn, .pre-gallery-panel__scope select):focus-visible
+) {
+  outline: 3px solid var(--apple-focus);
+  outline-offset: 3px;
+}
+
 :global(
   :is(.theme-apple, [class*='theme-apple-'])
     .same-layer-pre-host
