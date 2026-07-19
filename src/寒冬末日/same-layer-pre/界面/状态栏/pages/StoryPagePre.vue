@@ -23,6 +23,22 @@
 
         <div class="ui-page-menu">
           <button
+            v-if="isAppleTheme"
+            ref="appleHistoryTriggerRef"
+            type="button"
+            class="ui-icon-btn ui-page-menu-trigger"
+            :class="{ active: appleHistoryOpen }"
+            aria-haspopup="dialog"
+            :aria-expanded="appleHistoryOpen"
+            aria-label="打开故事历史"
+            @click.stop="openAppleHistory"
+          >
+            <span>楼层</span>
+            <span class="ui-page-menu-value">{{ readerSummary.turnCount }}</span>
+          </button>
+
+          <button
+            v-else
             type="button"
             class="ui-icon-btn ui-page-menu-trigger"
             :class="{ active: transcriptWindowMenuOpen }"
@@ -36,7 +52,7 @@
           </button>
 
           <transition name="toolbar-menu-fade">
-            <div v-if="transcriptWindowMenuOpen" class="ui-page-menu-list clip-corner-sm" role="menu">
+            <div v-if="!isAppleTheme && transcriptWindowMenuOpen" class="ui-page-menu-list clip-corner-sm" role="menu">
               <button
                 v-for="page in transcriptWindowPages"
                 :key="page.key"
@@ -224,7 +240,20 @@
           </div>
 
           <div class="ui-transcript-stage">
+            <PreAppleReader
+              v-if="isAppleTheme"
+              ref="appleReaderRef"
+              :items="transcriptItems"
+              :busy="busy"
+              :rollback-confirm-message-id="rollbackConfirmMessageId"
+              :error-message="errorMessage"
+              @request-rollback="requestRollbackDelete"
+              @confirm-rollback="confirmRollbackDelete"
+              @cancel-rollback="cancelRollbackDelete"
+              @regenerate-message="regenerateMessage"
+            />
             <PreTranscriptList
+              v-else
               :items="transcriptItems"
               :busy="busy"
               :rollback-confirm-message-id="rollbackConfirmMessageId"
@@ -233,7 +262,18 @@
               @cancel-rollback="cancelRollbackDelete"
               @regenerate-message="regenerateMessage"
             />
-            <div v-if="errorMessage" class="pre-error">{{ errorMessage }}</div>
+            <PreAppleHistoryOverlay
+              :open="isAppleTheme && appleHistoryOpen"
+              :items="transcriptItems"
+              :busy="busy"
+              :rollback-confirm-message-id="rollbackConfirmMessageId"
+              @close="restoreAppleReaderPosition"
+              @request-rollback="requestRollbackDelete"
+              @confirm-rollback="confirmRollbackDelete"
+              @cancel-rollback="cancelRollbackDelete"
+              @regenerate-message="regenerateMessage"
+            />
+            <div v-if="!isAppleTheme && errorMessage" class="pre-error">{{ errorMessage }}</div>
           </div>
         </section>
 
@@ -400,7 +440,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
 import {
   buildOpeningGeneratePrompt,
@@ -438,6 +478,8 @@ import {
   type RolePortraitOverrideMap,
 } from '../../../../界面同层版/界面/状态栏/rolePortraits';
 import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
+import PreAppleHistoryOverlay from '../components/PreAppleHistoryOverlay.vue';
+import PreAppleReader from '../components/PreAppleReader.vue';
 import PreGalleryPanel from '../components/PreGalleryPanel.vue';
 import PreGalleryBetaModal from '../components/PreGalleryBetaModal.vue';
 import PreTranscriptList from '../components/PreTranscriptList.vue';
@@ -446,6 +488,11 @@ import { useSameLayerPre } from '../useSameLayerPre';
 
 type ComposerExpose = {
   openChoiceModal: () => Promise<void> | void;
+};
+
+type AppleReaderExpose = {
+  getScrollTop: () => number;
+  setScrollTop: (scrollTop: number) => void;
 };
 
 const {
@@ -472,6 +519,10 @@ const {
 } = useSameLayerPre();
 
 const composerRef = ref<ComposerExpose | null>(null);
+const appleReaderRef = ref<AppleReaderExpose | null>(null);
+const appleHistoryTriggerRef = ref<HTMLButtonElement | null>(null);
+const appleReaderScrollTop = ref(0);
+const appleHistoryOpen = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
 const betaModalOpen = ref(false);
@@ -492,6 +543,7 @@ const openingModalOpen = ref(false);
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
 }));
+const isAppleTheme = computed(() => theme.value === 'apple' || theme.value.startsWith('apple-'));
 
 const themeItems: Array<{ label: string; value: DemoTheme }> = [
   { label: '科技', value: 'tech' },
@@ -754,6 +806,19 @@ function toggleUtilityDrawer(drawer: 'system' | 'map') {
 function toggleTranscriptWindowMenu() {
   transcriptWindowMenuOpen.value = !transcriptWindowMenuOpen.value;
   if (transcriptWindowMenuOpen.value) topbarMoreMenuOpen.value = false;
+}
+
+function openAppleHistory() {
+  appleReaderScrollTop.value = appleReaderRef.value?.getScrollTop() ?? 0;
+  appleHistoryOpen.value = true;
+  closeTopbarMenus();
+}
+
+async function restoreAppleReaderPosition() {
+  appleHistoryOpen.value = false;
+  await nextTick();
+  appleReaderRef.value?.setScrollTop(appleReaderScrollTop.value);
+  appleHistoryTriggerRef.value?.focus();
 }
 
 function toggleTopbarMoreMenu() {
@@ -1142,6 +1207,10 @@ async function handleReprocessVariablesFromChoiceModal() {
     reprocessVariablesPending.value = false;
   }
 }
+
+watch(isAppleTheme, enabled => {
+  if (!enabled) appleHistoryOpen.value = false;
+});
 
 onMounted(() => {
   refreshMvuVariableUpdateMode();
@@ -3095,8 +3164,7 @@ onBeforeUnmount(() => {
   --apple-focus: color-mix(in srgb, var(--apple-primary) 74%, #1d1d1f 8%);
   background:
     radial-gradient(circle at 8% 0%, var(--apple-color-wash), transparent 38%),
-    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%),
-    var(--background);
+    radial-gradient(circle at 100% 100%, var(--apple-color-wash-secondary), transparent 42%), var(--background);
 }
 
 :global(.theme-apple-sky .same-layer-pre-host .ui-topbar),
@@ -3190,6 +3258,8 @@ onBeforeUnmount(() => {
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-panel__empty),
 :global(.theme-apple-rose .same-layer-pre-host .pre-gallery-card) {
   background: color-mix(in srgb, var(--apple-surface) 84%, transparent);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, white 58%, transparent), 0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 58%, transparent),
+    0 8px 24px color-mix(in srgb, var(--shadow-color) 40%, transparent);
 }
 </style>
