@@ -2289,14 +2289,15 @@ onBeforeUnmount(() => {
   --apple-label-secondary: var(--muted-foreground);
   --apple-control-fill: color-mix(in srgb, var(--apple-elevated) 78%, var(--apple-paper) 22%);
   --apple-control-hover: color-mix(in srgb, var(--foreground) 8%, var(--apple-elevated));
-  --apple-focus: color-mix(in srgb, var(--apple-primary) 84%, white 16%);
+  --apple-focus: color-mix(in srgb, var(--apple-primary) 70%, var(--foreground) 30%);
+  --pre-font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Segoe UI',
+    sans-serif;
+  --pre-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   overflow-x: hidden;
 }
 
 :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host) {
-  --pre-font-sans:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Noto Sans SC', 'Segoe UI', sans-serif;
-  --pre-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   background: radial-gradient(circle at 12% -16%, var(--apple-wash), transparent 42%), var(--apple-canvas);
   color: var(--apple-label-primary);
   font-size: 16px;
@@ -2450,8 +2451,8 @@ onBeforeUnmount(() => {
     .same-layer-pre-host
     :is(.ui-icon-btn.active, .ui-signal-btn.active, .ui-page-menu-item.active)
 ) {
-  background: color-mix(in srgb, var(--apple-primary) 12%, var(--apple-elevated));
-  color: var(--apple-primary);
+  background: color-mix(in srgb, var(--apple-primary) 14%, var(--apple-elevated));
+  color: var(--apple-label-primary);
 }
 
 :global(
@@ -2460,8 +2461,8 @@ onBeforeUnmount(() => {
     :is(.choice-btn--primary:not(:disabled), .send-btn:not(.is-cancel):not(:disabled))
 ) {
   border: 0;
-  background: var(--apple-primary);
-  color: #fff;
+  background: color-mix(in srgb, var(--apple-primary) 18%, var(--apple-elevated));
+  color: var(--apple-label-primary);
   box-shadow: none;
 }
 
@@ -2560,7 +2561,7 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, #000 24%, transparent);
 }
 
-/* Content inside glass drawers returns to opaque Paper to avoid glass-on-glass. */
+/* APPLE nested content stays opaque: Paper/Elevated never compounds the drawer glass. */
 :global(
   :is(.theme-apple, [class*='theme-apple-'])
     .same-layer-pre-host
@@ -2573,9 +2574,32 @@ onBeforeUnmount(() => {
       .meta-box,
       .expand-card,
       .system-command-card,
+      .workbench-card,
+      .system-content,
+      .map-panel,
+      .map-section,
+      .zone-card,
+      .floor-card,
+      .room-card,
+      .map-summary-chip,
       .pre-gallery-panel__probe,
       .pre-gallery-panel__empty,
-      .pre-gallery-card
+      .pre-gallery-card,
+      .pre-gallery-card__image
+    )
+),
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .ui-bottom-drawer
+    :is(
+      .workbench-card,
+      .system-content,
+      .map-panel,
+      .map-section,
+      .zone-card,
+      .floor-card,
+      .room-card,
+      .map-summary-chip
     )
 ) {
   border-color: transparent;
@@ -2583,6 +2607,94 @@ onBeforeUnmount(() => {
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.page-tabs, .tab-row, .system-tabs, .source-nav, .pre-gallery-panel__scope)
+),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer :is(.system-tabs, .source-nav)) {
+  gap: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--apple-recessed);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.page-tab, .tab-btn, .system-tab, .source-nav-btn, .pre-gallery-panel__refresh, .pre-gallery-card__portrait)
+),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer :is(.system-tab, .source-nav-btn)) {
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--apple-label-secondary);
+  box-shadow: none;
+  font-family: var(--pre-font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.page-tab.active, .tab-btn.active, .system-tab.active)
+),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer .system-tab.active) {
+  background: color-mix(in srgb, var(--apple-primary) 14%, var(--apple-elevated));
+  color: var(--apple-label-primary);
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(
+      .source-status,
+      .accordion-title,
+      .source-field span,
+      .section-kicker,
+      .system-block-title,
+      .pre-gallery-card__line
+    )
+),
+:global(
+  :is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer :is(.source-status, .section-kicker, .system-block-title)
+) {
+  color: var(--apple-label-secondary);
+  font-family: var(--pre-font-sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.accordion-item.active, .room-card.active, .pre-gallery-card__image)
+),
+:global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer .room-card.active) {
+  border-color: transparent;
+  background: var(--apple-elevated);
+  color: var(--apple-label-primary);
+}
+
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .same-layer-pre-host
+    :is(.accordion-body, .workbench-card, .zone-card, .floor-card, .room-card, .map-summary-chip)
+),
+:global(
+  :is(.theme-apple, [class*='theme-apple-'])
+    .ui-bottom-drawer
+    :is(.workbench-card, .zone-card, .floor-card, .room-card, .map-summary-chip)
+) {
+  border-color: transparent;
+  border-radius: 16px;
 }
 
 /* Dock chrome floats around the input without enclosing it in a terminal frame. */
@@ -2624,7 +2736,7 @@ onBeforeUnmount(() => {
 }
 
 :global(:is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .ui-bottom-tool-row .ui-signal-btn.active) {
-  background: var(--apple-elevated);
+  background: color-mix(in srgb, var(--apple-primary) 14%, var(--apple-elevated));
   color: var(--apple-label-primary);
 }
 
@@ -2755,11 +2867,66 @@ onBeforeUnmount(() => {
     transform: none;
   }
 
+  /* Teleported drawers and masks cross-fade without inheriting off-screen transforms. */
   :global(
-    :is(.theme-apple, [class*='theme-apple-']) :is(.utility-drawer-rise-enter-from, .utility-drawer-rise-leave-to)
+    :is(.theme-apple, [class*='theme-apple-'])
+      :is(
+        .ui-bottom-drawer,
+        .ui-utility-mask,
+        .utility-drawer-rise-enter-active,
+        .utility-drawer-rise-leave-active,
+        .utility-mask-fade-enter-active,
+        .utility-mask-fade-leave-active
+      )
+  ) {
+    transition: opacity 140ms ease !important;
+    transform: none !important;
+  }
+
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      :is(
+        .utility-drawer-rise-enter-from,
+        .utility-drawer-rise-leave-to,
+        .utility-mask-fade-enter-from,
+        .utility-mask-fade-leave-to
+      )
   ) {
     opacity: 0;
-    transform: translate(-50%, -50%);
+    transform: none !important;
+  }
+
+  /* MvuRolePanel swaps faces statically when motion reduction is requested. */
+  :global(
+    :is(.theme-apple, [class*='theme-apple-'])
+      .same-layer-pre-host
+      :is(.role-detail-flip, .role-detail-face, .role-detail-front, .role-detail-back)
+  ) {
+    animation: none !important;
+    perspective: none !important;
+    transition: opacity 140ms ease !important;
+    transform: none !important;
+  }
+
+  :global(
+    :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .role-detail-flip:not(.flipped) .role-detail-back
+  ),
+  :global(
+    :is(.theme-apple, [class*='theme-apple-']) .same-layer-pre-host .role-detail-flip.flipped .role-detail-front
+  ) {
+    display: none;
+  }
+}
+
+@media (min-width: 761px) and (prefers-reduced-motion: reduce) {
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    translate: -50% -50%;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  :global(:is(.theme-apple, [class*='theme-apple-']) .ui-bottom-drawer) {
+    translate: none;
   }
 }
 

@@ -469,7 +469,7 @@ onUnmounted(restoreBodyScroll);
 }
 
 .pre-apple-history__role {
-  color: var(--primary, #0a84ff);
+  color: var(--apple-label-primary, var(--foreground, #1d1d1f));
   font-size: 13px;
   font-weight: 650;
 }

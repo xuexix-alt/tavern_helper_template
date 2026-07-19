@@ -319,6 +319,73 @@ test('same-layer-pre APPLE theme keeps its choices, floating handles, and access
   assert.match(appleStyleSource, /backdrop-filter:\s*blur\(/);
 });
 
+test('same-layer-pre APPLE materials avoid nested glass and harden reduced-motion and light accents', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const historySource = readPre(path.join('components', 'PreAppleHistoryOverlay.vue'));
+  const appleStyleStart = storySource.indexOf('/* APPLE material hierarchy');
+  const appleStyleSource = storySource.slice(appleStyleStart);
+
+  assert.match(appleStyleSource, /Microsoft YaHei/);
+  assert.match(
+    appleStyleSource,
+    /--apple-focus:\s*color-mix\([^;]*var\(--apple-primary\)[^;]*var\(--foreground\)[^;]*\)/,
+  );
+  assert.doesNotMatch(appleStyleSource, /--apple-focus:[^;]*\bwhite\b/);
+
+  const nestedMaterialStart = appleStyleSource.indexOf('/* APPLE nested content stays opaque');
+  const nestedMaterialEnd = appleStyleSource.indexOf('/* Dock chrome', nestedMaterialStart);
+  assert.notEqual(nestedMaterialStart, -1);
+  assert.notEqual(nestedMaterialEnd, -1);
+  const nestedMaterialSource = appleStyleSource.slice(nestedMaterialStart, nestedMaterialEnd);
+  for (const className of [
+    'workbench-card',
+    'zone-card',
+    'floor-card',
+    'room-card',
+    'map-summary-chip',
+    'accordion-item',
+    'pre-gallery-card',
+    'pre-gallery-card__image',
+  ]) {
+    assert.match(nestedMaterialSource, new RegExp(`\\.${className}`));
+  }
+  assert.match(nestedMaterialSource, /background:\s*var\(--apple-(?:paper|elevated)\)/);
+  assert.match(nestedMaterialSource, /backdrop-filter:\s*none/);
+  assert.doesNotMatch(nestedMaterialSource, /backdrop-filter:\s*blur\(/);
+  assert.match(
+    nestedMaterialSource,
+    /\.ui-bottom-drawer[\s\S]*?:is\([\s\S]*?\.workbench-card[\s\S]*?\.zone-card[\s\S]*?\.room-card/,
+    'teleported utility content must receive the opaque nested-material override without the reader host ancestor',
+  );
+  assert.match(nestedMaterialSource, /:is\(\.page-tab,\s*\.tab-btn,\s*\.system-tab/);
+  assert.match(nestedMaterialSource, /:is\(\s*\.source-status,\s*\.accordion-title/);
+  assert.match(nestedMaterialSource, /font-family:\s*var\(--pre-font-sans\)/);
+  assert.match(nestedMaterialSource, /text-transform:\s*none/);
+
+  const reducedMotionStart = appleStyleSource.indexOf('@media (prefers-reduced-motion: reduce)');
+  const reducedMotionEnd = appleStyleSource.indexOf(
+    '@media (prefers-reduced-transparency: reduce)',
+    reducedMotionStart,
+  );
+  const reducedMotionSource = appleStyleSource.slice(reducedMotionStart, reducedMotionEnd);
+  assert.match(reducedMotionSource, /\.ui-bottom-drawer/);
+  assert.match(reducedMotionSource, /\.utility-mask-fade-enter-active/);
+  assert.match(reducedMotionSource, /transition:\s*opacity\s+(?:1[0-5]\d|\d?\d)ms/);
+  assert.match(reducedMotionSource, /transform:\s*none\s*!important/);
+  assert.match(reducedMotionSource, /\.role-detail-flip/);
+  assert.match(reducedMotionSource, /\.role-detail-front/);
+  assert.match(reducedMotionSource, /\.role-detail-back/);
+
+  assert.doesNotMatch(appleStyleSource, /background:\s*var\(--apple-primary\)/);
+  assert.match(
+    appleStyleSource,
+    /\.send-btn[^{}]*\{[^{}]*background:\s*color-mix\([^;]*var\(--apple-primary\)\s+(?:1[2-9]|20)%[^;]*var\(--apple-elevated\)[^;]*\)[^{}]*color:\s*var\(--apple-label-primary\)/s,
+  );
+  const historyRoleBlock = extractCssRuleBlock(historySource, '.pre-apple-history__role');
+  assert.doesNotMatch(historyRoleBlock, /var\(--primary/);
+  assert.match(historyRoleBlock, /var\(--apple-label-(?:primary|secondary)/);
+});
+
 test('same-layer-pre routes only APPLE themes through the focused reader presentation', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const listSource = readPre(path.join('components', 'PreTranscriptList.vue'));
