@@ -45,6 +45,13 @@ class FakeElement {
     this.listeners.set(name, listeners);
   }
 
+  removeEventListener(name, listener) {
+    this.listeners.set(
+      name,
+      (this.listeners.get(name) ?? []).filter(candidate => candidate !== listener),
+    );
+  }
+
   click() {
     const event = {
       target: this,
@@ -158,7 +165,7 @@ test('malicious message text remains an inert text value at runtime', async () =
     submitActionToHost: async () => {},
   });
   const messages = apps.find(app => app.route === 'messages');
-  const rendered = await messages.render({ document: fakeDocument, listen, announce() {} });
+  const rendered = await messages.render(testContext());
 
   assert.equal(rendered.children.length, 1);
   assert.deepEqual(
@@ -201,7 +208,7 @@ test('private and Eden group rows open while failed messages can retry', async (
     submitActionToHost: async () => {},
   };
   const messages = createPhoneApps(services).find(app => app.route === 'messages');
-  const rendered = await messages.render({ document: fakeDocument, listen, announce() {} });
+  const rendered = await messages.render(testContext());
   const privateButton = findByClass(rendered.children[0], 'phone-conversation');
   const groupButton = findByClass(rendered.children[1], 'phone-conversation');
   const retryButton = findByClass(rendered.children[1], 'phone-retry');
@@ -239,7 +246,7 @@ test('settings form saves structured public settings without a secret field', as
     submitActionToHost: async () => {},
   };
   const settings = createPhoneApps(services).find(app => app.route === 'settings');
-  const rendered = await settings.render({ document: fakeDocument, listen, announce() {} });
+  const rendered = await settings.render(testContext());
   const form = findByClass(rendered, 'phone-settings');
   const fields = Object.fromEntries(
     form.children.slice(0, 6).map(label => [label.children[0].textContent, label.children[1]]),
@@ -265,3 +272,157 @@ test('settings form saves structured public settings without a secret field', as
   ]);
   assert.doesNotMatch(JSON.stringify(collectText(rendered)), /api.?key|secret/i);
 });
+
+test('message detail sends, retries and cancels by message id', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const calls = [];
+  let requestCount = 0;
+  const services = completeServices({
+    listConversations: () => [{ id: 'eden', kind: 'eden-group', title: '伊甸住户群', preview: '消息', unread: 0 }],
+    listMessages: () => [
+      { id: 'failed-1', sender: '纪宁', content: '<script>x</script>', direction: 'incoming', status: 'failed' },
+      { id: 'pending-1', sender: '我', content: '等待', direction: 'outgoing', status: 'pending' },
+    ],
+    openConversation: async id => calls.push(['open', id]),
+    sendMessage: async (id, value) => calls.push(['send', id, value]),
+    retryMessage: async (id, messageId) => calls.push(['retry', id, messageId]),
+    cancelMessage: async (id, messageId) => calls.push(['cancel', id, messageId]),
+  });
+  const apps = createPhoneApps(services);
+  const messages = apps.find(app => app.route === 'messages');
+  const context = {
+    document: fakeDocument,
+    listen,
+    announce() {},
+    requestRender() {
+      requestCount += 1;
+    },
+    navigate() {},
+    isActive: () => true,
+  };
+  const listView = await messages.render(context);
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+  const detail = await messages.render(context);
+  const composer = findByClass(detail, 'phone-composer__input');
+  composer.value = '  保持供暖  ';
+  findByClass(detail, 'phone-composer__send').click();
+  findByClass(detail, 'phone-message__retry').click();
+  findByClass(detail, 'phone-message__cancel').click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(calls, [
+    ['open', 'eden'],
+    ['send', 'eden', '保持供暖'],
+    ['retry', 'eden', 'failed-1'],
+    ['cancel', 'eden', 'pending-1'],
+  ]);
+  assert.ok(requestCount >= 4);
+  assert.ok(collectText(detail).includes('<script>x</script>'));
+});
+
+test('contact creates a private conversation and navigates to messages', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const navigated = [];
+  const services = completeServices({
+    listContacts: () => [{ id: 'role:a', name: '纪宁', detail: '公民', online: true, canSend: true }],
+    openOrCreateConversation: async () => 'private:a',
+  });
+  const contacts = createPhoneApps(services).find(app => app.route === 'contacts');
+  const rendered = await contacts.render({
+    document: fakeDocument,
+    listen,
+    announce() {},
+    requestRender() {},
+    navigate: route => navigated.push(route),
+    isActive: () => true,
+  });
+  findByClass(rendered, 'phone-contact').click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(navigated, ['messages']);
+});
+
+test('view scopes release stale listeners and reject late registration', () => {
+  const { PhoneViewScope } = loadTypeScriptModule(shellPath);
+  const target = new FakeElement('button');
+  const scope = new PhoneViewScope();
+  const listener = () => {};
+  scope.listen(target, 'click', listener);
+  assert.equal(target.listeners.get('click').length, 1);
+  scope.dispose();
+  assert.equal(target.listeners.get('click').length, 0);
+  scope.listen(target, 'click', listener);
+  assert.equal(target.listeners.get('click').length, 0);
+});
+
+test('focus guard and focus trap prevent late focus theft', () => {
+  const source = readFileSync(shellPath, 'utf8');
+  const { PhoneOpenFocusGuard, getFocusTrapTarget } = loadTypeScriptModule(shellPath);
+  const guard = new PhoneOpenFocusGuard();
+  const token = guard.begin();
+  assert.equal(guard.isCurrent(token), true);
+  guard.invalidate();
+  assert.equal(guard.isCurrent(token), false);
+  const first = { id: 'first' };
+  const last = { id: 'last' };
+  assert.equal(getFocusTrapTarget([first, last], last, false), first);
+  assert.equal(getFocusTrapTarget([first, last], first, true), last);
+  assert.match(source, /this\.panel\.focus\(\);\s*await this\.render\(\)/s);
+  assert.match(source, /this\.opened[^\n]+isCurrent/);
+});
+
+test('diagnostics redact JSON headers and URL credentials only', () => {
+  const { redactDiagnostic } = loadTypeScriptModule(appsPath);
+  const input =
+    'request failed {"Authorization":"Bearer top-secret","x-api-key":"sk-abcdefgh"} https://x.test/v1?token=abc&mode=fast api-key=plain-secret';
+  const output = redactDiagnostic(input);
+  assert.doesNotMatch(output, /top-secret|sk-abcdefgh|token=abc|plain-secret/);
+  assert.match(output, /mode=fast/);
+  assert.equal(redactDiagnostic('ordinary timeout in model alpha'), 'ordinary timeout in model alpha');
+});
+
+function completeServices(overrides = {}) {
+  return {
+    listConversations: () => [],
+    listMessages: () => [],
+    listContacts: () => [],
+    listBroadcasts: () => [],
+    listTasks: () => [],
+    getSettings: () => ({
+      provider: 'tavern',
+      apiUrl: '',
+      model: '',
+      parameters: '',
+      theme: 'system',
+      notifications: false,
+    }),
+    getDiagnostics: () => ({
+      runtimeState: '',
+      snapshotVersion: '',
+      pendingLoreCount: 0,
+      moduleStates: [],
+      recentErrors: [],
+    }),
+    openConversation: async () => {},
+    openOrCreateConversation: async () => '',
+    retryFailedMessage: async () => {},
+    sendMessage: async () => {},
+    retryMessage: async () => {},
+    cancelMessage: async () => {},
+    saveSettings: async () => {},
+    submitActionToHost: async () => {},
+    ...overrides,
+  };
+}
+
+function testContext(overrides = {}) {
+  return {
+    document: fakeDocument,
+    listen,
+    announce() {},
+    requestRender() {},
+    navigate() {},
+    isActive: () => true,
+    ...overrides,
+  };
+}

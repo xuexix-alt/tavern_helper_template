@@ -11,6 +11,14 @@ export interface PhoneConversationView {
   status?: 'sent' | 'pending' | 'failed';
 }
 
+export interface PhoneMessageView {
+  id: string;
+  sender: string;
+  content: string;
+  direction: 'incoming' | 'outgoing';
+  status: 'sent' | 'pending' | 'failed';
+}
+
 export interface PhoneContactView {
   id: string;
   name: string;
@@ -54,13 +62,18 @@ export interface PhoneDiagnosticsView {
 
 export interface PhoneAppServices {
   listConversations(): Promise<readonly PhoneConversationView[]> | readonly PhoneConversationView[];
+  listMessages(conversationId: string): Promise<readonly PhoneMessageView[]> | readonly PhoneMessageView[];
   listContacts(): Promise<readonly PhoneContactView[]> | readonly PhoneContactView[];
   listBroadcasts(): Promise<readonly PhoneBroadcastView[]> | readonly PhoneBroadcastView[];
   listTasks(): Promise<readonly PhoneTaskView[]> | readonly PhoneTaskView[];
   getSettings(): Promise<PhoneSettingsView> | PhoneSettingsView;
   getDiagnostics(): Promise<PhoneDiagnosticsView> | PhoneDiagnosticsView;
   openConversation(conversationId: string): Promise<void>;
+  openOrCreateConversation(contactId: string): Promise<string>;
   retryFailedMessage(conversationId: string): Promise<void>;
+  sendMessage(conversationId: string, content: string): Promise<void>;
+  retryMessage(conversationId: string, messageId: string): Promise<void>;
+  cancelMessage(conversationId: string, messageId: string): Promise<void>;
   saveSettings(settings: PhoneSettingsView): Promise<void>;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
 }
@@ -69,6 +82,9 @@ export interface PhoneAppRenderContext {
   document: Document;
   listen(target: EventTarget, event: string, listener: EventListener): void;
   announce(message: string, kind?: 'info' | 'error'): void;
+  requestRender(): void;
+  navigate(route: PhoneRoute): void;
+  isActive(): boolean;
 }
 
 export interface PhoneAppDefinition {
@@ -155,6 +171,8 @@ function safeCount(value: number): string {
 }
 
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
+  let currentConversationId: string | null = null;
+
   return [
     {
       route: 'messages',
@@ -162,6 +180,95 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       glyph: '●',
       async render(context) {
         const { document } = context;
+        if (currentConversationId) {
+          const conversationId = currentConversationId;
+          const messages = await services.listMessages(conversationId);
+          const page = document.createElement('section');
+          page.className = 'phone-chat';
+          const back = text(document, 'button', '返回会话列表');
+          back.className = 'phone-chat__back';
+          back.type = 'button';
+          context.listen(back, 'click', () => {
+            currentConversationId = null;
+            context.requestRender();
+          });
+          const history = list(document);
+          history.className = 'phone-list phone-chat__history';
+          for (const message of messages) {
+            const item = document.createElement('li');
+            item.className = `phone-message phone-message--${message.direction}`;
+            const copy = document.createElement('div');
+            copy.className = 'phone-message__copy';
+            copy.append(text(document, 'strong', message.sender), text(document, 'p', message.content));
+            item.append(copy);
+            if (message.status === 'failed') {
+              const retry = text(document, 'button', '重试');
+              retry.className = 'phone-message__retry';
+              retry.type = 'button';
+              context.listen(retry, 'click', () => {
+                retry.disabled = true;
+                void services
+                  .retryMessage(conversationId, message.id)
+                  .then(() => context.requestRender())
+                  .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                  .finally(() => {
+                    if (context.isActive()) retry.disabled = false;
+                  });
+              });
+              item.append(retry);
+            } else if (message.status === 'pending') {
+              const cancel = text(document, 'button', '取消');
+              cancel.className = 'phone-message__cancel';
+              cancel.type = 'button';
+              context.listen(cancel, 'click', () => {
+                cancel.disabled = true;
+                void services
+                  .cancelMessage(conversationId, message.id)
+                  .then(() => context.requestRender())
+                  .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                  .finally(() => {
+                    if (context.isActive()) cancel.disabled = false;
+                  });
+              });
+              item.append(cancel);
+            }
+            history.append(item);
+          }
+          const composer = document.createElement('div');
+          composer.className = 'phone-composer';
+          const input = document.createElement('textarea');
+          input.className = 'phone-composer__input';
+          input.setAttribute('aria-label', '聊天消息');
+          input.rows = 2;
+          const send = text(document, 'button', '发送');
+          send.className = 'phone-button phone-button--primary phone-composer__send';
+          send.type = 'button';
+          let sending = false;
+          context.listen(send, 'click', () => {
+            const content = input.value.trim();
+            if (!content) {
+              context.announce('消息不能为空', 'error');
+              return;
+            }
+            if (sending) return;
+            sending = true;
+            send.disabled = true;
+            void services
+              .sendMessage(conversationId, content)
+              .then(() => {
+                if (context.isActive()) input.value = '';
+                context.requestRender();
+              })
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+              .finally(() => {
+                sending = false;
+                if (context.isActive()) send.disabled = false;
+              });
+          });
+          composer.append(input, send);
+          page.append(back, history, composer);
+          return page;
+        }
         const items = await services.listConversations();
         if (items.length === 0) return empty(document, '还没有会话');
         const output = list(document);
@@ -183,6 +290,11 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           context.listen(conversation, 'click', () => {
             void services
               .openConversation(item.id)
+              .then(() => {
+                if (!context.isActive()) return;
+                currentConversationId = item.id;
+                context.requestRender();
+              })
               .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
           });
           const unread = safeCount(item.unread);
@@ -206,7 +318,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                 .then(() => context.announce('已重试发送'))
                 .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
                 .finally(() => {
-                  retry.disabled = false;
+                  if (context.isActive()) retry.disabled = false;
                 });
             });
             node.append(retry);
@@ -220,13 +332,35 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       route: 'contacts',
       title: '通讯录',
       glyph: '◉',
-      async render({ document }) {
+      async render(context) {
+        const { document } = context;
         const items = await services.listContacts();
         if (items.length === 0) return empty(document, '暂无可通讯角色');
         const output = list(document);
         for (const item of items) {
           const availability = item.online ? (item.canSend ? '在线' : '只读') : '离线·历史可读';
-          output.append(row(document, item.name, `${availability} · ${item.detail}`));
+          const node = document.createElement('li');
+          node.className = 'phone-row';
+          const button = document.createElement('button');
+          button.className = 'phone-contact';
+          button.type = 'button';
+          button.setAttribute('aria-label', `打开与${item.name}的私聊`);
+          const copy = document.createElement('span');
+          copy.className = 'phone-row__copy';
+          copy.append(text(document, 'strong', item.name), text(document, 'span', `${availability} · ${item.detail}`));
+          button.append(copy);
+          context.listen(button, 'click', () => {
+            void services
+              .openOrCreateConversation(item.id)
+              .then(conversationId => {
+                if (!context.isActive()) return;
+                currentConversationId = conversationId;
+                context.navigate('messages');
+              })
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
+          });
+          node.append(button);
+          output.append(node);
         }
         return output;
       },
@@ -269,7 +403,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
               .then(() => context.announce('已送入输入框'))
               .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
               .finally(() => {
-                button.disabled = false;
+                if (context.isActive()) button.disabled = false;
               });
           });
           node.append(button);
@@ -328,7 +462,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             .then(() => context.announce('设置已保存'))
             .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
             .finally(() => {
-              save.disabled = false;
+              if (context.isActive()) save.disabled = false;
             });
         });
         return form;
@@ -358,8 +492,10 @@ function isPhoneTheme(value: string): value is PhoneSettingsView['theme'] {
   return value === 'system' || value === 'light' || value === 'dark';
 }
 
-function redactDiagnostic(value: string): string {
+export function redactDiagnostic(value: string): string {
   return value
+    .replace(/([?&](?:api[-_]?key|access[-_]?token|token|authorization)=)[^&#\s]*/gi, '$1[REDACTED]')
+    .replace(/(["'](?:authorization|x-api-key|api[-_ ]?key)["']\s*:\s*["'])[^"']*(["'])/gi, '$1[REDACTED]$2')
     .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [REDACTED]')
     .replace(/\b(sk-[a-z0-9_-]{8,})\b/gi, '[REDACTED]')
     .replace(/\b(authorization|api[-_ ]?key|x-api-key)\b\s*[:=]\s*[^\s,;]+/gi, '$1: [REDACTED]');

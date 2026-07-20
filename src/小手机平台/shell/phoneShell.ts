@@ -42,6 +42,53 @@ export class PhoneRouteHistory {
   }
 }
 
+export class PhoneOpenFocusGuard {
+  private version = 0;
+
+  begin(): number {
+    this.version += 1;
+    return this.version;
+  }
+
+  invalidate(): void {
+    this.version += 1;
+  }
+
+  isCurrent(token: number): boolean {
+    return token === this.version;
+  }
+}
+
+export class PhoneViewScope {
+  private active = true;
+  private readonly disposers: Array<() => void> = [];
+
+  isActive(): boolean {
+    return this.active;
+  }
+
+  listen(target: EventTarget, event: string, listener: EventListener): void {
+    if (!this.active) return;
+    target.addEventListener(event, listener);
+    this.disposers.push(() => target.removeEventListener(event, listener));
+  }
+
+  dispose(): void {
+    if (!this.active) return;
+    this.active = false;
+    for (const dispose of this.disposers.splice(0).reverse()) dispose();
+  }
+}
+
+export function getFocusTrapTarget<T>(focusable: readonly T[], current: T | null, backwards: boolean): T | null {
+  if (focusable.length === 0) return null;
+  if (backwards && current === focusable[0]) return focusable[focusable.length - 1] ?? null;
+  if (!backwards && current === focusable[focusable.length - 1]) return focusable[0] ?? null;
+  if (!focusable.includes(current as T))
+    return backwards ? (focusable[focusable.length - 1] ?? null) : (focusable[0] ?? null);
+  return null;
+}
+
 function text<K extends keyof HTMLElementTagNameMap>(document: Document, tag: K, value: string) {
   const node = document.createElement(tag);
   node.textContent = value;
@@ -68,8 +115,9 @@ export class PhoneShell implements PhoneShellApi {
   private readonly liveRegion: HTMLElement;
   private readonly apps: ReadonlyMap<PhoneRoute, PhoneAppDefinition>;
   private readonly disposers: Array<() => void> = [];
-  private viewDisposers: Array<() => void> = [];
+  private viewScope: PhoneViewScope | null = null;
   private readonly routes: PhoneRouteHistory;
+  private readonly openFocus = new PhoneOpenFocusGuard();
   private opened = false;
   private disposed = false;
   private returnFocus: HTMLElement | null;
@@ -131,9 +179,12 @@ export class PhoneShell implements PhoneShellApi {
       if (event.target === overlay) this.close();
     });
     this.listen(this.document, 'keydown', event => {
-      if ('key' in event && event.key === 'Escape' && this.opened) {
+      if (!('key' in event) || !this.opened) return;
+      if (event.key === 'Escape') {
         event.preventDefault();
         this.close();
+      } else if (event.key === 'Tab') {
+        this.trapFocus(event as KeyboardEvent);
       }
     });
   }
@@ -142,15 +193,18 @@ export class PhoneShell implements PhoneShellApi {
     this.assertActive();
     if (returnFocus !== undefined) this.returnFocus = returnFocus;
     if (route !== undefined) this.routes.push(route);
+    const focusToken = this.openFocus.begin();
     this.opened = true;
     this.root.hidden = false;
-    await this.render();
     this.panel.focus();
+    await this.render();
+    if (this.opened && !this.disposed && this.openFocus.isCurrent(focusToken)) this.panel.focus();
   }
 
   close(): void {
     if (this.disposed || !this.opened) return;
     this.opened = false;
+    this.openFocus.invalidate();
     this.root.hidden = true;
     if (this.returnFocus && this.returnFocus.isConnected !== false) this.returnFocus.focus();
   }
@@ -184,6 +238,7 @@ export class PhoneShell implements PhoneShellApi {
     if (this.disposed) return;
     this.disposed = true;
     this.opened = false;
+    this.openFocus.invalidate();
     this.renderVersion += 1;
     this.disposeView();
     for (const dispose of this.disposers.splice(0).reverse()) dispose();
@@ -195,25 +250,23 @@ export class PhoneShell implements PhoneShellApi {
     this.disposers.push(() => target.removeEventListener(event, listener));
   }
 
-  private listenInView(target: EventTarget, event: string, listener: EventListener): void {
-    target.addEventListener(event, listener);
-    this.viewDisposers.push(() => target.removeEventListener(event, listener));
-  }
-
   private disposeView(): void {
-    for (const dispose of this.viewDisposers.splice(0).reverse()) dispose();
+    this.viewScope?.dispose();
+    this.viewScope = null;
   }
 
   private async render(): Promise<void> {
     const renderVersion = ++this.renderVersion;
     this.disposeView();
+    const scope = new PhoneViewScope();
+    this.viewScope = scope;
     this.content.replaceChildren();
     const route = this.getRoute();
     this.backButton.hidden = route === 'home';
 
     if (route === 'home') {
       this.title.textContent = '小手机';
-      this.content.append(this.renderHome());
+      this.content.append(this.renderHome(scope));
       return;
     }
 
@@ -228,23 +281,39 @@ export class PhoneShell implements PhoneShellApi {
     this.content.append(loading);
     const context: PhoneAppRenderContext = {
       document: this.document,
-      listen: (target, event, listener) => this.listenInView(target, event, listener),
+      listen: (target, event, listener) => scope.listen(target, event, listener),
       announce: (message, kind = 'info') => {
+        if (!scope.isActive() || renderVersion !== this.renderVersion) return;
         this.liveRegion.dataset.kind = kind;
         this.liveRegion.textContent = message;
       },
+      requestRender: () => {
+        if (scope.isActive() && renderVersion === this.renderVersion) void this.render();
+      },
+      navigate: route => {
+        if (!scope.isActive() || renderVersion !== this.renderVersion) return;
+        this.routes.push(route);
+        void this.render();
+      },
+      isActive: () => scope.isActive() && renderVersion === this.renderVersion && !this.disposed,
     };
     try {
       const page = await app.render(context);
-      if (this.disposed || renderVersion !== this.renderVersion) return;
+      if (this.disposed || !scope.isActive() || renderVersion !== this.renderVersion) {
+        scope.dispose();
+        return;
+      }
       this.content.replaceChildren(page);
     } catch (error) {
-      if (this.disposed || renderVersion !== this.renderVersion) return;
+      if (this.disposed || !scope.isActive() || renderVersion !== this.renderVersion) {
+        scope.dispose();
+        return;
+      }
       this.renderError(error instanceof Error ? error.message : String(error));
     }
   }
 
-  private renderHome(): HTMLElement {
+  private renderHome(scope: PhoneViewScope): HTMLElement {
     const desktop = this.document.createElement('div');
     desktop.className = 'phone-desktop';
     for (const app of this.apps.values()) {
@@ -255,7 +324,7 @@ export class PhoneShell implements PhoneShellApi {
       glyph.className = `phone-app__glyph phone-app__glyph--${app.route}`;
       const label = text(this.document, 'span', app.title);
       button.append(glyph, label);
-      this.listenInView(button, 'click', () => {
+      scope.listen(button, 'click', () => {
         this.routes.push(app.route);
         void this.render();
       });
@@ -270,6 +339,20 @@ export class PhoneShell implements PhoneShellApi {
     error.className = 'phone-error';
     error.append(text(this.document, 'strong', '此页暂时不可用'), text(this.document, 'p', message));
     this.content.append(error);
+  }
+
+  private trapFocus(event: KeyboardEvent): void {
+    const focusable = Array.from(
+      this.shadow.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]'),
+    ).filter(element => !element.hasAttribute('disabled') && !element.hidden && element.tabIndex !== -1);
+    const target = getFocusTrapTarget(focusable, this.shadow.activeElement as HTMLElement | null, event.shiftKey);
+    if (target) {
+      event.preventDefault();
+      target.focus();
+    } else if (focusable.length === 0) {
+      event.preventDefault();
+      this.panel.focus();
+    }
   }
 
   private assertActive(): void {
