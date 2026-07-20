@@ -277,10 +277,65 @@ async function testChatLoreSync(): Promise<void> {
   assert.equal((await retryDb.listMessages({ sessionKey: sessionA }))[0].syncedToLore, true);
 }
 
+async function testInFlightSessionSwitch(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  const sharedId = 'same-message-id';
+  await db.addMessage(message(sharedId, 1, { sessionKey: sessionA, content: 'A 的消息' }));
+  await db.addMessage(message(sharedId, 1, { sessionKey: sessionB, content: 'B 的消息' }));
+
+  let currentSession = { sessionKey: sessionA, worldbookName: '世界书-A' };
+  const capturedCurrentRequest = () => ({ ...currentSession, type: 'private' as const });
+  const writes: string[] = [];
+  const releaseWriters: Array<() => void> = [];
+  const sync = new ChatLoreSync({
+    db,
+    writer: (worldbookName, entry) => {
+      writes.push(`${worldbookName}:${entry.content}`);
+      return new Promise<void>(resolve => releaseWriters.push(resolve));
+    },
+  });
+
+  const writeA = sync.flushNow(capturedCurrentRequest());
+  await flushMicrotasks();
+  assert.deepEqual(
+    writes.map(value => value.split(':', 1)[0]),
+    ['世界书-A'],
+    'A writer 应先进入 pending，且使用调度时捕获的 A 世界书',
+  );
+
+  currentSession = { sessionKey: sessionB, worldbookName: '世界书-B' };
+  const writeB = sync.flushNow(capturedCurrentRequest());
+  await flushMicrotasks();
+  assert.equal(writes.length, 1, 'A writer 阻塞期间 B 不得并发进入 writer');
+
+  releaseWriters.shift()?.();
+  await flushMicrotasks();
+  assert.deepEqual(
+    writes.map(value => value.split(':', 1)[0]),
+    ['世界书-A', '世界书-B'],
+    '切到 B 后仍应先写 A 书，再串行写 B 书',
+  );
+  assert.match(writes[0], /A 的消息/);
+  assert.match(writes[1], /B 的消息/);
+
+  const afterA = await Promise.all([
+    db.listMessages({ sessionKey: sessionA }),
+    db.listMessages({ sessionKey: sessionB }),
+  ]);
+  assert.equal(afterA[0][0].syncedToLore, true, 'A writer 成功后只能标记 A 批次');
+  assert.equal(afterA[1][0].syncedToLore, false, '同 ID 的 B 消息在 B writer pending 时不得被 A 误标');
+
+  releaseWriters.shift()?.();
+  await Promise.all([writeA, writeB]);
+  const afterB = await db.listMessages({ sessionKey: sessionB });
+  assert.equal(afterB[0].syncedToLore, true, 'B writer 成功后应只标记 B 批次');
+}
+
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
   testLoreSummary();
   await testChatLoreSync();
+  await testInFlightSessionSwitch();
   console.log('data tests passed');
 }
 
