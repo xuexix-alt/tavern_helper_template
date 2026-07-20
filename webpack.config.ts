@@ -74,10 +74,22 @@ function glob_script_files() {
   return results;
 }
 
+const buildPrefixes = (process.env.TAVERN_BUILD_PREFIXES ?? '')
+  .split(';')
+  .map(value => value.trim().replaceAll('\\', '/'))
+  .filter(Boolean);
+const discoveredScriptFiles = glob_script_files();
+const selectedScriptFiles =
+  buildPrefixes.length === 0
+    ? discoveredScriptFiles
+    : discoveredScriptFiles.filter(file => buildPrefixes.some(prefix => file.replaceAll('\\', '/').startsWith(prefix)));
+
 const config: Config = {
   port: 6621,
-  entries: glob_script_files().map(parse_entry),
+  entries: selectedScriptFiles.map(parse_entry),
 };
+
+const skipGenerators = process.env.TAVERN_SKIP_GENERATORS === '1';
 
 let io: Server;
 function watch_tavern_helper(compiler: webpack.Compiler) {
@@ -438,8 +450,7 @@ function parse_configuration(entry: Entry): (_env: any, argv: any) => webpack.Co
     )
       .concat(
         { apply: watch_tavern_helper },
-        { apply: schema_dump },
-        { apply: tavern_sync },
+        ...(skipGenerators ? [] : [{ apply: schema_dump }, { apply: tavern_sync }]),
         new VueLoaderPlugin(),
         unpluginAutoImport({
           dts: true,

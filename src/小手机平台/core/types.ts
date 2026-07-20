@@ -68,8 +68,15 @@ export interface PhoneRuntimeEventMap {
 
 export interface PhoneModuleContext {
   runtime: TavernPhonePublicApi;
+  services: PhoneServiceRegistry;
   getOwner(): PhoneOwner | null;
   getSession(): PhoneSession | null;
+}
+
+export interface PhoneServiceRegistry {
+  publish(ownerId: string, capability: string, service: unknown): () => void;
+  get<T = unknown>(capability: string): T | undefined;
+  require<T = unknown>(capability: string): T;
 }
 
 export type PhoneModuleFactory = () => PhoneModule;

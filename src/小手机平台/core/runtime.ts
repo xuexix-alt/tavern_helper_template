@@ -1,6 +1,7 @@
 import { EventBus } from './eventBus';
 import { ModuleRegistry } from './moduleRegistry';
 import { getPhoneTopWindow } from './register';
+import { InternalPhoneServiceRegistry } from './serviceRegistry';
 import type {
   PhoneHostAction,
   PhoneHostBridge,
@@ -30,6 +31,7 @@ export class PhoneRuntime implements TavernPhonePublicApi {
     this.diagnostics.push(`${String(event)}: ${getErrorMessage(error)}`);
   });
   private readonly registry = new ModuleRegistry();
+  private readonly services = new InternalPhoneServiceRegistry();
   private owner: PhoneOwner | null = null;
   private session: PhoneSession | null = null;
   private hostBridge: AttachedBridge | null = null;
@@ -85,6 +87,7 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   async initializeModules(requiredIds: readonly string[] = []): Promise<void> {
     const context: PhoneModuleContext = {
       runtime: this,
+      services: this.services,
       getOwner: () => this.getOwner(),
       getSession: () => this.getSession(),
     };

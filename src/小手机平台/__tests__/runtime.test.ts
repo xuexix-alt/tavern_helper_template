@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { EventBus } from '../core/eventBus';
+import { createServiceModule } from '../core/serviceModule';
 import { ModuleRegistry } from '../core/moduleRegistry';
 import { registerPhoneModule } from '../core/register';
 import { createPhoneRuntime, installPhoneRuntime, makeSessionKey } from '../core/runtime';
@@ -699,6 +700,7 @@ function testSettingsStoreFailureIsolation(): void {
 }
 
 async function main(): Promise<void> {
+  await testServiceModuleLifecycle();
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
   await testRuntimeBridge();
@@ -711,6 +713,45 @@ async function main(): Promise<void> {
   await testSettingsStore();
   testSettingsStoreFailureIsolation();
   console.log('runtime tests passed');
+}
+
+async function testServiceModuleLifecycle(): Promise<void> {
+  const runtime = createPhoneRuntime();
+  let discovered: unknown;
+  const catalogModule = createServiceModule('catalog', { 'catalog.value': Object.freeze({ ready: true }) });
+  assert.equal(catalogModule.getStatus(), 'REGISTERED');
+  runtime.registerModule({
+    manifest: {
+      id: 'catalog',
+      version: '1.0.0',
+      required: true,
+      dependsOn: [],
+      capabilities: ['catalog.value'],
+    },
+    factory: () => catalogModule,
+  });
+  runtime.registerModule({
+    manifest: {
+      id: 'consumer',
+      version: '1.0.0',
+      required: true,
+      dependsOn: ['catalog'],
+      capabilities: [],
+    },
+    factory: () => ({
+      init(context) {
+        discovered = context.services.require('catalog.value');
+      },
+      dispose() {},
+      getStatus: () => 'READY',
+    }),
+  });
+
+  await runtime.initializeModules(['catalog', 'consumer']);
+  assert.deepEqual(discovered, { ready: true });
+  assert.equal(catalogModule.getStatus(), 'READY');
+  await runtime.dispose();
+  assert.equal(catalogModule.getStatus(), 'DISPOSED');
 }
 
 void main();
