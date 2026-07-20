@@ -798,6 +798,72 @@ async function testActiveSnapshotQuotaSurvivesSwitches(): Promise<void> {
   assert.deepEqual(failureCalls, ['active-failure', 'retry-after-failure']);
 }
 
+async function testConcurrentSameConversationFailuresHoldQuotaUntilLastSettle(): Promise<void> {
+  const first = deferred();
+  const second = deferred();
+  const calls: string[] = [];
+  const scheduler = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: current => {
+        calls.push(current.triggerKey);
+        if (current.triggerKey === 'same-conversation-first') return first.promise;
+        if (current.triggerKey === 'same-conversation-second') return second.promise;
+        return Promise.resolve();
+      },
+      deliverDeterministic: async () => undefined,
+      onError: () => undefined,
+    },
+    {
+      maxAIConversationsPerSnapshot: 1,
+      contactCooldownInStoryTurns: 0,
+      oneInflightRequestPerConversation: false,
+    },
+  );
+  scheduler.setSnapshot(snapshot());
+  scheduler.enqueue(
+    job({
+      triggerKey: 'same-conversation-first',
+      conversationId: 'shared-conversation',
+      contactKey: 'contact-first',
+      topicKey: 'topic-first',
+    }),
+  );
+  scheduler.enqueue(
+    job({
+      triggerKey: 'same-conversation-second',
+      conversationId: 'shared-conversation',
+      contactKey: 'contact-second',
+      topicKey: 'topic-second',
+    }),
+  );
+  scheduler.runAvailable();
+  assert.deepEqual(calls, ['same-conversation-first', 'same-conversation-second']);
+
+  first.reject(new Error('first concurrent request failed'));
+  await settle();
+  const thirdConversation = job({
+    triggerKey: 'different-conversation',
+    conversationId: 'different-conversation',
+    contactKey: 'contact-third',
+    topicKey: 'topic-third',
+  });
+  assert.equal(scheduler.enqueue(thirdConversation), true);
+  scheduler.runAvailable();
+  assert.deepEqual(
+    calls,
+    ['same-conversation-first', 'same-conversation-second'],
+    '同 conversation 仍有 active 请求时，一次失败不得释放 admitted quota',
+  );
+
+  second.reject(new Error('last concurrent request failed'));
+  await scheduler.whenIdle();
+  assert.equal(scheduler.enqueue(thirdConversation), true, '最后一个同 conversation 请求失败后应允许显式重试');
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.deepEqual(calls, ['same-conversation-first', 'same-conversation-second', 'different-conversation']);
+}
+
 async function testFailureReleaseRetryAndDisposeSafety(): Promise<void> {
   const errors: unknown[] = [];
   let attempts = 0;
@@ -868,6 +934,7 @@ async function main(): Promise<void> {
   await testOlderFailureCannotRollbackNewerCooldown();
   await testBoundedDedupAndSessionStateCleanup();
   await testActiveSnapshotQuotaSurvivesSwitches();
+  await testConcurrentSameConversationFailuresHoldQuotaUntilLastSettle();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   console.log('scheduler tests passed');
