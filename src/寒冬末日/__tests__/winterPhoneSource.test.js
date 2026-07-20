@@ -103,6 +103,40 @@ test('internal service publication does not collide with Vue auto-import names',
   assert.doesNotMatch(registry, /\bprovide\s*\(/);
 });
 
+test('winter communication facts are declared across schema, init data, and update rules', () => {
+  const schema = readFileSync('src/寒冬末日/schema.ts', 'utf8');
+  const init = readFileSync('src/寒冬末日/世界书/寒冬末日/[initvar].yaml', 'utf8');
+  const rules = readFileSync('src/寒冬末日/世界书/变量/[mvu_update]变量更新规则.yaml', 'utf8');
+  const output = readFileSync('src/寒冬末日/世界书/变量/[mvu_update]变量输出格式.yaml', 'utf8');
+  const variables = readFileSync('src/寒冬末日/世界书/变量/变量列表.txt', 'utf8');
+  const temporaryNpc = readFileSync('src/寒冬末日/世界书/变量/临时NPC变量结构示意.txt', 'utf8');
+
+  assert.match(schema, /终端类型/);
+  assert.match(schema, /公共通信网/);
+  assert.match(init, /^通讯网络:/m);
+  assert.match(rules, /social\.shift_ration_protocol_t2/);
+  assert.match(rules, /最多5台/);
+  assert.match(rules, /social\.eden_phone_mass_t4/);
+  assert.match(rules, /首版手机只读MVU/);
+  assert.match(output, /\/通讯网络\//);
+  assert.match(output, /\/纪宁\/通讯\//);
+  assert.match(output, /旧存档[\s\S]*insert[\s\S]*完整通讯对象/);
+  assert.match(variables, /通讯网络/);
+  assert.match(variables, /format_message_variable::stat_data/);
+  assert.match(temporaryNpc, /已建立联系/);
+  assert.match(temporaryNpc, /伊甸终端T2/);
+});
+
+test('schema dump has a strict, path-boundary-aware winter scope', () => {
+  const dumpSource = readFileSync('dump_schema.ts', 'utf8');
+
+  assert.match(dumpSource, /TAVERN_SCHEMA_PREFIXES/);
+  assert.match(dumpSource, /replaceAll\(['"]\\\\['"],\s*['"]\/['"]\)/);
+  assert.match(dumpSource, /prefix\s*\+\s*['"]\/['"]/);
+  assert.match(dumpSource, /throw new Error\([^)]*TAVERN_SCHEMA_PREFIXES/s);
+  assert.match(dumpSource, /for\s*\(const schema_file of/);
+});
+
 function assertArrayLiteral(source, key, values) {
   const literal = values.map(value => `'${value}'`).join(', ');
   assert.match(source, new RegExp(`${key}:\\s*\\[${escapeRegExp(literal)}\\]`));
