@@ -5,6 +5,7 @@ import { createServiceModule } from '../core/serviceModule';
 import { ModuleRegistry } from '../core/moduleRegistry';
 import { registerPhoneModule } from '../core/register';
 import { createPhoneRuntime, installPhoneRuntime, makeSessionKey } from '../core/runtime';
+import { InternalPhoneServiceRegistry } from '../core/serviceRegistry';
 import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration, PhoneOwner } from '../core/types';
 import { createHostGateway, createTopHostGateway } from '../platform/hostGateway';
 import { createSettingsStore, type PublicSettings, type StorageLike } from '../platform/settingsStore';
@@ -701,6 +702,7 @@ function testSettingsStoreFailureIsolation(): void {
 
 async function main(): Promise<void> {
   await testServiceModuleLifecycle();
+  testServiceModuleAtomicPublication();
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
   await testRuntimeBridge();
@@ -713,6 +715,33 @@ async function main(): Promise<void> {
   await testSettingsStore();
   testSettingsStoreFailureIsolation();
   console.log('runtime tests passed');
+}
+
+function testServiceModuleAtomicPublication(): void {
+  const services = new InternalPhoneServiceRegistry();
+  const releaseOccupied = services.publish('occupied', 'catalog.second', Object.freeze({ occupied: true }));
+  const module = createServiceModule('catalog', {
+    'catalog.first': Object.freeze({ first: true }),
+    'catalog.second': Object.freeze({ second: true }),
+  });
+  const context = {
+    runtime: {},
+    services,
+    getOwner: () => null,
+    getSession: () => null,
+  } as unknown as PhoneModuleContext;
+
+  assert.throws(() => module.init(context), /already provided/);
+  assert.equal(module.getStatus(), 'ERROR');
+  assert.equal(services.get('catalog.first'), undefined, '失败发布必须回滚早先成功的 capability');
+
+  releaseOccupied();
+  assert.doesNotThrow(() => module.init(context), '解除冲突后同一模块应可重试');
+  assert.deepEqual(services.require('catalog.first'), { first: true });
+  assert.deepEqual(services.require('catalog.second'), { second: true });
+  module.dispose('test complete');
+  assert.equal(services.get('catalog.first'), undefined);
+  assert.equal(services.get('catalog.second'), undefined);
 }
 
 async function testServiceModuleLifecycle(): Promise<void> {

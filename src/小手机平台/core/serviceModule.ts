@@ -6,12 +6,13 @@ export function createServiceModule(moduleId: string, services: Readonly<Record<
 
   return {
     init(context: PhoneModuleContext) {
-      if (status !== 'REGISTERED') throw new Error(`Phone service module ${moduleId} cannot initialize from ${status}`);
+      if (status !== 'REGISTERED' && status !== 'ERROR')
+        throw new Error(`Phone service module ${moduleId} cannot initialize from ${status}`);
       status = 'INITIALIZING';
       try {
-        releases = Object.entries(services).map(([capability, service]) =>
-          context.services.publish(moduleId, capability, service),
-        );
+        for (const [capability, service] of Object.entries(services)) {
+          releases.push(context.services.publish(moduleId, capability, service));
+        }
         status = 'READY';
       } catch (error) {
         releases.reverse().forEach(release => release());

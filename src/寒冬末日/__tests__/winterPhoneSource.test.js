@@ -64,19 +64,32 @@ for (const entrypoint of entrypoints) {
 test('webpack filters discovered scripts before entry parsing and can omit generator plugins', () => {
   const source = readFileSync('webpack.config.ts', 'utf8');
   const prefixes = source.indexOf('TAVERN_BUILD_PREFIXES');
-  const selection = source.indexOf('buildPrefixes.length');
+  const selection = source.indexOf('selectBuildFiles(');
   const config = source.indexOf('const config: Config');
 
   assert.ok(prefixes >= 0, 'webpack must read TAVERN_BUILD_PREFIXES');
-  assert.ok(selection > prefixes, 'webpack must select normalized prefixes');
+  assert.ok(selection > prefixes, 'webpack must apply the explicit build scope');
   assert.ok(config > selection, 'entry filtering must happen before config.entries is created');
-  assert.match(source, /split\(['"];['"]\)/);
-  assert.match(source, /trim\(\)\.replaceAll\(['"]\\\\['"],\s*['"]\/['"]\)/);
+  assert.match(source, /from ['"]\.\/webpack\.buildScope\.cjs['"]/, 'config helper must use a resolvable extension');
   assert.match(source, /TAVERN_SKIP_GENERATORS\s*===\s*['"]1['"]/);
   assert.match(
     source,
     /skipGenerators\s*\?\s*\[\]\s*:\s*\[\s*\{\s*apply:\s*schema_dump\s*\},\s*\{\s*apply:\s*tavern_sync\s*\}\s*\]/s,
   );
+});
+
+test('build scope matches path boundaries and rejects explicitly empty scopes', () => {
+  const { selectBuildFiles } = require('../../../webpack.buildScope.cjs');
+  const files = ['src/foo/index.ts', 'src/foo/nested/index.ts', 'src/foobar/index.ts', 'src\\foo\\win\\index.ts'];
+
+  assert.deepEqual(selectBuildFiles(files, undefined), files, '未设置变量时保持全量行为');
+  assert.deepEqual(selectBuildFiles(files, ' src/foo/ '), [
+    'src/foo/index.ts',
+    'src/foo/nested/index.ts',
+    'src\\foo\\win\\index.ts',
+  ]);
+  assert.deepEqual(selectBuildFiles(['src/foo', 'src/foobar'], 'src\\foo'), ['src/foo']);
+  assert.throws(() => selectBuildFiles(files, ' ;  ; '), /TAVERN_BUILD_PREFIXES.*valid|effective|empty/i);
 });
 
 test('internal service publication does not collide with Vue auto-import names', () => {

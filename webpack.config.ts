@@ -17,6 +17,8 @@ import unpluginVueComponents from 'unplugin-vue-components/webpack';
 import { VueLoaderPlugin } from 'vue-loader';
 import webpack from 'webpack';
 import WebpackObfuscator from 'webpack-obfuscator';
+
+import { selectBuildFiles } from './webpack.buildScope.cjs';
 const require = createRequire(import.meta.url);
 const HTMLInlineCSSWebpackPlugin = require('html-inline-css-webpack-plugin').default;
 
@@ -74,15 +76,9 @@ function glob_script_files() {
   return results;
 }
 
-const buildPrefixes = (process.env.TAVERN_BUILD_PREFIXES ?? '')
-  .split(';')
-  .map(value => value.trim().replaceAll('\\', '/'))
-  .filter(Boolean);
+const configuredBuildPrefixes = process.env.TAVERN_BUILD_PREFIXES;
 const discoveredScriptFiles = glob_script_files();
-const selectedScriptFiles =
-  buildPrefixes.length === 0
-    ? discoveredScriptFiles
-    : discoveredScriptFiles.filter(file => buildPrefixes.some(prefix => file.replaceAll('\\', '/').startsWith(prefix)));
+const selectedScriptFiles = selectBuildFiles(discoveredScriptFiles, configuredBuildPrefixes);
 
 const config: Config = {
   port: 6621,
