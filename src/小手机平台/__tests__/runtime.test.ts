@@ -5,6 +5,8 @@ import { ModuleRegistry } from '../core/moduleRegistry';
 import { registerPhoneModule } from '../core/register';
 import { createPhoneRuntime, installPhoneRuntime, makeSessionKey } from '../core/runtime';
 import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration, PhoneOwner } from '../core/types';
+import { createHostGateway, createTopHostGateway } from '../platform/hostGateway';
+import { createSettingsStore, type PublicSettings, type StorageLike } from '../platform/settingsStore';
 
 const ownerA: PhoneOwner = {
   characterName: '末世寒冬 - 星穹秩序',
@@ -343,6 +345,209 @@ function testTopRegistration(): void {
   }
 }
 
+type FakeHostListener = () => void;
+
+function createFakePublicHost(characterName = '末世寒冬 - 星穹秩序', chatId = 'chat-a') {
+  const listeners = new Map<string, Set<FakeHostListener>>();
+  const eventTypes = { CHAT_CHANGED: 'chat_changed', CHARACTER_PAGE_LOADED: 'character_page_loaded' } as const;
+  const host = {
+    name2: characterName,
+    getCurrentChatId: () => chatId,
+    eventTypes,
+    eventSource: {
+      on(event: string, listener: FakeHostListener) {
+        const bucket = listeners.get(event) ?? new Set<FakeHostListener>();
+        bucket.add(listener);
+        listeners.set(event, bucket);
+      },
+      removeListener(event: string, listener: FakeHostListener) {
+        listeners.get(event)?.delete(listener);
+      },
+    },
+  };
+
+  return {
+    host,
+    switchChat(next: string) {
+      chatId = next;
+      listeners.get(eventTypes.CHAT_CHANGED)?.forEach(listener => listener());
+    },
+    switchCharacter(nextCharacter: string, nextChat: string) {
+      host.name2 = nextCharacter;
+      chatId = nextChat;
+      listeners.get(eventTypes.CHARACTER_PAGE_LOADED)?.forEach(listener => listener());
+    },
+  };
+}
+
+function testHostGateway(): void {
+  const fake = createFakePublicHost();
+  const gateway = createHostGateway(fake.host);
+  const initial = gateway.getSnapshot();
+  assert.deepEqual(initial, {
+    characterName: '末世寒冬 - 星穹秩序',
+    chatId: 'chat-a',
+    sessionKey: '末世寒冬 - 星穹秩序::chat-a',
+  });
+  assert.equal(Object.isFrozen(initial), true, '宿主上下文快照必须不可变');
+
+  const received: string[] = [];
+  const unsubscribe = gateway.subscribe(snapshot => received.push(snapshot.sessionKey));
+  fake.switchChat('chat-b');
+  fake.switchChat('chat-b');
+  fake.switchCharacter('另一张卡', 'chat-c');
+  assert.deepEqual(received, ['末世寒冬 - 星穹秩序::chat-b', '另一张卡::chat-c'], '宿主切换应更新且去重');
+
+  unsubscribe();
+  fake.switchChat('chat-d');
+  assert.equal(received.length, 2, '订阅 disposer 必须解除通知');
+
+  const disposedReceived: string[] = [];
+  gateway.subscribe(snapshot => disposedReceived.push(snapshot.sessionKey));
+  gateway.dispose();
+  fake.switchChat('chat-e');
+  assert.deepEqual(disposedReceived, [], 'gateway dispose 后必须解除宿主监听');
+
+  assert.throws(() => createHostGateway(createFakePublicHost(' ', 'chat').host), /character|角色|empty|空/i);
+  assert.throws(() => createHostGateway(createFakePublicHost('角色', ' ').host), /chat|聊天|empty|空/i);
+
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const inaccessibleWindow = {} as { top?: unknown };
+  Object.defineProperty(inaccessibleWindow, 'top', {
+    get: () => {
+      throw new Error('cross-origin');
+    },
+  });
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: inaccessibleWindow });
+  try {
+    assert.throws(() => createTopHostGateway(), /window\.top|public host|宿主|access/i);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'window', previous);
+    else Reflect.deleteProperty(globalThis, 'window');
+  }
+
+  const missingPublicHost = { top: {} };
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: missingPublicHost });
+  try {
+    assert.throws(() => createTopHostGateway(), /SillyTavern|public host|宿主/i);
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'window', previous);
+    else Reflect.deleteProperty(globalThis, 'window');
+  }
+}
+
+class MemoryStorage implements StorageLike {
+  readonly values = new Map<string, string>();
+
+  getItem(key: string): string | null {
+    return this.values.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.values.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.values.delete(key);
+  }
+}
+
+async function testSettingsStore(): Promise<void> {
+  const storage = new MemoryStorage();
+  const winter = createSettingsStore('末世寒冬 - 星穹秩序', storage);
+  assert.deepEqual(winter.getPublic(), {
+    provider: 'tavern',
+    apiUrl: '',
+    model: '',
+    theme: 'system',
+    notifications: true,
+  });
+
+  const notifications: PublicSettings[] = [];
+  const unsubscribe = winter.subscribe(settings => notifications.push(settings));
+  winter.updatePublic({ provider: 'openai-compatible', apiUrl: 'https://api.example.test/v1', model: 'gpt-test' });
+  assert.equal(notifications.length, 1);
+  assert.equal(Object.isFrozen(notifications[0]), true, '公共设置事件必须传不可变快照');
+  assert.equal('apiKey' in notifications[0], false, '公共设置事件不得包含 secret');
+  unsubscribe();
+  winter.updatePublic({ theme: 'dark' });
+  assert.equal(notifications.length, 1, '设置订阅 disposer 必须有效');
+
+  for (const apiUrl of ['javascript:alert(1)', 'data:text/plain,bad', '/relative', 'not a url']) {
+    assert.throws(() => winter.updatePublic({ apiUrl }), /api.?url|http|https|invalid|无效/i, apiUrl);
+  }
+  winter.updatePublic({ apiUrl: '' });
+
+  winter.setSecret('super-secret-token');
+  const publicSnapshot = winter.getPublic() as PublicSettings & { apiKey?: string };
+  assert.equal(publicSnapshot.apiKey, undefined);
+  assert.equal(JSON.stringify(publicSnapshot).includes('super-secret-token'), false);
+  for (const [key, value] of storage.values) {
+    if (!key.includes(':secret')) assert.equal(value.includes('super-secret-token'), false, '公共持久化不得含 secret');
+  }
+
+  assert.equal(
+    winter.withApiKey(apiKey => `sync:${apiKey}`),
+    'sync:super-secret-token',
+  );
+  assert.equal(await winter.withApiKey(async apiKey => `async:${apiKey}`), 'async:super-secret-token');
+  assert.throws(
+    () =>
+      winter.withApiKey(() => {
+        throw new Error('callback failed');
+      }),
+    error =>
+      error instanceof Error && error.message === 'callback failed' && !error.message.includes('super-secret-token'),
+  );
+  await assert.rejects(
+    () =>
+      winter.withApiKey(async () => {
+        throw new Error('async callback failed');
+      }),
+    error =>
+      error instanceof Error &&
+      error.message === 'async callback failed' &&
+      !error.message.includes('super-secret-token'),
+  );
+  winter.clearSecret();
+  assert.equal(
+    winter.withApiKey(apiKey => apiKey),
+    undefined,
+  );
+
+  const other = createSettingsStore('另一张卡', storage);
+  assert.equal(other.getPublic().theme, 'system', '不同角色公共设置不得串用');
+  other.setSecret('other-secret');
+  assert.equal(
+    winter.withApiKey(apiKey => apiKey),
+    undefined,
+    '不同角色 secret 不得串用',
+  );
+  assert.equal(
+    other.withApiKey(apiKey => apiKey),
+    'other-secret',
+  );
+
+  const publicKey = [...storage.values.keys()].find(
+    key => key.includes(encodeURIComponent('损坏设置')) && key.includes(':public'),
+  );
+  assert.equal(publicKey, undefined);
+  const broken = createSettingsStore('损坏设置', storage);
+  const brokenKey = [...storage.values.keys()].find(
+    key => key.includes(encodeURIComponent('损坏设置')) && key.includes(':public'),
+  );
+  assert.ok(brokenKey, '首次读取应写入规范化默认公共设置');
+  storage.setItem(brokenKey, '{bad json');
+  assert.deepEqual(createSettingsStore('损坏设置', storage).getPublic(), {
+    provider: 'tavern',
+    apiUrl: '',
+    model: '',
+    theme: 'system',
+    notifications: true,
+  });
+  assert.deepEqual(broken.getPublic().theme, 'system');
+}
+
 async function main(): Promise<void> {
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
@@ -350,6 +555,8 @@ async function main(): Promise<void> {
   testEventBus();
   await testRuntimeFailureCleanupAndListenerDiagnostics();
   testTopRegistration();
+  testHostGateway();
+  await testSettingsStore();
   console.log('runtime tests passed');
 }
 
