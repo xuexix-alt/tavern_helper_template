@@ -70,6 +70,7 @@ interface QueuedJob {
   cancelled: boolean;
   activityToken: number;
   aiConversationTracked: boolean;
+  aiScopeTracked: boolean;
 }
 
 interface ContactCooldownRecord {
@@ -229,6 +230,7 @@ export class ControlledPhoneScheduler {
       cancelled: false,
       activityToken: 0,
       aiConversationTracked: false,
+      aiScopeTracked: false,
     });
     this.queuedTriggers.add(trigger);
     this.queuedTopics.add(topic);
@@ -280,6 +282,7 @@ export class ControlledPhoneScheduler {
       if (item.job.sessionKey === sessionKey) {
         item.cancelled = true;
         this.releaseActiveConversationTracking(item);
+        this.releaseActiveScopeTracking(item);
       }
     }
     this.cancelQueued(item => item.job.sessionKey === sessionKey);
@@ -303,6 +306,7 @@ export class ControlledPhoneScheduler {
     for (const item of this.activeItems) {
       item.cancelled = true;
       this.releaseActiveConversationTracking(item);
+      this.releaseActiveScopeTracking(item);
     }
     this.cancelQueued(() => true);
     this.queuedTriggers.clear();
@@ -329,6 +333,7 @@ export class ControlledPhoneScheduler {
   private startAi(item: QueuedJob, storyTurn: number, inflightKey: string): void {
     const scope = this.snapshotScope(item.job);
     this.activeAiScopes.set(scope, (this.activeAiScopes.get(scope) ?? 0) + 1);
+    item.aiScopeTracked = true;
     const activeConversation = this.conversationKey(item.job);
     this.activeAiConversations.set(activeConversation, (this.activeAiConversations.get(activeConversation) ?? 0) + 1);
     item.aiConversationTracked = true;
@@ -357,7 +362,7 @@ export class ControlledPhoneScheduler {
             }
           }
         }
-        this.decrementActiveScope(scope);
+        this.releaseActiveScopeTracking(item);
         this.pruneQuotaScopes();
       },
     );
@@ -368,7 +373,7 @@ export class ControlledPhoneScheduler {
     operation: () => Promise<unknown> | unknown,
     afterSettle: (success: boolean) => void = () => undefined,
   ): void {
-    this.removeQueued(item, true);
+    this.removeQueued(item);
     const trigger = this.triggerKey(item.job);
     const topic = this.topicKey(item.job);
     if (item.activityToken === 0) item.activityToken = ++this.activityToken;
@@ -439,6 +444,7 @@ export class ControlledPhoneScheduler {
 
   private releaseAiConversation(job: PhoneSchedulerJob): void {
     const scope = this.snapshotScope(job);
+    if ((this.activeAiConversations.get(this.conversationKey(job)) ?? 0) > 0) return;
     if (!this.committedAiConversations.get(scope)?.has(job.conversationId)) {
       this.admittedAiConversations.get(scope)?.delete(job.conversationId);
     }
@@ -450,13 +456,12 @@ export class ControlledPhoneScheduler {
     }
   }
 
-  private removeQueued(item: QueuedJob, starting = false): void {
+  private removeQueued(item: QueuedJob): void {
     const index = this.queue.indexOf(item);
     if (index === -1) return;
     this.queue.splice(index, 1);
     this.queuedTriggers.delete(this.triggerKey(item.job));
     this.queuedTopics.delete(this.topicKey(item.job));
-    if (!starting) this.releaseAiConversation(item.job);
   }
 
   private isSupportedJob(job: PhoneSchedulerJob): boolean {
@@ -539,12 +544,6 @@ export class ControlledPhoneScheduler {
     );
   }
 
-  private decrementActiveScope(scope: string): void {
-    const remaining = (this.activeAiScopes.get(scope) ?? 1) - 1;
-    if (remaining <= 0) this.activeAiScopes.delete(scope);
-    else this.activeAiScopes.set(scope, remaining);
-  }
-
   private releaseActiveConversationTracking(item: QueuedJob): number {
     const key = this.conversationKey(item.job);
     if (!item.aiConversationTracked) return this.activeAiConversations.get(key) ?? 0;
@@ -556,6 +555,15 @@ export class ControlledPhoneScheduler {
     }
     this.activeAiConversations.set(key, remaining);
     return remaining;
+  }
+
+  private releaseActiveScopeTracking(item: QueuedJob): void {
+    if (!item.aiScopeTracked) return;
+    item.aiScopeTracked = false;
+    const scope = this.snapshotScope(item.job);
+    const remaining = (this.activeAiScopes.get(scope) ?? 1) - 1;
+    if (remaining <= 0) this.activeAiScopes.delete(scope);
+    else this.activeAiScopes.set(scope, remaining);
   }
 
   private pruneQuotaScopes(): void {

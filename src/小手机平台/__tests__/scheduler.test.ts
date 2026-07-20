@@ -864,6 +864,117 @@ async function testConcurrentSameConversationFailuresHoldQuotaUntilLastSettle():
   assert.deepEqual(calls, ['same-conversation-first', 'same-conversation-second', 'different-conversation']);
 }
 
+async function testDiscardingUnreservedQueuedJobDoesNotReleaseActiveQuota(): Promise<void> {
+  const active = deferred();
+  const calls: string[] = [];
+  const scheduler = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: current => {
+        calls.push(current.triggerKey);
+        return current.triggerKey === 'active-reservation' ? active.promise : Promise.resolve();
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 2 },
+  );
+  scheduler.setSnapshot(snapshot());
+  scheduler.enqueue(
+    job({
+      triggerKey: 'active-reservation',
+      conversationId: 'shared-conversation',
+      contactKey: 'shared-contact',
+      topicKey: 'active-reservation-topic',
+    }),
+  );
+  scheduler.enqueue(
+    job({
+      triggerKey: 'cooldown-discarded',
+      conversationId: 'shared-conversation',
+      contactKey: 'shared-contact',
+      topicKey: 'cooldown-discarded-topic',
+    }),
+  );
+  scheduler.enqueue(
+    job({
+      triggerKey: 'different-conversation-after-discard',
+      conversationId: 'different-conversation',
+      contactKey: 'different-contact',
+      topicKey: 'different-topic',
+    }),
+  );
+  scheduler.runAvailable();
+  assert.deepEqual(calls, ['active-reservation'], '淘汰从未 reserve 的同会话 queued job 不得释放 active reservation');
+  active.resolve(undefined);
+  await scheduler.whenIdle();
+}
+
+async function testCancelSessionImmediatelyReleasesActiveScopeTracking(): Promise<void> {
+  const abandoned = deferred();
+  const calls: string[] = [];
+  const scheduler = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: current => {
+        calls.push(current.triggerKey);
+        return current.triggerKey === 'abandoned-active' ? abandoned.promise : Promise.resolve();
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 0 },
+  );
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-a', 10));
+  scheduler.enqueue(
+    job({
+      sessionKey: 'session-a',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'abandoned-active',
+      conversationId: 'abandoned-conversation',
+      contactKey: 'abandoned-contact',
+      topicKey: 'abandoned-topic',
+    }),
+  );
+  scheduler.runAvailable();
+
+  scheduler.setSnapshot(snapshot('session-b', 'snapshot-b', 11));
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-a', 12));
+  scheduler.enqueue(
+    job({
+      sessionKey: 'session-a',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'new-lifecycle-success',
+      conversationId: 'new-lifecycle-conversation',
+      contactKey: 'new-lifecycle-contact',
+      topicKey: 'new-lifecycle-topic',
+    }),
+  );
+  scheduler.runAvailable();
+  await settle();
+
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-other', 13));
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-a', 14));
+  scheduler.enqueue(
+    job({
+      sessionKey: 'session-a',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'after-scope-prune',
+      conversationId: 'after-scope-prune-conversation',
+      contactKey: 'after-scope-prune-contact',
+      topicKey: 'after-scope-prune-topic',
+    }),
+  );
+  scheduler.runAvailable();
+  await settle();
+  assert.deepEqual(
+    calls,
+    ['abandoned-active', 'new-lifecycle-success', 'after-scope-prune'],
+    '已取消且不 settle 的旧请求不得让 active scope 泄漏到重入生命周期',
+  );
+
+  abandoned.resolve(undefined);
+  await scheduler.whenIdle();
+}
+
 async function testFailureReleaseRetryAndDisposeSafety(): Promise<void> {
   const errors: unknown[] = [];
   let attempts = 0;
@@ -935,6 +1046,8 @@ async function main(): Promise<void> {
   await testBoundedDedupAndSessionStateCleanup();
   await testActiveSnapshotQuotaSurvivesSwitches();
   await testConcurrentSameConversationFailuresHoldQuotaUntilLastSettle();
+  await testDiscardingUnreservedQueuedJobDoesNotReleaseActiveQuota();
+  await testCancelSessionImmediatelyReleasesActiveScopeTracking();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   console.log('scheduler tests passed');
