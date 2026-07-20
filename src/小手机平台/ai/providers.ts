@@ -9,12 +9,12 @@ export interface RequestHandle<T> {
 }
 
 export class ProviderError extends Error {
-  readonly code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response';
+  readonly code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential';
   readonly status?: number;
 
   constructor(
     message: string,
-    code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response',
+    code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential',
     status?: number,
   ) {
     super(message);
@@ -40,6 +40,7 @@ export interface TavernProviderDependencies {
   generateRaw(options: TavernGenerateOptions): Promise<string>;
   stopGenerationById(id: string): void | Promise<void>;
   idFactory?: () => string;
+  onCancelError?: (error: ProviderError) => void;
 }
 
 export class TavernProvider {
@@ -71,7 +72,18 @@ export class TavernProvider {
       cancel: () => {
         if (cancelled) return;
         cancelled = true;
-        void this.#dependencies.stopGenerationById(id);
+        const reportCancelError = (): void => {
+          try {
+            this.#dependencies.onCancelError?.(new ProviderError('Tavern generation cancellation failed', 'cancelled'));
+          } catch {
+            // Diagnostics must not turn cancellation into an unhandled error.
+          }
+        };
+        try {
+          void Promise.resolve(this.#dependencies.stopGenerationById(id)).catch(reportCancelError);
+        } catch {
+          reportCancelError();
+        }
       },
     };
   }
@@ -86,13 +98,17 @@ export interface FetchResponseLike {
 export type FetchLike = (url: string, init: RequestInit) => Promise<FetchResponseLike>;
 type TimerHandle = ReturnType<typeof setTimeout> | number;
 
+export interface ApiKeyAccessor {
+  <T>(callback: (apiKey: string | undefined) => T): T;
+}
+
 export interface OpenAICompatibleProviderOptions {
   baseUrl: string;
   model: string;
   parameters?: Readonly<Record<string, unknown>>;
   timeoutMs?: number;
   fetch?: FetchLike;
-  withApiKey(callback: (apiKey: string) => Promise<string>): Promise<string> | string;
+  withApiKey: ApiKeyAccessor;
   idFactory?: () => string;
   setTimer?: (callback: () => void, delayMs: number) => TimerHandle;
   clearTimer?: (handle: TimerHandle) => void;
@@ -136,56 +152,72 @@ export class OpenAICompatibleProvider {
     let cancelled = false;
     let timedOut = false;
 
-    const promise = this.#withApiKey(async apiKey => {
-      let timer: TimerHandle | undefined;
-      try {
-        timer = this.#setTimer(() => {
-          timedOut = true;
-          controller.abort();
-        }, this.#timeoutMs);
-        let response: FetchResponseLike;
-        try {
-          response = await this.#fetch(this.#baseUrl, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              ...this.#parameters,
-              model: this.#model,
-              messages: buildRolePrompts(assembledPrompt),
-            }),
-            signal: controller.signal,
-          });
-        } catch {
-          if (timedOut) throw new ProviderError(`OpenAI-compatible 请求超时（${this.#timeoutMs}ms）`, 'timeout');
+    let accessed: Promise<string>;
+    try {
+      accessed = Promise.resolve(
+        this.#withApiKey(async apiKey => {
           if (cancelled) throw new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
-          throw new ProviderError('OpenAI-compatible 网络请求失败', 'network');
-        }
-        if (!response.ok) {
-          throw new ProviderError(`OpenAI-compatible HTTP ${response.status}`, 'http', response.status);
-        }
-        let payload: unknown;
-        try {
-          payload = await response.json();
-        } catch {
-          throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
-        }
-        const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
-          ?.content;
-        if (typeof content !== 'string' || content.length === 0) {
-          throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
-        }
-        return content;
-      } finally {
-        if (timer !== undefined) this.#clearTimer(timer);
-      }
+          if (apiKey === undefined || apiKey.trim().length === 0) {
+            throw new ProviderError('OpenAI-compatible API key 缺失', 'missing_key');
+          }
+
+          let timer: TimerHandle | undefined;
+          try {
+            timer = this.#setTimer(() => {
+              timedOut = true;
+              controller.abort();
+            }, this.#timeoutMs);
+            let response: FetchResponseLike;
+            try {
+              response = await this.#fetch(this.#baseUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  ...this.#parameters,
+                  model: this.#model,
+                  messages: buildRolePrompts(assembledPrompt),
+                }),
+                signal: controller.signal,
+              });
+            } catch {
+              if (timedOut) throw new ProviderError(`OpenAI-compatible 请求超时（${this.#timeoutMs}ms）`, 'timeout');
+              if (cancelled) throw new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
+              throw new ProviderError('OpenAI-compatible 网络请求失败', 'network');
+            }
+            if (!response.ok) {
+              throw new ProviderError(`OpenAI-compatible HTTP ${response.status}`, 'http', response.status);
+            }
+            let payload: unknown;
+            try {
+              payload = await response.json();
+            } catch {
+              throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
+            }
+            const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
+              ?.content;
+            if (typeof content !== 'string' || content.length === 0) {
+              throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
+            }
+            return content;
+          } finally {
+            if (timer !== undefined) this.#clearTimer(timer);
+          }
+        }),
+      );
+    } catch {
+      accessed = Promise.reject(new ProviderError('OpenAI-compatible API key access failed', 'credential'));
+    }
+    const promise = accessed.catch((error: unknown) => {
+      if (error instanceof ProviderError) throw error;
+      throw new ProviderError('OpenAI-compatible API key access failed', 'credential');
     });
 
     return {
       id,
-      promise: Promise.resolve(promise),
+      promise,
       cancel: () => {
         if (cancelled || timedOut) return;
         cancelled = true;

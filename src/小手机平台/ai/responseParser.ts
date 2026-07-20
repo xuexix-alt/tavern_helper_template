@@ -64,9 +64,13 @@ function extractCandidate(raw: string): string {
   if (fenced.length > 1) throw new ResponseParseError('响应包含多个 JSON 代码围栏候选', raw);
   const source = fenced.length === 1 ? fenced[0][1].trim() : trimmed;
   const candidates = extractBalancedCandidates(source);
-  if (candidates.length !== 1)
+  if (candidates.length > 1)
     throw new ResponseParseError(`响应必须包含且仅包含一个 JSON 候选，实际 ${candidates.length} 个`, raw);
-  return candidates[0];
+  if (candidates.length === 1) return candidates[0];
+
+  const starts = [source.indexOf('{'), source.indexOf('[')].filter(index => index >= 0);
+  if (starts.length === 0) throw new ResponseParseError('响应中没有 JSON 候选的起始符', raw);
+  return source.slice(Math.min(...starts)).trim();
 }
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);

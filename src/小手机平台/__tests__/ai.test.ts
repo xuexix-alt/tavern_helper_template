@@ -4,6 +4,7 @@ import { buildRolePrompts, JAILBREAK_LAYERS } from '../ai/jailbreakLayers';
 import { assemblePrompt, createPromptContextSnapshot, type PromptContextSnapshotInput } from '../ai/promptAssembler';
 import { OpenAICompatibleProvider, ProviderError, TavernProvider, type FetchLike } from '../ai/providers';
 import { parseResponse, ResponseParseError, type RepairFunction } from '../ai/responseParser';
+import { createSettingsStore, type StorageLike } from '../platform/settingsStore';
 
 const EXPECTED_LAYER1 = `[\u5fae\u4fe1\u6a21\u62df\u804a\u5929\u63a5\u53e3 v2.0]
 
@@ -166,6 +167,19 @@ function testResponseParser(): void {
   assert.deepEqual(parseResponse(`{messages:[{sender:'爱丽丝',content:'你好'}]}`, members, repair), expected);
   assert.equal(repairs, 1, '初始 parse 失败后 repair 只能调用一次');
 
+  let incompleteRepairs = 0;
+  const incomplete = `包裹文本\n{"messages":[{"sender":"爱丽丝","content":"你好"`;
+  assert.deepEqual(
+    parseResponse(incomplete, members, candidate => {
+      incompleteRepairs += 1;
+      assert.equal(candidate, '{"messages":[{"sender":"爱丽丝","content":"你好"');
+      return JSON.stringify(expected);
+    }),
+    expected,
+    '单一残缺 JSON 应先进入本地 repair',
+  );
+  assert.equal(incompleteRepairs, 1, '残缺 JSON 也只允许修复一次');
+
   const xss = '<img src=x onerror=alert(1)>';
   assert.equal(
     parseResponse(JSON.stringify({ messages: [{ sender: '爱丽丝', content: xss }] }), members).messages[0].content,
@@ -233,6 +247,20 @@ async function testTavernProvider(): Promise<void> {
   first.cancel();
   assert.deepEqual(stopped, ['phone-gen-a'], '取消幂等且只停止自己的 generation');
   await Promise.all([first.promise, second.promise]);
+
+  const cancelErrors: unknown[] = [];
+  const rejectedStop = new TavernProvider({
+    generateRaw: async () => '{"messages":[{"sender":"爱丽丝","content":"ok"}]}',
+    stopGenerationById: async () => {
+      throw new Error('stop raw secret should not leak');
+    },
+    onCancelError: error => cancelErrors.push(error),
+  });
+  rejectedStop.request('ASSEMBLED').cancel();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(cancelErrors.length, 1, '取消接口的 rejected Promise 必须被隔离并诊断');
+  assert.equal(String(cancelErrors[0]).includes('stop raw secret should not leak'), false, '诊断不得泄漏底层原文');
 }
 
 type RecordedRequest = { url: string; init: RequestInit };
@@ -275,6 +303,76 @@ async function testOpenAIProviderParityAndSecrets(): Promise<void> {
   );
   assert.equal((requests[0].init.headers as Record<string, string>).Authorization, `Bearer ${secret}`);
   assert.equal(JSON.stringify(provider).includes(secret), false, '公开 provider 状态不得含 key');
+}
+
+function memoryStorage(): StorageLike {
+  const values = new Map<string, string>();
+  return {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => {
+      values.set(key, value);
+    },
+    removeItem: key => {
+      values.delete(key);
+    },
+  };
+}
+
+async function testSettingsStoreApiKeyContract(): Promise<void> {
+  const settings = createSettingsStore('provider-contract', memoryStorage());
+  settings.setSecret('settings-store-secret');
+  let authorization = '';
+  const provider = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test',
+    model: 'm',
+    withApiKey: settings.withApiKey,
+    fetch: async (_url, init) => {
+      authorization = (init.headers as Record<string, string>).Authorization;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'ok' } }] }),
+      };
+    },
+  });
+  assert.equal(await provider.request('x').promise, 'ok');
+  assert.equal(authorization, 'Bearer settings-store-secret');
+
+  settings.clearSecret();
+  let fetchCalls = 0;
+  const missingKeyProvider = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test',
+    model: 'm',
+    withApiKey: settings.withApiKey,
+    fetch: async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'bad' } }] }) };
+    },
+  });
+  let missingKeyHandle: ReturnType<OpenAICompatibleProvider['request']> | undefined;
+  assert.doesNotThrow(() => {
+    missingKeyHandle = missingKeyProvider.request('x');
+  }, '缺 key 不得同步破坏 request handle API');
+  await assert.rejects(missingKeyHandle!.promise, error => {
+    return error instanceof ProviderError && error.code === 'missing_key' && /key|密钥/i.test(error.message);
+  });
+  assert.equal(fetchCalls, 0, '缺 key 时不得调用 fetch，更不得发送 Bearer undefined');
+
+  const throwingProvider = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test',
+    model: 'm',
+    withApiKey: <T>(_callback: (apiKey: string | undefined) => T): T => {
+      throw new Error('secret vault synchronously failed');
+    },
+  });
+  let throwingHandle: ReturnType<OpenAICompatibleProvider['request']> | undefined;
+  assert.doesNotThrow(() => {
+    throwingHandle = throwingProvider.request('x');
+  }, 'withApiKey 同步抛错应转为 handle.promise 拒绝');
+  await assert.rejects(
+    throwingHandle!.promise,
+    error => error instanceof ProviderError && !String(error).includes('secret vault synchronously failed'),
+  );
 }
 
 async function testOpenAIErrorsTimeoutAndCancel(): Promise<void> {
@@ -362,6 +460,7 @@ async function main(): Promise<void> {
   testResponseParser();
   await testTavernProvider();
   await testOpenAIProviderParityAndSecrets();
+  await testSettingsStoreApiKeyContract();
   await testOpenAIErrorsTimeoutAndCancel();
   console.log('ai tests passed');
 }
