@@ -31,6 +31,11 @@ export function buildLoreSummary(options: LoreSummaryOptions): string {
     .filter(message => message.type === options.type)
     .filter(
       message =>
+        options.type !== 'broadcast' ||
+        (Boolean(message.source?.trim()) && (message.trust === 'confirmed' || message.trust === 'unverified')),
+    )
+    .filter(
+      message =>
         options.type !== 'group' ||
         options.conversationId === undefined ||
         message.conversationId === options.conversationId,
@@ -57,9 +62,7 @@ export function buildLoreSummary(options: LoreSummaryOptions): string {
   }
 
   const lines = selected.map(message => {
-    const trust = message.trust ?? 'unverified';
-    const source = message.source ?? '未知来源';
-    return `[${trust}][${source}] ${timeLabel(message)}${message.sender}: ${takeCharacters(message.content, CONTENT_LIMIT)}`;
+    return `[${message.trust}][${message.source}] ${timeLabel(message)}${message.sender}: ${takeCharacters(message.content, CONTENT_LIMIT)}`;
   });
   return boundEntry(`【广播】\n${lines.join('\n')}`);
 }

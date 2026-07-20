@@ -76,6 +76,12 @@ function validateMessage(input: PhoneMessageInput): void {
   if (input.type !== 'broadcast' && (input.source !== undefined || input.trust !== undefined)) {
     throw new Error('source 和 trust 只能用于 broadcast 消息');
   }
+  if (input.type === 'broadcast' && !input.source?.trim()) {
+    throw new Error('broadcast source（来源）不能为空');
+  }
+  if (input.type === 'broadcast' && input.trust === undefined) {
+    throw new Error('broadcast trust（可信度）不能为空');
+  }
   if (input.trust !== undefined && input.trust !== 'confirmed' && input.trust !== 'unverified') {
     throw new Error('broadcast trust 必须是 confirmed 或 unverified');
   }
@@ -91,7 +97,7 @@ function cloneMessage(input: PhoneMessageInput | PhoneMessage): PhoneMessage {
 }
 
 function cloneRecord(record: PhoneBusinessRecord): PhoneBusinessRecord {
-  return { ...record };
+  return structuredClone(record);
 }
 
 function matches(message: PhoneMessage, query: MessageQuery): boolean {
@@ -215,9 +221,10 @@ class IndexedDbPhoneDb implements PhoneDb {
     assertNonEmpty(record.id, 'record.id');
     assertNonEmpty(record.sessionKey, 'record.sessionKey');
     if (containsApiKey(record)) throw new Error('PhoneDB 不得存储或复制 API key');
+    const stored = cloneRecord(record);
     const transaction = this.database.transaction(storeName, 'readwrite');
     const done = transactionDone(transaction);
-    transaction.objectStore(storeName).put(cloneRecord(record));
+    transaction.objectStore(storeName).put(stored);
     await done;
   }
 

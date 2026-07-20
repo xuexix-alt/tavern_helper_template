@@ -59,7 +59,64 @@ async function testMemoryPhoneDb(): Promise<void> {
   assert.equal((await db.listRecords('inbox', sessionA))[0].unread, true);
   assert.equal((await db.listRecords('proactiveJobs', sessionA))[0].runAt, 42);
 
+  const nested = { id: 'nested', sessionKey: sessionA, settings: { labels: ['原值'] } };
+  await db.putRecord('contactPrefs', nested);
+  nested.settings.labels[0] = '外部修改';
+  const firstNestedRead = await db.listRecords('contactPrefs', sessionA);
+  assert.deepEqual(firstNestedRead.find(record => record.id === 'nested')?.settings, { labels: ['原值'] });
+  const returnedSettings = firstNestedRead.find(record => record.id === 'nested')?.settings as { labels: string[] };
+  returnedSettings.labels[0] = '返回值修改';
+  const secondNestedRead = await db.listRecords('contactPrefs', sessionA);
+  assert.deepEqual(
+    secondNestedRead.find(record => record.id === 'nested')?.settings,
+    { labels: ['原值'] },
+    'Memory put/list 必须使用 structured clone 隔离嵌套对象',
+  );
+  await assert.rejects(
+    () => db.putRecord('inbox', { id: 'uncloneable', sessionKey: sessionA, callback: () => undefined }),
+    /clone|克隆|DataClone/i,
+    'Memory 应与 IndexedDB 一样拒绝不可 structured-clone 的值',
+  );
+
   await assert.rejects(() => createIndexedDbPhoneDb(undefined), /IndexedDB.*(?:不可用|unavailable)/i);
+}
+
+async function testBroadcastValidation(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await assert.rejects(
+    () =>
+      db.addMessage(
+        message('missing-source', 1, {
+          type: 'broadcast',
+          conversationId: 'broadcast:radio',
+          trust: 'confirmed',
+        }),
+      ),
+    /source|来源/i,
+  );
+  await assert.rejects(
+    () =>
+      db.addMessage(
+        message('missing-trust', 2, {
+          type: 'broadcast',
+          conversationId: 'broadcast:radio',
+          source: '官方电台',
+        }),
+      ),
+    /trust|可信/i,
+  );
+  await assert.rejects(
+    () =>
+      db.addMessage(
+        message('blank-source', 3, {
+          type: 'broadcast',
+          conversationId: 'broadcast:radio',
+          source: '   ',
+          trust: 'unverified',
+        }),
+      ),
+    /source|来源|空/i,
+  );
 }
 
 function testLoreSummary(): void {
@@ -107,6 +164,18 @@ function testLoreSummary(): void {
   assert.match(broadcastSummary, /confirmed/);
   assert.match(broadcastSummary, /unverified/);
   assert.match(broadcastSummary, /官方电台|匿名频段/);
+  const bypassedDb = buildLoreSummary({
+    type: 'broadcast',
+    messages: [
+      message('invalid-radio', 20, {
+        type: 'broadcast',
+        conversationId: 'broadcast:radio',
+        content: '不能伪造的广播',
+      }),
+    ],
+  });
+  assert.equal(bypassedDb.includes('不能伪造的广播'), false, '绕过 DB 且缺来源/可信度的广播必须被过滤');
+  assert.equal(bypassedDb.includes('未知来源'), false);
 
   const malicious = '<img src=x onerror=alert(1)>'.repeat(4);
   const textSummary = buildLoreSummary({
@@ -331,11 +400,138 @@ async function testInFlightSessionSwitch(): Promise<void> {
   assert.equal(afterB[0].syncedToLore, true, 'B writer 成功后应只标记 B 批次');
 }
 
+async function testDuplicateFlushAndCaptureFailure(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessage(message('only-once', 1));
+  let writes = 0;
+  let releaseWriter: (() => void) | undefined;
+  const sync = new ChatLoreSync({
+    db,
+    writer: async () => {
+      writes += 1;
+      await new Promise<void>(resolve => {
+        releaseWriter = resolve;
+      });
+    },
+  });
+  const first = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  await flushMicrotasks();
+  const duplicate = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  await flushMicrotasks();
+  assert.equal(writes, 1);
+  releaseWriter?.();
+  await Promise.all([first, duplicate]);
+  assert.equal(writes, 1, '首写 pending 时重复 flush 不得重复写同一批消息');
+
+  let rejectRead = true;
+  const failingDb = {
+    ...db,
+    async listMessages(query: Parameters<typeof db.listMessages>[0]) {
+      if (rejectRead) {
+        rejectRead = false;
+        throw new Error('db read failed');
+      }
+      return db.listMessages(query);
+    },
+  };
+  await db.addMessage(message('after-read-failure', 2));
+  const readFailureSync = new ChatLoreSync({ db: failingDb, writer: async () => undefined });
+  await assert.rejects(
+    () => readFailureSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    /db read failed/,
+  );
+  await readFailureSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+}
+
+async function testSyncLifecycle(): Promise<void> {
+  const pendingDb = createMemoryPhoneDb();
+  await pendingDb.addMessage(message('pending-timer', 1));
+  const scheduler = fakeScheduler();
+  let pendingWrites = 0;
+  const pendingSync = new ChatLoreSync({
+    db: pendingDb,
+    writer: async () => {
+      pendingWrites += 1;
+    },
+    schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
+    clearSchedule: timer => scheduler.clear(timer),
+  });
+  pendingSync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  let idleSettled = false;
+  const waitingForTimer = pendingSync.whenIdle().then(() => {
+    idleSettled = true;
+  });
+  await flushMicrotasks();
+  assert.equal(idleSettled, false, 'whenIdle 必须等待尚未开始的 debounce timer');
+  pendingSync.cancelSession(sessionA);
+  await waitingForTimer;
+  assert.equal(idleSettled, true, 'cancelSession 必须 settle 被取消的 pending 工作');
+  pendingSync.schedule({ sessionKey: sessionB, worldbookName: '世界书-B', type: 'private' });
+  const disposedTimer = scheduler.tasks.at(-1);
+  await pendingSync.dispose();
+  assert.equal(disposedTimer?.cancelled, true, 'dispose 必须取消全部未开始 timer');
+  assert.equal(pendingWrites, 0);
+
+  const activeDb = createMemoryPhoneDb();
+  await activeDb.addMessage(message('first-fails', 1));
+  await activeDb.addMessage(
+    message('second-completes', 2, { type: 'group', conversationId: 'group:eden', groupName: '伊甸住户群' }),
+  );
+  const entered: string[] = [];
+  let releaseSecond: (() => void) | undefined;
+  const lifecycleSync = new ChatLoreSync({
+    db: activeDb,
+    writer: async (_worldbookName, entry) => {
+      entered.push(entry.type);
+      if (entry.type === 'private') throw new Error('first writer failed');
+      await new Promise<void>(resolve => {
+        releaseSecond = resolve;
+      });
+    },
+  });
+  const failing = lifecycleSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  const completing = lifecycleSync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'group',
+    conversationId: 'group:eden',
+  });
+  void failing.catch(() => undefined);
+  void completing.catch(() => undefined);
+  const disposing = lifecycleSync.dispose();
+  await flushMicrotasks();
+  assert.deepEqual(entered, ['private', 'group'], '前一工作失败后共享队列仍应继续后续工作');
+  let disposeSettled = false;
+  void disposing
+    .finally(() => {
+      disposeSettled = true;
+    })
+    .catch(() => undefined);
+  await flushMicrotasks();
+  assert.equal(disposeSettled, false, 'dispose 必须等待失败之外的其余 active 工作 settle');
+  releaseSecond?.();
+  await assert.rejects(
+    () => disposing,
+    error => error instanceof AggregateError && error.errors.some(item => String(item).includes('first writer failed')),
+  );
+  assert.throws(
+    () => lifecycleSync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    /disposed|closed|关闭/i,
+  );
+  await assert.rejects(
+    () => lifecycleSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    /disposed|closed|关闭/i,
+  );
+}
+
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
+  await testBroadcastValidation();
   testLoreSummary();
   await testChatLoreSync();
   await testInFlightSessionSwitch();
+  await testDuplicateFlushAndCaptureFailure();
+  await testSyncLifecycle();
   console.log('data tests passed');
 }
 

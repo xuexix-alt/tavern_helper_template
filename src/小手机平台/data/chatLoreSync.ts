@@ -59,6 +59,13 @@ interface CapturedBatch {
   messages: readonly PhoneMessage[];
 }
 
+interface PendingTimer {
+  timer: unknown;
+  sessionKey: string;
+  settle: () => void;
+  fail: (error: unknown) => void;
+}
+
 let sharedWorldbookQueue: Promise<void> = Promise.resolve();
 
 function captureRequest(request: LoreSyncRequest): Readonly<LoreSyncRequest> {
@@ -74,10 +81,12 @@ function definitionFor(type: LoreSyncType): LoreEntryDefinition {
 }
 
 export class ChatLoreSync {
-  private readonly timers = new Map<string, unknown>();
-  private readonly active = new Set<Promise<void>>();
+  private readonly timers = new Map<string, PendingTimer>();
+  private readonly outstanding = new Set<Promise<void>>();
   private readonly scheduleCallback: (callback: () => void, delayMs: number) => unknown;
   private readonly clearCallback: (timer: unknown) => void;
+  private closed = false;
+  private disposePromise: Promise<void> | undefined;
 
   constructor(private readonly options: ChatLoreSyncOptions) {
     this.scheduleCallback = options.schedule ?? ((callback, delayMs) => setTimeout(callback, delayMs));
@@ -85,37 +94,79 @@ export class ChatLoreSync {
   }
 
   schedule(request: LoreSyncRequest): void {
+    this.assertOpen();
     const captured = captureRequest(request);
     const key = this.timerKey(captured.sessionKey, captured.type);
     const previous = this.timers.get(key);
-    if (previous !== undefined) this.clearCallback(previous);
+    if (previous) {
+      this.clearCallback(previous.timer);
+      this.timers.delete(key);
+      previous.settle();
+    }
+    let settle!: () => void;
+    let fail!: (error: unknown) => void;
+    const work = new Promise<void>((resolve, reject) => {
+      settle = resolve;
+      fail = reject;
+    });
+    this.track(work);
     const timer = this.scheduleCallback(() => {
       this.timers.delete(key);
       const operation = this.enqueue(captured);
-      void operation.catch(() => undefined);
+      operation.then(settle, fail);
     }, 500);
-    this.timers.set(key, timer);
+    this.timers.set(key, { timer, sessionKey: captured.sessionKey, settle, fail });
   }
 
   cancelSession(sessionKey: string): void {
-    const prefix = `${sessionKey}\u0000`;
-    for (const [key, timer] of this.timers) {
-      if (!key.startsWith(prefix)) continue;
-      this.clearCallback(timer);
+    for (const [key, pending] of this.timers) {
+      if (pending.sessionKey !== sessionKey) continue;
+      this.clearCallback(pending.timer);
       this.timers.delete(key);
+      pending.settle();
     }
   }
 
   flushNow(request: LoreSyncRequest): Promise<void> {
-    return this.enqueue(captureRequest(request));
+    if (this.closed) return Promise.reject(new Error('ChatLoreSync 已关闭 (disposed)'));
+    return this.track(this.enqueue(captureRequest(request)));
   }
 
   async whenIdle(): Promise<void> {
-    while (this.active.size > 0) await Promise.all([...this.active]);
+    const errors: unknown[] = [];
+    while (this.outstanding.size > 0) {
+      const results = await Promise.allSettled([...this.outstanding]);
+      for (const result of results) {
+        if (result.status === 'rejected') errors.push(result.reason);
+      }
+    }
+    if (errors.length > 0) throw new AggregateError(errors, 'ChatLoreSync 工作失败');
+  }
+
+  dispose(): Promise<void> {
+    if (this.disposePromise) return this.disposePromise;
+    this.closed = true;
+    for (const [key, pending] of this.timers) {
+      this.clearCallback(pending.timer);
+      this.timers.delete(key);
+      pending.settle();
+    }
+    this.disposePromise = this.whenIdle();
+    return this.disposePromise;
   }
 
   private timerKey(sessionKey: string, type: LoreSyncType): string {
     return `${sessionKey}\u0000${type}`;
+  }
+
+  private assertOpen(): void {
+    if (this.closed) throw new Error('ChatLoreSync 已关闭 (disposed)');
+  }
+
+  private track(operation: Promise<void>): Promise<void> {
+    this.outstanding.add(operation);
+    void operation.finally(() => this.outstanding.delete(operation)).catch(() => undefined);
+    return operation;
   }
 
   private async captureBatch(request: Readonly<LoreSyncRequest>): Promise<CapturedBatch | null> {
@@ -131,11 +182,10 @@ export class ChatLoreSync {
   }
 
   private enqueue(request: Readonly<LoreSyncRequest>): Promise<void> {
-    const capturedBatch = this.captureBatch(request);
     const operation = sharedWorldbookQueue
       .catch(() => undefined)
       .then(async () => {
-        const batch = await capturedBatch;
+        const batch = await this.captureBatch(request);
         if (!batch) return;
         const definition = definitionFor(batch.request.type);
         const content = buildLoreSummary({
@@ -147,8 +197,6 @@ export class ChatLoreSync {
         await this.options.db.markSynced(batch.request.sessionKey, batch.messageIds);
       });
     sharedWorldbookQueue = operation.catch(() => undefined);
-    this.active.add(operation);
-    void operation.finally(() => this.active.delete(operation)).catch(() => undefined);
     return operation;
   }
 }
