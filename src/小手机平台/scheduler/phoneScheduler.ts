@@ -314,7 +314,11 @@ export class ControlledPhoneScheduler {
       candidate.topicVersion,
     ];
     if (strings.some(value => typeof value !== 'string' || value.length === 0)) return false;
-    if (!(candidate.priority in PRIORITY_ORDER) || !candidate.payload || typeof candidate.payload !== 'object')
+    if (
+      !Object.hasOwn(PRIORITY_ORDER, candidate.priority) ||
+      !candidate.payload ||
+      typeof candidate.payload !== 'object'
+    )
       return false;
     if (candidate.source === 'deterministic_notice') return candidate.requiresAi === false;
     if (!AI_SOURCES.has(candidate.source) || candidate.requiresAi !== true) return false;

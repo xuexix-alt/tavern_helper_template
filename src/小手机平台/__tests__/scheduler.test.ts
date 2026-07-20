@@ -332,6 +332,30 @@ async function testSourcesAndWaitingReportValidation(): Promise<void> {
   assert.deepEqual(deterministic, ['deterministic_notice']);
 }
 
+async function testRejectsPrototypeAndEmptyPriorities(): Promise<void> {
+  let dispatches = 0;
+  const scheduler = new ControlledPhoneScheduler({
+    isEligible: () => true,
+    dispatchAi: async () => {
+      dispatches += 1;
+    },
+    deliverDeterministic: async () => {
+      dispatches += 1;
+    },
+  });
+  scheduler.setSnapshot(snapshot());
+  for (const priority of ['toString', 'constructor', '']) {
+    assert.equal(
+      scheduler.enqueue(job({ triggerKey: `invalid-${priority}`, priority }) as PhoneSchedulerJob),
+      false,
+      `必须拒绝非法 priority: ${priority}`,
+    );
+  }
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.equal(dispatches, 0, '非法 priority 不得进入任何投递路径');
+}
+
 async function testFailureReleaseRetryAndDisposeSafety(): Promise<void> {
   const errors: unknown[] = [];
   let attempts = 0;
@@ -396,6 +420,7 @@ async function main(): Promise<void> {
   await testInflightPerConversationAndParallelConversations();
   await testSnapshotSwitchCancelsUnstarted();
   await testSourcesAndWaitingReportValidation();
+  await testRejectsPrototypeAndEmptyPriorities();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   console.log('scheduler tests passed');
