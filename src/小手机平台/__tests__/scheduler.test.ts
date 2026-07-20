@@ -421,11 +421,11 @@ async function testJobDeepCloneAndRecursiveFreeze(): Promise<void> {
   let observedPayload: Record<string, unknown> | undefined;
   const scheduler = new ControlledPhoneScheduler({
     isEligible: current => {
-      observedPayload = current.payload;
+      observedPayload = current.payload as Record<string, unknown>;
       return true;
     },
     dispatchAi: async current => {
-      observedPayload = current.payload;
+      observedPayload = current.payload as Record<string, unknown>;
     },
     deliverDeterministic: async () => undefined,
   });
@@ -460,6 +460,54 @@ async function testJobDeepCloneAndRecursiveFreeze(): Promise<void> {
     false,
     '不可 structuredClone 的 payload 必须拒绝且不入队',
   );
+
+  let rejectedDispatches = 0;
+  const rejecting = new ControlledPhoneScheduler({
+    isEligible: () => true,
+    dispatchAi: async () => {
+      rejectedDispatches += 1;
+    },
+    deliverDeterministic: async () => {
+      rejectedDispatches += 1;
+    },
+  });
+  rejecting.setSnapshot(snapshot());
+  class PayloadInstance {
+    value = 'class';
+  }
+  const dangerousPrototype = Object.create({ inherited: true }) as Record<string, unknown>;
+  dangerousPrototype.value = 'custom-prototype';
+  const rejectedPayloads: unknown[] = [
+    new Map([['key', 'value']]),
+    new Set(['value']),
+    new Date(),
+    /value/,
+    new Uint8Array([1, 2]),
+    new PayloadInstance(),
+    dangerousPrototype,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+  ];
+  rejectedPayloads.forEach((payload, index) => {
+    assert.equal(
+      rejecting.enqueue(job({ triggerKey: `rejected-payload-${index}`, topicKey: `rejected-topic-${index}`, payload })),
+      false,
+    );
+  });
+  rejecting.runAvailable();
+  await rejecting.whenIdle();
+  assert.equal(rejectedDispatches, 0, '非 plain structured payload 不得 dispatch');
+
+  const nullPrototype = Object.create(null) as Record<string, unknown>;
+  nullPrototype.value = ['plain', 1, true, null];
+  for (const [index, payload] of [null, 'plain', true, 1, ['plain'], nullPrototype].entries()) {
+    assert.equal(
+      rejecting.enqueue(job({ triggerKey: `plain-payload-${index}`, topicKey: `plain-topic-${index}`, payload })),
+      true,
+      `应接受 plain structured payload #${index}`,
+    );
+  }
+  rejecting.dispose();
 }
 
 async function testOlderFailureCannotRollbackNewerCooldown(): Promise<void> {
@@ -634,6 +682,122 @@ async function testBoundedDedupAndSessionStateCleanup(): Promise<void> {
   assert.equal(reuseDispatches, 4, '离开快照后旧 quota scope 必须清理，返回时可重新计数');
 }
 
+async function testActiveSnapshotQuotaSurvivesSwitches(): Promise<void> {
+  const pendingSuccess = deferred();
+  const successCalls: string[] = [];
+  const successful = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: current => {
+        successCalls.push(current.triggerKey);
+        return current.triggerKey === 'active-success' ? pendingSuccess.promise : Promise.resolve();
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 0 },
+  );
+  successful.setSnapshot(snapshot('quota-session', 'snapshot-a', 10));
+  successful.enqueue(
+    job({
+      sessionKey: 'quota-session',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'active-success',
+      conversationId: 'conversation-1',
+      contactKey: 'contact-1',
+      topicKey: 'active-success-topic',
+    }),
+  );
+  successful.runAvailable();
+  successful.setSnapshot(snapshot('quota-session', 'snapshot-b', 11));
+  successful.setSnapshot(snapshot('quota-session', 'snapshot-a', 12));
+  successful.enqueue(
+    job({
+      sessionKey: 'quota-session',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'blocked-while-active',
+      conversationId: 'conversation-2',
+      contactKey: 'contact-2',
+      topicKey: 'blocked-active-topic',
+    }),
+  );
+  successful.runAvailable();
+  assert.deepEqual(successCalls, ['active-success'], '切回旧快照后 pending 会话仍必须占用 quota');
+  pendingSuccess.resolve(undefined);
+  await successful.whenIdle();
+  successful.enqueue(
+    job({
+      sessionKey: 'quota-session',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'blocked-after-success',
+      conversationId: 'conversation-3',
+      contactKey: 'contact-3',
+      topicKey: 'blocked-success-topic',
+    }),
+  );
+  successful.runAvailable();
+  await successful.whenIdle();
+  assert.deepEqual(successCalls, ['active-success'], '旧 active 成功后仍应提交并持续占用当前快照 quota');
+
+  const pendingFailure = deferred();
+  const failureCalls: string[] = [];
+  const failed = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: current => {
+        failureCalls.push(current.triggerKey);
+        return current.triggerKey === 'active-failure' ? pendingFailure.promise : Promise.resolve();
+      },
+      deliverDeterministic: async () => undefined,
+      onError: () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 0 },
+  );
+  failed.setSnapshot(snapshot('failure-session', 'snapshot-a', 10));
+  failed.enqueue(
+    job({
+      sessionKey: 'failure-session',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'active-failure',
+      conversationId: 'conversation-1',
+      contactKey: 'contact-1',
+      topicKey: 'active-failure-topic',
+    }),
+  );
+  failed.runAvailable();
+  failed.setSnapshot(snapshot('failure-session', 'snapshot-b', 11));
+  failed.setSnapshot(snapshot('failure-session', 'snapshot-a', 12));
+  failed.enqueue(
+    job({
+      sessionKey: 'failure-session',
+      snapshotKey: 'snapshot-a',
+      triggerKey: 'blocked-before-failure',
+      conversationId: 'conversation-2',
+      contactKey: 'contact-2',
+      topicKey: 'blocked-before-failure-topic',
+    }),
+  );
+  failed.runAvailable();
+  assert.deepEqual(failureCalls, ['active-failure']);
+  pendingFailure.reject(new Error('expected old active failure'));
+  await failed.whenIdle();
+  assert.equal(
+    failed.enqueue(
+      job({
+        sessionKey: 'failure-session',
+        snapshotKey: 'snapshot-a',
+        triggerKey: 'retry-after-failure',
+        conversationId: 'conversation-2',
+        contactKey: 'contact-2',
+        topicKey: 'retry-after-failure-topic',
+      }),
+    ),
+    true,
+  );
+  failed.runAvailable();
+  await failed.whenIdle();
+  assert.deepEqual(failureCalls, ['active-failure', 'retry-after-failure']);
+}
+
 async function testFailureReleaseRetryAndDisposeSafety(): Promise<void> {
   const errors: unknown[] = [];
   let attempts = 0;
@@ -703,6 +867,7 @@ async function main(): Promise<void> {
   await testJobDeepCloneAndRecursiveFreeze();
   await testOlderFailureCannotRollbackNewerCooldown();
   await testBoundedDedupAndSessionStateCleanup();
+  await testActiveSnapshotQuotaSurvivesSwitches();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   console.log('scheduler tests passed');

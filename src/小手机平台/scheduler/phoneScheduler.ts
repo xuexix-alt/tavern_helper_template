@@ -24,21 +24,29 @@ export type AiSchedulerSource =
   | 'waiting_report'
   | 'low_frequency_daily';
 
+export type SchedulerPayload =
+  | null
+  | string
+  | boolean
+  | number
+  | SchedulerPayload[]
+  | { [key: string]: SchedulerPayload };
+
 export type PhoneSchedulerJob =
   | (JobFields & {
       source: Exclude<AiSchedulerSource, 'waiting_report'>;
       requiresAi: true;
-      payload: Record<string, unknown>;
+      payload: SchedulerPayload;
     })
   | (JobFields & {
       source: 'waiting_report';
       requiresAi: true;
-      payload: Record<string, unknown> & { recordId: string };
+      payload: { [key: string]: SchedulerPayload; recordId: string };
     })
   | (JobFields & {
       source: 'deterministic_notice';
       requiresAi: false;
-      payload: Record<string, unknown>;
+      payload: SchedulerPayload;
     });
 
 export interface PhoneSchedulerDependencies {
@@ -97,6 +105,39 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   return Object.freeze(value);
 }
 
+function isPlainStructuredData(value: unknown, seen = new WeakSet<object>()): value is SchedulerPayload {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'object') return false;
+  if (seen.has(value)) return true;
+
+  if (Array.isArray(value)) {
+    if (Object.getPrototypeOf(value) !== Array.prototype) return false;
+    seen.add(value);
+    for (const key of Reflect.ownKeys(value)) {
+      if (key === 'length') continue;
+      if (typeof key !== 'string') return false;
+      const index = Number(key);
+      if (!Number.isSafeInteger(index) || index < 0 || String(index) !== key || index >= value.length) return false;
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) return false;
+      if (!isPlainStructuredData(descriptor.value, seen)) return false;
+    }
+    return true;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') return false;
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) return false;
+    if (!isPlainStructuredData(descriptor.value, seen)) return false;
+  }
+  return true;
+}
+
 export class ControlledPhoneScheduler {
   private readonly maxAIConversationsPerSnapshot: number;
   private readonly contactCooldownInStoryTurns: number;
@@ -119,6 +160,7 @@ export class ControlledPhoneScheduler {
   private readonly activeItems = new Set<QueuedJob>();
   private readonly admittedAiConversations = new Map<string, Set<string>>();
   private readonly committedAiConversations = new Map<string, Set<string>>();
+  private readonly activeAiScopes = new Map<string, number>();
   private readonly contactLastStartedTurn = new Map<string, ContactCooldownRecord>();
   private cooldownToken = 0;
   private activityToken = 0;
@@ -157,7 +199,7 @@ export class ControlledPhoneScheduler {
     if (previousSession && previousSession !== validated?.sessionKey) this.cancelSession(previousSession);
     this.currentSnapshot = validated;
     this.cancelQueued(item => !validated || !this.matchesSnapshot(item.job, validated));
-    this.clearQuotaExcept(validated ? this.snapshotScope(validated) : undefined);
+    this.pruneQuotaScopes();
   }
 
   updateSnapshot(snapshot: StableSchedulerSnapshot | undefined): void {
@@ -258,6 +300,7 @@ export class ControlledPhoneScheduler {
     this.inflightConversations.clear();
     this.admittedAiConversations.clear();
     this.committedAiConversations.clear();
+    this.activeAiScopes.clear();
     this.contactLastStartedTurn.clear();
   }
 
@@ -269,6 +312,8 @@ export class ControlledPhoneScheduler {
   }
 
   private startAi(item: QueuedJob, storyTurn: number, inflightKey: string): void {
+    const scope = this.snapshotScope(item.job);
+    this.activeAiScopes.set(scope, (this.activeAiScopes.get(scope) ?? 0) + 1);
     const contact = this.contactKey(item.job);
     const previousContactTurn = this.contactLastStartedTurn.get(contact);
     const cooldown = { turn: storyTurn, token: ++this.cooldownToken };
@@ -282,16 +327,19 @@ export class ControlledPhoneScheduler {
         if (this.inflightConversations.get(inflightKey) === item.activityToken) {
           this.inflightConversations.delete(inflightKey);
         }
-        if (item.cancelled || this.disposed) return;
-        if (success) {
-          this.committedAiConversations.get(this.snapshotScope(item.job))?.add(item.job.conversationId);
-        } else {
-          this.releaseAiConversation(item.job);
-          if (this.contactLastStartedTurn.get(contact)?.token === cooldown.token) {
-            if (previousContactTurn === undefined) this.contactLastStartedTurn.delete(contact);
-            else this.contactLastStartedTurn.set(contact, previousContactTurn);
+        if (!item.cancelled && !this.disposed) {
+          if (success) {
+            this.committedAiConversations.get(scope)?.add(item.job.conversationId);
+          } else {
+            this.releaseAiConversation(item.job);
+            if (this.contactLastStartedTurn.get(contact)?.token === cooldown.token) {
+              if (previousContactTurn === undefined) this.contactLastStartedTurn.delete(contact);
+              else this.contactLastStartedTurn.set(contact, previousContactTurn);
+            }
           }
         }
+        this.decrementActiveScope(scope);
+        this.pruneQuotaScopes();
       },
     );
   }
@@ -405,18 +453,10 @@ export class ControlledPhoneScheduler {
       candidate.topicVersion,
     ];
     if (strings.some(value => typeof value !== 'string' || value.length === 0)) return false;
-    if (
-      !Object.hasOwn(PRIORITY_ORDER, candidate.priority) ||
-      !candidate.payload ||
-      typeof candidate.payload !== 'object'
-    )
-      return false;
+    if (!Object.hasOwn(PRIORITY_ORDER, candidate.priority) || !isPlainStructuredData(candidate.payload)) return false;
     if (candidate.source === 'deterministic_notice') return candidate.requiresAi === false;
     if (!AI_SOURCES.has(candidate.source) || candidate.requiresAi !== true) return false;
-    return (
-      candidate.source !== 'waiting_report' ||
-      (typeof candidate.payload.recordId === 'string' && candidate.payload.recordId.length > 0)
-    );
+    return candidate.source !== 'waiting_report' || this.hasWaitingReportRecord(candidate.payload);
   }
 
   private copyJob(job: PhoneSchedulerJob): PhoneSchedulerJob | undefined {
@@ -470,12 +510,29 @@ export class ControlledPhoneScheduler {
     }
   }
 
-  private clearQuotaExcept(scope: string | undefined): void {
+  private hasWaitingReportRecord(payload: SchedulerPayload): boolean {
+    return (
+      payload !== null &&
+      typeof payload === 'object' &&
+      !Array.isArray(payload) &&
+      typeof payload.recordId === 'string' &&
+      payload.recordId.length > 0
+    );
+  }
+
+  private decrementActiveScope(scope: string): void {
+    const remaining = (this.activeAiScopes.get(scope) ?? 1) - 1;
+    if (remaining <= 0) this.activeAiScopes.delete(scope);
+    else this.activeAiScopes.set(scope, remaining);
+  }
+
+  private pruneQuotaScopes(): void {
+    const scope = this.currentSnapshot ? this.snapshotScope(this.currentSnapshot) : undefined;
     for (const key of this.admittedAiConversations.keys()) {
-      if (key !== scope) this.admittedAiConversations.delete(key);
+      if (key !== scope && !this.activeAiScopes.has(key)) this.admittedAiConversations.delete(key);
     }
     for (const key of this.committedAiConversations.keys()) {
-      if (key !== scope) this.committedAiConversations.delete(key);
+      if (key !== scope && !this.activeAiScopes.has(key)) this.committedAiConversations.delete(key);
     }
   }
 
