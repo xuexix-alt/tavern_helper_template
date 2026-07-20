@@ -436,14 +436,125 @@ function testHostGateway(): void {
   }
 }
 
+function testHostGatewayFailureIsolation(): void {
+  const fake = createFakePublicHost();
+  const reported: unknown[] = [];
+  const gateway = createHostGateway(fake.host, { onError: error => reported.push(error) });
+  const received: string[] = [];
+  gateway.subscribe(() => {
+    throw new Error('host listener failed');
+  });
+  gateway.subscribe(snapshot => received.push(snapshot.sessionKey));
+
+  assert.doesNotThrow(() => fake.switchChat('chat-b'));
+  assert.deepEqual(received, ['末世寒冬 - 星穹秩序::chat-b'], '单个宿主 listener 失败不得阻断后续 listener');
+  assert.match(String(reported[0]), /host listener failed/);
+
+  const previousSnapshot = gateway.getSnapshot();
+  fake.host.getCurrentChatId = () => {
+    throw new Error('host snapshot read failed');
+  };
+  assert.doesNotThrow(() => fake.switchCharacter('不可读取的新卡', 'chat-c'));
+  assert.equal(gateway.getSnapshot(), previousSnapshot, '读取失败时必须保留上一份有效宿主快照');
+  assert.match(String(reported[1]), /host snapshot read failed/);
+  gateway.dispose();
+}
+
+function testHostGatewayCleanupFailures(): void {
+  const eventTypes = { CHAT_CHANGED: 'chat_changed', CHARACTER_PAGE_LOADED: 'character_page_loaded' } as const;
+  const rollbackAttempts: string[] = [];
+  let subscriptionCount = 0;
+  const rollbackErrors: unknown[] = [];
+  const rollbackHost = {
+    name2: '角色',
+    getCurrentChatId: () => 'chat',
+    eventTypes,
+    eventSource: {
+      on() {
+        subscriptionCount += 1;
+        if (subscriptionCount === 2) throw new Error('subscribe failed');
+      },
+      removeListener(event: string) {
+        rollbackAttempts.push(event);
+        if (event === eventTypes.CHAT_CHANGED) throw new Error('rollback failed');
+      },
+    },
+  };
+  assert.throws(
+    () => createHostGateway(rollbackHost, { onError: error => rollbackErrors.push(error) }),
+    error =>
+      error instanceof AggregateError &&
+      error.errors.some(item => String(item).includes('subscribe failed')) &&
+      error.errors.some(item => String(item).includes('rollback failed')),
+  );
+  assert.deepEqual(
+    rollbackAttempts,
+    [eventTypes.CHARACTER_PAGE_LOADED, eventTypes.CHAT_CHANGED],
+    '初始化回滚必须逐项 best-effort',
+  );
+  assert.equal(rollbackErrors[0] instanceof AggregateError, true, '初始化聚合错误应进入错误报告器');
+
+  const listeners = new Map<string, Set<FakeHostListener>>();
+  const removalAttempts: string[] = [];
+  let failChatRemoval = true;
+  const disposeErrors: unknown[] = [];
+  const disposeHost = {
+    name2: '角色',
+    getCurrentChatId: () => 'chat-a',
+    eventTypes,
+    eventSource: {
+      on(event: string, listener: FakeHostListener) {
+        const bucket = listeners.get(event) ?? new Set<FakeHostListener>();
+        bucket.add(listener);
+        listeners.set(event, bucket);
+      },
+      removeListener(event: string, listener: FakeHostListener) {
+        removalAttempts.push(event);
+        if (event === eventTypes.CHAT_CHANGED && failChatRemoval) throw new Error('chat remove failed');
+        listeners.get(event)?.delete(listener);
+      },
+    },
+  };
+  const gateway = createHostGateway(disposeHost, { onError: error => disposeErrors.push(error) });
+  let notifications = 0;
+  gateway.subscribe(() => {
+    notifications += 1;
+  });
+  assert.throws(
+    () => gateway.dispose(),
+    error => error instanceof AggregateError && error.errors.some(item => String(item).includes('chat remove failed')),
+  );
+  assert.deepEqual(
+    removalAttempts,
+    [eventTypes.CHAT_CHANGED, eventTypes.CHARACTER_PAGE_LOADED],
+    'dispose 必须在单项失败后继续退订其他事件',
+  );
+  listeners.get(eventTypes.CHAT_CHANGED)?.forEach(listener => listener());
+  assert.equal(notifications, 0, 'dispose 失败后 gateway 仍必须 inactive 且清空业务 listener');
+  assert.equal(disposeErrors[0] instanceof AggregateError, true, 'dispose 聚合错误应进入错误报告器');
+
+  failChatRemoval = false;
+  gateway.dispose();
+  assert.deepEqual(
+    removalAttempts,
+    [eventTypes.CHAT_CHANGED, eventTypes.CHARACTER_PAGE_LOADED, eventTypes.CHAT_CHANGED],
+    '再次 dispose 应只重试之前退订失败的事件',
+  );
+}
+
 class MemoryStorage implements StorageLike {
   readonly values = new Map<string, string>();
+  failNextSet = false;
 
   getItem(key: string): string | null {
     return this.values.get(key) ?? null;
   }
 
   setItem(key: string, value: string): void {
+    if (this.failNextSet) {
+      this.failNextSet = false;
+      throw new Error('storage set failed');
+    }
     this.values.set(key, value);
   }
 
@@ -548,6 +659,29 @@ async function testSettingsStore(): Promise<void> {
   assert.deepEqual(broken.getPublic().theme, 'system');
 }
 
+function testSettingsStoreFailureIsolation(): void {
+  const storage = new MemoryStorage();
+  const reported: unknown[] = [];
+  const settings = createSettingsStore('事务设置', storage, { onError: error => reported.push(error) });
+
+  storage.failNextSet = true;
+  assert.throws(() => settings.updatePublic({ theme: 'dark' }), /storage set failed/);
+  assert.equal(settings.getPublic().theme, 'system', '持久化失败不得提前提交内存状态');
+  assert.equal(settings.updatePublic({ theme: 'dark' }).theme, 'dark', '同一 patch 必须可重试');
+
+  let laterListenerTheme = '';
+  settings.subscribe(() => {
+    throw new Error('settings listener failed');
+  });
+  settings.subscribe(snapshot => {
+    laterListenerTheme = snapshot.theme;
+  });
+  assert.doesNotThrow(() => settings.updatePublic({ theme: 'light' }));
+  assert.equal(laterListenerTheme, 'light', '单个设置 listener 失败不得阻断后续 listener');
+  assert.match(String(reported[0]), /settings listener failed/);
+  assert.equal(settings.getPublic().theme, 'light', 'listener 失败不得伪装为公共设置提交失败');
+}
+
 async function main(): Promise<void> {
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
@@ -556,7 +690,10 @@ async function main(): Promise<void> {
   await testRuntimeFailureCleanupAndListenerDiagnostics();
   testTopRegistration();
   testHostGateway();
+  testHostGatewayFailureIsolation();
+  testHostGatewayCleanupFailures();
   await testSettingsStore();
+  testSettingsStoreFailureIsolation();
   console.log('runtime tests passed');
 }
 

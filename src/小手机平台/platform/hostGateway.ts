@@ -25,6 +25,21 @@ export interface HostGateway {
   dispose(): void;
 }
 
+export interface HostGatewayOptions {
+  onError?: (error: unknown) => void;
+}
+
+function createSafeErrorReporter(onError?: (error: unknown) => void): (error: unknown) => void {
+  return error => {
+    if (!onError) return;
+    try {
+      onError(error);
+    } catch {
+      // Diagnostics must never break host event delivery or reveal contextual data.
+    }
+  };
+}
+
 function requireNonEmpty(value: unknown, label: 'characterName' | 'chatId'): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(`Public host ${label} is empty or unavailable`);
@@ -56,45 +71,84 @@ function assertPublicHost(host: unknown): asserts host is PublicHostApi {
   }
 }
 
-export function createHostGateway(host: PublicHostApi): HostGateway {
+export function createHostGateway(host: PublicHostApi, options: HostGatewayOptions = {}): HostGateway {
   assertPublicHost(host);
 
   let snapshot = readSnapshot(host);
-  let disposed = false;
+  let active = true;
   const listeners = new Set<HostContextListener>();
+  const reportError = createSafeErrorReporter(options.onError);
 
   const handleHostChange = (): void => {
-    if (disposed) return;
-    const next = readSnapshot(host);
+    if (!active) return;
+    let next: HostContextSnapshot;
+    try {
+      next = readSnapshot(host);
+    } catch (error) {
+      reportError(error);
+      return;
+    }
     if (next.characterName === snapshot.characterName && next.chatId === snapshot.chatId) return;
     snapshot = next;
-    for (const listener of [...listeners]) listener(snapshot);
+    for (const listener of [...listeners]) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        reportError(error);
+      }
+    }
   };
 
   const events = [host.eventTypes.CHAT_CHANGED, host.eventTypes.CHARACTER_PAGE_LOADED];
-  const attachedEvents: string[] = [];
-  try {
-    for (const event of events) {
+  const attachedEvents = new Set<string>();
+  const attemptedEvents: string[] = [];
+  for (const event of events) {
+    attemptedEvents.push(event);
+    try {
       host.eventSource.on(event, handleHostChange);
-      attachedEvents.push(event);
+      attachedEvents.add(event);
+    } catch (subscriptionError) {
+      const errors: unknown[] = [subscriptionError];
+      for (const attemptedEvent of [...attemptedEvents].reverse()) {
+        try {
+          host.eventSource.removeListener(attemptedEvent, handleHostChange);
+          attachedEvents.delete(attemptedEvent);
+        } catch (cleanupError) {
+          errors.push(cleanupError);
+        }
+      }
+      const aggregate = new AggregateError(errors, 'Unable to subscribe to SillyTavern public host events', {
+        cause: subscriptionError,
+      });
+      reportError(aggregate);
+      throw aggregate;
     }
-  } catch (error) {
-    for (const event of attachedEvents) host.eventSource.removeListener(event, handleHostChange);
-    throw new Error('Unable to subscribe to SillyTavern public host events', { cause: error });
   }
 
   return {
     getSnapshot: () => snapshot,
     subscribe(listener) {
-      if (disposed) throw new Error('HostGateway is disposed');
+      if (!active) throw new Error('HostGateway is disposed');
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     dispose() {
-      if (disposed) return;
-      disposed = true;
-      for (const event of attachedEvents) host.eventSource.removeListener(event, handleHostChange);
+      active = false;
       listeners.clear();
+      const errors: unknown[] = [];
+      for (const event of [...attachedEvents]) {
+        try {
+          host.eventSource.removeListener(event, handleHostChange);
+          attachedEvents.delete(event);
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (errors.length > 0) {
+        const aggregate = new AggregateError(errors, 'Unable to dispose all SillyTavern public host listeners');
+        reportError(aggregate);
+        throw aggregate;
+      }
     },
   };
 }
@@ -105,7 +159,7 @@ interface WindowWithPublicHost {
   } | null;
 }
 
-export function createTopHostGateway(): HostGateway {
+export function createTopHostGateway(options: HostGatewayOptions = {}): HostGateway {
   const root = globalThis as typeof globalThis & { readonly window?: WindowWithPublicHost };
   if (!root.window) throw new Error('window.top public host is unavailable');
 
@@ -124,5 +178,5 @@ export function createTopHostGateway(): HostGateway {
     throw new Error('Unable to access SillyTavern public host interface', { cause: error });
   }
   assertPublicHost(host);
-  return createHostGateway(host);
+  return createHostGateway(host, options);
 }

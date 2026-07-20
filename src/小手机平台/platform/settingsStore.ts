@@ -24,6 +24,21 @@ export interface SettingsStore {
   withApiKey<T>(callback: (apiKey: string | undefined) => T): T;
 }
 
+export interface SettingsStoreOptions {
+  onError?: (error: unknown) => void;
+}
+
+function createSafeErrorReporter(onError?: (error: unknown) => void): (error: unknown) => void {
+  return error => {
+    if (!onError) return;
+    try {
+      onError(error);
+    } catch {
+      // Public-setting notifications must remain committed even if diagnostics fail.
+    }
+  };
+}
+
 const DEFAULT_SETTINGS: PublicSettings = Object.freeze({
   provider: 'tavern',
   apiUrl: '',
@@ -80,7 +95,11 @@ function sameSettings(left: PublicSettings, right: PublicSettings): boolean {
   );
 }
 
-export function createSettingsStore(characterName: string, storage: StorageLike): SettingsStore {
+export function createSettingsStore(
+  characterName: string,
+  storage: StorageLike,
+  options: SettingsStoreOptions = {},
+): SettingsStore {
   const normalizedCharacterName = characterName.trim();
   if (normalizedCharacterName === '') throw new Error('Character name cannot be empty');
   if (!storage) throw new Error('Storage is unavailable');
@@ -89,6 +108,7 @@ export function createSettingsStore(characterName: string, storage: StorageLike)
   const publicKey = `${namespace}:public`;
   const secretKey = `${namespace}:secret`;
   const listeners = new Set<(settings: PublicSettings) => void>();
+  const reportError = createSafeErrorReporter(options.onError);
 
   let settings: PublicSettings;
   try {
@@ -104,9 +124,15 @@ export function createSettingsStore(characterName: string, storage: StorageLike)
     updatePublic(patch) {
       const next = normalizePublicSettings({ ...settings, ...patch });
       if (sameSettings(settings, next)) return settings;
+      storage.setItem(publicKey, JSON.stringify(next));
       settings = next;
-      storage.setItem(publicKey, JSON.stringify(settings));
-      for (const listener of [...listeners]) listener(settings);
+      for (const listener of [...listeners]) {
+        try {
+          listener(settings);
+        } catch (error) {
+          reportError(error);
+        }
+      }
       return settings;
     },
     subscribe(listener) {
