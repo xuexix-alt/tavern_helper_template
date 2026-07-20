@@ -9,12 +9,20 @@ export interface RequestHandle<T> {
 }
 
 export class ProviderError extends Error {
-  readonly code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential';
+  readonly code:
+    | 'http'
+    | 'timeout'
+    | 'cancelled'
+    | 'network'
+    | 'invalid_response'
+    | 'missing_key'
+    | 'credential'
+    | 'cleanup';
   readonly status?: number;
 
   constructor(
     message: string,
-    code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential',
+    code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential' | 'cleanup',
     status?: number,
   ) {
     super(message);
@@ -112,6 +120,7 @@ export interface OpenAICompatibleProviderOptions {
   idFactory?: () => string;
   setTimer?: (callback: () => void, delayMs: number) => TimerHandle;
   clearTimer?: (handle: TimerHandle) => void;
+  onCleanupError?: (error: ProviderError) => void;
 }
 
 function endpointFor(baseUrl: string): string {
@@ -131,6 +140,7 @@ export class OpenAICompatibleProvider {
   readonly #idFactory: () => string;
   readonly #setTimer: (callback: () => void, delayMs: number) => TimerHandle;
   readonly #clearTimer: (handle: TimerHandle) => void;
+  readonly #onCleanupError?: (error: ProviderError) => void;
 
   constructor(options: OpenAICompatibleProviderOptions) {
     this.#baseUrl = endpointFor(options.baseUrl);
@@ -144,6 +154,7 @@ export class OpenAICompatibleProvider {
     this.#idFactory = options.idFactory ?? defaultId;
     this.#setTimer = options.setTimer ?? ((callback, delayMs) => setTimeout(callback, delayMs));
     this.#clearTimer = options.clearTimer ?? (handle => clearTimeout(handle));
+    this.#onCleanupError = options.onCleanupError;
   }
 
   request(assembledPrompt: string): RequestHandle<string> {
@@ -152,68 +163,97 @@ export class OpenAICompatibleProvider {
     let cancelled = false;
     let timedOut = false;
 
-    let accessed: Promise<string>;
+    const interruptedError = (): ProviderError | undefined => {
+      if (timedOut) return new ProviderError(`OpenAI-compatible 请求超时（${this.#timeoutMs}ms）`, 'timeout');
+      if (cancelled) return new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
+      return undefined;
+    };
+    const assertNotInterrupted = (): void => {
+      const error = interruptedError();
+      if (error) throw error;
+    };
+    const reportCleanupError = (): void => {
+      try {
+        this.#onCleanupError?.(new ProviderError('OpenAI-compatible timer cleanup failed', 'cleanup'));
+      } catch {
+        // Diagnostics must never replace the request result.
+      }
+    };
+
+    let timer: TimerHandle | undefined;
+    let fetched: Promise<FetchResponseLike>;
     try {
-      accessed = Promise.resolve(
-        this.#withApiKey(async apiKey => {
-          if (cancelled) throw new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
+      timer = this.#setTimer(() => {
+        timedOut = true;
+        controller.abort();
+      }, this.#timeoutMs);
+      assertNotInterrupted();
+      fetched = Promise.resolve(
+        this.#withApiKey(apiKey => {
           if (apiKey === undefined || apiKey.trim().length === 0) {
             throw new ProviderError('OpenAI-compatible API key 缺失', 'missing_key');
           }
-
-          let timer: TimerHandle | undefined;
           try {
-            timer = this.#setTimer(() => {
-              timedOut = true;
-              controller.abort();
-            }, this.#timeoutMs);
-            let response: FetchResponseLike;
-            try {
-              response = await this.#fetch(this.#baseUrl, {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${apiKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  ...this.#parameters,
-                  model: this.#model,
-                  messages: buildRolePrompts(assembledPrompt),
-                }),
-                signal: controller.signal,
-              });
-            } catch {
-              if (timedOut) throw new ProviderError(`OpenAI-compatible 请求超时（${this.#timeoutMs}ms）`, 'timeout');
-              if (cancelled) throw new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
-              throw new ProviderError('OpenAI-compatible 网络请求失败', 'network');
-            }
-            if (!response.ok) {
-              throw new ProviderError(`OpenAI-compatible HTTP ${response.status}`, 'http', response.status);
-            }
-            let payload: unknown;
-            try {
-              payload = await response.json();
-            } catch {
-              throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
-            }
-            const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
-              ?.content;
-            if (typeof content !== 'string' || content.length === 0) {
-              throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
-            }
-            return content;
-          } finally {
-            if (timer !== undefined) this.#clearTimer(timer);
+            return this.#fetch(this.#baseUrl, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ...this.#parameters,
+                model: this.#model,
+                messages: buildRolePrompts(assembledPrompt),
+              }),
+              signal: controller.signal,
+            });
+          } catch {
+            return Promise.reject(new ProviderError('OpenAI-compatible 网络请求失败', 'network'));
           }
         }),
       );
-    } catch {
-      accessed = Promise.reject(new ProviderError('OpenAI-compatible API key access failed', 'credential'));
+    } catch (error) {
+      fetched = Promise.reject(
+        error instanceof ProviderError
+          ? error
+          : new ProviderError('OpenAI-compatible API key access failed', 'credential'),
+      );
     }
-    const promise = accessed.catch((error: unknown) => {
-      if (error instanceof ProviderError) throw error;
-      throw new ProviderError('OpenAI-compatible API key access failed', 'credential');
-    });
+
+    const promise = fetched
+      .catch((error: unknown) => {
+        assertNotInterrupted();
+        if (error instanceof ProviderError) throw error;
+        throw new ProviderError('OpenAI-compatible 网络请求失败', 'network');
+      })
+      .then(async response => {
+        assertNotInterrupted();
+        if (!response.ok) {
+          throw new ProviderError(`OpenAI-compatible HTTP ${response.status}`, 'http', response.status);
+        }
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch {
+          assertNotInterrupted();
+          throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
+        }
+        assertNotInterrupted();
+        const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
+          ?.content;
+        if (typeof content !== 'string' || content.length === 0) {
+          throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
+        }
+        return content;
+      })
+      .finally(() => {
+        if (timer === undefined) return;
+        try {
+          this.#clearTimer(timer);
+        } catch {
+          reportCleanupError();
+        }
+      });
 
     return {
       id,
