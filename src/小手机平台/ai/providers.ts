@@ -33,12 +33,12 @@ interface TavernGenerateOptions {
   should_stream: false;
   should_silence: true;
   max_chat_history: 0;
-  ordered_prompts: readonly RolePrompt[];
+  ordered_prompts: RolePrompt[];
 }
 
 export interface TavernProviderDependencies {
   generateRaw(options: TavernGenerateOptions): Promise<string>;
-  stopGenerationById(id: string): void | Promise<void>;
+  stopGenerationById(id: string): unknown | Promise<unknown>;
   idFactory?: () => string;
   onCancelError?: (error: ProviderError) => void;
 }
@@ -57,7 +57,7 @@ export class TavernProvider {
       should_stream: false,
       should_silence: true,
       max_chat_history: 0,
-      ordered_prompts: buildRolePrompts(assembledPrompt),
+      ordered_prompts: [...buildRolePrompts(assembledPrompt)],
     };
     let promise: Promise<string>;
     try {

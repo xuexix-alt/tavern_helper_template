@@ -261,6 +261,35 @@ async function testTavernProvider(): Promise<void> {
   await Promise.resolve();
   assert.equal(cancelErrors.length, 1, '取消接口的 rejected Promise 必须被隔离并诊断');
   assert.equal(String(cancelErrors[0]).includes('stop raw secret should not leak'), false, '诊断不得泄漏底层原文');
+
+  type HostGenerateRawConfig = {
+    generation_id?: string;
+    should_stream?: boolean;
+    should_silence?: boolean;
+    max_chat_history?: 'all' | number;
+    ordered_prompts?: Array<{ role: 'system' | 'assistant' | 'user'; content: string }>;
+  };
+  let hostPromptCount = 0;
+  let hostStoppedId = '';
+  const hostGenerateRaw = async (config: HostGenerateRawConfig): Promise<string> => {
+    config.ordered_prompts!.push({ role: 'user', content: 'host mutable probe' });
+    hostPromptCount = config.ordered_prompts!.length;
+    return 'host output';
+  };
+  const hostStopGenerationById = (id: string): boolean => {
+    hostStoppedId = id;
+    return true;
+  };
+  const hostConnected = new TavernProvider({
+    generateRaw: hostGenerateRaw,
+    stopGenerationById: hostStopGenerationById,
+    idFactory: () => 'host-generation',
+  });
+  const hostHandle = hostConnected.request('HOST_ASSEMBLED');
+  assert.equal(await hostHandle.promise, 'host output');
+  assert.equal(hostPromptCount, 5, '宿主 GenerateRawConfig 必须能按 mutable 数组消费四条提示');
+  hostHandle.cancel();
+  assert.equal(hostStoppedId, 'host-generation');
 }
 
 type RecordedRequest = { url: string; init: RequestInit };
