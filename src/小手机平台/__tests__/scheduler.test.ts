@@ -356,6 +356,284 @@ async function testRejectsPrototypeAndEmptyPriorities(): Promise<void> {
   assert.equal(dispatches, 0, '非法 priority 不得进入任何投递路径');
 }
 
+async function testRuntimeOptionAndSnapshotValidation(): Promise<void> {
+  const dependencies = {
+    isEligible: () => true,
+    dispatchAi: async () => undefined,
+    deliverDeterministic: async () => undefined,
+  };
+  for (const value of [Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5]) {
+    assert.throws(
+      () => new ControlledPhoneScheduler(dependencies, { maxAIConversationsPerSnapshot: value }),
+      /maxAIConversationsPerSnapshot|safe|integer|有限|非负/i,
+    );
+    assert.throws(
+      () => new ControlledPhoneScheduler(dependencies, { contactCooldownInStoryTurns: value }),
+      /contactCooldownInStoryTurns|safe|integer|有限|非负/i,
+    );
+  }
+  for (const [key, value] of [
+    ['oneInflightRequestPerConversation', 'true'],
+    ['suppressSameTopicUntilChanged', 1],
+  ] as const) {
+    assert.throws(
+      () => new ControlledPhoneScheduler(dependencies, { [key]: value } as never),
+      /boolean|布尔|oneInflight|suppressSameTopic/i,
+    );
+  }
+  assert.doesNotThrow(
+    () =>
+      new ControlledPhoneScheduler(dependencies, {
+        maxAIConversationsPerSnapshot: 0,
+        contactCooldownInStoryTurns: 0,
+      }),
+    '两个计数配置必须明确允许 0',
+  );
+
+  let dispatches = 0;
+  const scheduler = new ControlledPhoneScheduler({
+    ...dependencies,
+    dispatchAi: async () => {
+      dispatches += 1;
+    },
+  });
+  scheduler.setSnapshot(snapshot());
+  scheduler.enqueue(job());
+  for (const invalid of [
+    snapshot('', 'snapshot-x', 11),
+    snapshot('session-x', '', 11),
+    snapshot('session-x', 'snapshot-x', Number.NaN),
+    snapshot('session-x', 'snapshot-x', Number.POSITIVE_INFINITY),
+    snapshot('session-x', 'snapshot-x', -1),
+    snapshot('session-x', 'snapshot-x', 1.5),
+  ]) {
+    assert.throws(() => scheduler.setSnapshot(invalid), /snapshot|session|storyTurn|safe|integer|有限|非负|空/i);
+  }
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.equal(dispatches, 1, '非法快照不得替换或清空此前有效快照');
+}
+
+async function testJobDeepCloneAndRecursiveFreeze(): Promise<void> {
+  const cyclic: { label: string; self?: unknown } = { label: 'original' };
+  cyclic.self = cyclic;
+  const nested = { list: [{ value: 'original' }], cyclic };
+  let observedPayload: Record<string, unknown> | undefined;
+  const scheduler = new ControlledPhoneScheduler({
+    isEligible: current => {
+      observedPayload = current.payload;
+      return true;
+    },
+    dispatchAi: async current => {
+      observedPayload = current.payload;
+    },
+    deliverDeterministic: async () => undefined,
+  });
+  scheduler.setSnapshot(snapshot());
+  const mutableJob = job({ payload: nested });
+  assert.equal(scheduler.enqueue(mutableJob), true);
+  nested.list[0].value = 'mutated';
+  cyclic.label = 'mutated';
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+
+  const cloned = observedPayload as {
+    list: Array<{ value: string }>;
+    cyclic: { label: string; self: unknown };
+  };
+  assert.equal(cloned.list[0].value, 'original');
+  assert.equal(cloned.cyclic.label, 'original');
+  assert.equal(cloned.cyclic.self, cloned.cyclic, 'structured clone 必须保留循环结构');
+  assert.equal(Object.isFrozen(cloned), true);
+  assert.equal(Object.isFrozen(cloned.list), true);
+  assert.equal(Object.isFrozen(cloned.list[0]), true);
+  assert.equal(Object.isFrozen(cloned.cyclic), true);
+
+  assert.equal(
+    scheduler.enqueue(
+      job({
+        triggerKey: 'uncloneable',
+        topicKey: 'uncloneable-topic',
+        payload: { callback: () => undefined },
+      }),
+    ),
+    false,
+    '不可 structuredClone 的 payload 必须拒绝且不入队',
+  );
+}
+
+async function testOlderFailureCannotRollbackNewerCooldown(): Promise<void> {
+  const oldRequest = deferred();
+  const calls: string[] = [];
+  const scheduler = new ControlledPhoneScheduler({
+    isEligible: () => true,
+    dispatchAi: async current => {
+      calls.push(current.triggerKey);
+      if (current.triggerKey === 'old-turn-10') return oldRequest.promise;
+    },
+    deliverDeterministic: async () => undefined,
+    onError: () => undefined,
+  });
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-10', 10));
+  scheduler.enqueue(job({ triggerKey: 'old-turn-10', snapshotKey: 'snapshot-10', topicKey: 'race-topic' }));
+  scheduler.runAvailable();
+
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-12', 12));
+  scheduler.enqueue(
+    job({
+      triggerKey: 'new-turn-12',
+      snapshotKey: 'snapshot-12',
+      conversationId: 'conversation-new',
+      topicKey: 'race-topic',
+      topicVersion: '2',
+    }),
+  );
+  scheduler.runAvailable();
+  await settle();
+  oldRequest.reject(new Error('old request failed after newer success'));
+  await scheduler.whenIdle();
+
+  scheduler.setSnapshot(snapshot('session-a', 'snapshot-13', 13));
+  scheduler.enqueue(
+    job({
+      triggerKey: 'turn-13',
+      snapshotKey: 'snapshot-13',
+      conversationId: 'conversation-third',
+      topicKey: 'race-topic',
+      topicVersion: '3',
+    }),
+  );
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.deepEqual(calls, ['old-turn-10', 'new-turn-12'], '旧失败不得抹掉 turn12 的较新冷却记录');
+}
+
+async function testBoundedDedupAndSessionStateCleanup(): Promise<void> {
+  const scheduler = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: async () => undefined,
+      deliverDeterministic: async () => undefined,
+    },
+    {
+      maxAIConversationsPerSnapshot: 10,
+      contactCooldownInStoryTurns: 0,
+      deduplicationCacheSize: 2,
+    },
+  );
+  scheduler.setSnapshot(snapshot());
+  for (const suffix of ['a', 'b', 'c']) {
+    scheduler.enqueue(
+      job({
+        triggerKey: `bounded-trigger-${suffix}`,
+        conversationId: `bounded-conversation-${suffix}`,
+        contactKey: `bounded-contact-${suffix}`,
+        topicKey: `bounded-topic-${suffix}`,
+      }),
+    );
+  }
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.equal(
+    scheduler.enqueue(
+      job({
+        triggerKey: 'bounded-trigger-a',
+        topicKey: 'fresh-topic',
+        topicVersion: '2',
+        contactKey: 'fresh-contact-a',
+      }),
+    ),
+    true,
+    'trigger LRU 超限后必须淘汰最旧项',
+  );
+  assert.equal(
+    scheduler.enqueue(
+      job({
+        triggerKey: 'fresh-trigger',
+        topicKey: 'bounded-topic-a',
+        contactKey: 'fresh-contact-b',
+      }),
+    ),
+    true,
+    'topic LRU 超限后必须淘汰最旧项',
+  );
+  assert.equal(
+    scheduler.enqueue(
+      job({ triggerKey: 'bounded-trigger-b', topicKey: 'another-topic', contactKey: 'fresh-contact-c' }),
+    ),
+    false,
+    '较新的 trigger 仍应保留',
+  );
+  assert.equal(
+    scheduler.enqueue(
+      job({ triggerKey: 'another-trigger', topicKey: 'bounded-topic-b', contactKey: 'fresh-contact-d' }),
+    ),
+    false,
+    '较新的 topic 仍应保留',
+  );
+
+  let reuseDispatches = 0;
+  const reusable = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: async () => {
+        reuseDispatches += 1;
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 2 },
+  );
+  reusable.setSnapshot(snapshot());
+  reusable.enqueue(job({ triggerKey: 'reused', topicKey: 'reused-topic' }));
+  reusable.runAvailable();
+  await reusable.whenIdle();
+  reusable.cancelSession('session-a');
+  reusable.setSnapshot(snapshot());
+  assert.equal(reusable.enqueue(job({ triggerKey: 'reused', topicKey: 'reused-topic' })), true);
+  reusable.runAvailable();
+  await reusable.whenIdle();
+  assert.equal(reuseDispatches, 2, 'cancelSession 后复用同键不得继承去重、quota 或冷却状态');
+
+  const quota = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: async () => {
+        reuseDispatches += 1;
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    { maxAIConversationsPerSnapshot: 1, contactCooldownInStoryTurns: 0 },
+  );
+  quota.setSnapshot(snapshot('session-q', 'snapshot-old', 1));
+  quota.enqueue(
+    job({
+      sessionKey: 'session-q',
+      snapshotKey: 'snapshot-old',
+      triggerKey: 'quota-old',
+      conversationId: 'quota-conversation-old',
+      contactKey: 'quota-contact-old',
+      topicKey: 'quota-topic-old',
+    }),
+  );
+  quota.runAvailable();
+  await quota.whenIdle();
+  quota.setSnapshot(snapshot('session-q', 'snapshot-new', 2));
+  quota.setSnapshot(snapshot('session-q', 'snapshot-old', 3));
+  quota.enqueue(
+    job({
+      sessionKey: 'session-q',
+      snapshotKey: 'snapshot-old',
+      triggerKey: 'quota-returned',
+      conversationId: 'quota-conversation-returned',
+      contactKey: 'quota-contact-returned',
+      topicKey: 'quota-topic-returned',
+    }),
+  );
+  quota.runAvailable();
+  await quota.whenIdle();
+  assert.equal(reuseDispatches, 4, '离开快照后旧 quota scope 必须清理，返回时可重新计数');
+}
+
 async function testFailureReleaseRetryAndDisposeSafety(): Promise<void> {
   const errors: unknown[] = [];
   let attempts = 0;
@@ -421,6 +699,10 @@ async function main(): Promise<void> {
   await testSnapshotSwitchCancelsUnstarted();
   await testSourcesAndWaitingReportValidation();
   await testRejectsPrototypeAndEmptyPriorities();
+  await testRuntimeOptionAndSnapshotValidation();
+  await testJobDeepCloneAndRecursiveFreeze();
+  await testOlderFailureCannotRollbackNewerCooldown();
+  await testBoundedDedupAndSessionStateCleanup();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   console.log('scheduler tests passed');
