@@ -587,6 +587,44 @@ async function testCleanupFailureIsolation(): Promise<void> {
   );
 }
 
+async function testTimerSetupFailureClassification(): Promise<void> {
+  const secret = 'timer setup raw secret';
+  let accessorCalls = 0;
+  let fetchCalls = 0;
+  let cleanupCalls = 0;
+  const provider = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test',
+    model: 'm',
+    setTimer: () => {
+      throw new Error(secret);
+    },
+    clearTimer: () => {
+      cleanupCalls += 1;
+    },
+    withApiKey: callback => {
+      accessorCalls += 1;
+      return callback('sk-must-not-be-read');
+    },
+    fetch: async () => {
+      fetchCalls += 1;
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'bad' } }] }) };
+    },
+  });
+
+  let handle: ReturnType<OpenAICompatibleProvider['request']> | undefined;
+  assert.doesNotThrow(() => {
+    handle = provider.request('x');
+  }, 'timer setup 同步失败不得破坏 request handle API');
+  await assert.rejects(handle!.promise, error => {
+    return error instanceof ProviderError && error.code === 'setup' && !String(error).includes(secret);
+  });
+  assert.deepEqual(
+    { accessorCalls, fetchCalls, cleanupCalls },
+    { accessorCalls: 0, fetchCalls: 0, cleanupCalls: 0 },
+    'timer 未安装时不得读 key、发请求或执行清理',
+  );
+}
+
 async function testOpenAIErrorsTimeoutAndCancel(): Promise<void> {
   const secret = 'sk-never-leak';
   for (const status of [401, 429]) {
@@ -677,6 +715,7 @@ async function main(): Promise<void> {
   await testApiKeyCallbackIsSynchronousAndTransient();
   await testPendingResponseJsonHonorsCancelAndTimeout();
   await testCleanupFailureIsolation();
+  await testTimerSetupFailureClassification();
   await testOpenAIErrorsTimeoutAndCancel();
   console.log('ai tests passed');
 }

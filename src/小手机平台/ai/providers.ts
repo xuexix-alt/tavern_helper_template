@@ -17,12 +17,22 @@ export class ProviderError extends Error {
     | 'invalid_response'
     | 'missing_key'
     | 'credential'
+    | 'setup'
     | 'cleanup';
   readonly status?: number;
 
   constructor(
     message: string,
-    code: 'http' | 'timeout' | 'cancelled' | 'network' | 'invalid_response' | 'missing_key' | 'credential' | 'cleanup',
+    code:
+      | 'http'
+      | 'timeout'
+      | 'cancelled'
+      | 'network'
+      | 'invalid_response'
+      | 'missing_key'
+      | 'credential'
+      | 'setup'
+      | 'cleanup',
     status?: number,
   ) {
     super(message);
@@ -181,46 +191,53 @@ export class OpenAICompatibleProvider {
     };
 
     let timer: TimerHandle | undefined;
-    let fetched: Promise<FetchResponseLike>;
+    let fetched: Promise<FetchResponseLike> | undefined;
     try {
       timer = this.#setTimer(() => {
         timedOut = true;
         controller.abort();
       }, this.#timeoutMs);
-      assertNotInterrupted();
-      fetched = Promise.resolve(
-        this.#withApiKey(apiKey => {
-          if (apiKey === undefined || apiKey.trim().length === 0) {
-            throw new ProviderError('OpenAI-compatible API key 缺失', 'missing_key');
-          }
-          try {
-            return this.#fetch(this.#baseUrl, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                ...this.#parameters,
-                model: this.#model,
-                messages: buildRolePrompts(assembledPrompt),
-              }),
-              signal: controller.signal,
-            });
-          } catch {
-            return Promise.reject(new ProviderError('OpenAI-compatible 网络请求失败', 'network'));
-          }
-        }),
-      );
-    } catch (error) {
-      fetched = Promise.reject(
-        error instanceof ProviderError
-          ? error
-          : new ProviderError('OpenAI-compatible API key access failed', 'credential'),
-      );
+    } catch {
+      fetched = Promise.reject(new ProviderError('OpenAI-compatible timer setup failed', 'setup'));
     }
 
-    const promise = fetched
+    if (timer !== undefined) {
+      try {
+        assertNotInterrupted();
+        fetched = Promise.resolve(
+          this.#withApiKey(apiKey => {
+            if (apiKey === undefined || apiKey.trim().length === 0) {
+              throw new ProviderError('OpenAI-compatible API key 缺失', 'missing_key');
+            }
+            try {
+              return this.#fetch(this.#baseUrl, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  ...this.#parameters,
+                  model: this.#model,
+                  messages: buildRolePrompts(assembledPrompt),
+                }),
+                signal: controller.signal,
+              });
+            } catch {
+              return Promise.reject(new ProviderError('OpenAI-compatible 网络请求失败', 'network'));
+            }
+          }),
+        );
+      } catch (error) {
+        fetched = Promise.reject(
+          error instanceof ProviderError
+            ? error
+            : new ProviderError('OpenAI-compatible API key access failed', 'credential'),
+        );
+      }
+    }
+
+    const promise = (fetched ?? Promise.reject(new ProviderError('OpenAI-compatible timer setup failed', 'setup')))
       .catch((error: unknown) => {
         assertNotInterrupted();
         if (error instanceof ProviderError) throw error;
