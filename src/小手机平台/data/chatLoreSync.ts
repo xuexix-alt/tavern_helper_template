@@ -60,7 +60,9 @@ interface CapturedBatch {
 }
 
 interface PendingTimer {
-  timer: unknown;
+  timer?: unknown;
+  hasTimer: boolean;
+  active: boolean;
   sessionKey: string;
   settle: () => void;
   fail: (error: unknown) => void;
@@ -99,9 +101,8 @@ export class ChatLoreSync {
     const key = this.timerKey(captured.sessionKey, captured.type);
     const previous = this.timers.get(key);
     if (previous) {
-      this.clearCallback(previous.timer);
-      this.timers.delete(key);
-      previous.settle();
+      const clearError = this.cancelPending(key, previous);
+      if (clearError !== undefined) throw new AggregateError([clearError], '替换 debounce timer 失败');
     }
     let settle!: () => void;
     let fail!: (error: unknown) => void;
@@ -110,21 +111,41 @@ export class ChatLoreSync {
       fail = reject;
     });
     this.track(work);
-    const timer = this.scheduleCallback(() => {
-      this.timers.delete(key);
-      const operation = this.enqueue(captured);
-      operation.then(settle, fail);
-    }, 500);
-    this.timers.set(key, { timer, sessionKey: captured.sessionKey, settle, fail });
+    const pending: PendingTimer = {
+      hasTimer: false,
+      active: true,
+      sessionKey: captured.sessionKey,
+      settle,
+      fail,
+    };
+    this.timers.set(key, pending);
+    try {
+      const timer = this.scheduleCallback(() => {
+        if (!pending.active || this.timers.get(key) !== pending) return;
+        pending.active = false;
+        this.timers.delete(key);
+        this.enqueue(captured).then(settle, fail);
+      }, 500);
+      pending.timer = timer;
+      pending.hasTimer = true;
+    } catch (error) {
+      if (pending.active) {
+        pending.active = false;
+        if (this.timers.get(key) === pending) this.timers.delete(key);
+        pending.fail(error);
+      }
+      throw error;
+    }
   }
 
   cancelSession(sessionKey: string): void {
+    const errors: unknown[] = [];
     for (const [key, pending] of this.timers) {
       if (pending.sessionKey !== sessionKey) continue;
-      this.clearCallback(pending.timer);
-      this.timers.delete(key);
-      pending.settle();
+      const error = this.cancelPending(key, pending);
+      if (error !== undefined) errors.push(error);
     }
+    if (errors.length > 0) throw new AggregateError(errors, `取消 session ${sessionKey} 的 debounce timer 失败`);
   }
 
   flushNow(request: LoreSyncRequest): Promise<void> {
@@ -145,14 +166,30 @@ export class ChatLoreSync {
 
   dispose(): Promise<void> {
     if (this.disposePromise) return this.disposePromise;
+    let resolveDispose!: () => void;
+    let rejectDispose!: (error: unknown) => void;
+    const stablePromise = new Promise<void>((resolve, reject) => {
+      resolveDispose = resolve;
+      rejectDispose = reject;
+    });
+    this.disposePromise = stablePromise;
     this.closed = true;
-    for (const [key, pending] of this.timers) {
-      this.clearCallback(pending.timer);
-      this.timers.delete(key);
-      pending.settle();
+    const clearErrors: unknown[] = [];
+    for (const [key, pending] of [...this.timers]) {
+      const error = this.cancelPending(key, pending);
+      if (error !== undefined) clearErrors.push(error);
     }
-    this.disposePromise = this.whenIdle();
-    return this.disposePromise;
+    void (async () => {
+      const errors = [...clearErrors];
+      try {
+        await this.whenIdle();
+      } catch (error) {
+        if (error instanceof AggregateError) errors.push(...error.errors);
+        else errors.push(error);
+      }
+      if (errors.length > 0) throw new AggregateError(errors, 'ChatLoreSync 关闭失败');
+    })().then(resolveDispose, rejectDispose);
+    return stablePromise;
   }
 
   private timerKey(sessionKey: string, type: LoreSyncType): string {
@@ -161,6 +198,21 @@ export class ChatLoreSync {
 
   private assertOpen(): void {
     if (this.closed) throw new Error('ChatLoreSync 已关闭 (disposed)');
+  }
+
+  private cancelPending(key: string, pending: PendingTimer): unknown | undefined {
+    if (!pending.active) return undefined;
+    pending.active = false;
+    if (this.timers.get(key) === pending) this.timers.delete(key);
+    let clearError: unknown | undefined;
+    try {
+      if (pending.hasTimer) this.clearCallback(pending.timer);
+    } catch (error) {
+      clearError = error;
+    } finally {
+      pending.settle();
+    }
+    return clearError;
   }
 
   private track(operation: Promise<void>): Promise<void> {

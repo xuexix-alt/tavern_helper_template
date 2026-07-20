@@ -524,6 +524,120 @@ async function testSyncLifecycle(): Promise<void> {
   );
 }
 
+async function testScheduleFailureSettlesAndDisarmsCallback(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessage(message('must-not-write', 1));
+  const scheduler = fakeScheduler();
+  let writes = 0;
+  const sync = new ChatLoreSync({
+    db,
+    writer: async () => {
+      writes += 1;
+    },
+    schedule: (callback, delayMs) => {
+      scheduler.schedule(callback, delayMs);
+      throw new Error('schedule callback failed');
+    },
+    clearSchedule: timer => scheduler.clear(timer),
+  });
+
+  assert.throws(
+    () => sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    /schedule callback failed/,
+  );
+  let idleSettled = false;
+  void sync
+    .whenIdle()
+    .catch(() => undefined)
+    .finally(() => {
+      idleSettled = true;
+    });
+  await flushMicrotasks();
+  assert.equal(idleSettled, true, 'schedule 同步抛错后已 track 的 work 必须 settle，whenIdle 不得挂起');
+  scheduler.tasks.forEach(task => task.callback());
+  await flushMicrotasks();
+  assert.equal(writes, 0, 'schedule 抛错后残留 callback 必须永久 no-op');
+  await sync.dispose().catch(() => undefined);
+}
+
+async function testClearFailureStillCleansUp(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessage(message('active-message', 1));
+  const scheduler = fakeScheduler();
+  const cleared: number[] = [];
+  let writes = 0;
+  let releaseWriter: (() => void) | undefined;
+  const sync = new ChatLoreSync({
+    db,
+    writer: async () => {
+      writes += 1;
+      await new Promise<void>(resolve => {
+        releaseWriter = resolve;
+      });
+    },
+    schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
+    clearSchedule: timer => {
+      const id = timer as number;
+      cleared.push(id);
+      scheduler.clear(id);
+      throw new Error(`clear failed ${id}`);
+    },
+  });
+
+  sync.schedule({ sessionKey: sessionA, worldbookName: '旧世界书-A', type: 'private' });
+  assert.throws(
+    () => sync.schedule({ sessionKey: sessionA, worldbookName: '新世界书-A', type: 'private' }),
+    error => error instanceof AggregateError && error.errors.some(item => String(item).includes('clear failed')),
+    '替换旧 timer 时 clear 抛错也必须聚合报告',
+  );
+  scheduler.tasks[0].callback();
+  await flushMicrotasks();
+  assert.equal(writes, 0, '替换清理失败后的旧 callback 必须永久 no-op');
+  let replacementIdle = false;
+  void sync.whenIdle().finally(() => {
+    replacementIdle = true;
+  });
+  await flushMicrotasks();
+  assert.equal(replacementIdle, true, '替换清理失败也必须 settle 旧 pending');
+
+  sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'group', conversationId: 'group:eden' });
+  assert.throws(
+    () => sync.cancelSession(sessionA),
+    error => error instanceof AggregateError && error.errors.length === 2,
+    'cancelSession 必须在 clear 失败后继续清理同 session 的其余 timer',
+  );
+  assert.equal(cleared.length, 3);
+  scheduler.tasks.forEach(task => task.callback());
+  await flushMicrotasks();
+  assert.equal(writes, 0, 'cancelSession 后的残留 callback 不得写入');
+
+  sync.schedule({ sessionKey: sessionB, worldbookName: '世界书-B', type: 'private' });
+  const active = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  await flushMicrotasks();
+  assert.equal(writes, 1);
+  const firstDispose = sync.dispose();
+  const secondDispose = sync.dispose();
+  assert.equal(firstDispose, secondDispose, 'dispose 必须始终返回稳定可复用的 Promise');
+  let disposeSettled = false;
+  void firstDispose
+    .catch(() => undefined)
+    .finally(() => {
+      disposeSettled = true;
+    });
+  await flushMicrotasks();
+  assert.equal(disposeSettled, false, 'clear 失败后 dispose 仍必须等待 active 工作');
+  releaseWriter?.();
+  await active;
+  await assert.rejects(
+    () => firstDispose,
+    error => error instanceof AggregateError && error.errors.some(item => String(item).includes('clear failed')),
+  );
+  scheduler.tasks.forEach(task => task.callback());
+  await flushMicrotasks();
+  assert.equal(writes, 1, 'dispose 清理失败后的残留 callback 不得写入');
+}
+
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
   await testBroadcastValidation();
@@ -532,6 +646,8 @@ async function main(): Promise<void> {
   await testInFlightSessionSwitch();
   await testDuplicateFlushAndCaptureFailure();
   await testSyncLifecycle();
+  await testScheduleFailureSettlesAndDisarmsCallback();
+  await testClearFailureStillCleansUp();
   console.log('data tests passed');
 }
 
