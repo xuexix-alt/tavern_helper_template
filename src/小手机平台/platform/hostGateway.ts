@@ -108,6 +108,7 @@ export function createHostGateway(host: PublicHostApi, options: HostGatewayOptio
       host.eventSource.on(event, handleHostChange);
       attachedEvents.add(event);
     } catch (subscriptionError) {
+      active = false;
       const errors: unknown[] = [subscriptionError];
       for (const attemptedEvent of [...attemptedEvents].reverse()) {
         try {

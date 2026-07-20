@@ -464,14 +464,22 @@ function testHostGatewayCleanupFailures(): void {
   const eventTypes = { CHAT_CHANGED: 'chat_changed', CHARACTER_PAGE_LOADED: 'character_page_loaded' } as const;
   const rollbackAttempts: string[] = [];
   let subscriptionCount = 0;
+  let snapshotReads = 0;
+  let failSnapshotRead = false;
+  let residualListener: FakeHostListener | undefined;
   const rollbackErrors: unknown[] = [];
   const rollbackHost = {
     name2: '角色',
-    getCurrentChatId: () => 'chat',
+    getCurrentChatId: () => {
+      snapshotReads += 1;
+      if (failSnapshotRead) throw new Error('residual callback read');
+      return 'chat';
+    },
     eventTypes,
     eventSource: {
-      on() {
+      on(_event: string, listener: FakeHostListener) {
         subscriptionCount += 1;
+        residualListener = listener;
         if (subscriptionCount === 2) throw new Error('subscribe failed');
       },
       removeListener(event: string) {
@@ -493,6 +501,14 @@ function testHostGatewayCleanupFailures(): void {
     '初始化回滚必须逐项 best-effort',
   );
   assert.equal(rollbackErrors[0] instanceof AggregateError, true, '初始化聚合错误应进入错误报告器');
+  const leakedListener = residualListener;
+  assert.ok(leakedListener, 'fake host 应保留 rollback 退订失败后的 callback');
+  const readsAfterRollback = snapshotReads;
+  const reportsAfterRollback = rollbackErrors.length;
+  failSnapshotRead = true;
+  assert.doesNotThrow(() => leakedListener());
+  assert.equal(snapshotReads, readsAfterRollback, '初始化失败后的残留 callback 必须永久 inactive，不再读取宿主');
+  assert.equal(rollbackErrors.length, reportsAfterRollback, '残留 callback 不得继续发送错误报告');
 
   const listeners = new Map<string, Set<FakeHostListener>>();
   const removalAttempts: string[] = [];
