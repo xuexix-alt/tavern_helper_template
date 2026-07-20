@@ -54,12 +54,42 @@ export class ModuleRegistry {
     if (this.initializedOrder.length > 0) throw new Error('Phone modules are already initialized');
     this.assertRequired(requiredIds);
 
-    for (const id of this.resolveOrder()) {
-      const registration = this.registrations.get(id)!;
-      const instance = registration.factory();
-      await instance.init(context);
-      this.instances.set(id, instance);
-      this.initializedOrder.push(id);
+    let currentInstance: PhoneModule | null = null;
+    try {
+      for (const id of this.resolveOrder()) {
+        const registration = this.registrations.get(id)!;
+        currentInstance = registration.factory();
+        await currentInstance.init(context);
+        this.instances.set(id, currentInstance);
+        this.initializedOrder.push(id);
+        currentInstance = null;
+      }
+    } catch (initializationError) {
+      const cleanupErrors: unknown[] = [];
+      if (currentInstance) {
+        try {
+          await currentInstance.dispose('initialization failed');
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      }
+      for (const id of [...this.initializedOrder].reverse()) {
+        try {
+          await this.instances.get(id)?.dispose('initialization failed');
+        } catch (error) {
+          cleanupErrors.push(error);
+        }
+      }
+      this.instances.clear();
+      this.initializedOrder = [];
+      if (cleanupErrors.length > 0) {
+        throw new AggregateError(
+          [initializationError, ...cleanupErrors],
+          'Phone module initialization and rollback failed',
+          { cause: initializationError },
+        );
+      }
+      throw initializationError;
     }
   }
 

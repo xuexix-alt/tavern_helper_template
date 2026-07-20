@@ -4,6 +4,8 @@ type StoredListener = (...args: unknown[]) => void;
 export class EventBus<TEvents extends EventMapShape<TEvents>> {
   private readonly listeners = new Map<keyof TEvents, Set<StoredListener>>();
 
+  constructor(private readonly onListenerError?: (error: unknown, event: keyof TEvents) => void) {}
+
   on<K extends keyof TEvents>(event: K, listener: (...args: TEvents[K]) => void): () => void {
     const listeners = this.listeners.get(event) ?? new Set<StoredListener>();
     const storedListener = listener as unknown as StoredListener;
@@ -22,7 +24,25 @@ export class EventBus<TEvents extends EventMapShape<TEvents>> {
   emit<K extends keyof TEvents>(event: K, ...args: TEvents[K]): void {
     const listeners = this.listeners.get(event);
     if (!listeners) return;
-    [...listeners].forEach(listener => listener(...(args as unknown[])));
+    const unreportedErrors: unknown[] = [];
+    [...listeners].forEach(listener => {
+      try {
+        listener(...(args as unknown[]));
+      } catch (error) {
+        if (!this.onListenerError) {
+          unreportedErrors.push(error);
+          return;
+        }
+        try {
+          this.onListenerError(error, event);
+        } catch (reportingError) {
+          unreportedErrors.push(new AggregateError([error, reportingError], 'Event listener error reporting failed'));
+        }
+      }
+    });
+    if (unreportedErrors.length > 0) {
+      throw new AggregateError(unreportedErrors, `Unhandled errors from event ${String(event)}`);
+    }
   }
 
   dispose(): void {

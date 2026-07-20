@@ -87,6 +87,53 @@ async function testModuleRegistry(): Promise<void> {
   );
 }
 
+async function testInitializeRollbackAndRetry(): Promise<void> {
+  const initError = new Error('bad init');
+  const cleanupError = new Error('bad cleanup');
+  const lifecycle: string[] = [];
+  let shouldFail = true;
+  const registry = new ModuleRegistry();
+  registry.register(
+    registration('good', [], {
+      init: () => {
+        lifecycle.push('init:good');
+      },
+      dispose: () => {
+        lifecycle.push('dispose:good');
+      },
+    }),
+  );
+  registry.register({
+    manifest: { id: 'bad', version: '1.0.0', required: true, dependsOn: ['good'], capabilities: [] },
+    factory: () => ({
+      init: () => {
+        lifecycle.push('init:bad');
+        if (shouldFail) throw initError;
+      },
+      dispose: () => {
+        lifecycle.push('dispose:bad');
+        if (shouldFail) throw cleanupError;
+      },
+      getStatus: () => 'READY',
+    }),
+  });
+
+  await assert.rejects(
+    () => registry.initialize({} as PhoneModuleContext, ['good', 'bad']),
+    error =>
+      error instanceof AggregateError &&
+      error.cause === initError &&
+      error.errors.includes(initError) &&
+      error.errors.includes(cleanupError),
+  );
+  assert.deepEqual(lifecycle, ['init:good', 'init:bad', 'dispose:bad', 'dispose:good']);
+
+  shouldFail = false;
+  await registry.initialize({} as PhoneModuleContext, ['good', 'bad']);
+  await registry.dispose('retry completed');
+  assert.deepEqual(lifecycle.slice(4), ['init:good', 'init:bad', 'dispose:bad', 'dispose:good']);
+}
+
 async function testRuntimeBridge(): Promise<void> {
   assert.equal(makeSessionKey(ownerA, 'chat-42'), '末世寒冬 - 星穹秩序::chat-42');
 
@@ -180,6 +227,52 @@ function testEventBus(): void {
   bus.dispose();
   bus.emit('tick', 3);
   assert.deepEqual(received, [1], 'dispose 应清空所有订阅');
+
+  const listenerErrors: unknown[] = [];
+  const isolatedBus = new EventBus<{ tick: [number] }>(error => listenerErrors.push(error));
+  let secondListenerRan = false;
+  isolatedBus.on('tick', () => {
+    throw new Error('listener failed');
+  });
+  isolatedBus.on('tick', () => {
+    secondListenerRan = true;
+  });
+  isolatedBus.emit('tick', 4);
+  assert.equal(secondListenerRan, true, '单个 listener 失败不能阻断后续 listener');
+  assert.match(String(listenerErrors[0]), /listener failed/);
+}
+
+async function testRuntimeFailureCleanupAndListenerDiagnostics(): Promise<void> {
+  const runtime = createPhoneRuntime();
+  runtime.setOwner(ownerA);
+  runtime.setSession('dispose-chat');
+
+  let readyListenerRan = false;
+  runtime.on('ready', () => {
+    throw new Error('ready listener failed');
+  });
+  runtime.on('ready', () => {
+    readyListenerRan = true;
+  });
+  runtime.setSession('listener-chat');
+  assert.equal(readyListenerRan, true, 'ready listener 失败不能阻断 ready 流程');
+  assert.match(runtime.getStatus().diagnostics.join('\n'), /ready listener failed/);
+
+  runtime.registerModule(
+    registration('dispose-fails', [], {
+      dispose: () => {
+        throw new Error('module dispose failed');
+      },
+    }),
+  );
+  await runtime.initializeModules(['dispose-fails']);
+  await runtime.open();
+  await assert.rejects(() => runtime.dispose('test failure'), /dispose/i);
+  assert.deepEqual(
+    runtime.getStatus(),
+    { state: 'DISPOSED', owner: null, sessionKey: null, isOpen: false, diagnostics: ['ready: ready listener failed'] },
+    'registry dispose 失败后 runtime 仍必须完成本地清理',
+  );
 }
 
 function withFakeWindow(topWindow: object, run: () => void): void {
@@ -213,6 +306,27 @@ function testTopRegistration(): void {
     assert.equal(installPhoneRuntime(ownerB), first, '显式解绑后可由新 owner 复用 runtime');
   });
 
+  const conflictingPending = [
+    registration('conflict'),
+    {
+      ...registration('conflict'),
+      manifest: { ...registration('conflict').manifest, version: '2.0.0' },
+    },
+  ];
+  const conflictingTop = {
+    location: { href: 'https://example.test' },
+    __TAVERN_PHONE_PENDING_MODULES__: conflictingPending,
+  } as {
+    location: { href: string };
+    TavernPhone?: unknown;
+    __TAVERN_PHONE_PENDING_MODULES__: PhoneModuleRegistration[];
+  };
+  withFakeWindow(conflictingTop, () => {
+    assert.throws(() => installPhoneRuntime(ownerA), /version|hot replace/i);
+  });
+  assert.equal(conflictingTop.TavernPhone, undefined, 'pending 注册失败时不得发布半成品 runtime');
+  assert.equal(conflictingTop.__TAVERN_PHONE_PENDING_MODULES__, conflictingPending, 'pending 注册失败时不得丢失原队列');
+
   const inaccessibleWindow = {} as { top?: unknown };
   Object.defineProperty(inaccessibleWindow, 'top', {
     get: () => {
@@ -231,8 +345,10 @@ function testTopRegistration(): void {
 
 async function main(): Promise<void> {
   await testModuleRegistry();
+  await testInitializeRollbackAndRetry();
   await testRuntimeBridge();
   testEventBus();
+  await testRuntimeFailureCleanupAndListenerDiagnostics();
   testTopRegistration();
   console.log('runtime tests passed');
 }

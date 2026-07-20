@@ -25,7 +25,10 @@ export function makeSessionKey(owner: PhoneOwner, chatId: string): string {
 }
 
 export class PhoneRuntime implements TavernPhonePublicApi {
-  private readonly events = new EventBus<PhoneRuntimeEventMap>();
+  private diagnostics: string[] = [];
+  private readonly events = new EventBus<PhoneRuntimeEventMap>((error, event) => {
+    this.diagnostics.push(`${String(event)}: ${getErrorMessage(error)}`);
+  });
   private readonly registry = new ModuleRegistry();
   private owner: PhoneOwner | null = null;
   private session: PhoneSession | null = null;
@@ -33,7 +36,6 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   private state: PhoneRuntimeStatus['state'] = 'WAITING';
   private isOpen = false;
   private unreadCount = 0;
-  private diagnostics: string[] = [];
 
   registerModule(registration: PhoneModuleRegistration): void {
     this.registry.register(registration);
@@ -165,12 +167,15 @@ export class PhoneRuntime implements TavernPhonePublicApi {
 
   async dispose(reason = 'runtime disposed'): Promise<void> {
     this.hostBridge = null;
-    await this.registry.dispose(reason);
-    this.events.dispose();
-    this.owner = null;
-    this.session = null;
-    this.isOpen = false;
-    this.state = 'DISPOSED';
+    try {
+      await this.registry.dispose(reason);
+    } finally {
+      this.events.dispose();
+      this.owner = null;
+      this.session = null;
+      this.isOpen = false;
+      this.state = 'DISPOSED';
+    }
   }
 
   private invalidateHostBridge(): void {
@@ -192,6 +197,10 @@ function sameOwner(left: PhoneOwner | null, right: PhoneOwner | null): boolean {
   );
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function createPhoneRuntime(): PhoneRuntime {
   return new PhoneRuntime();
 }
@@ -205,9 +214,9 @@ export function installPhoneRuntime(expectedOwner?: PhoneOwner): TavernPhonePubl
 
   const runtime = createPhoneRuntime();
   if (expectedOwner) runtime.setOwner(expectedOwner);
-  topWindow.TavernPhone = runtime;
   const pending = topWindow.__TAVERN_PHONE_PENDING_MODULES__ ?? [];
   pending.forEach(registration => runtime.registerModule(registration));
+  topWindow.TavernPhone = runtime;
   topWindow.__TAVERN_PHONE_PENDING_MODULES__ = [];
   return runtime;
 }
