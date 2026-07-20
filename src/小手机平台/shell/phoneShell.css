@@ -202,6 +202,39 @@ button:focus-visible {
   flex: 1;
 }
 
+.phone-conversation {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phone-row__copy > span {
+  display: block;
+  margin-top: 2px;
+  color: var(--phone-secondary);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.phone-retry {
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--phone-red);
+  cursor: pointer;
+}
+
 .phone-row strong,
 .phone-row p {
   overflow-wrap: anywhere;
@@ -239,6 +272,46 @@ button:focus-visible {
 .phone-button:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.phone-settings {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--phone-surface);
+}
+
+.phone-field {
+  display: grid;
+  gap: 6px;
+  color: var(--phone-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.phone-field input:not([type='checkbox']),
+.phone-field select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--phone-separator);
+  border-radius: 12px;
+  padding: 8px 11px;
+  background: var(--phone-background);
+  color: var(--phone-label);
+  font: inherit;
+  font-size: 0.94rem;
+  font-weight: 400;
+}
+
+.phone-field input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--phone-blue);
+}
+
+.phone-settings__save {
+  justify-self: stretch;
 }
 
 .phone-empty,

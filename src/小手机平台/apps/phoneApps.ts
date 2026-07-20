@@ -4,6 +4,7 @@ export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'task
 
 export interface PhoneConversationView {
   id: string;
+  kind: 'private' | 'eden-group';
   title: string;
   preview: string;
   unread: number;
@@ -58,6 +59,9 @@ export interface PhoneAppServices {
   listTasks(): Promise<readonly PhoneTaskView[]> | readonly PhoneTaskView[];
   getSettings(): Promise<PhoneSettingsView> | PhoneSettingsView;
   getDiagnostics(): Promise<PhoneDiagnosticsView> | PhoneDiagnosticsView;
+  openConversation(conversationId: string): Promise<void>;
+  retryFailedMessage(conversationId: string): Promise<void>;
+  saveSettings(settings: PhoneSettingsView): Promise<void>;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
 }
 
@@ -115,6 +119,37 @@ function empty(document: Document, value: string): HTMLElement {
   return node;
 }
 
+function field(document: Document, title: string, control: HTMLInputElement | HTMLSelectElement): HTMLLabelElement {
+  const label = document.createElement('label');
+  label.className = 'phone-field';
+  label.append(text(document, 'span', title), control);
+  return label;
+}
+
+function input(document: Document, type: string, value: string): HTMLInputElement {
+  const control = document.createElement('input');
+  control.type = type;
+  control.value = value;
+  return control;
+}
+
+function select(
+  document: Document,
+  value: string,
+  options: readonly { value: string; label: string }[],
+): HTMLSelectElement {
+  const control = document.createElement('select');
+  const values = new Set(options.map(option => option.value));
+  const actualOptions = values.has(value) ? options : [{ value, label: value }, ...options];
+  for (const item of actualOptions) {
+    const option = text(document, 'option', item.label);
+    option.value = item.value;
+    control.append(option);
+  }
+  control.value = value;
+  return control;
+}
+
 function safeCount(value: number): string {
   return Number.isFinite(value) && value > 0 ? String(Math.floor(value)) : '';
 }
@@ -125,19 +160,56 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       route: 'messages',
       title: '消息',
       glyph: '●',
-      async render({ document }) {
+      async render(context) {
+        const { document } = context;
         const items = await services.listConversations();
         if (items.length === 0) return empty(document, '还没有会话');
         const output = list(document);
         for (const item of items) {
           const status = item.status === 'failed' ? '· 发送失败' : item.status === 'pending' ? '· 发送中' : '';
-          const node = row(document, item.title, `${item.preview}${status}`);
+          const node = document.createElement('li');
+          node.className = 'phone-row';
+          const conversation = document.createElement('button');
+          conversation.className = 'phone-conversation';
+          conversation.type = 'button';
+          conversation.setAttribute(
+            'aria-label',
+            `打开${item.kind === 'eden-group' ? '伊甸住户群' : '私聊'}：${item.title}`,
+          );
+          const copy = document.createElement('span');
+          copy.className = 'phone-row__copy';
+          copy.append(text(document, 'strong', item.title), text(document, 'span', `${item.preview}${status}`));
+          conversation.append(copy);
+          context.listen(conversation, 'click', () => {
+            void services
+              .openConversation(item.id)
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
+          });
           const unread = safeCount(item.unread);
           if (unread) {
             const badge = text(document, 'span', unread);
             badge.className = 'phone-badge';
             badge.setAttribute('aria-label', `${unread} 条未读`);
-            node.append(badge);
+            conversation.append(badge);
+          }
+          node.append(conversation);
+          if (item.status === 'failed') {
+            const retry = text(document, 'button', '重试');
+            retry.className = 'phone-retry';
+            retry.type = 'button';
+            retry.setAttribute('aria-label', `重试发送：${item.title}`);
+            context.listen(retry, 'click', event => {
+              event.stopPropagation();
+              retry.disabled = true;
+              void services
+                .retryFailedMessage(item.id)
+                .then(() => context.announce('已重试发送'))
+                .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                .finally(() => {
+                  retry.disabled = false;
+                });
+            });
+            node.append(retry);
           }
           output.append(node);
         }
@@ -210,18 +282,56 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       route: 'settings',
       title: '设置',
       glyph: '⚙',
-      async render({ document }) {
+      async render(context) {
+        const { document } = context;
         const settings = await services.getSettings();
-        const output = list(document);
-        output.append(
-          row(document, 'Provider', settings.provider),
-          row(document, 'API URL', settings.apiUrl),
-          row(document, '模型', settings.model),
-          row(document, '生成参数', settings.parameters),
-          row(document, '主题', settings.theme),
-          row(document, '通知', settings.notifications ? '开启' : '关闭'),
+        const form = document.createElement('form');
+        form.className = 'phone-settings';
+        const provider = select(document, settings.provider, [
+          { value: 'tavern', label: 'Tavern' },
+          { value: 'openai-compatible', label: 'OpenAI-compatible' },
+        ]);
+        const apiUrl = input(document, 'url', settings.apiUrl);
+        const model = input(document, 'text', settings.model);
+        const parameters = input(document, 'text', settings.parameters);
+        const theme = select(document, settings.theme, [
+          { value: 'system', label: '跟随系统' },
+          { value: 'light', label: '浅色' },
+          { value: 'dark', label: '深色' },
+        ]);
+        const notifications = input(document, 'checkbox', '');
+        notifications.checked = settings.notifications;
+        const save = text(document, 'button', '保存设置');
+        save.className = 'phone-button phone-button--primary phone-settings__save';
+        save.type = 'button';
+        form.append(
+          field(document, 'Provider', provider),
+          field(document, 'API URL', apiUrl),
+          field(document, '模型', model),
+          field(document, '生成参数', parameters),
+          field(document, '主题', theme),
+          field(document, '通知', notifications),
+          save,
         );
-        return output;
+        context.listen(save, 'click', () => {
+          save.disabled = true;
+          const next: PhoneSettingsView = {
+            provider: provider.value,
+            apiUrl: apiUrl.value,
+            model: model.value,
+            parameters: parameters.value,
+            theme: isPhoneTheme(theme.value) ? theme.value : 'system',
+            notifications: notifications.checked,
+          };
+          void services
+            .saveSettings(next)
+            .then(() => context.announce('设置已保存'))
+            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              save.disabled = false;
+            });
+        });
+        return form;
       },
     },
     {
@@ -242,6 +352,10 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       },
     },
   ];
+}
+
+function isPhoneTheme(value: string): value is PhoneSettingsView['theme'] {
+  return value === 'system' || value === 'light' || value === 'dark';
 }
 
 function redactDiagnostic(value: string): string {

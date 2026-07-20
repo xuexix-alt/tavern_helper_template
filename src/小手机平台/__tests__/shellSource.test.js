@@ -25,6 +25,10 @@ class FakeElement {
     this.dataset = {};
     this.attributes = {};
     this.textContent = '';
+    this.listeners = new Map();
+    this.value = '';
+    this.checked = false;
+    this.disabled = false;
   }
 
   append(...children) {
@@ -33,6 +37,21 @@ class FakeElement {
 
   setAttribute(name, value) {
     this.attributes[name] = value;
+  }
+
+  addEventListener(name, listener) {
+    const listeners = this.listeners.get(name) ?? [];
+    listeners.push(listener);
+    this.listeners.set(name, listeners);
+  }
+
+  click() {
+    const event = {
+      target: this,
+      preventDefault() {},
+      stopPropagation() {},
+    };
+    for (const listener of this.listeners.get('click') ?? []) listener(event);
   }
 }
 
@@ -44,6 +63,24 @@ const fakeDocument = {
 
 function collectText(node) {
   return [node.textContent, ...node.children.flatMap(collectText)];
+}
+
+function findByClass(node, className) {
+  if (
+    String(node.className ?? '')
+      .split(/\s+/)
+      .includes(className)
+  )
+    return node;
+  for (const child of node.children) {
+    const found = findByClass(child, className);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function listen(target, event, listener) {
+  target.addEventListener(event, listener);
 }
 
 test('shell renders untrusted business values as text only', () => {
@@ -112,7 +149,7 @@ test('malicious message text remains an inert text value at runtime', async () =
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const attack = '<img src=x onerror=alert(1)><script>alert(2)</script>';
   const apps = createPhoneApps({
-    listConversations: () => [{ id: 'x', title: attack, preview: attack, unread: 0 }],
+    listConversations: () => [{ id: 'x', kind: 'private', title: attack, preview: attack, unread: 0 }],
     listContacts: () => [],
     listBroadcasts: () => [],
     listTasks: () => [],
@@ -121,7 +158,7 @@ test('malicious message text remains an inert text value at runtime', async () =
     submitActionToHost: async () => {},
   });
   const messages = apps.find(app => app.route === 'messages');
-  const rendered = await messages.render({ document: fakeDocument });
+  const rendered = await messages.render({ document: fakeDocument, listen, announce() {} });
 
   assert.equal(rendered.children.length, 1);
   assert.deepEqual(
@@ -142,4 +179,89 @@ test('route history keeps the current app across a close/open boundary', () => {
   assert.equal(history.back(), 'messages');
   assert.equal(history.back(), 'home');
   assert.equal(history.back(), 'home');
+});
+
+test('private and Eden group rows open while failed messages can retry', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const opened = [];
+  const retried = [];
+  const services = {
+    listConversations: () => [
+      { id: 'private:a', kind: 'private', title: '纪宁', preview: '你好', unread: 0, status: 'sent' },
+      { id: 'eden', kind: 'eden-group', title: '伊甸住户群', preview: '失败', unread: 1, status: 'failed' },
+    ],
+    listContacts: () => [],
+    listBroadcasts: () => [],
+    listTasks: () => [],
+    getSettings: () => ({}),
+    getDiagnostics: () => ({}),
+    openConversation: async id => opened.push(id),
+    retryFailedMessage: async id => retried.push(id),
+    saveSettings: async () => {},
+    submitActionToHost: async () => {},
+  };
+  const messages = createPhoneApps(services).find(app => app.route === 'messages');
+  const rendered = await messages.render({ document: fakeDocument, listen, announce() {} });
+  const privateButton = findByClass(rendered.children[0], 'phone-conversation');
+  const groupButton = findByClass(rendered.children[1], 'phone-conversation');
+  const retryButton = findByClass(rendered.children[1], 'phone-retry');
+
+  privateButton.click();
+  groupButton.click();
+  retryButton.click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(opened, ['private:a', 'eden']);
+  assert.deepEqual(retried, ['eden']);
+  assert.match(groupButton.attributes['aria-label'], /伊甸住户群/);
+});
+
+test('settings form saves structured public settings without a secret field', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const saved = [];
+  const services = {
+    listConversations: () => [],
+    listContacts: () => [],
+    listBroadcasts: () => [],
+    listTasks: () => [],
+    getSettings: () => ({
+      provider: 'tavern',
+      apiUrl: 'https://api.example.com',
+      model: 'model-a',
+      parameters: '{"temperature":0.7}',
+      theme: 'system',
+      notifications: true,
+    }),
+    getDiagnostics: () => ({}),
+    openConversation: async () => {},
+    retryFailedMessage: async () => {},
+    saveSettings: async next => saved.push(next),
+    submitActionToHost: async () => {},
+  };
+  const settings = createPhoneApps(services).find(app => app.route === 'settings');
+  const rendered = await settings.render({ document: fakeDocument, listen, announce() {} });
+  const form = findByClass(rendered, 'phone-settings');
+  const fields = Object.fromEntries(
+    form.children.slice(0, 6).map(label => [label.children[0].textContent, label.children[1]]),
+  );
+  fields.Provider.value = 'openai-compatible';
+  fields['API URL'].value = 'https://new.example.com/v1';
+  fields['模型'].value = 'model-b';
+  fields['生成参数'].value = '{"temperature":0.4}';
+  fields['主题'].value = 'dark';
+  fields['通知'].checked = false;
+  findByClass(form, 'phone-settings__save').click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(saved, [
+    {
+      provider: 'openai-compatible',
+      apiUrl: 'https://new.example.com/v1',
+      model: 'model-b',
+      parameters: '{"temperature":0.4}',
+      theme: 'dark',
+      notifications: false,
+    },
+  ]);
+  assert.doesNotMatch(JSON.stringify(collectText(rendered)), /api.?key|secret/i);
 });
