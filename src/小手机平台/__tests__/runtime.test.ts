@@ -94,6 +94,15 @@ async function testRuntimeBridge(): Promise<void> {
   runtime.setOwner(ownerA);
   runtime.setSession('chat-a');
 
+  runtime.setOwner({ ...ownerA });
+  assert.equal(
+    runtime.getSession()?.sessionKey,
+    makeSessionKey(ownerA, 'chat-a'),
+    '同 owner 重复绑定应保持当前 session',
+  );
+  assert.throws(() => runtime.setOwner(ownerB), /owner|owned|占用|接管/i, '非空 owner 不允许被另一 owner 接管');
+  assert.equal(runtime.getOwner()?.adapterId, ownerA.adapterId, 'owner 冲突后必须保留原 owner');
+
   const received: string[] = [];
   const detach = runtime.attachHostBridge({
     id: 'same-layer-pre',
@@ -117,6 +126,20 @@ async function testRuntimeBridge(): Promise<void> {
     () => runtime.submitActionToHost({ kind: 'unknown', text: 'x', sourceKey: 'bad', mode: 'append' } as never),
     /kind|unsupported|不支持/i,
   );
+  await assert.rejects(
+    () => runtime.submitActionToHost({ kind: 'composer.insert', text: 'x', sourceKey: '   ', mode: 'append' }),
+    /sourceKey|source key|来源/i,
+  );
+  await assert.rejects(
+    () =>
+      runtime.submitActionToHost({
+        kind: 'composer.insert',
+        text: 'x',
+        sourceKey: 'bad-mode',
+        mode: 'invalid',
+      } as never),
+    /mode|unsupported|不支持/i,
+  );
 
   runtime.setSession('chat-b');
   await assert.rejects(
@@ -124,8 +147,9 @@ async function testRuntimeBridge(): Promise<void> {
     /owner|session|会话/i,
   );
 
-  runtime.setSession('chat-a');
+  runtime.setOwner(null);
   runtime.setOwner(ownerB);
+  runtime.setSession('chat-a');
   await assert.rejects(
     () =>
       runtime.submitActionToHost({ kind: 'composer.insert', text: '串卡', sourceKey: 'stale-owner', mode: 'append' }),
@@ -133,6 +157,7 @@ async function testRuntimeBridge(): Promise<void> {
   );
 
   detach();
+  runtime.setOwner(null);
   runtime.setOwner(ownerA);
   runtime.setSession('chat-a');
   await assert.rejects(
@@ -177,10 +202,15 @@ function testTopRegistration(): void {
   assert.equal(queuedTop.__TAVERN_PHONE_PENDING_MODULES__?.length, 1, 'runtime 不存在时应进入 top pending 队列');
 
   withFakeWindow(queuedTop, () => {
-    const first = installPhoneRuntime();
-    const second = installPhoneRuntime();
+    const first = installPhoneRuntime(ownerA);
+    const second = installPhoneRuntime({ ...ownerA });
     assert.equal(first, second, 'top 只能安装一个 TavernPhone runtime');
     assert.deepEqual(queuedTop.__TAVERN_PHONE_PENDING_MODULES__, [], 'runtime 应消费 pending 队列');
+    assert.throws(() => installPhoneRuntime(ownerB), /owner|owned|占用|接管/i, 'top runtime 不允许冲突 owner 复用');
+    assert.equal(first.getOwner()?.adapterId, ownerA.adapterId, '安装复用冲突后必须保留原 owner');
+
+    first.setOwner(null);
+    assert.equal(installPhoneRuntime(ownerB), first, '显式解绑后可由新 owner 复用 runtime');
   });
 
   const inaccessibleWindow = {} as { top?: unknown };

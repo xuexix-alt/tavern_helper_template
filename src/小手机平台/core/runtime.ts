@@ -40,7 +40,15 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   }
 
   setOwner(owner: PhoneOwner | null): void {
-    if (!sameOwner(this.owner, owner)) this.invalidateHostBridge();
+    if (owner && this.owner) {
+      if (!sameOwner(this.owner, owner)) {
+        throw new Error(`TavernPhone is already owned by ${this.owner.adapterId}; conflicting owner cannot take over`);
+      }
+      return;
+    }
+    if (!owner && !this.owner) return;
+
+    this.invalidateHostBridge();
     this.owner = owner ? { ...owner } : null;
     this.session = null;
     this.state = 'WAITING';
@@ -137,6 +145,8 @@ export class PhoneRuntime implements TavernPhonePublicApi {
     if (!action || action.kind !== 'composer.insert') throw new Error('Unsupported phone host action kind');
     if (typeof action.text !== 'string' || !action.text.trim())
       throw new Error('Phone host action text cannot be empty');
+    if (typeof action.sourceKey !== 'string' || !action.sourceKey.trim())
+      throw new Error('Phone host action sourceKey cannot be empty');
     if (action.mode !== 'replace' && action.mode !== 'append') throw new Error('Unsupported phone host action mode');
 
     const attachment = this.hostBridge;
@@ -186,11 +196,15 @@ export function createPhoneRuntime(): PhoneRuntime {
   return new PhoneRuntime();
 }
 
-export function installPhoneRuntime(): TavernPhonePublicApi {
+export function installPhoneRuntime(expectedOwner?: PhoneOwner): TavernPhonePublicApi {
   const topWindow = getPhoneTopWindow();
-  if (topWindow.TavernPhone) return topWindow.TavernPhone;
+  if (topWindow.TavernPhone) {
+    if (expectedOwner) topWindow.TavernPhone.setOwner(expectedOwner);
+    return topWindow.TavernPhone;
+  }
 
   const runtime = createPhoneRuntime();
+  if (expectedOwner) runtime.setOwner(expectedOwner);
   topWindow.TavernPhone = runtime;
   const pending = topWindow.__TAVERN_PHONE_PENDING_MODULES__ ?? [];
   pending.forEach(registration => runtime.registerModule(registration));

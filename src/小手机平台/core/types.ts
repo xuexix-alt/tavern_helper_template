@@ -81,6 +81,10 @@ export interface PhoneModuleRegistration {
 
 export interface TavernPhonePublicApi {
   registerModule(registration: PhoneModuleRegistration): void;
+  setOwner(owner: PhoneOwner | null): void;
+  getOwner(): PhoneOwner | null;
+  setSession(chatId: string | null): void;
+  getSession(): PhoneSession | null;
   open(): Promise<void>;
   close(): void;
   toggle(): Promise<void>;
