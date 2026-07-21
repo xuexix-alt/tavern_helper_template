@@ -345,12 +345,12 @@ ${userMessage}
   function cleanMessageContent(content: string, expectedSender?: string): string {
     if (!content) return '';
     let cleaned = content;
-    cleaned = cleaned.replace(/^[\[【\(]?\d{1,2}:\d{2}[\]】\)]?\s*/g, '');
-    cleaned = cleaned.replace(/^[\[【]?\d{4}[-\/]\d{1,2}[-\/]\d{1,2}\s*\d{1,2}:\d{2}[\]】]?\s*/g, '');
+    cleaned = cleaned.replace(/^[\u005b【(]?\d{1,2}:\d{2}[\u005d】)]?\s*/g, '');
+    cleaned = cleaned.replace(/^[\u005b【]?\d{4}[-/]\d{1,2}[-/]\d{1,2}\s*\d{1,2}:\d{2}[\u005d】]?\s*/g, '');
     if (expectedSender) {
       cleaned = cleaned.replace(new RegExp(`^${expectedSender}\\s*[:：]\\s*`, 'i'), '');
     }
-    cleaned = cleaned.replace(/^[\[【\(][^\]】\)]*[\]】\)]\s*/g, '');
+    cleaned = cleaned.replace(/^[\u005b【(][^\u005d】)]*[\u005d】)]\s*/g, '');
     return cleaned.trim();
   }
 
@@ -367,8 +367,8 @@ ${userMessage}
       });
 
     for (const line of lines) {
-      let cleaned = line.replace(/^[\[【\(]?\d{1,2}:\d{2}[\]】\)]?\s*/g, '');
-      cleaned = cleaned.replace(/^[\[【]?\d{4}[-\/]\d{1,2}[-\/]\d{1,2}\s*\d{1,2}:\d{2}[\]】]?\s*/g, '');
+      let cleaned = line.replace(/^[\u005b【(]?\d{1,2}:\d{2}[\u005d】)]?\s*/g, '');
+      cleaned = cleaned.replace(/^[\u005b【]?\d{4}[-/]\d{1,2}[-/]\d{1,2}\s*\d{1,2}:\d{2}[\u005d】]?\s*/g, '');
       const match = cleaned.match(/^(.+?)[:：]\s*(.+)$/);
       if (match) {
         const sender = match[1].trim();
