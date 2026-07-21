@@ -54,6 +54,15 @@ test('same-layer-pre is a standalone status-bar frontend entry', () => {
   assert.match(readPre('App.vue'), /StoryPagePre/);
 });
 
+test('same-layer-pre declares UTF-8 before its inline production script', () => {
+  const source = readPre('index.html');
+  const charsetIndex = source.search(/<meta\s+charset=['"]?utf-8/i);
+  const bodyIndex = source.search(/<body\b/i);
+
+  assert.ok(charsetIndex >= 0, 'the entry document should declare UTF-8');
+  assert.ok(charsetIndex < bodyIndex, 'the UTF-8 declaration should be in the document head');
+});
+
 test('same-layer-pre exposes one minimal phone entry immediately before regenerate', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const bridgePath = path.join(PRE_ROOT, 'phoneBridge.ts');
