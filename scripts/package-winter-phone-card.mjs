@@ -7,6 +7,40 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CARD_KEYWORD = 'chara';
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
 
+export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
+  {
+    id: 'c7c40c6c-a73d-4363-83bb-077f7b3e3200',
+    name: 'zod mvu',
+    enabled: true,
+  },
+  {
+    id: '62e84891-c986-4730-a2dd-82e3676104d2',
+    name: 'zod 定义',
+    enabled: true,
+    content:
+      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
+  },
+  {
+    id: '5ea5d786-2ff5-4744-b684-4b91d0aa6b9b',
+    name: '后台数据维护',
+    enabled: true,
+    content:
+      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+  },
+  {
+    id: '689f697c-34f4-496c-a324-3d39e55db69b',
+    name: '变量结构测试',
+    enabled: false,
+  },
+  {
+    id: '76a4249a-e849-5f5b-8bd5-a6f89b6400a0',
+    name: '自动更新角色卡',
+    enabled: true,
+    content:
+      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+  },
+]);
+
 export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
   {
     id: '76a4249a-e849-5f5b-8bd5-a6f89b640001',
@@ -199,6 +233,21 @@ function buildPhoneScript(definition) {
   };
 }
 
+function buildRuntimeScript(definition, existing = {}) {
+  return {
+    info: '',
+    button: { enabled: true, buttons: [] },
+    data: {},
+    export_with: { data: true, button: true },
+    ...existing,
+    type: 'script',
+    id: definition.id,
+    name: definition.name,
+    enabled: definition.enabled,
+    ...(definition.content === undefined ? {} : { content: definition.content }),
+  };
+}
+
 function applyWorldbook(card, worldbook) {
   if (!worldbook || typeof worldbook !== 'object' || !worldbook.entries || typeof worldbook.entries !== 'object') {
     throw new Error('世界书 JSON 缺少 entries');
@@ -225,6 +274,41 @@ function applyPhoneScripts(card) {
   helper.variables ??= {};
 }
 
+function applyRuntimeScripts(card) {
+  const extensions = (card.data.extensions ??= {});
+  const helper = (extensions.tavern_helper ??= { scripts: [], variables: {} });
+  const existingScripts = Array.isArray(helper.scripts) ? helper.scripts : [];
+  const emitted = new Set();
+  const definitionsById = new Map(RUNTIME_SCRIPT_DEFINITIONS.map(definition => [definition.id, definition]));
+  const definitionsByName = new Map(RUNTIME_SCRIPT_DEFINITIONS.map(definition => [definition.name, definition]));
+
+  helper.scripts = existingScripts.flatMap(script => {
+    const definition = definitionsById.get(script?.id) ?? definitionsByName.get(script?.name);
+    if (!definition) return [script];
+    if (emitted.has(definition.id)) return [];
+    emitted.add(definition.id);
+    return [buildRuntimeScript(definition, script)];
+  });
+  for (const definition of RUNTIME_SCRIPT_DEFINITIONS) {
+    if (!emitted.has(definition.id)) helper.scripts.push(buildRuntimeScript(definition));
+  }
+  helper.variables ??= {};
+}
+
+function validateRuntimeScripts(card) {
+  const scripts = card.data.extensions?.tavern_helper?.scripts;
+  if (!Array.isArray(scripts)) throw new Error('角色卡缺少 Tavern Helper 脚本清单');
+  for (const definition of RUNTIME_SCRIPT_DEFINITIONS) {
+    const matches = scripts.filter(script => script?.id === definition.id || script?.name === definition.name);
+    if (matches.length !== 1) throw new Error(`${definition.name} 脚本必须存在且唯一`);
+    const [script] = matches;
+    if (script.enabled !== definition.enabled) throw new Error(`${definition.name} 脚本启用状态不正确`);
+    if (definition.content !== undefined && script.content !== definition.content) {
+      throw new Error(`${definition.name} 脚本 import 不正确`);
+    }
+  }
+}
+
 function validatePackagedCard(card) {
   if (card?.data?.name !== EXPECTED_CARD_NAME) {
     throw new Error(`角色卡名称必须精确为 ${EXPECTED_CARD_NAME}`);
@@ -239,6 +323,7 @@ function validatePackagedCard(card) {
   if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
     throw new Error('角色卡未包含七个唯一的小手机脚本');
   }
+  validateRuntimeScripts(card);
 }
 
 async function writeAtomically(filename, buffer) {
@@ -267,6 +352,7 @@ export async function packageWinterPhoneCard({ input, worldbook, write = false }
   if (card?.data?.name !== EXPECTED_CARD_NAME) throw new Error(`拒绝打包其他角色卡：${card?.data?.name ?? '未知'}`);
   const worldbookData = JSON.parse(await readFile(worldbook, 'utf8'));
   applyWorldbook(card, worldbookData);
+  applyRuntimeScripts(card);
   applyPhoneScripts(card);
   validatePackagedCard(card);
 
