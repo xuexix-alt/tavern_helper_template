@@ -8,6 +8,10 @@ const CARD_KEYWORDS = Object.freeze(['chara', 'ccv3']);
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
 const PHONE_CDN_ROOT =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+const LEGACY_PRE_UI_CDN_URL =
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+const PRE_UI_CDN_URL =
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 
 export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
   {
@@ -303,6 +307,16 @@ function applyRuntimeScripts(card) {
   helper.variables ??= {};
 }
 
+function applyPreUiUrl(card) {
+  const regexScripts = card.data.extensions?.regex_scripts;
+  if (!Array.isArray(regexScripts)) throw new Error('角色卡缺少正则脚本清单');
+  for (const script of regexScripts) {
+    if (typeof script?.replaceString === 'string') {
+      script.replaceString = script.replaceString.replaceAll(LEGACY_PRE_UI_CDN_URL, PRE_UI_CDN_URL);
+    }
+  }
+}
+
 function validateRuntimeScripts(card) {
   const scripts = card.data.extensions?.tavern_helper?.scripts;
   if (!Array.isArray(scripts)) throw new Error('角色卡缺少 Tavern Helper 脚本清单');
@@ -326,6 +340,17 @@ function validatePackagedCard(card) {
     throw new Error('角色卡世界书未包含带通讯网络的变量列表');
   }
   const scripts = card.data.extensions?.tavern_helper?.scripts;
+  const productionPreRegexes = card.data.extensions?.regex_scripts?.filter(
+    script =>
+      script?.replaceString?.includes('testingcf.jsdelivr.net') &&
+      script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
+  );
+  if (
+    productionPreRegexes?.length !== 2 ||
+    productionPreRegexes.some(script => !script.replaceString.includes(PRE_UI_CDN_URL))
+  ) {
+    throw new Error('角色卡的生产 pre UI 正则未使用 refs/heads/20260211 CDN 地址');
+  }
   const ids = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
   const phoneScripts = Array.isArray(scripts) ? scripts.filter(script => ids.has(script?.id)) : [];
   if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
@@ -373,6 +398,7 @@ export async function packageWinterPhoneCard({ input, worldbook, write = false }
   applyWorldbook(card, worldbookData);
   applyRuntimeScripts(card);
   applyPhoneScripts(card);
+  applyPreUiUrl(card);
   validatePackagedCard(card);
 
   const nextChunks = chunks.map(chunk => {

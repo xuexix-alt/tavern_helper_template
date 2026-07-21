@@ -35,3 +35,4 @@
 - [ ] **Step 5: 以 `TAVERN_BUILD_PREFIXES=src/寒冬末日/same-layer-pre/界面/状态栏` 运行 production build。**
 - [ ] **Step 6: 验证产物、提交并原子推送 feature 分支与 `20260211`。**
 - [ ] **Step 7: 刷新并重新请求 CDN 的 pre HTML、版本清单和 PNG，确认不再返回旧缓存。**
+- [ ] **Step 8: 若普通分支 URL 仍被 testingcf 缓存，以测试驱动方式将 PNG 的两条生产 pre UI URL 规范为 `@refs/heads/20260211`，重新打包并验证 CDN 与本地产物一致。**

@@ -24,3 +24,4 @@
 - 修复后最终状态必须为 `available`，且 attach、unread 订阅与 detach 次数均为一次。
 - owner 永久失配、运行时缺失和运行时抛错的现有降级行为继续通过。
 - 重新构建 same-layer pre production 产物，推送到 `20260211` 并刷新 CDN 缓存。
+- 若 `testingcf` 仍缓存普通 `@20260211` URL，角色卡的两条生产 pre UI 正则改用等价的分支全名 `@refs/heads/20260211`；七个小手机脚本 import 保持不变。

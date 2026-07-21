@@ -18,6 +18,8 @@ const SOURCE_PNG = path.join(ROOT, 'src', '末世寒冬 - 星穹秩序.png');
 const WORLDBOOK = path.join(ROOT, 'src', '寒冬末日.json');
 const PHONE_CDN_ROOT =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+const PRE_UI_CDN_URL =
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const tempRoot = await mkdtemp(path.join(tmpdir(), 'winter-phone-card-'));
@@ -37,6 +39,11 @@ try {
   assert.deepEqual(ccv3Card, card, 'chara 与 ccv3 必须写入同一份角色卡数据');
   assert.equal(ccv3Card.data.extensions.tavern_helper.scripts.length, 15);
   await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
+  const productionPreRegexes = card.data.extensions.regex_scripts.filter(script =>
+    script.replaceString?.includes('testingcf.jsdelivr.net') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
+  );
+  assert.equal(productionPreRegexes.length, 2);
+  assert.ok(productionPreRegexes.every(script => script.replaceString.includes(PRE_UI_CDN_URL)));
   assert.equal(card.data.name, '末世寒冬 - 星穹秩序');
   const scripts = card.data.extensions.tavern_helper.scripts;
   const findScript = name => {
