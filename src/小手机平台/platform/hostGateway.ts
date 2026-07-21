@@ -174,7 +174,13 @@ export function createTopHostGateway(options: HostGatewayOptions = {}): HostGate
 
   let host: unknown;
   try {
-    host = topWindow.SillyTavern;
+    const entrypoint = topWindow.SillyTavern;
+    host =
+      entrypoint &&
+      typeof entrypoint === 'object' &&
+      typeof (entrypoint as { readonly getContext?: unknown }).getContext === 'function'
+        ? (entrypoint as { readonly getContext: () => unknown }).getContext()
+        : entrypoint;
   } catch (error) {
     throw new Error('Unable to access SillyTavern public host interface', { cause: error });
   }

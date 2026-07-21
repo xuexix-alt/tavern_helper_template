@@ -513,6 +513,24 @@ function testHostGateway(): void {
     if (previous) Object.defineProperty(globalThis, 'window', previous);
     else Reflect.deleteProperty(globalThis, 'window');
   }
+
+  const topFake = createFakePublicHost();
+  const publicEntrypoint = {
+    top: {
+      SillyTavern: {
+        getContext: () => topFake.host,
+      },
+    },
+  };
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: publicEntrypoint });
+  try {
+    const topGateway = createTopHostGateway();
+    assert.deepEqual(topGateway.getSnapshot(), initial, '应通过 SillyTavern.getContext() 获取公开宿主上下文');
+    topGateway.dispose();
+  } finally {
+    if (previous) Object.defineProperty(globalThis, 'window', previous);
+    else Reflect.deleteProperty(globalThis, 'window');
+  }
 }
 
 function testHostGatewayFailureIsolation(): void {
