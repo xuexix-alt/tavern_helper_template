@@ -409,7 +409,10 @@ $(() => {
                             store.createError && !store.isLoadingCandidates
                               ? h(
                                   'div',
-                                  { style: 'padding:8px;margin-bottom:8px;background:#ffe0e0;border-radius:6px;font-size:11px;color:#c00;' },
+                                  {
+                                    style:
+                                      'padding:8px;margin-bottom:8px;background:#ffe0e0;border-radius:6px;font-size:11px;color:#c00;',
+                                  },
                                   store.createError,
                                 )
                               : null,

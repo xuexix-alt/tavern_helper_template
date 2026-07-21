@@ -197,7 +197,7 @@ $(() => {
           const resp = await fetch(modelsUrl, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${settings.apiConfig.apiKey}`,
+              Authorization: `Bearer ${settings.apiConfig.apiKey}`,
             },
           });
 
@@ -261,20 +261,27 @@ $(() => {
             }),
           ]),
           h('div', { style: 'margin-bottom:8px;' }, [
-            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;' }, [
-              h('span', '模型'),
-              h(
-                'button',
-                {
-                  onClick: fetchModels,
-                  disabled: state.isLoadingModels,
-                  style:
-                    'padding:2px 8px;border-radius:4px;border:none;background:#007aff;color:#fff;font-size:10px;cursor:pointer;' +
-                    (state.isLoadingModels ? 'opacity:0.5;' : ''),
-                },
-                state.isLoadingModels ? '⏳ 加载中...' : '🔄 拉取模型',
-              ),
-            ]),
+            h(
+              'div',
+              {
+                style:
+                  'font-size:11px;color:#aaa;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;',
+              },
+              [
+                h('span', '模型'),
+                h(
+                  'button',
+                  {
+                    onClick: fetchModels,
+                    disabled: state.isLoadingModels,
+                    style:
+                      'padding:2px 8px;border-radius:4px;border:none;background:#007aff;color:#fff;font-size:10px;cursor:pointer;' +
+                      (state.isLoadingModels ? 'opacity:0.5;' : ''),
+                  },
+                  state.isLoadingModels ? '⏳ 加载中...' : '🔄 拉取模型',
+                ),
+              ],
+            ),
             h('input', {
               value: settings.apiConfig.model,
               onInput: (e: any) => {
@@ -637,7 +644,9 @@ $(() => {
           return { left: parsed.left, top: parsed.top };
         }
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     // 默认：右下角，距离边缘 20px
     const vw = window.parent.innerWidth;
     const vh = window.parent.innerHeight;
@@ -669,17 +678,24 @@ $(() => {
     WebkitUserSelect: 'none',
     touchAction: 'none',
   };
-  Object.entries(entryStyles).forEach(([k, v]) => { entryEl.style.setProperty(k, v); });
+  Object.entries(entryStyles).forEach(([k, v]) => {
+    entryEl.style.setProperty(k, v);
+  });
   parentDocument.body.appendChild(entryEl);
 
   // 保存位置
   function saveEntryPosition() {
     try {
-      localStorage.setItem(ENTRY_STORAGE_KEY, JSON.stringify({
-        left: parseInt(entryEl.style.left),
-        top: parseInt(entryEl.style.top),
-      }));
-    } catch { /* ignore */ }
+      localStorage.setItem(
+        ENTRY_STORAGE_KEY,
+        JSON.stringify({
+          left: parseInt(entryEl.style.left),
+          top: parseInt(entryEl.style.top),
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
   }
 
   // 调整位置到可见范围
@@ -689,10 +705,22 @@ $(() => {
     let l = parseInt(entryEl.style.left) || entryPos.left;
     let t = parseInt(entryEl.style.top) || entryPos.top;
     let changed = false;
-    if (l > vw - BTN_SIZE / 2) { l = vw - BTN_SIZE / 2; changed = true; }
-    if (l < -BTN_SIZE / 2) { l = -BTN_SIZE / 2; changed = true; }
-    if (t > vh - BTN_SIZE) { t = vh - BTN_SIZE; changed = true; }
-    if (t < 0) { t = 0; changed = true; }
+    if (l > vw - BTN_SIZE / 2) {
+      l = vw - BTN_SIZE / 2;
+      changed = true;
+    }
+    if (l < -BTN_SIZE / 2) {
+      l = -BTN_SIZE / 2;
+      changed = true;
+    }
+    if (t > vh - BTN_SIZE) {
+      t = vh - BTN_SIZE;
+      changed = true;
+    }
+    if (t < 0) {
+      t = 0;
+      changed = true;
+    }
     if (changed) {
       entryEl.style.left = l + 'px';
       entryEl.style.top = t + 'px';
