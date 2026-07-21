@@ -48,7 +48,11 @@ $(() => {
     },
     emit(event: string, ...args: any[]) {
       listeners.get(event)?.forEach(fn => {
-        try { fn(...args); } catch (e) { console.warn(`[PhoneSystem] 事件 ${event} 错误:`, e); }
+        try {
+          fn(...args);
+        } catch (e) {
+          console.warn(`[PhoneSystem] 事件 ${event} 错误:`, e);
+        }
       });
     },
   };
@@ -68,7 +72,9 @@ $(() => {
       const ctx = (window.parent as any).SillyTavern?.getContext?.();
       if (ctx?.name2) return ctx.name2;
       if (ctx?.characterId) return ctx.characterId;
-    } catch { /* 静默 */ }
+    } catch {
+      /* 静默 */
+    }
     return 'default_chara';
   }
 
@@ -86,7 +92,9 @@ $(() => {
           apiConfig: { ...DEFAULT_SETTINGS.apiConfig, ...(parsed.apiConfig || {}) },
         };
       }
-    } catch { /* 静默 */ }
+    } catch {
+      /* 静默 */
+    }
     return { ...DEFAULT_SETTINGS, apiConfig: { ...DEFAULT_SETTINGS.apiConfig } };
   }
 
@@ -97,7 +105,11 @@ $(() => {
       ...partial,
       apiConfig: { ...current.apiConfig, ...(partial.apiConfig || {}) },
     };
-    try { localStorage.setItem(getStorageKey(), JSON.stringify(updated)); } catch { /* 静默 */ }
+    try {
+      localStorage.setItem(getStorageKey(), JSON.stringify(updated));
+    } catch {
+      /* 静默 */
+    }
     bus.emit('settings-updated', updated);
   }
 
@@ -135,7 +147,7 @@ $(() => {
 
     const resp = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
       body,
       signal: options?.signal,
     });
@@ -155,49 +167,73 @@ $(() => {
   const SettingsPanel = {
     setup() {
       const settings = reactive(getSettings());
-      const save = () => { setSettings({ apiConfig: { ...settings.apiConfig } }); };
+      const save = () => {
+        setSettings({ apiConfig: { ...settings.apiConfig } });
+      };
 
-      return () => h('div', { style: 'padding:12px;color:#fff;font-size:12px;overflow-y:auto;height:100%;' }, [
-        h('div', { style: 'font-size:14px;font-weight:600;margin-bottom:10px;' }, '⚙️ 副 API 设置'),
-        h('div', { style: 'margin-bottom:8px;' }, [
-          h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, 'API URL (OpenAI 兼容)'),
-          h('input', {
-            value: settings.apiConfig.apiUrl,
-            onInput: (e: any) => { settings.apiConfig.apiUrl = e.target.value; },
-            placeholder: 'https://api.deepseek.com',
-            style: 'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
-          }),
-        ]),
-        h('div', { style: 'margin-bottom:8px;' }, [
-          h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, 'API Key'),
-          h('input', {
-            value: settings.apiConfig.apiKey,
-            onInput: (e: any) => { settings.apiConfig.apiKey = e.target.value; },
-            type: 'password',
-            placeholder: 'sk-...',
-            style: 'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
-          }),
-        ]),
-        h('div', { style: 'margin-bottom:8px;' }, [
-          h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, '模型'),
-          h('input', {
-            value: settings.apiConfig.model,
-            onInput: (e: any) => { settings.apiConfig.model = e.target.value; },
-            placeholder: 'gpt-4o-mini',
-            style: 'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
-          }),
-        ]),
-        h('button', {
-          onClick: save,
-          style: 'padding:8px 20px;border-radius:6px;border:none;background:#07c160;color:#fff;font-size:13px;font-weight:600;cursor:pointer;width:100%;',
-        }, '💾 保存设置'),
-        h('div', { style: 'margin-top:16px;padding:10px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:#888;line-height:1.6;' }, [
-          h('div', '提示：'),
-          h('div', '• 支持任意 OpenAI 兼容 API'),
-          h('div', '• 地址无需带 /v1/chat/completions'),
-          h('div', '• Key 仅保存在浏览器本地'),
-        ]),
-      ]);
+      return () =>
+        h('div', { style: 'padding:12px;color:#fff;font-size:12px;overflow-y:auto;height:100%;' }, [
+          h('div', { style: 'font-size:14px;font-weight:600;margin-bottom:10px;' }, '⚙️ 副 API 设置'),
+          h('div', { style: 'margin-bottom:8px;' }, [
+            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, 'API URL (OpenAI 兼容)'),
+            h('input', {
+              value: settings.apiConfig.apiUrl,
+              onInput: (e: any) => {
+                settings.apiConfig.apiUrl = e.target.value;
+              },
+              placeholder: 'https://api.deepseek.com',
+              style:
+                'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
+            }),
+          ]),
+          h('div', { style: 'margin-bottom:8px;' }, [
+            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, 'API Key'),
+            h('input', {
+              value: settings.apiConfig.apiKey,
+              onInput: (e: any) => {
+                settings.apiConfig.apiKey = e.target.value;
+              },
+              type: 'password',
+              placeholder: 'sk-...',
+              style:
+                'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
+            }),
+          ]),
+          h('div', { style: 'margin-bottom:8px;' }, [
+            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, '模型'),
+            h('input', {
+              value: settings.apiConfig.model,
+              onInput: (e: any) => {
+                settings.apiConfig.model = e.target.value;
+              },
+              placeholder: 'gpt-4o-mini',
+              style:
+                'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
+            }),
+          ]),
+          h(
+            'button',
+            {
+              onClick: save,
+              style:
+                'padding:8px 20px;border-radius:6px;border:none;background:#07c160;color:#fff;font-size:13px;font-weight:600;cursor:pointer;width:100%;',
+            },
+            '💾 保存设置',
+          ),
+          h(
+            'div',
+            {
+              style:
+                'margin-top:16px;padding:10px;background:rgba(255,255,255,0.04);border-radius:6px;font-size:10px;color:#888;line-height:1.6;',
+            },
+            [
+              h('div', '提示：'),
+              h('div', '• 支持任意 OpenAI 兼容 API'),
+              h('div', '• 地址无需带 /v1/chat/completions'),
+              h('div', '• Key 仅保存在浏览器本地'),
+            ],
+          ),
+        ]);
     },
   };
 
@@ -209,12 +245,20 @@ $(() => {
 
   const controller = createPhoneAppController({
     vue,
-    scheduleMount: run => { void nextTick(run); },
-    getContainer: appId => (phoneIframe?.[0] as HTMLIFrameElement | undefined)
-      ?.contentDocument?.getElementById(`app-content-${appId}`) ?? null,
-    ensurePhoneVisible: () => { if (!phoneIframe) openPhone(); else phoneIframe.show(); },
+    scheduleMount: run => {
+      void nextTick(run);
+    },
+    getContainer: appId =>
+      (phoneIframe?.[0] as HTMLIFrameElement | undefined)?.contentDocument?.getElementById(`app-content-${appId}`) ??
+      null,
+    ensurePhoneVisible: () => {
+      if (!phoneIframe) openPhone();
+      else phoneIframe.show();
+    },
     isRegisteredApp: appId => registeredApps.some(app => app.id === appId),
-    setCurrentApp: appId => { currentApp.value = appId; },
+    setCurrentApp: appId => {
+      currentApp.value = appId;
+    },
     showPlaceholder: (container, message) => {
       container.innerHTML = '';
       container.textContent = message;
@@ -244,77 +288,129 @@ $(() => {
 
   const PhoneDesktop = {
     setup() {
-      const sorted = computed(() =>
-        [...registeredApps].sort((a, b) => a.order - b.order),
-      );
+      const sorted = computed(() => [...registeredApps].sort((a, b) => a.order - b.order));
 
       const appsForDock = computed(() => sorted.value.slice(0, 4));
 
       return () => {
         // 桌面模式
         if (!currentApp.value) {
-          return h('div', {
-            style: 'width:100%;height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-family:"Microsoft YaHei",sans-serif;border-radius:16px;overflow:hidden;',
-          }, [
-            // 状态栏
-            h('div', {
-              style: 'padding:8px 16px;display:flex;justify-content:space-between;font-size:11px;color:#aaa;flex-shrink:0;',
-            }, [
-              h('span', new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2, '0')),
-              h('span', '📶 🔋'),
-            ]),
-            // APP 桌面网格
-            h('div', {
-              style: 'flex:1;overflow-y:auto;padding:12px;padding-bottom:60px;',
-            }, [
-              h('div', {
-                style: 'display:grid;grid-template-columns:repeat(4,1fr);gap:12px;',
-              }, sorted.value.map((app: PhoneApp) =>
-                h('div', {
-                  key: app.id,
-                  onClick: () => openApp(app.id),
-                  style: 'display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px;border-radius:12px;',
-                  onMouseenter: (e: any) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; },
-                  onMouseleave: (e: any) => { e.currentTarget.style.background = 'transparent'; },
-                }, [
-                  h('div', {
-                    style: `width:48px;height:48px;border-radius:12px;background:${app.color};display:flex;align-items:center;justify-content:center;font-size:24px;`,
-                  }, app.icon),
-                  h('span', { style: 'font-size:11px;text-align:center;color:#ccc;' }, app.name),
-                ]),
-              )),
-            ]),
-            // 底部 Dock
-            h('div', {
-              style: 'position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:12px;padding:8px 0;background:rgba(0,0,0,0.2);border-top:1px solid rgba(255,255,255,0.06);',
-            }, appsForDock.value.map((app: PhoneApp) =>
-              h('div', {
-                key: 'dock_' + app.id,
-                onClick: () => openApp(app.id),
-                style: 'cursor:pointer;',
-              }, [
-                h('div', {
-                  style: `width:40px;height:40px;border-radius:10px;background:${app.color};display:flex;align-items:center;justify-content:center;font-size:20px;`,
-                }, app.icon),
-              ]),
-            )),
-          ]);
+          return h(
+            'div',
+            {
+              style:
+                'width:100%;height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-family:"Microsoft YaHei",sans-serif;border-radius:16px;overflow:hidden;',
+            },
+            [
+              // 状态栏
+              h(
+                'div',
+                {
+                  style:
+                    'padding:8px 16px;display:flex;justify-content:space-between;font-size:11px;color:#aaa;flex-shrink:0;',
+                },
+                [
+                  h('span', new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2, '0')),
+                  h('span', '📶 🔋'),
+                ],
+              ),
+              // APP 桌面网格
+              h(
+                'div',
+                {
+                  style: 'flex:1;overflow-y:auto;padding:12px;padding-bottom:60px;',
+                },
+                [
+                  h(
+                    'div',
+                    {
+                      style: 'display:grid;grid-template-columns:repeat(4,1fr);gap:12px;',
+                    },
+                    sorted.value.map((app: PhoneApp) =>
+                      h(
+                        'div',
+                        {
+                          key: app.id,
+                          onClick: () => openApp(app.id),
+                          style:
+                            'display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px;border-radius:12px;',
+                          onMouseenter: (e: any) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                          },
+                          onMouseleave: (e: any) => {
+                            e.currentTarget.style.background = 'transparent';
+                          },
+                        },
+                        [
+                          h(
+                            'div',
+                            {
+                              style: `width:48px;height:48px;border-radius:12px;background:${app.color};display:flex;align-items:center;justify-content:center;font-size:24px;`,
+                            },
+                            app.icon,
+                          ),
+                          h('span', { style: 'font-size:11px;text-align:center;color:#ccc;' }, app.name),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // 底部 Dock
+              h(
+                'div',
+                {
+                  style:
+                    'position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:12px;padding:8px 0;background:rgba(0,0,0,0.2);border-top:1px solid rgba(255,255,255,0.06);',
+                },
+                appsForDock.value.map((app: PhoneApp) =>
+                  h(
+                    'div',
+                    {
+                      key: 'dock_' + app.id,
+                      onClick: () => openApp(app.id),
+                      style: 'cursor:pointer;',
+                    },
+                    [
+                      h(
+                        'div',
+                        {
+                          style: `width:40px;height:40px;border-radius:10px;background:${app.color};display:flex;align-items:center;justify-content:center;font-size:20px;`,
+                        },
+                        app.icon,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
         }
 
         // APP 内页模式
         const app = sorted.value.find((a: PhoneApp) => a.id === currentApp.value);
-        return h('div', {
-          style: 'width:100%;height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-family:"Microsoft YaHei",sans-serif;border-radius:16px;overflow:hidden;',
-        }, [
-          h('div', {
-            style: 'padding:8px 12px;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.3);cursor:pointer;flex-shrink:0;',
-            onClick: goHome,
-          }, [
-            h('span', { style: 'font-size:16px;' }, '←'),
-            h('span', { style: 'font-size:13px;font-weight:600;' }, app?.name || '返回'),
-          ]),
-          h('div', { id: `app-content-${currentApp.value}`, style: 'flex:1;overflow:hidden;' }),
-        ]);
+        return h(
+          'div',
+          {
+            style:
+              'width:100%;height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#fff;font-family:"Microsoft YaHei",sans-serif;border-radius:16px;overflow:hidden;',
+          },
+          [
+            h(
+              'div',
+              {
+                style:
+                  'padding:8px 12px;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.3);cursor:pointer;flex-shrink:0;',
+                onClick: goHome,
+              },
+              [
+                h('span', { style: 'font-size:16px;' }, '←'),
+                h('span', { style: 'font-size:13px;font-weight:600;' }, app?.name || '返回'),
+              ],
+            ),
+            h('div', { id: `app-content-${currentApp.value}`, style: 'flex:1;overflow:hidden;' }),
+          ],
+        );
       };
     },
   };
@@ -322,7 +418,10 @@ $(() => {
   // ==================== 创建手机 iframe + 入口按钮 ====================
 
   function togglePhoneVisibility(): void {
-    if (!phoneIframe) { openPhone(); return; }
+    if (!phoneIframe) {
+      openPhone();
+      return;
+    }
     if (phoneIframe.is(':visible')) phoneIframe.hide();
     else phoneIframe.show();
   }
@@ -331,18 +430,20 @@ $(() => {
     if (phoneIframe) return;
 
     phoneIframe = createScriptIdIframe({ tailwind: true }) as JQuery<HTMLIFrameElement>;
-    phoneIframe.css({
-      position: 'fixed',
-      bottom: '90px',
-      right: '20px',
-      width: '330px',
-      height: '580px',
-      'border-radius': '20px',
-      border: '2px solid rgba(255,255,255,0.15)',
-      'z-index': '9999',
-      'box-shadow': '0 8px 32px rgba(0,0,0,0.5)',
-      background: '#1a1a2e',
-    }).appendTo('body');
+    phoneIframe
+      .css({
+        position: 'fixed',
+        bottom: '90px',
+        right: '20px',
+        width: '330px',
+        height: '580px',
+        'border-radius': '20px',
+        border: '2px solid rgba(255,255,255,0.15)',
+        'z-index': '9999',
+        'box-shadow': '0 8px 32px rgba(0,0,0,0.5)',
+        background: '#1a1a2e',
+      })
+      .appendTo('body');
 
     phoneIframe.on('load', () => {
       const doc = (phoneIframe![0] as HTMLIFrameElement).contentDocument!;
@@ -385,14 +486,16 @@ $(() => {
 
   // 拖拽（mousedown 判断，轻微移动算 drag）
   let dragMoved = false;
-  $entry.on('mousedown', function(e) {
+  $entry.on('mousedown', function (e) {
     dragMoved = false;
-    const startX = e.clientX, startY = e.clientY;
+    const startX = e.clientX,
+      startY = e.clientY;
     const origLeft = parseInt($entry.css('left') || '0');
     const origTop = parseInt($entry.css('top') || '0');
 
     function onMove(ev: JQuery.MouseMoveEvent) {
-      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      const dx = ev.clientX - startX,
+        dy = ev.clientY - startY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
       $entry.css({ left: origLeft + dx + 'px', top: origTop + dy + 'px', bottom: 'auto', right: 'auto' });
     }
@@ -402,7 +505,9 @@ $(() => {
     $(document).on('mousemove', onMove).on('mouseup', onUp);
   });
 
-  $entry.on('click', () => { if (!dragMoved) togglePhoneVisibility(); });
+  $entry.on('click', () => {
+    if (!dragMoved) togglePhoneVisibility();
+  });
 
   // ==================== 卸载清理 ====================
 
@@ -412,7 +517,11 @@ $(() => {
     destroyed = true;
     controller.destroy();
     if (phoneApp) {
-      try { phoneApp.unmount(); } catch (error) { console.warn(error); }
+      try {
+        phoneApp.unmount();
+      } catch (error) {
+        console.warn(error);
+      }
       phoneApp = null;
     }
     phoneIframe?.remove();
