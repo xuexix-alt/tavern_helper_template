@@ -167,8 +167,6 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       }
 
       async function openConversation(conv: ConversationLike): Promise<void> {
-        messageOperation.invalidate();
-        store.isGenerating = false;
         store.activeConvId = conv.id;
         store.activeConv = conv;
         replaceItems(store.messages, []);
@@ -177,8 +175,6 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       }
 
       function goBack(): void {
-        messageOperation.invalidate();
-        store.isGenerating = false;
         store.activeConvId = null;
         store.activeConv = null;
         replaceItems(store.messages, []);
@@ -345,19 +341,24 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             });
           }
         } finally {
-          const ownsCurrentUi = messageOperation.isCurrent(operationToken)
+          const ownsActiveConversation = messageOperation.isCurrent(operationToken)
             && isListContextCurrent(token) && store.activeConvId === conv.id;
-          if (messageOperation.finish(operationToken) && ownsCurrentUi) {
+          if (messageOperation.finish(operationToken)) {
             store.isGenerating = false;
-            scrollChatBottom();
+            if (ownsActiveConversation) scrollChatBottom();
           }
         }
       }
 
       vue.onMounted(() => { void loadConversations(); });
       vue.onBeforeUnmount(() => {
-        disposed = true;
+        try {
+          (window.parent as any).ChatCore?.abort?.();
+        } catch (error) {
+          console.warn('[聊天APP] 中止生成失败:', error);
+        }
         messageOperation.invalidate();
+        disposed = true;
         store.componentGeneration += 1;
         store.modalGeneration += 1;
         if (scrollTimer !== null) clearTimeout(scrollTimer);

@@ -70,17 +70,16 @@ test('list and modal states distinguish loading error empty and reset paths', ()
   assert.doesNotMatch(submitBody, /会话已创建或打开/);
 });
 
-test('message operations are invalidated on navigation and stale completions cannot clear later busy state', () => {
+test('message busy spans same-renderer navigation while unmount aborts and invalidates the operation', () => {
   const goBackBody = extractFunctionBody('goBack');
   const openConversationBody = extractFunctionBody('openConversation');
   const sendBody = extractFunctionBody('sendMessage');
-  assert.match(goBackBody, /messageOperation\.invalidate\(\)/);
-  assert.match(goBackBody, /isGenerating\s*=\s*false/);
-  assert.match(openConversationBody, /messageOperation\.invalidate\(\)/);
-  assert.match(openConversationBody, /isGenerating\s*=\s*false/);
+  assert.doesNotMatch(goBackBody, /messageOperation\.invalidate\(\)|isGenerating\s*=\s*false/);
+  assert.doesNotMatch(openConversationBody, /messageOperation\.invalidate\(\)|isGenerating\s*=\s*false/);
   assert.match(sendBody, /const operationToken = messageOperation\.start\(\)/);
   assert.match(sendBody, /messageOperation\.isCurrent\(operationToken\)/);
-  assert.match(sendBody, /messageOperation\.finish\(operationToken\)/);
+  assert.match(sendBody, /if \(messageOperation\.finish\(operationToken\)\)\s*\{\s*store\.isGenerating = false/);
+  assert.match(source, /onBeforeUnmount\(\(\) => \{[\s\S]*ChatCore\?\.abort\?\.\(\)[\s\S]*messageOperation\.invalidate\(\)/);
 });
 
 test('existing message send generation and sync chain remains intact', () => {

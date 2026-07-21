@@ -4,13 +4,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createLatestMessageOperationGuard } = require('../聊天APP/chatMessageOperation.ts');
 
-test('navigation invalidates the active message operation and releases it exactly once', () => {
+test('same-renderer navigation leaves the active message operation able to release global busy', () => {
   const guard = createLatestMessageOperationGuard();
   const first = guard.start();
   assert.equal(guard.isCurrent(first), true);
-  guard.invalidate();
+  // Navigating between conversations does not touch the operation guard.
+  assert.equal(guard.finish(first), true);
   assert.equal(guard.isCurrent(first), false);
-  assert.equal(guard.finish(first), false);
 });
 
 test('a stale completion cannot finish or disturb a later message operation', () => {
