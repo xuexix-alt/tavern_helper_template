@@ -37,12 +37,31 @@ export function createPhoneAppController(deps: PhoneAppControllerDeps): PhoneApp
   let mountGeneration = 0;
   let destroyed = false;
 
+  function runCleanup(): void {
+    const cleanup = activeCleanup;
+    activeCleanup = null;
+    activeRenderer = null;
+
+    if (!cleanup) return;
+
+    try {
+      cleanup();
+    } catch (error) {
+      deps.logError(error);
+    }
+  }
+
+  function invalidateMount(): number {
+    mountGeneration += 1;
+    return mountGeneration;
+  }
+
   function scheduleCurrentMount(): void {
     if (destroyed || currentAppId === null) return;
 
     const appId = currentAppId;
     const renderer = renderers.get(appId);
-    const generation = ++mountGeneration;
+    const generation = invalidateMount();
 
     deps.scheduleMount(() => {
       if (destroyed || generation !== mountGeneration || currentAppId !== appId) return;
@@ -55,21 +74,51 @@ export function createPhoneAppController(deps: PhoneAppControllerDeps): PhoneApp
         return;
       }
 
-      const cleanup = renderer({ container, vue: deps.vue });
-      activeRenderer = renderer;
-      activeCleanup = cleanup ?? null;
+      try {
+        const cleanup = renderer({ container, vue: deps.vue });
+        if (
+          destroyed ||
+          generation !== mountGeneration ||
+          currentAppId !== appId ||
+          renderers.get(appId) !== renderer
+        ) {
+          if (cleanup) {
+            try {
+              cleanup();
+            } catch (error) {
+              deps.logError(error);
+            }
+          }
+          return;
+        }
+
+        activeRenderer = renderer;
+        activeCleanup = cleanup ?? null;
+      } catch (error) {
+        container.innerHTML = '';
+        deps.showError(container, error);
+      }
     });
+  }
+
+  function replaceVisibleRenderer(appId: string): void {
+    if (destroyed || currentAppId !== appId) return;
+
+    invalidateMount();
+    runCleanup();
+    scheduleCurrentMount();
   }
 
   return {
     registerRenderer(appId, renderer) {
       if (destroyed) return;
       renderers.set(appId, renderer);
-      if (currentAppId === appId) scheduleCurrentMount();
+      replaceVisibleRenderer(appId);
     },
 
     unregisterRenderer(appId) {
-      renderers.delete(appId);
+      const deleted = renderers.delete(appId);
+      if (deleted) replaceVisibleRenderer(appId);
     },
 
     openApp(appId) {
@@ -79,34 +128,34 @@ export function createPhoneAppController(deps: PhoneAppControllerDeps): PhoneApp
       const renderer = renderers.get(appId);
       if (currentAppId === appId && renderer !== undefined && activeRenderer === renderer) return true;
 
+      invalidateMount();
+      runCleanup();
       currentAppId = appId;
-      activeRenderer = null;
-      activeCleanup = null;
       deps.setCurrentApp(appId);
       scheduleCurrentMount();
       return true;
     },
 
     goHome() {
+      if (destroyed || currentAppId === null) return;
+
+      invalidateMount();
+      runCleanup();
       currentAppId = null;
-      activeRenderer = null;
-      activeCleanup = null;
-      mountGeneration += 1;
       deps.setCurrentApp(null);
     },
 
     refreshCurrent() {
-      if (currentAppId !== null) scheduleCurrentMount();
+      if (!destroyed && currentAppId !== null) scheduleCurrentMount();
     },
 
     destroy() {
       if (destroyed) return;
       destroyed = true;
-      mountGeneration += 1;
-      currentAppId = null;
-      activeRenderer = null;
-      activeCleanup = null;
+      invalidateMount();
+      runCleanup();
       renderers.clear();
+      currentAppId = null;
       deps.setCurrentApp(null);
     },
 
