@@ -167,8 +167,69 @@ $(() => {
   const SettingsPanel = {
     setup() {
       const settings = reactive(getSettings());
+      const state = reactive({
+        isLoadingModels: false,
+        modelList: [] as string[],
+      });
+
       const save = () => {
+        console.log('[PhoneSystem] 保存设置:', settings.apiConfig);
         setSettings({ apiConfig: { ...settings.apiConfig } });
+        alert('✅ 设置已保存');
+      };
+
+      const fetchModels = async () => {
+        if (!settings.apiConfig.apiUrl || !settings.apiConfig.apiKey) {
+          alert('⚠️ 请先填写 API URL 和 API Key');
+          return;
+        }
+
+        state.isLoadingModels = true;
+        try {
+          const baseUrl = settings.apiConfig.apiUrl.trim();
+          let modelsUrl = baseUrl;
+
+          // 构建 /models 端点
+          if (!modelsUrl.endsWith('/')) modelsUrl += '/';
+          if (!modelsUrl.includes('/v1')) modelsUrl += 'v1/';
+          modelsUrl += 'models';
+
+          const resp = await fetch(modelsUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${settings.apiConfig.apiKey}`,
+            },
+          });
+
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${await resp.text().catch(() => '')}`);
+          }
+
+          const data = await resp.json();
+          if (data.data && Array.isArray(data.data)) {
+            state.modelList = data.data
+              .map((m: any) => {
+                const modelId = m.id || m.name || String(m);
+                return typeof modelId === 'string' ? modelId.trim() : String(modelId).trim();
+              })
+              .filter(Boolean);
+            if (state.modelList.length === 0) {
+              alert('⚠️ 未找到可用模型');
+            }
+          } else {
+            throw new Error('API 返回格式异常');
+          }
+        } catch (e: any) {
+          alert('❌ 拉取模型失败：' + (e.message || '未知错误'));
+          state.modelList = [];
+        } finally {
+          state.isLoadingModels = false;
+        }
+      };
+
+      const selectModel = (modelId: string) => {
+        settings.apiConfig.model = modelId.trim();
+        state.modelList = [];
       };
 
       return () =>
@@ -200,7 +261,20 @@ $(() => {
             }),
           ]),
           h('div', { style: 'margin-bottom:8px;' }, [
-            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;' }, '模型'),
+            h('div', { style: 'font-size:11px;color:#aaa;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;' }, [
+              h('span', '模型'),
+              h(
+                'button',
+                {
+                  onClick: fetchModels,
+                  disabled: state.isLoadingModels,
+                  style:
+                    'padding:2px 8px;border-radius:4px;border:none;background:#007aff;color:#fff;font-size:10px;cursor:pointer;' +
+                    (state.isLoadingModels ? 'opacity:0.5;' : ''),
+                },
+                state.isLoadingModels ? '⏳ 加载中...' : '🔄 拉取模型',
+              ),
+            ]),
             h('input', {
               value: settings.apiConfig.model,
               onInput: (e: any) => {
@@ -210,6 +284,39 @@ $(() => {
               style:
                 'width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);background:#1a1a2e;color:#fff;font-size:11px;',
             }),
+            // 模型列表下拉
+            state.modelList.length > 0
+              ? h(
+                  'div',
+                  {
+                    style:
+                      'margin-top:4px;max-height:150px;overflow-y:auto;background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:4px;',
+                  },
+                  state.modelList.map(modelId =>
+                    h(
+                      'div',
+                      {
+                        key: modelId,
+                        onClick: () => selectModel(modelId),
+                        style:
+                          'padding:6px 8px;cursor:pointer;font-size:11px;border-bottom:1px solid rgba(255,255,255,0.05);' +
+                          (settings.apiConfig.model === modelId ? 'background:#007aff;color:#fff;' : ''),
+                        onMouseenter: (e: any) => {
+                          if (settings.apiConfig.model !== modelId) {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                          }
+                        },
+                        onMouseleave: (e: any) => {
+                          if (settings.apiConfig.model !== modelId) {
+                            e.currentTarget.style.background = 'transparent';
+                          }
+                        },
+                      },
+                      modelId,
+                    ),
+                  ),
+                )
+              : null,
           ]),
           h(
             'button',
@@ -284,26 +391,6 @@ $(() => {
 
   function goHome(): void {
     controller.goHome();
-  }
-
-  let contextGeneration = 0;
-  let currentChatId = String((window.parent as any).SillyTavern?.getContext?.()?.chatId || 'default');
-  let chatChangedHandle: { stop(): void } | null = null;
-
-  function getContextGeneration(): number {
-    return contextGeneration;
-  }
-
-  function handleChatChanged(callbackChatId?: unknown): void {
-    const chatId = String(callbackChatId || (window.parent as any).SillyTavern?.getContext?.()?.chatId || 'default');
-    if (chatId === currentChatId) return;
-    currentChatId = chatId;
-    contextGeneration += 1;
-    bus.emit('chat-context-changed', { chatId, generation: contextGeneration });
-    (window.parent as any).ChatCore?.abort?.();
-    (window.parent as any).ChatSync?.cancelPending?.();
-    goHome();
-    phoneIframe?.hide();
   }
 
   const PhoneDesktop = {
@@ -450,20 +537,63 @@ $(() => {
     if (phoneIframe) return;
 
     phoneIframe = createScriptIdIframe({ tailwind: true }) as JQuery<HTMLIFrameElement>;
-    phoneIframe
-      .css({
-        position: 'fixed',
-        bottom: '90px',
-        right: '20px',
-        width: '330px',
-        height: '580px',
-        'border-radius': '20px',
-        border: '2px solid rgba(255,255,255,0.15)',
-        'z-index': '9999',
-        'box-shadow': '0 8px 32px rgba(0,0,0,0.5)',
-        background: '#1a1a2e',
-      })
-      .appendTo('body');
+
+    // 计算初始位置和尺寸：确保完全在视口内
+    // 注意：使用 window.parent 获取主窗口的视口尺寸（因为脚本可能在 iframe 中运行）
+    const viewportWidth = $(window.parent).width() || window.parent.innerWidth || 1249;
+    const viewportHeight = $(window.parent).height() || window.parent.innerHeight || 1221;
+
+    console.log('[PhoneSystem] 视口尺寸:', { viewportWidth, viewportHeight });
+
+    // 移动端缩小尺寸以适应屏幕
+    const isMobile = viewportWidth < 768;
+    const phoneWidth = isMobile ? Math.min(330, viewportWidth - 20) : 330;
+    const phoneHeight = isMobile ? Math.min(580, viewportHeight - 100) : 580;
+
+    console.log('[PhoneSystem] 手机尺寸:', { phoneWidth, phoneHeight, isMobile });
+
+    // 计算初始位置：右下角，但确保不超出视口
+    // 如果空间够：right=20px, bottom=90px
+    // 如果空间不够：调整到能容纳的最小边距
+    const initialRight = viewportWidth > phoneWidth + 20 ? 20 : Math.max(0, viewportWidth - phoneWidth);
+    const initialBottom = viewportHeight > phoneHeight + 90 ? 90 : Math.max(0, viewportHeight - phoneHeight);
+
+    console.log('[PhoneSystem] 初始位置:', { initialRight, initialBottom });
+
+    phoneIframe.appendTo(window.parent.document.body);
+
+    // 计算 left 和 top 位置（从右下角反推）
+    const left = viewportWidth - phoneWidth - initialRight;
+    const top = viewportHeight - phoneHeight - initialBottom;
+
+    // 使用 cssText 原子设置所有样式，避免逐个设置被其他规则覆盖
+    const phoneEl = phoneIframe[0] as HTMLIFrameElement;
+    const updatePhoneStyle = (el: HTMLIFrameElement) => {
+      // Recompute based on current viewport
+      const vw = window.parent.innerWidth;
+      const vh = window.parent.innerHeight;
+      const pw = Math.min(330, vw < 768 ? vw - 20 : 330);
+      const ph = Math.min(580, vh - 100);
+      const clampedL = Math.max(0, Math.min(vw - pw, vw - pw - 20));
+      const clampedT = Math.max(0, Math.min(vh - ph, vh - ph - 90));
+
+      el.style.cssText = [
+        'position: fixed',
+        `left: ${clampedL}px`,
+        `top: ${clampedT}px`,
+        `width: ${pw}px`,
+        `height: ${ph}px`,
+        `min-width: ${pw}px`,
+        `min-height: ${ph}px`,
+        'border-radius: 20px',
+        'border: 2px solid rgba(255,255,255,0.15)',
+        'z-index: 9999',
+        'box-shadow: 0 8px 32px rgba(0,0,0,0.5)',
+        'background: #1a1a2e',
+      ].join(';');
+    };
+
+    updatePhoneStyle(phoneEl);
 
     phoneIframe.on('load', () => {
       const doc = (phoneIframe![0] as HTMLIFrameElement).contentDocument!;
@@ -473,63 +603,162 @@ $(() => {
 
       phoneApp = createApp(PhoneDesktop);
       phoneApp.mount(mountTarget);
-      void nextTick(() => controller.refreshCurrent());
+
+      // 挂载后重新确认 iframe 尺寸（防止被第三方样式覆盖）
+      void nextTick(() => {
+        updatePhoneStyle(phoneIframe![0] as HTMLIFrameElement);
+        controller.refreshCurrent();
+      });
+
       bus.emit('phone-opened');
       console.log('[PhoneSystem] 📱 手机已打开');
     });
+
+    // 窗口大小变化时保持在可见范围
+    $(window.parent).on('resize', () => {
+      if (!phoneIframe || destroyed) return;
+      updatePhoneStyle(phoneIframe[0] as HTMLIFrameElement);
+    });
   }
 
-  // 入口按钮
-  const $entry = $('<div>')
-    .attr('id', 'phone-entry-btn')
-    .css({
-      position: 'fixed',
-      bottom: '80px',
-      right: '20px',
-      width: '52px',
-      height: '52px',
-      'border-radius': '26px',
-      background: '#1a1a2e',
-      color: '#fff',
-      display: 'flex',
-      'align-items': 'center',
-      'justify-content': 'center',
-      'font-size': '26px',
-      cursor: 'pointer',
-      'z-index': '9998',
-      'box-shadow': '0 4px 16px rgba(0,0,0,0.4)',
-      border: '2px solid rgba(255,255,255,0.15)',
-      transition: 'transform 0.2s',
-    })
-    .text('📱')
-    .appendTo('body');
+  // ==================== 手机入口按钮（参考 FloatingMenuManager 模式） ====================
 
-  // 拖拽（mousedown 判断，轻微移动算 drag）
-  let dragMoved = false;
-  $entry.on('mousedown', function (e) {
-    dragMoved = false;
-    const startX = e.clientX,
-      startY = e.clientY;
-    const origLeft = parseInt($entry.css('left') || '0');
-    const origTop = parseInt($entry.css('top') || '0');
+  const parentDocument = window.parent.document;
+  const BTN_SIZE = 52;
+  const ENTRY_STORAGE_KEY = 'tavernPhone_entryPosition';
 
-    function onMove(ev: JQuery.MouseMoveEvent) {
-      const dx = ev.clientX - startX,
-        dy = ev.clientY - startY;
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
-      $entry.css({ left: origLeft + dx + 'px', top: origTop + dy + 'px', bottom: 'auto', right: 'auto' });
+  // 从 localStorage 恢复位置，或默认右下角
+  const entryPos = (() => {
+    try {
+      const raw = localStorage.getItem(ENTRY_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.left === 'number' && typeof parsed.top === 'number') {
+          return { left: parsed.left, top: parsed.top };
+        }
+      }
+    } catch { /* ignore */ }
+    // 默认：右下角，距离边缘 20px
+    const vw = window.parent.innerWidth;
+    const vh = window.parent.innerHeight;
+    return { left: vw - BTN_SIZE - 20, top: vh - BTN_SIZE - 80 };
+  })();
+
+  // 使用 parentDocument 创建元素
+  const entryEl = parentDocument.createElement('div');
+  entryEl.id = 'phone-entry-btn';
+  entryEl.textContent = '📱';
+  const entryStyles: Record<string, string> = {
+    position: 'fixed',
+    left: entryPos.left + 'px',
+    top: entryPos.top + 'px',
+    width: BTN_SIZE + 'px',
+    height: BTN_SIZE + 'px',
+    borderRadius: '26px',
+    background: '#1a1a2e',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '26px',
+    cursor: 'pointer',
+    zIndex: '9998',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    border: '2px solid rgba(255,255,255,0.15)',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    touchAction: 'none',
+  };
+  Object.entries(entryStyles).forEach(([k, v]) => { entryEl.style.setProperty(k, v); });
+  parentDocument.body.appendChild(entryEl);
+
+  // 保存位置
+  function saveEntryPosition() {
+    try {
+      localStorage.setItem(ENTRY_STORAGE_KEY, JSON.stringify({
+        left: parseInt(entryEl.style.left),
+        top: parseInt(entryEl.style.top),
+      }));
+    } catch { /* ignore */ }
+  }
+
+  // 调整位置到可见范围
+  function adjustEntryToViewport() {
+    const vw = window.parent.innerWidth;
+    const vh = window.parent.innerHeight;
+    let l = parseInt(entryEl.style.left) || entryPos.left;
+    let t = parseInt(entryEl.style.top) || entryPos.top;
+    let changed = false;
+    if (l > vw - BTN_SIZE / 2) { l = vw - BTN_SIZE / 2; changed = true; }
+    if (l < -BTN_SIZE / 2) { l = -BTN_SIZE / 2; changed = true; }
+    if (t > vh - BTN_SIZE) { t = vh - BTN_SIZE; changed = true; }
+    if (t < 0) { t = 0; changed = true; }
+    if (changed) {
+      entryEl.style.left = l + 'px';
+      entryEl.style.top = t + 'px';
+      saveEntryPosition();
     }
-    function onUp() {
-      $(document).off('mousemove', onMove).off('mouseup', onUp);
+  }
+  adjustEntryToViewport();
+
+  // 拖拽（参考 FloatingMenuManager）
+  let entryDragMoved = false;
+  let entryDragData = { startX: 0, startY: 0, initialLeft: 0, initialTop: 0 };
+  let entryRafId: number | null = null;
+
+  function entryHandleStart(e: MouseEvent | TouchEvent) {
+    const touch = (e as TouchEvent).touches?.[0] || e;
+    entryDragMoved = false;
+    entryDragData.startX = touch.clientX;
+    entryDragData.startY = touch.clientY;
+    const rect = entryEl.getBoundingClientRect();
+    entryDragData.initialLeft = rect.left;
+    entryDragData.initialTop = rect.top;
+    e.preventDefault();
+  }
+
+  function entryHandleMove(e: MouseEvent | TouchEvent) {
+    const touch = (e as TouchEvent).touches?.[0] || e;
+    const dx = touch.clientX - entryDragData.startX;
+    const dy = touch.clientY - entryDragData.startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) entryDragMoved = true;
+
+    if (entryRafId) cancelAnimationFrame(entryRafId);
+    entryRafId = requestAnimationFrame(() => {
+      const vw = window.parent.innerWidth;
+      const vh = window.parent.innerHeight;
+      const newLeft = Math.max(-BTN_SIZE / 2, Math.min(vw - BTN_SIZE / 2, entryDragData.initialLeft + dx));
+      const newTop = Math.max(0, Math.min(vh - BTN_SIZE, entryDragData.initialTop + dy));
+      entryEl.style.left = newLeft + 'px';
+      entryEl.style.top = newTop + 'px';
+      entryRafId = null;
+    });
+    e.preventDefault();
+  }
+
+  function entryHandleEnd(e: MouseEvent | TouchEvent) {
+    if (!entryDragMoved) {
+      togglePhoneVisibility();
     }
-    $(document).on('mousemove', onMove).on('mouseup', onUp);
-  });
+    saveEntryPosition();
+    entryDragMoved = false;
+    e.preventDefault();
+  }
 
-  $entry.on('click', () => {
-    if (!dragMoved) togglePhoneVisibility();
-  });
+  // 鼠标事件
+  entryEl.addEventListener('mousedown', entryHandleStart);
+  parentDocument.addEventListener('mousemove', entryHandleMove);
+  parentDocument.addEventListener('mouseup', entryHandleEnd);
 
-  chatChangedHandle = eventOn(tavern_events.CHAT_CHANGED, handleChatChanged);
+  // 触摸事件
+  entryEl.addEventListener('touchstart', entryHandleStart, { passive: false });
+  parentDocument.addEventListener('touchmove', entryHandleMove, { passive: false });
+  parentDocument.addEventListener('touchend', entryHandleEnd, { passive: false });
+
+  // 窗口大小变化时调整
+  window.parent.addEventListener('resize', () => {
+    adjustEntryToViewport();
+  });
 
   // ==================== 卸载清理 ====================
 
@@ -537,8 +766,6 @@ $(() => {
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
-    chatChangedHandle?.stop();
-    chatChangedHandle = null;
     controller.destroy();
     if (phoneApp) {
       try {
@@ -550,13 +777,40 @@ $(() => {
     }
     phoneIframe?.remove();
     phoneIframe = null;
-    $entry.remove();
-    $(document).off('.phoneDrag');
+    // 清理入口按钮和事件监听
+    if (entryEl.parentNode) entryEl.remove();
+    parentDocument.removeEventListener('mousemove', entryHandleMove);
+    parentDocument.removeEventListener('mouseup', entryHandleEnd);
+    parentDocument.removeEventListener('touchmove', entryHandleMove);
+    parentDocument.removeEventListener('touchend', entryHandleEnd);
     console.log('[PhoneSystem] 🗑️  已卸载');
   }
 
+  // ==================== 注册内置设置APP ====================
+
+  registerApp({
+    id: 'settings',
+    name: '设置',
+    icon: '⚙️',
+    color: '#8e8e93',
+    order: 99,
+  });
+
+  registerRenderer('settings', ({ container, vue }) => {
+    const app = vue.createApp(SettingsPanel);
+    app.mount(container);
+    console.log('[PhoneSystem] ⚙️ 设置已挂载');
+    return () => {
+      app.unmount();
+    };
+  });
+
   // 监听 pagehide 事件（脚本被关闭时触发），执行反注册
-  $(window).on('pagehide', destroy);
+  $(window).on('pagehide', () => {
+    destroyed = true;
+    $(window.parent).off('resize');
+    destroy();
+  });
 
   // ==================== 导出到全局 ====================
 
@@ -566,7 +820,6 @@ $(() => {
     unregisterRenderer,
     openApp,
     goHome,
-    getContextGeneration,
     registeredApps,
     getSettings,
     setSettings,

@@ -1,782 +1,704 @@
-// ==================== 聊天 APP ====================
-// PhoneSystem owns the iframe and passes the exact container and Vue runtime to this renderer.
+// ==================== 聊天APP ====================
+// 注册到 PhoneSystem 手机桌面，通过 renderer 契约渲染聊天界面
+// 使用 PhoneSystem.registerRenderer() 提供渲染函数，不再自行查找 iframe
 
-import type * as VueRuntime from 'vue';
-import { createLatestMessageOperationGuard } from './chatMessageOperation';
-import { createConversationCreationCoordinator } from './conversationCreationCoordinator';
-import { decideGroupConversation, decidePrivateConversation, type ConversationLike } from './conversationCreation';
-import { mountChatRenderer, waitForPhoneSystem } from './chatRendererLifecycle';
-import { loadStatDataRootNames, type StatDataRootNameFailure } from './statDataRootNames';
+import type { VNode } from 'vue';
 
-declare const substitudeMacros: (source: string) => string;
+$(() => {
+  let disposed = false;
 
-type Vue = typeof VueRuntime;
-type ListState = 'loading' | 'ready' | 'error';
-type CandidateState = 'idle' | 'loading' | 'ready' | 'error';
-type CreationMode = 'private' | 'group' | null;
+  // ==================== 聊天界面渲染器 ====================
 
-interface ChatStore {
-  conversations: ConversationLike[];
-  listState: ListState;
-  listError: string;
-  notice: string;
-  modalOpen: boolean;
-  creationMode: CreationMode;
-  candidateState: CandidateState;
-  candidates: string[];
-  candidateError: string;
-  selectedNames: string[];
-  groupName: string;
-  creationError: string;
-  isCreating: boolean;
-  componentGeneration: number;
-  modalGeneration: number;
-  activeConvId: string | null;
-  activeConv: ConversationLike | null;
-  messages: any[];
-  isGenerating: boolean;
-  inputText: string;
-}
+  function createChatRenderer(h: any, vueRuntime: any) {
+    return {
+      setup() {
+        const store = vueRuntime.reactive({
+          conversations: [] as any[],
+          activeConvId: null as string | null,
+          messages: [] as any[],
+          isGenerating: false,
+          inputText: '',
+          activeConv: null as any,
+          showCreateModal: false,
+          createMode: null as 'private' | 'group' | null,
+          candidateNames: [] as string[],
+          selectedNames: [] as string[],
+          groupName: '',
+          createError: '',
+          isLoadingCandidates: false,
+        });
 
-interface PhoneSystemLike {
-  registerApp(app: { id: string; name: string; icon: string; color: string; order: number }): void;
-  registerRenderer(
-    appId: string,
-    renderer: (context: { container: HTMLElement; vue: Vue }) => void | (() => void),
-  ): void;
-  unregisterRenderer(appId: string): void;
-  getContextGeneration(): number;
-}
-
-const chatMetadata = {
-  id: 'chat-app',
-  name: '微信',
-  icon: '💬',
-  color: '#07c160',
-  order: 1,
-};
-
-const candidateErrorMessage: Record<StatDataRootNameFailure, string> = {
-  'source-error': '无法读取 stat_data，请稍后重试',
-  'macro-unexpanded': 'stat_data 宏尚未展开，请确认当前消息已有变量数据',
-  'parse-error': 'stat_data 格式无法解析',
-  'not-object': 'stat_data 根节点不是角色对象',
-  empty: 'stat_data 根列表中没有可选角色',
-};
-
-const creationErrorMessage = {
-  'select-one': '私聊需要选择一名角色',
-  'select-at-least-two': '群聊至少需要选择两名角色',
-  'lookup-error': '读取现有会话失败，请重试',
-  'create-error': '创建会话失败，请重试',
-  busy: '正在创建会话，请稍候',
-  stale: '',
-} as const;
-
-function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
-  return {
-    setup() {
-      let disposed = false;
-      let scrollTimer: ReturnType<typeof setTimeout> | null = null;
-      const messageListElement = vue.ref<HTMLElement | null>(null);
-      const messageOperation = createLatestMessageOperationGuard();
-      const store = vue.reactive<ChatStore>({
-        conversations: [],
-        listState: 'loading',
-        listError: '',
-        notice: '',
-        modalOpen: false,
-        creationMode: null,
-        candidateState: 'idle',
-        candidates: [],
-        candidateError: '',
-        selectedNames: [],
-        groupName: '',
-        creationError: '',
-        isCreating: false,
-        componentGeneration: 0,
-        modalGeneration: 0,
-        activeConvId: null,
-        activeConv: null,
-        messages: [],
-        isGenerating: false,
-        inputText: '',
-      });
-
-      function captureComponentContext() {
-        return {
-          component: store.componentGeneration,
-          phone: PS.getContextGeneration(),
+        const loadConversations = async () => {
+          try {
+            const ChatDB = (window.parent as any).ChatDB;
+            if (ChatDB) {
+              const convs = await ChatDB.getConversations();
+              store.conversations.length = 0;
+              store.conversations.push(...convs);
+            }
+          } catch (e) {
+            console.warn('[聊天APP] 加载会话失败:', e);
+          }
         };
-      }
 
-      function isComponentContextCurrent(token: ReturnType<typeof captureComponentContext>): boolean {
-        return !disposed && token.component === store.componentGeneration && token.phone === PS.getContextGeneration();
-      }
-
-      function captureModalContext() {
-        return {
-          ...captureComponentContext(),
-          modal: store.modalGeneration,
+        const loadMessages = async (convId: string) => {
+          try {
+            const ChatDB = (window.parent as any).ChatDB;
+            if (ChatDB) {
+              const msgs = await ChatDB.getRecentMessages(convId, 50);
+              store.messages.length = 0;
+              store.messages.push(...msgs);
+            }
+          } catch (e) {
+            console.warn('[聊天APP] 加载消息失败:', e);
+          }
         };
-      }
 
-      function isModalContextCurrent(token: ReturnType<typeof captureModalContext>): boolean {
-        return isComponentContextCurrent(token) && token.modal === store.modalGeneration;
-      }
+        const openConversation = async (conv: any) => {
+          store.activeConvId = conv.id;
+          store.activeConv = conv;
+          await loadMessages(conv.id);
+          scrollChatBottom();
+        };
 
-      function replaceItems<T>(target: T[], items: T[]): void {
-        target.splice(0, target.length, ...items);
-      }
+        const goBack = () => {
+          store.activeConvId = null;
+          store.activeConv = null;
+          store.messages.length = 0;
+        };
 
-      async function loadConversations(): Promise<void> {
-        const context = captureComponentContext();
-        store.listState = 'loading';
-        store.listError = '';
-        try {
-          const ChatDB = (window.parent as any).ChatDB;
-          if (!ChatDB) throw new Error('ChatDB 未就绪');
-          const conversations = await ChatDB.getConversations();
-          if (!isComponentContextCurrent(context)) return;
-          replaceItems(store.conversations, conversations);
-          store.listState = 'ready';
-        } catch (error) {
-          if (!isComponentContextCurrent(context)) return;
-          store.listState = 'error';
-          store.listError = error instanceof Error ? error.message : '未知错误';
-        }
-      }
+        const scrollChatBottom = () => {
+          setTimeout(() => {
+            const el = document.getElementById('phone-chat-msgs');
+            if (el) el.scrollTop = el.scrollHeight;
+          }, 80);
+        };
 
-      function scrollChatBottom(context: ReturnType<typeof captureComponentContext>, convId: string | null): void {
-        if (scrollTimer !== null) clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(() => {
-          scrollTimer = null;
-          if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
-          const el = messageListElement.value;
-          if (el) el.scrollTop = el.scrollHeight;
-        }, 80);
-      }
+        const sendMessage = async () => {
+          const text = store.inputText.trim();
+          if (!text || store.isGenerating) return;
+          store.inputText = '';
+          store.isGenerating = true;
 
-      async function loadMessages(convId: string): Promise<void> {
-        const context = captureComponentContext();
-        try {
-          const ChatDB = (window.parent as any).ChatDB;
-          if (!ChatDB) throw new Error('ChatDB 未就绪');
-          const messages = await ChatDB.getRecentMessages(convId, 50);
-          if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
-          replaceItems(store.messages, messages);
-          scrollChatBottom(context, convId);
-        } catch (error) {
-          if (isComponentContextCurrent(context) && store.activeConvId === convId) {
-            console.warn('[聊天APP] 加载消息失败:', error);
-          }
-        }
-      }
-
-      async function openConversation(conv: ConversationLike): Promise<void> {
-        store.activeConvId = conv.id;
-        store.activeConv = conv;
-        replaceItems(store.messages, []);
-        await loadMessages(conv.id);
-      }
-
-      function goBack(): void {
-        store.activeConvId = null;
-        store.activeConv = null;
-        replaceItems(store.messages, []);
-      }
-
-      async function openCreationModal(): Promise<void> {
-        store.modalGeneration += 1;
-        const context = captureModalContext();
-        store.modalOpen = true;
-        store.creationMode = null;
-        store.candidates = [];
-        store.candidateError = '';
-        store.selectedNames = [];
-        store.groupName = '';
-        store.creationError = '';
-        store.isCreating = false;
-        store.candidateState = 'loading';
-        await vue.nextTick();
-        if (!isModalContextCurrent(context)) return;
-        await loadCreationCandidates();
-      }
-
-      async function loadCreationCandidates(): Promise<void> {
-        store.modalGeneration += 1;
-        const context = captureModalContext();
-        store.candidateState = 'loading';
-        store.candidateError = '';
-        await vue.nextTick();
-        if (!isModalContextCurrent(context) || !store.modalOpen) return;
-        const result = loadStatDataRootNames(source => substitudeMacros(source));
-        if (!isModalContextCurrent(context)) return;
-        if (result.ok) {
-          store.candidates = result.names;
-          store.selectedNames = store.selectedNames.filter(name => result.names.includes(name));
-          store.candidateState = 'ready';
-        } else {
-          store.candidates = [];
-          store.candidateState = 'error';
-          store.candidateError = candidateErrorMessage[result.reason];
-        }
-      }
-
-      function closeCreationModal(): void {
-        store.modalGeneration += 1;
-        store.modalOpen = false;
-        store.creationMode = null;
-        store.candidateState = 'idle';
-        store.candidates = [];
-        store.candidateError = '';
-        store.selectedNames = [];
-        store.groupName = '';
-        store.creationError = '';
-        store.isCreating = false;
-      }
-
-      const coordinator = createConversationCreationCoordinator({
-        getConversations: () => (window.parent as any).ChatDB.getConversations(),
-        createConversation: payload => (window.parent as any).ChatDB.createConversation(payload),
-        captureContext: captureModalContext,
-        isCurrent: isModalContextCurrent,
-        onCommit: conversation => {
-          const index = store.conversations.findIndex(item => item.id === conversation.id);
-          if (index === -1) store.conversations.push(conversation);
-          else store.conversations.splice(index, 1, conversation);
-          closeCreationModal();
-          void openConversation(conversation);
-        },
-        refreshConversations: loadConversations,
-        onRefreshError: () => {
-          if (!disposed) store.notice = '列表刷新失败，请稍后重试';
-        },
-      });
-
-      async function submitCreation(): Promise<void> {
-        if (store.isCreating || store.candidateState !== 'ready' || store.creationMode === null) return;
-        const submitContext = captureModalContext();
-        store.isCreating = true;
-        store.creationError = '';
-        try {
-          const result =
-            store.creationMode === 'private'
-              ? await coordinator.confirmPrivate([...store.selectedNames])
-              : await coordinator.confirmGroup([...store.selectedNames], store.groupName);
-          if (isModalContextCurrent(submitContext) && !result.ok && result.reason !== 'stale') {
-            store.creationError = creationErrorMessage[result.reason];
-          }
-        } catch (error) {
-          console.error('[聊天APP] 会话提交回调失败:', error);
-          if (isModalContextCurrent(submitContext)) {
-            closeCreationModal();
-            goBack();
-            store.notice = '会话状态需要刷新，已返回列表，请稍后重试';
-            void loadConversations();
-          }
-        } finally {
-          if (isModalContextCurrent(submitContext)) store.isCreating = coordinator.isBusy();
-        }
-      }
-
-      function chooseMode(mode: Exclude<CreationMode, null>): void {
-        if (store.isCreating) return;
-        store.creationMode = mode;
-        store.selectedNames = [];
-        store.groupName = '';
-        store.creationError = '';
-      }
-
-      function toggleCandidate(name: string): void {
-        if (store.isCreating || store.creationMode === null) return;
-        if (store.creationMode === 'private') {
-          store.selectedNames = [name];
-          return;
-        }
-        store.selectedNames = store.selectedNames.includes(name)
-          ? store.selectedNames.filter(item => item !== name)
-          : [...store.selectedNames, name];
-      }
-
-      function canSubmitCreation(): boolean {
-        if (store.candidateState !== 'ready' || store.isCreating || store.creationMode === null) return false;
-        return store.creationMode === 'private'
-          ? decidePrivateConversation(store.selectedNames, store.conversations).ok
-          : decideGroupConversation(store.selectedNames, store.groupName).ok;
-      }
-
-      async function sendMessage(): Promise<void> {
-        const text = store.inputText.trim();
-        if (!text || store.isGenerating) return;
-        const sendContext = captureComponentContext();
-        const conv = store.activeConv;
-        if (!conv) return;
-        const operationToken = messageOperation.start();
-        store.inputText = '';
-        store.isGenerating = true;
-
-        try {
-          const ChatCore = (window.parent as any).ChatCore;
-          const ChatDB = (window.parent as any).ChatDB;
-          if (!ChatCore || !ChatDB) return;
-
-          const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
-          if (!messageOperation.isCurrent(operationToken) || !isComponentContextCurrent(sendContext)) return;
-          if (store.activeConvId === conv.id) {
-            store.messages.push(userMsg);
-            scrollChatBottom(sendContext, conv.id);
-          }
-
-          let replies: any[];
-          if (conv.type === 'group') replies = await ChatCore.generateGroupReply(conv.id, text);
-          else replies = await ChatCore.generatePrivateReply(conv.id, text);
-          if (!messageOperation.isCurrent(operationToken) || !isComponentContextCurrent(sendContext)) return;
-          if (store.activeConvId === conv.id && replies) store.messages.push(...replies);
-
-          const ChatSync = (window.parent as any).ChatSync;
-          if (ChatSync) ChatSync.instantSync(conv.id);
-        } catch (error: any) {
-          if (
-            messageOperation.isCurrent(operationToken) &&
-            isComponentContextCurrent(sendContext) &&
-            store.activeConvId === conv.id &&
-            error?.message !== 'AbortError'
-          ) {
-            store.messages.push({
-              sender: '<system>',
-              content: `❌ 发送失败: ${error?.message || '未知'}`,
-              gameTime: null,
-              syncedToLore: true,
-            });
-          }
-        } finally {
-          const ownsActiveConversation =
-            messageOperation.isCurrent(operationToken) &&
-            isComponentContextCurrent(sendContext) &&
-            store.activeConvId === conv.id;
-          if (isComponentContextCurrent(sendContext)) {
-            if (messageOperation.finish(operationToken)) {
+          try {
+            const ChatCore = (window.parent as any).ChatCore;
+            const ChatDB = (window.parent as any).ChatDB;
+            const conv = store.activeConv;
+            if (!ChatCore || !ChatDB || !conv) {
               store.isGenerating = false;
-              if (ownsActiveConversation) scrollChatBottom(sendContext, conv.id);
+              return;
+            }
+
+            const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
+            store.messages.push(userMsg);
+            scrollChatBottom();
+
+            let replies: any[];
+            if (conv.type === 'group') {
+              replies = await ChatCore.generateGroupReply(conv.id, text);
+            } else {
+              replies = await ChatCore.generatePrivateReply(conv.id, text);
+            }
+            if (replies) {
+              for (const r of replies) store.messages.push(r);
+            }
+
+            const ChatSync = (window.parent as any).ChatSync;
+            if (ChatSync) ChatSync.instantSync(conv.id);
+          } catch (e: any) {
+            if (e.message !== 'AbortError') {
+              store.messages.push({
+                sender: '<system>',
+                content: '❌ 发送失败: ' + (e.message || '未知'),
+                gameTime: null,
+                syncedToLore: true,
+              });
+            }
+          } finally {
+            store.isGenerating = false;
+            scrollChatBottom();
+          }
+        };
+
+        // ==================== 新建会话相关 ====================
+
+        const openCreateModal = async () => {
+          console.log('[聊天APP] ➕ 按钮被点击');
+          store.showCreateModal = true;
+          store.createMode = null;
+          store.selectedNames = [];
+          store.groupName = '';
+          store.createError = '';
+          console.log('[聊天APP] 开始加载候选人物...');
+          await loadCandidateNames();
+          console.log('[聊天APP] 候选加载完成，showCreateModal =', store.showCreateModal);
+        };
+
+        const closeCreateModal = () => {
+          store.showCreateModal = false;
+          store.createMode = null;
+          store.selectedNames = [];
+          store.groupName = '';
+          store.createError = '';
+          store.candidateNames = [];
+        };
+
+        const loadCandidateNames = async () => {
+          store.isLoadingCandidates = true;
+          store.createError = '';
+          try {
+            // 方法1：尝试从 Mvu 直接读取
+            let parsed: any;
+            try {
+              const Mvu = (window.parent as any).Mvu;
+              if (Mvu?.getMvuData) {
+                const mvuData = Mvu.getMvuData({ type: 'message', message_id: -1 });
+                parsed = mvuData?.stat_data;
+              }
+            } catch {
+              // Mvu 读取失败，尝试宏展开
+            }
+
+            // 方法2：如果 MVU 失败，尝试宏展开
+            if (!parsed) {
+              const macroText = '{{format_message_variable::stat_data}}';
+              const expanded = (window.parent as any).substitudeMacros?.(macroText) || '';
+              const trimmed = expanded.trim();
+
+              if (!trimmed || trimmed.includes('{{format_message_variable::stat_data}}')) {
+                store.createError = '宏未展开：stat_data 不可用';
+                store.candidateNames = [];
+                return;
+              }
+
+              // 移除可能的代码围栏
+              let cleaned = trimmed;
+              const fenceMatch = cleaned.match(/^\s*```(?:ya?ml|json)?\s*\r?\n([\s\S]*?)\r?\n```\s*$/i);
+              if (fenceMatch) cleaned = fenceMatch[1];
+
+              // 解析为对象
+              try {
+                const yaml = await import('yaml');
+                parsed = yaml.parse(cleaned);
+              } catch {
+                store.createError = '解析失败：stat_data 格式错误';
+                store.candidateNames = [];
+                return;
+              }
+            }
+
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+              store.createError = 'stat_data 不是对象';
+              store.candidateNames = [];
+              return;
+            }
+
+            // 过滤候选：只保留有 "姓名" 字段的对象（排除 世界、庇护所 等系统键）
+            const names = Object.keys(parsed)
+              .filter(key => {
+                const value = parsed[key];
+                // 必须是对象且有 "姓名" 字段
+                return value && typeof value === 'object' && !Array.isArray(value) && value.姓名;
+              })
+              .map(k => String(k).trim())
+              .filter(Boolean);
+
+            // 去重
+            const unique = Array.from(new Set(names));
+
+            if (unique.length === 0) {
+              store.createError = '未找到可用角色（需要有"姓名"字段）';
+              store.candidateNames = [];
+              return;
+            }
+
+            store.candidateNames = unique;
+          } catch (e: any) {
+            store.createError = '数据源错误: ' + (e.message || '未知');
+            store.candidateNames = [];
+          } finally {
+            store.isLoadingCandidates = false;
+          }
+        };
+
+        const toggleNameSelection = (name: string) => {
+          const idx = store.selectedNames.indexOf(name);
+          if (idx === -1) {
+            if (store.createMode === 'private') {
+              store.selectedNames = [name];
+            } else {
+              store.selectedNames.push(name);
+            }
+          } else {
+            store.selectedNames.splice(idx, 1);
+          }
+        };
+
+        const confirmCreate = async () => {
+          store.createError = '';
+          const ChatDB = (window.parent as any).ChatDB;
+          if (!ChatDB) {
+            store.createError = 'ChatDB 未就绪';
+            return;
+          }
+
+          if (store.createMode === 'private') {
+            if (store.selectedNames.length !== 1) {
+              store.createError = '请选择一个角色';
+              return;
+            }
+
+            const name = store.selectedNames[0];
+            try {
+              // 查重
+              const existing = await ChatDB.getConversations();
+              const found = existing.find((c: any) => c.type === 'private' && c.members[0] === name);
+              if (found) {
+                closeCreateModal();
+                await openConversation(found);
+                return;
+              }
+
+              // 创建新会话
+              const conv = await ChatDB.createConversation({ type: 'private', members: [name], name });
+              await loadConversations();
+              closeCreateModal();
+              await openConversation(conv);
+            } catch (e: any) {
+              store.createError = '创建失败: ' + (e.message || '未知');
+            }
+          } else if (store.createMode === 'group') {
+            if (store.selectedNames.length < 2) {
+              store.createError = '群聊至少需要两名成员';
+              return;
+            }
+
+            let finalName = store.groupName.trim();
+            if (!finalName) {
+              finalName = store.selectedNames.join('、');
+            }
+
+            try {
+              const conv = await ChatDB.createConversation({
+                type: 'group',
+                members: store.selectedNames,
+                name: finalName,
+              });
+              await loadConversations();
+              closeCreateModal();
+              await openConversation(conv);
+            } catch (e: any) {
+              store.createError = '创建失败: ' + (e.message || '未知');
             }
           }
-        }
-      }
+        };
 
-      vue.onMounted(() => {
-        void loadConversations();
-      });
-      vue.onBeforeUnmount(() => {
-        try {
-          (window.parent as any).ChatCore?.abort?.();
-        } catch (error) {
-          console.warn('[聊天APP] 中止生成失败:', error);
-        }
-        messageOperation.invalidate();
-        disposed = true;
-        store.componentGeneration += 1;
-        store.modalGeneration += 1;
-        if (scrollTimer !== null) clearTimeout(scrollTimer);
-        scrollTimer = null;
-      });
+        vueRuntime.onMounted(() => {
+          loadConversations();
+        });
 
-      const h = vue.h;
-      const renderConversationRows = () =>
-        store.conversations.map(conv =>
-          h(
-            'button',
-            {
-              key: conv.id,
-              type: 'button',
-              onClick: () => {
-                void openConversation(conv);
-              },
-              style:
-                'width:100%;display:flex;align-items:center;gap:10px;padding:12px;margin:4px 0;background:#fff;border:0;border-radius:8px;cursor:pointer;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.05);',
-            },
-            [
-              h(
-                'span',
+        return () => {
+          // 新建会话弹窗
+          console.log('[聊天APP] render 被调用，showCreateModal =', store.showCreateModal);
+          const modalVNode = store.showCreateModal
+            ? h(
+                'div',
                 {
                   style:
-                    'width:42px;height:42px;border-radius:50%;background:#07c160;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;',
-                },
-                conv.type === 'group' ? '👥' : '👤',
-              ),
-              h('span', { style: 'flex:1;min-width:0;' }, [
-                h(
-                  'span',
-                  {
-                    style:
-                      'display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+                    'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;',
+                  onClick: (e: any) => {
+                    if (e.target === e.currentTarget) closeCreateModal();
                   },
-                  conv.name || conv.members[0],
-                ),
-                h(
-                  'span',
-                  { style: 'display:block;font-size:11px;color:#999;margin-top:3px;' },
-                  conv.type === 'group' ? `${conv.members.length}人` : '私聊',
-                ),
-              ]),
-            ],
-          ),
-        );
-
-      const renderCreationModal = () => {
-        if (!store.modalOpen) return null;
-        const candidateContent =
-          store.candidateState === 'loading'
-            ? h('p', { style: 'color:#888;text-align:center;' }, '正在读取角色…')
-            : store.candidateState === 'error'
-              ? h('div', { style: 'color:#c33;font-size:12px;text-align:center;' }, [
-                  h('p', store.candidateError),
+                },
+                [
                   h(
-                    'button',
+                    'div',
                     {
-                      type: 'button',
-                      disabled: store.isCreating,
-                      onClick: () => {
-                        void loadCreationCandidates();
-                      },
+                      style:
+                        'background:#fff;border-radius:12px;width:90%;max-width:280px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,0.3);',
+                      onClick: (e: any) => e.stopPropagation(),
                     },
-                    '重新读取',
+                    [
+                      h('div', { style: 'font-size:15px;font-weight:600;margin-bottom:12px;text-align:center;' }, [
+                        store.createMode ? (store.createMode === 'private' ? '新建私聊' : '新建群聊') : '选择类型',
+                      ]),
+
+                      // 选择类型
+                      !store.createMode
+                        ? h('div', { style: 'display:flex;flex-direction:column;gap:10px;' }, [
+                            h(
+                              'button',
+                              {
+                                onClick: () => {
+                                  store.createMode = 'private';
+                                },
+                                style:
+                                  'padding:12px;border-radius:8px;border:none;background:#07c160;color:#fff;font-size:14px;font-weight:600;cursor:pointer;',
+                              },
+                              '👤 私聊',
+                            ),
+                            h(
+                              'button',
+                              {
+                                onClick: () => {
+                                  store.createMode = 'group';
+                                },
+                                style:
+                                  'padding:12px;border-radius:8px;border:none;background:#07c160;color:#fff;font-size:14px;font-weight:600;cursor:pointer;',
+                              },
+                              '👥 群聊',
+                            ),
+                            h(
+                              'button',
+                              {
+                                onClick: closeCreateModal,
+                                style:
+                                  'padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;',
+                              },
+                              '取消',
+                            ),
+                          ])
+                        : null,
+
+                      // 选择姓名
+                      store.createMode
+                        ? h('div', [
+                            store.isLoadingCandidates
+                              ? h(
+                                  'div',
+                                  { style: 'text-align:center;padding:20px;color:#999;font-size:13px;' },
+                                  '加载中...',
+                                )
+                              : store.candidateNames.length === 0
+                                ? h('div', { style: 'padding:12px;color:#f56c6c;font-size:12px;text-align:center;' }, [
+                                    store.createError || '无可用角色',
+                                  ])
+                                : h('div', { style: 'max-height:200px;overflow-y:auto;margin-bottom:10px;' }, [
+                                    ...store.candidateNames.map((name: string) =>
+                                      h(
+                                        'div',
+                                        {
+                                          key: name,
+                                          onClick: () => toggleNameSelection(name),
+                                          style: `padding:10px;margin:4px 0;border-radius:6px;cursor:pointer;font-size:13px;background:${store.selectedNames.includes(name) ? '#d4edda' : '#f5f5f5'};border:1px solid ${store.selectedNames.includes(name) ? '#28a745' : '#ddd'};`,
+                                        },
+                                        [
+                                          store.selectedNames.includes(name) ? '✓ ' : '',
+                                          name,
+                                          store.createMode === 'private' && store.selectedNames.includes(name)
+                                            ? ' (已选)'
+                                            : '',
+                                        ],
+                                      ),
+                                    ),
+                                  ]),
+
+                            // 群聊群名输入
+                            store.createMode === 'group'
+                              ? h('input', {
+                                  value: store.groupName,
+                                  onInput: (e: any) => {
+                                    store.groupName = e.target.value;
+                                  },
+                                  placeholder: '群名（可选，默认为成员名）',
+                                  style:
+                                    'width:100%;padding:8px;border-radius:6px;border:1px solid #ddd;font-size:12px;margin-bottom:10px;box-sizing:border-box;',
+                                })
+                              : null,
+
+                            store.createError && !store.isLoadingCandidates
+                              ? h(
+                                  'div',
+                                  { style: 'padding:8px;margin-bottom:8px;background:#ffe0e0;border-radius:6px;font-size:11px;color:#c00;' },
+                                  store.createError,
+                                )
+                              : null,
+
+                            h('div', { style: 'display:flex;gap:8px;' }, [
+                              h(
+                                'button',
+                                {
+                                  onClick: confirmCreate,
+                                  disabled:
+                                    store.isLoadingCandidates ||
+                                    store.selectedNames.length === 0 ||
+                                    (store.createMode === 'group' && store.selectedNames.length < 2),
+                                  style: `flex:1;padding:10px;border-radius:8px;border:none;background:#07c160;color:#fff;font-size:13px;font-weight:600;cursor:pointer;opacity:${store.isLoadingCandidates || store.selectedNames.length === 0 || (store.createMode === 'group' && store.selectedNames.length < 2) ? 0.5 : 1};`,
+                                },
+                                '确定',
+                              ),
+                              h(
+                                'button',
+                                {
+                                  onClick: closeCreateModal,
+                                  style:
+                                    'flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;',
+                                },
+                                '取消',
+                              ),
+                            ]),
+                          ])
+                        : null,
+                    ],
                   ),
-                ])
-              : h(
-                  'div',
-                  { style: 'display:flex;flex-wrap:wrap;gap:7px;' },
-                  store.candidates.map(name => {
-                    const selected = store.selectedNames.includes(name);
-                    return h(
-                      'button',
-                      {
-                        key: name,
-                        type: 'button',
-                        disabled: store.creationMode === null || store.isCreating,
-                        onClick: () => toggleCandidate(name),
-                        style: `padding:7px 10px;border-radius:14px;border:1px solid ${selected ? '#07c160' : '#ccc'};background:${selected ? '#e7f8ee' : '#fff'};color:#333;`,
-                      },
-                      `${selected ? '✓ ' : ''}${name}`,
-                    );
-                  }),
-                );
-        return h(
-          'div',
-          {
-            style: 'position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;z-index:20;',
-            onClick: (event: MouseEvent) => {
-              if (event.target === event.currentTarget && !store.isCreating) closeCreationModal();
-            },
-          },
-          [
-            h(
+                ],
+              )
+            : null;
+
+          // 会话列表视图
+          if (!store.activeConvId) {
+            return h(
               'div',
               {
                 style:
-                  'width:100%;max-height:86%;overflow:auto;background:#fff;border-radius:16px 16px 0 0;padding:16px;box-sizing:border-box;',
+                  'width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;position:relative;',
               },
               [
                 h(
                   'div',
-                  { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;' },
+                  {
+                    style:
+                      'padding:10px 14px;font-size:14px;font-weight:600;color:#333;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd;flex-shrink:0;',
+                  },
                   [
-                    h('strong', '新建聊天'),
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        disabled: store.isCreating,
-                        onClick: closeCreationModal,
-                        style: 'border:0;background:transparent;font-size:20px;',
-                      },
-                      '×',
-                    ),
+                    h('span', '💬 聊天'),
+                    h('div', { style: 'display:flex;gap:12px;align-items:center;' }, [
+                      h(
+                        'span',
+                        { onClick: openCreateModal, style: 'font-size:18px;color:#07c160;cursor:pointer;' },
+                        '＋',
+                      ),
+                      h(
+                        'span',
+                        { onClick: loadConversations, style: 'font-size:12px;color:#07c160;cursor:pointer;' },
+                        '🔄',
+                      ),
+                    ]),
                   ],
                 ),
-                h('div', { style: 'display:flex;gap:8px;margin-bottom:12px;' }, [
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      disabled: store.isCreating,
-                      onClick: () => chooseMode('private'),
-                      style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'private' ? '#07c160' : '#fff'};color:${store.creationMode === 'private' ? '#fff' : '#07c160'};`,
-                    },
-                    '新建私聊',
-                  ),
-                  h(
-                    'button',
-                    {
-                      type: 'button',
-                      disabled: store.isCreating,
-                      onClick: () => chooseMode('group'),
-                      style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'group' ? '#07c160' : '#fff'};color:${store.creationMode === 'group' ? '#fff' : '#07c160'};`,
-                    },
-                    '新建群聊',
-                  ),
-                ]),
-                store.creationMode === null
-                  ? h('p', { style: 'font-size:12px;color:#888;' }, '请先选择私聊或群聊')
-                  : null,
-                candidateContent,
-                store.creationMode === 'group'
-                  ? h('input', {
-                      value: store.groupName,
-                      disabled: store.isCreating,
-                      onInput: (event: InputEvent) => {
-                        store.groupName = (event.target as HTMLInputElement).value;
-                      },
-                      placeholder: '群聊名称（可选）',
-                      style:
-                        'width:100%;box-sizing:border-box;margin-top:12px;padding:9px;border:1px solid #ddd;border-radius:8px;',
-                    })
-                  : null,
-                store.creationError ? h('p', { style: 'color:#c33;font-size:12px;' }, store.creationError) : null,
                 h(
-                  'button',
-                  {
-                    type: 'button',
-                    disabled:
-                      store.candidateState !== 'ready' ||
-                      store.isCreating ||
-                      store.creationMode === null ||
-                      !canSubmitCreation(),
-                    onClick: () => {
-                      void submitCreation();
-                    },
-                    style: `width:100%;margin-top:14px;padding:10px;border:0;border-radius:8px;background:#07c160;color:#fff;opacity:${canSubmitCreation() ? 1 : 0.45};`,
-                  },
-                  store.isCreating ? '创建中…' : '确认创建',
+                  'div',
+                  { style: 'flex:1;overflow-y:auto;padding:8px;' },
+                  store.conversations.length === 0
+                    ? [
+                        h('div', { style: 'text-align:center;padding:30px 20px;color:#999;' }, [
+                          h('div', { style: 'font-size:40px;margin-bottom:10px;' }, '💬'),
+                          h('p', { style: 'font-size:13px;margin-bottom:4px;' }, '暂无聊天记录'),
+                          h('p', { style: 'font-size:11px;margin-bottom:16px;color:#bbb;' }, '点击右上角 ＋ 新建会话'),
+                        ]),
+                      ]
+                    : store.conversations.map((conv: any) =>
+                        h(
+                          'div',
+                          {
+                            key: conv.id,
+                            onClick: () => openConversation(conv),
+                            style:
+                              'display:flex;align-items:center;gap:10px;padding:12px;margin:4px 0;background:#fff;border-radius:8px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.05);',
+                          },
+                          [
+                            h(
+                              'div',
+                              {
+                                style:
+                                  'width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#07c160,#00a650);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;',
+                              },
+                              conv.type === 'group' ? '👥' : '👤',
+                            ),
+                            h('div', { style: 'flex:1;min-width:0;' }, [
+                              h(
+                                'div',
+                                {
+                                  style:
+                                    'font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+                                },
+                                conv.name || (conv.type === 'private' ? conv.members?.[0] : '群聊'),
+                              ),
+                              h(
+                                'div',
+                                { style: 'font-size:11px;color:#999;' },
+                                conv.type === 'group' ? (conv.members?.length || 0) + '人' : '私聊',
+                              ),
+                            ]),
+                          ],
+                        ),
+                      ),
                 ),
+                modalVNode,
               ],
-            ),
-          ],
-        );
-      };
-
-      return () => {
-        if (!store.activeConvId) {
-          let listContent;
-          if (store.listState === 'loading') {
-            listContent = h('div', { style: 'text-align:center;padding:30px;color:#999;' }, '正在加载聊天记录…');
-          } else if (store.listState === 'error') {
-            listContent = h('div', { style: 'text-align:center;padding:30px;color:#999;' }, [
-              h('p', '聊天记录加载失败'),
-              h('p', { style: 'font-size:11px;' }, store.listError),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  onClick: () => {
-                    void loadConversations();
-                  },
-                },
-                '重试',
-              ),
-            ]);
-          } else if (store.listState === 'ready' && store.conversations.length === 0) {
-            listContent = h('div', { style: 'text-align:center;padding:30px 20px;color:#999;' }, [
-              h('div', { style: 'font-size:40px;margin-bottom:10px;' }, '💬'),
-              h('p', { style: 'font-size:13px;' }, '暂无聊天记录'),
-              h('p', { style: 'font-size:11px;' }, '点击右上角 ＋ 新建私聊或群聊'),
-            ]);
-          } else {
-            listContent = renderConversationRows();
+            );
           }
 
+          // 聊天视图
+          const conv = store.activeConv;
           return h(
             'div',
             {
               style:
-                'position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;',
+                'width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;',
             },
             [
               h(
                 'div',
                 {
                   style:
-                    'padding:10px 14px;font-size:14px;font-weight:600;color:#333;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd;flex-shrink:0;',
+                    'padding:8px 12px;background:#f0f0f0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd;flex-shrink:0;',
                 },
                 [
-                  h('span', '💬 聊天'),
-                  h('span', { style: 'display:flex;align-items:center;gap:12px;' }, [
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        onClick: () => {
-                          void loadConversations();
-                        },
-                        style: 'border:0;background:transparent;color:#07c160;cursor:pointer;',
-                      },
-                      '刷新',
-                    ),
-                    h(
-                      'button',
-                      {
-                        type: 'button',
-                        onClick: () => {
-                          void openCreationModal();
-                        },
-                        style: 'border:0;background:transparent;color:#07c160;font-size:22px;cursor:pointer;',
-                      },
-                      '＋',
-                    ),
-                  ]),
+                  h('span', { onClick: goBack, style: 'cursor:pointer;font-size:16px;' }, '←'),
+                  h('span', { style: 'font-weight:600;font-size:14px;' }, conv?.name || conv?.members?.[0] || '聊天'),
                 ],
               ),
-              store.notice
-                ? h('div', { style: 'padding:6px 10px;background:#fff5d6;color:#7a5a00;font-size:11px;' }, store.notice)
-                : null,
-              h('div', { style: 'flex:1;overflow-y:auto;padding:8px;' }, listContent),
-              renderCreationModal(),
+              h(
+                'div',
+                {
+                  id: 'phone-chat-msgs',
+                  style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;',
+                },
+                [
+                  ...store.messages.map((msg: any, i: number) => {
+                    const isMe = msg.sender === '<user>';
+                    const isSys = msg.sender === '<system>';
+                    return h(
+                      'div',
+                      {
+                        key: msg.id || i,
+                        style: `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};`,
+                      },
+                      [
+                        !isMe && !isSys
+                          ? h(
+                              'div',
+                              { style: 'font-size:10px;color:#888;margin-bottom:1px;padding:0 4px;' },
+                              msg.sender,
+                            )
+                          : null,
+                        h(
+                          'div',
+                          {
+                            style: `max-width:78%;padding:7px 10px;border-radius:8px;font-size:13px;line-height:1.5;word-break:break-word;background:${isMe ? '#95ec69' : isSys ? '#ffe0e0' : '#fff'};color:#000;box-shadow:0 1px 2px rgba(0,0,0,0.04);`,
+                          },
+                          msg.content,
+                        ),
+                        msg.gameTime?.时间
+                          ? h(
+                              'div',
+                              { style: 'font-size:9px;color:#bbb;margin-top:1px;padding:0 2px;' },
+                              msg.gameTime.时间,
+                            )
+                          : null,
+                      ].filter(Boolean),
+                    );
+                  }),
+                  store.isGenerating
+                    ? h(
+                        'div',
+                        { style: 'text-align:center;color:#999;font-size:12px;padding:8px;' },
+                        '⏳ 对方正在输入...',
+                      )
+                    : null,
+                ],
+              ),
+              h(
+                'div',
+                {
+                  style:
+                    'padding:6px 8px;background:#f7f7f7;display:flex;gap:6px;border-top:1px solid #ddd;flex-shrink:0;',
+                },
+                [
+                  h('input', {
+                    value: store.inputText,
+                    onInput: (e: any) => {
+                      store.inputText = e.target.value;
+                    },
+                    onKeydown: (e: any) => {
+                      if (e.key === 'Enter') sendMessage();
+                    },
+                    placeholder: '输入消息…',
+                    style:
+                      'flex:1;padding:8px 10px;border-radius:6px;border:1px solid #ddd;font-size:13px;outline:none;min-width:0;',
+                  }),
+                  h(
+                    'button',
+                    {
+                      onClick: sendMessage,
+                      disabled: store.isGenerating || !store.inputText.trim(),
+                      style: `padding:8px 14px;border-radius:6px;border:none;background:#07c160;color:#fff;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;opacity:${store.isGenerating || !store.inputText.trim() ? 0.5 : 1};`,
+                    },
+                    '发送',
+                  ),
+                ],
+              ),
             ],
           );
-        }
+        };
+      },
+    };
+  }
 
-        const conv = store.activeConv;
-        return h(
-          'div',
-          {
-            style:
-              'width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;',
-          },
-          [
-            h(
-              'div',
-              {
-                style:
-                  'padding:8px 12px;background:#f0f0f0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd;flex-shrink:0;',
-              },
-              [
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    onClick: goBack,
-                    style: 'border:0;background:transparent;cursor:pointer;font-size:16px;',
-                  },
-                  '←',
-                ),
-                h('span', { style: 'font-weight:600;font-size:14px;' }, conv?.name || conv?.members[0] || '聊天'),
-              ],
-            ),
-            h(
-              'div',
-              {
-                ref: messageListElement,
-                id: 'phone-chat-msgs',
-                style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;',
-              },
-              [
-                ...store.messages.map((msg: any, index: number) => {
-                  const isMe = msg.sender === '<user>';
-                  const isSystem = msg.sender === '<system>';
-                  return h(
-                    'div',
-                    {
-                      key: msg.id || index,
-                      style: `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};`,
-                    },
-                    [
-                      !isMe && !isSystem
-                        ? h('div', { style: 'font-size:10px;color:#888;margin-bottom:1px;padding:0 4px;' }, msg.sender)
-                        : null,
-                      h(
-                        'div',
-                        {
-                          style: `max-width:78%;padding:7px 10px;border-radius:8px;font-size:13px;line-height:1.5;word-break:break-word;background:${isMe ? '#95ec69' : isSystem ? '#ffe0e0' : '#fff'};color:#000;box-shadow:0 1px 2px rgba(0,0,0,.04);`,
-                        },
-                        msg.content,
-                      ),
-                      msg.gameTime?.时间
-                        ? h(
-                            'div',
-                            { style: 'font-size:9px;color:#bbb;margin-top:1px;padding:0 2px;' },
-                            msg.gameTime.时间,
-                          )
-                        : null,
-                    ],
-                  );
-                }),
-                store.isGenerating
-                  ? h(
-                      'div',
-                      { style: 'text-align:center;color:#999;font-size:12px;padding:8px;' },
-                      '⏳ 对方正在输入...',
-                    )
-                  : null,
-              ],
-            ),
-            h(
-              'div',
-              {
-                style:
-                  'padding:6px 8px;background:#f7f7f7;display:flex;gap:6px;border-top:1px solid #ddd;flex-shrink:0;',
-              },
-              [
-                h('input', {
-                  value: store.inputText,
-                  onInput: (event: InputEvent) => {
-                    store.inputText = (event.target as HTMLInputElement).value;
-                  },
-                  onKeydown: (event: KeyboardEvent) => {
-                    if (event.key === 'Enter') void sendMessage();
-                  },
-                  placeholder: '输入消息…',
-                  style:
-                    'flex:1;padding:8px 10px;border-radius:6px;border:1px solid #ddd;font-size:13px;outline:none;min-width:0;',
-                }),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    onClick: () => {
-                      void sendMessage();
-                    },
-                    disabled: store.isGenerating || !store.inputText.trim(),
-                    style: `padding:8px 14px;border-radius:6px;border:0;background:#07c160;color:#fff;font-size:13px;font-weight:600;opacity:${store.isGenerating || !store.inputText.trim() ? 0.5 : 1};`,
-                  },
-                  '发送',
-                ),
-              ],
-            ),
-          ],
-        );
+  // ==================== 注册到 PhoneSystem ====================
+
+  async function registerToPhoneSystem(): Promise<void> {
+    // 轮询等待 PhoneSystem 就绪
+    const PS: any = await new Promise(resolve => {
+      const check = () => {
+        if (disposed) return;
+        const ps = (window.parent as any).PhoneSystem;
+        if (ps) resolve(ps);
+        else setTimeout(check, 300);
       };
-    },
-  };
-}
+      check();
+    });
 
-let scriptDisposed = false;
-let registeredPhoneSystem: PhoneSystemLike | null = null;
-let stopWaitingForPhoneSystem: (() => void) | null = null;
+    if (disposed) return;
 
-function disposeChatAppScript(): void {
-  if (scriptDisposed) return;
-  scriptDisposed = true;
-  stopWaitingForPhoneSystem?.();
-  stopWaitingForPhoneSystem = null;
-  registeredPhoneSystem?.unregisterRenderer('chat-app');
-  registeredPhoneSystem = null;
-}
+    console.log('[聊天APP] PhoneSystem 已就绪，注册...');
 
-$(() => {
-  stopWaitingForPhoneSystem = waitForPhoneSystem({
-    read: () => (scriptDisposed ? null : ((window.parent as any).PhoneSystem as PhoneSystemLike | undefined)),
-    schedule: run => setTimeout(run, 300),
-    cancel: timer => clearTimeout(timer),
-    onReady: PS => {
-      if (scriptDisposed) return;
-      registeredPhoneSystem = PS;
-      PS.registerApp(chatMetadata);
-      PS.registerRenderer('chat-app', ({ container, vue }) =>
-        mountChatRenderer({ container, vue, component: createChatRenderer(vue, PS) }),
-      );
-      console.log('[聊天APP] 已注册到手机桌面');
-    },
+    // 注册 APP 元数据到桌面
+    PS.registerApp({
+      id: 'chat-app',
+      name: '微信',
+      icon: '💬',
+      color: '#07c160',
+      order: 1,
+    });
+
+    // 注册 renderer（通过稳定契约渲染）
+    PS.registerRenderer('chat-app', ({ container, vue }: any) => {
+      if (disposed) return;
+
+      console.log('[聊天APP] renderer 被调用，开始挂载...');
+
+      const app = vue.createApp(createChatRenderer(vue.h, vue));
+      app.mount(container);
+
+      console.log('[聊天APP] ✅ 聊天界面已挂载');
+
+      // 返回 cleanup 函数
+      return () => {
+        try {
+          app.unmount();
+          console.log('[聊天APP] 已卸载 Vue 实例');
+        } catch (e) {
+          console.warn('[聊天APP] unmount 失败:', e);
+        }
+      };
+    });
+
+    console.log('[聊天APP] ✅ 已注册 renderer 到 PhoneSystem');
+  }
+
+  registerToPhoneSystem();
+
+  // ==================== 脚本卸载清理 ====================
+  $(window).on('pagehide', () => {
+    disposed = true;
+    const PS = (window.parent as any).PhoneSystem;
+    if (PS?.unregisterRenderer) {
+      PS.unregisterRenderer('chat-app');
+      console.log('[聊天APP] 已反注册 renderer');
+    }
   });
-  $(window).on('pagehide', disposeChatAppScript);
-  console.log('[聊天APP] 已加载，等待 PhoneSystem...');
+
+  console.log('✅ [聊天APP] 已加载，等待 PhoneSystem...');
 });
