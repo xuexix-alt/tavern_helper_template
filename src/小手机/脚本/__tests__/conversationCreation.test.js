@@ -13,6 +13,12 @@ test('private decision requires one name and reuses only an exact private member
     kind: 'existing',
     conversation: privateChat,
   });
+  const malformedPrivateChat = { id: 'p2', type: 'private', members: ['甲', '乙'], name: '甲乙' };
+  assert.deepEqual(decidePrivateConversation(['甲'], [malformedPrivateChat]), {
+    ok: true,
+    kind: 'create',
+    payload: { type: 'private', members: ['甲'], name: '甲' },
+  });
   assert.deepEqual(decidePrivateConversation(['乙'], [privateChat]), {
     ok: true,
     kind: 'create',

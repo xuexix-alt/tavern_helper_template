@@ -28,7 +28,9 @@ export function decidePrivateConversation(
 ): ConversationDecision {
   const names = uniqueNames(selected);
   if (names.length !== 1) return { ok: false, reason: 'select-one' };
-  const existing = conversations.find(item => item.type === 'private' && item.members[0] === names[0]);
+  const existing = conversations.find(
+    item => item.type === 'private' && item.members.length === 1 && item.members[0] === names[0],
+  );
   if (existing) return { ok: true, kind: 'existing', conversation: existing };
   return { ok: true, kind: 'create', payload: { type: 'private', members: names, name: names[0] } };
 }
