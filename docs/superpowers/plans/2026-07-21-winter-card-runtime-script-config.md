@@ -85,6 +85,11 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
       "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   },
   {
+    id: 'd1e3e9ef-56b7-47ce-80f2-3f38b727087f',
+    name: '脚本测试',
+    enabled: false,
+  },
+  {
     id: '689f697c-34f4-496c-a324-3d39e55db69b',
     name: '变量结构测试',
     enabled: false,
@@ -111,7 +116,7 @@ Expected: PASS，包含脚本状态、唯一 ID、幂等字节和失败不覆盖
 将 `src/寒冬末日/自动更新角色卡版本.yaml` 改为：
 
 ```yaml
-版本: 1.0.1
+版本: 1.0.2
 ```
 
 Run:

@@ -71,6 +71,7 @@ try {
         "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
     },
   );
+  assert.equal(findScript('脚本测试').enabled, false);
   assert.equal(findScript('变量结构测试').enabled, false);
   assert.deepEqual(
     (({ enabled, content }) => ({ enabled, content }))(findScript('自动更新角色卡')),
@@ -81,6 +82,10 @@ try {
     },
   );
   assert.equal(new Set(RUNTIME_SCRIPT_DEFINITIONS.map(script => script.id)).size, RUNTIME_SCRIPT_DEFINITIONS.length);
+  assert.deepEqual(
+    scripts.slice(0, 6).map(script => script.name),
+    ['zod mvu', 'zod 定义', '后台数据维护', '脚本测试', '变量结构测试', '自动更新角色卡'],
+  );
 
   const beforeSecondPass = hash(await readFile(tempPng));
   await packageWinterPhoneCard({ input: tempPng, worldbook: WORLDBOOK, write: true });

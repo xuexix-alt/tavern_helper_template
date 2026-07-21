@@ -14,6 +14,7 @@
 | `zod mvu` | 开启 | 保持现有 MagVarUpdate import |
 | `zod 定义` | 开启 | `import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'` |
 | `后台数据维护` | 开启 | `import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'` |
+| `脚本测试` | 关闭 | 保留现有 localhost import，仅供本地开发 |
 | `变量结构测试` | 关闭 | 保留现有 localhost import，仅供本地开发 |
 | `自动更新角色卡` | 开启 | `import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'` |
 
@@ -25,7 +26,8 @@
 2. 对已有脚本按稳定 ID 就地更新，不创建同名重复项。
 3. 为新增的自动更新脚本使用稳定 ID；再次打包必须字节幂等。
 4. 原子更新 `src/末世寒冬 - 星穹秩序.png`，写入后重新解码验证。
-5. 将 `src/寒冬末日/自动更新角色卡版本.yaml` 从 `1.0.0` 提升到 `1.0.1`，使旧卡能检测新 PNG。
+5. 将 `src/寒冬末日/自动更新角色卡版本.yaml` 从 `1.0.0` 提升到 `1.0.2`，使旧卡能检测新 PNG。
+6. 将上述六个基础脚本按表格顺序固定在角色脚本列表顶部。
 
 ## 验证
 

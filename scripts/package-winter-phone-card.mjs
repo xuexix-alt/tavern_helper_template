@@ -28,6 +28,11 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
       "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   },
   {
+    id: 'd1e3e9ef-56b7-47ce-80f2-3f38b727087f',
+    name: '脚本测试',
+    enabled: false,
+  },
+  {
     id: '689f697c-34f4-496c-a324-3d39e55db69b',
     name: '变量结构测试',
     enabled: false,
@@ -278,20 +283,21 @@ function applyRuntimeScripts(card) {
   const extensions = (card.data.extensions ??= {});
   const helper = (extensions.tavern_helper ??= { scripts: [], variables: {} });
   const existingScripts = Array.isArray(helper.scripts) ? helper.scripts : [];
-  const emitted = new Set();
   const definitionsById = new Map(RUNTIME_SCRIPT_DEFINITIONS.map(definition => [definition.id, definition]));
   const definitionsByName = new Map(RUNTIME_SCRIPT_DEFINITIONS.map(definition => [definition.name, definition]));
-
-  helper.scripts = existingScripts.flatMap(script => {
+  const existingByDefinition = new Map();
+  const unmanagedScripts = [];
+  for (const script of existingScripts) {
     const definition = definitionsById.get(script?.id) ?? definitionsByName.get(script?.name);
-    if (!definition) return [script];
-    if (emitted.has(definition.id)) return [];
-    emitted.add(definition.id);
-    return [buildRuntimeScript(definition, script)];
-  });
-  for (const definition of RUNTIME_SCRIPT_DEFINITIONS) {
-    if (!emitted.has(definition.id)) helper.scripts.push(buildRuntimeScript(definition));
+    if (!definition) unmanagedScripts.push(script);
+    else if (!existingByDefinition.has(definition.id)) existingByDefinition.set(definition.id, script);
   }
+  helper.scripts = [
+    ...RUNTIME_SCRIPT_DEFINITIONS.map(definition =>
+      buildRuntimeScript(definition, existingByDefinition.get(definition.id)),
+    ),
+    ...unmanagedScripts,
+  ];
   helper.variables ??= {};
 }
 
