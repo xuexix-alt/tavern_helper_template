@@ -54,6 +54,25 @@ test('same-layer-pre is a standalone status-bar frontend entry', () => {
   assert.match(readPre('App.vue'), /StoryPagePre/);
 });
 
+test('same-layer-pre exposes one minimal phone entry immediately before regenerate', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const bridgePath = path.join(PRE_ROOT, 'phoneBridge.ts');
+
+  assert.equal(fs.existsSync(bridgePath), true, 'the optional TavernPhone bridge should exist');
+  const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
+
+  assert.ok(storySource.indexOf('phone-entry-button') < storySource.indexOf('btn-regenerate'));
+  assert.equal(storySource.match(/phone-entry-button/g)?.length, 1, 'Pre should expose exactly one phone entry');
+  assert.match(storySource, /\u79bb\u7ebf/);
+  assert.match(storySource, /\u4e0d\u53ef\u7528/);
+  assert.match(storySource, /\u672a\u8bfb/);
+  assert.match(bridgeSource, /attachHostBridge/);
+  assert.match(bridgeSource, /kind\s*!==\s*['"]composer\.insert['"]/);
+  assert.match(bridgeSource, /mode\s*===\s*['"]append['"]/);
+  assert.doesNotMatch(bridgeSource, /PhoneDB|PromptAssembler|ChatLoreSync/);
+  assert.doesNotMatch(storySource, /PhoneDB|PromptAssembler|ChatLoreSync|PhoneScheduler|TavernProvider/);
+});
+
 test('same-layer-pre strips old image persistence while allowing beta light image refs', () => {
   const forbiddenFiles = [
     'imageStore.ts',

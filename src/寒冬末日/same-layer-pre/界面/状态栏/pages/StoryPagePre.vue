@@ -340,8 +340,22 @@
             <div class="ui-bottom-tools">
               <div class="ui-bottom-tool-row">
                 <button
+                  ref="phoneEntryButtonRef"
                   type="button"
-                  class="ui-signal-btn"
+                  class="ui-signal-btn phone-entry-button"
+                  :disabled="phoneAvailability !== 'available'"
+                  :aria-label="phoneEntryLabel"
+                  @click="togglePhone"
+                >
+                  <span>{{ phoneEntryLabel }}</span>
+                  <span class="ui-bars">
+                    <i v-for="i in 5" :key="`phone-${i}`" :class="{ active: i <= Math.min(5, phoneUnread) }"></i>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  class="ui-signal-btn btn-regenerate"
                   :disabled="!canRegenerateLatestMessage"
                   aria-label="重新生成最新可重生楼层"
                   @click="regenerateLatestMessage"
@@ -484,6 +498,12 @@ import PreGalleryPanel from '../components/PreGalleryPanel.vue';
 import PreGalleryBetaModal from '../components/PreGalleryBetaModal.vue';
 import PreTranscriptList from '../components/PreTranscriptList.vue';
 import type { DemoTheme, PreGalleryLogItem } from '../types';
+import {
+  createPrePhoneBridge,
+  getTopTavernPhoneRuntime,
+  type PrePhoneAvailability,
+  type PrePhoneBridge,
+} from '../phoneBridge';
 import { useSameLayerPre } from '../useSameLayerPre';
 
 type ComposerExpose = {
@@ -519,6 +539,11 @@ const {
 } = useSameLayerPre();
 
 const composerRef = ref<ComposerExpose | null>(null);
+const phoneEntryButtonRef = ref<HTMLButtonElement | null>(null);
+const phoneAvailability = ref<PrePhoneAvailability>('offline');
+const phoneUnread = ref(0);
+let phoneBridge: PrePhoneBridge | null = null;
+let stopPhoneSubscription: (() => void) | null = null;
 const appleReaderRef = ref<AppleReaderExpose | null>(null);
 const appleHistoryTriggerRef = ref<HTMLButtonElement | null>(null);
 const appleReaderScrollTop = ref(0);
@@ -544,6 +569,11 @@ const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
 }));
 const isAppleTheme = computed(() => theme.value === 'apple' || theme.value.startsWith('apple-'));
+const phoneEntryLabel = computed(() => {
+  if (phoneAvailability.value === 'offline') return '手机·离线';
+  if (phoneAvailability.value === 'unavailable') return '手机·不可用';
+  return phoneUnread.value > 0 ? `手机·${phoneUnread.value}未读` : '手机';
+});
 
 const themeItems: Array<{ label: string; value: DemoTheme }> = [
   { label: '科技', value: 'tech' },
@@ -1176,6 +1206,10 @@ function openChoiceModalFromToolbar() {
   void composerRef.value?.openChoiceModal();
 }
 
+function togglePhone() {
+  void phoneBridge?.toggle();
+}
+
 async function handleReprocessVariablesFromChoiceModal() {
   refreshMvuVariableUpdateMode();
   const latestAssistant = latestAssistantItem.value;
@@ -1213,6 +1247,15 @@ watch(isAppleTheme, enabled => {
 });
 
 onMounted(() => {
+  phoneBridge = createPrePhoneBridge({
+    runtime: getTopTavernPhoneRuntime(),
+    composer: composerText,
+    launcher: () => phoneEntryButtonRef.value,
+  });
+  stopPhoneSubscription = phoneBridge.subscribe((unread, availability) => {
+    phoneUnread.value = unread;
+    phoneAvailability.value = availability;
+  });
   refreshMvuVariableUpdateMode();
   updateReaderShellHeight();
   window.addEventListener('resize', updateReaderShellHeight);
@@ -1220,6 +1263,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopPhoneSubscription?.();
+  stopPhoneSubscription = null;
+  phoneBridge?.dispose();
+  phoneBridge = null;
   window.removeEventListener('resize', updateReaderShellHeight);
   window.visualViewport?.removeEventListener('resize', updateReaderShellHeight);
 });
