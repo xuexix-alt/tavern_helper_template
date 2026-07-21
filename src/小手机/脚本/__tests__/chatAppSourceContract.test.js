@@ -57,7 +57,11 @@ test('list and modal states distinguish loading error empty and reset paths', ()
   assert.match(submitBody, /try\s*\{/);
   assert.match(submitBody, /catch\s*\(error\)/);
   assert.match(submitBody, /finally\s*\{/);
-  assert.match(submitBody, /会话已创建或打开，但界面提交失败，请返回列表刷新/);
+  assert.match(submitBody, /catch\s*\(error\)[\s\S]*closeCreationModal\(\)/);
+  assert.match(submitBody, /catch\s*\(error\)[\s\S]*goBack\(\)/);
+  assert.match(submitBody, /catch\s*\(error\)[\s\S]*void loadConversations\(\)/);
+  assert.match(submitBody, /会话状态需要刷新，已返回列表，请稍后重试/);
+  assert.doesNotMatch(submitBody, /会话已创建或打开/);
 });
 
 test('existing message send generation and sync chain remains intact', () => {

@@ -245,8 +245,10 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         } catch (error) {
           console.error('[聊天APP] 会话提交回调失败:', error);
           if (!disposed) {
-            store.notice = '会话已创建或打开，但界面提交失败，请返回列表刷新';
-            store.creationError = '会话已创建或打开，但界面提交失败，请返回列表刷新';
+            closeCreationModal();
+            goBack();
+            store.notice = '会话状态需要刷新，已返回列表，请稍后重试';
+            void loadConversations();
           }
         } finally {
           if (isContextCurrent(submitContext)) store.isCreating = coordinator.isBusy();
