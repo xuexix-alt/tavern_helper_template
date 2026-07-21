@@ -2,6 +2,8 @@
 // 租客聊天系统 — 提示词构建 + 3层破限 + 副API调用
 // 导出到 window.parent.ChatCore
 
+import { createChatGenerationController } from './chatGenerationController';
+
 $(() => {
   // ==================== 3 层破限结构 ====================
 
@@ -449,16 +451,14 @@ ${userMessage}
 
   // ==================== 回复生成 ====================
 
-  let isGenerating = false;
-  let abortController: AbortController | null = null;
+  const generationController = createChatGenerationController();
 
   async function generatePrivateReply(conversationId: string, userMessage: string): Promise<any[] | null> {
-    if (isGenerating) {
+    const operationController = generationController.start();
+    if (!operationController) {
       console.warn('[ChatCore] 正在生成中');
       return null;
     }
-    isGenerating = true;
-    abortController = new AbortController();
 
     try {
       const ChatDB = (window.parent as any).ChatDB;
@@ -475,7 +475,7 @@ ${userMessage}
       const context = await getEnhancedContext('private', [tenantName]);
       const prompt = buildPrivatePrompt(tenantName, tenantInfo, historyText, userMessage, timeText, context);
 
-      const response = await callAPI(prompt, { signal: abortController.signal });
+      const response = await callAPI(prompt, { signal: operationController.signal });
       const savedMessages: any[] = [];
       const lines = response
         .trim()
@@ -506,18 +506,16 @@ ${userMessage}
       if (e.name !== 'AbortError') console.error('[ChatCore] 生成私聊回复失败:', e);
       throw e;
     } finally {
-      isGenerating = false;
-      abortController = null;
+      generationController.finish(operationController);
     }
   }
 
   async function generateGroupReply(conversationId: string, userMessage: string): Promise<any[] | null> {
-    if (isGenerating) {
+    const operationController = generationController.start();
+    if (!operationController) {
       console.warn('[ChatCore] 正在生成中');
       return null;
     }
-    isGenerating = true;
-    abortController = new AbortController();
 
     try {
       const ChatDB = (window.parent as any).ChatDB;
@@ -537,7 +535,7 @@ ${userMessage}
       const context = await getEnhancedContext('group', conv.members);
       const prompt = buildGroupPrompt(membersInfo, historyText, userMessage, timeText, context);
 
-      const response = await callAPI(prompt, { signal: abortController.signal });
+      const response = await callAPI(prompt, { signal: operationController.signal });
       const replies = parseGroupReply(response, conv.members);
       const savedMessages: any[] = [];
 
@@ -552,21 +550,16 @@ ${userMessage}
       if (e.name !== 'AbortError') console.error('[ChatCore] 生成群聊回复失败:', e);
       throw e;
     } finally {
-      isGenerating = false;
-      abortController = null;
+      generationController.finish(operationController);
     }
   }
 
   function abort(): void {
-    if (abortController) {
-      abortController.abort();
-      isGenerating = false;
-      abortController = null;
-    }
+    generationController.abort();
   }
 
   function getStatus() {
-    return { isGenerating };
+    return generationController.getStatus();
   }
 
   // ==================== 导出到全局 ====================
