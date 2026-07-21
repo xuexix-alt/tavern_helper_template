@@ -92,3 +92,66 @@ test('creation errors preserve caller state and stale completion does not commit
   assert.equal(stale.calls.commit.length, 0);
   assert.equal(stale.calls.refresh, 0);
 });
+
+test('commit programming errors reject consistently for existing and created conversations', async () => {
+  const commitError = new Error('commit failed');
+  const existing = { id: 'old', type: 'private', members: ['甲'], name: '甲' };
+  const reused = harness({
+    getConversations: async () => { reused.calls.get += 1; return [existing]; },
+    onCommit: () => { throw commitError; },
+  });
+  await assert.rejects(reused.coordinator.confirmPrivate(['甲']), error => error === commitError);
+  assert.equal(reused.coordinator.isBusy(), false);
+  assert.equal(reused.calls.refresh, 0);
+
+  const created = harness({ onCommit: () => { throw commitError; } });
+  await assert.rejects(created.coordinator.confirmGroup(['甲', '乙'], '群'), error => error === commitError);
+  assert.equal(created.coordinator.isBusy(), false);
+  assert.equal(created.calls.refresh, 0);
+});
+
+test('synchronous refresh and refresh error callback failures cannot change creation success or become unhandled', async () => {
+  const unhandled = [];
+  const onUnhandled = reason => unhandled.push(reason);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    const h = harness({
+      refreshConversations: () => { h.calls.refresh += 1; throw new Error('sync refresh failed'); },
+      onRefreshError: () => { h.calls.refreshErrors += 1; throw new Error('reporting failed'); },
+    });
+    const result = await h.coordinator.confirmGroup(['甲', '乙'], '群');
+    assert.equal(result.ok, true);
+    assert.equal(h.calls.commit.length, 1);
+    assert.equal(h.coordinator.isBusy(), false);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(h.calls.refresh, 1);
+    assert.equal(h.calls.refreshErrors, 1);
+    assert.deepEqual(unhandled, []);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
+
+test('context becoming stale after create returns stale without commit or refresh and clears busy', async () => {
+  let release;
+  let current = true;
+  const pending = new Promise(resolve => { release = resolve; });
+  const h = harness({
+    createConversation: async payload => {
+      h.calls.create += 1;
+      await pending;
+      return { id: 'new', ...payload };
+    },
+    captureContext: () => 'old',
+    isCurrent: token => token === 'old' && current,
+  });
+  const result = h.coordinator.confirmGroup(['甲', '乙'], '群');
+  assert.equal(h.coordinator.isBusy(), true);
+  current = false;
+  release();
+  assert.deepEqual(await result, { ok: false, reason: 'stale' });
+  assert.equal(h.calls.create, 1);
+  assert.equal(h.calls.commit.length, 0);
+  assert.equal(h.calls.refresh, 0);
+  assert.equal(h.coordinator.isBusy(), false);
+});

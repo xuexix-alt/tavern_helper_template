@@ -24,19 +24,28 @@ export function createConversationCreationCoordinator<TContext>(deps: Conversati
   let busy = false;
 
   const refreshLater = () => {
-    void deps.refreshConversations().catch(error => deps.onRefreshError(error));
+    void Promise.resolve()
+      .then(() => deps.refreshConversations())
+      .catch(error => {
+        try {
+          deps.onRefreshError(error);
+        } catch {
+          // Error reporting must not affect the committed creation or leak a rejected promise.
+        }
+      });
   };
 
   const createAndCommit = async (payload: ConversationPayload, context: TContext): Promise<CreationResult> => {
+    let conversation: ConversationLike;
     try {
-      const conversation = await deps.createConversation(payload);
-      if (!deps.isCurrent(context)) return { ok: false, reason: 'stale' };
-      deps.onCommit(conversation);
-      refreshLater();
-      return { ok: true, kind: 'created', conversation };
+      conversation = await deps.createConversation(payload);
     } catch {
       return { ok: false, reason: 'create-error' };
     }
+    if (!deps.isCurrent(context)) return { ok: false, reason: 'stale' };
+    deps.onCommit(conversation);
+    refreshLater();
+    return { ok: true, kind: 'created', conversation };
   };
 
   const confirmPrivate = async (selected: string[]): Promise<CreationResult> => {
