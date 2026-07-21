@@ -45,7 +45,7 @@ interface PhoneSystemLike {
     renderer: (context: { container: HTMLElement; vue: Vue }) => void | (() => void),
   ): void;
   unregisterRenderer(appId: string): void;
-  getContextGeneration?(): number;
+  getContextGeneration(): number;
 }
 
 const chatMetadata = {
@@ -103,64 +103,75 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         inputText: '',
       });
 
-      const captureContext = () => ({
-        component: store.componentGeneration,
-        modal: store.modalGeneration,
-        phone: PS.getContextGeneration?.() ?? 0,
-      });
-      const isContextCurrent = (token: ReturnType<typeof captureContext>) =>
-        !disposed && token.component === store.componentGeneration && token.modal === store.modalGeneration
-        && token.phone === (PS.getContextGeneration?.() ?? 0);
-      const captureListContext = () => ({
-        component: store.componentGeneration,
-        phone: PS.getContextGeneration?.() ?? 0,
-      });
-      const isListContextCurrent = (token: ReturnType<typeof captureListContext>) =>
-        !disposed && token.component === store.componentGeneration
-        && token.phone === (PS.getContextGeneration?.() ?? 0);
+      function captureComponentContext() {
+        return {
+          component: store.componentGeneration,
+          phone: PS.getContextGeneration(),
+        };
+      }
+
+      function isComponentContextCurrent(token: ReturnType<typeof captureComponentContext>): boolean {
+        return !disposed && token.component === store.componentGeneration
+          && token.phone === PS.getContextGeneration();
+      }
+
+      function captureModalContext() {
+        return {
+          ...captureComponentContext(),
+          modal: store.modalGeneration,
+        };
+      }
+
+      function isModalContextCurrent(token: ReturnType<typeof captureModalContext>): boolean {
+        return isComponentContextCurrent(token) && token.modal === store.modalGeneration;
+      }
 
       function replaceItems<T>(target: T[], items: T[]): void {
         target.splice(0, target.length, ...items);
       }
 
       async function loadConversations(): Promise<void> {
-        const token = captureListContext();
+        const context = captureComponentContext();
         store.listState = 'loading';
         store.listError = '';
         try {
           const ChatDB = (window.parent as any).ChatDB;
           if (!ChatDB) throw new Error('ChatDB 未就绪');
           const conversations = await ChatDB.getConversations();
-          if (!isListContextCurrent(token)) return;
+          if (!isComponentContextCurrent(context)) return;
           replaceItems(store.conversations, conversations);
           store.listState = 'ready';
         } catch (error) {
-          if (!isListContextCurrent(token)) return;
+          if (!isComponentContextCurrent(context)) return;
           store.listState = 'error';
           store.listError = error instanceof Error ? error.message : '未知错误';
         }
       }
 
-      function scrollChatBottom(): void {
+      function scrollChatBottom(
+        context: ReturnType<typeof captureComponentContext>,
+        convId: string | null,
+      ): void {
         if (scrollTimer !== null) clearTimeout(scrollTimer);
         scrollTimer = setTimeout(() => {
           scrollTimer = null;
-          if (disposed) return;
+          if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
           const el = messageListElement.value;
           if (el) el.scrollTop = el.scrollHeight;
         }, 80);
       }
 
       async function loadMessages(convId: string): Promise<void> {
-        const token = captureListContext();
+        const context = captureComponentContext();
         try {
           const ChatDB = (window.parent as any).ChatDB;
           if (!ChatDB) throw new Error('ChatDB 未就绪');
           const messages = await ChatDB.getRecentMessages(convId, 50);
-          if (!isListContextCurrent(token) || store.activeConvId !== convId) return;
+          if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
           replaceItems(store.messages, messages);
+          scrollChatBottom(context, convId);
         } catch (error) {
-          if (isListContextCurrent(token) && store.activeConvId === convId) {
+          if (isComponentContextCurrent(context) && store.activeConvId === convId) {
             console.warn('[聊天APP] 加载消息失败:', error);
           }
         }
@@ -171,7 +182,6 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.activeConv = conv;
         replaceItems(store.messages, []);
         await loadMessages(conv.id);
-        if (!disposed && store.activeConvId === conv.id) scrollChatBottom();
       }
 
       function goBack(): void {
@@ -182,7 +192,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
 
       async function openCreationModal(): Promise<void> {
         store.modalGeneration += 1;
-        const generation = store.modalGeneration;
+        const context = captureModalContext();
         store.modalOpen = true;
         store.creationMode = null;
         store.candidates = [];
@@ -193,19 +203,19 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.isCreating = false;
         store.candidateState = 'loading';
         await vue.nextTick();
-        if (disposed || generation !== store.modalGeneration) return;
+        if (!isModalContextCurrent(context)) return;
         await loadCreationCandidates();
       }
 
       async function loadCreationCandidates(): Promise<void> {
         store.modalGeneration += 1;
-        const generation = store.modalGeneration;
+        const context = captureModalContext();
         store.candidateState = 'loading';
         store.candidateError = '';
         await vue.nextTick();
-        if (disposed || !store.modalOpen || generation !== store.modalGeneration) return;
+        if (!isModalContextCurrent(context) || !store.modalOpen) return;
         const result = loadStatDataRootNames(source => substitudeMacros(source));
-        if (disposed || generation !== store.modalGeneration) return;
+        if (!isModalContextCurrent(context)) return;
         if (result.ok) {
           store.candidates = result.names;
           store.selectedNames = store.selectedNames.filter(name => result.names.includes(name));
@@ -233,8 +243,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       const coordinator = createConversationCreationCoordinator({
         getConversations: () => (window.parent as any).ChatDB.getConversations(),
         createConversation: payload => (window.parent as any).ChatDB.createConversation(payload),
-        captureContext,
-        isCurrent: isContextCurrent,
+        captureContext: captureModalContext,
+        isCurrent: isModalContextCurrent,
         onCommit: conversation => {
           const index = store.conversations.findIndex(item => item.id === conversation.id);
           if (index === -1) store.conversations.push(conversation);
@@ -250,27 +260,26 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
 
       async function submitCreation(): Promise<void> {
         if (store.isCreating || store.candidateState !== 'ready' || store.creationMode === null) return;
-        const submitContext = captureContext();
+        const submitContext = captureModalContext();
         store.isCreating = true;
         store.creationError = '';
         try {
           const result = store.creationMode === 'private'
             ? await coordinator.confirmPrivate([...store.selectedNames])
             : await coordinator.confirmGroup([...store.selectedNames], store.groupName);
-          if (isContextCurrent(submitContext) && !result.ok && result.reason !== 'stale') {
+          if (isModalContextCurrent(submitContext) && !result.ok && result.reason !== 'stale') {
             store.creationError = creationErrorMessage[result.reason];
           }
         } catch (error) {
           console.error('[聊天APP] 会话提交回调失败:', error);
-          if (!disposed) {
+          if (isModalContextCurrent(submitContext)) {
             closeCreationModal();
             goBack();
             store.notice = '会话状态需要刷新，已返回列表，请稍后重试';
             void loadConversations();
           }
         } finally {
-          if (isContextCurrent(submitContext)) store.isCreating = coordinator.isBusy();
-          else if (!disposed) store.isCreating = false;
+          if (isModalContextCurrent(submitContext)) store.isCreating = coordinator.isBusy();
         }
       }
 
@@ -303,7 +312,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       async function sendMessage(): Promise<void> {
         const text = store.inputText.trim();
         if (!text || store.isGenerating) return;
-        const token = captureListContext();
+        const sendContext = captureComponentContext();
         const conv = store.activeConv;
         if (!conv) return;
         const operationToken = messageOperation.start();
@@ -316,22 +325,22 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           if (!ChatCore || !ChatDB) return;
 
           const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
-          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)) return;
+          if (!messageOperation.isCurrent(operationToken) || !isComponentContextCurrent(sendContext)) return;
           if (store.activeConvId === conv.id) {
             store.messages.push(userMsg);
-            scrollChatBottom();
+            scrollChatBottom(sendContext, conv.id);
           }
 
           let replies: any[];
           if (conv.type === 'group') replies = await ChatCore.generateGroupReply(conv.id, text);
           else replies = await ChatCore.generatePrivateReply(conv.id, text);
-          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)) return;
+          if (!messageOperation.isCurrent(operationToken) || !isComponentContextCurrent(sendContext)) return;
           if (store.activeConvId === conv.id && replies) store.messages.push(...replies);
 
           const ChatSync = (window.parent as any).ChatSync;
           if (ChatSync) ChatSync.instantSync(conv.id);
         } catch (error: any) {
-          if (messageOperation.isCurrent(operationToken) && isListContextCurrent(token)
+          if (messageOperation.isCurrent(operationToken) && isComponentContextCurrent(sendContext)
             && store.activeConvId === conv.id && error?.message !== 'AbortError') {
             store.messages.push({
               sender: '<system>',
@@ -342,10 +351,12 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           }
         } finally {
           const ownsActiveConversation = messageOperation.isCurrent(operationToken)
-            && isListContextCurrent(token) && store.activeConvId === conv.id;
-          if (messageOperation.finish(operationToken)) {
-            store.isGenerating = false;
-            if (ownsActiveConversation) scrollChatBottom();
+            && isComponentContextCurrent(sendContext) && store.activeConvId === conv.id;
+          if (isComponentContextCurrent(sendContext)) {
+            if (messageOperation.finish(operationToken)) {
+              store.isGenerating = false;
+              if (ownsActiveConversation) scrollChatBottom(sendContext, conv.id);
+            }
           }
         }
       }

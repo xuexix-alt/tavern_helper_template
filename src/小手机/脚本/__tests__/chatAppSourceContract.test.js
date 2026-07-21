@@ -58,8 +58,8 @@ test('list and modal states distinguish loading error empty and reset paths', ()
   assert.match(source, /重新读取/);
   assert.match(source, /onClick:\s*\(\)\s*=>\s*\{\s*void loadCreationCandidates\(\);\s*\}/);
   const submitBody = extractFunctionBody('submitCreation');
-  assert.match(submitBody, /const submitContext = captureContext\(\)/);
-  assert.match(submitBody, /isContextCurrent\(submitContext\)/);
+  assert.match(submitBody, /const submitContext = captureModalContext\(\)/);
+  assert.match(submitBody, /isModalContextCurrent\(submitContext\)/);
   assert.match(submitBody, /try\s*\{/);
   assert.match(submitBody, /catch\s*\(error\)/);
   assert.match(submitBody, /finally\s*\{/);
@@ -97,7 +97,7 @@ test('same-renderer navigation keeps original conversation sync while preventing
   const postReplyBeforeSync = sendBody.slice(replyGuard, sync);
   assert.doesNotMatch(postReplyBeforeSync, /activeConvId\s*!==\s*conv\.id[^\n]*return/);
   assert.match(postReplyBeforeSync, /if \(store\.activeConvId === conv\.id && replies\) store\.messages\.push\(\.\.\.replies\)/);
-  assert.match(postReplyBeforeSync, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isListContextCurrent\(token\)/);
+  assert.match(postReplyBeforeSync, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isComponentContextCurrent\(sendContext\)/);
 });
 
 test('same-renderer navigation after persisting the user message still generates for the original conversation', () => {
@@ -108,6 +108,6 @@ test('same-renderer navigation after persisting the user message still generates
   assert.notEqual(generate, -1, 'expected original conversation generation');
   const postAddBeforeGenerate = sendBody.slice(postAddGuard, generate);
   assert.doesNotMatch(postAddBeforeGenerate, /activeConvId\s*!==\s*conv\.id[^\n]*return/);
-  assert.match(postAddBeforeGenerate, /if \(store\.activeConvId === conv\.id\)\s*\{[\s\S]*store\.messages\.push\(userMsg\)[\s\S]*scrollChatBottom\(\)/);
-  assert.match(postAddBeforeGenerate, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isListContextCurrent\(token\)/);
+  assert.match(postAddBeforeGenerate, /if \(store\.activeConvId === conv\.id\)\s*\{[\s\S]*store\.messages\.push\(userMsg\)[\s\S]*scrollChatBottom\(sendContext, conv\.id\)/);
+  assert.match(postAddBeforeGenerate, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isComponentContextCurrent\(sendContext\)/);
 });
