@@ -1,22 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+const { readSource, extractFunctionBody } = require('./sourceTestUtils.js');
 
-const source = fs.readFileSync(path.resolve(__dirname, '../小手机主程序/index.ts'), 'utf8');
-
-function extractFunctionBody(functionName) {
-  const match = new RegExp(`function ${functionName}\\([^)]*\\)\\s*(?::\\s*[^\\{]+)?\\s*\\{`).exec(source);
-  assert.ok(match, `expected function ${functionName}`);
-  const bodyStart = match.index + match[0].length;
-  let depth = 1;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    if (source[index] === '{') depth += 1;
-    if (source[index] === '}') depth -= 1;
-    if (depth === 0) return source.slice(bodyStart, index);
-  }
-  assert.fail(`expected balanced function body for ${functionName}`);
-}
+const source = readSource('../小手机主程序/index.ts');
 
 test('PhoneSystem owns responsive app metadata and renderer APIs', () => {
   assert.match(source, /reactive<PhoneApp\[\]>\(\[\]\)/);
@@ -38,11 +24,11 @@ test('desktop clicks use openApp and renderer containers come from the owned pho
 });
 
 test('temporary hide preserves renderer while permanent destroy tears it down', () => {
-  const toggleBody = extractFunctionBody('togglePhoneVisibility');
+  const toggleBody = extractFunctionBody(source, 'togglePhoneVisibility');
   assert.match(toggleBody, /phoneIframe\.hide\(\)/);
   assert.match(toggleBody, /phoneIframe\.show\(\)/);
   assert.doesNotMatch(toggleBody, /controller\.(?:goHome|destroy)/);
-  const destroyBody = extractFunctionBody('destroy');
+  const destroyBody = extractFunctionBody(source, 'destroy');
   assert.match(destroyBody, /controller\.destroy\(\)/);
   assert.match(destroyBody, /phoneApp\.unmount\(\)/);
   assert.match(source, /pagehide[\s\S]*destroy/);

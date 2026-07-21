@@ -3,6 +3,15 @@
 // 按酒馆 chatId 隔离，切换聊天自动指向对应数据
 // 导出到 window.parent.ChatDB
 
+import {
+  buildConversationRecord,
+  createConversationForOperation,
+  queryConversationsForOperation,
+  type ConversationCreationData,
+} from './chatPartitionOperations';
+import { createChatOperationContextFactory, type ChatOperationContext } from './chatOperationContext';
+import { createDatabaseConnectionCache } from './databaseConnectionCache';
+
 interface ChatConversation {
   id: string;
   chatId: string;
@@ -36,16 +45,18 @@ interface GameTime {
   时间: string;
 }
 
+type CreateConversationInput = Partial<ChatConversation> & ConversationCreationData;
+
 $(() => {
   const DB_NAME = 'TenantChatDB';
   const DB_VERSION = 1;
 
-  let db: IDBDatabase | null = null;
+  let latestDatabase: IDBDatabase | null = null;
   let currentChatId: string | null = null;
 
   // ==================== 数据库初始化 ====================
 
-  function openDB(): Promise<IDBDatabase> {
+  function openDatabaseConnection(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -67,7 +78,8 @@ $(() => {
       };
 
       request.onsuccess = event => {
-        resolve((event.target as IDBOpenDBRequest).result);
+        latestDatabase = (event.target as IDBOpenDBRequest).result;
+        resolve(latestDatabase);
       };
 
       request.onerror = event => {
@@ -76,13 +88,32 @@ $(() => {
     });
   }
 
+  const databaseConnectionCache = createDatabaseConnectionCache({
+    openConnection: openDatabaseConnection,
+    setVersionChangeHandler: (database, handler) => {
+      database.onversionchange = handler;
+    },
+    closeConnection: database => database.close(),
+    onConnected: database => {
+      latestDatabase = database;
+    },
+    onDisconnected: database => {
+      if (latestDatabase === database) latestDatabase = null;
+    },
+  });
+
+  function openDB(): Promise<IDBDatabase> {
+    return databaseConnectionCache.open();
+  }
+
   // ==================== 游戏时间 ====================
 
   function getGameTime(chat: string = 'current'): GameTime {
     try {
       // 优先从 MVU 读取
-      if (window.parent.Mvu?.getMvuData) {
-        const mvuData = window.parent.Mvu.getMvuData({ type: 'message', message_id: -1 });
+      const parentWindow = window.parent as any;
+      if (parentWindow.Mvu?.getMvuData) {
+        const mvuData = parentWindow.Mvu.getMvuData({ type: 'message', message_id: -1 });
         if (mvuData?.stat_data?.世界) {
           return mvuData.stat_data.世界 as GameTime;
         }
@@ -105,13 +136,14 @@ $(() => {
     return `${gt.日期} 周${gt.星期} ${gt.时间}`;
   }
 
-  // ==================== ChatId 检测与重连 ====================
+  // ==================== ChatId 检测与操作上下文 ====================
 
-  async function getChatId(): Promise<string> {
+  function readCurrentChatId(): string {
     try {
-      if (window.parent.SillyTavern?.getContext) {
-        const ctx = window.parent.SillyTavern.getContext();
-        return ctx.chatId || 'default';
+      const parentWindow = window.parent as any;
+      if (parentWindow.SillyTavern?.getContext) {
+        const ctx = parentWindow.SillyTavern.getContext();
+        return String(ctx.chatId || 'default');
       }
     } catch {
       /* 静默忽略 */
@@ -119,74 +151,149 @@ $(() => {
     return 'default';
   }
 
+  const beginOperation = createChatOperationContextFactory({
+    readChatId: readCurrentChatId,
+    openDatabase: openDB,
+    onDiagnosticChatId: chatId => {
+      currentChatId = chatId;
+    },
+  });
+
+  async function getChatId(): Promise<string> {
+    return readCurrentChatId();
+  }
+
   async function ensureConnection(): Promise<void> {
-    const chatId = await getChatId();
-    if (db && currentChatId === chatId) return;
-    currentChatId = chatId;
-    db = await openDB();
-    console.log(`[ChatDB] 已连接 TenantChatDB, chatId: ${chatId}`);
+    const operation = beginOperation();
+    await operation.dbPromise;
+    console.log(`[ChatDB] 已连接 TenantChatDB, chatId: ${operation.chatId}`);
+  }
+
+  function readConversationById(database: IDBDatabase, conversationId: string): Promise<ChatConversation | undefined> {
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(['conversations'], 'readonly');
+      const request = tx.objectStore('conversations').get(conversationId);
+      request.onsuccess = () => resolve(request.result as ChatConversation | undefined);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function getConversationInContext(
+    operation: ChatOperationContext<IDBDatabase>,
+    id: string,
+  ): Promise<ChatConversation | undefined> {
+    const database = await operation.dbPromise;
+    const record = await readConversationById(database, id);
+    return record?.chatId === operation.chatId ? record : undefined;
+  }
+
+  async function requireConversationInContext(
+    operation: ChatOperationContext<IDBDatabase>,
+    id: string,
+  ): Promise<ChatConversation> {
+    const conversation = await getConversationInContext(operation, id);
+    if (!conversation) throw new Error(`会话不存在于当前聊天分区: ${id}`);
+    return conversation;
+  }
+
+  function waitForTransaction(transaction: IDBTransaction): Promise<void> {
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
   }
 
   // ==================== 会话 CRUD ====================
 
-  async function createConversation(
-    data: Partial<ChatConversation> & { type: 'private' | 'group'; members: string[]; name?: string },
-  ): Promise<ChatConversation> {
-    await ensureConnection();
-    const chatId = currentChatId!;
-    const name = data.name || (data.type === 'private' ? data.members[0] : `群聊_${Date.now()}`);
-    const id = `conv_${chatId}_${data.type}_${name}_${Date.now()}`;
-
-    const conv: ChatConversation = {
-      id,
-      chatId,
-      type: data.type,
-      name,
-      members: data.members,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['conversations'], 'readwrite');
-      tx.objectStore('conversations').add(conv);
-      tx.oncomplete = () => resolve(conv);
-      tx.onerror = () => reject(tx.error);
+  async function createConversation(data: CreateConversationInput): Promise<ChatConversation> {
+    const operation = beginOperation();
+    return createConversationForOperation(operation, data, Date.now(), async (database, record) => {
+      const conversation: ChatConversation = record;
+      const transaction = database.transaction(['conversations'], 'readwrite');
+      transaction.objectStore('conversations').add(conversation);
+      await waitForTransaction(transaction);
+      return conversation;
     });
   }
 
   async function getConversation(conversationId: string): Promise<ChatConversation | undefined> {
-    await ensureConnection();
-    return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['conversations'], 'readonly');
-      const req = tx.objectStore('conversations').get(conversationId);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
+    const operation = beginOperation();
+    return getConversationInContext(operation, conversationId);
   }
 
   async function getConversations(): Promise<ChatConversation[]> {
-    await ensureConnection();
-    return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['conversations'], 'readonly');
-      const index = tx.objectStore('conversations').index('chatId');
-      const req = index.getAll(currentChatId!);
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
-    });
+    const operation = beginOperation();
+    return queryConversationsForOperation(operation, database => ({
+      getAll: chatId =>
+        new Promise<ChatConversation[]>((resolve, reject) => {
+          const transaction = database.transaction(['conversations'], 'readonly');
+          const request = transaction.objectStore('conversations').index('chatId').getAll(chatId);
+          request.onsuccess = () => resolve((request.result || []) as ChatConversation[]);
+          request.onerror = () => reject(request.error);
+        }),
+    }));
   }
 
   async function updateConversation(conversationId: string, updates: Partial<ChatConversation>): Promise<void> {
-    await ensureConnection();
-    const conv = await getConversation(conversationId);
-    if (!conv) throw new Error(`会话不存在: ${conversationId}`);
-    const updated = { ...conv, ...updates, updatedAt: Date.now() };
+    const operation = beginOperation();
+    const database = await operation.dbPromise;
+    const existingConversation = await getConversationInContext(operation, conversationId);
+    if (!existingConversation) throw new Error(`会话不存在于当前聊天分区: ${conversationId}`);
+
     return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['conversations'], 'readwrite');
-      tx.objectStore('conversations').put(updated);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      const transaction = database.transaction(['conversations'], 'readwrite');
+      const conversationStore = transaction.objectStore('conversations');
+      const conversationRequest = conversationStore.get(conversationId);
+      conversationRequest.onsuccess = () => {
+        const conversation = conversationRequest.result as ChatConversation | undefined;
+        if (conversation?.chatId !== operation.chatId) {
+          reject(new Error(`会话不存在于当前聊天分区: ${conversationId}`));
+          transaction.abort();
+          return;
+        }
+        const updated: ChatConversation = {
+          ...conversation,
+          ...updates,
+          id: conversation.id,
+          chatId: operation.chatId,
+          updatedAt: Date.now(),
+        };
+        conversationStore.put(updated);
+      };
+      conversationRequest.onerror = () => reject(conversationRequest.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
     });
+  }
+
+  async function validateMessageIdsInContext(
+    operation: ChatOperationContext<IDBDatabase>,
+    database: IDBDatabase,
+    messageIds: number[],
+  ): Promise<ChatMessage[]> {
+    const messages = await new Promise<ChatMessage[]>((resolve, reject) => {
+      const transaction = database.transaction(['messages'], 'readonly');
+      const store = transaction.objectStore('messages');
+      const records: ChatMessage[] = [];
+      for (const id of messageIds) {
+        const request = store.get(id);
+        request.onsuccess = () => {
+          if (request.result) records.push(request.result as ChatMessage);
+        };
+      }
+      transaction.oncomplete = () => resolve(records);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+
+    for (const conversationId of new Set(messages.map(message => message.conversationId))) {
+      if (!(await getConversationInContext(operation, conversationId))) {
+        throw new Error(`消息不属于当前聊天分区: ${conversationId}`);
+      }
+    }
+    return messages;
   }
 
   // ==================== 消息 CRUD ====================
@@ -197,7 +304,9 @@ $(() => {
     content: string,
     extras?: Record<string, any>,
   ): Promise<ChatMessage> {
-    await ensureConnection();
+    const operation = beginOperation();
+    const database = await operation.dbPromise;
+    await requireConversationInContext(operation, conversationId);
 
     const msg: Omit<ChatMessage, 'id'> = {
       conversationId,
@@ -209,33 +318,39 @@ $(() => {
       createdAt: Date.now(),
     };
 
-    return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['messages', 'conversations'], 'readwrite');
-      const msgReq = tx.objectStore('messages').add(msg as any);
+    return new Promise<ChatMessage>((resolve, reject) => {
+      const transaction = database.transaction(['messages', 'conversations'], 'readwrite');
+      const messageStore = transaction.objectStore('messages');
+      const conversationStore = transaction.objectStore('conversations');
+      const conversationRequest = conversationStore.get(conversationId);
+      let messageId: number | undefined;
 
-      msgReq.onsuccess = () => {
-        // 同步更新会话的 updatedAt
-        const convReq = tx.objectStore('conversations').get(conversationId);
-        convReq.onsuccess = () => {
-          const conv = convReq.result;
-          if (conv) {
-            conv.updatedAt = Date.now();
-            tx.objectStore('conversations').put(conv);
-          }
+      conversationRequest.onsuccess = () => {
+        const conversation = conversationRequest.result as ChatConversation | undefined;
+        if (conversation?.chatId !== operation.chatId) {
+          reject(new Error(`会话不存在于当前聊天分区: ${conversationId}`));
+          transaction.abort();
+          return;
+        }
+        const messageRequest = messageStore.add(msg as ChatMessage);
+        messageRequest.onsuccess = () => {
+          messageId = messageRequest.result as number;
         };
-        resolve({ ...msg, id: msgReq.result as number });
+        conversationStore.put({ ...conversation, updatedAt: Date.now() });
       };
-      msgReq.onerror = () => reject(msgReq.error);
-      tx.oncomplete = () => {
-        /* 事务完成 */
-      };
+      conversationRequest.onerror = () => reject(conversationRequest.error);
+      transaction.oncomplete = () => resolve({ ...msg, id: messageId });
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
     });
   }
 
   async function getRecentMessages(conversationId: string, count: number = 30): Promise<ChatMessage[]> {
-    await ensureConnection();
+    const operation = beginOperation();
+    const database = await operation.dbPromise;
+    await requireConversationInContext(operation, conversationId);
     return new Promise((resolve, reject) => {
-      const tx = db!.transaction(['messages'], 'readonly');
+      const tx = database.transaction(['messages'], 'readonly');
       const index = tx.objectStore('messages').index('conversationId');
       const req = index.openCursor(IDBKeyRange.only(conversationId), 'prev');
       const messages: ChatMessage[] = [];
@@ -254,24 +369,20 @@ $(() => {
   }
 
   async function markSyncedToLore(messageIds: number[]): Promise<void> {
-    await ensureConnection();
-    const tx = db!.transaction(['messages'], 'readwrite');
+    const operation = beginOperation();
+    const database = await operation.dbPromise;
+    const messages = await validateMessageIdsInContext(operation, database, messageIds);
+    const tx = database.transaction(['messages'], 'readwrite');
     const store = tx.objectStore('messages');
 
-    for (const id of messageIds) {
-      const req = store.get(id);
-      req.onsuccess = () => {
-        const msg = req.result;
-        if (msg) {
-          msg.syncedToLore = true;
-          store.put(msg);
-        }
-      };
+    for (const message of messages) {
+      store.put({ ...message, syncedToLore: true });
     }
 
     return new Promise((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
     });
   }
 
@@ -279,7 +390,7 @@ $(() => {
 
   const ChatDB = {
     get db() {
-      return db;
+      return latestDatabase;
     },
     get currentChatId() {
       return currentChatId;
@@ -298,7 +409,7 @@ $(() => {
     getChatId,
   };
 
-  window.parent.ChatDB = ChatDB;
+  (window.parent as any).ChatDB = ChatDB;
 
   // 注册到酒馆助手的全局初始化系统
   if (typeof (window as any).initializeGlobal === 'function') {

@@ -3,6 +3,8 @@
 // 500ms 防抖 → 生成摘要 → 写入聊天世界书常驻条目
 // 导出到 window.parent.ChatSync
 
+import { cancelPendingTimers } from './pendingSyncTimers';
+
 $(() => {
   const DEBOUNCE_MS = 500;
   const MAX_SUMMARY_LENGTH = 800;
@@ -127,7 +129,7 @@ $(() => {
           try {
             (window.parent as any).updateVariablesWith(
               (vars: any) => {
-                const varKey = entryName.replace(/[\[\]]/g, '').replace(/[^\w一-鿿]/g, '_');
+                const varKey = entryName.replace(/[[\]]/g, '').replace(/[^\w一-鿿]/g, '_');
                 vars[`wechat_${varKey}`] = summary;
                 return vars;
               },
@@ -173,6 +175,10 @@ $(() => {
     );
   }
 
+  function cancelPending(): void {
+    cancelPendingTimers(syncTimers, clearTimeout);
+  }
+
   // ==================== 手动注入正文 ====================
 
   async function injectToInput(conversationId: string, topic?: string): Promise<void> {
@@ -205,6 +211,7 @@ $(() => {
   const ChatSync = {
     syncToChatLore,
     instantSync,
+    cancelPending,
     injectToInput,
     buildSummary,
   };
