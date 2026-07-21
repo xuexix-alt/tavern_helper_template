@@ -55,16 +55,9 @@ export function createPhoneAppController(deps: PhoneAppControllerDeps): PhoneApp
         return;
       }
 
-      try {
-        const cleanup = renderer({ container, vue: deps.vue });
-        activeRenderer = renderer;
-        activeCleanup = cleanup ?? null;
-      } catch (error) {
-        activeRenderer = null;
-        activeCleanup = null;
-        deps.showError(container, error);
-        deps.logError(error);
-      }
+      const cleanup = renderer({ container, vue: deps.vue });
+      activeRenderer = renderer;
+      activeCleanup = cleanup ?? null;
     });
   }
 
