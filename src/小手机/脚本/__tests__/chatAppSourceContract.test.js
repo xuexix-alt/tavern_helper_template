@@ -87,3 +87,15 @@ test('existing message send generation and sync chain remains intact', () => {
     assert.ok(source.includes(token), `expected preserved chain ${token}`);
   }
 });
+
+test('same-renderer navigation keeps original conversation sync while preventing reply UI pollution', () => {
+  const sendBody = extractFunctionBody('sendMessage');
+  const replyGuard = sendBody.indexOf('if (!messageOperation.isCurrent(operationToken)', sendBody.indexOf('generatePrivateReply'));
+  const sync = sendBody.indexOf('ChatSync.instantSync(conv.id)', replyGuard);
+  assert.notEqual(replyGuard, -1, 'expected post-reply operation/context guard');
+  assert.notEqual(sync, -1, 'expected original conversation sync');
+  const postReplyBeforeSync = sendBody.slice(replyGuard, sync);
+  assert.doesNotMatch(postReplyBeforeSync, /activeConvId\s*!==\s*conv\.id[^\n]*return/);
+  assert.match(postReplyBeforeSync, /if \(store\.activeConvId === conv\.id && replies\) store\.messages\.push\(\.\.\.replies\)/);
+  assert.match(postReplyBeforeSync, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isListContextCurrent\(token\)/);
+});

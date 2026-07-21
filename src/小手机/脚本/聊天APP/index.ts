@@ -324,9 +324,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           let replies: any[];
           if (conv.type === 'group') replies = await ChatCore.generateGroupReply(conv.id, text);
           else replies = await ChatCore.generatePrivateReply(conv.id, text);
-          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)
-            || store.activeConvId !== conv.id) return;
-          if (replies) store.messages.push(...replies);
+          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)) return;
+          if (store.activeConvId === conv.id && replies) store.messages.push(...replies);
 
           const ChatSync = (window.parent as any).ChatSync;
           if (ChatSync) ChatSync.instantSync(conv.id);
