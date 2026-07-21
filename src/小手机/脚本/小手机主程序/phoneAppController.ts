@@ -146,7 +146,7 @@ export function createPhoneAppController(deps: PhoneAppControllerDeps): PhoneApp
     },
 
     refreshCurrent() {
-      if (!destroyed && currentAppId !== null) scheduleCurrentMount();
+      if (!destroyed && currentAppId !== null) replaceVisibleRenderer(currentAppId);
     },
 
     destroy() {

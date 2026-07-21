@@ -287,3 +287,24 @@ test('refreshCurrent mounts after the phone shell creates its container', () => 
   assert.equal(calls[0].container, container);
   assert.equal(calls[0].vue, harness.vue);
 });
+
+test('refreshCurrent cleans the active instance before mounting its replacement', () => {
+  const harness = createHarness();
+  let mounts = 0;
+  let cleans = 0;
+  harness.controller.registerRenderer('chat-app', () => {
+    mounts += 1;
+    return () => {
+      cleans += 1;
+    };
+  });
+  harness.controller.openApp('chat-app');
+  harness.flushScheduled();
+
+  harness.controller.refreshCurrent();
+  harness.flushScheduled();
+  harness.controller.goHome();
+
+  assert.equal(mounts, 2);
+  assert.equal(cleans, 2);
+});
