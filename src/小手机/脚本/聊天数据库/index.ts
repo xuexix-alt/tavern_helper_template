@@ -10,6 +10,7 @@ import {
   type ConversationCreationData,
 } from './chatPartitionOperations';
 import { createChatOperationContextFactory, type ChatOperationContext } from './chatOperationContext';
+import { createDatabaseConnectionCache } from './databaseConnectionCache';
 
 interface ChatConversation {
   id: string;
@@ -55,7 +56,7 @@ $(() => {
 
   // ==================== 数据库初始化 ====================
 
-  function openDB(): Promise<IDBDatabase> {
+  function openDatabaseConnection(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -85,6 +86,24 @@ $(() => {
         reject((event.target as IDBOpenDBRequest).error);
       };
     });
+  }
+
+  const databaseConnectionCache = createDatabaseConnectionCache({
+    openConnection: openDatabaseConnection,
+    setVersionChangeHandler: (database, handler) => {
+      database.onversionchange = handler;
+    },
+    closeConnection: database => database.close(),
+    onConnected: database => {
+      latestDatabase = database;
+    },
+    onDisconnected: database => {
+      if (latestDatabase === database) latestDatabase = null;
+    },
+  });
+
+  function openDB(): Promise<IDBDatabase> {
+    return databaseConnectionCache.open();
   }
 
   // ==================== 游戏时间 ====================
@@ -219,18 +238,34 @@ $(() => {
   async function updateConversation(conversationId: string, updates: Partial<ChatConversation>): Promise<void> {
     const operation = beginOperation();
     const database = await operation.dbPromise;
-    const conversation = await getConversationInContext(operation, conversationId);
-    if (!conversation) throw new Error(`会话不存在于当前聊天分区: ${conversationId}`);
-    const updated: ChatConversation = {
-      ...conversation,
-      ...updates,
-      id: conversation.id,
-      chatId: operation.chatId,
-      updatedAt: Date.now(),
-    };
-    const transaction = database.transaction(['conversations'], 'readwrite');
-    transaction.objectStore('conversations').put(updated);
-    await waitForTransaction(transaction);
+    const existingConversation = await getConversationInContext(operation, conversationId);
+    if (!existingConversation) throw new Error(`会话不存在于当前聊天分区: ${conversationId}`);
+
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(['conversations'], 'readwrite');
+      const conversationStore = transaction.objectStore('conversations');
+      const conversationRequest = conversationStore.get(conversationId);
+      conversationRequest.onsuccess = () => {
+        const conversation = conversationRequest.result as ChatConversation | undefined;
+        if (conversation?.chatId !== operation.chatId) {
+          reject(new Error(`会话不存在于当前聊天分区: ${conversationId}`));
+          transaction.abort();
+          return;
+        }
+        const updated: ChatConversation = {
+          ...conversation,
+          ...updates,
+          id: conversation.id,
+          chatId: operation.chatId,
+          updatedAt: Date.now(),
+        };
+        conversationStore.put(updated);
+      };
+      conversationRequest.onerror = () => reject(conversationRequest.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
   }
 
   async function validateMessageIdsInContext(
@@ -271,7 +306,7 @@ $(() => {
   ): Promise<ChatMessage> {
     const operation = beginOperation();
     const database = await operation.dbPromise;
-    const conversation = await requireConversationInContext(operation, conversationId);
+    await requireConversationInContext(operation, conversationId);
 
     const msg: Omit<ChatMessage, 'id'> = {
       conversationId,
@@ -285,13 +320,25 @@ $(() => {
 
     return new Promise<ChatMessage>((resolve, reject) => {
       const transaction = database.transaction(['messages', 'conversations'], 'readwrite');
-      const messageRequest = transaction.objectStore('messages').add(msg as ChatMessage);
-      const updatedConversation = { ...conversation, updatedAt: Date.now() };
-      transaction.objectStore('conversations').put(updatedConversation);
+      const messageStore = transaction.objectStore('messages');
+      const conversationStore = transaction.objectStore('conversations');
+      const conversationRequest = conversationStore.get(conversationId);
       let messageId: number | undefined;
-      messageRequest.onsuccess = () => {
-        messageId = messageRequest.result as number;
+
+      conversationRequest.onsuccess = () => {
+        const conversation = conversationRequest.result as ChatConversation | undefined;
+        if (conversation?.chatId !== operation.chatId) {
+          reject(new Error(`会话不存在于当前聊天分区: ${conversationId}`));
+          transaction.abort();
+          return;
+        }
+        const messageRequest = messageStore.add(msg as ChatMessage);
+        messageRequest.onsuccess = () => {
+          messageId = messageRequest.result as number;
+        };
+        conversationStore.put({ ...conversation, updatedAt: Date.now() });
       };
+      conversationRequest.onerror = () => reject(conversationRequest.error);
       transaction.oncomplete = () => resolve({ ...msg, id: messageId });
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);

@@ -40,3 +40,32 @@ test('legacy connection helpers are compatibility-only and no CRUD calls them', 
   for (const name of publicCrud)
     assert.doesNotMatch(extractFunctionBody(source, name), /ensureConnection\(|getChatId\(/);
 });
+
+test('openDB uses the shared connection cache instead of opening once per CRUD', () => {
+  assert.match(source, /createDatabaseConnectionCache\(/);
+  assert.match(extractFunctionBody(source, 'openDB'), /return databaseConnectionCache\.open\(\);/);
+});
+
+test('write CRUD reloads and validates the latest conversation inside its target transaction', () => {
+  const updateBody = extractFunctionBody(source, 'updateConversation');
+  assert.match(updateBody, /await getConversationInContext\(operation, conversationId\);/);
+  assert.match(updateBody, /const conversationRequest = conversationStore\.get\(conversationId\);/);
+  assert.match(updateBody, /conversation\?\.chatId !== operation\.chatId/);
+  assert.ok(
+    updateBody.indexOf("database.transaction(['conversations'], 'readwrite')") <
+      updateBody.indexOf('.get(conversationId)'),
+  );
+  assert.ok(updateBody.indexOf('.get(conversationId)') < updateBody.indexOf('.put(updated)'));
+  assert.doesNotMatch(updateBody, /const conversation = await requireConversationInContext/);
+
+  const addBody = extractFunctionBody(source, 'addMessage');
+  assert.match(addBody, /await requireConversationInContext\(operation, conversationId\);/);
+  assert.match(addBody, /const conversationRequest = conversationStore\.get\(conversationId\);/);
+  assert.match(addBody, /conversation\?\.chatId !== operation\.chatId/);
+  assert.ok(
+    addBody.indexOf("database.transaction(['messages', 'conversations'], 'readwrite')") <
+      addBody.indexOf('.get(conversationId)'),
+  );
+  assert.ok(addBody.indexOf('.get(conversationId)') < addBody.indexOf('messageStore.add(msg as ChatMessage)'));
+  assert.doesNotMatch(addBody, /const conversation = await requireConversationInContext/);
+});
