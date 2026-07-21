@@ -32,8 +32,8 @@ function createHarness() {
       current.value = appId;
     },
     showPlaceholder: (container, message) => placeholders.push([container.id, message]),
-    showError: (container, error) => errors.push([container.id, error]),
-    logError: error => logs.push(error),
+    showError: (container, error) => errors.push([container.id, String(error?.message || error)]),
+    logError: error => logs.push(String(error?.message || error)),
   });
 
   function flushScheduled() {
@@ -104,7 +104,7 @@ test('unregistered app is rejected without changing state or scheduling a mount'
   assert.equal(harness.scheduled.length, 0);
 });
 
-test('registering a replacement renderer cleans the visible renderer before scheduling the replacement', () => {
+test('replacement cleans the old renderer once before mounting the new renderer', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => {
@@ -124,7 +124,7 @@ test('registering a replacement renderer cleans the visible renderer before sche
   assert.deepEqual(calls, ['mount-old', 'clean-old', 'mount-new']);
 });
 
-test('registering the same visible renderer again still cleans and remounts it', () => {
+test('registering the same renderer function again still replaces the visible instance', () => {
   const harness = createHarness();
   const calls = [];
   const renderer = () => {
@@ -143,7 +143,7 @@ test('registering the same visible renderer again still cleans and remounts it',
   assert.deepEqual(calls, ['mount', 'clean', 'mount']);
 });
 
-test('unregistering the visible renderer cleans it while retaining the route and showing a placeholder', () => {
+test('unregistering the visible renderer cleans once and shows not-ready placeholder', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => {
@@ -164,7 +164,7 @@ test('unregistering the visible renderer cleans it while retaining the route and
   assert.deepEqual(calls, ['mount', 'clean']);
 });
 
-test('switching apps invalidates stale mounts and cleans an actively mounted renderer once', () => {
+test('switching apps invalidates a stale scheduled mount and cleans the active app once', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => {
@@ -192,7 +192,7 @@ test('switching apps invalidates stale mounts and cleans an actively mounted ren
   assert.equal(calls.filter(call => call === 'clean-chat').length, 1);
 });
 
-test('reopening the active app preserves its renderer while ensuring the phone is visible again', () => {
+test('reopening the active app preserves its mounted instance', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => {
@@ -208,7 +208,7 @@ test('reopening the active app preserves its renderer while ensuring the phone i
   assert.deepEqual(calls, ['mount']);
 });
 
-test('going home twice and then destroying cleans the active renderer at most once and clears current state', () => {
+test('goHome and destroy each clean an active instance at most once', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => () => calls.push('clean'));
@@ -224,7 +224,7 @@ test('going home twice and then destroying cleans the active renderer at most on
   assert.equal(harness.current.value, null);
 });
 
-test('destroying the controller invalidates a scheduled mount', () => {
+test('destroy invalidates scheduled mounts', () => {
   const harness = createHarness();
   const calls = [];
   harness.controller.registerRenderer('chat-app', () => calls.push('mount'));
@@ -238,7 +238,7 @@ test('destroying the controller invalidates a scheduled mount', () => {
   assert.equal(harness.current.value, null);
 });
 
-test('a renderer failure clears partial content and reports the exact mount error', () => {
+test('renderer failures clear content and show a visible error', () => {
   const harness = createHarness();
   const container = harness.containers.get('chat-app');
   container.innerHTML = 'existing';
@@ -251,10 +251,10 @@ test('a renderer failure clears partial content and reports the exact mount erro
 
   assert.doesNotThrow(() => harness.flushScheduled());
   assert.equal(container.innerHTML, '');
-  assert.deepEqual(harness.errors, [['chat-app', error]]);
+  assert.deepEqual(harness.errors, [['chat-app', 'mount failed']]);
 });
 
-test('a cleanup failure is logged without preventing navigation home', () => {
+test('cleanup failures are logged and do not block navigation', () => {
   const harness = createHarness();
   const error = new Error('cleanup failed');
   harness.controller.registerRenderer('chat-app', () => () => {
@@ -264,12 +264,12 @@ test('a cleanup failure is logged without preventing navigation home', () => {
   harness.flushScheduled();
 
   assert.doesNotThrow(() => harness.controller.goHome());
-  assert.deepEqual(harness.logs, [error]);
+  assert.deepEqual(harness.logs, ['cleanup failed']);
   assert.equal(harness.controller.getCurrentAppId(), null);
   assert.equal(harness.current.value, null);
 });
 
-test('refreshCurrent mounts once a previously missing container becomes connected', () => {
+test('refreshCurrent mounts after the phone shell creates its container', () => {
   const harness = createHarness();
   const calls = [];
   harness.containers.delete('chat-app');
