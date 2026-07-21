@@ -12,19 +12,33 @@ function createFakeComposer(initial = '') {
   return { value: initial, generateCalls: 0 };
 }
 
-function createFakeRuntime(options: { ownerMatches?: boolean; unread?: number; open?: boolean } = {}) {
+function createFakeRuntime(
+  options: {
+    ownerMatches?: boolean;
+    ownerReady?: boolean;
+    sessionReady?: boolean;
+    unread?: number;
+    open?: boolean;
+  } = {},
+) {
   const listeners = new Map<string, Set<RuntimeListener>>();
   let unread = options.unread ?? 0;
   let open = options.open ?? false;
+  let ownerReady = options.ownerReady ?? true;
+  let sessionReady = options.sessionReady ?? true;
   let detachCalls = 0;
+  let attachCalls = 0;
   let toggleCalls = 0;
   let attachedSubmit: ((action: PhoneHostAction) => Promise<void> | void) | undefined;
   const runtime: PrePhoneRuntime = {
-    getOwner: () => ({
-      characterName: '\u672b\u4e16\u5bd2\u51ac - \u661f\u7a79\u79e9\u5e8f',
-      adapterId: options.ownerMatches === false ? 'another-adapter' : 'winter-apocalypse',
-      runtimeMajor: 1,
-    }),
+    getOwner: () =>
+      ownerReady
+        ? {
+            characterName: '\u672b\u4e16\u5bd2\u51ac - \u661f\u7a79\u79e9\u5e8f',
+            adapterId: options.ownerMatches === false ? 'another-adapter' : 'winter-apocalypse',
+            runtimeMajor: 1,
+          }
+        : null,
     getStatus: () => ({ isOpen: open }),
     getUnreadCount: () => unread,
     async toggle() {
@@ -39,6 +53,8 @@ function createFakeRuntime(options: { ownerMatches?: boolean; unread?: number; o
       return () => eventListeners.delete(listener);
     },
     attachHostBridge(bridge) {
+      if (!sessionReady) throw new Error('runtime session is still loading');
+      attachCalls += 1;
       attachedSubmit = bridge.submitAction;
       return () => {
         detachCalls += 1;
@@ -61,12 +77,23 @@ function createFakeRuntime(options: { ownerMatches?: boolean; unread?: number; o
       open = false;
       emit('status', { isOpen: false });
     },
+    setOwnerReady(value: boolean) {
+      ownerReady = value;
+      emit('status', { isOpen: open });
+    },
+    setSessionReady(value: boolean) {
+      sessionReady = value;
+      emit('status', { isOpen: open });
+    },
     submit(action: PhoneHostAction) {
       assert.ok(attachedSubmit, 'host bridge should be attached');
       return attachedSubmit(action);
     },
     get detachCalls() {
       return detachCalls;
+    },
+    get attachCalls() {
+      return attachCalls;
     },
     get toggleCalls() {
       return toggleCalls;
@@ -163,6 +190,19 @@ async function main() {
   assert.equal(mismatched.toggleCalls, 0);
   unavailableOwner.dispose();
   assert.equal(mismatched.detachCalls, 0);
+
+  const delayed = createFakeRuntime({ ownerReady: false, sessionReady: false });
+  const delayedBridge = createPrePhoneBridge({ runtime: delayed.runtime, composer: createFakeComposer() });
+  assert.equal(delayedBridge.getAvailability(), 'unavailable');
+  delayed.setOwnerReady(true);
+  assert.equal(delayedBridge.getAvailability(), 'unavailable', 'owner alone must not bind before the session exists');
+  delayed.setSessionReady(true);
+  assert.equal(delayedBridge.getAvailability(), 'available', 'a later session status must retry host bridge binding');
+  assert.equal(delayed.attachCalls, 1, 'late readiness must attach exactly once');
+  delayed.setSessionReady(true);
+  assert.equal(delayed.attachCalls, 1, 'repeated ready status must not attach twice');
+  delayedBridge.dispose();
+  assert.equal(delayed.detachCalls, 1, 'late attachment must detach exactly once');
 }
 
 void main();
