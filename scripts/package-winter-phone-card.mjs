@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CARD_KEYWORD = 'chara';
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
+const PHONE_CDN_ROOT =
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 
 export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
   {
@@ -230,8 +232,8 @@ function buildPhoneScript(definition) {
     enabled: true,
     name: definition.name,
     id: definition.id,
-    content: `import\n'http://localhost:5500/dist/${definition.distPath}'`,
-    info: '寒冬小手机本地构建产物；远端 CDN 发布为独立流程。',
+    content: `import\n'${PHONE_CDN_ROOT}${definition.distPath}'`,
+    info: '寒冬小手机 20260211 分支 CDN 构建产物。',
     button: { enabled: true, buttons: [] },
     data: {},
     export_with: { data: true, button: true },
@@ -328,6 +330,13 @@ function validatePackagedCard(card) {
   const phoneScripts = Array.isArray(scripts) ? scripts.filter(script => ids.has(script?.id)) : [];
   if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
     throw new Error('角色卡未包含七个唯一的小手机脚本');
+  }
+  for (const definition of PHONE_SCRIPT_DEFINITIONS) {
+    const script = phoneScripts.find(candidate => candidate.id === definition.id);
+    if (script?.enabled !== true) throw new Error(`${definition.name} 必须开启`);
+    if (script.content !== `import\n'${PHONE_CDN_ROOT}${definition.distPath}'`) {
+      throw new Error(`${definition.name} 未使用 20260211 分支 CDN import`);
+    }
   }
   validateRuntimeScripts(card);
 }

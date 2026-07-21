@@ -16,6 +16,8 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_PNG = path.join(ROOT, 'src', '末世寒冬 - 星穹秩序.png');
 const WORLDBOOK = path.join(ROOT, 'src', '寒冬末日.json');
+const PHONE_CDN_ROOT =
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const tempRoot = await mkdtemp(path.join(tmpdir(), 'winter-phone-card-'));
@@ -52,7 +54,11 @@ try {
     ),
   );
   assert.ok(phoneScripts.every(script => script.type === 'script' && script.enabled === true));
-  assert.ok(phoneScripts.every(script => /^import\n'http:\/\/localhost:5500\/dist\//.test(script.content)));
+  assert.deepEqual(
+    phoneScripts.map(script => script.content),
+    PHONE_SCRIPT_DEFINITIONS.map(definition => `import\n'${PHONE_CDN_ROOT}${definition.distPath}'`),
+  );
+  assert.ok(phoneScripts.every(script => !script.content.includes('localhost')));
 
   assert.equal(findScript('zod mvu').enabled, true);
   assert.deepEqual(
