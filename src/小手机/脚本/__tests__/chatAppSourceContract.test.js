@@ -99,3 +99,15 @@ test('same-renderer navigation keeps original conversation sync while preventing
   assert.match(postReplyBeforeSync, /if \(store\.activeConvId === conv\.id && replies\) store\.messages\.push\(\.\.\.replies\)/);
   assert.match(postReplyBeforeSync, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isListContextCurrent\(token\)/);
 });
+
+test('same-renderer navigation after persisting the user message still generates for the original conversation', () => {
+  const sendBody = extractFunctionBody('sendMessage');
+  const postAddGuard = sendBody.indexOf('if (!messageOperation.isCurrent(operationToken)', sendBody.indexOf('ChatDB.addMessage'));
+  const generate = sendBody.indexOf('ChatCore.generateGroupReply', postAddGuard);
+  assert.notEqual(postAddGuard, -1, 'expected post-add operation/context guard');
+  assert.notEqual(generate, -1, 'expected original conversation generation');
+  const postAddBeforeGenerate = sendBody.slice(postAddGuard, generate);
+  assert.doesNotMatch(postAddBeforeGenerate, /activeConvId\s*!==\s*conv\.id[^\n]*return/);
+  assert.match(postAddBeforeGenerate, /if \(store\.activeConvId === conv\.id\)\s*\{[\s\S]*store\.messages\.push\(userMsg\)[\s\S]*scrollChatBottom\(\)/);
+  assert.match(postAddBeforeGenerate, /!messageOperation\.isCurrent\(operationToken\)[\s\S]*!isListContextCurrent\(token\)/);
+});

@@ -316,10 +316,11 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           if (!ChatCore || !ChatDB) return;
 
           const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
-          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)
-            || store.activeConvId !== conv.id) return;
-          store.messages.push(userMsg);
-          scrollChatBottom();
+          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)) return;
+          if (store.activeConvId === conv.id) {
+            store.messages.push(userMsg);
+            scrollChatBottom();
+          }
 
           let replies: any[];
           if (conv.type === 'group') replies = await ChatCore.generateGroupReply(conv.id, text);
