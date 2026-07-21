@@ -6,16 +6,9 @@ const path = require('node:path');
 const source = fs.readFileSync(path.resolve(__dirname, '../小手机主程序/index.ts'), 'utf8');
 
 function extractFunctionBody(functionName) {
-  const match = new RegExp(`function ${functionName}\\([^)]*\\)\\s*(?::\\s*[^\\{]+)?\\s*\\{`).exec(source);
+  const match = source.match(new RegExp(`function ${functionName}\\([^)]*\\)[^{]*\\{([\\s\\S]*?)\\n\\s*\\}`));
   assert.ok(match, `expected function ${functionName}`);
-  const bodyStart = match.index + match[0].length;
-  let depth = 1;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    if (source[index] === '{') depth += 1;
-    if (source[index] === '}') depth -= 1;
-    if (depth === 0) return source.slice(bodyStart, index);
-  }
-  assert.fail(`expected balanced function body for ${functionName}`);
+  return match[1];
 }
 
 test('PhoneSystem owns responsive app metadata and renderer APIs', () => {
