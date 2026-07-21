@@ -41,7 +41,7 @@ import {
   isEdenTerminalDeploymentAllowed,
   isHostEpochCaptureCurrent,
   isStableSnapshotCurrent,
-  planTemporaryNpcMigration,
+  planTemporaryNpcPromotion,
   selectCharacterProfile,
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
@@ -163,6 +163,7 @@ function createWinterAdapterModule(): PhoneModule {
   let pendingConfirmedChanges: readonly string[] = [];
   const activeRequests = new Map<string, ActiveRequest>();
   const loreRetryRequests = new Map<string, Readonly<LoreSyncRequest>>();
+  const lastPublishedSnapshots = new Map<string, WinterSnapshot>();
   const diagnostics: string[] = [];
 
   function recordDiagnostic(message: string): void {
@@ -455,12 +456,13 @@ function createWinterAdapterModule(): PhoneModule {
       confirmedChanges: pendingConfirmedChanges,
     };
     if (context?.runtime.getSession()?.sessionKey !== session.sessionKey) return;
-    const previousSnapshot = snapshot?.sessionKey === next.sessionKey ? snapshot : null;
+    const previousSnapshot = lastPublishedSnapshots.get(next.sessionKey) ?? null;
     await migratePromotedContacts(previousSnapshot, next);
     assertHostCapture(hostCapture);
     await syncEdenGroup(next);
     assertHostCapture(hostCapture);
     snapshot = next;
+    lastPublishedSnapshots.set(next.sessionKey, next);
     pendingConfirmedChanges = [];
     scheduler?.setSnapshot({ sessionKey: next.sessionKey, snapshotKey: next.key, storyTurn: assistantMessageId });
     await enqueueSnapshotJobs(next);
@@ -545,13 +547,18 @@ function createWinterAdapterModule(): PhoneModule {
     if (!db) return;
     if (!previousSnapshot) return;
     const temporary = recordValue(previousSnapshot.mvu.stat_data.临时NPC);
-    const mainNames = Object.keys(current.mvu.stat_data).filter(
-      key => !RESERVED_MVU_KEYS.has(key) && isRecord(current.mvu.stat_data[key]),
-    );
-    const plan = planTemporaryNpcMigration(Object.keys(temporary), mainNames);
+    const previousMainNames = mainRoleNames(previousSnapshot);
+    const currentMainNames = mainRoleNames(current);
+    const plan = planTemporaryNpcPromotion(Object.keys(temporary), previousMainNames, currentMainNames);
     plan.diagnostics.forEach(recordDiagnostic);
     if (plan.migrations.length === 0) return;
     await db.migrateIdentities(current.sessionKey, plan.migrations);
+  }
+
+  function mainRoleNames(current: WinterSnapshot): string[] {
+    return Object.keys(current.mvu.stat_data).filter(
+      key => !RESERVED_MVU_KEYS.has(key) && isRecord(current.mvu.stat_data[key]),
+    );
   }
 
   function createAppServices(): PhoneAppServices {
@@ -1246,6 +1253,7 @@ function createWinterAdapterModule(): PhoneModule {
     activeHostCapture = null;
     activeChatWorldbookName = null;
     activeProfileWorldbookNames = [];
+    lastPublishedSnapshots.clear();
     if (context?.runtime.getOwner()?.adapterId === WINTER_OWNER.adapterId) {
       try {
         context.runtime.close();

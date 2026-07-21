@@ -168,7 +168,15 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /runPendingDispatchPreparation\s*\(/);
   assert.match(source, /EDEN_GROUP_CONVERSATION_ID/);
   assert.match(source, /deriveEdenGroupMemberIds\s*\(/);
-  assert.match(source, /previousSnapshot/);
+  assert.match(source, /lastPublishedSnapshots\s*=\s*new Map/);
+  assert.match(source, /lastPublishedSnapshots\.get\(next\.sessionKey\)/);
+  assert.match(source, /lastPublishedSnapshots\.set\(next\.sessionKey,\s*next\)/);
+  assert.match(source, /planTemporaryNpcPromotion\s*\(/);
+  const invalidationBlock = source.slice(
+    source.indexOf('function invalidateSnapshot'),
+    source.indexOf('async function refreshLatestSnapshot'),
+  );
+  assert.doesNotMatch(invalidationBlock, /lastPublishedSnapshots\.(?:clear|delete)/);
   assert.match(source, /migrateIdentities\s*\(/);
   assert.match(source, /buildWinterSchedulerJobs\s*\(/);
   assert.match(source, /submitWinterSchedulerJobs\s*\(\s*scheduler,\s*jobs\s*\)/);

@@ -19,6 +19,7 @@ import {
   isEdenTerminalDeploymentAllowed,
   isHostEpochCaptureCurrent,
   migrateTemporaryNpcIdentity,
+  planTemporaryNpcPromotion,
   planTemporaryNpcMigration,
   selectCharacterProfile,
   runPendingDispatchPreparation,
@@ -181,6 +182,21 @@ function testTemporaryNpcMigration(): void {
   const ambiguous = planTemporaryNpcMigration(['工程师', ' 工程师 '], ['工程师']);
   assert.deepEqual(ambiguous.migrations, []);
   assert.match(ambiguous.diagnostics[0] ?? '', /歧义|ambiguous/i);
+
+  assert.deepEqual(planTemporaryNpcPromotion(['工程师'], [], ['工程师']), {
+    migrations: [{ from: 'temporary:工程师', to: 'main:工程师' }],
+    diagnostics: [],
+  });
+  assert.deepEqual(
+    planTemporaryNpcPromotion(['工程师'], ['工程师'], ['工程师']),
+    { migrations: [], diagnostics: [] },
+    '早已存在的同名主角色不得被误判为本次转正',
+  );
+  assert.deepEqual(
+    planTemporaryNpcPromotion(['工程师'], ['旧角色'], ['旧角色', '工程师']),
+    { migrations: [{ from: 'temporary:工程师', to: 'main:工程师' }], diagnostics: [] },
+    '只允许相对上一已发布快照新增的主角色参与匹配',
+  );
 
   const migrated = migrateTemporaryNpcIdentity(
     { migrations: [{ from: 'temporary:工程师', to: 'main:工程师' }], diagnostics: [] },

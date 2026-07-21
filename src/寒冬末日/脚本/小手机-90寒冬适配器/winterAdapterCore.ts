@@ -255,6 +255,21 @@ export function planTemporaryNpcMigration(
   return { migrations, diagnostics };
 }
 
+export function planTemporaryNpcPromotion(
+  previousTemporaryNames: readonly string[],
+  previousMainNames: readonly string[],
+  currentMainNames: readonly string[],
+): IdentityMigrationPlan {
+  const previousMainCounts = countNormalizedNames(previousMainNames);
+  const currentMainCounts = countNormalizedNames(currentMainNames);
+  const newlyAddedMainNames: string[] = [];
+  for (const [name, currentCount] of currentMainCounts) {
+    const addedCount = Math.max(0, currentCount - (previousMainCounts.get(name) ?? 0));
+    for (let index = 0; index < addedCount; index += 1) newlyAddedMainNames.push(name);
+  }
+  return planTemporaryNpcMigration(previousTemporaryNames, newlyAddedMainNames);
+}
+
 interface ConversationIdentityRecord {
   id: string;
   participants: string[];
