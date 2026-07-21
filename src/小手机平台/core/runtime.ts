@@ -38,9 +38,13 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   private state: PhoneRuntimeStatus['state'] = 'WAITING';
   private isOpen = false;
   private unreadCount = 0;
+  private automaticInitializationQueued = false;
+  private initializationPromise: Promise<void> | null = null;
+  private modulesInitialized = false;
 
   registerModule(registration: PhoneModuleRegistration): void {
     this.registry.register(registration);
+    this.scheduleAutomaticInitialization();
   }
 
   setOwner(owner: PhoneOwner | null): void {
@@ -85,13 +89,14 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   }
 
   async initializeModules(requiredIds: readonly string[] = []): Promise<void> {
-    const context: PhoneModuleContext = {
-      runtime: this,
-      services: this.services,
-      getOwner: () => this.getOwner(),
-      getSession: () => this.getSession(),
-    };
-    await this.registry.initialize(context, requiredIds);
+    if (this.modulesInitialized) return;
+    if (this.initializationPromise) return this.initializationPromise;
+    this.initializationPromise = this.initializeRegisteredModules(requiredIds, false);
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
   }
 
   async open(): Promise<void> {
@@ -171,12 +176,14 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   async dispose(reason = 'runtime disposed'): Promise<void> {
     this.hostBridge = null;
     try {
+      if (this.initializationPromise) await this.initializationPromise.catch(() => undefined);
       await this.registry.dispose(reason);
     } finally {
       this.events.dispose();
       this.owner = null;
       this.session = null;
       this.isOpen = false;
+      this.modulesInitialized = false;
       this.state = 'DISPOSED';
     }
   }
@@ -187,6 +194,65 @@ export class PhoneRuntime implements TavernPhonePublicApi {
 
   private emitStatus(): void {
     this.events.emit('status', this.getStatus());
+  }
+
+  private scheduleAutomaticInitialization(): void {
+    if (this.modulesInitialized || this.automaticInitializationQueued || this.state === 'DISPOSED') return;
+    this.automaticInitializationQueued = true;
+    queueMicrotask(() => {
+      this.automaticInitializationQueued = false;
+      void this.tryAutomaticInitialization();
+    });
+  }
+
+  private async tryAutomaticInitialization(): Promise<void> {
+    if (this.modulesInitialized || this.initializationPromise || this.state === 'DISPOSED') return;
+    const roots = this.registry.findByCapability('phone.adapter');
+    if (roots.length === 0) return;
+    try {
+      this.registry.resolveOrder(roots);
+    } catch (error) {
+      if (/Missing phone module dependency/i.test(getErrorMessage(error))) {
+        this.state = 'WAITING';
+        this.emitStatus();
+        return;
+      }
+      this.diagnostics.push(`automatic module validation failed: ${getErrorMessage(error)}`);
+      this.state = 'ERROR';
+      this.emitStatus();
+      return;
+    }
+
+    this.initializationPromise = this.initializeRegisteredModules(roots, true);
+    try {
+      await this.initializationPromise;
+    } catch {
+      // initializeRegisteredModules records a redacted public diagnostic.
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async initializeRegisteredModules(requiredIds: readonly string[], automatic: boolean): Promise<void> {
+    const context: PhoneModuleContext = {
+      runtime: this,
+      services: this.services,
+      getOwner: () => this.getOwner(),
+      getSession: () => this.getSession(),
+    };
+    this.state = 'RESOLVE';
+    this.emitStatus();
+    try {
+      await this.registry.initialize(context, requiredIds);
+      this.modulesInitialized = true;
+      this.state = this.session ? 'READY' : 'WAITING';
+      this.emitStatus();
+    } catch (error) {
+      if (automatic) this.diagnostics.push(`automatic module initialization failed: ${getErrorMessage(error)}`);
+      this.state = 'ERROR';
+      this.emitStatus();
+      throw error;
+    }
   }
 }
 

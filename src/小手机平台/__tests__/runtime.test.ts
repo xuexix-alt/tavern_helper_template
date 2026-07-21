@@ -138,6 +138,83 @@ async function testInitializeRollbackAndRetry(): Promise<void> {
   assert.deepEqual(lifecycle.slice(4), ['init:good', 'init:bad', 'dispose:bad', 'dispose:good']);
 }
 
+async function flushAutomaticInitialization(): Promise<void> {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+}
+
+async function testAutomaticAdapterRootInitialization(): Promise<void> {
+  const orders = [
+    ['adapter', 'apps', 'core'],
+    ['core', 'adapter', 'apps'],
+    ['apps', 'core', 'adapter'],
+  ] as const;
+  for (const order of orders) {
+    const runtime = createPhoneRuntime();
+    const lifecycle: string[] = [];
+    const modules: Record<(typeof order)[number], PhoneModuleRegistration> = {
+      core: registration('core', [], { init: () => void lifecycle.push('core') }),
+      apps: registration('apps', ['core'], { init: () => void lifecycle.push('apps') }),
+      adapter: {
+        ...registration('adapter', ['apps'], { init: () => void lifecycle.push('adapter') }),
+        manifest: {
+          ...registration('adapter', ['apps']).manifest,
+          capabilities: ['phone.adapter'],
+        },
+      },
+    };
+    for (const id of order) runtime.registerModule(modules[id]);
+    await flushAutomaticInitialization();
+    assert.deepEqual(lifecycle, ['core', 'apps', 'adapter'], `任意顺序 ${order.join(',')} 应自动初始化一次`);
+    runtime.registerModule(modules.adapter);
+    runtime.registerModule(modules.core);
+    await flushAutomaticInitialization();
+    assert.deepEqual(lifecycle, ['core', 'apps', 'adapter'], '重复/并发注册不得重复初始化');
+    await runtime.dispose('automatic test complete');
+  }
+}
+
+async function testAutomaticInitializationFailureRollback(): Promise<void> {
+  const runtime = createPhoneRuntime();
+  const lifecycle: string[] = [];
+  let fail = true;
+  runtime.registerModule(
+    registration('core', [], {
+      init: () => void lifecycle.push('init:core'),
+      dispose: () => void lifecycle.push('dispose:core'),
+    }),
+  );
+  const adapter = {
+    manifest: {
+      id: 'adapter',
+      version: '1.0.0',
+      required: true,
+      dependsOn: ['core'],
+      capabilities: ['phone.adapter'],
+    },
+    factory: (): PhoneModule => ({
+      init() {
+        lifecycle.push('init:adapter');
+        if (fail) throw new Error('adapter exploded');
+      },
+      dispose() {
+        lifecycle.push('dispose:adapter');
+      },
+      getStatus: () => 'READY',
+    }),
+  } satisfies PhoneModuleRegistration;
+  runtime.registerModule(adapter);
+  await flushAutomaticInitialization();
+  assert.deepEqual(lifecycle, ['init:core', 'init:adapter', 'dispose:adapter', 'dispose:core']);
+  assert.equal(runtime.getStatus().state, 'ERROR');
+  assert.match(runtime.getStatus().diagnostics.join('\n'), /automatic|adapter exploded/i);
+
+  fail = false;
+  runtime.registerModule(adapter);
+  await flushAutomaticInitialization();
+  assert.deepEqual(lifecycle.slice(4), ['init:core', 'init:adapter'], '失败回滚后重复注册可安全重试');
+  await runtime.dispose('failure retry complete');
+}
+
 async function testRuntimeBridge(): Promise<void> {
   assert.equal(makeSessionKey(ownerA, 'chat-42'), '末世寒冬 - 星穹秩序::chat-42');
 
@@ -705,6 +782,8 @@ async function main(): Promise<void> {
   testServiceModuleAtomicPublication();
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
+  await testAutomaticAdapterRootInitialization();
+  await testAutomaticInitializationFailureRollback();
   await testRuntimeBridge();
   testEventBus();
   await testRuntimeFailureCleanupAndListenerDiagnostics();

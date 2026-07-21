@@ -5,18 +5,19 @@ export class ModuleRegistry {
   private readonly instances = new Map<string, PhoneModule>();
   private initializedOrder: string[] = [];
 
-  register(registration: PhoneModuleRegistration): void {
+  register(registration: PhoneModuleRegistration): boolean {
     const { id, version } = registration.manifest;
     if (!id.trim() || !version.trim()) throw new Error('Phone module id and version are required');
 
     const existing = this.registrations.get(id);
-    if (existing?.manifest.version === version) return;
+    if (existing?.manifest.version === version) return false;
     if (existing) {
       throw new Error(
         `Phone module ${id} version ${existing.manifest.version} is already registered; hot replace is unsupported`,
       );
     }
     this.registrations.set(id, registration);
+    return true;
   }
 
   list(): PhoneModuleRegistration[] {
@@ -28,7 +29,7 @@ export class ModuleRegistry {
     if (missing.length > 0) throw new Error(`Missing required phone modules: ${missing.join(', ')}`);
   }
 
-  resolveOrder(): string[] {
+  resolveOrder(rootIds?: readonly string[]): string[] {
     const resolved: string[] = [];
     const visiting = new Set<string>();
     const visited = new Set<string>();
@@ -46,8 +47,15 @@ export class ModuleRegistry {
       resolved.push(id);
     };
 
-    this.registrations.forEach((_registration, id) => visit(id));
+    if (rootIds) rootIds.forEach(visit);
+    else this.registrations.forEach((_registration, id) => visit(id));
     return resolved;
+  }
+
+  findByCapability(capability: string): string[] {
+    return this.list()
+      .filter(registration => registration.manifest.capabilities.includes(capability))
+      .map(registration => registration.manifest.id);
   }
 
   async initialize(context: PhoneModuleContext, requiredIds: readonly string[] = []): Promise<void> {
@@ -56,7 +64,7 @@ export class ModuleRegistry {
 
     let currentInstance: PhoneModule | null = null;
     try {
-      for (const id of this.resolveOrder()) {
+      for (const id of this.resolveOrder(requiredIds.length > 0 ? requiredIds : undefined)) {
         const registration = this.registrations.get(id)!;
         currentInstance = registration.factory();
         await currentInstance.init(context);

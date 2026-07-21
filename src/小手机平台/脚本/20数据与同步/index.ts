@@ -2,10 +2,10 @@ import { createServiceModule } from '../../core/serviceModule';
 import { registerPhoneModule } from '../../core/register';
 import { ChatLoreSync, LORE_ENTRY_DEFINITIONS } from '../../data/chatLoreSync';
 import { buildLoreSummary } from '../../data/loreSummary';
-import { createMemoryPhoneDb } from '../../data/phoneDb';
+import { createIndexedDbPhoneDb, createMemoryPhoneDb } from '../../data/phoneDb';
 
 const services = Object.freeze({
-  'phone.db': Object.freeze({ createMemoryPhoneDb }),
+  'phone.db': Object.freeze({ createIndexedDbPhoneDb, createMemoryPhoneDb }),
   'chat-lore.sync': Object.freeze({ ChatLoreSync, LORE_ENTRY_DEFINITIONS, buildLoreSummary }),
 });
 

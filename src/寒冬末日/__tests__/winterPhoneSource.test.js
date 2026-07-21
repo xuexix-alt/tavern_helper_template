@@ -36,6 +36,8 @@ const entrypoints = [
   },
 ];
 
+const winterAdapterPath = 'src/寒冬末日/脚本/小手机-90寒冬适配器/index.ts';
+
 test('runtime entry installs once at script-ready time without disposing the shared runtime', () => {
   const source = readFileSync('src/小手机平台/脚本/00运行时管理器/index.ts', 'utf8');
 
@@ -60,6 +62,14 @@ for (const entrypoint of entrypoints) {
     );
   });
 }
+
+test('data entry publishes persistent IndexedDB with an explicit memory fallback constructor', () => {
+  const source = readFileSync('src/小手机平台/脚本/20数据与同步/index.ts', 'utf8');
+
+  assert.match(source, /createIndexedDbPhoneDb/);
+  assert.match(source, /createMemoryPhoneDb/);
+  assert.match(source, /['"]phone\.db['"]:\s*Object\.freeze\(\{[^}]*createIndexedDbPhoneDb[^}]*createMemoryPhoneDb/s);
+});
 
 test('webpack filters discovered scripts before entry parsing and can omit generator plugins', () => {
   const source = readFileSync('webpack.config.ts', 'utf8');
@@ -125,6 +135,37 @@ test('winter communication facts are declared across schema, init data, and upda
   assert.match(variables, /format_message_variable::stat_data/);
   assert.match(temporaryNpc, /已建立联系/);
   assert.match(temporaryNpc, /伊甸终端T2/);
+});
+
+test('winter adapter declares the exact owner, MVU snapshot identity, abilities, and profile entry contract', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const core = readFileSync('src/寒冬末日/脚本/小手机-90寒冬适配器/winterAdapterCore.ts', 'utf8');
+  const combined = `${source}\n${core}`;
+
+  assert.match(source, /registerPhoneModule\s*\(\s*\{/);
+  assert.match(source, /id:\s*['"]winter\.adapter['"]/);
+  assert.match(source, /dependsOn:\s*\[['"]communication\.apps['"]\]/);
+  assert.match(combined, /末世寒冬 - 星穹秩序/);
+  assert.match(combined, /social\.shift_ration_protocol_t2/);
+  assert.match(combined, /social\.eden_phone_mass_t4/);
+  assert.match(combined, /assistantMessageId/);
+  assert.match(combined, /mvuSignature/);
+  assert.match(combined, /角色档案 - /);
+  assert.match(source, /PhoneAppServices/);
+  assert.match(source, /createIndexedDbPhoneDb\s*\(/);
+  assert.match(source, /createPhoneApps\s*\(/);
+  assert.match(source, /createPhoneShell\s*\(/);
+  assert.match(source, /new\s+ChatLoreSync\s*\(/);
+  assert.match(source, /new\s+TavernProvider\s*\(/);
+  assert.match(source, /new\s+ControlledPhoneScheduler\s*\(/);
+  assert.match(source, /getCharWorldbookNames\s*\(\s*['"]current['"]\s*\)/);
+  assert.match(source, /eventOn\s*\(/);
+  assert.match(source, /generationActive/);
+  assert.match(source, /activeChatWorldbookName/);
+  assert.match(source, /assertCapturedSession\s*\(/);
+  assert.match(source, /chatLore:\s*chatLore/);
+  assert.match(source, /finally\s*\{[\s\S]*deactivate\s*\(/);
+  assert.doesNotMatch(combined, /same-layer-pre|sameLayerPre|useSameLayerPre/);
 });
 
 test('schema dump has a strict, path-boundary-aware winter scope', () => {
