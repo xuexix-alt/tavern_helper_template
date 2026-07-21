@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-const CARD_KEYWORD = 'chara';
+const CARD_KEYWORDS = Object.freeze(['chara', 'ccv3']);
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
 const PHONE_CDN_ROOT =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
@@ -149,22 +149,22 @@ function textChunkParts(chunk) {
   };
 }
 
-function decodeCard(chunks) {
-  const cardChunk = chunks.find(chunk => textChunkParts(chunk)?.keyword === CARD_KEYWORD);
+function decodeCard(chunks, keyword = CARD_KEYWORDS[0]) {
+  const cardChunk = chunks.find(chunk => textChunkParts(chunk)?.keyword === keyword);
   const parts = cardChunk && textChunkParts(cardChunk);
-  if (!parts) throw new Error('PNG 中不存在 chara 角色卡数据');
+  if (!parts) throw new Error(`PNG 中不存在 ${keyword} 角色卡数据`);
   try {
     return JSON.parse(Buffer.from(parts.text, 'base64').toString('utf8'));
   } catch (error) {
-    throw new Error('chara 数据不是有效的 base64 JSON', { cause: error });
+    throw new Error(`${keyword} 数据不是有效的 base64 JSON`, { cause: error });
   }
 }
 
-function encodeCardChunk(card) {
+function encodeCardChunk(card, keyword) {
   const payload = Buffer.from(JSON.stringify(card), 'utf8').toString('base64');
   return {
     type: 'tEXt',
-    data: Buffer.from(`${CARD_KEYWORD}\0${payload}`, 'latin1'),
+    data: Buffer.from(`${keyword}\0${payload}`, 'latin1'),
   };
 }
 
@@ -172,8 +172,8 @@ function encodePng(chunks) {
   return Buffer.concat([PNG_SIGNATURE, ...chunks.map(chunk => encodeChunk(chunk.type, chunk.data))]);
 }
 
-export async function readCharacterCardPng(filename) {
-  return decodeCard(parsePng(await readFile(filename)));
+export async function readCharacterCardPng(filename, keyword = CARD_KEYWORDS[0]) {
+  return decodeCard(parsePng(await readFile(filename)), keyword);
 }
 
 function toCharacterBookEntry(entry) {
@@ -350,8 +350,11 @@ async function writeAtomically(filename, buffer) {
     await handle.sync();
     await handle.close();
     handle = undefined;
-    const verified = await readCharacterCardPng(tempName);
-    validatePackagedCard(verified);
+    const verifiedCards = await Promise.all(CARD_KEYWORDS.map(keyword => readCharacterCardPng(tempName, keyword)));
+    for (const verified of verifiedCards) validatePackagedCard(verified);
+    if (JSON.stringify(verifiedCards[0]) !== JSON.stringify(verifiedCards[1])) {
+      throw new Error('PNG 的 chara 与 ccv3 角色卡数据不一致');
+    }
     await rename(tempName, filename);
   } catch (error) {
     await handle?.close().catch(() => undefined);
@@ -363,7 +366,8 @@ async function writeAtomically(filename, buffer) {
 export async function packageWinterPhoneCard({ input, worldbook, write = false }) {
   const inputBuffer = await readFile(input);
   const chunks = parsePng(inputBuffer);
-  const card = structuredClone(decodeCard(chunks));
+  const sourceCards = CARD_KEYWORDS.map(keyword => decodeCard(chunks, keyword));
+  const card = structuredClone(sourceCards[0]);
   if (card?.data?.name !== EXPECTED_CARD_NAME) throw new Error(`拒绝打包其他角色卡：${card?.data?.name ?? '未知'}`);
   const worldbookData = JSON.parse(await readFile(worldbook, 'utf8'));
   applyWorldbook(card, worldbookData);
@@ -371,8 +375,10 @@ export async function packageWinterPhoneCard({ input, worldbook, write = false }
   applyPhoneScripts(card);
   validatePackagedCard(card);
 
-  const cardChunk = encodeCardChunk(card);
-  const nextChunks = chunks.map(chunk => (textChunkParts(chunk)?.keyword === CARD_KEYWORD ? cardChunk : chunk));
+  const nextChunks = chunks.map(chunk => {
+    const keyword = textChunkParts(chunk)?.keyword;
+    return keyword && CARD_KEYWORDS.includes(keyword) ? encodeCardChunk(card, keyword) : chunk;
+  });
   const output = encodePng(nextChunks);
   if (write) await writeAtomically(input, output);
   return { card, output, scriptCount: PHONE_SCRIPT_DEFINITIONS.length };

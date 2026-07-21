@@ -32,7 +32,11 @@ try {
   assert.equal(result.scriptCount, 7);
   assert.equal(hash(await readFile(SOURCE_PNG)), originalHash, '临时往返不得修改仓库原 PNG');
 
-  const card = await readCharacterCardPng(tempPng);
+  const card = await readCharacterCardPng(tempPng, 'chara');
+  const ccv3Card = await readCharacterCardPng(tempPng, 'ccv3');
+  assert.deepEqual(ccv3Card, card, 'chara 与 ccv3 必须写入同一份角色卡数据');
+  assert.equal(ccv3Card.data.extensions.tavern_helper.scripts.length, 15);
+  await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
   assert.equal(card.data.name, '末世寒冬 - 星穹秩序');
   const scripts = card.data.extensions.tavern_helper.scripts;
   const findScript = name => {
