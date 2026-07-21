@@ -15,7 +15,9 @@ $(() => {
 
   // ==================== 摘要生成 ====================
 
-  async function buildSummary(conversationId: string): Promise<{ entryName: string; summary: string; messageIds: number[] } | null> {
+  async function buildSummary(
+    conversationId: string,
+  ): Promise<{ entryName: string; summary: string; messageIds: number[] } | null> {
     try {
       const ChatDB = (window.parent as any).ChatDB;
       if (!ChatDB) {
@@ -37,17 +39,16 @@ $(() => {
       if (unsynced.length === 0) return null;
 
       const recent = messages.slice(-count);
-      const entryName = conv.type === 'private'
-        ? `[租客微信]${conv.members[0]}`
-        : '[租客微信]群聊记录';
+      const entryName = conv.type === 'private' ? `[租客微信]${conv.members[0]}` : '[租客微信]群聊记录';
 
       const summary = recent
         .map((msg: any) => {
           const sender = msg.sender === '<user>' ? '房东' : msg.sender;
           const timeStr = msg.gameTime?.时间 ? `[${msg.gameTime.时间}]` : '';
-          const text = (msg.content as string).length > MAX_MSG_LENGTH
-            ? (msg.content as string).substring(0, MAX_MSG_LENGTH) + '…'
-            : msg.content;
+          const text =
+            (msg.content as string).length > MAX_MSG_LENGTH
+              ? (msg.content as string).substring(0, MAX_MSG_LENGTH) + '…'
+              : msg.content;
           return `${timeStr} ${sender}: ${text}`;
         })
         .join('\n')
@@ -75,31 +76,36 @@ $(() => {
       let success = false;
       try {
         const worldbookName = await (window.parent as any).getOrCreateChatWorldbook('current');
-        await (window.parent as any).updateWorldbookWith(worldbookName, (entries: any[]) => {
-          // 查找同名条目
-          const existing = entries.find((e: any) => e.name === entryName);
-          if (existing) {
-            // 更新内容
-            return entries.map((e: any) =>
-              e.name === entryName
-                ? { ...e, content: summary, enabled: true }
-                : e,
-            );
-          } else {
-            // 创建新条目
-            const newEntry: any = {
-              name: entryName,
-              enabled: true,
-              content: summary,
-              strategy: { type: 'constant', keys: [entryName, '微信', '聊天记录'], keys_secondary: { logic: 'and_any', keys: [] }, scan_depth: 'same_as_global' as any },
-              position: { type: 'at_depth' as any, role: 'system', depth: 4, order: 100 },
-              probability: 100,
-              recursion: { prevent_incoming: false, prevent_outgoing: false, delay_until: null },
-              effect: { sticky: null, cooldown: null, delay: null },
-            };
-            return [...entries, newEntry];
-          }
-        }, { render: 'immediate' });
+        await (window.parent as any).updateWorldbookWith(
+          worldbookName,
+          (entries: any[]) => {
+            // 查找同名条目
+            const existing = entries.find((e: any) => e.name === entryName);
+            if (existing) {
+              // 更新内容
+              return entries.map((e: any) => (e.name === entryName ? { ...e, content: summary, enabled: true } : e));
+            } else {
+              // 创建新条目
+              const newEntry: any = {
+                name: entryName,
+                enabled: true,
+                content: summary,
+                strategy: {
+                  type: 'constant',
+                  keys: [entryName, '微信', '聊天记录'],
+                  keys_secondary: { logic: 'and_any', keys: [] },
+                  scan_depth: 'same_as_global' as any,
+                },
+                position: { type: 'at_depth' as any, role: 'system', depth: 4, order: 100 },
+                probability: 100,
+                recursion: { prevent_incoming: false, prevent_outgoing: false, delay_until: null },
+                effect: { sticky: null, cooldown: null, delay: null },
+              };
+              return [...entries, newEntry];
+            }
+          },
+          { render: 'immediate' },
+        );
         success = true;
         console.log('[ChatSync] ✅ ChatLore 条目已更新:', entryName);
       } catch (err1) {
@@ -119,13 +125,18 @@ $(() => {
 
           // 方式3：最后回退 — 写聊天变量（但不会自动进入正文）
           try {
-            (window.parent as any).updateVariablesWith((vars: any) => {
-              const varKey = entryName.replace(/[\[\]]/g, '').replace(/[^\w一-鿿]/g, '_');
-              vars[`wechat_${varKey}`] = summary;
-              return vars;
-            }, { type: 'chat' });
+            (window.parent as any).updateVariablesWith(
+              (vars: any) => {
+                const varKey = entryName.replace(/[\[\]]/g, '').replace(/[^\w一-鿿]/g, '_');
+                vars[`wechat_${varKey}`] = summary;
+                return vars;
+              },
+              { type: 'chat' },
+            );
             console.log('[ChatSync] ⚠️ 已回退到聊天变量（不会自动进入正文）');
-          } catch { /* 完全失败 */ }
+          } catch {
+            /* 完全失败 */
+          }
         }
       }
 
@@ -134,7 +145,9 @@ $(() => {
         try {
           const ChatDB = (window.parent as any).ChatDB;
           if (ChatDB) await ChatDB.markSyncedToLore(messageIds);
-        } catch { /* 标记失败不影响主流程 */ }
+        } catch {
+          /* 标记失败不影响主流程 */
+        }
       }
 
       return success;
@@ -151,10 +164,13 @@ $(() => {
       clearTimeout(syncTimers.get(conversationId));
     }
 
-    syncTimers.set(conversationId, setTimeout(async () => {
-      syncTimers.delete(conversationId);
-      await syncToChatLore(conversationId);
-    }, DEBOUNCE_MS));
+    syncTimers.set(
+      conversationId,
+      setTimeout(async () => {
+        syncTimers.delete(conversationId);
+        await syncToChatLore(conversationId);
+      }, DEBOUNCE_MS),
+    );
   }
 
   // ==================== 手动注入正文 ====================

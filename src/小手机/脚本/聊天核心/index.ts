@@ -52,7 +52,9 @@ $(() => {
       if (typeof getRegexedString === 'function') {
         return getRegexedString(text, 2, { isPrompt: true });
       }
-    } catch { /* 静默回退 */ }
+    } catch {
+      /* 静默回退 */
+    }
     return text
       .replace(/<UpdateVariable>[\s\S]*?<\/UpdateVariable>/g, '')
       .replace(/<Analysis>[\s\S]*?<\/Analysis>/g, '')
@@ -66,7 +68,9 @@ $(() => {
       if (ChatDB?.getGameTime) {
         return ChatDB.formatGameTime(ChatDB.getGameTime());
       }
-    } catch { /* 静默 */ }
+    } catch {
+      /* 静默 */
+    }
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} 周${['日', '一', '二', '三', '四', '五', '六'][now.getDay()]} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   }
@@ -92,7 +96,9 @@ $(() => {
           return summary.trim() || null;
         }
       }
-    } catch (e) { console.warn('[ChatCore] 获取正文上下文失败:', e); }
+    } catch (e) {
+      console.warn('[ChatCore] 获取正文上下文失败:', e);
+    }
     return null;
   }
 
@@ -116,7 +122,9 @@ $(() => {
         }
       }
       return summary || null;
-    } catch (e) { console.warn('[ChatCore] 获取私聊摘要失败:', e); }
+    } catch (e) {
+      console.warn('[ChatCore] 获取私聊摘要失败:', e);
+    }
     return null;
   }
 
@@ -137,11 +145,16 @@ $(() => {
           return summary;
         }
       }
-    } catch (e) { console.warn('[ChatCore] 获取群聊摘要失败:', e); }
+    } catch (e) {
+      console.warn('[ChatCore] 获取群聊摘要失败:', e);
+    }
     return null;
   }
 
-  async function getEnhancedContext(chatType: 'private' | 'group', memberNames: string[]): Promise<Record<string, string | null>> {
+  async function getEnhancedContext(
+    chatType: 'private' | 'group',
+    memberNames: string[],
+  ): Promise<Record<string, string | null>> {
     const context: Record<string, string | null> = {};
     try {
       context.storyContext = await getStoryContext();
@@ -150,7 +163,9 @@ $(() => {
       } else {
         context.groupChat = await getGroupChatSummary();
       }
-    } catch (e) { console.warn('[ChatCore] 获取增强上下文失败:', e); }
+    } catch (e) {
+      console.warn('[ChatCore] 获取增强上下文失败:', e);
+    }
     return context;
   }
 
@@ -170,9 +185,13 @@ $(() => {
         try {
           info.baseProfile = TenantAnalyzer.getBaseProfile?.(tenantName);
           info.dynamicProfile = TenantAnalyzer.getDynamicProfile?.(tenantName);
-        } catch { /* 可能未初始化 */ }
+        } catch {
+          /* 可能未初始化 */
+        }
       }
-    } catch (e) { console.warn('[ChatCore] 获取租客信息失败:', tenantName, e); }
+    } catch (e) {
+      console.warn('[ChatCore] 获取租客信息失败:', tenantName, e);
+    }
     return info;
   }
 
@@ -186,7 +205,12 @@ $(() => {
       if (d.状态) text += `状态: ${d.状态}\n`;
       if (d.内心) text += `内心: ${d.内心}\n`;
       if (d.关系) {
-        text += '关系: ' + Object.entries(d.关系).map(([k, v]) => `${k}:${v}`).join(', ') + '\n';
+        text +=
+          '关系: ' +
+          Object.entries(d.关系)
+            .map(([k, v]) => `${k}:${v}`)
+            .join(', ') +
+          '\n';
       }
     }
     if (info.baseProfile) text += `\n本色档案:\n${info.baseProfile}\n`;
@@ -309,11 +333,13 @@ ${userMessage}
 
   function formatChatHistory(messages: any[]): string {
     if (!messages || messages.length === 0) return '';
-    return messages.map(msg => {
-      const sender = msg.sender === '<user>' ? '房东' : msg.sender;
-      const time = msg.gameTime?.时间 ? `[${msg.gameTime.时间}]` : '';
-      return `${time} ${sender}: ${msg.content}`;
-    }).join('\n');
+    return messages
+      .map(msg => {
+        const sender = msg.sender === '<user>' ? '房东' : msg.sender;
+        const time = msg.gameTime?.时间 ? `[${msg.gameTime.时间}]` : '';
+        return `${time} ${sender}: ${msg.content}`;
+      })
+      .join('\n');
   }
 
   function cleanMessageContent(content: string, expectedSender?: string): string {
@@ -330,12 +356,15 @@ ${userMessage}
 
   function parseGroupReply(response: string, validMembers: string[]): { sender: string; content: string }[] {
     const replies: { sender: string; content: string }[] = [];
-    const lines = response.trim().split('\n').filter(line => {
-      const t = line.trim();
-      if (!t) return false;
-      if (/^[-—─━=*~_]{2,}$/.test(t)) return false;
-      return true;
-    });
+    const lines = response
+      .trim()
+      .split('\n')
+      .filter(line => {
+        const t = line.trim();
+        if (!t) return false;
+        if (/^[-—─━=*~_]{2,}$/.test(t)) return false;
+        return true;
+      });
 
     for (const line of lines) {
       let cleaned = line.replace(/^[\[【\(]?\d{1,2}:\d{2}[\]】\)]?\s*/g, '');
@@ -372,7 +401,11 @@ ${userMessage}
 
     // 回退：直接 fetch
     const config = (() => {
-      try { return (window.parent as any).PhoneSystem?.getAPIConfig?.(); } catch { return null; }
+      try {
+        return (window.parent as any).PhoneSystem?.getAPIConfig?.();
+      } catch {
+        return null;
+      }
     })();
     if (!config?.apiUrl || !config?.apiKey) {
       throw new Error('请先在手机设置中配置 API');
@@ -403,7 +436,7 @@ ${userMessage}
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
       body: JSON.stringify(requestBody),
       signal: options?.signal,
     });
@@ -420,7 +453,10 @@ ${userMessage}
   let abortController: AbortController | null = null;
 
   async function generatePrivateReply(conversationId: string, userMessage: string): Promise<any[] | null> {
-    if (isGenerating) { console.warn('[ChatCore] 正在生成中'); return null; }
+    if (isGenerating) {
+      console.warn('[ChatCore] 正在生成中');
+      return null;
+    }
     isGenerating = true;
     abortController = new AbortController();
 
@@ -441,12 +477,15 @@ ${userMessage}
 
       const response = await callAPI(prompt, { signal: abortController.signal });
       const savedMessages: any[] = [];
-      const lines = response.trim().split('\n').filter(line => {
-        const t = line.trim();
-        if (!t) return false;
-        if (/^[-—─━=*~_]{2,}$/.test(t)) return false;
-        return true;
-      });
+      const lines = response
+        .trim()
+        .split('\n')
+        .filter(line => {
+          const t = line.trim();
+          if (!t) return false;
+          if (/^[-—─━=*~_]{2,}$/.test(t)) return false;
+          return true;
+        });
 
       for (const line of lines) {
         const content = cleanMessageContent(line.trim(), tenantName);
@@ -473,7 +512,10 @@ ${userMessage}
   }
 
   async function generateGroupReply(conversationId: string, userMessage: string): Promise<any[] | null> {
-    if (isGenerating) { console.warn('[ChatCore] 正在生成中'); return null; }
+    if (isGenerating) {
+      console.warn('[ChatCore] 正在生成中');
+      return null;
+    }
     isGenerating = true;
     abortController = new AbortController();
 

@@ -49,7 +49,7 @@ $(() => {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const database = (event.target as IDBOpenDBRequest).result;
         if (!database.objectStoreNames.contains('conversations')) {
           const convStore = database.createObjectStore('conversations', { keyPath: 'id' });
@@ -66,11 +66,11 @@ $(() => {
         }
       };
 
-      request.onsuccess = (event) => {
+      request.onsuccess = event => {
         resolve((event.target as IDBOpenDBRequest).result);
       };
 
-      request.onerror = (event) => {
+      request.onerror = event => {
         reject((event.target as IDBOpenDBRequest).error);
       };
     });
@@ -87,7 +87,9 @@ $(() => {
           return mvuData.stat_data.世界 as GameTime;
         }
       }
-    } catch { /* 静默回退 */ }
+    } catch {
+      /* 静默回退 */
+    }
 
     // 回退：当前系统时间
     const now = new Date();
@@ -111,7 +113,9 @@ $(() => {
         const ctx = window.parent.SillyTavern.getContext();
         return ctx.chatId || 'default';
       }
-    } catch { /* 静默忽略 */ }
+    } catch {
+      /* 静默忽略 */
+    }
     return 'default';
   }
 
@@ -125,7 +129,9 @@ $(() => {
 
   // ==================== 会话 CRUD ====================
 
-  async function createConversation(data: Partial<ChatConversation> & { type: 'private' | 'group'; members: string[]; name?: string }): Promise<ChatConversation> {
+  async function createConversation(
+    data: Partial<ChatConversation> & { type: 'private' | 'group'; members: string[]; name?: string },
+  ): Promise<ChatConversation> {
     await ensureConnection();
     const chatId = currentChatId!;
     const name = data.name || (data.type === 'private' ? data.members[0] : `群聊_${Date.now()}`);
@@ -220,7 +226,9 @@ $(() => {
         resolve({ ...msg, id: msgReq.result as number });
       };
       msgReq.onerror = () => reject(msgReq.error);
-      tx.oncomplete = () => { /* 事务完成 */ };
+      tx.oncomplete = () => {
+        /* 事务完成 */
+      };
     });
   }
 
@@ -270,8 +278,12 @@ $(() => {
   // ==================== 导出到全局 ====================
 
   const ChatDB = {
-    get db() { return db; },
-    get currentChatId() { return currentChatId; },
+    get db() {
+      return db;
+    },
+    get currentChatId() {
+      return currentChatId;
+    },
     openDB,
     ensureConnection,
     createConversation,
