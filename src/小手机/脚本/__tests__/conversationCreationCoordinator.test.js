@@ -8,11 +8,21 @@ function harness(overrides = {}) {
   const calls = { get: 0, create: 0, commit: [], refresh: 0, refreshErrors: 0 };
   const created = { id: 'new', type: 'private', members: ['甲'], name: '甲' };
   const deps = {
-    getConversations: async () => { calls.get += 1; return []; },
-    createConversation: async payload => { calls.create += 1; return { ...created, ...payload }; },
+    getConversations: async () => {
+      calls.get += 1;
+      return [];
+    },
+    createConversation: async payload => {
+      calls.create += 1;
+      return { ...created, ...payload };
+    },
     onCommit: conversation => calls.commit.push(conversation),
-    refreshConversations: async () => { calls.refresh += 1; },
-    onRefreshError: () => { calls.refreshErrors += 1; },
+    refreshConversations: async () => {
+      calls.refresh += 1;
+    },
+    onRefreshError: () => {
+      calls.refreshErrors += 1;
+    },
     captureContext: () => 'ctx-1',
     isCurrent: token => token === 'ctx-1',
     ...overrides,
@@ -22,13 +32,23 @@ function harness(overrides = {}) {
 
 test('private confirmation performs fresh lookup and reuses an existing private without create', async () => {
   const existing = { id: 'old', type: 'private', members: ['甲'], name: '甲' };
-  const h = harness({ getConversations: async () => { h.calls.get += 1; return [existing]; } });
+  const h = harness({
+    getConversations: async () => {
+      h.calls.get += 1;
+      return [existing];
+    },
+  });
   assert.deepEqual(await h.coordinator.confirmPrivate(['甲']), { ok: true, kind: 'existing', conversation: existing });
   assert.deepEqual(h.calls, { get: 1, create: 0, commit: [existing], refresh: 0, refreshErrors: 0 });
 });
 
 test('private lookup failure fails closed and never creates', async () => {
-  const h = harness({ getConversations: async () => { h.calls.get += 1; throw new Error('read failed'); } });
+  const h = harness({
+    getConversations: async () => {
+      h.calls.get += 1;
+      throw new Error('read failed');
+    },
+  });
   assert.deepEqual(await h.coordinator.confirmPrivate(['甲']), { ok: false, reason: 'lookup-error' });
   assert.equal(h.calls.create, 0);
 });
@@ -36,9 +56,15 @@ test('private lookup failure fails closed and never creates', async () => {
 test('stale private lookup never starts a create in the new context', async () => {
   let release;
   let current = true;
-  const pending = new Promise(resolve => { release = resolve; });
+  const pending = new Promise(resolve => {
+    release = resolve;
+  });
   const h = harness({
-    getConversations: async () => { h.calls.get += 1; await pending; return []; },
+    getConversations: async () => {
+      h.calls.get += 1;
+      await pending;
+      return [];
+    },
     captureContext: () => 'old',
     isCurrent: token => token === 'old' && current,
   });
@@ -53,8 +79,15 @@ test('stale private lookup never starts a create in the new context', async () =
 
 test('created conversation commits and resolves before a non-blocking refresh settles', async () => {
   let rejectRefresh;
-  const pendingRefresh = new Promise((_, reject) => { rejectRefresh = reject; });
-  const h = harness({ refreshConversations: () => { h.calls.refresh += 1; return pendingRefresh; } });
+  const pendingRefresh = new Promise((_, reject) => {
+    rejectRefresh = reject;
+  });
+  const h = harness({
+    refreshConversations: () => {
+      h.calls.refresh += 1;
+      return pendingRefresh;
+    },
+  });
   const result = await Promise.race([
     h.coordinator.confirmPrivate(['甲']),
     new Promise((_, reject) => setTimeout(() => reject(new Error('confirmation waited for refresh')), 50)),
@@ -72,8 +105,16 @@ test('created conversation commits and resolves before a non-blocking refresh se
 
 test('group confirmation always creates once and busy submissions are rejected', async () => {
   let release;
-  const pending = new Promise(resolve => { release = resolve; });
-  const h = harness({ createConversation: async payload => { h.calls.create += 1; await pending; return { id: 'g', ...payload }; } });
+  const pending = new Promise(resolve => {
+    release = resolve;
+  });
+  const h = harness({
+    createConversation: async payload => {
+      h.calls.create += 1;
+      await pending;
+      return { id: 'g', ...payload };
+    },
+  });
   const first = h.coordinator.confirmGroup(['甲', '乙'], '');
   assert.deepEqual(await h.coordinator.confirmGroup(['甲', '乙'], ''), { ok: false, reason: 'busy' });
   release();
@@ -82,7 +123,12 @@ test('group confirmation always creates once and busy submissions are rejected',
 });
 
 test('creation errors preserve caller state and stale completion does not commit or refresh', async () => {
-  const failed = harness({ createConversation: async () => { failed.calls.create += 1; throw new Error('create failed'); } });
+  const failed = harness({
+    createConversation: async () => {
+      failed.calls.create += 1;
+      throw new Error('create failed');
+    },
+  });
   assert.deepEqual(await failed.coordinator.confirmGroup(['甲', '乙'], '群'), { ok: false, reason: 'create-error' });
   assert.equal(failed.calls.commit.length, 0);
   const stale = harness({ captureContext: () => 'old', isCurrent: () => false });
@@ -97,14 +143,23 @@ test('commit programming errors reject consistently for existing and created con
   const commitError = new Error('commit failed');
   const existing = { id: 'old', type: 'private', members: ['甲'], name: '甲' };
   const reused = harness({
-    getConversations: async () => { reused.calls.get += 1; return [existing]; },
-    onCommit: () => { throw commitError; },
+    getConversations: async () => {
+      reused.calls.get += 1;
+      return [existing];
+    },
+    onCommit: () => {
+      throw commitError;
+    },
   });
   await assert.rejects(reused.coordinator.confirmPrivate(['甲']), error => error === commitError);
   assert.equal(reused.coordinator.isBusy(), false);
   assert.equal(reused.calls.refresh, 0);
 
-  const created = harness({ onCommit: () => { throw commitError; } });
+  const created = harness({
+    onCommit: () => {
+      throw commitError;
+    },
+  });
   await assert.rejects(created.coordinator.confirmGroup(['甲', '乙'], '群'), error => error === commitError);
   assert.equal(created.coordinator.isBusy(), false);
   assert.equal(created.calls.refresh, 0);
@@ -116,8 +171,14 @@ test('synchronous refresh and refresh error callback failures cannot change crea
   process.on('unhandledRejection', onUnhandled);
   try {
     const h = harness({
-      refreshConversations: () => { h.calls.refresh += 1; throw new Error('sync refresh failed'); },
-      onRefreshError: () => { h.calls.refreshErrors += 1; throw new Error('reporting failed'); },
+      refreshConversations: () => {
+        h.calls.refresh += 1;
+        throw new Error('sync refresh failed');
+      },
+      onRefreshError: () => {
+        h.calls.refreshErrors += 1;
+        throw new Error('reporting failed');
+      },
     });
     const result = await h.coordinator.confirmGroup(['甲', '乙'], '群');
     assert.equal(result.ok, true);
@@ -135,7 +196,9 @@ test('synchronous refresh and refresh error callback failures cannot change crea
 test('context becoming stale after create returns stale without commit or refresh and clears busy', async () => {
   let release;
   let current = true;
-  const pending = new Promise(resolve => { release = resolve; });
+  const pending = new Promise(resolve => {
+    release = resolve;
+  });
   const h = harness({
     createConversation: async payload => {
       h.calls.create += 1;

@@ -111,8 +111,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       }
 
       function isComponentContextCurrent(token: ReturnType<typeof captureComponentContext>): boolean {
-        return !disposed && token.component === store.componentGeneration
-          && token.phone === PS.getContextGeneration();
+        return !disposed && token.component === store.componentGeneration && token.phone === PS.getContextGeneration();
       }
 
       function captureModalContext() {
@@ -148,10 +147,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         }
       }
 
-      function scrollChatBottom(
-        context: ReturnType<typeof captureComponentContext>,
-        convId: string | null,
-      ): void {
+      function scrollChatBottom(context: ReturnType<typeof captureComponentContext>, convId: string | null): void {
         if (scrollTimer !== null) clearTimeout(scrollTimer);
         scrollTimer = setTimeout(() => {
           scrollTimer = null;
@@ -264,9 +260,10 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.isCreating = true;
         store.creationError = '';
         try {
-          const result = store.creationMode === 'private'
-            ? await coordinator.confirmPrivate([...store.selectedNames])
-            : await coordinator.confirmGroup([...store.selectedNames], store.groupName);
+          const result =
+            store.creationMode === 'private'
+              ? await coordinator.confirmPrivate([...store.selectedNames])
+              : await coordinator.confirmGroup([...store.selectedNames], store.groupName);
           if (isModalContextCurrent(submitContext) && !result.ok && result.reason !== 'stale') {
             store.creationError = creationErrorMessage[result.reason];
           }
@@ -340,8 +337,12 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           const ChatSync = (window.parent as any).ChatSync;
           if (ChatSync) ChatSync.instantSync(conv.id);
         } catch (error: any) {
-          if (messageOperation.isCurrent(operationToken) && isComponentContextCurrent(sendContext)
-            && store.activeConvId === conv.id && error?.message !== 'AbortError') {
+          if (
+            messageOperation.isCurrent(operationToken) &&
+            isComponentContextCurrent(sendContext) &&
+            store.activeConvId === conv.id &&
+            error?.message !== 'AbortError'
+          ) {
             store.messages.push({
               sender: '<system>',
               content: `❌ 发送失败: ${error?.message || '未知'}`,
@@ -350,8 +351,10 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             });
           }
         } finally {
-          const ownsActiveConversation = messageOperation.isCurrent(operationToken)
-            && isComponentContextCurrent(sendContext) && store.activeConvId === conv.id;
+          const ownsActiveConversation =
+            messageOperation.isCurrent(operationToken) &&
+            isComponentContextCurrent(sendContext) &&
+            store.activeConvId === conv.id;
           if (isComponentContextCurrent(sendContext)) {
             if (messageOperation.finish(operationToken)) {
               store.isGenerating = false;
@@ -361,7 +364,9 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         }
       }
 
-      vue.onMounted(() => { void loadConversations(); });
+      vue.onMounted(() => {
+        void loadConversations();
+      });
       vue.onBeforeUnmount(() => {
         try {
           (window.parent as any).ChatCore?.abort?.();
@@ -377,71 +382,177 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       });
 
       const h = vue.h;
-      const renderConversationRows = () => store.conversations.map(conv => h('button', {
-        key: conv.id,
-        type: 'button',
-        onClick: () => { void openConversation(conv); },
-        style: 'width:100%;display:flex;align-items:center;gap:10px;padding:12px;margin:4px 0;background:#fff;border:0;border-radius:8px;cursor:pointer;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.05);',
-      }, [
-        h('span', { style: 'width:42px;height:42px;border-radius:50%;background:#07c160;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;' }, conv.type === 'group' ? '👥' : '👤'),
-        h('span', { style: 'flex:1;min-width:0;' }, [
-          h('span', { style: 'display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' }, conv.name || conv.members[0]),
-          h('span', { style: 'display:block;font-size:11px;color:#999;margin-top:3px;' }, conv.type === 'group' ? `${conv.members.length}人` : '私聊'),
-        ]),
-      ]));
+      const renderConversationRows = () =>
+        store.conversations.map(conv =>
+          h(
+            'button',
+            {
+              key: conv.id,
+              type: 'button',
+              onClick: () => {
+                void openConversation(conv);
+              },
+              style:
+                'width:100%;display:flex;align-items:center;gap:10px;padding:12px;margin:4px 0;background:#fff;border:0;border-radius:8px;cursor:pointer;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,.05);',
+            },
+            [
+              h(
+                'span',
+                {
+                  style:
+                    'width:42px;height:42px;border-radius:50%;background:#07c160;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex-shrink:0;',
+                },
+                conv.type === 'group' ? '👥' : '👤',
+              ),
+              h('span', { style: 'flex:1;min-width:0;' }, [
+                h(
+                  'span',
+                  {
+                    style:
+                      'display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+                  },
+                  conv.name || conv.members[0],
+                ),
+                h(
+                  'span',
+                  { style: 'display:block;font-size:11px;color:#999;margin-top:3px;' },
+                  conv.type === 'group' ? `${conv.members.length}人` : '私聊',
+                ),
+              ]),
+            ],
+          ),
+        );
 
       const renderCreationModal = () => {
         if (!store.modalOpen) return null;
-        const candidateContent = store.candidateState === 'loading'
-          ? h('p', { style: 'color:#888;text-align:center;' }, '正在读取角色…')
-          : store.candidateState === 'error'
-            ? h('div', { style: 'color:#c33;font-size:12px;text-align:center;' }, [
-                h('p', store.candidateError),
-                h('button', {
-                  type: 'button',
-                  disabled: store.isCreating,
-                  onClick: () => { void loadCreationCandidates(); },
-                }, '重新读取'),
-              ])
-            : h('div', { style: 'display:flex;flex-wrap:wrap;gap:7px;' }, store.candidates.map(name => {
-                const selected = store.selectedNames.includes(name);
-                return h('button', {
-                  key: name,
-                  type: 'button',
-                  disabled: store.creationMode === null || store.isCreating,
-                  onClick: () => toggleCandidate(name),
-                  style: `padding:7px 10px;border-radius:14px;border:1px solid ${selected ? '#07c160' : '#ccc'};background:${selected ? '#e7f8ee' : '#fff'};color:#333;`,
-                }, `${selected ? '✓ ' : ''}${name}`);
-              }));
-        return h('div', {
-          style: 'position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;z-index:20;',
-          onClick: (event: MouseEvent) => { if (event.target === event.currentTarget && !store.isCreating) closeCreationModal(); },
-        }, [h('div', { style: 'width:100%;max-height:86%;overflow:auto;background:#fff;border-radius:16px 16px 0 0;padding:16px;box-sizing:border-box;' }, [
-          h('div', { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;' }, [
-            h('strong', '新建聊天'),
-            h('button', { type: 'button', disabled: store.isCreating, onClick: closeCreationModal, style: 'border:0;background:transparent;font-size:20px;' }, '×'),
-          ]),
-          h('div', { style: 'display:flex;gap:8px;margin-bottom:12px;' }, [
-            h('button', { type: 'button', disabled: store.isCreating, onClick: () => chooseMode('private'), style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'private' ? '#07c160' : '#fff'};color:${store.creationMode === 'private' ? '#fff' : '#07c160'};` }, '新建私聊'),
-            h('button', { type: 'button', disabled: store.isCreating, onClick: () => chooseMode('group'), style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'group' ? '#07c160' : '#fff'};color:${store.creationMode === 'group' ? '#fff' : '#07c160'};` }, '新建群聊'),
-          ]),
-          store.creationMode === null ? h('p', { style: 'font-size:12px;color:#888;' }, '请先选择私聊或群聊') : null,
-          candidateContent,
-          store.creationMode === 'group' ? h('input', {
-            value: store.groupName,
-            disabled: store.isCreating,
-            onInput: (event: InputEvent) => { store.groupName = (event.target as HTMLInputElement).value; },
-            placeholder: '群聊名称（可选）',
-            style: 'width:100%;box-sizing:border-box;margin-top:12px;padding:9px;border:1px solid #ddd;border-radius:8px;',
-          }) : null,
-          store.creationError ? h('p', { style: 'color:#c33;font-size:12px;' }, store.creationError) : null,
-          h('button', {
-            type: 'button',
-            disabled: store.candidateState !== 'ready' || store.isCreating || store.creationMode === null || !canSubmitCreation(),
-            onClick: () => { void submitCreation(); },
-            style: `width:100%;margin-top:14px;padding:10px;border:0;border-radius:8px;background:#07c160;color:#fff;opacity:${canSubmitCreation() ? 1 : .45};`,
-          }, store.isCreating ? '创建中…' : '确认创建'),
-        ])]);
+        const candidateContent =
+          store.candidateState === 'loading'
+            ? h('p', { style: 'color:#888;text-align:center;' }, '正在读取角色…')
+            : store.candidateState === 'error'
+              ? h('div', { style: 'color:#c33;font-size:12px;text-align:center;' }, [
+                  h('p', store.candidateError),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      disabled: store.isCreating,
+                      onClick: () => {
+                        void loadCreationCandidates();
+                      },
+                    },
+                    '重新读取',
+                  ),
+                ])
+              : h(
+                  'div',
+                  { style: 'display:flex;flex-wrap:wrap;gap:7px;' },
+                  store.candidates.map(name => {
+                    const selected = store.selectedNames.includes(name);
+                    return h(
+                      'button',
+                      {
+                        key: name,
+                        type: 'button',
+                        disabled: store.creationMode === null || store.isCreating,
+                        onClick: () => toggleCandidate(name),
+                        style: `padding:7px 10px;border-radius:14px;border:1px solid ${selected ? '#07c160' : '#ccc'};background:${selected ? '#e7f8ee' : '#fff'};color:#333;`,
+                      },
+                      `${selected ? '✓ ' : ''}${name}`,
+                    );
+                  }),
+                );
+        return h(
+          'div',
+          {
+            style: 'position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;z-index:20;',
+            onClick: (event: MouseEvent) => {
+              if (event.target === event.currentTarget && !store.isCreating) closeCreationModal();
+            },
+          },
+          [
+            h(
+              'div',
+              {
+                style:
+                  'width:100%;max-height:86%;overflow:auto;background:#fff;border-radius:16px 16px 0 0;padding:16px;box-sizing:border-box;',
+              },
+              [
+                h(
+                  'div',
+                  { style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;' },
+                  [
+                    h('strong', '新建聊天'),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        disabled: store.isCreating,
+                        onClick: closeCreationModal,
+                        style: 'border:0;background:transparent;font-size:20px;',
+                      },
+                      '×',
+                    ),
+                  ],
+                ),
+                h('div', { style: 'display:flex;gap:8px;margin-bottom:12px;' }, [
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      disabled: store.isCreating,
+                      onClick: () => chooseMode('private'),
+                      style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'private' ? '#07c160' : '#fff'};color:${store.creationMode === 'private' ? '#fff' : '#07c160'};`,
+                    },
+                    '新建私聊',
+                  ),
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      disabled: store.isCreating,
+                      onClick: () => chooseMode('group'),
+                      style: `flex:1;padding:9px;border-radius:8px;border:1px solid #07c160;background:${store.creationMode === 'group' ? '#07c160' : '#fff'};color:${store.creationMode === 'group' ? '#fff' : '#07c160'};`,
+                    },
+                    '新建群聊',
+                  ),
+                ]),
+                store.creationMode === null
+                  ? h('p', { style: 'font-size:12px;color:#888;' }, '请先选择私聊或群聊')
+                  : null,
+                candidateContent,
+                store.creationMode === 'group'
+                  ? h('input', {
+                      value: store.groupName,
+                      disabled: store.isCreating,
+                      onInput: (event: InputEvent) => {
+                        store.groupName = (event.target as HTMLInputElement).value;
+                      },
+                      placeholder: '群聊名称（可选）',
+                      style:
+                        'width:100%;box-sizing:border-box;margin-top:12px;padding:9px;border:1px solid #ddd;border-radius:8px;',
+                    })
+                  : null,
+                store.creationError ? h('p', { style: 'color:#c33;font-size:12px;' }, store.creationError) : null,
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    disabled:
+                      store.candidateState !== 'ready' ||
+                      store.isCreating ||
+                      store.creationMode === null ||
+                      !canSubmitCreation(),
+                    onClick: () => {
+                      void submitCreation();
+                    },
+                    style: `width:100%;margin-top:14px;padding:10px;border:0;border-radius:8px;background:#07c160;color:#fff;opacity:${canSubmitCreation() ? 1 : 0.45};`,
+                  },
+                  store.isCreating ? '创建中…' : '确认创建',
+                ),
+              ],
+            ),
+          ],
+        );
       };
 
       return () => {
@@ -453,7 +564,16 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             listContent = h('div', { style: 'text-align:center;padding:30px;color:#999;' }, [
               h('p', '聊天记录加载失败'),
               h('p', { style: 'font-size:11px;' }, store.listError),
-              h('button', { type: 'button', onClick: () => { void loadConversations(); } }, '重试'),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => {
+                    void loadConversations();
+                  },
+                },
+                '重试',
+              ),
             ]);
           } else if (store.listState === 'ready' && store.conversations.length === 0) {
             listContent = h('div', { style: 'text-align:center;padding:30px 20px;color:#999;' }, [
@@ -465,54 +585,165 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             listContent = renderConversationRows();
           }
 
-          return h('div', { style: 'position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;' }, [
-            h('div', { style: 'padding:10px 14px;font-size:14px;font-weight:600;color:#333;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd;flex-shrink:0;' }, [
-              h('span', '💬 聊天'),
-              h('span', { style: 'display:flex;align-items:center;gap:12px;' }, [
-                h('button', { type: 'button', onClick: () => { void loadConversations(); }, style: 'border:0;background:transparent;color:#07c160;cursor:pointer;' }, '刷新'),
-                h('button', { type: 'button', onClick: () => { void openCreationModal(); }, style: 'border:0;background:transparent;color:#07c160;font-size:22px;cursor:pointer;' }, '＋'),
-              ]),
-            ]),
-            store.notice ? h('div', { style: 'padding:6px 10px;background:#fff5d6;color:#7a5a00;font-size:11px;' }, store.notice) : null,
-            h('div', { style: 'flex:1;overflow-y:auto;padding:8px;' }, listContent),
-            renderCreationModal(),
-          ]);
+          return h(
+            'div',
+            {
+              style:
+                'position:relative;width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;',
+            },
+            [
+              h(
+                'div',
+                {
+                  style:
+                    'padding:10px 14px;font-size:14px;font-weight:600;color:#333;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd;flex-shrink:0;',
+                },
+                [
+                  h('span', '💬 聊天'),
+                  h('span', { style: 'display:flex;align-items:center;gap:12px;' }, [
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        onClick: () => {
+                          void loadConversations();
+                        },
+                        style: 'border:0;background:transparent;color:#07c160;cursor:pointer;',
+                      },
+                      '刷新',
+                    ),
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        onClick: () => {
+                          void openCreationModal();
+                        },
+                        style: 'border:0;background:transparent;color:#07c160;font-size:22px;cursor:pointer;',
+                      },
+                      '＋',
+                    ),
+                  ]),
+                ],
+              ),
+              store.notice
+                ? h('div', { style: 'padding:6px 10px;background:#fff5d6;color:#7a5a00;font-size:11px;' }, store.notice)
+                : null,
+              h('div', { style: 'flex:1;overflow-y:auto;padding:8px;' }, listContent),
+              renderCreationModal(),
+            ],
+          );
         }
 
         const conv = store.activeConv;
-        return h('div', { style: 'width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;' }, [
-          h('div', { style: 'padding:8px 12px;background:#f0f0f0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd;flex-shrink:0;' }, [
-            h('button', { type: 'button', onClick: goBack, style: 'border:0;background:transparent;cursor:pointer;font-size:16px;' }, '←'),
-            h('span', { style: 'font-weight:600;font-size:14px;' }, conv?.name || conv?.members[0] || '聊天'),
-          ]),
-          h('div', { ref: messageListElement, id: 'phone-chat-msgs', style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;' }, [
-            ...store.messages.map((msg: any, index: number) => {
-              const isMe = msg.sender === '<user>';
-              const isSystem = msg.sender === '<system>';
-              return h('div', { key: msg.id || index, style: `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};` }, [
-                !isMe && !isSystem ? h('div', { style: 'font-size:10px;color:#888;margin-bottom:1px;padding:0 4px;' }, msg.sender) : null,
-                h('div', { style: `max-width:78%;padding:7px 10px;border-radius:8px;font-size:13px;line-height:1.5;word-break:break-word;background:${isMe ? '#95ec69' : isSystem ? '#ffe0e0' : '#fff'};color:#000;box-shadow:0 1px 2px rgba(0,0,0,.04);` }, msg.content),
-                msg.gameTime?.时间 ? h('div', { style: 'font-size:9px;color:#bbb;margin-top:1px;padding:0 2px;' }, msg.gameTime.时间) : null,
-              ]);
-            }),
-            store.isGenerating ? h('div', { style: 'text-align:center;color:#999;font-size:12px;padding:8px;' }, '⏳ 对方正在输入...') : null,
-          ]),
-          h('div', { style: 'padding:6px 8px;background:#f7f7f7;display:flex;gap:6px;border-top:1px solid #ddd;flex-shrink:0;' }, [
-            h('input', {
-              value: store.inputText,
-              onInput: (event: InputEvent) => { store.inputText = (event.target as HTMLInputElement).value; },
-              onKeydown: (event: KeyboardEvent) => { if (event.key === 'Enter') void sendMessage(); },
-              placeholder: '输入消息…',
-              style: 'flex:1;padding:8px 10px;border-radius:6px;border:1px solid #ddd;font-size:13px;outline:none;min-width:0;',
-            }),
-            h('button', {
-              type: 'button',
-              onClick: () => { void sendMessage(); },
-              disabled: store.isGenerating || !store.inputText.trim(),
-              style: `padding:8px 14px;border-radius:6px;border:0;background:#07c160;color:#fff;font-size:13px;font-weight:600;opacity:${store.isGenerating || !store.inputText.trim() ? .5 : 1};`,
-            }, '发送'),
-          ]),
-        ]);
+        return h(
+          'div',
+          {
+            style:
+              'width:100%;height:100%;display:flex;flex-direction:column;background:#ededed;color:#000;font-family:"Microsoft YaHei",sans-serif;overflow:hidden;',
+          },
+          [
+            h(
+              'div',
+              {
+                style:
+                  'padding:8px 12px;background:#f0f0f0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd;flex-shrink:0;',
+              },
+              [
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    onClick: goBack,
+                    style: 'border:0;background:transparent;cursor:pointer;font-size:16px;',
+                  },
+                  '←',
+                ),
+                h('span', { style: 'font-weight:600;font-size:14px;' }, conv?.name || conv?.members[0] || '聊天'),
+              ],
+            ),
+            h(
+              'div',
+              {
+                ref: messageListElement,
+                id: 'phone-chat-msgs',
+                style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;',
+              },
+              [
+                ...store.messages.map((msg: any, index: number) => {
+                  const isMe = msg.sender === '<user>';
+                  const isSystem = msg.sender === '<system>';
+                  return h(
+                    'div',
+                    {
+                      key: msg.id || index,
+                      style: `display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'};`,
+                    },
+                    [
+                      !isMe && !isSystem
+                        ? h('div', { style: 'font-size:10px;color:#888;margin-bottom:1px;padding:0 4px;' }, msg.sender)
+                        : null,
+                      h(
+                        'div',
+                        {
+                          style: `max-width:78%;padding:7px 10px;border-radius:8px;font-size:13px;line-height:1.5;word-break:break-word;background:${isMe ? '#95ec69' : isSystem ? '#ffe0e0' : '#fff'};color:#000;box-shadow:0 1px 2px rgba(0,0,0,.04);`,
+                        },
+                        msg.content,
+                      ),
+                      msg.gameTime?.时间
+                        ? h(
+                            'div',
+                            { style: 'font-size:9px;color:#bbb;margin-top:1px;padding:0 2px;' },
+                            msg.gameTime.时间,
+                          )
+                        : null,
+                    ],
+                  );
+                }),
+                store.isGenerating
+                  ? h(
+                      'div',
+                      { style: 'text-align:center;color:#999;font-size:12px;padding:8px;' },
+                      '⏳ 对方正在输入...',
+                    )
+                  : null,
+              ],
+            ),
+            h(
+              'div',
+              {
+                style:
+                  'padding:6px 8px;background:#f7f7f7;display:flex;gap:6px;border-top:1px solid #ddd;flex-shrink:0;',
+              },
+              [
+                h('input', {
+                  value: store.inputText,
+                  onInput: (event: InputEvent) => {
+                    store.inputText = (event.target as HTMLInputElement).value;
+                  },
+                  onKeydown: (event: KeyboardEvent) => {
+                    if (event.key === 'Enter') void sendMessage();
+                  },
+                  placeholder: '输入消息…',
+                  style:
+                    'flex:1;padding:8px 10px;border-radius:6px;border:1px solid #ddd;font-size:13px;outline:none;min-width:0;',
+                }),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    onClick: () => {
+                      void sendMessage();
+                    },
+                    disabled: store.isGenerating || !store.inputText.trim(),
+                    style: `padding:8px 14px;border-radius:6px;border:0;background:#07c160;color:#fff;font-size:13px;font-weight:600;opacity:${store.isGenerating || !store.inputText.trim() ? 0.5 : 1};`,
+                  },
+                  '发送',
+                ),
+              ],
+            ),
+          ],
+        );
       };
     },
   };
@@ -533,7 +764,7 @@ function disposeChatAppScript(): void {
 
 $(() => {
   stopWaitingForPhoneSystem = waitForPhoneSystem({
-    read: () => scriptDisposed ? null : ((window.parent as any).PhoneSystem as PhoneSystemLike | undefined),
+    read: () => (scriptDisposed ? null : ((window.parent as any).PhoneSystem as PhoneSystemLike | undefined)),
     schedule: run => setTimeout(run, 300),
     cancel: timer => clearTimeout(timer),
     onReady: PS => {
@@ -541,7 +772,8 @@ $(() => {
       registeredPhoneSystem = PS;
       PS.registerApp(chatMetadata);
       PS.registerRenderer('chat-app', ({ container, vue }) =>
-        mountChatRenderer({ container, vue, component: createChatRenderer(vue, PS) }));
+        mountChatRenderer({ container, vue, component: createChatRenderer(vue, PS) }),
+      );
       console.log('[聊天APP] 已注册到手机桌面');
     },
   });

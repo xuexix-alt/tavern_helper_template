@@ -26,7 +26,9 @@ test('each operation synchronously pins chatId before database promises resolve'
 
 test('missing chat ids normalize to default at synchronous entry', () => {
   const beginOperation = createChatOperationContextFactory({
-    readChatId: () => '', openDatabase: async () => ({}), onDiagnosticChatId: () => {},
+    readChatId: () => '',
+    openDatabase: async () => ({}),
+    onDiagnosticChatId: () => {},
   });
   assert.equal(beginOperation().chatId, 'default');
 });

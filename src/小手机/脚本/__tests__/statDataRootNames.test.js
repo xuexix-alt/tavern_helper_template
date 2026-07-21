@@ -32,8 +32,16 @@ test('returns exact failure reasons in precedence order', () => {
 
 test('macro adapter calls the exact macro and maps only source exceptions', () => {
   let received = '';
-  const success = loadStatDataRootNames(source => { received = source; return '角色甲: {}'; });
+  const success = loadStatDataRootNames(source => {
+    received = source;
+    return '角色甲: {}';
+  });
   assert.equal(received, '{{format_message_variable::stat_data}}');
   assert.deepEqual(success, { ok: true, names: ['角色甲'] });
-  assert.deepEqual(loadStatDataRootNames(() => { throw new Error('macro failed'); }), { ok: false, reason: 'source-error' });
+  assert.deepEqual(
+    loadStatDataRootNames(() => {
+      throw new Error('macro failed');
+    }),
+    { ok: false, reason: 'source-error' },
+  );
 });

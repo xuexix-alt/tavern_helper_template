@@ -43,19 +43,28 @@ test('send separates operation validity, component validity, and conversation UI
   const addGuard = body.indexOf('isComponentContextCurrent(sendContext)', addAwait);
   const userOwner = body.indexOf('store.activeConvId === conv.id', addGuard);
   const userPush = body.indexOf('store.messages.push(userMsg)', userOwner);
-  const coreCall = Math.min(...['await ChatCore.generateGroupReply', 'await ChatCore.generatePrivateReply'].map(token => {
-    const index = body.indexOf(token, userPush);
-    return index < 0 ? Infinity : index;
-  }));
+  const coreCall = Math.min(
+    ...['await ChatCore.generateGroupReply', 'await ChatCore.generatePrivateReply'].map(token => {
+      const index = body.indexOf(token, userPush);
+      return index < 0 ? Infinity : index;
+    }),
+  );
   const replyGuard = body.indexOf('isComponentContextCurrent(sendContext)', coreCall);
   const replyOwner = body.indexOf('store.activeConvId === conv.id', replyGuard);
   const replyPush = body.indexOf('store.messages.push(...replies)', replyOwner);
   const sync = body.indexOf('ChatSync.instantSync(conv.id)', replyPush);
 
   assert.ok(
-    capture >= 0 && addAwait > capture && addGuard > addAwait && userOwner > addGuard && userPush > userOwner
-      && coreCall > userPush && replyGuard > coreCall && replyOwner > replyGuard && replyPush > replyOwner
-      && sync > replyPush,
+    capture >= 0 &&
+      addAwait > capture &&
+      addGuard > addAwait &&
+      userOwner > addGuard &&
+      userPush > userOwner &&
+      coreCall > userPush &&
+      replyGuard > coreCall &&
+      replyOwner > replyGuard &&
+      replyPush > replyOwner &&
+      sync > replyPush,
     'send await guards, UI ownership, and original-conversation sync order',
   );
   assert.match(body, /messageOperation\.isCurrent\(operationToken\)[\s\S]*isComponentContextCurrent\(sendContext\)/);

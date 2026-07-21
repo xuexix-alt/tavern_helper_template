@@ -1,4 +1,7 @@
-export interface ChatOperationContext<TDatabase> { chatId: string; dbPromise: Promise<TDatabase> }
+export interface ChatOperationContext<TDatabase> {
+  chatId: string;
+  dbPromise: Promise<TDatabase>;
+}
 export function createChatOperationContextFactory<TDatabase>(deps: {
   readChatId(): string | null | undefined;
   openDatabase(): Promise<TDatabase>;

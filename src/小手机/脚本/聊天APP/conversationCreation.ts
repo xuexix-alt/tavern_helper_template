@@ -22,10 +22,7 @@ export type GroupConversationDecision =
 
 const uniqueNames = (names: string[]) => [...new Set(names.map(name => name.trim()).filter(Boolean))];
 
-export function decidePrivateConversation(
-  selected: string[],
-  conversations: ConversationLike[],
-): ConversationDecision {
+export function decidePrivateConversation(selected: string[], conversations: ConversationLike[]): ConversationDecision {
   const names = uniqueNames(selected);
   if (names.length !== 1) return { ok: false, reason: 'select-one' };
   const existing = conversations.find(
