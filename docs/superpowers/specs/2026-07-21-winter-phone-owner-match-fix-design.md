@@ -1,26 +1,26 @@
-# 寒冬小手机 Owner 校验修复设计
+# 寒冬小手机延迟 Owner 就绪修复设计
 
 ## 问题
 
-same-layer pre 的 `phoneBridge.ts` 将目标角色名写成了双反斜杠 Unicode 字面量：
+`00运行时管理器` 可以先于其余模块创建 `window.top.TavernPhone`，而 `winter.adapter` 必须等待平台服务、数据、AI、外壳和 APP 模块齐全后才能初始化并设置 owner/session。same-layer pre 挂载时因此可能看到“运行时存在但 owner 尚未就绪”。
 
-```ts
-'\\u672b\\u4e16\\u5bd2\\u51ac - \\u661f\\u7a79\\u79e9\\u5e8f'
-```
+当前 `createPrePhoneBridge()` 只在创建瞬间检查一次 owner。初次不匹配时，它将状态设为 `unavailable`，且不订阅运行时 `status` 事件；适配器之后调用 `setOwner()`、`setSession()` 也无法让 UI 恢复，入口会永久停在“手机·不可用”。
 
-该值包含 51 个字符，并不等于运行时适配器提供的 `末世寒冬 - 星穹秩序`。因此 `ownerMatches()` 恒为 `false`，pre UI 虽能发现 `window.top.TavernPhone`，仍只能显示“手机·不可用”。现有测试复制了同一错误字面量，未能发现真实运行时不匹配。
+源码中的 `\uXXXX` 每个只有一个反斜杠，会被 TypeScript 正确解析成中文，不是故障原因。
 
 ## 修复
 
-- 将 `EXPECTED_OWNER.characterName` 改为真实中文 `末世寒冬 - 星穹秩序`。
-- 将 `phoneBridge.test.ts` 的假运行时 owner 改为同一真实中文值，让测试模拟适配器实际输出。
-- 保留 `adapterId: winter-apocalypse` 与 `runtimeMajor: 1` 的严格校验，不做转义兼容，不删除角色卡隔离。
-- 不修改小手机运行时、业务模块、pre UI 布局或交互。
+- 运行时存在时始终订阅 `status`，即使初始 owner 尚未匹配。
+- 每次 `status` 更新都重新检查 owner，并尝试挂接 host bridge。
+- `setOwner()` 后 session 尚未设置导致挂接失败时保持 `unavailable`；下一次 `setSession()` 状态事件再次尝试并恢复为 `available`。
+- 成功挂接后只注册一次 unread 监听，避免重复监听与重复 detach。
+- owner 后续失配或 bridge dispose 时，清理 host bridge 与 unread 监听。
+- 保留角色名、adapterId、runtimeMajor 三字段严格校验，不允许其他角色卡接管。
 
 ## 验证与发布
 
-- 先运行使用真实中文 owner 的测试，确认它在旧实现上得到 `unavailable`。
-- 修改桥接常量后，确认匹配 owner 为 `available`，错误 adapter 仍为 `unavailable`。
-- 增加源码契约断言：桥接文件必须包含真实中文角色名，不得包含 `\\u672b` 双反斜杠字面量。
-- 运行寒冬小手机相关测试并重新构建 same-layer pre 状态栏产物。
-- 推送到 `20260211` 后，校验发布产物包含真实中文 owner。
+- 假运行时按真实顺序从 `owner=null/session=false` 变为 owner 匹配但无 session，再变为 owner/session 都就绪。
+- 旧实现必须在该测试中保持 `unavailable`，证明回归测试能捕获截图问题。
+- 修复后最终状态必须为 `available`，且 attach、unread 订阅与 detach 次数均为一次。
+- owner 永久失配、运行时缺失和运行时抛错的现有降级行为继续通过。
+- 重新构建 same-layer pre production 产物，推送到 `20260211` 并刷新 CDN 缓存。
