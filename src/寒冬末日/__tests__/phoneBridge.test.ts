@@ -92,11 +92,21 @@ async function main() {
 
   assert.equal(bridge.getAvailability(), 'available');
   assert.equal(bridge.getUnread(), 2);
-  await fake.submit({ kind: 'composer.insert', text: '\u68c0\u67e5\u4f9b\u6696', sourceKey: 'task:heat', mode: 'append' });
+  await fake.submit({
+    kind: 'composer.insert',
+    text: '\u68c0\u67e5\u4f9b\u6696',
+    sourceKey: 'task:heat',
+    mode: 'append',
+  });
   assert.equal(composer.value, '\u5df2\u6709\u6587\u672c\n\u68c0\u67e5\u4f9b\u6696');
   assert.equal(composer.generateCalls, 0);
 
-  await bridge.submitAction({ kind: 'composer.insert', text: '\u66ff\u6362\u5185\u5bb9', sourceKey: 'task:replace', mode: 'replace' });
+  await bridge.submitAction({
+    kind: 'composer.insert',
+    text: '\u66ff\u6362\u5185\u5bb9',
+    sourceKey: 'task:replace',
+    mode: 'replace',
+  });
   assert.equal(composer.value, '\u66ff\u6362\u5185\u5bb9');
   await assert.rejects(() => bridge.submitAction({ kind: 'unknown' } as any), /kind/i);
   await assert.rejects(
