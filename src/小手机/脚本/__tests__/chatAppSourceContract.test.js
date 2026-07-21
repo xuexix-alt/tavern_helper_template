@@ -46,11 +46,17 @@ test('list and modal states distinguish loading error empty and reset paths', ()
   const openBody = extractFunctionBody('openCreationModal');
   assert.match(openBody, /candidateState\s*=\s*['"]loading['"]/);
   assert.match(openBody, /await vue\.nextTick\(\)/);
-  assert.match(openBody, /loadStatDataRootNames\(substitudeMacros\)/);
+  assert.match(openBody, /await loadCreationCandidates\(\)/);
   const closeBody = extractFunctionBody('closeCreationModal');
-  for (const token of ["creationMode = null", "selectedNames = []", "groupName = ''", "creationError = ''", 'isCreating = false']) {
+  for (const token of ["creationMode = null", "selectedNames = []", "groupName = ''", "candidateError = ''", "creationError = ''", 'isCreating = false']) {
     assert.ok(closeBody.includes(token), `expected reset: ${token}`);
   }
+  const candidatesBody = extractFunctionBody('loadCreationCandidates');
+  assert.match(candidatesBody, /loadStatDataRootNames\(source\s*=>\s*substitudeMacros\(source\)\)/);
+  assert.match(candidatesBody, /candidateError\s*=\s*candidateErrorMessage\[result\.reason\]/);
+  assert.match(source, /candidateError:\s*['"]["']/);
+  assert.match(source, /重新读取/);
+  assert.match(source, /onClick:\s*\(\)\s*=>\s*\{\s*void loadCreationCandidates\(\);\s*\}/);
   const submitBody = extractFunctionBody('submitCreation');
   assert.match(submitBody, /const submitContext = captureContext\(\)/);
   assert.match(submitBody, /isContextCurrent\(submitContext\)/);
@@ -62,6 +68,19 @@ test('list and modal states distinguish loading error empty and reset paths', ()
   assert.match(submitBody, /catch\s*\(error\)[\s\S]*void loadConversations\(\)/);
   assert.match(submitBody, /会话状态需要刷新，已返回列表，请稍后重试/);
   assert.doesNotMatch(submitBody, /会话已创建或打开/);
+});
+
+test('message operations are invalidated on navigation and stale completions cannot clear later busy state', () => {
+  const goBackBody = extractFunctionBody('goBack');
+  const openConversationBody = extractFunctionBody('openConversation');
+  const sendBody = extractFunctionBody('sendMessage');
+  assert.match(goBackBody, /messageOperation\.invalidate\(\)/);
+  assert.match(goBackBody, /isGenerating\s*=\s*false/);
+  assert.match(openConversationBody, /messageOperation\.invalidate\(\)/);
+  assert.match(openConversationBody, /isGenerating\s*=\s*false/);
+  assert.match(sendBody, /const operationToken = messageOperation\.start\(\)/);
+  assert.match(sendBody, /messageOperation\.isCurrent\(operationToken\)/);
+  assert.match(sendBody, /messageOperation\.finish\(operationToken\)/);
 });
 
 test('existing message send generation and sync chain remains intact', () => {

@@ -2,6 +2,7 @@
 // PhoneSystem owns the iframe and passes the exact container and Vue runtime to this renderer.
 
 import type * as VueRuntime from 'vue';
+import { createLatestMessageOperationGuard } from './chatMessageOperation';
 import { createConversationCreationCoordinator } from './conversationCreationCoordinator';
 import { decideGroupConversation, decidePrivateConversation, type ConversationLike } from './conversationCreation';
 import { mountChatRenderer, waitForPhoneSystem } from './chatRendererLifecycle';
@@ -23,6 +24,7 @@ interface ChatStore {
   creationMode: CreationMode;
   candidateState: CandidateState;
   candidates: string[];
+  candidateError: string;
   selectedNames: string[];
   groupName: string;
   creationError: string;
@@ -77,6 +79,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       let disposed = false;
       let scrollTimer: ReturnType<typeof setTimeout> | null = null;
       const messageListElement = vue.ref<HTMLElement | null>(null);
+      const messageOperation = createLatestMessageOperationGuard();
       const store = vue.reactive<ChatStore>({
         conversations: [],
         listState: 'loading',
@@ -86,6 +89,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         creationMode: null,
         candidateState: 'idle',
         candidates: [],
+        candidateError: '',
         selectedNames: [],
         groupName: '',
         creationError: '',
@@ -163,6 +167,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       }
 
       async function openConversation(conv: ConversationLike): Promise<void> {
+        messageOperation.invalidate();
+        store.isGenerating = false;
         store.activeConvId = conv.id;
         store.activeConv = conv;
         replaceItems(store.messages, []);
@@ -171,6 +177,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       }
 
       function goBack(): void {
+        messageOperation.invalidate();
+        store.isGenerating = false;
         store.activeConvId = null;
         store.activeConv = null;
         replaceItems(store.messages, []);
@@ -181,6 +189,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         const generation = store.modalGeneration;
         store.modalOpen = true;
         store.creationMode = null;
+        store.candidates = [];
+        store.candidateError = '';
         store.selectedNames = [];
         store.groupName = '';
         store.creationError = '';
@@ -188,15 +198,26 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.candidateState = 'loading';
         await vue.nextTick();
         if (disposed || generation !== store.modalGeneration) return;
-        const result = loadStatDataRootNames(substitudeMacros);
+        await loadCreationCandidates();
+      }
+
+      async function loadCreationCandidates(): Promise<void> {
+        store.modalGeneration += 1;
+        const generation = store.modalGeneration;
+        store.candidateState = 'loading';
+        store.candidateError = '';
+        await vue.nextTick();
+        if (disposed || !store.modalOpen || generation !== store.modalGeneration) return;
+        const result = loadStatDataRootNames(source => substitudeMacros(source));
         if (disposed || generation !== store.modalGeneration) return;
         if (result.ok) {
           store.candidates = result.names;
+          store.selectedNames = store.selectedNames.filter(name => result.names.includes(name));
           store.candidateState = 'ready';
         } else {
           store.candidates = [];
           store.candidateState = 'error';
-          store.creationError = candidateErrorMessage[result.reason];
+          store.candidateError = candidateErrorMessage[result.reason];
         }
       }
 
@@ -206,6 +227,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.creationMode = null;
         store.candidateState = 'idle';
         store.candidates = [];
+        store.candidateError = '';
         store.selectedNames = [];
         store.groupName = '';
         store.creationError = '';
@@ -288,6 +310,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         const token = captureListContext();
         const conv = store.activeConv;
         if (!conv) return;
+        const operationToken = messageOperation.start();
         store.inputText = '';
         store.isGenerating = true;
 
@@ -297,20 +320,23 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           if (!ChatCore || !ChatDB) return;
 
           const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
-          if (!isListContextCurrent(token) || store.activeConvId !== conv.id) return;
+          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)
+            || store.activeConvId !== conv.id) return;
           store.messages.push(userMsg);
           scrollChatBottom();
 
           let replies: any[];
           if (conv.type === 'group') replies = await ChatCore.generateGroupReply(conv.id, text);
           else replies = await ChatCore.generatePrivateReply(conv.id, text);
-          if (!isListContextCurrent(token) || store.activeConvId !== conv.id) return;
+          if (!messageOperation.isCurrent(operationToken) || !isListContextCurrent(token)
+            || store.activeConvId !== conv.id) return;
           if (replies) store.messages.push(...replies);
 
           const ChatSync = (window.parent as any).ChatSync;
           if (ChatSync) ChatSync.instantSync(conv.id);
         } catch (error: any) {
-          if (isListContextCurrent(token) && store.activeConvId === conv.id && error?.message !== 'AbortError') {
+          if (messageOperation.isCurrent(operationToken) && isListContextCurrent(token)
+            && store.activeConvId === conv.id && error?.message !== 'AbortError') {
             store.messages.push({
               sender: '<system>',
               content: `❌ 发送失败: ${error?.message || '未知'}`,
@@ -319,7 +345,9 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             });
           }
         } finally {
-          if (isListContextCurrent(token) && store.activeConvId === conv.id) {
+          const ownsCurrentUi = messageOperation.isCurrent(operationToken)
+            && isListContextCurrent(token) && store.activeConvId === conv.id;
+          if (messageOperation.finish(operationToken) && ownsCurrentUi) {
             store.isGenerating = false;
             scrollChatBottom();
           }
@@ -329,6 +357,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
       vue.onMounted(() => { void loadConversations(); });
       vue.onBeforeUnmount(() => {
         disposed = true;
+        messageOperation.invalidate();
         store.componentGeneration += 1;
         store.modalGeneration += 1;
         if (scrollTimer !== null) clearTimeout(scrollTimer);
@@ -354,7 +383,14 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         const candidateContent = store.candidateState === 'loading'
           ? h('p', { style: 'color:#888;text-align:center;' }, '正在读取角色…')
           : store.candidateState === 'error'
-            ? h('div', { style: 'color:#c33;font-size:12px;' }, store.creationError)
+            ? h('div', { style: 'color:#c33;font-size:12px;text-align:center;' }, [
+                h('p', store.candidateError),
+                h('button', {
+                  type: 'button',
+                  disabled: store.isCreating,
+                  onClick: () => { void loadCreationCandidates(); },
+                }, '重新读取'),
+              ])
             : h('div', { style: 'display:flex;flex-wrap:wrap;gap:7px;' }, store.candidates.map(name => {
                 const selected = store.selectedNames.includes(name);
                 return h('button', {
@@ -386,7 +422,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
             placeholder: '群聊名称（可选）',
             style: 'width:100%;box-sizing:border-box;margin-top:12px;padding:9px;border:1px solid #ddd;border-radius:8px;',
           }) : null,
-          store.creationError && store.candidateState !== 'error' ? h('p', { style: 'color:#c33;font-size:12px;' }, store.creationError) : null,
+          store.creationError ? h('p', { style: 'color:#c33;font-size:12px;' }, store.creationError) : null,
           h('button', {
             type: 'button',
             disabled: store.candidateState !== 'ready' || store.isCreating || store.creationMode === null || !canSubmitCreation(),
