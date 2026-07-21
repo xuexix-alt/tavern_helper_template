@@ -665,16 +665,26 @@ async function testSettingsStore(): Promise<void> {
     provider: 'tavern',
     apiUrl: '',
     model: '',
+    parameters: {},
     theme: 'system',
     notifications: true,
   });
 
   const notifications: PublicSettings[] = [];
   const unsubscribe = winter.subscribe(settings => notifications.push(settings));
-  winter.updatePublic({ provider: 'openai-compatible', apiUrl: 'https://api.example.test/v1', model: 'gpt-test' });
+  winter.updatePublic({
+    provider: 'openai-compatible',
+    apiUrl: 'https://api.example.test/v1',
+    model: 'gpt-test',
+    parameters: { temperature: 0.4, max_tokens: 256 },
+  });
   assert.equal(notifications.length, 1);
   assert.equal(Object.isFrozen(notifications[0]), true, '公共设置事件必须传不可变快照');
   assert.equal('apiKey' in notifications[0], false, '公共设置事件不得包含 secret');
+  assert.deepEqual(createSettingsStore('末世寒冬 - 星穹秩序', storage).getPublic().parameters, {
+    temperature: 0.4,
+    max_tokens: 256,
+  });
   unsubscribe();
   winter.updatePublic({ theme: 'dark' });
   assert.equal(notifications.length, 1, '设置订阅 disposer 必须有效');
@@ -683,6 +693,14 @@ async function testSettingsStore(): Promise<void> {
     assert.throws(() => winter.updatePublic({ apiUrl }), /api.?url|http|https|invalid|无效/i, apiUrl);
   }
   winter.updatePublic({ apiUrl: '' });
+
+  for (const credentialKey of ['x-api-key', 'token', 'password', 'secret']) {
+    assert.throws(
+      () => winter.updatePublic({ parameters: { [credentialKey]: 'must-not-persist' } }),
+      /credential|凭据|secret/i,
+      credentialKey,
+    );
+  }
 
   winter.setSecret('super-secret-token');
   const publicSnapshot = winter.getPublic() as PublicSettings & { apiKey?: string };
@@ -748,6 +766,7 @@ async function testSettingsStore(): Promise<void> {
     provider: 'tavern',
     apiUrl: '',
     model: '',
+    parameters: {},
     theme: 'system',
     notifications: true,
   });

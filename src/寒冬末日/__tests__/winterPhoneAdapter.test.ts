@@ -1,28 +1,86 @@
 import assert from 'node:assert/strict';
+import { ControlledPhoneScheduler } from '../../小手机平台/scheduler/phoneScheduler';
 
 import {
   buildBoundedMemberContext,
   buildEdenNotices,
   buildWinterTasks,
+  buildWinterSchedulerJobs,
+  advanceSnapshotCompletionGate,
   collectChatLoreContext,
   canAssignEdenTerminal,
   canPublishSnapshot,
   characterProfileEntryName,
   createStableSnapshotKey,
   deriveContactAvailability,
+  deriveEdenGroupMemberIds,
   diffConfirmedMvuChanges,
   isCapturedSessionCurrent,
   isEdenTerminalDeploymentAllowed,
+  isHostEpochCaptureCurrent,
   migrateTemporaryNpcIdentity,
   planTemporaryNpcMigration,
   selectCharacterProfile,
+  runPendingDispatchPreparation,
+  submitWinterSchedulerJobs,
 } from '../脚本/小手机-90寒冬适配器/winterAdapterCore';
+
+function testSnapshotCompletionGateAndHostEpoch(): void {
+  const started = advanceSnapshotCompletionGate(undefined, { type: 'generation-started' });
+  const generated = advanceSnapshotCompletionGate(started.state, { type: 'generation-ended', assistantMessageId: 19 });
+  assert.equal(generated.publishAssistantMessageId, null, 'generation ended 后必须等待 MVU 完成');
+  const updating = advanceSnapshotCompletionGate(generated.state, { type: 'mvu-started' });
+  const completed = advanceSnapshotCompletionGate(updating.state, { type: 'mvu-ended' });
+  assert.equal(completed.publishAssistantMessageId, 19);
+
+  const earlyMvu = advanceSnapshotCompletionGate(started.state, { type: 'mvu-ended' });
+  assert.equal(earlyMvu.publishAssistantMessageId, null);
+  assert.equal(
+    advanceSnapshotCompletionGate(earlyMvu.state, { type: 'generation-ended', assistantMessageId: 20 })
+      .publishAssistantMessageId,
+    20,
+    'MVU 先完成时 generation ended 才可发布',
+  );
+
+  const host = { characterName: '末世寒冬 - 星穹秩序', chatId: 'chat-a', sessionKey: 'winter::chat-a' };
+  assert.equal(isHostEpochCaptureCurrent({ epoch: 3, host }, 3, { ...host }), true);
+  assert.equal(isHostEpochCaptureCurrent({ epoch: 3, host }, 4, { ...host }), false);
+  assert.equal(isHostEpochCaptureCurrent({ epoch: 3, host }, 3, { ...host, chatId: 'chat-b' }), false);
+}
+
+async function testPendingDispatchPreparation(): Promise<void> {
+  const states: string[] = [];
+  await assert.rejects(
+    () =>
+      runPendingDispatchPreparation({
+        markPending: async () => void states.push('pending'),
+        prepareAndDispatch: async () => {
+          states.push('prepare');
+          throw new Error('profile read failed');
+        },
+        markFailed: async error => void states.push(`failed:${error instanceof Error ? error.message : String(error)}`),
+      }),
+    /profile read failed/,
+  );
+  assert.deepEqual(states, ['pending', 'prepare', 'failed:profile read failed']);
+
+  states.length = 0;
+  await runPendingDispatchPreparation({
+    markPending: async () => void states.push('pending'),
+    prepareAndDispatch: async () => void states.push('dispatched'),
+    markFailed: async () => void states.push('failed'),
+  });
+  assert.deepEqual(states, ['pending', 'dispatched']);
+}
 
 function testStableSnapshotPolicy(): void {
   assert.equal(canPublishSnapshot({ assistantMessageId: null, mvu: {} }), false);
   assert.equal(canPublishSnapshot({ assistantMessageId: 12, mvu: {} }), false);
   assert.equal(canPublishSnapshot({ assistantMessageId: 12, mvu: { stat_data: { 世界: {} } } }), false);
-  assert.equal(canPublishSnapshot({ assistantMessageId: 12, mvu: { stat_data: {} }, assistantCompleted: false }), false);
+  assert.equal(
+    canPublishSnapshot({ assistantMessageId: 12, mvu: { stat_data: {} }, assistantCompleted: false }),
+    false,
+  );
   assert.equal(
     canPublishSnapshot({ assistantMessageId: 12, mvu: { stat_data: { 世界: {} } }, assistantCompleted: true }),
     true,
@@ -36,14 +94,8 @@ function testStableSnapshotPolicy(): void {
 }
 
 function testEdenTerminalAndContactPolicy(): void {
-  assert.equal(
-    canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 5 }),
-    false,
-  );
-  assert.equal(
-    canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 4 }),
-    true,
-  );
+  assert.equal(canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 5 }), false);
+  assert.equal(canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 4 }), true);
   assert.equal(canAssignEdenTerminal({ abilities: ['social.eden_phone_mass_t4'], assignedCount: 99 }), true);
   assert.equal(
     isEdenTerminalDeploymentAllowed({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 6 }),
@@ -90,6 +142,37 @@ function testEdenTerminalAndContactPolicy(): void {
   );
 }
 
+function testFixedEdenGroupMembership(): void {
+  const contacts = [
+    {
+      id: 'main:T2成员',
+      established: true,
+      terminalType: '伊甸终端T2' as const,
+      terminalStatus: '正常' as const,
+      signalStatus: '在线' as const,
+    },
+    {
+      id: 'main:普通手机',
+      established: true,
+      terminalType: '普通手机' as const,
+      terminalStatus: '正常' as const,
+      signalStatus: '在线' as const,
+    },
+    {
+      id: 'main:离线T2',
+      established: true,
+      terminalType: '伊甸终端T2' as const,
+      terminalStatus: '正常' as const,
+      signalStatus: '离线' as const,
+    },
+  ];
+  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '在线', edenAccessAllowed: true }), [
+    'main:T2成员',
+  ]);
+  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '在线', edenAccessAllowed: false }), []);
+  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '受限', edenAccessAllowed: true }), []);
+}
+
 function testTemporaryNpcMigration(): void {
   assert.deepEqual(planTemporaryNpcMigration(['工程师'], ['工程师']), {
     migrations: [{ from: 'temporary:工程师', to: 'main:工程师' }],
@@ -115,7 +198,10 @@ function testTemporaryNpcMigration(): void {
 function testProfilesAndBoundedFallback(): void {
   assert.equal(characterProfileEntryName('工程师'), '角色档案 - 工程师');
   assert.equal(
-    selectCharacterProfile('工程师', [{ name: '角色档案 - 工程师', content: '主档案' }, { name: '角色详情 - 工程师', content: '错误档案' }]),
+    selectCharacterProfile('工程师', [
+      { name: '角色档案 - 工程师', content: '主档案' },
+      { name: '角色详情 - 工程师', content: '错误档案' },
+    ]),
     '主档案',
   );
   assert.equal(selectCharacterProfile('临时工程师', [], true), undefined);
@@ -188,13 +274,86 @@ function testTasksAndNotices(): void {
   );
 }
 
-function main(): void {
+function testSchedulerJobsCaptureStableScope(): void {
+  const jobs = buildWinterSchedulerJobs({
+    sessionKey: 'winter::chat-a',
+    snapshotKey: 'chat-a::19::mvu:abc',
+    conversationId: 'eden-group:residents',
+    worldbookName: '世界书-A',
+    speaker: '纪宁',
+    participants: ['main:纪宁', 'temporary:工程师'],
+    notices: [
+      { id: 'network', source: '伊甸网络', content: '伊甸内网:在线', trust: 'confirmed', triggerKey: 'network:在线' },
+      { id: 'external-1', source: '北区广播', content: '疑似物资', trust: 'unverified', triggerKey: 'external:1' },
+    ],
+  });
+  assert.equal(
+    jobs.some(job => job.requiresAi),
+    true,
+  );
+  assert.equal(
+    jobs.some(job => !job.requiresAi),
+    true,
+  );
+  assert.equal(
+    jobs.every(job => job.sessionKey === 'winter::chat-a' && job.snapshotKey === 'chat-a::19::mvu:abc'),
+    true,
+  );
+  assert.equal(
+    jobs.every(job => JSON.stringify(job.payload).includes('世界书-A')),
+    true,
+  );
+  assert.equal(
+    jobs.filter(job => job.requiresAi).every(job => JSON.stringify(job.payload).includes('temporary:工程师')),
+    true,
+    '主动群消息任务必须捕获稳定群成员列表',
+  );
+  assert.equal(new Set(jobs.map(job => job.triggerKey)).size, jobs.length, '稳定事件应生成可去重 trigger');
+}
+
+async function testWinterJobsUseControlledSchedulerConstraints(): Promise<void> {
+  const delivered: string[] = [];
+  const scheduler = new ControlledPhoneScheduler({
+    isEligible: (job, latest) => job.sessionKey === latest.sessionKey && job.snapshotKey === latest.snapshotKey,
+    dispatchAi: job => void delivered.push(`ai:${job.triggerKey}`),
+    deliverDeterministic: job => void delivered.push(`deterministic:${job.triggerKey}`),
+  });
+  scheduler.setSnapshot({ sessionKey: 'winter::chat-a', snapshotKey: 'snap-a', storyTurn: 12 });
+  const jobs = buildWinterSchedulerJobs({
+    sessionKey: 'winter::chat-a',
+    snapshotKey: 'snap-a',
+    conversationId: 'eden-group:residents',
+    worldbookName: '世界书-A',
+    speaker: '纪宁',
+    participants: ['main:纪宁'],
+    notices: [
+      { id: 'network', source: '伊甸网络', content: '伊甸内网:在线', trust: 'confirmed', triggerKey: 'network:在线' },
+      { id: 'external-1', source: '北区广播', content: '疑似物资', trust: 'unverified', triggerKey: 'external:1' },
+    ],
+  });
+  assert.equal(submitWinterSchedulerJobs(scheduler, jobs), 3);
+  await scheduler.whenIdle();
+  assert.deepEqual(delivered.sort(), [
+    'ai:ai:network:在线',
+    'deterministic:deterministic:external:1',
+    'deterministic:deterministic:network:在线',
+  ]);
+  assert.equal(submitWinterSchedulerJobs(scheduler, jobs), 0, '已交付 trigger/topic 必须被调度器去重');
+  scheduler.dispose();
+}
+
+async function main(): Promise<void> {
+  testSnapshotCompletionGateAndHostEpoch();
+  await testPendingDispatchPreparation();
   testStableSnapshotPolicy();
   testEdenTerminalAndContactPolicy();
+  testFixedEdenGroupMembership();
   testTemporaryNpcMigration();
   testProfilesAndBoundedFallback();
   testTasksAndNotices();
+  testSchedulerJobsCaptureStableScope();
+  await testWinterJobsUseControlledSchedulerConstraints();
   console.log('winter phone adapter tests passed');
 }
 
-main();
+void main();

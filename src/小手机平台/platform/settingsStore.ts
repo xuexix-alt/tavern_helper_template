@@ -5,6 +5,7 @@ export interface PublicSettings {
   readonly provider: SettingsProvider;
   readonly apiUrl: string;
   readonly model: string;
+  readonly parameters: Readonly<Record<string, unknown>>;
   readonly theme: SettingsTheme;
   readonly notifications: boolean;
 }
@@ -43,6 +44,7 @@ const DEFAULT_SETTINGS: PublicSettings = Object.freeze({
   provider: 'tavern',
   apiUrl: '',
   model: '',
+  parameters: Object.freeze({}),
   theme: 'system',
   notifications: true,
 });
@@ -64,6 +66,47 @@ function normalizeApiUrl(value: unknown): string {
   return normalized;
 }
 
+function normalizeParameters(value: unknown): Readonly<Record<string, unknown>> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid generation parameters');
+  const validate = (candidate: unknown, seen = new Set<object>()): void => {
+    if (candidate === null || typeof candidate === 'string' || typeof candidate === 'boolean') return;
+    if (typeof candidate === 'number') {
+      if (!Number.isFinite(candidate)) throw new Error('Generation parameters contain a non-finite number');
+      return;
+    }
+    if (!candidate || typeof candidate !== 'object' || seen.has(candidate)) {
+      throw new Error('Generation parameters must be finite JSON data');
+    }
+    seen.add(candidate);
+    if (Array.isArray(candidate)) {
+      candidate.forEach(item => validate(item, seen));
+      return;
+    }
+    if (Object.getPrototypeOf(candidate) !== Object.prototype && Object.getPrototypeOf(candidate) !== null) {
+      throw new Error('Generation parameters must be a plain object');
+    }
+    for (const [key, nested] of Object.entries(candidate)) {
+      if (
+        /^(?:api[_-]?key|x[_-]?api[_-]?key|authorization|access[_-]?token|bearer[_-]?token|token|password|secret)$/i.test(
+          key,
+        )
+      ) {
+        throw new Error('Generation parameters must not contain credentials');
+      }
+      validate(nested, seen);
+    }
+  };
+  validate(value);
+  const cloned = structuredClone(value) as Record<string, unknown>;
+  const freeze = (candidate: unknown): void => {
+    if (!candidate || typeof candidate !== 'object' || Object.isFrozen(candidate)) return;
+    Object.values(candidate).forEach(freeze);
+    Object.freeze(candidate);
+  };
+  freeze(cloned);
+  return cloned;
+}
+
 function normalizePublicSettings(value: unknown): PublicSettings {
   if (!value || typeof value !== 'object') throw new Error('Invalid public settings');
   const input = value as Partial<PublicSettings>;
@@ -80,6 +123,7 @@ function normalizePublicSettings(value: unknown): PublicSettings {
     provider: input.provider,
     apiUrl: normalizeApiUrl(input.apiUrl),
     model: input.model,
+    parameters: normalizeParameters(input.parameters ?? {}),
     theme: input.theme,
     notifications: input.notifications,
   });
@@ -90,6 +134,7 @@ function sameSettings(left: PublicSettings, right: PublicSettings): boolean {
     left.provider === right.provider &&
     left.apiUrl === right.apiUrl &&
     left.model === right.model &&
+    JSON.stringify(left.parameters) === JSON.stringify(right.parameters) &&
     left.theme === right.theme &&
     left.notifications === right.notifications
   );

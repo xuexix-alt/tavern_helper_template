@@ -161,6 +161,56 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /getCharWorldbookNames\s*\(\s*['"]current['"]\s*\)/);
   assert.match(source, /eventOn\s*\(/);
   assert.match(source, /generationActive/);
+  assert.match(source, /Mvu\.events\.VARIABLE_UPDATE_STARTED/);
+  assert.match(source, /advanceSnapshotCompletionGate\s*\(/);
+  assert.match(source, /\+\+hostEpoch/);
+  assert.match(source, /assertHostCapture\s*\(/);
+  assert.match(source, /runPendingDispatchPreparation\s*\(/);
+  assert.match(source, /EDEN_GROUP_CONVERSATION_ID/);
+  assert.match(source, /deriveEdenGroupMemberIds\s*\(/);
+  assert.match(source, /previousSnapshot/);
+  assert.match(source, /migrateIdentities\s*\(/);
+  assert.match(source, /buildWinterSchedulerJobs\s*\(/);
+  assert.match(source, /submitWinterSchedulerJobs\s*\(\s*scheduler,\s*jobs\s*\)/);
+  assert.match(core, /scheduler\.enqueue\s*\(/);
+  assert.match(core, /scheduler\.runAvailable\s*\(/);
+  assert.match(source, /dispatchAi:\s*job\s*=>/);
+  assert.match(source, /deliverDeterministic:\s*job\s*=>/);
+  assert.doesNotMatch(source, /dispatchAi:\s*\(\)\s*=>\s*undefined|deliverDeterministic:\s*\(\)\s*=>\s*undefined/);
+  assert.match(source, /retryPendingLore/);
+  assert.match(source, /loreRetryRequests/);
+  assert.match(source, /parameters:\s*publicSettings\.parameters/);
+  assert.match(source, /function\s+assertSnapshotCapture\s*\(/);
+  const sendMessageBlock = source.slice(
+    source.indexOf('async function sendMessage'),
+    source.indexOf('async function retryMessage'),
+  );
+  assert.match(sendMessageBlock, /assertSnapshotCapture\s*\([\s\S]*assertConversationCanSend\s*\(/);
+  assert.match(sendMessageBlock, /markPending:\s*\(\)\s*=>\s*database\.addMessageWithInbox\s*\(/);
+  assert.doesNotMatch(sendMessageBlock, /await database\.addMessage\s*\(/);
+  assert.doesNotMatch(
+    sendMessageBlock,
+    /await database\.addMessage\s*\([\s\S]*assertCapturedSession\s*\([\s\S]*await runPendingDispatchPreparation/,
+  );
+  const retryMessageBlock = source.slice(
+    source.indexOf('async function retryMessage'),
+    source.indexOf('async function cancelMessage'),
+  );
+  assert.match(retryMessageBlock, /assertSnapshotCapture\s*\([\s\S]*assertConversationCanSend\s*\(/);
+  const scheduledAiBlock = source.slice(
+    source.indexOf('async function dispatchScheduledAi'),
+    source.indexOf('function scheduledPayload'),
+  );
+  assert.match(scheduledAiBlock, /conversationId:\s*job\.conversationId/);
+  assert.match(scheduledAiBlock, /type:\s*['"]group['"]/);
+  assert.match(scheduledAiBlock, /type:\s*['"]group['"],[\s\S]*conversationId:\s*job\.conversationId/);
+  assert.doesNotMatch(scheduledAiBlock, /conversationId:\s*['"]broadcast:eden['"]/);
+  assert.match(source, /launchAiRequest[\s\S]*assertHostCapture\s*\(/);
+  assert.match(source, /enqueueSnapshotJobs[\s\S]*assertHostCapture\s*\(/);
+  assert.match(source, /runtime\.on\(\s*['"]status['"]/);
+  assert.match(source, /stopRuntimeStatus/);
+  assert.doesNotMatch(source, /tavernPhoneLauncher|createLauncher|launcher\?\.remove/);
+  assert.doesNotMatch(source, /switchSession[\s\S]{0,500}cancelAllRequests\s*\(/);
   assert.match(source, /activeChatWorldbookName/);
   assert.match(source, /assertCapturedSession\s*\(/);
   assert.match(source, /chatLore:\s*chatLore/);

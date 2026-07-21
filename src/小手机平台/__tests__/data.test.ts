@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { IDBFactory } from 'fake-indexeddb';
 
 import { createIndexedDbPhoneDb, createMemoryPhoneDb, type PhoneMessageInput } from '../data/phoneDb';
 import { ChatLoreSync, LORE_ENTRY_DEFINITIONS } from '../data/chatLoreSync';
@@ -79,6 +81,139 @@ async function testMemoryPhoneDb(): Promise<void> {
   );
 
   await assert.rejects(() => createIndexedDbPhoneDb(undefined), /IndexedDB.*(?:不可用|unavailable)/i);
+}
+
+async function testAtomicIdentityMigration(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.putRecord('conversations', {
+    id: 'private:temporary:工程师',
+    sessionKey: sessionA,
+    participants: ['temporary:工程师', 'main:纪宁'],
+  });
+  await db.putRecord('contactPrefs', {
+    id: 'temporary:工程师',
+    identity: 'temporary:工程师',
+    sessionKey: sessionA,
+    muted: true,
+  });
+  await db.addMessage(
+    message('migration-message', 1, {
+      conversationId: 'private:temporary:工程师',
+      sender: 'temporary:工程师',
+      participants: ['temporary:工程师', 'main:纪宁'],
+      type: 'group',
+      groupName: '伊甸住户群',
+    }),
+  );
+  await db.putRecord('inbox', {
+    id: 'migration-message',
+    sessionKey: sessionA,
+    conversationId: 'private:temporary:工程师',
+    status: 'sent',
+  });
+  await db.putRecord('contactPrefs', {
+    id: 'temporary:工程师',
+    identity: 'temporary:工程师',
+    sessionKey: sessionB,
+    muted: false,
+  });
+
+  await db.migrateIdentities(sessionA, [{ from: 'temporary:工程师', to: 'main:工程师' }]);
+  const migratedConversation = (await db.listRecords('conversations', sessionA))[0];
+  assert.equal(migratedConversation.id, 'private:main:工程师');
+  assert.deepEqual(migratedConversation.participants, ['main:工程师', 'main:纪宁']);
+  assert.deepEqual(
+    (await db.listRecords('contactPrefs', sessionA)).map(record => record.id),
+    ['main:工程师'],
+    '迁移必须删除旧偏好键',
+  );
+  const migratedMessage = (await db.listMessages({ sessionKey: sessionA }))[0];
+  assert.equal(migratedMessage.conversationId, 'private:main:工程师');
+  assert.equal(migratedMessage.sender, 'main:工程师');
+  assert.deepEqual(migratedMessage.participants, ['main:工程师', 'main:纪宁']);
+  assert.equal(
+    (await db.listRecords('inbox', sessionA))[0].conversationId,
+    'private:main:工程师',
+    'inbox 必须与私聊历史一起迁移',
+  );
+  assert.equal((await db.listRecords('contactPrefs', sessionB))[0].id, 'temporary:工程师', '不得跨 session');
+
+  const dbSource = readFileSync('src/小手机平台/data/phoneDb.ts', 'utf8');
+  assert.match(
+    dbSource,
+    /transaction\(\s*\[\s*['"]messages['"],\s*['"]conversations['"],\s*['"]contactPrefs['"],\s*['"]inbox['"]\s*\],\s*['"]readwrite['"]\s*\)/,
+  );
+  assert.match(dbSource, /contactPrefs[\s\S]*\.delete\(\s*\[\s*sessionKey,\s*migration\.from\s*\]\s*\)/);
+  assert.match(dbSource, /preferenceById[\s\S]*record\.sessionKey[\s\S]*record\.id/);
+}
+
+async function testAtomicOutgoingAndInboxWrite(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessageWithInbox(message('atomic-outgoing', 2), {
+    id: 'atomic-outgoing',
+    sessionKey: sessionA,
+    conversationId: 'private:alice',
+    status: 'pending',
+  });
+  assert.equal((await db.listMessages({ sessionKey: sessionA }))[0].id, 'atomic-outgoing');
+  assert.equal((await db.listRecords('inbox', sessionA))[0].status, 'pending');
+
+  await assert.rejects(
+    () =>
+      db.addMessageWithInbox(message('atomic-rejected', 3), {
+        id: 'different-id',
+        sessionKey: sessionA,
+        conversationId: 'private:alice',
+        status: 'pending',
+      }),
+    /same message|同一|一致|match/i,
+  );
+  assert.equal(
+    (await db.listMessages({ sessionKey: sessionA })).some(item => item.id === 'atomic-rejected'),
+    false,
+    'inbox 校验失败时不得留下孤儿 outgoing',
+  );
+  const dbSource = readFileSync('src/小手机平台/data/phoneDb.ts', 'utf8');
+  assert.match(dbSource, /transaction\(\s*\[\s*['"]messages['"],\s*['"]inbox['"]\s*\],\s*['"]readwrite['"]\s*\)/);
+}
+
+async function testIndexedDbIdentityMigrationSuccessPath(): Promise<void> {
+  const db = await createIndexedDbPhoneDb(new IDBFactory());
+  await db.putRecord('conversations', {
+    id: 'private:temporary:技师',
+    sessionKey: sessionA,
+    kind: 'private',
+    participants: ['temporary:技师'],
+  });
+  await db.putRecord('contactPrefs', {
+    id: 'temporary:技师',
+    identity: 'temporary:技师',
+    sessionKey: sessionA,
+    muted: true,
+  });
+  await db.addMessageWithInbox(
+    message('idb-migration', 4, { conversationId: 'private:temporary:技师', sender: '技师' }),
+    {
+      id: 'idb-migration',
+      sessionKey: sessionA,
+      conversationId: 'private:temporary:技师',
+      status: 'pending',
+    },
+  );
+
+  await db.migrateIdentities(sessionA, [{ from: 'temporary:技师', to: 'main:技师' }]);
+  assert.equal((await db.listRecords('conversations', sessionA))[0].id, 'private:main:技师');
+  assert.equal((await db.listMessages({ sessionKey: sessionA }))[0].conversationId, 'private:main:技师');
+  assert.equal((await db.listRecords('inbox', sessionA))[0].conversationId, 'private:main:技师');
+  assert.equal((await db.listRecords('contactPrefs', sessionA))[0].id, 'main:技师');
+
+  const source = readFileSync('src/小手机平台/data/phoneDb.ts', 'utf8');
+  const indexedMigration = source.slice(
+    source.lastIndexOf('async migrateIdentities'),
+    source.indexOf('\n  }\n}', source.lastIndexOf('async migrateIdentities')),
+  );
+  assert.doesNotMatch(indexedMigration, /await\s+Promise\.all/, 'IDB 事务不得在读取 await 后追加写请求');
+  assert.match(indexedMigration, /\.onsuccess\s*=/, '迁移写请求必须在 IDB request success 回调仍活跃时排队');
 }
 
 async function testBroadcastValidation(): Promise<void> {
@@ -344,6 +479,61 @@ async function testChatLoreSync(): Promise<void> {
   await retrySync.flushNow({ sessionKey: sessionA, worldbookName: '捕获的世界书-A', type: 'private' });
   assert.equal(attempts, 2, '失败批次必须可重试');
   assert.equal((await retryDb.listMessages({ sessionKey: sessionA }))[0].syncedToLore, true);
+}
+
+async function testScheduledLoreFailureReportsCapturedRetryRequest(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessage(message('retry-diagnostic', 1));
+  const scheduler = fakeScheduler();
+  const failures: Array<{ error: unknown; request: { sessionKey: string; worldbookName: string; type: string } }> = [];
+  const sync = new ChatLoreSync({
+    db,
+    writer: async () => {
+      throw new Error('worldbook unavailable');
+    },
+    schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
+    clearSchedule: id => scheduler.clear(id),
+    onError: (error, request) => failures.push({ error, request }),
+  });
+  sync.schedule({ sessionKey: sessionA, worldbookName: '捕获世界书-A', type: 'private' });
+  scheduler.tasks.forEach(task => scheduler.run(task.id));
+  await assert.rejects(
+    () => sync.whenIdle(),
+    error =>
+      error instanceof AggregateError && error.errors.some(item => String(item).includes('worldbook unavailable')),
+  );
+  assert.equal(failures.length, 1);
+  assert.deepEqual(failures[0].request, {
+    sessionKey: sessionA,
+    worldbookName: '捕获世界书-A',
+    type: 'private',
+  });
+}
+
+async function testLoreCancellationFailureReportsCapturedRetryRequest(): Promise<void> {
+  const scheduler = fakeScheduler();
+  const failures: Array<{ request: { sessionKey: string; worldbookName: string; type: string } }> = [];
+  const sync = new ChatLoreSync({
+    db: createMemoryPhoneDb(),
+    writer: async () => undefined,
+    schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
+    clearSchedule: () => {
+      throw new Error('timer cancellation failed');
+    },
+    onError: (_error, request) => failures.push({ request }),
+  });
+  sync.schedule({ sessionKey: sessionA, worldbookName: '取消时捕获世界书-A', type: 'group', conversationId: 'eden' });
+  assert.throws(
+    () => sync.cancelSession(sessionA),
+    error =>
+      error instanceof AggregateError && error.errors.some(item => String(item).includes('timer cancellation failed')),
+  );
+  assert.deepEqual(failures[0].request, {
+    sessionKey: sessionA,
+    worldbookName: '取消时捕获世界书-A',
+    type: 'group',
+    conversationId: 'eden',
+  });
 }
 
 async function testInFlightSessionSwitch(): Promise<void> {
@@ -640,9 +830,14 @@ async function testClearFailureStillCleansUp(): Promise<void> {
 
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
+  await testAtomicIdentityMigration();
+  await testAtomicOutgoingAndInboxWrite();
+  await testIndexedDbIdentityMigrationSuccessPath();
   await testBroadcastValidation();
   testLoreSummary();
   await testChatLoreSync();
+  await testScheduledLoreFailureReportsCapturedRetryRequest();
+  await testLoreCancellationFailureReportsCapturedRetryRequest();
   await testInFlightSessionSwitch();
   await testDuplicateFlushAndCaptureFailure();
   await testSyncLifecycle();

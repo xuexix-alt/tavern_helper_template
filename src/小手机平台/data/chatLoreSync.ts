@@ -51,6 +51,7 @@ export interface ChatLoreSyncOptions {
   writer(worldbookName: string, entry: LoreWriteEntry): Promise<void>;
   schedule?: (callback: () => void, delayMs: number) => unknown;
   clearSchedule?: (timer: unknown) => void;
+  onError?(error: unknown, request: Readonly<LoreSyncRequest>): void;
 }
 
 interface CapturedBatch {
@@ -64,6 +65,7 @@ interface PendingTimer {
   hasTimer: boolean;
   active: boolean;
   sessionKey: string;
+  request: Readonly<LoreSyncRequest>;
   settle: () => void;
   fail: (error: unknown) => void;
 }
@@ -115,6 +117,7 @@ export class ChatLoreSync {
       hasTimer: false,
       active: true,
       sessionKey: captured.sessionKey,
+      request: captured,
       settle,
       fail,
     };
@@ -124,7 +127,7 @@ export class ChatLoreSync {
         if (!pending.active || this.timers.get(key) !== pending) return;
         pending.active = false;
         this.timers.delete(key);
-        this.enqueue(captured).then(settle, fail);
+        this.execute(captured).then(settle, fail);
       }, 500);
       pending.timer = timer;
       pending.hasTimer = true;
@@ -134,6 +137,7 @@ export class ChatLoreSync {
         if (this.timers.get(key) === pending) this.timers.delete(key);
         pending.fail(error);
       }
+      this.reportFailure(error, captured);
       throw error;
     }
   }
@@ -150,7 +154,8 @@ export class ChatLoreSync {
 
   flushNow(request: LoreSyncRequest): Promise<void> {
     if (this.closed) return Promise.reject(new Error('ChatLoreSync 已关闭 (disposed)'));
-    return this.track(this.enqueue(captureRequest(request)));
+    const captured = captureRequest(request);
+    return this.track(this.execute(captured));
   }
 
   async whenIdle(): Promise<void> {
@@ -209,6 +214,7 @@ export class ChatLoreSync {
       if (pending.hasTimer) this.clearCallback(pending.timer);
     } catch (error) {
       clearError = error;
+      this.reportFailure(error, pending.request);
     } finally {
       pending.settle();
     }
@@ -250,5 +256,20 @@ export class ChatLoreSync {
       });
     sharedWorldbookQueue = operation.catch(() => undefined);
     return operation;
+  }
+
+  private execute(request: Readonly<LoreSyncRequest>): Promise<void> {
+    return this.enqueue(request).catch(error => {
+      this.reportFailure(error, request);
+      throw error;
+    });
+  }
+
+  private reportFailure(error: unknown, request: Readonly<LoreSyncRequest>): void {
+    try {
+      this.options.onError?.(error, request);
+    } catch {
+      // Diagnostics must not replace the original sync failure.
+    }
   }
 }

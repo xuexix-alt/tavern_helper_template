@@ -56,6 +56,7 @@ export interface PhoneDiagnosticsView {
   runtimeState: string;
   snapshotVersion: string;
   pendingLoreCount: number;
+  pendingLoreRetryCount: number;
   moduleStates: readonly string[];
   recentErrors: readonly string[];
 }
@@ -74,6 +75,7 @@ export interface PhoneAppServices {
   sendMessage(conversationId: string, content: string): Promise<void>;
   retryMessage(conversationId: string, messageId: string): Promise<void>;
   cancelMessage(conversationId: string, messageId: string): Promise<void>;
+  retryPendingLore(): Promise<void>;
   saveSettings(settings: PhoneSettingsView): Promise<void>;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
 }
@@ -472,14 +474,35 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       route: 'diagnostics',
       title: '诊断',
       glyph: '…',
-      async render({ document }) {
+      async render(context) {
+        const { document } = context;
         const diagnostics = await services.getDiagnostics();
         const output = list(document);
         output.append(
           row(document, '运行时', diagnostics.runtimeState),
           row(document, '稳定快照', diagnostics.snapshotVersion),
           row(document, '待同步正文记忆', String(diagnostics.pendingLoreCount)),
+          row(document, '可重试 ChatLore', String(diagnostics.pendingLoreRetryCount)),
         );
+        if (diagnostics.pendingLoreRetryCount > 0) {
+          const retry = text(document, 'button', '重试 ChatLore 同步');
+          retry.className = 'phone-lore-retry';
+          retry.type = 'button';
+          context.listen(retry, 'click', () => {
+            retry.disabled = true;
+            void services
+              .retryPendingLore()
+              .then(() => {
+                context.announce('ChatLore 重试完成');
+                context.requestRender();
+              })
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+              .finally(() => {
+                if (context.isActive()) retry.disabled = false;
+              });
+          });
+          output.append(retry);
+        }
         for (const state of diagnostics.moduleStates) output.append(row(document, '模块', state));
         for (const error of diagnostics.recentErrors) output.append(row(document, '最近错误', redactDiagnostic(error)));
         return output;

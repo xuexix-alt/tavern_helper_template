@@ -1,6 +1,99 @@
+import type { PhoneSchedulerJob, SchedulerPriority } from '../../../小手机平台/scheduler/phoneScheduler';
+
 export const WINTER_CHARACTER_NAME = '末世寒冬 - 星穹秩序';
 export const EDEN_TERMINAL_T2_ABILITY = 'social.shift_ration_protocol_t2';
 export const EDEN_TERMINAL_T4_ABILITY = 'social.eden_phone_mass_t4';
+
+export interface SnapshotCompletionGateState {
+  generationActive: boolean;
+  mvuUpdateActive: boolean;
+  awaitingMvuCompletion: boolean;
+  pendingAssistantMessageId: number | null;
+}
+
+export type SnapshotCompletionGateEvent =
+  | { type: 'generation-started' }
+  | { type: 'generation-ended'; assistantMessageId: number }
+  | { type: 'mvu-started' }
+  | { type: 'mvu-ended' };
+
+export function advanceSnapshotCompletionGate(
+  state: SnapshotCompletionGateState = {
+    generationActive: false,
+    mvuUpdateActive: false,
+    awaitingMvuCompletion: false,
+    pendingAssistantMessageId: null,
+  },
+  event: SnapshotCompletionGateEvent,
+): { state: SnapshotCompletionGateState; publishAssistantMessageId: number | null } {
+  let next: SnapshotCompletionGateState;
+  switch (event.type) {
+    case 'generation-started':
+      next = {
+        generationActive: true,
+        mvuUpdateActive: false,
+        awaitingMvuCompletion: true,
+        pendingAssistantMessageId: null,
+      };
+      break;
+    case 'generation-ended':
+      next = { ...state, generationActive: false, pendingAssistantMessageId: event.assistantMessageId };
+      break;
+    case 'mvu-started':
+      next = { ...state, mvuUpdateActive: true };
+      break;
+    case 'mvu-ended':
+      next = { ...state, mvuUpdateActive: false, awaitingMvuCompletion: false };
+      break;
+  }
+  const publishAssistantMessageId =
+    !next.generationActive &&
+    !next.mvuUpdateActive &&
+    !next.awaitingMvuCompletion &&
+    next.pendingAssistantMessageId !== null
+      ? next.pendingAssistantMessageId
+      : null;
+  if (publishAssistantMessageId !== null) next = { ...next, pendingAssistantMessageId: null };
+  return { state: next, publishAssistantMessageId };
+}
+
+export interface HostEpochSnapshot {
+  characterName: string;
+  chatId: string;
+  sessionKey: string;
+}
+
+export interface HostEpochCapture {
+  epoch: number;
+  host: HostEpochSnapshot;
+}
+
+export function isHostEpochCaptureCurrent(
+  captured: HostEpochCapture,
+  currentEpoch: number,
+  currentHost: HostEpochSnapshot,
+): boolean {
+  return (
+    captured.epoch === currentEpoch &&
+    captured.host.characterName === currentHost.characterName &&
+    captured.host.chatId === currentHost.chatId &&
+    captured.host.sessionKey === currentHost.sessionKey
+  );
+}
+
+export async function runPendingDispatchPreparation<T>(options: {
+  markPending(): Promise<unknown>;
+  prepareAndDispatch(): Promise<T>;
+  markFailed(error: unknown): Promise<void>;
+}): Promise<T> {
+  await options.markPending();
+  try {
+    return await options.prepareAndDispatch();
+  } catch (error) {
+    await options.markFailed(error);
+    throw error;
+  }
+}
 
 export interface SnapshotPublicationInput {
   assistantMessageId: number | null;
@@ -25,7 +118,12 @@ export function canPublishSnapshot(input: SnapshotPublicationInput): boolean {
 export function createStableSnapshotKey(identity: StableSnapshotIdentity): string {
   const chatId = identity.chatId.trim();
   const mvuSignature = identity.mvuSignature.trim();
-  if (!chatId || !mvuSignature || !Number.isSafeInteger(identity.assistantMessageId) || identity.assistantMessageId < 0) {
+  if (
+    !chatId ||
+    !mvuSignature ||
+    !Number.isSafeInteger(identity.assistantMessageId) ||
+    identity.assistantMessageId < 0
+  ) {
     throw new Error('稳定快照需要 chatId、assistantMessageId 与 mvuSignature');
   }
   return `${chatId}::${identity.assistantMessageId}::${mvuSignature}`;
@@ -86,21 +184,43 @@ export interface ContactAvailability {
   network: '公共通信网' | '伊甸内网' | null;
 }
 
+export interface EdenGroupContact {
+  id: string;
+  established: boolean;
+  terminalType: TerminalType;
+  terminalStatus: TerminalStatus;
+  signalStatus: SignalStatus;
+}
+
+export function deriveEdenGroupMemberIds(input: {
+  contacts: readonly EdenGroupContact[];
+  edenNetwork: NetworkState;
+  edenAccessAllowed: boolean;
+}): string[] {
+  if (input.edenNetwork !== '在线' || !input.edenAccessAllowed) return [];
+  return input.contacts
+    .filter(
+      contact =>
+        contact.established &&
+        contact.terminalType === '伊甸终端T2' &&
+        contact.terminalStatus === '正常' &&
+        contact.signalStatus === '在线',
+    )
+    .map(contact => contact.id);
+}
+
 export function deriveContactAvailability(input: ContactAvailabilityInput): ContactAvailability {
   const network =
-    input.terminalType === '普通手机'
-      ? '公共通信网'
-      : input.terminalType === '伊甸终端T2'
-        ? '伊甸内网'
-        : null;
-  const networkState = network === '公共通信网' ? input.publicNetwork : network === '伊甸内网' ? input.edenNetwork : undefined;
+    input.terminalType === '普通手机' ? '公共通信网' : input.terminalType === '伊甸终端T2' ? '伊甸内网' : null;
+  const networkState =
+    network === '公共通信网' ? input.publicNetwork : network === '伊甸内网' ? input.edenNetwork : undefined;
   const online = Boolean(
     input.established &&
-      network &&
-      input.terminalStatus === '正常' &&
-      input.signalStatus === '在线' &&
-      (network !== '伊甸内网' || input.edenAccessAllowed === true) &&
-      networkState === '在线',
+    network &&
+    input.terminalStatus === '正常' &&
+    input.signalStatus === '在线' &&
+    (network !== '伊甸内网' || input.edenAccessAllowed === true) &&
+    networkState === '在线',
   );
   return { online, canSend: online, network };
 }
@@ -161,12 +281,15 @@ export function migrateTemporaryNpcIdentity(
   const replacements = new Map(plan.migrations.map(item => [item.from, item.to]));
   const contactPreferences: Record<string, unknown> = {};
   for (const [identity, preference] of Object.entries(records.contactPreferences)) {
-    contactPreferences[replacements.get(identity as IdentityMigration['from']) ?? identity] = structuredClone(preference);
+    contactPreferences[replacements.get(identity as IdentityMigration['from']) ?? identity] =
+      structuredClone(preference);
   }
   return {
     conversations: records.conversations.map(item => ({
       ...structuredClone(item),
-      participants: item.participants.map(identity => replacements.get(identity as IdentityMigration['from']) ?? identity),
+      participants: item.participants.map(
+        identity => replacements.get(identity as IdentityMigration['from']) ?? identity,
+      ),
     })),
     contactPreferences,
     messages: records.messages.map(item => ({
@@ -318,28 +441,102 @@ export function buildEdenNotices(input: EdenNoticeInput): EdenNotice[] {
   return notices;
 }
 
-export function diffConfirmedMvuChanges(
-  before: unknown,
-  after: unknown,
-  maxChanges = 20,
-): string[] {
+export interface WinterSchedulerJobInput {
+  sessionKey: string;
+  snapshotKey: string;
+  conversationId: string;
+  worldbookName: string;
+  speaker: string;
+  participants: readonly string[];
+  notices: readonly EdenNotice[];
+}
+
+export function buildWinterSchedulerJobs(input: WinterSchedulerJobInput): PhoneSchedulerJob[] {
+  const priorityFor = (notice: EdenNotice): SchedulerPriority =>
+    notice.id === 'network' ? 'P0' : notice.id.startsWith('confirmed:') ? 'P1' : 'P2';
+  const jobs: PhoneSchedulerJob[] = input.notices.map(notice => ({
+    triggerKey: `deterministic:${notice.triggerKey}`,
+    sessionKey: input.sessionKey,
+    snapshotKey: input.snapshotKey,
+    conversationId: 'broadcast:eden',
+    contactKey: notice.source,
+    topicKey: `notice:${notice.id}`,
+    topicVersion: notice.triggerKey,
+    priority: priorityFor(notice),
+    source: 'deterministic_notice',
+    requiresAi: false,
+    payload: {
+      kind: 'broadcast',
+      worldbookName: input.worldbookName,
+      source: notice.source,
+      content: notice.content,
+      trust: notice.trust,
+    },
+  }));
+  if (!input.speaker.trim()) return jobs;
+  for (const notice of input.notices) {
+    const source =
+      notice.id === 'network'
+        ? 'network_change'
+        : notice.id.startsWith('goal:') || notice.id.startsWith('intel:')
+          ? 'task_intel_change'
+          : null;
+    if (!source) continue;
+    jobs.push({
+      triggerKey: `ai:${notice.triggerKey}`,
+      sessionKey: input.sessionKey,
+      snapshotKey: input.snapshotKey,
+      conversationId: input.conversationId,
+      contactKey: input.speaker,
+      topicKey: `proactive:${notice.id}`,
+      topicVersion: notice.triggerKey,
+      priority: priorityFor(notice),
+      source,
+      requiresAi: true,
+      payload: {
+        kind: 'proactive-ai',
+        worldbookName: input.worldbookName,
+        source: notice.source,
+        content: notice.content,
+        trust: notice.trust,
+        speaker: input.speaker,
+        participants: [...input.participants],
+      },
+    });
+  }
+  return jobs;
+}
+
+export function submitWinterSchedulerJobs(
+  scheduler: Pick<
+    import('../../../小手机平台/scheduler/phoneScheduler').ControlledPhoneScheduler,
+    'enqueue' | 'runAvailable'
+  >,
+  jobs: readonly PhoneSchedulerJob[],
+): number {
+  let accepted = 0;
+  for (const job of jobs) {
+    if (scheduler.enqueue(job)) accepted += 1;
+  }
+  scheduler.runAvailable();
+  return accepted;
+}
+
+export function diffConfirmedMvuChanges(before: unknown, after: unknown, maxChanges = 20): string[] {
   if (!Number.isSafeInteger(maxChanges) || maxChanges <= 0) throw new Error('MVU 变化数量上限必须是正安全整数');
   const changes: string[] = [];
   collectChanges('', before, after, changes);
   return changes.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)).slice(0, maxChanges);
 }
 
-const CHAT_LORE_ENTRY_NAMES = new Set([
-  '[手机通讯]私聊记录',
-  '[手机通讯]伊甸住户群',
-  '[手机情报]广播摘要',
-]);
+const CHAT_LORE_ENTRY_NAMES = new Set(['[手机通讯]私聊记录', '[手机通讯]伊甸住户群', '[手机情报]广播摘要']);
 
 export function collectChatLoreContext(
   entries: readonly { name: string; content: string }[],
   characterBudget = 6_000,
 ): string {
-  if (!Number.isSafeInteger(characterBudget) || characterBudget <= 0) throw new Error('ChatLore 字符预算必须是正安全整数');
+  if (!Number.isSafeInteger(characterBudget) || characterBudget <= 0)
+    throw new Error('ChatLore 字符预算必须是正安全整数');
   return entries
     .filter(entry => CHAT_LORE_ENTRY_NAMES.has(entry.name))
     .map(entry => `${entry.name}\n${entry.content}`)

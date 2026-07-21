@@ -38,12 +38,19 @@ export type PhoneBusinessRecord = {
   [key: string]: unknown;
 };
 
+export interface PhoneIdentityMigration {
+  from: string;
+  to: string;
+}
+
 export interface PhoneDb {
   addMessage(input: PhoneMessageInput): Promise<PhoneMessage>;
+  addMessageWithInbox(input: PhoneMessageInput, inbox: PhoneBusinessRecord): Promise<PhoneMessage>;
   listMessages(query: MessageQuery): Promise<PhoneMessage[]>;
   markSynced(sessionKey: string, messageIds: readonly string[]): Promise<void>;
   putRecord(store: PhoneBusinessStore, record: PhoneBusinessRecord): Promise<void>;
   listRecords(store: PhoneBusinessStore, sessionKey: string): Promise<PhoneBusinessRecord[]>;
+  migrateIdentities(sessionKey: string, migrations: readonly PhoneIdentityMigration[]): Promise<void>;
 }
 
 const DATABASE_NAME = 'tavern-phone';
@@ -88,6 +95,16 @@ function validateMessage(input: PhoneMessageInput): void {
   if (containsApiKey(input)) throw new Error('PhoneDB 不得存储或复制 API key');
 }
 
+function validatePendingInbox(input: PhoneMessageInput, inbox: PhoneBusinessRecord): void {
+  assertNonEmpty(inbox.id, 'inbox.id');
+  assertNonEmpty(inbox.sessionKey, 'inbox.sessionKey');
+  if (inbox.id !== input.id || inbox.sessionKey !== input.sessionKey || inbox.conversationId !== input.conversationId) {
+    throw new Error('outgoing message 与 inbox 必须指向同一消息、会话和聊天');
+  }
+  if (inbox.status !== 'pending') throw new Error('原子 outgoing inbox 的初始状态必须是 pending');
+  if (containsApiKey(inbox)) throw new Error('PhoneDB 不得存储或复制 API key');
+}
+
 function cloneMessage(input: PhoneMessageInput | PhoneMessage): PhoneMessage {
   return {
     ...input,
@@ -111,6 +128,93 @@ function matches(message: PhoneMessage, query: MessageQuery): boolean {
   );
 }
 
+function identityReplacements(
+  sessionKey: string,
+  migrations: readonly PhoneIdentityMigration[],
+): ReadonlyMap<string, string> {
+  assertNonEmpty(sessionKey, 'migration.sessionKey');
+  const replacements = new Map<string, string>();
+  const targets = new Set<string>();
+  for (const migration of migrations) {
+    assertNonEmpty(migration.from, 'migration.from');
+    assertNonEmpty(migration.to, 'migration.to');
+    if (migration.from === migration.to) throw new Error('migration.from 与 migration.to 不得相同');
+    if (replacements.has(migration.from) || targets.has(migration.to)) throw new Error('身份迁移存在重复或歧义');
+    replacements.set(migration.from, migration.to);
+    targets.add(migration.to);
+  }
+  return replacements;
+}
+
+function migrateMessage(message: PhoneMessage, replacements: ReadonlyMap<string, string>): PhoneMessage {
+  return {
+    ...message,
+    conversationId: migrateConversationId(message.conversationId, replacements),
+    sender: replacements.get(message.sender) ?? message.sender,
+    participants: message.participants?.map(identity => replacements.get(identity) ?? identity),
+  };
+}
+
+function migrateConversationId(conversationId: string, replacements: ReadonlyMap<string, string>): string {
+  for (const [from, to] of replacements) {
+    if (conversationId === `private:${from}`) return `private:${to}`;
+  }
+  return conversationId;
+}
+
+function migrateConversation(
+  record: PhoneBusinessRecord,
+  replacements: ReadonlyMap<string, string>,
+): PhoneBusinessRecord {
+  return {
+    ...record,
+    id: migrateConversationId(record.id, replacements),
+    ...(Array.isArray(record.participants)
+      ? {
+          participants: record.participants.map(identity =>
+            typeof identity === 'string' ? (replacements.get(identity) ?? identity) : identity,
+          ),
+        }
+      : {}),
+  };
+}
+
+function migrateConversationReference(
+  record: PhoneBusinessRecord,
+  replacements: ReadonlyMap<string, string>,
+): PhoneBusinessRecord {
+  return typeof record.conversationId === 'string'
+    ? { ...record, conversationId: migrateConversationId(record.conversationId, replacements) }
+    : record;
+}
+
+function migrateConversationRecords(
+  records: readonly PhoneBusinessRecord[],
+  sessionKey: string,
+  replacements: ReadonlyMap<string, string>,
+): PhoneBusinessRecord[] {
+  const candidates = records
+    .filter(record => record.sessionKey === sessionKey)
+    .map(record => ({ originalId: record.id, migrated: migrateConversation(record, replacements) }))
+    .sort(
+      (left, right) => Number(left.originalId === left.migrated.id) - Number(right.originalId === right.migrated.id),
+    );
+  const byId = new Map<string, PhoneBusinessRecord>();
+  for (const { migrated } of candidates) {
+    const existing = byId.get(migrated.id);
+    const participants = [
+      ...(Array.isArray(existing?.participants) ? existing.participants : []),
+      ...(Array.isArray(migrated.participants) ? migrated.participants : []),
+    ].filter((identity, index, all) => typeof identity === 'string' && all.indexOf(identity) === index);
+    byId.set(migrated.id, {
+      ...existing,
+      ...migrated,
+      ...(participants.length > 0 ? { participants } : {}),
+    });
+  }
+  return [...byId.values()];
+}
+
 export function createMemoryPhoneDb(): PhoneDb {
   const messages = new Map<string, PhoneMessage>();
   const records = new Map<PhoneBusinessStore, Map<string, PhoneBusinessRecord>>(
@@ -124,6 +228,15 @@ export function createMemoryPhoneDb(): PhoneDb {
       const stored = cloneMessage(input);
       messages.set(keyOf(stored.sessionKey, stored.id), stored);
       return cloneMessage(stored);
+    },
+    async addMessageWithInbox(input, inbox) {
+      validateMessage(input);
+      validatePendingInbox(input, inbox);
+      const storedMessage = cloneMessage(input);
+      const storedInbox = cloneRecord(inbox);
+      messages.set(keyOf(storedMessage.sessionKey, storedMessage.id), storedMessage);
+      records.get('inbox')!.set(keyOf(storedInbox.sessionKey, storedInbox.id), storedInbox);
+      return cloneMessage(storedMessage);
     },
     async listMessages(query) {
       return [...messages.values()]
@@ -148,6 +261,44 @@ export function createMemoryPhoneDb(): PhoneDb {
       return [...(records.get(store)?.values() ?? [])]
         .filter(record => record.sessionKey === sessionKey)
         .map(cloneRecord);
+    },
+    async migrateIdentities(sessionKey, migrations) {
+      const replacements = identityReplacements(sessionKey, migrations);
+      if (replacements.size === 0) return;
+      const nextMessages = new Map(messages);
+      for (const [key, message] of messages) {
+        if (message.sessionKey === sessionKey) nextMessages.set(key, migrateMessage(message, replacements));
+      }
+      const nextRecords = new Map<PhoneBusinessStore, Map<string, PhoneBusinessRecord>>();
+      for (const [store, values] of records) nextRecords.set(store, new Map(values));
+      const conversations = nextRecords.get('conversations')!;
+      const migratedConversations = migrateConversationRecords([...conversations.values()], sessionKey, replacements);
+      for (const [key, record] of [...conversations]) {
+        if (record.sessionKey === sessionKey) conversations.delete(key);
+      }
+      for (const record of migratedConversations) conversations.set(keyOf(sessionKey, record.id), cloneRecord(record));
+      const inbox = nextRecords.get('inbox')!;
+      for (const [key, record] of inbox) {
+        if (record.sessionKey === sessionKey) inbox.set(key, migrateConversationReference(record, replacements));
+      }
+      const preferences = nextRecords.get('contactPrefs')!;
+      for (const [key, record] of [...preferences]) {
+        if (record.sessionKey !== sessionKey) continue;
+        const identity = typeof record.identity === 'string' ? record.identity : record.id;
+        const replacement = replacements.get(identity);
+        if (!replacement) continue;
+        const targetKey = keyOf(sessionKey, replacement);
+        const existing = preferences.get(targetKey);
+        preferences.delete(key);
+        preferences.set(targetKey, cloneRecord({ ...record, ...existing, id: replacement, identity: replacement }));
+      }
+      messages.clear();
+      for (const [key, value] of nextMessages) messages.set(key, value);
+      for (const [store, values] of nextRecords) {
+        const target = records.get(store)!;
+        target.clear();
+        for (const [key, value] of values) target.set(key, value);
+      }
     },
   };
 }
@@ -189,6 +340,19 @@ class IndexedDbPhoneDb implements PhoneDb {
     const transaction = this.database.transaction('messages', 'readwrite');
     const done = transactionDone(transaction);
     transaction.objectStore('messages').put(message);
+    await done;
+    return cloneMessage(message);
+  }
+
+  async addMessageWithInbox(input: PhoneMessageInput, inbox: PhoneBusinessRecord): Promise<PhoneMessage> {
+    validateMessage(input);
+    validatePendingInbox(input, inbox);
+    const message = cloneMessage(input);
+    const storedInbox = cloneRecord(inbox);
+    const transaction = this.database.transaction(['messages', 'inbox'], 'readwrite');
+    const done = transactionDone(transaction);
+    transaction.objectStore('messages').put(message);
+    transaction.objectStore('inbox').put(storedInbox);
     await done;
     return cloneMessage(message);
   }
@@ -236,6 +400,80 @@ class IndexedDbPhoneDb implements PhoneDb {
     );
     await done;
     return result.filter(record => record.sessionKey === sessionKey).map(cloneRecord);
+  }
+
+  async migrateIdentities(sessionKey: string, migrations: readonly PhoneIdentityMigration[]): Promise<void> {
+    const replacements = identityReplacements(sessionKey, migrations);
+    if (replacements.size === 0) return;
+    const transaction = this.database.transaction(['messages', 'conversations', 'contactPrefs', 'inbox'], 'readwrite');
+    const done = transactionDone(transaction);
+    const messageStore = transaction.objectStore('messages');
+    const conversationStore = transaction.objectStore('conversations');
+    const contactPrefs = transaction.objectStore('contactPrefs');
+    const inboxStore = transaction.objectStore('inbox');
+    const messageRequest = messageStore.getAll() as IDBRequest<PhoneMessage[]>;
+    const conversationRequest = conversationStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
+    const preferenceRequest = contactPrefs.getAll() as IDBRequest<PhoneBusinessRecord[]>;
+    const inboxRequest = inboxStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
+    let messages: PhoneMessage[] | undefined;
+    let conversations: PhoneBusinessRecord[] | undefined;
+    let preferences: PhoneBusinessRecord[] | undefined;
+    let inbox: PhoneBusinessRecord[] | undefined;
+    let writesQueued = false;
+    let writePreparationError: unknown;
+    const queueWritesWhileActive = (): void => {
+      if (writesQueued || !messages || !conversations || !preferences || !inbox) return;
+      writesQueued = true;
+      try {
+        for (const message of messages) {
+          if (message.sessionKey === sessionKey) messageStore.put(migrateMessage(message, replacements));
+        }
+        for (const conversation of conversations) {
+          if (conversation.sessionKey === sessionKey) conversationStore.delete([sessionKey, conversation.id]);
+        }
+        for (const conversation of migrateConversationRecords(conversations, sessionKey, replacements)) {
+          conversationStore.put(conversation);
+        }
+        for (const record of inbox) {
+          if (record.sessionKey === sessionKey) inboxStore.put(migrateConversationReference(record, replacements));
+        }
+        const preferenceById = new Map(preferences.map(record => [`${record.sessionKey}\u0000${record.id}`, record]));
+        for (const preference of preferences) {
+          if (preference.sessionKey !== sessionKey) continue;
+          const identity = typeof preference.identity === 'string' ? preference.identity : preference.id;
+          const replacement = replacements.get(identity);
+          if (!replacement) continue;
+          const migration = { from: identity, to: replacement };
+          const existing = preferenceById.get(`${sessionKey}\u0000${replacement}`);
+          contactPrefs.delete([sessionKey, migration.from]);
+          contactPrefs.put({ ...preference, ...existing, id: migration.to, identity: migration.to });
+        }
+      } catch (error) {
+        writePreparationError = error;
+        transaction.abort();
+      }
+    };
+    messageRequest.onsuccess = () => {
+      messages = messageRequest.result;
+      queueWritesWhileActive();
+    };
+    conversationRequest.onsuccess = () => {
+      conversations = conversationRequest.result;
+      queueWritesWhileActive();
+    };
+    preferenceRequest.onsuccess = () => {
+      preferences = preferenceRequest.result;
+      queueWritesWhileActive();
+    };
+    inboxRequest.onsuccess = () => {
+      inbox = inboxRequest.result;
+      queueWritesWhileActive();
+    };
+    try {
+      await done;
+    } catch (error) {
+      throw writePreparationError ?? error;
+    }
   }
 }
 

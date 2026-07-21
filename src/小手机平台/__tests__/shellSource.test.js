@@ -381,6 +381,29 @@ test('diagnostics redact JSON headers and URL credentials only', () => {
   assert.equal(redactDiagnostic('ordinary timeout in model alpha'), 'ordinary timeout in model alpha');
 });
 
+test('diagnostics exposes an explicit retry for captured ChatLore failures', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  let retries = 0;
+  const services = completeServices({
+    getDiagnostics: () => ({
+      runtimeState: 'READY',
+      snapshotVersion: 'snapshot-a',
+      pendingLoreCount: 2,
+      pendingLoreRetryCount: 1,
+      moduleStates: [],
+      recentErrors: ['ChatLore 写入失败'],
+    }),
+    retryPendingLore: async () => {
+      retries += 1;
+    },
+  });
+  const diagnostics = createPhoneApps(services).find(app => app.route === 'diagnostics');
+  const rendered = await diagnostics.render(testContext());
+  findByClass(rendered, 'phone-lore-retry').click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(retries, 1);
+});
+
 function completeServices(overrides = {}) {
   return {
     listConversations: () => [],
@@ -400,6 +423,7 @@ function completeServices(overrides = {}) {
       runtimeState: '',
       snapshotVersion: '',
       pendingLoreCount: 0,
+      pendingLoreRetryCount: 0,
       moduleStates: [],
       recentErrors: [],
     }),
@@ -409,6 +433,7 @@ function completeServices(overrides = {}) {
     sendMessage: async () => {},
     retryMessage: async () => {},
     cancelMessage: async () => {},
+    retryPendingLore: async () => {},
     saveSettings: async () => {},
     submitActionToHost: async () => {},
     ...overrides,
