@@ -273,6 +273,6 @@ export function createPrePhoneBridge(options: {
         stopRuntimeInstalled = null;
         clearRuntimeBinding();
       }
-    }
+    },
   };
 }
