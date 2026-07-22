@@ -4,6 +4,44 @@ export const WINTER_CHARACTER_NAME = '末世寒冬 - 星穹秩序';
 export const EDEN_TERMINAL_T2_ABILITY = 'social.shift_ration_protocol_t2';
 export const EDEN_TERMINAL_T4_ABILITY = 'social.eden_phone_mass_t4';
 
+const WINTER_NON_CHARACTER_ROOT_KEYS = new Set([
+  '世界',
+  '通讯网络',
+  '庇护所',
+  '伊甸一次性指令',
+  '房间',
+  '主线任务',
+  '临时NPC',
+  '楼层其他住户',
+]);
+
+export interface WinterContactCandidate {
+  id: string;
+  name: string;
+  temporary: boolean;
+}
+
+export function extractWinterContactCandidates(statData: unknown): WinterContactCandidate[] {
+  if (!isRecord(statData)) return [];
+  const candidates: WinterContactCandidate[] = [];
+  const collect = (key: string, value: unknown, temporary: boolean): void => {
+    if (!isRecord(value) || !Object.prototype.hasOwnProperty.call(value, '登场状态')) return;
+    const explicitName = typeof value.姓名 === 'string' ? value.姓名.trim() : '';
+    candidates.push({
+      id: `${temporary ? 'temporary' : 'main'}:${key}`,
+      name: explicitName || key,
+      temporary,
+    });
+  };
+  for (const [key, value] of Object.entries(statData)) {
+    if (!WINTER_NON_CHARACTER_ROOT_KEYS.has(key)) collect(key, value, false);
+  }
+  for (const [key, value] of Object.entries(isRecord(statData.临时NPC) ? statData.临时NPC : {})) {
+    collect(key, value, true);
+  }
+  return candidates;
+}
+
 export interface SnapshotCompletionGateState {
   generationActive: boolean;
   mvuUpdateActive: boolean;

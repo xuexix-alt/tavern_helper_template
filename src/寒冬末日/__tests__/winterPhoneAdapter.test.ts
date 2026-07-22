@@ -15,6 +15,7 @@ import {
   deriveContactAvailability,
   deriveEdenGroupMemberIds,
   diffConfirmedMvuChanges,
+  extractWinterContactCandidates,
   isCapturedSessionCurrent,
   isEdenTerminalDeploymentAllowed,
   isHostEpochCaptureCurrent,
@@ -25,6 +26,32 @@ import {
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
 } from '../脚本/小手机-90寒冬适配器/winterAdapterCore';
+
+function testWinterContactCandidateExtraction(): void {
+  assert.deepEqual(
+    extractWinterContactCandidates({
+      世界: { 登场状态: '登场' },
+      通讯网络: { 登场状态: '离场' },
+      庇护所: { 登场状态: '登场' },
+      伊甸一次性指令: { 登场状态: '离场' },
+      房间: { 登场状态: '登场' },
+      主线任务: { 登场状态: '离场' },
+      楼层其他住户: { 登场状态: '登场' },
+      纪宁: { 姓名: '纪宁', 登场状态: '离场' },
+      旧角色Key: { 登场状态: '登场' },
+      非角色: { 姓名: '错误对象' },
+      临时NPC: {
+        红衣男子: { 登场状态: '登场' },
+        无状态路人: { 姓名: '无状态路人' },
+      },
+    }),
+    [
+      { id: 'main:纪宁', name: '纪宁', temporary: false },
+      { id: 'main:旧角色Key', name: '旧角色Key', temporary: false },
+      { id: 'temporary:红衣男子', name: '红衣男子', temporary: true },
+    ],
+  );
+}
 
 function testSnapshotCompletionGateAndHostEpoch(): void {
   const started = advanceSnapshotCompletionGate(undefined, { type: 'generation-started' });
@@ -359,6 +386,7 @@ async function testWinterJobsUseControlledSchedulerConstraints(): Promise<void> 
 }
 
 async function main(): Promise<void> {
+  testWinterContactCandidateExtraction();
   testSnapshotCompletionGateAndHostEpoch();
   await testPendingDispatchPreparation();
   testStableSnapshotPolicy();
