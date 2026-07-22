@@ -172,6 +172,7 @@ function createWinterAdapterModule(): PhoneModule {
   let activeHostCapture: HostEpochCapture | null = null;
   let pendingConfirmedChanges: readonly string[] = [];
   const activeRequests = new Map<string, ActiveRequest>();
+  const conversationListeners = new Map<string, Set<() => void>>();
   const loreRetryRequests = new Map<string, Readonly<LoreSyncRequest>>();
   const lastPublishedSnapshots = new Map<string, WinterSnapshot>();
   const diagnostics: string[] = [];
@@ -180,6 +181,29 @@ function createWinterAdapterModule(): PhoneModule {
     if (diagnostics.at(-1) === message) return;
     diagnostics.push(message);
     if (diagnostics.length > 20) diagnostics.splice(0, diagnostics.length - 20);
+  }
+
+  function watchConversation(conversationId: string, listener: () => void): () => void {
+    const listeners = conversationListeners.get(conversationId) ?? new Set<() => void>();
+    listeners.add(listener);
+    conversationListeners.set(conversationId, listeners);
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
+      listeners.delete(listener);
+      if (listeners.size === 0) conversationListeners.delete(conversationId);
+    };
+  }
+
+  function notifyConversationChanged(conversationId: string): void {
+    for (const listener of [...(conversationListeners.get(conversationId) ?? [])]) {
+      try {
+        listener();
+      } catch {
+        recordDiagnostic('聊天界面刷新监听失败');
+      }
+    }
   }
 
   async function init(nextContext: PhoneModuleContext): Promise<void> {
@@ -614,6 +638,7 @@ function createWinterAdapterModule(): PhoneModule {
       sendMessage,
       retryMessage,
       cancelMessage,
+      watchConversation,
       retryPendingLore,
       saveSettings,
       fetchModels,
@@ -878,6 +903,7 @@ function createWinterAdapterModule(): PhoneModule {
           error: errorMessage(error),
         }),
     });
+    notifyConversationChanged(conversationId);
   }
 
   async function retryMessage(conversationId: string, messageId: string): Promise<void> {
@@ -921,6 +947,7 @@ function createWinterAdapterModule(): PhoneModule {
           error: errorMessage(error),
         }),
     });
+    notifyConversationChanged(conversationId);
   }
 
   async function cancelMessage(conversationId: string, messageId: string): Promise<void> {
@@ -938,6 +965,7 @@ function createWinterAdapterModule(): PhoneModule {
       status: 'failed',
       error: '已取消',
     });
+    notifyConversationChanged(conversationId);
   }
 
   async function saveSettings(value: PhoneSettingsView, apiKey: string): Promise<void> {
@@ -1069,6 +1097,7 @@ function createWinterAdapterModule(): PhoneModule {
           type: conversation.kind === 'eden-group' ? 'group' : 'private',
           conversationId: conversation.id,
         });
+        notifyConversationChanged(conversation.id);
       })
       .catch(async () => {
         if (active.cancelled) return;
@@ -1080,6 +1109,7 @@ function createWinterAdapterModule(): PhoneModule {
           error: 'AI 请求失败',
         });
         recordDiagnostic('AI 请求或响应校验失败');
+        notifyConversationChanged(conversation.id);
       })
       .finally(() => {
         if (activeRequests.get(key) === active) activeRequests.delete(key);
@@ -1335,6 +1365,7 @@ function createWinterAdapterModule(): PhoneModule {
     activeChatWorldbookName = null;
     activeProfileWorldbookNames = [];
     lastPublishedSnapshots.clear();
+    conversationListeners.clear();
     if (context?.runtime.getOwner()?.adapterId === WINTER_OWNER.adapterId) {
       try {
         context.runtime.close();

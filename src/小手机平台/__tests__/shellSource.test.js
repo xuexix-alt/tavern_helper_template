@@ -391,6 +391,65 @@ test('message detail sends, retries and cancels by message id', async () => {
   assert.ok(collectText(detail).includes('<script>x</script>'));
 });
 
+test('open message detail redraws when the adapter reports an AI reply and releases the subscription', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  let conversationListener;
+  let released = 0;
+  let rerenders = 0;
+  let disposeView;
+  const services = completeServices({
+    listConversations: () => [
+      { id: 'private:a', kind: 'private', title: '纪宁', preview: '你好', unread: 0, status: 'sent' },
+    ],
+    openConversation: async () => {},
+    watchConversation(conversationId, listener) {
+      assert.equal(conversationId, 'private:a');
+      conversationListener = listener;
+      return () => {
+        released += 1;
+      };
+    },
+  });
+  const messages = createPhoneApps(services).find(app => app.route === 'messages');
+  const context = testContext({
+    requestRender: () => {
+      rerenders += 1;
+    },
+    onDispose: disposer => {
+      disposeView = disposer;
+    },
+  });
+  const listView = await messages.render(context);
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+  await messages.render(context);
+
+  assert.equal(typeof conversationListener, 'function');
+  conversationListener();
+  assert.equal(rerenders, 2, '打开详情一次，AI 回复通知再重绘一次');
+  disposeView();
+  assert.equal(released, 1);
+});
+
+test('messages and contacts expose one WeChat visual language', () => {
+  const apps = readFileSync(appsPath, 'utf8');
+  const css = readFileSync(cssPath, 'utf8');
+  for (const className of [
+    'phone-conversation__avatar',
+    'phone-conversation__meta',
+    'phone-message__avatar',
+    'phone-message__bubble',
+    'phone-message--incoming',
+    'phone-message--outgoing',
+    'phone-contact__avatar',
+  ]) {
+    assert.match(apps, new RegExp(className));
+    assert.match(css, new RegExp(`\\.${className}`));
+  }
+  assert.match(css, /--wechat-green:\s*#07c160/i);
+  assert.match(css, /phone-message--outgoing[\s\S]*?#95ec69/i);
+});
+
 test('contact creates a private conversation and navigates to messages', async () => {
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const navigated = [];
@@ -517,6 +576,7 @@ function completeServices(overrides = {}) {
     retryMessage: async () => {},
     cancelMessage: async () => {},
     retryPendingLore: async () => {},
+    watchConversation: () => () => {},
     saveSettings: async () => {},
     fetchModels: async () => [],
     clearApiKey: async () => {},
@@ -532,6 +592,7 @@ function testContext(overrides = {}) {
     announce() {},
     requestRender() {},
     navigate() {},
+    onDispose() {},
     isActive: () => true,
     ...overrides,
   };

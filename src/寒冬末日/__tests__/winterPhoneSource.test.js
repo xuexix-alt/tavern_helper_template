@@ -149,6 +149,8 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /clearSecret\(/);
   assert.match(source, /fetchModels/);
   assert.match(source, /clearApiKey/);
+  assert.match(source, /watchConversation/);
+  assert.match(source, /notifyConversationChanged\(conversation\.id\)/);
   assert.match(combined, /assistantMessageId/);
   assert.match(combined, /mvuSignature/);
   assert.match(combined, /角色档案 - /);

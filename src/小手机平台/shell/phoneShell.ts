@@ -76,6 +76,14 @@ export class PhoneViewScope {
     this.disposers.push(() => target.removeEventListener(event, listener));
   }
 
+  onDispose(disposer: () => void): void {
+    if (!this.active) {
+      disposer();
+      return;
+    }
+    this.disposers.push(disposer);
+  }
+
   dispose(): void {
     if (!this.active) return;
     this.active = false;
@@ -311,6 +319,7 @@ export class PhoneShell implements PhoneShellApi {
         this.routes.push(route);
         void this.render();
       },
+      onDispose: disposer => scope.onDispose(disposer),
       isActive: () => scope.isActive() && renderVersion === this.renderVersion && !this.disposed,
     };
     try {

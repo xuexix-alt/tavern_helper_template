@@ -80,6 +80,7 @@ export interface PhoneAppServices {
   sendMessage(conversationId: string, content: string): Promise<void>;
   retryMessage(conversationId: string, messageId: string): Promise<void>;
   cancelMessage(conversationId: string, messageId: string): Promise<void>;
+  watchConversation(conversationId: string, listener: () => void): () => void;
   retryPendingLore(): Promise<void>;
   saveSettings(settings: PhoneSettingsView, apiKey: string): Promise<void>;
   fetchModels(apiUrl: string, apiKey: string): Promise<readonly string[]>;
@@ -93,6 +94,7 @@ export interface PhoneAppRenderContext {
   announce(message: string, kind?: 'info' | 'error'): void;
   requestRender(): void;
   navigate(route: PhoneRoute): void;
+  onDispose?(disposer: () => void): void;
   isActive(): boolean;
 }
 
@@ -179,8 +181,16 @@ function safeCount(value: number): string {
   return Number.isFinite(value) && value > 0 ? String(Math.floor(value)) : '';
 }
 
+function avatar(document: Document, name: string, className: string): HTMLSpanElement {
+  const node = text(document, 'span', Array.from(name.trim())[0] ?? '？');
+  node.className = className;
+  node.setAttribute('aria-hidden', 'true');
+  return node;
+}
+
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
   let currentConversationId: string | null = null;
+  let currentConversationTitle = '';
 
   return [
     {
@@ -191,25 +201,42 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const { document } = context;
         if (currentConversationId) {
           const conversationId = currentConversationId;
+          const stopWatching = services.watchConversation(conversationId, () => {
+            if (context.isActive()) context.requestRender();
+          });
+          context.onDispose?.(stopWatching);
           const messages = await services.listMessages(conversationId);
           const page = document.createElement('section');
           page.className = 'phone-chat';
-          const back = text(document, 'button', '返回会话列表');
+          const back = text(document, 'button', `‹ ${currentConversationTitle || '返回会话列表'}`);
           back.className = 'phone-chat__back';
           back.type = 'button';
+          back.setAttribute('aria-label', '返回会话列表');
           context.listen(back, 'click', () => {
             currentConversationId = null;
+            currentConversationTitle = '';
             context.requestRender();
           });
           const history = list(document);
           history.className = 'phone-list phone-chat__history';
           for (const message of messages) {
             const item = document.createElement('li');
-            item.className = `phone-message phone-message--${message.direction}`;
+            item.className = `phone-message ${
+              message.direction === 'outgoing' ? 'phone-message--outgoing' : 'phone-message--incoming'
+            }`;
+            const messageAvatar = avatar(
+              document,
+              message.direction === 'outgoing' ? '我' : message.sender,
+              'phone-message__avatar',
+            );
             const copy = document.createElement('div');
             copy.className = 'phone-message__copy';
-            copy.append(text(document, 'strong', message.sender), text(document, 'p', message.content));
-            item.append(copy);
+            const sender = text(document, 'strong', message.sender);
+            sender.className = 'phone-message__sender';
+            const bubble = text(document, 'p', message.content);
+            bubble.className = 'phone-message__bubble';
+            copy.append(sender, bubble);
+            item.append(messageAvatar, copy);
             if (message.status === 'failed') {
               const retry = text(document, 'button', '重试');
               retry.className = 'phone-message__retry';
@@ -281,6 +308,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const items = await services.listConversations();
         if (items.length === 0) return empty(document, '还没有会话');
         const output = list(document);
+        output.className = 'phone-list phone-conversation-list';
         for (const item of items) {
           const status = item.status === 'failed' ? '· 发送失败' : item.status === 'pending' ? '· 发送中' : '';
           const node = document.createElement('li');
@@ -295,13 +323,21 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           const copy = document.createElement('span');
           copy.className = 'phone-row__copy';
           copy.append(text(document, 'strong', item.title), text(document, 'span', `${item.preview}${status}`));
-          conversation.append(copy);
+          const conversationAvatar = avatar(
+            document,
+            item.kind === 'eden-group' ? '群' : item.title,
+            `phone-conversation__avatar${item.kind === 'eden-group' ? ' phone-conversation__avatar--group' : ''}`,
+          );
+          const meta = document.createElement('span');
+          meta.className = 'phone-conversation__meta';
+          conversation.append(conversationAvatar, copy, meta);
           context.listen(conversation, 'click', () => {
             void services
               .openConversation(item.id)
               .then(() => {
                 if (!context.isActive()) return;
                 currentConversationId = item.id;
+                currentConversationTitle = item.title;
                 context.requestRender();
               })
               .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
@@ -311,7 +347,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             const badge = text(document, 'span', unread);
             badge.className = 'phone-badge';
             badge.setAttribute('aria-label', `${unread} 条未读`);
-            conversation.append(badge);
+            meta.append(badge);
           }
           node.append(conversation);
           if (item.status === 'failed') {
@@ -371,7 +407,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                     if (context.isActive()) add.disabled = false;
                   });
               });
-              node.append(copy, add);
+              node.append(avatar(document, item.name, 'phone-contact__avatar'), copy, add);
               section.append(node);
               continue;
             }
@@ -385,13 +421,14 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
               text(document, 'strong', item.name),
               text(document, 'span', `${item.inEdenGroup ? '伊甸群成员' : '长期联系人'} · ${item.detail}`),
             );
-            button.append(copy);
+            button.append(avatar(document, item.name, 'phone-contact__avatar'), copy);
             context.listen(button, 'click', () => {
               void services
                 .openOrCreateConversation(item.id)
                 .then(conversationId => {
                   if (!context.isActive()) return;
                   currentConversationId = conversationId;
+                  currentConversationTitle = item.name;
                   context.navigate('messages');
                 })
                 .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
