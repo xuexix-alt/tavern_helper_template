@@ -25,6 +25,8 @@ export interface PhoneContactView {
   detail: string;
   online: boolean;
   canSend: boolean;
+  added: boolean;
+  inEdenGroup: boolean;
 }
 
 export interface PhoneBroadcastView {
@@ -71,6 +73,8 @@ export interface PhoneAppServices {
   getDiagnostics(): Promise<PhoneDiagnosticsView> | PhoneDiagnosticsView;
   openConversation(conversationId: string): Promise<void>;
   openOrCreateConversation(contactId: string): Promise<string>;
+  addContact(contactId: string): Promise<void>;
+  setContactGroupMembership(contactId: string, included: boolean): Promise<void>;
   retryFailedMessage(conversationId: string): Promise<void>;
   sendMessage(conversationId: string, content: string): Promise<void>;
   retryMessage(conversationId: string, messageId: string): Promise<void>;
@@ -337,33 +341,84 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       async render(context) {
         const { document } = context;
         const items = await services.listContacts();
-        if (items.length === 0) return empty(document, '暂无可通讯角色');
-        const output = list(document);
-        for (const item of items) {
-          const availability = item.online ? (item.canSend ? '在线' : '只读') : '离线·历史可读';
-          const node = document.createElement('li');
-          node.className = 'phone-row';
-          const button = document.createElement('button');
-          button.className = 'phone-contact';
-          button.type = 'button';
-          button.setAttribute('aria-label', `打开与${item.name}的私聊`);
-          const copy = document.createElement('span');
-          copy.className = 'phone-row__copy';
-          copy.append(text(document, 'strong', item.name), text(document, 'span', `${availability} · ${item.detail}`));
-          button.append(copy);
-          context.listen(button, 'click', () => {
-            void services
-              .openOrCreateConversation(item.id)
-              .then(conversationId => {
-                if (!context.isActive()) return;
-                currentConversationId = conversationId;
-                context.navigate('messages');
-              })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
-          });
-          node.append(button);
-          output.append(node);
-        }
+        if (items.length === 0) return empty(document, '当前变量中暂无人物');
+        const output = document.createElement('div');
+        const renderSection = (title: string, sectionItems: readonly PhoneContactView[]): void => {
+          if (sectionItems.length === 0) return;
+          output.append(text(document, 'h2', title));
+          const section = list(document);
+          for (const item of sectionItems) {
+            const node = document.createElement('li');
+            node.className = 'phone-row';
+            if (!item.added) {
+              const copy = document.createElement('div');
+              copy.className = 'phone-row__copy';
+              copy.append(text(document, 'strong', item.name), text(document, 'p', item.detail));
+              const add = text(document, 'button', '添加');
+              add.className = 'phone-button phone-button--primary';
+              add.type = 'button';
+              add.setAttribute('aria-label', `添加联系人：${item.name}`);
+              context.listen(add, 'click', () => {
+                add.disabled = true;
+                void services
+                  .addContact(item.id)
+                  .then(() => context.requestRender())
+                  .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                  .finally(() => {
+                    if (context.isActive()) add.disabled = false;
+                  });
+              });
+              node.append(copy, add);
+              section.append(node);
+              continue;
+            }
+            const button = document.createElement('button');
+            button.className = 'phone-contact';
+            button.type = 'button';
+            button.setAttribute('aria-label', `打开与${item.name}的私聊`);
+            const copy = document.createElement('span');
+            copy.className = 'phone-row__copy';
+            copy.append(
+              text(document, 'strong', item.name),
+              text(document, 'span', `${item.inEdenGroup ? '伊甸群成员' : '长期联系人'} · ${item.detail}`),
+            );
+            button.append(copy);
+            context.listen(button, 'click', () => {
+              void services
+                .openOrCreateConversation(item.id)
+                .then(conversationId => {
+                  if (!context.isActive()) return;
+                  currentConversationId = conversationId;
+                  context.navigate('messages');
+                })
+                .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
+            });
+            const group = text(document, 'button', item.inEdenGroup ? '移出群聊' : '邀请入群');
+            group.className = 'phone-button';
+            group.type = 'button';
+            context.listen(group, 'click', () => {
+              group.disabled = true;
+              void services
+                .setContactGroupMembership(item.id, !item.inEdenGroup)
+                .then(() => context.requestRender())
+                .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                .finally(() => {
+                  if (context.isActive()) group.disabled = false;
+                });
+            });
+            node.append(button, group);
+            section.append(node);
+          }
+          output.append(section);
+        };
+        renderSection(
+          '联系人',
+          items.filter(item => item.added),
+        );
+        renderSection(
+          '可添加人物',
+          items.filter(item => !item.added),
+        );
         return output;
       },
     },

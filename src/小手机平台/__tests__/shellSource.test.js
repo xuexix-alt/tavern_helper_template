@@ -112,6 +112,17 @@ test('shell owns one top-document root and restores focus on Escape', () => {
   assert.match(source, /disposers/);
 });
 
+test('user close actions delegate to the runtime close callback', () => {
+  const source = readFileSync(shellPath, 'utf8');
+
+  assert.match(source, /onRequestClose\?:\s*\(\)\s*=>\s*void/);
+  assert.match(source, /private\s+requestClose\(\)/);
+  assert.match(source, /this\.onRequestClose\?\.\(\)/);
+  assert.match(source, /closeButton,\s*['"]click['"],\s*\(\)\s*=>\s*this\.requestClose\(\)/);
+  assert.match(source, /event\.target\s*===\s*overlay\)\s*this\.requestClose\(\)/);
+  assert.match(source, /event\.key\s*===\s*['"]Escape['"][\s\S]*?this\.requestClose\(\)/);
+});
+
 test('Apple system styles include accessible themes and preferences', () => {
   const css = readFileSync(cssPath, 'utf8');
 
@@ -150,6 +161,17 @@ test('task actions stay structured and never generate or write MVU', () => {
     () => createTaskHostAction({ id: 'x', title: 'x', detail: 'x', sourceKey: 'task:x', actionText: '   ' }),
     /不能为空/,
   );
+});
+
+test('contacts distinguish saved contacts from addable characters and manage Eden group membership', () => {
+  const apps = readFileSync(appsPath, 'utf8');
+
+  assert.match(apps, /addContact\(item\.id\)/);
+  assert.match(apps, /setContactGroupMembership\(item\.id,\s*!item\.inEdenGroup\)/);
+  assert.match(apps, /联系人/);
+  assert.match(apps, /可添加人物/);
+  assert.match(apps, /邀请入群/);
+  assert.match(apps, /移出群聊/);
 });
 
 test('malicious message text remains an inert text value at runtime', async () => {
@@ -325,7 +347,17 @@ test('contact creates a private conversation and navigates to messages', async (
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const navigated = [];
   const services = completeServices({
-    listContacts: () => [{ id: 'role:a', name: '纪宁', detail: '公民', online: true, canSend: true }],
+    listContacts: () => [
+      {
+        id: 'role:a',
+        name: '纪宁',
+        detail: '公民',
+        online: true,
+        canSend: true,
+        added: true,
+        inEdenGroup: false,
+      },
+    ],
     openOrCreateConversation: async () => 'private:a',
   });
   const contacts = createPhoneApps(services).find(app => app.route === 'contacts');
@@ -429,6 +461,8 @@ function completeServices(overrides = {}) {
     }),
     openConversation: async () => {},
     openOrCreateConversation: async () => '',
+    addContact: async () => {},
+    setContactGroupMembership: async () => {},
     retryFailedMessage: async () => {},
     sendMessage: async () => {},
     retryMessage: async () => {},
