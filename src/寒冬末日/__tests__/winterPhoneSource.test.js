@@ -143,6 +143,12 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /dependsOn:\s*\[['"]communication\.apps['"]\]/);
   assert.match(combined, /末世寒冬 - 星穹秩序/);
   assert.doesNotMatch(combined, /EDEN_TERMINAL_T2_ABILITY|EDEN_TERMINAL_T4_ABILITY|canAssignEdenTerminal/);
+  assert.match(source, /fetchOpenAiCompatibleModels/);
+  assert.match(source, /withApiKey\(/);
+  assert.match(source, /setSecret\(/);
+  assert.match(source, /clearSecret\(/);
+  assert.match(source, /fetchModels/);
+  assert.match(source, /clearApiKey/);
   assert.match(combined, /assistantMessageId/);
   assert.match(combined, /mvuSignature/);
   assert.match(combined, /角色档案 - /);
@@ -190,10 +196,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
     source,
     /async function refreshInitialSnapshot[\s\S]*?while\s*\(snapshot\s*===\s*null[\s\S]*?refreshLatestSnapshot\(\)[\s\S]*?setTimeout/,
   );
-  assert.match(
-    source,
-    /当前 chat「\$\{session\.chatId\}」的 latest 消息变量无 stat_data/,
-  );
+  assert.match(source, /当前 chat「\$\{session\.chatId\}」的 latest 消息变量无 stat_data/);
   const waitForMvu = source.indexOf("await waitGlobalInitialized('Mvu')");
   const createHostGateway = source.indexOf('createTopHostGateway', source.indexOf('async function init'));
   assert.ok(waitForMvu >= 0 && waitForMvu < createHostGateway, 'adapter init must wait for Mvu before host activation');
@@ -202,11 +205,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
     source.indexOf('async function refreshSnapshot'),
     source.indexOf('async function enqueueSnapshotJobs'),
   );
-  assert.doesNotMatch(
-    refreshSnapshotBlock,
-    /invalidateSnapshot\(\)/,
-    '瞬时读取失败不得清空上一份稳定快照',
-  );
+  assert.doesNotMatch(refreshSnapshotBlock, /invalidateSnapshot\(\)/, '瞬时读取失败不得清空上一份稳定快照');
   assert.match(refreshSnapshotBlock, /snapshot\?\.key\s*===\s*nextKey/);
   assert.ok(
     refreshSnapshotBlock.indexOf('snapshot = next') < refreshSnapshotBlock.indexOf('await synchronizeSnapshotEffects'),

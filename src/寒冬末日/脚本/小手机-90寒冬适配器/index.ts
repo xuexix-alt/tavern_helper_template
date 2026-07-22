@@ -84,6 +84,7 @@ interface ChatLoreCatalog {
 interface AiCatalog {
   TavernProvider: typeof import('../../../小手机平台/ai/providers').TavernProvider;
   OpenAICompatibleProvider: typeof import('../../../小手机平台/ai/providers').OpenAICompatibleProvider;
+  fetchOpenAiCompatibleModels: typeof import('../../../小手机平台/ai/providers').fetchOpenAiCompatibleModels;
 }
 
 interface PromptCatalog {
@@ -470,9 +471,7 @@ function createWinterAdapterModule(): PhoneModule {
       mvu = getVariables({ type: 'message', message_id: 'latest' }) as Mvu.MvuData;
       assertHostCapture(hostCapture);
     } catch (error) {
-      recordDiagnostic(
-        `当前 chat「${session.chatId}」的 latest 消息变量读取失败：${errorMessage(error)}`,
-      );
+      recordDiagnostic(`当前 chat「${session.chatId}」的 latest 消息变量读取失败：${errorMessage(error)}`);
       return;
     }
     if (!isRecord(mvu.stat_data) || Object.keys(mvu.stat_data).length === 0) {
@@ -617,6 +616,8 @@ function createWinterAdapterModule(): PhoneModule {
       cancelMessage,
       retryPendingLore,
       saveSettings,
+      fetchModels,
+      clearApiKey,
       submitActionToHost: action => requireContext().runtime.submitActionToHost(action),
     };
   }
@@ -714,8 +715,10 @@ function createWinterAdapterModule(): PhoneModule {
   }
 
   function getSettings(): PhoneSettingsView {
-    const value = requireSettings().getPublic();
-    return { ...value, parameters: JSON.stringify(value.parameters) };
+    const store = requireSettings();
+    const value = store.getPublic();
+    const hasApiKey = store.withApiKey(apiKey => Boolean(apiKey?.trim()));
+    return { ...value, parameters: JSON.stringify(value.parameters), hasApiKey };
   }
 
   async function getDiagnostics(): Promise<PhoneDiagnosticsView> {
@@ -937,7 +940,7 @@ function createWinterAdapterModule(): PhoneModule {
     });
   }
 
-  async function saveSettings(value: PhoneSettingsView): Promise<void> {
+  async function saveSettings(value: PhoneSettingsView, apiKey: string): Promise<void> {
     const parsed: unknown = value.parameters.trim() ? JSON.parse(value.parameters) : {};
     if (!isRecord(parsed)) throw new Error('生成参数必须是 JSON 对象');
     const store = requireSettings();
@@ -949,7 +952,22 @@ function createWinterAdapterModule(): PhoneModule {
       theme: value.theme,
       notifications: value.notifications,
     });
+    if (apiKey.trim()) store.setSecret(apiKey.trim());
     shell?.setTheme(value.theme);
+  }
+
+  async function fetchModels(apiUrl: string, apiKey: string): Promise<readonly string[]> {
+    const aiCatalog = requireContext().services.require<AiCatalog>('ai.providers');
+    return requireSettings().withApiKey(savedApiKey =>
+      aiCatalog.fetchOpenAiCompatibleModels({
+        baseUrl: apiUrl,
+        apiKey: apiKey.trim() || savedApiKey || '',
+      }),
+    );
+  }
+
+  async function clearApiKey(): Promise<void> {
+    requireSettings().clearSecret();
   }
 
   async function launchAiRequest(
@@ -1237,10 +1255,7 @@ function createWinterAdapterModule(): PhoneModule {
     });
   }
 
-  async function assertConversationCanSend(
-    conversation: ConversationRecord,
-    current: WinterSnapshot,
-  ): Promise<void> {
+  async function assertConversationCanSend(conversation: ConversationRecord, current: WinterSnapshot): Promise<void> {
     const preferences = await listContactPreferences(current.sessionKey);
     assertCapturedSession(current.sessionKey);
     const added = new Set(preferences.map(contact => contact.id));

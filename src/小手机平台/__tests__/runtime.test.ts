@@ -781,29 +781,48 @@ async function testSettingsStore(): Promise<void> {
   );
 
   const other = createSettingsStore('另一张卡', storage);
-  assert.equal(other.getPublic().theme, 'system', '不同角色公共设置不得串用');
+  assert.equal(other.getPublic().theme, 'dark', '不同角色卡必须共享本机公共设置');
   other.setSecret('other-secret');
   assert.equal(
     winter.withApiKey(apiKey => apiKey),
-    undefined,
-    '不同角色 secret 不得串用',
+    'other-secret',
+    '不同角色卡必须共享本机 secret',
   );
   assert.equal(
     other.withApiKey(apiKey => apiKey),
     'other-secret',
   );
 
-  const publicKey = [...storage.values.keys()].find(
-    key => key.includes(encodeURIComponent('损坏设置')) && key.includes(':public'),
+  const migrationStorage = new MemoryStorage();
+  const legacyNamespace = `tavern-phone:${encodeURIComponent('旧角色卡')}`;
+  migrationStorage.setItem(
+    `${legacyNamespace}:public`,
+    JSON.stringify({
+      provider: 'openai-compatible',
+      apiUrl: 'https://legacy.example.test/v1',
+      model: 'legacy-model',
+      parameters: { temperature: 0.3 },
+      theme: 'light',
+      notifications: false,
+    }),
   );
-  assert.equal(publicKey, undefined);
-  const broken = createSettingsStore('损坏设置', storage);
-  const brokenKey = [...storage.values.keys()].find(
-    key => key.includes(encodeURIComponent('损坏设置')) && key.includes(':public'),
+  migrationStorage.setItem(`${legacyNamespace}:secret`, 'legacy-secret');
+  const migrated = createSettingsStore('旧角色卡', migrationStorage);
+  assert.equal(migrated.getPublic().model, 'legacy-model', '全局配置为空时应迁移当前角色卡旧设置');
+  assert.equal(
+    migrated.withApiKey(apiKey => apiKey),
+    'legacy-secret',
+    '应迁移当前角色卡旧 secret',
   );
-  assert.ok(brokenKey, '首次读取应写入规范化默认公共设置');
-  storage.setItem(brokenKey, '{bad json');
-  assert.deepEqual(createSettingsStore('损坏设置', storage).getPublic(), {
+  assert.ok(migrationStorage.getItem('tavern-phone:local:public'));
+  assert.equal(migrationStorage.getItem('tavern-phone:local:secret'), 'legacy-secret');
+
+  const brokenStorage = new MemoryStorage();
+  const broken = createSettingsStore('损坏设置', brokenStorage);
+  const brokenKey = 'tavern-phone:local:public';
+  assert.ok(brokenStorage.getItem(brokenKey), '首次读取应写入规范化默认公共设置');
+  brokenStorage.setItem(brokenKey, '{bad json');
+  assert.deepEqual(createSettingsStore('损坏设置', brokenStorage).getPublic(), {
     provider: 'tavern',
     apiUrl: '',
     model: '',

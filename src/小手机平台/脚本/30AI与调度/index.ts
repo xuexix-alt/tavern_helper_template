@@ -1,5 +1,5 @@
 import { assemblePrompt, createPromptContextSnapshot } from '../../ai/promptAssembler';
-import { OpenAICompatibleProvider, TavernProvider } from '../../ai/providers';
+import { fetchOpenAiCompatibleModels, OpenAICompatibleProvider, TavernProvider } from '../../ai/providers';
 import { parseResponse } from '../../ai/responseParser';
 import { createServiceModule } from '../../core/serviceModule';
 import { registerPhoneModule } from '../../core/register';
@@ -7,7 +7,7 @@ import { ControlledPhoneScheduler } from '../../scheduler/phoneScheduler';
 
 const services = Object.freeze({
   'prompt.assembler': Object.freeze({ assemblePrompt, createPromptContextSnapshot, parseResponse }),
-  'ai.providers': Object.freeze({ OpenAICompatibleProvider, TavernProvider }),
+  'ai.providers': Object.freeze({ fetchOpenAiCompatibleModels, OpenAICompatibleProvider, TavernProvider }),
   'phone.scheduler': Object.freeze({ ControlledPhoneScheduler }),
 });
 

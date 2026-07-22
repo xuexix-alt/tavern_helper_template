@@ -35,6 +35,10 @@ class FakeElement {
     this.children.push(...children);
   }
 
+  replaceChildren(...children) {
+    this.children = [...children];
+  }
+
   setAttribute(name, value) {
     this.attributes[name] = value;
   }
@@ -147,6 +151,8 @@ test('Apple system styles include accessible themes and preferences', () => {
   assert.match(css, /prefers-contrast:\s*more/i);
   assert.match(css, /safe-area-inset/i);
   assert.match(css, /overflow-x:\s*hidden/i);
+  assert.match(css, /:host\s*\{[\s\S]*?position:\s*fixed[\s\S]*?height:\s*100dvh/i);
+  assert.match(css, /\.phone-overlay\s*\{[\s\S]*?position:\s*absolute/i);
 });
 
 test('task actions stay structured and never generate or write MVU', () => {
@@ -256,14 +262,12 @@ test('private and Eden group rows open while failed messages can retry', async (
   assert.match(groupButton.attributes['aria-label'], /伊甸住户群/);
 });
 
-test('settings form saves structured public settings without a secret field', async () => {
+test('settings saves a separate local secret and fetches selectable OpenAI-compatible models', async () => {
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const saved = [];
-  const services = {
-    listConversations: () => [],
-    listContacts: () => [],
-    listBroadcasts: () => [],
-    listTasks: () => [],
+  const fetched = [];
+  let cleared = 0;
+  const services = completeServices({
     getSettings: () => ({
       provider: 'tavern',
       apiUrl: 'https://api.example.com',
@@ -271,39 +275,70 @@ test('settings form saves structured public settings without a secret field', as
       parameters: '{"temperature":0.7}',
       theme: 'system',
       notifications: true,
+      hasApiKey: true,
     }),
-    getDiagnostics: () => ({}),
-    openConversation: async () => {},
-    retryFailedMessage: async () => {},
-    saveSettings: async next => saved.push(next),
-    submitActionToHost: async () => {},
-  };
+    fetchModels: async (apiUrl, apiKey) => {
+      fetched.push({ apiUrl, apiKey });
+      return ['model-c', 'model-d'];
+    },
+    clearApiKey: async () => {
+      cleared += 1;
+    },
+    saveSettings: async (next, apiKey) => saved.push({ next, apiKey }),
+  });
   const settings = createPhoneApps(services).find(app => app.route === 'settings');
   const rendered = await settings.render(testContext());
   const form = findByClass(rendered, 'phone-settings');
   const fields = Object.fromEntries(
-    form.children.slice(0, 6).map(label => [label.children[0].textContent, label.children[1]]),
+    form.children
+      .filter(label => label.children?.length === 2)
+      .map(label => [label.children[0].textContent, label.children[1]]),
   );
+  assert.equal(fields['API Key'].type, 'password');
+  assert.match(findByClass(form, 'phone-settings__status').textContent, /已保存/);
   fields.Provider.value = 'openai-compatible';
   fields['API URL'].value = 'https://new.example.com/v1';
   fields['模型'].value = 'model-b';
   fields['生成参数'].value = '{"temperature":0.4}';
   fields['主题'].value = 'dark';
   fields['通知'].checked = false;
+  fields['API Key'].value = 'new-local-secret';
+
+  findByClass(form, 'phone-settings__fetch-models').click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(fetched, [{ apiUrl: 'https://new.example.com/v1', apiKey: 'new-local-secret' }]);
+  const modelChoices = findByClass(form, 'phone-settings__models');
+  assert.deepEqual(
+    modelChoices.children.map(option => option.value),
+    ['model-c', 'model-d'],
+  );
+  modelChoices.value = 'model-d';
+  for (const listener of modelChoices.listeners.get('change') ?? []) listener({ target: modelChoices });
+  assert.equal(fields['模型'].value, 'model-d');
+
   findByClass(form, 'phone-settings__save').click();
   await new Promise(resolve => setImmediate(resolve));
 
   assert.deepEqual(saved, [
     {
-      provider: 'openai-compatible',
-      apiUrl: 'https://new.example.com/v1',
-      model: 'model-b',
-      parameters: '{"temperature":0.4}',
-      theme: 'dark',
-      notifications: false,
+      next: {
+        provider: 'openai-compatible',
+        apiUrl: 'https://new.example.com/v1',
+        model: 'model-d',
+        parameters: '{"temperature":0.4}',
+        theme: 'dark',
+        notifications: false,
+        hasApiKey: true,
+      },
+      apiKey: 'new-local-secret',
     },
   ]);
-  assert.doesNotMatch(JSON.stringify(collectText(rendered)), /api.?key|secret/i);
+  assert.equal(fields['API Key'].value, '', '保存成功后不得在界面保留明文 Key');
+
+  findByClass(form, 'phone-settings__clear-key').click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(cleared, 1);
+  assert.match(findByClass(form, 'phone-settings__status').textContent, /已清除/);
 });
 
 test('message detail sends, retries and cancels by message id', async () => {
@@ -461,6 +496,7 @@ function completeServices(overrides = {}) {
       parameters: '',
       theme: 'system',
       notifications: false,
+      hasApiKey: false,
     }),
     getDiagnostics: () => ({
       runtimeState: '',
@@ -480,6 +516,8 @@ function completeServices(overrides = {}) {
     cancelMessage: async () => {},
     retryPendingLore: async () => {},
     saveSettings: async () => {},
+    fetchModels: async () => [],
+    clearApiKey: async () => {},
     submitActionToHost: async () => {},
     ...overrides,
   };

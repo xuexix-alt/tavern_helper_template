@@ -116,6 +116,71 @@ export interface FetchResponseLike {
 export type FetchLike = (url: string, init: RequestInit) => Promise<FetchResponseLike>;
 type TimerHandle = ReturnType<typeof setTimeout> | number;
 
+export interface OpenAIModelListOptions {
+  baseUrl: string;
+  apiKey: string;
+  fetch?: FetchLike;
+}
+
+function openAiEndpoint(baseUrl: string, resource: 'chat/completions' | 'models'): string {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new Error('OpenAI-compatible API URL 无效');
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('OpenAI-compatible API URL 只支持 http/https');
+  }
+  let path = url.pathname.replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
+  if (!/(?:^|\/)v1$/.test(path)) path = `${path}/v1`;
+  url.pathname = `${path}/${resource}`.replace(/\/{2,}/g, '/');
+  url.search = '';
+  url.hash = '';
+  return url.toString();
+}
+
+export function openAiModelsEndpoint(baseUrl: string): string {
+  return openAiEndpoint(baseUrl, 'models');
+}
+
+export async function fetchOpenAiCompatibleModels(options: OpenAIModelListOptions): Promise<readonly string[]> {
+  const apiKey = options.apiKey.trim();
+  if (!apiKey) throw new Error('OpenAI-compatible API Key 缺失');
+
+  let response: FetchResponseLike;
+  try {
+    response = await (options.fetch ?? ((url, init) => fetch(url, init)))(openAiModelsEndpoint(options.baseUrl), {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+  } catch {
+    throw new Error('拉取模型失败：网络请求失败');
+  }
+  if (!response.ok) throw new Error(`拉取模型失败：HTTP ${response.status}`);
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error('拉取模型失败：响应不是有效 JSON');
+  }
+  const data = (payload as { data?: unknown })?.data;
+  const ids = Array.isArray(data)
+    ? data
+        .map(item => {
+          if (!item || typeof item !== 'object') return '';
+          const entry = item as { id?: unknown; name?: unknown };
+          const value = entry.id ?? entry.name;
+          return typeof value === 'string' ? value.trim() : '';
+        })
+        .filter(Boolean)
+    : [];
+  const models = [...new Set(ids)];
+  if (models.length === 0) throw new Error('模型接口没有返回可用模型');
+  return Object.freeze(models);
+}
+
 export interface ApiKeyAccessor {
   <T>(callback: (apiKey: string | undefined) => T): T;
 }

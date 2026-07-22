@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 
 import { buildRolePrompts, JAILBREAK_LAYERS } from '../ai/jailbreakLayers';
 import { assemblePrompt, createPromptContextSnapshot, type PromptContextSnapshotInput } from '../ai/promptAssembler';
-import { OpenAICompatibleProvider, ProviderError, TavernProvider, type FetchLike } from '../ai/providers';
+import {
+  fetchOpenAiCompatibleModels,
+  openAiModelsEndpoint,
+  OpenAICompatibleProvider,
+  ProviderError,
+  TavernProvider,
+  type FetchLike,
+} from '../ai/providers';
 import { parseResponse, ResponseParseError, type RepairFunction } from '../ai/responseParser';
 import { createSettingsStore, type StorageLike } from '../platform/settingsStore';
 
@@ -703,6 +710,71 @@ async function testOpenAIErrorsTimeoutAndCancel(): Promise<void> {
   await assert.rejects(invalidProvider.request('x').promise, /invalid|response|content|响应/i);
 }
 
+async function testOpenAiModelDiscovery(): Promise<void> {
+  assert.equal(openAiModelsEndpoint('https://api.example.test'), 'https://api.example.test/v1/models');
+  assert.equal(openAiModelsEndpoint('https://api.example.test/v1'), 'https://api.example.test/v1/models');
+  assert.equal(
+    openAiModelsEndpoint('https://api.example.test/proxy/v1/chat/completions'),
+    'https://api.example.test/proxy/v1/models',
+  );
+  assert.throws(() => openAiModelsEndpoint('javascript:alert(1)'), /http|https/i);
+
+  let requestedUrl = '';
+  let authorization = '';
+  const models = await fetchOpenAiCompatibleModels({
+    baseUrl: 'https://api.example.test/proxy/v1',
+    apiKey: 'model-secret',
+    fetch: async (url, init) => {
+      requestedUrl = url;
+      authorization = String((init.headers as Record<string, string>).Authorization);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ id: 'gpt-b' }, { name: 'gpt-a' }, { id: 'gpt-b' }, {}] }),
+      };
+    },
+  });
+  assert.equal(requestedUrl, 'https://api.example.test/proxy/v1/models');
+  assert.equal(authorization, 'Bearer model-secret');
+  assert.deepEqual(models, ['gpt-b', 'gpt-a']);
+  assert.equal(Object.isFrozen(models), true);
+
+  await assert.rejects(
+    fetchOpenAiCompatibleModels({ baseUrl: 'https://api.example.test/v1', apiKey: '   ' }),
+    /api key|密钥|key/i,
+  );
+  await assert.rejects(
+    fetchOpenAiCompatibleModels({
+      baseUrl: 'https://api.example.test/v1',
+      apiKey: 'model-secret',
+      fetch: async () => ({ ok: false, status: 401, json: async () => ({}) }),
+    }),
+    error => error instanceof Error && /HTTP 401/.test(error.message) && !error.message.includes('model-secret'),
+  );
+  await assert.rejects(
+    fetchOpenAiCompatibleModels({
+      baseUrl: 'https://api.example.test/v1',
+      apiKey: 'model-secret',
+      fetch: async () => ({ ok: true, status: 200, json: async () => ({ data: [{}] }) }),
+    }),
+    /没有返回可用模型/,
+  );
+  await assert.rejects(
+    fetchOpenAiCompatibleModels({
+      baseUrl: 'https://api.example.test/v1',
+      apiKey: 'model-secret',
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new Error('response contained model-secret');
+        },
+      }),
+    }),
+    error => error instanceof Error && /JSON|响应/.test(error.message) && !error.message.includes('model-secret'),
+  );
+}
+
 async function main(): Promise<void> {
   testJailbreakLayers();
   testPromptAssemblerOrderAndImmutableSnapshot();
@@ -717,6 +789,7 @@ async function main(): Promise<void> {
   await testCleanupFailureIsolation();
   await testTimerSetupFailureClassification();
   await testOpenAIErrorsTimeoutAndCancel();
+  await testOpenAiModelDiscovery();
   console.log('ai tests passed');
 }
 

@@ -149,20 +149,27 @@ export function createSettingsStore(
   if (normalizedCharacterName === '') throw new Error('Character name cannot be empty');
   if (!storage) throw new Error('Storage is unavailable');
 
-  const namespace = `tavern-phone:${encodeURIComponent(normalizedCharacterName)}`;
+  const namespace = 'tavern-phone:local';
+  const legacyNamespace = `tavern-phone:${encodeURIComponent(normalizedCharacterName)}`;
   const publicKey = `${namespace}:public`;
   const secretKey = `${namespace}:secret`;
+  const legacyPublicKey = `${legacyNamespace}:public`;
+  const legacySecretKey = `${legacyNamespace}:secret`;
   const listeners = new Set<(settings: PublicSettings) => void>();
   const reportError = createSafeErrorReporter(options.onError);
 
   let settings: PublicSettings;
   try {
-    const serialized = storage.getItem(publicKey);
+    const serialized = storage.getItem(publicKey) ?? storage.getItem(legacyPublicKey);
     settings = serialized === null ? DEFAULT_SETTINGS : normalizePublicSettings(JSON.parse(serialized));
   } catch {
     settings = DEFAULT_SETTINGS;
   }
   storage.setItem(publicKey, JSON.stringify(settings));
+  if (storage.getItem(secretKey) === null) {
+    const legacySecret = storage.getItem(legacySecretKey);
+    if (legacySecret !== null) storage.setItem(secretKey, legacySecret);
+  }
 
   return {
     getPublic: () => settings,

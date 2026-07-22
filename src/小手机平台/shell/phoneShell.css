@@ -7,6 +7,15 @@
   --phone-surface: #ffffff;
   --phone-separator: rgba(60, 60, 67, 0.18);
   --phone-glass: rgba(249, 249, 249, 0.78);
+  position: fixed;
+  z-index: 2147483000;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  pointer-events: none;
   color: var(--phone-label);
   font:
     400 16px/1.45 system-ui,
@@ -15,6 +24,10 @@
     'Segoe UI',
     sans-serif;
   font-optical-sizing: auto;
+}
+
+:host([hidden]) {
+  display: none;
 }
 
 * {
@@ -27,8 +40,7 @@ button {
 }
 
 .phone-overlay {
-  position: fixed;
-  z-index: 2147483000;
+  position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
@@ -36,6 +48,7 @@ button {
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
 }
 
 .phone-shell {
@@ -393,6 +406,23 @@ button:focus-visible {
 
 .phone-settings__save {
   justify-self: stretch;
+}
+
+.phone-settings__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.phone-settings__status {
+  margin: 0;
+  color: var(--phone-secondary);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.phone-settings__status[data-kind='error'] {
+  color: var(--phone-red);
 }
 
 .phone-empty,

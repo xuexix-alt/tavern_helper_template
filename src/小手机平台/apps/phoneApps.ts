@@ -52,6 +52,7 @@ export interface PhoneSettingsView {
   parameters: string;
   theme: 'system' | 'light' | 'dark';
   notifications: boolean;
+  hasApiKey: boolean;
 }
 
 export interface PhoneDiagnosticsView {
@@ -80,7 +81,9 @@ export interface PhoneAppServices {
   retryMessage(conversationId: string, messageId: string): Promise<void>;
   cancelMessage(conversationId: string, messageId: string): Promise<void>;
   retryPendingLore(): Promise<void>;
-  saveSettings(settings: PhoneSettingsView): Promise<void>;
+  saveSettings(settings: PhoneSettingsView, apiKey: string): Promise<void>;
+  fetchModels(apiUrl: string, apiKey: string): Promise<readonly string[]>;
+  clearApiKey(): Promise<void>;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
 }
 
@@ -483,7 +486,14 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           { value: 'openai-compatible', label: 'OpenAI-compatible' },
         ]);
         const apiUrl = input(document, 'url', settings.apiUrl);
+        const apiKey = input(document, 'password', '');
+        apiKey.autocomplete = 'off';
+        apiKey.spellcheck = false;
         const model = input(document, 'text', settings.model);
+        const modelChoices = select(document, '', []);
+        modelChoices.className = 'phone-settings__models';
+        const modelChoicesField = field(document, '可用模型', modelChoices);
+        modelChoicesField.hidden = true;
         const parameters = input(document, 'text', settings.parameters);
         const theme = select(document, settings.theme, [
           { value: 'system', label: '跟随系统' },
@@ -495,15 +505,73 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const save = text(document, 'button', '保存设置');
         save.className = 'phone-button phone-button--primary phone-settings__save';
         save.type = 'button';
+        const fetchModels = text(document, 'button', '拉取模型列表');
+        fetchModels.className = 'phone-button phone-settings__fetch-models';
+        fetchModels.type = 'button';
+        const clearKey = text(document, 'button', '清除 Key');
+        clearKey.className = 'phone-button phone-settings__clear-key';
+        clearKey.type = 'button';
+        const actions = document.createElement('div');
+        actions.className = 'phone-settings__actions';
+        actions.append(fetchModels, clearKey);
+        const status = text(document, 'p', settings.hasApiKey ? '已保存 API Key；留空保存将保留' : '尚未保存 API Key');
+        status.className = 'phone-settings__status';
+        const report = (message: string, kind: 'info' | 'error' = 'info') => {
+          status.textContent = message;
+          status.dataset.kind = kind;
+          context.announce(message, kind);
+        };
         form.append(
           field(document, 'Provider', provider),
           field(document, 'API URL', apiUrl),
+          field(document, 'API Key', apiKey),
           field(document, '模型', model),
+          modelChoicesField,
+          actions,
           field(document, '生成参数', parameters),
           field(document, '主题', theme),
           field(document, '通知', notifications),
+          status,
           save,
         );
+        context.listen(modelChoices, 'change', () => {
+          if (modelChoices.value) model.value = modelChoices.value;
+        });
+        context.listen(fetchModels, 'click', () => {
+          fetchModels.disabled = true;
+          report('正在拉取模型列表…');
+          void services
+            .fetchModels(apiUrl.value, apiKey.value)
+            .then(models => {
+              const options = models.map(value => {
+                const option = text(document, 'option', value);
+                option.value = value;
+                return option;
+              });
+              modelChoices.replaceChildren(...options);
+              modelChoices.value = models.includes(model.value) ? model.value : (models[0] ?? '');
+              modelChoicesField.hidden = false;
+              report(`已拉取 ${models.length} 个模型`);
+            })
+            .catch(error => report(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              if (context.isActive()) fetchModels.disabled = false;
+            });
+        });
+        context.listen(clearKey, 'click', () => {
+          clearKey.disabled = true;
+          void services
+            .clearApiKey()
+            .then(() => {
+              settings.hasApiKey = false;
+              apiKey.value = '';
+              report('API Key 已清除');
+            })
+            .catch(error => report(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              if (context.isActive()) clearKey.disabled = false;
+            });
+        });
         context.listen(save, 'click', () => {
           save.disabled = true;
           const next: PhoneSettingsView = {
@@ -513,11 +581,16 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             parameters: parameters.value,
             theme: isPhoneTheme(theme.value) ? theme.value : 'system',
             notifications: notifications.checked,
+            hasApiKey: settings.hasApiKey || apiKey.value.trim().length > 0,
           };
           void services
-            .saveSettings(next)
-            .then(() => context.announce('设置已保存'))
-            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+            .saveSettings(next, apiKey.value)
+            .then(() => {
+              settings.hasApiKey = next.hasApiKey;
+              apiKey.value = '';
+              report('设置已保存到本机');
+            })
+            .catch(error => report(error instanceof Error ? error.message : String(error), 'error'))
             .finally(() => {
               if (context.isActive()) save.disabled = false;
             });
