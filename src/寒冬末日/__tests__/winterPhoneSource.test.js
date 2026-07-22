@@ -155,6 +155,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /createIndexedDbPhoneDb\s*\(/);
   assert.match(source, /createPhoneApps\s*\(/);
   assert.match(source, /createPhoneShell\s*\(/);
+  assert.match(source, /createPhoneShell\s*\(\s*\{[\s\S]*?onRequestClose:\s*\(\)\s*=>\s*context\?\.runtime\.close\(\)/);
   assert.match(source, /new\s+ChatLoreSync\s*\(/);
   assert.match(source, /new\s+TavernProvider\s*\(/);
   assert.match(source, /new\s+ControlledPhoneScheduler\s*\(/);
@@ -162,12 +163,71 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /eventOn\s*\(/);
   assert.match(source, /generationActive/);
   assert.match(source, /Mvu\.events\.VARIABLE_UPDATE_STARTED/);
+  assert.match(source, /Mvu\.events\.VARIABLE_INITIALIZED/);
+  assert.match(source, /VARIABLE_INITIALIZED[\s\S]*?refreshUnlessGenerating/);
+  assert.match(source, /context\?\.runtime\.getHostStoryMessageId\(\)/);
+  assert.match(source, /runtime\.on\(\s*['"]hostStory['"][\s\S]*?refreshUnlessGenerating/);
+  assert.match(
+    source,
+    /runtime\.on\(\s*['"]hostStory['"],\s*storyMessageId\s*=>[\s\S]*?storyMessageId\s*===\s*null[\s\S]*?scheduleSnapshotRefresh\(\)/,
+    'Pre bridge 暂时卸载时不得清空已成功的稳定快照，重新绑定后应合并刷新',
+  );
+  assert.match(
+    source,
+    /function scheduleSnapshotRefresh[\s\S]*?clearTimeout[\s\S]*?setTimeout[\s\S]*?refreshUnlessGenerating/,
+    '酒馆与 MVU 的连续事件必须合并后再读取 latest，避免在事件栈中反复处理整份 stat_data',
+  );
+  assert.match(
+    source,
+    /async function deactivate[\s\S]*?clearScheduledSnapshotRefresh\(\)/,
+    '适配器停用时必须清理待执行的快照刷新',
+  );
+  assert.match(source, /pre\.story-floor:/);
+  const refreshLatestSnapshotBlock = source.slice(
+    source.indexOf('async function refreshLatestSnapshot'),
+    source.indexOf('async function refreshSnapshot'),
+  );
+  assert.doesNotMatch(refreshLatestSnapshotBlock, /getChatMessages\(\s*['"]0-\{\{lastMessageId\}\}['"]/);
+  assert.match(source, /getVariables\(\{\s*type:\s*['"]message['"],\s*message_id:\s*['"]latest['"]\s*\}\)/);
+  assert.doesNotMatch(source, /Mvu\.getMvuData/);
+  assert.match(source, /await refreshInitialSnapshot\(\)/);
+  assert.match(
+    source,
+    /async function refreshInitialSnapshot[\s\S]*?while\s*\(snapshot\s*===\s*null[\s\S]*?refreshLatestSnapshot\(\)[\s\S]*?setTimeout/,
+  );
+  assert.match(
+    source,
+    /当前 chat「\$\{session\.chatId\}」的 latest 消息变量无 stat_data/,
+  );
+  const waitForMvu = source.indexOf("await waitGlobalInitialized('Mvu')");
+  const createHostGateway = source.indexOf('createTopHostGateway', source.indexOf('async function init'));
+  assert.ok(waitForMvu >= 0 && waitForMvu < createHostGateway, 'adapter init must wait for Mvu before host activation');
   assert.match(source, /advanceSnapshotCompletionGate\s*\(/);
+  const refreshSnapshotBlock = source.slice(
+    source.indexOf('async function refreshSnapshot'),
+    source.indexOf('async function enqueueSnapshotJobs'),
+  );
+  assert.doesNotMatch(
+    refreshSnapshotBlock,
+    /invalidateSnapshot\(\)/,
+    '瞬时读取失败不得清空上一份稳定快照',
+  );
+  assert.match(refreshSnapshotBlock, /snapshot\?\.key\s*===\s*nextKey/);
+  assert.ok(
+    refreshSnapshotBlock.indexOf('snapshot = next') < refreshSnapshotBlock.indexOf('await synchronizeSnapshotEffects'),
+    'readable MVU must publish the stable snapshot before optional persistence/scheduler effects',
+  );
+  assert.match(source, /function synchronizeSnapshotEffects[\s\S]*?稳定快照附属同步失败/);
   assert.match(source, /\+\+hostEpoch/);
   assert.match(source, /assertHostCapture\s*\(/);
   assert.match(source, /runPendingDispatchPreparation\s*\(/);
   assert.match(source, /EDEN_GROUP_CONVERSATION_ID/);
-  assert.match(source, /deriveEdenGroupMemberIds\s*\(/);
+  assert.match(source, /listRecords\(\s*['"]contactPrefs['"],\s*sessionKey\s*\)/);
+  assert.match(source, /putRecord\(\s*['"]contactPrefs['"]/);
+  assert.match(source, /kind:\s*['"]manual-contact['"]/);
+  assert.match(source, /async function addContact/);
+  assert.match(source, /async function setContactGroupMembership/);
+  assert.doesNotMatch(source, /deriveContactAvailability|deriveEdenGroupMemberIds|伊甸终端T2/);
   assert.match(source, /lastPublishedSnapshots\s*=\s*new Map/);
   assert.match(source, /lastPublishedSnapshots\.get\(next\.sessionKey\)/);
   assert.match(source, /lastPublishedSnapshots\.set\(next\.sessionKey,\s*next\)/);
@@ -177,6 +237,16 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
     source.indexOf('async function refreshLatestSnapshot'),
   );
   assert.doesNotMatch(invalidationBlock, /lastPublishedSnapshots\.(?:clear|delete)/);
+  const generationStartedBlock = source.slice(
+    source.indexOf('listen(tavern_events.GENERATION_STARTED'),
+    source.indexOf('listen(tavern_events.GENERATION_ENDED'),
+  );
+  assert.doesNotMatch(generationStartedBlock, /invalidateSnapshot\(\)/);
+  const mvuStartedBlock = source.slice(
+    source.indexOf('listen(Mvu.events.VARIABLE_UPDATE_STARTED'),
+    source.indexOf('listen(Mvu.events.VARIABLE_UPDATE_ENDED'),
+  );
+  assert.doesNotMatch(mvuStartedBlock, /invalidateSnapshot\(\)/);
   assert.match(source, /migrateIdentities\s*\(/);
   assert.match(source, /buildWinterSchedulerJobs\s*\(/);
   assert.match(source, /submitWinterSchedulerJobs\s*\(\s*scheduler,\s*jobs\s*\)/);
