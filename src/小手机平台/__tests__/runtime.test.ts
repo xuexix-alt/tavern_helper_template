@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { EventBus } from '../core/eventBus';
 import { createServiceModule } from '../core/serviceModule';
 import { ModuleRegistry } from '../core/moduleRegistry';
-import { registerPhoneModule } from '../core/register';
+import { PHONE_RUNTIME_INSTALLED_EVENT, registerPhoneModule } from '../core/register';
 import { createPhoneRuntime, installPhoneRuntime, makeSessionKey } from '../core/runtime';
 import { InternalPhoneServiceRegistry } from '../core/serviceRegistry';
 import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration, PhoneOwner } from '../core/types';
@@ -368,9 +368,17 @@ function withFakeWindow(topWindow: object, run: () => void): void {
 }
 
 function testTopRegistration(): void {
-  const queuedTop = { location: { href: 'https://example.test' } } as {
-    location: { href: string };
-    __TAVERN_PHONE_PENDING_MODULES__?: PhoneModuleRegistration[];
+  const installedEvents: string[] = [];
+  const queuedTop = {
+    location: { href: 'https://example.test' },
+    TavernPhone: undefined as ReturnType<typeof installPhoneRuntime> | undefined,
+    __TAVERN_PHONE_PENDING_MODULES__: undefined as PhoneModuleRegistration[] | undefined,
+    dispatchEvent(event: Event) {
+      assert.equal(event.type, PHONE_RUNTIME_INSTALLED_EVENT);
+      assert.ok(this.TavernPhone, 'runtime must be published before the install event');
+      installedEvents.push(event.type);
+      return true;
+    },
   };
   withFakeWindow(queuedTop, () => registerPhoneModule(registration('queued')));
   assert.equal(queuedTop.__TAVERN_PHONE_PENDING_MODULES__?.length, 1, 'runtime 不存在时应进入 top pending 队列');
@@ -386,7 +394,9 @@ function testTopRegistration(): void {
     first.setOwner(null);
     assert.equal(installPhoneRuntime(ownerB), first, '显式解绑后可由新 owner 复用 runtime');
   });
+  assert.deepEqual(installedEvents, [PHONE_RUNTIME_INSTALLED_EVENT], 'only a new singleton install emits the event');
 
+  const conflictingEvents: string[] = [];
   const conflictingPending = [
     registration('conflict'),
     {
@@ -397,16 +407,22 @@ function testTopRegistration(): void {
   const conflictingTop = {
     location: { href: 'https://example.test' },
     __TAVERN_PHONE_PENDING_MODULES__: conflictingPending,
+    dispatchEvent(event: Event) {
+      conflictingEvents.push(event.type);
+      return true;
+    },
   } as {
     location: { href: string };
     TavernPhone?: unknown;
     __TAVERN_PHONE_PENDING_MODULES__: PhoneModuleRegistration[];
+    dispatchEvent(event: Event): boolean;
   };
   withFakeWindow(conflictingTop, () => {
     assert.throws(() => installPhoneRuntime(ownerA), /version|hot replace/i);
   });
   assert.equal(conflictingTop.TavernPhone, undefined, 'pending 注册失败时不得发布半成品 runtime');
   assert.equal(conflictingTop.__TAVERN_PHONE_PENDING_MODULES__, conflictingPending, 'pending 注册失败时不得丢失原队列');
+  assert.deepEqual(conflictingEvents, [], 'failed installs must not announce an unavailable runtime');
 
   const inaccessibleWindow = {} as { top?: unknown };
   Object.defineProperty(inaccessibleWindow, 'top', {

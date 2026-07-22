@@ -2,10 +2,21 @@ import type { PhoneModuleRegistration, TavernPhonePublicApi } from './types';
 
 export const PENDING_KEY = '__TAVERN_PHONE_PENDING_MODULES__';
 export const RUNTIME_KEY = 'TavernPhone';
+export const PHONE_RUNTIME_INSTALLED_EVENT = 'tavern-phone:runtime-installed';
 
 export interface PhoneTopWindow {
   TavernPhone?: TavernPhonePublicApi;
   __TAVERN_PHONE_PENDING_MODULES__?: PhoneModuleRegistration[];
+  dispatchEvent?: (event: Event) => boolean;
+}
+
+export function dispatchPhoneRuntimeInstalled(topWindow: PhoneTopWindow): void {
+  if (typeof topWindow.dispatchEvent !== 'function') return;
+  try {
+    topWindow.dispatchEvent(new Event(PHONE_RUNTIME_INSTALLED_EVENT));
+  } catch {
+    // Runtime publication must remain usable when host event delivery is unavailable.
+  }
 }
 
 export function getPhoneTopWindow(): PhoneTopWindow {

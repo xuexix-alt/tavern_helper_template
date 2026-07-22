@@ -1,6 +1,6 @@
 import { EventBus } from './eventBus';
 import { ModuleRegistry } from './moduleRegistry';
-import { getPhoneTopWindow } from './register';
+import { dispatchPhoneRuntimeInstalled, getPhoneTopWindow } from './register';
 import { InternalPhoneServiceRegistry } from './serviceRegistry';
 import type {
   PhoneHostAction,
@@ -287,5 +287,6 @@ export function installPhoneRuntime(expectedOwner?: PhoneOwner): TavernPhonePubl
   pending.forEach(registration => runtime.registerModule(registration));
   topWindow.TavernPhone = runtime;
   topWindow.__TAVERN_PHONE_PENDING_MODULES__ = [];
+  dispatchPhoneRuntimeInstalled(topWindow);
   return runtime;
 }
