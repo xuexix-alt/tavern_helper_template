@@ -71,7 +71,11 @@ test('same-layer-pre exposes one minimal phone entry immediately before regenera
   const bridgeSource = fs.readFileSync(bridgePath, 'utf8');
 
   assert.ok(storySource.indexOf('phone-entry-button') < storySource.indexOf('btn-regenerate'));
-  assert.equal(storySource.match(/phone-entry-button/g)?.length, 1, 'Pre should expose exactly one phone entry');
+  assert.equal(
+    storySource.match(/class=["'][^"']*\bphone-entry-button\b[^"']*["']/g)?.length,
+    1,
+    'Pre should expose exactly one phone entry',
+  );
   assert.match(storySource, /\u79bb\u7ebf/);
   assert.match(storySource, /\u4e0d\u53ef\u7528/);
   assert.match(storySource, /\u672a\u8bfb/);
@@ -80,6 +84,27 @@ test('same-layer-pre exposes one minimal phone entry immediately before regenera
   assert.match(bridgeSource, /mode\s*===\s*['"]append['"]/);
   assert.doesNotMatch(bridgeSource, /PhoneDB|PromptAssembler|ChatLoreSync/);
   assert.doesNotMatch(storySource, /PhoneDB|PromptAssembler|ChatLoreSync|PhoneScheduler|TavernProvider/);
+});
+
+test('same-layer-pre reconnects the phone bridge and exposes a beta fallback without mobile label squeeze', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const betaSource = readPre(path.join('components', 'PreGalleryBetaModal.vue'));
+
+  assert.match(storySource, /resolveRuntime:\s*getTopTavernPhoneRuntime/);
+  assert.doesNotMatch(storySource, /runtime:\s*getTopTavernPhoneRuntime\(\)/);
+  assert.match(storySource, /:phone-availability="phoneAvailability"/);
+  assert.match(storySource, /@phone-redetect="redetectPhone"/);
+  assert.match(storySource, /function\s+redetectPhone\(\)[\s\S]*?phoneBridge\?\.redetect\(\)/);
+
+  assert.match(betaSource, /PHONE BRIDGE/);
+  assert.match(betaSource, /重新检测手机/);
+  assert.match(betaSource, /phoneAvailability:\s*PrePhoneAvailability/);
+  assert.match(betaSource, /\(event:\s*['"]phone-redetect['"]\)/);
+
+  assert.match(
+    storySource,
+    /@media\s*\(max-width:\s*760px\)[\s\S]*?:global\(html:not\(\.theme-apple\)\s+\.same-layer-pre-host\s+\.phone-entry-button\s+\.ui-bars\)\s*\{[\s\S]*?display:\s*none;/,
+  );
 });
 
 test('same-layer-pre strips old image persistence while allowing beta light image refs', () => {

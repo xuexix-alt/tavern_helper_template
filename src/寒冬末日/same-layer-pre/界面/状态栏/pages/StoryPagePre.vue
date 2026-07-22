@@ -141,7 +141,13 @@
       />
     </HudModal>
 
-    <PreGalleryBetaModal :open="betaModalOpen" @close="closeBetaModal" @gallery-log="appendGalleryLog" />
+    <PreGalleryBetaModal
+      :open="betaModalOpen"
+      :phone-availability="phoneAvailability"
+      @close="closeBetaModal"
+      @gallery-log="appendGalleryLog"
+      @phone-redetect="redetectPhone"
+    />
 
     <div class="ui-host-body">
       <transition name="sidebar-mask-fade">
@@ -873,6 +879,10 @@ function closeBetaModal() {
   betaModalOpen.value = false;
 }
 
+function redetectPhone() {
+  phoneBridge?.redetect();
+}
+
 function toggleBetaModal() {
   betaModalOpen.value = !betaModalOpen.value;
   closeTopbarMenus();
@@ -1248,7 +1258,7 @@ watch(isAppleTheme, enabled => {
 
 onMounted(() => {
   phoneBridge = createPrePhoneBridge({
-    runtime: getTopTavernPhoneRuntime(),
+    resolveRuntime: getTopTavernPhoneRuntime,
     composer: composerText,
     launcher: () => phoneEntryButtonRef.value,
   });
@@ -2223,6 +2233,10 @@ onBeforeUnmount(() => {
     gap: 3px;
     font-size: 12px;
     white-space: nowrap;
+  }
+
+  :global(html:not(.theme-apple) .same-layer-pre-host .phone-entry-button .ui-bars) {
+    display: none;
   }
 
   .ui-bottom-drawer {

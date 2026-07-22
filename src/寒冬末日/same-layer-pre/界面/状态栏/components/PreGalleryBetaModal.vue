@@ -13,6 +13,15 @@
         </header>
 
         <div class="pre-beta-modal-body">
+          <section class="pre-beta-phone">
+            <div>
+              <span class="pre-beta-eyebrow">PHONE BRIDGE</span>
+              <strong>{{ phoneStatusTitle }}</strong>
+              <small>{{ phoneStatusDetail }}</small>
+            </div>
+            <button type="button" class="pre-beta-scan" @click="redetectPhone">重新检测手机</button>
+          </section>
+
           <section class="pre-beta-summary">
             <div>
               <span class="pre-beta-eyebrow">SCAN</span>
@@ -133,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   beginPreGalleryImageRefLongPress,
   classifyPreGalleryImageRef,
@@ -148,12 +157,25 @@ import {
   type PreGalleryScanResult,
 } from '../preGalleryImageRefs';
 import type { PreGalleryLogItem } from '../types';
+import type { PrePhoneAvailability } from '../phoneBridge';
 
-const props = defineProps<{ open: boolean }>();
+const props = defineProps<{ open: boolean; phoneAvailability: PrePhoneAvailability }>();
 const emit = defineEmits<{
   (event: 'close'): void;
   (event: 'gallery-log', item: PreGalleryLogItem): void;
+  (event: 'phone-redetect'): void;
 }>();
+
+const phoneStatusTitle = computed(() => {
+  if (props.phoneAvailability === 'available') return '手机已连接';
+  if (props.phoneAvailability === 'unavailable') return '手机运行时不可用';
+  return '手机运行时离线';
+});
+const phoneStatusDetail = computed(() => {
+  if (props.phoneAvailability === 'available') return 'Pre 已连接当前角色卡的手机运行时。';
+  if (props.phoneAvailability === 'unavailable') return '已发现运行时，但角色适配器尚未就绪或不匹配。';
+  return '未发现 window.top.TavernPhone，可手动重新检测。';
+});
 
 const result = ref<PreGalleryScanResult>({
   reason: 'beta_init',
@@ -183,6 +205,16 @@ function logAction(title: string, detail: string, type: PreGalleryLogItem['type'
   const createdAt = new Date().toLocaleTimeString('zh-CN', { hour12: false });
   actionLogs.value = [{ createdAt, title, detail }, ...actionLogs.value].slice(0, 12);
   emit('gallery-log', { type, title, detail });
+}
+
+async function redetectPhone() {
+  emit('phone-redetect');
+  await nextTick();
+  logAction(
+    '手机桥重新检测',
+    `${phoneStatusTitle.value} · ${phoneStatusDetail.value}`,
+    props.phoneAvailability === 'available' ? 'action' : 'info',
+  );
 }
 
 function runGesture(entry: PreGalleryImageRef, mode: PreGalleryGestureMode) {
@@ -262,6 +294,7 @@ onBeforeUnmount(() => window.clearTimeout(longPressTimer));
 }
 
 .pre-beta-modal-head,
+.pre-beta-phone,
 .pre-beta-summary,
 .pre-beta-card-head,
 .pre-beta-log-head {
@@ -284,6 +317,7 @@ onBeforeUnmount(() => window.clearTimeout(longPressTimer));
 }
 
 .pre-beta-modal-head p,
+.pre-beta-phone small,
 .pre-beta-target small,
 .pre-beta-empty span,
 .pre-beta-summary small {
@@ -321,6 +355,19 @@ onBeforeUnmount(() => window.clearTimeout(longPressTimer));
   padding: 12px;
   border: 1px solid var(--demo-border-accent-soft);
   background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+.pre-beta-phone {
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--demo-border-accent-soft);
+  background: color-mix(in srgb, var(--demo-text-accent) 6%, transparent);
+}
+
+.pre-beta-phone strong {
+  display: block;
+  color: var(--demo-text-primary);
 }
 
 .pre-beta-eyebrow {
