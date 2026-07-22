@@ -8,16 +8,12 @@ import {
   buildWinterSchedulerJobs,
   advanceSnapshotCompletionGate,
   collectChatLoreContext,
-  canAssignEdenTerminal,
   canPublishSnapshot,
   characterProfileEntryName,
   createStableSnapshotKey,
-  deriveContactAvailability,
-  deriveEdenGroupMemberIds,
   diffConfirmedMvuChanges,
   extractWinterContactCandidates,
   isCapturedSessionCurrent,
-  isEdenTerminalDeploymentAllowed,
   isHostEpochCaptureCurrent,
   migrateTemporaryNpcIdentity,
   planTemporaryNpcPromotion,
@@ -119,86 +115,6 @@ function testStableSnapshotPolicy(): void {
   );
   assert.equal(isCapturedSessionCurrent('winter::chat-a', 'winter::chat-b'), false);
   assert.equal(isCapturedSessionCurrent('winter::chat-a', 'winter::chat-a'), true);
-}
-
-function testEdenTerminalAndContactPolicy(): void {
-  assert.equal(canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 5 }), false);
-  assert.equal(canAssignEdenTerminal({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 4 }), true);
-  assert.equal(canAssignEdenTerminal({ abilities: ['social.eden_phone_mass_t4'], assignedCount: 99 }), true);
-  assert.equal(
-    isEdenTerminalDeploymentAllowed({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 6 }),
-    false,
-  );
-  assert.equal(
-    isEdenTerminalDeploymentAllowed({ abilities: ['social.shift_ration_protocol_t2'], assignedCount: 5 }),
-    true,
-  );
-  assert.equal(isEdenTerminalDeploymentAllowed({ abilities: [], assignedCount: 1 }), false);
-
-  const base = { established: true, terminalStatus: '正常' as const, signalStatus: '在线' as const };
-  assert.deepEqual(
-    deriveContactAvailability({ ...base, terminalType: '普通手机', publicNetwork: '在线', edenNetwork: '中断' }),
-    { online: true, canSend: true, network: '公共通信网' },
-  );
-  assert.deepEqual(
-    deriveContactAvailability({ ...base, terminalType: '伊甸终端T2', publicNetwork: '在线', edenNetwork: '受限' }),
-    { online: false, canSend: false, network: '伊甸内网' },
-  );
-  assert.equal(
-    deriveContactAvailability({
-      ...base,
-      terminalType: '伊甸终端T2',
-      publicNetwork: '在线',
-      edenNetwork: '在线',
-      edenAccessAllowed: false,
-    }).canSend,
-    false,
-  );
-  assert.equal(
-    deriveContactAvailability({
-      ...base,
-      terminalType: '伊甸终端T2',
-      publicNetwork: '在线',
-      edenNetwork: '在线',
-      edenAccessAllowed: true,
-    }).canSend,
-    true,
-  );
-  assert.equal(
-    deriveContactAvailability({ ...base, established: false, terminalType: '普通手机', publicNetwork: '在线' }).canSend,
-    false,
-  );
-}
-
-function testFixedEdenGroupMembership(): void {
-  const contacts = [
-    {
-      id: 'main:T2成员',
-      established: true,
-      terminalType: '伊甸终端T2' as const,
-      terminalStatus: '正常' as const,
-      signalStatus: '在线' as const,
-    },
-    {
-      id: 'main:普通手机',
-      established: true,
-      terminalType: '普通手机' as const,
-      terminalStatus: '正常' as const,
-      signalStatus: '在线' as const,
-    },
-    {
-      id: 'main:离线T2',
-      established: true,
-      terminalType: '伊甸终端T2' as const,
-      terminalStatus: '正常' as const,
-      signalStatus: '离线' as const,
-    },
-  ];
-  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '在线', edenAccessAllowed: true }), [
-    'main:T2成员',
-  ]);
-  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '在线', edenAccessAllowed: false }), []);
-  assert.deepEqual(deriveEdenGroupMemberIds({ contacts, edenNetwork: '受限', edenAccessAllowed: true }), []);
 }
 
 function testTemporaryNpcMigration(): void {
@@ -390,8 +306,6 @@ async function main(): Promise<void> {
   testSnapshotCompletionGateAndHostEpoch();
   await testPendingDispatchPreparation();
   testStableSnapshotPolicy();
-  testEdenTerminalAndContactPolicy();
-  testFixedEdenGroupMembership();
   testTemporaryNpcMigration();
   testProfilesAndBoundedFallback();
   testTasksAndNotices();

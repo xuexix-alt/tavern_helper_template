@@ -47,6 +47,7 @@ levels:
       - sustain.wanxiang_synth_t1
       - life.water_heater_t1
       - social.nearfield_monitor_t1
+      - social.eden_terminal_t1
       - expansion.cold_protection_t1
   "2":
     label: 核心区稳态
@@ -73,7 +74,6 @@ levels:
       - security.wanxiang_thermal_t4
       - sustain.wanxiang_gourmet_t4
       - life.stage_lounge_t4
-      - social.eden_phone_mass_t4
 
 
 abilities:
@@ -206,6 +206,30 @@ abilities:
       must_avoid:
         - "无法伸入其他房间和楼层"
 
+  social.eden_terminal_t1:
+    name: "📱伊甸终端"
+    category: 社交
+    unlock_level: 1
+    system_line: social
+    tier: 1
+    growth_target: 为玩家提供随当前聊天存档运行的个人通讯与情报界面
+    player_advantage: 可手动添加剧情中出现的人物为长期联系人，并邀请联系人加入伊甸住户群
+    insufficiency: 不会自动建立关系，也不会替代剧情中的邀请、同意与交流过程
+    desc: 伊甸终端是默认拥有的个人界面，提供通讯录、私聊、伊甸住户群、任务与情报入口；联系人和群成员按当前聊天存档保存
+    effects: [通讯录, 私聊, 伊甸住户群, 任务与情报]
+    balance:
+      cost: 低
+      limit: 仅记录玩家手动添加的联系人与群成员，不自动生成剧情关系
+    summary:
+      prompt_brief: "默认拥有伊甸终端；可手动添加已在MVU中出现的人物并邀请加入伊甸住户群，名单随当前聊天存档保存"
+    boundary:
+      cannot:
+        - "不能自动把所有人物加入联系人或群聊"
+        - "不能绕过剧情直接改变人物关系"
+    writing_contract:
+      must_avoid:
+        - "避免把伊甸终端写成需要T2或T4才能启用"
+
   expansion.cold_protection_t1:
     name: "👔防寒防护服T1"
     category: 开拓
@@ -335,29 +359,28 @@ abilities:
         - 
 
   social.shift_ration_protocol_t2:
-    name: "📱伊甸手机终端T2"
+    name: "📋轮值配给协议T2"
     category: 社交
     unlock_level: 2
     system_line: social
     tier: 2
-    growth_target: 获得和末日前手机功能无异的手机终端，接入伊甸智能系统
-    player_advantage: 可以互相之间通讯和伊甸通讯
-    insufficiency: 只能设备间互通
-    desc: 伊甸可以提供伊甸手机终端T2，和末日前手机功能无异，接入伊甸智能系统，可以互相间通讯，只有5台
-    effects: [短信，微信，电话，对讲]
+    growth_target: 建立可执行的轮值、职责和配给制度
+    player_advantage: 协作效率比完全混乱时明显提升，系统可辅助记录职责和资源分配
+    insufficiency: 制度仍依赖成员理解与执行，不能强制改变人物意愿
+    desc: 为小规模庇护成员提供轮值、职责与配给协议模板，降低协作混乱
+    effects: [轮值安排, 职责记录, 配给协议]
     balance:
       cost: 中
-      limit: 全楼可用，室外低温无法使用
+      limit: 只对已接受协议的庇护成员生效
     summary:
-      prompt_brief: "给信任的角色分发伊甸手机终端T2，和末日前手机功能无异，接入伊甸智能系统，可以互相间通讯，只有5台"
+      prompt_brief: "提供轮值、职责与配给协议模板，改善小规模成员协作，但不能强制改变人物意愿"
     boundary:
       cannot:
-        - "不是万能终端"
-        - "非授权状态下使用"
+        - "不能强制服从"
+        - "不能凭空增加物资"
     writing_contract:
       must_avoid:
-        - "避免描述成万能终端"
-        - "避免非授权接管伊甸"
+        - "避免把制度描述成精神控制"
 
   expansion.cold_protection_t2:
     name: "👔防寒防护服T2"
@@ -642,29 +665,3 @@ abilities:
     writing_contract:
       must_avoid:
         - "避免非专业人物出丑"
-
-
-  social.eden_phone_mass_t4:
-    name: "📱伊甸手机终端-量产版T4"
-    category: 社交
-    unlock_level: 4
-    system_line: social
-    tier: 4
-    growth_target: "伊甸手机终端实现量产，如果{{user}}愿意可以人手一台"
-    player_advantage: "伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台"
-    insufficiency: "{{user}}可以远程关闭某人的终端功能"
-    desc: "伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台"
-    effects: [移动互联网时代]
-    balance:
-      cost: 中
-      limit: 只能终端间互相通讯，不具备未经授权的接管伊甸
-    summary:
-      prompt_brief: "伊甸手机终端实现量产，解除数量限制，如果{{user}}愿意可以人手一台"
-    boundary:
-      cannot:
-        - "不能无缘由突然获得"
-    writing_contract:
-      must_avoid:
-        - "避免终端从天而降的人手一台"
-
-  

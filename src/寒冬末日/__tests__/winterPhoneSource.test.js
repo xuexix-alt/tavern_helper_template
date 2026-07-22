@@ -142,8 +142,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /id:\s*['"]winter\.adapter['"]/);
   assert.match(source, /dependsOn:\s*\[['"]communication\.apps['"]\]/);
   assert.match(combined, /末世寒冬 - 星穹秩序/);
-  assert.match(combined, /social\.shift_ration_protocol_t2/);
-  assert.match(combined, /social\.eden_phone_mass_t4/);
+  assert.doesNotMatch(combined, /EDEN_TERMINAL_T2_ABILITY|EDEN_TERMINAL_T4_ABILITY|canAssignEdenTerminal/);
   assert.match(combined, /assistantMessageId/);
   assert.match(combined, /mvuSignature/);
   assert.match(combined, /角色档案 - /);
@@ -290,6 +289,15 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.match(source, /chatLore:\s*chatLore/);
   assert.match(source, /finally\s*\{[\s\S]*deactivate\s*\(/);
   assert.doesNotMatch(combined, /same-layer-pre|sameLayerPre|useSameLayerPre/);
+});
+
+test('Eden Terminal is a level-one default shelter ability without T2 or T4 phone gating', () => {
+  const abilities = readFileSync('src/寒冬末日/世界书/寒冬末日/庇护所升级能力.txt', 'utf8');
+  const levelOne = abilities.slice(abilities.indexOf('  "1":'), abilities.indexOf('  "2":'));
+
+  assert.match(levelOne, /social\.eden_terminal_t1/);
+  assert.match(abilities, /social\.eden_terminal_t1:[\s\S]*?name:\s*["']📱伊甸终端["'][\s\S]*?unlock_level:\s*1/);
+  assert.doesNotMatch(abilities, /📱伊甸手机终端T2|social\.eden_phone_mass_t4/);
 });
 
 test('schema dump has a strict, path-boundary-aware winter scope', () => {

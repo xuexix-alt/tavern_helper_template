@@ -112,6 +112,17 @@ test('shell owns one top-document root and restores focus on Escape', () => {
   assert.match(source, /disposers/);
 });
 
+test('shell accepts host-specific product and status branding', () => {
+  const source = readFileSync(shellPath, 'utf8');
+  const adapter = readFileSync('src/寒冬末日/脚本/小手机-90寒冬适配器/index.ts', 'utf8');
+
+  assert.match(source, /productName\?:\s*string/);
+  assert.match(source, /statusName\?:\s*string/);
+  assert.match(source, /options\.productName\s*\?\?\s*['"]小手机['"]/);
+  assert.match(source, /options\.statusName\s*\?\?\s*['"]星穹通信['"]/);
+  assert.match(adapter, /productName:\s*['"]伊甸终端['"]/);
+});
+
 test('user close actions delegate to the runtime close callback', () => {
   const source = readFileSync(shellPath, 'utf8');
 

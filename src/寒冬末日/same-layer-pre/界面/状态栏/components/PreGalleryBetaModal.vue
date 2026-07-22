@@ -19,7 +19,7 @@
               <strong>{{ phoneStatusTitle }}</strong>
               <small>{{ phoneStatusDetail }}</small>
             </div>
-            <button type="button" class="pre-beta-scan" @click="redetectPhone">重新检测手机</button>
+            <button type="button" class="pre-beta-scan" @click="redetectPhone">重新检测伊甸终端</button>
           </section>
 
           <section class="pre-beta-summary">
@@ -167,12 +167,12 @@ const emit = defineEmits<{
 }>();
 
 const phoneStatusTitle = computed(() => {
-  if (props.phoneAvailability === 'available') return '手机已连接';
-  if (props.phoneAvailability === 'unavailable') return '手机运行时不可用';
-  return '手机运行时离线';
+  if (props.phoneAvailability === 'available') return '伊甸终端已连接';
+  if (props.phoneAvailability === 'unavailable') return '伊甸终端运行时不可用';
+  return '伊甸终端运行时离线';
 });
 const phoneStatusDetail = computed(() => {
-  if (props.phoneAvailability === 'available') return 'Pre 已连接当前角色卡的手机运行时。';
+  if (props.phoneAvailability === 'available') return 'Pre 已连接当前角色卡的伊甸终端运行时。';
   if (props.phoneAvailability === 'unavailable') return '已发现运行时，但角色适配器尚未就绪或不匹配。';
   return '未发现 window.top.TavernPhone，可手动重新检测。';
 });
@@ -211,7 +211,7 @@ async function redetectPhone() {
   emit('phone-redetect');
   await nextTick();
   logAction(
-    '手机桥重新检测',
+    '伊甸终端桥重新检测',
     `${phoneStatusTitle.value} · ${phoneStatusDetail.value}`,
     props.phoneAvailability === 'available' ? 'action' : 'info',
   );

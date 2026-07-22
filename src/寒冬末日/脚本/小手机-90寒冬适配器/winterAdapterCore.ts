@@ -1,8 +1,6 @@
 import type { PhoneSchedulerJob, SchedulerPriority } from '../../../小手机平台/scheduler/phoneScheduler';
 
 export const WINTER_CHARACTER_NAME = '末世寒冬 - 星穹秩序';
-export const EDEN_TERMINAL_T2_ABILITY = 'social.shift_ration_protocol_t2';
-export const EDEN_TERMINAL_T4_ABILITY = 'social.eden_phone_mass_t4';
 
 const WINTER_NON_CHARACTER_ROOT_KEYS = new Set([
   '世界',
@@ -182,85 +180,6 @@ export function capturedWritebackSessionKey(capturedSessionKey: string): string 
   const sessionKey = capturedSessionKey.trim();
   if (!sessionKey) throw new Error('AI 回写缺少捕获的 sessionKey');
   return sessionKey;
-}
-
-export interface EdenAssignmentInput {
-  abilities: readonly string[];
-  assignedCount: number;
-}
-
-export function canAssignEdenTerminal(input: EdenAssignmentInput): boolean {
-  if (!Number.isSafeInteger(input.assignedCount) || input.assignedCount < 0) return false;
-  if (input.abilities.includes(EDEN_TERMINAL_T4_ABILITY)) return true;
-  return input.abilities.includes(EDEN_TERMINAL_T2_ABILITY) && input.assignedCount < 5;
-}
-
-export function isEdenTerminalDeploymentAllowed(input: EdenAssignmentInput): boolean {
-  if (!Number.isSafeInteger(input.assignedCount) || input.assignedCount < 0) return false;
-  if (input.abilities.includes(EDEN_TERMINAL_T4_ABILITY)) return true;
-  return input.abilities.includes(EDEN_TERMINAL_T2_ABILITY) && input.assignedCount <= 5;
-}
-
-type NetworkState = '在线' | '受限' | '中断';
-type TerminalType = '无设备' | '普通手机' | '伊甸终端T2';
-type TerminalStatus = '无设备' | '正常' | '关机' | '损坏' | '遗失';
-type SignalStatus = '在线' | '离线' | '失联';
-
-export interface ContactAvailabilityInput {
-  established: boolean;
-  terminalType: TerminalType;
-  terminalStatus: TerminalStatus;
-  signalStatus: SignalStatus;
-  publicNetwork?: NetworkState;
-  edenNetwork?: NetworkState;
-  edenAccessAllowed?: boolean;
-}
-
-export interface ContactAvailability {
-  online: boolean;
-  canSend: boolean;
-  network: '公共通信网' | '伊甸内网' | null;
-}
-
-export interface EdenGroupContact {
-  id: string;
-  established: boolean;
-  terminalType: TerminalType;
-  terminalStatus: TerminalStatus;
-  signalStatus: SignalStatus;
-}
-
-export function deriveEdenGroupMemberIds(input: {
-  contacts: readonly EdenGroupContact[];
-  edenNetwork: NetworkState;
-  edenAccessAllowed: boolean;
-}): string[] {
-  if (input.edenNetwork !== '在线' || !input.edenAccessAllowed) return [];
-  return input.contacts
-    .filter(
-      contact =>
-        contact.established &&
-        contact.terminalType === '伊甸终端T2' &&
-        contact.terminalStatus === '正常' &&
-        contact.signalStatus === '在线',
-    )
-    .map(contact => contact.id);
-}
-
-export function deriveContactAvailability(input: ContactAvailabilityInput): ContactAvailability {
-  const network =
-    input.terminalType === '普通手机' ? '公共通信网' : input.terminalType === '伊甸终端T2' ? '伊甸内网' : null;
-  const networkState =
-    network === '公共通信网' ? input.publicNetwork : network === '伊甸内网' ? input.edenNetwork : undefined;
-  const online = Boolean(
-    input.established &&
-    network &&
-    input.terminalStatus === '正常' &&
-    input.signalStatus === '在线' &&
-    (network !== '伊甸内网' || input.edenAccessAllowed === true) &&
-    networkState === '在线',
-  );
-  return { online, canSend: online, network };
 }
 
 export interface IdentityMigration {

@@ -349,13 +349,13 @@
                   ref="phoneEntryButtonRef"
                   type="button"
                   class="ui-signal-btn phone-entry-button"
-                  :disabled="phoneAvailability !== 'available'"
+                  :aria-disabled="phoneAvailability !== 'available'"
                   :aria-label="phoneEntryLabel"
                   @click="togglePhone"
                 >
                   <span>{{ phoneEntryLabel }}</span>
                   <span class="ui-bars">
-                    <i v-for="i in 5" :key="`phone-${i}`" :class="{ active: i <= Math.min(5, phoneUnread) }"></i>
+                    <i v-for="i in 5" :key="`phone-${i}`" :class="{ active: i <= phoneSignalStrength }"></i>
                   </span>
                 </button>
 
@@ -576,10 +576,11 @@ const shellStyleVars = computed(() => ({
 }));
 const isAppleTheme = computed(() => theme.value === 'apple' || theme.value.startsWith('apple-'));
 const phoneEntryLabel = computed(() => {
-  if (phoneAvailability.value === 'offline') return '手机·离线';
-  if (phoneAvailability.value === 'unavailable') return '手机·不可用';
-  return phoneUnread.value > 0 ? `手机·${phoneUnread.value}未读` : '手机';
+  if (phoneAvailability.value === 'offline') return '伊甸终端·离线';
+  if (phoneAvailability.value === 'unavailable') return '伊甸终端·不可用';
+  return phoneUnread.value > 0 ? `伊甸终端·${phoneUnread.value}未读` : '伊甸终端';
 });
+const phoneSignalStrength = computed(() => (phoneAvailability.value === 'available' ? 5 : 0));
 
 const themeItems: Array<{ label: string; value: DemoTheme }> = [
   { label: '科技', value: 'tech' },
@@ -1260,6 +1261,7 @@ onMounted(() => {
   phoneBridge = createPrePhoneBridge({
     resolveRuntime: getTopTavernPhoneRuntime,
     composer: composerText,
+    storyMessageId: () => latestAssistantMessageId.value,
     launcher: () => phoneEntryButtonRef.value,
   });
   stopPhoneSubscription = phoneBridge.subscribe((unread, availability) => {

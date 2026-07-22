@@ -76,10 +76,27 @@ test('same-layer-pre exposes one minimal phone entry immediately before regenera
     1,
     'Pre should expose exactly one phone entry',
   );
+  const phoneButtonSource = storySource.slice(
+    storySource.indexOf('ref="phoneEntryButtonRef"'),
+    storySource.indexOf('</button>', storySource.indexOf('ref="phoneEntryButtonRef"')),
+  );
+  assert.doesNotMatch(phoneButtonSource, /:disabled=/, 'the first click must reach the bridge while it is connecting');
+  assert.match(phoneButtonSource, /:aria-disabled="phoneAvailability !== 'available'"/);
   assert.match(storySource, /\u79bb\u7ebf/);
   assert.match(storySource, /\u4e0d\u53ef\u7528/);
   assert.match(storySource, /\u672a\u8bfb/);
+  assert.match(storySource, /伊甸终端·离线/);
+  assert.match(storySource, /伊甸终端·不可用/);
+  assert.doesNotMatch(storySource, /手机·离线|手机·不可用/);
+  assert.match(storySource, /phoneSignalStrength\s*=\s*computed\(\(\)\s*=>\s*\(phoneAvailability\.value\s*===\s*['"]available['"]\s*\?\s*5\s*:\s*0\)\)/);
+  assert.match(storySource, /i\s*<=\s*phoneSignalStrength/);
   assert.match(bridgeSource, /attachHostBridge/);
+  assert.match(bridgeSource, /getStoryMessageId/);
+  assert.match(bridgeSource, /attachedSessionKey\s*!==\s*runtimeSessionKey/);
+  assert.match(bridgeSource, /pendingOpen\s*=\s*true/);
+  assert.match(bridgeSource, /flushPendingOpen/);
+  assert.match(bridgeSource, /getStatus\(\)\.isOpen/);
+  assert.match(storySource, /storyMessageId:\s*\(\)\s*=>\s*latestAssistantMessageId\.value/);
   assert.match(bridgeSource, /kind\s*!==\s*['"]composer\.insert['"]/);
   assert.match(bridgeSource, /mode\s*===\s*['"]append['"]/);
   assert.doesNotMatch(bridgeSource, /PhoneDB|PromptAssembler|ChatLoreSync/);
@@ -97,7 +114,8 @@ test('same-layer-pre reconnects the phone bridge and exposes a beta fallback wit
   assert.match(storySource, /function\s+redetectPhone\(\)[\s\S]*?phoneBridge\?\.redetect\(\)/);
 
   assert.match(betaSource, /PHONE BRIDGE/);
-  assert.match(betaSource, /重新检测手机/);
+  assert.match(betaSource, /重新检测伊甸终端/);
+  assert.match(betaSource, /伊甸终端已连接/);
   assert.match(betaSource, /phoneAvailability:\s*PrePhoneAvailability/);
   assert.match(betaSource, /\(event:\s*['"]phone-redetect['"]\)/);
 

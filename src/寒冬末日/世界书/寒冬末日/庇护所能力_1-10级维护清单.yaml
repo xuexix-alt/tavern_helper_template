@@ -67,6 +67,13 @@ levels:
         player_advantage: 可以偷听门外动静、捕捉短距语音和情绪波动，为接触、交易和威慑抢到先手。
         insufficiency: 监听范围极小，且只能得到零碎线索，远远不到全局掌控。
         prompt_brief_seed: 可监听门口与短距走廊的动静、语音与情绪波动，让主角在接触和试探前先拿到情报优势；范围很小，只能获得零碎线索。
+        additional_default_ability:
+          ability_id: social.eden_terminal_t1
+          name: 伊甸终端
+          growth_target: 为玩家提供随当前聊天存档运行的个人通讯与情报界面。
+          player_advantage: 可手动添加剧情中出现的人物为长期联系人，并邀请联系人加入伊甸住户群。
+          insufficiency: 不会自动建立关系，也不会替代剧情中的邀请、同意与交流过程。
+          prompt_brief_seed: 默认拥有伊甸终端；联系人和伊甸住户群成员由玩家手动维护，并随当前聊天存档保存。
       expansion:
         ability_id: expansion.cold_protection_t1
         name: 核心保暖T1
@@ -204,13 +211,6 @@ levels:
         player_advantage: 可以提供小型舞台、酒廊氛围与社交娱乐空间，让角色在这里唱歌、跳舞、放松、取悦或竞争关注。
         insufficiency: 仍只是局部生活场景，不可能用一个舞台解决所有情绪创伤和人际矛盾。
         prompt_brief_seed: 可在庇护所内提供小型舞台和酒廊氛围，让角色在这里表演、放松、取悦或竞争关注，进一步强化这里的生活吸引力；这仍只是局部生活场景，不能化解所有矛盾。
-      social:
-        ability_id: social.eden_phone_mass_t4
-        name: 伊甸手机终端-量产版T4
-        growth_target: 让庇护所成员可以持有伊甸手机终端进行通信和信息交换。
-        player_advantage: 成员之间可以实时通信、传递信息，形成更紧密的社交网络。
-        insufficiency: 量产版功能有限，信号覆盖范围受限于庇护所控制区域。
-        prompt_brief_seed: 可让庇护所成员持有伊甸手机终端进行通信和信息交换，形成更紧密的社交网络；量产版功能有限，信号覆盖范围受限。
       expansion:
         ability_id: expansion.floor20_control_zone_t4
         name: 20层控制区T4

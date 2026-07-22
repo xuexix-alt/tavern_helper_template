@@ -282,6 +282,8 @@ function createWinterAdapterModule(): PhoneModule {
       shell = shellCatalog.createPhoneShell({
         apps,
         styles: phoneShellStyles,
+        productName: '伊甸终端',
+        statusName: '星穹通信',
         theme: settings.getPublic().theme,
         onRequestClose: () => context?.runtime.close(),
       });

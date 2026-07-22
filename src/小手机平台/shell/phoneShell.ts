@@ -7,6 +7,9 @@ export interface PhoneShellOptions {
   returnFocus?: HTMLElement | null;
   initialRoute?: PhoneRoute;
   theme?: 'system' | 'light' | 'dark';
+  productName?: string;
+  statusName?: string;
+  onRequestClose?: () => void;
 }
 
 export interface PhoneShellApi {
@@ -121,6 +124,8 @@ export class PhoneShell implements PhoneShellApi {
   private opened = false;
   private disposed = false;
   private returnFocus: HTMLElement | null;
+  private readonly onRequestClose?: () => void;
+  private readonly productName: string;
   private renderVersion = 0;
 
   constructor(options: PhoneShellOptions) {
@@ -131,6 +136,9 @@ export class PhoneShell implements PhoneShellApi {
     this.apps = new Map(options.apps.map(app => [app.route, app]));
     this.routes = new PhoneRouteHistory(options.initialRoute);
     this.returnFocus = options.returnFocus ?? null;
+    this.onRequestClose = options.onRequestClose;
+    this.productName = options.productName ?? '小手机';
+    const statusName = options.statusName ?? '星穹通信';
 
     this.root = this.document.createElement('div');
     this.root.dataset.tavernPhoneRoot = '';
@@ -147,18 +155,18 @@ export class PhoneShell implements PhoneShellApi {
     this.panel.className = 'phone-shell';
     this.panel.setAttribute('role', 'dialog');
     this.panel.setAttribute('aria-modal', 'true');
-    this.panel.setAttribute('aria-label', '小手机');
+    this.panel.setAttribute('aria-label', this.productName);
     this.panel.tabIndex = -1;
 
     const status = this.document.createElement('div');
     status.className = 'phone-status';
-    status.append(text(this.document, 'span', '星穹通信'), text(this.document, 'span', '已加密'));
+    status.append(text(this.document, 'span', statusName), text(this.document, 'span', '已加密'));
     const navigation = this.document.createElement('header');
     navigation.className = 'phone-navigation';
     this.backButton = text(this.document, 'button', '返回');
     this.backButton.className = 'phone-navigation__button';
     this.backButton.type = 'button';
-    this.title = text(this.document, 'h1', '小手机');
+    this.title = text(this.document, 'h1', this.productName);
     const closeButton = text(this.document, 'button', '关闭');
     closeButton.className = 'phone-navigation__button phone-navigation__button--close';
     closeButton.type = 'button';
@@ -174,15 +182,15 @@ export class PhoneShell implements PhoneShellApi {
     this.document.body.append(this.root);
 
     this.listen(this.backButton, 'click', () => this.back());
-    this.listen(closeButton, 'click', () => this.close());
+    this.listen(closeButton, 'click', () => this.requestClose());
     this.listen(overlay, 'click', event => {
-      if (event.target === overlay) this.close();
+      if (event.target === overlay) this.requestClose();
     });
     this.listen(this.document, 'keydown', event => {
       if (!('key' in event) || !this.opened) return;
       if (event.key === 'Escape') {
         event.preventDefault();
-        this.close();
+        this.requestClose();
       } else if (event.key === 'Tab') {
         this.trapFocus(event as KeyboardEvent);
       }
@@ -207,6 +215,14 @@ export class PhoneShell implements PhoneShellApi {
     this.openFocus.invalidate();
     this.root.hidden = true;
     if (this.returnFocus && this.returnFocus.isConnected !== false) this.returnFocus.focus();
+  }
+
+  private requestClose(): void {
+    if (this.onRequestClose) {
+      this.onRequestClose?.();
+      return;
+    }
+    this.close();
   }
 
   async toggle(returnFocus?: HTMLElement | null): Promise<void> {
@@ -265,7 +281,7 @@ export class PhoneShell implements PhoneShellApi {
     this.backButton.hidden = route === 'home';
 
     if (route === 'home') {
-      this.title.textContent = '小手机';
+      this.title.textContent = this.productName;
       this.content.append(this.renderHome(scope));
       return;
     }
