@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 
 import { EventBus } from '../core/eventBus';
 import { createServiceModule } from '../core/serviceModule';
@@ -792,6 +793,16 @@ async function testSettingsStore(): Promise<void> {
     other.withApiKey(apiKey => apiKey),
     'other-secret',
   );
+
+  const crossFrameParameters = runInNewContext('JSON.parse(\'{"temperature":0.2,"max_tokens":128}\')') as Record<
+    string,
+    unknown
+  >;
+  assert.doesNotThrow(
+    () => winter.updatePublic({ parameters: crossFrameParameters }),
+    '酒馆助手不同 iframe 产生的普通 JSON 对象必须通过校验',
+  );
+  assert.deepEqual(winter.getPublic().parameters, { temperature: 0.2, max_tokens: 128 });
 
   const migrationStorage = new MemoryStorage();
   const legacyNamespace = `tavern-phone:${encodeURIComponent('旧角色卡')}`;

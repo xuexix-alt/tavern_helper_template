@@ -82,7 +82,8 @@ function normalizeParameters(value: unknown): Readonly<Record<string, unknown>> 
       candidate.forEach(item => validate(item, seen));
       return;
     }
-    if (Object.getPrototypeOf(candidate) !== Object.prototype && Object.getPrototypeOf(candidate) !== null) {
+    const prototype = Object.getPrototypeOf(candidate);
+    if (prototype !== null && Object.getPrototypeOf(prototype) !== null) {
       throw new Error('Generation parameters must be a plain object');
     }
     for (const [key, nested] of Object.entries(candidate)) {

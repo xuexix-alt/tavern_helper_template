@@ -153,6 +153,8 @@ test('Apple system styles include accessible themes and preferences', () => {
   assert.match(css, /overflow-x:\s*hidden/i);
   assert.match(css, /:host\s*\{[\s\S]*?position:\s*fixed[\s\S]*?height:\s*100dvh/i);
   assert.match(css, /\.phone-overlay\s*\{[\s\S]*?position:\s*absolute/i);
+  assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?padding:\s*max\(8px,/i);
+  assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?\.phone-shell\s*\{[\s\S]*?border-radius:\s*28px/i);
 });
 
 test('task actions stay structured and never generate or write MVU', () => {
