@@ -101,6 +101,22 @@ function createFakeRuntime(
   };
 }
 
+function createFakeRuntimeInstallation() {
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    emit() {
+      for (const listener of [...listeners]) listener();
+    },
+    get size() {
+      return listeners.size;
+    },
+  };
+}
+
 async function main() {
   const composer = createFakeComposer('\u5df2\u6709\u6587\u672c');
   const fake = createFakeRuntime({ unread: 2 });
@@ -203,6 +219,39 @@ async function main() {
   assert.equal(delayed.attachCalls, 1, 'repeated ready status must not attach twice');
   delayedBridge.dispose();
   assert.equal(delayed.detachCalls, 1, 'late attachment must detach exactly once');
+
+  const installed = createFakeRuntimeInstallation();
+  const lateFake = createFakeRuntime({ unread: 3 });
+  let currentRuntime: PrePhoneRuntime | undefined;
+  const lateBridge = createPrePhoneBridge({
+    resolveRuntime: () => currentRuntime,
+    subscribeRuntimeInstalled: listener => installed.subscribe(listener),
+    composer: createFakeComposer(),
+  });
+  assert.equal(lateBridge.getAvailability(), 'offline');
+
+  currentRuntime = lateFake.runtime;
+  installed.emit();
+  assert.equal(lateBridge.getAvailability(), 'available');
+  assert.equal(lateBridge.getUnread(), 3);
+  assert.equal(lateFake.attachCalls, 1);
+
+  installed.emit();
+  assert.equal(lateBridge.redetect(), 'available');
+  assert.equal(lateFake.attachCalls, 1, 'event and manual redetect must be idempotent');
+
+  const replacement = createFakeRuntime({ unread: 7 });
+  currentRuntime = replacement.runtime;
+  assert.equal(lateBridge.redetect(), 'available');
+  assert.equal(lateFake.detachCalls, 1, 'runtime replacement must release the old host bridge');
+  assert.equal(replacement.attachCalls, 1, 'runtime replacement must attach the new host bridge once');
+  assert.equal(lateBridge.getUnread(), 7);
+
+  lateBridge.dispose();
+  assert.equal(installed.size, 0, 'dispose must remove the runtime installation listener');
+  assert.equal(replacement.detachCalls, 1, 'dispose must detach the replacement runtime once');
+  installed.emit();
+  assert.equal(replacement.attachCalls, 1, 'installation events after dispose must have no effect');
 }
 
 void main();

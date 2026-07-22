@@ -1,3 +1,5 @@
+import { PHONE_RUNTIME_INSTALLED_EVENT } from '../../../../小手机平台/core/register';
+
 export interface PhoneHostAction {
   kind: 'composer.insert';
   text: string;
@@ -45,6 +47,7 @@ export interface PrePhoneBridge {
   getAvailability(): PrePhoneAvailability;
   getUnread(): number;
   subscribe(listener: (unread: number, availability: PrePhoneAvailability) => void): () => void;
+  redetect(): PrePhoneAvailability;
   toggle(): Promise<void>;
   submitAction(action: unknown): Promise<void>;
   dispose(): void;
@@ -81,13 +84,30 @@ export function getTopTavernPhoneRuntime(): PrePhoneRuntime | undefined {
   }
 }
 
+export function subscribeTopTavernPhoneRuntimeInstalled(listener: () => void): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+  try {
+    const target = window.top;
+    if (!target) return () => undefined;
+    target.addEventListener(PHONE_RUNTIME_INSTALLED_EVENT, listener);
+    return () => target.removeEventListener(PHONE_RUNTIME_INSTALLED_EVENT, listener);
+  } catch {
+    return () => undefined;
+  }
+}
+
 export function createPrePhoneBridge(options: {
   runtime?: PrePhoneRuntime;
+  resolveRuntime?: () => PrePhoneRuntime | undefined;
+  subscribeRuntimeInstalled?: (listener: () => void) => () => void;
   composer: PrePhoneComposer;
   launcher?: () => { focus(): void; isConnected?: boolean } | null;
 }): PrePhoneBridge {
-  const { runtime, composer, launcher } = options;
-  let availability: PrePhoneAvailability = runtime ? 'unavailable' : 'offline';
+  const { composer, launcher } = options;
+  const resolveRuntime = options.resolveRuntime ?? (() => options.runtime);
+  const subscribeRuntimeInstalled = options.subscribeRuntimeInstalled ?? subscribeTopTavernPhoneRuntimeInstalled;
+  let runtime: PrePhoneRuntime | undefined;
+  let availability: PrePhoneAvailability = 'offline';
   let unread = 0;
   let disposed = false;
   let wasOpen = false;
@@ -95,6 +115,7 @@ export function createPrePhoneBridge(options: {
   let stopStatus: (() => void) | null = null;
   let stopUnread: (() => void) | null = null;
   let detachHostBridge: (() => void) | null = null;
+  let stopRuntimeInstalled: (() => void) | null = null;
 
   function notify(): void {
     for (const listener of listeners) listener(unread, availability);
@@ -115,7 +136,7 @@ export function createPrePhoneBridge(options: {
       candidate.mode === 'append' && composer.value.trim() ? `${composer.value}\n${candidate.text}` : candidate.text;
   }
 
-  function clearRuntimeBinding(): void {
+  function clearAttachedBinding(): void {
     try {
       stopUnread?.();
     } finally {
@@ -128,13 +149,24 @@ export function createPrePhoneBridge(options: {
     }
   }
 
+  function clearRuntimeBinding(): void {
+    clearAttachedBinding();
+    try {
+      stopStatus?.();
+    } finally {
+      stopStatus = null;
+      runtime = undefined;
+    }
+  }
+
   function refreshRuntimeBinding(value?: PhoneRuntimeStatus): void {
     if (!runtime || disposed) return;
+    const activeRuntime = runtime;
     const isOpen = Boolean(value?.isOpen);
     const shouldRestoreFocus = wasOpen && !isOpen;
 
-    if (!runtimeOwnerMatches(runtime)) {
-      clearRuntimeBinding();
+    if (!runtimeOwnerMatches(activeRuntime)) {
+      clearAttachedBinding();
       availability = 'unavailable';
       wasOpen = isOpen;
       notify();
@@ -143,16 +175,16 @@ export function createPrePhoneBridge(options: {
 
     if (!detachHostBridge) {
       try {
-        unread = Math.max(0, runtime.getUnreadCount());
-        detachHostBridge = runtime.attachHostBridge({ id: 'same-layer-pre', submitAction });
-        stopUnread = runtime.on('unread', value => {
-          if (disposed) return;
-          unread = typeof value === 'number' ? Math.max(0, value) : runtime.getUnreadCount();
+        unread = Math.max(0, activeRuntime.getUnreadCount());
+        detachHostBridge = activeRuntime.attachHostBridge({ id: 'same-layer-pre', submitAction });
+        stopUnread = activeRuntime.on('unread', value => {
+          if (disposed || runtime !== activeRuntime) return;
+          unread = typeof value === 'number' ? Math.max(0, value) : activeRuntime.getUnreadCount();
           notify();
         });
         availability = 'available';
       } catch {
-        clearRuntimeBinding();
+        clearAttachedBinding();
         availability = 'unavailable';
       }
     } else {
@@ -167,15 +199,54 @@ export function createPrePhoneBridge(options: {
     notify();
   }
 
-  if (runtime) {
+  function redetect(): PrePhoneAvailability {
+    if (disposed) return availability;
+
+    let detectedRuntime: PrePhoneRuntime | undefined;
     try {
-      stopStatus = runtime.on('status', value => refreshRuntimeBinding(value));
+      detectedRuntime = resolveRuntime();
+    } catch {
+      detectedRuntime = undefined;
+    }
+
+    if (!detectedRuntime) {
+      clearRuntimeBinding();
+      availability = 'offline';
+      unread = 0;
+      wasOpen = false;
+      notify();
+      return availability;
+    }
+
+    if (detectedRuntime !== runtime) {
+      clearRuntimeBinding();
+      runtime = detectedRuntime;
+      try {
+        stopStatus = runtime.on('status', value => refreshRuntimeBinding(value));
+      } catch {
+        clearRuntimeBinding();
+        availability = 'unavailable';
+        notify();
+        return availability;
+      }
+    }
+
+    try {
       refreshRuntimeBinding(runtime.getStatus());
     } catch {
-      clearRuntimeBinding();
+      clearAttachedBinding();
       availability = 'unavailable';
+      notify();
     }
+    return availability;
   }
+
+  try {
+    stopRuntimeInstalled = subscribeRuntimeInstalled(() => redetect());
+  } catch {
+    stopRuntimeInstalled = null;
+  }
+  redetect();
 
   return {
     getAvailability: () => availability,
@@ -186,6 +257,7 @@ export function createPrePhoneBridge(options: {
       listener(unread, availability);
       return () => listeners.delete(listener);
     },
+    redetect,
     async toggle() {
       if (disposed || availability !== 'available' || !runtime || !runtimeOwnerMatches(runtime)) return;
       await runtime.toggle();
@@ -196,11 +268,11 @@ export function createPrePhoneBridge(options: {
       disposed = true;
       listeners.clear();
       try {
-        stopStatus?.();
+        stopRuntimeInstalled?.();
       } finally {
-        stopStatus = null;
+        stopRuntimeInstalled = null;
         clearRuntimeBinding();
       }
-    },
+    }
   };
 }
