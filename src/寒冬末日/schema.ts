@@ -17,21 +17,6 @@ const 健康状况Schema = z
   )
   .prefault('健康');
 const 登场状态Schema = z.enum(['登场', '离场']).prefault('离场');
-const 通讯Schema = z
-  .object({
-    已建立联系: z.boolean().prefault(false),
-    终端类型: z.enum(['无设备', '普通手机', '伊甸终端T2']).prefault('无设备'),
-    终端状态: z.enum(['无设备', '正常', '关机', '损坏', '遗失']).prefault('无设备'),
-    信号状态: z.enum(['在线', '离线', '失联']).prefault('离线'),
-    状态原因: z.string().prefault(''),
-  })
-  .prefault({
-    已建立联系: false,
-    终端类型: '无设备',
-    终端状态: '无设备',
-    信号状态: '离线',
-    状态原因: '',
-  });
 const 通讯网络Schema = z
   .object({
     公共通信网: z.enum(['在线', '受限', '中断']).prefault('在线'),
@@ -204,7 +189,6 @@ const create角色Schema = (args: {
           return parseRoomTag(t).kind === 'none' ? '' : t;
         }),
       登场状态: 登场状态Schema,
-      通讯: 通讯Schema,
     })
     .prefault({
       姓名: '',
@@ -224,13 +208,6 @@ const create角色Schema = (args: {
       所在房间: '',
       秩序刻印更新原因: '',
       登场状态: '离场',
-      通讯: {
-        已建立联系: false,
-        终端类型: '无设备',
-        终端状态: '无设备',
-        信号状态: '离线',
-        状态原因: '',
-      },
     });
 
 const 主要角色Schema = create角色Schema({

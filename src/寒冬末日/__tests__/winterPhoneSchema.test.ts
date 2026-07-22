@@ -9,14 +9,6 @@ import { parse as parseYaml } from 'yaml';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Schema } = require('../schema.ts') as typeof import('../schema');
 
-const defaultCommunication = {
-  已建立联系: false,
-  终端类型: '无设备',
-  终端状态: '无设备',
-  信号状态: '离线',
-  状态原因: '',
-} as const;
-
 const defaultNetwork = {
   公共通信网: '在线',
   伊甸内网: '受限',
@@ -26,14 +18,14 @@ const defaultNetwork = {
 } as const;
 
 const parsedDefaults = Schema.parse({ 世界: {}, 纪宁: { 姓名: '纪宁' } });
-assert.deepEqual(parsedDefaults.纪宁.通讯, defaultCommunication);
+assert.equal(Object.hasOwn(parsedDefaults.纪宁, '通讯'), false);
 assert.deepEqual(parsedDefaults.通讯网络, defaultNetwork);
 
 const parsedTemporaryNpc = Schema.parse({
   世界: {},
   临时NPC: { 陌生拾荒者: { 姓名: '陌生拾荒者' } },
 });
-assert.deepEqual(parsedTemporaryNpc.临时NPC.陌生拾荒者.通讯, defaultCommunication);
+assert.equal(Object.hasOwn(parsedTemporaryNpc.临时NPC.陌生拾荒者, '通讯'), false);
 
 const legal = Schema.parse({
   世界: {},
@@ -44,39 +36,27 @@ const legal = Schema.parse({
     覆盖说明: '公寓中继可用',
     状态原因: '城市骨干网受损',
   },
-  普通联系人: {
-    姓名: '普通联系人',
+  普通联系人: { 姓名: '普通联系人' },
+});
+assert.equal(legal.通讯网络.外部链路, '中断');
+
+assert.equal(Schema.safeParse({ 世界: {}, 通讯网络: { 公共通信网: '全通' } }).success, false);
+
+const legacy = Schema.parse({
+  世界: {},
+  旧角色: {
+    姓名: '旧角色',
+    登场状态: '离场',
     通讯: {
       已建立联系: true,
       终端类型: '普通手机',
       终端状态: '正常',
       信号状态: '在线',
-      状态原因: '已明确交换联系方式',
-    },
-  },
-  T2联系人: {
-    姓名: 'T2联系人',
-    通讯: {
-      已建立联系: true,
-      终端类型: '伊甸终端T2',
-      终端状态: '损坏',
-      信号状态: '失联',
-      状态原因: '终端在冲突中损坏',
+      状态原因: '旧版本遗留字段',
     },
   },
 });
-assert.equal(legal.普通联系人.通讯.终端类型, '普通手机');
-assert.equal(legal.T2联系人.通讯.终端类型, '伊甸终端T2');
-assert.equal(legal.通讯网络.外部链路, '中断');
-
-for (const invalid of [
-  { 通讯: { ...defaultCommunication, 终端类型: '卫星电话' } },
-  { 通讯: { ...defaultCommunication, 终端状态: '欠费' } },
-  { 通讯: { ...defaultCommunication, 信号状态: '漫游' } },
-]) {
-  assert.equal(Schema.safeParse({ 世界: {}, 非法角色: { 姓名: '非法角色', ...invalid } }).success, false);
-}
-assert.equal(Schema.safeParse({ 世界: {}, 通讯网络: { 公共通信网: '全通' } }).success, false);
+assert.equal(Object.hasOwn(legacy.旧角色, '通讯'), false, 'legacy role communication data must be ignored safely');
 
 const dynamicRole = Schema.parse({ 世界: {}, 新动态角色: { 姓名: '新动态角色' } });
 assert.equal(dynamicRole.新动态角色.姓名, '新动态角色');
@@ -98,18 +78,17 @@ for (const roleName of [
   '凌音',
   '慕小小',
 ]) {
-  assert.deepEqual(
-    init[roleName].通讯,
-    defaultCommunication,
-    `${roleName} must declare conservative communication facts`,
-  );
-  assert.deepEqual(parsedInit[roleName].通讯, defaultCommunication);
+  assert.equal(Object.hasOwn(init[roleName], '通讯'), false, `${roleName} must not maintain redundant communication data`);
+  assert.equal(Object.hasOwn(parsedInit[roleName], '通讯'), false);
 }
 
 const generatedSchema = JSON.parse(readFileSync('src/寒冬末日/schema.json', 'utf8'));
 const generatedText = JSON.stringify(generatedSchema);
-for (const requiredText of ['通讯网络', '公共通信网', '已建立联系', '普通手机', '伊甸终端T2', '损坏', '遗失', '失联']) {
+for (const requiredText of ['通讯网络', '公共通信网', '伊甸内网', '外部链路']) {
   assert.ok(generatedText.includes(requiredText), `generated schema must contain ${requiredText}`);
+}
+for (const removedText of ['已建立联系', '普通手机', '伊甸终端T2', '终端状态', '信号状态']) {
+  assert.ok(!generatedText.includes(removedText), `generated schema must not contain ${removedText}`);
 }
 
 const initWrapperSchema = JSON.parse(readFileSync('src/寒冬末日/世界书/寒冬末日/initvar.schema.json', 'utf8'));
