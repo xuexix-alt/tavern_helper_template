@@ -30,6 +30,7 @@ function createFakeRuntime(
   let attachCalls = 0;
   let toggleCalls = 0;
   let attachedSubmit: ((action: PhoneHostAction) => Promise<void> | void) | undefined;
+  let attachedStoryMessageId: (() => number | null) | undefined;
   const runtime: PrePhoneRuntime = {
     getOwner: () =>
       ownerReady
@@ -56,9 +57,11 @@ function createFakeRuntime(
       if (!sessionReady) throw new Error('runtime session is still loading');
       attachCalls += 1;
       attachedSubmit = bridge.submitAction;
+      attachedStoryMessageId = bridge.getStoryMessageId;
       return () => {
         detachCalls += 1;
         attachedSubmit = undefined;
+        attachedStoryMessageId = undefined;
       };
     },
   };
@@ -88,6 +91,10 @@ function createFakeRuntime(
     submit(action: PhoneHostAction) {
       assert.ok(attachedSubmit, 'host bridge should be attached');
       return attachedSubmit(action);
+    },
+    getStoryMessageId() {
+      assert.ok(attachedStoryMessageId, 'host bridge should expose the Pre story message id');
+      return attachedStoryMessageId();
     },
     get detachCalls() {
       return detachCalls;
@@ -130,11 +137,13 @@ async function main() {
   const bridge = createPrePhoneBridge({
     runtime: fake.runtime,
     composer,
+    storyMessageId: () => 23,
     launcher: () => launcher,
   });
 
   assert.equal(bridge.getAvailability(), 'available');
   assert.equal(bridge.getUnread(), 2);
+  assert.equal(fake.getStoryMessageId(), 23);
   await fake.submit({
     kind: 'composer.insert',
     text: '\u68c0\u67e5\u4f9b\u6696',
@@ -219,6 +228,16 @@ async function main() {
   assert.equal(delayed.attachCalls, 1, 'repeated ready status must not attach twice');
   delayedBridge.dispose();
   assert.equal(delayed.detachCalls, 1, 'late attachment must detach exactly once');
+
+  const queued = createFakeRuntime({ ownerReady: false, sessionReady: false });
+  const queuedBridge = createPrePhoneBridge({ runtime: queued.runtime, composer: createFakeComposer() });
+  await queuedBridge.toggle();
+  assert.equal(queued.toggleCalls, 0, 'an early click must wait for the Tavern Helper runtime bridge');
+  queued.setOwnerReady(true);
+  queued.setSessionReady(true);
+  await Promise.resolve();
+  assert.equal(queued.toggleCalls, 1, 'the first click must open the phone once the bridge becomes ready');
+  queuedBridge.dispose();
 
   const installed = createFakeRuntimeInstallation();
   const lateFake = createFakeRuntime({ unread: 3 });

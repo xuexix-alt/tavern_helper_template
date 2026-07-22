@@ -15,6 +15,7 @@ interface PhoneOwner {
 
 interface PhoneRuntimeStatus {
   isOpen: boolean;
+  sessionKey?: string | null;
 }
 
 interface PrePhoneRuntimeEventMap {
@@ -33,6 +34,7 @@ export interface PrePhoneRuntime {
   ): () => void;
   attachHostBridge(bridge: {
     id: 'same-layer-pre';
+    getStoryMessageId(): number | null;
     submitAction(action: PhoneHostAction): Promise<void> | void;
   }): () => void;
 }
@@ -101,6 +103,7 @@ export function createPrePhoneBridge(options: {
   resolveRuntime?: () => PrePhoneRuntime | undefined;
   subscribeRuntimeInstalled?: (listener: () => void) => () => void;
   composer: PrePhoneComposer;
+  storyMessageId?: () => number | null;
   launcher?: () => { focus(): void; isConnected?: boolean } | null;
 }): PrePhoneBridge {
   const { composer, launcher } = options;
@@ -111,6 +114,8 @@ export function createPrePhoneBridge(options: {
   let unread = 0;
   let disposed = false;
   let wasOpen = false;
+  let pendingOpen = false;
+  let attachedSessionKey: string | null = null;
   const listeners = new Set<(unread: number, availability: PrePhoneAvailability) => void>();
   let stopStatus: (() => void) | null = null;
   let stopUnread: (() => void) | null = null;
@@ -119,6 +124,19 @@ export function createPrePhoneBridge(options: {
 
   function notify(): void {
     for (const listener of listeners) listener(unread, availability);
+  }
+
+  function flushPendingOpen(activeRuntime: PrePhoneRuntime): void {
+    if (!pendingOpen || disposed || runtime !== activeRuntime || availability !== 'available') return;
+    pendingOpen = false;
+    queueMicrotask(() => {
+      if (disposed || runtime !== activeRuntime || availability !== 'available') return;
+      try {
+        if (!activeRuntime.getStatus().isOpen) void activeRuntime.toggle().catch(() => undefined);
+      } catch {
+        // A later click or runtime status event can retry without breaking the Pre UI.
+      }
+    });
   }
 
   async function submitAction(action: unknown): Promise<void> {
@@ -146,6 +164,7 @@ export function createPrePhoneBridge(options: {
       detachHostBridge?.();
     } finally {
       detachHostBridge = null;
+      attachedSessionKey = null;
     }
   }
 
@@ -163,7 +182,10 @@ export function createPrePhoneBridge(options: {
     if (!runtime || disposed) return;
     const activeRuntime = runtime;
     const isOpen = Boolean(value?.isOpen);
+    const runtimeSessionKey = value?.sessionKey ?? null;
     const shouldRestoreFocus = wasOpen && !isOpen;
+
+    if (detachHostBridge && attachedSessionKey !== runtimeSessionKey) clearAttachedBinding();
 
     if (!runtimeOwnerMatches(activeRuntime)) {
       clearAttachedBinding();
@@ -176,7 +198,12 @@ export function createPrePhoneBridge(options: {
     if (!detachHostBridge) {
       try {
         unread = Math.max(0, activeRuntime.getUnreadCount());
-        detachHostBridge = activeRuntime.attachHostBridge({ id: 'same-layer-pre', submitAction });
+        detachHostBridge = activeRuntime.attachHostBridge({
+          id: 'same-layer-pre',
+          getStoryMessageId: () => options.storyMessageId?.() ?? null,
+          submitAction,
+        });
+        attachedSessionKey = runtimeSessionKey;
         stopUnread = activeRuntime.on('unread', value => {
           if (disposed || runtime !== activeRuntime) return;
           unread = typeof value === 'number' ? Math.max(0, value) : activeRuntime.getUnreadCount();
@@ -197,6 +224,7 @@ export function createPrePhoneBridge(options: {
     }
     wasOpen = isOpen;
     notify();
+    flushPendingOpen(activeRuntime);
   }
 
   function redetect(): PrePhoneAvailability {
@@ -259,13 +287,20 @@ export function createPrePhoneBridge(options: {
     },
     redetect,
     async toggle() {
-      if (disposed || availability !== 'available' || !runtime || !runtimeOwnerMatches(runtime)) return;
+      if (disposed) return;
+      if (availability !== 'available' || !runtime || !runtimeOwnerMatches(runtime)) {
+        pendingOpen = true;
+        redetect();
+        return;
+      }
+      pendingOpen = false;
       await runtime.toggle();
     },
     submitAction,
     dispose() {
       if (disposed) return;
       disposed = true;
+      pendingOpen = false;
       listeners.clear();
       try {
         stopRuntimeInstalled?.();

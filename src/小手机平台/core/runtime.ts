@@ -142,13 +142,37 @@ export class PhoneRuntime implements TavernPhonePublicApi {
       stale: false,
     };
     this.hostBridge = attachment;
+    this.events.emit('hostStory', this.getHostStoryMessageId());
 
     let active = true;
     return () => {
       if (!active) return;
       active = false;
-      if (this.hostBridge === attachment) this.hostBridge = null;
+      if (this.hostBridge === attachment) {
+        this.hostBridge = null;
+        this.events.emit('hostStory', null);
+      }
     };
+  }
+
+  getHostStoryMessageId(): number | null {
+    const attachment = this.hostBridge;
+    if (
+      !attachment ||
+      attachment.stale ||
+      !this.owner ||
+      !this.session ||
+      !sameOwner(attachment.owner, this.owner) ||
+      attachment.sessionKey !== this.session.sessionKey
+    ) {
+      return null;
+    }
+    try {
+      const messageId = attachment.bridge.getStoryMessageId();
+      return Number.isSafeInteger(messageId) && (messageId ?? -1) >= 0 ? messageId : null;
+    } catch {
+      return null;
+    }
   }
 
   async submitActionToHost(action: PhoneHostAction): Promise<void> {
@@ -189,7 +213,10 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   }
 
   private invalidateHostBridge(): void {
-    if (this.hostBridge) this.hostBridge.stale = true;
+    if (this.hostBridge) {
+      this.hostBridge.stale = true;
+      this.events.emit('hostStory', null);
+    }
   }
 
   private emitStatus(): void {

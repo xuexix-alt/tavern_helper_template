@@ -19,6 +19,7 @@ export interface PhoneHostAction {
 
 export interface PhoneHostBridge {
   id: 'same-layer-pre';
+  getStoryMessageId(): number | null;
   submitAction(action: PhoneHostAction): Promise<void> | void;
 }
 
@@ -64,6 +65,7 @@ export interface PhoneRuntimeEventMap {
   ready: [];
   status: [PhoneRuntimeStatus];
   unread: [number];
+  hostStory: [number | null];
 }
 
 export interface PhoneModuleContext {
@@ -99,5 +101,6 @@ export interface TavernPhonePublicApi {
   getUnreadCount(): number;
   on<K extends keyof PhoneRuntimeEventMap>(event: K, listener: (...args: PhoneRuntimeEventMap[K]) => void): () => void;
   attachHostBridge(bridge: PhoneHostBridge): () => void;
+  getHostStoryMessageId(): number | null;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
 }

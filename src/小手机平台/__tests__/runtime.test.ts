@@ -232,12 +232,17 @@ async function testRuntimeBridge(): Promise<void> {
   assert.equal(runtime.getOwner()?.adapterId, ownerA.adapterId, 'owner 冲突后必须保留原 owner');
 
   const received: string[] = [];
+  const storyMessageIds: Array<number | null> = [];
+  runtime.on('hostStory', messageId => storyMessageIds.push(messageId));
   const detach = runtime.attachHostBridge({
     id: 'same-layer-pre',
+    getStoryMessageId: () => 17,
     submitAction: action => {
       received.push(action.text);
     },
   });
+  assert.equal(runtime.getHostStoryMessageId(), 17, 'runtime 应读取 Pre 当前重渲染的正文楼层号');
+  assert.deepEqual(storyMessageIds, [17]);
   await runtime.submitActionToHost({
     kind: 'composer.insert',
     text: '检查供暖',
@@ -270,6 +275,8 @@ async function testRuntimeBridge(): Promise<void> {
   );
 
   runtime.setSession('chat-b');
+  assert.equal(runtime.getHostStoryMessageId(), null, '切换 chat 后不得继续使用旧 Pre 楼层号');
+  assert.deepEqual(storyMessageIds, [17, null]);
   await assert.rejects(
     () => runtime.submitActionToHost({ kind: 'composer.insert', text: '串线', sourceKey: 'stale', mode: 'append' }),
     /owner|session|会话/i,
