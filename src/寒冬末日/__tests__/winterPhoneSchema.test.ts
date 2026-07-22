@@ -78,7 +78,11 @@ for (const roleName of [
   '凌音',
   '慕小小',
 ]) {
-  assert.equal(Object.hasOwn(init[roleName], '通讯'), false, `${roleName} must not maintain redundant communication data`);
+  assert.equal(
+    Object.hasOwn(init[roleName], '通讯'),
+    false,
+    `${roleName} must not maintain redundant communication data`,
+  );
   assert.equal(Object.hasOwn(parsedInit[roleName], '通讯'), false);
 }
 

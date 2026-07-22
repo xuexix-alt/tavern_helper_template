@@ -88,7 +88,10 @@ test('same-layer-pre exposes one minimal phone entry immediately before regenera
   assert.match(storySource, /伊甸终端·离线/);
   assert.match(storySource, /伊甸终端·不可用/);
   assert.doesNotMatch(storySource, /手机·离线|手机·不可用/);
-  assert.match(storySource, /phoneSignalStrength\s*=\s*computed\(\(\)\s*=>\s*\(phoneAvailability\.value\s*===\s*['"]available['"]\s*\?\s*5\s*:\s*0\)\)/);
+  assert.match(
+    storySource,
+    /phoneSignalStrength\s*=\s*computed\(\(\)\s*=>\s*\(phoneAvailability\.value\s*===\s*['"]available['"]\s*\?\s*5\s*:\s*0\)\)/,
+  );
   assert.match(storySource, /i\s*<=\s*phoneSignalStrength/);
   assert.match(bridgeSource, /attachHostBridge/);
   assert.match(bridgeSource, /getStoryMessageId/);
