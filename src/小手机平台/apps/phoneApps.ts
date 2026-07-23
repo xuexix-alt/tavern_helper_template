@@ -218,13 +218,29 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
 
   const getAnalyzer = () => {
     if (!profileAnalyzer) {
-      const db = (window as any).phoneDb;
-      const runtime = (window as any).tavernPhone;
+      // 尝试多种方式获取数据库和运行时
+      const db =
+        (window as any).phoneDb ||
+        (window as any).parent?.phoneDb ||
+        (window as any).top?.phoneDb;
+
+      const runtime =
+        (window as any).tavernPhone ||
+        (window as any).parent?.tavernPhone ||
+        (window as any).top?.tavernPhone;
+
       const session = runtime?.getSession?.();
       const sessionKey = session?.sessionKey;
 
       if (db && sessionKey) {
         profileAnalyzer = new ProfileAnalyzer(db, sessionKey);
+      } else {
+        console.error('[档案] 无法获取数据库或会话', {
+          db: !!db,
+          runtime: !!runtime,
+          session: !!session,
+          sessionKey: !!sessionKey,
+        });
       }
     }
     return profileAnalyzer;
@@ -554,11 +570,28 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       async render(context) {
         const { document } = context;
 
-        // 直接从全局获取数据库和会话信息
-        const db = (window as any).phoneDb;
-        const runtime = (window as any).tavernPhone;
+        // 直接从全局获取数据库和会话信息（尝试多种方式）
+        const db =
+          (window as any).phoneDb ||
+          (window as any).parent?.phoneDb ||
+          (window as any).top?.phoneDb;
+
+        const runtime =
+          (window as any).tavernPhone ||
+          (window as any).parent?.tavernPhone ||
+          (window as any).top?.tavernPhone;
+
         const session = runtime?.getSession?.();
         const sessionKey = session?.sessionKey;
+
+        console.log('[档案] 调试信息:', {
+          hasDb: !!db,
+          hasRuntime: !!runtime,
+          hasSession: !!session,
+          hasSessionKey: !!sessionKey,
+          windowKeys: Object.keys(window).filter(k => k.includes('phone') || k.includes('tavern')),
+          parentKeys: Object.keys((window as any).parent || {}).filter(k => k.includes('phone') || k.includes('tavern')),
+        });
 
         if (!db || !sessionKey) {
           const placeholder = document.createElement('div');
@@ -566,7 +599,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           placeholder.textContent = '档案功能不可用';
           const hint = document.createElement('p');
           hint.style.cssText = 'margin-top: 12px; font-size: 13px; color: #888;';
-          hint.textContent = '无法访问数据库或会话';
+          hint.textContent = `无法访问数据库或会话 (db: ${!!db}, session: ${!!sessionKey})`;
           placeholder.append(hint);
           return placeholder;
         }
