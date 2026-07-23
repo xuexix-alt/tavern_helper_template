@@ -195,7 +195,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
   return [
     {
       route: 'messages',
-      title: '消息',
+      title: '微信',
       glyph: '●',
       async render(context) {
         const { document } = context;

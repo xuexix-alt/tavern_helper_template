@@ -17,22 +17,15 @@ export interface LoreWriteEntry extends LoreEntryDefinition {
 
 export const LORE_ENTRY_DEFINITIONS: readonly LoreEntryDefinition[] = [
   {
-    type: 'private',
-    name: '[手机通讯]私聊记录',
-    strategy: { type: 'constant' },
-    position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
-    probability: 100,
-  },
-  {
     type: 'group',
-    name: '[手机通讯]伊甸住户群',
+    name: '[微信-群聊]伊甸住户群',
     strategy: { type: 'constant' },
     position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
     probability: 100,
   },
   {
     type: 'broadcast',
-    name: '[手机情报]广播摘要',
+    name: '[微信-广播]情报摘要',
     strategy: { type: 'constant' },
     position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
     probability: 100,
@@ -78,7 +71,20 @@ function captureRequest(request: LoreSyncRequest): Readonly<LoreSyncRequest> {
   return Object.freeze({ ...request });
 }
 
-function definitionFor(type: LoreSyncType): LoreEntryDefinition {
+function definitionFor(type: LoreSyncType, conversationId?: string): LoreEntryDefinition {
+  // 私聊需要根据 conversationId 动态生成条目名
+  if (type === 'private') {
+    if (!conversationId) throw new Error('私聊类型必须提供 conversationId');
+    // 从 conversationId 提取角色名：private:张三 -> 张三
+    const characterName = conversationId.replace(/^private:/, '');
+    return {
+      type: 'private',
+      name: `[微信-私聊]${characterName}`,
+      strategy: { type: 'constant' },
+      position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
+      probability: 100,
+    };
+  }
   const definition = LORE_ENTRY_DEFINITIONS.find(item => item.type === type);
   if (!definition) throw new Error(`不支持的同步类型: ${type}`);
   return definition;
@@ -231,7 +237,10 @@ export class ChatLoreSync {
     const query = {
       sessionKey: request.sessionKey,
       type: request.type,
-      ...(request.type === 'group' && request.conversationId ? { conversationId: request.conversationId } : {}),
+      // 私聊和群聊都需要按 conversationId 筛选
+      ...((request.type === 'private' || request.type === 'group') && request.conversationId
+        ? { conversationId: request.conversationId }
+        : {}),
     };
     const messages = await this.options.db.listMessages(query);
     const messageIds = messages.filter(message => !message.syncedToLore).map(message => message.id);
@@ -245,7 +254,7 @@ export class ChatLoreSync {
       .then(async () => {
         const batch = await this.captureBatch(request);
         if (!batch) return;
-        const definition = definitionFor(batch.request.type);
+        const definition = definitionFor(batch.request.type, batch.request.conversationId);
         const content = buildLoreSummary({
           type: batch.request.type,
           conversationId: batch.request.conversationId,

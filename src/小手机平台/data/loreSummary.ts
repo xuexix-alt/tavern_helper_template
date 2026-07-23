@@ -48,7 +48,7 @@ export function buildLoreSummary(options: LoreSummaryOptions): string {
     const lines = selected.map(
       message => `${timeLabel(message)}${message.sender}: ${takeCharacters(message.content, CONTENT_LIMIT)}`,
     );
-    return boundEntry(`【私聊】\n${lines.join('\n')}`);
+    return boundEntry(`【微信私聊】\n${lines.join('\n')}`);
   }
 
   if (options.type === 'group') {
@@ -58,11 +58,11 @@ export function buildLoreSummary(options: LoreSummaryOptions): string {
     const lines = selected.map(
       message => `${timeLabel(message)}${message.sender}: ${takeCharacters(message.content, CONTENT_LIMIT)}`,
     );
-    return boundEntry(`【群聊】${groupName}${participants}\n${lines.join('\n')}`);
+    return boundEntry(`【微信群聊】${groupName}${participants}\n${lines.join('\n')}`);
   }
 
   const lines = selected.map(message => {
     return `[${message.trust}][${message.source}] ${timeLabel(message)}${message.sender}: ${takeCharacters(message.content, CONTENT_LIMIT)}`;
   });
-  return boundEntry(`【广播】\n${lines.join('\n')}`);
+  return boundEntry(`【微信广播】\n${lines.join('\n')}`);
 }

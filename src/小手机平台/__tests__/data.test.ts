@@ -334,7 +334,7 @@ function testLoreSummary(): void {
   const bounded = buildLoreSummary({ type: 'group', conversationId: 'group:huge', messages: huge });
   assert.ok(bounded.length <= 800, '最终条目最多 800 字符');
   assert.match(bounded, /…\[中间省略\]…/);
-  assert.ok(bounded.startsWith('【群聊】') && bounded.endsWith('文'.repeat(20)), '截断应保留约 200 字符首尾');
+  assert.ok(bounded.startsWith('【微信群聊】') && bounded.endsWith('文'.repeat(20)), '截断应保留约 200 字符首尾');
 }
 
 type ScheduledTask = { id: number; callback: () => void; cancelled: boolean; delayMs: number };
@@ -380,10 +380,10 @@ async function testChatLoreSync(): Promise<void> {
   assert.deepEqual(
     LORE_ENTRY_DEFINITIONS.map(entry => [entry.type, entry.name]),
     [
-      ['private', '[手机通讯]私聊记录'],
-      ['group', '[手机通讯]伊甸住户群'],
-      ['broadcast', '[手机情报]广播摘要'],
+      ['group', '[微信-群聊]伊甸住户群'],
+      ['broadcast', '[微信-广播]情报摘要'],
     ],
+    '私聊条目现在是动态生成的，不在 LORE_ENTRY_DEFINITIONS 中',
   );
   for (const entry of LORE_ENTRY_DEFINITIONS) {
     assert.deepEqual(entry.strategy, { type: 'constant' });
@@ -404,8 +404,8 @@ async function testChatLoreSync(): Promise<void> {
     clearSchedule: id => scheduler.clear(id),
   });
 
-  sync.schedule({ sessionKey: sessionA, worldbookName: '不应写入的旧世界书', type: 'private' });
-  sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  sync.schedule({ sessionKey: sessionA, worldbookName: '不应写入的旧世界书', type: 'private', conversationId: 'private:alice' });
+  sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private', conversationId: 'private:alice' });
   sync.schedule({
     sessionKey: sessionA,
     worldbookName: '世界书-A',
@@ -423,12 +423,12 @@ async function testChatLoreSync(): Promise<void> {
   );
   scheduler.tasks.forEach(task => scheduler.run(task.id));
   await flushMicrotasks();
-  assert.deepEqual(started, ['世界书-A:[手机通讯]私聊记录'], '三个并发类型必须走共享串行队列');
+  assert.deepEqual(started, ['世界书-A:[微信-私聊]alice'], '三个并发类型必须走共享串行队列');
 
   await db.addMessage(message('during-write', 4));
   resolvers.shift()?.();
   await flushMicrotasks();
-  assert.deepEqual(started.slice(0, 2), ['世界书-A:[手机通讯]私聊记录', '世界书-A:[手机通讯]伊甸住户群']);
+  assert.deepEqual(started.slice(0, 2), ['世界书-A:[微信-私聊]alice', '世界书-A:[微信-群聊]伊甸住户群']);
   resolvers.shift()?.();
   await flushMicrotasks();
   resolvers.shift()?.();

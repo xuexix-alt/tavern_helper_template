@@ -101,7 +101,7 @@ function testPromptAssemblerOrderAndImmutableSnapshot(): void {
     '【4 MVU确认事实与通讯网络】',
     '【5 ChatLore】',
     '【6 最近完成正文】',
-    '【7 手机历史与本轮玩家消息】',
+    '【7 微信历史与本轮玩家消息】',
     '【8 输出 JSON 契约】',
   ];
   assert.deepEqual(
@@ -109,7 +109,7 @@ function testPromptAssemblerOrderAndImmutableSnapshot(): void {
     [...markers.map(marker => assembled.indexOf(marker))].sort((a, b) => a - b),
     '必须严格按八层顺序组装',
   );
-  assert.match(assembled, /MVU确认事实 ＞ 最近完成正文 ＞ ChatLore ＞ 手机旧消息 ＞ 未核实广播/);
+  assert.match(assembled, /MVU确认事实 ＞ 最近完成正文 ＞ ChatLore ＞ 微信旧消息 ＞ 未核实广播/);
 }
 
 function testPromptDynamicDataIsolation(): void {

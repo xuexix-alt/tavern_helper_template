@@ -56,7 +56,7 @@ export type PromptContextSnapshot = Readonly<{
   maxCharacters: number;
 }>;
 
-const FACT_PRIORITY = 'MVU确认事实 ＞ 最近完成正文 ＞ ChatLore ＞ 手机旧消息 ＞ 未核实广播';
+const FACT_PRIORITY = 'MVU确认事实 ＞ 最近完成正文 ＞ ChatLore ＞ 微信旧消息 ＞ 未核实广播';
 
 function freezeEntries<T extends object>(entries: T[]): readonly Readonly<T>[] {
   return Object.freeze(entries.map(entry => Object.freeze({ ...entry })));
@@ -126,7 +126,7 @@ function render(snapshot: PromptContextSnapshot, selected: AssemblySelection): s
     '【6 最近完成正文】',
     readonlyData({ recentCompletedStory: selected.story }),
     '',
-    '【7 手机历史与本轮玩家消息】',
+    '【7 微信历史与本轮玩家消息】',
     readonlyData({ phoneHistory: selected.history, playerMessage: snapshot.playerMessage }),
     '',
     '【8 输出 JSON 契约】',
