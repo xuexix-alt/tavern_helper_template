@@ -1,6 +1,7 @@
 import type { PhoneHostAction } from '../core/types';
 import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles, refreshSingleProfile } from './profileHelper';
+import { ProfileAnalyzer } from './profileAnalyzer';
 
 export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'tasks' | 'profiles' | 'settings' | 'diagnostics';
 
@@ -211,6 +212,23 @@ function avatar(document: Document, name: string, className: string): HTMLSpanEl
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
+
+  // 初始化档案分析器（需要时才创建）
+  let profileAnalyzer: ProfileAnalyzer | null = null;
+
+  const getAnalyzer = () => {
+    if (!profileAnalyzer) {
+      const db = (window as any).phoneDb;
+      const runtime = (window as any).tavernPhone;
+      const session = runtime?.getSession?.();
+      const sessionKey = session?.sessionKey;
+
+      if (db && sessionKey) {
+        profileAnalyzer = new ProfileAnalyzer(db, sessionKey);
+      }
+    }
+    return profileAnalyzer;
+  };
 
   return [
     {
@@ -536,9 +554,11 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       async render(context) {
         const { document } = context;
 
-        // 获取数据库和会话信息
-        const db = services.getDb?.();
-        const sessionKey = services.getSessionKey?.();
+        // 直接从全局获取数据库和会话信息
+        const db = (window as any).phoneDb;
+        const runtime = (window as any).tavernPhone;
+        const session = runtime?.getSession?.();
+        const sessionKey = session?.sessionKey;
 
         if (!db || !sessionKey) {
           const placeholder = document.createElement('div');
@@ -561,11 +581,15 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const container = document.createElement('div');
         container.className = 'phone-profiles';
 
+        // 操作按钮组
+        const buttonGroup = document.createElement('div');
+        buttonGroup.style.cssText = 'display: flex; gap: 8px; margin-bottom: 12px;';
+
         // 刷新所有档案按钮
-        const refreshAll = text(document, 'button', '🔄 刷新所有档案');
-        refreshAll.className = 'phone-button phone-button--primary';
+        const refreshAll = text(document, 'button', '🔄 刷新数据');
+        refreshAll.className = 'phone-button';
         refreshAll.type = 'button';
-        refreshAll.style.cssText = 'width: 100%; margin-bottom: 12px;';
+        refreshAll.style.cssText = 'flex: 1;';
         context.listen(refreshAll, 'click', () => {
           refreshAll.disabled = true;
           refreshAll.textContent = '刷新中...';
@@ -578,11 +602,61 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             .finally(() => {
               if (context.isActive()) {
                 refreshAll.disabled = false;
-                refreshAll.textContent = '🔄 刷新所有档案';
+                refreshAll.textContent = '🔄 刷新数据';
               }
             });
         });
-        container.append(refreshAll);
+
+        // AI 分析所有按钮
+        const analyzeAll = text(document, 'button', '🤖 AI 分析');
+        analyzeAll.className = 'phone-button phone-button--primary';
+        analyzeAll.type = 'button';
+        analyzeAll.style.cssText = 'flex: 1;';
+        context.listen(analyzeAll, 'click', () => {
+          const analyzer = getAnalyzer();
+          if (!analyzer) {
+            context.announce('分析器初始化失败', 'error');
+            return;
+          }
+
+          analyzeAll.disabled = true;
+          analyzeAll.textContent = '分析中...';
+
+          // 获取所有人物
+          void (async () => {
+            const recentChat = analyzer['getRecentChat'](30);
+            const contacts = await analyzer['getContactsFromMvu']();
+            const activeContacts = contacts.filter(c => recentChat.includes(c.name));
+
+            if (activeContacts.length === 0) {
+              context.announce('最近对话中没有人物活动', 'error');
+              return;
+            }
+
+            // 依次分析每个人物
+            for (const contact of activeContacts) {
+              try {
+                await analyzer.analyzeContact(contact.name, recentChat);
+                context.announce(`${contact.name} 分析完成`);
+              } catch (e) {
+                context.announce(`${contact.name} 分析失败`, 'error');
+              }
+            }
+
+            context.announce('所有分析已完成');
+            context.requestRender();
+          })()
+            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              if (context.isActive()) {
+                analyzeAll.disabled = false;
+                analyzeAll.textContent = '🤖 AI 分析';
+              }
+            });
+        });
+
+        buttonGroup.append(refreshAll, analyzeAll);
+        container.append(buttonGroup);
 
         // 档案列表
         const profileList = list(document);
@@ -591,12 +665,16 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           item.className = 'phone-profile-item';
           item.style.cssText = 'padding: 12px; border-bottom: 1px solid var(--phone-border, #eee);';
 
-          // 头部：姓名 + 刷新按钮
+          // 头部：姓名 + 操作按钮
           const header = document.createElement('div');
           header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
           const nameEl = text(document, 'strong', profile.name);
           nameEl.style.cssText = 'font-size: 16px;';
 
+          const btnGroup = document.createElement('div');
+          btnGroup.style.cssText = 'display: flex; gap: 4px;';
+
+          // 刷新按钮
           const refreshBtn = text(document, 'button', '🔄');
           refreshBtn.className = 'phone-button';
           refreshBtn.type = 'button';
@@ -614,7 +692,35 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                 if (context.isActive()) refreshBtn.disabled = false;
               });
           });
-          header.append(nameEl, refreshBtn);
+
+          // AI 分析按钮
+          const analyzeBtn = text(document, 'button', '🤖');
+          analyzeBtn.className = 'phone-button';
+          analyzeBtn.type = 'button';
+          analyzeBtn.style.cssText = 'padding: 4px 8px; font-size: 12px;';
+          analyzeBtn.setAttribute('aria-label', `AI分析${profile.name}`);
+          context.listen(analyzeBtn, 'click', () => {
+            const analyzer = getAnalyzer();
+            if (!analyzer) {
+              context.announce('分析器初始化失败', 'error');
+              return;
+            }
+
+            analyzeBtn.disabled = true;
+            void analyzer
+              .analyzeContact(profile.name)
+              .then(() => {
+                context.announce(`${profile.name} AI分析完成`);
+                context.requestRender();
+              })
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+              .finally(() => {
+                if (context.isActive()) analyzeBtn.disabled = false;
+              });
+          });
+
+          btnGroup.append(refreshBtn, analyzeBtn);
+          header.append(nameEl, btnGroup);
 
           // 内容区域
           const content = document.createElement('div');
