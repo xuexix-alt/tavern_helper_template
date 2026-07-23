@@ -2,6 +2,9 @@ import type { PhoneAppServices, PhoneProfileView } from './phoneApps';
 
 export async function collectProfiles(services: PhoneAppServices): Promise<PhoneProfileView[]> {
   try {
+    if (services.listProfiles) {
+      return [...(await services.listProfiles())].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+    }
     const contacts = await services.listContacts();
     const conversations = await services.listConversations();
     const privateConversations = conversations.filter(c => c.kind === 'private');
@@ -51,10 +54,16 @@ export async function collectProfiles(services: PhoneAppServices): Promise<Phone
         id: contact.id,
         name: contact.name,
         basicInfo: contact.detail || '待了解',
-        personality: '待分析',
+        personalityBaseline: '待分析',
+        personalityTuning: '暂无',
         currentStatus: '未知',
         relationship: '普通关系',
-        recentInteraction: parts.length > 0 ? parts.join('；') : '暂无互动记录',
+        storyInteractionSummary: broadcastMention || '暂无正文互动小结',
+        chatInteractionSummary: parts.length > 0 ? parts.join('；') : '暂无聊天互动小结',
+        playerActionAdvice: '暂无',
+        lastWechatRound: lastMessage ? [lastMessage] : [],
+        sourceRange: '兼容只读数据',
+        refreshStatus: 'idle',
         lastUpdated: Date.now(),
       });
     }
@@ -65,4 +74,3 @@ export async function collectProfiles(services: PhoneAppServices): Promise<Phone
     return [];
   }
 }
-

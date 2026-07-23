@@ -1,20 +1,37 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
+const { createHash } = require('node:crypto');
+const { existsSync, readFileSync } = require('node:fs');
+const { dirname, extname, resolve } = require('node:path');
 const test = require('node:test');
 const ts = require('typescript');
 
 const shellPath = 'src/小手机平台/shell/phoneShell.ts';
 const appsPath = 'src/小手机平台/apps/phoneApps.ts';
 const cssPath = 'src/小手机平台/shell/phoneShell.css';
+const wechatIconPath = 'src/小手机平台/assets/wechatIcon.ts';
 
-function loadTypeScriptModule(path) {
-  const source = readFileSync(path, 'utf8');
+function loadTypeScriptModule(path, cache = new Map()) {
+  const absolutePath = resolve(path);
+  const cached = cache.get(absolutePath);
+  if (cached) return cached.exports;
+  const source = readFileSync(absolutePath, 'utf8');
   const output = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const module = { exports: {} };
-  Function('module', 'exports', 'require', output)(module, module.exports, require);
+  cache.set(absolutePath, module);
+  const localRequire = specifier => {
+    if (!specifier.startsWith('.')) return require(specifier);
+    const unresolved = resolve(dirname(absolutePath), specifier);
+    const candidates = extname(unresolved)
+      ? [unresolved]
+      : [`${unresolved}.ts`, `${unresolved}.js`, resolve(unresolved, 'index.ts'), resolve(unresolved, 'index.js')];
+    const dependency = candidates.find(existsSync);
+    if (!dependency) throw new Error(`Cannot resolve ${specifier} from ${absolutePath}`);
+    return dependency.endsWith('.ts') ? loadTypeScriptModule(dependency, cache) : require(dependency);
+  };
+  Function('module', 'exports', 'require', output)(module, module.exports, localRequire);
   return module.exports;
 }
 
@@ -155,6 +172,51 @@ test('Apple system styles include accessible themes and preferences', () => {
   assert.match(css, /\.phone-overlay\s*\{[\s\S]*?position:\s*absolute/i);
   assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?padding:\s*max\(8px,/i);
   assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?\.phone-shell\s*\{[\s\S]*?border-radius:\s*28px/i);
+});
+
+test('home WeChat entry uses the supplied PNG while other apps keep their glyphs', () => {
+  const apps = readFileSync(appsPath, 'utf8');
+  const css = readFileSync(cssPath, 'utf8');
+  const { WECHAT_APP_ICON_SRC } = loadTypeScriptModule(wechatIconPath);
+  const { createPhoneAppIcon } = loadTypeScriptModule(shellPath);
+  const imageBytes = Buffer.from(WECHAT_APP_ICON_SRC.replace(/^data:image\/png;base64,/, ''), 'base64');
+
+  assert.match(WECHAT_APP_ICON_SRC, /^data:image\/png;base64,/);
+  assert.equal(
+    createHash('sha256').update(imageBytes).digest('hex').toUpperCase(),
+    '231218A7264273DC445FB158DD92BC5D34BEE32EF017827F666027E9CB01AD21',
+  );
+  assert.match(apps, /route:\s*['"]messages['"][\s\S]*?title:\s*['"]微信['"][\s\S]*?iconSrc:\s*WECHAT_APP_ICON_SRC/);
+  assert.match(apps, /iconSrc\?:\s*string/);
+
+  const imageContainer = createPhoneAppIcon(fakeDocument, {
+    route: 'messages',
+    title: '微信',
+    glyph: '●',
+    iconSrc: WECHAT_APP_ICON_SRC,
+  });
+  assert.equal(imageContainer.textContent, '');
+  assert.equal(imageContainer.children.length, 1);
+  assert.equal(imageContainer.children[0].tagName, 'img');
+  assert.equal(imageContainer.children[0].src, WECHAT_APP_ICON_SRC);
+  assert.equal(imageContainer.children[0].attributes.alt, '');
+  assert.equal(imageContainer.children[0].attributes['aria-hidden'], 'true');
+
+  const glyphContainer = createPhoneAppIcon(fakeDocument, {
+    route: 'contacts',
+    title: '通讯录',
+    glyph: '人',
+  });
+  assert.equal(glyphContainer.textContent, '人');
+  assert.equal(glyphContainer.children.length, 0);
+  assert.match(css, /\.phone-app__icon\s*\{[\s\S]*?object-fit:\s*cover/i);
+});
+
+test('profile radio stays isolated from ChatLore and worldbook writers', () => {
+  const source = readFileSync('src/小手机平台/profiles/profileBroadcast.ts', 'utf8');
+
+  assert.doesNotMatch(source, /writeChatLoreEntry|createWorldbookEntries|updateWorldbookWith/);
+  assert.match(source, /broadcastIssues/);
 });
 
 test('task actions stay structured and never generate or write MVU', () => {
@@ -541,6 +603,116 @@ test('diagnostics exposes an explicit retry for captured ChatLore failures', asy
   findByClass(rendered, 'phone-lore-retry').click();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(retries, 1);
+});
+
+test('dynamic profile app exposes settings, progress, batch actions and complete fields', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const calls = [];
+  const services = completeServices({
+    listProfiles: () => [
+      {
+        id: 'main:纪宁',
+        name: '纪宁',
+        basicInfo: '医生',
+        personalityBaseline: '冷静谨慎',
+        personalityTuning: '近期更直接',
+        currentStatus: '诊疗室值守',
+        relationship: '协作',
+        storyInteractionSummary: '正文中完成交接',
+        chatInteractionSummary: '微信确认药品不足',
+        playerActionAdvice: '确认药品库存',
+        lastWechatRound: ['纪宁：药品不多了'],
+        sourceRange: '正文 1-20；微信新增 1 条',
+        refreshStatus: 'success',
+        lastUpdated: 1_000,
+      },
+    ],
+    getProfileSettings: () => ({
+      storyProgress: 7,
+      autoRefreshEvery: 20,
+      promptProfileMaxChars: 2000,
+    }),
+    saveProfileSettings: async value => calls.push(['save', value]),
+    refreshProfile: async id => calls.push(['person', id]),
+    refreshAllProfiles: async () => calls.push(['all']),
+    retryFailedProfiles: async () => calls.push(['retry']),
+  });
+  const profiles = createPhoneApps(services).find(app => app.route === 'profiles');
+  const rendered = await profiles.render(testContext());
+
+  assert.equal(findByClass(rendered, 'phone-profile-progress').textContent.includes('正文进度 7 / 20'), true);
+  const threshold = findByClass(rendered, 'phone-profile-settings__threshold');
+  const budget = findByClass(rendered, 'phone-profile-settings__budget');
+  assert.equal(threshold.min, '1');
+  assert.equal(threshold.max, '50');
+  assert.equal(threshold.value, '20');
+  assert.equal(budget.value, '2000');
+
+  findByClass(rendered, 'phone-profile-refresh-all').click();
+  findByClass(rendered, 'phone-profile-retry').click();
+  findByClass(rendered, 'phone-profile-refresh').click();
+  threshold.value = '25';
+  budget.value = '2400';
+  findByClass(rendered, 'phone-profile-settings__save').click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.deepEqual(calls, [
+    ['all'],
+    ['retry'],
+    ['person', 'main:纪宁'],
+    ['save', { storyProgress: 7, autoRefreshEvery: 25, promptProfileMaxChars: 2400 }],
+  ]);
+  const textValues = collectText(rendered).join('\n');
+  for (const label of [
+    '基本信息',
+    '固定性格',
+    '性格微调',
+    '当前处境',
+    '关系',
+    '正文互动小结',
+    '微信聊天小结',
+    '对玩家行动建议',
+    '最后一轮消息',
+    '来源范围',
+  ]) {
+    assert.match(textValues, new RegExp(label));
+  }
+});
+
+test('broadcast app renders profile radio history and can regenerate without replacing notices', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  let regenerations = 0;
+  const services = completeServices({
+    listBroadcasts: () => [
+      { id: 'notice', source: '伊甸网络', content: '网络受限', trust: 'confirmed', kind: 'deterministic' },
+      {
+        id: 'radio',
+        source: '伊甸末日广播',
+        content: '本期三栏广播',
+        trust: 'unverified',
+        kind: 'profile-radio',
+        generatedAt: 1_000,
+        sections: [
+          { title: '秩序与局势', body: '北门关闭。' },
+          { title: '生存与资源', body: '暂无重大变化。' },
+          { title: '人物与社会', body: '诊疗室恢复值守。' },
+        ],
+      },
+    ],
+    regenerateProfileRadio: async () => {
+      regenerations += 1;
+    },
+  });
+  const broadcasts = createPhoneApps(services).find(app => app.route === 'broadcasts');
+  const rendered = await broadcasts.render(testContext());
+  const textValues = collectText(rendered).join('\n');
+  assert.match(textValues, /伊甸网络/);
+  assert.match(textValues, /秩序与局势/);
+  assert.match(textValues, /生存与资源/);
+  assert.match(textValues, /人物与社会/);
+  findByClass(rendered, 'phone-broadcast-regenerate').click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(regenerations, 1);
 });
 
 function completeServices(overrides = {}) {

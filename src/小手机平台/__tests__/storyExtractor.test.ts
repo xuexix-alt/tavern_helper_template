@@ -4,14 +4,18 @@ import { extractRecentCompletedStory, extractCurrentStory } from '../platform/st
 // Mock getChatMessages
 let mockChatMessages: any[] = [];
 (globalThis as any).getChatMessages = (range: any, options?: any) => {
+  let selected: any[];
   if (typeof range === 'number') {
-    return mockChatMessages.filter(msg => msg.message_id === range);
-  }
-  if (typeof range === 'string') {
+    selected = mockChatMessages.filter(msg => msg.message_id === range);
+  } else if (typeof range === 'string') {
     const [start, end] = range.split('-').map(Number);
-    return mockChatMessages.filter(msg => msg.message_id >= start && msg.message_id <= end);
+    selected = mockChatMessages.filter(msg => msg.message_id >= start && msg.message_id <= end);
+  } else {
+    selected = [...mockChatMessages];
   }
-  return mockChatMessages;
+  if (options?.role) selected = selected.filter(msg => msg.role === options.role);
+  if (options?.hide_state === 'unhidden') selected = selected.filter(msg => !msg.is_hidden);
+  return selected.sort((left, right) => left.message_id - right.message_id);
 };
 
 function testExtractRecentCompletedStory(): void {
@@ -28,11 +32,11 @@ function testExtractRecentCompletedStory(): void {
 
   // 测试 1：基本提取
   const result1 = extractRecentCompletedStory({ storyMessageId: 10 });
-  assert.equal(result1.length, 4, '应提取 4 条正文（排除当前楼层和用户消息）');
+  assert.equal(result1.length, 3, '应提取 3 条正文（排除当前楼层和用户消息）');
   assert.equal(result1[0].id, 'story-6');
   assert.equal(result1[0].content, '正文 6：角色回复内容');
   assert.equal(result1[0].relevant, true);
-  assert.equal(result1[3].id, 'story-9');
+  assert.equal(result1[2].id, 'story-9');
 
   // 测试 2：限制数量
   const result2 = extractRecentCompletedStory({ storyMessageId: 10, maxStoryCount: 2 });
@@ -151,7 +155,4 @@ export function runStoryExtractorTests(): void {
   }
 }
 
-// 如果直接运行此文件
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runStoryExtractorTests();
-}
+runStoryExtractorTests();

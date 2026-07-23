@@ -176,6 +176,20 @@ button:focus-visible {
   box-shadow: 0 5px 12px rgba(0, 122, 255, 0.2);
 }
 
+.phone-app__glyph--icon {
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+}
+
+.phone-app__icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
 .phone-app__glyph--broadcasts,
 .phone-app__glyph--diagnostics {
   background: #5856d6;
@@ -543,6 +557,174 @@ button:focus-visible {
   color: var(--phone-red);
 }
 
+.phone-profiles,
+.phone-broadcasts {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.phone-profile-settings,
+.phone-broadcasts__toolbar {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--phone-separator);
+  background: var(--phone-surface);
+}
+
+.phone-profile-progress {
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.phone-profile-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.phone-profile-settings__save {
+  justify-self: stretch;
+  border: 1px solid var(--phone-separator);
+}
+
+.phone-profile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.phone-profile-actions .phone-button,
+.phone-broadcast-regenerate {
+  width: 100%;
+  border: 1px solid var(--phone-separator);
+  padding: 6px 10px;
+  overflow-wrap: anywhere;
+}
+
+.phone-profile-list,
+.phone-broadcast-list {
+  display: grid;
+  gap: 10px;
+  background: transparent;
+}
+
+.phone-profile-item,
+.phone-broadcast-issue {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--phone-separator);
+  border-radius: 8px;
+  background: var(--phone-surface);
+}
+
+.phone-profile-header,
+.phone-broadcast-issue__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--phone-separator);
+}
+
+.phone-profile-header__identity {
+  display: grid;
+  min-width: 0;
+}
+
+.phone-profile-header__identity strong {
+  overflow-wrap: anywhere;
+}
+
+.phone-profile-header__identity span,
+.phone-broadcast-issue__header time,
+.phone-broadcasts__toolbar span {
+  color: var(--phone-secondary);
+  font-size: 0.75rem;
+}
+
+.phone-profile-refresh {
+  flex: none;
+  width: 44px;
+  padding: 0;
+  border: 1px solid var(--phone-separator);
+  font-size: 1.2rem;
+}
+
+.phone-profile-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.phone-profile-field {
+  min-width: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--phone-separator);
+}
+
+.phone-profile-field:nth-child(odd) {
+  border-right: 1px solid var(--phone-separator);
+}
+
+.phone-profile-field h3,
+.phone-broadcast-section h3 {
+  margin: 0 0 4px;
+  color: var(--phone-secondary);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.phone-profile-field p,
+.phone-broadcast-section p {
+  margin: 0;
+  color: var(--phone-label);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.phone-profile-meta,
+.phone-profile-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 9px 12px;
+  color: var(--phone-secondary);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.phone-profile-error {
+  color: var(--phone-red);
+  background: color-mix(in srgb, var(--phone-red) 8%, transparent);
+}
+
+.phone-broadcasts__toolbar strong {
+  font-size: 0.95rem;
+}
+
+.phone-broadcast-issue__header {
+  align-items: baseline;
+}
+
+.phone-broadcast-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--phone-separator);
+}
+
+.phone-broadcast-section:last-child {
+  border-bottom: 0;
+}
+
+.phone-broadcast-notice {
+  border: 1px solid var(--phone-separator);
+  border-radius: 8px;
+}
+
 .phone-empty,
 .phone-error {
   margin: 0;
@@ -614,6 +796,15 @@ button:focus-visible {
     height: 100%;
     border: 1px solid rgba(255, 255, 255, 0.56);
     border-radius: 28px;
+  }
+
+  .phone-profile-settings__fields,
+  .phone-profile-content {
+    grid-template-columns: 1fr;
+  }
+
+  .phone-profile-field:nth-child(odd) {
+    border-right: 0;
   }
 }
 

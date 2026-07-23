@@ -1,4 +1,5 @@
 import type { PromptSourceEntry } from '../ai/promptAssembler';
+import type { ProfileStoryMessage } from '../profiles/profileTypes';
 
 export interface StoryExtractorOptions {
   /**
@@ -69,6 +70,44 @@ export function extractRecentCompletedStory(options: StoryExtractorOptions): Pro
   } catch (error) {
     // 如果读取失败（比如在非酒馆环境），返回空数组
     console.warn('[小手机平台] 提取正文失败:', error);
+    return [];
+  }
+}
+
+export function extractRecentCompletedMessages(
+  storyMessageId: number | null,
+  limit = 20,
+): ProfileStoryMessage[] {
+  if (
+    storyMessageId === null ||
+    !Number.isSafeInteger(storyMessageId) ||
+    storyMessageId < 0 ||
+    !Number.isSafeInteger(limit) ||
+    limit <= 0
+  ) {
+    return [];
+  }
+  try {
+    return getChatMessages(`0-${storyMessageId}`, {
+      hide_state: 'all',
+      include_swipes: false,
+    })
+      .filter(
+        message =>
+          message.message_id < storyMessageId &&
+          !(message as { is_hidden?: boolean }).is_hidden &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.message === 'string' &&
+          message.message.trim() !== '',
+      )
+      .slice(-limit)
+      .map(message => ({
+        id: String(message.message_id),
+        role: message.role as 'user' | 'assistant',
+        content: message.message.trim(),
+      }));
+  } catch (error) {
+    console.warn('[小手机平台] 提取完整正文窗口失败:', error);
     return [];
   }
 }

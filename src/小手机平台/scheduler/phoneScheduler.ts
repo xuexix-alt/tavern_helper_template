@@ -22,7 +22,9 @@ export type AiSchedulerSource =
   | 'task_intel_change'
   | 'role_threshold'
   | 'waiting_report'
-  | 'low_frequency_daily';
+  | 'low_frequency_daily'
+  | 'profile_refresh'
+  | 'profile_radio';
 
 export type SchedulerPayload =
   | null
@@ -62,6 +64,7 @@ export interface PhoneSchedulerOptions {
   oneInflightRequestPerConversation?: boolean;
   suppressSameTopicUntilChanged?: boolean;
   deduplicationCacheSize?: number;
+  maxInflightAIRequests?: number;
 }
 
 interface QueuedJob {
@@ -85,12 +88,22 @@ const AI_SOURCES = new Set<string>([
   'role_threshold',
   'waiting_report',
   'low_frequency_daily',
+  'profile_refresh',
+  'profile_radio',
 ]);
 
 function nonNegativeSafeInteger(name: string, value: number | undefined, fallback: number): number {
   const resolved = value ?? fallback;
   if (!Number.isSafeInteger(resolved) || resolved < 0) {
     throw new RangeError(`${name} must be a finite non-negative safe integer`);
+  }
+  return resolved;
+}
+
+function positiveSafeInteger(name: string, value: number | undefined, fallback: number): number {
+  const resolved = value ?? fallback;
+  if (!Number.isSafeInteger(resolved) || resolved <= 0) {
+    throw new RangeError(`${name} must be a finite positive safe integer`);
   }
   return resolved;
 }
@@ -146,6 +159,7 @@ export class ControlledPhoneScheduler {
   private readonly oneInflightRequestPerConversation: boolean;
   private readonly suppressSameTopicUntilChanged: boolean;
   private readonly deduplicationCacheSize: number;
+  private readonly maxInflightAIRequests: number;
   private currentSnapshot: StableSchedulerSnapshot | undefined;
   private queue: QueuedJob[] = [];
   private sequence = 0;
@@ -164,6 +178,7 @@ export class ControlledPhoneScheduler {
   private readonly committedAiConversations = new Map<string, Set<string>>();
   private readonly activeAiScopes = new Map<string, number>();
   private readonly activeAiConversations = new Map<string, number>();
+  private activeAiRequestCount = 0;
   private readonly contactLastStartedTurn = new Map<string, ContactCooldownRecord>();
   private cooldownToken = 0;
   private activityToken = 0;
@@ -183,6 +198,11 @@ export class ControlledPhoneScheduler {
       2,
     );
     this.deduplicationCacheSize = nonNegativeSafeInteger('deduplicationCacheSize', options.deduplicationCacheSize, 512);
+    this.maxInflightAIRequests = positiveSafeInteger(
+      'maxInflightAIRequests',
+      options.maxInflightAIRequests,
+      Number.MAX_SAFE_INTEGER,
+    );
     this.oneInflightRequestPerConversation = booleanOption(
       'oneInflightRequestPerConversation',
       options.oneInflightRequestPerConversation,
@@ -264,6 +284,7 @@ export class ControlledPhoneScheduler {
           this.removeQueued(item);
           continue;
         }
+        if (this.activeAiRequestCount >= this.maxInflightAIRequests) continue;
         const inflightKey = this.conversationKey(item.job);
         if (this.oneInflightRequestPerConversation && this.inflightConversations.has(inflightKey)) continue;
         if (!this.reserveAiConversation(item.job)) {
@@ -324,8 +345,16 @@ export class ControlledPhoneScheduler {
   }
 
   async whenIdle(): Promise<void> {
-    while (this.activeTasks.size > 0) {
-      await Promise.all([...this.activeTasks]);
+    while (this.queue.length > 0 || this.activeTasks.size > 0) {
+      if (this.activeTasks.size > 0) {
+        await Promise.all([...this.activeTasks]);
+      } else {
+        if (!this.currentSnapshot) return;
+        this.runAvailable();
+        if (this.queue.length > 0 && this.activeTasks.size === 0) {
+          await Promise.resolve();
+        }
+      }
       await Promise.resolve();
     }
   }
@@ -337,6 +366,7 @@ export class ControlledPhoneScheduler {
     const activeConversation = this.conversationKey(item.job);
     this.activeAiConversations.set(activeConversation, (this.activeAiConversations.get(activeConversation) ?? 0) + 1);
     item.aiConversationTracked = true;
+    this.activeAiRequestCount += 1;
     const contact = this.contactKey(item.job);
     const previousContactTurn = this.contactLastStartedTurn.get(contact);
     const cooldown = { turn: storyTurn, token: ++this.cooldownToken };
@@ -363,6 +393,7 @@ export class ControlledPhoneScheduler {
           }
         }
         this.releaseActiveScopeTracking(item);
+        this.activeAiRequestCount = Math.max(0, this.activeAiRequestCount - 1);
         this.pruneQuotaScopes();
       },
     );

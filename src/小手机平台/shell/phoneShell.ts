@@ -115,6 +115,23 @@ function resolveTopDocument(): Document {
   throw new Error('PhoneShell 需要可访问的 top document');
 }
 
+export function createPhoneAppIcon(
+  document: Document,
+  app: Pick<PhoneAppDefinition, 'route' | 'glyph' | 'iconSrc'>,
+): HTMLElement {
+  const icon = text(document, 'span', app.iconSrc ? '' : app.glyph);
+  icon.className = `phone-app__glyph phone-app__glyph--${app.route}${app.iconSrc ? ' phone-app__glyph--icon' : ''}`;
+  if (app.iconSrc) {
+    const image = document.createElement('img');
+    image.className = 'phone-app__icon';
+    image.src = app.iconSrc;
+    image.setAttribute('alt', '');
+    image.setAttribute('aria-hidden', 'true');
+    icon.append(image);
+  }
+  return icon;
+}
+
 export class PhoneShell implements PhoneShellApi {
   private readonly document: Document;
   private readonly root: HTMLDivElement;
@@ -345,8 +362,7 @@ export class PhoneShell implements PhoneShellApi {
       const button = this.document.createElement('button');
       button.className = 'phone-app';
       button.type = 'button';
-      const glyph = text(this.document, 'span', app.glyph);
-      glyph.className = `phone-app__glyph phone-app__glyph--${app.route}`;
+      const glyph = createPhoneAppIcon(this.document, app);
       const label = text(this.document, 'span', app.title);
       button.append(glyph, label);
       scope.listen(button, 'click', () => {

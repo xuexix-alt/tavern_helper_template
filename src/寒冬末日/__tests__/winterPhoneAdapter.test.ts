@@ -18,7 +18,10 @@ import {
   migrateTemporaryNpcIdentity,
   planTemporaryNpcPromotion,
   planTemporaryNpcMigration,
+  resolveWinterPersonMvu,
   selectCharacterProfile,
+  selectDynamicProfile,
+  selectPublicWinterMvuFacts,
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
 } from '../脚本/小手机-90寒冬适配器/winterAdapterCore';
@@ -173,6 +176,35 @@ function testProfilesAndBoundedFallback(): void {
   });
   assert.ok(context.length <= 120);
   assert.match(context, /工程师|在线/);
+
+  const statData = {
+    纪宁: { 关系: '协作', 位置: '诊疗室' },
+    临时NPC: { 工程师: { 关系: '初识', 位置: '锅炉房' } },
+  };
+  assert.deepEqual(resolveWinterPersonMvu('main:纪宁', statData), statData.纪宁);
+  assert.deepEqual(resolveWinterPersonMvu('temporary:工程师', statData), statData.临时NPC.工程师);
+  assert.deepEqual(resolveWinterPersonMvu('main:不存在', statData), {});
+  assert.equal(
+    selectDynamicProfile('main:纪宁', [
+      { name: '[人物动态]main:纪宁', content: '纪宁动态' },
+      { name: '[人物动态]main:赵卫国', content: '赵卫国动态' },
+    ]),
+    '纪宁动态',
+  );
+  assert.deepEqual(
+    selectPublicWinterMvuFacts({
+      世界: { 日期: '灾后第七日' },
+      通讯网络: { 状态: '不稳定' },
+      庇护所: { 温度: -2 },
+      纪宁: { 内心想法: '私密内容' },
+      临时NPC: { 路人: { 秘密: true } },
+    }),
+    {
+      世界: { 日期: '灾后第七日' },
+      通讯网络: { 状态: '不稳定' },
+      庇护所: { 温度: -2 },
+    },
+  );
 }
 
 function testTasksAndNotices(): void {
@@ -223,13 +255,15 @@ function testTasksAndNotices(): void {
   assert.equal(
     collectChatLoreContext(
       [
-        { name: '[手机通讯]私聊记录', content: '私聊事实' },
-        { name: '无关条目', content: '不得进入' },
-        { name: '[手机情报]广播摘要', content: '广播事实' },
+        { name: '[微信-私聊]main:纪宁', content: '纪宁私聊事实' },
+        { name: '[微信-私聊]main:赵卫国', content: '赵卫国私聊事实' },
+        { name: '[手机通讯]私聊记录', content: '旧汇总不得进入' },
       ],
-      30,
+      'private',
+      'private:main:纪宁',
+      6_000,
     ),
-    '[手机通讯]私聊记录\n私聊事实\n\n[手机情报]广播摘要\n广播',
+    '[微信-私聊]main:纪宁\n纪宁私聊事实',
   );
 }
 

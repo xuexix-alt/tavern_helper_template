@@ -8,6 +8,7 @@ export interface PromptMember {
   name: string;
   identity: string;
   profile: string;
+  dynamicProfile?: string;
 }
 
 export interface PromptSourceEntry {
@@ -115,6 +116,7 @@ function render(snapshot: PromptContextSnapshot, selected: AssemblySelection): s
     snapshot.mode,
     '',
     '【3 世界书与成员档案】',
+    '每份动态档案只属于其identity对应人物；其他人物不得知道、转述或据此行动，除非相关事实已在正文或MVU中公开。',
     readonlyData({ members: snapshot.members, worldbook: selected.worldbook }),
     '',
     '【4 MVU确认事实与通讯网络】',

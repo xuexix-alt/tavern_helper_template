@@ -30,7 +30,20 @@ export interface MessageQuery {
   createdBefore?: number;
 }
 
-export type PhoneBusinessStore = 'conversations' | 'contactPrefs' | 'inbox' | 'proactiveJobs';
+export const PHONE_BUSINESS_STORES = [
+  'conversations',
+  'contactPrefs',
+  'inbox',
+  'proactiveJobs',
+  'profileSettings',
+  'storyRefresh',
+  'profileAnalysis',
+  'profileViews',
+  'profileRuns',
+  'broadcastIssues',
+] as const;
+
+export type PhoneBusinessStore = (typeof PHONE_BUSINESS_STORES)[number];
 
 export type PhoneBusinessRecord = {
   id: string;
@@ -54,8 +67,8 @@ export interface PhoneDb {
 }
 
 const DATABASE_NAME = 'tavern-phone';
-const DATABASE_VERSION = 1;
-const ALL_STORES = ['messages', 'conversations', 'contactPrefs', 'inbox', 'proactiveJobs'] as const;
+const DATABASE_VERSION = 2;
+const ALL_STORES = ['messages', ...PHONE_BUSINESS_STORES] as const;
 
 function assertNonEmpty(value: string, field: string): void {
   if (!value.trim()) throw new Error(`${field} 不能为空`);
@@ -215,6 +228,28 @@ function migrateConversationRecords(
   return [...byId.values()];
 }
 
+function migratePersonRecord(
+  record: PhoneBusinessRecord,
+  replacements: ReadonlyMap<string, string>,
+): PhoneBusinessRecord {
+  const identity = typeof record.personId === 'string' ? record.personId : record.id;
+  const replacement = replacements.get(identity);
+  return replacement ? { ...record, id: replacement, personId: replacement } : record;
+}
+
+function migratePersonRecords(
+  records: readonly PhoneBusinessRecord[],
+  sessionKey: string,
+  replacements: ReadonlyMap<string, string>,
+): PhoneBusinessRecord[] {
+  const byId = new Map<string, PhoneBusinessRecord>();
+  for (const record of records.filter(record => record.sessionKey === sessionKey)) {
+    const migrated = migratePersonRecord(record, replacements);
+    byId.set(migrated.id, { ...byId.get(migrated.id), ...migrated });
+  }
+  return [...byId.values()];
+}
+
 export function createMemoryPhoneDb(): PhoneDb {
   const messages = new Map<string, PhoneMessage>();
   const records = new Map<PhoneBusinessStore, Map<string, PhoneBusinessRecord>>(
@@ -291,6 +326,14 @@ export function createMemoryPhoneDb(): PhoneDb {
         const existing = preferences.get(targetKey);
         preferences.delete(key);
         preferences.set(targetKey, cloneRecord({ ...record, ...existing, id: replacement, identity: replacement }));
+      }
+      for (const storeName of ['profileAnalysis', 'profileViews'] as const) {
+        const store = nextRecords.get(storeName)!;
+        const migrated = migratePersonRecords([...store.values()], sessionKey, replacements);
+        for (const [key, record] of [...store]) {
+          if (record.sessionKey === sessionKey) store.delete(key);
+        }
+        for (const record of migrated) store.set(keyOf(sessionKey, record.id), cloneRecord(record));
       }
       messages.clear();
       for (const [key, value] of nextMessages) messages.set(key, value);
@@ -405,24 +448,43 @@ class IndexedDbPhoneDb implements PhoneDb {
   async migrateIdentities(sessionKey: string, migrations: readonly PhoneIdentityMigration[]): Promise<void> {
     const replacements = identityReplacements(sessionKey, migrations);
     if (replacements.size === 0) return;
-    const transaction = this.database.transaction(['messages', 'conversations', 'contactPrefs', 'inbox'], 'readwrite');
+    const transaction = this.database.transaction(
+      ['messages', 'conversations', 'contactPrefs', 'inbox', 'profileAnalysis', 'profileViews'],
+      'readwrite',
+    );
     const done = transactionDone(transaction);
     const messageStore = transaction.objectStore('messages');
     const conversationStore = transaction.objectStore('conversations');
     const contactPrefs = transaction.objectStore('contactPrefs');
     const inboxStore = transaction.objectStore('inbox');
+    const profileAnalysisStore = transaction.objectStore('profileAnalysis');
+    const profileViewsStore = transaction.objectStore('profileViews');
     const messageRequest = messageStore.getAll() as IDBRequest<PhoneMessage[]>;
     const conversationRequest = conversationStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
     const preferenceRequest = contactPrefs.getAll() as IDBRequest<PhoneBusinessRecord[]>;
     const inboxRequest = inboxStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
+    const profileAnalysisRequest = profileAnalysisStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
+    const profileViewsRequest = profileViewsStore.getAll() as IDBRequest<PhoneBusinessRecord[]>;
     let messages: PhoneMessage[] | undefined;
     let conversations: PhoneBusinessRecord[] | undefined;
     let preferences: PhoneBusinessRecord[] | undefined;
     let inbox: PhoneBusinessRecord[] | undefined;
+    let profileAnalysis: PhoneBusinessRecord[] | undefined;
+    let profileViews: PhoneBusinessRecord[] | undefined;
     let writesQueued = false;
     let writePreparationError: unknown;
     const queueWritesWhileActive = (): void => {
-      if (writesQueued || !messages || !conversations || !preferences || !inbox) return;
+      if (
+        writesQueued ||
+        !messages ||
+        !conversations ||
+        !preferences ||
+        !inbox ||
+        !profileAnalysis ||
+        !profileViews
+      ) {
+        return;
+      }
       writesQueued = true;
       try {
         for (const message of messages) {
@@ -448,6 +510,17 @@ class IndexedDbPhoneDb implements PhoneDb {
           contactPrefs.delete([sessionKey, migration.from]);
           contactPrefs.put({ ...preference, ...existing, id: migration.to, identity: migration.to });
         }
+        for (const [store, records] of [
+          [profileAnalysisStore, profileAnalysis],
+          [profileViewsStore, profileViews],
+        ] as const) {
+          for (const record of records) {
+            if (record.sessionKey === sessionKey) store.delete([sessionKey, record.id]);
+          }
+          for (const record of migratePersonRecords(records, sessionKey, replacements)) {
+            store.put(record);
+          }
+        }
       } catch (error) {
         writePreparationError = error;
         transaction.abort();
@@ -467,6 +540,14 @@ class IndexedDbPhoneDb implements PhoneDb {
     };
     inboxRequest.onsuccess = () => {
       inbox = inboxRequest.result;
+      queueWritesWhileActive();
+    };
+    profileAnalysisRequest.onsuccess = () => {
+      profileAnalysis = profileAnalysisRequest.result;
+      queueWritesWhileActive();
+    };
+    profileViewsRequest.onsuccess = () => {
+      profileViews = profileViewsRequest.result;
       queueWritesWhileActive();
     };
     try {

@@ -5,6 +5,8 @@ import type {
   PhoneConversationView,
   PhoneDiagnosticsView,
   PhoneMessageView,
+  PhoneProfileView,
+  PhoneProfileSettingsView,
   PhoneSettingsView,
   PhoneTaskView,
 } from '../../../小手机平台/apps/phoneApps';
@@ -20,6 +22,30 @@ import type { ChatLoreSync, LoreSyncRequest, LoreWriteEntry } from '../../../小
 import type { PhoneBusinessRecord, PhoneDb } from '../../../小手机平台/data/phoneDb';
 import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/platform/hostGateway';
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
+import { extractRecentCompletedMessages } from '../../../小手机平台/platform/storyExtractor';
+import {
+  buildProfileBroadcastPrompt,
+  parseProfileBroadcastOutput,
+  saveProfileBroadcastIssue,
+  type StoredProfileBroadcastIssue,
+} from '../../../小手机平台/profiles/profileBroadcast';
+import {
+  ProfileRefreshCoordinator,
+  type ProfileRefreshDependencies,
+} from '../../../小手机平台/profiles/profileRefreshCoordinator';
+import { selectWechatIncrement } from '../../../小手机平台/profiles/profileSources';
+import type {
+  DynamicProfileDocument,
+  ProfileAnalysisSource,
+  ProfileAnalysisState,
+  ProfilePerson,
+  ProfileStoryMessage,
+} from '../../../小手机平台/profiles/profileTypes';
+import {
+  readDynamicProfileEntry,
+  writeDynamicProfileEntry,
+  type ProfileWorldbookEntry,
+} from '../../../小手机平台/profiles/profileWorldbook';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../../../小手机平台/scheduler/phoneScheduler';
 import type { PhoneShellApi } from '../../../小手机平台/shell/phoneShell';
 import phoneShellStyles from '../../../小手机平台/shell/phoneShell.css?raw';
@@ -40,7 +66,10 @@ import {
   isHostEpochCaptureCurrent,
   isStableSnapshotCurrent,
   planTemporaryNpcPromotion,
+  resolveWinterPersonMvu,
   selectCharacterProfile,
+  selectDynamicProfile,
+  selectPublicWinterMvuFacts,
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
   WINTER_CHARACTER_NAME,
@@ -111,6 +140,7 @@ interface WinterSnapshot {
   key: string;
   mvu: Mvu.MvuData;
   recentCompletedStory: readonly { id: string; content: string; relevant: boolean }[];
+  recentCompletedMessages: readonly ProfileStoryMessage[];
   tasks: readonly WinterTask[];
   confirmedChanges: readonly string[];
 }
@@ -156,6 +186,8 @@ function createWinterAdapterModule(): PhoneModule {
   let settings: SettingsStore | null = null;
   let loreSync: ChatLoreSync | null = null;
   let scheduler: ControlledPhoneScheduler | null = null;
+  let profileScheduler: ControlledPhoneScheduler | null = null;
+  let profileCoordinator: ProfileRefreshCoordinator | null = null;
   let shell: PhoneShellApi | null = null;
   let stopRuntimeStatus: (() => void) | null = null;
   let snapshot: WinterSnapshot | null = null;
@@ -175,6 +207,14 @@ function createWinterAdapterModule(): PhoneModule {
   const conversationListeners = new Map<string, Set<() => void>>();
   const loreRetryRequests = new Map<string, Readonly<LoreSyncRequest>>();
   const lastPublishedSnapshots = new Map<string, WinterSnapshot>();
+  const profileCaptures = new Map<
+    string,
+    {
+      snapshot: WinterSnapshot;
+      host: HostEpochCapture;
+      worldbooks: { chatWorldbookName: string; profileWorldbookNames: readonly string[] };
+    }
+  >();
   const diagnostics: string[] = [];
 
   function recordDiagnostic(message: string): void {
@@ -300,6 +340,26 @@ function createWinterAdapterModule(): PhoneModule {
         deliverDeterministic: job => deliverScheduledNotice(job),
         onError: error => recordDiagnostic(`手机调度任务执行失败：${errorMessage(error)}`),
       });
+      profileScheduler = new ControlledPhoneScheduler(
+        {
+          isEligible: (job, latest) =>
+            job.sessionKey === latest.sessionKey &&
+            job.snapshotKey === latest.snapshotKey &&
+            snapshot?.key === latest.snapshotKey,
+          dispatchAi: job => {
+            if (!profileCoordinator) throw new Error('档案刷新协调器尚未初始化');
+            return profileCoordinator.dispatchScheduledRefresh(job);
+          },
+          deliverDeterministic: async () => undefined,
+          onError: error => recordDiagnostic(`档案刷新任务执行失败：${errorMessage(error)}`),
+        },
+        {
+          maxAIConversationsPerSnapshot: Number.MAX_SAFE_INTEGER,
+          contactCooldownInStoryTurns: 0,
+          maxInflightAIRequests: 2,
+        },
+      );
+      profileCoordinator = createProfileCoordinator(profileScheduler);
       const appsCatalog = context.services.require<AppsCatalog>('communication.apps');
       const shellCatalog = context.services.require<ShellCatalog>('phone.shell');
       const services = createAppServices();
@@ -326,6 +386,7 @@ function createWinterAdapterModule(): PhoneModule {
   async function switchSession(captured: HostEpochCapture): Promise<void> {
     if (!context) return;
     assertHostCapture(captured);
+    if (activeSessionKey) profileCoordinator?.cancelSession(activeSessionKey);
     invalidateSnapshot();
     pendingConfirmedChanges = [];
     activeHostCapture = captured;
@@ -459,6 +520,7 @@ function createWinterAdapterModule(): PhoneModule {
   function invalidateSnapshot(): void {
     snapshot = null;
     scheduler?.setSnapshot(undefined);
+    profileScheduler?.setSnapshot(undefined);
   }
 
   async function refreshInitialSnapshot(): Promise<void> {
@@ -515,6 +577,7 @@ function createWinterAdapterModule(): PhoneModule {
       .filter(item => item.message_id <= assistantMessageId && item.message.trim() !== '')
       .slice(-3)
       .map(item => ({ id: String(item.message_id), content: item.message.slice(0, 2_000), relevant: true }));
+    const recentCompletedMessages = extractRecentCompletedMessages(assistantMessageId, 20);
     assertHostCapture(hostCapture);
     const next: WinterSnapshot = {
       sessionKey: session.sessionKey,
@@ -522,6 +585,7 @@ function createWinterAdapterModule(): PhoneModule {
       key: nextKey,
       mvu,
       recentCompletedStory: allAssistant,
+      recentCompletedMessages,
       tasks: buildWinterTasks(mvu.stat_data),
       confirmedChanges: pendingConfirmedChanges,
     };
@@ -532,6 +596,9 @@ function createWinterAdapterModule(): PhoneModule {
     pendingConfirmedChanges = [];
     scheduler?.setSnapshot({ sessionKey: next.sessionKey, snapshotKey: next.key, storyTurn: assistantMessageId });
     await synchronizeSnapshotEffects(previousSnapshot, next);
+    void profileCoordinator
+      ?.reconcileStory(next.recentCompletedMessages)
+      .catch(error => recordDiagnostic(`档案正文计数或自动刷新失败：${errorMessage(error)}`));
   }
 
   async function synchronizeSnapshotEffects(
@@ -621,6 +688,277 @@ function createWinterAdapterModule(): PhoneModule {
       .map(candidate => candidate.id.slice('main:'.length));
   }
 
+  function createProfileCoordinator(controlledScheduler: ControlledPhoneScheduler): ProfileRefreshCoordinator {
+    const dependencies: ProfileRefreshDependencies = {
+      db: requireDb(),
+      scheduler: controlledScheduler,
+      now: () => Date.now(),
+      getSessionKey: () => requireSnapshot().sessionKey,
+      getSnapshotKey: () => requireSnapshot().key,
+      getStoryMessages: () => requireSnapshot().recentCompletedMessages,
+      listAddedPeople: listAddedProfilePeople,
+      collectSource: collectProfileSource,
+      requestAnalysis: requestProfileAnalysis,
+      writeWorldbook: writeProfileWorldbook,
+      onAllRunComplete: async () => {
+        try {
+          await generateProfileRadio();
+        } catch (error) {
+          recordDiagnostic(`娱乐广播生成失败（人物档案已保留）：${errorMessage(error)}`);
+        }
+      },
+    };
+    return new ProfileRefreshCoordinator(dependencies, {
+      autoRefreshEvery: 20,
+      promptProfileMaxChars: 2_000,
+    });
+  }
+
+  async function listAddedProfilePeople(): Promise<readonly ProfilePerson[]> {
+    const current = requireSnapshot();
+    const candidates = new Map(extractWinterContactCandidates(current.mvu.stat_data).map(item => [item.id, item]));
+    const contacts = await listContactPreferences(current.sessionKey);
+    assertSnapshotCapture(current);
+    return contacts.map(contact => {
+      const candidate = candidates.get(contact.id);
+      return {
+        id: contact.id,
+        name: candidate?.name ?? contact.name,
+        aliases: [],
+        temporary: candidate?.temporary ?? contact.id.startsWith('temporary:'),
+      };
+    });
+  }
+
+  async function collectProfileSource(
+    person: ProfilePerson,
+    state: ProfileAnalysisState | null,
+  ): Promise<ProfileAnalysisSource> {
+    const captured = requireSnapshot();
+    const host = requireActiveHostCapture();
+    const worldbooks = requireCapturedWorldbooks(captured.sessionKey);
+    const database = requireDb();
+    const [fixedProfile, messages, storedViews, chatWorldbookEntries] = await Promise.all([
+      loadExactCharacterProfile(person.name, person.temporary, worldbooks.profileWorldbookNames),
+      database.listMessages({
+        sessionKey: captured.sessionKey,
+        conversationId: `private:${person.id}`,
+      }),
+      database.listRecords('profileViews', captured.sessionKey),
+      getWorldbook(worldbooks.chatWorldbookName),
+    ]);
+    assertHostCapture(host);
+    assertSnapshotCapture(captured);
+    const increment = selectWechatIncrement(messages, state?.lastWechatMessageId, 20, 4);
+    const storedDocument = storedViews.find(record => record.id === person.id)?.document;
+    const worldbookDocument = readDynamicProfileEntry(
+      person.id,
+      chatWorldbookEntries as unknown as readonly ProfileWorldbookEntry[],
+    )?.document;
+    const previous =
+      storedDocument && typeof storedDocument === 'object'
+        ? (structuredClone(storedDocument) as DynamicProfileDocument)
+        : (worldbookDocument ?? null);
+    profileCaptures.set(person.id, { snapshot: captured, host, worldbooks });
+    const toProfileMessage = (message: (typeof messages)[number], isNew: boolean) => ({
+      id: message.id,
+      sender: message.sender,
+      content: message.content,
+      isNew,
+    });
+    return {
+      sessionKey: captured.sessionKey,
+      personId: person.id,
+      personName: person.name,
+      fixedProfile: fixedProfile ?? '暂无固定档案',
+      mvuFacts: structuredClone(resolveWinterPersonMvu(person.id, captured.mvu.stat_data)),
+      story: captured.recentCompletedMessages,
+      wechatContext: increment.contextMessages.map(message => toProfileMessage(message, false)),
+      wechatNew: increment.newMessages.map(message => toProfileMessage(message, true)),
+      previous,
+    };
+  }
+
+  async function requestProfileAnalysis(prompt: string): Promise<string> {
+    const captured = requireSnapshot();
+    const handle = createProvider().request(prompt);
+    const key = requestKey(captured.sessionKey, `profile:${crypto.randomUUID()}`);
+    const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
+    activeRequests.set(key, active);
+    try {
+      const raw = await handle.promise;
+      if (active.cancelled) throw new Error('档案分析请求已取消');
+      assertSnapshotCapture(captured);
+      return raw;
+    } finally {
+      if (activeRequests.get(key) === active) activeRequests.delete(key);
+    }
+  }
+
+  async function writeProfileWorldbook(
+    document: DynamicProfileDocument,
+    aliases: readonly string[],
+    maxCharacters: number,
+  ): Promise<void> {
+    const captured = profileCaptures.get(document.personId);
+    if (!captured) throw new Error(`人物档案缺少稳定写入捕获：${document.personId}`);
+    try {
+      await writeDynamicProfileEntry(
+        captured.worldbooks.chatWorldbookName,
+        document,
+        aliases,
+        maxCharacters,
+        {
+          read: async worldbookName =>
+            (await getWorldbook(worldbookName)) as unknown as ProfileWorldbookEntry[],
+          update: async (worldbookName, updater) => {
+            await updateWorldbookWith(
+              worldbookName,
+              entries =>
+                updater(entries as unknown as ProfileWorldbookEntry[]) as unknown as typeof entries,
+              { render: 'debounced' },
+            );
+          },
+          assertSession: () => {
+            assertHostCapture(captured.host);
+            assertSnapshotCapture(captured.snapshot);
+            if (captured.worldbooks.chatWorldbookName !== requireCapturedWorldbooks(document.sessionKey).chatWorldbookName) {
+              throw new Error('档案目标世界书已切换');
+            }
+          },
+        },
+      );
+    } finally {
+      if (profileCaptures.get(document.personId) === captured) profileCaptures.delete(document.personId);
+    }
+  }
+
+  async function listProfileViews(): Promise<readonly PhoneProfileView[]> {
+    const coordinator = requireProfileCoordinator();
+    const [storedProfiles, people] = await Promise.all([coordinator.listProfiles(), listAddedProfilePeople()]);
+    const storedByPerson = new Map(storedProfiles.map(profile => [profile.personId, profile]));
+    return Promise.all(
+      people.map(async person => {
+        const stored = storedByPerson.get(person.id);
+        const state = await coordinator.getAnalysisState(person.id);
+        if (!stored) {
+          const baseline = await loadExactCharacterProfile(
+            person.name,
+            person.temporary,
+            requireCapturedWorldbooks(requireSnapshot().sessionKey).profileWorldbookNames,
+          );
+          return {
+            id: person.id,
+            name: person.name,
+            basicInfo: person.temporary ? '临时人物' : '剧情人物',
+            personalityBaseline: baseline ?? '暂无固定档案',
+            personalityTuning: '待首次分析',
+            currentStatus: '待首次分析',
+            relationship: '待首次分析',
+            storyInteractionSummary: '暂无',
+            chatInteractionSummary: '暂无',
+            playerActionAdvice: '暂无',
+            lastWechatRound: [],
+            sourceRange: '尚未刷新',
+            refreshStatus: state?.status ?? 'idle',
+            ...(state?.lastError ? { lastError: state.lastError } : {}),
+            lastUpdated: state?.lastSuccessfulRefreshAt ?? 0,
+          } satisfies PhoneProfileView;
+        }
+        const document = stored.document;
+        const firstStory = stored.sourceStoryIds[0];
+        const lastStory = stored.sourceStoryIds.at(-1);
+        const storyRange =
+          firstStory && lastStory ? `正文 ${firstStory}-${lastStory}` : '正文无有效消息';
+        return {
+          id: stored.personId,
+          name: document.personName,
+          basicInfo: document.basicInfoAdditions.join('；') || '暂无新增',
+          personalityBaseline: document.fixedBaseline,
+          personalityTuning: document.personalityTuning,
+          currentStatus: document.currentSituationSummary,
+          relationship: document.relationshipInterpretation,
+          storyInteractionSummary: document.storyInteractionSummary,
+          chatInteractionSummary: document.chatInteractionSummary,
+          playerActionAdvice: stored.playerActionAdvice,
+          lastWechatRound: document.lastWechatRound,
+          sourceRange: `${storyRange}；微信新增 ${stored.newWechatMessageIds.length} 条`,
+          refreshStatus: stored.status,
+          ...(stored.lastError ? { lastError: stored.lastError } : {}),
+          lastUpdated: document.updatedAt,
+        } satisfies PhoneProfileView;
+      }),
+    );
+  }
+
+  async function refreshProfile(personId: string): Promise<void> {
+    await requireProfileCoordinator().refreshPerson(personId, 'person-manual');
+  }
+
+  async function refreshAllProfiles(): Promise<void> {
+    await requireProfileCoordinator().refreshAll('all-manual');
+  }
+
+  async function retryFailedProfiles(): Promise<void> {
+    await requireProfileCoordinator().retryFailed();
+  }
+
+  async function getProfileSettings(): Promise<PhoneProfileSettingsView> {
+    const coordinator = requireProfileCoordinator();
+    const [settings, storyProgress] = await Promise.all([
+      coordinator.getSettings(),
+      coordinator.getStoryProgress(),
+    ]);
+    return { ...settings, storyProgress };
+  }
+
+  async function saveProfileSettings(value: PhoneProfileSettingsView): Promise<void> {
+    await requireProfileCoordinator().saveSettings({
+      autoRefreshEvery: value.autoRefreshEvery,
+      promptProfileMaxChars: value.promptProfileMaxChars,
+    });
+  }
+
+  async function generateProfileRadio(): Promise<void> {
+    const captured = requireSnapshot();
+    const profiles = await requireProfileCoordinator().listProfiles();
+    assertSnapshotCapture(captured);
+    const prompt = buildProfileBroadcastPrompt({
+      publicStory: captured.recentCompletedMessages.map(
+        message => `${message.role === 'user' ? '玩家' : '正文'}：${message.content}`,
+      ),
+      publicMvuFacts: selectPublicWinterMvuFacts(captured.mvu.stat_data),
+      publicProfileChanges: profiles
+        .filter(profile => profile.document.storyInteractionSummary.trim() !== '')
+        .map(profile => ({
+          content: `${profile.document.personName}：${profile.document.storyInteractionSummary}`,
+          evidenceRefs: profile.document.evidenceRefs.filter(
+            ref => ref.startsWith('story:') || ref.startsWith('mvu:'),
+          ),
+        })),
+    });
+    const rawText = await requestProfileAnalysis(prompt);
+    assertSnapshotCapture(captured);
+    const output = parseProfileBroadcastOutput(rawText);
+    await saveProfileBroadcastIssue(requireDb(), {
+      id: `profile-radio:${Date.now()}:${crypto.randomUUID()}`,
+      sessionKey: captured.sessionKey,
+      sourceStoryCursor: captured.recentCompletedMessages.at(-1)?.id ?? String(captured.identity.assistantMessageId),
+      generatedAt: Date.now(),
+      rawText,
+      output,
+    });
+  }
+
+  async function regenerateProfileRadio(): Promise<void> {
+    try {
+      await generateProfileRadio();
+    } catch (error) {
+      recordDiagnostic(`手动重新生成娱乐广播失败：${errorMessage(error)}`);
+      throw error;
+    }
+  }
+
   function createAppServices(): PhoneAppServices {
     return {
       listConversations,
@@ -643,6 +981,15 @@ function createWinterAdapterModule(): PhoneModule {
       saveSettings,
       fetchModels,
       clearApiKey,
+      listProfiles: listProfileViews,
+      refreshProfile,
+      refreshAllProfiles,
+      retryFailedProfiles,
+      getProfileSettings,
+      saveProfileSettings,
+      regenerateProfileRadio,
+      getDb: requireDb,
+      getSessionKey: () => requireSession().sessionKey,
       submitActionToHost: action => requireContext().runtime.submitActionToHost(action),
     };
   }
@@ -718,15 +1065,39 @@ function createWinterAdapterModule(): PhoneModule {
 
   async function listBroadcasts(): Promise<readonly PhoneBroadcastView[]> {
     const current = requireSnapshot();
-    const scheduled = (await requireDb().listRecords('proactiveJobs', current.sessionKey))
+    const database = requireDb();
+    const [scheduledRecords, radioRecords] = await Promise.all([
+      database.listRecords('proactiveJobs', current.sessionKey),
+      database.listRecords('broadcastIssues', current.sessionKey),
+    ]);
+    const scheduled = scheduledRecords
       .filter(record => record.kind === 'scheduled-external-broadcast')
       .map(record => ({ id: record.id, source: text(record.source), content: text(record.content) }));
-    return buildEdenNotices({
+    const deterministic: PhoneBroadcastView[] = buildEdenNotices({
       communicationNetwork: recordValue(current.mvu.stat_data.通讯网络),
       tasks: current.tasks,
       confirmedChanges: current.confirmedChanges,
       scheduledExternalBroadcasts: scheduled,
-    }).map(item => ({ id: item.id, source: item.source, content: item.content, trust: item.trust }));
+    }).map(item => ({
+      id: item.id,
+      source: item.source,
+      content: item.content,
+      trust: item.trust,
+      kind: 'deterministic',
+    }));
+    const profileRadio: PhoneBroadcastView[] = radioRecords
+      .filter(isStoredProfileBroadcastIssue)
+      .sort((left, right) => right.generatedAt - left.generatedAt)
+      .map(issue => ({
+        id: issue.id,
+        source: '伊甸末日广播',
+        content: issue.sections.map(section => `${section.title}：${section.body}`).join('\n'),
+        trust: 'unverified',
+        kind: 'profile-radio',
+        generatedAt: issue.generatedAt,
+        sections: issue.sections,
+      }));
+    return [...profileRadio, ...deterministic];
   }
 
   function listTasks(): readonly PhoneTaskView[] {
@@ -1010,22 +1381,33 @@ function createWinterAdapterModule(): PhoneModule {
     if (!context) return;
     const members = conversationMembers(conversation, captured);
     const promptCatalog = context.services.require<PromptCatalog>('prompt.assembler');
+    const chatWorldbookEntries = await getWorldbook(capturedWorldbooks.chatWorldbookName);
+    assertCapturedSession(captured.sessionKey);
+    assertHostCapture(hostCapture);
+    assertSnapshotCapture(captured);
+    const profileSettings = await requireProfileCoordinator().getSettings();
     const profiles = await Promise.all(
-      members.map(async member => ({
-        name: member.name,
-        identity: member.id,
-        profile: buildBoundedMemberContext({
+      members.map(async member => {
+        const dynamicProfile = selectDynamicProfile(member.id, chatWorldbookEntries);
+        return {
           name: member.name,
-          profile: await loadExactCharacterProfile(
-            member.name,
-            member.temporary,
-            capturedWorldbooks.profileWorldbookNames,
-          ),
-          mvuFields: member.mvu,
-          recentCompletedStory: captured.recentCompletedStory.map(item => item.content).join('\n'),
-          characterBudget: 1_600,
-        }),
-      })),
+          identity: member.id,
+          profile: buildBoundedMemberContext({
+            name: member.name,
+            profile: await loadExactCharacterProfile(
+              member.name,
+              member.temporary,
+              capturedWorldbooks.profileWorldbookNames,
+            ),
+            mvuFields: member.mvu,
+            recentCompletedStory: captured.recentCompletedStory.map(item => item.content).join('\n'),
+            characterBudget: 1_600,
+          }),
+          ...(dynamicProfile
+            ? { dynamicProfile: dynamicProfile.slice(0, profileSettings.promptProfileMaxChars) }
+            : {}),
+        };
+      }),
     );
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
@@ -1034,11 +1416,12 @@ function createWinterAdapterModule(): PhoneModule {
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
-    const chatLoreEntries = await getWorldbook(capturedWorldbooks.chatWorldbookName);
-    assertCapturedSession(captured.sessionKey);
-    assertHostCapture(hostCapture);
-    assertSnapshotCapture(captured);
-    const chatLore = collectChatLoreContext(chatLoreEntries, 6_000);
+    const chatLore = collectChatLoreContext(
+      chatLoreEntries,
+      conversation.kind === 'eden-group' ? 'group' : 'private',
+      conversation.id,
+      6_000,
+    );
     const assembled = promptCatalog.assemblePrompt(
       promptCatalog.createPromptContextSnapshot({
         sessionKey: captured.sessionKey,
@@ -1347,6 +1730,14 @@ function createWinterAdapterModule(): PhoneModule {
       recordDiagnostic('调度器关闭失败');
     }
     scheduler = null;
+    try {
+      profileCoordinator?.dispose();
+    } catch {
+      recordDiagnostic('档案刷新协调器关闭失败');
+    }
+    profileCoordinator = null;
+    profileScheduler = null;
+    profileCaptures.clear();
     if (loreSync) await loreSync.dispose().catch(() => recordDiagnostic('ChatLore 关闭失败'));
     loreSync = null;
     try {
@@ -1458,6 +1849,11 @@ function createWinterAdapterModule(): PhoneModule {
     return loreSync;
   }
 
+  function requireProfileCoordinator(): ProfileRefreshCoordinator {
+    if (!profileCoordinator) throw new Error('人物动态档案服务尚未初始化');
+    return profileCoordinator;
+  }
+
   function requireSnapshot(): WinterSnapshot {
     requireActiveHostCapture();
     const current = snapshot;
@@ -1537,6 +1933,25 @@ function isContactPreferenceRecord(value: PhoneBusinessRecord): value is Contact
     typeof value.name === 'string' &&
     typeof value.addedAt === 'number' &&
     typeof value.inEdenGroup === 'boolean'
+  );
+}
+
+function isStoredProfileBroadcastIssue(
+  value: PhoneBusinessRecord,
+): value is PhoneBusinessRecord & StoredProfileBroadcastIssue {
+  return (
+    value.kind === 'profile-radio' &&
+    typeof value.generatedAt === 'number' &&
+    typeof value.rawText === 'string' &&
+    typeof value.sourceStoryCursor === 'string' &&
+    Array.isArray(value.sections) &&
+    value.sections.length === 3 &&
+    value.sections.every(
+      section =>
+        isRecord(section) &&
+        typeof section.title === 'string' &&
+        typeof section.body === 'string',
+    )
   );
 }
 

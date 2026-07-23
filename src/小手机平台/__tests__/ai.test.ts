@@ -143,6 +143,32 @@ function testPromptDynamicDataIsolation(): void {
   }
 }
 
+function testMemberDynamicProfileIsolation(): void {
+  const assembled = assemblePrompt(
+    createPromptContextSnapshot(
+      promptInput({
+        members: [
+          {
+            name: '纪宁',
+            identity: 'main:纪宁',
+            profile: '医生',
+            dynamicProfile: '纪宁私聊: 药品不足',
+          },
+          {
+            name: '赵卫国',
+            identity: 'main:赵卫国',
+            profile: '保安',
+            dynamicProfile: '赵卫国私聊: 北门异常',
+          },
+        ],
+      }),
+    ),
+  );
+  assert.match(assembled, /main:纪宁[\s\S]*药品不足/);
+  assert.match(assembled, /main:赵卫国[\s\S]*北门异常/);
+  assert.match(assembled, /每份动态档案只属于其identity对应人物/);
+}
+
 function testPromptBudgetTrimmingAndProtectedOverflow(): void {
   const full = createPromptContextSnapshot(
     promptInput({
@@ -779,6 +805,7 @@ async function main(): Promise<void> {
   testJailbreakLayers();
   testPromptAssemblerOrderAndImmutableSnapshot();
   testPromptDynamicDataIsolation();
+  testMemberDynamicProfileIsolation();
   testPromptBudgetTrimmingAndProtectedOverflow();
   testResponseParser();
   await testTavernProvider();

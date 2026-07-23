@@ -1031,6 +1031,46 @@ async function testNoSnapshotDoesNotDispatch(): Promise<void> {
   scheduler.cancelSession('session-a');
 }
 
+async function testProfileInflightLimit(): Promise<void> {
+  let active = 0;
+  let maxActive = 0;
+  let delivered = 0;
+  const scheduler = new ControlledPhoneScheduler(
+    {
+      isEligible: () => true,
+      dispatchAi: async () => {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise(resolve => setTimeout(resolve, 2));
+        active -= 1;
+        delivered += 1;
+      },
+      deliverDeterministic: async () => undefined,
+    },
+    {
+      maxAIConversationsPerSnapshot: 10,
+      contactCooldownInStoryTurns: 0,
+      maxInflightAIRequests: 2,
+    },
+  );
+  scheduler.setSnapshot(snapshot());
+  for (let index = 0; index < 5; index += 1) {
+    scheduler.enqueue(
+      job({
+        triggerKey: `profile-${index}`,
+        conversationId: `profile-conversation-${index}`,
+        contactKey: `profile-contact-${index}`,
+        topicKey: `profile-topic-${index}`,
+        source: 'profile_refresh',
+      }),
+    );
+  }
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.equal(maxActive, 2);
+  assert.equal(delivered, 5);
+}
+
 async function main(): Promise<void> {
   await testPriorityOrder();
   await testEligibilityAndTopicDedup();
@@ -1050,6 +1090,7 @@ async function main(): Promise<void> {
   await testCancelSessionImmediatelyReleasesActiveScopeTracking();
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
+  await testProfileInflightLimit();
   console.log('scheduler tests passed');
 }
 

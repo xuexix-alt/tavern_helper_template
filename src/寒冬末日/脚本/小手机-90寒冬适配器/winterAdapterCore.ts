@@ -1,3 +1,4 @@
+import { loreEntryNameFor, type LoreSyncType } from '../../../小手机平台/data/chatLoreSync';
 import type { PhoneSchedulerJob, SchedulerPriority } from '../../../小手机平台/scheduler/phoneScheduler';
 
 export const WINTER_CHARACTER_NAME = '末世寒冬 - 星穹秩序';
@@ -290,6 +291,36 @@ export function selectCharacterProfile(
   return entries.find(entry => entry.name === exactName)?.content;
 }
 
+export function resolveWinterPersonMvu(
+  personId: string,
+  statData: unknown,
+): Readonly<Record<string, unknown>> {
+  if (!isRecord(statData)) return {};
+  const separator = personId.indexOf(':');
+  if (separator < 1) return {};
+  const scope = personId.slice(0, separator);
+  const name = personId.slice(separator + 1);
+  const value = scope === 'temporary' ? (isRecord(statData.临时NPC) ? statData.临时NPC[name] : undefined) : statData[name];
+  return isRecord(value) ? value : {};
+}
+
+export function selectDynamicProfile(
+  personId: string,
+  entries: readonly { name: string; content: string }[],
+): string | undefined {
+  return entries.find(entry => entry.name === `[人物动态]${personId}`)?.content;
+}
+
+export function selectPublicWinterMvuFacts(statData: unknown): Readonly<Record<string, unknown>> {
+  if (!isRecord(statData)) return {};
+  const publicKeys = ['世界', '通讯网络', '庇护所', '房间', '主线任务', '楼层其他住户'] as const;
+  return Object.fromEntries(
+    publicKeys
+      .filter(key => Object.prototype.hasOwnProperty.call(statData, key))
+      .map(key => [key, structuredClone(statData[key])]),
+  );
+}
+
 export interface BoundedMemberContextInput {
   name: string;
   profile?: string;
@@ -501,16 +532,17 @@ export function diffConfirmedMvuChanges(before: unknown, after: unknown, maxChan
   return changes.sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)).slice(0, maxChanges);
 }
 
-const CHAT_LORE_ENTRY_NAMES = new Set(['[手机通讯]私聊记录', '[手机通讯]伊甸住户群', '[手机情报]广播摘要']);
-
 export function collectChatLoreContext(
   entries: readonly { name: string; content: string }[],
+  type: LoreSyncType,
+  conversationId?: string,
   characterBudget = 6_000,
 ): string {
   if (!Number.isSafeInteger(characterBudget) || characterBudget <= 0)
     throw new Error('ChatLore 字符预算必须是正安全整数');
+  const entryName = loreEntryNameFor(type, conversationId);
   return entries
-    .filter(entry => CHAT_LORE_ENTRY_NAMES.has(entry.name))
+    .filter(entry => entry.name === entryName)
     .map(entry => `${entry.name}\n${entry.content}`)
     .join('\n\n')
     .slice(0, characterBudget);

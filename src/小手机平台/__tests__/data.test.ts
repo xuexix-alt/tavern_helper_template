@@ -8,6 +8,14 @@ import { buildLoreSummary } from '../data/loreSummary';
 
 const sessionA = '角色A::chat-a';
 const sessionB = '角色A::chat-b';
+const PROFILE_STORES = [
+  'profileSettings',
+  'storyRefresh',
+  'profileAnalysis',
+  'profileViews',
+  'profileRuns',
+  'broadcastIssues',
+] as const;
 
 function message(id: string, createdAt: number, overrides: Partial<PhoneMessageInput> = {}): PhoneMessageInput {
   return {
@@ -139,10 +147,7 @@ async function testAtomicIdentityMigration(): Promise<void> {
   assert.equal((await db.listRecords('contactPrefs', sessionB))[0].id, 'temporary:工程师', '不得跨 session');
 
   const dbSource = readFileSync('src/小手机平台/data/phoneDb.ts', 'utf8');
-  assert.match(
-    dbSource,
-    /transaction\(\s*\[\s*['"]messages['"],\s*['"]conversations['"],\s*['"]contactPrefs['"],\s*['"]inbox['"]\s*\],\s*['"]readwrite['"]\s*\)/,
-  );
+  assert.match(dbSource, /database\.transaction\([\s\S]*\['messages'[\s\S]*'profileAnalysis'[\s\S]*'profileViews'/);
   assert.match(dbSource, /contactPrefs[\s\S]*\.delete\(\s*\[\s*sessionKey,\s*migration\.from\s*\]\s*\)/);
   assert.match(dbSource, /preferenceById[\s\S]*record\.sessionKey[\s\S]*record\.id/);
 }
@@ -404,7 +409,12 @@ async function testChatLoreSync(): Promise<void> {
     clearSchedule: id => scheduler.clear(id),
   });
 
-  sync.schedule({ sessionKey: sessionA, worldbookName: '不应写入的旧世界书', type: 'private', conversationId: 'private:alice' });
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '不应写入的旧世界书',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private', conversationId: 'private:alice' });
   sync.schedule({
     sessionKey: sessionA,
@@ -448,8 +458,18 @@ async function testChatLoreSync(): Promise<void> {
     schedule: (callback, delayMs) => cancelled.schedule(callback, delayMs),
     clearSchedule: id => cancelled.clear(id),
   });
-  cancelSync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
-  cancelSync.schedule({ sessionKey: sessionB, worldbookName: '世界书-B', type: 'private' });
+  cancelSync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
+  cancelSync.schedule({
+    sessionKey: sessionB,
+    worldbookName: '世界书-B',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   cancelSync.cancelSession(sessionA);
   cancelled.tasks.forEach(task => cancelled.run(task.id));
   await cancelSync.whenIdle();
@@ -472,13 +492,53 @@ async function testChatLoreSync(): Promise<void> {
         sessionKey: sessionA,
         worldbookName: '捕获的世界书-A',
         type: 'private',
+        conversationId: 'private:alice',
       }),
     /write failed/,
   );
   assert.equal((await retryDb.listMessages({ sessionKey: sessionA }))[0].syncedToLore, false, 'writer 失败不得标记');
-  await retrySync.flushNow({ sessionKey: sessionA, worldbookName: '捕获的世界书-A', type: 'private' });
+  await retrySync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '捕获的世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   assert.equal(attempts, 2, '失败批次必须可重试');
   assert.equal((await retryDb.listMessages({ sessionKey: sessionA }))[0].syncedToLore, true);
+}
+
+async function testPrivateLoreDebounceIsScopedByConversation(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.addMessage(message('alice-private', 1, { conversationId: 'private:alice' }));
+  await db.addMessage(message('bob-private', 2, { conversationId: 'private:bob' }));
+  const scheduler = fakeScheduler();
+  const writes: string[] = [];
+  const sync = new ChatLoreSync({
+    db,
+    writer: async (_worldbookName, entry) => {
+      writes.push(entry.name);
+    },
+    schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
+    clearSchedule: id => scheduler.clear(id),
+  });
+
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:bob',
+  });
+
+  assert.equal(scheduler.tasks.filter(task => !task.cancelled).length, 2, '不同人物必须拥有独立私聊防抖槽');
+  scheduler.tasks.forEach(task => scheduler.run(task.id));
+  await sync.whenIdle();
+  assert.deepEqual(writes, ['[微信-私聊]alice', '[微信-私聊]bob']);
 }
 
 async function testScheduledLoreFailureReportsCapturedRetryRequest(): Promise<void> {
@@ -495,7 +555,12 @@ async function testScheduledLoreFailureReportsCapturedRetryRequest(): Promise<vo
     clearSchedule: id => scheduler.clear(id),
     onError: (error, request) => failures.push({ error, request }),
   });
-  sync.schedule({ sessionKey: sessionA, worldbookName: '捕获世界书-A', type: 'private' });
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '捕获世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   scheduler.tasks.forEach(task => scheduler.run(task.id));
   await assert.rejects(
     () => sync.whenIdle(),
@@ -507,6 +572,7 @@ async function testScheduledLoreFailureReportsCapturedRetryRequest(): Promise<vo
     sessionKey: sessionA,
     worldbookName: '捕获世界书-A',
     type: 'private',
+    conversationId: 'private:alice',
   });
 }
 
@@ -543,7 +609,11 @@ async function testInFlightSessionSwitch(): Promise<void> {
   await db.addMessage(message(sharedId, 1, { sessionKey: sessionB, content: 'B 的消息' }));
 
   let currentSession = { sessionKey: sessionA, worldbookName: '世界书-A' };
-  const capturedCurrentRequest = () => ({ ...currentSession, type: 'private' as const });
+  const capturedCurrentRequest = () => ({
+    ...currentSession,
+    type: 'private' as const,
+    conversationId: 'private:alice',
+  });
   const writes: string[] = [];
   const releaseWriters: Array<() => void> = [];
   const sync = new ChatLoreSync({
@@ -604,9 +674,19 @@ async function testDuplicateFlushAndCaptureFailure(): Promise<void> {
       });
     },
   });
-  const first = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  const first = sync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   await flushMicrotasks();
-  const duplicate = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  const duplicate = sync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   await flushMicrotasks();
   assert.equal(writes, 1);
   releaseWriter?.();
@@ -627,10 +707,21 @@ async function testDuplicateFlushAndCaptureFailure(): Promise<void> {
   await db.addMessage(message('after-read-failure', 2));
   const readFailureSync = new ChatLoreSync({ db: failingDb, writer: async () => undefined });
   await assert.rejects(
-    () => readFailureSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    () =>
+      readFailureSync.flushNow({
+        sessionKey: sessionA,
+        worldbookName: '世界书-A',
+        type: 'private',
+        conversationId: 'private:alice',
+      }),
     /db read failed/,
   );
-  await readFailureSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  await readFailureSync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
 }
 
 async function testSyncLifecycle(): Promise<void> {
@@ -646,7 +737,12 @@ async function testSyncLifecycle(): Promise<void> {
     schedule: (callback, delayMs) => scheduler.schedule(callback, delayMs),
     clearSchedule: timer => scheduler.clear(timer),
   });
-  pendingSync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  pendingSync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   let idleSettled = false;
   const waitingForTimer = pendingSync.whenIdle().then(() => {
     idleSettled = true;
@@ -656,7 +752,12 @@ async function testSyncLifecycle(): Promise<void> {
   pendingSync.cancelSession(sessionA);
   await waitingForTimer;
   assert.equal(idleSettled, true, 'cancelSession 必须 settle 被取消的 pending 工作');
-  pendingSync.schedule({ sessionKey: sessionB, worldbookName: '世界书-B', type: 'private' });
+  pendingSync.schedule({
+    sessionKey: sessionB,
+    worldbookName: '世界书-B',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   const disposedTimer = scheduler.tasks.at(-1);
   await pendingSync.dispose();
   assert.equal(disposedTimer?.cancelled, true, 'dispose 必须取消全部未开始 timer');
@@ -679,7 +780,12 @@ async function testSyncLifecycle(): Promise<void> {
       });
     },
   });
-  const failing = lifecycleSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  const failing = lifecycleSync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   const completing = lifecycleSync.flushNow({
     sessionKey: sessionA,
     worldbookName: '世界书-A',
@@ -705,11 +811,23 @@ async function testSyncLifecycle(): Promise<void> {
     error => error instanceof AggregateError && error.errors.some(item => String(item).includes('first writer failed')),
   );
   assert.throws(
-    () => lifecycleSync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    () =>
+      lifecycleSync.schedule({
+        sessionKey: sessionA,
+        worldbookName: '世界书-A',
+        type: 'private',
+        conversationId: 'private:alice',
+      }),
     /disposed|closed|关闭/i,
   );
   await assert.rejects(
-    () => lifecycleSync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    () =>
+      lifecycleSync.flushNow({
+        sessionKey: sessionA,
+        worldbookName: '世界书-A',
+        type: 'private',
+        conversationId: 'private:alice',
+      }),
     /disposed|closed|关闭/i,
   );
 }
@@ -732,7 +850,13 @@ async function testScheduleFailureSettlesAndDisarmsCallback(): Promise<void> {
   });
 
   assert.throws(
-    () => sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' }),
+    () =>
+      sync.schedule({
+        sessionKey: sessionA,
+        worldbookName: '世界书-A',
+        type: 'private',
+        conversationId: 'private:alice',
+      }),
     /schedule callback failed/,
   );
   let idleSettled = false;
@@ -774,9 +898,20 @@ async function testClearFailureStillCleansUp(): Promise<void> {
     },
   });
 
-  sync.schedule({ sessionKey: sessionA, worldbookName: '旧世界书-A', type: 'private' });
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '旧世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   assert.throws(
-    () => sync.schedule({ sessionKey: sessionA, worldbookName: '新世界书-A', type: 'private' }),
+    () =>
+      sync.schedule({
+        sessionKey: sessionA,
+        worldbookName: '新世界书-A',
+        type: 'private',
+        conversationId: 'private:alice',
+      }),
     error => error instanceof AggregateError && error.errors.some(item => String(item).includes('clear failed')),
     '替换旧 timer 时 clear 抛错也必须聚合报告',
   );
@@ -790,7 +925,12 @@ async function testClearFailureStillCleansUp(): Promise<void> {
   await flushMicrotasks();
   assert.equal(replacementIdle, true, '替换清理失败也必须 settle 旧 pending');
 
-  sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  sync.schedule({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   sync.schedule({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'group', conversationId: 'group:eden' });
   assert.throws(
     () => sync.cancelSession(sessionA),
@@ -802,8 +942,18 @@ async function testClearFailureStillCleansUp(): Promise<void> {
   await flushMicrotasks();
   assert.equal(writes, 0, 'cancelSession 后的残留 callback 不得写入');
 
-  sync.schedule({ sessionKey: sessionB, worldbookName: '世界书-B', type: 'private' });
-  const active = sync.flushNow({ sessionKey: sessionA, worldbookName: '世界书-A', type: 'private' });
+  sync.schedule({
+    sessionKey: sessionB,
+    worldbookName: '世界书-B',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
+  const active = sync.flushNow({
+    sessionKey: sessionA,
+    worldbookName: '世界书-A',
+    type: 'private',
+    conversationId: 'private:alice',
+  });
   await flushMicrotasks();
   assert.equal(writes, 1);
   const firstDispose = sync.dispose();
@@ -828,13 +978,58 @@ async function testClearFailureStillCleansUp(): Promise<void> {
   assert.equal(writes, 1, 'dispose 清理失败后的残留 callback 不得写入');
 }
 
+async function testProfileBusinessStores(): Promise<void> {
+  const memory = createMemoryPhoneDb();
+  for (const store of PROFILE_STORES) {
+    await memory.putRecord(store, { id: `${store}:id`, sessionKey: sessionA, kind: store });
+    assert.equal((await memory.listRecords(store, sessionA))[0].kind, store);
+  }
+
+  const indexed = await createIndexedDbPhoneDb(new IDBFactory());
+  for (const store of PROFILE_STORES) {
+    await indexed.putRecord(store, { id: `${store}:id`, sessionKey: sessionA, kind: store });
+    assert.equal((await indexed.listRecords(store, sessionA))[0].kind, store);
+  }
+}
+
+async function testProfileIdentityMigration(): Promise<void> {
+  const db = createMemoryPhoneDb();
+  await db.putRecord('profileAnalysis', {
+    id: 'temporary:纪宁',
+    personId: 'temporary:纪宁',
+    sessionKey: sessionA,
+    lastWechatMessageId: 'reply-1',
+  });
+  await db.putRecord('profileViews', {
+    id: 'temporary:纪宁',
+    personId: 'temporary:纪宁',
+    sessionKey: sessionA,
+    displayName: '纪宁',
+  });
+
+  await db.migrateIdentities(sessionA, [{ from: 'temporary:纪宁', to: 'main:纪宁' }]);
+
+  assert.deepEqual(await db.listRecords('profileAnalysis', sessionA), [
+    {
+      id: 'main:纪宁',
+      personId: 'main:纪宁',
+      sessionKey: sessionA,
+      lastWechatMessageId: 'reply-1',
+    },
+  ]);
+  assert.equal((await db.listRecords('profileViews', sessionA))[0].personId, 'main:纪宁');
+}
+
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
+  await testProfileBusinessStores();
+  await testProfileIdentityMigration();
   await testAtomicIdentityMigration();
   await testAtomicOutgoingAndInboxWrite();
   await testIndexedDbIdentityMigrationSuccessPath();
   await testBroadcastValidation();
   testLoreSummary();
+  await testPrivateLoreDebounceIsScopedByConversation();
   await testChatLoreSync();
   await testScheduledLoreFailureReportsCapturedRetryRequest();
   await testLoreCancellationFailureReportsCapturedRetryRequest();

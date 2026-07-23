@@ -71,15 +71,21 @@ function captureRequest(request: LoreSyncRequest): Readonly<LoreSyncRequest> {
   return Object.freeze({ ...request });
 }
 
-function definitionFor(type: LoreSyncType, conversationId?: string): LoreEntryDefinition {
-  // 私聊需要根据 conversationId 动态生成条目名
+export function loreEntryNameFor(type: LoreSyncType, conversationId?: string): string {
   if (type === 'private') {
     if (!conversationId) throw new Error('私聊类型必须提供 conversationId');
-    // 从 conversationId 提取角色名：private:张三 -> 张三
-    const characterName = conversationId.replace(/^private:/, '');
+    return `[微信-私聊]${conversationId.replace(/^private:/, '')}`;
+  }
+  const definition = LORE_ENTRY_DEFINITIONS.find(item => item.type === type);
+  if (!definition) throw new Error(`不支持的同步类型: ${type}`);
+  return definition.name;
+}
+
+function definitionFor(type: LoreSyncType, conversationId?: string): LoreEntryDefinition {
+  if (type === 'private') {
     return {
       type: 'private',
-      name: `[微信-私聊]${characterName}`,
+      name: loreEntryNameFor(type, conversationId),
       strategy: { type: 'constant' },
       position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
       probability: 100,
@@ -106,7 +112,7 @@ export class ChatLoreSync {
   schedule(request: LoreSyncRequest): void {
     this.assertOpen();
     const captured = captureRequest(request);
-    const key = this.timerKey(captured.sessionKey, captured.type);
+    const key = this.timerKey(captured);
     const previous = this.timers.get(key);
     if (previous) {
       const clearError = this.cancelPending(key, previous);
@@ -203,8 +209,8 @@ export class ChatLoreSync {
     return stablePromise;
   }
 
-  private timerKey(sessionKey: string, type: LoreSyncType): string {
-    return `${sessionKey}\u0000${type}`;
+  private timerKey(request: Readonly<LoreSyncRequest>): string {
+    return `${request.sessionKey}\u0000${request.type}\u0000${request.conversationId ?? ''}`;
   }
 
   private assertOpen(): void {
