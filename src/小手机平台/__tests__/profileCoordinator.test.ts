@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { createMemoryPhoneDb, type PhoneDb } from '../data/phoneDb';
-import {
-  ProfileRefreshCoordinator,
-  type ProfileRefreshDependencies,
-} from '../profiles/profileRefreshCoordinator';
+import { ProfileRefreshCoordinator, type ProfileRefreshDependencies } from '../profiles/profileRefreshCoordinator';
 import type {
   DynamicProfileDocument,
   ProfileAnalysisSource,
@@ -62,11 +59,7 @@ function createFixture(
             store === 'profileRuns' &&
             Array.isArray(record.people) &&
             record.people.some(
-              item =>
-                item &&
-                typeof item === 'object' &&
-                'status' in item &&
-                item.status !== 'refreshing',
+              item => item && typeof item === 'object' && 'status' in item && item.status !== 'refreshing',
             )
           ) {
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -169,10 +162,7 @@ async function testWorldbookFailureDoesNotAdvanceAnchor(): Promise<void> {
   const fixture = createFixture([PEOPLE[0]]);
   fixture.setRejectNext(new Error('write failed'));
 
-  await assert.rejects(
-    () => fixture.coordinator.refreshPerson('main:纪宁', 'person-manual'),
-    /write failed/,
-  );
+  await assert.rejects(() => fixture.coordinator.refreshPerson('main:纪宁', 'person-manual'), /write failed/);
   assert.equal((await fixture.coordinator.getAnalysisState('main:纪宁'))?.lastWechatMessageId, undefined);
 
   await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');

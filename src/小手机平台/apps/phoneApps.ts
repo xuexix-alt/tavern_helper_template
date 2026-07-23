@@ -3,7 +3,15 @@ import type { PhoneHostAction } from '../core/types';
 import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles } from './profileHelper';
 
-export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'tasks' | 'profiles' | 'settings' | 'diagnostics';
+export type PhoneRoute =
+  | 'home'
+  | 'messages'
+  | 'contacts'
+  | 'broadcasts'
+  | 'tasks'
+  | 'profiles'
+  | 'settings'
+  | 'diagnostics';
 
 export interface PhoneConversationView {
   id: string;
@@ -516,10 +524,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         page.className = 'phone-broadcasts';
         const toolbar = document.createElement('div');
         toolbar.className = 'phone-broadcasts__toolbar';
-        toolbar.append(
-          text(document, 'strong', '末日公共广播'),
-          text(document, 'span', '娱乐播报，不进入正文'),
-        );
+        toolbar.append(text(document, 'strong', '末日公共广播'), text(document, 'span', '娱乐播报，不进入正文'));
         const regenerate = text(document, 'button', '重新生成本期广播');
         regenerate.className = 'phone-button phone-broadcast-regenerate';
         regenerate.type = 'button';
@@ -780,11 +785,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             addProfileField('对玩家行动建议', profile.playerActionAdvice);
             addProfileField('最后一轮消息', profile.lastWechatRound.join('\n'));
             addProfileField('来源范围', profile.sourceRange);
-            const meta = text(
-              document,
-              'p',
-              `更新于 ${new Date(profile.lastUpdated).toLocaleString('zh-CN')}`,
-            );
+            const meta = text(document, 'p', `更新于 ${new Date(profile.lastUpdated).toLocaleString('zh-CN')}`);
             meta.className = 'phone-profile-meta';
             content.append(meta);
             if (profile.lastError) {

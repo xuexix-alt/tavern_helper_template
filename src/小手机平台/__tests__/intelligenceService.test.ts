@@ -231,11 +231,7 @@ async function testInvalidJsonResponse(): Promise<void> {
     recentStory: '',
   };
 
-  await assert.rejects(
-    () => service.enhanceProfile(request),
-    /无效/,
-    '无效 JSON 应抛出错误',
-  );
+  await assert.rejects(() => service.enhanceProfile(request), /无效/, '无效 JSON 应抛出错误');
 }
 
 export async function runIntelligenceServiceTests(): Promise<void> {

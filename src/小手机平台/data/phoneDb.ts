@@ -474,15 +474,7 @@ class IndexedDbPhoneDb implements PhoneDb {
     let writesQueued = false;
     let writePreparationError: unknown;
     const queueWritesWhileActive = (): void => {
-      if (
-        writesQueued ||
-        !messages ||
-        !conversations ||
-        !preferences ||
-        !inbox ||
-        !profileAnalysis ||
-        !profileViews
-      ) {
+      if (writesQueued || !messages || !conversations || !preferences || !inbox || !profileAnalysis || !profileViews) {
         return;
       }
       writesQueued = true;

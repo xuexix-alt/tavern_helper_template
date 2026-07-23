@@ -30,11 +30,7 @@ export interface ProfileBroadcastSection {
 }
 
 export interface ProfileBroadcastOutput {
-  sections: readonly [
-    ProfileBroadcastSection,
-    ProfileBroadcastSection,
-    ProfileBroadcastSection,
-  ];
+  sections: readonly [ProfileBroadcastSection, ProfileBroadcastSection, ProfileBroadcastSection];
 }
 
 export interface StoredProfileBroadcastIssue extends ProfileBroadcastOutput {
@@ -56,16 +52,11 @@ function jsonCandidate(raw: string): string {
 }
 
 function publicEvidenceOnly(refs: readonly ProfileEvidenceRef[]): boolean {
-  return (
-    refs.length > 0 &&
-    refs.every(ref => ref.startsWith('story:') || ref.startsWith('mvu:'))
-  );
+  return refs.length > 0 && refs.every(ref => ref.startsWith('story:') || ref.startsWith('mvu:'));
 }
 
 export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): string {
-  const publicProfileChanges = input.publicProfileChanges.filter(change =>
-    publicEvidenceOnly(change.evidenceRefs),
-  );
+  const publicProfileChanges = input.publicProfileChanges.filter(change => publicEvidenceOnly(change.evidenceRefs));
   return [
     '你是伊甸世界观中的末日公共广播编辑。',
     '广播是纯娱乐内容，只能根据下列公开证据写成新闻，不得续写剧情或向人物下达行动。',

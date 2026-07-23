@@ -145,9 +145,7 @@ export function buildTaskParsePrompt(request: TaskParseRequest): string {
     .map(msg => `${msg.sender}: ${msg.content}`)
     .join('\n');
 
-  const existingTasksText = request.existingTasks
-    ?.map(t => `- ${t.title}: ${t.description}`)
-    .join('\n') || '暂无';
+  const existingTasksText = request.existingTasks?.map(t => `- ${t.title}: ${t.description}`).join('\n') || '暂无';
 
   return `你是任务解析助手，从微信聊天中识别玩家可采取的行动。
 

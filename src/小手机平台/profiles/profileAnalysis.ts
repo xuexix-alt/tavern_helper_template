@@ -125,7 +125,8 @@ export function renderPromptProfile(document: DynamicProfileDocument, maxCharact
     section('私密范围', privateScope),
   ];
   const immutableText = immutable.join('\n');
-  if (immutableText.length > maxCharacters) throw new Error('人物身份、固定本色、MVU硬事实与私密范围已超过档案字符上限');
+  if (immutableText.length > maxCharacters)
+    throw new Error('人物身份、固定本色、MVU硬事实与私密范围已超过档案字符上限');
 
   const dynamic = [
     section('基本信息补充', document.basicInfoAdditions.join('；') || '暂无新增'),

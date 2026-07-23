@@ -291,16 +291,14 @@ export function selectCharacterProfile(
   return entries.find(entry => entry.name === exactName)?.content;
 }
 
-export function resolveWinterPersonMvu(
-  personId: string,
-  statData: unknown,
-): Readonly<Record<string, unknown>> {
+export function resolveWinterPersonMvu(personId: string, statData: unknown): Readonly<Record<string, unknown>> {
   if (!isRecord(statData)) return {};
   const separator = personId.indexOf(':');
   if (separator < 1) return {};
   const scope = personId.slice(0, separator);
   const name = personId.slice(separator + 1);
-  const value = scope === 'temporary' ? (isRecord(statData.临时NPC) ? statData.临时NPC[name] : undefined) : statData[name];
+  const value =
+    scope === 'temporary' ? (isRecord(statData.临时NPC) ? statData.临时NPC[name] : undefined) : statData[name];
   return isRecord(value) ? value : {};
 }
 

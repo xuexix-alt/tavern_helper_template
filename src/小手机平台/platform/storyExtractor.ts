@@ -74,10 +74,7 @@ export function extractRecentCompletedStory(options: StoryExtractorOptions): Pro
   }
 }
 
-export function extractRecentCompletedMessages(
-  storyMessageId: number | null,
-  limit = 20,
-): ProfileStoryMessage[] {
+export function extractRecentCompletedMessages(storyMessageId: number | null, limit = 20): ProfileStoryMessage[] {
   if (
     storyMessageId === null ||
     !Number.isSafeInteger(storyMessageId) ||

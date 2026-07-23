@@ -85,10 +85,7 @@ export function readDynamicProfileEntry(
 
 export interface DynamicProfileWorldbookWriter {
   read(worldbookName: string): Promise<ProfileWorldbookEntry[]>;
-  update(
-    worldbookName: string,
-    updater: (entries: ProfileWorldbookEntry[]) => ProfileWorldbookEntry[],
-  ): Promise<void>;
+  update(worldbookName: string, updater: (entries: ProfileWorldbookEntry[]) => ProfileWorldbookEntry[]): Promise<void>;
   assertSession(): void;
 }
 
@@ -104,9 +101,7 @@ export async function writeDynamicProfileEntry(
   await writer.update(worldbookName, entries => {
     const index = entries.findIndex(item => item.name === next.name);
     if (index < 0) return [...entries, next];
-    return entries.map((entry, entryIndex) =>
-      entryIndex === index ? { ...entry, ...next, uid: entry.uid } : entry,
-    );
+    return entries.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...next, uid: entry.uid } : entry));
   });
   writer.assertSession();
 }

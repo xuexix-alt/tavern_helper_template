@@ -33,11 +33,7 @@ export interface ProfileRefreshDependencies {
   listAddedPeople(): Promise<readonly ProfilePerson[]>;
   collectSource(person: ProfilePerson, state: ProfileAnalysisState | null): Promise<ProfileAnalysisSource>;
   requestAnalysis(prompt: string): Promise<string>;
-  writeWorldbook(
-    document: DynamicProfileDocument,
-    aliases: readonly string[],
-    maxCharacters: number,
-  ): Promise<void>;
+  writeWorldbook(document: DynamicProfileDocument, aliases: readonly string[], maxCharacters: number): Promise<void>;
   onAllRunComplete?(run: ProfileRefreshRunResult): Promise<void>;
 }
 
@@ -77,7 +73,11 @@ function isStoredRun(record: PhoneBusinessRecord): record is StoredRun {
 }
 
 function validateSettings(settings: ProfileRefreshSettings): ProfileRefreshSettings {
-  if (!Number.isSafeInteger(settings.autoRefreshEvery) || settings.autoRefreshEvery < 1 || settings.autoRefreshEvery > 50) {
+  if (
+    !Number.isSafeInteger(settings.autoRefreshEvery) ||
+    settings.autoRefreshEvery < 1 ||
+    settings.autoRefreshEvery > 50
+  ) {
     throw new RangeError('档案自动刷新阈值必须是 1 到 50 的整数');
   }
   if (!Number.isSafeInteger(settings.promptProfileMaxChars) || settings.promptProfileMaxChars <= 0) {
@@ -137,32 +137,30 @@ export class ProfileRefreshCoordinator {
     return {
       sessionKey,
       personId,
-      ...(typeof record.lastWechatMessageId === 'string'
-        ? { lastWechatMessageId: record.lastWechatMessageId }
-        : {}),
-      ...(typeof record.lastWechatCreatedAt === 'number'
-        ? { lastWechatCreatedAt: record.lastWechatCreatedAt }
-        : {}),
+      ...(typeof record.lastWechatMessageId === 'string' ? { lastWechatMessageId: record.lastWechatMessageId } : {}),
+      ...(typeof record.lastWechatCreatedAt === 'number' ? { lastWechatCreatedAt: record.lastWechatCreatedAt } : {}),
       ...(typeof record.lastSuccessfulRefreshAt === 'number'
         ? { lastSuccessfulRefreshAt: record.lastSuccessfulRefreshAt }
         : {}),
       status: record.status,
       ...(typeof record.lastError === 'string' ? { lastError: record.lastError } : {}),
-      ...(typeof record.lastFallbackReason === 'string'
-        ? { lastFallbackReason: record.lastFallbackReason }
-        : {}),
+      ...(typeof record.lastFallbackReason === 'string' ? { lastFallbackReason: record.lastFallbackReason } : {}),
     };
   }
 
-  async listProfiles(): Promise<readonly (ProfileViewRecordData & { personId: string; status: ProfileAnalysisState['status']; lastError?: string })[]> {
+  async listProfiles(): Promise<
+    readonly (ProfileViewRecordData & {
+      personId: string;
+      status: ProfileAnalysisState['status'];
+      lastError?: string;
+    })[]
+  > {
     const sessionKey = this.dependencies.getSessionKey();
     const [views, states] = await Promise.all([
       this.dependencies.db.listRecords('profileViews', sessionKey),
       this.dependencies.db.listRecords('profileAnalysis', sessionKey),
     ]);
-    const stateByPerson = new Map(
-      states.filter(isAnalysisState).map(state => [state.personId, state] as const),
-    );
+    const stateByPerson = new Map(states.filter(isAnalysisState).map(state => [state.personId, state] as const));
     return views.flatMap(record => {
       const personId = typeof record.personId === 'string' ? record.personId : record.id;
       if (!record.document || typeof record.document !== 'object') return [];
@@ -229,7 +227,13 @@ export class ProfileRefreshCoordinator {
   }
 
   async dispatchScheduledRefresh(job: PhoneSchedulerJob): Promise<void> {
-    if (job.source !== 'profile_refresh' || !job.requiresAi || !job.payload || typeof job.payload !== 'object' || Array.isArray(job.payload)) {
+    if (
+      job.source !== 'profile_refresh' ||
+      !job.requiresAi ||
+      !job.payload ||
+      typeof job.payload !== 'object' ||
+      Array.isArray(job.payload)
+    ) {
       throw new Error('收到非档案刷新调度任务');
     }
     const key = typeof job.payload.workKey === 'string' ? job.payload.workKey : '';
@@ -301,13 +305,7 @@ export class ProfileRefreshCoordinator {
       });
       if (!accepted) {
         this.scheduled.delete(workKey);
-        await this.updateRunPerson(
-          runId,
-          sessionKey,
-          person.id,
-          'failed',
-          '档案刷新任务未被调度器接受',
-        );
+        await this.updateRunPerson(runId, sessionKey, person.id, 'failed', '档案刷新任务未被调度器接受');
       }
     }
     this.dependencies.scheduler.runAvailable();
@@ -382,12 +380,7 @@ export class ProfileRefreshCoordinator {
         lastSuccessfulRefreshAt: this.dependencies.now(),
         status: 'success',
       });
-      await this.updateRunPerson(
-        scheduled.runId,
-        scheduled.sessionKey,
-        scheduled.person.id,
-        'success',
-      );
+      await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'success');
     } catch (error) {
       const message = errorMessage(error);
       await this.writeAnalysisState({
@@ -399,13 +392,7 @@ export class ProfileRefreshCoordinator {
         status: 'failed',
         lastError: message,
       });
-      await this.updateRunPerson(
-        scheduled.runId,
-        scheduled.sessionKey,
-        scheduled.person.id,
-        'failed',
-        message,
-      );
+      await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'failed', message);
       throw error;
     }
   }
@@ -448,17 +435,14 @@ export class ProfileRefreshCoordinator {
     };
     if (state.lastWechatMessageId !== undefined) record.lastWechatMessageId = state.lastWechatMessageId;
     if (state.lastWechatCreatedAt !== undefined) record.lastWechatCreatedAt = state.lastWechatCreatedAt;
-    if (state.lastSuccessfulRefreshAt !== undefined)
-      record.lastSuccessfulRefreshAt = state.lastSuccessfulRefreshAt;
+    if (state.lastSuccessfulRefreshAt !== undefined) record.lastSuccessfulRefreshAt = state.lastSuccessfulRefreshAt;
     if (state.lastError !== undefined) record.lastError = state.lastError;
     if (state.lastFallbackReason !== undefined) record.lastFallbackReason = state.lastFallbackReason;
     await this.dependencies.db.putRecord('profileAnalysis', record);
   }
 
   private async readRun(runId: string, sessionKey: string): Promise<StoredRun> {
-    const record = (await this.dependencies.db.listRecords('profileRuns', sessionKey)).find(
-      item => item.id === runId,
-    );
+    const record = (await this.dependencies.db.listRecords('profileRuns', sessionKey)).find(item => item.id === runId);
     if (!record || !isStoredRun(record)) throw new Error(`档案刷新批次记录丢失：${runId}`);
     return record;
   }
@@ -471,15 +455,15 @@ export class ProfileRefreshCoordinator {
     error?: string,
   ): Promise<void> {
     const previous = this.runUpdateTails.get(runId) ?? Promise.resolve();
-    const update = previous.catch(() => undefined).then(async () => {
-      const run = await this.readRun(runId, sessionKey);
-      run.people = run.people.map(person =>
-        person.personId === personId
-          ? { personId, status, ...(error ? { error } : {}) }
-          : person,
-      );
-      await this.dependencies.db.putRecord('profileRuns', run);
-    });
+    const update = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const run = await this.readRun(runId, sessionKey);
+        run.people = run.people.map(person =>
+          person.personId === personId ? { personId, status, ...(error ? { error } : {}) } : person,
+        );
+        await this.dependencies.db.putRecord('profileRuns', run);
+      });
     this.runUpdateTails.set(runId, update);
     try {
       await update;

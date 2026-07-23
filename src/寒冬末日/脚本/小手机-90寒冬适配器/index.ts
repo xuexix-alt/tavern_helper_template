@@ -803,31 +803,25 @@ function createWinterAdapterModule(): PhoneModule {
     const captured = profileCaptures.get(document.personId);
     if (!captured) throw new Error(`人物档案缺少稳定写入捕获：${document.personId}`);
     try {
-      await writeDynamicProfileEntry(
-        captured.worldbooks.chatWorldbookName,
-        document,
-        aliases,
-        maxCharacters,
-        {
-          read: async worldbookName =>
-            (await getWorldbook(worldbookName)) as unknown as ProfileWorldbookEntry[],
-          update: async (worldbookName, updater) => {
-            await updateWorldbookWith(
-              worldbookName,
-              entries =>
-                updater(entries as unknown as ProfileWorldbookEntry[]) as unknown as typeof entries,
-              { render: 'debounced' },
-            );
-          },
-          assertSession: () => {
-            assertHostCapture(captured.host);
-            assertSnapshotCapture(captured.snapshot);
-            if (captured.worldbooks.chatWorldbookName !== requireCapturedWorldbooks(document.sessionKey).chatWorldbookName) {
-              throw new Error('档案目标世界书已切换');
-            }
-          },
+      await writeDynamicProfileEntry(captured.worldbooks.chatWorldbookName, document, aliases, maxCharacters, {
+        read: async worldbookName => (await getWorldbook(worldbookName)) as unknown as ProfileWorldbookEntry[],
+        update: async (worldbookName, updater) => {
+          await updateWorldbookWith(
+            worldbookName,
+            entries => updater(entries as unknown as ProfileWorldbookEntry[]) as unknown as typeof entries,
+            { render: 'debounced' },
+          );
         },
-      );
+        assertSession: () => {
+          assertHostCapture(captured.host);
+          assertSnapshotCapture(captured.snapshot);
+          if (
+            captured.worldbooks.chatWorldbookName !== requireCapturedWorldbooks(document.sessionKey).chatWorldbookName
+          ) {
+            throw new Error('档案目标世界书已切换');
+          }
+        },
+      });
     } finally {
       if (profileCaptures.get(document.personId) === captured) profileCaptures.delete(document.personId);
     }
@@ -868,8 +862,7 @@ function createWinterAdapterModule(): PhoneModule {
         const document = stored.document;
         const firstStory = stored.sourceStoryIds[0];
         const lastStory = stored.sourceStoryIds.at(-1);
-        const storyRange =
-          firstStory && lastStory ? `正文 ${firstStory}-${lastStory}` : '正文无有效消息';
+        const storyRange = firstStory && lastStory ? `正文 ${firstStory}-${lastStory}` : '正文无有效消息';
         return {
           id: stored.personId,
           name: document.personName,
@@ -905,10 +898,7 @@ function createWinterAdapterModule(): PhoneModule {
 
   async function getProfileSettings(): Promise<PhoneProfileSettingsView> {
     const coordinator = requireProfileCoordinator();
-    const [settings, storyProgress] = await Promise.all([
-      coordinator.getSettings(),
-      coordinator.getStoryProgress(),
-    ]);
+    const [settings, storyProgress] = await Promise.all([coordinator.getSettings(), coordinator.getStoryProgress()]);
     return { ...settings, storyProgress };
   }
 
@@ -932,9 +922,7 @@ function createWinterAdapterModule(): PhoneModule {
         .filter(profile => profile.document.storyInteractionSummary.trim() !== '')
         .map(profile => ({
           content: `${profile.document.personName}：${profile.document.storyInteractionSummary}`,
-          evidenceRefs: profile.document.evidenceRefs.filter(
-            ref => ref.startsWith('story:') || ref.startsWith('mvu:'),
-          ),
+          evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),
         })),
     });
     const rawText = await requestProfileAnalysis(prompt);
@@ -1403,9 +1391,7 @@ function createWinterAdapterModule(): PhoneModule {
             recentCompletedStory: captured.recentCompletedStory.map(item => item.content).join('\n'),
             characterBudget: 1_600,
           }),
-          ...(dynamicProfile
-            ? { dynamicProfile: dynamicProfile.slice(0, profileSettings.promptProfileMaxChars) }
-            : {}),
+          ...(dynamicProfile ? { dynamicProfile: dynamicProfile.slice(0, profileSettings.promptProfileMaxChars) } : {}),
         };
       }),
     );
@@ -1947,10 +1933,7 @@ function isStoredProfileBroadcastIssue(
     Array.isArray(value.sections) &&
     value.sections.length === 3 &&
     value.sections.every(
-      section =>
-        isRecord(section) &&
-        typeof section.title === 'string' &&
-        typeof section.body === 'string',
+      section => isRecord(section) && typeof section.title === 'string' && typeof section.body === 'string',
     )
   );
 }

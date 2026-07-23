@@ -9,6 +9,6 @@ export function resolveProfilePromptMacros(template: string, context: ProfilePro
   return template.replace(PROFILE_MACRO, (_full, explicitPersonId: string | undefined) => {
     // This resolver is local to phone prompt assembly; it does not register a SillyTavern global macro.
     const personId = (explicitPersonId?.trim() || context.currentPersonId || '').trim();
-    return personId ? context.read(personId) ?? '' : '';
+    return personId ? (context.read(personId) ?? '') : '';
   });
 }

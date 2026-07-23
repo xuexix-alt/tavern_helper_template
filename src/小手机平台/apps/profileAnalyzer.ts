@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = {
 // ============ 分析提示词模板 ============
 const ANALYSIS_PROMPTS = {
   // 动态人设分析 - 本色+上次调色+聊天记录 → 新调色
-  tenantDynamicAnalysis: function(
+  tenantDynamicAnalysis: function (
     personName: string,
     baseProfile: string | null,
     lastDynamic: string | null,
@@ -62,7 +62,7 @@ ${personName}目前[描述当前的目标、愿望、关注的事情或追求]
   },
 
   // 解析AI返回的动态档案内容
-  parseDynamicContent: function(aiResponse: string): string {
+  parseDynamicContent: function (aiResponse: string): string {
     let content = aiResponse.trim();
     // 移除可能的markdown代码块标记
     content = content.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '');

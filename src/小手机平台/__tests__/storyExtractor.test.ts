@@ -46,7 +46,11 @@ function testExtractRecentCompletedStory(): void {
 
   // 测试 3：标记为不相关
   const result3 = extractRecentCompletedStory({ storyMessageId: 10, markAllRelevant: false });
-  assert.equal(result3.every(entry => entry.relevant === false), true, '所有条目应标记为不相关');
+  assert.equal(
+    result3.every(entry => entry.relevant === false),
+    true,
+    '所有条目应标记为不相关',
+  );
 
   // 测试 4：null storyMessageId
   const result4 = extractRecentCompletedStory({ storyMessageId: null });

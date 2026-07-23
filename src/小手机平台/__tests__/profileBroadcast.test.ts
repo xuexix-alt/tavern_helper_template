@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 
-import {
-  buildProfileBroadcastPrompt,
-  parseProfileBroadcastOutput,
-} from '../profiles/profileBroadcast';
+import { buildProfileBroadcastPrompt, parseProfileBroadcastOutput } from '../profiles/profileBroadcast';
 
 function testPromptContainsPublicEvidenceOnly(): void {
   const prompt = buildProfileBroadcastPrompt({

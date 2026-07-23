@@ -267,12 +267,15 @@ export class IntelligenceIntegration {
    */
   private startTaskCleanup(): void {
     // 每天清理一次过期任务
-    setInterval(() => {
-      const sessionKey = this.getSessionKey();
-      this.taskStore.cleanExpiredTasks(sessionKey, this.config.taskExpiryMs).catch(error => {
-        console.error('清理过期任务失败:', error);
-      });
-    }, 24 * 60 * 60 * 1000);
+    setInterval(
+      () => {
+        const sessionKey = this.getSessionKey();
+        this.taskStore.cleanExpiredTasks(sessionKey, this.config.taskExpiryMs).catch(error => {
+          console.error('清理过期任务失败:', error);
+        });
+      },
+      24 * 60 * 60 * 1000,
+    );
   }
 
   /**
@@ -325,7 +328,10 @@ export async function quickStart() {
   // 集成
   const apps = await integrateIntelligence(config, phoneDb, runtime);
 
-  console.log('智能情报系统已启动，创建了以下 APP:', apps.map(app => app.title));
+  console.log(
+    '智能情报系统已启动，创建了以下 APP:',
+    apps.map(app => app.title),
+  );
 
   return apps;
 }

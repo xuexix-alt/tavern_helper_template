@@ -2,11 +2,7 @@ import assert from 'node:assert/strict';
 
 import type { PhoneMessage } from '../data/phoneDb';
 import { extractRecentCompletedMessages } from '../platform/storyExtractor';
-import {
-  commitStoryCounter,
-  reconcileStoryCounter,
-  selectWechatIncrement,
-} from '../profiles/profileSources';
+import { commitStoryCounter, reconcileStoryCounter, selectWechatIncrement } from '../profiles/profileSources';
 import type { ProfileStoryMessage } from '../profiles/profileTypes';
 
 function story(id: string, role: 'user' | 'assistant', content: string): ProfileStoryMessage {
@@ -58,23 +54,30 @@ function testStoryCounterReconcilesInsteadOfDoubleCounting(): void {
 }
 
 function testWechatAnchorSelection(): void {
-  const messages = [
-    phoneMessage('m1', 1),
-    phoneMessage('m2', 2),
-    phoneMessage('m3', 3),
-    phoneMessage('m4', 4),
-  ];
+  const messages = [phoneMessage('m1', 1), phoneMessage('m2', 2), phoneMessage('m3', 3), phoneMessage('m4', 4)];
   const selected = selectWechatIncrement(messages, 'm2', 20, 4);
-  assert.deepEqual(selected.contextMessages.map(item => item.id), ['m1', 'm2']);
-  assert.deepEqual(selected.newMessages.map(item => item.id), ['m3', 'm4']);
+  assert.deepEqual(
+    selected.contextMessages.map(item => item.id),
+    ['m1', 'm2'],
+  );
+  assert.deepEqual(
+    selected.newMessages.map(item => item.id),
+    ['m3', 'm4'],
+  );
   assert.equal(selected.fallbackReason, undefined);
 
   const first = selectWechatIncrement(messages, undefined, 2, 4);
-  assert.deepEqual(first.newMessages.map(item => item.id), ['m3', 'm4']);
+  assert.deepEqual(
+    first.newMessages.map(item => item.id),
+    ['m3', 'm4'],
+  );
   assert.equal(first.fallbackReason, 'first-analysis');
 
   const missing = selectWechatIncrement(messages, 'missing', 2, 4);
-  assert.deepEqual(missing.newMessages.map(item => item.id), ['m3', 'm4']);
+  assert.deepEqual(
+    missing.newMessages.map(item => item.id),
+    ['m3', 'm4'],
+  );
   assert.equal(missing.fallbackReason, 'anchor-missing');
 }
 

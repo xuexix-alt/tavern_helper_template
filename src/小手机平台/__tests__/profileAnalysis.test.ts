@@ -60,10 +60,7 @@ function testOutputRejectsUnknownFields(): void {
       ),
     /结构|字段/,
   );
-  assert.throws(
-    () => parseProfileAnalysisOutput('{"__proto__":{"polluted":true}}'),
-    /结构|字段|危险/,
-  );
+  assert.throws(() => parseProfileAnalysisOutput('{"__proto__":{"polluted":true}}'), /结构|字段|危险/);
 }
 
 function testPromptSourceOrder(): void {

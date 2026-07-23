@@ -49,13 +49,10 @@ function testExactRead(): void {
 
 function testLocalMacroIsolation(): void {
   const entry = buildDynamicProfileEntry(document, ['纪宁'], 2_000);
-  const expanded = resolveProfilePromptMacros(
-    'A={{TAVERN_PHONE_PROFILE}} B={{TAVERN_PHONE_PROFILE:main:赵卫国}}',
-    {
-      currentPersonId: 'main:纪宁',
-      read: personId => (personId === 'main:纪宁' ? entry.content : undefined),
-    },
-  );
+  const expanded = resolveProfilePromptMacros('A={{TAVERN_PHONE_PROFILE}} B={{TAVERN_PHONE_PROFILE:main:赵卫国}}', {
+    currentPersonId: 'main:纪宁',
+    read: personId => (personId === 'main:纪宁' ? entry.content : undefined),
+  });
   assert.match(expanded, /A=.+纪宁/s);
   assert.match(expanded, / B=$/);
 }
