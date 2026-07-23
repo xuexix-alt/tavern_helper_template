@@ -1,7 +1,5 @@
 import type { PhoneHostAction } from '../core/types';
-import type { PhoneDb } from '../data/phoneDb';
-import { collectProfiles, refreshSingleProfile } from './profileHelper';
-import { ProfileAnalyzer } from './profileAnalyzer';
+import { collectProfiles } from './profileHelper';
 
 export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'tasks' | 'profiles' | 'settings' | 'diagnostics';
 
@@ -212,39 +210,6 @@ function avatar(document: Document, name: string, className: string): HTMLSpanEl
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
-
-  // 初始化档案分析器（需要时才创建）
-  let profileAnalyzer: ProfileAnalyzer | null = null;
-
-  const getAnalyzer = () => {
-    if (!profileAnalyzer) {
-      // 尝试多种方式获取数据库和运行时
-      const db =
-        (window as any).phoneDb ||
-        (window as any).parent?.phoneDb ||
-        (window as any).top?.phoneDb;
-
-      const runtime =
-        (window as any).tavernPhone ||
-        (window as any).parent?.tavernPhone ||
-        (window as any).top?.tavernPhone;
-
-      const session = runtime?.getSession?.();
-      const sessionKey = session?.sessionKey;
-
-      if (db && sessionKey) {
-        profileAnalyzer = new ProfileAnalyzer(db, sessionKey);
-      } else {
-        console.error('[档案] 无法获取数据库或会话', {
-          db: !!db,
-          runtime: !!runtime,
-          session: !!session,
-          sessionKey: !!sessionKey,
-        });
-      }
-    }
-    return profileAnalyzer;
-  };
 
   return [
     {
@@ -570,42 +535,9 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       async render(context) {
         const { document } = context;
 
-        // 直接从全局获取数据库和会话信息（尝试多种方式）
-        const db =
-          (window as any).phoneDb ||
-          (window as any).parent?.phoneDb ||
-          (window as any).top?.phoneDb;
-
-        const runtime =
-          (window as any).tavernPhone ||
-          (window as any).parent?.tavernPhone ||
-          (window as any).top?.tavernPhone;
-
-        const session = runtime?.getSession?.();
-        const sessionKey = session?.sessionKey;
-
-        console.log('[档案] 调试信息:', {
-          hasDb: !!db,
-          hasRuntime: !!runtime,
-          hasSession: !!session,
-          hasSessionKey: !!sessionKey,
-          windowKeys: Object.keys(window).filter(k => k.includes('phone') || k.includes('tavern')),
-          parentKeys: Object.keys((window as any).parent || {}).filter(k => k.includes('phone') || k.includes('tavern')),
-        });
-
-        if (!db || !sessionKey) {
-          const placeholder = document.createElement('div');
-          placeholder.className = 'phone-empty';
-          placeholder.textContent = '档案功能不可用';
-          const hint = document.createElement('p');
-          hint.style.cssText = 'margin-top: 12px; font-size: 13px; color: #888;';
-          hint.textContent = `无法访问数据库或会话 (db: ${!!db}, session: ${!!sessionKey})`;
-          placeholder.append(hint);
-          return placeholder;
-        }
-
-        // 直接调用档案助手收集数据
-        const profiles = await collectProfiles(db, sessionKey);
+        try {
+          // 使用 services 收集档案数据
+          const profiles = await collectProfiles(services);
 
         if (profiles.length === 0) {
           return empty(document, '暂无人员档案');
@@ -614,82 +546,28 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const container = document.createElement('div');
         container.className = 'phone-profiles';
 
-        // 操作按钮组
-        const buttonGroup = document.createElement('div');
-        buttonGroup.style.cssText = 'display: flex; gap: 8px; margin-bottom: 12px;';
-
-        // 刷新所有档案按钮
-        const refreshAll = text(document, 'button', '🔄 刷新数据');
-        refreshAll.className = 'phone-button';
+        // 操作按钮：刷新数据
+        const refreshAll = text(document, 'button', '🔄 刷新档案');
+        refreshAll.className = 'phone-button phone-button--primary';
         refreshAll.type = 'button';
-        refreshAll.style.cssText = 'flex: 1;';
+        refreshAll.style.cssText = 'width: 100%; margin-bottom: 12px;';
         context.listen(refreshAll, 'click', () => {
           refreshAll.disabled = true;
           refreshAll.textContent = '刷新中...';
-          void (async () => {
-            await collectProfiles(db, sessionKey);
-            context.announce('所有档案已更新');
-            context.requestRender();
-          })()
+          void collectProfiles(services)
+            .then(() => {
+              context.announce('所有档案已更新');
+              context.requestRender();
+            })
             .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
             .finally(() => {
               if (context.isActive()) {
                 refreshAll.disabled = false;
-                refreshAll.textContent = '🔄 刷新数据';
+                refreshAll.textContent = '🔄 刷新档案';
               }
             });
         });
-
-        // AI 分析所有按钮
-        const analyzeAll = text(document, 'button', '🤖 AI 分析');
-        analyzeAll.className = 'phone-button phone-button--primary';
-        analyzeAll.type = 'button';
-        analyzeAll.style.cssText = 'flex: 1;';
-        context.listen(analyzeAll, 'click', () => {
-          const analyzer = getAnalyzer();
-          if (!analyzer) {
-            context.announce('分析器初始化失败', 'error');
-            return;
-          }
-
-          analyzeAll.disabled = true;
-          analyzeAll.textContent = '分析中...';
-
-          // 获取所有人物
-          void (async () => {
-            const recentChat = analyzer['getRecentChat'](30);
-            const contacts = await analyzer['getContactsFromMvu']();
-            const activeContacts = contacts.filter(c => recentChat.includes(c.name));
-
-            if (activeContacts.length === 0) {
-              context.announce('最近对话中没有人物活动', 'error');
-              return;
-            }
-
-            // 依次分析每个人物
-            for (const contact of activeContacts) {
-              try {
-                await analyzer.analyzeContact(contact.name, recentChat);
-                context.announce(`${contact.name} 分析完成`);
-              } catch (e) {
-                context.announce(`${contact.name} 分析失败`, 'error');
-              }
-            }
-
-            context.announce('所有分析已完成');
-            context.requestRender();
-          })()
-            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
-            .finally(() => {
-              if (context.isActive()) {
-                analyzeAll.disabled = false;
-                analyzeAll.textContent = '🤖 AI 分析';
-              }
-            });
-        });
-
-        buttonGroup.append(refreshAll, analyzeAll);
-        container.append(buttonGroup);
+        container.append(refreshAll);
 
         // 档案列表
         const profileList = list(document);
@@ -698,62 +576,23 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           item.className = 'phone-profile-item';
           item.style.cssText = 'padding: 12px; border-bottom: 1px solid var(--phone-border, #eee);';
 
-          // 头部：姓名 + 操作按钮
+          // 头部：姓名 + 刷新按钮
           const header = document.createElement('div');
           header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
           const nameEl = text(document, 'strong', profile.name);
           nameEl.style.cssText = 'font-size: 16px;';
 
-          const btnGroup = document.createElement('div');
-          btnGroup.style.cssText = 'display: flex; gap: 4px;';
-
-          // 刷新按钮
           const refreshBtn = text(document, 'button', '🔄');
           refreshBtn.className = 'phone-button';
           refreshBtn.type = 'button';
           refreshBtn.style.cssText = 'padding: 4px 8px; font-size: 12px;';
           refreshBtn.setAttribute('aria-label', `刷新${profile.name}的档案`);
           context.listen(refreshBtn, 'click', () => {
+            // 直接重新渲染整个档案列表
             refreshBtn.disabled = true;
-            void refreshSingleProfile(db, sessionKey, profile.id)
-              .then(() => {
-                context.announce(`${profile.name}的档案已更新`);
-                context.requestRender();
-              })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
-              .finally(() => {
-                if (context.isActive()) refreshBtn.disabled = false;
-              });
+            context.requestRender();
           });
-
-          // AI 分析按钮
-          const analyzeBtn = text(document, 'button', '🤖');
-          analyzeBtn.className = 'phone-button';
-          analyzeBtn.type = 'button';
-          analyzeBtn.style.cssText = 'padding: 4px 8px; font-size: 12px;';
-          analyzeBtn.setAttribute('aria-label', `AI分析${profile.name}`);
-          context.listen(analyzeBtn, 'click', () => {
-            const analyzer = getAnalyzer();
-            if (!analyzer) {
-              context.announce('分析器初始化失败', 'error');
-              return;
-            }
-
-            analyzeBtn.disabled = true;
-            void analyzer
-              .analyzeContact(profile.name)
-              .then(() => {
-                context.announce(`${profile.name} AI分析完成`);
-                context.requestRender();
-              })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
-              .finally(() => {
-                if (context.isActive()) analyzeBtn.disabled = false;
-              });
-          });
-
-          btnGroup.append(refreshBtn, analyzeBtn);
-          header.append(nameEl, btnGroup);
+          header.append(nameEl, refreshBtn);
 
           // 内容区域
           const content = document.createElement('div');
@@ -792,7 +631,18 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
 
         container.append(profileList);
         return container;
-      },
+      } catch (error) {
+        console.error('[档案] 渲染失败:', error);
+        const placeholder = document.createElement('div');
+        placeholder.className = 'phone-empty';
+        placeholder.textContent = '档案加载失败';
+        const hint = document.createElement('p');
+        hint.style.cssText = 'margin-top: 12px; font-size: 13px; color: #888;';
+        hint.textContent = error instanceof Error ? error.message : String(error);
+        placeholder.append(hint);
+        return placeholder;
+      }
+    },
     },
     {
       route: 'settings',
