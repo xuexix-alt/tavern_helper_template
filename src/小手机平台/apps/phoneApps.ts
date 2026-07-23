@@ -1,6 +1,8 @@
 import type { PhoneHostAction } from '../core/types';
+import type { PhoneDb } from '../data/phoneDb';
+import { collectProfiles, refreshSingleProfile } from './profileHelper';
 
-export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'tasks' | 'settings' | 'diagnostics';
+export type PhoneRoute = 'home' | 'messages' | 'contacts' | 'broadcasts' | 'tasks' | 'profiles' | 'settings' | 'diagnostics';
 
 export interface PhoneConversationView {
   id: string;
@@ -64,6 +66,17 @@ export interface PhoneDiagnosticsView {
   recentErrors: readonly string[];
 }
 
+export interface PhoneProfileView {
+  id: string;
+  name: string;
+  basicInfo: string;
+  personality: string;
+  currentStatus: string;
+  relationship: string;
+  recentInteraction: string;
+  lastUpdated: number;
+}
+
 export interface PhoneAppServices {
   listConversations(): Promise<readonly PhoneConversationView[]> | readonly PhoneConversationView[];
   listMessages(conversationId: string): Promise<readonly PhoneMessageView[]> | readonly PhoneMessageView[];
@@ -86,6 +99,13 @@ export interface PhoneAppServices {
   fetchModels(apiUrl: string, apiKey: string): Promise<readonly string[]>;
   clearApiKey(): Promise<void>;
   submitActionToHost(action: PhoneHostAction): Promise<void>;
+  // 档案功能（可选，如果 AI 未配置则返回空）
+  listProfiles?(): Promise<readonly PhoneProfileView[]> | readonly PhoneProfileView[];
+  refreshProfile?(personId: string): Promise<void>;
+  refreshAllProfiles?(): Promise<void>;
+  // 数据访问（用于档案功能）
+  getDb?(): PhoneDb;
+  getSessionKey?(): string;
 }
 
 export interface PhoneAppRenderContext {
@@ -507,6 +527,132 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           output.append(node);
         }
         return output;
+      },
+    },
+    {
+      route: 'profiles',
+      title: '档案',
+      glyph: '◎',
+      async render(context) {
+        const { document } = context;
+
+        // 获取数据库和会话信息
+        const db = services.getDb?.();
+        const sessionKey = services.getSessionKey?.();
+
+        if (!db || !sessionKey) {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'phone-empty';
+          placeholder.textContent = '档案功能不可用';
+          const hint = document.createElement('p');
+          hint.style.cssText = 'margin-top: 12px; font-size: 13px; color: #888;';
+          hint.textContent = '无法访问数据库或会话';
+          placeholder.append(hint);
+          return placeholder;
+        }
+
+        // 直接调用档案助手收集数据
+        const profiles = await collectProfiles(db, sessionKey);
+
+        if (profiles.length === 0) {
+          return empty(document, '暂无人员档案');
+        }
+
+        const container = document.createElement('div');
+        container.className = 'phone-profiles';
+
+        // 刷新所有档案按钮
+        const refreshAll = text(document, 'button', '🔄 刷新所有档案');
+        refreshAll.className = 'phone-button phone-button--primary';
+        refreshAll.type = 'button';
+        refreshAll.style.cssText = 'width: 100%; margin-bottom: 12px;';
+        context.listen(refreshAll, 'click', () => {
+          refreshAll.disabled = true;
+          refreshAll.textContent = '刷新中...';
+          void (async () => {
+            await collectProfiles(db, sessionKey);
+            context.announce('所有档案已更新');
+            context.requestRender();
+          })()
+            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              if (context.isActive()) {
+                refreshAll.disabled = false;
+                refreshAll.textContent = '🔄 刷新所有档案';
+              }
+            });
+        });
+        container.append(refreshAll);
+
+        // 档案列表
+        const profileList = list(document);
+        for (const profile of profiles) {
+          const item = document.createElement('li');
+          item.className = 'phone-profile-item';
+          item.style.cssText = 'padding: 12px; border-bottom: 1px solid var(--phone-border, #eee);';
+
+          // 头部：姓名 + 刷新按钮
+          const header = document.createElement('div');
+          header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
+          const nameEl = text(document, 'strong', profile.name);
+          nameEl.style.cssText = 'font-size: 16px;';
+
+          const refreshBtn = text(document, 'button', '🔄');
+          refreshBtn.className = 'phone-button';
+          refreshBtn.type = 'button';
+          refreshBtn.style.cssText = 'padding: 4px 8px; font-size: 12px;';
+          refreshBtn.setAttribute('aria-label', `刷新${profile.name}的档案`);
+          context.listen(refreshBtn, 'click', () => {
+            refreshBtn.disabled = true;
+            void refreshSingleProfile(db, sessionKey, profile.id)
+              .then(() => {
+                context.announce(`${profile.name}的档案已更新`);
+                context.requestRender();
+              })
+              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+              .finally(() => {
+                if (context.isActive()) refreshBtn.disabled = false;
+              });
+          });
+          header.append(nameEl, refreshBtn);
+
+          // 内容区域
+          const content = document.createElement('div');
+          content.style.cssText = 'font-size: 14px; line-height: 1.6; color: var(--phone-text, #333);';
+
+          const addField = (label: string, value: string, emoji = '') => {
+            const field = document.createElement('p');
+            field.style.cssText = 'margin: 4px 0;';
+            const labelSpan = text(document, 'span', `${emoji} ${label}：`);
+            labelSpan.style.cssText = 'color: #888; font-size: 13px;';
+            const valueSpan = text(document, 'span', value);
+            field.append(labelSpan, valueSpan);
+            content.append(field);
+          };
+
+          addField('基本信息', profile.basicInfo, '👤');
+          addField('性格', profile.personality, '💭');
+          addField('当前状态', profile.currentStatus, '📍');
+          addField('关系', profile.relationship, '🤝');
+          addField('最近互动', profile.recentInteraction, '💬');
+
+          // 更新时间
+          const updatedTime = new Date(profile.lastUpdated).toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          const timeEl = text(document, 'p', `更新: ${updatedTime}`);
+          timeEl.style.cssText = 'margin-top: 8px; font-size: 11px; color: #aaa;';
+          content.append(timeEl);
+
+          item.append(header, content);
+          profileList.append(item);
+        }
+
+        container.append(profileList);
+        return container;
       },
     },
     {
