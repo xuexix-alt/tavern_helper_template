@@ -255,12 +255,10 @@ export class ProfileAnalyzer {
       const loreName = await this.ensureChatLore();
       if (!loreName) return null;
 
-      const getWB =
-        typeof (window as any).getWorldbook === 'function'
-          ? (window as any).getWorldbook
-          : (window as any).parent.getWorldbook;
-      if (getWB) {
-        const entries = await getWB(loreName);
+      // 脚本运行在 iframe 中，应该通过 window.parent.TavernHelper 访问
+      const tavernHelper = (window as any).parent?.TavernHelper;
+      if (tavernHelper && typeof tavernHelper.getWorldbook === 'function') {
+        const entries = await tavernHelper.getWorldbook(loreName);
         const entry = entries.find((e: any) => e.name === personName);
         return entry ? entry.content : null;
       }
@@ -275,12 +273,10 @@ export class ProfileAnalyzer {
       const loreName = await this.ensureChatLore();
       if (!loreName) return null;
 
-      const getWB =
-        typeof (window as any).getWorldbook === 'function'
-          ? (window as any).getWorldbook
-          : (window as any).parent.getWorldbook;
-      if (getWB) {
-        const entries = await getWB(loreName);
+      // 脚本运行在 iframe 中，应该通过 window.parent.TavernHelper 访问
+      const tavernHelper = (window as any).parent?.TavernHelper;
+      if (tavernHelper && typeof tavernHelper.getWorldbook === 'function') {
+        const entries = await tavernHelper.getWorldbook(loreName);
         const entry = entries.find((e: any) => e.name === `[人物动态]${personName}`);
         return entry ? entry.content : null;
       }

@@ -55,18 +55,34 @@ export interface PrePhoneBridge {
   dispose(): void;
 }
 
-const EXPECTED_OWNER = Object.freeze({
-  characterName: '\u672b\u4e16\u5bd2\u51ac - \u661f\u7a79\u79e9\u5e8f',
-  adapterId: 'winter-apocalypse',
-  runtimeMajor: 1,
-});
-
+/**
+ * \u68c0\u67e5 owner \u662f\u5426\u5339\u914d
+ *
+ * \u89c4\u5219\uff1a
+ * 1. \u5982\u679c adapterId \u660e\u786e\u6807\u8bc6\u4e3a\u5176\u4ed6\u89d2\u8272\u7684\u4e13\u7528\u9002\u914d\u5668\uff0c\u5219\u4e0d\u5339\u914d
+ * 2. runtimeMajor \u5fc5\u987b\u517c\u5bb9\uff08\u76ee\u524d\u53ea\u652f\u6301 version 1\uff09
+ * 3. \u4e0d\u518d\u5f3a\u5236\u8981\u6c42 characterName \u5b8c\u5168\u5339\u914d\uff0c\u56e0\u4e3a\uff1a
+ *    - \u540c\u4e00\u4e2a\u8fd0\u884c\u65f6\u53ef\u80fd\u88ab\u591a\u4e2a\u89d2\u8272\u5171\u4eab
+ *    - \u901a\u7528\u9002\u914d\u5668\u5e94\u8be5\u652f\u6301\u4efb\u4f55\u89d2\u8272
+ */
 function ownerMatches(owner: PhoneOwner | null): boolean {
-  return (
-    owner?.characterName === EXPECTED_OWNER.characterName &&
-    owner.adapterId === EXPECTED_OWNER.adapterId &&
-    owner.runtimeMajor === EXPECTED_OWNER.runtimeMajor
-  );
+  if (!owner) return false;
+
+  // \u68c0\u67e5\u7248\u672c\u517c\u5bb9\u6027
+  if (owner.runtimeMajor !== 1) return false;
+
+  // \u5982\u679c adapterId \u660e\u786e\u6807\u8bc6\u4e3a\u5176\u4ed6\u7279\u5b9a\u89d2\u8272\u7684\u9002\u914d\u5668\uff0c\u5219\u62d2\u7edd
+  // \u4f8b\u5982\uff1a'other-character-adapter', 'specific-story-adapter'
+  // \u4f46\u63a5\u53d7\uff1a'winter-apocalypse', 'main-adapter', 'phone-adapter' \u7b49\u901a\u7528\u6216\u5f53\u524d\u89d2\u8272\u7684\u9002\u914d\u5668
+  const rejectedAdapterIds = [
+    // \u672a\u6765\u5982\u679c\u6709\u5176\u4ed6\u89d2\u8272\u7684\u4e13\u7528\u9002\u914d\u5668\uff0c\u5728\u8fd9\u91cc\u6dfb\u52a0
+    // 'other-story-adapter',
+  ];
+
+  if (rejectedAdapterIds.includes(owner.adapterId)) return false;
+
+  // \u901a\u8fc7\u6240\u6709\u68c0\u67e5
+  return true;
 }
 
 function runtimeOwnerMatches(runtime: PrePhoneRuntime): boolean {
