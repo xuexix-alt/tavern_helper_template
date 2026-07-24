@@ -25,6 +25,16 @@ const STORY: readonly ProfileStoryMessage[] = Array.from({ length: 20 }, (_, ind
 
 function analysisJson(personName: string): string {
   return JSON.stringify({
+    analysisNarrative: `${personName}最近的动态来自正文和微信中的补给变化。`,
+    changes: [
+      {
+        field: 'personalityTuning',
+        before: '保持谨慎',
+        after: '近期表达更加直接',
+        reason: '连续证据显示其主动确认补给风险',
+        evidenceRefs: ['story:20', 'wechat:new'],
+      },
+    ],
     basicInfoAdditions: [`${personName}近期参与庇护所工作`],
     personalityTuning: '近期表达更加直接',
     currentSituationSummary: '目前位于公共区域',
@@ -207,11 +217,34 @@ async function testAutoRefreshAtConfiguredThreshold(): Promise<void> {
   assert.equal(fixture.analysisCalls.length, PEOPLE.length, '已提交正文不得重复触发');
 }
 
+async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+  const first = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(first);
+  assert.equal(first.versions.length, 1);
+  assert.match(first.analysisNarrative, /正文和微信/);
+  const firstVersionId = first.versions[0].id;
+
+  await fixture.coordinator.saveProfileEdit('main:纪宁', { personalityTuning: '玩家确认：暂时保持谨慎' });
+  const edited = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(edited);
+  assert.equal(edited.versions.length, 2);
+  assert.equal(edited.document.personalityTuning, '玩家确认：暂时保持谨慎');
+
+  await fixture.coordinator.restoreProfileVersion('main:纪宁', firstVersionId);
+  const restored = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(restored);
+  assert.equal(restored.versions.length, 3);
+  assert.equal(restored.document.personalityTuning, '近期表达更加直接');
+}
+
 async function main(): Promise<void> {
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
   await testConcurrentRunUpdatesDoNotOverwriteOtherPeople();
   await testAutoRefreshAtConfiguredThreshold();
+  await testDetailedViewVersionsAndPlayerEdit();
   console.log('profile coordinator tests passed');
 }
 

@@ -356,6 +356,56 @@ async function testTavernProvider(): Promise<void> {
   assert.equal(hostStoppedId, 'host-generation');
 }
 
+async function testStructuredProviderModeAndDetailedResponse(): Promise<void> {
+  const tavernCalls: Array<{ ordered_prompts: Array<{ role: string; content: string }> }> = [];
+  const tavern = new TavernProvider({
+    generateRaw: async options => {
+      tavernCalls.push(options);
+      return '{"analysisNarrative":"人物分析"}';
+    },
+    stopGenerationById: () => true,
+    idFactory: () => 'structured-tavern',
+  });
+  const tavernDetailed = await tavern.requestDetailed('PROFILE_CONTRACT', { mode: 'structured' }).promise;
+  assert.deepEqual(tavernDetailed, { content: '{"analysisNarrative":"人物分析"}' });
+  assert.deepEqual(tavernCalls[0].ordered_prompts, [{ role: 'user', content: 'PROFILE_CONTRACT' }]);
+  assert.doesNotMatch(JSON.stringify(tavernCalls[0]), /微信模拟聊天接口|成人聊天模式|开始生成聊天回复/);
+
+  const requests: RecordedRequest[] = [];
+  const openai = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test/v1',
+    model: 'reasoning-model',
+    withApiKey: callback => callback('sk-reasoning'),
+    fetch: async (url, init) => {
+      requests.push({ url, init });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: '{"analysisNarrative":"人物分析"}',
+                reasoning_content: '根据正文和微信变化形成的分析过程',
+              },
+              finish_reason: 'stop',
+            },
+          ],
+        }),
+      };
+    },
+  });
+  const detailed = await openai.requestDetailed('PROFILE_CONTRACT', { mode: 'structured' }).promise;
+  assert.deepEqual(detailed, {
+    content: '{"analysisNarrative":"人物分析"}',
+    reasoningContent: '根据正文和微信变化形成的分析过程',
+  });
+  const body = JSON.parse(String(requests[0].init.body)) as { messages: unknown };
+  assert.deepEqual(body.messages, [{ role: 'user', content: 'PROFILE_CONTRACT' }]);
+  assert.doesNotMatch(JSON.stringify(body), /微信模拟聊天接口|成人聊天模式|开始生成聊天回复/);
+}
+
 type RecordedRequest = { url: string; init: RequestInit };
 
 function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
@@ -809,6 +859,7 @@ async function main(): Promise<void> {
   testPromptBudgetTrimmingAndProtectedOverflow();
   testResponseParser();
   await testTavernProvider();
+  await testStructuredProviderModeAndDetailedResponse();
   await testOpenAIProviderParityAndSecrets();
   await testSettingsStoreApiKeyContract();
   await testApiKeyCallbackIsSynchronousAndTransient();

@@ -1,5 +1,6 @@
 import type { PhoneBusinessRecord, PhoneDb } from '../data/phoneDb';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../scheduler/phoneScheduler';
+import type { AiDetailedResponse } from '../ai/providers';
 import {
   buildProfileAnalysisPrompt,
   buildProfileViewRecord,
@@ -16,6 +17,9 @@ import type {
   ProfileRefreshTrigger,
   ProfileStoryMessage,
   ProfileViewRecordData,
+  ProfileEditPatch,
+  ProfileStateEvent,
+  ProfileVersion,
 } from './profileTypes';
 
 export interface ProfileRefreshSettings {
@@ -32,10 +36,12 @@ export interface ProfileRefreshDependencies {
   getStoryMessages(): readonly ProfileStoryMessage[];
   listAddedPeople(): Promise<readonly ProfilePerson[]>;
   collectSource(person: ProfilePerson, state: ProfileAnalysisState | null): Promise<ProfileAnalysisSource>;
-  requestAnalysis(prompt: string): Promise<string>;
+  requestAnalysis(prompt: string): Promise<string | AiDetailedResponse>;
   writeWorldbook(document: DynamicProfileDocument, aliases: readonly string[], maxCharacters: number): Promise<void>;
   onAllRunComplete?(run: ProfileRefreshRunResult): Promise<void>;
 }
+
+export type ProfileStateListener = (event: ProfileStateEvent) => void;
 
 interface ScheduledRefresh {
   runId: string;
@@ -93,6 +99,7 @@ export class ProfileRefreshCoordinator {
   private batchSequence = 0;
   private batchTail: Promise<unknown> = Promise.resolve();
   private disposed = false;
+  private readonly stateListeners = new Set<ProfileStateListener>();
 
   constructor(
     private readonly dependencies: ProfileRefreshDependencies,
@@ -145,7 +152,14 @@ export class ProfileRefreshCoordinator {
       status: record.status,
       ...(typeof record.lastError === 'string' ? { lastError: record.lastError } : {}),
       ...(typeof record.lastFallbackReason === 'string' ? { lastFallbackReason: record.lastFallbackReason } : {}),
+      ...(typeof record.lastRawResponse === 'string' ? { lastRawResponse: record.lastRawResponse } : {}),
+      ...(typeof record.lastReasoningContent === 'string' ? { lastReasoningContent: record.lastReasoningContent } : {}),
     };
+  }
+
+  watchProfiles(listener: ProfileStateListener): () => void {
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
   }
 
   async listProfiles(): Promise<
@@ -175,12 +189,103 @@ export class ProfileRefreshCoordinator {
           newWechatMessageIds: Array.isArray(record.newWechatMessageIds)
             ? record.newWechatMessageIds.filter((item): item is string => typeof item === 'string')
             : [],
+          analysisNarrative:
+            typeof record.analysisNarrative === 'string' ? record.analysisNarrative : '暂无额外分析说明',
+          changes: Array.isArray(record.changes) ? record.changes : [],
+          rawResponse: typeof record.rawResponse === 'string' ? record.rawResponse : undefined,
+          reasoningContent: typeof record.reasoningContent === 'string' ? record.reasoningContent : undefined,
+          versions: Array.isArray(record.versions) ? record.versions : [],
           personId,
           status: state?.status ?? 'idle',
           ...(typeof state?.lastError === 'string' ? { lastError: state.lastError } : {}),
         },
       ];
     });
+  }
+
+  async getProfileView(personId: string): Promise<(ProfileViewRecordData & { personId: string }) | null> {
+    const sessionKey = this.dependencies.getSessionKey();
+    const record = (await this.dependencies.db.listRecords('profileViews', sessionKey)).find(
+      item => item.id === personId || item.personId === personId,
+    );
+    if (!record || !record.document || typeof record.document !== 'object') return null;
+    return {
+      document: structuredClone(record.document) as DynamicProfileDocument,
+      playerActionAdvice: typeof record.playerActionAdvice === 'string' ? record.playerActionAdvice : '',
+      sourceStoryIds: Array.isArray(record.sourceStoryIds)
+        ? record.sourceStoryIds.filter((item): item is string => typeof item === 'string')
+        : [],
+      newWechatMessageIds: Array.isArray(record.newWechatMessageIds)
+        ? record.newWechatMessageIds.filter((item): item is string => typeof item === 'string')
+        : [],
+      analysisNarrative: typeof record.analysisNarrative === 'string' ? record.analysisNarrative : '暂无额外分析说明',
+      changes: Array.isArray(record.changes) ? structuredClone(record.changes) : [],
+      ...(typeof record.rawResponse === 'string' ? { rawResponse: record.rawResponse } : {}),
+      ...(typeof record.reasoningContent === 'string' ? { reasoningContent: record.reasoningContent } : {}),
+      versions: Array.isArray(record.versions) ? structuredClone(record.versions) : [],
+      personId,
+    };
+  }
+
+  async saveProfileEdit(personId: string, patch: ProfileEditPatch): Promise<void> {
+    const view = await this.getProfileView(personId);
+    if (!view) throw new Error(`未找到人物档案：${personId}`);
+    const person = (await this.dependencies.listAddedPeople()).find(item => item.id === personId);
+    if (!person) throw new Error(`未找到已添加联系人：${personId}`);
+    const document: DynamicProfileDocument = {
+      ...view.document,
+      ...(patch.basicInfoAdditions ? { basicInfoAdditions: Object.freeze([...patch.basicInfoAdditions]) } : {}),
+      ...(patch.personalityTuning !== undefined ? { personalityTuning: patch.personalityTuning.trim() } : {}),
+      ...(patch.currentSituationSummary !== undefined
+        ? { currentSituationSummary: patch.currentSituationSummary.trim() }
+        : {}),
+      ...(patch.relationshipInterpretation !== undefined
+        ? { relationshipInterpretation: patch.relationshipInterpretation.trim() }
+        : {}),
+      ...(patch.storyInteractionSummary !== undefined
+        ? { storyInteractionSummary: patch.storyInteractionSummary.trim() }
+        : {}),
+      ...(patch.chatInteractionSummary !== undefined
+        ? { chatInteractionSummary: patch.chatInteractionSummary.trim() }
+        : {}),
+      updatedAt: this.dependencies.now(),
+    };
+    const savedAt = this.dependencies.now();
+    await this.dependencies.writeWorldbook(document, person.aliases, (await this.getSettings()).promptProfileMaxChars);
+    const nextVersion = this.makeVersion(
+      view,
+      document,
+      patch.playerActionAdvice ?? view.playerActionAdvice,
+      'player',
+      savedAt,
+    );
+    await this.writeView(personId, view, {
+      document,
+      playerActionAdvice: patch.playerActionAdvice ?? view.playerActionAdvice,
+      versions: [...view.versions, nextVersion].slice(-10),
+    });
+    this.notify({ personId, status: 'success' });
+  }
+
+  async restoreProfileVersion(personId: string, versionId: string): Promise<void> {
+    const view = await this.getProfileView(personId);
+    if (!view) throw new Error(`未找到人物档案：${personId}`);
+    const target = view.versions.find(version => version.id === versionId);
+    if (!target) throw new Error(`未找到档案版本：${versionId}`);
+    const person = (await this.dependencies.listAddedPeople()).find(item => item.id === personId);
+    if (!person) throw new Error(`未找到已添加联系人：${personId}`);
+    const document = { ...structuredClone(target.document), updatedAt: this.dependencies.now() };
+    await this.dependencies.writeWorldbook(document, person.aliases, (await this.getSettings()).promptProfileMaxChars);
+    const savedAt = this.dependencies.now();
+    const nextVersion = this.makeVersion(view, document, target.playerActionAdvice, 'restore', savedAt);
+    await this.writeView(personId, view, {
+      document,
+      playerActionAdvice: target.playerActionAdvice,
+      analysisNarrative: target.analysisNarrative,
+      changes: target.changes,
+      versions: [...view.versions, nextVersion].slice(-10),
+    });
+    this.notify({ personId, status: 'success' });
   }
 
   async reconcileStory(
@@ -345,6 +450,8 @@ export class ProfileRefreshCoordinator {
       status: 'refreshing',
       lastError: undefined,
     });
+    this.notify({ personId: scheduled.person.id, status: 'refreshing' });
+    let detailedResponse: AiDetailedResponse | undefined;
     try {
       this.assertCapturedSession(scheduled.sessionKey);
       const source = await this.dependencies.collectSource(scheduled.person, oldState);
@@ -353,7 +460,16 @@ export class ProfileRefreshCoordinator {
         `当前分析人物：${source.personName}（${source.personId}）`,
         buildProfileAnalysisPrompt(source),
       ].join('\n');
-      const output = parseProfileAnalysisOutput(await this.dependencies.requestAnalysis(prompt));
+      const response = await this.dependencies.requestAnalysis(prompt);
+      const detailed: AiDetailedResponse = typeof response === 'string' ? { content: response } : response;
+      detailedResponse = detailed;
+      let output;
+      try {
+        output = parseProfileAnalysisOutput(detailed.content);
+      } catch (error) {
+        if (error && typeof error === 'object') Object.assign(error, { profileResponse: detailed });
+        throw error;
+      }
       this.assertCapturedSession(scheduled.sessionKey);
       const document = mergeDynamicProfile(
         source,
@@ -365,12 +481,20 @@ export class ProfileRefreshCoordinator {
       await this.dependencies.writeWorldbook(document, scheduled.person.aliases, settings.promptProfileMaxChars);
       this.assertCapturedSession(scheduled.sessionKey);
 
+      const previousView = await this.getProfileView(scheduled.person.id);
       const view = buildProfileViewRecord(source, output, document);
-      await this.dependencies.db.putRecord('profileViews', {
-        id: scheduled.person.id,
-        sessionKey: scheduled.sessionKey,
-        personId: scheduled.person.id,
+      const version = this.makeVersion(
+        previousView ?? ({ ...view, versions: [] } as ProfileViewRecordData & { personId: string }),
+        document,
+        output.playerActionAdvice,
+        'ai',
+        this.dependencies.now(),
+      );
+      await this.writeView(scheduled.person.id, previousView, {
         ...view,
+        rawResponse: detailed.content,
+        ...(detailed.reasoningContent ? { reasoningContent: detailed.reasoningContent } : {}),
+        versions: [...(previousView?.versions ?? []), version].slice(-10),
       });
       const lastWechatMessageId = source.wechatNew.at(-1)?.id ?? oldState?.lastWechatMessageId;
       await this.writeAnalysisState({
@@ -379,10 +503,17 @@ export class ProfileRefreshCoordinator {
         ...(lastWechatMessageId ? { lastWechatMessageId } : {}),
         lastSuccessfulRefreshAt: this.dependencies.now(),
         status: 'success',
+        lastRawResponse: detailed.content,
+        ...(detailed.reasoningContent ? { lastReasoningContent: detailed.reasoningContent } : {}),
       });
+      this.notify({ personId: scheduled.person.id, status: 'success' });
       await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'success');
     } catch (error) {
       const message = errorMessage(error);
+      const response =
+        error && typeof error === 'object' && 'profileResponse' in error
+          ? (error as { profileResponse?: AiDetailedResponse }).profileResponse
+          : detailedResponse;
       await this.writeAnalysisState({
         ...(oldState ?? {
           sessionKey: scheduled.sessionKey,
@@ -391,7 +522,10 @@ export class ProfileRefreshCoordinator {
         }),
         status: 'failed',
         lastError: message,
+        ...(response?.content ? { lastRawResponse: response.content } : {}),
+        ...(response?.reasoningContent ? { lastReasoningContent: response.reasoningContent } : {}),
       });
+      this.notify({ personId: scheduled.person.id, status: 'failed', lastError: message });
       await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'failed', message);
       throw error;
     }
@@ -438,7 +572,54 @@ export class ProfileRefreshCoordinator {
     if (state.lastSuccessfulRefreshAt !== undefined) record.lastSuccessfulRefreshAt = state.lastSuccessfulRefreshAt;
     if (state.lastError !== undefined) record.lastError = state.lastError;
     if (state.lastFallbackReason !== undefined) record.lastFallbackReason = state.lastFallbackReason;
+    if (state.lastRawResponse !== undefined) record.lastRawResponse = state.lastRawResponse;
+    if (state.lastReasoningContent !== undefined) record.lastReasoningContent = state.lastReasoningContent;
     await this.dependencies.db.putRecord('profileAnalysis', record);
+  }
+
+  private async writeView(
+    personId: string,
+    previous: (ProfileViewRecordData & { personId: string }) | null,
+    patch: Partial<ProfileViewRecordData>,
+  ): Promise<void> {
+    const sessionKey = this.dependencies.getSessionKey();
+    const current = previous ?? (await this.getProfileView(personId));
+    await this.dependencies.db.putRecord('profileViews', {
+      id: personId,
+      sessionKey,
+      personId,
+      ...(current ?? {}),
+      ...patch,
+    });
+  }
+
+  private makeVersion(
+    view: ProfileViewRecordData,
+    document: DynamicProfileDocument,
+    playerActionAdvice: string,
+    source: ProfileVersion['source'],
+    savedAt: number,
+  ): ProfileVersion {
+    return {
+      id: `profile-version:${savedAt}:${document.personId}`,
+      source,
+      savedAt,
+      document: structuredClone(document),
+      playerActionAdvice,
+      analysisNarrative: view.analysisNarrative,
+      changes: structuredClone(view.changes),
+      evidenceRefs: Object.freeze([...document.evidenceRefs]),
+    };
+  }
+
+  private notify(event: ProfileStateEvent): void {
+    for (const listener of this.stateListeners) {
+      try {
+        listener(event);
+      } catch {
+        // A UI listener must not break refresh persistence.
+      }
+    }
   }
 
   private async readRun(runId: string, sessionKey: string): Promise<StoredRun> {

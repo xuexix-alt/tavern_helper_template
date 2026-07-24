@@ -1,11 +1,21 @@
-import { buildRolePrompts, type RolePrompt } from './jailbreakLayers';
+import { buildRolePrompts, type AiPromptMode, type RolePrompt } from './jailbreakLayers';
 
 export type { RolePrompt } from './jailbreakLayers';
+export type { AiPromptMode } from './jailbreakLayers';
 
 export interface RequestHandle<T> {
   readonly id: string;
   readonly promise: Promise<T>;
   cancel(): void;
+}
+
+export interface AiDetailedResponse {
+  content: string;
+  reasoningContent?: string;
+}
+
+export interface AiRequestOptions {
+  mode?: AiPromptMode;
 }
 
 export class ProviderError extends Error {
@@ -69,17 +79,21 @@ export class TavernProvider {
   }
 
   request(assembledPrompt: string): RequestHandle<string> {
+    return mapContentHandle(this.requestDetailed(assembledPrompt));
+  }
+
+  requestDetailed(assembledPrompt: string, requestOptions: AiRequestOptions = {}): RequestHandle<AiDetailedResponse> {
     const id = (this.#dependencies.idFactory ?? defaultId)();
-    const options: TavernGenerateOptions = {
+    const generateOptions: TavernGenerateOptions = {
       generation_id: id,
       should_stream: false,
       should_silence: true,
       max_chat_history: 0,
-      ordered_prompts: [...buildRolePrompts(assembledPrompt)],
+      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode)],
     };
-    let promise: Promise<string>;
+    let promise: Promise<AiDetailedResponse>;
     try {
-      promise = Promise.resolve(this.#dependencies.generateRaw(options));
+      promise = Promise.resolve(this.#dependencies.generateRaw(generateOptions)).then(content => ({ content }));
     } catch (error) {
       promise = Promise.reject(error);
     }
@@ -105,6 +119,14 @@ export class TavernProvider {
       },
     };
   }
+}
+
+function mapContentHandle(handle: RequestHandle<AiDetailedResponse>): RequestHandle<string> {
+  return {
+    id: handle.id,
+    promise: handle.promise.then(response => response.content),
+    cancel: () => handle.cancel(),
+  };
 }
 
 export interface FetchResponseLike {
@@ -233,6 +255,10 @@ export class OpenAICompatibleProvider {
   }
 
   request(assembledPrompt: string): RequestHandle<string> {
+    return mapContentHandle(this.requestDetailed(assembledPrompt));
+  }
+
+  requestDetailed(assembledPrompt: string, options: AiRequestOptions = {}): RequestHandle<AiDetailedResponse> {
     const id = this.#idFactory();
     const controller = new AbortController();
     let cancelled = false;
@@ -284,7 +310,7 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                  messages: buildRolePrompts(assembledPrompt),
+                  messages: buildRolePrompts(assembledPrompt, options.mode),
                 }),
                 signal: controller.signal,
               });
@@ -321,12 +347,20 @@ export class OpenAICompatibleProvider {
           throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
         }
         assertNotInterrupted();
-        const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message
-          ?.content;
+        const message = (
+          payload as {
+            choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }>;
+          }
+        )?.choices?.[0]?.message;
+        const content = message?.content;
         if (typeof content !== 'string' || content.length === 0) {
           throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
         }
-        return content;
+        const reasoningContent = message?.reasoning_content;
+        return {
+          content,
+          ...(typeof reasoningContent === 'string' && reasoningContent.length > 0 ? { reasoningContent } : {}),
+        };
       })
       .finally(() => {
         if (timer === undefined) return;

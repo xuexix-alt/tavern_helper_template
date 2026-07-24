@@ -3,6 +3,8 @@ export type RolePrompt = Readonly<{
   content: string;
 }>;
 
+export type AiPromptMode = 'chat' | 'structured';
+
 export const JAILBREAK_LAYERS = {
   layer1_identity: `[微信模拟聊天接口 v2.0]
 
@@ -41,7 +43,10 @@ export const JAILBREAK_LAYERS = {
 开始生成聊天回复：`,
 } as const;
 
-export function buildRolePrompts(assembledPrompt: string): readonly RolePrompt[] {
+export function buildRolePrompts(assembledPrompt: string, mode: AiPromptMode = 'chat'): readonly RolePrompt[] {
+  if (mode === 'structured') {
+    return [{ role: 'user', content: assembledPrompt }];
+  }
   return [
     { role: 'system', content: JAILBREAK_LAYERS.layer1_identity },
     { role: 'system', content: JAILBREAK_LAYERS.layer2_nsfw },

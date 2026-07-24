@@ -4,6 +4,7 @@ import type {
   DynamicProfileDocument,
   ProfileAnalysisOutput,
   ProfileAnalysisSource,
+  ProfileChange,
   ProfileEvidenceRef,
   ProfileViewRecordData,
 } from './profileTypes';
@@ -17,6 +18,27 @@ const EvidenceRefSchema = z
 
 const ProfileAnalysisOutputSchema = z
   .object({
+    analysisNarrative: z.string().trim().max(2_000).optional().default('暂无额外分析说明'),
+    changes: z
+      .array(
+        z.object({
+          field: z.enum([
+            'basicInfoAdditions',
+            'personalityTuning',
+            'currentSituationSummary',
+            'relationshipInterpretation',
+            'storyInteractionSummary',
+            'chatInteractionSummary',
+          ]),
+          before: z.string().max(1_200),
+          after: z.string().max(1_200),
+          reason: z.string().trim().min(1).max(800),
+          evidenceRefs: z.array(EvidenceRefSchema).max(16),
+        }),
+      )
+      .max(12)
+      .optional()
+      .default([]),
     basicInfoAdditions: z.array(z.string().trim().min(1).max(240)).max(8),
     personalityTuning: z.string().trim().min(1).max(800),
     currentSituationSummary: z.string().trim().min(1).max(800),
@@ -74,6 +96,16 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     '',
     '【6 输出JSON契约】',
     JSON.stringify({
+      analysisNarrative: '用普通玩家能看懂的语言概括本次变化和依据（不重复字段原文）',
+      changes: [
+        {
+          field: 'personalityTuning',
+          before: '上一次动态性格',
+          after: '本次动态性格',
+          reason: '结合最近证据得出的有限变化',
+          evidenceRefs: ['story:消息ID', 'wechat:消息ID'],
+        },
+      ],
       basicInfoAdditions: ['有证据的新信息'],
       personalityTuning: '近期、有证据、不可推翻本色的性格微调',
       currentSituationSummary: '当前处境解释；MVU字段只可引用不可改写',
@@ -156,5 +188,10 @@ export function buildProfileViewRecord(
     playerActionAdvice: output.playerActionAdvice,
     sourceStoryIds: Object.freeze(source.story.map(item => item.id)),
     newWechatMessageIds: Object.freeze(source.wechatNew.map(item => item.id)),
+    analysisNarrative: output.analysisNarrative,
+    changes: Object.freeze(
+      output.changes.map(change => ({ ...change, evidenceRefs: Object.freeze([...change.evidenceRefs]) })),
+    ) as readonly ProfileChange[],
+    versions: [],
   };
 }

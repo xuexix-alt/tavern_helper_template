@@ -47,6 +47,7 @@ import {
   type ProfileWorldbookEntry,
 } from '../../../小手机平台/profiles/profileWorldbook';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../../../小手机平台/scheduler/phoneScheduler';
+import type { AiDetailedResponse, AiRequestOptions } from '../../../小手机平台/ai/providers';
 import type { PhoneShellApi } from '../../../小手机平台/shell/phoneShell';
 import phoneShellStyles from '../../../小手机平台/shell/phoneShell.css?raw';
 import {
@@ -779,9 +780,12 @@ function createWinterAdapterModule(): PhoneModule {
     };
   }
 
-  async function requestProfileAnalysis(prompt: string): Promise<string> {
+  async function requestProfileAnalysis(
+    prompt: string,
+    requestOptions: AiRequestOptions = { mode: 'structured' },
+  ): Promise<AiDetailedResponse> {
     const captured = requireSnapshot();
-    const handle = createProvider().request(prompt);
+    const handle = createProvider().requestDetailed(prompt, requestOptions);
     const key = requestKey(captured.sessionKey, `profile:${crypto.randomUUID()}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -857,6 +861,11 @@ function createWinterAdapterModule(): PhoneModule {
             refreshStatus: state?.status ?? 'idle',
             ...(state?.lastError ? { lastError: state.lastError } : {}),
             lastUpdated: state?.lastSuccessfulRefreshAt ?? 0,
+            analysisNarrative: state?.lastRawResponse
+              ? '最近一次分析未通过结构校验，原始回传已保留在失败状态。'
+              : '暂无额外分析说明',
+            ...(state?.lastRawResponse ? { rawResponse: state.lastRawResponse } : {}),
+            ...(state?.lastReasoningContent ? { reasoningContent: state.lastReasoningContent } : {}),
           } satisfies PhoneProfileView;
         }
         const document = stored.document;
@@ -879,6 +888,11 @@ function createWinterAdapterModule(): PhoneModule {
           refreshStatus: stored.status,
           ...(stored.lastError ? { lastError: stored.lastError } : {}),
           lastUpdated: document.updatedAt,
+          analysisNarrative: stored.analysisNarrative,
+          changes: stored.changes,
+          ...(stored.rawResponse ? { rawResponse: stored.rawResponse } : {}),
+          ...(stored.reasoningContent ? { reasoningContent: stored.reasoningContent } : {}),
+          versions: stored.versions,
         } satisfies PhoneProfileView;
       }),
     );
@@ -894,6 +908,26 @@ function createWinterAdapterModule(): PhoneModule {
 
   async function retryFailedProfiles(): Promise<void> {
     await requireProfileCoordinator().retryFailed();
+  }
+
+  function watchProfiles(listener: () => void): () => void {
+    return requireProfileCoordinator().watchProfiles(() => listener());
+  }
+
+  async function getProfile(personId: string): Promise<PhoneProfileView | null> {
+    const profile = (await listProfileViews()).find(item => item.id === personId);
+    return profile ?? null;
+  }
+
+  async function saveProfileEdit(
+    personId: string,
+    patch: import('../../../小手机平台/profiles/profileTypes').ProfileEditPatch,
+  ): Promise<void> {
+    await requireProfileCoordinator().saveProfileEdit(personId, patch);
+  }
+
+  async function restoreProfileVersion(personId: string, versionId: string): Promise<void> {
+    await requireProfileCoordinator().restoreProfileVersion(personId, versionId);
   }
 
   async function getProfileSettings(): Promise<PhoneProfileSettingsView> {
@@ -925,7 +959,7 @@ function createWinterAdapterModule(): PhoneModule {
           evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),
         })),
     });
-    const rawText = await requestProfileAnalysis(prompt);
+    const rawText = (await requestProfileAnalysis(prompt, { mode: 'chat' })).content;
     assertSnapshotCapture(captured);
     const output = parseProfileBroadcastOutput(rawText);
     await saveProfileBroadcastIssue(requireDb(), {
@@ -973,6 +1007,10 @@ function createWinterAdapterModule(): PhoneModule {
       refreshProfile,
       refreshAllProfiles,
       retryFailedProfiles,
+      watchProfiles,
+      getProfile,
+      saveProfileEdit,
+      restoreProfileVersion,
       getProfileSettings,
       saveProfileSettings,
       regenerateProfileRadio,
@@ -1403,7 +1441,7 @@ function createWinterAdapterModule(): PhoneModule {
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
     const chatLore = collectChatLoreContext(
-      chatLoreEntries,
+      chatWorldbookEntries,
       conversation.kind === 'eden-group' ? 'group' : 'private',
       conversation.id,
       6_000,

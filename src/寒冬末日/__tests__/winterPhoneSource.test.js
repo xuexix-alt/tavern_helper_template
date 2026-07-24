@@ -292,6 +292,18 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.doesNotMatch(combined, /same-layer-pre|sameLayerPre|useSameLayerPre/);
 });
 
+test('winter WeChat send reuses the loaded chat worldbook entries before dispatching the AI request', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const launchBlock = source.slice(
+    source.indexOf('async function launchAiRequest'),
+    source.indexOf('function rememberLoreFailure'),
+  );
+
+  assert.match(launchBlock, /const chatWorldbookEntries = await getWorldbook\(/);
+  assert.match(launchBlock, /collectChatLoreContext\(\s*chatWorldbookEntries,/);
+  assert.doesNotMatch(launchBlock, /\bchatLoreEntries\b/);
+});
+
 test('Eden Terminal is a level-one default shelter ability without T2 or T4 phone gating', () => {
   const abilities = readFileSync('src/寒冬末日/世界书/寒冬末日/庇护所升级能力.txt', 'utf8');
   const levelOne = abilities.slice(abilities.indexOf('  "1":'), abilities.indexOf('  "2":'));
