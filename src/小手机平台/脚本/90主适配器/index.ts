@@ -1,8 +1,8 @@
 /**
- * 小手机平台主适配器 - 独立实现版本
+ * 小手机平台通用服务适配器 - 实验实现
  *
- * 完全独立，不依赖旧版小手机的 ChatCore
- * 使用小手机平台自己的 TavernProvider
+ * 该模块不拥有 TavernPhone runtime、角色会话或顶层 Shell。
+ * 角色专用适配器负责建立 owner/session 并创建唯一 Shell。
  */
 
 import { registerPhoneModule } from '../../core/register';
@@ -200,34 +200,8 @@ function createMainAdapterModule(): PhoneModule {
         const apps = appsCatalog.createPhoneApps(services);
         console.log('[主适配器] 创建了', apps.length, '个 APP');
 
-        // 获取 shell 并注册 APP
-        const shellCatalog = context.services.require<{
-          createPhoneShell: (options: any) => any;
-        }>('phone.shell');
-
-        // 从 runtime 获取 owner，或使用默认值
-        const runtimeOwner = context.runtime?.getOwner?.();
-        const owner = runtimeOwner || {
-          characterName: '末世寒冬 - 星穹秩序',
-          adapterId: 'winter-apocalypse',
-          runtimeMajor: 1,
-        };
-
-        // 如果 runtime 还没有 owner，设置它
-        if (!runtimeOwner && context.runtime) {
-          console.log('[主适配器] 设置 Runtime Owner:', owner);
-          context.runtime.setOwner(owner);
-        }
-
-        const shell = shellCatalog.createPhoneShell({
-          owner,
-          apps,
-        });
-
-        console.log('[主适配器] Shell 已创建:', shell);
-
         status = 'READY';
-        console.log('✅ [主适配器] 初始化完成（独立模式）');
+        console.log('✅ [主适配器] 通用服务初始化完成（非运行时 owner）');
       } catch (error) {
         status = 'ERROR';
         console.error('❌ [主适配器] 初始化失败:', error);
@@ -251,9 +225,9 @@ $(() => {
     manifest: {
       id: 'main.adapter',
       version: '1.0.0',
-      required: true,
-      dependsOn: ['communication.apps', 'phone.shell'],
-      capabilities: ['main.adapter', 'phone.adapter'],
+      required: false,
+      dependsOn: ['communication.apps'],
+      capabilities: ['main.adapter'],
     },
     factory: () => createMainAdapterModule(),
   });

@@ -8,7 +8,7 @@ const entrypoints = [
     path: 'src/小手机平台/脚本/10平台服务/index.ts',
     id: 'platform.services',
     dependsOn: [],
-    capabilities: ['host.gateway', 'settings.store'],
+    capabilities: ['host.gateway', 'settings.store', 'story.extractor'],
   },
   {
     path: 'src/小手机平台/脚本/20数据与同步/index.ts',
@@ -20,7 +20,7 @@ const entrypoints = [
     path: 'src/小手机平台/脚本/30AI与调度/index.ts',
     id: 'ai.scheduler',
     dependsOn: ['platform.services', 'data.sync'],
-    capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler'],
+    capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],
   },
   {
     path: 'src/小手机平台/脚本/40手机外壳/index.ts',
