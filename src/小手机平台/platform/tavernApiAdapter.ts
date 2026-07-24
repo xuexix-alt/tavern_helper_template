@@ -20,7 +20,9 @@ export interface TavernGenerateOptions {
  */
 function resolveGenerateRawFunction(): ((options: TavernGenerateOptions) => Promise<string>) | null {
   // 脚本运行在 iframe 中，应该通过 window.parent.TavernHelper 访问
-  const tryGetFunction = (targetWindow: Window | null): ((options: TavernGenerateOptions) => Promise<string>) | null => {
+  const tryGetFunction = (
+    targetWindow: Window | null,
+  ): ((options: TavernGenerateOptions) => Promise<string>) | null => {
     if (!targetWindow) return null;
     try {
       const tavernHelper = (targetWindow as any)?.TavernHelper;
@@ -34,11 +36,7 @@ function resolveGenerateRawFunction(): ((options: TavernGenerateOptions) => Prom
   };
 
   // 依次尝试 window.parent（脚本应该用这个）、window.top、window
-  const candidates = [
-    () => window.parent,
-    () => window.top,
-    () => window,
-  ];
+  const candidates = [() => window.parent, () => window.top, () => window];
 
   for (const getCandidate of candidates) {
     try {
@@ -71,11 +69,7 @@ function resolveStopGenerationByIdFunction(): ((id: string) => void) | null {
   };
 
   // 依次尝试 window.parent、window.top、window
-  const candidates = [
-    () => window.parent,
-    () => window.top,
-    () => window,
-  ];
+  const candidates = [() => window.parent, () => window.top, () => window];
 
   for (const getCandidate of candidates) {
     try {

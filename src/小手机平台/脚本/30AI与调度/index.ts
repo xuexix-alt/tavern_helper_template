@@ -4,7 +4,11 @@ import { parseResponse } from '../../ai/responseParser';
 import { createServiceModule } from '../../core/serviceModule';
 import { registerPhoneModule } from '../../core/register';
 import { ControlledPhoneScheduler } from '../../scheduler/phoneScheduler';
-import { createGenerateRaw, createStopGenerationById, checkTavernApiAvailability } from '../../platform/tavernApiAdapter';
+import {
+  createGenerateRaw,
+  createStopGenerationById,
+  checkTavernApiAvailability,
+} from '../../platform/tavernApiAdapter';
 
 const services = Object.freeze({
   'prompt.assembler': Object.freeze({ assemblePrompt, createPromptContextSnapshot, parseResponse }),

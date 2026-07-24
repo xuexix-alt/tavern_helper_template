@@ -138,7 +138,6 @@ function createMainAdapterModule(): PhoneModule {
 
           // TODO: 将消息写入数据库
           // TODO: 同步到世界书
-
         } catch (error) {
           console.error('[主适配器] ❌ 消息发送失败:', error);
           throw error;
@@ -232,9 +231,7 @@ function createMainAdapterModule(): PhoneModule {
       } catch (error) {
         status = 'ERROR';
         console.error('❌ [主适配器] 初始化失败:', error);
-        throw new Error(
-          `主适配器初始化失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        throw new Error(`主适配器初始化失败: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
 

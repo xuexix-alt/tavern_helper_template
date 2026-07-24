@@ -20,9 +20,7 @@ function createWechatAdapterModule(): PhoneModule {
   /**
    * 创建 AI Provider 实例（支持 Tavern 和 OpenAI-compatible）
    */
-  function createProvider():
-    | InstanceType<typeof TavernProvider>
-    | InstanceType<typeof OpenAICompatibleProvider> {
+  function createProvider(): InstanceType<typeof TavernProvider> | InstanceType<typeof OpenAICompatibleProvider> {
     if (!context) {
       throw new Error('微信 APP 适配器未初始化');
     }
@@ -165,9 +163,7 @@ function createWechatAdapterModule(): PhoneModule {
       } catch (error) {
         status = 'ERROR';
         console.error('❌ [微信APP适配器] 初始化失败:', error);
-        throw new Error(
-          `微信 APP 适配器初始化失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        throw new Error(`微信 APP 适配器初始化失败: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
 
