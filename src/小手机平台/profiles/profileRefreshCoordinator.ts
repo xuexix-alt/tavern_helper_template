@@ -639,7 +639,7 @@ export class ProfileRefreshCoordinator {
   }
 
   private notify(event: ProfileStateEvent): void {
-    for (const listener of this.stateListeners) {
+    for (const listener of [...this.stateListeners]) {
       try {
         listener(event);
       } catch {

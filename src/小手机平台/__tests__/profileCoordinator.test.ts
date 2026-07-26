@@ -322,7 +322,26 @@ async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
   assert.equal(restored.document.personalityTuning, '近期表达更加直接');
 }
 
+async function testProfileNotificationUsesStableListenerSnapshot(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  let notifications = 0;
+  let stopWatching = () => undefined;
+  stopWatching = fixture.coordinator.watchProfiles(() => {
+    notifications += 1;
+    stopWatching();
+    stopWatching = fixture.coordinator.watchProfiles(() => {
+      notifications += 1;
+    });
+  });
+
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+
+  assert.equal(notifications, 2, '单次状态通知不得继续调用派发期间新订阅的 UI 监听器');
+  stopWatching();
+}
+
 async function main(): Promise<void> {
+  await testProfileNotificationUsesStableListenerSnapshot();
   await testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler();
   await testBatchRefreshRunsSequentiallyWithoutBackgroundScheduler();
   await testInterruptedRefreshingStatesRecoverOnStartup();
