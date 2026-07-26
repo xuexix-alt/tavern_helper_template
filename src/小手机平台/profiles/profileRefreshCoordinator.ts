@@ -59,6 +59,7 @@ interface StoredStoryState extends PhoneBusinessRecord, StoryCounterState {}
 
 const SETTINGS_ID = 'dynamic-profile-settings';
 const STORY_STATE_ID = 'dynamic-profile-story';
+const INTERRUPTED_ANALYSIS_ERROR = '上次档案分析因页面刷新或脚本重载中断，请重新分析';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -160,6 +161,44 @@ export class ProfileRefreshCoordinator {
   watchProfiles(listener: ProfileStateListener): () => void {
     this.stateListeners.add(listener);
     return () => this.stateListeners.delete(listener);
+  }
+
+  async recoverInterruptedAnalyses(): Promise<void> {
+    this.assertActive();
+    const sessionKey = this.dependencies.getSessionKey();
+    const [states, runs] = await Promise.all([
+      this.dependencies.db.listRecords('profileAnalysis', sessionKey),
+      this.dependencies.db.listRecords('profileRuns', sessionKey),
+    ]);
+    for (const record of states.filter(isAnalysisState)) {
+      if (record.status !== 'refreshing') continue;
+      await this.writeAnalysisState({
+        sessionKey,
+        personId: record.personId,
+        ...(typeof record.lastWechatMessageId === 'string' ? { lastWechatMessageId: record.lastWechatMessageId } : {}),
+        ...(typeof record.lastWechatCreatedAt === 'number' ? { lastWechatCreatedAt: record.lastWechatCreatedAt } : {}),
+        ...(typeof record.lastSuccessfulRefreshAt === 'number'
+          ? { lastSuccessfulRefreshAt: record.lastSuccessfulRefreshAt }
+          : {}),
+        status: 'failed',
+        lastError: INTERRUPTED_ANALYSIS_ERROR,
+        ...(typeof record.lastFallbackReason === 'string' ? { lastFallbackReason: record.lastFallbackReason } : {}),
+        ...(typeof record.lastRawResponse === 'string' ? { lastRawResponse: record.lastRawResponse } : {}),
+        ...(typeof record.lastReasoningContent === 'string'
+          ? { lastReasoningContent: record.lastReasoningContent }
+          : {}),
+      });
+      this.notify({ personId: record.personId, status: 'failed', lastError: INTERRUPTED_ANALYSIS_ERROR });
+    }
+    for (const run of runs.filter(isStoredRun)) {
+      if (!run.people.some(person => person.status === 'refreshing')) continue;
+      run.people = run.people.map(person =>
+        person.status === 'refreshing'
+          ? { personId: person.personId, status: 'failed', error: INTERRUPTED_ANALYSIS_ERROR }
+          : person,
+      );
+      await this.dependencies.db.putRecord('profileRuns', run);
+    }
   }
 
   async listProfiles(): Promise<
@@ -393,7 +432,6 @@ export class ProfileRefreshCoordinator {
   ): Promise<ProfileRefreshRunResult> {
     this.assertActive();
     const sessionKey = this.dependencies.getSessionKey();
-    const snapshotKey = this.dependencies.getSnapshotKey();
     const now = this.dependencies.now();
     const runId = `profile-run:${now}:${++this.batchSequence}`;
     const run: StoredRun = {
@@ -403,38 +441,12 @@ export class ProfileRefreshCoordinator {
       people: people.map(person => ({ personId: person.id, status: 'refreshing' })),
     };
     await this.dependencies.db.putRecord('profileRuns', run);
-    this.dependencies.scheduler.setSnapshot({
-      sessionKey,
-      snapshotKey,
-      storyTurn: this.storyTurn(),
-    });
-
     for (const person of people) {
-      const workKey = `${runId}\u0000${person.id}`;
-      this.scheduled.set(workKey, { runId, trigger, person, sessionKey });
-      const accepted = this.dependencies.scheduler.enqueue({
-        triggerKey: workKey,
-        sessionKey,
-        snapshotKey,
-        conversationId: `private:${person.id}`,
-        contactKey: person.id,
-        topicKey: `profile:${person.id}:${runId}`,
-        topicVersion: runId,
-        priority: 'P1',
-        source: 'profile_refresh',
-        requiresAi: true,
-        payload: { workKey, runId, personId: person.id, trigger },
-      });
-      if (!accepted) {
-        this.scheduled.delete(workKey);
-        await this.updateRunPerson(runId, sessionKey, person.id, 'failed', '档案刷新任务未被调度器接受');
+      try {
+        await this.refreshScheduledPerson({ runId, trigger, person, sessionKey });
+      } catch {
+        // A failed person is persisted by refreshScheduledPerson; continue the batch serially.
       }
-    }
-    this.dependencies.scheduler.runAvailable();
-    await this.dependencies.scheduler.whenIdle();
-
-    for (const key of [...this.scheduled.keys()]) {
-      if (key.startsWith(`${runId}\u0000`)) this.scheduled.delete(key);
     }
     const stored = await this.readRun(runId, sessionKey);
     const result: ProfileRefreshRunResult = {

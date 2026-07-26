@@ -206,6 +206,52 @@ async function testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler():
   assert.equal(fixture.written.has('main:纪宁'), true);
 }
 
+async function testBatchRefreshRunsSequentiallyWithoutBackgroundScheduler(): Promise<void> {
+  const fixture = createFixture(PEOPLE, { failOnSchedulerEnqueue: true });
+
+  const result = await fixture.coordinator.refreshAll('all-manual');
+
+  assert.deepEqual(
+    fixture.analysisCalls,
+    PEOPLE.map(person => person.id),
+  );
+  assert.equal(
+    result.people.every(person => person.status === 'success'),
+    true,
+  );
+  assert.equal(fixture.maxConcurrency(), 1, '酒馆生成通道的档案分析必须逐人物串行执行');
+}
+
+async function testInterruptedRefreshingStatesRecoverOnStartup(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  await fixture.db.putRecord('profileAnalysis', {
+    id: PEOPLE[0].id,
+    sessionKey: 'session-a',
+    personId: PEOPLE[0].id,
+    status: 'refreshing',
+    lastWechatMessageId: 'previous-message',
+  });
+  await fixture.db.putRecord('profileRuns', {
+    id: 'profile-run:interrupted',
+    sessionKey: 'session-a',
+    trigger: 'all-manual',
+    people: [{ personId: PEOPLE[0].id, status: 'refreshing' }],
+  });
+
+  const coordinator = fixture.coordinator as ProfileRefreshCoordinator & {
+    recoverInterruptedAnalyses?: () => Promise<void>;
+  };
+  assert.equal(typeof coordinator.recoverInterruptedAnalyses, 'function', '协调器必须提供启动恢复入口');
+  await coordinator.recoverInterruptedAnalyses!();
+
+  const state = await fixture.coordinator.getAnalysisState(PEOPLE[0].id);
+  assert.equal(state?.status, 'failed');
+  assert.equal(state?.lastWechatMessageId, 'previous-message');
+  assert.match(state?.lastError ?? '', /页面刷新或脚本重载中断/);
+  const runs = await fixture.db.listRecords('profileRuns', 'session-a');
+  assert.equal((runs[0].people as Array<{ status: string }>)[0]?.status, 'failed');
+}
+
 async function testBatchAllowsPartialSuccessAndLimitsConcurrency(): Promise<void> {
   const fixture = createFixture();
   fixture.setAlwaysFail('main:赵卫国');
@@ -278,6 +324,8 @@ async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
 
 async function main(): Promise<void> {
   await testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler();
+  await testBatchRefreshRunsSequentiallyWithoutBackgroundScheduler();
+  await testInterruptedRefreshingStatesRecoverOnStartup();
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
   await testAllFailedDoesNotGenerateBroadcast();

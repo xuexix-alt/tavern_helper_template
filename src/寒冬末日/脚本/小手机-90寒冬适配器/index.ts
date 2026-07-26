@@ -359,7 +359,7 @@ function createWinterAdapterModule(): PhoneModule {
         {
           maxAIConversationsPerSnapshot: Number.MAX_SAFE_INTEGER,
           contactCooldownInStoryTurns: 0,
-          maxInflightAIRequests: 2,
+          maxInflightAIRequests: 1,
         },
       );
       profileCoordinator = createProfileCoordinator(profileScheduler);
@@ -379,6 +379,7 @@ function createWinterAdapterModule(): PhoneModule {
       syncShellVisibility(context.runtime.getStatus().isOpen);
       attachCharacterEvents();
       await refreshInitialSnapshot();
+      if (snapshot) await profileCoordinator.recoverInterruptedAnalyses();
     } catch (error) {
       await deactivate('适配器激活失败');
       status = 'ERROR';
@@ -399,6 +400,7 @@ function createWinterAdapterModule(): PhoneModule {
     activeProfileWorldbookNames = [];
     await captureActiveWorldbooks(activeSessionKey, captured);
     await refreshInitialSnapshot();
+    if (snapshot) await profileCoordinator?.recoverInterruptedAnalyses();
   }
 
   async function captureActiveWorldbooks(sessionKey: string | null, captured: HostEpochCapture): Promise<void> {

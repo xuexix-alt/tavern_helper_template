@@ -71,6 +71,22 @@ test('data entry publishes persistent IndexedDB with an explicit memory fallback
   assert.match(source, /['"]phone\.db['"]:\s*Object\.freeze\(\{[^}]*createIndexedDbPhoneDb[^}]*createMemoryPhoneDb/s);
 });
 
+test('winter profile refresh is serialized and recovers interrupted state after activation or chat switch', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const activateBlock = source.slice(
+    source.indexOf('async function activate'),
+    source.indexOf('async function switchSession'),
+  );
+  const switchBlock = source.slice(
+    source.indexOf('async function switchSession'),
+    source.indexOf('async function captureActiveWorldbooks'),
+  );
+
+  assert.match(source, /maxInflightAIRequests:\s*1/);
+  assert.match(activateBlock, /await refreshInitialSnapshot\(\)[\s\S]*?recoverInterruptedAnalyses\(\)/);
+  assert.match(switchBlock, /await refreshInitialSnapshot\(\)[\s\S]*?recoverInterruptedAnalyses\(\)/);
+});
+
 test('webpack filters discovered scripts before entry parsing and can omit generator plugins', () => {
   const source = readFileSync('webpack.config.ts', 'utf8');
   const prefixes = source.indexOf('TAVERN_BUILD_PREFIXES');
