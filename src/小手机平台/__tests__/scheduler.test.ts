@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 import {
   ControlledPhoneScheduler,
@@ -1071,6 +1072,47 @@ async function testProfileInflightLimit(): Promise<void> {
   assert.equal(delivered, 5);
 }
 
+async function testCrossRealmProfilePayload(): Promise<void> {
+  const dispatched: PhoneSchedulerJob[] = [];
+  const scheduler = new ControlledPhoneScheduler({
+    isEligible: () => true,
+    dispatchAi: async current => {
+      dispatched.push(current);
+    },
+    deliverDeterministic: async () => undefined,
+  });
+  scheduler.setSnapshot(snapshot());
+  const payload = vm.runInNewContext(`({
+    workKey: 'profile-run:1\\u0000main:纪宁',
+    runId: 'profile-run:1',
+    personId: 'main:纪宁',
+    trigger: 'person-manual',
+    evidence: ['story:12', 'wechat:new']
+  })`);
+
+  assert.equal(
+    scheduler.enqueue(
+      job({
+        triggerKey: 'cross-realm-profile',
+        source: 'profile_refresh',
+        payload,
+      }),
+    ),
+    true,
+    '独立 iframe 创建的 plain object/array 必须可进入档案调度器',
+  );
+  scheduler.runAvailable();
+  await scheduler.whenIdle();
+  assert.equal(dispatched.length, 1);
+  assert.deepEqual(dispatched[0].payload, {
+    workKey: 'profile-run:1\u0000main:纪宁',
+    runId: 'profile-run:1',
+    personId: 'main:纪宁',
+    trigger: 'person-manual',
+    evidence: ['story:12', 'wechat:new'],
+  });
+}
+
 async function main(): Promise<void> {
   await testPriorityOrder();
   await testEligibilityAndTopicDedup();
@@ -1091,6 +1133,7 @@ async function main(): Promise<void> {
   await testFailureReleaseRetryAndDisposeSafety();
   await testNoSnapshotDoesNotDispatch();
   await testProfileInflightLimit();
+  await testCrossRealmProfilePayload();
   console.log('scheduler tests passed');
 }
 

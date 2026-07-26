@@ -235,7 +235,10 @@ export class ProfileRefreshCoordinator {
     const document: DynamicProfileDocument = {
       ...view.document,
       ...(patch.basicInfoAdditions ? { basicInfoAdditions: Object.freeze([...patch.basicInfoAdditions]) } : {}),
+      ...(patch.behaviorTuning !== undefined ? { behaviorTuning: patch.behaviorTuning.trim() } : {}),
       ...(patch.personalityTuning !== undefined ? { personalityTuning: patch.personalityTuning.trim() } : {}),
+      ...(patch.speechStyleTuning !== undefined ? { speechStyleTuning: patch.speechStyleTuning.trim() } : {}),
+      ...(patch.currentGoals !== undefined ? { currentGoals: patch.currentGoals.trim() } : {}),
       ...(patch.currentSituationSummary !== undefined
         ? { currentSituationSummary: patch.currentSituationSummary.trim() }
         : {}),
@@ -433,7 +436,7 @@ export class ProfileRefreshCoordinator {
             },
       ),
     };
-    if (trigger === 'auto' || trigger === 'all-manual') {
+    if ((trigger === 'auto' || trigger === 'all-manual') && result.people.some(person => person.status === 'success')) {
       await this.dependencies.onAllRunComplete?.(result);
     }
     return result;
@@ -456,16 +459,13 @@ export class ProfileRefreshCoordinator {
       this.assertCapturedSession(scheduled.sessionKey);
       const source = await this.dependencies.collectSource(scheduled.person, oldState);
       this.assertCapturedSession(scheduled.sessionKey);
-      const prompt = [
-        `当前分析人物：${source.personName}（${source.personId}）`,
-        buildProfileAnalysisPrompt(source),
-      ].join('\n');
+      const prompt = buildProfileAnalysisPrompt(source);
       const response = await this.dependencies.requestAnalysis(prompt);
       const detailed: AiDetailedResponse = typeof response === 'string' ? { content: response } : response;
       detailedResponse = detailed;
       let output;
       try {
-        output = parseProfileAnalysisOutput(detailed.content);
+        output = parseProfileAnalysisOutput(detailed.content, source);
       } catch (error) {
         if (error && typeof error === 'object') Object.assign(error, { profileResponse: detailed });
         throw error;

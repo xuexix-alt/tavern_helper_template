@@ -86,7 +86,10 @@ export interface PhoneProfileView {
   name: string;
   basicInfo: string;
   personalityBaseline: string;
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentStatus: string;
   relationship: string;
   storyInteractionSummary: string;
@@ -802,7 +805,10 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             };
             addProfileField('基本信息', profile.basicInfo);
             addProfileField('固定性格', profile.personalityBaseline);
+            addProfileField('行为模式', profile.behaviorTuning);
             addProfileField('性格微调', profile.personalityTuning);
+            addProfileField('说话方式', profile.speechStyleTuning);
+            addProfileField('当前目标', profile.currentGoals);
             addProfileField('当前处境', profile.currentStatus);
             addProfileField('关系', profile.relationship);
             addProfileField('正文互动小结', profile.storyInteractionSummary);
@@ -1269,7 +1275,10 @@ async function renderProfileDetailPage(
         content.append(sectionBlock(document, '固定本色（世界书）', profile.personalityBaseline));
         const fields: [string, string][] = [
           ['基本信息', profile.basicInfo],
+          ['行为模式', profile.behaviorTuning],
           ['性格微调', profile.personalityTuning],
+          ['说话方式', profile.speechStyleTuning],
+          ['当前目标', profile.currentGoals],
           ['当前处境', profile.currentStatus],
           ['关系解释', profile.relationship],
           ['正文互动', profile.storyInteractionSummary],
@@ -1301,7 +1310,10 @@ async function renderProfileDetailPage(
                 .split(/[；;\n]/)
                 .map(value => value.trim())
                 .filter(Boolean),
+              behaviorTuning: controls.get('行为模式') ?? '',
               personalityTuning: controls.get('性格微调') ?? '',
+              speechStyleTuning: controls.get('说话方式') ?? '',
+              currentGoals: controls.get('当前目标') ?? '',
               currentSituationSummary: controls.get('当前处境') ?? '',
               relationshipInterpretation: controls.get('关系解释') ?? '',
               storyInteractionSummary: controls.get('正文互动') ?? '',

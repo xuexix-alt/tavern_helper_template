@@ -850,7 +850,10 @@ function createWinterAdapterModule(): PhoneModule {
             name: person.name,
             basicInfo: person.temporary ? '临时人物' : '剧情人物',
             personalityBaseline: baseline ?? '暂无固定档案',
+            behaviorTuning: '待首次分析',
             personalityTuning: '待首次分析',
+            speechStyleTuning: '待首次分析',
+            currentGoals: '待首次分析',
             currentStatus: '待首次分析',
             relationship: '待首次分析',
             storyInteractionSummary: '暂无',
@@ -877,7 +880,10 @@ function createWinterAdapterModule(): PhoneModule {
           name: document.personName,
           basicInfo: document.basicInfoAdditions.join('；') || '暂无新增',
           personalityBaseline: document.fixedBaseline,
+          behaviorTuning: document.behaviorTuning || '暂无明确变化',
           personalityTuning: document.personalityTuning,
+          speechStyleTuning: document.speechStyleTuning || '暂无明确变化',
+          currentGoals: document.currentGoals || '暂无明确目标',
           currentStatus: document.currentSituationSummary,
           relationship: document.relationshipInterpretation,
           storyInteractionSummary: document.storyInteractionSummary,
@@ -903,11 +909,17 @@ function createWinterAdapterModule(): PhoneModule {
   }
 
   async function refreshAllProfiles(): Promise<void> {
-    await requireProfileCoordinator().refreshAll('all-manual');
+    const result = await requireProfileCoordinator().refreshAll('all-manual');
+    const failures = result.people.filter(person => person.status === 'failed');
+    if (failures.length > 0) {
+      throw new Error(`档案刷新完成 ${result.people.length - failures.length}/${result.people.length}，请查看失败人物详情`);
+    }
   }
 
   async function retryFailedProfiles(): Promise<void> {
-    await requireProfileCoordinator().retryFailed();
+    const result = await requireProfileCoordinator().retryFailed();
+    const failures = result.people.filter(person => person.status === 'failed');
+    if (failures.length > 0) throw new Error(`仍有 ${failures.length} 个人物刷新失败`);
   }
 
   function watchProfiles(listener: () => void): () => void {
@@ -959,7 +971,7 @@ function createWinterAdapterModule(): PhoneModule {
           evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),
         })),
     });
-    const rawText = (await requestProfileAnalysis(prompt, { mode: 'chat' })).content;
+    const rawText = (await requestProfileAnalysis(prompt, { mode: 'structured' })).content;
     assertSnapshotCapture(captured);
     const output = parseProfileBroadcastOutput(rawText);
     await saveProfileBroadcastIssue(requireDb(), {

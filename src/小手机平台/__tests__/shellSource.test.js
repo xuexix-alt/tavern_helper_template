@@ -629,7 +629,10 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
         name: '纪宁',
         basicInfo: '医生',
         personalityBaseline: '冷静谨慎',
+        behaviorTuning: '行动前先确认风险',
         personalityTuning: '近期更直接',
+        speechStyleTuning: '任务沟通使用短句',
+        currentGoals: '补足药品库存',
         currentStatus: '诊疗室值守',
         relationship: '协作',
         storyInteractionSummary: '正文中完成交接',
@@ -684,7 +687,10 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
   for (const label of [
     '基本信息',
     '固定本色（世界书）',
+    '行为模式',
     '性格微调',
+    '说话方式',
+    '当前目标',
     '当前处境',
     '关系解释',
     '正文互动',
@@ -693,7 +699,7 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
   ]) {
     assert.match(textValues, new RegExp(label));
   }
-  assert.equal(findAllByTag(detail, 'textarea').length, 7);
+  assert.equal(findAllByTag(detail, 'textarea').length, 10);
 });
 
 test('broadcast app renders profile radio history and can regenerate without replacing notices', async () => {

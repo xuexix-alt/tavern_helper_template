@@ -24,7 +24,10 @@ const STORY: readonly ProfileStoryMessage[] = Array.from({ length: 20 }, (_, ind
 }));
 
 function analysisJson(personName: string): string {
+  const person = PEOPLE.find(item => item.name === personName) ?? PEOPLE[0];
   return JSON.stringify({
+    personId: person.id,
+    personName,
     analysisNarrative: `${personName}最近的动态来自正文和微信中的补给变化。`,
     changes: [
       {
@@ -36,7 +39,10 @@ function analysisJson(personName: string): string {
       },
     ],
     basicInfoAdditions: [`${personName}近期参与庇护所工作`],
+    behaviorTuning: '执行任务前会先确认物资与风险',
     personalityTuning: '近期表达更加直接',
+    speechStyleTuning: '讨论任务时使用短句并明确结论',
+    currentGoals: '完成当前庇护所协作任务',
     currentSituationSummary: '目前位于公共区域',
     relationshipInterpretation: '与玩家保持协作关系',
     storyInteractionSummary: '最近在正文中完成一次协作',
@@ -54,6 +60,7 @@ interface Fixture {
   setRejectNext(error: Error): void;
   setAlwaysFail(personId: string | null): void;
   maxConcurrency(): number;
+  allRunCompleteCalls(): number;
 }
 
 function createFixture(
@@ -84,6 +91,7 @@ function createFixture(
   let alwaysFail: string | null = null;
   let active = 0;
   let maxActive = 0;
+  let allRunCompleteCalls = 0;
   let coordinator: ProfileRefreshCoordinator;
 
   const scheduler = new ControlledPhoneScheduler(
@@ -130,6 +138,9 @@ function createFixture(
       if (alwaysFail === document.personId) throw new Error(`write failed: ${document.personId}`);
       written.set(document.personId, structuredClone(document));
     },
+    onAllRunComplete: async () => {
+      allRunCompleteCalls += 1;
+    },
   };
 
   coordinator = new ProfileRefreshCoordinator(dependencies, {
@@ -149,6 +160,7 @@ function createFixture(
       alwaysFail = personId;
     },
     maxConcurrency: () => maxActive,
+    allRunCompleteCalls: () => allRunCompleteCalls,
   };
 }
 
@@ -190,6 +202,17 @@ async function testBatchAllowsPartialSuccessAndLimitsConcurrency(): Promise<void
   assert.equal(result.people.filter(item => item.status === 'success').length, 2);
   assert.equal(result.people.filter(item => item.status === 'failed').length, 1);
   assert.ok(fixture.maxConcurrency() <= 2);
+  assert.equal(fixture.allRunCompleteCalls(), 1, '部分成功时可基于成功档案生成播报');
+}
+
+async function testAllFailedDoesNotGenerateBroadcast(): Promise<void> {
+  const fixture = createFixture([PEOPLE[1]]);
+  fixture.setAlwaysFail('main:赵卫国');
+
+  const result = await fixture.coordinator.refreshAll('all-manual');
+
+  assert.equal(result.people[0]?.status, 'failed');
+  assert.equal(fixture.allRunCompleteCalls(), 0, '没有任何成功档案时不得误生成播报');
 }
 
 async function testConcurrentRunUpdatesDoNotOverwriteOtherPeople(): Promise<void> {
@@ -242,6 +265,7 @@ async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
 async function main(): Promise<void> {
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
+  await testAllFailedDoesNotGenerateBroadcast();
   await testConcurrentRunUpdatesDoNotOverwriteOtherPeople();
   await testAutoRefreshAtConfiguredThreshold();
   await testDetailedViewVersionsAndPlayerEdit();

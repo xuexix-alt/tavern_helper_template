@@ -59,10 +59,15 @@ export interface ProfileRefreshRunResult {
 }
 
 export interface ProfileAnalysisOutput {
+  personId: string;
+  personName: string;
   analysisNarrative: string;
   changes: readonly ProfileChange[];
   basicInfoAdditions: readonly string[];
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentSituationSummary: string;
   relationshipInterpretation: string;
   storyInteractionSummary: string;
@@ -73,7 +78,10 @@ export interface ProfileAnalysisOutput {
 
 export type ProfileChangeField =
   | 'basicInfoAdditions'
+  | 'behaviorTuning'
   | 'personalityTuning'
+  | 'speechStyleTuning'
+  | 'currentGoals'
   | 'currentSituationSummary'
   | 'relationshipInterpretation'
   | 'storyInteractionSummary'
@@ -95,7 +103,10 @@ export interface DynamicProfileDocument {
   fixedBaseline: string;
   hardFacts: Readonly<Record<string, unknown>>;
   basicInfoAdditions: readonly string[];
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentSituationSummary: string;
   relationshipInterpretation: string;
   storyInteractionSummary: string;
@@ -119,7 +130,10 @@ export interface ProfileViewRecordData {
 
 export interface ProfileEditPatch {
   basicInfoAdditions?: readonly string[];
+  behaviorTuning?: string;
   personalityTuning?: string;
+  speechStyleTuning?: string;
+  currentGoals?: string;
   currentSituationSummary?: string;
   relationshipInterpretation?: string;
   storyInteractionSummary?: string;
