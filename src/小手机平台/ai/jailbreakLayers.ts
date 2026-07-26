@@ -43,9 +43,17 @@ export const JAILBREAK_LAYERS = {
 开始生成聊天回复：`,
 } as const;
 
-export function buildRolePrompts(assembledPrompt: string, mode: AiPromptMode = 'chat'): readonly RolePrompt[] {
+export function buildRolePrompts(
+  assembledPrompt: string,
+  mode: AiPromptMode = 'chat',
+  systemPrompt?: string,
+): readonly RolePrompt[] {
   if (mode === 'structured') {
-    return [{ role: 'user', content: assembledPrompt }];
+    const structuredSystem = systemPrompt?.trim();
+    return [
+      ...(structuredSystem ? [{ role: 'system' as const, content: structuredSystem }] : []),
+      { role: 'user', content: assembledPrompt },
+    ];
   }
   return [
     { role: 'system', content: JAILBREAK_LAYERS.layer1_identity },

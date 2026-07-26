@@ -65,7 +65,7 @@ interface Fixture {
 
 function createFixture(
   people: readonly ProfilePerson[] = PEOPLE,
-  options: { delayRunUpdates?: boolean } = {},
+  options: { delayRunUpdates?: boolean; failOnSchedulerEnqueue?: boolean } = {},
 ): Fixture {
   const memoryDb = createMemoryPhoneDb();
   const db: PhoneDb = options.delayRunUpdates
@@ -107,6 +107,11 @@ function createFixture(
       maxInflightAIRequests: 2,
     },
   );
+  if (options.failOnSchedulerEnqueue) {
+    scheduler.enqueue = () => {
+      throw new Error('manual refresh must not enqueue a background scheduler job');
+    };
+  }
 
   const dependencies: ProfileRefreshDependencies = {
     db,
@@ -192,6 +197,15 @@ async function testWorldbookFailureDoesNotAdvanceAnchor(): Promise<void> {
   assert.match(fixture.written.get('main:纪宁')?.chatInteractionSummary ?? '', /聊天小结/);
 }
 
+async function testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]], { failOnSchedulerEnqueue: true });
+
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+
+  assert.deepEqual(fixture.analysisCalls, ['main:纪宁']);
+  assert.equal(fixture.written.has('main:纪宁'), true);
+}
+
 async function testBatchAllowsPartialSuccessAndLimitsConcurrency(): Promise<void> {
   const fixture = createFixture();
   fixture.setAlwaysFail('main:赵卫国');
@@ -263,6 +277,7 @@ async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler();
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
   await testAllFailedDoesNotGenerateBroadcast();

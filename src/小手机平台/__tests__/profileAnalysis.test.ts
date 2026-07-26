@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  PROFILE_ANALYSIS_SYSTEM_PROMPT,
   buildProfileAnalysisPrompt,
   mergeDynamicProfile,
   parseProfileAnalysisOutput,
@@ -113,6 +114,10 @@ function testIdentityAndEvidenceValidation(): void {
 
 function testPromptSourceOrder(): void {
   const prompt = buildProfileAnalysisPrompt(source);
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /角色动态分析专家/);
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /固定本色/);
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /只输出一个 JSON 对象/);
+  assert.doesNotMatch(prompt, /你是寒冬末日人物动态档案分析器/);
   assert.ok(prompt.indexOf('【1 MVU硬事实】') < prompt.indexOf('【2 固定角色世界书】'));
   assert.ok(prompt.indexOf('【2 固定角色世界书】') < prompt.indexOf('【3 最近20条正文】'));
   assert.ok(prompt.indexOf('【3 最近20条正文】') < prompt.indexOf('【5 上一次动态档案】'));
@@ -125,8 +130,34 @@ function testPromptSourceOrder(): void {
   assert.match(prompt, /story:12/);
 }
 
+function testOpenAiResponseEnvelopeCanBeParsed(): void {
+  const content = JSON.stringify({
+    personId: 'main:纪宁',
+    personName: '纪宁',
+    analysisNarrative: '纪宁近期更明确地表达药品补给风险。',
+    changes: [],
+    basicInfoAdditions: [],
+    behaviorTuning: '先核对药品，再提出补给需求',
+    personalityTuning: '保持谨慎，近期表达更直接',
+    speechStyleTuning: '医疗事务使用简短明确的措辞',
+    currentGoals: '补足药品库存',
+    currentSituationSummary: '正在诊疗室清点药品',
+    relationshipInterpretation: '保持协作关系',
+    storyInteractionSummary: '回到诊疗室',
+    chatInteractionSummary: '提醒药品即将耗尽',
+    playerActionAdvice: '确认药品补给安排',
+    evidenceRefs: ['story:12', 'wechat:new'],
+  });
+  const wrapped = JSON.stringify({
+    choices: [{ index: 0, message: { role: 'assistant', content, reasoning_content: '分析过程' } }],
+  });
+
+  assert.equal(parseProfileAnalysisOutput(wrapped, source).personId, 'main:纪宁');
+}
+
 testStrictOutputAndMerge();
 testOutputRejectsUnknownFields();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
+testOpenAiResponseEnvelopeCanBeParsed();
 console.log('profile analysis tests passed');

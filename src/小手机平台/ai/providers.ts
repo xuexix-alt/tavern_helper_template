@@ -16,6 +16,7 @@ export interface AiDetailedResponse {
 
 export interface AiRequestOptions {
   mode?: AiPromptMode;
+  systemPrompt?: string;
 }
 
 export class ProviderError extends Error {
@@ -89,7 +90,7 @@ export class TavernProvider {
       should_stream: false,
       should_silence: true,
       max_chat_history: 0,
-      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode)],
+      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt)],
     };
     let promise: Promise<AiDetailedResponse>;
     try {
@@ -310,7 +311,7 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                  messages: buildRolePrompts(assembledPrompt, options.mode),
+                  messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt),
                 }),
                 signal: controller.signal,
               });

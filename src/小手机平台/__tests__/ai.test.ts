@@ -366,9 +366,15 @@ async function testStructuredProviderModeAndDetailedResponse(): Promise<void> {
     stopGenerationById: () => true,
     idFactory: () => 'structured-tavern',
   });
-  const tavernDetailed = await tavern.requestDetailed('PROFILE_CONTRACT', { mode: 'structured' }).promise;
+  const tavernDetailed = await tavern.requestDetailed('PROFILE_CONTRACT', {
+    mode: 'structured',
+    systemPrompt: 'PROFILE_ANALYZER',
+  }).promise;
   assert.deepEqual(tavernDetailed, { content: '{"analysisNarrative":"人物分析"}' });
-  assert.deepEqual(tavernCalls[0].ordered_prompts, [{ role: 'user', content: 'PROFILE_CONTRACT' }]);
+  assert.deepEqual(tavernCalls[0].ordered_prompts, [
+    { role: 'system', content: 'PROFILE_ANALYZER' },
+    { role: 'user', content: 'PROFILE_CONTRACT' },
+  ]);
   assert.doesNotMatch(JSON.stringify(tavernCalls[0]), /微信模拟聊天接口|成人聊天模式|开始生成聊天回复/);
 
   const requests: RecordedRequest[] = [];
@@ -396,13 +402,19 @@ async function testStructuredProviderModeAndDetailedResponse(): Promise<void> {
       };
     },
   });
-  const detailed = await openai.requestDetailed('PROFILE_CONTRACT', { mode: 'structured' }).promise;
+  const detailed = await openai.requestDetailed('PROFILE_CONTRACT', {
+    mode: 'structured',
+    systemPrompt: 'PROFILE_ANALYZER',
+  }).promise;
   assert.deepEqual(detailed, {
     content: '{"analysisNarrative":"人物分析"}',
     reasoningContent: '根据正文和微信变化形成的分析过程',
   });
   const body = JSON.parse(String(requests[0].init.body)) as { messages: unknown };
-  assert.deepEqual(body.messages, [{ role: 'user', content: 'PROFILE_CONTRACT' }]);
+  assert.deepEqual(body.messages, [
+    { role: 'system', content: 'PROFILE_ANALYZER' },
+    { role: 'user', content: 'PROFILE_CONTRACT' },
+  ]);
   assert.doesNotMatch(JSON.stringify(body), /微信模拟聊天接口|成人聊天模式|开始生成聊天回复/);
 }
 

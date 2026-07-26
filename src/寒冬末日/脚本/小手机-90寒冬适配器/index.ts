@@ -24,11 +24,13 @@ import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
 import { extractRecentCompletedMessages } from '../../../小手机平台/platform/storyExtractor';
 import {
+  PROFILE_BROADCAST_SYSTEM_PROMPT,
   buildProfileBroadcastPrompt,
   parseProfileBroadcastOutput,
   saveProfileBroadcastIssue,
   type StoredProfileBroadcastIssue,
 } from '../../../小手机平台/profiles/profileBroadcast';
+import { PROFILE_ANALYSIS_SYSTEM_PROMPT } from '../../../小手机平台/profiles/profileAnalysis';
 import {
   ProfileRefreshCoordinator,
   type ProfileRefreshDependencies,
@@ -782,10 +784,14 @@ function createWinterAdapterModule(): PhoneModule {
 
   async function requestProfileAnalysis(
     prompt: string,
-    requestOptions: AiRequestOptions = { mode: 'structured' },
+    requestOptions: AiRequestOptions = {},
   ): Promise<AiDetailedResponse> {
     const captured = requireSnapshot();
-    const handle = createProvider().requestDetailed(prompt, requestOptions);
+    const handle = createProvider().requestDetailed(prompt, {
+      mode: 'structured',
+      systemPrompt: PROFILE_ANALYSIS_SYSTEM_PROMPT,
+      ...requestOptions,
+    });
     const key = requestKey(captured.sessionKey, `profile:${crypto.randomUUID()}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -973,7 +979,12 @@ function createWinterAdapterModule(): PhoneModule {
           evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),
         })),
     });
-    const rawText = (await requestProfileAnalysis(prompt, { mode: 'structured' })).content;
+    const rawText = (
+      await requestProfileAnalysis(prompt, {
+        mode: 'structured',
+        systemPrompt: PROFILE_BROADCAST_SYSTEM_PROMPT,
+      })
+    ).content;
     assertSnapshotCapture(captured);
     const output = parseProfileBroadcastOutput(rawText);
     await saveProfileBroadcastIssue(requireDb(), {

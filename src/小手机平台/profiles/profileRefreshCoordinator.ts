@@ -314,9 +314,10 @@ export class ProfileRefreshCoordinator {
     const people = await this.dependencies.listAddedPeople();
     const person = people.find(item => item.id === personId);
     if (!person) throw new Error(`未找到已添加联系人：${personId}`);
-    const result = await this.queueBatch([person], trigger);
-    const failed = result.people[0];
-    if (failed?.status === 'failed') throw new Error(failed.error || `刷新人物档案失败：${person.name}`);
+    const execute = () => this.runManualPerson(person, trigger);
+    const result = this.batchTail.then(execute, execute);
+    this.batchTail = result.catch(() => undefined);
+    await result;
   }
 
   async refreshAll(
@@ -371,6 +372,19 @@ export class ProfileRefreshCoordinator {
     const result = this.batchTail.then(execute, execute);
     this.batchTail = result.catch(() => undefined);
     return result;
+  }
+
+  private async runManualPerson(person: ProfilePerson, trigger: 'person-manual'): Promise<void> {
+    this.assertActive();
+    const sessionKey = this.dependencies.getSessionKey();
+    const runId = `profile-run:${this.dependencies.now()}:${++this.batchSequence}`;
+    await this.dependencies.db.putRecord('profileRuns', {
+      id: runId,
+      sessionKey,
+      trigger,
+      people: [{ personId: person.id, status: 'refreshing' }],
+    } satisfies StoredRun);
+    await this.refreshScheduledPerson({ runId, trigger, person, sessionKey });
   }
 
   private async runBatch(
