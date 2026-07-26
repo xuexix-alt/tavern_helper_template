@@ -912,7 +912,9 @@ function createWinterAdapterModule(): PhoneModule {
     const result = await requireProfileCoordinator().refreshAll('all-manual');
     const failures = result.people.filter(person => person.status === 'failed');
     if (failures.length > 0) {
-      throw new Error(`档案刷新完成 ${result.people.length - failures.length}/${result.people.length}，请查看失败人物详情`);
+      throw new Error(
+        `档案刷新完成 ${result.people.length - failures.length}/${result.people.length}，请查看失败人物详情`,
+      );
     }
   }
 
