@@ -34,7 +34,12 @@ export interface PhoneComponentHealthSummary {
 }
 
 export const PHONE_COMPONENT_REQUIREMENTS: readonly PhoneComponentRequirement[] = Object.freeze([
-  Object.freeze({ id: 'phone.runtime', label: '小手机-00运行时管理器', version: PHONE_RUNTIME_VERSION, activation: 'ready' }),
+  Object.freeze({
+    id: 'phone.runtime',
+    label: '小手机-00运行时管理器',
+    version: PHONE_RUNTIME_VERSION,
+    activation: 'ready',
+  }),
   Object.freeze({ id: 'platform.services', label: '小手机-10平台服务', version: '1.0.0', activation: 'ready' }),
   Object.freeze({ id: 'data.sync', label: '小手机-20数据与同步', version: '1.0.0', activation: 'ready' }),
   Object.freeze({ id: 'ai.scheduler', label: '小手机-30AI与调度', version: '1.0.0', activation: 'ready' }),

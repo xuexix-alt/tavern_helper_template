@@ -239,9 +239,7 @@ function testPhoneComponentHealthReport(): void {
   assert.equal(missing.healthy, false);
   assert.match(missing.issues.join('\n'), /70微信APP适配器.*缺失/);
 
-  const mismatched = evaluatePhoneComponentHealth(
-    componentSnapshots({ 'platform.services': { version: '0.9.0' } }),
-  );
+  const mismatched = evaluatePhoneComponentHealth(componentSnapshots({ 'platform.services': { version: '0.9.0' } }));
   assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.0/);
 
   const inactiveCore = evaluatePhoneComponentHealth(
