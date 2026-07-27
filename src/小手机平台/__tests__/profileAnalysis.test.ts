@@ -155,9 +155,35 @@ function testOpenAiResponseEnvelopeCanBeParsed(): void {
   assert.equal(parseProfileAnalysisOutput(wrapped, source).personId, 'main:纪宁');
 }
 
+function testNearValidOpenAiResponseCanBeRepaired(): void {
+  const malformedContent = `{
+    "personId": "main:纪宁",
+    "personName": "纪宁",
+    "analysisNarrative": "纪宁近期更明确地表达药品补给风险。"
+    "changes": [],
+    "basicInfoAdditions": [],
+    "behaviorTuning": "先核对药品，再提出补给需求",
+    "personalityTuning": "保持谨慎，近期表达更直接",
+    "speechStyleTuning": "医疗事务使用简短明确的措辞",
+    "currentGoals": "补足药品库存",
+    "currentSituationSummary": "正在诊疗室清点药品",
+    "relationshipInterpretation": "保持协作关系",
+    "storyInteractionSummary": "回到诊疗室",
+    "chatInteractionSummary": "提醒药品即将耗尽",
+    "playerActionAdvice": "确认药品补给安排",
+    "evidenceRefs": ["story:12", "wechat:new"]
+  }`;
+  const wrapped = JSON.stringify({
+    choices: [{ index: 0, message: { role: 'assistant', content: malformedContent } }],
+  });
+
+  assert.equal(parseProfileAnalysisOutput(wrapped, source).personId, 'main:纪宁');
+}
+
 testStrictOutputAndMerge();
 testOutputRejectsUnknownFields();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();
+testNearValidOpenAiResponseCanBeRepaired();
 console.log('profile analysis tests passed');

@@ -1,3 +1,4 @@
+import { jsonrepair } from 'jsonrepair';
 import { z } from 'zod';
 
 import type {
@@ -80,13 +81,22 @@ function jsonCandidate(raw: string): string {
   return start >= 0 && end > start ? trimmed.slice(start, end + 1) : trimmed;
 }
 
+function parseJsonCandidate(raw: string): unknown {
+  const candidate = jsonCandidate(raw);
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    return JSON.parse(jsonrepair(candidate)) as unknown;
+  }
+}
+
 function parseResponsePayload(raw: string): unknown {
-  const parsed: unknown = JSON.parse(jsonCandidate(raw));
+  const parsed = parseJsonCandidate(raw);
   if (!parsed || typeof parsed !== 'object') return parsed;
   const message = (parsed as { choices?: Array<{ message?: { content?: unknown } }> }).choices?.[0]?.message;
-  if (typeof message?.content === 'string') return JSON.parse(jsonCandidate(message.content));
+  if (typeof message?.content === 'string') return parseJsonCandidate(message.content);
   const content = (parsed as { content?: unknown }).content;
-  if (typeof content === 'string') return JSON.parse(jsonCandidate(content));
+  if (typeof content === 'string') return parseJsonCandidate(content);
   return parsed;
 }
 
