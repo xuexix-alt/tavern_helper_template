@@ -157,6 +157,15 @@ test('shell accepts host-specific product and status branding', () => {
   assert.match(adapter, /productName:\s*['"]伊甸终端['"]/);
 });
 
+test('winter adapter resolves Tavern generation through the cross-frame API adapter', () => {
+  const adapter = readFileSync('src/寒冬末日/脚本/小手机-90寒冬适配器/index.ts', 'utf8');
+
+  assert.match(adapter, /from ['"]\.\.\/\.\.\/\.\.\/小手机平台\/platform\/tavernApiAdapter['"]/);
+  assert.match(adapter, /generateRaw:\s*createGenerateRaw\(\)/);
+  assert.match(adapter, /stopGenerationById:\s*createStopGenerationById\(\)/);
+  assert.doesNotMatch(adapter, /new TavernProvider\(\{\s*generateRaw,\s*stopGenerationById\s*\}\)/);
+});
+
 test('user close actions delegate to the runtime close callback', () => {
   const source = readFileSync(shellPath, 'utf8');
 

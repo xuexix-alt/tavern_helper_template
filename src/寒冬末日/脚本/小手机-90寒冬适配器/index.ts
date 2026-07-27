@@ -23,6 +23,7 @@ import type { PhoneBusinessRecord, PhoneDb } from '../../../小手机平台/data
 import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/platform/hostGateway';
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
 import { extractRecentCompletedMessages } from '../../../小手机平台/platform/storyExtractor';
+import { createGenerateRaw, createStopGenerationById } from '../../../小手机平台/platform/tavernApiAdapter';
 import {
   PROFILE_BROADCAST_SYSTEM_PROMPT,
   buildProfileBroadcastPrompt,
@@ -1688,7 +1689,10 @@ function createWinterAdapterModule(): PhoneModule {
       });
     }
     const { TavernProvider } = aiCatalog;
-    return new TavernProvider({ generateRaw, stopGenerationById });
+    return new TavernProvider({
+      generateRaw: createGenerateRaw(),
+      stopGenerationById: createStopGenerationById(),
+    });
   }
 
   async function loadExactCharacterProfile(
@@ -2014,7 +2018,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'winter.adapter',
-      version: '1.0.0',
+      version: '1.1.0',
       required: true,
       dependsOn: ['communication.apps'],
       capabilities: ['phone.adapter'],

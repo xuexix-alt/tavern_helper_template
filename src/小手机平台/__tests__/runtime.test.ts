@@ -2,12 +2,25 @@ import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 
 import { EventBus } from '../core/eventBus';
+import {
+  PHONE_COMPONENT_REQUIREMENTS,
+  evaluatePhoneComponentHealth,
+  formatPhoneComponentHealth,
+  startPhoneComponentHealthNotification,
+} from '../core/componentHealth';
 import { createServiceModule } from '../core/serviceModule';
 import { ModuleRegistry } from '../core/moduleRegistry';
 import { PHONE_RUNTIME_INSTALLED_EVENT, registerPhoneModule } from '../core/register';
 import { createPhoneRuntime, installPhoneRuntime, makeSessionKey } from '../core/runtime';
 import { InternalPhoneServiceRegistry } from '../core/serviceRegistry';
-import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration, PhoneOwner } from '../core/types';
+import type {
+  PhoneModule,
+  PhoneModuleContext,
+  PhoneModuleRegistration,
+  PhoneModuleSnapshot,
+  PhoneOwner,
+  TavernPhonePublicApi,
+} from '../core/types';
 import { createHostGateway, createTopHostGateway } from '../platform/hostGateway';
 import { createSettingsStore, type PublicSettings, type StorageLike } from '../platform/settingsStore';
 
@@ -172,6 +185,107 @@ async function testAutomaticAdapterRootInitialization(): Promise<void> {
     assert.deepEqual(lifecycle, ['core', 'apps', 'adapter'], '重复/并发注册不得重复初始化');
     await runtime.dispose('automatic test complete');
   }
+}
+
+async function testRuntimeModuleSnapshots(): Promise<void> {
+  const runtime = createPhoneRuntime();
+  runtime.registerModule(registration('standby'));
+  runtime.registerModule({
+    ...registration('adapter'),
+    manifest: {
+      ...registration('adapter').manifest,
+      capabilities: ['phone.adapter'],
+    },
+  });
+  await flushAutomaticInitialization();
+
+  const snapshots = runtime.getModules();
+  assert.deepEqual(
+    snapshots.map(snapshot => ({ id: snapshot.id, version: snapshot.version, status: snapshot.status })),
+    [
+      { id: 'standby', version: '1.0.0', status: 'REGISTERED' },
+      { id: 'adapter', version: '1.0.0', status: 'READY' },
+    ],
+  );
+  assert.equal(Object.isFrozen(snapshots), true, '模块快照数组必须不可变');
+  assert.equal(Object.isFrozen(snapshots[0]), true, '单项模块快照必须不可变');
+  await runtime.dispose('snapshot test complete');
+}
+
+function componentSnapshots(
+  overrides: Partial<Record<string, { version?: string; status?: PhoneModuleSnapshot['status'] }>> = {},
+): PhoneModuleSnapshot[] {
+  return PHONE_COMPONENT_REQUIREMENTS.filter(requirement => requirement.id !== 'phone.runtime').map(requirement => ({
+    id: requirement.id,
+    version: overrides[requirement.id]?.version ?? requirement.version,
+    required: requirement.activation === 'ready',
+    dependsOn: [],
+    capabilities: [],
+    status: overrides[requirement.id]?.status ?? (requirement.activation === 'ready' ? 'READY' : 'REGISTERED'),
+  }));
+}
+
+function testPhoneComponentHealthReport(): void {
+  const complete = evaluatePhoneComponentHealth(componentSnapshots());
+  assert.equal(complete.healthy, true);
+  assert.equal(complete.detected, 10);
+  assert.equal(complete.active, 7);
+  assert.equal(complete.standby, 3);
+  assert.match(formatPhoneComponentHealth(complete).message, /10\/10/);
+
+  const missing = evaluatePhoneComponentHealth(
+    componentSnapshots().filter(snapshot => snapshot.id !== 'wechat.adapter'),
+  );
+  assert.equal(missing.healthy, false);
+  assert.match(missing.issues.join('\n'), /70微信APP适配器.*缺失/);
+
+  const mismatched = evaluatePhoneComponentHealth(
+    componentSnapshots({ 'platform.services': { version: '0.9.0' } }),
+  );
+  assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.0/);
+
+  const inactiveCore = evaluatePhoneComponentHealth(
+    componentSnapshots({ 'communication.apps': { status: 'REGISTERED' } }),
+  );
+  assert.match(inactiveCore.issues.join('\n'), /50通信与情报APP.*未初始化/);
+
+  const standbyExtension = evaluatePhoneComponentHealth(
+    componentSnapshots({ 'intelligence.services': { status: 'REGISTERED' } }),
+  );
+  assert.equal(standbyExtension.healthy, true, '扩展模块已注册但待命不应误报故障');
+}
+
+function testPhoneComponentHealthNotificationOnce(): void {
+  let moduleListener: (() => void) | null = null;
+  const scheduled: Array<() => void> = [];
+  const cancelled: number[] = [];
+  const notifications: string[] = [];
+  const runtime = {
+    getModules: () => componentSnapshots(),
+    on: (event: string, listener: () => void) => {
+      if (event === 'modules') moduleListener = listener;
+      return () => {
+        moduleListener = null;
+      };
+    },
+  } as unknown as TavernPhonePublicApi;
+  const stop = startPhoneComponentHealthNotification(runtime, {
+    delayMs: 10,
+    schedule: callback => {
+      scheduled.push(callback);
+      return scheduled.length;
+    },
+    cancel: timer => cancelled.push(timer as number),
+    notify: summary => notifications.push(summary.message),
+  });
+
+  moduleListener?.();
+  assert.equal(cancelled.length, 1, '新模块注册应重置等待窗口');
+  scheduled.at(-1)?.();
+  scheduled.at(-1)?.();
+  moduleListener?.();
+  assert.equal(notifications.length, 1, '每次页面加载最多通知一次');
+  stop();
 }
 
 async function testAutomaticInitializationFailureRollback(): Promise<void> {
@@ -873,6 +987,9 @@ async function main(): Promise<void> {
   await testModuleRegistry();
   await testInitializeRollbackAndRetry();
   await testAutomaticAdapterRootInitialization();
+  await testRuntimeModuleSnapshots();
+  testPhoneComponentHealthReport();
+  testPhoneComponentHealthNotificationOnce();
   await testAutomaticInitializationFailureRollback();
   await testRuntimeBridge();
   testEventBus();
