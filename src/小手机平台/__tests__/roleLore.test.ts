@@ -32,20 +32,43 @@ function snapshotInput(overrides: Partial<PromptContextSnapshotInput> = {}): Pro
 
 function testRoleLoreMatching(): void {
   const roles = ['爱丽丝', '鲍勃'];
-  const entries = buildRoleLoreEntries([
-    entry({ uid: 1, name: '蓝灯常驻', strategy: { type: 'constant', keys: [] }, content: '世界规则' }),
-    entry({ uid: 2, name: '爱丽丝档案', strategy: { type: 'selective', keys: ['爱丽丝'] }, content: '爱丽丝的私密档案' }),
-    entry({ uid: 3, name: '鲍勃档案', strategy: { type: 'selective', keys: ['鲍勃', /^阿尔/] }, content: '鲍勃的档案' }),
-    entry({ uid: 4, name: '未匹配', strategy: { type: 'selective', keys: ['路人'] }, content: '不该出现' }),
-    entry({ uid: 5, name: '禁用条目', enabled: false, strategy: { type: 'selective', keys: ['爱丽丝'] }, content: '不该出现' }),
-    entry({ uid: 6, name: '向量条目', strategy: { type: 'vectorized', keys: ['爱丽丝'] }, content: '不该出现' }),
-  ], roles);
+  const entries = buildRoleLoreEntries(
+    [
+      entry({ uid: 1, name: '蓝灯常驻', strategy: { type: 'constant', keys: [] }, content: '世界规则' }),
+      entry({
+        uid: 2,
+        name: '爱丽丝档案',
+        strategy: { type: 'selective', keys: ['爱丽丝'] },
+        content: '爱丽丝的私密档案',
+      }),
+      entry({
+        uid: 3,
+        name: '鲍勃档案',
+        strategy: { type: 'selective', keys: ['鲍勃', /^阿尔/] },
+        content: '鲍勃的档案',
+      }),
+      entry({ uid: 4, name: '未匹配', strategy: { type: 'selective', keys: ['路人'] }, content: '不该出现' }),
+      entry({
+        uid: 5,
+        name: '禁用条目',
+        enabled: false,
+        strategy: { type: 'selective', keys: ['爱丽丝'] },
+        content: '不该出现',
+      }),
+      entry({ uid: 6, name: '向量条目', strategy: { type: 'vectorized', keys: ['爱丽丝'] }, content: '不该出现' }),
+    ],
+    roles,
+  );
 
-  assert.deepEqual(entries, [
-    { id: '1', content: '世界规则', relevant: true },
-    { id: '2', content: '爱丽丝的私密档案', relevant: false, roles: ['爱丽丝'] },
-    { id: '3', content: '鲍勃的档案', relevant: false, roles: ['鲍勃'] },
-  ], '蓝灯常驻 + 绿灯按角色名匹配，未匹配/禁用/向量化全部排除');
+  assert.deepEqual(
+    entries,
+    [
+      { id: '1', content: '世界规则', relevant: true },
+      { id: '2', content: '爱丽丝的私密档案', relevant: false, roles: ['爱丽丝'] },
+      { id: '3', content: '鲍勃的档案', relevant: false, roles: ['鲍勃'] },
+    ],
+    '蓝灯常驻 + 绿灯按角色名匹配，未匹配/禁用/向量化全部排除',
+  );
 }
 
 function testAssembledWorldbookGroupedByRole(): void {
@@ -75,7 +98,6 @@ function testUnkeyedWorldbookFallsBackToResident(): void {
   );
   assert.ok(assembled.includes('"常驻":["旧格式条目"]'), '无 roles 的旧格式条目应归入常驻');
 }
-
 
 function testGroupBudgetTrimsRoleEntriesButKeepsResident(): void {
   // 群聊场景：蓝灯常驻 + 大量角色条目，预算不足时应先裁角色条目，保留常驻

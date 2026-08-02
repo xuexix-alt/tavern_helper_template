@@ -1042,7 +1042,8 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             body.append(debugSection(document, '组装提示词（宏未展开）', entry.assembled));
             body.append(debugSection(document, '展开后提示词（发送给 AI）', entry.expanded));
             if (entry.raw !== undefined) body.append(debugSection(document, 'AI 原始响应', entry.raw));
-            if (entry.messages !== undefined) body.append(debugSection(document, '解析结果', JSON.stringify(entry.messages, null, 2)));
+            if (entry.messages !== undefined)
+              body.append(debugSection(document, '解析结果', JSON.stringify(entry.messages, null, 2)));
             if (entry.error !== undefined) {
               const error = text(document, 'p', entry.error);
               error.className = 'phone-debug-entry__error';
@@ -1432,7 +1433,6 @@ async function renderProfileDetailPage(
     return failure;
   }
 }
-
 
 function debugSection(document: Document, title: string, value: string): HTMLElement {
   const section = document.createElement('section');

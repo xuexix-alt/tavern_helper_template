@@ -93,7 +93,9 @@ export class TavernProvider {
       should_stream: false,
       should_silence: true,
       max_chat_history: 0,
-      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt, requestOptions.replyAs)],
+      ordered_prompts: [
+        ...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt, requestOptions.replyAs),
+      ],
     };
     let promise: Promise<AiDetailedResponse>;
     try {
@@ -314,7 +316,7 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                    messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt, options.replyAs),
+                  messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt, options.replyAs),
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
                     : {}),

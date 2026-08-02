@@ -97,7 +97,6 @@ interface AssemblySelection {
   history: readonly Readonly<PromptHistoryEntry>[];
 }
 
-
 const RESIDENT_KEY = '常驻';
 
 function groupWorldbookByRole(entries: readonly Readonly<PromptSourceEntry>[]): Record<string, string[]> {

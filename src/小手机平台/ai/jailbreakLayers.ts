@@ -43,7 +43,7 @@ export const JAILBREAK_LAYERS = {
 【玩家最近的输入】
 {{lastUserMessage}}
 
-开始生成聊天回复：`
+开始生成聊天回复：`,
 } as const;
 
 export function buildRolePrompts(

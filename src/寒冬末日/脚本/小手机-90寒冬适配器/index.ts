@@ -1497,7 +1497,10 @@ function createWinterAdapterModule(): PhoneModule {
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
         recentCompletedStory: [...captured.recentCompletedStory],
-        worldbook: buildRoleLoreEntries(chatWorldbookEntries, profiles.map(item => item.name)),
+        worldbook: buildRoleLoreEntries(
+          chatWorldbookEntries,
+          profiles.map(item => item.name),
+        ),
         phoneHistory: history.slice(-20).map(item => ({ id: item.id, sender: item.sender, content: item.content })),
         playerMessage,
         outputContract: `只输出 {"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}，sender 必须属于：${profiles.map(item => item.name).join('、')}`,
@@ -1508,9 +1511,10 @@ function createWinterAdapterModule(): PhoneModule {
     assertSnapshotCapture(captured);
     const provider = createProvider();
     const promptText = expandPromptMacros(assembled, captured.identity.assistantMessageId, captured.mvu);
-    const replyAs = profiles.length === 1
-      ? profiles[0].name
-      : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
+    const replyAs =
+      profiles.length === 1
+        ? profiles[0].name
+        : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
     const handle = provider.request(promptText, { jsonMode: true, replyAs });
     const key = requestKey(captured.sessionKey, messageId);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
@@ -2019,7 +2023,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function recordValue(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
-
 
 function readPath(value: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((current, key) => {

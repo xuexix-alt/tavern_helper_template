@@ -492,7 +492,6 @@ async function testOpenAIProviderParityAndSecrets(): Promise<void> {
   await jsonProvider.request('ASSEMBLED', { jsonMode: true }).promise;
   const jsonBody = JSON.parse(String(jsonModeRequests[0].init.body)) as Record<string, unknown>;
   assert.deepEqual(jsonBody.response_format, { type: 'json_object' }, 'jsonMode 开启时应自动带上 response_format');
-
 }
 
 function memoryStorage(): StorageLike {
