@@ -1044,3 +1044,52 @@ button:focus-visible {
     border: 2px solid currentColor;
   }
 }
+
+/* ===== 提示词调试机 ===== */
+.phone-debug-heading {
+  margin: 10px 0 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #8a6d3b;
+}
+.phone-debug-entry {
+  margin: 6px 10px;
+  border: 1px solid rgba(0,0,0,.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,.5);
+  overflow: hidden;
+}
+.phone-debug-entry__summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4a44;
+  user-select: none;
+}
+.phone-debug-entry__body { padding: 2px 10px 10px; }
+.phone-debug-entry__section { margin: 6px 0; }
+.phone-debug-entry__section h3 {
+  margin: 0 0 4px;
+  font-size: 10px;
+  color: #6a7770;
+}
+.phone-debug-entry__pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.06);
+  font: 10px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.phone-debug-entry__error {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(200,70,60,.1);
+  color: #b0433a;
+  font-size: 11px;
+}

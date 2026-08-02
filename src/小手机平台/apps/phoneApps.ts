@@ -72,6 +72,23 @@ export interface PhoneSettingsView {
   hasApiKey: boolean;
 }
 
+export interface PhonePromptDebugEntryView {
+  id: string;
+  createdAt: number;
+  mode: string;
+  conversationId: string;
+  replyAs: string;
+  /** 组装提示词（宏未展开） */
+  assembled: string;
+  /** 宏展开后的最终提示词（发送给 AI 的） */
+  expanded: string;
+  /** AI 原始响应 */
+  raw?: string;
+  /** 解析后的微信消息 */
+  messages?: readonly { sender: string; content: string }[];
+  error?: string;
+}
+
 export interface PhoneDiagnosticsView {
   runtimeState: string;
   snapshotVersion: string;
@@ -79,6 +96,7 @@ export interface PhoneDiagnosticsView {
   pendingLoreRetryCount: number;
   moduleStates: readonly string[];
   recentErrors: readonly string[];
+  promptDebug: readonly PhonePromptDebugEntryView[];
 }
 
 export interface PhoneProfileView {
@@ -1008,6 +1026,32 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         }
         for (const state of diagnostics.moduleStates) output.append(row(document, '模块', state));
         for (const error of diagnostics.recentErrors) output.append(row(document, '最近错误', redactDiagnostic(error)));
+        if (diagnostics.promptDebug.length > 0) {
+          const debugHeading = text(document, 'h3', '提示词调试');
+          debugHeading.className = 'phone-debug-heading';
+          output.append(debugHeading);
+          for (const entry of [...diagnostics.promptDebug].reverse()) {
+            const details = document.createElement('details');
+            details.className = 'phone-debug-entry';
+            const time = new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour12: false });
+            const summary = text(document, 'summary', `#${entry.id} ${entry.mode} · ${entry.replyAs} · ${time}`);
+            summary.className = 'phone-debug-entry__summary';
+            details.append(summary);
+            const body = document.createElement('div');
+            body.className = 'phone-debug-entry__body';
+            body.append(debugSection(document, '组装提示词（宏未展开）', entry.assembled));
+            body.append(debugSection(document, '展开后提示词（发送给 AI）', entry.expanded));
+            if (entry.raw !== undefined) body.append(debugSection(document, 'AI 原始响应', entry.raw));
+            if (entry.messages !== undefined) body.append(debugSection(document, '解析结果', JSON.stringify(entry.messages, null, 2)));
+            if (entry.error !== undefined) {
+              const error = text(document, 'p', entry.error);
+              error.className = 'phone-debug-entry__error';
+              body.append(error);
+            }
+            details.append(body);
+            output.append(details);
+          }
+        }
         return output;
       },
     },
@@ -1389,6 +1433,16 @@ async function renderProfileDetailPage(
   }
 }
 
+
+function debugSection(document: Document, title: string, value: string): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'phone-debug-entry__section';
+  section.append(text(document, 'h3', title));
+  const pre = text(document, 'pre', value);
+  pre.className = 'phone-debug-entry__pre';
+  section.append(pre);
+  return section;
+}
 function sectionBlock(document: Document, title: string, value: string): HTMLElement {
   const section = document.createElement('section');
   section.className = 'phone-profile-detail__section';

@@ -17,6 +17,9 @@ export interface AiDetailedResponse {
 export interface AiRequestOptions {
   mode?: AiPromptMode;
   systemPrompt?: string;
+  jsonMode?: boolean;
+  /** 回复身份标签：私聊为对象名，群聊为“群名成员（A、B）”；缺省保留“作为指定角色” */
+  replyAs?: string;
 }
 
 export class ProviderError extends Error {
@@ -79,8 +82,8 @@ export class TavernProvider {
     this.#dependencies = dependencies;
   }
 
-  request(assembledPrompt: string): RequestHandle<string> {
-    return mapContentHandle(this.requestDetailed(assembledPrompt));
+  request(assembledPrompt: string, requestOptions: AiRequestOptions = {}): RequestHandle<string> {
+    return mapContentHandle(this.requestDetailed(assembledPrompt, requestOptions));
   }
 
   requestDetailed(assembledPrompt: string, requestOptions: AiRequestOptions = {}): RequestHandle<AiDetailedResponse> {
@@ -90,7 +93,7 @@ export class TavernProvider {
       should_stream: false,
       should_silence: true,
       max_chat_history: 0,
-      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt)],
+      ordered_prompts: [...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt, requestOptions.replyAs)],
     };
     let promise: Promise<AiDetailedResponse>;
     try {
@@ -255,8 +258,8 @@ export class OpenAICompatibleProvider {
     this.#onCleanupError = options.onCleanupError;
   }
 
-  request(assembledPrompt: string): RequestHandle<string> {
-    return mapContentHandle(this.requestDetailed(assembledPrompt));
+  request(assembledPrompt: string, requestOptions: AiRequestOptions = {}): RequestHandle<string> {
+    return mapContentHandle(this.requestDetailed(assembledPrompt, requestOptions));
   }
 
   requestDetailed(assembledPrompt: string, options: AiRequestOptions = {}): RequestHandle<AiDetailedResponse> {
@@ -311,7 +314,10 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                  messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt),
+                    messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt, options.replyAs),
+                  ...(options.jsonMode && this.#parameters.response_format === undefined
+                    ? { response_format: { type: 'json_object' } }
+                    : {}),
                 }),
                 signal: controller.signal,
               });

@@ -10,7 +10,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'phone.shell',
-      version: '1.0.0',
+      version: '1.0.1',
       required: true,
       dependsOn: ['platform.services'],
       capabilities: ['phone.shell'],

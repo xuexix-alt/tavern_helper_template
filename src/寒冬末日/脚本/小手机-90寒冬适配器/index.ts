@@ -10,6 +10,7 @@ import type {
   PhoneSettingsView,
   PhoneTaskView,
 } from '../../../小手机平台/apps/phoneApps';
+import { buildRoleLoreEntries } from '../../../小手机平台/ai/roleLore';
 import { registerPhoneModule } from '../../../小手机平台/core/register';
 import type {
   PhoneModule,
@@ -62,7 +63,6 @@ import {
   canPublishSnapshot,
   capturedWritebackSessionKey,
   characterProfileEntryName,
-  collectChatLoreContext,
   createStableSnapshotKey,
   diffConfirmedMvuChanges,
   extractWinterContactCandidates,
@@ -220,6 +220,25 @@ function createWinterAdapterModule(): PhoneModule {
     }
   >();
   const diagnostics: string[] = [];
+
+  interface PromptDebugEntry {
+    id: string;
+    createdAt: number;
+    mode: string;
+    conversationId: string;
+    replyAs: string;
+    assembled: string;
+    expanded: string;
+    raw?: string;
+    messages?: readonly { sender: string; content: string }[];
+    error?: string;
+  }
+  const promptDebugEntries: PromptDebugEntry[] = [];
+
+  function recordPromptDebug(entry: PromptDebugEntry): void {
+    promptDebugEntries.push(entry);
+    if (promptDebugEntries.length > 5) promptDebugEntries.splice(0, promptDebugEntries.length - 5);
+  }
 
   function recordDiagnostic(message: string): void {
     if (diagnostics.at(-1) === message) return;
@@ -1189,6 +1208,7 @@ function createWinterAdapterModule(): PhoneModule {
         `scheduler:${scheduler ? 'READY' : 'WAITING'}`,
       ],
       recentErrors: [...diagnostics],
+      promptDebug: [...promptDebugEntries],
     };
   }
 
@@ -1468,23 +1488,16 @@ function createWinterAdapterModule(): PhoneModule {
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
-    const chatLore = collectChatLoreContext(
-      chatWorldbookEntries,
-      conversation.kind === 'eden-group' ? 'group' : 'private',
-      conversation.id,
-      6_000,
-    );
+    const mode = conversation.kind === 'eden-group' ? '伊甸住户群' : '私聊';
     const assembled = promptCatalog.assemblePrompt(
       promptCatalog.createPromptContextSnapshot({
         sessionKey: captured.sessionKey,
         snapshotKey: captured.identity,
-        mode: conversation.kind === 'eden-group' ? '伊甸住户群' : '私聊',
+        mode,
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
-        mvuFacts: JSON.stringify(captured.mvu.stat_data).slice(0, 6_000),
-        communicationNetwork: JSON.stringify(captured.mvu.stat_data.通讯网络 ?? {}),
-        chatLore: chatLore,
         recentCompletedStory: [...captured.recentCompletedStory],
+        worldbook: buildRoleLoreEntries(chatWorldbookEntries, profiles.map(item => item.name)),
         phoneHistory: history.slice(-20).map(item => ({ id: item.id, sender: item.sender, content: item.content })),
         playerMessage,
         outputContract: `只输出 {"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}，sender 必须属于：${profiles.map(item => item.name).join('、')}`,
@@ -1494,7 +1507,11 @@ function createWinterAdapterModule(): PhoneModule {
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
     const provider = createProvider();
-    const handle = provider.request(assembled);
+    const promptText = expandPromptMacros(assembled, captured.identity.assistantMessageId, captured.mvu);
+    const replyAs = profiles.length === 1
+      ? profiles[0].name
+      : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
+    const handle = provider.request(promptText, { jsonMode: true, replyAs });
     const key = requestKey(captured.sessionKey, messageId);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -1505,6 +1522,17 @@ function createWinterAdapterModule(): PhoneModule {
           raw,
           profiles.map(item => item.name),
         );
+        recordPromptDebug({
+          id: `debug-${messageId}`,
+          createdAt: Date.now(),
+          mode,
+          conversationId: conversation.id,
+          replyAs,
+          assembled,
+          expanded: promptText,
+          raw,
+          messages: parsed.messages,
+        });
         const writebackSessionKey = capturedWritebackSessionKey(captured.sessionKey);
         for (const [index, item] of parsed.messages.entries()) {
           await database.addMessage({
@@ -1534,7 +1562,17 @@ function createWinterAdapterModule(): PhoneModule {
         });
         notifyConversationChanged(conversation.id);
       })
-      .catch(async () => {
+      .catch(async error => {
+        recordPromptDebug({
+          id: `debug-${messageId}`,
+          createdAt: Date.now(),
+          mode,
+          conversationId: conversation.id,
+          replyAs,
+          assembled,
+          expanded: promptText,
+          error: errorMessage(error),
+        });
         if (active.cancelled) return;
         await putInboxWith(database, {
           id: messageId,
@@ -1611,9 +1649,6 @@ function createWinterAdapterModule(): PhoneModule {
         members: [
           { name: payload.speaker, identity: `scheduled:${payload.speaker}`, profile: '只能转述本次确认事件。' },
         ],
-        mvuFacts: payload.content,
-        communicationNetwork: payload.source,
-        chatLore: '',
         recentCompletedStory: [],
         phoneHistory: [],
         playerMessage: `依据确认事件生成一条简短通讯：${payload.content}`,
@@ -1621,7 +1656,8 @@ function createWinterAdapterModule(): PhoneModule {
         maxCharacters: 8_000,
       }),
     );
-    const handle = createProvider().request(assembled);
+    const promptText = expandPromptMacros(assembled, job.snapshotKey);
+    const handle = createProvider().request(promptText, { jsonMode: true, replyAs: payload.speaker });
     const key = requestKey(job.sessionKey, `scheduled:${job.triggerKey}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -1629,6 +1665,17 @@ function createWinterAdapterModule(): PhoneModule {
       const raw = await handle.promise;
       if (active.cancelled) return;
       const parsed = promptCatalog.parseResponse(raw, [payload.speaker]);
+      recordPromptDebug({
+        id: `debug-scheduled-${job.snapshotKey}-${job.triggerKey}`,
+        createdAt: Date.now(),
+        mode: '伊甸结构化事件主动通讯',
+        conversationId: job.conversationId,
+        replyAs: payload.speaker,
+        assembled,
+        expanded: promptText,
+        raw,
+        messages: parsed.messages,
+      });
       for (const [index, message] of parsed.messages.entries()) {
         await database.addMessage({
           id: `scheduled-ai:${job.snapshotKey}:${job.triggerKey}:${index}`,
@@ -1648,6 +1695,18 @@ function createWinterAdapterModule(): PhoneModule {
         type: 'group',
         conversationId: job.conversationId,
       });
+    } catch (error) {
+      recordPromptDebug({
+        id: `debug-scheduled-${job.snapshotKey}-${job.triggerKey}`,
+        createdAt: Date.now(),
+        mode: '伊甸结构化事件主动通讯',
+        conversationId: job.conversationId,
+        replyAs: payload.speaker,
+        assembled,
+        expanded: promptText,
+        error: errorMessage(error),
+      });
+      throw error;
     } finally {
       if (activeRequests.get(key) === active) activeRequests.delete(key);
     }
@@ -1961,6 +2020,31 @@ function recordValue(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+
+function readPath(value: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current === null || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, value);
+}
+
+function expandPromptMacros(text: string, assistantMessageId: number, mvu?: Mvu.MvuData): string {
+  const expanded = substitudeMacros(text);
+  if (!expanded.includes('{{')) return expanded;
+  let stat: Record<string, unknown> = {};
+  try {
+    const data = (mvu ?? getVariables({ type: 'message', message_id: 'latest' })) as Mvu.MvuData;
+    if (isRecord(data.stat_data)) stat = data.stat_data;
+  } catch {
+    // 回退取不到变量时按空数据展开，避免把宏裸发给 AI
+  }
+  return expanded
+    .replace(/\{\{format_message_variable::stat_data(?:\.([^}]+))?\}\}/g, (_match, path: string | undefined) => {
+      const value = path ? readPath(stat, path) : stat;
+      return value === undefined ? '' : JSON.stringify(value);
+    })
+    .replaceAll('{{lastCharMessageId}}', String(assistantMessageId));
+}
 function mvuStatData(value: unknown): unknown {
   return isRecord(value) ? value.stat_data : undefined;
 }
@@ -2018,7 +2102,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'winter.adapter',
-      version: '1.1.0',
+      version: '1.1.1',
       required: true,
       dependsOn: ['communication.apps'],
       capabilities: ['phone.adapter'],

@@ -10,7 +10,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'communication.apps',
-      version: '1.0.0',
+      version: '1.0.1',
       required: true,
       dependsOn: ['data.sync', 'ai.scheduler', 'phone.shell'],
       capabilities: ['communication.apps'],
