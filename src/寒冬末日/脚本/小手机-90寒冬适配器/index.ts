@@ -2087,7 +2087,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'winter.adapter',
-      version: '1.1.1',
+      version: '1.1.2',
       required: true,
       dependsOn: ['communication.apps'],
       capabilities: ['phone.adapter'],

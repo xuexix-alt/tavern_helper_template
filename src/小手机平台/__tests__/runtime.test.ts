@@ -226,6 +226,19 @@ function componentSnapshots(
 }
 
 function testPhoneComponentHealthReport(): void {
+  assert.deepEqual(
+    Object.fromEntries(
+      PHONE_COMPONENT_REQUIREMENTS.filter(requirement =>
+        ['platform.services', 'ai.scheduler', 'winter.adapter'].includes(requirement.id),
+      ).map(requirement => [requirement.id, requirement.version]),
+    ),
+    {
+      'platform.services': '1.0.1',
+      'ai.scheduler': '1.0.2',
+      'winter.adapter': '1.1.2',
+    },
+    '本次改动组件的最低版本校验必须与 manifest 同步',
+  );
   const complete = evaluatePhoneComponentHealth(componentSnapshots());
   assert.equal(complete.healthy, true);
   assert.equal(complete.detected, 10);
@@ -240,7 +253,7 @@ function testPhoneComponentHealthReport(): void {
   assert.match(missing.issues.join('\n'), /70微信APP适配器.*缺失/);
 
   const mismatched = evaluatePhoneComponentHealth(componentSnapshots({ 'platform.services': { version: '0.9.0' } }));
-  assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.0/);
+  assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.1/);
 
   const inactiveCore = evaluatePhoneComponentHealth(
     componentSnapshots({ 'communication.apps': { status: 'REGISTERED' } }),

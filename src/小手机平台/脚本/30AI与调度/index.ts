@@ -21,7 +21,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'ai.scheduler',
-      version: '1.0.1',
+      version: '1.0.2',
       required: true,
       dependsOn: ['platform.services', 'data.sync'],
       capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],

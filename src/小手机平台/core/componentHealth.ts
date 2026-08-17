@@ -40,15 +40,15 @@ export const PHONE_COMPONENT_REQUIREMENTS: readonly PhoneComponentRequirement[] 
     version: PHONE_RUNTIME_VERSION,
     activation: 'ready',
   }),
-  Object.freeze({ id: 'platform.services', label: '小手机-10平台服务', version: '1.0.0', activation: 'ready' }),
+  Object.freeze({ id: 'platform.services', label: '小手机-10平台服务', version: '1.0.1', activation: 'ready' }),
   Object.freeze({ id: 'data.sync', label: '小手机-20数据与同步', version: '1.0.0', activation: 'ready' }),
-  Object.freeze({ id: 'ai.scheduler', label: '小手机-30AI与调度', version: '1.0.1', activation: 'ready' }),
+  Object.freeze({ id: 'ai.scheduler', label: '小手机-30AI与调度', version: '1.0.2', activation: 'ready' }),
   Object.freeze({ id: 'phone.shell', label: '小手机-40手机外壳', version: '1.0.1', activation: 'ready' }),
   Object.freeze({ id: 'communication.apps', label: '小手机-50通信与情报APP', version: '1.0.1', activation: 'ready' }),
   Object.freeze({ id: 'intelligence.services', label: '60智能情报', version: '1.0.0', activation: 'standby' }),
   Object.freeze({ id: 'wechat.adapter', label: '70微信APP适配器', version: '1.0.0', activation: 'standby' }),
   Object.freeze({ id: 'main.adapter', label: '90主适配器', version: '1.0.0', activation: 'standby' }),
-  Object.freeze({ id: 'winter.adapter', label: '小手机-90寒冬适配器', version: '1.1.1', activation: 'ready' }),
+  Object.freeze({ id: 'winter.adapter', label: '小手机-90寒冬适配器', version: '1.1.2', activation: 'ready' }),
 ]);
 
 export function evaluatePhoneComponentHealth(

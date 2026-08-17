@@ -7,7 +7,7 @@ const entrypoints = [
   {
     path: 'src/小手机平台/脚本/10平台服务/index.ts',
     id: 'platform.services',
-    version: '1.0.0',
+    version: '1.0.1',
     dependsOn: [],
     capabilities: ['host.gateway', 'settings.store', 'story.extractor'],
   },
@@ -21,7 +21,7 @@ const entrypoints = [
   {
     path: 'src/小手机平台/脚本/30AI与调度/index.ts',
     id: 'ai.scheduler',
-    version: '1.0.1',
+    version: '1.0.2',
     dependsOn: ['platform.services', 'data.sync'],
     capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],
   },
@@ -161,6 +161,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
 
   assert.match(source, /registerPhoneModule\s*\(\s*\{/);
   assert.match(source, /id:\s*['"]winter\.adapter['"]/);
+  assert.match(source, /id:\s*['"]winter\.adapter['"][\s\S]*?version:\s*['"]1\.1\.2['"]/);
   assert.match(source, /dependsOn:\s*\[['"]communication\.apps['"]\]/);
   assert.match(combined, /末世寒冬 - 星穹秩序/);
   assert.doesNotMatch(combined, /EDEN_TERMINAL_T2_ABILITY|EDEN_TERMINAL_T4_ABILITY|canAssignEdenTerminal/);
