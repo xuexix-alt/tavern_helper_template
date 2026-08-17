@@ -10,7 +10,7 @@ import type {
   PhoneSettingsView,
   PhoneTaskView,
 } from '../../../小手机平台/apps/phoneApps';
-import { buildRoleLoreEntries } from '../../../小手机平台/ai/roleLore';
+import type { PromptMainChatEntry } from '../../../小手机平台/ai/promptAssembler';
 import { registerPhoneModule } from '../../../小手机平台/core/register';
 import type {
   PhoneModule,
@@ -23,7 +23,10 @@ import type { ChatLoreSync, LoreSyncRequest, LoreWriteEntry } from '../../../小
 import type { PhoneBusinessRecord, PhoneDb } from '../../../小手机平台/data/phoneDb';
 import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/platform/hostGateway';
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
-import { extractRecentCompletedMessages } from '../../../小手机平台/platform/storyExtractor';
+import {
+  extractRecentCompletedMessages,
+  extractRecentMainChatMessages,
+} from '../../../小手机平台/platform/storyExtractor';
 import { createGenerateRaw, createStopGenerationById } from '../../../小手机平台/platform/tavernApiAdapter';
 import {
   PROFILE_BROADCAST_SYSTEM_PROMPT,
@@ -55,7 +58,7 @@ import type { AiDetailedResponse, AiRequestOptions } from '../../../小手机平
 import type { PhoneShellApi } from '../../../小手机平台/shell/phoneShell';
 import phoneShellStyles from '../../../小手机平台/shell/phoneShell.css?raw';
 import {
-  buildBoundedMemberContext,
+  buildCharacterMvuReference,
   buildEdenNotices,
   buildWinterTasks,
   buildWinterSchedulerJobs,
@@ -72,7 +75,6 @@ import {
   planTemporaryNpcPromotion,
   resolveWinterPersonMvu,
   selectCharacterProfile,
-  selectDynamicProfile,
   selectPublicWinterMvuFacts,
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
@@ -143,7 +145,7 @@ interface WinterSnapshot {
   identity: StableSnapshotIdentity;
   key: string;
   mvu: Mvu.MvuData;
-  recentCompletedStory: readonly { id: string; content: string; relevant: boolean }[];
+  recentMainChat: readonly PromptMainChatEntry[];
   recentCompletedMessages: readonly ProfileStoryMessage[];
   tasks: readonly WinterTask[];
   confirmedChanges: readonly string[];
@@ -598,10 +600,7 @@ function createWinterAdapterModule(): PhoneModule {
     const nextKey = createStableSnapshotKey(identity);
     if (snapshot?.key === nextKey) return;
     assertHostCapture(hostCapture);
-    const allAssistant = getChatMessages('0-{{lastMessageId}}', { role: 'assistant', include_swipes: false })
-      .filter(item => item.message_id <= assistantMessageId && item.message.trim() !== '')
-      .slice(-3)
-      .map(item => ({ id: String(item.message_id), content: item.message.slice(0, 2_000), relevant: true }));
+    const recentMainChat = extractRecentMainChatMessages(assistantMessageId, 5);
     const recentCompletedMessages = extractRecentCompletedMessages(assistantMessageId, 20);
     assertHostCapture(hostCapture);
     const next: WinterSnapshot = {
@@ -609,7 +608,7 @@ function createWinterAdapterModule(): PhoneModule {
       identity,
       key: nextKey,
       mvu,
-      recentCompletedStory: allAssistant,
+      recentMainChat,
       recentCompletedMessages,
       tasks: buildWinterTasks(mvu.stat_data),
       confirmedChanges: pendingConfirmedChanges,
@@ -1453,33 +1452,19 @@ function createWinterAdapterModule(): PhoneModule {
     hostCapture: HostEpochCapture,
   ): Promise<void> {
     if (!context) return;
-    const members = conversationMembers(conversation, captured);
+    const members = conversationMembers(conversation);
     const promptCatalog = context.services.require<PromptCatalog>('prompt.assembler');
-    const chatWorldbookEntries = await getWorldbook(capturedWorldbooks.chatWorldbookName);
-    assertCapturedSession(captured.sessionKey);
-    assertHostCapture(hostCapture);
-    assertSnapshotCapture(captured);
-    const profileSettings = await requireProfileCoordinator().getSettings();
+    // [人物动态] 暂不接入正常微信提示词；后续修复档案质量后，只能按 member.id 精确读取。
     const profiles = await Promise.all(
-      members.map(async member => {
-        const dynamicProfile = selectDynamicProfile(member.id, chatWorldbookEntries);
-        return {
-          name: member.name,
-          identity: member.id,
-          profile: buildBoundedMemberContext({
-            name: member.name,
-            profile: await loadExactCharacterProfile(
-              member.name,
-              member.temporary,
-              capturedWorldbooks.profileWorldbookNames,
-            ),
-            mvuFields: member.mvu,
-            recentCompletedStory: captured.recentCompletedStory.map(item => item.content).join('\n'),
-            characterBudget: 1_600,
-          }),
-          ...(dynamicProfile ? { dynamicProfile: dynamicProfile.slice(0, profileSettings.promptProfileMaxChars) } : {}),
-        };
-      }),
+      members.map(async member => ({
+        name: member.name,
+        identity: member.id,
+        profile:
+          (await loadExactCharacterProfile(member.name, member.temporary, capturedWorldbooks.profileWorldbookNames))
+            ?.trim()
+            .slice(0, 1_600) || '暂无固定档案',
+        mvuReference: buildCharacterMvuReference(member.name, member.temporary),
+      })),
     );
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
@@ -1496,12 +1481,11 @@ function createWinterAdapterModule(): PhoneModule {
         mode,
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
-        recentCompletedStory: [...captured.recentCompletedStory],
-        worldbook: buildRoleLoreEntries(
-          chatWorldbookEntries,
-          profiles.map(item => item.name),
-        ),
-        phoneHistory: history.slice(-20).map(item => ({ id: item.id, sender: item.sender, content: item.content })),
+        recentMainChat: [...captured.recentMainChat],
+        phoneHistory: history
+          .filter(item => item.id !== messageId)
+          .slice(-30)
+          .map(item => ({ id: item.id, sender: item.sender, content: item.content })),
         playerMessage,
         outputContract: `只输出 {"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}，sender 必须属于：${profiles.map(item => item.name).join('、')}`,
         maxCharacters: 16_000,
@@ -1515,7 +1499,7 @@ function createWinterAdapterModule(): PhoneModule {
       profiles.length === 1
         ? profiles[0].name
         : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
-    const handle = provider.request(promptText, { jsonMode: true, replyAs });
+    const handle = provider.request(promptText, { jsonMode: true, replyAs, playerMessage });
     const key = requestKey(captured.sessionKey, messageId);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -1653,7 +1637,7 @@ function createWinterAdapterModule(): PhoneModule {
         members: [
           { name: payload.speaker, identity: `scheduled:${payload.speaker}`, profile: '只能转述本次确认事件。' },
         ],
-        recentCompletedStory: [],
+        recentMainChat: [],
         phoneHistory: [],
         playerMessage: `依据确认事件生成一条简短通讯：${payload.content}`,
         outputContract: `只输出 {"messages":[{"sender":"${payload.speaker}","content":"纯文本消息"}]}`,
@@ -1776,13 +1760,11 @@ function createWinterAdapterModule(): PhoneModule {
     return undefined;
   }
 
-  function conversationMembers(conversation: ConversationRecord, current: WinterSnapshot) {
-    const statData = current.mvu.stat_data;
+  function conversationMembers(conversation: ConversationRecord) {
     return conversation.participants.map(identity => {
       const temporary = identity.startsWith('temporary:');
       const name = identity.slice(identity.indexOf(':') + 1);
-      const raw = temporary ? recordValue(statData.临时NPC)[name] : statData[name];
-      return { id: identity, name, temporary, mvu: isRecord(raw) ? raw : {} };
+      return { id: identity, name, temporary };
     });
   }
 
@@ -2031,7 +2013,7 @@ function readPath(value: unknown, path: string): unknown {
   }, value);
 }
 
-function expandPromptMacros(text: string, assistantMessageId: number, mvu?: Mvu.MvuData): string {
+function expandPromptMacros(text: string, assistantMessageId: string | number, mvu?: Mvu.MvuData): string {
   const expanded = substitudeMacros(text);
   if (!expanded.includes('{{')) return expanded;
   let stat: Record<string, unknown> = {};

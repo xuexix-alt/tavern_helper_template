@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { ControlledPhoneScheduler } from '../../小手机平台/scheduler/phoneScheduler';
 
 import {
-  buildBoundedMemberContext,
+  buildCharacterMvuReference,
   buildEdenNotices,
   buildWinterTasks,
   buildWinterSchedulerJobs,
@@ -157,7 +157,7 @@ function testTemporaryNpcMigration(): void {
   assert.equal(migrated.messages[0]?.content, '还在', '历史内容不得丢失');
 }
 
-function testProfilesAndBoundedFallback(): void {
+function testProfilesAndExactMvuReference(): void {
   assert.equal(characterProfileEntryName('工程师'), '角色档案 - 工程师');
   assert.equal(
     selectCharacterProfile('工程师', [
@@ -167,15 +167,10 @@ function testProfilesAndBoundedFallback(): void {
     '主档案',
   );
   assert.equal(selectCharacterProfile('临时工程师', [], true), undefined);
-  const context = buildBoundedMemberContext({
-    name: '工程师',
-    profile: undefined,
-    mvuFields: { 通讯: { 信号状态: '在线' }, 内心想法: '保持供暖' },
-    recentCompletedStory: '雪'.repeat(500),
-    characterBudget: 120,
-  });
-  assert.ok(context.length <= 120);
-  assert.match(context, /工程师|在线/);
+  assert.equal(buildCharacterMvuReference('纪宁'), '{{format_message_variable::stat_data.纪宁}}');
+  assert.equal(buildCharacterMvuReference('工程师', true), '{{format_message_variable::stat_data.临时NPC.工程师}}');
+  assert.throws(() => buildCharacterMvuReference('错误.路径'), /姓名|路径/);
+  assert.throws(() => buildCharacterMvuReference('错误}路径'), /姓名|路径/);
 
   const statData = {
     纪宁: { 关系: '协作', 位置: '诊疗室' },
@@ -341,7 +336,7 @@ async function main(): Promise<void> {
   await testPendingDispatchPreparation();
   testStableSnapshotPolicy();
   testTemporaryNpcMigration();
-  testProfilesAndBoundedFallback();
+  testProfilesAndExactMvuReference();
   testTasksAndNotices();
   testSchedulerJobsCaptureStableScope();
   await testWinterJobsUseControlledSchedulerConstraints();

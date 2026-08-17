@@ -21,7 +21,7 @@ function snapshotInput(overrides: Partial<PromptContextSnapshotInput> = {}): Pro
     mode: '私聊',
     protocol: '协议',
     members: [{ name: '爱丽丝', identity: '伊甸居民', profile: '冷静的医生' }],
-    recentCompletedStory: [],
+    recentMainChat: [],
     phoneHistory: [],
     playerMessage: '你好',
     outputContract: '契约',

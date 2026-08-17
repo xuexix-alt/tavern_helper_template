@@ -7,30 +7,35 @@ const entrypoints = [
   {
     path: 'src/小手机平台/脚本/10平台服务/index.ts',
     id: 'platform.services',
+    version: '1.0.0',
     dependsOn: [],
     capabilities: ['host.gateway', 'settings.store', 'story.extractor'],
   },
   {
     path: 'src/小手机平台/脚本/20数据与同步/index.ts',
     id: 'data.sync',
+    version: '1.0.0',
     dependsOn: ['platform.services'],
     capabilities: ['phone.db', 'chat-lore.sync'],
   },
   {
     path: 'src/小手机平台/脚本/30AI与调度/index.ts',
     id: 'ai.scheduler',
+    version: '1.0.1',
     dependsOn: ['platform.services', 'data.sync'],
     capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],
   },
   {
     path: 'src/小手机平台/脚本/40手机外壳/index.ts',
     id: 'phone.shell',
+    version: '1.0.1',
     dependsOn: ['platform.services'],
     capabilities: ['phone.shell'],
   },
   {
     path: 'src/小手机平台/脚本/50通信与情报APP/index.ts',
     id: 'communication.apps',
+    version: '1.0.1',
     dependsOn: ['data.sync', 'ai.scheduler', 'phone.shell'],
     capabilities: ['communication.apps'],
   },
@@ -51,7 +56,7 @@ for (const entrypoint of entrypoints) {
 
     assert.match(source, /registerPhoneModule\s*\(\s*\{/);
     assert.match(source, new RegExp(`id:\\s*['"]${escapeRegExp(entrypoint.id)}['"]`));
-    assert.match(source, /version:\s*['"]1\.0\.0['"]/);
+    assert.match(source, new RegExp(`version:\\s*['"]${escapeRegExp(entrypoint.version)}['"]`));
     assert.match(source, /required:\s*true/);
     assertArrayLiteral(source, 'dependsOn', entrypoint.dependsOn);
     assertArrayLiteral(source, 'capabilities', entrypoint.capabilities);
@@ -303,21 +308,25 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.doesNotMatch(source, /switchSession[\s\S]{0,500}cancelAllRequests\s*\(/);
   assert.match(source, /activeChatWorldbookName/);
   assert.match(source, /assertCapturedSession\s*\(/);
-  assert.match(source, /chatLore:\s*chatLore/);
   assert.match(source, /finally\s*\{[\s\S]*deactivate\s*\(/);
   assert.doesNotMatch(combined, /same-layer-pre|sameLayerPre|useSameLayerPre/);
 });
 
-test('winter WeChat send reuses the loaded chat worldbook entries before dispatching the AI request', () => {
+test('winter WeChat send wires only the current conversation business sources', () => {
   const source = readFileSync(winterAdapterPath, 'utf8');
   const launchBlock = source.slice(
     source.indexOf('async function launchAiRequest'),
     source.indexOf('function rememberLoreFailure'),
   );
 
-  assert.match(launchBlock, /const chatWorldbookEntries = await getWorldbook\(/);
-  assert.match(launchBlock, /collectChatLoreContext\(\s*chatWorldbookEntries,/);
-  assert.doesNotMatch(launchBlock, /\bchatLoreEntries\b/);
+  assert.match(source, /extractRecentMainChatMessages\(\s*assistantMessageId,\s*5\s*\)/);
+  assert.match(launchBlock, /mvuReference:\s*buildCharacterMvuReference\(/);
+  assert.match(launchBlock, /recentMainChat:\s*\[\.\.\.captured\.recentMainChat\]/);
+  assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
+  assert.match(launchBlock, /playerMessage/);
+  assert.match(launchBlock, /\[人物动态\][^\n]*后续/);
+  assert.doesNotMatch(launchBlock, /buildRoleLoreEntries|selectDynamicProfile|collectChatLoreContext/);
+  assert.doesNotMatch(launchBlock, /chatWorldbookEntries|profileSettings|worldbook:\s*|stat_data\.通讯网络/);
 });
 
 test('Eden Terminal is a level-one default shelter ability without T2 or T4 phone gating', () => {

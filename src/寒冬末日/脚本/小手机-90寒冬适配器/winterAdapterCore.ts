@@ -291,6 +291,13 @@ export function selectCharacterProfile(
   return entries.find(entry => entry.name === exactName)?.content;
 }
 
+export function buildCharacterMvuReference(name: string, temporaryNpc = false): string {
+  const normalized = name.trim();
+  if (!normalized || /[.{}]/.test(normalized)) throw new Error('人物姓名不能包含 MVU 路径分隔符或宏边界字符');
+  const path = temporaryNpc ? `临时NPC.${normalized}` : normalized;
+  return `{{format_message_variable::stat_data.${path}}}`;
+}
+
 export function resolveWinterPersonMvu(personId: string, statData: unknown): Readonly<Record<string, unknown>> {
   if (!isRecord(statData)) return {};
   const separator = personId.indexOf(':');
@@ -317,24 +324,6 @@ export function selectPublicWinterMvuFacts(statData: unknown): Readonly<Record<s
       .filter(key => Object.prototype.hasOwnProperty.call(statData, key))
       .map(key => [key, structuredClone(statData[key])]),
   );
-}
-
-export interface BoundedMemberContextInput {
-  name: string;
-  profile?: string;
-  mvuFields: unknown;
-  recentCompletedStory: string;
-  characterBudget: number;
-}
-
-export function buildBoundedMemberContext(input: BoundedMemberContextInput): string {
-  if (!Number.isSafeInteger(input.characterBudget) || input.characterBudget <= 0) {
-    throw new Error('角色资料字符预算必须是正安全整数');
-  }
-  const source = input.profile?.trim()
-    ? `姓名：${input.name.trim()}\n角色档案：${input.profile.trim()}`
-    : `姓名：${input.name.trim()}\nMVU字段：${JSON.stringify(input.mvuFields)}\n近期已完成正文：${input.recentCompletedStory}`;
-  return source.slice(0, input.characterBudget);
 }
 
 export interface WinterTask {

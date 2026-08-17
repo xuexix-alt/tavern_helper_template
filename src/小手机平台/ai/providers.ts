@@ -20,6 +20,8 @@ export interface AiRequestOptions {
   jsonMode?: boolean;
   /** 回复身份标签：私聊为对象名，群聊为“群名成员（A、B）”；缺省保留“作为指定角色” */
   replyAs?: string;
+  /** 本轮玩家消息，用于替换仅酒馆环境支持的 {{lastUserMessage}} 宏 */
+  playerMessage?: string;
 }
 
 export class ProviderError extends Error {
@@ -94,7 +96,13 @@ export class TavernProvider {
       should_silence: true,
       max_chat_history: 0,
       ordered_prompts: [
-        ...buildRolePrompts(assembledPrompt, requestOptions.mode, requestOptions.systemPrompt, requestOptions.replyAs),
+        ...buildRolePrompts(
+          assembledPrompt,
+          requestOptions.mode,
+          requestOptions.systemPrompt,
+          requestOptions.replyAs,
+          requestOptions.playerMessage,
+        ),
       ],
     };
     let promise: Promise<AiDetailedResponse>;
@@ -316,7 +324,13 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                  messages: buildRolePrompts(assembledPrompt, options.mode, options.systemPrompt, options.replyAs),
+                  messages: buildRolePrompts(
+                    assembledPrompt,
+                    options.mode,
+                    options.systemPrompt,
+                    options.replyAs,
+                    options.playerMessage ?? '',
+                  ),
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
                     : {}),
