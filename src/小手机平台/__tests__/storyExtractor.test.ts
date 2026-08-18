@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { extractRecentCompletedStory, extractCurrentStory } from '../platform/storyExtractor';
+import {
+  extractCurrentStory,
+  extractRecentCompletedStory,
+  extractRecentMainChatMessages,
+} from '../platform/storyExtractor';
 
 // Mock getChatMessages
 let mockChatMessages: any[] = [];
@@ -136,6 +140,53 @@ function testStoryExtractorOrder(): void {
   assert.equal(result[3].id, 'story-5');
 }
 
+function testRecentMainChatMessages(): void {
+  mockChatMessages = [
+    { message_id: 1, name: '小明', role: 'user', message: '旧玩家消息', is_hidden: false },
+    { message_id: 2, name: '纪宁', role: 'assistant', message: '旧 AI 消息', is_hidden: false },
+    { message_id: 3, name: '系统', role: 'system', message: '不得进入', is_hidden: false },
+    {
+      message_id: 4,
+      name: '小明',
+      role: 'user',
+      message: '玩家行动<Analysis>内部分析</Analysis>',
+      is_hidden: false,
+    },
+    {
+      message_id: 5,
+      name: '纪宁',
+      role: 'assistant',
+      message: 'AI 正文<UpdateVariable>{"path":"x"}</UpdateVariable>',
+      is_hidden: false,
+    },
+    { message_id: 6, name: '纪宁', role: 'assistant', message: '隐藏消息', is_hidden: true },
+    {
+      message_id: 7,
+      name: '小明',
+      role: 'user',
+      message: '继续询问<JSONPatch>[{"op":"replace"}]</JSONPatch>',
+      is_hidden: false,
+    },
+    { message_id: 8, name: '纪宁', role: 'assistant', message: '当前已完成 AI 正文', is_hidden: false },
+    { message_id: 9, name: '小明', role: 'user', message: '范围外消息', is_hidden: false },
+  ];
+
+  const result = extractRecentMainChatMessages(8, 5);
+
+  assert.deepEqual(
+    result,
+    [
+      { id: 'main-chat-2', role: 'assistant', sender: '纪宁', content: '旧 AI 消息' },
+      { id: 'main-chat-4', role: 'user', sender: '小明', content: '玩家行动' },
+      { id: 'main-chat-5', role: 'assistant', sender: '纪宁', content: 'AI 正文' },
+      { id: 'main-chat-7', role: 'user', sender: '小明', content: '继续询问' },
+      { id: 'main-chat-8', role: 'assistant', sender: '纪宁', content: '当前已完成 AI 正文' },
+    ],
+    '应取最后五条可见玩家/AI消息并包含当前已完成 assistant 楼层',
+  );
+  assert.doesNotMatch(JSON.stringify(result), /UpdateVariable|Analysis|JSONPatch/);
+}
+
 export function runStoryExtractorTests(): void {
   console.log('[Story Extractor Tests] Starting...');
 
@@ -151,6 +202,9 @@ export function runStoryExtractorTests(): void {
 
     testStoryExtractorOrder();
     console.log('✓ 排序测试通过');
+
+    testRecentMainChatMessages();
+    console.log('✓ 最近五条主聊天与控制块清理测试通过');
 
     console.log('[Story Extractor Tests] All tests passed! ✓');
   } catch (error) {

@@ -24,9 +24,25 @@ const STORY: readonly ProfileStoryMessage[] = Array.from({ length: 20 }, (_, ind
 }));
 
 function analysisJson(personName: string): string {
+  const person = PEOPLE.find(item => item.name === personName) ?? PEOPLE[0];
   return JSON.stringify({
+    personId: person.id,
+    personName,
+    analysisNarrative: `${personName}最近的动态来自正文和微信中的补给变化。`,
+    changes: [
+      {
+        field: 'personalityTuning',
+        before: '保持谨慎',
+        after: '近期表达更加直接',
+        reason: '连续证据显示其主动确认补给风险',
+        evidenceRefs: ['story:20', 'wechat:new'],
+      },
+    ],
     basicInfoAdditions: [`${personName}近期参与庇护所工作`],
+    behaviorTuning: '执行任务前会先确认物资与风险',
     personalityTuning: '近期表达更加直接',
+    speechStyleTuning: '讨论任务时使用短句并明确结论',
+    currentGoals: '完成当前庇护所协作任务',
     currentSituationSummary: '目前位于公共区域',
     relationshipInterpretation: '与玩家保持协作关系',
     storyInteractionSummary: '最近在正文中完成一次协作',
@@ -44,11 +60,12 @@ interface Fixture {
   setRejectNext(error: Error): void;
   setAlwaysFail(personId: string | null): void;
   maxConcurrency(): number;
+  allRunCompleteCalls(): number;
 }
 
 function createFixture(
   people: readonly ProfilePerson[] = PEOPLE,
-  options: { delayRunUpdates?: boolean } = {},
+  options: { delayRunUpdates?: boolean; failOnSchedulerEnqueue?: boolean } = {},
 ): Fixture {
   const memoryDb = createMemoryPhoneDb();
   const db: PhoneDb = options.delayRunUpdates
@@ -74,6 +91,7 @@ function createFixture(
   let alwaysFail: string | null = null;
   let active = 0;
   let maxActive = 0;
+  let allRunCompleteCalls = 0;
   let coordinator: ProfileRefreshCoordinator;
 
   const scheduler = new ControlledPhoneScheduler(
@@ -89,6 +107,11 @@ function createFixture(
       maxInflightAIRequests: 2,
     },
   );
+  if (options.failOnSchedulerEnqueue) {
+    scheduler.enqueue = () => {
+      throw new Error('manual refresh must not enqueue a background scheduler job');
+    };
+  }
 
   const dependencies: ProfileRefreshDependencies = {
     db,
@@ -120,6 +143,9 @@ function createFixture(
       if (alwaysFail === document.personId) throw new Error(`write failed: ${document.personId}`);
       written.set(document.personId, structuredClone(document));
     },
+    onAllRunComplete: async () => {
+      allRunCompleteCalls += 1;
+    },
   };
 
   coordinator = new ProfileRefreshCoordinator(dependencies, {
@@ -139,6 +165,7 @@ function createFixture(
       alwaysFail = personId;
     },
     maxConcurrency: () => maxActive,
+    allRunCompleteCalls: () => allRunCompleteCalls,
   };
 }
 
@@ -170,6 +197,61 @@ async function testWorldbookFailureDoesNotAdvanceAnchor(): Promise<void> {
   assert.match(fixture.written.get('main:纪宁')?.chatInteractionSummary ?? '', /聊天小结/);
 }
 
+async function testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]], { failOnSchedulerEnqueue: true });
+
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+
+  assert.deepEqual(fixture.analysisCalls, ['main:纪宁']);
+  assert.equal(fixture.written.has('main:纪宁'), true);
+}
+
+async function testBatchRefreshRunsSequentiallyWithoutBackgroundScheduler(): Promise<void> {
+  const fixture = createFixture(PEOPLE, { failOnSchedulerEnqueue: true });
+
+  const result = await fixture.coordinator.refreshAll('all-manual');
+
+  assert.deepEqual(
+    fixture.analysisCalls,
+    PEOPLE.map(person => person.id),
+  );
+  assert.equal(
+    result.people.every(person => person.status === 'success'),
+    true,
+  );
+  assert.equal(fixture.maxConcurrency(), 1, '酒馆生成通道的档案分析必须逐人物串行执行');
+}
+
+async function testInterruptedRefreshingStatesRecoverOnStartup(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  await fixture.db.putRecord('profileAnalysis', {
+    id: PEOPLE[0].id,
+    sessionKey: 'session-a',
+    personId: PEOPLE[0].id,
+    status: 'refreshing',
+    lastWechatMessageId: 'previous-message',
+  });
+  await fixture.db.putRecord('profileRuns', {
+    id: 'profile-run:interrupted',
+    sessionKey: 'session-a',
+    trigger: 'all-manual',
+    people: [{ personId: PEOPLE[0].id, status: 'refreshing' }],
+  });
+
+  const coordinator = fixture.coordinator as ProfileRefreshCoordinator & {
+    recoverInterruptedAnalyses?: () => Promise<void>;
+  };
+  assert.equal(typeof coordinator.recoverInterruptedAnalyses, 'function', '协调器必须提供启动恢复入口');
+  await coordinator.recoverInterruptedAnalyses!();
+
+  const state = await fixture.coordinator.getAnalysisState(PEOPLE[0].id);
+  assert.equal(state?.status, 'failed');
+  assert.equal(state?.lastWechatMessageId, 'previous-message');
+  assert.match(state?.lastError ?? '', /页面刷新或脚本重载中断/);
+  const runs = await fixture.db.listRecords('profileRuns', 'session-a');
+  assert.equal((runs[0].people as Array<{ status: string }>)[0]?.status, 'failed');
+}
+
 async function testBatchAllowsPartialSuccessAndLimitsConcurrency(): Promise<void> {
   const fixture = createFixture();
   fixture.setAlwaysFail('main:赵卫国');
@@ -180,6 +262,17 @@ async function testBatchAllowsPartialSuccessAndLimitsConcurrency(): Promise<void
   assert.equal(result.people.filter(item => item.status === 'success').length, 2);
   assert.equal(result.people.filter(item => item.status === 'failed').length, 1);
   assert.ok(fixture.maxConcurrency() <= 2);
+  assert.equal(fixture.allRunCompleteCalls(), 1, '部分成功时可基于成功档案生成播报');
+}
+
+async function testAllFailedDoesNotGenerateBroadcast(): Promise<void> {
+  const fixture = createFixture([PEOPLE[1]]);
+  fixture.setAlwaysFail('main:赵卫国');
+
+  const result = await fixture.coordinator.refreshAll('all-manual');
+
+  assert.equal(result.people[0]?.status, 'failed');
+  assert.equal(fixture.allRunCompleteCalls(), 0, '没有任何成功档案时不得误生成播报');
 }
 
 async function testConcurrentRunUpdatesDoNotOverwriteOtherPeople(): Promise<void> {
@@ -207,11 +300,57 @@ async function testAutoRefreshAtConfiguredThreshold(): Promise<void> {
   assert.equal(fixture.analysisCalls.length, PEOPLE.length, '已提交正文不得重复触发');
 }
 
+async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+  const first = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(first);
+  assert.equal(first.versions.length, 1);
+  assert.match(first.analysisNarrative, /正文和微信/);
+  const firstVersionId = first.versions[0].id;
+
+  await fixture.coordinator.saveProfileEdit('main:纪宁', { personalityTuning: '玩家确认：暂时保持谨慎' });
+  const edited = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(edited);
+  assert.equal(edited.versions.length, 2);
+  assert.equal(edited.document.personalityTuning, '玩家确认：暂时保持谨慎');
+
+  await fixture.coordinator.restoreProfileVersion('main:纪宁', firstVersionId);
+  const restored = await fixture.coordinator.getProfileView('main:纪宁');
+  assert.ok(restored);
+  assert.equal(restored.versions.length, 3);
+  assert.equal(restored.document.personalityTuning, '近期表达更加直接');
+}
+
+async function testProfileNotificationUsesStableListenerSnapshot(): Promise<void> {
+  const fixture = createFixture([PEOPLE[0]]);
+  let notifications = 0;
+  let stopWatching = () => undefined;
+  stopWatching = fixture.coordinator.watchProfiles(() => {
+    notifications += 1;
+    stopWatching();
+    stopWatching = fixture.coordinator.watchProfiles(() => {
+      notifications += 1;
+    });
+  });
+
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+
+  assert.equal(notifications, 2, '单次状态通知不得继续调用派发期间新订阅的 UI 监听器');
+  stopWatching();
+}
+
 async function main(): Promise<void> {
+  await testProfileNotificationUsesStableListenerSnapshot();
+  await testManualPersonRefreshCallsAnalysisWithoutBackgroundScheduler();
+  await testBatchRefreshRunsSequentiallyWithoutBackgroundScheduler();
+  await testInterruptedRefreshingStatesRecoverOnStartup();
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
+  await testAllFailedDoesNotGenerateBroadcast();
   await testConcurrentRunUpdatesDoNotOverwriteOtherPeople();
   await testAutoRefreshAtConfiguredThreshold();
+  await testDetailedViewVersionsAndPlayerEdit();
   console.log('profile coordinator tests passed');
 }
 

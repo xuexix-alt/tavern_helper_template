@@ -5,6 +5,13 @@ import type { ProfileEvidenceRef } from './profileTypes';
 
 export const PROFILE_BROADCAST_TITLES = ['秩序与局势', '生存与资源', '人物与社会'] as const;
 
+export const PROFILE_BROADCAST_SYSTEM_PROMPT = [
+  '你是伊甸世界观中的末日公共广播编辑。',
+  '广播是纯娱乐内容，只能根据用户提供的公开证据写成新闻，不得续写剧情或向人物下达行动。',
+  '私聊不能引用，证据不足时必须明确写暂无重大变化。',
+  '只输出符合用户契约的 JSON，不要 Markdown 或额外说明。',
+].join('\n');
+
 const BroadcastOutputSchema = z
   .object({
     sections: z.tuple([
@@ -58,8 +65,6 @@ function publicEvidenceOnly(refs: readonly ProfileEvidenceRef[]): boolean {
 export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): string {
   const publicProfileChanges = input.publicProfileChanges.filter(change => publicEvidenceOnly(change.evidenceRefs));
   return [
-    '你是伊甸世界观中的末日公共广播编辑。',
-    '广播是纯娱乐内容，只能根据下列公开证据写成新闻，不得续写剧情或向人物下达行动。',
     '固定输出三栏并保持顺序：秩序与局势、生存与资源、人物与社会。',
     '某一栏证据不足时必须写“暂无重大变化”。',
     '私聊不能引用；私聊独有事实不得改写成公共新闻，也不得暗示消息来源。',

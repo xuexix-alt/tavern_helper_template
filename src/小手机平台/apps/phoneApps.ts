@@ -1,5 +1,6 @@
 import { WECHAT_APP_ICON_SRC } from '../assets/wechatIcon';
 import type { PhoneHostAction } from '../core/types';
+import type { ProfileEditPatch, ProfileVersion } from '../profiles/profileTypes';
 import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles } from './profileHelper';
 
@@ -10,6 +11,8 @@ export type PhoneRoute =
   | 'broadcasts'
   | 'tasks'
   | 'profiles'
+  | 'profile-detail'
+  | 'smart-tasks'
   | 'settings'
   | 'diagnostics';
 
@@ -69,6 +72,23 @@ export interface PhoneSettingsView {
   hasApiKey: boolean;
 }
 
+export interface PhonePromptDebugEntryView {
+  id: string;
+  createdAt: number;
+  mode: string;
+  conversationId: string;
+  replyAs: string;
+  /** 组装提示词（宏未展开） */
+  assembled: string;
+  /** 宏展开后的最终提示词（发送给 AI 的） */
+  expanded: string;
+  /** AI 原始响应 */
+  raw?: string;
+  /** 解析后的微信消息 */
+  messages?: readonly { sender: string; content: string }[];
+  error?: string;
+}
+
 export interface PhoneDiagnosticsView {
   runtimeState: string;
   snapshotVersion: string;
@@ -76,6 +96,7 @@ export interface PhoneDiagnosticsView {
   pendingLoreRetryCount: number;
   moduleStates: readonly string[];
   recentErrors: readonly string[];
+  promptDebug: readonly PhonePromptDebugEntryView[];
 }
 
 export interface PhoneProfileView {
@@ -83,7 +104,10 @@ export interface PhoneProfileView {
   name: string;
   basicInfo: string;
   personalityBaseline: string;
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentStatus: string;
   relationship: string;
   storyInteractionSummary: string;
@@ -94,6 +118,17 @@ export interface PhoneProfileView {
   refreshStatus: 'idle' | 'refreshing' | 'success' | 'failed';
   lastError?: string;
   lastUpdated: number;
+  analysisNarrative?: string;
+  changes?: readonly {
+    field: string;
+    before: string;
+    after: string;
+    reason: string;
+    evidenceRefs: readonly string[];
+  }[];
+  rawResponse?: string;
+  reasoningContent?: string;
+  versions?: readonly ProfileVersion[];
 }
 
 export interface PhoneProfileSettingsView {
@@ -129,6 +164,10 @@ export interface PhoneAppServices {
   refreshProfile?(personId: string): Promise<void>;
   refreshAllProfiles?(): Promise<void>;
   retryFailedProfiles?(): Promise<void>;
+  watchProfiles?(listener: () => void): () => void;
+  getProfile?(personId: string): Promise<PhoneProfileView | null>;
+  saveProfileEdit?(personId: string, patch: ProfileEditPatch): Promise<void>;
+  restoreProfileVersion?(personId: string, versionId: string): Promise<void>;
   getProfileSettings?(): Promise<PhoneProfileSettingsView> | PhoneProfileSettingsView;
   saveProfileSettings?(settings: PhoneProfileSettingsView): Promise<void>;
   regenerateProfileRadio?(): Promise<void>;
@@ -152,6 +191,7 @@ export interface PhoneAppDefinition {
   title: string;
   glyph: string;
   iconSrc?: string;
+  showOnHome?: boolean;
   render(context: PhoneAppRenderContext): Promise<HTMLElement>;
 }
 
@@ -196,7 +236,7 @@ function empty(document: Document, value: string): HTMLElement {
   return node;
 }
 
-function field(document: Document, title: string, control: HTMLInputElement | HTMLSelectElement): HTMLLabelElement {
+function field(document: Document, title: string, control: HTMLElement): HTMLLabelElement {
   const label = document.createElement('label');
   label.className = 'phone-field';
   label.append(text(document, 'span', title), control);
@@ -241,6 +281,7 @@ function avatar(document: Document, name: string, className: string): HTMLSpanEl
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
+  let selectedProfileId: string | null = null;
 
   return [
     {
@@ -620,6 +661,11 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       title: '档案',
       glyph: '◎',
       async render(context) {
+        return renderProfileListPage(services, context, personId => {
+          selectedProfileId = personId;
+          context.navigate('profile-detail');
+        });
+        /* legacy profile list retained below for source compatibility */
         const { document } = context;
         try {
           const [profiles, settings] = await Promise.all([
@@ -777,7 +823,10 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             };
             addProfileField('基本信息', profile.basicInfo);
             addProfileField('固定性格', profile.personalityBaseline);
+            addProfileField('行为模式', profile.behaviorTuning);
             addProfileField('性格微调', profile.personalityTuning);
+            addProfileField('说话方式', profile.speechStyleTuning);
+            addProfileField('当前目标', profile.currentGoals);
             addProfileField('当前处境', profile.currentStatus);
             addProfileField('关系', profile.relationship);
             addProfileField('正文互动小结', profile.storyInteractionSummary);
@@ -789,7 +838,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             meta.className = 'phone-profile-meta';
             content.append(meta);
             if (profile.lastError) {
-              const failure = text(document, 'p', profile.lastError);
+              const failure = text(document, 'p', profile.lastError ?? '档案刷新失败');
               failure.className = 'phone-profile-error';
               content.append(failure);
             }
@@ -805,6 +854,15 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           placeholder.append(hint);
           return placeholder;
         }
+      },
+    },
+    {
+      route: 'profile-detail',
+      title: '人物档案',
+      glyph: '‹',
+      showOnHome: false,
+      async render(context) {
+        return renderProfileDetailPage(services, context, selectedProfileId, () => context.navigate('profiles'));
       },
     },
     {
@@ -968,10 +1026,428 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         }
         for (const state of diagnostics.moduleStates) output.append(row(document, '模块', state));
         for (const error of diagnostics.recentErrors) output.append(row(document, '最近错误', redactDiagnostic(error)));
+        if (diagnostics.promptDebug.length > 0) {
+          const debugHeading = text(document, 'h3', '提示词调试');
+          debugHeading.className = 'phone-debug-heading';
+          output.append(debugHeading);
+          for (const entry of [...diagnostics.promptDebug].reverse()) {
+            const details = document.createElement('details');
+            details.className = 'phone-debug-entry';
+            const time = new Date(entry.createdAt).toLocaleTimeString('zh-CN', { hour12: false });
+            const summary = text(document, 'summary', `#${entry.id} ${entry.mode} · ${entry.replyAs} · ${time}`);
+            summary.className = 'phone-debug-entry__summary';
+            details.append(summary);
+            const body = document.createElement('div');
+            body.className = 'phone-debug-entry__body';
+            body.append(debugSection(document, '组装提示词（宏未展开）', entry.assembled));
+            body.append(debugSection(document, '展开后提示词（发送给 AI）', entry.expanded));
+            if (entry.raw !== undefined) body.append(debugSection(document, 'AI 原始响应', entry.raw));
+            if (entry.messages !== undefined)
+              body.append(debugSection(document, '解析结果', JSON.stringify(entry.messages, null, 2)));
+            if (entry.error !== undefined) {
+              const error = text(document, 'p', entry.error);
+              error.className = 'phone-debug-entry__error';
+              body.append(error);
+            }
+            details.append(body);
+            output.append(details);
+          }
+        }
         return output;
       },
     },
   ];
+}
+
+async function renderProfileListPage(
+  services: PhoneAppServices,
+  context: PhoneAppRenderContext,
+  openProfile: (personId: string) => void,
+): Promise<HTMLElement> {
+  const { document } = context;
+  const container = document.createElement('main');
+  container.className = 'phone-profiles phone-profiles--list';
+  const stopWatching = services.watchProfiles?.(() => {
+    if (context.isActive()) context.requestRender();
+  });
+  context.onDispose?.(stopWatching ?? (() => undefined));
+  try {
+    const [profiles, settings] = await Promise.all([
+      collectProfiles(services),
+      services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 2_000 },
+    ]);
+    const progress = document.createElement('section');
+    progress.className = 'phone-profile-overview';
+    const progressTitle = text(
+      document,
+      'strong',
+      `正文进度 ${Math.max(0, Math.floor(settings.storyProgress))} / ${settings.autoRefreshEvery}`,
+    );
+    progressTitle.className = 'phone-profile-progress';
+    progress.append(progressTitle);
+    const settingsPanel = document.createElement('section');
+    settingsPanel.className = 'phone-profile-settings';
+    const threshold = input(document, 'number', String(settings.autoRefreshEvery));
+    threshold.className = 'phone-profile-settings__threshold';
+    threshold.min = '1';
+    threshold.max = '50';
+    threshold.step = '1';
+    const budget = input(document, 'number', String(settings.promptProfileMaxChars));
+    budget.className = 'phone-profile-settings__budget';
+    budget.min = '1';
+    budget.step = '100';
+    const settingFields = document.createElement('div');
+    settingFields.className = 'phone-profile-settings__fields';
+    settingFields.append(field(document, '自动刷新条数', threshold), field(document, '档案提示词上限', budget));
+    const saveSettings = text(document, 'button', '保存刷新设置') as HTMLButtonElement;
+    saveSettings.className = 'phone-button phone-profile-settings__save';
+    saveSettings.type = 'button';
+    saveSettings.disabled = !services.saveProfileSettings;
+    context.listen(saveSettings, 'click', () => {
+      if (!services.saveProfileSettings) return;
+      const autoRefreshEvery = Number(threshold.value);
+      const promptProfileMaxChars = Number(budget.value);
+      if (
+        !Number.isSafeInteger(autoRefreshEvery) ||
+        autoRefreshEvery < 1 ||
+        autoRefreshEvery > 50 ||
+        !Number.isSafeInteger(promptProfileMaxChars) ||
+        promptProfileMaxChars <= 0
+      ) {
+        context.announce('刷新设置数值无效', 'error');
+        return;
+      }
+      saveSettings.disabled = true;
+      void services
+        .saveProfileSettings({ storyProgress: settings.storyProgress, autoRefreshEvery, promptProfileMaxChars })
+        .then(() => context.announce('档案刷新设置已保存'))
+        .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+        .finally(() => {
+          if (context.isActive()) saveSettings.disabled = false;
+        });
+    });
+    settingsPanel.append(settingFields, saveSettings);
+    progress.append(settingsPanel);
+    const actions = document.createElement('div');
+    actions.className = 'phone-profile-actions';
+    const runAction = (button: HTMLButtonElement, action: (() => Promise<void>) | undefined, success: string) => {
+      if (!action) return;
+      button.disabled = true;
+      void action()
+        .then(() => {
+          context.announce(success);
+          context.requestRender();
+        })
+        .catch(error => {
+          context.announce(error instanceof Error ? error.message : String(error), 'error');
+          context.requestRender();
+        })
+        .finally(() => {
+          if (context.isActive()) button.disabled = false;
+        });
+    };
+    const refreshAll = text(document, 'button', '刷新全部人物') as HTMLButtonElement;
+    refreshAll.className = 'phone-button phone-button--primary phone-profile-refresh-all';
+    refreshAll.type = 'button';
+    refreshAll.disabled = !services.refreshAllProfiles;
+    context.listen(refreshAll, 'click', () =>
+      runAction(refreshAll, services.refreshAllProfiles?.bind(services), '全部人物档案刷新完成'),
+    );
+    const retry = text(document, 'button', '重试失败人物') as HTMLButtonElement;
+    retry.className = 'phone-button phone-profile-retry';
+    retry.type = 'button';
+    retry.disabled = !services.retryFailedProfiles;
+    context.listen(retry, 'click', () =>
+      runAction(retry, services.retryFailedProfiles?.bind(services), '失败人物已重试'),
+    );
+    actions.append(refreshAll, retry);
+    progress.append(actions);
+    container.append(progress);
+
+    if (profiles.length === 0) {
+      container.append(empty(document, '尚无已添加人物'));
+      return container;
+    }
+    const listNode = list(document);
+    listNode.className = 'phone-list phone-profile-list phone-profile-list--compact';
+    for (const profile of profiles) {
+      const item = document.createElement('li');
+      item.className = 'phone-profile-item';
+      item.dataset.status = profile.refreshStatus;
+      const open = text(document, 'button', '') as HTMLButtonElement;
+      open.className = 'phone-profile-row';
+      open.type = 'button';
+      open.setAttribute('aria-label', `打开${profile.name}的人物档案`);
+      const identity = document.createElement('span');
+      identity.className = 'phone-profile-row__identity';
+      identity.append(text(document, 'strong', profile.name), text(document, 'small', profile.sourceRange));
+      const status = document.createElement('span');
+      status.className = 'phone-profile-row__status';
+      status.dataset.status = profile.refreshStatus;
+      status.textContent =
+        profile.refreshStatus === 'refreshing'
+          ? '分析中'
+          : profile.refreshStatus === 'failed'
+            ? '失败'
+            : profile.refreshStatus === 'success'
+              ? '已更新'
+              : '待分析';
+      const summary = text(document, 'span', profile.analysisNarrative || profile.personalityTuning || '尚无动态变化');
+      summary.className = 'phone-profile-row__summary';
+      open.append(identity, status, summary, text(document, 'span', '›'));
+      context.listen(open, 'click', () => openProfile(profile.id));
+      const refresh = text(document, 'button', '↻') as HTMLButtonElement;
+      refresh.className = 'phone-button phone-profile-refresh';
+      refresh.type = 'button';
+      refresh.setAttribute('aria-label', `刷新${profile.name}的档案`);
+      refresh.disabled = !services.refreshProfile || profile.refreshStatus === 'refreshing';
+      context.listen(refresh, 'click', event => {
+        event.stopPropagation();
+        runAction(
+          refresh,
+          services.refreshProfile ? () => services.refreshProfile!(profile.id) : undefined,
+          `${profile.name}的档案已更新`,
+        );
+      });
+      item.append(open, refresh);
+      if (profile.lastError) {
+        const error = text(document, 'p', profile.lastError);
+        error.className = 'phone-profile-error';
+        item.append(error);
+      }
+      listNode.append(item);
+    }
+    container.append(listNode);
+    return container;
+  } catch (error) {
+    const failure = empty(document, '档案加载失败');
+    const hint = text(document, 'p', error instanceof Error ? error.message : String(error));
+    hint.className = 'phone-profile-error';
+    failure.append(hint);
+    return failure;
+  }
+}
+
+async function renderProfileDetailPage(
+  services: PhoneAppServices,
+  context: PhoneAppRenderContext,
+  personId: string | null,
+  goBack: () => void,
+): Promise<HTMLElement> {
+  const { document } = context;
+  if (!personId) {
+    goBack();
+    return empty(document, '请选择人物档案');
+  }
+  const page = document.createElement('main');
+  page.className = 'phone-profile-detail';
+  const stopWatching = services.watchProfiles?.(() => {
+    if (context.isActive()) context.requestRender();
+  });
+  context.onDispose?.(stopWatching ?? (() => undefined));
+  try {
+    const profile = services.getProfile
+      ? await services.getProfile(personId)
+      : ((await collectProfiles(services)).find(item => item.id === personId) ?? null);
+    if (!profile) return empty(document, '人物档案不存在');
+    const header = document.createElement('header');
+    header.className = 'phone-profile-detail__header';
+    const back = text(document, 'button', '‹ 返回档案') as HTMLButtonElement;
+    back.className = 'phone-button phone-profile-back';
+    back.type = 'button';
+    context.listen(back, 'click', goBack);
+    const title = document.createElement('div');
+    title.append(
+      text(document, 'h1', profile.name),
+      text(
+        document,
+        'p',
+        profile.refreshStatus === 'refreshing'
+          ? '正在分析新证据'
+          : `最近更新 ${profile.lastUpdated ? new Date(profile.lastUpdated).toLocaleString('zh-CN') : '尚未更新'}`,
+      ),
+    );
+    const refresh = text(document, 'button', '重新分析') as HTMLButtonElement;
+    refresh.className = 'phone-button phone-button--primary';
+    refresh.type = 'button';
+    refresh.disabled = !services.refreshProfile || profile.refreshStatus === 'refreshing';
+    context.listen(refresh, 'click', () => {
+      if (!services.refreshProfile) return;
+      refresh.disabled = true;
+      void services
+        .refreshProfile(personId)
+        .then(() => context.announce('人物档案已更新'))
+        .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+        .finally(() => {
+          if (context.isActive()) context.requestRender();
+        });
+    });
+    header.append(back, title, refresh);
+    page.append(header);
+    if (profile.lastError) {
+      const warning = text(document, 'p', `本次分析未应用：${profile.lastError}`);
+      warning.className = 'phone-profile-error';
+      page.append(warning);
+    }
+    const tabs = document.createElement('nav');
+    tabs.className = 'phone-profile-tabs';
+    const tabButtons: HTMLButtonElement[] = [];
+    const content = document.createElement('div');
+    content.className = 'phone-profile-detail__content';
+    const tabNames = ['变化', '档案', '依据', '分析'] as const;
+    const renderTab = (tab: (typeof tabNames)[number]) => {
+      content.replaceChildren();
+      for (const button of tabButtons)
+        button.setAttribute('aria-selected', button.textContent === tab ? 'true' : 'false');
+      if (tab === '变化') {
+        const changes = profile.changes ?? [];
+        content.append(sectionBlock(document, '本次自动写入', profile.analysisNarrative || '暂无新的动态变化。'));
+        if (changes.length === 0)
+          content.append(sectionBlock(document, '变化记录', '本次没有识别到可单独列出的字段变化。'));
+        for (const change of changes) {
+          const block = document.createElement('section');
+          block.className = 'phone-profile-detail__section';
+          block.append(
+            text(document, 'h2', change.field),
+            text(document, 'p', `之前：${change.before || '暂无'}`),
+            text(document, 'p', `现在：${change.after || '暂无'}`),
+            text(document, 'p', `原因：${change.reason}`),
+            text(document, 'small', `依据：${change.evidenceRefs.join('、') || '未提供'}`),
+          );
+          content.append(block);
+        }
+      } else if (tab === '档案') {
+        content.append(sectionBlock(document, '固定本色（世界书）', profile.personalityBaseline));
+        const fields: [string, string][] = [
+          ['基本信息', profile.basicInfo],
+          ['行为模式', profile.behaviorTuning],
+          ['性格微调', profile.personalityTuning],
+          ['说话方式', profile.speechStyleTuning],
+          ['当前目标', profile.currentGoals],
+          ['当前处境', profile.currentStatus],
+          ['关系解释', profile.relationship],
+          ['正文互动', profile.storyInteractionSummary],
+          ['微信互动', profile.chatInteractionSummary],
+          ['玩家行动建议', profile.playerActionAdvice],
+        ];
+        const form = document.createElement('form');
+        form.className = 'phone-profile-editor';
+        for (const [label, value] of fields) {
+          const control = document.createElement('textarea');
+          control.value = value;
+          control.dataset.field = label;
+          control.rows = label === '基本信息' ? 3 : 4;
+          form.append(field(document, label, control));
+        }
+        const save = text(document, 'button', '保存修改') as HTMLButtonElement;
+        save.className = 'phone-button phone-button--primary';
+        save.type = 'button';
+        save.disabled = !services.saveProfileEdit;
+        context.listen(save, 'click', () => {
+          if (!services.saveProfileEdit) return;
+          const controls = new Map(
+            Array.from(form.querySelectorAll('textarea')).map(node => [node.dataset.field, node.value]),
+          );
+          save.disabled = true;
+          void services
+            .saveProfileEdit(personId, {
+              basicInfoAdditions: (controls.get('基本信息') ?? '')
+                .split(/[；;\n]/)
+                .map(value => value.trim())
+                .filter(Boolean),
+              behaviorTuning: controls.get('行为模式') ?? '',
+              personalityTuning: controls.get('性格微调') ?? '',
+              speechStyleTuning: controls.get('说话方式') ?? '',
+              currentGoals: controls.get('当前目标') ?? '',
+              currentSituationSummary: controls.get('当前处境') ?? '',
+              relationshipInterpretation: controls.get('关系解释') ?? '',
+              storyInteractionSummary: controls.get('正文互动') ?? '',
+              chatInteractionSummary: controls.get('微信互动') ?? '',
+              playerActionAdvice: controls.get('玩家行动建议') ?? '',
+            })
+            .then(() => context.announce('玩家修改已保存并写入档案'))
+            .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+            .finally(() => {
+              if (context.isActive()) context.requestRender();
+            });
+        });
+        form.append(save);
+        content.append(form);
+      } else if (tab === '依据') {
+        content.append(
+          sectionBlock(document, '正文范围', profile.sourceRange),
+          sectionBlock(document, '最近微信', profile.lastWechatRound.join('\n') || '暂无'),
+        );
+        const evidence = profile.changes?.flatMap(change => change.evidenceRefs) ?? [];
+        content.append(sectionBlock(document, '引用标记', [...new Set(evidence)].join('\n') || '暂无可展示的引用标记'));
+        if (profile.versions?.length) {
+          const versions = document.createElement('section');
+          versions.className = 'phone-profile-detail__section';
+          versions.append(text(document, 'h2', '历史版本'));
+          for (const version of [...profile.versions].reverse()) {
+            const restore = text(
+              document,
+              'button',
+              `${version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复'} · ${new Date(version.savedAt).toLocaleString('zh-CN')}`,
+            ) as HTMLButtonElement;
+            restore.className = 'phone-button phone-profile-version';
+            restore.type = 'button';
+            restore.disabled = !services.restoreProfileVersion;
+            context.listen(restore, 'click', () => {
+              if (!services.restoreProfileVersion) return;
+              restore.disabled = true;
+              void services
+                .restoreProfileVersion(personId, version.id)
+                .then(() => context.announce('已恢复该版本'))
+                .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+                .finally(() => {
+                  if (context.isActive()) context.requestRender();
+                });
+            });
+            versions.append(restore);
+          }
+          content.append(versions);
+        }
+      } else {
+        content.append(sectionBlock(document, 'AI 分析说明', profile.analysisNarrative || '暂无'));
+        if (profile.reasoningContent) content.append(sectionBlock(document, '模型推理回传', profile.reasoningContent));
+        if (profile.rawResponse) content.append(sectionBlock(document, '原始结构化回传', profile.rawResponse));
+        else content.append(sectionBlock(document, '原始结构化回传', '暂无，当前档案来自旧版本或玩家修改。'));
+      }
+    };
+    for (const tab of tabNames) {
+      const button = text(document, 'button', tab) as HTMLButtonElement;
+      button.className = 'phone-profile-tab';
+      button.type = 'button';
+      button.setAttribute('aria-selected', tab === '变化' ? 'true' : 'false');
+      context.listen(button, 'click', () => renderTab(tab));
+      tabButtons.push(button);
+      tabs.append(button);
+    }
+    page.append(tabs, content);
+    renderTab('变化');
+    return page;
+  } catch (error) {
+    const failure = empty(document, '档案详情加载失败');
+    failure.append(text(document, 'p', error instanceof Error ? error.message : String(error)));
+    return failure;
+  }
+}
+
+function debugSection(document: Document, title: string, value: string): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'phone-debug-entry__section';
+  section.append(text(document, 'h3', title));
+  const pre = text(document, 'pre', value);
+  pre.className = 'phone-debug-entry__pre';
+  section.append(pre);
+  return section;
+}
+function sectionBlock(document: Document, title: string, value: string): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'phone-profile-detail__section';
+  section.append(text(document, 'h2', title), text(document, 'p', value.trim() || '暂无'));
+  return section;
 }
 
 function isPhoneTheme(value: string): value is PhoneSettingsView['theme'] {

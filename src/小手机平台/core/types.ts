@@ -33,6 +33,15 @@ export interface PhoneModuleManifest {
 
 export type PhoneModuleStatus = 'REGISTERED' | 'INITIALIZING' | 'READY' | 'ERROR' | 'DISPOSED';
 
+export interface PhoneModuleSnapshot {
+  readonly id: string;
+  readonly version: string;
+  readonly required: boolean;
+  readonly dependsOn: readonly string[];
+  readonly capabilities: readonly string[];
+  readonly status: PhoneModuleStatus;
+}
+
 export interface PhoneModule {
   init(context: PhoneModuleContext): Promise<void> | void;
   dispose(reason: string): Promise<void> | void;
@@ -64,6 +73,7 @@ export interface PhoneRuntimeStatus {
 export interface PhoneRuntimeEventMap {
   ready: [];
   status: [PhoneRuntimeStatus];
+  modules: [readonly PhoneModuleSnapshot[]];
   unread: [number];
   hostStory: [number | null];
 }
@@ -98,6 +108,7 @@ export interface TavernPhonePublicApi {
   close(): void;
   toggle(): Promise<void>;
   getStatus(): PhoneRuntimeStatus;
+  getModules(): readonly PhoneModuleSnapshot[];
   getUnreadCount(): number;
   on<K extends keyof PhoneRuntimeEventMap>(event: K, listener: (...args: PhoneRuntimeEventMap[K]) => void): () => void;
   attachHostBridge(bridge: PhoneHostBridge): () => void;

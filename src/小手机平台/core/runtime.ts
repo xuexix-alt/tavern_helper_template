@@ -43,7 +43,8 @@ export class PhoneRuntime implements TavernPhonePublicApi {
   private modulesInitialized = false;
 
   registerModule(registration: PhoneModuleRegistration): void {
-    this.registry.register(registration);
+    const registered = this.registry.register(registration);
+    if (registered) this.events.emit('modules', this.getModules());
     this.scheduleAutomaticInitialization();
   }
 
@@ -123,6 +124,10 @@ export class PhoneRuntime implements TavernPhonePublicApi {
       isOpen: this.isOpen,
       diagnostics: [...this.diagnostics],
     };
+  }
+
+  getModules() {
+    return this.registry.snapshots();
   }
 
   getUnreadCount(): number {
@@ -273,6 +278,7 @@ export class PhoneRuntime implements TavernPhonePublicApi {
       await this.registry.initialize(context, requiredIds);
       this.modulesInitialized = true;
       this.state = this.session ? 'READY' : 'WAITING';
+      this.events.emit('modules', this.getModules());
       this.emitStatus();
     } catch (error) {
       if (automatic) this.diagnostics.push(`automatic module initialization failed: ${getErrorMessage(error)}`);

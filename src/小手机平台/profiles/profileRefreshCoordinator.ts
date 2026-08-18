@@ -1,5 +1,6 @@
 import type { PhoneBusinessRecord, PhoneDb } from '../data/phoneDb';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../scheduler/phoneScheduler';
+import type { AiDetailedResponse } from '../ai/providers';
 import {
   buildProfileAnalysisPrompt,
   buildProfileViewRecord,
@@ -16,6 +17,9 @@ import type {
   ProfileRefreshTrigger,
   ProfileStoryMessage,
   ProfileViewRecordData,
+  ProfileEditPatch,
+  ProfileStateEvent,
+  ProfileVersion,
 } from './profileTypes';
 
 export interface ProfileRefreshSettings {
@@ -32,10 +36,12 @@ export interface ProfileRefreshDependencies {
   getStoryMessages(): readonly ProfileStoryMessage[];
   listAddedPeople(): Promise<readonly ProfilePerson[]>;
   collectSource(person: ProfilePerson, state: ProfileAnalysisState | null): Promise<ProfileAnalysisSource>;
-  requestAnalysis(prompt: string): Promise<string>;
+  requestAnalysis(prompt: string): Promise<string | AiDetailedResponse>;
   writeWorldbook(document: DynamicProfileDocument, aliases: readonly string[], maxCharacters: number): Promise<void>;
   onAllRunComplete?(run: ProfileRefreshRunResult): Promise<void>;
 }
+
+export type ProfileStateListener = (event: ProfileStateEvent) => void;
 
 interface ScheduledRefresh {
   runId: string;
@@ -53,6 +59,7 @@ interface StoredStoryState extends PhoneBusinessRecord, StoryCounterState {}
 
 const SETTINGS_ID = 'dynamic-profile-settings';
 const STORY_STATE_ID = 'dynamic-profile-story';
+const INTERRUPTED_ANALYSIS_ERROR = '上次档案分析因页面刷新或脚本重载中断，请重新分析';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -93,6 +100,7 @@ export class ProfileRefreshCoordinator {
   private batchSequence = 0;
   private batchTail: Promise<unknown> = Promise.resolve();
   private disposed = false;
+  private readonly stateListeners = new Set<ProfileStateListener>();
 
   constructor(
     private readonly dependencies: ProfileRefreshDependencies,
@@ -145,7 +153,52 @@ export class ProfileRefreshCoordinator {
       status: record.status,
       ...(typeof record.lastError === 'string' ? { lastError: record.lastError } : {}),
       ...(typeof record.lastFallbackReason === 'string' ? { lastFallbackReason: record.lastFallbackReason } : {}),
+      ...(typeof record.lastRawResponse === 'string' ? { lastRawResponse: record.lastRawResponse } : {}),
+      ...(typeof record.lastReasoningContent === 'string' ? { lastReasoningContent: record.lastReasoningContent } : {}),
     };
+  }
+
+  watchProfiles(listener: ProfileStateListener): () => void {
+    this.stateListeners.add(listener);
+    return () => this.stateListeners.delete(listener);
+  }
+
+  async recoverInterruptedAnalyses(): Promise<void> {
+    this.assertActive();
+    const sessionKey = this.dependencies.getSessionKey();
+    const [states, runs] = await Promise.all([
+      this.dependencies.db.listRecords('profileAnalysis', sessionKey),
+      this.dependencies.db.listRecords('profileRuns', sessionKey),
+    ]);
+    for (const record of states.filter(isAnalysisState)) {
+      if (record.status !== 'refreshing') continue;
+      await this.writeAnalysisState({
+        sessionKey,
+        personId: record.personId,
+        ...(typeof record.lastWechatMessageId === 'string' ? { lastWechatMessageId: record.lastWechatMessageId } : {}),
+        ...(typeof record.lastWechatCreatedAt === 'number' ? { lastWechatCreatedAt: record.lastWechatCreatedAt } : {}),
+        ...(typeof record.lastSuccessfulRefreshAt === 'number'
+          ? { lastSuccessfulRefreshAt: record.lastSuccessfulRefreshAt }
+          : {}),
+        status: 'failed',
+        lastError: INTERRUPTED_ANALYSIS_ERROR,
+        ...(typeof record.lastFallbackReason === 'string' ? { lastFallbackReason: record.lastFallbackReason } : {}),
+        ...(typeof record.lastRawResponse === 'string' ? { lastRawResponse: record.lastRawResponse } : {}),
+        ...(typeof record.lastReasoningContent === 'string'
+          ? { lastReasoningContent: record.lastReasoningContent }
+          : {}),
+      });
+      this.notify({ personId: record.personId, status: 'failed', lastError: INTERRUPTED_ANALYSIS_ERROR });
+    }
+    for (const run of runs.filter(isStoredRun)) {
+      if (!run.people.some(person => person.status === 'refreshing')) continue;
+      run.people = run.people.map(person =>
+        person.status === 'refreshing'
+          ? { personId: person.personId, status: 'failed', error: INTERRUPTED_ANALYSIS_ERROR }
+          : person,
+      );
+      await this.dependencies.db.putRecord('profileRuns', run);
+    }
   }
 
   async listProfiles(): Promise<
@@ -175,12 +228,106 @@ export class ProfileRefreshCoordinator {
           newWechatMessageIds: Array.isArray(record.newWechatMessageIds)
             ? record.newWechatMessageIds.filter((item): item is string => typeof item === 'string')
             : [],
+          analysisNarrative:
+            typeof record.analysisNarrative === 'string' ? record.analysisNarrative : '暂无额外分析说明',
+          changes: Array.isArray(record.changes) ? record.changes : [],
+          rawResponse: typeof record.rawResponse === 'string' ? record.rawResponse : undefined,
+          reasoningContent: typeof record.reasoningContent === 'string' ? record.reasoningContent : undefined,
+          versions: Array.isArray(record.versions) ? record.versions : [],
           personId,
           status: state?.status ?? 'idle',
           ...(typeof state?.lastError === 'string' ? { lastError: state.lastError } : {}),
         },
       ];
     });
+  }
+
+  async getProfileView(personId: string): Promise<(ProfileViewRecordData & { personId: string }) | null> {
+    const sessionKey = this.dependencies.getSessionKey();
+    const record = (await this.dependencies.db.listRecords('profileViews', sessionKey)).find(
+      item => item.id === personId || item.personId === personId,
+    );
+    if (!record || !record.document || typeof record.document !== 'object') return null;
+    return {
+      document: structuredClone(record.document) as DynamicProfileDocument,
+      playerActionAdvice: typeof record.playerActionAdvice === 'string' ? record.playerActionAdvice : '',
+      sourceStoryIds: Array.isArray(record.sourceStoryIds)
+        ? record.sourceStoryIds.filter((item): item is string => typeof item === 'string')
+        : [],
+      newWechatMessageIds: Array.isArray(record.newWechatMessageIds)
+        ? record.newWechatMessageIds.filter((item): item is string => typeof item === 'string')
+        : [],
+      analysisNarrative: typeof record.analysisNarrative === 'string' ? record.analysisNarrative : '暂无额外分析说明',
+      changes: Array.isArray(record.changes) ? structuredClone(record.changes) : [],
+      ...(typeof record.rawResponse === 'string' ? { rawResponse: record.rawResponse } : {}),
+      ...(typeof record.reasoningContent === 'string' ? { reasoningContent: record.reasoningContent } : {}),
+      versions: Array.isArray(record.versions) ? structuredClone(record.versions) : [],
+      personId,
+    };
+  }
+
+  async saveProfileEdit(personId: string, patch: ProfileEditPatch): Promise<void> {
+    const view = await this.getProfileView(personId);
+    if (!view) throw new Error(`未找到人物档案：${personId}`);
+    const person = (await this.dependencies.listAddedPeople()).find(item => item.id === personId);
+    if (!person) throw new Error(`未找到已添加联系人：${personId}`);
+    const document: DynamicProfileDocument = {
+      ...view.document,
+      ...(patch.basicInfoAdditions ? { basicInfoAdditions: Object.freeze([...patch.basicInfoAdditions]) } : {}),
+      ...(patch.behaviorTuning !== undefined ? { behaviorTuning: patch.behaviorTuning.trim() } : {}),
+      ...(patch.personalityTuning !== undefined ? { personalityTuning: patch.personalityTuning.trim() } : {}),
+      ...(patch.speechStyleTuning !== undefined ? { speechStyleTuning: patch.speechStyleTuning.trim() } : {}),
+      ...(patch.currentGoals !== undefined ? { currentGoals: patch.currentGoals.trim() } : {}),
+      ...(patch.currentSituationSummary !== undefined
+        ? { currentSituationSummary: patch.currentSituationSummary.trim() }
+        : {}),
+      ...(patch.relationshipInterpretation !== undefined
+        ? { relationshipInterpretation: patch.relationshipInterpretation.trim() }
+        : {}),
+      ...(patch.storyInteractionSummary !== undefined
+        ? { storyInteractionSummary: patch.storyInteractionSummary.trim() }
+        : {}),
+      ...(patch.chatInteractionSummary !== undefined
+        ? { chatInteractionSummary: patch.chatInteractionSummary.trim() }
+        : {}),
+      updatedAt: this.dependencies.now(),
+    };
+    const savedAt = this.dependencies.now();
+    await this.dependencies.writeWorldbook(document, person.aliases, (await this.getSettings()).promptProfileMaxChars);
+    const nextVersion = this.makeVersion(
+      view,
+      document,
+      patch.playerActionAdvice ?? view.playerActionAdvice,
+      'player',
+      savedAt,
+    );
+    await this.writeView(personId, view, {
+      document,
+      playerActionAdvice: patch.playerActionAdvice ?? view.playerActionAdvice,
+      versions: [...view.versions, nextVersion].slice(-10),
+    });
+    this.notify({ personId, status: 'success' });
+  }
+
+  async restoreProfileVersion(personId: string, versionId: string): Promise<void> {
+    const view = await this.getProfileView(personId);
+    if (!view) throw new Error(`未找到人物档案：${personId}`);
+    const target = view.versions.find(version => version.id === versionId);
+    if (!target) throw new Error(`未找到档案版本：${versionId}`);
+    const person = (await this.dependencies.listAddedPeople()).find(item => item.id === personId);
+    if (!person) throw new Error(`未找到已添加联系人：${personId}`);
+    const document = { ...structuredClone(target.document), updatedAt: this.dependencies.now() };
+    await this.dependencies.writeWorldbook(document, person.aliases, (await this.getSettings()).promptProfileMaxChars);
+    const savedAt = this.dependencies.now();
+    const nextVersion = this.makeVersion(view, document, target.playerActionAdvice, 'restore', savedAt);
+    await this.writeView(personId, view, {
+      document,
+      playerActionAdvice: target.playerActionAdvice,
+      analysisNarrative: target.analysisNarrative,
+      changes: target.changes,
+      versions: [...view.versions, nextVersion].slice(-10),
+    });
+    this.notify({ personId, status: 'success' });
   }
 
   async reconcileStory(
@@ -206,9 +353,10 @@ export class ProfileRefreshCoordinator {
     const people = await this.dependencies.listAddedPeople();
     const person = people.find(item => item.id === personId);
     if (!person) throw new Error(`未找到已添加联系人：${personId}`);
-    const result = await this.queueBatch([person], trigger);
-    const failed = result.people[0];
-    if (failed?.status === 'failed') throw new Error(failed.error || `刷新人物档案失败：${person.name}`);
+    const execute = () => this.runManualPerson(person, trigger);
+    const result = this.batchTail.then(execute, execute);
+    this.batchTail = result.catch(() => undefined);
+    await result;
   }
 
   async refreshAll(
@@ -265,13 +413,25 @@ export class ProfileRefreshCoordinator {
     return result;
   }
 
+  private async runManualPerson(person: ProfilePerson, trigger: 'person-manual'): Promise<void> {
+    this.assertActive();
+    const sessionKey = this.dependencies.getSessionKey();
+    const runId = `profile-run:${this.dependencies.now()}:${++this.batchSequence}`;
+    await this.dependencies.db.putRecord('profileRuns', {
+      id: runId,
+      sessionKey,
+      trigger,
+      people: [{ personId: person.id, status: 'refreshing' }],
+    } satisfies StoredRun);
+    await this.refreshScheduledPerson({ runId, trigger, person, sessionKey });
+  }
+
   private async runBatch(
     people: readonly ProfilePerson[],
     trigger: ProfileRefreshTrigger,
   ): Promise<ProfileRefreshRunResult> {
     this.assertActive();
     const sessionKey = this.dependencies.getSessionKey();
-    const snapshotKey = this.dependencies.getSnapshotKey();
     const now = this.dependencies.now();
     const runId = `profile-run:${now}:${++this.batchSequence}`;
     const run: StoredRun = {
@@ -281,38 +441,12 @@ export class ProfileRefreshCoordinator {
       people: people.map(person => ({ personId: person.id, status: 'refreshing' })),
     };
     await this.dependencies.db.putRecord('profileRuns', run);
-    this.dependencies.scheduler.setSnapshot({
-      sessionKey,
-      snapshotKey,
-      storyTurn: this.storyTurn(),
-    });
-
     for (const person of people) {
-      const workKey = `${runId}\u0000${person.id}`;
-      this.scheduled.set(workKey, { runId, trigger, person, sessionKey });
-      const accepted = this.dependencies.scheduler.enqueue({
-        triggerKey: workKey,
-        sessionKey,
-        snapshotKey,
-        conversationId: `private:${person.id}`,
-        contactKey: person.id,
-        topicKey: `profile:${person.id}:${runId}`,
-        topicVersion: runId,
-        priority: 'P1',
-        source: 'profile_refresh',
-        requiresAi: true,
-        payload: { workKey, runId, personId: person.id, trigger },
-      });
-      if (!accepted) {
-        this.scheduled.delete(workKey);
-        await this.updateRunPerson(runId, sessionKey, person.id, 'failed', '档案刷新任务未被调度器接受');
+      try {
+        await this.refreshScheduledPerson({ runId, trigger, person, sessionKey });
+      } catch {
+        // A failed person is persisted by refreshScheduledPerson; continue the batch serially.
       }
-    }
-    this.dependencies.scheduler.runAvailable();
-    await this.dependencies.scheduler.whenIdle();
-
-    for (const key of [...this.scheduled.keys()]) {
-      if (key.startsWith(`${runId}\u0000`)) this.scheduled.delete(key);
     }
     const stored = await this.readRun(runId, sessionKey);
     const result: ProfileRefreshRunResult = {
@@ -328,7 +462,7 @@ export class ProfileRefreshCoordinator {
             },
       ),
     };
-    if (trigger === 'auto' || trigger === 'all-manual') {
+    if ((trigger === 'auto' || trigger === 'all-manual') && result.people.some(person => person.status === 'success')) {
       await this.dependencies.onAllRunComplete?.(result);
     }
     return result;
@@ -345,15 +479,23 @@ export class ProfileRefreshCoordinator {
       status: 'refreshing',
       lastError: undefined,
     });
+    this.notify({ personId: scheduled.person.id, status: 'refreshing' });
+    let detailedResponse: AiDetailedResponse | undefined;
     try {
       this.assertCapturedSession(scheduled.sessionKey);
       const source = await this.dependencies.collectSource(scheduled.person, oldState);
       this.assertCapturedSession(scheduled.sessionKey);
-      const prompt = [
-        `当前分析人物：${source.personName}（${source.personId}）`,
-        buildProfileAnalysisPrompt(source),
-      ].join('\n');
-      const output = parseProfileAnalysisOutput(await this.dependencies.requestAnalysis(prompt));
+      const prompt = buildProfileAnalysisPrompt(source);
+      const response = await this.dependencies.requestAnalysis(prompt);
+      const detailed: AiDetailedResponse = typeof response === 'string' ? { content: response } : response;
+      detailedResponse = detailed;
+      let output;
+      try {
+        output = parseProfileAnalysisOutput(detailed.content, source);
+      } catch (error) {
+        if (error && typeof error === 'object') Object.assign(error, { profileResponse: detailed });
+        throw error;
+      }
       this.assertCapturedSession(scheduled.sessionKey);
       const document = mergeDynamicProfile(
         source,
@@ -365,12 +507,20 @@ export class ProfileRefreshCoordinator {
       await this.dependencies.writeWorldbook(document, scheduled.person.aliases, settings.promptProfileMaxChars);
       this.assertCapturedSession(scheduled.sessionKey);
 
+      const previousView = await this.getProfileView(scheduled.person.id);
       const view = buildProfileViewRecord(source, output, document);
-      await this.dependencies.db.putRecord('profileViews', {
-        id: scheduled.person.id,
-        sessionKey: scheduled.sessionKey,
-        personId: scheduled.person.id,
+      const version = this.makeVersion(
+        previousView ?? ({ ...view, versions: [] } as ProfileViewRecordData & { personId: string }),
+        document,
+        output.playerActionAdvice,
+        'ai',
+        this.dependencies.now(),
+      );
+      await this.writeView(scheduled.person.id, previousView, {
         ...view,
+        rawResponse: detailed.content,
+        ...(detailed.reasoningContent ? { reasoningContent: detailed.reasoningContent } : {}),
+        versions: [...(previousView?.versions ?? []), version].slice(-10),
       });
       const lastWechatMessageId = source.wechatNew.at(-1)?.id ?? oldState?.lastWechatMessageId;
       await this.writeAnalysisState({
@@ -379,10 +529,17 @@ export class ProfileRefreshCoordinator {
         ...(lastWechatMessageId ? { lastWechatMessageId } : {}),
         lastSuccessfulRefreshAt: this.dependencies.now(),
         status: 'success',
+        lastRawResponse: detailed.content,
+        ...(detailed.reasoningContent ? { lastReasoningContent: detailed.reasoningContent } : {}),
       });
+      this.notify({ personId: scheduled.person.id, status: 'success' });
       await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'success');
     } catch (error) {
       const message = errorMessage(error);
+      const response =
+        error && typeof error === 'object' && 'profileResponse' in error
+          ? (error as { profileResponse?: AiDetailedResponse }).profileResponse
+          : detailedResponse;
       await this.writeAnalysisState({
         ...(oldState ?? {
           sessionKey: scheduled.sessionKey,
@@ -391,7 +548,10 @@ export class ProfileRefreshCoordinator {
         }),
         status: 'failed',
         lastError: message,
+        ...(response?.content ? { lastRawResponse: response.content } : {}),
+        ...(response?.reasoningContent ? { lastReasoningContent: response.reasoningContent } : {}),
       });
+      this.notify({ personId: scheduled.person.id, status: 'failed', lastError: message });
       await this.updateRunPerson(scheduled.runId, scheduled.sessionKey, scheduled.person.id, 'failed', message);
       throw error;
     }
@@ -438,7 +598,54 @@ export class ProfileRefreshCoordinator {
     if (state.lastSuccessfulRefreshAt !== undefined) record.lastSuccessfulRefreshAt = state.lastSuccessfulRefreshAt;
     if (state.lastError !== undefined) record.lastError = state.lastError;
     if (state.lastFallbackReason !== undefined) record.lastFallbackReason = state.lastFallbackReason;
+    if (state.lastRawResponse !== undefined) record.lastRawResponse = state.lastRawResponse;
+    if (state.lastReasoningContent !== undefined) record.lastReasoningContent = state.lastReasoningContent;
     await this.dependencies.db.putRecord('profileAnalysis', record);
+  }
+
+  private async writeView(
+    personId: string,
+    previous: (ProfileViewRecordData & { personId: string }) | null,
+    patch: Partial<ProfileViewRecordData>,
+  ): Promise<void> {
+    const sessionKey = this.dependencies.getSessionKey();
+    const current = previous ?? (await this.getProfileView(personId));
+    await this.dependencies.db.putRecord('profileViews', {
+      id: personId,
+      sessionKey,
+      personId,
+      ...(current ?? {}),
+      ...patch,
+    });
+  }
+
+  private makeVersion(
+    view: ProfileViewRecordData,
+    document: DynamicProfileDocument,
+    playerActionAdvice: string,
+    source: ProfileVersion['source'],
+    savedAt: number,
+  ): ProfileVersion {
+    return {
+      id: `profile-version:${savedAt}:${document.personId}`,
+      source,
+      savedAt,
+      document: structuredClone(document),
+      playerActionAdvice,
+      analysisNarrative: view.analysisNarrative,
+      changes: structuredClone(view.changes),
+      evidenceRefs: Object.freeze([...document.evidenceRefs]),
+    };
+  }
+
+  private notify(event: ProfileStateEvent): void {
+    for (const listener of [...this.stateListeners]) {
+      try {
+        listener(event);
+      } catch {
+        // A UI listener must not break refresh persistence.
+      }
+    }
   }
 
   private async readRun(runId: string, sessionKey: string): Promise<StoredRun> {

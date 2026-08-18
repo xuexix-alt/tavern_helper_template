@@ -11,7 +11,7 @@
   --wechat-bubble-outgoing: #95ec69;
   --wechat-chat-background: #ededed;
   position: fixed;
-  z-index: 2147483000;
+  z-index: 2147483647;
   top: 0;
   left: 0;
   display: block;
@@ -90,7 +90,7 @@ button:focus-visible {
   color: var(--phone-secondary);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .phone-navigation {
@@ -106,7 +106,7 @@ button:focus-visible {
   margin: 0;
   font-size: 1.06rem;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -564,6 +564,209 @@ button:focus-visible {
   min-width: 0;
 }
 
+.phone-profile-page-header {
+  display: grid;
+  gap: 4px;
+  padding: 4px 2px 2px;
+}
+
+.phone-profile-page-header h1,
+.phone-profile-detail__header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+.phone-profile-page-header p,
+.phone-profile-detail__header p {
+  margin: 0;
+  color: var(--phone-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.phone-profile-overview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--phone-separator);
+  border-radius: 8px;
+  background: var(--phone-surface);
+}
+
+.phone-profile-overview p {
+  margin: 0;
+  color: var(--phone-secondary);
+  font-size: 0.78rem;
+}
+
+.phone-profile-list--compact {
+  gap: 6px;
+}
+
+.phone-profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 3px 10px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid var(--phone-separator);
+  border-radius: 8px;
+  background: var(--phone-surface);
+  color: var(--phone-label);
+  text-align: left;
+}
+
+.phone-profile-list--compact .phone-profile-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+}
+
+.phone-profile-list--compact .phone-profile-row {
+  border: 0;
+  border-radius: 0;
+}
+
+.phone-profile-list--compact .phone-profile-refresh {
+  width: 52px;
+  border-left: 1px solid var(--phone-separator);
+  border-radius: 0;
+}
+
+.phone-profile-list--compact .phone-profile-error {
+  grid-column: 1 / -1;
+}
+
+.phone-profile-row__identity {
+  display: grid;
+  min-width: 0;
+}
+
+.phone-profile-row__identity small,
+.phone-profile-row__summary {
+  overflow: hidden;
+  color: var(--phone-secondary);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-profile-row__status {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--phone-secondary);
+  font-size: 0.76rem;
+}
+
+.phone-profile-row__status[data-status='success'] {
+  color: var(--wechat-green);
+}
+.phone-profile-row__status[data-status='failed'] {
+  color: var(--phone-red);
+}
+.phone-profile-row__status[data-status='refreshing'] {
+  color: var(--phone-blue);
+}
+
+.phone-profile-row > span:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: end;
+  color: var(--phone-secondary);
+}
+
+.phone-profile-detail {
+  display: grid;
+  gap: 10px;
+}
+
+.phone-profile-detail__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone-profile-back {
+  padding-inline: 8px;
+}
+
+.phone-profile-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--phone-separator);
+}
+
+.phone-profile-tab {
+  min-height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--phone-secondary);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.phone-profile-tab[aria-selected='true'] {
+  border-bottom-color: var(--phone-blue);
+  color: var(--phone-blue);
+  font-weight: 650;
+}
+
+.phone-profile-detail__content {
+  display: grid;
+  gap: 8px;
+}
+
+.phone-profile-detail__section {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--phone-separator);
+  background: var(--phone-surface);
+}
+
+.phone-profile-detail__section h2 {
+  margin: 0;
+  font-size: 0.88rem;
+  letter-spacing: 0;
+}
+
+.phone-profile-detail__section p,
+.phone-profile-detail__section small {
+  margin: 0;
+  color: var(--phone-label);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.phone-profile-detail__section small {
+  color: var(--phone-secondary);
+  font-size: 0.72rem;
+}
+
+.phone-profile-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.phone-profile-editor textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.phone-profile-version {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  text-align: left;
+}
+
 .phone-profile-settings,
 .phone-broadcasts__toolbar {
   display: grid;
@@ -656,7 +859,7 @@ button:focus-visible {
 
 .phone-profile-content {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 
@@ -667,7 +870,7 @@ button:focus-visible {
 }
 
 .phone-profile-field:nth-child(odd) {
-  border-right: 1px solid var(--phone-separator);
+  border-right: 0;
 }
 
 .phone-profile-field h3,
@@ -840,4 +1043,61 @@ button:focus-visible {
   .phone-list {
     border: 2px solid currentColor;
   }
+}
+
+/* ===== 提示词调试机 ===== */
+.phone-debug-heading {
+  margin: 10px 0 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #8a6d3b;
+}
+.phone-debug-entry {
+  margin: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+.phone-debug-entry__summary {
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3a4a44;
+  user-select: none;
+}
+.phone-debug-entry__body {
+  padding: 2px 10px 10px;
+}
+.phone-debug-entry__section {
+  margin: 6px 0;
+}
+.phone-debug-entry__section h3 {
+  margin: 0 0 4px;
+  font-size: 10px;
+  color: #6a7770;
+}
+.phone-debug-entry__pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  font:
+    10px/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.phone-debug-entry__error {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(200, 70, 60, 0.1);
+  color: #b0433a;
+  font-size: 11px;
 }

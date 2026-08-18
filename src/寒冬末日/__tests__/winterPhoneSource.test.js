@@ -7,30 +7,35 @@ const entrypoints = [
   {
     path: 'src/小手机平台/脚本/10平台服务/index.ts',
     id: 'platform.services',
+    version: '1.0.1',
     dependsOn: [],
     capabilities: ['host.gateway', 'settings.store', 'story.extractor'],
   },
   {
     path: 'src/小手机平台/脚本/20数据与同步/index.ts',
     id: 'data.sync',
+    version: '1.0.0',
     dependsOn: ['platform.services'],
     capabilities: ['phone.db', 'chat-lore.sync'],
   },
   {
     path: 'src/小手机平台/脚本/30AI与调度/index.ts',
     id: 'ai.scheduler',
+    version: '1.0.2',
     dependsOn: ['platform.services', 'data.sync'],
     capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],
   },
   {
     path: 'src/小手机平台/脚本/40手机外壳/index.ts',
     id: 'phone.shell',
+    version: '1.0.1',
     dependsOn: ['platform.services'],
     capabilities: ['phone.shell'],
   },
   {
     path: 'src/小手机平台/脚本/50通信与情报APP/index.ts',
     id: 'communication.apps',
+    version: '1.0.1',
     dependsOn: ['data.sync', 'ai.scheduler', 'phone.shell'],
     capabilities: ['communication.apps'],
   },
@@ -51,7 +56,7 @@ for (const entrypoint of entrypoints) {
 
     assert.match(source, /registerPhoneModule\s*\(\s*\{/);
     assert.match(source, new RegExp(`id:\\s*['"]${escapeRegExp(entrypoint.id)}['"]`));
-    assert.match(source, /version:\s*['"]1\.0\.0['"]/);
+    assert.match(source, new RegExp(`version:\\s*['"]${escapeRegExp(entrypoint.version)}['"]`));
     assert.match(source, /required:\s*true/);
     assertArrayLiteral(source, 'dependsOn', entrypoint.dependsOn);
     assertArrayLiteral(source, 'capabilities', entrypoint.capabilities);
@@ -69,6 +74,22 @@ test('data entry publishes persistent IndexedDB with an explicit memory fallback
   assert.match(source, /createIndexedDbPhoneDb/);
   assert.match(source, /createMemoryPhoneDb/);
   assert.match(source, /['"]phone\.db['"]:\s*Object\.freeze\(\{[^}]*createIndexedDbPhoneDb[^}]*createMemoryPhoneDb/s);
+});
+
+test('winter profile refresh is serialized and recovers interrupted state after activation or chat switch', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const activateBlock = source.slice(
+    source.indexOf('async function activate'),
+    source.indexOf('async function switchSession'),
+  );
+  const switchBlock = source.slice(
+    source.indexOf('async function switchSession'),
+    source.indexOf('async function captureActiveWorldbooks'),
+  );
+
+  assert.match(source, /maxInflightAIRequests:\s*1/);
+  assert.match(activateBlock, /await refreshInitialSnapshot\(\)[\s\S]*?recoverInterruptedAnalyses\(\)/);
+  assert.match(switchBlock, /await refreshInitialSnapshot\(\)[\s\S]*?recoverInterruptedAnalyses\(\)/);
 });
 
 test('webpack filters discovered scripts before entry parsing and can omit generator plugins', () => {
@@ -140,6 +161,7 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
 
   assert.match(source, /registerPhoneModule\s*\(\s*\{/);
   assert.match(source, /id:\s*['"]winter\.adapter['"]/);
+  assert.match(source, /id:\s*['"]winter\.adapter['"][\s\S]*?version:\s*['"]1\.1\.2['"]/);
   assert.match(source, /dependsOn:\s*\[['"]communication\.apps['"]\]/);
   assert.match(combined, /末世寒冬 - 星穹秩序/);
   assert.doesNotMatch(combined, /EDEN_TERMINAL_T2_ABILITY|EDEN_TERMINAL_T4_ABILITY|canAssignEdenTerminal/);
@@ -287,9 +309,25 @@ test('winter adapter declares the exact owner, MVU snapshot identity, abilities,
   assert.doesNotMatch(source, /switchSession[\s\S]{0,500}cancelAllRequests\s*\(/);
   assert.match(source, /activeChatWorldbookName/);
   assert.match(source, /assertCapturedSession\s*\(/);
-  assert.match(source, /chatLore:\s*chatLore/);
   assert.match(source, /finally\s*\{[\s\S]*deactivate\s*\(/);
   assert.doesNotMatch(combined, /same-layer-pre|sameLayerPre|useSameLayerPre/);
+});
+
+test('winter WeChat send wires only the current conversation business sources', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const launchBlock = source.slice(
+    source.indexOf('async function launchAiRequest'),
+    source.indexOf('function rememberLoreFailure'),
+  );
+
+  assert.match(source, /extractRecentMainChatMessages\(\s*assistantMessageId,\s*5\s*\)/);
+  assert.match(launchBlock, /mvuReference:\s*buildCharacterMvuReference\(/);
+  assert.match(launchBlock, /recentMainChat:\s*\[\.\.\.captured\.recentMainChat\]/);
+  assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
+  assert.match(launchBlock, /playerMessage/);
+  assert.match(launchBlock, /\[人物动态\][^\n]*后续/);
+  assert.doesNotMatch(launchBlock, /buildRoleLoreEntries|selectDynamicProfile|collectChatLoreContext/);
+  assert.doesNotMatch(launchBlock, /chatWorldbookEntries|profileSettings|worldbook:\s*|stat_data\.通讯网络/);
 });
 
 test('Eden Terminal is a level-one default shelter ability without T2 or T4 phone gating', () => {

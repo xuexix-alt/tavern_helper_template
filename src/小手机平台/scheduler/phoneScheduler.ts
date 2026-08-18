@@ -127,7 +127,6 @@ function isPlainStructuredData(value: unknown, seen = new WeakSet<object>()): va
   if (seen.has(value)) return true;
 
   if (Array.isArray(value)) {
-    if (Object.getPrototypeOf(value) !== Array.prototype) return false;
     seen.add(value);
     for (const key of Reflect.ownKeys(value)) {
       if (key === 'length') continue;
@@ -142,7 +141,9 @@ function isPlainStructuredData(value: unknown, seen = new WeakSet<object>()): va
   }
 
   const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) return false;
+  // 脚本模块运行在不同 iframe；跨 realm 的 Object.prototype 不会严格等于本 realm 的 Object.prototype。
+  // Plain object 的直接原型仍然以 null 结束，而 class/Date/Map 等实例会有更深的原型链。
+  if (prototype !== null && Object.getPrototypeOf(prototype) !== null) return false;
   seen.add(value);
   for (const key of Reflect.ownKeys(value)) {
     if (typeof key !== 'string') return false;

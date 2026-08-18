@@ -46,6 +46,8 @@ export interface ProfileAnalysisState {
   status: 'idle' | 'refreshing' | 'success' | 'failed';
   lastError?: string;
   lastFallbackReason?: string;
+  lastRawResponse?: string;
+  lastReasoningContent?: string;
 }
 
 export type ProfileRefreshTrigger = 'auto' | 'person-manual' | 'all-manual' | 'retry-failed';
@@ -57,13 +59,39 @@ export interface ProfileRefreshRunResult {
 }
 
 export interface ProfileAnalysisOutput {
+  personId: string;
+  personName: string;
+  analysisNarrative: string;
+  changes: readonly ProfileChange[];
   basicInfoAdditions: readonly string[];
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentSituationSummary: string;
   relationshipInterpretation: string;
   storyInteractionSummary: string;
   chatInteractionSummary: string;
   playerActionAdvice: string;
+  evidenceRefs: readonly ProfileEvidenceRef[];
+}
+
+export type ProfileChangeField =
+  | 'basicInfoAdditions'
+  | 'behaviorTuning'
+  | 'personalityTuning'
+  | 'speechStyleTuning'
+  | 'currentGoals'
+  | 'currentSituationSummary'
+  | 'relationshipInterpretation'
+  | 'storyInteractionSummary'
+  | 'chatInteractionSummary';
+
+export interface ProfileChange {
+  field: ProfileChangeField;
+  before: string;
+  after: string;
+  reason: string;
   evidenceRefs: readonly ProfileEvidenceRef[];
 }
 
@@ -75,7 +103,10 @@ export interface DynamicProfileDocument {
   fixedBaseline: string;
   hardFacts: Readonly<Record<string, unknown>>;
   basicInfoAdditions: readonly string[];
+  behaviorTuning: string;
   personalityTuning: string;
+  speechStyleTuning: string;
+  currentGoals: string;
   currentSituationSummary: string;
   relationshipInterpretation: string;
   storyInteractionSummary: string;
@@ -90,4 +121,39 @@ export interface ProfileViewRecordData {
   playerActionAdvice: string;
   sourceStoryIds: readonly string[];
   newWechatMessageIds: readonly string[];
+  analysisNarrative: string;
+  changes: readonly ProfileChange[];
+  rawResponse?: string;
+  reasoningContent?: string;
+  versions: readonly ProfileVersion[];
+}
+
+export interface ProfileEditPatch {
+  basicInfoAdditions?: readonly string[];
+  behaviorTuning?: string;
+  personalityTuning?: string;
+  speechStyleTuning?: string;
+  currentGoals?: string;
+  currentSituationSummary?: string;
+  relationshipInterpretation?: string;
+  storyInteractionSummary?: string;
+  chatInteractionSummary?: string;
+  playerActionAdvice?: string;
+}
+
+export interface ProfileStateEvent {
+  personId: string;
+  status: ProfileAnalysisState['status'];
+  lastError?: string;
+}
+
+export interface ProfileVersion {
+  id: string;
+  source: 'ai' | 'player' | 'restore';
+  savedAt: number;
+  document: DynamicProfileDocument;
+  playerActionAdvice: string;
+  analysisNarrative: string;
+  changes: readonly ProfileChange[];
+  evidenceRefs: readonly ProfileEvidenceRef[];
 }

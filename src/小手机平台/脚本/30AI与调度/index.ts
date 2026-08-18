@@ -4,7 +4,11 @@ import { parseResponse } from '../../ai/responseParser';
 import { createServiceModule } from '../../core/serviceModule';
 import { registerPhoneModule } from '../../core/register';
 import { ControlledPhoneScheduler } from '../../scheduler/phoneScheduler';
-import { createGenerateRaw, createStopGenerationById, checkTavernApiAvailability } from '../../platform/tavernApiAdapter';
+import {
+  createGenerateRaw,
+  createStopGenerationById,
+  checkTavernApiAvailability,
+} from '../../platform/tavernApiAdapter';
 
 const services = Object.freeze({
   'prompt.assembler': Object.freeze({ assemblePrompt, createPromptContextSnapshot, parseResponse }),
@@ -17,7 +21,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'ai.scheduler',
-      version: '1.0.0',
+      version: '1.0.2',
       required: true,
       dependsOn: ['platform.services', 'data.sync'],
       capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],

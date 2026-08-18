@@ -359,6 +359,7 @@ export class PhoneShell implements PhoneShellApi {
     const desktop = this.document.createElement('div');
     desktop.className = 'phone-desktop';
     for (const app of this.apps.values()) {
+      if (app.showOnHome === false) continue;
       const button = this.document.createElement('button');
       button.className = 'phone-app';
       button.type = 'button';

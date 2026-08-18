@@ -1,4 +1,4 @@
-import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration } from './types';
+import type { PhoneModule, PhoneModuleContext, PhoneModuleRegistration, PhoneModuleSnapshot } from './types';
 
 export class ModuleRegistry {
   private readonly registrations = new Map<string, PhoneModuleRegistration>();
@@ -22,6 +22,22 @@ export class ModuleRegistry {
 
   list(): PhoneModuleRegistration[] {
     return [...this.registrations.values()];
+  }
+
+  snapshots(): readonly PhoneModuleSnapshot[] {
+    return Object.freeze(
+      this.list().map(registration => {
+        const { id, version, required, dependsOn, capabilities } = registration.manifest;
+        return Object.freeze({
+          id,
+          version,
+          required,
+          dependsOn: Object.freeze([...dependsOn]),
+          capabilities: Object.freeze([...capabilities]),
+          status: this.instances.get(id)?.getStatus() ?? 'REGISTERED',
+        });
+      }),
+    );
   }
 
   assertRequired(requiredIds: readonly string[]): void {

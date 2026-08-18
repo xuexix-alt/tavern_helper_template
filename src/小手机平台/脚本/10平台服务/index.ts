@@ -14,7 +14,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'platform.services',
-      version: '1.0.0',
+      version: '1.0.1',
       required: true,
       dependsOn: [],
       capabilities: ['host.gateway', 'settings.store', 'story.extractor'],

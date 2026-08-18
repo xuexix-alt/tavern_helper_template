@@ -10,6 +10,7 @@ import type {
   PhoneSettingsView,
   PhoneTaskView,
 } from '../../../小手机平台/apps/phoneApps';
+import type { PromptMainChatEntry } from '../../../小手机平台/ai/promptAssembler';
 import { registerPhoneModule } from '../../../小手机平台/core/register';
 import type {
   PhoneModule,
@@ -22,13 +23,19 @@ import type { ChatLoreSync, LoreSyncRequest, LoreWriteEntry } from '../../../小
 import type { PhoneBusinessRecord, PhoneDb } from '../../../小手机平台/data/phoneDb';
 import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/platform/hostGateway';
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
-import { extractRecentCompletedMessages } from '../../../小手机平台/platform/storyExtractor';
 import {
+  extractRecentCompletedMessages,
+  extractRecentMainChatMessages,
+} from '../../../小手机平台/platform/storyExtractor';
+import { createGenerateRaw, createStopGenerationById } from '../../../小手机平台/platform/tavernApiAdapter';
+import {
+  PROFILE_BROADCAST_SYSTEM_PROMPT,
   buildProfileBroadcastPrompt,
   parseProfileBroadcastOutput,
   saveProfileBroadcastIssue,
   type StoredProfileBroadcastIssue,
 } from '../../../小手机平台/profiles/profileBroadcast';
+import { PROFILE_ANALYSIS_SYSTEM_PROMPT } from '../../../小手机平台/profiles/profileAnalysis';
 import {
   ProfileRefreshCoordinator,
   type ProfileRefreshDependencies,
@@ -47,10 +54,11 @@ import {
   type ProfileWorldbookEntry,
 } from '../../../小手机平台/profiles/profileWorldbook';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../../../小手机平台/scheduler/phoneScheduler';
+import type { AiDetailedResponse, AiRequestOptions } from '../../../小手机平台/ai/providers';
 import type { PhoneShellApi } from '../../../小手机平台/shell/phoneShell';
 import phoneShellStyles from '../../../小手机平台/shell/phoneShell.css?raw';
 import {
-  buildBoundedMemberContext,
+  buildCharacterMvuReference,
   buildEdenNotices,
   buildWinterTasks,
   buildWinterSchedulerJobs,
@@ -58,7 +66,6 @@ import {
   canPublishSnapshot,
   capturedWritebackSessionKey,
   characterProfileEntryName,
-  collectChatLoreContext,
   createStableSnapshotKey,
   diffConfirmedMvuChanges,
   extractWinterContactCandidates,
@@ -68,7 +75,6 @@ import {
   planTemporaryNpcPromotion,
   resolveWinterPersonMvu,
   selectCharacterProfile,
-  selectDynamicProfile,
   selectPublicWinterMvuFacts,
   runPendingDispatchPreparation,
   submitWinterSchedulerJobs,
@@ -139,7 +145,7 @@ interface WinterSnapshot {
   identity: StableSnapshotIdentity;
   key: string;
   mvu: Mvu.MvuData;
-  recentCompletedStory: readonly { id: string; content: string; relevant: boolean }[];
+  recentMainChat: readonly PromptMainChatEntry[];
   recentCompletedMessages: readonly ProfileStoryMessage[];
   tasks: readonly WinterTask[];
   confirmedChanges: readonly string[];
@@ -216,6 +222,25 @@ function createWinterAdapterModule(): PhoneModule {
     }
   >();
   const diagnostics: string[] = [];
+
+  interface PromptDebugEntry {
+    id: string;
+    createdAt: number;
+    mode: string;
+    conversationId: string;
+    replyAs: string;
+    assembled: string;
+    expanded: string;
+    raw?: string;
+    messages?: readonly { sender: string; content: string }[];
+    error?: string;
+  }
+  const promptDebugEntries: PromptDebugEntry[] = [];
+
+  function recordPromptDebug(entry: PromptDebugEntry): void {
+    promptDebugEntries.push(entry);
+    if (promptDebugEntries.length > 5) promptDebugEntries.splice(0, promptDebugEntries.length - 5);
+  }
 
   function recordDiagnostic(message: string): void {
     if (diagnostics.at(-1) === message) return;
@@ -356,7 +381,7 @@ function createWinterAdapterModule(): PhoneModule {
         {
           maxAIConversationsPerSnapshot: Number.MAX_SAFE_INTEGER,
           contactCooldownInStoryTurns: 0,
-          maxInflightAIRequests: 2,
+          maxInflightAIRequests: 1,
         },
       );
       profileCoordinator = createProfileCoordinator(profileScheduler);
@@ -376,6 +401,7 @@ function createWinterAdapterModule(): PhoneModule {
       syncShellVisibility(context.runtime.getStatus().isOpen);
       attachCharacterEvents();
       await refreshInitialSnapshot();
+      if (snapshot) await profileCoordinator.recoverInterruptedAnalyses();
     } catch (error) {
       await deactivate('适配器激活失败');
       status = 'ERROR';
@@ -396,6 +422,7 @@ function createWinterAdapterModule(): PhoneModule {
     activeProfileWorldbookNames = [];
     await captureActiveWorldbooks(activeSessionKey, captured);
     await refreshInitialSnapshot();
+    if (snapshot) await profileCoordinator?.recoverInterruptedAnalyses();
   }
 
   async function captureActiveWorldbooks(sessionKey: string | null, captured: HostEpochCapture): Promise<void> {
@@ -573,10 +600,7 @@ function createWinterAdapterModule(): PhoneModule {
     const nextKey = createStableSnapshotKey(identity);
     if (snapshot?.key === nextKey) return;
     assertHostCapture(hostCapture);
-    const allAssistant = getChatMessages('0-{{lastMessageId}}', { role: 'assistant', include_swipes: false })
-      .filter(item => item.message_id <= assistantMessageId && item.message.trim() !== '')
-      .slice(-3)
-      .map(item => ({ id: String(item.message_id), content: item.message.slice(0, 2_000), relevant: true }));
+    const recentMainChat = extractRecentMainChatMessages(assistantMessageId, 5);
     const recentCompletedMessages = extractRecentCompletedMessages(assistantMessageId, 20);
     assertHostCapture(hostCapture);
     const next: WinterSnapshot = {
@@ -584,7 +608,7 @@ function createWinterAdapterModule(): PhoneModule {
       identity,
       key: nextKey,
       mvu,
-      recentCompletedStory: allAssistant,
+      recentMainChat,
       recentCompletedMessages,
       tasks: buildWinterTasks(mvu.stat_data),
       confirmedChanges: pendingConfirmedChanges,
@@ -779,9 +803,16 @@ function createWinterAdapterModule(): PhoneModule {
     };
   }
 
-  async function requestProfileAnalysis(prompt: string): Promise<string> {
+  async function requestProfileAnalysis(
+    prompt: string,
+    requestOptions: AiRequestOptions = {},
+  ): Promise<AiDetailedResponse> {
     const captured = requireSnapshot();
-    const handle = createProvider().request(prompt);
+    const handle = createProvider().requestDetailed(prompt, {
+      mode: 'structured',
+      systemPrompt: PROFILE_ANALYSIS_SYSTEM_PROMPT,
+      ...requestOptions,
+    });
     const key = requestKey(captured.sessionKey, `profile:${crypto.randomUUID()}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -846,7 +877,10 @@ function createWinterAdapterModule(): PhoneModule {
             name: person.name,
             basicInfo: person.temporary ? '临时人物' : '剧情人物',
             personalityBaseline: baseline ?? '暂无固定档案',
+            behaviorTuning: '待首次分析',
             personalityTuning: '待首次分析',
+            speechStyleTuning: '待首次分析',
+            currentGoals: '待首次分析',
             currentStatus: '待首次分析',
             relationship: '待首次分析',
             storyInteractionSummary: '暂无',
@@ -857,6 +891,11 @@ function createWinterAdapterModule(): PhoneModule {
             refreshStatus: state?.status ?? 'idle',
             ...(state?.lastError ? { lastError: state.lastError } : {}),
             lastUpdated: state?.lastSuccessfulRefreshAt ?? 0,
+            analysisNarrative: state?.lastRawResponse
+              ? '最近一次分析未通过结构校验，原始回传已保留在失败状态。'
+              : '暂无额外分析说明',
+            ...(state?.lastRawResponse ? { rawResponse: state.lastRawResponse } : {}),
+            ...(state?.lastReasoningContent ? { reasoningContent: state.lastReasoningContent } : {}),
           } satisfies PhoneProfileView;
         }
         const document = stored.document;
@@ -868,7 +907,10 @@ function createWinterAdapterModule(): PhoneModule {
           name: document.personName,
           basicInfo: document.basicInfoAdditions.join('；') || '暂无新增',
           personalityBaseline: document.fixedBaseline,
+          behaviorTuning: document.behaviorTuning || '暂无明确变化',
           personalityTuning: document.personalityTuning,
+          speechStyleTuning: document.speechStyleTuning || '暂无明确变化',
+          currentGoals: document.currentGoals || '暂无明确目标',
           currentStatus: document.currentSituationSummary,
           relationship: document.relationshipInterpretation,
           storyInteractionSummary: document.storyInteractionSummary,
@@ -879,6 +921,11 @@ function createWinterAdapterModule(): PhoneModule {
           refreshStatus: stored.status,
           ...(stored.lastError ? { lastError: stored.lastError } : {}),
           lastUpdated: document.updatedAt,
+          analysisNarrative: stored.analysisNarrative,
+          changes: stored.changes,
+          ...(stored.rawResponse ? { rawResponse: stored.rawResponse } : {}),
+          ...(stored.reasoningContent ? { reasoningContent: stored.reasoningContent } : {}),
+          versions: stored.versions,
         } satisfies PhoneProfileView;
       }),
     );
@@ -889,11 +936,39 @@ function createWinterAdapterModule(): PhoneModule {
   }
 
   async function refreshAllProfiles(): Promise<void> {
-    await requireProfileCoordinator().refreshAll('all-manual');
+    const result = await requireProfileCoordinator().refreshAll('all-manual');
+    const failures = result.people.filter(person => person.status === 'failed');
+    if (failures.length > 0) {
+      throw new Error(
+        `档案刷新完成 ${result.people.length - failures.length}/${result.people.length}，请查看失败人物详情`,
+      );
+    }
   }
 
   async function retryFailedProfiles(): Promise<void> {
-    await requireProfileCoordinator().retryFailed();
+    const result = await requireProfileCoordinator().retryFailed();
+    const failures = result.people.filter(person => person.status === 'failed');
+    if (failures.length > 0) throw new Error(`仍有 ${failures.length} 个人物刷新失败`);
+  }
+
+  function watchProfiles(listener: () => void): () => void {
+    return requireProfileCoordinator().watchProfiles(() => listener());
+  }
+
+  async function getProfile(personId: string): Promise<PhoneProfileView | null> {
+    const profile = (await listProfileViews()).find(item => item.id === personId);
+    return profile ?? null;
+  }
+
+  async function saveProfileEdit(
+    personId: string,
+    patch: import('../../../小手机平台/profiles/profileTypes').ProfileEditPatch,
+  ): Promise<void> {
+    await requireProfileCoordinator().saveProfileEdit(personId, patch);
+  }
+
+  async function restoreProfileVersion(personId: string, versionId: string): Promise<void> {
+    await requireProfileCoordinator().restoreProfileVersion(personId, versionId);
   }
 
   async function getProfileSettings(): Promise<PhoneProfileSettingsView> {
@@ -925,7 +1000,12 @@ function createWinterAdapterModule(): PhoneModule {
           evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),
         })),
     });
-    const rawText = await requestProfileAnalysis(prompt);
+    const rawText = (
+      await requestProfileAnalysis(prompt, {
+        mode: 'structured',
+        systemPrompt: PROFILE_BROADCAST_SYSTEM_PROMPT,
+      })
+    ).content;
     assertSnapshotCapture(captured);
     const output = parseProfileBroadcastOutput(rawText);
     await saveProfileBroadcastIssue(requireDb(), {
@@ -973,6 +1053,10 @@ function createWinterAdapterModule(): PhoneModule {
       refreshProfile,
       refreshAllProfiles,
       retryFailedProfiles,
+      watchProfiles,
+      getProfile,
+      saveProfileEdit,
+      restoreProfileVersion,
       getProfileSettings,
       saveProfileSettings,
       regenerateProfileRadio,
@@ -1123,6 +1207,7 @@ function createWinterAdapterModule(): PhoneModule {
         `scheduler:${scheduler ? 'READY' : 'WAITING'}`,
       ],
       recentErrors: [...diagnostics],
+      promptDebug: [...promptDebugEntries],
     };
   }
 
@@ -1367,33 +1452,19 @@ function createWinterAdapterModule(): PhoneModule {
     hostCapture: HostEpochCapture,
   ): Promise<void> {
     if (!context) return;
-    const members = conversationMembers(conversation, captured);
+    const members = conversationMembers(conversation);
     const promptCatalog = context.services.require<PromptCatalog>('prompt.assembler');
-    const chatWorldbookEntries = await getWorldbook(capturedWorldbooks.chatWorldbookName);
-    assertCapturedSession(captured.sessionKey);
-    assertHostCapture(hostCapture);
-    assertSnapshotCapture(captured);
-    const profileSettings = await requireProfileCoordinator().getSettings();
+    // [人物动态] 暂不接入正常微信提示词；后续修复档案质量后，只能按 member.id 精确读取。
     const profiles = await Promise.all(
-      members.map(async member => {
-        const dynamicProfile = selectDynamicProfile(member.id, chatWorldbookEntries);
-        return {
-          name: member.name,
-          identity: member.id,
-          profile: buildBoundedMemberContext({
-            name: member.name,
-            profile: await loadExactCharacterProfile(
-              member.name,
-              member.temporary,
-              capturedWorldbooks.profileWorldbookNames,
-            ),
-            mvuFields: member.mvu,
-            recentCompletedStory: captured.recentCompletedStory.map(item => item.content).join('\n'),
-            characterBudget: 1_600,
-          }),
-          ...(dynamicProfile ? { dynamicProfile: dynamicProfile.slice(0, profileSettings.promptProfileMaxChars) } : {}),
-        };
-      }),
+      members.map(async member => ({
+        name: member.name,
+        identity: member.id,
+        profile:
+          (await loadExactCharacterProfile(member.name, member.temporary, capturedWorldbooks.profileWorldbookNames))
+            ?.trim()
+            .slice(0, 1_600) || '暂无固定档案',
+        mvuReference: buildCharacterMvuReference(member.name, member.temporary),
+      })),
     );
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
@@ -1402,24 +1473,19 @@ function createWinterAdapterModule(): PhoneModule {
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
-    const chatLore = collectChatLoreContext(
-      chatLoreEntries,
-      conversation.kind === 'eden-group' ? 'group' : 'private',
-      conversation.id,
-      6_000,
-    );
+    const mode = conversation.kind === 'eden-group' ? '伊甸住户群' : '私聊';
     const assembled = promptCatalog.assemblePrompt(
       promptCatalog.createPromptContextSnapshot({
         sessionKey: captured.sessionKey,
         snapshotKey: captured.identity,
-        mode: conversation.kind === 'eden-group' ? '伊甸住户群' : '私聊',
+        mode,
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
-        mvuFacts: JSON.stringify(captured.mvu.stat_data).slice(0, 6_000),
-        communicationNetwork: JSON.stringify(captured.mvu.stat_data.通讯网络 ?? {}),
-        chatLore: chatLore,
-        recentCompletedStory: [...captured.recentCompletedStory],
-        phoneHistory: history.slice(-20).map(item => ({ id: item.id, sender: item.sender, content: item.content })),
+        recentMainChat: [...captured.recentMainChat],
+        phoneHistory: history
+          .filter(item => item.id !== messageId)
+          .slice(-30)
+          .map(item => ({ id: item.id, sender: item.sender, content: item.content })),
         playerMessage,
         outputContract: `只输出 {"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}，sender 必须属于：${profiles.map(item => item.name).join('、')}`,
         maxCharacters: 16_000,
@@ -1428,7 +1494,12 @@ function createWinterAdapterModule(): PhoneModule {
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
     const provider = createProvider();
-    const handle = provider.request(assembled);
+    const promptText = expandPromptMacros(assembled, captured.identity.assistantMessageId, captured.mvu);
+    const replyAs =
+      profiles.length === 1
+        ? profiles[0].name
+        : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
+    const handle = provider.request(promptText, { jsonMode: true, replyAs, playerMessage });
     const key = requestKey(captured.sessionKey, messageId);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -1439,6 +1510,17 @@ function createWinterAdapterModule(): PhoneModule {
           raw,
           profiles.map(item => item.name),
         );
+        recordPromptDebug({
+          id: `debug-${messageId}`,
+          createdAt: Date.now(),
+          mode,
+          conversationId: conversation.id,
+          replyAs,
+          assembled,
+          expanded: promptText,
+          raw,
+          messages: parsed.messages,
+        });
         const writebackSessionKey = capturedWritebackSessionKey(captured.sessionKey);
         for (const [index, item] of parsed.messages.entries()) {
           await database.addMessage({
@@ -1468,7 +1550,17 @@ function createWinterAdapterModule(): PhoneModule {
         });
         notifyConversationChanged(conversation.id);
       })
-      .catch(async () => {
+      .catch(async error => {
+        recordPromptDebug({
+          id: `debug-${messageId}`,
+          createdAt: Date.now(),
+          mode,
+          conversationId: conversation.id,
+          replyAs,
+          assembled,
+          expanded: promptText,
+          error: errorMessage(error),
+        });
         if (active.cancelled) return;
         await putInboxWith(database, {
           id: messageId,
@@ -1545,17 +1637,15 @@ function createWinterAdapterModule(): PhoneModule {
         members: [
           { name: payload.speaker, identity: `scheduled:${payload.speaker}`, profile: '只能转述本次确认事件。' },
         ],
-        mvuFacts: payload.content,
-        communicationNetwork: payload.source,
-        chatLore: '',
-        recentCompletedStory: [],
+        recentMainChat: [],
         phoneHistory: [],
         playerMessage: `依据确认事件生成一条简短通讯：${payload.content}`,
         outputContract: `只输出 {"messages":[{"sender":"${payload.speaker}","content":"纯文本消息"}]}`,
         maxCharacters: 8_000,
       }),
     );
-    const handle = createProvider().request(assembled);
+    const promptText = expandPromptMacros(assembled, job.snapshotKey);
+    const handle = createProvider().request(promptText, { jsonMode: true, replyAs: payload.speaker });
     const key = requestKey(job.sessionKey, `scheduled:${job.triggerKey}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
@@ -1563,6 +1653,17 @@ function createWinterAdapterModule(): PhoneModule {
       const raw = await handle.promise;
       if (active.cancelled) return;
       const parsed = promptCatalog.parseResponse(raw, [payload.speaker]);
+      recordPromptDebug({
+        id: `debug-scheduled-${job.snapshotKey}-${job.triggerKey}`,
+        createdAt: Date.now(),
+        mode: '伊甸结构化事件主动通讯',
+        conversationId: job.conversationId,
+        replyAs: payload.speaker,
+        assembled,
+        expanded: promptText,
+        raw,
+        messages: parsed.messages,
+      });
       for (const [index, message] of parsed.messages.entries()) {
         await database.addMessage({
           id: `scheduled-ai:${job.snapshotKey}:${job.triggerKey}:${index}`,
@@ -1582,6 +1683,18 @@ function createWinterAdapterModule(): PhoneModule {
         type: 'group',
         conversationId: job.conversationId,
       });
+    } catch (error) {
+      recordPromptDebug({
+        id: `debug-scheduled-${job.snapshotKey}-${job.triggerKey}`,
+        createdAt: Date.now(),
+        mode: '伊甸结构化事件主动通讯',
+        conversationId: job.conversationId,
+        replyAs: payload.speaker,
+        assembled,
+        expanded: promptText,
+        error: errorMessage(error),
+      });
+      throw error;
     } finally {
       if (activeRequests.get(key) === active) activeRequests.delete(key);
     }
@@ -1623,7 +1736,10 @@ function createWinterAdapterModule(): PhoneModule {
       });
     }
     const { TavernProvider } = aiCatalog;
-    return new TavernProvider({ generateRaw, stopGenerationById });
+    return new TavernProvider({
+      generateRaw: createGenerateRaw(),
+      stopGenerationById: createStopGenerationById(),
+    });
   }
 
   async function loadExactCharacterProfile(
@@ -1644,13 +1760,11 @@ function createWinterAdapterModule(): PhoneModule {
     return undefined;
   }
 
-  function conversationMembers(conversation: ConversationRecord, current: WinterSnapshot) {
-    const statData = current.mvu.stat_data;
+  function conversationMembers(conversation: ConversationRecord) {
     return conversation.participants.map(identity => {
       const temporary = identity.startsWith('temporary:');
       const name = identity.slice(identity.indexOf(':') + 1);
-      const raw = temporary ? recordValue(statData.临时NPC)[name] : statData[name];
-      return { id: identity, name, temporary, mvu: isRecord(raw) ? raw : {} };
+      return { id: identity, name, temporary };
     });
   }
 
@@ -1892,6 +2006,30 @@ function recordValue(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+function readPath(value: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current === null || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    return (current as Record<string, unknown>)[key];
+  }, value);
+}
+
+function expandPromptMacros(text: string, assistantMessageId: string | number, mvu?: Mvu.MvuData): string {
+  const expanded = substitudeMacros(text);
+  if (!expanded.includes('{{')) return expanded;
+  let stat: Record<string, unknown> = {};
+  try {
+    const data = (mvu ?? getVariables({ type: 'message', message_id: 'latest' })) as Mvu.MvuData;
+    if (isRecord(data.stat_data)) stat = data.stat_data;
+  } catch {
+    // 回退取不到变量时按空数据展开，避免把宏裸发给 AI
+  }
+  return expanded
+    .replace(/\{\{format_message_variable::stat_data(?:\.([^}]+))?\}\}/g, (_match, path: string | undefined) => {
+      const value = path ? readPath(stat, path) : stat;
+      return value === undefined ? '' : JSON.stringify(value);
+    })
+    .replaceAll('{{lastCharMessageId}}', String(assistantMessageId));
+}
 function mvuStatData(value: unknown): unknown {
   return isRecord(value) ? value.stat_data : undefined;
 }
@@ -1949,7 +2087,7 @@ $(() => {
   registerPhoneModule({
     manifest: {
       id: 'winter.adapter',
-      version: '1.0.0',
+      version: '1.1.2',
       required: true,
       dependsOn: ['communication.apps'],
       capabilities: ['phone.adapter'],

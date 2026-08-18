@@ -107,6 +107,19 @@ function findByClass(node, className) {
   return undefined;
 }
 
+function findByText(node, value) {
+  if (node.textContent === value) return node;
+  for (const child of node.children) {
+    const found = findByText(child, value);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function findAllByTag(node, tagName) {
+  return [...(node.tagName === tagName ? [node] : []), ...node.children.flatMap(child => findAllByTag(child, tagName))];
+}
+
 function listen(target, event, listener) {
   target.addEventListener(event, listener);
 }
@@ -144,6 +157,15 @@ test('shell accepts host-specific product and status branding', () => {
   assert.match(adapter, /productName:\s*['"]伊甸终端['"]/);
 });
 
+test('winter adapter resolves Tavern generation through the cross-frame API adapter', () => {
+  const adapter = readFileSync('src/寒冬末日/脚本/小手机-90寒冬适配器/index.ts', 'utf8');
+
+  assert.match(adapter, /from ['"]\.\.\/\.\.\/\.\.\/小手机平台\/platform\/tavernApiAdapter['"]/);
+  assert.match(adapter, /generateRaw:\s*createGenerateRaw\(\)/);
+  assert.match(adapter, /stopGenerationById:\s*createStopGenerationById\(\)/);
+  assert.doesNotMatch(adapter, /new TavernProvider\(\{\s*generateRaw,\s*stopGenerationById\s*\}\)/);
+});
+
 test('user close actions delegate to the runtime close callback', () => {
   const source = readFileSync(shellPath, 'utf8');
 
@@ -169,6 +191,7 @@ test('Apple system styles include accessible themes and preferences', () => {
   assert.match(css, /safe-area-inset/i);
   assert.match(css, /overflow-x:\s*hidden/i);
   assert.match(css, /:host\s*\{[\s\S]*?position:\s*fixed[\s\S]*?height:\s*100dvh/i);
+  assert.match(css, /:host\s*\{[\s\S]*?z-index:\s*2147483647/i);
   assert.match(css, /\.phone-overlay\s*\{[\s\S]*?position:\s*absolute/i);
   assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?padding:\s*max\(8px,/i);
   assert.match(css, /@media\s*\(max-width:\s*520px\)[\s\S]*?\.phone-shell\s*\{[\s\S]*?border-radius:\s*28px/i);
@@ -615,7 +638,10 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
         name: '纪宁',
         basicInfo: '医生',
         personalityBaseline: '冷静谨慎',
+        behaviorTuning: '行动前先确认风险',
         personalityTuning: '近期更直接',
+        speechStyleTuning: '任务沟通使用短句',
+        currentGoals: '补足药品库存',
         currentStatus: '诊疗室值守',
         relationship: '协作',
         storyInteractionSummary: '正文中完成交接',
@@ -637,7 +663,8 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
     refreshAllProfiles: async () => calls.push(['all']),
     retryFailedProfiles: async () => calls.push(['retry']),
   });
-  const profiles = createPhoneApps(services).find(app => app.route === 'profiles');
+  const apps = createPhoneApps(services);
+  const profiles = apps.find(app => app.route === 'profiles');
   const rendered = await profiles.render(testContext());
 
   assert.equal(findByClass(rendered, 'phone-profile-progress').textContent.includes('正文进度 7 / 20'), true);
@@ -662,21 +689,26 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
     ['person', 'main:纪宁'],
     ['save', { storyProgress: 7, autoRefreshEvery: 25, promptProfileMaxChars: 2400 }],
   ]);
-  const textValues = collectText(rendered).join('\n');
+  findByClass(rendered, 'phone-profile-row').click();
+  const detail = await apps.find(app => app.route === 'profile-detail').render(testContext());
+  findByText(detail, '档案').click();
+  const textValues = collectText(detail).join('\n');
   for (const label of [
     '基本信息',
-    '固定性格',
+    '固定本色（世界书）',
+    '行为模式',
     '性格微调',
+    '说话方式',
+    '当前目标',
     '当前处境',
-    '关系',
-    '正文互动小结',
-    '微信聊天小结',
-    '对玩家行动建议',
-    '最后一轮消息',
-    '来源范围',
+    '关系解释',
+    '正文互动',
+    '微信互动',
+    '玩家行动建议',
   ]) {
     assert.match(textValues, new RegExp(label));
   }
+  assert.equal(findAllByTag(detail, 'textarea').length, 10);
 });
 
 test('broadcast app renders profile radio history and can regenerate without replacing notices', async () => {

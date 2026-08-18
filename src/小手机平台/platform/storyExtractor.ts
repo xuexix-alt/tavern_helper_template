@@ -1,4 +1,4 @@
-import type { PromptSourceEntry } from '../ai/promptAssembler';
+import type { PromptMainChatEntry, PromptSourceEntry } from '../ai/promptAssembler';
 import type { ProfileStoryMessage } from '../profiles/profileTypes';
 
 export interface StoryExtractorOptions {
@@ -14,6 +14,54 @@ export interface StoryExtractorOptions {
    * 是否标记所有正文为相关（默认 true）
    */
   markAllRelevant?: boolean;
+}
+
+const CONTROL_BLOCK_PATTERN = /<(UpdateVariable(?:variable)?|Analysis|JSONPatch)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+const UNCLOSED_CONTROL_BLOCK_PATTERN = /<(?:UpdateVariable(?:variable)?|Analysis|JSONPatch)\b[^>]*>[\s\S]*$/gi;
+const CONTROL_TAG_PATTERN = /<\/?(?:UpdateVariable(?:variable)?|Analysis|JSONPatch)\b[^>]*>/gi;
+
+export function stripMainChatControlBlocks(content: string): string {
+  return content
+    .replace(CONTROL_BLOCK_PATTERN, '')
+    .replace(UNCLOSED_CONTROL_BLOCK_PATTERN, '')
+    .replace(CONTROL_TAG_PATTERN, '')
+    .trim();
+}
+
+export function extractRecentMainChatMessages(storyMessageId: number | null, limit = 5): PromptMainChatEntry[] {
+  if (
+    storyMessageId === null ||
+    !Number.isSafeInteger(storyMessageId) ||
+    storyMessageId < 0 ||
+    !Number.isSafeInteger(limit) ||
+    limit <= 0
+  ) {
+    return [];
+  }
+  try {
+    return getChatMessages(`0-${storyMessageId}`, {
+      hide_state: 'unhidden',
+      include_swipes: false,
+    })
+      .filter(
+        message =>
+          message.message_id <= storyMessageId &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.message === 'string' &&
+          message.message.trim() !== '',
+      )
+      .map(message => ({
+        id: `main-chat-${message.message_id}`,
+        role: message.role as 'user' | 'assistant',
+        sender: message.name?.trim() || (message.role === 'user' ? '玩家' : 'AI'),
+        content: stripMainChatControlBlocks(message.message),
+      }))
+      .filter(message => message.content !== '')
+      .slice(-limit);
+  } catch (error) {
+    console.warn('[小手机平台] 提取最近主聊天消息失败:', error);
+    return [];
+  }
 }
 
 /**
@@ -32,7 +80,7 @@ export interface StoryExtractorOptions {
  * const recentStory = extractRecentCompletedStory({ storyMessageId });
  * const snapshot = createPromptContextSnapshot({
  *   // ... 其他字段
- *   recentCompletedStory: recentStory,
+ *   recentMainChat: extractRecentMainChatMessages(storyMessageId),
  * });
  * ```
  */
