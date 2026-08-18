@@ -88,6 +88,11 @@ export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
     name: '小手机-90寒冬适配器',
     distPath: '寒冬末日/脚本/小手机-90寒冬适配器/index.js',
   },
+  {
+    id: '47a2ea37-5a59-4efa-88c5-74795994b5cc',
+    name: '小手机-90',
+    distPath: '小手机平台/脚本/90主适配器/index.js',
+  },
 ]);
 
 let crcTable;
@@ -354,7 +359,7 @@ function validatePackagedCard(card) {
   const ids = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
   const phoneScripts = Array.isArray(scripts) ? scripts.filter(script => ids.has(script?.id)) : [];
   if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
-    throw new Error('角色卡未包含七个唯一的小手机脚本');
+    throw new Error('角色卡未包含八个唯一的小手机脚本');
   }
   for (const definition of PHONE_SCRIPT_DEFINITIONS) {
     const script = phoneScripts.find(candidate => candidate.id === definition.id);

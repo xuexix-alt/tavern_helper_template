@@ -31,13 +31,16 @@ try {
   await writeFile(tempPng, original);
 
   const result = await packageWinterPhoneCard({ input: tempPng, worldbook: WORLDBOOK, write: true });
-  assert.equal(result.scriptCount, 7);
+  assert.equal(result.scriptCount, PHONE_SCRIPT_DEFINITIONS.length);
   assert.equal(hash(await readFile(SOURCE_PNG)), originalHash, '临时往返不得修改仓库原 PNG');
 
   const card = await readCharacterCardPng(tempPng, 'chara');
   const ccv3Card = await readCharacterCardPng(tempPng, 'ccv3');
   assert.deepEqual(ccv3Card, card, 'chara 与 ccv3 必须写入同一份角色卡数据');
-  assert.equal(ccv3Card.data.extensions.tavern_helper.scripts.length, 15);
+  assert.equal(
+    ccv3Card.data.extensions.tavern_helper.scripts.length,
+    RUNTIME_SCRIPT_DEFINITIONS.length + PHONE_SCRIPT_DEFINITIONS.length,
+  );
   await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
   const productionPreRegexes = card.data.extensions.regex_scripts.filter(script =>
     script.replaceString?.includes('testingcf.jsdelivr.net') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
@@ -53,8 +56,8 @@ try {
   };
   const phoneIds = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
   const phoneScripts = scripts.filter(script => phoneIds.has(script.id));
-  assert.equal(phoneScripts.length, 7);
-  assert.equal(new Set(phoneScripts.map(script => script.id)).size, 7);
+  assert.equal(phoneScripts.length, PHONE_SCRIPT_DEFINITIONS.length);
+  assert.equal(new Set(phoneScripts.map(script => script.id)).size, PHONE_SCRIPT_DEFINITIONS.length);
   assert.deepEqual(
     phoneScripts.map(script => script.id).sort(),
     [...phoneIds].sort(),
@@ -108,7 +111,7 @@ try {
   await packageWinterPhoneCard({ input: tempPng, worldbook: WORLDBOOK, write: true });
   const secondCard = await readCharacterCardPng(tempPng);
   const secondPhoneScripts = secondCard.data.extensions.tavern_helper.scripts.filter(script => phoneIds.has(script.id));
-  assert.equal(secondPhoneScripts.length, 7, '重复打包必须 upsert，不能复制脚本');
+  assert.equal(secondPhoneScripts.length, PHONE_SCRIPT_DEFINITIONS.length, '重复打包必须 upsert，不能复制脚本');
   assert.equal(hash(await readFile(tempPng)), beforeSecondPass, '相同输入重复打包应字节幂等');
 
   const invalidWorldbook = path.join(tempRoot, 'invalid-worldbook.json');
