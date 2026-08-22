@@ -1,0 +1,743 @@
+同层原理与开发教程（面向本项目：ctrl的同层手机）
+
+0. 这份教程解决什么问题？
+- 解释“同层聊天”到底是什么：为什么不用一条消息对应一个楼层，而是把“一个手机应用”的全部内容写进同一条楼层消息里。
+- 给开发者：你要怎么读/写/解析/渲染/同步，才能安全地在同层里扩展：多私聊、多应用、朋友圈、评论、AI回复等。
+
+0.1 本教程默认目标（给零基础朋友的“学习路线”）
+- 目标：写一个“同层数据界面”（一张网页 UI），并且让它在 SillyTavern 里运行。
+- 核心能力：能在同一个楼层 message_id 里，持久化保存 UI 状态（<shouji>...</shouji>），并且刷新/换聊天后不丢。
+- 本教程不追求：做成可发布的 NPM 项目/工程化构建；先能跑起来、能读写、能扩展协议。
+
+0.2 10分钟跑通（最小成功案例：在 SillyTavern 里运行并写回同层）
+如果是零基础，请先完成这一节再看后面的原理。否则非常容易“听懂了，但跑不起来”。
+
+前置条件（满足任意一个能让页面拿到接口的方式即可）：
+- 方式 A（推荐）：通过 JS-Slash-Runner 的 iframe 环境运行页面（这样页面里会有 getChatMessages / setChatMessages / generate / generateRaw 等函数）。
+- 方式 B（进阶）：用“自定义脚本/扩展脚本”在 SillyTavern 主页面里创建 iframe，并自己做一层桥接，把必要能力传给 iframe（本项目页面默认按方式A写的）。
+
+步骤：
+1) 确认 SillyTavern 正在运行
+   - 常见是 http://127.0.0.1:8000 或 http://localhost:8000（端口以你实际为准）。
+
+2) 让 SillyTavern 能访问到你的 HTML 文件（同源最省事）
+   - 原则：页面最好通过 SillyTavern 内置服务器打开（http://127.0.0.1:8000/...），而不是双击 file:// 打开。
+   - 原因：file:// 可能被浏览器限制；更重要的是，你需要同源来调用 /api/... 等接口（比如上传图片、调用酒馆 API）。
+
+3) 在 SillyTavern 里打开同层页面（例如：同层私聊喵喵喵2.html / 同层群聊6.html）
+   - 打开后先做“接口自检”（最关键的 5 秒）：
+     - 在页面控制台执行：typeof getChatMessages / typeof setChatMessages / typeof getCurrentMessageId
+     - 期望结果：都是 'function'
+     - 如果是 'undefined'：说明你没有在“能注入这些函数”的环境里运行（常见原因：直接用浏览器打开、没通过 JS-Slash-Runner iframe）。
+
+4) 建一个同层数据“容器楼层”
+   - 在聊天里随便发一条消息（空内容也行）用来当同层容器；记住它的 message_id（楼层号）。
+   - 同层的核心约定：你的 UI 状态会写进这个 message_id 的 ChatMessage.message 中（私聊/朋友圈用 <shouji>...</shouji>；群聊用 <qunliao>...</qunliao>）。
+
+5) 在页面里发送一条“你好”，确认写回成功
+   - 现象A：UI 上出现你刚发送的消息气泡（这是“显示层”）。
+   - 现象B：同一个 message_id 的 ChatMessage.message 发生变化，并包含/更新了 <shouji>...</shouji>（这是“数据层”，最重要）。
+   - 快速验证（示例，按你页面的实现可能略不同）：
+     - const id = getCurrentMessageId(); getChatMessages(id)[0].message
+     - 看到里面有 <shouji> 和 [我方消息|你好|HH:MM] 之类行，就说明跑通了。
+
+6) 刷新页面/切换聊天再回来，确认不丢
+   - 刷新后仍能 parse 出历史（parseShoujiLog / parseMomentsFromShouji 正常工作）。
+   - 若刷新丢失：说明你只改了 DOM，没有 setChatMessages 写回（见“坑 1/坑 4”与第 2 节）。
+
+这一节跑通后，你朋友就已经具备了“能在 SillyTavern 里写同层应用”的最小闭环：读 -> 改 state -> 渲染 -> 写回 -> 刷新仍存在。
+
+0.3 术语速查（1 分钟看懂下面所有章节）
+- message_id：酒馆聊天里的“楼层号”，同层只更新同一个 message_id。
+- ChatMessage.message：该楼层的正文文本，所有同层数据都塞在这里。
+- <shouji>...</shouji>：本项目私聊/朋友圈的“外层容器”。
+- <private>...</private>：一个私聊会话块（可有多个）。
+- <pyq>...</pyq>：朋友圈块（放在 <shouji> 内）。
+- <qunliao>...</qunliao>：群聊外层容器（同层群聊6.html）。
+- <multi>...</multi>：一个群聊会话块（可有多个）。
+- <group>...</group>：角色群聊（“偷看模式”）块，放在 <shouji> 内。
+- 同层写回：用 setChatMessages 修改同一条楼层，不新增楼层。
+
+0.4 本次更新速览（新增/强化）
+- 角色群聊（<group>）正式并入同层私聊喵喵喵2.html：AI 生成/AI 回复均支持“偷看模式”。
+- 群聊（<qunliao>/<multi>）也集成到同层私聊喵喵喵2.html（无需再单独页面也可用）。
+- 角色卡 data.extensions 持久化：好友/群聊/角色群聊列表 + UI 素材 + 角色头像档案，并提供迁移兜底。
+- 导入/导出好友/群聊列表（JSON），群聊只追加不覆盖。
+- 新增/完善消息类型：文件/文档/位置、语音通话结束等格式，并统一解析/序列化。
+- AI 调试面板加强：可查看私聊/群聊/角色群聊/朋友圈的原始输出流。
+
+----------------------------------------------------------------------------------------------------
+1. 一句话概括：什么是“同层”？
+同层 = 把整个应用的数据（私聊、朋友圈等）都存放在“同一条 SillyTavern 楼层消息（message_id）”里，前端只负责解析这段文本并渲染 UI；每次操作只更新同一楼层的 message，而不是新增楼层。
+
+对比：
+1) 普通聊天：每发一条 -> createChatMessages -> 新增一个 message_id（楼层）
+2) 同层聊天：每发一条 -> 修改同一个 message_id 的 message 文本 -> setChatMessages 写回（仍然是同一个楼层）
+
+----------------------------------------------------------------------------------------------------
+2. 两层模型：数据层 vs 显示层（最关键的概念）
+
+2.1 数据层（真正保存到聊天文件里的）
+- SillyTavern 的聊天记录里，每条楼层的正文在 ChatMessage.message。
+- 本项目把“手机应用状态”存进某一楼层 message 的 <shouji>...</shouji> 中。
+
+数据层关键函数（来自 JS-Slash-Runner）：
+- getCurrentMessageId()                 -> 当前楼层号
+- getChatMessages(message_id)[0].message -> 读取某楼层正文（字符串）
+- setChatMessages([{message_id, message: newText}], {refresh:'none'|'affected'|'all'}) -> 写回（保存）
+
+2.2 显示层（网页 DOM 里看到的）
+- 页面上每个楼层会渲染成 DOM：#chat > .mes[mesid="X"]
+- 只改 DOM 不会保存；刷新/换聊天/重载就丢。
+
+显示层关键函数（来自 JS-Slash-Runner酒馆助手）：
+- retrieveDisplayedMessage(message_id) -> 拿某楼层 .mes_text 的 jQuery（纯显示层）
+- refreshOneMessage(message_id, $mes?) -> 用 chat[message_id] 重渲染一个 DOM 楼层；传 $mes 可实现“换皮显示”
+- formatAsDisplayedMessage(text, {message_id}) -> 宏/正则/显示格式处理（常用于解析 {{user}}）
+
+2.3 “最小保存原则”（避免同层写回覆盖）
+- 所有“持久化”的数据只写进 ChatMessage.message；不要把状态只留在 DOM。
+- 每次写回，只更新“属于你”的结构块（<private>/<pyq>/<qunliao>），不要整段覆盖。
+- 只要你能做到：解析 -> 修改内存 state -> 统一 sync 写回，就不会丢。
+
+2.4 同层持久化 vs 角色卡 vs 本机设置（别混了）
+- 同层持久化（随当前聊天保存）：只在 ChatMessage.message 里（<shouji>/<pyq>/<qunliao>）。
+- 角色卡扩展（跟着角色走）：data.extensions（例如每角色好友/群聊列表、每角色 UI 偏好/开关等）。
+- 酒馆设置（全局、与聊天弱相关）：extension_settings（例如全局开关/默认值/调试项等）。
+- 本机 UI 设置（只存在当前浏览器）：localStorage（主题/气泡/壁纸/头像/界面缩放/打字速度/识图API配置/调试开关等）。
+- 结论：聊天内容放 <shouji>/<qunliao>；“随角色走”的小配置放 data.extensions；全局放 extension_settings；只想本机自定义的就放 localStorage。
+- 本项目“新策略”：优先写 data.extensions；老版本若仍在 localStorage/extension_settings，会在首次运行时自动迁移。
+
+2.5 角色卡 data.extensions（每角色的扩展持久化）
+- data.extensions 是 SillyTavern 角色卡数据对象里的扩展字段，给前端/插件存放自定义数据用，不会污染角色描述正文。
+- 适用场景：希望“跟着角色走”的小体量配置，例如每个角色的好友/群聊列表、每角色 UI 偏好、专属开关等。
+- 读写方式（示意）：
+  - 读：从 getContext() 里的当前角色对象读取 data.extensions?.你的Key。
+  - 写：使用 getContext().writeExtensionField('你的Key', value) 持久化写回角色卡（导出角色卡时会一起带走）。
+- 注意事项：
+  - data.extensions 适合“小而稳定”的数据，不适合塞大段聊天记录（聊天记录仍应放在 <shouji>/<qunliao>）。
+  - 某些情况下角色卡是“浅加载”，写入前可先调用 unshallowCharacter 以确保 data 字段完整。
+- 兼容说明：旧版可能把好友/群聊列表存 localStorage/extension_settings，新版已迁移到 data.extensions（接口不可用时仍会降级保存）。
+- 若不在 SillyTavern 运行环境或接口不可用，可降级到 localStorage/extension_settings 做临时兜底。
+
+2.6 本项目用到的 extensions key（便于排查与迁移）
+- tavern_helper_friends_v1：好友列表（私聊联系人）
+- tavern_helper_groups_v1：群聊列表（群名 + 成员 + addTime）
+- tavern_helper_role_groups_v1：角色群聊（偷看模式）列表
+- tavern_helper_ui_assets_v1：UI 素材（用户头像/聊天壁纸/主屏壁纸/朋友圈封面）
+- tavern_helper_char_profile_v1：角色头像档案（当前角色头像 URL + 更新时间）
+- 这些字段都“随角色走”，切换角色会自动隔离。
+----------------------------------------------------------------------------------------------------
+3. 原理图（从用户操作到写回同层）
+
+3.1 总体数据流（同层）
+
+  [用户在手机UI里操作]                [同层脚本：同层私聊喵喵喵2.html]
+           |                                      |
+           | 修改 state（内存：state.messageHistory / state.privateConversations / state.moments）
+           v                                      |
+  renderAllMessages()/renderMomentsList()         |
+           |                                      |
+           | deferredSync() -> syncToSillyTavern()|
+           v                                      v
+  +--------------------+      setChatMessages()   +-----------------------------+
+  | SillyTavern 聊天文件 | <--------------------- | 当前楼层 ChatMessage.message |
+  |  message_id = N     |                        | <shouji> ... </shouji>       |
+  +--------------------+                        +-----------------------------+
+
+3.2 结构化存储（本项目约定）
+
+  ChatMessage.message 里包含：
+
+  <shouji>
+    (A) 私聊：可选多个 <private> 块（每块一个会话）
+
+    <private>
+    【和角色名的聊天】
+    [我方消息|内容|HH:MM]
+    [角色名|头像后缀|内容|HH:MM]
+    ...（更多行）
+    </private>
+
+    <private> ... </private>
+
+    (B) 群聊：可选的 <qunliao> 块（在同层私聊喵喵喵2.html 中同样支持）
+
+    <qunliao>
+      <multi> ... </multi>
+    </qunliao>
+
+    (C) 角色群聊（偷看模式）：可选多个 <group> 块（同层私聊喵喵喵2.html 新增）
+
+    <group>
+    [被查看角色|群聊名称|成员1,成员2]
+    [消息行...]
+    </group>
+
+    (D) 朋友圈：同层朋友圈 + <pyq> 块（放在 </shouji> 之前）
+
+    <pyq>
+    <post:1>
+    [发布者人名|发布者头像后缀|发布内容|YYYY/MM/DD HH:MM]
+    {{
+    [评论|人名|评论内容|YYYY/MM/DD HH:MM]
+    [评论|人名|被评论的人名|评论内容|YYYY/MM/DD HH:MM]
+    }}
+    </post:1>
+    <post:2> ... </post:2>
+    </pyq>
+
+  </shouji>
+
+补充说明（重要）：
+- 评论行支持“多种字段数量”以便兼容旧数据/不同输出：
+  - 最简（推荐 AI 输出）：[评论|人名|评论内容|时间] 或 [评论|人名|被评论的人名|评论内容|时间]
+  - 带头像（用于更稳的头像显示）：[评论|人名|头像后缀|评论内容|时间] 或 [评论|人名|头像后缀|被评论的人名|评论内容|时间]
+- {{ ... }} 包裹评论块是可选的：解析器会在 block 内搜集所有 [评论|...] 行。
+
+3.3 群聊结构化存储（同层群聊6.html / 同层私聊喵喵喵2.html 共用约定）
+
+群聊块统一使用：<qunliao>...</qunliao>
+- 在“群聊独立页”（同层群聊6.html）里：<qunliao> 是最外层容器（不再包 <shouji>）。
+- 在“同层私聊喵喵喵2.html”里：<qunliao> 会被写进 <shouji> 内部（与 <private>/<group>/<pyq> 并列）。
+- <qunliao> 内可以有多个 <multi> 块；每个 <multi> 相当于一个“群聊会话/群”。
+- 每个 <multi> 块里依然复用“聊天行协议”（也就是 parseShoujiLog 能解析的那些 [..|..|..] / <..|..|..> 行）。
+- 与私聊不同：<multi> 里会额外固定插入一行群成员声明，解析时这行不会匹配任何消息类型，会被忽略。
+
+结构示例：
+
+  <qunliao>
+    <multi>
+    【和群名的聊天】
+    [群成员：张三,李四,王五]
+    [我方消息|大家好|HH:MM]
+    [张三|头像后缀|收到|HH:MM]
+    <李四|头像后缀|引用内容|回复内容|HH:MM>
+    ...（更多行）
+    </multi>
+
+    <multi>
+    【和另一个群的聊天】
+    [群成员：...]
+    ...
+    </multi>
+  </qunliao>
+
+兼容说明：
+- 同层群聊6.html 在加载时优先解析 <qunliao>/<multi>；如果没有 <qunliao>，会兼容解析旧的 <shouji>/<private> 多会话格式。
+- 写回时会优先替换原文中的 <qunliao>...</qunliao>；如果原文只有 <shouji>...</shouji>，会把该块替换成 <qunliao>（相当于迁移到群聊格式）。
+- 同层私聊喵喵喵2.html 的写回会调用 upsertPrivateAndGroupIntoShoujiMessage，把 <qunliao> 合并回 <shouji>（不会丢私聊/朋友圈）。
+
+3.4 块顺序建议（避免解析/写回互相干扰）
+- <shouji> 内推荐顺序：<private>...（可多个） → <qunliao>（可选） → <group>（可多个） → <pyq>。
+- 当你追加聊天行时，优先插入到 <pyq> 之前；不要把聊天行插进 <pyq> 内。
+- 这样做的原因：解析器会先清理结构块，顺序稳定时更不容易误判。
+
+3.5 角色群聊（偷看模式）结构（同层私聊喵喵喵2.html 新增）
+- 用途：查看“某角色的群聊记录”，用户不能发言，只展示群成员对话。
+- 存储位置：仍在 <shouji> 内，与 <private>/<qunliao>/<pyq> 并列；使用 <group>...</group> 包裹。
+- 同步策略：写回时由 upsertPrivateAndGroupIntoShoujiMessage 统一合并；并镜像保存到 data.extensions（tavern_helper_role_groups_v1）。
+
+结构示例：
+
+  <group>
+  [被查看的角色|群聊的名字|成员1,成员2,成员3]
+  [张三|头像后缀|大家好|HH:MM]
+  <李四|头像后缀|引用内容|回复内容|HH:MM>
+  </group>
+
+说明：
+- 首行是“群聊头信息”，不参与消息解析。
+- 下面每行依旧是“聊天行协议”，可被 parseShoujiLog 解析。
+- 用户视角禁止输出 [我方消息|...]，只允许群成员发言。
+- 解析/序列化函数：parseRoleGroupConversationsFromShouji / serializeRoleGroups / serializeRoleGroupBlock。
+
+3.6 世界书/提示词（AI 生成角色群聊）
+目的：当你用“查看xx的群聊”触发 AI 时，保证输出可被前端解析。
+
+建议世界书条目（可直接复制）：
+条目名：同层角色群聊输出规范
+触发关键词：查看*的群聊 / 角色群聊 / 偷看群聊
+内容：
+- 你正在查看「{角色}」的群聊（群聊名由上下文给出）。
+- 只输出 1~3 行聊天消息，不要解释、不加 <group> 标签、不加标题行。
+- 禁止输出 [我方消息|...]，只能是群成员发言。
+- 行格式示例：
+  [成员名|头像后缀|内容|HH:MM]
+  <成员名|头像后缀|引用内容|回复内容|HH:MM>
+----------------------------------------------------------------------------------------------------
+4. 本项目里的真实关键函数（按用途分组）
+
+4.1 解析/序列化（同层核心）
+- parseShoujiLog(text)
+  - 输入：包含 <shouji>...</shouji> 的字符串
+  - 输出：消息数组 state.messageHistory（只解析“聊天行”）
+  - 重要：本项目已做兼容清理：会先剔除 <pyq>、同层朋友圈提示行、<private> 块再逐行解析，避免把朋友圈/多会话结构当成聊天消息。
+
+- serializeShoujiLog(msgArr)
+  - 输入：消息数组（state.messageHistory）
+  - 输出：完整 <shouji>...</shouji> 字符串（包含标题行【和xxx的聊天】）
+
+- parsePrivateConversationsFromShouji(text)
+  - 输入：包含 <shouji> 的字符串
+  - 输出：[{name, messages, raw}]，每个 messages 是该会话的消息数组
+
+- parseGroupConversationsFromQunliao(text)（同层群聊6.html）
+  - 输入：包含 <qunliao>...</qunliao> 的字符串
+  - 输出：[{name, members, messages, raw}]，每个块是一个 <multi> 群聊
+
+- parseRoleGroupConversationsFromShouji(text)（同层私聊喵喵喵2.html）
+  - 输入：包含 <shouji> 的字符串
+  - 输出：[{role, name, members, messages, raw}]，每个块是一个 <group> 角色群聊
+
+- serializeQunliao(conversations, msgArrOverrideForActive?)（同层群聊6.html）
+  - 输入：群聊会话数组（每项含 members/messages）
+  - 输出：完整 <qunliao>...</qunliao> 字符串
+  - 备注：内部会用 serializeMultiBlock() 确保存在标题行【和xxx的聊天】与成员行[群成员：...]
+
+- serializeRoleGroups(conversations, msgArrOverrideForActive?)
+  - 输入：角色群聊会话数组
+  - 输出：多段 <group> 块拼接
+
+- serializeMessageLinesOnly(msgArr)
+  - 作用：只返回“聊天行”，不包含 <shouji> 与标题行（角色群聊 AI 上下文专用）
+
+- splitGroupMembers(raw)（同层群聊6.html）
+  - 输入：一段成员字符串（支持中文逗号/英文逗号分隔）
+  - 输出：去重后的成员数组
+
+- parseMomentsFromShouji(text)
+  - 输入：包含 <shouji> 的字符串
+  - 输出：朋友圈 posts 数组 state.moments
+
+- serializeMomentsToPyq(moments)
+  - 输入：state.moments
+  - 输出：文本：<pyq>...</pyq>
+
+- upsertPyqIntoShoujiMessage(shoujiMessageText, pyqText)
+  - 输入：完整 <shouji>...</shouji> 文本 + pyq 文本
+  - 输出：把 <pyq> 块“覆盖写入/插入”到 <shouji> 内，并移除旧的 pyq（兼容清理旧的“同层朋友圈”提示行）
+  - 目的：避免你更新私聊时把朋友圈覆盖掉，或更新朋友圈时把私聊覆盖掉。
+
+- upsertPrivateAndGroupIntoShoujiMessage(shoujiMessageText, privateBlocksText, qunliaoText, roleGroupText)
+  - 作用：一次性合并 <private>/<qunliao>/<group>，避免互相覆盖。
+
+4.2 同步（写回同层楼层）
+- deferredSync(delay=300)
+  - 作用：防抖/延迟批量同步，避免频繁 setChatMessages
+
+- syncToSillyTavern()
+  - 作用：把内存状态写回到当前楼层（state.currentMsgId）
+  - 关键点：
+    1) 若已有 <private> 结构：会重建全部 <private> 块，或仅替换当前会话块（避免会话串线）。
+    2) <qunliao>/<group> 会与 <private> 一起通过 upsertPrivateAndGroupIntoShoujiMessage 合并写回。
+    3) 总是把 <pyq> 通过 upsertPyqIntoShoujiMessage 写回。
+    4) 角色群聊列表会同步保存到 data.extensions（tavern_helper_role_groups_v1）。
+    5) setChatMessages refresh 通常用 'none'，因为 UI 由本前端自己渲染。
+    6) 群聊页面（同层群聊6.html）：会把会话数组序列化为 <qunliao>...；写回时优先替换原文中的 <qunliao>...</qunliao>，否则会把 <shouji>...</shouji> 替换为 <qunliao>（迁移到群聊格式）。
+
+4.3 UI 渲染（前端显示）
+- renderAllMessages() / renderNewMessages() / appendMessage(msg, idx)
+- renderMomentsList()
+- openMomentsPanel() / closeMomentsPanel()
+- openConversation(name) / switchPrivateChat(index)
+
+4.4 AI（本项目的真实用法）
+- AI_GENERATE_RAW = (typeof generateRaw === 'function') ? generateRaw : null;
+- 私聊 AI 回复：requestAiReply()（在破限模式下用 AI_GENERATE_RAW）
+- 角色群聊 AI 创建：requestRoleGroupAiCreate()（输出 <group> 块）
+- 角色群聊 AI 回复：requestRoleGroupAiReply()（只输出聊天行，不包 <group>）
+- 朋友圈 AI 回复：aiCommentOnMoment()（强制使用 AI_GENERATE_RAW）
+- AI 按钮会自动分流：若处于 roleGroupMode，点击 AI = 角色群聊回复；否则走私聊回复。
+- 调试面板：可查看私聊/群聊/角色群聊/朋友圈的原始输出流（便于排查格式不合规）。
+
+4.5 聊天行协议速查（常见可解析格式）
+- 普通文本：
+  [我方消息|内容|HH:MM]
+  [角色名|头像后缀|内容|HH:MM]（头像后缀可为空）
+- 引用回复（尖括号）：
+  <角色名|头像后缀|引用内容|回复内容|HH:MM>
+- 文件/文档/位置：
+  文件：
+  [我方消息|TXT|内容|HH:MM] / [我方消息|PDF|内容|HH:MM]（格式字段可自定义）
+  文档：
+  [我方消息|文档|文件名(大小)|描述或预览|HH:MM]
+  位置：
+  [我方消息|地点,地址|HH:MM]（地址可省略）
+- 图片：
+  [我方消息|图片|描述|IMGDATA:短链接|FILENAME:文件名|HH:MM]
+  备注：IMGDATA 通常是 /api/images/upload 返回的短链接路径。
+- 表情包（catbox 文件名附在描述末尾）：
+  [我方消息|表情包|描述+文件名|HH:MM]
+- 视频：
+  [我方消息|视频|URL|HH:MM]
+- 语音消息：
+  [我方消息|语音消息|文本|HH:MM]
+  [角色名|头像后缀|语音消息|文本|HH:MM]
+- 转账/收账/红包：
+  [我方消息|转账X元|HH:MM] / [角色名|头像后缀|转账X元|HH:MM]
+  [我方消息|收账X元|HH:MM] / [角色名|头像后缀|收账X元|HH:MM]
+  [我方消息|已退回收账|HH:MM] / [角色名|头像后缀|已退回收账|HH:MM]
+  [我方消息|红包X元|HH:MM] / [角色名|头像后缀|红包X元|HH:MM]
+  [我方消息|领取红包X元|HH:MM] / [角色名|头像后缀|领取红包X元|HH:MM]
+- 系统消息：
+  [系统消息|YYYY/MM/DD]
+  [系统消息|戳一戳|内容]
+  [系统消息|开始一起听歌|HH:MM]
+  [系统消息|一起听歌N分钟|HH:MM]
+  [系统消息|正在听|歌名|备注|HH:MM]
+- 语音通话/变声：
+  [我方消息|语音通话|内容|HH:MM] / [角色名|语音通话|内容|HH:MM]
+  [我方消息|语音通话已挂断|时长|transcript-json|HH:MM]
+  [我方消息|变音特效|效果|内容|HH:MM]
+- 语音未接听：
+  [角色名|语音未接听|内容|HH:MM]
+- 头像字段兼容：可使用 IMGDATA:/path|FILENAME:xxx（SillyTavern 内置短链格式）。
+
+generateRaw 典型请求结构（本项目风格）：
+- ordered_prompts: [...可选越狱system..., 'world_info_before', ... , 'chat_history', 'user_input']
+- user_input: 你的请求
+- should_stream 或 should_silence：按场景选择
+
+----------------------------------------------------------------------------------------------------
+5. 典型流程（用“同层私聊 + 同层朋友圈”解释一遍）
+
+5.1 启动加载（loadHistoryFromSillyTavern）
+1) state.currentMsgId = getCurrentMessageId()
+2) raw = getChatMessages(state.currentMsgId)[0].message
+3) state.moments = parseMomentsFromShouji(raw)         // 朋友圈独立解析
+4) groupConversations = parseGroupConversationsFromQunliao(raw)
+5) privateConversations = parsePrivateConversationsFromShouji(raw)
+6) parsedRoleGroups = parseRoleGroupConversationsFromShouji(raw)
+7) extRoleGroups = loadRoleGroupsFromExtensions()
+   - 若 extRoleGroups 存在且非空：以扩展数据为准
+   - 否则使用 parsedRoleGroups，并回写到 extensions（迁移/兜底）
+8) 根据当前模式（private/group/roleGroup）选中激活会话，初始化 state.messageHistory
+9) renderAllMessages() + renderMomentsList()
+
+5.2 用户发送私聊消息（同层写入）
+1) 把用户输入变成一条 msg 对象 push 进 state.messageHistory
+2) appendMessage() 即时渲染
+3) deferredSync() -> syncToSillyTavern() -> setChatMessages 写回同一楼层
+
+5.3 用户发布朋友圈 / 评论 / 回复评论（同层写入）
+1) addMomentPost()/addMomentComment() 修改 state.moments
+2) renderMomentsList() 更新 UI
+3) deferredSync(0) 立即写回：
+   - syncToSillyTavern() 内会把 serializeMomentsToPyq(state.moments) upsert 到 <shouji> 里
+
+5.4 群聊启动加载（同层群聊6.html）
+1) state.currentMsgId = getCurrentMessageId()
+2) raw = getChatMessages(state.currentMsgId)[0].message
+3) conversations = parseGroupConversationsFromQunliao(raw)
+   - 如果 conversations 为空：兼容旧格式 -> parsePrivateConversationsFromShouji(raw)
+4) state.privateConversations = conversations（确保每个会话对象都有 members 数组）
+5) 选择当前激活会话 state.currentPrivateIndex（通常按标题/当前显示名匹配，否则默认第 0 个）
+6) state.messageHistory = active.messages
+7) renderAllMessages() + buildPrivateChatTabs()
+注：同层私聊喵喵喵2.html 的群聊加载流程类似，只是会把 <qunliao> 放进 <shouji> 并与私聊/朋友圈共存。
+
+5.5 群聊发送消息 / 改群成员（同层写入）
+- 发送群聊消息：push 到 state.messageHistory -> appendMessage/render -> deferredSync() -> syncToSillyTavern()
+  - syncToSillyTavern() 会 serializeQunliao(state.privateConversations, state.messageHistory)
+  - 并把序列化结果写回当前楼层（优先替换 <qunliao>，否则替换 <shouji>）
+- 改群成员：修改当前会话的 conv.members（例如 UI 输入“张三,李四” -> splitGroupMembers()）然后 deferredSync()
+  - serializeMultiBlock 会保证成员行 [群成员：...] 永远位于标题行后面
+
+5.6 图片/表情包/视频 & 识图流程（同层私聊喵喵喵2.html）
+1) 图片/表情包发送
+   - 文件 -> /api/images/upload -> 短链
+   - 写回格式示例：
+     [我方消息|图片|描述|IMGDATA:短链|FILENAME:文件名|HH:MM]
+     [我方消息|表情包|描述+catbox文件名|HH:MM]
+2) 识图/识视频
+   - 统一入口：VisionPlugin.analyzeUrl 或 __uploadImageByPlugin
+   - 模式：direct / tavern / kimi / custom（配置存在 localStorage）
+3) 视频
+   - 需要视频识别插件才能上传并生成短链；无插件时会降级为“发送了一个视频”的文本描述。
+4) 同源要求
+   - /api/images/upload 需要同源访问，必须通过 SillyTavern 内置服务器打开页面。
+
+5.7 角色群聊 AI 创建 / 回复（偷看模式）
+1) 创建：
+   - requestRoleGroupAiCreate() 要求 AI 输出完整 <group> 块（含群聊名/成员/初始消息）。
+   - 解析：extractFirstRoleGroupBlock → parseRoleGroupConversationsFromShouji。
+2) 回复：
+   - requestRoleGroupAiReply() 只喂“聊天行上下文”（serializeMessageLinesOnly）。
+   - AI 只输出 1~3 行消息，不包 <group>、不含标题行、禁止“我方消息”。
+   - 解析仍走 parseShoujiLog，并过滤 sender === 'user'。
+
+5.8 好友/群聊/角色群聊列表（集成版）
+1) 存储位置
+   - 主存：角色卡 data.extensions（tavern_helper_friends_v1 / tavern_helper_groups_v1 / tavern_helper_role_groups_v1）
+   - 兜底：localStorage / extension_settings（自动迁移）
+2) 导入/导出（JSON）
+   - 导出：包含好友 + 群聊（含成员），文件名含角色名与时间戳。
+   - 导入：好友按模式“覆盖或追加”；群聊只追加，不覆盖已有群聊名。
+3) 群聊列表与会话同步
+   - 群聊列表保存的是“群名 + 成员”；真正聊天记录仍在 <qunliao>/<multi>。
+----------------------------------------------------------------------------------------------------
+6. 示例代码（教程里最容易复制用的）
+
+6.1 读取当前同层原文（当前楼层）
+------------------------------------------------------------
+const id = getCurrentMessageId();
+const msg = getChatMessages(id)[0];
+const raw = msg && msg.message ? String(msg.message) : '<shouji>\\n</shouji>';
+------------------------------------------------------------
+
+6.2 把朋友圈写入/更新到 <shouji> 里（不碰私聊）
+------------------------------------------------------------
+const pyqText = serializeMomentsToPyq(state.moments);
+const updated = upsertPyqIntoShoujiMessage(raw, pyqText);
+await setChatMessages([{ message_id: id, message: updated }], { refresh: 'none' });
+------------------------------------------------------------
+
+6.3 往当前会话追加一条消息，然后写回（推荐走 deferredSync）
+------------------------------------------------------------
+state.messageHistory.push({ sender:'user', type:'text', content:'你好', time:getTimeStr() });
+appendMessage(state.messageHistory[state.messageHistory.length - 1], state.messageHistory.length - 1);
+deferredSync(0);
+------------------------------------------------------------
+
+6.4 “换皮显示”（只改网页显示，不保存）
+------------------------------------------------------------
+// 让最后一楼 DOM 显示第 0 楼的内容（聊天文件不变）
+await refreshOneMessage(0, $('#chat > .mes.last_mes'));
+------------------------------------------------------------
+
+6.5 朋友圈 AI 回复（本项目：必须 generateRaw）
+------------------------------------------------------------
+if (!AI_GENERATE_RAW) throw new Error('no generateRaw');
+const rawRequestData = {
+  ordered_prompts: [
+    ...(state.jailbreakEnabled ? [{ role: 'system', content: JAILBREAK_PROMPT }] : []),
+    'world_info_before',
+    'persona_description',
+    'char_description',
+    'char_personality',
+    'scenario',
+    'world_info_after',
+    'dialogue_examples',
+    'chat_history',
+    'user_input',
+  ],
+  user_input: '只输出一条中文朋友圈评论...',
+  should_silence: true,
+};
+const text = String(await AI_GENERATE_RAW(rawRequestData) || '').trim();
+addMomentComment(postId, getCurrentCharName(), getCurrentCharAvatarSuffix(), text);
+------------------------------------------------------------
+
+6.6 写回群聊（更新群成员 + 写回 <qunliao>）
+------------------------------------------------------------
+// 说明：群聊页会把数据存进 <qunliao>...</qunliao>；这里演示“改成员后写回”。
+const id = getCurrentMessageId();
+const msg = getChatMessages(id)[0];
+const raw = msg && msg.message ? String(msg.message) : '';
+
+// 例：把当前会话的群成员改成 3 个人（输入支持中英文逗号，会自动去重）
+const members = splitGroupMembers('张三,李四,王五');
+const idx = (typeof state.currentPrivateIndex === 'number') ? state.currentPrivateIndex : 0;
+if (!Array.isArray(state.privateConversations)) state.privateConversations = [];
+if (!state.privateConversations[idx]) state.privateConversations[idx] = { name: getCurrentCharName() || '群聊', members: [], messages: [] };
+state.privateConversations[idx].members = members;
+
+const qunliaoText = serializeQunliao(state.privateConversations, state.messageHistory);
+const updated = /<qunliao>[\s\S]*?<\/qunliao>/.test(raw)
+  ? raw.replace(/<qunliao>[\s\S]*?<\/qunliao>/, qunliaoText)
+  : (/<shouji>[\s\S]*?<\/shouji>/.test(raw)
+      ? raw.replace(/<shouji>[\s\S]*?<\/shouji>/, qunliaoText)
+      : qunliaoText);
+
+await setChatMessages([{ message_id: id, message: updated }], { refresh: 'none' });
+------------------------------------------------------------
+
+6.7 安全写回模板（只替换目标块）
+------------------------------------------------------------
+// 用于“只更新 <shouji>/<qunliao>，保留原文其它内容”
+const replaceBlock = (raw, tagName, newBlockText) => {
+  const re = new RegExp(`<${tagName}>[\\s\\S]*?<\\/${tagName}>`);
+  if (re.test(raw)) return raw.replace(re, newBlockText);
+  return `${raw}\\n${newBlockText}`.trim();
+};
+
+const updated = replaceBlock(raw, 'shouji', newShoujiText);
+await setChatMessages([{ message_id: id, message: updated }], { refresh: 'none' });
+------------------------------------------------------------
+
+6.8 合并写回（私聊 + 群聊 + 角色群聊）
+------------------------------------------------------------
+const privateBlocks = buildPrivateBlocksFromConversations(state.privateConversations);
+const qunliaoText = serializeQunliao(state.groupConversations);
+const roleGroupText = serializeRoleGroups(state.roleGroupConversations);
+const updatedCore = upsertPrivateAndGroupIntoShoujiMessage(raw, privateBlocks, qunliaoText, roleGroupText);
+const updated = upsertPyqIntoShoujiMessage(updatedCore, serializeMomentsToPyq(state.moments));
+await setChatMessages([{ message_id: id, message: updated }], { refresh: 'none' });
+------------------------------------------------------------
+
+----------------------------------------------------------------------------------------------------
+7. 常见坑（强烈建议在教程里加粗提醒）
+
+坑 1：直接字符串拼接写回，会覆盖其它块
+- 你如果用 raw.replace(...) 直接把 <shouji> 整段替换掉，极容易把 <private> 或 <pyq> 覆盖丢。
+- 正解：统一通过 syncToSillyTavern()，内部会：
+  - 私聊：重建/替换对应 <private> 块
+  - 朋友圈：upsertPyqIntoShoujiMessage() 写回 <pyq>
+
+坑 2：parseShoujiLog 不处理结构块，会把朋友圈/评论当聊天消息
+- 本项目已在 parseShoujiLog 内先清理 <pyq> 和 <private>（并兼容剔除旧的“同层朋友圈”提示行）。
+- 如果你改了朋友圈格式，一定要同步更新清理逻辑和解析器。
+
+坑 3：从 <shouji> 推断角色名时，被评论行干扰
+- parsePersonNameFromShouji(text) 若不排除 [评论|...]，会误判“评论”为角色名。
+- 本项目已排除：先剔除 <pyq>，并用 (?!评论|) 负向匹配。
+
+坑 4：refresh 参数用错导致 UI 抖动或触发酒馆重渲染
+- setChatMessages refresh='all' 会触发整聊天重载，可能打乱你的前端 UI 逻辑。
+- 同层前端一般用 refresh:'none'，由你自己的 renderAllMessages()/renderMomentsList() 控制显示。
+
+坑 5：AI 输出格式不稳定导致 parse 失败
+- 私聊 AI 回复的解析逻辑是：parseShoujiLog(`<shouji>${buffer}</shouji>`)
+- 这意味着 AI 输出应该是“多行聊天行”，不要输出 <shouji> 标签，不要输出 JSON，不要输出解释。
+- 角色群聊 AI 回复更严格：不要输出 <group> / 标题行，只能输出 1~3 行群成员聊天。
+- 建议在 lorebook 里强约束（见第 9 节）。
+
+坑 6：时间格式不一致
+- 私聊行里常用 HH:MM；朋友圈建议 YYYY/MM/DD HH:MM。
+- 解析器/序列化器要一致；否则“显示正常但写回后再读解析错误”。
+
+坑 7：切换聊天后 message_id 变化，仍写旧楼层
+- 你必须在切换角色/聊天后重新 getCurrentMessageId() 并重新 loadHistoryFromSillyTavern。
+- 否则会把新聊天的 UI 写进旧楼层，造成“串档”。
+
+坑 8：解析分隔符被正文污染
+- 行协议依赖 "|" 与 "]" 等分隔符；正文里包含这些字符可能导致解析错位。
+- 简单处理：发送前把 "|" 替换为 "｜"（全角），或在序列化时做转义/反转义。
+
+坑 9：接口未注入导致写回失败
+- 如果 typeof getChatMessages === 'undefined'，说明你不是在 JS-Slash-Runner 的 iframe 环境。
+- 解决：用 SillyTavern 内置服务器打开页面，或用扩展脚本桥接注入接口。
+
+坑 10：序列化支持了新类型，但解析没跟上
+- 例如你新增“文件/文档/位置”或其它消息格式，只写了 serialize，没加 messageParsers/parseInlineContentType。
+- 结果是：刷新后回落为普通文本，或直接解析失败。
+- 解决：新增类型时务必同步补“解析 + 序列化 + 渲染”三件套。
+
+----------------------------------------------------------------------------------------------------
+8. FAQ（可放到文档末尾）
+
+Q1：为什么要同层？直接每条消息一个楼层不好吗？
+A：同层适合“一个楼层里存一个复杂应用”，比如手机 UI、朋友圈、小游戏等；能让聊天记录更干净，也能把应用状态完整保存。
+
+Q2：同层会不会丢消息？
+A：只要最终写回的是 setChatMessages，而且你不把 <shouji> 覆盖坏，数据在聊天文件里是持久化的。
+
+Q3：为什么页面显示和聊天文件不同步？
+A：你可能只改了 DOM（retrieveDisplayedMessage/refreshOneMessage 的 $mes 换皮）而没 setChatMessages；或者 deferredSync 没跑成功。
+
+Q4：同层会不会影响酒馆正则/世界书？
+A：会。因为你把大量内容塞进一个楼层，世界书/正则/宏替换会受你注入的上下文影响；建议用 generateRaw 控制 prompt 顺序与注入位置。
+
+Q5：怎么快速备份同层数据？
+A：把 getChatMessages(message_id)[0].message 复制出来保存即可；这是唯一的真实数据源。
+
+Q6：私聊同层如何迁移到群聊同层？
+A：群聊页会在写回时把 <shouji> 替换为 <qunliao>；你也可以手动替换块内容再 setChatMessages。
+
+Q7：角色群聊的数据存在哪？
+A：一份在 <shouji> 的 <group> 块里（同层持久化），另一份镜像在角色卡 data.extensions（tavern_helper_role_groups_v1）。
+
+----------------------------------------------------------------------------------------------------
+9. 推荐 lorebook 触发策略（让 AI 输出稳定）
+
+目标：让 AI 在“私聊回复场景”只输出可解析的聊天行；在“朋友圈评论/发动态场景”只输出可解析的结构化行。
+
+9.1 建议拆成 3 个 Lorebook 词条（关键词触发）
+
+(A) 同层私聊输出规范（关键词：同层/手机/私聊/回复/聊天）
+- 约束 AI 输出：只输出 1~N 行“聊天行”，不要解释，不要加 <shouji>。
+- 例：
+  [角色名|头像后缀|内容|HH:MM]
+  或（引用）
+  <角色名|头像后缀|引用内容|回复内容|HH:MM>
+
+(B) 同层朋友圈输出规范（关键词：朋友圈/pyq/评论/回复评论/post）
+- 约束 AI 输出：只输出 1~N 行，每行都要匹配指定格式；不要解释，不要输出 <shouji>/<pyq>。
+- 推荐两套格式（二选一，前端均可兼容）：
+  1) 评论（推荐 AI 输出，最简）：
+     [评论|人名|评论内容|时间]
+     [评论|人名|被评论的人名|评论内容|时间]
+  2) 发朋友圈：
+     [人名|头像后缀|动态正文|时间]
+
+(C) 角色群聊输出规范（关键词：角色群聊/偷看群聊/查看*的群聊）
+- 创建（AI 生成 <group> 块时）：
+  - 只输出一个 <group> 块，包含 [角色|群聊名|成员...] 头行 + 1~3 条消息行。
+- 回复（AI 续写时）：
+  - 只输出 1~3 行聊天消息，不要 <group>、不要标题行、不允许“我方消息”。
+     或 [人名|动态正文|时间]
+
+9.2 触发方式建议
+- 只用“关键词触发”，不要“总是注入”。
+- 原因：同层系统的 prompt 很长，总是注入会让模型在普通对话时也误输出结构化内容。
+
+9.3 额外建议（强烈）
+- 对私聊 AI：在 user_input 里加“输出必须符合某个正则格式”的硬约束。
+- 对朋友圈 AI：强约束它输出“结构化行”（上面的 [评论|...] / [人名|...]），不要输出解释文本，避免污染 <pyq>。
+
+9.4 调试建议（本项目新增）
+- 设置页里有“朋友圈输出调试”按钮：用于查看朋友圈 AI 回复时的流式原始输出（debug panel 的 stream 字段）。
+- 如果出现“看不到 AI 回复/解析失败”，优先用调试面板确认：AI 实际输出是否符合格式、是否夹带了标签/解释。
+
+----------------------------------------------------------------------------------------------------
+10. 扩展开发 checklist（你要加新功能时照着做）
+
+1) 先决定存储位置：放在 <shouji> 内作为新块？还是放在 <private> 内作为新行类型？
+2) 给出稳定的文本格式（行协议/标签协议），并写解析器 + 序列化器。
+3) 修改 parseShoujiLog 的“清理逻辑”，避免新块影响旧解析。
+4) 在 syncToSillyTavern 里把新块做成“upsert”，保证不会覆盖别的块。
+5) UI 只渲染内存 state；保存统一走 deferredSync/syncToSillyTavern。
+6) 给 AI 用的：准备 lorebook 规则 + prompt 约束，保证输出稳定可解析。
+
+----------------------------------------------------------------------------------------------------
+11. 回归测试清单（每次改动后 3 分钟）
+
+- 载入：打开页面能成功 parse 历史（私聊/群聊/朋友圈至少一项）。
+- 发送：发一条消息 -> UI 即时显示 -> 同层 message 写回成功。
+- 刷新：刷新页面/切换聊天再回来，消息不丢。
+- 朋友圈：发动态/评论 -> UI 更新 -> <pyq> 写回正常。
+- 多会话：切换会话/群聊成员后再发消息，不串线。
+- AI：AI 回复能被 parseShoujiLog 或朋友圈解析器正确解析。
+
+----------------------------------------------------------------------------------------------------
+12. 附录：给 Agent 的提示词模板（小白自制同层手机）
+
+把下面整段贴给你的 Agent（可把“目标/风格”按需改）：
+
+------------------------------------------------------------
+你是一个前端/同层应用开发助手，帮我做一个“同层手机 UI”，运行在 SillyTavern 的 JS-Slash-Runner iframe 中。
+
+约束与目标：
+1) 同层持久化：只写入当前 message_id 的 ChatMessage.message（<shouji>...</shouji>）。
+2) 不要新增楼层：只用 setChatMessages 更新同一条消息。
+3) 数据/显示分离：DOM 只是显示，必须把状态写回 <shouji>。
+4) 写回必须“块级替换/upsert”：不能整段覆盖，否则会丢 <private>/<pyq>。
+5) 需要实现：parse -> state -> render -> deferredSync -> syncToSillyTavern 的闭环。
+6) 聊天行协议必须稳定：用 [我方消息|内容|HH:MM] / [角色名|头像|内容|HH:MM]。
+7) 如果有朋友圈，写入 <pyq>，并保证插入在 </shouji> 前，不污染聊天行。
+8) 运行环境：页面需通过 SillyTavern 内置服务器同源打开，以调用 /api/images/upload 等接口。
+9) 给我最小可运行版本，不要引入构建工具；一个 HTML 文件即可。
+
+接口说明（可直接用）：
+- getCurrentMessageId()
+- getChatMessages(message_id)[0].message
+- setChatMessages([{message_id, message: newText}], {refresh:'none'})
+
+请输出：
+- 完整 HTML（含 CSS + JS）
+- 必需的核心函数：parseShoujiLog / serializeShoujiLog / syncToSillyTavern / deferredSync / renderAllMessages
+- 一个最小示例：页面打开后能读历史、发消息、刷新不丢
+------------------------------------------------------------
+
+
