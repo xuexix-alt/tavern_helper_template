@@ -7,9 +7,7 @@ export type LoreSyncType = PhoneMessageType;
  * 聊天摘要世界书条目用绿灯（selective）按正文关键词触发，而非蓝灯（constant）每楼常驻：
  * 正文提到相关人物或手机/微信时才注入，避免无关楼层持续占用主聊天上下文。
  */
-export type LoreEntryStrategy =
-  | { type: 'constant' }
-  | { type: 'selective'; keys: readonly string[] };
+export type LoreEntryStrategy = { type: 'constant' } | { type: 'selective'; keys: readonly string[] };
 
 /** 通用触发词：正文出现即视为"正在使用手机"的信号 */
 const PHONE_TRIGGER_KEYS = ['微信', '手机'] as const;
@@ -291,11 +289,7 @@ export class ChatLoreSync {
       .then(async () => {
         const batch = await this.captureBatch(request);
         if (!batch) return;
-        const definition = definitionFor(
-          batch.request.type,
-          batch.request.conversationId,
-          batch.request.groupName,
-        );
+        const definition = definitionFor(batch.request.type, batch.request.conversationId, batch.request.groupName);
         const content = buildLoreSummary({
           type: batch.request.type,
           conversationId: batch.request.conversationId,

@@ -32,7 +32,14 @@ function fakeRequester(responses: string[], error?: Error) {
       },
     };
   };
-  return { request, prompts, handles, get calls() { return calls; } };
+  return {
+    request,
+    prompts,
+    handles,
+    get calls() {
+      return calls;
+    },
+  };
 }
 
 async function testFirstAttemptSuccess(): Promise<void> {

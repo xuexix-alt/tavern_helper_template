@@ -238,7 +238,8 @@ export function assemblePrompt(snapshot: PromptContextSnapshot, characterBudget 
     '主聊天',
     selected.mainChat,
     () => true,
-    entry => `id=${entry.id} role=${(entry as PromptMainChatEntry).role} ${entry.sender}:「${trimSummary(entry.content)}」`,
+    entry =>
+      `id=${entry.id} role=${(entry as PromptMainChatEntry).role} ${entry.sender}:「${trimSummary(entry.content)}」`,
   );
 
   if (result.length > characterBudget) {

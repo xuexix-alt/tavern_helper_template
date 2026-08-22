@@ -85,9 +85,7 @@ export function buildRolePrompts(
       ? identityPrefill
       : identityPrefill.replaceAll('{{lastUserMessage}}', () => playerMessage);
   return [
-    ...(layers.identity === false
-      ? []
-      : [{ role: 'system' as const, content: JAILBREAK_LAYERS.layer1_identity }]),
+    ...(layers.identity === false ? [] : [{ role: 'system' as const, content: JAILBREAK_LAYERS.layer1_identity }]),
     ...(layers.nsfw === false ? [] : [{ role: 'system' as const, content: JAILBREAK_LAYERS.layer2_nsfw }]),
     { role: 'user', content: assembledPrompt },
     ...(layers.prefill === false ? [] : [{ role: 'assistant' as const, content: prefill }]),

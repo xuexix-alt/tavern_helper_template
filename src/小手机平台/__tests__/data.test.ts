@@ -1023,7 +1023,14 @@ async function testProfileIdentityMigration(): Promise<void> {
 async function testSessionExportImport(): Promise<void> {
   const source = createMemoryPhoneDb();
   await source.addMessage(message('older', 10));
-  await source.addMessage(message('newer', 20, { type: 'group', conversationId: 'group:eden', groupName: '群', participants: ['main:alice'] }));
+  await source.addMessage(
+    message('newer', 20, {
+      type: 'group',
+      conversationId: 'group:eden',
+      groupName: '群',
+      participants: ['main:alice'],
+    }),
+  );
   await source.markSynced(sessionA, ['older']);
   await source.putRecord('conversations', { id: 'private:alice', sessionKey: sessionA, title: '爱丽丝' });
   await source.putRecord('contactPrefs', { id: 'main:alice', sessionKey: sessionB, identity: 'main:alice' });
@@ -1032,7 +1039,11 @@ async function testSessionExportImport(): Promise<void> {
   assert.equal(bundle.version, 1);
   assert.equal(bundle.kind, 'phone-session-export');
   assert.equal(bundle.sessionKey, sessionA);
-  assert.deepEqual(bundle.messages.map(item => item.id), ['older', 'newer'], '导出消息应按时间排序');
+  assert.deepEqual(
+    bundle.messages.map(item => item.id),
+    ['older', 'newer'],
+    '导出消息应按时间排序',
+  );
   assert.equal(bundle.messages[0].syncedToLore, true, '同步状态应随包保留');
   assert.deepEqual(Object.keys(bundle.records), ['conversations'], '只导出本会话有数据的 store');
 
@@ -1095,7 +1106,12 @@ async function testIndexedDbSessionExportImportRoundTrip(): Promise<void> {
   await source.addMessage(message('m1', 10));
   await source.addMessage(message('m2', 20));
   await source.addMessage(message('m3', 30, { sessionKey: sessionB }));
-  await source.putRecord('inbox', { id: 'm1', sessionKey: sessionA, conversationId: 'private:alice', status: 'pending' });
+  await source.putRecord('inbox', {
+    id: 'm1',
+    sessionKey: sessionA,
+    conversationId: 'private:alice',
+    status: 'pending',
+  });
 
   const bundle = await source.exportSession(sessionA);
   assert.equal(bundle.messages.length, 2, '索引导出应隔离 session');
@@ -1111,7 +1127,10 @@ async function testIndexedDbSessionExportImportRoundTrip(): Promise<void> {
   const report = await restored.importSession(JSON.parse(JSON.stringify(bundle)));
   assert.equal(report.importedMessages, 2);
   assert.equal(report.importedRecords, 1);
-  assert.deepEqual(await restored.listMessages({ sessionKey: sessionA }), await source.listMessages({ sessionKey: sessionA }));
+  assert.deepEqual(
+    await restored.listMessages({ sessionKey: sessionA }),
+    await source.listMessages({ sessionKey: sessionA }),
+  );
   assert.deepEqual(await restored.listRecords('inbox', sessionA), [
     { id: 'm1', sessionKey: sessionA, conversationId: 'private:alice', status: 'pending' },
   ]);

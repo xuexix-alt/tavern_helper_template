@@ -465,7 +465,9 @@ class IndexedDbPhoneDb implements PhoneDb {
     const done = transactionDone(transaction);
     // 走 by_session 索引只取本会话消息，其余查询维度在内存过滤
     const sessionMessages = await requestResult(
-      transaction.objectStore('messages').index(MESSAGE_SESSION_INDEX).getAll(query.sessionKey) as IDBRequest<PhoneMessage[]>,
+      transaction.objectStore('messages').index(MESSAGE_SESSION_INDEX).getAll(query.sessionKey) as IDBRequest<
+        PhoneMessage[]
+      >,
     );
     await done;
     return sessionMessages
@@ -621,9 +623,7 @@ class IndexedDbPhoneDb implements PhoneDb {
     );
     const exportRecords: Partial<Record<PhoneBusinessStore, PhoneBusinessRecord[]>> = {};
     for (const storeName of PHONE_BUSINESS_STORES) {
-      const all = await requestResult(
-        transaction.objectStore(storeName).getAll() as IDBRequest<PhoneBusinessRecord[]>,
-      );
+      const all = await requestResult(transaction.objectStore(storeName).getAll() as IDBRequest<PhoneBusinessRecord[]>);
       const list = all.filter(record => record.sessionKey === sessionKey).map(cloneRecord);
       if (list.length > 0) exportRecords[storeName] = list;
     }
