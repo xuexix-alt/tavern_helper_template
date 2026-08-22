@@ -3,9 +3,10 @@ import { registerPhoneModule } from '../../core/register';
 import { ChatLoreSync, LORE_ENTRY_DEFINITIONS } from '../../data/chatLoreSync';
 import { buildLoreSummary } from '../../data/loreSummary';
 import { createIndexedDbPhoneDb, createMemoryPhoneDb } from '../../data/phoneDb';
+import { PHONE_EXPORT_VERSION } from '../../data/phoneDbSchema';
 
 const services = Object.freeze({
-  'phone.db': Object.freeze({ createIndexedDbPhoneDb, createMemoryPhoneDb }),
+  'phone.db': Object.freeze({ createIndexedDbPhoneDb, createMemoryPhoneDb, PHONE_EXPORT_VERSION }),
   'chat-lore.sync': Object.freeze({ ChatLoreSync, LORE_ENTRY_DEFINITIONS, buildLoreSummary }),
 });
 

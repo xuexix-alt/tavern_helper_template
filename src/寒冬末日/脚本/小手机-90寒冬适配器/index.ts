@@ -55,10 +55,10 @@ import {
 } from '../../../小手机平台/profiles/profileWorldbook';
 import type { ControlledPhoneScheduler, PhoneSchedulerJob } from '../../../小手机平台/scheduler/phoneScheduler';
 import type { AiDetailedResponse, AiRequestOptions } from '../../../小手机平台/ai/providers';
+import { requestParsedWithRetry } from '../../../小手机平台/ai/parseRetry';
 import type { PhoneShellApi } from '../../../小手机平台/shell/phoneShell';
 import phoneShellStyles from '../../../小手机平台/shell/phoneShell.css?raw';
 import {
-  buildCharacterMvuReference,
   buildEdenNotices,
   buildWinterTasks,
   buildWinterSchedulerJobs,
@@ -74,6 +74,7 @@ import {
   isStableSnapshotCurrent,
   planTemporaryNpcPromotion,
   resolveWinterPersonMvu,
+  resolveWinterWorldTime,
   selectCharacterProfile,
   selectPublicWinterMvuFacts,
   runPendingDispatchPreparation,
@@ -234,6 +235,9 @@ function createWinterAdapterModule(): PhoneModule {
     raw?: string;
     messages?: readonly { sender: string; content: string }[];
     error?: string;
+    /** 解析重试回路实际发出的请求次数与每次失败原因（无重试时省略） */
+    attempts?: number;
+    retryReasons?: readonly string[];
   }
   const promptDebugEntries: PromptDebugEntry[] = [];
 
@@ -666,6 +670,7 @@ function createWinterAdapterModule(): PhoneModule {
       speaker,
       participants,
       notices,
+      ...resolveWinterWorldTime(current.mvu.stat_data),
     });
     submitWinterSchedulerJobs(scheduler, jobs);
   }
@@ -1091,13 +1096,17 @@ function createWinterAdapterModule(): PhoneModule {
     const session = requireSession();
     const database = requireDb();
     const statuses = await inboxByMessage(session.sessionKey);
-    return (await database.listMessages({ sessionKey: session.sessionKey, conversationId })).map(message => ({
-      id: message.id,
-      sender: message.sender,
-      content: message.content,
-      direction: message.sender === '你' ? 'outgoing' : 'incoming',
-      status: statuses.get(message.id)?.status ?? 'sent',
-    }));
+    return (await database.listMessages({ sessionKey: session.sessionKey, conversationId })).map(message => {
+      const timeLabel = [message.gameDate, message.gameTime].filter(Boolean).join(' ');
+      return {
+        id: message.id,
+        sender: message.sender,
+        content: message.content,
+        direction: message.sender === '你' ? ('outgoing' as const) : ('incoming' as const),
+        status: statuses.get(message.id)?.status ?? ('sent' as const),
+        ...(timeLabel ? { timeLabel } : {}),
+      };
+    });
   }
 
   async function listContacts(): Promise<readonly PhoneContactView[]> {
@@ -1313,6 +1322,7 @@ function createWinterAdapterModule(): PhoneModule {
             sender: '你',
             content: cleanContent,
             createdAt: Date.now(),
+            ...resolveWinterWorldTime(current.mvu.stat_data),
             ...(conversation.kind === 'eden-group'
               ? { groupName: conversation.title, participants: [...conversation.participants] }
               : {}),
@@ -1327,6 +1337,7 @@ function createWinterAdapterModule(): PhoneModule {
           worldbookName: capturedWorldbooks.chatWorldbookName,
           type: conversation.kind === 'eden-group' ? 'group' : 'private',
           conversationId,
+          ...(conversation.kind === 'eden-group' ? { groupName: conversation.title } : {}),
         });
         await launchAiRequest(
           current,
@@ -1463,7 +1474,7 @@ function createWinterAdapterModule(): PhoneModule {
           (await loadExactCharacterProfile(member.name, member.temporary, capturedWorldbooks.profileWorldbookNames))
             ?.trim()
             .slice(0, 1_600) || '暂无固定档案',
-        mvuReference: buildCharacterMvuReference(member.name, member.temporary),
+        mvuData: resolveWinterPersonMvu(member.id, captured.mvu.stat_data),
       })),
     );
     assertCapturedSession(captured.sessionKey);
@@ -1499,17 +1510,18 @@ function createWinterAdapterModule(): PhoneModule {
       profiles.length === 1
         ? profiles[0].name
         : `${conversation.kind === 'eden-group' ? '伊甸住户群' : '群聊'}成员（${profiles.map(item => item.name).join('、')}）`;
-    const handle = provider.request(promptText, { jsonMode: true, replyAs, playerMessage });
+    const handle = requestParsedWithRetry(
+      text => provider.request(text, { jsonMode: true, replyAs, playerMessage }),
+      promptText,
+      profiles.map(item => item.name),
+    );
     const key = requestKey(captured.sessionKey, messageId);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
     void handle.promise
-      .then(async raw => {
+      .then(async result => {
         if (active.cancelled) return;
-        const parsed = promptCatalog.parseResponse(
-          raw,
-          profiles.map(item => item.name),
-        );
+        const { raw, messages } = result;
         recordPromptDebug({
           id: `debug-${messageId}`,
           createdAt: Date.now(),
@@ -1519,10 +1531,11 @@ function createWinterAdapterModule(): PhoneModule {
           assembled,
           expanded: promptText,
           raw,
-          messages: parsed.messages,
+          messages,
+          ...(result.attempts > 1 ? { attempts: result.attempts, retryReasons: result.retryReasons } : {}),
         });
         const writebackSessionKey = capturedWritebackSessionKey(captured.sessionKey);
-        for (const [index, item] of parsed.messages.entries()) {
+        for (const [index, item] of messages.entries()) {
           await database.addMessage({
             id: `${messageId}:reply:${index}`,
             sessionKey: writebackSessionKey,
@@ -1531,6 +1544,7 @@ function createWinterAdapterModule(): PhoneModule {
             sender: item.sender,
             content: item.content,
             createdAt: Date.now() + index,
+            ...resolveWinterWorldTime(captured.mvu.stat_data),
             ...(conversation.kind === 'eden-group'
               ? { groupName: conversation.title, participants: [...conversation.participants] }
               : {}),
@@ -1547,6 +1561,7 @@ function createWinterAdapterModule(): PhoneModule {
           worldbookName: capturedWorldbooks.chatWorldbookName,
           type: conversation.kind === 'eden-group' ? 'group' : 'private',
           conversationId: conversation.id,
+          ...(conversation.kind === 'eden-group' ? { groupName: conversation.title } : {}),
         });
         notifyConversationChanged(conversation.id);
       })
@@ -1608,6 +1623,8 @@ function createWinterAdapterModule(): PhoneModule {
       sender: payload.source,
       content: payload.content,
       createdAt: Date.now(),
+      ...(payload.gameDate ? { gameDate: payload.gameDate } : {}),
+      ...(payload.gameTime ? { gameTime: payload.gameTime } : {}),
       source: payload.source,
       trust: payload.trust,
     });
@@ -1645,14 +1662,18 @@ function createWinterAdapterModule(): PhoneModule {
       }),
     );
     const promptText = expandPromptMacros(assembled, job.snapshotKey);
-    const handle = createProvider().request(promptText, { jsonMode: true, replyAs: payload.speaker });
+    const handle = requestParsedWithRetry(
+      text => createProvider().request(text, { jsonMode: true, replyAs: payload.speaker }),
+      promptText,
+      [payload.speaker],
+    );
     const key = requestKey(job.sessionKey, `scheduled:${job.triggerKey}`);
     const active: ActiveRequest = { cancel: () => handle.cancel(), cancelled: false };
     activeRequests.set(key, active);
     try {
-      const raw = await handle.promise;
+      const result = await handle.promise;
       if (active.cancelled) return;
-      const parsed = promptCatalog.parseResponse(raw, [payload.speaker]);
+      const { raw, messages } = result;
       recordPromptDebug({
         id: `debug-scheduled-${job.snapshotKey}-${job.triggerKey}`,
         createdAt: Date.now(),
@@ -1662,9 +1683,10 @@ function createWinterAdapterModule(): PhoneModule {
         assembled,
         expanded: promptText,
         raw,
-        messages: parsed.messages,
+        messages,
+        ...(result.attempts > 1 ? { attempts: result.attempts, retryReasons: result.retryReasons } : {}),
       });
-      for (const [index, message] of parsed.messages.entries()) {
+      for (const [index, message] of messages.entries()) {
         await database.addMessage({
           id: `scheduled-ai:${job.snapshotKey}:${job.triggerKey}:${index}`,
           sessionKey: job.sessionKey,
@@ -1673,6 +1695,8 @@ function createWinterAdapterModule(): PhoneModule {
           sender: message.sender,
           content: message.content,
           createdAt: Date.now() + index,
+          ...(payload.gameDate ? { gameDate: payload.gameDate } : {}),
+          ...(payload.gameTime ? { gameTime: payload.gameTime } : {}),
           groupName: '伊甸住户群',
           participants: payload.participants,
         });
@@ -1682,6 +1706,7 @@ function createWinterAdapterModule(): PhoneModule {
         worldbookName: payload.worldbookName,
         type: 'group',
         conversationId: job.conversationId,
+        groupName: '伊甸住户群',
       });
     } catch (error) {
       recordPromptDebug({
@@ -1707,6 +1732,8 @@ function createWinterAdapterModule(): PhoneModule {
     trust: 'confirmed' | 'unverified';
     speaker?: string;
     participants: string[];
+    gameDate?: string;
+    gameTime?: string;
   } {
     const payload = recordValue(job.payload);
     const worldbookName = text(payload.worldbookName).trim();
@@ -1718,7 +1745,18 @@ function createWinterAdapterModule(): PhoneModule {
     const participants = Array.isArray(payload.participants)
       ? payload.participants.filter((identity): identity is string => typeof identity === 'string')
       : [];
-    return { worldbookName, source, content, trust, ...(speaker ? { speaker } : {}), participants };
+    const gameDate = text(payload.gameDate).trim();
+    const gameTime = text(payload.gameTime).trim();
+    return {
+      worldbookName,
+      source,
+      content,
+      trust,
+      ...(speaker ? { speaker } : {}),
+      participants,
+      ...(gameDate ? { gameDate } : {}),
+      ...(gameTime ? { gameTime } : {}),
+    };
   }
 
   function createProvider():

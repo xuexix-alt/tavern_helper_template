@@ -616,6 +616,7 @@ test('diagnostics exposes an explicit retry for captured ChatLore failures', asy
       pendingLoreRetryCount: 1,
       moduleStates: [],
       recentErrors: ['ChatLore 写入失败'],
+      promptDebug: [],
     }),
     retryPendingLore: async () => {
       retries += 1;

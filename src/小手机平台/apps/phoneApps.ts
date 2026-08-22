@@ -31,6 +31,8 @@ export interface PhoneMessageView {
   content: string;
   direction: 'incoming' | 'outgoing';
   status: 'sent' | 'pending' | 'failed';
+  /** 剧情时间戳标签（如「末日纪元，9527年12月14日 上午 - 08:00」），旧消息可能缺失 */
+  timeLabel?: string;
 }
 
 export interface PhoneContactView {
@@ -311,7 +313,15 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           });
           const history = list(document);
           history.className = 'phone-list phone-chat__history';
+          // 微信风格时间分隔条：相邻消息时间标签相同则不重复；旧消息无标签时跳过且不打断比较
+          let previousTimeLabel = '';
           for (const message of messages) {
+            if (message.timeLabel && message.timeLabel !== previousTimeLabel) {
+              const divider = text(document, 'li', message.timeLabel);
+              divider.className = 'phone-chat__time';
+              history.append(divider);
+              previousTimeLabel = message.timeLabel;
+            }
             const item = document.createElement('li');
             item.className = `phone-message ${
               message.direction === 'outgoing' ? 'phone-message--outgoing' : 'phone-message--incoming'
@@ -408,10 +418,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           const conversation = document.createElement('button');
           conversation.className = 'phone-conversation';
           conversation.type = 'button';
-          conversation.setAttribute(
-            'aria-label',
-            `打开${item.kind === 'eden-group' ? '伊甸住户群' : '私聊'}：${item.title}`,
-          );
+          conversation.setAttribute('aria-label', `打开${item.kind === 'eden-group' ? '群聊' : '私聊'}：${item.title}`);
           const copy = document.createElement('span');
           copy.className = 'phone-row__copy';
           copy.append(text(document, 'strong', item.title), text(document, 'span', `${item.preview}${status}`));

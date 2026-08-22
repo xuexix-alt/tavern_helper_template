@@ -56,19 +56,25 @@ function extractBalancedCandidates(text: string): string[] {
   return candidates;
 }
 
-function extractCandidate(raw: string): string {
+function extractCandidates(raw: string): string[] {
   const trimmed = raw.trim();
   if (trimmed.length === 0) throw new ResponseParseError('响应为空，无 JSON 消息可解析', raw);
 
   const fenced = [...trimmed.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)];
-  if (fenced.length > 1) throw new ResponseParseError('响应包含多个 JSON 代码围栏候选', raw);
-  const source = fenced.length === 1 ? fenced[0][1].trim() : trimmed;
-  const candidates = extractBalancedCandidates(source);
-  if (candidates.length > 0) return candidates[candidates.length - 1];
-
-  const starts = [source.indexOf('{'), source.indexOf('[')].filter(index => index >= 0);
-  if (starts.length === 0) throw new ResponseParseError('响应中没有 JSON 候选的起始符', raw);
-  return source.slice(Math.min(...starts)).trim();
+  const sources =
+    fenced.length > 0 ? fenced.map(match => match[1].trim()).filter(source => source.length > 0) : [trimmed];
+  const candidates: string[] = [];
+  for (const source of sources) {
+    const balanced = extractBalancedCandidates(source);
+    if (balanced.length > 0) {
+      candidates.push(...balanced);
+      continue;
+    }
+    const starts = [source.indexOf('{'), source.indexOf('[')].filter(index => index >= 0);
+    if (starts.length > 0) candidates.push(source.slice(Math.min(...starts)).trim());
+  }
+  if (candidates.length === 0) throw new ResponseParseError('响应中没有 JSON 候选的起始符', raw);
+  return candidates;
 }
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
@@ -87,28 +93,40 @@ function validate(value: unknown, members: readonly string[], raw: string): Pars
     throw new ResponseParseError('响应 JSON 顶层必须是 {messages:[...]}', raw);
   }
   const root = value as Record<string, unknown>;
-  if (Object.keys(root).length !== 1 || !Array.isArray(root.messages) || root.messages.length === 0) {
-    throw new ResponseParseError('响应 JSON 必须只含非空 messages 数组', raw);
+  if (!Array.isArray(root.messages)) {
+    throw new ResponseParseError('响应 JSON 缺少 messages 数组', raw);
   }
   const allowed = new Set(members);
-  const messages = root.messages.map((item, index): ParsedMessage => {
-    if (item === null || typeof item !== 'object' || Array.isArray(item)) {
-      throw new ResponseParseError(`messages[${index}] 必须是消息对象`, raw);
-    }
+  // 坏消息（非对象、缺字段、空白内容、sender 非成员）跳过；多余字段随构造剥离
+  const messages: ParsedMessage[] = [];
+  for (const item of root.messages) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) continue;
     const message = item as Record<string, unknown>;
     if (
-      Object.keys(message).length !== 2 ||
       typeof message.sender !== 'string' ||
       message.sender.trim().length === 0 ||
       typeof message.content !== 'string' ||
-      message.content.trim().length === 0
+      message.content.trim().length === 0 ||
+      !allowed.has(message.sender)
     ) {
-      throw new ResponseParseError(`messages[${index}] 必须只含非空 sender/content 字符串`, raw);
+      continue;
     }
-    if (!allowed.has(message.sender)) throw new ResponseParseError(`messages[${index}] sender 不属于当前成员`, raw);
-    return { sender: message.sender, content: message.content };
-  });
+    messages.push({ sender: message.sender, content: message.content });
+  }
+  if (messages.length === 0) throw new ResponseParseError('响应 JSON 没有可用的消息', raw);
   return { messages };
+}
+
+function parseCandidate(candidate: string, repair: RepairFunction, raw: string): unknown {
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    try {
+      return JSON.parse(repair(candidate)) as unknown;
+    } catch {
+      throw new ResponseParseError('响应 JSON 解析失败，一次本地修复后仍无效', raw);
+    }
+  }
 }
 
 export function parseResponse(
@@ -116,16 +134,16 @@ export function parseResponse(
   members: readonly string[],
   repair: RepairFunction = jsonrepair,
 ): ParsedResponse {
-  const candidate = extractCandidate(raw);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(candidate) as unknown;
-  } catch {
+  const candidates = extractCandidates(raw);
+  let lastError: ResponseParseError | null = null;
+  // AI 通常先输出思考或草稿、最后输出正式结果，故从尾部候选开始，取第一个合法结果
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
     try {
-      parsed = JSON.parse(repair(candidate)) as unknown;
-    } catch {
-      throw new ResponseParseError('响应 JSON 解析失败，一次本地修复后仍无效', raw);
+      return validate(parseCandidate(candidates[index], repair, raw), members, raw);
+    } catch (error) {
+      if (!(error instanceof ResponseParseError)) throw error;
+      lastError = error;
     }
   }
-  return validate(parsed, members, raw);
+  throw lastError ?? new ResponseParseError('响应 JSON 解析失败', raw);
 }

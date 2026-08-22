@@ -5,6 +5,19 @@ export type RolePrompt = Readonly<{
 
 export type AiPromptMode = 'chat' | 'structured';
 
+/**
+ * 破限层开关：默认全开（向后兼容）；适配器可按角色卡定位或用户偏好关闭对应层。
+ * 平台层不强制注入成人内容声明--这是角色卡/用户的内容决策，不是平台契约。
+ */
+export interface JailbreakLayerOptions {
+  /** 第一层：微信模拟接口身份声明（含"成人向，允许R18"分级文案） */
+  identity?: boolean;
+  /** 第二层：NSFW 内容细则 */
+  nsfw?: boolean;
+  /** 第三层：assistant 预填充（含玩家最近输入宏） */
+  prefill?: boolean;
+}
+
 export const JAILBREAK_LAYERS = {
   layer1_identity: `[微信模拟聊天接口 v2.0]
 
@@ -54,6 +67,8 @@ export function buildRolePrompts(
   replyAs?: string,
   /** 本轮玩家消息；提供时直接替换酒馆专属宏，供 OpenAI 兼容接口使用 */
   playerMessage?: string,
+  /** 破限层开关；缺省全开，传 false 关闭对应层 */
+  layers: JailbreakLayerOptions = {},
 ): readonly RolePrompt[] {
   if (mode === 'structured') {
     const structuredSystem = systemPrompt?.trim();
@@ -70,9 +85,11 @@ export function buildRolePrompts(
       ? identityPrefill
       : identityPrefill.replaceAll('{{lastUserMessage}}', () => playerMessage);
   return [
-    { role: 'system', content: JAILBREAK_LAYERS.layer1_identity },
-    { role: 'system', content: JAILBREAK_LAYERS.layer2_nsfw },
+    ...(layers.identity === false
+      ? []
+      : [{ role: 'system' as const, content: JAILBREAK_LAYERS.layer1_identity }]),
+    ...(layers.nsfw === false ? [] : [{ role: 'system' as const, content: JAILBREAK_LAYERS.layer2_nsfw }]),
     { role: 'user', content: assembledPrompt },
-    { role: 'assistant', content: prefill },
+    ...(layers.prefill === false ? [] : [{ role: 'assistant' as const, content: prefill }]),
   ];
 }

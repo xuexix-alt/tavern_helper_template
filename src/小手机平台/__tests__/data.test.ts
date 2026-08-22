@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { IDBFactory } from 'fake-indexeddb';
 
 import { createIndexedDbPhoneDb, createMemoryPhoneDb, type PhoneMessageInput } from '../data/phoneDb';
-import { ChatLoreSync, LORE_ENTRY_DEFINITIONS } from '../data/chatLoreSync';
+import { ChatLoreSync, loreEntryNameFor, LORE_ENTRY_DEFINITIONS } from '../data/chatLoreSync';
 import { buildLoreSummary } from '../data/loreSummary';
 
 const sessionA = '角色A::chat-a';
@@ -384,14 +384,11 @@ async function testChatLoreSync(): Promise<void> {
 
   assert.deepEqual(
     LORE_ENTRY_DEFINITIONS.map(entry => [entry.type, entry.name]),
-    [
-      ['group', '[微信-群聊]伊甸住户群'],
-      ['broadcast', '[微信-广播]情报摘要'],
-    ],
-    '私聊条目现在是动态生成的，不在 LORE_ENTRY_DEFINITIONS 中',
+    [['broadcast', '[微信-广播]情报摘要']],
+    '群聊/私聊条目按请求动态生成，静态表只保留广播',
   );
   for (const entry of LORE_ENTRY_DEFINITIONS) {
-    assert.deepEqual(entry.strategy, { type: 'constant' });
+    assert.deepEqual(entry.strategy, { type: 'selective', keys: ['广播', '情报', '微信', '手机'] });
     assert.deepEqual(entry.position, { type: 'at_depth', role: 'system', depth: 4, order: 100 });
     assert.equal(entry.probability, 100);
   }
@@ -439,6 +436,9 @@ async function testChatLoreSync(): Promise<void> {
   resolvers.shift()?.();
   await flushMicrotasks();
   assert.deepEqual(started.slice(0, 2), ['世界书-A:[微信-私聊]alice', '世界书-A:[微信-群聊]伊甸住户群']);
+  // 群名由适配器传入：条目名与触发词跟随 groupName，缺省兜底平台默认群名
+  assert.equal(loreEntryNameFor('group', undefined, '雪原幸存者'), '[微信-群聊]雪原幸存者', '群名应来自适配器');
+  assert.equal(loreEntryNameFor('group'), '[微信-群聊]伊甸住户群', '缺省群名兜底保持向后兼容');
   resolvers.shift()?.();
   await flushMicrotasks();
   resolvers.shift()?.();
@@ -1020,6 +1020,103 @@ async function testProfileIdentityMigration(): Promise<void> {
   assert.equal((await db.listRecords('profileViews', sessionA))[0].personId, 'main:纪宁');
 }
 
+async function testSessionExportImport(): Promise<void> {
+  const source = createMemoryPhoneDb();
+  await source.addMessage(message('older', 10));
+  await source.addMessage(message('newer', 20, { type: 'group', conversationId: 'group:eden', groupName: '群', participants: ['main:alice'] }));
+  await source.markSynced(sessionA, ['older']);
+  await source.putRecord('conversations', { id: 'private:alice', sessionKey: sessionA, title: '爱丽丝' });
+  await source.putRecord('contactPrefs', { id: 'main:alice', sessionKey: sessionB, identity: 'main:alice' });
+
+  const bundle = await source.exportSession(sessionA);
+  assert.equal(bundle.version, 1);
+  assert.equal(bundle.kind, 'phone-session-export');
+  assert.equal(bundle.sessionKey, sessionA);
+  assert.deepEqual(bundle.messages.map(item => item.id), ['older', 'newer'], '导出消息应按时间排序');
+  assert.equal(bundle.messages[0].syncedToLore, true, '同步状态应随包保留');
+  assert.deepEqual(Object.keys(bundle.records), ['conversations'], '只导出本会话有数据的 store');
+
+  // JSON round-trip（模拟文件传输）后导入新库，数据一致
+  const restored = createMemoryPhoneDb();
+  const report = await restored.importSession(JSON.parse(JSON.stringify(bundle)));
+  assert.equal(report.importedMessages, 2);
+  assert.equal(report.importedRecords, 1);
+  assert.deepEqual(report.skipped, []);
+  const restoredMessages = await restored.listMessages({ sessionKey: sessionA });
+  assert.deepEqual(restoredMessages, await source.listMessages({ sessionKey: sessionA }));
+  assert.deepEqual(await restored.listRecords('conversations', sessionA), [
+    { id: 'private:alice', sessionKey: sessionA, title: '爱丽丝' },
+  ]);
+  assert.deepEqual(await restored.listRecords('contactPrefs', sessionA), [], '他 session 的记录不得混入');
+
+  // 重复导入幂等（按 id 覆盖，不产生重复）
+  const again = await restored.importSession(bundle);
+  assert.equal((await restored.listMessages({ sessionKey: sessionA })).length, 2);
+  assert.equal(again.importedMessages, 2);
+
+  // 宽容导入：多余字段剥离、坏条目跳过并报告
+  const maliciousBundle = JSON.parse(JSON.stringify(bundle));
+  maliciousBundle.messages.push(
+    { ...bundle.messages[0], id: 'extra-field', injected: 'x', __proto__: undefined },
+    { ...bundle.messages[0], id: 'wrong-session', sessionKey: sessionB },
+    { ...bundle.messages[0], id: 'api-key', apiKey: 'sk-secret' },
+    { ...bundle.messages[0], id: 'bad-type', type: 'sms' },
+  );
+  maliciousBundle.messages[0].injected = '多余字段';
+  maliciousBundle.records.hackerStore = [{ id: 'x', sessionKey: sessionA }];
+  const tolerant = createMemoryPhoneDb();
+  const tolerantReport = await tolerant.importSession(maliciousBundle);
+  // older/newer/extra-field 三条在剥离未知键后结构合法可导入；wrong-session/api-key/bad-type 三条跳过
+  assert.equal(tolerantReport.importedMessages, 3, '坏消息应跳过，剥离后合法的消息应导入');
+  assert.equal(
+    (await tolerant.listMessages({ sessionKey: sessionA })).every(item => item.injected === undefined),
+    true,
+    '多余字段应被剥离',
+  );
+  assert.equal(
+    (await tolerant.listMessages({ sessionKey: sessionA })).some(item => item.id === 'extra-field'),
+    true,
+    '带未知字段的消息剥离后应导入',
+  );
+  const reasons = tolerantReport.skipped.map(item => `${item.store}:${item.id}`).join('\n');
+  assert.match(reasons, /messages:wrong-session/, 'sessionKey 不一致应跳过');
+  assert.match(reasons, /messages:api-key/, '含 API key 应跳过（在剥离前的原始数据上扫描）');
+  assert.match(reasons, /messages:bad-type/, '非法类型应跳过（报告应回取原 id）');
+  assert.match(reasons, /hackerStore/, '未知 store 应整组跳过');
+
+  // 结构性错误整体拒绝
+  await assert.rejects(() => tolerant.importSession({ ...bundle, version: 99 }), /导入包结构无效/);
+  await assert.rejects(() => tolerant.importSession('not an object'), /导入包结构无效/);
+  await assert.rejects(() => tolerant.importSession(null), /导入包结构无效/);
+}
+
+async function testIndexedDbSessionExportImportRoundTrip(): Promise<void> {
+  const source = await createIndexedDbPhoneDb(new IDBFactory());
+  await source.addMessage(message('m1', 10));
+  await source.addMessage(message('m2', 20));
+  await source.addMessage(message('m3', 30, { sessionKey: sessionB }));
+  await source.putRecord('inbox', { id: 'm1', sessionKey: sessionA, conversationId: 'private:alice', status: 'pending' });
+
+  const bundle = await source.exportSession(sessionA);
+  assert.equal(bundle.messages.length, 2, '索引导出应隔离 session');
+
+  // v3 索引路径：listMessages 在 IndexedDB 上走 by_session 索引
+  assert.deepEqual(
+    (await source.listMessages({ sessionKey: sessionA })).map(item => item.id),
+    ['m1', 'm2'],
+    '索引查询应隔离 session 并按时间排序',
+  );
+
+  const restored = await createIndexedDbPhoneDb(new IDBFactory());
+  const report = await restored.importSession(JSON.parse(JSON.stringify(bundle)));
+  assert.equal(report.importedMessages, 2);
+  assert.equal(report.importedRecords, 1);
+  assert.deepEqual(await restored.listMessages({ sessionKey: sessionA }), await source.listMessages({ sessionKey: sessionA }));
+  assert.deepEqual(await restored.listRecords('inbox', sessionA), [
+    { id: 'm1', sessionKey: sessionA, conversationId: 'private:alice', status: 'pending' },
+  ]);
+}
+
 async function main(): Promise<void> {
   await testMemoryPhoneDb();
   await testProfileBusinessStores();
@@ -1038,6 +1135,8 @@ async function main(): Promise<void> {
   await testSyncLifecycle();
   await testScheduleFailureSettlesAndDisarmsCallback();
   await testClearFailureStillCleansUp();
+  await testSessionExportImport();
+  await testIndexedDbSessionExportImportRoundTrip();
   console.log('data tests passed');
 }
 

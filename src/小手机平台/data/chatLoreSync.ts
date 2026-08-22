@@ -3,10 +3,21 @@ import type { PhoneDb, PhoneMessage, PhoneMessageType } from './phoneDb';
 
 export type LoreSyncType = PhoneMessageType;
 
+/**
+ * 聊天摘要世界书条目用绿灯（selective）按正文关键词触发，而非蓝灯（constant）每楼常驻：
+ * 正文提到相关人物或手机/微信时才注入，避免无关楼层持续占用主聊天上下文。
+ */
+export type LoreEntryStrategy =
+  | { type: 'constant' }
+  | { type: 'selective'; keys: readonly string[] };
+
+/** 通用触发词：正文出现即视为"正在使用手机"的信号 */
+const PHONE_TRIGGER_KEYS = ['微信', '手机'] as const;
+
 export interface LoreEntryDefinition {
   type: LoreSyncType;
   name: string;
-  strategy: { type: 'constant' };
+  strategy: LoreEntryStrategy;
   position: { type: 'at_depth'; role: 'system'; depth: 4; order: 100 };
   probability: 100;
 }
@@ -15,18 +26,15 @@ export interface LoreWriteEntry extends LoreEntryDefinition {
   content: string;
 }
 
+/**
+ * 广播等与具体会话无关的静态条目定义。
+ * 群聊/私聊条目名与触发词随请求动态生成（见 definitionFor/loreEntryNameFor）。
+ */
 export const LORE_ENTRY_DEFINITIONS: readonly LoreEntryDefinition[] = [
-  {
-    type: 'group',
-    name: '[微信-群聊]伊甸住户群',
-    strategy: { type: 'constant' },
-    position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
-    probability: 100,
-  },
   {
     type: 'broadcast',
     name: '[微信-广播]情报摘要',
-    strategy: { type: 'constant' },
+    strategy: { type: 'selective', keys: ['广播', '情报', ...PHONE_TRIGGER_KEYS] },
     position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
     probability: 100,
   },
@@ -37,6 +45,8 @@ export interface LoreSyncRequest {
   worldbookName: string;
   type: LoreSyncType;
   conversationId?: string;
+  /** 群聊显示名（如 伊甸住户群）：决定群聊摘要条目名与触发词；缺省用平台默认群名 */
+  groupName?: string;
 }
 
 export interface ChatLoreSyncOptions {
@@ -71,22 +81,43 @@ function captureRequest(request: LoreSyncRequest): Readonly<LoreSyncRequest> {
   return Object.freeze({ ...request });
 }
 
-export function loreEntryNameFor(type: LoreSyncType, conversationId?: string): string {
+/** 平台默认群名：适配器未提供 groupName 时的兜底（向后兼容旧会话数据） */
+export const DEFAULT_GROUP_NAME = '伊甸住户群';
+
+export function loreEntryNameFor(type: LoreSyncType, conversationId?: string, groupName?: string): string {
   if (type === 'private') {
     if (!conversationId) throw new Error('私聊类型必须提供 conversationId');
     return `[微信-私聊]${conversationId.replace(/^private:/, '')}`;
   }
+  if (type === 'group') return `[微信-群聊]${(groupName ?? '').trim() || DEFAULT_GROUP_NAME}`;
   const definition = LORE_ENTRY_DEFINITIONS.find(item => item.type === type);
   if (!definition) throw new Error(`不支持的同步类型: ${type}`);
   return definition.name;
 }
 
-function definitionFor(type: LoreSyncType, conversationId?: string): LoreEntryDefinition {
+function definitionFor(type: LoreSyncType, conversationId?: string, groupName?: string): LoreEntryDefinition {
   if (type === 'private') {
+    // 私聊摘要 keys 含完整身份、剥掉作用域前缀的人物名与通用触发词：
+    // 正文提到该人物或正在用手机时，其私聊记录才会注入主聊天上下文
+    const identity = conversationId!.replace(/^private:/, '');
+    const name = identity.slice(identity.indexOf(':') + 1);
     return {
       type: 'private',
       name: loreEntryNameFor(type, conversationId),
-      strategy: { type: 'constant' },
+      strategy: {
+        type: 'selective',
+        keys: [identity, ...(identity.includes(':') ? [name] : []), ...PHONE_TRIGGER_KEYS],
+      },
+      position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
+      probability: 100,
+    };
+  }
+  if (type === 'group') {
+    const resolved = (groupName ?? '').trim() || DEFAULT_GROUP_NAME;
+    return {
+      type: 'group',
+      name: `[微信-群聊]${resolved}`,
+      strategy: { type: 'selective', keys: [resolved, ...PHONE_TRIGGER_KEYS] },
       position: { type: 'at_depth', role: 'system', depth: 4, order: 100 },
       probability: 100,
     };
@@ -260,7 +291,11 @@ export class ChatLoreSync {
       .then(async () => {
         const batch = await this.captureBatch(request);
         if (!batch) return;
-        const definition = definitionFor(batch.request.type, batch.request.conversationId);
+        const definition = definitionFor(
+          batch.request.type,
+          batch.request.conversationId,
+          batch.request.groupName,
+        );
         const content = buildLoreSummary({
           type: batch.request.type,
           conversationId: batch.request.conversationId,

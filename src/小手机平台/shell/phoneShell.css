@@ -331,6 +331,16 @@ button:focus-visible {
   background: var(--wechat-chat-background);
 }
 
+/* 微信风格时间分隔条：居中灰字，剧情时间变化时插入 */
+.phone-chat__time {
+  padding: 8px 0 2px;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--phone-secondary);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
 .phone-message {
   display: flex;
   min-height: 44px;

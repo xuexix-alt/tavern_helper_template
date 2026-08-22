@@ -23,7 +23,7 @@ const entrypoints = [
     id: 'ai.scheduler',
     version: '1.0.2',
     dependsOn: ['platform.services', 'data.sync'],
-    capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler', 'tavern.api'],
+    capabilities: ['prompt.assembler', 'ai.providers', 'phone.scheduler'],
   },
   {
     path: 'src/小手机平台/脚本/40手机外壳/index.ts',
@@ -321,7 +321,7 @@ test('winter WeChat send wires only the current conversation business sources', 
   );
 
   assert.match(source, /extractRecentMainChatMessages\(\s*assistantMessageId,\s*5\s*\)/);
-  assert.match(launchBlock, /mvuReference:\s*buildCharacterMvuReference\(/);
+  assert.match(launchBlock, /mvuData:\s*resolveWinterPersonMvu\(member\.id,\s*captured\.mvu\.stat_data\)/);
   assert.match(launchBlock, /recentMainChat:\s*\[\.\.\.captured\.recentMainChat\]/);
   assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
   assert.match(launchBlock, /playerMessage/);

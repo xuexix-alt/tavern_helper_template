@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { ControlledPhoneScheduler } from '../../小手机平台/scheduler/phoneScheduler';
 
 import {
-  buildCharacterMvuReference,
   buildEdenNotices,
   buildWinterTasks,
   buildWinterSchedulerJobs,
@@ -19,6 +18,7 @@ import {
   planTemporaryNpcPromotion,
   planTemporaryNpcMigration,
   resolveWinterPersonMvu,
+  resolveWinterWorldTime,
   selectCharacterProfile,
   selectDynamicProfile,
   selectPublicWinterMvuFacts,
@@ -167,10 +167,6 @@ function testProfilesAndExactMvuReference(): void {
     '主档案',
   );
   assert.equal(selectCharacterProfile('临时工程师', [], true), undefined);
-  assert.equal(buildCharacterMvuReference('纪宁'), '{{format_message_variable::stat_data.纪宁}}');
-  assert.equal(buildCharacterMvuReference('工程师', true), '{{format_message_variable::stat_data.临时NPC.工程师}}');
-  assert.throws(() => buildCharacterMvuReference('错误.路径'), /姓名|路径/);
-  assert.throws(() => buildCharacterMvuReference('错误}路径'), /姓名|路径/);
 
   const statData = {
     纪宁: { 关系: '协作', 位置: '诊疗室' },
@@ -179,6 +175,14 @@ function testProfilesAndExactMvuReference(): void {
   assert.deepEqual(resolveWinterPersonMvu('main:纪宁', statData), statData.纪宁);
   assert.deepEqual(resolveWinterPersonMvu('temporary:工程师', statData), statData.临时NPC.工程师);
   assert.deepEqual(resolveWinterPersonMvu('main:不存在', statData), {});
+  assert.deepEqual(
+    resolveWinterWorldTime({ 世界: { 日期: ' 灾后第七日 ', 时间: '上午 - 08:00' } }),
+    { gameDate: '灾后第七日', gameTime: '上午 - 08:00' },
+    '世界时间应去除首尾空白后盖章',
+  );
+  assert.deepEqual(resolveWinterWorldTime({ 世界: { 日期: '', 时间: '  ' } }), {}, '空白时间字段应省略');
+  assert.deepEqual(resolveWinterWorldTime({}), {}, '缺少世界状态时不盖章');
+  assert.deepEqual(resolveWinterWorldTime(null), {});
   assert.equal(
     selectDynamicProfile('main:纪宁', [
       { name: '[人物动态]main:纪宁', content: '纪宁动态' },
@@ -274,7 +278,17 @@ function testSchedulerJobsCaptureStableScope(): void {
       { id: 'network', source: '伊甸网络', content: '伊甸内网:在线', trust: 'confirmed', triggerKey: 'network:在线' },
       { id: 'external-1', source: '北区广播', content: '疑似物资', trust: 'unverified', triggerKey: 'external:1' },
     ],
+    gameDate: '灾后第七日',
+    gameTime: '上午 - 08:00',
   });
+  assert.equal(
+    jobs.every(job => {
+      const payload = job.payload as Record<string, unknown>;
+      return payload.gameDate === '灾后第七日' && payload.gameTime === '上午 - 08:00';
+    }),
+    true,
+    '调度任务 payload 必须透传剧情时间戳供落库盖章',
+  );
   assert.equal(
     jobs.some(job => job.requiresAi),
     true,

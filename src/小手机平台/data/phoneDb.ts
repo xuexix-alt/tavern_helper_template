@@ -1,3 +1,5 @@
+import { buildPhoneExportBundle, bundleParseError, parsePhoneExportBundle } from './phoneDbSchema';
+
 export type PhoneMessageType = 'private' | 'group' | 'broadcast';
 export type BroadcastTrust = 'confirmed' | 'unverified';
 
@@ -56,6 +58,13 @@ export interface PhoneIdentityMigration {
   to: string;
 }
 
+/** 导入报告：成功计数 + 被跳过条目的原因清单（与解析器同哲学：坏条目跳过不阻断整体） */
+export interface PhoneImportReport {
+  importedMessages: number;
+  importedRecords: number;
+  skipped: readonly { store: string; id?: string; reason: string }[];
+}
+
 export interface PhoneDb {
   addMessage(input: PhoneMessageInput): Promise<PhoneMessage>;
   addMessageWithInbox(input: PhoneMessageInput, inbox: PhoneBusinessRecord): Promise<PhoneMessage>;
@@ -64,10 +73,18 @@ export interface PhoneDb {
   putRecord(store: PhoneBusinessStore, record: PhoneBusinessRecord): Promise<void>;
   listRecords(store: PhoneBusinessStore, sessionKey: string): Promise<PhoneBusinessRecord[]>;
   migrateIdentities(sessionKey: string, migrations: readonly PhoneIdentityMigration[]): Promise<void>;
+  /** 导出单会话全量数据（消息+业务记录）；返回结构化克隆副本，可直接 JSON.stringify */
+  exportSession(sessionKey: string): Promise<import('./phoneDbSchema').PhoneExportBundle>;
+  /**
+   * 导入会话数据包（接受未知输入，内部 zod 校验）：结构性错误抛错；
+   * 单条结构不符/含密钥/会话键不一致则跳过并记入报告；按 id 覆盖写入（重复导入幂等）。
+   */
+  importSession(bundle: unknown): Promise<PhoneImportReport>;
 }
 
 const DATABASE_NAME = 'tavern-phone';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
+const MESSAGE_SESSION_INDEX = 'by_session';
 const ALL_STORES = ['messages', ...PHONE_BUSINESS_STORES] as const;
 
 function assertNonEmpty(value: string, field: string): void {
@@ -343,6 +360,44 @@ export function createMemoryPhoneDb(): PhoneDb {
         for (const [key, value] of values) target.set(key, value);
       }
     },
+    async exportSession(sessionKey) {
+      assertNonEmpty(sessionKey, 'export.sessionKey');
+      const exportMessages = [...messages.values()]
+        .filter(message => message.sessionKey === sessionKey)
+        .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id))
+        .map(cloneMessage);
+      const exportRecords: Partial<Record<PhoneBusinessStore, PhoneBusinessRecord[]>> = {};
+      for (const [store, values] of records) {
+        const list = [...values.values()].filter(record => record.sessionKey === sessionKey).map(cloneRecord);
+        if (list.length > 0) exportRecords[store] = list;
+      }
+      return buildPhoneExportBundle({ sessionKey, messages: exportMessages, records: exportRecords });
+    },
+    async importSession(bundle) {
+      let parsed;
+      try {
+        parsed = parsePhoneExportBundle(bundle);
+      } catch (error) {
+        throw new Error(`导入包结构无效: ${bundleParseError(error)}`);
+      }
+      for (const message of parsed.bundle.messages) {
+        messages.set(keyOf(message.sessionKey, message.id), cloneMessage(message));
+      }
+      let importedRecords = 0;
+      for (const [store, list] of Object.entries(parsed.bundle.records)) {
+        const target = records.get(store as PhoneBusinessStore);
+        if (!target) continue;
+        for (const record of list) {
+          target.set(keyOf(record.sessionKey, record.id), cloneRecord(record));
+          importedRecords += 1;
+        }
+      }
+      return {
+        importedMessages: parsed.bundle.messages.length,
+        importedRecords,
+        skipped: parsed.skipped,
+      };
+    },
   };
 }
 
@@ -369,6 +424,11 @@ async function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains(storeName)) {
         database.createObjectStore(storeName, { keyPath: ['sessionKey', 'id'] });
       }
+    }
+    // v3：messages 增加 session 索引，listMessages 不再全表扫描（旧库升级时幂等补建）
+    const messageStore = request.transaction?.objectStore('messages');
+    if (messageStore && !messageStore.indexNames.contains(MESSAGE_SESSION_INDEX)) {
+      messageStore.createIndex(MESSAGE_SESSION_INDEX, 'sessionKey', { unique: false });
     }
   };
   return requestResult(request);
@@ -403,9 +463,12 @@ class IndexedDbPhoneDb implements PhoneDb {
   async listMessages(query: MessageQuery): Promise<PhoneMessage[]> {
     const transaction = this.database.transaction('messages', 'readonly');
     const done = transactionDone(transaction);
-    const result = await requestResult(transaction.objectStore('messages').getAll() as IDBRequest<PhoneMessage[]>);
+    // 走 by_session 索引只取本会话消息，其余查询维度在内存过滤
+    const sessionMessages = await requestResult(
+      transaction.objectStore('messages').index(MESSAGE_SESSION_INDEX).getAll(query.sessionKey) as IDBRequest<PhoneMessage[]>,
+    );
     await done;
-    return result
+    return sessionMessages
       .filter(message => matches(message, query))
       .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id))
       .map(cloneMessage);
@@ -547,6 +610,55 @@ class IndexedDbPhoneDb implements PhoneDb {
     } catch (error) {
       throw writePreparationError ?? error;
     }
+  }
+
+  async exportSession(sessionKey: string): Promise<import('./phoneDbSchema').PhoneExportBundle> {
+    assertNonEmpty(sessionKey, 'export.sessionKey');
+    const transaction = this.database.transaction(ALL_STORES, 'readonly');
+    const done = transactionDone(transaction);
+    const sessionMessages = await requestResult(
+      transaction.objectStore('messages').index(MESSAGE_SESSION_INDEX).getAll(sessionKey) as IDBRequest<PhoneMessage[]>,
+    );
+    const exportRecords: Partial<Record<PhoneBusinessStore, PhoneBusinessRecord[]>> = {};
+    for (const storeName of PHONE_BUSINESS_STORES) {
+      const all = await requestResult(
+        transaction.objectStore(storeName).getAll() as IDBRequest<PhoneBusinessRecord[]>,
+      );
+      const list = all.filter(record => record.sessionKey === sessionKey).map(cloneRecord);
+      if (list.length > 0) exportRecords[storeName] = list;
+    }
+    await done;
+    return buildPhoneExportBundle({
+      sessionKey,
+      messages: sessionMessages
+        .sort((left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id))
+        .map(cloneMessage),
+      records: exportRecords,
+    });
+  }
+
+  async importSession(bundle: unknown): Promise<PhoneImportReport> {
+    let parsed;
+    try {
+      parsed = parsePhoneExportBundle(bundle);
+    } catch (error) {
+      throw new Error(`导入包结构无效: ${bundleParseError(error)}`);
+    }
+    const stores = ['messages', ...Object.keys(parsed.bundle.records)];
+    const transaction = this.database.transaction(stores, 'readwrite');
+    const done = transactionDone(transaction);
+    const messageStore = transaction.objectStore('messages');
+    for (const message of parsed.bundle.messages) messageStore.put(cloneMessage(message));
+    let importedRecords = 0;
+    for (const [storeName, list] of Object.entries(parsed.bundle.records)) {
+      const store = transaction.objectStore(storeName);
+      for (const record of list) {
+        store.put(cloneRecord(record));
+        importedRecords += 1;
+      }
+    }
+    await done;
+    return { importedMessages: parsed.bundle.messages.length, importedRecords, skipped: parsed.skipped };
   }
 }
 

@@ -291,13 +291,6 @@ export function selectCharacterProfile(
   return entries.find(entry => entry.name === exactName)?.content;
 }
 
-export function buildCharacterMvuReference(name: string, temporaryNpc = false): string {
-  const normalized = name.trim();
-  if (!normalized || /[.{}]/.test(normalized)) throw new Error('人物姓名不能包含 MVU 路径分隔符或宏边界字符');
-  const path = temporaryNpc ? `临时NPC.${normalized}` : normalized;
-  return `{{format_message_variable::stat_data.${path}}}`;
-}
-
 export function resolveWinterPersonMvu(personId: string, statData: unknown): Readonly<Record<string, unknown>> {
   if (!isRecord(statData)) return {};
   const separator = personId.indexOf(':');
@@ -307,6 +300,20 @@ export function resolveWinterPersonMvu(personId: string, statData: unknown): Rea
   const value =
     scope === 'temporary' ? (isRecord(statData.临时NPC) ? statData.临时NPC[name] : undefined) : statData[name];
   return isRecord(value) ? value : {};
+}
+
+/**
+ * 从 MVU 世界状态提取剧情时间戳；空白字段省略，供消息落库时由系统盖章。
+ * 时间不由 AI 生成——AI 输出的时间容易错乱且可伪造，真实微信的时间戳同样由客户端/服务器加盖。
+ */
+export function resolveWinterWorldTime(statData: unknown): { gameDate?: string; gameTime?: string } {
+  if (!isRecord(statData) || !isRecord(statData.世界)) return {};
+  const gameDate = typeof statData.世界.日期 === 'string' ? statData.世界.日期.trim() : '';
+  const gameTime = typeof statData.世界.时间 === 'string' ? statData.世界.时间.trim() : '';
+  return {
+    ...(gameDate ? { gameDate } : {}),
+    ...(gameTime ? { gameTime } : {}),
+  };
 }
 
 export function selectDynamicProfile(
@@ -439,11 +446,18 @@ export interface WinterSchedulerJobInput {
   speaker: string;
   participants: readonly string[];
   notices: readonly EdenNotice[];
+  /** 事件发生时的剧情时间戳（resolveWinterWorldTime 的输出），随 payload 透传供落库盖章 */
+  gameDate?: string;
+  gameTime?: string;
 }
 
 export function buildWinterSchedulerJobs(input: WinterSchedulerJobInput): PhoneSchedulerJob[] {
   const priorityFor = (notice: EdenNotice): SchedulerPriority =>
     notice.id === 'network' ? 'P0' : notice.id.startsWith('confirmed:') ? 'P1' : 'P2';
+  const worldTime = {
+    ...(input.gameDate ? { gameDate: input.gameDate } : {}),
+    ...(input.gameTime ? { gameTime: input.gameTime } : {}),
+  };
   const jobs: PhoneSchedulerJob[] = input.notices.map(notice => ({
     triggerKey: `deterministic:${notice.triggerKey}`,
     sessionKey: input.sessionKey,
@@ -461,6 +475,7 @@ export function buildWinterSchedulerJobs(input: WinterSchedulerJobInput): PhoneS
       source: notice.source,
       content: notice.content,
       trust: notice.trust,
+      ...worldTime,
     },
   }));
   if (!input.speaker.trim()) return jobs;
@@ -491,6 +506,7 @@ export function buildWinterSchedulerJobs(input: WinterSchedulerJobInput): PhoneS
         trust: notice.trust,
         speaker: input.speaker,
         participants: [...input.participants],
+        ...worldTime,
       },
     });
   }
@@ -524,10 +540,11 @@ export function collectChatLoreContext(
   type: LoreSyncType,
   conversationId?: string,
   characterBudget = 6_000,
+  groupName?: string,
 ): string {
   if (!Number.isSafeInteger(characterBudget) || characterBudget <= 0)
     throw new Error('ChatLore 字符预算必须是正安全整数');
-  const entryName = loreEntryNameFor(type, conversationId);
+  const entryName = loreEntryNameFor(type, conversationId, groupName);
   return entries
     .filter(entry => entry.name === entryName)
     .map(entry => `${entry.name}\n${entry.content}`)

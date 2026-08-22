@@ -1,7 +1,8 @@
-import { buildRolePrompts, type AiPromptMode, type RolePrompt } from './jailbreakLayers';
+import { buildRolePrompts, type AiPromptMode, type JailbreakLayerOptions, type RolePrompt } from './jailbreakLayers';
 
 export type { RolePrompt } from './jailbreakLayers';
 export type { AiPromptMode } from './jailbreakLayers';
+export type { JailbreakLayerOptions } from './jailbreakLayers';
 
 export interface RequestHandle<T> {
   readonly id: string;
@@ -22,6 +23,8 @@ export interface AiRequestOptions {
   replyAs?: string;
   /** 本轮玩家消息，用于替换仅酒馆环境支持的 {{lastUserMessage}} 宏 */
   playerMessage?: string;
+  /** 破限层开关：缺省全开；适配器可按角色卡定位或用户偏好关闭 identity/nsfw/prefill 层 */
+  jailbreakLayers?: JailbreakLayerOptions;
 }
 
 export class ProviderError extends Error {
@@ -102,6 +105,7 @@ export class TavernProvider {
           requestOptions.systemPrompt,
           requestOptions.replyAs,
           requestOptions.playerMessage,
+          requestOptions.jailbreakLayers,
         ),
       ],
     };
@@ -330,6 +334,7 @@ export class OpenAICompatibleProvider {
                     options.systemPrompt,
                     options.replyAs,
                     options.playerMessage ?? '',
+                    options.jailbreakLayers,
                   ),
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
