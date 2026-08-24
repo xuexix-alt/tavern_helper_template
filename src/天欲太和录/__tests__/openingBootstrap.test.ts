@@ -1,12 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import _ from 'lodash';
+import { TIANYU_PROLOGUE, ensureTianyuPrologue } from '../脚本/变量结构/openingBootstrap';
 
 (globalThis as typeof globalThis & { _: typeof _ })._ = _;
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { TIANYU_PROLOGUE, ensureTianyuPrologue } =
-  require('../脚本/变量结构/openingBootstrap.ts') as typeof import('../脚本/变量结构/openingBootstrap');
 
 async function main() {
   const sourceMvuData = {
