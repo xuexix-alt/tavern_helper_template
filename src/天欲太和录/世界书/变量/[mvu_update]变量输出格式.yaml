@@ -1,0 +1,107 @@
+# [mvu_update] 变量输出格式（优化版）
+
+rule:
+  - "在产出本块之前，必须先在内心完成 <变量运算指导> 中 <match_cot> 的逐条思考（日期时间、秩序刻印/关系、健康、伊甸一次性指令的数量与生效实例等）。所有数值运算与归一化规则以 <match_cot> 为准，本文件不再重复。"
+  - '全局优先级（冲突时裁决）：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡规则。玩家发出"直接加 Imp / 直接设档位"等脱离剧情指令 → 视为破坏规则，正文拒绝、不产出相关 patch。'
+  - You MUST output the `<UpdateVariable>` block at the end of your reply.
+  - The block MUST contain `<Analysis>` and `<JSONPatch>` sections.
+  - "The update commands works like the **JSON Patch (RFC 6902)** standard, must
+    be a valid JSON array containing operation objects, but supports the
+    following operations instead:"
+  - "  - `replace`: replace the value of existing paths"
+  - "  - `delta`: update the value of existing number paths by a delta value
+    (positive or negative)"
+  - "  - `insert`: insert new items into an object or array"
+  - "  - `remove`: delete path"
+  - '  - `move`: move an existing value from one path to another (requires
+    `"from"`). '
+  - Path MUST start with `/`.
+  - DO NOT update field names starts with `_` as they are readonly, such as
+    `_变量`.
+  - analyze every variable based on its corresponding `check`, according only to
+    current reply instead of previous plots
+
+format: |-
+  <UpdateVariable>
+  <Analysis>
+  前置声明：以下分析严格遵循 <变量运算指导> 的 <match_cot> 结论，不再重复其中的计算公式、倾向加成、归一化规则；本块只写"结论"与"触发点"，所有数值来源于 match_cot 的推演。
+  全局优先级：伊甸一次性指令 > 关系档位/Imp 映射 > 健康/死亡；玩家直接改 Imp 的指令不予采纳。
+
+  1. 在场盘点（登场状态）
+     - 本轮在场/被提及角色 → '登场'；其余 → '离场'。
+     - 【永久逃离】（Imp<0）角色不参与盘点、不回写任何字段。
+     - 结果：新登场 ____；新离场 ____。
+
+  2. 世界（日期 / 地址）
+     - 日期：按 match_cot 推出的最终日期时间写回 `/世界/日期`（格式：天和X年M月D日 HH:MM）。
+     - 地址：仅在角色实际移动时更新。
+     - 结果：日期 ____。
+
+  3. 伊甸一次性指令
+     - 根据`check`进行新增或减少指令，日期更新需随机新增3条一次性指令
+     - 严格按 match_cot 的"发动 → 推进 → 结束"三态产出 patch，只维护 `数量` 与 `生效实例`；禁止改动 `名称/说明/范围/时效`。
+     - 本轮受指令保护的角色/事件列表 ____；受保护范围之外的独立负向事件 ____。
+
+  4. 角色逐个过审（顶层角色 + `/临时NPC/*`）
+     对每位在场角色按以下顺序对齐 match_cot 结论：
+     a. 健康：按 match_cot 给出的 delta 写入（昏迷/失能期的性相关事件不扣健康）。
+     b. 秩序刻印 → 关系：`刻印` 按简化法（base 0~15 + 正向加成 50%~100% 或硬约束事件明示值）做 `delta`，跨档时 `replace` 更新 `关系`；Imp<0 → 【永久逃离】。
+     c. 登场状态：按"在场盘点"结论 `replace`。
+     离场角色同样由 AI 按剧情结算健康（无脚本兜底）。
+     【永久逃离】角色本块跳过。
+
+  5. 临时NPC
+     - 新出场：`insert /临时NPC/${姓名}` 完整对象，关系初始 ≤ 逃离，Imp 初始 ~10（禁止初始进入【归附】）。
+     - 转正：推荐 `insert /${姓名}`（基于临时NPC对象并补齐缺字段）+ `remove /临时NPC/${姓名}`；或直接 `move`。
+     - 顶层已有同名：`replace` 合并，删除临时NPC。
+
+  9. 操作汇总
+     - 列出本轮所有 path + op（replace/delta/insert/remove/move），复核与 match_cot 结论是否一致。
+     - 自检：数值路径用 `delta`，文本路径用 `replace`；对不存在路径禁止 `replace/delta/remove`（改用 `insert`）。
+
+  </Analysis>
+  <JSONPatch>
+  [
+    { "op": "replace", "path": "/世界/日期", "value": "天和元年1月1日 15:30" },
+    { "op": "delta", "path": "/顾玄一/健康", "value": -1 },
+    { "op": "delta", "path": "/顾玄一/秩序刻印", "value": 9 },
+    { "op": "replace", "path": "/顾玄一/关系", "value": "交易" },
+    { "op": "replace", "path": "/顾玄一/登场状态", "value": "登场" },
+    {
+      "op": "insert",
+      "path": "/临时NPC/红衣男子",
+      "value": {
+        "姓名": "红衣男子",
+        "关系": "无",
+        "关系倾向": "中立",
+        "秩序刻印": 0,
+        "健康": 100,
+        "健康状况": "健康",
+        "登场状态": "登场"
+      }
+    },
+    { "op": "delta", "path": "/伊甸一次性指令/sk001/数量", "value": -1 },
+    {
+      "op": "replace",
+      "path": "/伊甸一次性指令/sk001/生效实例",
+      "value": [
+        { "对象范围": "正厅", "剩余时效": "约6小时" }
+      ]
+    },
+    { "op": "replace", "path": "/伊甸一次性指令/sk001/生效实例/0/剩余时效", "value": "约4小时" },
+    { "op": "remove", "path": "/伊甸一次性指令/rz003/生效实例/0" }
+  ]
+  </JSONPatch>
+  </UpdateVariable>
+
+requirements:
+  - "Allowed operations: replace, delta, insert, remove, move."
+  - Path MUST be a valid JSON Pointer absolute path.
+  - DO NOT `replace` on non-existent paths (use `insert`).
+  - "If `/<角色名>` does not exist in current `stat_data`, NEVER use
+    `replace`/`delta`/`remove` on that role path; MUST `insert /<角色名>` first."
+  - "所有涉及数值运算的字段（日期时间、秩序刻印、健康、伊甸一次性指令.生效实例.剩余时效等）必须以 <match_cot> 的推演结果为唯一真源，本文件与 <Analysis> 仅负责组织输出、不再复述计算公式。"
+  - "Imp 与健康相互独立：Imp<0 → 永久逃离（非死亡）；健康=0 → 死亡（唯一死亡条件）。"
+  - "伊甸一次性指令具有最高优先级：指令自身行为不扣 Imp/健康；但指令保护范围外的独立负向事件照常结算。"
+  - "初始赋值：新增角色关系**禁止**直接设为【归附】；Imp 与关系倾向按剧情与人设综合判断。"
+  - '玩家"直接改 Imp/档位/健康"的指令视为破坏游戏规则，正文拒绝、不产出 patch。'

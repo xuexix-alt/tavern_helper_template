@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "世界": {
+      "default": {
+        "地址": "",
+        "日期": "天和元年1月1日 14:00"
+      },
+      "type": "object",
+      "properties": {
+        "地址": {
+          "type": "string"
+        },
+        "日期": {
+          "default": "天和元年1月1日 14:00",
+          "type": "string",
+          "pattern": "^.+年\\d{1,2}月\\d{1,2}日 \\d{2}:\\d{2}$"
+        }
+      }
+    },
+    "伊甸一次性指令": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "指令编号"
+      },
+      "additionalProperties": {
+        "default": {
+          "名称": "",
+          "数量": 0,
+          "说明": "",
+          "范围": "",
+          "时效": "",
+          "生效实例": []
+        },
+        "type": "object",
+        "properties": {
+          "名称": {
+            "type": "string"
+          },
+          "数量": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "说明": {
+            "type": "string"
+          },
+          "范围": {
+            "type": "string"
+          },
+          "时效": {
+            "type": "string"
+          },
+          "生效实例": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "default": {
+                "对象范围": "",
+                "剩余时效": ""
+              },
+              "type": "object",
+              "properties": {
+                "对象范围": {
+                  "type": "string"
+                },
+                "剩余时效": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "顾玄一": {
+      "$ref": "#/$defs/__schema0"
+    },
+    "临时NPC": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "description": "临时称呼"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/__schema0"
+      }
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/__schema0"
+  },
+  "$defs": {
+    "__schema0": {
+      "default": {
+        "姓名": "",
+        "关系": "无",
+        "关系倾向": "中立",
+        "秩序刻印": 0,
+        "健康": 100,
+        "健康状况": "健康",
+        "登场状态": "离场"
+      },
+      "type": "object",
+      "properties": {
+        "姓名": {
+          "type": "string"
+        },
+        "关系": {
+          "default": "无",
+          "type": "string",
+          "enum": [
+            "无",
+            "永久逃离",
+            "逃离",
+            "交易",
+            "协作",
+            "忠诚",
+            "归附"
+          ]
+        },
+        "关系倾向": {
+          "default": "中立",
+          "type": "string",
+          "enum": [
+            "极易",
+            "易",
+            "中立",
+            "难",
+            "极难",
+            "不可"
+          ]
+        },
+        "秩序刻印": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "健康": {
+          "default": 100,
+          "type": "number"
+        },
+        "健康状况": {
+          "default": "健康",
+          "type": "string",
+          "enum": [
+            "健康",
+            "亚健康",
+            "生病/受伤",
+            "重病/濒死",
+            "无",
+            "死亡"
+          ]
+        },
+        "登场状态": {
+          "default": "离场",
+          "type": "string",
+          "enum": [
+            "登场",
+            "离场"
+          ]
+        }
+      }
+    }
+  }
+}
