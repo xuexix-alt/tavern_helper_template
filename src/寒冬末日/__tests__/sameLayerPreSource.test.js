@@ -875,6 +875,8 @@ test('same-layer-pre loads and renders a character-owned runtime opening preset'
 
   assert.match(storySource, /getVariables\(\{ type: 'character' \}\)/);
   assert.match(storySource, /readRuntimeOpeningPresetFromCharacterVariables/);
+  assert.match(storySource, /function refreshRuntimeOpeningPresetFromCharacter\(\)/);
+  assert.match(storySource, /\[0, 250, 1000\]/);
   assert.match(storySource, /runtimeOpeningPresetError/);
   assert.match(storySource, /:runtime-preset="runtimeOpeningPreset"/);
   assert.match(storySource, /isRuntimeOpeningPayload/);

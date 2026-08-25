@@ -604,6 +604,7 @@ const openingPayload = ref(
 const openingWorldModes = getOpeningWorldModes();
 const openingRoutes = getOpeningRoutes();
 const openingModalOpen = ref(false);
+let runtimeOpeningPresetRetryTimerIds: number[] = [];
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
 }));
@@ -1032,6 +1033,33 @@ function persistOpeningPayloadNow() {
   replaceOpeningPayloadInChat(openingPayload.value);
 }
 
+function refreshRuntimeOpeningPresetFromCharacter(): boolean {
+  let result;
+  try {
+    result = readRuntimeOpeningPresetFromCharacterVariables(getVariables({ type: 'character' }));
+  } catch (error) {
+    runtimeOpeningPresetError.value = error instanceof Error ? error.message : String(error);
+    return true;
+  }
+
+  if (result.status === 'absent') return false;
+  if (result.status === 'invalid') {
+    runtimeOpeningPresetError.value = result.error;
+    return true;
+  }
+  if (runtimeOpeningPreset.value?.preset_id === result.preset.preset_id) return true;
+
+  runtimeOpeningPreset.value = result.preset;
+  runtimeOpeningPresetError.value = '';
+  openingPreset.value = toLegacyOpeningPreset(result.preset);
+  const restored = readOpeningPayloadFromChat();
+  openingPayload.value =
+    restored?.story_template === runtimeOpeningStoryTemplateId(result.preset.preset_id)
+      ? restored
+      : getRuntimeOpeningDefaultPayload(result.preset);
+  return true;
+}
+
 function buildOpeningFormValuesForCurrentTemplate(payload: OpeningPayload): Record<string, string> {
   const currentFormValues = payload.form_values ?? {};
   const nextFormValues: Record<string, string> = {};
@@ -1325,6 +1353,11 @@ watch(isAppleTheme, enabled => {
 });
 
 onMounted(() => {
+  if (runtimeOpeningPresetRead.status === 'absent') {
+    runtimeOpeningPresetRetryTimerIds = [0, 250, 1000].map(delay =>
+      window.setTimeout(() => refreshRuntimeOpeningPresetFromCharacter(), delay),
+    );
+  }
   phoneBridge = createPrePhoneBridge({
     resolveRuntime: getTopTavernPhoneRuntime,
     composer: composerText,
@@ -1342,6 +1375,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  runtimeOpeningPresetRetryTimerIds.forEach(timerId => window.clearTimeout(timerId));
+  runtimeOpeningPresetRetryTimerIds = [];
   stopPhoneSubscription?.();
   stopPhoneSubscription = null;
   phoneBridge?.dispose();

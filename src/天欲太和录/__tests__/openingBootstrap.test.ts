@@ -1,66 +1,50 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import _ from 'lodash';
-import { TIANYU_PROLOGUE, ensureTianyuPrologue } from '../脚本/变量结构/openingBootstrap';
+import { parse as parseYaml } from 'yaml';
 
-(globalThis as typeof globalThis & { _: typeof _ })._ = _;
+import { installTianyuOpeningPreset, parseTianyuOpeningPreset } from '../脚本/变量结构/openingBootstrap';
 
-async function main() {
-  const sourceMvuData = {
-    initialized_lorebooks: { 天欲太和录: ['init'] },
-    stat_data: {
-      世界: { 地址: null, 日期: '天和元年1月1日 14:00' },
-    },
-  };
-  const created: Array<Record<string, any>> = [];
-  let lastMessageId = 0;
-  let releaseCreate!: () => void;
-  const createGate = new Promise<void>(resolve => {
-    releaseCreate = resolve;
-  });
+const rawPreset = parseYaml(readFileSync('src/天欲太和录/opening-preset.yaml', 'utf8'));
+const preset = parseTianyuOpeningPreset(rawPreset);
 
-  const dependencies = {
-    getLastMessageId: () => lastMessageId,
-    getMvuData: () => sourceMvuData,
-    createMessage: async (message: Record<string, any>) => {
-      created.push(message);
-      await createGate;
-      lastMessageId = 1;
-    },
-  };
+assert.equal(preset.version, 2);
+assert.equal(preset.preset_id, 'tianyu-taihe-v1');
+assert.equal(preset.ui.title, '天欲太和录 · 江湖开局');
+assert.deepEqual(
+  preset.fields.map(field => field.label),
+  ['初始身份', '阴阳道路', '开局位置', '初始目标', '剧情基调', '叙事文风', '开局字数'],
+);
+assert.match(preset.prompt.task, /残卷失窃/);
+assert.ok(preset.prompt.forbidden.some(item => item.includes('替玩家决定')));
 
-  const firstRun = ensureTianyuPrologue(dependencies);
-  const concurrentRun = await ensureTianyuPrologue(dependencies);
-  assert.equal(concurrentRun, 'skipped', 'a concurrent bootstrap must not create a duplicate prologue');
-  assert.equal(created.length, 1);
+const original = {
+  existing: { keep: true },
+  same_layer_pre: { another_setting: 'preserve-me' },
+};
+let characterVariables: Record<string, any> = structuredClone(original);
+const writes: Array<Record<string, unknown>> = [];
+const dependencies = {
+  getCharacterVariables: () => characterVariables,
+  replaceCharacterVariables: (next: Record<string, unknown>) => {
+    writes.push(structuredClone(next));
+    characterVariables = next;
+  },
+};
 
-  releaseCreate();
-  assert.equal(await firstRun, 'created');
-  assert.equal(await ensureTianyuPrologue(dependencies), 'skipped', 'an existing mes=1 must remain untouched');
+assert.equal(installTianyuOpeningPreset(preset, dependencies), 'installed');
+assert.equal(writes.length, 1);
+assert.deepEqual(characterVariables.existing, original.existing);
+assert.equal(characterVariables.same_layer_pre.another_setting, 'preserve-me');
+assert.deepEqual(characterVariables.same_layer_pre.opening_preset, preset);
+assert.equal(installTianyuOpeningPreset(preset, dependencies), 'unchanged');
+assert.equal(writes.length, 1, 'an unchanged preset must not rewrite character variables');
 
-  const message = created[0];
-  assert.equal(message.role, 'assistant');
-  assert.equal(message.is_hidden, false);
-  assert.equal(message.message, TIANYU_PROLOGUE);
-  assert.ok(TIANYU_PROLOGUE.startsWith('阴阳江湖序章\n太和山入冬以后，常有雾。'));
-  assert.ok(TIANYU_PROLOGUE.endsWith('太和山的钟声。\n因此响了一夜。'));
-  assert.ok(TIANYU_PROLOGUE.includes('苏晚晴。\n叶红绡。\n沈玉娘。'));
-  assert.ok(TIANYU_PROLOGUE.includes('《天欲阴阳录》'));
-  assert.ok(TIANYU_PROLOGUE.split('\n').length > 150, 'the complete approved prologue must be preserved');
+const bootstrapSource = readFileSync('src/天欲太和录/脚本/变量结构/openingBootstrap.ts', 'utf8');
+const entrySource = readFileSync('src/天欲太和录/脚本/变量结构/index.ts', 'utf8');
+assert.doesNotMatch(bootstrapSource, /TIANYU_PROLOGUE|createChatMessages|ensureTianyuPrologue/);
+assert.match(entrySource, /opening-preset\.yaml\?raw/);
+assert.match(entrySource, /getVariables\(\{ type: 'character' \}\)/);
+assert.match(entrySource, /replaceVariables\(variables, \{ type: 'character' \}\)/);
+assert.doesNotMatch(entrySource, /createChatMessages|CHAT_CHANGED|waitGlobalInitialized\('Mvu'\)/);
 
-  assert.notEqual(message.data, sourceMvuData, 'mes=1 data must be cloned instead of aliasing mes=0');
-  assert.equal(message.data.stat_data.世界.地址, '');
-  assert.equal(sourceMvuData.stat_data.世界.地址, null, 'normalization must not mutate mes=0');
-  assert.deepEqual(message.data.initialized_lorebooks, sourceMvuData.initialized_lorebooks);
-
-  const entrySource = readFileSync('src/天欲太和录/脚本/变量结构/index.ts', 'utf8');
-  assert.match(entrySource, /import \{ ensureTianyuPrologue \} from '.\/openingBootstrap'/);
-  assert.match(entrySource, /await waitGlobalInitialized\('Mvu'\)/);
-  assert.match(entrySource, /eventOn\(tavern_events\.CHAT_CHANGED/);
-  assert.match(entrySource, /Mvu\.getMvuData\(\{ type: 'message', message_id: messageId \}\)/);
-  assert.match(entrySource, /createChatMessages\(\[message\], \{ refresh: 'all' \}\)/);
-
-  console.log('天欲太和录 opening bootstrap test passed');
-}
-
-void main();
+console.log('天欲太和录 runtime opening preset bootstrap test passed');

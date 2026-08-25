@@ -1,0 +1,110 @@
+version: 2
+preset_id: tianyu-taihe-v1
+
+ui:
+  title: 天欲太和录 · 江湖开局
+  intro: 选择你的身份、道路与落脚处。开局会依据当前角色卡、世界书和这些选择即时生成。
+  submit_label: 生成江湖开局
+
+meta_template:
+  character_label: 主角姓名
+  time_label: 开局时间
+  location_label: 所在地域
+
+default_meta:
+  character: "{{user}}"
+  time: 天和元年
+  location: 太和山
+
+fields:
+  - key: initial_identity
+    label: 初始身份
+    kind: select
+    required: true
+    options:
+      - 太和山门人
+      - 天欲一脉传人
+      - 江湖散人
+      - 朝廷中人
+      - 身份成谜
+    default_value: 身份成谜
+
+  - key: yin_yang_path
+    label: 阴阳道路
+    kind: select
+    required: true
+    options:
+      - 太和之道
+      - 天欲之道
+      - 尚未选择
+      - 自创道路
+    default_value: 尚未选择
+
+  - key: opening_location
+    label: 开局位置
+    kind: select
+    required: true
+    options:
+      - 太和山藏经阁
+      - 山下太和镇
+      - 江南水乡
+      - 塞北边城
+      - 朝廷京师
+      - 红尘旅途
+    default_value: 太和山藏经阁
+
+  - key: initial_goal
+    label: 初始目标
+    kind: textarea
+    required: true
+    placeholder: 例如：查清残卷去向；寻找失踪故人；暂且旁观两脉之争
+    default_value: 查清失窃残卷的去向，并弄明白顾玄一留下的那句批注
+
+  - key: story_tone
+    label: 剧情基调
+    kind: select
+    required: true
+    options:
+      - 武侠正剧
+      - 江湖群像
+      - 情欲纠葛
+      - 阴谋悬疑
+      - 轻松游历
+    default_value: 武侠正剧
+
+  - key: narrative_style
+    label: 叙事文风
+    kind: select
+    required: true
+    options:
+      - 章回武侠
+      - 电影感叙事
+      - 古雅白描
+      - 网文爽感
+    default_value: 电影感叙事
+
+  - key: opening_length
+    label: 开局字数
+    kind: text
+    required: true
+    placeholder: 建议 1200—1800 字
+    default_value: "1500"
+
+prompt:
+  task: 依据角色卡与世界书，从太和山藏经阁残卷失窃、现场残留《天欲阴阳录》气息这一事件展开一条可直接游玩的正式开局剧情。
+  directives:
+    - 让玩家所选身份、道路、地点、目标、基调与文风自然进入剧情，而不是逐项复述表单。
+    - 太和与天欲都应保持完整而复杂的理念：太和重在彼此成全，天欲直面关系流变与人的欲望；不得简单写成正邪善恶二分。
+    - 以具体人物、行动、环境细节和当下冲突推动开局，并尽早给玩家一个能够回应的现场局面。
+    - 顾玄一、沈孤鸿、太和十贤及两门功法的事实必须服从当前角色卡世界书，不得擅自改写核心设定。
+    - 正文长度尽量贴合玩家填写的开局字数；结尾停在玩家可以自由行动的节点。
+  forbidden:
+    - 不得替玩家决定长期修行道路、恋爱关系、忠诚归属或不可逆选择。
+    - 不得把《天欲阴阳录》写成杀人采补术，也不得把《太和阴阳经》写成强制婚配或单纯男女双修。
+    - 不得沿用寒冬末日、星穹秩序、伊甸终端等其他角色卡的专属设定。
+    - 不得用百科介绍、设定总结或作者解说代替可见的正式剧情。
+
+output:
+  content_tag: content
+  option_tag: option
+  option_count: 4

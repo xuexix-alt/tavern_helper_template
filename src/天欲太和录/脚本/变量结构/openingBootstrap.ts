@@ -1,264 +1,32 @@
-import { Schema } from '../../schema';
+import _ from 'lodash';
 
-export const TIANYU_PROLOGUE = `阴阳江湖序章
-太和山入冬以后，常有雾。
-雾从山腰起，绕过藏经阁，覆住后山的青石小院。外人看不清山上的路，山上的人却早已习惯了这种朦胧。
-辰时刚过，后山传来一声钟响。
-院门未开。
-一男一女却已经坐在蒲团之上。
-两人之间隔着三尺距离，双掌相抵，呼吸同调。
-男子额角有汗，眉头微皱。
-“不要急。”
-女子闭着眼，声音很轻。
-“你的阳息太盛，急于压过我的寒息，反而会乱。”
-男子苦笑。
-“我已经按照《太和阴阳经》的法门走了七遍。”
-女子睁眼看他。
-“你修的是经，不是口诀。”
-“什么意思？”
-“顾祖师留下这门功法，不是让两个人争一个高低。”
-她收回手。
-“你总想着自己的内力能不能更强。”
-“可这门功法第一句是什么？”
-男子沉默片刻。
-答道：
-“阴阳相济，彼此成全。”
-女子点头。
-“你记住了，却没有懂。”
-男子看着她。
-“那你懂？”
-女子笑了。
-“我也不懂。”
-“只是比你早一点承认自己不懂。”
-两人相视一笑。
-院外，扫雪的老仆听见动静，忍不住摇头。
-如今的年轻人，总以为练成一门绝世武功，便能胜过天下。
-可太和山的人知道。
-真正难练的，从来不是内力。
-而是心。
-----
+import {
+  RUNTIME_OPENING_CHARACTER_PATH,
+} from '../../../寒冬末日/界面同层版/shared/runtimeOpeningPreset';
+import {
+  RuntimeOpeningPresetSchema,
+  type RuntimeOpeningPreset,
+} from '../../../寒冬末日/界面同层版/shared/runtimeOpeningPreset.schema';
 
-这一男一女，是如今太和山仅存的几对修习《太和阴阳经》的眷侣之一。
-男子名叫顾承舟。
-女子名叫谢晚棠。
-他们并非夫妻。
-至少目前不是。
-太和山修炼此功，从不强求男女关系。
-顾玄一留下祖训：
-“情可为道，不可为锁。”
-若两人心意相通，自可同修。
-若缘尽，则不可强留。
-这也是《太和阴阳经》与天下许多所谓双修功法最大的不同。
----------------------------
-
-江湖中，曾有无数人误解这门武功。
-有人认为：
-阴阳双修，不过是借男女之力增长内功。
-有人认为：
-此类功法皆为旁门。
-也有人认为：
-顾玄一不过是将采补之术换了一个说法。
-可真正看过《太和阴阳经》的人才知道。
-这门功法最重要的，并不是“阴阳”。
-而是“和”。
-------
-
-所谓阴阳，并非单指男女。
-人体有阴阳。
-内力有阴阳。
-性情有阴阳。
-甚至武学本身，也有阴阳。
-刚猛的掌力，需要柔韧化解。
-凌厉的剑意，需要平静驾驭。
-一个人的力量越强，越容易失衡。
-《太和阴阳经》所做的，便是让两股不同的力量，在冲突中找到平衡。
-因此修炼此功者，内力未必天下第一。
-但同境界之中，极难被击溃。
-他们可以化解敌人的刚劲。
-可以借力反击。
-可以在长时间交手中保持气息稳定。
-但它有一个最大的限制。
-慢。
-太慢。
-寻常内功，十年可见成效。
-《太和阴阳经》，十年不过筑基。
-想达到真正的大成，往往需要几十年。
-因为它修的不是一身内力。
-而是一生关系。
--------
-
-太和山的大殿之中，供奉着一块无字石碑。
-没有名字。
-没有碑文。
-只有一道剑痕。
-据说，那是顾玄一留下的。
-百年前，顾玄一曾站在这里，对自己的弟子说：
-“若后人只记住我的武功，不记住我为何创它。”
-“那么这门功法，迟早会害人。”
----------------
-
-顾玄一的故事，如今已经被江湖说了很多遍。
-有人说他少年狂妄，曾误入歧途。
-有人说他晚年悟道，创造太和。
-但太和山真正保存下来的记录，并不多。
-只有一份名册。
-上面记载着跟随顾玄一一生的十位女子。
-苏晚晴。
-叶红绡。
-沈玉娘。
-萧寒月。
-白青萝。
-唐无忧。
-慕容秋。
-林清霜。
-温如玉。
-顾青璃。
-后世称她们为：
-太和十贤。
-她们不是顾玄一的附属。
-每个人，都留下了一脉武学。
-有人留下医术。
-有人留下剑法。
-有人留下奇门。
-有人留下调息之术。
-也有人留下了关于人的理解。
--------------
-
-顾玄一晚年曾说：
-“太和二字，不在男女。”
-“在两个不同的人，如何成为更好的自己。”
-这句话，后来被刻在太和山的藏经阁外。
-也是太和一脉最大的戒律。
-------------
-
-然而，世间总有另一种声音。
-如果阴阳可以相合。
-是否也可以相御？
-如果人与人之间的联系会改变。
-是否可以不依赖任何人？
-这个问题，来自顾玄一最出色的弟子。
-沈孤鸿。
-----
-
-沈孤鸿年轻时，也是太和山的人。
-甚至比顾玄一年轻时更加耀眼。
-他学任何武功都极快。
-读一遍剑谱，便能指出其中不足。
-看一遍内功心法，便能找到运转规律。
-顾玄一曾说：
-“孤鸿若守本心，百年后，太和一脉无人可及。”
-可惜。
-人最难守的，往往就是本心。
--------------
-
-沈孤鸿也曾相信太和。
-他相信一生一人。
-相信誓言。
-相信两个相爱的人，可以共同走到最后。
-他的眷侣，名叫林清瑶。
-他们少年相识。
-一起练剑。
-一起修行。
-一起在江湖中留下名字。
-那时候，没有人怀疑他们会成为下一代太和宗师。
-直到那个失踪多年的人回来。
-顾长风。
-----
-
-顾长风与林清瑶幼年相识。
-后来因一场变故失踪。
-所有人都以为他死了。
-林清瑶也以为。
-于是，她选择了沈孤鸿。
-多年以后，顾长风归来。
-没有阴谋。
-没有欺骗。
-只有迟到了许多年的真相。
-而这份真相，足以击碎一个人的信念。
------------------
-
-沈孤鸿离开太和山后，再也没有回来。
-很多年后，江湖出现了一门新的功法。
-《天欲阴阳录》。
-它出自沈孤鸿之手。
-与《太和阴阳经》一脉相承，却完全不同。
--------------------
-
-《太和阴阳经》认为：
-两人相合，是为了成全彼此。
-《天欲阴阳录》认为：
-人与人的关系，本就是变化。
-因此不求唯一。
-不求长久。
-不求承诺。
-只求掌握变化。
-它不靠杀人采补。
-也不靠夺取他人性命。
-但它承认欲望。
-承认人性中那些不愿承认的部分。
-所以，它被正道称为邪功。
-------------
-
-有人说：
-修《太和》的人，最后会得到一个懂自己的人。
-修《天欲》的人，最后会懂所有人。
-却无人懂他。
-------
-
-百年之后。
-顾玄一已成为传说。
-沈孤鸿也成为传说。
-但两门功法仍然存在。
-太和山守着《太和阴阳经》。
-江湖上的天欲一脉，则隐藏在红尘各处。
-没有人知道。
-这两条道路，究竟哪一条更接近真正的阴阳之道。
-直到这一年。
-太和山藏经阁失窃。
-失去的不是完整秘籍。
-而是一页残卷。
-那一页上，记载着一句顾玄一从未公开传出的批注：
-“太和之后，仍有一步。”
-而偷走残卷的人。
-留下的气息。
-属于《天欲阴阳录》。
-太和山的钟声。
-因此响了一夜。`;
-
-type PrologueMessage = {
-  role: 'assistant';
-  message: string;
-  is_hidden: false;
-  data: Record<string, any>;
+export type TianyuOpeningPresetDependencies = {
+  getCharacterVariables: () => Record<string, unknown>;
+  replaceCharacterVariables: (variables: Record<string, unknown>) => void;
 };
 
-export type TianyuPrologueDependencies = {
-  getLastMessageId: () => number;
-  getMvuData: (messageId: number) => unknown;
-  createMessage: (message: PrologueMessage) => Promise<void>;
-};
+export function parseTianyuOpeningPreset(raw: unknown): RuntimeOpeningPreset {
+  return RuntimeOpeningPresetSchema.parse(raw);
+}
 
-let creating = false;
+export function installTianyuOpeningPreset(
+  preset: RuntimeOpeningPreset,
+  dependencies: TianyuOpeningPresetDependencies,
+): 'installed' | 'unchanged' {
+  const current = dependencies.getCharacterVariables();
+  const installed = _.get(current, RUNTIME_OPENING_CHARACTER_PATH);
+  if (_.isEqual(installed, preset)) return 'unchanged';
 
-export async function ensureTianyuPrologue(dependencies: TianyuPrologueDependencies): Promise<'created' | 'skipped'> {
-  if (creating || dependencies.getLastMessageId() !== 0) return 'skipped';
-
-  creating = true;
-  try {
-    if (dependencies.getLastMessageId() !== 0) return 'skipped';
-
-    const source = _.cloneDeep(dependencies.getMvuData(0));
-    const data = _.isPlainObject(source) ? source : {};
-    _.set(data, 'stat_data', Schema.parse(_.get(data, 'stat_data', {})));
-
-    await dependencies.createMessage({
-      role: 'assistant',
-      message: TIANYU_PROLOGUE,
-      is_hidden: false,
-      data,
-    });
-    return 'created';
-  } finally {
-    creating = false;
-  }
+  const next = _.cloneDeep(current);
+  _.set(next, RUNTIME_OPENING_CHARACTER_PATH, _.cloneDeep(preset));
+  dependencies.replaceCharacterVariables(next);
+  return 'installed';
 }

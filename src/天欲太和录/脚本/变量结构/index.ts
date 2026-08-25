@@ -1,24 +1,15 @@
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
-import { ensureTianyuPrologue } from './openingBootstrap';
+import openingPresetRaw from '../../opening-preset.yaml?raw';
+import { installTianyuOpeningPreset, parseTianyuOpeningPreset } from './openingBootstrap';
 
-async function createAutomaticPrologue() {
-  await waitGlobalInitialized('Mvu');
-  await ensureTianyuPrologue({
-    getLastMessageId,
-    getMvuData: messageId => Mvu.getMvuData({ type: 'message', message_id: messageId }),
-    createMessage: message => createChatMessages([message], { refresh: 'all' }),
-  });
-}
-
-function scheduleAutomaticPrologue() {
-  void createAutomaticPrologue().catch(error => {
-    console.error('[天欲太和录] 自动序章创建失败', error);
-  });
-}
+const openingPreset = parseTianyuOpeningPreset(YAML.parse(openingPresetRaw));
 
 $(() => {
   registerMvuSchema(Schema);
-  eventOn(tavern_events.CHAT_CHANGED, scheduleAutomaticPrologue);
-  scheduleAutomaticPrologue();
+  const result = installTianyuOpeningPreset(openingPreset, {
+    getCharacterVariables: () => getVariables({ type: 'character' }),
+    replaceCharacterVariables: variables => replaceVariables(variables, { type: 'character' }),
+  });
+  console.info(`[天欲太和录] opening preset ${result}`);
 });
