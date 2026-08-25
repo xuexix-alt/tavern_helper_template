@@ -138,6 +138,7 @@ test('same-layer system panel and workbench modal render eden commands from top-
   assert.match(commandsSource, /duration:\s*String\(record\.时效 \?\? ''\)\.trim\(\) \|\| meta\?\.duration \|\| ''/);
   assert.match(commandsSource, /category:\s*meta\?\.category \|\| '未分类'/);
   assert.match(storeSource, /const RESERVED_TOP_LEVEL_KEYS = new Set\(\[/);
+  assert.match(storeSource, /'通讯网络'/);
   assert.match(storeSource, /'伊甸一次性指令'/);
 });
 

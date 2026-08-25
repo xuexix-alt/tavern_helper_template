@@ -9,6 +9,7 @@ type RoleLike = SchemaType[string & keyof SchemaType] | Record<string, any>;
 
 const RESERVED_TOP_LEVEL_KEYS = new Set([
   '世界',
+  '通讯网络',
   '庇护所',
   '房间',
   '主线任务',
