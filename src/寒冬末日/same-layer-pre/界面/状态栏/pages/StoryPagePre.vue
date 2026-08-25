@@ -90,6 +90,9 @@
                 画廊
               </button>
               <button type="button" class="ui-page-menu-item" role="menuitem" @click="refreshFromMoreMenu">刷新</button>
+              <button type="button" class="ui-page-menu-item" role="menuitem" @click="openTypographyModalFromMoreMenu">
+                排版
+              </button>
               <button type="button" class="ui-page-menu-item" role="menuitem" @click="openOpeningModalFromMoreMenu">
                 开局
               </button>
@@ -144,6 +147,23 @@
         @update-route="updateOpeningRoute"
         @update-stream="updateOpeningStream"
         @submit="handleOpeningSubmit"
+      />
+    </HudModal>
+
+    <HudModal
+      :open="typographyModalOpen"
+      title="阅读与排版设置"
+      subtitle="拖动滑块即时调整 AI 正文行距。"
+      variant="typography"
+      icon="T"
+      eyebrow="TYPE // SETTINGS"
+      @close="closeTypographyModal"
+    >
+      <ReaderLineHeightControl
+        :model-value="bodyLineHeight"
+        density="comfortable"
+        :automatic-value="1.75"
+        @update:model-value="bodyLineHeight = $event"
       />
     </HudModal>
 
@@ -500,6 +520,7 @@ import HudModal from '../../../../界面同层版/界面/状态栏/components/Hu
 import MapBusinessPanel from '../../../../界面同层版/界面/状态栏/components/MapBusinessPanel.vue';
 import MvuRolePanel from '../../../../界面同层版/界面/状态栏/components/MvuRolePanel.vue';
 import OpeningSetupPanel from '../../../../界面同层版/界面/状态栏/components/OpeningSetupPanel.vue';
+import ReaderLineHeightControl from '../../../../界面同层版/界面/状态栏/components/ReaderLineHeightControl.vue';
 import WorkbenchTabs from '../../../../界面同层版/界面/状态栏/components/WorkbenchTabs.vue';
 import openingModalIcon from '../../../../界面同层版/界面/状态栏/assets/opening-modal-icon.webp?url';
 import { useMvuRoleStore } from '../../../../界面同层版/界面/状态栏/mvuRoleStore';
@@ -542,6 +563,7 @@ const {
   composerText,
   busy,
   theme,
+  bodyLineHeight,
   errorMessage,
   logItems,
   readerSummary,
@@ -604,9 +626,11 @@ const openingPayload = ref(
 const openingWorldModes = getOpeningWorldModes();
 const openingRoutes = getOpeningRoutes();
 const openingModalOpen = ref(false);
+const typographyModalOpen = ref(false);
 let runtimeOpeningPresetRetryTimerIds: number[] = [];
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
+  ...(bodyLineHeight.value == null ? {} : { '--reader-body-line-height': String(bodyLineHeight.value) }),
 }));
 const isAppleTheme = computed(() => theme.value === 'apple' || theme.value.startsWith('apple-'));
 const phoneEntryLabel = computed(() => {
@@ -1022,6 +1046,17 @@ function openOpeningModalFromMoreMenu() {
   closeUtilityDrawer();
   closeSideDrawers();
   openingModalOpen.value = true;
+}
+
+function openTypographyModalFromMoreMenu() {
+  closeTopbarMenus();
+  closeUtilityDrawer();
+  closeSideDrawers();
+  typographyModalOpen.value = true;
+}
+
+function closeTypographyModal() {
+  typographyModalOpen.value = false;
 }
 
 function closeOpeningModal() {

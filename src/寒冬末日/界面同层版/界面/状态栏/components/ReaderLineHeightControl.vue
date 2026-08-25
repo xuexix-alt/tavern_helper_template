@@ -36,6 +36,7 @@ import type { TranscriptDensity } from '../types';
 const props = defineProps<{
   modelValue: number | null;
   density: TranscriptDensity;
+  automaticValue?: number;
 }>();
 
 const emit = defineEmits<{
@@ -43,7 +44,12 @@ const emit = defineEmits<{
 }>();
 
 const isCustom = computed(() => props.modelValue != null);
-const sliderValue = computed(() => resolveReaderBodyLineHeight(props.density, props.modelValue));
+const sliderValue = computed(
+  () =>
+    normalizeReaderBodyLineHeight(props.modelValue) ??
+    normalizeReaderBodyLineHeight(props.automaticValue) ??
+    resolveReaderBodyLineHeight(props.density, null),
+);
 
 function updateLineHeight(event: Event) {
   const value = normalizeReaderBodyLineHeight((event.target as HTMLInputElement).value);
