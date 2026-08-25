@@ -18,8 +18,7 @@ export function normalizeReaderBodyLineHeight(input: unknown): number | null {
   const clamped = Math.min(READER_BODY_LINE_HEIGHT_MAX, Math.max(READER_BODY_LINE_HEIGHT_MIN, numeric));
   const stepped =
     READER_BODY_LINE_HEIGHT_MIN +
-    Math.round((clamped - READER_BODY_LINE_HEIGHT_MIN) / READER_BODY_LINE_HEIGHT_STEP) *
-      READER_BODY_LINE_HEIGHT_STEP;
+    Math.round((clamped - READER_BODY_LINE_HEIGHT_MIN) / READER_BODY_LINE_HEIGHT_STEP) * READER_BODY_LINE_HEIGHT_STEP;
   return Number(stepped.toFixed(2));
 }
 
