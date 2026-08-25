@@ -1,8 +1,6 @@
 import _ from 'lodash';
 
-import {
-  RUNTIME_OPENING_CHARACTER_PATH,
-} from '../../../寒冬末日/界面同层版/shared/runtimeOpeningPreset';
+import { RUNTIME_OPENING_CHARACTER_PATH } from '../../../寒冬末日/界面同层版/shared/runtimeOpeningPreset';
 import {
   RuntimeOpeningPresetSchema,
   type RuntimeOpeningPreset,
