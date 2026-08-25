@@ -842,8 +842,8 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /@update-stream="updateOpeningStream"/);
   assert.match(storySource, /@submit="handleOpeningSubmit"/);
 
-  assert.match(storySource, /const openingPreset = ref\(getDefaultOpeningPreset\(\)\)/);
-  assert.match(storySource, /const openingPayload = ref\(readOpeningPayloadFromChat\(\) \?\? getDefaultOpeningPayload/);
+  assert.match(storySource, /const openingPreset = ref\([\s\S]*?getDefaultOpeningPreset\(\)[\s\S]*?\);/);
+  assert.match(storySource, /const openingPayload = ref\([\s\S]*?getDefaultOpeningPayload\(openingPreset\.value\)/);
   assert.match(storySource, /const openingWorldModes = getOpeningWorldModes\(\)/);
   assert.match(storySource, /const openingRoutes = getOpeningRoutes\(\)/);
   assert.match(storySource, /const shouldShowOpeningSetup = computed/);
@@ -859,7 +859,7 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /async function handleOpeningSubmit\(\)/);
   assert.match(
     storySource,
-    /const compiledPromptSnapshot = buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/,
+    /buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/,
   );
   assert.match(storySource, /await submitPrompt\(compiledPromptSnapshot\)/);
   assert.match(
@@ -867,6 +867,26 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
     /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*latestAssistantId/,
   );
   assert.doesNotMatch(storySource, /runOpeningDetachedGeneration|runOpeningNativeGeneration|sendToNativeChat/);
+});
+
+test('same-layer-pre loads and renders a character-owned runtime opening preset', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const panelSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'components', 'OpeningSetupPanel.vue'),
+    'utf8',
+  );
+
+  assert.match(storySource, /getVariables\(\{ type: 'character' \}\)/);
+  assert.match(storySource, /readRuntimeOpeningPresetFromCharacterVariables/);
+  assert.match(storySource, /runtimeOpeningPresetError/);
+  assert.match(storySource, /:runtime-preset="runtimeOpeningPreset"/);
+  assert.match(storySource, /isRuntimeOpeningPayload/);
+  assert.match(storySource, /if\s*\(\s*!runtimeOpeningPreset\.value/);
+  assert.match(panelSource, /runtimePreset\?: RuntimeOpeningPreset \| null/);
+  assert.match(panelSource, /runtimePreset\?\.ui\.title/);
+  assert.match(panelSource, /runtimePreset\?\.ui\.intro/);
+  assert.match(panelSource, /runtimePreset\?\.ui\.submit_label/);
+  assert.match(panelSource, /v-if="runtimePreset"/);
 });
 
 test('same-layer-pre keeps the right gallery drawer fixed height even when empty', () => {

@@ -125,12 +125,18 @@
       wide
       @close="closeOpeningModal"
     >
+      <div v-if="runtimeOpeningPresetError" class="opening-runtime-error" role="alert">
+        <strong>角色卡 opening preset 无效</strong>
+        <p>{{ runtimeOpeningPresetError }}</p>
+      </div>
       <OpeningSetupPanel
+        v-else
         :preset="openingPreset"
         :payload="openingPayload"
         :busy="busy"
         :world-modes="openingWorldModes"
         :routes="openingRoutes"
+        :runtime-preset="runtimeOpeningPreset"
         @update-meta="updateOpeningMeta"
         @update-field="updateOpeningField"
         @update-story-template="updateOpeningStoryTemplate"
@@ -478,6 +484,15 @@ import {
   replaceOpeningPayloadInChat,
 } from '../../../../界面同层版/shared/opening';
 import type { OpeningPayload } from '../../../../界面同层版/shared/opening.schema';
+import {
+  buildRuntimeOpeningGeneratePrompt,
+  getRuntimeOpeningDefaultPayload,
+  isRuntimeOpeningPayload,
+  readRuntimeOpeningPresetFromCharacterVariables,
+  runtimeOpeningStoryTemplateId,
+  toLegacyOpeningPreset,
+} from '../../../../界面同层版/shared/runtimeOpeningPreset';
+import type { RuntimeOpeningPreset } from '../../../../界面同层版/shared/runtimeOpeningPreset.schema';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
 import GalleryImageRoleAssignPicker from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
 import type { GalleryImageRoleAssignRoleOption } from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
@@ -566,8 +581,25 @@ const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
 const transcriptWindowLabel = ref('最新');
 const readerShellHeight = ref('min(92vh, 960px)');
-const openingPreset = ref(getDefaultOpeningPreset());
-const openingPayload = ref(readOpeningPayloadFromChat() ?? getDefaultOpeningPayload(openingPreset.value));
+const runtimeOpeningPresetRead = readRuntimeOpeningPresetFromCharacterVariables(getVariables({ type: 'character' }));
+const runtimeOpeningPreset = ref<RuntimeOpeningPreset | null>(
+  runtimeOpeningPresetRead.status === 'valid' ? runtimeOpeningPresetRead.preset : null,
+);
+const runtimeOpeningPresetError = ref(
+  runtimeOpeningPresetRead.status === 'invalid' ? runtimeOpeningPresetRead.error : '',
+);
+const openingPreset = ref(
+  runtimeOpeningPreset.value ? toLegacyOpeningPreset(runtimeOpeningPreset.value) : getDefaultOpeningPreset(),
+);
+const restoredOpeningPayload = readOpeningPayloadFromChat();
+const openingPayload = ref(
+  runtimeOpeningPreset.value
+    ? restoredOpeningPayload &&
+      restoredOpeningPayload.story_template === runtimeOpeningStoryTemplateId(runtimeOpeningPreset.value.preset_id)
+      ? restoredOpeningPayload
+      : getRuntimeOpeningDefaultPayload(runtimeOpeningPreset.value)
+    : (restoredOpeningPayload ?? getDefaultOpeningPayload(openingPreset.value)),
+);
 const openingWorldModes = getOpeningWorldModes();
 const openingRoutes = getOpeningRoutes();
 const openingModalOpen = ref(false);
@@ -1010,6 +1042,30 @@ function buildOpeningFormValuesForCurrentTemplate(payload: OpeningPayload): Reco
 }
 
 function hydrateOpeningPayloadDefaults() {
+  if (runtimeOpeningPreset.value) {
+    const fallback = getRuntimeOpeningDefaultPayload(runtimeOpeningPreset.value);
+    const currentMeta = openingPayload.value.meta ?? { character: '', time: '', location: '' };
+    openingPayload.value = {
+      ...openingPayload.value,
+      story_template: fallback.story_template,
+      world_mode_id: '',
+      route_id: '',
+      meta: {
+        character: String(currentMeta.character ?? '').trim() || fallback.meta.character,
+        time: String(currentMeta.time ?? '').trim() || fallback.meta.time,
+        location: String(currentMeta.location ?? '').trim() || fallback.meta.location,
+      },
+      form_values: Object.fromEntries(
+        runtimeOpeningPreset.value.fields.map(field => [
+          field.key,
+          String(openingPayload.value.form_values?.[field.key] ?? '').trim() || field.default_value,
+        ]),
+      ),
+    };
+    persistOpeningPayloadNow();
+    return;
+  }
+
   const fallback = getDefaultOpeningPayload(openingPreset.value);
   const currentWorldModeId =
     String(openingPayload.value.world_mode_id ?? '').trim() || String(fallback.world_mode_id ?? '').trim();
@@ -1140,12 +1196,20 @@ async function handleOpeningSubmit() {
 
   hydrateOpeningPayloadDefaults();
 
-  if (!isGenericStoryOpening(openingPayload.value) && !getOpeningWorldMode(openingPayload.value.world_mode_id)) {
+  if (
+    !runtimeOpeningPreset.value &&
+    !isGenericStoryOpening(openingPayload.value) &&
+    !getOpeningWorldMode(openingPayload.value.world_mode_id)
+  ) {
     toastr?.warning?.('请先选择有效的世界观档位');
     openingModalOpen.value = true;
     return;
   }
-  if (!isGenericStoryOpening(openingPayload.value) && !getOpeningRoute(openingPayload.value.route_id)) {
+  if (
+    !runtimeOpeningPreset.value &&
+    !isGenericStoryOpening(openingPayload.value) &&
+    !getOpeningRoute(openingPayload.value.route_id)
+  ) {
     toastr?.warning?.('请先选择有效的开局主流派');
     openingModalOpen.value = true;
     return;
@@ -1158,7 +1222,10 @@ async function handleOpeningSubmit() {
     return;
   }
 
-  const compiledPromptSnapshot = buildOpeningGeneratePrompt(openingPreset.value, openingPayload.value);
+  const compiledPromptSnapshot =
+    runtimeOpeningPreset.value && isRuntimeOpeningPayload(openingPayload.value)
+      ? buildRuntimeOpeningGeneratePrompt(runtimeOpeningPreset.value, openingPayload.value)
+      : buildOpeningGeneratePrompt(openingPreset.value, openingPayload.value);
   openingPayload.value = {
     ...openingPayload.value,
     state: 'generating',
