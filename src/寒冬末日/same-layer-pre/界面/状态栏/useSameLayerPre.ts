@@ -848,6 +848,42 @@ export function useSameLayerPre() {
     }
   }
 
+  async function submitAssistantOnlyPrompt(value: string): Promise<number | null> {
+    const text = String(value ?? '').trim();
+    if (!text || busy.value) return null;
+
+    const generationId = `same-layer-pre-opening-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    activeGenerationId.value = generationId;
+    busy.value = true;
+    status.value = 'preparing';
+    errorMessage.value = '';
+    updateStreamingPreviewText('');
+    pushLog('action', '生成正式开局', plainPreview(text, 80));
+
+    try {
+      status.value = 'streaming';
+      const response = await generate({ user_input: text, should_stream: true, generation_id: generationId });
+
+      status.value = 'persisting';
+      reserveNextHostMessageVisualHide();
+      await createChatMessages([{ role: 'assistant', message: response, is_hidden: false }], { refresh: 'affected' });
+      const assistantMessageId = getTrueChatLength();
+      updateStreamingPreviewText('');
+      status.value = 'done';
+      refreshTranscript('opening_assistant_persisted');
+      pushLog('info', '正式开局已写入', `助手楼层 #${assistantMessageId}`);
+      return assistantMessageId;
+    } catch (error) {
+      status.value = 'error';
+      errorMessage.value = error instanceof Error ? error.message : String(error);
+      pushLog('error', '开局生成失败', errorMessage.value);
+      return null;
+    } finally {
+      busy.value = false;
+      activeGenerationId.value = null;
+    }
+  }
+
   function requestRollbackDelete(item: TranscriptItem) {
     if (busy.value || item.isStreaming || !item.canDeleteFrom) return;
     rollbackConfirmMessageId.value = item.message_id;
@@ -1069,6 +1105,7 @@ export function useSameLayerPre() {
     lastRefreshedAt,
     refreshTranscript,
     submitPrompt,
+    submitAssistantOnlyPrompt,
     cancelGeneration,
     requestRollbackDelete,
     confirmRollbackDelete,

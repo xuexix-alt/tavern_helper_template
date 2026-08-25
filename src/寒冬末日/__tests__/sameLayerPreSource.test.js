@@ -857,14 +857,11 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /function updateOpeningStream/);
   assert.match(storySource, /function updateOpeningField/);
   assert.match(storySource, /async function handleOpeningSubmit\(\)/);
+  assert.match(storySource, /buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(storySource, /await submitAssistantOnlyPrompt\(compiledPromptSnapshot\)/);
   assert.match(
     storySource,
-    /buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/,
-  );
-  assert.match(storySource, /await submitPrompt\(compiledPromptSnapshot\)/);
-  assert.match(
-    storySource,
-    /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*latestAssistantId/,
+    /openingPayload\.value = \{[\s\S]*state:\s*'ready'[\s\S]*opening_assistant_message_id:\s*openingAssistantId/,
   );
   assert.doesNotMatch(storySource, /runOpeningDetachedGeneration|runOpeningNativeGeneration|sendToNativeChat/);
 });
@@ -887,6 +884,27 @@ test('same-layer-pre loads and renders a character-owned runtime opening preset'
   assert.match(panelSource, /runtimePreset\?\.ui\.intro/);
   assert.match(panelSource, /runtimePreset\?\.ui\.submit_label/);
   assert.match(panelSource, /v-if="runtimePreset"/);
+});
+
+test('same-layer-pre opening generation persists only assistant mes=1', () => {
+  const preSource = readPre('useSameLayerPre.ts');
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const assistantOnlySource = extractFunctionSource(preSource, 'submitAssistantOnlyPrompt');
+
+  assert.match(
+    assistantOnlySource,
+    /generate\(\{ user_input: text, should_stream: true, generation_id: generationId \}\)/,
+  );
+  assert.match(
+    assistantOnlySource,
+    /createChatMessages\(\[\{ role: 'assistant', message: response, is_hidden: false \}\]/,
+  );
+  assert.doesNotMatch(assistantOnlySource, /role: 'user'/);
+  assert.match(assistantOnlySource, /return assistantMessageId/);
+  assert.match(preSource, /submitAssistantOnlyPrompt,/);
+  assert.match(storySource, /const openingAssistantId = await submitAssistantOnlyPrompt\(compiledPromptSnapshot\)/);
+  assert.doesNotMatch(storySource, /await submitPrompt\(compiledPromptSnapshot\)/);
+  assert.match(storySource, /opening_assistant_message_id: openingAssistantId/);
 });
 
 test('same-layer-pre keeps the right gallery drawer fixed height even when empty', () => {

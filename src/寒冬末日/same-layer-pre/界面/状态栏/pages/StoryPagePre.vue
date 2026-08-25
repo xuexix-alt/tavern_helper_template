@@ -551,6 +551,7 @@ const {
   lastRefreshedAt,
   refreshTranscript,
   submitPrompt,
+  submitAssistantOnlyPrompt,
   cancelGeneration,
   requestRollbackDelete,
   confirmRollbackDelete,
@@ -1235,15 +1236,14 @@ async function handleOpeningSubmit() {
   persistOpeningPayloadNow();
   openingModalOpen.value = false;
 
-  await submitPrompt(compiledPromptSnapshot);
+  const openingAssistantId = await submitAssistantOnlyPrompt(compiledPromptSnapshot);
 
-  const latestAssistantId = latestAssistantItem.value?.message_id ?? latestAssistantMessageId.value ?? null;
-  if (latestAssistantId != null) {
+  if (openingAssistantId != null) {
     openingPayload.value = {
       ...openingPayload.value,
       state: 'ready',
       compiled_prompt_snapshot: compiledPromptSnapshot,
-      opening_assistant_message_id: latestAssistantId,
+      opening_assistant_message_id: openingAssistantId,
     };
     persistOpeningPayloadNow();
   } else {
