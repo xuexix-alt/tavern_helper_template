@@ -76,6 +76,7 @@ export type ReaderChatState = {
   density: TranscriptDensity;
   theme: DemoTheme;
   font_mode: ReaderFontMode;
+  body_line_height: number | null;
   opening_expanded: boolean;
   collapsed_assistant_message_ids: number[];
 };

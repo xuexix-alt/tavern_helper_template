@@ -1,7 +1,9 @@
 ﻿import type { DemoTheme, ReaderChatState, ReaderFontMode, ReadingMode, TranscriptDensity } from './types';
 
+import { normalizeReaderBodyLineHeight } from './readerLineHeight';
+
 export const READER_CHAT_STATE_PATH = 'stream_demo.reader_state';
-export const READER_CHAT_STATE_VERSION = 4;
+export const READER_CHAT_STATE_VERSION = 5;
 
 export function normalizeReadingMode(input: unknown): ReadingMode | null {
   return input === 'following_latest' || input === 'browsing_history' ? input : null;
@@ -49,6 +51,7 @@ export function migrateReaderChatState(raw: Partial<ReaderChatState>): Partial<R
     density: normalizeDensity(raw?.density) ?? 'comfortable',
     theme: normalizeTheme(raw?.theme) ?? 'amber',
     font_mode: normalizeFontMode(raw?.font_mode) ?? 'hud',
+    body_line_height: normalizeReaderBodyLineHeight(raw?.body_line_height),
     opening_expanded: typeof raw?.opening_expanded === 'boolean' ? raw.opening_expanded : true,
     collapsed_assistant_message_ids: normalizeCollapsedAssistantMessageIds(raw?.collapsed_assistant_message_ids),
   };
@@ -80,6 +83,9 @@ export function patchReaderChatState(patch: Partial<ReaderChatState>) {
           density: normalizeDensity(patch.density) ?? normalizeDensity(current.density) ?? 'comfortable',
           theme: normalizeTheme(patch.theme) ?? normalizeTheme(current.theme) ?? 'amber',
           font_mode: normalizeFontMode(patch.font_mode) ?? normalizeFontMode(current.font_mode) ?? 'hud',
+          body_line_height: Object.prototype.hasOwnProperty.call(patch, 'body_line_height')
+            ? normalizeReaderBodyLineHeight(patch.body_line_height)
+            : normalizeReaderBodyLineHeight(current.body_line_height),
           opening_expanded:
             typeof patch.opening_expanded === 'boolean'
               ? patch.opening_expanded
