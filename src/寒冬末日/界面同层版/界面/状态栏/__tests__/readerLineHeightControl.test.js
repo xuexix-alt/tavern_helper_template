@@ -37,3 +37,31 @@ test('reader chat state stores nullable body line height with a versioned migrat
   assert.match(readerStateSource, /normalizeReaderBodyLineHeight\(patch\.body_line_height\)/);
   assert.match(readerStateSource, /normalizeReaderBodyLineHeight\(current\.body_line_height\)/);
 });
+
+test('typography panel wires a live line-height slider only into assistant prose', () => {
+  const controlSource = readSource('components/ReaderLineHeightControl.vue');
+  const toolbarSource = readSource('components/TopToolbar.vue');
+  const storySource = readSource('pages/StoryPage.vue');
+  const demoSource = readSource('useStreamingDemo.ts');
+  const messageSource = readSource('components/TranscriptMessageCard.vue');
+  const openingSource = readSource('components/TranscriptOpeningCard.vue');
+
+  assert.match(controlSource, /type="range"/);
+  assert.match(controlSource, /min="1\.3"/);
+  assert.match(controlSource, /max="2\.1"/);
+  assert.match(controlSource, /step="0\.05"/);
+  assert.match(controlSource, /恢复自动/);
+  assert.match(toolbarSource, /ReaderLineHeightControl/);
+  assert.match(toolbarSource, /update:bodyLineHeight/);
+  assert.match(storySource, /v-model:body-line-height="bodyLineHeight"/);
+  assert.match(storySource, /--reader-body-line-height/);
+  assert.match(demoSource, /const bodyLineHeight = ref<number \| null>\(null\);/);
+  assert.match(demoSource, /body_line_height: bodyLineHeight\.value/);
+  assert.match(demoSource, /bodyLineHeight\.value = normalizeReaderBodyLineHeight\(state\.body_line_height\)/);
+  assert.match(demoSource, /watch\(bodyLineHeight/);
+  assert.match(messageSource, /line-height: var\(--reader-body-line-height, 1\.9\);/);
+  assert.match(messageSource, /line-height: var\(--reader-body-line-height, 1\.7\);/);
+  assert.match(openingSource, /line-height: var\(--reader-body-line-height, 1\.6\);/);
+  assert.match(messageSource, /\.user-message[\s\S]*?line-height: 1\.75;/);
+  assert.match(messageSource, /\.assistant-body-wrap :deep\(p\)[\s\S]*?margin: 0 0 1em;/);
+});

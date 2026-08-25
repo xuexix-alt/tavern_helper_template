@@ -128,6 +128,7 @@ import {
   runQueuedHostMessageUpdate,
   runQueuedPostDoneAssistantSideEffects,
 } from './postDoneSideEffectsQueue';
+import { normalizeReaderBodyLineHeight } from './readerLineHeight';
 import {
   normalizeCollapsedAssistantMessageIds,
   normalizeDensity,
@@ -2859,6 +2860,7 @@ export function useStreamingDemo() {
   const density = ref<TranscriptDensity>('comfortable');
   const theme = ref<DemoTheme>('amber');
   const fontMode = ref<ReaderFontMode>('hud');
+  const bodyLineHeight = ref<number | null>(null);
   const readingMode = ref<ReadingMode>('following_latest');
   const transcriptWindowMode = ref<TranscriptWindowMode>('latest');
   const transcriptHistoryAnchorLastId = ref<number | null>(null);
@@ -3764,6 +3766,7 @@ export function useStreamingDemo() {
         collapsed_assistant_message_ids: collapsedAssistantMessageIds.value,
         theme: theme.value,
         font_mode: fontMode.value,
+        body_line_height: bodyLineHeight.value,
       });
     }, 80);
   }
@@ -3862,6 +3865,7 @@ export function useStreamingDemo() {
     const restoredDensity = normalizeDensity(state.density);
     const restoredTheme = normalizeTheme(state.theme);
     const restoredFontMode = normalizeFontMode(state.font_mode);
+    bodyLineHeight.value = normalizeReaderBodyLineHeight(state.body_line_height);
     if (restoredMode) readingMode.value = restoredMode;
     if (restoredDensity) density.value = restoredDensity;
     if (restoredTheme) theme.value = restoredTheme;
@@ -9082,6 +9086,10 @@ export function useStreamingDemo() {
     queuePersistReaderChatState();
   });
 
+  watch(bodyLineHeight, () => {
+    queuePersistReaderChatState();
+  });
+
   watch(
     () => latestUserItem.value?.message_id ?? null,
     latestId => {
@@ -9780,6 +9788,7 @@ export function useStreamingDemo() {
     density,
     theme,
     fontMode,
+    bodyLineHeight,
     readingMode,
     readingModeLabel,
     followLatest,

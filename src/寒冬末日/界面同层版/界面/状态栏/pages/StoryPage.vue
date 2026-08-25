@@ -429,6 +429,7 @@
         v-model:filter-mode="filterMode"
         v-model:density="density"
         v-model:font-mode="fontMode"
+        v-model:body-line-height="bodyLineHeight"
         :total-count="transcriptStats.total"
         :at-latest="followLatest"
         :is-browsing-history="isTranscriptHistoryMode"
@@ -588,6 +589,7 @@ const {
   density,
   theme,
   fontMode,
+  bodyLineHeight,
   readingMode,
   followLatest,
   isTranscriptHistoryMode,
@@ -881,6 +883,7 @@ const activeUtilityPills = computed(() => {
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
   '--reader-content-max': isFullscreen.value ? 'min(80vw, 96rem)' : '72rem',
+  ...(bodyLineHeight.value == null ? {} : { '--reader-body-line-height': String(bodyLineHeight.value) }),
 }));
 
 function readHostViewportHeight() {

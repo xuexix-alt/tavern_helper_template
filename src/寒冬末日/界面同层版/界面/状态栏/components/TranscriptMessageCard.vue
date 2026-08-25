@@ -1522,7 +1522,7 @@ onBeforeUnmount(() => {
   max-width: 100%;
   min-width: 0;
   font-size: 15px;
-  line-height: 1.9;
+  line-height: var(--reader-body-line-height, 1.9);
   color: var(--demo-text-panel-strong);
   overflow-x: hidden;
   overflow-wrap: anywhere;
@@ -1539,7 +1539,7 @@ onBeforeUnmount(() => {
 
 .message-shell.density-minimal .assistant-body {
   font-size: 14px;
-  line-height: 1.7;
+  line-height: var(--reader-body-line-height, 1.7);
 }
 
 .message-shell.density-minimal .assistant-corners {

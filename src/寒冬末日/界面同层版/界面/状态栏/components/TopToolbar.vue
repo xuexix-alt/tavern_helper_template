@@ -77,6 +77,12 @@
         </div>
       </div>
 
+      <ReaderLineHeightControl
+        :model-value="bodyLineHeight"
+        :density="density"
+        @update:model-value="$emit('update:bodyLineHeight', $event)"
+      />
+
       <button type="button" class="jump-btn clip-corner-sm" :disabled="atLatest" @click="$emit('jump-latest')">
         {{ atLatest ? '已在最新' : '回到最新' }}
       </button>
@@ -96,6 +102,8 @@
 </template>
 
 <script setup lang="ts">
+import ReaderLineHeightControl from './ReaderLineHeightControl.vue';
+
 import type { DemoTheme, ReaderFontMode, TranscriptDensity, TranscriptFilterMode } from '../types';
 
 defineProps<{
@@ -103,6 +111,7 @@ defineProps<{
   filterMode: TranscriptFilterMode;
   density: TranscriptDensity;
   fontMode: ReaderFontMode;
+  bodyLineHeight: number | null;
   totalCount: number;
   atLatest: boolean;
   isBrowsingHistory: boolean;
@@ -113,6 +122,7 @@ defineEmits<{
   (event: 'update:filterMode', value: TranscriptFilterMode): void;
   (event: 'update:density', value: TranscriptDensity): void;
   (event: 'update:fontMode', value: ReaderFontMode): void;
+  (event: 'update:bodyLineHeight', value: number | null): void;
   (event: 'jump-latest'): void;
 }>();
 
