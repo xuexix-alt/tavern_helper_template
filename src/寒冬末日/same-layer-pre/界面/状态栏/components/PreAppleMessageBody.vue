@@ -2,13 +2,19 @@
   <StreamRenderer
     v-if="item.isStreaming"
     class="pre-message-card__body pre-apple-message-body"
+    :class="`role-${item.role}`"
     :message="item.content"
     :role="item.role"
     :active="true"
     :message-id="item.message_id"
   />
   <!-- eslint-disable-next-line vue/no-v-html -->
-  <div v-else class="pre-message-card__body pre-apple-message-body" v-html="item.finalHtml || item.preview"></div>
+  <div
+    v-else
+    class="pre-message-card__body pre-apple-message-body"
+    :class="`role-${item.role}`"
+    v-html="item.finalHtml || item.preview"
+  ></div>
 </template>
 
 <script setup lang="ts">
@@ -32,6 +38,10 @@ defineProps<{
   letter-spacing: 0.002em;
   font-optical-sizing: auto;
   text-wrap: pretty;
+}
+
+.pre-apple-message-body.role-assistant {
+  line-height: var(--reader-body-line-height, 1.82);
 }
 
 .pre-apple-message-body :deep(*) {
@@ -106,6 +116,10 @@ defineProps<{
   .pre-apple-message-body {
     font-size: 16px;
     line-height: 1.78;
+  }
+
+  .pre-apple-message-body.role-assistant {
+    line-height: var(--reader-body-line-height, 1.78);
   }
 }
 </style>

@@ -142,6 +142,10 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   line-height: 1.75;
 }
 
+.pre-message-card.role-assistant .pre-message-card__body {
+  line-height: var(--reader-body-line-height, 1.75);
+}
+
 .pre-message-card__body :deep(*) {
   box-sizing: border-box;
   min-width: 0;
@@ -291,6 +295,10 @@ const showActions = computed(() => props.item.canDeleteFrom || props.item.canRer
   .pre-message-card__body {
     font-size: 13px;
     line-height: 1.65;
+  }
+
+  .pre-message-card.role-assistant .pre-message-card__body {
+    line-height: var(--reader-body-line-height, 1.65);
   }
 
   .pre-message-card__actions {

@@ -1,4 +1,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { normalizeReaderBodyLineHeight } from '../../../界面同层版/界面/状态栏/readerLineHeight';
+import { patchReaderChatState, readReaderChatState } from '../../../界面同层版/界面/状态栏/readerState';
 import {
   PRE_TRANSCRIPT_DISPLAY_MIN,
   readPreTranscriptDisplayPreference,
@@ -430,6 +432,7 @@ export function useSameLayerPre() {
   const busy = ref(false);
   const status = ref<DemoStatus>('idle');
   const theme = ref<DemoTheme>('amber');
+  const bodyLineHeight = ref<number | null>(normalizeReaderBodyLineHeight(readReaderChatState().body_line_height));
   const errorMessage = ref('');
   const streamingText = ref('');
   const activeGenerationId = ref<string | null>(null);
@@ -1067,6 +1070,10 @@ export function useSameLayerPre() {
     { immediate: true },
   );
 
+  watch(bodyLineHeight, value => {
+    patchReaderChatState({ body_line_height: value });
+  });
+
   watch(
     () => transcriptItems.value.map(item => item.message_id),
     ids => {
@@ -1143,6 +1150,7 @@ export function useSameLayerPre() {
     busy,
     status,
     theme,
+    bodyLineHeight,
     statusLabel,
     errorMessage,
     logItems,

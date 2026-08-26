@@ -215,7 +215,7 @@ const streamingOpeningHtml = computed(() => {
 
 .transcript-body {
   font-size: 13px;
-  line-height: 1.6;
+  line-height: var(--reader-body-line-height, 1.6);
   min-width: 0;
   border: 1px solid rgba(191, 158, 96, 0.18);
   background: color-mix(in srgb, var(--surface) 34%, transparent);

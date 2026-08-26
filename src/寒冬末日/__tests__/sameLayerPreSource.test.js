@@ -1700,3 +1700,29 @@ test('same-layer-pre only follows the bottom on resize when the reader was alrea
   assert.match(source, /onlyIfNearBottom/);
   assert.match(source, /scrollToBottom\(\{ onlyIfNearBottom: true \}\)/);
 });
+
+test('same-layer-pre exposes the shared正文 line-height control and persists it per chat', () => {
+  const pageSource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const demoSource = readPre('useSameLayerPre.ts');
+  const messageSource = readPre(path.join('components', 'PreTranscriptMessageCard.vue'));
+  const appleMessageSource = readPre(path.join('components', 'PreAppleMessageBody.vue'));
+  const sharedControlSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'components', 'ReaderLineHeightControl.vue'),
+    'utf8',
+  );
+
+  assert.match(pageSource, /ReaderLineHeightControl/);
+  assert.match(pageSource, />\s*排版\s*</);
+  assert.match(pageSource, /typographyModalOpen/);
+  assert.match(pageSource, /:model-value="bodyLineHeight"/);
+  assert.match(pageSource, /:automatic-value="1\.75"/);
+  assert.match(pageSource, /--reader-body-line-height/);
+  assert.match(demoSource, /const bodyLineHeight = ref<number \| null>/);
+  assert.match(demoSource, /readReaderChatState\(\)/);
+  assert.match(demoSource, /patchReaderChatState\(\{ body_line_height: value \}\)/);
+  assert.match(messageSource, /line-height: var\(--reader-body-line-height, 1\.75\);/);
+  assert.match(messageSource, /line-height: var\(--reader-body-line-height, 1\.65\);/);
+  assert.match(appleMessageSource, /line-height: var\(--reader-body-line-height, 1\.82\);/);
+  assert.match(appleMessageSource, /line-height: var\(--reader-body-line-height, 1\.78\);/);
+  assert.match(sharedControlSource, /automaticValue\?: number/);
+});
