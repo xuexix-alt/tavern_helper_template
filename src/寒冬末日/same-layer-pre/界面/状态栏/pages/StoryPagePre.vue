@@ -34,7 +34,7 @@
             @click.stop="openAppleHistory"
           >
             <span>楼层</span>
-            <span class="ui-page-menu-value">{{ readerSummary.turnCount }}</span>
+            <span class="ui-page-menu-value">{{ transcriptDisplayCount }}</span>
           </button>
 
           <button
@@ -42,28 +42,27 @@
             type="button"
             class="ui-icon-btn ui-page-menu-trigger"
             :class="{ active: transcriptWindowMenuOpen }"
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             :aria-expanded="transcriptWindowMenuOpen"
             aria-label="切换楼层窗口"
             @click.stop="toggleTranscriptWindowMenu"
           >
             <span>楼层</span>
-            <span class="ui-page-menu-value">{{ transcriptWindowLabel }}</span>
+            <span class="ui-page-menu-value">{{ transcriptDisplayCount }}</span>
           </button>
 
           <transition name="toolbar-menu-fade">
-            <div v-if="!isAppleTheme && transcriptWindowMenuOpen" class="ui-page-menu-list clip-corner-sm" role="menu">
-              <button
-                v-for="page in transcriptWindowPages"
-                :key="page.key"
-                type="button"
-                class="ui-page-menu-item"
-                :class="{ active: transcriptWindowLabel === page.label }"
-                role="menuitem"
-                @click="selectTranscriptWindowPage(page.label)"
-              >
-                {{ page.label }}
-              </button>
+            <div
+              v-if="!isAppleTheme && transcriptWindowMenuOpen"
+              class="ui-page-menu-list ui-floor-slider-menu clip-corner-sm"
+            >
+              <PreTranscriptFloorSlider
+                v-model="transcriptFloorDraft"
+                :minimum="transcriptDisplayMinimum"
+                :maximum="transcriptTotalCount"
+                :disabled="transcriptTotalCount <= transcriptDisplayMinimum"
+                @change="commitTranscriptFloorCount"
+              />
             </div>
           </transition>
         </div>
@@ -201,7 +200,7 @@
           <MvuRolePanel
             v-if="roleDrawerOpen"
             :target-message-id="latestAssistantMessageId"
-            :transcript-items="baseTranscriptItems"
+            :transcript-items="mvuTranscriptItems"
             :gallery-entries="preGalleryEntries"
             :role-portrait-overrides="rolePortraitOverrides"
             agents-only
@@ -279,7 +278,12 @@
               :items="transcriptItems"
               :busy="busy"
               :rollback-confirm-message-id="rollbackConfirmMessageId"
+              :floor-count="transcriptFloorDraft"
+              :floor-minimum="transcriptDisplayMinimum"
+              :floor-maximum="transcriptTotalCount"
               @close="restoreAppleReaderPosition"
+              @update:floor-count="transcriptFloorDraft = $event"
+              @floor-change="commitTranscriptFloorCount"
               @request-rollback="requestRollbackDelete"
               @confirm-rollback="confirmRollbackDelete"
               @cancel-rollback="cancelRollbackDelete"
@@ -517,6 +521,7 @@ import PreAppleHistoryOverlay from '../components/PreAppleHistoryOverlay.vue';
 import PreAppleReader from '../components/PreAppleReader.vue';
 import PreGalleryPanel from '../components/PreGalleryPanel.vue';
 import PreGalleryBetaModal from '../components/PreGalleryBetaModal.vue';
+import PreTranscriptFloorSlider from '../components/PreTranscriptFloorSlider.vue';
 import PreTranscriptList from '../components/PreTranscriptList.vue';
 import type { DemoTheme, PreGalleryLogItem } from '../types';
 import {
@@ -539,6 +544,10 @@ type AppleReaderExpose = {
 const {
   transcriptItems,
   baseTranscriptItems,
+  mvuTranscriptItems,
+  transcriptTotalCount,
+  transcriptDisplayMinimum,
+  transcriptDisplayCount,
   composerText,
   busy,
   theme,
@@ -550,6 +559,7 @@ const {
   canRegenerateLatestMessage,
   lastRefreshedAt,
   refreshTranscript,
+  setTranscriptDisplayPreference,
   submitPrompt,
   submitAssistantOnlyPrompt,
   cancelGeneration,
@@ -580,7 +590,7 @@ const roleProviderStore = useMvuRoleStore(latestAssistantMessageId);
 const transcriptWindowMenuOpen = ref(false);
 const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
-const transcriptWindowLabel = ref('最新');
+const transcriptFloorDraft = ref(transcriptDisplayCount.value);
 const readerShellHeight = ref('min(92vh, 960px)');
 const runtimeOpeningPresetRead = readRuntimeOpeningPresetFromCharacterVariables(getVariables({ type: 'character' }));
 const runtimeOpeningPreset = ref<RuntimeOpeningPreset | null>(
@@ -802,11 +812,6 @@ const activeUtilityPills = computed(() => {
   ];
 });
 
-const transcriptWindowPages = computed(() => [
-  { key: 'latest', label: '最新' },
-  { key: 'all', label: `${readerSummary.value.turnCount || 0}楼` },
-]);
-
 function readHostViewportHeight() {
   const candidates: number[] = [];
 
@@ -897,9 +902,9 @@ function toggleTopbarMoreMenu() {
   if (topbarMoreMenuOpen.value) transcriptWindowMenuOpen.value = false;
 }
 
-function selectTranscriptWindowPage(label: string) {
-  transcriptWindowLabel.value = label;
-  closeTopbarMenus();
+function commitTranscriptFloorCount(value: number) {
+  setTranscriptDisplayPreference(value);
+  transcriptWindowMenuOpen.value = false;
 }
 
 function closeRoleDrawer() {
@@ -1352,6 +1357,14 @@ watch(isAppleTheme, enabled => {
   if (!enabled) appleHistoryOpen.value = false;
 });
 
+watch(
+  transcriptDisplayCount,
+  value => {
+    transcriptFloorDraft.value = value;
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   if (runtimeOpeningPresetRead.status === 'absent') {
     runtimeOpeningPresetRetryTimerIds = [0, 250, 1000].map(delay =>
@@ -1589,6 +1602,12 @@ onBeforeUnmount(() => {
     inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+}
+
+.ui-floor-slider-menu {
+  width: min(82vw, 320px);
+  max-width: min(82vw, 320px);
+  padding: 4px;
 }
 
 .ui-page-menu-item {

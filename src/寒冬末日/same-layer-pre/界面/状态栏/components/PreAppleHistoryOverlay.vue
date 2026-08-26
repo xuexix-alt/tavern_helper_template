@@ -16,6 +16,15 @@
               <span class="pre-apple-history__eyebrow">STORY ARCHIVE</span>
               <h2 id="pre-apple-history-title">故事历史</h2>
             </div>
+            <PreTranscriptFloorSlider
+              class="pre-apple-history__floor-slider"
+              :model-value="floorCount"
+              :minimum="floorMinimum"
+              :maximum="floorMaximum"
+              :disabled="floorMaximum <= floorMinimum"
+              @update:model-value="emit('update:floor-count', $event)"
+              @change="value => emit('floor-change', value)"
+            />
             <button
               ref="closeButtonRef"
               type="button"
@@ -141,12 +150,16 @@ import { useEventListener } from '@vueuse/core';
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import type { TranscriptItem } from '../types';
 import PreAppleMessageBody from './PreAppleMessageBody.vue';
+import PreTranscriptFloorSlider from './PreTranscriptFloorSlider.vue';
 
 const props = defineProps<{
   open: boolean;
   items: TranscriptItem[];
   busy?: boolean;
   rollbackConfirmMessageId?: number | null;
+  floorCount: number;
+  floorMinimum: number;
+  floorMaximum: number;
 }>();
 
 const emit = defineEmits<{
@@ -155,6 +168,8 @@ const emit = defineEmits<{
   (event: 'confirm-rollback', item: TranscriptItem): void;
   (event: 'cancel-rollback'): void;
   (event: 'regenerate-message', item: TranscriptItem): void;
+  (event: 'update:floor-count', value: number): void;
+  (event: 'floor-change', value: number): void;
 }>();
 
 const FOCUSABLE = [
@@ -349,6 +364,12 @@ onUnmounted(restoreBodyScroll);
 
 .pre-apple-history__heading {
   min-width: 0;
+}
+
+.pre-apple-history__floor-slider {
+  width: min(42vw, 320px);
+  min-width: 220px;
+  margin-left: auto;
 }
 
 .pre-apple-history__eyebrow {
@@ -675,7 +696,15 @@ onUnmounted(restoreBodyScroll);
   }
 
   .pre-apple-history__header {
+    flex-wrap: wrap;
     padding: 14px 16px;
+  }
+
+  .pre-apple-history__floor-slider {
+    order: 3;
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
   }
 
   .pre-apple-history__close,
