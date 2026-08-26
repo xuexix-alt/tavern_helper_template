@@ -24,16 +24,15 @@ export function resolvePreTranscriptDisplayCount(preference: unknown, totalReada
 
 export function readPreTranscriptDisplayPreference(storage?: PreTranscriptStorage | null): number {
   try {
-    return normalizePreTranscriptDisplayPreference(resolveStorage(storage)?.getItem(PRE_TRANSCRIPT_DISPLAY_STORAGE_KEY));
+    return normalizePreTranscriptDisplayPreference(
+      resolveStorage(storage)?.getItem(PRE_TRANSCRIPT_DISPLAY_STORAGE_KEY),
+    );
   } catch {
     return PRE_TRANSCRIPT_DISPLAY_MIN;
   }
 }
 
-export function writePreTranscriptDisplayPreference(
-  value: unknown,
-  storage?: PreTranscriptStorage | null,
-): number {
+export function writePreTranscriptDisplayPreference(value: unknown, storage?: PreTranscriptStorage | null): number {
   const normalized = normalizePreTranscriptDisplayPreference(value);
   try {
     resolveStorage(storage)?.setItem(PRE_TRANSCRIPT_DISPLAY_STORAGE_KEY, String(normalized));

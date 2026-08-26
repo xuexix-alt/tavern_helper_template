@@ -81,10 +81,7 @@ test('escapes the snapshot when Tavern display regex throws', () => {
       throw new Error('regex unavailable');
     },
     () => {
-      assert.equal(
-        buildStreamRendererHtml('<b>unfinished</b>', 'assistant', 11),
-        '&lt;b&gt;unfinished&lt;/b&gt;',
-      );
+      assert.equal(buildStreamRendererHtml('<b>unfinished</b>', 'assistant', 11), '&lt;b&gt;unfinished&lt;/b&gt;');
     },
   );
 });
