@@ -1,11 +1,11 @@
-import { escapeHtml } from './useTranscriptRebuild.ts';
+import { applyRegexForDisplay, escapeHtml } from './useTranscriptRebuild.ts';
 import type { TranscriptItem } from './types';
 
 /**
  * StreamRenderer 流式预览渲染纯函数
  *
  * 提取自接入需求：流式阶段只做「忠实反映 AI 输出」的轻量渲染。
- * - 仅复用宿主 display formatter，让闭合后的美化正则能跟随流式快照实时生效。
+ * - 流式阶段使用 role-aware Tavern display 正则，不依赖尚未落盘的预测 message_id。
  * - 不做 chunk 切断防护 / blocks 增量解析：同层框架给的是全量快照而非 SSE delta。
  * - 不处理图片 token / artifact：生图协议交给插件事件客户端与宿主插件。
  *
@@ -26,14 +26,7 @@ export function buildStreamRendererHtml(message: string, role: TranscriptItem['r
   const source = String(message ?? '').trim();
   if (!source) return STREAM_RENDERER_PENDING_HTML;
 
-  if (role === 'assistant' && typeof formatAsDisplayedMessage === 'function') {
-    try {
-      return formatAsDisplayedMessage(source, { message_id: messageId });
-    } catch (error) {
-      console.warn('[same-layer-pre] stream formatAsDisplayedMessage failed', { messageId, error });
-      return escapeHtml(source);
-    }
-  }
-
-  return escapeHtml(source);
+  void messageId;
+  const regexed = applyRegexForDisplay(source, role);
+  return typeof regexed === 'string' && regexed.trim() ? regexed : escapeHtml(source);
 }

@@ -23,15 +23,13 @@ export function encodeDataAttr(input: string): string {
 export function applyRegexForDisplay(text: string, role: TranscriptItem['role']): string {
   if (!text) return '';
   try {
-    if (typeof formatAsTavernRegexedString === 'function') {
-      const source = role === 'user' ? 'user_input' : role === 'system' ? 'world_info' : 'ai_output';
-      const out = formatAsTavernRegexedString(text, source, 'display', { depth: 0 });
-      return typeof out === 'string' ? out : text;
-    }
+    if (typeof formatAsTavernRegexedString !== 'function') return '';
+    const source = role === 'user' ? 'user_input' : role === 'system' ? 'world_info' : 'ai_output';
+    const out = formatAsTavernRegexedString(text, source, 'display', { depth: 0 });
+    return typeof out === 'string' ? out : '';
   } catch {
-    // ignore
+    return '';
   }
-  return text;
 }
 
 export function normalizeRoleLabel(role: TranscriptItem['role']): string {
