@@ -577,7 +577,7 @@ test('same-layer-pre routes only APPLE themes through the focused reader present
   );
   assert.match(storySource, /watch\(\s*isAppleTheme[\s\S]*?appleHistoryOpen\.value\s*=\s*false/);
   assert.match(storySource, /v-if="!isAppleTheme && transcriptWindowMenuOpen"/);
-  assert.match(storySource, /:transcript-items="baseTranscriptItems"/);
+  assert.match(storySource, /:transcript-items="mvuTranscriptItems"/);
   assert.doesNotMatch(storySource, /as\s+unknown\s+as/);
   assert.match(
     inheritedRolePanelSource,
@@ -1091,7 +1091,7 @@ test('same-layer-pre left sidebar inherits the full same-layer AGENTS page witho
   assert.match(storySource, /<MvuRolePanel\s*\n\s*v-if="roleDrawerOpen"/);
   assert.match(storySource, /agents-only/);
   assert.match(storySource, /:target-message-id="latestAssistantMessageId"/);
-  assert.match(storySource, /:transcript-items="baseTranscriptItems"/);
+  assert.match(storySource, /:transcript-items="mvuTranscriptItems"/);
   assert.match(storySource, /@collapse="closeRoleDrawer"/);
   assert.doesNotMatch(storySource, /PreMvuPanel/);
   assert.doesNotMatch(storySource, /roleTabs/);
@@ -1217,20 +1217,24 @@ test('same-layer-pre coalesces refresh events and avoids full transcript rerende
   const refreshTranscriptSource = extractFunctionSource(hookSource, 'refreshTranscript');
   const readRecentSource = extractFunctionSource(hookSource, 'readRecentChatMessagesForUi');
 
-  assert.match(hookSource, /const PRE_TRANSCRIPT_TAIL_PAIR_COUNT\s*=\s*3;/);
-  assert.match(hookSource, /const PRE_TRANSCRIPT_WINDOW_SIZE\s*=\s*PRE_TRANSCRIPT_TAIL_PAIR_COUNT \* 2;/);
+  assert.match(hookSource, /const transcriptDisplayPreference = ref\(readPreTranscriptDisplayPreference\(\)\)/);
+  assert.match(hookSource, /const transcriptTotalCount = ref\(0\)/);
+  assert.match(hookSource, /resolvePreTranscriptDisplayCount\(transcriptDisplayPreference\.value, total\)/);
   assert.match(hookSource, /const PRE_EVENT_REFRESH_DELAY_MS\s*=/);
   assert.match(hookSource, /const preTranscriptItemCache = new Map/);
   assert.match(hookSource, /function buildCachedTranscriptItem/);
   assert.match(hookSource, /function scheduleTranscriptRefresh/);
-  assert.match(readRecentSource, /const startId = Math\.max\(1,\s*lastId - PRE_TRANSCRIPT_WINDOW_SIZE \+ 1\)/);
+  assert.match(readRecentSource, /const hostMessages = readHostChatWindow\(1, lastId\)/);
+  assert.match(readRecentSource, /const total = countPreReadableMessages\(hostMessages\)/);
+  assert.match(
+    readRecentSource,
+    /const selectedHostMessages = selectPreTranscriptWindow\(hostMessages, effectiveCount\)/,
+  );
+  assert.match(readRecentSource, /const startId = selectedHostMessages\.at\(0\)\?\.message_id \?\? lastId/);
   assert.match(readRecentSource, /getChatMessages\(`\$\{startId\}-\$\{lastId\}`,\s*\{\s*hide_state:\s*'all'\s*\}\)/);
-  assert.match(readRecentSource, /selectPreTranscriptWindow\(normalizeChatMessages\(list,\s*startId\)\)/);
+  assert.match(readRecentSource, /selectPreTranscriptWindow\(normalizeChatMessages\(list, startId\), effectiveCount\)/);
   assert.doesNotMatch(readRecentSource, /Math\.max\(0,\s*lastId - PRE_TRANSCRIPT_WINDOW_SIZE \+ 1\)/);
-  assert.match(hookSource, /function selectPreTranscriptWindow\(messages: ChatMessage\[\]\)/);
-  assert.match(hookSource, /message\.message_id > 0/);
-  assert.match(hookSource, /message\.role === 'user' \|\| message\.role === 'assistant'/);
-  assert.match(hookSource, /\.slice\(-PRE_TRANSCRIPT_WINDOW_SIZE\)/);
+  assert.match(hookSource, /selectPreMvuTranscriptItems\(transcriptItems\.value\)/);
   assert.match(refreshTranscriptSource, /visibleMessages\.map\(message =>\s*buildCachedTranscriptItem/);
   assert.match(refreshTranscriptSource, /pruneTranscriptItemCache/);
   assert.doesNotMatch(refreshTranscriptSource, /readAllChatMessages\(\)/);
@@ -1512,9 +1516,9 @@ test('same-layer-pre streaming preview stays lightweight until the done transcri
     hookSource.indexOf('const visibleTranscriptItems = computed'),
   );
 
-  assert.doesNotMatch(rendererSource, /applyRegexForDisplay/);
-  assert.match(rendererSource, /formatAsDisplayedMessage\(source,\s*\{\s*message_id:\s*messageId\s*\}\)/);
-  assert.match(rendererSource, /catch \(error\)[\s\S]*?escapeHtml\(source\)/);
+  assert.match(rendererSource, /applyRegexForDisplay\(source, role\)/);
+  assert.doesNotMatch(rendererSource, /formatAsDisplayedMessage/);
+  assert.match(rendererSource, /regexed\.trim\(\) \? regexed : escapeHtml\(source\)/);
   assert.match(cardSource, /:message-id="item\.message_id"/);
   assert.match(streamComponentSource, /buildStreamRendererHtml\(props\.message,\s*props\.role,\s*props\.messageId\)/);
   assert.match(streamingItemSource, /options:\s*\[\]/);
