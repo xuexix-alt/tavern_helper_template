@@ -1,10 +1,19 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+  PRE_TRANSCRIPT_DISPLAY_MIN,
+  readPreTranscriptDisplayPreference,
+  resolvePreTranscriptDisplayCount,
+  writePreTranscriptDisplayPreference,
+} from './preTranscriptDisplaySetting';
+import {
+  countPreReadableMessages,
+  selectPreMvuTranscriptItems,
+  selectPreTranscriptWindow,
+} from './preTranscriptWindow';
 import type { DemoStatus, DemoTheme, ReaderLogItem, ReaderSummary, TranscriptItem } from './types';
 import { createPreHostVisualHideController } from './preHostVisualHide';
 import { bindPreHostLifecycleBridge } from './preHostLifecycleBridge';
 
-const PRE_TRANSCRIPT_TAIL_PAIR_COUNT = 3;
-const PRE_TRANSCRIPT_WINDOW_SIZE = PRE_TRANSCRIPT_TAIL_PAIR_COUNT * 2;
 const PRE_EVENT_REFRESH_DELAY_MS = 80;
 const PRE_STREAMING_RENDER_INTERVAL_MS = 120;
 const PRE_TRANSCRIPT_CACHE_LIMIT = 48;
@@ -262,12 +271,6 @@ function normalizeChatMessages(messages: any[], fallbackStartId: number) {
     .filter(message => Number.isFinite(Number(message.message_id)));
 }
 
-function selectPreTranscriptWindow(messages: ChatMessage[]) {
-  return messages
-    .filter(message => message.message_id > 0 && (message.role === 'user' || message.role === 'assistant'))
-    .slice(-PRE_TRANSCRIPT_WINDOW_SIZE);
-}
-
 function normalizeReadableMessageId(value: unknown) {
   const id = Math.trunc(Number(value));
   return Number.isFinite(id) && id >= 0 ? id : null;
@@ -416,6 +419,13 @@ function toTranscriptItem(message: ChatMessage, latestId: number, carrierMessage
 
 export function useSameLayerPre() {
   const transcriptItems = ref<TranscriptItem[]>([]);
+  const transcriptDisplayPreference = ref(readPreTranscriptDisplayPreference());
+  const transcriptTotalCount = ref(0);
+  const transcriptDisplayMinimum = computed(() => Math.min(PRE_TRANSCRIPT_DISPLAY_MIN, transcriptTotalCount.value));
+  const transcriptDisplayCount = computed(() =>
+    resolvePreTranscriptDisplayCount(transcriptDisplayPreference.value, transcriptTotalCount.value),
+  );
+  const mvuTranscriptItems = computed(() => selectPreMvuTranscriptItems(transcriptItems.value));
   const composerText = ref('');
   const busy = ref(false);
   const status = ref<DemoStatus>('idle');
@@ -471,17 +481,45 @@ export function useSameLayerPre() {
 
   function readRecentChatMessagesForUi() {
     const lastId = getTrueChatLength();
-    if (lastId <= 0) return [];
-    const startId = Math.max(1, lastId - PRE_TRANSCRIPT_WINDOW_SIZE + 1);
-
-    try {
-      const list = getChatMessages(`${startId}-${lastId}`, { hide_state: 'all' });
-      if (Array.isArray(list)) return selectPreTranscriptWindow(normalizeChatMessages(list, startId));
-    } catch (error) {
-      console.warn('[same-layer-pre] bounded getChatMessages failed', { startId, lastId, error });
+    if (lastId <= 0) {
+      transcriptTotalCount.value = 0;
+      return [];
     }
 
-    return selectPreTranscriptWindow(readHostChatWindow(startId, lastId));
+    const hostMessages = readHostChatWindow(1, lastId);
+    if (hostMessages.length > 0) {
+      const total = countPreReadableMessages(hostMessages);
+      const effectiveCount = resolvePreTranscriptDisplayCount(transcriptDisplayPreference.value, total);
+      const selectedHostMessages = selectPreTranscriptWindow(hostMessages, effectiveCount);
+      const startId = selectedHostMessages.at(0)?.message_id ?? lastId;
+      transcriptTotalCount.value = total;
+
+      try {
+        const list = getChatMessages(`${startId}-${lastId}`, { hide_state: 'all' });
+        if (Array.isArray(list)) {
+          return selectPreTranscriptWindow(normalizeChatMessages(list, startId), effectiveCount);
+        }
+      } catch (error) {
+        console.warn('[same-layer-pre] dynamic getChatMessages failed', { startId, lastId, error });
+      }
+
+      return selectedHostMessages;
+    }
+
+    try {
+      const list = getChatMessages(`1-${lastId}`, { hide_state: 'all' });
+      const normalized = Array.isArray(list) ? normalizeChatMessages(list, 1) : [];
+      const total = countPreReadableMessages(normalized);
+      transcriptTotalCount.value = total;
+      return selectPreTranscriptWindow(
+        normalized,
+        resolvePreTranscriptDisplayCount(transcriptDisplayPreference.value, total),
+      );
+    } catch (error) {
+      transcriptTotalCount.value = 0;
+      console.warn('[same-layer-pre] full getChatMessages fallback failed', { lastId, error });
+      return [];
+    }
   }
 
   function readChatMessageById(messageId: number) {
@@ -632,6 +670,11 @@ export function useSameLayerPre() {
       errorMessage.value = error instanceof Error ? error.message : String(error);
       pushLog('error', '读取聊天失败', errorMessage.value);
     }
+  }
+
+  function setTranscriptDisplayPreference(value: number) {
+    transcriptDisplayPreference.value = writePreTranscriptDisplayPreference(value);
+    refreshTranscript('transcript_window_changed');
   }
 
   function scheduleTranscriptRefresh(reason = 'event') {
@@ -1091,6 +1134,11 @@ export function useSameLayerPre() {
   return {
     transcriptItems: visibleTranscriptItems,
     baseTranscriptItems: transcriptItems,
+    mvuTranscriptItems,
+    transcriptTotalCount,
+    transcriptDisplayMinimum,
+    transcriptDisplayCount,
+    transcriptDisplayPreference,
     composerText,
     busy,
     status,
@@ -1104,6 +1152,7 @@ export function useSameLayerPre() {
     canRegenerateLatestMessage,
     lastRefreshedAt,
     refreshTranscript,
+    setTranscriptDisplayPreference,
     submitPrompt,
     submitAssistantOnlyPrompt,
     cancelGeneration,
