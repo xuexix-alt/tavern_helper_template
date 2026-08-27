@@ -1133,11 +1133,7 @@ async function renderProfileListPage(
         text(document, 'strong', profile.name),
         text(document, 'small', `NO.${dossierFileNo(profile.id)} · ${profile.sourceRange}`),
       );
-      const summary = text(
-        document,
-        'span',
-        profile.analysisNarrative || profile.personalityTuning || '尚无动态变化',
-      );
+      const summary = text(document, 'span', profile.analysisNarrative || profile.personalityTuning || '尚无动态变化');
       summary.className = 'phone-profile-row__summary';
       main.append(identity, summary);
       const status = document.createElement('span');
@@ -1355,8 +1351,7 @@ async function renderProfileDetailPage(
           versions.className = 'phone-profile-detail__section';
           versions.append(text(document, 'h2', '历史版本'));
           for (const version of [...profile.versions].reverse()) {
-            const sourceLabel =
-              version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复';
+            const sourceLabel = version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复';
             const timeLabel = new Date(version.savedAt).toLocaleString('zh-CN');
             const restore = text(document, 'button', '') as HTMLButtonElement;
             restore.className = 'phone-button phone-profile-version dossier-versions__restore';

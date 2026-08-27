@@ -204,8 +204,7 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     speechStyleTuning:
       '说话方式微调：对谁、在什么话题下，用词、语气、句式有怎样的规律性变化；仅写可复用于角色扮演的规律',
     currentGoals: '当前目标：由哪些近期事件催生或改变，进行到什么程度；无新证据时延续上次目标或写暂无明确目标',
-    currentSituationSummary:
-      '当前处境：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
+    currentSituationSummary: '当前处境：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
     relationshipInterpretation:
       '与玩家的关系轨迹：MVU档位 + 当前互动距离的具体表现（愿意分享什么、回避什么）+ 正在松动或收紧的边界 + 推动变化的事件。禁止只写更亲近或更疏远',
     storyInteractionSummary:
