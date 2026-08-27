@@ -17,47 +17,63 @@ const EvidenceRefSchema = z
   .max(160)
   .regex(/^(?:fixed-profile|previous-dynamic|mvu:.+|story:.+|wechat:.+)$/);
 
+/** AI 常以「暂无」语义输出空值；契约层统一兜底文案，避免整份输出因个别空字段被判失败。 */
+const narrativeField = (fallback: string) =>
+  z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform(value => (typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback));
+
 const ProfileAnalysisOutputSchema = z
   .object({
     personId: z.string().trim().min(1).max(160),
     personName: z.string().trim().min(1).max(160),
-    analysisNarrative: z.string().trim().min(1).max(2_000),
+    analysisNarrative: narrativeField('本次分析未提供概括说明。').pipe(z.string().max(2_000)),
     changes: z
       .array(
-        z.object({
-          field: z.enum([
-            'basicInfoAdditions',
-            'behaviorTuning',
-            'personalityTuning',
-            'speechStyleTuning',
-            'currentGoals',
-            'currentSituationSummary',
-            'relationshipInterpretation',
-            'storyInteractionSummary',
-            'chatInteractionSummary',
-          ]),
-          before: z.string().max(1_200),
-          after: z.string().max(1_200),
-          reason: z.string().trim().min(1).max(800),
-          evidenceRefs: z.array(EvidenceRefSchema).min(1).max(16),
-        }),
+        z
+          .object({
+            field: z.enum([
+              'basicInfoAdditions',
+              'behaviorTuning',
+              'personalityTuning',
+              'speechStyleTuning',
+              'currentGoals',
+              'currentSituationSummary',
+              'relationshipInterpretation',
+              'storyInteractionSummary',
+              'chatInteractionSummary',
+            ]),
+            before: z.string().max(1_200),
+            after: z.string().max(1_200),
+            reason: z.string().trim().min(1).max(800),
+            evidenceRefs: z.array(EvidenceRefSchema).min(1).max(16),
+          })
+          .strip(),
       )
       .max(12)
-      .optional()
-      .default([]),
-    basicInfoAdditions: z.array(z.string().trim().min(1).max(240)).max(8),
-    behaviorTuning: z.string().trim().min(1).max(800),
-    personalityTuning: z.string().trim().min(1).max(800),
-    speechStyleTuning: z.string().trim().min(1).max(800),
-    currentGoals: z.string().trim().min(1).max(800),
-    currentSituationSummary: z.string().trim().min(1).max(800),
-    relationshipInterpretation: z.string().trim().min(1).max(800),
-    storyInteractionSummary: z.string().trim().min(1).max(1_200),
-    chatInteractionSummary: z.string().trim().min(1).max(1_200),
-    playerActionAdvice: z.string().trim().min(1).max(800),
-    evidenceRefs: z.array(EvidenceRefSchema).min(1).max(32),
+      .nullish()
+      .transform(value => value ?? []),
+    basicInfoAdditions: z
+      .array(z.string().trim().min(1).max(240))
+      .max(8)
+      .nullish()
+      .transform(value => value ?? []),
+    behaviorTuning: narrativeField('暂无明显变化'),
+    personalityTuning: narrativeField('暂无明显变化'),
+    speechStyleTuning: narrativeField('暂无明显变化'),
+    currentGoals: narrativeField('暂无明确目标'),
+    currentSituationSummary: narrativeField('暂无明确处境信息'),
+    relationshipInterpretation: narrativeField('暂无新变化'),
+    storyInteractionSummary: narrativeField('暂无正文互动'),
+    chatInteractionSummary: narrativeField('暂无微信互动'),
+    playerActionAdvice: narrativeField('暂无特别建议'),
+    evidenceRefs: z
+      .array(EvidenceRefSchema)
+      .max(32)
+      .nullish()
+      .transform(value => value ?? []),
   })
-  .strict();
+  .strip();
 
 export const PROFILE_ANALYSIS_SYSTEM_PROMPT = [
   '你是一个角色动态分析专家，负责维护可供玩家查看、修改并复用于角色扮演的人物动态档案。',
@@ -111,6 +127,30 @@ function allowedEvidenceRefs(source: ProfileAnalysisSource): Set<string> {
   ]);
 }
 
+/** mvu:顶层键 的嵌套路径（如 mvu:健康状况.所在房间）同样指向本次输入的人物子树，视为合法。 */
+function evidenceRefAllowed(reference: string, allowed: ReadonlySet<string>, mvuKeys: ReadonlySet<string>): boolean {
+  if (allowed.has(reference)) return true;
+  if (reference.startsWith('mvu:')) {
+    const rootKey = reference.slice('mvu:'.length).split('.')[0]?.trim();
+    return rootKey !== undefined && rootKey !== '' && mvuKeys.has(rootKey);
+  }
+  return false;
+}
+
+/**
+ * 剔除不在本次输入中的证据引用（模型常拼错 id 或引用嵌套路径）；
+ * 全部被剔除时回填 fixed-profile（固定档案永远在场），保证档案分析不因证据瑕疵整体失败。
+ */
+function sanitizeEvidenceRefs(
+  references: readonly string[],
+  allowed: ReadonlySet<string>,
+  mvuKeys: ReadonlySet<string>,
+): readonly string[] {
+  const kept = references.filter(reference => evidenceRefAllowed(reference, allowed, mvuKeys));
+  if (kept.length > 0) return kept;
+  return ['fixed-profile'];
+}
+
 export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysisSource): ProfileAnalysisOutput {
   try {
     const parsed = parseResponsePayload(raw);
@@ -122,9 +162,11 @@ export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysis
         );
       }
       const allowed = allowedEvidenceRefs(source);
-      const references = [...output.evidenceRefs, ...output.changes.flatMap(change => change.evidenceRefs)];
-      const invalid = references.find(reference => !allowed.has(reference));
-      if (invalid) throw new Error(`回传引用了本次输入中不存在的证据：${invalid}`);
+      const mvuKeys = new Set(Object.keys(source.mvuFacts));
+      output.evidenceRefs = sanitizeEvidenceRefs(output.evidenceRefs, allowed, mvuKeys);
+      for (const change of output.changes) {
+        change.evidenceRefs = sanitizeEvidenceRefs(change.evidenceRefs, allowed, mvuKeys) as ProfileChange['evidenceRefs'];
+      }
     }
     return output;
   } catch (error) {

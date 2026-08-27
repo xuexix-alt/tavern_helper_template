@@ -31,6 +31,7 @@ import { createGenerateRaw, createStopGenerationById } from '../../../小手机�
 import {
   PROFILE_BROADCAST_SYSTEM_PROMPT,
   buildProfileBroadcastPrompt,
+  isMeaningfulStorySummary,
   parseProfileBroadcastOutput,
   saveProfileBroadcastIssue,
   type StoredProfileBroadcastIssue,
@@ -623,6 +624,11 @@ function createWinterAdapterModule(): PhoneModule {
     lastPublishedSnapshots.set(next.sessionKey, next);
     pendingConfirmedChanges = [];
     scheduler?.setSnapshot({ sessionKey: next.sessionKey, snapshotKey: next.key, storyTurn: assistantMessageId });
+    profileScheduler?.setSnapshot({
+      sessionKey: next.sessionKey,
+      snapshotKey: next.key,
+      storyTurn: assistantMessageId,
+    });
     await synchronizeSnapshotEffects(previousSnapshot, next);
     void profileCoordinator
       ?.reconcileStory(next.recentCompletedMessages)
@@ -744,19 +750,16 @@ function createWinterAdapterModule(): PhoneModule {
   }
 
   async function listAddedProfilePeople(): Promise<readonly ProfilePerson[]> {
+    // 档案分析的人物池与通讯录（微信好友）解耦：直接取 MVU 中全部人物候选，
+    // 不依赖用户手动添加联系人——否则 profileViews 永远为空，广播【人物动向】无料可播。
     const current = requireSnapshot();
-    const candidates = new Map(extractWinterContactCandidates(current.mvu.stat_data).map(item => [item.id, item]));
-    const contacts = await listContactPreferences(current.sessionKey);
     assertSnapshotCapture(current);
-    return contacts.map(contact => {
-      const candidate = candidates.get(contact.id);
-      return {
-        id: contact.id,
-        name: candidate?.name ?? contact.name,
-        aliases: [],
-        temporary: candidate?.temporary ?? contact.id.startsWith('temporary:'),
-      };
-    });
+    return extractWinterContactCandidates(current.mvu.stat_data).map(candidate => ({
+      id: candidate.id,
+      name: candidate.name,
+      aliases: [] as string[],
+      temporary: candidate.temporary,
+    }));
   }
 
   async function collectProfileSource(
@@ -836,8 +839,14 @@ function createWinterAdapterModule(): PhoneModule {
     aliases: readonly string[],
     maxCharacters: number,
   ): Promise<void> {
-    const captured = profileCaptures.get(document.personId);
-    if (!captured) throw new Error(`人物档案缺少稳定写入捕获：${document.personId}`);
+    // 分析运行期内使用 collectProfileSource 预置的捕获；
+    // 手动编辑/版本回档发生在运行期外，现场捕获当前稳定快照，保证同样的写入一致性校验。
+    const captured =
+      profileCaptures.get(document.personId) ?? {
+        snapshot: requireSnapshot(),
+        host: requireActiveHostCapture(),
+        worldbooks: requireCapturedWorldbooks(document.sessionKey),
+      };
     try {
       await writeDynamicProfileEntry(captured.worldbooks.chatWorldbookName, document, aliases, maxCharacters, {
         read: async worldbookName => (await getWorldbook(worldbookName)) as unknown as ProfileWorldbookEntry[],
@@ -999,7 +1008,7 @@ function createWinterAdapterModule(): PhoneModule {
       ),
       publicMvuFacts: selectPublicWinterMvuFacts(captured.mvu.stat_data),
       publicProfileChanges: profiles
-        .filter(profile => profile.document.storyInteractionSummary.trim() !== '')
+        .filter(profile => isMeaningfulStorySummary(profile.document.storyInteractionSummary))
         .map(profile => ({
           content: `${profile.document.personName}：${profile.document.storyInteractionSummary}`,
           evidenceRefs: profile.document.evidenceRefs.filter(ref => ref.startsWith('story:') || ref.startsWith('mvu:')),

@@ -54,32 +54,52 @@ function testStrictOutputAndMerge(): void {
   assert.doesNotMatch(renderPromptProfile(merged, 2_000), /尽快确认药品补给/);
 }
 
-function testOutputRejectsUnknownFields(): void {
-  assert.throws(
-    () =>
-      parseProfileAnalysisOutput(
-        JSON.stringify({
-          personId: 'main:纪宁',
-          personName: '纪宁',
-          analysisNarrative: '无变化',
-          changes: [],
-          basicInfoAdditions: [],
-          behaviorTuning: 'x',
-          personalityTuning: 'x',
-          speechStyleTuning: 'x',
-          currentGoals: 'x',
-          currentSituationSummary: 'x',
-          relationshipInterpretation: 'x',
-          storyInteractionSummary: 'x',
-          chatInteractionSummary: 'x',
-          playerActionAdvice: 'x',
-          evidenceRefs: ['fixed-profile'],
-          mvuRelation: '忠诚',
-        }),
-        source,
-      ),
-    /结构|字段/,
+function testOutputToleratesExtraFieldsAndEmptyValues(): void {
+  // B1: 多余字段剥离而非整体失败
+  const tolerant = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '无变化',
+      changes: [],
+      basicInfoAdditions: [],
+      behaviorTuning: 'x',
+      personalityTuning: 'x',
+      speechStyleTuning: 'x',
+      currentGoals: 'x',
+      currentSituationSummary: 'x',
+      relationshipInterpretation: 'x',
+      storyInteractionSummary: 'x',
+      chatInteractionSummary: 'x',
+      playerActionAdvice: 'x',
+      evidenceRefs: ['fixed-profile'],
+      mvuRelation: '忠诚',
+      confidence: 0.9,
+    }),
+    source,
   );
+  assert.equal((tolerant as unknown as Record<string, unknown>).mvuRelation, undefined);
+  assert.equal((tolerant as unknown as Record<string, unknown>).confidence, undefined);
+
+  // B1: 空串/null/缺键走兜底文案
+  const sparse = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '',
+      currentGoals: null,
+      behaviorTuning: '保持谨慎',
+    }),
+    source,
+  );
+  assert.equal(sparse.analysisNarrative, '本次分析未提供概括说明。');
+  assert.equal(sparse.currentGoals, '暂无明确目标');
+  assert.equal(sparse.behaviorTuning, '保持谨慎');
+  assert.equal(sparse.personalityTuning, '暂无明显变化');
+  assert.equal(sparse.playerActionAdvice, '暂无特别建议');
+  assert.deepEqual(sparse.changes, []);
+  assert.deepEqual(sparse.basicInfoAdditions, []);
+
   assert.throws(() => parseProfileAnalysisOutput('{"__proto__":{"polluted":true}}'), /结构|字段|危险/);
 }
 
@@ -102,14 +122,51 @@ function testIdentityAndEvidenceValidation(): void {
     evidenceRefs: ['story:12', 'wechat:new'],
   };
   assert.doesNotThrow(() => parseProfileAnalysisOutput(JSON.stringify(valid), source));
+
+  // 身份不一致仍然整体拒绝（张冠李戴的档案比没有档案更糟）
   assert.throws(
     () => parseProfileAnalysisOutput(JSON.stringify({ ...valid, personId: 'main:陈宇' }), source),
     /人物|personId/,
   );
-  assert.throws(
-    () => parseProfileAnalysisOutput(JSON.stringify({ ...valid, evidenceRefs: ['story:999'] }), source),
-    /证据|story:999/,
+
+  // B2: 非法引用被剔除，合法引用保留
+  const pruned = parseProfileAnalysisOutput(
+    JSON.stringify({ ...valid, evidenceRefs: ['story:999', 'story:12', 'mvu:关系'] }),
+    source,
   );
+  assert.deepEqual(pruned.evidenceRefs, ['story:12', 'mvu:关系']);
+
+  // B2: mvu 嵌套路径按顶层键匹配视为合法（顶层键「健康」在 mvuFacts 中存在）
+  const nested = parseProfileAnalysisOutput(
+    JSON.stringify({ ...valid, evidenceRefs: ['mvu:健康状况.所在房间', 'mvu:健康'] }),
+    source,
+  );
+  assert.deepEqual(nested.evidenceRefs, ['mvu:健康']);
+
+  // B3: 全部非法时回填 fixed-profile
+  const fallback = parseProfileAnalysisOutput(
+    JSON.stringify({ ...valid, evidenceRefs: ['story:999', 'wechat:ghost'] }),
+    source,
+  );
+  assert.deepEqual(fallback.evidenceRefs, ['fixed-profile']);
+
+  // B2: changes 内的非法引用同样被剔除
+  const changePruned = parseProfileAnalysisOutput(
+    JSON.stringify({
+      ...valid,
+      changes: [
+        {
+          field: 'behaviorTuning',
+          before: '暂无',
+          after: '主动组织抢修',
+          reason: '正文明确其带队',
+          evidenceRefs: ['story:999', 'story:12'],
+        },
+      ],
+    }),
+    source,
+  );
+  assert.deepEqual(changePruned.changes[0].evidenceRefs, ['story:12']);
 }
 
 function testPromptSourceOrder(): void {
@@ -181,7 +238,7 @@ function testNearValidOpenAiResponseCanBeRepaired(): void {
 }
 
 testStrictOutputAndMerge();
-testOutputRejectsUnknownFields();
+testOutputToleratesExtraFieldsAndEmptyValues();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();

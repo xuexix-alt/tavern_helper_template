@@ -323,14 +323,104 @@ export function selectDynamicProfile(
   return entries.find(entry => entry.name === `[人物动态]${personId}`)?.content;
 }
 
+/**
+ * 广播（profile-radio）公开 MVU 事实的定向投影：只输出「播新闻所必须」的字段。
+ * - 世界/通讯网络：整体公开（日期时间锚点 + 网络通断头条）。
+ * - 庇护所：仅保留等级/升级距离/能力总述/可扩展区域/庇护范围变更备注；剔除游戏机制字段（今日投掷点数）与工程接口字段（接口覆盖范围等）。
+ * - 主线任务：剔除 $meta（角色底牌、楼层号等剧透元数据）。
+ * - 房间/楼层其他住户：递归剔除空字符串、空数组与空对象，只留有效居住信息。
+ * - 临时NPC：仅输出公开动向投影（关系档位/健康状况/所在房间/登场状态），且仅收录关系档位非「无」者；私密字段（内心想法、衣着等）与主要角色动态键一律不进入。
+ */
 export function selectPublicWinterMvuFacts(statData: unknown): Readonly<Record<string, unknown>> {
   if (!isRecord(statData)) return {};
-  const publicKeys = ['世界', '通讯网络', '庇护所', '房间', '主线任务', '楼层其他住户'] as const;
-  return Object.fromEntries(
-    publicKeys
-      .filter(key => Object.prototype.hasOwnProperty.call(statData, key))
-      .map(key => [key, structuredClone(statData[key])]),
-  );
+
+  const facts: Record<string, unknown> = {};
+
+  if (hasOwnField(statData, '世界')) facts.世界 = structuredClone(statData.世界);
+  if (hasOwnField(statData, '通讯网络')) facts.通讯网络 = structuredClone(statData.通讯网络);
+
+  if (isRecord(statData.庇护所)) {
+    const scopeChangeNote = isRecord(statData.庇护所.庇护范围变更)
+      ? statData.庇护所.庇护范围变更.note
+      : undefined;
+    const shelter = pickMeaningful({
+      庇护所等级: statData.庇护所.庇护所等级,
+      距离上次升级: statData.庇护所.距离上次升级,
+      庇护所能力总述: statData.庇护所.庇护所能力总述,
+      可扩展区域: statData.庇护所.可扩展区域,
+    });
+    if (typeof scopeChangeNote === 'string' && scopeChangeNote.trim() !== '') {
+      shelter.庇护范围变更 = scopeChangeNote;
+    }
+    if (Object.keys(shelter).length > 0) facts.庇护所 = shelter;
+  }
+
+  if (hasOwnField(statData, '主线任务')) {
+    const missions = structuredClone(statData.主线任务);
+    if (isRecord(missions)) {
+      delete missions.$meta;
+      facts.主线任务 = missions;
+    }
+  }
+
+  if (isRecord(statData.房间)) {
+    const rooms = stripEmptyDeep(statData.房间);
+    if (rooms !== undefined) facts.房间 = rooms;
+  }
+
+  if (isRecord(statData.楼层其他住户)) {
+    const residents = stripEmptyDeep(statData.楼层其他住户);
+    if (residents !== undefined) facts.楼层其他住户 = residents;
+  }
+
+  if (isRecord(statData.临时NPC)) {
+    const movements: Record<string, unknown> = {};
+    for (const [name, npc] of Object.entries(statData.临时NPC)) {
+      if (!isRecord(npc) || typeof npc.关系 !== 'string' || npc.关系 === '无') continue;
+      movements[name] = pickMeaningful({
+        关系: npc.关系,
+        健康状况: npc.健康状况 === '无' ? undefined : npc.健康状况,
+        所在房间: npc.所在房间,
+        登场状态: npc.登场状态,
+      });
+    }
+    if (Object.keys(movements).length > 0) facts.临时NPC动向 = movements;
+  }
+
+  return facts;
+}
+
+function hasOwnField(record: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+/** 仅保留已定义且非空白字符串的键（0/false 等有效值照常保留）。 */
+function pickMeaningful(entries: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entries)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === 'string' && value.trim() === '') continue;
+    result[key] = value;
+  }
+  return result;
+}
+
+/** 递归剔除空字符串/空数组/空对象；全部为空时返回 undefined（数字与布尔原样保留）。 */
+function stripEmptyDeep(value: unknown): unknown {
+  if (typeof value === 'string') return value.trim() === '' ? undefined : value;
+  if (Array.isArray(value)) {
+    const items = value.map(stripEmptyDeep).filter(item => item !== undefined);
+    return items.length > 0 ? items : undefined;
+  }
+  if (isRecord(value)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      const stripped = stripEmptyDeep(item);
+      if (stripped !== undefined) result[key] = stripped;
+    }
+    return Object.keys(result).length > 0 ? result : undefined;
+  }
+  return value;
 }
 
 export interface WinterTask {
