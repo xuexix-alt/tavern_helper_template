@@ -12,11 +12,45 @@
           <span class="stream-toggle-slider"></span>
           <span class="stream-toggle-label">流式生成</span>
         </label>
-        <button type="button" class="opening-generate-btn clip-corner-sm" :disabled="busy" @click="emitSubmit">
+        <button
+          type="button"
+          class="opening-generate-btn clip-corner-sm"
+          :disabled="busy || transferBusy"
+          @click="emitSubmit"
+        >
           {{ busy ? '生成中…' : runtimePreset?.ui.submit_label || '生成开局' }}
         </button>
       </div>
     </header>
+
+    <section class="opening-transfer-actions" aria-label="开局配置文件操作">
+      <input
+        ref="jsonInputRef"
+        class="opening-json-input"
+        type="file"
+        accept="application/json,.json"
+        @change="handleJsonFileSelection"
+      />
+      <button type="button" class="opening-transfer-button" :disabled="busy || transferBusy" @click="triggerJsonImport">
+        导入 JSON
+      </button>
+      <button
+        type="button"
+        class="opening-transfer-button"
+        :disabled="busy || transferBusy"
+        @click="emit('export-json')"
+      >
+        导出 JSON
+      </button>
+      <button
+        type="button"
+        class="opening-transfer-button"
+        :disabled="busy || transferBusy || !runtimePreset"
+        @click="emit('sync-worldbook')"
+      >
+        同步世界书
+      </button>
+    </section>
 
     <template v-if="runtimePreset">
       <section class="opening-meta-grid">
@@ -265,7 +299,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import {
   OPENING_STORY_TEMPLATE_GENERIC,
@@ -287,6 +321,7 @@ const props = defineProps<{
   worldModes: OpeningWorldModeOption[];
   routes: OpeningRouteOption[];
   runtimePreset?: RuntimeOpeningPreset | null;
+  transferBusy?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -296,8 +331,13 @@ const emit = defineEmits<{
   (event: 'update-world-mode', value: string): void;
   (event: 'update-route', value: string): void;
   (event: 'update-stream', value: boolean): void;
+  (event: 'import-json', file: File): void;
+  (event: 'export-json'): void;
+  (event: 'sync-worldbook'): void;
   (event: 'submit'): void;
 }>();
+
+const jsonInputRef = ref<HTMLInputElement | null>(null);
 
 const CURRENT_STORY_KEY = 'winter-apocalypse-order';
 const NEW_STORY_KEY = 'new-story';
@@ -371,6 +411,17 @@ function emitStreamToggle(event: Event) {
 function emitSubmit() {
   emit('submit');
 }
+
+function triggerJsonImport() {
+  jsonInputRef.value?.click();
+}
+
+function handleJsonFileSelection(event: Event) {
+  const target = event.target as HTMLInputElement | null;
+  const file = target?.files?.[0];
+  if (file) emit('import-json', file);
+  if (target) target.value = '';
+}
 </script>
 
 <style scoped>
@@ -395,6 +446,31 @@ function emitSubmit() {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.opening-transfer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.opening-json-input {
+  display: none;
+}
+
+.opening-transfer-button {
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--demo-border-accent-strong);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 38%, transparent);
+  color: var(--demo-text-secondary);
+  font-size: 12px;
+}
+
+.opening-transfer-button:hover:not(:disabled) {
+  border-color: var(--demo-border-warning-soft);
+  color: var(--demo-text-primary);
 }
 
 .opening-setup-kicker {

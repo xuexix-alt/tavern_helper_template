@@ -4,6 +4,7 @@ import { OpeningPayloadSchema, type OpeningPayload, type OpeningPreset } from '.
 import { RuntimeOpeningPresetSchema, type RuntimeOpeningPreset } from './runtimeOpeningPreset.schema';
 
 export const RUNTIME_OPENING_CHARACTER_PATH = 'same_layer_pre.opening_preset';
+export const RUNTIME_OPENING_CHAT_SNAPSHOT_PATH = 'stream_demo.runtime_opening_preset_snapshot';
 export const RUNTIME_OPENING_STORY_PREFIX = 'runtime:';
 
 export type RuntimeOpeningPresetReadResult =
@@ -17,15 +18,38 @@ function formatRuntimePresetError(error: { issues: Array<{ path: PropertyKey[]; 
     .join('; ');
 }
 
-export function readRuntimeOpeningPresetFromCharacterVariables(
+function readRuntimeOpeningPresetAtPath(
   variables: Record<string, unknown> | null | undefined,
+  path: string,
 ): RuntimeOpeningPresetReadResult {
-  const raw = _.get(variables ?? {}, RUNTIME_OPENING_CHARACTER_PATH);
+  const raw = _.get(variables ?? {}, path);
   if (raw === undefined || raw === null) return { status: 'absent' };
 
   const parsed = RuntimeOpeningPresetSchema.safeParse(raw);
   if (!parsed.success) return { status: 'invalid', error: formatRuntimePresetError(parsed.error) };
   return { status: 'valid', preset: parsed.data };
+}
+
+export function readRuntimeOpeningPresetFromCharacterVariables(
+  variables: Record<string, unknown> | null | undefined,
+): RuntimeOpeningPresetReadResult {
+  return readRuntimeOpeningPresetAtPath(variables, RUNTIME_OPENING_CHARACTER_PATH);
+}
+
+export function readRuntimeOpeningPresetFromChatVariables(
+  variables: Record<string, unknown> | null | undefined,
+): RuntimeOpeningPresetReadResult {
+  return readRuntimeOpeningPresetAtPath(variables, RUNTIME_OPENING_CHAT_SNAPSHOT_PATH);
+}
+
+export function withRuntimeOpeningPresetAtPath(
+  variables: Record<string, unknown> | null | undefined,
+  path: string,
+  preset: RuntimeOpeningPreset,
+): Record<string, unknown> {
+  const next = _.cloneDeep(variables ?? {});
+  _.set(next, path, RuntimeOpeningPresetSchema.parse(preset));
+  return next;
 }
 
 export function toLegacyOpeningPreset(preset: RuntimeOpeningPreset): OpeningPreset {

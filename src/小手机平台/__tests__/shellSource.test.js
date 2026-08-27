@@ -726,9 +726,9 @@ test('broadcast app renders profile radio history and can regenerate without rep
         kind: 'profile-radio',
         generatedAt: 1_000,
         sections: [
-          { title: '秩序与局势', body: '北门关闭。' },
-          { title: '生存与资源', body: '暂无重大变化。' },
-          { title: '人物与社会', body: '诊疗室恢复值守。' },
+          { title: '本台通告', body: '北门关闭。' },
+          { title: '生活频道', body: '暂无重大变化。' },
+          { title: '街坊风声', body: '诊疗室恢复值守。' },
         ],
       },
     ],
@@ -740,9 +740,9 @@ test('broadcast app renders profile radio history and can regenerate without rep
   const rendered = await broadcasts.render(testContext());
   const textValues = collectText(rendered).join('\n');
   assert.match(textValues, /伊甸网络/);
-  assert.match(textValues, /秩序与局势/);
-  assert.match(textValues, /生存与资源/);
-  assert.match(textValues, /人物与社会/);
+  assert.match(textValues, /本台通告/);
+  assert.match(textValues, /生活频道/);
+  assert.match(textValues, /街坊风声/);
   findByClass(rendered, 'phone-broadcast-regenerate').click();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(regenerations, 1);

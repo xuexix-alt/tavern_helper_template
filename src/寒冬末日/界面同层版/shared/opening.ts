@@ -765,31 +765,14 @@ export function readOpeningPayloadFromChat(): OpeningPayload | null {
   }
 }
 
-const OPENING_PERSISTED_FORM_KEYS = [
-  'pre_disaster_identity',
-  'shelter_ability_summary',
-  'early_story_tone',
-  'opening_style',
-  'supplemental_setting',
-  'custom_opening_setting',
-  'word_count',
-  'financial_level',
-  'pre_disaster_contacts',
-  'stockpile_focus',
-  'generic_genre',
-  'is_fanwork',
-  'fanwork_name',
-  'protagonist_background',
-  'opening_scene',
-  'user_requirements',
-] as const;
-
 function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
   const compactFormValues = Object.fromEntries(
-    OPENING_PERSISTED_FORM_KEYS.map(key => [key, trimText(payload.form_values?.[key])]).filter(([, value]) =>
-      Boolean(value),
-    ),
+    Object.entries(payload.form_values ?? {})
+      .map(([key, value]) => [key, trimText(value)])
+      .filter(([, value]) => Boolean(value)),
   );
+  const keepsExplicitMeta =
+    isGenericStoryOpening(payload) || String(payload.story_template ?? '').startsWith('runtime:');
 
   return {
     version: 5,
@@ -806,7 +789,7 @@ function buildCompactOpeningPayloadForChat(payload: OpeningPayload) {
         : null,
     meta: {
       character: compactText(payload.meta.character) || '{{user}}',
-      ...(isGenericStoryOpening(payload)
+      ...(keepsExplicitMeta
         ? {
             time: compactText(payload.meta.time),
             location: compactText(payload.meta.location),

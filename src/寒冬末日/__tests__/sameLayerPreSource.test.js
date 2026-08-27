@@ -888,6 +888,74 @@ test('same-layer-pre loads and renders a character-owned runtime opening preset'
   assert.match(panelSource, /v-if="runtimePreset"/);
 });
 
+test('same-layer-pre imports, exports, snapshots, and explicitly syncs runtime openings', () => {
+  const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
+  const panelSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', '界面', '状态栏', 'components', 'OpeningSetupPanel.vue'),
+    'utf8',
+  );
+
+  assert.match(panelSource, /accept="application\/json,\.json"/);
+  assert.match(panelSource, />\s*导入 JSON\s*</);
+  assert.match(panelSource, />\s*导出 JSON\s*</);
+  assert.match(panelSource, />\s*同步世界书\s*</);
+  assert.match(panelSource, /transferBusy\?: boolean/);
+  assert.match(panelSource, /event: 'import-json', file: File/);
+  assert.match(panelSource, /event: 'export-json'/);
+  assert.match(panelSource, /event: 'sync-worldbook'/);
+  const exportButtonSource =
+    panelSource.match(/<button[\s\S]*?@click="emit\('export-json'\)"[\s\S]*?<\/button>/)?.[0] ?? '';
+  assert.ok(exportButtonSource, 'export button source should be discoverable');
+  assert.doesNotMatch(exportButtonSource, /!runtimePreset/);
+
+  assert.match(storySource, /:transfer-busy="openingTransferBusy"/);
+  assert.match(storySource, /@import-json="handleRuntimeOpeningImport"/);
+  assert.match(storySource, /@export-json="handleRuntimeOpeningExport"/);
+  assert.match(storySource, /@sync-worldbook="handleRuntimeOpeningWorldbookSync"/);
+  assert.match(storySource, /readRuntimeOpeningPresetFromChatVariables\(getVariables\(\{ type: 'chat' \}\)\)/);
+  assert.match(storySource, /withRuntimeOpeningPresetAtPath/);
+  assert.match(storySource, /RUNTIME_OPENING_CHARACTER_PATH/);
+  assert.match(storySource, /RUNTIME_OPENING_CHAT_SNAPSHOT_PATH/);
+  assert.match(storySource, /parseRuntimeOpeningImport/);
+  assert.match(storySource, /buildRuntimeOpeningExport/);
+  assert.match(storySource, /toPortableRuntimeOpeningPreset/);
+  assert.match(storySource, /runtimeOpeningPreset\.value \?\?\s*toPortableRuntimeOpeningPreset/);
+  assert.match(storySource, /fields: getOpeningFormSchema\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(storySource, /syncRuntimeOpeningWorldbook/);
+  assert.match(storySource, /async function handleRuntimeOpeningImport\(file: File\)/);
+  assert.match(storySource, /function handleRuntimeOpeningExport\(\)/);
+  assert.match(storySource, /async function handleRuntimeOpeningWorldbookSync\(\)/);
+  assert.match(storySource, /开局配置已导入，但世界书同步失败/);
+
+  const refreshPresetSource = extractFunctionSource(storySource, 'refreshRuntimeOpeningPresetFromCharacter');
+  const readChatSnapshotIndex = refreshPresetSource.indexOf('readRuntimeOpeningPresetFromChatVariables');
+  const readCharacterPresetIndex = refreshPresetSource.indexOf('readRuntimeOpeningPresetFromCharacterVariables');
+  assert.ok(readChatSnapshotIndex >= 0, 'delayed preset refresh should re-check the chat snapshot');
+  assert.ok(
+    readChatSnapshotIndex < readCharacterPresetIndex,
+    'the chat snapshot must remain authoritative over delayed character-preset discovery',
+  );
+
+  const submitSource = extractFunctionSource(storySource, 'handleOpeningSubmit');
+  const syncIndex = submitSource.indexOf('await syncCurrentOpeningWorldbook');
+  const generateIndex = submitSource.indexOf('submitAssistantOnlyPrompt');
+  assert.ok(syncIndex >= 0, 'opening submit should explicitly sync the current chat worldbook');
+  assert.ok(generateIndex >= 0, 'opening submit should still call assistant-only generation');
+  assert.ok(syncIndex < generateIndex, 'worldbook synchronization must finish before generation starts');
+});
+
+test('runtime opening chat persistence keeps dynamic preset field keys', () => {
+  const openingSource = fs.readFileSync(
+    path.join(ROOT, 'src', '寒冬末日', '界面同层版', 'shared', 'opening.ts'),
+    'utf8',
+  );
+  const compactSource = extractFunctionSource(openingSource, 'buildCompactOpeningPayloadForChat');
+
+  assert.match(compactSource, /Object\.entries\(payload\.form_values \?\? \{\}\)/);
+  assert.match(compactSource, /story_template.*startsWith\('runtime:'\)/s);
+  assert.doesNotMatch(compactSource, /OPENING_PERSISTED_FORM_KEYS\.map/);
+});
+
 test('same-layer-pre opening generation persists only assistant mes=1', () => {
   const preSource = readPre('useSameLayerPre.ts');
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));

@@ -139,12 +139,16 @@
         :world-modes="openingWorldModes"
         :routes="openingRoutes"
         :runtime-preset="runtimeOpeningPreset"
+        :transfer-busy="openingTransferBusy"
         @update-meta="updateOpeningMeta"
         @update-field="updateOpeningField"
         @update-story-template="updateOpeningStoryTemplate"
         @update-world-mode="updateOpeningWorldMode"
         @update-route="updateOpeningRoute"
         @update-stream="updateOpeningStream"
+        @import-json="handleRuntimeOpeningImport"
+        @export-json="handleRuntimeOpeningExport"
+        @sync-worldbook="handleRuntimeOpeningWorldbookSync"
         @submit="handleOpeningSubmit"
       />
     </HudModal>
@@ -509,14 +513,23 @@ import {
 } from '../../../../界面同层版/shared/opening';
 import type { OpeningPayload } from '../../../../界面同层版/shared/opening.schema';
 import {
+  RUNTIME_OPENING_CHARACTER_PATH,
+  RUNTIME_OPENING_CHAT_SNAPSHOT_PATH,
   buildRuntimeOpeningGeneratePrompt,
   getRuntimeOpeningDefaultPayload,
   isRuntimeOpeningPayload,
+  readRuntimeOpeningPresetFromChatVariables,
   readRuntimeOpeningPresetFromCharacterVariables,
   runtimeOpeningStoryTemplateId,
   toLegacyOpeningPreset,
+  withRuntimeOpeningPresetAtPath,
 } from '../../../../界面同层版/shared/runtimeOpeningPreset';
 import type { RuntimeOpeningPreset } from '../../../../界面同层版/shared/runtimeOpeningPreset.schema';
+import {
+  buildRuntimeOpeningExport,
+  parseRuntimeOpeningImport,
+  toPortableRuntimeOpeningPreset,
+} from '../../../../界面同层版/shared/runtimeOpeningPresetTransfer';
 import BottomComposer from '../../../../界面同层版/界面/状态栏/components/BottomComposer.vue';
 import GalleryImageRoleAssignPicker from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
 import type { GalleryImageRoleAssignRoleOption } from '../../../../界面同层版/界面/状态栏/components/GalleryImageRoleAssignPicker.vue';
@@ -552,6 +565,7 @@ import {
   type PrePhoneBridge,
 } from '../phoneBridge';
 import { useSameLayerPre } from '../useSameLayerPre';
+import { syncRuntimeOpeningWorldbook } from '../runtimeOpeningWorldbookSync';
 
 type ComposerExpose = {
   openChoiceModal: () => Promise<void> | void;
@@ -614,7 +628,14 @@ const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
 const transcriptFloorDraft = ref(transcriptDisplayCount.value);
 const readerShellHeight = ref('min(92vh, 960px)');
-const runtimeOpeningPresetRead = readRuntimeOpeningPresetFromCharacterVariables(getVariables({ type: 'character' }));
+const runtimeOpeningCharacterPresetRead = readRuntimeOpeningPresetFromCharacterVariables(
+  getVariables({ type: 'character' }),
+);
+const runtimeOpeningChatPresetRead = readRuntimeOpeningPresetFromChatVariables(getVariables({ type: 'chat' }));
+const runtimeOpeningPresetRead =
+  runtimeOpeningChatPresetRead.status === 'absent' ? runtimeOpeningCharacterPresetRead : runtimeOpeningChatPresetRead;
+const shouldPersistInitialRuntimeOpeningSnapshot =
+  runtimeOpeningChatPresetRead.status === 'absent' && runtimeOpeningCharacterPresetRead.status === 'valid';
 const runtimeOpeningPreset = ref<RuntimeOpeningPreset | null>(
   runtimeOpeningPresetRead.status === 'valid' ? runtimeOpeningPresetRead.preset : null,
 );
@@ -637,6 +658,7 @@ const openingWorldModes = getOpeningWorldModes();
 const openingRoutes = getOpeningRoutes();
 const openingModalOpen = ref(false);
 const typographyModalOpen = ref(false);
+const openingTransferBusy = ref(false);
 let runtimeOpeningPresetRetryTimerIds: number[] = [];
 const shellStyleVars = computed(() => ({
   '--reader-shell-height': readerShellHeight.value,
@@ -1073,7 +1095,45 @@ function persistOpeningPayloadNow() {
   replaceOpeningPayloadInChat(openingPayload.value);
 }
 
+function persistRuntimeOpeningPresetAt(
+  preset: RuntimeOpeningPreset,
+  path: string,
+  option: { type: 'character' | 'chat' },
+) {
+  updateVariablesWith(variables => withRuntimeOpeningPresetAtPath(variables, path, preset), option);
+}
+
+function persistRuntimeOpeningCharacterPreset(preset: RuntimeOpeningPreset) {
+  persistRuntimeOpeningPresetAt(preset, RUNTIME_OPENING_CHARACTER_PATH, { type: 'character' });
+}
+
+function persistRuntimeOpeningChatSnapshot(preset: RuntimeOpeningPreset) {
+  persistRuntimeOpeningPresetAt(preset, RUNTIME_OPENING_CHAT_SNAPSHOT_PATH, { type: 'chat' });
+}
+
 function refreshRuntimeOpeningPresetFromCharacter(): boolean {
+  try {
+    const chatResult = readRuntimeOpeningPresetFromChatVariables(getVariables({ type: 'chat' }));
+    if (chatResult.status === 'invalid') {
+      runtimeOpeningPresetError.value = chatResult.error;
+      return true;
+    }
+    if (chatResult.status === 'valid') {
+      runtimeOpeningPreset.value = chatResult.preset;
+      runtimeOpeningPresetError.value = '';
+      openingPreset.value = toLegacyOpeningPreset(chatResult.preset);
+      const restored = readOpeningPayloadFromChat();
+      openingPayload.value =
+        restored?.story_template === runtimeOpeningStoryTemplateId(chatResult.preset.preset_id)
+          ? restored
+          : getRuntimeOpeningDefaultPayload(chatResult.preset);
+      return true;
+    }
+  } catch (error) {
+    runtimeOpeningPresetError.value = error instanceof Error ? error.message : String(error);
+    return true;
+  }
+
   let result;
   try {
     result = readRuntimeOpeningPresetFromCharacterVariables(getVariables({ type: 'character' }));
@@ -1087,11 +1147,15 @@ function refreshRuntimeOpeningPresetFromCharacter(): boolean {
     runtimeOpeningPresetError.value = result.error;
     return true;
   }
-  if (runtimeOpeningPreset.value?.preset_id === result.preset.preset_id) return true;
-
   runtimeOpeningPreset.value = result.preset;
   runtimeOpeningPresetError.value = '';
   openingPreset.value = toLegacyOpeningPreset(result.preset);
+  try {
+    persistRuntimeOpeningChatSnapshot(result.preset);
+  } catch (error) {
+    runtimeOpeningPresetError.value = error instanceof Error ? error.message : String(error);
+    return true;
+  }
   const restored = readOpeningPayloadFromChat();
   openingPayload.value =
     restored?.story_template === runtimeOpeningStoryTemplateId(result.preset.preset_id)
@@ -1260,8 +1324,136 @@ function updateOpeningField(key: string, value: string) {
   persistOpeningPayloadNow();
 }
 
+function requireCurrentChatId(): string {
+  const chatId = String(getCurrentChatId() ?? '').trim();
+  if (!chatId) throw new Error('当前没有可用的聊天记录');
+  return chatId;
+}
+
+function assertOpeningChatCurrent(expectedChatId: string) {
+  if (String(getCurrentChatId() ?? '').trim() !== expectedChatId) {
+    throw new Error('当前聊天已切换，已终止开局操作');
+  }
+}
+
+async function syncCurrentOpeningWorldbook(
+  expectedChatId = requireCurrentChatId(),
+  preset = runtimeOpeningPreset.value,
+  payload = openingPayload.value,
+) {
+  if (!preset) throw new Error('当前没有可同步的 runtime opening preset');
+  return syncRuntimeOpeningWorldbook(
+    { expectedChatId, preset, payload },
+    {
+      getCurrentChatId,
+      getOrCreateChatWorldbook,
+      getWorldbook,
+      updateWorldbookWith,
+      createWorldbookEntries,
+    },
+  );
+}
+
+async function handleRuntimeOpeningImport(file: File) {
+  if (busy.value || openingTransferBusy.value) return;
+  openingTransferBusy.value = true;
+  let openingConfigInstalled = false;
+  try {
+    const raw = JSON.parse(await file.text()) as unknown;
+    const imported = parseRuntimeOpeningImport(raw);
+    const confirmed = window.confirm(
+      `导入将覆盖当前角色卡的默认开局，并为当前聊天安装“${imported.preset.ui.title}”。是否继续？`,
+    );
+    if (!confirmed) return;
+
+    const expectedChatId = requireCurrentChatId();
+    persistRuntimeOpeningCharacterPreset(imported.preset);
+    assertOpeningChatCurrent(expectedChatId);
+    persistRuntimeOpeningChatSnapshot(imported.preset);
+    assertOpeningChatCurrent(expectedChatId);
+
+    runtimeOpeningPreset.value = imported.preset;
+    runtimeOpeningPresetError.value = '';
+    openingPreset.value = toLegacyOpeningPreset(imported.preset);
+    openingPayload.value = imported.payload;
+    persistOpeningPayloadNow();
+    openingConfigInstalled = true;
+
+    await syncCurrentOpeningWorldbook(expectedChatId, imported.preset, imported.payload);
+    toastr?.success?.(`已导入“${imported.preset.ui.title}”并同步当前聊天世界书`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    toastr?.error?.(
+      openingConfigInstalled ? `开局配置已导入，但世界书同步失败：${message}` : `开局 JSON 导入失败：${message}`,
+    );
+  } finally {
+    openingTransferBusy.value = false;
+  }
+}
+
+function handleRuntimeOpeningExport() {
+  const preset =
+    runtimeOpeningPreset.value ??
+    toPortableRuntimeOpeningPreset(openingPreset.value, openingPayload.value, {
+      fields: getOpeningFormSchema(openingPreset.value, openingPayload.value),
+      extraFields: isGenericStoryOpening(openingPayload.value)
+        ? []
+        : [
+            {
+              key: 'world_mode_id',
+              label: '世界观档位',
+              kind: 'select',
+              required: true,
+              options: openingWorldModes.map(mode => mode.id),
+              placeholder: '选择世界观档位',
+              default_value: String(openingPayload.value.world_mode_id ?? ''),
+            },
+            {
+              key: 'route_id',
+              label: '游玩流派',
+              kind: 'select',
+              required: true,
+              options: openingRoutes.map(route => route.name),
+              placeholder: '选择游玩流派',
+              default_value: String(openingPayload.value.route_id ?? ''),
+            },
+          ],
+    });
+
+  const bundle = buildRuntimeOpeningExport(preset, openingPayload.value);
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const safePresetId = preset.preset_id.replace(/[<>:"/\\|?*]/g, '-');
+  link.href = url;
+  link.download = `同层PRE开局_${safePresetId}_${new Date().toISOString().slice(0, 10)}.json`;
+  link.style.display = 'none';
+  document.body.append(link);
+  try {
+    link.click();
+    toastr?.success?.('已导出当前开局 JSON');
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function handleRuntimeOpeningWorldbookSync() {
+  if (busy.value || openingTransferBusy.value) return;
+  openingTransferBusy.value = true;
+  try {
+    await syncCurrentOpeningWorldbook();
+    toastr?.success?.('已同步当前聊天的自定义开局世界书');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    toastr?.error?.(`开局世界书同步失败：${message}`);
+  } finally {
+    openingTransferBusy.value = false;
+  }
+}
+
 async function handleOpeningSubmit() {
-  if (busy.value) return;
+  if (busy.value || openingTransferBusy.value) return;
 
   hydrateOpeningPayloadDefaults();
 
@@ -1289,6 +1481,25 @@ async function handleOpeningSubmit() {
     toastr?.warning?.(`请先填写：${missing.label}`);
     openingModalOpen.value = true;
     return;
+  }
+
+  if (runtimeOpeningPreset.value) {
+    openingTransferBusy.value = true;
+    try {
+      await syncCurrentOpeningWorldbook();
+    } catch (error) {
+      openingPayload.value = {
+        ...openingPayload.value,
+        state: 'configuring',
+      };
+      persistOpeningPayloadNow();
+      openingModalOpen.value = true;
+      const message = error instanceof Error ? error.message : String(error);
+      toastr?.error?.(`开局世界书同步失败，已停止生成：${message}`);
+      return;
+    } finally {
+      openingTransferBusy.value = false;
+    }
   }
 
   const compiledPromptSnapshot =
@@ -1401,6 +1612,13 @@ watch(
 );
 
 onMounted(() => {
+  if (shouldPersistInitialRuntimeOpeningSnapshot && runtimeOpeningPreset.value) {
+    try {
+      persistRuntimeOpeningChatSnapshot(runtimeOpeningPreset.value);
+    } catch (error) {
+      runtimeOpeningPresetError.value = error instanceof Error ? error.message : String(error);
+    }
+  }
   if (runtimeOpeningPresetRead.status === 'absent') {
     runtimeOpeningPresetRetryTimerIds = [0, 250, 1000].map(delay =>
       window.setTimeout(() => refreshRuntimeOpeningPresetFromCharacter(), delay),
