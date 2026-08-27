@@ -280,6 +280,31 @@ function avatar(document: Document, name: string, className: string): HTMLSpanEl
   return node;
 }
 
+/** 电台三声腔：段名 -> 栏目气质标签（用于 UI 呈现） */
+const BROADCAST_VOICE_LABELS: Record<string, string> = {
+  notice: '管理处 · 官方',
+  life: '物资组 · 生活',
+  whisper: '街坊 · 道听途说',
+  plain: '本台栏目',
+};
+
+function broadcastVoiceOf(title: string): keyof typeof BROADCAST_VOICE_LABELS {
+  if (title.includes('通告')) return 'notice';
+  if (title.includes('生活')) return 'life';
+  if (title.includes('风声') || title.includes('街坊')) return 'whisper';
+  return 'plain';
+}
+
+/** 档案编号：personId 的 FNV-1a 指纹，形如 EDN-3F2A */
+function dossierFileNo(personId: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < personId.length; i += 1) {
+    hash ^= personId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return `EDN-${hash.toString(16).toUpperCase().slice(-4).padStart(4, '0')}`;
+}
+
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
@@ -570,16 +595,43 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         const items = await services.listBroadcasts();
         const page = document.createElement('section');
         page.className = 'phone-broadcasts';
-        const toolbar = document.createElement('div');
-        toolbar.className = 'phone-broadcasts__toolbar';
-        toolbar.append(text(document, 'strong', '末日公共广播'), text(document, 'span', '娱乐播报，不进入正文'));
-        const regenerate = text(document, 'button', '重新生成本期广播');
+
+        // 电台机头：频率 / ON AIR / 台名 / 调频刻度
+        const hero = document.createElement('header');
+        hero.className = 'radio-hero';
+        const band = document.createElement('div');
+        band.className = 'radio-hero__band';
+        const freq = text(document, 'span', 'FM 87.6 MHz');
+        freq.className = 'radio-hero__freq';
+        const onair = document.createElement('span');
+        onair.className = 'radio-hero__onair';
+        onair.setAttribute('aria-hidden', 'true');
+        const onairDot = document.createElement('i');
+        onairDot.className = 'radio-hero__onair-dot';
+        onair.append(onairDot, text(document, 'span', 'ON AIR'));
+        band.append(freq, onair);
+        const heading = text(document, 'h1', '末日公共广播');
+        heading.className = 'radio-hero__title';
+        const slogan = text(document, 'p', '伊甸楼宇广播站 · 娱乐播报，不进入正文');
+        slogan.className = 'radio-hero__slogan';
+        const dial = document.createElement('div');
+        dial.className = 'radio-dial';
+        dial.setAttribute('aria-hidden', 'true');
+        const needle = document.createElement('span');
+        needle.className = 'radio-dial__needle';
+        dial.append(needle);
+        const dialLabels = document.createElement('div');
+        dialLabels.className = 'radio-dial__labels';
+        dialLabels.setAttribute('aria-hidden', 'true');
+        for (const label of ['88', '92', '96', '100', '104']) dialLabels.append(text(document, 'span', label));
+        const regenerate = text(document, 'button', '播报新一期');
         regenerate.className = 'phone-button phone-broadcast-regenerate';
         regenerate.type = 'button';
         regenerate.disabled = !services.regenerateProfileRadio;
         context.listen(regenerate, 'click', () => {
           if (!services.regenerateProfileRadio) return;
           regenerate.disabled = true;
+          hero.dataset.busy = 'true';
           void services
             .regenerateProfileRadio()
             .then(() => {
@@ -589,44 +641,74 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
             .finally(() => {
               if (context.isActive()) regenerate.disabled = false;
+              delete hero.dataset.busy;
             });
         });
-        toolbar.append(regenerate);
-        page.append(toolbar);
+        hero.append(band, heading, slogan, dial, dialLabels, regenerate);
+        page.append(hero);
+
         if (items.length === 0) {
-          page.append(empty(document, '暂无广播'));
+          const silence = empty(document, '本台尚未播报任何节目');
+          silence.className = 'phone-empty radio-empty';
+          const hint = text(document, 'p', '点击「播报新一期」，广播站将汇总近期的公开动静。');
+          hint.className = 'radio-empty__hint';
+          silence.append(hint);
+          page.append(silence);
           return page;
         }
+
         const output = list(document);
         output.className = 'phone-list phone-broadcast-list';
         for (const item of items) {
           if (item.kind === 'profile-radio' && item.sections?.length) {
+            // 三声联播节目存档：本台通告 / 生活频道 / 街坊风声
             const issue = document.createElement('li');
             issue.className = 'phone-broadcast-issue';
-            const heading = document.createElement('header');
-            heading.className = 'phone-broadcast-issue__header';
-            heading.append(
-              text(document, 'strong', item.source),
+            const issueHeader = document.createElement('header');
+            issueHeader.className = 'phone-broadcast-issue__header';
+            const masthead = document.createElement('div');
+            masthead.className = 'phone-broadcast-masthead';
+            masthead.append(text(document, 'strong', item.source || '末日公共广播'));
+            masthead.append(
               text(
                 document,
                 'time',
                 item.generatedAt ? new Date(item.generatedAt).toLocaleString('zh-CN') : '历史一期',
               ),
             );
-            issue.append(heading);
+            const issueLabel = text(document, 'span', '末日公共广播 · 节目存档');
+            issueLabel.className = 'phone-broadcast-issue__label';
+            issueHeader.append(masthead, issueLabel);
+            issue.append(issueHeader);
+            const issueBody = document.createElement('div');
+            issueBody.className = 'phone-broadcast-issue__body';
             for (const section of item.sections) {
+              const voice = broadcastVoiceOf(section.title);
               const sectionNode = document.createElement('section');
-              sectionNode.className = 'phone-broadcast-section';
-              sectionNode.append(text(document, 'h3', section.title), text(document, 'p', section.body));
-              issue.append(sectionNode);
+              sectionNode.className = `phone-broadcast-section phone-broadcast-section--${voice}`;
+              const sectionHead = document.createElement('div');
+              sectionHead.className = 'phone-broadcast-section__head';
+              sectionHead.append(text(document, 'h3', section.title));
+              const voiceLabel = text(document, 'span', BROADCAST_VOICE_LABELS[voice] ?? '本台栏目');
+              voiceLabel.className = 'phone-broadcast-section__voice';
+              sectionHead.append(voiceLabel);
+              sectionNode.append(sectionHead, text(document, 'p', section.body));
+              issueBody.append(sectionNode);
             }
+            issue.append(issueBody);
             output.append(issue);
             continue;
           }
-          const trust = item.trust === 'confirmed' ? '伊甸确认' : '外部未核实';
-          const node = row(document, `${trust} · ${item.source}`, item.content);
-          node.className = 'phone-row phone-broadcast-notice';
+          // 系统快讯：网络状态等确定性通知
+          const node = document.createElement('li');
+          node.className = 'phone-broadcast-notice';
           node.dataset.trust = item.trust;
+          const noticeHead = document.createElement('div');
+          noticeHead.className = 'phone-broadcast-notice__head';
+          const chip = text(document, 'span', item.trust === 'confirmed' ? '伊甸确认' : '外部未核实');
+          chip.className = 'phone-broadcast-notice__chip';
+          noticeHead.append(chip, text(document, 'strong', item.source));
+          node.append(noticeHead, text(document, 'p', item.content));
           output.append(node);
         }
         page.append(output);
@@ -666,201 +748,12 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
     {
       route: 'profiles',
       title: '档案',
-      glyph: '◎',
+      glyph: '▤',
       async render(context) {
         return renderProfileListPage(services, context, personId => {
           selectedProfileId = personId;
           context.navigate('profile-detail');
         });
-        /* legacy profile list retained below for source compatibility */
-        const { document } = context;
-        try {
-          const [profiles, settings] = await Promise.all([
-            collectProfiles(services),
-            services.getProfileSettings?.() ?? {
-              storyProgress: 0,
-              autoRefreshEvery: 20,
-              promptProfileMaxChars: 2_000,
-            },
-          ]);
-          const container = document.createElement('div');
-          container.className = 'phone-profiles';
-
-          const settingsPanel = document.createElement('section');
-          settingsPanel.className = 'phone-profile-settings';
-          const progress = text(
-            document,
-            'strong',
-            `正文进度 ${Math.max(0, Math.floor(settings.storyProgress))} / ${settings.autoRefreshEvery}`,
-          );
-          progress.className = 'phone-profile-progress';
-          const threshold = input(document, 'number', String(settings.autoRefreshEvery));
-          threshold.className = 'phone-profile-settings__threshold';
-          threshold.min = '1';
-          threshold.max = '50';
-          threshold.step = '1';
-          threshold.inputMode = 'numeric';
-          const budget = input(document, 'number', String(settings.promptProfileMaxChars));
-          budget.className = 'phone-profile-settings__budget';
-          budget.min = '1';
-          budget.step = '100';
-          budget.inputMode = 'numeric';
-          const fields = document.createElement('div');
-          fields.className = 'phone-profile-settings__fields';
-          fields.append(field(document, '自动刷新条数', threshold), field(document, '档案提示词上限', budget));
-          const saveProfileSettings = text(document, 'button', '保存刷新设置');
-          saveProfileSettings.className = 'phone-button phone-profile-settings__save';
-          saveProfileSettings.type = 'button';
-          saveProfileSettings.disabled = !services.saveProfileSettings;
-          context.listen(saveProfileSettings, 'click', () => {
-            if (!services.saveProfileSettings) return;
-            const autoRefreshEvery = Number(threshold.value);
-            const promptProfileMaxChars = Number(budget.value);
-            if (!Number.isSafeInteger(autoRefreshEvery) || autoRefreshEvery < 1 || autoRefreshEvery > 50) {
-              context.announce('自动刷新条数必须是 1 到 50 的整数', 'error');
-              return;
-            }
-            if (!Number.isSafeInteger(promptProfileMaxChars) || promptProfileMaxChars <= 0) {
-              context.announce('档案提示词上限必须是正整数', 'error');
-              return;
-            }
-            saveProfileSettings.disabled = true;
-            void services
-              .saveProfileSettings({
-                storyProgress: settings.storyProgress,
-                autoRefreshEvery,
-                promptProfileMaxChars,
-              })
-              .then(() => {
-                context.announce('档案刷新设置已保存');
-                context.requestRender();
-              })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
-              .finally(() => {
-                if (context.isActive()) saveProfileSettings.disabled = false;
-              });
-          });
-          settingsPanel.append(progress, fields, saveProfileSettings);
-
-          const actions = document.createElement('div');
-          actions.className = 'phone-profile-actions';
-          const refreshAll = text(document, 'button', '刷新全部人物');
-          refreshAll.className = 'phone-button phone-button--primary phone-profile-refresh-all';
-          refreshAll.type = 'button';
-          refreshAll.disabled = !services.refreshAllProfiles;
-          const retryFailed = text(document, 'button', '重试失败人物');
-          retryFailed.className = 'phone-button phone-profile-retry';
-          retryFailed.type = 'button';
-          retryFailed.disabled = !services.retryFailedProfiles;
-          const runAction = (
-            button: HTMLButtonElement,
-            action: (() => Promise<void>) | undefined,
-            success: string,
-          ): void => {
-            if (!action) return;
-            button.disabled = true;
-            void action()
-              .then(() => {
-                context.announce(success);
-                context.requestRender();
-              })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
-              .finally(() => {
-                if (context.isActive()) button.disabled = false;
-              });
-          };
-          context.listen(refreshAll, 'click', () =>
-            runAction(refreshAll, services.refreshAllProfiles?.bind(services), '全部人物档案刷新完成'),
-          );
-          context.listen(retryFailed, 'click', () =>
-            runAction(retryFailed, services.retryFailedProfiles?.bind(services), '失败人物已重试'),
-          );
-          actions.append(refreshAll, retryFailed);
-          container.append(settingsPanel, actions);
-
-          if (profiles.length === 0) {
-            container.append(empty(document, '尚无已生成的人物档案'));
-            return container;
-          }
-          const profileList = list(document);
-          profileList.className = 'phone-list phone-profile-list';
-          for (const profile of profiles) {
-            const item = document.createElement('li');
-            item.className = 'phone-profile-item';
-            item.dataset.status = profile.refreshStatus;
-            const header = document.createElement('header');
-            header.className = 'phone-profile-header';
-            const identity = document.createElement('div');
-            identity.className = 'phone-profile-header__identity';
-            identity.append(
-              text(document, 'strong', profile.name),
-              text(
-                document,
-                'span',
-                profile.refreshStatus === 'refreshing'
-                  ? '刷新中'
-                  : profile.refreshStatus === 'failed'
-                    ? '刷新失败'
-                    : profile.refreshStatus === 'success'
-                      ? '已更新'
-                      : '待刷新',
-              ),
-            );
-            const refresh = text(document, 'button', '↻');
-            refresh.className = 'phone-button phone-profile-refresh';
-            refresh.type = 'button';
-            refresh.setAttribute('aria-label', `刷新${profile.name}的档案`);
-            refresh.title = `刷新${profile.name}的档案`;
-            refresh.disabled = !services.refreshProfile || profile.refreshStatus === 'refreshing';
-            context.listen(refresh, 'click', () =>
-              runAction(
-                refresh,
-                services.refreshProfile ? () => services.refreshProfile!(profile.id) : undefined,
-                `${profile.name}的档案已更新`,
-              ),
-            );
-            header.append(identity, refresh);
-            const content = document.createElement('div');
-            content.className = 'phone-profile-content';
-            const addProfileField = (label: string, value: string): void => {
-              const node = document.createElement('section');
-              node.className = 'phone-profile-field';
-              node.append(text(document, 'h3', label), text(document, 'p', value.trim() || '暂无'));
-              content.append(node);
-            };
-            addProfileField('基本信息', profile.basicInfo);
-            addProfileField('固定性格', profile.personalityBaseline);
-            addProfileField('行为模式', profile.behaviorTuning);
-            addProfileField('性格微调', profile.personalityTuning);
-            addProfileField('说话方式', profile.speechStyleTuning);
-            addProfileField('当前目标', profile.currentGoals);
-            addProfileField('当前处境', profile.currentStatus);
-            addProfileField('关系', profile.relationship);
-            addProfileField('正文互动小结', profile.storyInteractionSummary);
-            addProfileField('微信聊天小结', profile.chatInteractionSummary);
-            addProfileField('对玩家行动建议', profile.playerActionAdvice);
-            addProfileField('最后一轮消息', profile.lastWechatRound.join('\n'));
-            addProfileField('来源范围', profile.sourceRange);
-            const meta = text(document, 'p', `更新于 ${new Date(profile.lastUpdated).toLocaleString('zh-CN')}`);
-            meta.className = 'phone-profile-meta';
-            content.append(meta);
-            if (profile.lastError) {
-              const failure = text(document, 'p', profile.lastError ?? '档案刷新失败');
-              failure.className = 'phone-profile-error';
-              content.append(failure);
-            }
-            item.append(header, content);
-            profileList.append(item);
-          }
-          container.append(profileList);
-          return container;
-        } catch (error) {
-          const placeholder = empty(document, '档案加载失败');
-          const hint = text(document, 'p', error instanceof Error ? error.message : String(error));
-          hint.className = 'phone-profile-error';
-          placeholder.append(hint);
-          return placeholder;
-        }
       },
     },
     {
@@ -1083,15 +976,86 @@ async function renderProfileListPage(
       collectProfiles(services),
       services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 2_000 },
     ]);
-    const progress = document.createElement('section');
-    progress.className = 'phone-profile-overview';
+
+    // 档案馆门头
+    const hero = document.createElement('header');
+    hero.className = 'dossier-hero';
+    const kicker = text(document, 'span', 'ARCHIVE · 档案室');
+    kicker.className = 'dossier-hero__kicker';
+    const heroTitle = text(document, 'h1', '居民动态档案');
+    heroTitle.className = 'dossier-hero__title';
+    const heroIntro = text(document, 'p', '汇总正文与微信证据 · 分析结果写入世界书生效');
+    heroIntro.className = 'dossier-hero__intro';
+    hero.append(kicker, heroTitle, heroIntro);
+    container.append(hero);
+
+    // 工作台：刷新进度 + 批量操作 + 刷新参数
+    const deck = document.createElement('section');
+    deck.className = 'phone-profile-overview dossier-deck';
+    const progressRow = document.createElement('div');
+    progressRow.className = 'dossier-deck__progress';
     const progressTitle = text(
       document,
       'strong',
       `正文进度 ${Math.max(0, Math.floor(settings.storyProgress))} / ${settings.autoRefreshEvery}`,
     );
     progressTitle.className = 'phone-profile-progress';
-    progress.append(progressTitle);
+    const meter = document.createElement('span');
+    meter.className = 'dossier-progress__meter';
+    meter.setAttribute('aria-hidden', 'true');
+    const meterTicks = Math.max(1, Math.min(20, Math.floor(settings.autoRefreshEvery) || 20));
+    const meterFilled = Math.max(
+      0,
+      Math.min(
+        meterTicks,
+        Math.round((Math.max(0, settings.storyProgress) / Math.max(1, settings.autoRefreshEvery)) * meterTicks),
+      ),
+    );
+    for (let i = 0; i < meterTicks; i += 1) {
+      const tick = document.createElement('i');
+      tick.className = i < meterFilled ? 'dossier-progress__tick dossier-progress__tick--on' : 'dossier-progress__tick';
+      meter.append(tick);
+    }
+    const meterNote = text(document, 'span', '正文累计达到阈值后自动刷新全部档案');
+    meterNote.className = 'dossier-deck__note';
+    progressRow.append(progressTitle, meter, meterNote);
+    deck.append(progressRow);
+
+    const actions = document.createElement('div');
+    actions.className = 'phone-profile-actions';
+    const runAction = (button: HTMLButtonElement, action: (() => Promise<void>) | undefined, success: string) => {
+      if (!action) return;
+      button.disabled = true;
+      void action()
+        .then(() => {
+          context.announce(success);
+          context.requestRender();
+        })
+        .catch(error => {
+          context.announce(error instanceof Error ? error.message : String(error), 'error');
+          context.requestRender();
+        })
+        .finally(() => {
+          if (context.isActive()) button.disabled = false;
+        });
+    };
+    const refreshAll = text(document, 'button', '刷新全部人物') as HTMLButtonElement;
+    refreshAll.className = 'phone-button phone-button--primary phone-profile-refresh-all';
+    refreshAll.type = 'button';
+    refreshAll.disabled = !services.refreshAllProfiles;
+    context.listen(refreshAll, 'click', () =>
+      runAction(refreshAll, services.refreshAllProfiles?.bind(services), '全部人物档案刷新完成'),
+    );
+    const retry = text(document, 'button', '重试失败人物') as HTMLButtonElement;
+    retry.className = 'phone-button phone-profile-retry';
+    retry.type = 'button';
+    retry.disabled = !services.retryFailedProfiles;
+    context.listen(retry, 'click', () =>
+      runAction(retry, services.retryFailedProfiles?.bind(services), '失败人物已重试'),
+    );
+    actions.append(refreshAll, retry);
+    deck.append(actions);
+
     const settingsPanel = document.createElement('section');
     settingsPanel.className = 'phone-profile-settings';
     const threshold = input(document, 'number', String(settings.autoRefreshEvery));
@@ -1134,47 +1098,20 @@ async function renderProfileListPage(
         });
     });
     settingsPanel.append(settingFields, saveSettings);
-    progress.append(settingsPanel);
-    const actions = document.createElement('div');
-    actions.className = 'phone-profile-actions';
-    const runAction = (button: HTMLButtonElement, action: (() => Promise<void>) | undefined, success: string) => {
-      if (!action) return;
-      button.disabled = true;
-      void action()
-        .then(() => {
-          context.announce(success);
-          context.requestRender();
-        })
-        .catch(error => {
-          context.announce(error instanceof Error ? error.message : String(error), 'error');
-          context.requestRender();
-        })
-        .finally(() => {
-          if (context.isActive()) button.disabled = false;
-        });
-    };
-    const refreshAll = text(document, 'button', '刷新全部人物') as HTMLButtonElement;
-    refreshAll.className = 'phone-button phone-button--primary phone-profile-refresh-all';
-    refreshAll.type = 'button';
-    refreshAll.disabled = !services.refreshAllProfiles;
-    context.listen(refreshAll, 'click', () =>
-      runAction(refreshAll, services.refreshAllProfiles?.bind(services), '全部人物档案刷新完成'),
-    );
-    const retry = text(document, 'button', '重试失败人物') as HTMLButtonElement;
-    retry.className = 'phone-button phone-profile-retry';
-    retry.type = 'button';
-    retry.disabled = !services.retryFailedProfiles;
-    context.listen(retry, 'click', () =>
-      runAction(retry, services.retryFailedProfiles?.bind(services), '失败人物已重试'),
-    );
-    actions.append(refreshAll, retry);
-    progress.append(actions);
-    container.append(progress);
+    deck.append(settingsPanel);
+    container.append(deck);
 
     if (profiles.length === 0) {
-      container.append(empty(document, '尚无已添加人物'));
+      const vacant = empty(document, '尚无已添加人物');
+      vacant.className = 'phone-empty dossier-empty';
+      const hint = text(document, 'p', '在通讯录中添加人物后，档案室将为其建立卷宗。');
+      hint.className = 'dossier-empty__hint';
+      vacant.append(hint);
+      container.append(vacant);
       return container;
     }
+
+    // 卷宗卡片列表
     const listNode = list(document);
     listNode.className = 'phone-list phone-profile-list phone-profile-list--compact';
     for (const profile of profiles) {
@@ -1185,9 +1122,24 @@ async function renderProfileListPage(
       open.className = 'phone-profile-row';
       open.type = 'button';
       open.setAttribute('aria-label', `打开${profile.name}的人物档案`);
+      const avatar = text(document, 'span', profile.name.trim().charAt(0) || '档');
+      avatar.className = 'phone-profile-row__avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      const main = document.createElement('span');
+      main.className = 'phone-profile-row__main';
       const identity = document.createElement('span');
       identity.className = 'phone-profile-row__identity';
-      identity.append(text(document, 'strong', profile.name), text(document, 'small', profile.sourceRange));
+      identity.append(
+        text(document, 'strong', profile.name),
+        text(document, 'small', `NO.${dossierFileNo(profile.id)} · ${profile.sourceRange}`),
+      );
+      const summary = text(
+        document,
+        'span',
+        profile.analysisNarrative || profile.personalityTuning || '尚无动态变化',
+      );
+      summary.className = 'phone-profile-row__summary';
+      main.append(identity, summary);
       const status = document.createElement('span');
       status.className = 'phone-profile-row__status';
       status.dataset.status = profile.refreshStatus;
@@ -1199,9 +1151,10 @@ async function renderProfileListPage(
             : profile.refreshStatus === 'success'
               ? '已更新'
               : '待分析';
-      const summary = text(document, 'span', profile.analysisNarrative || profile.personalityTuning || '尚无动态变化');
-      summary.className = 'phone-profile-row__summary';
-      open.append(identity, status, summary, text(document, 'span', '›'));
+      const chevron = text(document, 'span', '›');
+      chevron.className = 'phone-profile-row__chevron';
+      chevron.setAttribute('aria-hidden', 'true');
+      open.append(avatar, main, status, chevron);
       context.listen(open, 'click', () => openProfile(profile.id));
       const refresh = text(document, 'button', '↻') as HTMLButtonElement;
       refresh.className = 'phone-button phone-profile-refresh';
@@ -1257,14 +1210,19 @@ async function renderProfileDetailPage(
       ? await services.getProfile(personId)
       : ((await collectProfiles(services)).find(item => item.id === personId) ?? null);
     if (!profile) return empty(document, '人物档案不存在');
+    // 卷宗封面：返回 + 档案编号 + 姓名 + 更新时间 + 重新分析
     const header = document.createElement('header');
-    header.className = 'phone-profile-detail__header';
+    header.className = 'phone-profile-detail__header dossier-cover';
     const back = text(document, 'button', '‹ 返回档案') as HTMLButtonElement;
     back.className = 'phone-button phone-profile-back';
     back.type = 'button';
     context.listen(back, 'click', goBack);
     const title = document.createElement('div');
+    title.className = 'dossier-cover__main';
+    const fileNo = text(document, 'span', `NO.${dossierFileNo(personId)} · 居民卷宗`);
+    fileNo.className = 'dossier-cover__file';
     title.append(
+      fileNo,
       text(document, 'h1', profile.name),
       text(
         document,
@@ -1275,7 +1233,7 @@ async function renderProfileDetailPage(
       ),
     );
     const refresh = text(document, 'button', '重新分析') as HTMLButtonElement;
-    refresh.className = 'phone-button phone-button--primary';
+    refresh.className = 'phone-button phone-button--primary dossier-cover__refresh';
     refresh.type = 'button';
     refresh.disabled = !services.refreshProfile || profile.refreshStatus === 'refreshing';
     context.listen(refresh, 'click', () => {
@@ -1313,14 +1271,19 @@ async function renderProfileDetailPage(
           content.append(sectionBlock(document, '变化记录', '本次没有识别到可单独列出的字段变化。'));
         for (const change of changes) {
           const block = document.createElement('section');
-          block.className = 'phone-profile-detail__section';
-          block.append(
-            text(document, 'h2', change.field),
-            text(document, 'p', `之前：${change.before || '暂无'}`),
-            text(document, 'p', `现在：${change.after || '暂无'}`),
-            text(document, 'p', `原因：${change.reason}`),
-            text(document, 'small', `依据：${change.evidenceRefs.join('、') || '未提供'}`),
-          );
+          block.className = 'phone-profile-change';
+          block.append(text(document, 'h3', change.field));
+          const before = document.createElement('div');
+          before.className = 'phone-profile-change__row phone-profile-change__row--before';
+          before.append(text(document, 'span', '之前'), text(document, 'p', change.before || '暂无'));
+          const after = document.createElement('div');
+          after.className = 'phone-profile-change__row phone-profile-change__row--after';
+          after.append(text(document, 'span', '现在'), text(document, 'p', change.after || '暂无'));
+          const reason = text(document, 'p', `原因：${change.reason}`);
+          reason.className = 'phone-profile-change__reason';
+          const evidence = text(document, 'small', `依据：${change.evidenceRefs.join('、') || '未提供'}`);
+          evidence.className = 'phone-profile-change__evidence';
+          block.append(before, after, reason, evidence);
           content.append(block);
         }
       } else if (tab === '档案') {
@@ -1392,14 +1355,19 @@ async function renderProfileDetailPage(
           versions.className = 'phone-profile-detail__section';
           versions.append(text(document, 'h2', '历史版本'));
           for (const version of [...profile.versions].reverse()) {
-            const restore = text(
-              document,
-              'button',
-              `${version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复'} · ${new Date(version.savedAt).toLocaleString('zh-CN')}`,
-            ) as HTMLButtonElement;
-            restore.className = 'phone-button phone-profile-version';
+            const sourceLabel =
+              version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复';
+            const timeLabel = new Date(version.savedAt).toLocaleString('zh-CN');
+            const restore = text(document, 'button', '') as HTMLButtonElement;
+            restore.className = 'phone-button phone-profile-version dossier-versions__restore';
             restore.type = 'button';
+            restore.setAttribute('aria-label', `恢复${sourceLabel}版本 ${timeLabel}`);
             restore.disabled = !services.restoreProfileVersion;
+            const chip = text(document, 'span', sourceLabel);
+            chip.className = 'dossier-versions__chip';
+            const time = text(document, 'span', timeLabel);
+            time.className = 'dossier-versions__time';
+            restore.append(chip, time);
             context.listen(restore, 'click', () => {
               if (!services.restoreProfileVersion) return;
               restore.disabled = true;
