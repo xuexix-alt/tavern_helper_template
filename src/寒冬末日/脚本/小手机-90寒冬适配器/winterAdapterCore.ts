@@ -340,9 +340,7 @@ export function selectPublicWinterMvuFacts(statData: unknown): Readonly<Record<s
   if (hasOwnField(statData, '通讯网络')) facts.通讯网络 = structuredClone(statData.通讯网络);
 
   if (isRecord(statData.庇护所)) {
-    const scopeChangeNote = isRecord(statData.庇护所.庇护范围变更)
-      ? statData.庇护所.庇护范围变更.note
-      : undefined;
+    const scopeChangeNote = isRecord(statData.庇护所.庇护范围变更) ? statData.庇护所.庇护范围变更.note : undefined;
     const shelter = pickMeaningful({
       庇护所等级: statData.庇护所.庇护所等级,
       距离上次升级: statData.庇护所.距离上次升级,

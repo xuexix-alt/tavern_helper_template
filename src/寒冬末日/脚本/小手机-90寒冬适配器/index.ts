@@ -841,12 +841,11 @@ function createWinterAdapterModule(): PhoneModule {
   ): Promise<void> {
     // 分析运行期内使用 collectProfileSource 预置的捕获；
     // 手动编辑/版本回档发生在运行期外，现场捕获当前稳定快照，保证同样的写入一致性校验。
-    const captured =
-      profileCaptures.get(document.personId) ?? {
-        snapshot: requireSnapshot(),
-        host: requireActiveHostCapture(),
-        worldbooks: requireCapturedWorldbooks(document.sessionKey),
-      };
+    const captured = profileCaptures.get(document.personId) ?? {
+      snapshot: requireSnapshot(),
+      host: requireActiveHostCapture(),
+      worldbooks: requireCapturedWorldbooks(document.sessionKey),
+    };
     try {
       await writeDynamicProfileEntry(captured.worldbooks.chatWorldbookName, document, aliases, maxCharacters, {
         read: async worldbookName => (await getWorldbook(worldbookName)) as unknown as ProfileWorldbookEntry[],

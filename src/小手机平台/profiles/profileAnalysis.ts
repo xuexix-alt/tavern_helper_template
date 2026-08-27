@@ -165,7 +165,11 @@ export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysis
       const mvuKeys = new Set(Object.keys(source.mvuFacts));
       output.evidenceRefs = sanitizeEvidenceRefs(output.evidenceRefs, allowed, mvuKeys);
       for (const change of output.changes) {
-        change.evidenceRefs = sanitizeEvidenceRefs(change.evidenceRefs, allowed, mvuKeys) as ProfileChange['evidenceRefs'];
+        change.evidenceRefs = sanitizeEvidenceRefs(
+          change.evidenceRefs,
+          allowed,
+          mvuKeys,
+        ) as ProfileChange['evidenceRefs'];
       }
     }
     return output;
