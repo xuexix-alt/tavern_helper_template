@@ -607,7 +607,7 @@ async function testOpenAIProviderParityAndSecrets(): Promise<void> {
   const requestOptions = { jsonMode: false, playerMessage: '药品还够吗？' };
   const handle = provider.request('ASSEMBLED', requestOptions);
   assert.equal(await handle.promise, 'MODEL_OUTPUT');
-  assert.equal(requests[0].url, 'https://api.example.test/v1/chat/completions');
+  assert.equal(requests[0].url, 'https://api.example.test/root/v1/chat/completions');
   assert.equal(requests[0].init.method, 'POST');
   const body = JSON.parse(String(requests[0].init.body)) as Record<string, unknown>;
   const openAiMessages = body.messages as Array<{ role: string; content: string }>;
@@ -1038,6 +1038,43 @@ async function testOpenAiModelDiscovery(): Promise<void> {
     }),
     error => error instanceof Error && /JSON|响应/.test(error.message) && !error.message.includes('model-secret'),
   );
+
+  // 版本段结尾（v4 / v1beta）不再强补 /v1，避免网关路径拼出 /v4/v1/models 导致 404
+  assert.equal(openAiModelsEndpoint('https://api.example.test/v4'), 'https://api.example.test/v4/models');
+  assert.equal(openAiModelsEndpoint('https://api.example.test/v1beta'), 'https://api.example.test/v1beta/models');
+
+  // 首个端点 404 时降级尝试不补 /v1 的 /models
+  const requestedUrls: string[] = [];
+  const fallbackModels = await fetchOpenAiCompatibleModels({
+    baseUrl: 'https://api.example.test/api',
+    apiKey: 'model-secret',
+    fetch: async url => {
+      requestedUrls.push(url);
+      return url.endsWith('/api/models')
+        ? { ok: true, status: 200, json: async () => ({ data: [{ id: 'gw-a' }] }) }
+        : { ok: false, status: 404, json: async () => ({}) };
+    },
+  });
+  assert.deepEqual(requestedUrls, [
+    'https://api.example.test/api/v1/models',
+    'https://api.example.test/api/models',
+  ]);
+  assert.deepEqual(fallbackModels, ['gw-a']);
+
+  // 非端点类错误（401）不触发降级，直接失败
+  let unauthUrls = 0;
+  await assert.rejects(
+    fetchOpenAiCompatibleModels({
+      baseUrl: 'https://api.example.test/api',
+      apiKey: 'model-secret',
+      fetch: async () => {
+        unauthUrls += 1;
+        return { ok: false, status: 401, json: async () => ({}) };
+      },
+    }),
+    /HTTP 401/,
+  );
+  assert.equal(unauthUrls, 1, '鉴权失败不得换端点重试');
 }
 
 async function main(): Promise<void> {
