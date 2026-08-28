@@ -424,6 +424,9 @@ export class ProfileRefreshCoordinator {
       people: [{ personId: person.id, status: 'refreshing' }],
     } satisfies StoredRun);
     await this.refreshScheduledPerson({ runId, trigger, person, sessionKey });
+    // B7: 单人手动刷新成功后同样触发广播重生成，否则人物动向停留在旧版素材
+    const result = await this.buildRunResult(runId, sessionKey, trigger);
+    await this.maybeNotifyRunComplete(result);
   }
 
   private async runBatch(
@@ -448,8 +451,18 @@ export class ProfileRefreshCoordinator {
         // A failed person is persisted by refreshScheduledPerson; continue the batch serially.
       }
     }
+    const result = await this.buildRunResult(runId, sessionKey, trigger);
+    await this.maybeNotifyRunComplete(result);
+    return result;
+  }
+
+  private async buildRunResult(
+    runId: string,
+    sessionKey: string,
+    trigger: ProfileRefreshTrigger,
+  ): Promise<ProfileRefreshRunResult> {
     const stored = await this.readRun(runId, sessionKey);
-    const result: ProfileRefreshRunResult = {
+    return {
       runId,
       trigger,
       people: stored.people.map(person =>
@@ -462,10 +475,16 @@ export class ProfileRefreshCoordinator {
             },
       ),
     };
-    if ((trigger === 'auto' || trigger === 'all-manual') && result.people.some(person => person.status === 'success')) {
+  }
+
+  /**
+   * B7: 只要本次运行有成功刷新（含单人手动与失败重试），就通知广播消费端重生成，
+   * 避免人物动向停留在旧版素材。全部失败时不触发，防止空素材覆盖现有广播。
+   */
+  private async maybeNotifyRunComplete(result: ProfileRefreshRunResult): Promise<void> {
+    if (result.people.some(person => person.status === 'success')) {
       await this.dependencies.onAllRunComplete?.(result);
     }
-    return result;
   }
 
   private async refreshScheduledPerson(scheduled: ScheduledRefresh): Promise<void> {

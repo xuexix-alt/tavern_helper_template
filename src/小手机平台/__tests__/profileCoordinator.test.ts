@@ -275,6 +275,34 @@ async function testAllFailedDoesNotGenerateBroadcast(): Promise<void> {
   assert.equal(fixture.allRunCompleteCalls(), 0, '没有任何成功档案时不得误生成播报');
 }
 
+async function testPersonManualRefreshRegeneratesBroadcast(): Promise<void> {
+  // B7: 单人手动刷新成功后必须触发广播重生成
+  const fixture = createFixture([PEOPLE[0]]);
+
+  await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
+  assert.equal(fixture.allRunCompleteCalls(), 1, '单人手动刷新成功后应触发播报重生成');
+
+  // 失败的单人手动刷新不得触发
+  fixture.setRejectNext(new Error('write failed'));
+  await assert.rejects(() => fixture.coordinator.refreshPerson('main:纪宁', 'person-manual'), /write failed/);
+  assert.equal(fixture.allRunCompleteCalls(), 1, '单人手动刷新失败不得触发播报重生成');
+}
+
+async function testRetryFailedRegeneratesBroadcast(): Promise<void> {
+  // B7: 失败重试成功后同样要触发广播重生成
+  const fixture = createFixture([PEOPLE[1]]);
+  fixture.setAlwaysFail('main:赵卫国');
+  await fixture.coordinator.refreshAll('all-manual');
+  assert.equal(fixture.allRunCompleteCalls(), 0);
+
+  fixture.setAlwaysFail(null);
+  const result = await fixture.coordinator.retryFailed();
+
+  assert.equal(result.people[0]?.status, 'success');
+  assert.equal(result.trigger, 'retry-failed');
+  assert.equal(fixture.allRunCompleteCalls(), 1, '失败重试成功后应触发播报重生成');
+}
+
 async function testConcurrentRunUpdatesDoNotOverwriteOtherPeople(): Promise<void> {
   const fixture = createFixture(PEOPLE, { delayRunUpdates: true });
 
@@ -348,6 +376,8 @@ async function main(): Promise<void> {
   await testWorldbookFailureDoesNotAdvanceAnchor();
   await testBatchAllowsPartialSuccessAndLimitsConcurrency();
   await testAllFailedDoesNotGenerateBroadcast();
+  await testPersonManualRefreshRegeneratesBroadcast();
+  await testRetryFailedRegeneratesBroadcast();
   await testConcurrentRunUpdatesDoNotOverwriteOtherPeople();
   await testAutoRefreshAtConfiguredThreshold();
   await testDetailedViewVersionsAndPlayerEdit();
