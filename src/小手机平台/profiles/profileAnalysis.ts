@@ -83,6 +83,7 @@ export const PROFILE_ANALYSIS_SYSTEM_PROMPT = [
   '禁止无锚点的空泛定性（如「更亲近了」「态度有所变化」「近期更直接」「关系缓和」）：一切演变都要落到具体言行或事件上；各字段不许套用同一句式。',
   '不要续写剧情，不要虚构事件，不要把一次性情绪上升为永久人格，也不要输出思考过程。',
   '事实冲突优先级：MVU硬事实 > 最近正文明确事实 > 固定角色世界书 > 当前人物微信 > 上一次动态档案。',
+  '字数纪律：动态字段最终会拼入有字符上限的角色扮演提示词，务必精炼——严格遵循契约中各字段的字数上限，宁可删掉修饰语也不超限。',
   '只输出一个 JSON 对象，且必须符合用户所给契约；不要 Markdown、前后说明或额外字段。',
 ].join('\n');
 
@@ -186,7 +187,7 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     personId: source.personId,
     personName: source.personName,
     analysisNarrative:
-      '人物近况速写（2至4句，像连续剧的上集回顾）：最近的关键经历 → 心境或立场发生的移动 → 此刻的状态；写给玩家看，不要写成变更日志',
+      '人物近况速写（2至4句、合计不超过200字，像连续剧的上集回顾）：最近的关键经历 → 心境或立场发生的移动 → 此刻的状态；写给玩家看，不要写成变更日志',
     changes: [
       {
         field: 'relationshipInterpretation',
@@ -196,21 +197,21 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
         evidenceRefs: ['story:消息ID', 'wechat:消息ID'],
       },
     ],
-    basicInfoAdditions: ['仅写有明确证据的新增客观信息（经历、身份、资源、秘密等）；没有则输出空数组'],
+    basicInfoAdditions: ['仅写有明确证据的新增客观信息（经历、身份、资源、秘密等），每条不超过60字；没有则输出空数组'],
     behaviorTuning:
-      '行为模式微调，按「底色+事件+倾向」写。好例：一向独自拍板，但玩家把半份退烧药让给她（story:25）后，清点物资时会主动把清单副本交给玩家核对；对外人依旧不假手',
+      '行为模式微调，不超过120字，按「底色+事件+倾向」写。好例：一向独自拍板，但玩家把半份退烧药让给她（story:25）后，清点物资时会主动把清单副本交给玩家核对；对外人依旧不假手',
     personalityTuning:
-      '性格侧重微调：同一性格在不同事件后的偏移方向与触发条件；不把一次性情绪写成永久人格，也不写与固定本色重复的内容',
+      '性格侧重微调，不超过120字：同一性格在不同事件后的偏移方向与触发条件；不把一次性情绪写成永久人格，也不写与固定本色重复的内容',
     speechStyleTuning:
-      '说话方式微调：对谁、在什么话题下，用词、语气、句式有怎样的规律性变化；仅写可复用于角色扮演的规律',
-    currentGoals: '当前目标：由哪些近期事件催生或改变，进行到什么程度；无新证据时延续上次目标或写暂无明确目标',
-    currentSituationSummary: '当前处境：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
+      '说话方式微调，不超过120字：对谁、在什么话题下，用词、语气、句式有怎样的规律性变化；仅写可复用于角色扮演的规律',
+    currentGoals: '当前目标，不超过80字：由哪些近期事件催生或改变，进行到什么程度；无新证据时延续上次目标或写暂无明确目标',
+    currentSituationSummary: '当前处境，不超过120字：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
     relationshipInterpretation:
-      '与玩家的关系轨迹：MVU档位 + 当前互动距离的具体表现（愿意分享什么、回避什么）+ 正在松动或收紧的边界 + 推动变化的事件。禁止只写更亲近或更疏远',
+      '与玩家的关系轨迹，不超过120字：MVU档位 + 当前互动距离的具体表现（愿意分享什么、回避什么）+ 正在松动或收紧的边界 + 推动变化的事件。禁止只写更亲近或更疏远',
     storyInteractionSummary:
-      '最近正文互动的质感小结：谁做了什么、人物如何回应、留下什么余波或未解决的心结；写互动的温度，不是事件罗列',
+      '最近正文互动的质感小结，不超过120字：谁做了什么、人物如何回应、留下什么余波或未解决的心结；写互动的温度，不是事件罗列',
     chatInteractionSummary:
-      '该人物微信的质感小结：语气亲疏、主动还是被动、话题边界的变化；不得把私聊内容扩散给其他人物',
+      '该人物微信的质感小结，不超过120字：语气亲疏、主动还是被动、话题边界的变化；不得把私聊内容扩散给其他人物',
     playerActionAdvice:
       '基于当前关系轨迹给玩家的相处提示：下一步做什么会推进或损害这段关系；只供玩家在档案页查看，不写入人物角色扮演提示',
     evidenceRefs: ['本次结论使用的全部证据标记'],
@@ -223,6 +224,7 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     '- 结论必须具体到事件与言行；字段之间共同呈现人物弧光，但不要互相重复同一句话。',
     '- 关系、态度类字段要写出轨迹：从什么状态、因哪件事、移向什么状态，以及尚未松动的边界在哪里。',
     '- 无真实变化时保守延续上次档案，不要编造转折；但可在 analysisNarrative 中指出正在积蓄的趋势（须有证据可引）。',
+    '- 字数纪律：严格遵循契约中各字段的字数上限；除 analysisNarrative 不超过200字外，其余每个动态字段不超过120字（currentGoals 不超过80字），basicInfoAdditions 每条不超过60字；全部动态内容合计不超过800字。字数超限会导致档案被截断或落盘失败。',
     '只允许输出结构化动态字段，不得修改、重写或推断覆盖 MVU 硬事实和固定人物本色。',
     '每项变化必须引用本次允许的 evidenceRefs；证据不足时保守延续上次档案或固定本色，并且不要加入 changes。',
     'changes 只列出与上次动态档案相比真正改变的字段；首次分析只列有直接证据支持的动态字段。',
@@ -298,7 +300,7 @@ function section(label: string, value: string): string {
   return `[${label}] ${value.trim() || '暂无'}`;
 }
 
-export function renderPromptProfile(document: DynamicProfileDocument, maxCharacters = 2_000): string {
+export function renderPromptProfile(document: DynamicProfileDocument, maxCharacters = 4_000): string {
   if (!Number.isSafeInteger(maxCharacters) || maxCharacters <= 0) throw new Error('档案字符上限必须是正安全整数');
   const privateScope = `仅${document.personName}可将本条目的私聊信息作为认知与行动依据；其他人物不得知情、转述或据此行动，除非相关事实已在正文或MVU中公开。`;
   const immutable = [
@@ -308,8 +310,8 @@ export function renderPromptProfile(document: DynamicProfileDocument, maxCharact
     section('私密范围', privateScope),
   ];
   const immutableText = immutable.join('\n');
-  if (immutableText.length > maxCharacters)
-    throw new Error('人物身份、固定本色、MVU硬事实与私密范围已超过档案字符上限');
+  // 身份与硬事实是不可截断的必需要据：超上限时原样保留（不再整体失败），仅压缩后续动态段的追加预算。
+  const budget = Math.max(maxCharacters, immutableText.length);
 
   const dynamic = [
     section('基本信息补充', document.basicInfoAdditions.join('；') || '暂无新增'),
@@ -325,7 +327,7 @@ export function renderPromptProfile(document: DynamicProfileDocument, maxCharact
   ];
   let result = immutableText;
   for (const item of dynamic) {
-    const remaining = maxCharacters - result.length - 1;
+    const remaining = budget - result.length - 1;
     if (remaining <= 0) break;
     result += `\n${item.slice(0, remaining)}`;
   }

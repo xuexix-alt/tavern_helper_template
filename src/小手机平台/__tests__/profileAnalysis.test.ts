@@ -237,10 +237,61 @@ function testNearValidOpenAiResponseCanBeRepaired(): void {
   assert.equal(parseProfileAnalysisOutput(wrapped, source).personId, 'main:纪宁');
 }
 
+function testPromptProfileCharacterBudget(): void {
+  // 不可变块（身份+固定本色+MVU硬事实+私密范围）超上限时不再整体失败，而是原样保留并压缩动态段预算
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '近期对药品不足的表达更直接。',
+      changes: [],
+      basicInfoAdditions: [],
+      behaviorTuning: '先核对药品，再提出补给需求',
+      personalityTuning: '保持谨慎，近期表达更直接',
+      speechStyleTuning: '医疗事务使用简短明确的措辞',
+      currentGoals: '补足药品库存',
+      currentSituationSummary: '正在诊疗室清点药品',
+      relationshipInterpretation: '保持协作关系',
+      storyInteractionSummary: '回到诊疗室',
+      chatInteractionSummary: '提醒药品即将耗尽',
+      playerActionAdvice: '确认药品补给安排',
+      evidenceRefs: ['story:12'],
+    }),
+    source,
+  );
+  const bigSource: ProfileAnalysisSource = {
+    ...source,
+    mvuFacts: { 关系: '协作', 位置: '诊疗室', 健康: 83, 备注: 'x'.repeat(3_000) },
+  };
+  const merged = mergeDynamicProfile(bigSource, parsed, []);
+
+  const rendered = renderPromptProfile(merged, 2_000);
+  assert.ok(rendered.includes('MVU硬事实'), '不可变块必须保留');
+  assert.ok(rendered.length > 2_000, '不可变块超上限时原样保留而非失败或截断');
+
+  // 正常上限下动态段仍按预算追加
+  const normal = renderPromptProfile(mergeDynamicProfile(source, parsed, []), 4_000);
+  assert.match(normal, /近期行为模式/);
+  assert.ok(normal.length <= 4_000);
+}
+
+function testPromptEnforcesFieldLengthDiscipline(): void {
+  const prompt = buildProfileAnalysisPrompt(source);
+  // 契约与写作要求中必须有明确的字数约束
+  assert.match(prompt, /不超过200字/);
+  assert.match(prompt, /不超过120字/);
+  assert.match(prompt, /不超过80字/);
+  assert.match(prompt, /每条不超过60字/);
+  assert.match(prompt, /合计不超过800字/);
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /字数纪律/);
+}
+
 testStrictOutputAndMerge();
 testOutputToleratesExtraFieldsAndEmptyValues();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();
+testPromptProfileCharacterBudget();
+testPromptEnforcesFieldLengthDiscipline();
 testNearValidOpenAiResponseCanBeRepaired();
 console.log('profile analysis tests passed');

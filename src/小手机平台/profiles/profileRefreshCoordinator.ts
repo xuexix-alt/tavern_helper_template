@@ -104,7 +104,7 @@ export class ProfileRefreshCoordinator {
 
   constructor(
     private readonly dependencies: ProfileRefreshDependencies,
-    defaults: ProfileRefreshSettings = { autoRefreshEvery: 20, promptProfileMaxChars: 2_000 },
+    defaults: ProfileRefreshSettings = { autoRefreshEvery: 20, promptProfileMaxChars: 4_000 },
   ) {
     this.defaults = validateSettings(defaults);
   }

@@ -974,7 +974,7 @@ async function renderProfileListPage(
   try {
     const [profiles, settings] = await Promise.all([
       collectProfiles(services),
-      services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 2_000 },
+      services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 4_000 },
     ]);
 
     // 档案馆门头
