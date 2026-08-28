@@ -398,6 +398,67 @@ function testPromptProfileCharacterBudget(): void {
   assert.ok(normal.length <= 4_000);
 }
 
+function testRealWorldWechatPayloadEndToEnd(): void {
+  // 线上实测（2026-08-28 真实回传）：AI 在每个叙事字段内联 wechat 长引用并携带 :reply:0 后缀，
+  // 旧版因内联引用撑爆档案字符上限而整体失败；当前管线必须全链路通过。
+  const wechatSource: ProfileAnalysisSource = {
+    ...source,
+    wechatNew: [
+      { id: 'out-msg-001', sender: '玩家', content: '想你了', isNew: true },
+      { id: 'out-msg-001:reply:0', sender: '纪宁', content: '干、干嘛突然发……', isNew: true },
+      { id: 'out-msg-002', sender: '玩家', content: '你好', isNew: true },
+    ],
+  };
+  const ref = 'wechat:out-msg-001:reply:0';
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '原本平静的日常被玩家的直球打破（mvu:内心想法），内心泛起涟漪。',
+      changes: [
+        {
+          field: 'relationshipInterpretation',
+          before: '普通邻居关系。',
+          after: `关系档位升至协作（mvu:关系），并因直球互动表现出害羞但未推拒的回应（${ref}）`,
+          reason: `玩家直白示好（${ref}）击中其心房。`,
+          evidenceRefs: ['mvu:关系', ref],
+        },
+      ],
+      basicInfoAdditions: [],
+      behaviorTuning: `开门时下意识用身体挡住门缝（mvu:动作姿势），掩饰慌乱（${ref}）。`,
+      personalityTuning: '敏感防御暂时隐去，性格偏向傲娇与纯真（mvu:神态样貌）。',
+      speechStyleTuning: `频繁使用结巴反问句与害羞表情（${ref}）进行防御性反击。`,
+      currentGoals: '纠结是否邀请玩家进屋坐坐（mvu:内心想法）。',
+      currentSituationSummary: '身处诊疗室（mvu:位置），面临社交危机（mvu:内心想法）。',
+      relationshipInterpretation: `从普通邻居跨越至协作档位（mvu:关系），推动事件是直白示好（${ref}）。`,
+      storyInteractionSummary: '玩家特意折返送来物资（story:12），她脸色微红地收下。',
+      chatInteractionSummary: `被动接收后的慌乱，用反问与表情表达手足无措（${ref}）。`,
+      playerActionAdvice: '对直球免疫力极低，建议提供自然台阶。',
+      evidenceRefs: ['fixed-profile', 'mvu:关系', 'mvu:内心想法', 'story:12', ref],
+    }),
+    wechatSource,
+  );
+  // 内联引用必须全部剔除，正文干净
+  for (const value of [
+    parsed.behaviorTuning,
+    parsed.speechStyleTuning,
+    parsed.relationshipInterpretation,
+    parsed.chatInteractionSummary,
+    parsed.changes[0]?.after ?? '',
+  ]) {
+    assert.ok(!/[（(]\s*(?:mvu:|story:|wechat:)/.test(value), `内联引用必须剔除：${value}`);
+  }
+  // :reply:0 后缀的 wechat 引用合法保留
+  assert.ok(parsed.evidenceRefs.includes(ref));
+  assert.ok(parsed.changes[0].evidenceRefs.includes(ref));
+
+  // 全链路：合并 + 渲染不再因字符上限失败
+  const merged = mergeDynamicProfile(wechatSource, parsed, ['玩家: 想你了']);
+  const rendered = renderPromptProfile(merged, 4_000);
+  assert.ok(rendered.includes('MVU硬事实'));
+  assert.ok(rendered.length <= 4_000);
+}
+
 function testPromptEnforcesFieldLengthDiscipline(): void {
   const prompt = buildProfileAnalysisPrompt(source);
   // 契约与写作要求中必须有明确的字数约束
@@ -418,6 +479,7 @@ testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();
 testPromptProfileCharacterBudget();
+testRealWorldWechatPayloadEndToEnd();
 testPromptEnforcesFieldLengthDiscipline();
 testNearValidOpenAiResponseCanBeRepaired();
 console.log('profile analysis tests passed');

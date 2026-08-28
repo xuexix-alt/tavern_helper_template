@@ -745,7 +745,7 @@ function createWinterAdapterModule(): PhoneModule {
     };
     return new ProfileRefreshCoordinator(dependencies, {
       autoRefreshEvery: 20,
-      promptProfileMaxChars: 2_000,
+      promptProfileMaxChars: 4_000,
     });
   }
 
