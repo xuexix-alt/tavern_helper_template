@@ -154,6 +154,36 @@ function testChangesEntryTolerance(): void {
   assert.deepEqual(parsed.changes[1].evidenceRefs, ['fixed-profile'], '缺 evidenceRefs 的条目应回填 fixed-profile');
 }
 
+function testKeywordFallbackExtraction(): void {
+  // 严格解析彻底失败（personId 数字类型 + JSON 断尾）时按关键字降级提取
+  const salvaged = parseProfileAnalysisOutput(
+    '{"personId": 123, "personName": "纪宁", "behaviorTuning": "保持谨慎，清点物资先核对缺口", "currentGoals": "补足药品库存", "changes": [{"field": "relationshipInterp',
+    source,
+  );
+  assert.equal(salvaged.personId, 'main:纪宁', '身份回退到 source');
+  assert.equal(salvaged.personName, '纪宁');
+  assert.equal(salvaged.behaviorTuning, '保持谨慎，清点物资先核对缺口');
+  assert.equal(salvaged.currentGoals, '补足药品库存');
+  assert.deepEqual(salvaged.changes, [], '断尾的 changes 直接放弃');
+  assert.deepEqual(salvaged.evidenceRefs, ['fixed-profile']);
+  assert.equal(salvaged.personalityTuning, '暂无明显变化', '未提取到的字段走兜底');
+
+  // 纯文本（完全无 JSON）也不失败：全部兜底
+  const plainText = parseProfileAnalysisOutput('模型拒绝输出 JSON，只说了些闲话。', source);
+  assert.equal(plainText.personId, 'main:纪宁');
+  assert.equal(plainText.analysisNarrative, '本次分析未提供概括说明。');
+  assert.deepEqual(plainText.changes, []);
+
+  // 降级提取路径下身份错乱仍然拒绝
+  assert.throws(
+    () => parseProfileAnalysisOutput('{"personId": "main:别人", "personName": "别人", "behaviorTuning": "x"}', source),
+    /人物|身份/,
+  );
+
+  // 原型污染尝试在降级路径前被拦截
+  assert.throws(() => parseProfileAnalysisOutput('{"__proto__": {"polluted": true}, "personId": 1}'), /结构|字段|危险/);
+}
+
 function testIdentityAndEvidenceValidation(): void {
   const valid = {
     personId: 'main:纪宁',
@@ -340,6 +370,7 @@ function testPromptEnforcesFieldLengthDiscipline(): void {
 testStrictOutputAndMerge();
 testOutputToleratesExtraFieldsAndEmptyValues();
 testChangesEntryTolerance();
+testKeywordFallbackExtraction();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();

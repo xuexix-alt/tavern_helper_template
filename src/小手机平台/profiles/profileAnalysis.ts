@@ -186,13 +186,91 @@ function sanitizeEvidenceRefs(
   return ['fixed-profile'];
 }
 
+/** 身份错乱是唯一不可兜底的失败：张冠李戴的档案比没有档案更糟。 */
+class ProfileIdentityMismatchError extends Error {}
+
+const FALLBACK_NARRATIVE_FIELDS = [
+  'analysisNarrative',
+  'behaviorTuning',
+  'personalityTuning',
+  'speechStyleTuning',
+  'currentGoals',
+  'currentSituationSummary',
+  'relationshipInterpretation',
+  'storyInteractionSummary',
+  'chatInteractionSummary',
+  'playerActionAdvice',
+] as const;
+
+const FALLBACK_NARRATIVE_DEFAULTS: Record<(typeof FALLBACK_NARRATIVE_FIELDS)[number], string> = {
+  analysisNarrative: '本次分析未提供概括说明。',
+  behaviorTuning: '暂无明显变化',
+  personalityTuning: '暂无明显变化',
+  speechStyleTuning: '暂无明显变化',
+  currentGoals: '暂无明确目标',
+  currentSituationSummary: '暂无明确处境信息',
+  relationshipInterpretation: '暂无新变化',
+  storyInteractionSummary: '暂无正文互动',
+  chatInteractionSummary: '暂无微信互动',
+  playerActionAdvice: '暂无特别建议',
+};
+
+function decodeJsonStringLiteral(literal: string): string {
+  try {
+    return JSON.parse(`"${literal}"`) as string;
+  } catch {
+    return literal;
+  }
+}
+
+/** 从原始回传中按键名提取字符串值（AI 输出半截 JSON / 字段类型错误时仍能捞回内容）。 */
+function extractStringField(raw: string, field: string): string | null {
+  const match = raw.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'));
+  if (!match?.[1]) return null;
+  const decoded = decodeJsonStringLiteral(match[1]);
+  const trimmed = decoded.trim();
+  return trimmed !== '' ? trimmed : null;
+}
+
+/**
+ * 最终兜底：严格解析失败时按关键字逐字段提取，提不到的用兜底文案。
+ * 档案分析不允许因单字段瑕疵整体失败——changes/basicInfoAdditions 展示类数据直接放弃，
+ * 叙事字段能捞多少是多少。
+ */
+function buildFallbackProfileAnalysisOutput(raw: string, source?: ProfileAnalysisSource): ProfileAnalysisOutput {
+  if (source) {
+    const rawPersonId = extractStringField(raw, 'personId');
+    const rawPersonName = extractStringField(raw, 'personName');
+    if (
+      (rawPersonId !== null && rawPersonId !== source.personId) ||
+      (rawPersonName !== null && rawPersonName !== source.personName)
+    ) {
+      throw new ProfileIdentityMismatchError(
+        `回传人物身份不匹配：期望 ${source.personName}（${source.personId}），实际 ${rawPersonName ?? '未提供'}（${rawPersonId ?? '未提供'}）`,
+      );
+    }
+  }
+  const narrative = {} as Record<(typeof FALLBACK_NARRATIVE_FIELDS)[number], string>;
+  for (const field of FALLBACK_NARRATIVE_FIELDS) {
+    narrative[field] = extractStringField(raw, field) ?? FALLBACK_NARRATIVE_DEFAULTS[field];
+  }
+  return {
+    personId: source?.personId ?? extractStringField(raw, 'personId') ?? 'unknown',
+    personName: source?.personName ?? extractStringField(raw, 'personName') ?? '未知人物',
+    ...narrative,
+    changes: [],
+    basicInfoAdditions: [],
+    evidenceRefs: ['fixed-profile'],
+  };
+}
+
 export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysisSource): ProfileAnalysisOutput {
   try {
     const parsed = parseResponsePayload(raw);
     const output = ProfileAnalysisOutputSchema.parse(parsed) as ProfileAnalysisOutput;
     if (source) {
       if (output.personId !== source.personId || output.personName !== source.personName) {
-        throw new Error(
+        throw new ProfileIdentityMismatchError(
           `回传人物身份不匹配：期望 ${source.personName}（${source.personId}），实际 ${output.personName}（${output.personId}）`,
         );
       }
@@ -209,7 +287,14 @@ export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysis
     }
     return output;
   } catch (error) {
-    throw new Error(`档案结构或字段无效：${error instanceof Error ? error.message : String(error)}`);
+    // 身份错乱不可兜底（fallback 内部也会再做一次文本级身份核对）
+    if (error instanceof ProfileIdentityMismatchError) throw error;
+    // 原型污染尝试必须拒绝，不得进入降级提取
+    if (/__proto__|prototype pollution/i.test(raw)) {
+      throw new Error('档案结构或字段无效：输入包含危险属性');
+    }
+    // 其余一切失败：按关键字降级提取，绝不让单字段瑕疵否决整份分析
+    return buildFallbackProfileAnalysisOutput(raw, source);
   }
 }
 
