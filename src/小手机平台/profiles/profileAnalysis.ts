@@ -36,9 +36,7 @@ function stripInlineCitations(value: string): string {
 const narrativeField = (fallback: string) =>
   z
     .union([z.string(), z.null(), z.undefined()])
-    .transform(value =>
-      typeof value === 'string' && value.trim() !== '' ? stripInlineCitations(value) : fallback,
-    );
+    .transform(value => (typeof value === 'string' && value.trim() !== '' ? stripInlineCitations(value) : fallback));
 
 const PROFILE_CHANGE_FIELDS = [
   'basicInfoAdditions',
@@ -106,11 +104,7 @@ const ProfileAnalysisOutputSchema = z
       .array(z.string().max(300))
       .max(8)
       .nullish()
-      .transform(value =>
-        (value ?? [])
-          .map(item => stripInlineCitations(item))
-          .filter(item => item !== ''),
-      ),
+      .transform(value => (value ?? []).map(item => stripInlineCitations(item)).filter(item => item !== '')),
     behaviorTuning: narrativeField('暂无明显变化'),
     personalityTuning: narrativeField('暂无明显变化'),
     speechStyleTuning: narrativeField('暂无明显变化'),
