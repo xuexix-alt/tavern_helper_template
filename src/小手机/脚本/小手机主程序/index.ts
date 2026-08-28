@@ -119,12 +119,30 @@ $(() => {
 
   // ==================== 副 API 调用 ====================
 
+  /** 形如 v1 / v1beta / v2 / v4 / v1.1 的末段视为已有版本号，不再强补 /v1。 */
+  function looksLikeVersionSegment(segment: string): boolean {
+    return /^v\d+(?:[._]\d+)*(?:beta\d*|preview\d*|alpha\d*)?$/i.test(segment);
+  }
+
+  /** 剥离尾部斜杠与已拼资源尾缀，返回基础路径与「末段是否已是版本号」。 */
+  function splitApiBase(url: string): { base: string; hasVersion: boolean } {
+    const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
+    const last = base.split('/').pop() ?? '';
+    return { base, hasVersion: looksLikeVersionSegment(last) };
+  }
+
+  /** 主端点规范化：保留代理路径，末段为版本号时不重复补 /v1。 */
   function normalizeApiUrl(url: string): string {
-    if (!url || url.includes('/chat/completions')) return url;
-    let fixed = url;
-    if (!fixed.endsWith('/')) fixed += '/';
-    fixed += fixed.includes('/v1') ? 'chat/completions' : 'v1/chat/completions';
-    return fixed;
+    if (!url) return url;
+    const { base, hasVersion } = splitApiBase(url);
+    return `${base}/${hasVersion ? '' : 'v1/'}chat/completions`;
+  }
+
+  /** 主端点 404 时的备用端点（不带 /v1，部分网关按路径直出资源）。 */
+  function fallbackApiUrl(url: string): string {
+    if (!url) return url;
+    const { base } = splitApiBase(url);
+    return `${base}/chat/completions`;
   }
 
   async function callExternalAPI(
@@ -134,7 +152,8 @@ $(() => {
     const config = getAPIConfig();
     if (!config.apiUrl || !config.apiKey) throw new Error('请先在手机设置中配置副 API');
 
-    const apiUrl = normalizeApiUrl(config.apiUrl);
+    const primaryUrl = normalizeApiUrl(config.apiUrl);
+    const fallbackUrl = fallbackApiUrl(config.apiUrl);
     const body = JSON.stringify({
       model: config.model,
       messages,
@@ -145,12 +164,19 @@ $(() => {
       frequency_penalty: 0.1,
     });
 
-    const resp = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-      body,
-      signal: options?.signal,
-    });
+    const doFetch = (url: string) =>
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+        body,
+        signal: options?.signal,
+      });
+
+    let resp = await doFetch(primaryUrl);
+    // 端点不存在（404/405）时换不带 /v1 的端点重试一次；404 未产生计费副作用，安全
+    if ((resp.status === 404 || resp.status === 405) && fallbackUrl !== primaryUrl) {
+      resp = await doFetch(fallbackUrl);
+    }
 
     if (!resp.ok) {
       const err = await resp.text().catch(() => '');
@@ -186,23 +212,27 @@ $(() => {
 
         state.isLoadingModels = true;
         try {
-          const baseUrl = settings.apiConfig.apiUrl.trim();
-          let modelsUrl = baseUrl;
+          const { base, hasVersion } = splitApiBase(settings.apiConfig.apiUrl);
+          // 中转网关布局不一：优先规范化的 /v1/models；404/405 时降级尝试不带 /v1 的 /models。
+          const modelUrls = hasVersion ? [`${base}/models`] : [`${base}/v1/models`, `${base}/models`];
 
-          // 构建 /models 端点
-          if (!modelsUrl.endsWith('/')) modelsUrl += '/';
-          if (!modelsUrl.includes('/v1')) modelsUrl += 'v1/';
-          modelsUrl += 'models';
-
-          const resp = await fetch(modelsUrl, {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${settings.apiConfig.apiKey}`,
-            },
-          });
-
-          if (!resp.ok) {
-            throw new Error(`HTTP ${resp.status}: ${await resp.text().catch(() => '')}`);
+          let resp: Response | null = null;
+          let firstErrorStatus = 0;
+          for (let i = 0; i < modelUrls.length; i += 1) {
+            resp = await fetch(modelUrls[i], {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${settings.apiConfig.apiKey}`,
+              },
+            });
+            if (resp.ok) break;
+            if (i === 0) firstErrorStatus = resp.status;
+            // 只有「端点不存在」才值得换路径重试；鉴权等错误换端点无意义
+            if (resp.status !== 404 && resp.status !== 405) break;
+            resp = null;
+          }
+          if (!resp || !resp.ok) {
+            throw new Error(`HTTP ${firstErrorStatus || resp?.status || 0}: ${await resp?.text().catch(() => '') ?? ''}`);
           }
 
           const data = await resp.json();
