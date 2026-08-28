@@ -308,7 +308,11 @@ function applyRuntimeScripts(card) {
       buildRuntimeScript(definition, existingByDefinition.get(definition.id)),
     ),
     ...unmanagedScripts,
-  ];
+  ].map(script =>
+    typeof script?.content === 'string'
+      ? { ...script, content: script.content.replaceAll('https://testingcf.jsdelivr.net/', 'https://cdn.jsdelivr.net/') }
+      : script,
+  );
   helper.variables ??= {};
 }
 
