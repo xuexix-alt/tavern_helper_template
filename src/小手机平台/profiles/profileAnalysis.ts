@@ -17,11 +17,28 @@ const EvidenceRefSchema = z
   .max(160)
   .regex(/^(?:fixed-profile|previous-dynamic|mvu:.+|story:.+|wechat:.+)$/);
 
+/**
+ * 剔除叙事字段正文中被内联的引用标注（如「（mvu:内心想法）」「(story:3, wechat:xxx:reply:0)」）。
+ * 引用只应出现在 evidenceRefs 数组；正文内联会让档案体积暴涨撑爆提示词预算。
+ */
+const INLINE_CITATION_PATTERN =
+  /[（(]\s*(?:(?:fixed-profile|previous-dynamic|mvu:[^()））、,，;；、]+|story:[^()））、,，;；、]+|wechat:[^()））、,，;；、]+)\s*[,，、;；]?\s*)+[)）]/g;
+
+function stripInlineCitations(value: string): string {
+  return value
+    .replace(INLINE_CITATION_PATTERN, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+([。！？；，、,.!?;])/g, '$1')
+    .trim();
+}
+
 /** AI 常以「暂无」语义输出空值；契约层统一兜底文案，避免整份输出因个别空字段被判失败。 */
 const narrativeField = (fallback: string) =>
   z
     .union([z.string(), z.null(), z.undefined()])
-    .transform(value => (typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback));
+    .transform(value =>
+      typeof value === 'string' && value.trim() !== '' ? stripInlineCitations(value) : fallback,
+    );
 
 const PROFILE_CHANGE_FIELDS = [
   'basicInfoAdditions',
@@ -52,17 +69,17 @@ const ProfileAnalysisOutputSchema = z
               .string()
               .max(1_200)
               .nullish()
-              .transform(value => value?.trim() ?? ''),
+              .transform(value => (value ? stripInlineCitations(value) : '')),
             after: z
               .string()
               .max(1_200)
               .nullish()
-              .transform(value => value?.trim() ?? ''),
+              .transform(value => (value ? stripInlineCitations(value) : '')),
             reason: z
               .string()
               .max(800)
               .nullish()
-              .transform(value => value?.trim() ?? ''),
+              .transform(value => (value ? stripInlineCitations(value) : '')),
             evidenceRefs: z
               .array(EvidenceRefSchema)
               .max(16)
@@ -86,10 +103,14 @@ const ProfileAnalysisOutputSchema = z
           })),
       ),
     basicInfoAdditions: z
-      .array(z.string().trim().min(1).max(240))
+      .array(z.string().max(300))
       .max(8)
       .nullish()
-      .transform(value => value ?? []),
+      .transform(value =>
+        (value ?? [])
+          .map(item => stripInlineCitations(item))
+          .filter(item => item !== ''),
+      ),
     behaviorTuning: narrativeField('暂无明显变化'),
     personalityTuning: narrativeField('暂无明显变化'),
     speechStyleTuning: narrativeField('暂无明显变化'),
@@ -116,6 +137,7 @@ export const PROFILE_ANALYSIS_SYSTEM_PROMPT = [
   '不要续写剧情，不要虚构事件，不要把一次性情绪上升为永久人格，也不要输出思考过程。',
   '事实冲突优先级：MVU硬事实 > 最近正文明确事实 > 固定角色世界书 > 当前人物微信 > 上一次动态档案。',
   '字数纪律：动态字段最终会拼入有字符上限的角色扮演提示词，务必精炼——严格遵循契约中各字段的字数上限，宁可删掉修饰语也不超限。',
+  '引用纪律：所有字段正文中禁止出现引用标注（如「（mvu:内心想法）」「(story:3)」）——引用只放在 evidenceRefs 数组里，正文只写干净的叙事文字。',
   '只输出一个 JSON 对象，且必须符合用户所给契约；不要 Markdown、前后说明或额外字段。',
 ].join('\n');
 
@@ -228,8 +250,8 @@ function extractStringField(raw: string, field: string): string | null {
   const match = raw.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'));
   if (!match?.[1]) return null;
   const decoded = decodeJsonStringLiteral(match[1]);
-  const trimmed = decoded.trim();
-  return trimmed !== '' ? trimmed : null;
+  const stripped = stripInlineCitations(decoded);
+  return stripped !== '' ? stripped : null;
 }
 
 /**
@@ -344,6 +366,7 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     '- 关系、态度类字段要写出轨迹：从什么状态、因哪件事、移向什么状态，以及尚未松动的边界在哪里。',
     '- 无真实变化时保守延续上次档案，不要编造转折；但可在 analysisNarrative 中指出正在积蓄的趋势（须有证据可引）。',
     '- 字数纪律：严格遵循契约中各字段的字数上限；除 analysisNarrative 不超过200字外，其余每个动态字段不超过120字（currentGoals 不超过80字），basicInfoAdditions 每条不超过60字；全部动态内容合计不超过800字。字数超限会导致档案被截断或落盘失败。',
+    '- 引用纪律：任何字段正文中都不得出现「（mvu:xxx）」「(story:3)」这类内联引用标注——引用一律写入 evidenceRefs 数组，正文保持干净的叙事文字；正文中混入引用会导致引用被整段删除。',
     '只允许输出结构化动态字段，不得修改、重写或推断覆盖 MVU 硬事实和固定人物本色。',
     '每项变化必须引用本次允许的 evidenceRefs；证据不足时保守延续上次档案或固定本色，并且不要加入 changes。',
     'changes 只列出与上次动态档案相比真正改变的字段；首次分析只列有直接证据支持的动态字段。',

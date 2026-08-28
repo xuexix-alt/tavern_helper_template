@@ -184,6 +184,48 @@ function testKeywordFallbackExtraction(): void {
   assert.throws(() => parseProfileAnalysisOutput('{"__proto__": {"polluted": true}, "personId": 1}'), /结构|字段|危险/);
 }
 
+function testInlineCitationsStripped(): void {
+  // 线上实测：AI 把引用内联进叙事正文，档案体积暴涨撑爆提示词预算——解析端必须剔除
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '纪宁回到诊疗室（mvu:内心想法），开始清点药品。',
+      changes: [
+        {
+          field: 'currentGoals',
+          before: '暂无',
+          after: '补足诊疗室的常用药品库存（mvu:内心想法, story:12）',
+          reason: '正文明确提到清点',
+          evidenceRefs: ['story:12'],
+        },
+      ],
+      basicInfoAdditions: ['近期负责诊疗室（mvu:位置）'],
+      currentSituationSummary: '人在诊疗室（story:12）(wechat:new)，正在清点药品。',
+      behaviorTuning: '保持谨慎',
+    }),
+    source,
+  );
+  assert.equal(parsed.analysisNarrative, '纪宁回到诊疗室，开始清点药品。');
+  assert.equal(parsed.changes[0].after, '补足诊疗室的常用药品库存');
+  assert.equal(parsed.basicInfoAdditions[0], '近期负责诊疗室');
+  assert.equal(parsed.currentSituationSummary, '人在诊疗室，正在清点药品。');
+  assert.equal(parsed.behaviorTuning, '保持谨慎');
+  // 引用本体不受影响（只剥正文，不剥 evidenceRefs）
+  assert.deepEqual(parsed.changes[0].evidenceRefs, ['story:12']);
+
+  // 降级提取路径同样剔除
+  const salvaged = parseProfileAnalysisOutput(
+    '{"personId": 123, "personName": "纪宁", "behaviorTuning": "先核对缺口（mvu:内心想法）再上报"}',
+    source,
+  );
+  assert.equal(salvaged.behaviorTuning, '先核对缺口再上报');
+
+  // 提示词包含引用纪律
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /引用纪律/);
+  assert.match(buildProfileAnalysisPrompt(source), /引用纪律/);
+}
+
 function testIdentityAndEvidenceValidation(): void {
   const valid = {
     personId: 'main:纪宁',
@@ -371,6 +413,7 @@ testStrictOutputAndMerge();
 testOutputToleratesExtraFieldsAndEmptyValues();
 testChangesEntryTolerance();
 testKeywordFallbackExtraction();
+testInlineCitationsStripped();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();
