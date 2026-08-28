@@ -48,10 +48,26 @@ const ProfileAnalysisOutputSchema = z
         z
           .object({
             field: z.string().trim().max(64),
-            before: z.string().max(1_200).nullish().transform(value => value?.trim() ?? ''),
-            after: z.string().max(1_200).nullish().transform(value => value?.trim() ?? ''),
-            reason: z.string().max(800).nullish().transform(value => value?.trim() ?? ''),
-            evidenceRefs: z.array(EvidenceRefSchema).max(16).nullish().transform(value => value ?? []),
+            before: z
+              .string()
+              .max(1_200)
+              .nullish()
+              .transform(value => value?.trim() ?? ''),
+            after: z
+              .string()
+              .max(1_200)
+              .nullish()
+              .transform(value => value?.trim() ?? ''),
+            reason: z
+              .string()
+              .max(800)
+              .nullish()
+              .transform(value => value?.trim() ?? ''),
+            evidenceRefs: z
+              .array(EvidenceRefSchema)
+              .max(16)
+              .nullish()
+              .transform(value => value ?? []),
           })
           .strip(),
       )
@@ -60,8 +76,9 @@ const ProfileAnalysisOutputSchema = z
       .transform(entries =>
         (entries ?? [])
           // 未知字段与空 after 的条目直接剔除，不能让单条畸形数据否决整份分析
-          .filter((entry): entry is typeof entry & { field: ProfileChangeField } =>
-            isProfileChangeField(entry.field) && entry.after !== '',
+          .filter(
+            (entry): entry is typeof entry & { field: ProfileChangeField } =>
+              isProfileChangeField(entry.field) && entry.after !== '',
           )
           .map(entry => ({
             ...entry,
