@@ -247,10 +247,15 @@ function testPhoneComponentHealthReport(): void {
   assert.match(formatPhoneComponentHealth(complete).message, /10\/10/);
 
   const missing = evaluatePhoneComponentHealth(
-    componentSnapshots().filter(snapshot => snapshot.id !== 'wechat.adapter'),
+    componentSnapshots().filter(snapshot => snapshot.id !== 'communication.apps'),
   );
   assert.equal(missing.healthy, false);
-  assert.match(missing.issues.join('\n'), /70微信APP适配器.*缺失/);
+  assert.match(missing.issues.join('\n'), /50通信与情报APP.*缺失/);
+
+  const missingOptional = evaluatePhoneComponentHealth(
+    componentSnapshots().filter(snapshot => snapshot.id !== 'wechat.adapter'),
+  );
+  assert.equal(missingOptional.healthy, true, '可选组件（如微信APP适配器）未安装不应误报缺失');
 
   const mismatched = evaluatePhoneComponentHealth(componentSnapshots({ 'platform.services': { version: '0.9.0' } }));
   assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.1/);
