@@ -28,6 +28,28 @@ $(() => {
           isLoadingCandidates: false,
         });
 
+        // 与真微信一致：用户停在底部时新消息自动跟底；上翻阅读历史时保持位置不拉扯
+        let stickToBottom = true;
+
+        const scrollToBottom = () => {
+          const el = document.getElementById('phone-chat-msgs');
+          if (el) el.scrollTop = el.scrollHeight;
+        };
+
+        /**
+         * 等待 Vue 完成本次 DOM 更新后再滚动，并做多级重试：
+         * 长文本/输入指示条会延后改变容器高度，单次定时滚动会量到旧高度导致视图停在顶部。
+         */
+        const scrollChatBottom = (force = false) => {
+          if (!force && !stickToBottom) return;
+          vueRuntime.nextTick(() => {
+            scrollToBottom();
+            requestAnimationFrame(scrollToBottom);
+            setTimeout(scrollToBottom, 120);
+            setTimeout(scrollToBottom, 400);
+          });
+        };
+
         const loadConversations = async () => {
           try {
             const ChatDB = (window.parent as any).ChatDB;
@@ -58,7 +80,8 @@ $(() => {
           store.activeConvId = conv.id;
           store.activeConv = conv;
           await loadMessages(conv.id);
-          scrollChatBottom();
+          stickToBottom = true;
+          scrollChatBottom(true);
         };
 
         const goBack = () => {
@@ -67,12 +90,16 @@ $(() => {
           store.messages.length = 0;
         };
 
-        const scrollChatBottom = () => {
-          setTimeout(() => {
-            const el = document.getElementById('phone-chat-msgs');
-            if (el) el.scrollTop = el.scrollHeight;
-          }, 80);
-        };
+        // 新消息（含回复逐条 push、「正在输入」指示条出现/消失改变高度）时自动跟底
+        vueRuntime.watch(
+          () => store.messages,
+          () => scrollChatBottom(false),
+          { deep: true },
+        );
+        vueRuntime.watch(
+          () => store.isGenerating,
+          () => scrollChatBottom(false),
+        );
 
         const sendMessage = async () => {
           const text = store.inputText.trim();
@@ -91,7 +118,7 @@ $(() => {
 
             const userMsg = await ChatDB.addMessage(conv.id, '<user>', text);
             store.messages.push(userMsg);
-            scrollChatBottom();
+            scrollChatBottom(true);
 
             let replies: any[];
             if (conv.type === 'group') {
@@ -116,7 +143,7 @@ $(() => {
             }
           } finally {
             store.isGenerating = false;
-            scrollChatBottom();
+            scrollChatBottom(false);
           }
         };
 
@@ -557,6 +584,11 @@ $(() => {
                 {
                   id: 'phone-chat-msgs',
                   style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;',
+                  onScroll: (e: any) => {
+                    const el = e.target as HTMLElement;
+                    // 距底 60px 内视为「在底部」，新消息自动跟底；上翻阅读时不再拉扯
+                    stickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+                  },
                 },
                 [
                   ...store.messages.map((msg: any, i: number) => {
