@@ -1055,10 +1055,7 @@ async function testOpenAiModelDiscovery(): Promise<void> {
         : { ok: false, status: 404, json: async () => ({}) };
     },
   });
-  assert.deepEqual(requestedUrls, [
-    'https://api.example.test/api/v1/models',
-    'https://api.example.test/api/models',
-  ]);
+  assert.deepEqual(requestedUrls, ['https://api.example.test/api/v1/models', 'https://api.example.test/api/models']);
   assert.deepEqual(fallbackModels, ['gw-a']);
 
   // 非端点类错误（401）不触发降级，直接失败
