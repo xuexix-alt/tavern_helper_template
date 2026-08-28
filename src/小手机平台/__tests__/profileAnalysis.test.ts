@@ -103,6 +103,57 @@ function testOutputToleratesExtraFieldsAndEmptyValues(): void {
   assert.throws(() => parseProfileAnalysisOutput('{"__proto__":{"polluted":true}}'), /结构|字段|危险/);
 }
 
+function testChangesEntryTolerance(): void {
+  // 线上实测：changes 条目缺 evidenceRefs / 带未知 field / 空 after 时不得否决整份分析
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '纪宁在诊疗室清点药品。',
+      changes: [
+        {
+          field: 'relationshipInterpretation',
+          before: '协作',
+          after: '信任加深',
+          reason: '共同完成抢修',
+          evidenceRefs: ['story:12'],
+        },
+        {
+          // 缺 evidenceRefs：sanitize 应回填 fixed-profile
+          field: 'currentSituationSummary',
+          before: '在诊疗室',
+          after: '正在清点药品',
+          reason: '正文明确',
+        },
+        {
+          // 未知 field：条目剔除
+          field: 'mvuRelation',
+          before: 'a',
+          after: 'b',
+          reason: 'c',
+          evidenceRefs: ['fixed-profile'],
+        },
+        {
+          // 空 after：条目剔除
+          field: 'currentGoals',
+          before: '补库存',
+          after: '   ',
+          reason: 'c',
+          evidenceRefs: ['fixed-profile'],
+        },
+      ],
+    }),
+    source,
+  );
+  assert.equal(parsed.changes.length, 2);
+  assert.deepEqual(
+    parsed.changes.map(change => change.field),
+    ['relationshipInterpretation', 'currentSituationSummary'],
+  );
+  assert.deepEqual(parsed.changes[0].evidenceRefs, ['story:12']);
+  assert.deepEqual(parsed.changes[1].evidenceRefs, ['fixed-profile'], '缺 evidenceRefs 的条目应回填 fixed-profile');
+}
+
 function testIdentityAndEvidenceValidation(): void {
   const valid = {
     personId: 'main:纪宁',
@@ -288,6 +339,7 @@ function testPromptEnforcesFieldLengthDiscipline(): void {
 
 testStrictOutputAndMerge();
 testOutputToleratesExtraFieldsAndEmptyValues();
+testChangesEntryTolerance();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();

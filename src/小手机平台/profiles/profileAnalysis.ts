@@ -23,6 +23,21 @@ const narrativeField = (fallback: string) =>
     .union([z.string(), z.null(), z.undefined()])
     .transform(value => (typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback));
 
+const PROFILE_CHANGE_FIELDS = [
+  'basicInfoAdditions',
+  'behaviorTuning',
+  'personalityTuning',
+  'speechStyleTuning',
+  'currentGoals',
+  'currentSituationSummary',
+  'relationshipInterpretation',
+  'storyInteractionSummary',
+  'chatInteractionSummary',
+] as const satisfies readonly ProfileChangeField[];
+
+const isProfileChangeField = (value: string): value is ProfileChangeField =>
+  (PROFILE_CHANGE_FIELDS as readonly string[]).includes(value);
+
 const ProfileAnalysisOutputSchema = z
   .object({
     personId: z.string().trim().min(1).max(160),
@@ -32,27 +47,27 @@ const ProfileAnalysisOutputSchema = z
       .array(
         z
           .object({
-            field: z.enum([
-              'basicInfoAdditions',
-              'behaviorTuning',
-              'personalityTuning',
-              'speechStyleTuning',
-              'currentGoals',
-              'currentSituationSummary',
-              'relationshipInterpretation',
-              'storyInteractionSummary',
-              'chatInteractionSummary',
-            ]),
-            before: z.string().max(1_200),
-            after: z.string().max(1_200),
-            reason: z.string().trim().min(1).max(800),
-            evidenceRefs: z.array(EvidenceRefSchema).min(1).max(16),
+            field: z.string().trim().max(64),
+            before: z.string().max(1_200).nullish().transform(value => value?.trim() ?? ''),
+            after: z.string().max(1_200).nullish().transform(value => value?.trim() ?? ''),
+            reason: z.string().max(800).nullish().transform(value => value?.trim() ?? ''),
+            evidenceRefs: z.array(EvidenceRefSchema).max(16).nullish().transform(value => value ?? []),
           })
           .strip(),
       )
       .max(12)
       .nullish()
-      .transform(value => value ?? []),
+      .transform(entries =>
+        (entries ?? [])
+          // 未知字段与空 after 的条目直接剔除，不能让单条畸形数据否决整份分析
+          .filter((entry): entry is typeof entry & { field: ProfileChangeField } =>
+            isProfileChangeField(entry.field) && entry.after !== '',
+          )
+          .map(entry => ({
+            ...entry,
+            reason: entry.reason !== '' ? entry.reason : '未提供变更理由',
+          })),
+      ),
     basicInfoAdditions: z
       .array(z.string().trim().min(1).max(240))
       .max(8)
