@@ -266,13 +266,14 @@ function testPhoneComponentHealthReport(): void {
   assert.equal(standbyExtension.healthy, true, '扩展模块已注册但待命不应误报故障');
 }
 
-function testPhoneComponentHealthNotificationOnce(): void {
+function testPhoneComponentHealthNotification(): void {
   let moduleListener: (() => void) | null = null;
   const scheduled: Array<() => void> = [];
   const cancelled: number[] = [];
   const notifications: string[] = [];
+  let healthy = false;
   const runtime = {
-    getModules: () => componentSnapshots(),
+    getModules: () => componentSnapshots(healthy ? {} : { 'communication.apps': { status: 'REGISTERED' } }),
     on: (event: string, listener: () => void) => {
       if (event === 'modules') moduleListener = listener;
       return () => {
@@ -287,16 +288,31 @@ function testPhoneComponentHealthNotificationOnce(): void {
       return scheduled.length;
     },
     cancel: timer => cancelled.push(timer as number),
-    notify: summary => notifications.push(summary.message),
+    notify: summary => notifications.push(summary.level),
   });
 
   moduleListener?.();
   assert.equal(cancelled.length, 1, '新模块注册应重置等待窗口');
   scheduled.at(-1)?.();
-  scheduled.at(-1)?.();
+  assert.deepEqual(notifications, ['warning'], '首次评估为 warning 时必须通知');
+
+  // 同级别状态不重复通知
+  healthy = false;
   moduleListener?.();
-  assert.equal(notifications.length, 1, '每次页面加载最多通知一次');
+  scheduled.at(-1)?.();
+  assert.equal(notifications.length, 1, '状态未翻转时不得重复通知');
+
+  // 状态翻转（warning -> success）必须通知：CDN 慢导致组件迟到时，误报可由 success 自愈修正
+  healthy = true;
+  moduleListener?.();
+  scheduled.at(-1)?.();
+  assert.deepEqual(notifications, ['warning', 'success'], '状态翻转必须通知');
   stop();
+
+  // stop 后不再监听
+  moduleListener?.();
+  scheduled.at(-1)?.();
+  assert.equal(notifications.length, 2, 'stop 后不得再通知');
 }
 
 async function testAutomaticInitializationFailureRollback(): Promise<void> {
@@ -1000,7 +1016,7 @@ async function main(): Promise<void> {
   await testAutomaticAdapterRootInitialization();
   await testRuntimeModuleSnapshots();
   testPhoneComponentHealthReport();
-  testPhoneComponentHealthNotificationOnce();
+  testPhoneComponentHealthNotification();
   await testAutomaticInitializationFailureRollback();
   await testRuntimeBridge();
   testEventBus();

@@ -131,22 +131,27 @@ export function startPhoneComponentHealthNotification(
   const cancel = options.cancel ?? (timer => window.clearTimeout(timer));
   let timer: number | null = null;
   let active = true;
-  let notified = false;
+  // 组件脚本是独立的网络请求，到达顺序与间隔不定（CDN 抖动时可能超过防抖窗口）。
+  // 因此不做一次性通知：仅在健康状态发生翻转（warning -> success 或反之）时通知，
+  // 早到的 warning 会在后续模块到齐后由 success 自动修正，不会留下过时误报。
+  let lastLevel: 'success' | 'warning' | null = null;
   let stopListening = (): void => undefined;
 
   const run = (): void => {
     timer = null;
-    if (!active || notified) return;
-    notified = true;
-    stopListening();
+    if (!active) return;
     try {
-      options.notify(formatPhoneComponentHealth(evaluatePhoneComponentHealth(runtime.getModules())));
+      const summary = formatPhoneComponentHealth(evaluatePhoneComponentHealth(runtime.getModules()));
+      if (summary.level !== lastLevel) {
+        lastLevel = summary.level;
+        options.notify(summary);
+      }
     } catch (error) {
       options.onError?.(error);
     }
   };
   const queue = (): void => {
-    if (!active || notified) return;
+    if (!active) return;
     if (timer !== null) cancel(timer);
     timer = schedule(run, delayMs);
   };

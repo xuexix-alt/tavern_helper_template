@@ -31,6 +31,10 @@ export const PLATFORM_ASSEMBLY_MODULES = [
   '50通信与情报APP',
 ] as const;
 
+interface PhoneModuleSnapshotLike {
+  capabilities?: readonly string[];
+}
+
 interface PhoneAssemblyStamp {
   version: string;
   modules: readonly string[];
@@ -39,7 +43,11 @@ interface PhoneAssemblyStamp {
 
 interface PhoneAssemblyTopWindow {
   __TAVERN_PHONE_ASSEMBLY__?: PhoneAssemblyStamp;
+  TavernPhone?: { getModules?: () => readonly PhoneModuleSnapshotLike[] };
 }
+
+/** 总成就绪后等待角色适配器的窗口；超时仍未出现则提示（适配器网络失败/未安装时避免静默失效）。 */
+const ADAPTER_WAIT_TIMEOUT_MS = 15_000;
 
 $(() => {
   const topWindow = window.top as unknown as PhoneAssemblyTopWindow | null | undefined;
@@ -66,4 +74,28 @@ $(() => {
   console.info(
     `[小手机平台] 总成 v${PLATFORM_ASSEMBLY_VERSION} 已加载（${PLATFORM_ASSEMBLY_MODULES.length} 个模块；角色适配器需单独安装）`,
   );
+
+  // 适配器（phone.adapter）是初始化的根模块：它缺席时平台各模块保持待命，手机不会出现。
+  // 适配器脚本与总成是两个独立的网络请求，可能迟到；超时仍查不到该能力则给出一次性提示。
+  try {
+    topWindow.setTimeout?.(() => {
+      if (!topWindow.__TAVERN_PHONE_ASSEMBLY__) return;
+      try {
+        const modules = topWindow.TavernPhone?.getModules?.() ?? [];
+        if (modules.some(module => module.capabilities?.includes('phone.adapter'))) return;
+      } catch {
+        return;
+      }
+      const message =
+        '[小手机平台] 总成已就绪，但角色适配器（如 小手机-90寒冬适配器）长时间未注册；请确认适配器脚本已安装。';
+      console.warn(message);
+      try {
+        toastr?.warning(message, '小手机平台总成', { timeOut: 12_000, extendedTimeOut: 4_000 });
+      } catch {
+        // toastr 不可用时仅保留控制台告警
+      }
+    }, ADAPTER_WAIT_TIMEOUT_MS);
+  } catch {
+    // 宿主不支持 setTimeout 时保持静默
+  }
 });
