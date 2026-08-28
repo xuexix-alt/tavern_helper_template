@@ -126,7 +126,10 @@ $(() => {
 
   /** 剥离尾部斜杠与已拼资源尾缀，返回基础路径与「末段是否已是版本号」。 */
   function splitApiBase(url: string): { base: string; hasVersion: boolean } {
-    const base = url.trim().replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
+    const base = url
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/(?:chat\/completions|models)$/, '');
     const last = base.split('/').pop() ?? '';
     return { base, hasVersion: looksLikeVersionSegment(last) };
   }
@@ -232,7 +235,9 @@ $(() => {
             resp = null;
           }
           if (!resp || !resp.ok) {
-            throw new Error(`HTTP ${firstErrorStatus || resp?.status || 0}: ${await resp?.text().catch(() => '') ?? ''}`);
+            throw new Error(
+              `HTTP ${firstErrorStatus || resp?.status || 0}: ${(await resp?.text().catch(() => '')) ?? ''}`,
+            );
           }
 
           const data = await resp.json();
