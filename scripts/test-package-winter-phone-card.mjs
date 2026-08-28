@@ -17,9 +17,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_PNG = path.join(ROOT, 'src', '末世寒冬 - 星穹秩序.png');
 const WORLDBOOK = path.join(ROOT, 'src', '寒冬末日.json');
 const PHONE_CDN_ROOT =
-  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 const PRE_UI_CDN_URL =
-  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const tempRoot = await mkdtemp(path.join(tmpdir(), 'winter-phone-card-'));
@@ -43,7 +43,7 @@ try {
   );
   await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
   const productionPreRegexes = card.data.extensions.regex_scripts.filter(script =>
-    script.replaceString?.includes('testingcf.jsdelivr.net') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
+    script.replaceString?.includes('cdn.jsdelivr.net') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
   );
   assert.equal(productionPreRegexes.length, 2);
   assert.ok(productionPreRegexes.every(script => script.replaceString.includes(PRE_UI_CDN_URL)));
@@ -80,7 +80,7 @@ try {
     {
       enabled: true,
       content:
-        "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
+        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
     },
   );
   assert.deepEqual(
@@ -88,7 +88,7 @@ try {
     {
       enabled: true,
       content:
-        "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
     },
   );
   assert.equal(findScript('脚本测试').enabled, false);
@@ -98,7 +98,7 @@ try {
     {
       enabled: true,
       content:
-        "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
     },
   );
   assert.equal(new Set(RUNTIME_SCRIPT_DEFINITIONS.map(script => script.id)).size, RUNTIME_SCRIPT_DEFINITIONS.length);

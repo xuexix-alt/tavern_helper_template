@@ -10,8 +10,8 @@
 线上加载方式（两条 import 即可，jsdelivr 自动更新）：
 
 ```ts
-import 'https://testingcf.jsdelivr.net/gh/<user>/<repo>@<tag>/dist/小手机平台/总成/index.js';
-import 'https://testingcf.jsdelivr.net/gh/<user>/<repo>@<tag>/dist/寒冬末日/脚本/小手机-90寒冬适配器/index.js';
+import 'https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/dist/小手机平台/总成/index.js';
+import 'https://cdn.jsdelivr.net/gh/<user>/<repo>@<tag>/dist/寒冬末日/脚本/小手机-90寒冬适配器/index.js';
 ```
 
 总成版本戳写入 `window.top.__TAVERN_PHONE_ASSEMBLY__`（`PLATFORM_ASSEMBLY_VERSION`，发布时与 git tag 对齐），重复安装/混版会双通道告警。总成与散装脚本同版本重复注册幂等，可平滑互迁。

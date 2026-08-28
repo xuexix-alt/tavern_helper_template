@@ -7,11 +7,11 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CARD_KEYWORDS = Object.freeze(['chara', 'ccv3']);
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
 const PHONE_CDN_ROOT =
-  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 const LEGACY_PRE_UI_CDN_URL =
-  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 const PRE_UI_CDN_URL =
-  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 
 export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
   {
@@ -24,14 +24,14 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
     name: 'zod 定义',
     enabled: true,
     content:
-      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
   },
   {
     id: '5ea5d786-2ff5-4744-b684-4b91d0aa6b9b',
     name: '后台数据维护',
     enabled: true,
     content:
-      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   },
   {
     id: 'd1e3e9ef-56b7-47ce-80f2-3f38b727087f',
@@ -48,7 +48,7 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
     name: '自动更新角色卡',
     enabled: true,
     content:
-      "import\n'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
   },
 ]);
 
@@ -317,7 +317,10 @@ function applyPreUiUrl(card) {
   if (!Array.isArray(regexScripts)) throw new Error('角色卡缺少正则脚本清单');
   for (const script of regexScripts) {
     if (typeof script?.replaceString === 'string') {
-      script.replaceString = script.replaceString.replaceAll(LEGACY_PRE_UI_CDN_URL, PRE_UI_CDN_URL);
+      // 先把旧卡的 testingcf 镜像迁移到官方 cdn，再执行既有版本升级重写
+      script.replaceString = script.replaceString
+        .replaceAll('https://testingcf.jsdelivr.net/', 'https://cdn.jsdelivr.net/')
+        .replaceAll(LEGACY_PRE_UI_CDN_URL, PRE_UI_CDN_URL);
     }
   }
 }
@@ -347,7 +350,7 @@ function validatePackagedCard(card) {
   const scripts = card.data.extensions?.tavern_helper?.scripts;
   const productionPreRegexes = card.data.extensions?.regex_scripts?.filter(
     script =>
-      script?.replaceString?.includes('testingcf.jsdelivr.net') &&
+      script?.replaceString?.includes('cdn.jsdelivr.net') &&
       script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
   );
   if (

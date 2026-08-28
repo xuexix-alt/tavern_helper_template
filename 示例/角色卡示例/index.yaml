@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
+# yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/character.zh.json
 头像: 头像
 版本: 1.0.0
 作者: 青空莉想做舞台少女的狗
@@ -266,7 +266,7 @@
         ```
         <body>
         <script>
-        $('body').load('https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/界面/状态栏/index.html')
+        $('body').load('https://cdn.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/界面/状态栏/index.html')
         </script>
         </body>
         ```
@@ -284,29 +284,29 @@
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js';
+          import 'https://cdn.jsdelivr.net/gh/MagicalAstrogy/MagVarUpdate/artifact/bundle.js';
 
       - 名称: 变量结构
         id: f65ab164-4268-4366-8228-16af904c2251
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/脚本/变量结构/index.js';
+          import 'https://cdn.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/脚本/变量结构/index.js';
 
       - 名称: 立即事件
         id: 0f03773b-812a-4a78-85d1-d7d7fbe70240
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/脚本/立即事件/index.js';
+          import 'https://cdn.jsdelivr.net/gh/StageDog/tavern_helper_template/dist/角色卡示例/脚本/立即事件/index.js';
 
       - 名称: 自动更新角色卡
         id: 176b0b3c-b410-4373-8c81-8636a94a0839
         启用: true
         类型: 脚本
         内容: |-
-          import 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/酒馆助手/自动更新角色卡/index.js';
+          import 'https://cdn.jsdelivr.net/gh/StageDog/tavern_resource/dist/酒馆助手/自动更新角色卡/index.js';
         数据:
           角色卡名称: 呕吐内心的少女
-          角色卡链接: https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/示例/角色卡示例/角色卡示例.png
-          更新日志链接: https://testingcf.jsdelivr.net/gh/StageDog/tavern_helper_template/示例/角色卡示例/更新日志.md
+          角色卡链接: https://cdn.jsdelivr.net/gh/StageDog/tavern_helper_template/示例/角色卡示例/角色卡示例.png
+          更新日志链接: https://cdn.jsdelivr.net/gh/StageDog/tavern_helper_template/示例/角色卡示例/更新日志.md

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://testingcf.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/settings.zh.json
+# yaml-language-server: $schema=https://cdn.jsdelivr.net/gh/StageDog/tavern_sync/dist/schema/settings.zh.json
 
 # 在此填入 user 名称, 提示词中如果有这个名字则会被替换成 <user> 宏
 user名称: 用户
