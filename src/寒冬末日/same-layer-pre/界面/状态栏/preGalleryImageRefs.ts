@@ -14,6 +14,7 @@ import {
   type HostGestureDispatchStrategy,
 } from '../../../界面同层版/界面/状态栏/hostGestureDispatch.ts';
 import type { ReaderGalleryEntry } from '../../../界面同层版/界面/状态栏/types.ts';
+import { readPluginField, readPluginMediaSrc, usableMediaSrc } from './prePluginMedia.ts';
 
 export type PreGalleryImageSource = 'host-dom' | 'pre-render' | 'extra.images' | 'mes_tag' | 'cache';
 export type PreGalleryGestureTargetHint = 'prompt-button' | 'ready-image' | 'message-text' | 'unknown';
@@ -111,6 +112,10 @@ export type PreGalleryLongPressSession = {
 const SOURCE_ORDER: PreGalleryImageSource[] = ['host-dom', 'pre-render', 'extra.images', 'mes_tag', 'cache'];
 const HOST_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
 const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>();
+export function clearPreGalleryHostRefs() {
+  HOST_ELEMENT_REF_CACHE.clear();
+  HOST_IMAGE_ELEMENT_REF_CACHE.clear();
+}
 const PLUGIN_NATIVE_SELECTORS = [
   'button.image-tag-button',
   '.st-chatu8-image-button',
@@ -167,7 +172,8 @@ function shortHash(input: string): string {
 }
 
 function normalizeSrc(input: unknown): string {
-  return normalizeImageDataToSrc(input);
+  const src = usableMediaSrc(input);
+  return src.startsWith('blob:') ? src : normalizeImageDataToSrc(src);
 }
 
 export function preGalleryRefToReaderGalleryEntry(ref: PreGalleryImageRef): ReaderGalleryEntry {
@@ -235,6 +241,8 @@ function buildIdentity(parts: {
 }
 
 function isSameArtifact(lhs: PreGalleryImageRef, rhs: Partial<PreGalleryImageRef>): boolean {
+  if (lhs.requestId && rhs.requestId && lhs.requestId !== rhs.requestId) return false;
+  if (lhs.imageId && rhs.imageId && lhs.imageId !== rhs.imageId) return false;
   const leftKeys = [lhs.requestId, lhs.imageId, lhs.promptToken, lhs.tag, lhs.link].filter(Boolean);
   const rightKeys = [rhs.requestId, rhs.imageId, rhs.promptToken, rhs.tag, rhs.link].map(clean).filter(Boolean);
   if (leftKeys.some(key => rightKeys.includes(key))) return true;
@@ -324,21 +332,14 @@ function getMessageId(message: Record<string, any>, fallback: number): number | 
 
 function readSwipeEntries(message: Record<string, any>, swipeId: number): Record<string, any>[] {
   const extraImages = message?.extra?.images;
-  if (!Array.isArray(extraImages)) return [];
+  if (!extraImages || typeof extraImages !== 'object') return [];
   if (Array.isArray(extraImages[swipeId])) {
     return extraImages[swipeId]
       .filter(Boolean)
       .map(entry => asRecord(entry))
       .filter(Boolean) as Record<string, any>[];
   }
-  return extraImages.flatMap(item =>
-    Array.isArray(item)
-      ? (item
-          .filter(Boolean)
-          .map(entry => asRecord(entry))
-          .filter(Boolean) as Record<string, any>[])
-      : [],
-  );
+  return [];
 }
 
 function createEmptyRef(messageId: number, swipeId: number, entry: Partial<PreGalleryImageRef>): PreGalleryImageRef {
@@ -537,24 +538,11 @@ function hasHostArtifactIdentity(artifact: PreGalleryHostArtifact): boolean {
 }
 
 function readDataset(element: Element | null | undefined, keys: string[]): string {
-  if (!element) return '';
-  for (const key of keys) {
-    const value = clean(
-      (element as HTMLElement).dataset?.[key] ??
-        element.getAttribute?.(`data-${key.replace(/[A-Z]/g, m => `-${m.toLowerCase()}`)}`),
-    );
-    if (value) return value;
-  }
-  return '';
+  return readPluginField(element, keys);
 }
 
 function readElementSrc(element: Element): string {
-  if (element.matches('img,video')) {
-    const media = element as HTMLImageElement | HTMLVideoElement;
-    return clean(media.currentSrc || media.src || element.getAttribute('src'));
-  }
-  const nested = element.querySelector?.('img,video') as HTMLImageElement | HTMLVideoElement | null;
-  return clean(nested?.currentSrc || nested?.src || nested?.getAttribute('src'));
+  return readPluginMediaSrc(element);
 }
 
 function summarizeProbeSrc(src: string) {
@@ -660,10 +648,10 @@ function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string
       const carrier = element.closest(
         '.st-chatu8-image-span,.st-chatu8-image-container,.ai-image-container,span.image-tag-placeholder',
       );
-      const tag = readDataset(carrier, ['imageTag', 'tag']);
-      const link = readDataset(carrier, ['link']);
-      const regex = readDataset(carrier, ['regex', 'promptRegex', 'prompt_regex']);
-      const promptToken = readDataset(carrier, ['promptToken']) || tag || link || promptTokens[index] || '';
+      const tag = readDataset(element, ['imageTag', 'tag']);
+      const link = readDataset(element, ['link']);
+      const regex = readDataset(element, ['regex', 'promptRegex', 'prompt_regex']);
+      const promptToken = readDataset(element, ['promptToken']) || tag || link || promptTokens[index] || '';
       return {
         messageId,
         source: 'pre-render' as const,
@@ -671,8 +659,8 @@ function collectPreVisibleGalleryArtifacts(messageId: number, rawMessage: string
         className: clean((carrier as HTMLElement | null)?.className || (element as HTMLElement).className),
         tag: tag || promptToken,
         link: link || promptToken,
-        requestId: readDataset(carrier, ['requestId']),
-        imageId: readDataset(carrier, ['imageId']),
+        requestId: readDataset(element, ['requestId']),
+        imageId: readDataset(element, ['imageId']),
         regex,
         promptToken,
         src,
@@ -897,6 +885,8 @@ function scoreElementForRef(element: Element, ref: PreGalleryImageRef): number {
   const imageId = readDataset(element, ['imageId']);
   const promptToken = readDataset(element, ['promptToken']) || tag || link;
   const src = readElementSrc(element);
+  if (ref.requestId && requestId !== ref.requestId) return 0;
+  if (ref.imageId && imageId && imageId !== ref.imageId) return 0;
   let score = 0;
   if (ref.tag && tag && ref.tag === tag) score += 6;
   if (ref.link && link && ref.link === link) score += 6;
@@ -904,6 +894,7 @@ function scoreElementForRef(element: Element, ref: PreGalleryImageRef): number {
   if (ref.requestId && requestId && ref.requestId === requestId) score += 4;
   if (ref.imageId && imageId && ref.imageId === imageId) score += 4;
   if (ref.src && src && ref.src === src) score += 2;
+  if (score === 0) return 0;
   if (ref.gestureTargetHint === 'prompt-button' && isPluginPromptButton(element)) score += 12;
   if (element.matches('button.image-tag-button,.st-chatu8-image-button')) score += 1;
   return score;
@@ -913,6 +904,8 @@ function scoreImageElementForRef(element: Element, ref: PreGalleryImageRef): num
   const requestId = readDataset(element, ['requestId']);
   const imageId = readDataset(element, ['imageId']);
   const src = readElementSrc(element);
+  if (ref.requestId && requestId !== ref.requestId) return 0;
+  if (ref.imageId && imageId && imageId !== ref.imageId) return 0;
   const hasExactIdentity = Boolean(
     (ref.requestId && requestId && ref.requestId === requestId) ||
     (ref.imageId && imageId && ref.imageId === imageId) ||
@@ -1046,19 +1039,23 @@ function findCachedHostImageElementForRef(ref: PreGalleryImageRef): HTMLElement 
 }
 
 export function resolvePreGalleryHostInteraction(ref: PreGalleryImageRef): PreGalleryHostInteraction {
-  const preImageTarget = findPreNativeImageElementForRef(ref);
+  const message = readRuntimeMessageById(ref.messageId);
+  if (message && normalizeSwipeId(message.swipe_id ?? message.swipeId) !== ref.swipeId) {
+    return {
+      target: null,
+      targetKind: 'none',
+      longPressTarget: null,
+      longPressTargetKind: 'none',
+      reason: '楼层 swipe 已变化，请刷新画廊',
+    };
+  }
   const imageTarget = findCachedHostImageElementForRef(ref) ?? findHostImageElementForRef(ref);
+  const preImageTarget = imageTarget ? null : findPreNativeImageElementForRef(ref);
   const buttonTarget = findCachedHostElementForRef(ref) ?? findHostElementForRef(ref);
   const target = ref.src ? (preImageTarget ?? imageTarget) : buttonTarget;
   // 生成完成后的按钮仍保有插件的原始长按编辑监听器；它比宿主的空 img 更可靠。
-  const longPressTarget = buttonTarget ?? preImageTarget ?? imageTarget;
-  const longPressTargetKind = buttonTarget
-    ? 'prompt-button'
-    : preImageTarget
-      ? 'iframe-ready-image'
-      : imageTarget
-        ? 'ready-image'
-        : 'none';
+  const longPressTarget = buttonTarget;
+  const longPressTargetKind = buttonTarget ? 'prompt-button' : 'none';
   if (!target) {
     return {
       target: null,

@@ -528,7 +528,8 @@ test('pre gallery beta event model targets refs first and hydrates DOM after ren
   assert.match(panelSource, /tavern_events\.USER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
   assert.match(panelSource, /tavern_events\.CHARACTER_MESSAGE_RENDERED[\s\S]*hydrateImageDom/);
   assert.match(panelSource, /scheduleRenderRescan\(eventName,\s*messageIds\)/);
-  assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED|CHAT_CHANGED/);
+  assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED/);
+  assert.match(panelSource, /CHAT_CHANGED/);
 });
 
 test('pre gallery panel exposes bounded wall scan selector', () => {
@@ -637,13 +638,13 @@ test('pre gallery gesture keeps plugin prompt buttons ahead of image containers 
   );
 });
 
-test('pre gallery displayed images prefer the exact plugin-bound iframe media target before host fallback', () => {
+test('pre gallery displayed images prefer real host media over iframe snapshots', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
 
   assert.match(source, /const HOST_IMAGE_ELEMENT_REF_CACHE = new Map<string, HTMLElement>\(\)/);
   assert.match(source, /rememberHostImageElementRef\(existing, artifact\.element\)/);
   assert.match(source, /function findPreNativeImageElementForRef\(ref: PreGalleryImageRef\)/);
-  assert.match(source, /const preImageTarget = findPreNativeImageElementForRef\(ref\);/);
+  assert.match(source, /const preImageTarget = imageTarget \? null : findPreNativeImageElementForRef\(ref\);/);
   assert.match(
     source,
     /const imageTarget = findCachedHostImageElementForRef\(ref\) \?\? findHostImageElementForRef\(ref\)/,
@@ -667,12 +668,12 @@ test('pre gallery resolves parent-window host media without iframe realm instanc
   assert.doesNotMatch(source, /instanceof HTMLImageElement/);
 });
 
-test('pre gallery longpress mirrors the real press duration on the exact plugin button before falling back to media', () => {
+test('pre gallery longpress edits through the real host button to retain CHAT context', () => {
   const source = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/preGalleryImageRefs.ts');
   const panelSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryPanel.vue');
 
   assert.match(source, /longPressTarget: HTMLElement \| null;/);
-  assert.match(source, /const longPressTarget = buttonTarget \?\? preImageTarget \?\? imageTarget;/);
+  assert.match(source, /const longPressTarget = buttonTarget;/);
   assert.match(source, /export function beginPreGalleryImageRefLongPress\(ref: PreGalleryImageRef\)/);
   assert.match(source, /export function finishPreGalleryImageRefLongPress\(session: PreGalleryLongPressSession\)/);
   assert.match(panelSource, /@pointerdown="startLongPress\(entry, \$event\)"/);
@@ -769,20 +770,17 @@ test('pre gallery performs one bounded active rescan when an image event carries
 
   assert.match(panelSource, /scheduleScan\(`\$\{eventName\}:idless`, LAZY_RESCAN_DELAY_MS\)/);
   assert.match(panelSource, /scheduleRenderRescan\(`\$\{eventName\}:idless`\)/);
-  assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED|CHAT_CHANGED/);
+  assert.doesNotMatch(panelSource, /MESSAGE_RECEIVED/);
+  assert.match(panelSource, /clearPreGalleryHostRefs\(\)/);
 });
 
-test('pre gallery beta audit records evidence boundaries and native delegation semantics', () => {
-  const audit = readSource('docs/same-layer-pre画廊beta全量审计说明.md');
+test('pre gallery audit records live evidence and device verification boundaries', () => {
+  const audit = readSource('docs/reports/2026-09-15-st-chatu8-pre-compatibility.md');
   const modalSource = readSource('src/寒冬末日/same-layer-pre/界面/状态栏/components/PreGalleryBetaModal.vue');
 
-  assert.match(audit, /对自身状态只读/);
-  assert.match(audit, /可以委托宿主原生节点/);
-  assert.match(audit, /#1\/2; same=false/);
-  assert.match(audit, /无条件调用 `resetMobileTapState\(\)`/);
+  assert.match(audit, /requestId/);
+  assert.match(audit, /chat\[5\]\.mes/);
   assert.match(audit, /1200ms/);
-  assert.match(audit, /旧版[^\n]*500ms/);
-  assert.match(audit, /派发到.*目标/);
-  assert.match(audit, /尚需设备现场复验/);
+  assert.match(audit, /移动端/);
   assert.doesNotMatch(modalSource, /eventEmit\(['"]generate-image-request/);
 });

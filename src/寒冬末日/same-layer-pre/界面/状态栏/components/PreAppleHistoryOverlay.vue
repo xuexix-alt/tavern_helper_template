@@ -49,6 +49,7 @@
                   'is-hidden': item.hidden,
                 }"
                 :data-message-id="item.message_id"
+                :data-swipe-id="item.swipe_id ?? 0"
               >
                 <div class="pre-apple-history__row">
                   <button

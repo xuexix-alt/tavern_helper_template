@@ -3,6 +3,7 @@
     class="pre-message-card"
     :class="[`role-${item.role}`, { 'is-hidden': item.hidden }]"
     :data-message-id="item.message_id"
+    :data-swipe-id="item.swipe_id ?? 0"
   >
     <header class="pre-message-card__header">
       <span class="pre-message-card__role">{{ item.roleLabel }}</span>

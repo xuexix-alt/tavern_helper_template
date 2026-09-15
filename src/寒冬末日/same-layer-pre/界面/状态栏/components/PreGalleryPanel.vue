@@ -81,6 +81,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   beginPreGalleryImageRefLongPress,
+  clearPreGalleryHostRefs,
   dispatchPreGalleryImageRefGesture,
   finishPreGalleryImageRefLongPress,
   PRE_GALLERY_NATIVE_LONG_PRESS_MS,
@@ -499,6 +500,24 @@ watch(
 );
 
 onMounted(() => {
+  stops.push(eventOn('generate-image-response' as any, () => refreshImageRef('plugin_image_response')));
+  stops.push(
+    eventOn(tavern_events.MESSAGE_SWIPED as any, (...args: unknown[]) => {
+      cancelLongPress();
+      clearPreGalleryHostRefs();
+      refreshImageRef('message_swiped', ...args);
+    }),
+  );
+  stops.push(
+    eventOn(tavern_events.CHAT_CHANGED as any, () => {
+      cancelLongPress();
+      clearPendingClick();
+      clearPreGalleryHostRefs();
+      result.value = { ...result.value, refs: [], selectedMessageId: null };
+      emit('gallery-entries', []);
+      refreshImageRef('chat_changed');
+    }),
+  );
   stops.push(
     eventOn(tavern_events.MESSAGE_UPDATED as any, (...args: unknown[]) =>
       refreshImageRef(String(tavern_events.MESSAGE_UPDATED), ...args),

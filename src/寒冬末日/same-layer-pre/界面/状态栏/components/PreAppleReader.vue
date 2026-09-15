@@ -6,6 +6,7 @@
         class="pre-message-card pre-apple-reader__user"
         :class="{ 'is-expanded': userExpanded, 'is-hidden': relatedUser.hidden }"
         :data-message-id="relatedUser.message_id"
+        :data-swipe-id="relatedUser.swipe_id ?? 0"
       >
         <button
           type="button"
@@ -29,6 +30,7 @@
         class="pre-message-card pre-apple-reader__paper"
         :class="{ 'is-hidden': latestAssistant.hidden }"
         :data-message-id="latestAssistant.message_id"
+        :data-swipe-id="latestAssistant.swipe_id ?? 0"
       >
         <header class="pre-apple-reader__paper-meta">
           <span class="pre-apple-reader__meta-role">{{ latestAssistant.roleLabel }}</span>
@@ -94,7 +96,7 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { installPreHostImageGestureForwarder } from '../preHostImageGestureForwarder';
 import type { TranscriptItem } from '../types';
 import PreAppleMessageBody from './PreAppleMessageBody.vue';
@@ -167,6 +169,22 @@ useEventListener(window, 'touchend', event => hostImageGestureForwarder?.handleT
   capture: true,
   passive: false,
 });
+useEventListener(window, 'touchstart', event => hostImageGestureForwarder?.handleTouchStart(event), {
+  capture: true,
+  passive: false,
+});
+useEventListener(window, 'click', event => hostImageGestureForwarder?.handleClick(event), { capture: true });
+useEventListener(window, 'pointerdown', event => hostImageGestureForwarder?.handlePointerDown(event), {
+  capture: true,
+});
+useEventListener(window, 'pointerup', event => hostImageGestureForwarder?.handlePointerUp(event), { capture: true });
+useEventListener(window, 'pointermove', event => hostImageGestureForwarder?.handlePointerMove(event), {
+  capture: true,
+  passive: true,
+});
+useEventListener(window, 'pointercancel', () => hostImageGestureForwarder?.cancelPointer(), { capture: true });
+useEventListener(window, 'blur', () => hostImageGestureForwarder?.cancelPointer());
+onBeforeUnmount(() => hostImageGestureForwarder?.destroy());
 
 function getScrollTop() {
   return readerRef.value?.scrollTop ?? 0;

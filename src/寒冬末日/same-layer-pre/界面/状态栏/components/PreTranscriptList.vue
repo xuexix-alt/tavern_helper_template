@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core';
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import PreTranscriptMessageCard from './PreTranscriptMessageCard.vue';
 import type { TranscriptItem } from '../types';
 import { installPreHostImageGestureForwarder } from '../preHostImageGestureForwarder';
@@ -64,6 +64,14 @@ watch(
 useEventListener(window, 'resize', () => void scrollToBottom({ onlyIfNearBottom: true }));
 useEventListener(window, 'dblclick', hostImageGestureForwarder.handleDoubleClick, { capture: true });
 useEventListener(window, 'touchend', hostImageGestureForwarder.handleTouchEnd, { capture: true, passive: false });
+useEventListener(window, 'touchstart', hostImageGestureForwarder.handleTouchStart, { capture: true, passive: false });
+useEventListener(window, 'click', hostImageGestureForwarder.handleClick, { capture: true });
+useEventListener(window, 'pointerdown', hostImageGestureForwarder.handlePointerDown, { capture: true });
+useEventListener(window, 'pointerup', hostImageGestureForwarder.handlePointerUp, { capture: true });
+useEventListener(window, 'pointermove', hostImageGestureForwarder.handlePointerMove, { capture: true, passive: true });
+useEventListener(window, 'pointercancel', hostImageGestureForwarder.cancelPointer, { capture: true });
+useEventListener(window, 'blur', hostImageGestureForwarder.cancelPointer);
+onBeforeUnmount(() => hostImageGestureForwarder.destroy());
 </script>
 
 <style scoped>
