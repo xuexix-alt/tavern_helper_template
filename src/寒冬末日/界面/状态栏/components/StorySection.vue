@@ -11,6 +11,15 @@
           @load="scheduleResize"
           @error="scheduleResize"
         />
+        <video
+          v-else-if="seg.isVideo"
+          :src="seg.imageUrl"
+          class="story-image"
+          controls
+          playsinline
+          @loadeddata="scheduleResize"
+          @error="scheduleResize"
+        ></video>
         <table v-else-if="seg.isTable" class="markdown-table">
           <thead>
             <tr>
@@ -35,11 +44,14 @@
 </template>
 
 <script setup lang="ts">
+import { resolveChatu8Images, watchChatu8Activity, type Chatu8ResolvedImage } from '../../../../util/chatu8';
+
 type Segment = {
   key: string;
   text?: string;
   className?: string;
   isImage?: boolean;
+  isVideo?: boolean;
   imageUrl?: string;
   altText?: string;
   isTable?: boolean;
@@ -60,6 +72,32 @@ type ResolvedDisplayedImage = {
 // 生图插件升级后，图片可能不再写回到消息“原始文本”里，而是只在酒馆的“显示层 DOM”里插入 <img>。
 // 因此这里尝试从 retrieveDisplayedMessage(message_id) 中，把 image###...### 对应的图片 src 解析出来。
 const resolvedImagesByPrompt = ref<Record<string, ResolvedDisplayedImage[]>>({});
+
+// 主路径：chatu8 适配层直读插件 IndexedDB 缓存（src/util/chatu8.ts）。
+// 不依赖插件是否往本 iframe 注入 DOM、也不依赖其事件名，插件小版本升级不影响此处。
+const chatu8ImagesByPrompt = ref<Record<string, Chatu8ResolvedImage>>({});
+let chatu8ResolveToken = 0;
+
+function chatu8Signature(map: Record<string, Chatu8ResolvedImage>): string {
+  return Object.entries(map)
+    .map(([k, v]) => `${k}=>${v.date}:${v.index}/${v.total}:${v.isVideo ? 1 : 0}`)
+    .sort()
+    .join('|');
+}
+
+async function refreshChatu8Images(prompts: string[]): Promise<void> {
+  if (prompts.length === 0) return;
+  const token = ++chatu8ResolveToken;
+  try {
+    const result = await resolveChatu8Images(prompts);
+    // 丢弃过期结果（raw 已变化时的旧解析）
+    if (token !== chatu8ResolveToken) return;
+    if (chatu8Signature(chatu8ImagesByPrompt.value) === chatu8Signature(result)) return;
+    chatu8ImagesByPrompt.value = result;
+  } catch {
+    // 适配层内部已优雅降级（console.warn 一次），不影响 UI 主流程
+  }
+}
 
 function normalizeForMatch(s: string): string {
   return String(s ?? '')
@@ -142,19 +180,34 @@ const segments = computed<Segment[]>(() => {
   const segs = buildSegments(text);
 
   const mapped = resolvedImagesByPrompt.value ?? {};
+  const chatu8Map = chatu8ImagesByPrompt.value ?? {};
   const out: Segment[] = [];
   let id = 0;
   for (const seg of segs) {
     if (seg.className === 'image-prompt' && seg.text) {
+      // 主路径：适配层 IndexedDB 直读（含视频；不依赖插件 DOM 注入）
+      const hit = chatu8Map[seg.text];
+      if (hit) {
+        out.push({
+          key: `img_chatu8_${id++}`,
+          isImage: !hit.isVideo,
+          isVideo: hit.isVideo,
+          imageUrl: hit.objectUrl,
+          altText: '生成图片',
+          text: hit.objectUrl,
+        });
+        continue;
+      }
+      // 降级路径：显示层 DOM 邻近匹配（插件已把图片插入酒馆楼层时可用）
       const hits = mapped[seg.text] ?? [];
       if (hits.length > 0) {
-        for (const hit of hits) {
+        for (const hitDom of hits) {
           out.push({
             key: `img_resolved_${id++}`,
             isImage: true,
-            imageUrl: hit.src,
-            altText: hit.alt || '生成图片',
-            text: hit.src,
+            imageUrl: hitDom.src,
+            altText: hitDom.alt || '生成图片',
+            text: hitDom.src,
           });
         }
         // 已有图片时默认不再显示提示词，避免占位刷屏
@@ -191,6 +244,16 @@ watchEffect(onCleanup => {
     if (prevJson !== nextJson) resolvedImagesByPrompt.value = next;
   };
 
+  // 主路径：适配层直读插件 IndexedDB 缓存
+  void refreshChatu8Images(prompts);
+
+  // 双信号订阅生图活动（完成事件 / 插件 DOM 注入），任一到达即失效缓存并重解析两条路径。
+  // 事件名或 DOM 类名单一失效不影响通知 —— 这是「防脱节」的核心兜底。
+  const stopActivity = watchChatu8Activity(() => {
+    void refreshChatu8Images(prompts);
+    run();
+  });
+
   // 立即尝试一次，并在短时间内再重试（生图 DOM 插入通常是异步的）
   run();
   timers.push(window.setTimeout(run, 600));
@@ -198,6 +261,7 @@ watchEffect(onCleanup => {
 
   onCleanup(() => {
     canceled = true;
+    stopActivity();
     for (const t of timers) window.clearTimeout(t);
   });
 });

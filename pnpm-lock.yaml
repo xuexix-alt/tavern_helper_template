@@ -184,32 +184,11 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2
       mini-css-extract-plugin:
-<<<<<<< HEAD
-<<<<<<< HEAD
-        specifier: ^2.10.0
-        version: 2.10.0(webpack@5.105.4)
-<<<<<<< HEAD
+        specifier: ^2.10.2
+        version: 2.10.2(webpack@5.106.2)
       playwright:
         specifier: ^1.58.2
         version: 1.58.2
-=======
->>>>>>> b0dafaa424fd6b2abbf4f32eab5bb8f9ad970e3d
-=======
-        specifier: ^2.10.1
-        version: 2.10.1(webpack@5.105.4)
->>>>>>> a29fe33091e38cf7a506efd6e481bac35ed6d521
-=======
-        specifier: ^2.10.2
-<<<<<<< HEAD
-<<<<<<< HEAD
-        version: 2.10.2(webpack@5.105.4)
->>>>>>> f759a3e3f10c9abb6086ecf76222f35268e80cf1
-=======
-        version: 2.10.2(webpack@5.106.1)
->>>>>>> df19bf5a213c5e38b25c07c65b47a908c4cdd7ce
-=======
-        version: 2.10.2(webpack@5.106.2)
->>>>>>> dc79e70c2b507a4984bc1620b1a875e1a4ff083d
       postcss:
         specifier: ^8.5.12
         version: 8.5.12
