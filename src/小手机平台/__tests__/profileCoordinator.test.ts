@@ -65,7 +65,7 @@ interface Fixture {
 
 function createFixture(
   people: readonly ProfilePerson[] = PEOPLE,
-  options: { delayRunUpdates?: boolean; failOnSchedulerEnqueue?: boolean } = {},
+  options: { delayRunUpdates?: boolean; failOnSchedulerEnqueue?: boolean; autoRefreshEnabled?: boolean } = {},
 ): Fixture {
   const memoryDb = createMemoryPhoneDb();
   const db: PhoneDb = options.delayRunUpdates
@@ -149,6 +149,7 @@ function createFixture(
   };
 
   coordinator = new ProfileRefreshCoordinator(dependencies, {
+    autoRefreshEnabled: options.autoRefreshEnabled ?? true,
     autoRefreshEvery: 20,
     promptProfileMaxChars: 2_000,
   });
@@ -328,6 +329,38 @@ async function testAutoRefreshAtConfiguredThreshold(): Promise<void> {
   assert.equal(fixture.analysisCalls.length, PEOPLE.length, '已提交正文不得重复触发');
 }
 
+async function testAutoRefreshDisabledByDefaultDoesNotTrigger(): Promise<void> {
+  const fixture = createFixture(PEOPLE, { autoRefreshEnabled: false });
+
+  // 默认关闭：达到阈值也不得触发批量刷新，进度仍然持续跟踪
+  const result = await fixture.coordinator.reconcileStory(STORY);
+  assert.equal(result, null);
+  assert.equal(fixture.analysisCalls.length, 0);
+  assert.equal(await fixture.coordinator.getStoryProgress(), 20);
+
+  // 开关保存为开启后：下一次达到阈值立即生效
+  await fixture.coordinator.saveSettings({
+    autoRefreshEnabled: true,
+    autoRefreshEvery: 20,
+    promptProfileMaxChars: 2_000,
+  });
+  const enabledRun = await fixture.coordinator.reconcileStory(STORY);
+  assert.ok(enabledRun);
+  assert.equal(fixture.analysisCalls.length, PEOPLE.length);
+  assert.equal(await fixture.coordinator.getStoryProgress(), 0);
+
+  // 关闭开关：阈值已满也不再触发
+  await fixture.coordinator.reconcileStory(STORY.slice(0, 19));
+  await fixture.coordinator.saveSettings({
+    autoRefreshEnabled: false,
+    autoRefreshEvery: 20,
+    promptProfileMaxChars: 2_000,
+  });
+  const disabledRun = await fixture.coordinator.reconcileStory(STORY);
+  assert.equal(disabledRun, null);
+  assert.equal(fixture.analysisCalls.length, PEOPLE.length, '关闭开关后不得产生新的 AI 调用');
+}
+
 async function testDetailedViewVersionsAndPlayerEdit(): Promise<void> {
   const fixture = createFixture([PEOPLE[0]]);
   await fixture.coordinator.refreshPerson('main:纪宁', 'person-manual');
@@ -380,6 +413,7 @@ async function main(): Promise<void> {
   await testRetryFailedRegeneratesBroadcast();
   await testConcurrentRunUpdatesDoNotOverwriteOtherPeople();
   await testAutoRefreshAtConfiguredThreshold();
+  await testAutoRefreshDisabledByDefaultDoesNotTrigger();
   await testDetailedViewVersionsAndPlayerEdit();
   console.log('profile coordinator tests passed');
 }

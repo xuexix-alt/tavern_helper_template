@@ -656,6 +656,7 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
     ],
     getProfileSettings: () => ({
       storyProgress: 7,
+      autoRefreshEnabled: false,
       autoRefreshEvery: 20,
       promptProfileMaxChars: 2000,
     }),
@@ -669,6 +670,8 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
   const rendered = await profiles.render(testContext());
 
   assert.equal(findByClass(rendered, 'phone-profile-progress').textContent.includes('正文进度 7 / 20'), true);
+  const autoToggle = findByClass(rendered, 'phone-profile-settings__auto-toggle');
+  assert.equal(autoToggle.checked, false, '自动刷新开关默认关闭');
   const threshold = findByClass(rendered, 'phone-profile-settings__threshold');
   const budget = findByClass(rendered, 'phone-profile-settings__budget');
   assert.equal(threshold.min, '1');
@@ -681,6 +684,7 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
   findByClass(rendered, 'phone-profile-refresh').click();
   threshold.value = '25';
   budget.value = '2400';
+  autoToggle.checked = true;
   findByClass(rendered, 'phone-profile-settings__save').click();
   await new Promise(resolve => setImmediate(resolve));
 
@@ -688,7 +692,7 @@ test('dynamic profile app exposes settings, progress, batch actions and complete
     ['all'],
     ['retry'],
     ['person', 'main:纪宁'],
-    ['save', { storyProgress: 7, autoRefreshEvery: 25, promptProfileMaxChars: 2400 }],
+    ['save', { storyProgress: 7, autoRefreshEnabled: true, autoRefreshEvery: 25, promptProfileMaxChars: 2400 }],
   ]);
   findByClass(rendered, 'phone-profile-row').click();
   const detail = await apps.find(app => app.route === 'profile-detail').render(testContext());

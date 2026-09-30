@@ -135,6 +135,8 @@ export interface PhoneProfileView {
 
 export interface PhoneProfileSettingsView {
   storyProgress: number;
+  /** 自动刷新总开关：默认关闭，仅用户手动开启后才自动触发 */
+  autoRefreshEnabled: boolean;
   autoRefreshEvery: number;
   promptProfileMaxChars: number;
 }
@@ -998,7 +1000,12 @@ async function renderProfileListPage(
   try {
     const [profiles, settings] = await Promise.all([
       collectProfiles(services),
-      services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 4_000 },
+      services.getProfileSettings?.() ?? {
+        storyProgress: 0,
+        autoRefreshEnabled: false,
+        autoRefreshEvery: 20,
+        promptProfileMaxChars: 4_000,
+      },
     ]);
 
     // 档案馆门头
@@ -1040,7 +1047,13 @@ async function renderProfileListPage(
       tick.className = i < meterFilled ? 'dossier-progress__tick dossier-progress__tick--on' : 'dossier-progress__tick';
       meter.append(tick);
     }
-    const meterNote = text(document, 'span', '正文累计达到阈值后自动刷新全部档案');
+    const meterNote = text(
+      document,
+      'span',
+      settings.autoRefreshEnabled
+        ? '正文累计达到阈值后自动刷新全部档案'
+        : '正文自动刷新已关闭：达到阈值也不会自动调用 AI，可手动刷新',
+    );
     meterNote.className = 'dossier-deck__note';
     progressRow.append(progressTitle, meter, meterNote);
     deck.append(progressRow);
@@ -1082,6 +1095,9 @@ async function renderProfileListPage(
 
     const settingsPanel = document.createElement('section');
     settingsPanel.className = 'phone-profile-settings';
+    const autoToggle = input(document, 'checkbox', settings.autoRefreshEnabled ? 'on' : '');
+    autoToggle.className = 'phone-profile-settings__auto-toggle';
+    autoToggle.checked = settings.autoRefreshEnabled;
     const threshold = input(document, 'number', String(settings.autoRefreshEvery));
     threshold.className = 'phone-profile-settings__threshold';
     threshold.min = '1';
@@ -1093,7 +1109,11 @@ async function renderProfileListPage(
     budget.step = '100';
     const settingFields = document.createElement('div');
     settingFields.className = 'phone-profile-settings__fields';
-    settingFields.append(field(document, '自动刷新条数', threshold), field(document, '档案提示词上限', budget));
+    settingFields.append(
+      field(document, '正文自动刷新', autoToggle),
+      field(document, '自动刷新条数', threshold),
+      field(document, '档案提示词上限', budget),
+    );
     const saveSettings = text(document, 'button', '保存刷新设置') as HTMLButtonElement;
     saveSettings.className = 'phone-button phone-profile-settings__save';
     saveSettings.type = 'button';
@@ -1114,7 +1134,12 @@ async function renderProfileListPage(
       }
       saveSettings.disabled = true;
       void services
-        .saveProfileSettings({ storyProgress: settings.storyProgress, autoRefreshEvery, promptProfileMaxChars })
+        .saveProfileSettings({
+          storyProgress: settings.storyProgress,
+          autoRefreshEnabled: autoToggle.checked,
+          autoRefreshEvery,
+          promptProfileMaxChars,
+        })
         .then(() => context.announce('档案刷新设置已保存'))
         .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
         .finally(() => {

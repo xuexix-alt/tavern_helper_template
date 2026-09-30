@@ -23,6 +23,8 @@ import type {
 } from './profileTypes';
 
 export interface ProfileRefreshSettings {
+  /** 自动刷新总开关：默认关闭，避免正文推进过程中不知不觉产生大量 AI 调用 */
+  autoRefreshEnabled: boolean;
   autoRefreshEvery: number;
   promptProfileMaxChars: number;
 }
@@ -80,6 +82,9 @@ function isStoredRun(record: PhoneBusinessRecord): record is StoredRun {
 }
 
 function validateSettings(settings: ProfileRefreshSettings): ProfileRefreshSettings {
+  if (typeof settings.autoRefreshEnabled !== 'boolean') {
+    throw new RangeError('档案自动刷新开关必须是布尔值');
+  }
   if (
     !Number.isSafeInteger(settings.autoRefreshEvery) ||
     settings.autoRefreshEvery < 1 ||
@@ -104,7 +109,11 @@ export class ProfileRefreshCoordinator {
 
   constructor(
     private readonly dependencies: ProfileRefreshDependencies,
-    defaults: ProfileRefreshSettings = { autoRefreshEvery: 20, promptProfileMaxChars: 4_000 },
+    defaults: ProfileRefreshSettings = {
+      autoRefreshEnabled: false,
+      autoRefreshEvery: 20,
+      promptProfileMaxChars: 4_000,
+    },
   ) {
     this.defaults = validateSettings(defaults);
   }
@@ -116,6 +125,8 @@ export class ProfileRefreshCoordinator {
     );
     if (!record) return { ...this.defaults };
     return validateSettings({
+      // 旧版本存量记录没有开关字段：按默认关闭读取，升级后不会恢复自动调用
+      autoRefreshEnabled: typeof record.autoRefreshEnabled === 'boolean' ? record.autoRefreshEnabled : false,
       autoRefreshEvery: Number(record.autoRefreshEvery),
       promptProfileMaxChars: Number(record.promptProfileMaxChars),
     });
@@ -339,7 +350,8 @@ export class ProfileRefreshCoordinator {
     const reconciled = reconcileStoryCounter(previous ?? undefined, storyMessages);
     await this.writeStoryState(sessionKey, reconciled);
     const settings = await this.getSettings();
-    if (reconciled.count < settings.autoRefreshEvery) return null;
+    // 开关未开启时只跟踪进度不触发批量刷新，避免正文推进中持续消耗 AI 请求
+    if (!settings.autoRefreshEnabled || reconciled.count < settings.autoRefreshEvery) return null;
 
     const result = await this.refreshAll('auto');
     await this.writeStoryState(sessionKey, commitStoryCounter(reconciled));
