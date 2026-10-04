@@ -168,7 +168,7 @@ const OPENAI_VERSION_SEGMENT = /^v\d+(?:[._]\d+)*(?:beta\d*|preview\d*|alpha\d*)
 function openAiBase(baseUrl: string): URL {
   let url: URL;
   try {
-    url = new URL(baseUrl);
+    url = new URL(baseUrl.trim());
   } catch {
     throw new Error('OpenAI-compatible API URL 无效');
   }
@@ -191,7 +191,15 @@ function openAiResourceUrl(baseUrl: string, resource: 'chat/completions' | 'mode
 }
 
 function openAiEndpoint(baseUrl: string, resource: 'chat/completions' | 'models'): string {
-  return openAiResourceUrl(baseUrl, resource, true);
+  return openAiEndpointCandidates(baseUrl, resource)[0];
+}
+
+function openAiEndpointCandidates(baseUrl: string, resource: 'chat/completions' | 'models'): string[] {
+  // 完整端点表示用户明确选定的路由，不再偷偷补版本号。
+  const explicitEndpoint = /\/(?:chat\/completions|models)\/?$/.test(new URL(baseUrl.trim()).pathname);
+  const primary = openAiResourceUrl(baseUrl, resource, !explicitEndpoint);
+  if (explicitEndpoint) return [primary];
+  return [...new Set([primary, openAiResourceUrl(baseUrl, resource, false)])];
 }
 
 export function openAiModelsEndpoint(baseUrl: string): string {
@@ -204,7 +212,7 @@ export async function fetchOpenAiCompatibleModels(options: OpenAIModelListOption
 
   const fetchLike = options.fetch ?? ((url: string, init: RequestInit) => fetch(url, init));
   // 中转网关布局不一：优先规范化的 /v1/models；404/405 时降级尝试不带 /v1 的 /models（部分网关按路径直出）。
-  const candidates = [openAiModelsEndpoint(options.baseUrl), openAiResourceUrl(options.baseUrl, 'models', false)];
+  const candidates = openAiEndpointCandidates(options.baseUrl, 'models');
 
   let response: FetchResponseLike | null = null;
   let firstErrorStatus = 0;
@@ -264,13 +272,8 @@ export interface OpenAICompatibleProviderOptions {
   onCleanupError?: (error: ProviderError) => void;
 }
 
-function endpointFor(baseUrl: string): string {
-  // 与模型发现共用同一套规范化：保留用户提供的代理/网关路径，末段为版本号时不重复补 /v1。
-  return openAiEndpoint(baseUrl, 'chat/completions');
-}
-
 export class OpenAICompatibleProvider {
-  readonly #baseUrl: string;
+  readonly #endpoints: readonly string[];
   readonly #model: string;
   readonly #parameters: Readonly<Record<string, unknown>>;
   readonly #timeoutMs: number;
@@ -282,7 +285,7 @@ export class OpenAICompatibleProvider {
   readonly #onCleanupError?: (error: ProviderError) => void;
 
   constructor(options: OpenAICompatibleProviderOptions) {
-    this.#baseUrl = endpointFor(options.baseUrl);
+    this.#endpoints = openAiEndpointCandidates(options.baseUrl, 'chat/completions');
     if (options.model.trim().length === 0) throw new Error('OpenAI-compatible model 不得为空');
     this.#model = options.model;
     this.#parameters = Object.freeze({ ...(options.parameters ?? {}) });
@@ -334,16 +337,16 @@ export class OpenAICompatibleProvider {
       fetched = Promise.reject(new ProviderError('OpenAI-compatible timer setup failed', 'setup'));
     }
 
-    if (timer !== undefined) {
+    const send = (endpoint: string): Promise<FetchResponseLike> => {
       try {
         assertNotInterrupted();
-        fetched = Promise.resolve(
+        return Promise.resolve(
           this.#withApiKey(apiKey => {
             if (apiKey === undefined || apiKey.trim().length === 0) {
               throw new ProviderError('OpenAI-compatible API key 缺失', 'missing_key');
             }
             try {
-              return this.#fetch(this.#baseUrl, {
+              return this.#fetch(endpoint, {
                 method: 'POST',
                 headers: {
                   Authorization: `Bearer ${apiKey}`,
@@ -372,11 +375,21 @@ export class OpenAICompatibleProvider {
           }),
         );
       } catch (error) {
-        fetched = Promise.reject(
+        return Promise.reject(
           error instanceof ProviderError
             ? error
             : new ProviderError('OpenAI-compatible API key access failed', 'credential'),
         );
+      }
+    };
+    if (timer !== undefined) {
+      // 首次调用仍同步取密钥；回退请求重新通过 accessor 获取，不在异步闭包中保存密钥。
+      fetched = send(this.#endpoints[0]);
+      for (const endpoint of this.#endpoints.slice(1)) {
+        fetched = fetched.then(response => {
+          assertNotInterrupted();
+          return !response.ok && (response.status === 404 || response.status === 405) ? send(endpoint) : response;
+        });
       }
     }
 

@@ -320,9 +320,13 @@ test('winter WeChat send wires only the current conversation business sources', 
     source.indexOf('function rememberLoreFailure'),
   );
 
-  assert.match(source, /extractRecentMainChatMessages\(\s*assistantMessageId,\s*5\s*\)/);
   assert.match(launchBlock, /mvuData:\s*resolveWinterPersonMvu\(member\.id,\s*captured\.mvu\.stat_data\)/);
-  assert.match(launchBlock, /recentMainChat:\s*\[\.\.\.captured\.recentMainChat\]/);
+  assert.match(
+    launchBlock,
+    /recentMainChat:\s*extractRecentMainChatMessages\(Number\(captured\.identity\.assistantMessageId\), 5\)/,
+  );
+  assert.match(launchBlock, /protectedPhoneHistoryCount:\s*16/);
+  assert.match(launchBlock, /maxCharacters:\s*32_000/);
   assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
   assert.match(launchBlock, /playerMessage/);
   assert.match(launchBlock, /\[人物动态\][^\n]*后续/);

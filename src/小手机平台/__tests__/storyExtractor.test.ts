@@ -7,6 +7,7 @@ import {
 
 // Mock getChatMessages
 let mockChatMessages: any[] = [];
+(globalThis as any).formatAsTavernRegexedString = (value: string) => value;
 (globalThis as any).getChatMessages = (range: any, options?: any) => {
   let selected: any[];
   if (typeof range === 'number') {
@@ -187,6 +188,46 @@ function testRecentMainChatMessages(): void {
   assert.doesNotMatch(JSON.stringify(result), /UpdateVariable|Analysis|JSONPatch/);
 }
 
+function testPromptRegexDepthAndRefresh(): void {
+  mockChatMessages = [
+    { message_id: 0, role: 'assistant', message: '旧正文' },
+    { message_id: 1, role: 'assistant', message: '隐藏', is_hidden: true },
+    { message_id: 2, role: 'system', message: '系统' },
+    { message_id: 3, role: 'user', message: '玩家输入' },
+    { message_id: 4, role: 'assistant', message: '<Analysis>只含控制块</Analysis>' },
+    { message_id: 5, role: 'assistant', message: '新正文' },
+    { message_id: 6, role: 'user', message: '快照之外' },
+  ];
+  const calls: unknown[] = [];
+  (globalThis as any).formatAsTavernRegexedString = (
+    value: string,
+    source: string,
+    destination: string,
+    options: any,
+  ) => {
+    calls.push([value, source, destination, options.depth]);
+    return options.depth >= 3 ? '旧摘要' : value;
+  };
+  const result = extractRecentMainChatMessages(5, 3);
+  assert.deepEqual(
+    result.map(item => item.content),
+    ['旧摘要', '玩家输入', '新正文'],
+  );
+  assert.deepEqual(
+    calls.map((call: any) => call.slice(1)),
+    [
+      ['ai_output', 'prompt', 3],
+      ['user_input', 'prompt', 2],
+      ['ai_output', 'prompt', 1],
+      ['ai_output', 'prompt', 0],
+    ],
+    '在清理空消息与截取之前计算深度，排除隐藏/系统/未来楼层',
+  );
+  (globalThis as any).formatAsTavernRegexedString = () => '修改后的规则';
+  assert.equal(extractRecentMainChatMessages(5, 1)[0].content, '修改后的规则');
+  (globalThis as any).formatAsTavernRegexedString = (value: string) => value;
+}
+
 export function runStoryExtractorTests(): void {
   console.log('[Story Extractor Tests] Starting...');
 
@@ -204,6 +245,7 @@ export function runStoryExtractorTests(): void {
     console.log('✓ 排序测试通过');
 
     testRecentMainChatMessages();
+    testPromptRegexDepthAndRefresh();
     console.log('✓ 最近五条主聊天与控制块清理测试通过');
 
     console.log('[Story Extractor Tests] All tests passed! ✓');

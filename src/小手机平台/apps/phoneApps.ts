@@ -3,6 +3,7 @@ import type { PhoneHostAction } from '../core/types';
 import type { ProfileEditPatch, ProfileVersion } from '../profiles/profileTypes';
 import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles } from './profileHelper';
+import { copyText } from './copyText';
 
 export type PhoneRoute =
   | 'home'
@@ -843,6 +844,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         form.append(
           field(document, 'Provider', provider),
           field(document, 'API URL', apiUrl),
+          text(document, 'p', '可填写基础地址或完整的 /chat/completions 地址；完整地址不会自动添加 /v1。'),
           field(document, 'API Key', apiKey),
           field(document, '模型', model),
           modelChoicesField,
@@ -965,13 +967,13 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             details.append(summary);
             const body = document.createElement('div');
             body.className = 'phone-debug-entry__body';
-            body.append(debugSection(document, '组装提示词（宏未展开）', entry.assembled));
-            body.append(debugSection(document, '展开后提示词（发送给 AI）', entry.expanded));
-            if (entry.raw !== undefined) body.append(debugSection(document, 'AI 原始响应', entry.raw));
+            body.append(debugSection(context, '组装提示词（宏未展开）', entry.assembled));
+            body.append(debugSection(context, '展开后提示词（发送给 AI）', entry.expanded));
+            if (entry.raw !== undefined) body.append(debugSection(context, 'AI 原始响应', entry.raw));
             if (entry.messages !== undefined)
-              body.append(debugSection(document, '解析结果', JSON.stringify(entry.messages, null, 2)));
+              body.append(debugSection(context, '解析结果', JSON.stringify(entry.messages, null, 2)));
             if (entry.error !== undefined) {
-              const error = text(document, 'p', entry.error);
+              const error = debugSection(context, '请求错误', redactDiagnostic(entry.error));
               error.className = 'phone-debug-entry__error';
               body.append(error);
             }
@@ -1453,10 +1455,31 @@ async function renderProfileDetailPage(
   }
 }
 
-function debugSection(document: Document, title: string, value: string): HTMLElement {
+function debugSection(context: PhoneAppRenderContext, title: string, value: string): HTMLElement {
+  const { document } = context;
   const section = document.createElement('section');
   section.className = 'phone-debug-entry__section';
-  section.append(text(document, 'h3', title));
+  const header = document.createElement('div');
+  header.className = 'phone-debug-entry__header';
+  const copy = text(document, 'button', '复制');
+  copy.type = 'button';
+  copy.className = 'phone-debug-copy';
+  copy.setAttribute('aria-label', `复制${title}`);
+  context.listen(copy, 'click', () => {
+    copy.disabled = true;
+    void copyText(document, value)
+      .then(() => {
+        if (context.isActive()) context.announce(`已复制${title}`);
+      })
+      .catch(error => {
+        if (context.isActive()) context.announce(error instanceof Error ? error.message : '复制失败', 'error');
+      })
+      .finally(() => {
+        if (context.isActive()) copy.disabled = false;
+      });
+  });
+  header.append(text(document, 'h3', title), copy);
+  section.append(header);
   const pre = text(document, 'pre', value);
   pre.className = 'phone-debug-entry__pre';
   section.append(pre);

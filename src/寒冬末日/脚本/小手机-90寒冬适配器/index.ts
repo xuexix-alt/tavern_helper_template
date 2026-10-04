@@ -10,7 +10,6 @@ import type {
   PhoneSettingsView,
   PhoneTaskView,
 } from '../../../小手机平台/apps/phoneApps';
-import type { PromptMainChatEntry } from '../../../小手机平台/ai/promptAssembler';
 import { registerPhoneModule } from '../../../小手机平台/core/register';
 import type {
   PhoneModule,
@@ -147,7 +146,6 @@ interface WinterSnapshot {
   identity: StableSnapshotIdentity;
   key: string;
   mvu: Mvu.MvuData;
-  recentMainChat: readonly PromptMainChatEntry[];
   recentCompletedMessages: readonly ProfileStoryMessage[];
   tasks: readonly WinterTask[];
   confirmedChanges: readonly string[];
@@ -605,7 +603,6 @@ function createWinterAdapterModule(): PhoneModule {
     const nextKey = createStableSnapshotKey(identity);
     if (snapshot?.key === nextKey) return;
     assertHostCapture(hostCapture);
-    const recentMainChat = extractRecentMainChatMessages(assistantMessageId, 5);
     const recentCompletedMessages = extractRecentCompletedMessages(assistantMessageId, 20);
     assertHostCapture(hostCapture);
     const next: WinterSnapshot = {
@@ -613,7 +610,6 @@ function createWinterAdapterModule(): PhoneModule {
       identity,
       key: nextKey,
       mvu,
-      recentMainChat,
       recentCompletedMessages,
       tasks: buildWinterTasks(mvu.stat_data),
       confirmedChanges: pendingConfirmedChanges,
@@ -1502,14 +1498,16 @@ function createWinterAdapterModule(): PhoneModule {
         mode,
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
-        recentMainChat: [...captured.recentMainChat],
+        // 每次发送重新应用当前正则，避免仅修改正则时继续使用稳定快照中的旧文本。
+        recentMainChat: extractRecentMainChatMessages(Number(captured.identity.assistantMessageId), 5),
         phoneHistory: history
           .filter(item => item.id !== messageId)
           .slice(-30)
           .map(item => ({ id: item.id, sender: item.sender, content: item.content })),
         playerMessage,
         outputContract: `只输出 {"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}，sender 必须属于：${profiles.map(item => item.name).join('、')}`,
-        maxCharacters: 16_000,
+        maxCharacters: 32_000,
+        protectedPhoneHistoryCount: 16,
       }),
     );
     assertHostCapture(hostCapture);

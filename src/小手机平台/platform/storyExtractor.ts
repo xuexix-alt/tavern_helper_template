@@ -38,30 +38,38 @@ export function extractRecentMainChatMessages(storyMessageId: number | null, lim
   ) {
     return [];
   }
+  let messages: ChatMessage[];
   try {
-    return getChatMessages(`0-${storyMessageId}`, {
+    messages = getChatMessages(`0-${storyMessageId}`, {
       hide_state: 'unhidden',
       include_swipes: false,
-    })
-      .filter(
-        message =>
-          message.message_id <= storyMessageId &&
-          (message.role === 'user' || message.role === 'assistant') &&
-          typeof message.message === 'string' &&
-          message.message.trim() !== '',
-      )
-      .map(message => ({
-        id: `main-chat-${message.message_id}`,
-        role: message.role as 'user' | 'assistant',
-        sender: message.name?.trim() || (message.role === 'user' ? '玩家' : 'AI'),
-        content: stripMainChatControlBlocks(message.message),
-      }))
-      .filter(message => message.content !== '')
-      .slice(-limit);
+    });
   } catch (error) {
     console.warn('[小手机平台] 提取最近主聊天消息失败:', error);
     return [];
   }
+  return (
+    messages
+      .filter(
+        message =>
+          message.message_id <= storyMessageId &&
+          (message.role === 'user' || message.role === 'assistant') &&
+          typeof message.message === 'string',
+      )
+      // 深度基于整个可见消息序列，不能在截取窗口或清除空正文后重新编号。
+      .map((message, index, visibleMessages) => ({
+        id: `main-chat-${message.message_id}`,
+        role: message.role as 'user' | 'assistant',
+        sender: message.name?.trim() || (message.role === 'user' ? '玩家' : 'AI'),
+        content: stripMainChatControlBlocks(
+          formatAsTavernRegexedString(message.message, message.role === 'user' ? 'user_input' : 'ai_output', 'prompt', {
+            depth: visibleMessages.length - index - 1,
+          }),
+        ),
+      }))
+      .filter(message => message.content !== '')
+      .slice(-limit)
+  );
 }
 
 /**

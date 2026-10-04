@@ -42,6 +42,8 @@ export interface PromptContextSnapshotInput {
   playerMessage: string;
   outputContract: string;
   maxCharacters: number;
+  /** 最近多少条微信历史不可因预算被删；默认 0，由调用方指定会话保障窗口。 */
+  protectedPhoneHistoryCount?: number;
 }
 
 export type PromptContextSnapshot = Readonly<{
@@ -56,6 +58,7 @@ export type PromptContextSnapshot = Readonly<{
   playerMessage: string;
   outputContract: string;
   maxCharacters: number;
+  protectedPhoneHistoryCount: number;
 }>;
 
 const FACT_PRIORITY = '对应人物当前 MVU ＞ 最近主聊天消息 ＞ 当前微信历史';
@@ -90,6 +93,10 @@ function freezeMembers(members: PromptMember[]): readonly Readonly<PromptMember>
 }
 
 export function createPromptContextSnapshot(input: PromptContextSnapshotInput): PromptContextSnapshot {
+  const protectedPhoneHistoryCount = input.protectedPhoneHistoryCount ?? 0;
+  if (!Number.isSafeInteger(protectedPhoneHistoryCount) || protectedPhoneHistoryCount < 0) {
+    throw new Error('protectedPhoneHistoryCount 必须是非负安全整数');
+  }
   if (!Number.isSafeInteger(input.maxCharacters) || input.maxCharacters <= 0) {
     throw new Error('maxCharacters 必须是正安全整数');
   }
@@ -111,6 +118,7 @@ export function createPromptContextSnapshot(input: PromptContextSnapshotInput): 
     playerMessage: requireText(input.playerMessage, 'playerMessage'),
     outputContract: requireText(input.outputContract, 'outputContract'),
     maxCharacters: input.maxCharacters,
+    protectedPhoneHistoryCount,
   };
   return Object.freeze(snapshot);
 }
@@ -200,6 +208,10 @@ export function assemblePrompt(snapshot: PromptContextSnapshot, characterBudget 
   if (result.length <= characterBudget) return result;
 
   const overflow = result.length - characterBudget;
+  const initialLength = result.length;
+  const protectedHistory = new Set(
+    snapshot.protectedPhoneHistoryCount > 0 ? selected.history.slice(-snapshot.protectedPhoneHistoryCount) : [],
+  );
   const trims: string[] = [];
   const trimUntilFit = <T>(
     stage: string,
@@ -218,9 +230,9 @@ export function assemblePrompt(snapshot: PromptContextSnapshot, characterBudget 
     }
   };
 
-  // 裁剪顺序与 FACT_PRIORITY 对齐：先牺牲最冗余/最低优先级的来源，后牺牲高优先级事实。
+  // 事实冲突优先级与上下文保留是两回事：最近微信对话有独立的最低保留窗口。
   // 绿灯角色条目（relevant:false）只是固定档案与 MVU 的补充，冗余度最高，最先裁；
-  // 微信历史是 FACT_PRIORITY 最低层，其次裁；主聊天是中层事实，最后裁（两者都从最旧开始）。
+  // 先裁旧微信，再裁主聊天（都从最旧开始），受保护的最近微信不删。
   // 蓝灯常驻（relevant:true）与协议、成员身份、人物 MVU、本轮消息、输出契约不可删。
   trimUntilFit(
     '绿灯条目',
@@ -231,7 +243,7 @@ export function assemblePrompt(snapshot: PromptContextSnapshot, characterBudget 
   trimUntilFit(
     '微信历史',
     selected.history,
-    () => true,
+    entry => !protectedHistory.has(entry),
     entry => `id=${entry.id} ${entry.sender}:「${trimSummary(entry.content)}」`,
   );
   trimUntilFit(
@@ -247,15 +259,15 @@ export function assemblePrompt(snapshot: PromptContextSnapshot, characterBudget 
       `${TRIM_LOG_PREFIX} 裁完所有可删内容后仍超预算：预算=${characterBudget}，当前=${result.length}` +
         `（不可删核心超出 ${result.length - characterBudget} 字符），本次已裁 ${trims.length} 条`,
       trims,
-      '不可删核心构成：协议+成员身份+人物MVU+蓝灯条目+本轮消息+输出契约；请调大 maxCharacters 或精简成员档案',
+      '不可删核心构成：协议+成员身份+人物MVU+蓝灯条目+最近微信历史+本轮消息+输出契约；请调大 maxCharacters 或精简成员档案',
     );
     throw new Error(
-      `不可删的协议、当前成员身份、当前人物 MVU、本轮消息与输出契约已超出字符预算 ${characterBudget}（当前 ${result.length}）`,
+      `不可删的协议、当前成员身份、当前人物 MVU、最近微信历史、本轮消息与输出契约已超出字符预算 ${characterBudget}（当前 ${result.length}）`,
     );
   }
   console.warn(
-    `${TRIM_LOG_PREFIX} 提示词超预算 ${overflow} 字符，已按 FACT_PRIORITY 裁剪 ${trims.length} 条：` +
-      `预算=${characterBudget}，初始=${result.length + overflow}，最终=${result.length}；` +
+    `${TRIM_LOG_PREFIX} 提示词超预算 ${overflow} 字符，已按上下文保留策略裁剪 ${trims.length} 条：` +
+      `预算=${characterBudget}，初始=${initialLength}，最终=${result.length}；` +
       `剩余 绿灯条目=${selected.worldbook.filter(entry => !entry.relevant).length}/${snapshot.worldbook.length}，` +
       `微信历史=${selected.history.length}/${snapshot.phoneHistory.length}，` +
       `主聊天=${selected.mainChat.length}/${snapshot.recentMainChat.length}。明细：`,

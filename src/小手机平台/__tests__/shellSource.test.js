@@ -629,6 +629,87 @@ test('diagnostics exposes an explicit retry for captured ChatLore failures', asy
   assert.equal(retries, 1);
 });
 
+test('diagnostics copies the exact selected log section', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const copied = [];
+  const announcements = [];
+  const document = {
+    ...fakeDocument,
+    defaultView: { navigator: { clipboard: { writeText: async value => copied.push(value) } } },
+  };
+  const services = completeServices({
+    getDiagnostics: () => ({
+      runtimeState: 'READY',
+      snapshotVersion: 'test',
+      pendingLoreCount: 0,
+      pendingLoreRetryCount: 0,
+      moduleStates: [],
+      recentErrors: [],
+      promptDebug: [
+        {
+          id: 'test',
+          createdAt: 1,
+          mode: '私聊',
+          replyAs: '甲',
+          assembled: '组装\n"原文"',
+          expanded: '展开原文',
+          raw: '响应原文',
+          messages: [],
+        },
+      ],
+    }),
+  });
+  const app = createPhoneApps(services).find(app => app.route === 'diagnostics');
+  const rendered = await app.render(testContext({ document, announce: value => announcements.push(value) }));
+  const buttons = findAllByTag(rendered, 'button').filter(button => button.className === 'phone-debug-copy');
+  assert.equal(buttons.length, 4);
+  buttons[0].click();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(copied, ['组装\n"原文"']);
+  assert.ok(announcements.some(value => value.includes('已复制')));
+});
+
+test('clipboard fallback restores focus and reports rejected copies', async () => {
+  const { copyText } = loadTypeScriptModule('src/小手机平台/apps/copyText.ts');
+  let removed = 0;
+  let focused = 0;
+  let selected = 0;
+  let copiedValue;
+  let accepted = true;
+  const document = {
+    defaultView: {
+      navigator: {
+        clipboard: {
+          writeText: async () => {
+            throw new Error('denied');
+          },
+        },
+      },
+    },
+    activeElement: { focus: () => focused++ },
+    getSelection: () => null,
+    createElement: () => ({ style: {}, select: () => selected++, remove: () => removed++ }),
+    body: {
+      append: element => {
+        copiedValue = element.value;
+      },
+    },
+    execCommand: command => {
+      assert.equal(command, 'copy');
+      return accepted;
+    },
+  };
+  await copyText(document, '完整\n日志');
+  assert.equal(copiedValue, '完整\n日志');
+  assert.equal(selected, 1);
+  assert.equal(removed, 1);
+  assert.equal(focused, 1);
+  accepted = false;
+  await assert.rejects(copyText(document, '失败'), /复制失败/);
+  assert.equal(removed, 2);
+  assert.equal(focused, 2);
+});
+
 test('dynamic profile app exposes settings, progress, batch actions and complete fields', async () => {
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const calls = [];
