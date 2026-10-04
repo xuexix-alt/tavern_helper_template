@@ -1518,7 +1518,11 @@ function createWinterAdapterModule(): PhoneModule {
             }
           : {}),
         // 每次发送重新应用当前正则，避免仅修改正则时继续使用稳定快照中的旧文本。
-        recentMainChat: extractRecentMainChatMessages(Number(captured.identity.assistantMessageId), 5),
+        recentMainChat: extractRecentMainChatMessages(
+          Number(captured.identity.assistantMessageId),
+          5,
+          profiles.map(member => member.name),
+        ),
         phoneHistory: history
           .filter(item => item.id !== messageId)
           .slice(-30)

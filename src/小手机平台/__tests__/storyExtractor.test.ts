@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { extractRoleStoryContext } from '../platform/roleStoryContext';
 import {
   extractCurrentStory,
   extractRecentCompletedStory,
@@ -228,6 +229,74 @@ function testPromptRegexDepthAndRefresh(): void {
   (globalThis as any).formatAsTavernRegexedString = (value: string) => value;
 }
 
+function testRoleTextWindows(): void {
+  const short = '纪宁说：检查完成。陈宇点了点头。';
+  assert.equal(extractRoleStoryContext(short, ['纪宁', '纪宁', '陈宇']), short, '重叠片段去重');
+  assert.equal(extractRoleStoryContext('她离开了。', ['纪宁']), '', '不猜测代词');
+  assert.equal(extractRoleStoryContext('AxxB 离开了。', ['A.*B']), '', '姓名按字面匹配，不能作为正则');
+  assert.match(extractRoleStoryContext('A.*B 离开了。', [' A.*B ']), /A\.\*B/);
+  const long =
+    '无关内容'.repeat(800) + '纪宁检查药品。' + '过场'.repeat(800) + '陈宇修好了发电机。' + '结尾'.repeat(800);
+  const selected = extractRoleStoryContext(long, ['纪宁', '陈宇']);
+  assert.ok(selected.length <= 1600);
+  assert.match(selected, /纪宁检查药品/);
+  assert.match(selected, /陈宇修好了发电机/);
+  assert.ok(selected.indexOf('纪宁') < selected.indexOf('陈宇'), '保持原文顺序');
+  assert.match(selected, /省略/);
+  const repeated = Array.from({ length: 50 }, (_, i) => `纪宁事件${i}。${'间隔'.repeat(300)}`).join('');
+  const bounded = extractRoleStoryContext(repeated, ['纪宁']);
+  assert.ok(bounded.length <= 1600);
+  assert.match(bounded, /纪宁事件49/);
+  assert.doesNotMatch(bounded, /纪宁事件0。/);
+  const emoji = extractRoleStoryContext('😀'.repeat(400) + '纪宁' + '😀'.repeat(400), ['纪宁']);
+  assert.equal(emoji.isWellFormed(), true);
+}
+
+function testRoleRelevantMainChat(): void {
+  mockChatMessages = [
+    { message_id: 0, role: 'assistant', message: '纪宁检查药品。她发现缺少绷带。' },
+    ...Array.from({ length: 7 }, (_, index) => ({
+      message_id: index + 1,
+      role: 'assistant',
+      message: '其他人在外面搬运物资。',
+    })),
+    {
+      message_id: 8,
+      role: 'assistant',
+      message: '无关天气。'.repeat(300) + '\n陈宇修好了发电机。\n他请大家节约用电。\n' + '无关仓库。'.repeat(300),
+    },
+    { message_id: 9, role: 'assistant', message: '纪宁秘密行动', is_hidden: true },
+    { message_id: 10, role: 'assistant', message: '纪宁未来行动' },
+  ];
+  const calls: number[] = [];
+  (globalThis as any).formatAsTavernRegexedString = (
+    value: string,
+    _source: string,
+    _destination: string,
+    options: any,
+  ) => {
+    calls.push(options.depth);
+    return value;
+  };
+  const result = extractRecentMainChatMessages(9, 5, ['纪宁', '陈宇']);
+  assert.deepEqual(
+    result.map(item => item.id),
+    ['main-chat-0', 'main-chat-8'],
+    '先检索全部已有正文，再取相关楼层窗口',
+  );
+  assert.match(result[0].content, /她发现缺少绷带/);
+  assert.match(result[1].content, /陈宇修好了发电机/);
+  assert.match(result[1].content, /他请大家节约用电/);
+  assert.ok(result.every(item => item.content.length <= 1600));
+  assert.ok(result[1].content.length < 1000, '不因一次命中而带入整楼无关长正文');
+  assert.deepEqual(calls, [8, 7, 6, 5, 4, 3, 2, 1, 0], '角色筛选不能改变正则深度');
+  assert.deepEqual(extractRecentMainChatMessages(9, 5, ['不存在的人']), []);
+  assert.deepEqual(extractRecentMainChatMessages(9, 5, []), []);
+  (globalThis as any).formatAsTavernRegexedString = () => '无人物信息的摘要';
+  assert.deepEqual(extractRecentMainChatMessages(9, 5, ['纪宁']), [], '不得从被正则删掉的正文中捞回信息');
+  (globalThis as any).formatAsTavernRegexedString = (value: string) => value;
+}
+
 export function runStoryExtractorTests(): void {
   console.log('[Story Extractor Tests] Starting...');
 
@@ -246,6 +315,8 @@ export function runStoryExtractorTests(): void {
 
     testRecentMainChatMessages();
     testPromptRegexDepthAndRefresh();
+    testRoleRelevantMainChat();
+    testRoleTextWindows();
     console.log('✓ 最近五条主聊天与控制块清理测试通过');
 
     console.log('[Story Extractor Tests] All tests passed! ✓');

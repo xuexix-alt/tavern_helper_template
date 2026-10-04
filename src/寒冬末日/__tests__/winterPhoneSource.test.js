@@ -323,7 +323,7 @@ test('winter WeChat send wires only the current conversation business sources', 
   assert.match(launchBlock, /mvuData:\s*resolveWinterPersonMvu\(member\.id,\s*captured\.mvu\.stat_data\)/);
   assert.match(
     launchBlock,
-    /recentMainChat:\s*extractRecentMainChatMessages\(Number\(captured\.identity\.assistantMessageId\), 5\)/,
+    /recentMainChat:\s*extractRecentMainChatMessages\(\s*Number\(captured\.identity\.assistantMessageId\),\s*5,\s*profiles\.map\(member => member\.name\),?\s*\)/,
   );
   assert.match(launchBlock, /protectedPhoneHistoryCount:\s*16/);
   assert.match(launchBlock, /maxCharacters:\s*32_000/);

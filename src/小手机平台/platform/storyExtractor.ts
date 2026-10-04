@@ -1,5 +1,6 @@
 import type { PromptMainChatEntry, PromptSourceEntry } from '../ai/promptAssembler';
 import type { ProfileStoryMessage } from '../profiles/profileTypes';
+import { extractRoleStoryContext } from './roleStoryContext';
 
 export interface StoryExtractorOptions {
   /**
@@ -28,7 +29,11 @@ export function stripMainChatControlBlocks(content: string): string {
     .trim();
 }
 
-export function extractRecentMainChatMessages(storyMessageId: number | null, limit = 5): PromptMainChatEntry[] {
+export function extractRecentMainChatMessages(
+  storyMessageId: number | null,
+  limit = 5,
+  roleNames?: readonly string[],
+): PromptMainChatEntry[] {
   if (
     storyMessageId === null ||
     !Number.isSafeInteger(storyMessageId) ||
@@ -67,6 +72,14 @@ export function extractRecentMainChatMessages(storyMessageId: number | null, lim
           }),
         ),
       }))
+      .map(message =>
+        roleNames === undefined
+          ? message
+          : {
+              ...message,
+              content: extractRoleStoryContext(message.content, roleNames),
+            },
+      )
       .filter(message => message.content !== '')
       .slice(-limit)
   );
