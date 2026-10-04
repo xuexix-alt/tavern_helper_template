@@ -103,6 +103,129 @@ function testOutputToleratesExtraFieldsAndEmptyValues(): void {
   assert.throws(() => parseProfileAnalysisOutput('{"__proto__":{"polluted":true}}'), /结构|字段|危险/);
 }
 
+function testChangesEntryTolerance(): void {
+  // 线上实测：changes 条目缺 evidenceRefs / 带未知 field / 空 after 时不得否决整份分析
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '纪宁在诊疗室清点药品。',
+      changes: [
+        {
+          field: 'relationshipInterpretation',
+          before: '协作',
+          after: '信任加深',
+          reason: '共同完成抢修',
+          evidenceRefs: ['story:12'],
+        },
+        {
+          // 缺 evidenceRefs：sanitize 应回填 fixed-profile
+          field: 'currentSituationSummary',
+          before: '在诊疗室',
+          after: '正在清点药品',
+          reason: '正文明确',
+        },
+        {
+          // 未知 field：条目剔除
+          field: 'mvuRelation',
+          before: 'a',
+          after: 'b',
+          reason: 'c',
+          evidenceRefs: ['fixed-profile'],
+        },
+        {
+          // 空 after：条目剔除
+          field: 'currentGoals',
+          before: '补库存',
+          after: '   ',
+          reason: 'c',
+          evidenceRefs: ['fixed-profile'],
+        },
+      ],
+    }),
+    source,
+  );
+  assert.equal(parsed.changes.length, 2);
+  assert.deepEqual(
+    parsed.changes.map(change => change.field),
+    ['relationshipInterpretation', 'currentSituationSummary'],
+  );
+  assert.deepEqual(parsed.changes[0].evidenceRefs, ['story:12']);
+  assert.deepEqual(parsed.changes[1].evidenceRefs, ['fixed-profile'], '缺 evidenceRefs 的条目应回填 fixed-profile');
+}
+
+function testKeywordFallbackExtraction(): void {
+  // 严格解析彻底失败（personId 数字类型 + JSON 断尾）时按关键字降级提取
+  const salvaged = parseProfileAnalysisOutput(
+    '{"personId": 123, "personName": "纪宁", "behaviorTuning": "保持谨慎，清点物资先核对缺口", "currentGoals": "补足药品库存", "changes": [{"field": "relationshipInterp',
+    source,
+  );
+  assert.equal(salvaged.personId, 'main:纪宁', '身份回退到 source');
+  assert.equal(salvaged.personName, '纪宁');
+  assert.equal(salvaged.behaviorTuning, '保持谨慎，清点物资先核对缺口');
+  assert.equal(salvaged.currentGoals, '补足药品库存');
+  assert.deepEqual(salvaged.changes, [], '断尾的 changes 直接放弃');
+  assert.deepEqual(salvaged.evidenceRefs, ['fixed-profile']);
+  assert.equal(salvaged.personalityTuning, '暂无明显变化', '未提取到的字段走兜底');
+
+  // 纯文本（完全无 JSON）也不失败：全部兜底
+  const plainText = parseProfileAnalysisOutput('模型拒绝输出 JSON，只说了些闲话。', source);
+  assert.equal(plainText.personId, 'main:纪宁');
+  assert.equal(plainText.analysisNarrative, '本次分析未提供概括说明。');
+  assert.deepEqual(plainText.changes, []);
+
+  // 降级提取路径下身份错乱仍然拒绝
+  assert.throws(
+    () => parseProfileAnalysisOutput('{"personId": "main:别人", "personName": "别人", "behaviorTuning": "x"}', source),
+    /人物|身份/,
+  );
+
+  // 原型污染尝试在降级路径前被拦截
+  assert.throws(() => parseProfileAnalysisOutput('{"__proto__": {"polluted": true}, "personId": 1}'), /结构|字段|危险/);
+}
+
+function testInlineCitationsStripped(): void {
+  // 线上实测：AI 把引用内联进叙事正文，档案体积暴涨撑爆提示词预算——解析端必须剔除
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '纪宁回到诊疗室（mvu:内心想法），开始清点药品。',
+      changes: [
+        {
+          field: 'currentGoals',
+          before: '暂无',
+          after: '补足诊疗室的常用药品库存（mvu:内心想法, story:12）',
+          reason: '正文明确提到清点',
+          evidenceRefs: ['story:12'],
+        },
+      ],
+      basicInfoAdditions: ['近期负责诊疗室（mvu:位置）'],
+      currentSituationSummary: '人在诊疗室（story:12）(wechat:new)，正在清点药品。',
+      behaviorTuning: '保持谨慎',
+    }),
+    source,
+  );
+  assert.equal(parsed.analysisNarrative, '纪宁回到诊疗室，开始清点药品。');
+  assert.equal(parsed.changes[0].after, '补足诊疗室的常用药品库存');
+  assert.equal(parsed.basicInfoAdditions[0], '近期负责诊疗室');
+  assert.equal(parsed.currentSituationSummary, '人在诊疗室，正在清点药品。');
+  assert.equal(parsed.behaviorTuning, '保持谨慎');
+  // 引用本体不受影响（只剥正文，不剥 evidenceRefs）
+  assert.deepEqual(parsed.changes[0].evidenceRefs, ['story:12']);
+
+  // 降级提取路径同样剔除
+  const salvaged = parseProfileAnalysisOutput(
+    '{"personId": 123, "personName": "纪宁", "behaviorTuning": "先核对缺口（mvu:内心想法）再上报"}',
+    source,
+  );
+  assert.equal(salvaged.behaviorTuning, '先核对缺口再上报');
+
+  // 提示词包含引用纪律
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /引用纪律/);
+  assert.match(buildProfileAnalysisPrompt(source), /引用纪律/);
+}
+
 function testIdentityAndEvidenceValidation(): void {
   const valid = {
     personId: 'main:纪宁',
@@ -237,10 +360,126 @@ function testNearValidOpenAiResponseCanBeRepaired(): void {
   assert.equal(parseProfileAnalysisOutput(wrapped, source).personId, 'main:纪宁');
 }
 
+function testPromptProfileCharacterBudget(): void {
+  // 不可变块（身份+固定本色+MVU硬事实+私密范围）超上限时不再整体失败，而是原样保留并压缩动态段预算
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '近期对药品不足的表达更直接。',
+      changes: [],
+      basicInfoAdditions: [],
+      behaviorTuning: '先核对药品，再提出补给需求',
+      personalityTuning: '保持谨慎，近期表达更直接',
+      speechStyleTuning: '医疗事务使用简短明确的措辞',
+      currentGoals: '补足药品库存',
+      currentSituationSummary: '正在诊疗室清点药品',
+      relationshipInterpretation: '保持协作关系',
+      storyInteractionSummary: '回到诊疗室',
+      chatInteractionSummary: '提醒药品即将耗尽',
+      playerActionAdvice: '确认药品补给安排',
+      evidenceRefs: ['story:12'],
+    }),
+    source,
+  );
+  const bigSource: ProfileAnalysisSource = {
+    ...source,
+    mvuFacts: { 关系: '协作', 位置: '诊疗室', 健康: 83, 备注: 'x'.repeat(3_000) },
+  };
+  const merged = mergeDynamicProfile(bigSource, parsed, []);
+
+  const rendered = renderPromptProfile(merged, 2_000);
+  assert.ok(rendered.includes('MVU硬事实'), '不可变块必须保留');
+  assert.ok(rendered.length > 2_000, '不可变块超上限时原样保留而非失败或截断');
+
+  // 正常上限下动态段仍按预算追加
+  const normal = renderPromptProfile(mergeDynamicProfile(source, parsed, []), 4_000);
+  assert.match(normal, /近期行为模式/);
+  assert.ok(normal.length <= 4_000);
+}
+
+function testRealWorldWechatPayloadEndToEnd(): void {
+  // 线上实测（2026-08-28 真实回传）：AI 在每个叙事字段内联 wechat 长引用并携带 :reply:0 后缀，
+  // 旧版因内联引用撑爆档案字符上限而整体失败；当前管线必须全链路通过。
+  const wechatSource: ProfileAnalysisSource = {
+    ...source,
+    wechatNew: [
+      { id: 'out-msg-001', sender: '玩家', content: '想你了', isNew: true },
+      { id: 'out-msg-001:reply:0', sender: '纪宁', content: '干、干嘛突然发……', isNew: true },
+      { id: 'out-msg-002', sender: '玩家', content: '你好', isNew: true },
+    ],
+  };
+  const ref = 'wechat:out-msg-001:reply:0';
+  const parsed = parseProfileAnalysisOutput(
+    JSON.stringify({
+      personId: 'main:纪宁',
+      personName: '纪宁',
+      analysisNarrative: '原本平静的日常被玩家的直球打破（mvu:内心想法），内心泛起涟漪。',
+      changes: [
+        {
+          field: 'relationshipInterpretation',
+          before: '普通邻居关系。',
+          after: `关系档位升至协作（mvu:关系），并因直球互动表现出害羞但未推拒的回应（${ref}）`,
+          reason: `玩家直白示好（${ref}）击中其心房。`,
+          evidenceRefs: ['mvu:关系', ref],
+        },
+      ],
+      basicInfoAdditions: [],
+      behaviorTuning: `开门时下意识用身体挡住门缝（mvu:动作姿势），掩饰慌乱（${ref}）。`,
+      personalityTuning: '敏感防御暂时隐去，性格偏向傲娇与纯真（mvu:神态样貌）。',
+      speechStyleTuning: `频繁使用结巴反问句与害羞表情（${ref}）进行防御性反击。`,
+      currentGoals: '纠结是否邀请玩家进屋坐坐（mvu:内心想法）。',
+      currentSituationSummary: '身处诊疗室（mvu:位置），面临社交危机（mvu:内心想法）。',
+      relationshipInterpretation: `从普通邻居跨越至协作档位（mvu:关系），推动事件是直白示好（${ref}）。`,
+      storyInteractionSummary: '玩家特意折返送来物资（story:12），她脸色微红地收下。',
+      chatInteractionSummary: `被动接收后的慌乱，用反问与表情表达手足无措（${ref}）。`,
+      playerActionAdvice: '对直球免疫力极低，建议提供自然台阶。',
+      evidenceRefs: ['fixed-profile', 'mvu:关系', 'mvu:内心想法', 'story:12', ref],
+    }),
+    wechatSource,
+  );
+  // 内联引用必须全部剔除，正文干净
+  for (const value of [
+    parsed.behaviorTuning,
+    parsed.speechStyleTuning,
+    parsed.relationshipInterpretation,
+    parsed.chatInteractionSummary,
+    parsed.changes[0]?.after ?? '',
+  ]) {
+    assert.ok(!/[（(]\s*(?:mvu:|story:|wechat:)/.test(value), `内联引用必须剔除：${value}`);
+  }
+  // :reply:0 后缀的 wechat 引用合法保留
+  assert.ok(parsed.evidenceRefs.includes(ref));
+  assert.ok(parsed.changes[0].evidenceRefs.includes(ref));
+
+  // 全链路：合并 + 渲染不再因字符上限失败
+  const merged = mergeDynamicProfile(wechatSource, parsed, ['玩家: 想你了']);
+  const rendered = renderPromptProfile(merged, 4_000);
+  assert.ok(rendered.includes('MVU硬事实'));
+  assert.ok(rendered.length <= 4_000);
+}
+
+function testPromptEnforcesFieldLengthDiscipline(): void {
+  const prompt = buildProfileAnalysisPrompt(source);
+  // 契约与写作要求中必须有明确的字数约束
+  assert.match(prompt, /不超过200字/);
+  assert.match(prompt, /不超过120字/);
+  assert.match(prompt, /不超过80字/);
+  assert.match(prompt, /每条不超过60字/);
+  assert.match(prompt, /合计不超过800字/);
+  assert.match(PROFILE_ANALYSIS_SYSTEM_PROMPT, /字数纪律/);
+}
+
 testStrictOutputAndMerge();
 testOutputToleratesExtraFieldsAndEmptyValues();
+testChangesEntryTolerance();
+testKeywordFallbackExtraction();
+testInlineCitationsStripped();
 testIdentityAndEvidenceValidation();
 testPromptSourceOrder();
 testOpenAiResponseEnvelopeCanBeParsed();
+testPromptProfileCharacterBudget();
+testRealWorldWechatPayloadEndToEnd();
+testPromptEnforcesFieldLengthDiscipline();
 testNearValidOpenAiResponseCanBeRepaired();
 console.log('profile analysis tests passed');

@@ -135,6 +135,8 @@ export interface PhoneProfileView {
 
 export interface PhoneProfileSettingsView {
   storyProgress: number;
+  /** 自动刷新总开关：默认关闭，仅用户手动开启后才自动触发 */
+  autoRefreshEnabled: boolean;
   autoRefreshEvery: number;
   promptProfileMaxChars: number;
 }
@@ -309,6 +311,10 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
   let selectedProfileId: string | null = null;
+  // 微信聊天滚动锚点：requestRender 会整体重建 DOM（scrollTop 归零导致视角回顶），
+  // 需要跨渲染保留滚动意图。atBottom=true 时新消息自动贴底（视角回到最新一条）；
+  // 用户上翻阅读历史时恢复原位置，不被新消息拉扯。
+  let chatScrollAnchor: { atBottom: boolean; scrollTop: number } = { atBottom: true, scrollTop: 0 };
 
   return [
     {
@@ -338,6 +344,13 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           });
           const history = list(document);
           history.className = 'phone-list phone-chat__history';
+          // 用户滚动时持续更新锚点：距底 60px 内视为「贴底」，否则记录当前位置
+          context.listen(history, 'scroll', () => {
+            chatScrollAnchor = {
+              atBottom: history.scrollHeight - history.scrollTop - history.clientHeight < 60,
+              scrollTop: history.scrollTop,
+            };
+          });
           // 微信风格时间分隔条：相邻消息时间标签相同则不重复；旧消息无标签时跳过且不打断比较
           let previousTimeLabel = '';
           for (const message of messages) {
@@ -416,6 +429,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             if (sending) return;
             sending = true;
             send.disabled = true;
+            chatScrollAnchor.atBottom = true; // 自己发消息后贴底，等待回复时视角停在最新一条
             void services
               .sendMessage(conversationId, content)
               .then(() => {
@@ -430,6 +444,16 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           });
           composer.append(input, send);
           page.append(back, history, composer);
+          // 挂载后恢复滚动位置：贴底时滚到最新一条；上翻阅读时保持在原位置。
+          // 读取实时锚点：若重试窗口内用户手动滚动，则应用其最新位置而不是拉回旧位置。
+          // 消息气泡换行等会延后改变容器高度，需多级重试防止量到旧高度。
+          const restoreScroll = () => {
+            if (chatScrollAnchor.atBottom) history.scrollTop = history.scrollHeight;
+            else history.scrollTop = Math.min(chatScrollAnchor.scrollTop, history.scrollHeight);
+          };
+          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(restoreScroll);
+          setTimeout(restoreScroll, 50);
+          setTimeout(restoreScroll, 200);
           return page;
         }
         const items = await services.listConversations();
@@ -462,6 +486,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                 if (!context.isActive()) return;
                 currentConversationId = item.id;
                 currentConversationTitle = item.title;
+                chatScrollAnchor = { atBottom: true, scrollTop: 0 }; // 新开会话贴底显示最新消息
                 context.requestRender();
               })
               .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
@@ -553,6 +578,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                   if (!context.isActive()) return;
                   currentConversationId = conversationId;
                   currentConversationTitle = item.name;
+                  chatScrollAnchor = { atBottom: true, scrollTop: 0 }; // 新开会话贴底显示最新消息
                   context.navigate('messages');
                 })
                 .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'));
@@ -974,7 +1000,12 @@ async function renderProfileListPage(
   try {
     const [profiles, settings] = await Promise.all([
       collectProfiles(services),
-      services.getProfileSettings?.() ?? { storyProgress: 0, autoRefreshEvery: 20, promptProfileMaxChars: 2_000 },
+      services.getProfileSettings?.() ?? {
+        storyProgress: 0,
+        autoRefreshEnabled: false,
+        autoRefreshEvery: 20,
+        promptProfileMaxChars: 4_000,
+      },
     ]);
 
     // 档案馆门头
@@ -1016,7 +1047,13 @@ async function renderProfileListPage(
       tick.className = i < meterFilled ? 'dossier-progress__tick dossier-progress__tick--on' : 'dossier-progress__tick';
       meter.append(tick);
     }
-    const meterNote = text(document, 'span', '正文累计达到阈值后自动刷新全部档案');
+    const meterNote = text(
+      document,
+      'span',
+      settings.autoRefreshEnabled
+        ? '正文累计达到阈值后自动刷新全部档案'
+        : '正文自动刷新已关闭：达到阈值也不会自动调用 AI，可手动刷新',
+    );
     meterNote.className = 'dossier-deck__note';
     progressRow.append(progressTitle, meter, meterNote);
     deck.append(progressRow);
@@ -1058,6 +1095,9 @@ async function renderProfileListPage(
 
     const settingsPanel = document.createElement('section');
     settingsPanel.className = 'phone-profile-settings';
+    const autoToggle = input(document, 'checkbox', settings.autoRefreshEnabled ? 'on' : '');
+    autoToggle.className = 'phone-profile-settings__auto-toggle';
+    autoToggle.checked = settings.autoRefreshEnabled;
     const threshold = input(document, 'number', String(settings.autoRefreshEvery));
     threshold.className = 'phone-profile-settings__threshold';
     threshold.min = '1';
@@ -1069,7 +1109,11 @@ async function renderProfileListPage(
     budget.step = '100';
     const settingFields = document.createElement('div');
     settingFields.className = 'phone-profile-settings__fields';
-    settingFields.append(field(document, '自动刷新条数', threshold), field(document, '档案提示词上限', budget));
+    settingFields.append(
+      field(document, '正文自动刷新', autoToggle),
+      field(document, '自动刷新条数', threshold),
+      field(document, '档案提示词上限', budget),
+    );
     const saveSettings = text(document, 'button', '保存刷新设置') as HTMLButtonElement;
     saveSettings.className = 'phone-button phone-profile-settings__save';
     saveSettings.type = 'button';
@@ -1090,7 +1134,12 @@ async function renderProfileListPage(
       }
       saveSettings.disabled = true;
       void services
-        .saveProfileSettings({ storyProgress: settings.storyProgress, autoRefreshEvery, promptProfileMaxChars })
+        .saveProfileSettings({
+          storyProgress: settings.storyProgress,
+          autoRefreshEnabled: autoToggle.checked,
+          autoRefreshEvery,
+          promptProfileMaxChars,
+        })
         .then(() => context.announce('档案刷新设置已保存'))
         .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
         .finally(() => {
@@ -1133,11 +1182,7 @@ async function renderProfileListPage(
         text(document, 'strong', profile.name),
         text(document, 'small', `NO.${dossierFileNo(profile.id)} · ${profile.sourceRange}`),
       );
-      const summary = text(
-        document,
-        'span',
-        profile.analysisNarrative || profile.personalityTuning || '尚无动态变化',
-      );
+      const summary = text(document, 'span', profile.analysisNarrative || profile.personalityTuning || '尚无动态变化');
       summary.className = 'phone-profile-row__summary';
       main.append(identity, summary);
       const status = document.createElement('span');
@@ -1355,8 +1400,7 @@ async function renderProfileDetailPage(
           versions.className = 'phone-profile-detail__section';
           versions.append(text(document, 'h2', '历史版本'));
           for (const version of [...profile.versions].reverse()) {
-            const sourceLabel =
-              version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复';
+            const sourceLabel = version.source === 'ai' ? 'AI' : version.source === 'player' ? '玩家' : '恢复';
             const timeLabel = new Date(version.savedAt).toLocaleString('zh-CN');
             const restore = text(document, 'button', '') as HTMLButtonElement;
             restore.className = 'phone-button phone-profile-version dossier-versions__restore';

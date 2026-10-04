@@ -17,11 +17,41 @@ const EvidenceRefSchema = z
   .max(160)
   .regex(/^(?:fixed-profile|previous-dynamic|mvu:.+|story:.+|wechat:.+)$/);
 
+/**
+ * 剔除叙事字段正文中被内联的引用标注（如「（mvu:内心想法）」「(story:3, wechat:xxx:reply:0)」）。
+ * 引用只应出现在 evidenceRefs 数组；正文内联会让档案体积暴涨撑爆提示词预算。
+ */
+const INLINE_CITATION_PATTERN =
+  /[（(]\s*(?:(?:fixed-profile|previous-dynamic|mvu:[^()））、,，;；、]+|story:[^()））、,，;；、]+|wechat:[^()））、,，;；、]+)\s*[,，、;；]?\s*)+[)）]/g;
+
+function stripInlineCitations(value: string): string {
+  return value
+    .replace(INLINE_CITATION_PATTERN, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+([。！？；，、,.!?;])/g, '$1')
+    .trim();
+}
+
 /** AI 常以「暂无」语义输出空值；契约层统一兜底文案，避免整份输出因个别空字段被判失败。 */
 const narrativeField = (fallback: string) =>
   z
     .union([z.string(), z.null(), z.undefined()])
-    .transform(value => (typeof value === 'string' && value.trim() !== '' ? value.trim() : fallback));
+    .transform(value => (typeof value === 'string' && value.trim() !== '' ? stripInlineCitations(value) : fallback));
+
+const PROFILE_CHANGE_FIELDS = [
+  'basicInfoAdditions',
+  'behaviorTuning',
+  'personalityTuning',
+  'speechStyleTuning',
+  'currentGoals',
+  'currentSituationSummary',
+  'relationshipInterpretation',
+  'storyInteractionSummary',
+  'chatInteractionSummary',
+] as const satisfies readonly ProfileChangeField[];
+
+const isProfileChangeField = (value: string): value is ProfileChangeField =>
+  (PROFILE_CHANGE_FIELDS as readonly string[]).includes(value);
 
 const ProfileAnalysisOutputSchema = z
   .object({
@@ -32,32 +62,49 @@ const ProfileAnalysisOutputSchema = z
       .array(
         z
           .object({
-            field: z.enum([
-              'basicInfoAdditions',
-              'behaviorTuning',
-              'personalityTuning',
-              'speechStyleTuning',
-              'currentGoals',
-              'currentSituationSummary',
-              'relationshipInterpretation',
-              'storyInteractionSummary',
-              'chatInteractionSummary',
-            ]),
-            before: z.string().max(1_200),
-            after: z.string().max(1_200),
-            reason: z.string().trim().min(1).max(800),
-            evidenceRefs: z.array(EvidenceRefSchema).min(1).max(16),
+            field: z.string().trim().max(64),
+            before: z
+              .string()
+              .max(1_200)
+              .nullish()
+              .transform(value => (value ? stripInlineCitations(value) : '')),
+            after: z
+              .string()
+              .max(1_200)
+              .nullish()
+              .transform(value => (value ? stripInlineCitations(value) : '')),
+            reason: z
+              .string()
+              .max(800)
+              .nullish()
+              .transform(value => (value ? stripInlineCitations(value) : '')),
+            evidenceRefs: z
+              .array(EvidenceRefSchema)
+              .max(16)
+              .nullish()
+              .transform(value => value ?? []),
           })
           .strip(),
       )
       .max(12)
       .nullish()
-      .transform(value => value ?? []),
+      .transform(entries =>
+        (entries ?? [])
+          // 未知字段与空 after 的条目直接剔除，不能让单条畸形数据否决整份分析
+          .filter(
+            (entry): entry is typeof entry & { field: ProfileChangeField } =>
+              isProfileChangeField(entry.field) && entry.after !== '',
+          )
+          .map(entry => ({
+            ...entry,
+            reason: entry.reason !== '' ? entry.reason : '未提供变更理由',
+          })),
+      ),
     basicInfoAdditions: z
-      .array(z.string().trim().min(1).max(240))
+      .array(z.string().max(300))
       .max(8)
       .nullish()
-      .transform(value => value ?? []),
+      .transform(value => (value ?? []).map(item => stripInlineCitations(item)).filter(item => item !== '')),
     behaviorTuning: narrativeField('暂无明显变化'),
     personalityTuning: narrativeField('暂无明显变化'),
     speechStyleTuning: narrativeField('暂无明显变化'),
@@ -83,6 +130,8 @@ export const PROFILE_ANALYSIS_SYSTEM_PROMPT = [
   '禁止无锚点的空泛定性（如「更亲近了」「态度有所变化」「近期更直接」「关系缓和」）：一切演变都要落到具体言行或事件上；各字段不许套用同一句式。',
   '不要续写剧情，不要虚构事件，不要把一次性情绪上升为永久人格，也不要输出思考过程。',
   '事实冲突优先级：MVU硬事实 > 最近正文明确事实 > 固定角色世界书 > 当前人物微信 > 上一次动态档案。',
+  '字数纪律：动态字段最终会拼入有字符上限的角色扮演提示词，务必精炼——严格遵循契约中各字段的字数上限，宁可删掉修饰语也不超限。',
+  '引用纪律：所有字段正文中禁止出现引用标注（如「（mvu:内心想法）」「(story:3)」）——引用只放在 evidenceRefs 数组里，正文只写干净的叙事文字。',
   '只输出一个 JSON 对象，且必须符合用户所给契约；不要 Markdown、前后说明或额外字段。',
 ].join('\n');
 
@@ -153,13 +202,91 @@ function sanitizeEvidenceRefs(
   return ['fixed-profile'];
 }
 
+/** 身份错乱是唯一不可兜底的失败：张冠李戴的档案比没有档案更糟。 */
+class ProfileIdentityMismatchError extends Error {}
+
+const FALLBACK_NARRATIVE_FIELDS = [
+  'analysisNarrative',
+  'behaviorTuning',
+  'personalityTuning',
+  'speechStyleTuning',
+  'currentGoals',
+  'currentSituationSummary',
+  'relationshipInterpretation',
+  'storyInteractionSummary',
+  'chatInteractionSummary',
+  'playerActionAdvice',
+] as const;
+
+const FALLBACK_NARRATIVE_DEFAULTS: Record<(typeof FALLBACK_NARRATIVE_FIELDS)[number], string> = {
+  analysisNarrative: '本次分析未提供概括说明。',
+  behaviorTuning: '暂无明显变化',
+  personalityTuning: '暂无明显变化',
+  speechStyleTuning: '暂无明显变化',
+  currentGoals: '暂无明确目标',
+  currentSituationSummary: '暂无明确处境信息',
+  relationshipInterpretation: '暂无新变化',
+  storyInteractionSummary: '暂无正文互动',
+  chatInteractionSummary: '暂无微信互动',
+  playerActionAdvice: '暂无特别建议',
+};
+
+function decodeJsonStringLiteral(literal: string): string {
+  try {
+    return JSON.parse(`"${literal}"`) as string;
+  } catch {
+    return literal;
+  }
+}
+
+/** 从原始回传中按键名提取字符串值（AI 输出半截 JSON / 字段类型错误时仍能捞回内容）。 */
+function extractStringField(raw: string, field: string): string | null {
+  const match = raw.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'i'));
+  if (!match?.[1]) return null;
+  const decoded = decodeJsonStringLiteral(match[1]);
+  const stripped = stripInlineCitations(decoded);
+  return stripped !== '' ? stripped : null;
+}
+
+/**
+ * 最终兜底：严格解析失败时按关键字逐字段提取，提不到的用兜底文案。
+ * 档案分析不允许因单字段瑕疵整体失败——changes/basicInfoAdditions 展示类数据直接放弃，
+ * 叙事字段能捞多少是多少。
+ */
+function buildFallbackProfileAnalysisOutput(raw: string, source?: ProfileAnalysisSource): ProfileAnalysisOutput {
+  if (source) {
+    const rawPersonId = extractStringField(raw, 'personId');
+    const rawPersonName = extractStringField(raw, 'personName');
+    if (
+      (rawPersonId !== null && rawPersonId !== source.personId) ||
+      (rawPersonName !== null && rawPersonName !== source.personName)
+    ) {
+      throw new ProfileIdentityMismatchError(
+        `回传人物身份不匹配：期望 ${source.personName}（${source.personId}），实际 ${rawPersonName ?? '未提供'}（${rawPersonId ?? '未提供'}）`,
+      );
+    }
+  }
+  const narrative = {} as Record<(typeof FALLBACK_NARRATIVE_FIELDS)[number], string>;
+  for (const field of FALLBACK_NARRATIVE_FIELDS) {
+    narrative[field] = extractStringField(raw, field) ?? FALLBACK_NARRATIVE_DEFAULTS[field];
+  }
+  return {
+    personId: source?.personId ?? extractStringField(raw, 'personId') ?? 'unknown',
+    personName: source?.personName ?? extractStringField(raw, 'personName') ?? '未知人物',
+    ...narrative,
+    changes: [],
+    basicInfoAdditions: [],
+    evidenceRefs: ['fixed-profile'],
+  };
+}
+
 export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysisSource): ProfileAnalysisOutput {
   try {
     const parsed = parseResponsePayload(raw);
     const output = ProfileAnalysisOutputSchema.parse(parsed) as ProfileAnalysisOutput;
     if (source) {
       if (output.personId !== source.personId || output.personName !== source.personName) {
-        throw new Error(
+        throw new ProfileIdentityMismatchError(
           `回传人物身份不匹配：期望 ${source.personName}（${source.personId}），实际 ${output.personName}（${output.personId}）`,
         );
       }
@@ -176,7 +303,14 @@ export function parseProfileAnalysisOutput(raw: string, source?: ProfileAnalysis
     }
     return output;
   } catch (error) {
-    throw new Error(`档案结构或字段无效：${error instanceof Error ? error.message : String(error)}`);
+    // 身份错乱不可兜底（fallback 内部也会再做一次文本级身份核对）
+    if (error instanceof ProfileIdentityMismatchError) throw error;
+    // 原型污染尝试必须拒绝，不得进入降级提取
+    if (/__proto__|prototype pollution/i.test(raw)) {
+      throw new Error('档案结构或字段无效：输入包含危险属性');
+    }
+    // 其余一切失败：按关键字降级提取，绝不让单字段瑕疵否决整份分析
+    return buildFallbackProfileAnalysisOutput(raw, source);
   }
 }
 
@@ -186,7 +320,7 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     personId: source.personId,
     personName: source.personName,
     analysisNarrative:
-      '人物近况速写（2至4句，像连续剧的上集回顾）：最近的关键经历 → 心境或立场发生的移动 → 此刻的状态；写给玩家看，不要写成变更日志',
+      '人物近况速写（2至4句、合计不超过200字，像连续剧的上集回顾）：最近的关键经历 → 心境或立场发生的移动 → 此刻的状态；写给玩家看，不要写成变更日志',
     changes: [
       {
         field: 'relationshipInterpretation',
@@ -196,22 +330,23 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
         evidenceRefs: ['story:消息ID', 'wechat:消息ID'],
       },
     ],
-    basicInfoAdditions: ['仅写有明确证据的新增客观信息（经历、身份、资源、秘密等）；没有则输出空数组'],
+    basicInfoAdditions: ['仅写有明确证据的新增客观信息（经历、身份、资源、秘密等），每条不超过60字；没有则输出空数组'],
     behaviorTuning:
-      '行为模式微调，按「底色+事件+倾向」写。好例：一向独自拍板，但玩家把半份退烧药让给她（story:25）后，清点物资时会主动把清单副本交给玩家核对；对外人依旧不假手',
+      '行为模式微调，不超过120字，按「底色+事件+倾向」写。好例：一向独自拍板，但玩家把半份退烧药让给她（story:25）后，清点物资时会主动把清单副本交给玩家核对；对外人依旧不假手',
     personalityTuning:
-      '性格侧重微调：同一性格在不同事件后的偏移方向与触发条件；不把一次性情绪写成永久人格，也不写与固定本色重复的内容',
+      '性格侧重微调，不超过120字：同一性格在不同事件后的偏移方向与触发条件；不把一次性情绪写成永久人格，也不写与固定本色重复的内容',
     speechStyleTuning:
-      '说话方式微调：对谁、在什么话题下，用词、语气、句式有怎样的规律性变化；仅写可复用于角色扮演的规律',
-    currentGoals: '当前目标：由哪些近期事件催生或改变，进行到什么程度；无新证据时延续上次目标或写暂无明确目标',
+      '说话方式微调，不超过120字：对谁、在什么话题下，用词、语气、句式有怎样的规律性变化；仅写可复用于角色扮演的规律',
+    currentGoals:
+      '当前目标，不超过80字：由哪些近期事件催生或改变，进行到什么程度；无新证据时延续上次目标或写暂无明确目标',
     currentSituationSummary:
-      '当前处境：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
+      '当前处境，不超过120字：职责、位置、资源或风险相对之前的变化及成因；MVU硬事实只可引用不可改写',
     relationshipInterpretation:
-      '与玩家的关系轨迹：MVU档位 + 当前互动距离的具体表现（愿意分享什么、回避什么）+ 正在松动或收紧的边界 + 推动变化的事件。禁止只写更亲近或更疏远',
+      '与玩家的关系轨迹，不超过120字：MVU档位 + 当前互动距离的具体表现（愿意分享什么、回避什么）+ 正在松动或收紧的边界 + 推动变化的事件。禁止只写更亲近或更疏远',
     storyInteractionSummary:
-      '最近正文互动的质感小结：谁做了什么、人物如何回应、留下什么余波或未解决的心结；写互动的温度，不是事件罗列',
+      '最近正文互动的质感小结，不超过120字：谁做了什么、人物如何回应、留下什么余波或未解决的心结；写互动的温度，不是事件罗列',
     chatInteractionSummary:
-      '该人物微信的质感小结：语气亲疏、主动还是被动、话题边界的变化；不得把私聊内容扩散给其他人物',
+      '该人物微信的质感小结，不超过120字：语气亲疏、主动还是被动、话题边界的变化；不得把私聊内容扩散给其他人物',
     playerActionAdvice:
       '基于当前关系轨迹给玩家的相处提示：下一步做什么会推进或损害这段关系；只供玩家在档案页查看，不写入人物角色扮演提示',
     evidenceRefs: ['本次结论使用的全部证据标记'],
@@ -224,6 +359,8 @@ export function buildProfileAnalysisPrompt(source: ProfileAnalysisSource): strin
     '- 结论必须具体到事件与言行；字段之间共同呈现人物弧光，但不要互相重复同一句话。',
     '- 关系、态度类字段要写出轨迹：从什么状态、因哪件事、移向什么状态，以及尚未松动的边界在哪里。',
     '- 无真实变化时保守延续上次档案，不要编造转折；但可在 analysisNarrative 中指出正在积蓄的趋势（须有证据可引）。',
+    '- 字数纪律：严格遵循契约中各字段的字数上限；除 analysisNarrative 不超过200字外，其余每个动态字段不超过120字（currentGoals 不超过80字），basicInfoAdditions 每条不超过60字；全部动态内容合计不超过800字。字数超限会导致档案被截断或落盘失败。',
+    '- 引用纪律：任何字段正文中都不得出现「（mvu:xxx）」「(story:3)」这类内联引用标注——引用一律写入 evidenceRefs 数组，正文保持干净的叙事文字；正文中混入引用会导致引用被整段删除。',
     '只允许输出结构化动态字段，不得修改、重写或推断覆盖 MVU 硬事实和固定人物本色。',
     '每项变化必须引用本次允许的 evidenceRefs；证据不足时保守延续上次档案或固定本色，并且不要加入 changes。',
     'changes 只列出与上次动态档案相比真正改变的字段；首次分析只列有直接证据支持的动态字段。',
@@ -299,7 +436,7 @@ function section(label: string, value: string): string {
   return `[${label}] ${value.trim() || '暂无'}`;
 }
 
-export function renderPromptProfile(document: DynamicProfileDocument, maxCharacters = 2_000): string {
+export function renderPromptProfile(document: DynamicProfileDocument, maxCharacters = 4_000): string {
   if (!Number.isSafeInteger(maxCharacters) || maxCharacters <= 0) throw new Error('档案字符上限必须是正安全整数');
   const privateScope = `仅${document.personName}可将本条目的私聊信息作为认知与行动依据；其他人物不得知情、转述或据此行动，除非相关事实已在正文或MVU中公开。`;
   const immutable = [
@@ -309,8 +446,8 @@ export function renderPromptProfile(document: DynamicProfileDocument, maxCharact
     section('私密范围', privateScope),
   ];
   const immutableText = immutable.join('\n');
-  if (immutableText.length > maxCharacters)
-    throw new Error('人物身份、固定本色、MVU硬事实与私密范围已超过档案字符上限');
+  // 身份与硬事实是不可截断的必需要据：超上限时原样保留（不再整体失败），仅压缩后续动态段的追加预算。
+  const budget = Math.max(maxCharacters, immutableText.length);
 
   const dynamic = [
     section('基本信息补充', document.basicInfoAdditions.join('；') || '暂无新增'),
@@ -326,7 +463,7 @@ export function renderPromptProfile(document: DynamicProfileDocument, maxCharact
   ];
   let result = immutableText;
   for (const item of dynamic) {
-    const remaining = maxCharacters - result.length - 1;
+    const remaining = budget - result.length - 1;
     if (remaining <= 0) break;
     result += `\n${item.slice(0, remaining)}`;
   }

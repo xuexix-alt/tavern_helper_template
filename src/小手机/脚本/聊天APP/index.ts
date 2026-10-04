@@ -78,6 +78,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
     setup() {
       let disposed = false;
       let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+      // 与真微信一致：用户停在底部时新消息自动跟底；上翻阅读历史时保持位置不拉扯
+      let stickToBottom = true;
       const messageListElement = vue.ref<HTMLElement | null>(null);
       const messageOperation = createLatestMessageOperationGuard();
       const store = vue.reactive<ChatStore>({
@@ -147,14 +149,29 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         }
       }
 
-      function scrollChatBottom(context: ReturnType<typeof captureComponentContext>, convId: string | null): void {
-        if (scrollTimer !== null) clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(() => {
-          scrollTimer = null;
+      function scrollChatBottom(
+        context: ReturnType<typeof captureComponentContext>,
+        convId: string | null,
+        force = false,
+      ): void {
+        if (!force && !stickToBottom) return;
+        const scrollToBottom = () => {
           if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
           const el = messageListElement.value;
           if (el) el.scrollTop = el.scrollHeight;
-        }, 80);
+        };
+        // 等待 Vue 完成本次 DOM 更新后再滚动，并做多级重试：
+        // 长文本/输入指示条会延后改变容器高度，单次定时滚动会量到旧高度导致视图停在顶部。
+        vue.nextTick(() => {
+          scrollToBottom();
+          requestAnimationFrame(scrollToBottom);
+          if (scrollTimer !== null) clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(() => {
+            scrollTimer = null;
+            scrollToBottom();
+          }, 120);
+          setTimeout(scrollToBottom, 400);
+        });
       }
 
       async function loadMessages(convId: string): Promise<void> {
@@ -165,7 +182,8 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           const messages = await ChatDB.getRecentMessages(convId, 50);
           if (!isComponentContextCurrent(context) || store.activeConvId !== convId) return;
           replaceItems(store.messages, messages);
-          scrollChatBottom(context, convId);
+          stickToBottom = true;
+          scrollChatBottom(context, convId, true);
         } catch (error) {
           if (isComponentContextCurrent(context) && store.activeConvId === convId) {
             console.warn('[聊天APP] 加载消息失败:', error);
@@ -185,6 +203,17 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
         store.activeConv = null;
         replaceItems(store.messages, []);
       }
+
+      // 新消息（含回复逐条 push、「正在输入」指示条出现/消失改变高度）时自动跟底
+      vue.watch(
+        () => store.messages,
+        () => scrollChatBottom(captureComponentContext(), store.activeConvId),
+        { deep: true },
+      );
+      vue.watch(
+        () => store.isGenerating,
+        () => scrollChatBottom(captureComponentContext(), store.activeConvId),
+      );
 
       async function openCreationModal(): Promise<void> {
         store.modalGeneration += 1;
@@ -325,7 +354,7 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
           if (!messageOperation.isCurrent(operationToken) || !isComponentContextCurrent(sendContext)) return;
           if (store.activeConvId === conv.id) {
             store.messages.push(userMsg);
-            scrollChatBottom(sendContext, conv.id);
+            scrollChatBottom(sendContext, conv.id, true);
           }
 
           let replies: any[];
@@ -668,6 +697,11 @@ function createChatRenderer(vue: Vue, PS: PhoneSystemLike) {
                 ref: messageListElement,
                 id: 'phone-chat-msgs',
                 style: 'flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;',
+                onScroll: (e: any) => {
+                  const el = e.target as HTMLElement;
+                  // 距底 60px 内视为「在底部」，新消息自动跟底；上翻阅读时不再拉扯
+                  stickToBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+                },
               },
               [
                 ...store.messages.map((msg: any, index: number) => {

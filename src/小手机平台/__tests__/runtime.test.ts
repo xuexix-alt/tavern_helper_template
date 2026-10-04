@@ -247,10 +247,15 @@ function testPhoneComponentHealthReport(): void {
   assert.match(formatPhoneComponentHealth(complete).message, /10\/10/);
 
   const missing = evaluatePhoneComponentHealth(
-    componentSnapshots().filter(snapshot => snapshot.id !== 'wechat.adapter'),
+    componentSnapshots().filter(snapshot => snapshot.id !== 'communication.apps'),
   );
   assert.equal(missing.healthy, false);
-  assert.match(missing.issues.join('\n'), /70微信APP适配器.*缺失/);
+  assert.match(missing.issues.join('\n'), /50通信与情报APP.*缺失/);
+
+  const missingOptional = evaluatePhoneComponentHealth(
+    componentSnapshots().filter(snapshot => snapshot.id !== 'wechat.adapter'),
+  );
+  assert.equal(missingOptional.healthy, true, '可选组件（如微信APP适配器）未安装不应误报缺失');
 
   const mismatched = evaluatePhoneComponentHealth(componentSnapshots({ 'platform.services': { version: '0.9.0' } }));
   assert.match(mismatched.issues.join('\n'), /10平台服务.*0\.9\.0.*1\.0\.1/);
@@ -266,13 +271,14 @@ function testPhoneComponentHealthReport(): void {
   assert.equal(standbyExtension.healthy, true, '扩展模块已注册但待命不应误报故障');
 }
 
-function testPhoneComponentHealthNotificationOnce(): void {
+function testPhoneComponentHealthNotification(): void {
   let moduleListener: (() => void) | null = null;
   const scheduled: Array<() => void> = [];
   const cancelled: number[] = [];
   const notifications: string[] = [];
+  let healthy = false;
   const runtime = {
-    getModules: () => componentSnapshots(),
+    getModules: () => componentSnapshots(healthy ? {} : { 'communication.apps': { status: 'REGISTERED' } }),
     on: (event: string, listener: () => void) => {
       if (event === 'modules') moduleListener = listener;
       return () => {
@@ -287,16 +293,31 @@ function testPhoneComponentHealthNotificationOnce(): void {
       return scheduled.length;
     },
     cancel: timer => cancelled.push(timer as number),
-    notify: summary => notifications.push(summary.message),
+    notify: summary => notifications.push(summary.level),
   });
 
   moduleListener?.();
   assert.equal(cancelled.length, 1, '新模块注册应重置等待窗口');
   scheduled.at(-1)?.();
-  scheduled.at(-1)?.();
+  assert.deepEqual(notifications, ['warning'], '首次评估为 warning 时必须通知');
+
+  // 同级别状态不重复通知
+  healthy = false;
   moduleListener?.();
-  assert.equal(notifications.length, 1, '每次页面加载最多通知一次');
+  scheduled.at(-1)?.();
+  assert.equal(notifications.length, 1, '状态未翻转时不得重复通知');
+
+  // 状态翻转（warning -> success）必须通知：CDN 慢导致组件迟到时，误报可由 success 自愈修正
+  healthy = true;
+  moduleListener?.();
+  scheduled.at(-1)?.();
+  assert.deepEqual(notifications, ['warning', 'success'], '状态翻转必须通知');
   stop();
+
+  // stop 后不再监听
+  moduleListener?.();
+  scheduled.at(-1)?.();
+  assert.equal(notifications.length, 2, 'stop 后不得再通知');
 }
 
 async function testAutomaticInitializationFailureRollback(): Promise<void> {
@@ -1000,7 +1021,7 @@ async function main(): Promise<void> {
   await testAutomaticAdapterRootInitialization();
   await testRuntimeModuleSnapshots();
   testPhoneComponentHealthReport();
-  testPhoneComponentHealthNotificationOnce();
+  testPhoneComponentHealthNotification();
   await testAutomaticInitializationFailureRollback();
   await testRuntimeBridge();
   testEventBus();

@@ -15,6 +15,7 @@ import {
 import type { DemoStatus, DemoTheme, ReaderLogItem, ReaderSummary, TranscriptItem } from './types';
 import { createPreHostVisualHideController } from './preHostVisualHide';
 import { bindPreHostLifecycleBridge } from './preHostLifecycleBridge';
+import { serializePreHostHtml } from './prePluginMedia';
 
 const PRE_EVENT_REFRESH_DELAY_MS = 80;
 const PRE_STREAMING_RENDER_INTERVAL_MS = 120;
@@ -377,7 +378,7 @@ function readHostRenderedMessageHtml(messageId: number) {
   for (const doc of collectHostOnlyDocuments()) {
     const root = doc.querySelector(`.mes[mesid='${normalizedId}'], .mes[data-message-index='${normalizedId}']`);
     const mesText = root?.querySelector?.('.mes_text') as HTMLElement | null;
-    const html = String(mesText?.innerHTML ?? '').trim();
+    const html = mesText ? serializePreHostHtml(mesText).trim() : '';
     if (html) return normalizeDisplayedHtml(html);
   }
 
@@ -398,6 +399,7 @@ function toTranscriptItem(message: ChatMessage, latestId: number, carrierMessage
   const canDeleteFrom = message.message_id > 0 && message.message_id !== carrierMessageId;
   return {
     message_id: message.message_id,
+    swipe_id: message.swipe_id ?? 0,
     role,
     roleLabel: roleLabel(role),
     isOpening: message.message_id === 0,
@@ -625,9 +627,8 @@ export function useSameLayerPre() {
       message.message_id === latestId ? 'latest' : 'not-latest',
       message.is_hidden === true ? 'hidden' : 'visible',
       canDeleteFrom ? 'delete' : 'locked',
-      raw.length,
-      raw.slice(0, 96),
-      raw.slice(-96),
+      message.swipe_id ?? 0,
+      raw,
     ].join('\u0001');
   }
 
@@ -1084,6 +1085,22 @@ export function useSameLayerPre() {
 
   onMounted(() => {
     refreshTranscript('mounted');
+    stops.push(
+      eventOn('generate-image-response' as any, (response: { id?: string; success?: boolean }) => {
+        if (!response?.id || !response.success) return;
+        const ids = new Set<number>();
+        for (const doc of collectHostOnlyDocuments()) {
+          for (const button of Array.from(doc.querySelectorAll('button.image-tag-button[data-request-id]'))) {
+            if ((button as HTMLElement).dataset.requestId !== response.id) continue;
+            const root = button.closest('.mes');
+            const id = root ? readMessageIdFromHostElement(root) : null;
+            if (id !== null) ids.add(id);
+          }
+        }
+        for (const id of ids) preTranscriptItemCache.delete(id);
+        scheduleTargetedTranscriptRefresh([...ids], 'plugin_image_ready');
+      }),
+    );
     const refreshEvents = [
       tavern_events.MESSAGE_SENT,
       tavern_events.MESSAGE_RECEIVED,

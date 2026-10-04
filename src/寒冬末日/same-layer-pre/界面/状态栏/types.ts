@@ -24,6 +24,7 @@ export type ReadingMode = 'following_latest' | 'browsing_history';
 
 export type TranscriptItem = {
   message_id: number;
+  swipe_id?: number;
   role: 'assistant' | 'user' | 'system';
   roleLabel: string;
   isOpening: boolean;

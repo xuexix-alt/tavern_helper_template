@@ -7,6 +7,12 @@ export interface PhoneComponentRequirement {
   readonly label: string;
   readonly version: string;
   readonly activation: 'ready' | 'standby';
+  /**
+   * 可选组件：本套组装不包含它不算缺失（60/70/通用适配器按卡按需安装，
+   * 寒冬卡用寒冬适配器替代通用 90 主适配器）。已安装时仍检查版本与状态。
+   * 适配器全体缺席由总成的 15 秒 phone.adapter 能力检测兜底，不归健康检查管。
+   */
+  readonly optional?: boolean;
 }
 
 export type PhoneComponentStatus = PhoneModuleStatus | 'MISSING';
@@ -45,10 +51,28 @@ export const PHONE_COMPONENT_REQUIREMENTS: readonly PhoneComponentRequirement[] 
   Object.freeze({ id: 'ai.scheduler', label: '小手机-30AI与调度', version: '1.0.2', activation: 'ready' }),
   Object.freeze({ id: 'phone.shell', label: '小手机-40手机外壳', version: '1.0.1', activation: 'ready' }),
   Object.freeze({ id: 'communication.apps', label: '小手机-50通信与情报APP', version: '1.0.1', activation: 'ready' }),
-  Object.freeze({ id: 'intelligence.services', label: '60智能情报', version: '1.0.0', activation: 'standby' }),
-  Object.freeze({ id: 'wechat.adapter', label: '70微信APP适配器', version: '1.0.0', activation: 'standby' }),
-  Object.freeze({ id: 'main.adapter', label: '90主适配器', version: '1.0.0', activation: 'standby' }),
-  Object.freeze({ id: 'winter.adapter', label: '小手机-90寒冬适配器', version: '1.1.2', activation: 'ready' }),
+  Object.freeze({
+    id: 'intelligence.services',
+    label: '60智能情报',
+    version: '1.0.0',
+    activation: 'standby',
+    optional: true,
+  }),
+  Object.freeze({
+    id: 'wechat.adapter',
+    label: '70微信APP适配器',
+    version: '1.0.0',
+    activation: 'standby',
+    optional: true,
+  }),
+  Object.freeze({ id: 'main.adapter', label: '90主适配器', version: '1.0.0', activation: 'standby', optional: true }),
+  Object.freeze({
+    id: 'winter.adapter',
+    label: '小手机-90寒冬适配器',
+    version: '1.1.2',
+    activation: 'ready',
+    optional: true,
+  }),
 ]);
 
 export function evaluatePhoneComponentHealth(
@@ -69,7 +93,9 @@ export function evaluatePhoneComponentHealth(
   const issues: string[] = [];
   for (const component of components) {
     if (component.status === 'MISSING') {
-      issues.push(`${component.label}：缺失`);
+      // 可选组件未安装不算缺失（60/70/通用适配器按卡按需安装）；
+      // 适配器全体缺席由总成的 15 秒 phone.adapter 能力检测兜底。
+      if (!component.optional) issues.push(`${component.label}：缺失`);
       continue;
     }
     if (component.actualVersion !== component.version) {
@@ -131,22 +157,27 @@ export function startPhoneComponentHealthNotification(
   const cancel = options.cancel ?? (timer => window.clearTimeout(timer));
   let timer: number | null = null;
   let active = true;
-  let notified = false;
+  // 组件脚本是独立的网络请求，到达顺序与间隔不定（CDN 抖动时可能超过防抖窗口）。
+  // 因此不做一次性通知：仅在健康状态发生翻转（warning -> success 或反之）时通知，
+  // 早到的 warning 会在后续模块到齐后由 success 自动修正，不会留下过时误报。
+  let lastLevel: 'success' | 'warning' | null = null;
   let stopListening = (): void => undefined;
 
   const run = (): void => {
     timer = null;
-    if (!active || notified) return;
-    notified = true;
-    stopListening();
+    if (!active) return;
     try {
-      options.notify(formatPhoneComponentHealth(evaluatePhoneComponentHealth(runtime.getModules())));
+      const summary = formatPhoneComponentHealth(evaluatePhoneComponentHealth(runtime.getModules()));
+      if (summary.level !== lastLevel) {
+        lastLevel = summary.level;
+        options.notify(summary);
+      }
     } catch (error) {
       options.onError?.(error);
     }
   };
   const queue = (): void => {
-    if (!active || notified) return;
+    if (!active) return;
     if (timer !== null) cancel(timer);
     timer = schedule(run, delayMs);
   };

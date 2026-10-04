@@ -6,7 +6,7 @@ const ACTIVE_INSTANCE_KEY = '__winter_auto_update_active_instance__';
 const INSTANCE_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const CHARACTER_NAME = '末世寒冬 - 星穹秩序';
-const BASE_URL = 'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211';
+const BASE_URL = 'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211';
 const REMOTE_VERSION_PATH = 'src/寒冬末日/自动更新角色卡版本.yaml';
 const CHARACTER_CARD_PATH = 'src/末世寒冬 - 星穹秩序.png';
 

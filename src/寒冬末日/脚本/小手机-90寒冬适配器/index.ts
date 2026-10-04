@@ -744,8 +744,9 @@ function createWinterAdapterModule(): PhoneModule {
       },
     };
     return new ProfileRefreshCoordinator(dependencies, {
+      autoRefreshEnabled: false,
       autoRefreshEvery: 20,
-      promptProfileMaxChars: 2_000,
+      promptProfileMaxChars: 4_000,
     });
   }
 
@@ -992,6 +993,7 @@ function createWinterAdapterModule(): PhoneModule {
 
   async function saveProfileSettings(value: PhoneProfileSettingsView): Promise<void> {
     await requireProfileCoordinator().saveSettings({
+      autoRefreshEnabled: value.autoRefreshEnabled,
       autoRefreshEvery: value.autoRefreshEvery,
       promptProfileMaxChars: value.promptProfileMaxChars,
     });

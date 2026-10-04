@@ -162,7 +162,10 @@ export interface OpenAIModelListOptions {
   fetch?: FetchLike;
 }
 
-function openAiEndpoint(baseUrl: string, resource: 'chat/completions' | 'models'): string {
+/** 形如 v1 / v1beta / v2 / v4 / v1.1 / v3preview 的末段视为已有版本号，不再强补 /v1。 */
+const OPENAI_VERSION_SEGMENT = /^v\d+(?:[._]\d+)*(?:beta\d*|preview\d*|alpha\d*)?$/i;
+
+function openAiBase(baseUrl: string): URL {
   let url: URL;
   try {
     url = new URL(baseUrl);
@@ -172,12 +175,23 @@ function openAiEndpoint(baseUrl: string, resource: 'chat/completions' | 'models'
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error('OpenAI-compatible API URL 只支持 http/https');
   }
-  let path = url.pathname.replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
-  if (!/(?:^|\/)v1$/.test(path)) path = `${path}/v1`;
-  url.pathname = `${path}/${resource}`.replace(/\/{2,}/g, '/');
+  url.pathname = url.pathname.replace(/\/+$/, '').replace(/\/(?:chat\/completions|models)$/, '');
   url.search = '';
   url.hash = '';
+  return url;
+}
+
+function openAiResourceUrl(baseUrl: string, resource: 'chat/completions' | 'models', withV1: boolean): string {
+  const url = openAiBase(baseUrl);
+  const path = url.pathname;
+  const lastSegment = path.split('/').pop() ?? '';
+  const effectivePath = withV1 && !OPENAI_VERSION_SEGMENT.test(lastSegment) ? `${path}/v1` : path;
+  url.pathname = `${effectivePath}/${resource}`.replace(/\/{2,}/g, '/');
   return url.toString();
+}
+
+function openAiEndpoint(baseUrl: string, resource: 'chat/completions' | 'models'): string {
+  return openAiResourceUrl(baseUrl, resource, true);
 }
 
 export function openAiModelsEndpoint(baseUrl: string): string {
@@ -188,16 +202,28 @@ export async function fetchOpenAiCompatibleModels(options: OpenAIModelListOption
   const apiKey = options.apiKey.trim();
   if (!apiKey) throw new Error('OpenAI-compatible API Key 缺失');
 
-  let response: FetchResponseLike;
+  const fetchLike = options.fetch ?? ((url: string, init: RequestInit) => fetch(url, init));
+  // 中转网关布局不一：优先规范化的 /v1/models；404/405 时降级尝试不带 /v1 的 /models（部分网关按路径直出）。
+  const candidates = [openAiModelsEndpoint(options.baseUrl), openAiResourceUrl(options.baseUrl, 'models', false)];
+
+  let response: FetchResponseLike | null = null;
+  let firstErrorStatus = 0;
   try {
-    response = await (options.fetch ?? ((url, init) => fetch(url, init)))(openAiModelsEndpoint(options.baseUrl), {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    for (let index = 0; index < candidates.length; index += 1) {
+      response = await fetchLike(candidates[index], {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (response.ok) break;
+      if (index === 0) firstErrorStatus = response.status;
+      // 只有「端点不存在」（404/405）才值得换路径重试；鉴权与限流错误换端点无意义
+      if (response.status !== 404 && response.status !== 405) break;
+      response = null;
+    }
   } catch {
     throw new Error('拉取模型失败：网络请求失败');
   }
-  if (!response.ok) throw new Error(`拉取模型失败：HTTP ${response.status}`);
+  if (!response || !response.ok) throw new Error(`拉取模型失败：HTTP ${firstErrorStatus || (response?.status ?? 0)}`);
 
   let payload: unknown;
   try {
@@ -239,10 +265,8 @@ export interface OpenAICompatibleProviderOptions {
 }
 
 function endpointFor(baseUrl: string): string {
-  const url = new URL(baseUrl);
-  if (url.protocol !== 'http:' && url.protocol !== 'https:')
-    throw new Error('OpenAI-compatible baseUrl 只支持 http/https');
-  return new URL('/v1/chat/completions', url).toString();
+  // 与模型发现共用同一套规范化：保留用户提供的代理/网关路径，末段为版本号时不重复补 /v1。
+  return openAiEndpoint(baseUrl, 'chat/completions');
 }
 
 export class OpenAICompatibleProvider {

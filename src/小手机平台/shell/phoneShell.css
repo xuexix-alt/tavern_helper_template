@@ -1088,6 +1088,13 @@ button:focus-visible {
   border-radius: 6px;
 }
 
+.phone-profile-settings .phone-field input[type='checkbox'] {
+  width: 22px;
+  min-height: 22px;
+  margin: auto 0;
+  accent-color: var(--dossier-kraft-deep, #8f6134);
+}
+
 .phone-profile-settings__save {
   justify-self: stretch;
   min-height: 36px;
