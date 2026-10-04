@@ -400,6 +400,26 @@ $(() => {
     controller.goHome();
   }
 
+  let contextGeneration = 0;
+  let currentChatId = String((window.parent as any).SillyTavern?.getContext?.()?.chatId || 'default');
+  let chatChangedHandle: { stop(): void } | null = null;
+
+  function getContextGeneration(): number {
+    return contextGeneration;
+  }
+
+  function handleChatChanged(callbackChatId?: unknown): void {
+    const chatId = String(callbackChatId || (window.parent as any).SillyTavern?.getContext?.()?.chatId || 'default');
+    if (chatId === currentChatId) return;
+    currentChatId = chatId;
+    contextGeneration += 1;
+    bus.emit('chat-context-changed', { chatId, generation: contextGeneration });
+    (window.parent as any).ChatCore?.abort?.();
+    (window.parent as any).ChatSync?.cancelPending?.();
+    goHome();
+    phoneIframe?.hide();
+  }
+
   const PhoneDesktop = {
     setup() {
       const sorted = computed(() => [...registeredApps].sort((a, b) => a.order - b.order));
@@ -788,12 +808,16 @@ $(() => {
     adjustEntryToViewport();
   });
 
+  chatChangedHandle = eventOn(tavern_events.CHAT_CHANGED, handleChatChanged);
+
   // ==================== 卸载清理 ====================
 
   let destroyed = false;
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
+    chatChangedHandle?.stop();
+    chatChangedHandle = null;
     controller.destroy();
     if (phoneApp) {
       try {
@@ -848,6 +872,7 @@ $(() => {
     unregisterRenderer,
     openApp,
     goHome,
+    getContextGeneration,
     registeredApps,
     getSettings,
     setSettings,

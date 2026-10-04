@@ -56,5 +56,6 @@
     "Access-Control-Allow-Methods": "GET,HEAD,OPTIONS",
     "Access-Control-Allow-Headers": "*"
   },
-  "kiroAgent.configureMCP": "Disabled"
+  "kiroAgent.configureMCP": "Disabled",
+  "editor.fontFamily": "Consolas, 'Courier New', monospace,Microsoft YaHei Mono, Microsoft YaHei, SimSun, monospace"
 }

@@ -17,6 +17,14 @@ function normalizeDateText(value: unknown): string {
   return `${年号}${month}月${day}日 ${hh}:${mm}`;
 }
 
+// 兼容旧版 initvar / AI 写入的空值(null)：统一归一为空字符串，避免 prefault 只兜底 undefined 导致初始化失败
+const 空值容错字符串Schema = z
+  .preprocess(val => {
+    if (val === null || val === undefined) return '';
+    return val;
+  }, z.string())
+  .prefault('');
+
 const 关系档位Schema = z.enum(['无', '永久逃离', '逃离', '交易', '协作', '忠诚', '归附']).prefault('无');
 const 关系倾向Schema = z.enum(['极易', '易', '中立', '难', '极难', '不可']).prefault('中立');
 const 健康状况Schema = z
@@ -84,7 +92,7 @@ export const Schema = z
   .object({
     世界: z
       .object({
-        地址: z.preprocess(value => value ?? '', z.string()).prefault(''),
+        地址: 空值容错字符串Schema,
         日期: z.preprocess(normalizeDateText, 日期格式Schema).prefault(初始日期).catch(初始日期),
       })
       .prefault({ 地址: '', 日期: 初始日期 }),

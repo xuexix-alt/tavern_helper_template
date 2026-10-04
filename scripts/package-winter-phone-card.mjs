@@ -2,6 +2,7 @@
 import { open, readFile, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CARD_KEYWORDS = Object.freeze(['chara', 'ccv3']);
@@ -12,6 +13,14 @@ const LEGACY_PRE_UI_CDN_URL =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 const PRE_UI_CDN_URL =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+const RECOMMENDED_STATUS_REGEX_NAME = '1.（UI二选一）状态栏（推荐版兼容图文）';
+const DEFAULT_VERSION_MANIFEST = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'src',
+  '寒冬末日',
+  '自动更新角色卡版本.yaml',
+);
 
 export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
   {
@@ -322,6 +331,22 @@ function applyPreUiUrl(card) {
   }
 }
 
+function applyRecommendedStatusRegex(card) {
+  const regexScripts = card.data.extensions?.regex_scripts;
+  if (!Array.isArray(regexScripts)) throw new Error('角色卡缺少正则脚本清单');
+  const matches = regexScripts.filter(script => script?.scriptName === RECOMMENDED_STATUS_REGEX_NAME);
+  if (matches.length !== 1) throw new Error(`${RECOMMENDED_STATUS_REGEX_NAME} 正则必须存在且唯一`);
+  matches[0].findRegex = 'EDEN-STAR';
+  matches[0].maxDepth = null;
+}
+
+async function readCharacterVersion(filename) {
+  const manifest = parseYaml(await readFile(filename, 'utf8'));
+  const version = String(manifest?.版本 ?? '').trim();
+  if (!version) throw new Error(`角色卡版本清单缺少"版本"字段: ${filename}`);
+  return version;
+}
+
 function validateRuntimeScripts(card) {
   const scripts = card.data.extensions?.tavern_helper?.scripts;
   if (!Array.isArray(scripts)) throw new Error('角色卡缺少 Tavern Helper 脚本清单');
@@ -393,17 +418,24 @@ async function writeAtomically(filename, buffer) {
   }
 }
 
-export async function packageWinterPhoneCard({ input, worldbook, write = false }) {
+export async function packageWinterPhoneCard({
+  input,
+  worldbook,
+  versionManifest = DEFAULT_VERSION_MANIFEST,
+  write = false,
+}) {
   const inputBuffer = await readFile(input);
   const chunks = parsePng(inputBuffer);
   const sourceCards = CARD_KEYWORDS.map(keyword => decodeCard(chunks, keyword));
   const card = structuredClone(sourceCards[0]);
   if (card?.data?.name !== EXPECTED_CARD_NAME) throw new Error(`拒绝打包其他角色卡：${card?.data?.name ?? '未知'}`);
   const worldbookData = JSON.parse(await readFile(worldbook, 'utf8'));
+  card.data.character_version = await readCharacterVersion(versionManifest);
   applyWorldbook(card, worldbookData);
   applyRuntimeScripts(card);
   applyPhoneScripts(card);
   applyPreUiUrl(card);
+  applyRecommendedStatusRegex(card);
   validatePackagedCard(card);
 
   const nextChunks = chunks.map(chunk => {
