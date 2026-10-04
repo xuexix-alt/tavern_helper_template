@@ -66,6 +66,7 @@ import {
   canPublishSnapshot,
   capturedWritebackSessionKey,
   characterProfileEntryName,
+  collectChatLoreContext,
   createStableSnapshotKey,
   diffConfirmedMvuChanges,
   extractWinterContactCandidates,
@@ -1490,6 +1491,19 @@ function createWinterAdapterModule(): PhoneModule {
     assertCapturedSession(captured.sessionKey);
     assertHostCapture(hostCapture);
     assertSnapshotCapture(captured);
+    // 世界书 ChatLore 是跨会话的持久聊天摘要：PhoneDb 历史按 sessionKey 隔离，
+    // 换聊天/清库后只剩世界书记录，必须读回本会话条目，否则微信 AI 不知道既有聊天内容。
+    const chatWorldbookEntries = await getWorldbook(capturedWorldbooks.chatWorldbookName);
+    assertCapturedSession(captured.sessionKey);
+    assertHostCapture(hostCapture);
+    assertSnapshotCapture(captured);
+    const chatLoreContext = collectChatLoreContext(
+      chatWorldbookEntries,
+      conversation.kind === 'eden-group' ? 'group' : 'private',
+      conversation.id,
+      6_000,
+      conversation.kind === 'eden-group' ? conversation.title : undefined,
+    );
     const mode = conversation.kind === 'eden-group' ? '伊甸住户群' : '私聊';
     const assembled = promptCatalog.assemblePrompt(
       promptCatalog.createPromptContextSnapshot({
@@ -1498,6 +1512,11 @@ function createWinterAdapterModule(): PhoneModule {
         mode,
         protocol: THREE_LAYER_PROTOCOL,
         members: profiles,
+        ...(chatLoreContext
+          ? {
+              worldbook: [{ id: `chat-lore:${conversation.id}`, content: chatLoreContext, relevant: true }],
+            }
+          : {}),
         // 每次发送重新应用当前正则，避免仅修改正则时继续使用稳定快照中的旧文本。
         recentMainChat: extractRecentMainChatMessages(Number(captured.identity.assistantMessageId), 5),
         phoneHistory: history

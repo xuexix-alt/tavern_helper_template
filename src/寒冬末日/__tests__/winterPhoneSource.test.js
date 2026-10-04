@@ -330,8 +330,12 @@ test('winter WeChat send wires only the current conversation business sources', 
   assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
   assert.match(launchBlock, /playerMessage/);
   assert.match(launchBlock, /\[人物动态\][^\n]*后续/);
-  assert.doesNotMatch(launchBlock, /buildRoleLoreEntries|selectDynamicProfile|collectChatLoreContext/);
-  assert.doesNotMatch(launchBlock, /chatWorldbookEntries|profileSettings|worldbook:\s*|stat_data\.通讯网络/);
+  assert.match(
+    launchBlock,
+    /collectChatLoreContext\(\s*chatWorldbookEntries,\s*conversation\.kind === 'eden-group' \? 'group' : 'private',\s*conversation\.id,/,
+  );
+  assert.match(launchBlock, /chat-lore:\$\{conversation\.id\}/);
+  assert.doesNotMatch(launchBlock, /buildRoleLoreEntries|selectDynamicProfile|profileSettings|stat_data\.通讯网络/);
 });
 
 test('Eden Terminal is a level-one default shelter ability without T2 or T4 phone gating', () => {
