@@ -350,6 +350,7 @@ function applyRecommendedStatusRegex(card) {
   const matches = regexScripts.filter(script => script?.scriptName === RECOMMENDED_STATUS_REGEX_NAME);
   if (matches.length !== 1) throw new Error(`${RECOMMENDED_STATUS_REGEX_NAME} 正则必须存在且唯一`);
   matches[0].findRegex = 'EDEN-STAR';
+  matches[0].minDepth = null;
   matches[0].maxDepth = null;
 }
 
