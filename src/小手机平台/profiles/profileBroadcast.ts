@@ -1,3 +1,5 @@
+import { PROMPT_DEFINITIONS } from '../ai/promptCatalog';
+import { renderPromptTemplate } from '../ai/promptTemplates';
 import { jsonrepair } from 'jsonrepair';
 import { z } from 'zod';
 
@@ -6,19 +8,7 @@ import type { ProfileEvidenceRef } from './profileTypes';
 
 export const PROFILE_BROADCAST_TITLES = ['本台通告', '生活频道', '街坊风声'] as const;
 
-export const PROFILE_BROADCAST_SYSTEM_PROMPT = [
-  '你是「伊甸」定居点广播站的制作人兼轮值播音员，为幸存者播出每期三段节目。',
-  '这份广播不是新闻联播：它的目的是让听众隔着电波感觉到——这栋楼里的人还活着，事情正在发生。',
-  '写作总纲：',
-  '1. 三段节目用三种声音：「本台通告」是管理处的官方腔，短句、公事公办、克制；「生活频道」是物资组熟人的口吻，具体、带数字、有点絮叨；「街坊风声」是爱聊八卦的邻居口吻，绘声绘色、半真半假。不要把三段写成同一种公文。',
-  '2. 长度：「本台通告」「生活频道」各写 60~200 字，公文与絮叨点到即止；「街坊风声」放宽到 60~300 字——传闻值得讲得绘声绘色，可以多给几句起承转合，把「听说」「有人瞧见」的细节铺开讲。',
-  '3. 感知化改写：把素材翻译成住户能感知到的样子——「阶段目标当前值2/目标值3」应播成「19层的清理完成了大半」；「伊甸内网受限」应播成「这两天内网时好时坏」。数字与状态只在对生活有意义时出现。',
-  '4. 活人感：信源可以模糊化（如「据不愿透露姓名的住户」「住在20层的大爷说」）；可以在事实之外补一句楼里人的反应或议论，但不得虚构新的事实、新的人物或新的事件。',
-  '5. 钩子：让听众听完想去看一眼——一句未证实的传闻、一处反常的细节、一句下期预告，都是好钩子。',
-  '6. 红线：严禁编造素材中不存在的事实；严禁续写剧情或向任何人物下达行动指令；严禁引用、改写或暗示任何私聊（微信）内容，即使素材中出现也要忽略。',
-  '7. 仅当某段节目在全部素材中确实无话可说时，该段才写「暂无重大变化」；素材简短但确有事件时必须写成节目，不得放弃。',
-  '8. 只输出符合用户契约的 JSON，不要 Markdown 或额外说明。',
-].join('\n');
+export const PROFILE_BROADCAST_SYSTEM_PROMPT = PROMPT_DEFINITIONS.find(item => item.id === 'broadcast.system')!.text;
 
 const BroadcastSectionSchema = z
   .object({
@@ -58,6 +48,7 @@ const BroadcastOutputSchema = z
   });
 
 export interface ProfileBroadcastInput {
+  wechat?: readonly { conversationId: string; type: 'private' | 'group'; sender: string; content: string }[];
   publicStory: readonly string[];
   publicMvuFacts: Readonly<Record<string, unknown>>;
   publicProfileChanges: readonly {
@@ -140,31 +131,20 @@ export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): strin
     Object.keys(input.publicMvuFacts).length > 0
       ? JSON.stringify(input.publicMvuFacts, null, 2)
       : '（本期暂无公开事实）';
-  return [
-    '请依据下列素材编排本期节目，固定播出三段并保持顺序：本台通告、生活频道、街坊风声。',
-    '',
-    '【本期节目单】',
-    '1.「本台通告」——管理处官方腔，短句、公文式、克制。播：主线任务进展（感知化改写）、通讯网络状态、庇护范围调整、危险与规则提醒。素材取自：主线任务、通讯网络、庇护范围变更。',
-    '2.「生活频道」——物资组熟人口吻，具体、带数字、有点絮叨。播：食物能源储备与消耗、天气气温、居住安排（谁住进了哪）、生活小提醒。素材取自：世界、庇护所、房间、楼层其他住户。',
-    '3.「街坊风声」——八卦邻居口吻，绘声绘色、半真半假。播：人物新动向、邻里互动与互助、楼里传闻（可用「听说」「有人瞧见」起头）。素材取自：人物动向、临时NPC动向、楼层其他住户；传闻必须挂在公开素材上，不得涉及私聊。',
-    '',
-    '【公开正文】（最近剧情，按时间排列）',
-    ...storyLines,
-    '',
-    '【MVU公开事实】',
-    mvuFacts,
-    '',
-    '【人物动向】（仅公开证据支持；私聊内容已剔除，播报也不得引用私聊、改写成新闻或暗示消息来源）',
-    ...changeLines,
-    '',
-    '【输出契约】只输出如下结构的 JSON，三段顺序固定；「本台通告」「生活频道」body 为 60~200 字，「街坊风声」body 为 60~300 字（传闻叙事可以写得更长更放）；仅当该段素材为空时才写「暂无重大变化」：',
-    JSON.stringify({
+  return renderPromptTemplate('broadcast.body', {
+    story: storyLines.join('\n'),
+    wechat: JSON.stringify(
+      (input.wechat ?? []).slice(-30).map(message => ({ ...message, content: message.content.slice(0, 500) })),
+    ),
+    mvuFacts: mvuFacts,
+    changes: changeLines.join('\n'),
+    value1: JSON.stringify({
       sections: PROFILE_BROADCAST_TITLES.map(title => ({
         title,
         body: title === '街坊风声' ? '节目正文（60~300字）' : '节目正文（60~200字）',
       })),
     }),
-  ].join('\n');
+  });
 }
 
 export function parseProfileBroadcastOutput(raw: string): ProfileBroadcastOutput {

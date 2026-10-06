@@ -323,11 +323,14 @@ test('winter WeChat send wires only the current conversation business sources', 
   assert.match(launchBlock, /mvuData:\s*resolveWinterPersonMvu\(member\.id,\s*captured\.mvu\.stat_data\)/);
   assert.match(
     launchBlock,
-    /recentMainChat:\s*extractRecentMainChatMessages\(\s*Number\(captured\.identity\.assistantMessageId\),\s*5,\s*profiles\.map\(member => member\.name\),?\s*\)/,
+    /recentMainChat:\s*extractRecentMainChatMessages\(\s*Number\(captured\.identity\.assistantMessageId\),\s*getPromptSettings\(\)\.context\.storyCount,\s*profiles\.map\(member => member\.name\),?\s*\)/,
   );
-  assert.match(launchBlock, /protectedPhoneHistoryCount:\s*16/);
-  assert.match(launchBlock, /maxCharacters:\s*32_000/);
-  assert.match(launchBlock, /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-30\)/);
+  assert.match(launchBlock, /protectedPhoneHistoryCount:\s*getPromptSettings\(\)\.context\.protectedHistory/);
+  assert.match(launchBlock, /maxCharacters:\s*getPromptSettings\(\)\.context\.maxCharacters/);
+  assert.match(
+    launchBlock,
+    /history\s*\.filter\(item\s*=>\s*item\.id\s*!==\s*messageId\)\s*\.slice\(-getPromptSettings\(\)\.context\.historyCount\)/,
+  );
   assert.match(launchBlock, /playerMessage/);
   assert.match(launchBlock, /\[人物动态\][^\n]*后续/);
   assert.match(

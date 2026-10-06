@@ -1,3 +1,4 @@
+import { getPromptSettings } from '../ai/promptTemplates';
 import type { PromptMainChatEntry, PromptSourceEntry } from '../ai/promptAssembler';
 import type { ProfileStoryMessage } from '../profiles/profileTypes';
 import { extractRoleStoryContext } from './roleStoryContext';
@@ -77,7 +78,7 @@ export function extractRecentMainChatMessages(
           ? message
           : {
               ...message,
-              content: extractRoleStoryContext(message.content, roleNames),
+              content: extractRoleStoryContext(message.content, roleNames, getPromptSettings().context.storyCharacters),
             },
       )
       .filter(message => message.content !== '')

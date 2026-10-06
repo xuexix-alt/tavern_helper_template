@@ -19,7 +19,11 @@ const WORLDBOOK = path.join(ROOT, 'src', '寒冬末日.json');
 const PHONE_CDN_ROOT =
   'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 const PRE_UI_CDN_URL =
-  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+  'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
+
+assert.ok(PHONE_SCRIPT_DEFINITIONS.some(script => script.name === '小手机-60智能情报' && script.distPath === '小手机平台/脚本/60智能情报/index.js'), '角色卡必须包含 60 智能情报');
+const assembly = await readFile(path.join(ROOT, 'src/小手机平台/总成/index.ts'), 'utf8');
+assert.ok(assembly.includes("import '../脚本/60智能情报';"), '总成必须加载 60 智能情报');
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const tempRoot = await mkdtemp(path.join(tmpdir(), 'winter-phone-card-'));
@@ -43,7 +47,7 @@ try {
   );
   await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
   const productionPreRegexes = card.data.extensions.regex_scripts.filter(script =>
-    script.replaceString?.includes('cdn.jsdelivr.net') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
+    script.replaceString?.includes('.jsdelivr.net/gh/') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
   );
   assert.equal(productionPreRegexes.length, 2);
   assert.ok(productionPreRegexes.every(script => script.replaceString.includes(PRE_UI_CDN_URL)));

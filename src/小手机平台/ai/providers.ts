@@ -337,6 +337,14 @@ export class OpenAICompatibleProvider {
       fetched = Promise.reject(new ProviderError('OpenAI-compatible timer setup failed', 'setup'));
     }
 
+    const requestMessages = buildRolePrompts(
+      assembledPrompt,
+      options.mode,
+      options.systemPrompt,
+      options.replyAs,
+      options.playerMessage ?? '',
+      options.jailbreakLayers,
+    );
     const send = (endpoint: string): Promise<FetchResponseLike> => {
       try {
         assertNotInterrupted();
@@ -355,14 +363,7 @@ export class OpenAICompatibleProvider {
                 body: JSON.stringify({
                   ...this.#parameters,
                   model: this.#model,
-                  messages: buildRolePrompts(
-                    assembledPrompt,
-                    options.mode,
-                    options.systemPrompt,
-                    options.replyAs,
-                    options.playerMessage ?? '',
-                    options.jailbreakLayers,
-                  ),
+                  messages: requestMessages,
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
                     : {}),

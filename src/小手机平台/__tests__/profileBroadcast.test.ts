@@ -38,11 +38,11 @@ function testSystemPromptPushesNewsWriting(): void {
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /三种声音/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /感知化改写/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /活人感/);
-  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /仅当某段节目在全部素材中确实无话可说/);
-  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /严禁.*私聊/);
+  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /播音员不是全知旁白/);
+  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /微信是编剧参考/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /严禁编造/);
   // 「街坊风声」传闻叙事上限放宽到 300 字，其余两段保持 200 字
-  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /「街坊风声」放宽到 60~300 字/);
+  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /立场/);
 }
 
 function testRumorSectionRelaxedLength(): void {
@@ -162,6 +162,15 @@ function main(): void {
   testPromptContainsPublicEvidenceOnly();
   testSystemPromptPushesNewsWriting();
   testRumorSectionRelaxedLength();
+  const withChat = buildProfileBroadcastPrompt({
+    publicStory: [],
+    publicMvuFacts: {},
+    publicProfileChanges: [],
+    wechat: [{ conversationId: 'a', type: 'private', sender: '甲', content: 'CHAT_REFERENCE' }],
+  });
+  assert.match(withChat, /CHAT_REFERENCE/);
+  assert.match(withChat, /不等于公开播报授权/);
+  assert.doesNotMatch(withChat, /{{wechat}}/);
   testStrictThreeSectionOutput();
   testOutputTolerance();
   testMeaningfulStorySummaryFilter();

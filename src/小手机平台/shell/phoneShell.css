@@ -1812,3 +1812,80 @@ button:focus-visible {
   color: #b0433a;
   font-size: 11px;
 }
+
+.phone-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  padding-bottom: 80px;
+}
+.phone-prompt p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  opacity: 0.8;
+}
+.phone-prompt h3 {
+  margin: 0;
+}
+.phone-prompt textarea,
+.phone-prompt select,
+.phone-prompt input[type='number'] {
+  box-sizing: border-box;
+  width: 100%;
+  color: inherit;
+  background: rgba(128, 128, 128, 0.1);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+}
+.phone-prompt textarea {
+  resize: vertical;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.phone-prompt-editor {
+  min-height: 310px;
+}
+.phone-prompt button,
+.phone-prompt summary {
+  min-height: 44px;
+  padding: 10px;
+  cursor: pointer;
+}
+.phone-prompt button {
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.12);
+  color: inherit;
+}
+.phone-prompt details {
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+  padding-top: 8px;
+}
+.phone-prompt label {
+  display: block;
+  margin: 10px 0;
+  font-size: 13px;
+}
+.phone-prompt-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.phone-prompt-actions button {
+  font-size: 11px;
+}
+.phone-prompt-save {
+  position: sticky;
+  bottom: 0;
+  padding: 8px 0;
+}
+.phone-prompt-save button {
+  width: 100%;
+  background: #238254;
+  color: white;
+  font-weight: 600;
+}

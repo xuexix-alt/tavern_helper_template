@@ -93,6 +93,11 @@ export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
     distPath: '小手机平台/脚本/50通信与情报APP/index.js',
   },
   {
+    id: '76a4249a-e849-5f5b-8bd5-a6f89b640060',
+    name: '小手机-60智能情报',
+    distPath: '小手机平台/脚本/60智能情报/index.js',
+  },
+  {
     id: '76a4249a-e849-5f5b-8bd5-a6f89b640090',
     name: '小手机-90寒冬适配器',
     distPath: '寒冬末日/脚本/小手机-90寒冬适配器/index.js',
@@ -333,7 +338,8 @@ function applyPreUiUrl(card) {
       // 先把旧卡的 testingcf 镜像迁移到官方 cdn，再执行既有版本升级重写
       script.replaceString = script.replaceString
         .replaceAll('https://testingcf.jsdelivr.net/', 'https://cdn.jsdelivr.net/')
-        .replaceAll(LEGACY_PRE_UI_CDN_URL, PRE_UI_CDN_URL);
+        .replaceAll(LEGACY_PRE_UI_CDN_URL, PRE_UI_CDN_URL)
+        .replaceAll(PRE_UI_CDN_URL.replace('testingcf.jsdelivr.net', 'cdn.jsdelivr.net'), PRE_UI_CDN_URL);
     }
   }
 }
@@ -379,7 +385,7 @@ function validatePackagedCard(card) {
   const scripts = card.data.extensions?.tavern_helper?.scripts;
   const productionPreRegexes = card.data.extensions?.regex_scripts?.filter(
     script =>
-      script?.replaceString?.includes('cdn.jsdelivr.net') &&
+      script?.replaceString?.includes('.jsdelivr.net/gh/') &&
       script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
   );
   if (
@@ -391,7 +397,7 @@ function validatePackagedCard(card) {
   const ids = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
   const phoneScripts = Array.isArray(scripts) ? scripts.filter(script => ids.has(script?.id)) : [];
   if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
-    throw new Error('角色卡未包含八个唯一的小手机脚本');
+    throw new Error('角色卡未包含全部唯一的小手机脚本');
   }
   for (const definition of PHONE_SCRIPT_DEFINITIONS) {
     const script = phoneScripts.find(candidate => candidate.id === definition.id);

@@ -1,3 +1,4 @@
+import { createPromptEditorApp } from './promptEditor';
 import { WECHAT_APP_ICON_SRC } from '../assets/wechatIcon';
 import type { PhoneHostAction } from '../core/types';
 import type { ProfileEditPatch, ProfileVersion } from '../profiles/profileTypes';
@@ -15,7 +16,8 @@ export type PhoneRoute =
   | 'profile-detail'
   | 'smart-tasks'
   | 'settings'
-  | 'diagnostics';
+  | 'diagnostics'
+  | 'prompt-editor';
 
 export interface PhoneConversationView {
   id: string;
@@ -318,6 +320,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
   let chatScrollAnchor: { atBottom: boolean; scrollTop: number } = { atBottom: true, scrollTop: 0 };
 
   return [
+    createPromptEditorApp(),
     {
       route: 'messages',
       title: '微信',

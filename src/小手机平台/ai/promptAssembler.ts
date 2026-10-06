@@ -1,3 +1,4 @@
+import { renderPromptTemplate } from './promptTemplates';
 export interface PromptSnapshotKey {
   chatId: string;
   assistantMessageId: string | number;
@@ -160,27 +161,19 @@ function render(snapshot: PromptContextSnapshot, selected: AssemblySelection): s
   );
 
   return [
-    '【1 协议与事实规则】',
-    snapshot.protocol,
-    `事实冲突时严格按以下优先级处理：${FACT_PRIORITY}`,
-    `稳定快照（只读标识）：session=${snapshot.sessionKey}；主聊天截至楼层=${snapshot.snapshotKey.assistantMessageId}`,
-    '',
-    '【2 当前会话】',
-    snapshot.mode,
-    '',
-    '【3 当前人物资料】',
-    '固定档案只提供稳定人设；每条当前人物 MVU 只属于其标注的 identity，不得挪用给其他人物。',
-    readonlyData(memberData),
-    ...exactMvuData,
-    '',
-    '【4 最近主聊天】',
-    readonlyData({ recentMainChat: selected.mainChat }),
-    '',
-    '【5 微信历史与本轮玩家消息】',
-    readonlyData({ phoneHistory: selected.history, playerMessage: snapshot.playerMessage }),
-    '',
-    '【6 输出 JSON 契约】',
-    snapshot.outputContract,
+    renderPromptTemplate('chat.rules', {
+      protocol: snapshot.protocol,
+      factPriority: FACT_PRIORITY,
+      sessionKey: snapshot.sessionKey,
+      storyMessageId: snapshot.snapshotKey.assistantMessageId,
+    }),
+    renderPromptTemplate('chat.session', { mode: snapshot.mode }),
+    renderPromptTemplate('chat.members', { members: readonlyData(memberData), mvu: exactMvuData.join('\n') }),
+    renderPromptTemplate('chat.story', { story: readonlyData({ recentMainChat: selected.mainChat }) }),
+    renderPromptTemplate('chat.history', {
+      wechat: readonlyData({ phoneHistory: selected.history, playerMessage: snapshot.playerMessage }),
+    }),
+    renderPromptTemplate('chat.output', { outputContract: snapshot.outputContract }),
   ].join('\n');
 }
 

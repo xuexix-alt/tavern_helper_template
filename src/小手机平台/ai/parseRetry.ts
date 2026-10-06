@@ -1,3 +1,4 @@
+import { renderPromptTemplate } from './promptTemplates';
 import { parseResponse, ResponseParseError, type ParsedMessage } from './responseParser';
 
 /** 与 providers 的 RequestHandle<string> 结构兼容的最小接口 */
@@ -39,21 +40,12 @@ export function buildParseRetryPrompt(input: {
 }): string {
   const limit = input.rawEchoLimit ?? 4_000;
   const echoed = input.raw.length > limit ? `${input.raw.slice(0, limit)}…（已截断）` : input.raw;
-  return [
-    input.originalPrompt,
-    '',
-    '─── 上一次输出无法解析，请修正后重新输出 ───',
-    '【上一次的输出】',
-    echoed,
-    '',
-    '【解析失败原因】',
-    input.error,
-    '',
-    '【修正要求】',
-    '只输出一个 JSON 对象，禁止 JSON 以外的任何文字：',
-    '{"messages":[{"sender":"成员姓名","content":"纯文本消息"}]}',
-    `sender 必须属于：${input.members.join('、')}`,
-  ].join('\n');
+  return renderPromptTemplate('retry.body', {
+    originalPrompt: input.originalPrompt,
+    previousOutput: echoed,
+    error: input.error,
+    members: input.members.join('、'),
+  });
 }
 
 /**
