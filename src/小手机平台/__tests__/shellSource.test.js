@@ -888,25 +888,40 @@ function testContext(overrides = {}) {
   };
 }
 
-
 test('prompt editor keeps draft through navigation and saves templates by character', async () => {
- const values=new Map();const before=global.localStorage;
- global.localStorage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
- try {
- const {createPromptEditorApp}=loadTypeScriptModule('src/小手机平台/apps/promptEditor.ts');
- const app=createPromptEditorApp();
- const context={document:fakeDocument,listen:(n,event,fn)=>n.addEventListener(event,fn),announce(){},requestRender(){},navigate(){},isActive:()=>true};
- const all=node=>[node,...node.children.flatMap(all)];
- let root=await app.render(context);
- const editor=all(root).find(n=>n.attributes['aria-label']==='事实规则与优先级内容');
- editor.value+='\nCUSTOM_DRAFT';
- for(const fn of editor.listeners.get('input'))fn();
- assert.equal(values.size,0);
- root=await app.render(context);
- assert.ok(all(root).find(n=>n.attributes['aria-label']==='事实规则与优先级内容').value.includes('CUSTOM_DRAFT'));
- all(root).find(n=>n.textContent==='保存全部修改').click();
- await new Promise(resolve=>setImmediate(resolve));
- assert.equal(values.size,1);
- assert.ok([...values.values()][0].includes('CUSTOM_DRAFT'));
- } finally {global.localStorage=before;}
+  const values = new Map();
+  const before = global.localStorage;
+  global.localStorage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
+  try {
+    const { createPromptEditorApp } = loadTypeScriptModule('src/小手机平台/apps/promptEditor.ts');
+    const app = createPromptEditorApp();
+    const context = {
+      document: fakeDocument,
+      listen: (n, event, fn) => n.addEventListener(event, fn),
+      announce() {},
+      requestRender() {},
+      navigate() {},
+      isActive: () => true,
+    };
+    const all = node => [node, ...node.children.flatMap(all)];
+    let root = await app.render(context);
+    const editor = all(root).find(n => n.attributes['aria-label'] === '事实规则与优先级内容');
+    editor.value += '\nCUSTOM_DRAFT';
+    for (const fn of editor.listeners.get('input')) fn();
+    assert.equal(values.size, 0);
+    root = await app.render(context);
+    assert.ok(
+      all(root)
+        .find(n => n.attributes['aria-label'] === '事实规则与优先级内容')
+        .value.includes('CUSTOM_DRAFT'),
+    );
+    all(root)
+      .find(n => n.textContent === '保存全部修改')
+      .click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(values.size, 1);
+    assert.ok([...values.values()][0].includes('CUSTOM_DRAFT'));
+  } finally {
+    global.localStorage = before;
+  }
 });
