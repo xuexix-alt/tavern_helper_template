@@ -1,7 +1,7 @@
 import { compare } from 'compare-versions';
 import { z } from 'zod';
 
-const SCRIPT_VERSION = '1.0.0';
+const SCRIPT_VERSION = '1.0.1';
 const ACTIVE_INSTANCE_KEY = '__winter_auto_update_active_instance__';
 const INSTANCE_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -13,6 +13,21 @@ const CHARACTER_CARD_PATH = 'src/末世寒冬 - 星穹秩序.png';
 const BTN_CHECK = '角色卡更新-检查';
 const BTN_APPLY = '角色卡更新-执行';
 const BTN_TOGGLE_AUTO = '角色卡更新-自动开关';
+let updateInProgress = false;
+
+function hasIntegratedPhone(scripts: ScriptTree[]): boolean {
+  return scripts.some(script => {
+    if (!script.enabled) return false;
+    if (script.type === 'folder') return hasIntegratedPhone(script.scripts);
+    return (
+      script.id === 'd9d2a605-64f7-4b3e-8d79-310b6bf87051' && script.content.includes('dist/小手机平台/一体化/index.js')
+    );
+  });
+}
+
+function requiresIntegratedPhone(version: string): boolean {
+  return compare(version, '2.0.0', '>=');
+}
 
 const SettingsSchema = z
   .object({
@@ -141,8 +156,11 @@ async function fetchRemoteVersion(versionUrl: string): Promise<string> {
   return version;
 }
 
-async function importRemoteCharacterPng(pngUrl: string) {
-  const response = await fetch(pngUrl, { cache: 'no-store' });
+async function importRemoteCharacterPng(pngUrl: string, expectedVersion: string) {
+  // 版本参数隔离不同发布版本；CDN 仍可能返回旧内容，因此导入后必须回读核验。
+  const url = new URL(pngUrl);
+  url.searchParams.set('version', expectedVersion);
+  const response = await fetch(url.toString(), { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`拉取远程角色卡失败（${response.status}）: ${pngUrl}`);
   }
@@ -151,11 +169,25 @@ async function importRemoteCharacterPng(pngUrl: string) {
   if (pngBlob.size <= 0) {
     throw new Error(`远程角色卡为空: ${pngUrl}`);
   }
-  await importRawCharacter(`${CHARACTER_NAME}.png`, pngBlob);
+  const imported = await importRawCharacter(`${CHARACTER_NAME}.png`, pngBlob);
+  if (!imported.ok) throw new Error(`导入角色卡失败（${imported.status}），未确认更新成功`);
+
+  const installed = await getCharacter(CHARACTER_NAME);
+  if (installed.version.trim() !== expectedVersion) {
+    throw new Error(
+      `导入后版本为 ${installed.version || '空'}，预期 ${expectedVersion}；远端卡可能尚未同步，请稍后重试`,
+    );
+  }
+  if (
+    requiresIntegratedPhone(expectedVersion) &&
+    !hasIntegratedPhone(installed.extensions.tavern_helper?.scripts ?? [])
+  ) {
+    throw new Error('导入后缺少已启用的小手机一体化脚本，更新不完整；请重新执行更新');
+  }
 }
 
 async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: boolean }) {
-  if (!isActiveInstance()) return;
+  if (!isActiveInstance() || updateInProgress) return;
 
   const forceApply = options?.force_apply === true;
   const fromButton = options?.from_button === true;
@@ -165,11 +197,12 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
     return;
   }
 
+  updateInProgress = true;
   try {
     const remote = resolveRemoteUrls();
     const remoteVersion = await fetchRemoteVersion(remote.version_url);
     const current = await getCharacter(CHARACTER_NAME);
-    const currentVersion = String(current?.version ?? '').trim() || settings.last_applied_remote_version || '0.0.0';
+    const currentVersion = String(current?.version ?? '').trim() || '0.0.0';
     const needUpdate = safeCompareLt(currentVersion, remoteVersion);
 
     patchSettings(prev => ({
@@ -179,12 +212,16 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
       last_error: '',
     }));
 
-    if (needUpdate) {
+    if (needUpdate || (forceApply && currentVersion === remoteVersion)) {
       const shouldApply = settings.auto_apply || forceApply;
       if (shouldApply) {
-        await importRemoteCharacterPng(remote.png_url);
+        await importRemoteCharacterPng(remote.png_url, remoteVersion);
         patchSettings(prev => ({ ...prev, last_applied_remote_version: remoteVersion }));
-        toastr.success(`[自动更新] 已更新 ${CHARACTER_NAME}: ${currentVersion} -> ${remoteVersion}`, '自动更新角色卡');
+        toastr.success(
+          `[自动更新] 已核验 ${CHARACTER_NAME}: ${currentVersion} -> ${remoteVersion}。请刷新整个酒馆页面，清理旧小手机运行时`,
+          '自动更新角色卡',
+          { timeOut: 15_000 },
+        );
       } else {
         toastr.info(
           `[自动更新] 检测到新版本 ${remoteVersion}（当前 ${currentVersion}），点击"${BTN_APPLY}"可执行更新`,
@@ -194,6 +231,12 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
       return;
     }
 
+    if (
+      requiresIntegratedPhone(currentVersion) &&
+      !hasIntegratedPhone(current.extensions.tavern_helper?.scripts ?? [])
+    ) {
+      throw new Error('当前卡缺少已启用的小手机一体化脚本；同版本可点击“角色卡更新-执行”重新导入，随后刷新酒馆');
+    }
     if (settings.notify_latest || fromButton) {
       toastr.success(`[自动更新] 已是最新版本 ${currentVersion}`, '自动更新角色卡');
     }
@@ -205,6 +248,8 @@ async function runUpdateFlow(options?: { force_apply?: boolean; from_button?: bo
       last_error: msg,
     }));
     toastr.warning(`[自动更新] ${msg}`, '自动更新角色卡');
+  } finally {
+    updateInProgress = false;
   }
 }
 
