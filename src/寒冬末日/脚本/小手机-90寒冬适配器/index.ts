@@ -1020,6 +1020,7 @@ function createWinterAdapterModule(): PhoneModule {
       await requestProfileAnalysis(prompt, {
         mode: 'structured',
         systemPrompt: renderPromptTemplate('broadcast.system'),
+        jsonMode: true,
       })
     ).content;
     assertSnapshotCapture(captured);
@@ -2142,7 +2143,7 @@ function isStoredProfileBroadcastIssue(
     typeof value.rawText === 'string' &&
     typeof value.sourceStoryCursor === 'string' &&
     Array.isArray(value.sections) &&
-    value.sections.length === 3 &&
+    (value.sections.length === 3 || value.sections.length === 4) &&
     value.sections.every(
       section => isRecord(section) && typeof section.title === 'string' && typeof section.body === 'string',
     )

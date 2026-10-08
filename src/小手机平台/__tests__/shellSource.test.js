@@ -806,7 +806,7 @@ test('broadcast app renders profile radio history and can regenerate without rep
       {
         id: 'radio',
         source: '伊甸末日广播',
-        content: '本期三栏广播',
+        content: '本期四栏广播',
         trust: 'unverified',
         kind: 'profile-radio',
         generatedAt: 1_000,
@@ -814,6 +814,7 @@ test('broadcast app renders profile radio history and can regenerate without rep
           { title: '本台通告', body: '北门关闭。' },
           { title: '生活频道', body: '暂无重大变化。' },
           { title: '街坊风声', body: '诊疗室恢复值守。' },
+          { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
         ],
       },
     ],
@@ -828,6 +829,8 @@ test('broadcast app renders profile radio history and can regenerate without rep
   assert.match(textValues, /本台通告/);
   assert.match(textValues, /生活频道/);
   assert.match(textValues, /街坊风声/);
+  assert.match(textValues, /床头床尾/);
+  assert.match(textValues, /夜话 · 亲密关系/);
   findByClass(rendered, 'phone-broadcast-regenerate').click();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(regenerations, 1);

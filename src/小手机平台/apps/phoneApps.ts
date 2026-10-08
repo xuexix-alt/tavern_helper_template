@@ -285,15 +285,17 @@ function avatar(document: Document, name: string, className: string): HTMLSpanEl
   return node;
 }
 
-/** 电台三声腔：段名 -> 栏目气质标签（用于 UI 呈现） */
+/** 电台栏目：段名 -> 栏目气质标签（用于 UI 呈现） */
 const BROADCAST_VOICE_LABELS: Record<string, string> = {
   notice: '管理处 · 官方',
   life: '物资组 · 生活',
   whisper: '街坊 · 道听途说',
+  intimacy: '夜话 · 亲密关系',
   plain: '本台栏目',
 };
 
 function broadcastVoiceOf(title: string): keyof typeof BROADCAST_VOICE_LABELS {
+  if (title === '床头床尾') return 'intimacy';
   if (title.includes('通告')) return 'notice';
   if (title.includes('生活')) return 'life';
   if (title.includes('风声') || title.includes('街坊')) return 'whisper';
@@ -691,7 +693,7 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         output.className = 'phone-list phone-broadcast-list';
         for (const item of items) {
           if (item.kind === 'profile-radio' && item.sections?.length) {
-            // 三声联播节目存档：本台通告 / 生活频道 / 街坊风声
+            // 节目存档：兼容旧三栏及含「床头床尾」的新四栏
             const issue = document.createElement('li');
             issue.className = 'phone-broadcast-issue';
             const issueHeader = document.createElement('header');

@@ -368,3 +368,28 @@ function assertArrayLiteral(source, key, values) {
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+test('radio storage accepts legacy three-section and new four-section issues', () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const start = source.indexOf('function isStoredProfileBroadcastIssue(');
+  const end = source.indexOf('\nfunction isInboxRecord', start);
+  assert.ok(start >= 0 && end > start);
+  const { outputText } = require('typescript').transpileModule(source.slice(start, end), {
+    compilerOptions: { target: require('typescript').ScriptTarget.ES2022 },
+  });
+  const accepts = new Function('isRecord', outputText + '\nreturn isStoredProfileBroadcastIssue;')(
+    value => value !== null && typeof value === 'object' && !Array.isArray(value),
+  );
+  const issue = {
+    kind: 'profile-radio',
+    generatedAt: 1000,
+    rawText: '{}',
+    sourceStoryCursor: '1',
+    sections: ['本台通告', '生活频道', '街坊风声', '床头床尾'].map(title => ({ title, body: '节目正文' })),
+  };
+  assert.equal(accepts(issue), true);
+  assert.equal(accepts({ ...issue, sections: issue.sections.slice(0, 3) }), true);
+  assert.equal(accepts({ ...issue, sections: issue.sections.slice(0, 2) }), false);
+  assert.equal(accepts({ ...issue, sections: [...issue.sections, issue.sections[0]] }), false);
+  assert.equal(accepts({ ...issue, sections: [...issue.sections.slice(0, 3), { title: '床头床尾', body: 1 }] }), false);
+});

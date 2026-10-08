@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { PhoneDb } from '../data/phoneDb';
 import type { ProfileEvidenceRef } from './profileTypes';
 
-export const PROFILE_BROADCAST_TITLES = ['本台通告', '生活频道', '街坊风声'] as const;
+export const PROFILE_BROADCAST_TITLES = ['本台通告', '生活频道', '街坊风声', '床头床尾'] as const;
 
 export const PROFILE_BROADCAST_SYSTEM_PROMPT = PROMPT_DEFINITIONS.find(item => item.id === 'broadcast.system')!.text;
 
@@ -23,7 +23,7 @@ const BroadcastSectionSchema = z
 
 const BroadcastOutputSchema = z
   .object({
-    sections: z.tuple([BroadcastSectionSchema, BroadcastSectionSchema, BroadcastSectionSchema]),
+    sections: z.tuple([BroadcastSectionSchema, BroadcastSectionSchema, BroadcastSectionSchema, BroadcastSectionSchema]),
   })
   .strip()
   // 段目按标题识别并回填固定节目单顺序：乱序重排、未知标题按剩余位置认领，
@@ -44,7 +44,7 @@ const BroadcastOutputSchema = z
       const fallback = unclaimed.shift();
       return fallback ? { ...fallback, title } : { title, body: '暂无重大变化' };
     });
-    return { sections } satisfies ProfileBroadcastOutput;
+    return { sections: [sections[0], sections[1], sections[2], sections[3]] } satisfies ProfileBroadcastOutput;
   });
 
 export interface ProfileBroadcastInput {
@@ -63,10 +63,19 @@ export interface ProfileBroadcastSection {
 }
 
 export interface ProfileBroadcastOutput {
-  sections: readonly [ProfileBroadcastSection, ProfileBroadcastSection, ProfileBroadcastSection];
+  sections: readonly [
+    ProfileBroadcastSection,
+    ProfileBroadcastSection,
+    ProfileBroadcastSection,
+    ProfileBroadcastSection,
+  ];
 }
 
-export interface StoredProfileBroadcastIssue extends ProfileBroadcastOutput {
+export interface StoredProfileBroadcastIssue extends Omit<ProfileBroadcastOutput, 'sections'> {
+  /** 新期为四栏；旧三栏存档仍可展示，不凭空补造历史节目。 */
+  sections:
+    | ProfileBroadcastOutput['sections']
+    | readonly [ProfileBroadcastSection, ProfileBroadcastSection, ProfileBroadcastSection];
   id: string;
   sessionKey: string;
   kind: 'profile-radio';
@@ -93,6 +102,37 @@ function parseJsonCandidate(raw: string): unknown {
   }
 }
 
+/** 分开提取草稿和正式结果，避免首尾花括号把多个 JSON 拼成一个。 */
+function broadcastJsonCandidates(raw: string): string[] {
+  const text = raw.replace(/<(think|thinking|analysis)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '').trim();
+  const candidates = [text];
+  for (const match of text.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)) {
+    candidates.push(match[1].trim());
+  }
+  let start = -1;
+  let depth = 0;
+  let quote: string | null = null;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = null;
+      continue;
+    }
+    if (depth > 0 && (char === '"' || char === "'")) {
+      quote = char;
+    } else if (char === '{') {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (char === '}' && depth > 0) {
+      depth -= 1;
+      if (depth === 0) candidates.push(text.slice(start, index + 1));
+    }
+  }
+  return candidates;
+}
 /** 防御性解包 OpenAI 兼容信封（choices[0].message.content / content 字段）。 */
 function parseResponsePayload(raw: string): unknown {
   const parsed = parseJsonCandidate(raw);
@@ -148,11 +188,16 @@ export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): strin
 }
 
 export function parseProfileBroadcastOutput(raw: string): ProfileBroadcastOutput {
-  try {
-    return BroadcastOutputSchema.parse(parseResponsePayload(raw));
-  } catch (error) {
-    throw new Error(`广播结构或字段无效：${error instanceof Error ? error.message : String(error)}`);
+  const candidates = broadcastJsonCandidates(raw);
+  let lastError: unknown;
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    try {
+      return BroadcastOutputSchema.parse(parseResponsePayload(candidates[index]));
+    } catch (error) {
+      lastError = error;
+    }
   }
+  throw new Error(`广播结构或字段无效：${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
 export async function saveProfileBroadcastIssue(

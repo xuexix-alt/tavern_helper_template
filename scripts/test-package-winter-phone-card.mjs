@@ -10,20 +10,45 @@ import {
   PHONE_SCRIPT_DEFINITIONS,
   RUNTIME_SCRIPT_DEFINITIONS,
   packageWinterPhoneCard,
+  migratePhoneScripts,
   readCharacterCardPng,
 } from './package-winter-phone-card.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_PNG = path.join(ROOT, 'src', '末世寒冬 - 星穹秩序.png');
 const WORLDBOOK = path.join(ROOT, 'src', '寒冬末日.json');
-const PHONE_CDN_ROOT =
-  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+const PHONE_CDN_ROOT = 'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 const PRE_UI_CDN_URL =
   'https://testingcf.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 
-assert.ok(PHONE_SCRIPT_DEFINITIONS.some(script => script.name === '小手机-60智能情报' && script.distPath === '小手机平台/脚本/60智能情报/index.js'), '角色卡必须包含 60 智能情报');
-const assembly = await readFile(path.join(ROOT, 'src/小手机平台/总成/index.ts'), 'utf8');
+assert.equal(PHONE_SCRIPT_DEFINITIONS.length, 1, '发布卡只安装一个小手机脚本');
+assert.equal(PHONE_SCRIPT_DEFINITIONS[0].distPath, '小手机平台/一体化/index.js');
+const assembly = await readFile(path.join(ROOT, 'src/小手机平台/一体化/index.ts'), 'utf8');
 assert.ok(assembly.includes("import '../脚本/60智能情报';"), '总成必须加载 60 智能情报');
+
+const unrelated = { id: 'custom', name: '玩家自定义脚本', content: 'console.log(1)', enabled: true };
+const migrated = migratePhoneScripts([
+  unrelated,
+  { id: '76a4249a-e849-5f5b-8bd5-a6f89b640001', name: '改名后的运行时' },
+  { id: 'renamed', name: '小手机-20数据与同步' },
+  {
+    id: 'assembly',
+    name: '旧总成',
+    content: "import 'https://cdn.jsdelivr.net/gh/example/dist/小手机平台/总成/index.js'",
+  },
+  {
+    id: 'wechat',
+    name: '旧微信扩展',
+    content: "import 'https://cdn.jsdelivr.net/gh/example/dist/小手机平台/脚本/70微信APP适配器/index.js'",
+  },
+  { id: 'debug', name: '脚本测试' },
+  { id: 'another-import', name: '小手机一体化（寒冬）', enabled: false },
+]);
+assert.equal(migrated.length, 2);
+assert.deepEqual(migrated[0], unrelated, '不得删除不相关的自定义脚本');
+assert.equal(migrated[1].name, '小手机一体化（寒冬）');
+assert.equal(migrated[1].enabled, true);
+assert.deepEqual(migratePhoneScripts(migrated), migrated, '迁移应幂等');
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const tempRoot = await mkdtemp(path.join(tmpdir(), 'winter-phone-card-'));
@@ -46,12 +71,15 @@ try {
     RUNTIME_SCRIPT_DEFINITIONS.length + PHONE_SCRIPT_DEFINITIONS.length,
   );
   await assert.rejects(() => readCharacterCardPng(tempPng, 'missing'), /missing/);
-  const productionPreRegexes = card.data.extensions.regex_scripts.filter(script =>
-    script.replaceString?.includes('.jsdelivr.net/gh/') && script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
+  const productionPreRegexes = card.data.extensions.regex_scripts.filter(
+    script =>
+      script.replaceString?.includes('.jsdelivr.net/gh/') &&
+      script.replaceString.includes('same-layer-pre/界面/状态栏/index.html'),
   );
   assert.equal(productionPreRegexes.length, 2);
   assert.ok(productionPreRegexes.every(script => script.replaceString.includes(PRE_UI_CDN_URL)));
   assert.equal(card.data.name, '末世寒冬 - 星穹秩序');
+  assert.equal(card.data.character_version, '2.0.0');
   const scripts = card.data.extensions.tavern_helper.scripts;
   const findScript = name => {
     const matches = scripts.filter(script => script.name === name);
@@ -62,14 +90,9 @@ try {
   const phoneScripts = scripts.filter(script => phoneIds.has(script.id));
   assert.equal(phoneScripts.length, PHONE_SCRIPT_DEFINITIONS.length);
   assert.equal(new Set(phoneScripts.map(script => script.id)).size, PHONE_SCRIPT_DEFINITIONS.length);
-  assert.deepEqual(
-    phoneScripts.map(script => script.id).sort(),
-    [...phoneIds].sort(),
-  );
+  assert.deepEqual(phoneScripts.map(script => script.id).sort(), [...phoneIds].sort());
   assert.ok(
-    card.data.character_book.entries.some(
-      entry => entry.comment === '变量列表' && entry.content.includes('通讯网络'),
-    ),
+    card.data.character_book.entries.some(entry => entry.comment === '变量列表' && entry.content.includes('通讯网络')),
   );
   assert.ok(phoneScripts.every(script => script.type === 'script' && script.enabled === true));
   assert.deepEqual(
@@ -79,36 +102,27 @@ try {
   assert.ok(phoneScripts.every(script => !script.content.includes('localhost')));
 
   assert.equal(findScript('zod mvu').enabled, true);
-  assert.deepEqual(
-    (({ enabled, content }) => ({ enabled, content }))(findScript('zod 定义')),
-    {
-      enabled: true,
-      content:
-        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
-    },
-  );
-  assert.deepEqual(
-    (({ enabled, content }) => ({ enabled, content }))(findScript('后台数据维护')),
-    {
-      enabled: true,
-      content:
-        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
-    },
-  );
-  assert.equal(findScript('脚本测试').enabled, false);
-  assert.equal(findScript('变量结构测试').enabled, false);
-  assert.deepEqual(
-    (({ enabled, content }) => ({ enabled, content }))(findScript('自动更新角色卡')),
-    {
-      enabled: true,
-      content:
-        "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
-    },
-  );
+  assert.deepEqual((({ enabled, content }) => ({ enabled, content }))(findScript('zod 定义')), {
+    enabled: true,
+    content:
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/变量结构/index.js'",
+  });
+  assert.deepEqual((({ enabled, content }) => ({ enabled, content }))(findScript('后台数据维护')), {
+    enabled: true,
+    content:
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+  });
+  assert.ok(!scripts.some(script => ['脚本测试', '变量结构测试'].includes(script.name)));
+  assert.equal(scripts.filter(script => script.name.startsWith('小手机')).length, 1);
+  assert.deepEqual((({ enabled, content }) => ({ enabled, content }))(findScript('自动更新角色卡')), {
+    enabled: true,
+    content:
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+  });
   assert.equal(new Set(RUNTIME_SCRIPT_DEFINITIONS.map(script => script.id)).size, RUNTIME_SCRIPT_DEFINITIONS.length);
   assert.deepEqual(
-    scripts.slice(0, 6).map(script => script.name),
-    ['zod mvu', 'zod 定义', '后台数据维护', '脚本测试', '变量结构测试', '自动更新角色卡'],
+    scripts.slice(0, 4).map(script => script.name),
+    ['zod mvu', 'zod 定义', '后台数据维护', '自动更新角色卡'],
   );
 
   const beforeSecondPass = hash(await readFile(tempPng));

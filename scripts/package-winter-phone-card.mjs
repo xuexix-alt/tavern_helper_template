@@ -7,8 +7,7 @@ import { parse as parseYaml } from 'yaml';
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const CARD_KEYWORDS = Object.freeze(['chara', 'ccv3']);
 const EXPECTED_CARD_NAME = '末世寒冬 - 星穹秩序';
-const PHONE_CDN_ROOT =
-  'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
+const PHONE_CDN_ROOT = 'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/';
 const LEGACY_PRE_UI_CDN_URL =
   'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/same-layer-pre/界面/状态栏/index.html';
 const PRE_UI_CDN_URL =
@@ -43,16 +42,6 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
       "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   },
   {
-    id: 'd1e3e9ef-56b7-47ce-80f2-3f38b727087f',
-    name: '脚本测试',
-    enabled: false,
-  },
-  {
-    id: '689f697c-34f4-496c-a324-3d39e55db69b',
-    name: '变量结构测试',
-    enabled: false,
-  },
-  {
     id: '76a4249a-e849-5f5b-8bd5-a6f89b6400a0',
     name: '自动更新角色卡',
     enabled: true,
@@ -61,7 +50,7 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
   },
 ]);
 
-export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
+const LEGACY_PHONE_SCRIPT_DEFINITIONS = Object.freeze([
   {
     id: '76a4249a-e849-5f5b-8bd5-a6f89b640001',
     name: '小手机-00运行时管理器',
@@ -108,6 +97,41 @@ export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
     distPath: '小手机平台/脚本/90主适配器/index.js',
   },
 ]);
+
+export const PHONE_SCRIPT_DEFINITIONS = Object.freeze([
+  {
+    id: 'd9d2a605-64f7-4b3e-8d79-310b6bf87051',
+    name: '小手机一体化（寒冬）',
+    distPath: '小手机平台/一体化/index.js',
+  },
+]);
+
+const REMOVED_DEBUG_SCRIPTS = [
+  { id: 'd1e3e9ef-56b7-47ce-80f2-3f38b727087f', name: '脚本测试' },
+  { id: '689f697c-34f4-496c-a324-3d39e55db69b', name: '变量结构测试' },
+];
+
+function isRetiredScript(script) {
+  const legacy = [...LEGACY_PHONE_SCRIPT_DEFINITIONS, ...REMOVED_DEBUG_SCRIPTS];
+  if (legacy.some(item => item.id === script?.id || item.name === script?.name)) return true;
+  if (['小手机平台总成', '小手机-70微信APP适配器'].includes(script?.name)) return true;
+  const content = typeof script?.content === 'string' ? script.content : '';
+  return [
+    ...LEGACY_PHONE_SCRIPT_DEFINITIONS.map(item => item.distPath),
+    '小手机平台/总成/index.js',
+    '小手机平台/脚本/70微信APP适配器/index.js',
+  ].some(distPath => content.includes('dist/' + distPath));
+}
+
+/** 2.0 发布迁移：移除已被一体化替代的入口，保留不相关的脚本。 */
+export function migratePhoneScripts(existingScripts) {
+  const ids = new Set(PHONE_SCRIPT_DEFINITIONS.map(item => item.id));
+  const names = new Set(PHONE_SCRIPT_DEFINITIONS.map(item => item.name));
+  return [
+    ...existingScripts.filter(script => !isRetiredScript(script) && !ids.has(script?.id) && !names.has(script?.name)),
+    ...PHONE_SCRIPT_DEFINITIONS.map(buildPhoneScript),
+  ];
+}
 
 let crcTable;
 
@@ -296,11 +320,7 @@ function applyPhoneScripts(card) {
   const extensions = (card.data.extensions ??= {});
   const helper = (extensions.tavern_helper ??= { scripts: [], variables: {} });
   const existingScripts = Array.isArray(helper.scripts) ? helper.scripts : [];
-  const phoneIds = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
-  helper.scripts = [
-    ...existingScripts.filter(script => !phoneIds.has(script?.id)),
-    ...PHONE_SCRIPT_DEFINITIONS.map(buildPhoneScript),
-  ];
+  helper.scripts = migratePhoneScripts(existingScripts);
   helper.variables ??= {};
 }
 
@@ -324,7 +344,10 @@ function applyRuntimeScripts(card) {
     ...unmanagedScripts,
   ].map(script =>
     typeof script?.content === 'string'
-      ? { ...script, content: script.content.replaceAll('https://testingcf.jsdelivr.net/', 'https://cdn.jsdelivr.net/') }
+      ? {
+          ...script,
+          content: script.content.replaceAll('https://testingcf.jsdelivr.net/', 'https://cdn.jsdelivr.net/'),
+        }
       : script,
   );
   helper.variables ??= {};
@@ -380,7 +403,10 @@ function validatePackagedCard(card) {
     throw new Error(`角色卡名称必须精确为 ${EXPECTED_CARD_NAME}`);
   }
   const entries = card.data.character_book?.entries;
-  if (!Array.isArray(entries) || !entries.some(entry => entry.comment === '变量列表' && entry.content.includes('通讯网络'))) {
+  if (
+    !Array.isArray(entries) ||
+    !entries.some(entry => entry.comment === '变量列表' && entry.content.includes('通讯网络'))
+  ) {
     throw new Error('角色卡世界书未包含带通讯网络的变量列表');
   }
   const scripts = card.data.extensions?.tavern_helper?.scripts;
@@ -397,7 +423,10 @@ function validatePackagedCard(card) {
   }
   const ids = new Set(PHONE_SCRIPT_DEFINITIONS.map(script => script.id));
   const phoneScripts = Array.isArray(scripts) ? scripts.filter(script => ids.has(script?.id)) : [];
-  if (phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length || new Set(phoneScripts.map(script => script.id)).size !== ids.size) {
+  if (
+    phoneScripts.length !== PHONE_SCRIPT_DEFINITIONS.length ||
+    new Set(phoneScripts.map(script => script.id)).size !== ids.size
+  ) {
     throw new Error('角色卡未包含全部唯一的小手机脚本');
   }
   for (const definition of PHONE_SCRIPT_DEFINITIONS) {
@@ -407,6 +436,7 @@ function validatePackagedCard(card) {
       throw new Error(`${definition.name} 未使用 20260211 分支 CDN import`);
     }
   }
+  if (scripts.some(isRetiredScript)) throw new Error('角色卡仍包含被替代的小手机组件或本地测试脚本');
   validateRuntimeScripts(card);
 }
 

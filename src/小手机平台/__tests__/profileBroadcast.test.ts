@@ -35,7 +35,7 @@ function testPromptContainsPublicEvidenceOnly(): void {
 
 function testSystemPromptPushesNewsWriting(): void {
   // 系统提示词必须给出节目感设计与写作机制，而不是引导兜底
-  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /三种声音/);
+  assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /四种声音/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /感知化改写/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /活人感/);
   assert.match(PROFILE_BROADCAST_SYSTEM_PROMPT, /播音员不是全知旁白/);
@@ -61,20 +61,21 @@ function testRumorSectionRelaxedLength(): void {
   assert.match(contract, /"title":"本台通告","body":"节目正文（60~200字）"/);
 }
 
-function testStrictThreeSectionOutput(): void {
+function testStrictFourSectionOutput(): void {
   const issue = parseProfileBroadcastOutput(
     JSON.stringify({
       sections: [
         { title: '本台通告', body: '北门暂时关闭。' },
         { title: '生活频道', body: '暂无重大变化。' },
         { title: '街坊风声', body: '诊疗室恢复值守。' },
+        { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
       ],
     }),
   );
-  assert.equal(issue.sections.length, 3);
+  assert.equal(issue.sections.length, 4);
   assert.deepEqual(
     issue.sections.map(section => section.title),
-    ['本台通告', '生活频道', '街坊风声'],
+    ['本台通告', '生活频道', '街坊风声', '床头床尾'],
   );
 }
 
@@ -86,12 +87,13 @@ function testOutputTolerance(): void {
         { title: '生活频道', body: '食堂今天有热汤。' },
         { title: '本台通告', body: '北门暂时关闭。' },
         { title: '街坊风声', body: '诊疗室恢复值守。' },
+        { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
       ],
     }),
   );
   assert.deepEqual(
     reordered.sections.map(section => section.title),
-    ['本台通告', '生活频道', '街坊风声'],
+    ['本台通告', '生活频道', '街坊风声', '床头床尾'],
   );
   assert.equal(reordered.sections[0].body, '北门暂时关闭。');
   assert.equal(reordered.sections[1].body, '食堂今天有热汤。');
@@ -101,7 +103,8 @@ function testOutputTolerance(): void {
     "sections": [
       { "title": "本台通告", "body": "北门暂时关闭。" }
       { "title": "生活频道", "body": "食堂今天有热汤。" },
-      { "title": "街坊风声", "body": "诊疗室恢复值守。" }
+      { "title": "街坊风声", "body": "诊疗室恢复值守。" },
+      { "title": "床头床尾", "body": "暂无可点评的亲密互动" }
     ]
   }`;
   assert.doesNotThrow(() => parseProfileBroadcastOutput(malformed));
@@ -118,6 +121,7 @@ function testOutputTolerance(): void {
               { title: '本台通告', body: '北门暂时关闭。' },
               { title: '生活频道', body: '食堂今天有热汤。' },
               { title: '街坊风声', body: '诊疗室恢复值守。' },
+              { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
             ],
           }),
         },
@@ -133,6 +137,7 @@ function testOutputTolerance(): void {
         { title: '本台通告', body: '', extra: 'x' },
         { title: '生活频道', body: null },
         { title: '街坊风声', body: '风'.repeat(1_600) },
+        { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
       ],
       meta: '多余顶层字段',
     }),
@@ -142,7 +147,7 @@ function testOutputTolerance(): void {
   assert.equal(tolerant.sections[2].body.length, 1_500);
   assert.equal((tolerant as unknown as Record<string, unknown>).meta, undefined);
 
-  // B5: 段数不足仍然失败（三段是硬契约）
+  // B5: 段数不足仍然失败（四段是硬契约）
   assert.throws(
     () => parseProfileBroadcastOutput(JSON.stringify({ sections: [{ title: '本台通告', body: '只有一段。' }] })),
     /广播结构或字段无效/,
@@ -171,10 +176,43 @@ function main(): void {
   assert.match(withChat, /CHAT_REFERENCE/);
   assert.match(withChat, /不等于公开播报授权/);
   assert.doesNotMatch(withChat, /{{wechat}}/);
-  testStrictThreeSectionOutput();
+  testStrictFourSectionOutput();
   testOutputTolerance();
+  assert.throws(
+    () =>
+      parseProfileBroadcastOutput(
+        JSON.stringify({
+          sections: [
+            { title: '本台通告', body: '通告' },
+            { title: '生活频道', body: '生活' },
+            { title: '街坊风声', body: '风声' },
+          ],
+        }),
+      ),
+    /广播结构或字段无效/,
+  );
   testMeaningfulStorySummaryFilter();
+  testFinalJsonAfterDraft();
   console.log('profile broadcast tests passed');
+}
+
+function testFinalJsonAfterDraft(): void {
+  const final = JSON.stringify({
+    sections: [
+      { title: '本台通告', body: '北门暂时关闭。' },
+      { title: '生活频道', body: '食堂今天有热汤。' },
+      { title: '街坊风声', body: '诊疗室恢复值守。' },
+      { title: '床头床尾', body: '两人终于愿意把心里的话说开。' },
+    ],
+  });
+  for (const raw of [
+    `<think>素材参考：{"通讯网络":{"状态":"不稳定"}}</think>\n${final}`,
+    `草稿：{"sections":[]}\n正式输出：\n\`\`\`json\n${final}\n\`\`\``,
+    `${final}\n{"sections":[{"title":"本台通告","body":"草稿"},{"title":"生活频道","body":"草稿"},{"title":"街坊风声","body":"草稿"}]}\n${final}`,
+    `${final}\n附加元数据：{"note":"结束"}`,
+  ]) {
+    assert.equal(parseProfileBroadcastOutput(raw).sections[0].body, '北门暂时关闭。');
+  }
 }
 
 main();
