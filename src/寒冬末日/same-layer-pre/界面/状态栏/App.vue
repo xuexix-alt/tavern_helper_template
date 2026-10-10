@@ -7,10 +7,13 @@
 </template>
 
 <script setup lang="ts">
-import { inject, ref } from 'vue';
+import { provide } from 'vue';
 import StoryPagePre from './pages/StoryPagePre.vue';
+import { preWebFullscreenKey, usePreWebFullscreen } from './usePreWebFullscreen';
 
-const isFullscreen = inject('isFullscreen', ref(false));
+const fullscreen = usePreWebFullscreen();
+provide(preWebFullscreenKey, fullscreen);
+const { isFullscreen } = fullscreen;
 </script>
 
 <style scoped>

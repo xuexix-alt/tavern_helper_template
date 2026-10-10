@@ -246,6 +246,8 @@ async function confirmChoice() {
 
 defineExpose({
   openChoiceModal,
+  closeChoiceModal,
+  choiceModalOpen,
 });
 </script>
 

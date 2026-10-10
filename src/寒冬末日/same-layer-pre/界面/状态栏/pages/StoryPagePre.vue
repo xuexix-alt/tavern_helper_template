@@ -1,5 +1,9 @@
 <template>
-  <section class="ui-host-shell same-layer-pre-host layout-reader-desktop" :style="shellStyleVars">
+  <section
+    class="ui-host-shell same-layer-pre-host layout-reader-desktop"
+    :class="{ 'is-web-fullscreen': isFullscreen }"
+    :style="shellStyleVars"
+  >
     <header class="ui-topbar">
       <div class="ui-topbar-brand">
         <span class="ui-dot" :class="{ 'save-failing': Boolean(errorMessage) }"></span>
@@ -9,6 +13,16 @@
 
       <div class="ui-topbar-actions">
         <span class="ui-online">PRE</span>
+
+        <button
+          type="button"
+          class="ui-icon-btn ui-fullscreen-trigger"
+          :aria-label="isFullscreen ? '退出网页全屏' : '进入网页全屏'"
+          :aria-pressed="isFullscreen"
+          @click="toggleWebFullscreen"
+        >
+          {{ isFullscreen ? '退出' : '全屏' }}
+        </button>
 
         <button
           type="button"
@@ -82,6 +96,9 @@
 
           <transition name="toolbar-menu-fade">
             <div v-if="topbarMoreMenuOpen" class="ui-more-menu-list clip-corner-sm" role="menu">
+              <button type="button" class="ui-page-menu-item" role="menuitem" @click="toggleWebFullscreen">
+                {{ isFullscreen ? '退出网页全屏' : '网页全屏' }}
+              </button>
               <button type="button" class="ui-page-menu-item" role="menuitem" @click="openRoleDrawerFromMoreMenu">
                 角色
               </button>
@@ -494,7 +511,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useEventListener, useThrottleFn } from '@vueuse/core';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { preWebFullscreenKey } from '../usePreWebFullscreen';
 import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
 import {
   buildOpeningGeneratePrompt,
@@ -569,6 +588,8 @@ import { syncRuntimeOpeningWorldbook } from '../runtimeOpeningWorldbookSync';
 
 type ComposerExpose = {
   openChoiceModal: () => Promise<void> | void;
+  choiceModalOpen: boolean;
+  closeChoiceModal: () => void;
 };
 
 type AppleReaderExpose = {
@@ -628,6 +649,45 @@ const topbarMoreMenuOpen = ref(false);
 const activeUtilityDrawer = ref<null | 'system' | 'map'>(null);
 const transcriptFloorDraft = ref(transcriptDisplayCount.value);
 const readerShellHeight = ref('min(92vh, 960px)');
+const fullscreen = inject(preWebFullscreenKey)!;
+const { isFullscreen, viewportHeight } = fullscreen;
+
+function toggleWebFullscreen() {
+  closeTopbarMenus();
+  fullscreen.toggle();
+}
+
+function dismissFullscreenOverlay(): boolean {
+  if (composerRef.value?.choiceModalOpen) {
+    composerRef.value.closeChoiceModal();
+    return true;
+  }
+  if (galleryRoleAssignEntry.value) {
+    galleryRoleAssignEntry.value = null;
+    return true;
+  }
+  // Mandatory opening setup cannot be dismissed; it still owns Escape.
+  if (shouldShowOpeningSetup.value) return true;
+  const overlays = [openingModalOpen, typographyModalOpen, betaModalOpen, appleHistoryOpen];
+  for (const overlay of overlays) {
+    if (!overlay.value) continue;
+    overlay.value = false;
+    return true;
+  }
+  if (topbarMoreMenuOpen.value || transcriptWindowMenuOpen.value) {
+    closeTopbarMenus();
+    return true;
+  }
+  if (activeUtilityDrawer.value) {
+    closeUtilityDrawer();
+    return true;
+  }
+  if (roleDrawerOpen.value || galleryDrawerOpen.value) {
+    closeSideDrawers();
+    return true;
+  }
+  return false;
+}
 const runtimeOpeningCharacterPresetRead = readRuntimeOpeningPresetFromCharacterVariables(
   getVariables({ type: 'character' }),
 );
@@ -661,7 +721,7 @@ const typographyModalOpen = ref(false);
 const openingTransferBusy = ref(false);
 let runtimeOpeningPresetRetryTimerIds: number[] = [];
 const shellStyleVars = computed(() => ({
-  '--reader-shell-height': readerShellHeight.value,
+  '--reader-shell-height': isFullscreen.value ? `${viewportHeight.value}px` : readerShellHeight.value,
   ...(bodyLineHeight.value == null ? {} : { '--reader-body-line-height': String(bodyLineHeight.value) }),
 }));
 const isAppleTheme = computed(() => theme.value === 'apple' || theme.value.startsWith('apple-'));
@@ -1612,6 +1672,7 @@ watch(
 );
 
 onMounted(() => {
+  fullscreen.dismissOverlay.value = dismissFullscreenOverlay;
   if (shouldPersistInitialRuntimeOpeningSnapshot && runtimeOpeningPreset.value) {
     try {
       persistRuntimeOpeningChatSnapshot(runtimeOpeningPreset.value);
@@ -1636,19 +1697,20 @@ onMounted(() => {
   });
   refreshMvuVariableUpdateMode();
   updateReaderShellHeight();
-  window.addEventListener('resize', updateReaderShellHeight);
-  window.visualViewport?.addEventListener('resize', updateReaderShellHeight);
 });
 
+const throttledReaderResize = useThrottleFn(updateReaderShellHeight, 50);
+useEventListener(window, 'resize', throttledReaderResize);
+if (window.visualViewport) useEventListener(window.visualViewport, 'resize', throttledReaderResize);
+
 onBeforeUnmount(() => {
+  fullscreen.dismissOverlay.value = null;
   runtimeOpeningPresetRetryTimerIds.forEach(timerId => window.clearTimeout(timerId));
   runtimeOpeningPresetRetryTimerIds = [];
   stopPhoneSubscription?.();
   stopPhoneSubscription = null;
   phoneBridge?.dispose();
   phoneBridge = null;
-  window.removeEventListener('resize', updateReaderShellHeight);
-  window.visualViewport?.removeEventListener('resize', updateReaderShellHeight);
 });
 </script>
 
@@ -3480,6 +3542,60 @@ onBeforeUnmount(() => {
   ) {
     outline-width: 4px;
     outline-color: var(--foreground);
+  }
+}
+/* Fullscreen owns a measured host viewport, including the mobile keyboard height. */
+.ui-host-shell.is-web-fullscreen {
+  min-height: 0;
+  height: var(--reader-shell-height);
+  max-height: var(--reader-shell-height);
+  border-radius: 0;
+}
+
+.is-web-fullscreen .ui-topbar {
+  flex-shrink: 0;
+}
+
+.is-web-fullscreen :deep(.pre-transcript-list),
+.is-web-fullscreen :deep(.pre-apple-reader) {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  overscroll-behavior-y: contain;
+}
+
+.is-web-fullscreen .ui-bottom-dock {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 760px) {
+  .ui-fullscreen-trigger[aria-pressed='false'] {
+    display: none;
+  }
+
+  .is-web-fullscreen .ui-topbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-block: 6px;
+  }
+}
+
+@media (max-height: 480px) {
+  .is-web-fullscreen .ui-topbar,
+  .is-web-fullscreen .ui-bottom-console-strip {
+    min-height: 0;
+    padding-block: 4px;
+  }
+
+  .is-web-fullscreen .ui-transcript-panel,
+  .is-web-fullscreen .ui-bottom-dock {
+    gap: 4px;
+    padding-block: 4px;
+  }
+
+  .is-web-fullscreen .pre-reader-meta {
+    display: none;
   }
 }
 </style>
