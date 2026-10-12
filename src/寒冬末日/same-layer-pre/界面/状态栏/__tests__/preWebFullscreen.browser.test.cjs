@@ -133,6 +133,85 @@ test('web fullscreen preserves the host, plugins and Eden terminal', async t => 
     await page.evaluate(() => phone.dispose());
   });
 
+  await t.test('mobile host dialogs suspend PRE painting until the last dialog closes', async t => {
+    await page.setViewportSize({ width: 390, height: 700 });
+    t.after(async () => {
+      await page.evaluate(() => document.querySelectorAll('[data-test-popup]').forEach(e => e.remove()));
+    });
+    await page.evaluate(() => {
+      fullscreen.updateViewport();
+      for (const name of ['st-chatu8-edit-backdrop', 'st-chatu8-preview-backdrop']) {
+        const popup = document.createElement('div');
+        popup.className = name;
+        popup.dataset.testPopup = '';
+        // Reproduce a handset/host theme placing a popup below the iframe.
+        popup.style.cssText = 'position:fixed;inset:0;z-index:100;background:white';
+        document.body.append(popup);
+      }
+    });
+    await page.waitForFunction(() => getComputedStyle(originalFrame).visibility === 'hidden', null, { timeout: 1500 });
+    assert.equal(
+      await page.evaluate(() => document.elementFromPoint(195, 350).className),
+      'st-chatu8-preview-backdrop',
+    );
+    await page.evaluate(() => document.querySelector('.st-chatu8-preview-backdrop').remove());
+    assert.equal(await page.evaluate(() => getComputedStyle(originalFrame).visibility), 'hidden');
+    await page.evaluate(() => {
+      document.querySelector('.st-chatu8-edit-backdrop').style.display = 'none';
+    });
+    await page.waitForFunction(() => getComputedStyle(originalFrame).visibility === 'visible');
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        same: originalFrame.contentWindow === originalWindow,
+        draft: originalFrame.contentDocument.querySelector('textarea').value,
+        full: fullscreen.active,
+      })),
+      { same: true, draft: 'draft', full: true },
+    );
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.evaluate(() => {
+      document.querySelector('.st-chatu8-edit-backdrop').style.display = 'block';
+    });
+    assert.equal(
+      await page.evaluate(() => getComputedStyle(originalFrame).visibility),
+      'visible',
+      'desktop keeps its existing backdrop presentation',
+    );
+    await page.setViewportSize({ width: 390, height: 700 });
+    await page.waitForFunction(() => getComputedStyle(originalFrame).visibility === 'hidden');
+    await page.evaluate(() => fullscreen.exit());
+    assert.equal(await page.evaluate(() => originalFrame.hasAttribute('data-eden-pre-host-overlay')), false);
+    await page.evaluate(() => {
+      document.querySelector('.st-chatu8-edit-backdrop').remove();
+      fullscreen.enter();
+    });
+  });
+
+  await t.test('touch menu measurement is not scaled during its opening animation', async t => {
+    // Fixture from chatu8/styles/click-trigger.css; independent of an initialized gitlink.
+    await page.addStyleTag({
+      content: `
+      @keyframes st-chatu8-click-trigger-scaleIn { from {transform:scale(.85);opacity:0} to {transform:scale(1);opacity:1} }
+      @keyframes st-chatu8-click-trigger-fadeIn { from {opacity:0} to {opacity:1} }
+      .st-chatu8-click-trigger-bubble { animation:st-chatu8-click-trigger-scaleIn .2s ease-out;transform-origin:top left; }
+    `,
+    });
+    t.after(() => page.evaluate(() => document.querySelector('[data-test-bubble]')?.remove()));
+    const dimensions = await page.evaluate(() => {
+      const overlay = document.createElement('div');
+      overlay.className = 'st-chatu8-click-trigger-overlay';
+      overlay.dataset.testBubble = '';
+      const bubble = document.createElement('div');
+      bubble.className = 'st-chatu8-click-trigger-bubble';
+      bubble.style.cssText = 'width:200px;height:240px;box-sizing:border-box;position:absolute;transform:none';
+      overlay.append(bubble);
+      document.body.append(overlay);
+      const rect = bubble.getBoundingClientRect();
+      return { measured: rect.width, layout: bubble.offsetWidth };
+    });
+    assert.equal(dimensions.measured, dimensions.layout, 'the plugin positions the menu using getBoundingClientRect');
+  });
+
   await t.test('short mobile viewport and viewport offsets use actual available size', async () => {
     await page.setViewportSize({ width: 390, height: 320 });
     await page.evaluate(() => fullscreen.updateViewport());
@@ -184,5 +263,6 @@ test('web fullscreen preserves the host, plugins and Eden terminal', async t => 
       timeout: 1500,
     });
     assert.equal(await page.evaluate(() => document.querySelectorAll('[data-eden-pre-fullscreen]').length), 0);
+    assert.equal(await page.evaluate(() => originalFrame.hasAttribute('data-eden-pre-host-overlay')), false);
   });
 });

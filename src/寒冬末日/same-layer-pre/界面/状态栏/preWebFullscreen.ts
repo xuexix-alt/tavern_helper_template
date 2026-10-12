@@ -1,5 +1,13 @@
 const FULLSCREEN_ATTR = 'data-eden-pre-fullscreen';
 const STYLE_ID = 'eden-pre-web-fullscreen-style';
+const HOST_OVERLAY_ATTR = 'data-eden-pre-host-overlay';
+const CHATU8_OVERLAYS = [
+  '.st-chatu8-click-trigger-overlay',
+  '.st-chatu8-popup-overlay',
+  '.st-chatu8-edit-backdrop',
+  '.st-chatu8-preview-backdrop',
+  '.st-chatu8-confirm-backdrop',
+].join(',');
 
 export interface PreWebFullscreenState {
   active: boolean;
@@ -32,12 +40,31 @@ export function createPreWebFullscreenController(
   let style: HTMLStyleElement | null = null;
   let observer: MutationObserver | null = null;
   let ancestors: HTMLElement[] = [];
+  let previousOverlayState: string | null = null;
   const attributes: Array<{ element: HTMLElement; previous: string | null; owned: string }> = [];
   let scrollPositions: Array<{ element: HTMLElement; top: number; left: number }> = [];
 
   function mark(element: HTMLElement, value: string) {
     attributes.push({ element, previous: element.getAttribute(FULLSCREEN_ATTR), owned: value });
     element.setAttribute(FULLSCREEN_ATTR, value);
+  }
+
+  function restoreOverlayState() {
+    if (frame.getAttribute(HOST_OVERLAY_ATTR) !== 'true') return;
+    if (previousOverlayState === null) frame.removeAttribute(HOST_OVERLAY_ATTR);
+    else frame.setAttribute(HOST_OVERLAY_ATTR, previousOverlayState);
+  }
+
+  function syncHostOverlayState() {
+    if (!active) return;
+    const open = Array.from(doc.querySelectorAll<HTMLElement>(CHATU8_OVERLAYS)).some(overlay => {
+      if (overlay.hidden || !overlay.getClientRects().length) return false;
+      const computed = host.getComputedStyle(overlay);
+      return computed.display !== 'none' && computed.visibility === 'visible';
+    });
+    if (open) {
+      if (frame.getAttribute(HOST_OVERLAY_ATTR) !== 'true') frame.setAttribute(HOST_OVERLAY_ATTR, 'true');
+    } else restoreOverlayState();
   }
 
   function exit() {
@@ -47,6 +74,7 @@ export function createPreWebFullscreenController(
     observer = null;
     style?.remove();
     style = null;
+    restoreOverlayState();
     for (const { element, previous, owned } of attributes.splice(0)) {
       if (element.getAttribute(FULLSCREEN_ATTR) !== owned) continue;
       if (previous === null) element.removeAttribute(FULLSCREEN_ATTR);
@@ -93,6 +121,18 @@ iframe[${FULLSCREEN_ATTR}="frame"] {
   margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
   box-sizing: border-box !important; display: block !important; z-index: 900 !important;
   transform: none !important; transition: none !important;
+}
+/* Do not let a fixed iframe's mobile compositing/touch surface cover host dialogs.
+   The browsing context stays alive: no remount, inert, display:none or reparenting. */
+@media (max-width: 760px), (pointer: coarse) {
+  iframe[${FULLSCREEN_ATTR}="frame"][${HOST_OVERLAY_ATTR}="true"] {
+    visibility: hidden !important; pointer-events: none !important;
+  }
+}
+/* chatu8 measures the bubble on its first frame. Scaling .85 -> 1 makes that
+   measurement too small and clips the final menu at the right/bottom edge. */
+html[${FULLSCREEN_ATTR}="root"] .st-chatu8-click-trigger-bubble {
+  animation-name: st-chatu8-click-trigger-fadeIn !important;
 }`;
     onChange({ active: true, height });
   }
@@ -109,6 +149,7 @@ iframe[${FULLSCREEN_ATTR}="frame"] {
     }
     if (!innerRoot) return false;
     ancestors = [];
+    previousOverlayState = frame.getAttribute(HOST_OVERLAY_ATTR);
     for (let node = frame.parentElement; node; node = node.parentElement) ancestors.push(node);
     scrollPositions = ancestors.map(element => ({ element, top: element.scrollTop, left: element.scrollLeft }));
     active = true;
@@ -122,6 +163,7 @@ iframe[${FULLSCREEN_ATTR}="frame"] {
       mark(innerRoot, 'viewport');
       doc.head.append(style);
       updateViewport();
+      syncHostOverlayState();
       // Host rerenders can remove the carrier without notifying the old Vue app.
       // Both observer AND callback must belong to the host realm. Browser callback
       // dispatch suppresses functions created in an iframe after it is detached.
@@ -129,14 +171,19 @@ iframe[${FULLSCREEN_ATTR}="frame"] {
         'frame',
         'ancestors',
         'exit',
+        'syncOverlay',
         `
         const observer = new MutationObserver(function () {
           if (!frame.isConnected || ancestors.some(function (node) { return !node.contains(frame); })) exit();
+          else syncOverlay();
         });
-        observer.observe(frame.ownerDocument.body, { childList: true, subtree: true });
+        observer.observe(frame.ownerDocument.body, {
+          childList: true, subtree: true, attributes: true,
+          attributeFilter: ['class', 'style', 'hidden']
+        });
         return observer;
       `,
-      )(frame, ancestors, exit) as MutationObserver;
+      )(frame, ancestors, exit, syncHostOverlayState) as MutationObserver;
       return true;
     } catch (error) {
       exit();
