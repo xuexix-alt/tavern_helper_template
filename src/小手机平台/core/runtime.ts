@@ -60,6 +60,7 @@ export class PhoneRuntime implements TavernPhonePublicApi {
     this.invalidateHostBridge();
     this.owner = owner ? { ...owner } : null;
     this.session = null;
+    this.resetUnreadCount();
     this.state = 'WAITING';
     this.emitStatus();
   }
@@ -74,7 +75,10 @@ export class PhoneRuntime implements TavernPhonePublicApi {
             sessionKey: makeSessionKey(this.owner, normalizedChatId),
           }
         : null;
-    if (this.session?.sessionKey !== nextSession?.sessionKey) this.invalidateHostBridge();
+    if (this.session?.sessionKey !== nextSession?.sessionKey) {
+      this.invalidateHostBridge();
+      this.resetUnreadCount();
+    }
     this.session = nextSession;
     this.state = nextSession ? 'READY' : 'WAITING';
     this.emitStatus();
@@ -132,6 +136,20 @@ export class PhoneRuntime implements TavernPhonePublicApi {
 
   getUnreadCount(): number {
     return this.unreadCount;
+  }
+
+  setUnreadCount(sessionKey: string, count: number): void {
+    if (!this.session || this.session.sessionKey !== sessionKey) return;
+    const normalized = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    if (normalized === this.unreadCount) return;
+    this.unreadCount = normalized;
+    this.events.emit('unread', normalized);
+  }
+
+  private resetUnreadCount(): void {
+    if (this.unreadCount === 0) return;
+    this.unreadCount = 0;
+    this.events.emit('unread', 0);
   }
 
   on<K extends keyof PhoneRuntimeEventMap>(event: K, listener: (...args: PhoneRuntimeEventMap[K]) => void): () => void {
@@ -212,6 +230,7 @@ export class PhoneRuntime implements TavernPhonePublicApi {
       this.owner = null;
       this.session = null;
       this.isOpen = false;
+      this.unreadCount = 0;
       this.modulesInitialized = false;
       this.state = 'DISPOSED';
     }

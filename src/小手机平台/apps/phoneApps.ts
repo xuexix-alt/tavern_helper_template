@@ -5,6 +5,7 @@ import type { ProfileEditPatch, ProfileVersion } from '../profiles/profileTypes'
 import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles } from './profileHelper';
 import { copyText } from './copyText';
+import { ChatDrafts } from './chatDrafts';
 
 export type PhoneRoute =
   | 'home'
@@ -25,6 +26,8 @@ export interface PhoneConversationView {
   title: string;
   preview: string;
   unread: number;
+  updatedAt?: number;
+  timeLabel?: string;
   status?: 'sent' | 'pending' | 'failed';
 }
 
@@ -161,6 +164,8 @@ export interface PhoneAppServices {
   retryMessage(conversationId: string, messageId: string): Promise<void>;
   cancelMessage(conversationId: string, messageId: string): Promise<void>;
   watchConversation(conversationId: string, listener: () => void): () => void;
+  watchConversations?(listener: () => void): () => void;
+  markConversationRead?(conversationId: string, messageIds: readonly string[]): Promise<void>;
   retryPendingLore(): Promise<void>;
   saveSettings(settings: PhoneSettingsView, apiKey: string): Promise<void>;
   fetchModels(apiUrl: string, apiKey: string): Promise<readonly string[]>;
@@ -189,8 +194,11 @@ export interface PhoneAppRenderContext {
   announce(message: string, kind?: 'info' | 'error'): void;
   requestRender(): void;
   navigate(route: PhoneRoute): void;
+  /** 外壳将页面接入文档后执行，只对本次活动视图调用。 */
+  onMount?(callback: () => void): void;
   onDispose?(disposer: () => void): void;
   isActive(): boolean;
+  isVisible?(): boolean;
 }
 
 export interface PhoneAppDefinition {
@@ -313,12 +321,18 @@ function dossierFileNo(personId: string): string {
 }
 
 export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDefinition[] {
+  let draftDocument: Document | undefined;
+  const drafts = new ChatDrafts(() => draftDocument?.defaultView?.sessionStorage);
+  const sendingDrafts = new Set<string>();
+  let activeComposer: { key: string; refresh(): void; announce(message: string): void } | undefined;
+  let currentSessionKey = services.getSessionKey?.() ?? 'default';
   let currentConversationId: string | null = null;
   let currentConversationTitle = '';
+  let currentConversationKind: PhoneConversationView['kind'] = 'private';
+  let showingGroupMembers = false;
+  let latestRenderedMessageId: string | undefined;
   let selectedProfileId: string | null = null;
-  // 微信聊天滚动锚点：requestRender 会整体重建 DOM（scrollTop 归零导致视角回顶），
-  // 需要跨渲染保留滚动意图。atBottom=true 时新消息自动贴底（视角回到最新一条）；
-  // 用户上翻阅读历史时恢复原位置，不被新消息拉扯。
+  // 普通重绘保留阅读位置；打开会话、发送或收到新消息时显示最新一条。
   let chatScrollAnchor: { atBottom: boolean; scrollTop: number } = { atBottom: true, scrollTop: 0 };
 
   return [
@@ -330,24 +344,88 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
       iconSrc: WECHAT_APP_ICON_SRC,
       async render(context) {
         const { document } = context;
+        draftDocument = document;
+        const sessionKey = services.getSessionKey?.() ?? 'default';
+        const isCurrentSession = () => sessionKey === (services.getSessionKey?.() ?? 'default');
+        if (sessionKey !== currentSessionKey) {
+          currentSessionKey = sessionKey;
+          currentConversationId = null;
+          currentConversationTitle = '';
+          showingGroupMembers = false;
+          latestRenderedMessageId = undefined;
+          chatScrollAnchor = { atBottom: true, scrollTop: 0 };
+        }
         if (currentConversationId) {
           const conversationId = currentConversationId;
           const stopWatching = services.watchConversation(conversationId, () => {
             if (context.isActive()) context.requestRender();
           });
           context.onDispose?.(stopWatching);
-          const messages = await services.listMessages(conversationId);
+          const [messages, contacts] = await Promise.all([
+            services.listMessages(conversationId),
+            currentConversationKind === 'eden-group' ? services.listContacts() : [],
+          ]);
           const page = document.createElement('section');
+          if (!context.isActive() || !isCurrentSession()) return page;
+          const groupMembers = contacts.filter(contact => contact.added && contact.inEdenGroup);
+          const title =
+            currentConversationKind === 'eden-group'
+              ? `${currentConversationTitle}（${groupMembers.length + 1}）`
+              : currentConversationTitle;
+          if (showingGroupMembers && currentConversationKind === 'eden-group') {
+            page.className = 'phone-group';
+            const back = text(document, 'button', '‹ 返回聊天');
+            back.className = 'phone-button phone-group__back';
+            back.type = 'button';
+            context.listen(back, 'click', () => {
+              showingGroupMembers = false;
+              context.requestRender();
+            });
+            const heading = text(document, 'h2', `群成员（${groupMembers.length + 1}）`);
+            heading.className = 'phone-group__title';
+            const members = list(document);
+            members.className = 'phone-group__members';
+            for (const name of ['我', ...groupMembers.map(member => member.name)]) {
+              const member = document.createElement('li');
+              member.className = 'phone-group__member';
+              const label = text(document, 'span', name);
+              label.className = 'phone-group__name';
+              member.append(avatar(document, name, 'phone-contact__avatar'), label);
+              members.append(member);
+            }
+            page.append(back, heading, members);
+            return page;
+          }
+          const latestMessageId = messages.at(-1)?.id;
+          if (latestMessageId !== latestRenderedMessageId) chatScrollAnchor.atBottom = true;
+          latestRenderedMessageId = latestMessageId;
           page.className = 'phone-chat';
-          const back = text(document, 'button', `‹ ${currentConversationTitle || '返回会话列表'}`);
+          const header = document.createElement('header');
+          header.className = 'phone-chat__header';
+          const back = text(document, 'button', '‹');
           back.className = 'phone-chat__back';
           back.type = 'button';
           back.setAttribute('aria-label', '返回会话列表');
           context.listen(back, 'click', () => {
             currentConversationId = null;
             currentConversationTitle = '';
+            showingGroupMembers = false;
             context.requestRender();
           });
+          const heading = text(document, 'h2', title);
+          heading.className = 'phone-chat__title';
+          header.append(back, heading);
+          if (currentConversationKind === 'eden-group') {
+            const members = text(document, 'button', '···');
+            members.className = 'phone-button phone-chat__members';
+            members.type = 'button';
+            members.setAttribute('aria-label', `查看群成员，共 ${groupMembers.length + 1} 人`);
+            context.listen(members, 'click', () => {
+              showingGroupMembers = true;
+              context.requestRender();
+            });
+            header.append(members);
+          }
           const history = list(document);
           history.className = 'phone-list phone-chat__history';
           // 用户滚动时持续更新锚点：距底 60px 内视为「贴底」，否则记录当前位置
@@ -422,45 +500,89 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           input.className = 'phone-composer__input';
           input.setAttribute('aria-label', '聊天消息');
           input.rows = 2;
+          const draftKey = drafts.key(sessionKey, conversationId);
+          input.value = drafts.get(draftKey).text;
+          context.listen(input, 'input', () => drafts.set(draftKey, input.value));
           const send = text(document, 'button', '发送');
           send.className = 'phone-button phone-button--primary phone-composer__send';
           send.type = 'button';
-          let sending = false;
+          send.disabled = sendingDrafts.has(draftKey);
+          const composerView = {
+            key: draftKey,
+            refresh: () => {
+              if (!context.isActive()) return;
+              input.value = drafts.get(draftKey).text;
+              send.disabled = sendingDrafts.has(draftKey);
+            },
+            announce: (message: string) => context.announce(message, 'error'),
+          };
+          activeComposer = composerView;
+          context.onDispose?.(() => {
+            if (activeComposer === composerView) activeComposer = undefined;
+          });
           context.listen(send, 'click', () => {
+            if (!context.isActive() || !isCurrentSession()) return;
             const content = input.value.trim();
             if (!content) {
               context.announce('消息不能为空', 'error');
               return;
             }
-            if (sending) return;
-            sending = true;
+            if (sendingDrafts.has(draftKey)) return;
+            const revision = drafts.set(draftKey, input.value);
+            sendingDrafts.add(draftKey);
             send.disabled = true;
             chatScrollAnchor.atBottom = true; // 自己发消息后贴底，等待回复时视角停在最新一条
             void services
               .sendMessage(conversationId, content)
               .then(() => {
-                if (context.isActive()) input.value = '';
+                drafts.clearSent(draftKey, revision);
+                if (activeComposer?.key === draftKey) activeComposer.refresh();
                 context.requestRender();
               })
-              .catch(error => context.announce(error instanceof Error ? error.message : String(error), 'error'))
+              .catch(error => {
+                if (activeComposer?.key === draftKey)
+                  activeComposer.announce(error instanceof Error ? error.message : String(error));
+              })
               .finally(() => {
-                sending = false;
-                if (context.isActive()) send.disabled = false;
+                sendingDrafts.delete(draftKey);
+                if (activeComposer?.key === draftKey) activeComposer.refresh();
               });
           });
           composer.append(input, send);
-          page.append(back, history, composer);
-          // 挂载后恢复滚动位置：贴底时滚到最新一条；上翻阅读时保持在原位置。
-          // 读取实时锚点：若重试窗口内用户手动滚动，则应用其最新位置而不是拉回旧位置。
-          // 消息气泡换行等会延后改变容器高度，需多级重试防止量到旧高度。
+          page.append(header, history, composer);
+          // 使用宿主文档的挂载时机，避免后台 iframe 的 rAF 暂停或量到离线 DOM。
           const restoreScroll = () => {
+            if (!context.isActive() || !isCurrentSession() || !history.isConnected) return;
             if (chatScrollAnchor.atBottom) history.scrollTop = history.scrollHeight;
             else history.scrollTop = Math.min(chatScrollAnchor.scrollTop, history.scrollHeight);
           };
-          if (typeof requestAnimationFrame === 'function') requestAnimationFrame(restoreScroll);
-          setTimeout(restoreScroll, 50);
-          setTimeout(restoreScroll, 200);
+          context.onMount?.(() => {
+            restoreScroll();
+            if (!context.isActive() || !isCurrentSession()) return;
+            if ((context.isVisible?.() ?? true) && services.markConversationRead) {
+              void services
+                .markConversationRead(
+                  conversationId,
+                  messages.map(message => message.id),
+                )
+                .catch(error => {
+                  context.announce(error instanceof Error ? error.message : String(error), 'error');
+                });
+            }
+            const ResizeObserver = document.defaultView?.ResizeObserver;
+            if (ResizeObserver) {
+              const observer = new ResizeObserver(restoreScroll);
+              observer.observe(history);
+              context.onDispose?.(() => observer.disconnect());
+            }
+          });
           return page;
+        }
+        if (services.watchConversations) {
+          const stopWatching = services.watchConversations(() => {
+            if (context.isActive()) context.requestRender();
+          });
+          context.onDispose?.(stopWatching);
         }
         const items = await services.listConversations();
         if (items.length === 0) return empty(document, '还没有会话');
@@ -484,6 +606,11 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           );
           const meta = document.createElement('span');
           meta.className = 'phone-conversation__meta';
+          if (item.timeLabel) {
+            const time = text(document, 'span', item.timeLabel);
+            time.className = 'phone-conversation__time';
+            meta.append(time);
+          }
           conversation.append(conversationAvatar, copy, meta);
           context.listen(conversation, 'click', () => {
             void services
@@ -492,6 +619,9 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                 if (!context.isActive()) return;
                 currentConversationId = item.id;
                 currentConversationTitle = item.title;
+                currentConversationKind = item.kind;
+                showingGroupMembers = false;
+                latestRenderedMessageId = undefined;
                 chatScrollAnchor = { atBottom: true, scrollTop: 0 }; // 新开会话贴底显示最新消息
                 context.requestRender();
               })
@@ -582,8 +712,12 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
                 .openOrCreateConversation(item.id)
                 .then(conversationId => {
                   if (!context.isActive()) return;
+                  currentSessionKey = services.getSessionKey?.() ?? 'default';
                   currentConversationId = conversationId;
                   currentConversationTitle = item.name;
+                  currentConversationKind = 'private';
+                  showingGroupMembers = false;
+                  latestRenderedMessageId = undefined;
                   chatScrollAnchor = { atBottom: true, scrollTop: 0 }; // 新开会话贴底显示最新消息
                   context.navigate('messages');
                 })

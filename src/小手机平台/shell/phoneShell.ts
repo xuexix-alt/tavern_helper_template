@@ -10,6 +10,7 @@ export interface PhoneShellOptions {
   productName?: string;
   statusName?: string;
   onRequestClose?: () => void;
+  unreadCount?: number;
 }
 
 export interface PhoneShellApi {
@@ -20,6 +21,7 @@ export interface PhoneShellApi {
   getRoute(): PhoneRoute;
   isOpen(): boolean;
   setTheme(theme: 'system' | 'light' | 'dark'): void;
+  setUnreadCount(count: number): void;
   dispose(): void;
 }
 
@@ -152,6 +154,7 @@ export class PhoneShell implements PhoneShellApi {
   private readonly onRequestClose?: () => void;
   private readonly productName: string;
   private renderVersion = 0;
+  private unreadCount = 0;
 
   constructor(options: PhoneShellOptions) {
     this.document = options.document ?? resolveTopDocument();
@@ -163,6 +166,7 @@ export class PhoneShell implements PhoneShellApi {
     this.returnFocus = options.returnFocus ?? null;
     this.onRequestClose = options.onRequestClose;
     this.productName = options.productName ?? '小手机';
+    this.unreadCount = options.unreadCount ?? 0;
     const statusName = options.statusName ?? '星穹通信';
 
     this.root = this.document.createElement('div');
@@ -220,6 +224,9 @@ export class PhoneShell implements PhoneShellApi {
         this.trapFocus(event as KeyboardEvent);
       }
     });
+    this.listen(this.document, 'visibilitychange', () => {
+      if (this.opened && this.document.visibilityState !== 'hidden') void this.render();
+    });
   }
 
   async open(route?: PhoneRoute, returnFocus?: HTMLElement | null): Promise<void> {
@@ -238,6 +245,7 @@ export class PhoneShell implements PhoneShellApi {
     if (this.disposed || !this.opened) return;
     this.opened = false;
     this.openFocus.invalidate();
+    this.disposeView();
     this.root.hidden = true;
     if (this.returnFocus && this.returnFocus.isConnected !== false) this.returnFocus.focus();
   }
@@ -267,6 +275,16 @@ export class PhoneShell implements PhoneShellApi {
 
   isOpen(): boolean {
     return this.opened;
+  }
+
+  setUnreadCount(count: number): void {
+    this.unreadCount = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+    const badge = this.shadow.querySelector<HTMLElement>('.phone-app__unread');
+    if (badge) {
+      badge.hidden = this.unreadCount === 0;
+      badge.textContent = this.unreadCount > 99 ? '99+' : String(this.unreadCount);
+      badge.setAttribute('aria-label', `${this.unreadCount} 条未读消息`);
+    }
   }
 
   setTheme(theme: 'system' | 'light' | 'dark'): void {
@@ -320,6 +338,7 @@ export class PhoneShell implements PhoneShellApi {
     const loading = text(this.document, 'p', '载入中…');
     loading.className = 'phone-empty';
     this.content.append(loading);
+    const mountCallbacks: Array<() => void> = [];
     const context: PhoneAppRenderContext = {
       document: this.document,
       listen: (target, event, listener) => scope.listen(target, event, listener),
@@ -337,7 +356,9 @@ export class PhoneShell implements PhoneShellApi {
         void this.render();
       },
       onDispose: disposer => scope.onDispose(disposer),
+      onMount: callback => mountCallbacks.push(callback),
       isActive: () => scope.isActive() && renderVersion === this.renderVersion && !this.disposed,
+      isVisible: () => this.opened && !this.root.hidden && this.document.visibilityState !== 'hidden',
     };
     try {
       const page = await app.render(context);
@@ -346,6 +367,9 @@ export class PhoneShell implements PhoneShellApi {
         return;
       }
       this.content.replaceChildren(page);
+      for (const callback of mountCallbacks) {
+        if (scope.isActive() && renderVersion === this.renderVersion) callback();
+      }
     } catch (error) {
       if (this.disposed || !scope.isActive() || renderVersion !== this.renderVersion) {
         scope.dispose();
@@ -364,6 +388,13 @@ export class PhoneShell implements PhoneShellApi {
       button.className = 'phone-app';
       button.type = 'button';
       const glyph = createPhoneAppIcon(this.document, app);
+      if (app.route === 'messages') {
+        const badge = text(this.document, 'span', this.unreadCount > 99 ? '99+' : String(this.unreadCount));
+        badge.className = 'phone-badge phone-app__unread';
+        badge.hidden = this.unreadCount === 0;
+        badge.setAttribute('aria-label', `${this.unreadCount} 条未读消息`);
+        glyph.append(badge);
+      }
       const label = text(this.document, 'span', app.title);
       button.append(glyph, label);
       scope.listen(button, 'click', () => {

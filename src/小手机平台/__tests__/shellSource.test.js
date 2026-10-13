@@ -481,7 +481,7 @@ test('open message detail redraws when the adapter reports an AI reply and relea
   let conversationListener;
   let released = 0;
   let rerenders = 0;
-  let disposeView;
+  const disposeView = [];
   const services = completeServices({
     listConversations: () => [
       { id: 'private:a', kind: 'private', title: '纪宁', preview: '你好', unread: 0, status: 'sent' },
@@ -501,7 +501,7 @@ test('open message detail redraws when the adapter reports an AI reply and relea
       rerenders += 1;
     },
     onDispose: disposer => {
-      disposeView = disposer;
+      disposeView.push(disposer);
     },
   });
   const listView = await messages.render(context);
@@ -512,8 +512,244 @@ test('open message detail redraws when the adapter reports an AI reply and relea
   assert.equal(typeof conversationListener, 'function');
   conversationListener();
   assert.equal(rerenders, 2, '打开详情一次，AI 回复通知再重绘一次');
-  disposeView();
+  disposeView.forEach(dispose => dispose());
   assert.equal(released, 1);
+});
+
+test('chat restores after mount, follows new messages from history, and ignores disposed mounts', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const data = [{ id: '1', sender: '纪宁', content: '你好', direction: 'incoming', status: 'sent' }];
+  const app = createPhoneApps(
+    completeServices({
+      listConversations: () => [{ id: 'a', kind: 'private', title: '纪宁', unread: 0, preview: '' }],
+      listMessages: () => data,
+    }),
+  ).find(app => app.route === 'messages');
+  const listView = await app.render(testContext());
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+
+  async function renderChat() {
+    const mounts = [];
+    let active = true;
+    const view = await app.render(testContext({ onMount: fn => mounts.push(fn), isActive: () => active }));
+    const history = findByClass(view, 'phone-chat__history');
+    Object.assign(history, { scrollTop: 0, scrollHeight: 1500, clientHeight: 400, isConnected: true });
+    assert.equal(history.scrollTop, 0, 'must wait for attachment before measuring');
+    return {
+      history,
+      mount: () => mounts.forEach(fn => fn()),
+      dispose: () => {
+        active = false;
+      },
+    };
+  }
+  const first = await renderChat();
+  first.mount();
+  assert.equal(first.history.scrollTop, 1500, 'initial open must scroll to bottom after mount');
+  first.history.scrollTop = 120;
+  for (const fn of first.history.listeners.get('scroll')) fn();
+  first.dispose();
+  const redraw = await renderChat();
+  redraw.mount();
+  assert.equal(redraw.history.scrollTop, 120, 'ordinary redraw preserves reading position');
+  redraw.dispose();
+  data.push({ id: '2', sender: '纪宁', content: '新消息', direction: 'incoming', status: 'sent' });
+  const incoming = await renderChat();
+  incoming.mount();
+  assert.equal(incoming.history.scrollTop, 1500, 'new message must reveal latest even after scrolling up');
+  const stale = await renderChat();
+  stale.dispose();
+  stale.mount();
+  assert.equal(stale.history.scrollTop, 0, 'disposed view must not run scroll restoration');
+});
+
+test('group details show current invited contacts and self, refresh membership, and return to chat', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const contacts = [
+    { id: 'a', name: '纪宁', added: true, inEdenGroup: true },
+    { id: 'b', name: '未入群', added: true, inEdenGroup: false },
+    { id: 'c', name: '未添加', added: false, inEdenGroup: true },
+  ];
+  const app = createPhoneApps(
+    completeServices({
+      listConversations: () => [{ id: 'eden', kind: 'eden-group', title: '伊甸住户群', unread: 0, preview: '' }],
+      listContacts: () => contacts,
+    }),
+  ).find(app => app.route === 'messages');
+  const listView = await app.render(testContext());
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+  const chat = await app.render(testContext());
+  assert.ok(collectText(chat).includes('伊甸住户群（2）'));
+  findByClass(chat, 'phone-chat__members').click();
+  const members = await app.render(testContext());
+  const grid = findByClass(members, 'phone-group__members');
+  assert.ok(grid);
+  assert.deepEqual(
+    grid.children.map(member => findByClass(member, 'phone-group__name').textContent),
+    ['我', '纪宁'],
+  );
+  assert.equal(findByClass(members, 'phone-composer'), undefined);
+  contacts[0].inEdenGroup = false;
+  const updated = await app.render(testContext());
+  assert.equal(findByClass(updated, 'phone-group__members').children.length, 1);
+  findByClass(updated, 'phone-group__back').click();
+  const returned = await app.render(testContext());
+  assert.ok(findByClass(returned, 'phone-chat__history'));
+  assert.ok(collectText(returned).includes('伊甸住户群（1）'));
+});
+
+test('chat drafts survive redraws and sending never erases a newer draft', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  let finishSend;
+  let sessionKey = 'session-a';
+  const app = createPhoneApps(
+    completeServices({
+      getSessionKey: () => sessionKey,
+      listConversations: () => [{ id: 'a', kind: 'private', title: '纪宁', unread: 0, preview: '' }],
+      sendMessage: () =>
+        new Promise(resolve => {
+          finishSend = resolve;
+        }),
+    }),
+  ).find(app => app.route === 'messages');
+  async function open() {
+    const page = await app.render(testContext());
+    findByClass(page, 'phone-conversation').click();
+    await new Promise(resolve => setImmediate(resolve));
+    return app.render(testContext());
+  }
+  let page = await open();
+  const input = findByClass(page, 'phone-composer__input');
+  input.value = '原始草稿';
+  for (const fn of input.listeners.get('input') ?? []) fn();
+  page = await app.render(testContext());
+  assert.equal(findByClass(page, 'phone-composer__input').value, '原始草稿');
+  findByClass(page, 'phone-composer__send').click();
+  page = await app.render(testContext());
+  assert.equal(findByClass(page, 'phone-composer__send').disabled, true, 'pending send survives redraw');
+  const newer = findByClass(page, 'phone-composer__input');
+  newer.value = '下一条草稿';
+  for (const fn of newer.listeners.get('input')) fn();
+  finishSend();
+  await new Promise(resolve => setImmediate(resolve));
+  page = await app.render(testContext());
+  assert.equal(findByClass(page, 'phone-composer__input').value, '下一条草稿');
+  assert.equal(findByClass(page, 'phone-composer__send').disabled, false);
+  sessionKey = 'session-b';
+  page = await open();
+  assert.equal(findByClass(page, 'phone-composer__input').value, '');
+  sessionKey = 'session-a';
+  page = await open();
+  assert.equal(findByClass(page, 'phone-composer__input').value, '下一条草稿');
+});
+
+test('draft storage restores after app recreation and degrades safely when storage fails', () => {
+  const { ChatDrafts } = loadTypeScriptModule('src/小手机平台/apps/chatDrafts.ts');
+  const values = new Map();
+  const storage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: key => values.delete(key),
+  };
+  const drafts = new ChatDrafts(() => storage);
+  const key = drafts.key('session-a', 'group');
+  const revision = drafts.set(key, '草稿');
+  const reloaded = new ChatDrafts(() => storage);
+  assert.equal(reloaded.get(key).text, '草稿');
+  assert.equal(reloaded.get(drafts.key('session-b', 'group')).text, '');
+  drafts.set(key, '草稿');
+  drafts.clearSent(key, revision);
+  assert.equal(drafts.get(key).text, '草稿', 'retyped identical text is still a new draft');
+  drafts.clearSent(key, drafts.get(key).revision);
+  assert.equal(new ChatDrafts(() => storage).get(key).text, '');
+  const unavailable = new ChatDrafts(() => {
+    throw new Error('storage denied');
+  });
+  unavailable.set(key, '内存草稿');
+  assert.equal(unavailable.get(key).text, '内存草稿');
+});
+
+test('failed sends retain the draft and allow retry after a redraw', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const app = createPhoneApps(
+    completeServices({
+      listConversations: () => [{ id: 'a', kind: 'private', title: '纪宁', unread: 0, preview: '' }],
+      sendMessage: async () => {
+        throw new Error('网络失败');
+      },
+    }),
+  ).find(app => app.route === 'messages');
+  const listView = await app.render(testContext());
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+  const chat = await app.render(testContext());
+  findByClass(chat, 'phone-composer__input').value = '保留这句话';
+  findByClass(chat, 'phone-composer__send').click();
+  await new Promise(resolve => setImmediate(resolve));
+  const redraw = await app.render(testContext());
+  assert.equal(findByClass(redraw, 'phone-composer__input').value, '保留这句话');
+  assert.equal(findByClass(redraw, 'phone-composer__send').disabled, false);
+});
+
+test('only mounted visible chat messages are marked read, and the list subscribes to updates', async () => {
+  const { createPhoneApps } = loadTypeScriptModule(appsPath);
+  const reads = [],
+    mounts = [],
+    disposers = [];
+  let visible = true,
+    changed,
+    redraws = 0;
+  let sessionKey = 'session-a';
+  const app = createPhoneApps(
+    completeServices({
+      getSessionKey: () => sessionKey,
+      listConversations: () => [
+        { id: 'a', kind: 'private', title: '纪宁', unread: 1, preview: '新消息', timeLabel: '08:30' },
+      ],
+      listMessages: () => [{ id: 'm1', sender: '纪宁', direction: 'incoming', content: '新消息', status: 'sent' }],
+      markConversationRead: async (...args) => reads.push(args),
+      watchConversations: listener => {
+        changed = listener;
+        return () => {
+          changed = undefined;
+        };
+      },
+    }),
+  ).find(app => app.route === 'messages');
+  const context = testContext({
+    onMount: fn => mounts.push(fn),
+    onDispose: fn => disposers.push(fn),
+    isVisible: () => visible,
+    requestRender: () => {
+      redraws++;
+    },
+  });
+  const listView = await app.render(context);
+  assert.equal(typeof changed, 'function');
+  assert.ok(collectText(listView).includes('08:30'));
+  changed();
+  assert.equal(redraws, 1);
+  findByClass(listView, 'phone-conversation').click();
+  await new Promise(resolve => setImmediate(resolve));
+  disposers.splice(0).forEach(fn => fn());
+  assert.equal(changed, undefined);
+  await app.render(context);
+  assert.deepEqual(reads, [], 'data fetch alone must not mark read');
+  visible = false;
+  mounts.splice(0).forEach(fn => fn());
+  assert.deepEqual(reads, [], 'hidden view must not mark read');
+  visible = true;
+  await app.render(context);
+  mounts.splice(0).forEach(fn => fn());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(reads, [['a', ['m1']]]);
+  await app.render(context);
+  sessionKey = 'session-b';
+  mounts.splice(0).forEach(fn => fn());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(reads, [['a', ['m1']]], 'late mount must not mark another session read');
 });
 
 test('messages and contacts expose one WeChat visual language', () => {
@@ -538,7 +774,9 @@ test('messages and contacts expose one WeChat visual language', () => {
 test('contact creates a private conversation and navigates to messages', async () => {
   const { createPhoneApps } = loadTypeScriptModule(appsPath);
   const navigated = [];
+  let sessionKey = 'old-session';
   const services = completeServices({
+    getSessionKey: () => sessionKey,
     listContacts: () => [
       {
         id: 'role:a',
@@ -552,7 +790,9 @@ test('contact creates a private conversation and navigates to messages', async (
     ],
     openOrCreateConversation: async () => 'private:a',
   });
-  const contacts = createPhoneApps(services).find(app => app.route === 'contacts');
+  const apps = createPhoneApps(services);
+  sessionKey = 'new-session';
+  const contacts = apps.find(app => app.route === 'contacts');
   const rendered = await contacts.render({
     document: fakeDocument,
     listen,
@@ -564,6 +804,8 @@ test('contact creates a private conversation and navigates to messages', async (
   findByClass(rendered, 'phone-contact').click();
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(navigated, ['messages']);
+  const chat = await apps.find(app => app.route === 'messages').render(testContext());
+  assert.ok(findByClass(chat, 'phone-chat__history'), 'contact opened after a session switch must stay selected');
 });
 
 test('view scopes release stale listeners and reject late registration', () => {

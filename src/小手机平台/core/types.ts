@@ -110,6 +110,7 @@ export interface TavernPhonePublicApi {
   getStatus(): PhoneRuntimeStatus;
   getModules(): readonly PhoneModuleSnapshot[];
   getUnreadCount(): number;
+  setUnreadCount(sessionKey: string, count: number): void;
   on<K extends keyof PhoneRuntimeEventMap>(event: K, listener: (...args: PhoneRuntimeEventMap[K]) => void): () => void;
   attachHostBridge(bridge: PhoneHostBridge): () => void;
   getHostStoryMessageId(): number | null;

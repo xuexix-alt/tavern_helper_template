@@ -21,6 +21,7 @@ import type {
 } from '../../../小手机平台/core/types';
 import type { ChatLoreSync, LoreSyncRequest, LoreWriteEntry } from '../../../小手机平台/data/chatLoreSync';
 import type { PhoneBusinessRecord, PhoneDb } from '../../../小手机平台/data/phoneDb';
+import { createConversationState } from '../../../小手机平台/data/conversationState';
 import type { HostContextSnapshot, HostGateway } from '../../../小手机平台/platform/hostGateway';
 import type { SettingsStore } from '../../../小手机平台/platform/settingsStore';
 import {
@@ -191,6 +192,11 @@ function createWinterAdapterModule(): PhoneModule {
   let profileCoordinator: ProfileRefreshCoordinator | null = null;
   let shell: PhoneShellApi | null = null;
   let stopRuntimeStatus: (() => void) | null = null;
+  let stopRuntimeUnread: (() => void) | null = null;
+  let shellSessionReady = false;
+  let conversationState: ReturnType<typeof createConversationState> | null = null;
+  let unreadRefreshVersion = 0;
+  const conversationsListeners = new Set<() => void>();
   let snapshot: WinterSnapshot | null = null;
   let snapshotRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   const eventStops: Array<() => void> = [];
@@ -260,6 +266,7 @@ function createWinterAdapterModule(): PhoneModule {
   }
 
   function notifyConversationChanged(conversationId: string): void {
+    notifyConversationsChanged();
     for (const listener of [...(conversationListeners.get(conversationId) ?? [])]) {
       try {
         listener();
@@ -267,6 +274,41 @@ function createWinterAdapterModule(): PhoneModule {
         recordDiagnostic('聊天界面刷新监听失败');
       }
     }
+  }
+
+  function notifyConversationsChanged(): void {
+    for (const listener of [...conversationsListeners]) {
+      try {
+        listener();
+      } catch {
+        recordDiagnostic('会话列表刷新监听失败');
+      }
+    }
+  }
+
+  async function refreshUnread(sessionKey: string): Promise<void> {
+    const state = conversationState;
+    if (!state || sessionKey !== activeSessionKey) return;
+    const version = ++unreadRefreshVersion;
+    const count = await state.count(sessionKey);
+    if (version !== unreadRefreshVersion || state !== conversationState) return;
+    context?.runtime.setUnreadCount(sessionKey, count);
+  }
+
+  function watchConversations(listener: () => void): () => void {
+    conversationsListeners.add(listener);
+    return () => {
+      conversationsListeners.delete(listener);
+    };
+  }
+
+  async function markConversationRead(conversationId: string, messageIds: readonly string[]): Promise<void> {
+    const sessionKey = requireSession().sessionKey;
+    await conversationState?.markRead(sessionKey, conversationId, messageIds);
+    if (sessionKey !== activeSessionKey) return;
+    await refreshUnread(sessionKey);
+    // Reading updates the list and badge, never the mounted chat subscription.
+    notifyConversationsChanged();
   }
 
   async function init(nextContext: PhoneModuleContext): Promise<void> {
@@ -342,6 +384,16 @@ function createWinterAdapterModule(): PhoneModule {
         await deactivate('激活期间角色卡已切换');
         return;
       }
+      conversationState = createConversationState(db, message => {
+        if (message.sessionKey !== activeSessionKey || message.type === 'broadcast') return;
+        notifyConversationChanged(message.conversationId);
+        void refreshUnread(message.sessionKey).catch(() => recordDiagnostic('未读计数更新失败'));
+      });
+      db = conversationState.db;
+      if (activeSessionKey) {
+        await conversationState.initialize(activeSessionKey);
+        await refreshUnread(activeSessionKey);
+      }
       const settingsCatalog = context.services.require<SettingsCatalog>('settings.store');
       settings = settingsCatalog.createSettingsStore(WINTER_CHARACTER_NAME, localStorage);
       await captureActiveWorldbooks(activeSessionKey, captured);
@@ -393,13 +445,17 @@ function createWinterAdapterModule(): PhoneModule {
         productName: '伊甸终端',
         statusName: '星穹通信',
         theme: settings.getPublic().theme,
+        unreadCount: context.runtime.getUnreadCount(),
         onRequestClose: () => context?.runtime.close(),
       });
       stopRuntimeStatus = context.runtime.on('status', runtimeStatus => syncShellVisibility(runtimeStatus.isOpen));
-      syncShellVisibility(context.runtime.getStatus().isOpen);
+      stopRuntimeUnread = context.runtime.on('unread', count => shell?.setUnreadCount(count));
       attachCharacterEvents();
       await refreshInitialSnapshot();
       if (snapshot) await profileCoordinator.recoverInterruptedAnalyses();
+      assertHostCapture(captured);
+      shellSessionReady = true;
+      syncShellVisibility(context.runtime.getStatus().isOpen);
     } catch (error) {
       await deactivate('适配器激活失败');
       status = 'ERROR';
@@ -414,13 +470,23 @@ function createWinterAdapterModule(): PhoneModule {
     invalidateSnapshot();
     pendingConfirmedChanges = [];
     activeHostCapture = captured;
+    // setSession 会同步发出 status；新快照就绪前禁止它重新打开旧页面。
+    shellSessionReady = false;
+    shell?.close();
     context.runtime.setSession(captured.host.chatId);
     activeSessionKey = context.runtime.getSession()?.sessionKey ?? null;
+    if (activeSessionKey) {
+      await conversationState?.initialize(activeSessionKey);
+      await refreshUnread(activeSessionKey);
+    }
     activeChatWorldbookName = null;
     activeProfileWorldbookNames = [];
     await captureActiveWorldbooks(activeSessionKey, captured);
     await refreshInitialSnapshot();
     if (snapshot) await profileCoordinator?.recoverInterruptedAnalyses();
+    assertHostCapture(captured);
+    shellSessionReady = true;
+    syncShellVisibility(context.runtime.getStatus().isOpen);
   }
 
   async function captureActiveWorldbooks(sessionKey: string | null, captured: HostEpochCapture): Promise<void> {
@@ -1062,6 +1128,8 @@ function createWinterAdapterModule(): PhoneModule {
       retryMessage,
       cancelMessage,
       watchConversation,
+      watchConversations,
+      markConversationRead,
       retryPendingLore,
       saveSettings,
       fetchModels,
@@ -1088,20 +1156,28 @@ function createWinterAdapterModule(): PhoneModule {
     const database = requireDb();
     const records = (await database.listRecords('conversations', session.sessionKey)).filter(isConversationRecord);
     const output: PhoneConversationView[] = [];
+    const unread = (await conversationState?.unread(session.sessionKey)) ?? [];
+    const statuses = await inboxByMessage(session.sessionKey);
     for (const record of records) {
       const messages = await database.listMessages({ sessionKey: session.sessionKey, conversationId: record.id });
       const latest = messages.at(-1);
-      const statuses = await inboxByMessage(session.sessionKey);
       output.push({
         id: record.id,
         kind: record.kind,
         title: record.title,
         preview: latest?.content ?? '暂无消息',
-        unread: 0,
+        unread: unread.filter(message => message.conversationId === record.id).length,
+        updatedAt: latest?.createdAt,
+        timeLabel: latest
+          ? [latest.gameDate, latest.gameTime].filter(Boolean).join(' ') ||
+            new Date(latest.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          : undefined,
         status: latest ? (statuses.get(latest.id)?.status ?? 'sent') : 'sent',
       });
     }
-    return output;
+    return output.sort(
+      (left, right) => (right.updatedAt ?? 0) - (left.updatedAt ?? 0) || left.id.localeCompare(right.id),
+    );
   }
 
   async function listMessages(conversationId: string): Promise<readonly PhoneMessageView[]> {
@@ -1877,11 +1953,12 @@ function createWinterAdapterModule(): PhoneModule {
 
   function syncShellVisibility(shouldOpen: boolean): void {
     if (!shell) return;
-    if (shouldOpen) void shell.open().catch(() => recordDiagnostic('手机外壳打开失败'));
+    if (shouldOpen && shellSessionReady) void shell.open().catch(() => recordDiagnostic('手机外壳打开失败'));
     else shell.close();
   }
 
   async function deactivate(reason: string): Promise<void> {
+    shellSessionReady = false;
     activationVersion += 1;
     clearScheduledSnapshotRefresh();
     for (const stop of eventStops.splice(0)) {
@@ -1897,6 +1974,11 @@ function createWinterAdapterModule(): PhoneModule {
       recordDiagnostic('运行时状态监听清理失败');
     }
     stopRuntimeStatus = null;
+    stopRuntimeUnread?.();
+    stopRuntimeUnread = null;
+    conversationState = null;
+    unreadRefreshVersion += 1;
+    conversationsListeners.clear();
     cancelAllRequests();
     try {
       scheduler?.dispose();
