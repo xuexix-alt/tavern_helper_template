@@ -110,7 +110,7 @@ try {
   assert.deepEqual((({ enabled, content }) => ({ enabled, content }))(findScript('后台数据维护')), {
     enabled: true,
     content:
-      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   });
   assert.ok(!scripts.some(script => ['脚本测试', '变量结构测试'].includes(script.name)));
   assert.equal(scripts.filter(script => script.name.startsWith('小手机')).length, 1);

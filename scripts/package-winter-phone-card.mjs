@@ -39,7 +39,7 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
     name: '后台数据维护',
     enabled: true,
     content:
-      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/脚本/伊甸后台数据辅助/index.js'",
   },
   {
     id: '76a4249a-e849-5f5b-8bd5-a6f89b6400a0',
