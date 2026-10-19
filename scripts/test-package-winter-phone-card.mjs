@@ -79,7 +79,7 @@ try {
   assert.equal(productionPreRegexes.length, 2);
   assert.ok(productionPreRegexes.every(script => script.replaceString.includes(PRE_UI_CDN_URL)));
   assert.equal(card.data.name, '末世寒冬 - 星穹秩序');
-  assert.equal(card.data.character_version, '2.0.1');
+  assert.equal(card.data.character_version, '2.0.2');
   const scripts = card.data.extensions.tavern_helper.scripts;
   const findScript = name => {
     const matches = scripts.filter(script => script.name === name);
