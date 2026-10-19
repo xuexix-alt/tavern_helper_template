@@ -4,8 +4,7 @@ meta:
   id: eden_shelter_ability_maintain_list_l1_l10
   name: 庇护所能力 1-10级维护清单
   purpose: >
-    作为《庇护所升级能力.txt》的可读维护底稿。
-    这份文件不接入运行时世界书，只用于集中修改 1-10 级能力设计，
+    作为《庇护所升级能力.txt》的可读维护底稿。 这份文件不接入运行时世界书，只用于集中修改 1-10 级能力设计，
     后续如有调整，应优先修改本文件，再回灌到总表。
   runtime_input: false
   design_principles:
@@ -17,6 +16,16 @@ meta:
     - 先改本清单
     - 再同步庇护所升级能力.txt
     - 如需导出世界书，再执行 tavern_sync bundle
+
+character_resonance:
+  principle: 核心成员的人格特质可与伊甸共鸣；等级决定上限，真实认同与参与决定对应功能能否启用。
+  shelter_extension:
+    character: 纪宁
+    name: 庇护延伸
+    requirement: 达到协作或以上、正式加入伊甸，并在剧情中明确认同共同生活、实际参与照管。
+    scope: T3起对2001以外的供暖、供电外扩生效；T4及后续扩展继承此前提，不能用升级或任务奖励跳过。
+    boundary: 2001基础维生独立运行；共鸣不附送监控、供水、制造或防护；空间登记不代表自动获得各项服务。
+    continuity: 共鸣成立后不因短暂离开、休息或一次争执反复开关；正式退出时按实际剧情处理。
 
 system_lines:
   - energy
@@ -138,10 +147,10 @@ levels:
       energy:
         ability_id: energy.hallway_heat_reach_t3
         name: 近域供能延伸T3
-        growth_target: 让供暖与供电第一次从2001延伸到20层近域节点。
-        player_advantage: 你开始能把内部优势投射到门外，不只是关门自保。
-        insufficiency: 外扩范围很小，维持成本显著提高，无法长期全域覆盖。
-        prompt_brief_seed: 可将供暖与基础供能短距外扩到20层近域节点，支撑局部行动、收容或据守；范围和时长都有限，无法长期全域覆盖。
+        growth_target: 纪宁将伊甸认作共同的家后，以庇护延伸共鸣让供暖、供电从2001延伸到其他住户。
+        player_advantage: 共鸣成立且等级达到T3后，经玩家授权可接入20层最多三个外部房间，2002可作为首个节点。
+        insufficiency: 缺少纪宁共鸣时不能外扩供能；外扩后负荷增加，不附送监控、供水、制造或防护。
+        prompt_brief_seed: 需纪宁达到协作或以上、正式加入并明确认同共同生活、实际参与照管；共鸣成立且达到T3后，经玩家授权可向20层最多三个外部房间提供供暖、供电，不附带其他服务。
       security:
         ability_id: security.hallway_control_t3
         name: 走廊控制链T3
@@ -189,7 +198,7 @@ levels:
         growth_target: 让楼层节点供能进入可管理状态，而不是临时拼命顶住。
         player_advantage: 可以在多节点之间做真实调度，支持外部控制区维持。
         insufficiency: 每次扩节点都意味着更高天气、人力、维护压力。
-        prompt_brief_seed: 可对20层多个节点的供暖与供能做预算调度，支持局部控制区稳定维持；外扩越多，系统越容易因天气和负载吃紧。
+        prompt_brief_seed: 继承纪宁庇护延伸共鸣前提，经玩家授权可对20层实现基础供暖、供电；等级提升不能替代共鸣，不附送监控、供水、制造或防护，仍受负荷与维护约束。
       security:
         ability_id: security.floor_awareness_t4
         name: 楼层威胁感知T4
@@ -256,9 +265,12 @@ levels:
         ability_id: social.population_strata_t5
         name: IMP共鸣加成T5
         growth_target: 让庇护所第一次对角色好感与依赖形成系统级增益。
-        player_advantage: 在庇护所内被照料、娱乐、安抚和优待的角色，其 IMP 增长会得到稳定加成，主角第一次真正拥有情感经营红利。
+        player_advantage:
+          在庇护所内被照料、娱乐、安抚和优待的角色，其 IMP 增长会得到稳定加成，主角第一次真正拥有情感经营红利。
         insufficiency: 这只是加成，不是洗脑；越界、失信和羞辱依旧会让 IMP 大幅下跌。
-        prompt_brief_seed: 可让在庇护所内被照料、娱乐和优待的角色获得稳定的 IMP 增长加成，使主角第一次真正拥有情感经营红利；这不是洗脑，越界和失信依旧会让 IMP 大幅下跌。
+        prompt_brief_seed:
+          可让在庇护所内被照料、娱乐和优待的角色获得稳定的 IMP
+          增长加成，使主角第一次真正拥有情感经营红利；这不是洗脑，越界和失信依旧会让 IMP 大幅下跌。
       expansion:
         ability_id: expansion.floor20_governance_zone_t5
         name: 20层治理区T5
@@ -402,7 +414,9 @@ levels:
         growth_target: 让主角获得社区级的情感引导和 IMP 增益优势。
         player_advantage: 可以通过公开全息广播、活动展示和情绪引导，稳定提高庇护所内外接触对象的好感与 IMP 增长效率。
         insufficiency: 舆情越强，反噬也越大；一旦现实与展示割裂，社区好感会成片掉落。
-        prompt_brief_seed: 可通过公开全息广播、活动展示与情绪引导，稳定提高接触对象的好感与 IMP 增长效率，形成社区级情感优势；若现实与展示割裂，舆情反噬也会成片出现。
+        prompt_brief_seed:
+          可通过公开全息广播、活动展示与情绪引导，稳定提高接触对象的好感与 IMP
+          增长效率，形成社区级情感优势；若现实与展示割裂，舆情反噬也会成片出现。
       expansion:
         ability_id: expansion.route_node_hegemony_t8
         name: 线路节点优势T8
@@ -496,9 +510,12 @@ levels:
         ability_id: social.regional_rule_network_t10
         name: 群星共感网T10
         growth_target: 让情报优势、情感优势与 IMP 增益统一成区域级社会支配能力。
-        player_advantage: 可以在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP 增长加成。
+        player_advantage:
+          可以在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP 增长加成。
         insufficiency: 共感网只能放大已有优势，不能强行制造真爱或忠诚；一旦发生重大失信，反噬范围也会同步放大。
-        prompt_brief_seed: 可在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP 增长加成；这不能强行制造忠诚，重大失信时反噬范围也会同步放大。
+        prompt_brief_seed:
+          可在楼栋核心与周边接触网中同步获得情报、塑造舆情、放大情感影响，并为所有受庇护角色提供稳定的 IMP
+          增长加成；这不能强行制造忠诚，重大失信时反噬范围也会同步放大。
       expansion:
         ability_id: expansion.order_center_radiance_t10
         name: 秩序中心辐射T10
