@@ -73,6 +73,12 @@ assert.equal(repaired.imports, 1, '手动执行应允许同版本重装');
 assert.equal(repaired.settings.last_applied_remote_version, '2.0.0');
 assert.ok(repaired.notices.some(item => item.level === 'success' && item.message.includes('刷新')));
 assert.equal(new URL(repaired.urls[1]).searchParams.get('version'), '2.0.0');
+for (const url of repaired.urls) {
+  assert.ok(
+    url.startsWith('https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/'),
+    '版本清单与PNG必须请求已验证的显式分支入口',
+  );
+}
 assert.equal((await run({ current: '2.0.0', force: false })).imports, 0);
 assert.equal((await run({ current: '2.1.0' })).imports, 0, '手动修复不能降级');
 assert.equal(

@@ -117,7 +117,7 @@ try {
   assert.deepEqual((({ enabled, content }) => ({ enabled, content }))(findScript('自动更新角色卡')), {
     enabled: true,
     content:
-      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
   });
   assert.equal(new Set(RUNTIME_SCRIPT_DEFINITIONS.map(script => script.id)).size, RUNTIME_SCRIPT_DEFINITIONS.length);
   assert.deepEqual(

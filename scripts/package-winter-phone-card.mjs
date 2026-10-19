@@ -46,7 +46,7 @@ export const RUNTIME_SCRIPT_DEFINITIONS = Object.freeze([
     name: '自动更新角色卡',
     enabled: true,
     content:
-      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
+      "import\n'https://cdn.jsdelivr.net/gh/xuexix-alt/tavern_helper_template@refs/heads/20260211/dist/寒冬末日/脚本/自动更新角色卡/index.js'",
   },
 ]);
 
