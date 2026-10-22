@@ -266,6 +266,7 @@
         </div>
         <div class="ui-sidebar-body">
           <PreGalleryPanel
+            ref="galleryPanelRef"
             :active="galleryDrawerOpen"
             @gallery-log="appendGalleryLog"
             @gallery-entries="updatePreGalleryEntries"
@@ -639,6 +640,7 @@ const appleReaderScrollTop = ref(0);
 const appleHistoryOpen = ref(false);
 const roleDrawerOpen = ref(false);
 const galleryDrawerOpen = ref(false);
+const galleryPanelRef = ref<InstanceType<typeof PreGalleryPanel> | null>(null);
 const betaModalOpen = ref(false);
 const rolePortraitOverrides = ref<RolePortraitOverrideMap>(readRolePortraitOverrides());
 const preGalleryEntries = ref<ReaderGalleryEntry[]>([]);
@@ -658,6 +660,7 @@ function toggleWebFullscreen() {
 }
 
 function dismissFullscreenOverlay(): boolean {
+  if (galleryPanelRef.value?.closePreview()) return true;
   if (composerRef.value?.choiceModalOpen) {
     composerRef.value.closeChoiceModal();
     return true;

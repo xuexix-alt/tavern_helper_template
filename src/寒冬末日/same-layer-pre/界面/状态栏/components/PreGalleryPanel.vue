@@ -74,11 +74,18 @@
         </div>
       </article>
     </div>
+    <PreGalleryViewer
+      v-if="previewEntries.length"
+      :entries="previewEntries"
+      :initial-index="previewIndex"
+      @close="previewEntries = []"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import PreGalleryViewer from './PreGalleryViewer.vue';
 import {
   beginPreGalleryImageRefLongPress,
   clearPreGalleryHostRefs,
@@ -150,6 +157,14 @@ const pendingClickKey = ref('');
 const mobileTapState = ref({ key: '', count: 0, updatedAt: 0 });
 const suppressClickAfterLongPress = ref({ key: '', until: 0 });
 const scanLimitValue = ref('1');
+const previewEntries = ref<ReaderGalleryEntry[]>([]);
+const previewIndex = ref(0);
+function closePreview(): boolean {
+  if (!previewEntries.value.length) return false;
+  previewEntries.value = [];
+  return true;
+}
+defineExpose({ closePreview });
 const stops: Array<{ stop: () => void }> = [];
 const scanLimitOptions = SCAN_LIMIT_OPTIONS;
 
@@ -336,6 +351,14 @@ function hydrateImageDom(eventName: string, ...eventArgs: unknown[]) {
 
 function dispatchGesture(entry: PreGalleryImageRef, mode: PreGalleryGestureMode) {
   cancelLongPress();
+  if (mode === 'click' && entry.src) {
+    const images = result.value.refs.filter(item => item.src);
+    const index = images.findIndex(item => item.id === entry.id);
+    if (index < 0) return;
+    previewIndex.value = index;
+    previewEntries.value = images.map(toReaderGalleryEntry);
+    return;
+  }
   const dispatched = dispatchPreGalleryImageRefGesture(entry, mode);
   pushGalleryLog(
     dispatched.ok ? 'action' : 'error',
@@ -490,6 +513,7 @@ watch(
       return;
     }
     if (scanTimer.value) window.clearTimeout(scanTimer.value);
+    previewEntries.value = [];
     if (renderRescanTimer.value) window.clearTimeout(renderRescanTimer.value);
     clearPendingClick();
     resetMobileTapState();
@@ -510,6 +534,7 @@ onMounted(() => {
   );
   stops.push(
     eventOn(tavern_events.CHAT_CHANGED as any, () => {
+      previewEntries.value = [];
       cancelLongPress();
       clearPendingClick();
       clearPreGalleryHostRefs();
