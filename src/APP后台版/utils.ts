@@ -234,3 +234,73 @@ export function stopStreaming() {
     // ignore
   }
 }
+
+/** 解析正文时需要剥离的标签（这些标签不参与正文展示） */
+const STREAM_STRIP_TAGS = [
+  'content',
+  'summary',
+  'option',
+  'roleplay_options',
+  'update',
+  'updatevariable',
+  'json_patch',
+  'jsonpatch',
+  'analysis',
+  'thought',
+  'review',
+  'game',
+  'initvar',
+];
+
+/** 提取指定标签的内容（取第一个匹配） */
+export function extractStreamTag(text: string, tag: string): string {
+  const pattern = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
+  return text.match(pattern)?.[1]?.trim() ?? '';
+}
+
+/** 移除指定标签块 */
+function removeStreamTagBlock(text: string, tag: string): string {
+  const pattern = new RegExp(`<${tag}[^>]*>[\\s\\S]*?</${tag}>`, 'gi');
+  return text.replace(pattern, '');
+}
+
+export type StreamingContent = {
+  content: string;
+  summary: string;
+  option: string;
+  update_only: boolean;
+};
+
+/**
+ * 统一解析楼层消息，保证“模型有输出就一定不会解析为空”。
+ * 优先级：<content> → <game> 内的 <content> → 剥离标签后的纯文本
+ * → 仅选项/总结（兜底展示） → 原文。
+ */
+export function parseStreamingContent(raw: string): StreamingContent {
+  const text = String(raw ?? '');
+  const summary = extractStreamTag(text, 'summary');
+  const option = extractStreamTag(text, 'option') || extractStreamTag(text, 'roleplay_options');
+
+  let content = extractStreamTag(text, 'content');
+  if (!content) {
+    const gameBlock = extractStreamTag(text, 'game');
+    if (gameBlock) content = extractStreamTag(gameBlock, 'content');
+  }
+
+  if (!content) {
+    let cleaned = text;
+    STREAM_STRIP_TAGS.forEach(tag => {
+      cleaned = removeStreamTagBlock(cleaned, tag);
+    });
+    content = cleaned.trim();
+  }
+
+  const update_only = !content && /<(update|updatevariable|json_patch|jsonpatch|initvar)[^>]*>/i.test(text);
+
+  if (!content && !update_only) {
+    // 兜底：避免正文为空导致整个楼层空白
+    content = option || summary || text.trim();
+  }
+
+  return { content, summary, option, update_only };
+}

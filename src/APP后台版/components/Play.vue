@@ -85,7 +85,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { requestStreaming } from '../utils';
+import { requestStreaming, parseStreamingContent } from '../utils';
 import { historyOverlayOpen, playPanelsMini, playPanelsOpen, shopOverlayOpen } from '../shared/uiState';
 import { playAppearance } from '../shared/playAppearance';
 
@@ -240,12 +240,12 @@ function focusText() {
 }
 
 function extractContent(raw: string, role?: string) {
-  const contentMatch = raw.match(/<content>([\s\S]*?)<\/content>/i);
-  if (contentMatch?.[1]) return contentMatch[1].trim();
-  const hasUpdateTags = /<updatevariable>|<json_patch>|<update>|<initvar>/i.test(raw);
-  if (hasUpdateTags) return '';
-  if (role === 'assistant') return raw.trim();
-  return '';
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+  // 用户消息只作为指令显示，不进入正文日志
+  if (role && role !== 'assistant') return '';
+  // 统一解析：优先 <content>，没有时退化为剥标签后的正文，避免整条消息被判为空
+  return parseStreamingContent(text).content;
 }
 
 function appendLogBlock(text: string) {

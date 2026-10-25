@@ -57,7 +57,7 @@ export function mountStreamingMessages(
   };
 
   const destroyAllInvalid = () => {
-    states.keys().forEach(message_id => destroyIfInvalid(message_id));
+    states.forEach((_state, message_id) => destroyIfInvalid(message_id));
   };
 
   const renderOneMessage = async (message_id: number, stream_message?: string) => {
@@ -227,7 +227,7 @@ export function mountStreamingMessages(
       if ($th_streaming.length > 0) {
         $th_streaming.removeClass('hidden!');
       } else {
-        $('chat').find('.mes_text').removeClass('hidden!');
+        $('#chat').find('.mes_text').removeClass('hidden!');
       }
       states.forEach(({ destroy }) => destroy());
       stop_list.forEach(stop => stop());

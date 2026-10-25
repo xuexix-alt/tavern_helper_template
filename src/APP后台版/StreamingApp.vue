@@ -13,7 +13,7 @@
 
     <div class="stream-body">
       <pre
-        class="stream-content">{{ contentText || ui.streaming.empty }}<span v-if="context.during_streaming">_</span></pre>
+        class="stream-content">{{ contentText || (parsed.update_only ? ui.streaming.updateOnly : ui.streaming.empty) }}<span v-if="context.during_streaming">_</span></pre>
 
       <details v-if="summaryText" class="stream-fold">
         <summary>{{ ui.streaming.summary }}</summary>
@@ -31,65 +31,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { injectStreamingMessageContext } from '@util/streaming';
+import { parseStreamingContent } from './utils';
 import uiSpec from './shared/ui-spec-for-designers.json';
 
 const context = injectStreamingMessageContext();
 const ui = uiSpec.uiTexts;
 
-function extractTag(text: string, tag: string): string {
-  const pattern = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i');
-  const match = text.match(pattern);
-  return match?.[1]?.trim() ?? '';
-}
-
-function removeTagBlock(text: string, tag: string): string {
-  const pattern = new RegExp(`<${tag}[^>]*>[\\s\\S]*?</${tag}>`, 'gi');
-  return text.replace(pattern, '').trim();
-}
-
-const contentText = computed(() => {
-  const raw = String(context.message ?? '');
-  const contentDirect = extractTag(raw, 'content');
-  if (contentDirect) return contentDirect;
-
-  const gameBlock = extractTag(raw, 'game');
-  if (gameBlock) {
-    const inner = extractTag(gameBlock, 'content');
-    if (inner) return inner;
-  }
-
-  let cleaned = raw;
-  [
-    'summary',
-    'option',
-    'roleplay_options',
-    'update',
-    'updatevariable',
-    'json_patch',
-    'jsonpatch',
-    'analysis',
-    'thought',
-    'review',
-    'game',
-  ].forEach(tag => {
-    cleaned = removeTagBlock(cleaned, tag);
-  });
-
-  const stripped = cleaned.trim();
-  if (stripped) return stripped;
-
-  const hasUpdateOnly = /<(update|updatevariable|json_patch|jsonpatch)[^>]*>/i.test(raw);
-  if (hasUpdateOnly) return ui.streaming.updateOnly;
-
-  return '';
-});
-
-const summaryText = computed(() => extractTag(String(context.message ?? ''), 'summary'));
-const optionText = computed(() => {
-  const option = extractTag(String(context.message ?? ''), 'option');
-  if (option) return option;
-  return extractTag(String(context.message ?? ''), 'roleplay_options');
-});
+const parsed = computed(() => parseStreamingContent(String(context.message ?? '')));
+const contentText = computed(() => parsed.value.content);
+const summaryText = computed(() => parsed.value.summary);
+const optionText = computed(() => parsed.value.option);
 </script>
 
 <style scoped lang="scss">
