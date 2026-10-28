@@ -16,6 +16,14 @@ import type { DemoStatus, DemoTheme, ReaderLogItem, ReaderSummary, TranscriptIte
 import { createPreHostVisualHideController } from './preHostVisualHide';
 import { bindPreHostLifecycleBridge } from './preHostLifecycleBridge';
 import { serializePreHostHtml } from './prePluginMedia';
+import { readPreStreamingPreference, writePreStreamingPreference } from './preGenerationSetting';
+import {
+  adaptSPresetResponse,
+  resolvePreGenerationText,
+  type PreResponseRecovery,
+  type SPresetRuntime,
+} from './preSPresetToolCompat';
+import { createPreGenerationRequestScope } from './preGenerationRequestScope';
 
 const PRE_EVENT_REFRESH_DELAY_MS = 80;
 const PRE_STREAMING_RENDER_INTERVAL_MS = 120;
@@ -424,6 +432,7 @@ function toTranscriptItem(message: ChatMessage, latestId: number, carrierMessage
 export function useSameLayerPre() {
   const transcriptItems = ref<TranscriptItem[]>([]);
   const transcriptDisplayPreference = ref(readPreTranscriptDisplayPreference());
+  const streamingEnabled = ref(readPreStreamingPreference());
   const transcriptTotalCount = ref(0);
   const transcriptDisplayMinimum = computed(() => Math.min(PRE_TRANSCRIPT_DISPLAY_MIN, transcriptTotalCount.value));
   const transcriptDisplayCount = computed(() =>
@@ -438,6 +447,8 @@ export function useSameLayerPre() {
   const errorMessage = ref('');
   const streamingText = ref('');
   const activeGenerationId = ref<string | null>(null);
+  const generationRecovery = ref<(PreResponseRecovery & { generationId: string }) | null>(null);
+  let activeResponseScope: ReturnType<typeof createPreGenerationRequestScope> | null = null;
   const rollbackConfirmMessageId = ref<number | null>(null);
   const logItems = ref<ReaderLogItem[]>([]);
   const lastRefreshedAt = ref('');
@@ -848,6 +859,70 @@ export function useSameLayerPre() {
     () => [...transcriptItems.value].reverse().find(item => item.canReroll && item.isLatest) ?? null,
   );
 
+  async function generatePreReply(userInput: string, generationId: string): Promise<string> {
+    const shouldStream = streamingEnabled.value;
+    let scope: ReturnType<typeof createPreGenerationRequestScope> | null = null;
+    const host = window.parent as any;
+    const settings = host?.SPresetEditorBridge?.getOutputPreprocessing?.();
+    if (settings?.enabled) {
+      const names = [
+        'createSPresetOutputPreprocessingSession',
+        'formatSPresetToolCalls',
+        'consumeSPresetToolCallsFromResponse',
+      ];
+      if (names.some(name => typeof host[name] !== 'function')) {
+        throw new Error('当前 SPreset 缺少运行处理接口，无法安全生成；请检查预设脚本是否已加载');
+      }
+      const context = host.SillyTavern.getContext();
+      if (context.streamingProcessor) throw new Error('酒馆正在生成，请等待当前请求结束');
+      const runtime: SPresetRuntime = {
+        createSession: host.createSPresetOutputPreprocessingSession.bind(host),
+        formatCalls: host.formatSPresetToolCalls.bind(host),
+        consumeResponse: host.consumeSPresetToolCallsFromResponse.bind(host),
+      };
+      const snapshot = structuredClone(settings);
+      scope = createPreGenerationRequestScope({
+        host,
+        events: context.eventSource,
+        generationId,
+        adapt: (response, stream) =>
+          adaptSPresetResponse(response, {
+            runtime,
+            settings: snapshot,
+            stream,
+            onFailure: recovery => {
+              if (activeGenerationId.value === generationId) generationRecovery.value = { ...recovery, generationId };
+            },
+          }),
+      });
+      activeResponseScope = scope;
+    }
+    try {
+      const result = await generate({
+        user_input: userInput,
+        should_stream: shouldStream,
+        generation_id: generationId,
+      });
+      if (activeGenerationId.value !== generationId) throw new Error('本次生成已取消');
+      scope?.assertClaimed();
+      return resolvePreGenerationText(result);
+    } finally {
+      scope?.dispose();
+      if (activeResponseScope === scope) activeResponseScope = null;
+    }
+  }
+
+  function downloadGenerationRecovery() {
+    if (!generationRecovery.value) return;
+    const blob = new Blob([JSON.stringify(generationRecovery.value, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = generationRecovery.value.generationId + '-response.json';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   const canRegenerateLatestMessage = computed(() => {
     const target = latestRegeneratableMessage.value;
     if (!target || busy.value) return false;
@@ -876,7 +951,7 @@ export function useSameLayerPre() {
       refreshTranscript('user_submitted');
 
       status.value = 'streaming';
-      const response = await generate({ user_input: text, should_stream: true, generation_id: generationId });
+      const response = await generatePreReply(text, generationId);
 
       status.value = 'persisting';
       reserveNextHostMessageVisualHide();
@@ -886,12 +961,15 @@ export function useSameLayerPre() {
       refreshTranscript('assistant_persisted');
       pushLog('info', '助手回复已写入', plainPreview(response, 80));
     } catch (error) {
+      if (activeGenerationId.value !== generationId) return;
       status.value = 'error';
       errorMessage.value = error instanceof Error ? error.message : String(error);
       pushLog('error', '生成失败', errorMessage.value);
     } finally {
-      busy.value = false;
-      activeGenerationId.value = null;
+      if (activeGenerationId.value === generationId) {
+        busy.value = false;
+        activeGenerationId.value = null;
+      }
     }
   }
 
@@ -909,7 +987,7 @@ export function useSameLayerPre() {
 
     try {
       status.value = 'streaming';
-      const response = await generate({ user_input: text, should_stream: true, generation_id: generationId });
+      const response = await generatePreReply(text, generationId);
 
       status.value = 'persisting';
       reserveNextHostMessageVisualHide();
@@ -921,13 +999,16 @@ export function useSameLayerPre() {
       pushLog('info', '正式开局已写入', `助手楼层 #${assistantMessageId}`);
       return assistantMessageId;
     } catch (error) {
+      if (activeGenerationId.value !== generationId) return null;
       status.value = 'error';
       errorMessage.value = error instanceof Error ? error.message : String(error);
       pushLog('error', '开局生成失败', errorMessage.value);
       return null;
     } finally {
-      busy.value = false;
-      activeGenerationId.value = null;
+      if (activeGenerationId.value === generationId) {
+        busy.value = false;
+        activeGenerationId.value = null;
+      }
     }
   }
 
@@ -1026,7 +1107,7 @@ export function useSameLayerPre() {
       }
 
       status.value = 'streaming';
-      const response = await generate({ user_input: prompt, should_stream: true, generation_id: generationId });
+      const response = await generatePreReply(prompt, generationId);
 
       status.value = 'persisting';
       reserveNextHostMessageVisualHide();
@@ -1036,12 +1117,15 @@ export function useSameLayerPre() {
       refreshTranscript('regenerate_persisted');
       pushLog('info', '重新生成完成', plainPreview(response, 80));
     } catch (error) {
+      if (activeGenerationId.value !== generationId) return;
       status.value = 'error';
       errorMessage.value = error instanceof Error ? error.message : String(error);
       pushLog('error', '重新生成失败', errorMessage.value);
     } finally {
-      busy.value = false;
-      activeGenerationId.value = null;
+      if (activeGenerationId.value === generationId) {
+        busy.value = false;
+        activeGenerationId.value = null;
+      }
     }
   }
 
@@ -1050,6 +1134,8 @@ export function useSameLayerPre() {
   }
 
   function cancelGeneration() {
+    activeResponseScope?.dispose();
+    activeResponseScope = null;
     const id = activeGenerationId.value;
     if (id && typeof stopGenerationById === 'function') {
       stopGenerationById(id);
@@ -1074,6 +1160,8 @@ export function useSameLayerPre() {
   watch(bodyLineHeight, value => {
     patchReaderChatState({ body_line_height: value });
   });
+
+  watch(streamingEnabled, value => writePreStreamingPreference(value), { flush: 'sync' });
 
   watch(
     () => transcriptItems.value.map(item => item.message_id),
@@ -1145,6 +1233,12 @@ export function useSameLayerPre() {
   });
 
   onBeforeUnmount(() => {
+    activeResponseScope?.dispose();
+    activeResponseScope = null;
+    if (activeGenerationId.value) {
+      stopGenerationById(activeGenerationId.value);
+      activeGenerationId.value = null;
+    }
     if (refreshTimer) {
       window.clearTimeout(refreshTimer);
       refreshTimer = 0;
@@ -1168,6 +1262,9 @@ export function useSameLayerPre() {
     status,
     theme,
     bodyLineHeight,
+    streamingEnabled,
+    hasGenerationRecovery: computed(() => generationRecovery.value !== null),
+    downloadGenerationRecovery,
     statusLabel,
     errorMessage,
     logItems,

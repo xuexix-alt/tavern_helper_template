@@ -151,7 +151,7 @@
       <OpeningSetupPanel
         v-else
         :preset="openingPreset"
-        :payload="openingPayload"
+        :payload="{ ...openingPayload, use_stream: streamingEnabled }"
         :busy="busy"
         :world-modes="openingWorldModes"
         :routes="openingRoutes"
@@ -172,8 +172,8 @@
 
     <HudModal
       :open="typographyModalOpen"
-      title="阅读与排版设置"
-      subtitle="拖动滑块即时调整 AI 正文行距。"
+      title="阅读与生成设置"
+      subtitle="调整正文行距和生成方式。"
       variant="typography"
       icon="T"
       eyebrow="TYPE // SETTINGS"
@@ -185,6 +185,11 @@
         :automatic-value="1.75"
         @update:model-value="bodyLineHeight = $event"
       />
+      <label class="pre-stream-setting">
+        <input v-model="streamingEnabled" type="checkbox" />
+        <span>流式生成</span>
+        <small>开启后逐步显示回复；关闭后生成完成时显示。</small>
+      </label>
     </HudModal>
 
     <PreGalleryBetaModal
@@ -336,6 +341,10 @@
         </section>
 
         <section class="ui-bottom-dock">
+          <div v-if="hasGenerationRecovery" class="pre-response-recovery" role="status">
+            <span>已保留最近一次处理失败的原始回复。</span>
+            <button type="button" class="ui-icon-btn" @click="downloadGenerationRecovery">下载原始回复</button>
+          </div>
           <Teleport to="body">
             <transition name="utility-mask-fade">
               <div
@@ -609,6 +618,9 @@ const {
   busy,
   theme,
   bodyLineHeight,
+  streamingEnabled,
+  hasGenerationRecovery,
+  downloadGenerationRecovery,
   errorMessage,
   logItems,
   readerSummary,
@@ -1369,6 +1381,7 @@ function updateOpeningRoute(value: string) {
 }
 
 function updateOpeningStream(value: boolean) {
+  streamingEnabled.value = value;
   openingPayload.value = {
     ...openingPayload.value,
     use_stream: value === true,
@@ -1718,6 +1731,34 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.pre-response-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.pre-stream-setting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  cursor: pointer;
+}
+
+.pre-stream-setting input {
+  accent-color: var(--ui-accent, #bc8c44);
+}
+
+.pre-stream-setting small {
+  flex-basis: 100%;
+  opacity: 0.7;
+}
+
 /*
  * Z-INDEX 层级表（same-layer-pre）
  *   1      — ui-host-shell 基础层

@@ -834,7 +834,7 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /<HudModal[\s\S]*:open="openingModalOpen \|\| shouldShowOpeningSetup"/);
   assert.match(storySource, /title="世界观自定义 \/ Opening Start"/);
   assert.match(storySource, /:icon-src="openingModalIcon"/);
-  assert.match(storySource, /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="openingPayload"/);
+  assert.match(storySource, /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="\{ \.\.\.openingPayload, use_stream: streamingEnabled \}"/);
   assert.match(storySource, /@update-meta="updateOpeningMeta"/);
   assert.match(storySource, /@update-field="updateOpeningField"/);
   assert.match(storySource, /@update-world-mode="updateOpeningWorldMode"/);
@@ -961,10 +961,7 @@ test('same-layer-pre opening generation persists only assistant mes=1', () => {
   const storySource = readPre(path.join('pages', 'StoryPagePre.vue'));
   const assistantOnlySource = extractFunctionSource(preSource, 'submitAssistantOnlyPrompt');
 
-  assert.match(
-    assistantOnlySource,
-    /generate\(\{ user_input: text, should_stream: true, generation_id: generationId \}\)/,
-  );
+  assert.match(assistantOnlySource, /generatePreReply\(text, generationId\)/);
   assert.match(
     assistantOnlySource,
     /createChatMessages\(\[\{ role: 'assistant', message: response, is_hidden: false \}\]/,
@@ -1070,10 +1067,7 @@ test('same-layer-pre wires native-style regenerate and rollback actions through 
   assert.match(hookSource, /function resolveRegenerateTarget/);
   assert.match(hookSource, /findUserPromptBefore/);
   assert.match(hookSource, /await deleteChatMessages\(trailingIds,\s*\{\s*refresh:\s*'none'\s*\}\)/);
-  assert.match(
-    hookSource,
-    /await generate\(\{\s*user_input:\s*prompt,\s*should_stream:\s*true,\s*generation_id:\s*generationId\s*\}\)/,
-  );
+  assert.match(hookSource, /await generatePreReply\(prompt, generationId\)/);
   assert.match(hookSource, /await createChatMessages\(\[\{\s*role:\s*'assistant'/);
   assert.match(hookSource, /canDeleteFrom,/);
   assert.match(hookSource, /canReroll:\s*canDeleteFrom && \(role === 'assistant' \|\| role === 'user'\)/);
