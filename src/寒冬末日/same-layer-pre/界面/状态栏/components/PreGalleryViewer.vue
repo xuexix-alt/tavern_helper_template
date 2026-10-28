@@ -3,6 +3,7 @@
     <section
       ref="dialog"
       class="pre-viewer"
+      :style="visibleInsets"
       role="dialog"
       aria-modal="true"
       aria-label="画廊大图浏览"
@@ -49,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import type { ReaderGalleryEntry } from '../../../../界面同层版/界面/状态栏/types';
 
@@ -61,6 +63,49 @@ const stage = ref<HTMLElement>();
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const failed = ref(false);
+const visibleInsets = ref<{ top: string; bottom: string } | undefined>();
+let frame: HTMLIFrameElement | null = null;
+let host: Window | null = null;
+try {
+  frame = window.frameElement as HTMLIFrameElement | null;
+  host = frame?.ownerDocument.defaultView ?? null;
+} catch {
+  // Standalone or cross-origin previews keep their normal iframe viewport.
+}
+
+function updateVisibleInsets() {
+  if (!frame || !host) return;
+  const rect = frame.getBoundingClientRect();
+  const factor = rect.height / frame.clientHeight;
+  if (!factor || !Number.isFinite(factor)) return;
+  const viewport = host.visualViewport;
+  let top = Math.max(rect.top, viewport?.offsetTop ?? 0);
+  let bottom = Math.min(rect.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? host.innerHeight));
+  for (let parent = frame.parentElement; parent; parent = parent.parentElement) {
+    const overflow = host.getComputedStyle(parent).overflowY;
+    if (!['auto', 'scroll', 'hidden', 'clip'].includes(overflow)) continue;
+    const bounds = parent.getBoundingClientRect();
+    const scale = parent.offsetHeight ? bounds.height / parent.offsetHeight : 1;
+    const clipTop = bounds.top + parent.clientTop * scale;
+    top = Math.max(top, clipTop);
+    bottom = Math.min(bottom, clipTop + parent.clientHeight * scale);
+  }
+  if (bottom <= top) return;
+  visibleInsets.value = {
+    top: `${Math.max(0, (top - rect.top) / factor)}px`,
+    bottom: `${Math.max(0, (rect.bottom - bottom) / factor)}px`,
+  };
+}
+const scheduleVisibleInsets = useThrottleFn(updateVisibleInsets, 32);
+if (host) {
+  useEventListener(host, 'scroll', scheduleVisibleInsets, { capture: true, passive: true });
+  useEventListener(host, 'resize', scheduleVisibleInsets);
+  if (host.visualViewport) {
+    useEventListener(host.visualViewport, 'scroll', scheduleVisibleInsets);
+    useEventListener(host.visualViewport, 'resize', scheduleVisibleInsets);
+  }
+}
+let resizeObserver: ResizeObserver | undefined;
 type Point = { x: number; y: number };
 const pointers = new Map<number, Point>();
 let start: Point | null = null;
@@ -181,9 +226,16 @@ function onKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   previousFocus = document.activeElement as HTMLElement | null;
+  updateVisibleInsets();
+  if (frame && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(scheduleVisibleInsets);
+    for (let element: HTMLElement | null = frame; element; element = element.parentElement)
+      resizeObserver.observe(element);
+  }
   dialog.value?.focus({ preventScroll: true });
 });
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
   cancelGesture();
   if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
 });
