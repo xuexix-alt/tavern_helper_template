@@ -1519,6 +1519,8 @@ function createWinterAdapterModule(): PhoneModule {
       provider: value.provider === 'openai-compatible' ? 'openai-compatible' : 'tavern',
       apiUrl: value.apiUrl,
       model: value.model,
+      timeoutMs: value.timeoutMs,
+      stream: value.stream,
       parameters: parsed,
       theme: value.theme,
       notifications: value.notifications,
@@ -1882,6 +1884,9 @@ function createWinterAdapterModule(): PhoneModule {
         baseUrl: publicSettings.apiUrl,
         model: publicSettings.model,
         parameters: publicSettings.parameters,
+        // 广播等结构化输出耗时较长：沿用设置里的空闲超时与流式开关
+        timeoutMs: publicSettings.timeoutMs,
+        stream: publicSettings.stream,
         withApiKey: callback => requireSettings().withApiKey(callback),
       });
     }

@@ -55,6 +55,8 @@ function createWechatAdapterModule(): PhoneModule {
         baseUrl: publicSettings.apiUrl,
         model: publicSettings.model,
         parameters: publicSettings.parameters,
+        timeoutMs: publicSettings.timeoutMs,
+        stream: publicSettings.stream,
         withApiKey: callback => settings.withApiKey(callback),
       });
     }

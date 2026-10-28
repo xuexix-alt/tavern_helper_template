@@ -1,3 +1,5 @@
+import { DEFAULT_OPENAI_TIMEOUT_MS, MAX_OPENAI_TIMEOUT_MS, MIN_OPENAI_TIMEOUT_MS } from '../ai/providers';
+
 export type SettingsProvider = 'tavern' | 'openai-compatible';
 export type SettingsTheme = 'system' | 'light' | 'dark';
 
@@ -5,6 +7,10 @@ export interface PublicSettings {
   readonly provider: SettingsProvider;
   readonly apiUrl: string;
   readonly model: string;
+  /** OpenAI-compatible 请求超时（毫秒）。流式下是「多久没有新数据」的空闲超时；旧存档缺该字段时回落到默认值。 */
+  readonly timeoutMs: number;
+  /** 是否请求 SSE 流式响应。缓冲型中转网关可关掉它退回一次性 JSON。旧存档缺该字段时默认开启。 */
+  readonly stream: boolean;
   readonly parameters: Readonly<Record<string, unknown>>;
   readonly theme: SettingsTheme;
   readonly notifications: boolean;
@@ -44,10 +50,31 @@ const DEFAULT_SETTINGS: PublicSettings = Object.freeze({
   provider: 'tavern',
   apiUrl: '',
   model: '',
+  timeoutMs: DEFAULT_OPENAI_TIMEOUT_MS,
+  stream: true,
   parameters: Object.freeze({}),
   theme: 'system',
   notifications: true,
 });
+
+function normalizeStream(value: unknown): boolean {
+  // 旧存档没有该字段：默认开启流式，同样不能因此把整套设置重置成默认。
+  if (value === undefined || value === null) return true;
+  if (typeof value !== 'boolean') throw new Error('流式开关必须是布尔值');
+  return value;
+}
+
+function normalizeTimeoutMs(value: unknown): number {
+  // 旧存档没有该字段：静默补默认值，避免整个设置被重置成默认。
+  if (value === undefined || value === null) return DEFAULT_OPENAI_TIMEOUT_MS;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
+    throw new Error('请求超时必须是整数毫秒');
+  }
+  if (value < MIN_OPENAI_TIMEOUT_MS || value > MAX_OPENAI_TIMEOUT_MS) {
+    throw new Error(`请求超时必须在 ${MIN_OPENAI_TIMEOUT_MS}～${MAX_OPENAI_TIMEOUT_MS} 毫秒之间`);
+  }
+  return value;
+}
 
 function normalizeApiUrl(value: unknown): string {
   if (typeof value !== 'string') throw new Error('API URL must be a string');
@@ -124,6 +151,8 @@ function normalizePublicSettings(value: unknown): PublicSettings {
     provider: input.provider,
     apiUrl: normalizeApiUrl(input.apiUrl),
     model: input.model,
+    timeoutMs: normalizeTimeoutMs(input.timeoutMs),
+    stream: normalizeStream(input.stream),
     parameters: normalizeParameters(input.parameters ?? {}),
     theme: input.theme,
     notifications: input.notifications,
@@ -135,6 +164,8 @@ function sameSettings(left: PublicSettings, right: PublicSettings): boolean {
     left.provider === right.provider &&
     left.apiUrl === right.apiUrl &&
     left.model === right.model &&
+    left.timeoutMs === right.timeoutMs &&
+    left.stream === right.stream &&
     JSON.stringify(left.parameters) === JSON.stringify(right.parameters) &&
     left.theme === right.theme &&
     left.notifications === right.notifications

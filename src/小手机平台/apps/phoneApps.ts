@@ -6,6 +6,7 @@ import type { PhoneDb } from '../data/phoneDb';
 import { collectProfiles } from './profileHelper';
 import { copyText } from './copyText';
 import { ChatDrafts } from './chatDrafts';
+import { MAX_OPENAI_TIMEOUT_MS, MIN_OPENAI_TIMEOUT_MS } from '../ai/providers';
 
 export type PhoneRoute =
   | 'home'
@@ -74,6 +75,10 @@ export interface PhoneSettingsView {
   provider: string;
   apiUrl: string;
   model: string;
+  /** OpenAI-compatible 请求超时（毫秒）；旧调用方不给时按默认值处理。 */
+  timeoutMs: number;
+  /** 是否请求 SSE 流式响应；旧调用方不给时按开启处理。 */
+  stream: boolean;
   parameters: string;
   theme: 'system' | 'light' | 'dark';
   notifications: boolean;
@@ -953,6 +958,23 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
         modelChoices.className = 'phone-settings__models';
         const modelChoicesField = field(document, '可用模型', modelChoices);
         modelChoicesField.hidden = true;
+        // 旧适配器可能还没有 stream；缺省按开启处理，与设置层默认一致。
+        const stream = input(document, 'checkbox', '');
+        stream.checked = settings.stream !== false;
+        // 旧适配器可能还没有 timeoutMs；留空时保存沿用原值，由设置层补默认。
+        const timeoutMs = input(
+          document,
+          'number',
+          Number.isFinite(settings.timeoutMs) ? String(settings.timeoutMs) : '',
+        );
+        timeoutMs.min = String(MIN_OPENAI_TIMEOUT_MS);
+        timeoutMs.max = String(MAX_OPENAI_TIMEOUT_MS);
+        timeoutMs.step = '1000';
+        const readTimeoutMs = (): number => {
+          const raw = timeoutMs.value.trim();
+          const parsed = Number(raw);
+          return raw === '' || !Number.isFinite(parsed) ? settings.timeoutMs : parsed;
+        };
         const parameters = input(document, 'text', settings.parameters);
         const theme = select(document, settings.theme, [
           { value: 'system', label: '跟随系统' },
@@ -988,6 +1010,14 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
           field(document, '模型', model),
           modelChoicesField,
           actions,
+          field(document, '启用流式', stream),
+          text(document, 'p', '开启后逐段接收内容，长生成不会被总时长砍断；中转网关会缓冲 SSE 时关掉它。'),
+          field(document, '请求超时（毫秒）', timeoutMs),
+          text(
+            document,
+            'p',
+            `流式开启时这是「多久没有收到新内容」的空闲超时，每段新增量都会重新计时；关闭流式后变回整段请求的总时长。DeepSeek 等长生成建议不低于 120000。可填 ${MIN_OPENAI_TIMEOUT_MS}～${MAX_OPENAI_TIMEOUT_MS}。`,
+          ),
           field(document, '生成参数', parameters),
           field(document, '主题', theme),
           field(document, '通知', notifications),
@@ -1038,6 +1068,8 @@ export function createPhoneApps(services: PhoneAppServices): readonly PhoneAppDe
             provider: provider.value,
             apiUrl: apiUrl.value,
             model: model.value,
+            timeoutMs: readTimeoutMs(),
+            stream: stream.checked,
             parameters: parameters.value,
             theme: isPhoneTheme(theme.value) ? theme.value : 'system',
             notifications: notifications.checked,

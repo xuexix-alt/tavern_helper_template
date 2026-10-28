@@ -618,6 +618,7 @@ async function testOpenAIProviderParityAndSecrets(): Promise<void> {
     model: 'model-x',
     temperature: 0.4,
     max_tokens: 512,
+    stream: true,
     messages: buildRolePrompts('ASSEMBLED', 'chat', undefined, undefined, requestOptions.playerMessage),
   });
   assert.deepEqual(
@@ -1075,6 +1076,110 @@ async function testOpenAiModelDiscovery(): Promise<void> {
   assert.equal(unauthUrls, 1, '鉴权失败不得换端点重试');
 }
 
+/** 构造一个逐块吐字节的 SSE 响应体，用来验证流式拼接与空闲计时。 */
+function streamedResponse(chunks: readonly string[]): {
+  ok: boolean;
+  status: number;
+  json(): Promise<never>;
+  body: {
+    getReader(): {
+      read(): Promise<{ done: boolean; value?: Uint8Array }>;
+      cancel(): void;
+    };
+  };
+} {
+  const encoder = new TextEncoder();
+  let index = 0;
+  return {
+    ok: true,
+    status: 200,
+    json: async () => {
+      throw new Error('流式响应不应退回一次性 JSON');
+    },
+    body: {
+      getReader: () => ({
+        read: async () =>
+          index < chunks.length ? { done: false, value: encoder.encode(chunks[index++]) } : { done: true },
+        cancel: () => undefined,
+      }),
+    },
+  };
+}
+
+async function testOpenAIStreamingResponse(): Promise<void> {
+  const requests: Array<{ body: unknown }> = [];
+  const armed: number[] = [];
+  let nextTimer = 0;
+  const provider = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test/v1',
+    model: 'deepseek-chat',
+    withApiKey: callback => callback('sk-stream'),
+    setTimer: () => {
+      nextTimer += 1;
+      armed.push(nextTimer);
+      return nextTimer;
+    },
+    clearTimer: () => undefined,
+    fetch: async (_url, init) => {
+      requests.push({ body: JSON.parse(String(init.body)) });
+      return streamedResponse([
+        ': keep-alive\n\n',
+        'data: {"choices":[{"delta":{"reasoning_content":"先想"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"{\\"sections\\":"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":"[]}"}}]}\n\n',
+        'data: [DONE]\n\n',
+      ]);
+    },
+  });
+  const detailed = await provider.requestDetailed('PROMPT', { jsonMode: true }).promise;
+  assert.equal(detailed.content, '{"sections":[]}');
+  assert.equal(detailed.reasoningContent, '先想');
+  assert.equal((requests[0].body as { stream?: boolean }).stream, true, '流式模式必须在请求体里带 stream:true');
+  assert.deepEqual(
+    (requests[0].body as { response_format?: unknown }).response_format,
+    { type: 'json_object' },
+    'jsonMode 与流式必须能同时开启',
+  );
+  // 初始计时 1 次 + 三段新增量（思维链 1 + 正文 2）各续命一次；纯 keep-alive 注释帧不得续命
+  assert.equal(armed.length, 4, `预期初始 1 次 + 三段增量 3 次续命，实际 ${armed.length} 次`);
+
+  // 网关忽略 stream:true、直接回整段 JSON 时退回普通解析
+  const jsonFallback = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test/v1',
+    model: 'm',
+    withApiKey: callback => callback('sk-stream'),
+    fetch: async () =>
+      streamedResponse([JSON.stringify({ choices: [{ message: { content: '整段 JSON 回包' } }] })]),
+  });
+  assert.equal(await jsonFallback.request('x').promise, '整段 JSON 回包');
+
+  // 既不是 SSE 也不是有效 JSON 的响应体必须报 invalid_response，而不是静默返回空串
+  const garbage = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test/v1',
+    model: 'm',
+    withApiKey: callback => callback('sk-stream'),
+    fetch: async () => streamedResponse(['not an sse frame']),
+  });
+  await assert.rejects(
+    garbage.request('x').promise,
+    error => error instanceof ProviderError && error.code === 'invalid_response',
+  );
+
+  // stream:false 时保持一次性 JSON 解析
+  const nonStream = new OpenAICompatibleProvider({
+    baseUrl: 'https://api.example.test/v1',
+    model: 'm',
+    stream: false,
+    withApiKey: callback => callback('sk-stream'),
+    fetch: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: '一次性结果' } }] }),
+    }),
+  });
+  assert.equal(await nonStream.request('x').promise, '一次性结果');
+}
+
 async function main(): Promise<void> {
   testJailbreakLayers();
   testPromptAssemblerOrderAndImmutableSnapshot();
@@ -1088,6 +1193,7 @@ async function main(): Promise<void> {
   await testOpenAIProviderParityAndSecrets();
   await testSettingsStoreApiKeyContract();
   await testApiKeyCallbackIsSynchronousAndTransient();
+  await testOpenAIStreamingResponse();
   await testPendingResponseJsonHonorsCancelAndTimeout();
   await testCleanupFailureIsolation();
   await testTimerSetupFailureClassification();

@@ -853,6 +853,8 @@ async function testSettingsStore(): Promise<void> {
     provider: 'tavern',
     apiUrl: '',
     model: '',
+    timeoutMs: 120_000,
+    stream: true,
     parameters: {},
     theme: 'system',
     notifications: true,
@@ -881,6 +883,20 @@ async function testSettingsStore(): Promise<void> {
     assert.throws(() => winter.updatePublic({ apiUrl }), /api.?url|http|https|invalid|无效/i, apiUrl);
   }
   winter.updatePublic({ apiUrl: '' });
+
+  // 请求超时：越界或非整数必须被拒；合法值落盘
+  for (const timeoutMs of [0, 999, 10, 600_001, Number.NaN, 120_000.5]) {
+    assert.throws(() => winter.updatePublic({ timeoutMs }), /超时/, String(timeoutMs));
+  }
+  winter.updatePublic({ timeoutMs: 180_000 });
+  assert.equal(winter.getPublic().timeoutMs, 180_000);
+  assert.equal(createSettingsStore('末世寒冬 - 星穹秩序', storage).getPublic().timeoutMs, 180_000);
+
+  // 流式开关：只接受布尔值
+  assert.throws(() => winter.updatePublic({ stream: 'yes' as unknown as boolean }), /流式/);
+  winter.updatePublic({ stream: false });
+  assert.equal(winter.getPublic().stream, false);
+  assert.equal(createSettingsStore('末世寒冬 - 星穹秩序', storage).getPublic().stream, false);
 
   for (const credentialKey of ['x-api-key', 'token', 'password', 'secret']) {
     assert.throws(
@@ -966,6 +982,8 @@ async function testSettingsStore(): Promise<void> {
   migrationStorage.setItem(`${legacyNamespace}:secret`, 'legacy-secret');
   const migrated = createSettingsStore('旧角色卡', migrationStorage);
   assert.equal(migrated.getPublic().model, 'legacy-model', '全局配置为空时应迁移当前角色卡旧设置');
+  assert.equal(migrated.getPublic().timeoutMs, 120_000, '旧存档缺 timeoutMs 时补默认值，不得因此重置整套设置');
+  assert.equal(migrated.getPublic().stream, true, '旧存档缺 stream 时默认开启流式');
   assert.equal(
     migrated.withApiKey(apiKey => apiKey),
     'legacy-secret',
@@ -983,6 +1001,8 @@ async function testSettingsStore(): Promise<void> {
     provider: 'tavern',
     apiUrl: '',
     model: '',
+    timeoutMs: 120_000,
+    stream: true,
     parameters: {},
     theme: 'system',
     notifications: true,

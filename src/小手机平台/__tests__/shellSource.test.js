@@ -359,6 +359,8 @@ test('settings saves a separate local secret and fetches selectable OpenAI-compa
       provider: 'tavern',
       apiUrl: 'https://api.example.com',
       model: 'model-a',
+      timeoutMs: 120_000,
+      stream: true,
       parameters: '{"temperature":0.7}',
       theme: 'system',
       notifications: true,
@@ -386,6 +388,8 @@ test('settings saves a separate local secret and fetches selectable OpenAI-compa
   fields.Provider.value = 'openai-compatible';
   fields['API URL'].value = 'https://new.example.com/v1';
   fields['模型'].value = 'model-b';
+  fields['启用流式'].checked = false;
+  fields['请求超时（毫秒）'].value = '300000';
   fields['生成参数'].value = '{"temperature":0.4}';
   fields['主题'].value = 'dark';
   fields['通知'].checked = false;
@@ -412,6 +416,8 @@ test('settings saves a separate local secret and fetches selectable OpenAI-compa
         provider: 'openai-compatible',
         apiUrl: 'https://new.example.com/v1',
         model: 'model-d',
+        timeoutMs: 300_000,
+        stream: false,
         parameters: '{"temperature":0.4}',
         theme: 'dark',
         notifications: false,

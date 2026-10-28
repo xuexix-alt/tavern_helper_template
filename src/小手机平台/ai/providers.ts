@@ -147,14 +147,74 @@ function mapContentHandle(handle: RequestHandle<AiDetailedResponse>): RequestHan
   };
 }
 
+/** 流式响应体只需要 getReader，避免把 DOM 流类型渗透进测试替身。 */
+export interface StreamReaderLike {
+  read(): Promise<{ done: boolean; value?: Uint8Array | undefined }>;
+  cancel?(reason?: unknown): Promise<void> | void;
+}
+
+export interface StreamBodyLike {
+  getReader(): StreamReaderLike;
+}
+
 export interface FetchResponseLike {
   readonly ok: boolean;
   readonly status: number;
   json(): Promise<unknown>;
+  /**
+   * 流式响应体。缺省、或网关不支持流式时退回 `json()` 一次性解析，
+   * 因此自定义 fetch 只实现 ok/status/json 也能正常工作。
+   */
+  readonly body?: StreamBodyLike | null;
 }
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<FetchResponseLike>;
 type TimerHandle = ReturnType<typeof setTimeout> | number;
+
+/** 按空行切分 SSE 帧；`rest` 是尚未收完的尾巴。兼容 CRLF 与裸 CR。 */
+function splitSseFrames(buffer: string): { frames: string[]; rest: string } {
+  const normalized = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const segments = normalized.split('\n\n');
+  return { frames: segments.slice(0, -1), rest: segments[segments.length - 1] ?? '' };
+}
+
+/**
+ * 取一帧的 data 字段。注释行（以 `:` 开头，常见于 keep-alive）返回 null：
+ * 这类帧不能用来续命空闲计时，否则一个只发心跳的连接可以永不超时。
+ */
+function sseFrameData(frame: string): string | null {
+  const data: string[] = [];
+  for (const line of frame.split('\n')) {
+    if (line === '' || line.startsWith(':')) continue;
+    const separator = line.indexOf(':');
+    const field = separator === -1 ? line : line.slice(0, separator);
+    if (field !== 'data') continue;
+    const value = separator === -1 ? '' : line.slice(separator + 1);
+    data.push(value.startsWith(' ') ? value.slice(1) : value);
+  }
+  return data.length > 0 ? data.join('\n') : null;
+}
+
+/** 流式增量帧：DeepSeek 的思维链放在 delta.reasoning_content。 */
+function streamDeltaOf(payload: unknown): { content: string; reasoningContent: string } {
+  const delta = (payload as { choices?: Array<{ delta?: { content?: unknown; reasoning_content?: unknown } }> })
+    ?.choices?.[0]?.delta;
+  return {
+    content: typeof delta?.content === 'string' ? delta.content : '',
+    reasoningContent: typeof delta?.reasoning_content === 'string' ? delta.reasoning_content : '',
+  };
+}
+
+/** 非流式（或把 stream:true 当普通 JSON 返回的网关）的整段响应。 */
+function messageContentOf(payload: unknown): { content: string; reasoningContent: string } {
+  const message = (
+    payload as { choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }> }
+  )?.choices?.[0]?.message;
+  return {
+    content: typeof message?.content === 'string' ? message.content : '',
+    reasoningContent: typeof message?.reasoning_content === 'string' ? message.reasoning_content : '',
+  };
+}
 
 export interface OpenAIModelListOptions {
   baseUrl: string;
@@ -259,11 +319,27 @@ export interface ApiKeyAccessor {
   <T>(callback: (apiKey: string | undefined) => T): T;
 }
 
+/**
+ * OpenAI-compatible 请求的默认超时。
+ * 默认走流式，此时这是「多久没有收到新增量」的空闲超时；每段增量都会重置计时。
+ * 非流式（stream:false）时退回整体超时语义。30s 对 DeepSeek 一类长提示词 + 四栏结构化输出
+ * 太短，会在正常耗时内误判超时，因此默认放宽到 2 分钟并允许在设置里调整。
+ */
+export const DEFAULT_OPENAI_TIMEOUT_MS = 120_000;
+export const MIN_OPENAI_TIMEOUT_MS = 10_000;
+export const MAX_OPENAI_TIMEOUT_MS = 600_000;
+
 export interface OpenAICompatibleProviderOptions {
   baseUrl: string;
   model: string;
   parameters?: Readonly<Record<string, unknown>>;
   timeoutMs?: number;
+  /**
+   * 是否请求 SSE 流式响应，默认 true。
+   * 流式下 `timeoutMs` 的含义变为「多久没有收到新增量」，长生成不会再被总时长砍断；
+   * 遇到不兼容的网关可显式传 false 退回一次性 JSON。
+   */
+  stream?: boolean;
   fetch?: FetchLike;
   withApiKey: ApiKeyAccessor;
   idFactory?: () => string;
@@ -277,6 +353,7 @@ export class OpenAICompatibleProvider {
   readonly #model: string;
   readonly #parameters: Readonly<Record<string, unknown>>;
   readonly #timeoutMs: number;
+  readonly #stream: boolean;
   readonly #fetch: FetchLike;
   readonly #withApiKey: OpenAICompatibleProviderOptions['withApiKey'];
   readonly #idFactory: () => string;
@@ -289,9 +366,11 @@ export class OpenAICompatibleProvider {
     if (options.model.trim().length === 0) throw new Error('OpenAI-compatible model 不得为空');
     this.#model = options.model;
     this.#parameters = Object.freeze({ ...(options.parameters ?? {}) });
-    this.#timeoutMs = options.timeoutMs ?? 30_000;
+    this.#timeoutMs = options.timeoutMs ?? DEFAULT_OPENAI_TIMEOUT_MS;
     if (!Number.isSafeInteger(this.#timeoutMs) || this.#timeoutMs <= 0) throw new Error('timeoutMs 必须是正安全整数');
-    this.#fetch = options.fetch ?? ((url, init) => fetch(url, init));
+    this.#stream = options.stream ?? true;
+    // Response.body 与 StreamBodyLike 结构一致，这里只需绕过 lib.dom 的流类型差异。
+    this.#fetch = options.fetch ?? (async (url, init) => (await fetch(url, init)) as unknown as FetchResponseLike);
     this.#withApiKey = options.withApiKey;
     this.#idFactory = options.idFactory ?? defaultId;
     this.#setTimer = options.setTimer ?? ((callback, delayMs) => setTimeout(callback, delayMs));
@@ -310,7 +389,10 @@ export class OpenAICompatibleProvider {
     let timedOut = false;
 
     const interruptedError = (): ProviderError | undefined => {
-      if (timedOut) return new ProviderError(`OpenAI-compatible 请求超时（${this.#timeoutMs}ms）`, 'timeout');
+      if (timedOut) {
+        const detail = this.#stream ? `${this.#timeoutMs}ms 内没有收到新数据` : `${this.#timeoutMs}ms`;
+        return new ProviderError(`OpenAI-compatible 请求超时（${detail}）`, 'timeout');
+      }
       if (cancelled) return new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
       return undefined;
     };
@@ -328,14 +410,33 @@ export class OpenAICompatibleProvider {
 
     let timer: TimerHandle | undefined;
     let fetched: Promise<FetchResponseLike> | undefined;
-    try {
-      timer = this.#setTimer(() => {
+    const armTimer = (): TimerHandle =>
+      this.#setTimer(() => {
         timedOut = true;
         controller.abort();
       }, this.#timeoutMs);
+    try {
+      timer = armTimer();
     } catch {
       fetched = Promise.reject(new ProviderError('OpenAI-compatible timer setup failed', 'setup'));
     }
+    // 流式下每收到一段新增量就重置计时，把「总时长」改成「空闲时长」。
+    const touchTimer = (): void => {
+      if (timer === undefined) return;
+      let next: TimerHandle;
+      try {
+        // 先建新计时器再清旧的：新计时器建不起来时，原期限仍然有效，请求不会永不超时
+        next = armTimer();
+      } catch {
+        return;
+      }
+      try {
+        this.#clearTimer(timer);
+      } catch {
+        reportCleanupError();
+      }
+      timer = next;
+    };
 
     const requestMessages = buildRolePrompts(
       assembledPrompt,
@@ -367,6 +468,7 @@ export class OpenAICompatibleProvider {
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
                     : {}),
+                  ...(this.#stream ? { stream: true } : {}),
                 }),
                 signal: controller.signal,
               });
@@ -405,6 +507,9 @@ export class OpenAICompatibleProvider {
         if (!response.ok) {
           throw new ProviderError(`OpenAI-compatible HTTP ${response.status}`, 'http', response.status);
         }
+        if (this.#stream && response.body && typeof response.body.getReader === 'function') {
+          return await this.#consumeStream(response.body, { touch: touchTimer, assertNotInterrupted });
+        }
         let payload: unknown;
         try {
           payload = await response.json();
@@ -413,19 +518,13 @@ export class OpenAICompatibleProvider {
           throw new ProviderError('OpenAI-compatible 响应不是有效 JSON', 'invalid_response');
         }
         assertNotInterrupted();
-        const message = (
-          payload as {
-            choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }>;
-          }
-        )?.choices?.[0]?.message;
-        const content = message?.content;
-        if (typeof content !== 'string' || content.length === 0) {
+        const message = messageContentOf(payload);
+        if (message.content.length === 0) {
           throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].message.content', 'invalid_response');
         }
-        const reasoningContent = message?.reasoning_content;
         return {
-          content,
-          ...(typeof reasoningContent === 'string' && reasoningContent.length > 0 ? { reasoningContent } : {}),
+          content: message.content,
+          ...(message.reasoningContent.length > 0 ? { reasoningContent: message.reasoningContent } : {}),
         };
       })
       .finally(() => {
@@ -446,5 +545,110 @@ export class OpenAICompatibleProvider {
         controller.abort();
       },
     };
+  }
+
+  /**
+   * 逐帧消费 SSE：拼接 delta.content，兼容 DeepSeek 的 delta.reasoning_content。
+   * 网关忽略 stream:true 直接回整段 JSON 时，退回普通解析而不是报错。
+   */
+  async #consumeStream(
+    body: StreamBodyLike,
+    hooks: { touch: () => void; assertNotInterrupted: () => void },
+  ): Promise<AiDetailedResponse> {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let pending = '';
+    let raw = '';
+    let content = '';
+    let reasoningContent = '';
+    let sawFrame = false;
+    let finished = false;
+    try {
+      while (!finished) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        if (!chunk.value || chunk.value.length === 0) continue;
+        const text = decoder.decode(chunk.value, { stream: true });
+        raw += text;
+        pending += text;
+        const split = splitSseFrames(pending);
+        pending = split.rest;
+        let touched = false;
+        for (const frame of split.frames) {
+          const data = sseFrameData(frame);
+          if (data === null) continue; // 注释/keep-alive：不续命
+          sawFrame = true;
+          if (data === '[DONE]') {
+            finished = true;
+            break;
+          }
+          let payload: unknown;
+          try {
+            payload = JSON.parse(data);
+          } catch {
+            continue; // 半截或非 JSON 帧直接跳过
+          }
+          const apiError = (payload as { error?: unknown })?.error;
+          if (apiError) {
+            const detail =
+              typeof apiError === 'object' && apiError !== null
+                ? String((apiError as { message?: unknown }).message ?? '')
+                : String(apiError);
+            throw new ProviderError(
+              `OpenAI-compatible 流式响应返回错误${detail ? `：${detail}` : ''}`,
+              'invalid_response',
+            );
+          }
+          const delta = streamDeltaOf(payload);
+          if (delta.content.length > 0 || delta.reasoningContent.length > 0) touched = true;
+          content += delta.content;
+          reasoningContent += delta.reasoningContent;
+        }
+        if (touched) hooks.touch();
+      }
+      if (!finished && pending.trim() !== '') {
+        // 收尾时可能缺最后一个空行分隔，把残帧当一帧处理
+        const tail = sseFrameData(pending);
+        if (tail !== null && tail !== '[DONE]') {
+          try {
+            const delta = streamDeltaOf(JSON.parse(tail));
+            content += delta.content;
+            reasoningContent += delta.reasoningContent;
+            if (delta.content.length > 0 || delta.reasoningContent.length > 0) sawFrame = true;
+          } catch {
+            // 尾巴不完整就丢弃
+          }
+        }
+      }
+    } catch (error) {
+      hooks.assertNotInterrupted();
+      if (error instanceof ProviderError) throw error;
+      throw new ProviderError('OpenAI-compatible 流式响应中断', 'network');
+    } finally {
+      try {
+        await reader.cancel?.();
+      } catch {
+        // 已结束的流取消失败无需上报
+      }
+    }
+
+    if (!sawFrame) {
+      try {
+        const message = messageContentOf(JSON.parse(raw));
+        if (message.content.length > 0) {
+          return {
+            content: message.content,
+            ...(message.reasoningContent.length > 0 ? { reasoningContent: message.reasoningContent } : {}),
+          };
+        }
+      } catch {
+        // 落到下面的统一报错
+      }
+      throw new ProviderError('OpenAI-compatible 流式响应不是有效 SSE', 'invalid_response');
+    }
+    if (content.length === 0) {
+      throw new ProviderError('OpenAI-compatible 响应缺少 choices[0].delta.content', 'invalid_response');
+    }
+    return { content, ...(reasoningContent.length > 0 ? { reasoningContent } : {}) };
   }
 }
