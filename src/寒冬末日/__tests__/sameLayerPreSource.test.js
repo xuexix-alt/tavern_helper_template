@@ -834,7 +834,10 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /<HudModal[\s\S]*:open="openingModalOpen \|\| shouldShowOpeningSetup"/);
   assert.match(storySource, /title="世界观自定义 \/ Opening Start"/);
   assert.match(storySource, /:icon-src="openingModalIcon"/);
-  assert.match(storySource, /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="\{ \.\.\.openingPayload, use_stream: streamingEnabled \}"/);
+  assert.match(
+    storySource,
+    /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="\{ \.\.\.openingPayload, use_stream: streamingEnabled \}"/,
+  );
   assert.match(storySource, /@update-meta="updateOpeningMeta"/);
   assert.match(storySource, /@update-field="updateOpeningField"/);
   assert.match(storySource, /@update-world-mode="updateOpeningWorldMode"/);
