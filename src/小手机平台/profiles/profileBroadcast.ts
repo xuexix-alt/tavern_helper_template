@@ -10,14 +10,59 @@ export const PROFILE_BROADCAST_TITLES = ['本台通告', '生活频道', '街坊
 
 export const PROFILE_BROADCAST_SYSTEM_PROMPT = PROMPT_DEFINITIONS.find(item => item.id === 'broadcast.system')!.text;
 
+type BroadcastTitle = (typeof PROFILE_BROADCAST_TITLES)[number];
+
+/**
+ * 各栏体量与兜底文案。min/max 取自 broadcast.body【输出契约】的字数区间，用于拼装输出骨架；
+ * hard 只作截断护栏，防止某一栏吞掉整期篇幅。
+ * 想给某栏单独的兜底文案就改这里——不要把兜底句再写进 prompt（两处措辞不一致时模型会随机挑）。
+ */
+export const PROFILE_BROADCAST_SECTION_LIMITS: Readonly<
+  Record<BroadcastTitle, { min: number; max: number; hard: number; fallback: string }>
+> = {
+  本台通告: { min: 60, max: 200, hard: 600, fallback: '暂无重大变化' },
+  生活频道: { min: 60, max: 200, hard: 600, fallback: '暂无重大变化' },
+  街坊风声: { min: 60, max: 300, hard: 900, fallback: '暂无重大变化' },
+  床头床尾: { min: 60, max: 200, hard: 600, fallback: '暂无重大变化' },
+};
+
+/**
+ * 各栏塞进输出骨架的硬性提示：只复述 broadcast.body 里该栏已有的要求，
+ * 让约束出现在模型抄写该栏正文的同一位置，而不是散落在长 prompt 中段。
+ * 「床头床尾」不在此列——那一栏写什么由提示词作者决定，这里只给定位指针。
+ */
+export const PROFILE_BROADCAST_SECTION_HINTS: Readonly<Record<BroadcastTitle, string>> = {
+  本台通告: '公共事件或局势变化 + 可听出的立场；机构与立场须有素材依据',
+  生活频道: '≥2 位具名人物 + 一处已发生的具体举动 + 主持人评价（体谅/打趣/挑明不公平）',
+  街坊风声: '一处关系反差 + 带刺的主持人看法 + 谁受益、谁难堪、谁承担代价',
+  床头床尾: '按【本期节目单】第 4 条「床头床尾」的说明执行',
+};
+
+/** 输出前自检：只在代码层追加，不写进 promptCatalog，改提示词时不受影响。 */
+export const PROFILE_BROADCAST_SELF_CHECK = [
+  '【输出前自检：逐条核对，不达标的栏当场改写】',
+  '1. 四栏都写到具体的人与事，而不是泛泛的局势或生活道理。',
+  '2. 生活频道、街坊风声能让听众认出是哪两个人、哪件事。',
+  '3. 每栏都落在素材已有的动作、物件、措辞或现场细节上，没有新增气味、天气、伤亡、价格、人数或路人反应。',
+  '4. 同一事件没有被重复播报。',
+  '5. 私聊没有被洗成公众已知事实；没有编造消息来源、目击者、引语或未来结果。',
+  '6. 四栏体量符合各自字数区间；素材不足时短而具体，不凑字。',
+  '7. body 是可直接念出的广播词；标题与顺序不得改动。',
+].join('\n');
+
+function normalizeSectionBody(title: BroadcastTitle, body: string): string {
+  const trimmed = body.trim();
+  if (trimmed === '') return PROFILE_BROADCAST_SECTION_LIMITS[title].fallback;
+  const { hard } = PROFILE_BROADCAST_SECTION_LIMITS[title];
+  return trimmed.length > hard ? trimmed.slice(0, hard) : trimmed;
+}
+
 const BroadcastSectionSchema = z
   .object({
     title: z.string().trim(),
     body: z
       .union([z.string(), z.null(), z.undefined()])
-      .transform(value =>
-        typeof value === 'string' && value.trim() !== '' ? value.trim().slice(0, 1_500) : '暂无重大变化',
-      ),
+      .transform(value => (typeof value === 'string' ? value.trim() : '')),
   })
   .strip();
 
@@ -39,10 +84,8 @@ const BroadcastOutputSchema = z
       }
     }
     const sections = PROFILE_BROADCAST_TITLES.map(title => {
-      const matched = byTitle.get(title);
-      if (matched) return matched;
-      const fallback = unclaimed.shift();
-      return fallback ? { ...fallback, title } : { title, body: '暂无重大变化' };
+      const matched = byTitle.get(title) ?? unclaimed.shift();
+      return { title, body: normalizeSectionBody(title, matched?.body ?? '') };
     });
     return { sections: [sections[0], sections[1], sections[2], sections[3]] } satisfies ProfileBroadcastOutput;
   });
@@ -171,7 +214,7 @@ export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): strin
     Object.keys(input.publicMvuFacts).length > 0
       ? JSON.stringify(input.publicMvuFacts, null, 2)
       : '（本期暂无公开事实）';
-  return renderPromptTemplate('broadcast.body', {
+  const body = renderPromptTemplate('broadcast.body', {
     story: storyLines.join('\n'),
     wechat: JSON.stringify(
       (input.wechat ?? []).slice(-30).map(message => ({ ...message, content: message.content.slice(0, 500) })),
@@ -179,12 +222,14 @@ export function buildProfileBroadcastPrompt(input: ProfileBroadcastInput): strin
     mvuFacts: mvuFacts,
     changes: changeLines.join('\n'),
     value1: JSON.stringify({
-      sections: PROFILE_BROADCAST_TITLES.map(title => ({
-        title,
-        body: title === '街坊风声' ? '节目正文（60~300字）' : '节目正文（60~200字）',
-      })),
+      sections: PROFILE_BROADCAST_TITLES.map(title => {
+        const { min, max } = PROFILE_BROADCAST_SECTION_LIMITS[title];
+        return { title, body: `节目正文（${min}~${max}字）——${PROFILE_BROADCAST_SECTION_HINTS[title]}` };
+      }),
     }),
   });
+  // 自检块追加在骨架之后：模型读到它的位置最靠近生成，也不依赖用户对 broadcast.body 的改写顺序。
+  return `${body.trimEnd()}\n\n${PROFILE_BROADCAST_SELF_CHECK}`;
 }
 
 export function parseProfileBroadcastOutput(raw: string): ProfileBroadcastOutput {

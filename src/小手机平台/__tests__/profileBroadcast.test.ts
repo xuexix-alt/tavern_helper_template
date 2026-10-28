@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  PROFILE_BROADCAST_SECTION_LIMITS,
   PROFILE_BROADCAST_SYSTEM_PROMPT,
   buildProfileBroadcastPrompt,
   isMeaningfulStorySummary,
@@ -57,8 +58,13 @@ function testRumorSectionRelaxedLength(): void {
   // 契约示例中只有街坊风声标注 300 字
   const contractStart = prompt.indexOf('【输出契约】');
   const contract = prompt.slice(contractStart);
-  assert.match(contract, /"title":"街坊风声","body":"节目正文（60~300字）"/);
-  assert.match(contract, /"title":"本台通告","body":"节目正文（60~200字）"/);
+  // 骨架里每栏除字数外还带该栏的硬性提示，约束就近出现在模型抄写该栏的位置
+  assert.match(contract, /"title":"街坊风声","body":"节目正文（60~300字）——/);
+  assert.match(contract, /"title":"本台通告","body":"节目正文（60~200字）——/);
+  assert.match(contract, /"title":"生活频道","body":"节目正文（60~200字）——[^"]*具名人物/);
+  // 输出前自检块追加在骨架之后
+  assert.match(prompt, /【输出前自检：逐条核对/);
+  assert.ok(prompt.trimEnd().endsWith('标题与顺序不得改动。'));
 }
 
 function testStrictFourSectionOutput(): void {
@@ -130,7 +136,7 @@ function testOutputTolerance(): void {
   });
   assert.equal(parseProfileBroadcastOutput(wrapped).sections[0].body, '北门暂时关闭。');
 
-  // B5: 多余字段剥离、空 body 兜底、超长 body 钳制到 1500 字
+  // B5: 多余字段剥离、空 body 按栏兜底、超长 body 按栏护栏钳制（街坊风声 hard=900）
   const tolerant = parseProfileBroadcastOutput(
     JSON.stringify({
       sections: [
@@ -144,7 +150,8 @@ function testOutputTolerance(): void {
   );
   assert.equal(tolerant.sections[0].body, '暂无重大变化');
   assert.equal(tolerant.sections[1].body, '暂无重大变化');
-  assert.equal(tolerant.sections[2].body.length, 1_500);
+  assert.equal(tolerant.sections[2].body.length, PROFILE_BROADCAST_SECTION_LIMITS['街坊风声'].hard);
+  assert.equal(tolerant.sections[2].body.length, 900);
   assert.equal((tolerant as unknown as Record<string, unknown>).meta, undefined);
 
   // B5: 段数不足仍然失败（四段是硬契约）
