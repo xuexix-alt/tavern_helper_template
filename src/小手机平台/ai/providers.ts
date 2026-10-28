@@ -207,9 +207,8 @@ function streamDeltaOf(payload: unknown): { content: string; reasoningContent: s
 
 /** 非流式（或把 stream:true 当普通 JSON 返回的网关）的整段响应。 */
 function messageContentOf(payload: unknown): { content: string; reasoningContent: string } {
-  const message = (
-    payload as { choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }> }
-  )?.choices?.[0]?.message;
+  const message = (payload as { choices?: Array<{ message?: { content?: unknown; reasoning_content?: unknown } }> })
+    ?.choices?.[0]?.message;
   return {
     content: typeof message?.content === 'string' ? message.content : '',
     reasoningContent: typeof message?.reasoning_content === 'string' ? message.reasoning_content : '',

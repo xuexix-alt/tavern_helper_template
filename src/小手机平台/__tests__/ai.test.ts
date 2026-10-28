@@ -1148,8 +1148,7 @@ async function testOpenAIStreamingResponse(): Promise<void> {
     baseUrl: 'https://api.example.test/v1',
     model: 'm',
     withApiKey: callback => callback('sk-stream'),
-    fetch: async () =>
-      streamedResponse([JSON.stringify({ choices: [{ message: { content: '整段 JSON 回包' } }] })]),
+    fetch: async () => streamedResponse([JSON.stringify({ choices: [{ message: { content: '整段 JSON 回包' } }] })]),
   });
   assert.equal(await jsonFallback.request('x').promise, '整段 JSON 回包');
 
