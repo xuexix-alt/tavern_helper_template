@@ -1180,6 +1180,7 @@ async function testOpenAIStreamingResponse(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  await testSlowReasoningResponse();
   testJailbreakLayers();
   testPromptAssemblerOrderAndImmutableSnapshot();
   testPromptDynamicDataIsolation();
@@ -1202,3 +1203,35 @@ async function main(): Promise<void> {
 }
 
 void main();
+
+async function testSlowReasoningResponse(): Promise<void> {
+  let deadline = 0;
+  let expire = () => {};
+  let cleared = false;
+  const provider = new OpenAICompatibleProvider({
+    baseUrl: 'https://example.test/v1',
+    model: 'deepseek-reasoner',
+    withApiKey: callback => callback('test-key'),
+    setTimer: (callback, delay) => {
+      deadline = delay;
+      expire = callback;
+      return 1 as any;
+    },
+    clearTimer: () => {
+      cleared = true;
+    },
+    fetch: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        // 模拟请求体在第45秒才完整返回，无需真实等待或访问收费API。
+        if (deadline <= 45_000) expire();
+        return { choices: [{ message: { reasoning_content: '分析过程', content: '{"sections":[]}' } }] };
+      },
+    }),
+  });
+  const result = await provider.requestDetailed('生成广播', { mode: 'structured', jsonMode: true }).promise;
+  assert.equal(result.content, '{"sections":[]}');
+  assert.equal(result.reasoningContent, '分析过程');
+  assert.ok(cleared);
+}
