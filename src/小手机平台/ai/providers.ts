@@ -16,6 +16,8 @@ export interface AiDetailedResponse {
 }
 
 export interface AiRequestOptions {
+  /** 长任务的最低等待时间；只延长本次请求，不缩短已配置的超时。 */
+  minimumTimeoutMs?: number;
   mode?: AiPromptMode;
   systemPrompt?: string;
   jsonMode?: boolean;
@@ -382,6 +384,11 @@ export class OpenAICompatibleProvider {
   }
 
   requestDetailed(assembledPrompt: string, options: AiRequestOptions = {}): RequestHandle<AiDetailedResponse> {
+    const minimumTimeoutMs = options.minimumTimeoutMs ?? 0;
+    if (!Number.isSafeInteger(minimumTimeoutMs) || minimumTimeoutMs < 0) {
+      throw new Error('minimumTimeoutMs 必须是非负安全整数');
+    }
+    const timeoutMs = Math.max(this.#timeoutMs, minimumTimeoutMs);
     const id = this.#idFactory();
     const controller = new AbortController();
     let cancelled = false;
@@ -389,7 +396,7 @@ export class OpenAICompatibleProvider {
 
     const interruptedError = (): ProviderError | undefined => {
       if (timedOut) {
-        const detail = this.#stream ? `${this.#timeoutMs}ms 内没有收到新数据` : `${this.#timeoutMs}ms`;
+        const detail = this.#stream ? `${timeoutMs}ms 内没有收到新数据` : `${timeoutMs}ms`;
         return new ProviderError(`OpenAI-compatible 请求超时（${detail}）`, 'timeout');
       }
       if (cancelled) return new ProviderError('OpenAI-compatible 请求已取消 (cancelled)', 'cancelled');
@@ -413,7 +420,7 @@ export class OpenAICompatibleProvider {
       this.#setTimer(() => {
         timedOut = true;
         controller.abort();
-      }, this.#timeoutMs);
+      }, timeoutMs);
     try {
       timer = armTimer();
     } catch {
@@ -467,7 +474,8 @@ export class OpenAICompatibleProvider {
                   ...(options.jsonMode && this.#parameters.response_format === undefined
                     ? { response_format: { type: 'json_object' } }
                     : {}),
-                  ...(this.#stream ? { stream: true } : {}),
+                  // 接收策略必须和发送开关一致，不能被高级参数里残留的 stream 覆盖。
+                  stream: this.#stream,
                 }),
                 signal: controller.signal,
               });

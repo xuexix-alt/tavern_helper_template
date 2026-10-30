@@ -877,6 +877,8 @@ function createWinterAdapterModule(): PhoneModule {
     const handle = createProvider().requestDetailed(prompt, {
       mode: 'structured',
       systemPrompt: renderPromptTemplate('profile.system'),
+      // 档案/广播可能先长时间推理或由网关缓冲，不能沿用短聊天的 30 秒限制。
+      minimumTimeoutMs: 300_000,
       ...requestOptions,
     });
     const key = requestKey(captured.sessionKey, `profile:${crypto.randomUUID()}`);

@@ -393,3 +393,43 @@ test('radio storage accepts legacy three-section and new four-section issues', (
   assert.equal(accepts({ ...issue, sections: [...issue.sections, issue.sections[0]] }), false);
   assert.equal(accepts({ ...issue, sections: [...issue.sections.slice(0, 3), { title: '床头床尾', body: 1 }] }), false);
 });
+
+test('profile requests use a long-task timeout without losing cancellation tracking', async () => {
+  const source = readFileSync(winterAdapterPath, 'utf8');
+  const start = source.indexOf('  async function requestProfileAnalysis(');
+  const end = source.indexOf('  async function writeProfileWorldbook(', start);
+  assert.ok(start >= 0 && end > start);
+  const ts = require('typescript');
+  const { outputText } = ts.transpileModule(source.slice(start, end), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022 },
+  });
+  let receivedOptions;
+  const requests = new Map();
+  const request = new Function(
+    'requireSnapshot',
+    'createProvider',
+    'renderPromptTemplate',
+    'requestKey',
+    'activeRequests',
+    'assertSnapshotCapture',
+    'crypto',
+    outputText + '\nreturn requestProfileAnalysis;',
+  )(
+    () => ({ sessionKey: 'test-session' }),
+    () => ({
+      requestDetailed: (_prompt, options) => {
+        receivedOptions = options;
+        return { promise: Promise.resolve({ content: '档案结果' }), cancel() {} };
+      },
+    }),
+    () => '档案系统提示词',
+    (session, key) => session + key,
+    requests,
+    () => {},
+    { randomUUID: () => 'test' },
+  );
+  assert.equal((await request('生成档案')).content, '档案结果');
+  assert.equal(receivedOptions.minimumTimeoutMs, 300_000);
+  assert.equal(receivedOptions.mode, 'structured');
+  assert.equal(requests.size, 0, '请求结束后应清理取消跟踪');
+});

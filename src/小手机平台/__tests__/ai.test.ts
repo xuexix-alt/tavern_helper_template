@@ -1169,17 +1169,22 @@ async function testOpenAIStreamingResponse(): Promise<void> {
     baseUrl: 'https://api.example.test/v1',
     model: 'm',
     stream: false,
+    parameters: { stream: true },
     withApiKey: callback => callback('sk-stream'),
-    fetch: async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ choices: [{ message: { content: '一次性结果' } }] }),
-    }),
+    fetch: async (_url, init) => {
+      assert.equal(JSON.parse(String(init.body)).stream, false, '关闭流式必须覆盖高级参数中的旧 stream:true');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '一次性结果' } }] }),
+      };
+    },
   });
   assert.equal(await nonStream.request('x').promise, '一次性结果');
 }
 
 async function main(): Promise<void> {
+  await testProfileMinimumTimeout();
   await testSlowReasoningResponse();
   testJailbreakLayers();
   testPromptAssemblerOrderAndImmutableSnapshot();
@@ -1234,4 +1239,43 @@ async function testSlowReasoningResponse(): Promise<void> {
   assert.equal(result.content, '{"sections":[]}');
   assert.equal(result.reasoningContent, '分析过程');
   assert.ok(cleared);
+}
+async function testProfileMinimumTimeout(): Promise<void> {
+  for (const stream of [false, true]) {
+    for (const savedTimeout of [30_000, 600_000]) {
+      let deadline = 0;
+      let expire = () => {};
+      const provider = new OpenAICompatibleProvider({
+        baseUrl: 'https://example.test/v1',
+        model: 'reasoning-model',
+        stream,
+        timeoutMs: savedTimeout,
+        withApiKey: callback => callback('test-key'),
+        setTimer: (callback, delay) => {
+          deadline = delay;
+          expire = callback;
+          return 1;
+        },
+        clearTimer: () => {},
+        fetch: async () => ({
+          ok: true,
+          status: 200,
+          json: async () => {
+            // 网关缓冲/长推理：第 150 秒才返回档案，不能被原聊天的 30 秒设置截断。
+            if (deadline <= 150_000) expire();
+            return { choices: [{ message: { content: '{"analysisNarrative":"档案完成"}' } }] };
+          },
+        }),
+      });
+      const response = await provider.requestDetailed('生成档案', {
+        mode: 'structured',
+        minimumTimeoutMs: 300_000,
+      }).promise;
+      assert.equal(response.content, '{"analysisNarrative":"档案完成"}');
+      assert.equal(deadline, Math.max(savedTimeout, 300_000));
+      if (savedTimeout === 30_000) await assert.rejects(provider.request('聊天').promise, /超时/);
+      else await provider.request('聊天').promise;
+      assert.equal(deadline, savedTimeout, '单次档案设置不能改写后续聊天的超时');
+    }
+  }
 }
