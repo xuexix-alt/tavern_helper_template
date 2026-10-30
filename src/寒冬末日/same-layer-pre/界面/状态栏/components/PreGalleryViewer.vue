@@ -63,41 +63,77 @@ const stage = ref<HTMLElement>();
 const scale = ref(1);
 const offset = ref({ x: 0, y: 0 });
 const failed = ref(false);
-const visibleInsets = ref<{ top: string; bottom: string } | undefined>();
-let frame: HTMLIFrameElement | null = null;
-let host: Window | null = null;
+const visibleInsets = ref<Record<'top' | 'bottom' | 'left' | 'right', string>>();
+const frames: HTMLIFrameElement[] = [];
+const hosts: Window[] = [];
 try {
-  frame = window.frameElement as HTMLIFrameElement | null;
-  host = frame?.ownerDocument.defaultView ?? null;
+  let context: Window = window;
+  while (context.frameElement) {
+    const frame = context.frameElement as HTMLIFrameElement;
+    const host = frame.ownerDocument.defaultView;
+    if (!host) break;
+    frames.push(frame);
+    hosts.push(host);
+    context = host;
+  }
 } catch {
-  // Standalone or cross-origin previews keep their normal iframe viewport.
+  // Use the accessible part of the frame chain in cross-origin previews.
 }
 
 function updateVisibleInsets() {
-  if (!frame || !host) return;
-  const rect = frame.getBoundingClientRect();
-  const factor = rect.height / frame.clientHeight;
-  if (!factor || !Number.isFinite(factor)) return;
-  const viewport = host.visualViewport;
-  let top = Math.max(rect.top, viewport?.offsetTop ?? 0);
-  let bottom = Math.min(rect.bottom, (viewport?.offsetTop ?? 0) + (viewport?.height ?? host.innerHeight));
-  for (let parent = frame.parentElement; parent; parent = parent.parentElement) {
-    const overflow = host.getComputedStyle(parent).overflowY;
-    if (!['auto', 'scroll', 'hidden', 'clip'].includes(overflow)) continue;
-    const bounds = parent.getBoundingClientRect();
-    const scale = parent.offsetHeight ? bounds.height / parent.offsetHeight : 1;
-    const clipTop = bounds.top + parent.clientTop * scale;
-    top = Math.max(top, clipTop);
-    bottom = Math.min(bottom, clipTop + parent.clientHeight * scale);
+  let top = 0;
+  let left = 0;
+  let bottom = window.innerHeight;
+  let right = window.innerWidth;
+  // Walk inward from the outermost accessible viewport, carrying its clipping
+  // through every iframe instead of treating an intermediate iframe as the screen.
+  for (let i = frames.length - 1; i >= 0; i--) {
+    const frame = frames[i];
+    const host = hosts[i];
+    const viewport = host.visualViewport;
+    if (i === frames.length - 1) {
+      top = viewport?.offsetTop ?? 0;
+      left = viewport?.offsetLeft ?? 0;
+      bottom = top + (viewport?.height ?? host.innerHeight);
+      right = left + (viewport?.width ?? host.innerWidth);
+    }
+    for (let parent = frame.parentElement; parent; parent = parent.parentElement) {
+      const style = host.getComputedStyle(parent);
+      const bounds = parent.getBoundingClientRect();
+      const sx = parent.offsetWidth ? bounds.width / parent.offsetWidth : 1;
+      const sy = parent.offsetHeight ? bounds.height / parent.offsetHeight : 1;
+      if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowY)) {
+        const clipTop = bounds.top + parent.clientTop * sy;
+        top = Math.max(top, clipTop);
+        bottom = Math.min(bottom, clipTop + parent.clientHeight * sy);
+      }
+      if (['auto', 'scroll', 'hidden', 'clip'].includes(style.overflowX)) {
+        const clipLeft = bounds.left + parent.clientLeft * sx;
+        left = Math.max(left, clipLeft);
+        right = Math.min(right, clipLeft + parent.clientWidth * sx);
+      }
+    }
+    const rect = frame.getBoundingClientRect();
+    const sx = rect.width / frame.offsetWidth;
+    const sy = rect.height / frame.offsetHeight;
+    if (!sx || !sy || !Number.isFinite(sx) || !Number.isFinite(sy)) return;
+    const originX = rect.left + frame.clientLeft * sx;
+    const originY = rect.top + frame.clientTop * sy;
+    top = Math.max(0, (top - originY) / sy);
+    left = Math.max(0, (left - originX) / sx);
+    bottom = Math.min(frame.clientHeight, (bottom - originY) / sy);
+    right = Math.min(frame.clientWidth, (right - originX) / sx);
   }
-  if (bottom <= top) return;
+  if (bottom <= top || right <= left) return;
   visibleInsets.value = {
-    top: `${Math.max(0, (top - rect.top) / factor)}px`,
-    bottom: `${Math.max(0, (rect.bottom - bottom) / factor)}px`,
+    top: `${top}px`,
+    bottom: `${Math.max(0, window.innerHeight - bottom)}px`,
+    left: `${left}px`,
+    right: `${Math.max(0, window.innerWidth - right)}px`,
   };
 }
 const scheduleVisibleInsets = useThrottleFn(updateVisibleInsets, 32);
-if (host) {
+for (const host of [window, ...hosts]) {
   useEventListener(host, 'scroll', scheduleVisibleInsets, { capture: true, passive: true });
   useEventListener(host, 'resize', scheduleVisibleInsets);
   if (host.visualViewport) {
@@ -227,10 +263,12 @@ function onKeydown(event: KeyboardEvent) {
 onMounted(() => {
   previousFocus = document.activeElement as HTMLElement | null;
   updateVisibleInsets();
-  if (frame && typeof ResizeObserver !== 'undefined') {
+  if (frames.length && typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(scheduleVisibleInsets);
-    for (let element: HTMLElement | null = frame; element; element = element.parentElement)
-      resizeObserver.observe(element);
+    for (const frame of frames) {
+      for (let element: HTMLElement | null = frame; element; element = element.parentElement)
+        resizeObserver.observe(element);
+    }
   }
   dialog.value?.focus({ preventScroll: true });
 });
@@ -254,6 +292,7 @@ onBeforeUnmount(() => {
 }
 .pre-viewer__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
