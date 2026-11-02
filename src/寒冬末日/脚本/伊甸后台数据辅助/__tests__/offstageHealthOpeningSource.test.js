@@ -22,7 +22,7 @@ test('Eden helper reads opening world mode for offstage health settlement', () =
   );
   assert.match(
     source,
-    /computeOffstageHealthDelta\(deltaHours, sheltered, rules, \{ worldModeId \}\)/,
-    'offstage health settlement should pass the opening world mode into the health algorithm',
+    /computeOffstageHealthDelta\(deltaHours, sheltered, rules, \{\s*worldModeId,\s*daysSinceDisaster: _\.get\(stat_data, '世界\.末日天数'\),\s*\}\)/,
+    'offstage health settlement should pass the current disaster day and legacy opening mode into the health algorithm',
   );
 });

@@ -161,7 +161,7 @@ test('workbench renders a tab-independent active directive strip from lightweigh
 
   assert.match(
     workbenchSource,
-    /<section class="active-directive-strip[\s\S]*?<div class="system-tabs"/,
+    /<section\b[^>]*class="active-directive-strip[\s\S]*?<div class="system-tabs"/,
     'active directive strip should render before tab buttons and stay independent of activeTab',
   );
   assert.match(workbenchSource, /activeDirectiveEntries/);
@@ -181,7 +181,7 @@ test('workbench logs tab owns system summary and command tab keeps themed catego
   assert.doesNotMatch(workbenchSource, /<section class="workbench-summary-strip">[\s\S]*?<div class="system-tabs"/);
   assert.match(
     workbenchSource,
-    /<section v-else class="workbench-panel logs-panel">[\s\S]*<section class="workbench-summary-strip">/,
+    /<section v-else-if="activeTab === 'logs'" class="workbench-panel logs-panel">[\s\S]*<section class="workbench-summary-strip">/,
   );
   assert.doesNotMatch(storyPageSource, /const activeUtilityPills = computed\(\(\) => \{[\s\S]*?日志[\s\S]*?楼层/);
   assert.match(workbenchSource, /class="command-category-badge"/);

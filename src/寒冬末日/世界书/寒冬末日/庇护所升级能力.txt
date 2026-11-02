@@ -1,3 +1,4 @@
+# <%_ if (!getvar('eden.worldbookManaged', { defaults: false })) { _%>
 version: 1
 meta:
   id: eden_shelter_ability_master
@@ -686,3 +687,4 @@ abilities:
       must_avoid:
         - "避免把慕小小写成播放设备的开关；共鸣来自真实认同和认真表演"
         - "避免因短暂离开、休息或一次拒演关闭已启用的舞台；其他成员也可使用"
+# <%_ } _%>

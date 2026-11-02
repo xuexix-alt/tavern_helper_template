@@ -1,6 +1,9 @@
 <template>
   <section class="workbench-card">
-    <section class="active-directive-strip clip-corner-sm">
+    <section
+      v-if="!enableEdenEditor || ['commands', 'status', 'logs'].includes(activeTab)"
+      class="active-directive-strip clip-corner-sm"
+    >
       <div class="active-directive-head">
         <span class="block-label">Active Eden Directive</span>
         <strong>生效项 {{ activeDirectiveEntries.length }}</strong>
@@ -36,7 +39,7 @@
       <div v-else class="empty-log">当前无生效中的一次性指令</div>
     </section>
 
-    <div class="system-tabs" role="tablist" aria-label="系统面板页签">
+    <div class="system-tabs" :class="{ 'is-eden': enableEdenEditor }" role="tablist" aria-label="系统面板页签">
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -49,6 +52,12 @@
       </button>
     </div>
 
+    <EdenSystemPanel
+      v-if="enableEdenEditor"
+      v-show="['abilities', 'rescue', 'technology'].includes(activeTab)"
+      :tab="edenTab"
+      :busy="busy"
+    />
     <section v-if="activeTab === 'commands'" class="workbench-panel command-panel">
       <span class="block-label">Eden Commands</span>
       <div v-if="edenCommandEntries.length === 0" class="empty-log">当前暂无一次性指令</div>
@@ -138,7 +147,7 @@
       </div>
     </section>
 
-    <section v-else class="workbench-panel logs-panel">
+    <section v-else-if="activeTab === 'logs'" class="workbench-panel logs-panel">
       <section class="workbench-summary-strip">
         <article class="summary-chip clip-corner-sm">
           <small>日志</small>
@@ -183,6 +192,7 @@
 </template>
 
 <script setup lang="ts">
+import EdenSystemPanel from '../../../../eden/components/EdenSystemPanel.vue';
 import type { ReaderLogItem } from '../types';
 import {
   buildEdenActiveDirectiveEntries,
@@ -192,6 +202,7 @@ import {
 import { useMvuSystemStore } from '../mvuRoleStore';
 
 const props = defineProps<{
+  enableEdenEditor?: boolean;
   logs: ReaderLogItem[];
   logDisplayLimit?: number;
   busy?: boolean;
@@ -199,13 +210,26 @@ const props = defineProps<{
   assistantCount?: number;
 }>();
 
-const tabs = [
-  { id: 'commands', label: '指令' },
-  { id: 'status', label: '状态' },
-  { id: 'logs', label: '日志' },
-] as const;
+const tabs = computed(
+  () =>
+    [
+      ...(props.enableEdenEditor
+        ? [
+            { id: 'abilities', label: '能力' },
+            { id: 'rescue', label: '救亡任务' },
+            { id: 'technology', label: '技术' },
+          ]
+        : []),
+      { id: 'commands', label: '指令' },
+      { id: 'status', label: '状态' },
+      { id: 'logs', label: '日志' },
+    ] as const,
+);
 
-const activeTab = ref<(typeof tabs)[number]['id']>('commands');
+const activeTab = ref(props.enableEdenEditor ? 'abilities' : 'commands');
+const edenTab = computed(() =>
+  activeTab.value === 'rescue' ? 'rescue' : activeTab.value === 'technology' ? 'technology' : 'abilities',
+);
 const { data: systemMvuData, ready: systemReady, isRetrying: isSystemRetrying } = useMvuSystemStore();
 
 const copyStatus = ref('');
@@ -847,5 +871,17 @@ async function copyLogs() {
   .command-extra-chip {
     flex: 1 1 100%;
   }
+}
+.system-tabs.is-eden {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.system-tabs.is-eden .system-tab {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 </style>

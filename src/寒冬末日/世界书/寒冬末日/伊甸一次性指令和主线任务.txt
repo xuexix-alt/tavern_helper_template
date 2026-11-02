@@ -52,6 +52,7 @@
 </伊甸一次性指令>
 
 
+<%_ if (!getvar('eden.worldbookManaged', { defaults: false })) { _%>
 <主线任务>
 <%_
 var edenTaskOpening = getvar('stream_demo.opening', { defaults: {} }) || {};
@@ -174,3 +175,4 @@ _%>
 <%_ } _%>
 ---
 </主线任务>
+<%_ } _%>

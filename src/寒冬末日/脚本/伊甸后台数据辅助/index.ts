@@ -1,7 +1,24 @@
 import YAML from 'yaml';
 import { z } from 'zod';
+import { getEdenRuntime, projectEdenToMvu, type EdenContext, type EdenDocument } from '../../eden/model';
+import {
+  currentEdenChatId,
+  EDEN_SAVED_EVENT,
+  getEdenHostDeps,
+  isEdenWorldbookManaged,
+  markEdenWorldbookManaged,
+  projectSavedEden,
+  readEdenContext,
+} from '../../eden/runtime';
+import { loadEdenDocument, refreshEdenEntries } from '../../eden/worldbook';
 import { isRoleEnabledBySelectorState, readRoleSelectorStateFromStatData } from '../../role_control';
-import { clampHealth, computeOffstageHealthDelta, healthCondition, HealthRules } from '../../util/health';
+import {
+  capOffstageHoursAtDisaster,
+  clampHealth,
+  computeOffstageHealthDelta,
+  healthCondition,
+  HealthRules,
+} from '../../util/health';
 import { findRoleLocation, normalizeRoomTag, parseRoomTag, roomTagFromLocation } from '../../util/room';
 import { floorRoomCapacity, isRoomSheltered, normalizeScope, ShelterScopeByFloor } from '../../util/shelter_scope';
 import { diffWorldHours } from '../../util/time';
@@ -37,6 +54,40 @@ const EDEN_HELPER_DEBUG_FLAG_PATH = 'eden.debug.eden_helper';
 const EDEN_HELPER_DEBUG_TO_CHAT_FLAG_PATH = 'eden.debug.to_chat';
 const EDEN_HELPER_DEBUG_LOG_PATH = 'eden.debug.eden_helper_log';
 const EDEN_HELPER_DEBUG_LOG_MAX = 80;
+
+let managedEdenCache: { chatId: string; document: EdenDocument } | null = null;
+let managedEdenLoadTicket = 0;
+let managedEdenLoading = false;
+let managedEdenLoadFailed = false;
+let managedEdenContext: EdenContext | null = null;
+
+function currentManagedEden(): EdenDocument | null {
+  return managedEdenCache?.chatId === currentEdenChatId() ? managedEdenCache.document : null;
+}
+
+async function reloadManagedEden(): Promise<void> {
+  const ticket = ++managedEdenLoadTicket;
+  const chatId = currentEdenChatId();
+  managedEdenLoading = true;
+  managedEdenLoadFailed = false;
+  if (managedEdenCache?.chatId !== chatId) managedEdenCache = null;
+  try {
+    const saved = chatId ? await loadEdenDocument(chatId, getEdenHostDeps()) : null;
+    if (ticket !== managedEdenLoadTicket || currentEdenChatId() !== chatId || !isActiveInstance()) return;
+    managedEdenCache = saved ? { chatId, document: saved.document } : null;
+    if (saved) markEdenWorldbookManaged(chatId);
+  } catch (error) {
+    if (ticket === managedEdenLoadTicket) {
+      managedEdenCache = null;
+      managedEdenLoadFailed = true;
+      edenLog('error', 'eden.worldbook.load_failed', {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } finally {
+    if (ticket === managedEdenLoadTicket) managedEdenLoading = false;
+  }
+}
 
 const DEBUG_BUTTON_TOGGLE = '伊甸调试开关';
 const DEBUG_BUTTON_TOGGLE_CHATLOG = '伊甸调试写入日志';
@@ -1776,6 +1827,12 @@ function readHealthRulesFromChat(): HealthRules {
 }
 
 function isShelteredForRole(stat_data: any, rolePath: string, scope: ShelterScopeByFloor): boolean {
+  const managed = currentManagedEden();
+  if (
+    managed &&
+    !getEdenRuntime(managed, managedEdenContext ?? readEdenContext()).abilities.some(item => item.group === '供暖供电')
+  )
+    return false;
   const tag = _.get(stat_data, `${rolePath}.所在房间`, '');
   const loc = parseRoomTag(tag);
   if (loc.kind === 'core' || loc.kind === 'entrance') return true;
@@ -2151,7 +2208,10 @@ function applyOffstageRoleHealthIfNeeded(
   if (currentHealth <= 0) return;
 
   const sheltered = isShelteredForRole(stat_data, rolePath, scope);
-  const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules, { worldModeId });
+  const computed = computeOffstageHealthDelta(deltaHours, sheltered, rules, {
+    worldModeId,
+    daysSinceDisaster: _.get(stat_data, '世界.末日天数'),
+  });
   if (!computed.delta) return;
 
   const nextHealth = clampHealth(currentHealth + computed.delta);
@@ -2285,6 +2345,12 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
 
   const stat_data = _.get(new_variables, 'stat_data', {});
   const old_stat_data = _.get(old_variables, 'stat_data', {});
+  deltaHours = capOffstageHoursAtDisaster(
+    deltaHours,
+    oldWorld.末日天数,
+    newWorld.末日天数,
+    parseTimeStrToMinutes(String(newWorld.时间 ?? '')),
+  );
   const roleSelectorState = readRoleSelectorStateSafe(stat_data);
   const rules = readHealthRulesFromChat();
   const worldModeId = readOpeningWorldModeIdFromChat();
@@ -2359,6 +2425,11 @@ function applyOffstageBundle(new_variables: any, old_variables: any, scope: Shel
 
 async function syncLatestShelterProfileOnBoot() {
   if (!isActiveInstance()) return;
+  if (currentManagedEden() || isEdenWorldbookManaged() || managedEdenLoadFailed) {
+    const managed = currentManagedEden();
+    if (managed) await projectSavedEden(managed, currentEdenChatId());
+    return;
+  }
   try {
     const latest = Mvu.getMvuData({ type: 'message', message_id: 'latest' as any });
     if (!latest || typeof latest !== 'object') return;
@@ -2414,7 +2485,21 @@ $(async () => {
     baseDebug,
   );
 
+  await reloadManagedEden();
   await syncLatestShelterProfileOnBoot();
+  eventOn(EDEN_SAVED_EVENT, async (chatId: string) => {
+    if (!isActiveInstance() || chatId !== currentEdenChatId()) return;
+    await reloadManagedEden();
+  });
+  eventOn(tavern_events.WORLDINFO_UPDATED, async (name: string) => {
+    if (isActiveInstance() && name === getChatWorldbookName('current')) await reloadManagedEden();
+  });
+  eventOn(tavern_events.WORLDINFO_SETTINGS_UPDATED, () => {
+    if (isActiveInstance()) void reloadManagedEden();
+  });
+  eventOn(tavern_events.CHAT_CHANGED, () => {
+    if (isActiveInstance()) void reloadManagedEden();
+  });
 
   // MVU 更新变量时可能会“就地修改”对象，导致 VARIABLE_UPDATE_ENDED 的
   // variables_before_update 与 variables 共享引用，进而让“本轮是否写入字段”的判定失真。
@@ -2514,6 +2599,38 @@ $(async () => {
     try {
       const old_vars = variablesBeforeUpdateSnapshot ?? old_variables;
       const stat_data = _.get(new_variables, 'stat_data', {}) ?? {};
+
+      // 新模式只投影正式世界书，旧掷点/升级奖励/范围写入/摘要均不得覆盖确认设定。
+      const managed = currentManagedEden();
+      if (managed || isEdenWorldbookManaged() || managedEdenLoading || managedEdenLoadFailed) {
+        if (managed) {
+          const rawDay = stat_data.世界?.末日天数;
+          managedEdenContext = {
+            ...readEdenContext(),
+            day: typeof rawDay === 'number' && Number.isFinite(rawDay) ? rawDay : null,
+            knownIntel: stat_data.主线任务?.情报碎片 ?? {},
+          };
+          projectEdenToMvu(managed, managedEdenContext, stat_data);
+          applyOffstageBundle(new_variables, old_vars, stat_data.庇护所.当前生存庇护范围);
+          const capturedChatId = currentEdenChatId();
+          void refreshEdenEntries(capturedChatId, managedEdenContext, getEdenHostDeps()).catch(error => {
+            edenLog(
+              'error',
+              'eden.worldbook.refresh_failed',
+              { reason: error instanceof Error ? error.message : String(error) },
+              debugSetting,
+            );
+          });
+        } else if (isEdenWorldbookManaged()) {
+          edenLog(
+            'warn',
+            'eden.worldbook.waiting',
+            { zh: '伊甸正式设定尚未载入，已跳过旧能力及健康结算' },
+            debugSetting,
+          );
+        }
+        return;
+      }
 
       // 日更 roll / 升级结算：从 UI 剥离后由脚本统一处理（含手动校准触发）
       applyShelterDailyRollIfNeeded(new_variables, old_vars, debugSetting);

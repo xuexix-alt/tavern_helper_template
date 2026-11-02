@@ -24,6 +24,7 @@ import {
   type SPresetRuntime,
 } from './preSPresetToolCompat';
 import { createPreGenerationRequestScope } from './preGenerationRequestScope';
+import { prepareEdenGeneration } from '../../../eden/runtime';
 
 const PRE_EVENT_REFRESH_DELAY_MS = 80;
 const PRE_STREAMING_RENDER_INTERVAL_MS = 120;
@@ -860,6 +861,8 @@ export function useSameLayerPre() {
   );
 
   async function generatePreReply(userInput: string, generationId: string): Promise<string> {
+    await prepareEdenGeneration();
+    if (activeGenerationId.value !== generationId) throw new Error('本次生成已取消');
     const shouldStream = streamingEnabled.value;
     let scope: ReturnType<typeof createPreGenerationRequestScope> | null = null;
     const host = window.parent as any;

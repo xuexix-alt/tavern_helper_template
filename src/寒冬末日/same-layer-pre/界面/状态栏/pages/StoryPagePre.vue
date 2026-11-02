@@ -389,6 +389,7 @@
                 <div class="ui-bottom-drawer-body" :class="`is-${activeUtilityDrawer}`">
                   <WorkbenchTabs
                     v-if="activeUtilityDrawer === 'system'"
+                    :enable-eden-editor="true"
                     :logs="logItems"
                     :log-display-limit="40"
                     :busy="busy"
@@ -911,8 +912,8 @@ const activeUtilityMeta = computed(() => {
   }
 
   return {
-    title: '系统 TAB',
-    subtitle: '压缩展示日志、状态和关键工作台指标。',
+    title: '伊甸系统',
+    subtitle: '能力与救亡看板',
     eyebrow: 'TASKS // SYSTEM',
   };
 });
@@ -926,11 +927,7 @@ const activeUtilityPills = computed(() => {
     ];
   }
 
-  return [
-    { label: '日志', value: `${logItems.value.length}` },
-    { label: '楼层', value: `${readerSummary.value.turnCount || 0}` },
-    { label: '助手', value: `${assistantItemCount.value}` },
-  ];
+  return [];
 });
 
 function readHostViewportHeight() {
