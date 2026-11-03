@@ -18,7 +18,7 @@
           :disabled="busy || transferBusy"
           @click="emitSubmit"
         >
-          {{ busy ? '生成中…' : runtimePreset?.ui.submit_label || '生成开局' }}
+          {{ busy ? '生成中…' : submitLabel || runtimePreset?.ui.submit_label || '生成开局' }}
         </button>
       </div>
     </header>
@@ -45,113 +45,15 @@
       <button
         type="button"
         class="opening-transfer-button"
-        :disabled="busy || transferBusy || !runtimePreset"
+        :disabled="busy || transferBusy || (!runtimePreset && !worldbookSyncEnabled)"
         @click="emit('sync-worldbook')"
       >
         同步世界书
       </button>
     </section>
 
-    <template v-if="runtimePreset">
-      <section class="opening-meta-grid">
-        <div class="opening-meta-item">
-          <span class="opening-label">{{ preset.meta_template.character_label }}</span>
-          <input class="opening-input" :value="payload.meta.character" @input="emitMeta('character', $event)" />
-        </div>
-        <div class="opening-meta-item">
-          <span class="opening-label">{{ preset.meta_template.time_label }}</span>
-          <input class="opening-input" :value="payload.meta.time" @input="emitMeta('time', $event)" />
-        </div>
-        <div class="opening-meta-item full">
-          <span class="opening-label">{{ preset.meta_template.location_label }}</span>
-          <input class="opening-input" :value="payload.meta.location" @input="emitMeta('location', $event)" />
-        </div>
-      </section>
-
-      <section class="opening-form-grid">
-        <div
-          v-for="field in runtimePreset.fields"
-          :key="field.key"
-          class="opening-form-item"
-          :class="{ full: field.kind === 'textarea' }"
-        >
-          <span class="opening-label">{{ field.label }}</span>
-          <textarea
-            v-if="field.kind === 'textarea'"
-            class="opening-textarea"
-            :rows="4"
-            :placeholder="field.placeholder"
-            :value="payload.form_values[field.key] || ''"
-            @input="emitField(field.key, $event)"
-          />
-          <select
-            v-else-if="field.kind === 'select'"
-            class="opening-select"
-            :value="payload.form_values[field.key] || ''"
-            @change="emitField(field.key, $event)"
-          >
-            <option value="">请选择</option>
-            <option v-for="option in field.options || []" :key="option" :value="option">{{ option }}</option>
-          </select>
-          <input
-            v-else
-            class="opening-input"
-            :placeholder="field.placeholder"
-            :value="payload.form_values[field.key] || ''"
-            @input="emitField(field.key, $event)"
-          />
-        </div>
-      </section>
-    </template>
-
-    <template v-else>
-      <section class="opening-story-menu">
-        <div class="opening-form-item full">
-          <span class="opening-label">故事模板</span>
-          <select
-            :value="selectedStoryKey"
-            class="opening-select opening-story-select"
-            @change="emitStoryTemplate($event)"
-          >
-            <option :value="CURRENT_STORY_KEY">末世寒冬-星球秩序</option>
-            <option :value="NEW_STORY_KEY">新的故事</option>
-          </select>
-        </div>
-      </section>
-
-      <template v-if="isCurrentStorySelected">
-        <section class="opening-profile-grid">
-          <div class="opening-form-item">
-            <span class="opening-label">世界观档位</span>
-            <select class="opening-select" :value="payload.world_mode_id" @change="emitWorldMode($event)">
-              <option v-for="mode in worldModes" :key="mode.id" :value="mode.id">
-                {{ mode.id }} · {{ mode.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="opening-form-item">
-            <span class="opening-label">游玩流派</span>
-            <select class="opening-select" :value="payload.route_id" @change="emitRoute($event)">
-              <option v-for="route in routes" :key="route.id" :value="route.name">
-                {{ route.name }}
-              </option>
-            </select>
-          </div>
-        </section>
-
-        <section class="opening-form-grid">
-          <div class="opening-form-item full">
-            <span class="opening-label">世界观档位</span>
-            <textarea
-              class="opening-textarea opening-textarea-readonly"
-              :rows="8"
-              :value="worldModeAxisDictionaryText"
-              readonly
-            />
-          </div>
-        </section>
-
+    <fieldset class="opening-fields" :disabled="busy || transferBusy">
+      <template v-if="runtimePreset">
         <section class="opening-meta-grid">
           <div class="opening-meta-item">
             <span class="opening-label">{{ preset.meta_template.character_label }}</span>
@@ -167,9 +69,10 @@
           </div>
         </section>
 
+        <slot name="eden-setup" />
         <section class="opening-form-grid">
           <div
-            v-for="field in effectiveFormSchema"
+            v-for="field in runtimePreset.fields"
             :key="field.key"
             class="opening-form-item"
             :class="{ full: field.kind === 'textarea' }"
@@ -192,22 +95,6 @@
               <option value="">请选择</option>
               <option v-for="option in field.options || []" :key="option" :value="option">{{ option }}</option>
             </select>
-            <div v-else-if="field.kind === 'text' && field.options?.length" class="opening-combo-field">
-              <select
-                class="opening-select opening-combo-select"
-                :value="presetSelectValue(field)"
-                @change="emitField(field.key, $event)"
-              >
-                <option value="">预设</option>
-                <option v-for="option in getFieldOptions(field)" :key="option" :value="option">{{ option }}</option>
-              </select>
-              <input
-                class="opening-input opening-combo-input"
-                :placeholder="field.placeholder"
-                :value="payload.form_values[field.key] || ''"
-                @input="emitField(field.key, $event)"
-              />
-            </div>
             <input
               v-else
               class="opening-input"
@@ -220,81 +107,198 @@
       </template>
 
       <template v-else>
-        <section class="opening-new-story-brief clip-corner-sm">
-          <div>
-            <span class="opening-label">新的故事</span>
-            <h4>通用故事开场</h4>
-          </div>
-          <p>用独立提示词生成原创或同人开场，不继承寒冬末日的世界观档位与流派约束。</p>
-        </section>
-
-        <section class="opening-meta-grid">
-          <div class="opening-meta-item">
-            <span class="opening-label">主角</span>
-            <input class="opening-input" :value="payload.meta.character" @input="emitMeta('character', $event)" />
-          </div>
-          <div class="opening-meta-item">
-            <span class="opening-label">故事时间</span>
-            <input class="opening-input" :value="payload.meta.time" @input="emitMeta('time', $event)" />
-          </div>
-          <div class="opening-meta-item full">
-            <span class="opening-label">开场地点</span>
-            <input class="opening-input" :value="payload.meta.location" @input="emitMeta('location', $event)" />
-          </div>
-        </section>
-
-        <section class="opening-form-grid">
-          <div
-            v-for="field in visibleNewStoryFormSchema"
-            :key="field.key"
-            class="opening-form-item"
-            :class="{ full: field.kind === 'textarea' }"
-          >
-            <span class="opening-label">{{ field.label }}</span>
-            <textarea
-              v-if="field.kind === 'textarea'"
-              class="opening-textarea"
-              :rows="4"
-              :placeholder="field.placeholder"
-              :value="payload.form_values[field.key] || ''"
-              @input="emitField(field.key, $event)"
-            />
+        <section class="opening-story-menu">
+          <div class="opening-form-item full">
+            <span class="opening-label">故事模板</span>
             <select
-              v-else-if="field.kind === 'select'"
-              class="opening-select"
-              :value="payload.form_values[field.key] || ''"
-              @change="emitField(field.key, $event)"
+              :value="selectedStoryKey"
+              class="opening-select opening-story-select"
+              @change="emitStoryTemplate($event)"
             >
-              <option value="">请选择</option>
-              <option v-for="option in field.options || []" :key="option" :value="option">{{ option }}</option>
+              <option :value="CURRENT_STORY_KEY">末世寒冬-星球秩序</option>
+              <option :value="NEW_STORY_KEY">新的故事</option>
             </select>
-            <div v-else-if="field.kind === 'text' && field.options?.length" class="opening-combo-field">
+          </div>
+        </section>
+
+        <template v-if="isCurrentStorySelected">
+          <section class="opening-profile-grid">
+            <div class="opening-form-item">
+              <span class="opening-label">世界观档位</span>
+              <select class="opening-select" :value="payload.world_mode_id" @change="emitWorldMode($event)">
+                <option v-for="mode in worldModes" :key="mode.id" :value="mode.id">
+                  {{ mode.id }} · {{ mode.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="opening-form-item">
+              <span class="opening-label">游玩流派</span>
+              <select class="opening-select" :value="payload.route_id" @change="emitRoute($event)">
+                <option v-for="route in routes" :key="route.id" :value="route.name">
+                  {{ route.name }}
+                </option>
+              </select>
+            </div>
+          </section>
+
+          <section class="opening-form-grid">
+            <div class="opening-form-item full">
+              <span class="opening-label">世界观档位</span>
+              <textarea
+                class="opening-textarea opening-textarea-readonly"
+                :rows="8"
+                :value="worldModeAxisDictionaryText"
+                readonly
+              />
+            </div>
+          </section>
+
+          <section class="opening-meta-grid">
+            <div class="opening-meta-item">
+              <span class="opening-label">{{ preset.meta_template.character_label }}</span>
+              <input class="opening-input" :value="payload.meta.character" @input="emitMeta('character', $event)" />
+            </div>
+            <div class="opening-meta-item">
+              <span class="opening-label">{{ preset.meta_template.time_label }}</span>
+              <input class="opening-input" :value="payload.meta.time" @input="emitMeta('time', $event)" />
+            </div>
+            <div class="opening-meta-item full">
+              <span class="opening-label">{{ preset.meta_template.location_label }}</span>
+              <input class="opening-input" :value="payload.meta.location" @input="emitMeta('location', $event)" />
+            </div>
+          </section>
+
+          <slot name="eden-setup" />
+          <section class="opening-form-grid">
+            <div
+              v-for="field in effectiveFormSchema"
+              :key="field.key"
+              class="opening-form-item"
+              :class="{ full: field.kind === 'textarea' }"
+            >
+              <span class="opening-label">{{ field.label }}</span>
+              <textarea
+                v-if="field.kind === 'textarea'"
+                class="opening-textarea"
+                :rows="4"
+                :placeholder="field.placeholder"
+                :value="payload.form_values[field.key] || ''"
+                @input="emitField(field.key, $event)"
+              />
               <select
-                class="opening-select opening-combo-select"
-                :value="presetSelectValue(field)"
+                v-else-if="field.kind === 'select'"
+                class="opening-select"
+                :value="payload.form_values[field.key] || ''"
                 @change="emitField(field.key, $event)"
               >
-                <option value="">预设</option>
-                <option v-for="option in getFieldOptions(field)" :key="option" :value="option">{{ option }}</option>
+                <option value="">请选择</option>
+                <option v-for="option in field.options || []" :key="option" :value="option">{{ option }}</option>
               </select>
+              <div v-else-if="field.kind === 'text' && field.options?.length" class="opening-combo-field">
+                <select
+                  class="opening-select opening-combo-select"
+                  :value="presetSelectValue(field)"
+                  @change="emitField(field.key, $event)"
+                >
+                  <option value="">预设</option>
+                  <option v-for="option in getFieldOptions(field)" :key="option" :value="option">{{ option }}</option>
+                </select>
+                <input
+                  class="opening-input opening-combo-input"
+                  :placeholder="field.placeholder"
+                  :value="payload.form_values[field.key] || ''"
+                  @input="emitField(field.key, $event)"
+                />
+              </div>
               <input
-                class="opening-input opening-combo-input"
+                v-else
+                class="opening-input"
                 :placeholder="field.placeholder"
                 :value="payload.form_values[field.key] || ''"
                 @input="emitField(field.key, $event)"
               />
             </div>
-            <input
-              v-else
-              class="opening-input"
-              :placeholder="field.placeholder"
-              :value="payload.form_values[field.key] || ''"
-              @input="emitField(field.key, $event)"
-            />
-          </div>
-        </section>
+          </section>
+        </template>
+
+        <template v-else>
+          <section class="opening-new-story-brief clip-corner-sm">
+            <div>
+              <span class="opening-label">新的故事</span>
+              <h4>通用故事开场</h4>
+            </div>
+            <p>用独立提示词生成原创或同人开场，不继承寒冬末日的世界观档位与流派约束。</p>
+          </section>
+
+          <section class="opening-meta-grid">
+            <div class="opening-meta-item">
+              <span class="opening-label">主角</span>
+              <input class="opening-input" :value="payload.meta.character" @input="emitMeta('character', $event)" />
+            </div>
+            <div class="opening-meta-item">
+              <span class="opening-label">故事时间</span>
+              <input class="opening-input" :value="payload.meta.time" @input="emitMeta('time', $event)" />
+            </div>
+            <div class="opening-meta-item full">
+              <span class="opening-label">开场地点</span>
+              <input class="opening-input" :value="payload.meta.location" @input="emitMeta('location', $event)" />
+            </div>
+          </section>
+
+          <section class="opening-form-grid">
+            <div
+              v-for="field in visibleNewStoryFormSchema"
+              :key="field.key"
+              class="opening-form-item"
+              :class="{ full: field.kind === 'textarea' }"
+            >
+              <span class="opening-label">{{ field.label }}</span>
+              <textarea
+                v-if="field.kind === 'textarea'"
+                class="opening-textarea"
+                :rows="4"
+                :placeholder="field.placeholder"
+                :value="payload.form_values[field.key] || ''"
+                @input="emitField(field.key, $event)"
+              />
+              <select
+                v-else-if="field.kind === 'select'"
+                class="opening-select"
+                :value="payload.form_values[field.key] || ''"
+                @change="emitField(field.key, $event)"
+              >
+                <option value="">请选择</option>
+                <option v-for="option in field.options || []" :key="option" :value="option">{{ option }}</option>
+              </select>
+              <div v-else-if="field.kind === 'text' && field.options?.length" class="opening-combo-field">
+                <select
+                  class="opening-select opening-combo-select"
+                  :value="presetSelectValue(field)"
+                  @change="emitField(field.key, $event)"
+                >
+                  <option value="">预设</option>
+                  <option v-for="option in getFieldOptions(field)" :key="option" :value="option">{{ option }}</option>
+                </select>
+                <input
+                  class="opening-input opening-combo-input"
+                  :placeholder="field.placeholder"
+                  :value="payload.form_values[field.key] || ''"
+                  @input="emitField(field.key, $event)"
+                />
+              </div>
+              <input
+                v-else
+                class="opening-input"
+                :placeholder="field.placeholder"
+                :value="payload.form_values[field.key] || ''"
+                @input="emitField(field.key, $event)"
+              />
+            </div>
+          </section>
+        </template>
       </template>
-    </template>
+    </fieldset>
   </section>
 </template>
 
@@ -322,6 +326,8 @@ const props = defineProps<{
   routes: OpeningRouteOption[];
   runtimePreset?: RuntimeOpeningPreset | null;
   transferBusy?: boolean;
+  submitLabel?: string;
+  worldbookSyncEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -431,6 +437,16 @@ function handleJsonFileSelection(event: Event) {
   gap: 14px;
   padding: 16px;
   border-radius: 18px;
+}
+
+.opening-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .opening-setup-head {

@@ -65,7 +65,7 @@ export const OpeningPayloadSchema = z
     }),
     form_values: z.record(z.string(), z.string()).default({}),
   })
-  .prefault({});
+  .prefault({ version: 5, meta: {} });
 
 export type OpeningFormField = z.infer<typeof OpeningFormFieldSchema>;
 export type OpeningPreset = z.infer<typeof OpeningPresetSchema>;

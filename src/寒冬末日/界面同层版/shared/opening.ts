@@ -1045,9 +1045,37 @@ export function resolveOpeningPromptTemplateRaw(
   return String(openingPromptTemplateRaw ?? '');
 }
 
-export function buildOpeningGeneratePrompt(preset: OpeningPreset, payload: OpeningPayload): string {
+/** Apply confirmed structured time before template interpolation; legacy callers retain the original text. */
+export function adaptEdenOpeningTimeline(template: string, startDay: number): string {
+  if (!Number.isFinite(startDay) || !Number.isInteger(startDay)) throw new Error('伊甸开局天数必须为有限整数');
+  const current = startDay < 0 ? `灾变前第${Math.abs(startDay)}天` : `灾后第${startDay}天`;
+  const obtained = startDay - 7;
+  const obtainedTime = obtained < 0 ? `灾变前第${Math.abs(obtained)}天` : `灾后第${obtained}天`;
+  return (
+    template
+      .replace(/^[^\n]*(?:在正文结束后，需明确本次重要变量|A档初始变量必须对齐)[^\n]*$/gm, '')
+      .replace(
+        /故事时间：[^\n]*/g,
+        `故事时间：${'${time}'}，当前为${current}，这是${'${character_name}'}获得伊甸庇护所的第7天。`,
+      )
+      .replace('灾变的1年后', obtainedTime)
+      .replace(/提前三个月/g, `提前${Math.abs(startDay)}天`)
+      .replace(/距离灾变只剩下3个月/g, `距离灾变只剩下${Math.abs(startDay)}天`)
+      .replace(/3\s*个月后/g, `${Math.abs(startDay)}天后`)
+      .replace(/这三个月/g, `这${Math.abs(startDay)}天`)
+      .replace(/三个月窗口期/g, `${Math.abs(startDay)}天窗口期`) +
+    `\n初始 /世界/末日天数 必须为 ${startDay}；当前为${current}。该结构化起始日优先于其他叙述中的相对时间，不得被旧模板默认值覆盖。`
+  );
+}
+
+export function buildOpeningGeneratePrompt(
+  preset: OpeningPreset,
+  payload: OpeningPayload,
+  options?: { edenStartDay: number },
+): string {
   const context = buildOpeningPromptContext(preset, payload);
-  const templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id, getOpeningStoryTemplateId(payload));
+  let templateRaw = resolveOpeningPromptTemplateRaw(payload.world_mode_id, getOpeningStoryTemplateId(payload));
+  if (options) templateRaw = adaptEdenOpeningTimeline(templateRaw, options.edenStartDay);
   const compiledTemplate = compileOpeningPromptTemplate(String(templateRaw ?? '').trim(), context);
   const finalTemplate = typeof substitudeMacros === 'function' ? substitudeMacros(compiledTemplate) : compiledTemplate;
 

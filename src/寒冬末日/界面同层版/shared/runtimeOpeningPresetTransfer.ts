@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EdenOpeningConfigSchema, type EdenOpeningConfig } from '../../eden/openingConfig';
 
 import type { OpeningPayload, OpeningPreset } from './opening.schema';
 import { getRuntimeOpeningDefaultPayload } from './runtimeOpeningPreset';
@@ -22,11 +23,17 @@ const RuntimeOpeningAnswersSchema = z
 export const RuntimeOpeningExportBundleSchema = z
   .object({
     format: z.literal('same-layer-pre-opening'),
-    version: z.literal(1),
+    version: z.union([z.literal(1), z.literal(2)]),
+    eden: EdenOpeningConfigSchema.optional(),
     preset: RuntimeOpeningPresetSchema,
     answers: RuntimeOpeningAnswersSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((bundle, ctx) => {
+    if (bundle.eden && (bundle.version !== 2 || !bundle.preset.integrations?.eden)) {
+      ctx.addIssue({ code: 'custom', message: '伊甸扩展需要 version 2 和 integrations.eden 声明' });
+    }
+  });
 
 export type RuntimeOpeningExportBundle = z.infer<typeof RuntimeOpeningExportBundleSchema>;
 
@@ -34,6 +41,7 @@ export type RuntimeOpeningImportResult = {
   preset: RuntimeOpeningPreset;
   payload: OpeningPayload;
   source: 'bundle' | 'bare-preset';
+  eden?: EdenOpeningConfig;
 };
 
 function validOutputTag(value: unknown, fallback: string): string {
@@ -45,6 +53,7 @@ export function toPortableRuntimeOpeningPreset(
   legacyPreset: OpeningPreset,
   payload: Pick<OpeningPayload, 'story_template' | 'world_mode_id' | 'route_id' | 'meta' | 'form_values'>,
   options: {
+    eden?: boolean;
     fields?: OpeningPreset['form_schema'];
     extraFields?: OpeningPreset['form_schema'];
   } = {},
@@ -77,7 +86,8 @@ export function toPortableRuntimeOpeningPreset(
     },
     meta_template: legacyPreset.meta_template,
     default_meta: payload.meta,
-    fields,
+    fields: options.eden ? fields.filter(field => field.key !== 'shelter_ability_summary') : fields,
+    ...(options.eden ? { integrations: { eden: true } } : {}),
     prompt: {
       task: legacyPreset.first_line || '请根据开局配置开始正式剧情。',
       directives: legacyPreset.world_intro ? [legacyPreset.world_intro] : [],
@@ -99,10 +109,11 @@ function resolveImportSource(raw: unknown): {
   preset: RuntimeOpeningPreset;
   answers: z.infer<typeof RuntimeOpeningAnswersSchema>;
   source: RuntimeOpeningImportResult['source'];
+  eden?: EdenOpeningConfig;
 } {
   const bundle = RuntimeOpeningExportBundleSchema.safeParse(raw);
   if (bundle.success) {
-    return { preset: bundle.data.preset, answers: bundle.data.answers, source: 'bundle' };
+    return { preset: bundle.data.preset, answers: bundle.data.answers, source: 'bundle', eden: bundle.data.eden };
   }
 
   const preset = RuntimeOpeningPresetSchema.safeParse(raw);
@@ -115,7 +126,8 @@ function resolveImportSource(raw: unknown): {
 }
 
 export function parseRuntimeOpeningImport(raw: unknown): RuntimeOpeningImportResult {
-  const { preset, answers, source } = resolveImportSource(raw);
+  const { preset: importedPreset, answers, source, eden } = resolveImportSource(raw);
+  const preset = cleanIntegratedPreset(importedPreset);
   const payload = getRuntimeOpeningDefaultPayload(preset);
   payload.meta = {
     character: answers.meta.character ?? payload.meta.character,
@@ -139,16 +151,19 @@ export function parseRuntimeOpeningImport(raw: unknown): RuntimeOpeningImportRes
     }),
   );
 
-  return { preset, payload, source };
+  return { preset, payload, source, ...(eden ? { eden } : {}) };
 }
 
 export function buildRuntimeOpeningExport(
   preset: RuntimeOpeningPreset,
   payload: OpeningPayload,
+  eden?: EdenOpeningConfig,
 ): RuntimeOpeningExportBundle {
+  preset = cleanIntegratedPreset(preset);
   return RuntimeOpeningExportBundleSchema.parse({
     format: 'same-layer-pre-opening',
-    version: 1,
+    version: eden ? 2 : 1,
+    ...(eden ? { eden } : {}),
     preset,
     answers: {
       meta: {
@@ -185,7 +200,7 @@ export function buildRuntimeOpeningLoreContent(preset: RuntimeOpeningPreset, pay
     `${displayValue(preset.meta_template.time_label)}：${displayValue(payload.meta.time)}`,
     `${displayValue(preset.meta_template.location_label)}：${displayValue(payload.meta.location)}`,
   ];
-  const fields = preset.fields.map(
+  const fields = cleanIntegratedPreset(preset).fields.map(
     field => `${displayValue(field.label)}：${displayValue(payload.form_values[field.key])}`,
   );
 
@@ -204,6 +219,7 @@ export function buildRuntimeOpeningLoreContent(preset: RuntimeOpeningPreset, pay
     '</player_opening_choices>',
     '',
     '<persistent_directives>',
+    ...(preset.integrations?.eden ? ['伊甸能力与权限以当前伊甸世界书为准；开局叙述不授予额外权限。'] : []),
     bulletList(preset.prompt.directives),
     '</persistent_directives>',
     '',
@@ -212,4 +228,10 @@ export function buildRuntimeOpeningLoreContent(preset: RuntimeOpeningPreset, pay
     '</forbidden>',
     '</same_layer_pre_opening_context>',
   ].join('\n');
+}
+
+function cleanIntegratedPreset(preset: RuntimeOpeningPreset): RuntimeOpeningPreset {
+  return preset.integrations?.eden
+    ? { ...preset, fields: preset.fields.filter(field => field.key !== 'shelter_ability_summary') }
+    : preset;
 }

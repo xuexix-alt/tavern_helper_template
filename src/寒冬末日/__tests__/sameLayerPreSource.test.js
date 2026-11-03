@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Node source contract test harness. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -836,7 +837,7 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /:icon-src="openingModalIcon"/);
   assert.match(
     storySource,
-    /<OpeningSetupPanel[\s\S]*:preset="openingPreset"[\s\S]*:payload="\{ \.\.\.openingPayload, use_stream: streamingEnabled \}"/,
+    /<OpeningSetupPanel[\s\S]*:preset="effectiveOpeningPreset"[\s\S]*:payload="\{ \.\.\.openingPayload, use_stream: streamingEnabled \}"/,
   );
   assert.match(storySource, /@update-meta="updateOpeningMeta"/);
   assert.match(storySource, /@update-field="updateOpeningField"/);
@@ -859,8 +860,8 @@ test('same-layer-pre reuses the original same-layer opening setup form through t
   assert.match(storySource, /function updateOpeningRoute/);
   assert.match(storySource, /function updateOpeningStream/);
   assert.match(storySource, /function updateOpeningField/);
-  assert.match(storySource, /async function handleOpeningSubmit\(\)/);
-  assert.match(storySource, /buildOpeningGeneratePrompt\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(storySource, /async function handleOpeningSubmit\(generateAfterConfirm = true\)/);
+  assert.match(storySource, /buildOpeningGeneratePrompt\(\s*effectiveOpeningPreset\.value,\s*edenEnabled\.value/);
   assert.match(storySource, /await submitAssistantOnlyPrompt\(compiledPromptSnapshot\)/);
   assert.match(
     storySource,
@@ -881,7 +882,7 @@ test('same-layer-pre loads and renders a character-owned runtime opening preset'
   assert.match(storySource, /function refreshRuntimeOpeningPresetFromCharacter\(\)/);
   assert.match(storySource, /\[0, 250, 1000\]/);
   assert.match(storySource, /runtimeOpeningPresetError/);
-  assert.match(storySource, /:runtime-preset="runtimeOpeningPreset"/);
+  assert.match(storySource, /:runtime-preset="effectiveRuntimeOpeningPreset"/);
   assert.match(storySource, /isRuntimeOpeningPayload/);
   assert.match(storySource, /if\s*\(\s*!runtimeOpeningPreset\.value/);
   assert.match(panelSource, /runtimePreset\?: RuntimeOpeningPreset \| null/);
@@ -911,7 +912,7 @@ test('same-layer-pre imports, exports, snapshots, and explicitly syncs runtime o
   assert.ok(exportButtonSource, 'export button source should be discoverable');
   assert.doesNotMatch(exportButtonSource, /!runtimePreset/);
 
-  assert.match(storySource, /:transfer-busy="openingTransferBusy"/);
+  assert.match(storySource, /:transfer-busy="openingTransferBusy \|\| \(edenEnabled && edenOpening.loading.value\)"/);
   assert.match(storySource, /@import-json="handleRuntimeOpeningImport"/);
   assert.match(storySource, /@export-json="handleRuntimeOpeningExport"/);
   assert.match(storySource, /@sync-worldbook="handleRuntimeOpeningWorldbookSync"/);
@@ -922,8 +923,8 @@ test('same-layer-pre imports, exports, snapshots, and explicitly syncs runtime o
   assert.match(storySource, /parseRuntimeOpeningImport/);
   assert.match(storySource, /buildRuntimeOpeningExport/);
   assert.match(storySource, /toPortableRuntimeOpeningPreset/);
-  assert.match(storySource, /runtimeOpeningPreset\.value \?\?\s*toPortableRuntimeOpeningPreset/);
-  assert.match(storySource, /fields: getOpeningFormSchema\(openingPreset\.value, openingPayload\.value\)/);
+  assert.match(storySource, /effectiveRuntimeOpeningPreset\.value \?\?\s*toPortableRuntimeOpeningPreset/);
+  assert.match(storySource, /fields: getOpeningFormSchema\(effectiveOpeningPreset\.value, openingPayload\.value\)/);
   assert.match(storySource, /syncRuntimeOpeningWorldbook/);
   assert.match(storySource, /async function handleRuntimeOpeningImport\(file: File\)/);
   assert.match(storySource, /function handleRuntimeOpeningExport\(\)/);
@@ -940,6 +941,18 @@ test('same-layer-pre imports, exports, snapshots, and explicitly syncs runtime o
   );
 
   const submitSource = extractFunctionSource(storySource, 'handleOpeningSubmit');
+  const importSource = extractFunctionSource(storySource, 'handleRuntimeOpeningImport');
+  assert.ok(
+    /if \(imported\.preset\.integrations\?\.eden\)[\s\S]*edenOpening\.installConfig\(imported\.eden\)[\s\S]*invalidatePreview\(\)[\s\S]*return;[\s\S]*await syncCurrentOpeningWorldbook/.test(
+      importSource,
+    ),
+    'Eden imports must install a draft and invalidate preview before returning without generic worldbook synchronization',
+  );
+  assert.ok(
+    submitSource.indexOf('await edenOpening.confirm()') >= 0 &&
+      submitSource.indexOf('await edenOpening.confirm()') < submitSource.indexOf('submitAssistantOnlyPrompt'),
+    'Eden confirmation must finish before assistant-only generation',
+  );
   const syncIndex = submitSource.indexOf('await syncCurrentOpeningWorldbook');
   const generateIndex = submitSource.indexOf('submitAssistantOnlyPrompt');
   assert.ok(syncIndex >= 0, 'opening submit should explicitly sync the current chat worldbook');

@@ -18,6 +18,10 @@ export const EDEN_ENTRY_NAMES = [
   '[伊甸设定]伊甸技术',
 ] as const;
 type EdenEntry = Omit<WorldbookEntry, 'uid'> & { uid?: number };
+export interface EdenSaveOptions {
+  openingEntry?: PartialDeep<WorldbookEntry>;
+  assertCanSave?: () => void;
+}
 export interface EdenWorldbookDeps {
   currentChatId(): string | null;
   boundWorldbook(): string | null;
@@ -105,6 +109,27 @@ function mergeEntries(entries: WorldbookEntry[], next: EdenEntry[]): PartialDeep
   return [...merged, ...next.filter(entry => !seen.has(entry.name))];
 }
 
+function mergeOpeningEntry(entries: PartialDeep<WorldbookEntry>[], next: PartialDeep<WorldbookEntry>) {
+  if (next.name !== '[同层PRE]自定义开局上下文' || next.extra?.same_layer_pre?.kind !== 'runtime_opening_context')
+    throw new Error('开局上下文标识无效');
+  let seen = false;
+  const merged = entries.flatMap(entry => {
+    if (entry.name !== next.name) return [entry];
+    if (entry.extra?.same_layer_pre?.kind !== 'runtime_opening_context')
+      throw new Error('世界书已有同名非本功能的开局条目，请先重命名');
+    if (seen) return [];
+    seen = true;
+    return [{ ...entry, ...next, uid: entry.uid, extra: { ...entry.extra, ...next.extra } }];
+  });
+  return seen ? merged : [...merged, next];
+}
+
+function sameOpeningDocument(current: EdenDocument, draft: EdenDocument): boolean {
+  return (
+    JSON.stringify({ ...current, revision: 0, savedAt: '' }) === JSON.stringify({ ...draft, revision: 0, savedAt: '' })
+  );
+}
+
 export async function loadEdenDocument(chatId: string, deps: EdenWorldbookDeps): Promise<SavedEden | null> {
   assertChat(chatId, deps);
   const worldbookName = deps.boundWorldbook();
@@ -130,13 +155,34 @@ export function saveEdenDocument(
   context: EdenContext,
   deps: EdenWorldbookDeps,
   expectedWorldbookName: string | null = deps.boundWorldbook(),
+  options: EdenSaveOptions = {},
 ): Promise<SavedEden> {
   const parsed = EdenDocumentSchema.parse(structuredClone(draft));
   return enqueue(async () => {
     assertChat(chatId, deps);
+    options.assertCanSave?.();
     if (deps.boundWorldbook() !== expectedWorldbookName) throw new Error('聊天绑定世界书已变更，请重新载入后再确认');
     const worldbookName = deps.boundWorldbook() ?? (await deps.ensureWorldbook());
     assertChat(chatId, deps, worldbookName);
+    options.assertCanSave?.();
+    if (options.openingEntry && parsed.openingSetup) {
+      const existing = await deps.read(worldbookName);
+      assertChat(chatId, deps, worldbookName);
+      options.assertCanSave?.();
+      const current = readEdenDocument(existing);
+      if (
+        current &&
+        (current.revision === expectedRevision || current.revision === expectedRevision + 1) &&
+        sameOpeningDocument(current, parsed) &&
+        existing.some(
+          entry =>
+            entry.name === options.openingEntry?.name &&
+            entry.extra?.same_layer_pre?.kind === 'runtime_opening_context' &&
+            entry.content === options.openingEntry.content,
+        )
+      )
+        return { document: current, worldbookName };
+    }
     const document = EdenDocumentSchema.parse({
       ...parsed,
       revision: expectedRevision + 1,
@@ -145,10 +191,12 @@ export function saveEdenDocument(
     try {
       await deps.update(worldbookName, entries => {
         assertChat(chatId, deps, worldbookName);
+        options.assertCanSave?.();
         const current = readEdenDocument(entries);
         if ((current?.revision ?? 0) !== expectedRevision)
           throw new Error('世界书版本已有更新，请先重新载入，避免覆盖其他修改');
-        return mergeEntries(entries, renderEdenEntries(document, context));
+        const merged = mergeEntries(entries, renderEdenEntries(document, context));
+        return options.openingEntry ? mergeOpeningEntry(merged, options.openingEntry) : merged;
       });
     } catch (error) {
       if (
@@ -161,6 +209,14 @@ export function saveEdenDocument(
       throw error;
     }
     assertChat(chatId, deps, worldbookName);
+    if (options.openingEntry) {
+      const persisted = await deps.read(worldbookName);
+      assertChat(chatId, deps, worldbookName);
+      options.assertCanSave?.();
+      const confirmed = readEdenDocument(persisted);
+      if (!confirmed || confirmed.revision !== document.revision || !sameOpeningDocument(confirmed, document))
+        throw new Error('开局世界书回读与已确认配置不一致，请重新载入');
+    }
     return { document, worldbookName };
   });
 }

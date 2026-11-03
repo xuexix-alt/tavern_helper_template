@@ -1,4 +1,5 @@
 import type { OpeningPayload } from '../../../界面同层版/shared/opening.schema';
+import type { PartialDeep } from 'type-fest';
 import { buildRuntimeOpeningLoreContent } from '../../../界面同层版/shared/runtimeOpeningPresetTransfer';
 import type { RuntimeOpeningPreset } from '../../../界面同层版/shared/runtimeOpeningPreset.schema';
 

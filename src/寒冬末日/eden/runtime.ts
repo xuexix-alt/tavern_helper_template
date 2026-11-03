@@ -16,9 +16,15 @@ export function getEdenHostDeps(): EdenWorldbookDeps {
     read: name => getWorldbook(name),
     update: (name, updater) => {
       // 脚本和pre位于不同iframe，使用宿主队列避免同一本伊甸文档同时确认覆盖。
-      const host = window.top as Window & { __edenWorldbookQueue?: Promise<unknown> };
-      const run = () => updateWorldbookWith(name, updater, { render: 'debounced' });
-      const result = (host.__edenWorldbookQueue ?? Promise.resolve()).then(run, run);
+      const host = window.top as Window &
+        typeof globalThis & {
+          __edenWorldbookQueue?: Promise<unknown>;
+          TavernHelper?: { updateWorldbookWith: typeof updateWorldbookWith };
+        };
+      // 写入会触发宿主重绘。跨 iframe 回信可能随旧文档销毁而丢失，不能让该 Promise 卡住宿主队列。
+      const update = host.TavernHelper?.updateWorldbookWith ?? updateWorldbookWith;
+      const run = () => update(name, updater, { render: 'debounced' });
+      const result = (host.__edenWorldbookQueue ?? (host.Promise ?? Promise).resolve()).then(run, run);
       host.__edenWorldbookQueue = result.catch(() => undefined);
       return result;
     },

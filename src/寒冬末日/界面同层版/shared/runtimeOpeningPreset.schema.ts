@@ -17,6 +17,7 @@ const OutputTagSchema = z.string().regex(/^[A-Za-z][A-Za-z0-9_-]*$/);
 export const RuntimeOpeningPresetSchema = z
   .object({
     version: z.literal(2),
+    integrations: z.object({ eden: z.boolean() }).strict().optional(),
     preset_id: z.string().min(1),
     ui: z
       .object({

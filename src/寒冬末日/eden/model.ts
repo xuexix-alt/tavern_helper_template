@@ -25,6 +25,12 @@ const AchievementSchema = z.object({
   branch: z.enum(['农业', '工业', '气象', '其他']).prefault('其他'),
   techLevel: z.number().int().min(0).max(5).nullable().prefault(null),
 });
+export const InitialEdenTechnologySchema = z.object({
+  branch: z.enum(['农业', '工业', '气象']),
+  techLevel: z.number().int().min(0).max(5),
+  name: Text,
+});
+export type InitialEdenTechnology = z.infer<typeof InitialEdenTechnologySchema>;
 export const EdenDocumentSchema = z.object({
   version: z.literal(1),
   revision: z.number().int().min(0),
@@ -45,6 +51,14 @@ export const EdenDocumentSchema = z.object({
     return new Set(names).size === names.length;
   }, '能力名称不能重复'),
   rescueStartDay: z.number().min(0),
+  initialTechnologies: z
+    .array(InitialEdenTechnologySchema)
+    .refine(
+      items => new Set(items.map(item => `${item.branch}-lv${item.techLevel}`)).size === items.length,
+      '初始技术不能重复',
+    )
+    .prefault([]),
+  openingSetup: z.object({ fingerprint: z.string(), startDay: z.number().finite() }).optional(),
   achievements: z.record(Text, AchievementSchema),
   missionLore: Text,
   technologyLore: Text,
@@ -105,6 +119,15 @@ export function confirmAchievement(
     item.key = `${item.branch}-lv${item.techLevel}`;
   }
   const id = `${item.kind}:${item.key}`;
+  if (
+    item.kind === '技术' &&
+    document.initialTechnologies.some(
+      initial =>
+        `${initial.branch}-lv${initial.techLevel}` === item.key ||
+        (initial.branch === '农业' && initial.techLevel === 0 && item.key === 'agriculture-0'),
+    )
+  )
+    throw new Error('初始技术不能重复结算');
   const previous = document.achievements[id];
   const sourceWasReplaced =
     !!previous &&
@@ -212,20 +235,38 @@ export function describeRescue(document: EdenDocument, context: EdenContext): st
   ].join('\n');
 }
 
+export type KnownEdenTechnology = Pick<
+  z.infer<typeof AchievementSchema>,
+  'branch' | 'techLevel' | 'key' | 'name' | 'evidence'
+> & { id: string };
+
+/** 初始知识不进入成果账本，不参与救亡计时。 */
+export function getKnownEdenTechnologies(document: EdenDocument, context: EdenContext): KnownEdenTechnology[] {
+  const initial = document.initialTechnologies.map(item => ({
+    ...item,
+    id: `技术:${item.branch}-lv${item.techLevel}`,
+    key: `${item.branch}-lv${item.techLevel}`,
+    evidence: '开局已掌握（不计救亡成果）',
+  }));
+  const known = new Map<string, KnownEdenTechnology>(initial.map(item => [item.id, item]));
+  for (const item of getEdenRuntime(document, context).achievements.filter(item => item.kind === '技术')) {
+    if (!known.has(item.id)) known.set(item.id, item);
+  }
+  return [...known.values()];
+}
+
 export function describeTechnologies(document: EdenDocument, context: EdenContext): string {
   const state = getEdenRuntime(document, context);
   return [
     '<当前伊甸技术>',
-    ...state.achievements
-      .filter(item => item.kind === '技术')
-      .map(
-        item =>
-          `- 已获得 ${item.branch}${item.techLevel === null ? '' : `lv${item.techLevel}`} ${item.key}：${item.name}；${item.evidence}`,
-      ),
+    ...getKnownEdenTechnologies(document, context).map(
+      item =>
+        `- 已获得 ${item.branch}${item.techLevel === null ? '' : `lv${item.techLevel}`} ${item.key}：${item.name}；${item.evidence}`,
+    ),
     ...state.achievements
       .filter(item => item.kind === '生产')
       .map(item => `- 自持生产体系 ${item.key}：${item.name}；${item.evidence}`),
-    ...(state.achievements.length ? [] : ['尚无已确认的技术或自持生产成果。']),
+    ...(state.achievements.length || document.initialTechnologies.length ? [] : ['尚无已确认的技术或自持生产成果。']),
     '仅有知识不等于已有设备、人口、原料和生产秩序；未发现的后续线索不得提前告诉角色。',
     '</当前伊甸技术>',
   ].join('\n');
@@ -234,10 +275,8 @@ export function describeTechnologies(document: EdenDocument, context: EdenContex
 /** 看板只显示已知调查方向，不展开完整技术树或未来失散地点。 */
 export function getEdenMissionBoard(document: EdenDocument, context: EdenContext, intel: Record<string, any> = {}) {
   const state = getEdenRuntime(document, context);
-  const agricultureZero = state.achievements.some(
-    item =>
-      item.kind === '技术' &&
-      ((item.branch === '农业' && item.techLevel === 0) || ['agriculture-0', '农业-lv0'].includes(item.key)),
+  const agricultureZero = getKnownEdenTechnologies(document, context).some(
+    item => (item.branch === '农业' && item.techLevel === 0) || ['agriculture-0', '农业-lv0'].includes(item.key),
   );
   const production = state.achievements.some(item => item.kind === '生产');
   const currentTask = state.rescue.overdue

@@ -9,6 +9,7 @@ const props = defineProps<{
   initialized?: boolean;
   locked?: boolean;
   error?: string;
+  showInitialTechnologies?: boolean;
 }>();
 const board = computed(() => getEdenMissionBoard(props.document, props.context, props.intel));
 const achievements = computed(() =>
@@ -57,6 +58,13 @@ function submit() {
         <p>{{ clue.description }}</p>
       </article>
       <p v-if="!board.clues.length" class="muted">尚无已知线索，继续探索以获取情报。</p>
+    </section>
+    <section v-if="showInitialTechnologies !== false && document.initialTechnologies.length">
+      <h3>初始已掌握技术</h3>
+      <article v-for="tech in document.initialTechnologies" :key="`${tech.branch}-${tech.techLevel}`">
+        <strong>{{ tech.branch }} lv{{ tech.techLevel }} · {{ tech.name }}</strong>
+        <p class="muted">开局条件，不计为新增成果。</p>
+      </article>
     </section>
     <section>
       <h3>已确认成果</h3>

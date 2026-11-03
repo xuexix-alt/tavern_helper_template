@@ -150,13 +150,15 @@
       </div>
       <OpeningSetupPanel
         v-else
-        :preset="openingPreset"
+        :preset="effectiveOpeningPreset"
         :payload="{ ...openingPayload, use_stream: streamingEnabled }"
         :busy="busy"
         :world-modes="openingWorldModes"
         :routes="openingRoutes"
-        :runtime-preset="runtimeOpeningPreset"
-        :transfer-busy="openingTransferBusy"
+        :runtime-preset="effectiveRuntimeOpeningPreset"
+        :transfer-busy="openingTransferBusy || (edenEnabled && edenOpening.loading.value)"
+        :worldbook-sync-enabled="edenEnabled"
+        :submit-label="edenEnabled ? (edenPreviewReady ? '确认配置并生成开局' : '预览开局配置') : undefined"
         @update-meta="updateOpeningMeta"
         @update-field="updateOpeningField"
         @update-story-template="updateOpeningStoryTemplate"
@@ -167,7 +169,30 @@
         @export-json="handleRuntimeOpeningExport"
         @sync-worldbook="handleRuntimeOpeningWorldbookSync"
         @submit="handleOpeningSubmit"
-      />
+      >
+        <template #eden-setup>
+          <template v-if="edenEnabled">
+            <p v-if="edenOpening.notice.value" role="status">{{ edenOpening.notice.value }}</p>
+            <p v-if="edenOpening.loading.value" role="status">正在读取伊甸初始配置…</p>
+            <div v-else-if="edenOpening.error.value" role="alert">
+              <p>{{ edenOpening.error.value }}</p>
+              <button type="button" @click="edenOpening.load">重新读取伊甸配置</button>
+            </div>
+            <EdenOpeningSetup
+              v-else
+              ref="edenSetupRef"
+              v-model:document="edenOpening.draft.value"
+              :start-day="edenOpening.startDay.value"
+              :setup-key="edenSetupKey"
+              :initialized="edenOpening.confirmed.value"
+              :locked="hasSuccessfulOpeningAssistant || hasOpeningSeedUserMessage"
+              :busy="busy || openingTransferBusy"
+              @update:start-day="edenOpening.setStartDay"
+              @preview-ready="edenPreviewReady = $event"
+            />
+          </template>
+        </template>
+      </OpeningSetupPanel>
     </HudModal>
 
     <HudModal
@@ -524,6 +549,9 @@
 <script setup lang="ts">
 import { useEventListener, useThrottleFn } from '@vueuse/core';
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import EdenOpeningSetup from '../../../../eden/components/EdenOpeningSetup.vue';
+import { useEdenOpening } from '../../../../eden/useEdenOpening';
+import { defaultEdenOpeningTime } from '../../../../eden/openingConfig';
 import { preWebFullscreenKey } from '../usePreWebFullscreen';
 import { retryMessageExtraAnalysisByNativeMvu } from '../../../../mvu_reprocess';
 import {
@@ -731,6 +759,8 @@ const openingPayload = ref(
     : (restoredOpeningPayload ?? getDefaultOpeningPayload(openingPreset.value)),
 );
 const openingWorldModes = getOpeningWorldModes();
+if (!runtimeOpeningPreset.value && !restoredOpeningPayload && !isGenericStoryOpening(openingPayload.value))
+  openingPayload.value.meta.time = defaultEdenOpeningTime(openingPayload.value.world_mode_id);
 const openingRoutes = getOpeningRoutes();
 const openingModalOpen = ref(false);
 const typographyModalOpen = ref(false);
@@ -773,6 +803,51 @@ const hasOpeningSeedUserMessage = computed(() => baseTranscriptItems.value.some(
 const shouldShowOpeningSetup = computed(
   () => !busy.value && !hasSuccessfulOpeningAssistant.value && !hasOpeningSeedUserMessage.value,
 );
+
+const edenEnabled = computed(() =>
+  runtimeOpeningPreset.value
+    ? runtimeOpeningPreset.value.integrations?.eden === true
+    : !isGenericStoryOpening(openingPayload.value),
+);
+const effectiveOpeningPreset = computed(() => {
+  if (!edenEnabled.value) return openingPreset.value;
+  return {
+    ...openingPreset.value,
+    form_schema: openingPreset.value.form_schema.filter(field => field.key !== 'shelter_ability_summary'),
+    form_schema_overrides: Object.fromEntries(
+      Object.entries(openingPreset.value.form_schema_overrides).map(([key, override]) => [
+        key,
+        { ...override, fields: override.fields.filter(field => field.key !== 'shelter_ability_summary') },
+      ]),
+    ),
+  };
+});
+const effectiveRuntimeOpeningPreset = computed(() =>
+  runtimeOpeningPreset.value && edenEnabled.value
+    ? {
+        ...runtimeOpeningPreset.value,
+        fields: runtimeOpeningPreset.value.fields.filter(field => field.key !== 'shelter_ability_summary'),
+      }
+    : runtimeOpeningPreset.value,
+);
+const edenSetupRef = ref<InstanceType<typeof EdenOpeningSetup> | null>(null);
+const edenPreviewReady = ref(false);
+const edenSetupKey = computed(() =>
+  JSON.stringify({
+    meta: openingPayload.value.meta,
+    fields: openingPayload.value.form_values,
+    world: openingPayload.value.world_mode_id,
+    route: openingPayload.value.route_id,
+    preset: runtimeOpeningPreset.value,
+  }),
+);
+const edenOpening = useEdenOpening({
+  enabled: edenEnabled,
+  worldModeId: computed(() => openingPayload.value.world_mode_id),
+  payload: openingPayload,
+  hasStory: computed(() => hasSuccessfulOpeningAssistant.value || hasOpeningSeedUserMessage.value),
+  buildPreset: buildCurrentOpeningPortablePreset,
+});
 type RoleProviderEntry = { key: string; role: Record<string, any> };
 function roleProviderName(entry: RoleProviderEntry) {
   return String(entry.role.姓名 ?? entry.key ?? '').trim() || entry.key;
@@ -1338,7 +1413,7 @@ function updateOpeningStoryTemplate(value: string) {
     const defaults = getEffectiveDefaultMeta(openingPreset.value, openingPayload.value.world_mode_id);
     nextPayload.meta = {
       character: String(currentMeta.character ?? '').trim() || defaults.character,
-      time: defaults.time,
+      time: defaultEdenOpeningTime(openingPayload.value.world_mode_id),
       location: defaults.location,
     };
   }
@@ -1360,7 +1435,12 @@ function updateOpeningWorldMode(value: string) {
     route_id: String(openingPayload.value.route_id ?? '').trim() || worldMode?.recommended_main_route || '',
     meta: {
       character: String(currentMeta.character ?? '').trim() || effectiveDefaults.character,
-      time: String(currentMeta.time ?? '').trim() || effectiveDefaults.time,
+      time:
+        !String(currentMeta.time ?? '').trim() ||
+        currentMeta.time === defaultEdenOpeningTime(openingPayload.value.world_mode_id) ||
+        currentMeta.time === getEffectiveDefaultMeta(openingPreset.value, openingPayload.value.world_mode_id).time
+          ? defaultEdenOpeningTime(nextWorldModeId)
+          : currentMeta.time,
       location: String(currentMeta.location ?? '').trim() || effectiveDefaults.location,
     },
   });
@@ -1434,13 +1514,15 @@ async function handleRuntimeOpeningImport(file: File) {
   try {
     const raw = JSON.parse(await file.text()) as unknown;
     const imported = parseRuntimeOpeningImport(raw);
+    if (imported.preset.integrations?.eden && (hasSuccessfulOpeningAssistant.value || hasOpeningSeedUserMessage.value))
+      throw new Error('已有剧情，伊甸初始配置只能导入新聊天');
     const confirmed = window.confirm(
       `导入将覆盖当前角色卡的默认开局，并为当前聊天安装“${imported.preset.ui.title}”。是否继续？`,
     );
     if (!confirmed) return;
 
     const expectedChatId = requireCurrentChatId();
-    persistRuntimeOpeningCharacterPreset(imported.preset);
+    if (!imported.preset.integrations?.eden) persistRuntimeOpeningCharacterPreset(imported.preset);
     assertOpeningChatCurrent(expectedChatId);
     persistRuntimeOpeningChatSnapshot(imported.preset);
     assertOpeningChatCurrent(expectedChatId);
@@ -1452,6 +1534,16 @@ async function handleRuntimeOpeningImport(file: File) {
     persistOpeningPayloadNow();
     openingConfigInstalled = true;
 
+    if (imported.preset.integrations?.eden) {
+      await nextTick();
+      await edenOpening.load();
+      assertOpeningChatCurrent(expectedChatId);
+      if (edenOpening.error.value) throw new Error(edenOpening.error.value);
+      if (imported.eden) edenOpening.installConfig(imported.eden);
+      edenSetupRef.value?.invalidatePreview();
+      toastr?.success?.('已导入开局草稿，请预览并确认写入世界书');
+      return;
+    }
     await syncCurrentOpeningWorldbook(expectedChatId, imported.preset, imported.payload);
     toastr?.success?.(`已导入“${imported.preset.ui.title}”并同步当前聊天世界书`);
   } catch (error) {
@@ -1464,11 +1556,12 @@ async function handleRuntimeOpeningImport(file: File) {
   }
 }
 
-function handleRuntimeOpeningExport() {
+function buildCurrentOpeningPortablePreset(): RuntimeOpeningPreset {
   const preset =
-    runtimeOpeningPreset.value ??
-    toPortableRuntimeOpeningPreset(openingPreset.value, openingPayload.value, {
-      fields: getOpeningFormSchema(openingPreset.value, openingPayload.value),
+    effectiveRuntimeOpeningPreset.value ??
+    toPortableRuntimeOpeningPreset(effectiveOpeningPreset.value, openingPayload.value, {
+      eden: edenEnabled.value,
+      fields: getOpeningFormSchema(effectiveOpeningPreset.value, openingPayload.value),
       extraFields: isGenericStoryOpening(openingPayload.value)
         ? []
         : [
@@ -1493,7 +1586,16 @@ function handleRuntimeOpeningExport() {
           ],
     });
 
-  const bundle = buildRuntimeOpeningExport(preset, openingPayload.value);
+  return preset;
+}
+
+function handleRuntimeOpeningExport() {
+  const preset = buildCurrentOpeningPortablePreset();
+  const bundle = buildRuntimeOpeningExport(
+    preset,
+    openingPayload.value,
+    edenEnabled.value ? edenOpening.exportConfig() : undefined,
+  );
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -1513,6 +1615,10 @@ function handleRuntimeOpeningExport() {
 
 async function handleRuntimeOpeningWorldbookSync() {
   if (busy.value || openingTransferBusy.value) return;
+  if (edenEnabled.value) {
+    await handleOpeningSubmit(false);
+    return;
+  }
   openingTransferBusy.value = true;
   try {
     await syncCurrentOpeningWorldbook();
@@ -1525,7 +1631,7 @@ async function handleRuntimeOpeningWorldbookSync() {
   }
 }
 
-async function handleOpeningSubmit() {
+async function handleOpeningSubmit(generateAfterConfirm = true) {
   if (busy.value || openingTransferBusy.value) return;
 
   hydrateOpeningPayloadDefaults();
@@ -1549,14 +1655,49 @@ async function handleOpeningSubmit() {
     return;
   }
 
-  const missing = getOpeningMissingRequiredField(openingPreset.value, openingPayload.value);
+  const missing = getOpeningMissingRequiredField(effectiveOpeningPreset.value, openingPayload.value);
   if (missing) {
     toastr?.warning?.(`请先填写：${missing.label}`);
     openingModalOpen.value = true;
     return;
   }
 
-  if (runtimeOpeningPreset.value) {
+  if (edenEnabled.value) {
+    if (hasSuccessfulOpeningAssistant.value || hasOpeningSeedUserMessage.value) {
+      toastr?.warning?.('已有剧情，初始配置不能覆盖当前进度；请使用新聊天');
+      return;
+    }
+    if (edenOpening.loading.value || edenOpening.error.value) {
+      toastr?.error?.(edenOpening.error.value || '正在读取伊甸配置');
+      return;
+    }
+    if (
+      !runtimeOpeningPreset.value &&
+      (openingPayload.value.world_mode_id === 'A') !== edenOpening.startDay.value < 0
+    ) {
+      toastr?.warning?.('起始灾变天数与世界观档位不一致，请调整起始天数或档位');
+      return;
+    }
+    await nextTick();
+    if (!edenSetupRef.value?.requestConfirmation()) {
+      openingModalOpen.value = true;
+      return;
+    }
+    openingTransferBusy.value = true;
+    try {
+      await edenOpening.confirm();
+    } catch (error) {
+      openingModalOpen.value = true;
+      toastr?.error?.(`开局初始化未完成，已停止生成：${error instanceof Error ? error.message : String(error)}`);
+      return;
+    } finally {
+      openingTransferBusy.value = false;
+    }
+    if (!generateAfterConfirm) {
+      toastr?.success?.('伊甸与开局配置已保存至当前聊天世界书');
+      return;
+    }
+  } else if (runtimeOpeningPreset.value) {
     openingTransferBusy.value = true;
     try {
       await syncCurrentOpeningWorldbook();
@@ -1575,10 +1716,24 @@ async function handleOpeningSubmit() {
     }
   }
 
-  const compiledPromptSnapshot =
+  let compiledPromptSnapshot =
     runtimeOpeningPreset.value && isRuntimeOpeningPayload(openingPayload.value)
-      ? buildRuntimeOpeningGeneratePrompt(runtimeOpeningPreset.value, openingPayload.value)
-      : buildOpeningGeneratePrompt(openingPreset.value, openingPayload.value);
+      ? buildRuntimeOpeningGeneratePrompt(buildCurrentOpeningPortablePreset(), openingPayload.value)
+      : buildOpeningGeneratePrompt(
+          effectiveOpeningPreset.value,
+          edenEnabled.value
+            ? {
+                ...openingPayload.value,
+                form_values: {
+                  ...openingPayload.value.form_values,
+                  shelter_ability_summary: edenOpening.abilitySummary(),
+                },
+              }
+            : openingPayload.value,
+          edenEnabled.value ? { edenStartDay: edenOpening.startDay.value } : undefined,
+        );
+  if (edenEnabled.value)
+    compiledPromptSnapshot += `\n本次开局 /世界/末日天数 必须为 ${edenOpening.startDay.value}；能力与救亡权限以本次专属世界书为准。`;
   openingPayload.value = {
     ...openingPayload.value,
     state: 'generating',
